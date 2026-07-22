@@ -224,15 +224,6 @@ export const ENV_BINDINGS = [
     },
   },
   {
-    key: "ALERT_WEBHOOK_URL",
-    valueType: "string",
-    description: "Webhook URL used for Discord/Slack-style error alerts.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { order: 17, status: "optional" },
-    },
-  },
-  {
     key: "ANTHROPIC_API_KEY",
     valueType: "string",
     description: "Anthropic credential used for daily digest generation.",

@@ -100,7 +100,6 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `BIRDEYE_API_KEY` | `string` | optional | - | - | Birdeye credential used for optional targeted Solana exact-address token-price augmentation. |
 | `ADDRESS_PRICE_PROVIDERS_ENABLED` | `string` | optional | - | - | Optional comma-separated allowlist for exact-address price providers; production pins this to `none` while quarter-hour stablecoin sync runs under Worker heap pressure. Unset auto-enables DexPaprika plus configured key-backed providers, and `dexscreener-address` remains explicit opt-in for the Cloudflare/WAF-protected public lane. |
 | `GRAPH_API_KEY` | `string` | optional | - | - | The Graph credential used by DEX liquidity subgraph reads. |
-| `ALERT_WEBHOOK_URL` | `string` | optional | - | - | Webhook URL used for Discord/Slack-style error alerts. |
 | `ANTHROPIC_API_KEY` | `string` | optional | - | - | Anthropic credential used for daily digest generation. |
 | `CMC_API_KEY` | `string` | optional | - | - | CoinMarketCap credential used by the price-fallback pass. |
 | `JUPITER_API_KEY` | `string` | optional | - | - | Jupiter credential used by the Solana price-fallback pass against `api.jup.ag`. |
@@ -172,7 +171,6 @@ Three modules derive runtime configuration from `Env` bindings via pure function
 | ------------------------------------------------------- | --------------------- | ---------------------------------------------------- |
 | `normalizeCgApiKey(env.COINGECKO_API_KEY)`              | `fetch` + `scheduled` | Returns normalized API key for CoinGecko requests    |
 | `buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY)` | `fetch` + `scheduled` | Builds chain RPC configs with Alchemy/dRPC primaries |
-| `normalizeWebhookUrl(env.ALERT_WEBHOOK_URL)`            | `scheduled`           | Returns normalized webhook URL for error alerts      |
 
 These are pure functions. `Env` bindings are only available inside handler functions (not at module initialization time), so values are computed fresh per-request/per-trigger via the context factory. The notable exception is `shared/lib/cloudflare-access-jwt.ts`, which intentionally keeps an in-memory JWKS cache (`jwksCache`, 1-hour TTL) at module scope to avoid refetching Cloudflare Access signing keys on every admin request.
 
@@ -498,11 +496,10 @@ Shared cron behavior is narrower than a single worker-wide tier system:
 
 - `runLeasedCron(...)` / `logCronRun(...)` record terminal outcomes per canonical schedule/job/path and persist Worker version plus invocation identity.
 - A weighted slot semaphore admits at most five live external fetches, including sidecars and budget-only work; heartbeats and ledger writes are serialized per job.
-- Thrown or explicit error outcomes send the configured webhook alert after terminal accounting and before rethrow.
-- Degraded returns, no-write fallbacks, alert markers/cooldowns, and producer-specific retries remain job-owned.
+- Thrown or explicit error outcomes are recorded after terminal accounting and before rethrow.
+- Degraded returns, no-write fallbacks, and producer-specific retries remain job-owned.
 - Sidecar publication returns a structured terminal outcome; failures cannot be swallowed behind a successful parent result.
 
-`sendAlert()` is the single webhook transport. It returns `true` only after a successful `2xx` response; producers use that result when deciding whether to advance a delivery marker or keep the alert eligible for a later run.
 
 ## Telegram Alert Bot
 
@@ -546,7 +543,6 @@ async function logCronRun(
   db: D1Database,
   job: string,
   fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
-  alertFn?: (title: string, message: string) => Promise<unknown> | void,
   options?: { slotStartedAt?: number | null },
 ): Promise<CronResult | void>;
 ```
@@ -560,7 +556,7 @@ async function logCronRun(
 - On normal completion: inserts row into `cron_runs` with `status = resolvedResult.status ?? "ok"`, `item_count`, and `metadata`; returned statuses such as `degraded`, `skipped_locked`, `skipped_neutral`, or `error` are preserved
 - Assigns each append-only run insert an `idempotency_key`; the partial unique index makes an ambiguous committed D1 overload retry a no-op instead of duplicate telemetry
 - On lease contention: inserts row with `status='skipped_locked'` and lease metadata
-- On error: inserts a terminal row, awaits the direct webhook attempt, and re-throws a typed aggregate through the slot fence
+- On error: inserts a terminal row and re-throws a typed aggregate through the slot fence
 - On completion/error of a progress-reporting job: clears the corresponding `cron_run_progress` row
 - Returns the job's `CronResult` when the handler provides one
 - Persisted cron metadata is compacted globally below 64 KiB; rich in-process results are not copied wholesale into `cron_runs`. The stablecoin producer applies its domain-aware compaction below 60 KiB, reserving 4 KiB for wrapper-owned lease and slot enrichment so publication and active-price coverage remain top-level health evidence.
@@ -635,7 +631,6 @@ Most high-risk external integrations are protected by per-source circuit breaker
 
 - **Open threshold**: 3 consecutive failures
 - **Probe interval**: 30 minutes (one request allowed to test recovery)
-- **Alerts**: Webhook alert fires on open and close transitions
 - **Health impact**: 3 or more public-impact open circuits degrade `/api/health`; scoped `live-reserves:*`, optional `dexscreener-liquidity` / `dexscreener-search`, and single-asset `kava-pricefeed`, `jusd-citrea-bridge`, and `aznd-curve-pool` breakers are excluded from that source-wide count. They remain in admin provider diagnostics, while reserve and exact active-price coverage own their public impact. The retired `mento-broker` and `usx-stable-pools` cache keys are no longer active sources and are filtered from Worker diagnostics.
 
 Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
@@ -710,34 +705,6 @@ Primary-oracle implementation notes:
 - `/api/health` completes the circuit list from active `CIRCUIT_SOURCE` values plus configured `live-reserves:*` scopes, and filters retired/stale cache rows so old breaker keys do not keep surfacing as active incidents after a source is removed.
 - `POST /api/reset-circuit-breaker?circuit=<source>` uses the same active-source whitelist, so operators can reset both source-wide breakers and configured scoped live-reserve breakers such as `live-reserves:usdgo-osl`.
 - Scheduled handlers that write breaker state from cron outcomes now treat `degraded`, `skipped_locked`, and `skipped_neutral` as neutral by default; only explicit `ok` heals a breaker and only thrown/error outcomes count as failures unless a source-specific handler opts into stricter semantics.
-
----
-
-## Alert System
-
-**File:** `worker/src/lib/alerts.ts`.
-
-Scheduled producers call `sendAlert()` directly and retain their existing
-source-specific cache markers, streaks, recovery rules, and repeat cooldowns.
-The transport auto-detects webhook format from the URL:
-
-| URL contains               | Format                                             |
-| -------------------------- | -------------------------------------------------- |
-| `discord.com/api/webhooks` | Discord embed (red, `[Pharos] {title}`, timestamp) |
-| Anything else              | Slack markdown (`*[Pharos] {title}*\n{message}`)   |
-
-`sendAlert()` returns `true` only when the webhook responds with `2xx`, and
-returns `false` for a missing URL, rejected response, timeout, or transport
-error. It consumes response bodies and never lets alert transport failure
-replace the producer's primary outcome.
-
-The Access-gated `POST /api/alert-broker-canary` path is retained as a
-compatibility endpoint. Live execution requires
-`?execute=true&confirm=emit-incident-and-recovery` plus a unique
-`Idempotency-Key`, accepts no caller-supplied target or copy, and sends one
-fixed incident and recovery directly. Migration `0175` and existing broker rows
-remain inert for forensic inspection; runtime status keeps the public broker
-fields as zero-valued compatibility data without querying those tables.
 
 ---
 

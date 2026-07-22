@@ -11,12 +11,6 @@ vi.mock("../../lib/db-cache", () => ({
   deleteCache: mockDeleteCache,
 }));
 
-const mockSendAlert = vi.fn();
-
-vi.mock("../../lib/alerts", () => ({
-  sendAlert: mockSendAlert,
-}));
-
 const {
   runTelegramDegradationWatchdog,
   PENDING_BACKLOG_THRESHOLD,
@@ -147,8 +141,6 @@ beforeEach(() => {
   mockGetCache.mockReset();
   mockSetCache.mockReset();
   mockDeleteCache.mockReset();
-  mockSendAlert.mockReset();
-  mockSendAlert.mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -161,21 +153,14 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.pendingSince, { value: String(nowSec - 3600), updatedAt: nowSec - 3600 });
-    store.values.set(WATCHDOG_KEYS.pendingAlerted, { value: "1", updatedAt: nowSec - 1800 });
 
-    const result = await runTelegramDegradationWatchdog(makeDb({ capacityError: true }), "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(makeDb({ capacityError: true }));
     const meta = JSON.parse(result.metadata ?? "{}");
 
     expect(result.status).toBe("degraded");
     expect(meta.pendingBacklog.availability).toBe("unknown");
     expect(meta.pendingBacklog.detail).toContain("incident state preserved");
     expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(true);
-    expect(store.values.has(WATCHDOG_KEYS.pendingAlerted)).toBe(true);
-    expect(mockSendAlert).not.toHaveBeenCalledWith(
-      expect.anything(),
-      "Telegram pending backlog recovered",
-      expect.anything(),
-    );
   });
 
   it("treats aged execution-unknown work as delivery risk", async () => {
@@ -192,17 +177,12 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
         pendingExecutionUnknown: 1,
         oldestExecutionUnknownAgeSec: 1800,
       }),
-      "https://hooks.example/x",
     );
     const meta = JSON.parse(result.metadata ?? "{}");
 
     expect(meta.pendingBacklog.triggered).toBe(true);
     expect(meta.pendingBacklog.executionUnknown).toBe(1);
-    expect(mockSendAlert).toHaveBeenCalledWith(
-      "https://hooks.example/x",
-      "Telegram pending delivery risk",
-      expect.stringContaining("executionUnknown=1"),
-    );
+    expect(meta.pendingBacklog.detail).toContain("executionUnknown=1");
   });
 
   it("uses a preloaded pending capacity snapshot instead of rereading the queue", async () => {
@@ -222,7 +202,7 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     });
     const db = { prepare } as unknown as D1Database;
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x", undefined, {
+    const result = await runTelegramDegradationWatchdog(db, undefined, {
       pendingCapacitySnapshot: {
         total: PENDING_BACKLOG_THRESHOLD + 5,
         active: PENDING_BACKLOG_THRESHOLD + 5,
@@ -253,27 +233,25 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     });
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).not.toHaveBeenCalled();
     expect(meta.pendingBacklog.count).toBe(PENDING_BACKLOG_THRESHOLD + 5);
     expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(true);
     expect(prepare.mock.calls.some(([sql]) => isPendingCapacityQuery(String(sql)))).toBe(false);
   });
 
-  it("does not alert on first observation above threshold", async () => {
+  it("does not trigger on first observation above threshold", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     const db = makeDb({ pendingCount: PENDING_BACKLOG_THRESHOLD + 5 });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).not.toHaveBeenCalled();
     expect(meta.pendingBacklog.triggered).toBe(false);
     expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(true);
   });
 
-  it("alerts once threshold has been sustained beyond window", async () => {
+  it("triggers once threshold has been sustained beyond window", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
@@ -283,39 +261,15 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     });
     const db = makeDb({ pendingCount: PENDING_BACKLOG_THRESHOLD + 50 });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).toHaveBeenCalledWith(
-      "https://hooks.example/x",
-      "Telegram pending delivery risk",
-      expect.stringContaining("pending="),
-    );
     expect(meta.pendingBacklog.triggered).toBe(true);
-    expect(meta.pendingBacklog.alertSent).toBe(true);
+    expect(meta.pendingBacklog.detail).toContain("pending=");
     expect(result.status).toBe("degraded");
   });
 
-  it("does not mark a pending backlog episode alerted when the alert webhook fails", async () => {
-    const store = installCacheStore();
-    const nowSec = Math.floor(Date.now() / 1000);
-    mockSendAlert.mockResolvedValueOnce(false);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
-    store.values.set(WATCHDOG_KEYS.pendingSince, {
-      value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
-      updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
-    });
-    const db = makeDb({ pendingCount: PENDING_BACKLOG_THRESHOLD + 50 });
-
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
-    const meta = JSON.parse(result.metadata ?? "{}");
-
-    expect(meta.pendingBacklog.triggered).toBe(true);
-    expect(meta.pendingBacklog.alertSent).toBe(false);
-    expect(store.values.has(WATCHDOG_KEYS.pendingAlerted)).toBe(false);
-  });
-
-  it("emits recovery alert and clears flag when backlog drains", async () => {
+  it("clears the episode when backlog drains", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
@@ -323,69 +277,16 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
       value: String(nowSec - 3600),
       updatedAt: nowSec - 3600,
     });
-    store.values.set(WATCHDOG_KEYS.pendingAlerted, { value: "1", updatedAt: nowSec - 1800 });
     const db = makeDb({ pendingCount: 10 });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).toHaveBeenCalledWith(
-      "https://hooks.example/x",
-      "Telegram pending backlog recovered",
-      expect.stringContaining("cleared"),
-    );
     expect(meta.pendingBacklog.recovered).toBe(true);
     expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(false);
-    expect(store.values.has(WATCHDOG_KEYS.pendingAlerted)).toBe(false);
   });
 
-  it("does not repeat pending backlog alerts during the same episode", async () => {
-    const store = installCacheStore();
-    const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
-    store.values.set(WATCHDOG_KEYS.pendingSince, {
-      value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
-      updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
-    });
-    store.values.set(WATCHDOG_KEYS.pendingAlerted, { value: "1", updatedAt: nowSec - 60 });
-    const db = makeDb({ pendingCount: PENDING_BACKLOG_THRESHOLD + 50 });
-
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
-    const meta = JSON.parse(result.metadata ?? "{}");
-
-    expect(mockSendAlert).not.toHaveBeenCalled();
-    expect(meta.pendingBacklog.triggered).toBe(true);
-    expect(meta.pendingBacklog.alertSent).toBe(false);
-  });
-
-  it("ignores the legacy pending-alerted flag during direct-delivery cutover", async () => {
-    const store = installCacheStore();
-    const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
-    store.values.set(WATCHDOG_KEYS.pendingSince, {
-      value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
-      updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
-    });
-    store.values.set("telegram:degradation:pending-alerted", { value: "1", updatedAt: nowSec - 60 });
-
-    const result = await runTelegramDegradationWatchdog(
-      makeDb({ pendingCount: PENDING_BACKLOG_THRESHOLD + 50 }),
-      "https://hooks.example/x",
-    );
-    const meta = JSON.parse(result.metadata ?? "{}");
-
-    expect(mockSendAlert).toHaveBeenCalledWith(
-      "https://hooks.example/x",
-      "Telegram pending delivery risk",
-      expect.any(String),
-    );
-    expect(meta.pendingBacklog.alertSent).toBe(true);
-    expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(true);
-    expect(store.values.has(WATCHDOG_KEYS.pendingAlerted)).toBe(true);
-    expect(store.values.has("telegram:degradation:pending-alerted")).toBe(true);
-  });
-
-  it("alerts on old pending age even when queue size is below the count threshold", async () => {
+  it("triggers on old pending age even when queue size is below the count threshold", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
@@ -395,19 +296,15 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     });
     const db = makeDb({ pendingCount: 10, oldestPendingAgeSec: 20 * 60 });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).toHaveBeenCalledWith(
-      "https://hooks.example/x",
-      "Telegram pending delivery risk",
-      expect.stringContaining("oldestAgeSec="),
-    );
     expect(meta.pendingBacklog.triggered).toBe(true);
+    expect(meta.pendingBacklog.detail).toContain("oldestAgeSec=");
     expect(meta.pendingBacklog.oldestAgeSec).toBe(20 * 60);
   });
 
-  it("alerts on estimated drain time over the threshold", async () => {
+  it("triggers on estimated drain time over the threshold", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
@@ -418,19 +315,15 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     // 10,801 active pending rows at the shared 1,800/run drain budget estimate to 35 min.
     const db = makeDb({ pendingCount: 10_801 });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).toHaveBeenCalledWith(
-      "https://hooks.example/x",
-      "Telegram pending delivery risk",
-      expect.stringContaining("estimatedDrainTimeSec="),
-    );
     expect(meta.pendingBacklog.triggered).toBe(true);
+    expect(meta.pendingBacklog.detail).toContain("estimatedDrainTimeSec=");
     expect(meta.pendingBacklog.estimatedDrainTimeSec).toBe(35 * 60);
   });
 
-  it("alerts immediately when pending rows are near TTL expiry", async () => {
+  it("triggers immediately when pending rows are near TTL expiry", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
@@ -440,21 +333,17 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     });
     const db = makeDb({ pendingCount: 3, nearTtl: 1 });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).toHaveBeenCalledWith(
-      "https://hooks.example/x",
-      "Telegram pending delivery risk",
-      expect.stringContaining("nearTtl=1"),
-    );
     expect(meta.pendingBacklog.triggered).toBe(true);
+    expect(meta.pendingBacklog.detail).toContain("nearTtl=1");
     expect(meta.pendingBacklog.nearTtl).toBe(1);
   });
 });
 
 describe("runTelegramDegradationWatchdog · safety source", () => {
-  it("alerts when safety-source cache is missing for sustained window", async () => {
+  it("triggers when safety-source cache is missing for sustained window", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     // safety-source-cache absent => state = missing
@@ -464,18 +353,14 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     });
     const db = makeDb({ pendingCount: 0 });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).toHaveBeenCalledWith(
-      "https://hooks.example/x",
-      "Telegram safety-source cache degraded",
-      expect.stringContaining("state=missing"),
-    );
     expect(meta.safetySource.triggered).toBe(true);
+    expect(meta.safetySource.detail).toContain("state=missing");
   });
 
-  it("does not alert until sustained window elapses", async () => {
+  it("does not trigger until sustained window elapses", async () => {
     const store = installCacheStore();
     installCacheStore(); // reset
     const nowSec = Math.floor(Date.now() / 1000);
@@ -486,10 +371,9 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     });
     const db = makeDb({ pendingCount: 0 });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).not.toHaveBeenCalled();
     expect(meta.safetySource.triggered).toBe(false);
   });
 
@@ -501,38 +385,13 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
       value: String(nowSec - 4000),
       updatedAt: nowSec - 4000,
     });
-    store.values.set(WATCHDOG_KEYS.safetySourceAlerted, { value: "1", updatedAt: nowSec - 1800 });
     const db = makeDb({ pendingCount: 0 });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).toHaveBeenCalledWith(
-      "https://hooks.example/x",
-      "Telegram safety-source cache recovered",
-      expect.stringContaining("ok"),
-    );
     expect(meta.safetySource.recovered).toBe(true);
     expect(store.values.has(WATCHDOG_KEYS.safetySourceSince)).toBe(false);
-    expect(store.values.has(WATCHDOG_KEYS.safetySourceAlerted)).toBe(false);
-  });
-
-  it("does not repeat safety-source alerts during the same episode", async () => {
-    const store = installCacheStore();
-    const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set(WATCHDOG_KEYS.safetySourceSince, {
-      value: String(nowSec - 4000),
-      updatedAt: nowSec - 4000,
-    });
-    store.values.set(WATCHDOG_KEYS.safetySourceAlerted, { value: "1", updatedAt: nowSec - 60 });
-    const db = makeDb({ pendingCount: 0 });
-
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
-    const meta = JSON.parse(result.metadata ?? "{}");
-
-    expect(mockSendAlert).not.toHaveBeenCalled();
-    expect(meta.safetySource.triggered).toBe(true);
-    expect(meta.safetySource.alertSent).toBe(false);
   });
 });
 
@@ -550,8 +409,8 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       },
     });
 
-    await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
-    const second = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    await runTelegramDegradationWatchdog(db);
+    const second = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(second.metadata ?? "{}");
     const state = JSON.parse(store.values.get(WATCHDOG_KEYS.zeroSendStreak)?.value ?? "{}");
 
@@ -561,7 +420,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
     expect(meta.zeroSend.runIdentity).toBe("77");
   });
 
-  it("does not alert before reaching streak threshold", async () => {
+  it("does not trigger before reaching streak threshold", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
@@ -574,10 +433,10 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       },
     });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).not.toHaveBeenCalled();
+    expect(meta.zeroSend.triggered).toBe(false);
     expect(meta.zeroSend.streak).toBe(1);
   });
 
@@ -594,14 +453,14 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       },
     });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).not.toHaveBeenCalled();
+    expect(meta.zeroSend.triggered).toBe(false);
     expect(meta.zeroSend.streak).toBe(1);
   });
 
-  it("alerts after threshold consecutive zero-send runs", async () => {
+  it("triggers after threshold consecutive zero-send runs", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
@@ -618,19 +477,15 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       },
     });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).toHaveBeenCalledWith(
-      "https://hooks.example/x",
-      "Telegram dispatch sent zero messages with pending events",
-      expect.stringContaining(`consecutiveZeroSendRuns=${ZERO_SEND_STREAK_THRESHOLD}`),
-    );
     expect(meta.zeroSend.triggered).toBe(true);
     expect(meta.zeroSend.streak).toBe(ZERO_SEND_STREAK_THRESHOLD);
+    expect(result.status).toBe("degraded");
   });
 
-  it("emits recovery alert and resets streak when dispatch sends again", async () => {
+  it("recovers and resets streak when dispatch sends again", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
@@ -638,7 +493,6 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       value: String(ZERO_SEND_STREAK_THRESHOLD),
       updatedAt: nowSec - 60,
     });
-    store.values.set(WATCHDOG_KEYS.zeroSendAlerted, { value: "1", updatedAt: nowSec - 60 });
     const db = makeDb({
       pendingCount: 0,
       dispatchMetadata: {
@@ -648,21 +502,15 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       },
     });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).toHaveBeenCalledWith(
-      "https://hooks.example/x",
-      "Telegram dispatch zero-send streak recovered",
-      expect.stringContaining("messagesSent=7"),
-    );
     expect(meta.zeroSend.recovered).toBe(true);
     expect(meta.zeroSend.streak).toBe(0);
     expect(store.values.has(WATCHDOG_KEYS.zeroSendStreak)).toBe(false);
-    expect(store.values.has(WATCHDOG_KEYS.zeroSendAlerted)).toBe(false);
   });
 
-  it("does not repeat zero-send alerts during the same episode", async () => {
+  it("stays triggered while the zero-send streak continues", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
     store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
@@ -670,7 +518,6 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       value: String(ZERO_SEND_STREAK_THRESHOLD),
       updatedAt: nowSec - 60,
     });
-    store.values.set(WATCHDOG_KEYS.zeroSendAlerted, { value: "1", updatedAt: nowSec - 60 });
     const db = makeDb({
       pendingCount: 0,
       dispatchMetadata: {
@@ -680,12 +527,11 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       },
     });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).not.toHaveBeenCalled();
     expect(meta.zeroSend.triggered).toBe(true);
-    expect(meta.zeroSend.alertSent).toBe(false);
+    expect(meta.zeroSend.streak).toBe(ZERO_SEND_STREAK_THRESHOLD + 1);
   });
 
   it("ignores runs with no events even if messagesSent is zero", async () => {
@@ -701,10 +547,9 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       },
     });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).not.toHaveBeenCalled();
     expect(meta.zeroSend.triggered).toBe(false);
     expect(meta.zeroSend.streak).toBe(0);
   });
@@ -722,10 +567,9 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       },
     });
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
-    expect(mockSendAlert).not.toHaveBeenCalled();
     expect(meta.zeroSend.triggered).toBe(false);
     expect(meta.zeroSend.streak).toBe(0);
   });
@@ -738,7 +582,7 @@ describe("runTelegramDegradationWatchdog · abort", () => {
     const controller = new AbortController();
     controller.abort(new Error("scheduled abort"));
 
-    await expect(runTelegramDegradationWatchdog(db, "https://hooks.example/x", controller.signal)).rejects.toThrow(
+    await expect(runTelegramDegradationWatchdog(db, controller.signal)).rejects.toThrow(
       "scheduled abort",
     );
   });
@@ -791,7 +635,7 @@ describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
       },
     ]);
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
     // The completed run sent messages, so the streak resets.
@@ -812,7 +656,7 @@ describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
       { status: "error", metadata: null },
     ]);
 
-    const result = await runTelegramDegradationWatchdog(db, "https://hooks.example/x");
+    const result = await runTelegramDegradationWatchdog(db);
     const meta = JSON.parse(result.metadata ?? "{}");
 
     // No completed run found, watchdog returns without touching the streak.

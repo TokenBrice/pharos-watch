@@ -22,8 +22,6 @@ export const STATUS_HYSTERESIS = {
 } as const;
 
 export const STATUS_SYSTEM_FRESHNESS_SEC = 1800;
-export const STATUS_DISCREPANCY_ALERT_STREAK = 2;
-export const STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC = 1800;
 
 /**
  * Consecutive-stale readings required to transition degraded → stale.

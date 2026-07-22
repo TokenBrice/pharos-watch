@@ -4,7 +4,7 @@ Triggered by:
 - `sync-yield-data` metadata `fallbackMode` containing `risk-free-rate:*`
 - `/api/yield-rankings` provenance showing retained benchmark fallback
 - `/admin/` -> Crons showing failing or stale `fetch-tbill-rate`
-- `ALERT_WEBHOOK_URL` receiving `GBP SONIA retained benchmark fallback`, emitted after 2 consecutive daily GBP SONIA retained-fallback runs with a 24-hour re-alert cooldown
+- Dashboard observation of the retained GBP SONIA fallback after consecutive daily runs
 - Worker canary `yield-gbp-benchmark-current` reporting fewer than 2 consecutive direct, current GBP publications
 
 ## Symptom

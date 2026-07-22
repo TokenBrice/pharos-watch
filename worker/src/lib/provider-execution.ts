@@ -28,7 +28,6 @@ export interface ProviderBreakerPolicy {
   circuitKey?: string;
   enabled?: boolean;
   recordOutcome?: boolean;
-  webhookUrl?: string | null;
 }
 
 export interface ProviderExecutionPolicy<TResult = unknown> {
@@ -339,7 +338,6 @@ async function recordProviderOutcome<TResult>(
     context.db,
     circuitKey,
     outcome === "success",
-    policy.breakerPolicy?.webhookUrl,
   );
 }
 

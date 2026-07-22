@@ -395,7 +395,7 @@ Detects simultaneous outflows from risky stablecoins and inflows to safe havens.
 
 ## Retention
 
-`mint_burn_events` is **append-only by product decision** (settled with owner, 2026-06-10): it is the immutable on-chain event log behind /flows history and Telegram flow alerts, and no retention pruning is applied. The growth budget is enforced by the daily `mint-burn-growth-watchdog` cron (`worker/src/cron/mint-burn-growth-watchdog.ts`, 03:00 UTC slot): it counts table rows and webhook-alerts (7-day redelivery cooldown) once the count crosses **2.3M rows**, the row-count proxy for the agreed ~5 GB D1 revisit point (at ~1.43M rows the whole database measured 3.09 GB of the 10 GB cap; D1 disallows `PRAGMA page_count`). When the alert fires, revisit the decision: document a raised budget, or archive rows older than N months into the dated snapshot export.
+`mint_burn_events` is **append-only by product decision** (settled with owner, 2026-06-10): it is the immutable on-chain event log behind /flows history and Telegram flow alerts, and no retention pruning is applied. The growth budget is enforced by the daily `mint-burn-growth-watchdog` cron (`worker/src/cron/mint-burn-growth-watchdog.ts`, 03:00 UTC slot): it counts table rows and reports degraded status once the count crosses **2.3M rows**, the row-count proxy for the agreed ~5 GB D1 revisit point (at ~1.43M rows the whole database measured 3.09 GB of the 10 GB cap; D1 disallows `PRAGMA page_count`). When the watchdog reports degraded, revisit the decision: document a raised budget, or archive rows older than N months into the dated snapshot export.
 
 ## Database Schema
 

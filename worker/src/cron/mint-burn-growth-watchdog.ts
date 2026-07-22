@@ -1,7 +1,4 @@
-import { sendAlert } from "../lib/alerts";
-import { readAlertMarker } from "../lib/alert-marker";
 import type { CronResult } from "../lib/cron-logger";
-import { getCache, setCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
 
 /**
@@ -10,29 +7,13 @@ import { throwIfAborted } from "../lib/abort";
  * retention pruning is applied. This watchdog enforces the agreed growth
  * budget instead — at ~1.43M rows the database sat at 3.09 GB of the 10 GB D1
  * cap, so ~2.3M rows extrapolates to the agreed ~5 GB revisit point. Crossing
- * the threshold alerts (with weekly redelivery) so the append-only decision
- * gets actively revisited instead of silently drifting toward the cap.
+ * the threshold reports degraded so the append-only decision gets actively
+ * revisited instead of silently drifting toward the cap.
  * D1 disallows PRAGMA page_count, hence the row-count proxy.
  */
 export const MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD = 2_300_000;
-const ALERT_COOLDOWN_SEC = 7 * 86400;
-const ALERT_MARKER_KEY = "mint-burn-growth-watchdog:alert:direct:v1";
-
-interface AlertMarker {
-  lastAlertedAt: number;
-  rowCount: number;
-}
-
-function readMarker(value: string | null | undefined): AlertMarker | null {
-  return readAlertMarker<AlertMarker>(
-    value,
-    (p): p is AlertMarker => typeof p.lastAlertedAt === "number" && typeof p.rowCount === "number",
-  );
-}
-
 export async function runMintBurnGrowthWatchdog(
   db: D1Database,
-  alertWebhookUrl: string | null,
   signal?: AbortSignal,
 ): Promise<CronResult> {
   throwIfAborted(signal);
@@ -47,35 +28,12 @@ export async function runMintBurnGrowthWatchdog(
     };
   }
 
-  const nowSec = Math.floor(Date.now() / 1000);
-  const marker = readMarker((await getCache(db, ALERT_MARKER_KEY))?.value);
-  throwIfAborted(signal);
-
-  let alerted = false;
-  const dueForAlert = nowSec - (marker?.lastAlertedAt ?? 0) >= ALERT_COOLDOWN_SEC;
-  if (dueForAlert) {
-    alerted = await sendAlert(
-      alertWebhookUrl,
-      "mint_burn_events growth budget exceeded",
-      [
-        `mint_burn_events has ${rowCount.toLocaleString("en-US")} rows (threshold ${MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD.toLocaleString("en-US")}, ~5 GB D1 revisit point).`,
-        "The table is append-only by product decision (docs/mint-burn-flows.md § Retention).",
-        "Revisit retention: document a raised budget, or archive older rows into the dated snapshot export.",
-      ].join("\n"),
-    );
-    if (alerted) {
-      await setCache(db, ALERT_MARKER_KEY, JSON.stringify({ lastAlertedAt: nowSec, rowCount } satisfies AlertMarker));
-    }
-  }
-
   return {
     status: "degraded",
     itemCount: rowCount,
     metadata: JSON.stringify({
       rowCount,
       thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD,
-      alerted,
-      suppressedByCooldown: !dueForAlert,
     }),
   };
 }

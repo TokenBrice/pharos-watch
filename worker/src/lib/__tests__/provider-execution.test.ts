@@ -159,7 +159,6 @@ describe("provider-execution", () => {
       context.db,
       "test-provider",
       false,
-      undefined,
     );
   });
 
@@ -221,7 +220,6 @@ describe("provider-execution", () => {
         context.db,
         "test-provider",
         false,
-        undefined,
       );
     } finally {
       vi.useRealTimers();
@@ -289,7 +287,6 @@ describe("provider-execution", () => {
       context.db,
       "json-provider",
       false,
-      undefined,
     );
   });
 

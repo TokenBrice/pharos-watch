@@ -24,11 +24,9 @@ import {
   evaluateStablecoinActivePriceCoverage,
   loadPreviousStablecoinActivePriceCoverage,
 } from "../lib/stablecoin-publication-coverage";
-import { alertOnMissingActiveStablecoinPrices } from "../lib/stablecoin-publication-alerts";
 
 export interface SyncStablecoinsOptions {
   cmcApiKey?: string;
-  alertWebhookUrl?: string | null;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
   reportProgress?: CronProgressReporter;
@@ -43,7 +41,6 @@ export async function syncStablecoins(
 ): Promise<CronResult> {
   const {
     cmcApiKey,
-    alertWebhookUrl,
     coingeckoApiKey,
     chainRpcs,
     reportProgress,
@@ -60,7 +57,6 @@ export async function syncStablecoins(
     cmcApiKey,
     jupiterApiKey,
     signal,
-    alertWebhookUrl,
     coingeckoApiKey,
     chainRpcs,
     reportProgress,
@@ -147,7 +143,7 @@ export async function syncStablecoins(
     }),
   });
   if (stalenessCheck.blockedResult) {
-    await recordStablecoinsStalenessBlockOutcome(db, stalenessCheck, alertWebhookUrl);
+    await recordStablecoinsStalenessBlockOutcome(db, stalenessCheck);
     return stalenessCheck.blockedResult;
   }
   const {
@@ -162,7 +158,6 @@ export async function syncStablecoins(
     db,
     syncStartSec,
     signal,
-    alertWebhookUrl,
     coingeckoApiKey,
     rawAssetCount,
     droppedMalformedAssets,
@@ -180,11 +175,6 @@ export async function syncStablecoins(
     previousCoverage: previousActivePriceCoverage,
     previousAcceptedAssetsById: intake.previousAssetsById,
   });
-  const activePriceCoverageAlert = await alertOnMissingActiveStablecoinPrices(
-    db,
-    activePriceCoverage,
-    alertWebhookUrl,
-  );
   const result = buildStablecoinsSyncResult({
     assets,
     rawAssetCount,
@@ -215,7 +205,6 @@ export async function syncStablecoins(
     previousActivePriceCoverage,
     previousAcceptedAssetsById: intake.previousAssetsById,
     activePriceCoverage,
-    activePriceCoverageAlert,
   });
   await reportStablecoinsStage(reportProgress, "complete", "Completed stablecoins sync", {
     itemsDone: assets.length,

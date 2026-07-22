@@ -37,18 +37,13 @@ function buildProbeResponse(input: unknown, healthStatus: HealthProbeStatus = "h
 
 const fetchMock = vi.fn();
 const routeMock = vi.fn();
-const sendAlertMock = vi.fn(async () => true);
 const writeStatusProbeRunMock = vi.fn(async () => true);
 const writeStatusRawSnapshotMock = vi.fn(async () => true);
 const updateDiscrepancyObservationMock = vi.fn(async () => ({
   consecutiveDivergent: 2,
-  lastAlertAt: null,
   consecutiveProbeFailures: 0,
-  lastProbeAlertAt: null,
   persistenceSucceeded: true,
 }));
-const markDiscrepancyAlertSentMock = vi.fn(async () => true);
-const markProbeFailureAlertSentMock = vi.fn(async () => true);
 function buildRawStatus(rawOverallStatus = "healthy", freshnessDiagnostics: Array<Record<string, unknown>> = []) {
   return { rawOverallStatus, confidence: 1, causes: { overall: [] }, freshnessDiagnostics };
 }
@@ -67,7 +62,6 @@ const buildDiscrepancyMock = vi.fn((_status: unknown, _probe: unknown, _now: num
   consecutiveDivergent: streak,
 }));
 
-vi.mock("../../lib/alerts", () => ({ sendAlert: sendAlertMock }));
 vi.mock("../../lib/status-evaluation", () => ({
   computeRawStatus: computeRawStatusMock,
 }));
@@ -79,8 +73,6 @@ vi.mock("../../router", () => ({
 }));
 vi.mock("../../lib/status-reliability", () => ({
   buildDiscrepancy: buildDiscrepancyMock,
-  markDiscrepancyAlertSent: markDiscrepancyAlertSentMock,
-  markProbeFailureAlertSent: markProbeFailureAlertSentMock,
   STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC: 1800,
   STATUS_DISCREPANCY_ALERT_STREAK: 2,
   reconcileStatusState: reconcileStatusStateMock,
@@ -132,55 +124,9 @@ describe("runStatusSelfCheck", () => {
     });
     updateDiscrepancyObservationMock.mockResolvedValue({
       consecutiveDivergent: 2,
-      lastAlertAt: null,
       consecutiveProbeFailures: 0,
-      lastProbeAlertAt: null,
       persistenceSucceeded: true,
     });
-  });
-
-  it("does not mark discrepancy alert as sent when webhook delivery fails", async () => {
-    sendAlertMock.mockResolvedValueOnce(false);
-
-    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(sendAlertMock).toHaveBeenCalledTimes(1);
-    expect(markDiscrepancyAlertSentMock).not.toHaveBeenCalled();
-    expect(metadata.alertAttempted).toBe(true);
-    expect(metadata.alertSent).toBe(false);
-  });
-
-  it("marks discrepancy alert sent only after successful webhook delivery", async () => {
-    sendAlertMock.mockResolvedValueOnce(true);
-
-    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(sendAlertMock).toHaveBeenCalledTimes(1);
-    expect(markDiscrepancyAlertSentMock).toHaveBeenCalledTimes(1);
-    expect(metadata.alertAttempted).toBe(true);
-    expect(metadata.alertSent).toBe(true);
-  });
-
-  it("suppresses alerts when discrepancy state persistence fails", async () => {
-    updateDiscrepancyObservationMock.mockResolvedValueOnce({
-      consecutiveDivergent: 2,
-      lastAlertAt: null,
-      consecutiveProbeFailures: 3,
-      lastProbeAlertAt: null,
-      persistenceSucceeded: false,
-    });
-
-    const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(sendAlertMock).not.toHaveBeenCalled();
-    expect(markDiscrepancyAlertSentMock).not.toHaveBeenCalled();
-    expect(markProbeFailureAlertSentMock).not.toHaveBeenCalled();
-    expect(metadata.alertAttempted).toBe(false);
-    expect(metadata.probeFailureAlertAttempted).toBe(false);
-    expect(metadata.discrepancyPersistenceSucceeded).toBe(false);
   });
 
   it("records latency summary and slowest probes in cron metadata", async () => {
@@ -285,9 +231,7 @@ describe("runStatusSelfCheck", () => {
     });
     updateDiscrepancyObservationMock.mockResolvedValueOnce({
       consecutiveDivergent: 0,
-      lastAlertAt: null,
       consecutiveProbeFailures: 1,
-      lastProbeAlertAt: null,
       persistenceSucceeded: true,
     });
 
@@ -337,9 +281,7 @@ describe("runStatusSelfCheck", () => {
     }));
     updateDiscrepancyObservationMock.mockResolvedValueOnce({
       consecutiveDivergent: 0,
-      lastAlertAt: null,
       consecutiveProbeFailures: 0,
-      lastProbeAlertAt: null,
       persistenceSucceeded: true,
     });
 
@@ -358,7 +300,7 @@ describe("runStatusSelfCheck", () => {
     ]);
   });
 
-  it("alerts on sustained probe failures even when no status divergence exists", async () => {
+  it("records sustained probe failures even when no status divergence exists", async () => {
     fetchMock
       .mockResolvedValueOnce(new Response("{}", { status: 503 }))
       .mockResolvedValueOnce(new Response("{}", { status: 200 }));
@@ -373,26 +315,13 @@ describe("runStatusSelfCheck", () => {
     }));
     updateDiscrepancyObservationMock.mockResolvedValueOnce({
       consecutiveDivergent: 0,
-      lastAlertAt: null,
       consecutiveProbeFailures: 3,
-      lastProbeAlertAt: null,
       persistenceSucceeded: true,
     });
 
     const result = await runStatusSelfCheck({} as D1Database, { selfUrl: "https://staging.api.pharos.watch" });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
-    expect(sendAlertMock).toHaveBeenCalledTimes(1);
-    expect(sendAlertMock).toHaveBeenCalledWith(
-      null,
-      "Status probe failures detected",
-      expect.stringContaining("streak=3"),
-    );
-    expect(markDiscrepancyAlertSentMock).not.toHaveBeenCalled();
-    expect(markProbeFailureAlertSentMock).toHaveBeenCalledTimes(1);
-    expect(metadata.alertAttempted).toBe(false);
-    expect(metadata.probeFailureAlertAttempted).toBe(true);
-    expect(metadata.probeFailureAlertSent).toBe(true);
     expect(metadata.probeFailureStreak).toBe(3);
     expect(metadata.probeBaseUrl).toBe("https://staging.api.pharos.watch");
   });
@@ -424,7 +353,6 @@ describe("runStatusSelfCheck", () => {
     const result = await runStatusSelfCheck({} as D1Database, {
       selfUrl: "https://api.pharos.watch",
       ctx,
-      alertWebhookUrl: null,
       siteApiSharedSecret: "site-secret",
     });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -479,7 +407,6 @@ describe("runStatusSelfCheck", () => {
     const result = await runStatusSelfCheck({} as D1Database, {
       selfUrl: "https://api.pharos.watch",
       ctx,
-      alertWebhookUrl: null,
       siteApiSharedSecret: null,
     });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -496,7 +423,7 @@ describe("runStatusSelfCheck", () => {
     expect(metadata.probePlanes?.external?.origins).toEqual(expect.arrayContaining(["https://site-api.pharos.watch"]));
   });
 
-  it("surfaces internal-vs-external discrepancies in details and alerts", async () => {
+  it("surfaces internal-vs-external discrepancies in details", async () => {
     const ctx = {
       waitUntil: vi.fn(),
       passThroughOnException: vi.fn(),
@@ -535,21 +462,17 @@ describe("runStatusSelfCheck", () => {
     }));
     updateDiscrepancyObservationMock.mockResolvedValueOnce({
       consecutiveDivergent: 0,
-      lastAlertAt: null,
       consecutiveProbeFailures: 3,
-      lastProbeAlertAt: null,
       persistenceSucceeded: true,
     });
 
     const result = await runStatusSelfCheck({} as D1Database, {
       selfUrl: "https://api.pharos.watch",
       ctx,
-      alertWebhookUrl: null,
       siteApiSharedSecret: "site-secret",
     });
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       internalExternalDiscrepancy?: { reason?: string; hasDivergence?: boolean };
-      probeFailureAlertAttempted?: boolean;
     };
     const latestProbeWriteCall = writeStatusProbeRunMock.mock.calls[writeStatusProbeRunMock.mock.calls.length - 1] as
       unknown[] | undefined;
@@ -567,12 +490,6 @@ describe("runStatusSelfCheck", () => {
       hasDivergence: true,
       reason: "external-worse",
     });
-    expect(metadata.probeFailureAlertAttempted).toBe(true);
-    expect(sendAlertMock).toHaveBeenCalledWith(
-      null,
-      "Status probe failures detected",
-      expect.stringContaining("comparison=external-worse"),
-    );
   });
 
   it("treats missing cache 503s as bootstrap misses only before the producer cron has ever run", async () => {
@@ -602,9 +519,7 @@ describe("health probe semantic classification", () => {
     });
     updateDiscrepancyObservationMock.mockResolvedValue({
       consecutiveDivergent: 0,
-      lastAlertAt: null,
       consecutiveProbeFailures: 0,
-      lastProbeAlertAt: null,
       persistenceSucceeded: true,
     });
     buildDiscrepancyMock.mockImplementation((_status: unknown, _probe: unknown, _now: number, streak: number) => ({

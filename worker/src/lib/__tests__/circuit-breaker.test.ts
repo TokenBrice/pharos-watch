@@ -1,13 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import type { CircuitRecord } from "../circuit-breaker";
-
-// Mock sendAlert to prevent real HTTP calls
-vi.mock("../alerts", () => ({
-  sendAlert: vi.fn(() => Promise.resolve()),
-}));
-
-// Import after mocking
 import {
   getCircuitRecord,
   shouldAttemptFetch,
@@ -17,10 +10,7 @@ import {
   filterInactiveCircuitStates,
   mapCronStatusToCircuitOutcome,
 } from "../circuit-breaker";
-import { sendAlert } from "../alerts";
 import { CIRCUIT_SOURCE } from "../constants";
-
-const mockedAlert = vi.mocked(sendAlert);
 
 function makeRecord(overrides: Partial<CircuitRecord> = {}): CircuitRecord {
   return {
@@ -70,7 +60,6 @@ describe("circuit-breaker", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-01-15T12:00:00Z"));
-    mockedAlert.mockClear();
   });
 
   afterEach(() => {
@@ -216,7 +205,7 @@ describe("circuit-breaker", () => {
       expect(true).toBe(true);
     });
 
-    it("transitions half-open → closed and fires recovery alert", async () => {
+    it("transitions half-open → closed", async () => {
       const stored = makeRecord({ state: "half-open", consecutiveFailures: 3 });
       const db = mockDbWithCircuit("src", stored);
       const outcome = await recordOutcome(db, "src", true);
@@ -226,30 +215,21 @@ describe("circuit-breaker", () => {
         state: "closed",
         consecutiveFailures: 0,
       });
-      expect(mockedAlert).toHaveBeenCalledWith(
-        null,
-        "Circuit closed: src",
-        expect.stringContaining("recovered"),
-      );
     });
 
-    it("transitions open → closed and fires recovery alert", async () => {
+    it("transitions open → closed", async () => {
       const now = Math.floor(Date.now() / 1000);
       const stored = makeRecord({ state: "open", consecutiveFailures: 5, openedAt: now - 3600 });
       const db = mockDbWithCircuit("src", stored);
-      await recordOutcome(db, "src", true);
-      expect(mockedAlert).toHaveBeenCalledWith(
-        null,
-        "Circuit closed: src",
-        expect.stringContaining("recovered"),
-      );
+      const outcome = await recordOutcome(db, "src", true);
+      expect(outcome.after.state).toBe("closed");
     });
 
-    it("does not fire alert when already closed", async () => {
+    it("stays closed after a successful outcome", async () => {
       const stored = makeRecord({ state: "closed" });
       const db = mockDbWithCircuit("src", stored);
-      await recordOutcome(db, "src", true);
-      expect(mockedAlert).not.toHaveBeenCalled();
+      const outcome = await recordOutcome(db, "src", true);
+      expect(outcome.after.state).toBe("closed");
     });
 
     it("stores only the authoritative circuit record cache row", async () => {
@@ -294,37 +274,30 @@ describe("circuit-breaker", () => {
     it("opens circuit at threshold (3 failures)", async () => {
       const stored = makeRecord({ state: "closed", consecutiveFailures: 2 });
       const db = mockDbWithCircuit("src", stored);
-      await recordOutcome(db, "src", false);
-      expect(mockedAlert).toHaveBeenCalledWith(
-        null,
-        "Circuit OPEN: src",
-        expect.stringContaining("3 consecutive"),
-      );
+      const outcome = await recordOutcome(db, "src", false);
+      expect(outcome.after).toMatchObject({ state: "open", consecutiveFailures: 3 });
     });
 
     it("does not open circuit before threshold", async () => {
       const stored = makeRecord({ state: "closed", consecutiveFailures: 1 });
       const db = mockDbWithCircuit("src", stored);
-      await recordOutcome(db, "src", false);
-      expect(mockedAlert).not.toHaveBeenCalled();
+      const outcome = await recordOutcome(db, "src", false);
+      expect(outcome.after).toMatchObject({ state: "closed", consecutiveFailures: 2 });
     });
 
     it("stays open on further failures after opening", async () => {
       const now = Math.floor(Date.now() / 1000);
       const stored = makeRecord({ state: "open", consecutiveFailures: 5, openedAt: now - 100 });
       const db = mockDbWithCircuit("src", stored);
-      await recordOutcome(db, "src", false);
-      // Should not fire a new "open" alert since already open
-      expect(mockedAlert).not.toHaveBeenCalled();
+      const outcome = await recordOutcome(db, "src", false);
+      expect(outcome.after).toMatchObject({ state: "open", consecutiveFailures: 6 });
     });
 
     it("half-open probe failure reopens circuit", async () => {
       const stored = makeRecord({ state: "half-open", consecutiveFailures: 3 });
       const db = mockDbWithCircuit("src", stored);
-      await recordOutcome(db, "src", false);
-      // Probe failed — circuit should reopen (no new alert, just state change)
-      // The function transitions back to open without firing the "open" alert again
-      expect(mockedAlert).not.toHaveBeenCalled();
+      const outcome = await recordOutcome(db, "src", false);
+      expect(outcome.after).toMatchObject({ state: "open", consecutiveFailures: 4 });
     });
   });
 
@@ -394,19 +367,21 @@ describe("circuit-breaker", () => {
       const stored = makeRecord({ state: "half-open", consecutiveFailures: 3 });
       const db = mockDbWithCircuit("src", stored);
       await recoverBreakerOnNoCandidate(db, "src");
-      // A recovery success transition fires the "Circuit closed" alert.
-      expect(mockedAlert).toHaveBeenCalledWith(
-        null,
-        "Circuit closed: src",
-        expect.stringContaining("recovered"),
-      );
+      const write = db
+        .getHistory()
+        .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+      expect(write?.binds[0]).toBe("circuit:src");
+      expect(JSON.parse(String(write?.binds[1]))).toMatchObject({ state: "closed", consecutiveFailures: 0 });
     });
 
     it("is a no-op when breaker is already closed", async () => {
       const stored = makeRecord({ state: "closed" });
       const db = mockDbWithCircuit("src", stored);
       await recoverBreakerOnNoCandidate(db, "src");
-      expect(mockedAlert).not.toHaveBeenCalled();
+      const write = db
+        .getHistory()
+        .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+      expect(write).toBeUndefined();
     });
 
     it("records success when breaker is open (allowing recovery on next probe window)", async () => {
@@ -414,11 +389,11 @@ describe("circuit-breaker", () => {
       const stored = makeRecord({ state: "open", consecutiveFailures: 5, openedAt: now - 3600 });
       const db = mockDbWithCircuit("src", stored);
       await recoverBreakerOnNoCandidate(db, "src");
-      expect(mockedAlert).toHaveBeenCalledWith(
-        null,
-        "Circuit closed: src",
-        expect.stringContaining("recovered"),
-      );
+      const write = db
+        .getHistory()
+        .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO cache"));
+      expect(write?.binds[0]).toBe("circuit:src");
+      expect(JSON.parse(String(write?.binds[1]))).toMatchObject({ state: "closed", consecutiveFailures: 0 });
     });
   });
 });

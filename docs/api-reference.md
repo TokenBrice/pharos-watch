@@ -284,7 +284,6 @@ Many router-dispatched mutating admin endpoints also support optional `Idempoten
 - `POST /api/reset-circuit-breaker`
 - `POST /api/kill-cron-in-flight`
 - `POST /api/telegram-pending`
-- `POST /api/alert-broker-canary` for live execution (`execute=true`); dry-run previews bypass idempotency
 - `POST /api/admin-telegram-resend`
 - `POST /api/admin-telegram-broadcast`
 - `POST /api/admin-telegram-delivery-control` (GET inspection bypasses idempotency)
@@ -296,8 +295,6 @@ When an `Idempotency-Key` is supplied on one of those routes, the worker fingerp
 Once execution has been marked as started, an unconfirmed outcome is never retried automatically. An in-flight duplicate, a handler throw after that point, or a terminal response that cannot be confirmed as persisted returns `503` with `error: "execution_unknown"`; subsequent requests with the same key also return `503` with `X-Idempotent-Replay: true` and do not invoke the handler again. Operators must reconcile whether the external effect occurred before deciding whether to submit a new idempotency key.
 
 `POST /api/telegram-pending` is conditional: mutating clears use idempotency, but dry-run previews (`dry_run`, `dryRun`, or `dry-run`) bypass idempotency bookkeeping and return the current match count directly.
-
-`POST /api/alert-broker-canary` is also conditional: the default dry-run bypasses idempotency bookkeeping. Live execution requires `?execute=true`, the documented confirmation value, and an `Idempotency-Key`; the key is also used to derive a fixed synthetic condition identity.
 
 The worker’s idempotent admin route helpers now authenticate first and only then enter idempotency bookkeeping. That keeps the helper contract aligned with its name and prevents future admin endpoints from accidentally becoming “idempotent but unauthenticated” through wrapper misuse.
 
@@ -5158,31 +5155,6 @@ Clears rows from `telegram_pending_alerts`. Safe by default: refuses unfiltered 
 ```
 
 **Error responses:** `400` when neither filter is supplied, when both are supplied, or when `older_than_sec` is not a positive integer.
-
-### `POST /api/alert-broker-canary`
-
-Runs the authenticated direct-alert acceptance canary against the configured `ALERT_WEBHOOK_URL`. The request is dry-run by default and never accepts a caller-supplied target, title, or message. The preview reports whether a target is configured and the guards required for live execution without sending a webhook.
-
-Live execution requires `?execute=true&confirm=emit-incident-and-recovery` plus an `Idempotency-Key` header between 8 and 128 characters. It sends one fixed synthetic incident followed by one recovery and returns whether both direct delivery attempts passed. Failed webhook delivery returns `502`; the response includes both attempt outcomes, and no broker condition or delivery row is written.
-
-**Authentication:** Cloudflare Access admin plus `X-Pharos-Admin: 1`. Live execution additionally requires `Idempotency-Key`.
-
-**Dry-run response**
-
-```json
-{
-  "ok": true,
-  "dryRun": true,
-  "targetConfigured": true,
-  "wouldEmit": ["incident", "recovery"],
-  "executeQuery": "?execute=true&confirm=emit-incident-and-recovery",
-  "requiresIdempotencyKey": true
-}
-```
-
-**Live response:** preserves the compatibility keys `conditionKey`, `incident`, `recovery`, exactly two `deliveries`, `transitionContractSatisfied`, `deliverySucceeded`, and `failedDeliveryVisible`.
-
-**Error responses:** `400` when confirmation or the idempotency key is missing/invalid; `409` when `ALERT_WEBHOOK_URL` is not configured; `502` when either webhook delivery failed.
 
 ### `POST /api/reset-cron-lease`
 

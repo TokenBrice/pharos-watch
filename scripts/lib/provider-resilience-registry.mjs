@@ -474,22 +474,6 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     requiredMarkers: ["cancelResponseBodyQuietly", "rateLimit", "budgetExhausted", "signal"],
   },
   {
-    id: "webhook-alerts",
-    family: "operator-alerts",
-    description: "Discord/Slack webhook alert delivery.",
-    files: ["worker/src/lib/alerts.ts"],
-    tests: ["worker/src/lib/__tests__/alerts.test.ts"],
-    allowBareFetch: true,
-    directFetchJustification: "Best-effort operator alert delivery must not throw back into cron/status paths.",
-    resilience: {
-      transport: "direct-fetch",
-      timeout: "Uses AbortSignal.timeout().",
-      body: "Drains success bodies and reads bounded failure text.",
-      circuitSources: [],
-    },
-    requiredMarkers: ["AbortSignal.timeout", "drainResponseBody", "truncateFailureBody"],
-  },
-  {
     id: "cloudflare-d1-usage-status",
     family: "operator-status",
     description: "Cloudflare D1 analytics status fetches.",

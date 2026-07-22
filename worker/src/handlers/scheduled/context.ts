@@ -8,7 +8,6 @@ import {
   type CronLeaseOptions,
 } from "../../lib/cron-lease";
 import { logCronRun, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
-import { normalizeWebhookUrl, sendAlert } from "../../lib/alerts";
 import { normalizeCgApiKey } from "../../lib/coingecko";
 import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { normalizeCronMetadata, mergeCronMetadataWithLease } from "../../lib/cron-metadata";
@@ -92,7 +91,6 @@ export interface ScheduledRuntimeContext {
   mintBurnDisabledSymbols: string[];
   mintBurnFreshnessConfig: MintBurnFreshnessConfig;
   coingeckoApiKey: string | null;
-  alertWebhookUrl: string | null;
   chainRpcs: Map<string, ChainRpcConfig>;
   runLeasedCron: (
     job: string,
@@ -187,7 +185,6 @@ export function createScheduledRuntimeContext(
   const mintBurnDisabledSymbols = parseCsvEnv(env.MINT_BURN_DISABLED_SYMBOLS);
   const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
   const coingeckoApiKey = normalizeCgApiKey(env.COINGECKO_API_KEY);
-  const alertWebhookUrl = normalizeWebhookUrl(env.ALERT_WEBHOOK_URL);
   const chainRpcs = buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
   const workerJobLedgerMode = normalizeWorkerJobLedgerMode(env.WORKER_JOB_LEDGER_MODE);
   const workerJobLedgerAllowlist = parseCsvEnv(env.WORKER_JOB_LEDGER_ALLOWLIST);
@@ -233,7 +230,6 @@ export function createScheduledRuntimeContext(
     mintBurnDisabledSymbols,
     mintBurnFreshnessConfig,
     coingeckoApiKey,
-    alertWebhookUrl,
     chainRpcs,
     runLeasedCron: async (job, fn) => {
       const descriptor = getScheduledTaskDescriptor(scheduled.scheduleKey, job);
@@ -418,7 +414,7 @@ export function createScheduledRuntimeContext(
           const terminalResult = { ...result, metadata };
           await finishLedgerResult(terminalResult);
           return terminalResult;
-        }, (title, message) => sendAlert(alertWebhookUrl, title, message), {
+        }, {
           slotStartedAt: scheduled.slotStartedAt,
           timeoutBudget,
           abortSignal: combinedSlotSignal,

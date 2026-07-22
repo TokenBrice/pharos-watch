@@ -1,4 +1,3 @@
-import { toErrorMessage } from "../../lib/error-utils";
 /**
  * Four-hourly reserve-sync trigger (11 * / 4 * * *):
  *   sync-live-reserves (2) → sync-redemption-backstops (0) → sync-kinesis-supply (1) → reserve-post-sync-watchdog (1)
@@ -15,8 +14,7 @@ import { getCache, setCache } from "../../lib/db-cache";
 import { SNAPSHOT_KEYS } from "../../cron/telegram-alert-snapshots";
 import { computeReserveCompositionOverview, getMaxSyncAge } from "../../lib/live-reserves-store";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { sendAlert } from "../../lib/alerts";
-import { logCronEvent, recordCronFailure, type CronResult } from "../../lib/cron-logger";
+import { recordCronFailure, type CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups, type ScheduledSlotGroup } from "./slot-groups";
 import {
@@ -47,50 +45,8 @@ import {
 } from "../../lib/reserve-recovery-fault-injection";
 import { isReserveRecoveryFaultInjectionEnabled } from "../../lib/env";
 
-const PERSISTENTLY_STALE_ALERT_COUNT_THRESHOLD = 3;
-const PERSISTENTLY_STALE_ALERT_MAX_AGE_SEC = 21 * DAY_SECONDS;
-
-function reserveAlertTargetClass(runtime: ScheduledRuntimeContext): string {
-  if (!runtime.alertWebhookUrl) return "missing-webhook";
-  return runtime.alertWebhookUrl.includes("discord.com/api/webhooks") ? "discord-webhook" : "webhook";
-}
-
-async function sendReserveSyncAlert(
-  runtime: ScheduledRuntimeContext,
-  alertType: string,
-  title: string,
-  message: string,
-  metadata?: Record<string, unknown>,
-): Promise<void> {
-  try {
-    const delivered = await sendAlert(runtime.alertWebhookUrl, title, message);
-    if (delivered) return;
-    await logCronEvent(runtime.db, {
-      job: "reserve-post-sync-watchdog",
-      eventType: "reserve-alert-delivery-failed",
-      severity: "warning",
-      message: "Reserve-sync alert delivery failed.",
-      metadata: {
-        alertType,
-        deliveryTargetClass: reserveAlertTargetClass(runtime),
-        ...metadata,
-      },
-    });
-  } catch (err) {
-    await logCronEvent(runtime.db, {
-      job: "reserve-post-sync-watchdog",
-      eventType: "reserve-alert-delivery-failed",
-      severity: "warning",
-      message: "Reserve-sync alert delivery threw unexpectedly.",
-      metadata: {
-        alertType,
-        deliveryTargetClass: reserveAlertTargetClass(runtime),
-        error: toErrorMessage(err),
-        ...metadata,
-      },
-    });
-  }
-}
+const PERSISTENTLY_STALE_WARNING_COUNT_THRESHOLD = 3;
+const PERSISTENTLY_STALE_WARNING_MAX_AGE_SEC = 21 * DAY_SECONDS;
 
 async function runReservePostSyncWatchdog(runtime: ScheduledRuntimeContext, signal?: AbortSignal): Promise<CronResult> {
   const degradedReasons: string[] = [];
@@ -111,13 +67,6 @@ async function runReservePostSyncWatchdog(runtime: ScheduledRuntimeContext, sign
         .map((d) => `${d.id}: live=${d.liveScore}, curated=${d.curatedScore} (Δ${d.delta})`)
         .join("\n");
       console.warn(`[live-reserves] Collateral drift detected:\n${driftSummary}`);
-      await sendReserveSyncAlert(
-        runtime,
-        "collateral-score-drift",
-        "Collateral Score Drift",
-        `${drift.driftCoins.length} coin(s) with >15pt live/curated divergence:\n${driftSummary}`,
-        { driftCoinCount: drift.driftCoins.length },
-      );
     }
     if (drift.fallbackCoins.length > 5) {
       console.warn(`[live-reserves] ${drift.fallbackCoins.length} live-enabled coins using curated fallback`);
@@ -147,17 +96,6 @@ async function runReservePostSyncWatchdog(runtime: ScheduledRuntimeContext, sign
       SYNC_ORDERED_CONFIGURED_COINS.map((coin) => coin.id),
     );
     throwIfAborted(signal);
-    // Alert after ~3 missed 4-hourly runs, matching the "several missed runs"
-    // posture the previous 6h threshold gave at the prior hourly cadence.
-    if (maxSyncAgeSec > 12 * 3600) {
-      await sendReserveSyncAlert(
-        runtime,
-        "live-reserve-sync-stale",
-        "Live reserve sync stale",
-        `Oldest configured reserve has not been attempted in ${Math.round(maxSyncAgeSec / 3600)}h. Check cron scheduler.`,
-        { maxAgeHours: Math.round(maxSyncAgeSec / 3600) },
-      );
-    }
   } catch (e) {
     rethrowIfAborted(e, signal);
     degradedReasons.push("drift-cache-age-check-failed");
@@ -171,24 +109,14 @@ async function runReservePostSyncWatchdog(runtime: ScheduledRuntimeContext, sign
     const persistentlyStale = overview.persistentlyStaleIndependentCoins;
     persistentlyStaleIndependentCoinCount = persistentlyStale.length;
     maxPersistentlyStaleAgeSec = persistentlyStale.length > 0 ? persistentlyStale[0].ageSec : 0;
-    const shouldAlert =
-      persistentlyStale.length > PERSISTENTLY_STALE_ALERT_COUNT_THRESHOLD ||
-      maxPersistentlyStaleAgeSec > PERSISTENTLY_STALE_ALERT_MAX_AGE_SEC;
-    if (shouldAlert) {
+    const shouldWarn =
+      persistentlyStale.length > PERSISTENTLY_STALE_WARNING_COUNT_THRESHOLD ||
+      maxPersistentlyStaleAgeSec > PERSISTENTLY_STALE_WARNING_MAX_AGE_SEC;
+    if (shouldWarn) {
       const staleSummary = persistentlyStale
         .map((entry) => `${entry.stablecoinId}: ${Math.round(entry.ageSec / DAY_SECONDS)}d`)
         .join("\n");
       console.warn(`[live-reserves] Persistently-stale independent sources:\n${staleSummary}`);
-      await sendReserveSyncAlert(
-        runtime,
-        "persistently-stale-independent-sources",
-        "Persistently-stale independent reserve sources",
-        `${persistentlyStale.length} coin(s) configured-live with degraded/error status and last success >14d ago:\n${staleSummary}`,
-        {
-          staleCoinCount: persistentlyStale.length,
-          maxStaleAgeDays: Math.round(maxPersistentlyStaleAgeSec / DAY_SECONDS),
-        },
-      );
     }
   } catch (e) {
     rethrowIfAborted(e, signal);

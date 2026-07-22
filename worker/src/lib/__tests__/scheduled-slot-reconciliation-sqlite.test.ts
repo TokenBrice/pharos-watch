@@ -228,7 +228,6 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
         async () => {
           throw new Error("sweep failed");
         },
-        undefined,
         {
           slotStartedAt: 1_772_000_000,
           producer: {

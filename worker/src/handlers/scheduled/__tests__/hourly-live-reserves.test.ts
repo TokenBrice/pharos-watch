@@ -18,9 +18,6 @@ vi.mock("../../../lib/live-reserves-store", () => ({
   getMaxSyncAge: vi.fn(),
   computeReserveCompositionOverview: vi.fn(),
 }));
-vi.mock("../../../lib/alerts", () => ({
-  sendAlert: vi.fn(async () => true),
-}));
 vi.mock("../../../lib/db-cache", () => ({
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => {}),
@@ -70,7 +67,6 @@ import { syncRedemptionBackstops } from "../../../cron/sync-redemption-backstops
 import { syncKinesisSupply } from "../../../cron/sync-kinesis-supply";
 import { checkCollateralDrift } from "../../../lib/collateral-drift";
 import { computeReserveCompositionOverview, getMaxSyncAge } from "../../../lib/live-reserves-store";
-import { sendAlert } from "../../../lib/alerts";
 import { getCache, setCache } from "../../../lib/db-cache";
 import { ALERT_RESERVE_SOURCE_GENERATION } from "../../../lib/alert-reserve-source-cache";
 import { SNAPSHOT_KEYS } from "../../../cron/telegram-alert-snapshots";
@@ -161,7 +157,6 @@ describe("runFourHourlyReserveSyncSlot", () => {
       mintBurnDisabledSymbols: [],
       mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
       coingeckoApiKey: null,
-      alertWebhookUrl: null,
       chainRpcs: new Map(),
       runLeasedCron: runLeasedCron as unknown as ScheduledRuntimeContext["runLeasedCron"],
       ...(recoveryCheckpoint ? { recoveryCheckpoint } : {}),
@@ -284,12 +279,6 @@ describe("runFourHourlyReserveSyncSlot", () => {
       expect.stringContaining("[cron-failure:reserve-post-sync-watchdog]"),
       expect.any(String),
     );
-  });
-
-  it("does not send reserve alerts when all watched conditions are healthy", async () => {
-    await runFourHourlyReserveSyncSlot(buildRuntime());
-
-    expect(sendAlert).not.toHaveBeenCalled();
   });
 
   it.each([

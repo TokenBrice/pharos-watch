@@ -67,7 +67,6 @@ interface StablecoinsIntakeStageOptions extends CronStageContext {
   syncStartSec: number;
   cmcApiKey?: string;
   jupiterApiKey?: string | null;
-  alertWebhookUrl?: string | null;
   coingeckoApiKey?: string | null;
   addressPriceProvider?: AddressPriceProviderRuntimeConfig;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -117,7 +116,6 @@ export async function runStablecoinsIntakeStage(
         options.cmcApiKey,
         options.syncStartSec,
         options.signal,
-        options.alertWebhookUrl,
         options.coingeckoApiKey,
         options.reportProgress,
         options.jupiterApiKey,

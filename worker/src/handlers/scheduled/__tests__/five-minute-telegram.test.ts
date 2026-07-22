@@ -47,7 +47,6 @@ function buildRuntime(token?: string, recapRolloutMode: string = "public"): Sche
     mintBurnDisabledSymbols: [],
     mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
     coingeckoApiKey: null,
-    alertWebhookUrl: null,
     chainRpcs: new Map(),
     runLeasedCron: vi.fn(async (_job, fn) => fn(new AbortController().signal, vi.fn())),
   };

@@ -15,7 +15,6 @@ function buildRuntime(prepare: D1Database["prepare"]): ScheduledRuntimeContext {
     mintBurnDisabledSymbols: [],
     mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
     coingeckoApiKey: null,
-    alertWebhookUrl: null,
     chainRpcs: new Map(),
     runLeasedCron: vi.fn(),
   };

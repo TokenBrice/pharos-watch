@@ -1,5 +1,4 @@
 import type { CronResult } from "../lib/cron-logger";
-import { sendAlert } from "../lib/alerts";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { toErrorMessage } from "../lib/error-utils";
 import { API_ORIGIN, OPS_API_ORIGIN, SITE_API_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
@@ -15,10 +14,6 @@ import { route } from "../router";
 import {
   buildDiscrepancy,
   reconcileStatusState,
-  markProbeFailureAlertSent,
-  markDiscrepancyAlertSent,
-  STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC,
-  STATUS_DISCREPANCY_ALERT_STREAK,
   updateDiscrepancyObservation,
   writeStatusProbeRun,
   type StatusLevel,
@@ -84,7 +79,6 @@ export interface StatusSelfCheckOptions {
   signal?: AbortSignal;
   ctx?: ExecutionContext;
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
-  alertWebhookUrl?: string | null;
   siteApiSharedSecret?: string | null;
   d1StatusConfig?: CloudflareD1StatusConfig;
   workerJobLedgerMode?: string;
@@ -115,7 +109,6 @@ export const STATUS_DEEP_PROBE_ROTATION_BUCKETS = 3;
 export const STATUS_DEEP_PROBE_FULL_SWEEP_WINDOW_SEC =
   STATUS_SELF_CHECK_INTERVAL_SEC * STATUS_DEEP_PROBE_ROTATION_BUCKETS;
 const PROBE_TIMEOUT_MS = 10_000;
-const PROBE_FAILURE_ALERT_THRESHOLD = 3;
 const OPS_API_ACCESS_GATE_EXPECTED_STATUSES = [302, 403] as const;
 const SITE_API_ACCESS_GATE_EXPECTED_STATUSES = [401, 403] as const;
 const BOOTSTRAP_CACHE_PRODUCER_BY_PATH: Record<string, string> = {
@@ -652,24 +645,6 @@ async function collectStatusSelfCheckProbes(
   };
 }
 
-function shouldSendAlert(
-  guard: {
-    persistenceSucceeded: boolean;
-    triggered: boolean;
-    streakMet: boolean;
-    lastAlertAt: number | null;
-  },
-  now: number,
-  cooldownSec: number,
-): boolean {
-  return (
-    guard.persistenceSucceeded &&
-    guard.triggered &&
-    guard.streakMet &&
-    (guard.lastAlertAt == null || now - guard.lastAlertAt >= cooldownSec)
-  );
-}
-
 export async function runStatusSelfCheck(db: D1Database, options: StatusSelfCheckOptions = {}): Promise<CronResult> {
   const now = Math.floor(Date.now() / 1000);
   const d1CapacityMonitoring = options.d1StatusConfig
@@ -757,57 +732,6 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   const discrepancyState = await updateDiscrepancyObservation(db, now, discrepancyObserved, hasProbeFailure);
   const discrepancy = buildDiscrepancy(effectiveStatus, probeSummary, now, discrepancyState.consecutiveDivergent);
 
-  const shouldDiscrepancyAlert = shouldSendAlert(
-    {
-      persistenceSucceeded: discrepancyState.persistenceSucceeded,
-      triggered: discrepancy.hasDivergence,
-      streakMet: discrepancyState.consecutiveDivergent >= STATUS_DISCREPANCY_ALERT_STREAK,
-      lastAlertAt: discrepancyState.lastAlertAt,
-    },
-    now,
-    STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC,
-  );
-  const shouldProbeFailureAlert = shouldSendAlert(
-    {
-      persistenceSucceeded: discrepancyState.persistenceSucceeded,
-      triggered: hasProbeFailure,
-      streakMet: discrepancyState.consecutiveProbeFailures >= PROBE_FAILURE_ALERT_THRESHOLD,
-      lastAlertAt: discrepancyState.lastProbeAlertAt,
-    },
-    now,
-    STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC,
-  );
-  const probeComparisonAlertSegment =
-    `internal=${internalExternalDiscrepancy.internalStatus}, external=${internalExternalDiscrepancy.externalStatus}, ` +
-    `comparison=${internalExternalDiscrepancy.reason}, comparisonDelta=${internalExternalDiscrepancy.severityDelta}`;
-
-  let discrepancyAlertSent = false;
-  if (shouldDiscrepancyAlert) {
-    discrepancyAlertSent = await sendAlert(
-      options.alertWebhookUrl ?? null,
-      "Status divergence detected",
-      `effective=${effectiveStatus}, raw=${raw.rawOverallStatus}, probe=${probeStatus}, ` +
-        `delta=${discrepancy.severityDelta}, streak=${discrepancyState.consecutiveDivergent}, ` +
-        probeComparisonAlertSegment,
-    );
-    if (discrepancyAlertSent) {
-      await markDiscrepancyAlertSent(db, now);
-    }
-  }
-
-  let probeFailureAlertSent = false;
-  if (shouldProbeFailureAlert) {
-    probeFailureAlertSent = await sendAlert(
-      options.alertWebhookUrl ?? null,
-      "Status probe failures detected",
-      `probe=${probeStatus}, failures=${failCount}/${sampleCount}, ` +
-        `streak=${discrepancyState.consecutiveProbeFailures}, ${probeComparisonAlertSegment}`,
-    );
-    if (probeFailureAlertSent) {
-      await markProbeFailureAlertSent(db, now);
-    }
-  }
-
   return {
     status: probeStatus === "stale" ? "degraded" : "ok",
     itemCount: sampleCount,
@@ -833,10 +757,6 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       probeBaseUrl: probeBaseUrl.origin,
       probeMode,
       probeFailureStreak: discrepancyState.consecutiveProbeFailures,
-      alertAttempted: shouldDiscrepancyAlert,
-      alertSent: discrepancyAlertSent,
-      probeFailureAlertAttempted: shouldProbeFailureAlert,
-      probeFailureAlertSent,
       freshnessDiagnostics: raw.freshnessDiagnostics,
       d1CapacityMonitoring,
     }),

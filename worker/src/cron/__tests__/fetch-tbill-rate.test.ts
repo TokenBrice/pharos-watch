@@ -213,7 +213,6 @@ function okExtendedBenchmarkMocks(): Record<string, MockUrlResponse> {
 /** Banxico requires a token; pass via env. */
 const BANXICO_TEST_ENV = { BANXICO_TOKEN: "test-token" } as const;
 const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
-const GBP_RETAINED_FALLBACK_DIRECT_ALERT_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-alert:direct:v1";
 
 describe("fetchTbillRate", () => {
   const db = {} as D1Database;
@@ -556,8 +555,7 @@ describe("fetchTbillRate", () => {
     expect(metadata.gbpRate).toBe(4.05);
     expect(metadata.gbpRetainedFallbackActive).toBe(true);
     expect(metadata.gbpRetainedFallbackStreak).toBe(1);
-    expect(metadata.gbpRetainedFallbackAlerted).toBe(false);
-    expect(metadata.gbpRetainedFallbackWebhookAlerted).toBe(false);
+    expect(metadata.gbpRetainedFallbackEventThreshold).toBe(2);
     expect(metadata.gbpResponseResolvedProvider).toBeNull();
     expect(metadata.gbpResponseAttempts).toEqual([
       expect.objectContaining({ provider: "fred-sonia-compounded-index", failure: "transport-failed" }),
@@ -585,9 +583,7 @@ describe("fetchTbillRate", () => {
     expect(logCronEvent).not.toHaveBeenCalled();
   });
 
-  it("alerts and logs a warning when the retained GBP SONIA fallback repeats", async () => {
-    const alertFetch = vi.fn(async () => new Response("ok", { status: 200 }));
-    vi.stubGlobal("fetch", alertFetch);
+  it("logs a structured warning when the retained GBP SONIA fallback repeats", async () => {
     const legacyLastAlertedAt = Math.floor(Date.now() / 1000) - 3600;
     mockByUrl({
       "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
@@ -621,29 +617,20 @@ describe("fetchTbillRate", () => {
 
     const result = await fetchTbillRate(db, undefined, {
       ...BANXICO_TEST_ENV,
-      ALERT_WEBHOOK_URL: "https://hooks.slack.com/services/test",
     });
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
 
     expect(result.status).toBe("degraded");
-    expect(alertFetch).toHaveBeenCalledTimes(1);
     expect(metadata).toMatchObject({
       gbpRetainedFallbackActive: true,
       gbpRetainedFallbackStreak: 2,
-      gbpRetainedFallbackAlerted: true,
-      gbpRetainedFallbackWebhookAlerted: true,
-      gbpRetainedFallbackSuppressedByCooldown: false,
-      gbpRetainedFallbackWebhookConfigured: true,
+      gbpRetainedFallbackEventThreshold: 2,
     });
     expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
       consecutiveRetainedRuns: 2,
       firstRetainedAt: 1774479600,
-      lastAlertedAt: legacyLastAlertedAt,
       lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
       lastMarketSource: "fred-sonia-compounded-index",
-    });
-    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_DIRECT_ALERT_CACHE_KEY)).toMatchObject({
-      lastAlertedAt: expect.any(Number),
     });
     expect(logCronEvent).toHaveBeenCalledWith(
       db,
@@ -657,146 +644,9 @@ describe("fetchTbillRate", () => {
           fallbackMode: "gbp-sonia-compounded-index-failed-retained",
           lastMarketSource: "fred-sonia-compounded-index",
           lastMarketRecordDate: "2026-03-25",
-          webhookAlerted: true,
         }),
       }),
     );
-  });
-
-  it("does not start the retained GBP SONIA fallback alert cooldown when the webhook fails", async () => {
-    const alertFetch = vi.fn(async () => new Response("temporary outage", { status: 500 }));
-    vi.stubGlobal("fetch", alertFetch);
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
-      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": null,
-      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": null,
-      "bankofengland.co.uk": null,
-    });
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rates") return previousRiskFreeRatesCacheWithGbp();
-      if (key === GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY) {
-        return {
-          value: JSON.stringify({
-            consecutiveRetainedRuns: 1,
-            firstRetainedAt: 1774479600,
-            lastRetainedAt: 1774479600,
-            lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
-            lastMarketSource: "fred-sonia-compounded-index",
-            lastMarketRecordDate: "2026-03-25",
-            lastMarketFetchedAt: 1774479600,
-          }),
-          updatedAt: 1774479600,
-        } as never;
-      }
-      return null as never;
-    });
-
-    const result = await fetchTbillRate(db, undefined, {
-      ...BANXICO_TEST_ENV,
-      ALERT_WEBHOOK_URL: "https://hooks.slack.com/services/test",
-    });
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(result.status).toBe("degraded");
-    expect(alertFetch).toHaveBeenCalledTimes(1);
-    expect(metadata).toMatchObject({
-      gbpRetainedFallbackActive: true,
-      gbpRetainedFallbackStreak: 2,
-      gbpRetainedFallbackAlerted: false,
-      gbpRetainedFallbackWebhookAlerted: false,
-      gbpRetainedFallbackSuppressedByCooldown: false,
-      gbpRetainedFallbackWebhookConfigured: true,
-      gbpRetainedFallbackLastAlertedAt: null,
-    });
-    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
-      consecutiveRetainedRuns: 2,
-      firstRetainedAt: 1774479600,
-      lastAlertedAt: null,
-      lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
-      lastMarketSource: "fred-sonia-compounded-index",
-    });
-    expect(
-      vi.mocked(setCache).mock.calls.some((entry) => entry[1] === GBP_RETAINED_FALLBACK_DIRECT_ALERT_CACHE_KEY),
-    ).toBe(false);
-    expect(logCronEvent).toHaveBeenCalledWith(
-      db,
-      expect.objectContaining({
-        job: "fetch-tbill-rate",
-        eventType: "gbp-retained-fallback-repeated",
-        severity: "warning",
-        metadata: expect.objectContaining({
-          consecutiveRetainedRuns: 2,
-          webhookAlerted: false,
-        }),
-      }),
-    );
-  });
-
-  it("suppresses repeated retained GBP SONIA fallback alerts inside the cooldown", async () => {
-    const alertFetch = vi.fn(async () => new Response("ok", { status: 200 }));
-    vi.stubGlobal("fetch", alertFetch);
-    const lastAlertedAt = Math.floor(Date.now() / 1000) - 3600;
-    mockByUrl({
-      "data-api.ecb.europa.eu": new Response(ECB_ESTR_3M_CSV_SNIPPET, { status: 200 }),
-      "id=DGS3MO": new Response("DATE,DGS3MO\n2026-03-02,3.72\n", { status: 200 }),
-      "oauth/token": new Response(SIX_GUEST_TOKEN_RESPONSE, { status: 200 }),
-      "report-download": new Response(SIX_SAR3MC_CSV_SNIPPET, { status: 200, headers: { "Content-Type": "text/csv" } }),
-      ...okExtendedBenchmarkMocks(),
-      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": null,
-      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": null,
-      "bankofengland.co.uk": null,
-    });
-    vi.mocked(getCache).mockImplementation(async (_db, key) => {
-      if (key === "risk_free_rates") return previousRiskFreeRatesCacheWithGbp();
-      if (key === GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY) {
-        return {
-          value: JSON.stringify({
-            consecutiveRetainedRuns: 2,
-            firstRetainedAt: 1774479600,
-            lastRetainedAt: 1774566000,
-            lastAlertedAt,
-            lastFallbackMode: "gbp-sonia-compounded-index-failed-retained",
-            lastMarketSource: "fred-sonia-compounded-index",
-            lastMarketRecordDate: "2026-03-25",
-            lastMarketFetchedAt: 1774479600,
-          }),
-          updatedAt: lastAlertedAt,
-        } as never;
-      }
-      if (key === GBP_RETAINED_FALLBACK_DIRECT_ALERT_CACHE_KEY) {
-        return {
-          value: JSON.stringify({ lastAlertedAt }),
-          updatedAt: lastAlertedAt,
-        } as never;
-      }
-      return null as never;
-    });
-
-    const result = await fetchTbillRate(db, undefined, {
-      ...BANXICO_TEST_ENV,
-      ALERT_WEBHOOK_URL: "https://hooks.slack.com/services/test",
-    });
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-
-    expect(result.status).toBe("degraded");
-    expect(alertFetch).not.toHaveBeenCalled();
-    expect(logCronEvent).not.toHaveBeenCalled();
-    expect(metadata).toMatchObject({
-      gbpRetainedFallbackActive: true,
-      gbpRetainedFallbackStreak: 3,
-      gbpRetainedFallbackAlerted: false,
-      gbpRetainedFallbackWebhookAlerted: false,
-      gbpRetainedFallbackSuppressedByCooldown: true,
-      gbpRetainedFallbackLastAlertedAt: lastAlertedAt,
-    });
-    expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
-      consecutiveRetainedRuns: 3,
-      lastAlertedAt,
-    });
   });
 
   it("resets the retained GBP SONIA fallback monitor after source recovery", async () => {
@@ -839,7 +689,6 @@ describe("fetchTbillRate", () => {
     });
     expect(cacheWritePayload(GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY)).toMatchObject({
       consecutiveRetainedRuns: 0,
-      lastAlertedAt: 1774566000,
       recoveredSource: "fred-sonia-compounded-index",
     });
     expect(logCronEvent).toHaveBeenCalledWith(

@@ -80,7 +80,6 @@ describe("runDigestTriggerPollSlot", () => {
       mintBurnDisabledSymbols: [],
       mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
       coingeckoApiKey: null,
-      alertWebhookUrl: null,
       chainRpcs: new Map(),
       runLeasedCron: runLeasedCron as unknown as ScheduledRuntimeContext["runLeasedCron"],
     };

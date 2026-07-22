@@ -6,7 +6,6 @@ export type EndpointPublicApiAccess = "protected" | "exempt";
 export type EndpointSiteDataAccess = "allowed" | "denied";
 export type EndpointDependency =
   | "apiKeyHashPepper"
-  | "alertWebhookUrl"
   | "alchemyApiKey"
   | "anthropicApiKey"
   | "cloudflareD1StatusConfig"
@@ -1069,12 +1068,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
   adminMutation({
     key: "clear-telegram-pending",
     path: API_PATHS.clearTelegramPending(),
-    probeGroup: "manual",
-  }),
-  adminMutation({
-    key: "alert-broker-canary",
-    path: API_PATHS.alertBrokerCanary(),
-    routeDependencies: ["alertWebhookUrl"],
     probeGroup: "manual",
   }),
   adminMutation({

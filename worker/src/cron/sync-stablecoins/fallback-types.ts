@@ -113,7 +113,6 @@ export interface FallbackCachePublicationInput extends FallbackPhaseContext, Fal
   assets: PeggedAsset[];
   priceCacheEntries: PriceCacheWriteEntry[];
   fxFallbackRates?: Record<string, number>;
-  alertWebhookUrl?: string | null;
 }
 
 export interface FallbackCachePublicationOutput {

@@ -24,7 +24,6 @@ import {
   type StablecoinPriceCoverageAsset,
   type StablecoinActivePriceCoverage,
 } from "../../lib/stablecoin-publication-coverage";
-import type { StablecoinPriceCoverageAlertResult } from "../../lib/stablecoin-publication-alerts";
 import { MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES } from "../../lib/cron-metadata-persistence";
 
 const MAX_DIAGNOSTIC_ARRAY_ITEMS = 20;
@@ -297,7 +296,6 @@ export function buildStablecoinsSyncResult(input: {
   previousActivePriceCoverage?: PreviousStablecoinActivePriceCoverage | null;
   previousAcceptedAssetsById?: ReadonlyMap<string, StablecoinPriceCoverageAsset>;
   activePriceCoverage?: StablecoinActivePriceCoverage;
-  activePriceCoverageAlert?: StablecoinPriceCoverageAlertResult;
 }): CronResult {
   const finalMissing = input.assets.filter(hasMissingPrice).length;
   const priceSourceHealth = buildPriceSourceHealth(input.assets);
@@ -361,7 +359,6 @@ export function buildStablecoinsSyncResult(input: {
     },
     activePublicationCoverage: publicationCoverage,
     activePriceCoverage,
-    activePriceCoverageAlert: input.activePriceCoverageAlert,
     priceSourceAttemptLedger,
     upstreamFetchOk: input.upstreamFetchOk ?? true,
     payloadAccepted: input.payloadAccepted ?? true,

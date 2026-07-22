@@ -3,14 +3,10 @@ import {
   type CacheFreshnessLaneKey,
   type CacheFreshnessLaneConfig,
 } from "@shared/lib/api-freshness";
-import { formatStalenessDurationSeconds } from "@shared/lib/relative-time";
 import type { CacheStatus } from "@shared/types/status";
-import { sendAlert } from "../lib/alerts";
-import { readAlertMarker } from "../lib/alert-marker";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
 import type { CronResult } from "../lib/cron-logger";
-import { deleteCache, getCache, setCache } from "../lib/db-cache";
 import { runChunkedInFilter } from "../lib/db";
 import { buildCacheStatuses } from "../lib/api-freshness";
 
@@ -21,10 +17,6 @@ const WATCHED_LANE_KEYS = [
   "yieldData",
   "dews",
 ] as const satisfies readonly CacheFreshnessLaneKey[];
-
-const ALERT_COOLDOWN_SEC = 3600;
-const ALERT_CACHE_PREFIX = "cron-staleness-watchdog:alert:";
-const DIRECT_ALERT_MARKER_SUFFIX = ":direct:v1";
 
 // Markers written by the detail handler when a per-coin cache write fails or
 // exceeds the D1 value cap (see stablecoin-detail/shared.ts). Demand-refreshed
@@ -92,7 +84,7 @@ export async function loadDetailWriteFailures(
 
     // A detail row written after the marker means a later cache write
     // succeeded; the coin has recovered, so drop the stale marker instead of
-    // degrading runs and re-alerting for up to 24h.
+    // degrading runs for up to 24h.
     const detailUpdatedAt = detailUpdatedAtByKey.get(detailKeyByMarkerKey.get(row.key) ?? "");
     if (detailUpdatedAt != null && detailUpdatedAt > row.updated_at) {
       recoveredMarkerKeys.push(row.key);
@@ -134,17 +126,6 @@ export async function loadDetailWriteFailures(
   return failures;
 }
 
-function buildDetailWriteFailureMessage(failures: readonly DetailWriteFailureObservation[], nowSec: number): string {
-  const lines = failures.map(
-    (failure) =>
-      `- detail:${failure.stablecoinId}: ${failure.reason}${failure.bytes != null ? ` (${failure.bytes} bytes)` : ""}, last failed ${formatStalenessDurationSeconds(failure.ageSeconds)} ago`,
-  );
-  return [
-    `Per-coin detail cache writes are failing (serving via synchronous upstream refetch) at ${new Date(nowSec * 1000).toISOString()}.`,
-    ...lines,
-  ].join("\n");
-}
-
 export interface CronStalenessObservation {
   laneKey: CacheFreshnessLaneKey;
   cacheKey: string;
@@ -155,36 +136,6 @@ export interface CronStalenessObservation {
   endpointThresholdSec: number;
   availabilityThresholdSec: number;
   availabilityImpacting: boolean;
-}
-
-interface AlertMarker {
-  firstStaleAt: number;
-  lastObservedAt: number;
-  lastAlertedAt: number;
-}
-
-interface DirectAlertMarker {
-  lastAlertedAt: number;
-}
-
-function alertCacheKey(cacheKey: string): string {
-  return `${ALERT_CACHE_PREFIX}${cacheKey}`;
-}
-
-function directAlertCacheKey(cacheKey: string): string {
-  return `${alertCacheKey(cacheKey)}${DIRECT_ALERT_MARKER_SUFFIX}`;
-}
-
-function readMarker(value: string | null | undefined): AlertMarker | null {
-  return readAlertMarker<AlertMarker>(
-    value,
-    (p): p is AlertMarker =>
-      typeof p.firstStaleAt === "number" && typeof p.lastObservedAt === "number" && typeof p.lastAlertedAt === "number",
-  );
-}
-
-function readDirectAlertMarker(value: string | null | undefined): DirectAlertMarker | null {
-  return readAlertMarker<DirectAlertMarker>(value, (p): p is DirectAlertMarker => typeof p.lastAlertedAt === "number");
 }
 
 function isFreshAge(ageSeconds: number | null, thresholdSec: number): boolean {
@@ -276,96 +227,8 @@ export function evaluateCronStaleness(
   });
 }
 
-function buildAlertMessage(stale: readonly CronStalenessObservation[], nowSec: number): string {
-  const lines = stale.map(
-    (observation) =>
-      `- ${observation.cacheKey} (${observation.producerJob}): age ${formatStalenessDurationSeconds(observation.ageSeconds)}, threshold ${formatStalenessDurationSeconds(observation.thresholdSec)}`,
-  );
-  return [`Detected stale Tier-1 cron-backed caches at ${new Date(nowSec * 1000).toISOString()}.`, ...lines].join("\n");
-}
-
-function buildRecoveryMessage(recovered: readonly CronStalenessObservation[], nowSec: number): string {
-  const lines = recovered.map(
-    (observation) =>
-      `- ${observation.cacheKey} (${observation.producerJob}) recovered below ${formatStalenessDurationSeconds(observation.thresholdSec)}`,
-  );
-  return [`Cron-backed cache freshness recovered at ${new Date(nowSec * 1000).toISOString()}.`, ...lines].join("\n");
-}
-
-async function loadAlertMarkers(
-  db: D1Database,
-  observations: readonly CronStalenessObservation[],
-): Promise<{
-  observationMarkers: Map<string, AlertMarker | null>;
-  directAlertMarkers: Map<string, DirectAlertMarker | null>;
-}> {
-  const observationMarkers = new Map<string, AlertMarker | null>();
-  const directAlertMarkers = new Map<string, DirectAlertMarker | null>();
-  if (observations.length === 0) return { observationMarkers, directAlertMarkers };
-
-  const observationKeyToCacheKey = new Map(
-    observations.map((observation) => [alertCacheKey(observation.cacheKey), observation.cacheKey]),
-  );
-  const directAlertKeyToCacheKey = new Map(
-    observations.map((observation) => [directAlertCacheKey(observation.cacheKey), observation.cacheKey]),
-  );
-  const valueByAlertKey = new Map<string, string>();
-  await runChunkedInFilter(
-    [...observationKeyToCacheKey.keys(), ...directAlertKeyToCacheKey.keys()],
-    (inClauseSql) => `SELECT key, value FROM cache WHERE key IN (${inClauseSql})`,
-    async (sql, binds) => {
-      const rows = await runWithOverloadRetry(() =>
-        db
-          .prepare(sql)
-          .bind(...binds)
-          .all<{ key: string; value: string }>(),
-      );
-      for (const row of rows.results ?? []) {
-        valueByAlertKey.set(row.key, row.value);
-      }
-    },
-  );
-
-  for (const [alertKey, cacheKey] of observationKeyToCacheKey) {
-    observationMarkers.set(cacheKey, readMarker(valueByAlertKey.get(alertKey)));
-  }
-  for (const [alertKey, cacheKey] of directAlertKeyToCacheKey) {
-    directAlertMarkers.set(cacheKey, readDirectAlertMarker(valueByAlertKey.get(alertKey)));
-  }
-  return { observationMarkers, directAlertMarkers };
-}
-
-async function persistStaleMarkers(params: {
-  db: D1Database;
-  nowSec: number;
-  stale: readonly CronStalenessObservation[];
-  markers: Map<string, AlertMarker | null>;
-  alertedCacheKeys: ReadonlySet<string>;
-}): Promise<void> {
-  for (const observation of params.stale) {
-    const marker = params.markers.get(observation.cacheKey);
-    await setCache(
-      params.db,
-      alertCacheKey(observation.cacheKey),
-      JSON.stringify({
-        firstStaleAt: marker?.firstStaleAt ?? params.nowSec,
-        lastObservedAt: params.nowSec,
-        lastAlertedAt: params.alertedCacheKeys.has(observation.cacheKey) ? params.nowSec : (marker?.lastAlertedAt ?? 0),
-      } satisfies AlertMarker),
-    );
-    if (params.alertedCacheKeys.has(observation.cacheKey)) {
-      await setCache(
-        params.db,
-        directAlertCacheKey(observation.cacheKey),
-        JSON.stringify({ lastAlertedAt: params.nowSec } satisfies DirectAlertMarker),
-      );
-    }
-  }
-}
-
 export async function runCronStalenessWatchdog(
   db: D1Database,
-  alertWebhookUrl: string | null,
   signal?: AbortSignal,
 ): Promise<CronResult> {
   const nowSec = Math.floor(Date.now() / 1000);
@@ -379,101 +242,12 @@ export async function runCronStalenessWatchdog(
   );
   const stale = watchedObservations.filter(isStale);
   const dependencyRecoveryChecks = buildDependencyRecoveryChecks(watchedObservations);
-  const { observationMarkers, directAlertMarkers } = await loadAlertMarkers(db, watchedObservations);
-  const staleCacheKeys = new Set(stale.map((observation) => observation.cacheKey));
-  const dueForAlert = stale.filter((observation) => {
-    const marker = directAlertMarkers.get(observation.cacheKey);
-    return alertWebhookUrl && nowSec - (marker?.lastAlertedAt ?? 0) >= ALERT_COOLDOWN_SEC;
-  });
-  const recovered = watchedObservations.filter(
-    (observation) => !staleCacheKeys.has(observation.cacheKey) && observationMarkers.get(observation.cacheKey),
-  );
 
   if (signal?.aborted) {
     throw signal.reason instanceof Error ? signal.reason : new Error("cron staleness watchdog aborted");
   }
 
-  const alertedCacheKeys = new Set<string>();
-  if (dueForAlert.length > 0) {
-    const delivered = await sendAlert(alertWebhookUrl, "Cron freshness stale", buildAlertMessage(dueForAlert, nowSec));
-    if (delivered) {
-      for (const observation of dueForAlert) {
-        alertedCacheKeys.add(observation.cacheKey);
-      }
-    }
-  }
-
-  const recoveredAlertedCacheKeys = new Set<string>();
-  const recoveryAlertFailedCacheKeys = new Set<string>();
-  if (recovered.length > 0) {
-    const alertableRecovered = recovered.filter(
-      (observation) => (directAlertMarkers.get(observation.cacheKey)?.lastAlertedAt ?? 0) > 0,
-    );
-    let recoveredAlertDelivered = alertableRecovered.length === 0;
-    if (alertableRecovered.length > 0) {
-      recoveredAlertDelivered = await sendAlert(
-        alertWebhookUrl,
-        "Cron freshness recovered",
-        buildRecoveryMessage(alertableRecovered, nowSec),
-      );
-      for (const observation of alertableRecovered) {
-        if (recoveredAlertDelivered) {
-          recoveredAlertedCacheKeys.add(observation.cacheKey);
-        } else {
-          recoveryAlertFailedCacheKeys.add(observation.cacheKey);
-        }
-      }
-    }
-    for (const observation of recovered) {
-      const markerWasAlerted = (directAlertMarkers.get(observation.cacheKey)?.lastAlertedAt ?? 0) > 0;
-      if (!markerWasAlerted || recoveredAlertDelivered) {
-        await deleteCache(db, directAlertCacheKey(observation.cacheKey));
-        await deleteCache(db, alertCacheKey(observation.cacheKey));
-      }
-    }
-  }
-
-  await persistStaleMarkers({
-    db,
-    nowSec,
-    stale,
-    markers: observationMarkers,
-    alertedCacheKeys,
-  });
-
   const detailWriteFailures = await loadDetailWriteFailures(db, nowSec);
-  let detailFailureAlerted = false;
-  if (detailWriteFailures.length > 0 && alertWebhookUrl) {
-    const detailMarkerKey = alertCacheKey("detail-write-failures");
-    const detailDirectAlertMarkerKey = directAlertCacheKey("detail-write-failures");
-    const detailMarkerRow = await getCache(db, detailMarkerKey);
-    const detailMarker = readMarker(detailMarkerRow?.value);
-    const detailDirectAlertMarkerRow = await getCache(db, detailDirectAlertMarkerKey);
-    const detailDirectAlertMarker = readDirectAlertMarker(detailDirectAlertMarkerRow?.value);
-    if (nowSec - (detailDirectAlertMarker?.lastAlertedAt ?? 0) >= ALERT_COOLDOWN_SEC) {
-      detailFailureAlerted = await sendAlert(
-        alertWebhookUrl,
-        "Detail cache writes failing",
-        buildDetailWriteFailureMessage(detailWriteFailures, nowSec),
-      );
-      await setCache(
-        db,
-        detailMarkerKey,
-        JSON.stringify({
-          firstStaleAt: detailMarker?.firstStaleAt ?? nowSec,
-          lastObservedAt: nowSec,
-          lastAlertedAt: detailFailureAlerted ? nowSec : (detailMarker?.lastAlertedAt ?? 0),
-        } satisfies AlertMarker),
-      );
-      if (detailFailureAlerted) {
-        await setCache(
-          db,
-          detailDirectAlertMarkerKey,
-          JSON.stringify({ lastAlertedAt: nowSec } satisfies DirectAlertMarker),
-        );
-      }
-    }
-  }
 
   return {
     status: stale.length > 0 || detailWriteFailures.length > 0 ? "degraded" : "ok",
@@ -481,19 +255,7 @@ export async function runCronStalenessWatchdog(
     metadata: JSON.stringify({
       stale,
       detailWriteFailures,
-      detailFailureAlerted,
-      attemptedAlerts: dueForAlert.map((observation) => observation.cacheKey),
-      alerted: [...alertedCacheKeys],
-      failedAlerts: dueForAlert
-        .filter((observation) => !alertedCacheKeys.has(observation.cacheKey))
-        .map((observation) => observation.cacheKey),
-      suppressed: stale
-        .filter((observation) => !alertedCacheKeys.has(observation.cacheKey))
-        .map((observation) => observation.cacheKey),
-      recovered: recovered.map((observation) => observation.cacheKey),
       dependencyRecoveryChecks,
-      deliveredRecoveryAlerts: [...recoveredAlertedCacheKeys],
-      failedRecoveryAlerts: [...recoveryAlertFailedCacheKeys],
       warnings: status.warnings,
       failures: status.failures,
       diagnostics: status.diagnostics,

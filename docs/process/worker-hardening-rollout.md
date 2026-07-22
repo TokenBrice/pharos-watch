@@ -71,21 +71,7 @@ must not mask either condition.
 
 ## Direct Alert Acceptance
 
-Scheduled operational alerts use `sendAlert()` directly. Producer-owned cache
-markers and cooldowns remain the incident/repeat authority; delivery is
-one-shot and a failed webhook attempt returns `false` so the producer can keep
-its retry marker eligible. Direct delivery evidence uses `:direct:v1` cache
-keys, so legacy markers written by broker shadow mode cannot suppress the first
-direct incident or manufacture a recovery. Observation/onset/streak state stays
-on its existing keys. Migration `0175_durable_alert_broker.sql`, legacy marker
-fields, and existing rows remain inert for forensic inspection.
-
-The Access-gated compatibility canary remains at
-`POST /api/alert-broker-canary`. Preview with `X-Pharos-Admin: 1`, then execute
-with `?execute=true&confirm=emit-incident-and-recovery` and a fresh
-`Idempotency-Key`. The route accepts only the configured `ALERT_WEBHOOK_URL`
-and fixed synthetic copy, sends one incident and one recovery directly, and
-returns `502` if either transport attempt fails.
+Historical note: the direct webhook transport and its compatibility canary were removed on 2026-07-22. Scheduled incident detection remains visible through cron and status-dashboard telemetry; migration `0175_durable_alert_broker.sql` rows remain inert for forensic inspection.
 
 ## Data-Invariant Canaries
 

@@ -72,7 +72,6 @@ const cronMocks = vi.hoisted(() => ({
     _db: D1Database,
     _job: string,
     fn: (signal: AbortSignal, reportProgress: (update: Record<string, unknown>) => Promise<void>) => Promise<unknown>,
-    _alertFn?: (title: string, message: string) => Promise<unknown> | void,
     _options?: { slotStartedAt?: number | null },
   ) => (
     fn(new AbortController().signal, async () => undefined)
@@ -138,7 +137,6 @@ const cronMocks = vi.hoisted(() => ({
   }),
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => undefined),
-  sendAlert: vi.fn(async () => true),
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => undefined),
   reconcileTelegramCommandRegistration: vi.fn(async () => ({ attempted: false })),
@@ -312,14 +310,6 @@ vi.mock("../lib/cron-lease", async (importOriginal) => {
   };
 });
 
-vi.mock("../lib/alerts", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../lib/alerts")>();
-  return {
-    ...original,
-    sendAlert: cronMocks.sendAlert,
-  };
-});
-
 vi.mock("../lib/circuit-breaker", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/circuit-breaker")>();
   return {
@@ -425,7 +415,7 @@ describe("worker.scheduled", () => {
       }
       expect(cronMocks.logCronRun).toHaveBeenCalled();
       for (const call of cronMocks.logCronRun.mock.calls) {
-        expect(call[4]).toEqual(expect.objectContaining({ slotStartedAt: expect.any(Number) }));
+        expect(call[3]).toEqual(expect.objectContaining({ slotStartedAt: expect.any(Number) }));
       }
       expect(fetchSpy).not.toHaveBeenCalled();
     } finally {
@@ -528,7 +518,6 @@ describe("worker.scheduled", () => {
     expect(cronMocks.logCronRun).toHaveBeenCalledWith(
       expect.anything(),
       "sync-stablecoins",
-      expect.any(Function),
       expect.any(Function),
       expect.objectContaining({ slotStartedAt: expectedSlotStartedAt }),
     );

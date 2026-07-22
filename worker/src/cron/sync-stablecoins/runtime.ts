@@ -236,8 +236,7 @@ export async function checkStablecoinsPriceStaleness(params: {
 export async function recordStablecoinsStalenessBlockOutcome(
   db: D1Database,
   check: Pick<StablecoinsStalenessCheckResult, "blockedReason">,
-  alertWebhookUrl?: string | null,
 ): Promise<void> {
   if (check.blockedReason !== "severe-staleness") return;
-  await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false, alertWebhookUrl);
+  await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
 }

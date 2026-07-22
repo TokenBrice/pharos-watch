@@ -44,7 +44,6 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
       signal,
       {
         cmcApiKey: runtime.env.CMC_API_KEY,
-        alertWebhookUrl: runtime.alertWebhookUrl,
         coingeckoApiKey: runtime.coingeckoApiKey,
         chainRpcs: runtime.chainRpcs,
         reportProgress,

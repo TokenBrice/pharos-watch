@@ -20,7 +20,6 @@ const LCOV_PATH = "coverage/lcov.info";
 // Explicit per-file minimums for critical reliability paths.
 function getCriticalThresholds(env = process.env) {
   return {
-    "worker/src/lib/alerts.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_ALERTS ?? "80"),
     "worker/src/lib/stablecoins-cache.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE ?? "50"),
     "worker/src/lib/auth.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_AUTH ?? "70"),
     "worker/src/lib/evm-rpc.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_EVM_RPC ?? "70"),

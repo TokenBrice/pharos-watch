@@ -249,7 +249,7 @@ function buildTelegramSlotGroups(
       job: "telegram-degradation-watchdog",
       errorMessage: "[cron] telegram-degradation-watchdog failed:",
       run: (signal) =>
-        runTelegramDegradationWatchdog(runtime.db, runtime.alertWebhookUrl, signal, {
+        runTelegramDegradationWatchdog(runtime.db, signal, {
           pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
           safetySourceAssessment: sharedTelegramState.safetySourceAssessment,
         }),
