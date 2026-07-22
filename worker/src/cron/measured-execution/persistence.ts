@@ -37,7 +37,6 @@ interface QuoteRow {
   status: "measured" | "failed";
   failure_reason: string | null;
   quote_profile_json: string | null;
-  raw_quote_payload_json: string | null;
 }
 
 export interface DexMeasuredQuoteOutcome {
@@ -45,6 +44,7 @@ export interface DexMeasuredQuoteOutcome {
   status: "measured" | "failed";
   failureReason?: string;
   profile?: DexMeasuredExecutionProfile;
+  /** Persisted only for failed outcomes; measured rows carry their evidence in the profile's quoteProof. */
   rawPayload?: unknown;
 }
 
@@ -65,7 +65,6 @@ export interface LoadedDexMeasuredQuoteEvidence {
       status: "measured" | "failed";
       failureReason: string | null;
       profile: DexMeasuredExecutionProfile | null;
-      rawPayload: unknown;
     }
   >;
 }
@@ -374,7 +373,9 @@ export async function publishDexMeasuredQuoteGeneration(input: {
         profile?.quotedAt ?? null,
         profile?.blockNumber ?? null,
         profile ? JSON.stringify(profile) : null,
-        outcome.rawPayload == null ? null : JSON.stringify(outcome.rawPayload),
+        // Raw producer envelopes duplicate the measured profile's quoteProof; persist them
+        // only for failed outcomes, where they are the sole structured failure evidence.
+        outcome.status === "failed" && outcome.rawPayload != null ? JSON.stringify(outcome.rawPayload) : null,
       ] as const;
     });
     await batchExecute(
@@ -426,7 +427,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
       db
         .prepare(
           `SELECT generation_id, target_generation_id, target_id, status, failure_reason,
-            quote_profile_json, raw_quote_payload_json
+            quote_profile_json
      FROM dex_measured_execution_quotes
      WHERE generation_id = ?
      ORDER BY stablecoin_id, target_id`,
@@ -507,7 +508,6 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
       status: row.status,
       failureReason: row.failure_reason,
       profile,
-      rawPayload: row.raw_quote_payload_json ? JSON.parse(row.raw_quote_payload_json) : null,
     });
   }
   return {
