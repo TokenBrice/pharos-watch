@@ -11,8 +11,9 @@
     "rwa": false,
     "navToken": true
   },
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Aave Umbrella documentation",
@@ -25,11 +26,15 @@
       {
         "label": "Aave GHO contract",
         "url": "https://etherscan.io/token/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+      },
+      {
+        "label": "stkGHO verified implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x75e8ac0c063b6966e2a9954adedf39bde9370197?fields=sources,compilation"
       }
     ],
-    "evidence": "stkGHO is an Umbrella staking receipt whose asset() is GHO. The reviewed wrapper and parent GHO token surfaces establish an inherited Aave governance and GHO-facilitator exposure, but neither source establishes a holder-level blacklist, freeze, seizure, pause, or transfer-restriction path for stkGHO balances. The inherited status records that upstream control exposure without claiming direct balance control.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-reviewed 2026-07-22: the stkGHO implementation exposes owner-controlled pause(), and its _update transfer path is guarded by whenNotPaused. paused() was false at review, but the owner can block all stkGHO share transfers while paused. This is a direct current control surface in addition to the GHO exposure, so the status is true rather than inherited-only.",
+    "reviewer": "GPT SOL-CORP-C wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

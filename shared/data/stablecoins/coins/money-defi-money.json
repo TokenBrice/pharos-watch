@@ -1117,9 +1117,9 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "defi.money deployment registry",
@@ -1132,11 +1132,15 @@
       {
         "label": "Arbitrum MONEY token",
         "url": "https://arbiscan.io/token/0x69420f9e38a4e60a62224c489be4bf7a94402496"
+      },
+      {
+        "label": "MONEY BridgeToken exact source on Arbitrum",
+        "url": "https://sourcify.dev/server/v2/contract/42161/0x69420f9e38a4e60a62224c489be4bf7a94402496?fields=sources,compilation"
       }
     ],
-    "evidence": "BLOCKED: defi.money's primary deployment and protocol documentation establishes MONEY markets on Arbitrum, Optimism, and Base, with market-parameter administration and LayerZero routing. The reviewed Arbitrum token evidence identifies the owner Safe, but the available primary sources do not establish a complete current holder-level blacklist, freeze, pause, privileged-burn, or transfer-restriction inventory across all tracked deployments and route contracts. Possible is retained for the material admin and cross-chain intervention boundary without asserting a direct holder-control function.",
-    "reviewer": "SONG-5 Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-reviewed 2026-07-22: the exact BridgeToken source lets the owner set an arbitrary minter, and any enabled minter can call burn(account, amount) without holder approval. That is a direct arbitrary-holder seizure surface; true replaces the prior bounded possible posture. The same deployment pattern is tracked on Arbitrum, Optimism, and Base.",
+    "reviewer": "GPT SOL-CORP-C wave6",
+    "reviewedAt": "2026-07-22"
   },
   "deploymentModel": "native-multichain",
   "reserves": [

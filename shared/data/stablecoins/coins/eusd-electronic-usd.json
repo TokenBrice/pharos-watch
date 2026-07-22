@@ -148,11 +148,15 @@
       {
         "label": "eUSD Central Auth on Etherscan",
         "url": "https://etherscan.io/address/0xe1ec57c8ee970280f237863910b606059e9641c9"
+      },
+      {
+        "label": "eUSD RTokenP1 verified implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833cf9ad19208372763a00aa1565dd40b3c"
       }
     ],
-    "evidence": "Reserve's documentation and the verified eUSD RToken and Central Auth deployments establish a governed basket with protocol-level pause, freeze, and basket controls. The reviewed materials do not establish a separate direct holder blacklist on eUSD itself; inherited exposure is retained through the governed basket and upstream reserve dependencies.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-reviewed 2026-07-22 against the verified RTokenP1 implementation and Reserve documentation. The deployed RToken transfer path rejects transfer-to-self but does not establish a mutable direct holder blacklist, freeze, seizure, or transfer-pause path. The separately reviewed reserve basket retains USDC and USDT exposure, so inherited status is preserved without asserting a direct eUSD holder-control function.",
+    "reviewer": "GPT SOL-CORP-C wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

@@ -19,13 +19,17 @@
         "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367"
       },
       {
-        "label": "Curve crvUSD resources",
-        "url": "https://resources.curve.finance/crvusd/"
+      "label": "Curve crvUSD source repository",
+      "url": "https://github.com/curvefi/curve-stablecoin"
+      },
+      {
+        "label": "scrvUSD exact-match YearnV3Vault clone",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
       }
     ],
-    "evidence": "The reviewed scrvUSD contract is an immutable ERC-4626 wrapper whose asset() points to crvUSD; its wrapper has no owner or direct holder-freeze function. The parent crvUSD control and reserve path remains the relevant upstream failure domain, so inherited exposure is retained with the parent identity recorded by mintAuthority.inheritedFrom.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-reviewed 2026-07-22: scrvUSD is an immutable ERC-4626 wrapper whose asset() is crvUSD. The exact-match wrapper has no owner or direct holder-freeze function. The parent crvUSD control and reserve path remains the relevant upstream failure domain, so inherited exposure is retained with the parent identity recorded by mintAuthority.inheritedFrom.",
+    "reviewer": "GPT SOL-CORP-C wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
