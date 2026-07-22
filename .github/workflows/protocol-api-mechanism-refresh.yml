@@ -11,36 +11,144 @@ on:
 
 permissions:
   contents: read
-
-concurrency:
-  group: protocol-api-mechanism-refresh
-  cancel-in-progress: false
+  pull-requests: read
 
 jobs:
   refresh:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        asset: [usde-ethena, usdf-falcon]
+    concurrency:
+      group: protocol-api-mechanism-refresh-${{ matrix.asset }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Prepare target branch
+        env:
+          ASSET_ID: ${{ matrix.asset }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BRANCH="automated/protocol-api-mechanism-refresh/${ASSET_ID}"
+          git fetch origin main:refs/remotes/origin/main
+          PR_HISTORY="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --base main --head "$BRANCH" --limit 100 --json number,state,mergedAt)"
+          OPEN_PR_COUNT="$(jq '[.[] | select(.state == "OPEN")] | length' <<< "$PR_HISTORY")"
+          CLOSED_UNMERGED_COUNT="$(jq '[.[] | select(.state == "CLOSED" and .mergedAt == null)] | length' <<< "$PR_HISTORY")"
+
+          set +e
+          git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null
+          REMOTE_STATUS=$?
+          set -e
+          if [ "$REMOTE_STATUS" -eq 2 ]; then
+            if [ "$OPEN_PR_COUNT" -ne 0 ]; then
+              echo "::error title=Inconsistent mechanism refresh branch::${BRANCH} has an open PR but no remote branch."
+              exit 1
+            fi
+            if [ "$CLOSED_UNMERGED_COUNT" -ne 0 ]; then
+              echo "::error title=Closed unmerged mechanism refresh::${BRANCH} has closed-unmerged PR history; refusing to recreate it."
+              exit 1
+            fi
+            git checkout -B "$BRANCH" origin/main
+          elif [ "$REMOTE_STATUS" -ne 0 ]; then
+            echo "::error title=Mechanism refresh branch lookup failed::Could not inspect ${BRANCH}."
+            exit 1
+          elif [ "$OPEN_PR_COUNT" -eq 1 ]; then
+            git fetch origin "${BRANCH}:refs/remotes/origin/${BRANCH}"
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+            git rebase origin/main
+          elif [ "$OPEN_PR_COUNT" -gt 1 ]; then
+            echo "::error title=Ambiguous mechanism refresh PR::${BRANCH} has ${OPEN_PR_COUNT} open PRs."
+            exit 1
+          else
+            git fetch origin "${BRANCH}:refs/remotes/origin/${BRANCH}"
+            if git merge-base --is-ancestor "origin/$BRANCH" origin/main; then
+              git checkout -B "$BRANCH" origin/main
+            else
+              echo "::error title=Unowned mechanism refresh history::${BRANCH} has unmerged commits but no open PR; refusing to overwrite it."
+              exit 1
+            fi
+          fi
+
       - uses: ./.github/actions/setup-workspace
 
       - name: Capture protocol API mechanism evidence
-        run: npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts
+        env:
+          ASSET_ID: ${{ matrix.asset }}
+        run: npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --asset "$ASSET_ID"
 
       - name: Validate producer and deterministic derivation
         run: npm exec vitest -- scripts/__tests__/measure-protocol-api-mechanism-metrics.test.ts --run
 
-      - name: Detect evidence diff
+      - name: Replay all protocol API evidence
+        run: npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --replay-all
+
+      - name: Detect additions-only evidence diff
         id: diff
+        env:
+          ASSET_ID: ${{ matrix.asset }}
         run: |
           set -euo pipefail
-          ROOT=shared/data/safety-score-v9/mechanism-measurements/usde-ethena
-          if git diff --quiet -- "$ROOT" && [ -z "$(git ls-files --others --exclude-standard -- "$ROOT")" ]; then
+          ROOT="shared/data/safety-score-v9/mechanism-measurements/${ASSET_ID}"
+
+          while IFS=$'\t' read -r status path; do
+            [ -z "$status" ] && continue
+            if [ "$status" != "A" ]; then
+              echo "::error title=Non-append-only mechanism PR::${path} has status ${status}."
+              exit 1
+            fi
+            case "$path" in
+              "$ROOT"/*-protocol-api.json) ;;
+              *)
+                echo "::error title=Unexpected mechanism PR diff::${path} is outside the target artifact set."
+                exit 1
+                ;;
+            esac
+          done < <(git diff --name-status origin/main...HEAD)
+
+          CHANGED_PATHS="$({
+            git diff --name-only
+            git diff --cached --name-only
+            git ls-files --others --exclude-standard
+          } | sort -u)"
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            case "$path" in
+              "$ROOT"/*) ;;
+              *)
+                echo "::error title=Unexpected mechanism refresh diff::${path} is outside ${ROOT}."
+                exit 1
+                ;;
+            esac
+          done <<< "$CHANGED_PATHS"
+
+          if ! git diff --quiet -- "$ROOT" || ! git diff --cached --quiet -- "$ROOT"; then
+            echo "::error title=Non-append-only mechanism refresh::Tracked evidence under ${ROOT} changed."
+            git status --short -- "$ROOT"
+            exit 1
+          fi
+
+          NEW_FILES="$(git ls-files --others --exclude-standard -- "$ROOT")"
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            case "$path" in
+              "$ROOT"/*-protocol-api.json) ;;
+              *)
+                echo "::error title=Unexpected mechanism artifact::${path} is not a target protocol API artifact."
+                exit 1
+                ;;
+            esac
+          done <<< "$NEW_FILES"
+
+          if [ -z "$NEW_FILES" ]; then
             echo "has_diff=false" >> "$GITHUB_OUTPUT"
+            echo "No new ${ASSET_ID} protocol API snapshot."
           else
             echo "has_diff=true" >> "$GITHUB_OUTPUT"
             git status --short -- "$ROOT"
@@ -60,23 +168,73 @@ jobs:
       - name: Open or update refresh PR
         if: steps.diff.outputs.has_diff == 'true'
         env:
+          ASSET_ID: ${{ matrix.asset }}
           GH_TOKEN: ${{ secrets.MECHANISM_REFRESH_GITHUB_TOKEN || secrets.SHOCK_COVERAGE_GITHUB_TOKEN || secrets.OG_REFRESH_GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          BRANCH=automated/protocol-api-mechanism-refresh
+          ROOT="shared/data/safety-score-v9/mechanism-measurements/${ASSET_ID}"
+          BRANCH="automated/protocol-api-mechanism-refresh/${ASSET_ID}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B "$BRANCH"
-          git add shared/data/safety-score-v9/mechanism-measurements/usde-ethena/
-          git commit -m "chore(v9): refresh protocol API mechanism evidence"
+          git add -- "$ROOT"
+          git commit \
+            -m "chore(v9): refresh ${ASSET_ID} protocol API evidence" \
+            -m "Capture append-only producer evidence without changing mechanism overlays or score identity."
+
+          while IFS=$'\t' read -r status path; do
+            [ -z "$status" ] && continue
+            if [ "$status" != "A" ]; then
+              echo "::error title=Non-append-only mechanism PR::${path} has status ${status}."
+              exit 1
+            fi
+            case "$path" in
+              "$ROOT"/*-protocol-api.json) ;;
+              *)
+                echo "::error title=Unexpected mechanism PR diff::${path} is outside the target artifact set."
+                exit 1
+                ;;
+            esac
+          done < <(git diff --name-status origin/main...HEAD)
+
+          ARTIFACT_PATH="$(git diff-tree --no-commit-id --name-only -r HEAD -- "$ROOT" | head -n 1)"
+          export ARTIFACT_PATH ASSET_ID
+          node <<'NODE'
+          const { readFileSync, writeFileSync } = require("node:fs");
+
+          const artifact = JSON.parse(readFileSync(process.env.ARTIFACT_PATH, "utf8"));
+          const metrics = Array.isArray(artifact.metrics)
+            ? artifact.metrics
+            : Object.entries(artifact.metrics ?? {}).map(([metricId, metric]) => ({ metricId, ...metric }));
+          const metricId = (metric) => metric.metricId ?? metric.id ?? "unknown";
+          const measured = metrics
+            .filter((metric) => metric.state === "measured")
+            .map((metric) => `${metricId(metric)}=${metric.value}${metric.unit ? ` ${metric.unit}` : ""}`);
+          const unavailable = metrics.filter((metric) => metric.state === "unavailable").map(metricId);
+          const blockers = artifact.adoptionEligibility?.blockers ?? [];
+          const expectedEffect = artifact.scoreImpactAssessment?.expectedEffect ?? "indeterminate";
+          const lines = [
+            `Automated producer-only mechanism measurement for \`${process.env.ASSET_ID}\`.`,
+            "",
+            `- Artifact: \`${process.env.ARTIFACT_PATH}\``,
+            `- Snapshot: \`${artifact.snapshotId ?? "unknown"}\``,
+            `- Measured: ${measured.length ? measured.map((value) => `\`${value}\``).join(", ") : "none"}`,
+            `- Unavailable: ${unavailable.length ? unavailable.map((value) => `\`${value}\``).join(", ") : "none"}`,
+            `- Adoption blockers: ${blockers.length ? blockers.join("; ") : "none recorded"}`,
+            `- Expected effect: \`${expectedEffect}\``,
+            "",
+            "All committed protocol API artifacts replayed successfully. This PR does not edit the mechanism overlay or any score identity, and auto-merge is deliberately disabled.",
+          ];
+          writeFileSync("/tmp/protocol-api-mechanism-pr-body.md", `${lines.join("\n")}\n`);
+          NODE
+
           gh auth setup-git
           git push --force-with-lease -u origin "$BRANCH"
           if gh pr view "$BRANCH" --json state --jq '.state' 2>/dev/null | grep -qx OPEN; then
-            echo "Existing open PR for $BRANCH updated by force-push."
+            gh pr edit "$BRANCH" --body-file /tmp/protocol-api-mechanism-pr-body.md
           else
             gh pr create \
               --base main \
               --head "$BRANCH" \
-              --title "chore(v9): refresh protocol API mechanism evidence" \
-              --body "Automated producer-only Ethena mechanism measurement. This preserves raw API payloads and derived candidate metrics; it does not change the active score identity or mechanism overlay. See docs/process/protocol-api-mechanism-refresh.md."
+              --title "chore(v9): refresh ${ASSET_ID} protocol API evidence" \
+              --body-file /tmp/protocol-api-mechanism-pr-body.md
           fi

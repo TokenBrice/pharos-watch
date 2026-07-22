@@ -1,28 +1,58 @@
 # Protocol API Mechanism Refresh
 
-The [Protocol API Mechanism Refresh](../../.github/workflows/protocol-api-mechanism-refresh.yml) captures current synthetic/yield mechanism evidence without changing the active Safety Score identity. The first target is `usde-ethena`, using Ethena's collateralization-status and proof-of-reserves APIs.
+The [Protocol API Mechanism Refresh](../../.github/workflows/protocol-api-mechanism-refresh.yml) captures first-party mechanism evidence for `usde-ethena` and `usdf-falcon`. The evidence is producer-only: collection cannot update a Safety Score overlay, fact set, evaluation identity, or score.
 
-## Contract
+## Artifact Contract
 
-The workflow runs weekly and writes append-only, schema-validated evidence under `shared/data/safety-score-v9/mechanism-measurements/<assetId>/`. The source observation timestamp keys each artifact, so a retry against unchanged source evidence is an idempotent no-op; changed evidence under the same timestamp fails rather than overwriting the prior record. Each artifact preserves the normalized source payloads, source timestamps, confirmed PoR auditors, and deterministic candidate metrics:
+The producer writes append-only Artifact V2 files under `shared/data/safety-score-v9/mechanism-measurements/<assetId>/`. Each artifact preserves the exact response bytes, selected response headers, source observation times, strict normalized payloads, metric derivations, and blockers.
 
-- collateralization ratio and nonnegative excess-backing margin
-- Reserve Fund share of token supply
-- the latest attested delta-neutral and overcollateralized states
+The one committed USDe V1 artifact predates the raw-byte contract and remains immutable. Repository-wide validation pins its exact SHA-256 as frozen normalized-only evidence, reports that raw replay is unavailable, and validates every subsequent artifact through V2 raw-byte replay. The legacy artifact has no score authority and must not be used as a template for new captures.
 
-Collateralization observations older than 12 hours, PoR observations older than 10 days, future timestamps, unconfirmed reports, and implausible ratios fail before an artifact is written. Ethena's report attests whether the backing is delta neutral but does not publish a quantitative position ratio, so `hedgeCoverageRatio` remains `null` for both positive and adverse attestations rather than inventing coverage. USDe has no CDP liquidation surface or protocol liquidation-capacity endpoint, so `liquidationCapacityUsd` is also explicitly `null`.
+Observation hashes bind the source ID, URL, observation time, and raw-body hash. Selected response headers are preserved as first-capture transport metadata but do not enter the observation hash. The artifact `snapshotId` binds the ordered observation hashes to the schema, family, and asset. Capture time is excluded from that identity, so retrying an unchanged snapshot is an idempotent no-op. A conflicting snapshot or an attempt to replace existing evidence fails closed.
 
-## Adoption Boundary
+Numeric source values and derived ratios use canonical decimal strings and fixed-point arithmetic. Metrics distinguish `measured`, `documented-only`, `unavailable`, and `not-applicable`; qualitative claims never become quantitative ratios. Offline replay starts from the recorded raw bytes, verifies their hashes, reparses the source schemas, recomputes every derivation and identity, and requires byte-identical canonical output. Latest selection compares the full target-ordered vector of source observation times; two different snapshots with the same vector are ambiguous and fail closed.
 
-These files are measurement inputs only. The workflow never edits `mechanism-review-overlays-v1.json`, the V9 policy, or a score registry. A later reviewed identity rotation decides whether and how a measurement is adopted; continuous collection can confirm a restrictive disposition as readily as it can support clearing one.
+## Target Semantics
 
-The automation opens or updates `automated/protocol-api-mechanism-refresh` and deliberately does not arm auto-merge. It uses `MECHANISM_REFRESH_GITHUB_TOKEN`, with the existing shock-coverage or OG refresh tokens as fallbacks, so normal pull-request checks run.
+### Ethena USDe
+
+USDe combines Ethena's collateralization-status and proof-of-reserves observations. Collateralization observations may be at most 12 hours old, PoR observations at most 10 days old, and timestamps may not be more than 5 minutes in the future.
+
+The producer measures collateralization, reserve excess, and the dedicated Reserve Fund share. Delta-neutral and overcollateralized statements remain dated qualitative claims. Quantitative hedge coverage, exchange-margin headroom, funding-basis stress, and executable unwind capacity remain unavailable. The resulting artifact is adoption-blocked and is expected to confirm the restrictive disposition rather than clear it.
+
+### Falcon USDf
+
+USDf uses `https://api.falcon.finance/api/v1/transparency`, with a maximum source age of 36 hours and the common 5-minute future tolerance. Asset-allocation cells may arrive as quoted decimals or exact JSON number tokens; both forms normalize to nonnegative canonical decimal strings without `Number` coercion. The asset rows must reconcile to top-level TVL within `max($0.01, TVL * 1e-9)` using exact decimal arithmetic.
+
+The separately published `reserves` total has unresolved scope and is excluded from backing while it does not reconcile with asset TVL. The insurance fund is measured separately as dedicated loss absorption and is not added to collateral TVL. An empty `venues` object means venue evidence was not published; it does not establish zero exposure. Hedge coverage, exchange-margin headroom, funding stress, and executable unwind capacity remain unavailable, so direct score adoption is blocked.
+
+## Automation
+
+The weekly workflow runs an explicit matrix over `usde-ethena` and `usdf-falcon` with one branch per target:
+
+- `automated/protocol-api-mechanism-refresh/usde-ethena`
+- `automated/protocol-api-mechanism-refresh/usdf-falcon`
+
+If a target already has an open refresh PR, the workflow checks out that branch and rebases it onto `origin/main` before capturing another snapshot. This preserves unmerged append-only history. With no open PR, the workflow inspects the remote branch and PR history before starting from `origin/main`; closed-unmerged, orphaned, or otherwise ambiguous branch state fails for operator review.
+
+Jobs use target-specific concurrency, stage only the target's evidence directory, run focused tests and repository-wide replay, and require the PR diff to contain additions only under that directory. They open or update a non-auto-merge PR only after those checks pass.
+
+The PR records the snapshot identity, measured and unavailable metrics, adoption blockers, and the expected confirmatory or indeterminate effect. Automation never edits an overlay or grants an artifact score authority.
 
 ## Manual Use
 
+Live capture requires an explicit allowlisted target:
+
 ```bash
-npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts
-npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --replay <artifact.json>
+npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --asset usde-ethena
+npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --asset usdf-falcon
 ```
 
-Replay rebuilds every derived field from the recorded source payloads and capture time, then requires byte-identical JSON.
+Replay one artifact or validate all committed and newly captured artifacts:
+
+```bash
+npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --replay <artifact.json>
+npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --replay-all
+```
+
+Live options, explicit replay paths, and `--replay-all` are mutually exclusive. Unknown or duplicate targets fail before network or filesystem work.

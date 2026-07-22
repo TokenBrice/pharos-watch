@@ -37,9 +37,11 @@ type WorkflowStep = {
   if?: string;
   name?: string;
   run?: string;
+  uses?: string;
 };
 
 type WorkflowJob = {
+  concurrency?: { group: string; "cancel-in-progress": boolean };
   environment?: { name: string; url?: string };
   if?: string;
   name?: string;
@@ -48,6 +50,7 @@ type WorkflowJob = {
   "runs-on"?: string;
   secrets?: Record<string, string>;
   steps?: WorkflowStep[];
+  strategy?: { "fail-fast": boolean; matrix: Record<string, unknown[]> };
   uses?: string;
   with?: Record<string, unknown>;
 };
@@ -153,6 +156,54 @@ describe("validate-ci parity", () => {
     expect(workflows).not.toContain("actions/setup-node@");
     expect(workflows).not.toContain("node-version:");
     expect(setupWorkspaceAction).not.toContain('default: "25"');
+  });
+
+  it("keeps protocol API refreshes target-isolated, append-only, replayed, and review-gated", () => {
+    const filePath = ".github/workflows/protocol-api-mechanism-refresh.yml";
+    const source = readFileSync(resolve(process.cwd(), filePath), "utf8");
+    const workflow = readWorkflow(filePath);
+    const refresh = workflow.jobs.refresh;
+
+    expect(workflow.permissions).toEqual({ contents: "read", "pull-requests": "read" });
+    expect(refresh["runs-on"]).toBe(
+      "${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}",
+    );
+    expect(refresh.strategy).toEqual({
+      "fail-fast": false,
+      matrix: { asset: ["usde-ethena", "usdf-falcon"] },
+    });
+    expect(refresh.concurrency).toEqual({
+      group: "protocol-api-mechanism-refresh-${{ matrix.asset }}",
+      "cancel-in-progress": false,
+    });
+    expect(refresh.steps?.some((step) => step.uses === "./.github/actions/setup-workspace")).toBe(true);
+    expect(source).toContain('BRANCH="automated/protocol-api-mechanism-refresh/${ASSET_ID}"');
+    expect(source).toContain('--state all --base main --head "$BRANCH"');
+    expect(source).toContain("CLOSED_UNMERGED_COUNT");
+    expect(source).toContain("closed-unmerged PR history");
+    expect(source).toContain('--limit 100 --json number,state,mergedAt');
+    expect(source).toContain('git ls-remote --exit-code --heads origin "$BRANCH"');
+    expect(source).toContain('if [ "$REMOTE_STATUS" -eq 2 ]');
+    expect(source).toContain('if [ "$OPEN_PR_COUNT" -ne 0 ]');
+    expect(source).toContain('elif [ "$OPEN_PR_COUNT" -eq 1 ]');
+    expect(source).toContain('elif [ "$OPEN_PR_COUNT" -gt 1 ]');
+    expect(source.match(/git checkout -B "\$BRANCH" origin\/main/g)).toHaveLength(2);
+    expect(source).toContain('git checkout -B "$BRANCH" "origin/$BRANCH"');
+    expect(source).toContain("git rebase origin/main");
+    expect(source).toContain('git merge-base --is-ancestor "origin/$BRANCH" origin/main');
+    expect(source).toContain("has unmerged commits but no open PR");
+    expect(source).toContain("refusing to overwrite it");
+    expect(source).toContain('measure-protocol-api-mechanism-metrics.ts --asset "$ASSET_ID"');
+    expect(source).toContain("measure-protocol-api-mechanism-metrics.ts --replay-all");
+    expect(source.match(/git diff --name-status origin\/main\.\.\.HEAD/g)).toHaveLength(2);
+    expect(source).toContain('if [ "$status" != "A" ]');
+    expect(source).toContain('git diff --quiet -- "$ROOT"');
+    expect(source).toContain('git ls-files --others --exclude-standard -- "$ROOT"');
+    expect(source).toContain('git add -- "$ROOT"');
+    expect(source).toContain('git push --force-with-lease -u origin "$BRANCH"');
+    expect(source).toContain("gh pr edit");
+    expect(source).not.toContain("gh pr merge");
+    expect(source).not.toContain("--auto");
   });
 
   it("threads every public Pharos feature flag into Pages build workflows", () => {
