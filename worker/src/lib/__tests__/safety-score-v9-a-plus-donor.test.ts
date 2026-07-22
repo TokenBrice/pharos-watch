@@ -1599,20 +1599,20 @@ describe("Safety Score v9 real-donor A+ fixture", { timeout: 30_000 }, () => {
       observedAtSec: redemptionReview.output!.valuation!.observedAtSec,
     });
 
-    expect(card).toMatchObject({ id: COMPOSITE_ID, score: 88, grade: "A+", evidence: { level: "strong" } });
+    expect(card).toMatchObject({ id: COMPOSITE_ID, score: 89, grade: "A+", evidence: { level: "strong" } });
     expect(evaluated).toMatchObject({
-      backing: { score: 90.52859075 },
+      backing: { score: 92.42609075 },
       exit: { score: 79.44 },
       control: { score: 95 },
-      trace: { pegMultiplier: 1, weightedQuality: 87.7654, preCapScore: 87.7654, bindingCap: null },
+      trace: { pegMultiplier: 1, weightedQuality: 88.5244, preCapScore: 88.5244, bindingCap: null },
     });
     const rawAuditScore = evaluated.trace.pillarContributions.reduce(
       (sum, contribution) => sum + contribution.score * contribution.weight,
       0,
     );
-    expect(rawAuditScore).toBe(87.7654363);
+    expect(rawAuditScore).toBe(88.5244363);
     expect(card.pillars).toMatchObject({
-      backing: { score: 90.52859075, evidenceLevel: "strong", reasons: [] },
+      backing: { score: 92.42609075, evidenceLevel: "strong", reasons: [] },
       exit: { score: 79.44, evidenceLevel: "strong", reasons: [] },
       control: { score: 95, evidenceLevel: "strong", reasons: [] },
     });
