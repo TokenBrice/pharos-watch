@@ -479,9 +479,9 @@
   "deploymentModel": "canonical-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "DAI is native on Ethereum. Reviewed non-Ethereum deployments span Maker-governed and canonical rollup bridges (Arbitrum, Optimism, Base, zkSync Era, Boba, Metis, Linea, Scroll, Unichain, Taiko, Morph, Hemi, Starknet StarkGate), federation/validator bridges (Polygon PoS, Gnosis OmniBridge, Rootstock TokenBridge, PulseChain, NEAR Rainbow, Wormhole Solana, Orbit Klaytn, Multichain Kava, Celer Astar, Axelar Osmosis, Wanchain Cardano). BSC, Avalanche, Fantom, Moonriver, Moonbeam, Harmony, and Aurora remain unresolved because their live mint authority resolves only to bytecode-less EOAs (Multichain MPC, Binance peg wallet, Avalanche bridge role, Rainbow admin).",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex Safety Score V9 bridge review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "summary": "DAI is native on Ethereum. Reviewed non-Ethereum deployments span Maker-governed and canonical rollup bridges (Arbitrum, Optimism, Base, zkSync Era, Boba, Metis, Linea, Scroll, Unichain, Taiko, Morph, Hemi, Starknet StarkGate), federation/validator bridges (Polygon PoS, Gnosis OmniBridge, Rootstock TokenBridge, PulseChain, NEAR Rainbow, Wormhole Solana, Orbit Klaytn, Multichain Kava, Celer Astar, Axelar Osmosis, Wanchain Cardano). BSC, Avalanche, Fantom, Moonriver, Moonbeam, Harmony, and Aurora remain unresolved because their live mint authority resolves only to bytecode-less EOAs (Multichain MPC, Binance peg wallet, Avalanche bridge role, Rainbow admin). Per-route bridged-supply attribution pinned on-chain 2026-07-22: Ethereum-native DAI.totalSupply() at block 25584812 = 4,638,093,582.405928 DAI (denominator). The Polygon PoS child token 0x8f3cf7ad23cd3cadbd9735aff958023239c6a063 totalSupply() at Polygon block 90651088 = 556,606,180.655442 DAI = 12.00% of DAI supply, corroborated by the L1 Polygon ERC20 predicate 0x40ec5B33f54e0E8A33A975908C5BA1c14e5BbbDf holding 584,895,715 DAI and DefiLlama per-chain attribution (554,072,601 DAI = 11.44% of DAI's 4,845,197,470 total). The Polygon PoS common-mode exposure is measured above the 10% materiality threshold, so the critical-dependency severity on the polygon-pos-bridge domains (protocol:polygon-pos-bridge and contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa) is retained on a measured basis, not a fail-closed default. All other bridged routes are immaterial: Arbitrum 18,565,525 DAI (0.40%), Optimism 13,715,643 DAI (0.30%), Base 2,070,150 DAI (0.04%), Gnosis OmniBridge 63,561 DAI (0.001%), with every remaining canonical/opaque route below 0.75% (DefiLlama per-chain), so Polygon PoS is the only bridge domain that reaches the materiality floor.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "Codex Safety Score V9 bridge review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Claude T6 DAI attribution sprint (2026-07-22)",
     "confidence": "verified",
     "protocols": [
       {
@@ -528,8 +528,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Ethereum block 25584812 on 2026-07-22 returned 4,638,093,582.405928 DAI, the denominator for per-route bridged-supply shares.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-22",
+        "observedBlock": 25584812,
         "sources": [
           {
             "label": "Sky Dai token docs",
@@ -564,8 +566,10 @@
           "contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa"
         ],
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() on the Polygon PoS child token at Polygon block 90651088 on 2026-07-22 returned 556,606,180.655442 DAI, 12.00075% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI). Independently corroborated by the L1 Polygon ERC20 predicate 0x40ec5B33f54e0E8A33A975908C5BA1c14e5BbbDf holding 584,895,715 DAI and DefiLlama per-chain attribution (554,072,601 DAI = 11.44% of DAI's 4,845,197,470 total). Above the 10% materiality threshold, so the polygon-pos-bridge common-mode cap is measured rather than fail-closed.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-07-22",
+        "observedBlock": 90651088,
         "sources": [
           {
             "label": "Polygon mapped token registry",
@@ -596,8 +600,10 @@
           "contract:arbitrum:0x467194771dae2967aef3ecbedd3bf9a310c76c65"
         ],
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Arbitrum block 486362140 on 2026-07-22 returned 18,565,525.134873 DAI, 0.40028% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) — immaterial, below the 5% floor.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-07-22",
+        "observedBlock": 486362140,
         "sources": [
           {
             "label": "MakerDAO Arbitrum DAI Bridge repository",
@@ -624,8 +630,10 @@
           "contract:optimism:0x467194771dae2967aef3ecbedd3bf9a310c76c65"
         ],
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Optimism block 154541426 on 2026-07-22 returned 13,715,643.334159 DAI, 0.29572% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) — immaterial, below the 5% floor.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-06-13",
+        "observedAt": "2026-07-22",
+        "observedBlock": 154541426,
         "sources": [
           {
             "label": "Sky Dai token docs",
@@ -737,8 +745,10 @@
           "contract:base:0x4200000000000000000000000000000000000010"
         ],
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Base block 48946141 on 2026-07-22 returned 2,070,150.298811 DAI, 0.04463% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) — immaterial, below the 5% floor.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-07-22",
+        "observedBlock": 48946141,
         "sources": [
           {
             "label": "BaseScan DAI bridge token implementation",
@@ -769,8 +779,10 @@
           "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
         ],
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Gnosis block 47325121 on 2026-07-22 returned 63,561.271026 DAI, 0.00137% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) — immaterial, below the 5% floor. (Distinct from native xDAI; this is the OmniBridge-bridged DAI representation.)",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-14",
+        "observedAt": "2026-07-22",
+        "observedBlock": 47325121,
         "sources": [
           {
             "label": "Gnosis OmniBridge documentation",
