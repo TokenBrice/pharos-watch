@@ -1,4 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const logWorkerEventMock = vi.hoisted(() => vi.fn());
+
+vi.mock("../../../lib/structured-log", () => ({
+  logWorkerEvent: logWorkerEventMock,
+}));
 
 import type { DexApiPool } from "../../../lib/dex-api-types";
 import {
@@ -169,6 +175,46 @@ describe("measured execution target inventory", () => {
         }),
       ).toBeNull();
     }
+  });
+
+  it("rejects pool-implied references below measured-execution price precision", () => {
+    const baseCandidate: UniV3ExecutionCandidate = {
+      chain: "ethereum",
+      poolAddress: POOL,
+      feePips: 10_000,
+      tvlUsd: 20_000,
+      token0Price: 2.9386629316549423e-27,
+      token1Price: 3.402908008205777e26,
+      tokens: [
+        { address: USDC, symbol: "USDC", decimals: 6 },
+        { address: "0x4444444444444444444444444444444444444444", symbol: "ENS", decimals: 18 },
+      ],
+    };
+    const base = {
+      stablecoinId: "usdc-circle",
+      stablecoinPriceById: new Map([["usdc-circle", 1]]),
+      chainAddressToId: addressMap([[USDC, "usdc-circle"]]),
+      retainedTvlUsd: 20_000,
+      capturedAt: 1_752_560_000,
+    };
+
+    expect(buildUniV3MeasuredExecutionTarget({ ...base, candidate: baseCandidate })).toBeNull();
+    expect(logWorkerEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "univ3_implied_reference_rejected",
+        metadata: expect.objectContaining({
+          token0Price: baseCandidate.token0Price,
+          token1Price: baseCandidate.token1Price,
+          impliedOutputPrice: baseCandidate.token0Price,
+        }),
+      }),
+    );
+    expect(
+      buildUniV3MeasuredExecutionTarget({
+        ...base,
+        candidate: { ...baseCandidate, token0Price: 2.818366306216791e-9 },
+      }),
+    ).toBeNull();
   });
 
   it("builds exact two-token Pancake and Fluid targets but rejects self-output and multi-token pools", () => {
