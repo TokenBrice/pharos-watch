@@ -141,6 +141,13 @@ export const PUBLIC_STATIC_ROUTES = [
           handleReportCardsV9(db),
     ),
   ),
+  defineLazyStaticRoute("report-cards-v9-preview-412d818c031b7bc5", () =>
+    import("../api/report-cards-v9").then(
+      ({ handleReportCardsV9Preview }) =>
+        ({ db }) =>
+          handleReportCardsV9Preview(db),
+    ),
+  ),
   defineLazyStaticRoute("depeg-resolver", () =>
     import("../api/depeg-resolver").then(
       ({ handleDepegResolver }) =>

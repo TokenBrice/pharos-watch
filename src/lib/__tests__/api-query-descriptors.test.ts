@@ -29,6 +29,7 @@ const EXPECTED_RESPONSE_MODES: {
   pegSummary: "meta",
   reportCards: "meta",
   reportCardsV9: "meta",
+  reportCardsV9Preview: "meta",
   depegResolver: "meta",
   depegResolverReview: "meta",
   redemptionBackstops: "meta",

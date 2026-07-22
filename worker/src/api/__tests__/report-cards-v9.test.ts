@@ -16,7 +16,7 @@ vi.mock("../../lib/report-cards-snapshot", () => ({
   buildReportCardsSnapshot: mockBuildReportCardsSnapshot,
 }));
 
-const { handleReportCardsV9 } = await import("../report-cards-v9");
+const { handleReportCardsV9, handleReportCardsV9Preview } = await import("../report-cards-v9");
 const { getRouteMatch } = await import("../../routes/registry");
 
 const digest = (character: string) => character.repeat(64);
@@ -133,6 +133,43 @@ describe("handleReportCardsV9", () => {
     );
 
     const response = await handleReportCardsV9(markerDb(approvedMarker()));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: "Canonical Safety Score V9 shadow cache is unavailable" });
+    expect(mockBuildReportCardsSnapshot).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleReportCardsV9Preview", () => {
+  beforeEach(() => {
+    mockLoadPublishedReportCardsV9Snapshot.mockReset();
+    mockBuildReportCardsSnapshot.mockReset();
+  });
+
+  it("serves the strict shadow projection without activating the V9 endpoint", async () => {
+    mockLoadPublishedReportCardsV9Snapshot.mockResolvedValue(snapshot());
+
+    const response = await handleReportCardsV9Preview(mockD1());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      model: "v9",
+      schemaVersion: 1,
+      lifecycle: "shadow",
+      safetyScoreIdentity: snapshot().safetyScoreIdentity,
+    });
+    const endpoint = getRouteMatch("/api/report-cards/v9-preview-412d818c031b7bc5")?.endpoint;
+    expect(endpoint?.key).toBe("report-cards-v9-preview-412d818c031b7bc5");
+    expect(endpoint?.cacheBypass).toBe(false);
+  });
+
+  it("returns explicit unavailability without reading or recomputing V8", async () => {
+    mockLoadPublishedReportCardsV9Snapshot.mockRejectedValue(
+      new MockV9UnavailableError("Canonical Safety Score V9 shadow cache is unavailable"),
+    );
+
+    const response = await handleReportCardsV9Preview(mockD1());
 
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({ error: "Canonical Safety Score V9 shadow cache is unavailable" });

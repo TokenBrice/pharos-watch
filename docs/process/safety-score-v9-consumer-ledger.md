@@ -1,7 +1,8 @@
 # Safety Score V9 Consumer Ledger
 
 > **Status:** pre-activation inventory. Every `OPEN` row is an activation
-> blocker. Safety Score v8.17 remains the only public model.
+> blocker. Safety Score v8.17 remains the only active public model; the
+> read-only unlisted V9 feedback preview remains a shadow consumer.
 
 This ledger implements the consumer contract in
 [`safety-score-v9-rollout.md`](./safety-score-v9-rollout.md#consumer-contract).
@@ -23,6 +24,13 @@ is tested, and its material V8/V9 diff has a reviewed artifact.
 - Activation and rollback boundaries are not organic score movements.
 - `Diff: pending` means no reviewed consumer-specific V8/V9 evidence is yet
   recorded and therefore the row remains `OPEN`.
+
+The temporary `/v9-preview-412d818c031b7bc5/` reviewer page and its opaque
+read endpoint are deliberately outside the activation dispositions below. They
+render only the strict `lifecycle: "shadow"` projection, retain a V9-specific
+query identity, and expose no V8 fallback or admin data. Their existence does
+not close C01 or C02: external compatibility, active-route behavior, full
+frontend cutover, and reviewed consumer diffs remain open.
 
 ## Direct And Frontend Consumers
 

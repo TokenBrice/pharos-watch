@@ -482,6 +482,12 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
   }),
   publicGet({
+    key: "report-cards-v9-preview-412d818c031b7bc5",
+    path: API_PATHS.reportCardsV9Preview(),
+    strictContract: true,
+    probeGroup: "manual",
+  }),
+  publicGet({
     key: "depeg-resolver",
     path: API_PATHS.depegResolver(),
     strictContract: true,

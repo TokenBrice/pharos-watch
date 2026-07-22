@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import { errorResponse, jsonFreshResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
@@ -41,6 +42,17 @@ function parseActivationMarker(value: string): ReportCardsV9ActivationMarker | n
   }
 }
 
+function snapshotResponse(snapshot: ReportCardsV9Response, lifecycle: ReportCardsV9Response["lifecycle"]): Response {
+  return jsonFreshResponse(
+    { ...snapshot, lifecycle },
+    {
+      cacheControl: CACHE_PROFILES.standard,
+      updatedAt: snapshot.updatedAt,
+      maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
+    },
+  );
+}
+
 /**
  * Versioned V9 public contract. It is shadow-only until a separately approved
  * activation writes the identity-bound marker; this route never reads or
@@ -51,11 +63,17 @@ export const handleReportCardsV9 = withErrorHandler("report-cards-v9", async (db
   try {
     const activation = await getCache(db, REPORT_CARDS_V9_ACTIVATION_CACHE_KEY);
     if (!activation) {
-      return errorResponse(404, "Safety Score v9 is not activated; this endpoint is dark until the owner-gated activation step.");
+      return errorResponse(
+        404,
+        "Safety Score v9 is not activated; this endpoint is dark until the owner-gated activation step.",
+      );
     }
     const approved = parseActivationMarker(activation.value);
     if (approved === null) {
-      return errorResponse(404, "Safety Score v9 activation marker is not a valid identity binding; the endpoint remains dark (fail-closed).");
+      return errorResponse(
+        404,
+        "Safety Score v9 activation marker is not a valid identity binding; the endpoint remains dark (fail-closed).",
+      );
     }
     const snapshot = await loadPublishedReportCardsV9Snapshot(db);
     const identity = snapshot.safetyScoreIdentity;
@@ -65,16 +83,12 @@ export const handleReportCardsV9 = withErrorHandler("report-cards-v9", async (db
       identity.evaluationBuildDigest === approved.evaluationBuildDigest &&
       identity.methodologyVersion === approved.methodologyVersion;
     if (!identityMatches) {
-      return errorResponse(404, "Safety Score v9 activation identity does not match the canonical snapshot; the endpoint remains dark (fail-closed).");
+      return errorResponse(
+        404,
+        "Safety Score v9 activation identity does not match the canonical snapshot; the endpoint remains dark (fail-closed).",
+      );
     }
-    return jsonFreshResponse(
-      { ...snapshot, lifecycle: "active" },
-      {
-        cacheControl: CACHE_PROFILES.standard,
-        updatedAt: snapshot.updatedAt,
-        maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
-      },
-    );
+    return snapshotResponse(snapshot, "active");
   } catch (error) {
     if (error instanceof ReportCardsV9SnapshotUnavailableError) {
       return errorResponse(503, error.message);
@@ -82,3 +96,23 @@ export const handleReportCardsV9 = withErrorHandler("report-cards-v9", async (db
     throw error;
   }
 });
+
+/**
+ * Owner-approved, read-only feedback surface for the current shadow candidate.
+ * It deliberately bypasses activation while preserving the shadow lifecycle
+ * and strict public projection. The opaque route is discoverability control,
+ * not authentication.
+ */
+export const handleReportCardsV9Preview = withErrorHandler(
+  "report-cards-v9-preview",
+  async (db: D1Database): Promise<Response> => {
+    try {
+      return snapshotResponse(await loadPublishedReportCardsV9Snapshot(db), "shadow");
+    } catch (error) {
+      if (error instanceof ReportCardsV9SnapshotUnavailableError) {
+        return errorResponse(503, error.message);
+      }
+      throw error;
+    }
+  },
+);
