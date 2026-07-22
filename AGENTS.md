@@ -18,6 +18,7 @@ This file is mirrored to `CLAUDE.md`. Durable process guidance belongs in `/docs
 
 - State assumptions for non-trivial work; ask only when ambiguity blocks a safe choice.
 - Prefer the smallest root-cause fix. Match existing style and avoid unrelated refactors.
+- Pharos intentionally has no canonical formatter. Preserve existing layout, match nearby style, avoid formatting-only churn, and use `git diff --check`; generated artifacts retain generator-owned formatting. Do not add or run an ad hoc formatter without an explicit repository-wide migration decision. See `docs/testing.md#source-formatting-policy`.
 - Preserve existing product and design-system patterns unless explicitly asked for a redesign.
 - Before reporting a required local credential as missing, check the ignored root `.env.local` and the command's documented environment source. Report presence or absence by variable name only; never print, copy, or log secret values. Production Worker secrets remain Cloudflare/Wrangler-managed and must not be copied into local files.
 - Update matching docs for behavior, API, pipeline, methodology, or data-source changes; new data sources also update the about page.

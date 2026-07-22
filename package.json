@@ -189,7 +189,6 @@
     "check:og-case-studies": "tsx scripts/maintenance/build-og-case-studies.ts --check",
     "generate:case-study-client-index": "tsx scripts/maintenance/generate-case-study-client-index.ts",
     "check:case-study-client-index": "tsx scripts/maintenance/generate-case-study-client-index.ts --check",
-    "format": "prettier --write .",
     "prepare": "node scripts/maintenance/prepare-workspace.mjs"
   },
   "dependencies": {
@@ -243,7 +242,6 @@
     "eslint-plugin-security": "^4.0.1",
     "jsdom": "^29.1.1",
     "madge": "8.0.0",
-    "prettier": "3.9.5",
     "tailwindcss": "4.3.2",
     "topojson-client": "3.1.0",
     "tsx": "^4.23.0",
