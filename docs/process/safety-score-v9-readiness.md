@@ -394,7 +394,7 @@ ignored research workspace's anchor-coherence plan):
 The final candidate identity of the chain is policy digest
 `8f5af0e2b75ac1bb3f1dd161de915eb4182477a75254fe4721350a9b790298fd` and
 evaluation-build digest
-`fbf6d7d72cb681718fb9f5d52adcdf8df4c22a75d03fbb8b69c6d0e06c29b9ea`
+`545b3ba887123969111e5b80ea684d0d72c9fbc83706dcabed2a11d46e5e72d5`
 (reshape-v2 batch, 2026-07-22: F-gate predicate split D1, wrapper same-obligor
 dependency dedup D2, TUSD pin release D8, rateable floor re-derivation D6 —
 prior identity `bba4fe1461967763895f0bc2fe0fe56af3c37334ce969141…` from the

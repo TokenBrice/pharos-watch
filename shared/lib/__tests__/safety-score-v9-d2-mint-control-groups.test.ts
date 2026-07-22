@@ -165,3 +165,46 @@ describe("D2 ruled issuer-scoped grouping — Stage B", () => {
     expect(split).toEqual([merged, merged]);
   });
 });
+
+describe("Reshape-v2 D2 — parent-controlled common-mode dedup", () => {
+  const serialPaths = [
+    {
+      assetId: "steakusdt-steakhouse",
+      upstreamAssetId: "usdt-tether",
+      edgeKey: "wrap",
+      dependencyType: "wrapped-issuance" as const,
+      role: "serial-claim" as const,
+      weight: 1,
+      failureDomains: [],
+    },
+    {
+      assetId: "basket-holder",
+      upstreamAssetId: "usdt-tether",
+      edgeKey: "basket",
+      dependencyType: "reserve-exposure" as const,
+      role: "basket-exposure" as const,
+      weight: 0.4,
+      failureDomains: [],
+    },
+  ] as never[];
+
+  it("extracts the controller asset id only from asset-keyed control domains", () => {
+    expect(evaluateSet.v9ControlAssetDomainId({ kind: "mint-control", key: "asset:usdt-tether" } as never)).toBe("usdt-tether");
+    expect(evaluateSet.v9ControlAssetDomainId({ kind: "upgrade-control", key: "asset:usdc-circle" } as never)).toBe("usdc-circle");
+    expect(evaluateSet.v9ControlAssetDomainId({ kind: "mint-control", key: "safe:ethereum:0x0a0e" } as never)).toBeNull();
+    expect(evaluateSet.v9ControlAssetDomainId({ kind: "bridge-route", key: "asset:usdt-tether" } as never)).toBeNull();
+  });
+
+  it("defers to the parent cap only for serial-claim children of the domain asset", () => {
+    expect(evaluateSet.isV9ParentControlledCommonModeMember("steakusdt-steakhouse", "usdt-tether", serialPaths as never)).toBe(
+      true,
+    );
+    // Basket exposure is not a required-parent relationship: the shared-controller risk stays priced.
+    expect(evaluateSet.isV9ParentControlledCommonModeMember("basket-holder", "usdt-tether", serialPaths as never)).toBe(false);
+    // A different upstream never matches, and a null domain id never dedups.
+    expect(evaluateSet.isV9ParentControlledCommonModeMember("steakusdt-steakhouse", "usdc-circle", serialPaths as never)).toBe(
+      false,
+    );
+    expect(evaluateSet.isV9ParentControlledCommonModeMember("steakusdt-steakhouse", null, serialPaths as never)).toBe(false);
+  });
+});
