@@ -19,6 +19,7 @@ const STRATEGY_KEYWORDS = [
   "AMO", "AMM",
   "Yearn", "Aave", "Morpho", "Compound",
   "lending", "loan", "loop",
+  "debt",
   "LP ", "LP)", "LP,",
   "pool",
   "Curve", "Uniswap", "Kodiak", "Pendle",

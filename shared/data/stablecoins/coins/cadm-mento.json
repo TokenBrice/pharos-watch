@@ -424,7 +424,7 @@
     {
       "name": "WETH residual on Celo",
       "pct": 0.0006921547,
-      "risk": "low",
+      "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Wrapped Ether on Celo",
       "riskFactors": [
