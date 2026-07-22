@@ -163,8 +163,8 @@
       }
     ],
     "evidence": "Lista's official documentation describes lisUSD as an open-source, collateralized CDP stablecoin and explicitly contrasts it with fiat-backed frozen funds. The verified BSC LisUSD implementation exposes Maker-style wards, mint, burn, and standard ERC-20 transfer operations; no holder blacklist, freeze, or pause control is present in the reviewed token surface. Upstream collateral and PSM assets can carry separate freeze exposure, but no direct lisUSD holder restriction is asserted.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "reviewer": "GPT SOL-CORP-B wave6",
+    "reviewedAt": "2026-07-22"
   },
   "reserves": [
     {

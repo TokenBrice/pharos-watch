@@ -54,8 +54,8 @@
     ],
     "sourceFreeRationale": "Explicit possible: the verified stcUSD UUPS proxy can replace its implementation through Cap's external AccessControl, one-day TimelockController, and 3-of-5 governance Safe. The active implementation has no direct holder restriction, but this bounded live authority can introduce one.",
     "evidence": "Reviewed 2026-07-15. At Ethereum safe block 25,535,489 (0x185a401; hash 0x5ecfd74206eab6171c6acac2c9b2d1a5c253f17c3178fb272b2db06ffb4bc57a), stcUSD asset() returned cUSD and EIP-1967 slots resolved the stcUSD proxy to 0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31 and cUSD to 0xa76645e15c267b876999bf7689e0b2c1ee29bfe6. The verified StakedCap source has standard ERC-4626/ERC-20 transfer paths and no pause, blacklist, freeze, seize, or address-lock function; paused() reverted. The record's verified mint-authority observation at block 25,531,350 establishes the live UUPS upgrade path: external AccessControl, then a one-day TimelockController, then the Cap 3-of-5 governance Safe. This establishes a bounded governance-controlled future holder-control possibility, not a current direct blacklist. The verified cUSD implementation exposes protocol- and asset-level pause functions, which remain additive upstream exposure. Cap's terms and reserve dashboard provided no additional deployed holder-control mechanism. The official mechanics page has a 2026-06-22 archive capture.",
-    "reviewer": "Codex Wave 11 access review",
-    "reviewedAt": "2026-07-15"
+    "reviewer": "GPT SOL-CORP-B wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
