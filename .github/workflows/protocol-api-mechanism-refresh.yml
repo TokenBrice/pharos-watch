@@ -1,0 +1,82 @@
+name: Protocol API Mechanism Refresh
+
+# Producer-only evidence for synthetic/yield mechanism reviews. These files do
+# not alter the active score identity; a reviewed identity rotation owns any
+# later scoring adoption.
+
+on:
+  schedule:
+    - cron: "17 4 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: protocol-api-mechanism-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Capture protocol API mechanism evidence
+        run: npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts
+
+      - name: Validate producer and deterministic derivation
+        run: npm exec vitest -- scripts/__tests__/measure-protocol-api-mechanism-metrics.test.ts --run
+
+      - name: Detect evidence diff
+        id: diff
+        run: |
+          set -euo pipefail
+          ROOT=shared/data/safety-score-v9/mechanism-measurements/usde-ethena
+          if git diff --quiet -- "$ROOT" && [ -z "$(git ls-files --others --exclude-standard -- "$ROOT")" ]; then
+            echo "has_diff=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_diff=true" >> "$GITHUB_OUTPUT"
+            git status --short -- "$ROOT"
+          fi
+
+      - name: Require automation token for checked PRs
+        if: steps.diff.outputs.has_diff == 'true'
+        env:
+          REFRESH_TOKEN: ${{ secrets.MECHANISM_REFRESH_GITHUB_TOKEN || secrets.SHOCK_COVERAGE_GITHUB_TOKEN || secrets.OG_REFRESH_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${REFRESH_TOKEN:-}" ]; then
+            echo "::error title=Missing mechanism refresh token::Configure MECHANISM_REFRESH_GITHUB_TOKEN or a supported fallback token so the refresh PR triggers normal checks."
+            exit 1
+          fi
+
+      - name: Open or update refresh PR
+        if: steps.diff.outputs.has_diff == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.MECHANISM_REFRESH_GITHUB_TOKEN || secrets.SHOCK_COVERAGE_GITHUB_TOKEN || secrets.OG_REFRESH_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          BRANCH=automated/protocol-api-mechanism-refresh
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add shared/data/safety-score-v9/mechanism-measurements/usde-ethena/
+          git commit -m "chore(v9): refresh protocol API mechanism evidence"
+          gh auth setup-git
+          git push --force-with-lease -u origin "$BRANCH"
+          if gh pr view "$BRANCH" --json state --jq '.state' 2>/dev/null | grep -qx OPEN; then
+            echo "Existing open PR for $BRANCH updated by force-push."
+          else
+            gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "chore(v9): refresh protocol API mechanism evidence" \
+              --body "Automated producer-only Ethena mechanism measurement. This preserves raw API payloads and derived candidate metrics; it does not change the active score identity or mechanism overlay. See docs/process/protocol-api-mechanism-refresh.md."
+          fi

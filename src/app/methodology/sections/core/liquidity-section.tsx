@@ -71,6 +71,12 @@ export function LiquidityMethodologySection() {
             Optimism.
           </p>
           <p>
+            Classic Aerodrome execution is limited to volatile pools already present in the Base Aerodrome census. Exact
+            models require same-block reviewed factory and implementation runtimes, an exact
+            `getPool(token0, token1, false)` binding, `stable = false`, an unpaused factory, and the pool&apos;s dynamic fee.
+            This does not admit generic Solidly forks or deployments on Avalanche, Linea, or Sonic.
+          </p>
+          <p>
             Repeated sightings of the same physical pool across direct API, staged, and fallback sources are collapsed
             before DEX price aggregation. Exact direct price evidence can rejoin only when the same canonical pool survives
             final scoring and both records clear the price-observation floor; derived or mismatched identities remain

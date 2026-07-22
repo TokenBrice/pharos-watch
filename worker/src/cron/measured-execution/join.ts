@@ -49,7 +49,11 @@ export async function loadDexMeasuredExecutionJoinEvidence(
 }
 
 function deploymentIssues(profile: DexMeasuredExecutionProfile): string[] {
-  if (profile.adapterProfileId === "uniswap-v3-quoter-v2" || profile.adapterProfileId === "pancakeswap-v3-quoter-v2") {
+  if (
+    profile.adapterProfileId === "uniswap-v3-quoter-v2" ||
+    profile.adapterProfileId === "pancakeswap-v3-quoter-v2" ||
+    profile.adapterProfileId === "aerodrome-slipstream-quoter-v2"
+  ) {
     const deployment = getDexMeasuredExecutionDeployment(profile.adapterProfileId, profile.chain);
     if (!deployment) return ["deployment-missing"];
     const issues: string[] = [];

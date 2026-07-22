@@ -1,14 +1,11 @@
+import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { mergeDexPriceObservationMap } from "./orchestrator-phases/price-obs";
 import type { SubgraphPriceObservation } from "./subgraph-helpers";
-import type {
-  AerodromeLookups,
-  DexPriceObs,
-  UniV3Lookups,
-} from "./types";
+import type { AerodromeLookups, DexPriceObs, UniV3Lookups } from "./types";
 import {
   AERODROME_PAIR_MAX_PAGES,
   AERODROME_PAIR_PAGE_SIZE,
@@ -23,6 +20,7 @@ import { buildPoolIdentity } from "./pool-identity";
 import { resolveTrackedStablecoinId } from "./token-resolution";
 import { runSubgraphFamily } from "./subgraph-family-runner";
 import { buildUniV3ExecutionCandidateKey } from "../measured-execution/inventory";
+import { buildEvmV2ExecutionCandidate } from "./constant-product-v2";
 
 type UniV3SubgraphPool = {
   id: string;
@@ -60,16 +58,7 @@ function mapTrackedSubgraphPriceObservations(config: {
   identity: ReturnType<typeof buildPoolIdentity>;
 }): SubgraphPriceObservation[] {
   const mapped: SubgraphPriceObservation[] = [];
-  const {
-    chain,
-    protocol,
-    tvl,
-    tokenEntries,
-    chainAddressToId,
-    symbolToChainScopedIds,
-    references,
-    identity,
-  } = config;
+  const { chain, protocol, tvl, tokenEntries, chainAddressToId, symbolToChainScopedIds, references, identity } = config;
 
   for (const { symbol, address, usdPrice } of tokenEntries) {
     const resolved = resolveTrackedStablecoinId(
@@ -142,18 +131,21 @@ export async function fetchUniV3Data(
         const token1Decimals = Number.parseInt(pool.token1.decimals, 10);
         const token0Price = parseFloat(pool.token0Price);
         const token1Price = parseFloat(pool.token1Price);
-        const executionKey = buildUniV3ExecutionCandidateKey(
-          chain,
-          [pool.token0.id, pool.token1.id],
-          feeTier,
-        );
+        const executionKey = buildUniV3ExecutionCandidateKey(chain, [pool.token0.id, pool.token1.id], feeTier);
         if (
           executionKey &&
-          Number.isFinite(tvl) && tvl > 0 &&
-          Number.isInteger(token0Decimals) && token0Decimals >= 0 && token0Decimals <= 255 &&
-          Number.isInteger(token1Decimals) && token1Decimals >= 0 && token1Decimals <= 255 &&
-          Number.isFinite(token0Price) && token0Price > 0 &&
-          Number.isFinite(token1Price) && token1Price > 0
+          Number.isFinite(tvl) &&
+          tvl > 0 &&
+          Number.isInteger(token0Decimals) &&
+          token0Decimals >= 0 &&
+          token0Decimals <= 255 &&
+          Number.isInteger(token1Decimals) &&
+          token1Decimals >= 0 &&
+          token1Decimals <= 255 &&
+          Number.isFinite(token0Price) &&
+          token0Price > 0 &&
+          Number.isFinite(token1Price) &&
+          token1Price > 0
         ) {
           const candidates = lookups.uniV3ExecutionCandidates.get(executionKey) ?? [];
           candidates.push({
@@ -233,6 +225,7 @@ export async function fetchAerodromeData(
     createLookups: () => ({
       aerodromePriceObs: new Map<string, DexPriceObs[]>(),
       aerodromeIsStable: new Map<string, boolean>(),
+      aerodromeV2ExecutionCandidates: new Map(),
     }),
     buildConfig: (chain, subgraphUrl, combinedSignal, lookups) => ({
       subgraphUrl,
@@ -244,6 +237,24 @@ export async function fetchAerodromeData(
       signal: combinedSignal,
       extractEntities: (data) => (data as { pairs?: AerodromeSubgraphPair[] } | undefined)?.pairs,
       mapEntity: (pair) => {
+        if (!pair.isStable) {
+          const candidate = buildEvmV2ExecutionCandidate({
+            chain,
+            protocol: "aerodrome",
+            poolType: "aerodrome-volatile",
+            poolAddress: pair.id,
+            tokenAddresses: [pair.token0.id, pair.token1.id],
+            tokenSymbols: [pair.token0.symbol, pair.token1.symbol],
+            confirmedStable: pair.isStable,
+          });
+          if (candidate) {
+            lookups.aerodromeV2ExecutionCandidates.set(
+              canonicalExitRouteAssetKey(chain, candidate.poolAddress),
+              candidate,
+            );
+          }
+        }
+
         const reserveUSD = parseFloat(pair.reserveUSD);
         if (isNaN(reserveUSD) || reserveUSD < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
 
@@ -301,6 +312,7 @@ export async function fetchAerodromeData(
       `[dex-liquidity] Indexed ${result.entityCount} Aerodrome pairs from ${chain} subgraph (${result.observationCount} price obs)`,
     buildFinalSummary: (lookups) =>
       `[dex-liquidity] Collected ${lookups.aerodromePriceObs.size} coins with Aerodrome price observations, ` +
-      `${lookups.aerodromeIsStable.size} pool stability flags`,
+      `${lookups.aerodromeIsStable.size} pool stability flags, and ` +
+      `${lookups.aerodromeV2ExecutionCandidates.size} classic volatile execution candidates`,
   });
 }

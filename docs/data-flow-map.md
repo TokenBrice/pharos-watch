@@ -39,7 +39,9 @@ This map links each major Pharos data domain from upstream source to frontend co
 
 The DEX flow has an additive measured-execution subflow. Pinned Uniswap
 V3 and PancakeSwap V3 QuoterV2/factory RPC reads, the Fluid resolver
-adapter, and reviewed Curve CryptoSwap `get_dy` pools enter
+adapter, reviewed Curve CryptoSwap `get_dy` pools, native Solana
+Raydium CLMM/Orca Whirlpool exact quotes, and shadow Tron SunSwap V2
+factory/reserve plus SUN Smart Router proofs enter
 `worker/src/cron/measured-execution/` through the isolated
 `sync-cl-exit-depth` job. Curve CryptoSwap activation verifies pinned runtime
 code/dependency identities and the on-chain `coins(i)` order before active
@@ -50,7 +52,9 @@ profiles are generation-fenced in `dex_measured_execution_quotes`. The following
 `sync-dex-liquidity` run consumes only a published prior quote generation and
 exposes proof-free profiles and explicit capability gates through the existing
 DEX API. Unreviewed measured deployment cohorts remain score-ineligible while
-their activation evidence is pending.
+their activation evidence is pending. SunSwap census rows are excluded from
+liquidity scoring and price consensus; its latest-only TronGrid state reads are
+accepted only inside a bounded before/after block bracket.
 
 The private `report-cards:snapshot` row is checksum-verified gzip/base64 with
 bounded decompression; its decoded public V8 JSON is unchanged, and the new

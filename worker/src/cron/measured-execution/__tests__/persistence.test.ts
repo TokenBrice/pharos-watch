@@ -2,9 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 
 import { buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import {
+  buildSolanaMeasuredQuoteGenerationId,
+  buildTronMeasuredQuoteGenerationId,
   loadLatestPublishedDexMeasuredQuoteEvidence,
   publishDexMeasuredQuoteGeneration,
   publishDexMeasuredTargetInventory,
+  publishSolanaMeasuredQuoteGeneration,
+  publishSolanaMeasuredTargetInventory,
+  publishTronMeasuredQuoteGeneration,
+  publishTronMeasuredTargetInventory,
   pruneDexMeasuredExecutionGenerations,
 } from "../persistence";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
@@ -106,6 +112,44 @@ describe("measured execution publication", () => {
       }),
     ).rejects.toThrow("empty measured quote generation");
     expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it("rejects empty native shadow generations before touching shared storage", async () => {
+    const prepare = vi.fn();
+    const db = { prepare } as Pick<D1Database, "prepare"> as D1Database;
+
+    await expect(publishSolanaMeasuredTargetInventory({ db, targets: [], capturedAt: 1_700_000_000 })).rejects.toThrow(
+      "empty Solana measured target generation",
+    );
+    await expect(
+      publishSolanaMeasuredQuoteGeneration({
+        db,
+        targetGeneration: { generationId: "solana-targets", targets: [], publishedAt: 1_700_000_000 },
+        outcomes: [],
+        quotedAt: 1_700_000_100,
+      }),
+    ).rejects.toThrow("empty Solana measured quote generation");
+    await expect(publishTronMeasuredTargetInventory({ db, targets: [], capturedAt: 1_700_000_000 })).rejects.toThrow(
+      "empty Tron measured target generation",
+    );
+    await expect(
+      publishTronMeasuredQuoteGeneration({
+        db,
+        targetGeneration: { generationId: "tron-targets", targets: [], publishedAt: 1_700_000_000 },
+        outcomes: [],
+        quotedAt: 1_700_000_100,
+      }),
+    ).rejects.toThrow("empty Tron measured quote generation");
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it("uses chain-specific native quote generation prefixes", () => {
+    expect(buildSolanaMeasuredQuoteGenerationId(1_700_000_000)).toMatch(
+      /^dex-solana-measured-quotes-1700000000-[0-9a-f]{12}$/,
+    );
+    expect(buildTronMeasuredQuoteGenerationId(1_700_000_000)).toMatch(
+      /^dex-tron-measured-quotes-1700000000-[0-9a-f]{12}$/,
+    );
   });
 });
 
@@ -277,19 +321,37 @@ describe("measured execution generation prune", () => {
     expect(quotes.sql).toContain("DELETE FROM dex_measured_execution_quotes");
     expect(quotes.sql).toContain("state IN ('failed', 'rejected', 'superseded')");
     expect(quotes.sql).toContain("ORDER BY started_at ASC LIMIT ?");
-    expect(quotes.binds).toEqual(["dex-measured-execution-quotes", cutoff, 16]);
+    expect(quotes.binds).toEqual([
+      "dex-measured-execution-quotes",
+      "dex-solana-measured-execution-quotes",
+      "dex-tron-measured-execution-quotes",
+      cutoff,
+      16,
+    ]);
 
     expect(targets.sql).toContain("DELETE FROM dex_measured_execution_targets");
-    expect(targets.sql).toContain(
-      "NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)",
-    );
+    expect(targets.sql).toContain("NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)");
     expect(targets.sql).toContain("ORDER BY started_at ASC LIMIT ?");
-    expect(targets.binds).toEqual(["dex-measured-execution-targets", cutoff, 16]);
+    expect(targets.binds).toEqual([
+      "dex-measured-execution-targets",
+      "dex-solana-measured-execution-targets",
+      "dex-tron-measured-execution-targets",
+      cutoff,
+      16,
+    ]);
 
     expect(ledger.sql).toContain("DELETE FROM surface_publication_generations");
     expect(ledger.sql).toContain("state IN ('failed', 'rejected', 'superseded')");
     expect(ledger.sql).toContain("q.target_generation_id = surface_publication_generations.generation_id");
     expect(ledger.sql).toContain("FROM dex_measured_execution_targets t");
-    expect(ledger.binds).toEqual(["dex-measured-execution-targets", "dex-measured-execution-quotes", cutoff]);
+    expect(ledger.binds).toEqual([
+      "dex-measured-execution-targets",
+      "dex-measured-execution-quotes",
+      "dex-solana-measured-execution-targets",
+      "dex-solana-measured-execution-quotes",
+      "dex-tron-measured-execution-targets",
+      "dex-tron-measured-execution-quotes",
+      cutoff,
+    ]);
   });
 });

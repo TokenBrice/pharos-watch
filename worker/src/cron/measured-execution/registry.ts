@@ -5,8 +5,11 @@ import { fetchEvmCodeAtBlock } from "../../lib/evm-rpc";
 import type { DexMeasuredExecutionRpcBudget } from "./profiles";
 
 export interface DexMeasuredExecutionDeployment {
-  adapterProfileId: "uniswap-v3-quoter-v2" | "pancakeswap-v3-quoter-v2";
-  protocol: "uniswap-v3" | "pancakeswap";
+  adapterProfileId:
+    | "uniswap-v3-quoter-v2"
+    | "pancakeswap-v3-quoter-v2"
+    | "aerodrome-slipstream-quoter-v2";
+  protocol: "uniswap-v3" | "pancakeswap" | "aerodrome-slipstream";
   chain: "ethereum" | "arbitrum" | "optimism" | "base" | "polygon" | "bsc";
   endpointAddress: `0x${string}`;
   expectedCodeHash: `0x${string}`;
@@ -64,6 +67,15 @@ export const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDe
     expectedCodeHash: "0xceb5b8bc35e09fc64b1c48c6b920e0d2e37d5710e4f3ef214e1a81f75acee51e",
     factoryAddress: "0x33128a8fc17869897dce68ed026d694621f6fdfd",
     expectedFactoryCodeHash: "0x95707a4ac71f20181a63ef7d180e3c625be5d20fc8f6f980befa966bad568132",
+  },
+  {
+    adapterProfileId: "aerodrome-slipstream-quoter-v2",
+    protocol: "aerodrome-slipstream",
+    chain: "base",
+    endpointAddress: "0x254cf9e1e6e233aa1ac962cb9b05b2cfeaae15b0",
+    expectedCodeHash: "0xfb0ab713266d089d5b6ac48d50455c4fadc9cd49a1efcc83a091e7c2e48dad0e",
+    factoryAddress: "0x5e7bb104d84c7cb9b682aac2f3d509f5f406809a",
+    expectedFactoryCodeHash: "0x7340cf80843bd721bcaefbfc050e38304cb4174c239e6e914e3056f27f39b11c",
   },
   {
     adapterProfileId: "pancakeswap-v3-quoter-v2",

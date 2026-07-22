@@ -19,9 +19,16 @@ import { getDexMeasuredExecutionDeployment } from "./registry";
 const QUOTER_V2_ABI = parseAbi([
   "function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96) params) returns (uint256 amountOut,uint160 sqrtPriceX96After,uint32 initializedTicksCrossed,uint256 gasEstimate)",
 ]);
+const SLIPSTREAM_QUOTER_V2_ABI = parseAbi([
+  "function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,int24 tickSpacing,uint160 sqrtPriceLimitX96) params) returns (uint256 amountOut,uint160 sqrtPriceX96After,uint32 initializedTicksCrossed,uint256 gasEstimate)",
+]);
 const V3_FACTORY_ABI = parseAbi([
   "function getPool(address tokenA,address tokenB,uint24 fee) view returns (address pool)",
 ]);
+const SLIPSTREAM_FACTORY_ABI = parseAbi([
+  "function getPool(address tokenA,address tokenB,int24 tickSpacing) view returns (address pool)",
+]);
+const AERODROME_SLIPSTREAM_ADAPTER_PROFILE_ID = "aerodrome-slipstream-quoter-v2";
 const QUOTER_MULTICALL_BATCH_SIZE = 8;
 const QUOTER_MULTICALL_GAS = "0x1c9c380";
 const MAX_UINT256 = (1n << 256n) - 1n;
@@ -95,7 +102,31 @@ function rawAmountToUsd(amount: bigint, decimals: number, referencePriceUsd: num
   return Number(usdScaled) / Number(usdScale);
 }
 
+function isSlipstreamTarget(target: Pick<DexMeasuredExecutionTarget, "adapterProfileId">): boolean {
+  return target.adapterProfileId === AERODROME_SLIPSTREAM_ADAPTER_PROFILE_ID;
+}
+
+function hasAdapterParameter(target: DexMeasuredExecutionTarget): boolean {
+  return isSlipstreamTarget(target) ? target.tickSpacing != null : target.feePips != null;
+}
+
 export function encodeQuoterV2ExactInputSingle(target: DexMeasuredExecutionTarget, amountInRaw: bigint): `0x${string}` {
+  if (isSlipstreamTarget(target)) {
+    if (target.tickSpacing == null) throw new Error(`Measured target ${target.targetId} has no tick spacing`);
+    return encodeFunctionData({
+      abi: SLIPSTREAM_QUOTER_V2_ABI,
+      functionName: "quoteExactInputSingle",
+      args: [
+        {
+          tokenIn: target.tokenIn.address as `0x${string}`,
+          tokenOut: target.tokenOut.address as `0x${string}`,
+          amountIn: amountInRaw,
+          tickSpacing: target.tickSpacing,
+          sqrtPriceLimitX96: 0n,
+        },
+      ],
+    });
+  }
   if (target.feePips == null) throw new Error(`Measured target ${target.targetId} has no fee pips`);
   return encodeFunctionData({
     abi: QUOTER_V2_ABI,
@@ -118,7 +149,7 @@ function encodeRequest(request: QuoterV2Request, index: number): EncodedQuoterV2
     request.target.tokenIn.decimals,
     request.target.tokenIn.referencePriceUsd,
   );
-  if (amountInRaw == null || request.target.feePips == null) return null;
+  if (amountInRaw == null || !hasAdapterParameter(request.target)) return null;
   try {
     return {
       ...request,
@@ -346,6 +377,14 @@ function targetPoolAddress(target: Pick<DexMeasuredExecutionTarget, "chain" | "p
 }
 
 export function encodeV3FactoryGetPool(target: DexMeasuredExecutionTarget): `0x${string}` {
+  if (isSlipstreamTarget(target)) {
+    if (target.tickSpacing == null) throw new Error(`Measured target ${target.targetId} has no tick spacing`);
+    return encodeFunctionData({
+      abi: SLIPSTREAM_FACTORY_ABI,
+      functionName: "getPool",
+      args: [target.tokenIn.address as `0x${string}`, target.tokenOut.address as `0x${string}`, target.tickSpacing],
+    });
+  }
   if (target.feePips == null) throw new Error(`Measured target ${target.targetId} has no fee pips`);
   return encodeFunctionData({
     abi: V3_FACTORY_ABI,
@@ -387,7 +426,7 @@ export async function resolveQuoterV2PoolBindings(input: {
 }): Promise<QuoterV2PoolBindingOutcome[]> {
   const encoded = input.requests.map((request, index) => {
     const expectedPool = targetPoolAddress(request.target);
-    if (!expectedPool || request.target.feePips == null) return null;
+    if (!expectedPool || !hasAdapterParameter(request.target)) return null;
     return {
       ...request,
       expectedPool,
@@ -478,13 +517,17 @@ export function validateQuoterV2ProfileProof(profile: DexMeasuredExecutionProfil
     )
       issues.add("factory-identity-mismatch");
     try {
-      const decodedCall = decodeFunctionData({ abi: V3_FACTORY_ABI, data: binding.callData as `0x${string}` });
-      const [tokenA, tokenB, fee] = decodedCall.args as readonly [string, string, number];
+      const slipstream = profile.adapterProfileId === AERODROME_SLIPSTREAM_ADAPTER_PROFILE_ID;
+      const decodedCall = decodeFunctionData({
+        abi: slipstream ? SLIPSTREAM_FACTORY_ABI : V3_FACTORY_ABI,
+        data: binding.callData as `0x${string}`,
+      });
+      const [tokenA, tokenB, poolParameter] = decodedCall.args as readonly [string, string, number];
       if (
         decodedCall.functionName !== "getPool" ||
         tokenA.toLowerCase() !== profile.tokenIn.address ||
         tokenB.toLowerCase() !== profile.tokenOut.address ||
-        fee !== profile.feePips
+        poolParameter !== (slipstream ? profile.tickSpacing : profile.feePips)
       )
         issues.add("factory-call-data-mismatch");
     } catch {
@@ -497,7 +540,11 @@ export function validateQuoterV2ProfileProof(profile: DexMeasuredExecutionProfil
   }
   for (const point of profile.quoteProof) {
     try {
-      const decodedCall = decodeFunctionData({ abi: QUOTER_V2_ABI, data: point.callData as `0x${string}` });
+      const slipstream = profile.adapterProfileId === AERODROME_SLIPSTREAM_ADAPTER_PROFILE_ID;
+      const decodedCall = decodeFunctionData({
+        abi: slipstream ? SLIPSTREAM_QUOTER_V2_ABI : QUOTER_V2_ABI,
+        data: point.callData as `0x${string}`,
+      });
       if (decodedCall.functionName !== "quoteExactInputSingle") {
         issues.add("wrong-function-selector");
         continue;
@@ -506,14 +553,15 @@ export function validateQuoterV2ProfileProof(profile: DexMeasuredExecutionProfil
         tokenIn: string;
         tokenOut: string;
         amountIn: bigint;
-        fee: number;
+        fee?: number;
+        tickSpacing?: number;
         sqrtPriceLimitX96: bigint;
       };
       if (
         params.tokenIn.toLowerCase() !== profile.tokenIn.address ||
         params.tokenOut.toLowerCase() !== profile.tokenOut.address ||
         params.amountIn.toString() !== point.amountInRaw ||
-        params.fee !== profile.feePips ||
+        (slipstream ? params.tickSpacing !== profile.tickSpacing : params.fee !== profile.feePips) ||
         params.sqrtPriceLimitX96 !== 0n
       )
         issues.add("call-data-mismatch");

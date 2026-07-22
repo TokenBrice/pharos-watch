@@ -82,10 +82,28 @@ import type {
   DexMeasuredExecutionPublicProfile,
   DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
+import type {
+  SolanaMeasuredExecutionProfile,
+  SolanaMeasuredExecutionPublicProfile,
+  SolanaMeasuredExecutionTarget,
+} from "@shared/types/solana-measured-execution";
+import type {
+  TronMeasuredExecutionProfile,
+  TronMeasuredExecutionPublicProfile,
+  TronMeasuredExecutionTarget,
+} from "@shared/types/tron-measured-execution";
 
 export type { LiquidityPoolSourceFamily, LiquiditySourceMixEntry, LiquidityCoverageClass };
 
 export type LiquiditySourceMixByFamily = Partial<Record<LiquidityPoolSourceFamily, LiquiditySourceMixEntry>>;
+
+/** Internal descriptor awaiting same-block factory and reserve verification. */
+export interface EvmV2ExecutionCandidate {
+  source: "uniswap-v2" | "pancakeswap-v2" | "aerodrome-volatile";
+  poolAddress: `0x${string}`;
+  tokenAddresses: [`0x${string}`, `0x${string}`];
+  tokenSymbols: [string, string];
+}
 
 export interface PoolEntry {
   poolId: string;
@@ -127,6 +145,8 @@ export interface PoolEntry {
     executionCapabilityGate?: DexExecutionCapabilityGate;
     /** Exact direct-API inputs retained for supported AMM execution simulation. */
     ammExecutionModel?: DexAmmExecutionModel;
+    /** Internal V2 candidate; consumed before scoring and never published. */
+    evmV2ExecutionCandidate?: EvmV2ExecutionCandidate;
     /** Internal all-retained target descriptor; stripped before top-pool publication. */
     measuredExecutionTarget?: DexMeasuredExecutionTarget;
     /** Proof-free validated capacity/provenance projection retained for P4 and API publication. */
@@ -137,6 +157,34 @@ export interface PoolEntry {
     measuredExecutionPhysicalPoolId?: string;
     /** Internal cohort diagnostics retained in cron metadata, not the public pool envelope. */
     measuredExecutionDiagnostic?: {
+      adapterProfileId: string;
+      targetId?: string;
+      detail?: string;
+    };
+    /** Internal native Solana target; never published. */
+    solanaMeasuredExecutionTarget?: SolanaMeasuredExecutionTarget;
+    /** Proof-free shadow profile retained for operator/API diagnostics. */
+    solanaMeasuredExecution?: SolanaMeasuredExecutionPublicProfile;
+    /** Internal native Solana proof profile; never published. */
+    solanaMeasuredExecutionProfile?: SolanaMeasuredExecutionProfile;
+    /** Internal native physical pool id consumed before publication. */
+    solanaMeasuredExecutionPhysicalPoolId?: string;
+    /** Internal native adapter diagnostics; never published. */
+    solanaMeasuredExecutionDiagnostic?: {
+      adapterProfileId: string;
+      targetId?: string;
+      detail?: string;
+    };
+    /** Internal native Tron target; never published. */
+    tronMeasuredExecutionTarget?: TronMeasuredExecutionTarget;
+    /** Proof-free shadow profile retained for operator/API diagnostics. */
+    tronMeasuredExecution?: TronMeasuredExecutionPublicProfile;
+    /** Internal native Tron proof profile; never published. */
+    tronMeasuredExecutionProfile?: TronMeasuredExecutionProfile;
+    /** Internal native physical pool id consumed before publication. */
+    tronMeasuredExecutionPhysicalPoolId?: string;
+    /** Internal native adapter diagnostics; never published. */
+    tronMeasuredExecutionDiagnostic?: {
       adapterProfileId: string;
       targetId?: string;
       detail?: string;
@@ -289,6 +337,7 @@ export interface ScoreResult {
 export interface AerodromeLookups {
   aerodromePriceObs: Map<string, DexPriceObs[]>;
   aerodromeIsStable: Map<string, boolean>; // "chain:poolAddress" → isStable
+  aerodromeV2ExecutionCandidates: Map<string, EvmV2ExecutionCandidate>;
 }
 
 /** Result of GT pool crawl: new pools to merge into metrics + price observations */
@@ -344,6 +393,8 @@ export interface GtNewPool {
   ammExecutionModel?: DexAmmExecutionModel;
   /** Reviewed exact-family failure retained for P4 completeness accounting. */
   executionCapabilityGate?: DexExecutionCapabilityGate;
+  /** Internal V2 candidate; consumed before scoring and never published. */
+  evmV2ExecutionCandidate?: EvmV2ExecutionCandidate;
   /** CoinGecko 2% downside orderbook depth when available. */
   orderbookDepthUsd?: number | null;
   /** CoinGecko 2% upside orderbook depth when available. */

@@ -29,6 +29,7 @@ export interface DexApiPool {
     | "orca"
     | "meteora"
     | "pancakeswap"
+    | "sunswap"
     | "aerodrome-slipstream"
     | "velodrome-slipstream";
   chain: string;
@@ -40,6 +41,8 @@ export interface DexApiPool {
   tvlUsd: number;
   volume24hUsd: number;
   feeRate: number | null;
+  /** Concentrated-liquidity tick spacing when the source exposes it directly. */
+  tickSpacing?: number;
   balances: number[] | null;
   /** True only when balances are normalized native-token amounts rather than integer base units. */
   balancesNormalized?: boolean;

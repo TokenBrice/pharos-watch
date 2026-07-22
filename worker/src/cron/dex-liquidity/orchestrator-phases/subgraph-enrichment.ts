@@ -1,7 +1,7 @@
 import { rethrowIfAborted } from "../../../lib/abort";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
 import { fetchUniV3Data, fetchAerodromeData } from "../subgraph-source-families";
-import type { DexPriceObs, SymbolLookups, UniV3Lookups } from "../types";
+import type { AerodromeLookups, DexPriceObs, SymbolLookups, UniV3Lookups } from "../types";
 
 export interface SubgraphEnrichmentPhaseResult {
   uniV3PoolFees: Map<string, number>;
@@ -10,6 +10,7 @@ export interface SubgraphEnrichmentPhaseResult {
   uniV3ExecutionCandidates: UniV3Lookups["uniV3ExecutionCandidates"];
   aerodromePriceObs: Map<string, DexPriceObs[]>;
   aerodromeIsStable: Map<string, boolean>;
+  aerodromeV2ExecutionCandidates: AerodromeLookups["aerodromeV2ExecutionCandidates"];
 }
 
 export async function fetchSubgraphEnrichmentPhase(params: {
@@ -45,6 +46,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
 
   let aerodromePriceObs = new Map<string, DexPriceObs[]>();
   let aerodromeIsStable = new Map<string, boolean>();
+  let aerodromeV2ExecutionCandidates: AerodromeLookups["aerodromeV2ExecutionCandidates"] = new Map();
   try {
     const aeroData = await fetchAerodromeData(
       params.graphApiKey,
@@ -55,6 +57,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     );
     aerodromePriceObs = aeroData.aerodromePriceObs;
     aerodromeIsStable = aeroData.aerodromeIsStable;
+    aerodromeV2ExecutionCandidates = aeroData.aerodromeV2ExecutionCandidates;
   } catch (err) {
     rethrowIfAborted(err, params.signal);
     console.warn("[dex-liquidity] Aerodrome fetch failed (non-fatal):", err);
@@ -68,6 +71,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     uniV3ExecutionCandidates,
     aerodromePriceObs,
     aerodromeIsStable,
+    aerodromeV2ExecutionCandidates,
     failedSources,
   };
 }

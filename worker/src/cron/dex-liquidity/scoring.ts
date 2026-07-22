@@ -9,6 +9,8 @@ import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import type { SolanaMeasuredExecutionTarget } from "@shared/types/solana-measured-execution";
+import type { TronMeasuredExecutionTarget } from "@shared/types/tron-measured-execution";
 import { buildMeasuredPoolDirectionKey } from "../measured-execution/inventory";
 import {
   joinDexMeasuredExecutionEvidence,
@@ -16,7 +18,25 @@ import {
   stripDexMeasuredExecutionInternalFields,
   type DexMeasuredExecutionJoinDiagnostics,
 } from "../measured-execution/join";
-import { publishDexMeasuredTargetInventory } from "../measured-execution/persistence";
+import {
+  publishDexMeasuredTargetInventory,
+  publishSolanaMeasuredTargetInventory,
+  publishTronMeasuredTargetInventory,
+} from "../measured-execution/persistence";
+import { buildSolanaMeasuredPoolDirectionKey } from "../measured-execution/solana-inventory";
+import {
+  joinSolanaMeasuredExecutionEvidence,
+  loadSolanaMeasuredExecutionJoinEvidence,
+  stripSolanaMeasuredExecutionInternalFields,
+  type SolanaMeasuredExecutionJoinDiagnostics,
+} from "../measured-execution/solana-join";
+import { buildTronMeasuredPoolDirectionKey } from "../measured-execution/tron-inventory";
+import {
+  joinTronMeasuredExecutionEvidence,
+  loadTronMeasuredExecutionJoinEvidence,
+  stripTronMeasuredExecutionInternalFields,
+  type TronMeasuredExecutionJoinDiagnostics,
+} from "../measured-execution/tron-join";
 import { dexPriceConfidenceForSourceFamily } from "./constants";
 import { computeDurabilityScore, computeLiquidityScore } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
@@ -202,8 +222,18 @@ interface ScoreDiagnostics {
   protocolCapReductions: ProtocolCapDiagnostics;
   measuredExecution: {
     join: DexMeasuredExecutionJoinDiagnostics;
+    solanaJoin: SolanaMeasuredExecutionJoinDiagnostics;
+    tronJoin: TronMeasuredExecutionJoinDiagnostics;
     inventoryTargetCount: number;
+    solanaInventoryTargetCount: number;
+    tronInventoryTargetCount: number;
     targetPublication:
+      | { status: "published"; generationId: string; rowCount: number }
+      | { status: "skipped" | "failed"; reason: string };
+    solanaTargetPublication:
+      | { status: "published"; generationId: string; rowCount: number }
+      | { status: "skipped" | "failed"; reason: string };
+    tronTargetPublication:
       | { status: "published"; generationId: string; rowCount: number }
       | { status: "skipped" | "failed"; reason: string };
   };
@@ -294,6 +324,9 @@ export async function computeStablecoinScores(
   pancakeMeasuredTargets: ReadonlyMap<string, DexMeasuredExecutionTarget> = new Map(),
   fluidMeasuredTargets: ReadonlyMap<string, DexMeasuredExecutionTarget> = new Map(),
   signal?: AbortSignal,
+  solanaMeasuredTargets: ReadonlyMap<string, SolanaMeasuredExecutionTarget> = new Map(),
+  slipstreamMeasuredTargets: ReadonlyMap<string, DexMeasuredExecutionTarget> = new Map(),
+  tronMeasuredTargets: ReadonlyMap<string, TronMeasuredExecutionTarget> = new Map(),
 ): Promise<{
   scores: Map<string, FullScoreResult>;
   globalAgg: GlobalAgg;
@@ -339,16 +372,22 @@ export async function computeStablecoinScores(
     const retainedPools = m.topPools;
     for (const pool of retainedPools) {
       const existingTarget = pool.extra?.measuredExecutionTarget;
-      const candidate = pool.project === "pancakeswap" && pool.poolType.startsWith("pancakeswap-v3")
-        ? pancakeMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
-        : pool.project === "fluid" && pool.poolType.includes("fluid")
-          ? fluidMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
-          : existingTarget;
-      const adapterProfileId = pool.project === "pancakeswap"
-        ? "pancakeswap-v3-quoter-v2"
-        : pool.project === "fluid"
-          ? "fluid-resolver-measured"
-          : existingTarget?.adapterProfileId;
+      const candidate =
+        pool.project === "pancakeswap" && pool.poolType.startsWith("pancakeswap-v3")
+          ? pancakeMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
+          : pool.project === "fluid" && pool.poolType.includes("fluid")
+            ? fluidMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
+            : pool.project === "aerodrome-slipstream" && pool.poolType.startsWith("aerodrome-slipstream")
+              ? slipstreamMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
+            : existingTarget;
+      const adapterProfileId =
+        pool.project === "pancakeswap"
+          ? "pancakeswap-v3-quoter-v2"
+          : pool.project === "fluid"
+            ? "fluid-resolver-measured"
+            : pool.project === "aerodrome-slipstream"
+              ? "aerodrome-slipstream-quoter-v2"
+            : existingTarget?.adapterProfileId;
       if (!adapterProfileId) continue;
 
       pool.extra = { ...(pool.extra ?? {}) };
@@ -375,6 +414,55 @@ export async function computeStablecoinScores(
         targetId: candidate.targetId,
       };
     }
+    for (const pool of retainedPools) {
+      const adapterProfileId =
+        pool.project === "raydium" && pool.poolType === "raydium-clmm"
+          ? "raydium-clmm-trade-api-v1"
+          : pool.project === "orca" && pool.poolType === "orca-whirlpool"
+            ? "orca-whirlpool-jupiter-v1"
+            : null;
+      if (!adapterProfileId) continue;
+      const candidate = solanaMeasuredTargets.get(buildSolanaMeasuredPoolDirectionKey(id, pool.poolId));
+      pool.extra = { ...(pool.extra ?? {}) };
+      if (!candidate || candidate.adapterProfileId !== adapterProfileId) {
+        delete pool.extra.solanaMeasuredExecutionTarget;
+        delete pool.extra.solanaMeasuredExecution;
+        delete pool.extra.solanaMeasuredExecutionProfile;
+        delete pool.extra.solanaMeasuredExecutionPhysicalPoolId;
+        pool.extra.executionCapabilityGate = { family: "measured-execution", reason: "target-unresolved" };
+        pool.extra.solanaMeasuredExecutionDiagnostic = { adapterProfileId };
+        continue;
+      }
+      pool.extra.solanaMeasuredExecutionTarget = {
+        ...candidate,
+        retainedTvlUsd: pool.tvlUsd,
+        capturedAt: routeObservedAt,
+      };
+      pool.extra.solanaMeasuredExecutionPhysicalPoolId = candidate.poolId;
+      if (pool.extra.executionCapabilityGate?.family === "measured-execution") {
+        delete pool.extra.executionCapabilityGate;
+      }
+      pool.extra.solanaMeasuredExecutionDiagnostic = {
+        adapterProfileId: candidate.adapterProfileId,
+        targetId: candidate.targetId,
+      };
+    }
+    for (const pool of retainedPools) {
+      if (!pool.project.includes("sunswap")) continue;
+      const candidate = tronMeasuredTargets.get(buildTronMeasuredPoolDirectionKey(id, pool.poolId));
+      if (!candidate) continue;
+      pool.extra = { ...(pool.extra ?? {}) };
+      pool.extra.tronMeasuredExecutionTarget = {
+        ...candidate,
+        retainedTvlUsd: pool.tvlUsd,
+        capturedAt: routeObservedAt,
+      };
+      pool.extra.tronMeasuredExecutionPhysicalPoolId = candidate.poolId;
+      pool.extra.tronMeasuredExecutionDiagnostic = {
+        adapterProfileId: candidate.adapterProfileId,
+        targetId: candidate.targetId,
+      };
+    }
     preparedRetainedPools.set(id, retainedPools);
   }
 
@@ -385,11 +473,33 @@ export async function computeStablecoinScores(
     nowSec: routeObservedAt,
   });
   joinEvidence?.byTargetId.clear();
+  const solanaJoinEvidence = await loadSolanaMeasuredExecutionJoinEvidence(db, signal);
+  const solanaMeasuredExecutionJoin = joinSolanaMeasuredExecutionEvidence({
+    poolsByStablecoin: preparedRetainedPools,
+    evidence: solanaJoinEvidence,
+    nowSec: routeObservedAt,
+  });
+  solanaJoinEvidence?.byTargetId.clear();
+  const tronJoinEvidence = await loadTronMeasuredExecutionJoinEvidence(db, signal);
+  const tronMeasuredExecutionJoin = joinTronMeasuredExecutionEvidence({
+    poolsByStablecoin: preparedRetainedPools,
+    evidence: tronJoinEvidence,
+    nowSec: routeObservedAt,
+  });
+  tronJoinEvidence?.byTargetId.clear();
   const targetInventoryById = new Map<string, DexMeasuredExecutionTarget>();
+  const solanaTargetInventoryById = new Map<string, SolanaMeasuredExecutionTarget>();
+  const tronTargetInventoryById = new Map(
+    [...tronMeasuredTargets.values()].map((target) => [target.targetId, target] as const),
+  );
   for (const pools of preparedRetainedPools.values()) {
     for (const pool of pools) {
       const target = pool.extra?.measuredExecutionTarget;
       if (target) targetInventoryById.set(target.targetId, target);
+      const solanaTarget = pool.extra?.solanaMeasuredExecutionTarget;
+      if (solanaTarget) solanaTargetInventoryById.set(solanaTarget.targetId, solanaTarget);
+      const tronTarget = pool.extra?.tronMeasuredExecutionTarget;
+      if (tronTarget) tronTargetInventoryById.set(tronTarget.targetId, tronTarget);
     }
   }
 
@@ -407,6 +517,8 @@ export async function computeStablecoinScores(
       observedAt: routeObservedAt,
     });
     stripDexMeasuredExecutionInternalFields(retainedPools);
+    stripSolanaMeasuredExecutionInternalFields(retainedPools);
+    stripTronMeasuredExecutionInternalFields(retainedPools);
     // Persistence and price publication are read-only consumers of the same
     // sanitized pool graph. Sharing it avoids cloning thousands of rich pool
     // objects at the scoring peak.
@@ -495,6 +607,40 @@ export async function computeStablecoinScores(
       targetPublication = { status: "failed", reason: String(error).slice(0, 500) };
     }
   }
+  let solanaTargetPublication: ScoreDiagnostics["measuredExecution"]["solanaTargetPublication"];
+  if (solanaTargetInventoryById.size === 0) {
+    solanaTargetPublication = { status: "skipped", reason: "no-applicable-targets" };
+  } else {
+    try {
+      const publication = await publishSolanaMeasuredTargetInventory({
+        db,
+        targets: [...solanaTargetInventoryById.values()],
+        capturedAt: routeObservedAt,
+        signal,
+      });
+      solanaTargetPublication = { status: "published", ...publication };
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      solanaTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
+    }
+  }
+  let tronTargetPublication: ScoreDiagnostics["measuredExecution"]["tronTargetPublication"];
+  if (tronTargetInventoryById.size === 0) {
+    tronTargetPublication = { status: "skipped", reason: "no-applicable-targets" };
+  } else {
+    try {
+      const publication = await publishTronMeasuredTargetInventory({
+        db,
+        targets: [...tronTargetInventoryById.values()],
+        capturedAt: routeObservedAt,
+        signal,
+      });
+      tronTargetPublication = { status: "published", ...publication };
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      tronTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
+    }
+  }
 
   // Global protocol-level TVL cap: when reducing excess, chain TVLs are
   // distributed proportionally rather than attributed to the chain with the
@@ -548,8 +694,14 @@ export async function computeStablecoinScores(
       },
       measuredExecution: {
         join: measuredExecutionJoin,
+        solanaJoin: solanaMeasuredExecutionJoin,
+        tronJoin: tronMeasuredExecutionJoin,
         inventoryTargetCount: targetInventoryById.size,
+        solanaInventoryTargetCount: solanaTargetInventoryById.size,
+        tronInventoryTargetCount: tronTargetInventoryById.size,
         targetPublication,
+        solanaTargetPublication,
+        tronTargetPublication,
       },
     },
   };
@@ -610,10 +762,7 @@ export async function computeDepthStability(
     )
     .bind(generationId)
     .first<{ row_count: number; stability_count: number }>();
-  if (
-    staged?.row_count !== ACTIVE_STABLECOINS.length ||
-    staged.stability_count !== stagedStabilityCount
-  ) {
+  if (staged?.row_count !== ACTIVE_STABLECOINS.length || staged.stability_count !== stagedStabilityCount) {
     throw new Error(
       `Incomplete DEX depth stability stage for ${generationId}` +
         ` (rows=${staged?.row_count ?? 0}/${ACTIVE_STABLECOINS.length},` +
@@ -726,10 +875,10 @@ export async function computeDexPrices(
   const rejectedByStablecoin: DexPricePersistenceDiagnostics["rejectedByStablecoin"] = [];
   for (const [id, retainedPools] of retainedPoolsByStablecoin) {
     throwIfAborted(signal);
-    const observations = buildDexPriceObservationsFromRetainedPools(
-      new Map([[id, retainedPools]]),
-      exactPriceEvidenceByStablecoin,
-    ).get(id) ?? [];
+    const observations =
+      buildDexPriceObservationsFromRetainedPools(new Map([[id, retainedPools]]), exactPriceEvidenceByStablecoin).get(
+        id,
+      ) ?? [];
     if (observations.length === 0) continue;
     const prices = await loadPrimaryPrices();
 
@@ -749,7 +898,8 @@ export async function computeDexPrices(
     for (const observation of collapsedObservations) {
       (isPlausibleDexObservationPrice(id, observation.price, references)
         ? plausibleObservations
-        : rejectedObservations).push(observation);
+        : rejectedObservations
+      ).push(observation);
     }
     if (rejectedObservations.length > 0) {
       rejectedObservationCount += rejectedObservations.length;
@@ -758,16 +908,14 @@ export async function computeDexPrices(
         rejectedByStablecoin.push({
           stablecoinId: id,
           reason: "peg-impossible",
-          observations: rejectedObservations
-            .slice(0, MAX_DEX_PRICE_REJECTIONS_PER_ASSET)
-            .map((observation) => ({
-              chain: observation.chain,
-              protocol: observation.protocol,
-              poolKey: observation.poolKey ?? null,
-              price: observation.price,
-              tvl: observation.tvl,
-              sourceFamily: observation.sourceFamily ?? null,
-            })),
+          observations: rejectedObservations.slice(0, MAX_DEX_PRICE_REJECTIONS_PER_ASSET).map((observation) => ({
+            chain: observation.chain,
+            protocol: observation.protocol,
+            poolKey: observation.poolKey ?? null,
+            price: observation.price,
+            tvl: observation.tvl,
+            sourceFamily: observation.sourceFamily ?? null,
+          })),
           truncated: Math.max(0, rejectedObservations.length - MAX_DEX_PRICE_REJECTIONS_PER_ASSET),
         });
       }
@@ -930,10 +1078,7 @@ export async function computeDexPrices(
     ],
     { signal },
   );
-  const allowedPublishedChanges = new Set([
-    1 + existingIds.size + observedIds.size,
-    1 + observedIds.size * 2,
-  ]);
+  const allowedPublishedChanges = new Set([1 + existingIds.size + observedIds.size, 1 + observedIds.size * 2]);
   if (!allowedPublishedChanges.has(publishedChanges)) {
     throw new Error(
       `DEX price publication fence/replacement changed ${publishedChanges} rows for ${generationId}` +
@@ -964,10 +1109,7 @@ export async function computeDexPrices(
   }
 
   try {
-    const cleanup = await db
-      .prepare("DELETE FROM dex_price_run_rows WHERE generation_id = ?")
-      .bind(generationId)
-      .run();
+    const cleanup = await db.prepare("DELETE FROM dex_price_run_rows WHERE generation_id = ?").bind(generationId).run();
     const cleanedRows = Number(cleanup.meta?.changes ?? 0);
     if (cleanedRows !== observedIds.size) {
       console.warn(

@@ -141,6 +141,7 @@ export function buildDexMeasuredExecutionProfile(input: {
     tokenIn: input.target.tokenIn,
     tokenOut: input.target.tokenOut,
     ...(input.target.feePips != null ? { feePips: input.target.feePips } : {}),
+    ...(input.target.tickSpacing != null ? { tickSpacing: input.target.tickSpacing } : {}),
     retainedTvlUsdAtQuote: input.target.retainedTvlUsd,
     retainedPoolPriceUsdAtQuote: input.target.retainedPoolPriceUsd,
     quotedAt: input.quotedAt,

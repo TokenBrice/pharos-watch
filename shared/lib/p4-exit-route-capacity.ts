@@ -24,7 +24,7 @@ import {
   type DexMeasuredExecutionPublicProfile,
 } from "../types/measured-execution";
 
-const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.4";
+const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.6";
 
 const DEFAULT_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 const REFERENCE_NOTIONAL_USD = 1_000_000;
@@ -134,6 +134,27 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     limitations: [
       "Supports only Raydium standard constant-product pools with complete retained inputs.",
       "Untracked counter-asset reference prices may be pool-implied: derived from the same response's spot price and the other token's direct reference.",
+    ],
+  },
+  {
+    id: "evm-v2-constant-product-exact",
+    sourceFamilies: ["dl", "cg_onchain", "gecko_terminal", "dexscreener", "direct_api"],
+    model: "constant-product",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "exact",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "producer-run",
+    outputEvidenceKind: "reserve-based-amm-simulation",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin", "collateral"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: true,
+    limitations: [
+      "Supports factory-verified Uniswap V2 pools on Ethereum, PancakeSwap V2 pools on BSC, and classic Aerodrome volatile pools on Base.",
+      "Aerodrome requires the reviewed factory and implementation runtimes, exact volatile factory binding, an unpaused factory, and the same-block per-pool fee.",
+      "Untracked counter-asset reference prices are pool-implied from same-block reserves and the tracked input's market price.",
     ],
   },
   {
@@ -351,7 +372,8 @@ export function isDexExitRouteCoverageComplete(coverage: ExitRouteObservationCov
     coverage.capabilityMatrixVersion !== DEX_ROUTE_CAPABILITY_MATRIX_VERSION ||
     coverage.scoreEligiblePoolCount == null ||
     coverage.scoreEligibleCapabilityPoolCount == null
-  ) return false;
+  )
+    return false;
 
   return (
     coverage.scoreEligibleCapabilityPoolCount > 0 &&
@@ -408,7 +430,11 @@ function capabilityForPool(pool: P4DexRoutePoolInput): DexRouteSourceCapability 
     return capabilityById("cg-tickers-orderbook-depth-2pct");
   }
   if (pool.extra?.ammExecutionModel?.invariant === "constant-product") {
-    return capabilityById("raydium-constant-product-exact");
+    return capabilityById(
+      pool.extra.ammExecutionModel.source === "raydium"
+        ? "raydium-constant-product-exact"
+        : "evm-v2-constant-product-exact",
+    );
   }
   if (pool.extra?.ammExecutionModel?.invariant === "weighted-constant-mean") {
     return capabilityById("balancer-weighted-constant-mean-exact");
@@ -471,25 +497,29 @@ function validateMeasuredExecutionProfile(
   if (
     canonicalExitRouteChain(profile.chain) !== canonicalExitRouteChain(context.pool.chain) ||
     normalizedKey(profile.protocol) !== normalizedKey(context.pool.project)
-  ) issues.push("pool-identity-mismatch");
+  )
+    issues.push("pool-identity-mismatch");
   if (
     !context.pool.extra?.measuredExecutionPhysicalPoolId ||
     canonicalExitRouteScopedKey(profile.chain, profile.poolId) !==
       canonicalExitRouteScopedKey(context.pool.chain, context.pool.extra.measuredExecutionPhysicalPoolId)
-  ) issues.push("retained-physical-pool-mismatch");
+  )
+    issues.push("retained-physical-pool-mismatch");
   if (profile.tokenIn.trackedAssetId !== context.stablecoinId) issues.push("tracked-input-mismatch");
   if (profile.tokenOut.trackedAssetId === context.stablecoinId) issues.push("self-output-asset");
   if (profile.poolTokenAddresses?.length !== 2) issues.push("invalid-cl-token-count");
   if (
     profile.poolProvenance == null ||
     canonicalExitRouteAssetKey(profile.chain, profile.poolProvenance.resolvedPoolAddress) !== profile.poolId
-  ) issues.push("physical-pool-provenance-mismatch");
+  )
+    issues.push("physical-pool-provenance-mismatch");
   if (context.observedAt - profile.quotedAt > DEX_MEASURED_FRESHNESS_MAX_SEC) issues.push("stale-profile");
   if (profile.quotedAt > context.observedAt + 60) issues.push("future-profile");
   if (
     !Number.isFinite(profile.retainedTvlUsdAtQuote) ||
     Math.abs(profile.retainedTvlUsdAtQuote / context.pool.tvlUsd - 1) > 0.2
-  ) issues.push("retained-tvl-mismatch");
+  )
+    issues.push("retained-tvl-mismatch");
   if (profile.capacityCurve.some((point) => point.executableUsd > context.pool.tvlUsd * 1.5 + 0.01)) {
     issues.push("capacity-above-retained-tvl-bound");
   }
@@ -537,7 +567,12 @@ function validateAmmExecutionModel(
     if (modeledTvlRatio > P4_AMM_MODELED_TVL_MAX_RATIO) issues.push("modeled-tvl-above-retained-bound");
   }
   if (model.invariant === "constant-product") {
-    if (model.source !== "raydium" || model.tokens.length !== 2) issues.push("invalid-constant-product-model");
+    if (
+      !["raydium", "uniswap-v2", "pancakeswap-v2", "aerodrome-volatile"].includes(model.source) ||
+      model.tokens.length !== 2
+    ) {
+      issues.push("invalid-constant-product-model");
+    }
   } else if (model.invariant === "stableswap") {
     if (model.source !== "curve" && model.source !== "balancer") issues.push("invalid-stableswap-model-source");
     if (model.amplification == null || !Number.isFinite(model.amplification) || model.amplification <= 0) {
@@ -802,9 +837,10 @@ export function buildP4DexExitRouteObservations(params: {
     if (executionCapabilityGate != null) {
       scoreEligibleCapabilityPoolCount++;
       unsupportedPoolCount++;
-      const reason = ammModel == null
-        ? `executionCapabilityGate:${executionCapabilityGate.family}:${executionCapabilityGate.reason}`
-        : "conflictingExecutionCapabilityEvidence";
+      const reason =
+        ammModel == null
+          ? `executionCapabilityGate:${executionCapabilityGate.family}:${executionCapabilityGate.reason}`
+          : "conflictingExecutionCapabilityEvidence";
       unsupportedReasons[reason] = (unsupportedReasons[reason] ?? 0) + 1;
       continue;
     }

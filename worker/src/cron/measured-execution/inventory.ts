@@ -14,8 +14,8 @@ import { logWorkerEvent } from "../../lib/structured-log";
 // token-resolution -> types) flagged by check:shared-cycles.
 const buildChainAddressKey = canonicalExitRouteAssetKey;
 
-export type { UniV3ExecutionCandidate } from "./candidate-types";
-import type { UniV3ExecutionCandidate } from "./candidate-types";
+export type { SlipstreamExecutionCandidate, UniV3ExecutionCandidate } from "./candidate-types";
+import type { SlipstreamExecutionCandidate, UniV3ExecutionCandidate } from "./candidate-types";
 
 function canonicalEvmAddress(value: string): `0x${string}` | null {
   const normalized = value.trim().toLowerCase();
@@ -275,16 +275,27 @@ export function buildFluidMeasuredExecutionTargets(input: {
   return targets;
 }
 
-export function buildUniV3MeasuredExecutionTarget(input: {
+interface ClMeasuredExecutionTargetInput {
   stablecoinId: string;
-  candidate: UniV3ExecutionCandidate;
+  candidate: UniV3ExecutionCandidate | SlipstreamExecutionCandidate;
   stablecoinPriceById: Map<string, number> | undefined;
   chainAddressToId: Map<string, string>;
   symbolToChainScopedIds?: Map<string, Map<string, string[]>>;
   validationReferences?: PriceValidationReferences;
   retainedTvlUsd: number;
   capturedAt: number;
-}): DexMeasuredExecutionTarget | null {
+}
+
+function buildClMeasuredExecutionTarget(
+  input: ClMeasuredExecutionTargetInput,
+  adapter: {
+    adapterProfileId: "uniswap-v3-quoter-v2" | "aerodrome-slipstream-quoter-v2";
+    protocol: "uniswap-v3" | "aerodrome-slipstream";
+    source: "uniswap-v3-subgraph" | "aerodrome-slipstream-sugar";
+    feePips?: number;
+    tickSpacing?: number;
+  },
+): DexMeasuredExecutionTarget | null {
   const candidate = input.candidate;
   const tokenAddresses = candidate.tokens.map((token) => canonicalEvmAddress(token.address));
   const poolAddress = canonicalEvmAddress(candidate.poolAddress);
@@ -343,9 +354,11 @@ export function buildUniV3MeasuredExecutionTarget(input: {
       logWorkerEvent({
         scope: "lib",
         level: "warn",
-        event: "univ3_implied_reference_rejected",
+        event: adapter.protocol === "uniswap-v3"
+          ? "univ3_implied_reference_rejected"
+          : "slipstream_implied_reference_rejected",
         job: "sync-dex-liquidity",
-        source: "uniswap-v3-subgraph",
+        source: adapter.source,
         message: "Rejected a pool-implied output reference below measured-execution price precision",
         metadata: {
           chain: candidate.chain,
@@ -361,24 +374,24 @@ export function buildUniV3MeasuredExecutionTarget(input: {
   if (outputPrice == null || !Number.isFinite(outputPrice) || outputPrice <= 0) return null;
   const chain = canonicalExitRouteChain(candidate.chain);
   const poolId = canonicalExitRouteAssetKey(chain, poolAddress);
-  const adapterProfileId = "uniswap-v3-quoter-v2";
   const targetId = buildDexMeasuredExecutionTargetId({
-    adapterProfileId,
+    adapterProfileId: adapter.adapterProfileId,
     stablecoinId: input.stablecoinId,
     chain,
-    protocol: "uniswap-v3",
+    protocol: adapter.protocol,
     poolId,
     tokenInAddress: canonicalTokens[inputIndex]!,
     tokenOutAddress: canonicalTokens[outputIndex]!,
     poolTokenAddresses: canonicalTokens,
-    feePips: candidate.feePips,
+    ...(adapter.feePips != null ? { feePips: adapter.feePips } : {}),
+    ...(adapter.tickSpacing != null ? { tickSpacing: adapter.tickSpacing } : {}),
   });
   return {
     schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
     targetId,
     stablecoinId: input.stablecoinId,
-    adapterProfileId,
-    protocol: "uniswap-v3",
+    adapterProfileId: adapter.adapterProfileId,
+    protocol: adapter.protocol,
     chain,
     poolId,
     poolTokenAddresses: canonicalTokens,
@@ -396,9 +409,114 @@ export function buildUniV3MeasuredExecutionTarget(input: {
       referencePriceUsd: outputPrice,
       ...(outputStablecoinId ? { trackedAssetId: outputStablecoinId } : {}),
     },
-    feePips: candidate.feePips,
+    ...(adapter.feePips != null ? { feePips: adapter.feePips } : {}),
+    ...(adapter.tickSpacing != null ? { tickSpacing: adapter.tickSpacing } : {}),
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputPrice,
     capturedAt: input.capturedAt,
   };
+}
+
+export function buildUniV3MeasuredExecutionTarget(
+  input: Omit<ClMeasuredExecutionTargetInput, "candidate"> & { candidate: UniV3ExecutionCandidate },
+): DexMeasuredExecutionTarget | null {
+  return buildClMeasuredExecutionTarget(input, {
+    adapterProfileId: "uniswap-v3-quoter-v2",
+    protocol: "uniswap-v3",
+    source: "uniswap-v3-subgraph",
+    feePips: input.candidate.feePips,
+  });
+}
+
+export function buildSlipstreamMeasuredExecutionTarget(
+  input: Omit<ClMeasuredExecutionTargetInput, "candidate"> & { candidate: SlipstreamExecutionCandidate },
+): DexMeasuredExecutionTarget | null {
+  return buildClMeasuredExecutionTarget(input, {
+    adapterProfileId: "aerodrome-slipstream-quoter-v2",
+    protocol: "aerodrome-slipstream",
+    source: "aerodrome-slipstream-sugar",
+    tickSpacing: input.candidate.tickSpacing,
+  });
+}
+
+export function buildSlipstreamMeasuredExecutionTargets(input: {
+  pools: readonly DexApiPool[];
+  chainAddressToId: Map<string, string>;
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
+  validationReferences?: PriceValidationReferences;
+  stablecoinPriceById?: Map<string, number>;
+  capturedAt: number;
+}): Map<string, DexMeasuredExecutionTarget> {
+  const targets = new Map<string, DexMeasuredExecutionTarget>();
+  for (const pool of input.pools) {
+    if (
+      pool.source !== "aerodrome-slipstream" ||
+      pool.tokens.length !== 2 ||
+      !Number.isInteger(pool.tickSpacing) ||
+      pool.tickSpacing == null ||
+      pool.tickSpacing <= 0 ||
+      pool.tickSpacing > 8_388_607 ||
+      !Number.isFinite(pool.tvlUsd) ||
+      pool.tvlUsd <= 0
+    ) continue;
+
+    const [token0, token1] = pool.tokens;
+    const poolAddress = canonicalEvmAddress(pool.poolAddress);
+    const token0Address = canonicalEvmAddress(token0.address);
+    const token1Address = canonicalEvmAddress(token1.address);
+    const token0PriceUsd = token0.priceUsd;
+    const token1PriceUsd = token1.priceUsd;
+    if (
+      !poolAddress ||
+      !token0Address ||
+      !token1Address ||
+      token0Address === token1Address ||
+      !token0.symbol.trim() ||
+      !token1.symbol.trim() ||
+      !Number.isInteger(token0.decimals) ||
+      token0.decimals < 0 ||
+      token0.decimals > 255 ||
+      !Number.isInteger(token1.decimals) ||
+      token1.decimals < 0 ||
+      token1.decimals > 255 ||
+      token0PriceUsd == null ||
+      !Number.isFinite(token0PriceUsd) ||
+      token0PriceUsd <= 0 ||
+      token1PriceUsd == null ||
+      !Number.isFinite(token1PriceUsd) ||
+      token1PriceUsd <= 0
+    ) continue;
+
+    const candidate: SlipstreamExecutionCandidate = {
+      chain: pool.chain,
+      poolAddress,
+      tickSpacing: pool.tickSpacing,
+      tvlUsd: pool.tvlUsd,
+      token0Price: token1PriceUsd / token0PriceUsd,
+      token1Price: token0PriceUsd / token1PriceUsd,
+      tokens: [
+        { address: token0Address, symbol: token0.symbol, decimals: token0.decimals },
+        { address: token1Address, symbol: token1.symbol, decimals: token1.decimals },
+      ],
+    };
+    const stablecoinIds = new Set(
+      candidate.tokens
+        .map((token) => input.chainAddressToId.get(buildChainAddressKey(pool.chain, token.address)))
+        .filter((stablecoinId): stablecoinId is string => Boolean(stablecoinId)),
+    );
+    for (const stablecoinId of stablecoinIds) {
+      const target = buildSlipstreamMeasuredExecutionTarget({
+        stablecoinId,
+        candidate,
+        stablecoinPriceById: input.stablecoinPriceById,
+        chainAddressToId: input.chainAddressToId,
+        symbolToChainScopedIds: input.symbolToChainScopedIds,
+        validationReferences: input.validationReferences,
+        retainedTvlUsd: pool.tvlUsd,
+        capturedAt: input.capturedAt,
+      });
+      if (target) targets.set(buildMeasuredPoolDirectionKey(stablecoinId, target.poolId), target);
+    }
+  }
+  return targets;
 }

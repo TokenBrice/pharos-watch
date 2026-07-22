@@ -4,6 +4,18 @@ import {
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
+import {
+  SolanaMeasuredExecutionProfileSchema,
+  SolanaMeasuredExecutionTargetSchema,
+  type SolanaMeasuredExecutionProfile,
+  type SolanaMeasuredExecutionTarget,
+} from "@shared/types/solana-measured-execution";
+import {
+  TronMeasuredExecutionProfileSchema,
+  TronMeasuredExecutionTargetSchema,
+  type TronMeasuredExecutionProfile,
+  type TronMeasuredExecutionTarget,
+} from "@shared/types/tron-measured-execution";
 import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 
@@ -518,6 +530,597 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   };
 }
 
+export const SOLANA_MEASURED_TARGET_SURFACE = "dex-solana-measured-execution-targets";
+export const SOLANA_MEASURED_QUOTE_SURFACE = "dex-solana-measured-execution-quotes";
+
+export interface PublishedSolanaMeasuredTargets {
+  generationId: string;
+  targets: SolanaMeasuredExecutionTarget[];
+  publishedAt: number;
+}
+
+export interface SolanaMeasuredQuoteOutcome {
+  target: SolanaMeasuredExecutionTarget;
+  status: "measured" | "failed";
+  failureReason?: string;
+  profile?: SolanaMeasuredExecutionProfile;
+  rawPayload?: unknown;
+}
+
+export interface LoadedSolanaMeasuredQuoteEvidence {
+  quoteGenerationId: string;
+  targetGenerationId: string;
+  publishedAt: number;
+  byTargetId: Map<
+    string,
+    {
+      quotedTarget: SolanaMeasuredExecutionTarget;
+      status: "measured" | "failed";
+      failureReason: string | null;
+      profile: SolanaMeasuredExecutionProfile | null;
+    }
+  >;
+}
+
+export function buildSolanaMeasuredQuoteGenerationId(nowSec: number): string {
+  return generationId("dex-solana-measured-quotes", nowSec);
+}
+
+export const TRON_MEASURED_TARGET_SURFACE = "dex-tron-measured-execution-targets";
+export const TRON_MEASURED_QUOTE_SURFACE = "dex-tron-measured-execution-quotes";
+
+export interface PublishedTronMeasuredTargets {
+  generationId: string;
+  targets: TronMeasuredExecutionTarget[];
+  publishedAt: number;
+}
+
+export interface TronMeasuredQuoteOutcome {
+  target: TronMeasuredExecutionTarget;
+  status: "measured" | "failed";
+  failureReason?: string;
+  profile?: TronMeasuredExecutionProfile;
+  rawPayload?: unknown;
+}
+
+export interface LoadedTronMeasuredQuoteEvidence {
+  quoteGenerationId: string;
+  targetGenerationId: string;
+  publishedAt: number;
+  byTargetId: Map<
+    string,
+    {
+      quotedTarget: TronMeasuredExecutionTarget;
+      status: "measured" | "failed";
+      failureReason: string | null;
+      profile: TronMeasuredExecutionProfile | null;
+    }
+  >;
+}
+
+export function buildTronMeasuredQuoteGenerationId(nowSec: number): string {
+  return generationId("dex-tron-measured-quotes", nowSec);
+}
+
+interface NativeMeasuredTarget {
+  targetId: string;
+  stablecoinId: string;
+  adapterProfileId: string;
+  protocol: string;
+  chain: string;
+  poolId: string;
+  capturedAt: number;
+}
+
+interface NativeMeasuredProfile {
+  targetId: string;
+  targetGenerationId: string;
+  quoteGenerationId: string;
+  quotedAt: number;
+}
+
+interface NativePersistenceConfig<TTarget extends NativeMeasuredTarget, TProfile extends NativeMeasuredProfile> {
+  label: string;
+  targetSurface: string;
+  quoteSurface: string;
+  targetGenerationPrefix: string;
+  quoteGenerationPrefix: string;
+  targetSchema: { parse(value: unknown): TTarget };
+  profileSchema: { parse(value: unknown): TProfile };
+  profileBlockNumber(profile: TProfile): number;
+}
+
+interface NativePublishedTargets<TTarget> {
+  generationId: string;
+  targets: TTarget[];
+  publishedAt: number;
+}
+
+interface NativeQuoteOutcome<TTarget, TProfile> {
+  target: TTarget;
+  status: "measured" | "failed";
+  failureReason?: string;
+  profile?: TProfile;
+  rawPayload?: unknown;
+}
+
+interface NativeLoadedQuoteEvidence<TTarget, TProfile> {
+  quoteGenerationId: string;
+  targetGenerationId: string;
+  publishedAt: number;
+  byTargetId: Map<
+    string,
+    {
+      quotedTarget: TTarget;
+      status: "measured" | "failed";
+      failureReason: string | null;
+      profile: TProfile | null;
+    }
+  >;
+}
+
+const SOLANA_PERSISTENCE: NativePersistenceConfig<SolanaMeasuredExecutionTarget, SolanaMeasuredExecutionProfile> = {
+  label: "Solana",
+  targetSurface: SOLANA_MEASURED_TARGET_SURFACE,
+  quoteSurface: SOLANA_MEASURED_QUOTE_SURFACE,
+  targetGenerationPrefix: "dex-solana-measured-targets",
+  quoteGenerationPrefix: "dex-solana-measured-quotes",
+  targetSchema: SolanaMeasuredExecutionTargetSchema,
+  profileSchema: SolanaMeasuredExecutionProfileSchema,
+  profileBlockNumber: (profile) => profile.slotWindow.after,
+};
+
+const TRON_PERSISTENCE: NativePersistenceConfig<TronMeasuredExecutionTarget, TronMeasuredExecutionProfile> = {
+  label: "Tron",
+  targetSurface: TRON_MEASURED_TARGET_SURFACE,
+  quoteSurface: TRON_MEASURED_QUOTE_SURFACE,
+  targetGenerationPrefix: "dex-tron-measured-targets",
+  quoteGenerationPrefix: "dex-tron-measured-quotes",
+  targetSchema: TronMeasuredExecutionTargetSchema,
+  profileSchema: TronMeasuredExecutionProfileSchema,
+  profileBlockNumber: (profile) => Math.max(...profile.quoteProof.map((point) => point.route.blockAfter)),
+};
+
+async function publishNativeMeasuredTargetInventory<
+  TTarget extends NativeMeasuredTarget,
+  TProfile extends NativeMeasuredProfile,
+>(
+  config: NativePersistenceConfig<TTarget, TProfile>,
+  input: {
+    db: D1Database;
+    targets: readonly TTarget[];
+    capturedAt: number;
+    signal?: AbortSignal;
+  },
+): Promise<{ generationId: string; rowCount: number }> {
+  const targets = input.targets.map((target) => config.targetSchema.parse(target));
+  if (targets.length === 0) {
+    throw new Error(`Refusing to publish an empty ${config.label} measured target generation`);
+  }
+  if (new Set(targets.map((target) => target.targetId)).size !== targets.length) {
+    throw new Error(`${config.label} measured target inventory contains duplicate target ids`);
+  }
+  const previous = await latestPublishedGeneration(input.db, config.targetSurface, input.signal);
+  const id = generationId(config.targetGenerationPrefix, input.capturedAt);
+  try {
+    await runWithOverloadRetry(
+      () =>
+        input.db
+          .prepare(
+            `INSERT INTO surface_publication_generations
+       (surface, generation_id, started_at, state, expected_rows, previous_generation_id,
+        producer_schedule_key, producer_job, producer_path, producer_kind)
+       VALUES (?, ?, ?, 'candidate', ?, ?, 'halfHourlyOffset', 'sync-dex-liquidity',
+        'halfHourlyOffset', 'scheduled-job')`,
+          )
+          .bind(config.targetSurface, id, input.capturedAt, targets.length, previous?.generation_id ?? null)
+          .run(),
+      3,
+      input.signal,
+    );
+    const rows = targets.map(
+      (target) =>
+        [
+          id,
+          target.targetId,
+          target.stablecoinId,
+          target.adapterProfileId,
+          target.protocol,
+          target.chain,
+          target.poolId,
+          target.capturedAt,
+          JSON.stringify(target),
+        ] as const,
+    );
+    await batchExecute(
+      input.db,
+      prepareMultiRowInsertStatements(
+        input.db,
+        `INSERT INTO dex_measured_execution_targets
+       (generation_id, target_id, stablecoin_id, adapter_profile_id, protocol, chain, pool_id, captured_at, target_json)`,
+        rows,
+      ),
+      { signal: input.signal },
+    );
+    const count = await input.db
+      .prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets WHERE generation_id = ?")
+      .bind(id)
+      .first<{ count: number }>();
+    if (Number(count?.count ?? -1) !== targets.length) {
+      throw new Error(
+        `${config.label} measured target generation row mismatch: expected=${targets.length} actual=${count?.count ?? -1}`,
+      );
+    }
+    await publishGenerationPointer({
+      db: input.db,
+      surface: config.targetSurface,
+      generationId: id,
+      previousGenerationId: previous?.generation_id ?? null,
+      nowSec: input.capturedAt,
+      rowCount: targets.length,
+      validationSummary: { exactTargetCount: targets.length, activation: "shadow" },
+      signal: input.signal,
+    });
+    return { generationId: id, rowCount: targets.length };
+  } catch (error) {
+    await markGenerationFailed(input.db, config.targetSurface, id, String(error));
+    throw error;
+  }
+}
+
+async function loadLatestPublishedNativeMeasuredTargets<
+  TTarget extends NativeMeasuredTarget,
+  TProfile extends NativeMeasuredProfile,
+>(
+  config: NativePersistenceConfig<TTarget, TProfile>,
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<NativePublishedTargets<TTarget> | null> {
+  const generation = await latestPublishedGeneration(db, config.targetSurface, signal);
+  if (!generation) return null;
+  const result = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT generation_id, target_id, target_json
+       FROM dex_measured_execution_targets
+       WHERE generation_id = ?
+       ORDER BY stablecoin_id, target_id`,
+        )
+        .bind(generation.generation_id)
+        .all<TargetRow>(),
+    3,
+    signal,
+  );
+  const targets = (result.results ?? []).map((row) => config.targetSchema.parse(JSON.parse(row.target_json)));
+  if (
+    (generation.expected_rows != null && generation.expected_rows !== targets.length) ||
+    (generation.published_rows != null && generation.published_rows !== targets.length)
+  ) {
+    throw new Error(`Published ${config.label} measured target generation ${generation.generation_id} is incomplete`);
+  }
+  return {
+    generationId: generation.generation_id,
+    targets,
+    publishedAt: generation.published_at ?? generation.started_at,
+  };
+}
+
+async function publishNativeMeasuredQuoteGeneration<
+  TTarget extends NativeMeasuredTarget,
+  TProfile extends NativeMeasuredProfile,
+>(
+  config: NativePersistenceConfig<TTarget, TProfile>,
+  input: {
+    db: D1Database;
+    targetGeneration: NativePublishedTargets<TTarget>;
+    outcomes: readonly NativeQuoteOutcome<TTarget, TProfile>[];
+    quotedAt: number;
+    generationId?: string;
+    signal?: AbortSignal;
+  },
+): Promise<{ generationId: string; measuredCount: number; failedCount: number }> {
+  if (input.targetGeneration.targets.length === 0 || input.outcomes.length === 0) {
+    throw new Error(`Refusing to publish an empty ${config.label} measured quote generation`);
+  }
+  const targetIds = new Set(input.targetGeneration.targets.map((target) => target.targetId));
+  const outcomeIds = new Set(input.outcomes.map((outcome) => outcome.target.targetId));
+  if (
+    outcomeIds.size !== input.outcomes.length ||
+    targetIds.size !== outcomeIds.size ||
+    [...targetIds].some((targetId) => !outcomeIds.has(targetId))
+  ) {
+    throw new Error(`${config.label} measured quote outcomes do not exactly cover the target generation`);
+  }
+
+  const previous = await latestPublishedGeneration(input.db, config.quoteSurface, input.signal);
+  const id = input.generationId ?? generationId(config.quoteGenerationPrefix, input.quotedAt);
+  const measuredCount = input.outcomes.filter((outcome) => outcome.status === "measured").length;
+  const failedCount = input.outcomes.length - measuredCount;
+  try {
+    await runWithOverloadRetry(
+      () =>
+        input.db
+          .prepare(
+            `INSERT INTO surface_publication_generations
+       (surface, generation_id, started_at, state, expected_rows, previous_generation_id,
+        dependency_snapshot_json, producer_schedule_key, producer_job, producer_path, producer_kind)
+       VALUES (?, ?, ?, 'candidate', ?, ?, ?, 'halfHourlyMeasuredExecution', 'sync-cl-exit-depth',
+        'halfHourlyMeasuredExecution', 'scheduled-job')`,
+          )
+          .bind(
+            config.quoteSurface,
+            id,
+            input.quotedAt,
+            input.outcomes.length,
+            previous?.generation_id ?? null,
+            JSON.stringify({ targetGenerationId: input.targetGeneration.generationId }),
+          )
+          .run(),
+      3,
+      input.signal,
+    );
+    const rows = input.outcomes.map((outcome) => {
+      if (
+        (outcome.status === "measured" && (!outcome.profile || outcome.failureReason != null)) ||
+        (outcome.status === "failed" && (outcome.profile != null || !outcome.failureReason?.trim()))
+      ) {
+        throw new Error(
+          `${config.label} measured quote outcome ${outcome.target.targetId} has an invalid terminal state`,
+        );
+      }
+      const profile = outcome.profile ? config.profileSchema.parse(outcome.profile) : null;
+      if (
+        profile &&
+        (profile.targetId !== outcome.target.targetId ||
+          profile.targetGenerationId !== input.targetGeneration.generationId ||
+          profile.quoteGenerationId !== id)
+      ) {
+        throw new Error(
+          `${config.label} measured quote outcome ${outcome.target.targetId} has mismatched generation identity`,
+        );
+      }
+      return [
+        id,
+        input.targetGeneration.generationId,
+        outcome.target.targetId,
+        outcome.target.stablecoinId,
+        outcome.target.adapterProfileId,
+        outcome.target.protocol,
+        outcome.target.chain,
+        outcome.target.poolId,
+        outcome.status,
+        outcome.failureReason ?? null,
+        profile?.quotedAt ?? null,
+        profile ? config.profileBlockNumber(profile) : null,
+        profile ? JSON.stringify(profile) : null,
+        outcome.status === "failed" && outcome.rawPayload != null ? JSON.stringify(outcome.rawPayload) : null,
+      ] as const;
+    });
+    await batchExecute(
+      input.db,
+      prepareMultiRowInsertStatements(
+        input.db,
+        `INSERT INTO dex_measured_execution_quotes
+       (generation_id, target_generation_id, target_id, stablecoin_id, adapter_profile_id, protocol, chain,
+        pool_id, status, failure_reason, quoted_at, block_number, quote_profile_json, raw_quote_payload_json)`,
+        rows,
+      ),
+      { signal: input.signal },
+    );
+    const count = await input.db
+      .prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes WHERE generation_id = ?")
+      .bind(id)
+      .first<{ count: number }>();
+    if (Number(count?.count ?? -1) !== input.outcomes.length) {
+      throw new Error(
+        `${config.label} measured quote generation row mismatch: expected=${input.outcomes.length} actual=${count?.count ?? -1}`,
+      );
+    }
+    await publishGenerationPointer({
+      db: input.db,
+      surface: config.quoteSurface,
+      generationId: id,
+      previousGenerationId: previous?.generation_id ?? null,
+      nowSec: input.quotedAt,
+      rowCount: input.outcomes.length,
+      validationSummary: {
+        measuredCount,
+        failedCount,
+        targetGenerationId: input.targetGeneration.generationId,
+        activation: "shadow",
+      },
+      signal: input.signal,
+    });
+    return { generationId: id, measuredCount, failedCount };
+  } catch (error) {
+    await markGenerationFailed(input.db, config.quoteSurface, id, String(error));
+    throw error;
+  }
+}
+
+async function loadLatestPublishedNativeMeasuredQuoteEvidence<
+  TTarget extends NativeMeasuredTarget,
+  TProfile extends NativeMeasuredProfile,
+>(
+  config: NativePersistenceConfig<TTarget, TProfile>,
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<NativeLoadedQuoteEvidence<TTarget, TProfile> | null> {
+  const generation = await latestPublishedGeneration(db, config.quoteSurface, signal);
+  if (!generation) return null;
+  const quoteResult = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `SELECT generation_id, target_generation_id, target_id, status, failure_reason, quote_profile_json
+       FROM dex_measured_execution_quotes
+       WHERE generation_id = ?
+       ORDER BY stablecoin_id, target_id`,
+        )
+        .bind(generation.generation_id)
+        .all<QuoteRow>(),
+    3,
+    signal,
+  );
+  const quoteRows = quoteResult.results ?? [];
+  if (
+    (generation.expected_rows != null && generation.expected_rows !== quoteRows.length) ||
+    (generation.published_rows != null && generation.published_rows !== quoteRows.length)
+  ) {
+    throw new Error(`Published ${config.label} measured quote generation ${generation.generation_id} is incomplete`);
+  }
+
+  const targetGenerationIds = new Set(quoteRows.map((row) => row.target_generation_id));
+  const dependency = generation.dependency_snapshot_json
+    ? (JSON.parse(generation.dependency_snapshot_json) as { targetGenerationId?: string })
+    : {};
+  const targetGenerationId =
+    (targetGenerationIds.values().next().value as string | undefined) ?? dependency.targetGenerationId;
+  if (!targetGenerationId || targetGenerationIds.size > 1 || dependency.targetGenerationId !== targetGenerationId) {
+    throw new Error(
+      `Published ${config.label} measured quote generation ${generation.generation_id} has a torn target dependency`,
+    );
+  }
+  const targetGeneration = await db
+    .prepare(
+      `SELECT generation_id, state, started_at, published_at, expected_rows, published_rows, dependency_snapshot_json
+     FROM surface_publication_generations
+     WHERE surface = ? AND generation_id = ? AND state IN ('published', 'superseded')`,
+    )
+    .bind(config.targetSurface, targetGenerationId)
+    .first<SurfaceGenerationRow>();
+  if (!targetGeneration) {
+    throw new Error(`${config.label} measured target generation ${targetGenerationId} was not published`);
+  }
+  const targetResult = await db
+    .prepare(
+      `SELECT generation_id, target_id, target_json
+     FROM dex_measured_execution_targets
+     WHERE generation_id = ?`,
+    )
+    .bind(targetGenerationId)
+    .all<TargetRow>();
+  const targets = new Map<string, TTarget>(
+    (targetResult.results ?? []).map((row) => {
+      const target = config.targetSchema.parse(JSON.parse(row.target_json));
+      return [target.targetId, target];
+    }),
+  );
+  if (
+    (targetGeneration.expected_rows != null && targetGeneration.expected_rows !== targets.size) ||
+    (targetGeneration.published_rows != null && targetGeneration.published_rows !== targets.size)
+  ) {
+    throw new Error(`${config.label} measured target generation ${targetGenerationId} is incomplete`);
+  }
+
+  const byTargetId = new Map<
+    string,
+    {
+      quotedTarget: TTarget;
+      status: "measured" | "failed";
+      failureReason: string | null;
+      profile: TProfile | null;
+    }
+  >();
+  for (const row of quoteRows) {
+    const quotedTarget = targets.get(row.target_id);
+    if (!quotedTarget) throw new Error(`${config.label} measured quote ${row.target_id} has no target row`);
+    const profile = row.quote_profile_json ? config.profileSchema.parse(JSON.parse(row.quote_profile_json)) : null;
+    if (
+      (row.status === "measured" &&
+        (profile == null ||
+          row.failure_reason != null ||
+          profile.targetId !== row.target_id ||
+          profile.targetGenerationId !== targetGenerationId ||
+          profile.quoteGenerationId !== generation.generation_id)) ||
+      (row.status === "failed" && (profile != null || !row.failure_reason?.trim()))
+    ) {
+      throw new Error(`${config.label} measured quote row ${row.target_id} has a torn terminal identity`);
+    }
+    byTargetId.set(row.target_id, {
+      quotedTarget,
+      status: row.status,
+      failureReason: row.failure_reason,
+      profile,
+    });
+  }
+  return {
+    quoteGenerationId: generation.generation_id,
+    targetGenerationId,
+    publishedAt: generation.published_at ?? generation.started_at,
+    byTargetId,
+  };
+}
+
+export async function publishSolanaMeasuredTargetInventory(input: {
+  db: D1Database;
+  targets: readonly SolanaMeasuredExecutionTarget[];
+  capturedAt: number;
+  signal?: AbortSignal;
+}): Promise<{ generationId: string; rowCount: number }> {
+  return publishNativeMeasuredTargetInventory(SOLANA_PERSISTENCE, input);
+}
+
+export async function loadLatestPublishedSolanaMeasuredTargets(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<PublishedSolanaMeasuredTargets | null> {
+  return loadLatestPublishedNativeMeasuredTargets(SOLANA_PERSISTENCE, db, signal);
+}
+
+export async function publishSolanaMeasuredQuoteGeneration(input: {
+  db: D1Database;
+  targetGeneration: PublishedSolanaMeasuredTargets;
+  outcomes: readonly SolanaMeasuredQuoteOutcome[];
+  quotedAt: number;
+  generationId?: string;
+  signal?: AbortSignal;
+}): Promise<{ generationId: string; measuredCount: number; failedCount: number }> {
+  return publishNativeMeasuredQuoteGeneration(SOLANA_PERSISTENCE, input);
+}
+
+export async function loadLatestPublishedSolanaMeasuredQuoteEvidence(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<LoadedSolanaMeasuredQuoteEvidence | null> {
+  return loadLatestPublishedNativeMeasuredQuoteEvidence(SOLANA_PERSISTENCE, db, signal);
+}
+
+export async function publishTronMeasuredTargetInventory(input: {
+  db: D1Database;
+  targets: readonly TronMeasuredExecutionTarget[];
+  capturedAt: number;
+  signal?: AbortSignal;
+}): Promise<{ generationId: string; rowCount: number }> {
+  return publishNativeMeasuredTargetInventory(TRON_PERSISTENCE, input);
+}
+
+export async function loadLatestPublishedTronMeasuredTargets(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<PublishedTronMeasuredTargets | null> {
+  return loadLatestPublishedNativeMeasuredTargets(TRON_PERSISTENCE, db, signal);
+}
+
+export async function publishTronMeasuredQuoteGeneration(input: {
+  db: D1Database;
+  targetGeneration: PublishedTronMeasuredTargets;
+  outcomes: readonly TronMeasuredQuoteOutcome[];
+  quotedAt: number;
+  generationId?: string;
+  signal?: AbortSignal;
+}): Promise<{ generationId: string; measuredCount: number; failedCount: number }> {
+  return publishNativeMeasuredQuoteGeneration(TRON_PERSISTENCE, input);
+}
+
+export async function loadLatestPublishedTronMeasuredQuoteEvidence(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<LoadedTronMeasuredQuoteEvidence | null> {
+  return loadLatestPublishedNativeMeasuredQuoteEvidence(TRON_PERSISTENCE, db, signal);
+}
+
 export async function pruneDexMeasuredExecutionGenerations(
   db: D1Database,
   nowSec: number,
@@ -532,26 +1135,38 @@ export async function pruneDexMeasuredExecutionGenerations(
           `DELETE FROM dex_measured_execution_quotes
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
-         WHERE surface = ? AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+         WHERE surface IN (?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
          ORDER BY started_at ASC LIMIT ?
        )`,
         )
-        .bind(DEX_MEASURED_QUOTE_SURFACE, cutoff, GENERATION_PRUNE_MAX_PER_RUN),
+        .bind(
+          DEX_MEASURED_QUOTE_SURFACE,
+          SOLANA_MEASURED_QUOTE_SURFACE,
+          TRON_MEASURED_QUOTE_SURFACE,
+          cutoff,
+          GENERATION_PRUNE_MAX_PER_RUN,
+        ),
       db
         .prepare(
           `DELETE FROM dex_measured_execution_targets
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
-         WHERE surface = ? AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+         WHERE surface IN (?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
          ORDER BY started_at ASC LIMIT ?
        )
        AND generation_id NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)`,
         )
-        .bind(DEX_MEASURED_TARGET_SURFACE, cutoff, GENERATION_PRUNE_MAX_PER_RUN),
+        .bind(
+          DEX_MEASURED_TARGET_SURFACE,
+          SOLANA_MEASURED_TARGET_SURFACE,
+          TRON_MEASURED_TARGET_SURFACE,
+          cutoff,
+          GENERATION_PRUNE_MAX_PER_RUN,
+        ),
       db
         .prepare(
           `DELETE FROM surface_publication_generations
-       WHERE surface IN (?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+       WHERE surface IN (?, ?, ?, ?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
        AND NOT EXISTS (
          SELECT 1 FROM dex_measured_execution_quotes q
          WHERE q.generation_id = surface_publication_generations.generation_id
@@ -562,7 +1177,15 @@ export async function pruneDexMeasuredExecutionGenerations(
          WHERE t.generation_id = surface_publication_generations.generation_id
        )`,
         )
-        .bind(DEX_MEASURED_TARGET_SURFACE, DEX_MEASURED_QUOTE_SURFACE, cutoff),
+        .bind(
+          DEX_MEASURED_TARGET_SURFACE,
+          DEX_MEASURED_QUOTE_SURFACE,
+          SOLANA_MEASURED_TARGET_SURFACE,
+          SOLANA_MEASURED_QUOTE_SURFACE,
+          TRON_MEASURED_TARGET_SURFACE,
+          TRON_MEASURED_QUOTE_SURFACE,
+          cutoff,
+        ),
     ],
     { signal },
   );

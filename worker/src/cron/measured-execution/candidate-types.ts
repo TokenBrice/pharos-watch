@@ -13,3 +13,16 @@ export interface UniV3ExecutionCandidate {
     { address: string; symbol: string; decimals: number },
   ];
 }
+
+export interface SlipstreamExecutionCandidate {
+  chain: string;
+  poolAddress: string;
+  tickSpacing: number;
+  tvlUsd: number;
+  token0Price: number;
+  token1Price: number;
+  tokens: readonly [
+    { address: string; symbol: string; decimals: number },
+    { address: string; symbol: string; decimals: number },
+  ];
+}

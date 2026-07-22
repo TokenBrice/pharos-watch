@@ -37,6 +37,7 @@ export const DexMeasuredExecutionTargetSchema = z.object({
   tokenIn: DexMeasuredExecutionTokenSchema,
   tokenOut: DexMeasuredExecutionTokenSchema,
   feePips: z.number().int().min(0).max(1_000_000).optional(),
+  tickSpacing: z.number().int().min(1).max(8_388_607).optional(),
   retainedTvlUsd: z.number().finite().positive(),
   retainedPoolPriceUsd: z.number().finite().positive(),
   capturedAt: z.number().int().nonnegative(),
@@ -80,6 +81,7 @@ export const DexMeasuredExecutionProfileSchema = z.object({
   tokenIn: DexMeasuredExecutionTokenSchema,
   tokenOut: DexMeasuredExecutionTokenSchema,
   feePips: z.number().int().min(0).max(1_000_000).optional(),
+  tickSpacing: z.number().int().min(1).max(8_388_607).optional(),
   retainedTvlUsdAtQuote: z.number().finite().positive(),
   retainedPoolPriceUsdAtQuote: z.number().finite().positive(),
   quotedAt: z.number().int().nonnegative(),
@@ -160,6 +162,7 @@ export function buildDexMeasuredExecutionTargetId(input: {
   tokenOutAddress: string;
   poolTokenAddresses?: readonly string[];
   feePips?: number;
+  tickSpacing?: number;
 }): string {
   return [
     DEX_MEASURED_TARGET_SCHEMA_VERSION,
@@ -172,6 +175,7 @@ export function buildDexMeasuredExecutionTargetId(input: {
     input.tokenOutAddress,
     ...(input.poolTokenAddresses ?? []),
     input.feePips ?? "na",
+    ...(input.tickSpacing != null ? [input.tickSpacing] : []),
   ]
     .map((part) => canonicalPart(String(part)))
     .join("|");
@@ -308,6 +312,7 @@ export function validateDexMeasuredExecutionProfile(input: {
     profile.tokenIn.trackedAssetId === quotedTarget.tokenIn.trackedAssetId &&
     profile.tokenOut.trackedAssetId === quotedTarget.tokenOut.trackedAssetId &&
     profile.feePips === quotedTarget.feePips &&
+    profile.tickSpacing === quotedTarget.tickSpacing &&
     Math.abs(profile.retainedTvlUsdAtQuote - quotedTarget.retainedTvlUsd) <= 0.01 &&
     Math.abs(profile.retainedPoolPriceUsdAtQuote - quotedTarget.retainedPoolPriceUsd) <= 0.00000001 &&
     Math.abs(profile.tokenIn.referencePriceUsd - quotedTarget.tokenIn.referencePriceUsd) <= 0.00000001 &&
@@ -323,7 +328,8 @@ export function validateDexMeasuredExecutionProfile(input: {
     profile.tokenOut.decimals === currentTarget.tokenOut.decimals &&
     profile.tokenIn.trackedAssetId === currentTarget.tokenIn.trackedAssetId &&
     profile.tokenOut.trackedAssetId === currentTarget.tokenOut.trackedAssetId &&
-    profile.feePips === currentTarget.feePips;
+    profile.feePips === currentTarget.feePips &&
+    profile.tickSpacing === currentTarget.tickSpacing;
   const currentPoolOrderMatches =
     JSON.stringify(profile.poolTokenAddresses ?? null) === JSON.stringify(currentTarget.poolTokenAddresses ?? null);
   if (!currentIdentityMatches || !currentPoolOrderMatches) issues.add("identity-mismatch");
@@ -443,6 +449,7 @@ export function validateDexMeasuredExecutionProfile(input: {
     tokenOutAddress: profile.tokenOut.address,
     ...(profile.poolTokenAddresses ? { poolTokenAddresses: profile.poolTokenAddresses } : {}),
     ...(profile.feePips != null ? { feePips: profile.feePips } : {}),
+    ...(profile.tickSpacing != null ? { tickSpacing: profile.tickSpacing } : {}),
   });
   if (profile.targetId !== expectedTargetId) {
     issues.add("identity-mismatch");

@@ -23,6 +23,8 @@ const BUSINESS_DAILY_PEGS = [
   "peggedMXN",
   "peggedMYR",
   "peggedKRW",
+  "peggedHKD",
+  "peggedINR",
 ];
 
 const CALENDAR_DAILY_PEGS = [

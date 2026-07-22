@@ -24,7 +24,11 @@ vi.mock("../dex-liquidity/subgraph-source-families", () => ({
     uniV3PriceObs: new Map(),
     uniV3ExecutionCandidates: new Map(),
   })),
-  fetchAerodromeData: vi.fn(async () => ({ aerodromePriceObs: new Map(), aerodromeIsStable: new Map() })),
+  fetchAerodromeData: vi.fn(async () => ({
+    aerodromePriceObs: new Map(),
+    aerodromeIsStable: new Map(),
+    aerodromeV2ExecutionCandidates: new Map(),
+  })),
 }));
 
 vi.mock("../dex-liquidity/fetch-primary", () => ({
@@ -91,6 +95,9 @@ vi.mock("../dex-liquidity/fetch-orca", () => ({ fetchOrcaPools: vi.fn(async () =
 vi.mock("../dex-liquidity/fetch-meteora", () => ({ fetchMeteoraPools: vi.fn(async () => makeDirectApiResult()) }));
 vi.mock("../dex-liquidity/fetch-pancakeswap", () => ({
   fetchPancakeSwapPools: vi.fn(async () => makeDirectApiResult()),
+}));
+vi.mock("../dex-liquidity/fetch-sunswap", () => ({
+  fetchSunSwapPools: vi.fn(async () => makeDirectApiResult()),
 }));
 vi.mock("../dex-liquidity/fetch-slipstream", () => ({
   fetchSlipstreamPools: vi.fn(async () => makeDirectApiResult()),
@@ -665,8 +672,8 @@ describe("syncDexLiquidity", () => {
         expect(curvePoolMap.size).toBe(1);
         expect(uniV3PoolFees.size).toBe(1);
         expect(uniV3ExecutionCandidates.size).toBe(1);
-        expect(confirmation?.enforcedChainsByProtocol.get("fluid")).toContain("ethereum");
-        expect(confirmation?.confirmedExactKeysByProtocol.get("fluid")?.size).toBe(1);
+        expect(confirmation?.enforcedChainsByProtocol.get("fluid")).toBeUndefined();
+        expect(confirmation?.confirmedExactKeysByProtocol.get("fluid")).toBeUndefined();
         return {
           mergedCount: 0,
           skippedCount: 0,

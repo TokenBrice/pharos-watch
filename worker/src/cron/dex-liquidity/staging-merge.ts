@@ -10,7 +10,7 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import { mergeCgPools, mergeGtPools } from "./fetch-crawlers";
 import type { CgTickerOrderbookMetadata } from "./coingecko-tickers-shared";
 import type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases";
-import { getGtDexQuality, normalizeProtocol } from "./pool-helpers";
+import { getGtDexQuality, normalizeProtocol, parsePoolSymbols } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import type { CgNewPool, GtNewPool, LiquidityMetrics, DexPriceObs } from "./types";
 import {
@@ -20,6 +20,7 @@ import {
   registerKnownPoolIdentity,
   type KnownPoolIdentityIndex,
 } from "./pool-identity";
+import { attachEvmV2CandidateToRetainedPool, buildEvmV2ExecutionCandidate } from "./constant-product-v2";
 
 interface StagedPoolRow {
   pool_id: string;
@@ -311,8 +312,15 @@ function requiresAuthoritativeProtocolConfirmation(
   authoritativeConfirmation: AuthoritativeStagedPoolConfirmationIndex | undefined,
   protocol: string,
   chain: string,
+  poolType: string,
+  dexId: string,
 ): boolean {
   if (!authoritativeConfirmation) return false;
+  if (protocol === "pancakeswap") {
+    const familyDescriptor = `${dexId} ${poolType}`.toLowerCase();
+    if (familyDescriptor.includes("v2")) return false;
+    if (!/(v3|v4|concentrated|\bclmm\b|\bcg-cl-)/.test(familyDescriptor)) return false;
+  }
   const enforcedChains = authoritativeConfirmation.enforcedChainsByProtocol.get(protocol);
   return enforcedChains?.has(chain.toLowerCase()) ?? false;
 }
@@ -450,6 +458,18 @@ export async function mergeStagedPools(
     const entry = buildStagedPoolEntry(stagedPool, nowSec);
     const { dexId, poolType, qualityMultiplier, identity, confidence } = entry;
     const normalizedProtocol = normalizeProtocol(stagedPool.protocol || dexId);
+    // Preserve the full suffix after the first colon. Orderbook ids and any colon-bearing
+    // native ids stay intact. EVM/base58 addresses are colon-free so this is safe.
+    const firstColonIndex = stagedPool.poolId.indexOf(":");
+    const address = firstColonIndex >= 0 ? stagedPool.poolId.slice(firstColonIndex + 1) : stagedPool.poolId;
+    const evmV2ExecutionCandidate = buildEvmV2ExecutionCandidate({
+      chain: stagedPool.chain,
+      protocol: dexId,
+      poolType,
+      poolAddress: address,
+      tokenAddresses: [stagedPool.baseToken ?? "", stagedPool.quoteToken ?? ""],
+      tokenSymbols: parsePoolSymbols(stagedPool.symbol),
+    });
 
     // Compute confidence and adjusted TVL early — needed for price observation gate
     if (confidence === 0) {
@@ -469,7 +489,15 @@ export async function mergeStagedPools(
       continue;
     }
 
-    if (requiresAuthoritativeProtocolConfirmation(authoritativeConfirmation, normalizedProtocol, stagedPool.chain)) {
+    if (
+      requiresAuthoritativeProtocolConfirmation(
+        authoritativeConfirmation,
+        normalizedProtocol,
+        stagedPool.chain,
+        poolType,
+        dexId,
+      )
+    ) {
       const confirmedExactKeys = authoritativeConfirmation?.confirmedExactKeysByProtocol.get(normalizedProtocol);
       if (!identity.exactPoolKey || !confirmedExactKeys?.has(identity.exactPoolKey)) {
         skippedCount++;
@@ -528,6 +556,14 @@ export async function mergeStagedPools(
     );
     const dedupReason = knownDedupReason ?? stagedDedupReason;
     if (dedupReason) {
+      if (evmV2ExecutionCandidate) {
+        attachEvmV2CandidateToRetainedPool({
+          metrics,
+          stablecoinId: stagedPool.stablecoinId,
+          chain: stagedPool.chain,
+          candidate: evmV2ExecutionCandidate,
+        });
+      }
       skippedCount++;
       if (dedupReason === "exact") exactIdentitySkipped++;
       if (dedupReason === "derived_unique") uniqueDerivedIdentitySkipped++;
@@ -555,10 +591,6 @@ export async function mergeStagedPools(
     }
 
     const adjustedVolume = (stagedPool.volume24h ?? 0) * confidence;
-    // Preserve the full suffix after the first colon. Orderbook ids and any colon-bearing
-    // native ids stay intact. EVM/base58 addresses are colon-free so this is safe.
-    const firstColonIndex = stagedPool.poolId.indexOf(":");
-    const address = firstColonIndex >= 0 ? stagedPool.poolId.slice(firstColonIndex + 1) : stagedPool.poolId;
     const maturityDays = stagedPoolMaturityDays(stagedPool.discoveredAt, nowSec);
     const orderbookMetadata =
       stagedPool.source === "cg_tickers" ? readCgTickerOrderbookMetadata(stagedPool.rawJson) : null;
@@ -589,6 +621,7 @@ export async function mergeStagedPools(
           synthetic: false,
           decayed: confidence < 1,
         },
+        ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
       });
       continue;
     }
@@ -611,6 +644,7 @@ export async function mergeStagedPools(
           : stagedPool.source === "cg_tickers"
             ? "cg_tickers"
             : "gecko_terminal",
+      ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
       ...(stagedPool.source === "cg_tickers"
         ? {
             pairQualityOverride: 0.85,

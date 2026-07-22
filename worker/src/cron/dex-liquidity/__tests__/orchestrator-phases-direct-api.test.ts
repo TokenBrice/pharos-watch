@@ -167,9 +167,9 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(compacted.phase.results[0]?.result.pools).toHaveLength(retainedPoolCount);
     expect(compacted.phase.results[0]?.result.pagination).toEqual(rawPhase.results[0]?.result.pagination);
     expect(compacted.phase.sourceWarnings).toEqual(rawPhase.sourceWarnings);
-    expect(authoritativeConfirmation.confirmedExactKeysByProtocol.get("balancer")).toContain(
-      `ethereum:0x${(rawPoolCount - 1).toString(16).padStart(40, "0")}`,
-    );
+    const lastPoolKey = `ethereum:0x${(rawPoolCount - 1).toString(16).padStart(40, "0")}`;
+    expect(compacted.phase.results[0]?.authoritativeExactPoolKeys).toContain(lastPoolKey);
+    expect(authoritativeConfirmation.confirmedExactKeysByProtocol.has("balancer")).toBe(false);
   });
 
   it("reports pre-compaction exclusion counts after receiving only retained direct pools", async () => {

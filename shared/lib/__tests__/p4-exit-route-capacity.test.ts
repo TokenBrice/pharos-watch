@@ -28,10 +28,7 @@ describe("P4 DEX exit route observations", () => {
       protocol: "uniswap-v3",
       chain: "ethereum",
       poolId: `ethereum:${physicalPool}`,
-      poolTokenAddresses: [
-        "0x1111111111111111111111111111111111111111",
-        "0x2222222222222222222222222222222222222222",
-      ],
+      poolTokenAddresses: ["0x1111111111111111111111111111111111111111", "0x2222222222222222222222222222222222222222"],
       tokenIn: {
         address: "0x1111111111111111111111111111111111111111",
         symbol: "USDC",
@@ -80,23 +77,25 @@ describe("P4 DEX exit route observations", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
       observedAt,
-      retainedPools: [{
-        poolId: "defillama-yields-uuid",
-        project: "uniswap-v3",
-        chain: "ethereum",
-        tvlUsd: 2_000_000,
-        symbol: "USDC-USDT",
-        poolType: "uniswap-v3",
-        source: "dl",
-        extra: {
-          measuredExecution: measuredProfile(observedAt - 60),
-          measuredExecutionPhysicalPoolId: physicalPoolId,
+      retainedPools: [
+        {
+          poolId: "defillama-yields-uuid",
+          project: "uniswap-v3",
+          chain: "ethereum",
+          tvlUsd: 2_000_000,
+          symbol: "USDC-USDT",
+          poolType: "uniswap-v3",
+          source: "dl",
+          extra: {
+            measuredExecution: measuredProfile(observedAt - 60),
+            measuredExecutionPhysicalPoolId: physicalPoolId,
+          },
         },
-      }],
+      ],
     });
 
     expect(result.coverage).toMatchObject({
-      capabilityMatrixVersion: "p4a.4",
+      capabilityMatrixVersion: "p4a.6",
       retainedPoolCount: 1,
       scoreEligibleCapabilityPoolCount: 1,
       scoreEligiblePoolCount: 1,
@@ -136,20 +135,22 @@ describe("P4 DEX exit route observations", () => {
       const result = buildP4DexExitRouteObservations({
         stablecoinId: "usdc-circle",
         observedAt,
-        retainedPools: [{
-          poolId: "defillama-yields-uuid",
-          project: "uniswap-v3",
-          chain: "ethereum",
-          tvlUsd: 2_000_000,
-          symbol: "USDC-USDT",
-          poolType: "uniswap-v3",
-          source: "dl",
-          extra: {
-            measuredExecution: testCase.profile,
-            measuredExecutionPhysicalPoolId: "ethereum:0x3333333333333333333333333333333333333333",
-            ...(testCase.extra as object),
+        retainedPools: [
+          {
+            poolId: "defillama-yields-uuid",
+            project: "uniswap-v3",
+            chain: "ethereum",
+            tvlUsd: 2_000_000,
+            symbol: "USDC-USDT",
+            poolType: "uniswap-v3",
+            source: "dl",
+            extra: {
+              measuredExecution: testCase.profile,
+              measuredExecutionPhysicalPoolId: "ethereum:0x3333333333333333333333333333333333333333",
+              ...(testCase.extra as object),
+            },
           },
-        }],
+        ],
       });
 
       expect(result.coverage.scoreEligibleCapabilityPoolCount).toBe(1);
@@ -181,7 +182,7 @@ describe("P4 DEX exit route observations", () => {
     expect(isDexExitRouteCoverageComplete(legacyProductionCoverage)).toBe(false);
     const explicitProductionCoverage = {
       ...legacyProductionCoverage,
-      capabilityMatrixVersion: "p4a.4",
+      capabilityMatrixVersion: "p4a.6",
       scoreEligibleCapabilityPoolCount: 38,
     };
     expect(
@@ -709,6 +710,63 @@ describe("P4 DEX exit route observations", () => {
     expect(validateExitRouteCapacityCurve(result.observations[0]!.capacityCurve!)).toEqual([]);
   });
 
+  it("simulates a factory-verified EVM V2 constant-product exit", () => {
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "u-united-stables",
+      observedAt: 1_720_000_000,
+      retainedPools: [
+        {
+          poolId: "bsc:0x108752b2a22c731ede3edac2205c63ae553e221a",
+          project: "pancakeswap",
+          chain: "bsc",
+          tvlUsd: 2_000_000,
+          symbol: "U / WBNB",
+          poolType: "ds-amm",
+          source: "dexscreener",
+          extra: {
+            ammExecutionModel: {
+              source: "pancakeswap-v2",
+              invariant: "constant-product",
+              trackedTokenIndex: 0,
+              feeRate: 0.0025,
+              tokens: [
+                {
+                  address: "0xce24439f2d9c6a2289f741120fe202248b666666",
+                  symbol: "U",
+                  decimals: 18,
+                  balance: 1_000_000,
+                  referencePriceUsd: 1,
+                  referencePriceSource: "tracked-market",
+                  trackedAssetId: "u-united-stables",
+                },
+                {
+                  address: "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
+                  symbol: "WBNB",
+                  decimals: 18,
+                  balance: 2_000,
+                  referencePriceUsd: 500,
+                  referencePriceSource: "pool-implied",
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    expect(result.coverage).toMatchObject({
+      scoreEligibleCapabilityPoolCount: 1,
+      scoreEligiblePoolCount: 1,
+      unsupportedPoolCount: 0,
+      evidenceCounts: { "reserve-based-amm-simulation": 1 },
+    });
+    expect(result.observations[0]).toMatchObject({
+      scope: { contractOrPoolId: "bsc:0x108752b2a22c731ede3edac2205c63ae553e221a" },
+      output: { kind: "collateral" },
+      scoreEligible: true,
+    });
+  });
+
   it("keeps case-distinct Solana pool and mint identities in distinct routes", () => {
     const buildPool = (poolId: string, outputMint: string) => ({
       poolId,
@@ -1061,6 +1119,7 @@ describe("P4 DEX exit route observations", () => {
     const raydium = DEX_ROUTE_SOURCE_CAPABILITIES.find(
       (capability) => capability.id === "raydium-constant-product-exact",
     );
+    const evmV2 = DEX_ROUTE_SOURCE_CAPABILITIES.find((capability) => capability.id === "evm-v2-constant-product-exact");
 
     expect(orderbook).toMatchObject({
       outputEvidenceKind: "direct-orderbook-depth",
@@ -1080,6 +1139,12 @@ describe("P4 DEX exit route observations", () => {
       outputEvidenceKind: "generic-tvl-proxy",
     });
     expect(raydium).toMatchObject({
+      exactBalancesOrReserves: "exact",
+      poolInvariantParameters: "exact",
+      outputEvidenceKind: "reserve-based-amm-simulation",
+      scoreEligible: true,
+    });
+    expect(evmV2).toMatchObject({
       exactBalancesOrReserves: "exact",
       poolInvariantParameters: "exact",
       outputEvidenceKind: "reserve-based-amm-simulation",
