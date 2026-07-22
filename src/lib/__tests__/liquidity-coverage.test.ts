@@ -7,13 +7,17 @@ describe("liquidity coverage", () => {
     const classified: string[] = [];
     for (const meta of ACTIVE_STABLECOINS) {
       for (const c of meta.contracts ?? []) {
-        classified.push(`${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain).join(",") || "provider-inaccessible"}`);
+        classified.push(
+          `${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain).join(",") || "provider-inaccessible"}`,
+        );
       }
       for (const c of meta.tradedContracts ?? []) {
-        classified.push(`${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain).join(",") || "provider-inaccessible"}`);
+        classified.push(
+          `${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain).join(",") || "provider-inaccessible"}`,
+        );
       }
     }
-    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(329);
+    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(331);
   });
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {

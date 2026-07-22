@@ -185,7 +185,7 @@ function exactFixedInput(
         exitRouteObservations: [route("dex:primary", observedAtSec, args.routeChain ?? "ethereum", clockSec)],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.4",
+          capabilityMatrixVersion: "p4a.6",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,
@@ -915,10 +915,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   });
 
   it("keeps supply missing when neither per-chain rows nor a positive aggregate bucket exist", () => {
-    const absent = compileSafetyScoreV9FactSetFromFixedInput(
-      exactFixedInput({ chainSupplyByChain: {} }),
-      extension(),
-    ).assets[0]!.supply;
+    const absent = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ chainSupplyByChain: {} }), extension())
+      .assets[0]!.supply;
     expect(absent.status.observationState).not.toBe("known");
     expect(absent.circulatingUsd).toBeNull();
     expect(absent.sourceKind).toBe("usd-denominated-circulating");
@@ -1022,7 +1020,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
             ...original.dexLiqMap.alpha!,
             exitRouteObservationCoverage: {
               status: "populated",
-              capabilityMatrixVersion: "p4a.4",
+              capabilityMatrixVersion: "p4a.6",
               retainedPoolCount: 2_380 + exactCapabilityPoolCount,
               observationCount: 1,
               scoreEligibleObservationCount: 1,
@@ -1466,7 +1464,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "bb18e07e845353f004041b7388a7019716cb568ac72b23ba8101a740b9d29698",
+      "c2a0b3b4e71635a090342ae4df261c5f7a005b1d8715acdf5ddbbdba00029277",
     );
   });
 
@@ -1631,7 +1629,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   });
 
   it("derives cdp shock-coverage freshness on the D12 72-hour policy window", () => {
-    const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp.stressMeasurementFreshness.maxAgeSec;
+    const maxAgeSec =
+      V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp.stressMeasurementFreshness.maxAgeSec;
     expect(maxAgeSec).toBe(259_200);
     const measurement = selectSafetyScoreV9CdpShockMeasurement("lusd-liquity", 1_784_225_942);
     if (!measurement || measurement.source === null) throw new Error("Expected a pinned LUSD shock measurement");
