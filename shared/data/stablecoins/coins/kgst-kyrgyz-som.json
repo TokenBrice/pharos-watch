@@ -14,6 +14,18 @@
   "collateral": "Kyrgyz som fiat reserves and cash equivalents held in licensed banks and custodial institutions to back KGST 1:1 against the Kyrgyz som",
   "pegMechanism": "Issuer-managed mint and redemption route designed to maintain 1 KGST = 1 KGS through fully backed som reserves",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "KGST's issuer disclosure identifies a 1:1 Kyrgyz-som token backed by KGS cash or cash equivalents held with licensed Kyrgyz banks and custodial institutions. That supports the fiat-cash archetype while leaving the issuer's unverified reserve composition and assurance claims in the separate reserve review.",
+    "sources": [
+      {
+        "label": "KGST issuer disclosure",
+        "url": "https://www.kgstoken.kg/"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "kyrgyz-som-stablecoin",
   "links": [

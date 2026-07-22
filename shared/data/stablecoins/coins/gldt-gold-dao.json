@@ -14,6 +14,22 @@
   "collateral": "GLD NFTs representing physical gold bars stored in Swiss vaults; GLDT is minted when GLD NFTs are locked in the swap canister at a ratio of 1 gram of GLD NFT backing for 100 GLDT",
   "pegMechanism": "Commodity redemption/swap model: 1 GLDT represents 0.01 grams of gold, and GLDT can be reverse-swapped into GLD NFTs when enough tokens are supplied to unlock the corresponding NFT denomination",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "Gold DAO documents GLDT issuance against locked GLD NFT gold certificates, with physical gold underlying the certificates. The live claim is an issuer/protocol-managed, asset-backed commodity receipt rather than a borrower CDP, NAV fund share, or algorithmic stablecoin; within the available taxonomy, fiat-cash is the applicable direct-asset-claim archetype. Its GOLD reference remains distinct from a USD peg.",
+    "sources": [
+      {
+        "label": "Gold DAO GLDT documentation",
+        "url": "https://docs.gold-dao.org/tokens/gldt"
+      },
+      {
+        "label": "Gold DAO technology documentation",
+        "url": "https://docs.gold-dao.org/how-to/redeem-physical-gold"
+      }
+    ]
+  },
   "commodityOunces": 0.000321507467,
   "detailProvider": "commodity",
   "geckoId": "gold-token",

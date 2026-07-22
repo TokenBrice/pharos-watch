@@ -14,6 +14,18 @@
   "collateral": "Cash, cash equivalents, and short-duration U.S. Treasuries held in segregated accounts at regulated financial institutions",
   "pegMechanism": "Direct 1:1 redemption through Brale (registered MSB and licensed U.S. money transmitter)",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "Brale's current SBC disclosure describes a payments stablecoin redeemable 1:1 for U.S. dollars, supported by daily reserve reporting and monthly independent reserve assurance. The claim is issuer-managed fiat reserve issuance, not a protocol collateral vault or NAV-share product.",
+    "sources": [
+      {
+        "label": "Brale SBC transparency disclosure",
+        "url": "https://brale.xyz/stablecoins/sbc"
+      }
+    ]
+  },
   "llamaId": "324",
   "detailProvider": "defillama",
   "geckoId": "stable-coin-2",

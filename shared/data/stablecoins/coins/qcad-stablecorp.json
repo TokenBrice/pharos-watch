@@ -14,6 +14,22 @@
   "collateral": "Canadian dollars held 1:1 in regulated Canadian financial institutions under the QCAD Digital Trust reserve framework",
   "pegMechanism": "Qualified holders can mint and redeem QCAD at 1 CAD through Stablecorp or authorized partners; issuer APIs publish live supply and fiat reserve totals.",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "Stablecorp describes QCAD as a CAD-denominated token backed 1:1 by Canadian-dollar reserves, minted and redeemed by authorized partners. That issuer-managed cash claim and redemption path supports the fiat-cash archetype; it is not a borrower CDP, fund-share, or algorithmic stabilization mechanism.",
+    "sources": [
+      {
+        "label": "Stablecorp QCAD transparency",
+        "url": "https://stablecorp.ca/transparency"
+      },
+      {
+        "label": "QCAD Digital Trust regulatory order",
+        "url": "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust"
+      }
+    ]
+  },
   "detailProvider": "defillama",
   "geckoId": "stablecorp-qcad",
   "llamaId": "424",

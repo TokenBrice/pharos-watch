@@ -14,6 +14,18 @@
   "collateral": "Facilitator-managed crypto and stablecoin collateral under Cod3x protocol limits and strategies",
   "pegMechanism": "Cod3x Facilitators can mint and burn cdxUSD under protocol-defined limits; supply is expected to remain sufficiently collateralized by strategy assets",
   "mechanismArchetype": "cdp",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "Cod3x describes cdxUSD as protocol-limited facilitator credit: facilitators mint and burn within assigned limits against collateralized strategy assets. The existing cdp category is retained as the closest V9 archetype for this governed collateral-credit mechanism, while its measured backstop, shutdown, and structural-redemption metrics remain packet-only review work.",
+    "sources": [
+      {
+        "label": "Cod3x technical stack overview",
+        "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "cod3x-usd",
   "llamaId": "418",

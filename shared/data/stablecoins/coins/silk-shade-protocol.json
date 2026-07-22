@@ -14,6 +14,22 @@
   "collateral": "DAO-whitelisted assets locked in overcollateralized ShadeLend vaults; current collateral identities, balances, and weights are private on Secret Network",
   "pegMechanism": "NAV tracks a governance-set basket of global currencies and commodities (currently USD ~33.5%, EUR ~22.9%, Gold ~18.7%, JPY ~11.1%, CAD ~7.5%, BTC ~6.3%) priced via Band Protocol feeds, with weights selected on GDP, monetary-policy health and growth and adjustable through SILK Assembly peg migrations; stability maintained via overcollateralized ShadeLend minting, bounded conversion minting, redemption pools, collateral redemptions/liquidations, and ShadeDAO bonds",
   "mechanismArchetype": "cdp",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "Shade's primary SILK documentation describes overcollateralized minting through collateralized lending, collateral redemptions against at-risk lending positions, and liquidation incentives. SILK's basket reference is not a fiat issuer reserve claim; its stabilization boundary is an advanced collateralized debt mechanism, so cdp is retained.",
+    "sources": [
+      {
+        "label": "SILK minting and redemption",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption"
+      },
+      {
+        "label": "SILK basket composition",
+        "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/basket-composition.md"
+      }
+    ]
+  },
   "llamaId": "113",
   "detailProvider": "defillama",
   "geckoId": "silk-bcec1136-561c-4706-a42c-8b67d0d7f7d2",

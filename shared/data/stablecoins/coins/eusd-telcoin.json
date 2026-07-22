@@ -14,6 +14,22 @@
   "collateral": "Cash and high-quality liquid dollar reserves managed by Telcoin Digital Asset Bank for the eUSD issued token",
   "pegMechanism": "Bank-issued dollar token with KYC-gated mint and redemption through Telcoin banking rails",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "Telcoin Digital Asset Bank's current terms define eUSD as a USD-backed stablecoin issued and managed by the bank, with at least 100% segregated dollar or dollar-equivalent reserves and customer mint-and-burn redemption. This supports the fiat-cash archetype; reserve mix remains separately reviewed.",
+    "sources": [
+      {
+        "label": "Telcoin Digital Asset Bank terms of use",
+        "url": "https://bank.telco.in/terms-of-use"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank customer agreement",
+        "url": "https://bank.telco.in/customer-agreement"
+      }
+    ]
+  },
   "detailProvider": "defillama",
   "geckoId": "eusd-2",
   "llamaId": "416",

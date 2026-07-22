@@ -14,6 +14,22 @@
   "collateral": "Balanced v2 money-market loan collateral across supported chains plus USDC and USDT deposited into the Stability Fund; current constituent weights are not published",
   "pegMechanism": "Users borrow bnUSD against eligible crypto collateral through Balanced's cross-chain money market, while the Stability Fund mints or burns bnUSD 1:1 against USDC and USDT to support the peg",
   "mechanismArchetype": "cdp",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "Balanced describes bnUSD as a crypto-backed stablecoin minted through collateralized positions and its Stability Fund. This is a collateralized-debt-position stabilization path, so the CDP archetype is the supported classification; the current collateral allocation remains separately bounded by the reserve review.",
+    "sources": [
+      {
+        "label": "Balanced bnUSD overview",
+        "url": "https://balanced.network/stablecoin/"
+      },
+      {
+        "label": "Balanced documentation",
+        "url": "https://docs.balanced.network/"
+      }
+    ]
+  },
   "llamaId": "204",
   "detailProvider": "defillama",
   "geckoId": "balanced-dollars",

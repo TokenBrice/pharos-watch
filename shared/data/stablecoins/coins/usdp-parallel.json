@@ -14,6 +14,22 @@
   "collateral": "Overcollateralized basket of correlated USD stablecoins and yield-bearing wrappers routed through the Parallelizer Module: frxUSD, sfrxUSD, USDe, sUSDe on Ethereum; USDS, sUSDS on Base; USDe, sUSDe on HyperEVM; USDC and ygamiUSDC on Avalanche. Composition and exposure limits set by sPRL holders via DAO vote.",
   "pegMechanism": "Parallelizer Module (a licensed fork of Angle Protocol's Transmuter) lets users mint and burn USDp at oracle value against a whitelisted overcollateralized basket, with adaptive fees that widen on depeg. Yield is delivered through a separate Savings Module wrapper (sUSDp); liquid USDp itself does not accrue yield.",
   "mechanismArchetype": "cdp",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "Parallel's primary documentation describes USDp as minted and burned at oracle value against a governed backing basket, with proportional redemption and adaptive fees. The live claim is a decentralized, governed collateral mechanism rather than an issuer cash claim; within the available taxonomy, cdp is the matching advanced collateralized archetype.",
+    "sources": [
+      {
+        "label": "Parallelizer Module",
+        "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module"
+      },
+      {
+        "label": "Parallel USDp implementation",
+        "url": "https://docs.parallel.best/products/parallel-v3/stablecoins-and-savings/usdp-and-susdp/implementation"
+      }
+    ]
+  },
   "llamaId": "291",
   "detailProvider": "defillama",
   "oracleRisk": {

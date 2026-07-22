@@ -14,6 +14,22 @@
   "collateral": "Backed 1:1 by Australian-dollar cash and government-backed instruments such as Treasury Bills and Notes, held by TAU Pty Ltd trading as AUDX Token",
   "pegMechanism": "Issuer-managed mint and redemption path targeting 1 AUDX = 1 AUD through fully backed Australian-dollar reserves",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "TAU Pty Ltd's terms state that each AUDX is pegged and redeemable 1:1 to AUD and that the company holds one AUD for every token minted. Aura Partners' May 2026 limited-assurance report separately reconciles designated AUD reserve accounts with reported AUDX supply, supporting the issuer-managed fiat-cash archetype.",
+    "sources": [
+      {
+        "label": "AUDX issuer terms and conditions",
+        "url": "https://www.audxtoken.com/terms-and-conditions"
+      },
+      {
+        "label": "Aura Partners AUDX Limited Assurance Report - May 2026",
+        "url": "https://www.audxtoken.com/_files/ugd/539754_4d37414d003148f582f99d625f903ef6.pdf"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "aussie-dollar-token",
   "cmcSlug": "aussie-dollar-token",
