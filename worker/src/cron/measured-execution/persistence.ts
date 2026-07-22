@@ -9,7 +9,10 @@ import { runWithOverloadRetry } from "../../lib/cron-lease";
 
 export const DEX_MEASURED_TARGET_SURFACE = "dex-measured-execution-targets";
 export const DEX_MEASURED_QUOTE_SURFACE = "dex-measured-execution-quotes";
-const GENERATION_RETENTION_SEC = 7 * 24 * 60 * 60;
+/** Superseded/failed generations are operator forensics only; nothing reads them after supersession. */
+const GENERATION_RETENTION_SEC = 3 * 24 * 60 * 60;
+/** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
+const GENERATION_PRUNE_MAX_PER_RUN = 16;
 
 interface SurfaceGenerationRow {
   generation_id: string;
@@ -530,19 +533,21 @@ export async function pruneDexMeasuredExecutionGenerations(
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
          WHERE surface = ? AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+         ORDER BY started_at ASC LIMIT ?
        )`,
         )
-        .bind(DEX_MEASURED_QUOTE_SURFACE, cutoff),
+        .bind(DEX_MEASURED_QUOTE_SURFACE, cutoff, GENERATION_PRUNE_MAX_PER_RUN),
       db
         .prepare(
           `DELETE FROM dex_measured_execution_targets
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
          WHERE surface = ? AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+         ORDER BY started_at ASC LIMIT ?
        )
        AND generation_id NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)`,
         )
-        .bind(DEX_MEASURED_TARGET_SURFACE, cutoff),
+        .bind(DEX_MEASURED_TARGET_SURFACE, cutoff, GENERATION_PRUNE_MAX_PER_RUN),
       db
         .prepare(
           `DELETE FROM surface_publication_generations
@@ -551,6 +556,10 @@ export async function pruneDexMeasuredExecutionGenerations(
          SELECT 1 FROM dex_measured_execution_quotes q
          WHERE q.generation_id = surface_publication_generations.generation_id
             OR q.target_generation_id = surface_publication_generations.generation_id
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM dex_measured_execution_targets t
+         WHERE t.generation_id = surface_publication_generations.generation_id
        )`,
         )
         .bind(DEX_MEASURED_TARGET_SURFACE, DEX_MEASURED_QUOTE_SURFACE, cutoff),
