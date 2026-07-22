@@ -2,7 +2,23 @@ import { describe, it, expect } from "vitest";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
 // Known stablecoin tickers that should be linked when referenced in reserves
-const KNOWN_TICKERS = ["USDC", "USDT", "DAI", "FRAX", "USDe", "USDtb", "BUIDL", "USDS", "USYC", "OUSG", "DOLA", "GHO", "crvUSD", "FRXUSD", "USD0"];
+const KNOWN_TICKERS = [
+  "USDC",
+  "USDT",
+  "DAI",
+  "FRAX",
+  "USDe",
+  "USDtb",
+  "BUIDL",
+  "USDS",
+  "USYC",
+  "OUSG",
+  "DOLA",
+  "GHO",
+  "crvUSD",
+  "FRXUSD",
+  "USD0",
+];
 const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "usdm-mega::USDC and USDtb reserve basket::USDC",
@@ -33,6 +49,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "GHO facilitator labels describe issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
   ],
   [
+    "gho-aave::GhoDirectFacilitator GSM Arbitrum::GHO",
+    "This remote GSM facilitator is an issuance rail, not an upstream GHO reserve asset that should inherit coinId linkage.",
+  ],
+  [
     "gho-aave::HorizonGhoDirectMinter::GHO",
     "GHO direct-minter labels describe facilitator issuance rails, not upstream GHO reserve assets that should inherit coinId linkage.",
   ],
@@ -47,14 +67,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "bnusd-balanced::Balanced v2 crypto-loan collateral and USDC/USDT Stability Fund basket::USDT",
     "The complete current backing categories are identified, but Balanced does not publish current constituent balances or weights.",
-  ],
-  [
-    "frax-frax::Below-display-threshold basket (BNB, MATIC, USDT, VELO, crvUSD)::USDT",
-    "A mixed sub-threshold dust basket spans several assets; no single coinId link represents it, and the itemized major slices above it are linked.",
-  ],
-  [
-    "frax-frax::Below-display-threshold basket (BNB, MATIC, USDT, VELO, crvUSD)::crvUSD",
-    "Same mixed sub-threshold dust basket as the USDT mention; reviewed, not linkable to one coinId.",
   ],
   [
     "dola-inverse-finance::sDOLA-scrvUSD Curve LP and residual LP collateral::DOLA",
@@ -107,6 +119,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "frax-frax::LFRAX::FRAX",
     "LFRAX is a Frax-ecosystem legacy/locked FRAX claim and remains subject self exposure rather than an upstream dependency edge.",
+  ],
+  [
+    "frax-frax::Unmapped Frax balance-sheet assets::FRAX",
+    "The label identifies an aggregate Frax balance-sheet bucket rather than a FRAX token holding; its reviewed sub-threshold constituents cannot be represented by one coinId.",
   ],
   [
     "fpi-frax::stkcvxFPIFRAX (staked Convex FPI/FRAX LP)::FRAX",
@@ -175,18 +191,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "hbusdt-hyperbeat::Dynamic Hyperbeat hbUSDT strategy portfolio::USDT",
     "The reviewed Hyperbeat portfolio is a dynamic strategy envelope without durable asset or position weights; the hbUSDT product name does not establish a fixed USDT reserve slice.",
-  ],
-  [
-    "usde-ethena::Liquid stablecoins (USDT, USDC, USDtb, PYUSD)::USDC",
-    "Ethena reports this as one mixed liquid-stablecoin bucket without current constituent weights, so no single tracked coinId is representative.",
-  ],
-  [
-    "usde-ethena::Liquid stablecoins (USDT, USDC, USDtb, PYUSD)::USDT",
-    "Ethena reports this as one mixed liquid-stablecoin bucket without current constituent weights, so no single tracked coinId is representative.",
-  ],
-  [
-    "usde-ethena::Liquid stablecoins (USDT, USDC, USDtb, PYUSD)::USDtb",
-    "Ethena reports this as one mixed liquid-stablecoin bucket without current constituent weights, so no single tracked coinId is representative.",
   ],
   [
     "yzusd-yuzu::Other disclosed small positions (syrupUSDG, VBILL, PYUSD loops; Aave AUSD/GHO/RLUSD; rest)::GHO",

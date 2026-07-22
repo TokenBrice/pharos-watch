@@ -16,7 +16,6 @@ const EXPECTED_RETIRED_DILUTABLE_UPSTREAM_IDS = [
   "reusd-resupply",
   "srusd-reservoir",
   "usdd-tron-dao-reserve",
-  "usde-ethena",
   "usdu-unitas",
 ] as const;
 
@@ -29,10 +28,7 @@ function deterministicShuffle<T>(values: readonly T[]): T[] {
   return copy;
 }
 
-function makeMeta(
-  id: string,
-  overrides: Record<string, unknown> = {},
-): never {
+function makeMeta(id: string, overrides: Record<string, unknown> = {}): never {
   return {
     id,
     name: id,
@@ -146,6 +142,9 @@ describe("report-card blacklist authority", () => {
       expect(resolved.get(id)).toBe("inherited");
     }
 
+    // USDe left the inherited-only cohort after the reviewed TON deployment
+    // established an administrator-controlled wallet lock path.
+    expect(resolved.get("usde-ethena")).toBe(true);
     expect(resolved.get("luausd-lumi-finance")).toBe("inherited");
     // usdn-smardex: TERRA re-review of the verified Ethereum USDN source found no
     // direct holder freeze/blacklist and added a reviewed suppression (same-symbol
@@ -178,9 +177,7 @@ describe("report-card blacklist authority", () => {
   it("keeps batch and singleton resolution aligned when using the same resolved context", () => {
     const resolved = resolveBlacklistStatuses(TRACKED_STABLECOINS);
     const blacklistableIds = new Set(
-      [...resolved.entries()]
-        .filter(([, status]) => status === true || status === "inherited")
-        .map(([id]) => id),
+      [...resolved.entries()].filter(([, status]) => status === true || status === "inherited").map(([id]) => id),
     );
     const trackedMetaById = new Map(TRACKED_STABLECOINS.map((meta) => [meta.id, meta] as const));
     const context = createBlacklistResolutionContext(blacklistableIds, trackedMetaById);

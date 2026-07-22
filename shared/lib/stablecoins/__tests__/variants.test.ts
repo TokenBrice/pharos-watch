@@ -1,16 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { deriveEffectiveDependencies } from "../../dependency-derivation";
-import {
-  resolveBlacklistStatuses,
-  type BlacklistStatus,
-} from "../../report-card-blacklist-matchers";
+import { resolveBlacklistStatuses, type BlacklistStatus } from "../../report-card-blacklist-matchers";
 import type { StablecoinMeta, VariantKind } from "../../../types";
-import {
-  ACTIVE_META_BY_ID,
-  ACTIVE_STABLECOINS,
-  TRACKED_META_BY_ID,
-  TRACKED_STABLECOINS,
-} from "../registry";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "../registry";
 import { isActiveStablecoinMeta } from "../status";
 import { createVariantRelationshipHelpers } from "../variant-relationships";
 
@@ -26,10 +18,7 @@ const { getVariantParent, getVariantRelationship, getVariants, isTrackedVariant 
   hasTrackedVariantMeta,
 });
 
-const trackedBlacklistStatuses = resolveBlacklistStatuses(
-  TRACKED_STABLECOINS,
-  { trackedMetaById: TRACKED_META_BY_ID },
-);
+const trackedBlacklistStatuses = resolveBlacklistStatuses(TRACKED_STABLECOINS, { trackedMetaById: TRACKED_META_BY_ID });
 
 describe("stablecoin variants", () => {
   it("resolves a tracked variant parent", () => {
@@ -76,22 +65,24 @@ describe("stablecoin variants", () => {
     }
   });
 
-  it("resolves stkgho-umbrella-aave to upstream via gho-aave inheritance", () => {
+  it("keeps stkgho's direct pause authority above gho-aave inheritance", () => {
     // Regression: before the variant-aware inheritance rule, this resolved to
     // `false` because gho-aave was not in blacklistableIds and
     // no reserve-text pattern matched "gho".
     expect(trackedBlacklistStatuses.get("gho-aave")).toBe("inherited");
-    expect(trackedBlacklistStatuses.get("stkgho-umbrella-aave")).toBe("inherited");
+    expect(trackedBlacklistStatuses.get("stkgho-umbrella-aave")).toBe(true);
   });
 
   it("normalizes variant-aware dependencies to a single synthetic wrapper edge", () => {
-    expect(deriveEffectiveDependencies({
-      variantOf: "usds-sky",
-      dependencies: [
-        { id: "usds-sky", weight: 0.5, type: "collateral" },
-        { id: "usdc-circle", weight: 0.2, type: "mechanism" },
-      ],
-      reserves: undefined,
-    })).toEqual([{ id: "usds-sky", weight: 1, type: "wrapper" }]);
+    expect(
+      deriveEffectiveDependencies({
+        variantOf: "usds-sky",
+        dependencies: [
+          { id: "usds-sky", weight: 0.5, type: "collateral" },
+          { id: "usdc-circle", weight: 0.2, type: "mechanism" },
+        ],
+        reserves: undefined,
+      }),
+    ).toEqual([{ id: "usds-sky", weight: 1, type: "wrapper" }]);
   });
 });
