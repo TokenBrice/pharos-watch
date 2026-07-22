@@ -148,11 +148,15 @@ export const SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1 = {
     // the mint-soften + control-compensability changes let them land on their
     // honest pillar blend (USDD 55/C, USDAI 52/C-) instead of the hard 39 cap.
     // The owner released both pins ("USDD is 55/C in V8", "USDAI 62/C+ fitting");
-    // they are no longer must-stay-low assets. U/EURS/MIM/TUSD remain pinned.
+    // they are no longer must-stay-low assets. U/EURS/MIM remain pinned.
+    // TUSD adverse pin (≤C-) SUPERSEDED by owner ruling 2026-07-21 (reshape-v2
+    // D8): TUSD lands on its honest blend (C- 54; redemption genuinely
+    // DIFC-impaired, exit 46). It remains a named WATCH sentinel in every
+    // counterfactual — a surprise rise gets flagged and re-presented, not
+    // silently shipped — but is no longer a must-stay-low asset.
     { kind: "max-score", id: "u-united-stables", maxScore: 32, label: "U adverse pin" },
     { kind: "max-grade", id: "eurs-stasis", maxGrade: "F", label: "EURS adverse pin" },
     { kind: "max-grade", id: "mim-abracadabra", maxGrade: "F", label: "MIM adverse pin" },
-    { kind: "max-grade", id: "tusd-trueusd", maxGrade: "C-", label: "TUSD adverse pin" },
   ],
 } as const satisfies V9AnchorContract;
 

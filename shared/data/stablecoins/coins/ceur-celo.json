@@ -286,9 +286,9 @@
   "launchDate": "2021-04-22",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "EURm has native Celo and Monad deployments connected through Mento's Wormhole NTT configuration. The residual Ethereum and Polygon supply is legacy Optics-bridged cEUR (token owner is the Optics BridgeRouter, verified on-chain), and the Solana supply is legacy Allbridge cEUR (mint authority verified).",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "summary": "EURm has native Celo and Monad deployments connected through Mento's Wormhole NTT configuration. The residual Ethereum and Polygon supply is legacy Optics-bridged cEUR (token owner is the Optics BridgeRouter, verified on-chain), and the Solana supply is legacy Allbridge cEUR (mint authority verified). Pinned totalSupply reads on 2026-07-21 establish 2,073,193.841739276070272578 unique EURm/cEUR claims: 1,688,715.972819276070272578 in the Celo canonical supply, including the backing of legacy lock-mint representations, plus 384,477.868920000000000000 on the Monad NTT burn-mint deployment. Monad therefore carries 18.54519636% of unique claims, so the chain:monad common-mode exposure is attributed and remains above the 10% materiality threshold.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao); SOL-KEYSTONE supply attribution (2026-07-21)",
     "confidence": "verified",
     "protocols": [
       {
@@ -333,11 +333,13 @@
         "semantics": "burn-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Celo block 72770618 on 2026-07-21 returned 1,688,715.972819276070272578 cEUR. The reviewed Optics and Allbridge routes are lock-mint representations backed within this canonical supply, so they are not added again to the unique-claim denominator. After subtracting the three observed legacy representation supplies, 1,680,826.222997517070272578 cEUR, or 81.07424347% of unique claims, remains Celo-resident.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "wormhole:ntt:eurm"
         ],
-        "observedAt": "2026-07-15",
+        "observedAt": "2026-07-21",
+        "observedBlock": 72770618,
         "sources": [
           {
             "label": "Mento NTT configuration",
@@ -346,6 +348,10 @@
           {
             "label": "Mento MGP-14 Wormhole NTT proposal",
             "url": "https://forum.mento.org/t/mgp-14-mento-v3-deployment-phase-1/103"
+          },
+          {
+            "label": "Celo cEUR token supply",
+            "url": "https://celoscan.io/token/0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
           }
         ]
       },
@@ -361,12 +367,13 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Monad block 89292718 on 2026-07-21 returned 384,477.868920000000000000 EURm. Against the 2,073,193.841739276070272578 unique-claim denominator, this chain:monad exposure is 18.54519636%.",
         "mappingVersion": "bridge-route-facts-v1",
         "failureDomainKeys": [
           "wormhole:ntt:eurm"
         ],
-        "observedAt": "2026-07-15",
-        "observedBlock": 87876757,
+        "observedAt": "2026-07-21",
+        "observedBlock": 89292718,
         "sources": [
           {
             "label": "Mento contract registry (EURmSpoke)",
@@ -379,6 +386,10 @@
           {
             "label": "Mento NTT configuration",
             "url": "https://github.com/mento-protocol/deployments-v2/blob/main/script/config/wormhole/NTTConfig.sol"
+          },
+          {
+            "label": "Monad EURm token supply",
+            "url": "https://explorer.monad.xyz/address/0x4d502d735b4c574b487ed641ae87ceae884731c7"
           }
         ]
       },
@@ -397,9 +408,10 @@
         "controllerChain": "ethereum",
         "controllerAddress": "0x4fc16de11deac71e8b2db539d82d93be4b486892",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Legacy Optics-bridged cEUR: token owner() = Optics BridgeRouter 0x4fc16de11deac71e8b2db539d82d93be4b486892 (contract) verified on Ethereum at 2026-07-20.",
+        "reviewNote": "Legacy Optics-bridged cEUR: token owner() = Optics BridgeRouter 0x4fc16de11deac71e8b2db539d82d93be4b486892 (contract) verified on Ethereum at 2026-07-20. Pinned totalSupply() at Ethereum block 25583961 on 2026-07-21 returned 10.020000000000000000 cEUR, a representation of 0.00048331% of unique claims; it remains within the Celo canonical denominator rather than being counted again.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25583961,
         "sources": [
           {
             "label": "Mento",
@@ -408,6 +420,10 @@
           {
             "label": "DefiLlama cEUR adapter (route attribution)",
             "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-euro/index.ts"
+          },
+          {
+            "label": "Ethereum legacy cEUR token supply",
+            "url": "https://etherscan.io/token/0x977453366b8d205f5c9266b6ba271e850a814a50"
           }
         ],
         "failureDomainKeys": [
@@ -430,9 +446,10 @@
         "controllerChain": "polygon",
         "controllerAddress": "0x3a5846882c0d5f8b0fa4bb04dc90c013104d125d",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Legacy Optics-bridged cEUR: token owner() = Optics BridgeRouter 0x3a5846882c0d5f8b0fa4bb04dc90c013104d125d (contract) verified on Polygon at 2026-07-20.",
+        "reviewNote": "Legacy Optics-bridged cEUR: token owner() = Optics BridgeRouter 0x3a5846882c0d5f8b0fa4bb04dc90c013104d125d (contract) verified on Polygon at 2026-07-20. Pinned totalSupply() at Polygon block 90644253 on 2026-07-21 returned 43.203872000000000000 cEUR, a representation of 0.00208392% of unique claims; it remains within the Celo canonical denominator rather than being counted again.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 90644253,
         "sources": [
           {
             "label": "Mento",
@@ -441,6 +458,10 @@
           {
             "label": "DefiLlama cEUR adapter (route attribution)",
             "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-euro/index.ts"
+          },
+          {
+            "label": "Polygon legacy cEUR token supply",
+            "url": "https://polygonscan.com/token/0x2f0173dfe97a7dc670d5a10b35c4263cfecfa853"
           }
         ],
         "failureDomainKeys": [
@@ -463,9 +484,10 @@
         "controllerChain": "solana",
         "controllerAddress": "BTb346DSozfTScyDt1q26YLz1Drs1PwBWeSqHBJDF8wW",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Legacy Allbridge cEUR on Solana: SPL mint authority = BTb346DSozfTScyDt1q26YLz1Drs1PwBWeSqHBJDF8wW (getAccountInfo verified at 2026-07-20), the Allbridge mint authority per DefiLlama's route attribution.",
+        "reviewNote": "Legacy Allbridge cEUR on Solana: SPL mint authority = BTb346DSozfTScyDt1q26YLz1Drs1PwBWeSqHBJDF8wW (getAccountInfo verified at 2026-07-20), the Allbridge mint authority per DefiLlama's route attribution. Pinned getTokenSupply at slot 434385638 on 2026-07-21 returned 7,836.525949759 cEUR, a representation of 0.37799292% of unique claims; it remains within the Celo canonical denominator rather than being counted again.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 434385638,
         "sources": [
           {
             "label": "Mento",
@@ -474,6 +496,10 @@
           {
             "label": "DefiLlama cEUR adapter (route attribution)",
             "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/celo-euro/index.ts"
+          },
+          {
+            "label": "Solana legacy cEUR mint supply",
+            "url": "https://solscan.io/token/7g166TuBmnoHKvS2PEkZx6kREZtbfjUxCHGWjCqoDXZv"
           }
         ],
         "failureDomainKeys": [

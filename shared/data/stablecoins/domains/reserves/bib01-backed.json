@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 NR-recovery review",
     "confidence": "verified",
     "sources": [
       {
@@ -23,10 +23,15 @@
       {
         "label": "Backed proof-of-reserves documentation",
         "url": "https://docs.backed.fi/backed-ecosystem/proof-of-reserves"
+      },
+      {
+        "label": "Backed public assetReserves GraphQL feed - IB01.L",
+        "url": "https://api.backed.fi/graphql"
       }
     ],
-    "rationale": "Backed identifies bIB01 as a tracker certificate whose sole underlying is the iShares IB01 UCITS ETF. The reserve is recorded as one fund-share position; the Chainlink reserve feed verifies the Backed-held share balance but does not justify decomposing the ETF's changing security-level holdings.",
-    "compositionBasis": "Backed bIB01 product and proof-of-reserves disclosures",
+    "rationale": "Backed identifies bIB01 as a tracker certificate whose sole underlying is the iShares IB01 UCITS ETF. On July 21, 2026, Backed's public assetReserves feed reported 2,008 IB01 reserve shares against 1,967.285993046277 bIB01 in circulation, with Chainlink as provider. The reserve is recorded as one fund-share position; the proof does not justify decomposing the ETF's changing security-level holdings.",
+    "compositionBasis": "Backed bIB01 product disclosure and Chainlink/The Network Firm reserve proof",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
     "knownUnknownExposure": "The certificate's underlying fund is fully identified; the ETF's changing security-level portfolio and Backed custodian allocations are outside this single-underlying composition.",
     "knownUnknownExposurePct": 0,

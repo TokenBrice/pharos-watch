@@ -45,9 +45,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "EURCV is issued natively by SG Forge on each supported ledger: an Ethereum ERC-20, a Solana Token-2022 mint, an XRP Ledger issued currency, and a Stellar credit asset. Each deployment's issuing authority was read directly on-chain on 2026-07-20; no lock-and-mint or third-party bridge leg carries the claim.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether); Phase 3 cur-2 non-EVM controller reads (2026-07-20)",
+    "summary": "EURCV is issued natively by SG Forge on each supported ledger: an Ethereum ERC-20, a Solana Token-2022 mint, an XRP Ledger issued currency, and a Stellar credit asset. Each deployment's issuing authority was read directly on-chain on 2026-07-20; no lock-and-mint or third-party bridge leg carries the claim. Pinned ledger reads on 2026-07-21 sum to 128,041,811.64 EURCV across the four issuer-native deployments. Stellar carries 15,030,600 EURCV, or 11.73882172%, so the chain:stellar common-mode exposure is attributed and remains above the 10% materiality threshold.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether); Phase 3 cur-2 non-EVM controller reads (2026-07-20); SOL-KEYSTONE supply attribution (2026-07-21)",
     "confidence": "verified",
     "sources": [
       {
@@ -65,6 +65,10 @@
       {
         "label": "EURCV Stellar issuing account on Stellar Expert",
         "url": "https://stellar.expert/explorer/public/account/GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G"
+      },
+      {
+        "label": "SG Forge EURCV MiCA white paper (four-ledger issuance identifiers)",
+        "url": "https://www.sgforge.com/wp-content/uploads/2025/10/EURCV-WP-Ethereum-Solana_XRPL_Stellar_2025.10.14.pdf"
       }
     ],
     "routes": [
@@ -79,9 +83,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'EUR CoinVertible', symbol EURCV, 18 decimals — SG Forge issuer-native deployment on Ethereum.",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'EUR CoinVertible', symbol EURCV, 18 decimals — SG Forge issuer-native deployment on Ethereum. Pinned totalSupply() at block 25583961 on 2026-07-21 returned 101,974,490.260000000000000000 EURCV, 79.64155532% of the summed 128,041,811.64 EURCV issuer-native supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25583961,
         "sources": [
           {
             "label": "SG Forge",
@@ -104,10 +109,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20 (validated ledger 105731713): gateway_balances on issuer rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL reports obligations of 10,000,000 for currency 4555524356... ('EURCV'). account_info shows defaultRipple true, allowTrustLineClawback true, globalFreeze false, noFreeze false, disableMasterKey false, and account_objects returns no SignerList, so the issuer's master key is the sole issuing authority. XRPL issued currencies are minted as obligations of this account, so the deployment is issuer-native rather than a bridged representation.",
+        "reviewNote": "Verified on-chain 2026-07-20 (validated ledger 105731713): gateway_balances on issuer rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL reports obligations of 10,000,000 for currency 4555524356... ('EURCV'). account_info shows defaultRipple true, allowTrustLineClawback true, globalFreeze false, noFreeze false, disableMasterKey false, and account_objects returns no SignerList, so the issuer's master key is the sole issuing authority. XRPL issued currencies are minted as obligations of this account, so the deployment is issuer-native rather than a bridged representation. At validated ledger 105759574 on 2026-07-21, gateway_balances still reported 10,000,000 EURCV, 7.80994885% of summed issuer-native supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 105731713,
+        "observedAt": "2026-07-21",
+        "observedBlock": 105759574,
         "sources": [
           {
             "label": "SG Forge CoinVertible product page (chain availability)",
@@ -130,10 +135,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20 via Horizon (account last_modified_ledger 60369778): issuing account GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G issues asset code EURCV (credit_alphanum12) with auth_required, auth_revocable and auth_clawback_enabled set and auth_immutable false. Signers are the master key plus GCYYFR4SR4RDSWTN64LSE4BGF2UQEDYZ32QTD7TMQXO6TXSGEDWP652D, each weight 1, with low/med/high thresholds all 0, so any single SG Forge key can issue. Stellar credit assets are direct obligations of this issuing account, so the deployment is issuer-native rather than a bridged representation.",
+        "reviewNote": "Verified on-chain 2026-07-20 via Horizon (account last_modified_ledger 60369778): issuing account GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G issues asset code EURCV (credit_alphanum12) with auth_required, auth_revocable and auth_clawback_enabled set and auth_immutable false. Signers are the master key plus GCYYFR4SR4RDSWTN64LSE4BGF2UQEDYZ32QTD7TMQXO6TXSGEDWP652D, each weight 1, with low/med/high thresholds all 0, so any single SG Forge key can issue. Stellar credit assets are direct obligations of this issuing account, so the deployment is issuer-native rather than a bridged representation. At Horizon ledger 63585933 on 2026-07-21, EURCV balances totaled 15,030,600, or 11.73882172% of summed issuer-native supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 60369778,
+        "observedAt": "2026-07-21",
+        "observedBlock": 63585933,
         "sources": [
           {
             "label": "SG Forge CoinVertible product page (chain availability)",
@@ -142,6 +147,10 @@
           {
             "label": "EURCV Stellar issuing account on Stellar Expert",
             "url": "https://stellar.expert/explorer/public/account/GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G"
+          },
+          {
+            "label": "Stellar Horizon EURCV asset balances",
+            "url": "https://horizon.stellar.org/assets?asset_code=EURCV&asset_issuer=GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G"
           }
         ]
       },
@@ -156,10 +165,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20 (getAccountInfo, slot 434131854): Token-2022 mint DghpMkatCiUsofbTmid3M3kAbDTPqDwKiYHnudXeGG52 owned by program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, tokenMetadata name 'EUR CoinVertible' symbol EURCV, decimals 2, supply 102390519 raw (EUR 1,023,905.19). mintAuthority = freezeAuthority = permanentDelegate = mintCloseAuthority = metadata updateAuthority = 5tg4qRdiXJ7XxYd6KK4UnnNvxgHJqfBUygPqZLwSnhnt, the SG Forge 'registrar' key named in the mint's own additionalMetadata. Issuance is direct to this mint with no lock/escrow leg, so this is issuer-native issuance rather than a bridged representation.",
+        "reviewNote": "Verified on-chain 2026-07-20 (getAccountInfo, slot 434131854): Token-2022 mint DghpMkatCiUsofbTmid3M3kAbDTPqDwKiYHnudXeGG52 owned by program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, tokenMetadata name 'EUR CoinVertible' symbol EURCV, decimals 2, supply 102390519 raw (EUR 1,023,905.19). mintAuthority = freezeAuthority = permanentDelegate = mintCloseAuthority = metadata updateAuthority = 5tg4qRdiXJ7XxYd6KK4UnnNvxgHJqfBUygPqZLwSnhnt, the SG Forge 'registrar' key named in the mint's own additionalMetadata. Issuance is direct to this mint with no lock/escrow leg, so this is issuer-native issuance rather than a bridged representation. At slot 434385635 on 2026-07-21, getTokenSupply returned 103,672,138 raw, or 1,036,721.38 EURCV and 0.80967409% of summed issuer-native supply; the recorded authorities remained unchanged.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 434131854,
+        "observedAt": "2026-07-21",
+        "observedBlock": 434385635,
         "sources": [
           {
             "label": "SG Forge CoinVertible product page (chain availability)",

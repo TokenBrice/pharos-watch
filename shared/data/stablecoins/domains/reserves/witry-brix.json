@@ -2,11 +2,11 @@
   "id": "witry-brix",
   "reserves": [
     {
-      "name": "Brix iTRY staking wrapper backed by TRY money-market fund exposure",
+      "name": "wiTRY claim on iTRY backed by Digital Liquidity Fund shares",
       "pct": 100,
       "risk": "high",
       "assetClass": "fund-share",
-      "issuerOrObligor": "Brix / iTRY issuer and TRY money-market fund",
+      "issuerOrObligor": "Brix / iTRY issuer and the Digital Liquidity Fund's Turkish money-market fund basket",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -19,28 +19,38 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Brix documentation",
-        "url": "https://docs.brix.money/"
+        "label": "Brix iTRY backing and custody documentation",
+        "url": "https://docs.brix.money/itry/backing"
       },
       {
-        "label": "Brix proof-of-solvency portal",
-        "url": "https://accountable.brix.money/"
+        "label": "Brix proof-of-reserves documentation",
+        "url": "https://docs.brix.money/itry/proof-of-reserves"
       },
       {
-        "label": "Brix website",
-        "url": "https://www.brix.money/"
+        "label": "Brix Accountable dashboard API",
+        "url": "https://accountable.brix.money:8443/dashboard"
       }
     ],
-    "rationale": "Brix describes wiTRY as a staking wrapper over iTRY with cooldown and Fast Redeem paths, and the issuer's reserve portal identifies the proof-of-solvency surface. The reviewed public pages do not provide a dated independent reserve composition or underlying TRY fund allocation, so the wrapper exposure remains an aggregate slice.",
-    "compositionBasis": "Brix wiTRY staking and proof-of-solvency disclosures",
+    "rationale": "Brix identifies wiTRY as an ERC-4626 claim on iTRY and iTRY as 100% backed by Digital Liquidity Fund shares representing a regulated basket of Turkish money-market funds. Accountable's 2026-07-21 snapshot verified TRY 417,674,273.64 of assets against TRY 417,674,169.25 of liabilities, but neither the dashboard nor Brix's current disclosures publish the DLF constituent funds or allocation weights. The full look-through reserve therefore remains one unsplit fund-share basket.",
+    "compositionBasis": "Brix's direct DLF backing disclosure plus Accountable's current assets-and-liabilities snapshot; DLF constituent allocation undisclosed",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "The underlying TRY money-market fund holdings, issuer split, and current assurance details are not published in the reviewed public pages.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "The Digital Liquidity Fund identity and total NAV are verified, but its current underlying Turkish money-market funds, constituent weights, issuers, maturities, and liquidity allocations are not published.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "wiTRY claim on iTRY backed by Digital Liquidity Fund shares",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The current Accountable proof verifies aggregate DLF-backed assets and liabilities but does not disclose the fund-level holdings needed for a defensible look-through split."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

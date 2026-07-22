@@ -221,9 +221,9 @@
   },
   "reserves": [
     {
-      "name": "iShares Gold Trust (IAU) economic exposure via Ondo Global Markets collateral accounts",
+      "name": "iShares Gold Trust (IAU) shares and cash in transit held for Ondo Global Markets",
       "pct": 100,
-      "risk": "low",
+      "risk": "medium",
       "assetClass": "fund-share",
       "issuerOrObligor": "BlackRock (iShares Gold Trust, IAU) via Ondo Global Markets",
       "riskFactors": [
@@ -233,13 +233,13 @@
         "liquidity",
         "legal"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-21",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure); OpenAI Codex class-level normalization",
-    "confidence": "probable",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure); OpenAI Codex NR-recovery review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Ondo IAUon product page",
@@ -252,36 +252,47 @@
       {
         "label": "Ondo Global Markets important notes",
         "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      },
+      {
+        "label": "Ondo Global Markets trust and transparency",
+        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
       }
     ],
-    "rationale": "Ondo identifies IAUon as 100% economic exposure to iShares Gold Trust through Ondo Global Markets, so the immediate reserve instrument and its failure domain are fully identified. The reviewed materials do not publish a dated share inventory, collateral-account allocation, or custody breakdown; those remain assurance and custody uncertainties rather than unidentified direct reserve composition.",
-    "compositionBasis": "Ondo IAUon product disclosure and Global Markets documentation",
+    "rationale": "Ondo identifies IAUon as economic exposure to iShares Gold Trust and states that each Ondo tokenized stock is fully backed by the underlying security together with cash in transit. Ankura Trust Company independently verifies the existence and amount of underlying securities and reconciles investor liabilities to reserves daily. The current IAU share inventory and cash-in-transit weight are not published in the reviewed durable sources, so they remain an allocation uncertainty rather than unidentified reserve categories.",
+    "compositionBasis": "Ondo IAUon product disclosure and Ondo Global Markets backing and transparency documentation",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "No direct reserve category is unidentified. Current IAU share inventory, collateral-account balances, custody arrangements, and independent reserve reconciliation are not disclosed in the reviewed sources.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "The aggregate basket is known to contain IAU shares and cash in transit, but their current weights are not published. Because the 100% reserve entry cannot be split between those categories, the full basket remains known-unknown for composition scoring; custodial broker-dealer identities and provider allocation are also undisclosed.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "iShares Gold Trust (IAU) economic exposure via Ondo Global Markets collateral accounts",
+        "reserveName": "iShares Gold Trust (IAU) shares and cash in transit held for Ondo Global Markets",
         "pct": 100,
-      "disposition": "untracked-exogenous-asset",
-      "rationale": "The direct reserve is a BlackRock iShares fund exposure rather than a tracked stablecoin dependency; holdings reconciliation and custody allocation remain separate assurance uncertainties."
+        "disposition": "basket-needs-split",
+        "rationale": "Ondo identifies IAU shares and cash in transit as the backing categories but does not publish their current weights, so the 100% aggregate reserve basket cannot be itemized without fabrication."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Ondo Global Markets collateral accounts (custodian undisclosed in reviewed sources)",
-        "role": "other"
+        "name": "US-registered custodial broker-dealer(s) holding the underlying IAU shares (undisclosed)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Ankura Trust Company",
+        "role": "other",
+        "jurisdiction": "United States"
       }
     ],
-    "segregation": "unknown",
-    "bankruptcyRemoteness": "unknown",
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure); OpenAI Codex NR-recovery review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Ondo Global Markets overview",
@@ -290,9 +301,13 @@
       {
         "label": "Ondo Global Markets important notes",
         "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      },
+      {
+        "label": "Ondo Global Markets trust and transparency",
+        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
       }
     ],
-    "uncertainty": "Ondo states that GM token collateral is held through Global Markets accounts, but the reviewed sources do not name the custodian or broker-dealer, account segregation, insolvency treatment, rehypothecation terms, or provider shares for the IAU position.",
+    "uncertainty": "Ondo documents a bankruptcy-remote SPV with segregated assets and accounts, daily Ankura verification, and a first-priority security interest over the collateral, with holdings at one or more US-registered custodial broker-dealers. The broker-dealer identities, provider shares, cash-in-transit allocation, and any reuse restrictions are not published.",
     "knownUnknownExposurePct": 100
   },
   "notices": [
@@ -305,8 +320,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "IAUon on Ethereum uses AccessControl: MINTER_ROLE held by GMTokenManager (subscription/redemption engine) and OndoOFT (LayerZero bridge for cross-chain minting). DEFAULT_ADMIN is a TimelockController with no PROPOSER_ROLE members \u2014 effectively locking admin changes. BSC follows the same pattern with a separate GMTokenManager and OndoOFT.",
+    "confidence": "unknown",
+    "summary": "IAUon uses issuer-controlled minting across Ethereum, BSC, HyperEVM, and Solana. The three EVM tokens are BeaconProxy deployments whose shared Ondo beacons are upgradeable through 2-hour owner timelocks; Ethereum direct minters are identified, but the complete BSC/HyperEVM role graphs and Solana mint/program-upgrade authorities are not yet enumerated in this profile.",
     "controls": [
       {
         "label": "GMTokenManager (Ethereum) \u2014 primary minter",
@@ -341,47 +356,89 @@
         ]
       },
       {
-        "label": "IAUon Ethereum DEFAULT_ADMIN TimelockController (no proposers \u2014 effectively locked)",
-        "role": "minter-admin",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "can-authorize",
-        "canRaiseCap": false,
-        "evidence": "At Ethereum block 25295025, getRoleMember(DEFAULT_ADMIN_ROLE, 0) = 0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1; Blockscout source: TimelockController. getMinDelay() = 7200 seconds (2 hours). PROPOSER_ROLE count = 0 (no proposers). EXECUTOR_ROLE count = 2 (0x2e55b738... and 0xff1621ee...). With zero proposers, no new operations can be proposed, making admin changes effectively impossible through this path.",
+        "label": "IAUon deployment-wide beacon-owner timelocks (incomplete)",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 7200,
+        "failureDomainKeys": [
+          "contract:ethereum:0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1",
+          "contract:bsc:0x8860bbfc7a83e4788a981f4e9f30878331413b26",
+          "contract:hyperevm:0x6253fbc5bcf4f49c80745694366f05d6c7be0e83"
+        ],
+        "evidence": "Ethereum, BSC, and HyperEVM IAUon tokens resolve through UpgradeableBeacon contracts 0x985462c9..., 0xc046b05a..., and 0x258269e7.... Their owners are distinct TimelockControllers with 7,200-second delays. This records the confirmed upgrade surface without asserting terminal role members or signer thresholds that have not been completed for IAUon; Solana is outside this EVM control.",
         "sources": [
           {
-            "label": "IAUon Timelock (Blockscout)",
+            "label": "IAUon Ethereum timelock",
             "url": "https://eth.blockscout.com/address/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "BSC PublicNode RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "HyperEVM RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
           }
         ]
       }
     ],
     "upgradeability": {
-      "model": "immutable",
-      "implementationAddresses": [
+      "model": "beacon",
+      "proxyAddresses": [
         "0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf",
-        "0xcb2a0f46f67dc4c58a316f1c008edef5c2311795"
+        "0xcb2a0f46f67dc4c58a316f1c008edef5c2311795",
+        "0x83b01ac9e2d1632a70dd1c813c5b8edf29cd707f"
       ],
-      "canChangeMintLogic": false,
-      "observedAt": "2026-07-15",
-      "observedBlock": 25295025,
+      "implementationAddresses": [
+        "0xebbcb2cee51c2fee4062c9c1270dcb98b0b22250",
+        "0x578f397ca4661d1db4d9a65065d6b284a1a850fd",
+        "0x0d25c65d0cc97af724ffd7a54eb287660e8dfad4"
+      ],
+      "adminAddresses": [
+        "0x985462c9aa4d6c3ad59ae6e1e9c0c11347ed1598",
+        "0xc046b05a920e4b412815934dd8e58904dda73315",
+        "0x258269e782ab73aca6c0574990ff29b79aafffb6"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 7200,
+      "controlRef": "IAUon deployment-wide beacon-owner timelocks (incomplete)",
+      "observedAt": "2026-07-21",
       "sources": [
         {
-          "label": "IAUon Ethereum token",
-          "url": "https://etherscan.io/address/0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf#code"
+          "label": "Sourcify IAUon Ethereum BeaconProxy",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf?fields=compilation,proxyResolution"
         },
         {
-          "label": "IAUon BSC token",
-          "url": "https://bscscan.com/address/0xcb2a0f46f67dc4c58a316f1c008edef5c2311795#code"
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "BSC PublicNode RPC",
+          "url": "https://bsc-rpc.publicnode.com"
+        },
+        {
+          "label": "HyperEVM RPC",
+          "url": "https://rpc.hyperliquid.xyz/evm"
         }
       ]
     },
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25295025: IAUon (AccessControl ERC20, non-upgradeable). MINTER_ROLE count=2: GMTokenManager (0x2c158b...) + OndoOFT (0x8ffe0d...). DEFAULT_ADMIN = TimelockController (0x3715b2..., 2h delay, 0 proposers \u2014 locked). BSC: DEFAULT_ADMIN = 0x8860bbfc... (contract), MINTER_ROLE count=2 (0x91f8aff... GMTokenManager, 0xeb8ceb... OndoOFT). No proxy admin on any deployment. Economic-control evidence reviewed 2026-07-15: Ankura Trust Company receives read-only account access and independently reconciles Ondo Global Markets assets and liabilities on a daily NAV cadence. The underlying IAU registration does not prudentially supervise the BVI token issuer or IAUon product.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-07-15",
-      "disposition": "scoreable",
+      "evidence": "The prior immutable/no-proxy ruling is superseded. Sourcify and EIP-1967 beacon-slot reads show that the Ethereum, BSC, and HyperEVM IAUon tokens are BeaconProxy deployments using Ondo's shared upgradeable beacons, whose owner timelocks each report a 7,200-second delay. Ethereum direct minters remain identified, but this IAUon profile does not yet enumerate the terminal BSC/HyperEVM timelock roles and signer structures or the Solana Token-2022 mint and GM-program upgrade authorities. Ankura's daily assets-and-liabilities verification remains valid backing evidence, but it does not close these deployment-control gaps.",
+      "reviewer": "Claude Phase 0c continuation; OpenAI Codex NR-recovery correction",
+      "reviewedAt": "2026-07-21",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Which terminal accounts and signer thresholds control the IAUon BSC and HyperEVM timelocks and mint roles?",
+        "Which authorities control the IAUon Solana mint and the upgradeable Ondo GM program?"
+      ],
       "sources": [
         {
           "label": "Ondo Global Markets overview",

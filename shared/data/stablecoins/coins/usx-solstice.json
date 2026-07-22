@@ -2,7 +2,7 @@
   "id": "usx-solstice",
   "name": "Solstice USX",
   "symbol": "USX",
-  "oneLiner": "USX is Solstice's Solana dollar with Chainlink PoR and institutional redemption; retail holders rely on DEX liquidity during stress.",
+  "oneLiner": "USX is Solstice's Solana dollar, backed by audited cash, tokenized Treasuries, and delta-neutral hedged positions with Accountable solvency proofs.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -11,12 +11,37 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "USDC and USDT deposited 1:1; plans to expand to SOL, ETH, and BTC collateral",
-  "pegMechanism": "1:1 collateralization with multi-oracle pricing via Chainlink and Pyth; Chainlink Proof of Reserve provides real-time on-chain verification of reserves; institutional minting ($500K minimum, KYC-gated); permissionless access via Solana DEXs",
+  "collateral": "Diversified reserve of audited cash, tokenized Treasuries, and delta-neutral hedged positions; Solstice publishes aggregate collateralization but not current category weights",
+  "pegMechanism": "Overcollateralized institutional issuance with multi-oracle pricing and PDA-controlled minting; Accountable publishes aggregate reserve-versus-supply solvency proofs, while secondary access remains available through Solana DeFi markets",
   "llamaId": "310",
   "detailProvider": "defillama",
   "geckoId": "usx",
   "pythFeedId": "0x80950327494d0e7f29bdddb061ed7d1def1d712cec73bc167af02f0664137a16",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://attestation.solstice.finance/",
+    "provider": "Accountable",
+    "attestorTier": "niche",
+    "latestReport": {
+      "periodEnd": "2026-07-15",
+      "publishedAt": "2026-07-15",
+      "assuranceMethod": "onchain-proof",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Solstice Accountable attestation dashboard API",
+          "url": "https://attestation-api.solstice.finance/dashboard"
+        },
+        {
+          "label": "Solstice USX product and proof-of-solvency disclosure",
+          "url": "https://solstice.finance/usx"
+        }
+      ]
+    }
+  },
   "links": [
     {
       "label": "Website",

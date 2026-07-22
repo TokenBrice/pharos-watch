@@ -18,10 +18,14 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex SOL-ULTRA Cohort A reserve research",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex SOL-KEYSTONE reserve research",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "KPMG PAXG Redemption Assets Report - May 29, 2026",
+        "url": "https://framerusercontent.com/assets/V9r8HlI6Q7XkJUWPk6VjXu844.pdf"
+      },
       {
         "label": "Paxos PAX Gold product page",
         "url": "https://www.paxos.com/pax-gold"
@@ -29,12 +33,17 @@
       {
         "label": "Paxos PAXG transparency reports",
         "url": "https://www.paxos.com/paxg-transparency"
+      },
+      {
+        "label": "Paxos PAXG allocation and physical gold bar details",
+        "url": "https://support.paxos.com/articles/7204091747-paxg-allocation-and-physical-gold-bar-details-representing-my-paxg-tokens"
       }
     ],
-    "rationale": "Paxos states that each PAXG represents one fine troy ounce of physical gold held in LBMA vaults in London, with ownership of the underlying allocated gold under Paxos custody. Paxos also publishes monthly KPMG examination reports. These issuer disclosures support a complete 100% allocated-physical-gold reserve category without a separate asset-type split.",
-    "compositionBasis": "Paxos PAX Gold product disclosure and monthly KPMG attestation index",
+    "rationale": "KPMG's examination report for May 29, 2026 reports 467,075 PAXG redeemable tokens and 467,075 fine troy ounces of London Good Delivery gold, with no timing differences, temporary differences, surplus, or deficit. Exhibit B identifies London Good Delivery gold as the only redemption asset type. Paxos states that each token represents ownership of an allocated fine troy ounce, and its allocation tool exposes the serial number, brand code, gross weight, fineness, and fine weight of the bars assigned to a holder.",
+    "compositionBasis": "KPMG examination of PAXG redemption assets and redeemable tokens as of May 29, 2026",
+    "compositionAsOf": "2026-05-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve asset is identified and independently attested, but the reviewed public pages do not provide a provider-level allocation of the gold across vault accounts.",
+    "knownUnknownExposure": "The complete reserve asset type is independently examined as allocated London Good Delivery gold. The report names Brink's Global Services Ltd. and ICBC Standard Bank as the LBMA-approved vault providers but does not disclose the ounces held with each provider.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -54,7 +63,12 @@
         "jurisdiction": "United States"
       },
       {
-        "name": "Undisclosed LBMA-accredited London vault providers",
+        "name": "Brink's Global Services Ltd.",
+        "role": "subcustodian",
+        "jurisdiction": "United Kingdom"
+      },
+      {
+        "name": "ICBC Standard Bank",
         "role": "subcustodian",
         "jurisdiction": "United Kingdom"
       }
@@ -62,10 +76,14 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex SOL-KEYSTONE reserve research",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "KPMG PAXG Redemption Assets Report - May 29, 2026",
+        "url": "https://framerusercontent.com/assets/V9r8HlI6Q7XkJUWPk6VjXu844.pdf"
+      },
       {
         "label": "Paxos PAX Gold product page",
         "url": "https://www.paxos.com/pax-gold"
@@ -73,8 +91,12 @@
       {
         "label": "Paxos PAXG transparency reports",
         "url": "https://www.paxos.com/paxg-transparency"
+      },
+      {
+        "label": "Paxos PAXG allocation and physical gold bar details",
+        "url": "https://support.paxos.com/articles/7204091747-paxg-allocation-and-physical-gold-bar-details-representing-my-paxg-tokens"
       }
     ],
-    "uncertainty": "Paxos custody, allocated storage in LBMA-accredited London vaults, and monthly KPMG attestations are disclosed, but current vault providers, provider-level gold shares, and explicit rehypothecation terms were not established in the reviewed sources."
+    "uncertainty": "Paxos custody, allocated storage, and the current Brink's Global Services Ltd. and ICBC Standard Bank vault providers are disclosed. The May 2026 report does not disclose provider-level gold shares, vault-account identifiers, or explicit rehypothecation terms."
   }
 }

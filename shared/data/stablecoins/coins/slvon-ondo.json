@@ -68,8 +68,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "unknown",
-    "summary": "SLVon is a centrally issued Ondo Global Markets tokenized ETF tracker. Its Ethereum, BSC, and HyperEVM tokens are BeaconProxy deployments whose distinct UpgradeableBeacon owners are 2-hour timelocks. Ethereum's minter and timelock role graph is resolved, but the BSC and HyperEVM terminal timelock authorities are not; Solana remains a separate SPL Token deployment.",
+    "confidence": "verified",
+    "summary": "SLVon is a centrally issued Ondo Global Markets tokenized ETF tracker. Ethereum, BSC, and HyperEVM use upgradeable token deployments administered through 2-hour timelocks; each reviewed timelock has a 5-of-9 Safe as an admin. The Solana Token-2022 mint authority is Ondo's GM program PDA, while a single EOA can upgrade that program without an on-chain delay.",
     "upgradeability": {
       "model": "beacon",
       "proxyAddresses": [
@@ -260,21 +260,202 @@
             "url": "https://rpc.hyperliquid.xyz/evm"
           }
         ],
-        "evidence": "This umbrella control exists because the upgradeability schema accepts one controlRef; it does not imply a shared controller. Ethereum beacon 0x985462c9... is owned by timelock 0x3715b215..., BSC beacon 0xc046b05a... by timelock 0x8860bbfc..., and HyperEVM beacon 0x258269e7... by timelock 0x6253fbc5.... Each owner returned getMinDelay() = 7200. Ethereum's role graph is resolved above; the terminal role holders and signer structures behind the BSC and HyperEVM timelocks are intentionally left unresolved."
+        "evidence": "This umbrella control exists because the upgradeability schema accepts one controlRef; it does not imply a shared controller. Ethereum beacon 0x985462c9... is owned by timelock 0x3715b215..., BSC beacon 0xc046b05a... by timelock 0x8860bbfc..., and HyperEVM beacon 0x258269e7... by timelock 0x6253fbc5.... Each owner returned getMinDelay() = 7200. The Ethereum timelock is administered by 5-of-9 Safe 0xcd35671d.... At pinned BSC block 111360010 and HyperEVM block 41089232, the other timelocks each had themselves plus 5-of-9 Safe 0xa3a3c713... in DEFAULT_ADMIN_ROLE; their proposer, executor, and canceller memberships were also enumerated."
+      },
+      {
+        "label": "SLVon BSC direct minters",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "chain": "bsc",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-21",
+        "observedBlock": 111360010,
+        "failureDomainKeys": [
+          "contract:bsc:0x91f8aff3738825e8eb16fc6f6b1a7a4647bdb299",
+          "contract:bsc:0x02a4144f5f84fcfbca63f89f1c0038d3053ea525"
+        ],
+        "evidence": "At pinned BSC block 111360010 (hash 0xece995265468e7bf911781bc64d115778a9ac83f97243943d508de5e29703685), SLVon MINTER_ROLE had two members: Ondo's documented GMTokenManager 0x91f8aff3... and OndoOFT 0x02a4144f.... The OFT token() call returned the SLVon BSC token address.",
+        "sources": [
+          {
+            "label": "BSC PublicNode RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          },
+          {
+            "label": "Ondo contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          }
+        ]
+      },
+      {
+        "label": "Ondo governance Safe - BSC TimelockController admin (5-of-9)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "address": "0xa3a3c71380128972f172ff4052af7b6405da6364",
+        "chain": "bsc",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 5,
+        "signerCount": 9,
+        "timelockDelaySec": 7200,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x58417f57f29c6b03114129e0eb59a174b1f41504",
+            "0x189d409b807ac1949fe82c143270992fe9457607",
+            "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02",
+            "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e",
+            "0xece6bc29f718085a30b7bc14162b0fad4737e5d0",
+            "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241",
+            "0x6a95a204ad4a6842b2f0ae3bbb59f35e85594f46",
+            "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d",
+            "0x81961c315e38badc02c014a13dd1d4b3dab81d15"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 111360781,
+          "observedAt": "2026-07-21",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-21",
+        "observedBlock": 111360781,
+        "evidence": "At pinned BSC block 111360781 (hash 0xfb98ca2bf4c080005fd985a803004c3cbba40d6ca976b3715b7eeef8e3b7f0c7), this Safe returned the listed nine owners and threshold 5. getModulesPaginated returned no modules, the guard slot was zero, VERSION() returned 1.4.1, and slot 0 resolved singleton 0x29fcb43b.... It is a DEFAULT_ADMIN_ROLE member of the SLVon BSC timelock.",
+        "sources": [
+          {
+            "label": "BSC PublicNode RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "label": "SLVon HyperEVM OndoOFT direct minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "address": "0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85",
+        "chain": "hyperevm",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-21",
+        "observedBlock": 41089232,
+        "evidence": "At pinned HyperEVM block 41089232 (hash 0x91c7e3d0b5f89f78c4813e9a0f49075c9273b4ea2a00b2f247a83111ad0738d5), SLVon had one MINTER_ROLE member, 0x7b97e37f.... The verified OndoOFT contract's token() call returned the HyperEVM SLVon address.",
+        "sources": [
+          {
+            "label": "HyperEVM RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          },
+          {
+            "label": "HyperEVM OndoOFT contract",
+            "url": "https://hyperevmscan.io/address/0x7b97e37f7ec5271ef24eb2a3c5bd1fcf308c2a85"
+          }
+        ]
+      },
+      {
+        "label": "Ondo governance Safe - HyperEVM TimelockController admin (5-of-9)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "address": "0xa3a3c71380128972f172ff4052af7b6405da6364",
+        "chain": "hyperevm",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 5,
+        "signerCount": 9,
+        "timelockDelaySec": 7200,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x58417f57f29c6b03114129e0eb59a174b1f41504",
+            "0x189d409b807ac1949fe82c143270992fe9457607",
+            "0x60f030d621a4ab27dff024a8e43eb36e2d95fb02",
+            "0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e",
+            "0xece6bc29f718085a30b7bc14162b0fad4737e5d0",
+            "0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241",
+            "0x6a95a204ad4a6842b2f0ae3bbb59f35e85594f46",
+            "0x74a4c329aa5a6bfa16bd32baf37209f4c632173d",
+            "0x81961c315e38badc02c014a13dd1d4b3dab81d15"
+          ],
+          "threshold": 5,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "version": "1.4.1",
+          "observedBlock": 41089839,
+          "observedAt": "2026-07-21",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-21",
+        "observedBlock": 41089839,
+        "evidence": "At pinned HyperEVM block 41089839 (hash 0x371521ef47d7ddc851d73fc41b4d551e48ee18b74928e1868e19c8b4f15df50c), this Safe returned the listed nine owners and threshold 5. getModulesPaginated returned no modules, the guard slot was zero, VERSION() returned 1.4.1, and slot 0 resolved singleton 0x29fcb43b.... It is a DEFAULT_ADMIN_ROLE member of the SLVon HyperEVM timelock.",
+        "sources": [
+          {
+            "label": "HyperEVM RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          }
+        ]
+      },
+      {
+        "label": "Ondo Solana GM program mint-authority PDA",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "address": "9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD",
+        "chain": "solana",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "observedAt": "2026-07-21",
+        "observedBlock": 434387395,
+        "failureDomainKeys": [
+          "program:solana:XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm"
+        ],
+        "evidence": "At finalized Solana slot 434387395, the SLVon Token-2022 mint authority was 9foMHsSD... and no account existed at that address, consistent with a program-derived address. Ondo documents the GM program as XzTT4XB8...; Zellic's audit identifies the program's mint_authority PDA and minting instruction controls.",
+        "sources": [
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Ondo contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "Zellic Ondo GM Solana audit",
+            "url": "https://docs.ondo.finance/pdf/GM-Solana-Zellic-12-29-2025.pdf"
+          }
+        ]
+      },
+      {
+        "label": "Ondo Solana GM program upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "address": "9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM",
+        "chain": "solana",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "observedAt": "2026-07-21",
+        "observedBlock": 434387395,
+        "evidence": "At finalized Solana slot 434387395, Ondo's GM program was an upgradeable BPF program whose ProgramData account F4F1Zdqw... named 9ECeczLt... as upgrade authority. That authority was a funded, zero-data system account, so this terminal EOA can replace minting logic without an on-chain timelock.",
+        "sources": [
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Ondo contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          }
+        ]
       }
     ],
     "economicCapSemantics": "unknown",
     "reconciliation": "periodic",
     "supervision": "unknown",
     "review": {
-      "evidence": "Sourcify verifies the Ethereum token as BeaconProxy and beacon 0x985462c9... as UpgradeableBeacon. On 2026-07-14, the standard beacon slots on Ethereum, BSC, and HyperEVM resolved respectively to 0x985462c9..., 0xc046b05a..., and 0x258269e7.... Their implementation() calls returned 0xebbcb2ce..., 0x578f397c..., and 0x0d25c65d..., while owner() returned distinct TimelockControllers 0x3715b215..., 0x8860bbfc..., and 0x6253fbc5.... All three timelocks returned a current minimum delay of 7200 seconds. Ethereum's existing direct minters remain GMTokenManager and OndoOFT; the Ethereum timelock role graph is current and its admin Safe remains 5-of-9 with no modules or guard. BSC and HyperEVM terminal timelock role holders/signers were not established by this ruling, and the Solana deployment remains an SPL Token mint outside the EVM beacon graph, so the asset-wide authority profile is not scoreable yet.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Which terminal accounts control the BSC and HyperEVM timelocks' admin, proposer, executor, and canceller roles, and what signer thresholds, modules, or guards apply?",
-        "Which terminal authority controls the Solana SPL mint and any bridge-mediated mint path?"
-      ],
+      "evidence": "Sourcify verifies the Ethereum token and upgradeable beacon, and pinned RPC reads resolve the Ethereum, BSC, and HyperEVM beacons, implementations, and 2-hour owner timelocks. Ethereum's direct minters and 5-of-9 admin Safe were already resolved. At pinned BSC block 111360010 and HyperEVM block 41089232, the terminal timelock role graphs were enumerated; both timelocks include the same 5-of-9 Safe as admin. Separate pinned Safe reads found the same nine owners, threshold 5, no enabled modules, and no guard on both chains. At finalized Solana slot 434387395, the SLVon Token-2022 mint named Ondo's audited GM-program PDA as mint authority, while the upgradeable program named a single funded system-account EOA as its no-delay upgrade authority. These observations close the previously identified deployment-wide authority questions; the centralized upgrade and mint paths remain scoring risks rather than evidence gaps.",
+      "reviewer": "P2 mint-free cohort; OpenAI Codex NR-recovery review",
+      "reviewedAt": "2026-07-21",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Ondo Global Markets overview",
@@ -471,9 +652,9 @@
   },
   "reserves": [
     {
-      "name": "iShares Silver Trust (SLV) economic exposure via Ondo Global Markets collateral accounts",
+      "name": "iShares Silver Trust (SLV) shares and cash in transit held for Ondo Global Markets",
       "pct": 100,
-      "risk": "low",
+      "risk": "medium",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "Ondo Global Markets (BVI) Limited; iShares Silver Trust (BlackRock) shares held at US-registered custodial broker-dealers",
       "riskFactors": [
@@ -487,9 +668,9 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli); OpenAI Codex NR-recovery review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Ondo Global Markets overview",
@@ -498,20 +679,25 @@
       {
         "label": "SLVon trust and transparency",
         "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+      },
+      {
+        "label": "Ondo Global Markets important notes",
+        "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
       }
     ],
-    "rationale": "Ondo documents SLVon as fully backed by iShares Silver Trust ETF shares plus cash in transit, with Ankura Trust Company providing daily third-party verification of holdings; the reserve is therefore the SLV ETF exposure itself, held through Ondo Global Markets collateral accounts. Custodian identities and the cash-buffer share are not published, which is recorded as a custody known-unknown rather than a composition gap.",
-    "compositionBasis": "Ondo Global Markets product and trust disclosures",
+    "rationale": "Ondo identifies SLVon as economic exposure to iShares Silver Trust and states that each Ondo tokenized stock is fully backed by the underlying security together with cash in transit. Ankura Trust Company independently verifies the existence and amount of underlying securities and reconciles investor liabilities to reserves daily. The current SLV share inventory and cash-in-transit weight are not published in the reviewed durable sources, so they remain an allocation uncertainty rather than unidentified reserve categories.",
+    "compositionBasis": "Ondo SLVon product disclosure and Ondo Global Markets backing and transparency documentation",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "No reserve asset is unclassified; custodial broker-dealer identities and the cash-in-transit share are undisclosed (tracked in the custody profile).",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "The aggregate basket is known to contain SLV shares and cash in transit, but their current weights are not published. Because the 100% reserve entry cannot be split between those categories, the full basket remains known-unknown for composition scoring; custodial broker-dealer identities and provider allocation are also undisclosed.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "iShares Silver Trust (SLV) economic exposure via Ondo Global Markets collateral accounts",
+        "reserveName": "iShares Silver Trust (SLV) shares and cash in transit held for Ondo Global Markets",
         "pct": 100,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "iShares Silver Trust ETF shares are exogenous securities backing rather than a tracked stablecoin dependency."
+        "disposition": "basket-needs-split",
+        "rationale": "Ondo identifies SLV shares and cash in transit as the backing categories but does not publish their current weights, so the 100% aggregate reserve basket cannot be itemized without fabrication."
       }
     ]
   },
@@ -531,16 +717,20 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli); OpenAI Codex NR-recovery review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Ondo Global Markets trust and transparency",
         "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+      },
+      {
+        "label": "Ondo Global Markets important notes",
+        "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
       }
     ],
-    "uncertainty": "Ondo documents a bankruptcy-remote SPV with segregated assets, daily Ankura verification, and a first-priority security interest over the collateral, with holdings at one or more US-registered custodial broker-dealers; the broker-dealer identities, per-custodian split, cash-in-transit buffer, and any reuse terms are not published.",
+    "uncertainty": "Ondo documents a bankruptcy-remote SPV with segregated assets and accounts, daily Ankura verification, and a first-priority security interest over the collateral, with holdings at one or more US-registered custodial broker-dealers. The broker-dealer identities, provider shares, cash-in-transit allocation, and any reuse restrictions are not published.",
     "knownUnknownExposurePct": 100
   },
   "notices": [

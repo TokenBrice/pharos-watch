@@ -53,9 +53,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "ZCHF cross-chain deployments are reviewed through Chainlink CCIP Burn/Mint token pools (BurnMintTokenPool 1.5.1 on all eight networks, allowList disabled). Frankencoin's CCIPAdmin contract manages token-pool configuration through qualified-voter governance proposals and vetoes, but cross-chain transfer execution still depends on Chainlink CCIP as an external validation and messaging network. Per-chain pool addresses were verified on-chain 2026-07-17: the Ethereum TokenAdminRegistry maps ZCHF to pool 0x9359cd75549DaE00Cdd8D22297BC9B13FbBe4B79, and each L2 token registers pool 0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743 as an approved minter (verified on Optimism, Base, and Gnosis).",
-    "reviewedAt": "2026-07-17",
-    "reviewer": "KIMI ANCHOR-EV Safety Score V9 bridge route review",
+    "summary": "ZCHF cross-chain deployments are reviewed through Chainlink CCIP Burn/Mint token pools (BurnMintTokenPool 1.5.1 on all eight networks, allowList disabled). Frankencoin's CCIPAdmin contract manages token-pool configuration through qualified-voter governance proposals and vetoes, but cross-chain transfer execution still depends on Chainlink CCIP as an external validation and messaging network. Per-chain pool addresses were verified on-chain 2026-07-17: the Ethereum TokenAdminRegistry maps ZCHF to pool 0x9359cd75549DaE00Cdd8D22297BC9B13FbBe4B79, and each L2 token registers pool 0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743 as an approved minter (verified on Optimism, Base, and Gnosis). Pinned totalSupply reads on 2026-07-21 sum to 34,131,422.668749966359367170 ZCHF across the eight deployments; the seven CCIP destination mints sum to 3,697,677.829406945936079760 ZCHF, or 10.83364695%, so the Chainlink CCIP common-mode exposure is measured and remains above the 10% materiality threshold.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "KIMI ANCHOR-EV Safety Score V9 bridge route review; SOL-KEYSTONE supply attribution (2026-07-21)",
     "confidence": "verified",
     "protocols": [
       {
@@ -105,8 +105,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Ethereum block 25583961 on 2026-07-21 returned 30,433,744.839343020423287410 ZCHF, 89.16635305% of the summed 34,131,422.668749966359367170 ZCHF deployment supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-17",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25583961,
         "sources": [
           {
             "label": "Frankencoin governance documentation",
@@ -135,6 +137,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Optimism block 154536299 on 2026-07-21 returned 5,600.120000000000000000 ZCHF, 0.01640751% of summed deployment supply.",
         "controllerChain": "optimism",
         "controllerAddress": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
         "failureDomainKeys": [
@@ -142,7 +145,8 @@
           "contract:optimism:0x7cbac118b3f299f8be1c3dba66368d96b37d7743"
         ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-17",
+        "observedAt": "2026-07-21",
+        "observedBlock": 154536299,
         "sources": [
           {
             "label": "Chainlink ZCHF CCIP directory",
@@ -151,6 +155,10 @@
           {
             "label": "Chainlink CCIP mainnet token config",
             "url": "https://github.com/smartcontractkit/documentation/blob/main/src/config/data/ccip/v1_2_0/mainnet/tokens.json"
+          },
+          {
+            "label": "Optimism ZCHF token supply",
+            "url": "https://optimistic.etherscan.io/token/0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553"
           },
           {
             "label": "Optimism ZCHF BurnMintTokenPool (getToken and minter registration verified on-chain 2026-07-17)",
@@ -175,6 +183,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Gnosis block 47323115 on 2026-07-21 returned 1,381,997.465893672969028478 ZCHF, 4.04904735% of summed deployment supply.",
         "controllerChain": "gnosis",
         "controllerAddress": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
         "failureDomainKeys": [
@@ -182,7 +191,8 @@
           "contract:gnosis:0x7cbac118b3f299f8be1c3dba66368d96b37d7743"
         ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-17",
+        "observedAt": "2026-07-21",
+        "observedBlock": 47323115,
         "sources": [
           {
             "label": "Chainlink ZCHF CCIP directory",
@@ -191,6 +201,10 @@
           {
             "label": "Chainlink CCIP mainnet token config",
             "url": "https://github.com/smartcontractkit/documentation/blob/main/src/config/data/ccip/v1_2_0/mainnet/tokens.json"
+          },
+          {
+            "label": "Gnosis ZCHF token supply",
+            "url": "https://gnosisscan.io/token/0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553"
           },
           {
             "label": "Gnosis ZCHF BurnMintTokenPool (getToken and minter registration verified on-chain 2026-07-17)",
@@ -215,6 +229,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Base block 48941014 on 2026-07-21 returned 2,293,079.450977460233981628 ZCHF, 6.71838227% of summed deployment supply.",
         "controllerChain": "base",
         "controllerAddress": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
         "failureDomainKeys": [
@@ -222,7 +237,8 @@
           "contract:base:0x7cbac118b3f299f8be1c3dba66368d96b37d7743"
         ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-17",
+        "observedAt": "2026-07-21",
+        "observedBlock": 48941014,
         "sources": [
           {
             "label": "Chainlink ZCHF CCIP directory",
@@ -231,6 +247,10 @@
           {
             "label": "Chainlink CCIP mainnet token config",
             "url": "https://github.com/smartcontractkit/documentation/blob/main/src/config/data/ccip/v1_2_0/mainnet/tokens.json"
+          },
+          {
+            "label": "Base ZCHF token supply",
+            "url": "https://basescan.org/token/0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553"
           },
           {
             "label": "Base ZCHF BurnMintTokenPool (getToken and minter registration verified on-chain 2026-07-17)",
@@ -255,6 +275,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Arbitrum block 486321156 on 2026-07-21 returned 15,839.199951831050228311 ZCHF, 0.04640650% of summed deployment supply.",
         "controllerChain": "arbitrum",
         "controllerAddress": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
         "failureDomainKeys": [
@@ -262,7 +283,8 @@
           "contract:arbitrum:0x7cbac118b3f299f8be1c3dba66368d96b37d7743"
         ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-17",
+        "observedAt": "2026-07-21",
+        "observedBlock": 486321156,
         "sources": [
           {
             "label": "Chainlink ZCHF CCIP directory",
@@ -271,6 +293,10 @@
           {
             "label": "Chainlink CCIP mainnet token config",
             "url": "https://github.com/smartcontractkit/documentation/blob/main/src/config/data/ccip/v1_2_0/mainnet/tokens.json"
+          },
+          {
+            "label": "Arbitrum ZCHF token supply",
+            "url": "https://arbiscan.io/token/0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553"
           },
           {
             "label": "Arbitrum ZCHF BurnMintTokenPool (getToken and minter registration verified on-chain 2026-07-17)",
@@ -295,6 +321,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Polygon block 90644253 on 2026-07-21 returned 1,142.918499999999999800 ZCHF, 0.00334858% of summed deployment supply.",
         "controllerChain": "polygon",
         "controllerAddress": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
         "failureDomainKeys": [
@@ -302,7 +329,8 @@
           "contract:polygon:0x7cbac118b3f299f8be1c3dba66368d96b37d7743"
         ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-17",
+        "observedAt": "2026-07-21",
+        "observedBlock": 90644253,
         "sources": [
           {
             "label": "Chainlink ZCHF CCIP directory",
@@ -311,6 +339,10 @@
           {
             "label": "Chainlink CCIP mainnet token config",
             "url": "https://github.com/smartcontractkit/documentation/blob/main/src/config/data/ccip/v1_2_0/mainnet/tokens.json"
+          },
+          {
+            "label": "Polygon ZCHF token supply",
+            "url": "https://polygonscan.com/token/0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553"
           },
           {
             "label": "Polygon ZCHF BurnMintTokenPool (getToken and minter registration verified on-chain 2026-07-17)",
@@ -335,6 +367,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Avalanche block 90908018 on 2026-07-21 returned 16.674083981682841543 ZCHF, 0.00004885% of summed deployment supply.",
         "controllerChain": "avalanche",
         "controllerAddress": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
         "failureDomainKeys": [
@@ -342,7 +375,8 @@
           "contract:avalanche:0x7cbac118b3f299f8be1c3dba66368d96b37d7743"
         ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-17",
+        "observedAt": "2026-07-21",
+        "observedBlock": 90908018,
         "sources": [
           {
             "label": "Chainlink ZCHF CCIP directory",
@@ -351,6 +385,10 @@
           {
             "label": "Chainlink CCIP mainnet token config",
             "url": "https://github.com/smartcontractkit/documentation/blob/main/src/config/data/ccip/v1_2_0/mainnet/tokens.json"
+          },
+          {
+            "label": "Avalanche ZCHF token supply",
+            "url": "https://snowtrace.io/token/0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553"
           },
           {
             "label": "Avalanche ZCHF BurnMintTokenPool (getToken and minter registration verified on-chain 2026-07-17)",
@@ -375,6 +413,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
+        "reviewNote": "Pinned totalSupply() at Sonic block 76303909 on 2026-07-21 returned 2.000000000000000000 ZCHF, 0.00000585% of summed deployment supply.",
         "controllerChain": "sonic",
         "controllerAddress": "0x7CBac118B3F299f8BE1C3DBA66368D96B37D7743",
         "failureDomainKeys": [
@@ -382,7 +421,8 @@
           "contract:sonic:0x7cbac118b3f299f8be1c3dba66368d96b37d7743"
         ],
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-17",
+        "observedAt": "2026-07-21",
+        "observedBlock": 76303909,
         "sources": [
           {
             "label": "Chainlink ZCHF CCIP directory",
@@ -391,6 +431,10 @@
           {
             "label": "Chainlink CCIP mainnet token config",
             "url": "https://github.com/smartcontractkit/documentation/blob/main/src/config/data/ccip/v1_2_0/mainnet/tokens.json"
+          },
+          {
+            "label": "Sonic ZCHF token supply",
+            "url": "https://sonicscan.org/token/0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553"
           },
           {
             "label": "Sonic ZCHF BurnMintTokenPool (getToken and minter registration verified on-chain 2026-07-17)",

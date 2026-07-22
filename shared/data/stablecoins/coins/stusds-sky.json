@@ -76,15 +76,19 @@
         "observedBlock": 25573289,
         "sources": [
           {
-            "label": "Sky USDS contracts",
-            "url": "https://github.com/sky-ecosystem/usds"
+            "label": "Sky stUSDS implementation (pinned)",
+            "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/src/StUsds.sol#L142-L156"
           },
           {
             "label": "stUSDS token",
             "url": "https://etherscan.io/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9#readContract"
+          },
+          {
+            "label": "Sky DSPause",
+            "url": "https://etherscan.io/address/0xbE286431454714F511008713973d3B053A2d38f3#readContract"
           }
         ],
-        "evidence": "At Ethereum block 25573289, stUSDS.wards(0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) returned 1. The current implementation is UUPS (UPGRADE_INTERFACE_VERSION() returns 5.0.0); the reviewed Sky governance configuration establishes the Pause Proxy's 172800-second delay."
+        "evidence": "At Ethereum block 25573289, stUSDS.wards(0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) returned 1. PauseProxy.owner() returned DSPause 0xbE286431454714F511008713973d3B053A2d38f3, whose delay() returned 172800 seconds. The proxy reported UPGRADE_INTERFACE_VERSION 5.0.0, and the pinned implementation source gates _authorizeUpgrade with the wards-based auth modifier."
       }
     ],
     "economicCapSemantics": "raiseable",
@@ -108,12 +112,16 @@
       "observedBlock": 25573289,
       "sources": [
         {
-          "label": "Sky USDS contracts",
-          "url": "https://github.com/sky-ecosystem/usds"
+          "label": "Sky stUSDS implementation (pinned)",
+          "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/src/StUsds.sol#L142-L156"
         },
         {
           "label": "stUSDS token",
           "url": "https://etherscan.io/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9#readContract"
+        },
+        {
+          "label": "Sky DSPause",
+          "url": "https://etherscan.io/address/0xbE286431454714F511008713973d3B053A2d38f3#readContract"
         }
       ]
     },
@@ -124,11 +132,15 @@
           "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
         },
         {
-          "label": "Sky USDS contracts",
-          "url": "https://github.com/sky-ecosystem/usds"
+          "label": "Sky stUSDS implementation (pinned)",
+          "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/src/StUsds.sol#L142-L156"
+        },
+        {
+          "label": "Sky DSPause",
+          "url": "https://etherscan.io/address/0xbE286431454714F511008713973d3B053A2d38f3#readContract"
         }
       ],
-      "evidence": "Re-reviewed 2026-07-20 at Ethereum block 25573289. asset() confirms that stUSDS wraps USDS. Its EIP-1967 implementation slot resolves to 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22 with zero external admin and beacon slots, and the proxy reports UPGRADE_INTERFACE_VERSION 5.0.0. stUSDS.wards(Sky Pause Proxy 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) is 1, so Sky's reviewed delayed governance path can replace local logic; current public share minting remains USDS-deposit backed. No independent wrapper reserve reconciliation or named prudential supervisor is established.",
+      "evidence": "Re-reviewed 2026-07-20 at Ethereum block 25573289. asset() confirms that stUSDS wraps USDS. Its EIP-1967 implementation slot resolves to 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22 with zero external admin and beacon slots, and the proxy reports UPGRADE_INTERFACE_VERSION 5.0.0. stUSDS.wards(Sky Pause Proxy 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) is 1; PauseProxy.owner() resolves to DSPause 0xbE286431454714F511008713973d3B053A2d38f3, whose delay() is 172800 seconds. The pinned implementation source makes UUPS authorization wards-gated, so this delayed governance path can replace local logic; current public share minting remains USDS-deposit backed. No independent wrapper reserve reconciliation or named prudential supervisor is established.",
       "reviewer": "P2 mint-free cohort",
       "reviewedAt": "2026-07-20",
       "disposition": "scoreable"

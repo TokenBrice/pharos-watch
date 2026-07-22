@@ -18,11 +18,30 @@
   "geckoId": "backed-ib01-treasury-bond-0-1yr",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://app.backed.fi/issuance",
+    "url": "https://defi.backed.fi/proof-of-reserves",
     "provider": "Chainlink Proof of Reserve feed (reserve data sourced by The Network Firm LLP from Backed's custody-bank balances; LedgerLens non-attest service)",
     "attestorTier": "niche",
     "cadence": "daily",
-    "attestorJurisdiction": "United States"
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-07-21",
+      "publishedAt": "2026-07-21",
+      "assuranceMethod": "onchain-proof",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex V9 NR-recovery review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Backed public assetReserves GraphQL feed - IB01.L",
+          "url": "https://api.backed.fi/graphql"
+        },
+        {
+          "label": "Backed proof-of-reserves methodology",
+          "url": "https://docs.backed.fi/backed-ecosystem/proof-of-reserves"
+        }
+      ]
+    }
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

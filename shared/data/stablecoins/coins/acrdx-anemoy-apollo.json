@@ -19,10 +19,29 @@
   "protocolSlug": "centrifuge",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse",
+    "url": "https://chroniclelabs.org/dashboard/proofofassets/anemoy-tokenized-apollo-acrdx",
     "provider": "Chronicle Proof of Asset",
     "attestorTier": "niche",
-    "cadence": "real-time"
+    "cadence": "real-time",
+    "latestReport": {
+      "periodEnd": "2026-07-21",
+      "publishedAt": "2026-07-21",
+      "assuranceMethod": "onchain-proof",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "OpenAI Codex V9 NR-recovery review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Chronicle live ACRDX Proof of Asset",
+          "url": "https://chroniclelabs.org/dashboard/proofofassets/anemoy-tokenized-apollo-acrdx"
+        },
+        {
+          "label": "Chronicle ACRDX verification methodology",
+          "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse"
+        }
+      ]
+    }
   },
   "links": [
     {
@@ -97,11 +116,11 @@
   "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "Apollo Diversified Credit Fund strategy envelope",
-      "pct": 100,
+      "name": "Apollo Diversified Credit-I Fund shares",
+      "pct": 97.11,
       "risk": "high",
       "assetClass": "private-credit",
-      "issuerOrObligor": "Apollo Global Management credit strategies through Anemoy Tokenized Apollo Diversified Credit Fund",
+      "issuerOrObligor": "Apollo Diversified Credit Fund, advised by Apollo Global Management",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -111,19 +130,49 @@
         "concentration"
       ],
       "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Cash",
+      "pct": 2.73,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Anemoy fund cash accounts; counterparties not disclosed",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Unspecified cryptocurrency balance",
+      "pct": 0.16,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Asset identity not disclosed by Chronicle",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
     "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 curation pass",
-    "confidence": "manual-review",
+    "reviewer": "OpenAI Codex V9 NR-recovery review",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Anemoy ACRDX launch",
         "url": "https://www.anemoy.io/news/acrdx-launched"
       },
       {
-        "label": "Chronicle proof of asset for ACRDX",
+        "label": "Chronicle live ACRDX Proof of Asset",
+        "url": "https://chroniclelabs.org/dashboard/proofofassets/anemoy-tokenized-apollo-acrdx"
+      },
+      {
+        "label": "Chronicle ACRDX verification methodology",
         "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse"
       },
       {
@@ -131,18 +180,33 @@
         "url": "https://docs.centrifuge.io/"
       }
     ],
-    "rationale": "Anemoy identifies ACRDX as a feeder fund providing exposure to the Apollo Diversified Credit Fund across corporate direct lending, asset-backed lending, performing credit, and dislocated credit, while Chronicle verifies the tokenized fund through Proof of Asset. Neither source publishes a current portfolio schedule or a cash percentage. The previous 95% credit / 5% cash split was unsupported and has been removed; the complete fund is represented as one 100% strategy envelope without fabricating constituent weights.",
-    "compositionBasis": "Anemoy ACRDX product and Chronicle proof-of-asset disclosures",
+    "rationale": "Chronicle's live July 21 Proof of Asset reports USD 42,362,031 of Apollo Diversified Credit-I Fund shares, USD 1,188,950 cash, and USD 70,838.76 cryptocurrency, totaling USD 43,621,819.76 of gross holdings. Those values produce the 97.11%, 2.73%, and 0.16% weights recorded here. Chronicle separately reports USD 43,546,443 NAV, 42,634,425 outstanding shares, and a USD 1.021392 share price, with the reported NAV and share supply reconciling to the stated per-share value. Gross holdings exceed reported NAV by USD 75,376.76, but the dashboard does not explain that difference; it is retained as a reporting uncertainty rather than attributed to verified fund liabilities. The exact cryptocurrency and cash counterparties also remain explicit unknowns.",
+    "compositionBasis": "Chronicle-verified gross feeder-fund holdings, reconciled to ACRDX NAV and outstanding share supply",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current credit-sleeve, obligor, sector, geography, maturity, and cash weights are not disclosed in the reviewed public sources.",
-    "knownUnknownExposurePct": 100,
+    "knownUnknownExposure": "Chronicle labels USD 70,838.76, or 0.16% of gross holdings, only as cryptocurrency; it does not identify the token. Cash counterparties, the look-through obligor schedule inside the Apollo fund share, and the USD 75,376.76 gross-holdings-to-NAV difference are also unexplained, while the feeder-level asset categories and weights are reported.",
+    "knownUnknownExposurePct": 0.16,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Apollo Diversified Credit Fund strategy envelope",
-        "pct": 100,
+        "reserveName": "Apollo Diversified Credit-I Fund shares",
+        "pct": 97.11,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The backing asset is an identified Apollo fund share rather than a Pharos-tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Cash",
+        "pct": 2.73,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Cash is an exogenous reserve asset; the current feeder-fund weight is independently verified even though bank counterparties are not disclosed."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Unspecified cryptocurrency balance",
+        "pct": 0.16,
         "disposition": "basket-needs-split",
-        "rationale": "The issuer identifies the underlying credit strategy but does not publish current constituent or cash weights."
+        "rationale": "Chronicle verifies the aggregate cryptocurrency value but does not identify the constituent token."
       }
     ]
   },

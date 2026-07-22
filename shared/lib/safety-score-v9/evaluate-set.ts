@@ -32,6 +32,7 @@ import {
   buildV9DependencyEvaluationPlan,
   resolveV9DependencyInputs,
   type V9DependencyEvaluationPlan,
+  type V9DependencyPathPlan,
   type V9ResolvedDependencyInputs,
 } from "./dependencies";
 import {
@@ -319,6 +320,35 @@ export interface V9MintControlGroupIssuerFacts {
     pathKey: string;
     assetIssuerKey: string | null;
   }[];
+}
+
+/**
+ * Reshape-v2 D2 (owner ruling 2026-07-21): a mint/upgrade-control domain whose
+ * key is a tracked asset (`asset:<id>`) IS that asset acting as controller. For
+ * a member whose serial-claim parent is exactly that asset the relationship is
+ * definitional — the parent/wrapper cap already prices the inheritance — so the
+ * shared-controller signal defers to it (diagnostic). Non-child members keep
+ * the group severity; non-asset domains (safe/eoa/program keys) never match.
+ */
+export function v9ControlAssetDomainId(failureDomain: V9FailureDomainRef): string | null {
+  return (failureDomain.kind === "mint-control" || failureDomain.kind === "upgrade-control") &&
+    failureDomain.key.startsWith("asset:")
+    ? failureDomain.key.slice("asset:".length)
+    : null;
+}
+
+export function isV9ParentControlledCommonModeMember(
+  assetId: string,
+  controlAssetDomainId: string | null,
+  serialPaths: readonly V9DependencyPathPlan[],
+): boolean {
+  return (
+    controlAssetDomainId !== null &&
+    serialPaths.some(
+      (path) =>
+        path.assetId === assetId && path.role === "serial-claim" && path.upstreamAssetId === controlAssetDomainId,
+    )
+  );
 }
 
 /** Same-issuer mint groups are diagnostic; every unresolved or crossed join fails closed. */
@@ -789,11 +819,15 @@ function commonModeSignalsByAsset(
         members,
       });
     })();
+    const controlAssetDomainId = v9ControlAssetDomainId(group.failureDomain);
     for (const assetId of assetIds) {
-      const severity =
-        mintControlSeverity ?? commonModeSignalSeverity(group.failureDomain, contextFor(assetId), materiality);
-      const qualifier =
-        mintControlSeverity === "low"
+      const parentControlled = isV9ParentControlledCommonModeMember(assetId, controlAssetDomainId, plan.serialPaths);
+      const severity = parentControlled
+        ? "low"
+        : (mintControlSeverity ?? commonModeSignalSeverity(group.failureDomain, contextFor(assetId), materiality));
+      const qualifier = parentControlled
+        ? "own required parent's controller, priced by the parent cap, diagnostic only"
+        : mintControlSeverity === "low"
           ? "same-issuer controller, diagnostic only"
           : commonModeReasonQualifier(group.failureDomain.kind, severity);
       const signal: V9StructuralSignal = {

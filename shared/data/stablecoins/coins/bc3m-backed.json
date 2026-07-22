@@ -17,12 +17,30 @@
   "detailProvider": "coingecko",
   "geckoId": "backed-govies-0-6-months-euro",
   "proofOfReserves": {
-    "type": "self-reported",
-    "url": "https://app.backed.fi/issuance",
-    "provider": "Backed Finance (monthly attestations and on-chain reserve dashboard)",
-    "attestorTier": "self",
-    "cadence": "monthly",
-    "attestorJurisdiction": "Switzerland"
+    "type": "real-time",
+    "url": "https://defi.backed.fi/proof-of-reserves",
+    "provider": "The Network Firm / Chainlink Proof of Reserve",
+    "attestorTier": "niche",
+    "cadence": "daily",
+    "latestReport": {
+      "periodEnd": "2026-07-21",
+      "publishedAt": "2026-07-21",
+      "assuranceMethod": "onchain-proof",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex V9 NR-recovery review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Backed public assetReserves GraphQL feed - C3M.MI",
+          "url": "https://api.backed.fi/graphql"
+        },
+        {
+          "label": "Backed proof-of-reserves methodology",
+          "url": "https://docs.backed.fi/backed-ecosystem/proof-of-reserves"
+        }
+      ]
+    }
   },
   "links": [
     {

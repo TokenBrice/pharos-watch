@@ -34,7 +34,7 @@ vi.mock("@/components/share-button", () => ({
 }));
 
 vi.mock("@/components/stablecoin-logo", () => ({
-  StablecoinLogo: ({ name }: { name: string }) => <span>logo:{name}</span>,
+  StablecoinLogo: ({ name, size }: { name: string; size?: number }) => <span data-logo-size={size}>logo:{name}</span>,
 }));
 
 vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => ({
@@ -332,6 +332,8 @@ describe("HeroCard", () => {
     );
 
     expect(html).toContain("USD Coin");
+    expect(html).toContain('data-logo-size="56"');
+    expect(html).toMatch(/logo:USD Coin<\/span><span[^>]*>USDC<\/span><h2[^>]*>USD Coin<\/h2>/);
     expect(html).toContain("Circle-issued dollar stablecoin backed by cash and short-duration reserves.");
     expect(html).toContain('href="https://www.circle.com/usdc"');
     expect(html).toContain('aria-label="Website"');

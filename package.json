@@ -149,6 +149,7 @@
     "safety-score-v9:curation-worklist": "node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs",
     "safety-score-v9:sensitivity": "tsx scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts",
     "safety-score-v9:validation": "tsx scripts/maintenance/generate-safety-score-v9-validation-report.ts",
+    "safety-score-v9:composite-ceiling": "node scripts/maintenance/check-safety-score-v9-composite-ceiling.mjs",
     "generate:safety-score-v8-evaluation-build": "tsx scripts/maintenance/generate-safety-score-v8-evaluation-build-manifest.ts",
     "check:safety-score-v8-evaluation-build": "tsx scripts/maintenance/generate-safety-score-v8-evaluation-build-manifest.ts --check",
     "generate:safety-score-v9-evaluation-build": "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",

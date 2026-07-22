@@ -16,6 +16,32 @@
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "axcnh",
+  "proofOfReserves": {
+    "type": "independent-audit",
+    "url": "https://anchorx.org/transparency",
+    "provider": "Kreston ITH Digital Assets",
+    "attestorTier": "regional",
+    "cadence": "monthly",
+    "latestReport": {
+      "periodEnd": "2026-05-31",
+      "publishedAt": "2026-06-15",
+      "assuranceMethod": "agreed-upon-procedures",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "OpenAI Codex V9 NR-recovery review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Kreston AxCNH Agreed-Upon Procedures Report - May 2026",
+          "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQBFtWH9omnjQJjvKMhV9wp1AR2X5H5ZgPjMxgMIDc6QZeI?e=eyMBgf"
+        },
+        {
+          "label": "AnchorX transparency page",
+          "url": "https://anchorx.org/transparency"
+        }
+      ]
+    }
+  },
   "links": [
     {
       "label": "Website",
@@ -24,6 +50,10 @@
     {
       "label": "Twitter",
       "url": "https://x.com/AnchorX_Ltd"
+    },
+    {
+      "label": "Proof of Reserve",
+      "url": "https://anchorx.org/transparency"
     }
   ],
   "jurisdiction": {
