@@ -97,6 +97,7 @@ describe("api endpoint registry", () => {
       "/api/remediate-blacklist-amount-gaps",
       "/api/report-cards",
       "/api/report-cards/v9",
+      "/api/report-cards/v9-preview-412d818c031b7bc5",
       "/api/request-source-stats",
       "/api/reset-blacklist-sync",
       "/api/reset-circuit-breaker",
@@ -202,6 +203,7 @@ describe("api endpoint registry", () => {
 
     expect(getProbePaths("manual")).toEqual([
       "/api/report-cards/v9",
+      "/api/report-cards/v9-preview-412d818c031b7bc5",
       "/api/trigger-digest",
       "/api/reset-blacklist-sync",
       "/api/remediate-blacklist-amount-gaps",

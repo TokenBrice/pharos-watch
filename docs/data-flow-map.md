@@ -64,8 +64,11 @@ and append-only movement reviews. A failed attempt can be retried later on the
 same day; routine successful runs do not retain a full artifact bundle.
 `GET /api/admin-safety-score-v9` and its review mutation remain the operator
 surface. The additive `GET /api/report-cards/v9` route now exposes a strict,
-fully identified shadow contract for dark consumer verification. Shadow state
-still does not feed `GET /api/report-cards`, the active frontend, yield,
+fully identified contract only after its owner activation marker matches. A
+separate opaque read endpoint and unlisted `noindex` page expose the same strict
+projection with `lifecycle: "shadow"` for external feedback; they do not expose
+admin diffs, history, movement reviews, or mutations. Shadow state still does
+not feed `GET /api/report-cards`, the active frontend, yield,
 Telegram, chain analytics, or V8-compatible public history; those remain V8 until the
 independent validation, coverage, shadow-window, and consumer-cutover gates are
 satisfied. See [Safety Score V9 Rollout](./process/safety-score-v9-rollout.md).

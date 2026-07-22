@@ -196,6 +196,14 @@ export function useReportCardsV9(overrides?: V9QueryControlOverrides) {
   });
 }
 
+/** Read-only V9 shadow query for the opaque public feedback route. */
+export function useReportCardsV9Preview(overrides?: V9QueryControlOverrides) {
+  return useRegisteredApiQuery<ReportCardsV9Response>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Preview, {
+    ...overrides,
+    keepPreviousData: false,
+  });
+}
+
 export function useDepegResolver(overrides?: QueryControlOverrides) {
   return useRegisteredApiQuery<DdrResponse>(FRONTEND_API_QUERY_DESCRIPTORS.depegResolver, {
     keepPreviousData: true,

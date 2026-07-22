@@ -1,8 +1,10 @@
 # Safety Score V9 Rollout
 
 > **Current state:** pre-release shadow preparation. Safety Score v8.17 remains
-> the only public model. The current V9 candidate is not activation-ready, and
-> the unavailable ratified release-coverage proof is an explicit hard blocker.
+> the only active public model. An owner-approved, unlisted read-only preview
+> exposes the V9 shadow candidate for feedback without activating it. The
+> current V9 candidate is not activation-ready, and the unavailable ratified
+> release-coverage proof is an explicit hard blocker.
 
 This document is the durable rollout contract for Safety Score V9. It replaces
 the dual-live-publication mechanics that were explored during implementation;
@@ -16,6 +18,14 @@ Pharos will privately shadow V9 before release and operate one public Safety
 Score model after release. The deployed Worker build selects the active model.
 Rollback restores the retained V8-compatible Worker and Pages deployments; it
 does not depend on continuously recomputing and publishing V8 beside V9.
+
+The temporary feedback preview is a narrow exception to private shadowing. Its
+opaque page and API paths are read-only, unlinked, and `noindex`; the API returns
+only the strict public projection with `lifecycle: "shadow"`. The route does not
+expose admin diffs, history, movement reviews, or mutations, and it does not
+read or write the V9 activation marker. The opaque URL limits accidental
+discovery but is not an authentication boundary. Preview feedback is evidence
+for review only and closes no activation gate or consumer-ledger blocker.
 
 The rollout deliberately has no:
 
