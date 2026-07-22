@@ -20,7 +20,7 @@ describe("SafetyScoreV9PreviewClient", () => {
 
   it("renders candidate scores and filters by asset identity", () => {
     const cards = [
-      makeV9Card(),
+      makeV9Card({ evidence: { level: "strong", freshness: "unknown", reasons: [] } }),
       makeV9Card({
         id: "usdt-tether",
         score: 72,
@@ -42,6 +42,11 @@ describe("SafetyScoreV9PreviewClient", () => {
     expect(screen.getByText("USDT")).toBeTruthy();
     expect(screen.getByLabelText("Safety grade B+, score 84")).toBeTruthy();
     expect(screen.getByText("2 of 2 assets")).toBeTruthy();
+    expect(screen.getByText("Grade distribution")).toBeTruthy();
+    expect(screen.getByText("2 assets")).toBeTruthy();
+    expect(document.querySelector('[title="Grade B: 2"]')).toBeTruthy();
+    expect(screen.getByText("Strong")).toBeTruthy();
+    expect(screen.queryByText("Unknown")).toBeNull();
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search candidate ratings" }), {
       target: { value: "tether" },
@@ -50,6 +55,7 @@ describe("SafetyScoreV9PreviewClient", () => {
     expect(screen.queryByText("USDC")).toBeNull();
     expect(screen.getByText("USDT")).toBeTruthy();
     expect(screen.getByText("1 of 2 assets")).toBeTruthy();
+    expect(document.querySelector('[title="Grade B: 2"]')).toBeTruthy();
   });
 
   it("shows a retryable unavailable state without implying V8 is affected", () => {

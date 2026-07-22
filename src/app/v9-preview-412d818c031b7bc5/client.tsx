@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import { RefreshCw, Search } from "lucide-react";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { gradeRange, type ReportCardGradeRange } from "@shared/lib/report-cards";
 import type { SafetyScoreV9Card } from "@shared/types";
+import { SafetyGradeDistributionBar } from "@/components/safety-grade-distribution-bar";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
@@ -38,6 +40,12 @@ function compareCards(left: SafetyScoreV9Card, right: SafetyScoreV9Card): number
     return right.score - left.score;
   }
   return left.id.localeCompare(right.id);
+}
+
+function buildGradeCounts(cards: readonly SafetyScoreV9Card[]): Record<ReportCardGradeRange, number> {
+  const counts: Record<ReportCardGradeRange, number> = { A: 0, B: 0, C: 0, D: 0, F: 0, NR: 0 };
+  for (const card of cards) counts[gradeRange(card.grade)] += 1;
+  return counts;
 }
 
 function Metric({ label, value }: { label: string; value: string | number }) {
@@ -158,7 +166,6 @@ function PreviewTable({ cards }: { cards: readonly SafetyScoreV9Card[] }) {
               </TableCell>
               <TableCell className="px-3 py-3">
                 <div className="font-medium text-foreground">{titleCase(card.evidence.level)}</div>
-                <div className="mt-0.5 text-muted-foreground">{titleCase(card.evidence.freshness)}</div>
               </TableCell>
             </TableRow>
           );
@@ -171,6 +178,7 @@ function PreviewTable({ cards }: { cards: readonly SafetyScoreV9Card[] }) {
 export function SafetyScoreV9PreviewClient() {
   const { data, isLoading, error, refetch } = useReportCardsV9Preview();
   const [search, setSearch] = useState("");
+  const gradeCounts = useMemo(() => buildGradeCounts(data?.cards ?? []), [data?.cards]);
   const cards = useMemo(() => {
     const query = search.trim().toLowerCase();
     return [...(data?.cards ?? [])]
@@ -214,6 +222,8 @@ export function SafetyScoreV9PreviewClient() {
         <Metric label="Methodology" value={data.methodology.version} />
         <Metric label="Published" value={`${formatTimestamp(data.updatedAt)} UTC`} />
       </dl>
+
+      <SafetyGradeDistributionBar gradeCounts={gradeCounts} totalCards={data.cards.length} totalLabel="assets" />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
