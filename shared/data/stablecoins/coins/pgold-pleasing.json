@@ -57,6 +57,11 @@
       "chain": "ethereum",
       "address": "0xfb0bd86210d2a10543bb40289e92d108b3a5334f",
       "decimals": 18
+    },
+    {
+      "chain": "pharos",
+      "address": "0x531f1e4a3ca96b9f42467659d8088b07fe8d2839",
+      "decimals": 18
     }
   ],
   "blacklistabilityReview": {
@@ -68,10 +73,10 @@
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "external-validated-network",
-    "summary": "PGOLD is listed in Chainlink CCIP directory data across Arbitrum, Ethereum, and Pharos with lock/release and burn/mint pools. The route depends on CCIP validation and token-pool controls.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "tier": "external-lock-mint",
+    "summary": "PGOLD has issuer-native mint surfaces on Arbitrum and Ethereum, an Arbitrum-to-ApeChain LayerZero lock/mint route, and Chainlink CCIP routes whose directory lists an Arbitrum lock/release pool and Ethereum and Pharos burn/mint pools. The external validator and token-pool controls make external-lock-mint the conservative aggregate tier.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "verified",
     "protocols": [
       {
@@ -96,11 +101,11 @@
     ],
     "sources": [
       {
-        "label": "Chainlink PGOLD CCIP directory",
+        "label": "Chainlink PGOLD CCIP directory (accessed 2026-07-22)",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/PGOLD"
       },
       {
-        "label": "Pleasing PGOLD docs",
+        "label": "Pleasing PGOLD docs (accessed 2026-07-22)",
         "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features"
       }
     ],
@@ -177,6 +182,35 @@
             "url": "https://etherscan.io/address/0xfb0bd86210d2a10543bb40289e92d108b3a5334f"
           }
         ]
+      },
+      {
+        "id": "pharos:0x531f1e4a3ca96b9f42467659d8088b07fe8d2839",
+        "sourceChain": "arbitrum",
+        "destinationChain": "pharos",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x531f1e4a3ca96b9f42467659d8088b07fe8d2839",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Chainlink's PGOLD directory, observed 2026-07-22, lists this Pharos deployment with Burn/Mint token pool 0x944ED1b0a0f9de55a21F0372652ba1bF05194AA4; the Arbitrum PGOLD leg is listed with a Lock/Release pool, so the Pharos representation inherits CCIP validation and pool-control risk.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "pharos",
+        "controllerAddress": "0x944ED1b0a0f9de55a21F0372652ba1bF05194AA4",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:pharos:0x944ed1b0a0f9de55a21f0372652ba1bf05194aa4"
+        ],
+        "observedAt": "2026-07-22",
+        "sources": [
+          {
+            "label": "Chainlink PGOLD CCIP directory (accessed 2026-07-22)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/PGOLD"
+          }
+        ]
       }
     ]
   },
@@ -198,7 +232,7 @@
       }
     },
     "params": {
-      "label": "Physical gold bars (LBMA 99.99%)",
+      "label": "Physical gold bullion (LBMA-standard, 99.99% purity)",
       "risk": "very-low"
     }
   },

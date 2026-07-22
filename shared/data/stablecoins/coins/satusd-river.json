@@ -1981,21 +1981,30 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
-        "label": "River documentation",
-        "url": "https://docs.river.inc/"
+        "label": "Ethereum verified satUSD implementation (observed at block 25552008 on 2026-07-17)",
+        "url": "https://etherscan.io/address/0xa32313c04df2e12dcbc0b4b5ad234a2cc69d6c8d#code"
       },
       {
-        "label": "satUSD Ethereum deployment",
-        "url": "https://etherscan.io/address/0x1958853a8be062dc4f401750eb233f5850f0d0d2#code"
+        "label": "BSC verified satUSD implementation (observed at block 110504683 on 2026-07-17)",
+        "url": "https://bscscan.com/address/0xb247bce6f7ca0345174ee0d3860a36e7d72b5a9d#code"
+      },
+      {
+        "label": "Base verified satUSD implementation (observed at block 48748582 on 2026-07-17)",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x256bd26fddc17a1d1a9b974bcd268f89bfe15789"
+      },
+      {
+        "label": "BOB verified satUSD implementation (observed at block 35712265 on 2026-07-17)",
+        "url": "https://explorer.gobob.xyz/api/v2/smart-contracts/0x1b6e58e9f72a8428cd8af3f8c45d509f4c5f73e3"
       }
     ],
-    "evidence": "BLOCKED: reviewed issuer documentation and the Ethereum deployment do not establish holder-level freeze or transfer-restriction reach across the eleven tracked satUSD deployments. The existing inherited upstream exposure is retained; complete native and bridged deployment authority evidence is required before resolving the access facts.",
-    "reviewer": "OpenAI Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "The canonical Ethereum and runtime-selected material BSC, Base, and BOB deployments were pinned on 2026-07-17. Each verified DebtTokenWithLz implementation permits an enabled TroveManager or owner-appointed ward to call burn(address,uint256) against an arbitrary holder without allowance. This privileged holder-burn path establishes a current restrictable posture independently of the separate fixed protocol-recipient transfer guard.",
+    "reviewer": "GPT SOL-EVD-A wave6",
+    "reviewedAt": "2026-07-22"
   },
   "chainTier": "unproven",
   "deploymentModel": "third-party-bridge",
@@ -2400,26 +2409,26 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "probable",
     "sources": [
       {
-        "label": "River satUSD FAQ",
+        "label": "River satUSD FAQ (accessed 2026-07-22)",
         "url": "https://docs.river.inc/intro/faq"
       },
       {
-        "label": "River satUSD product overview",
+        "label": "River satUSD product overview (accessed 2026-07-22)",
         "url": "https://river.inc/"
       },
       {
-        "label": "River protocol-info API",
+        "label": "River protocol-info API (snapshot 2026-07-22T18:00:00Z)",
         "url": "https://api-airdrop.river.inc/protocol-info"
       }
     ],
-    "rationale": "The live river-protocol-info adapter publishes one aggregate Aggregate River protocol collateral TVL row at 100%, so the reviewed classification is keyed to that exact identity. River states that satUSD is minted against BTC, ETH, BNB, and liquid staking tokens through its omni-CDP system. The issuer does not publish a current collateral allocation or a chain-wide pool inventory, so the previously stored asset-class weights are not supportable and the envelope remains the documented aggregate basket.",
+    "rationale": "The River protocol-info API snapshot at 2026-07-22T18:00:00Z reported aggregate collateral TVL of $255,709,758.3648083 and circulating satUSD of 159,366,548.61429694, a 1.604538471769779 aggregate collateralization ratio. The live adapter publishes one Aggregate River protocol collateral TVL row at 100%, so the reviewed classification is keyed to that exact identity; the ratio is a mechanism metric, not a reserve weight. River states that satUSD is minted against BTC, ETH, BNB, and liquid staking tokens, but does not publish current category weights or a complete chain-wide pool inventory.",
     "compositionBasis": "River current product and FAQ collateral disclosures plus the protocol-info aggregate TVL feed",
-    "compositionAsOf": "2026-07-20",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
     "knownUnknownExposure": "River does not publish current weights among BTC, ETH, BNB, and liquid staking tokens or a complete cross-chain collateral inventory.",
     "knownUnknownExposurePct": 100,

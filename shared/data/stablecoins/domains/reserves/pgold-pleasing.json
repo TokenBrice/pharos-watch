@@ -18,20 +18,24 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "Pleasing Gold official website",
+        "label": "Pleasing Gold official website (accessed 2026-07-22)",
         "url": "https://www.pleasinggold.com/"
       },
       {
-        "label": "Pleasing Gold token features documentation",
+        "label": "Pleasing Gold token features documentation (accessed 2026-07-22)",
         "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features"
+      },
+      {
+        "label": "Pleasing Gold terms of sale and service (accessed 2026-07-22)",
+        "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service"
       }
     ],
-    "rationale": "Pleasing Gold materials describe PGOLD as one fine troy ounce of 99.99% LBMA-standard physical gold and describe physical redemption through the issuer platform. The reviewed materials do not identify a dated independent reserve report, current gold quantity reconciliation, or the custody provider.",
+    "rationale": "Rechecked 2026-07-22: Pleasing Gold materials define one PGOLD as one fine troy ounce of 99.99% LBMA-standard physical gold and describe KYC-gated physical redemption. The terms state that token supply is intended to match vaulted metal held with qualified custodians, but the issuer does not publish a current bar list, gold quantity reconciliation, named custodian, or dated independent reserve report. The published audit page concerns smart-contract security rather than reserve assurance.",
     "compositionBasis": "Pleasing Gold product and token-feature disclosures",
     "scope": "full-composition",
     "knownUnknownExposure": "The physical-gold reserve category is identified, but current reserve quantities, independent assurance, custody provider, segregation, and redemption liquidity are not independently evidenced.",
@@ -57,19 +61,23 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "Pleasing Gold official website",
+        "label": "Pleasing Gold official website (accessed 2026-07-22)",
         "url": "https://www.pleasinggold.com/"
       },
       {
-        "label": "Pleasing Gold token features documentation",
+        "label": "Pleasing Gold token features documentation (accessed 2026-07-22)",
         "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features"
+      },
+      {
+        "label": "Pleasing Gold terms of sale and service (accessed 2026-07-22)",
+        "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service"
       }
     ],
-    "uncertainty": "The issuer describes physical gold backing and redemption but does not disclose the vault or custodian, account segregation, bankruptcy treatment, rehypothecation terms, or current reserve evidence."
+    "uncertainty": "The issuer describes physical gold backing and redemption but does not disclose the vault or custodian, account segregation, bankruptcy treatment, rehypothecation terms, insurance coverage, or current reserve evidence."
   }
 }
