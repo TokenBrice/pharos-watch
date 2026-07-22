@@ -392,9 +392,9 @@ ignored research workspace's anchor-coherence plan):
    routes).
 
 The final candidate identity of the chain is policy digest
-`513d69b713ed1503f830b60cd28d198dd81ee984cf44c77b3016abd86f2c01ce` and
+`76bb98ce18a7f798a2953fb3fce86c36b4809994cfbcb4310d0a7b9e4d3037d1` and
 evaluation-build digest
-`0893afef290d7490e9bb11c2dacd862c075aa1c06dbdb19541c756c9a93de8bc`
+`fa2eb030ec07e265100ede8ae8374d2dee21f712a443b67f1989dbd29143f16f`
 (reshape-v3 batch, 2026-07-22: backing-scale re-anchor T4 + seasoned-issuer credit T5
 + documented-fee exit ceiling T1, on top of the reshape-v2 batch [F-gate split D1,
 parent-controlled dedup D2, TUSD pin release D8, floor re-derivation D6] — prior pair

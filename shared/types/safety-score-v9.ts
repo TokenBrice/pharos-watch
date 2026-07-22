@@ -727,6 +727,17 @@ const V9BackingPolicySchema = z
       })
       .strict(),
     boundedUnknownQuality: ScoreSchema,
+    // T5 (owner ruling 2026-07-22, R2), assurance half: sustained attestation
+    // cadence proven over the credit window earns the points on the
+    // assurance-and-reconciliation component when its measured quality is
+    // already adequate-or-better, capped at the strong tier.
+    assuranceSeasonedCredit: z
+      .object({
+        points: z.number().finite().min(0).max(5).default(0),
+        minMonths: z.number().int().positive().default(60),
+      })
+      .strict()
+      .default({ points: 0, minMonths: 60 }),
     reserve: z
       .object({
         assetClassQuality: z

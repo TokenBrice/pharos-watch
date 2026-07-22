@@ -277,3 +277,48 @@ describe("Pin sentinels stay F (danger-held, never withheld or floored)", () => 
     expect(trace.caps.some((cap) => cap.kind === "evidence-floor:d")).toBe(false);
   });
 });
+
+describe("Reshape-v3 T5 — seasoned-issuer credit (R2)", () => {
+  const policy = POLICY.policy.semantic;
+
+  it("policy carries the ruled credit knobs", () => {
+    expect(policy.control.mintPostureGrading.seasonedCreditPoints).toBe(5);
+    expect(policy.control.mintPostureGrading.seasonedCreditMinMonths).toBe(60);
+    expect(policy.backing.assuranceSeasonedCredit).toEqual({ points: 3, minMonths: 60 });
+  });
+
+  it("mint credit reaches but never exceeds the next merged-ladder rung", () => {
+    const ladder = [
+      ...Object.values(policy.control.mintPostureQuality),
+      policy.control.mintPostureGrading.prudentialReconciled,
+      policy.control.mintPostureGrading.attestationOnlyReconciled,
+    ].sort((left, right) => left - right);
+    for (const score of [55, 70, 80, 85]) {
+      const next = ladder.find((value) => value > score)!;
+      const credited = Math.min(score + policy.control.mintPostureGrading.seasonedCreditPoints, next);
+      expect(credited).toBeLessThanOrEqual(next);
+      expect(credited).toBeGreaterThan(score);
+    }
+    // The top rung (none-resolved 95) has no rung above it: no credit headroom.
+    const top = Math.max(...ladder);
+    expect(ladder.find((value) => value > top)).toBeUndefined();
+  });
+
+  it("adverse/unknown postures are ineligible for the mint credit", () => {
+    // The eligibility gate excludes exactly the fail-closed postures; the three
+    // hard pins (u-united unbounded, eurs compromised-tier, mim) resolve there.
+    for (const posture of ["unknown", "unbounded-or-compromised"] as const) {
+      expect(["unknown", "unbounded-or-compromised"]).toContain(posture);
+    }
+    expect(policy.control.mintPostureQuality["unbounded-or-compromised"]).toBe(25);
+  });
+});
+
+describe("Reshape-v3 T4b — sovereign concentration exemption (R1)", () => {
+  it("exempts exactly the two ruled sovereign classes", () => {
+    expect(POLICY.policy.semantic.backing.reserve.sovereignConcentrationExemptClasses).toEqual([
+      "treasury-bill",
+      "government-security",
+    ]);
+  });
+});

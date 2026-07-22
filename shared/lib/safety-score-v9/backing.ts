@@ -875,16 +875,17 @@ function evaluateV9ArchetypeBackingInternal(
         ? backing.boundedUnknownQuality
         : backing.componentQuality[component.fact.quality];
     // T5 seasoned-issuer credit (owner ruling 2026-07-22, R2), assurance half:
-    // a sustained attestation cadence proven over >= 60 months earns +3 on the
-    // assurance-and-reconciliation component when its measured quality is
-    // already adequate-or-better, capped at the strong tier — seasoning can
-    // close the adequate->strong gap, never exceed the evidence ceiling.
+    // a sustained attestation cadence proven over the credit window earns the
+    // policy's points on the assurance-and-reconciliation component when its
+    // measured quality is already adequate-or-better, capped at the strong
+    // tier — seasoning can close the adequate->strong gap, never exceed the
+    // evidence ceiling.
     const score =
       component.componentKey === "assurance-and-reconciliation" &&
       (component.fact.quality === "strong" || component.fact.quality === "adequate") &&
       input.asset.trackRecordMonths !== undefined &&
-      input.asset.trackRecordMonths >= 60
-        ? Math.min(tierScore + 3, backing.componentQuality.strong)
+      input.asset.trackRecordMonths >= backing.assuranceSeasonedCredit.minMonths
+        ? Math.min(tierScore + backing.assuranceSeasonedCredit.points, backing.componentQuality.strong)
         : tierScore;
     const baseWeight = archetypePolicy.componentWeights[component.componentKey];
     const normalizedWithinMechanism =

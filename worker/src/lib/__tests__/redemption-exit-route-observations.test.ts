@@ -206,6 +206,25 @@ describe("derived supply-model route observations", () => {
     expect(overCost).toMatchObject({ scoreEligible: false, executableUsd: 0 });
   });
 
+  it("arms capacity from a reviewed documented fee ceiling on the static config (T1)", () => {
+    // usdt-tether's config states the issuer redemption fee outright (0.10% ->
+    // feeBpsMax 10), so a documented-variable published row derives a real
+    // executable bound instead of the zero-capacity curve.
+    const armed = deriveSupplyModelExitRouteObservation(
+      { ...supplyFullEntry, stablecoinId: "usdt-tether", feeModelKind: "documented-variable", feeBps: null },
+      now,
+    );
+    expect(armed).toMatchObject({
+      routeId: "redemption:usdt-tether:offchain-issuer",
+      executableUsd: 5_000_000,
+      completionRatio: 1,
+      scoreEligible: true,
+    });
+    // usdc-circle's config has no feeBpsMax: documented-variable stays unarmed
+    // (asserted by the zero-bound test above) — the ceiling only exists where a
+    // primary source states one.
+  });
+
   it("resolves derived outputs from the reviewed static config's outputAssets", () => {
     // dai-makerdao's psm-swap config documents the LitePSM DAI <-> USDC leg.
     const daiEntry: RedemptionBackstopEntry = {

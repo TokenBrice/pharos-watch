@@ -741,7 +741,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       ].sort((left, right) => left - right);
       const nextRung = ladder.find((value) => value > gradedPostureScore);
       const ceiling = nextRung === undefined ? gradedPostureScore : nextRung;
-      return Math.min(gradedPostureScore + grading.seasonedCreditPoints, Math.max(gradedPostureScore, ceiling));
+      return Math.min(gradedPostureScore + grading.seasonedCreditPoints, ceiling);
     })();
     components.push({
       componentKey: "mint",
