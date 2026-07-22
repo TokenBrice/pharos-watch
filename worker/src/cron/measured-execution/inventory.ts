@@ -8,6 +8,7 @@ import {
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexApiPool } from "../../lib/dex-api-types";
 import { getTokenReferenceUsdPrice } from "../../lib/dex-api-token-pricing";
+import { logWorkerEvent } from "../../lib/structured-log";
 // Alias the canonical key builder locally instead of importing token-resolution's
 // wrapper: that import closed a module cycle (dex-liquidity/types -> inventory ->
 // token-resolution -> types) flagged by check:shared-cycles.
@@ -335,8 +336,26 @@ export function buildUniV3MeasuredExecutionTarget(input: {
     // stay gated.
     const spotInputPerOutput = inputIndex === 0 ? candidate.token0Price : candidate.token1Price;
     const impliedOutputPrice = inputPrice * spotInputPerOutput;
-    if (Number.isFinite(impliedOutputPrice) && impliedOutputPrice > 0) {
+    const fixedPointPrice = Math.round(impliedOutputPrice * 100_000_000);
+    if (Number.isFinite(impliedOutputPrice) && impliedOutputPrice > 0 && fixedPointPrice > 0) {
       outputPrice = impliedOutputPrice;
+    } else if (Number.isFinite(impliedOutputPrice) && impliedOutputPrice > 0) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "univ3_implied_reference_rejected",
+        job: "sync-dex-liquidity",
+        source: "uniswap-v3-subgraph",
+        message: "Rejected a pool-implied output reference below measured-execution price precision",
+        metadata: {
+          chain: candidate.chain,
+          poolAddress: candidate.poolAddress,
+          stablecoinId: input.stablecoinId,
+          token0Price: candidate.token0Price,
+          token1Price: candidate.token1Price,
+          impliedOutputPrice,
+        },
+      });
     }
   }
   if (outputPrice == null || !Number.isFinite(outputPrice) || outputPrice <= 0) return null;
