@@ -14,6 +14,22 @@
   "collateral": "Isolated basket of institutional credit assets: private credit, structured finance, project finance, asset-backed loans, plus market-neutral fund strategies (Nomura, Fasanara, Edge Capital), with periodic NAV and scheduled non-instant redemption.",
   "pegMechanism": "NAV-based valuation of underlying RWA basket; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
   "mechanismArchetype": "rwa-credit-fund",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "Multipli defines rwaUSDi as a permissioned institutional-credit layer allocating to private credit, structured finance, project finance, asset-backed lending, and market-neutral funds, with periodic pricing and scheduled rather than instant redemption. That NAV-bearing credit-pool claim maps to rwa-credit-fund rather than a fixed-par fiat reserve or borrower CDP.",
+    "sources": [
+      {
+        "label": "Multipli rwaUSDi institutional-credit documentation",
+        "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
+      },
+      {
+        "label": "Multipli liquidity-class design",
+        "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design"
+      }
+    ]
+  },
   "llamaId": "340",
   "detailProvider": "defillama",
   "bridgeRouteRisk": {
@@ -166,8 +182,9 @@
       "decimals": 6
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Multipli documentation",
@@ -175,12 +192,24 @@
       },
       {
         "label": "rwaUSDi Ethereum deployment",
-        "url": "https://etherscan.io/address/0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4#code"
+        "url": "https://eth.blockscout.com/address/0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4"
+      },
+      {
+        "label": "rwaUSDi Base deployment",
+        "url": "https://base.blockscout.com/address/0xd74fb32112b1ef5b4c428fead8da8d85a0019009"
+      },
+      {
+        "label": "rwaUSDi Arbitrum deployment",
+        "url": "https://arbitrum.blockscout.com/address/0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4"
+      },
+      {
+        "label": "rwaUSDi Monad deployment",
+        "url": "https://monadscan.com/address/0x650b616b46ff94000eb115926ab8393b90788d76"
       }
     ],
-    "evidence": "BLOCKED: the reviewed issuer documentation and Ethereum deployment identify the product and native token, but do not establish current holder-level freeze or transfer-restriction authority across the Ethereum, Arbitrum, Base, and Monad deployments. The inherited upstream exposure remains recorded; material deployment-control evidence is still required.",
-    "reviewer": "OpenAI Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "All four live implementations authorize chain-local Safe 0xf25c404c101d40d88b5dcd64b82583dbc918dd25 for forceTransfer(address,address,uint256) and arbitrary-holder burn(address,uint256), while the shared mint EOA lacks those permissions. Nonzero seizure simulations against actual holders succeeded on Ethereum block 25590408 (hash 0x114ec56a77156d27c6d2d91bf401ca428ffed4aa85f0ff0371b34af67f109052), Base block 48979919 (hash 0x4e8d1eed9b32347b239c53b681c713a167c3f491f0af1b79b7072d0ba3732c83), and Arbitrum block 486632328 (hash 0xc536c0320873e43c1c1d63ee1fdc6cd1b63ccf61cf61ac7c54867bfda503faeb); Monad block 89486097 (hash 0x6d816fae89965dc2323f02e29116adb6550c83b4a8870f8f75d539d10cf1b0be) confirmed selector authorization and a successful Safe call. Current Safe thresholds were Ethereum 3-of-8, Base 3-of-7, Arbitrum 1-of-7, and Monad 2-of-7.",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "reviewedAt": "2026-07-22"
   },
   "deploymentModel": "native-multichain",
   "collateralQuality": "rwa",
@@ -204,12 +233,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-16",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
     "confidence": "probable",
     "sources": [
       {
-        "label": "AFI rwaUSDi proof-of-reserves snapshot (2026-07-16)",
+        "label": "AFI rwaUSDi proof-of-reserves snapshot (2026-07-22)",
         "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
       },
       {
@@ -221,9 +250,9 @@
         "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
       }
     ],
-    "rationale": "AFI's dated proof verifies aggregate reserves and liabilities for rwaUSDi and the signed periodic index records weekly solvency checks through July 12, 2026, but the current proof returns no reserve breakdown. Multipli describes the rwaUSDi envelope as permissioned private pools spanning private credit, asset-backed lending, project finance, and structured or market-neutral strategies with scheduled redemptions and periodic pricing. Because no current holdings, weights, borrowers, funds, or strategy counterparties are disclosed, the complete envelope remains one unresolved mixed basket.",
+    "rationale": "AFI's proof payload dated 2026-07-22T18:30:41.260Z reports $1,200,000,000 of aggregate reserves against $390,010,160 of liabilities, a collateralization ratio of 3.076843, but returns no reserve breakdown. Multipli describes the rwaUSDi envelope as permissioned private pools spanning private credit, asset-backed lending, project finance, and structured or market-neutral strategies with scheduled redemptions and periodic pricing. Because no current holdings, weights, borrowers, funds, or strategy counterparties are disclosed, the complete envelope remains one unresolved mixed basket.",
     "compositionBasis": "AFI aggregate solvency proof plus Multipli's documented rwaUSDi eligible-asset envelope; current constituents and weights undisclosed",
-    "compositionAsOf": "2026-07-16",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
     "knownUnknownExposure": "Current asset classes, individual borrowers and funds, constituent weights, credit seniority, maturities, valuation marks, custody shares, strategy exposures, and redemption schedules are not exposed by the reviewed proof.",
     "knownUnknownExposurePct": 100,

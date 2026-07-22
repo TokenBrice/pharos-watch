@@ -16,9 +16,9 @@
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-5 Safety Score V9 mechanism review",
-    "rationale": "First Digital's reserve disclosures support the fiat-cash classification, but the reviewed materials do not disclose current FDUSD claim, custody-continuity, and reconciliation semantics beyond the reserve asset balances.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "FD121 issues FDUSD against segregated reserves composed of cash, bank deposits, and short-dated U.S. government instruments, with conditional par sale and redemption available through eligible account-holder rails. That issuer-reserve mechanism is neither a fund share nor a borrower vault, so fiat-cash remains the appropriate archetype without implying reserve entitlement for every secondary holder.",
     "sources": [
       {
         "label": "First Digital Labs transparency",
@@ -27,6 +27,10 @@
       {
         "label": "First Digital Labs FDUSD page",
         "url": "https://www.firstdigitallabs.com/fdusd"
+      },
+      {
+        "label": "First Digital FDUSD terms",
+        "url": "https://www.firstdigitallabs.com/legal/fdd-terms"
       }
     ]
   },

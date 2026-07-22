@@ -19,18 +19,18 @@
         "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
       },
       {
-        "label": "syzUSD Plasma deployment",
-        "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6#code"
+        "label": "syzUSD Plasma implementation",
+        "url": "https://plasmascan.to/address/0xa3982582016375a0b25cb7d572379d3d49e5e9c8#code"
       },
       {
         "label": "syzUSD Monad deployment",
-        "url": "https://monad.blockscout.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f?tab=contract"
+        "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
       }
     ],
-    "sourceFreeRationale": "Bounded unknown retained: syzUSD is a staked wrapper over yzUSD and two deployments are identified, but the reviewed wrapper and issuer materials do not establish a complete holder-level blacklist or freeze inventory across the tracked routes.",
-    "evidence": "Yuzu documents syzUSD as an ERC-4626 wrapper over yzUSD. The reviewed deployment references establish the wrapper scope but do not prove a direct holder-control function; inherited yzUSD access exposure remains unresolved rather than being treated as a direct syzUSD blacklist.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "sourceFreeRationale": "The wrapper implementations establish no direct holder freeze, while upstream yzUSD and reserve-asset access exposure remains inherited.",
+    "evidence": "The verified Plasma vault's pause is scoped to mint and redemption, and neither the Plasma nor Monad implementation exposes a holder blacklist or freeze selector. syzUSD therefore has no direct freeze path in the reviewed deployments and inherits the parent's upstream access exposure.",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "reviewedAt": "2026-07-22"
   },
   "variantOf": "yzusd-yuzu",
   "variantKind": "strategy-vault",
@@ -38,13 +38,17 @@
   "implementationLaunchDate": "2025-10-10",
   "mechanismArchetypeReview": {
     "disposition": "unresolved",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex Prompt 6b implementation review",
-    "rationale": "The primary Plasma syzUSD vault deployment was created on 2025-10-10. This establishes the current wrapper implementation boundary; because syzUSD is a variant, the date review retains its parent-inherited mechanism classification rather than declaring a redundant direct archetype.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "syzUSD is an ERC-4626 strategy-vault share redeemable for yzUSD. It has no mechanism that intentionally diverges from the parent, so no direct override is set: the variant inherits yzUSD's resolved cdp archetype while retaining its distinct NAV-accreting wrapper semantics.",
     "sources": [
       {
         "label": "Yuzu syzUSD documentation",
         "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+      },
+      {
+        "label": "Yuzu yzUSD documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
       },
       {
         "label": "syzUSD Plasma vault creation transaction",

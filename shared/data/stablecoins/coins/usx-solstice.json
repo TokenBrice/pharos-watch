@@ -229,16 +229,24 @@
     }
   ],
   "launchDate": "2025-09-30",
-  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetype": "synthetic-delta-neutral",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-13",
-    "reviewer": "Codex mechanism review",
-    "rationale": "USX is issued against deposited USDC and USDT reserves; oracle monitoring does not turn the reserve receipt into a CDP.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "Solstice defines USX as its base synthetic dollar and makes delta-neutral hedged digital-asset positions part of the backing alongside cash and tokenized Treasuries. Because the dollar mechanism depends on a managed long-asset and short-derivative book rather than solely on a par fiat claim, synthetic-delta-neutral is the closest closed-taxonomy archetype.",
     "sources": [
       {
-        "label": "Solstice USX docs",
-        "url": "https://docs.solstice.finance/usx"
+        "label": "Solstice USX documentation",
+        "url": "https://docs.solstice.finance/solstice-for-users/usx.md"
+      },
+      {
+        "label": "Solstice attestations and proof-of-solvency documentation",
+        "url": "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md"
+      },
+      {
+        "label": "Solstice risk disclosures",
+        "url": "https://docs.solstice.finance/legal-documents/risk-disclosures.md"
       }
     ]
   }

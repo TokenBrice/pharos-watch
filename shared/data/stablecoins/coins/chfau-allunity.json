@@ -14,6 +14,26 @@
   "collateral": "CHF-denominated reserve assets held 1:1 in separate accounts at regulated EU credit institutions, as CHF cash or eligible low-risk CHF HQLAs under MiCAR and German payment-services law",
   "pegMechanism": "Direct 1:1 redemption through AllUnity; holders have statutory right of redemption at par value under MiCA Article 49; mint and redeem via AllUnity platform with straight-through processing",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "AllUnity defines CHFAU as a CHF-denominated e-money token issued and redeemed at par, backed one-for-one by segregated CHF cash and eligible low-risk CHF liquid assets. That direct regulated issuer claim is a fiat-cash mechanism, not a NAV fund share.",
+    "sources": [
+      {
+        "label": "AllUnity CHFAU product disclosure",
+        "url": "https://allunity.com/chfau"
+      },
+      {
+        "label": "AllUnity CHFAU whitepaper",
+        "url": "https://framerusercontent.com/assets/JeQkppdC27Tdc6SzTqM9nYkKKQI.html"
+      },
+      {
+        "label": "AllUnity trust center",
+        "url": "https://allunity.com/trust-center"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "allunity-chf",
   "canBeBlacklisted": true,

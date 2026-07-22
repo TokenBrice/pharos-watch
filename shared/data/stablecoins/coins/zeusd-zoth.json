@@ -564,8 +564,8 @@
   ],
   "mechanismArchetypeReview": {
     "disposition": "unresolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "ORCL-DRAIN data review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
     "rationale": "The tracked deprecated V1 is not a continuing borrower CDP: its router fixes collateral value and debt at mint and provides exact burn-and-reclaim redemption without ongoing health checks or forced liquidation. Pharos's closed archetype enum has no exact category for this fixed-mint RWA escrow receipt, so the false CDP label is removed rather than replaced with a materially different fiat issuer or fund-share model.",
     "sources": [
       {

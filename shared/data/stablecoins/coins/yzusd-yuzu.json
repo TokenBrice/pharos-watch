@@ -16,13 +16,17 @@
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex V9 curation",
-    "rationale": "Yuzu documents yzUSD as an overcollateralized senior pool tranche with USDT0 minting and yzPP first-loss protection. The tracked yzUSD proxy was created in Plasma block 3172399 on 2025-10-10, establishing the implementation boundary for the reviewed mechanism.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "Yuzu documents yzUSD as the senior claim on an overcollateralized on-chain strategy pool, minted against USDT0 and protected by the separate yzPP first-loss tranche. Within the closed taxonomy, cdp is the closest collateralized-debt archetype even though risk is pooled rather than held in borrower-specific vaults.",
     "sources": [
       {
-        "label": "Yuzu Money documentation",
-        "url": "https://yuzu-money.gitbook.io/yuzu-money"
+        "label": "Yuzu stablecoin documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+      },
+      {
+        "label": "Yuzu Protection Pool documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-protection-pool-yzpp"
       },
       {
         "label": "yzUSD Plasma contract creation transaction",
@@ -102,14 +106,19 @@
       "chain": "plasma",
       "address": "0x6695c0f8706c5ace3bdf8995073179cca47926dc",
       "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x9dcb0d17edde04d27f387c89fecb78654c373858",
+      "decimals": 18
     }
   ],
   "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "yzUSD's only material deployment is native issuance on Plasma. DefiLlama still reports ~24 yzUSD on a legacy Monad LayerZero OFT (0x9dcB0D17eDDE04D27F387c89fECb78654C373858), but peers(eid) returns zero for all probed endpoint ids on the Monad OFT (re-verified 2026-07-20 at block 88919965) and Yuzu announced it replaced LayerZero with Chainlink CCIP as its exclusive cross-chain infrastructure. The dormant Monad residue is below Pharos deployment and route-materiality thresholds, so it is not promoted as an active catalog route.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge-route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "summary": "yzUSD's only material deployment is native issuance on Plasma. DefiLlama still reports ~24 yzUSD on a legacy Monad LayerZero OFT (0x9dcB0D17eDDE04D27F387c89fECb78654C373858), but peers(eid) returns zero for all probed endpoint ids on the Monad OFT (re-verified 2026-07-20 at block 88919965) and Yuzu announced it replaced LayerZero with Chainlink CCIP as its exclusive cross-chain infrastructure. The dormant Monad residue is inventoried as a reviewed subthreshold retired route and excluded from material tiering.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
     "confidence": "verified",
     "protocols": [
       {
@@ -121,7 +130,7 @@
           "external-lock-mint",
           "oft-adapter"
         ],
-        "note": "LayerZero metadata maps the Plasma adapter and Monad NativeOFT at 0x9dcb...3858 to canonical Plasma yzUSD. Both endpoint peer mappings were zero at Plasma block 27084996 and Monad block 87683087; the Monad token retained 23.772 yzUSD of residual supply."
+        "note": "LayerZero metadata maps the Plasma adapter and Monad NativeOFT at 0x9dcb...3858 to canonical Plasma yzUSD. Both endpoint peer mappings were zero at Plasma block 27084996 and Monad block 88919965; the Monad token retained 23.772 yzUSD of residual supply."
       }
     ],
     "sources": [
@@ -167,7 +176,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The authored contract registry contains only the material native Plasma deployment. The retired Monad OFT residue is documented at profile level and is not treated as an active route.",
+        "reviewNote": "The native Plasma deployment carries the material supply. The retired Monad OFT residue is separately inventoried as a reviewed subthreshold route.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedBlock": 27084996,
         "sources": [
@@ -181,6 +190,46 @@
           }
         ],
         "observedAt": "2026-07-20"
+      },
+      {
+        "id": "monad:0x9dcb0d17edde04d27f387c89fecb78654c373858",
+        "sourceChain": "plasma",
+        "destinationChain": "monad",
+        "canonicalChain": "plasma",
+        "contractAddress": "0x9dcb0d17edde04d27f387c89fecb78654c373858",
+        "protocol": "LayerZero V2 OFT (retired)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Retired Monad representation with 23.772 yzUSD total supply and zero peers at block 88919965. The transparent proxy uses implementation 0xd48ea6df9d3cdb6e3a68fb12fa6c62f66e2d9a38; ProxyAdmin 0xd7b4cdf9a7646ded1af7d6ba756e3aa45859269e and the OFT are both controlled without delay by no-code EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae. The route is reviewed for control completeness but remains retired and immaterial.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 88919965,
+        "controllerChain": "monad",
+        "controllerAddress": "0xd7b4cdf9a7646ded1af7d6ba756e3aa45859269e",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:monad:0x9dcb0d17edde04d27f387c89fecb78654c373858",
+          "contract:monad:0xd7b4cdf9a7646ded1af7d6ba756e3aa45859269e",
+          "eoa:evm:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae"
+        ],
+        "sources": [
+          {
+            "label": "Monad legacy yzUSD OFT contract",
+            "url": "https://monadscan.com/address/0x9dcb0d17edde04d27f387c89fecb78654c373858#code"
+          },
+          {
+            "label": "Monad transaction clearing the Plasma OFT peer",
+            "url": "https://monadscan.com/tx/0xbf550ea959a1b075bc1227103d534dc90be8ad8c24afd7dc2f942a14ccd167f8"
+          },
+          {
+            "label": "LayerZero deployment metadata",
+            "url": "https://metadata.layerzero-api.com/v1/metadata"
+          }
+        ]
       }
     ]
   },
@@ -196,13 +245,13 @@
         "url": "https://yuzu-money.gitbook.io/yuzu-money/security-infrastructure/hypernative-sentinel"
       },
       {
-        "label": "YZUSD Plasma deployment",
-        "url": "https://plasmascan.to/address/0x6695c0f8706c5ace3bdf8995073179cca47926dc?tab=contract"
+        "label": "YZUSD Plasma implementation",
+        "url": "https://plasmascan.to/address/0x32d7d5bf842d6ae28c9dd4fac4c6662cf9bf5cfe#code"
       }
     ],
-    "evidence": "Yuzu's official overview describes yzUSD as an overcollateralized DeFi-suite stablecoin, while its security documentation describes protocol-level threat response and the ability to block a malicious wallet or contract from interacting with the protocol. Those materials do not establish a dated holder-level blacklist or freeze function for the tracked Plasma token contract. The inherited status is retained for the reserve, custody, and protocol-control dependencies; no direct token restriction is asserted.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "The verified Plasma implementation exposes pause controls for minting and redemption but no direct holder blacklist or freeze function. Yuzu's threat-response documentation can block malicious actors from protocol interaction, while issuer-freeze exposure remains inherited through reserve assets. The inherited status records that upstream exposure without asserting a direct yzUSD token restriction.",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "reviewedAt": "2026-07-22"
   },
   "chainTier": "unproven",
   "collateralQuality": "exotic",
@@ -876,27 +925,12 @@
           }
         ],
         "evidence": "At block 27099366, this TimelockController has getMinDelay() = 43200 seconds and directly holds both LIMIT_MANAGER_ROLE and RESTRICTION_MANAGER_ROLE. Safe 0xe61a...530d is proposer and canceller; EOA 0x0939...b60f is an additional canceller; execution is open and DEFAULT_ADMIN_ROLE is held by the timelock itself."
-      },
-      {
-        "label": "Fordefi MPC treasury workspace (collateral operations)",
-        "role": "custodian",
-        "authorityType": "custodian",
-        "directMintAbility": "none",
-        "chain": "plasma",
-        "canRaiseCap": "unknown",
-        "sources": [
-          {
-            "label": "Yuzu Stablecoin (yzUSD) docs",
-            "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
-          }
-        ],
-        "evidence": "Deposited USDT0 is pulled into a Fordefi MPC workspace whose policy only permits interaction with whitelisted protocols/contracts; overcollateralization and a yzPP junior tranche backstop the senior yzUSD."
       }
     ],
     "review": {
-      "evidence": "At Plasma block 27099366, yzUSD is a TransparentUpgradeableProxy with implementation 0x32d7...5cfe and ProxyAdmin 0x6ccf...d2aa. ProxyAdmin.owner() is a 172800-second TimelockController proposed by a 4-of-5 Safe. LIMIT_MANAGER_ROLE and RESTRICTION_MANAGER_ROLE are each currently held by a 3-of-5 Safe and a 43200-second TimelockController proposed by that Safe; both Safes have the same five EOA owners. This corrects the prior UUPS classification and the false claim that the 48-hour timelock was an unresolvable custom contract. The remaining blocker is narrower: historical MINTER_ROLE grants/revokes have not yet been exhaustively reconciled to a complete current holder set. MINTER_ROLE reconciliation completed 2026-07-20: full RoleGranted/RoleRevoked history of the yzUSD token on Plasma (Routescan index) reconciled against per-account hasRole calls at block 27578074 \u2014 40 live MINTER_ROLE holders, all EOAs (enumerated in the direct-minter control evidence).",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Plasma block 27099366, yzUSD is a TransparentUpgradeableProxy with implementation 0x32d7...5cfe and ProxyAdmin 0x6ccf...d2aa. ProxyAdmin.owner() is a 172800-second TimelockController proposed by a 4-of-5 Safe. LIMIT_MANAGER_ROLE and RESTRICTION_MANAGER_ROLE are each held by a 3-of-5 Safe and a 43200-second TimelockController proposed by that Safe; both Safes have the same five EOA owners. Full RoleGranted/RoleRevoked history reconciled against hasRole calls at block 27578074 found exactly 40 live MINTER_ROLE holders, all EOAs and enumerated in the direct-minter control evidence. Fordefi remains documented in custodyProfile but is excluded from mint controls because it has no mint authority.",
+      "reviewer": "GPT SOL-NR-A wave6",
+      "reviewedAt": "2026-07-22",
       "sources": [
         {
           "label": "Yuzu Stablecoin (yzUSD) docs",

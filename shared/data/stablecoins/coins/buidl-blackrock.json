@@ -14,6 +14,22 @@
   "collateral": "Cash, U.S. Treasury bills, and repurchase agreements held by Bank of New York Mellon as custodian; tokenized and administered by Securitize",
   "pegMechanism": "NAV-based pricing with institutional redemption through BlackRock/Securitize",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "BUIDL is an authenticated participating share in BlackRock's institutional liquidity fund, not a direct payment-stablecoin claim. Securitize identifies the fund's cash, U.S. Treasury bill, and repurchase-agreement portfolio and its $1 NAV distribution design, so the tokenized-Treasury archetype matches the live fund-share claim while preserving its NAV and eligibility constraints.",
+    "sources": [
+      {
+        "label": "Securitize BUIDL product disclosure",
+        "url": "https://securitize.io/blackrock/buidl"
+      },
+      {
+        "label": "SEC-filed BUIDL participating-share agreement",
+        "url": "https://www.sec.gov/Archives/edgar/data/2094496/000121390026042685/ea026411904ex10-9.htm"
+      }
+    ]
+  },
   "llamaId": "173",
   "detailProvider": "defillama",
   "geckoId": "blackrock-usd-institutional-digital-liquidity-fund",

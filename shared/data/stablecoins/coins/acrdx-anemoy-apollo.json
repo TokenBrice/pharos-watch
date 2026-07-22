@@ -14,6 +14,22 @@
   "collateral": "Tokenized feeder exposure to Apollo Diversified Credit Fund through the Anemoy Tokenized Apollo Diversified Credit Fund Segregated Portfolio, investing across corporate direct lending, asset-backed lending, performing credit, and dislocated credit.",
   "pegMechanism": "NAV-accreting fund share rather than a fixed $1 token; primary subscriptions and redemptions are permissioned at fund NAV.",
   "mechanismArchetype": "rwa-credit-fund",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "ACRDX is a permissioned share of an Anemoy feeder that invests in Apollo Diversified Credit Fund. The holder owns a NAV-accreting credit-fund interest, not a fixed-par stablecoin claim, so rwa-credit-fund preserves the feeder and underlying fund structure.",
+    "sources": [
+      {
+        "label": "Anemoy ACRDX launch disclosure",
+        "url": "https://www.anemoy.io/news/acrdx-launched"
+      },
+      {
+        "label": "Centrifuge ACRDX launch disclosure",
+        "url": "https://centrifuge.io/blog/acrdx-launch-on-centrifuge"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "anemoy-tokenized-apollo-diversified-credit-fund",
   "protocolSlug": "centrifuge",
@@ -119,7 +135,7 @@
       "name": "Apollo Diversified Credit-I Fund shares",
       "pct": 97.11,
       "risk": "high",
-      "assetClass": "private-credit",
+      "assetClass": "fund-share",
       "issuerOrObligor": "Apollo Diversified Credit Fund, advised by Apollo Global Management",
       "riskFactors": [
         "credit",
@@ -159,8 +175,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 NR-recovery review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
     "confidence": "verified",
     "sources": [
       {
@@ -180,7 +196,7 @@
         "url": "https://docs.centrifuge.io/"
       }
     ],
-    "rationale": "Chronicle's live July 21 Proof of Asset reports USD 42,362,031 of Apollo Diversified Credit-I Fund shares, USD 1,188,950 cash, and USD 70,838.76 cryptocurrency, totaling USD 43,621,819.76 of gross holdings. Those values produce the 97.11%, 2.73%, and 0.16% weights recorded here. Chronicle separately reports USD 43,546,443 NAV, 42,634,425 outstanding shares, and a USD 1.021392 share price, with the reported NAV and share supply reconciling to the stated per-share value. Gross holdings exceed reported NAV by USD 75,376.76, but the dashboard does not explain that difference; it is retained as a reporting uncertainty rather than attributed to verified fund liabilities. The exact cryptocurrency and cash counterparties also remain explicit unknowns.",
+    "rationale": "Chronicle's live July 21 Proof of Asset reports USD 42,362,031 of Apollo Diversified Credit-I Fund shares, USD 1,188,950 cash, and USD 70,838.76 cryptocurrency, totaling USD 43,621,819.76 of gross holdings. Those values produce the 97.11%, 2.73%, and 0.16% weights recorded here; the dominant reserve is classified as the disclosed fund share rather than look-through private credit. Chronicle separately reports USD 43,546,443 NAV, 42,634,425 outstanding shares, and a USD 1.021392 share price, with the reported NAV and share supply reconciling to the stated per-share value. Gross holdings exceed reported NAV by USD 75,376.76, but the dashboard does not explain that difference; it is retained as a reporting uncertainty rather than attributed to verified fund liabilities. The exact cryptocurrency and cash counterparties also remain explicit unknowns.",
     "compositionBasis": "Chronicle-verified gross feeder-fund holdings, reconciled to ACRDX NAV and outstanding share supply",
     "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
@@ -209,6 +225,36 @@
         "rationale": "Chronicle verifies the aggregate cryptocurrency value but does not identify the constituent token."
       }
     ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon Trust Company, N.A. (underlying Apollo fund custodian)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Apollo Diversified Credit Fund N-CSR",
+        "url": "https://www.sec.gov/Archives/edgar/data/1676197/000139834426004660/fp0097839-1_ncsr.htm"
+      },
+      {
+        "label": "Anemoy ACRDX launch disclosure",
+        "url": "https://www.anemoy.io/news/acrdx-launched"
+      },
+      {
+        "label": "BVI FSC Anemoy Capital SPC registry",
+        "url": "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited"
+      }
+    ],
+    "uncertainty": "The underlying Apollo fund filing names BNY Mellon Trust as custodian, but the feeder-level custodian, provider shares, segregation terms, and rehypothecation policy are not public. The BVI segregated-portfolio structure supports structural bankruptcy separation without proving custody-level segregation.",
+    "knownUnknownExposurePct": 100
   },
   "yieldConfig": {
     "yieldSource": "Anemoy Apollo Diversified Credit Fund NAV",
@@ -373,8 +419,8 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "ACRDX cross-chain movement uses Centrifuge cross-chain architecture over Wormhole messaging, so Pharos scores durable route exposure as an external validated network rather than Across liquidity/intent routing.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
     "confidence": "verified",
     "protocols": [
       {
@@ -395,6 +441,14 @@
       {
         "label": "Wormhole",
         "url": "https://wormhole.com/"
+      },
+      {
+        "label": "Centrifuge protocol deployments",
+        "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+      },
+      {
+        "label": "Centrifuge share-token bridge guide",
+        "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
       }
     ],
     "routes": [

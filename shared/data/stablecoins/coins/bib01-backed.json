@@ -14,6 +14,22 @@
   "collateral": "Tracker certificate fully backed by the BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01), held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
   "pegMechanism": "NAV-accreting tracker token (not pegged to $1); price reflects the underlying iShares 0-1yr T-bill ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "bIB01 is a NAV-accreting tracker certificate fully backed by shares of the iShares 0-1 year U.S. Treasury Bond UCITS ETF. It is not a fixed $1 payment claim; within the closed taxonomy, tbill preserves the tokenized short-Treasury fund exposure and its fund-NAV behavior.",
+    "sources": [
+      {
+        "label": "Backed bIB01 product page",
+        "url": "https://assets.backed.fi/products/bib01"
+      },
+      {
+        "label": "Backed legal documentation",
+        "url": "https://assets.backed.fi/legal-documentation"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "backed-ib01-treasury-bond-0-1yr",
   "proofOfReserves": {
