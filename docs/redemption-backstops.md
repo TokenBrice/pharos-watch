@@ -353,7 +353,7 @@ Key columns:
 
 ### `redemption_backstop_history`
 
-Daily history table keyed by `(stablecoin_id, snapshot_date)`.
+Daily history table keyed by `(stablecoin_id, snapshot_date)`. No runtime reader consumes it today; rows are retained for 90 days for future track-record use and pruned in bounded batches by the same retention pass that prunes run manifests.
 
 Stored fields:
 

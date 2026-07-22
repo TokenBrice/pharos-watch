@@ -1146,6 +1146,12 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
           updated_at INTEGER NOT NULL,
           PRIMARY KEY (snapshot_run_id, stablecoin_id)
         );
+        CREATE TABLE redemption_backstop_history (
+          stablecoin_id TEXT NOT NULL,
+          snapshot_date INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          PRIMARY KEY (stablecoin_id, snapshot_date)
+        );
       `);
       const insertRun = sqlite.prepare(
         `INSERT INTO redemption_backstop_runs (
@@ -1170,10 +1176,19 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
         insertRun.run(run.runId, run.startedAt, run.completedAt, run.status, run.completedAt, run.completedAt);
         insertRunRow.run(run.runId, `${run.runId}-coin`, run.completedAt ?? run.startedAt);
       }
+      const historyRetentionSec = 2_000;
+      const historyCutoff = nowSec - historyRetentionSec;
+      const insertHistory = sqlite.prepare(
+        "INSERT INTO redemption_backstop_history (stablecoin_id, snapshot_date, updated_at) VALUES (?, ?, ?)",
+      );
+      insertHistory.run("usdt-tether", historyCutoff - 100, historyCutoff - 100);
+      insertHistory.run("usdc-circle", historyCutoff - 50, historyCutoff - 50);
+      insertHistory.run("usdt-tether", historyCutoff + 500, historyCutoff + 500);
 
       const result = await pruneRedemptionBackstopRunRetention(createSqliteD1(sqlite), {
         nowSec,
         retentionSec,
+        historyRetentionSec,
         preserveRunId: "current-completed",
         batchSize: 2,
       });
@@ -1182,8 +1197,14 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
         cutoff,
         runRowsDeletedCount: 3,
         runsDeletedCount: 3,
+        historyCutoff,
+        historyRowsDeletedCount: 2,
         warnings: [],
       });
+      const remainingHistory = sqlite
+        .prepare("SELECT stablecoin_id, snapshot_date FROM redemption_backstop_history")
+        .all() as Array<{ stablecoin_id: string; snapshot_date: number }>;
+      expect(remainingHistory).toEqual([{ stablecoin_id: "usdt-tether", snapshot_date: historyCutoff + 500 }]);
       const remainingRuns = sqlite
         .prepare("SELECT run_id FROM redemption_backstop_runs ORDER BY run_id ASC")
         .all()
@@ -1263,11 +1284,17 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
         rows: [],
         throwError: new Error("row prune failed"),
       },
+      {
+        match: "DELETE FROM redemption_backstop_history",
+        rows: [],
+        runMeta: { changes: 0 },
+      },
     ]);
 
     const result = await pruneRedemptionBackstopRunRetention(db, {
       nowSec: 10_000,
       retentionSec: 1_000,
+      historyRetentionSec: 1_000,
       preserveRunId: "current-run",
       batchSize: 2,
     });
@@ -1276,11 +1303,14 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
       cutoff: 9_000,
       runRowsDeletedCount: 0,
       runsDeletedCount: 1,
+      historyCutoff: 9_000,
+      historyRowsDeletedCount: 0,
       warnings: [expect.stringContaining("row prune failed")],
     });
     const history = db.getHistory().filter((entry) => entry.sql.includes("DELETE FROM redemption_backstop"));
     expect(history[0]?.sql).toContain("DELETE FROM redemption_backstop_runs");
     expect(history[1]?.sql).toContain("DELETE FROM redemption_backstop_run_rows");
+    expect(history[2]?.sql).toContain("DELETE FROM redemption_backstop_history");
   });
 });
 

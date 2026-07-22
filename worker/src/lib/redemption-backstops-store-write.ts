@@ -10,11 +10,16 @@ export interface RedemptionBackstopRunRetentionResult {
   cutoff: number;
   runRowsDeletedCount: number;
   runsDeletedCount: number;
+  historyCutoff: number;
+  historyRowsDeletedCount: number;
   warnings: string[];
 }
 
 const REDEMPTION_BACKSTOP_RUN_RETENTION_SEC = 14 * DAY_SECONDS;
 const REDEMPTION_BACKSTOP_RUN_RETENTION_BATCH_SIZE = 100;
+/** Daily history has no current reader; retained 90 days for future track-record use (owner ruling 2026-07-22). */
+const REDEMPTION_BACKSTOP_HISTORY_RETENTION_SEC = 90 * DAY_SECONDS;
+const REDEMPTION_BACKSTOP_HISTORY_RETENTION_BATCH_SIZE = 500;
 
 export const SNAPSHOT_ROW_COLUMNS = [
   "stablecoin_id",
@@ -384,6 +389,27 @@ async function deleteOrphanRedemptionBackstopRunRowsBatch(
   return Number(result.meta?.changes ?? 0);
 }
 
+async function deleteRedemptionBackstopHistoryBatch(
+  db: D1Database,
+  args: { cutoffDate: number; batchSize: number },
+): Promise<number> {
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `DELETE FROM redemption_backstop_history
+          WHERE rowid IN (
+            SELECT rowid
+              FROM redemption_backstop_history
+             WHERE snapshot_date < ?
+             LIMIT ?
+          )`,
+      )
+      .bind(args.cutoffDate, args.batchSize)
+      .run(),
+  );
+  return Number(result.meta?.changes ?? 0);
+}
+
 async function deleteRedemptionBackstopRunsBatch(
   db: D1Database,
   args: { cutoff: number; preserveRunId: string; batchSize: number },
@@ -405,6 +431,7 @@ export async function pruneRedemptionBackstopRunRetention(
   input: {
     nowSec?: number;
     retentionSec?: number;
+    historyRetentionSec?: number;
     preserveRunId: string;
     batchSize?: number;
   },
@@ -443,10 +470,28 @@ export async function pruneRedemptionBackstopRunRetention(
     warnings.push(`Run-row retention prune failed: ${message}`);
   }
 
+  const historyCutoff = nowSec - (input.historyRetentionSec ?? REDEMPTION_BACKSTOP_HISTORY_RETENTION_SEC);
+  let historyRowsDeletedCount = 0;
+  try {
+    for (;;) {
+      const deletedHistory = await deleteRedemptionBackstopHistoryBatch(db, {
+        cutoffDate: historyCutoff,
+        batchSize: REDEMPTION_BACKSTOP_HISTORY_RETENTION_BATCH_SIZE,
+      });
+      historyRowsDeletedCount += deletedHistory;
+      if (deletedHistory < REDEMPTION_BACKSTOP_HISTORY_RETENTION_BATCH_SIZE) break;
+    }
+  } catch (error) {
+    const message = toErrorMessage(error);
+    warnings.push(`Daily-history retention prune failed: ${message}`);
+  }
+
   return {
     cutoff,
     runRowsDeletedCount,
     runsDeletedCount,
+    historyCutoff,
+    historyRowsDeletedCount,
     warnings,
   };
 }
