@@ -16,9 +16,9 @@
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-1 mechanism evidence review",
-    "rationale": "XT.COM's first-party announcement describes XTUSD as an XTDao vault system in which users mint against collateral and unsafe vaults are auctioned, establishing the CDP archetype.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "XT.COM describes XTUSD as an XTDao vault system in which users mint debt against overcollateralized assets and unsafe vaults are auctioned. Those borrower-vault and liquidation mechanics establish the cdp archetype even though the current live collateral and control graph remain opaque.",
     "sources": [
       {
         "label": "XT.COM TAI to XTUSD announcement",

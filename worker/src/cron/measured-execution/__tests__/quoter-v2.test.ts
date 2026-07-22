@@ -28,9 +28,12 @@ import { createDexMeasuredExecutionRpcBudget } from "../profiles";
 
 interface ReplayFixture {
   name: string;
-  adapterProfileId: "uniswap-v3-quoter-v2" | "pancakeswap-v3-quoter-v2";
-  protocol: "uniswap-v3" | "pancakeswap";
-  chain: "ethereum" | "bsc";
+  adapterProfileId:
+    | "uniswap-v3-quoter-v2"
+    | "pancakeswap-v3-quoter-v2"
+    | "aerodrome-slipstream-quoter-v2";
+  protocol: "uniswap-v3" | "pancakeswap" | "aerodrome-slipstream";
+  chain: "ethereum" | "bsc" | "base";
   blockNumber: number;
   pool: `0x${string}`;
   tokenIn: `0x${string}`;
@@ -40,6 +43,7 @@ interface ReplayFixture {
   amountOutRaw: string;
   factoryReturnData: `0x${string}`;
   quoteReturnData: `0x${string}`;
+  tickSpacing?: number;
 }
 
 const REPLAYS: readonly ReplayFixture[] = [
@@ -75,6 +79,23 @@ const REPLAYS: readonly ReplayFixture[] = [
     quoteReturnData:
       "0x00000000000000000000000000000000000000000000d39b1312b8ab9e71c87e0000000000000000000000000000000000000000ffe9569bc667ee7d5aa6bbfa0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000002a803",
   },
+  {
+    name: "Base Aerodrome Slipstream USDC to USDbC",
+    adapterProfileId: "aerodrome-slipstream-quoter-v2",
+    protocol: "aerodrome-slipstream",
+    chain: "base",
+    blockNumber: 33_000_000,
+    pool: "0x3333333333333333333333333333333333333333",
+    tokenIn: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+    tokenOut: "0xd9aaec86b65d86f6a7b5b1b0c42ffa531710b6ca",
+    decimals: 6,
+    amountInRaw: "1000000000000",
+    amountOutRaw: "1000428895951",
+    factoryReturnData: "0x0000000000000000000000003333333333333333333333333333333333333333",
+    quoteReturnData:
+      "0x000000000000000000000000000000000000000000000000000000e8ee357ecf00000000000000000000000000000000000000010010b1148c71c129f534eb6500000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000017bbd",
+    tickSpacing: 50,
+  },
 ] as const;
 
 function makeTarget(fixture: ReplayFixture): DexMeasuredExecutionTarget {
@@ -89,7 +110,7 @@ function makeTarget(fixture: ReplayFixture): DexMeasuredExecutionTarget {
     tokenInAddress: fixture.tokenIn,
     tokenOutAddress: fixture.tokenOut,
     poolTokenAddresses: [fixture.tokenIn, fixture.tokenOut],
-    feePips: 100,
+    ...(fixture.tickSpacing != null ? { tickSpacing: fixture.tickSpacing } : { feePips: 100 }),
   });
   return {
     schemaVersion: "dex-measured-target-v1",
@@ -114,7 +135,7 @@ function makeTarget(fixture: ReplayFixture): DexMeasuredExecutionTarget {
       referencePriceUsd: 1,
       trackedAssetId: `${fixture.chain}-output`,
     },
-    feePips: 100,
+    ...(fixture.tickSpacing != null ? { tickSpacing: fixture.tickSpacing } : { feePips: 100 }),
     retainedTvlUsd: 20_000_000,
     retainedPoolPriceUsd: 1,
     capturedAt: 1_752_560_000,
@@ -185,7 +206,8 @@ describe("QuoterV2 pinned-block replay proofs", () => {
         poolTokenAddresses: target.poolTokenAddresses,
         tokenIn: target.tokenIn,
         tokenOut: target.tokenOut,
-        feePips: target.feePips,
+        ...(target.feePips != null ? { feePips: target.feePips } : {}),
+        ...(target.tickSpacing != null ? { tickSpacing: target.tickSpacing } : {}),
         retainedTvlUsdAtQuote: target.retainedTvlUsd,
         retainedPoolPriceUsdAtQuote: target.retainedPoolPriceUsd,
         quotedAt: target.capturedAt + 60,

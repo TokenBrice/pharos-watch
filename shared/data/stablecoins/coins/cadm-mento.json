@@ -112,11 +112,20 @@
       {
         "label": "Mento Celo stablecoin documentation",
         "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "StableTokenV2 implementation source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+      },
+      {
+        "label": "Mento stablecoin backing configuration",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
       }
     ],
-    "evidence": "The Celo explorer resolves the tracked CADm proxy to verified StableTokenV2 implementation 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E. The reviewed implementation exposes standard stable-token transfer operations but no holder blacklist, freeze, or pause function. CADm retains inherited exposure from the Mento reserve mix, including freezable upstream stablecoins such as USDC, USDT, and EURC.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "sourceFreeRationale": "The current holder-facing CADm token has no direct blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
+    "evidence": "At finalized Celo block 72780426, CADm's sole tracked Celo deployment resolved to verified StableTokenV2 implementation 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E. It exposes ordinary ERC-20 transfers, permissioned minting, and self-burn only; it has no direct holder blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. The Mento Broker reserve configuration instead leaves shared reserve USDT, EURC, and USDC-family exposure as computed upstream risk.",
+    "reviewer": "GPT SOL-MENTO wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

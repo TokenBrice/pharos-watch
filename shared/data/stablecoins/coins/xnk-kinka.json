@@ -14,6 +14,22 @@
   "collateral": "Each XNK represents one fine troy ounce equivalent of 99.99% Japanese-brand physical gold bullion held through Gold Management LLC and stored with Loomis International vaulting; issuer is Kinka (BVI) Ltd.",
   "pegMechanism": "XNK can be exchanged for physical gold through GM LLC/storage-company desks after AML/KYC; issuer docs describe a 321.5 XNK minimum for ten 1 kg bars, and secondary-market price tracks one fine troy ounce of gold.",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "Kinka's issuer whitepaper states that each XNK represents one troy fine ounce of 99.99% Japanese-brand physical gold, with bullion held at Loomis International and physical exchange through the issuer's disclosed redemption process. The reference is gold, not USD; fiat-cash is retained only as the repository's established fully-reserved commodity-token archetype, with commodityOunces carrying the operative claim measurement.",
+    "sources": [
+      {
+        "label": "Kinka whitepaper",
+        "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
+      },
+      {
+        "label": "Kinka terms of use",
+        "url": "https://kinka-gold.com/wp-content/uploads/2022/12/Kinka_Terms-of-Use_ver1.pdf"
+      }
+    ]
+  },
   "commodityOunces": 1,
   "detailProvider": "commodity",
   "geckoId": "kinka",

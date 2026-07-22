@@ -915,6 +915,55 @@ describe("mergeStagedPools", () => {
     expect(metrics.get("usdai-usd-ai")?.protocolTvl.balancer).toBe(547760);
   });
 
+  it("does not apply Pancake V3 authority to an exact Pancake V2 pool", async () => {
+    const now = 1710000000;
+    const poolAddress = "0x108752b2a22c731ede3edac2205c63ae553e221a";
+    const uAddress = "0xce24439f2d9c6a2289f741120fe202248b666666";
+    const wbnbAddress = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c";
+    const mockDb = createMockDb([
+      {
+        pool_id: `bsc:${poolAddress}`,
+        stablecoin_id: "u-united-stables",
+        source: "dexscreener",
+        chain: "bsc",
+        protocol: "pancakeswap",
+        dex_id: "pancakeswap",
+        symbol: "U/WBNB",
+        tvl_usd: 150000,
+        volume_24h: 25000,
+        quality_multiplier: 0.5,
+        pool_type: "ds-amm",
+        fee_tier: null,
+        balance_ratio: null,
+        is_stable: null,
+        base_token: uAddress,
+        quote_token: wbnbAddress,
+        quote_symbol: "WBNB",
+        price_usd: 1,
+        locked_liq_pct: null,
+        discovered_at: now - 86400,
+        refreshed_at: now,
+      },
+    ]);
+    const metrics = new Map();
+
+    const result = await mergeStagedPools(
+      mockDb,
+      metrics as never,
+      makeKnownPoolIndex(),
+      now,
+      undefined,
+      makeAuthoritativeConfirmationIndex([{ protocol: "pancakeswap", chains: ["bsc"] }]),
+    );
+
+    expect(result.mergedCount).toBe(1);
+    expect(result.skippedByAuthoritativeProtocolCount).toBe(0);
+    expect(metrics.get("u-united-stables")?.topPools[0]?.extra?.evmV2ExecutionCandidate).toMatchObject({
+      source: "pancakeswap-v2",
+      poolAddress,
+    });
+  });
+
   it("merges CG staged pools and preserves balance ratio and locked liquidity", async () => {
     const now = 1710000000;
     const mockDb = createMockDb([

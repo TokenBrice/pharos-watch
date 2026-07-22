@@ -6,6 +6,22 @@
   "symbol": "EURO3",
   "oneLiner": "EURO3 is 3A DAO's overcollateralized euro stablecoin, minted on Polygon and Linea against whitelisted crypto and stablecoin collateral in user-owned vaults.",
   "mechanismArchetype": "cdp",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "3A documents EURO3 as minted through collateralized vault loans and burned on repayment or redemption. That live stabilization path is a CDP mechanism, not issuer cash issuance or a NAV fund share; its reference remains the euro rather than the U.S. dollar.",
+    "sources": [
+      {
+        "label": "3A DAO EURO3 documentation",
+        "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      },
+      {
+        "label": "EURO3 Polygon token",
+        "url": "https://polygonscan.com/token/0xa0e4c84693266a9d3bbef2f394b33712c76599ab"
+      }
+    ]
+  },
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "EUR",
@@ -400,10 +416,19 @@
   ],
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "EURO3 can be minted against supported stablecoin collateral such as USDC.e and USDT, so upstream freeze exposure is possible even though no direct holder blacklist override was authored for the EURO3 token.",
-    "reviewer": "Codex DefiLlama path addition",
-    "reviewedAt": "2026-05-14"
+    "evidence": "The reviewed Polygon EURO3 MintableToken is an Ownable ERC-20 with mint and burn control routed through MintableTokenOwner; the documented 3A collateral path includes centralized stablecoin collateral such as USDC.e and USDT. The reviewed token evidence does not establish a direct holder blacklist or freeze function, but an inherited impairment/control exposure remains through accepted collateral. This review does not assess transfer restrictions, which are routed to the transfer lane.",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "reviewedAt": "2026-07-22",
+    "sources": [
+      {
+        "label": "EURO3 Polygon MintableToken",
+        "url": "https://polygonscan.com/address/0xa0e4c84693266a9d3bbef2f394b33712c76599ab#code"
+      },
+      {
+        "label": "3A DAO EURO3 documentation",
+        "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+      }
+    ]
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

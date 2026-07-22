@@ -21,6 +21,26 @@
     "cadence": "real-time"
   },
   "mechanismArchetype": "synthetic-delta-neutral",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "XSY describes UTY as a dollar claim minted from USDC whose managed backing uses long spot assets and offsetting short perpetual positions, with asynchronous redemption after the strategy unwinds. Peg defense therefore depends on maintained hedge neutrality and venue continuity, directly matching synthetic-delta-neutral.",
+    "sources": [
+      {
+        "label": "YieldPoint core flows",
+        "url": "https://docs.yieldpoint.io/protocol/architecture/flows"
+      },
+      {
+        "label": "XSY protocol mechanics",
+        "url": "https://xsy-1.gitbook.io/xsy-main/protocol-mechanics"
+      },
+      {
+        "label": "XSY risk disclosures",
+        "url": "https://xsy-1.gitbook.io/xsy-main/risks"
+      }
+    ]
+  },
   "llamaId": "305",
   "detailProvider": "defillama",
   "geckoId": "unity-2",
@@ -238,13 +258,13 @@
       }
     ]
   },
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "YieldPoint contract addresses",
-        "url": "https://docs.yieldpoint.io/protocol/architecture/contracts"
+        "url": "https://docs.yieldpoint.io/protocol/architecture/contracts.md"
       },
       {
         "label": "Base UTY proxy and verified implementation",
@@ -259,9 +279,9 @@
         "url": "https://katanascan.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
       }
     ],
-    "evidence": "Pinned 2026-07-14 review covers the tracked Base vault and Avalanche/Katana OFT deployments. No active holder blacklist or freeze path was established, but the same immediate EOA owner controls the UUPS upgrade path on all three deployments and can replace transfer logic, so a bounded possible posture is retained.",
-    "reviewer": "TERRA-II access verification",
-    "reviewedAt": "2026-07-15"
+    "evidence": "The current Base implementation has no deployed holder blacklist or freeze function. At Base block 48619333, Avalanche block 90284859, and Katana block 37285133, however, the same no-code EOA 0xa695bb4b9a86daf0581233031f273697135e3016 directly owned every tracked zero-delay UUPS proxy and could replace token logic with holder-control functionality. The Yes result is therefore an established upgrade-control capability, not a claim that a blacklist is presently deployed.",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "reviewedAt": "2026-07-22"
   },
   "chainTier": "established-alt-l1",
   "collateralQuality": "exotic",

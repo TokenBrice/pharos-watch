@@ -21,6 +21,7 @@ describe("subgraph source families", () => {
 
     expect(result.aerodromePriceObs.size).toBe(0);
     expect(result.aerodromeIsStable.size).toBe(0);
+    expect(result.aerodromeV2ExecutionCandidates.size).toBe(0);
   });
 
   it("paginates the Uni V3 query by embedding the skip offset and page size", () => {

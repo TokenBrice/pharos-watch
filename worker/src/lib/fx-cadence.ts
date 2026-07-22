@@ -19,6 +19,8 @@ export const BUSINESS_DAILY_FX_PEGS: ReadonlySet<string> = new Set([
   "peggedMXN",
   "peggedMYR",
   "peggedKRW",
+  "peggedHKD",
+  "peggedINR",
 ]);
 
 export const CALENDAR_DAILY_FX_PEGS: ReadonlySet<string> = new Set([

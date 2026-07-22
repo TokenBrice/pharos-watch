@@ -157,7 +157,7 @@
   "reserves": [
     {
       "name": "Nest private and structured credit vaults",
-      "pct": 83.96,
+      "pct": 93.6,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "BlackOpal LiquidStone II FIDC (Brazilian credit-card receivables) via Nest vault",
@@ -172,7 +172,7 @@
     },
     {
       "name": "Liquid USDT balances",
-      "pct": 7.75,
+      "pct": 0.8,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -189,7 +189,7 @@
     },
     {
       "name": "Nest Treasury vault (nTBILL)",
-      "pct": 5.47,
+      "pct": 4.8,
       "risk": "low",
       "coinId": "ntbill-nest",
       "assetClass": "tokenized-security",
@@ -205,7 +205,7 @@
     },
     {
       "name": "Liquid USDC balances",
-      "pct": 2.48,
+      "pct": 0.5,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -222,7 +222,7 @@
     },
     {
       "name": "pUSD liquid balance",
-      "pct": 0.34,
+      "pct": 0.3,
       "risk": "high",
       "coinId": "pusd-plume",
       "depType": "collateral",
@@ -239,38 +239,38 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Nest vault positions API (live composition)",
+        "label": "Nest vault positions API (observed 2026-07-22)",
         "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/positions"
       },
       {
-        "label": "Nest available vaults (snapshot-dated composition)",
+        "label": "Nest available vaults (snapshot 2026-07-15; accessed 2026-07-22)",
         "url": "https://docs.nest.credit/about/available-vaults/"
       },
       {
-        "label": "Nest flow of funds (custody model)",
+        "label": "Nest flow of funds (accessed 2026-07-22)",
         "url": "https://docs.nest.credit/security-and-compliance/flow-of-funds/"
       },
       {
-        "label": "BlackOpal LiquidStone II fund",
+        "label": "BlackOpal LiquidStone II fund (accessed 2026-07-22)",
         "url": "https://blackopal.finance/"
       }
     ],
-    "rationale": "Nest's live vault-positions API at 2026-07-20 values the nOPAL vault at $37.79M: BlackOpal LiquidStone II (OALS2T on Plume and Ethereum) $31.73M, liquid USDT $2.93M, Nest Treasury vault nTBILL $2.07M, liquid USDC $0.94M, and pUSD $0.13M. Slice names mirror the nest-vault-positions live adapter buckets so the reviewed classification overlays the captured exposures; the previously recorded 96.66/2.44/0.9 split and the 2026-07-02 docs snapshot (95.2/3.46/1.39) are both superseded by the live API weights. The BlackOpal position is a single-investor sub-fund of a Brazilian FIDC holding credit-card receivables acquired via true sale, but obligor-level detail is not public, so that slice stays explicitly unresolved.",
-    "compositionBasis": "Nest live vault-positions API reserve values at 2026-07-20",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Nest's live vault-positions API, observed twice on 2026-07-22, values the nOPAL vault at $43,406,410.51: BlackOpal LiquidStone II OALS2T $40,635,908.28, nTBILL $2,070,017.04, USDT $349,313.32, USDC $221,495.12, and pUSD $129,676.76. Those values normalize to the recorded 93.6%, 4.8%, 0.8%, 0.5%, and 0.3% slices; zero nBASIS creates no slice. Names mirror the nest-vault-positions adapter buckets. BlackOpal describes LiquidStone II as a true-sale Brazilian FIDC exposure to short-dated credit-card receivables, but obligor-level composition and fund service providers are not public, so the dominant slice remains explicitly unresolved.",
+    "compositionBasis": "Nest live vault-positions API reserve values observed 2026-07-22",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
     "knownUnknownExposure": "The LiquidStone II FIDC's obligor-level receivable composition, FIDC service providers, and any fund-level financial audit are not public; the stablecoin and nTBILL legs are fully identified. A Nest Basis Vault (nBASIS) target component currently carries a zero balance and creates no slice.",
-    "knownUnknownExposurePct": 83.96,
+    "knownUnknownExposurePct": 93.6,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Nest private and structured credit vaults",
-        "pct": 83.96,
+        "pct": 93.6,
         "disposition": "insufficient-evidence",
         "rationale": "The BlackOpal LiquidStone II position is identified at fund level, but no current position-level receivable or obligor composition is published."
       }
@@ -292,25 +292,25 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Nest flow of funds (custody model)",
+        "label": "Nest flow of funds (accessed 2026-07-22)",
         "url": "https://docs.nest.credit/security-and-compliance/flow-of-funds/"
       },
       {
-        "label": "BlackOpal LiquidStone II fund",
+        "label": "BlackOpal LiquidStone II fund (accessed 2026-07-22)",
         "url": "https://blackopal.finance/"
       },
       {
-        "label": "Nest protocol contracts",
+        "label": "Nest protocol contracts (accessed 2026-07-22)",
         "url": "https://github.com/plumenetwork/nest-protocol"
       }
     ],
     "uncertainty": "Nest documents that underlying-asset cash and securities sit with third-party custodians rather than Nest itself, and BlackOpal describes LiquidStone II as a single-investor sub-fund of a Brazilian FIDC holding receivables acquired via true sale, which supports segregated, bankruptcy-remote treatment. The FIDC's custodian, administrator, and obligor-level positions are not named publicly, no fund-level financial attestation exists, and rehypothecation terms are not published.",
-    "knownUnknownExposurePct": 83.96
+    "knownUnknownExposurePct": 93.6
   },
   "liveReservesConfig": {
     "adapter": "nest-vault-positions",

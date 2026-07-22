@@ -14,6 +14,22 @@
   "collateral": "Tokenized fund shares in Securitize AAA CLO Tokenized Fund, Ltd., a BVI private fund investing substantially all assets in U.S. dollar-denominated AAA-rated CLO tranches, with BNY as custodian and BNY Investments as sub-advisor.",
   "pegMechanism": "NAV-accreting tokenized private-fund share rather than a fixed $1 peg; eligible investors subscribe through Securitize with Ethereum-issued shares, KYC/AML and investor-qualification controls, and limited liquidity/no guaranteed secondary market.",
   "mechanismArchetype": "rwa-credit-fund",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "STAC is a digital share of an unlevered private fund that invests substantially all assets in U.S. dollar AAA CLO tranches. Its value and redemption follow fund NAV rather than a fixed-par issuer claim, so the live instrument is a tokenized structured-credit fund and maps to rwa-credit-fund.",
+    "sources": [
+      {
+        "label": "Securitize STAC launch disclosure",
+        "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx"
+      },
+      {
+        "label": "SEC Form D for Securitize AAA CLO Tokenized Fund",
+        "url": "https://www.sec.gov/Archives/edgar/data/2095325/000209532525000001/0002095325-25-000001-index.htm"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "securitize-tokenized-aaa-clo-fund",
   "proofOfReserves": {

@@ -124,7 +124,7 @@ function capturedNavOutputInput(navObservedAtSec: number): ReportCardsFixedInput
         exitRouteObservations: [route],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.4",
+          capabilityMatrixVersion: "p4a.6",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,
@@ -298,7 +298,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         exitRouteObservations: [route],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.4",
+          capabilityMatrixVersion: "p4a.6",
           retainedPoolCount: 2_418,
           observationCount: 44,
           scoreEligibleObservationCount: 44,
@@ -361,7 +361,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         exitRouteObservations: [route],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.4",
+          capabilityMatrixVersion: "p4a.6",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,
@@ -482,11 +482,11 @@ describe("buildDexRouteReview model-confidence derivation", () => {
     };
     const reviews = buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle");
     expect(reviews).toHaveLength(2);
-    expect(
-      reviews.find((review) => review.routeId.includes("measured-executable-depth")),
-    ).toMatchObject({ modelConfidence: "high" });
-    expect(
-      reviews.find((review) => review.routeId.includes("reserve-based-amm-simulation")),
-    ).toMatchObject({ modelConfidence: "medium" });
+    expect(reviews.find((review) => review.routeId.includes("measured-executable-depth"))).toMatchObject({
+      modelConfidence: "high",
+    });
+    expect(reviews.find((review) => review.routeId.includes("reserve-based-amm-simulation"))).toMatchObject({
+      modelConfidence: "medium",
+    });
   });
 });

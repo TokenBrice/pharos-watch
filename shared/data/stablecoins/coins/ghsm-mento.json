@@ -95,9 +95,8 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Mento Celo mainnet deployment inventory",
@@ -144,10 +143,10 @@
         "url": "https://forno.celo.org"
       }
     ],
-    "sourceFreeRationale": "Explicit possible: the tracked Celo proxy has no active holder blacklist, freeze, pause, or transfer hook in its verified implementation, but its owner can replace that holder-facing logic through the verified two-day Mento Timelock path. This direct possibility does not rely on, or suppress, separately evidenced upstream reserve exposure.",
-    "evidence": "At Celo block 72186904, the sole tracked GHSm proxy 0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313 returned StableTokenV2 implementation 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E; proxy _getOwner() and delegated owner() both returned Mento Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147, whose getMinDelay() returned 172800 seconds. The verified proxy source restricts _setImplementation and _setAndInitializeImplementation to that owner, and MGP-16 documents use of the same method to switch StableToken logic. The active implementation's verified ABI/source has ordinary transfer and transferFrom, permissioned minting, self-burn for broker/exchange callers, and Celo-VM-only gas accounting, but no issuer/governance callable blacklist, freeze, pause, seizure, or transfer-hook restriction; zero-value transfer and transferFrom simulations both returned true at the pinned block. Archived Forno calls at Celo block 69287341 returned the same implementation and owner, and a zero-value transfer simulation returned true. Mento's published legal source is a privacy notice, not direct token-control authority. Its live reserve API lists USDT, EURC, and USDC-family positions, while the archived dashboard confirms historical transparency availability; that upstream exposure remains distinct from this snapshot-specific direct result.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "sourceFreeRationale": "The current holder-facing GHSm token has no direct blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
+    "evidence": "At Celo block 72186904, the sole tracked GHSm proxy 0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313 resolved to StableTokenV2 implementation 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E and a 172800-second Mento Timelock owner. The verified active implementation exposes ordinary transfer and transferFrom, permissioned minting, and self-burn only; it has no direct blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer hook. The direct token-level freeze posture is therefore No as of this review. USDT, EURC, and USDC-family reserve collateral remains separately represented and can still produce computed upstream exposure.",
+    "reviewer": "GPT SOL-MENTO wave6",
+    "reviewedAt": "2026-07-22"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

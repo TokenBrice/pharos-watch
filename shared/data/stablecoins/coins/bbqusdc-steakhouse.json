@@ -13,10 +13,19 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "bbqUSDC resolves to Upstream because the vault holds USDC routed through Morpho markets, inheriting Circle's blacklist surface.",
-    "reviewer": "Codex data review",
-    "reviewedAt": "2026-06-20"
+    "sources": [
+      {
+        "label": "Smokehouse USDC exact-match MetaMorpho vault source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xbeefff209270748ddd194831b3fa287a5386f5bc?fields=sources,compilation"
+      },
+      {
+        "label": "Circle USDC Ethereum token",
+        "url": "https://etherscan.io/address/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-07-22: bbqUSDC is an immutable MetaMorpho vault whose asset() is USDC; its local share-transfer surface does not establish a holder blacklist, freeze, seizure, or pause. Circle USDC remains the direct reserve and upstream holder-control exposure, so inherited status is retained.",
+    "reviewer": "GPT SOL-CORP-C wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

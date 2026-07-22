@@ -31,7 +31,7 @@
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "GPT SOL-BIND wave6",
       "confidence": "verified",
       "sources": [
         {

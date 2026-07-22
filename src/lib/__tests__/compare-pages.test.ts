@@ -11,7 +11,7 @@ import {
 
 describe("compare page blacklist copy", () => {
   it("surfaces upstream FreezeWatch status in static comparison copy", () => {
-    const page = STATIC_COMPARISON_PAGE_BY_SLUG.get("usdt-tether-vs-usde-ethena");
+    const page = STATIC_COMPARISON_PAGE_BY_SLUG.get("usdt-tether-vs-dai-makerdao");
 
     expect(page).toBeDefined();
 

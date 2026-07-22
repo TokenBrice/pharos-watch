@@ -13,10 +13,27 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: sGHO resolves to Upstream because deposits remain GHO and inherit Aave-governance-controlled GHO admin authorities.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
+    "sources": [
+      {
+        "label": "Aave sGHO documentation",
+        "url": "https://aave.com/docs/ecosystem/gho/sgho"
+      },
+      {
+        "label": "sGHO token",
+        "url": "https://etherscan.io/address/0xe1753f2e00940cc31213dd92013cf019dfe4ca1d#readContract"
+      },
+      {
+        "label": "sGHO ProxyAdmin",
+        "url": "https://etherscan.io/address/0xc15700631020eba02317964550365b95a9a28adb"
+      },
+      {
+        "label": "Aave GovernanceV3 Ethereum address book (pinned)",
+        "url": "https://github.com/aave-dao/aave-address-book/blob/4ee7b505d40760f48bcfdc4edd5fe3d532ec88d2/src/GovernanceV3Ethereum.sol#L55-L56"
+      }
+    ],
+    "evidence": "At Ethereum block 25573280, sGHO asset() returned GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f. The wrapper's EIP-1967 implementation slot resolved to 0xff229a0bbb614a284de8ae0e41e5974878fd7c04 and its admin slot to ProxyAdmin 0xc15700631020eba02317964550365b95a9a28adb. ProxyAdmin.owner() returned the Aave Governance V3 Level-1 Executor 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A. The current wrapper implementation has ordinary ERC-20 transfers and no live holder blacklist, pause, seizure, or privileged holder-burn surface. Proxy upgrade authority remains reviewed in Mint Authority and does not create a direct FreezeWatch finding. sGHO therefore retains upstream-only status through its tracked GHO parent.",
+    "reviewer": "GPT SOL-BIND wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
@@ -126,8 +143,8 @@
         }
       ],
       "evidence": "At Ethereum block 25573280, asset() on the recorded sGHO token returned GHO 0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f. The wrapper is an EIP-1967 transparent proxy with implementation 0xff229a0bbb614a284de8ae0e41e5974878fd7c04 and ProxyAdmin 0xc15700631020eba02317964550365b95a9a28adb. Its ProxyAdmin owner is the Aave Governance V3 Level-1 Executor 0x5300A1a15135EA4dc7aD5a167152C01EFc9b192A. Shares are local deposit accounting; durable GHO issuance remains inherited from the reviewed parent. No named prudential supervisor applies to the wrapper.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "reviewer": "GPT SOL-BIND wave6",
+      "reviewedAt": "2026-07-22",
       "disposition": "scoreable"
     }
   },

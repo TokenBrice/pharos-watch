@@ -219,8 +219,8 @@
       }
     ],
     "evidence": "The accepted deployment inventory includes Ethereum ReceiptToken 0x48f9e38f3070ad8945dfeae3fa70987722e3d89c, BNB OFT IUSD 0x60B14ec49874Af1BA471685cb11132101aeBdF09, and Tempo TIP-20 IUSD 0x20c000000000000000000000AB02D39df30bd17E with OFT adapter 0xfA339b5a3AD03fd9Ff048F574636b60d0FC7538A. The issuer-listed Plasma address is excluded because pinned metadata identifies it as iUSDT, not iUSD. At Ethereum block 25534201, the verified ReceiptToken deployment was unpaused and its source has no transfer hook or holder blacklist. At BNB block 110030607, verified InfiniFiOFT source exposed standard OFT/ERC-20 transfers without a pause ABI. At Tempo block 30008157, TIP-20 IUSD reported paused() = false and transferPolicyId() = 1, while its official specification permits PAUSE_ROLE, DEFAULT_ADMIN_ROLE transfer-policy changes, and BURN_BLOCKED_ROLE burns of policy-blocked balances; the OFT adapter resolved token() to TIP-20 IUSD and owner() to the infiniFi Safe. Route role membership and Tempo adapter source were not fully enumerable, so a global no-freeze/no-restriction conclusion is unsupported.",
-    "reviewer": "Codex Safety Score V9 multi-deployment access review",
-    "reviewedAt": "2026-07-14"
+    "reviewer": "GPT SOL-CORP-B wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

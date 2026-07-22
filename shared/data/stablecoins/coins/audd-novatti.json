@@ -14,6 +14,18 @@
   "collateral": "Australian dollar cash and cash equivalents, including Treasury bills and notes, held in segregated accounts at Australian Authorised Deposit-taking Institutions by AUDC Pty Ltd",
   "pegMechanism": "Direct 1:1 redemption for AUD through AUDC Pty Ltd (AFSL No. 700123, Novatti subsidiary), with monthly independent reserve attestations by William Buck",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "AUDC's current transparency disclosure describes AUDD as fully backed by highly liquid Australian-dollar reserves held separately from operating funds, with monthly independent assurance and 1:1 AUD redemption. That is a centralized fiat-reserve claim rather than a CDP, synthetic, or NAV-share mechanism.",
+    "sources": [
+      {
+        "label": "AUDD transparency and monthly assurance index",
+        "url": "https://www.audd.digital/transparency/"
+      }
+    ]
+  },
   "llamaId": "165",
   "detailProvider": "defillama",
   "geckoId": "novatti-australian-digital-dollar",

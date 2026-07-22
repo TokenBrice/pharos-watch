@@ -30,9 +30,7 @@ export interface RedemptionUnusedTelemetryPolicyEntry extends RedemptionBackstop
 }
 
 export type RedemptionBackstopPolicyEntry =
-  | RedemptionFreshnessPolicyEntry
-  | RedemptionDegradedSyncWarningPolicyEntry
-  | RedemptionUnusedTelemetryPolicyEntry;
+  RedemptionFreshnessPolicyEntry | RedemptionDegradedSyncWarningPolicyEntry | RedemptionUnusedTelemetryPolicyEntry;
 
 const POLICY_OWNER = "redemption-backstop-v4";
 
@@ -165,6 +163,14 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
       "The collateral-positions-api adapter only emits redemption capacity when a redemptionBridge param is configured, and dEURO's liveReservesConfig has none, so a reserve-sync-metadata route would stay permanently unrated; the documented full-system collateral-redemption model remains until a dEURO redemption bridge or capacity feed is wired.",
     owner: POLICY_OWNER,
     reviewedAt: "2026-06-10",
+  },
+  {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "xofm-mento",
+    reason:
+      "The Mento adapter now emits XOFm Broker/BiPoolManager capacity and fee telemetry, but the newly reviewed reserve-backed legacy Broker route has not yet been added to the redemption registry as a PSM swap; the existing Mento batch config is CDP-scoped and must not be reused for XOFm.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-07-22",
   },
 ];
 

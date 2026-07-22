@@ -3,6 +3,7 @@ import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capac
 import type { CurvePoolEntry, LlamaPool } from "../dex-liquidity/types";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { buildPoolFingerprint } from "../dex-liquidity/pool-helpers";
+import { buildEvmV2ExecutionCandidate } from "../dex-liquidity/constant-product-v2";
 import { buildChainAddressToId, buildSymbolToChainScopedIds } from "./dex-liquidity-fixtures";
 
 function makePool(overrides: Partial<LlamaPool>): LlamaPool {
@@ -143,6 +144,67 @@ describe("processPoolMetrics", () => {
     expect(pool?.extra?.registryId).toBeUndefined();
     expect(pool?.extra?.measurement?.balanceMeasured).toBe(false);
     expect(usdt?.totalTvlForBalance).toBe(0);
+  });
+
+  it("attaches classic Aerodrome execution only to the exact volatile census pool", () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+    const weth = "0x4200000000000000000000000000000000000006";
+    const volatilePool = "0xcdac0d6c6c59727a65f871236188350531885c43";
+    const stablePool = "0x1111111111111111111111111111111111111111";
+    const candidate = buildEvmV2ExecutionCandidate({
+      chain: "base",
+      protocol: "aerodrome",
+      poolType: "aerodrome-volatile",
+      poolAddress: volatilePool,
+      tokenAddresses: [usdc, weth],
+      tokenSymbols: ["USDC", "WETH"],
+      confirmedStable: false,
+    })!;
+    const symbolToIds = new Map<string, string[]>([["USDC", ["usdc-circle"]]]);
+
+    const metrics = processPoolMetrics(
+      [
+        makePool({
+          pool: volatilePool,
+          chain: "Base",
+          project: "aerodrome",
+          symbol: "USDC-WETH",
+          underlyingTokens: [usdc, weth],
+        }),
+        makePool({
+          pool: stablePool,
+          chain: "Base",
+          project: "aerodrome",
+          symbol: "USDC-WETH",
+          underlyingTokens: [usdc, weth],
+        }),
+      ],
+      new Set(["aerodrome"]),
+      symbolToIds,
+      buildSymbolToChainScopedIds(symbolToIds, ["base"]),
+      new Map(),
+      new Map([[`base:${usdc}`, "usdc-circle"]]),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map([
+        [`base:${volatilePool}`, false],
+        [`base:${stablePool}`, true],
+      ]),
+      new Map(),
+      new Map([["usdc-circle", 1]]),
+      1_752_560_000,
+      undefined,
+      new Map([[`base:${volatilePool}`, candidate]]),
+    );
+
+    const pools = metrics.get("usdc-circle")!.topPools;
+    expect(pools.find((pool) => pool.poolId === `base:${volatilePool}`)?.extra?.evmV2ExecutionCandidate).toEqual(
+      candidate,
+    );
+    expect(pools.find((pool) => pool.poolId === `base:${stablePool}`)?.poolType).toBe("aerodrome-stable");
+    expect(pools.find((pool) => pool.poolId === `base:${stablePool}`)?.extra?.evmV2ExecutionCandidate).toBeUndefined();
   });
 
   it("matches pools without mutating canonical addresses, protects symbol collisions, and enriches pool extras", () => {
@@ -857,14 +919,16 @@ describe("processPoolMetrics", () => {
 
     for (const testCase of cases) {
       const metrics = processPoolMetrics(
-        [makePool({
-          pool: "4dbfda50-1111-2222-3333-444455556666",
-          project: "curve-dex",
-          symbol: "USDC-USDT",
-          tvlUsd: 1_500_000,
-          underlyingTokens: [USDC, USDT],
-          count: 3,
-        })],
+        [
+          makePool({
+            pool: "4dbfda50-1111-2222-3333-444455556666",
+            project: "curve-dex",
+            symbol: "USDC-USDT",
+            tvlUsd: 1_500_000,
+            underlyingTokens: [USDC, USDT],
+            count: 3,
+          }),
+        ],
         new Set(["curve-dex"]),
         symbolToIds,
         symbolToChainScopedIds,
@@ -891,7 +955,7 @@ describe("processPoolMetrics", () => {
         observedAt: 1_000,
       });
       expect(routeResult.coverage, testCase.name).toMatchObject({
-        capabilityMatrixVersion: "p4a.4",
+        capabilityMatrixVersion: "p4a.6",
         retainedPoolCount: 1,
         scoreEligiblePoolCount: 0,
         scoreEligibleCapabilityPoolCount: 1,

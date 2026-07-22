@@ -14,6 +14,22 @@
   "collateral": "Tracker certificate fully backed by the AMUNDI ETF GOVIES 0-6 MONTHS EUROMTS INVESTMENT GRADE UCITS ETF, held in segregated custody and administered by Backed Assets (Jersey) Limited under Swiss DLT Act framework",
   "pegMechanism": "EUR-denominated NAV-accreting tracker token (not pegged to €1); price reflects the underlying short-term Eurozone government bond ETF NAV with continuous yield accrual; KYC-gated 1:1 primary mint and redemption via Backed; secondary liquidity on Uniswap and CoW Protocol",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "Backed identifies bC3M as an ERC-20 tracker certificate for the Amundi 0-6 month Eurozone government-bill ETF. Its value follows that short-duration sovereign-bill ETF rather than a fixed one-euro claim, so the existing tbill archetype is retained as the closest supported V9 category.",
+    "sources": [
+      {
+        "label": "Backed bC3M product disclosure",
+        "url": "https://assets.backed.fi/products/bc3m"
+      },
+      {
+        "label": "Backed product structure",
+        "url": "https://assets.backed.fi/structure"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "backed-govies-0-6-months-euro",
   "proofOfReserves": {

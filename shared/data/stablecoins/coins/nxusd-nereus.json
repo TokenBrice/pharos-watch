@@ -482,8 +482,8 @@
       }
     ],
     "evidence": "At Avalanche block 90343075, the tracked NXUSD deployment 0xf14f4ce569cb3679e99d5059909e23b07bd2f387 was a 5,007-byte direct deployment with a zero EIP-1967 implementation slot. Sourcify exact-match ABI/source exposes ordinary ERC-20 transfer, transferFrom, approval, and permit behavior; owner-only mint and mintToBentoBox; and burn(uint256), which subtracts only msg.sender's balance. It has no pause, blacklist, freeze, seizure, or privileged arbitrary-holder-burn function. owner() remained the 2-of-3 Safe 0xdd3de3b819edd3a014fda93868d7dfc873341467, but that ownership cannot add a holder-control path to the immutable deployed code. Zero-value transfer and self-burn eth_call simulations succeeded at the reviewed block. At Polygon block 90266253, the separately deployed NXUSDV2 token 0xf955a6694c6f5629f5ecd514094b3bd450b59000 returned name and symbol NXUSD, 18 decimals, positive supply, and owner 0xc4eca7d55db3dc217a2edfff3da05fca4d8a7ef8; verified source exposes owner-gated mint and burn without a holder blacklist or freeze surface. The official Nereus Avalanche manifest also identifies USDCCauldron 0xd75a20314fb7fbe79ec7474497d5bf09e9c00cfc; at that block collateral() returned native Circle USDC 0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e and totalBorrow was 182,497.852160412510292820 NXUSD. The verified current Circle USDC implementation exposes blacklist/unBlacklist and gates transfer and transferFrom with notBlacklisted, establishing an active upstream collateral exposure. Current issuer legal material and the archived issuer page were reviewed as context but do not establish a direct NXUSD holder restriction. Inherited therefore preserves the upstream USDC risk without claiming a direct NXUSD freeze.",
-    "reviewer": "Codex Wave 11 access review",
-    "reviewedAt": "2026-07-15"
+    "reviewer": "GPT SOL-CORP-C wave6",
+    "reviewedAt": "2026-07-22"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "native-multichain",

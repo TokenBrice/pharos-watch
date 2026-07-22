@@ -50,7 +50,11 @@ vi.mock("../dex-liquidity/token-resolution", () => ({
   normalizeTokenAddress: vi.fn((address: string) => address.trim().toLowerCase()),
 }));
 vi.mock("../dex-liquidity/subgraph-source-families", () => ({
-  fetchAerodromeData: vi.fn(async () => ({ aerodromePriceObs: new Map(), aerodromeIsStable: new Map() })),
+  fetchAerodromeData: vi.fn(async () => ({
+    aerodromePriceObs: new Map(),
+    aerodromeIsStable: new Map(),
+    aerodromeV2ExecutionCandidates: new Map(),
+  })),
   fetchUniV3Data: vi.fn(async () => ({ uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), uniV3PriceObs: new Map() })),
 }));
 

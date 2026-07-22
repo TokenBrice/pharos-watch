@@ -11,22 +11,27 @@ import {
   buildFluidMeasuredExecutionTargets,
   buildMeasuredPoolDirectionKey,
   buildPancakeMeasuredExecutionTargets,
+  buildSlipstreamMeasuredExecutionTarget,
+  buildSlipstreamMeasuredExecutionTargets,
   buildUniV3MeasuredExecutionTarget,
   parseUniV3FeePips,
+  type SlipstreamExecutionCandidate,
   type UniV3ExecutionCandidate,
 } from "../inventory";
 
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
 const POOL = "0x3333333333333333333333333333333333333333";
+const BASE_USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+const BASE_USDBC = "0xd9aaec86b65d86f6a7b5b1b0c42ffa531710b6ca";
 
 function addressMap(entries: Array<[string, string]>, chain = "ethereum") {
   return new Map(entries.map(([address, stablecoinId]) => [`${chain}:${address}`, stablecoinId]));
 }
 
 function directPool(
-  source: "pancakeswap" | "fluid",
-  tokens = [
+  source: "pancakeswap" | "fluid" | "aerodrome-slipstream",
+  tokens: DexApiPool["tokens"] = [
     { address: USDC, symbol: "USDC", decimals: 6 },
     { address: USDT, symbol: "USDT", decimals: 6 },
   ],
@@ -35,7 +40,12 @@ function directPool(
     source,
     chain: "ethereum",
     poolAddress: POOL,
-    poolType: source === "fluid" ? "fluid-dex" : "pancakeswap-v3",
+    poolType:
+      source === "fluid"
+        ? "fluid-dex"
+        : source === "aerodrome-slipstream"
+          ? "aerodrome-slipstream-1bp"
+          : "pancakeswap-v3",
     tokens,
     price: 0.98,
     tvlUsd: 4_000_000,
@@ -52,6 +62,76 @@ describe("measured execution target inventory", () => {
     expect(parseUniV3FeePips("Uniswap V3 1.2.3%")).toBeNull();
     expect(parseUniV3FeePips("Uniswap V3 .01%")).toBeNull();
     expect(parseUniV3FeePips("Uniswap V3")).toBeNull();
+  });
+
+  it("builds a Base Slipstream shadow target with tick-spacing identity", () => {
+    const candidate: SlipstreamExecutionCandidate = {
+      chain: "base",
+      poolAddress: POOL,
+      tickSpacing: 50,
+      tvlUsd: 4_000_000,
+      token0Price: 1,
+      token1Price: 1,
+      tokens: [
+        { address: BASE_USDC, symbol: "USDC", decimals: 6 },
+        { address: BASE_USDBC, symbol: "USDbC", decimals: 6 },
+      ],
+    };
+    const target = buildSlipstreamMeasuredExecutionTarget({
+      stablecoinId: "usdc-circle",
+      candidate,
+      stablecoinPriceById: new Map([
+        ["usdc-circle", 1],
+        ["usdbc-bridged", 1],
+      ]),
+      chainAddressToId: addressMap([
+        [BASE_USDC, "usdc-circle"],
+        [BASE_USDBC, "usdbc-bridged"],
+      ], "base"),
+      retainedTvlUsd: 3_000_000,
+      capturedAt: 1_752_560_000,
+    });
+
+    expect(target).toMatchObject({
+      adapterProfileId: "aerodrome-slipstream-quoter-v2",
+      protocol: "aerodrome-slipstream",
+      chain: "base",
+      poolId: `base:${POOL}`,
+      tickSpacing: 50,
+    });
+    expect(target?.targetId).toContain("|na|50");
+  });
+
+  it("builds Slipstream targets from exact Sugar pool metadata", () => {
+    const pool = directPool("aerodrome-slipstream", [
+      { address: BASE_USDC, symbol: "USDC", decimals: 6, priceUsd: 0.99 },
+      { address: BASE_USDBC, symbol: "USDbC", decimals: 6, priceUsd: 1.01 },
+    ]);
+    pool.chain = "base";
+    pool.tickSpacing = 50;
+
+    const targets = buildSlipstreamMeasuredExecutionTargets({
+      pools: [pool],
+      chainAddressToId: addressMap([
+        [BASE_USDC, "usdc-circle"],
+        [BASE_USDBC, "usdbc-bridged"],
+      ], "base"),
+      symbolToChainScopedIds: new Map(),
+      stablecoinPriceById: new Map([
+        ["usdc-circle", 0.99],
+        ["usdbc-bridged", 1.01],
+      ]),
+      capturedAt: 1_752_560_000,
+    });
+
+    expect(targets.size).toBe(2);
+    expect(targets.get(`usdc-circle|base:${POOL}`)).toMatchObject({
+      adapterProfileId: "aerodrome-slipstream-quoter-v2",
+      poolId: `base:${POOL}`,
+      tickSpacing: 50,
+      tokenIn: { address: BASE_USDC, referencePriceUsd: 0.99 },
+      tokenOut: { address: BASE_USDBC, referencePriceUsd: 1.01 },
+    });
   });
 
   it("uses independent tracked references for a uniquely joined Uniswap v3 target", () => {

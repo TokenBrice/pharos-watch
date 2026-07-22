@@ -14,6 +14,22 @@
   "collateral": "Mixed reserves transitioning from USDC-only toward a target mix dominated by short-term Korean Treasury Bonds. Current composition includes USDC (Circle), Frax frxUSD, and tokenized Korean Treasury Bonds issued via Etherfuse's Stablebond framework and held in segregated, bankruptcy-remote custody at Shinhan Securities.",
   "pegMechanism": "Centralized issuance against a 100% reserve. Mint and redemption are gated to KYC-verified institutional counterparties (exchanges, market makers, OTC desks). Ethereum is the canonical mint chain; Base and other destinations share unified supply via LayerZero OFT v2. KRWQ is not offered to South Korean residents pending domestic stablecoin legislation under the Korean National Assembly.",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "KRWQ's issuer reserve endpoint reports the current reserve assets and an over-100% reserve ratio, while issuer materials describe KYC-gated centralized issuance and redemption. The KRW reference and mixed reserve assets do not make this a USD peg or an algorithmic design; it is an issuer-managed reserve claim.",
+    "sources": [
+      {
+        "label": "KRWQ custodian-assets API",
+        "url": "https://www.krwq.cash/api/custodian-assets"
+      },
+      {
+        "label": "KRWQ transparency dashboard",
+        "url": "https://krwq.cash/transparency"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "krwt",
   "cmcSlug": "korean-won-iq",

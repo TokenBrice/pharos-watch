@@ -71,7 +71,7 @@ describe("syncFxRates", () => {
         body: {
           base: "USD",
           date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
+          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, HKD: 7.81, INR: 85.5 },
         },
       },
       {
@@ -123,6 +123,8 @@ describe("syncFxRates", () => {
     const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
     expect(cachedRates.peggedCNH).toBeCloseTo(1 / 7.28, 6);
     expect(cachedRates.peggedCNH).not.toBe(cachedRates.peggedCNY);
+    expect(cachedRates.peggedHKD).toBeCloseTo(1 / 7.81, 6);
+    expect(cachedRates.peggedINR).toBeCloseTo(1 / 85.5, 6);
 
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
     const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
@@ -496,7 +498,7 @@ describe("syncFxRates", () => {
           usd: {
             eur: 0.93, gbp: 0.8, chf: 0.88, brl: 5.01, jpy: 149.8, idr: 15810, sgd: 1.35, try: 36.1,
             aud: 1.56, zar: 18.4, cad: 1.38, cny: 7.26, php: 56.1, mxn: 17.3, cnh: 7.31, rub: 90.5, uah: 41.2, ars: 1401, kgs: 87.1, ngn: 1371, xof: 561,
-            myr: 4.51, krw: 1382, vnd: 25000,
+            myr: 4.51, krw: 1382, hkd: 7.82, inr: 85.6, vnd: 25000,
           },
         },
       },
@@ -507,7 +509,7 @@ describe("syncFxRates", () => {
           usd: {
             eur: 0.925, gbp: 0.79, chf: 0.88, brl: 5.0, jpy: 149.5, idr: 15800, sgd: 1.35, try: 36,
             aud: 1.55, zar: 18.3, cad: 1.37, cny: 7.25, php: 56, mxn: 17.2, cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560,
-            myr: 4.5, krw: 1380, vnd: 25000,
+            myr: 4.5, krw: 1380, hkd: 7.81, inr: 85.5, vnd: 25000,
           },
         },
       },
@@ -591,7 +593,7 @@ describe("syncFxRates", () => {
           rates: {
             EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
             AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, CNH: 7.28, RUB: 90, UAH: 41, ARS: 1400, KGS: 87, NGN: 1370, XOF: 560,
-            MYR: 4.5, KRW: 1380, VND: 25000,
+            MYR: 4.5, KRW: 1380, HKD: 7.81, INR: 85.5, VND: 25000,
           },
         },
       },
@@ -700,6 +702,8 @@ describe("syncFxRates", () => {
       peggedXOF: 1 / 560,
       peggedMYR: 1 / 4.5,
       peggedKRW: 1 / 1380,
+      peggedHKD: 1 / 7.81,
+      peggedINR: 1 / 85.5,
       peggedVND: 1 / 25000,
     };
     const calendarDailyPegs = new Set(["peggedCNH", "peggedRUB", "peggedUAH", "peggedARS", "peggedKGS", "peggedNGN", "peggedXOF", "peggedVND"]);
@@ -1167,6 +1171,8 @@ describe("syncFxRates", () => {
       peggedXOF: 1 / 560,
       peggedMYR: 1 / 4.5,
       peggedKRW: 1 / 1380,
+      peggedHKD: 1 / 7.81,
+      peggedINR: 1 / 85.5,
       peggedVND: 1 / 25000,
     };
     const sameDayUpdatedAt = Math.floor(Date.parse("2025-06-15T05:02:23Z") / 1000);
@@ -1261,6 +1267,8 @@ describe("syncFxRates", () => {
       peggedXOF: 1 / 560,
       peggedMYR: 1 / 4.5,
       peggedKRW: 1 / 1380,
+      peggedHKD: 1 / 7.81,
+      peggedINR: 1 / 85.5,
       peggedVND: 1 / 25000,
     };
     const staleUpdatedAt = Math.floor(Date.parse("2025-06-12T12:00:00Z") / 1000);
@@ -1288,7 +1296,7 @@ describe("syncFxRates", () => {
           rates: {
             EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
             AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, CNH: 7.28, PHP: 56, MXN: 17.2, RUB: 90, UAH: 41, ARS: 1400, KGS: 87, NGN: 1370, XOF: 560,
-            MYR: 4.5, KRW: 1380, VND: 25000,
+            MYR: 4.5, KRW: 1380, HKD: 7.81, INR: 85.5, VND: 25000,
           },
         },
       },

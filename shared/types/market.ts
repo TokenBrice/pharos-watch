@@ -13,6 +13,8 @@ import {
   ExitRouteObservationSchema,
 } from "./exit-route";
 import { DexMeasuredExecutionPublicProfileSchema } from "./measured-execution";
+import { SolanaMeasuredExecutionPublicProfileSchema } from "./solana-measured-execution";
+import { TronMeasuredExecutionPublicProfileSchema } from "./tron-measured-execution";
 
 export {
   BluechipRatingSchema,
@@ -200,7 +202,7 @@ export type DexAmmExecutionToken = z.infer<typeof DexAmmExecutionTokenSchema>;
 
 export const DexAmmExecutionModelSchema = z
   .object({
-    source: z.enum(["raydium", "balancer", "curve"]),
+    source: z.enum(["raydium", "uniswap-v2", "pancakeswap-v2", "aerodrome-volatile", "balancer", "curve"]),
     invariant: z.enum(["constant-product", "weighted-constant-mean", "stableswap"]),
     trackedTokenIndex: z.number().int().nonnegative(),
     feeRate: z.number().finite().min(0).lt(1),
@@ -216,14 +218,21 @@ export const DexAmmExecutionModelSchema = z
       ctx.addIssue({ code: "custom", path: ["amplification"], message: "amplification is a stableswap parameter" });
     }
     if (model.invariant === "constant-product") {
-      if (model.source !== "raydium" || model.tokens.length !== 2) {
+      if (
+        !["raydium", "uniswap-v2", "pancakeswap-v2", "aerodrome-volatile"].includes(model.source) ||
+        model.tokens.length !== 2
+      ) {
         ctx.addIssue({ code: "custom", path: ["invariant"], message: "invalid constant-product model" });
       }
       return;
     }
     if (model.invariant === "stableswap") {
       if (model.source !== "curve" && model.source !== "balancer") {
-        ctx.addIssue({ code: "custom", path: ["source"], message: "stableswap models require a Curve or Balancer source" });
+        ctx.addIssue({
+          code: "custom",
+          path: ["source"],
+          message: "stableswap models require a Curve or Balancer source",
+        });
       }
       if (model.amplification === undefined) {
         ctx.addIssue({ code: "custom", path: ["amplification"], message: "stableswap models require amplification" });
@@ -257,6 +266,7 @@ export const DexExecutionCapabilityGateSchema = z.object({
     "curve-cryptoswap",
     "balancer-amm",
     "raydium-amm",
+    "constant-product-v2",
     "measured-execution",
   ]),
   reason: z.enum([
@@ -331,6 +341,8 @@ const DexLiquidityPoolSchema = z.object({
       executionCapabilityGate: DexExecutionCapabilityGateSchema.optional(),
       ammExecutionModel: DexAmmExecutionModelSchema.optional(),
       measuredExecution: DexMeasuredExecutionPublicProfileSchema.optional(),
+      solanaMeasuredExecution: SolanaMeasuredExecutionPublicProfileSchema.optional(),
+      tronMeasuredExecution: TronMeasuredExecutionPublicProfileSchema.optional(),
     })
     .optional(),
 });

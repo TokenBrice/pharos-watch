@@ -96,7 +96,7 @@
     }
   ],
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Mento Celo deployment inventory",
@@ -135,10 +135,10 @@
         "url": "https://forno.celo.org"
       }
     ],
-    "sourceFreeRationale": "Explicit possible: the current verified implementation has no active holder blacklist, freeze, pause, or transfer hook, but the proxy owner can replace that holder-facing logic through the verified 172800-second Mento timelock path. This direct possibility does not rely on, or suppress, the separately evidenced upstream reserve exposure.",
-    "evidence": "At Celo block 72189914 on 2026-07-15, ZARm proxy 0x4c35853a3b4e647fd266f4de678dcc8fec410bf6 returned StableTokenV2 implementation 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E; proxy _getOwner() and delegated owner() both returned 0x890DB8A597940165901372Dd7DB61C9f246e2147, whose getMinDelay() returned 172800 seconds. Exact-match proxy source limits implementation changes to that owner. The verified StableTokenV2 ABI/source has ordinary ERC-20 transfer and transferFrom, permissioned minting, and burn(uint256), which burns only msg.sender; it has no active holder blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer hook. A zero-value transfer eth_call from 0x0000000000000000000000000000000000000001 returned true at the pinned block. The Mento governance upgrade example establishes that the proxy path is a real direct future-control path, so the result is Possible rather than a false direct claim. The legal source is a privacy notice, not token-control authority. Mento's live reserve API and archived transparency dashboard separately evidence reserve-side USDC, USDT, and EURC-family exposure; that upstream risk remains additive.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "sourceFreeRationale": "The current holder-facing ZARm token has no direct blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
+    "evidence": "At Celo block 72189914, ZARm proxy 0x4c35853a3b4e647fd266f4de678dcc8fec410bf6 resolved to StableTokenV2 implementation 0x434563B0604BE100F04B7Ae485BcafE3c9D8850E and a 172800-second Mento Timelock owner. The verified active implementation has ordinary ERC-20 transfer and transferFrom, permissioned minting, and burn(uint256) only for msg.sender; it has no direct blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer hook. The direct token-level freeze posture is therefore No as of this review. USDT, EURC, and USDC-family reserve collateral remains separately represented and can still produce computed upstream exposure.",
+    "reviewer": "GPT SOL-MENTO wave6",
+    "reviewedAt": "2026-07-22"
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",

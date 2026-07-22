@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
-      "pct": 79.57,
+      "pct": 79.18,
       "risk": "very-low",
       "coinId": "tbill-openeden",
       "assetClass": "tokenized-security",
@@ -13,7 +13,7 @@
     },
     {
       "name": "BlackRock BUIDL (tokenized money market fund)",
-      "pct": 9.23,
+      "pct": 9.4,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "assetClass": "fund-share",
@@ -23,7 +23,7 @@
     },
     {
       "name": "Ripple USD (RLUSD) cash-equivalent buffer",
-      "pct": 8.1,
+      "pct": 8.24,
       "risk": "low",
       "coinId": "rlusd-ripple",
       "depType": "collateral",
@@ -34,7 +34,7 @@
     },
     {
       "name": "VanEck VBILL (tokenized U.S. T-bill fund)",
-      "pct": 2.92,
+      "pct": 2.97,
       "risk": "low",
       "coinId": "vbill-vaneck",
       "assetClass": "tokenized-security",
@@ -44,7 +44,7 @@
     },
     {
       "name": "USDC redemption buffer",
-      "pct": 0.18,
+      "pct": 0.21,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -55,22 +55,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 curation",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "verified",
     "sources": [
       {
-        "label": "OpenEden USDO reserve composition API",
+        "label": "OpenEden USDO reserve composition API (snapshot 2026-07-22T08:00:19.092Z)",
         "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
       },
       {
-        "label": "OpenEden USDO reserve assets",
+        "label": "OpenEden USDO reserve assets (accessed 2026-07-22)",
         "url": "https://docs.openeden.com/usdo/usdo-token/reserve-assets"
       }
     ],
-    "rationale": "OpenEden's issuer-operated reserve API snapshot at 2026-07-21T08:00:18.477Z reported $29,271,334.97 in reserve assets against $29,010,929.31 USDO. The API's USD-valued constituent amounts produce the rounded full-composition weights recorded here: OpenEden TBILL 79.57%, BUIDL 9.23%, RLUSD 8.10%, VBILL 2.92%, and USDC 0.18%. Zero-balance USYC, BENJI, and pending-USDC fields do not create slices.",
+    "rationale": "OpenEden's issuer-operated reserve API snapshot at 2026-07-22T08:00:19.092Z reported $28,760,245.354108024 in reserve assets against 28,431,286.133951165 USDO, a 101.157% reserve ratio. The API constituent values normalize to the rounded full-composition weights recorded here: OpenEden TBILL 79.18%, BUIDL 9.40%, RLUSD 8.24%, VBILL 2.97%, and USDC 0.21%. Zero-balance USYC, BENJI, and pending-USDC fields do not create slices.",
     "compositionBasis": "OpenEden issuer reserve API asset values normalized by total reserve assets",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
     "knownUnknownExposure": "All positive reserve components reported by the issuer API are identified.",
     "knownUnknownExposurePct": 0
@@ -78,27 +78,31 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "OpenEden Digital reserve custodians and asset issuers",
+        "name": "OpenEden Digital segregated USDO reserve account and underlying reserve-asset custodians",
         "role": "other"
       }
     ],
-    "segregation": "unknown",
-    "bankruptcyRemoteness": "unknown",
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "OpenEden USDO reserve composition API",
+        "label": "OpenEden USDO reserve composition API (snapshot 2026-07-22T08:00:19.092Z)",
         "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
       },
       {
-        "label": "OpenEden USDO reserve assets",
+        "label": "OpenEden USDO reserve assets (accessed 2026-07-22)",
         "url": "https://docs.openeden.com/usdo/usdo-token/reserve-assets"
+      },
+      {
+        "label": "OpenEden USDO FAQ on segregated Bermuda SAC reserves (accessed 2026-07-22)",
+        "url": "https://docs.openeden.com/usdo/faqs"
       }
     ],
-    "uncertainty": "OpenEden's current reserve API identifies the asset holdings but does not identify the reserve account custodians, provider shares, legal segregation, bankruptcy remoteness, or rehypothecation terms for the USDO portfolio.",
+    "uncertainty": "OpenEden states that USDO reserve assets and liabilities are held in a segregated account of a Bermuda segregated-accounts company and are insulated from claims against other accounts. The current reserve API identifies asset holdings but not the account-level custodians, provider shares, underlying fund custody chains, or rehypothecation terms.",
     "knownUnknownExposurePct": 100
   }
 }

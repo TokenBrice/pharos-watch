@@ -14,6 +14,22 @@
   "collateral": "Tokenized exposure to Fasanara's Global Fund (same strategy as the Global Diversified Alternative Debt Fund): an asset-backed lending portfolio investing primarily in short-dated trade receivables and digital invoices purchased from SMEs, held via Midas tokenized-certificate rails.",
   "pegMechanism": "NAV-accreting Midas tokenized certificate; primary issuance and redemption occur through Midas permissioned rails rather than a fixed $1 peg.",
   "mechanismArchetype": "rwa-credit-fund",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "Midas describes mGLOBAL as a security token linked to Fasanara's managed short-duration receivables and asset-based private-credit portfolio. Because holders receive NAV-linked certificate exposure to that credit strategy rather than a redeemable fixed-par dollar claim, rwa-credit-fund preserves the actual instrument structure.",
+    "sources": [
+      {
+        "label": "Midas mGLOBAL strategy and structure disclosure",
+        "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/"
+      },
+      {
+        "label": "Midas prospectus documents hub",
+        "url": "https://docs.midas.app/resources/legal-documents/prospectus-documents"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "midas-fasanara-global",
   "proofOfReserves": {

@@ -269,8 +269,9 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Verified USBD Ethereum DebtToken source",
@@ -279,11 +280,15 @@
       {
         "label": "Bima documentation",
         "url": "https://docs.bima.money/"
+      },
+      {
+        "label": "Bima DebtToken source",
+        "url": "https://github.com/Bima-Labs/bima-v1-core/blob/mainnet-v2/contracts/core/DebtToken.sol"
       }
     ],
-    "evidence": "The verified Ethereum DebtToken source at the tracked USBD address exposes ERC-20 transfer and protocol mint/burn operations but no holder blacklist, freeze, or pause function. The same token address is recorded across the tracked deployments. The inherited classification is retained for the protocol's upstream collateral and dependency exposure; no direct holder-balance control is asserted from the reviewed source.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-reviewed 2026-07-22: DebtToken.burn(account, amount) is callable by enabled TroveManagers and the owner-configured lending-vault adapter without holder allowance. Those protocol-authorized paths can destroy an arbitrary holder balance, so true replaces the prior inherited-only posture. The same DebtToken address is tracked across deployments.",
+    "reviewer": "GPT SOL-CORP-C wave6",
+    "reviewedAt": "2026-07-22"
   },
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {

@@ -2,7 +2,7 @@
   "id": "uusd-anything-labs",
   "name": "Unity USD",
   "symbol": "UUSD",
-  "oneLiner": "UUSD is Anything Labs's BSC-based protocol dollar minted against managed stablecoin and crypto collateral, with limited public mechanism documentation.",
+  "oneLiner": "UUSD is Anything Labs's issuer-controlled BSC dollar token; current public materials do not identify its backing assets or peg-maintenance mechanism.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -86,42 +86,42 @@
   "deploymentModel": "single-chain",
   "reserves": [
     {
-      "name": "Protocol-managed stablecoin and crypto collateral",
+      "name": "Undisclosed UUSD backing assets",
       "pct": 100,
-      "risk": "high",
+      "risk": "very-high",
       "assetClass": "other",
-      "issuerOrObligor": "Anything Labs and undisclosed protocol collateral counterparties",
+      "issuerOrObligor": "Anything Labs and undisclosed backing counterparties",
       "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody", "market", "legal"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "UUSD official website",
+        "label": "UUSD official website (accessed 2026-07-22)",
         "url": "https://uusd.ai/"
       },
       {
-        "label": "UUSD whitepaper",
+        "label": "UUSD whitepaper (accessed 2026-07-22)",
         "url": "https://uusd.ai/whitepaper.pdf"
       },
       {
-        "label": "UUSD smart-contract repository",
+        "label": "UUSD smart-contract repository (accessed 2026-07-22)",
         "url": "https://github.com/uusdai/uusd"
       }
     ],
-    "rationale": "The reviewed UUSD website, whitepaper, and repository do not disclose reserve assets, category weights, named counterparties, or an assurance report. The existing 100% aggregate envelope is retained as an explicit evidence gap rather than decomposed into fabricated stablecoin or crypto slices.",
+    "rationale": "Two primary-source hunts completed on 2026-07-22 found that the UUSD website, whitepaper, developer materials, and repository do not disclose backing assets, category weights, named counterparties, redemption mechanics, or a reserve-assurance report. The former description of stablecoin and crypto collateral was unsupported and is replaced by one explicit undisclosed-backing envelope rather than fabricated asset classes.",
     "compositionBasis": "UUSD official disclosures and repository review",
     "scope": "full-composition",
-    "knownUnknownExposure": "The entire reserve envelope is unclassified beyond the protocol's reserve-backed marketing claim; no current composition, custody, or assurance evidence was found.",
+    "knownUnknownExposure": "The entire backing envelope is unclassified; no current composition, custody, redemption, or reserve-to-liability assurance evidence was found.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Protocol-managed stablecoin and crypto collateral",
+        "reserveName": "Undisclosed UUSD backing assets",
         "pct": 100,
         "disposition": "insufficient-evidence",
         "rationale": "The official disclosures do not identify the reserve assets or provide a current auditable composition."
@@ -131,27 +131,28 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Anything Labs and UUSD protocol contracts",
+        "name": "Undisclosed UUSD backing custodians",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "UUSD official website",
+        "label": "UUSD official website (accessed 2026-07-22)",
         "url": "https://uusd.ai/"
       },
       {
-        "label": "UUSD whitepaper",
+        "label": "UUSD whitepaper (accessed 2026-07-22)",
         "url": "https://uusd.ai/whitepaper.pdf"
       }
     ],
-    "uncertainty": "The reviewed public materials do not identify reserve custodians, account segregation, bankruptcy remoteness, or rehypothecation terms."
+    "uncertainty": "The public materials reviewed on 2026-07-22 do not identify backing custodians, account segregation, bankruptcy remoteness, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
   },
   "liveReservesConfig": {
     "adapter": "curated-validated",

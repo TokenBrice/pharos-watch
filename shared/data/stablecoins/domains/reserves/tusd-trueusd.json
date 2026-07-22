@@ -12,22 +12,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Moore CPA TUSD Consolidated Reserves Report - July 14, 2026",
-        "url": "https://widget.verinumus.io/api/v1/tusd/report?tokens=%5BTrueUSD%5D"
+        "label": "Moore CPA TUSD Consolidated Reserves Report - July 22, 2026",
+        "url": "https://widget.verinumus.io/api/v1/tusd/report"
       },
       {
         "label": "TUSD transparency dashboard",
         "url": "https://tusd.io/transparency"
       }
     ],
-    "rationale": "The independent Chainlink/Moore live feed publishes one aggregate row named USD reserves (Moore Hong Kong attested), so the reviewed classification is keyed to that exact 100% live identity. Moore CPA's July 14 reasonable-assurance report preserves the underlying detail: $501.850 million held through First Digital Trust Limited and $78,900.88 of cash against $501.928901 million of total collateral, or 99.98% and 0.02%. The report values the First Digital position at reported cost and does not disclose its underlying fund instruments or fair value.",
-    "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of July 14, 2026",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "The independent Chainlink/Moore live feed publishes one aggregate row named USD reserves (Moore Hong Kong attested), so the reviewed classification is keyed to that exact 100% live identity. Moore CPA's July 22 reasonable-assurance report preserves the underlying detail: $501.850 million held through First Digital Trust Limited and $78,900.88 of cash against $501.928901 million of total collateral, or 99.98% and 0.02%. The report values the First Digital position at reported cost and does not examine the fund investments' fair value.",
+    "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of July 22, 2026",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
     "knownUnknownExposure": "The live feed exposes the attested reserve as one aggregate row. Moore's report identifies a 99.98% First Digital Trust fund position and 0.02% cash, but the aggregate row cannot be split one-to-one for live classification and the fund's assets, liquidity, counterparties, and current fair value remain undisclosed; the report also notes ongoing litigation and restrictions affecting that collateral.",
     "knownUnknownExposurePct": 100,
@@ -59,12 +59,12 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-16",
-    "reviewer": "Kimi FIAT-CTRL shard-09 control-evidence review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - July 16, 2026",
+        "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - July 22, 2026",
         "url": "https://widget.verinumus.io/api/v1/tusd/report"
       }
     ],

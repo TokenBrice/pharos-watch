@@ -21,6 +21,8 @@ export const HARDCODED_PRICE_BOUNDS: Record<string, [min: number, max: number]> 
   MXN: [0.005, 0.2],
   MYR: [0.18, 0.3],
   KRW: [0.0005, 0.001],
+  HKD: [0.01, 0.5],
+  INR: [0.001, 0.1],
   UAH: [0.002, 0.15],
   ARS: [0.000001, 0.05],
   KGS: [0.005, 0.05],
@@ -50,6 +52,8 @@ export const FX_RATE_BOUNDS: Record<string, [min: number, max: number]> = {
   peggedMXN: [0.02, 0.15],
   peggedMYR: [0.18, 0.30],
   peggedKRW: [0.0005, 0.0010],
+  peggedHKD: [0.05, 0.25],
+  peggedINR: [0.005, 0.05],
   peggedUAH: [0.01, 0.10],
   peggedARS: [0.0001, 0.01],
   peggedKGS: [0.005, 0.05],
@@ -101,6 +105,8 @@ export function classifyPegClass(pegCurrency: string | undefined, pegType: strin
     pegType.includes("MXN") ||
     pegType.includes("MYR") ||
     pegType.includes("KRW") ||
+    pegType.includes("HKD") ||
+    pegType.includes("INR") ||
     pegType.includes("KGS") ||
     pegType.includes("NGN") ||
     pegType.includes("XOF") ||

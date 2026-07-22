@@ -25,11 +25,19 @@
       {
         "label": "Sky USDS contracts",
         "url": "https://github.com/sky-ecosystem/usds"
+      },
+      {
+        "label": "Sky stUSDS implementation (pinned)",
+        "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/src/StUsds.sol#L142-L156"
+      },
+      {
+        "label": "Sky DSPause",
+        "url": "https://etherscan.io/address/0xbE286431454714F511008713973d3B053A2d38f3#readContract"
       }
     ],
-    "evidence": "The stUSDS contract is an ERC-4626 wrapper over USDS and has no privileged wrapper mint path; durable balance and freeze exposure therefore follows the reviewed USDS parent governance and token controls. A direct stUSDS holder blacklist is not established separately, so the variant is classified as inherited through mintAuthority.inheritedFrom.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "At Ethereum block 25573289, stUSDS asset() returned USDS, its EIP-1967 implementation slot resolved to 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22, and the external admin and beacon slots were zero. The verified implementation gates UUPS upgrades through wards; stUSDS.wards(0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) returned 1, and the Sky DSPause delay was 172800 seconds. The current implementation has ordinary ERC-20 transfers and no live holder blacklist, pause, seizure, or privileged holder-burn surface. Proxy upgrade authority remains reviewed in Mint Authority and does not create a direct FreezeWatch finding. stUSDS therefore retains upstream-only status through its tracked USDS parent.",
+    "reviewer": "GPT SOL-BIND wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
@@ -141,8 +149,8 @@
         }
       ],
       "evidence": "Re-reviewed 2026-07-20 at Ethereum block 25573289. asset() confirms that stUSDS wraps USDS. Its EIP-1967 implementation slot resolves to 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22 with zero external admin and beacon slots, and the proxy reports UPGRADE_INTERFACE_VERSION 5.0.0. stUSDS.wards(Sky Pause Proxy 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) is 1; PauseProxy.owner() resolves to DSPause 0xbE286431454714F511008713973d3B053A2d38f3, whose delay() is 172800 seconds. The pinned implementation source makes UUPS authorization wards-gated, so this delayed governance path can replace local logic; current public share minting remains USDS-deposit backed. No independent wrapper reserve reconciliation or named prudential supervisor is established.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "reviewer": "GPT SOL-BIND wave6",
+      "reviewedAt": "2026-07-22",
       "disposition": "scoreable"
     }
   },

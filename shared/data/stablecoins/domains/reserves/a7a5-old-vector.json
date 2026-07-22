@@ -12,20 +12,32 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "A7A5 reserve transparency documentation",
+        "label": "A7A5 reserve transparency documentation (accessed 2026-07-22)",
         "url": "https://docs.a7a5.io/legal/transparency.md"
       },
       {
-        "label": "A7A5 terms of use",
+        "label": "A7A5 terms of use (accessed 2026-07-22)",
         "url": "https://docs.a7a5.io/legal/terms-of-use.md"
+      },
+      {
+        "label": "U.S. Treasury designation of Old Vector LLC (2025-08-14)",
+        "url": "https://home.treasury.gov/news/press-releases/sb0225"
+      },
+      {
+        "label": "UK designation of Old Vector LLC and A7A5 network (2025-08-20)",
+        "url": "https://www.gov.uk/government/news/uk-targets-sanctions-circumvention-and-crypto-networks-exploited-by-russia"
+      },
+      {
+        "label": "EU 19th sanctions package prohibiting A7A5 transactions (2025-10-23)",
+        "url": "https://www.consilium.europa.eu/en/press/press-releases/2025/10/23/19th-package-of-sanctions-against-russia-eu-targets-russian-energy-third-country-banks-and-crypto-providers/pdf"
       }
     ],
-    "rationale": "A7A5's transparency page describes one-for-one backing by Russian-ruble deposits, while section 4.3 of its terms describes a diversified basket of fiat deposits and short-term assets. The issuer does not reconcile those descriptions or publish current constituent weights, institutions, account terms, or a retrievable assurance artifact, so the complete reserve is represented as one unresolved aggregate.",
+    "rationale": "Rechecked 2026-07-22: A7A5's transparency page describes one-for-one backing by Russian-ruble deposits, while section 4.3 of its terms describes a diversified basket of fiat deposits and short-term assets. The issuer does not reconcile those descriptions or publish current constituent weights, institutions, account terms, or a retrievable assurance artifact, so the complete reserve is represented as one unresolved aggregate. Old Vector LLC is designated by the United States and United Kingdom, and the European Union prohibits A7A5 transactions; these restrictions create material legal and access risk but do not establish that any specific reserve account is frozen. Kyrgyz virtual-asset registration is not prudential reserve verification.",
     "compositionBasis": "Conflicting current issuer descriptions of the eligible Russian-ruble reserve envelope",
     "scope": "full-composition",
     "knownUnknownExposure": "Reserve-bank identities, deposit and short-term-asset weights, instrument identities, account terms, custody, liquidity, and current assurance evidence are undisclosed.",
@@ -50,12 +62,12 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "owner-triage",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "A7A5 terms of use",
+        "label": "A7A5 terms of use (accessed 2026-07-22)",
         "url": "https://docs.a7a5.io/legal/terms-of-use.md"
       }
     ],

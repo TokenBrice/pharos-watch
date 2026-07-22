@@ -20,23 +20,24 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Bridge Building Inc Stablecoin Terms",
+        "label": "Bridge Building Inc Stablecoin Terms (accessed 2026-07-22)",
         "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
       },
       {
-        "label": "Bridge stablecoins reserve and custody FAQ",
+        "label": "Bridge stablecoins reserve and custody FAQ (accessed 2026-07-22)",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
       }
     ],
-    "rationale": "Bridge's issuer terms identify the eligible reserve categories but do not publish CASH's current allocation among them. The prior 50/15/15/10/10 split had no source support and was replaced by one evidenced aggregate basket.",
+    "rationale": "Rechecked 2026-07-22: Bridge's issuer terms require at least 1:1 reserves and identify eligible Treasury bills of no more than three months, overnight Treasury repo, government money-market funds, deposits, and tokenized equivalents. Bridge does not publish CASH's current allocation among them or a CASH-specific reserve report, so the complete reserve remains one evidenced aggregate basket rather than an unsupported split.",
     "compositionBasis": "Bridge issuer terms and reserve FAQ; current category weights undisclosed",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer identifies the eligible reserve envelope but does not publish current asset-class, tokenized-asset, counterparty, or provider weights for CASH. The reviewed issuer terms and reserve FAQ also do not provide a dated independent attestation, audit, or reconciliation procedure for CASH reserves; that assurance boundary was rechecked on 2026-07-14 by SONG Safety Score V9 mechanism review.",
+    "knownUnknownExposure": "The issuer identifies the eligible reserve envelope but does not publish current asset-class, tokenized-asset, counterparty, or provider weights for CASH. The issuer terms and reserve FAQ reviewed on 2026-07-22 do not provide a dated CASH-specific independent attestation, audit, or reserve-to-liability reconciliation.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -64,16 +65,16 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Bridge Building Inc Stablecoin Terms",
+        "label": "Bridge Building Inc Stablecoin Terms (accessed 2026-07-22)",
         "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
       },
       {
-        "label": "Bridge stablecoins reserve and custody FAQ",
+        "label": "Bridge stablecoins reserve and custody FAQ (accessed 2026-07-22)",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
       }
     ],

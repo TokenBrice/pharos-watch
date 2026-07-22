@@ -61,3 +61,5 @@ Second, and just as fiercely held: **everything stays open source, under the MIT
 In six months, Pharos broke into the stablecoin space and made a splash. We're staying in our lane, comfy, and quite assured about where we're going, and about the necessity of what we're doing. The next six months are going to be even better, and you're invited.
 
 If you like and use Pharos, you know how to support us: spread the word, make sure everybody knows about Pharos, and if you feel like it and can afford it, [Pharos accepts donations](/funding/). See you at the lighthouse. 🗼
+
+	/- TokenBrice

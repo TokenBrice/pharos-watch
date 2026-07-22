@@ -12,26 +12,30 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Bridge reserve management",
+        "label": "Bridge reserve management (accessed 2026-07-22)",
         "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
       },
       {
-        "label": "Bridge stablecoins FAQ",
+        "label": "Bridge stablecoins FAQ (accessed 2026-07-22)",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
       },
       {
-        "label": "Bridge reporting and transparency",
+        "label": "Bridge reporting and transparency (accessed 2026-07-22)",
         "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
+      },
+      {
+        "label": "Sui USDsui launch announcement (2026-03-04)",
+        "url": "https://blog.sui.io/sui-dollar-launch-bridge/"
       }
     ],
-    "rationale": "Bridge states that issued stablecoins are at least 1:1 collateralized. Its reserve-management documentation allows allocation across USD, on-chain stablecoins, and Treasuries, while its FAQ identifies cash, short-dated U.S. Treasuries, overnight Treasury repos, and government money-market funds. No public USDsui-specific reserve report or authenticated reserve-API output identifies current weights, providers, or holdings, so the complete basket is retained as one aggregate slice.",
+    "rationale": "Rechecked 2026-07-22: Bridge states that issued stablecoins are at least 1:1 collateralized. Its reserve-management documentation allows allocation across USD, on-chain stablecoins, and Treasuries, while its FAQ identifies cash, short-dated U.S. Treasuries, overnight Treasury repos, and government money-market funds. No public USDsui-specific reserve report, independent assurance artifact, or authenticated reserve-API output identifies current weights, providers, or holdings, so the complete basket is retained as one aggregate slice.",
     "compositionBasis": "Bridge Open Issuance reserve categories; USDsui-specific component weights are undisclosed",
-    "compositionAsOf": "2026-07-15",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve categories are identified, but USDsui-specific weights, stablecoin identities, and individual bank, repo, and money-market-fund counterparties are not published.",
     "knownUnknownExposurePct": 100,
@@ -66,16 +70,16 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Bridge stablecoins FAQ",
+        "label": "Bridge stablecoins FAQ (accessed 2026-07-22)",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
       },
       {
-        "label": "Bridge reserve management",
+        "label": "Bridge reserve management (accessed 2026-07-22)",
         "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
       }
     ],

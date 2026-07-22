@@ -30,7 +30,7 @@
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "SOL-8 Safety Score V9 blocker challenge",
+      "reviewer": "GPT SOL-BIND wave6",
       "confidence": "probable",
       "sources": [
         {

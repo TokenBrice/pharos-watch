@@ -3,7 +3,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
 import { QUALITY_MULTIPLIERS, isBlockedDexId } from "../../lib/dex-cron-constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import type { LlamaPool, CurvePoolEntry, LiquidityMetrics } from "./types";
+import type { EvmV2ExecutionCandidate, LlamaPool, CurvePoolEntry, LiquidityMetrics } from "./types";
 import {
   classifyPoolType,
   buildPoolFingerprint,
@@ -14,6 +14,7 @@ import {
   computePoolStress,
   initMetrics,
   isCryptoSwap,
+  parsePoolSymbols,
 } from "./pool-helpers";
 import { isTrustworthyExactPoolId } from "./pool-identity";
 import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
@@ -34,6 +35,7 @@ import {
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
   getCurveCryptoSwapShadowPolicy,
 } from "../measured-execution/curve-cryptoswap";
+import { buildEvmV2ExecutionCandidate } from "./constant-product-v2";
 
 /**
  * The Curve pools endpoint does not publish per-pool fees. Standard
@@ -264,6 +266,7 @@ export function processPoolMetrics(
   stablecoinPriceById?: Map<string, number>,
   measuredTargetCapturedAt = Math.floor(Date.now() / 1000),
   validationReferences?: PriceValidationReferences,
+  aerodromeV2ExecutionCandidates: Map<string, EvmV2ExecutionCandidate> = new Map(),
 ): Map<string, LiquidityMetrics> {
   const metrics = new Map<string, LiquidityMetrics>();
   const enforceDexProjectFilter = dexProjects.size > 0;
@@ -320,6 +323,11 @@ export function processPoolMetrics(
           ? buildUniV3ExecutionCandidateKey(chainNorm, pool.underlyingTokens, uniV3FeePips)
           : null;
       const uniV3Candidates = uniV3ExecutionKey ? (uniV3ExecutionCandidates.get(uniV3ExecutionKey) ?? []) : [];
+      const aerodromeExecutionKey =
+        protocol === "aerodrome" ? canonicalExitRouteAssetKey(chainNorm, pool.pool) : null;
+      const aerodromeV2ExecutionCandidate = aerodromeExecutionKey
+        ? aerodromeV2ExecutionCandidates.get(aerodromeExecutionKey)
+        : undefined;
 
       // --- v2: Enhanced quality resolution ---
       let qualMult: number;
@@ -513,6 +521,16 @@ export function processPoolMetrics(
           protocol === "uniswap-v3" && !uniV3MeasuredTarget
             ? { family: "measured-execution", reason: "target-unresolved" }
             : null;
+        const evmV2ExecutionCandidate =
+          (resolvedPoolType === "aerodrome-volatile" ? aerodromeV2ExecutionCandidate : undefined) ??
+          buildEvmV2ExecutionCandidate({
+            chain: chainNorm,
+            protocol: pool.project,
+            poolType: resolvedPoolType,
+            poolAddress: pool.pool,
+            tokenAddresses: pool.underlyingTokens ?? [],
+            tokenSymbols: parsePoolSymbols(pool.symbol),
+          });
 
         // Pool entry with enriched extra
         m.topPools.push({
@@ -542,6 +560,7 @@ export function processPoolMetrics(
                 ? { feeTier: Math.round(feeTierForExtra / 100) }
                 : {}),
             ...(ammExecutionModel ? { ammExecutionModel } : {}),
+            ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
             ...(curveExecutionCapability.gate && !curveCryptoSwapMeasuredTarget
               ? { executionCapabilityGate: curveExecutionCapability.gate }
               : measuredExecutionGate

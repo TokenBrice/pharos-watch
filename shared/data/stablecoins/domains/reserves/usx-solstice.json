@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
     "confidence": "verified",
     "sources": [
       {
@@ -30,13 +30,17 @@
       {
         "label": "Solstice attestation API",
         "url": "https://attestation-api.solstice.finance/dashboard"
+      },
+      {
+        "label": "Solstice USX documentation",
+        "url": "https://docs.solstice.finance/solstice-for-users/usx.md"
       }
     ],
-    "rationale": "Solstice's current USX product page identifies audited cash, tokenized Treasuries, and delta-neutral hedged positions as the reserve categories. The attestation API's latest underlying reserve observation, dated 2026-07-15 and reviewed on 2026-07-21, reported aggregate collateralization of about 1.0042 and supplied cryptographic attestation material, but no asset-level balances or category weights. The complete reserve is therefore retained as one conservatively high-risk aggregate rather than assigning unsupported stablecoin constituents or weights. The slice name remains aligned to the solstice-attestation adapter row identity.",
+    "rationale": "Solstice identifies audited cash, tokenized Treasuries, and delta-neutral hedged positions as the reserve categories. The attestation API observation fetched on 2026-07-22 reported aggregate collateralization of 1.003922 and supplied cryptographic attestation material, but no asset-level balances or category weights. The complete reserve is therefore retained as one conservatively high-risk aggregate rather than assigning unsupported constituents or weights. The slice name remains aligned to the solstice-attestation adapter row identity.",
     "compositionBasis": "Current Solstice collateral disclosure and aggregate reserve-versus-supply attestation",
-    "compositionAsOf": "2026-07-15",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "The current split among audited cash, tokenized Treasuries, and delta-neutral hedged positions is not published; underlying instruments, custodians, execution venues, and hedge counterparties are also undisclosed.",
+    "knownUnknownExposure": "The current split among audited cash, tokenized Treasuries, and delta-neutral hedged positions is not published; underlying instruments, custodian shares, execution venues, and hedge counterparties are also undisclosed.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -51,15 +55,19 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Undisclosed Solstice reserve custodians and hedge venues",
-        "role": "other"
+        "name": "Copper",
+        "role": "custodian"
+      },
+      {
+        "name": "Ceffu",
+        "role": "custodian"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
     "confidence": "probable",
     "sources": [
       {
@@ -69,9 +77,17 @@
       {
         "label": "Solstice attestation API",
         "url": "https://attestation-api.solstice.finance/dashboard"
+      },
+      {
+        "label": "Solstice USX documentation",
+        "url": "https://docs.solstice.finance/solstice-for-users/usx.md"
+      },
+      {
+        "label": "Solstice risk disclosures",
+        "url": "https://docs.solstice.finance/legal-documents/risk-disclosures.md"
       }
     ],
-    "uncertainty": "Solstice and Accountable publish aggregate collateral coverage and name the reserve categories, but the public materials do not identify custodians or hedge venues, provider shares, legal segregation, bankruptcy remoteness, or rehypothecation terms.",
+    "uncertainty": "Solstice names Copper and Ceffu as third-party custodians but does not publish their current shares, identify hedge venues, or establish legal segregation, bankruptcy remoteness, or rehypothecation terms for the complete reserve.",
     "knownUnknownExposurePct": 100
   }
 }

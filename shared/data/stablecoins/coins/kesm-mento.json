@@ -134,10 +134,10 @@
         "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
       }
     ],
-    "sourceFreeRationale": "Bounded unknown retained: Mento documentation and the verified KESm deployment establish the reserve-backed system, but do not establish a complete holder-level blacklist or freeze inventory for the token and its upstream reserve assets.",
-    "evidence": "KESm inherits upstream freeze exposure because the Mento reserve mix includes tracked freezable stablecoins such as USDC, USDT, and EURC. No direct KESm holder-control function is asserted without a deployment-wide verified control inventory.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "sourceFreeRationale": "The current holder-facing KESm token has no direct blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Timelocked proxy upgrade authority is recorded in mint-authority evidence but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
+    "evidence": "At finalized Celo block 72780426, KESm's sole tracked Celo deployment resolved to the verified StableTokenV2 implementation used by the Mento Broker assets. The implementation exposes ordinary ERC-20 transfers, permissioned minting, and self-burn only; it has no direct blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer hook. KESm's direct token-level freeze posture is therefore No. The current Mento Reserve's USDT, EURC, and USDC-family collateral remains separately represented and can still produce computed upstream exposure.",
+    "reviewer": "GPT SOL-MENTO wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "permissioned-minter",

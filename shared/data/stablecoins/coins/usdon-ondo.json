@@ -387,8 +387,8 @@
     {
       "name": "USDon settlement cash and cash equivalents held at Ondo Global Markets brokerage accounts",
       "pct": 100,
-      "risk": "very-low",
-      "assetClass": "cash",
+      "risk": "high",
+      "assetClass": "other",
       "issuerOrObligor": "Ondo Global Markets (BVI) Limited at one or more undisclosed US-registered custodial broker-dealers",
       "riskFactors": [
         "credit",
@@ -402,42 +402,42 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Ondo Global Markets available assets (USDon definition)",
-        "url": "https://docs.ondo.finance/ondo-global-markets/available-assets"
+        "label": "Ondo Stocks available assets, including USDon (accessed 2026-07-22)",
+        "url": "https://docs.ondo.finance/ondo-stocks/available-assets"
       },
       {
-        "label": "Ondo Global Markets investing and redeeming",
-        "url": "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming"
+        "label": "Ondo Stocks investing and redeeming (accessed 2026-07-22)",
+        "url": "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming"
       },
       {
-        "label": "Ondo Global Markets trust and transparency",
-        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+        "label": "Ondo Stocks trust and transparency (accessed 2026-07-22)",
+        "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency"
       },
       {
-        "label": "Ondo Global Markets smart-contract audit index",
+        "label": "Ondo smart-contract audit index (accessed 2026-07-22)",
         "url": "https://docs.ondo.finance/audits"
       },
       {
-        "label": "Ondo July 2025 Cyfrin Global Markets audit",
+        "label": "Ondo Cyfrin smart-contract audit (2025-07-14)",
         "url": "https://docs-v2-git-prod-ondo-docs.vercel.app/pdf/2025-07-14-cyfrin-ondo-global-markets-v2.0.pdf"
       },
       {
-        "label": "Ondo Global Markets addresses",
+        "label": "Ondo Global Markets addresses (accessed 2026-07-22)",
         "url": "https://docs.ondo.finance/addresses"
       },
       {
-        "label": "USDon Ethereum implementation source",
+        "label": "USDon Ethereum implementation source (observed 2026-07-20)",
         "url": "https://sourcify.dev/server/v2/contract/1/0x267e11bb559f5d392e498cdd0e2342057031a2cf"
       }
     ],
-    "rationale": "Re-verified 2026-07-20 against issuer documentation fetched today: the available-assets page states 'USDon is a stablecoin backed 1:1 by a US dollar in one of Global Markets' brokerage accounts', and the investing-and-redeeming page states each USDon is backed by 'a dollar of cash or equivalents at a Global Markets brokerage account' with redemptions to USDon documented as always instant; the slice is renamed to the issuer's cash-or-equivalents language and liquidityHorizon set to immediate accordingly. The trust-and-transparency page scopes Ankura Trust's daily verification to tokenized-stock securities and their collateral; no USDon-specific cash balance, brokerage identity, account reconciliation, or reserve assurance was found, so the 100% insufficient-evidence disposition is retained. The July 2025 Cyfrin Global Markets audit and the fixed-block token-source review carried from the 2026-07-15 review remain the contract-side evidence.",
-    "compositionBasis": "Issuer product documentation (available-assets and investing-and-redeeming pages) fetched 2026-07-20, plus the July 2025 Cyfrin Global Markets audit and fixed-block token-source review",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Reverified 2026-07-22: Ondo states that each USDon is backed by one U.S. dollar of cash or equivalents in a Global Markets brokerage account and documents instant USDon settlement in the investing flow. Because the issuer does not disclose the cash-equivalent instruments or their weights, the aggregate is classified as other rather than assuming that the whole account is cash. Ondo's Ankura verification covers tokenized-stock securities and collateral, not USDon brokerage cash; the Cyfrin document is a smart-contract audit. No USDon-specific balance, broker identity, account reconciliation, or reserve assurance was found.",
+    "compositionBasis": "Ondo issuer product documentation for USDon cash-or-equivalent brokerage-account backing, accessed 2026-07-22",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
     "knownUnknownExposure": "Current cash balances, brokerage identity, account reconciliation, provider allocation, custody terms, and USDon-specific reserve assurance are not disclosed in the reviewed sources.",
     "knownUnknownExposurePct": 100,
@@ -467,20 +467,20 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Ondo Global Markets trust and transparency",
-        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+        "label": "Ondo Stocks trust and transparency (accessed 2026-07-22)",
+        "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency"
       },
       {
-        "label": "Ondo Global Markets investing and redeeming",
-        "url": "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming"
+        "label": "Ondo Stocks investing and redeeming (accessed 2026-07-22)",
+        "url": "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming"
       },
       {
-        "label": "Ondo Global Markets disclaimer",
+        "label": "Ondo Global Markets disclaimer (accessed 2026-07-22)",
         "url": "https://docs.ondo.finance/ondo-global-markets/disclaimer"
       }
     ],

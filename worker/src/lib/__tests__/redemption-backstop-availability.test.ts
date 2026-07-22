@@ -149,7 +149,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     const cusd = result.get("cusd-celo");
     expect(cusd?.routeStatus).toBe("degraded");
     expect(cusd?.outputImpairedDependencyId).toBe("ausd-agora");
-    expect(cusd?.outputImpairedShare).toBeCloseTo(0.274, 6);
+    expect(cusd?.outputImpairedShare).toBeCloseTo(0.267201077302, 6);
     expect(cusd?.routeStatusReason).toContain("Output asset impairment");
   });
 
@@ -180,8 +180,9 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     // worst impaired dependency wins attribution (USDC's -3000 bps beats USDT's -2600 bps)
     expect(cusd?.outputImpairedDependencyId).toBe("usdc-circle");
     expect(cusd?.activeDepegBps).toBe(3000);
-    // cUSD's reviewed USDC (3.8%) and USDT (12.3%) reserve shares accumulate.
-    expect(cusd?.outputImpairedShare).toBeCloseTo(0.161, 6);
+    // cUSD's reviewed USDC (3.052055248%) and USDT (11.6128170806%)
+    // Mento reserve shares accumulate.
+    expect(cusd?.outputImpairedShare).toBeCloseTo(0.146648723286, 6);
     // composition weights sum below 1.0, so no over-leverage marker is emitted
     expect(cusd?.routeStatusReason).not.toContain("over-leveraged");
   });
@@ -284,10 +285,7 @@ describe("evaluateOutputDependencyImpairment", () => {
 
     expect(evaluateOutputDependencyImpairment(weights, new Map())).toBeNull();
 
-    const partial = evaluateOutputDependencyImpairment(
-      weights,
-      new Map([["dep-a", row("dep-a", -3000, 1_000_000)]]),
-    );
+    const partial = evaluateOutputDependencyImpairment(weights, new Map([["dep-a", row("dep-a", -3000, 1_000_000)]]));
     expect(partial?.outputImpairedShare).toBeCloseTo(0.5, 6);
     expect(partial?.impairedDependencyId).toBe("dep-a");
   });

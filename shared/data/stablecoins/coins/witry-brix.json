@@ -14,6 +14,22 @@
   "collateral": "iTRY deposited into the Brix staking wrapper, backed by regulated Turkish-lira money-market funds and related TRY cash/liquidity instruments",
   "pegMechanism": "wiTRY appreciates against iTRY as fund yield is minted into the staking contract and vests over time; users can unstake through a cooldown or use Fast Redeem for a fee, while final TRY exposure inherits iTRY issuer and local-currency risk",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "Brix documentation identifies wiTRY as the yield-bearing wrapper claim on iTRY, whose disclosed backing is the Digital Liquidity Fund's Turkish money-market fund basket. The token is an NAV/yield-accreting short-duration fund exposure rather than a fixed TRY cash claim; the existing tbill archetype is retained as the closest supported V9 category.",
+    "sources": [
+      {
+        "label": "Brix iTRY backing and custody documentation",
+        "url": "https://docs.brix.money/itry/backing"
+      },
+      {
+        "label": "Brix proof-of-reserves documentation",
+        "url": "https://docs.brix.money/itry/proof-of-reserves"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "wrapped-itry",
   "links": [

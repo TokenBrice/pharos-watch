@@ -1066,9 +1066,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "DefiLlama's paypal-usd adapter counts Cardano supply ($199 dust) from the Cardano native asset 25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff9355059555344 with bridge tag 'wan' (Wanchain). Wanchain's Cardano route is controlled by its off-chain Storeman node group, which has no single readable on-chain controller contract; without Cardano tooling to enumerate the mint authority honestly this route stays unresolved.",
+        "reviewNote": "Re-verified 2026-07-22. Wanchain's own Cardano transaction documentation identifies policy 25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff935 as Wanchain-mapped and requires userBurn for its mapped tokens. Wanchain documents a rotating 25-node Storeman group using MPC and Shamir secret sharing, with more than two-thirds of nodes required to sign; the live group API returned smgID 0x000000000000000000000000000000000000000000000041726965735f303638. That rotating off-chain group ID and threshold cannot be encoded honestly as a single Cardano contract controller in the current route schema, and the exact Cardano minting policy script identity was not published by the reviewed sources. The route therefore remains unresolved rather than fabricating a controller address.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-22",
         "sources": [
           {
             "label": "DefiLlama paypal-usd layerzeroConfig (per-chain PYUSD0 contracts)",
@@ -1077,6 +1077,22 @@
           {
             "label": "DefiLlama paypal-usd adapter (cardano wan entry)",
             "url": "https://github.com/DefiLlama/peggedassets-server/blob/master/src/adapters/peggedAssets/paypal-usd/index.ts"
+          },
+          {
+            "label": "Wanchain direct Cardano bridge interaction documentation",
+            "url": "https://docs.wanchain.org/developers/wanbridge-api/2.-creating-cross-chain-transactions-for-wanbridge/2.1-direct-interaction-with-on-chain-contracts"
+          },
+          {
+            "label": "Wanchain Bridge Node fact sheet",
+            "url": "https://docs.wanchain.org/wanchain-bridge-nodes"
+          },
+          {
+            "label": "Wanchain universal multichain bridge architecture",
+            "url": "https://docs.wanchain.org/crosschain/universal-multichain-bridges"
+          },
+          {
+            "label": "Wanchain active Storeman group ID API",
+            "url": "https://bridge-api.wanchain.org/api/smgID"
           }
         ]
       }

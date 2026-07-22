@@ -17,6 +17,36 @@
   "commodityOunces": 0.001,
   "detailProvider": "commodity",
   "geckoId": "goldfish-gold",
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://goldfishgold.com/collateral",
+    "provider": "Goldfish designated collateral wallet on Ethereum",
+    "attestorTier": "self",
+    "cadence": "real-time",
+    "latestReport": {
+      "periodEnd": "2026-07-22",
+      "publishedAt": "2026-07-22",
+      "assuranceMethod": "onchain-proof",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "GPT SOL-EVD-A wave6",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Goldfish collateral model and designated wallet (accessed 2026-07-22)",
+          "url": "https://goldfishgold.com/collateral"
+        },
+        {
+          "label": "ION.au collateral-wallet balance at Ethereum block 25590329 (2026-07-22)",
+          "url": "https://etherscan.io/token/0xd051c326c9aef673428e6f01eb65d2c52de95d30?a=0x2F371Ba19F89874689a91bA322194F9967Cb640D"
+        },
+        {
+          "label": "GGBR total supply at Ethereum block 25590329 (2026-07-22)",
+          "url": "https://etherscan.io/token/0x7e2ac793f3E692f388e66c7DC28F739d13B0B71A"
+        }
+      ]
+    }
+  },
   "links": [
     {
       "label": "Website",
@@ -166,7 +196,7 @@
       }
     },
     "params": {
-      "label": "Issuer-managed gold backing",
+      "label": "In-situ gold-reserve-backed ION.au securities",
       "risk": "high"
     }
   },

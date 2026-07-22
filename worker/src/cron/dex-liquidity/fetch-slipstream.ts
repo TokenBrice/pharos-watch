@@ -220,6 +220,8 @@ export async function fetchSlipstreamPools(
 
     const pools: DexApiPool[] = [];
     for (const pool of clPools) {
+      const tickSpacing = Number(pool.type);
+      if (!Number.isInteger(tickSpacing) || tickSpacing <= 0 || tickSpacing > 8_388_607) continue;
       const token0 = tokenMap.get(normalizeAddress(pool.token0));
       const token1 = tokenMap.get(normalizeAddress(pool.token1));
       if (!token0 || !token1) continue;
@@ -309,6 +311,7 @@ export async function fetchSlipstreamPools(
         // "unknown volume" from a measured no-volume pool.
         volume24hUsd: 0,
         feeRate: normalizeFeeRateFromBps(effectiveFeeBps),
+        tickSpacing,
         balances: [reserve0, reserve1],
       });
     }

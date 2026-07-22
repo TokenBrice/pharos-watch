@@ -20,9 +20,28 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://openeden.com/usdo/transparency",
-    "provider": "Chainlink PoR",
-    "attestorTier": "niche",
-    "cadence": "real-time"
+    "provider": "OpenEden issuer reserve API and transparency dashboard",
+    "attestorTier": "self",
+    "cadence": "real-time",
+    "latestReport": {
+      "periodEnd": "2026-07-22",
+      "publishedAt": "2026-07-22",
+      "assuranceMethod": "self-verification",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "partial",
+      "reviewer": "GPT SOL-EVD-A wave6",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "OpenEden USDO reserve composition and supply API (snapshot 2026-07-22T08:00:19.092Z)",
+          "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
+        },
+        {
+          "label": "OpenEden USDO transparency dashboard (accessed 2026-07-22)",
+          "url": "https://openeden.com/usdo/transparency"
+        }
+      ]
+    }
   },
   "links": [
     {

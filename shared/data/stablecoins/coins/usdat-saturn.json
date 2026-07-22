@@ -119,19 +119,33 @@
       "chain": "ethereum",
       "address": "0x23238f20b894f29041f48d88ee91131c395aaa71",
       "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+      "decimals": 6
     }
   ],
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "USDat is currently an Ethereum-only Saturn M0 extension. The token wraps and unwraps M through the local M0 SwapFacility; no cross-chain representation is authored for the current deployment.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos bridge route review",
+    "tier": "external-validated-network",
+    "summary": "Within the current runtime-selected material snapshot, USDat is an issuer-native M0 extension on Ethereum and a Chainlink CCIP burn/mint representation on Monad. Pinned Monad reads identify the sole MINTER_ROLE holder as a CCIP BurnMintTokenPool whose configured Ethereum remote token is the canonical USDat deployment; deployments not selected by this snapshot are outside this binding pass.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
     "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
         "name": "M0 Extensions / SwapFacility",
         "url": "https://docs.m0.org/protocol/extensions"
+      },
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "slug": "chainlink-ccip",
+        "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/evm/token-pools",
+        "bridgeTypes": [
+          "burnAndMint"
+        ]
       }
     ],
     "sources": [
@@ -142,6 +156,14 @@
       {
         "label": "M0 Extensions and SwapFacility documentation",
         "url": "https://docs.m0.org/protocol/extensions"
+      },
+      {
+        "label": "Chainlink CCIP EVM token-pool documentation",
+        "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/evm/token-pools"
+      },
+      {
+        "label": "Sourcify exact-match SaturnOFT implementation",
+        "url": "https://sourcify.dev/server/v2/contract/143/0x79EdA68D227eaA4B6431B123aa89f31F4bC70e5d?fields=all"
       }
     ],
     "routes": [
@@ -173,6 +195,48 @@
           {
             "label": "USDat contract on Etherscan",
             "url": "https://etherscan.io/address/0x23238f20b894f29041f48d88ee91131c395aaa71"
+          }
+        ]
+      },
+      {
+        "id": "monad:0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+        "sourceChain": "ethereum",
+        "destinationChain": "monad",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+        "protocol": "Chainlink CCIP BurnMintTokenPool",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Monad block 89485023, name(), symbol(), and decimals() identify this 6-decimal USDat deployment; its EIP-1967 implementation is the Sourcify exact-match SaturnOFT contract at 0x79eda68d227eaa4b6431b123aa89f31f4bc70e5d. MINTER_ROLE enumeration returns only 0x8ab40e2dabcd24dcff0a06a68eb59990405270f0. That controller exposes the Chainlink CCIP BurnMintTokenPool interface, getRouter() = 0x33566fe5976aaa420f3d5c64996641fc3858cadb, and its Ethereum remote-token configuration resolves to canonical USDat 0x23238f20b894f29041f48d88ee91131c395aaa71. The token default admin is a timelock with minDelay() = 172800 seconds.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "monad",
+        "controllerAddress": "0x8ab40e2dabcd24dcff0a06a68eb59990405270f0",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:monad:0x8ab40e2dabcd24dcff0a06a68eb59990405270f0"
+        ],
+        "observedAt": "2026-07-22",
+        "observedBlock": 89485023,
+        "sources": [
+          {
+            "label": "USDat on Monadscan",
+            "url": "https://monadscan.com/address/0x0Bb150DFa86EA5d7742F07FEfCD8E8edA81D64eF"
+          },
+          {
+            "label": "Sourcify exact-match SaturnOFT implementation",
+            "url": "https://sourcify.dev/server/v2/contract/143/0x79EdA68D227eaA4B6431B123aa89f31F4bC70e5d?fields=all"
+          },
+          {
+            "label": "Chainlink CCIP EVM token-pool documentation",
+            "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/evm/token-pools"
+          },
+          {
+            "label": "Monad public RPC",
+            "url": "https://rpc.monad.xyz"
           }
         ]
       }

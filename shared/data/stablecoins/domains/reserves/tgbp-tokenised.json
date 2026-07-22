@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex reserve composition audit",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
     "confidence": "probable",
     "sources": [
       {
@@ -43,23 +43,27 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Reserve banks and securities custodian (not publicly disclosed)",
-        "role": "other",
+        "name": "Undisclosed regulated UK banking partners",
+        "role": "bank",
         "jurisdiction": "United Kingdom"
       }
     ],
-    "segregation": "unknown",
-    "bankruptcyRemoteness": "unknown",
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
+    "confidence": "probable",
     "sources": [
+      {
+        "label": "Tokenised GBP terms (site bundle dated 2026-07-14)",
+        "url": "https://www.tokenisedgbp.com/terms"
+      },
       {
         "label": "Tokenised GBP issuer site",
         "url": "https://www.tokenisedgbp.com/"
       }
     ],
-    "uncertainty": "The reviewed issuer disclosure does not identify reserve banks or a securities custodian, publish provider shares, or establish segregation, bankruptcy-remoteness, and rehypothecation safeguards."
+    "uncertainty": "The current terms state that reserve accounts remain segregated from operational accounts and that backing is held with regulated financial institutions, while the issuer site identifies UK banking partners. The issuer does not name the reserve institutions or a securities custodian, publish provider shares, provide a legal opinion on insolvency treatment, or disclose rehypothecation safeguards."
   }
 }

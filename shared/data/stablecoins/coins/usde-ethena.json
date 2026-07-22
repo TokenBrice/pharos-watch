@@ -246,12 +246,17 @@
       "decimals": 18
     }
   ],
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Sourcify USDe.sol",
-        "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3/sources/contracts/USDe.sol"
+      "url": "https://sourcify.dev/server/v2/contract/1/0x4c9EDD5852cd905f086C759E8383e09bff1E68B3?fields=sources"
+      },
+      {
+        "label": "Ethena USDe token source",
+        "url": "https://github.com/ethena-labs/code4arena-contest/blob/main/protocols/USDe/contracts/USDe.sol"
       },
       {
         "label": "Ethena staking documentation",
@@ -260,11 +265,27 @@
       {
         "label": "Solscan USDe mint",
         "url": "https://solscan.io/token/DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT"
+      },
+      {
+        "label": "Solana mainnet JSON-RPC finalized mint read at slot 434568679",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "TONAPI verified USDe jetton source observed 2026-07-22",
+        "url": "https://tonapi.io/v2/blockchain/accounts/EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f/inspect"
+      },
+      {
+        "label": "TONAPI USDe get_jetton_data read observed 2026-07-22",
+        "url": "https://tonapi.io/v2/blockchain/accounts/EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f/methods/get_jetton_data"
+      },
+      {
+        "label": "TONAPI USDe jetton metadata",
+        "url": "https://tonapi.io/v2/jettons/EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f"
       }
     ],
-    "evidence": "The verified Ethereum USDe.sol source exposes owner-set minter authority and standard ERC-20 transfers but no holder freeze or blacklist function. Ethena's own documentation states that its blacklist and repossession controls apply to the sUSDe staking contract, not USDe. The listed Solana USDe mint was queried through the Solana JSON-RPC API on 2026-07-14 and returned freezeAuthority=null. Reserve and custody dependencies can carry upstream freeze exposure, but no direct holder-balance freeze was found for the reviewed USDe deployments.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "POSTURE CHANGE on 2026-07-22: direct holder control is Yes because the material TON USDe jetton can be locked by its administrator. Ethereum USDe exposes owner-set minter authority and ordinary ERC-20 transfers but no holder freeze or blacklist, and a finalized Solana read at slot 434568679 returned freezeAuthority=null. On TON, verified jetton-minter.fc code for EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f gives the administrator an upgrade path and an admin-only call_to operation that can send set_status to any derived jetton wallet; the verified source explicitly describes this path as able to lock, unlock, or redeem funds. The 2026-07-22 state was pinned to master code hash a9bfedc76d60b332e8019e405505aadf4d7f870b8d3bae7abcfeb868681e6b2a and last transaction LT 91438387000020 / hash bf7da7303ee7eb1ac66741c08f6ba5146fc6fdde56206118f6801b30673f2727, with administrator EQCrj-smMj6JQCAvb-BPwlMa71IAA7pK3KNaFcVOdeYC6qS7. This TON holder-control path makes the asset-level direct posture true even though the reviewed Ethereum and Solana deployments lack an equivalent active freeze authority.",
+    "reviewer": "GPT SOL-CORP-A wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "offchain-attested-minter",
@@ -1859,9 +1880,9 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "2026-07-20: the contract at 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 on Tempo is a minimal EIP-1967 proxy (implementation 0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a) whose endpoint() returns 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c, but all ERC20 metadata and owner() calls revert, so the deployment cannot be honestly identified as the USDe OFT or attributed to a controller. DefiLlama classifies Tempo USDe supply ($22, dust) as natively minted. Left unresolved.",
+        "reviewNote": "Re-verified from Tempo mainnet RPC at block 31232268 on 2026-07-22: 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34 is a minimal EIP-1967 proxy with implementation 0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a and a zero admin slot. endpoint() returns Tempo's published LayerZero V2 endpoint 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c, but name(), symbol(), decimals(), totalSupply(), and owner() all revert. The implementation bytecode also lacks the standard ERC-20 metadata selectors. The address therefore cannot be honestly identified as a USDe token deployment or attributed to a token controller, so the route remains unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-22",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -1870,6 +1891,14 @@
           {
             "label": "Tempo explorer",
             "url": "https://explorer.tempo.xyz/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+          },
+          {
+            "label": "Tempo mainnet JSON-RPC pinned read at block 31232268",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "LayerZero Tempo deployment addresses",
+            "url": "https://docs.layerzero.network/v2/deployments/chains/tempo"
           }
         ]
       }

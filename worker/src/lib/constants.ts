@@ -205,6 +205,7 @@ export const CIRCUIT_SOURCE = {
   ORCA_API: "orca-api",
   METEORA_API: "meteora-api",
   PANCAKESWAP_API: "pancakeswap-api",
+  SUNSWAP_API: "sunswap-api",
   AERODROME_SLIPSTREAM_API: "aerodrome-slipstream-api",
   VELODROME_SLIPSTREAM_API: "velodrome-slipstream-api",
   TRONGRID: "trongrid",

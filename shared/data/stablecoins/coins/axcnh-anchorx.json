@@ -14,6 +14,22 @@
   "collateral": "Offshore Chinese yuan (CNH) cash reserves held 1:1 at regulated financial institutions; issuer materials describe AxCNH as fully reserved and redeemable for CNH",
   "pegMechanism": "Direct 1:1 issuance and redemption through AnchorX for CNH transfers; the issuer publishes reported circulating AxCNH and corresponding CNH reserves on its transparency page",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "AnchorX's transparency disclosure and the current Kreston procedures report describe AxCNH as direct 1:1 CNH issuance and redemption supported by CNH cash held at regulated financial institutions. This is an issuer-managed offshore-yuan reserve claim, not a USD peg or a protocol collateral mechanism.",
+    "sources": [
+      {
+        "label": "AnchorX transparency disclosure",
+        "url": "https://anchorx.org/transparency"
+      },
+      {
+        "label": "Kreston AxCNH agreed-upon procedures report",
+        "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQBFtWH9omnjQJjvKMhV9wp1AR2X5H5ZgPjMxgMIDc6QZeI?e=eyMBgf"
+      }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "axcnh",
   "proofOfReserves": {

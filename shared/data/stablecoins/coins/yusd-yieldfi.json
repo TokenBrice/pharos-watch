@@ -115,9 +115,9 @@
       "decimals": 18
     }
   ],
-  "canBeBlacklisted": "possible",
+  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Docs",
@@ -126,11 +126,15 @@
       {
         "label": "Website",
         "url": "https://yield.fi/"
+      },
+      {
+        "label": "YToken exact-match implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493?fields=sources,compilation"
       }
     ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-reviewed 2026-07-22: the exact YToken implementation rejects blacklisted senders and recipients in _update, and its manager can call burnYToken(from, shares) without an allowance. These are direct holder restriction and seizure controls; true replaces the prior possible posture.",
+    "reviewer": "GPT SOL-CORP-C wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

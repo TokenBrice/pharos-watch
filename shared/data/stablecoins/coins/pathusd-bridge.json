@@ -18,6 +18,26 @@
   "collateral": "Bridge-managed reserve assets for Tempo pathUSD, including cash, short-dated Treasuries, overnight Treasury repo, and money-market-fund exposure",
   "pegMechanism": "Tempo users mint pathUSD by depositing USDC.e through Bridge-supported exchange flows and redeem pathUSD back into USDC through Bridge rails",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "Bridge documents pathUSD issuance and redemption through its stablecoin rail against reserves of cash, short Treasuries, overnight Treasury repo, and money-market-fund exposure. The holder receives a par issuer redemption claim rather than a fund share or collateralized borrower position, so fiat-cash is the closest archetype.",
+    "sources": [
+      {
+        "label": "Bridge issuance FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq.md"
+      },
+      {
+        "label": "Bridge issuance overview",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/overview.md"
+      },
+      {
+        "label": "Tempo pathUSD quote-token documentation",
+        "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
+      }
+    ]
+  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://apidocs.bridge.xyz/platform/issuance/faq",

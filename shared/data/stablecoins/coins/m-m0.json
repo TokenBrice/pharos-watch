@@ -333,6 +333,11 @@
       "decimals": 6
     },
     {
+      "chain": "hyperliquid",
+      "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "decimals": 6
+    },
+    {
       "chain": "plume",
       "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
       "decimals": 6
@@ -381,15 +386,15 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "M0 documents M Portals as the multichain architecture for M, with Ethereum as the authoritative issuance and governance source and Wormhole NTT implementing hub lock/release plus spoke mint/burn logic. That is reviewed as external lock/mint bridge exposure. 2026-07-20 cohort dc-1 pass: resolved the flagged non-native route controls with on-chain reads, including Solana's documented M Portal program; see per-row reviewNote evidence.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "summary": "M0 documents M Portals as the multichain architecture for M, with Ethereum as the authoritative issuance and governance source and Wormhole NTT or Hyperlane implementing hub lock/release plus spoke mint/burn logic. The 2026-07-20 cohort resolved the non-native route controls with on-chain reads, including Solana's documented M Portal program. The 2026-07-22 pass also maps DefiLlama's Hyperliquid supply label to the same chain-999 HyperEVM deployment and control domain; see per-route evidence.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-CORP-A wave6",
     "confidence": "verified",
     "protocols": [
       {
         "source": "issuer",
         "name": "M Portal",
-        "url": "https://docs.m0.org/home/technical-documentations/m-portal/overview/",
+      "url": "https://docs.m0.org/protocol/m-portals",
         "bridgeTypes": [
           "lockMint"
         ]
@@ -401,16 +406,24 @@
         "bridgeTypes": [
           "nativeTokenTransfer"
         ]
+      },
+      {
+        "source": "issuer",
+        "name": "M Portal Lite (Hyperlane)",
+        "url": "https://docs.m0.org/build/bridging-developer",
+        "bridgeTypes": [
+          "lockMint"
+        ]
       }
     ],
     "sources": [
       {
         "label": "M Portal overview",
-        "url": "https://docs.m0.org/home/technical-documentations/m-portal/overview/"
+      "url": "https://docs.m0.org/protocol/m-portals"
       },
       {
         "label": "M Portal underlying technology",
-        "url": "https://docs.m0.org/home/technical-documentations/m-portal/underlying/"
+      "url": "https://docs.m0.org/build/bridging-developer"
       },
       {
         "label": "Wormhole NTT overview",
@@ -594,6 +607,39 @@
           {
             "label": "M0 documentation",
             "url": "https://docs.m0.org/"
+          }
+        ]
+      },
+      {
+        "id": "hyperliquid:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "destinationChain": "hyperliquid",
+        "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "protocol": "M0 Portal (HyperEVM representation exposed under the Hyperliquid supply label)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "M0 identifies chain ID 999 as HyperEVM and publishes M at 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b across supported EVM chains. DefiLlama's Hyperliquid supply label is the same economic deployment: at HyperEVM block 41167990 on 2026-07-22, the token's portal() returned 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, matching the reviewed HyperEVM route. This alias therefore shares the same portal mint/burn authority, upgrade surface, and failure domain; it is not a second bridge or independently capped deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-22",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:hyperevm:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "sources": [
+          {
+            "label": "M0 bridging guide",
+            "url": "https://docs.m0.org/build/bridging-user"
+          },
+          {
+            "label": "HyperEVM public RPC",
+            "url": "https://rpc.hyperliquid.xyz/evm"
           }
         ]
       },

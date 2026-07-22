@@ -215,6 +215,7 @@ describe("fetchSlipstreamPools", () => {
       poolAddress: "0x00000000000000000000000000000000000000AA",
       poolType: "aerodrome-slipstream-1bp",
       feeRate: 0.0001,
+      tickSpacing: 1,
       tvlUsd: 100,
       price: null,
       volume24hUsd: 0,

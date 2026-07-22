@@ -83,4 +83,51 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
     expect(index.enforcedChainsByProtocol.size).toBe(0);
     expect(index.confirmedExactKeysByProtocol.size).toBe(0);
   });
+
+  it("fails open while a paginated authoritative inventory is incomplete", () => {
+    const index = buildAuthoritativeStagedPoolConfirmationIndex([
+      {
+        name: "PancakeSwap",
+        circuitKey: "pancakeswap-api",
+        normalizedProtocol: "pancakeswap",
+        supportedChains: ["bsc"],
+        result: {
+          pools: [],
+          ok: true,
+          degraded: false,
+          errors: [],
+          pagination: {
+            state: "partial",
+            headRefreshed: true,
+            pagesFetched: 3,
+            cursor: "750",
+            cycleCompleted: false,
+          },
+        },
+      },
+    ]);
+
+    expect(index.enforcedChainsByProtocol.size).toBe(0);
+    expect(index.confirmedExactKeysByProtocol.size).toBe(0);
+  });
+
+  it("never treats the shadow-only SunSwap census as authoritative scoring coverage", () => {
+    const index = buildAuthoritativeStagedPoolConfirmationIndex([
+      {
+        name: "SunSwap V2",
+        circuitKey: "sunswap-api",
+        normalizedProtocol: "sunswap",
+        supportedChains: ["tron"],
+        result: {
+          pools: [],
+          ok: true,
+          degraded: false,
+          errors: [],
+        },
+      },
+    ]);
+
+    expect(index.enforcedChainsByProtocol.size).toBe(0);
+    expect(index.confirmedExactKeysByProtocol.size).toBe(0);
+  });
 });

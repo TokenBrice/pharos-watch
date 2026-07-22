@@ -17,6 +17,8 @@ export const PRIMARY_FX_CURRENCIES = [
   "MXN",
   "MYR",
   "KRW",
+  "HKD",
+  "INR",
 ] as const;
 
 export const PRIMARY_CURRENCY_TO_PEG: Record<string, string> = {
@@ -36,6 +38,8 @@ export const PRIMARY_CURRENCY_TO_PEG: Record<string, string> = {
   MXN: "peggedMXN",
   MYR: "peggedMYR",
   KRW: "peggedKRW",
+  HKD: "peggedHKD",
+  INR: "peggedINR",
 };
 
 // Keys are lowercase ISO codes as returned by the fawazahmed0 currency API.

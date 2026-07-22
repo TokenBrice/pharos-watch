@@ -16,6 +16,22 @@
   "collateral": "Argentine peso reserves and local-currency liquid instruments backing WARS at a 1:1 target against the Argentine peso",
   "pegMechanism": "Issuer-managed fiat-backed stablecoin route targeting 1 WARS = 1 ARS; DefiLlama classifies the asset as fiat-backed",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-B wave6",
+    "rationale": "Ripio's independent accountant certification reconciles outstanding wARS to Argentine-peso deposits at Argentine financial institutions and certifies full ARS backing. That is an issuer-managed cash-reserve claim targeting ARS, not a USD or algorithmic peg.",
+    "sources": [
+      {
+        "label": "Independent public accountant certification for wARS - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
+      },
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ]
+  },
   "geckoId": "argentine-peso",
   "links": [
     {

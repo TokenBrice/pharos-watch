@@ -155,9 +155,9 @@
         "url": "https://arbitrum-one-rpc.publicnode.com"
       }
     ],
-    "evidence": "All four tracked routes were reviewed separately. Ethereum 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd is an EIP-1967 UUPS proxy: at block 25535646 it returned implementation 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0, with wards(MCD_PAUSE_PROXY 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB)=1 and wards(0x36b072ed8afe665e3aa6daba79decbec63752b22)=1. The verified current ERC-4626 source has ordinary transfer and transferFrom paths, no blacklist, pause, seizure, or transfer hook, and burns another holder's shares only with that holder's allowance; pinned zero-value transfer and transferFrom simulations returned true. Base 0x5875eee11cf8398102fdad704c9e96607675467a and OP Mainnet 0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0 are separately verified UUPS representations: their current sources also have ordinary ERC-20 transfer paths, while their active ward pairs respectively include 0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255 and 0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7 on Base, and 0x10e6593cdda8c58a1d0f14c5164b376352a55f2f and 0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6 on OP. At pinned blocks 48650092 and 154245377, their implementation and zero-value transfer/transferFrom calls succeeded. Arbitrum 0xddb46999f8891663a8f2828d25298f70416d7610 returned implementation 0x5aee6b37d6e31860804575aee3e2f368a0a428e7 at current head 483995500; its two active wards are 0x10e6593cdda8c58a1d0f14c5164b376352a55f2f and 0x13f7f24ca959359a4d710d32c715d4bce273c793, and current zero-value transfer paths returned true. The free Arbitrum endpoint rejected later fixed-block simulations as archive-only. Each live implementation authorizes UUPS upgrades through a ward, so a governance-controlled ward can replace holder-facing logic even though no active deployment currently exposes a direct holder blacklist or global transfer stop. Sky's parent repository, terms, transparency, and archived shutdown materials do not establish an additional live sUSDS holder-control function. Possible is retained for those route-specific live upgrade paths, not as a claim that one route's authority operates another route.",
-    "reviewer": "Codex Safety Score V9 access review",
-    "reviewedAt": "2026-07-15"
+    "evidence": "All four tracked routes were reviewed separately. Ethereum 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd is an EIP-1967 UUPS proxy: at block 25535646 it returned implementation 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0, with wards(MCD_PAUSE_PROXY 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB)=1 and wards(0x36b072ed8afe665e3aa6daba79decbec63752b22)=1. The verified current ERC-4626 source has ordinary transfer and transferFrom paths, no blacklist, pause, seizure, or transfer hook, and burns another holder's shares only with that holder's allowance; pinned zero-value transfer and transferFrom simulations returned true. Base 0x5875eee11cf8398102fdad704c9e96607675467a and OP Mainnet 0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0 are separately verified UUPS representations: their current sources also have ordinary ERC-20 transfer paths, while their active ward pairs respectively include 0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255 and 0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7 on Base, and 0x10e6593cdda8c58a1d0f14c5164b376352a55f2f and 0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6 on OP. At pinned blocks 48650092 and 154245377, their implementation and zero-value transfer/transferFrom calls succeeded. Arbitrum 0xddb46999f8891663a8f2828d25298f70416d7610 returned implementation 0x5aee6b37d6e31860804575aee3e2f368a0a428e7 at current head 483995500; its two active wards are 0x10e6593cdda8c58a1d0f14c5164b376352a55f2f and 0x13f7f24ca959359a4d710d32c715d4bce273c793, and current zero-value transfer paths returned true. The free Arbitrum endpoint rejected later fixed-block simulations as archive-only. No active deployment currently exposes a holder blacklist, pause, seizure, or global transfer stop. Ward-gated upgrade authority remains a Mint Authority fact and does not establish direct freeze reach. Possible is retained as the prior bounded posture pending primary evidence of an active holder-facing freeze surface.",
+    "reviewer": "GPT SOL-BIND wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
@@ -288,27 +288,34 @@
   },
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "sUSDS is the ERC-4626 savings wrapper for USDS and its multichain route is tied to Sky/Spark cross-chain liquidity plus Sky's Wormhole NTT expansion. Because NTT/OFT-style routes introduce an external messaging and token framework, Pharos scores the wrapper as external lock/mint exposure. A near-synchronous 2026-07-21 totalSupply snapshot attributes 342,446,332.180536477297262823 sUSDS, or 7.9776341236% of canonical Ethereum supply, to the Base, OP Mainnet, and Arbitrum representations.",
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex bridge route and materiality review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "tier": "canonical-rollup-bridge",
+    "summary": "sUSDS is issued natively by the Sky Savings USDS vault on Ethereum. Its three authored non-Ethereum deployments are SkyLink canonical rollup lock/mint representations on Base, OP Mainnet, and Arbitrum; no unauthored NTT or liquidity route influences this profile tier. A near-synchronous 2026-07-21 totalSupply snapshot attributes 342,446,332.180536477297262823 sUSDS, or 7.9776341236% of canonical Ethereum supply, to those three representations.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
     "confidence": "verified",
     "protocols": [
       {
         "source": "docs",
-        "name": "Wormhole NTT",
-        "url": "https://wormhole.com/blog/sky-formerly-maker-is-expanding-sky-usds-and-susds-multichain-to-solana-with",
+        "name": "SkyLink Base Token Bridge",
+        "url": "https://developers.skyeco.com/guides/skylink/base-eth-native-bridge/",
         "bridgeTypes": [
-          "burnAndMint",
           "lockAndMint"
         ]
       },
       {
         "source": "docs",
-        "name": "Spark cross-chain PSM",
-        "url": "https://docs.spark.fi/dev/savings/spark-psm",
+        "name": "SkyLink OP Token Bridge",
+        "url": "https://github.com/sky-ecosystem/op-token-bridge",
         "bridgeTypes": [
-          "liquidity"
+          "lockAndMint"
+        ]
+      },
+      {
+        "source": "docs",
+        "name": "SkyLink Arbitrum Token Bridge",
+        "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge",
+        "bridgeTypes": [
+          "lockAndMint"
         ]
       }
     ],
@@ -318,12 +325,16 @@
         "url": "https://developers.sky.money/protocol/tokens/susds/"
       },
       {
-        "label": "Wormhole Sky multichain announcement",
-        "url": "https://wormhole.com/blog/sky-formerly-maker-is-expanding-sky-usds-and-susds-multichain-to-solana-with"
+        "label": "SkyLink Base bridge guide",
+        "url": "https://developers.skyeco.com/guides/skylink/base-eth-native-bridge/"
       },
       {
-        "label": "Spark PSM docs",
-        "url": "https://docs.spark.fi/dev/savings/spark-psm"
+        "label": "SkyLink OP Token Bridge repository",
+        "url": "https://github.com/sky-ecosystem/op-token-bridge"
+      },
+      {
+        "label": "SkyLink Arbitrum Token Bridge repository",
+        "url": "https://github.com/sky-ecosystem/arbitrum-token-bridge"
       }
     ],
     "routes": [

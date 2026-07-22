@@ -218,27 +218,31 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-TAIL-B wave6",
     "confidence": "probable",
     "sources": [
       {
         "label": "Sovryn Mynt and DLLR documentation",
         "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt"
+      },
+      {
+        "label": "Sovryn Mynt bAsset-to-mAsset documentation",
+        "url": "https://build.sovryn.com/builder-portal/smart-contracts/mynt/basset-to-masset"
       }
     ],
     "rationale": "Sovryn documents DLLR as a 1:1 Mynt basket whose currently supported bAssets are ZUSD and DOC, both BTC-backed. The issuer documentation does not publish a current basket balance or an API for the live ZUSD/DOC allocation.",
     "compositionBasis": "Sovryn Mynt supported-bAsset documentation and captured live balance labels",
     "scope": "full-composition",
-    "knownUnknownExposure": "No issuer-published current balance or allocation proves the live ZUSD/DOC split emitted by the reserve producer.",
-    "knownUnknownExposurePct": 99.998,
+    "knownUnknownExposure": "Sovryn's Mynt documentation identifies ZUSD and DOC as the supported DLLR bAssets. The reserve producer supplies the current slice weights, but the issuer does not publish a standalone current basket-balance report.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Sovryn Zero ZUSD",
         "pct": 99.998,
-        "disposition": "basket-needs-split",
-        "rationale": "Issuer confirms ZUSD is supported but does not publish the current basket balance."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Sovryn identifies ZUSD as a supported DLLR bAsset, but it is not a tracked Pharos stablecoin and therefore cannot form a dependency graph edge."
       }
     ]
   },

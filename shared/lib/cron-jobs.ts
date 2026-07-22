@@ -350,7 +350,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "half-hourly",
     scheduleKey: "halfHourlyMeasuredExecution",
     triggerMode: "isolated",
-    maxConnections: 3, // At most three chain lanes; each lane serializes its RPC requests.
+    maxConnections: 5, // Three EVM chain lanes plus serialized Solana and Tron quote streams.
   },
   {
     job: "sync-dex-liquidity",

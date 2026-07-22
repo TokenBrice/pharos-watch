@@ -11,6 +11,36 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.87",
+    title: "Base Aerodrome volatile exact execution",
+    date: "2026-07-22",
+    effectiveAt: 1784678400,
+    summary:
+      "Classic volatile pools from the existing Base Aerodrome census can publish exact constant-product execution models after deployment-specific same-block verification.",
+    impact: [
+      "Only census-confirmed classic Base Aerodrome pools with stable=false are eligible; generic Solidly support and Avalanche, Linea, or Sonic deployments remain out of scope",
+      "Each candidate requires reviewed factory and implementation runtimes, exact factory getPool(token0, token1, false) binding, pool stable=false, and an unpaused factory at one pinned block",
+      "The model uses the pool's same-block dynamic fee; any runtime, identity, pause-state, fee, reserve, or price failure remains capability-gated instead of inheriting executable depth",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "5.86",
+    title: "Canonical V2 pool retention and exact execution",
+    date: "2026-07-22",
+    effectiveAt: 1784678400,
+    summary:
+      "PancakeSwap V2 discovery is no longer rejected by the V3 authoritative inventory, and reviewed Ethereum Uniswap V2 and BSC PancakeSwap V2 pools can publish factory-verified constant-product execution models.",
+    impact: [
+      "Incomplete paginated authoritative inventories now fail open, while complete PancakeSwap V3 authority remains scoped to concentrated-liquidity rows instead of suppressing V2 pools",
+      "Ethereum Uniswap V2 and BSC PancakeSwap V2 candidates require a pinned canonical factory runtime, exact getPair binding, and same-block token-order, reserve, and decimals reads before becoming score-eligible",
+      "Other V2 forks and any identity, factory, reserve, or price failure remain shaped or capability-gated evidence rather than inheriting executable depth",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.85",
     title: "Raydium pool-implied counter-asset reference",
     date: "2026-07-20",

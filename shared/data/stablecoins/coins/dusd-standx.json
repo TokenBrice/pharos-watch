@@ -14,6 +14,26 @@
   "collateral": "USDT/USDC deposits converted to hedged crypto positions (BTC, ETH, SOL) via Ceffu",
   "pegMechanism": "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "rationale": "StandX documents conversion of stablecoin deposits into spot digital assets paired with matching short perpetual positions, with the stability reserve and managed hedge system absorbing basis and liquidation stress. The peg therefore depends on a centrally operated delta-neutral portfolio, which directly matches synthetic-delta-neutral.",
+    "sources": [
+      {
+        "label": "StandX DUSD architecture",
+        "url": "https://docs.standx.com/docs/dusd-solutions"
+      },
+      {
+        "label": "StandX DUSD minting",
+        "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd"
+      },
+      {
+        "label": "StandX risks and hedging system",
+        "url": "https://docs.standx.com/docs/dusd-solutions/risks-hedging-system"
+      }
+    ]
+  },
   "llamaId": "252",
   "detailProvider": "defillama",
   "geckoId": "standx-dusd",

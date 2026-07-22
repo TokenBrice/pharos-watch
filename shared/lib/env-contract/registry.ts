@@ -163,7 +163,7 @@ export const ENV_BINDINGS = [
   {
     key: "TRONGRID_API_KEY",
     valueType: "string",
-    description: "TronGrid API credential used by the Tron blacklist-sync lane.",
+    description: "TronGrid API credential used by Tron blacklist sync and shadow SunSwap exact-execution reads.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 10, status: "optional" },
@@ -244,7 +244,7 @@ export const ENV_BINDINGS = [
   {
     key: "JUPITER_API_KEY",
     valueType: "string",
-    description: "Jupiter credential used by the Solana price-fallback pass against `api.jup.ag`.",
+    description: "Jupiter credential used by Solana price fallback and shadow Orca exact-route quotes against `api.jup.ag`.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 20, status: "optional" },
