@@ -29,7 +29,6 @@ export async function publishFallbackStablecoinsCache(
     db: input.db,
     syncStartSec: input.syncStartSec,
     signal: input.signal,
-    alertWebhookUrl: input.alertWebhookUrl,
     validationContext: "fallback",
     returnIfAborted: input.returnIfAborted,
     abortResult: input.abortResult,

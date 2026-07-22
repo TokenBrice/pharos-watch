@@ -242,15 +242,17 @@ export function makeStatefulDb(options: StatefulDbOptions = {}) {
           idempotency_key: idempotencyKey,
         });
       } else if (sql.includes("INSERT INTO status_discrepancy_state")) {
+        // Mirrors the 6-column upsert: legacy alert-timestamp columns are not
+        // in the column list, so ON CONFLICT preserves any existing values.
         store.discrepancy = {
           scope: String(boundValues[0]),
           consecutive_divergent: Number(boundValues[1]),
           last_divergent_at: (boundValues[2] as number | null) ?? null,
-          last_alert_at: (boundValues[3] as number | null) ?? null,
-          consecutive_probe_failures: Number(boundValues[4]),
-          last_probe_failure_at: (boundValues[5] as number | null) ?? null,
-          last_probe_alert_at: (boundValues[6] as number | null) ?? null,
-          updated_at: Number(boundValues[7]),
+          last_alert_at: store.discrepancy?.last_alert_at ?? null,
+          consecutive_probe_failures: Number(boundValues[3]),
+          last_probe_failure_at: (boundValues[4] as number | null) ?? null,
+          last_probe_alert_at: store.discrepancy?.last_probe_alert_at ?? null,
+          updated_at: Number(boundValues[5]),
         };
       } else if (sql.includes("SET last_alert_at = ?")) {
         store.discrepancy = {

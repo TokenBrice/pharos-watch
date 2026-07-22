@@ -24,7 +24,6 @@ import {
   evaluateStablecoinPublicationCoverage,
   loadPreviousStablecoinActivePriceCoverage,
 } from "../../lib/stablecoin-publication-coverage";
-import { alertOnMissingActiveStablecoinPrices } from "../../lib/stablecoin-publication-alerts";
 import {
   buildPriceSourceAttemptLedger,
   compactPriceSourceAttemptLedger,
@@ -40,7 +39,6 @@ export async function syncViaCoingeckoFallback(
   cmcApiKey: string | undefined,
   syncStartSec: number,
   signal?: AbortSignal,
-  alertWebhookUrl?: string | null,
   coingeckoApiKey?: string | null,
   reportProgress?: CronProgressReporter,
   jupiterApiKey?: string | null,
@@ -137,7 +135,6 @@ export async function syncViaCoingeckoFallback(
     reportProgress,
     priceCacheEntries,
     fxFallbackRates,
-    alertWebhookUrl,
     returnIfAborted,
     abortResult,
   });
@@ -169,11 +166,6 @@ export async function syncViaCoingeckoFallback(
     ? compactStablecoinActivePriceCoverage(activePriceCoverage, 20)
     : activePriceCoverage;
   const providerDiagnostics = [...fallbackProviderDiagnostics, ...depegProviderDiagnostics];
-  const activePriceCoverageAlert = await alertOnMissingActiveStablecoinPrices(
-    db,
-    activePriceCoverage,
-    alertWebhookUrl,
-  );
   const priceSourceAttemptLedger = compactPriceSourceAttemptLedger(buildPriceSourceAttemptLedger({
     missingActiveIds: activePriceCoverage.missingActiveIds,
     providerDiagnostics,
@@ -215,7 +207,6 @@ export async function syncViaCoingeckoFallback(
       depegPipelineSucceeded: depegErrorCount === 0,
       activePublicationCoverage: publicationCoverage,
       activePriceCoverage: persistedActivePriceCoverage,
-      activePriceCoverageAlert,
       priceSourceAttemptLedger,
     }, {
       cacheWriteMode: "published",

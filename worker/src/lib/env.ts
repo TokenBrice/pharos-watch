@@ -36,7 +36,6 @@ export interface Env {
   BIRDEYE_API_KEY?: string;
   ADDRESS_PRICE_PROVIDERS_ENABLED?: string;
   GRAPH_API_KEY?: string;
-  ALERT_WEBHOOK_URL?: string;
   ANTHROPIC_API_KEY?: string;
   CMC_API_KEY?: string;
   JUPITER_API_KEY?: string;

@@ -6,8 +6,6 @@ import {
   getLatestStatusProbe,
   getStatusStateSnapshot,
   listRecentStatusTransitions,
-  markDiscrepancyAlertSent,
-  markProbeFailureAlertSent,
   reconcileStatusState,
   summarizeStatusPersistenceIssues,
   STATUS_HYSTERESIS,
@@ -16,10 +14,6 @@ import {
   writeStatusProbeRun,
 } from "../status-reliability";
 import { STATUS_DEGRADED_TO_STALE_THRESHOLD } from "../status-reliability-shared";
-import {
-  STATUS_DISCREPANCY_DIRECT_ALERT_CACHE_KEY,
-  STATUS_PROBE_FAILURE_DIRECT_ALERT_CACHE_KEY,
-} from "../status-discrepancy-store";
 import { decideNextStatus } from "../status-reliability-decision";
 import { makeStatefulDb } from "./_helpers/stateful-d1";
 
@@ -430,40 +424,29 @@ describe("status-reliability", () => {
     expect(store.probes[0]?.idempotency_key).toBeTruthy();
   });
 
-  it("tracks discrepancy streaks and alert timestamps", async () => {
+  it("tracks discrepancy streaks", async () => {
     const { db, store } = makeStatefulDb();
 
     const first = await updateDiscrepancyObservation(db, 100, true, true);
     expect(first).toEqual({
       consecutiveDivergent: 1,
-      lastAlertAt: null,
       consecutiveProbeFailures: 1,
-      lastProbeAlertAt: null,
       persistenceSucceeded: true,
     });
-
-    await expect(markDiscrepancyAlertSent(db, 200)).resolves.toBe(true);
-    await expect(markProbeFailureAlertSent(db, 300)).resolves.toBe(true);
 
     const second = await updateDiscrepancyObservation(db, 400, false, false);
     expect(second).toEqual({
       consecutiveDivergent: 0,
-      lastAlertAt: 200,
       consecutiveProbeFailures: 0,
-      lastProbeAlertAt: 300,
       persistenceSucceeded: true,
     });
 
-    expect(JSON.parse(store.cache.get(STATUS_DISCREPANCY_DIRECT_ALERT_CACHE_KEY)?.value ?? "{}"))
-      .toEqual({ lastAlertedAt: 200 });
-    expect(JSON.parse(store.cache.get(STATUS_PROBE_FAILURE_DIRECT_ALERT_CACHE_KEY)?.value ?? "{}"))
-      .toEqual({ lastAlertedAt: 300 });
     expect(store.discrepancy).toMatchObject({ last_alert_at: null, last_probe_alert_at: null });
 
     expect(await getDiscrepancyStreak(db)).toBe(0);
   });
 
-  it("ignores legacy status-row alert timestamps for direct-alert cooldowns", async () => {
+  it("preserves legacy alert-timestamp columns on upsert", async () => {
     const { db, store } = makeStatefulDb();
     store.discrepancy = {
       scope: "global",
@@ -479,8 +462,7 @@ describe("status-reliability", () => {
     const result = await updateDiscrepancyObservation(db, 100, true, true);
 
     expect(result).toMatchObject({
-      lastAlertAt: null,
-      lastProbeAlertAt: null,
+      consecutiveDivergent: 4,
       persistenceSucceeded: true,
     });
     expect(store.discrepancy).toMatchObject({ last_alert_at: 80, last_probe_alert_at: 60 });
@@ -506,9 +488,7 @@ describe("status-reliability", () => {
 
     expect(result).toEqual({
       consecutiveDivergent: 4,
-      lastAlertAt: null,
       consecutiveProbeFailures: 2,
-      lastProbeAlertAt: null,
       persistenceSucceeded: false,
     });
   });

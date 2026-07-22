@@ -41,19 +41,11 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext): ScheduledSl
         },
         {
           job: "mint-burn-growth-watchdog",
-          run: (signal) => runMintBurnGrowthWatchdog(
-            runtime.db,
-            runtime.alertWebhookUrl,
-            signal,
-          ),
+          run: (signal) => runMintBurnGrowthWatchdog(runtime.db, signal),
         },
         {
           job: "cron-duration-watchdog",
-          run: (signal) => runCronDurationWatchdog(
-            runtime.db,
-            runtime.alertWebhookUrl,
-            signal,
-          ),
+          run: (signal) => runCronDurationWatchdog(runtime.db, signal),
         },
       ],
     },

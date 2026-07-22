@@ -5,7 +5,6 @@ import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { CRON_TIMEOUT_MS } from "../../lib/cron-lease";
 import { runCronDurationWatchdog } from "../cron-duration-watchdog";
 
-const WEBHOOK_URL = "https://example.com/webhook";
 const NOW = new Date("2026-06-10T03:00:00Z");
 const NOW_SEC = Math.floor(NOW.getTime() / 1000);
 const SINCE_SEC = NOW_SEC - 7 * 86400;
@@ -104,12 +103,10 @@ describe("runCronDurationWatchdog", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("ok", { status: 200 })));
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.unstubAllGlobals();
   });
 
   it("stays ok while averages sit under the 80% ceiling ratio", async () => {
@@ -117,35 +114,25 @@ describe("runCronDurationWatchdog", () => {
       statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.7), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBeUndefined();
-    expect(fetch).not.toHaveBeenCalled();
   });
 
-  it("degrades and alerts when the 7d average crosses 80% of the ceiling", async () => {
+  it("degrades when the 7d average crosses 80% of the ceiling", async () => {
     const db = mockD1([
       statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.85), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBe("degraded");
-    expect(fetch).toHaveBeenCalledTimes(1);
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       breaching: ["sync-stablecoins"],
-      alerted: true,
     });
-    expect(
-      db.getHistory().some(
-        (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-          entry.binds[0] === "cron-duration-watchdog:alert:direct:v1",
-      ),
-    ).toBe(true);
   });
 
-  it("alerts on repeated at-cap runs even with a healthy average", async () => {
+  it("degrades on repeated at-cap runs even with a healthy average", async () => {
     const db = mockD1([
       statsMatcher({
         n: 660,
@@ -156,13 +143,13 @@ describe("runCronDurationWatchdog", () => {
       }),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(String(result.metadata))).toMatchObject({ breaching: ["sync-stablecoins"] });
   });
 
-  it("alerts on repeated at-cap runs for low-cadence jobs below the trend sample floor", async () => {
+  it("degrades on repeated at-cap runs for low-cadence jobs below the trend sample floor", async () => {
     const db = mockD1([
       statsMatcher({
         n: 3,
@@ -173,7 +160,7 @@ describe("runCronDurationWatchdog", () => {
       }),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
@@ -182,7 +169,7 @@ describe("runCronDurationWatchdog", () => {
     });
   });
 
-  it("alerts on repeated budget truncations below the trend sample floor", async () => {
+  it("degrades on repeated budget truncations below the trend sample floor", async () => {
     const db = mockD1([
       statsMatcher({
         n: 3,
@@ -194,7 +181,7 @@ describe("runCronDurationWatchdog", () => {
       }),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
@@ -214,11 +201,10 @@ describe("runCronDurationWatchdog", () => {
       }),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
     const metadata = JSON.parse(String(result.metadata));
 
     expect(result.status).toBeUndefined();
-    expect(fetch).not.toHaveBeenCalled();
     expect(metadata.runtimeCapRecentWindowSec).toBe(86400);
     expect(metadata.runtimeBreaching).toEqual([]);
     expect(metadata.stats).toEqual(
@@ -275,7 +261,7 @@ describe("runCronDurationWatchdog", () => {
       ]),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
@@ -317,70 +303,9 @@ describe("runCronDurationWatchdog", () => {
       statsMatcher({ n: 5, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.95), max_ms: SYNC_TIMEOUT_MS, cap_hits: 0 }),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBeUndefined();
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it("suppresses re-alerts inside the weekly cooldown", async () => {
-    const db = mockD1([
-      statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.85), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
-      {
-        match: "cache",
-        matchBinds: ["cron-duration-watchdog:alert:direct:v1"],
-        rows: [],
-        first: {
-          key: "cron-duration-watchdog:alert:direct:v1",
-          value: JSON.stringify({ lastAlertedAt: NOW_SEC - 3600 }),
-          updated_at: NOW_SEC - 3600,
-        },
-      },
-    ]);
-
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
-
-    expect(result.status).toBe("degraded");
-    expect(fetch).not.toHaveBeenCalled();
-    expect(JSON.parse(String(result.metadata))).toMatchObject({ alerted: false, suppressedByCooldown: true });
-  });
-
-  it("ignores the legacy alert marker during the direct-delivery cutover", async () => {
-    const db = mockD1([
-      statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.85), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
-      {
-        match: "cache",
-        rows: [],
-        first: {
-          key: "cron-duration-watchdog:alert",
-          value: JSON.stringify({ lastAlertedAt: NOW_SEC - 3600 }),
-          updated_at: NOW_SEC - 3600,
-        },
-      },
-    ]);
-
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
-
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(String(result.metadata))).toMatchObject({ alerted: true, suppressedByCooldown: false });
-  });
-
-  it("does not advance the direct marker when webhook delivery fails", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("failed", { status: 500 })));
-    const db = mockD1([
-      statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.85), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
-    ]);
-
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
-
-    expect(JSON.parse(String(result.metadata))).toMatchObject({ alerted: false, suppressedByCooldown: false });
-    expect(
-      db.getHistory().some(
-        (entry) =>
-          entry.sql.includes("INSERT OR REPLACE INTO cache") &&
-          entry.binds[0] === "cron-duration-watchdog:alert:direct:v1",
-      ),
-    ).toBe(false);
   });
 
   it("excludes stale-slot reconciled child rows from runtime averages", async () => {
@@ -388,7 +313,7 @@ describe("runCronDurationWatchdog", () => {
       statsMatcher({ n: 20, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.2), max_ms: SYNC_TIMEOUT_MS, cap_hits: 0 }),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
     const runtimeQueries = db.getHistory().filter((entry) => entry.sql.includes("FROM cron_runs"));
 
     expect(result.status).toBeUndefined();
@@ -410,18 +335,17 @@ describe("runCronDurationWatchdog", () => {
       }),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       runtimeBreaching: ["sync-live-reserves"],
       slotAbandonmentBreaching: [],
       breaching: ["sync-live-reserves"],
-      alerted: true,
     });
   });
 
-  it("alerts on scheduled slot abandonment separately from runtime pressure", async () => {
+  it("degrades on scheduled slot abandonment separately from runtime pressure", async () => {
     const db = mockD1([
       slotStatsMatcher([{
         slot_key: "hourlyYieldSync",
@@ -432,14 +356,13 @@ describe("runCronDurationWatchdog", () => {
       }]),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       runtimeBreaching: [],
       slotAbandonmentBreaching: ["hourlyYieldSync"],
       breaching: ["hourlyYieldSync"],
-      alerted: true,
     });
     expect(db.getHistory().some((entry) => entry.binds.includes(STALE_SLOT_ERROR))).toBe(true);
     expect(db.getHistory().every((entry) => !entry.sql.includes("LIKE"))).toBe(true);
@@ -461,7 +384,7 @@ describe("runCronDurationWatchdog", () => {
       }]),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(String(result.metadata))).toMatchObject({
@@ -477,7 +400,6 @@ describe("runCronDurationWatchdog", () => {
         }),
       ]),
     });
-    expect(String(vi.mocked(fetch).mock.calls[0]?.[1]?.body)).toContain("3 not-started slot(s)");
   });
 
   it("executes lifecycle classification against SQLite and fails legacy ambiguity closed", async () => {
@@ -537,7 +459,7 @@ describe("runCronDurationWatchdog", () => {
       },
     }));
 
-    const result = await runCronDurationWatchdog(createSqliteD1(sqlite), null);
+    const result = await runCronDurationWatchdog(createSqliteD1(sqlite));
     const metadata = JSON.parse(String(result.metadata));
 
     expect(result.status).toBe("degraded");
@@ -564,10 +486,9 @@ describe("runCronDurationWatchdog", () => {
       }]),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBeUndefined();
-    expect(fetch).not.toHaveBeenCalled();
     expect(JSON.parse(String(result.metadata))).toMatchObject({
       slotAbandonmentRecentWindowSec: 86400,
       slotAbandonmentBreaching: [],
@@ -592,10 +513,9 @@ describe("runCronDurationWatchdog", () => {
       }]),
     ]);
 
-    const result = await runCronDurationWatchdog(db, WEBHOOK_URL);
+    const result = await runCronDurationWatchdog(db);
 
     expect(result.status).toBeUndefined();
-    expect(fetch).not.toHaveBeenCalled();
     const metadata = JSON.parse(String(result.metadata));
     expect(metadata.slotStats).toEqual(
       expect.arrayContaining([

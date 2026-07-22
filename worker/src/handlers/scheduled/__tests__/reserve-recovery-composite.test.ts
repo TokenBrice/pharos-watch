@@ -127,7 +127,6 @@ function runtime(
     mintBurnDisabledSymbols: [],
     mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
     coingeckoApiKey: null,
-    alertWebhookUrl: null,
     chainRpcs: new Map(),
     runLeasedCron: async (job, run) => {
       startedJobs.push(job);

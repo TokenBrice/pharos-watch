@@ -5,7 +5,6 @@
  */
 
 import { getCache, setCache } from "./db-cache";
-import { sendAlert } from "./alerts";
 import { CIRCUIT_OPEN_THRESHOLD, CIRCUIT_PROBE_INTERVAL_SEC } from "./circuit-config";
 import { CIRCUIT_SOURCE } from "./constants";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -192,7 +191,6 @@ export async function shouldAttemptFetch(db: D1Database, source: string): Promis
 
 /**
  * Records the outcome of a fetch attempt and handles state transitions.
- * Fires alerts on open/close transitions.
  *
  * NOTE: There is a known TOCTOU window between shouldAttemptFetch() and
  * recordOutcome() — concurrent cron jobs could both read "half-open" and
@@ -205,7 +203,6 @@ export async function recordOutcome(
   db: D1Database,
   source: string,
   success: boolean,
-  webhookUrl?: string | null,
 ): Promise<CircuitOutcomeRecord> {
   const record = await getCircuitRecord(db, source);
   const before = { ...record };
@@ -220,14 +217,6 @@ export async function recordOutcome(
     await setCircuitRecord(db, source, record);
     if (wasOpen) {
       console.log(`[circuit-breaker] ${source}: CLOSED (recovered)`);
-      // Awaited (not fire-and-forget) so the webhook fetch is tied to the
-      // caller's awaited recordOutcome promise and completes before isolate
-      // teardown. sendAlert never throws — it returns false on any failure.
-      await sendAlert(
-        webhookUrl ?? null,
-        `Circuit closed: ${source}`,
-        `Source "${source}" has recovered after being open.`,
-      );
     }
     return { before, after: { ...record } };
   }
@@ -248,14 +237,6 @@ export async function recordOutcome(
     record.openedAt = now;
     console.log(`[circuit-breaker] ${source}: closed -> OPEN (${record.consecutiveFailures} consecutive failures)`);
     await setCircuitRecord(db, source, record);
-    // Awaited (not fire-and-forget) so the webhook fetch is tied to the caller's
-    // awaited recordOutcome promise and completes before isolate teardown.
-    // sendAlert never throws — it returns false on any failure.
-    await sendAlert(
-      webhookUrl ?? null,
-      `Circuit OPEN: ${source}`,
-      `Source "${source}" has failed ${record.consecutiveFailures} consecutive times. Circuit opened — requests will be blocked for ${CIRCUIT_PROBE_INTERVAL_SEC / 60} min.`,
-    );
     return { before, after: { ...record } };
   }
 
@@ -277,12 +258,11 @@ export async function recordOutcomeDecision(
   db: D1Database,
   source: string,
   outcome: CircuitOutcomeDecision,
-  webhookUrl?: string | null,
 ): Promise<void> {
   if (outcome === "neutral") {
     return;
   }
-  await recordOutcome(db, source, outcome === "success", webhookUrl);
+  await recordOutcome(db, source, outcome === "success");
 }
 
 /**
@@ -294,11 +274,10 @@ export async function recordOutcomeDecision(
 export async function recoverBreakerOnNoCandidate(
   db: D1Database,
   source: string,
-  webhookUrl?: string | null,
 ): Promise<void> {
   const record = await getCircuitRecord(db, source);
   if (record.state !== "closed") {
-    await recordOutcome(db, source, true, webhookUrl);
+    await recordOutcome(db, source, true);
   }
 }
 
@@ -307,10 +286,9 @@ export async function recordOutcomeSafe(
   db: D1Database,
   source: string,
   success: boolean,
-  webhookUrl?: string | null,
 ): Promise<CircuitOutcomeRecord | null> {
   try {
-    return await recordOutcome(db, source, success, webhookUrl);
+    return await recordOutcome(db, source, success);
   } catch (err) {
     console.warn(`[circuit-breaker] Failed to record outcome (${source}):`, err);
     return null;

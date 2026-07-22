@@ -21,7 +21,6 @@ function buildRuntime(
     mintBurnDisabledSymbols: [],
     mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
     coingeckoApiKey: null,
-    alertWebhookUrl: null,
     chainRpcs: new Map(),
     runLeasedCron,
   };

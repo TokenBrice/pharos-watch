@@ -55,7 +55,6 @@ function runtime(mode: string | undefined): ScheduledRuntimeContext {
     mintBurnDisabledSymbols: [],
     mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
     coingeckoApiKey: null,
-    alertWebhookUrl: null,
     chainRpcs: new Map(),
     runLeasedCron: vi.fn(async (_job, fn) => fn(new AbortController().signal, vi.fn())),
   } as ScheduledRuntimeContext;

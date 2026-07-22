@@ -4,7 +4,6 @@ import {
   type AlertSafetySourceAssessment,
 } from "../lib/alert-safety-source-cache";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
-import { sendAlert } from "../lib/alerts";
 import type { CronResult } from "../lib/cron-logger";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -20,9 +19,9 @@ import { parseJson } from "../lib/json-parse";
 
 /**
  * Telegram dispatch degradation watchdog. Reads fresh signals after each
- * 5-minute dispatch run and fires a one-shot alert when delivery health
- * crosses a documented threshold. Clearing the threshold emits a single
- * "recovered" alert and resets the corresponding cache flag.
+ * 5-minute dispatch run and reports degraded when delivery health crosses a
+ * documented threshold. Clearing the threshold resets the corresponding
+ * episode state.
  */
 
 export const PENDING_BACKLOG_THRESHOLD = 500;
@@ -31,22 +30,18 @@ export const ZERO_SEND_STREAK_THRESHOLD = 3;
 
 export const WATCHDOG_KEYS = {
   pendingSince: "telegram:degradation:pending-since",
-  pendingAlerted: "telegram:degradation:pending-alerted:direct:v1",
   safetySourceSince: "telegram:degradation:safety-source-since",
-  safetySourceAlerted: "telegram:degradation:safety-source-alerted:direct:v1",
   zeroSendStreak: "telegram:degradation:zero-send-streak",
-  zeroSendAlerted: "telegram:degradation:zero-send-alerted:direct:v1",
 } as const;
 
-interface WatchdogAlertOutcome {
+interface WatchdogOutcome {
   triggered: boolean;
   recovered: boolean;
-  alertSent: boolean;
   detail: string | null;
 }
 
 interface WatchdogResult {
-  pendingBacklog: WatchdogAlertOutcome & {
+  pendingBacklog: WatchdogOutcome & {
     availability: "available" | "unknown";
     count: number | null;
     oldestAgeSec: number | null;
@@ -60,8 +55,8 @@ interface WatchdogResult {
     sentCleanup: number | null;
     executionUnknownLowerBound: boolean | null;
   };
-  safetySource: WatchdogAlertOutcome & { state: string | null };
-  zeroSend: WatchdogAlertOutcome & {
+  safetySource: WatchdogOutcome & { state: string | null };
+  zeroSend: WatchdogOutcome & {
     streak: number;
     evaluated: boolean;
     runIdentity: string | null;
@@ -73,33 +68,20 @@ export interface TelegramDegradationWatchdogOptions {
   safetySourceAssessment?: AlertSafetySourceAssessment | null;
 }
 
-function emptyOutcome(): WatchdogAlertOutcome {
-  return { triggered: false, recovered: false, alertSent: false, detail: null };
+function emptyOutcome(): WatchdogOutcome {
+  return { triggered: false, recovered: false, detail: null };
 }
 
 /**
- * Shared clear-episode logic: mark recovered, optionally send a recovery alert,
- * and delete the two cache keys only if the alert succeeded (or was not needed).
- * Returns { recovered: true, alertSent } to merge into the caller's outcome.
+ * Shared clear-episode logic: mark recovered and unconditionally delete the
+ * episode state.
  */
-async function clearEpisodeIfAlerted(
+async function clearEpisode(
   db: D1Database,
-  alreadyAlerted: boolean,
   sinceKey: string,
-  alertedKey: string,
-  sendRecoveryAlert: () => Promise<boolean>,
-): Promise<{ recovered: true; alertSent: boolean }> {
-  let canClearEpisode = true;
-  let alertSent = false;
-  if (alreadyAlerted) {
-    alertSent = await sendRecoveryAlert();
-    canClearEpisode = alertSent;
-  }
-  if (canClearEpisode) {
-    await deleteCache(db, sinceKey);
-    await deleteCache(db, alertedKey);
-  }
-  return { recovered: true, alertSent };
+): Promise<{ recovered: true }> {
+  await deleteCache(db, sinceKey);
+  return { recovered: true };
 }
 
 async function readLatestDispatchMetadata(db: D1Database) {
@@ -170,14 +152,8 @@ async function writeZeroSendState(db: D1Database, state: ZeroSendState): Promise
   await setCache(db, WATCHDOG_KEYS.zeroSendStreak, JSON.stringify(state));
 }
 
-async function readCachedFlag(db: D1Database, key: string): Promise<boolean> {
-  const cached = await getCache(db, key);
-  return cached?.value === "1";
-}
-
 async function evaluatePendingBacklog(
   db: D1Database,
-  alertWebhookUrl: string | null,
   nowSec: number,
   preloadedCapacity?: PendingCapacitySnapshot | null,
 ): Promise<WatchdogResult["pendingBacklog"]> {
@@ -187,7 +163,6 @@ async function evaluatePendingBacklog(
   const capacity = capacityRead.status === "available" ? capacityRead.value : null;
   const count = capacity?.active ?? null;
   const flagSince = await readCachedTimestamp(db, WATCHDOG_KEYS.pendingSince);
-  const alreadyAlerted = await readCachedFlag(db, WATCHDOG_KEYS.pendingAlerted);
   const oldestAgeSec = capacity?.oldestPendingAgeSec ?? null;
   const estimatedDrainTimeSec = capacity?.estimatedDrainTimeSec ?? null;
   const nearTtl = capacity?.nearTtl ?? null;
@@ -238,16 +213,6 @@ async function evaluatePendingBacklog(
     const ageSec = Math.max(0, nowSec - flagSince);
     if (ageSec >= PENDING_BACKLOG_SUSTAINED_SEC || nearTtlBreached) {
       outcome.triggered = true;
-      if (!alreadyAlerted) {
-        outcome.alertSent = await sendAlert(
-          alertWebhookUrl,
-          "Telegram pending delivery risk",
-          `${breachReasons.join(", ")} for ${Math.round(ageSec / 60)}min`,
-        );
-        if (outcome.alertSent) {
-          await setCache(db, WATCHDOG_KEYS.pendingAlerted, "1");
-        }
-      }
       outcome.detail = `${breachReasons.join(", ")}, sustainedSec=${ageSec}`;
     } else {
       outcome.detail = `${breachReasons.join(", ")}, ageSec=${ageSec}`;
@@ -256,20 +221,11 @@ async function evaluatePendingBacklog(
   }
 
   if (flagSince != null) {
-    const cleared = await clearEpisodeIfAlerted(
+    const cleared = await clearEpisode(
       db,
-      alreadyAlerted,
       WATCHDOG_KEYS.pendingSince,
-      WATCHDOG_KEYS.pendingAlerted,
-      () =>
-        sendAlert(
-          alertWebhookUrl,
-          "Telegram pending backlog recovered",
-          `pending=${count} (cleared after sustained breach)`,
-        ),
     );
     outcome.recovered = cleared.recovered;
-    outcome.alertSent = cleared.alertSent;
     outcome.detail = `pending=${count}, recovered`;
   }
   return outcome;
@@ -277,7 +233,6 @@ async function evaluatePendingBacklog(
 
 async function evaluateSafetySource(
   db: D1Database,
-  alertWebhookUrl: string | null,
   nowSec: number,
   preloadedAssessment?: AlertSafetySourceAssessment | null,
 ): Promise<WatchdogResult["safetySource"]> {
@@ -287,7 +242,6 @@ async function evaluateSafetySource(
     preloadedAssessment ??
     assessAlertSafetySourceCache(await getCache(db, ALERT_SAFETY_SOURCE_CACHE_KEY), { nowSec, producerIntervalSec });
   const flagSince = await readCachedTimestamp(db, WATCHDOG_KEYS.safetySourceSince);
-  const alreadyAlerted = await readCachedFlag(db, WATCHDOG_KEYS.safetySourceAlerted);
   const outcome: WatchdogResult["safetySource"] = { ...emptyOutcome(), state: assessment.state };
 
   if (assessment.state !== "ok") {
@@ -299,17 +253,6 @@ async function evaluateSafetySource(
     const ageSec = Math.max(0, nowSec - flagSince);
     if (ageSec >= sustainedSec) {
       outcome.triggered = true;
-      if (!alreadyAlerted) {
-        outcome.alertSent = await sendAlert(
-          alertWebhookUrl,
-          "Telegram safety-source cache degraded",
-          `state=${assessment.state} for ${Math.round(ageSec / 60)}min ` +
-            `(>${Math.round(sustainedSec / 60)}min, ageSeconds=${assessment.ageSeconds ?? "n/a"})`,
-        );
-        if (outcome.alertSent) {
-          await setCache(db, WATCHDOG_KEYS.safetySourceAlerted, "1");
-        }
-      }
       outcome.detail = `state=${assessment.state}, sustainedSec=${ageSec}`;
     } else {
       outcome.detail = `state=${assessment.state}, ageSec=${ageSec}`;
@@ -318,15 +261,11 @@ async function evaluateSafetySource(
   }
 
   if (flagSince != null) {
-    const cleared = await clearEpisodeIfAlerted(
+    const cleared = await clearEpisode(
       db,
-      alreadyAlerted,
       WATCHDOG_KEYS.safetySourceSince,
-      WATCHDOG_KEYS.safetySourceAlerted,
-      () => sendAlert(alertWebhookUrl, "Telegram safety-source cache recovered", "state=ok"),
     );
     outcome.recovered = cleared.recovered;
-    outcome.alertSent = cleared.alertSent;
     outcome.detail = "state=ok, recovered";
   }
   return outcome;
@@ -340,12 +279,10 @@ function sumEvents(metadata: ReturnType<typeof parseTelegramDispatchCronMetadata
 
 async function evaluateZeroSendStreak(
   db: D1Database,
-  alertWebhookUrl: string | null,
 ): Promise<WatchdogResult["zeroSend"]> {
   const latestRun = await readLatestDispatchMetadata(db);
   const priorState = await readZeroSendState(db);
   const priorStreak = priorState.streak;
-  const alreadyAlerted = await readCachedFlag(db, WATCHDOG_KEYS.zeroSendAlerted);
   const outcome: WatchdogResult["zeroSend"] = {
     ...emptyOutcome(),
     streak: priorStreak,
@@ -376,16 +313,6 @@ async function evaluateZeroSendStreak(
     outcome.streak = nextStreak;
     if (nextStreak >= ZERO_SEND_STREAK_THRESHOLD) {
       outcome.triggered = true;
-      if (!alreadyAlerted) {
-        outcome.alertSent = await sendAlert(
-          alertWebhookUrl,
-          "Telegram dispatch sent zero messages with pending events",
-          `eventsDetected=${events}, freshCandidateChats=${freshCandidateChats}, messagesSent=0, consecutiveZeroSendRuns=${nextStreak}`,
-        );
-        if (outcome.alertSent) {
-          await setCache(db, WATCHDOG_KEYS.zeroSendAlerted, "1");
-        }
-      }
       outcome.detail = `eventsDetected=${events}, freshCandidateChats=${freshCandidateChats}, streak=${nextStreak}`;
     } else {
       outcome.detail = `eventsDetected=${events}, freshCandidateChats=${freshCandidateChats}, streak=${nextStreak}`;
@@ -395,20 +322,11 @@ async function evaluateZeroSendStreak(
 
   if (priorStreak >= ZERO_SEND_STREAK_THRESHOLD) {
     outcome.streak = 0;
-    const cleared = await clearEpisodeIfAlerted(
+    const cleared = await clearEpisode(
       db,
-      alreadyAlerted,
       WATCHDOG_KEYS.zeroSendStreak,
-      WATCHDOG_KEYS.zeroSendAlerted,
-      () =>
-        sendAlert(
-          alertWebhookUrl,
-          "Telegram dispatch zero-send streak recovered",
-          `messagesSent=${messagesSent}, eventsDetected=${events}`,
-        ),
     );
     outcome.recovered = cleared.recovered;
-    outcome.alertSent = cleared.alertSent;
     outcome.detail = `recovered after streak=${priorStreak}`;
     return outcome;
   }
@@ -425,7 +343,6 @@ async function evaluateZeroSendStreak(
 
 export async function runTelegramDegradationWatchdog(
   db: D1Database,
-  alertWebhookUrl: string | null,
   signal?: AbortSignal,
   options: TelegramDegradationWatchdogOptions = {},
 ): Promise<CronResult> {
@@ -433,9 +350,9 @@ export async function runTelegramDegradationWatchdog(
 
   const nowSec = Math.floor(Date.now() / 1000);
 
-  const pendingBacklog = await evaluatePendingBacklog(db, alertWebhookUrl, nowSec, options.pendingCapacitySnapshot);
-  const safetySource = await evaluateSafetySource(db, alertWebhookUrl, nowSec, options.safetySourceAssessment);
-  const zeroSend = await evaluateZeroSendStreak(db, alertWebhookUrl);
+  const pendingBacklog = await evaluatePendingBacklog(db, nowSec, options.pendingCapacitySnapshot);
+  const safetySource = await evaluateSafetySource(db, nowSec, options.safetySourceAssessment);
+  const zeroSend = await evaluateZeroSendStreak(db);
 
   const result: WatchdogResult = { pendingBacklog, safetySource, zeroSend };
   const degraded =

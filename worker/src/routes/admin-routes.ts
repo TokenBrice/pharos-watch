@@ -155,11 +155,6 @@ export const ADMIN_STATIC_ROUTES = [
   defineLazyStaticRoute("clear-telegram-pending", () =>
     import("../api/admin-telegram-pending").then(({ handleClearTelegramPending }) => handleClearTelegramPending),
   ),
-  defineConditionalIdempotentAdminRoute(
-    "alert-broker-canary",
-    ({ url }) => url.searchParams.get("execute") === "true",
-    () => import("../api/admin-alert-broker-canary").then(({ handleAlertBrokerCanary }) => handleAlertBrokerCanary),
-  ),
   defineLazyStaticRoute("admin-telegram-resend", () =>
     import("../api/admin-telegram-resend").then(({ handleAdminTelegramResend }) => handleAdminTelegramResend),
   ),

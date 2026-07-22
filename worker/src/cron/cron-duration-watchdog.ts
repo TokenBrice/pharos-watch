@@ -1,7 +1,5 @@
-import { sendAlert } from "../lib/alerts";
 import type { CronResult } from "../lib/cron-logger";
 import { CRON_TIMEOUT_MS, runWithOverloadRetry } from "../lib/cron-lease";
-import { getCache, setCache } from "../lib/db-cache";
 import { throwIfAborted } from "../lib/abort";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 
@@ -9,7 +7,7 @@ import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
  * Duration-trend watchdog for status-tracked cron jobs with explicit app-level
  * timeouts (`CRON_TIMEOUT_MS`). sync-stablecoins already averages ~70% of its
  * 8-min ceiling and has hit the cap in production; adding the next provider
- * to a near-budget slot would tip it over with no warning. Alerts when a
+ * to a near-budget slot would tip it over with no warning. Reports degraded when a
  * job's 7-day average crosses 80% of its ceiling or it hits the cap 3+ times
  * in a week, so capacity is budgeted before the timeout starts truncating
  * runs. Per-job stats are always emitted in cron metadata for trend review, and
@@ -28,8 +26,6 @@ const LOOKBACK_SEC = 7 * 86400;
 // average over a handful of runs is noise, not a trend.
 const MIN_RUNS_FOR_TREND = 20;
 const MIN_SLOTS_FOR_ABANDONMENT_TREND = 20;
-const ALERT_COOLDOWN_SEC = 7 * 86400;
-const ALERT_MARKER_KEY = "cron-duration-watchdog:alert:direct:v1";
 const STALE_SLOT_CHILD_ERROR = "scheduled slot heartbeat stale; child job progress abandoned";
 const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
 const STALE_SLOT_METADATA_REASON = "stale-slot-reconciled";
@@ -163,16 +159,6 @@ function isSlotAbandonmentBreaching(stats: SlotAbandonmentStats, nowSec: number)
     return false;
   }
   return stats.abandonedSlots >= SLOT_ABANDONMENT_ALERT_COUNT && stats.abandonmentRatio >= SLOT_ABANDONMENT_ALERT_RATIO;
-}
-
-function readLastAlertedAt(value: string | null | undefined): number {
-  if (!value) return 0;
-  try {
-    const parsed = JSON.parse(value) as { lastAlertedAt?: unknown };
-    return typeof parsed.lastAlertedAt === "number" ? parsed.lastAlertedAt : 0;
-  } catch {
-    return 0;
-  }
 }
 
 function readDiagnosticMetadata(value: string | null): Record<string, unknown> {
@@ -317,7 +303,6 @@ async function loadDurationDiagnostics(
 
 export async function runCronDurationWatchdog(
   db: D1Database,
-  alertWebhookUrl: string | null,
   signal?: AbortSignal,
 ): Promise<CronResult> {
   throwIfAborted(signal);
@@ -481,50 +466,6 @@ export async function runCronDurationWatchdog(
     };
   }
 
-  const marker = await getCache(db, ALERT_MARKER_KEY);
-  throwIfAborted(signal);
-  const dueForAlert = nowSec - readLastAlertedAt(marker?.value) >= ALERT_COOLDOWN_SEC;
-  let alerted = false;
-  if (dueForAlert) {
-    const diagnosticsByJob = new Map(durationDiagnostics.map((entry) => [entry.job, entry]));
-    const runtimeLines = runtimeBreaching.map(
-      (entry) =>
-        `- ${entry.job}: 7d avg ${Math.round(entry.avgMs / 1000)}s of ${Math.round(entry.timeoutMs / 1000)}s ceiling ` +
-        `(${Math.round(entry.avgRatio * 100)}%), ${entry.capHits} run(s) at cap, ` +
-        `${entry.budgetTruncations} budget truncation(s), ${entry.runs} runs` +
-        (() => {
-          const stages = diagnosticsByJob.get(entry.job)?.stageBreakdown ?? [];
-          if (stages.length === 0) return "";
-          return `; cap/trunc stages: ${stages
-            .map((stage) => `${stage.stage} (${stage.capHits} cap, ${stage.budgetTruncations} trunc)`)
-            .join(", ")}`;
-        })(),
-    );
-    const slotLines = slotAbandonmentBreaching.map(
-      (entry) =>
-        `- ${entry.scheduleKey}: ${entry.abandonedSlots}/${entry.slots} slot(s) abandoned ` +
-        `(${Math.round(entry.abandonmentRatio * 100)}%), ${entry.errorSlots} total error slot(s); ` +
-        `${entry.notStartedSlots} not-started slot(s), ` +
-        `${entry.publicationFailureSlots} publication failure(s), ` +
-        `${entry.terminalAccountingUnknownSlots} terminal-accounting unknown, ` +
-        `${entry.realChildFailureSlots} real child failure(s), ` +
-        `${entry.successfulChildTerminalSlots} slot(s) with preserved successful child terminals`,
-    );
-    alerted = await sendAlert(
-      alertWebhookUrl,
-      "Cron runtime budget or slot abandonment breach",
-      [
-        "Cron runtime pressure and scheduled-slot abandonment are reported separately.",
-        ...(runtimeLines.length > 0 ? ["Runtime budget pressure:", ...runtimeLines] : []),
-        ...(slotLines.length > 0 ? ["Scheduled slot abandonment:", ...slotLines] : []),
-        "Treat runtime budget pressure as capacity work; treat slot abandonment as worker infrastructure/platform interruption.",
-      ].join("\n"),
-    );
-    if (alerted) {
-      await setCache(db, ALERT_MARKER_KEY, JSON.stringify({ lastAlertedAt: nowSec }));
-    }
-  }
-
   return {
     status: "degraded",
     itemCount: stats.length + slotStats.length,
@@ -540,8 +481,6 @@ export async function runCronDurationWatchdog(
         ...runtimeBreaching.map((entry) => entry.job),
         ...slotAbandonmentBreaching.map((entry) => entry.scheduleKey),
       ],
-      alerted,
-      suppressedByCooldown: !dueForAlert,
     }),
   };
 }

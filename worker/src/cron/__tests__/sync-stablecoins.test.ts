@@ -352,11 +352,6 @@ vi.mock("../../lib/coingecko", () => ({
   cgHeaders: vi.fn((extra: Record<string, string>) => extra),
 }));
 
-// Stub alerts
-vi.mock("../../lib/alerts", () => ({
-  sendAlert: vi.fn(async () => true),
-}));
-
 // Coverage completeness is exercised in stablecoin-publication-coverage.test.ts.
 // This suite isolates pricing/publication mechanics with intentionally partial fixtures.
 vi.mock("../../lib/stablecoin-publication-coverage", async (importOriginal) => {
@@ -406,7 +401,6 @@ import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
-import { sendAlert } from "../../lib/alerts";
 import * as apiUtils from "../../lib/api-utils";
 import * as evmRpcModule from "../../lib/evm-rpc";
 
@@ -1423,16 +1417,10 @@ describe("syncStablecoins", () => {
     expect(metadata.cacheWriteMode).toBe("blocked-invalid-payload");
     expect(metadata.casSkipped).toBe(false);
     expect(metadata.downstreamSafe).toBe(false);
-    expect(sendAlert).toHaveBeenCalledWith(
-      null,
-      "Stablecoins schema validation warning",
-      expect.stringContaining("forced-test-validation-failure"),
-    );
     expect(recordOutcome).toHaveBeenCalledWith(
       expect.anything(),
       "defillama-stablecoins",
       true,
-      undefined,
     );
     const cacheKeys = cacheWrites.map((write) => write.key);
     expect(cacheKeys).toContain("stablecoins:invalid-last");
@@ -1521,11 +1509,6 @@ describe("syncStablecoins", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.validationFailures).toBe(1);
     expect(metadata.validationContext).toBe("fallback");
-    expect(sendAlert).toHaveBeenCalledWith(
-      null,
-      "Stablecoins schema validation warning",
-      expect.stringContaining("context=fallback"),
-    );
     const cacheKeys = cacheWrites.map((write) => write.key);
     expect(cacheKeys).toContain("stablecoins:invalid-last");
     expect(cacheKeys).not.toContain("stablecoins");
@@ -1547,7 +1530,6 @@ describe("syncStablecoins", () => {
       expect.anything(),
       "defillama-stablecoins",
       true,
-      undefined,
     );
   });
 
@@ -1694,7 +1676,6 @@ describe("syncStablecoins", () => {
       expect.anything(),
       CIRCUIT_SOURCE.DL_STABLECOINS,
       false,
-      undefined,
     );
   });
 

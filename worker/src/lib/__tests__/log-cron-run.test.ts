@@ -1,9 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("../alerts", () => ({
-  sendAlert: vi.fn().mockResolvedValue(undefined),
-}));
-
 import { logCronRun } from "../cron-logger";
 import { CRON_ABANDONED_JOB_GRACE_MS, CronJobAbandonedError } from "../cron-lease";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
@@ -161,7 +157,6 @@ describe("logCronRun", () => {
         await reportProgress({ stage: "started" });
         return { itemCount: 1 };
       },
-      undefined,
       { slotStartedAt: 1_772_495_700 },
     );
 

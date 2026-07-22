@@ -183,7 +183,6 @@ export const API_PATHS = {
       chat_id: params?.chatId,
       older_than_sec: params?.olderThanSec,
     }),
-  alertBrokerCanary: () => "/api/alert-broker-canary",
   adminTelegramResend: () => "/api/admin-telegram-resend",
   adminTelegramBroadcast: () => "/api/admin-telegram-broadcast",
   adminTelegramDeliveryControl: () => "/api/admin-telegram-delivery-control",

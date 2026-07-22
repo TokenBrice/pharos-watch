@@ -43,7 +43,6 @@ function buildRuntime(env: Partial<ScheduledRuntimeContext["env"]> = {}): {
       mintBurnDisabledSymbols: [],
       mintBurnFreshnessConfig: {} as ScheduledRuntimeContext["mintBurnFreshnessConfig"],
       coingeckoApiKey: null,
-      alertWebhookUrl: null,
       chainRpcs,
       runLeasedCron: runLeasedCron as ScheduledRuntimeContext["runLeasedCron"],
     },

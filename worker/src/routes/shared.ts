@@ -60,10 +60,6 @@ export interface AlchemyRouteFields {
   alchemyApiKey: string | null;
 }
 
-export interface AlertWebhookRouteFields {
-  alertWebhookUrl: string | null;
-}
-
 export interface ApiKeysRouteFields {
   apiKeyHashPepper: string | undefined;
 }
@@ -93,7 +89,6 @@ export interface WorkerStatusConfigRouteFields {
 
 export interface RouteDependencyFieldMap {
   apiKeyHashPepper: ApiKeysRouteFields;
-  alertWebhookUrl: AlertWebhookRouteFields;
   alchemyApiKey: AlchemyRouteFields;
   anthropicApiKey: Pick<DigestRouteFields, "anthropicApiKey">;
   cloudflareD1StatusConfig: CloudflareD1StatusRouteFields;

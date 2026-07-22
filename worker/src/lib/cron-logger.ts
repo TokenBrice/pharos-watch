@@ -375,7 +375,6 @@ export async function logCronRun(
   db: D1Database,
   job: string,
   fn: (signal: AbortSignal, reportProgress: CronProgressReporter) => Promise<CronResult | void>,
-  alertFn?: (title: string, message: string) => Promise<unknown> | void,
   options?: CronRunLoggerOptions,
 ): Promise<CronResult | void> {
   const startMs = Date.now();
@@ -542,11 +541,6 @@ export async function logCronRun(
           .run(),
       );
     }
-    if (resultStatus === "error" && alertFn) {
-      await Promise.resolve(
-        alertFn(`Cron ${job} returned error status`, resolvedResult?.error ?? resolvedResult?.metadata ?? ""),
-      ).catch(() => {});
-    }
   } catch (e) {
     const terminalMetadata = compactCronMetadataForPersistence(serializeTerminalCronMetadata(e)).metadata;
     try {
@@ -618,13 +612,6 @@ export async function logCronRun(
       }
     } catch (logErr) {
       console.error(`[db] Failed to log cron error for ${job}:`, logErr);
-    }
-    // Durable brokers and delivery adapters must settle before the scheduled
-    // invocation exits so a platform stop cannot lose the terminal alert.
-    if (alertFn) {
-      await Promise.resolve(
-        alertFn(`Cron failure: ${job}`, `Error: ${String(e).slice(0, 500)}`),
-      ).catch(() => {});
     }
     throw e;
   } finally {
