@@ -67,7 +67,7 @@
         "id": "legacy-sfrxeth",
         "label": "Legacy sfrxETH controller",
         "tier": "single-source-or-laggy",
-        "summary": "The legacy sfrxETH controller retains five loans and debt despite a zero debt ceiling; its oracle always invokes an unchecked Chainlink ETH/USD clamp and a 900-second Uniswap lower floor around Curve EMA components.",
+        "summary": "At finalized Ethereum block 25584850 the legacy sfrxETH controller retained five loans and 153,839.980440801457521311 crvUSD of debt despite its closed debt ceiling; its oracle always invokes an unchecked Chainlink ETH/USD clamp and a 900-second Uniswap lower floor around Curve EMA components.",
         "collateralAssets": [
           "sfrxETH (legacy market)"
         ],
@@ -80,8 +80,8 @@
             "path": "TriCrypto2 USDT/WBTC/WETH WETH leg 0xD51a44d3FaE010294C616388b506AcdA1bfAAE46 + USDT/crvUSD pool 0x390f3595bCa2Df7d23783dFd126427CCeb997BF4 + legacy stable-price aggregator 0xe5Afcf332a5457E8FafCD668BcE3dF953762Dfe7 + ETH/frxETH pool 0xa1F8A6807c402E4A15ef4EBa36528A3FED24E577 + sfrxETH share rate, bounded to Chainlink ETH/USD 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419 and a 900-second Uniswap frxETH/FRAX lower floor 0x36C060Cc4b088c830a561E959A679A58205D3F56",
             "address": "0x19F5B81e5325F882C9853B5585f74f751DE3896d",
             "chain": "ethereum",
-            "observedAt": "2026-07-14",
-            "observedBlock": 25531477,
+            "observedAt": "2026-07-22",
+            "observedBlock": 25584850,
             "failureDomainKeys": [
               "curve-legacy-tricrypto2",
               "curve-legacy-stable-aggregator",
@@ -93,13 +93,13 @@
           }
         ],
         "fallbackBehavior": "There is no alternate provider. Chainlink ETH/USD is called unconditionally for a plus-or-minus 1% clamp but updatedAt is not checked; the 900-second Uniswap frxETH/FRAX TWAP is only a lower floor, not failover. Mandatory component reverts block the oracle, and the internal Curve price uses a 600-second EMA.",
-        "observedAt": "2026-07-14",
-        "observedBlock": 25531477,
+        "observedAt": "2026-07-22",
+        "observedBlock": 25584850,
         "collateralParameters": [
           {
             "asset": "sfrxETH (legacy market)",
             "maximumLtvPct": 89,
-            "note": "Controller 0x8472A9A7632b173c8Cf3a86D3afec50c35548e76; AMM 0x136e783846ef68C8Bd00a3369F787dF8d683a696; A=100, loan discount 9%, liquidation discount 6%. Debt was 153,838.108782806041821091 crvUSD across five loans; zero ceiling disables fresh factory inventory but does not remove existing exposure."
+            "note": "Controller 0x8472A9A7632b173c8Cf3a86D3afec50c35548e76; AMM 0x136e783846ef68C8Bd00a3369F787dF8d683a696; A=100, loan discount 9%, liquidation discount 6%. At finalized block 25584850, debt was 153,839.980440801457521311 crvUSD across five loans; zero ceiling disables fresh factory inventory but does not remove existing exposure."
           }
         ],
         "liquidationMechanism": "LLAMMA band arbitrage performs permissionless soft liquidation as collateral price moves. Hard liquidation is permissionless when health(user, true) is below zero; a borrower or approved caller can invoke it earlier. The controller uses crvUSD already held in the AMM first, then requires the liquidator or callback to atomically supply any shortfall before collateral is transferred and debt is reduced.",
@@ -113,6 +113,10 @@
           "ethereum"
         ],
         "sources": [
+          {
+            "label": "Finalized Ethereum block 25584850",
+            "url": "https://eth.blockscout.com/block/25584850"
+          },
           {
             "label": "Legacy sfrxETH oracle verified contract",
             "url": "https://eth.blockscout.com/address/0x19F5B81e5325F882C9853B5585f74f751DE3896d?tab=contract"

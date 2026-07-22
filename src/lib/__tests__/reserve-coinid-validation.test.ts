@@ -49,6 +49,26 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "The complete current backing categories are identified, but Balanced does not publish current constituent balances or weights.",
   ],
   [
+    "frax-frax::Below-display-threshold basket (BNB, MATIC, USDT, VELO, crvUSD)::USDT",
+    "A mixed sub-threshold dust basket spans several assets; no single coinId link represents it, and the itemized major slices above it are linked.",
+  ],
+  [
+    "frax-frax::Below-display-threshold basket (BNB, MATIC, USDT, VELO, crvUSD)::crvUSD",
+    "Same mixed sub-threshold dust basket as the USDT mention; reviewed, not linkable to one coinId.",
+  ],
+  [
+    "dola-inverse-finance::sDOLA-scrvUSD Curve LP and residual LP collateral::DOLA",
+    "A two-sided LP position naming the protocol's own token; self-referential collateral is priced by the mechanism review, not a coinId link.",
+  ],
+  [
+    "dola-inverse-finance::sDOLA-scrvUSD Curve LP and residual LP collateral::crvUSD",
+    "Same LP row; the crvUSD side is one leg of a mixed LP, not a linkable single-asset slice.",
+  ],
+  [
+    "dola-inverse-finance::Frontier legacy DOLA debt::DOLA",
+    "Legacy bad-debt row denominated in the protocol's own token; self-referential, reviewed, no coinId link applies.",
+  ],
+  [
     "uty-xsy::USDC deposits swept to custodial managed backing::USDC",
     "The reviewed sources establish the USDC mint and redemption envelope but not the current assets or positions held after the custodial sweep.",
   ],
@@ -87,10 +107,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
   [
     "frax-frax::LFRAX::FRAX",
     "LFRAX is a Frax-ecosystem legacy/locked FRAX claim and remains subject self exposure rather than an upstream dependency edge.",
-  ],
-  [
-    "frax-frax::Unmapped Frax balance-sheet assets::FRAX",
-    "The unmapped balance-sheet basket combines several sub-display-threshold tokens; its name matches the FRAX substring but it carries no single tracked stablecoin whose coinId would be representative.",
   ],
   [
     "fpi-frax::stkcvxFPIFRAX (staked Convex FPI/FRAX LP)::FRAX",

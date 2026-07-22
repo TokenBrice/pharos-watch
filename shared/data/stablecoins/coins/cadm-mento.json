@@ -4,7 +4,7 @@
   "detailProvider": "coingecko",
   "name": "Mento Canadian Dollar",
   "symbol": "CADm",
-  "oneLiner": "CADm is Mento's Canadian dollar stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
+  "oneLiner": "CADm is Mento's reserve-backed Canadian dollar stablecoin on Celo, issued and retired through the oracle-priced USDm/CADm Broker pool.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "CAD",
@@ -13,9 +13,24 @@
     "rwa": false,
     "navToken": false
   },
-  "collateral": "Mento V3 Liquity-v2-style CDPs collateralized by USDm; USDm in turn is backed by the diversified Mento Reserve mix (sUSDS, CELO, EURC, USDC, USDT, axlEUROC, stETH, and smaller positions exposed via the Mento reserve dashboard).",
-  "pegMechanism": "Mento V3 oracle-priced FX stablecoin minted by depositing USDm as CDP collateral and borrowing CADm against it; user-set interest rates, Stability Pool liquidations, and Liquity-style redemptions support the CADm peg, with circuit breakers and Mento reserve transparency on the upstream USDm leg.",
-  "mechanismArchetype": "cdp",
+  "collateral": "Shared Mento Reserve: Mento's pinned analytics configuration classifies CADm as reserve-backed rather than CDP-backed. Its backing is the protocol's diversified, dynamically managed reserve, not USDm locked in a CADm-specific borrower trove.",
+  "pegMechanism": "CADm is issued through Mento v2's USDm/CADm Broker and BiPoolManager exchange. A USDm-to-CADm swap burns incoming USDm and mints outgoing CADm; the reverse burns CADm and mints USDm. The virtual pool prices swaps from the CAD/USD SortedOracles feed and applies spread, trading-limit, report-count, freshness, and BreakerBox checks.",
+  "mechanismArchetypeReview": {
+    "disposition": "unresolved",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+    "rationale": "Primary evidence resolves CADm as a reserve-backed legacy Broker stable with no borrower CDP. Pharos's current closed archetype enum has no protocol-reserve-backed FX category: fiat-cash is custodial off-chain cash issuance, algorithmic is reflexive or unbacked, and cdp requires borrower vaults. The false cdp value is removed rather than replaced with another materially inaccurate label.",
+    "sources": [
+      {
+        "label": "Pinned Mento stablecoin backing config",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      },
+      {
+        "label": "Pinned Mento Broker source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+      }
+    ]
+  },
   "geckoId": "celo-canadian-dollar",
   "proofOfReserves": {
     "type": "real-time",
@@ -35,12 +50,12 @@
       "rationale": "At Celo block 72127154, CADm broker() returned the Mento v2 Broker and BiPoolManager exposed one USDm/CADm exchange using rate feed 0x20869cF54Ead821C45DFb2aB0C23d2e10Fbb65A4, minimumReports 1, and a 360-second reset/expiry window. SortedOracles had one reporter for that feed. The current Mento reserve API lists active CDP troves only for GBPm, JPYm, and CHFm, not CADm, so CADm has no live borrower-specific oracle/liquidation branch to enumerate.",
       "sources": [
         {
-          "label": "Mento BiPoolManager source",
-          "url": "https://github.com/mento-protocol/mento-core/blob/develop/contracts/swap/BiPoolManager.sol"
+          "label": "Pinned Mento Celo deployment registry",
+          "url": "https://github.com/mento-protocol/deployments-v2/blob/7b02f6a61c1eb646742c74b516f827b2c305acf1/packages/contracts/contracts.json"
         },
         {
-          "label": "Mento deployment addresses",
-          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+          "label": "Pinned Mento stablecoin backing config",
+          "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
         },
         {
           "label": "Mento reserve analytics API",
@@ -53,8 +68,8 @@
     "confidence": "verified",
     "sources": [
       {
-        "label": "Mento BiPoolManager source",
-        "url": "https://github.com/mento-protocol/mento-core/blob/develop/contracts/swap/BiPoolManager.sol"
+        "label": "Pinned Mento BiPoolManager source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
       },
       {
         "label": "CADm on Celo Blockscout",
@@ -104,10 +119,10 @@
     "reviewedAt": "2026-07-14"
   },
   "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
+    "mintPath": "permissioned-minter",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "CADm is minted via the Mento Broker (0x777A...) which is the sole authorized minter (broker() getter confirmed). The Broker's proxy admin and the CADm token owner and proxy admin all resolve to the Mento Timelock (0x890DB...) with a 2-day delay.",
+    "summary": "Operational CADm issuance runs through the Mento Broker, which burns the incoming Mento stable token and mints the outgoing token during USDm/CADm swaps. StableTokenV2 also authorizes the Celo ValidatorsProxy, but its current implementation only mints registry USDm for EpochManager; its Celo-Governance-owned proxy is therefore a latent upgrade-controlled CADm mint surface. exchange() is zero, and the two-day Mento Timelock can change token authorization slots and upgrade the CADm token and Broker.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -123,13 +138,13 @@
       ],
       "canChangeMintLogic": true,
       "delaySec": 172800,
-      "controlRef": "Mento Timelock — CADm token owner and proxy admin",
-      "observedAt": "2026-07-13",
-      "observedBlock": 72084007,
+      "controlRef": "Mento Timelock - CADm token and Broker administrator",
+      "observedAt": "2026-07-22",
+      "observedBlock": 72780426,
       "sources": [
         {
-          "label": "Mento V3 stablecoin docs",
-          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          "label": "Finalized Celo block 72780426",
+          "url": "https://celo.blockscout.com/block/72780426"
         },
         {
           "label": "CADm token on Celo Blockscout",
@@ -149,65 +164,120 @@
       {
         "chain": "celo",
         "address": "0x777A8255cA72412f0d706dc03C9D1987306B4CaD",
-        "label": "Mento Broker — authorized minter for CADm",
+        "label": "Mento Broker - operational CADm swap minter",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-22",
+        "observedBlock": 72780426,
         "sources": [
           {
-            "label": "CADm token broker() on-chain read",
-            "url": "https://celo.blockscout.com/address/0xff4ab19391af240c311c54200a492233052b6325"
+            "label": "Pinned Mento Broker source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+          },
+          {
+            "label": "Pinned Mento BiPoolManager source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
           }
         ],
-        "evidence": "At Celo block 69287341, broker() on CADm (0xff4ab19391af240c311c54200a492233052b6325) returned 0x777A8255cA72412f0d706dc03C9D1987306B4CaD (Mento BrokerProxy). The Broker's EIP-1967 proxy admin slot returned 0x890DB8A597940165901372Dd7DB61C9f246e2147 (Mento Timelock)."
+        "evidence": "At finalized Celo block 72780426, broker() on CADm returned this Broker. Broker swaps call transferIn to burn the incoming Mento stable and transferOut to mint the outgoing stable only through registered exchanges subject to exchange and trading-limit checks."
       },
       {
         "chain": "celo",
         "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
-        "label": "Mento Timelock — CADm token owner and proxy admin",
+        "label": "Mento Timelock - CADm token and Broker administrator",
         "role": "minter-admin",
         "authorityType": "timelock",
         "directMintAbility": "can-authorize",
         "timelockDelaySec": 172800,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-22",
+        "observedBlock": 72780426,
         "sources": [
           {
-            "label": "Mento V3 stablecoin docs",
-            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+            "label": "Pinned StableTokenV2 source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
           },
           {
-            "label": "CADm token on Celo Blockscout",
-            "url": "https://celo.blockscout.com/address/0xff4ab19391af240c311c54200a492233052b6325"
+            "label": "Finalized Celo block 72780426",
+            "url": "https://celo.blockscout.com/block/72780426"
           }
         ],
-        "evidence": "At Celo block 69287341, owner() on CADm returned 0x890DB8A597940165901372Dd7DB61C9f246e2147; EIP-1967 proxy admin slot returned the same address. getMinDelay() on the Timelock returned 0x2a300 = 172800 seconds (48 hours)."
+        "evidence": "At finalized Celo block 72780426, CADm owner(), token proxy owner, and Broker proxy owner returned this Timelock; getMinDelay() returned 172800 seconds. StableTokenV2 ownership can change broker, validators, and exchange authorization slots, while the proxy role can replace token and Broker mint-critical logic."
+      },
+      {
+        "chain": "celo",
+        "address": "0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58",
+        "label": "Celo ValidatorsProxy - authorized CADm minter slot",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-22",
+        "observedBlock": 72780426,
+        "sources": [
+          {
+            "label": "Pinned StableTokenV2 source",
+            "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+          },
+          {
+            "label": "Celo ValidatorsProxy verified source",
+            "url": "https://celo.blockscout.com/address/0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58?tab=contract"
+          }
+        ],
+        "evidence": "At finalized Celo block 72780426, validators() on CADm returned this proxy and StableTokenV2 admitted it through onlyMinter. The current Validators implementation can mint only Registry USDm to EpochManager and has no generic or CADm-targeting call, so the slot is authorized but cannot currently issue CADm."
+      },
+      {
+        "chain": "celo",
+        "address": "0xD533Ca259b330c7A88f74E000a3FaEa2d63B7972",
+        "label": "Celo GovernanceProxy - Validators proxy upgrade owner",
+        "role": "proxy-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-22",
+        "observedBlock": 72780426,
+        "sources": [
+          {
+            "label": "Celo ValidatorsProxy verified source",
+            "url": "https://celo.blockscout.com/address/0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58?tab=contract"
+          }
+        ],
+        "evidence": "At finalized Celo block 72780426, ValidatorsProxy _getOwner() returned this GovernanceProxy and _getImplementation() returned 0x13B0B89F3242f815C1FC6C9CF56e1Ab5aEA4dC58. Governance can change the authorized proxy's implementation, creating a latent CADm mint path, but has no current direct CADm call."
       }
     ],
     "economicCapSemantics": "raiseable",
     "review": {
       "sources": [
         {
-          "label": "Mento V3 stablecoin docs",
-          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          "label": "Finalized Celo block 72780426",
+          "url": "https://celo.blockscout.com/block/72780426"
         },
         {
-          "label": "CADm token on Celo Blockscout",
-          "url": "https://celo.blockscout.com/address/0xff4ab19391af240c311c54200a492233052b6325"
+          "label": "Pinned StableTokenV2 source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+        },
+        {
+          "label": "Pinned Mento Broker source",
+          "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
         }
       ],
-      "evidence": "At Celo block 69287341: owner() = Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147 (confirmed); EIP-1967 proxy admin slot = same Timelock; getMinDelay() = 172800s (48h); broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD (Mento BrokerProxy, confirmed as sole authorized minter); Broker EIP-1967 proxy admin = same Timelock. Celo Registry confirms Broker = 0x777A... All mint-capable surfaces resolved. Economically, Broker issuance is the collateral-exchange path; changing that path or authorizing different mint logic requires the independently enforced 48-hour Mento Timelock, so the encoding-derived unbounded cap is superseded by raiseable semantics.",
-      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At finalized Celo block 72780426, CADm broker(), owner(), validators(), and exchange() returned the Mento Broker, two-day Mento Timelock, Celo ValidatorsProxy, and zero address respectively. Proxy introspection resolved the current token and Broker implementations and administrators. The Broker is the live swap mint/burn path; the current Validators implementation can only mint Registry USDm, while its Celo-Governance-owned proxy remains a latent upgrade-controlled authorization surface.",
+      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+      "reviewedAt": "2026-07-22",
+      "disposition": "scoreable"
     }
   },
   "chainTier": "established-alt-l1",
   "deploymentModel": "single-chain",
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "CADm is tracked only on Celo in Pharos and Mento docs route users to Celo-native Mento stables. The sole Celo deployment was verified on-chain 2026-07-20 as native Mento issuance (Mento Broker sole minter, Mento Timelock owner); no bridge representation carries the claim.",
+    "summary": "CADm is tracked only on Celo in Pharos and Mento docs route users to Celo-native Mento stables. The sole Celo deployment was verified on-chain as native Mento Broker issuance; the separate ValidatorsProxy authorization is latent under its current implementation, and no bridge representation carries the claim.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
     "confidence": "verified",
@@ -242,7 +312,7 @@
             "url": "https://celo.blockscout.com/address/0xff4ab19391af240c311c54200a492233052b6325"
           }
         ],
-        "reviewNote": "Verified on-chain 2026-07-20 at Celo block 72616317: name 'Mento Canadian Dollar', symbol CADm, totalSupply 2667.02 CADm; owner() = 0x890db8a597940165901372dd7db61c9f246e2147 (Mento Timelock, 48h delay per mint-authority review); broker() = 0x777a8255ca72412f0d706dc03c9d1987306b4cad (Mento Broker, sole authorized minter per the 2026-07-15 mint-authority review). Native Mento protocol issuance on Celo, the asset's only chain — no bridge representation."
+        "reviewNote": "Verified on-chain 2026-07-20 at Celo block 72616317: name 'Mento Canadian Dollar', symbol CADm, totalSupply 2667.02 CADm; owner() = 0x890db8a597940165901372dd7db61c9f246e2147 (Mento Timelock, 48h delay); broker() = 0x777a8255ca72412f0d706dc03c9d1987306b4cad (the operational mint/burn path). The 2026-07-22 mint-authority review separately records the latent ValidatorsProxy authorization. Native Mento protocol issuance on Celo, the asset's only chain; no bridge representation."
       }
     ]
   },
@@ -251,46 +321,166 @@
   "governanceQuality": "dao-governance",
   "reserves": [
     {
-      "name": "USDm (Mento Dollar) CDP collateral",
-      "pct": 100,
+      "name": "AUSD (Agora Dollar; Ethereum and Monad)",
+      "pct": 27.0187065808,
       "risk": "low",
-      "coinId": "cusd-celo",
+      "coinId": "ausd-agora",
       "depType": "collateral",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Mento Protocol and the shared Mento Reserve",
+      "issuerOrObligor": "Agora (AUSD issuer)",
       "riskFactors": [
         "counterparty",
-        "smart-contract",
-        "liquidity",
-        "custody"
+        "custody",
+        "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "sUSDS (Sky savings USDS)",
+      "pct": 24.9680725281,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Ecosystem (sUSDS savings vault)",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "CELO",
+      "pct": 18.3957201267,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Celo network native asset held by Mento Reserve governance",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDT family (Ethereum/Celo USDT and Monad USDT0)",
+      "pct": 12.6468900513,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether and the USDT0 bridge system",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "EURC family (Ethereum EURC and Celo axlEUROC)",
+      "pct": 12.0222853019,
+      "risk": "low",
+      "coinId": "eurc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and the Axelar bridge system",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDC family (native USDC and Celo axlUSDC)",
+      "pct": 2.3387353345,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and the Axelar bridge system",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "stETH (Lido staked ETH)",
+      "pct": 2.608897922,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido (stETH liquid staking issuer)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "WETH residual on Celo",
+      "pct": 0.0006921547,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Wrapped Ether on Celo",
+      "riskFactors": [
+        "market",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Mento Reserve analytics API",
+        "label": "Mento Reserve analytics API (live read 2026-07-22T01:41:27Z)",
         "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       },
       {
-        "label": "Mento CDP documentation",
-        "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
+        "label": "Pinned Mento stablecoin backing config",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
       },
       {
-        "label": "Mento deployment registry",
-        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+        "label": "Pinned Mento Celo deployment registry",
+        "url": "https://github.com/mento-protocol/deployments-v2/blob/7b02f6a61c1eb646742c74b516f827b2c305acf1/packages/contracts/contracts.json"
       }
     ],
-    "rationale": "CADm is minted through the Mento V3 CDP system against USDm collateral, matching the GBPm sibling review. The exact reserve is one tracked stablecoin exposure with the Mento Reserve, custody, liquidity, and smart-contract failure domains retained.",
-    "compositionBasis": "Exact live Mento CDP row and Mento CDP/deployment documentation",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "The pinned issuer configuration classifies CADm as reserve-backed, and the pinned deployment registry contains no CADm borrower branch. The issuer-run reserve API was re-read at 2026-07-22T01:41:27Z and reported CELO at $3,443,094.341884923 of $18,716,822.816231456 total collateral, or 18.3957201267035%. The authored fallback groups only API rows that represent the same stablecoin family and retains every positive category, including the 0.0006921547% WETH residual. This independently re-verifies the high-risk CELO slice; the unsafe-backing cap correctly remains.",
+    "compositionBasis": "Shared Mento Reserve composition measured by the issuer-run live API; reserve-backed classification and absence of a CADm borrower branch verified in pinned issuer repositories",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "No additional direct CADm reserve slice is identified; the upstream Mento Reserve basket is tracked through the linked USDm asset.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposure": "No separate CADm borrower collateral exists. Every positive shared-reserve API row is retained in the eight normalized stablecoin-family or exogenous-asset slices, and the observed 18.3957201267035% CELO share remains explicitly high risk.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "CELO",
+        "pct": 18.3957201267,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "CELO is the Celo network native asset held as external reserve collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "stETH (Lido staked ETH)",
+        "pct": 2.608897922,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "stETH is external liquid-staking collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "WETH residual on Celo",
+        "pct": 0.0006921547,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WETH is an identified wrapped cryptoasset residual, not a tracked stablecoin dependency."
+      }
+    ]
   },
   "liveReservesConfig": {
     "adapter": "mento",
@@ -323,6 +513,5 @@
       }
     }
   },
-  "infrastructures": ["liquity-v2"],
   "launchDate": "2025-04-13"
 }

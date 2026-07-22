@@ -302,7 +302,7 @@
   "reserves": [
     {
       "name": "sUSDe collateral",
-      "pct": 81.0,
+      "pct": 76.13294,
       "risk": "high",
       "coinId": "susde-ethena",
       "depType": "collateral",
@@ -320,7 +320,7 @@
     },
     {
       "name": "sUSDS collateral",
-      "pct": 12.3,
+      "pct": 11.54424,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -334,7 +334,7 @@
     },
     {
       "name": "ETH / Liquid staking (wstETH, WETH)",
-      "pct": 1.5,
+      "pct": 1.38409,
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "ETH and Lido wstETH collateral",
@@ -346,8 +346,8 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "Other collateral",
-      "pct": 3.4,
+      "name": "sDOLA-scrvUSD Curve LP and residual LP collateral",
+      "pct": 3.20513,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Curve sDOLA-scrvUSD LP position",
@@ -361,7 +361,7 @@
     },
     {
       "name": "Governance tokens (INV, CRV, CVX)",
-      "pct": 1.3,
+      "pct": 1.17932,
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Inverse Finance (INV), Curve (CRV), and Convex (CVX) governance tokens",
@@ -374,7 +374,7 @@
     },
     {
       "name": "BTC (WBTC, cbBTC)",
-      "pct": 0.5,
+      "pct": 0.54205,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Wrapped BTC custodians (WBTC, Coinbase cbBTC)",
@@ -385,11 +385,56 @@
         "liquidity"
       ],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "DAI collateral",
+      "pct": 0.00006,
+      "risk": "low",
+      "coinId": "dai-makerdao",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Ecosystem (DAI issuer)",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USR collateral",
+      "pct": 0.00018,
+      "risk": "high",
+      "coinId": "usr-resolv",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Resolv (USR issuer)",
+      "riskFactors": [
+        "counterparty",
+        "market",
+        "basis",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Frontier legacy DOLA debt",
+      "pct": 6.01199,
+      "risk": "very-high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Inverse Finance Frontier lending market borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex wave-4 evidence upgrade",
     "confidence": "verified",
     "sources": [
       {
@@ -397,28 +442,56 @@
         "url": "https://www.inverse.finance/api/f2/fixed-markets"
       },
       {
+        "label": "Inverse Finance Fed overview API",
+        "url": "https://www.inverse.finance/api/transparency/fed-overview"
+      },
+      {
+        "label": "Inverse Finance DOLA documentation",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola"
+      },
+      {
         "label": "Inverse Finance transparency documentation",
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
+      },
+      {
+        "label": "dRPC Ethereum archive endpoint",
+        "url": "https://eth.drpc.org"
+      },
+      {
+        "label": "Ethereum block 25584925 (0x80ea1f9b...b806ed)",
+        "url": "https://etherscan.io/block/25584925"
+      },
+      {
+        "label": "Frontier anDOLA market",
+        "url": "https://etherscan.io/address/0x7Fcb7DAC61eE35b3D4a51117A7c58D53f0a8a670#readContract"
+      },
+      {
+        "label": "Inverse PSM Fed",
+        "url": "https://etherscan.io/address/0x67FC21332D24FC5250a3B7fc988191ad7F38f9cC#readContract"
+      },
+      {
+        "label": "Inverse USDS PSM",
+        "url": "https://etherscan.io/address/0x1d02f2841afA3Cc20435a8c804C24dEaC5F30DFa#readContract"
       }
     ],
-    "rationale": "The FiRM markets API fetched on 2026-07-20 reported $42,982,738 of total DOLA debt; bucketing each market's debt through the reviewed DOLA live-reserve adapter mapping yields sUSDe 81.0%, sUSDS 12.3%, the sDOLA-scrvUSD Curve LP 3.4%, ETH/LST 1.5%, governance tokens 1.3%, and BTC 0.5%, summing to 100.0% on the adapter's exact identities. Since the 2026-07-14 review the sDOLA-scrvUSD LP slice grew from 1.4% to 3.4% and sUSDe eased from 82.7% to 81.0%, so curated weights were re-aligned to the 2026-07-20 live rows and every slice now carries a complete classification. The scope is restated as full-composition: the six slices cover the entire observed FiRM collateral envelope. The remaining slices are not silently linked: the sDOLA-scrvUSD Curve LP needs a constituent split, while ETH/LST, governance-token, and BTC collateral are identified exogenous assets outside the stablecoin dependency graph.",
-    "compositionBasis": "Current DOLA debt outstanding by FiRM collateral market (API fetched 2026-07-20), aggregated with the reviewed DOLA live-reserve adapter",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Finalized Ethereum block 25584925 (hash 0x80ea1f9b0dc91006961aac2349c3d8ca8cf2664d3dd56afe54dc752760b806ed; 2026-07-22T01:16:11Z) was used for every call. The reviewed FiRM API inventory contained 45 markets; totalDebt()(uint256) succeeded for all 45, with 19 positive raw values and 26 zeros. Positive calls were WETH 0x63Df5e23Db45a2066508318f172bA45B9CD37035=3756959497024031201960; stETH 0x743A502cf0e213F6FEE56cD9C6B03dE7Fa951dCf=2400000000000000000000; cvxCRV 0x3474ad0e3a9775c9F68B415A7a9880B0CAB9397a=110858314772739392229835; INV 0xb516247596Ca36bf32876199FBdCaD6B3322330B=186225762470794105980236; st-yCRV 0x27b6c301Fd441f3345d61B7a4245E1F823c3F9c4=110003294529098808811753; DAI 0x0971B1690d101169BFca4715897aD3a9b3C39b26=26231693322637037541; CVX 0xdc2265cBD15beD67b5F2c0B82e23FcE4a07ddF6b=132222135656672350244832; wstETH 0x3FD3daBB9F9480621C8A111603D3Ba70F17550BC=626792841707981633682720; WBTC 0x48BA574Edf0bc4E2E40B529863aaA6a67c264E7C=162546712330584663176866; sUSDe 0x79eF6d28C41e47A588E2F2ffB4140Eb6d952AEc4=402722299575805667488403; cbBTC 0x2A256306D8ba899E33B01e495982656884Ac77FF=85334980035778802015823; yv-FraxPyUSD-DOLA 0xf013D998D4cf7f45547958094F1EEE75Ca43c4f5=3502442; FraxBP-DOLA 0x87df9A00f0e4908e61756d2Fcb348ADF95Ce72Ea=625000; sUSDe-DOLA 0xb427fC22561f3963B04202F9bb5BCEbd76c14A99=27172737156502760820562909; yv-sUSDe-DOLA 0x4E264618dC015219CD83dbc53B31251D73c2db1a=7240496783129299421310424; sUSDS-DOLA 0xD68d3a44d46dd50BFeBa8Cca544717B76e7C4b29=4907274852525455915887555; yv-sUSDS-DOLA 0x4A33baFA8a31E4ec9649f65646022cAD1957808b=371961660000000000000000; yv-USR-DOLA 0xC0086Ff652c67f43F00F0F9C69Ef6c33640C8cCF=82522262033844415411; and scrvUSD-sDOLA 0xC45E9c231ab5D9Bd3F1131E7901B100D8D236C4d=1465722316636974525451659. Their exact sum is 42,981,164.823326326623625369 DOLA. Frontier Fed 0x5E075E40D01c82B6Bf0B0ecdb4Eb1D6984357EF7 returned ctoken()=0x7Fcb7DAC61eE35b3D4a51117A7c58D53f0a8a670, whose totalBorrows() was 2749310090747120614605413, producing an exact 45,730,474.914073447238230782-DOLA debt denominator. PSM Fed 0x67FC21332D24FC5250a3B7fc988191ad7F38f9cC returned psm()=0x1d02f2841afA3Cc20435a8c804C24dEaC5F30DFa and supply()=200000000000000000000000; DOLA balanceOf(PSM) equaled the same 200000000000000000000000 while PSM supply() and getTotalReserves() were zero, proving zero net external PSM issuance rather than zero Fed minting. Bucketing the debt denominator yields sUSDe 76.13294%, sUSDS 11.54424%, Frontier 6.01199%, sDOLA-scrvUSD and residual LP collateral 3.20513%, ETH/LST 1.38409%, governance tokens 1.17932%, BTC 0.54205%, USR 0.00018%, and DAI 0.00006%. This corrects the prior FiRM-only denominator without pretending the opaque Frontier borrower/collateral state or Curve LP constituents are known.",
+    "compositionBasis": "Pinned Ethereum block 25584925 totalDebt reads for all 45 FiRM markets; Frontier Fed 0x5E075E40... returned DOLA underlying 0x86537736..., supply 3100000000000000000000000, and ctoken 0x7Fcb7DAC... whose totalBorrows was used; PSM Fed supply was reconciled against DOLA retained inside the PSM; source inventory came from Inverse's official APIs",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 3.4% Other collateral slice is the sDOLA-scrvUSD Curve LP; its self and scrvUSD legs cannot be weighted from the aggregate market debt alone.",
-    "knownUnknownExposurePct": 3.4,
+    "knownUnknownExposure": "The 3.20513% sDOLA-scrvUSD and residual LP slice lacks constituent weights, while the 6.01199% Frontier balance is verified as outstanding DOLA debt but its current borrower collateral, health, and bad-debt attribution are not exposed by the reviewed source set.",
+    "knownUnknownExposurePct": 9.21712,
     "nonLinkDispositions": [
       {
         "reserveIndex": 2,
         "reserveName": "ETH / Liquid staking (wstETH, WETH)",
-        "pct": 1.5,
+        "pct": 1.38409,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The slice contains ETH and liquid-staking collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
-        "reserveName": "Other collateral",
-        "pct": 3.4,
+        "reserveName": "sDOLA-scrvUSD Curve LP and residual LP collateral",
+        "pct": 3.20513,
         "disposition": "basket-needs-split",
         "rationale": "The API identifies this debt as an sDOLA-scrvUSD Curve LP market but does not split the self and scrvUSD constituent weights.",
         "candidateCoinIds": [
@@ -428,16 +501,23 @@
       {
         "reserveIndex": 4,
         "reserveName": "Governance tokens (INV, CRV, CVX)",
-        "pct": 1.3,
+        "pct": 1.17932,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Governance-token collateral is identified but is not a stablecoin dependency."
       },
       {
         "reserveIndex": 5,
         "reserveName": "BTC (WBTC, cbBTC)",
-        "pct": 0.5,
+        "pct": 0.54205,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Bitcoin collateral is identified but is not a stablecoin dependency."
+      },
+      {
+        "reserveIndex": 8,
+        "reserveName": "Frontier legacy DOLA debt",
+        "pct": 6.01199,
+        "disposition": "insufficient-evidence",
+        "rationale": "Pinned totalBorrows proves the Frontier DOLA balance remains outstanding, but the reviewed official APIs and documentation do not expose its current borrower collateral, health, or bad-debt attribution."
       }
     ]
   },

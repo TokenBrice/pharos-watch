@@ -2,8 +2,8 @@
   "id": "pusd-plume",
   "reserves": [
     {
-      "name": "USDC (via Nucleus BoringVault)",
-      "pct": 100,
+      "name": "Native USDC held by pUSD BoringVaults on Ethereum and Plume",
+      "pct": 90.03,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -11,44 +11,76 @@
       "issuerOrObligor": "Circle Internet Financial, Inc.",
       "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
       "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Bridged USDC.e held by the pUSD BoringVault on Plume",
+      "pct": 9.97,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial, Inc. and the legacy Plume USDC.e bridge route",
+      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex Safety Score V9 backing review",
     "confidence": "verified",
     "sources": [
       {
         "label": "Plume USD documentation",
         "url": "https://docs.plume.org/plume/tokens/plume-usd"
+      },
+      {
+        "label": "Plume mainnet contract addresses",
+        "url": "https://docs.plume.org/plume/developers/contract-addresses"
+      },
+      {
+        "label": "Ethereum block 25584897",
+        "url": "https://etherscan.io/block/25584897"
+      },
+      {
+        "label": "Plume block 82560814",
+        "url": "https://explorer.plume.org/block/82560814"
       }
     ],
-    "rationale": "Plume documents pUSD as a non-interest-bearing wrapper backed 1:1 by USDC in a BoringVault, redeemable for USDC at a 1:1 ratio, with collateral risk consisting entirely of reliance on Circle's USDC. The sole reserve slice therefore maps directly to the tracked USDC asset.",
-    "compositionBasis": "Current Plume issuer documentation for pUSD reserve composition and redemption",
+    "rationale": "Plume documents pUSD as a non-interest-bearing USDC wrapper and identifies the Plume pUSD, native USDC, and legacy USDC.e contracts. At Ethereum block 25584897 (2026-07-22T01:10:35Z), pUSD totalSupply was 45,069.364229 and its BoringVault held 1,004,104.519629 native USDC. At Plume block 82560814 (2026-07-22T01:10:39Z), pUSD totalSupply was 4,924,317.169452 and its BoringVault held 3,469,873.680870 native USDC plus 495,408.331533 USDC.e. The two-chain aggregate is 4,969,386.533681 pUSD against 4,969,386.532032 USDC claims, a 0.001649-token difference (99.99999997% reconciliation). The collateral mix normalizes to 90.03% native USDC and 9.97% bridged USDC.e; the bridged slice is rated medium for the additional bridge contract path.",
+    "compositionBasis": "Issuer-documented USDC-only composition reconciled from pUSD totalSupply and BoringVault token balances at timestamp-aligned Ethereum and Plume blocks",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unresolved reserve constituent exposure in the issuer-documented single-asset composition.",
+    "knownUnknownExposure": "No unresolved reserve constituent exposure in the issuer-documented and on-chain-reconciled composition.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Plume-managed Nucleus BoringVault contracts",
+        "name": "Plume-managed Nucleus BoringVault contracts on Ethereum and Plume",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex Safety Score V9 backing review",
     "confidence": "verified",
     "sources": [
       {
         "label": "Plume USD documentation",
         "url": "https://docs.plume.org/plume/tokens/plume-usd"
+      },
+      {
+        "label": "Ethereum block 25584897",
+        "url": "https://etherscan.io/block/25584897"
+      },
+      {
+        "label": "Plume block 82560814",
+        "url": "https://explorer.plume.org/block/82560814"
       }
     ],
-    "uncertainty": "Plume identifies the on-chain BoringVault and states that it is managed by Plume, but the public documentation does not establish legal segregation, bankruptcy remoteness, or rehypothecation terms.",
+    "uncertainty": "Pinned reads establish the token balances held by the two pUSD BoringVault deployments and reconcile them to aggregate pUSD supply, but Plume's public documentation does not establish legal segregation, bankruptcy remoteness, or rehypothecation terms.",
     "knownUnknownExposurePct": 0
   }
 }

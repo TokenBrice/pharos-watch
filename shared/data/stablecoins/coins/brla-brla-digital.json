@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": false
   },
-  "collateral": "BRL cash and cash equivalents plus overnight repurchase agreements collateralized by Brazilian corporate debentures; the May 31, 2026 reserve and circulation totals received reasonable assurance from UHY Bendoraytes",
+  "collateral": "BRL cash and cash equivalents plus overnight repurchase agreements collateralized by Brazilian corporate debentures; the June 30, 2026 reserve and circulation totals received reasonable assurance from UHY Bendoraytes",
   "pegMechanism": "Fiat-backed 1:1 peg to the Brazilian Real; mint/redeem 1:1 for BRL through Avenia (formerly BRLA Digital) platform after KYC; native multichain deployment without wrapping or bridge dependencies",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "365",
@@ -25,17 +25,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Brazil",
     "latestReport": {
-      "periodEnd": "2026-05-31",
-      "publishedAt": "2026-06-16",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-21",
       "assuranceMethod": "attestation",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "owner-triage",
+      "reviewer": "OpenAI Codex Safety Score V9 backing review",
       "confidence": "verified",
       "sources": [
         {
-          "label": "UHY BRLA Transparency Report - May 31, 2026",
-          "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a"
+          "label": "UHY BRLA Transparency Report - June 30, 2026",
+          "url": "https://brladigital.notion.site/BRLA-Transparency-Page-238ba143aa2f4338902ee91ebe50298a#3a47f28f0ae48040bbdafe358baa09b3"
         }
       ]
     }

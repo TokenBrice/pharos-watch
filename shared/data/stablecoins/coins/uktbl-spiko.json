@@ -106,7 +106,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "unknown",
-    "summary": "UKTBL Ethereum mint/burn is gated by Spiko's UUPS PermissionManager. Its group-0 Safe can authorize minters and replace PermissionManager logic without a contract-enforced delay. Terminal mint and upgrade control chains are not enumerated for every non-Ethereum deployment.",
+    "summary": "UKTBL's chain-local EVM ADMIN Safes, Starknet admin multisig, and Stellar contract administrator are verified, but the full direct-minter inventory is not. Non-Ethereum EVM group-2 operators, additional Starknet MINTER members, and Stellar's three MINTER accounts remain unrecorded as controls; eight Ethereum mint-capable rows also retain unknown cap authority.",
     "controls": [
       {
         "chain": "ethereum",
@@ -144,7 +144,7 @@
             "url": "https://eth.blockscout.com/address/0x344278aff344d6fb960705dc18a4912221608472"
           }
         ],
-        "evidence": "Verified on-chain 2026-07-20: Sourcify-verified PermissionManager; getRequirements(UKTBL, mint) = group mask {0,2}; group 0 (ADMIN) = Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3/8); group 2 = six operator contracts with canCall mint = true on UKTBL."
+        "evidence": "Verified on-chain 2026-07-20: Sourcify-verified PermissionManager; getRequirements(UKTBL, mint) = group mask {0,2}; group 0 (ADMIN) = Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3-of-6); group 2 = six operator contracts with canCall mint = true on UKTBL."
       },
       {
         "chain": "ethereum",
@@ -257,35 +257,34 @@
       {
         "chain": "ethereum",
         "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
-        "label": "Spiko PermissionManager ADMIN Safe (3-of-8)",
+        "label": "Spiko PermissionManager ADMIN Safe (Ethereum)",
         "role": "proxy-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "threshold": 3,
-        "signerCount": 8,
+        "signerCount": 6,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "version": "1.4.1",
           "owners": [
             "0x75e0092e7D2c8D854Fcf5334f95554852d62746a",
-            "0xE9106C617D7180bf6BaDCFa5EdC664B726c5Dcbb",
-            "0x6c00Be5d1013a5bca938EF6aa8F1E5e706FF384d",
+            "0xd01046472371168721e45DC357296683F026d6B8",
             "0x4D1d9C5B5d9Ca448194313D799De374f362Bd460",
             "0xDa47Bd72438F11bef7Cc54F18cd02426dd86A5a2",
-            "0xe67D2cbeaE3090bE017C66e7A6943961619a5D35",
             "0x4896f23FF83242D8D4EB5fA1dEdF8c57e9145949",
             "0xA6e06dfE42064B7Cd6DC902a62e74ca5Bb574011"
           ],
           "threshold": 3,
           "enabledModules": [],
           "guard": null,
-          "observedBlock": 25573477,
-          "observedAt": "2026-07-20",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25584970,
+          "observedAt": "2026-07-22",
           "source": "onchain"
         },
-        "observedAt": "2026-07-20",
-        "observedBlock": 25573477,
+        "observedAt": "2026-07-22",
+        "observedBlock": 25584970,
         "sources": [
           {
             "label": "Spiko PermissionManager implementation",
@@ -296,7 +295,167 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 25573477, Safe reads returned VERSION() = 1.4.1, eight owners, and threshold 3; existing PermissionManager review records no enabled modules or guard. Group 0 can administer PermissionManager permissions and its UUPS upgrade authorization, so it can authorize minters and replace mint-critical authority logic."
+        "evidence": "At Ethereum block 25584970, getGroups() confirms this Safe holds ADMIN group 0; Safe reads returned VERSION() = 1.4.1, the six listed owners, threshold 3, no enabled modules, and a zero guard slot. UKTBL mint requires mask 0x05, while upgradeToAndCall on both the token and PermissionManager requires mask 0x01, so this Safe can authorize minters and replace mint-critical logic without a contract-enforced delay."
+      },
+      {
+        "chain": "polygon",
+        "address": "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+        "label": "Spiko UKTBL PermissionManager ADMIN Safe (Polygon)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 90652348,
+          "observedAt": "2026-07-22",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-22",
+        "observedBlock": 90652348,
+        "sources": [
+          {
+            "label": "UKTBL Polygon contract",
+            "url": "https://polygonscan.com/address/0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"
+          },
+          {
+            "label": "Polygon PublicNode RPC",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 90652348, UKTBL authority() returned PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 and getGroups() confirmed this Safe holds ADMIN group 0. The Safe is 3-of-6 with no enabled modules and a zero guard slot. Mint requires mask 0x05, while token and PermissionManager upgrades require mask 0x01."
+      },
+      {
+        "chain": "base",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "label": "Spiko UKTBL PermissionManager ADMIN Safe (Base)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 48947086,
+          "observedAt": "2026-07-22",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-22",
+        "observedBlock": 48947086,
+        "sources": [
+          {
+            "label": "UKTBL Base contract",
+            "url": "https://basescan.org/address/0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 48947086, UKTBL authority() returned PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 and getGroups() confirmed this Safe holds ADMIN group 0. The Safe is 3-of-6 with no enabled modules and a zero guard slot. Mint requires mask 0x05, while token and PermissionManager upgrades require mask 0x01."
+      },
+      {
+        "chain": "etherlink",
+        "address": "0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
+        "label": "Spiko UKTBL PermissionManager ADMIN Safe (Etherlink)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 48881439,
+          "observedAt": "2026-07-22",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-22",
+        "observedBlock": 48881439,
+        "sources": [
+          {
+            "label": "UKTBL Etherlink contract",
+            "url": "https://explorer.etherlink.com/address/0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"
+          },
+          {
+            "label": "Etherlink mainnet RPC",
+            "url": "https://node.mainnet.etherlink.com"
+          }
+        ],
+        "evidence": "At Etherlink block 48881439, UKTBL authority() returned PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 and getGroups() confirmed this Safe holds ADMIN group 0. The Safe is 3-of-6 with no enabled modules and a zero guard slot. Mint requires mask 0x05, while token and PermissionManager upgrades require mask 0x01."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+        "label": "Spiko UKTBL PermissionManager ADMIN Safe (Arbitrum)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "observedBlock": 486369724,
+          "observedAt": "2026-07-22",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-22",
+        "observedBlock": 486369724,
+        "sources": [
+          {
+            "label": "Arbitrum PermissionManager",
+            "url": "https://arbitrum.blockscout.com/address/0xa925c217e4c1c82ee721ebd496d3863d5c2d829a"
+          },
+          {
+            "label": "Arbitrum public RPC",
+            "url": "https://arb1.arbitrum.io/rpc"
+          }
+        ],
+        "evidence": "At Arbitrum block 486369724, UKTBL authority() returned chain-local PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a and getGroups() confirmed this Safe holds ADMIN group 0. The Safe is 3-of-6 with no enabled modules and a zero guard slot. Mint requires mask 0x05, while token and PermissionManager upgrades require mask 0x01."
+      },
+      {
+        "chain": "starknet",
+        "address": "0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395",
+        "label": "UKTBL Starknet restricted mint/burn",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Mint and burn are gated by the shared Spiko Starknet PermissionManager; the token owner can replace both its declared class and PermissionManager address.",
+        "observedAt": "2026-07-22",
+        "observedBlock": 12140924,
+        "sources": [
+          {
+            "label": "Spiko Starknet production addresses",
+            "url": "https://github.com/spiko-tech/starknet-contracts/blob/main/clis/address/production.json"
+          },
+          {
+            "label": "Starknet Lava public RPC",
+            "url": "https://rpc.starknet.lava.build"
+          }
+        ],
+        "evidence": "At Starknet block 12140924, the token's permission_manager_contract_address storage variable resolved to the issuer's production PermissionManager 0x07c7a6db2763d01aa889702bf5eb7b88a01a9df11da0e3d45c96a140c1f43ba3. Its declared class 0x5973b1bed1f0a20a9125fac8ec5499f29f44bb70d9c465658c0da20ca9b75f3 exposes mint, burn, set_permission_manager_contract_address, and OpenZeppelin IUpgradeable entrypoints."
       },
       {
         "chain": "starknet",
@@ -307,49 +466,140 @@
         "directMintAbility": "can-authorize",
         "threshold": 3,
         "signerCount": 5,
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-21",
-        "observedBlock": 12113111,
+        "capDescription": "Token owner and PermissionManager DEFAULT_ADMIN_ROLE holder: can upgrade the token class, replace the PermissionManager, grant mint roles, and upgrade the PermissionManager without a delay.",
+        "observedAt": "2026-07-22",
+        "observedBlock": 12140924,
         "sources": [
           {
             "label": "Starknet Lava public RPC",
             "url": "https://rpc.starknet.lava.build"
           },
           {
-            "label": "UKTBL on Starknet explorer",
-            "url": "https://starkscan.co/contract/0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395"
+            "label": "Spiko Starknet PermissionManager source",
+            "url": "https://github.com/spiko-tech/starknet-contracts/blob/main/src/permission_manager.cairo"
           }
         ],
-        "evidence": "At Starknet block 12113111, owner() on the UKTBL token (0x0153d6e0...74395) re-confirmed the admin contract 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d. starknet_getClass on that admin contract's class hash (0x6e150953b26271a740bf2b6e9bca17cc52c68d765f761295de51ceb8526ee72) shows it implements argent::multisig::interface::IArgentMultisig; get_threshold() returned 3 and get_signers() returned 5 signer felts (0x3167aa34..., 0x4ae1bfde..., 0x3e02f370..., 0x147ecc4a..., 0x53b475eb...). The UKTBL token's own ABI additionally exposes top-level mint/burn/pause/unpause/redeem functions plus set_permission_manager_contract_address and set_redemption_contract_address, mirroring the Ethereum Token+PermissionManager split, but no public getter exposes the currently-set permission-manager address, so the Starknet mint-authorization path below the 3-of-5 owner multisig is not independently enumerated."
+        "evidence": "At Starknet block 12140924, owner() on UKTBL returned this ArgentMultisig; get_threshold() returned 3 and get_signers() returned the five signer felts 0x3167aa34..., 0x4ae1bfde..., 0x3e02f370..., 0x147ecc4a..., and 0x53b475eb.... On PermissionManager 0x07c7a6db2763d01aa889702bf5eb7b88a01a9df11da0e3d45c96a140c1f43ba3, has_role() returned true for this multisig's DEFAULT_ADMIN_ROLE, MINTER_ROLE, PAUSER_ROLE, and WHITELISTER_ROLE and false for BURNER_ROLE. The official source restricts PermissionManager upgrade() to DEFAULT_ADMIN_ROLE."
+      },
+      {
+        "chain": "stellar",
+        "address": "CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR",
+        "label": "UKTBL Stellar Soroban restricted mint/burn",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Minting requires the shared PermissionManager MINTER role; the single-key token owner can replace the PermissionManager and upgrade the token wasm.",
+        "observedAt": "2026-07-22",
+        "observedBlock": 63588183,
+        "sources": [
+          {
+            "label": "Spiko Stellar production addresses",
+            "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/address/production.json"
+          },
+          {
+            "label": "Spiko Soroban Token source",
+            "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/contracts/token/src/contract.rs"
+          },
+          {
+            "label": "Stellar public Soroban RPC",
+            "url": "https://mainnet.sorobanrpc.com"
+          }
+        ],
+        "evidence": "At Stellar ledger 63588183, contract-instance storage identified UKTBL metadata, PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M, and Owner GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H. A no-op upgrade simulation against current token wasm f48f10d9c7d35fc7783b5e27578bf0e764e3a30ff26a3bd7d8e57758c17a9ea8 succeeded from that owner; the source restricts upgrades and PermissionManager replacement to the owner."
+      },
+      {
+        "chain": "stellar",
+        "address": "GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H",
+        "label": "Spiko UKTBL Stellar contract owner and PermissionManager admin (single-key account)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "threshold": 1,
+        "signerCount": 1,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "stellar:gbyiqxbkeb655eb3wtrits6rr5gxep6sqrblprezhnfykt7wbmtmpr3h"
+        ],
+        "observedAt": "2026-07-22",
+        "observedBlock": 63588183,
+        "sources": [
+          {
+            "label": "Spiko Soroban PermissionManager source",
+            "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/contracts/permission-manager/src/contract.rs"
+          },
+          {
+            "label": "Stellar public Soroban RPC",
+            "url": "https://mainnet.sorobanrpc.com"
+          },
+          {
+            "label": "Stellar Horizon account endpoint",
+            "url": "https://horizon.stellar.org/accounts/GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H"
+          }
+        ],
+        "evidence": "At Stellar ledger 63588183, the shared PermissionManager stored this account as Admin and a no-op upgrade simulation against current PermissionManager wasm f4de70f678124ba1f17642e07b7a06355deb468e0df573b8897269258fb0ff1a succeeded from it. get_role_member_count(MINTER) returned 3; the three current members are GD2ELXTH...X4EO, GBWKGT3Q...XIQY, and GDUFSH23...HATC. Horizon reports the admin and all three minters as one-signer accounts with weight 1 and zero low, medium, and high thresholds, so the Stellar path is explicitly a single-key authority surface."
       }
     ],
     "economicCapSemantics": "unknown",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "upgradeability": {
-      "model": "uups",
+      "model": "custom",
       "proxyAddresses": [
-        "0x344278aff344d6fb960705dc18a4912221608472"
+        "0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+        "0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068",
+        "0x903d5990119bc799423e9c25c56518ba7dd19474",
+        "0x344278aff344d6fb960705dc18a4912221608472",
+        "0xa925c217e4c1c82ee721ebd496d3863d5c2d829a",
+        "0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395",
+        "0x07c7a6db2763d01aa889702bf5eb7b88a01a9df11da0e3d45c96a140c1f43ba3",
+        "CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR",
+        "CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M"
       ],
       "implementationAddresses": [
-        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
+        "0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74",
+        "0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068",
+        "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e",
+        "0x344278aff344d6fb960705dc18a4912221608472",
+        "0x5973b1bed1f0a20a9125fac8ec5499f29f44bb70d9c465658c0da20ca9b75f3",
+        "f48f10d9c7d35fc7783b5e27578bf0e764e3a30ff26a3bd7d8e57758c17a9ea8",
+        "f4de70f678124ba1f17642e07b7a06355deb468e0df573b8897269258fb0ff1a"
       ],
       "adminAddresses": [
-        "0x4eaa52b6280593a8820c45ce38f974290ae52cea"
+        "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "0xa4196f06fe948b8ca81d3dc77110d3f83d10abd9",
+        "0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
+        "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
+        "0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d",
+        "GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "Spiko PermissionManager ADMIN Safe (3-of-8)",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25573477,
+      "delaySec": 0,
+      "controlRef": "Spiko UKTBL Stellar contract owner and PermissionManager admin (single-key account)",
+      "observedAt": "2026-07-22",
+      "observedBlock": 25584970,
       "sources": [
         {
           "label": "Spiko PermissionManager implementation",
           "url": "https://eth.blockscout.com/address/0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e"
         },
         {
-          "label": "Ethereum PublicNode RPC",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "Spiko Starknet PermissionManager source",
+          "url": "https://github.com/spiko-tech/starknet-contracts/blob/main/src/permission_manager.cairo"
+        },
+        {
+          "label": "Spiko Soroban Token source",
+          "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/contracts/token/src/contract.rs"
+        },
+        {
+          "label": "Spiko Soroban PermissionManager source",
+          "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/contracts/permission-manager/src/contract.rs"
         }
       ]
     },
@@ -380,17 +630,43 @@
           "url": "https://rpc.starknet.lava.build"
         },
         {
-          "label": "Stellar Expert contract API",
-          "url": "https://api.stellar.expert/explorer/public/contract/CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR"
+          "label": "Spiko Starknet production addresses",
+          "url": "https://github.com/spiko-tech/starknet-contracts/blob/main/clis/address/production.json"
+        },
+        {
+          "label": "Spiko Starknet PermissionManager source",
+          "url": "https://github.com/spiko-tech/starknet-contracts/blob/main/src/permission_manager.cairo"
+        },
+        {
+          "label": "Spiko Stellar production addresses",
+          "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/address/production.json"
+        },
+        {
+          "label": "Spiko Soroban Token source",
+          "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/contracts/token/src/contract.rs"
+        },
+        {
+          "label": "Spiko Soroban PermissionManager source",
+          "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/contracts/permission-manager/src/contract.rs"
+        },
+        {
+          "label": "Stellar public Soroban RPC",
+          "url": "https://mainnet.sorobanrpc.com"
+        },
+        {
+          "label": "Stellar Horizon admin account",
+          "url": "https://horizon.stellar.org/accounts/GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H"
         }
       ],
-      "evidence": "Ethereum contract and RPC evidence identifies the UUPS PermissionManager as UKTBL's authority path. At block 25573477, its group-0 Safe is 3-of-8; the PermissionManager implementation slot is 0xd3f5f1524e1a472b51374a3ff41b8936eb5b658e and the external proxy-admin slot is zero. Existing role evidence establishes group 2 operator contracts that can call UKTBL mint on Ethereum. The reviewed Spiko fund record is an AMF-regulated UCITS short-term VNAV money-market fund with quarterly PwC audit evidence, supporting periodic reconciliation and prudential supervision. 2026-07-21 gap-fill pass narrowed the non-Ethereum gap: Starknet owner() re-confirmed at block 12113111, and its class hash resolves to an argent::multisig::interface::IArgentMultisig implementation; get_threshold()=3 and get_signers() returned exactly 5 signer keys, so the Starknet UKTBL owner is a 3-of-5 Argent Multisig (added to controls). The Starknet token's own ABI exposes mint/burn/pause and a settable permission-manager address mirroring the Ethereum Token+PermissionManager split, but no public getter surfaces the currently configured permission-manager contract, so operator-level (non-owner) minters on Starknet remain unenumerated. Stellar was independently checked via the Stellar Expert contract API and Horizon: the Soroban UKTBL contract (CDT3KU6...4FR) was deployed 2025-10-01 by account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H, a plain single-signature Stellar account (one ed25519 signer, weight 1, zero thresholds) rather than a multisig; however, Soroban contracts commonly set a separate runtime 'admin' address at initialize() that can differ from the deploying account, and no public API (Stellar Expert operations/history endpoints returned 404; Soroban storage requires ledger-entry XDR decoding not available in this session) exposed that runtime admin key, so the Stellar terminal admin identity remains unresolved.",
-      "reviewer": "P2 mint-free cohort; Claude 2026-07-21 gap-fill pass",
-      "reviewedAt": "2026-07-21",
+      "evidence": "Pinned reads substantially improve UKTBL's administration inventory: EVM blocks Ethereum 25584970, Polygon 90652348, Base 48947086, Etherlink 48881439, and Arbitrum 486369724 resolve chain-local 3-of-6 ADMIN Safes with no detected modules or guards; Starknet block 12140924 resolves the token and PermissionManager administrator to a 3-of-5 Argent multisig; Stellar ledger 63588183 resolves the contract owner and PermissionManager admin to one single-key account. This is not yet a terminal mint inventory. Only Ethereum's six group-2 mint operators are recorded, the other EVM group-2 members are absent, Starknet MINTER membership was not enumerated beyond the admin, and Stellar reports three current MINTER accounts that are not represented as controls. The eight Ethereum mint-capable rows also retain canRaiseCap unknown. The AMF-regulated UCITS fund and quarterly PwC audit evidence continue to support periodic reconciliation and prudential supervision, but do not close these contract-control gaps.",
+      "reviewer": "P2 mint-free cohort; Claude 2026-07-21 gap-fill pass; OpenAI Codex wave-4 evidence upgrade",
+      "reviewedAt": "2026-07-22",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Identify the Soroban runtime admin (initialize-time admin address, which may differ from the deploying account) for the Stellar UKTBL contract CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR.",
-        "Enumerate the Starknet permission-manager contract address and its operator/group membership below the confirmed 3-of-5 Argent Multisig owner."
+        "Enumerate every group-2 direct minter on Polygon, Base, Etherlink, and Arbitrum and determine each mint-capable control's canRaiseCap semantics.",
+        "Enumerate all Starknet MINTER_ROLE members and record their terminal authority models.",
+        "Record the three current Stellar MINTER accounts as controls and resolve their cap authority, rather than treating the administrator as the only terminal mint surface.",
+        "Resolve canRaiseCap for the Ethereum token, PermissionManager, and six group-2 mint operators."
       ]
     }
   },
