@@ -25,7 +25,26 @@
     "provider": "KPMG",
     "attestorTier": "big4",
     "cadence": "monthly",
-    "attestorJurisdiction": "United States"
+    "attestorJurisdiction": "United States",
+    "latestReport": {
+      "periodEnd": "2026-05-29",
+      "publishedAt": "2026-06-25",
+      "assuranceMethod": "examination",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "GPT SOL-BIND wave6",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "KPMG PAXG Redemption Assets Report - May 29, 2026",
+          "url": "https://framerusercontent.com/assets/V9r8HlI6Q7XkJUWPk6VjXu844.pdf"
+        },
+        {
+          "label": "Paxos PAXG transparency reports",
+          "url": "https://www.paxos.com/paxg-transparency"
+        }
+      ]
+    }
   },
   "links": [
     {

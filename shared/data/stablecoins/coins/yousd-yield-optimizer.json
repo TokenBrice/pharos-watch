@@ -51,20 +51,16 @@
   ],
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
-    "tier": "liquidity-or-intent-route",
-    "summary": "yoUSD is a multi-chain yield-optimizer stable asset whose strategy allocates across protocols and chains. The workflow's L2BEAT route signal points to Across, so Pharos scores bridge-route exposure as a liquidity-or-intent route rather than native-only issuance. 2026-07-20 cohort dc-1 pass: Base row confirmed native yoUSD; Ethereum/Arbitrum rows confirmed uniform yoUSD multichain deployments (uniform address + owner reads).",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
-    "confidence": "probable",
+    "tier": "issuer-native-burn-mint",
+    "summary": "yoUSD is issued independently as a local ERC-4626 vault on Base, Ethereum, and Arbitrum. YO's gateway documentation says deposits and redemptions occur independently on each chain and shares received on one chain can only be redeemed there, so no bridge control carries the issuance claim.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
+    "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Across",
-        "slug": "across",
-        "url": "https://l2beat.com/interop/protocols/across",
-        "bridgeTypes": [
-          "Non-minting"
-        ]
+        "source": "issuer",
+        "name": "YO Gateway per-chain vault issuance",
+        "url": "https://docs.yo.xyz/integrations/technical-guides/yogateway-integration-guide"
       }
     ],
     "sources": [
@@ -73,91 +69,117 @@
         "url": "https://www.yo.xyz/"
       },
       {
-        "label": "YO Protocol docs",
-        "url": "https://docs.yo.xyz/"
+        "label": "YO Gateway integration guide",
+        "url": "https://docs.yo.xyz/integrations/technical-guides/yogateway-integration-guide"
       },
       {
-        "label": "L2BEAT Across",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "YO contract addresses",
+        "url": "https://docs.yo.xyz/protocol/contract-addresses"
       }
     ],
     "routes": [
       {
         "id": "base:0x0000000f2eb9f69274678c76222b35eec7588a65",
         "destinationChain": "base",
+        "canonicalChain": "base",
         "contractAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
-        "protocol": "yoUSD (native issuance on Base)",
+        "protocol": "YO local ERC-4626 issuance",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on-chain 2026-07-20: name 'yoUSD', symbol yoUSD, 6 decimals; owner() = 0x67b6f699f1c8040414032a3c2c88a54db144fcd2 (yoUSD admin Safe per the mint-authority review) — native issuance on Base.",
+        "reviewNote": "At Base block 48979898, the local vault reads name/symbol yoUSD, 6 decimals, owner() = 0x67b6f699f1c8040414032a3c2c88a54db144fcd2, and asset() = Base USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. YO documents that gateway deposits and redemptions occur independently on each chain and local shares cannot be redeemed on another chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-22",
+        "observedBlock": 48979898,
         "sources": [
           {
             "label": "yoUSD on Basescan",
             "url": "https://basescan.org/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
+          },
+          {
+            "label": "YO Gateway integration guide",
+            "url": "https://docs.yo.xyz/integrations/technical-guides/yogateway-integration-guide"
+          },
+          {
+            "label": "YO contract addresses",
+            "url": "https://docs.yo.xyz/protocol/contract-addresses"
+          },
+          {
+            "label": "Base PublicNode RPC",
+            "url": "https://base-rpc.publicnode.com"
           }
         ]
       },
       {
         "id": "ethereum:0x0000000f2eb9f69274678c76222b35eec7588a65",
         "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
-        "protocol": "yoUSD multichain deployment (uniform address + admin Safe)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "YO local ERC-4626 issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'yoUSD'/'yoVaultUSD', symbol yoUSD, 6 decimals on ethereum; uniform deployment address with uniform owner() 0x67b6f699f1c8040414032a3c2c88a54db144fcd2 (yoUSD admin Safe). The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "reviewNote": "At Ethereum block 25590409, the local vault reads name/symbol yoUSD, 6 decimals, owner() = 0x67b6f699f1c8040414032a3c2c88a54db144fcd2, and asset() = Ethereum USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. The proxy uses implementation 0x64efce64a41274e2fe87793cc77caa62911b3b13 and ProxyAdmin 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073, owned by TimelockController 0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48 with a 172800-second delay; authority() returns 0x9524e25079b1b04d904865704783a5aa0202d44d, owned by the same admin Safe. YO documents that gateway deposits and redemptions occur independently on each chain and local shares cannot be redeemed on another chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "base",
-        "canonicalChain": "base",
-        "controllerChain": "ethereum",
-        "controllerAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
-        "failureDomainKeys": [
-          "protocol:yousd-multichain",
-          "contract:ethereum:0x0000000f2eb9f69274678c76222b35eec7588a65"
-        ],
+        "observedAt": "2026-07-22",
+        "observedBlock": 25590409,
         "sources": [
           {
-            "label": "yoUSD on Basescan",
-            "url": "https://basescan.org/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
+            "label": "yoUSD on Etherscan",
+            "url": "https://etherscan.io/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
+          },
+          {
+            "label": "YO Gateway integration guide",
+            "url": "https://docs.yo.xyz/integrations/technical-guides/yogateway-integration-guide"
+          },
+          {
+            "label": "YO contract addresses",
+            "url": "https://docs.yo.xyz/protocol/contract-addresses"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ]
       },
       {
         "id": "arbitrum:0x0000000f2eb9f69274678c76222b35eec7588a65",
         "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
         "contractAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
-        "protocol": "yoUSD multichain deployment (uniform address + admin Safe)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
+        "protocol": "YO local ERC-4626 issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'yoUSD'/'yoVaultUSD', symbol yoUSD, 6 decimals on arbitrum; uniform deployment address with uniform owner() 0x67b6f699f1c8040414032a3c2c88a54db144fcd2 (yoUSD admin Safe). The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "reviewNote": "At Arbitrum block 486632165, the local vault reads name yoVaultUSD, symbol yoUSD, 6 decimals, owner() = 0x67b6f699f1c8040414032a3c2c88a54db144fcd2, and asset() = Arbitrum USDC 0xaf88d065e77c8cc2239327c5edb3a432268e5831. The proxy uses implementation 0x7e715d9731ee8c29e0bde2e852891e9fbef262bb and the same ProxyAdmin/TimelockController path as Ethereum, including the 172800-second delay; authority() returns the same Safe-owned RolesAuthority. YO documents that gateway deposits and redemptions occur independently on each chain and local shares cannot be redeemed on another chain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "sourceChain": "base",
-        "canonicalChain": "base",
-        "controllerChain": "arbitrum",
-        "controllerAddress": "0x0000000f2eb9f69274678c76222b35eec7588a65",
-        "failureDomainKeys": [
-          "protocol:yousd-multichain",
-          "contract:arbitrum:0x0000000f2eb9f69274678c76222b35eec7588a65"
-        ],
+        "observedAt": "2026-07-22",
+        "observedBlock": 486632165,
         "sources": [
           {
-            "label": "yoUSD on Basescan",
-            "url": "https://basescan.org/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
+            "label": "yoUSD on Arbiscan",
+            "url": "https://arbiscan.io/address/0x0000000f2eb9f69274678c76222b35eec7588a65"
+          },
+          {
+            "label": "YO Gateway integration guide",
+            "url": "https://docs.yo.xyz/integrations/technical-guides/yogateway-integration-guide"
+          },
+          {
+            "label": "YO contract addresses",
+            "url": "https://docs.yo.xyz/protocol/contract-addresses"
+          },
+          {
+            "label": "Arbitrum PublicNode RPC",
+            "url": "https://arbitrum-one-rpc.publicnode.com"
           }
         ]
       }

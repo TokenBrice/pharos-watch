@@ -27,16 +27,16 @@
     "attestorJurisdiction": "Hong Kong",
     "attestorLicense": "HK CPA",
     "latestReport": {
-      "periodEnd": "2026-07-16",
-      "publishedAt": "2026-07-16",
+      "periodEnd": "2026-07-22",
+      "publishedAt": "2026-07-22",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Kimi FIAT-CTRL shard-09 control-evidence review",
+      "reviewer": "GPT SOL-BIND wave6",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - July 16, 2026",
+          "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - July 22, 2026",
           "url": "https://widget.verinumus.io/api/v1/tusd/report"
         }
       ]

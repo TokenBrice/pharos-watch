@@ -57,8 +57,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex SOL-ULTRA Cohort A reserve research; SOL-KEYSTONE arithmetic correction",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
     "confidence": "verified",
     "sources": [
       {
@@ -90,7 +90,7 @@
     "providers": [
       {
         "name": "Agora Reserve Fund LP",
-        "role": "custodian",
+        "role": "other",
         "sharePct": 92.45,
         "jurisdiction": "United States"
       },
@@ -103,23 +103,13 @@
         "name": "Agora-controlled segregated wallets and regulated virtual asset service providers",
         "role": "custodian",
         "sharePct": 3.66
-      },
-      {
-        "name": "State Street",
-        "role": "subcustodian",
-        "jurisdiction": "United States"
-      },
-      {
-        "name": "VanEck",
-        "role": "other",
-        "jurisdiction": "United States"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-17",
-    "reviewer": "Kimi FIAT-CTRL shard-01 (V9 anchor-coherence swarm)",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
     "confidence": "verified",
     "sources": [
       {
@@ -129,12 +119,8 @@
       {
         "label": "Agora Bermuda Limited Terms of Use (as of 2026-05-27)",
         "url": "https://static.agora.finance/termsofuse.pdf"
-      },
-      {
-        "label": "Agora CEO Nick van Eck on State Street cash-custody/fund-administration and VanEck investment-manager roles (The Block, 2025-06-26)",
-        "url": "https://www.theblock.co/post/360034/agora-ceo-pushes-back-anchorages-stablecoin-safety-matrix"
       }
     ],
-    "uncertainty": "The May 2026 attestation and the Terms of Use dated 2026-05-27 document that reserve assets are held for the benefit of AUSD holders in a segregated account of Agora Bermuda Limited under the Bermuda Segregated Accounts Companies Act 2000, protected from the Company's general-account creditors, with 99% of the Agora Reserve Fund LP (a Delaware limited partnership) held through that account. Neither primary document names the fund's custodian, administrator, or investment manager: State Street (cash custodian and fund administrator) and VanEck (investment manager) are issuer-disclosed via a 2025-06-26 CEO statement and consistent 2026 third-party profiles, so no share is attributed to them. The launch-era 'Agora Reserve Trust' Delaware Statutory Trust layer described in 2024-2025 governance documents does not appear in current primary documents. Repo counterparties, stablecoin issuers (USDC and PYUSD per the attestation notes), bank identities, and any rehypothecation terms remain undisclosed."
+    "uncertainty": "The May 2026 attestation and the Terms of Use dated 2026-05-27 document that reserve assets are held for the benefit of AUSD holders in a segregated account of Agora Bermuda Limited under the Bermuda Segregated Accounts Companies Act 2000, protected from the Company's general-account creditors, with 99% of the Agora Reserve Fund LP held through that account. The current primary documents do not name the fund custodian, administrator, investment manager, repo counterparties, bank identities, or stablecoin issuers, and they do not disclose rehypothecation terms or provider-level shares beyond the reported asset categories."
   }
 }

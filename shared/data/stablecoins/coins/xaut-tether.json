@@ -287,15 +287,15 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "XAUT is issuer-native on Ethereum, while XAUt0 locks XAUt in the Ethereum OFT adapter and mints equivalent representations across 14 destinations. At the near-synchronous 2026-07-21 snapshot, the adapter held 29,714.544713 of 707,747.089000 XAUT (4.198469365%). Destination supplies reconciled to 29,714.438956 XAUt0 (4.198454422%), leaving an explicit 0.105757 XAUT timing/reconciliation residual (0.000014943%). Pharos scores the weakest durable route as external lock/mint because it depends on LayerZero/OFT lockbox infrastructure.",
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex bridge route and materiality review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
     "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "LayerZero",
+        "source": "docs",
+        "name": "LayerZero OFT",
         "slug": "layerzero",
-        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard",
         "bridgeTypes": [
           "oft",
           "lockAndMint"
@@ -317,15 +317,15 @@
       },
       {
         "label": "USDT0 / XAUt0 lock-and-mint design",
-        "url": "https://docs.usdt0.to/overview/how-it-works"
+      "url": "https://docs.usdt0.to/"
       },
       {
         "label": "USDT0 site",
         "url": "https://usdt0.to/"
       },
       {
-        "label": "L2BEAT LayerZero",
-        "url": "https://l2beat.com/interop/protocols/layerzero"
+        "label": "LayerZero OFT standard",
+        "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
       }
     ],
     "routes": [

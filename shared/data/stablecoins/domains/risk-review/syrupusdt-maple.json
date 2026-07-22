@@ -11,8 +11,8 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "syrupUSDT's canonical home is Ethereum, where the immutable non-proxy ERC-4626 vault token 0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d is issued natively against USDT deposits. Plasma, BNB Chain, Mantle and Ink carry Chainlink CCIP Cross-Chain Token (CCT) representations, but the route is asymmetric: the Ethereum leg is a LockReleaseTokenPool 1.5.1 lockbox at 0xDE76A096C5eadDdf97Af3fE15ee49d32AEDa9822 that held 272,587,979.695601 syrupUSDT — 78.04% of the vault's 349,308,558.995465 total supply — while each remote leg is a BurnMintTokenPool over a Chainlink BurnMintERC20. Remote units are therefore lock-mint claims on Ethereum-locked shares, not issuer-native burn-mint supply, and the third-party lockbox is the concentrating failure surface.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Pharos contested-review re-measurement (pinned on-chain reads)",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
     "confidence": "verified",
     "protocols": [
       {
