@@ -725,7 +725,7 @@
   "reserves": [
     {
       "name": "BTC collateral",
-      "pct": 92.6,
+      "pct": 93.5,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Bitcoin network, BTC wrapper issuers, and Falcon custodians",
@@ -741,7 +741,7 @@
     },
     {
       "name": "Other crypto / tokenized assets",
-      "pct": 2.8,
+      "pct": 2.1,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Multiple token networks, issuers, and Falcon custodians",
@@ -758,7 +758,7 @@
     },
     {
       "name": "USDT cash-equivalent assets",
-      "pct": 2,
+      "pct": 1.8,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -805,8 +805,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-CORP-A wave6",
     "confidence": "verified",
     "sources": [
       {
@@ -826,24 +826,24 @@
         "url": "https://docs.falcon.finance/supported-assets"
       }
     ],
-    "rationale": "The exact Falcon adapter output from the timestamped July 15 issuer API replaces the undated legacy fallback. The current envelope is dominated by the adapter's aggregate BTC bucket, separately links the reported USDT and USDC rows, retains the insurance fund as protocol protection capital, and preserves the Other crypto / tokenized assets residual without inventing constituent links. HT Digital's July 13 reserve report independently corroborates the reserve categories and the large BTC and wrapped-BTC concentration.",
+    "rationale": "The exact Falcon adapter output from the issuer API snapshot at 2026-07-22T09:33:02Z is dominated by the aggregate BTC bucket, separately links the reported USDT and USDC rows, retains the insurance fund as protocol protection capital, and preserves the Other crypto / tokenized assets residual without inventing constituent links. HT Digital's July 13 reserve report independently corroborates the reserve categories and the large BTC and wrapped-BTC concentration.",
     "compositionBasis": "Exact Falcon live-reserve adapter identities and rounded weights from the timestamped issuer API, corroborated by the latest HT Digital weekly reserve report",
-    "compositionAsOf": "2026-07-15",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 2.8% Other crypto / tokenized assets adapter row aggregates multiple token networks, issuers, and custody failure domains without a source-native constituent split that can be linked as one reviewed exposure.",
-    "knownUnknownExposurePct": 2.8,
+    "knownUnknownExposure": "The 2.1% Other crypto / tokenized assets adapter row aggregates multiple token networks, issuers, and custody failure domains without a source-native constituent split that can be linked as one reviewed exposure.",
+    "knownUnknownExposurePct": 2.1,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "BTC collateral",
-        "pct": 92.6,
+        "pct": 93.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The adapter's BTC, wrapped-BTC, mBTC, and enzoBTC bucket is external crypto backing rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Other crypto / tokenized assets",
-        "pct": 2.8,
+        "pct": 2.1,
         "disposition": "basket-needs-split",
         "rationale": "The adapter intentionally aggregates multiple altcoins and tokenized assets; the reviewed envelope preserves that residual rather than claiming one issuer or tracked-asset link."
       },

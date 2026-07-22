@@ -372,13 +372,29 @@
         "url": "https://docs.makerdao.com/smart-contract-modules/dai-module"
       },
       {
+        "label": "MakerDAO DSS Dai token source",
+        "url": "https://github.com/makerdao/dss/blob/master/src/dai.sol"
+      },
+      {
         "label": "Etherscan DAI contract",
         "url": "https://etherscan.io/token/0x6b175474e89094c44da98b954eedeac495271d0f"
+      },
+      {
+        "label": "Polygon Blockscout verified DAI child proxy",
+        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0x8f3cf7ad23cd3cadbd9735aff958023239c6a063"
+      },
+      {
+        "label": "Polygon Blockscout verified UChildDAI implementation",
+        "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0x490e379C9cFF64944bE82b849F8FD5972C7999A7"
+      },
+      {
+        "label": "Polygon archive JSON-RPC pinned read at block 90651088",
+        "url": "https://polygon.drpc.org"
       }
     ],
-    "evidence": "The Maker Dai Module documentation describes DAI's user-facing token as a standard ERC-20 surface with mint, burn, push, pull, move, approve, and permit operations. The verified Ethereum DAI contract exposes no holder blacklist, freeze, or pause function. DAI's PSM/RWA/custody dependencies can carry upstream freeze exposure, but that is separate from a direct holder-balance control on DAI itself.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "Re-verified 2026-07-22 across both material deployments. MakerDAO's canonical Ethereum Dai source exposes authorized minting plus ordinary ERC-20 transfer, burn, approval, permit, push, pull, and move operations, with no holder blacklist, freeze, seizure, or global transfer-pause function. At Polygon block 90651088, the 11.60%-of-asset child DAI proxy resolved to verified UChildDAI implementation 0x490e379C9cFF64944bE82b849F8FD5972C7999A7; proxyOwner() was the burned 0x0000000000000000000000000000000000000001, DEFAULT_ADMIN_ROLE had zero members, and the sole DEPOSITOR_ROLE member was Polygon's ChildChainManagerProxy 0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa. The verified implementation has bridge deposit/withdraw plus ordinary token operations but no holder freeze, blacklist, or seizure surface; paused() and isBlacklisted(address) reverted. DAI still inherits censorship and custody exposure through reserve assets, PSMs, RWA structures, and bridge controls, which remain separate from this direct holder-balance finding.",
+    "reviewer": "GPT SOL-CORP-A wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",

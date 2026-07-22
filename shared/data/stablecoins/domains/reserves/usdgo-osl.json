@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Money market funds (CUSIPs 38151N205 and 46655R119)",
-      "pct": 74.19,
+      "pct": 74.18761643789395,
       "risk": "very-low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Undisclosed money market fund issuers",
@@ -17,7 +17,7 @@
     },
     {
       "name": "BUIDL (BlackRock USD Institutional Digital Liquidity Fund)",
-      "pct": 25.32,
+      "pct": 25.31551743668213,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -33,7 +33,7 @@
     },
     {
       "name": "Cash at FDIC-insured depository institutions",
-      "pct": 0.50,
+      "pct": 0.4968661254239206,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed major commercial banks",
@@ -46,8 +46,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 dependency review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-CORP-A wave6",
     "confidence": "verified",
     "sources": [
       {
@@ -59,7 +59,7 @@
         "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
       }
     ],
-    "rationale": "Anchorage's May 31 examination reports $240,981,509 of money market funds, $82,231,670 of BUIDL, and $1,613,956 of cash against $324,827,135 of reserve assets. Those balances normalize to 74.19%, 25.32%, and 0.50%; BUIDL is the only tracked canonical dependency.",
+    "rationale": "Anchorage's May 31 examination reports $240,981,509 of money market funds, $82,231,670 of BUIDL, and $1,613,956 of cash against $324,827,135 of reserve assets. The exact normalized weights are 74.18761643789395%, 25.31551743668213%, and 0.4968661254239206%; BUIDL is the only tracked canonical dependency.",
     "compositionBasis": "Anchorage examination of the USDGO Reserve Report as of May 31, 2026",
     "compositionAsOf": "2026-05-31",
     "scope": "full-composition",

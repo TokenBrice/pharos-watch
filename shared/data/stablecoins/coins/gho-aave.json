@@ -228,11 +228,15 @@
       {
         "label": "Aave GHO bridging documentation",
         "url": "https://aave.com/help/gho-stablecoin/bridging-gho"
+      },
+      {
+        "label": "Chainlink GHO CCIP directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/GHO"
       }
     ],
-    "evidence": "Aave's GHO design describes a decentralized collateral-backed token whose supply is generated and burned by governance-approved facilitators. The verified Ethereum GHO token surface exposes standard transfer and transferFrom operations without a holder blacklist, freeze, or pause function. Aave's bridge documentation describes lock-and-mint or burn-and-mint bridge mechanics; those bridge contracts and reserve dependencies are separate control surfaces and do not establish a direct holder-balance freeze on GHO itself.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "The verified immutable Ethereum GHO token exposes standard transfer and transferFrom operations without a holder blacklist, balance freeze, seizure, or global pause function. Aave and Chainlink identify the reviewed non-Ethereum representations as CCIP burn/mint tokens; their token-pool mint, burn, and route controls do not establish a holder-level blacklist on GHO balances. This is a direct-token finding and does not suppress bridge-route or reserve impairment risk.",
+    "reviewer": "GPT SOL-CORP-A wave6",
+    "reviewedAt": "2026-07-22"
   },
   "mintAuthority": {
     "mintPath": "facilitator-bucket-mint",
@@ -805,7 +809,7 @@
   "reserves": [
     {
       "name": "GhoDirectFacilitator GSMs Mainnet",
-      "pct": 46.5,
+      "pct": 44.3,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Aave DAO mainnet GHO stability modules",
@@ -814,7 +818,7 @@
     },
     {
       "name": "CoreGhoDirectMinter",
-      "pct": 20.3,
+      "pct": 19.3,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Aave V3 Ethereum Core market",
@@ -823,7 +827,7 @@
     },
     {
       "name": "HorizonGhoDirectMinter",
-      "pct": 8.9,
+      "pct": 8.4,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Aave Horizon market",
@@ -832,7 +836,7 @@
     },
     {
       "name": "stataUSDT GSM",
-      "pct": 10,
+      "pct": 7.4,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "mechanism",
@@ -842,27 +846,36 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "LidoGhoDirectMinter",
-      "pct": 6.8,
-      "risk": "medium",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Aave V3 Lido market",
-      "riskFactors": ["market", "liquidity", "smart-contract"],
-      "liquidityHorizon": "unknown"
-    },
-    {
       "name": "GhoDirectFacilitator Plasma",
-      "pct": 7.5,
+      "pct": 7.1,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Aave V3 Plasma market",
       "riskFactors": ["market", "liquidity", "smart-contract"],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "GhoDirectFacilitator GSM Arbitrum",
+      "pct": 7.1,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave DAO Arbitrum GHO Reserve and remote GSM",
+      "riskFactors": ["counterparty", "liquidity", "smart-contract", "custody"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "LidoGhoDirectMinter",
+      "pct": 6.4,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave V3 Lido market",
+      "riskFactors": ["market", "liquidity", "smart-contract"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-CORP-A wave6",
     "confidence": "verified",
     "sources": [
       {
@@ -876,47 +889,58 @@
       {
         "label": "GHO facilitator registry and bucket state on Ethereum",
         "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readContract"
+      },
+      {
+        "label": "Aave remoteGSM launch on Arbitrum",
+        "url": "https://governance.aave.com/t/arfc-launch-remotegsm-on-arbitrum/24986"
       }
     ],
-    "rationale": "The on-chain GHO adapter reconciles total supply across the current mainnet GSM aggregate, the tracked stataUSDT GSM, and four direct issuance facilities. This review mirrors the six exact live rows and classifies direct minters as protocol issuance positions rather than reserve-token claims.",
+    "rationale": "The July 22 on-chain GHO capture reconciles total supply across the mainnet GSM aggregate, the tracked stataUSDT GSM, and five direct issuance facilities. The new Arbitrum row is the Ethereum facilitator used to mint and bridge GHO into Aave DAO's Arbitrum GHO Reserve and remote GSM; it is therefore classified as a protocol issuance position rather than a reserve-token claim.",
     "compositionBasis": "On-chain GHO facilitator bucket levels and tracked GSM backing normalized by total GHO supply",
-    "compositionAsOf": "2026-07-15",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
     "knownUnknownExposure": "The aggregate mainnet GSM facilitator row does not expose its underlying stablecoin identities at the reviewed slice level; direct minters are separately identified issuance facilities.",
-    "knownUnknownExposurePct": 46.5,
+    "knownUnknownExposurePct": 44.3,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "GhoDirectFacilitator GSMs Mainnet",
-        "pct": 46.5,
+        "pct": 44.3,
         "disposition": "insufficient-evidence",
         "rationale": "The residual bucket does not expose a stablecoin identity that can be mapped to one canonical target."
       },
       {
         "reserveIndex": 1,
         "reserveName": "CoreGhoDirectMinter",
-        "pct": 20.3,
+        "pct": 19.3,
         "disposition": "not-applicable",
         "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
       },
       {
         "reserveIndex": 2,
         "reserveName": "HorizonGhoDirectMinter",
-        "pct": 8.9,
+        "pct": 8.4,
         "disposition": "not-applicable",
         "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
       },
       {
         "reserveIndex": 4,
-        "reserveName": "LidoGhoDirectMinter",
-        "pct": 6.8,
+        "reserveName": "GhoDirectFacilitator Plasma",
+        "pct": 7.1,
         "disposition": "not-applicable",
         "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
       },
       {
         "reserveIndex": 5,
-        "reserveName": "GhoDirectFacilitator Plasma",
-        "pct": 7.5,
+        "reserveName": "GhoDirectFacilitator GSM Arbitrum",
+        "pct": 7.1,
+        "disposition": "not-applicable",
+        "rationale": "This facilitator funds the Aave DAO Arbitrum GHO Reserve and remote GSM; it is an issuance path rather than a stablecoin reserve token."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "LidoGhoDirectMinter",
+        "pct": 6.4,
         "disposition": "not-applicable",
         "rationale": "This facilitator is an issuance path, not a stablecoin reserve token."
       }

@@ -80,7 +80,7 @@
   "reserves": [
     {
       "name": "Short-term U.S. Treasury bills",
-      "pct": 47.37280669,
+      "pct": 46.08607595,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -89,7 +89,7 @@
     },
     {
       "name": "USDG",
-      "pct": 24.53608749,
+      "pct": 30.36233538,
       "risk": "low",
       "coinId": "usdg-paxos",
       "depType": "collateral",
@@ -100,7 +100,7 @@
     },
     {
       "name": "sUSDS",
-      "pct": 7.8471434,
+      "pct": 7.63400085,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -111,7 +111,7 @@
     },
     {
       "name": "syrupUSDC",
-      "pct": 4.36202991,
+      "pct": 4.24821065,
       "risk": "medium",
       "coinId": "syrupusdc-maple",
       "depType": "collateral",
@@ -122,7 +122,7 @@
     },
     {
       "name": "sUSDe",
-      "pct": 2.52162062,
+      "pct": 2.45739309,
       "risk": "high",
       "coinId": "susde-ethena",
       "depType": "collateral",
@@ -133,7 +133,7 @@
     },
     {
       "name": "USCC",
-      "pct": 2.16674281,
+      "pct": 2.1089306,
       "risk": "medium",
       "assetClass": "fund-share",
       "issuerOrObligor": "Superstate Crypto Carry Fund (USCC)",
@@ -142,7 +142,7 @@
     },
     {
       "name": "USYC",
-      "pct": 0.18693652,
+      "pct": 0.18185899,
       "risk": "low",
       "coinId": "usyc-hashnote",
       "depType": "collateral",
@@ -153,7 +153,7 @@
     },
     {
       "name": "USDC",
-      "pct": 3.98611817,
+      "pct": 0.09136993,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -164,7 +164,7 @@
     },
     {
       "name": "USD cash",
-      "pct": 7.02051439,
+      "pct": 6.82982457,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "On Re SAC cash accounts; banking counterparties undisclosed",
@@ -173,8 +173,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex reserve curation",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-CORP-A wave6",
     "confidence": "manual-review",
     "sources": [
       {
@@ -198,9 +198,9 @@
         "url": "https://docs.onre.finance/reinsurance-framework/portfolio-makeup"
       }
     ],
-    "rationale": "OnRe's issuer-hosted Transparency Hub loads its Schedule of Assets from the cited public sheet. Fetched 2026-07-21, the sheet reports $230,966,689.80 of collateral across nine asset categories totaling 100%; its separate AUM row is $220,324,554.70. The two Treasury rows were combined without changing their aggregate weight. OnRe separately publishes bound and offered reinsurance contracts: those are contingent underwriting obligations secured by the assets, not additional reserve assets, so adding them as another percentage slice would double-count the balance sheet. Their non-additive risk remains documented in the custody profile and source set.",
-    "compositionBasis": "OnRe live Schedule of Assets fetched 2026-07-21; $230,966,689.80 total collateral and source-native allocation percentages",
-    "compositionAsOf": "2026-07-21",
+    "rationale": "OnRe's issuer-hosted Transparency Hub loads its Schedule of Assets from the cited public sheet. Fetched 2026-07-22, the sheet reports $237,415,317.50 of collateral across nine asset categories totaling 100%; its separate AUM row is $236,170,864.60. The two Treasury rows were combined without changing their aggregate weight. OnRe separately publishes bound and offered reinsurance contracts: those are contingent underwriting obligations secured by the assets, not additional reserve assets, so adding them as another percentage slice would double-count the balance sheet. Their non-additive risk remains documented in the custody profile and source set.",
+    "compositionBasis": "OnRe live Schedule of Assets fetched 2026-07-22; $237,415,317.50 total collateral and source-native allocation percentages",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
     "knownUnknownExposure": "All current reserve asset categories and weights are classified. The sheet does not identify every final bank, broker, or custody-account allocation, and reinsurance claim obligations are a non-additive overlay rather than an unclassified reserve slice.",
     "knownUnknownExposurePct": 0,
@@ -208,21 +208,21 @@
       {
         "reserveIndex": 0,
         "reserveName": "Short-term U.S. Treasury bills",
-        "pct": 47.37280669,
+        "pct": 46.08607595,
         "disposition": "untracked-exogenous-asset",
         "rationale": "U.S. Treasury bills are external sovereign assets rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 5,
         "reserveName": "USCC",
-        "pct": 2.16674281,
+        "pct": 2.1089306,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Superstate USCC is a tokenized fund share that is not in the tracked stablecoin registry."
       },
       {
         "reserveIndex": 8,
         "reserveName": "USD cash",
-        "pct": 7.02051439,
+        "pct": 6.82982457,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Fiat cash is an external reserve asset rather than a tracked stablecoin dependency."
       }
