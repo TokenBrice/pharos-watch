@@ -1,5 +1,5 @@
 import { defineBatch, type RedemptionBackstopRegistryEntry } from "../factory";
-import { documentedBoundSupplyFull, issuerBase, sourceRef } from "../shared";
+import { documentedBoundSupplyFull, documentedVariableFee, issuerBase, sourceRef } from "../shared";
 import { reviewedDirectRedemptionSupplyFull, REVIEWED_NON_USD_BATCH_AT, REVIEWED_REMEDIATION_AT } from "./shared";
 
 const SOURCE_FILE_PATH = "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts";
@@ -255,6 +255,16 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
     ),
   ).map((entry) => ({
     ...entry,
+    config:
+      entry.id === "usyc-hashnote"
+        ? {
+            ...entry.config,
+            costModel: {
+              ...documentedVariableFee("Redemption fee 0.03%"),
+              feeBpsMax: 3,
+            },
+          }
+        : entry.config,
     overrideReason: "Direct-redemption review cohort upgrades issuer defaults to documented-bound capacity.",
   })),
 ];

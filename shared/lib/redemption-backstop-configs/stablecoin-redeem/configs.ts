@@ -105,9 +105,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssets: ["usdc-circle"],
     accessModel: "whitelisted-onchain",
     executionModel: "rules-based-nav",
-    costModel: documentedVariableFee(
-      "Instant mint/redemption at daily NAV via OUSGInstantManager against USDC (T+0 via BUIDL on-chain liquidity)",
-    ),
+    costModel: {
+      ...documentedVariableFee("$5K, Instant Redemption, 0% Fee"),
+      feeBpsMax: 0,
+    },
     docs: [
       sourceRef("Ondo OUSG", "https://ondo.finance/ousg", ["route", "capacity", "fees", "access"]),
       sourceRef("Ondo OUSG redeeming", "https://docs.ondo.finance/qualified-access-products/ousg/redeeming", [

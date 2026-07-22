@@ -20,6 +20,10 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   ...expandIds(["kau-kinesis", "kag-kinesis"], {
     ...commodityIssuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    costModel: {
+      ...documentedVariableFee("KAU: 0.45% + $100 + delivery fee; KAG: 0.45% + $100 + delivery fee"),
+      feeBpsMax: 45,
+    },
     docs: [
       sourceRef("Kinesis fees", "https://kinesis.money/about-us/fees/", ["route", "capacity", "fees"]),
       sourceRef(
