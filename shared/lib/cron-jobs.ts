@@ -225,7 +225,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "quarter-hourly",
     scheduleKey: "statusSelfCheckOffset",
     triggerMode: "isolated",
-    maxConnections: 1, // DB stale-slot reconciliation plus optional webhook alert
+    maxConnections: 1, // DB stale-slot reconciliation
     connectionGroup: "status-self-check-chain",
   },
   {
@@ -262,7 +262,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "quarter-hourly",
     scheduleKey: "statusSelfCheckOffset",
     triggerMode: "isolated",
-    maxConnections: 1, // DB freshness inspection plus optional webhook alert
+    maxConnections: 1, // DB freshness inspection
     connectionGroup: "status-self-check-chain",
   },
   {
@@ -492,7 +492,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "multi-hourly",
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
-    maxConnections: 1, // DB drift/cache/age checks plus optional webhook alert
+    maxConnections: 1, // DB drift/cache/age checks
     connectionGroup: "reserve-sync-chain",
   },
   {
@@ -585,7 +585,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
-    maxConnections: 1, // DB row-count read plus optional webhook alert
+    maxConnections: 1, // DB row-count read
   },
   {
     job: "cron-duration-watchdog",
@@ -593,7 +593,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
-    maxConnections: 1, // DB duration aggregates plus optional webhook alert
+    maxConnections: 1, // DB duration aggregates
   },
 ] as const;
 
