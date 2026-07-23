@@ -6,6 +6,7 @@ import type { ReportCardGrade } from "@shared/types/report-cards";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import type { ReportCardsResponse } from "@shared/types/report-cards";
 import {
+  ActiveV8SafetyScoreHistorySourceInactiveError,
   fetchLatestSafetyScoreHistoryV2Rows,
   loadActiveV8SafetyScoreHistorySource,
   prepareSafetyScoreHistoryBoundaryWrite,
@@ -40,6 +41,17 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   try {
     source = await loadActiveV8SafetyScoreHistorySource(db, signal);
   } catch (err) {
+    if (err instanceof ActiveV8SafetyScoreHistorySourceInactiveError) {
+      return {
+        status: "degraded" as const,
+        itemCount: 0,
+        metadata: JSON.stringify({
+          reason: err.reason,
+          expectedModel: err.expectedModel,
+          historyWritesSkipped: true,
+        }),
+      };
+    }
     recordCronFailure("snapshot-safety-grade-history", err, {
       metadata: { stage: "loadActiveV8SafetyScoreHistorySource" },
     });

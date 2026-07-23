@@ -1,5 +1,10 @@
 import { z } from "zod";
 import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
+import {
+  V9MechanismProfileReviewSchema,
+  projectV9MechanismProfile,
+  type V9MechanismProfileComponentProjection,
+} from "@shared/lib/safety-score-v9/mechanism-profiles";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
@@ -18,6 +23,10 @@ type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | 
 
 const MECHANISM_POLICY_RULE_ID = "v9.backing.mechanism-review";
 
+function compareText(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
 function status(observationState: V9FactStatusV2["observationState"], componentKey: string): V9FactStatusV2 {
   // The fact-set compiler rebinds these statuses to the research-overlay
   // evidence reference; the extension-level ids only carry the fact state.
@@ -34,6 +43,14 @@ function status(observationState: V9FactStatusV2["observationState"], componentK
 function boundedFact(componentKey: string, hasEvidence: boolean): V9MechanismFactV1 {
   return {
     status: status(hasEvidence ? "bounded-unknown" : "missing", componentKey),
+    quality: null,
+    failureDomains: [],
+  };
+}
+
+function unsupportedFact(componentKey: string): V9MechanismFactV1 {
+  return {
+    status: status("unsupported", componentKey),
     quality: null,
     failureDomains: [],
   };
@@ -175,6 +192,7 @@ export const MechanismReviewOverlaySchema = z
     sources: z.array(OverlaySourceSchema).min(1),
     notes: z.string().min(1),
     metrics: z.record(z.string(), z.number().finite().nullable()),
+    profileReview: V9MechanismProfileReviewSchema.optional(),
     metricApplicability: z.record(z.string(), OverlayMetricApplicabilitySchema).optional(),
     analogousMetrics: z.record(z.string(), z.number().finite()).optional(),
     venueShares: z
@@ -192,6 +210,23 @@ export const MechanismReviewOverlaySchema = z
   })
   .strict()
   .superRefine((overlay, ctx) => {
+    if (overlay.profileReview !== undefined) {
+      const projection = projectV9MechanismProfile(overlay.profileReview);
+      if (projection.archetype !== overlay.archetype) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["profileReview", "profile"],
+          message: `Profile ${overlay.profileReview.profile} is incompatible with ${overlay.archetype}`,
+        });
+      }
+      if (Object.keys(overlay.metrics).length > 0 || Object.keys(overlay.components).length > 0) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["profileReview"],
+          message: "Profile-driven overlays cannot duplicate projected metrics or components",
+        });
+      }
+    }
     const sourceUrls = new Set(overlay.sources.map((source) => source.url));
     for (const [componentKey, component] of Object.entries(overlay.components)) {
       if (
@@ -313,23 +348,40 @@ function kebabCase(value: string): string {
   return value.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`);
 }
 
+function profileComponentFact(
+  componentField: string,
+  component: V9MechanismProfileComponentProjection,
+): V9MechanismFactV1 {
+  const componentKey = kebabCase(componentField);
+  if (component.observationState === "known" && component.quality !== null) {
+    return knownFact(componentKey, component.quality);
+  }
+  if (component.observationState === "unsupported") return unsupportedFact(componentKey);
+  return boundedFact(componentKey, component.observationState === "bounded-unknown");
+}
+
 export function expandOverlayReview(
   overlay: MechanismReviewOverlay,
   fallbackReview?: V9MechanismRiskReview | null,
 ): V9MechanismRiskReview {
+  const profileProjection =
+    overlay.profileReview === undefined ? null : projectV9MechanismProfile(overlay.profileReview);
   const componentKeys = OVERLAY_ARCHETYPE_COMPONENTS[overlay.archetype];
   const metricKeys = OVERLAY_ARCHETYPE_METRICS[overlay.archetype];
-  for (const key of Object.keys(overlay.components)) {
+  const projectedComponents = profileProjection?.components ?? null;
+  const components = projectedComponents ?? overlay.components;
+  const metrics = profileProjection?.metrics ?? overlay.metrics;
+  for (const key of Object.keys(components)) {
     if (!componentKeys.includes(key)) {
       throw new Error(`Unknown ${overlay.archetype} mechanism component in overlay ${overlay.assetId}: ${key}`);
     }
   }
   for (const key of metricKeys) {
-    if (!(key in overlay.metrics)) {
+    if (!(key in metrics)) {
       throw new Error(`Overlay ${overlay.assetId} is missing required ${overlay.archetype} metric: ${key}`);
     }
   }
-  for (const key of Object.keys(overlay.metrics)) {
+  for (const key of Object.keys(metrics)) {
     if (!metricKeys.includes(key)) {
       throw new Error(`Unknown ${overlay.archetype} mechanism metric in overlay ${overlay.assetId}: ${key}`);
     }
@@ -345,11 +397,11 @@ export function expandOverlayReview(
     fallbackReview && fallbackReview.archetype === overlay.archetype
       ? (fallbackReview as unknown as Record<string, V9MechanismFactV1>)
       : null;
-  const review: Record<string, unknown> = { archetype: overlay.archetype, ...overlay.metrics };
+  const review: Record<string, unknown> = { archetype: overlay.archetype, ...metrics };
   if (overlay.archetype === "cdp") {
     const metricApplicability: Record<string, unknown> = {};
     for (const metricKey of metricKeys) {
-      const value = overlay.metrics[metricKey];
+      const value = metrics[metricKey];
       const applicability = overlay.metricApplicability?.[metricKey] ?? { state: "measured" as const };
       if (applicability.state === "measured" && value == null) {
         throw new Error(`Overlay ${overlay.assetId} has measured ${metricKey} without a numeric value`);
@@ -367,13 +419,18 @@ export function expandOverlayReview(
             };
     }
     review.metricApplicability = metricApplicability;
-  } else if (Object.values(overlay.metrics).some((value) => value === null)) {
+  } else if (Object.values(metrics).some((value) => value === null)) {
     throw new Error(`Only CDP overlays support structurally not-applicable metrics (${overlay.assetId})`);
   }
   if (overlay.archetype === "synthetic-delta-neutral") {
     review.venueShares = overlay.venueShares ?? [];
   }
   for (const componentField of componentKeys) {
+    const projected = projectedComponents?.[componentField];
+    if (projected !== undefined) {
+      review[componentField] = profileComponentFact(componentField, projected);
+      continue;
+    }
     const curated = overlay.components[componentField];
     // A component the curated review does not evidence keeps the built
     // review's fact when one exists (e.g. PoR-derived assurance), otherwise
@@ -439,6 +496,27 @@ export function getSafetyScoreV9MechanismOverlayEvidence(
         maxAgeSec: MECHANISM_OVERLAY_MAX_AGE_SEC,
       }
     : null;
+}
+
+export function getSafetyScoreV9MechanismExitFacts(
+  assetId: string,
+  archetype: string,
+  clockSec: number,
+): Array<{
+  factKey: "physical-redemption" | "protocol-redemption";
+  disposition: "supported" | "issuer-undisclosed" | "integration-missing" | "method-unsupported";
+  quality: V9MechanismQualityLevel | null;
+}> {
+  const overlay = currentMechanismOverlay(assetId, archetype, clockSec);
+  if (overlay?.profileReview === undefined) return [];
+  const projection = projectV9MechanismProfile(overlay.profileReview);
+  return Object.entries(projection.exitFacts)
+    .map(([factKey, fact]) => ({
+      factKey: kebabCase(factKey) as "physical-redemption" | "protocol-redemption",
+      disposition: fact.disposition,
+      quality: fact.disposition === "supported" ? fact.quality : null,
+    }))
+    .sort((left, right) => compareText(left.factKey, right.factKey));
 }
 
 /**

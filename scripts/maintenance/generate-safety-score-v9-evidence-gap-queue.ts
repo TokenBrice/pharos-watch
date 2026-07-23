@@ -3,14 +3,13 @@ import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
-import { parseCompiledV9FactSetV2 } from "@shared/lib/safety-score-v9/facts";
-import { V9EvidenceGapQueueV1Schema, type V9EvidenceGapQueueV1 } from "@shared/types/safety-score-v9-evidence-queue";
+import { V9EvidenceGapQueueV2Schema, type V9EvidenceGapQueueV2 } from "@shared/types/safety-score-v9-evidence-queue";
 import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 
 const USAGE = `Usage: npx tsx scripts/maintenance/generate-safety-score-v9-evidence-gap-queue.ts [options]
 
 Options:
-  --fact-set <path>       Compiled V2 fact-set JSON (required)
+  --fact-set <path>       Compiled V3 or retained V2 fact-set JSON (required)
   --policy <path>         Explicit V9 methodology policy JSON (required)
   --output <path>         Strict evidence-gap queue JSON (required)
   --require-clear         Exit nonzero after writing when work remains
@@ -34,10 +33,10 @@ const DEFAULT_IO: V9EvidenceGapQueueIo = {
 export function generateV9EvidenceGapQueueFromArtifacts(input: {
   factSet: unknown;
   policy: unknown;
-}): V9EvidenceGapQueueV1 {
-  return V9EvidenceGapQueueV1Schema.parse(
+}): V9EvidenceGapQueueV2 {
+  return V9EvidenceGapQueueV2Schema.parse(
     buildV9EvidenceGapQueue({
-      factSet: parseCompiledV9FactSetV2(input.factSet),
+      factSet: input.factSet,
       policy: loadV9MethodologyPolicy(input.policy),
     }),
   );
@@ -46,7 +45,7 @@ export function generateV9EvidenceGapQueueFromArtifacts(input: {
 export function runV9EvidenceGapQueueCli(
   argv: readonly string[],
   io: V9EvidenceGapQueueIo = DEFAULT_IO,
-): V9EvidenceGapQueueV1 | null {
+): V9EvidenceGapQueueV2 | null {
   const { values } = parseStrictCliArgs(argv, {
     options: {
       "fact-set": { type: "string" },

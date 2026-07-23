@@ -3,14 +3,15 @@ import { CardFrame, MetricLabel, TEXT_SECONDARY, FROST_BLUE, GRADE_COLORS, SEMAN
 
 export interface SafetyScoresCardData {
   gradeDistribution: Record<string, number>;
-  pulseGrade: string;
-  pulseScore: number;
+  pulseGrade: string | null;
+  pulseScore: number | null;
   coverageRatio: number; // 0-1
   totalCoins: number;
   // New fields
   topPerformers: Array<{ symbol: string; grade: string; score: number }>;
   bottomPerformers: Array<{ symbol: string; grade: string; score: number }>;
   trend: number | null; // week-over-week change
+  safetyModel?: "v8" | "v9" | null;
   lastUpdated?: string;
 }
 
@@ -88,12 +89,14 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
   return (
     <CardFrame 
       title="Safety Scores" 
-      subtitle="Report Card Overview"
+      subtitle={data.safetyModel ? `${data.safetyModel.toUpperCase()} Report Card Overview` : "Report Card Overview"}
       lastUpdated={data.lastUpdated}
     >
       {/* Grade distribution - horizontal layout */}
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <MetricLabel>GRADE DISTRIBUTION</MetricLabel>
+        <MetricLabel>
+          {data.safetyModel ? `${data.safetyModel.toUpperCase()} GRADE DISTRIBUTION` : "GRADE DISTRIBUTION"}
+        </MetricLabel>
         <div
           style={{
             display: "flex",
@@ -130,10 +133,10 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
       {/* Middle section: Pulse + Coverage + Trend */}
       <div style={{ display: "flex", gap: 60, fontFamily: "Geist Mono" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <MetricLabel>MARKET PULSE</MetricLabel>
+          <MetricLabel>AVERAGE SCORE</MetricLabel>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 56, fontWeight: 700, color: FROST_BLUE }}>
-              {data.pulseGrade}
+              {data.pulseScore !== null ? data.pulseScore.toFixed(1) : "NR"}
             </span>
             <span 
               style={{ 
@@ -146,7 +149,7 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
             </span>
           </div>
           <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>
-            {data.pulseScore.toFixed(1)} / 100
+            {data.pulseScore !== null ? "/ 100 · no aggregate grade" : "Safety score unavailable"}
           </span>
           {data.trend !== null && (
             <span style={{ fontSize: 14, color: trend.color }}>

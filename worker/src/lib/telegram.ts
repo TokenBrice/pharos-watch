@@ -287,6 +287,8 @@ export interface BatchMessage {
   preferenceGeneration?: number;
   /** Exact coin/family pairs represented by this immutable rendered target. */
   alertScope?: PendingAlertScopeItem[];
+  /** Safety model/policy/build identity bound to any safety items in this target. */
+  safetyScoreIdentity?: import("@shared/types/safety-score-publication").SafetyScorePublicationIdentity;
 }
 
 export interface BatchResult {

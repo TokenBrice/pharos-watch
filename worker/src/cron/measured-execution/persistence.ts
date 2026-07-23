@@ -1,6 +1,8 @@
 import {
+  DEX_MEASURED_FRESHNESS_MAX_SEC,
   DexMeasuredExecutionProfileSchema,
   DexMeasuredExecutionTargetSchema,
+  type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
@@ -19,10 +21,14 @@ import {
 import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { parseJson } from "../../lib/json-parse";
+import {
+  summarizeDexMeasuredExecutionHistory,
+  type DexMeasuredExecutionHistoryCycle,
+} from "./history";
 
 const DEX_MEASURED_TARGET_SURFACE = "dex-measured-execution-targets";
 const DEX_MEASURED_QUOTE_SURFACE = "dex-measured-execution-quotes";
-/** Superseded/failed generations are operator forensics only; nothing reads them after supersession. */
+/** Superseded generations remain available for bounded history and operator forensics. */
 const GENERATION_RETENTION_SEC = 3 * 24 * 60 * 60;
 /** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
 const GENERATION_PRUNE_MAX_PER_RUN = 16;
@@ -58,6 +64,11 @@ interface QuoteRow {
   quote_profile_json: string | null;
 }
 
+interface HistoricalQuoteRow extends QuoteRow {
+  quote_published_at: number;
+  target_json: string;
+}
+
 export interface DexMeasuredQuoteOutcome {
   target: DexMeasuredExecutionTarget;
   status: "measured" | "failed";
@@ -84,8 +95,27 @@ export interface LoadedDexMeasuredQuoteEvidence {
       status: "measured" | "failed";
       failureReason: string | null;
       profile: DexMeasuredExecutionProfile | null;
+      quoteGenerationId: string;
+      targetGenerationId: string;
+      resolution: "latest" | "last-known-good";
+      latestFailureReason: string | null;
+      observationHistory?: DexMeasuredExecutionObservationHistory;
     }
   >;
+}
+
+const OPERATIONAL_DEX_MEASURED_FAILURE_REASONS = new Set([
+  "block-number-unavailable",
+  "budget-deferred",
+  "chain-circuit-open",
+  "quote-call-budget-exhausted",
+  "quoter-rpc-unavailable",
+  "request-budget-exhausted",
+  "runtime-deadline-exceeded",
+]);
+
+export function isOperationalDexMeasuredFailure(reason: string | null | undefined): boolean {
+  return reason != null && OPERATIONAL_DEX_MEASURED_FAILURE_REASONS.has(reason);
 }
 
 function generationId(prefix: string, nowSec: number): string {
@@ -505,6 +535,8 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     string,
     LoadedDexMeasuredQuoteEvidence["byTargetId"] extends Map<string, infer T> ? T : never
   >();
+  const historyCyclesByTargetId = new Map<string, DexMeasuredExecutionHistoryCycle[]>();
+  const latestPublishedAt = generation.published_at ?? generation.started_at;
   for (const row of quoteRows) {
     const quotedTarget = targets.get(row.target_id);
     if (!quotedTarget)
@@ -522,17 +554,162 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
       (row.status === "failed" && (profile != null || !row.failure_reason?.trim()))
     )
       throw new Error(`Measured quote row ${row.target_id} has a torn terminal identity`);
-    byTargetId.set(row.target_id, {
+    const entry = {
       quotedTarget,
       status: row.status,
       failureReason: row.failure_reason,
       profile,
-    });
+      quoteGenerationId: generation.generation_id,
+      targetGenerationId,
+      resolution: "latest",
+      latestFailureReason: row.failure_reason,
+    } as const;
+    byTargetId.set(row.target_id, entry);
+    historyCyclesByTargetId.set(row.target_id, [
+      {
+        generationId: generation.generation_id,
+        publishedAt: latestPublishedAt,
+        status: row.status,
+        operationalFailure: row.status === "failed" && isOperationalDexMeasuredFailure(row.failure_reason),
+        profile,
+      },
+    ]);
   }
+
+  // A transport or runtime-budget failure says nothing about executable depth.
+  // Reuse the newest still-fresh measured row for that exact target identity;
+  // consumer validation below retains the original quote clock and snapshot.
+  try {
+    const lkgBlockedTargetIds = new Set<string>();
+    const historicalResult = await runWithOverloadRetry(
+      () =>
+        db
+          .prepare(
+            `SELECT q.generation_id, q.target_generation_id, q.target_id, q.status, q.failure_reason,
+              q.quote_profile_json, g.published_at AS quote_published_at, t.target_json
+       FROM dex_measured_execution_quotes q
+       JOIN surface_publication_generations g ON g.surface = ? AND g.generation_id = q.generation_id
+       JOIN dex_measured_execution_targets t
+         ON t.generation_id = q.target_generation_id AND t.target_id = q.target_id
+       WHERE q.generation_id IN (
+         SELECT history_generation.generation_id
+         FROM surface_publication_generations history_generation
+         WHERE history_generation.surface = ? AND history_generation.state = 'superseded'
+           AND history_generation.published_at IS NOT NULL AND history_generation.published_at >= ?
+           AND history_generation.expected_rows IS NOT NULL
+           AND history_generation.published_rows = history_generation.expected_rows
+           AND history_generation.expected_rows = (
+             SELECT COUNT(*)
+             FROM dex_measured_execution_quotes complete_quotes
+             WHERE complete_quotes.generation_id = history_generation.generation_id
+           )
+       )
+       ORDER BY g.published_at DESC, q.target_id`,
+          )
+          .bind(
+            DEX_MEASURED_QUOTE_SURFACE,
+            DEX_MEASURED_QUOTE_SURFACE,
+            latestPublishedAt - DEX_MEASURED_FRESHNESS_MAX_SEC,
+          )
+          .all<HistoricalQuoteRow>(),
+      3,
+      signal,
+    );
+    for (const row of historicalResult.results ?? []) {
+      const recordCycle = (cycle: DexMeasuredExecutionHistoryCycle) => {
+        const cycles = historyCyclesByTargetId.get(row.target_id) ?? [];
+        cycles.push(cycle);
+        historyCyclesByTargetId.set(row.target_id, cycles);
+      };
+      const recordIntegrityBarrier = () => {
+        recordCycle({
+          generationId: row.generation_id,
+          publishedAt: row.quote_published_at,
+          status: "failed",
+          operationalFailure: false,
+          profile: null,
+        });
+        lkgBlockedTargetIds.add(row.target_id);
+      };
+      const targetJson = parseJson(row.target_json, { onFailure: () => undefined });
+      const profileJson = row.quote_profile_json
+        ? parseJson(row.quote_profile_json, { onFailure: () => undefined })
+        : null;
+      if (!targetJson.ok || (row.quote_profile_json != null && !profileJson?.ok)) {
+        recordIntegrityBarrier();
+        continue;
+      }
+      const targetResult = DexMeasuredExecutionTargetSchema.safeParse(targetJson.value);
+      const profileResult = profileJson?.ok
+        ? DexMeasuredExecutionProfileSchema.safeParse(profileJson.value)
+        : null;
+      const profile = profileResult?.success ? profileResult.data : null;
+      if (
+        !targetResult.success ||
+        targetResult.data.targetId !== row.target_id ||
+        (row.status === "measured" &&
+          (profile === null ||
+            row.failure_reason !== null ||
+            profile.targetId !== row.target_id ||
+            profile.targetGenerationId !== row.target_generation_id ||
+            profile.quoteGenerationId !== row.generation_id)) ||
+        (row.status === "failed" && (profile !== null || !row.failure_reason?.trim()))
+      ) {
+        recordIntegrityBarrier();
+        continue;
+      }
+      recordCycle({
+        generationId: row.generation_id,
+        publishedAt: row.quote_published_at,
+        status: row.status,
+        operationalFailure: row.status === "failed" && isOperationalDexMeasuredFailure(row.failure_reason),
+        profile,
+      });
+      if (row.status === "failed" && !isOperationalDexMeasuredFailure(row.failure_reason)) {
+        lkgBlockedTargetIds.add(row.target_id);
+      }
+
+      const latest = byTargetId.get(row.target_id);
+      if (
+        row.status !== "measured" ||
+        profile === null ||
+        lkgBlockedTargetIds.has(row.target_id) ||
+        latest?.resolution === "last-known-good" ||
+        (latest != null && (latest.status === "measured" || !isOperationalDexMeasuredFailure(latest.failureReason)))
+      ) {
+        continue;
+      }
+      byTargetId.set(row.target_id, {
+        quotedTarget: targetResult.data,
+        status: "measured",
+        failureReason: null,
+        profile,
+        quoteGenerationId: row.generation_id,
+        targetGenerationId: row.target_generation_id,
+        resolution: "last-known-good",
+        latestFailureReason: latest?.failureReason ?? "quote-missing",
+      });
+    }
+  } catch {
+    // Current-generation evidence remains usable if the optional LKG read fails.
+  }
+
+  for (const [targetId, entry] of byTargetId) {
+    if (entry.status !== "measured" || entry.profile === null) continue;
+    const observationHistory = summarizeDexMeasuredExecutionHistory({
+      cycles: historyCyclesByTargetId.get(targetId) ?? [],
+      nowSec: latestPublishedAt,
+      freshnessMaxSec: DEX_MEASURED_FRESHNESS_MAX_SEC,
+    });
+    if (observationHistory) {
+      byTargetId.set(targetId, { ...entry, observationHistory });
+    }
+  }
+
   return {
     quoteGenerationId: generation.generation_id,
     targetGenerationId,
-    publishedAt: generation.published_at ?? generation.started_at,
+    publishedAt: latestPublishedAt,
     byTargetId,
   };
 }

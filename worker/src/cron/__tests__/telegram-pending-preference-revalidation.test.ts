@@ -13,6 +13,12 @@ import {
 } from "../telegram-pending/preference-revalidation";
 import type { PendingAlertRow } from "../telegram-pending/types";
 import { emptyAlerts, expandSubscriberChunks } from "../dispatch-telegram-routing";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import {
+  ALERT_SAFETY_SOURCE_CACHE_KEY,
+  getAlertSafetySourceGeneration,
+} from "../../lib/alert-safety-source-cache";
 
 const NOW = 1_800_000_000;
 const CHAT_ID = "42";
@@ -24,6 +30,11 @@ let db: D1Database;
 beforeEach(() => {
   sqlite = new DatabaseSync(":memory:");
   sqlite.exec(`
+    CREATE TABLE cache (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
     CREATE TABLE telegram_subscribers (
       chat_id TEXT PRIMARY KEY,
       preference_generation INTEGER NOT NULL DEFAULT 0,
@@ -124,6 +135,7 @@ function pendingRow(options: {
   generation?: number;
   scope?: PendingAlertScopeItem[];
   legacy?: boolean;
+  safetyScoreIdentity?: SafetyScorePublicationIdentity | null;
 } = {}): PendingAlertRow {
   const scope = options.scope ?? [{ stablecoinId: COIN_ID, family: "dews" }];
   return {
@@ -142,7 +154,9 @@ function pendingRow(options: {
     dedupe_key: "target-1",
     chunk_index: 0,
     source_event_id: options.legacy ? null : "source-1",
-    alert_scope_json: options.legacy ? null : serializePendingAlertScope(scope),
+    alert_scope_json: options.legacy
+      ? null
+      : serializePendingAlertScope(scope, options.safetyScoreIdentity),
     preference_generation: options.legacy ? null : options.generation ?? 1,
     markup_policy_json: options.legacy ? null : serializePendingMarkupPolicy({}),
     delivery_state: "pending",
@@ -157,6 +171,34 @@ function pendingRow(options: {
     quiet_hours_end_utc: null,
     timezone: null,
   };
+}
+
+function v8SafetyIdentity(publicationGenerationId = "report-cards:v8:pending-current") {
+  return {
+    model: "v8" as const,
+    schemaVersion: 1 as const,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    evaluationBuildDigest: "a".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+    publicationGenerationId,
+  };
+}
+
+function insertV8SafetySource(identity = v8SafetyIdentity()): void {
+  sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+    ALERT_SAFETY_SOURCE_CACHE_KEY,
+    JSON.stringify({
+      generation: getAlertSafetySourceGeneration(identity.methodologyVersion),
+      safetyScoreIdentity: identity,
+      publicationGenerationId: identity.publicationGenerationId,
+      methodologyVersion: identity.methodologyVersion,
+      publishedAt: NOW - 60,
+      snapshot: {
+        [COIN_ID]: { grade: "A", score: 91, methodologyVersion: identity.methodologyVersion },
+      },
+    }),
+    NOW - 60,
+  );
 }
 
 function recapRow(options: { generation?: number; markupPolicyJson?: string | null } = {}): PendingAlertRow {
@@ -237,6 +279,44 @@ describe("pending Telegram preference revalidation", () => {
     insertSubscriber({ generation: 4 });
     insertDirect();
     await expect(evaluate(pendingRow({ generation: 4 }))).resolves.toMatchObject({
+      kind: "eligible",
+      validatedPreferenceGeneration: 4,
+    });
+  });
+
+  it("cancels a queued safety target whose model identity no longer matches", async () => {
+    insertV8SafetySource();
+    const staleV9Identity = {
+      model: "v9" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: "candidate-v9.0",
+      policyId: "safety-score-v9",
+      policyDigest: "c".repeat(64),
+      evaluationBuildDigest: "d".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}`,
+      publicationGenerationId: "report-cards:v9:stale",
+    };
+    await expect(evaluate(pendingRow({
+      scope: [{ stablecoinId: COIN_ID, family: "safety" }],
+      safetyScoreIdentity: staleV9Identity,
+    }))).resolves.toMatchObject({
+      kind: "cancel",
+      reason: "safety_identity_changed",
+    });
+  });
+
+  it("allows a restored V8 safety target when its build identity still matches", async () => {
+    const identity = v8SafetyIdentity();
+    insertV8SafetySource(identity);
+    insertSubscriber({ generation: 4 });
+    sqlite.prepare("UPDATE telegram_subscribers SET global_alert_safety = 1 WHERE chat_id = ?")
+      .run(CHAT_ID);
+
+    await expect(evaluate(pendingRow({
+      generation: 4,
+      scope: [{ stablecoinId: COIN_ID, family: "safety" }],
+      safetyScoreIdentity: identity,
+    }))).resolves.toMatchObject({
       kind: "eligible",
       validatedPreferenceGeneration: 4,
     });

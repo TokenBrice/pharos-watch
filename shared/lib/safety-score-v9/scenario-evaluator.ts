@@ -17,6 +17,7 @@ export interface V9ScenarioStructuralCap {
   readonly kind: string;
   readonly limit: number;
   readonly reason: string;
+  readonly pricedInPillar?: V9QualityPillar;
 }
 
 /** Informational research context that never resolves to a numeric cap. */

@@ -1,9 +1,10 @@
 # Safety Score V9 Rollout
 
-> **Current state:** Safety Score v8.17 remains the public model. V9 continues
-> to publish a daily shadow row and an owner-approved, unlisted read-only
-> preview. The versioned public V9 endpoint remains dark until the owner writes
-> the identity-bound activation key.
+> **Current state:** Safety Score v8.17 remains the public model. V9 retains one
+> compact shadow row per UTC day and may refresh its private latest candidate
+> every three hours after a valid V8 publication. The owner-approved, unlisted
+> read-only preview remains a shadow consumer. The versioned public V9 endpoint
+> remains dark until the owner writes the identity-bound activation key.
 
 This document is the durable rollout contract for Safety Score V9. Candidate
 correctness, calibration results, and identity records live in
@@ -52,17 +53,17 @@ not authorize or veto activation.
 
 ## Calibration Loop
 
-Until activation, the owner reviews daily rows and sends discontents in the
-Ike-list format. Each session separates data problems from scoring-logic
-problems, ships the smallest supported correction, and rotates policy or
+Until activation, the owner reviews shadow rows and sends specific scoring
+discontents. Each session separates data problems from scoring-logic problems,
+ships the smallest supported correction, and rotates policy or
 evaluation-build identity when required. Rotations carry no procedural release
 cost and do not restart a clock.
 
 The surviving constraints are:
 
 - fact-side curation may proceed without an identity freeze;
-- USDT crosses into A- only on evidence, never through compensating parameter
-  changes;
+- named asset concerns move only through attributable evidence or general
+  framework changes, never through asset-specific score overrides;
 - the U, EURS, and MIM pins and the TUSD watch keep their existing semantics;
   and
 - adversarial review remains required for each identity rotation.
@@ -79,8 +80,14 @@ or persistence failure cannot suppress or replace V8 publication.
 
 The private latest entries are:
 
+- `report-cards:v9-fixed-input:exact`: the normalized V8 base generation plus
+  any bounded V9-only evidence used by the latest attempted shadow refresh;
 - `report-cards:v9-shadow`: the latest strict candidate envelope; and
 - `report-cards:v9-shadow:diff`: the latest V8/V9 movement report.
+
+Evidence capture must export the V9 exact-input key, not the atomic V8
+`report-cards:fixed-input:exact` key, and verify that its base and source
+generation identities match the selected shadow row.
 
 The Worker also retains one compact `safety_score_v9_shadow_daily` row per UTC
 day. The row records candidate identity, result counts, coverage observations,
@@ -92,25 +99,49 @@ The unlisted preview is read-only, unlinked, and `noindex`. It serves the strict
 public projection with `lifecycle: "shadow"` and neither reads nor writes the
 activation key.
 
-## Pre-Flip Sanity Check
+## Shadow-Only Production Release
+
+Deploying candidate scorer, producer, validation, or consumer-fencing code to
+production is permitted for shadow observation. That deployment must preserve
+all of these boundaries:
+
+- `shared/lib/methodology-versions/safety-score.ts` continues to identify V8.17
+  as the active public methodology;
+- `safety-score-v9:public-activation` is not created, changed, or inferred;
+- `/api/report-cards` continues to serve the V8 contract and
+  `/api/report-cards/v9` continues to return `404`;
+- no V9 public methodology section or structured activation changelog entry is
+  created; and
+- V9 failures remain caught after V8 publication and cannot fail the V8 write.
+
+The purpose of this release is to obtain exact post-change production evidence:
+producer generations, fact-set and result identities, distributions, named
+anchor movements, and failure diagnostics. A successful deployment proves only
+that the shadow code is running. It does not prove rating quality, holdout
+success, readiness, or activation.
+
+## Pre-Activation Evidence Check
 
 On the day the owner declares the candidate ready, prepare one fresh packet
 against the exact deployed identity:
 
 1. capture the exact publication input;
 2. replay it at deployed `HEAD`;
-3. byte-check the U, EURS, and MIM pins and review TUSD against its watch
+3. review the named resilient and adverse anchors against their documented
    semantics;
-4. confirm the anchor table is green;
-5. reproduce the composite A+ case three times;
-6. compare the distribution with the last live shadow row and explain every
-   grade-band movement; and
-7. confirm the score-bearing producers are green in `cron_runs`.
+4. compare the distribution with the latest live shadow row and explain every
+   grade-band movement;
+5. confirm the score-bearing producers are green in `cron_runs`; and
+6. run the strict production verifier with the exact captures, continuity
+   ledger, and real holdout artifacts that are actually available.
 
-The packet is a one-shot sanity check, not the start of a window. The rated-count
-regression alarm must be quiet when the owner writes the activation key. A
-later calibration change requires a fresh packet because the approved identity
-changed, not because a release clock restarted.
+The verifier is advisory and fail-closed: missing holdout or continuity evidence
+must remain visible as a no-go result and must not be replaced by local fixtures
+or reviewer-authored pass booleans. The packet is a one-shot sanity check, not
+the start of a window. The rated-count regression alarm must be quiet when the
+owner writes the activation key. A later calibration change requires a fresh
+packet because the approved identity changed, not because a release clock
+restarted.
 
 ## Consumer Contract
 
@@ -147,7 +178,8 @@ baselines, and fails conflicting replays.
 
 Activation is an owner operation:
 
-1. review the one-shot sanity packet and confirm the rated-count alarm is quiet;
+1. review the one-shot evidence packet, including any explicit no-go findings,
+   and confirm the rated-count alarm is quiet;
 2. retain the healthy V8-compatible Worker and Pages deployment IDs for
    rollback;
 3. coordinate the public methodology changelog entry, `/methodology` update,
@@ -175,7 +207,11 @@ The operator records the incident and deployment identities, removes the
 public-activation key so the versioned endpoint fails closed, and restores the
 retained V8-compatible Worker or Pages deployment where necessary. Verify V8
 publication, append the non-comparable V8 history boundary, reseed safety-alert
-state, and keep incoherent derived surfaces degraded until they refresh.
+state, and keep incoherent derived surfaces degraded until they refresh. A
+restored Worker must complete its first quarter-hourly V8 report-card
+publication before evaluation-build-bound compact caches and consumers are
+considered converged; request-time V8 report cards may use their identified
+compute fallback during that bounded interval.
 
 D1 migrations are not reversed during rollback. Cloudflare deployment history
 is the immediate code target; Git remains the durable source record.
@@ -190,7 +226,9 @@ methodology/history and the exact V9 activation identity and sanity packet.
 ## Activation Checklist
 
 - [ ] Fresh exact capture replays at deployed `HEAD`.
-- [ ] Pins/watch, anchor table, composite A+ x3, and distribution review pass.
+- [ ] Named resilient/adverse anchors and distribution movements are reviewed.
+- [ ] Holdout and continuity status is generated from real supplied artifacts;
+      missing evidence remains explicit.
 - [ ] Score-bearing producers are green in `cron_runs`.
 - [ ] Rated-count regression alarm is quiet.
 - [ ] Activation-key identity matches the canonical V9 snapshot.

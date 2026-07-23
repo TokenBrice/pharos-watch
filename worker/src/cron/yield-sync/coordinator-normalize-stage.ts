@@ -36,6 +36,8 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
     dlPools: fetched.dlPools,
     onChainRates: fetched.onChainRates,
     safetyScores: fetched.safetyScores,
+    safetySnapshotAvailable: fetched.safetySnapshotAvailable,
+    expectedModel: fetched.safetySnapshot.expectedModel,
     riskFreeRates: fetched.riskFreeRates,
     signal: params.signal,
     chainRpcs: params.chainRpcs,
@@ -152,8 +154,7 @@ export async function runYieldCoordinatorNormalizeStage(params: YieldCoordinator
       startSec: fetched.startSec,
       sevenDaysAgoSec: fetched.sevenDaysAgoSec,
       safetyScores: fetched.safetyScores,
-      safetySnapshotAvailable:
-        fetched.safetySnapshot.kind === "ok" && fetched.safetySnapshot.safetyScoreIdentity != null,
+      safetySnapshotAvailable: fetched.safetySnapshotAvailable,
       safetyScoreIdentity: fetched.safetySnapshot.safetyScoreIdentity,
       riskFreeRates: fetched.riskFreeRates,
       tier1PrevRates,

@@ -46,6 +46,7 @@ export {
   type ExitRouteFamily,
   type ExitRouteObservation,
   type ExitRouteObservationCoverage,
+  type ExitRouteObservationHistory,
   type ExitRouteOutput,
   type ExitRouteOutputKind,
   type ExitRouteScope,

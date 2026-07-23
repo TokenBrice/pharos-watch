@@ -18,6 +18,7 @@ import { isCurrentSafetyScoreV8Identity } from "./safety-score-current-identity"
 import { safetyScoreV8PublicationIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
 import { SafetyScoreV8PublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { isRecord } from "@shared/lib/type-guards";
+import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
 
 interface PublicationGenerationRow {
   generation_id: string;
@@ -98,6 +99,11 @@ const REPORT_CARD_CACHE_SURFACE: PublicationSurfaceDefinition = {
 const REPORT_CARD_CACHE_FALLBACK_SURFACE: PublicationSurfaceDefinition = {
   ...REPORT_CARD_CACHE_SURFACE,
   sourceOfTruth: "cache[report_card_cache]",
+};
+
+const REPORT_CARDS_V9_ACTIVE_SURFACE: PublicationSurfaceDefinition = {
+  ...REPORT_CARD_CACHE_SURFACE,
+  sourceOfTruth: "cache[safety-score-v9:public-activation]+cache[report-cards:v9-shadow]",
 };
 
 function mapSourceState(state: string): PublicationGenerationState {
@@ -598,6 +604,43 @@ async function loadReportCardCachePublicationSurface(
   db: D1Database,
   now: number,
 ): Promise<PublicationSurfaceHealth> {
+  const active = await loadActiveSafetyScoreSource(db);
+  if (active.kind === "v9") {
+    const snapshot = active.snapshot;
+    const publishedRow = publishedFallbackRow(
+      snapshot.safetyScoreIdentity.publicationGenerationId,
+      snapshot.updatedAt,
+      snapshot.cards.length,
+      {
+        inputWatermarks: {
+          reportCardCache: snapshot.updatedAt,
+          safetyScoreActivation: active.activationUpdatedAt,
+        },
+        expectedModel: active.expectedModel,
+        activationMarker: active.marker,
+        methodologyVersion: snapshot.methodology.version,
+        safetyScoreIdentity: snapshot.safetyScoreIdentity,
+        completeness: snapshot.completeness,
+      },
+    );
+    return buildSurfaceHealth(REPORT_CARDS_V9_ACTIVE_SURFACE, now, publishedRow, publishedRow, null);
+  }
+  if (active.kind === "error") {
+    const attemptedAt = Math.max(active.activationUpdatedAt, active.snapshot?.updatedAt ?? 0);
+    const failedRow = failedFallbackRow(
+      `safety-score-v9-active:${attemptedAt}:${active.reason}`,
+      active.reason,
+      attemptedAt,
+      {
+        expectedModel: active.expectedModel,
+        activationMarker: active.marker,
+        safetyScoreIdentity: active.snapshot?.safetyScoreIdentity ?? null,
+        activationUpdatedAt: active.activationUpdatedAt,
+      },
+    );
+    return buildSurfaceHealth(REPORT_CARDS_V9_ACTIVE_SURFACE, now, failedRow, null, failedRow);
+  }
+
   const [genericSurface, result] = await Promise.all([
     loadGenericPublicationSurface(db, now, REPORT_CARD_CACHE_SURFACE),
     loadReportCardCache(db, { requireCompleteness: true }),

@@ -11,6 +11,7 @@ import {
 } from "../telegram-alert-target-plans";
 import { classifyTelegramTargetCounterBucket } from "../telegram-alert-job-target-outcomes";
 import { emptyAlerts, type RoutedSubscriberAlert } from "../dispatch-telegram-routing";
+import { parsePendingAlertProvenance } from "../../lib/telegram-pending-provenance";
 
 function routed(): RoutedSubscriberAlert {
   const alerts = emptyAlerts();
@@ -62,6 +63,51 @@ describe("authoritative Telegram target plan contract", () => {
     }
     await expect(parseTelegramTargetPlan(`${serialized.payloadJson} `, serialized.payloadDigest))
       .resolves.toEqual({ kind: "invalid", reason: "target_plan_digest_mismatch" });
+  });
+
+  it("persists model identity with safety outbox plans and rejects unbound safety plans", async () => {
+    const alerts = emptyAlerts();
+    alerts.safety.push({
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+      oldGrade: "B",
+      newGrade: "A",
+      oldScore: 78,
+      newScore: 91,
+    });
+    const safetyScoreIdentity = {
+      model: "v9" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: "candidate-v9.0",
+      policyId: "safety-score-v9",
+      policyDigest: "a".repeat(64),
+      evaluationBuildDigest: "b".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+      publicationGenerationId: "report-cards:v9:1",
+    };
+    const safetyPlan: RoutedSubscriberAlert = {
+      ...routed(),
+      alerts,
+      canonicalHtml: "<b>USDC</b> Safety B to A",
+      chunks: ["<b>USDC</b> Safety B to A"],
+      alertType: "safety",
+      alertTypes: ["safety"],
+      alertScope: [{ stablecoinId: "usdc-circle", family: "safety" }],
+      safetyScoreIdentity,
+    };
+
+    const serialized = await serializeTelegramTargetPlan(safetyPlan, 1_800_003_600);
+    expect(parsePendingAlertProvenance(serialized.payload.alertScopeJson)).toEqual({
+      kind: "ok",
+      value: {
+        scope: [{ stablecoinId: "usdc-circle", family: "safety" }],
+        safetyScoreIdentity,
+      },
+    });
+    await expect(serializeTelegramTargetPlan(
+      { ...safetyPlan, safetyScoreIdentity: undefined },
+      1_800_003_600,
+    )).rejects.toThrow("Safety Score identity");
   });
 
   it("keeps worst-case target and item materialization within one D1 batch", () => {

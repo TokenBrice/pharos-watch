@@ -28,6 +28,9 @@ function passingCards(): V9AnchorGateCard[] {
     card("usdc-circle", 90),
     card("bold-liquity", 84, "cdp"),
     card("usdt-tether", 80),
+    card("dai-makerdao", 72, "cdp"),
+    card("sdai-makerdao", 70, "wrapper"),
+    card("sbold-k3-capital", 70, "wrapper"),
     card("lusd-liquity", 76, "cdp"),
     card("pyusd-paypal", 71),
     card("pusd-polymarket", 64),
@@ -165,7 +168,10 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     const cards = [
       card("usdc-circle", 83),
       card("bold-liquity", 83, "cdp"),
-      card("usdt-tether", 70),
+      card("usdt-tether", 80),
+      card("dai-makerdao", 70, "cdp"),
+      card("sdai-makerdao", 65, "wrapper"),
+      card("sbold-k3-capital", 65, "wrapper"),
       card("lusd-liquity", 75, "cdp"),
       card("pyusd-paypal", 70),
       card("pusd-polymarket", 70),
@@ -185,10 +191,10 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     expect(report.decision).toBe("gate-passed");
   });
 
-  it("applies the ruled D-F/D-G/D-H/D-I thresholds as the defaults", () => {
+  it("applies the current production-calibration thresholds as the defaults", () => {
     const cards = withScore(
       withScore(
-        withScore(withScore(passingCards(), "usdt-tether", 72), "ausd-agora", 62),
+        withScore(withScore(passingCards(), "usdt-tether", 80), "ausd-agora", 62),
         "zchf-frankencoin",
         64,
       ),
@@ -197,10 +203,13 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     );
     const report = evaluateSafetyScoreV9AnchorGate({ cards });
     expect(report.decision).toBe("gate-passed");
-    expect(verdict(report, "anchor:usdt-tether").required).toBe("score ≥ 70 (B)");
+    expect(verdict(report, "anchor:usdt-tether").required).toBe("score ≥ 80 (A-)");
+    expect(verdict(report, "anchor:dai-makerdao").required).toBe("score ≥ 70 (B)");
+    expect(verdict(report, "anchor:sdai-makerdao").required).toBe("score ≥ 65 (B-)");
+    expect(verdict(report, "anchor:sbold-k3-capital").required).toBe("score ≥ 65 (B-)");
     expect(verdict(report, "anchor:ausd-agora").required).toBe("score ≥ 60 (C+)");
     expect(verdict(report, "anchor:zchf-frankencoin").required).toBe("score ≥ 60 (C+)");
-    expect(verdict(report, "anchor:usdg-paxos").required).toBe("score ≥ 60 (C+)");
+    expect(report.verdicts.some((entry) => entry.rule === "anchor:usdg-paxos")).toBe(false);
 
     const below = evaluateSafetyScoreV9AnchorGate({ cards: withScore(cards, "ausd-agora", 59) });
     expect(below.decision).toBe("no-go");

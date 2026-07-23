@@ -223,6 +223,7 @@ describe("handleYieldRankings", () => {
       coverageRatio: 1,
       scores: new Map([["rated-coin", { score: 66, grade: "B-" }]]),
       source: "report-card-cache",
+      expectedModel: "v8",
       safetyScoreIdentity: currentSafetyIdentity,
       publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
@@ -490,6 +491,7 @@ describe("handleYieldRankings", () => {
       trackedCount: 3,
       reason: "low-row-safety-coverage",
       source: "report-card-cache",
+      expectedModel: "v8",
       publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       publishedAt: expect.any(Number),
@@ -554,6 +556,7 @@ describe("handleYieldRankings", () => {
       trackedCount: 1,
       reason: null,
       source: "report-card-cache",
+      expectedModel: "v8",
       publicationGenerationId: liveGenerationId,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       publishedAt: expect.any(Number),
@@ -573,6 +576,7 @@ describe("handleYieldRankings", () => {
       coverageRatio: 1,
       scores: new Map([["usdc-circle", { score: 88, grade: "A" }]]),
       source: "report-card-cache",
+      expectedModel: "v8",
       safetyScoreIdentity: {
         ...v8Identity(`report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:other`),
         evaluationBuildDigest: "c".repeat(64),
@@ -1153,33 +1157,31 @@ describe("handleYieldRankings", () => {
     expect(res.status).toBe(503);
   });
 
-  it("returns explicit NR safety and Warning 199 when the compact safety snapshot is unavailable", async () => {
+  it.each([
+    ["active V9 marker", "active-safety-score:v9"],
+    ["malformed V9 marker", "active-safety-score:activation-marker-invalid"],
+    ["mismatched V9 identity", "active-safety-score:v9-identity-mismatch"],
+  ])("retains cached rows with explicit NR safety and Warning 199 for %s", async (_label, snapshotReason) => {
     computeSafetyScoresSnapshotMock.mockResolvedValueOnce({
       kind: "degraded",
       mode: "map",
       coveredCount: 0,
       trackedCount: 1,
       coverageRatio: 0,
-      reason: "report-card-cache:missing-cache",
+      reason: snapshotReason,
       scores: new Map(),
       source: "report-card-cache",
+      expectedModel: "v9",
       safetyScoreIdentity: null,
       publicationGenerationId: null,
       methodologyVersion: null,
       publishedAt: null,
     });
     const updatedAt = Math.floor(Date.now() / 1000) - 30;
-    const db = makeCacheDb({
-      rankings: [],
-      riskFreeRate: 4.25,
-      scalingFactor: 8,
-      medianApy: 4.2,
-      updatedAt,
-      provenance: null,
-    }, updatedAt);
+    const db = makeCacheDb(v748RankingsPayload, updatedAt);
 
     const res = await handleYieldRankings(db);
-    const body = await res.json() as {
+    const body = await res.json() as YieldRankingsResponse & {
       warnings?: Array<{ code: string; reasons?: string[] }>;
       _meta: { ageSeconds: number };
     };
@@ -1189,6 +1191,21 @@ describe("handleYieldRankings", () => {
     expect(body.warnings?.[0]).toMatchObject({
       code: "yield-safety-hydration-degraded",
       reasons: ["safety-snapshot-unavailable"],
+    });
+    expect(body.rankings).toHaveLength(1);
+    expect(body.rankings[0]).toMatchObject({
+      id: "usdc-circle",
+      currentApy: 4.72,
+      safetyScore: null,
+      safetyGrade: "NR",
+      safetyReason: "safety-snapshot-unavailable",
+      pharosYieldScore: null,
+      pysNullReason: "safety-unrated",
+    });
+    expect(body.provenance?.liveSafetyHydration).toMatchObject({
+      kind: "degraded",
+      expectedModel: "v9",
+      reason: "safety-snapshot-unavailable",
     });
     expect(body._meta.ageSeconds).toBe(30);
   });

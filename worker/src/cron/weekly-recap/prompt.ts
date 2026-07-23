@@ -69,6 +69,17 @@ export function buildWeeklyPrompt(
     `Grade transitions: ${data.gradeTransitionCount}`,
   ];
 
+  if (data.safetyContext?.status === "available") {
+    const identity = data.safetyContext.identity;
+    lines.push(
+      `Safety source: ${identity.model.toUpperCase()} methodology=${identity.methodologyVersion}, build=${identity.evaluationBuildDigest}, generation=${identity.publicationGenerationId}${identity.model === "v9" ? `, policy=${identity.policyId}:${identity.policyDigest}` : ""}`,
+    );
+  } else if (data.safetyContext?.status === "unavailable") {
+    lines.push(
+      `Safety source unavailable (${data.safetyContext.expectedModel.toUpperCase()}: ${data.safetyContext.reason}); do not infer safety or grade movement from its absence.`,
+    );
+  }
+
   if (data.gaugeRange) {
     lines.push(`Bank Run Gauge range: ${round1(data.gaugeRange.min)} to ${round1(data.gaugeRange.max)}`);
   }
@@ -204,7 +215,7 @@ export function buildWeeklyPrompt(
     lines.push("  Top grade transitions by mcap:");
     for (const transition of data.weeklySignals.topGradeTransitions) {
       lines.push(
-        `    ${transition.date} ${transition.symbol}: ${transition.fromGrade} -> ${transition.toGrade}, ${formatCurrency(transition.mcapUsd)} mcap`,
+        `    ${transition.date} ${transition.symbol}: ${transition.model.toUpperCase()} ${transition.fromGrade} -> ${transition.toGrade}, ${formatCurrency(transition.mcapUsd)} mcap`,
       );
     }
   }
@@ -225,17 +236,25 @@ export function buildWeeklyPrompt(
     }
   }
 
-  lines.push("", "Daily digest headlines:");
-  for (const d of data.dailyDigests) {
+  const compatibleHeadlines = data.dailyDigests.filter((digest) => digest.title.trim().length > 0);
+  const compatibleSummaries = data.dailyDigests.filter((digest) => digest.text.trim().length > 0);
+  lines.push("", "Identity-compatible daily digest headlines:");
+  for (const d of compatibleHeadlines) {
     const psi = d.inputData.stabilityIndex;
     lines.push(
       `  ${d.date}: "${d.title}" — PSI ${psi?.score ?? "?"} [${psi?.band ?? "?"}], mcap ${formatCurrency(d.inputData.totalMcapUsd)}`,
     );
   }
+  if (compatibleHeadlines.length === 0) {
+    lines.push("  None; use the structured weekly signals only.");
+  }
 
-  lines.push("", "Daily digest summaries:");
-  for (const d of data.dailyDigests) {
+  lines.push("", "Identity-compatible daily digest summaries:");
+  for (const d of compatibleSummaries) {
     lines.push(`  ${d.date}: ${d.text}`);
+  }
+  if (compatibleSummaries.length === 0) {
+    lines.push("  None; use the structured weekly signals only.");
   }
 
   if (recentWeeklyMeta.length > 0) {

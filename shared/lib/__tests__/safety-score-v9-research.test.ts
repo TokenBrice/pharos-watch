@@ -103,11 +103,10 @@ describe("v9 research handoff contracts", () => {
   });
 
   it.each([
-    ["material-unknown-reserve-exposure", 69],
-    ["missing-implementation-date", 79],
-    ["missing-latest-assurance-report", 84],
-    ["partial-reserve-review", 69],
-  ] as const)("executes the %s reason-coded ceiling", (code, expectedLimit) => {
+    ["material-unknown-reserve-exposure", "issuer-undisclosed", 69],
+    ["missing-latest-assurance-report", "issuer-undisclosed", 84],
+    ["partial-reserve-review", "issuer-undisclosed", 69],
+  ] as const)("executes the %s issuer-evidence ceiling", (code, responsibility, expectedLimit) => {
     const trace = scoreV9Input(
       {
         assetId: `bounded-unknown-${code}`,
@@ -126,6 +125,7 @@ describe("v9 research handoff contracts", () => {
             reason: "A bounded fact remains unresolved.",
             critical: false,
             path: "fixture",
+            responsibility,
           },
         ],
       },
@@ -138,6 +138,35 @@ describe("v9 research handoff contracts", () => {
       kind: `reason:${code}`,
       limit: expectedLimit,
     });
+    expect(trace.nrReasons).toEqual([]);
+  });
+
+  it("keeps an integration-owned implementation-date gap diagnostic", () => {
+    const trace = scoreV9Input(
+      {
+        assetId: "integration-owned-implementation-date",
+        pillars: { backing: 95, exit: 95, control: 95 },
+        pegScore: 100,
+        pegApplicable: true,
+        evidenceLevel: "strong",
+        trackRecordMonths: 48,
+        activeDepegBps: null,
+        parentRequired: false,
+        parentScore: null,
+        structuralSignals: [],
+        unresolved: [{
+          code: "missing-implementation-date",
+          reason: "Pharos has not integrated the reviewed launch date.",
+          critical: false,
+          path: "fixture",
+          responsibility: "integration-missing",
+        }],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalScore).toBe(95);
+    expect(trace.caps.some((cap) => cap.kind === "reason:missing-implementation-date")).toBe(false);
     expect(trace.nrReasons).toEqual([]);
   });
 

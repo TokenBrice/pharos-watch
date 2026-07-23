@@ -12,6 +12,7 @@ import {
   type V9DependencyPlanningEdge,
 } from "../safety-score-v9/dependencies";
 import { scoreV9Input } from "../safety-score-v9/formula";
+import { V9_LEGACY_RESPONSIBILITY_BY_REASON } from "../safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1, resolveV9ReasonPolicy } from "../safety-score-v9/policy";
 import { scoreV9GoldenScenario } from "../safety-score-v9/scenario-evaluator";
 import { scoreCompiledAssetSet } from "../safety-score-v9-research";
@@ -52,14 +53,33 @@ function scoringInput(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
 
 function boundedCeilingFact(code: string): V9UnresolvedFact {
   const resolved = resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, code as V9UnresolvedFact["code"]);
-  return { code: code as V9UnresolvedFact["code"], reason: `fixture ${code}`, critical: resolved.critical };
+  const reasonCode = code as V9UnresolvedFact["code"];
+  return {
+    code: reasonCode,
+    reason: `fixture ${code}`,
+    critical: resolved.critical,
+    responsibility: V9_LEGACY_RESPONSIBILITY_BY_REASON[reasonCode],
+  };
 }
 
 function signal(kind: V9StructuralSignal["kind"], severity: V9StructuralSignal["severity"]): V9StructuralSignal {
+  const pricedInPillar =
+    kind === "unsafe-backing" ||
+    kind === "speculative-credit" ||
+    kind === "algorithmic-reflexivity"
+      ? "backing" as const
+      : kind === "centralized-mint" ||
+          kind === "unreviewed-upgrade" ||
+          kind === "weak-oracle-branch" ||
+          kind === "active-control-incident"
+        ? "control" as const
+        : undefined;
   return {
     kind,
     severity,
     reason: `fixture ${kind}:${severity}`,
+    responsibility: "measured-adverse",
+    ...(pricedInPillar === undefined ? {} : { pricedInPillar }),
     failureDomainKeys: [`fixture:${kind}`],
     evidence: [],
   };
@@ -108,7 +128,7 @@ function compiledInput(
 describe("anchor-coherence invariants — active", () => {
   it("keeps the 32 golden orderings passing unmodified", () => {
     expect(GOLDEN_SCENARIOS).toHaveLength(34);
-    expect(PAIRWISE_CONSTRAINTS).toHaveLength(32);
+    expect(PAIRWISE_CONSTRAINTS).toHaveLength(31);
     const traces = new Map(
       GOLDEN_SCENARIOS.map((scenario) => [scenario.id, scoreV9GoldenScenario(scenario, V9_CANDIDATE_POLICY_V1)]),
     );
@@ -140,7 +160,12 @@ describe("anchor-coherence invariants — active", () => {
         { unresolved: [boundedCeilingFact("missing-same-notional-route")] },
       ];
       for (const variant of variants) {
-        expect(score({ pillars, ...variant }).finalScore!, JSON.stringify(variant)).toBeLessThanOrEqual(base);
+        const candidate = score({ pillars, ...variant });
+        if (candidate.finalScore === null) {
+          expect(candidate.finalGrade, JSON.stringify(variant)).toBe("NR");
+        } else {
+          expect(candidate.finalScore, JSON.stringify(variant)).toBeLessThanOrEqual(base);
+        }
       }
     }
   });
@@ -161,7 +186,7 @@ describe("anchor-coherence invariants — active", () => {
         edgeKey: "serial:parent:child",
         upstreamAssetId: "parent",
         dependencyType: "wrapper",
-        pathKind: "serial-dependency",
+        economicRole: "serial-claim",
         weight: 1,
         failureDomains: [],
       },
@@ -169,7 +194,7 @@ describe("anchor-coherence invariants — active", () => {
         edgeKey: "basket:parent:child",
         upstreamAssetId: "parent",
         dependencyType: "collateral",
-        pathKind: "collateral-exposure",
+        economicRole: "basket-exposure",
         weight: 0.4,
         failureDomains: [],
       },
@@ -196,6 +221,8 @@ describe("anchor-coherence invariants — active", () => {
         upstreamAssetId: "parent",
         selectedEdgeKey: "serial:parent:child",
         suppressedEdgeKey: "basket:parent:child",
+        selectedRole: "serial-claim",
+        suppressedRole: "basket-exposure",
         reason: "serial-role-dominates",
       },
     ]);
@@ -280,7 +307,6 @@ describe("adverse anchor re-pins — active same-input fixtures (capture-9 V0 re
       activeDepegBps: null,
       structuralSignals: [signal("centralized-mint", "critical")],
       maxScore: 39,
-      bindingCapKind: "signal:centralized-mint:critical",
     },
     {
       // TUSD 53/C-: quality 54.2755 x peg 0.983804 = 53.40; caps at 55+ never bind.

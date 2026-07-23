@@ -6,7 +6,11 @@ import { perCoinFlowCacheKey } from "./mint-burn-flows-shared";
 import { getCache } from "../lib/db-cache";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";
-import { loadActiveV8SafetyScoreHistorySource } from "../lib/safety-score-history-v2";
+import {
+  loadActiveV8SafetyScoreHistorySource,
+  type ActiveV8SafetyScoreHistorySource,
+} from "../lib/safety-score-history-v2";
+import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 
 /** 24h mint/burn flow older than this is "stale": shown on /status with age, omitted from the terse alert Context line. */
 const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
@@ -16,7 +20,7 @@ const MINT_BURN_FLOW_STALE_SEC = 6 * 3600;
  *
  * Sources:
  * - published `stress_signals` generation for the latest DEWS band + score per coin
- * - exact canonical Safety Score V8 snapshot + fixed-input identity
+ * - activation-gated canonical Safety Score V8 snapshot + fixed-input identity
  * - `depeg_events`            only rows with `ended_at IS NULL` (an active event)
  * - `price_cache`             latest cached price by `asset_id = stablecoin_id`
  *
@@ -42,6 +46,7 @@ export interface StatusForCoin {
     recordedAt: number;
   } | null;
   safetyUnavailableReason?: string | null;
+  expectedSafetyScoreModel?: "v8" | "v9" | null;
   liquidity: {
     score: number | null;
     totalTvlUsd: number;
@@ -52,6 +57,7 @@ export interface StatusForCoin {
     apy30d: number;
     source: string;
     pharosYieldScore: number | null;
+    pysUnavailableReason?: string | null;
     updatedAt: number;
   } | null;
   flow: { netFlowUsd: number; updatedAt: number; stale: boolean } | null;
@@ -66,15 +72,71 @@ export interface StatusForCoin {
       };
 }
 
+interface TelegramSafetyState {
+  expectedModel: "v8" | "v9" | null;
+  unavailableReason: string | null;
+  source: ActiveV8SafetyScoreHistorySource | null;
+}
+
+async function loadTelegramSafetyState(db: D1Database): Promise<TelegramSafetyState> {
+  let activeSource;
+  try {
+    activeSource = await loadActiveSafetyScoreSource(db);
+  } catch {
+    return {
+      expectedModel: null,
+      unavailableReason: "active-source-unavailable",
+      source: null,
+    };
+  }
+
+  if (activeSource.kind !== "v8") {
+    return {
+      expectedModel: activeSource.expectedModel,
+      unavailableReason: activeSource.kind === "v9" ? "active-model-v9" : activeSource.reason,
+      source: null,
+    };
+  }
+
+  try {
+    return {
+      expectedModel: activeSource.expectedModel,
+      unavailableReason: null,
+      source: await loadActiveV8SafetyScoreHistorySource(db),
+    };
+  } catch {
+    try {
+      const refreshedActiveSource = await loadActiveSafetyScoreSource(db);
+      if (refreshedActiveSource.kind !== "v8") {
+        return {
+          expectedModel: refreshedActiveSource.expectedModel,
+          unavailableReason:
+            refreshedActiveSource.kind === "v9" ? "active-model-v9" : refreshedActiveSource.reason,
+          source: null,
+        };
+      }
+    } catch {
+      return {
+        expectedModel: null,
+        unavailableReason: "active-source-unavailable",
+        source: null,
+      };
+    }
+    return {
+      expectedModel: activeSource.expectedModel,
+      unavailableReason: "canonical-snapshot-unavailable",
+      source: null,
+    };
+  }
+}
+
 export async function loadStatusForCoin(db: D1Database, stablecoinId: string): Promise<StatusForCoin> {
   const nowSec = Math.floor(Date.now() / 1000);
   const isMintBurnTracked = getMintBurnConfigsForStablecoin(stablecoinId).length > 0;
-  const [dewsRow, safetySource, depegRow, priceRow, liquidityRow, yieldRow, stablecoinsCache, flowCache] =
+  const [dewsRow, safetyState, depegRow, priceRow, liquidityRow, yieldRow, stablecoinsCache, flowCache] =
     await Promise.all([
       loadStressSignalCurrentRowForCoin(db, stablecoinId, nowSec, { staleAfterSec: 30 * 60 }),
-      loadActiveV8SafetyScoreHistorySource(db)
-        .then((source) => ({ kind: "ok" as const, source }))
-        .catch(() => ({ kind: "error" as const })),
+      loadTelegramSafetyState(db),
       db
         .prepare(
           "SELECT direction, peak_deviation_bps, peg_reference, started_at FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL ORDER BY started_at DESC LIMIT 1",
@@ -142,8 +204,8 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
   }
 
   const safetyCard =
-    safetySource.kind === "ok"
-      ? safetySource.source.snapshot.cards.find((card) => card.id === stablecoinId && !card.isDefunct)
+    safetyState.source !== null
+      ? safetyState.source.snapshot.cards.find((card) => card.id === stablecoinId && !card.isDefunct)
       : null;
 
   return {
@@ -154,18 +216,19 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
     stablecoinsUpdatedAt,
     dews: dewsRow ? { band: dewsRow.band, score: dewsRow.score, computedAt: dewsRow.computed_at } : null,
     safety:
-      safetyCard && safetySource.kind === "ok"
+      safetyCard && safetyState.source !== null
         ? {
             grade: safetyCard.overallGrade,
             score: safetyCard.overallScore,
-            model: safetySource.source.identity.model,
-            methodologyVersion: safetySource.source.identity.methodologyVersion,
-            publicationGenerationId: safetySource.source.identity.publicationGenerationId,
-            publishedAt: safetySource.source.publishedAtSec,
-            recordedAt: safetySource.source.publishedAtSec,
+            model: safetyState.source.identity.model,
+            methodologyVersion: safetyState.source.identity.methodologyVersion,
+            publicationGenerationId: safetyState.source.identity.publicationGenerationId,
+            publishedAt: safetyState.source.publishedAtSec,
+            recordedAt: safetyState.source.publishedAtSec,
           }
         : null,
-    safetyUnavailableReason: safetySource.kind === "error" ? "canonical-snapshot-unavailable" : null,
+    safetyUnavailableReason: safetyState.source === null ? safetyState.unavailableReason : null,
+    expectedSafetyScoreModel: safetyState.expectedModel,
     liquidity: liquidityRow
       ? {
           score: liquidityRow.liquidity_score,
@@ -178,7 +241,11 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
           currentApy: yieldRow.current_apy,
           apy30d: yieldRow.apy_30d,
           source: yieldRow.yield_source,
-          pharosYieldScore: yieldRow.pharos_yield_score,
+          pharosYieldScore: safetyState.expectedModel === "v8" ? yieldRow.pharos_yield_score : null,
+          pysUnavailableReason:
+            safetyState.expectedModel === "v8"
+              ? null
+              : safetyState.unavailableReason ?? "active-source-unavailable",
           updatedAt: yieldRow.updated_at,
         }
       : null,

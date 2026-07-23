@@ -151,6 +151,7 @@ export async function executeAuthoritativeFanoutPath(
         depegResolved: events.depegResolved,
         depegWorsening: events.depegWorsening,
         safetyChanges: events.safetyChanges,
+        safetyScoreIdentity: events.safetyScoreIdentity ?? null,
         launchPromoted: events.launchPromoted,
         reservePromoted: events.reservePromoted,
       },

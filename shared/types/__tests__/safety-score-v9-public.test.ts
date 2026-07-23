@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { SafetyScoreV9ResponseSchema } from "../safety-score-v9-public";
+import {
+  SafetyScoreV9CurrentResponseSchema,
+  SafetyScoreV9LegacyResponseSchema,
+  SafetyScoreV9ResponseSchema,
+} from "../safety-score-v9-public";
 
 const DIGEST = "a".repeat(64);
 
@@ -81,11 +85,92 @@ function response() {
   } as const;
 }
 
+function currentResponse() {
+  const current = structuredClone(response()) as unknown as {
+    schemaVersion: number;
+    cards: Array<{ scoreTrace?: unknown }>;
+  };
+  current.schemaVersion = 2;
+  current.cards[0]!.scoreTrace = {
+    schemaVersion: 1,
+    legacyAliases: {
+      qualityScore: "weighted-pillar-mean",
+      pegAdjustedScore: "post-deployment-pre-cap-score",
+      score: "post-cap-public-score",
+    },
+    aggregation: {
+      method: "smooth-bounded-headroom",
+      score: 92,
+      weightedPillarMean: 92,
+      weakestPillar: "backing",
+      weakestScore: 90,
+      headroom: 45,
+    },
+    stages: {
+      weightedPillarMean: 92,
+      aggregatedQualityScore: 92,
+      pegMultiplier: 1,
+      baseAssetScore: 92,
+      deploymentAdjustedScore: 92,
+      deploymentAdjustmentPoints: 0,
+      preCapScore: 92,
+      publishedScore: 90,
+    },
+    deploymentRisk: {
+      method: "holder-slice-exposure-weighted-v2",
+      totalAdjustmentPoints: 0,
+      adjustments: [],
+      unresolvedExposures: [],
+    },
+    adverseAttribution: {
+      semantics: "causal-measured-adverse-v1",
+      items: [],
+    },
+    evidenceResponsibility: {
+      semantics: "limiting-fact-owner-v1",
+      totalFactCount: 0,
+      summaries: [
+        { responsibility: "integration-missing", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        { responsibility: "issuer-undisclosed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        { responsibility: "measured-adverse", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        { responsibility: "method-unsupported", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        { responsibility: "producer-failed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+      ],
+    },
+    wrapperParentLimit: null,
+  };
+  return current;
+}
+
 describe("SafetyScoreV9ResponseSchema", () => {
-  it("accepts a strict candidate V9 critical-path envelope", () => {
-    const parsed = SafetyScoreV9ResponseSchema.parse(response());
+  it("retains a strict schema-v1 reader for persisted candidate artifacts", () => {
+    const parsed = SafetyScoreV9LegacyResponseSchema.parse(response());
     expect(parsed.cards[0]?.grade).toBe("A+");
     expect(parsed.lifecycle).toBe("candidate");
+    expect(SafetyScoreV9ResponseSchema.parse(parsed).schemaVersion).toBe(1);
+  });
+
+  it("requires the self-describing score trace on every current candidate card", () => {
+    const parsed = SafetyScoreV9CurrentResponseSchema.parse(currentResponse());
+    expect(parsed.schemaVersion).toBe(2);
+    expect(parsed.cards[0]?.scoreTrace.aggregation?.method).toBe("smooth-bounded-headroom");
+    expect(parsed.cards[0]?.scoreTrace.legacyAliases.pegAdjustedScore).toBe(
+      "post-deployment-pre-cap-score",
+    );
+    expect(SafetyScoreV9ResponseSchema.parse(parsed).schemaVersion).toBe(2);
+
+    const missingTrace = currentResponse();
+    delete missingTrace.cards[0]!.scoreTrace;
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(missingTrace)).toThrow();
+
+    const inconsistentTrace = currentResponse();
+    const scoreTrace = inconsistentTrace.cards[0]!.scoreTrace as {
+      stages: { preCapScore: number };
+    };
+    scoreTrace.stages.preCapScore = 91;
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(inconsistentTrace)).toThrow(
+      /explicit preCapScore must match/,
+    );
   });
 
   it("does not permit an active lifecycle or a final 9.0 policy label", () => {

@@ -56,7 +56,7 @@ function evaluatedSourceToRanking(
     sourceTvlUsd: source.sourceTvlUsd,
     pharosYieldScore: source.pharosYieldScore,
     pysNullReason: source.pysNullReason,
-    safetyScore: source.safetyScore,
+    safetyScore: source.safetyProvenance === "safety-snapshot-unavailable" ? null : source.safetyScore,
     safetyGrade: source.safetyGrade,
     safetyReason: source.safetyReason,
     yieldToRisk: source.yieldToRisk,

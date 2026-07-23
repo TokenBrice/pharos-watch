@@ -21,8 +21,12 @@ function route(overrides: Partial<V9ExitEvaluationRoute> = {}): V9ExitEvaluation
     modelConfidence: "high",
     access: "permissionless-onchain",
     holderEligibility: "any-holder",
+    capacityScoringHorizon: "immediate",
     settlement: "atomic",
     settlementDelaySec: 300,
+    queueDepthUsd: null,
+    dailyLimitUsd: null,
+    minRedeemUsd: null,
     execution: "deterministic-onchain",
     outputQuality: "stable-single",
     outputResolved: true,
@@ -86,6 +90,117 @@ describe("evaluateV9Exit", () => {
     const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [route()] }, V9_CANDIDATE_POLICY_V1);
     expect(result.primaryRouteKey).toBe("redemption:issuer");
     expect(result.score).toBeGreaterThanOrEqual(90);
+  });
+
+  it("keeps immediate, near-term, and queued capacity in explicit horizon lanes", () => {
+    const immediate = route({ routeKey: "redemption:immediate" });
+    const nearTerm = route({
+      routeKey: "redemption:near-term",
+      settlement: "same-day",
+      settlementDelaySec: 86_400,
+    });
+    const queued = route({
+      routeKey: "redemption:queued",
+      settlement: "queued",
+      settlementDelaySec: 30 * 86_400,
+      routeScoreCap: "queue-redeem",
+    });
+    const result = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [queued, nearTerm, immediate] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.stressRequest?.comparisonWindowSec).toBe(300);
+    expect(result.horizons).toEqual({
+      immediate: expect.objectContaining({ primaryRouteKey: "redemption:immediate" }),
+      "near-term": expect.objectContaining({ primaryRouteKey: "redemption:near-term" }),
+      queued: expect.objectContaining({ primaryRouteKey: "redemption:queued" }),
+    });
+    expect(result.routes.find((entry) => entry.routeKey === "redemption:queued")?.horizon).toBe("queued");
+  });
+
+  it("credits a 30-day queue without treating it as immediate capacity", () => {
+    const result = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        routes: [
+          route({
+            routeKey: "redemption:30-day-queue",
+            settlement: "queued",
+            settlementDelaySec: 30 * 86_400,
+            routeScoreCap: "queue-redeem",
+          }),
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.score).toBeGreaterThan(0);
+    expect(result.horizons.immediate).toEqual({ primaryRouteKey: null, score: null });
+    expect(result.horizons.queued.primaryRouteKey).toBe("redemption:30-day-queue");
+  });
+
+  it("keeps daily capacity in the bounded near-term lane even when transfers settle atomically", () => {
+    const result = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        routes: [
+          route({
+            routeKey: "redemption:daily-capacity",
+            capacityScoringHorizon: "daily",
+            dailyLimitUsd: 1_000_000,
+          }),
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.score).toBeGreaterThan(0);
+    expect(result.score).toBeLessThanOrEqual(
+      V9_CANDIDATE_POLICY_V1.policy.semantic.exit.routeFamilyCaps.queueRedeem,
+    );
+    expect(result.horizons.immediate).toEqual({ primaryRouteKey: null, score: null });
+    expect(result.horizons["near-term"].primaryRouteKey).toBe("redemption:daily-capacity");
+  });
+
+  it("prices queue backlog and minimum redemption gates through the reviewed constraint bands", () => {
+    const base = route({
+      routeKey: "redemption:queue-terms",
+      capacityScoringHorizon: "queued",
+      settlement: "queued",
+      settlementDelaySec: 30 * 86_400,
+      routeScoreCap: "queue-redeem",
+      access: "issuer-api",
+      dailyLimitUsd: 1_000_000,
+    });
+    const unconstrained = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [base] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const constrained = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        routes: [
+          {
+            ...base,
+            queueDepthUsd: 1_500_000,
+            minRedeemUsd: 1_000_000,
+          },
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(constrained.score!).toBeLessThan(unconstrained.score!);
+    expect(constrained.routes[0]).toMatchObject({
+      horizon: "queued",
+      capacityScoringHorizon: "queued",
+      settlementDelaySec: 30 * 86_400,
+      queueDepthUsd: 1_500_000,
+      dailyLimitUsd: 1_000_000,
+      minRedeemUsd: 1_000_000,
+      capsApplied: expect.arrayContaining(["queue-backlog:0.65", "minimum-redeem:0.75"]),
+    });
   });
 
   it("does not let a weak optional route lower the best credible route", () => {

@@ -2,6 +2,10 @@ import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output"
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
+import {
+  DEX_MEASURED_FRESHNESS_MAX_SEC,
+  isDexMeasuredExecutionObservationHistoryMature,
+} from "@shared/types/measured-execution";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { deriveSupplyModelExitRouteObservation } from "./redemption-exit-route-observations";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
@@ -185,19 +189,31 @@ function buildDexRouteReview(
   assetId: string,
   observation: ExitRouteObservation,
 ): RouteReview {
+  const observationHistory = observation.observationHistory;
+  const matureMeasuredHistory =
+    observation.evidenceKind === "measured-executable-depth" &&
+    observation.confidence === "high" &&
+    isDexMeasuredExecutionObservationHistoryMature(observationHistory) &&
+    observationHistory != null &&
+    fixedInput.clockSec - observationHistory.observationWindowEndedAt <= DEX_MEASURED_FRESHNESS_MAX_SEC &&
+    observationHistory.observationWindowEndedAt <= fixedInput.clockSec + 60;
   return {
     lane: "dex",
     routeId: observation.routeId,
     holderAccess: "permissionless",
     executionModel: "market-depth",
     executionCertainty: "bounded",
-    // Measured executable depth is the producer's own realized-quote evidence,
-    // so the route model earns high confidence; simulated or otherwise
-    // derived depth keeps the conservative modeled default.
-    modelConfidence: observation.evidenceKind === "measured-executable-depth" ? "high" : "medium",
+    // A realized quote is still a single-cycle observation until the producer
+    // repeats it. Operational LKG preserves a mature history because only
+    // successful complete cycles enter the conservative statistic.
+    modelConfidence: matureMeasuredHistory ? "high" : "medium",
     coverageClass: dexCoverageClass(fixedInput, assetId),
+    capacityScoringHorizon: "immediate",
     settlementModel: "atomic",
     settlementSlaSec: 0,
+    queueDepthUsd: null,
+    dailyLimitUsd: null,
+    minRedeemUsd: null,
     physicalResourceKeys: dexPhysicalResourceKeys(observation),
     executionCosts: capacityPoints(observation),
     output: buildOutputReview(fixedInput, observation, fixedInput.dexGenerationId),
@@ -258,15 +274,15 @@ function redemptionSettlement(entry: RedemptionBackstopEntry): {
 } {
   switch (entry.settlementModel) {
     case "atomic":
-      return { settlementModel: "atomic", settlementSlaSec: 0 };
+      return { settlementModel: "atomic", settlementSlaSec: entry.settlementDelaySec ?? 0 };
     case "immediate":
-      return { settlementModel: "bounded-delay", settlementSlaSec: 3_600 };
+      return { settlementModel: "bounded-delay", settlementSlaSec: entry.settlementDelaySec ?? 3_600 };
     case "same-day":
-      return { settlementModel: "same-day", settlementSlaSec: 86_400 };
+      return { settlementModel: "same-day", settlementSlaSec: entry.settlementDelaySec ?? 86_400 };
     case "days":
-      return { settlementModel: "bounded-delay", settlementSlaSec: null };
+      return { settlementModel: "bounded-delay", settlementSlaSec: entry.settlementDelaySec ?? null };
     case "queued":
-      return { settlementModel: "queued", settlementSlaSec: null };
+      return { settlementModel: "queued", settlementSlaSec: entry.settlementDelaySec ?? null };
   }
 }
 
@@ -319,7 +335,11 @@ function buildRedemptionRouteReview(
     executionCertainty: redemptionExecutionCertainty(entry),
     modelConfidence: entry.modelConfidence,
     coverageClass: redemptionCoverageClass(entry, observation),
+    capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
     ...redemptionSettlement(entry),
+    queueDepthUsd: entry.queueDepthUsd ?? null,
+    dailyLimitUsd: entry.dailyLimitUsd ?? null,
+    minRedeemUsd: entry.minRedeemUsd ?? null,
     physicalResourceKeys,
     executionCosts: redemptionExecutionCosts(entry, observation),
     output: buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId),

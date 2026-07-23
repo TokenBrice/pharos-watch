@@ -15,6 +15,10 @@ import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils"
 import { CACHE_PROFILES } from "../lib/constants";
 import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
 import { isCurrentSafetyScoreV8Identity } from "../lib/safety-score-current-identity";
+import {
+  loadActiveSafetyScoreSource,
+  type ActiveSafetyScoreSource,
+} from "../lib/safety-score-active-source";
 
 const CHAINS_FRESHNESS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.chains;
 const CHAINS_STALE_THRESHOLD_SEC = CHAINS_FRESHNESS_MAX_AGE_SEC * 2;
@@ -26,6 +30,7 @@ interface ChainsDependencyMeta {
   ageSeconds?: number | null;
   status: ChainsDependencyStatus;
   reason?: string | null;
+  expectedModel: "v8" | "v9";
   inputsStale?: boolean;
   staleInputs?: string[];
 }
@@ -61,6 +66,7 @@ function buildReportCardDependencyMeta(
         ageSeconds: getDependencyAgeSeconds(reportCardResult.updatedAt, nowSec),
         status: "degraded",
         reason: "inputs stale",
+        expectedModel: "v8",
         inputsStale: true,
         staleInputs: reportCardResult.payload.degradedInputs?.staleInputs ?? [],
       };
@@ -70,6 +76,7 @@ function buildReportCardDependencyMeta(
       updatedAt: reportCardResult.updatedAt,
       ageSeconds: getDependencyAgeSeconds(reportCardResult.updatedAt, nowSec),
       status: "fresh",
+      expectedModel: "v8",
     };
   }
 
@@ -81,6 +88,23 @@ function buildReportCardDependencyMeta(
     ageSeconds,
     status,
     reason: reportCardResult.reason.replace(/-/g, " "),
+    expectedModel: "v8",
+  };
+}
+
+function buildV9ExpectedDependencyMeta(
+  activeSource: Exclude<ActiveSafetyScoreSource, { kind: "v8" }>,
+  nowSec: number,
+): ChainsDependencyMeta {
+  const updatedAt = activeSource.kind === "v9"
+    ? activeSource.snapshot.updatedAt
+    : activeSource.activationUpdatedAt;
+  return {
+    updatedAt,
+    ageSeconds: getDependencyAgeSeconds(updatedAt, nowSec),
+    status: "unavailable",
+    reason: activeSource.kind === "v9" ? "active-model-v9" : activeSource.reason,
+    expectedModel: activeSource.expectedModel,
   };
 }
 
@@ -100,11 +124,11 @@ export function isActiveChainAggregateAsset(asset: {
 
 function buildChainsFreshnessMeta(
   updatedAt: number,
-  reportCardResult: ReportCardCacheLoadResult,
+  reportCards: ChainsDependencyMeta,
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null,
 ): { headers: Record<string, string>; meta: ChainsFreshnessMeta } {
   const nowSec = Math.floor(Date.now() / 1000);
   const ageSeconds = Math.max(0, nowSec - updatedAt);
-  const reportCards = buildReportCardDependencyMeta(reportCardResult, nowSec);
   let status: FreshnessStatus;
 
   if (ageSeconds <= CHAINS_FRESHNESS_MAX_AGE_SEC) {
@@ -125,8 +149,9 @@ function buildChainsFreshnessMeta(
       status = "degraded";
     }
     const reportCardAgeSuffix = reportCards.ageSeconds != null ? ` (${reportCards.ageSeconds}s old)` : "";
-    const reportCardReason = reportCards.reason ?? reportCards.status;
-    warnings.push(`report-card cache ${reportCardReason}${reportCardAgeSuffix}`);
+    const reportCardReason = (reportCards.reason ?? reportCards.status).replace(/-/g, " ");
+    const dependencyLabel = reportCards.expectedModel === "v9" ? "safety-score dependency" : "report-card cache";
+    warnings.push(`${dependencyLabel} ${reportCardReason}${reportCardAgeSuffix}`);
   }
 
   const warning = warnings.length > 0 ? warnings.join("; ") : null;
@@ -144,8 +169,7 @@ function buildChainsFreshnessMeta(
       dependencies: {
         reportCards,
       },
-      safetyScoreIdentity:
-        reportCardResult.kind === "ok" ? (reportCardResult.payload.safetyScoreIdentity ?? null) : null,
+      safetyScoreIdentity,
       ...(warning ? { warning } : {}),
     },
   };
@@ -167,21 +191,29 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
   // Derive peg rates for non-USD peg stability calculation
   const { rates: pegRates } = derivePegRates(activePeggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
 
-  // Load safety scores from report card cache (one D1 read)
+  const activeSource = await loadActiveSafetyScoreSource(db);
   const safetyScores: Record<string, number> = {};
-  const loadedReportCardResult = await loadReportCardCache(db, {
-    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-    requireCompleteness: true,
-  });
-  const reportCardResult: ReportCardCacheLoadResult =
-    loadedReportCardResult.kind === "ok" &&
-    !isCurrentSafetyScoreV8Identity(loadedReportCardResult.payload.safetyScoreIdentity)
-      ? { kind: "error", reason: "identity-mismatch", updatedAt: loadedReportCardResult.updatedAt }
-      : loadedReportCardResult;
-  if (reportCardResult.kind === "ok") {
-    for (const [id, entry] of Object.entries(reportCardResult.payload.scores)) {
-      safetyScores[id] = entry.score;
+  let reportCards: ChainsDependencyMeta;
+  let safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null = null;
+  if (activeSource.kind === "v8") {
+    const loadedReportCardResult = await loadReportCardCache(db, {
+      maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+      requireCompleteness: true,
+    });
+    const reportCardResult: ReportCardCacheLoadResult =
+      loadedReportCardResult.kind === "ok" &&
+      !isCurrentSafetyScoreV8Identity(loadedReportCardResult.payload.safetyScoreIdentity)
+        ? { kind: "error", reason: "identity-mismatch", updatedAt: loadedReportCardResult.updatedAt }
+        : loadedReportCardResult;
+    reportCards = buildReportCardDependencyMeta(reportCardResult, Math.floor(Date.now() / 1000));
+    if (reportCardResult.kind === "ok") {
+      safetyScoreIdentity = reportCardResult.payload.safetyScoreIdentity ?? null;
+      for (const [id, entry] of Object.entries(reportCardResult.payload.scores)) {
+        safetyScores[id] = entry.score;
+      }
     }
+  } else {
+    reportCards = buildV9ExpectedDependencyMeta(activeSource, Math.floor(Date.now() / 1000));
   }
 
   const response = aggregateChains({
@@ -190,13 +222,13 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
     pegRates,
   });
 
-  const freshness = buildChainsFreshnessMeta(stablecoinsResult.updatedAt, reportCardResult);
+  const freshness = buildChainsFreshnessMeta(stablecoinsResult.updatedAt, reportCards, safetyScoreIdentity);
 
   return jsonResponse(
     {
       ...response,
       updatedAt: stablecoinsResult.updatedAt,
-      safetyScoreIdentity: reportCardResult.kind === "ok" ? reportCardResult.payload.safetyScoreIdentity : null,
+      safetyScoreIdentity,
       _meta: freshness.meta,
     },
     freshness.headers,

@@ -11,6 +11,11 @@ import { pruneAlreadyTerminalSubscribers } from "../dispatch-telegram-terminal-t
 import { TELEGRAM_FRESH_TARGET_CLAIM_TTL_SEC } from "../telegram-alert-target-effects";
 import { deliverTelegramSubscriberQueue } from "../dispatch-telegram-delivery";
 import { applyTelegramTransportControlSchema } from "../../test-helpers/telegram-transport-control-schema";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import {
+  ALERT_SAFETY_SOURCE_CACHE_KEY,
+  getAlertSafetySourceGeneration,
+} from "../../lib/alert-safety-source-cache";
 
 interface StoredTarget {
   status: string;
@@ -53,6 +58,11 @@ function createHarness(): {
 } {
   const sqlite = new DatabaseSync(":memory:");
   sqlite.exec(`
+    CREATE TABLE cache (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
     CREATE TABLE telegram_alert_job_targets (
       job_id TEXT NOT NULL,
       target_key TEXT NOT NULL,
@@ -76,6 +86,8 @@ function createHarness(): {
       final_delivery_state TEXT,
       final_delivery_at INTEGER,
       final_delivery_error TEXT,
+      cancelled_at INTEGER,
+      cancellation_reason TEXT,
       PRIMARY KEY (job_id, target_key)
     );
     CREATE TABLE telegram_subscribers (
@@ -170,6 +182,100 @@ function harness(): ReturnType<typeof createHarness> {
 }
 
 describe("fresh Telegram delivery effect fence", () => {
+  it("invalidates a fresh safety target when its model identity is stale before send", async () => {
+    const { sqlite, db } = harness();
+    sqlite.exec("DELETE FROM telegram_alert_job_targets");
+    const nowSec = Math.floor(Date.now() / 1000);
+    const currentIdentity = {
+      model: "v8" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      evaluationBuildDigest: "a".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+      publicationGenerationId: "report-cards:v8:fresh-current",
+    };
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+      ALERT_SAFETY_SOURCE_CACHE_KEY,
+      JSON.stringify({
+        generation: getAlertSafetySourceGeneration(currentIdentity.methodologyVersion),
+        safetyScoreIdentity: currentIdentity,
+        publicationGenerationId: currentIdentity.publicationGenerationId,
+        methodologyVersion: currentIdentity.methodologyVersion,
+        publishedAt: nowSec - 60,
+        snapshot: {
+          "usdc-circle": {
+            grade: "A",
+            score: 91,
+            methodologyVersion: currentIdentity.methodologyVersion,
+          },
+        },
+      }),
+      nowSec - 60,
+    );
+    const staleIdentity = {
+      model: "v9" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: "candidate-v9.0",
+      policyId: "safety-score-v9",
+      policyDigest: "c".repeat(64),
+      evaluationBuildDigest: "d".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}`,
+      publicationGenerationId: "report-cards:v9:stale",
+    };
+    const alerts = subscriber().alerts;
+    alerts.safety.push({
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+      oldGrade: "B",
+      newGrade: "A",
+      oldScore: 78,
+      newScore: 91,
+    });
+    const routed: RoutedSubscriberAlert = {
+      ...subscriber(),
+      alerts,
+      canonicalHtml: "<b>USDC Safety B to A</b>",
+      chunks: ["<b>USDC Safety B to A</b>"],
+      alertType: "safety",
+      sourceEventId: "telegram-source:test:v1:stale-safety",
+      preferenceGeneration: 1,
+      alertScope: [{ stablecoinId: "usdc-circle", family: "safety" }],
+      safetyScoreIdentity: staleIdentity,
+    };
+    const [message] = expandSubscriberChunks([routed]);
+    const targetKey = buildDedupeKey(message);
+    sqlite.prepare(
+      `INSERT INTO telegram_alert_job_targets (
+         job_id, target_key, chat_id, alert_type, pending_dedupe_key, created_at
+       ) VALUES ('job-1', ?, '42', 'safety', ?, ?)`,
+    ).run(targetKey, targetKey, nowSec);
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const outcome = await deliverFreshAlerts(
+      db,
+      [message],
+      [routed],
+      "token",
+      0,
+      0,
+      Date.now(),
+      new Map([[targetKey, "job-1"]]),
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(outcome).toMatchObject({ freshAttempted: 0, freshSent: 0 });
+    expect(
+      sqlite.prepare(
+        "SELECT status, effect_state, cancellation_reason FROM telegram_alert_job_targets WHERE job_id = 'job-1'",
+      ).get(),
+    ).toEqual({
+      status: "failed",
+      effect_state: "unstarted",
+      cancellation_reason: "safety_identity_changed",
+    });
+  });
+
   it("does not cross the effect boundary when the run aborts before send", async () => {
     const { sqlite, db, routed, targetKey } = harness();
     const controller = new AbortController();

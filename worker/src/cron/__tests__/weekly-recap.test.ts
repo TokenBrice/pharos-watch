@@ -11,6 +11,15 @@ vi.mock("../../lib/telegram-digest-outbox", () => ({
   deliverTelegramDigestEdition: vi.fn(),
 }));
 
+vi.mock("../../lib/digest-safety-context", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/digest-safety-context")>();
+  return {
+    ...actual,
+    loadDigestSafetyContext: vi.fn(),
+    digestSafetyContextFromPersistedInput: vi.fn(),
+  };
+});
+
 vi.mock("../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcomeSafe: vi.fn(async () => {}),
@@ -24,6 +33,25 @@ import {
 } from "../../lib/telegram-digest-outbox";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { DIGEST_MODEL } from "../../lib/constants";
+import {
+  digestSafetyContextFromPersistedInput,
+  loadDigestSafetyContext,
+} from "../../lib/digest-safety-context";
+
+const safetyContext = {
+  status: "available" as const,
+  expectedModel: "v8" as const,
+  identity: {
+    model: "v8" as const,
+    schemaVersion: 1 as const,
+    methodologyVersion: "8.17",
+    evaluationBuildDigest: "a".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+    publicationGenerationId: "report-cards:v8:test",
+  },
+  publishedAt: 1_774_800_000,
+  reason: null,
+};
 
 const VALID_WEEKLY_EXTENDED = [
   "PSI opened the trailing edition window at 90 and closed at 86, never leaving BEDROCK but losing four points across five daily notes. USDT stayed near 1.00 in every fixture row, which makes the week's story less about a broken peg and more about calm data refusing to become a headline. The recap should notice the drift without inventing a crisis.",
@@ -145,6 +173,8 @@ describe("generateWeeklyRecap", () => {
     vi.setSystemTime(new Date("2026-03-30T12:00:00.000Z"));
     vi.clearAllMocks();
     vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
+    vi.mocked(loadDigestSafetyContext).mockResolvedValue(safetyContext);
+    vi.mocked(digestSafetyContextFromPersistedInput).mockReturnValue(safetyContext);
     vi.mocked(enqueueTelegramDigestEdition).mockResolvedValue({
       created: true,
       payloadMatched: true,
@@ -370,6 +400,42 @@ describe("generateWeeklyRecap", () => {
     expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
   });
 
+  it.each([
+    "failed: Error: Telegram digest failed_permanent: stale_safety_identity:identity-mismatch",
+    "queued: execution_unknown",
+  ])("does not auto-retry an operator-terminal weekly outbox row (%s)", async (telegramDeliveryStatus) => {
+    const existingGeneratedAt = Math.floor(Date.UTC(2026, 2, 30, 12, 0, 0) / 1000);
+    const existing = {
+      generated_at: existingGeneratedAt,
+      digest_title: "Weekly Terminal",
+      digest_text: "A stored weekly digest.",
+      digest_extended: VALID_WEEKLY_EXTENDED,
+      digest_meta: JSON.stringify({
+        type: "weekly",
+        telegramDelivered: false,
+        telegramDeliveryStatus,
+      }),
+    };
+    const db = mockD1([
+      {
+        match: "SELECT generated_at, digest_title, digest_text, digest_extended, digest_meta",
+        rows: [existing],
+        first: existing,
+      },
+    ], { requireMatch: true });
+
+    const result = await generateWeeklyRecap(
+      db,
+      "anthropic-key",
+      { botToken: "bot", chatId: "chat" },
+    );
+
+    expect(result.status).toBe("skipped_neutral");
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(db.getHistory().some((entry) => entry.sql.includes("SET digest_meta = ?"))).toBe(false);
+  });
+
   it("preserves blocked quality-gate metadata when Telegram delivery is skipped", async () => {
     const db = mockD1(makeTables(), { requireMatch: true });
     vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse({
@@ -397,6 +463,38 @@ describe("generateWeeklyRecap", () => {
       qualityGate: "blocked",
       telegramDelivered: false,
       telegramDeliveryStatus: "skipped: quality-gate",
+    });
+  });
+
+  it("blocks weekly copy that makes grade claims while safety context is unavailable", async () => {
+    vi.mocked(loadDigestSafetyContext).mockResolvedValueOnce({
+      status: "unavailable",
+      expectedModel: "v9",
+      identity: null,
+      publishedAt: null,
+      reason: "v9-snapshot-unavailable",
+    });
+    const db = mockD1(makeTables(), { requireMatch: true });
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+
+    const result = await generateWeeklyRecap(
+      db,
+      "anthropic-key",
+      { botToken: "bot", chatId: "chat" },
+    );
+
+    expect(result.status).toBe("degraded");
+    expect(result.metadata).toContain("unbound-safety-copy:hard");
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(JSON.parse(String(insert?.binds[5]))).toMatchObject({
+      qualityGate: "blocked",
+      safetyContext: {
+        status: "unavailable",
+        reason: "v9-snapshot-unavailable",
+      },
     });
   });
 
@@ -580,7 +678,19 @@ describe("generateWeeklyRecap", () => {
       ...rows[2]!,
       input_data: JSON.stringify({
         ...(JSON.parse(rows[2]!.input_data) as Record<string, unknown>),
-        gradeTransitions: [{ symbol: "USDT", fromGrade: "A", toGrade: "B", mcapUsd: 2_000_000 }],
+        gradeTransitions: [{
+          historyId: "history:usdt:1",
+          recordedAt: rows[2]!.generated_at,
+          model: "v8",
+          safetyScoreIdentity: safetyContext.identity,
+          symbol: "USDT",
+          fromGrade: "A",
+          toGrade: "B",
+          fromScore: 90,
+          toScore: 80,
+          currentDimensions: { peg: 95, liq: 80, resilience: null, decentralization: null },
+          mcapUsd: 2_000_000,
+        }],
       }),
     };
     const db = mockD1(makeTables({ dailyRows: rows }), { requireMatch: true });

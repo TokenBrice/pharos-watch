@@ -114,6 +114,7 @@ describe("runYieldCoverageAudit", () => {
       reason: "report-card-cache:completeness-mismatch",
       scores: new Map(),
       source: "report-card-cache",
+      expectedModel: "v8",
       safetyScoreIdentity: null,
       publicationGenerationId: null,
       methodologyVersion: null,
@@ -126,11 +127,52 @@ describe("runYieldCoverageAudit", () => {
     expect(result.itemCount).toBe(0);
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       reason: "safety-snapshot-unavailable:report-card-cache:completeness-mismatch",
+      expectedModel: "v8",
     });
     expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledOnce();
     expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledWith(expect.anything(), {
       outputMode: "map",
       sourceMode: "published-cache",
+    });
+    expect(mockSetCache).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["active V9 marker", "active-safety-score:v9"],
+    ["malformed V9 marker", "active-safety-score:activation-marker-invalid"],
+    ["mismatched V9 identity", "active-safety-score:v9-identity-mismatch"],
+  ])("defers with explicit V9 provenance for %s", async (_label, reason) => {
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools: [{
+        pool: "new-usdc", chain: "Ethereum", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000,
+        apy: 4, apyBase: 4, apyReward: null, apyMean30d: 4, stablecoin: true, exposure: "single", underlyingTokens: null,
+      }],
+      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: 1, fallbackMode: null },
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue({
+      kind: "degraded",
+      mode: "map",
+      coveredCount: 0,
+      trackedCount: 1,
+      coverageRatio: 0,
+      reason,
+      scores: new Map(),
+      source: "report-card-cache",
+      expectedModel: "v9",
+      safetyScoreIdentity: null,
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      publishedAt: null,
+    } as never);
+
+    const result = await runYieldCoverageAudit(mockD1());
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(0);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: `safety-snapshot-unavailable:${reason}`,
+      expectedModel: "v9",
+      safetyScoreIdentity: null,
     });
     expect(mockSetCache).not.toHaveBeenCalled();
   });
@@ -192,6 +234,7 @@ describe("runYieldCoverageAudit", () => {
       coverageRatio: 1,
       scores: new Map(),
       source: "report-card-cache",
+      expectedModel: "v8",
       safetyScoreIdentity: v8Identity(),
       publicationGenerationId: v8Identity().publicationGenerationId,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
@@ -362,6 +405,7 @@ describe("runYieldCoverageAudit", () => {
       coverageRatio: 1,
       scores: new Map(),
       source: "report-card-cache",
+      expectedModel: "v8",
       safetyScoreIdentity: v8Identity(),
       publicationGenerationId: v8Identity().publicationGenerationId,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,

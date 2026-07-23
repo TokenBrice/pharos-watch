@@ -307,8 +307,11 @@ export async function persistEvaluatedYieldSources(
       source.yieldStability != null && Number.isFinite(source.yieldStability) ? source.yieldStability : null;
     const safePharosYieldScore =
       source.pharosYieldScore != null && Number.isFinite(source.pharosYieldScore) ? source.pharosYieldScore : null;
+    const safetySnapshotUnavailable = source.safetyProvenance === "safety-snapshot-unavailable";
     const safeSafetyScore =
-      source.safetyScore != null && Number.isFinite(source.safetyScore) ? source.safetyScore : null;
+      !safetySnapshotUnavailable && source.safetyScore != null && Number.isFinite(source.safetyScore)
+        ? source.safetyScore
+        : null;
 
     yieldDataRows.push({
       stablecoin_id: source.id,
@@ -324,9 +327,9 @@ export async function persistEvaluatedYieldSources(
       source_pool: source.sourcePool,
       source_tvl_usd: source.sourceTvlUsd,
       data_source: source.dataSource,
-      safety_score: source.safetyScore,
+      safety_score: safeSafetyScore,
       safety_grade: source.safetyGrade,
-      pharos_yield_score: source.pharosYieldScore,
+      pharos_yield_score: safePharosYieldScore,
       yield_to_risk: source.yieldToRisk,
       excess_yield: source.excessYield,
       yield_stability: safeStability,
@@ -361,19 +364,21 @@ export async function persistEvaluatedYieldSources(
       pys_at_publish: safePharosYieldScore,
       safety_at_publish: safeSafetyScore,
       variance_at_publish: safeVariance30d,
-      pys_inputs_at_publish: JSON.stringify({
-        schemaVersion: 1,
-        methodologyVersion: YIELD_METHODOLOGY_VERSION,
-        apy30d: source.apy30d,
-        safetyScore: source.safetyScore,
-        varianceScore: source.apyVarianceScore,
-        benchmarkRate: source.benchmarkRate,
-        sourceRiskPenalty: source.sourceRiskPenalty,
-        scalingFactor: PYS_SCALING_FACTOR,
-        scoreQualification: source.scoreQualification,
-        benchmarkKey: source.benchmarkKey,
-        evidenceClass: source.evidenceClass,
-      }),
+      pys_inputs_at_publish: safetySnapshotUnavailable
+        ? null
+        : JSON.stringify({
+            schemaVersion: 1,
+            methodologyVersion: YIELD_METHODOLOGY_VERSION,
+            apy30d: source.apy30d,
+            safetyScore: source.safetyScore,
+            varianceScore: source.apyVarianceScore,
+            benchmarkRate: source.benchmarkRate,
+            sourceRiskPenalty: source.sourceRiskPenalty,
+            scalingFactor: PYS_SCALING_FACTOR,
+            scoreQualification: source.scoreQualification,
+            benchmarkKey: source.benchmarkKey,
+            evidenceClass: source.evidenceClass,
+          }),
     });
 
     rankingProvenanceByKey.set(

@@ -1,6 +1,143 @@
 import { z } from "zod";
 import type { DepegDirection } from "./market";
-import type { SafetyScorePublicationIdentity } from "./safety-score-publication";
+import {
+  SafetyScorePublicationIdentitySchema,
+  SafetyScoreV8PublicationIdentitySchema,
+  SafetyScoreV9PublicationIdentitySchema,
+  type SafetyScorePublicationIdentity,
+  type SafetyScoreV8PublicationIdentity,
+  type SafetyScoreV9PublicationIdentity,
+} from "./safety-score-publication";
+
+export type DigestSafetyContext =
+  | {
+      status: "available";
+      expectedModel: SafetyScorePublicationIdentity["model"];
+      identity: SafetyScorePublicationIdentity;
+      publishedAt: number;
+      reason: null;
+    }
+  | {
+      status: "unavailable";
+      expectedModel: SafetyScorePublicationIdentity["model"];
+      identity: null;
+      publishedAt: null;
+      reason: string;
+    };
+
+export const DigestSafetyContextSchema = z
+  .discriminatedUnion("status", [
+    z
+      .object({
+        status: z.literal("available"),
+        expectedModel: z.enum(["v8", "v9"]),
+        identity: SafetyScorePublicationIdentitySchema,
+        publishedAt: z.number().int().nonnegative(),
+        reason: z.null(),
+      })
+      .strict(),
+    z
+      .object({
+        status: z.literal("unavailable"),
+        expectedModel: z.enum(["v8", "v9"]),
+        identity: z.null(),
+        publishedAt: z.null(),
+        reason: z.string().min(1),
+      })
+      .strict(),
+  ])
+  .superRefine((context, ctx) => {
+    if (context.status === "available" && context.identity.model !== context.expectedModel) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["expectedModel"],
+        message: "Digest Safety Score expected model must match its exact publication identity",
+      });
+    }
+  });
+
+export interface DigestV8SafetyCoin {
+  symbol: string;
+  grade: string;
+  score: number;
+  peg: number | null;
+  liq: number | null;
+}
+
+export interface DigestV9SafetyPillar {
+  score: number | null;
+  evidenceLevel: string;
+  freshness: string;
+  reasons: { code: string; message: string }[];
+}
+
+export interface DigestV9SafetyCap {
+  kind: string;
+  limit: number;
+  reason: string;
+  binding: boolean;
+}
+
+export interface DigestV9SafetyCoin {
+  symbol: string;
+  grade: string;
+  score: number | null;
+  pillars: {
+    backing: DigestV9SafetyPillar;
+    exit: DigestV9SafetyPillar;
+    control: DigestV9SafetyPillar;
+  };
+  reasonCodes: string[];
+  caps: DigestV9SafetyCap[];
+  bindingCap: DigestV9SafetyCap | null;
+}
+
+export type DigestSafetyScores =
+  | {
+      model: "v8";
+      mentionedCoins: DigestV8SafetyCoin[];
+      medianGrade: string;
+      aboveBCount: number;
+      fCount: number;
+      provenance: SafetyScoreV8PublicationIdentity & { publishedAt: number };
+    }
+  | {
+      model: "v9";
+      mentionedCoins: DigestV9SafetyCoin[];
+      gradeDistribution: Record<string, number>;
+      provenance: SafetyScoreV9PublicationIdentity & { publishedAt: number };
+    };
+
+interface DigestGradeTransitionBase {
+  historyId: string;
+  recordedAt: number;
+  symbol: string;
+  fromGrade: string;
+  toGrade: string;
+  fromScore: number | null;
+  toScore: number | null;
+  mcapUsd: number;
+}
+
+export type DigestGradeTransition =
+  | (DigestGradeTransitionBase & {
+      model: "v8";
+      safetyScoreIdentity: SafetyScoreV8PublicationIdentity;
+      currentDimensions: {
+        peg: number | null;
+        liq: number | null;
+        resilience: number | null;
+        decentralization: number | null;
+      };
+    })
+  | (DigestGradeTransitionBase & {
+      model: "v9";
+      safetyScoreIdentity: SafetyScoreV9PublicationIdentity;
+      currentPillars: DigestV9SafetyCoin["pillars"];
+      reasonCodes: string[];
+      caps: DigestV9SafetyCap[];
+      bindingCap: DigestV9SafetyCap | null;
+    });
 
 export type DigestEditorialCandidateKind =
   | "depeg"
@@ -106,6 +243,7 @@ export interface DigestInputData {
   calmNarrativeFrame?: DigestCalmNarrativeFrame;
   editorialAudit?: DigestEditorialAudit;
   degradedSources?: string[];
+  safetyContext?: DigestSafetyContext;
   /** Curated cause annotations for coins in the depeg set (why it broke). */
   causeContext?: {
     stablecoinId: string;
@@ -177,21 +315,7 @@ export interface DigestInputData {
     coin: string;
     change7d: number;
   }[];
-  safetyScores?: {
-    mentionedCoins: { symbol: string; grade: string; score: number; peg: number | null; liq: number | null }[];
-    medianGrade: string;
-    aboveBCount: number;
-    fCount: number;
-    provenance: {
-      model: "v8";
-      schemaVersion: 1;
-      methodologyVersion: string;
-      evaluationBuildDigest: string;
-      baseInputGenerationId: string;
-      publicationGenerationId: string;
-      publishedAt: number;
-    };
-  };
+  safetyScores?: DigestSafetyScores;
   resolvedDepegs?: {
     stablecoinId?: string;
     symbol: string;
@@ -268,20 +392,7 @@ export interface DigestInputData {
     mcapUsd: number;
     marketImpact: number;
   }[];
-  gradeTransitions?: {
-    symbol: string;
-    fromGrade: string;
-    toGrade: string;
-    fromScore: number;
-    toScore: number;
-    currentDimensions: {
-      peg: number | null;
-      liq: number | null;
-      resilience: number | null;
-      decentralization: number | null;
-    };
-    mcapUsd: number;
-  }[];
+  gradeTransitions?: DigestGradeTransition[];
   yieldAnomalies?: {
     symbol: string;
     currentApy: number;
@@ -448,6 +559,80 @@ export const DigestArchiveResponseSchema = z.object({
 });
 export type DigestArchiveResponse = z.infer<typeof DigestArchiveResponseSchema>;
 
+const DigestV8SafetyProvenanceSchema = SafetyScoreV8PublicationIdentitySchema.extend({
+  publishedAt: z.number().int().nonnegative(),
+});
+
+const DigestV9SafetyProvenanceSchema = SafetyScoreV9PublicationIdentitySchema.extend({
+  publishedAt: z.number().int().nonnegative(),
+});
+
+const DigestV9SafetyPillarSchema = z
+  .object({
+    score: z.number().nullable(),
+    evidenceLevel: z.string(),
+    freshness: z.string(),
+    reasons: z.array(z.object({ code: z.string(), message: z.string() }).passthrough()),
+  })
+  .passthrough();
+
+const DigestV9SafetyCapSchema = z
+  .object({
+    kind: z.string(),
+    limit: z.number(),
+    reason: z.string(),
+    binding: z.boolean(),
+  })
+  .passthrough();
+
+const DigestV8SafetyScoresSnapshotSchema = z
+  .object({
+    model: z.literal("v8").optional(),
+    mentionedCoins: z.array(
+      z
+        .object({
+          symbol: z.string(),
+          grade: z.string().optional(),
+          score: z.number().optional(),
+          peg: z.number().nullable().optional(),
+          liq: z.number().nullable().optional(),
+        })
+        .passthrough(),
+    ),
+    medianGrade: z.string(),
+    aboveBCount: z.number(),
+    fCount: z.number(),
+    provenance: DigestV8SafetyProvenanceSchema.optional(),
+  })
+  .passthrough();
+
+const DigestV9SafetyScoresSnapshotSchema = z
+  .object({
+    model: z.literal("v9"),
+    mentionedCoins: z.array(
+      z
+        .object({
+          symbol: z.string(),
+          grade: z.string(),
+          score: z.number().nullable(),
+          pillars: z
+            .object({
+              backing: DigestV9SafetyPillarSchema,
+              exit: DigestV9SafetyPillarSchema,
+              control: DigestV9SafetyPillarSchema,
+            })
+            .passthrough(),
+          reasonCodes: z.array(z.string()),
+          caps: z.array(DigestV9SafetyCapSchema),
+          bindingCap: DigestV9SafetyCapSchema.nullable(),
+        })
+        .passthrough(),
+    ),
+    gradeDistribution: z.record(z.string(), z.number()),
+    provenance: DigestV9SafetyProvenanceSchema,
+  })
+  .passthrough();
+
 // Validate the impactful fields actually rendered by digest-snapshot.tsx so
 // snapshot drift/corruption is caught at the contract boundary, while keeping
 // .passthrough() to preserve the many other DigestInputData fields untouched.
@@ -463,6 +648,7 @@ const DigestSnapshotInputDataSchema = z
     nextTriggers: z.array(DigestNextTriggerSchema).optional(),
     forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).optional(),
     riskTape: z.array(DigestRiskTapeItemSchema).optional(),
+    safetyContext: DigestSafetyContextSchema.optional(),
     topDepegs: z
       .array(
         z
@@ -508,34 +694,7 @@ const DigestSnapshotInputDataSchema = z
       .nullable()
       .optional(),
     safetyScores: z
-      .object({
-        mentionedCoins: z.array(
-          z
-            .object({
-              symbol: z.string(),
-              grade: z.string().optional(),
-              score: z.number().optional(),
-              peg: z.number().nullable().optional(),
-              liq: z.number().nullable().optional(),
-            })
-            .passthrough(),
-        ),
-        medianGrade: z.string(),
-        aboveBCount: z.number(),
-        fCount: z.number(),
-        provenance: z
-          .object({
-            model: z.literal("v8"),
-            schemaVersion: z.literal(1),
-            methodologyVersion: z.string(),
-            evaluationBuildDigest: z.string(),
-            baseInputGenerationId: z.string(),
-            publicationGenerationId: z.string(),
-            publishedAt: z.number(),
-          })
-          .optional(),
-      })
-      .passthrough()
+      .union([DigestV9SafetyScoresSnapshotSchema, DigestV8SafetyScoresSnapshotSchema])
       .optional(),
     yieldAnomalies: z
       .array(

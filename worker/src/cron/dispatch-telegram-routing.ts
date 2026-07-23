@@ -23,6 +23,7 @@ import {
 } from "../lib/telegram-constants";
 import { TELEGRAM_ALERT_TTL_SEC } from "@shared/lib/telegram-delivery-policy";
 import type { PerAlertTypeDelivery, PerAlertTypeDeliveryStats, TelegramAlertType } from "@shared/types/status";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import {
   claimFreshTelegramAlertTargets,
   createTelegramFreshTargetOwner,
@@ -39,6 +40,11 @@ import {
   telegramTransportPermitSkip,
   type TelegramTransportPermit,
 } from "../lib/telegram-transport-control";
+import {
+  alertSafetyIdentitiesAreComparable,
+  loadActiveAlertSafetySourceAssessment,
+} from "../lib/alert-safety-source-cache";
+import { recordTelegramAlertTargetCancellations } from "./telegram-alert-target-status";
 
 type AlertAppender<T> = (alerts: ConsolidatedAlerts) => T[];
 
@@ -140,6 +146,7 @@ export interface RoutedSubscriberAlert {
   sourceEventId?: string;
   preferenceGeneration?: number;
   alertScope?: PendingAlertScopeItem[];
+  safetyScoreIdentity?: SafetyScorePublicationIdentity;
 }
 
 export interface FreshSendOutcome {
@@ -374,6 +381,7 @@ export interface PlannedSubscriberAlert {
   alertType: TelegramAlertType;
   alertTypes?: readonly TelegramAlertType[];
   sourceEventId?: string;
+  safetyScoreIdentity?: SafetyScorePublicationIdentity;
   /** Cheap chunk-count estimate (no formatting); see `estimateChatChunks`. */
   estimatedChunks: number;
 }
@@ -409,6 +417,7 @@ function estimateChatChunks(alerts: ConsolidatedAlerts): number {
 export function planSubscriberQueue(
   alertsByChat: Map<string, AlertsByChatEntry>,
   sourceEventId?: string,
+  safetyScoreIdentity?: SafetyScorePublicationIdentity | null,
 ): PlannedSubscriberAlert[] {
   return [...alertsByChat.entries()]
     .map(([chatId, entry]) => ({
@@ -417,6 +426,12 @@ export function planSubscriberQueue(
       alertType: dominantAlertType(entry.alerts),
       alertTypes: alertTypesForConsolidated(entry.alerts),
       sourceEventId,
+      ...(
+        safetyScoreIdentity &&
+        (entry.alerts.safety.length > 0 || entry.alerts.burst?.dominantFamily === "safety")
+          ? { safetyScoreIdentity }
+          : {}
+      ),
       estimatedChunks: estimateChatChunks(entry.alerts),
     }))
     .sort((a, b) => b.entry.lastActiveAt - a.entry.lastActiveAt);
@@ -471,6 +486,9 @@ export function formatPlannedSubscriber(
     routed.sourceEventId = plan.sourceEventId;
     routed.preferenceGeneration = plan.entry.preferenceGeneration ?? 0;
     routed.alertScope = buildPendingAlertScope(plan.entry.alerts);
+    if (plan.safetyScoreIdentity) {
+      routed.safetyScoreIdentity = plan.safetyScoreIdentity;
+    }
   }
   return routed;
 }
@@ -553,6 +571,9 @@ export function expandSubscriberChunks(
               sourceEventId: sub.sourceEventId,
               preferenceGeneration: sub.preferenceGeneration,
               alertScope: sub.alertScope,
+              ...(sub.safetyScoreIdentity
+                ? { safetyScoreIdentity: sub.safetyScoreIdentity }
+                : {}),
             }
           : {}),
         ...(linkPreviewOptions ? { linkPreviewOptions } : {}),
@@ -598,14 +619,49 @@ export async function deliverFreshAlerts(
               for (const entry of entries) skipped.set(entry.index, skip);
               return skipped;
             }
-            const identities = entries.map(({ item }) => {
-              const targetKey = buildDedupeKey(item);
-              const jobId = freshTargetJobIds.get(targetKey);
-              if (!jobId) {
-                throw new Error("Telegram fresh target has no durable manifest identity");
+            const skipped = new Map<number, PreSendBatchResult>();
+            const safetyEntries = entries.filter(({ item }) =>
+              item.alertScope?.some((scope) => scope.family === "safety"));
+            if (safetyEntries.length > 0) {
+              const identityAssessment = await loadActiveAlertSafetySourceAssessment(
+                db,
+                permitNowSec,
+                signal,
+              );
+              const currentIdentity = identityAssessment.state === "ok"
+                ? identityAssessment.envelope?.safetyScoreIdentity ?? null
+                : null;
+              const cancellations: Array<{ targetKey: string; at: number; reason: string }> = [];
+              for (const entry of safetyEntries) {
+                const comparable = entry.item.safetyScoreIdentity &&
+                  currentIdentity &&
+                  alertSafetyIdentitiesAreComparable(
+                    entry.item.safetyScoreIdentity,
+                    currentIdentity,
+                  );
+                if (comparable) continue;
+                const reason = currentIdentity == null
+                  ? "safety_identity_unavailable"
+                  : "safety_identity_changed";
+                skipped.set(entry.index, buildPreSendFenceSkip());
+                cancellations.push({
+                  targetKey: buildDedupeKey(entry.item),
+                  at: permitNowSec,
+                  reason,
+                });
               }
-              return { jobId, targetKey };
-            });
+              await recordTelegramAlertTargetCancellations(db, cancellations);
+            }
+            const identities = entries
+              .filter((entry) => !skipped.has(entry.index))
+              .map(({ item }) => {
+                const targetKey = buildDedupeKey(item);
+                const jobId = freshTargetJobIds.get(targetKey);
+                if (!jobId) {
+                  throw new Error("Telegram fresh target has no durable manifest identity");
+                }
+                return { jobId, targetKey };
+              });
             const { claims, skippedTargetKeys } = await claimFreshTelegramAlertTargets(
               db,
               identities,
@@ -615,14 +671,12 @@ export async function deliverFreshAlerts(
             );
             await markFreshTelegramAlertTargetsSending(db, [...claims.values()], Math.floor(Date.now() / 1000), signal);
             for (const [targetKey, claim] of claims) freshTargetClaimsByKey.set(targetKey, claim);
-            if (skippedTargetKeys.size === 0) return;
-            const skipped = new Map<number, PreSendBatchResult>();
             for (const entry of entries) {
               if (skippedTargetKeys.has(buildDedupeKey(entry.item))) {
                 skipped.set(entry.index, buildPreSendFenceSkip());
               }
             }
-            return skipped;
+            return skipped.size > 0 ? skipped : undefined;
           },
           afterSendBatch: async (entries, results) => {
             const completedAt = Math.floor(Date.now() / 1000);

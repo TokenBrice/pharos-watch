@@ -4,6 +4,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-versi
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
 
 // Mock stablecoins to avoid importing full metadata tree
 vi.mock("@shared/lib/stablecoins/registry", () => ({
@@ -192,6 +193,7 @@ describe("handleChains", () => {
         dependencies: {
           reportCards: {
             status: FreshnessStatus | "unavailable";
+            expectedModel: "v8" | "v9";
           };
         };
       };
@@ -202,6 +204,7 @@ describe("handleChains", () => {
     expect(body._meta.status).toBe("fresh");
     expect(body._meta.ageSeconds).toBeGreaterThanOrEqual(0);
     expect(body._meta.dependencies.reportCards.status).toBe("fresh");
+    expect(body._meta.dependencies.reportCards.expectedModel).toBe("v8");
     expect(body.safetyScoreIdentity).toMatchObject({ model: "v8" });
     expect(body._meta.safetyScoreIdentity).toEqual(body.safetyScoreIdentity);
     expect(response.headers.get("Warning")).toBeNull();
@@ -383,6 +386,118 @@ describe("handleChains", () => {
       reason: expectedReason,
     });
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it.each([
+    [
+      "a valid V9 activation marker",
+      {
+        kind: "v9",
+        expectedModel: "v9",
+        activationUpdatedAt: 1_800_000_000,
+        snapshot: { updatedAt: 1_800_000_030 },
+      },
+      "active-model-v9",
+    ],
+    [
+      "a malformed V9 activation marker",
+      {
+        kind: "error",
+        expectedModel: "v9",
+        activationUpdatedAt: 1_800_000_000,
+        reason: "activation-marker-invalid",
+      },
+      "activation-marker-invalid",
+    ],
+    [
+      "a mismatched V9 activation identity",
+      {
+        kind: "error",
+        expectedModel: "v9",
+        activationUpdatedAt: 1_800_000_000,
+        reason: "v9-identity-mismatch",
+      },
+      "v9-identity-mismatch",
+    ],
+  ] as const)("keeps chain supply but withholds safety-derived health for %s", async (
+    _label,
+    activeSource,
+    expectedReason,
+  ) => {
+    const payload = {
+      peggedAssets: [
+        {
+          id: "usdt-tether",
+          symbol: "USDT",
+          name: "Tether",
+          price: 1,
+          pegType: "peggedUSD",
+          circulating: { peggedUSD: 100 },
+          chainCirculating: {
+            ethereum: { current: 100, circulatingPrevDay: 100, circulatingPrevWeek: 100, circulatingPrevMonth: 100 },
+          },
+        },
+      ],
+    };
+    const activeSourceSpy = vi
+      .spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockResolvedValueOnce(activeSource as never);
+    const db = mockD1([
+      freshCache(payload),
+      reportCardCache({ "usdt-tether": { score: 99, grade: "A+" } }),
+    ]);
+
+    const response = await handleChains(db);
+    const body = (await response.json()) as {
+      chains: Array<{
+        totalUsd: number;
+        healthScore: number | null;
+        healthBand: string | null;
+        healthFactors: { quality: number | null; pegStability: number };
+      }>;
+      safetyScoreIdentity: unknown;
+      _meta: {
+        status: FreshnessStatus;
+        safetyScoreIdentity: unknown;
+        dependencies: {
+          reportCards: {
+            status: string;
+            reason: string;
+            expectedModel: string;
+          };
+        };
+      };
+    };
+
+    expect(body.chains[0]).toMatchObject({
+      totalUsd: 100,
+      healthScore: null,
+      healthBand: null,
+      healthFactors: {
+        quality: null,
+      },
+    });
+    expect(body.chains[0]?.healthFactors.pegStability).toBeTypeOf("number");
+    expect(body.safetyScoreIdentity).toBeNull();
+    expect(body._meta).toMatchObject({
+      status: "degraded",
+      safetyScoreIdentity: null,
+      dependencies: {
+        reportCards: {
+          status: "unavailable",
+          reason: expectedReason,
+          expectedModel: "v9",
+        },
+      },
+    });
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Warning")).toContain(
+      `safety-score dependency ${expectedReason.replace(/-/g, " ")}`,
+    );
+    expect(
+      db.getHistory().some((entry) => entry.binds.includes("report_card_cache")),
+    ).toBe(false);
+    activeSourceSpy.mockRestore();
   });
 
   it("marks the response degraded when the stablecoins snapshot is older than the 1800s chains budget", async () => {

@@ -49,6 +49,7 @@ const dependencyUnavailable: V9UnresolvedFact = {
   reason: "A material required dependency is unavailable.",
   critical: false,
   path: "dependencies",
+  responsibility: "integration-missing",
 };
 
 const weakOracleBranch: V9StructuralSignal = {
@@ -143,13 +144,19 @@ export const MATCHED_V9_INVARIANTS = [
             code: "bounded-unknown-reserve-exposure",
             reason: "A noncritical fact is missing.",
             critical: false,
+            responsibility: "integration-missing",
           },
         ],
       },
       criticalMissing: {
         evidenceLevel: "insufficient",
         structuralSignals: [],
-        unresolved: [{ code: "insufficient-evidence", reason: "A critical fact is missing.", critical: true }],
+        unresolved: [{
+          code: "insufficient-evidence",
+          reason: "A critical fact is missing.",
+          critical: true,
+          responsibility: "integration-missing",
+        }],
       },
     } satisfies Record<
       string,

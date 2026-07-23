@@ -62,6 +62,7 @@ export interface YieldSyncLoadedState {
   safetySnapshot: PublishedSafetyScoresResultMap;
   safetyScores: SafetyScoresResultMap["scores"];
   safetyCoverageRatio: number;
+  safetySnapshotAvailable: boolean;
   safetySnapshotDegraded: boolean;
 }
 
@@ -346,8 +347,10 @@ export async function loadYieldSyncState(params: {
   }
   const safetyScores = safetySnapshot.scores;
   const safetyCoverageRatio = safetySnapshot.coverageRatio;
+  const safetySnapshotAvailable =
+    safetySnapshot.kind === "ok" && safetySnapshot.safetyScoreIdentity != null;
   const safetySnapshotDegraded =
-    safetySnapshot.kind !== "ok" || safetyCoverageRatio < MIN_SAFETY_SCORE_COVERAGE_RATIO;
+    !safetySnapshotAvailable || safetyCoverageRatio < MIN_SAFETY_SCORE_COVERAGE_RATIO;
 
   return {
     dlPools,
@@ -370,6 +373,7 @@ export async function loadYieldSyncState(params: {
     safetySnapshot,
     safetyScores,
     safetyCoverageRatio,
+    safetySnapshotAvailable,
     safetySnapshotDegraded,
   };
 }

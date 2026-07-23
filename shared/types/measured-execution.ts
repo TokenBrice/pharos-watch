@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { ExitRouteCapacityPointSchema } from "./exit-route";
+import { ExitRouteCapacityPointSchema, ExitRouteObservationHistorySchema } from "./exit-route";
 
 export const DEX_MEASURED_EXECUTION_SCHEMA_VERSION = "dex-measured-execution-v1" as const;
 export const DEX_MEASURED_TARGET_SCHEMA_VERSION = "dex-measured-target-v1" as const;
@@ -9,8 +9,29 @@ export const DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO = 1.02;
 export const DEX_MEASURED_MARGINAL_NOTIONAL_USD = 1_000;
 export const DEX_MEASURED_CAPACITY_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 export const DEX_MEASURED_FRESHNESS_MAX_SEC = 2 * 30 * 60;
+export const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
 
 const CanonicalEvmAddressSchema = z.string().regex(/^0x[a-f0-9]{40}$/);
+
+export const DexMeasuredExecutionObservationHistorySchema = ExitRouteObservationHistorySchema
+  .superRefine((history, ctx) => {
+    if (history.conservativeCapacityCurve.length !== DEX_MEASURED_CAPACITY_NOTIONALS_USD.length) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["conservativeCapacityCurve"],
+        message: `Measured observation history requires ${DEX_MEASURED_CAPACITY_NOTIONALS_USD.length} capacity points`,
+      });
+    }
+  });
+export type DexMeasuredExecutionObservationHistory = z.infer<
+  typeof DexMeasuredExecutionObservationHistorySchema
+>;
+
+export function isDexMeasuredExecutionObservationHistoryMature(
+  history: DexMeasuredExecutionObservationHistory | null | undefined,
+): boolean {
+  return (history?.successfulObservationCount ?? 0) >= DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT;
+}
 
 const DexMeasuredExecutionTokenSchema = z.object({
   address: CanonicalEvmAddressSchema,
@@ -103,6 +124,7 @@ export const DexMeasuredExecutionPublicProfileSchema = DexMeasuredExecutionProfi
   quoteProof: true,
   poolBindingProof: true,
 }).extend({
+  observationHistory: DexMeasuredExecutionObservationHistorySchema.optional(),
   poolProvenance: z.object({
     factoryAddress: CanonicalEvmAddressSchema,
     factoryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
@@ -113,11 +135,13 @@ export type DexMeasuredExecutionPublicProfile = z.infer<typeof DexMeasuredExecut
 
 export function toDexMeasuredExecutionPublicProfile(
   input: DexMeasuredExecutionProfile,
+  options: { observationHistory?: DexMeasuredExecutionObservationHistory } = {},
 ): DexMeasuredExecutionPublicProfile {
   const parsed = DexMeasuredExecutionProfileSchema.parse(input);
   const { quoteProof: _quoteProof, poolBindingProof, ...profile } = parsed;
   return DexMeasuredExecutionPublicProfileSchema.parse({
     ...profile,
+    ...(options.observationHistory ? { observationHistory: options.observationHistory } : {}),
     ...(poolBindingProof
       ? {
           poolProvenance: {

@@ -243,22 +243,50 @@ export function buildUserPrompt(
   if (data.gradeTransitions && data.gradeTransitions.length > 0) {
     lines.push("", "Grade Transitions (last 48h):");
     for (const transition of data.gradeTransitions) {
-      const dims = transition.currentDimensions;
-      lines.push(
-        `  ${transition.symbol} | ${transition.fromGrade} (${transition.fromScore}) -> ${transition.toGrade} (${transition.toScore}) | ${formatCurrency(transition.mcapUsd)} mcap | peg=${dims.peg}, liq=${dims.liq}, resilience=${dims.resilience}, decentralization=${dims.decentralization}`,
-      );
+      if (transition.model === "v9") {
+        const pillars = transition.currentPillars;
+        const cap = transition.bindingCap
+          ? ` | binding cap=${transition.bindingCap.kind} <=${transition.bindingCap.limit} (${transition.bindingCap.reason})`
+          : "";
+        const reasons = transition.reasonCodes.length > 0
+          ? ` | reasons=${transition.reasonCodes.join(",")}`
+          : "";
+        lines.push(
+          `  ${transition.symbol} | V9 ${transition.fromGrade} (${transition.fromScore ?? "NR"}) -> ${transition.toGrade} (${transition.toScore ?? "NR"}) | ${formatCurrency(transition.mcapUsd)} mcap | backing=${pillars.backing.score}, exit=${pillars.exit.score}, control=${pillars.control.score}${cap}${reasons}`,
+        );
+      } else {
+        const dims = transition.currentDimensions;
+        lines.push(
+          `  ${transition.symbol} | V8 ${transition.fromGrade} (${transition.fromScore ?? "NR"}) -> ${transition.toGrade} (${transition.toScore ?? "NR"}) | ${formatCurrency(transition.mcapUsd)} mcap | peg=${dims.peg}, liq=${dims.liq}, resilience=${dims.resilience}, decentralization=${dims.decentralization}`,
+        );
+      }
     }
   }
 
   if (data.safetyScores) {
-    const { mentionedCoins } = data.safetyScores;
-    if (mentionedCoins.length > 0) {
-      lines.push("", "Safety Scores:");
-      for (const coin of mentionedCoins) {
-        const parts = [`${coin.symbol}: ${coin.grade} (${coin.score}`];
-        if (coin.peg !== null) parts.push(`peg=${coin.peg}`);
-        if (coin.liq !== null) parts.push(`liq=${coin.liq}`);
-        lines.push(`  ${parts.join(", ")})`);
+    const { provenance } = data.safetyScores;
+    if (data.safetyScores.mentionedCoins.length > 0) {
+      lines.push(
+        "",
+        `Safety Scores (${provenance.model.toUpperCase()}, methodology=${provenance.methodologyVersion}, build=${provenance.evaluationBuildDigest}, generation=${provenance.publicationGenerationId}):`,
+      );
+      if (data.safetyScores.model === "v9") {
+        for (const coin of data.safetyScores.mentionedCoins) {
+          const cap = coin.bindingCap
+            ? ` | binding cap=${coin.bindingCap.kind} <=${coin.bindingCap.limit} (${coin.bindingCap.reason})`
+            : "";
+          const reasons = coin.reasonCodes.length > 0 ? ` | reasons=${coin.reasonCodes.join(",")}` : "";
+          lines.push(
+            `  ${coin.symbol}: ${coin.grade} (${coin.score ?? "NR"}) | backing=${coin.pillars.backing.score}, exit=${coin.pillars.exit.score}, control=${coin.pillars.control.score}${cap}${reasons}`,
+          );
+        }
+      } else {
+        for (const coin of data.safetyScores.mentionedCoins) {
+          const parts = [`${coin.symbol}: ${coin.grade} (${coin.score}`];
+          if (coin.peg !== null) parts.push(`peg=${coin.peg}`);
+          if (coin.liq !== null) parts.push(`liq=${coin.liq}`);
+          lines.push(`  ${parts.join(", ")})`);
+        }
       }
     }
   }

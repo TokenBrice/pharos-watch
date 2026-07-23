@@ -4,7 +4,13 @@ Use this runbook when the `telegram-digest-outbox-drain` budget-only status surf
 
 ## Contract
 
-`telegram_digest_outbox` stores the target channel, exact rendered chunk array, success actions, and accepted-chunk cursor before the first Bot API request.
+`telegram_digest_outbox` stores the target channel, exact rendered chunk array,
+success actions, accepted-chunk cursor, and the digest's authored Safety Score
+context before the first Bot API request. A digest with safety content is sent
+only while that full publication identity remains active. A digest authored
+with an explicitly unavailable safety section may still deliver its unrelated
+content only when deterministic copy checks find no Safety Score, report-card,
+grade/rating, V9-pillar, or binding-cap claim.
 
 | State | Meaning | Automatic action |
 |---|---|---|
@@ -12,7 +18,7 @@ Use this runbook when the `telegram-digest-outbox-drain` budget-only status surf
 | `sending` | An owner/generation has crossed the external-effect boundary | Never taken over while its claim is live |
 | `sent` | Every chunk and the post-send appendix actions committed | None; rows are retained for 90 days |
 | `execution_unknown` | Telegram may have accepted the chunk, or acceptance could not be durably recorded | None; operator proof is required |
-| `failed_permanent` | Telegram explicitly rejected the chunk with a non-retryable response | None; correct the cause before resetting |
+| `failed_permanent` | Telegram rejected the chunk, or the authored Safety Score identity is stale/legacy-unbound | None; correct the cause or generate a current edition |
 
 An expired `sending` claim becomes `execution_unknown`. It is never returned to `pending` automatically.
 
@@ -25,7 +31,7 @@ List unresolved editions:
 ```bash
 cd worker
 npx --no-install wrangler d1 execute stablecoin-db --remote --command \
-  "SELECT edition_key, digest_kind, state, next_chunk_index, json_array_length(payload_chunks_json) AS chunk_count, attempts, last_error_class, last_status_code, updated_at FROM telegram_digest_outbox WHERE state IN ('sending','execution_unknown','failed_permanent') ORDER BY updated_at DESC;"
+  "SELECT edition_key, digest_kind, state, next_chunk_index, json_array_length(payload_chunks_json) AS chunk_count, json_extract(safety_context_json, '\$.status') AS safety_status, json_extract(safety_context_json, '\$.expectedModel') AS safety_model, json_extract(safety_context_json, '\$.identity.publicationGenerationId') AS safety_generation, attempts, last_error_class, last_status_code, updated_at FROM telegram_digest_outbox WHERE state IN ('sending','execution_unknown','failed_permanent') ORDER BY updated_at DESC;"
 ```
 
 Inspect the uncertain chunk without editing it:
@@ -77,9 +83,26 @@ If acceptance remains uncertain, leave the row unchanged. Do not reset it merely
 
 ## Reconcile Permanent Failure
 
-Use `last_status_code` and `last_error_class` to classify the rejection. A confirmed permanent rejection means the chunk was not accepted, so the cursor does not advance. Reset the same edition only after an external/configuration cause such as channel permissions has been corrected. An immutable payload or HTML defect requires a new reviewed edition key; keep the failed row as forensic evidence.
+Use `last_status_code` and `last_error_class` to classify the rejection. A
+confirmed permanent Telegram rejection means the chunk was not accepted, so
+the cursor does not advance. Reset the same edition only after an
+external/configuration cause such as channel permissions has been corrected.
+An immutable payload or HTML defect requires a new reviewed edition key; keep
+the failed row as forensic evidence.
 
-Do not modify `payload_chunks_json`, `success_actions_json`, or `target_chat_id` in place. A changed edition requires a new reviewed edition key; mutation would break exact-payload auditability.
+`last_error_class` beginning with `stale_safety_identity:` means the authored
+Safety Score identity no longer matches the active publication, or the row
+predates identity binding. Do not reset that edition as current. Preserve it
+for audit and generate a newly reviewed edition against the active source.
+
+`last_error_class` beginning with `unbound_safety_copy:` means persisted copy
+contains a Safety Score or grade claim but the edition has no identified
+publication. Treat it like a stale identity: preserve the row and generate a
+reviewed, identity-bound edition instead of resetting it.
+
+Do not modify `payload_chunks_json`, `success_actions_json`,
+`safety_context_json`, or `target_chat_id` in place. A changed edition requires
+a new reviewed edition key; mutation would break exact-payload auditability.
 
 ## Verification
 
@@ -93,4 +116,9 @@ After the next five-minute poll:
 
 ## Rollback
 
-Migration `0184_telegram_digest_outbox.sql` is additive and remains in place during a Worker rollback. Before restoring an older Worker, reconcile all `sending` and `execution_unknown` rows; the legacy sender does not understand this effect fence. Keep terminal rows for forensics rather than deleting them during rollback.
+Migrations `0184_telegram_digest_outbox.sql` and
+`0221_telegram_digest_safety_identity.sql` are additive and remain in place
+during a Worker rollback. Before restoring an older Worker, reconcile all
+`sending` and `execution_unknown` rows; the legacy sender does not understand
+this effect fence. Keep terminal rows for forensics rather than deleting them
+during rollback.

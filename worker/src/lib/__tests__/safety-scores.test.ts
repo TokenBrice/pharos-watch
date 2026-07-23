@@ -81,6 +81,7 @@ vi.mock("../report-cards-snapshot", () => ({
 }));
 
 import { computeSafetyScoresSnapshot } from "../safety-scores";
+import * as activeSafetyScoreSource from "../safety-score-active-source";
 import type { StablecoinsCacheLoadOk } from "../stablecoins-cache";
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
@@ -176,7 +177,7 @@ describe("computeSafetyScoresSnapshot", () => {
     expect(result.reason).toBe("Redemption backstop snapshot unavailable");
   });
 
-  it("loads yield safety from one exact published report-card generation", async () => {
+  it("loads V8 yield safety from one exact published report-card generation when the activation marker is absent", async () => {
     const updatedAt = Math.floor(Date.now() / 1000);
     const generationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
     db = mockD1([{
@@ -214,6 +215,7 @@ describe("computeSafetyScoresSnapshot", () => {
     expect(result).toMatchObject({
       kind: "ok",
       source: "report-card-cache",
+      expectedModel: "v8",
       publicationGenerationId: generationId,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       publishedAt: updatedAt,
@@ -222,6 +224,71 @@ describe("computeSafetyScoresSnapshot", () => {
     });
     expect(result.scores.get("usdc-circle")).toEqual({ score: 82, grade: "B+" });
     expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "valid V9 activation",
+      {
+        kind: "v9",
+        expectedModel: "v9",
+        snapshot: { completeness: { expectedCount: 2 } },
+      },
+      "active-safety-score:v9",
+      2,
+    ],
+    [
+      "malformed activation marker",
+      {
+        kind: "error",
+        expectedModel: "v9",
+        reason: "activation-marker-invalid",
+        snapshot: null,
+      },
+      "active-safety-score:activation-marker-invalid",
+      3,
+    ],
+    [
+      "mismatched V9 activation identity",
+      {
+        kind: "error",
+        expectedModel: "v9",
+        reason: "v9-identity-mismatch",
+        snapshot: { completeness: { expectedCount: 2 } },
+      },
+      "active-safety-score:v9-identity-mismatch",
+      2,
+    ],
+  ] as const)("fails the compact V8 score source closed for %s", async (
+    _label,
+    activeSource,
+    reason,
+    trackedCount,
+  ) => {
+    const activeSourceSpy = vi
+      .spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockResolvedValueOnce(activeSource as never);
+
+    const result = await computeSafetyScoresSnapshot(db, {
+      outputMode: "map",
+      sourceMode: "published-cache",
+    });
+
+    expect(result).toMatchObject({
+      kind: "degraded",
+      source: "report-card-cache",
+      expectedModel: "v9",
+      reason,
+      coveredCount: 0,
+      trackedCount,
+      safetyScoreIdentity: null,
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      publishedAt: null,
+    });
+    expect(result.scores.size).toBe(0);
+    expect(buildReportCardsSnapshotMock).not.toHaveBeenCalled();
+    activeSourceSpy.mockRestore();
   });
 
   it("fails closed when a compact cache V8 identity is from a different evaluation build", async () => {

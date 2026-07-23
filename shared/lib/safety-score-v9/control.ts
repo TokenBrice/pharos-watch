@@ -714,6 +714,10 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       ...(mintControl?.failureDomains ?? []),
       ...(upgradeControl?.failureDomains ?? []),
     ]);
+    const mintControlKeys = mintControl === null ? [] : [mintControl.controlKey];
+    const mintFailureDomains = canonicalFailureDomains(mintControl?.failureDomains ?? []);
+    const upgradeControlKeys = upgradeControl === null ? [] : [upgradeControl.controlKey];
+    const upgradeFailureDomains = canonicalFailureDomains(upgradeControl?.failureDomains ?? []);
     const mintBinding = mintControl === null ? true : bindingByMateriality(mintControl, materialShareThreshold);
     const mintReconciled = mint.reconciliation === "continuous" || mint.reconciliation === "periodic";
     const gradedPostureScore =
@@ -791,9 +795,10 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
             posture === "unbounded-or-compromised"
               ? "Economically effective minting is unbounded or compromised."
               : "Minting is economically unbounded but supply is reconciled against reserves.",
-          materialSharePct: null,
-          controlKeys: componentControlKeys,
-          failureDomains: componentFailureDomains,
+          materialSharePct:
+            mintControl?.materialSupplyShare == null ? null : mintControl.materialSupplyShare * 100,
+          controlKeys: mintControlKeys,
+          failureDomains: mintFailureDomains,
         });
       }
     } else if (posture === "concentrated-admin") {
@@ -802,20 +807,24 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         severity: "moderate",
         binding: mintBinding,
         reason: "Minting depends on one concentrated administrator path.",
-        materialSharePct: null,
-        controlKeys: componentControlKeys,
-        failureDomains: componentFailureDomains,
+        materialSharePct:
+          mintControl?.materialSupplyShare == null ? null : mintControl.materialSupplyShare * 100,
+        controlKeys: mintControlKeys,
+        failureDomains: mintFailureDomains,
       });
     }
     if (upgradeUnreviewed) {
+      const upgradeBinding =
+        upgradeControl === null ? mintBinding : bindingByMateriality(upgradeControl, materialShareThreshold);
       addStructuralFailure({
         kind: "unreviewed-upgrade",
         severity: "high",
-        binding: mintBinding,
+        binding: upgradeBinding,
         reason: "Mint-critical upgrade authority is not fully reviewed.",
-        materialSharePct: mintControl?.materialSupplyShare == null ? null : mintControl.materialSupplyShare * 100,
-        controlKeys: componentControlKeys,
-        failureDomains: componentFailureDomains,
+        materialSharePct:
+          upgradeControl?.materialSupplyShare == null ? null : upgradeControl.materialSupplyShare * 100,
+        controlKeys: upgradeControlKeys,
+        failureDomains: upgradeFailureDomains,
       });
     }
   }
@@ -1127,13 +1136,29 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     args.policy,
     normalizedReasons.map((reason) => reason.code),
   );
-  const normalizedComponents = [...components].sort((left, right) =>
-    compareText(left.componentKey, right.componentKey),
-  );
   const normalizedStructuralFailures = [...structuralFailures.values()].sort(
     (left, right) =>
       compareText(left.kind, right.kind) || compareText(left.controlKeys.join("+"), right.controlKeys.join("+")),
   );
+  const scopedDeploymentControlKeys = new Set(
+    normalizedStructuralFailures
+      .filter((failure) => failure.binding && failure.materialSharePct !== null)
+      .flatMap((failure) =>
+        failure.controlKeys.filter((controlKey) => {
+          const control = controlsByKey.get(controlKey);
+          return control?.economicLossScope === "deployment" && control.materialSupplyShare !== null;
+        }),
+      ),
+  );
+  const normalizedComponents = components
+    .map((component) =>
+      component.binding &&
+      component.controlKeys.length > 0 &&
+      component.controlKeys.every((controlKey) => scopedDeploymentControlKeys.has(controlKey))
+        ? { ...component, binding: false }
+        : component,
+    )
+    .sort((left, right) => compareText(left.componentKey, right.componentKey));
   const bindingControlFailureDomains = controls
     .filter(isControlEconomicallyRelevant)
     .filter((control) => isKnownRequired(control.status))

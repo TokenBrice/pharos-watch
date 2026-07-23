@@ -17,7 +17,7 @@ The page keeps an honest, prose-forward register:
 
 - The KPI card opens on a full-width hero strip whose frost-blue "One Beam" lights the monthly running cost (`costs.json` total). Coverage % stays **neutral** — it is a directional funding-progress figure and is never recolored frost.
 - Cards use the shared flat `pharos-card-shell` treatment.
-- Previous-month coverage chips use the pill control visual; the prominent dollar/percent figures use `.pharos-numeric`.
+- Previous-month results use a compact comparison table with month, community funding, and coverage columns. Neutral inline bars reinforce the coverage percentage on wider screens; exact dollar and percentage figures remain visible at every viewport and use `.pharos-numeric`.
 - The only sanctioned frost surface beyond the One Beam is the progress-bar fill (existing owner choice). See `docs/design-language.md` → Reference-group hero calls.
 
 ## Data model
@@ -26,6 +26,8 @@ Two hand-maintained JSON files:
 
 - `shared/data/funding/costs.json` — monthly cost line items. Owned by @TokenBrice; reviewed on the 1st of each month. `last_reviewed_at` (UTC unix seconds) is surfaced in the Monthly costs card footer/details text so readers see freshness.
 - `shared/data/funding/donations.json` — every inbound donation, one row each. Populated via the `funding-update` Claude skill on a ~weekly cadence.
+
+The Monthly costs card separately discloses $5,800 in exceptional, one-time design expenses for the full website redesign and logo. TokenBrice paid and sponsored those expenses, so they are not included in the recurring monthly total.
 
 Row shape for donations is defined in `shared/lib/funding/types.ts` (`Donation`). Each row carries `usd_at_receipt` priced at the transfer's block date, a `kind` field (`founder | pool | community`), and a `display` field with a forward-verified ENS name, custom/human label, or truncated-address fallback.
 

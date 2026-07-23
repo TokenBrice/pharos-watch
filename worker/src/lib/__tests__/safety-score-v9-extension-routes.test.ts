@@ -233,6 +233,40 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
   });
 
+  it("carries a live 30-day queue and its capacity constraints into the v9 route review", () => {
+    const row = liveDirectRow("protocol-api");
+    const observation = row.capacityProfile!.exitRouteObservations![0]!;
+    row.settlementModel = "queued";
+    row.queueEnabled = true;
+    row.settlementDelaySec = 30 * 86_400;
+    row.queueDepthUsd = 12_000_000;
+    row.dailyLimitUsd = 5_000_000;
+    row.minRedeemUsd = 100_000;
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      scoringHorizon: "queued",
+      dailyLimitUsd: 5_000_000,
+      queuedUsd: 12_000_000,
+      exitRouteObservations: [
+        {
+          ...observation,
+          settlementHorizonSec: 30 * 86_400,
+          scoreEligible: false,
+        },
+      ],
+    };
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
+      lane: "redemption",
+      capacityScoringHorizon: "queued",
+      settlementModel: "queued",
+      settlementSlaSec: 30 * 86_400,
+      queueDepthUsd: 12_000_000,
+      dailyLimitUsd: 5_000_000,
+      minRedeemUsd: 100_000,
+    });
+  });
+
   it("values a resolved stable-basket output at the weakest component's price", () => {
     const row = supplyFullRow({ stablecoinId: "dai-makerdao" });
     const derived = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), "dai-makerdao")[0]!;
@@ -420,8 +454,11 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
 });
 
 describe("buildDexRouteReview model-confidence derivation", () => {
-  function dexObservation(evidenceKind: ExitRouteObservation["evidenceKind"]): ExitRouteObservation {
-    return {
+  function dexObservation(
+    evidenceKind: ExitRouteObservation["evidenceKind"],
+    mature = false,
+  ): ExitRouteObservation {
+    const observation: ExitRouteObservation = {
       routeId: `dex:usdc-circle:dl:ethereum%3Apool:${evidenceKind}`,
       routeFamily: "dex-amm",
       scope: { kind: "chain-contract", chain: "ethereum", contractOrPoolId: `pool-${evidenceKind}`, protocol: "curve" },
@@ -438,21 +475,68 @@ describe("buildDexRouteReview model-confidence derivation", () => {
       freshnessSeconds: 0,
       commonModeKeys: ["chain:ethereum", "protocol:curve"],
     };
+    if (evidenceKind === "measured-executable-depth" && mature) {
+      const conservativeCapacityCurve = [
+        {
+          requestedNotionalUsd: observation.requestedNotionalUsd,
+          maxCostBps: observation.maxCostBps,
+          executableUsd: observation.executableUsd,
+          completionRatio: observation.completionRatio,
+        },
+      ];
+      observation.observationHistory = {
+        completeProducerCycleCount: 2,
+        successfulObservationCount: 2,
+        consecutiveSuccessCount: 2,
+        observationWindowStartedAt: NOW - 1_800,
+        observationWindowEndedAt: NOW,
+        latestOperationalFailureAt: null,
+        conservativeStatistic: "pointwise-minimum",
+        conservativeCapacityCurve,
+      };
+      observation.capacityCurve = conservativeCapacityCurve;
+    }
+    return observation;
   }
 
-  function dexReviewFor(evidenceKind: ExitRouteObservation["evidenceKind"]) {
+  function dexReviewFor(evidenceKind: ExitRouteObservation["evidenceKind"], mature = false) {
     const fixedInput = fixedInputStub(undefined);
     (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
-      "usdc-circle": { exitRouteObservations: [dexObservation(evidenceKind)] },
+      "usdc-circle": { exitRouteObservations: [dexObservation(evidenceKind, mature)] },
     };
     return buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]!;
   }
 
-  it("grades measured executable depth as high model confidence", () => {
+  it("bounds a single measured cycle at medium model confidence", () => {
     expect(dexReviewFor("measured-executable-depth")).toMatchObject({
       lane: "dex",
       executionCertainty: "bounded",
+      modelConfidence: "medium",
+    });
+  });
+
+  it("grades repeated measured executable depth as high model confidence", () => {
+    expect(dexReviewFor("measured-executable-depth", true)).toMatchObject({
+      lane: "dex",
+      executionCertainty: "bounded",
       modelConfidence: "high",
+    });
+  });
+
+  it("does not retain high model confidence after measured history expires", () => {
+    const fixedInput = fixedInputStub(undefined);
+    const observation = dexObservation("measured-executable-depth", true);
+    observation.observationHistory = {
+      ...observation.observationHistory!,
+      observationWindowStartedAt: NOW - 4_000,
+      observationWindowEndedAt: NOW - 3_601,
+    };
+    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
+      "usdc-circle": { exitRouteObservations: [observation] },
+    };
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
+      modelConfidence: "medium",
     });
   });
 
@@ -476,7 +560,7 @@ describe("buildDexRouteReview model-confidence derivation", () => {
       "usdc-circle": {
         exitRouteObservations: [
           dexObservation("reserve-based-amm-simulation"),
-          dexObservation("measured-executable-depth"),
+          dexObservation("measured-executable-depth", true),
         ],
       },
     };

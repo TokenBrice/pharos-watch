@@ -15,6 +15,10 @@ import { formatTelegramCompactUsd } from "./telegram-format";
 import type { StatusForCoin } from "./telegram-webhook-status";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
+import {
+  loadActiveSafetyScoreSource,
+  type ActiveSafetyScoreSource,
+} from "../lib/safety-score-active-source";
 
 const TOP_LIMIT = 5;
 const TOP_VIEWS = TOP_VIEW_NAMES;
@@ -27,6 +31,14 @@ function formatAge(ts: number | null | undefined, nowSec = Math.floor(Date.now()
 function truncate(text: string, max = 220): string {
   if (text.length <= max) return text;
   return `${text.slice(0, max - 1).trim()}...`;
+}
+
+function expectedV9UnavailableText(
+  activeSource: Exclude<ActiveSafetyScoreSource, { kind: "v8" }>,
+): string {
+  return activeSource.kind === "v9"
+    ? "expected model V9"
+    : `expected model V9, ${activeSource.reason.replace(/-/g, " ")}`;
 }
 
 export async function buildBriefMessage(db: D1Database): Promise<string> {
@@ -156,13 +168,18 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
     }
     case "yield":
     case "yields": {
+      const activeSource = await loadActiveSafetyScoreSource(db);
+      const pysAvailable = activeSource.kind === "v8";
+      const orderBy = pysAvailable
+        ? "pharos_yield_score DESC, apy_30d DESC"
+        : "apy_30d DESC";
       const result = await db
         .prepare(
           `SELECT stablecoin_id, symbol, current_apy, apy_30d, yield_source, pharos_yield_score, source_tvl_usd
              FROM yield_data
             WHERE is_best = 1
               AND (publication_generation_id IS NULL OR publication_state = 'published')
-            ORDER BY pharos_yield_score DESC, apy_30d DESC
+            ORDER BY ${orderBy}
             LIMIT ?`,
         )
         .bind(TOP_LIMIT)
@@ -176,10 +193,18 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
           source_tvl_usd: number | null;
         }>();
       return formatTopRows(
-        "Top risk-adjusted yields",
+        pysAvailable
+          ? "Top risk-adjusted yields"
+          : `Top yields (PYS unavailable; ${expectedV9UnavailableText(activeSource)})`,
         result.results ?? [],
         (row, i) =>
-          `${i}. ${row.symbol} — ${row.apy_30d.toFixed(2)}% 30d, PYS ${row.pharos_yield_score != null ? Math.round(row.pharos_yield_score) : "NR"}, TVL ${formatTelegramCompactUsd(row.source_tvl_usd) ?? "n/a"} (${row.yield_source})`,
+          `${i}. ${row.symbol} — ${row.apy_30d.toFixed(2)}% 30d, PYS ${
+            pysAvailable
+              ? row.pharos_yield_score != null
+                ? Math.round(row.pharos_yield_score)
+                : "NR"
+              : "unavailable"
+          }, TVL ${formatTelegramCompactUsd(row.source_tvl_usd) ?? "n/a"} (${row.yield_source})`,
       );
     }
     case "liquidity": {
@@ -207,16 +232,22 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
       );
     }
     case "chains": {
+      const activeSource = await loadActiveSafetyScoreSource(db);
       const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
       if (stablecoinsResult.kind !== "ok") return "Chain rankings are temporarily unavailable.";
-      const reportCardResult = await loadReportCardCache(db, {
-        maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-        requireCompleteness: true,
-      });
       const safetyScores: Record<string, number> = {};
-      if (reportCardResult.kind === "ok" && isCurrentSafetyScoreV8Identity(reportCardResult.payload.safetyScoreIdentity)) {
-        for (const [id, entry] of Object.entries(reportCardResult.payload.scores)) {
-          safetyScores[id] = entry.score;
+      if (activeSource.kind === "v8") {
+        const reportCardResult = await loadReportCardCache(db, {
+          maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+          requireCompleteness: true,
+        });
+        if (
+          reportCardResult.kind === "ok" &&
+          isCurrentSafetyScoreV8Identity(reportCardResult.payload.safetyScoreIdentity)
+        ) {
+          for (const [id, entry] of Object.entries(reportCardResult.payload.scores)) {
+            safetyScores[id] = entry.score;
+          }
         }
       }
       const { rates: pegRates } = derivePegRates(
@@ -229,12 +260,15 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         safetyScores,
         pegRates,
       }).chains.slice(0, TOP_LIMIT);
-      return formatTopRows(
+      const message = formatTopRows(
         "Top chains by stablecoin supply",
         chains,
         (row, i) =>
           `${i}. ${row.name} — ${formatTelegramCompactUsd(row.totalUsd) ?? "n/a"}, health ${row.healthScore ?? "NR"} (${row.healthBand})`,
       );
+      return activeSource.kind === "v8"
+        ? message
+        : `${message}\n${escapeHtml(`Chain health unavailable; ${expectedV9UnavailableText(activeSource)}.`)}`;
     }
     case "safety": {
       let source;

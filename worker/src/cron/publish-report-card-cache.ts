@@ -6,12 +6,21 @@ import { buildPublishedReportCardsSnapshotCacheEntry } from "../lib/report-cards
 import type { CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import { buildReportCardPublicationPlan } from "../lib/report-card-publication";
-import { buildReportCardsFixedInputCacheEntry } from "../lib/report-cards-fixed-input";
+import {
+  buildReportCardsFixedInputCacheEntry,
+  buildSafetyScoreV9FixedInputCacheEntry,
+} from "../lib/report-cards-fixed-input";
 import { recordCronFailure } from "../lib/cron-logger";
 import { runSafetyScoreV9ShadowAfterV8Publication } from "../lib/safety-score-v9-shadow-runner";
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
+import type { ChainRpcConfig } from "../lib/chain-registry";
+import { enrichSafetyScoreV9FixedInputSupply } from "../lib/safety-score-v9-supply-attribution";
 
-export async function publishReportCardCache(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+export async function publishReportCardCache(
+  db: D1Database,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<CronResult> {
   throwIfAborted(signal);
 
   const snapshot = await buildReportCardsSnapshot(db, {
@@ -65,10 +74,27 @@ export async function publishReportCardCache(db: D1Database, signal?: AbortSigna
   await setCacheMany(db, [snapshotEntry, compactEntry, alertEntry, fixedInputEntry], signal);
 
   let v9Shadow: Record<string, unknown>;
+  let v9FixedInputCacheBytes: number | null = null;
+  let v9FixedInputUncompressedBytes: number | null = null;
   try {
     v9Shadow = await runSafetyScoreV9ShadowAfterV8Publication({
       db,
       fixedInput,
+      prepareFixedInput: async (baseFixedInput, shadowSignal) => {
+        const v9FixedInput = await enrichSafetyScoreV9FixedInputSupply(
+          baseFixedInput,
+          chainRpcs,
+          shadowSignal,
+        );
+        const v9FixedInputEntry = await buildSafetyScoreV9FixedInputCacheEntry(
+          v9FixedInput,
+          safetyScoreIdentity,
+        );
+        await setCacheMany(db, [v9FixedInputEntry], shadowSignal);
+        v9FixedInputCacheBytes = v9FixedInputEntry.storedBytes;
+        v9FixedInputUncompressedBytes = v9FixedInputEntry.uncompressedBytes;
+        return v9FixedInput;
+      },
       v8Cards: publication.activeCards,
       v8Publication: publication.completeness,
       v8MethodologyVersion: snapshot.methodology.version,
@@ -125,6 +151,8 @@ export async function publishReportCardCache(db: D1Database, signal?: AbortSigna
       snapshotCacheUncompressedBytes: snapshotEntry.uncompressedBytes,
       fixedInputCacheBytes: fixedInputEntry.storedBytes,
       fixedInputUncompressedBytes: fixedInputEntry.uncompressedBytes,
+      v9FixedInputCacheBytes,
+      v9FixedInputUncompressedBytes,
       safetyScoreIdentity,
       v9Shadow,
     }),

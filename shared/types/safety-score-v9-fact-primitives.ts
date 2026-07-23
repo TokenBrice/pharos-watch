@@ -53,6 +53,15 @@ export type V9FactApplicability = z.infer<typeof V9FactApplicabilitySchema>;
 export const V9ObservationStateSchema = z.enum(["known", "missing", "stale", "unsupported", "bounded-unknown"]);
 export type V9ObservationState = z.infer<typeof V9ObservationStateSchema>;
 
+export const V9EvidenceResponsibilitySchema = z.enum([
+  "measured-adverse",
+  "issuer-undisclosed",
+  "integration-missing",
+  "producer-failed",
+  "method-unsupported",
+]);
+export type V9EvidenceResponsibility = z.infer<typeof V9EvidenceResponsibilitySchema>;
+
 export const V9FactStatusV2Schema = z
   .object({
     applicability: V9FactApplicabilitySchema,

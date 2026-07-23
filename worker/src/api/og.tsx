@@ -26,6 +26,8 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import type { BackingType } from "@shared/types";
 import { isCurrentSafetyScoreV8Identity } from "../lib/safety-score-current-identity";
+import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
+import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9-consumer-freshness";
 
 // ---------------------------------------------------------------------------
 // WASM singleton initialization (yoga for satori + resvg for SVG→PNG)
@@ -99,31 +101,110 @@ function ogDataNotYetAvailable(): Response {
   });
 }
 
-function safetyScoreOgPresentation(
-  reportCardCache: Awaited<ReturnType<typeof loadReportCardCache>>,
-): { lastUpdated: string; headers: Record<string, string> } {
+interface OgSafetyScoreEntry {
+  score: number | null;
+  grade: string;
+}
+
+type OgSafetyScoreSource =
+  | {
+      kind: "ok";
+      model: "v8" | "v9";
+      methodologyVersion: string;
+      expectedCount: number;
+      scores: Record<string, OgSafetyScoreEntry>;
+    }
+  | {
+      kind: "error";
+      expectedModel: "v8" | "v9";
+      reason: string;
+    };
+
+async function loadOgSafetyScoreSource(db: D1Database): Promise<OgSafetyScoreSource> {
+  const active = await loadActiveSafetyScoreSource(db);
+  if (active.kind === "error") {
+    return {
+      kind: "error",
+      expectedModel: active.expectedModel,
+      reason: active.reason,
+    };
+  }
+
+  if (active.kind === "v9") {
+    if (!isSafetyScoreV9SnapshotFresh(active.snapshot)) {
+      return {
+        kind: "error",
+        expectedModel: "v9",
+        reason: "stale-cache",
+      };
+    }
+    return {
+      kind: "ok",
+      model: "v9",
+      methodologyVersion: active.snapshot.safetyScoreIdentity.methodologyVersion,
+      expectedCount: active.snapshot.completeness.expectedCount,
+      scores: Object.fromEntries(
+        active.snapshot.cards.map((card) => [
+          card.id,
+          { score: card.score, grade: card.grade },
+        ]),
+      ),
+    };
+  }
+
+  const reportCardCache = await loadReportCardCache(db, {
+    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+    requireCompleteness: true,
+  });
   if (reportCardCache.kind === "ok" && isCurrentSafetyScoreV8Identity(reportCardCache.payload.safetyScoreIdentity)) {
     const identity = reportCardCache.payload.safetyScoreIdentity;
+    const scores: Record<string, OgSafetyScoreEntry> = {
+      ...reportCardCache.payload.scores,
+    };
+    for (const id of reportCardCache.payload.completeness?.notRatedIds ?? []) {
+      scores[id] = { score: null, grade: "NR" };
+    }
     return {
-      lastUpdated: `${identity.model.toUpperCase()} ${identity.methodologyVersion}`,
+      kind: "ok",
+      model: "v8",
+      methodologyVersion: identity.methodologyVersion,
+      expectedCount: reportCardCache.payload.completeness?.expectedCount ?? ACTIVE_IDS.size,
+      scores,
+    };
+  }
+
+  return {
+    kind: "error",
+    expectedModel: "v8",
+    reason: reportCardCache.kind === "error" ? reportCardCache.reason : "identity-mismatch",
+  };
+}
+
+function safetyScoreOgPresentation(
+  safetySource: OgSafetyScoreSource,
+): { lastUpdated: string; headers: Record<string, string> } {
+  if (safetySource.kind === "ok") {
+    return {
+      lastUpdated: `${safetySource.model.toUpperCase()} ${safetySource.methodologyVersion}`,
       headers: {
         ...CACHE_HEADERS,
-        "X-Safety-Score-Model": identity.model,
+        "X-Safety-Score-Model": safetySource.model,
         "X-Safety-Score-Status": "current",
       },
     };
   }
 
   return {
-    lastUpdated: "DEGRADED: Safety score unavailable",
+    lastUpdated: `DEGRADED: ${safetySource.expectedModel.toUpperCase()} safety score unavailable`,
     headers: {
       // Keep degraded OG renders edge-cacheable: /api/og/* is public and
       // unauthenticated, and rendering each miss runs the WASM PNG pipeline.
       // The explicit degraded headers keep consumers from treating the image as
       // current safety-score evidence while avoiding no-store render amplification.
       ...CACHE_HEADERS,
+      "X-Safety-Score-Model": safetySource.expectedModel,
       "X-Safety-Score-Status": "degraded",
-      "X-Safety-Score-Reason": reportCardCache.kind === "error" ? reportCardCache.reason : "identity-mismatch",
+      "X-Safety-Score-Reason": safetySource.reason,
     },
   };
 }
@@ -238,7 +319,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     stablecoinsPayload,
     dexLiqMap,
     dewsRow,
-    reportCardCache,
+    safetySource,
     sparklineRows,
     activeDepegRow,
     flowRow,
@@ -252,7 +333,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       )
       .bind(id)
       .first<{ score: number; band: string }>(),
-    loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS, requireCompleteness: true }),
+    loadOgSafetyScoreSource(db),
     db
       .prepare(
         "SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 7",
@@ -310,9 +391,8 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   }
 
   const meta = TRACKED_META_BY_ID.get(id);
-  const reportCardRow = reportCardCache.kind === "ok"
-    && isCurrentSafetyScoreV8Identity(reportCardCache.payload.safetyScoreIdentity)
-    ? reportCardCache.payload.scores[id] ?? null
+  const reportCardRow = safetySource.kind === "ok"
+    ? safetySource.scores[id] ?? null
     : null;
 
   // Cache-first: only pegScore is needed here, and the direct compute
@@ -351,7 +431,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     change24h = ((price24hRow.current_price - price24hRow.prev_day_price) / price24hRow.prev_day_price) * 100;
   }
 
-  const safetyPresentation = safetyScoreOgPresentation(reportCardCache);
+  const safetyPresentation = safetyScoreOgPresentation(safetySource);
   const data = {
     ...deriveStablecoinOgCardData({
       coin,
@@ -370,6 +450,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       variantParentSymbol,
       isFrozen,
     }),
+    safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
     lastUpdated: safetyPresentation.lastUpdated,
   };
 
@@ -382,9 +463,9 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
 // ---------------------------------------------------------------------------
 
 async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
-  const [stablecoinsPayload, reportCardCache] = await Promise.all([
+  const [stablecoinsPayload, safetySource] = await Promise.all([
     loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
-    loadReportCardCache(db, { maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS, requireCompleteness: true }),
+    loadOgSafetyScoreSource(db),
   ]);
 
   const gradeDistribution: Record<string, number> = {
@@ -405,20 +486,24 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
       symbolById.set(asset.id, asset.symbol);
     }
   }
-  const totalCoins = payloadUsable ? stablecoinsPayload.payload.peggedAssets.length : ACTIVE_IDS.size;
+  const totalCoins = safetySource.kind === "ok"
+    ? safetySource.expectedCount
+    : payloadUsable
+      ? stablecoinsPayload.payload.peggedAssets.length
+      : ACTIVE_IDS.size;
 
-  if (reportCardCache.kind === "ok" && isCurrentSafetyScoreV8Identity(reportCardCache.payload.safetyScoreIdentity)) {
-    for (const [id, entry] of Object.entries(reportCardCache.payload.scores)) {
+  if (safetySource.kind === "ok") {
+    for (const [id, entry] of Object.entries(safetySource.scores)) {
       const grade = entry.grade;
       if (grade in gradeDistribution) {
         gradeDistribution[grade]++;
       } else {
         gradeDistribution["NR"]++;
       }
-      if (entry.grade !== "NR") {
+      if (entry.grade !== "NR" && entry.score !== null) {
         pulseScore += entry.score;
         ratedCount++;
-        const symbol = symbolById.get(id);
+        const symbol = symbolById.get(id) ?? TRACKED_META_BY_ID.get(id)?.symbol;
         if (symbol) {
           allScores.push({ symbol, grade, score: entry.score });
         }
@@ -426,7 +511,7 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
     }
   }
 
-  const avgScore = ratedCount > 0 ? pulseScore / ratedCount : 0;
+  const avgScore = ratedCount > 0 ? pulseScore / ratedCount : null;
 
   allScores.sort((a, b) => b.score - a.score);
   const topPerformers = allScores.slice(0, 3);
@@ -434,20 +519,20 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
 
   const data: SafetyScoresCardData = {
     gradeDistribution,
-    // An average score is not an asset-level grade. Do not apply V8 grade bands
-    // here, since that would also mislabel a future identified model.
-    pulseGrade: "NR",
+    // An average score is not an asset-level grade under either methodology.
+    pulseGrade: null,
     pulseScore: avgScore,
     coverageRatio: totalCoins > 0 ? ratedCount / totalCoins : 0,
     totalCoins,
     topPerformers,
     bottomPerformers,
     trend: null,
-    lastUpdated: safetyScoreOgPresentation(reportCardCache).lastUpdated,
+    safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
+    lastUpdated: safetyScoreOgPresentation(safetySource).lastUpdated,
   };
 
   const png = await renderPng(<SafetyScoresCard data={data} />);
-  return new Response(png, { headers: safetyScoreOgPresentation(reportCardCache).headers });
+  return new Response(png, { headers: safetyScoreOgPresentation(safetySource).headers });
 }
 
 // ---------------------------------------------------------------------------
@@ -651,13 +736,12 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
   // Safety scores feed the chain health factor. An incomplete or mismatched
   // compact publication deliberately leaves chain health unrated.
   const safetyScores: Record<string, number> = {};
-  const reportCardResult = await loadReportCardCache(db, {
-    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-    requireCompleteness: true,
-  });
-  if (reportCardResult.kind === "ok" && isCurrentSafetyScoreV8Identity(reportCardResult.payload.safetyScoreIdentity)) {
-    for (const [id, entry] of Object.entries(reportCardResult.payload.scores)) {
-      safetyScores[id] = entry.score;
+  const safetySource = await loadOgSafetyScoreSource(db);
+  if (safetySource.kind === "ok") {
+    for (const [id, entry] of Object.entries(safetySource.scores)) {
+      if (entry.score !== null) {
+        safetyScores[id] = entry.score;
+      }
     }
   }
 
@@ -682,7 +766,8 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
           share: coin.share,
           supplyUsd: coin.supplyUsd,
         })),
-        lastUpdated: safetyScoreOgPresentation(reportCardResult).lastUpdated,
+        safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
+        lastUpdated: safetyScoreOgPresentation(safetySource).lastUpdated,
       }
     : {
         name: CHAIN_META[chainId].name,
@@ -693,11 +778,12 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
         healthScore: null,
         healthBand: null,
         topStablecoins: [],
-        lastUpdated: safetyScoreOgPresentation(reportCardResult).lastUpdated,
+        safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
+        lastUpdated: safetyScoreOgPresentation(safetySource).lastUpdated,
       };
 
   const png = await renderPng(<ChainCard data={data} />);
-  return new Response(png, { headers: safetyScoreOgPresentation(reportCardResult).headers });
+  return new Response(png, { headers: safetyScoreOgPresentation(safetySource).headers });
 }
 
 // ---------------------------------------------------------------------------

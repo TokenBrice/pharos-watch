@@ -1,6 +1,15 @@
 import { formatCurrency, formatIsoDate } from "@shared/lib/format";
 import { getDepegEditorialImpactScore, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
-import type { DigestInputData } from "@shared/types/digest";
+import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
+import {
+  DigestSafetyContextSchema,
+  type DigestInputData,
+  type DigestSafetyContext,
+} from "@shared/types/digest";
+import {
+  SafetyScorePublicationIdentitySchema,
+  type SafetyScorePublicationIdentity,
+} from "@shared/types/safety-score-publication";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
 import { rollupDigestInputs, type RollupSummary } from "../daily-digest/collectors-shared";
 import { DEWS_BAND_RANK } from "../daily-digest/digest-intelligence-utils";
@@ -26,10 +35,20 @@ function topSignals<TOut>(
   project: (row: WeeklyParsedRow) => TOut[],
   sortKey: (out: TOut) => number,
   limit = 7,
+  uniqueKey?: (out: TOut) => string,
 ): TOut[] {
-  return parsed
+  const sorted = parsed
     .flatMap(project)
-    .sort((a, b) => sortKey(b) - sortKey(a))
+    .sort((a, b) => sortKey(b) - sortKey(a));
+  if (!uniqueKey) return sorted.slice(0, limit);
+  const seen = new Set<string>();
+  return sorted
+    .filter((row) => {
+      const key = uniqueKey(row);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .slice(0, limit);
 }
 
@@ -221,6 +240,67 @@ function parseDailyRows(dailyRows: DailyDigestSourceRow[]): WeeklyParsedRow[] {
   return parsed;
 }
 
+function parsePersistedSafetyIdentity(value: unknown): SafetyScorePublicationIdentity | null {
+  if (!value || typeof value !== "object") return null;
+  const { publishedAt: _publishedAt, ...candidate } = value as Record<string, unknown>;
+  return SafetyScorePublicationIdentitySchema.safeParse(candidate).data ?? null;
+}
+
+function parseAuthoredSafetyIdentity(inputData: DigestInputData): SafetyScorePublicationIdentity | null {
+  const explicitContext = DigestSafetyContextSchema.safeParse(inputData.safetyContext).data;
+  if (explicitContext) {
+    return explicitContext.status === "available" ? explicitContext.identity : null;
+  }
+  return parsePersistedSafetyIdentity(inputData.safetyScores?.provenance);
+}
+
+function sanitizeSafetyForWeekly(
+  parsed: WeeklyParsedRow[],
+  safetyContext: DigestSafetyContext | undefined,
+): WeeklyParsedRow[] {
+  if (!safetyContext) return parsed;
+  const activeIdentity = safetyContext.status === "available" ? safetyContext.identity : null;
+  const seenTransitionIds = new Set<string>();
+  return parsed.map((row) => {
+    const inputData = { ...row.inputData };
+    const authoredIdentity = parseAuthoredSafetyIdentity(inputData);
+    const copyIsComparable =
+      activeIdentity != null &&
+      authoredIdentity != null &&
+      safetyScorePublicationIdentitiesAreComparable(authoredIdentity, activeIdentity);
+    const safetyIdentity = parsePersistedSafetyIdentity(inputData.safetyScores?.provenance);
+    if (
+      !activeIdentity ||
+      !safetyIdentity ||
+      !safetyScorePublicationIdentitiesAreComparable(safetyIdentity, activeIdentity)
+    ) {
+      delete inputData.safetyScores;
+    }
+    inputData.gradeTransitions = (inputData.gradeTransitions ?? []).filter((transition) => {
+      const transitionIdentity = SafetyScorePublicationIdentitySchema.safeParse(
+        transition.safetyScoreIdentity,
+      ).data;
+      if (
+        !activeIdentity ||
+        !transitionIdentity ||
+        !safetyScorePublicationIdentitiesAreComparable(transitionIdentity, activeIdentity) ||
+        seenTransitionIds.has(transition.historyId)
+      ) {
+        return false;
+      }
+      seenTransitionIds.add(transition.historyId);
+      return true;
+    });
+    if (inputData.gradeTransitions.length === 0) delete inputData.gradeTransitions;
+    return {
+      ...row,
+      title: copyIsComparable ? row.title : "",
+      text: copyIsComparable ? row.text : "",
+      inputData,
+    };
+  });
+}
+
 interface WeeklyTopSignals extends Omit<WeeklyInputData["weeklySignals"], "riskLeaderboard"> {
   allDepegSignals: WeeklyDepegSignal[];
 }
@@ -351,14 +431,22 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
     (d) =>
       (d.inputData.gradeTransitions ?? [])
         .map((transition) => ({
+          historyId: transition.historyId,
+          recordedAt: transition.recordedAt,
+          model: transition.model,
+          safetyScoreIdentity: transition.safetyScoreIdentity,
           symbol: transition.symbol,
           fromGrade: transition.fromGrade,
           toGrade: transition.toGrade,
           mcapUsd: transition.mcapUsd,
-          date: d.date,
+          date: formatIsoDate(transition.recordedAt),
         }))
         .filter(
           (transition) =>
+            typeof transition.historyId === "string" &&
+            typeof transition.recordedAt === "number" &&
+            (transition.model === "v8" || transition.model === "v9") &&
+            SafetyScorePublicationIdentitySchema.safeParse(transition.safetyScoreIdentity).success &&
             typeof transition.symbol === "string" &&
             typeof transition.fromGrade === "string" &&
             typeof transition.toGrade === "string" &&
@@ -366,6 +454,8 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
             Number.isFinite(transition.mcapUsd),
         ),
     (row) => row.mcapUsd,
+    7,
+    (row) => row.historyId,
   );
   const topYieldAnomalies = topSignals(
     parsed,
@@ -480,9 +570,10 @@ function buildWeeklyWowDeltas(
 export function buildWeeklyInputData(
   currentDailyRows: DailyDigestSourceRow[],
   priorDailyRows: DailyDigestSourceRow[] = [],
+  safetyContext?: DigestSafetyContext,
 ): WeeklyInputData | null {
-  const parsed = parseDailyRows(currentDailyRows);
-  const priorParsed = parseDailyRows(priorDailyRows);
+  const parsed = sanitizeSafetyForWeekly(parseDailyRows(currentDailyRows), safetyContext);
+  const priorParsed = sanitizeSafetyForWeekly(parseDailyRows(priorDailyRows), safetyContext);
   if (parsed.length < 5) return null;
 
   const psiScores = parsed.map((d) => d.inputData.stabilityIndex?.score).filter((s): s is number => s != null);
@@ -538,6 +629,10 @@ export function buildWeeklyInputData(
     weekStartDate: parsed[0].date,
     weekEndDate: parsed[parsed.length - 1].date,
     periodType: "trailing-daily-editions",
+    ...(safetyContext ? { safetyContext } : {}),
+    ...(safetyContext?.status === "unavailable"
+      ? { degradedSources: [`safety-canonical-snapshot:${safetyContext.reason}`] }
+      : {}),
     dailyDigests: parsed,
     psiRange: {
       min: Math.min(...psiScores),

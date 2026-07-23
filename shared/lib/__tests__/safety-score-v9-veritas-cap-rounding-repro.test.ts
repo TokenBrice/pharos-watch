@@ -19,16 +19,16 @@ function input(exit: number): V9ScoringInput {
   };
 }
 
-// VER-001: final-score rounding can exceed a fractional compensability ceiling
-// and raising a pillar can therefore lower the published score and grade.
-describe("VERITAS finding VER-001: fractional cap rounding crosses a grade boundary", () => {
-  it("does not publish a rounded score above the compensability ceiling", () => {
+// VER-001 regression: replacing the fractional hard cap must retain monotonic
+// published rounding without a hidden cap boundary.
+describe("VERITAS finding VER-001: continuous aggregation remains monotonic across rounding", () => {
+  it("publishes the continuously aggregated score without a compensability cap", () => {
     const trace = scoreV9Input(input(65.93), V9_CANDIDATE_POLICY_V1);
-    const compensabilityCap = trace.caps.find((cap) => cap.kind === "bounded-compensability");
 
-    expect(trace.preCapScore).toBe(64.7113);
-    expect(compensabilityCap?.limit).toBe(64.714375);
-    expect(trace.finalScore).toBe(64);
+    expect(trace.weightedQuality).toBe(64.7113);
+    expect(trace.preCapScore).toBe(59.9449);
+    expect(trace.caps.map((cap) => cap.kind)).not.toContain("bounded-compensability");
+    expect(trace.finalScore).toBe(60);
     expect(trace.finalGrade).toBe("C+");
   });
 

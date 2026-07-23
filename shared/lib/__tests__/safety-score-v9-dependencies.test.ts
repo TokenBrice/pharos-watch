@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
-import type { V9DependencyPlanningAsset } from "../safety-score-v9/dependencies";
-import { buildV9DependencyEvaluationPlan, resolveV9DependencyInputs } from "../safety-score-v9/dependencies";
-import { commonModeSignalSeverity, type V9CommonModeContext } from "../safety-score-v9/evaluate-set";
+import type {
+  V9DependencyEconomicRole,
+  V9DependencyPlanningAsset,
+  V9DependencyPlanningEdge,
+} from "../safety-score-v9/dependencies";
+import {
+  buildV9DependencyEvaluationPlan,
+  projectV9RoleDependencyPillarLimits,
+  resolveV9DependencyInputs,
+} from "../safety-score-v9/dependencies";
+import {
+  commonModeSignalSeverity,
+  projectV9EffectiveBackingPillarScore,
+  projectV9ResolvedBackingExposure,
+  type V9CommonModeContext,
+  type V9EvaluatedAsset,
+} from "../safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 const domain = (kind: "reserve-custodian" | "mint-control", key: string) => ({ kind, key }) as const;
@@ -33,12 +47,49 @@ function edge(
     upstreamAssetId,
     dependencyType,
     pathKind: dependencyType === "collateral" ? ("collateral-exposure" as const) : ("serial-dependency" as const),
+    economicRole: dependencyType === "collateral" ? ("basket-exposure" as const) : ("serial-claim" as const),
     weight,
     failureDomains: [],
   };
 }
 
+function roleEdge(
+  edgeKey: string,
+  upstreamAssetId: string,
+  economicRole: V9DependencyEconomicRole,
+  weight: number,
+  failureDomains: V9DependencyPlanningEdge["failureDomains"] = [],
+): V9DependencyPlanningEdge {
+  const defaultFailureDomains: V9DependencyPlanningEdge["failureDomains"] =
+    economicRole === "exit-dependency"
+      ? [{ kind: "redemption-rail", key: `rail:${upstreamAssetId}` }]
+      : economicRole === "control-operator"
+        ? [{ kind: "mint-control", key: `operator:${upstreamAssetId}` }]
+        : economicRole === "oracle-nav"
+          ? [{ kind: "oracle-feed", key: `oracle:${upstreamAssetId}` }]
+          : [];
+  return {
+    edgeKey,
+    upstreamAssetId,
+    dependencyType:
+      economicRole === "serial-claim" ? "wrapper" : economicRole === "basket-exposure" ? "collateral" : "mechanism",
+    economicRole,
+    weight,
+    evidenceRefIds: [`evidence:${edgeKey}`],
+    failureDomains: failureDomains.length > 0 ? failureDomains : defaultFailureDomains,
+  };
+}
+
 describe("buildV9DependencyEvaluationPlan", () => {
+  it("inherits the post-credit backing pillar rather than the raw backing result", () => {
+    const upstream = {
+      backing: { score: 72 },
+      scoreInput: { pillars: { backing: { score: 78 } } },
+    } as unknown as Pick<V9EvaluatedAsset, "backing" | "scoreInput">;
+
+    expect(projectV9EffectiveBackingPillarScore(upstream)).toBe(78);
+  });
+
   it("orders upstreams before serial and basket consumers", () => {
     const plan = buildV9DependencyEvaluationPlan({
       activeAssetIds: ["diamond", "left", "right", "root"],
@@ -79,12 +130,53 @@ describe("buildV9DependencyEvaluationPlan", () => {
     expect(plan.cyclicComponents).toEqual([["a", "b"]]);
     expect(plan.serialBlockedDescendants).toEqual(["serial"]);
     const resolved = resolveV9DependencyInputs(plan, [
-      { assetId: "a", score: null },
-      { assetId: "b", score: null },
+      { assetId: "a", score: null, backingScore: null },
+      { assetId: "b", score: null, backingScore: null },
     ]);
     expect(resolved.find((item) => item.assetId === "serial")?.cycleBlocked).toBe(true);
     expect(resolved.find((item) => item.assetId === "basket")?.cycleBlocked).toBe(false);
     expect(resolved.find((item) => item.assetId === "basket")?.basket[0]?.boundedUnknown).toBe(true);
+  });
+
+  it("uses final score for serial claims and backing score for collateral baskets", () => {
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["basket", "parent", "serial"],
+      assets: [
+        asset("parent"),
+        asset("serial", [edge("parent", "wrapper")]),
+        asset("basket", [edge("parent", "collateral", 1)]),
+      ],
+    });
+    const resolved = resolveV9DependencyInputs(plan, [
+      { assetId: "parent", score: null, backingScore: 82 },
+    ]);
+
+    expect(resolved.find((item) => item.assetId === "serial")?.serial).toEqual([
+      { upstreamAssetId: "parent", score: null, blocked: true },
+    ]);
+    expect(resolved.find((item) => item.assetId === "basket")?.basket).toEqual([
+      { upstreamAssetId: "parent", weight: 1, score: 82, boundedUnknown: false },
+    ]);
+  });
+
+  it("propagates only the immediate parent result through a nested wrapper", () => {
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["child", "parent", "root"],
+      assets: [
+        asset("root"),
+        asset("parent", [edge("root", "wrapper")]),
+        asset("child", [edge("parent", "wrapper")]),
+      ],
+    });
+    const resolved = resolveV9DependencyInputs(plan, [
+      { assetId: "root", score: 90, backingScore: 94 },
+      { assetId: "parent", score: 84, backingScore: 88 },
+    ]);
+
+    expect(resolved.find((item) => item.assetId === "parent")?.serial[0]?.score).toBe(90);
+    expect(resolved.find((item) => item.assetId === "child")?.serial).toEqual([
+      { upstreamAssetId: "parent", score: 84, blocked: false },
+    ]);
   });
 
   it("groups repeated cross-pillar failure domains once", () => {
@@ -180,6 +272,377 @@ describe("buildV9DependencyEvaluationPlan", () => {
     expect(reverse).toEqual(forward);
   });
 
+  it("resolves exit, control/operator, and oracle/NAV roles from only their relevant upstream dimensions", () => {
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["child", "parent"],
+      assets: [
+        asset("parent"),
+        asset("child", [
+          roleEdge("basket:parent", "parent", "basket-exposure", 0.3),
+          roleEdge("exit:parent", "parent", "exit-dependency", 0.75),
+          roleEdge("control:parent", "parent", "control-operator", 0.4),
+          roleEdge("oracle:parent", "parent", "oracle-nav", 0.6),
+        ]),
+      ],
+    });
+
+    expect(plan.serialPaths).toHaveLength(0);
+    expect(plan.basketPaths).toHaveLength(1);
+    expect(plan.exitPaths).toHaveLength(1);
+    expect(plan.controlPaths).toHaveLength(1);
+    expect(plan.oracleNavPaths).toHaveLength(1);
+
+    const resolved = resolveV9DependencyInputs(plan, [
+      {
+        assetId: "parent",
+        score: 88,
+        backingScore: 91,
+        exitScore: 78,
+        accessScore: 66,
+        controlScore: 72,
+        oracleNavScore: 81,
+      },
+    ]).find((input) => input.assetId === "child")!;
+    const byRole = new Map(resolved.roleInputs!.map((input) => [input.role, input]));
+
+    expect(byRole.get("basket-exposure")).toMatchObject({
+      score: 91,
+      inheritedDimensions: ["backing"],
+      boundedUnknown: false,
+    });
+    expect(byRole.get("exit-dependency")).toMatchObject({
+      score: 66,
+      inheritedDimensions: ["exit", "access"],
+      boundedUnknown: false,
+    });
+    expect(byRole.get("control-operator")).toMatchObject({
+      score: 72,
+      inheritedDimensions: ["control"],
+      boundedUnknown: false,
+    });
+    expect(byRole.get("oracle-nav")).toMatchObject({
+      score: 81,
+      inheritedDimensions: ["oracle-nav"],
+      boundedUnknown: false,
+    });
+    const limits = projectV9RoleDependencyPillarLimits(resolved);
+    expect(limits.exit.limit).toBeCloseTo(74.5, 10);
+    expect(limits.control.limit).toBeCloseTo(77.4, 10);
+  });
+
+  it("fails an exit role closed when access is unavailable and preserves exact trace attribution", () => {
+    const rail = { kind: "reserve-custodian" as const, key: "bank-a" };
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["child", "parent"],
+      assets: [
+        asset("parent"),
+        asset("child", [
+          {
+            ...roleEdge("exit:parent", "parent", "exit-dependency", 0.4, [rail]),
+            evidenceRefIds: ["evidence:rail"],
+          },
+        ]),
+      ],
+    });
+    const resolved = resolveV9DependencyInputs(plan, [
+      { assetId: "parent", score: 90, backingScore: 90, exitScore: 84 },
+    ]).find((input) => input.assetId === "child")!;
+
+    expect(resolved.cycleBlocked).toBe(false);
+    expect(resolved.roleInputs).toEqual([
+      {
+        assetId: "child",
+        upstreamAssetId: "parent",
+        edgeKey: "exit:parent",
+        exposureKey: "exit:parent",
+        riskEventKey: "dependency-event:reserve-custodian:bank-a",
+        dependencyType: "mechanism",
+        role: "exit-dependency",
+        weight: 0.4,
+        inheritedDimensions: ["exit", "access"],
+        unavailableDimensions: ["access"],
+        score: null,
+        boundedUnknown: true,
+        cycleBlocked: false,
+        evidenceRefIds: ["evidence:rail"],
+        failureDomains: [rail],
+      },
+    ]);
+    expect(projectV9RoleDependencyPillarLimits(resolved).exit).toMatchObject({
+      limit: null,
+      knownLossPoints: 0,
+      unresolvedExposureShare: 0.4,
+    });
+  });
+
+  it("bounds sub-material unknown role exposure and withholds only at the material threshold", () => {
+    const resolveUnknownExit = (weight: number) => {
+      const plan = buildV9DependencyEvaluationPlan({
+        activeAssetIds: ["child", "parent"],
+        assets: [
+          asset("parent"),
+          asset("child", [roleEdge("exit:parent", "parent", "exit-dependency", weight)]),
+        ],
+      });
+      return resolveV9DependencyInputs(plan, [
+        { assetId: "parent", score: 90, backingScore: 90, exitScore: 84 },
+      ]).find((input) => input.assetId === "child")!;
+    };
+
+    expect(
+      projectV9RoleDependencyPillarLimits(resolveUnknownExit(0.01), {
+        unresolvedMaterialityThreshold: 0.1,
+      }).exit,
+    ).toMatchObject({
+      limit: 99,
+      boundedUnknownLossPoints: 1,
+      unresolvedExposureShare: 0.01,
+      materialUnresolvedExposure: false,
+    });
+    expect(
+      projectV9RoleDependencyPillarLimits(resolveUnknownExit(0.1), {
+        unresolvedMaterialityThreshold: 0.1,
+      }).exit,
+    ).toMatchObject({
+      limit: null,
+      boundedUnknownLossPoints: 10,
+      unresolvedExposureShare: 0.1,
+      materialUnresolvedExposure: true,
+    });
+  });
+
+  it("lets serial inheritance dominate other roles once while retaining their distinct failure domains", () => {
+    const shared = domain("reserve-custodian", "bank-a");
+    const oracle = { kind: "oracle-feed" as const, key: "feed-a" };
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["child", "parent"],
+      assets: [
+        asset("parent"),
+        asset(
+          "child",
+          [
+            roleEdge("serial:parent", "parent", "serial-claim", 1, [shared]),
+            roleEdge("exit:parent", "parent", "exit-dependency", 0.5, [shared]),
+            roleEdge("oracle:parent", "parent", "oracle-nav", 0.5, [oracle]),
+          ],
+          { exitRoutes: [{ routeKey: "local-redeem", failureDomains: [shared] }] },
+        ),
+      ],
+    });
+
+    expect(plan.serialPaths).toEqual([
+      expect.objectContaining({
+        edgeKey: "serial:parent",
+        failureDomains: [oracle, shared],
+      }),
+    ]);
+    expect(plan.exitPaths).toHaveLength(0);
+    expect(plan.oracleNavPaths).toHaveLength(0);
+    expect(plan.suppressedRoles).toEqual([
+      expect.objectContaining({
+        selectedRole: "serial-claim",
+        suppressedRole: "exit-dependency",
+        reason: "serial-role-dominates",
+      }),
+      expect.objectContaining({
+        selectedRole: "serial-claim",
+        suppressedRole: "oracle-nav",
+        reason: "serial-role-dominates",
+      }),
+    ]);
+    expect(plan.commonModeGroups.find((group) => group.failureDomain.key === "bank-a")?.members).toEqual([
+      { assetId: "child", owner: "dependency", pathKey: "serial:parent" },
+      { assetId: "child", owner: "exit", pathKey: "local-redeem" },
+    ]);
+  });
+
+  it("preserves distinct authored slices for the same upstream and role", () => {
+    const first = domain("reserve-custodian", "bank-a");
+    const second = { kind: "redemption-rail" as const, key: "rail-b" };
+    const edges = [
+      roleEdge("z-larger", "parent", "exit-dependency", 0.7, [first]),
+      roleEdge("a-smaller", "parent", "exit-dependency", 0.3, [second]),
+    ];
+    const forward = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["child", "parent"],
+      assets: [asset("parent"), asset("child", edges)],
+    });
+    const reversed = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["parent", "child"],
+      assets: [asset("child", [...edges].reverse()), asset("parent")],
+    });
+
+    expect(reversed).toEqual(forward);
+    expect(forward.exitPaths).toEqual([
+      expect.objectContaining({
+        edgeKey: "a-smaller",
+        exposureKey: "a-smaller",
+        weight: 0.3,
+        failureDomains: [second],
+      }),
+      expect.objectContaining({
+        edgeKey: "z-larger",
+        exposureKey: "z-larger",
+        weight: 0.7,
+        failureDomains: [first],
+      }),
+    ]);
+    expect(forward.suppressedRoles).toEqual([]);
+  });
+
+  it("does not use a shared provider domain as proof of one holder slice", () => {
+    const shared = domain("mint-control", "operator-a");
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["child", "parent"],
+      assets: [
+        asset("parent"),
+        asset("child", [
+          roleEdge("control:parent", "parent", "control-operator", 0.6, [shared]),
+          roleEdge("oracle:parent", "parent", "oracle-nav", 0.6, [shared]),
+        ]),
+      ],
+    });
+    const resolved = resolveV9DependencyInputs(plan, [
+      { assetId: "parent", score: 85, backingScore: 90, controlScore: 70, oracleNavScore: 50 },
+    ]).find((input) => input.assetId === "child")!;
+    const projection = projectV9RoleDependencyPillarLimits(resolved).control;
+
+    expect(projection).toMatchObject({
+      limit: 60,
+      knownLossPoints: 40,
+      unresolvedExposureShare: 0,
+    });
+    expect(projection.events).toEqual([
+      expect.objectContaining({
+        exposureKey: "control:parent",
+        roles: ["control-operator"],
+        edgeKeys: ["control:parent"],
+        nominalExposureShare: 0.6,
+        exposureShare: 0.5,
+        inheritedScore: 70,
+        modeledLossPoints: 15,
+        failureDomains: [shared],
+      }),
+      expect.objectContaining({
+        exposureKey: "oracle:parent",
+        roles: ["oracle-nav"],
+        edgeKeys: ["oracle:parent"],
+        nominalExposureShare: 0.6,
+        exposureShare: 0.5,
+        inheritedScore: 50,
+        modeledLossPoints: 25,
+        failureDomains: [shared],
+      }),
+    ]);
+  });
+
+  it("adds two distinct ten-percent slices that share one operator", () => {
+    const shared = domain("mint-control", "operator-a");
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["child", "left", "right"],
+      assets: [
+        asset("left"),
+        asset("right"),
+        asset("child", [
+          roleEdge("control:left", "left", "control-operator", 0.1, [shared]),
+          roleEdge("control:right", "right", "control-operator", 0.1, [shared]),
+        ]),
+      ],
+    });
+    const resolved = resolveV9DependencyInputs(plan, [
+      { assetId: "left", score: 0, backingScore: 0, controlScore: 0 },
+      { assetId: "right", score: 0, backingScore: 0, controlScore: 0 },
+    ]).find((input) => input.assetId === "child")!;
+    const projection = projectV9RoleDependencyPillarLimits(resolved).control;
+
+    expect(projection).toMatchObject({
+      limit: 80,
+      knownLossPoints: 20,
+      unresolvedExposureShare: 0,
+    });
+    expect(projection.events.map((event) => event.exposureKey)).toEqual([
+      "control:left",
+      "control:right",
+    ]);
+  });
+
+  it("does not charge two risk events twice when explicit identity proves one slice", () => {
+    const shared = domain("mint-control", "operator-a");
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["child", "left", "right"],
+      assets: [
+        asset("left"),
+        asset("right"),
+        asset("child", [
+          roleEdge("control:left", "left", "control-operator", 0.1, [shared]),
+          roleEdge("control:right", "right", "control-operator", 0.1, [shared]),
+        ]),
+      ],
+    });
+    const resolved = resolveV9DependencyInputs(plan, [
+      { assetId: "left", score: 0, backingScore: 0, controlScore: 0 },
+      { assetId: "right", score: 0, backingScore: 0, controlScore: 0 },
+    ]).find((input) => input.assetId === "child")!;
+    const sameSlice = {
+      ...resolved,
+      roleInputs: resolved.roleInputs?.map((input) => ({
+        ...input,
+        exposureKey: "deployment:shared",
+        riskEventKey: `event:${input.edgeKey}`,
+      })),
+    };
+    const projection = projectV9RoleDependencyPillarLimits(sameSlice).control;
+
+    expect(projection).toMatchObject({
+      limit: 90,
+      knownLossPoints: 10,
+      unresolvedExposureShare: 0,
+    });
+    expect(projection.events).toHaveLength(1);
+    expect(projection.events[0]).toMatchObject({
+      exposureKey: "deployment:shared",
+      nominalExposureShare: 0.1,
+      exposureShare: 0.1,
+    });
+  });
+
+  it("contains non-serial role cycles to the affected dimensions instead of blocking the whole claim", () => {
+    const plan = buildV9DependencyEvaluationPlan({
+      activeAssetIds: ["a", "b"],
+      assets: [
+        asset("a", [roleEdge("a-exit-b", "b", "exit-dependency", 1)]),
+        asset("b", [roleEdge("b-control-a", "a", "control-operator", 1)]),
+      ],
+    });
+    const resolved = resolveV9DependencyInputs(plan, [
+      {
+        assetId: "a",
+        score: 80,
+        backingScore: 80,
+        exitScore: 80,
+        accessScore: 80,
+        controlScore: 80,
+      },
+      {
+        assetId: "b",
+        score: 80,
+        backingScore: 80,
+        exitScore: 80,
+        accessScore: 80,
+        controlScore: 80,
+      },
+    ]);
+
+    expect(plan.cyclicComponents).toEqual([["a", "b"]]);
+    expect(plan.serialCycleAssetIds).toEqual([]);
+    expect(plan.serialBlockedDescendants).toEqual([]);
+    expect(resolved.every((input) => !input.cycleBlocked)).toBe(true);
+    expect(resolved.flatMap((input) => input.roleInputs ?? [])).toEqual([
+      expect.objectContaining({ edgeKey: "a-exit-b", score: null, boundedUnknown: true, cycleBlocked: true }),
+      expect.objectContaining({ edgeKey: "b-control-a", score: null, boundedUnknown: true, cycleBlocked: true }),
+    ]);
+  });
+
   it("rejects omissions and dependencies outside the active set", () => {
     expect(() => buildV9DependencyEvaluationPlan({ activeAssetIds: ["a", "b"], assets: [asset("a")] })).toThrow(
       /exact active asset set/,
@@ -187,6 +650,83 @@ describe("buildV9DependencyEvaluationPlan", () => {
     expect(() =>
       buildV9DependencyEvaluationPlan({ activeAssetIds: ["a"], assets: [asset("a", [edge("missing", "wrapper")])] }),
     ).toThrow(/Invalid.*dependency/);
+    expect(() =>
+      buildV9DependencyEvaluationPlan({
+        activeAssetIds: ["a", "b"],
+        assets: [
+          asset("a"),
+          asset("b", [
+            {
+              ...roleEdge("invalid-role", "a", "basket-exposure", 0.5),
+              economicRole: "unknown-role",
+            } as never,
+          ]),
+        ],
+      }),
+    ).toThrow(/supported economic role/);
+    expect(() =>
+      buildV9DependencyEvaluationPlan({
+        activeAssetIds: ["a", "b"],
+        assets: [asset("a"), asset("b", [roleEdge("partial-serial", "a", "serial-claim", 0.5)])],
+      }),
+    ).toThrow(/must cover the whole claim/);
+    expect(() =>
+      buildV9DependencyEvaluationPlan({
+        activeAssetIds: ["a", "b"],
+        assets: [
+          asset("a"),
+          asset("b", [{ ...roleEdge("exit-without-domain", "a", "exit-dependency", 1), failureDomains: [] }]),
+        ],
+      }),
+    ).toThrow(/requires a failure domain/);
+    expect(() =>
+      buildV9DependencyEvaluationPlan({
+        activeAssetIds: ["a", "b"],
+        assets: [
+          asset("a"),
+          asset("b", [{ ...roleEdge("control-without-evidence", "a", "control-operator", 1), evidenceRefIds: [] }]),
+        ],
+      }),
+    ).toThrow(/requires evidence attribution/);
+  });
+});
+
+describe("dimension-aware backing projection", () => {
+  it("carries only the upstream backing evidence and failure domains", () => {
+    const backingDomain = domain("reserve-custodian", "bank-a");
+    const upstream = {
+      backing: {
+        failureDomains: [backingDomain],
+      },
+      scoreInput: {
+        pillars: {
+          backing: {
+            evidenceLevel: "adequate",
+            reasons: [
+              { code: "bounded-unknown-reserve-exposure" },
+              { code: "bounded-unknown-reserve-exposure" },
+            ],
+          },
+        },
+      },
+    } as unknown as Pick<V9EvaluatedAsset, "backing" | "scoreInput">;
+
+    expect(
+      projectV9ResolvedBackingExposure(
+        "reserve:parent",
+        { upstreamAssetId: "parent", weight: 1, score: 82, boundedUnknown: false },
+        upstream,
+        ["parent"],
+      ),
+    ).toEqual({
+      exposureKey: "reserve:parent",
+      upstreamAssetId: "parent",
+      score: 82,
+      evidenceLevel: "adequate",
+      reasonCodes: ["bounded-unknown-reserve-exposure"],
+      failureDomains: [backingDomain],
+      failureRootAssetIds: ["parent"],
+    });
   });
 });
 

@@ -179,6 +179,11 @@ export const ADMIN_STATIC_ROUTES = [
       ({ handleAdminSafetyScoreV9MovementReview }) => handleAdminSafetyScoreV9MovementReview,
     ),
   ),
+  defineLazyStaticRoute("admin-safety-score-v9-history-boundary", () =>
+    import("../api/admin-safety-score-v9").then(
+      ({ handleAdminSafetyScoreV9HistoryBoundary }) => handleAdminSafetyScoreV9HistoryBoundary,
+    ),
+  ),
   defineLazyStaticRoute("status-probe-history", () =>
     import("../api/status-probe-history").then(({ handleStatusProbeHistory }) => handleStatusProbeHistory),
   ),

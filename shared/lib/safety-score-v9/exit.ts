@@ -1,9 +1,12 @@
 import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import type { V9AssetFactsV2, V9ExitRouteFactV2 } from "../../types/safety-score-v9-facts";
+import type { ExitRouteObservationHistory } from "../../types/exit-route";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 
 export type V9ExitAccess = "permissionless-onchain" | "whitelisted-onchain" | "issuer-api" | "manual";
 export type V9ExitSettlement = "atomic" | "immediate" | "same-day" | "days" | "queued";
+export type V9ExitHorizon = "immediate" | "near-term" | "queued";
+export type V9ExitCapacityScoringHorizon = "immediate" | "daily" | "queued" | "eventual" | "unknown";
 export type V9ExitExecution = "deterministic-onchain" | "deterministic-basket" | "rules-based-nav" | "opaque";
 export type V9ExitOutputQuality =
   "stable-single" | "stable-basket" | "bluechip-collateral" | "mixed-collateral" | "nav";
@@ -43,10 +46,15 @@ export interface V9ExitEvaluationRoute {
   feeEvidence?: "undisclosed-reviewed" | null;
   observationConfidence: "high" | "medium" | "low" | "unknown";
   modelConfidence: "high" | "medium" | "low";
+  observationHistory?: ExitRouteObservationHistory | null;
   access: V9ExitAccess;
   holderEligibility: V9ExitHolderEligibility;
+  capacityScoringHorizon: V9ExitCapacityScoringHorizon;
   settlement: V9ExitSettlement;
   settlementDelaySec: number;
+  queueDepthUsd: number | null;
+  dailyLimitUsd: number | null;
+  minRedeemUsd: number | null;
   execution: V9ExitExecution;
   outputQuality: V9ExitOutputQuality;
   outputResolved: boolean;
@@ -59,6 +67,16 @@ export interface V9ExitEvaluationRoute {
 
 export interface V9ExitRouteTrace {
   routeKey: string;
+  routeFamily: V9ExitEvaluationRoute["routeFamily"];
+  observationConfidence: V9ExitEvaluationRoute["observationConfidence"];
+  modelConfidence: V9ExitEvaluationRoute["modelConfidence"];
+  observationHistory: ExitRouteObservationHistory | null;
+  horizon: V9ExitHorizon;
+  capacityScoringHorizon: V9ExitCapacityScoringHorizon;
+  settlementDelaySec: number;
+  queueDepthUsd: number | null;
+  dailyLimitUsd: number | null;
+  minRedeemUsd: number | null;
   score: number | null;
   included: boolean;
   exclusionReason: V9ReasonCode | null;
@@ -75,15 +93,27 @@ export interface V9ExitRouteTrace {
   capsApplied: readonly string[];
 }
 
+export interface V9ExitHorizonTrace {
+  primaryRouteKey: string | null;
+  score: number | null;
+}
+
 export interface V9ExitEvaluationResult {
   score: number | null;
   stressRequest: V9ExitStressRequest | null;
   primaryRouteKey: string | null;
   diversificationRouteKey: string | null;
   diversificationBonus: number;
+  horizons: Readonly<Record<V9ExitHorizon, V9ExitHorizonTrace>>;
   reasons: readonly V9ReasonCode[];
   routes: readonly V9ExitRouteTrace[];
 }
+
+const EMPTY_HORIZONS: Readonly<Record<V9ExitHorizon, V9ExitHorizonTrace>> = {
+  immediate: { primaryRouteKey: null, score: null },
+  "near-term": { primaryRouteKey: null, score: null },
+  queued: { primaryRouteKey: null, score: null },
+};
 
 function clampScore(value: number): number {
   return Math.max(0, Math.min(100, value));
@@ -194,7 +224,7 @@ function curveIssue(points: readonly V9ExitCapacityPoint[]): string | null {
   return null;
 }
 
-function capacityAtRequest(
+export function resolveV9ExitCapacityAtRequest(
   points: readonly V9ExitCapacityPoint[],
   request: V9ExitStressRequest,
 ): V9ExitCapacityPoint | null {
@@ -237,6 +267,40 @@ function settlementDelayMultiplier(
   bands: readonly { maxSec: number | null; multiplier: number }[],
 ): number {
   return bands.find((band) => band.maxSec === null || delaySec <= band.maxSec)?.multiplier ?? 0;
+}
+
+function descendingThresholdMultiplier(
+  value: number,
+  bands: readonly { threshold: number; multiplier: number }[],
+): number {
+  return bands.find((band) => value >= band.threshold)?.multiplier ?? 1;
+}
+
+function routeCapacityHorizon(
+  route: V9ExitEvaluationRoute,
+  request: V9ExitStressRequest,
+): V9ExitHorizon {
+  if (
+    route.settlement === "queued" ||
+    route.settlementDelaySec > 7 * 86_400 ||
+    route.capacityScoringHorizon === "queued" ||
+    route.capacityScoringHorizon === "eventual"
+  ) {
+    return "queued";
+  }
+  if (route.capacityScoringHorizon === "daily") return "near-term";
+  return route.settlementDelaySec <= request.comparisonWindowSec ? "immediate" : "near-term";
+}
+
+function queueServiceCapacityUsd(
+  route: V9ExitEvaluationRoute,
+  capacityPoint: V9ExitCapacityPoint,
+): number {
+  if (route.dailyLimitUsd !== null && route.dailyLimitUsd > 0) return route.dailyLimitUsd;
+  return Math.max(
+    capacityPoint.executableUsd,
+    ...route.capacityCurve.map((point) => point.executableUsd),
+  );
 }
 
 /**
@@ -325,7 +389,7 @@ function resolveIncludedRouteCapacity(
   if (exclusionReason !== null || route.applicability === "not-applicable") {
     return { state: "excluded", exclusionReason };
   }
-  const capacityPoint = capacityAtRequest(route.capacityCurve, request);
+  const capacityPoint = resolveV9ExitCapacityAtRequest(route.capacityCurve, request);
   if (capacityPoint === null) return { state: "incomparable" };
   if (
     !Number.isFinite(route.outputValueRetention) ||
@@ -404,6 +468,19 @@ function evaluateRoute(
   envelope: V9ValidatedPolicyEnvelope,
   preExitDangerHeld: boolean,
 ): V9ExitRouteTrace {
+  const horizon = routeCapacityHorizon(route, request);
+  const attribution = {
+    routeFamily: route.routeFamily,
+    observationConfidence: route.observationConfidence,
+    modelConfidence: route.modelConfidence,
+    observationHistory: route.observationHistory ?? null,
+    horizon,
+    capacityScoringHorizon: route.capacityScoringHorizon,
+    settlementDelaySec: route.settlementDelaySec,
+    queueDepthUsd: route.queueDepthUsd,
+    dailyLimitUsd: route.dailyLimitUsd,
+    minRedeemUsd: route.minRedeemUsd,
+  } as const;
   // Danger-held exclusion (owner ruling 2026-07-23): the SIM-EXIT-L2
   // undisclosed-fee lever emits modeled capacity for an opaque-fee route, but an
   // asset already held down by a non-exit adverse fact does not get to buy exit
@@ -415,6 +492,7 @@ function evaluateRoute(
   if (preExitDangerHeld && route.feeEvidence === "undisclosed-reviewed") {
     return {
       routeKey: route.routeKey,
+      ...attribution,
       score: null,
       included: false,
       exclusionReason: "unsupported-same-notional-route",
@@ -428,6 +506,7 @@ function evaluateRoute(
   if (resolvedCapacity.state === "excluded") {
     return {
       routeKey: route.routeKey,
+      ...attribution,
       score: null,
       included: false,
       exclusionReason: resolvedCapacity.exclusionReason,
@@ -440,6 +519,7 @@ function evaluateRoute(
   if (resolvedCapacity.state !== "included") {
     return {
       routeKey: route.routeKey,
+      ...attribution,
       score: null,
       included: false,
       exclusionReason:
@@ -467,6 +547,7 @@ function evaluateRoute(
   ) {
     return {
       routeKey: route.routeKey,
+      ...attribution,
       score: null,
       included: false,
       exclusionReason: "unsupported-same-notional-route",
@@ -479,8 +560,23 @@ function evaluateRoute(
   const coverageScore = interpolateScore(completionRatio, policy.coverageRatioBreakpoints);
   const absoluteScore = interpolateScore(valuedExecutableUsd, policy.absoluteCapacityBreakpoints);
   const delayMultiplier = settlementDelayMultiplier(route.settlementDelaySec, policy.settlementDelayBands);
-  const capacity =
+  let capacity =
     (coverageScore * COVERAGE_SHARE_OF_CAPACITY + absoluteScore * (1 - COVERAGE_SHARE_OF_CAPACITY)) * delayMultiplier;
+  const constraintMultipliers: string[] = [];
+  if (route.queueDepthUsd !== null && route.queueDepthUsd > 0) {
+    const serviceCapacityUsd = queueServiceCapacityUsd(route, capacityPoint);
+    if (serviceCapacityUsd > 0) {
+      const backlogRatio = route.queueDepthUsd / serviceCapacityUsd;
+      const multiplier = descendingThresholdMultiplier(backlogRatio, policy.queueBacklogBands);
+      capacity *= multiplier;
+      if (multiplier < 1) constraintMultipliers.push(`queue-backlog:${multiplier}`);
+    }
+  }
+  if (route.minRedeemUsd !== null) {
+    const multiplier = descendingThresholdMultiplier(route.minRedeemUsd, policy.minimumRedeemBands);
+    capacity *= multiplier;
+    if (multiplier < 1) constraintMultipliers.push(`minimum-redeem:${multiplier}`);
+  }
   const components = {
     access: policy.accessScores[route.access],
     settlement: policy.settlementScores[route.settlement],
@@ -504,7 +600,7 @@ function evaluateRoute(
     components.capacity * weights.capacity +
     components.outputAssetQuality * weights.outputAssetQuality +
     components.cost * weights.cost;
-  const capsApplied: string[] = [];
+  const capsApplied: string[] = [...constraintMultipliers];
   // Capacity carries only a minority of the component ladder, so access,
   // settlement, execution certainty, output quality and a bounded-unknown cost
   // would otherwise carry a route that moves no meaningful value at the stress
@@ -526,14 +622,21 @@ function evaluateRoute(
   );
   score *= confidenceFactor * policy.holderEligibilityMultipliers[route.holderEligibility];
   const routeCap =
-    route.routeScoreCap === "queue-redeem"
+    route.routeScoreCap === "queue-redeem" ||
+    route.capacityScoringHorizon === "daily" ||
+    route.capacityScoringHorizon === "queued" ||
+    route.capacityScoringHorizon === "eventual"
       ? policy.routeFamilyCaps.queueRedeem
       : route.routeScoreCap === "offchain-issuer"
         ? policy.routeFamilyCaps.offchainIssuer
         : null;
   if (routeCap !== null && score > routeCap) {
     score = routeCap;
-    capsApplied.push(`route-family:${route.routeScoreCap}`);
+    capsApplied.push(
+      route.routeScoreCap === "queue-redeem" || route.routeScoreCap === "offchain-issuer"
+        ? `route-family:${route.routeScoreCap}`
+        : `capacity-horizon:${route.capacityScoringHorizon}`,
+    );
   }
   // A `documented-terms` redemption is a reviewed T&C promise — the weakest
   // scoreable evidence kind — not an on-chain-enforced or reserve-verified exit.
@@ -555,6 +658,7 @@ function evaluateRoute(
   }
   return {
     routeKey: route.routeKey,
+    ...attribution,
     score: roundTraceScore(clampScore(score)),
     included: true,
     exclusionReason: null,
@@ -653,7 +757,9 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     feeEvidence: route.feeEvidence ?? null,
     observationConfidence: route.observationConfidence,
     modelConfidence: route.modelConfidence,
+    observationHistory: route.observationHistory ?? null,
     ...access,
+    capacityScoringHorizon: route.capacityScoringHorizon ?? "unknown",
     settlement: mapSettlement(route),
     // A reviewed settlement SLA is the delay the settlement-delay multiplier
     // prices. When the review layer publishes no explicit SLA (the `days` and
@@ -663,13 +769,19 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     // DEX routes carry an explicit `0` SLA (not null), so this fallback never
     // fires for them and their multiplier stays 1.0.
     settlementDelaySec: route.settlementSlaSec ?? route.request?.settlementHorizonSec ?? 0,
+    queueDepthUsd: route.queueDepthUsd ?? null,
+    dailyLimitUsd: route.dailyLimitUsd ?? null,
+    minRedeemUsd: route.minRedeemUsd ?? null,
     execution: mapExecution(route),
     outputQuality: mapOutputQuality(route),
     outputResolved: route.output.status.observationState === "known" && route.output.valuation !== null,
     outputValueRetention: Math.min(1, route.output.valuation?.valueRetentionRatio ?? 0),
     capacityCurve: route.capacityCurve,
     routeScoreCap:
-      route.settlementModel === "queued"
+      route.settlementModel === "queued" ||
+      route.capacityScoringHorizon === "daily" ||
+      route.capacityScoringHorizon === "queued" ||
+      route.capacityScoringHorizon === "eventual"
         ? "queue-redeem"
         : route.holderAccess === "issuer-only"
           ? "offchain-issuer"
@@ -735,6 +847,7 @@ export function evaluateV9Exit(
       primaryRouteKey: null,
       diversificationRouteKey: null,
       diversificationBonus: 0,
+      horizons: EMPTY_HORIZONS,
       reasons: ["missing-same-notional-route"],
       routes: [],
     };
@@ -745,6 +858,24 @@ export function evaluateV9Exit(
     .flatMap((trace, index) => (trace.score === null ? [] : [{ trace, route: routes[index]!, score: trace.score }]))
     .sort((left, right) => right.score - left.score || left.route.routeKey.localeCompare(right.route.routeKey));
   const diagnosticReasons = traces.flatMap((trace) => (trace.exclusionReason ? [trace.exclusionReason] : []));
+  const horizons = Object.fromEntries(
+    (["immediate", "near-term", "queued"] as const).map((horizon) => {
+      const best = traces
+        .filter((trace) => trace.horizon === horizon && trace.score !== null)
+        .sort(
+          (left, right) =>
+            (right.score ?? 0) - (left.score ?? 0) ||
+            left.routeKey.localeCompare(right.routeKey),
+        )[0];
+      return [
+        horizon,
+        {
+          primaryRouteKey: best?.routeKey ?? null,
+          score: best?.score ?? null,
+        },
+      ];
+    }),
+  ) as Record<V9ExitHorizon, V9ExitHorizonTrace>;
   if (evaluated.length === 0) {
     const portfolioReviewed = args.portfolioStatus === "reviewed-complete";
     return {
@@ -753,6 +884,7 @@ export function evaluateV9Exit(
       primaryRouteKey: null,
       diversificationRouteKey: null,
       diversificationBonus: 0,
+      horizons,
       reasons: sortedUnique([
         portfolioReviewed ? "no-viable-exit-path" : "missing-same-notional-route",
         ...diagnosticReasons,
@@ -784,6 +916,7 @@ export function evaluateV9Exit(
     primaryRouteKey: primary.route.routeKey,
     diversificationRouteKey: independent?.route.routeKey ?? null,
     diversificationBonus: roundTraceScore(diversificationBonus),
+    horizons,
     // Excluded optional routes stay visible on their per-route traces; a weak
     // or unreviewed alternative cannot impose a critical reason once a
     // score-eligible route carries the exit claim.

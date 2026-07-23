@@ -54,6 +54,10 @@ export const SAFETY_SCORE_V9_SHADOW_TIMEOUT_MS = 2 * 60_000;
 export interface RunSafetyScoreV9ShadowInput {
   db: D1Database;
   fixedInput: unknown;
+  prepareFixedInput?: (
+    fixedInput: Readonly<ReportCardsFixedInput>,
+    signal: AbortSignal,
+  ) => Promise<unknown>;
   v8Cards: readonly ReportCard[];
   v8Publication: ReportCardPublicationCompleteness;
   v8MethodologyVersion: string;
@@ -98,6 +102,11 @@ function compareText(left: string, right: string): number {
 
 function sortedUnique<T extends string>(values: readonly T[]): T[] {
   return [...new Set(values)].sort(compareText);
+}
+
+function fixedInputWithoutV9SupplyAttribution(input: Readonly<ReportCardsFixedInput>) {
+  const { safetyScoreV9SupplyAttributionById: _v9SupplyAttribution, ...baseInput } = input;
+  return baseInput;
 }
 
 function fallbackNowSec(): number {
@@ -292,7 +301,7 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
     if (input.nowSec !== undefined && (!Number.isInteger(input.nowSec) || input.nowSec < 0)) {
       throw new Error("Safety Score v9 shadow clock must be epoch seconds");
     }
-    const fixedInput = normalizeFixedInput(input.fixedInput);
+    let fixedInput = normalizeFixedInput(input.fixedInput);
     const scheduledForSec = scheduledForUtcDay(fixedInput.clockSec);
     utcDay = safetyScoreV9UtcDay(scheduledForSec);
 
@@ -326,6 +335,18 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
 
     startedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
     stage = "v9-enrichment";
+    if (input.prepareFixedInput) {
+      const preparedFixedInput = normalizeFixedInput(
+        await input.prepareFixedInput(fixedInput, shadowSignal),
+      );
+      if (
+        stableJsonStringifyV1(fixedInputWithoutV9SupplyAttribution(preparedFixedInput)) !==
+        stableJsonStringifyV1(fixedInputWithoutV9SupplyAttribution(fixedInput))
+      ) {
+        throw new Error("Safety Score v9 preparation changed the authoritative V8 fixed input");
+      }
+      fixedInput = preparedFixedInput;
+    }
     const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput);
     stage = "compile";
     const pipeline = buildSafetyScoreV9CandidateFromNormalizedInput({

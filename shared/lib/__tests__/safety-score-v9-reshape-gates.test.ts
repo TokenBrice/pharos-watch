@@ -19,7 +19,14 @@ const BUILD_DIGEST = "b".repeat(64);
 const BASE_ID = `report-cards-input:v1:${"c".repeat(64)}`;
 
 function signal(kind: V9StructuralSignalKind, severity: V9Severity): V9StructuralSignal {
-  return { kind, severity, reason: `${kind}:${severity}`, failureDomainKeys: [], evidence: [] };
+  return {
+    kind,
+    severity,
+    reason: `${kind}:${severity}`,
+    responsibility: "measured-adverse",
+    failureDomainKeys: [],
+    evidence: [],
+  };
 }
 
 function pillar(score: number | null, overrides: Partial<V9PillarEvaluation> = {}): V9PillarEvaluation {
@@ -127,30 +134,39 @@ describe("Lever 1 — insufficient-evidence withhold", () => {
     expect(trace.nrReasons.map((reason) => reason.code)).toContain("insufficient-evidence");
   });
 
-  it("does NOT withhold a measured-adverse control-25 asset — it lands rated D (D1+D5)", () => {
+  it("keeps a measured-adverse control-25 asset rated with explicit structural attribution", () => {
     const trace = scoreV9EvaluatedAsset(
       assetInput({
         pillars: {
           backing: pillar(35, { evidenceLevel: "limited" }),
           exit: pillar(35, { evidenceLevel: "limited" }),
-          control: pillar(25, { evidenceLevel: "limited" }),
+          control: pillar(25, {
+            evidenceLevel: "limited",
+            structuralSignals: [{ ...signal("centralized-mint", "critical"), pricedInPillar: "control" }],
+          }),
         },
       }),
       POLICY,
     );
-    // Withhold gate: control 25 < bounded-unknown 45 is measured-adverse, so
-    // the asset stays rated. F-gate: 25 is the ladder's defined minimum, not
-    // sub-floor, so the blend-arithmetic F floors to D (weakness priced in-pillar).
-    expect(trace.finalGrade).toBe("D");
-    expect(trace.finalScore).toBe(40);
-    expect(trace.bindingCap?.kind).toBe("evidence-floor:d");
+    expect(trace.finalGrade).toBe("F");
+    expect(trace.finalScore).toBe(32);
+    expect(trace.adverseAttribution).toContainEqual(
+      expect.objectContaining({
+        source: "structural-signal",
+        path: "structural:centralized-mint:critical",
+      }),
+    );
+    expect(trace.caps.some((cap) => cap.kind === "evidence-floor:d")).toBe(false);
   });
 
-  it("keeps a genuinely sub-floor pillar at F under both gates (u-united analog: backing < 35)", () => {
+  it("keeps measured sub-floor backing at F under both gates (u-united analog: backing < 35)", () => {
     const trace = scoreV9EvaluatedAsset(
       assetInput({
         pillars: {
-          backing: pillar(30, { evidenceLevel: "limited" }),
+          backing: pillar(30, {
+            evidenceLevel: "limited",
+            structuralSignals: [{ ...signal("unsafe-backing", "critical"), pricedInPillar: "backing" }],
+          }),
           exit: pillar(35, { evidenceLevel: "limited" }),
           control: pillar(45),
         },
@@ -174,8 +190,8 @@ describe("Lever 1 — insufficient-evidence withhold", () => {
   });
 });
 
-describe("Lever 2 — danger-gate F floors to D", () => {
-  it("floors an evidence-gap-only would-be-F to D(40) with the evidence-floor:d marker", () => {
+describe("Workstream A — attributable D/F ratings", () => {
+  it("withholds an evidence-gap-only would-be-F instead of synthesizing D", () => {
     const trace = scoreV9EvaluatedAsset(
       assetInput({
         pillars: {
@@ -186,37 +202,45 @@ describe("Lever 2 — danger-gate F floors to D", () => {
       }),
       POLICY,
     );
-    expect(trace.finalScore).toBe(40);
-    expect(trace.finalGrade).toBe("D");
-    expect(trace.caps.map((cap) => cap.kind)).toContain("evidence-floor:d");
-    expect(trace.bindingCap?.kind).toBe("evidence-floor:d");
+    expect(trace.finalScore).toBeNull();
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.caps.map((cap) => cap.kind)).not.toContain("evidence-floor:d");
+    expect(trace.adverseAttribution).toEqual([]);
+    expect(trace.nrReasons).toContainEqual(
+      expect.objectContaining({ field: "adverseAttribution", responsibility: "method-unsupported" }),
+    );
   });
 
-  it("floors at the formula boundary (limited count 0 skips Lever 1)", () => {
+  it("applies the attribution requirement at the formula boundary", () => {
     const trace = scoreV9Input(rawInput(), POLICY);
-    expect(trace.finalScore).toBe(40);
-    expect(trace.finalGrade).toBe("D");
-    expect(trace.caps.some((cap) => cap.kind === "evidence-floor:d")).toBe(true);
+    expect(trace.finalScore).toBeNull();
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.caps.some((cap) => cap.kind === "evidence-floor:d")).toBe(false);
   });
 
-  it("D1: a mint:high blend-arithmetic would-be-F floors to D (weakness stays priced in-pillar)", () => {
+  it("keeps a measured mint-concentration F with structural attribution", () => {
     const trace = scoreV9EvaluatedAsset(
       assetInput({
         pillars: {
           backing: pillar(35, { evidenceLevel: "limited" }),
           exit: pillar(35),
-          control: pillar(45, { structuralSignals: [signal("centralized-mint", "high")] }),
+          control: pillar(45, {
+            structuralSignals: [{ ...signal("centralized-mint", "high"), pricedInPillar: "control" }],
+          }),
         },
       }),
       POLICY,
     );
-    expect(trace.finalScore).toBe(40);
-    expect(trace.finalGrade).toBe("D");
-    expect(trace.bindingCap?.kind).toBe("evidence-floor:d");
+    expect(trace.finalScore).toBe(37);
+    expect(trace.finalGrade).toBe("F");
+    expect(trace.bindingCap).toBeNull();
     expect(trace.caps.find((cap) => cap.kind === "signal:centralized-mint:high")?.binding).toBe(false);
+    expect(trace.adverseAttribution).toContainEqual(
+      expect.objectContaining({ source: "structural-signal", path: "structural:centralized-mint:high" }),
+    );
   });
 
-  it("D1: peg multiplier in [0.8,0.9) is degraded-not-failing — rated D, never NR, never F", () => {
+  it("keeps measured degraded peg performance rated and attributed", () => {
     const trace = scoreV9Input(
       rawInput({ pillars: { backing: 40, exit: 40, control: 50 }, pegScore: 66, evidenceLevel: "limited" }),
       POLICY,
@@ -224,9 +248,12 @@ describe("Lever 2 — danger-gate F floors to D", () => {
       2,
       true,
     );
-    expect(trace.finalGrade).toBe("D");
-    expect(trace.finalScore).toBe(40);
-    expect(trace.caps.some((cap) => cap.kind === "evidence-floor:d")).toBe(true);
+    expect(trace.finalGrade).toBe("F");
+    expect(trace.finalScore).not.toBeNull();
+    expect(trace.caps.some((cap) => cap.kind === "evidence-floor:d")).toBe(false);
+    expect(trace.adverseAttribution).toContainEqual(
+      expect.objectContaining({ source: "peg-performance", path: "peg:historical-performance" }),
+    );
   });
 });
 
@@ -235,9 +262,16 @@ describe("Pin sentinels stay F (danger-held, never withheld or floored)", () => 
     const trace = scoreV9EvaluatedAsset(
       assetInput({
         pillars: {
-          backing: pillar(35),
+          backing: pillar(35, {
+            structuralSignals: [
+              {
+                ...signal("unsafe-backing", "critical"),
+                pricedInPillar: "backing",
+              },
+            ],
+          }),
           exit: pillar(35),
-          control: pillar(25, { structuralSignals: [signal("unsafe-backing", "critical")] }),
+          control: pillar(25),
         },
       }),
       POLICY,

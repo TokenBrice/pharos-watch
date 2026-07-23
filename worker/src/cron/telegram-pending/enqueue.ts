@@ -93,9 +93,18 @@ function resolvePendingProvenance(
   ) {
     throw new Error("Telegram pending risk alert has incomplete provenance");
   }
+  if (
+    message.alertScope.some((item) => item.family === "safety") &&
+    !message.safetyScoreIdentity
+  ) {
+    throw new Error("Telegram pending safety alert has no Safety Score identity");
+  }
   return {
     sourceEventId: message.sourceEventId,
-    alertScopeJson: serializePendingAlertScope(message.alertScope),
+    alertScopeJson: serializePendingAlertScope(
+      message.alertScope,
+      message.safetyScoreIdentity,
+    ),
     preferenceGeneration: message.preferenceGeneration ?? null,
     markupPolicyJson: serializePendingMarkupPolicy({
       replyMarkup: message.replyMarkup,

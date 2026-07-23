@@ -363,6 +363,7 @@ function hydrateAltSourcesWithLiveSafety(row: YieldRanking, underlyingSafetyScor
 
 interface LiveSafetyHydrationSource {
   source: "report-card-cache";
+  expectedModel?: "v8" | "v9";
   safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
   publicationGenerationId: string | null;
   methodologyVersion: string | null;
@@ -697,6 +698,7 @@ function createYieldRankingsCacheHandler(
         });
         const hydrationSource: LiveSafetyHydrationSource = {
           source: "report-card-cache",
+          expectedModel: snapshot.expectedModel,
           safetyScoreIdentity: snapshot.safetyScoreIdentity,
           publicationGenerationId: snapshot.publicationGenerationId,
           methodologyVersion: snapshot.methodologyVersion,
@@ -731,6 +733,7 @@ function createYieldRankingsCacheHandler(
         console.warn("[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
         const hydrationSource: LiveSafetyHydrationSource = {
           source: "report-card-cache",
+          expectedModel: validatedPayload.provenance?.safetySnapshot.expectedModel,
           safetyScoreIdentity: null,
           publicationGenerationId: null,
           methodologyVersion: null,

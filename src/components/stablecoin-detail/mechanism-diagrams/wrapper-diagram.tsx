@@ -14,6 +14,7 @@ interface WrapperDiagramProps {
 }
 
 const VARIANT_DESCRIPTION: Record<VariantKind, string> = {
+  "pure-wrapper": "wraps and unwraps the parent claim 1:1",
   "savings-passthrough": "routes savings yield to holders",
   "strategy-vault": "routes strategy yield to holders",
   "risk-absorption": "absorbs first-loss for senior holders",
@@ -21,6 +22,7 @@ const VARIANT_DESCRIPTION: Record<VariantKind, string> = {
 };
 
 const VARIANT_KICKER: Record<VariantKind, string> = {
+  "pure-wrapper": "1:1 wrapper",
   "savings-passthrough": "savings vault",
   "strategy-vault": "strategy vault",
   "risk-absorption": "risk-absorption vault",
@@ -28,6 +30,7 @@ const VARIANT_KICKER: Record<VariantKind, string> = {
 };
 
 const VARIANT_STRESS_FOOTNOTE: Record<VariantKind, string> = {
+  "pure-wrapper": "stress: parent stress + wrapper contract",
   "savings-passthrough": "stress: parent stress + redemption queue",
   "strategy-vault": "stress: parent stress + strategy unwind",
   "risk-absorption": "stress: parent stress + first-loss absorption",

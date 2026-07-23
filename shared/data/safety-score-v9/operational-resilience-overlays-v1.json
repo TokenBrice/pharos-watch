@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "note": "Curated Safety Score v9 operational-resilience evidence. Live history is eligibility-only, never a score bonus. Issuer-reported redemption performance remains distinct from independent assurance or completed audits. Null and not-reviewed fields are intentionally non-claims.",
+  "overlays": [
+    {
+      "assetId": "usdt-tether",
+      "reviewedAt": "2026-07-23T12:37:19Z",
+      "expiresAt": "2027-07-23T12:37:19Z",
+      "reviewer": "Codex V9 Workstream G",
+      "notes": "The May 2022 redemption result is an issuer report, not independent verification. The BDO reports are point-in-time ISAE 3000R reasonable-assurance engagements, not financial-statement audits. No lifetime redemption ratio, peg-recovery interval, report-gap count, or incident-free history is asserted.",
+      "sources": [
+        {
+          "sourceId": "tether-2022-05-redemption-stress",
+          "label": "Tether: Stress Tests, Resiliency and Bank Runs",
+          "publisher": "Tether Operations",
+          "publishedAt": "2022-05-31",
+          "url": "https://tether.io/news/stress-tests-resiliency-and-bank-runs/",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "tether-2024-ten-year-milestones",
+          "label": "Tether ten-year milestones and quarterly-attestation statement",
+          "publisher": "Tether Operations",
+          "publishedAt": "2024-10-07",
+          "url": "https://tether.io/news/tether-celebrates-10-years-of-global-adoption-and-stablecoin-dominance-with-over-350-million-users-worldwide/",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "bdo-2022-q2-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 30 June 2022 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2022-08-10",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2xJyKdUKicdRUWpC9buRWR/6fe2987698dbbf39b947af718d736ddb/Std_ISAE_3000R_Opinion_30-6-2022_RC134792022BD0303.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2026-q1-reserves-assurance",
+          "label": "BDO ISAE 3000R reasonable-assurance report for 31 March 2026 reserves",
+          "publisher": "BDO Advisory Services S.r.l.",
+          "publishedAt": "2026-04-30",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf",
+          "confidence": "independent-assurance"
+        }
+      ],
+      "eligibility": {
+        "liveHistory": {
+          "minimumLiveHistoryMonths": 120,
+          "observedAt": "2024-10-07",
+          "treatment": "eligibility-only",
+          "sourceIds": [
+            "tether-2024-ten-year-milestones"
+          ]
+        }
+      },
+      "redemptionThroughput": {
+        "cumulativeLifetimeRedeemedSupplyRatio": null,
+        "stressWindows": [
+          {
+            "episodeKey": "terra-ust-market-stress-2022-05",
+            "observedAt": "2022-05-31",
+            "maximumWindowDays": 7,
+            "redeemedUsdLowerBound": 10000000000,
+            "redeemedSupplyRatioLowerBound": 0.12,
+            "settlement": {
+              "state": "settled-in-full",
+              "verification": "issuer-reported"
+            },
+            "sourceIds": [
+              "tether-2022-05-redemption-stress"
+            ]
+          }
+        ]
+      },
+      "stressEpisodes": [
+        {
+          "episodeKey": "terra-ust-market-stress-2022-05",
+          "name": "Terra-LUNA and UST market stress",
+          "observedMonth": "2022-05",
+          "redemptionContinued": true,
+          "recoveredWithinSec": null,
+          "sourceIds": [
+            "tether-2022-05-redemption-stress"
+          ]
+        }
+      ],
+      "reserveReconciliation": {
+        "firstReportPeriodEnd": "2022-06-30",
+        "latestReportPeriodEnd": "2026-03-31",
+        "observedReportHistoryMonths": 45,
+        "reportedCadence": "quarterly",
+        "continuityEvidence": "issuer-reported",
+        "missedMaterialPeriods": null,
+        "historySourceIds": [
+          "bdo-2022-q2-reserves-assurance",
+          "tether-2024-ten-year-milestones",
+          "bdo-2026-q1-reserves-assurance"
+        ],
+        "latestAssurance": {
+          "level": "reasonable-assurance",
+          "standard": "ISAE 3000 (Revised)",
+          "periodEnd": "2026-03-31",
+          "sourceIds": [
+            "bdo-2026-q1-reserves-assurance"
+          ]
+        },
+        "latestReconciliationProcedures": {
+          "bankAndDepositaryBalances": true,
+          "blockchainAssetsAndLiabilities": true,
+          "sourceIds": [
+            "bdo-2026-q1-reserves-assurance"
+          ]
+        }
+      },
+      "incidentReview": {
+        "state": "not-reviewed"
+      }
+    }
+  ]
+}

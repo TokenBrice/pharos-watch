@@ -2,8 +2,7 @@ import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../../data/safety-score
 import {
   isUsdDenominatedSupplyKind,
   type V9FactStatusV2,
-  type V9AssetFactsV2,
-  type CompiledV9FactSetV2,
+  type V9AssetFactsV3,
 } from "../../types/safety-score-v9-facts";
 import {
   V9_RELEASE_COVERAGE_FLOORS,
@@ -22,7 +21,7 @@ import {
 import type { MechanismArchetype } from "../../types/stablecoin-taxonomy";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
-import { parseCompiledV9FactSetV2 } from "./facts";
+import { readCompiledV9FactSetForEvaluation } from "./facts";
 
 const V9_RELEASE_COVERAGE_REPORT_DIGEST_DOMAIN = "safety-score-v9.release-coverage-report.v1";
 const V9_COVERAGE_EVALUATION_PROJECTION_DIGEST_DOMAIN = "safety-score-v9.coverage-evaluation-projection.v1";
@@ -41,7 +40,7 @@ function sameStrings(left: readonly string[], right: readonly string[]): boolean
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
-function resolvedArchetype(value: V9AssetFactsV2["archetype"]): MechanismArchetype | null {
+function resolvedArchetype(value: V9AssetFactsV3["archetype"]): MechanismArchetype | null {
   return value === "unresolved" ? null : value;
 }
 
@@ -63,7 +62,7 @@ function deepFreeze<T>(value: T): Readonly<T> {
   return value;
 }
 
-function evidenceCurrent(asset: V9AssetFactsV2, evidenceRefIds: readonly string[]): boolean {
+function evidenceCurrent(asset: V9AssetFactsV3, evidenceRefIds: readonly string[]): boolean {
   if (evidenceRefIds.length === 0) return false;
   const byId = new Map(asset.evidence.map((reference) => [reference.evidenceId, reference]));
   return evidenceRefIds.every((evidenceId) => {
@@ -76,7 +75,7 @@ function applicabilityReviewed(status: V9FactStatusV2): boolean {
   return status.applicability.state !== "unresolved";
 }
 
-function statusCurrent(asset: V9AssetFactsV2, status: V9FactStatusV2): boolean {
+function statusCurrent(asset: V9AssetFactsV3, status: V9FactStatusV2): boolean {
   return (
     applicabilityReviewed(status) &&
     status.observationState === "known" &&
@@ -84,7 +83,7 @@ function statusCurrent(asset: V9AssetFactsV2, status: V9FactStatusV2): boolean {
   );
 }
 
-function mechanismStatuses(asset: V9AssetFactsV2): V9FactStatusV2[] {
+function mechanismStatuses(asset: V9AssetFactsV3): V9FactStatusV2[] {
   if (asset.mechanismRiskReview.review === null) return [];
   return Object.values(asset.mechanismRiskReview.review).flatMap((value) =>
     value !== null && typeof value === "object" && "status" in value
@@ -98,7 +97,7 @@ interface ReviewState {
   currentComplete: boolean;
 }
 
-function reviewState(asset: V9AssetFactsV2, domain: (typeof REVIEW_DOMAINS)[number]): ReviewState {
+function reviewState(asset: V9AssetFactsV3, domain: (typeof REVIEW_DOMAINS)[number]): ReviewState {
   let statuses: readonly V9FactStatusV2[];
   let structuralComplete = true;
   if (domain === "backing") {
@@ -145,7 +144,7 @@ function reviewState(asset: V9AssetFactsV2, domain: (typeof REVIEW_DOMAINS)[numb
   };
 }
 
-function reserveCoverage(asset: V9AssetFactsV2) {
+function reserveCoverage(asset: V9AssetFactsV3) {
   const sourceNative = asset.reserveExposures.filter(
     (exposure) => exposure.provenance === "live" && statusCurrent(asset, exposure.status),
   );
@@ -169,7 +168,7 @@ function reserveCoverage(asset: V9AssetFactsV2) {
   };
 }
 
-function routeCoverage(asset: V9AssetFactsV2, lane: "dex" | "redemption", includedRouteKeys: ReadonlySet<string>) {
+function routeCoverage(asset: V9AssetFactsV3, lane: "dex" | "redemption", includedRouteKeys: ReadonlySet<string>) {
   const routes = asset.exitRoutes.filter((route) => route.lane === lane);
   const current = routes.filter((route) => statusCurrent(asset, route.status));
   const capabilityComplete = routes.filter(
@@ -243,7 +242,7 @@ export function computeV9CoverageEvaluationProjectionDigest(
 }
 
 function currentCanonicalWeightMatches(
-  asset: V9AssetFactsV2,
+  asset: V9AssetFactsV3,
   manifestAsset: V9ReleaseCohortAssetV1,
   chainSupplyGenerationId: string,
   chainSupplyObservedAtSec: number,
@@ -264,7 +263,7 @@ function currentCanonicalWeightMatches(
 }
 
 function isTopEvidenceComplete(
-  asset: V9AssetFactsV2,
+  asset: V9AssetFactsV3,
   evaluation: V9CoverageEvaluationSnapshotV1["assets"][number] | undefined,
   routeAssets: readonly ReturnType<typeof routeCoverage>[],
 ): boolean {
@@ -279,11 +278,17 @@ function isTopEvidenceComplete(
 
 /** Evaluate the immutable V9-9 economic coverage floors without mutating facts or score output. */
 export function evaluateV9ReleaseCoverage(args: {
-  factSet: CompiledV9FactSetV2;
+  factSet: unknown;
   evaluation: V9CoverageEvaluationSnapshotV1;
   manifest: V9ReleaseCohortManifestV1;
 }): Readonly<V9ReleaseCoverageReportV1> {
-  const factSet = parseCompiledV9FactSetV2(args.factSet);
+  const factSetRead = readCompiledV9FactSetForEvaluation(args.factSet);
+  if (factSetRead.sourceSchemaVersion !== 3) {
+    throw new Error(
+      "Safety Score v9 release coverage requires a native V3 fact set; retained V2 facts must be replayed through the V3 compiler because the V1 coverage report has only one fact-set identity",
+    );
+  }
+  const factSet = factSetRead.factSet;
   const evaluation = V9CoverageEvaluationSnapshotV1Schema.parse(args.evaluation);
   const manifest = V9ReleaseCohortManifestV1Schema.parse(args.manifest);
   const blockers: V9CoverageBlockerV1[] = [];

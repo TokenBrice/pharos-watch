@@ -6,10 +6,9 @@ import type { V9Grade, V9ValidatedPolicyEnvelope } from "@shared/types/safety-sc
  * anchor contract is declared once in SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1 as
  * grade-band references; the numeric thresholds are resolved from the candidate
  * methodology policy's gradeThresholds so the gate tracks policy retunes
- * instead of duplicating magic numbers. Two anchors carry pending owner
- * rulings (D-F usdt-tether, D-G ausd-agora): passing the decision id through
- * `applyRulings` flips exactly that anchor's threshold to the ruled
- * alternative, so a later ruling changes one data field.
+ * instead of duplicating magic numbers. The production-acceptance validator
+ * owns the complete release contract; this smaller gate keeps the principal
+ * calibration anchors and adverse controls coherent during iteration.
  */
 
 const SAFETY_SCORE_V9_ANCHOR_GATE_SCHEMA_VERSION = 1;
@@ -85,10 +84,12 @@ export const SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1 = {
   anchors: [
     { id: "usdc-circle", minGrade: "A", label: "A-anchor" },
     { id: "bold-liquity", minGrade: "A", label: "A-anchor" },
-    { id: "usdt-tether", minGrade: "B", label: "USDT anchor (amended A- to B by owner ruling D-F, 2026-07-19)" },
+    { id: "usdt-tether", minGrade: "A-", label: "USDT resilience anchor" },
+    { id: "dai-makerdao", minGrade: "B", label: "DAI current-facts anchor" },
+    { id: "sdai-makerdao", minGrade: "B-", label: "sDAI current-facts anchor" },
+    { id: "sbold-k3-capital", minGrade: "B-", label: "sBOLD measured-withdrawal anchor" },
     { id: "lusd-liquity", minGrade: "B+", label: "LUSD anchor" },
     { id: "pyusd-paypal", minGrade: "B", label: "B-anchor" },
-    { id: "usdg-paxos", minGrade: "C+", label: "USDG anchor (amended B to C+ by owner ruling D-I, 2026-07-19)" },
     { id: "ausd-agora", minGrade: "C+", label: "AUSD anchor (amended B to C+ by owner ruling D-G, 2026-07-19)" },
     { id: "rlusd-ripple", minGrade: "B", label: "B-anchor" },
     { id: "zchf-frankencoin", minGrade: "C+", label: "ZCHF anchor (amended B to C+ by owner ruling D-H, 2026-07-19)" },

@@ -62,12 +62,15 @@ function fixtureTarget(chain: string): DexMeasuredExecutionTarget {
   };
 }
 
-function fixtureProfile(target: DexMeasuredExecutionTarget) {
+function fixtureProfile(
+  target: DexMeasuredExecutionTarget,
+  identity: { targetGenerationId?: string; quoteGenerationId?: string; quotedAt?: number } = {},
+) {
   return buildDexMeasuredExecutionProfile({
     target,
-    targetGenerationId: "target-generation",
-    quoteGenerationId: "quote-generation",
-    quotedAt: 1_060,
+    targetGenerationId: identity.targetGenerationId ?? "target-generation",
+    quoteGenerationId: identity.quoteGenerationId ?? "quote-generation",
+    quotedAt: identity.quotedAt ?? 1_060,
     blockNumber: 25_536_894,
     endpointAddress: `0x${"44".repeat(20)}`,
     endpointCodeHash: `0x${"55".repeat(32)}`,
@@ -84,6 +87,109 @@ function fixtureProfile(target: DexMeasuredExecutionTarget) {
       },
     ],
   });
+}
+
+function evidenceDb(input: {
+  target: DexMeasuredExecutionTarget;
+  latest: {
+    status: "measured" | "failed";
+    failureReason: string | null;
+    profile: ReturnType<typeof fixtureProfile> | null;
+  };
+  historical?: Array<{
+    target: DexMeasuredExecutionTarget;
+    profile?: ReturnType<typeof fixtureProfile> | null;
+    status?: "measured" | "failed";
+    failureReason?: string | null;
+    generationId?: string;
+    targetGenerationId?: string;
+    publishedAt?: number;
+  }>;
+}) {
+  const preparedSql: string[] = [];
+  const makeStmt = (sql: string): Record<string, unknown> => ({
+    bind: () => makeStmt(sql),
+    first: async () => {
+      if (sql.includes("state IN ('published', 'superseded')")) {
+        return {
+          generation_id: "target-generation-latest",
+          state: "superseded",
+          started_at: 1_000,
+          published_at: 1_010,
+          expected_rows: 1,
+          published_rows: 1,
+          dependency_snapshot_json: null,
+        };
+      }
+      if (sql.includes("WHERE surface = ? AND state = 'published'")) {
+        return {
+          generation_id: "quote-generation-latest",
+          state: "published",
+          started_at: 2_000,
+          published_at: 2_010,
+          expected_rows: 1,
+          published_rows: 1,
+          dependency_snapshot_json: JSON.stringify({ targetGenerationId: "target-generation-latest" }),
+        };
+      }
+      return null;
+    },
+    all: async () => {
+      if (sql.includes("q.generation_id IN")) {
+        return {
+          results: (input.historical ?? []).map((entry, index) => {
+            const profile = entry.profile ?? null;
+            return {
+              generation_id: entry.generationId ?? profile?.quoteGenerationId ?? `quote-generation-failed-${index}`,
+              target_generation_id:
+                entry.targetGenerationId ?? profile?.targetGenerationId ?? `target-generation-failed-${index}`,
+              target_id: entry.target.targetId,
+              status: entry.status ?? "measured",
+              failure_reason: entry.failureReason ?? null,
+              quote_profile_json: profile ? JSON.stringify(profile) : null,
+              quote_published_at: entry.publishedAt ?? 1_900 - index,
+              target_json: JSON.stringify(entry.target),
+            };
+          }),
+        };
+      }
+      if (sql.includes("FROM dex_measured_execution_quotes")) {
+        return {
+          results: [
+            {
+              generation_id: "quote-generation-latest",
+              target_generation_id: "target-generation-latest",
+              target_id: input.target.targetId,
+              status: input.latest.status,
+              failure_reason: input.latest.failureReason,
+              quote_profile_json: input.latest.profile ? JSON.stringify(input.latest.profile) : null,
+            },
+          ],
+        };
+      }
+      if (sql.includes("FROM dex_measured_execution_targets")) {
+        return {
+          results: [
+            {
+              generation_id: "target-generation-latest",
+              target_id: input.target.targetId,
+              target_json: JSON.stringify(input.target),
+            },
+          ],
+        };
+      }
+      return { results: [] };
+    },
+  });
+  return {
+    preparedSql,
+    db: {
+      prepare: (sql: string) => {
+        preparedSql.push(sql);
+        return makeStmt(sql);
+      },
+    } as unknown as D1Database,
+  };
 }
 
 describe("measured execution publication", () => {
@@ -295,6 +401,230 @@ describe("measured execution raw payload policy", () => {
     expect(entry?.status).toBe("measured");
     expect(entry?.profile).toBeTruthy();
     expect(entry).not.toHaveProperty("rawPayload");
+  });
+});
+
+describe("measured execution last-known-good selection", () => {
+  it("uses a prior measured row when the latest outcome is an operational failure", async () => {
+    const measuredTarget = fixtureTarget("ethereum");
+    const historicalProfile = fixtureProfile(measuredTarget, {
+      targetGenerationId: "target-generation-lkg",
+      quoteGenerationId: "quote-generation-lkg",
+      quotedAt: 1_900,
+    });
+    const { db, preparedSql } = evidenceDb({
+      target: measuredTarget,
+      latest: {
+        status: "failed",
+        failureReason: "request-budget-exhausted",
+        profile: null,
+      },
+      historical: [{ target: measuredTarget, profile: historicalProfile }],
+    });
+
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const entry = evidence?.byTargetId.get(measuredTarget.targetId);
+
+    expect(entry).toMatchObject({
+      status: "measured",
+      failureReason: null,
+      quoteGenerationId: "quote-generation-lkg",
+      targetGenerationId: "target-generation-lkg",
+      resolution: "last-known-good",
+      latestFailureReason: "request-budget-exhausted",
+    });
+    expect(entry?.profile?.quotedAt).toBe(1_900);
+    expect(entry?.profile?.quoteGenerationId).toBe("quote-generation-lkg");
+    expect(entry?.observationHistory).toMatchObject({
+      completeProducerCycleCount: 2,
+      successfulObservationCount: 1,
+      consecutiveSuccessCount: 0,
+      latestOperationalFailureAt: 2_010,
+    });
+    const historicalSql = preparedSql.find((sql) => sql.includes("q.generation_id IN"));
+    expect(historicalSql).toContain("state = 'superseded'");
+    expect(historicalSql).toContain("published_rows = history_generation.expected_rows");
+    expect(historicalSql).toContain("SELECT COUNT(*)");
+    expect(historicalSql).not.toContain("q.status = 'measured'");
+  });
+
+  it("preserves mature conservative history across a latest operational failure", async () => {
+    const measuredTarget = fixtureTarget("ethereum");
+    const newerProfile = fixtureProfile(measuredTarget, {
+      targetGenerationId: "target-generation-g2",
+      quoteGenerationId: "quote-generation-g2",
+      quotedAt: 1_900,
+    });
+    const olderProfile = fixtureProfile(measuredTarget, {
+      targetGenerationId: "target-generation-g1",
+      quoteGenerationId: "quote-generation-g1",
+      quotedAt: 1_800,
+    });
+    const { db } = evidenceDb({
+      target: measuredTarget,
+      latest: {
+        status: "failed",
+        failureReason: "quoter-rpc-unavailable",
+        profile: null,
+      },
+      historical: [
+        { target: measuredTarget, profile: newerProfile },
+        { target: measuredTarget, profile: olderProfile },
+      ],
+    });
+
+    const entry = (await loadLatestPublishedDexMeasuredQuoteEvidence(db))?.byTargetId.get(measuredTarget.targetId);
+
+    expect(entry).toMatchObject({
+      resolution: "last-known-good",
+      quoteGenerationId: "quote-generation-g2",
+      observationHistory: {
+        completeProducerCycleCount: 3,
+        successfulObservationCount: 2,
+        consecutiveSuccessCount: 0,
+        latestOperationalFailureAt: 2_010,
+        conservativeStatistic: "pointwise-minimum",
+      },
+    });
+  });
+
+  it("does not mask a deterministic or semantic failure with older evidence", async () => {
+    const measuredTarget = fixtureTarget("ethereum");
+    const historicalProfile = fixtureProfile(measuredTarget, {
+      targetGenerationId: "target-generation-lkg",
+      quoteGenerationId: "quote-generation-lkg",
+      quotedAt: 1_900,
+    });
+    const { db } = evidenceDb({
+      target: measuredTarget,
+      latest: {
+        status: "failed",
+        failureReason: "pool-revert",
+        profile: null,
+      },
+      historical: [{ target: measuredTarget, profile: historicalProfile }],
+    });
+
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const entry = evidence?.byTargetId.get(measuredTarget.targetId);
+
+    expect(entry).toMatchObject({
+      status: "failed",
+      failureReason: "pool-revert",
+      quoteGenerationId: "quote-generation-latest",
+      targetGenerationId: "target-generation-latest",
+      resolution: "latest",
+    });
+    expect(entry?.profile).toBeNull();
+  });
+
+  it("does not search past a historical deterministic failure for LKG evidence", async () => {
+    const measuredTarget = fixtureTarget("ethereum");
+    const olderProfile = fixtureProfile(measuredTarget, {
+      targetGenerationId: "target-generation-g1",
+      quoteGenerationId: "quote-generation-g1",
+      quotedAt: 1_800,
+    });
+    const { db } = evidenceDb({
+      target: measuredTarget,
+      latest: {
+        status: "failed",
+        failureReason: "request-budget-exhausted",
+        profile: null,
+      },
+      historical: [
+        {
+          target: measuredTarget,
+          status: "failed",
+          failureReason: "pool-revert",
+          generationId: "quote-generation-g2",
+          targetGenerationId: "target-generation-g2",
+          publishedAt: 1_900,
+        },
+        { target: measuredTarget, profile: olderProfile, publishedAt: 1_800 },
+      ],
+    });
+
+    const entry = (await loadLatestPublishedDexMeasuredQuoteEvidence(db))?.byTargetId.get(measuredTarget.targetId);
+
+    expect(entry).toMatchObject({
+      status: "failed",
+      failureReason: "request-budget-exhausted",
+      resolution: "latest",
+      quoteGenerationId: "quote-generation-latest",
+    });
+    expect(entry?.profile).toBeNull();
+    expect(entry?.observationHistory).toBeUndefined();
+  });
+
+  it("keeps a latest measured-zero profile instead of substituting older evidence", async () => {
+    const measuredTarget = fixtureTarget("ethereum");
+    const latestProfile = fixtureProfile(measuredTarget, {
+      targetGenerationId: "target-generation-latest",
+      quoteGenerationId: "quote-generation-latest",
+      quotedAt: 2_000,
+    });
+    const historicalProfile = fixtureProfile(measuredTarget, {
+      targetGenerationId: "target-generation-lkg",
+      quoteGenerationId: "quote-generation-lkg",
+      quotedAt: 1_900,
+    });
+    const { db } = evidenceDb({
+      target: measuredTarget,
+      latest: {
+        status: "measured",
+        failureReason: null,
+        profile: latestProfile,
+      },
+      historical: [{ target: measuredTarget, profile: historicalProfile }],
+    });
+
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const entry = evidence?.byTargetId.get(measuredTarget.targetId);
+
+    expect(entry).toMatchObject({
+      status: "measured",
+      quoteGenerationId: "quote-generation-latest",
+      targetGenerationId: "target-generation-latest",
+      resolution: "latest",
+      latestFailureReason: null,
+    });
+    expect(entry?.profile?.capacityCurve.every((point) => point.executableUsd === 0)).toBe(true);
+    expect(
+      entry?.observationHistory?.conservativeCapacityCurve.every((point) => point.executableUsd === 0),
+    ).toBe(true);
+  });
+
+  it("exposes exact-identity historical evidence for a target absent from the latest quote generation", async () => {
+    const latestTarget = fixtureTarget("ethereum");
+    const historicalTarget = fixtureTarget("base");
+    const historicalProfile = fixtureProfile(historicalTarget, {
+      targetGenerationId: "target-generation-lkg",
+      quoteGenerationId: "quote-generation-lkg",
+      quotedAt: 1_900,
+    });
+    const { db } = evidenceDb({
+      target: latestTarget,
+      latest: {
+        status: "failed",
+        failureReason: "pool-revert",
+        profile: null,
+      },
+      historical: [{ target: historicalTarget, profile: historicalProfile }],
+    });
+
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const latestEntry = evidence?.byTargetId.get(latestTarget.targetId);
+    const historicalEntry = evidence?.byTargetId.get(historicalTarget.targetId);
+
+    expect(latestEntry).toMatchObject({ status: "failed", failureReason: "pool-revert", resolution: "latest" });
+    expect(historicalEntry).toMatchObject({
+      status: "measured",
+      resolution: "last-known-good",
+      latestFailureReason: "quote-missing",
+      quoteGenerationId: "quote-generation-lkg",
+      targetGenerationId: "target-generation-lkg",
+    });
   });
 });
 

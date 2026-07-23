@@ -1,20 +1,41 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
+import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import fraxMetaSource from "@shared/data/stablecoins/coins/frax-frax.json";
+import flipcashMetaSource from "@shared/data/stablecoins/coins/usdf-flipcash.json";
+import astherusMetaSource from "@shared/data/stablecoins/coins/usdf-astherus.json";
+import megaMetaSource from "@shared/data/stablecoins/coins/usdm-mega.json";
+import wrappedMSource from "@shared/data/stablecoins/coins/wm-m0.json";
+import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { buildV9DependencyEvaluationPlan } from "@shared/lib/safety-score-v9/dependencies";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import {
+  evaluateV9Exit,
+  projectV9ExitEvaluationRoute,
+} from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9StressState } from "@shared/lib/safety-score-v9/stress";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
+import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
   computeSafetyScoreV9ReserveExposureKey,
   type SafetyScoreV9FactSetExtensionV2,
 } from "../safety-score-v9-fact-set";
-import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9-extension";
+import {
+  buildReviewedReserveClassifications,
+  buildSafetyScoreV9BaselineExtension,
+  type V9ExtensionRegistryMeta,
+} from "../safety-score-v9-extension";
+import {
+  buildSafetyScoreV9RetainedRedemptionRoutes,
+  buildSafetyScoreV9RouteReviews,
+} from "../safety-score-v9-extension-routes";
+import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9-extension-operational-resilience";
 import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9-extension-shock";
 import type { SafetyScoreV9ReviewedTransferFact } from "../safety-score-v9-extension-transfer";
 
@@ -310,6 +331,58 @@ function exactTwoAssetFixedInput(options: { mapAlphaCollateral?: boolean; omitAl
   });
 }
 
+function exactThreeAssetFixedInput(gammaCompletionRatio = 0.8) {
+  const two = exactTwoAssetFixedInput();
+  const {
+    schemaVersion: omittedSchemaVersion,
+    activeAssetIds: omittedActiveAssetIds,
+    dexPayloadFingerprint: omittedDexPayloadFingerprint,
+    redemptionPayloadFingerprint: omittedRedemptionPayloadFingerprint,
+    registryFingerprint: omittedRegistryFingerprint,
+    inputMethodologyVersions: omittedInputMethodologyVersions,
+    baseInputGenerationId: omittedBaseInputGenerationId,
+    ...draft
+  } = two;
+  void [
+    omittedSchemaVersion,
+    omittedActiveAssetIds,
+    omittedDexPayloadFingerprint,
+    omittedRedemptionPayloadFingerprint,
+    omittedRegistryFingerprint,
+    omittedInputMethodologyVersions,
+    omittedBaseInputGenerationId,
+  ];
+  const gammaRoute = route("dex:gamma");
+  gammaRoute.executableUsd = gammaRoute.requestedNotionalUsd * gammaCompletionRatio;
+  gammaRoute.completionRatio = gammaCompletionRatio;
+  gammaRoute.capacityCurve = gammaRoute.capacityCurve!.map((point) => ({
+    ...point,
+    executableUsd: point.requestedNotionalUsd * gammaCompletionRatio,
+    completionRatio: gammaCompletionRatio,
+  }));
+  return createReportCardsFixedInput({
+    ...draft,
+    activeAssetIds: ["alpha", "beta", "gamma"],
+    pegDataById: {
+      ...two.pegDataById,
+      gamma: { ...two.pegDataById.alpha!, id: "gamma", symbol: "GAMMA", name: "Gamma" },
+    },
+    dexLiqMap: {
+      ...two.dexLiqMap,
+      gamma: {
+        ...two.dexLiqMap.alpha!,
+        exitRouteObservations: [gammaRoute],
+      },
+    },
+    resolvedBlacklistStatuses: { alpha: false, beta: false, gamma: false },
+    liveReserveMap: { ...two.liveReserveMap, gamma: [] },
+    chainCirculatingById: {
+      ...two.chainCirculatingById,
+      gamma: structuredClone(two.chainCirculatingById.alpha),
+    },
+  });
+}
+
 function mechanismReview() {
   const component = {
     status: status(),
@@ -333,8 +406,12 @@ function routeReview(routeId = "dex:primary", observedAt = OBSERVED_AT_SEC) {
     executionCertainty: "bounded" as const,
     modelConfidence: "medium" as const,
     coverageClass: "exact-complete" as const,
+    capacityScoringHorizon: "immediate" as const,
     settlementModel: "atomic" as const,
     settlementSlaSec: null,
+    queueDepthUsd: null,
+    dailyLimitUsd: null,
+    minRedeemUsd: null,
     physicalResourceKeys: [`pool:${routeId}`],
     executionCosts: [
       { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executionCostBps: 180 },
@@ -363,6 +440,190 @@ function routeReview(routeId = "dex:primary", observedAt = OBSERVED_AT_SEC) {
       { kind: "dex-protocol" as const, key: "fixture-dex" },
     ],
   };
+}
+
+function queuedRedemptionFixedInput() {
+  const base = exactFixedInput();
+  const observation: ExitRouteObservation = {
+    routeId: "redemption:alpha:queue",
+    routeFamily: "issuer-redemption",
+    scope: { kind: "issuer", issuerId: "alpha" },
+    requestedNotionalUsd: 1_000_000,
+    settlementHorizonSec: 30 * 86_400,
+    maxCostBps: 200,
+    executableUsd: 1_000_000,
+    completionRatio: 1,
+    output: { kind: "fiat", currency: "USD" },
+    evidenceKind: "live-reserve-state",
+    confidence: "high",
+    scoreEligible: false,
+    observedAt: OBSERVED_AT_SEC,
+    freshnessSeconds: AS_OF_SEC - OBSERVED_AT_SEC,
+    commonModeKeys: ["issuer:alpha"],
+    capacityCurve: [
+      {
+        requestedNotionalUsd: 100_000,
+        maxCostBps: 200,
+        executableUsd: 100_000,
+        completionRatio: 1,
+      },
+      {
+        requestedNotionalUsd: 1_000_000,
+        maxCostBps: 200,
+        executableUsd: 1_000_000,
+        completionRatio: 1,
+      },
+    ],
+  };
+  const redemption: RedemptionBackstopEntry = {
+    stablecoinId: "alpha",
+    score: null,
+    effectiveExitScore: null,
+    dexLiquidityScore: null,
+    accessScore: 40,
+    settlementScore: 20,
+    executionCertaintyScore: 60,
+    capacityScore: 40,
+    outputAssetQualityScore: 100,
+    costScore: 100,
+    routeFamily: "offchain-issuer",
+    accessModel: "issuer-api",
+    settlementModel: "queued",
+    executionModel: "rules-based-nav",
+    outputAssetType: "stable-single",
+    provider: "reserve-sync-metadata",
+    sourceMode: "dynamic",
+    resolutionState: "resolved",
+    routeStatus: "open",
+    routeStatusSource: "protocol-api",
+    holderEligibility: "verified-customer",
+    capacityConfidence: "live-direct",
+    capacitySemantics: "immediate-bounded",
+    capacityProfile: {
+      immediateUsd: 1_000_000,
+      dailyLimitUsd: 1_000_000,
+      queuedUsd: 1_500_000,
+      scoringUsd: 1_000_000,
+      scoringHorizon: "queued",
+      capacityProfileConfidence: "live-direct",
+      modeledExitSizeUsd: 1_000_000,
+      exitRouteObservations: [observation],
+    },
+    feeConfidence: "fixed",
+    feeModelKind: "fixed-bps",
+    modelConfidence: "high",
+    immediateCapacityUsd: 1_000_000,
+    immediateCapacityRatio: 0.1,
+    capacityKind: "live-direct-bounded",
+    freshnessKind: "same-run-api",
+    sourceTimestamp: OBSERVED_AT_SEC,
+    settlementDelaySec: 30 * 86_400,
+    queueDepthUsd: 1_500_000,
+    dailyLimitUsd: 1_000_000,
+    minRedeemUsd: 1_000_000,
+    feeBps: 0,
+    queueEnabled: true,
+    methodologyVersion: "4.18",
+    updatedAt: OBSERVED_AT_SEC,
+  };
+  const {
+    schemaVersion: _schemaVersion,
+    dexPayloadFingerprint: _dexPayloadFingerprint,
+    redemptionPayloadFingerprint: _redemptionPayloadFingerprint,
+    registryFingerprint: _registryFingerprint,
+    inputMethodologyVersions: _inputMethodologyVersions,
+    baseInputGenerationId: _baseInputGenerationId,
+    ...draft
+  } = base;
+  return createReportCardsFixedInput({
+    ...draft,
+    redemptionGenerationId: "redemption:fixture",
+    redemptionBackstopMap: { alpha: redemption },
+    redemptionStale: false,
+    inputFreshness: {
+      ...draft.inputFreshness,
+      redemptionBackstops: {
+        updatedAt: OBSERVED_AT_SEC,
+        ageSeconds: AS_OF_SEC - OBSERVED_AT_SEC,
+        stale: false,
+      },
+    },
+  });
+}
+
+function boundedUnknownFeeRedemptionFixedInput() {
+  const assetId = "usdc-circle";
+  const base = exactFixedInput({ assetId });
+  const redemption: RedemptionBackstopEntry = {
+    stablecoinId: "usdc-circle",
+    score: null,
+    effectiveExitScore: null,
+    dexLiquidityScore: null,
+    accessScore: 40,
+    settlementScore: 65,
+    executionCertaintyScore: 60,
+    capacityScore: null,
+    outputAssetQualityScore: 100,
+    costScore: 40,
+    routeFamily: "offchain-issuer",
+    accessModel: "issuer-api",
+    settlementModel: "atomic",
+    executionModel: "rules-based-nav",
+    outputAssetType: "stable-single",
+    provider: "supply-full-model",
+    sourceMode: "estimated",
+    resolutionState: "resolved",
+    routeStatus: "open",
+    routeStatusSource: "static-config",
+    holderEligibility: "any-holder",
+    capacityConfidence: "documented-bound",
+    capacitySemantics: "eventual-only",
+    capacityProfile: {
+      immediateUsd: null,
+      eventualUsd: 10_000_000,
+      scoringUsd: null,
+      scoringHorizon: "eventual",
+      capacityProfileConfidence: "documented-bound",
+      modeledExitSizeUsd: 10_000_000,
+    },
+    feeConfidence: "undisclosed-reviewed",
+    feeModelKind: "documented-variable",
+    modelConfidence: "high",
+    immediateCapacityUsd: null,
+    immediateCapacityRatio: null,
+    feeBps: null,
+    queueEnabled: false,
+    methodologyVersion: "4.18",
+    updatedAt: OBSERVED_AT_SEC,
+    docs: {
+      label: "Fixture redemption terms",
+      url: "https://example.com/redemption",
+      reviewedAt: "1970-01-01",
+    },
+  };
+  const {
+    schemaVersion: _schemaVersion,
+    dexPayloadFingerprint: _dexPayloadFingerprint,
+    redemptionPayloadFingerprint: _redemptionPayloadFingerprint,
+    registryFingerprint: _registryFingerprint,
+    inputMethodologyVersions: _inputMethodologyVersions,
+    baseInputGenerationId: _baseInputGenerationId,
+    ...draft
+  } = base;
+  return createReportCardsFixedInput({
+    ...draft,
+    redemptionGenerationId: "redemption:bounded-unknown-fee",
+    redemptionBackstopMap: { [assetId]: redemption },
+    redemptionStale: false,
+    inputFreshness: {
+      ...draft.inputFreshness,
+      redemptionBackstops: {
+        updatedAt: OBSERVED_AT_SEC,
+        ageSeconds: AS_OF_SEC - OBSERVED_AT_SEC,
+        stale: false,
+      },
+    },
+  });
 }
 
 function extension(): SafetyScoreV9FactSetExtensionV2 {
@@ -457,9 +718,118 @@ function extension(): SafetyScoreV9FactSetExtensionV2 {
   };
 }
 
+type ExtensionDependencyEdge = NonNullable<
+  SafetyScoreV9FactSetExtensionV2["assets"][number]["dependencies"]
+>["edges"][number];
+
+function roleExtension(
+  fixed: ReturnType<typeof exactThreeAssetFixedInput>,
+  edgesByAssetId: Readonly<Record<string, readonly ExtensionDependencyEdge[]>>,
+): SafetyScoreV9FactSetExtensionV2 {
+  const base = extension();
+  return {
+    ...base,
+    registryFingerprint: fixed.registryFingerprint,
+    assets: fixed.activeAssetIds.map((assetId) => {
+      const asset = structuredClone(base.assets[0]!);
+      const edges = [...(edgesByAssetId[assetId] ?? [])];
+      const hasDependencyEvidence = edges.length > 0;
+      return {
+        ...asset,
+        assetId,
+        dependencies: {
+          source: edges.length > 0 ? "manual" : "none",
+          baseSource: edges.length > 0 ? "manual" : "none",
+          dependencyFromLive: false,
+          mappedLiveReserveWeight: null,
+          fallbackReason: null,
+          edges,
+          diagnostics: {
+            graphState: "valid",
+            issueCodes: [],
+            sccMemberAssetIds: [],
+          },
+        },
+        routeReviews: [routeReview(assetId === "alpha" ? "dex:primary" : `dex:${assetId}`)],
+        researchEvidence: hasDependencyEvidence
+          ? [
+              {
+                evidenceKey: `dependencies:${assetId}`,
+                sourceId: "fixture.role-dependencies",
+                observedAtSec: OBSERVED_AT_SEC,
+                publishedAtSec: null,
+                url: `https://example.com/dependencies/${assetId}`,
+                contentSha256: "d".repeat(64),
+                confidence: "manual-review",
+                maxAgeSec: 500,
+              },
+            ]
+          : [],
+        componentEvidence: hasDependencyEvidence
+          ? [{ componentKey: "dependencies", evidenceKeys: [`dependencies:${assetId}`] }]
+          : [],
+      };
+    }),
+  };
+}
+
+function extensionRoleEdge(
+  upstreamAssetId: string,
+  economicRole: "exit-dependency" | "control-operator" | "oracle-nav",
+  weight = 1,
+): ExtensionDependencyEdge {
+  const domain =
+    economicRole === "exit-dependency"
+      ? { kind: "redemption-rail" as const, key: `rail:${upstreamAssetId}` }
+      : economicRole === "control-operator"
+        ? { kind: "mint-control" as const, key: `operator:${upstreamAssetId}` }
+        : { kind: "oracle-feed" as const, key: `oracle:${upstreamAssetId}` };
+  return {
+    upstreamAssetId,
+    dependencyType: "mechanism",
+    economicRole,
+    weight,
+    failureDomains: [domain],
+  };
+}
+
 const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
 
 describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  it("carries reviewed mechanism redemption into the exit evidence responsibility path", () => {
+    const fixed = exactFixedInput();
+    const profiled = extension();
+    profiled.assets[0]!.mechanismExitFacts = [{
+      factKey: "protocol-redemption",
+      disposition: "supported",
+      quality: "adequate",
+    }];
+    profiled.assets[0]!.routeReviews = [];
+    profiled.assets[0]!.retainedRoutes = [];
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, profiled);
+    const asset = compiled.assets[0]!;
+    expect(asset.mechanismExitFacts).toEqual([
+      expect.objectContaining({
+        factKey: "protocol-redemption",
+        disposition: "supported",
+        quality: "adequate",
+      }),
+    ]);
+
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.scoreInput.pillars.exit.reasons).toContainEqual(
+      expect.objectContaining({
+        code: "missing-runtime-route-evidence",
+        path: "exit:mechanism-profile:protocol-redemption",
+        responsibility: "integration-missing",
+      }),
+    );
+    expect(evaluated.scoreInput.pillars.exit.reasons).not.toContainEqual(
+      expect.objectContaining({ code: "no-viable-exit-path" }),
+    );
+  });
+
   it("defaults retained v2 route reviews without modeled confidence to low", () => {
     const fixed = exactFixedInput();
     const retained = structuredClone(extension());
@@ -467,6 +837,179 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, retained);
     expect(compiled.assets[0]!.exitRoutes[0]).toMatchObject({ modelConfidence: "low" });
+  });
+
+  it("propagates post-role exit scores through three hops and never improves after adding an unmitigated role", () => {
+    const evaluateChain = (gammaCompletionRatio: number) => {
+      const fixed = exactThreeAssetFixedInput(gammaCompletionRatio);
+      const profiled = roleExtension(fixed, {
+        alpha: [extensionRoleEdge("beta", "exit-dependency")],
+        beta: [extensionRoleEdge("gamma", "exit-dependency")],
+      });
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, profiled);
+      const alphaEdge = compiled.assets.find((asset) => asset.assetId === "alpha")!.dependencies.edges[0]!;
+      expect(alphaEdge).toMatchObject({
+        edgeKey: "exit-dependency:mechanism:beta",
+        economicRole: "exit-dependency",
+        pathKind: "local-component",
+      });
+      expect(alphaEdge.evidenceRefIds).not.toHaveLength(0);
+      return evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
+    };
+
+    const stronger = evaluateChain(0.8);
+    const weaker = evaluateChain(0.05);
+    const exitScore = (set: ReturnType<typeof evaluateChain>, assetId: string) =>
+      set.assets.find((asset) => asset.assetId === assetId)!.scoreInput.pillars.exit.score!;
+
+    expect(exitScore(weaker, "gamma")).toBeLessThan(exitScore(stronger, "gamma"));
+    expect(exitScore(weaker, "beta")).toBeLessThan(exitScore(stronger, "beta"));
+    expect(exitScore(weaker, "alpha")).toBeLessThan(exitScore(stronger, "alpha"));
+
+    const fixed = exactThreeAssetFixedInput(0.05);
+    const withoutAddedRole = evaluateV9FactSet(
+      compileSafetyScoreV9FactSetFromFixedInput(
+        fixed,
+        roleExtension(fixed, { alpha: [extensionRoleEdge("beta", "exit-dependency")] }),
+      ),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const withAddedRole = evaluateV9FactSet(
+      compileSafetyScoreV9FactSetFromFixedInput(
+        fixed,
+        roleExtension(fixed, {
+          alpha: [
+            extensionRoleEdge("beta", "exit-dependency"),
+            extensionRoleEdge("gamma", "exit-dependency"),
+          ],
+        }),
+      ),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(exitScore(withAddedRole, "alpha")).toBeLessThanOrEqual(exitScore(withoutAddedRole, "alpha"));
+  });
+
+  it("propagates the effective oracle role subdimension through three hops", () => {
+    const evaluateOracleChain = (tier: "redundant-with-failover" | "single-source-or-laggy") => {
+      const fixed = exactThreeAssetFixedInput();
+      const profiled = roleExtension(fixed, {
+        alpha: [extensionRoleEdge("beta", "oracle-nav")],
+        beta: [extensionRoleEdge("gamma", "oracle-nav")],
+      });
+      const gamma = profiled.assets.find((asset) => asset.assetId === "gamma")!;
+      gamma.economicControlReview = {
+        ...gamma.economicControlReview!,
+        oracle: {
+          status: status("known", "v9.control.oracle-review"),
+          tier,
+          branches: [],
+        },
+      };
+      return evaluateV9FactSet(
+        compileSafetyScoreV9FactSetFromFixedInput(fixed, profiled),
+        V9_CANDIDATE_POLICY_V1,
+      );
+    };
+    const stronger = evaluateOracleChain("redundant-with-failover");
+    const weaker = evaluateOracleChain("single-source-or-laggy");
+    const controlScore = (set: ReturnType<typeof evaluateOracleChain>, assetId: string) =>
+      set.assets.find((asset) => asset.assetId === assetId)!.scoreInput.pillars.control.score!;
+
+    expect(controlScore(weaker, "gamma")).toBeLessThan(controlScore(stronger, "gamma"));
+    expect(controlScore(weaker, "beta")).toBeLessThan(controlScore(stronger, "beta"));
+    expect(controlScore(weaker, "alpha")).toBeLessThan(controlScore(stronger, "alpha"));
+  });
+
+  it("contains a sub-material exit/control SCC to its role pillars without a serial-cycle NR reason", () => {
+    const fixed = exactThreeAssetFixedInput();
+    const evaluated = evaluateV9FactSet(
+      compileSafetyScoreV9FactSetFromFixedInput(
+        fixed,
+        roleExtension(
+          fixed,
+          {
+            alpha: [extensionRoleEdge("beta", "exit-dependency", 0.01)],
+            beta: [extensionRoleEdge("alpha", "control-operator", 0.01)],
+          },
+        ),
+      ),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(evaluated.dependencyPlan.cyclicComponents).toContainEqual(["alpha", "beta"]);
+    expect(evaluated.dependencyPlan.serialCycleAssetIds).toEqual([]);
+    for (const assetId of ["alpha", "beta"]) {
+      const asset = evaluated.assets.find((candidate) => candidate.assetId === assetId)!;
+      expect(
+        asset.trace.finalGrade,
+        JSON.stringify({
+          nrReasons: asset.trace.nrReasons,
+          dependencyReasons: asset.scoreInput.dependencyReasons,
+          pillars: asset.scoreInput.pillars,
+        }),
+      ).not.toBe("NR");
+      expect(asset.scoreInput.dependencyReasons.map((reason) => reason.code)).not.toContain(
+        "implementation-parent-cycle",
+      );
+      expect(asset.scoreInput.dependencyReasons.map((reason) => reason.code)).not.toContain("parent-cycle");
+      expect(asset.dependencyInputs.roleInputs).toEqual([
+        expect.objectContaining({ cycleBlocked: true, boundedUnknown: true, score: null }),
+      ]);
+    }
+    const alpha = evaluated.assets.find((asset) => asset.assetId === "alpha")!;
+    const beta = evaluated.assets.find((asset) => asset.assetId === "beta")!;
+    expect(alpha.scoreInput.pillars.exit.reasons.map((reason) => reason.code)).toContain(
+      "nonmaterial-dependency-unavailable",
+    );
+    expect(alpha.scoreInput.pillars.control.reasons.map((reason) => reason.code)).not.toContain(
+      "nonmaterial-dependency-unavailable",
+    );
+    expect(beta.scoreInput.pillars.control.reasons.map((reason) => reason.code)).toContain(
+      "nonmaterial-dependency-unavailable",
+    );
+    expect(beta.scoreInput.pillars.exit.reasons.map((reason) => reason.code)).not.toContain(
+      "nonmaterial-dependency-unavailable",
+    );
+  });
+
+  it("loads every economic role from reviewed production metadata and preserves the Frax WTGXX non-link", () => {
+    const productionMeta = [
+      fraxMetaSource,
+      flipcashMetaSource,
+      astherusMetaSource,
+      megaMetaSource,
+      wrappedMSource,
+    ] as unknown as V9ExtensionRegistryMeta[];
+    const metaById = new Map(productionMeta.map((meta) => [meta.id, meta] as const));
+    const expectedRoles = [
+      ["wm-m0", "m-m0", "serial-claim"],
+      ["usdf-flipcash", "usdc-circle", "basket-exposure"],
+      ["usdf-astherus", "usdt-tether", "exit-dependency"],
+      ["usdm-mega", "usdtb-ethena", "control-operator"],
+      ["usdf-astherus", "usdt-tether", "oracle-nav"],
+    ] as const;
+    for (const [assetId, upstreamAssetId, role] of expectedRoles) {
+      expect(metaById.get(assetId)?.dependencyReview?.relationships).toContainEqual(
+        expect.objectContaining({ id: upstreamAssetId, economicRole: role }),
+      );
+    }
+
+    const frax = metaById.get("frax-frax")!;
+    const wtgxx = frax.reserves!.find((reserve) => reserve.name.startsWith("WTGXX"))!;
+    expect(frax.reserveReview?.nonLinkDispositions).toContainEqual(
+      expect.objectContaining({
+        reserveIndex: frax.reserves!.indexOf(wtgxx),
+        disposition: "untracked-exogenous-asset",
+        candidateCoinIds: ["wtgxx-wisdomtree"],
+      }),
+    );
+    const classifications = buildReviewedReserveClassifications(
+      [{ ...wtgxx, coinId: "wtgxx-wisdomtree", depType: "collateral" }],
+      frax,
+      Date.parse("2026-07-23T00:00:00.000Z") / 1_000,
+    );
+    expect(classifications).toEqual([
+      expect.objectContaining({ trackedAssetDisposition: "reviewed-non-link" }),
+    ]);
   });
 
   it("builds a conservative baseline overlay without inventing missing reviews", () => {
@@ -505,6 +1048,136 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       expect.arrayContaining(["missing-access-review"]),
     );
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
+  });
+
+  it("compiles clock-valid operational-resilience claims with one evidence record per cited source", () => {
+    const clockSec = Date.parse("2026-07-24T00:00:00Z") / 1_000;
+    const fixed = exactFixedInput({ assetId: "usdt-tether", clockSec });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "usdt-tether",
+          {
+            id: "usdt-tether",
+            mechanismArchetype: "fiat-cash",
+            launchDate: "2014-10-06",
+          },
+        ],
+      ]),
+    });
+    expect(baseline.assets[0]!.operationalResilience).toEqual(
+      getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", clockSec),
+    );
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const asset = compiled.assets[0]!;
+    const operationalEvidence = asset.evidence.filter((evidence) =>
+      evidence.evidenceId.startsWith("usdt-tether:operational-resilience:"),
+    );
+    expect(operationalEvidence).toHaveLength(4);
+    expect(new Set(operationalEvidence.map((evidence) => evidence.sourceId))).toEqual(
+      new Set([
+        "tether-2022-05-redemption-stress",
+        "tether-2024-ten-year-milestones",
+        "bdo-2022-q2-reserves-assurance",
+        "bdo-2026-q1-reserves-assurance",
+      ]),
+    );
+    expect(asset.operationalResilience).toMatchObject({
+      schemaVersion: 1,
+      redemptionThroughput: {
+        cumulativeLifetimeRedeemedSupplyRatio: null,
+        stressWindows: [
+          {
+            episodeKey: "terra-ust-market-stress-2022-05",
+            redeemedSupplyRatioLowerBound: 0.12,
+            settlement: { state: "settled-in-full", verification: "issuer-reported" },
+            confidence: "issuer-reported",
+          },
+        ],
+      },
+      stressEpisodes: [
+        {
+          episodeKey: "terra-ust-market-stress-2022-05",
+          recoveredWithinSec: null,
+          confidence: "issuer-reported",
+        },
+      ],
+      reserveReconciliation: {
+        reportHistory: {
+          observedReportHistoryMonths: 45,
+          missedMaterialPeriods: null,
+          confidence: "issuer-reported",
+        },
+        latestAssurance: {
+          level: "reasonable-assurance",
+          confidence: "independent-assurance",
+        },
+      },
+      incidentReview: { state: "not-reviewed" },
+    });
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.operationalResilience).toMatchObject({
+      eligible: true,
+      rawPillarCredits: { backing: 0, exit: 1.5, control: 0 },
+      pillarCredits: { backing: 0, exit: 1.5, control: 0 },
+      contributions: [
+        {
+          component: "stress-redemption",
+          confidence: "issuer-reported",
+          confidenceMultiplier: 0.5,
+          points: 1.5,
+        },
+      ],
+    });
+    expect(evaluated.scoreInput.pillars.exit.score).toBe(
+      Math.min(100, evaluated.exit.score! + 1.5),
+    );
+    expect(evaluated.trace.operationalResilience).toEqual(evaluated.operationalResilience);
+
+    const retainedCore = structuredClone(compiled);
+    const removedEvidenceId = operationalEvidence[0]!.evidenceId;
+    retainedCore.assets[0]!.evidence = retainedCore.assets[0]!.evidence.filter(
+      (evidence) => evidence.evidenceId !== removedEvidenceId,
+    );
+    const { v9FactSetDigest: _digest, ...core } = retainedCore;
+    expect(() => compileV9FactSetV3(core)).toThrow(`Unknown evidence reference ${removedEvidenceId}`);
+  });
+
+  it("keeps pre-review operational-resilience captures explicit null", () => {
+    const clockSec = Date.parse("2026-07-23T12:37:18Z") / 1_000;
+    const fixed = exactFixedInput({ assetId: "usdt-tether", clockSec });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "usdt-tether",
+          {
+            id: "usdt-tether",
+            mechanismArchetype: "fiat-cash",
+            launchDate: "2014-10-06",
+          },
+        ],
+      ]),
+    });
+    expect(baseline.assets[0]!.operationalResilience).toBeNull();
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    expect(compiled.assets[0]!.operationalResilience).toBeNull();
+    expect(
+      compiled.assets[0]!.evidence.some((evidence) =>
+        evidence.evidenceId.startsWith("usdt-tether:operational-resilience:"),
+      ),
+    ).toBe(false);
+
+    const futureOverlay = getSafetyScoreV9OperationalResilienceOverlay(
+      "usdt-tether",
+      Date.parse("2026-07-24T00:00:00Z") / 1_000,
+    );
+    expect(futureOverlay).not.toBeNull();
+    const injected = structuredClone(baseline);
+    injected.assets[0]!.operationalResilience = futureOverlay;
+    expect(() => compileSafetyScoreV9FactSetFromFixedInput(fixed, injected)).toThrow(
+      /outside its exact review window/,
+    );
   });
 
   it("marks pure NAV tokens as reviewed not-applicable for fixed-peg scoring", () => {
@@ -615,20 +1288,45 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         .scoreInput.dependencyReasons.map((reason) => reason.code),
     ).toContain("unreviewed-dependency-relationships");
 
-    const mismatchedMeta = new Map(metaById);
-    mismatchedMeta.set("alpha", {
+    const weightDriftMeta = new Map(metaById);
+    weightDriftMeta.set("alpha", {
       ...metaById.get("alpha")!,
       dependencyReview: {
         ...dependencyReview,
         relationships: [{ ...dependencyReview.relationships[0]!, weight: 0.4 }],
       },
     });
-    const mismatched = buildSafetyScoreV9BaselineExtension(fixed, { metaById: mismatchedMeta });
-    expect(mismatched.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
+    const weightDrift = buildSafetyScoreV9BaselineExtension(fixed, { metaById: weightDriftMeta });
+    expect(weightDrift.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
       diagnostics: {
         graphState: "unresolved",
-        issueCodes: ["collateral-edge-exposure-unmapped:beta", "dependency-review-mismatch"],
+        issueCodes: ["collateral-edge-exposure-unmapped:beta"],
       },
+      edges: [{ upstreamAssetId: "beta", dependencyType: "collateral", weight: 0.5 }],
+    });
+
+    const structuralDriftMeta = new Map(metaById);
+    structuralDriftMeta.set("alpha", {
+      ...metaById.get("alpha")!,
+      dependencyReview: {
+        ...dependencyReview,
+        relationships: [{ ...dependencyReview.relationships[0]!, id: "gamma" }],
+      },
+    });
+    const structuralDrift = buildSafetyScoreV9BaselineExtension(fixed, { metaById: structuralDriftMeta });
+    expect(structuralDrift.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
+      diagnostics: {
+        graphState: "unresolved",
+        issueCodes: expect.arrayContaining(["dependency-review-mismatch"]),
+      },
+      edges: [
+        expect.objectContaining({
+          upstreamAssetId: "beta",
+          dependencyType: "collateral",
+          economicRole: "basket-exposure",
+          weight: 0.5,
+        }),
+      ],
     });
 
     const mappedFixed = exactTwoAssetFixedInput({ mapAlphaCollateral: true });
@@ -657,6 +1355,96 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         .scoreInput.dependencyReasons.map((reason) => reason.code),
     ).not.toContain("unreviewed-dependency-relationships");
 
+    const reviewedLiveLinkMeta = new Map(metaById);
+    reviewedLiveLinkMeta.set("alpha", {
+      ...metaById.get("alpha")!,
+      reserves: [
+        {
+          name: "Beta stablecoin",
+          pct: 50,
+          risk: "low",
+          coinId: "beta",
+          depType: "collateral",
+          assetClass: "stablecoin",
+          issuerOrObligor: "Beta issuer",
+          riskFactors: ["counterparty"],
+          liquidityHorizon: "immediate",
+        },
+        {
+          name: "Custodied cash",
+          pct: 50,
+          risk: "very-low",
+          assetClass: "cash",
+          issuerOrObligor: "issuer:alpha",
+          riskFactors: ["custody", "counterparty"],
+          liquidityHorizon: "immediate",
+          maturityDaysMax: 0,
+        },
+      ],
+      reserveReview: {
+        reviewedAt: "1970-01-01",
+        reviewer: "Fixture reviewer",
+        confidence: "verified",
+        sources: [{ label: "Fixture reserve review", url: "https://example.com/reserves/alpha" }],
+        rationale: "The live Beta reserve row is linked by a reviewed one-to-one identity.",
+        compositionBasis: "Fixture composition",
+        compositionAsOf: "1970-01-01",
+        scope: "full-composition",
+        knownUnknownExposure: "No unknown exposure.",
+        knownUnknownExposurePct: 0,
+      },
+    });
+    const reviewedLiveLinkOriginal = exactTwoAssetFixedInput({ mapAlphaCollateral: true });
+    const reviewedLiveReserveMap = structuredClone(reviewedLiveLinkOriginal.liveReserveMap);
+    delete reviewedLiveReserveMap.alpha![0]!.coinId;
+    delete reviewedLiveReserveMap.alpha![0]!.depType;
+    const {
+      schemaVersion: omittedReviewedSchemaVersion,
+      activeAssetIds: omittedReviewedActiveAssetIds,
+      dexPayloadFingerprint: omittedReviewedDexPayloadFingerprint,
+      redemptionPayloadFingerprint: omittedReviewedRedemptionPayloadFingerprint,
+      registryFingerprint: omittedReviewedRegistryFingerprint,
+      inputMethodologyVersions: omittedReviewedInputMethodologyVersions,
+      baseInputGenerationId: omittedReviewedBaseInputGenerationId,
+      ...reviewedLiveLinkDraft
+    } = reviewedLiveLinkOriginal;
+    void [
+      omittedReviewedSchemaVersion,
+      omittedReviewedActiveAssetIds,
+      omittedReviewedDexPayloadFingerprint,
+      omittedReviewedRedemptionPayloadFingerprint,
+      omittedReviewedRegistryFingerprint,
+      omittedReviewedInputMethodologyVersions,
+      omittedReviewedBaseInputGenerationId,
+    ];
+    const reviewedLiveLinkFixed = createReportCardsFixedInput({
+      ...reviewedLiveLinkDraft,
+      activeAssetIds: ["alpha", "beta"],
+      liveReserveMap: reviewedLiveReserveMap,
+    });
+    const reviewedLiveLink = buildSafetyScoreV9BaselineExtension(reviewedLiveLinkFixed, {
+      metaById: reviewedLiveLinkMeta,
+    });
+    expect(reviewedLiveLink.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
+      source: "live-reserve",
+      dependencyFromLive: true,
+      diagnostics: { graphState: "valid", issueCodes: [] },
+      edges: [{ upstreamAssetId: "beta", dependencyType: "collateral", weight: 0.5 }],
+    });
+    const compiledReviewedLiveLink = compileSafetyScoreV9FactSetFromFixedInput(
+      reviewedLiveLinkFixed,
+      reviewedLiveLink,
+    );
+    expect(
+      compiledReviewedLiveLink.assets
+        .find((asset) => asset.assetId === "alpha")!
+        .reserveExposures.find((exposure) => exposure.trackedAssetId === "beta"),
+    ).toMatchObject({
+      weight: 0.5,
+      assetClass: "stablecoin",
+      status: { observationState: "known" },
+    });
+
     const retainedNullClassification = structuredClone(mapped);
     retainedNullClassification.assets
       .find((asset) => asset.assetId === "alpha")!
@@ -678,6 +1466,170 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         issueCodes: ["collateral-edge-exposure-weight-mismatch:beta"],
       },
     });
+  });
+
+  it("compiles duplicate reviewed relationships as distinct role-specific V3 paths", () => {
+    const fixed = exactTwoAssetFixedInput({ omitAlphaReserve: true });
+    const metaById = new Map<string, V9ExtensionRegistryMeta>([
+      [
+        "alpha",
+        {
+          id: "alpha",
+          mechanismArchetype: "fiat-cash",
+          launchDate: "1970-01-01",
+          dependencies: [{ id: "beta", weight: 1, type: "mechanism" }],
+          dependencyReview: {
+            reviewedAt: "1970-01-01",
+            reviewer: "Fixture reviewer",
+            confidence: "verified",
+            sources: [{ label: "Role review", url: "https://example.com/dependencies/alpha" }],
+            rationale: "Beta supplies both the reviewed exit asset and reference unit.",
+            relationships: [
+              {
+                id: "beta",
+                weight: 1,
+                type: "mechanism",
+                economicRole: "exit-dependency",
+                reason: "Beta is the redemption output.",
+              },
+              {
+                id: "beta",
+                weight: 1,
+                type: "mechanism",
+                economicRole: "oracle-nav",
+                reason: "Beta is the reference unit.",
+              },
+            ],
+          },
+        },
+      ],
+      ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "1970-01-01" }],
+    ]);
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+    expect(baseline.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
+      diagnostics: { graphState: "valid", issueCodes: [] },
+      edges: [
+        expect.objectContaining({ upstreamAssetId: "beta", economicRole: "exit-dependency" }),
+        expect.objectContaining({ upstreamAssetId: "beta", economicRole: "oracle-nav" }),
+      ],
+    });
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const edges = compiled.assets.find((asset) => asset.assetId === "alpha")!.dependencies.edges;
+    expect(edges).toEqual([
+      expect.objectContaining({
+        edgeKey: "exit-dependency:mechanism:beta",
+        pathKind: "local-component",
+        economicRole: "exit-dependency",
+        evidenceRefIds: expect.any(Array),
+      }),
+      expect.objectContaining({
+        edgeKey: "oracle-nav:mechanism:beta",
+        pathKind: "local-component",
+        economicRole: "oracle-nav",
+        evidenceRefIds: expect.any(Array),
+      }),
+    ]);
+    expect(edges.every((edge) => edge.evidenceRefIds.length > 0)).toBe(true);
+  });
+
+  it("derives only form-positive native savings wrapper-local facts", () => {
+    const original = exactTwoAssetFixedInput({ mapAlphaCollateral: true });
+    const {
+      schemaVersion: omittedSchemaVersion,
+      activeAssetIds: omittedActiveAssetIds,
+      dexPayloadFingerprint: omittedDexPayloadFingerprint,
+      redemptionPayloadFingerprint: omittedRedemptionPayloadFingerprint,
+      registryFingerprint: omittedRegistryFingerprint,
+      inputMethodologyVersions: omittedInputMethodologyVersions,
+      baseInputGenerationId: omittedBaseInputGenerationId,
+      ...draft
+    } = original;
+    void [
+      omittedSchemaVersion,
+      omittedActiveAssetIds,
+      omittedDexPayloadFingerprint,
+      omittedRedemptionPayloadFingerprint,
+      omittedRegistryFingerprint,
+      omittedInputMethodologyVersions,
+      omittedBaseInputGenerationId,
+    ];
+    const parentReserve = structuredClone(original.liveReserveMap.alpha![0]!);
+    parentReserve.pct = 100;
+    const fixed = createReportCardsFixedInput({
+      ...draft,
+      activeAssetIds: ["alpha", "beta"],
+      liveReserveMap: { ...draft.liveReserveMap, alpha: [parentReserve] },
+    });
+    const metaById = new Map<string, V9ExtensionRegistryMeta>([
+      [
+        "alpha",
+        {
+          id: "alpha",
+          mechanismArchetype: "fiat-cash",
+          launchDate: "1970-01-01",
+          variantOf: "beta",
+          variantKind: "savings-passthrough",
+          flags: {
+            backing: "crypto-backed",
+            pegCurrency: "USD",
+            governance: "decentralized",
+            yieldBearing: true,
+            rwa: false,
+            navToken: true,
+          },
+        },
+      ],
+      ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "1970-01-01" }],
+    ]);
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+    const alpha = baseline.assets.find((asset) => asset.assetId === "alpha")!;
+    alpha.economicControlReview = {
+      mint: {
+        status: notApplicableStatus("v9.control.mint-review"),
+        controlKey: null,
+        reconciliation: "not-applicable",
+        supervision: "none",
+        upgrade: { state: "not-applicable", controlKey: null },
+      },
+      oracle: {
+        status: notApplicableStatus("v9.control.oracle-review"),
+        tier: null,
+        branches: [],
+      },
+      bridge: {
+        status: notApplicableStatus("v9.control.bridge-review"),
+        routes: [],
+      },
+    };
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const compiledAlpha = compiled.assets.find((asset) => asset.assetId === "alpha")!;
+    expect(compiledAlpha.economicControlReview.mint).toMatchObject({
+      status: { observationState: "known" },
+      reconciliation: "not-applicable",
+    });
+    expect(compiledAlpha.peg.status.observationState).toBe("known");
+    expect(compiledAlpha.peg.referenceKind).toBe("nav");
+    const wrapper = compiledAlpha.wrapperLocalFacts;
+    expect(wrapper).toMatchObject({
+      applicability: "wrapper",
+      form: "native-staked",
+      facts: {
+        custodyEscrow: { disposition: "issuer-undisclosed", assessment: null },
+        strategyComplexity: { disposition: "reviewed", assessment: "low" },
+        leverage: { disposition: "issuer-undisclosed", assessment: null },
+        rehypothecationCorrelation: { disposition: "issuer-undisclosed", assessment: null },
+        shareAccountingNavOracle: { disposition: "reviewed", assessment: "moderate" },
+      },
+    });
+    if (wrapper.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
+    for (const factKey of [
+      "strategyComplexity",
+      "shareAccountingNavOracle",
+    ] as const) {
+      expect(wrapper.facts[factKey].evidenceRefIds.length).toBeGreaterThan(0);
+    }
   });
 
   it("reconciles curated collateral only when no live reserve snapshot exists", () => {
@@ -842,7 +1794,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
     expect(evaluated.assets).toHaveLength(1);
-    expect(evaluated.assets[0]!.trace).toMatchObject({ finalGrade: "B+", finalScore: 79 });
+    expect(evaluated.assets[0]!.trace).toMatchObject({ finalGrade: "B+", finalScore: 77 });
     expect(evaluated.assets[0]!.access).toMatchObject({
       transfer: "permissionless",
       freezeExposure: "none-known",
@@ -856,6 +1808,127 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const high = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ liquidityScore: 99 }), extension());
     expect(low.assets).toEqual(high.assets);
     expect(low.baseInputGenerationId).not.toBe(high.baseInputGenerationId);
+  });
+
+  it("preserves live queued terms through the production review and fact boundary", () => {
+    const fixed = queuedRedemptionFixedInput();
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+    const redemption = compiled.assets[0]!.exitRoutes.find((route) => route.lane === "redemption")!;
+    expect(redemption).toMatchObject({
+      capacityScoringHorizon: "queued",
+      settlementModel: "queued",
+      settlementSlaSec: 30 * 86_400,
+      queueDepthUsd: 1_500_000,
+      dailyLimitUsd: 1_000_000,
+      minRedeemUsd: 1_000_000,
+    });
+
+    const exit = evaluateV9Exit(
+      {
+        circulatingUsd: 10_000_000,
+        portfolioStatus: "reviewed-complete",
+        routes: [projectV9ExitEvaluationRoute(redemption)],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(exit.score).toBeGreaterThan(0);
+    expect(exit.horizons.immediate).toEqual({ primaryRouteKey: null, score: null });
+    expect(exit.horizons.queued.primaryRouteKey).toBe(redemption.routeKey);
+    expect(exit.routes[0]).toMatchObject({
+      horizon: "queued",
+      settlementDelaySec: 30 * 86_400,
+      capsApplied: expect.arrayContaining(["queue-backlog:0.65", "minimum-redeem:0.75"]),
+    });
+  });
+
+  it("preserves reviewed capacity and applies the bounded-unknown fee ceiling end to end", () => {
+    const fixed = boundedUnknownFeeRedemptionFixedInput();
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.assetId = "usdc-circle";
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "usdc-circle");
+    reviewed.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, "usdc-circle");
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+    const redemption = compiled.assets[0]!.exitRoutes.find((route) => route.lane === "redemption")!;
+    expect(redemption).toMatchObject({
+      feeEvidence: "undisclosed-reviewed",
+      scoreEligible: false,
+      status: { observationState: "known" },
+    });
+    expect(redemption.capacityCurve.every((point) => point.executableUsd > 0)).toBe(true);
+
+    const exit = evaluateV9Exit(
+      {
+        circulatingUsd: 10_000_000,
+        portfolioStatus: "reviewed-complete",
+        routes: [projectV9ExitEvaluationRoute(redemption)],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const ceiling = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.undisclosedFeeRouteScoreCeiling;
+    expect(exit.score).toBeGreaterThan(0);
+    expect(exit.score).toBeLessThanOrEqual(ceiling);
+    expect(exit.routes[0]).toMatchObject({
+      included: true,
+      capsApplied: expect.arrayContaining(["fee-evidence:undisclosed-reviewed"]),
+    });
+  });
+
+  it("carries measured route history into v9 facts and evaluation traces", () => {
+    const fixed = structuredClone(exactFixedInput());
+    const observation = fixed.dexLiqMap.alpha!.exitRouteObservations![0]!;
+    observation.evidenceKind = "measured-executable-depth";
+    observation.observationHistory = {
+      completeProducerCycleCount: 3,
+      successfulObservationCount: 2,
+      consecutiveSuccessCount: 0,
+      observationWindowStartedAt: observation.observedAt - 200,
+      observationWindowEndedAt: observation.observedAt,
+      latestOperationalFailureAt: observation.observedAt,
+      conservativeStatistic: "pointwise-minimum",
+      conservativeCapacityCurve: observation.capacityCurve!,
+    };
+    fixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixed);
+    const reviewed = structuredClone(extension());
+    reviewed.assets[0]!.routeReviews[0]!.modelConfidence = "high";
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+    expect(compiled.assets[0]!.exitRoutes[0]).toMatchObject({
+      routeFamily: "dex-amm",
+      modelConfidence: "high",
+      observationHistory: {
+        completeProducerCycleCount: 3,
+        successfulObservationCount: 2,
+        latestOperationalFailureAt: observation.observedAt,
+        conservativeStatistic: "pointwise-minimum",
+      },
+    });
+
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.exit.routes[0]).toMatchObject({
+      routeFamily: "dex-amm",
+      observationConfidence: "high",
+      modelConfidence: "high",
+      observationHistory: {
+        successfulObservationCount: 2,
+        latestOperationalFailureAt: observation.observedAt,
+      },
+    });
+    expect(evaluated.scoreInput.pillars.exit.evidenceLevel).toBe("strong");
+
+    const immatureFixed = structuredClone(exactFixedInput());
+    immatureFixed.dexLiqMap.alpha!.exitRouteObservations![0]!.evidenceKind = "measured-executable-depth";
+    immatureFixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(immatureFixed);
+    const immature = evaluateV9FactSet(
+      compileSafetyScoreV9FactSetFromFixedInput(immatureFixed, extension()),
+      V9_CANDIDATE_POLICY_V1,
+    ).assets[0]!;
+    expect(immature.scoreInput.pillars.exit.evidenceLevel).not.toBe("strong");
   });
 
   it("aggregates chain aliases and conserves unresolved source supply without price multiplication", () => {
@@ -1066,13 +2139,16 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     const fiatCompiled = compileSafetyScoreV9FactSetFromFixedInput(withoutPegRow(), extension());
     expect(fiatCompiled.assets[0]!.peg.status.observationState).toBe("missing");
-    // A fiat asset without a peg row stays rateable under the bounded policy:
-    // the peg multiplier floors at par and the peg-unverified ceiling caps the
-    // final score instead of reason-coding NR.
+    // A missing producer row is an availability failure, not measured peg
+    // safety. The latent peg multiplier remains visible, but the public rating
+    // is withheld until a current or fresh last-known-good row exists.
     const fiatTrace = evaluateV9FactSet(fiatCompiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace;
-    expect(fiatTrace.finalGrade).not.toBe("NR");
+    expect(fiatTrace.finalGrade).toBe("NR");
+    expect(fiatTrace.finalScore).toBeNull();
     expect(fiatTrace.pegMultiplier).toBe(1);
-    expect(fiatTrace.caps.map((cap) => cap.kind)).toContain("reason:missing-peg-input");
+    expect(fiatTrace.nrReasons).toContainEqual(
+      expect.objectContaining({ code: "missing-peg-input", responsibility: "producer-failed" }),
+    );
   });
 
   it("retains an independently observed active depeg when current deviation is unavailable", () => {
@@ -1101,7 +2177,9 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       compileSafetyScoreV9FactSetFromFixedInput(missingPeak, extension()),
       V9_CANDIDATE_POLICY_V1,
     ).assets[0]!.trace;
-    expect(trace.finalScore).toBeLessThan(missingPeakTrace.finalScore!);
+    expect(trace.finalGrade).toBe("NR");
+    expect(missingPeakTrace.finalGrade).toBe("NR");
+    expect(trace.preCapScore).toBeLessThan(missingPeakTrace.preCapScore!);
   });
 
   it("keeps an active peg row suppressed when its depeg peak is absent", () => {
@@ -1116,7 +2194,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       activeDepegBps: null,
     });
     const trace = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace;
-    expect(trace.caps.map((cap) => cap.kind)).toContain("reason:missing-peg-input");
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.nrReasons).toContainEqual(
+      expect.objectContaining({ code: "missing-peg-input", responsibility: "producer-failed" }),
+    );
     expect(trace.caps.some((cap) => cap.source === "active-depeg")).toBe(false);
   });
 
@@ -1210,6 +2291,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       exactFixedInput({ classifiedReserve: false }),
       incomplete,
     );
+    expect(compiled.schemaVersion).toBe(3);
     const alpha = compiled.assets[0]!;
     const reasons = alpha.gaps.map((gap) => gap.reasonCode);
     expect(reasons).toEqual(
@@ -1230,6 +2312,34 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     });
     expect(alpha.exitRoutes[0]!.output).toMatchObject({ valuation: null, status: { observationState: "missing" } });
     expect(alpha.controls).toEqual([]);
+    expect(alpha.gaps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          reasonCode: "material-reserve-slice-unstructured",
+          responsibility: "integration-missing",
+        }),
+        expect.objectContaining({
+          reasonCode: "unresolved-exit-output",
+          responsibility: "integration-missing",
+        }),
+        expect.objectContaining({
+          reasonCode: "missing-upgradeability-review",
+          responsibility: "integration-missing",
+        }),
+      ]),
+    );
+    expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.unresolvedFacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "material-reserve-slice-unstructured",
+          responsibility: "integration-missing",
+        }),
+        expect.objectContaining({
+          code: "unresolved-exit-output",
+          responsibility: "integration-missing",
+        }),
+      ]),
+    );
   });
 
   it("preserves supplied stale and rejected last-known route observations", () => {
@@ -1464,7 +2574,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "e9feda6fc28d10f2b2e490d234f48310665fb1a1c10024698ca746731547fa6f",
+      "47ff7e12f20cb577f29a0aec4348b4b6068f4c6d0143183a486d078d38f06bd1",
     );
   });
 

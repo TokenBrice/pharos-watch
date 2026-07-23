@@ -1,6 +1,7 @@
 import {
   createV9BackingStructuralReason,
   evaluateV9ArchetypeBacking,
+  v9StructuralResponsibilityForStatus,
   type V9BackingAssetInput,
   type V9BackingEvaluationPolicy,
   type V9BackingResult,
@@ -20,6 +21,7 @@ export function evaluateV9RwaCreditFundBacking(
   if (review.weightedAverageMaturityDays > backing.structural.rwaCreditFund.maturityMismatchDays) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.rwaCreditFund.signal, {
+        responsibility: v9StructuralResponsibilityForStatus(review.maturityAndLiquidity.status),
         pathKey: "mechanism:maturity-and-liquidity",
         materialShare: null,
         evidenceRefIds: review.maturityAndLiquidity.status.evidenceRefIds,

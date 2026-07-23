@@ -9,10 +9,16 @@ import {
 import {
   collateralExposureV9Path,
   createV9FactGap,
+  createV9FactGapV3,
   deploymentControlV9Path,
   optionalExitV9Path,
   serialDependencyV9Path,
 } from "../safety-score-v9/reasons";
+import {
+  V9FactGapV2Schema,
+  V9FactGapV3Schema,
+} from "../../types/safety-score-v9-facts";
+import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
 
 describe("Safety Score v9 evidence, applicability, and reason helpers", () => {
   it("preserves observed, published, rejected, current, and stale source states", () => {
@@ -171,5 +177,33 @@ describe("Safety Score v9 evidence, applicability, and reason helpers", () => {
       reasonCode: "unresolved-exit-output",
       path: { kind: "optional-exit" },
     });
+  });
+
+  it("versions evidence responsibility without weakening retained V2 parsing", () => {
+    expect(V9EvidenceResponsibilitySchema.options).toEqual([
+      "measured-adverse",
+      "issuer-undisclosed",
+      "integration-missing",
+      "producer-failed",
+      "method-unsupported",
+    ]);
+    const retained = createV9FactGap({
+      gapId: "gap:retained",
+      reasonCode: "missing-runtime-route-evidence",
+      ownerDomain: "exit",
+      policyRuleId: "exit.runtime",
+      observationState: "stale",
+      path: optionalExitV9Path("dex:dex:g1:retained"),
+      message: "Retained route evidence is stale.",
+    });
+    expect(V9FactGapV2Schema.parse(retained)).toEqual(retained);
+    expect(() => V9FactGapV3Schema.parse(retained)).toThrow();
+    expect(() => V9FactGapV2Schema.parse({ ...retained, responsibility: "producer-failed" })).toThrow(
+      "Unrecognized key",
+    );
+
+    const current = createV9FactGapV3({ ...retained, responsibility: "producer-failed" });
+    expect(V9FactGapV3Schema.parse(current)).toEqual(current);
+    expect(() => createV9FactGapV3({ ...retained, responsibility: "publisher-late" as never })).toThrow();
   });
 });

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   makeDb,
   findPublishedYieldRow,
+  findPublishedYieldHistoryRow,
   getYieldRankingsCachePayload,
   makeYieldOrphanDb,
   resetSyncYieldDataTest,
@@ -12,6 +13,7 @@ import {
   fixtureShouldAttemptFetch,
   fixtureMockFetch,
   fixtureSafetyScoresModule,
+  fixtureYieldConfigModule,
   fixtureYieldHelpersModule,
 } from "./sync-yield-data.test-support";
 
@@ -222,6 +224,12 @@ describe("syncYieldData", () => {
       coverageRatio: 0,
       reason: "stablecoins-cache:missing-cache",
       scores: new Map(),
+      source: "report-card-cache",
+      expectedModel: "v8",
+      safetyScoreIdentity: null,
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      publishedAt: null,
     } as never);
 
     const result = await fixtureSyncYieldData(db);
@@ -238,6 +246,123 @@ describe("syncYieldData", () => {
 
     expect(getYieldRankingsCachePayload(db)).toBeDefined();
     expect(vi.mocked(fixtureSetCacheIfNewer).mock.calls.some((call) => call[1] === "report_card_cache")).toBe(false);
+  });
+
+  it.each([
+    ["active V9 marker", "active-safety-score:v9"],
+    ["malformed V9 marker", "active-safety-score:activation-marker-invalid"],
+    ["mismatched V9 identity", "active-safety-score:v9-identity-mismatch"],
+  ])("retains auto-lending rows as unrated for %s", async (_label, reason) => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const nativePoolMap = fixtureYieldConfigModule.YIELD_POOL_MAP as Record<string, string>;
+    nativePoolMap["100"] = "pool-sdai-native";
+
+    vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-sdai-native",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 100_000_000,
+              apy: 4.5,
+              apyBase: 4.5,
+              apyReward: null,
+              apyMean30d: 4.4,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+            {
+              pool: "pool-lusd-aave",
+              chain: "Ethereum",
+              project: "aave-v3",
+              symbol: "LUSD",
+              tvlUsd: 10_000_000,
+              apy: 3.5,
+              apyBase: 3.5,
+              apyReward: null,
+              apyMean30d: 3.4,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: ["0x5f98805a4e8be255a32880fdec7f6728c6568ba0"],
+            },
+          ]),
+          updatedAt: nowSec - 60,
+        };
+      }
+      if (key === "risk_free_rate") {
+        return {
+          value: JSON.stringify({
+            rate: 4,
+            source: "fred-dgs3mo",
+            fetchedAt: nowSec,
+            recordDate: "2025-06-13",
+            isFallback: false,
+            fallbackMode: null,
+          }),
+          updatedAt: nowSec,
+        };
+      }
+      return null;
+    });
+    vi.mocked(fixtureShouldAttemptFetch).mockResolvedValue(false);
+    fixtureMockFetch([]);
+    vi.spyOn(fixtureSafetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
+      kind: "degraded",
+      mode: "map",
+      coveredCount: 0,
+      trackedCount: 4,
+      coverageRatio: 0,
+      reason,
+      scores: new Map(),
+      source: "report-card-cache",
+      expectedModel: "v9",
+      safetyScoreIdentity: null,
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      publishedAt: null,
+    } as never);
+
+    const result = await fixtureSyncYieldData(db);
+    const payload = getYieldRankingsCachePayload(db) as {
+      rankings: Array<{
+        id: string;
+        safetyScore: number | null;
+        safetyGrade: string;
+        safetyReason: string | null;
+        pharosYieldScore: number | null;
+        pysNullReason: string | null;
+      }>;
+      provenance: { safetySnapshot: { expectedModel?: string; reason: string | null } };
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(findPublishedYieldRow(db, "lusd-liquity", (row) => row.data_source === "defillama-auto")).toMatchObject({
+      safety_score: null,
+      safety_grade: "NR",
+      pharos_yield_score: null,
+    });
+    expect(findPublishedYieldHistoryRow(db, "lusd-liquity", (row) => row.source_key === "pool-lusd-aave"))
+      .toMatchObject({
+        safety_at_publish: null,
+        pys_at_publish: null,
+        pys_inputs_at_publish: null,
+      });
+    expect(payload.rankings.find((row) => row.id === "lusd-liquity")).toMatchObject({
+      safetyScore: null,
+      safetyGrade: "NR",
+      safetyReason: "safety-snapshot-unavailable",
+      pharosYieldScore: null,
+      pysNullReason: "safety-unrated",
+    });
+    expect(payload.provenance.safetySnapshot).toMatchObject({
+      expectedModel: "v9",
+      reason,
+    });
   });
 
   it("skips destructive yield row cleanup on degraded runs", async () => {

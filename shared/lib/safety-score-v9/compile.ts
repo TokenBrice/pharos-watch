@@ -1,10 +1,14 @@
 import {
   CompiledV9FactSetV2Schema,
+  CompiledV9FactSetV3Schema,
   V9FactSetCoreV2Schema,
+  V9FactSetCoreV3Schema,
   type CompiledV9FactSetV2,
+  type CompiledV9FactSetV3,
   type V9FactSetCoreV2,
+  type V9FactSetCoreV3,
 } from "../../types/safety-score-v9-facts";
-import { computeV9FactSetDigest, parseCompiledV9FactSetV2 } from "./facts";
+import { computeV9FactSetDigest, parseCompiledV9FactSetV2, parseCompiledV9FactSetV3 } from "./facts";
 
 function deepFreeze<T>(value: T): Readonly<T> {
   if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
@@ -24,8 +28,18 @@ export function compileV9FactSetV2(input: unknown): Readonly<CompiledV9FactSetV2
   return deepFreeze(parseCompiledV9FactSetV2(compiled));
 }
 
+/** Compile the responsibility-bearing V3 fact contract. */
+export function compileV9FactSetV3(input: unknown): Readonly<CompiledV9FactSetV3> {
+  const core: V9FactSetCoreV3 = V9FactSetCoreV3Schema.parse(input);
+  const compiled = CompiledV9FactSetV3Schema.parse({
+    ...core,
+    v9FactSetDigest: computeV9FactSetDigest(core),
+  });
+  return deepFreeze(parseCompiledV9FactSetV3(compiled));
+}
+
 export function assertExactV9ActiveAssetSet(
-  factSet: Pick<CompiledV9FactSetV2, "activeAssetIds" | "assets">,
+  factSet: Pick<CompiledV9FactSetV2 | CompiledV9FactSetV3, "activeAssetIds" | "assets">,
   expectedActiveAssetIds: readonly string[],
 ): void {
   const expected = [...new Set(expectedActiveAssetIds)].sort();

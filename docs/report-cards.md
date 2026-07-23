@@ -28,25 +28,22 @@ Safety Score V9 is implemented as an internal candidate and shadow pipeline,
 not as the active methodology. It replaces unrestricted weighted compensation
 with archetype-specific Backing, Exit, and Economic Control pillars bounded by
 the weakest material failure path, structural ceilings, evidence sufficiency,
-dependencies, peg behavior, and stress propagation. Candidate failures cannot
-affect V8 publication; exact candidate state is available only to the admin
-workspace. The 2026-07-16 real-A calibration rates 342 of 344 assets and
-produces a numerical BOLD 84/A through the normal compiler and evaluator. The
-hardened judge does not qualify it as a defensible real A because 15 of its 34
-score-bearing evidence references have `not-assessed` freshness. Three
-distinct exact production inputs reproduce the numerical output and the same
-grade distribution after local projection onto the reviewed registry, but the
-repeated-real-A gate therefore fails. The production-shaped composite fixture
-remains 88/A+; no standalone composite replay or bound causal-attribution
-artifact was supplied to the Friday judge, so those evidence gates fail
-closed. The candidate is still not calibration-ready: real-A evidence
-freshness, F-count, upper-cohort breadth, IQR, adverse-control, composite-replay,
-and causal-attribution gates fail or remain incomplete. The captures were
-locally rekeyed and therefore remain calibration evidence. Under the
-2026-07-23 owner ruling, release cohorts and a consecutive-day shadow window
-are no longer activation prerequisites. Calibration continues until the owner
-declares the candidate ready, then a fresh exact-capture sanity packet is run
-against deployed HEAD before the owner writes the public activation key. See
+dependencies, peg behavior, and stress propagation. The current candidate also
+distinguishes missing integration evidence from measured adverse evidence,
+models exit capacity across stress horizons, scopes loss to exposed holder
+slices, preserves dependency roles and live weights, and evaluates wrapper-local
+and mechanism-specific risk explicitly.
+
+Candidate failures cannot affect V8 publication. A production deployment of V9
+scorer or producer code only changes the private shadow output; it does not
+change the active version, public methodology, or public API. The candidate
+identity is computed from the current policy, evaluation build, compiler schema,
+and producer capability rather than copied into this document. Earlier
+calibration histograms and named-asset scores predate the current implementation
+and are not evidence for it. Fresh exact production shadow generations and a
+real holdout package have not yet established readiness. V8.17 remains public,
+and `/api/report-cards/v9` remains dark until the owner writes a matching
+identity-bound activation key. See
 [Safety Score V9 readiness](./process/safety-score-v9-readiness.md), the
 [single-publisher rollout contract](./process/safety-score-v9-rollout.md), and
 the [consumer ledger](./process/safety-score-v9-consumer-ledger.md).
@@ -464,7 +461,9 @@ Lowered 5 points in v4.0 to compensate for structural deflation from removing pe
 
 The common read path uses the cron-published `report-cards:snapshot` cache row. That D1 value wraps the generation/methodology-pinned private storage envelope in checksum-verified gzip/base64. The outer envelope retains the V8 identity for operator inspection, while bounded decompression protects the row-size budget and the new reader remains compatible with legacy plain envelopes. The decoded public V8 response payload is unchanged. The loader recomputes its publication manifest from the card identities and rejects a missing identity, active-set mismatch, cache-generation mismatch, evaluation-build mismatch, oversized payload, or Safety Score methodology mismatch; the API then computes an identified V8 response on read until the cron republishes. The accepted `safetyScoreIdentity` names model `v8`, schema version, methodology, evaluation build, exact base input, and the shared publication generation.
 
-The same publication cron also persists a private exact fixed-input artifact at `report-cards:fixed-input:exact`; it is an operator/replay contract, not a public API response. The artifact captures the in-memory inputs used for that publication and is written in the same D1 batch as the full snapshot, compact score map, and Telegram safety source. All four projections carry the same V8 identity. Publication fails before the batch if active DEX rows do not belong to one complete published generation/timestamp, redemption rows cannot bind to one completed producer run, the fixed-input generation differs from the report-card publication generation, or the compressed artifact exceeds its bounded cache size.
+The same publication cron also persists a private exact fixed-input artifact at `report-cards:fixed-input:exact`; it is an operator/replay contract, not a public API response. The artifact captures the in-memory V8 inputs used for that publication, omits the additive V9-only supply-attribution field for strict rollback compatibility, and is written in the same D1 batch as the full snapshot, compact score map, and Telegram safety source. The current parser restores the omitted field to its empty schema default. All four projections carry the same V8 identity. Publication fails before the batch if active DEX rows do not belong to one complete published generation/timestamp, redemption rows cannot bind to one completed producer run, the fixed-input generation differs from the report-card publication generation, or the compressed artifact exceeds its bounded cache size.
+
+When the post-commit V9 shadow refresh is due, its preparation step may add bounded V9-only evidence to the same normalized base generation and persist the resulting attempt input separately at `report-cards:v9-fixed-input:exact`. The V9 artifact retains the V8 publication identity that anchors its base input, while V9 source, fact-set, result, and candidate identities bind the added evidence. Preparation happens only after the atomic V8 batch, and any enrichment, artifact, compile, or shadow-state failure remains inside the caught V9 sidecar.
 
 `GET /api/redemption-backstops` — current redemption backstop and effective-exit dataset used by redeemable-asset detail views and report-card liquidity inputs. Cache: standard (`public, s-maxage=300, max-age=60`).
 

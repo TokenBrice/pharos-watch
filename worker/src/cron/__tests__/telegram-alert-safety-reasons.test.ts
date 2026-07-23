@@ -34,6 +34,93 @@ describe("telegram alert safety reasons", () => {
     })).toBe("Reason: Weakest pillar is exit (41).");
   });
 
+  it("routes active V9 rows through native pillar explanations", () => {
+    const previous = snapshot({
+      grade: "B",
+      score: 78,
+      v9Explain: {
+        bindingCap: null,
+        reasons: [],
+        weakestPillar: { pillar: "exit", score: 70 },
+        pillars: {
+          backing: { score: 82, evidenceLevel: "adequate", freshness: "current" },
+          exit: { score: 70, evidenceLevel: "adequate", freshness: "current" },
+          control: { score: 80, evidenceLevel: "adequate", freshness: "current" },
+        },
+      },
+    });
+    const current = snapshot({
+      grade: "C",
+      score: 58,
+      v9Explain: {
+        bindingCap: null,
+        reasons: [{ code: "exit-capacity-stress", message: "Exit capacity deteriorated." }],
+        weakestPillar: { pillar: "exit", score: 41 },
+        pillars: {
+          backing: { score: 81, evidenceLevel: "adequate", freshness: "current" },
+          exit: { score: 41, evidenceLevel: "limited", freshness: "current" },
+          control: { score: 79, evidenceLevel: "adequate", freshness: "current" },
+        },
+      },
+    });
+
+    const [result] = addSafetyReasonLines(
+      [{ ...BASE_CHANGE, newGrade: "C", newScore: 58 }],
+      current,
+      previous,
+    );
+    expect(result.contextLine).toBe("Reason: Exit pillar fell from 70 to 41.");
+    expect(result.currentExplain).toBeUndefined();
+  });
+
+  it("selects the V9 pillar movement that matches the overall grade direction", () => {
+    expect(buildV9SafetyReason({
+      grade: "C",
+      score: 58,
+      v9Explain: {
+        bindingCap: null,
+        reasons: [],
+        weakestPillar: { pillar: "exit", score: 65 },
+        pillars: {
+          backing: { score: 95, evidenceLevel: "strong", freshness: "current" },
+          exit: { score: 65, evidenceLevel: "adequate", freshness: "current" },
+          control: { score: 80, evidenceLevel: "adequate", freshness: "current" },
+        },
+      },
+    }, {
+      grade: "B",
+      score: 78,
+      v9Explain: {
+        bindingCap: null,
+        reasons: [],
+        weakestPillar: { pillar: "exit", score: 70 },
+        pillars: {
+          backing: { score: 60, evidenceLevel: "adequate", freshness: "current" },
+          exit: { score: 70, evidenceLevel: "adequate", freshness: "current" },
+          control: { score: 80, evidenceLevel: "adequate", freshness: "current" },
+        },
+      },
+    })).toBe("Reason: Exit pillar fell from 70 to 65.");
+  });
+
+  it("recognizes a tighter V9 cap when its reason text is unchanged", () => {
+    expect(buildV9SafetyReason({
+      grade: "C",
+      score: 58,
+      v9Explain: {
+        bindingCap: { kind: "exit", limit: 60, reason: "Primary exit remains issuer-gated" },
+        reasons: [],
+        weakestPillar: { pillar: "exit", score: 58 },
+      },
+    }, {
+      grade: "B",
+      score: 78,
+      v9Explain: {
+        bindingCap: { kind: "exit", limit: 80, reason: "Primary exit remains issuer-gated" },
+      },
+    })).toBe("Reason: Primary exit remains issuer-gated.");
+  });
+
   it("uses active-depeg cap explain data as the safety Reason line", () => {
     const current = snapshot({
       grade: "F",

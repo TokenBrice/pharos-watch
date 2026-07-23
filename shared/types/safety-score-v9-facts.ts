@@ -1,11 +1,23 @@
 import { z } from "zod";
-import { DependencyTypeSchema } from "./dependency-types";
+import {
+  DependencyTypeSchema,
+  V9DependencyEconomicRoleSchema,
+  type V9DependencyEconomicRole,
+} from "./dependency-types";
 import { V9PathKindSchema, V9ReasonCodeSchema, V9ReasonOwnerDomainSchema } from "./safety-score-v9";
 import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema } from "./safety-score-v9-backing";
+import { V9OperationalResilienceFactSchema } from "./safety-score-v9-operational-resilience";
 import {
+  V9WrapperLocalFactsSchema,
+  type V9ApplicableWrapperLocalFacts,
+} from "./safety-score-v9-wrapper";
+import { ExitRouteObservationHistorySchema } from "./exit-route";
+import {
+  V9EvidenceResponsibilitySchema,
   V9FactStatusV2Schema,
   V9FailureDomainRefSchema,
   V9ObservationStateSchema,
+  type V9EvidenceResponsibility,
   type V9FactApplicability,
   type V9FactStatusV2,
   type V9FailureDomainKind,
@@ -31,7 +43,14 @@ export type V9ResolvedMechanismArchetype = z.infer<typeof V9ResolvedMechanismArc
 export const V9VariantKindSchema = z.enum(VARIANT_KIND_VALUES).nullable().optional();
 
 export { V9FactStatusV2Schema };
-export type { V9FactApplicability, V9FactStatusV2, V9FailureDomainKind, V9FailureDomainRef, V9ObservationState };
+export type {
+  V9EvidenceResponsibility,
+  V9FactApplicability,
+  V9FactStatusV2,
+  V9FailureDomainKind,
+  V9FailureDomainRef,
+  V9ObservationState,
+};
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const UnixSecondsSchema = z.number().int().nonnegative();
@@ -160,24 +179,37 @@ export const V9TypedFactPathSchema = z.discriminatedUnion("kind", [
 ]);
 export type V9TypedFactPath = z.infer<typeof V9TypedFactPathSchema>;
 
+const V9FactGapV2Fields = {
+  gapId: CanonicalTextSchema,
+  reasonCode: V9ReasonCodeSchema,
+  ownerDomain: V9ReasonOwnerDomainSchema,
+  policyRuleId: CanonicalTextSchema,
+  observationState: V9ObservationStateSchema.exclude(["known"]),
+  path: V9TypedFactPathSchema,
+  message: CanonicalTextSchema,
+  evidenceRefIds: CanonicalStringArraySchema,
+};
+
+function validateFactGapPath(gap: { path: V9TypedFactPath }, ctx: z.RefinementCtx): void {
+  if (!V9PathKindSchema.safeParse(gap.path.kind).success) {
+    ctx.addIssue({ code: "custom", path: ["path", "kind"], message: "Gap path kind is not registered by v9" });
+  }
+}
+
 export const V9FactGapV2Schema = z
+  .object(V9FactGapV2Fields)
+  .strict()
+  .superRefine(validateFactGapPath);
+export type V9FactGapV2 = z.infer<typeof V9FactGapV2Schema>;
+
+export const V9FactGapV3Schema = z
   .object({
-    gapId: CanonicalTextSchema,
-    reasonCode: V9ReasonCodeSchema,
-    ownerDomain: V9ReasonOwnerDomainSchema,
-    policyRuleId: CanonicalTextSchema,
-    observationState: V9ObservationStateSchema.exclude(["known"]),
-    path: V9TypedFactPathSchema,
-    message: CanonicalTextSchema,
-    evidenceRefIds: CanonicalStringArraySchema,
+    ...V9FactGapV2Fields,
+    responsibility: V9EvidenceResponsibilitySchema,
   })
   .strict()
-  .superRefine((gap, ctx) => {
-    if (!V9PathKindSchema.safeParse(gap.path.kind).success) {
-      ctx.addIssue({ code: "custom", path: ["path", "kind"], message: "Gap path kind is not registered by v9" });
-    }
-  });
-export type V9FactGapV2 = z.infer<typeof V9FactGapV2Schema>;
+  .superRefine(validateFactGapPath);
+export type V9FactGapV3 = z.infer<typeof V9FactGapV3Schema>;
 
 const CanonicalFailureDomainsSchema = canonicalArrayBy(
   V9FailureDomainRefSchema,
@@ -207,62 +239,148 @@ const V9EffectiveDependencyEdgeV2Schema = z
   });
 export type V9EffectiveDependencyEdgeV2 = z.infer<typeof V9EffectiveDependencyEdgeV2Schema>;
 
+const V9EffectiveDependenciesBaseFields = {
+  status: V9FactStatusV2Schema,
+  sourceGenerationId: CanonicalTextSchema,
+  source: z.enum(["live-reserve", "live-unmapped", "curated-reserve", "manual", "none", "variant"]),
+  baseSource: z.enum(["live-reserve", "live-unmapped", "curated-reserve", "manual", "none"]),
+  dependencyFromLive: z.boolean(),
+  mappedLiveReserveWeight: FractionSchema.nullable(),
+  fallbackReason: z
+    .enum(["live-unmapped-to-curated-reserve", "live-unmapped-to-manual", "live-cycle-to-curated"])
+    .nullable(),
+  diagnostics: z
+    .object({
+      graphState: z.enum(["valid", "cycle", "invalid", "unresolved"]),
+      issueCodes: CanonicalStringArraySchema,
+      sccMemberAssetIds: CanonicalStringArraySchema,
+    })
+    .strict(),
+};
+
+function validateDependencyEnvelope(
+  dependencies: {
+    source: "live-reserve" | "live-unmapped" | "curated-reserve" | "manual" | "none" | "variant";
+    fallbackReason: "live-unmapped-to-curated-reserve" | "live-unmapped-to-manual" | "live-cycle-to-curated" | null;
+    diagnostics: {
+      graphState: "valid" | "cycle" | "invalid" | "unresolved";
+      issueCodes: readonly string[];
+      sccMemberAssetIds: readonly string[];
+    };
+    edges: readonly { economicRole: V9DependencyEconomicRole; weight: number }[];
+  },
+  ctx: z.RefinementCtx,
+): void {
+  if (dependencies.source === "none" && dependencies.edges.length > 0) {
+    ctx.addIssue({ code: "custom", path: ["edges"], message: "A none dependency source cannot contain edges" });
+  }
+  if (dependencies.fallbackReason !== null && dependencies.source === "live-reserve") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["fallbackReason"],
+      message: "Direct live dependencies cannot be a fallback",
+    });
+  }
+  if (dependencies.diagnostics.graphState === "valid") {
+    if (dependencies.diagnostics.issueCodes.length > 0 || dependencies.diagnostics.sccMemberAssetIds.length > 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["diagnostics"],
+        message: "A valid dependency graph cannot carry issues",
+      });
+    }
+  }
+  if (dependencies.diagnostics.graphState === "cycle" && dependencies.diagnostics.sccMemberAssetIds.length === 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["diagnostics", "sccMemberAssetIds"],
+      message: "A cycle requires SCC members",
+    });
+  }
+  const collateralWeight = dependencies.edges
+    .filter((edge) => edge.economicRole === "basket-exposure")
+    .reduce((sum, edge) => sum + edge.weight, 0);
+  if (collateralWeight > 1.000001) {
+    ctx.addIssue({ code: "custom", path: ["edges"], message: "Collateral dependency weight cannot exceed 1" });
+  }
+}
+
 const V9EffectiveDependenciesV2Schema = z
   .object({
-    status: V9FactStatusV2Schema,
-    sourceGenerationId: CanonicalTextSchema,
-    source: z.enum(["live-reserve", "live-unmapped", "curated-reserve", "manual", "none", "variant"]),
-    baseSource: z.enum(["live-reserve", "live-unmapped", "curated-reserve", "manual", "none"]),
-    dependencyFromLive: z.boolean(),
-    mappedLiveReserveWeight: FractionSchema.nullable(),
-    fallbackReason: z
-      .enum(["live-unmapped-to-curated-reserve", "live-unmapped-to-manual", "live-cycle-to-curated"])
-      .nullable(),
+    ...V9EffectiveDependenciesBaseFields,
     edges: canonicalArrayBy(V9EffectiveDependencyEdgeV2Schema, (edge) => edge.edgeKey),
-    diagnostics: z
-      .object({
-        graphState: z.enum(["valid", "cycle", "invalid", "unresolved"]),
-        issueCodes: CanonicalStringArraySchema,
-        sccMemberAssetIds: CanonicalStringArraySchema,
-      })
-      .strict(),
   })
   .strict()
-  .superRefine((dependencies, ctx) => {
-    if (dependencies.source === "none" && dependencies.edges.length > 0) {
-      ctx.addIssue({ code: "custom", path: ["edges"], message: "A none dependency source cannot contain edges" });
-    }
-    if (dependencies.fallbackReason !== null && dependencies.source === "live-reserve") {
+  .superRefine(validateDependencyEnvelope);
+export type V9EffectiveDependenciesV2 = z.infer<typeof V9EffectiveDependenciesV2Schema>;
+
+const V9EffectiveDependencyEdgeV3Schema = z
+  .object({
+    edgeKey: CanonicalTextSchema,
+    upstreamAssetId: CanonicalTextSchema,
+    dependencyType: DependencyTypeSchema,
+    pathKind: z.enum(["serial-dependency", "collateral-exposure", "local-component"]),
+    weight: PositiveFractionSchema,
+    economicRole: V9DependencyEconomicRoleSchema,
+    evidenceRefIds: CanonicalStringArraySchema,
+    failureDomains: CanonicalFailureDomainsSchema,
+  })
+  .strict()
+  .superRefine((edge, ctx) => {
+    const expectedPathKind =
+      edge.economicRole === "serial-claim"
+        ? "serial-dependency"
+        : edge.economicRole === "basket-exposure"
+          ? "collateral-exposure"
+          : "local-component";
+    if (edge.pathKind !== expectedPathKind) {
       ctx.addIssue({
         code: "custom",
-        path: ["fallbackReason"],
-        message: "Direct live dependencies cannot be a fallback",
+        path: ["pathKind"],
+        message: `Dependency role ${edge.economicRole} requires ${expectedPathKind}`,
       });
     }
-    if (dependencies.diagnostics.graphState === "valid") {
-      if (dependencies.diagnostics.issueCodes.length > 0 || dependencies.diagnostics.sccMemberAssetIds.length > 0) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["diagnostics"],
-          message: "A valid dependency graph cannot carry issues",
-        });
+    if (edge.economicRole === "serial-claim") {
+      if (edge.dependencyType === "collateral") {
+        ctx.addIssue({ code: "custom", path: ["dependencyType"], message: "Serial claims cannot be collateral edges" });
       }
-    }
-    if (dependencies.diagnostics.graphState === "cycle" && dependencies.diagnostics.sccMemberAssetIds.length === 0) {
+      if (edge.weight !== 1) {
+        ctx.addIssue({ code: "custom", path: ["weight"], message: "Serial dependencies must have weight 1" });
+      }
+    } else if (edge.economicRole === "basket-exposure" && edge.dependencyType !== "collateral") {
       ctx.addIssue({
         code: "custom",
-        path: ["diagnostics", "sccMemberAssetIds"],
-        message: "A cycle requires SCC members",
+        path: ["dependencyType"],
+        message: "Basket exposures must be collateral dependencies",
       });
+    } else if (edge.economicRole !== "basket-exposure" && edge.dependencyType === "wrapper") {
+      ctx.addIssue({ code: "custom", path: ["dependencyType"], message: "Wrapper edges must be serial claims" });
     }
-    const collateralWeight = dependencies.edges
-      .filter((edge) => edge.pathKind === "collateral-exposure")
-      .reduce((sum, edge) => sum + edge.weight, 0);
-    if (collateralWeight > 1.000001) {
-      ctx.addIssue({ code: "custom", path: ["edges"], message: "Collateral dependency weight cannot exceed 1" });
+    if (
+      edge.economicRole !== "serial-claim" &&
+      edge.economicRole !== "basket-exposure" &&
+      edge.failureDomains.length === 0
+    ) {
+      ctx.addIssue({ code: "custom", path: ["failureDomains"], message: "Role dependencies require a failure domain" });
+    }
+    if (
+      edge.economicRole !== "serial-claim" &&
+      edge.economicRole !== "basket-exposure" &&
+      edge.evidenceRefIds.length === 0
+    ) {
+      ctx.addIssue({ code: "custom", path: ["evidenceRefIds"], message: "Role dependencies require evidence" });
     }
   });
-export type V9EffectiveDependenciesV2 = z.infer<typeof V9EffectiveDependenciesV2Schema>;
+export type V9EffectiveDependencyEdgeV3 = z.infer<typeof V9EffectiveDependencyEdgeV3Schema>;
+
+const V9EffectiveDependenciesV3Schema = z
+  .object({
+    ...V9EffectiveDependenciesBaseFields,
+    edges: canonicalArrayBy(V9EffectiveDependencyEdgeV3Schema, (edge) => edge.edgeKey),
+  })
+  .strict()
+  .superRefine(validateDependencyEnvelope);
+export type V9EffectiveDependenciesV3 = z.infer<typeof V9EffectiveDependenciesV3Schema>;
 
 export const V9ReserveAssetClassSchema = z.enum([
   "cash",
@@ -450,6 +568,7 @@ const V9ExitRouteFactV2Schema = z
     // current compilers still materialize the normalized value in their output.
     modelConfidence: z.enum(["high", "medium", "low"]).default("low"),
     observationConfidence: z.enum(["high", "medium", "low", "unknown"]),
+    observationHistory: ExitRouteObservationHistorySchema.nullable().optional(),
     evidenceKind: z.enum([
       "measured-executable-depth",
       "reserve-based-amm-simulation",
@@ -465,8 +584,12 @@ const V9ExitRouteFactV2Schema = z
     coverageClass: z.enum(["exact-complete", "exact-lower-bound", "diagnostic"]),
     /** Carried from the route observation: the reviewed fee is undisclosed, so the modeled capacity has no cost bound. */
     feeEvidence: z.literal("undisclosed-reviewed").optional(),
+    capacityScoringHorizon: z.enum(["immediate", "daily", "queued", "eventual", "unknown"]).optional(),
     settlementModel: z.enum(["atomic", "same-day", "bounded-delay", "queued", "eventual", "unknown"]),
     settlementSlaSec: z.number().int().nonnegative().nullable(),
+    queueDepthUsd: z.number().finite().nonnegative().nullable().optional(),
+    dailyLimitUsd: z.number().finite().nonnegative().nullable().optional(),
+    minRedeemUsd: z.number().finite().nonnegative().nullable().optional(),
     settlementEvidenceRefIds: CanonicalStringArraySchema,
     physicalResourceKeys: CanonicalStringArraySchema,
     status: V9FactStatusV2Schema,
@@ -1090,73 +1213,173 @@ const V9MechanismRiskReviewFactV2Schema = z
   });
 export type V9MechanismRiskReviewFactV2 = z.infer<typeof V9MechanismRiskReviewFactV2Schema>;
 
-const V9AssetFactsV2Schema = z
+export const V9MechanismExitFactV1Schema = z
   .object({
-    assetId: CanonicalTextSchema,
-    assetIssuerKey: CanonicalTextSchema.nullable().optional(),
-    archetype: V9ResolvedMechanismArchetypeSchema,
-    variantKind: V9VariantKindSchema,
-    evidence: canonicalArrayBy(V9EvidenceReferenceV2Schema, (reference) => reference.evidenceId),
-    gaps: canonicalArrayBy(V9FactGapV2Schema, (gap) => gap.gapId),
-    implementation: V9ImplementationFactV2Schema,
-    mechanismRiskReview: V9MechanismRiskReviewFactV2Schema,
-    cdpStressCoverage: V9CdpStressCoverageFactSchema.optional(),
-    dependencies: V9EffectiveDependenciesV2Schema,
-    reserveStatus: V9FactStatusV2Schema,
-    reserveExposures: canonicalArrayBy(V9ReserveExposureFactV2Schema, (exposure) => exposure.exposureKey),
-    exitStatus: V9FactStatusV2Schema,
-    exitRoutes: canonicalArrayBy(V9ExitRouteFactV2Schema, (route) => route.routeKey),
-    controlStatus: V9FactStatusV2Schema,
-    controls: canonicalArrayBy(V9DeploymentControlFactV2Schema, (control) => control.controlKey),
-    economicControlReview: V9EconomicControlReviewV2Schema,
-    accessReview: V9AccessReviewV2Schema,
-    peg: V9PegFactV2Schema,
-    supply: V9SupplyFactV2Schema,
+    factKey: z.enum(["physical-redemption", "protocol-redemption"]),
+    disposition: z.enum(["supported", "issuer-undisclosed", "integration-missing", "method-unsupported"]),
+    quality: z.enum(["strong", "adequate", "limited", "weak", "failed"]).nullable(),
+    evidenceRefIds: CanonicalStringArraySchema,
   })
   .strict()
-  .superRefine((asset, ctx) => {
-    if (asset.mechanismRiskReview.review && asset.mechanismRiskReview.review.archetype !== asset.archetype) {
+  .superRefine((fact, ctx) => {
+    if ((fact.disposition === "supported") !== (fact.quality !== null)) {
       ctx.addIssue({
         code: "custom",
-        path: ["mechanismRiskReview", "review", "archetype"],
-        message: "Mechanism review archetype does not match the asset archetype",
+        path: ["quality"],
+        message: "Supported mechanism exit facts require quality; unavailable facts cannot claim quality",
       });
     }
-    if (asset.cdpStressCoverage !== undefined && asset.archetype !== "cdp") {
+    if (fact.disposition === "supported" && fact.evidenceRefIds.length === 0) {
       ctx.addIssue({
         code: "custom",
-        path: ["cdpStressCoverage"],
-        message: "Only CDP assets may carry stress-coverage facts",
+        path: ["evidenceRefIds"],
+        message: "Supported mechanism exit facts require evidence",
       });
-    }
-    const controlKeys = new Set(asset.controls.map((control) => control.controlKey));
-    for (const [label, controlKey] of [
-      ["mint", asset.economicControlReview.mint.controlKey],
-      ["upgrade", asset.economicControlReview.mint.upgrade.controlKey],
-      ...asset.economicControlReview.oracle.branches.map((branch) => [`oracle:${branch.branch}`, branch.controlKey]),
-      ...asset.economicControlReview.bridge.routes.map((route) => [`bridge:${route.controlKey}`, route.controlKey]),
-      ...asset.accessReview.freeze.reviews.map((review) => [`access:${review.reviewKey}`, review.controlKey]),
-    ] as Array<[string, string | null]>) {
-      if (controlKey !== null && !controlKeys.has(controlKey)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["economicControlReview"],
-          message: `${label} review references unknown control ${controlKey}`,
-        });
-      }
-    }
-    // exitRoutes is deliberately absent: a reviewed-complete empty exit
-    // surface is representable KNOWN negative evidence (VER-006).
-    for (const [field, status, count] of [
-      ["reserveExposures", asset.reserveStatus, asset.reserveExposures.length],
-      ["controls", asset.controlStatus, asset.controls.length],
-    ] as const) {
-      if (status.applicability.state === "required" && status.observationState === "known" && count === 0) {
-        ctx.addIssue({ code: "custom", path: [field], message: `Known required ${field} cannot be empty` });
-      }
     }
   });
+export type V9MechanismExitFactV1 = z.infer<typeof V9MechanismExitFactV1Schema>;
+
+const V9AssetFactsBaseFields = {
+  assetId: CanonicalTextSchema,
+  assetIssuerKey: CanonicalTextSchema.nullable().optional(),
+  archetype: V9ResolvedMechanismArchetypeSchema,
+  variantKind: V9VariantKindSchema,
+  evidence: canonicalArrayBy(V9EvidenceReferenceV2Schema, (reference) => reference.evidenceId),
+  implementation: V9ImplementationFactV2Schema,
+  mechanismRiskReview: V9MechanismRiskReviewFactV2Schema,
+  // Optional only so retained V2 bytes remain byte-stable. Current V3
+  // producers always emit the complete reviewed mechanism-exit projection.
+  mechanismExitFacts: canonicalArrayBy(
+    V9MechanismExitFactV1Schema,
+    (fact) => fact.factKey,
+  ).optional(),
+  cdpStressCoverage: V9CdpStressCoverageFactSchema.optional(),
+  // Retained V2 facts carry only serial/basket dependency roles. V3 overrides
+  // this field with the role-aware edge contract below.
+  dependencies: V9EffectiveDependenciesV2Schema,
+  reserveStatus: V9FactStatusV2Schema,
+  reserveExposures: canonicalArrayBy(V9ReserveExposureFactV2Schema, (exposure) => exposure.exposureKey),
+  exitStatus: V9FactStatusV2Schema,
+  exitRoutes: canonicalArrayBy(V9ExitRouteFactV2Schema, (route) => route.routeKey),
+  controlStatus: V9FactStatusV2Schema,
+  controls: canonicalArrayBy(V9DeploymentControlFactV2Schema, (control) => control.controlKey),
+  economicControlReview: V9EconomicControlReviewV2Schema,
+  accessReview: V9AccessReviewV2Schema,
+  peg: V9PegFactV2Schema,
+  supply: V9SupplyFactV2Schema,
+  operationalResilience: V9OperationalResilienceFactSchema.nullable().optional(),
+  // Optional only for retained V2 compatibility. V3 requires the complete,
+  // policy-independent wrapper-local contract for every asset.
+  wrapperLocalFacts: V9WrapperLocalFactsSchema.optional(),
+};
+
+const V9AssetFactsV2ObjectSchema = z
+  .object({
+    ...V9AssetFactsBaseFields,
+    gaps: canonicalArrayBy(V9FactGapV2Schema, (gap) => gap.gapId),
+  })
+  .strict();
+type V9AssetFactsV2Object = z.infer<typeof V9AssetFactsV2ObjectSchema>;
+type V9AssetFactsValidationInput = Omit<V9AssetFactsV2Object, "dependencies"> & {
+  dependencies: V9EffectiveDependenciesV2 | V9EffectiveDependenciesV3;
+};
+
+function validateAssetFacts(asset: V9AssetFactsValidationInput, ctx: z.RefinementCtx): void {
+  if (asset.mechanismRiskReview.review && asset.mechanismRiskReview.review.archetype !== asset.archetype) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["mechanismRiskReview", "review", "archetype"],
+      message: "Mechanism review archetype does not match the asset archetype",
+    });
+  }
+  if (asset.cdpStressCoverage !== undefined && asset.archetype !== "cdp") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["cdpStressCoverage"],
+      message: "Only CDP assets may carry stress-coverage facts",
+    });
+  }
+  const controlKeys = new Set(asset.controls.map((control) => control.controlKey));
+  for (const [label, controlKey] of [
+    ["mint", asset.economicControlReview.mint.controlKey],
+    ["upgrade", asset.economicControlReview.mint.upgrade.controlKey],
+    ...asset.economicControlReview.oracle.branches.map((branch) => [`oracle:${branch.branch}`, branch.controlKey]),
+    ...asset.economicControlReview.bridge.routes.map((route) => [`bridge:${route.controlKey}`, route.controlKey]),
+    ...asset.accessReview.freeze.reviews.map((review) => [`access:${review.reviewKey}`, review.controlKey]),
+  ] as Array<[string, string | null]>) {
+    if (controlKey !== null && !controlKeys.has(controlKey)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["economicControlReview"],
+        message: `${label} review references unknown control ${controlKey}`,
+      });
+    }
+  }
+  // exitRoutes is deliberately absent: a reviewed-complete empty exit
+  // surface is representable KNOWN negative evidence (VER-006).
+  for (const [field, status, count] of [
+    ["reserveExposures", asset.reserveStatus, asset.reserveExposures.length],
+    ["controls", asset.controlStatus, asset.controls.length],
+  ] as const) {
+    if (status.applicability.state === "required" && status.observationState === "known" && count === 0) {
+      ctx.addIssue({ code: "custom", path: [field], message: `Known required ${field} cannot be empty` });
+    }
+  }
+  const hasWrapperEdge = asset.dependencies.edges.some(
+    (edge) => edge.pathKind === "serial-dependency" && edge.dependencyType === "wrapper",
+  );
+  const explicitWrapperVariant =
+    asset.variantKind === "pure-wrapper" ||
+    asset.variantKind === "savings-passthrough" ||
+    asset.variantKind === "strategy-vault" ||
+    asset.variantKind === "risk-absorption";
+  const wrapperApplicable = explicitWrapperVariant || hasWrapperEdge;
+  if (asset.wrapperLocalFacts?.applicability === "wrapper" && !wrapperApplicable) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["wrapperLocalFacts", "applicability"],
+      message: "Wrapper-local facts require an explicit wrapper variant or serial wrapper dependency",
+    });
+  }
+  if (asset.wrapperLocalFacts?.applicability === "not-wrapper" && wrapperApplicable) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["wrapperLocalFacts", "applicability"],
+      message: "Wrapper assets cannot declare wrapper-local facts not applicable",
+    });
+  }
+  if (asset.wrapperLocalFacts?.applicability === "wrapper") {
+    const expectedForm =
+      asset.variantKind === "pure-wrapper"
+        ? "pure"
+        : asset.variantKind === "savings-passthrough" || asset.variantKind === "risk-absorption"
+          ? "native-staked"
+          : "strategy-vault";
+    if (asset.wrapperLocalFacts.form !== expectedForm) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["wrapperLocalFacts", "form"],
+        message: `Wrapper form must be ${expectedForm} for the compiled variant/dependency facts`,
+      });
+    }
+  }
+}
+
+const V9AssetFactsV2Schema = V9AssetFactsV2ObjectSchema.superRefine(validateAssetFacts);
 export type V9AssetFactsV2 = z.infer<typeof V9AssetFactsV2Schema>;
+
+const V9AssetFactsV3ObjectSchema = z
+  .object({
+    ...V9AssetFactsBaseFields,
+    dependencies: V9EffectiveDependenciesV3Schema,
+    wrapperLocalFacts: V9WrapperLocalFactsSchema,
+    gaps: canonicalArrayBy(V9FactGapV3Schema, (gap) => gap.gapId),
+  })
+  .strict();
+const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asset, ctx) =>
+  validateAssetFacts(asset, ctx),
+);
+export type V9AssetFactsV3 = z.infer<typeof V9AssetFactsV3Schema>;
 
 const V9FactSourceIdentityV2Schema = z
   .object({
@@ -1180,24 +1403,37 @@ export const V9FactSourceFingerprintsV2Schema = z
   .strict();
 export type V9FactSourceFingerprintsV2 = z.infer<typeof V9FactSourceFingerprintsV2Schema>;
 
-const V9FactSetCoreFields = {
-  schemaVersion: z.literal(2),
+const V9FactSetCoreBaseFields = {
   baseInputGenerationId: BaseInputGenerationIdSchema,
   asOfSec: UnixSecondsSchema,
   compiledAtSec: UnixSecondsSchema,
   sourceFingerprints: V9FactSourceFingerprintsV2Schema,
   activeAssetIds: CanonicalStringArraySchema.pipe(z.array(CanonicalTextSchema).min(1)),
+};
+
+const V9FactSetCoreV2Fields = {
+  schemaVersion: z.literal(2),
+  ...V9FactSetCoreBaseFields,
   assets: canonicalArrayBy(V9AssetFactsV2Schema, (asset) => asset.assetId),
 };
 
-const V9FactSetCoreObjectSchema = z.object(V9FactSetCoreFields).strict();
-export type V9FactSetCoreV2 = z.infer<typeof V9FactSetCoreObjectSchema>;
+const V9FactSetCoreV2ObjectSchema = z.object(V9FactSetCoreV2Fields).strict();
+export type V9FactSetCoreV2 = z.infer<typeof V9FactSetCoreV2ObjectSchema>;
+
+const V9FactSetCoreV3Fields = {
+  schemaVersion: z.literal(3),
+  ...V9FactSetCoreBaseFields,
+  assets: canonicalArrayBy(V9AssetFactsV3Schema, (asset) => asset.assetId),
+};
+
+const V9FactSetCoreV3ObjectSchema = z.object(V9FactSetCoreV3Fields).strict();
+export type V9FactSetCoreV3 = z.infer<typeof V9FactSetCoreV3ObjectSchema>;
 
 function addIssue(ctx: z.RefinementCtx, path: PropertyKey[], message: string): void {
   ctx.addIssue({ code: "custom", path, message });
 }
 
-function factStatuses(asset: V9AssetFactsV2): Array<{ label: string; status: V9FactStatusV2 }> {
+function factStatuses(asset: V9AssetFactsV2 | V9AssetFactsV3): Array<{ label: string; status: V9FactStatusV2 }> {
   const mechanismStatuses = asset.mechanismRiskReview.review
     ? Object.entries(asset.mechanismRiskReview.review).flatMap(([key, value]) =>
         value !== null && typeof value === "object" && "status" in value
@@ -1238,9 +1474,10 @@ function factStatuses(asset: V9AssetFactsV2): Array<{ label: string; status: V9F
 }
 
 function validateAssetReferences(
-  asset: V9AssetFactsV2,
+  asset: V9AssetFactsV2 | V9AssetFactsV3,
   activeAssetIds: ReadonlySet<string>,
   assetIndex: number,
+  schemaVersion: 2 | 3,
   ctx: z.RefinementCtx,
 ): void {
   const evidenceById = new Map(asset.evidence.map((reference) => [reference.evidenceId, reference]));
@@ -1316,9 +1553,67 @@ function validateAssetReferences(
       }
     }
   }
+  for (const fact of asset.mechanismExitFacts ?? []) {
+    captureRefs(`mechanism-exit:${fact.factKey}`, fact.evidenceRefIds, []);
+  }
+  const wrapperLocalFacts = asset.wrapperLocalFacts;
+  if (wrapperLocalFacts?.applicability === "not-wrapper") {
+    captureRefs("wrapper-local:not-wrapper", wrapperLocalFacts.evidenceRefIds, []);
+  } else if (wrapperLocalFacts?.applicability === "wrapper") {
+    captureRefs("wrapper-local:form", wrapperLocalFacts.formEvidenceRefIds, []);
+    for (const [factKey, fact] of Object.entries(wrapperLocalFacts.facts) as Array<
+      [keyof V9ApplicableWrapperLocalFacts["facts"], V9ApplicableWrapperLocalFacts["facts"][keyof V9ApplicableWrapperLocalFacts["facts"]]]
+    >) {
+      captureRefs(`wrapper-local:${factKey}`, fact.evidenceRefIds, []);
+    }
+    captureRefs("wrapper-local:risk-transfer", wrapperLocalFacts.riskTransfer.evidenceRefIds, []);
+  }
   for (const route of asset.exitRoutes) {
     captureRefs(`settlement:${route.routeKey}`, route.settlementEvidenceRefIds, []);
     if (route.output.valuation) captureRefs(`valuation:${route.routeKey}`, route.output.valuation.evidenceRefIds, []);
+  }
+  const operationalResilience = asset.operationalResilience;
+  if (operationalResilience) {
+    captureRefs(
+      "operational-resilience:live-history",
+      operationalResilience.liveHistoryEligibility.evidenceRefIds,
+      [],
+    );
+    const cumulative = operationalResilience.redemptionThroughput?.cumulativeLifetimeRedeemedSupplyRatio;
+    if (cumulative) captureRefs("operational-resilience:cumulative-redemption", cumulative.evidenceRefIds, []);
+    for (const window of operationalResilience.redemptionThroughput?.stressWindows ?? []) {
+      captureRefs(`operational-resilience:redemption:${window.episodeKey}`, window.evidenceRefIds, []);
+    }
+    for (const episode of operationalResilience.stressEpisodes) {
+      captureRefs(`operational-resilience:stress:${episode.episodeKey}`, episode.evidenceRefIds, []);
+    }
+    if (operationalResilience.reserveReconciliation) {
+      captureRefs(
+        "operational-resilience:reconciliation-history",
+        operationalResilience.reserveReconciliation.reportHistory.evidenceRefIds,
+        [],
+      );
+      captureRefs(
+        "operational-resilience:latest-assurance",
+        operationalResilience.reserveReconciliation.latestAssurance.evidenceRefIds,
+        [],
+      );
+      captureRefs(
+        "operational-resilience:reconciliation-procedures",
+        operationalResilience.reserveReconciliation.latestReconciliationProcedures.evidenceRefIds,
+        [],
+      );
+    }
+    if (operationalResilience.incidentReview.state === "reviewed") {
+      captureRefs(
+        "operational-resilience:incident-review",
+        operationalResilience.incidentReview.evidenceRefIds,
+        [],
+      );
+      for (const incident of operationalResilience.incidentReview.incidents) {
+        captureRefs(`operational-resilience:incident:${incident.incidentKey}`, incident.evidenceRefIds, []);
+      }
+    }
   }
   for (const gap of asset.gaps) captureRefs(`gap:${gap.gapId}`, gap.evidenceRefIds, []);
 
@@ -1333,11 +1628,17 @@ function validateAssetReferences(
 
   const edgeKeys = new Set<string>();
   for (const [edgeIndex, edge] of asset.dependencies.edges.entries()) {
-    const expectedKey = `${edge.dependencyType}:${edge.upstreamAssetId}`;
+    const expectedKey =
+      schemaVersion === 2
+        ? `${edge.dependencyType}:${edge.upstreamAssetId}`
+        : `${edge.economicRole}:${edge.dependencyType}:${edge.upstreamAssetId}`;
     if (edge.edgeKey !== expectedKey) {
       addIssue(ctx, ["assets", assetIndex, "dependencies", "edges", edgeIndex, "edgeKey"], `Expected ${expectedKey}`);
     }
-    const relationKey = `${edge.upstreamAssetId}:${edge.dependencyType}`;
+    const relationKey =
+      schemaVersion === 2
+        ? `${edge.upstreamAssetId}:${edge.dependencyType}`
+        : `${edge.upstreamAssetId}:${edge.dependencyType}:${edge.economicRole}`;
     if (edgeKeys.has(relationKey)) {
       addIssue(ctx, ["assets", assetIndex, "dependencies", "edges", edgeIndex], `Duplicate dependency ${relationKey}`);
     }
@@ -1370,8 +1671,14 @@ function validateAssetReferences(
   for (const [gapIndex, gap] of asset.gaps.entries()) {
     const path = gap.path;
     if (path.kind === "serial-dependency") {
-      const key = `${path.dependencyType}:${path.upstreamAssetId}`;
-      if (!asset.dependencies.edges.some((edge) => edge.edgeKey === key)) {
+      if (
+        !asset.dependencies.edges.some(
+          (edge) =>
+            edge.upstreamAssetId === path.upstreamAssetId &&
+            edge.dependencyType === path.dependencyType &&
+            edge.economicRole === "serial-claim",
+        )
+      ) {
         addIssue(ctx, ["assets", assetIndex, "gaps", gapIndex, "path"], "Serial path does not reference a dependency");
       }
     } else if (path.kind === "collateral-exposure" && !exposures.has(path.exposureKey)) {
@@ -1391,7 +1698,7 @@ function validateAssetReferences(
   }
 }
 
-function validateFactSetCore(value: V9FactSetCoreV2, ctx: z.RefinementCtx): void {
+function validateFactSetCore(value: V9FactSetCoreV2 | V9FactSetCoreV3, ctx: z.RefinementCtx): void {
   if (value.compiledAtSec < value.asOfSec) {
     addIssue(ctx, ["compiledAtSec"], "compiledAtSec cannot predate asOfSec");
   }
@@ -1538,17 +1845,29 @@ function validateFactSetCore(value: V9FactSetCoreV2, ctx: z.RefinementCtx): void
         "Supply provenance generation is inconsistent",
       );
     }
-    validateAssetReferences(asset, activeAssetIds, assetIndex, ctx);
+    validateAssetReferences(asset, activeAssetIds, assetIndex, value.schemaVersion, ctx);
   }
 }
 
-export const V9FactSetCoreV2Schema = V9FactSetCoreObjectSchema.superRefine(validateFactSetCore);
+export const V9FactSetCoreV2Schema = V9FactSetCoreV2ObjectSchema.superRefine((value, ctx) =>
+  validateFactSetCore(value, ctx),
+);
 
 export const CompiledV9FactSetV2Schema = z
-  .object({ ...V9FactSetCoreFields, v9FactSetDigest: Sha256Schema })
+  .object({ ...V9FactSetCoreV2Fields, v9FactSetDigest: Sha256Schema })
   .strict()
-  .superRefine(validateFactSetCore);
+  .superRefine((value, ctx) => validateFactSetCore(value, ctx));
 export type CompiledV9FactSetV2 = z.infer<typeof CompiledV9FactSetV2Schema>;
+
+export const V9FactSetCoreV3Schema = V9FactSetCoreV3ObjectSchema.superRefine((value, ctx) =>
+  validateFactSetCore(value, ctx),
+);
+
+export const CompiledV9FactSetV3Schema = z
+  .object({ ...V9FactSetCoreV3Fields, v9FactSetDigest: Sha256Schema })
+  .strict()
+  .superRefine((value, ctx) => validateFactSetCore(value, ctx));
+export type CompiledV9FactSetV3 = z.infer<typeof CompiledV9FactSetV3Schema>;
 
 const V9PublicFactGapV2Schema = z
   .object({
@@ -1582,6 +1901,7 @@ const V9PublicAssetFactProjectionV2Schema = z
           upstreamAssetId: CanonicalTextSchema,
           dependencyType: DependencyTypeSchema,
           pathKind: z.enum(["serial-dependency", "collateral-exposure"]),
+          economicRole: z.enum(["serial-claim", "basket-exposure"]),
           weight: PositiveFractionSchema,
         })
         .strict(),

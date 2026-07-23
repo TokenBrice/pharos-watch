@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
-import { admitTargetsWithinBudget, resolveMeasuredExecutionCronStatus } from "../sync";
+import {
+  admitTargetsWithinBudget,
+  hasCompleteDexMeasuredQuoteProgress,
+  resolveMeasuredExecutionCronStatus,
+} from "../sync";
 
 function target(stablecoinId: string, retainedTvlUsd: number): DexMeasuredExecutionTarget {
   return {
@@ -63,5 +67,36 @@ describe("measured execution overflow admission", () => {
     expect(resolveMeasuredExecutionCronStatus({ failedCount: 0, cursorWriteStatus: "write-failed" })).toBe("degraded");
     expect(resolveMeasuredExecutionCronStatus({ failedCount: 0, cursorWriteStatus: "missing-table" })).toBe("ok");
     expect(resolveMeasuredExecutionCronStatus({ failedCount: 1, cursorWriteStatus: "written" })).toBe("degraded");
+  });
+});
+
+describe("measured execution runtime budget completion", () => {
+  it("preserves targets that completed their required probe set before the global budget stop", () => {
+    const measuredTarget = target("coin-a", 100_000);
+
+    expect(
+      hasCompleteDexMeasuredQuoteProgress({
+        target: measuredTarget,
+        points: [{ inputUsd: 1_000 }, { inputUsd: 100_000 }],
+        stopped: false,
+      }),
+    ).toBe(true);
+    expect(
+      hasCompleteDexMeasuredQuoteProgress({
+        target: measuredTarget,
+        points: [{ inputUsd: 1_000 }],
+        stopped: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("treats a deterministic cost-bound stop as complete, including measured zero", () => {
+    expect(
+      hasCompleteDexMeasuredQuoteProgress({
+        target: target("coin-a", 10_000_000),
+        points: [{ inputUsd: 1_000 }],
+        stopped: true,
+      }),
+    ).toBe(true);
   });
 });

@@ -1,10 +1,14 @@
 import { z } from "zod";
-import { compileV9FactSetV2 } from "@shared/lib/safety-score-v9/compile";
+import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { resolveChainId } from "@shared/lib/chains";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
 import { canonicalV9DependencyEdgeKey, canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import { deriveV9WindowedPegScore } from "@shared/lib/safety-score-v9/formula";
+import {
+  resolveV9ExitCapacityAtRequest,
+  selectV9ExitStressRequest,
+} from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
   createV9EvidenceReference,
@@ -12,10 +16,19 @@ import {
   notApplicableV9Fact,
   requiredV9Applicability,
 } from "@shared/lib/safety-score-v9/evidence";
-import { collateralExposureV9Path, createV9FactGap, optionalExitV9Path } from "@shared/lib/safety-score-v9/reasons";
+import {
+  collateralExposureV9Path,
+  createV9FactGapV3,
+  optionalExitV9Path,
+} from "@shared/lib/safety-score-v9/reasons";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import {
+  defaultV9DependencyEconomicRole,
+  V9DependencyEconomicRoleSchema,
+  type V9DependencyEconomicRole,
+} from "@shared/types/dependency-types";
 import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "../cron/sync-stablecoins/shared";
 import {
   V9AccessReviewV2Schema,
@@ -23,18 +36,21 @@ import {
   V9ReserveAssetClassSchema,
   V9ResolvedMechanismArchetypeSchema,
   V9VariantKindSchema,
-  type CompiledV9FactSetV2,
+  type CompiledV9FactSetV3,
   type V9AccessReviewV2,
   type V9AssetFactsV2,
+  type V9AssetFactsV3,
   type V9DeploymentControlFactV2,
   type V9EconomicControlReviewV2,
-  type V9EffectiveDependenciesV2,
+  type V9EffectiveDependenciesV3,
   type V9EvidenceReferenceV2,
   type V9ExitRouteFactV2,
-  type V9FactGapV2,
+  type V9EvidenceResponsibility,
+  type V9FactGapV3,
   type V9FactStatusV2,
   type V9FailureDomainRef,
   type V9MechanismRiskReviewFactV2,
+  type V9MechanismExitFactV1,
   type V9ReserveExposureFactV2,
 } from "@shared/types/safety-score-v9-facts";
 import {
@@ -44,6 +60,19 @@ import {
   type V9MechanismRiskReview,
 } from "@shared/types/safety-score-v9-backing";
 import {
+  V9OperationalResilienceFactSchema,
+  type V9OperationalResilienceClaimConfidence,
+  type V9OperationalResilienceFact,
+} from "@shared/types/safety-score-v9-operational-resilience";
+import {
+  V9WrapperLocalFactsSchema,
+  type V9ApplicableWrapperLocalFacts,
+  type V9WrapperFactDisposition,
+  type V9WrapperLocalDimensionFact,
+  type V9WrapperLocalFacts,
+  type V9WrapperRiskAssessment,
+} from "@shared/types/safety-score-v9-wrapper";
+import {
   DexExitRouteObservationSchema,
   ExitRouteObservationSchema,
   RedemptionExitRouteObservationSchema,
@@ -52,7 +81,16 @@ import {
 import { ReserveSliceSchema, type ReserveSlice } from "@shared/types/reserves";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 import { assertSafetyScoreV9ExactExtensionAssets } from "./safety-score-v9-fact-set-boundary";
+import {
+  SafetyScoreV9OperationalResilienceOverlaySchema,
+  type SafetyScoreV9OperationalResilienceOverlay,
+} from "./safety-score-v9-extension-operational-resilience";
 import { hydrateSafetyScoreV9ShockCoverageExtension } from "./safety-score-v9-extension-shock";
+import {
+  safetyScoreV9ChainRows,
+  safetyScoreV9ChainSupplyObservedAtSec,
+  safetyScoreV9ChainSupplySourcePayload,
+} from "./safety-score-v9-supply-attribution";
 
 const CanonicalTextSchema = z.string().trim().min(1);
 const UnixSecondsSchema = z.number().int().nonnegative();
@@ -159,6 +197,8 @@ const ReserveClassificationSchema = z
     liquidityHorizon: z.enum(["immediate", "one-day", "seven-days", "over-seven-days", "unknown"]).nullable(),
     maturityDaysMax: z.number().int().nonnegative().nullable(),
     failureDomains: FailureDomainsSchema,
+    trackedAssetId: CanonicalTextSchema.nullable().optional(),
+    trackedAssetDisposition: z.enum(["source", "reviewed-non-link"]).optional(),
   })
   .strict();
 
@@ -167,9 +207,28 @@ const DependencyEdgeOverlaySchema = z
     upstreamAssetId: CanonicalTextSchema,
     dependencyType: z.enum(["wrapper", "mechanism", "collateral"]),
     weight: z.number().finite().positive().max(1),
+    economicRole: V9DependencyEconomicRoleSchema.optional(),
     failureDomains: FailureDomainsSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((edge, ctx) => {
+    const role = edge.economicRole ?? defaultV9DependencyEconomicRole(edge.dependencyType);
+    if (role === "serial-claim" && edge.weight !== 1) {
+      ctx.addIssue({ code: "custom", path: ["weight"], message: "Serial dependencies must have weight 1" });
+    }
+    if (role === "serial-claim" && edge.dependencyType === "collateral") {
+      ctx.addIssue({ code: "custom", path: ["dependencyType"], message: "Serial claims cannot be collateral edges" });
+    }
+    if (role === "basket-exposure" && edge.dependencyType !== "collateral") {
+      ctx.addIssue({ code: "custom", path: ["dependencyType"], message: "Basket exposures must be collateral edges" });
+    }
+    if (role !== "serial-claim" && role !== "basket-exposure" && edge.dependencyType === "wrapper") {
+      ctx.addIssue({ code: "custom", path: ["dependencyType"], message: "Wrapper edges must be serial claims" });
+    }
+    if (role !== "serial-claim" && role !== "basket-exposure" && edge.failureDomains.length === 0) {
+      ctx.addIssue({ code: "custom", path: ["failureDomains"], message: "Role dependencies require a failure domain" });
+    }
+  });
 
 const EffectiveDependenciesOverlaySchema = z
   .object({
@@ -180,9 +239,10 @@ const EffectiveDependenciesOverlaySchema = z
     fallbackReason: z
       .enum(["live-unmapped-to-curated-reserve", "live-unmapped-to-manual", "live-cycle-to-curated"])
       .nullable(),
-    edges: canonicalArrayBy(DependencyEdgeOverlaySchema, (edge) =>
-      canonicalV9DependencyEdgeKey(edge.dependencyType, edge.upstreamAssetId),
-    ),
+    edges: canonicalArrayBy(DependencyEdgeOverlaySchema, (edge) => {
+      const role = edge.economicRole ?? defaultV9DependencyEconomicRole(edge.dependencyType);
+      return canonicalV9DependencyEdgeKey(edge.dependencyType, edge.upstreamAssetId, role);
+    }),
     diagnostics: z
       .object({
         graphState: z.enum(["valid", "cycle", "invalid", "unresolved"]),
@@ -260,8 +320,12 @@ const RouteReviewSchema = z
     // the conservative modeled-confidence floor at the compiler boundary.
     modelConfidence: z.enum(["high", "medium", "low"]).default("low"),
     coverageClass: z.enum(["exact-complete", "exact-lower-bound", "diagnostic"]),
+    capacityScoringHorizon: z.enum(["immediate", "daily", "queued", "eventual", "unknown"]).optional(),
     settlementModel: z.enum(["atomic", "same-day", "bounded-delay", "queued", "eventual", "unknown"]),
     settlementSlaSec: z.number().int().nonnegative().nullable(),
+    queueDepthUsd: z.number().finite().nonnegative().nullable().optional(),
+    dailyLimitUsd: z.number().finite().nonnegative().nullable().optional(),
+    minRedeemUsd: z.number().finite().nonnegative().nullable().optional(),
     physicalResourceKeys: canonicalArrayBy(CanonicalTextSchema, (value) => value),
     executionCosts: canonicalArrayBy(
       RouteExecutionCostSchema,
@@ -408,6 +472,42 @@ const IssuerAttestedReserveRowsSchema = z
   })
   .strict();
 
+const MechanismExitFactOverlaySchema = z
+  .object({
+    factKey: z.enum(["physical-redemption", "protocol-redemption"]),
+    disposition: z.enum(["supported", "issuer-undisclosed", "integration-missing", "method-unsupported"]),
+    quality: z.enum(["strong", "adequate", "limited", "weak", "failed"]).nullable(),
+  })
+  .strict()
+  .superRefine((fact, ctx) => {
+    if ((fact.disposition === "supported") !== (fact.quality !== null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["quality"],
+        message: "Supported mechanism exit facts require quality; unavailable facts cannot claim quality",
+      });
+    }
+  });
+
+const WrapperCustodyReviewSchema = z
+  .object({
+    providers: canonicalArrayBy(
+      z
+        .object({
+          providerKey: CanonicalTextSchema,
+          role: z.enum(["custodian", "subcustodian", "bank", "prime-broker", "other"]),
+          shareFraction: FractionSchema.nullable(),
+        })
+        .strict(),
+      (provider) => provider.providerKey,
+    ),
+    segregation: z.enum(["segregated", "omnibus", "mixed", "unknown"]),
+    bankruptcyRemoteness: z.enum(["structured", "contractual-only", "none", "unknown"]),
+    rehypothecation: z.enum(["prohibited", "permitted", "conditional", "unknown"]),
+    knownUnknownExposureShare: FractionSchema.nullable(),
+  })
+  .strict();
+
 const AssetExtensionSchema = z
   .object({
     assetId: CanonicalTextSchema,
@@ -416,6 +516,10 @@ const AssetExtensionSchema = z
     variantKind: V9VariantKindSchema,
     launchedAtSec: UnixSecondsSchema.nullable(),
     mechanismRiskReview: V9MechanismRiskReviewSchema.nullable(),
+    mechanismExitFacts: canonicalArrayBy(
+      MechanismExitFactOverlaySchema,
+      (fact) => fact.factKey,
+    ).optional(),
     cdpStressCoverage: V9CdpStressCoverageFactSchema.optional(),
     dependencies: EffectiveDependenciesOverlaySchema.nullable(),
     reserveApplicability: ReserveApplicabilitySchema,
@@ -431,11 +535,26 @@ const AssetExtensionSchema = z
     accessReview: V9AccessReviewV2Schema.nullable(),
     pegReference: PegReferenceSchema.nullable(),
     supplyReview: SupplyReviewSchema.nullable(),
+    operationalResilience: SafetyScoreV9OperationalResilienceOverlaySchema.nullable().optional(),
+    // Optional only for retained extension-v2 compatibility. The current
+    // baseline producer emits the reviewed registry projection when available.
+    wrapperCustodyReview: WrapperCustodyReviewSchema.nullable().optional(),
     researchEvidence: canonicalArrayBy(ResearchEvidenceSchema, (evidence) => evidence.evidenceKey).default([]),
     componentEvidence: canonicalArrayBy(ComponentEvidenceBindingSchema, (binding) => binding.componentKey).default([]),
   })
   .strict()
   .superRefine((asset, ctx) => {
+    if (
+      asset.operationalResilience !== undefined &&
+      asset.operationalResilience !== null &&
+      asset.operationalResilience.assetId !== asset.assetId
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["operationalResilience", "assetId"],
+        message: "Operational-resilience overlay assetId must match its extension asset",
+      });
+    }
     if (asset.cdpStressCoverage !== undefined && asset.archetype !== "cdp") {
       ctx.addIssue({
         code: "custom",
@@ -487,6 +606,17 @@ export const SafetyScoreV9FactSetExtensionV2Schema = z
   .superRefine((extension, ctx) => {
     for (let assetIndex = 0; assetIndex < extension.assets.length; assetIndex += 1) {
       const asset = extension.assets[assetIndex]!;
+      if (asset.operationalResilience !== undefined && asset.operationalResilience !== null) {
+        const reviewedAtSec = Date.parse(asset.operationalResilience.reviewedAt) / 1_000;
+        const expiresAtSec = Date.parse(asset.operationalResilience.expiresAt) / 1_000;
+        if (!(reviewedAtSec <= extension.compiledAtSec && extension.compiledAtSec < expiresAtSec)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["assets", assetIndex, "operationalResilience"],
+            message: "Operational-resilience overlay is outside its exact review window",
+          });
+        }
+      }
       for (let evidenceIndex = 0; evidenceIndex < asset.researchEvidence.length; evidenceIndex += 1) {
         const evidence = asset.researchEvidence[evidenceIndex]!;
         if (evidence.observedAtSec > extension.compiledAtSec) {
@@ -529,7 +659,7 @@ interface AssetBuildContext {
   readonly asset: AssetExtension;
   readonly researchPayloadSha256: string;
   readonly evidence: Map<string, V9EvidenceReferenceV2>;
-  readonly gaps: Map<string, V9FactGapV2>;
+  readonly gaps: Map<string, V9FactGapV3>;
 }
 
 function digest(domain: string, payload: unknown): string {
@@ -590,7 +720,7 @@ function addEvidence(context: AssetBuildContext, evidence: V9EvidenceReferenceV2
   return evidence.evidenceId;
 }
 
-function addGap(context: AssetBuildContext, gap: V9FactGapV2): string {
+function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
   const existing = context.gaps.get(gap.gapId);
   if (existing && stableJsonStringifyV1(existing) !== stableJsonStringifyV1(gap)) {
     throw new Error(`Conflicting Safety Score v9 gap identity ${gap.gapId}`);
@@ -666,12 +796,214 @@ function researchEvidence(context: AssetBuildContext, componentKey?: string): st
   return componentKey ? componentResearchEvidence(context, componentKey)[0]! : fallbackResearchEvidence(context);
 }
 
+function isoDateStartSec(value: string, label: string, asOfSec: number): number {
+  const timestampMs = Date.parse(`${value}T00:00:00.000Z`);
+  if (!Number.isFinite(timestampMs)) throw new Error(`Safety Score v9 ${label} has an invalid date`);
+  const timestampSec = Math.floor(timestampMs / 1_000);
+  if (timestampSec > asOfSec) throw new Error(`Safety Score v9 ${label} is later than the scoring clock`);
+  return timestampSec;
+}
+
+function timestampSec(value: string, label: string, asOfSec: number): number {
+  const timestampMs = Date.parse(value);
+  if (!Number.isFinite(timestampMs)) throw new Error(`Safety Score v9 ${label} has an invalid timestamp`);
+  const timestamp = Math.floor(timestampMs / 1_000);
+  if (timestamp > asOfSec) throw new Error(`Safety Score v9 ${label} is later than the scoring clock`);
+  return timestamp;
+}
+
+function operationalResilienceConfidence(
+  overlay: SafetyScoreV9OperationalResilienceOverlay,
+  sourceIds: readonly string[],
+): V9OperationalResilienceClaimConfidence {
+  const confidenceRank: Record<Exclude<V9OperationalResilienceClaimConfidence, "unknown">, number> = {
+    "issuer-reported": 0,
+    "independent-assurance": 1,
+    audited: 2,
+  };
+  const sourceById = new Map(overlay.sources.map((source) => [source.sourceId, source]));
+  const confidences = sourceIds.map((sourceId) => {
+    const source = sourceById.get(sourceId);
+    if (!source) throw new Error(`Unknown operational-resilience source ${overlay.assetId}:${sourceId}`);
+    return source.confidence;
+  });
+  if (confidences.length === 0) {
+    throw new Error(`Operational-resilience claim ${overlay.assetId} has no evidence sources`);
+  }
+  return confidences.reduce((lowest, confidence) =>
+    confidenceRank[confidence] < confidenceRank[lowest] ? confidence : lowest,
+  );
+}
+
+function buildOperationalResilienceFact(context: AssetBuildContext): V9OperationalResilienceFact | null {
+  const overlay = context.asset.operationalResilience ?? null;
+  if (overlay === null) return null;
+  const sourceGenerationId = context.extension.sources.researchOverlays.generationId;
+  const evidenceIdBySourceId = new Map(
+    overlay.sources.map((source) => {
+      const publishedAtSec = isoDateStartSec(
+        source.publishedAt,
+        `${overlay.assetId}:${source.sourceId} publication`,
+        context.fixedInput.clockSec,
+      );
+      const evidenceId = addEvidence(
+        context,
+        createV9EvidenceReference(
+          {
+            evidenceId: `${overlay.assetId}:operational-resilience:${source.sourceId}`,
+            sourceId: source.sourceId,
+            sourceGenerationId,
+            disposition: "published",
+            observedAtSec: publishedAtSec,
+            publishedAtSec,
+            url: source.url,
+            contentSha256: digest("safety-score-v9.operational-resilience-source.v1", {
+              assetId: overlay.assetId,
+              source,
+            }),
+            maxAgeSec: null,
+          },
+          context.fixedInput.clockSec,
+        ),
+      );
+      return [source.sourceId, evidenceId] as const;
+    }),
+  );
+  const evidenceRefIds = (sourceIds: readonly string[]): string[] =>
+    sourceIds.map((sourceId) => {
+      const evidenceId = evidenceIdBySourceId.get(sourceId);
+      if (!evidenceId) throw new Error(`Unknown operational-resilience source ${overlay.assetId}:${sourceId}`);
+      return evidenceId;
+    });
+  const claimEvidence = (sourceIds: readonly string[]) => ({
+    evidenceRefIds: evidenceRefIds(sourceIds),
+    confidence: operationalResilienceConfidence(overlay, sourceIds),
+  });
+
+  const cumulativeRatio = overlay.redemptionThroughput?.cumulativeLifetimeRedeemedSupplyRatio ?? null;
+  const cumulativeSourceIds =
+    overlay.redemptionThroughput?.cumulativeLifetimeRedeemedSupplyRatioSourceIds ?? null;
+  if ((cumulativeRatio === null) !== (cumulativeSourceIds === null)) {
+    throw new Error(`Operational-resilience cumulative redemption claim ${overlay.assetId} lacks exact evidence`);
+  }
+  const reconciliation = overlay.reserveReconciliation;
+  const incidentReview = overlay.incidentReview;
+  return V9OperationalResilienceFactSchema.parse({
+    schemaVersion: 1,
+    reviewedAtSec: timestampSec(
+      overlay.reviewedAt,
+      `${overlay.assetId} operational-resilience review`,
+      context.fixedInput.clockSec,
+    ),
+    expiresAtSec: Math.floor(Date.parse(overlay.expiresAt) / 1_000),
+    liveHistoryEligibility: {
+      minimumLiveHistoryMonths: overlay.eligibility.liveHistory.minimumLiveHistoryMonths,
+      observedAtSec: isoDateStartSec(
+        overlay.eligibility.liveHistory.observedAt,
+        `${overlay.assetId} live-history observation`,
+        context.fixedInput.clockSec,
+      ),
+      treatment: "eligibility-only",
+      ...claimEvidence(overlay.eligibility.liveHistory.sourceIds),
+    },
+    redemptionThroughput:
+      overlay.redemptionThroughput === null
+        ? null
+        : {
+            cumulativeLifetimeRedeemedSupplyRatio:
+              cumulativeRatio === null || cumulativeSourceIds === null
+                ? null
+                : {
+                    value: cumulativeRatio,
+                    ...claimEvidence(cumulativeSourceIds),
+                  },
+            stressWindows: overlay.redemptionThroughput.stressWindows.map((window) => ({
+              episodeKey: window.episodeKey,
+              observedAtSec: isoDateStartSec(
+                window.observedAt,
+                `${overlay.assetId}:${window.episodeKey} redemption observation`,
+                context.fixedInput.clockSec,
+              ),
+              maximumWindowDays: window.maximumWindowDays,
+              redeemedUsdLowerBound: window.redeemedUsdLowerBound,
+              redeemedSupplyRatioLowerBound: window.redeemedSupplyRatioLowerBound,
+              settlement: window.settlement,
+              ...claimEvidence(window.sourceIds),
+            })),
+          },
+    stressEpisodes: overlay.stressEpisodes.map((episode) => ({
+      episodeKey: episode.episodeKey,
+      name: episode.name,
+      observedMonth: episode.observedMonth,
+      redemptionContinued: episode.redemptionContinued,
+      recoveredWithinSec: episode.recoveredWithinSec,
+      ...claimEvidence(episode.sourceIds),
+    })),
+    reserveReconciliation:
+      reconciliation === null
+        ? null
+        : {
+            reportHistory: {
+              firstReportPeriodEnd: reconciliation.firstReportPeriodEnd,
+              latestReportPeriodEnd: reconciliation.latestReportPeriodEnd,
+              observedReportHistoryMonths: reconciliation.observedReportHistoryMonths,
+              reportedCadence: reconciliation.reportedCadence,
+              continuityEvidence: reconciliation.continuityEvidence,
+              missedMaterialPeriods: reconciliation.missedMaterialPeriods,
+              ...claimEvidence(reconciliation.historySourceIds),
+              ...(reconciliation.continuityEvidence === "unknown" ? { confidence: "unknown" as const } : {}),
+            },
+            latestAssurance: {
+              level: reconciliation.latestAssurance.level,
+              standard: reconciliation.latestAssurance.standard,
+              periodEnd: reconciliation.latestAssurance.periodEnd,
+              ...claimEvidence(reconciliation.latestAssurance.sourceIds),
+            },
+            latestReconciliationProcedures: {
+              bankAndDepositaryBalances:
+                reconciliation.latestReconciliationProcedures.bankAndDepositaryBalances,
+              blockchainAssetsAndLiabilities:
+                reconciliation.latestReconciliationProcedures.blockchainAssetsAndLiabilities,
+              ...claimEvidence(reconciliation.latestReconciliationProcedures.sourceIds),
+            },
+          },
+    incidentReview:
+      incidentReview.state === "not-reviewed"
+        ? { state: "not-reviewed" }
+        : {
+            state: "reviewed",
+            windowStart: incidentReview.windowStart,
+            windowEnd: incidentReview.windowEnd,
+            incidents: incidentReview.incidents.map((incident) => ({
+              incidentKey: incident.incidentKey,
+              name: incident.name,
+              category: incident.category,
+              state: incident.state,
+              occurredAt: incident.occurredAt,
+              resolvedAt: incident.resolvedAt,
+              ...claimEvidence(incident.sourceIds),
+            })),
+            ...claimEvidence(incidentReview.sourceIds),
+          },
+  });
+}
+
+function reviewedGapResponsibility(
+  observationState: Exclude<V9FactStatusV2["observationState"], "known">,
+): V9EvidenceResponsibility {
+  if (observationState === "stale") return "producer-failed";
+  if (observationState === "unsupported") return "method-unsupported";
+  if (observationState === "bounded-unknown") return "issuer-undisclosed";
+  return "integration-missing";
+}
+
 function missingLocalFact(
   context: AssetBuildContext,
   args: {
     componentKey: string;
-    reasonCode: V9FactGapV2["reasonCode"];
-    ownerDomain: V9FactGapV2["ownerDomain"];
+    reasonCode: V9FactGapV3["reasonCode"];
+    ownerDomain: V9FactGapV3["ownerDomain"];
+    responsibility: V9EvidenceResponsibility;
     policyRuleId: string;
     message: string;
     observationState?: Exclude<V9FactStatusV2["observationState"], "known">;
@@ -681,12 +1013,13 @@ function missingLocalFact(
   const observationState = args.observationState ?? "missing";
   const gapId = addGap(
     context,
-    createV9FactGap({
+    createV9FactGapV3({
       gapId: `${context.asset.assetId}:gap:${args.componentKey}`,
       reasonCode: args.reasonCode,
       ownerDomain: args.ownerDomain,
       policyRuleId: args.policyRuleId,
       observationState,
+      responsibility: args.responsibility,
       path: { kind: "local-component", componentKey: args.componentKey },
       message: args.message,
       evidenceRefIds: args.evidenceRefIds,
@@ -710,6 +1043,7 @@ function buildImplementation(context: AssetBuildContext): V9AssetFactsV2["implem
         componentKey: "implementation-date",
         reasonCode: "missing-implementation-date",
         ownerDomain: "evidence",
+        responsibility: "integration-missing",
         policyRuleId: "v9.implementation.launch-date",
         message: "No reviewed implementation launch date is present in the v9 research overlay.",
       }).status,
@@ -766,13 +1100,14 @@ function normalizeMechanismReview(
     // critical evidence failure.
     const gapId = addGap(
       context,
-      createV9FactGap({
+      createV9FactGapV3({
         gapId: `${context.asset.assetId}:gap:mechanism-review:${componentKey}`,
         reasonCode:
           original.observationState === "unsupported" ? "missing-pillar-evidence" : "bounded-mechanism-review",
         ownerDomain: "backing",
         policyRuleId: original.applicability.policyRuleId,
         observationState: original.observationState,
+        responsibility: reviewedGapResponsibility(original.observationState),
         path: { kind: "local-component", componentKey: `mechanism-review:${componentKey}` },
         message: `The ${componentKey} mechanism review is not a current known fact.`,
         evidenceRefIds:
@@ -823,12 +1158,13 @@ function buildMechanismReview(context: AssetBuildContext): V9MechanismRiskReview
       // methodology owner and path (queue-contract reconciliation).
       const gapId = addGap(
         context,
-        createV9FactGap({
+        createV9FactGapV3({
           gapId: `${context.asset.assetId}:gap:mechanism-risk-review`,
           reasonCode: "missing-archetype",
           ownerDomain: "methodology",
           policyRuleId: "v9.backing.mechanism-review",
           observationState: "missing",
+          responsibility: "method-unsupported",
           path: { kind: "methodology", componentKey: "mechanism-risk-review" },
           message: "The asset does not yet have a resolved Safety Score v9 mechanism archetype.",
         }),
@@ -850,6 +1186,7 @@ function buildMechanismReview(context: AssetBuildContext): V9MechanismRiskReview
         // quality instead of reason-coding NR.
         reasonCode: "bounded-mechanism-review",
         ownerDomain: "backing",
+        responsibility: "integration-missing",
         policyRuleId: "v9.backing.mechanism-review",
         message: "No policy-independent archetype mechanism review is present in the v9 overlay.",
       }).status,
@@ -860,6 +1197,15 @@ function buildMechanismReview(context: AssetBuildContext): V9MechanismRiskReview
     throw new Error(`Mechanism review archetype mismatch for ${context.asset.assetId}`);
   }
   return normalizeMechanismReview(context, context.asset.mechanismRiskReview);
+}
+
+function buildMechanismExitFacts(context: AssetBuildContext): V9MechanismExitFactV1[] {
+  if ((context.asset.mechanismExitFacts?.length ?? 0) === 0) return [];
+  const evidenceRefIds = componentResearchEvidence(context, "mechanism-risk-review");
+  return context.asset.mechanismExitFacts!.map((fact) => ({
+    ...fact,
+    evidenceRefIds,
+  }));
 }
 
 function buildCdpStressCoverage(context: AssetBuildContext): V9CdpStressCoverageFact | undefined {
@@ -894,7 +1240,14 @@ function buildCdpStressCoverage(context: AssetBuildContext): V9CdpStressCoverage
   return V9CdpStressCoverageFactSchema.parse(fact);
 }
 
-function buildDependencies(context: AssetBuildContext): V9EffectiveDependenciesV2 {
+function dependencyPathKind(
+  role: V9DependencyEconomicRole,
+): "serial-dependency" | "collateral-exposure" | "local-component" {
+  if (role === "serial-claim") return "serial-dependency";
+  return role === "basket-exposure" ? "collateral-exposure" : "local-component";
+}
+
+function buildDependencies(context: AssetBuildContext): V9EffectiveDependenciesV3 {
   const overlay = context.asset.dependencies;
   if (overlay === null) {
     return {
@@ -902,6 +1255,7 @@ function buildDependencies(context: AssetBuildContext): V9EffectiveDependenciesV
         componentKey: "effective-dependencies",
         reasonCode: "unreviewed-dependency-relationships",
         ownerDomain: "dependency",
+        responsibility: "integration-missing",
         policyRuleId: "v9.dependencies.effective-set",
         message: "The exact effective dependency set has not been reviewed for v9.",
       }).status,
@@ -951,6 +1305,7 @@ function buildDependencies(context: AssetBuildContext): V9EffectiveDependenciesV
       componentKey: "effective-dependencies",
       reasonCode: "unreviewed-dependency-relationships",
       ownerDomain: "dependency",
+      responsibility: "method-unsupported",
       policyRuleId: "v9.dependencies.effective-set",
       message: `The effective dependency graph is ${overlay.diagnostics.graphState}.`,
       observationState: "bounded-unknown",
@@ -966,14 +1321,14 @@ function buildDependencies(context: AssetBuildContext): V9EffectiveDependenciesV
     mappedLiveReserveWeight: overlay.mappedLiveReserveWeight,
     fallbackReason: overlay.fallbackReason,
     edges: overlay.edges.map((edge) => {
-      const serial = edge.dependencyType === "wrapper" || edge.dependencyType === "mechanism";
+      const economicRole = edge.economicRole ?? defaultV9DependencyEconomicRole(edge.dependencyType);
       return {
-        edgeKey: canonicalV9DependencyEdgeKey(edge.dependencyType, edge.upstreamAssetId),
+        edgeKey: canonicalV9DependencyEdgeKey(edge.dependencyType, edge.upstreamAssetId, economicRole),
         upstreamAssetId: edge.upstreamAssetId,
         dependencyType: edge.dependencyType,
-        pathKind: serial ? "serial-dependency" : "collateral-exposure",
+        pathKind: dependencyPathKind(economicRole),
         weight: edge.weight,
-        economicRole: serial ? "serial-claim" : "basket-exposure",
+        economicRole,
         evidenceRefIds: evidenceIds,
         failureDomains: edge.failureDomains,
       };
@@ -1072,6 +1427,7 @@ function buildReserves(context: AssetBuildContext): {
         componentKey: "reserve-composition",
         reasonCode: "missing-reserve-composition",
         ownerDomain: "backing",
+        responsibility: "issuer-undisclosed",
         policyRuleId: "v9.backing.reserve-composition",
         message: "No reserve composition is present in the exact fixed input.",
       }).status,
@@ -1120,24 +1476,29 @@ function buildReserves(context: AssetBuildContext): {
     const evidenceIds = issuerAttested
       ? issuerAttestedEvidenceIds
       : [reserveSourceEvidence(context, exposureKey, groupedSlices)];
+    const reviewedNonLink = classification?.trackedAssetDisposition === "reviewed-non-link";
+    const trackedAssetId = reviewedNonLink
+      ? null
+      : (raw.coinId ?? classification?.trackedAssetId ?? null);
     const issuerOrObligorKey = classification?.issuerOrObligorKey ?? raw.issuerOrObligor ?? null;
-    const assetClass = classification?.assetClass ?? raw.assetClass ?? (raw.coinId ? ("stablecoin" as const) : null);
+    const assetClass = classification?.assetClass ?? raw.assetClass ?? (trackedAssetId ? ("stablecoin" as const) : null);
     const failureDomains = stableFailureDomains([
       ...(classification?.failureDomains ?? []),
       ...(issuerOrObligorKey ? [{ kind: "reserve-issuer" as const, key: issuerOrObligorKey }] : []),
-      ...(raw.coinId ? [{ kind: "reserve-issuer" as const, key: `asset:${raw.coinId}` }] : []),
+      ...(trackedAssetId ? [{ kind: "reserve-issuer" as const, key: `asset:${trackedAssetId}` }] : []),
     ]);
     const classificationKnown = assetClass !== null && failureDomains.length > 0;
     let status: V9FactStatusV2;
     if (!classificationKnown) {
       const gapId = addGap(
         context,
-        createV9FactGap({
+        createV9FactGapV3({
           gapId: `${context.asset.assetId}:gap:reserve:${exposureKey}`,
           reasonCode: "material-reserve-slice-unstructured",
           ownerDomain: "backing",
           policyRuleId: "v9.backing.reserve-classification",
           observationState: "bounded-unknown",
+          responsibility: "integration-missing",
           path: collateralExposureV9Path(exposureKey),
           message: "The captured reserve slice lacks a complete v9 classification or failure-domain identity.",
           evidenceRefIds: evidenceIds,
@@ -1153,12 +1514,13 @@ function buildReserves(context: AssetBuildContext): {
     } else if (evidenceIds.some((evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale")) {
       const gapId = addGap(
         context,
-        createV9FactGap({
+        createV9FactGapV3({
           gapId: `${context.asset.assetId}:gap:reserve:${exposureKey}:stale`,
           reasonCode: "partial-reserve-review",
           ownerDomain: "backing",
           policyRuleId: "v9.backing.reserve-freshness",
           observationState: "stale",
+          responsibility: "producer-failed",
           path: collateralExposureV9Path(exposureKey),
           message: "The last-known reserve exposure is older than the v9 freshness bound.",
           evidenceRefIds: evidenceIds,
@@ -1194,7 +1556,7 @@ function buildReserves(context: AssetBuildContext): {
       status,
       name: raw.name.trim(),
       weight,
-      trackedAssetId: raw.coinId ?? null,
+      trackedAssetId,
       assetClass,
       issuerOrObligorKey,
       riskFactors: classification?.riskFactors ?? raw.riskFactors ?? [],
@@ -1222,9 +1584,9 @@ function buildReserves(context: AssetBuildContext): {
 
 function reconcileCollateralDependencyMappings(
   context: AssetBuildContext,
-  dependencies: V9EffectiveDependenciesV2,
+  dependencies: V9EffectiveDependenciesV3,
   reserveExposures: readonly V9ReserveExposureFactV2[],
-): V9EffectiveDependenciesV2 {
+): V9EffectiveDependenciesV3 {
   const mappedWeightByUpstream = new Map<string, number>();
   for (const exposure of reserveExposures) {
     if (exposure.trackedAssetId === null) continue;
@@ -1234,7 +1596,7 @@ function reconcileCollateralDependencyMappings(
     );
   }
   const mappingIssues = dependencies.edges.flatMap((edge) => {
-    if (edge.pathKind !== "collateral-exposure") return [];
+    if (edge.economicRole !== "basket-exposure") return [];
     const mappedWeight = mappedWeightByUpstream.get(edge.upstreamAssetId);
     if (mappedWeight === undefined) return [`collateral-edge-exposure-unmapped:${edge.upstreamAssetId}`];
     if (Math.abs(mappedWeight - edge.weight) > 0.000001) {
@@ -1256,6 +1618,7 @@ function reconcileCollateralDependencyMappings(
           componentKey: "effective-dependencies",
           reasonCode: "unreviewed-dependency-relationships",
           ownerDomain: "dependency",
+          responsibility: "integration-missing",
           policyRuleId: "v9.dependencies.edge-exposure-mapping",
           message: "A collateral dependency edge lacks an exact mapping to the captured reserve exposures.",
           observationState: "bounded-unknown",
@@ -1379,18 +1742,20 @@ function routeGap(
   routeKey: string,
   suffix: string,
   observationState: Exclude<V9FactStatusV2["observationState"], "known">,
-  reasonCode: V9FactGapV2["reasonCode"],
+  reasonCode: V9FactGapV3["reasonCode"],
+  responsibility: V9EvidenceResponsibility,
   message: string,
   evidenceRefIds: readonly string[],
 ): string {
   return addGap(
     context,
-    createV9FactGap({
+    createV9FactGapV3({
       gapId: `${context.asset.assetId}:gap:route:${routeKey}:${suffix}`,
       reasonCode,
       ownerDomain: "exit",
       policyRuleId: suffix === "output" ? "v9.exit.output-valuation" : "v9.exit.same-notional-route",
       observationState,
+      responsibility,
       path: optionalExitV9Path(routeKey),
       message,
       evidenceRefIds,
@@ -1430,6 +1795,7 @@ function buildRoute(
       "semantics",
       args.disposition === "rejected" ? "unsupported" : "bounded-unknown",
       "unsupported-same-notional-route",
+      args.disposition === "rejected" ? "method-unsupported" : "integration-missing",
       "The base observation lacks reviewed v9 access, execution-cost, settlement, resource, and output semantics.",
       [evidenceId],
     );
@@ -1450,11 +1816,16 @@ function buildRoute(
       executionCertainty: "unknown",
       modelConfidence: "low",
       observationConfidence: args.observation.confidence,
+      observationHistory: args.observation.observationHistory ?? null,
       evidenceKind: args.observation.evidenceKind,
       ...(args.observation.feeEvidence ? { feeEvidence: args.observation.feeEvidence } : {}),
       coverageClass: "diagnostic",
+      capacityScoringHorizon: "unknown",
       settlementModel: "unknown",
       settlementSlaSec: null,
+      queueDepthUsd: null,
+      dailyLimitUsd: null,
+      minRedeemUsd: null,
       settlementEvidenceRefIds: [],
       physicalResourceKeys: [],
       status,
@@ -1501,6 +1872,7 @@ function buildRoute(
           routeState === "stale" ? "stale" : "rejected",
           routeState,
           routeState === "stale" ? "missing-runtime-route-evidence" : "unsupported-same-notional-route",
+          routeState === "stale" ? "producer-failed" : "method-unsupported",
           routeState === "stale"
             ? "The retained route observation is older than the lane freshness bound."
             : "The retained route observation was rejected by its producer or review process.",
@@ -1531,6 +1903,7 @@ function buildRoute(
       "output",
       "missing",
       "unresolved-exit-output",
+      "integration-missing",
       "The route output does not have an explicit same-notional USD valuation.",
       [evidenceId],
     );
@@ -1560,6 +1933,7 @@ function buildRoute(
             "output",
             "stale",
             "unresolved-exit-output",
+            "producer-failed",
             "The last-known route output valuation is older than its freshness bound.",
             [valuationEvidenceId],
           )
@@ -1607,11 +1981,16 @@ function buildRoute(
     executionCertainty: args.review.executionCertainty,
     modelConfidence: args.review.modelConfidence,
     observationConfidence: args.observation.confidence,
+    observationHistory: args.observation.observationHistory ?? null,
     evidenceKind: args.observation.evidenceKind,
     ...(args.observation.feeEvidence ? { feeEvidence: args.observation.feeEvidence } : {}),
     coverageClass: args.review.coverageClass,
+    capacityScoringHorizon: args.review.capacityScoringHorizon ?? "unknown",
     settlementModel: args.review.settlementModel,
     settlementSlaSec: args.review.settlementSlaSec,
+    queueDepthUsd: args.review.queueDepthUsd ?? null,
+    dailyLimitUsd: args.review.dailyLimitUsd ?? null,
+    minRedeemUsd: args.review.minRedeemUsd ?? null,
     settlementEvidenceRefIds: [evidenceId],
     physicalResourceKeys: args.review.physicalResourceKeys,
     status: routeStatus,
@@ -1727,12 +2106,13 @@ function buildRoutes(context: AssetBuildContext): {
       const staleGapId = coverageStale
         ? addGap(
             context,
-            createV9FactGap({
+            createV9FactGapV3({
               gapId: `${context.asset.assetId}:gap:exit-route-observation-coverage:stale`,
               reasonCode: "missing-runtime-route-evidence",
               ownerDomain: "exit",
               policyRuleId: "v9.exit.same-notional-route",
               observationState: "stale",
+              responsibility: "producer-failed",
               path: { kind: "local-component", componentKey: "exit-routes" },
               message: "The known-empty DEX exit-route coverage observation is older than the lane freshness bound.",
               evidenceRefIds: [coverageEvidenceId],
@@ -1754,6 +2134,7 @@ function buildRoutes(context: AssetBuildContext): {
         componentKey: "exit-routes",
         reasonCode: "missing-runtime-route-evidence",
         ownerDomain: "exit",
+        responsibility: "producer-failed",
         policyRuleId: "v9.exit.same-notional-route",
         message: "No exact DEX, redemption, or retained route observation is available.",
       }).status,
@@ -1787,12 +2168,13 @@ function buildRoutes(context: AssetBuildContext): {
     portfolioGapIds.push(
       addGap(
         context,
-        createV9FactGap({
+        createV9FactGapV3({
           gapId: `${context.asset.assetId}:gap:exit-portfolio-coverage`,
           reasonCode: "incomplete-dex-route-coverage",
           ownerDomain: "exit",
           policyRuleId: "v9.exit.same-notional-route",
           observationState: "bounded-unknown",
+          responsibility: "producer-failed",
           path: { kind: "local-component", componentKey: "exit-portfolio-coverage" },
           message: "Reviewed DEX execution-capability pools do not all carry score-eligible exact route observations.",
           evidenceRefIds,
@@ -1822,6 +2204,7 @@ function buildControls(context: AssetBuildContext): {
         componentKey: "deployment-controls",
         reasonCode: "missing-upgradeability-review",
         ownerDomain: "control",
+        responsibility: "integration-missing",
         policyRuleId: "v9.control.review",
         message: "No reviewed deployment-control posture is present in the v9 overlay.",
       }).status,
@@ -1851,6 +2234,7 @@ function buildControls(context: AssetBuildContext): {
           componentKey: "deployment-controls",
           reasonCode: "unresolved-control-identity",
           ownerDomain: "control",
+          responsibility: "issuer-undisclosed",
           policyRuleId: "v9.control.review",
           message: review.rationale,
           observationState: "bounded-unknown",
@@ -1898,12 +2282,13 @@ function boundedControlSemanticsStatus(
 ): V9FactStatusV2 {
   const gapId = addGap(
     context,
-    createV9FactGap({
+    createV9FactGapV3({
       gapId: `${context.asset.assetId}:gap:deployment-control:${control.controlKey}`,
       reasonCode: "unresolved-control-identity",
       ownerDomain: "control",
       policyRuleId: "v9.control.review",
       observationState: "bounded-unknown",
+      responsibility: "issuer-undisclosed",
       path:
         control.scope === "deployment"
           ? { kind: "deployment-control", deploymentKey: control.deploymentKey, controlKey: control.controlKey }
@@ -1924,7 +2309,7 @@ function normalizeEconomicControlStatus(
   context: AssetBuildContext,
   original: V9FactStatusV2,
   componentKey: string,
-  reasonCode: V9FactGapV2["reasonCode"],
+  reasonCode: V9FactGapV3["reasonCode"],
 ): V9FactStatusV2 {
   const bindingKey = `economic-control:${componentKey}`;
   const evidenceIds =
@@ -1953,12 +2338,13 @@ function normalizeEconomicControlStatus(
   const evidenceRefIds = keepEvidence ? evidenceIds : [];
   const gapId = addGap(
     context,
-    createV9FactGap({
+    createV9FactGapV3({
       gapId: `${context.asset.assetId}:gap:economic-control:${componentKey}`,
       reasonCode,
       ownerDomain: "control",
       policyRuleId: original.applicability.policyRuleId,
       observationState: original.observationState,
+      responsibility: reviewedGapResponsibility(original.observationState),
       path: { kind: "local-component", componentKey: `economic-control:${componentKey}` },
       message: `The ${componentKey} economic-control review is not a current known fact.`,
       evidenceRefIds,
@@ -1982,6 +2368,7 @@ function buildEconomicControlReview(context: AssetBuildContext): V9EconomicContr
           componentKey: "economic-control:mint",
           reasonCode: "missing-mint-authority",
           ownerDomain: "control",
+          responsibility: "integration-missing",
           policyRuleId: "v9.control.mint-review",
           message: "Mint reconciliation and upgrade linkage have not been reviewed.",
         }).status,
@@ -1995,6 +2382,7 @@ function buildEconomicControlReview(context: AssetBuildContext): V9EconomicContr
           componentKey: "economic-control:oracle",
           reasonCode: "missing-oracle-profile",
           ownerDomain: "control",
+          responsibility: "integration-missing",
           policyRuleId: "v9.control.oracle-review",
           message: "Oracle tier and branch applicability have not been reviewed.",
         }).status,
@@ -2006,6 +2394,7 @@ function buildEconomicControlReview(context: AssetBuildContext): V9EconomicContr
           componentKey: "economic-control:bridge",
           reasonCode: "missing-bridge-routes",
           ownerDomain: "control",
+          responsibility: "integration-missing",
           policyRuleId: "v9.control.bridge-review",
           message: "Bridge-route control tiers have not been reviewed.",
         }).status,
@@ -2074,12 +2463,13 @@ function normalizeAccessStatus(
   const evidenceRefIds = keepEvidence ? evidenceIds : [];
   const gapId = addGap(
     context,
-    createV9FactGap({
+    createV9FactGapV3({
       gapId: `${context.asset.assetId}:gap:access:${componentKey}`,
       reasonCode: "missing-access-review",
       ownerDomain: "control",
       policyRuleId: original.applicability.policyRuleId,
       observationState: original.observationState,
+      responsibility: reviewedGapResponsibility(original.observationState),
       path: { kind: "local-component", componentKey: `access:${componentKey}` },
       message: `The ${componentKey} access/censorship review is not a current known fact.`,
       evidenceRefIds,
@@ -2103,6 +2493,7 @@ function buildAccessReview(context: AssetBuildContext): V9AccessReviewV2 {
           componentKey: "access:transfer",
           reasonCode: "missing-access-review",
           ownerDomain: "control",
+          responsibility: "integration-missing",
           policyRuleId: "v9.access.transfer-review",
           message: "Transfer permissioning posture has not been reviewed.",
         }).status,
@@ -2113,6 +2504,7 @@ function buildAccessReview(context: AssetBuildContext): V9AccessReviewV2 {
           componentKey: "access:freeze",
           reasonCode: "missing-access-review",
           ownerDomain: "control",
+          responsibility: "integration-missing",
           policyRuleId: "v9.access.freeze-review",
           message: "Direct and upstream freeze reach have not been reviewed.",
         }).status,
@@ -2183,6 +2575,7 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
         componentKey: "peg",
         reasonCode: "missing-peg-input",
         ownerDomain: "peg",
+        responsibility: "producer-failed",
         policyRuleId: "v9.peg.current",
         message: "No peg fact exists for the asset in the exact fixed input.",
       }).status,
@@ -2231,6 +2624,7 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
       componentKey: "peg",
       reasonCode: reference === null ? "missing-applicable-peg" : "missing-peg-input",
       ownerDomain: "peg",
+      responsibility: reference === null ? "integration-missing" : "producer-failed",
       policyRuleId: "v9.peg.current",
       message: "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
       observationState: "bounded-unknown",
@@ -2241,6 +2635,7 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
       componentKey: "peg",
       reasonCode: "missing-peg-input",
       ownerDomain: "peg",
+      responsibility: "producer-failed",
       policyRuleId: "v9.peg.current",
       message: "The last-known peg observation is stale.",
       observationState: "stale",
@@ -2295,6 +2690,7 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
         componentKey: "chain-supply",
         reasonCode: "missing-pillar-evidence",
         ownerDomain: "evidence",
+        responsibility: "producer-failed",
         policyRuleId: "v9.supply.current",
         message: "No USD-denominated chain circulating rows are present in the exact fixed input.",
       }).status,
@@ -2341,6 +2737,7 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
           componentKey: "chain-supply",
           reasonCode: "missing-pillar-evidence",
           ownerDomain: "evidence",
+          responsibility: "producer-failed",
           policyRuleId: "v9.supply.current",
           message: "The aggregate circulating observation is past the supplemental carry-forward ceiling.",
           observationState: "stale",
@@ -2369,7 +2766,9 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
 
 function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
   const source = context.extension.sources.chainSupply;
-  const chainRows = context.fixedInput.chainCirculatingById[context.asset.assetId] ?? {};
+  const v9Attribution =
+    context.fixedInput.safetyScoreV9SupplyAttributionById[context.asset.assetId];
+  const chainRows = safetyScoreV9ChainRows(context.fixedInput, context.asset.assetId);
   const chains = Object.keys(chainRows).sort(compareText);
   const circulatingUsd = chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
   // A per-chain map that is present but sums to zero carries no more supply
@@ -2385,10 +2784,17 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
     createV9EvidenceReference(
       {
         evidenceId: `${context.asset.assetId}:chain-supply`,
-        sourceId: "report-cards-chain-circulating",
+        sourceId:
+          v9Attribution === undefined
+            ? "report-cards-chain-circulating"
+            : "safety-score-v9-lock-mint-attribution",
         sourceGenerationId: source.generationId,
         disposition: "observed",
-        observedAtSec: source.observedAtSec,
+        observedAtSec: safetyScoreV9ChainSupplyObservedAtSec(
+          context.fixedInput,
+          context.asset.assetId,
+          source.observedAtSec,
+        ),
         contentSha256: digest("safety-score-v9.chain-supply.v1", chainRows),
         maxAgeSec: source.maxAgeSec,
       },
@@ -2425,6 +2831,7 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
       componentKey: "chain-supply",
       reasonCode: "missing-pillar-evidence",
       ownerDomain: "evidence",
+      responsibility: "producer-failed",
       policyRuleId: "v9.supply.current",
       message: "The chain supply observation is stale.",
       observationState: "stale",
@@ -2435,6 +2842,7 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
       componentKey: "bridge-materiality",
       reasonCode: "runtime-bridge-materiality-unavailable",
       ownerDomain: "control",
+      responsibility: "integration-missing",
       policyRuleId: "v9.supply.bridge-materiality",
       message: "Circulating USD is known, but bridge-route materiality has not been reviewed.",
       observationState: "bounded-unknown",
@@ -2519,12 +2927,599 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
   };
 }
 
+interface WrapperLocalFactBuildInputs {
+  implementation: V9AssetFactsV2["implementation"];
+  dependencies: V9EffectiveDependenciesV3;
+  reserveStatus: V9FactStatusV2;
+  reserveExposures: readonly V9ReserveExposureFactV2[];
+  exitStatus: V9FactStatusV2;
+  exitRoutes: readonly V9ExitRouteFactV2[];
+  controlStatus: V9FactStatusV2;
+  controls: readonly V9DeploymentControlFactV2[];
+  economicControlReview: V9EconomicControlReviewV2;
+  peg: V9AssetFactsV2["peg"];
+  supply: V9AssetFactsV2["supply"];
+}
+
+function uniqueEvidenceRefIds(values: readonly string[]): string[] {
+  return [...new Set(values)].sort(compareText);
+}
+
+function wrapperFactDisposition(
+  context: AssetBuildContext,
+  statuses: readonly V9FactStatusV2[],
+  fallback: Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable"> = "integration-missing",
+): Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable"> {
+  const responsibilities = statuses.flatMap((status) =>
+    status.gapIds.flatMap((gapId) => {
+      const responsibility = context.gaps.get(gapId)?.responsibility;
+      return responsibility ? [responsibility] : [];
+    }),
+  );
+  if (responsibilities.includes("issuer-undisclosed")) return "issuer-undisclosed";
+  if (responsibilities.includes("method-unsupported")) return "method-unsupported";
+  if (
+    responsibilities.includes("producer-failed") ||
+    statuses.some((status) => status.observationState === "stale")
+  ) {
+    return "producer-failed";
+  }
+  return fallback;
+}
+
+function reviewedWrapperFact(
+  context: AssetBuildContext,
+  assessment: V9WrapperRiskAssessment,
+  signals: readonly string[],
+  evidenceRefIds: readonly string[],
+): V9WrapperLocalDimensionFact {
+  const evidence = uniqueEvidenceRefIds(evidenceRefIds);
+  return {
+    disposition: "reviewed",
+    assessment,
+    signals: [...signals],
+    evidenceRefIds: evidence.length > 0 ? evidence : [fallbackResearchEvidence(context)],
+  };
+}
+
+function unavailableWrapperFact(
+  disposition: Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable">,
+  signal: string,
+  evidenceRefIds: readonly string[] = [],
+): V9WrapperLocalDimensionFact {
+  return {
+    disposition,
+    assessment: null,
+    signals: [signal],
+    evidenceRefIds: uniqueEvidenceRefIds(evidenceRefIds),
+  };
+}
+
+function notApplicableWrapperFact(signal: string, evidenceRefIds: readonly string[] = []): V9WrapperLocalDimensionFact {
+  return {
+    disposition: "not-applicable",
+    assessment: null,
+    signals: [signal],
+    evidenceRefIds: uniqueEvidenceRefIds(evidenceRefIds),
+  };
+}
+
+function wrapperControlRisk(
+  control: V9DeploymentControlFactV2,
+): { assessment: V9WrapperRiskAssessment; signals: string[] } {
+  if (control.incidentState === "active") {
+    return { assessment: "critical", signals: [`active-control-incident:${control.controlKey}`] };
+  }
+  if (
+    control.claimImpairment === "unbounded" ||
+    control.economicLossScope === "global-claim" ||
+    control.capSemantics.kind === "unbounded"
+  ) {
+    return { assessment: "high", signals: [`unbounded-claim-control:${control.controlKey}`] };
+  }
+  if (
+    control.claimImpairment === "bounded" ||
+    control.economicLossScope === "reserve-claim" ||
+    control.capSemantics.kind === "raiseable"
+  ) {
+    return { assessment: "moderate", signals: [`claim-affecting-control:${control.controlKey}`] };
+  }
+  return { assessment: "low", signals: [`non-claim-control:${control.controlKey}`] };
+}
+
+function worstWrapperRisk(values: readonly V9WrapperRiskAssessment[]): V9WrapperRiskAssessment {
+  const rank: Readonly<Record<V9WrapperRiskAssessment, number>> = {
+    none: 0,
+    low: 1,
+    moderate: 2,
+    high: 3,
+    critical: 4,
+  };
+  return [...values].sort((left, right) => rank[right] - rank[left])[0] ?? "none";
+}
+
+function buildWrapperLocalFacts(
+  context: AssetBuildContext,
+  input: WrapperLocalFactBuildInputs,
+): V9WrapperLocalFacts {
+  const wrapperEdge = input.dependencies.edges.find(
+    (edge) => edge.pathKind === "serial-dependency" && edge.dependencyType === "wrapper",
+  );
+  const form =
+    context.asset.variantKind === "pure-wrapper"
+      ? "pure"
+      : context.asset.variantKind === "savings-passthrough" ||
+          context.asset.variantKind === "risk-absorption"
+        ? "native-staked"
+        : context.asset.variantKind === "strategy-vault" || wrapperEdge !== undefined
+          ? "strategy-vault"
+          : null;
+  const formEvidenceRefIds = uniqueEvidenceRefIds([
+    ...input.implementation.status.evidenceRefIds,
+    ...input.dependencies.status.evidenceRefIds,
+    ...(wrapperEdge?.evidenceRefIds ?? []),
+  ]);
+  if (form === null) {
+    return V9WrapperLocalFactsSchema.parse({
+      schemaVersion: 1,
+      applicability: "not-wrapper",
+      evidenceRefIds:
+        formEvidenceRefIds.length > 0 ? formEvidenceRefIds : [fallbackResearchEvidence(context)],
+    });
+  }
+  const reviewedFormEvidence =
+    formEvidenceRefIds.length > 0 ? formEvidenceRefIds : [fallbackResearchEvidence(context)];
+  const controlEvidenceRefIds = uniqueEvidenceRefIds([
+    ...input.controlStatus.evidenceRefIds,
+    ...input.economicControlReview.mint.status.evidenceRefIds,
+    ...input.controls.flatMap((control) => control.status.evidenceRefIds),
+  ]);
+  const reserveEvidenceRefIds = uniqueEvidenceRefIds([
+    ...input.reserveStatus.evidenceRefIds,
+    ...input.reserveExposures.flatMap((exposure) => exposure.status.evidenceRefIds),
+    ...(wrapperEdge?.evidenceRefIds ?? []),
+  ]);
+  const routeEvidenceRefIds = uniqueEvidenceRefIds([
+    ...input.exitStatus.evidenceRefIds,
+    ...input.exitRoutes.flatMap((route) => [
+      ...route.status.evidenceRefIds,
+      ...route.settlementEvidenceRefIds,
+      ...route.output.status.evidenceRefIds,
+      ...(route.output.valuation?.evidenceRefIds ?? []),
+    ]),
+  ]);
+  let contractMutability: V9WrapperLocalDimensionFact;
+  const upgrade = input.economicControlReview.mint.upgrade;
+  if (input.economicControlReview.mint.status.observationState !== "known") {
+    contractMutability = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.economicControlReview.mint.status]),
+      "wrapper-upgrade-review-unavailable",
+      controlEvidenceRefIds,
+    );
+  } else if (upgrade.state === "immutable" || upgrade.state === "not-applicable") {
+    contractMutability = reviewedWrapperFact(
+      context,
+      "none",
+      [`wrapper-upgrade-state:${upgrade.state}`],
+      controlEvidenceRefIds,
+    );
+  } else if (upgrade.state === "reviewed" && upgrade.controlKey !== null) {
+    const upgradeControl = input.controls.find((control) => control.controlKey === upgrade.controlKey);
+    if (!upgradeControl || upgradeControl.status.observationState !== "known") {
+      contractMutability = unavailableWrapperFact(
+        "integration-missing",
+        `reviewed-upgrade-control-not-compiled:${upgrade.controlKey}`,
+        controlEvidenceRefIds,
+      );
+    } else {
+      const delayAssessment: V9WrapperRiskAssessment =
+        upgradeControl.delaySec === null || upgradeControl.delaySec < 86_400
+          ? "high"
+          : upgradeControl.delaySec < 604_800
+            ? "moderate"
+            : "low";
+      const authorityRisk = wrapperControlRisk(upgradeControl);
+      contractMutability = reviewedWrapperFact(
+        context,
+        worstWrapperRisk([delayAssessment, authorityRisk.assessment]),
+        [
+          `wrapper-upgrade-authority:${upgradeControl.authority?.model ?? "unknown"}`,
+          `wrapper-upgrade-delay-sec:${upgradeControl.delaySec ?? "undisclosed"}`,
+          ...authorityRisk.signals,
+        ],
+        controlEvidenceRefIds,
+      );
+    }
+  } else {
+    contractMutability = unavailableWrapperFact(
+      "issuer-undisclosed",
+      "wrapper-upgrade-authority-undisclosed",
+      controlEvidenceRefIds,
+    );
+  }
+
+  let custodyEscrow: V9WrapperLocalDimensionFact;
+  const custody = context.asset.wrapperCustodyReview ?? null;
+  if (custody !== null) {
+    const custodyEvidence = componentResearchEvidence(context, "wrapper-local:custodyEscrow");
+    const hasUnknown =
+      custody.segregation === "unknown" ||
+      custody.bankruptcyRemoteness === "unknown" ||
+      custody.knownUnknownExposureShare === null ||
+      custody.knownUnknownExposureShare > 0;
+    custodyEscrow = hasUnknown
+      ? unavailableWrapperFact(
+          "issuer-undisclosed",
+          `wrapper-custody-terms-incomplete:${custody.knownUnknownExposureShare ?? "unknown"}`,
+          custodyEvidence,
+        )
+      : reviewedWrapperFact(
+          context,
+          custody.segregation === "segregated" && custody.bankruptcyRemoteness === "structured"
+            ? "low"
+            : custody.bankruptcyRemoteness === "none"
+              ? "high"
+              : "moderate",
+          [
+            `wrapper-custody-providers:${custody.providers.length}`,
+            `wrapper-custody-segregation:${custody.segregation}`,
+            `wrapper-custody-bankruptcy-remoteness:${custody.bankruptcyRemoteness}`,
+          ],
+          custodyEvidence,
+        );
+  } else if (form === "pure" && wrapperEdge !== undefined) {
+    custodyEscrow = notApplicableWrapperFact(
+      "pure-wrapper-custody-is-the-serial-parent-contract-claim",
+      reviewedFormEvidence,
+    );
+  } else {
+    custodyEscrow = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),
+      "wrapper-custody-or-escrow-review-unavailable",
+      reserveEvidenceRefIds,
+    );
+  }
+
+  let strategyComplexity: V9WrapperLocalDimensionFact;
+  if (form === "pure" && wrapperEdge !== undefined) {
+    strategyComplexity = reviewedWrapperFact(
+      context,
+      "none",
+      ["pure-wrapper-has-no-local-strategy"],
+      reviewedFormEvidence,
+    );
+  } else if (
+    context.asset.variantKind === "savings-passthrough" ||
+    context.asset.variantKind === "risk-absorption"
+  ) {
+    const riskAbsorption = context.asset.variantKind === "risk-absorption";
+    strategyComplexity = reviewedWrapperFact(
+      context,
+      riskAbsorption ? "moderate" : "low",
+      [
+        riskAbsorption
+          ? "native-wrapper-adds-reviewed-loss-absorption-layer"
+          : "native-wrapper-is-single-parent-savings-passthrough",
+      ],
+      reviewedFormEvidence,
+    );
+  } else if (context.asset.variantKind === "strategy-vault") {
+    const highComplexity =
+      input.reserveExposures.some((exposure) => exposure.assetClass === "private-credit") ||
+      (custody?.knownUnknownExposureShare ?? 0) > 0;
+    strategyComplexity = reviewedWrapperFact(
+      context,
+      highComplexity ? "high" : "moderate",
+      [
+        highComplexity
+          ? "strategy-vault-has-private-or-unknown-credit-exposure"
+          : "strategy-vault-adds-third-party-allocation-layer",
+        `wrapper-strategy-reserve-components:${input.reserveExposures.length}`,
+      ],
+      uniqueEvidenceRefIds([...reviewedFormEvidence, ...reserveEvidenceRefIds]),
+    );
+  } else {
+    strategyComplexity = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.reserveStatus]),
+      "wrapper-strategy-complexity-review-unavailable",
+      reserveEvidenceRefIds,
+    );
+  }
+
+  let leverage: V9WrapperLocalDimensionFact;
+  if (form === "pure" && wrapperEdge !== undefined) {
+    leverage = notApplicableWrapperFact(
+      "pure-wrapper-has-no-local-strategy-leverage",
+      reviewedFormEvidence,
+    );
+  } else if (input.reserveStatus.observationState === "known") {
+    const leverageFactors = input.reserveExposures.flatMap((exposure) =>
+      exposure.riskFactors.filter((factor) => /\b(leverage|leveraged|borrowing|debt-financed)\b/i.test(factor)),
+    );
+    leverage =
+      leverageFactors.length > 0
+        ? reviewedWrapperFact(
+            context,
+            "high",
+            leverageFactors.map((factor) => `wrapper-leverage-factor:${factor}`),
+            reserveEvidenceRefIds,
+          )
+        : unavailableWrapperFact(
+            "issuer-undisclosed",
+            "wrapper-leverage-review-does-not-establish-absence",
+            reserveEvidenceRefIds,
+          );
+  } else {
+    leverage = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),
+      "wrapper-leverage-review-unavailable",
+      reserveEvidenceRefIds,
+    );
+  }
+
+  let rehypothecationCorrelation: V9WrapperLocalDimensionFact;
+  if (custody !== null) {
+    const custodyEvidence = componentResearchEvidence(context, "wrapper-local:rehypothecationCorrelation");
+    rehypothecationCorrelation =
+      custody.rehypothecation === "unknown"
+        ? unavailableWrapperFact(
+            "issuer-undisclosed",
+            "wrapper-rehypothecation-terms-undisclosed",
+            custodyEvidence,
+          )
+        : reviewedWrapperFact(
+            context,
+            custody.rehypothecation === "prohibited"
+              ? "low"
+              : custody.rehypothecation === "conditional"
+                ? "moderate"
+                : "high",
+            [
+              `wrapper-rehypothecation:${custody.rehypothecation}`,
+              `wrapper-custody-provider-count:${custody.providers.length}`,
+            ],
+            custodyEvidence,
+          );
+  } else if (form === "pure" && wrapperEdge !== undefined) {
+    rehypothecationCorrelation = notApplicableWrapperFact(
+      "pure-wrapper-parent-correlation-is-applied-by-serial-dependency",
+      reviewedFormEvidence,
+    );
+  } else {
+    rehypothecationCorrelation = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),
+      "wrapper-rehypothecation-correlation-review-unavailable",
+      reserveEvidenceRefIds,
+    );
+  }
+
+  let shareAccountingNavOracle: V9WrapperLocalDimensionFact;
+  if (form === "pure") {
+    shareAccountingNavOracle = reviewedWrapperFact(
+      context,
+      "none",
+      ["pure-wrapper-fixed-parent-claim-accounting"],
+      reviewedFormEvidence,
+    );
+  } else if (
+    (context.asset.variantKind === "savings-passthrough" ||
+      context.asset.variantKind === "risk-absorption" ||
+      context.asset.variantKind === "strategy-vault") &&
+    input.peg.referenceKind === "nav" &&
+    input.peg.status.observationState === "known"
+  ) {
+    const oracleTier = input.economicControlReview.oracle.tier;
+    const weakOracle =
+      oracleTier === "single-source-or-laggy" || oracleTier === "opaque-or-unknown";
+    shareAccountingNavOracle = reviewedWrapperFact(
+      context,
+      weakOracle ? "high" : "moderate",
+      [
+        `wrapper-share-form:${context.asset.variantKind}`,
+        `wrapper-share-reference-kind:${input.peg.referenceKind}`,
+        `wrapper-share-oracle-tier:${oracleTier ?? "not-applicable"}`,
+      ],
+      uniqueEvidenceRefIds([
+        ...reviewedFormEvidence,
+        ...input.peg.status.evidenceRefIds,
+        ...input.economicControlReview.oracle.status.evidenceRefIds,
+      ]),
+    );
+  } else {
+    shareAccountingNavOracle = unavailableWrapperFact(
+      wrapperFactDisposition(
+        context,
+        [input.peg.status, input.economicControlReview.mint.status],
+        "integration-missing",
+      ),
+      "wrapper-share-accounting-or-nav-oracle-review-unavailable",
+      [...input.peg.status.evidenceRefIds, ...input.economicControlReview.mint.status.evidenceRefIds],
+    );
+  }
+
+  const knownRedemptionRoutes = input.exitRoutes.filter(
+    (route) =>
+      route.lane === "redemption" &&
+      (route.status.observationState === "known" || route.status.observationState === "stale"),
+  );
+  let withdrawalTerms: V9WrapperLocalDimensionFact;
+  if (knownRedemptionRoutes.length === 0) {
+    withdrawalTerms = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.exitStatus]),
+      "wrapper-withdrawal-fee-or-gate-terms-unavailable",
+      routeEvidenceRefIds,
+    );
+  } else if (knownRedemptionRoutes.some((route) => route.feeEvidence === "undisclosed-reviewed")) {
+    withdrawalTerms = unavailableWrapperFact(
+      "issuer-undisclosed",
+      "wrapper-withdrawal-fee-undisclosed",
+      routeEvidenceRefIds,
+    );
+  } else {
+    const termsRisk = knownRedemptionRoutes.map((route): V9WrapperRiskAssessment => {
+      if (
+        route.holderAccess === "issuer-only" ||
+        route.executionModel === "discretionary" ||
+        route.executionCertainty === "discretionary"
+      ) {
+        return "critical";
+      }
+      if (route.settlementModel === "queued" || route.executionModel === "queued") {
+        return (route.settlementSlaSec ?? Number.POSITIVE_INFINITY) > 604_800 ? "high" : "moderate";
+      }
+      if (
+        route.holderAccess === "allowlisted" ||
+        route.holderAccess === "institutional-eligible" ||
+        route.executionCertainty === "conditional"
+      ) {
+        return "moderate";
+      }
+      return "low";
+    });
+    withdrawalTerms = reviewedWrapperFact(
+      context,
+      worstWrapperRisk(termsRisk),
+      knownRedemptionRoutes.flatMap((route) => [
+        `wrapper-withdrawal-access:${route.holderAccess}`,
+        `wrapper-withdrawal-execution:${route.executionModel}`,
+        `wrapper-withdrawal-settlement:${route.settlementModel}:${route.settlementSlaSec ?? "atomic"}`,
+      ]),
+      routeEvidenceRefIds,
+    );
+  }
+
+  const observedUnwindRoutes = input.exitRoutes.filter(
+    (route) => route.status.observationState === "known" && route.scoreEligible && route.capacityCurve.length > 0,
+  );
+  let measuredUnwind: V9WrapperLocalDimensionFact;
+  const stressRequest =
+    input.supply.status.observationState === "known"
+      ? selectV9ExitStressRequest(input.supply.circulatingUsd, V9_CANDIDATE_POLICY_V1)
+      : null;
+  const stressCompletions =
+    stressRequest === null
+      ? []
+      : observedUnwindRoutes.flatMap((route) => {
+          const point = resolveV9ExitCapacityAtRequest(route.capacityCurve, stressRequest);
+          return point === null ? [] : [point.completionRatio];
+        });
+  if (stressCompletions.length > 0) {
+    const bestCompletion = Math.max(...stressCompletions);
+    measuredUnwind = reviewedWrapperFact(
+      context,
+      bestCompletion >= 0.95
+        ? "none"
+        : bestCompletion >= 0.8
+          ? "low"
+          : bestCompletion >= 0.5
+            ? "moderate"
+            : bestCompletion > 0
+              ? "high"
+              : "critical",
+      [
+        `wrapper-measured-unwind-policy-notional:${stressRequest!.requestedNotionalUsd}`,
+        `wrapper-measured-unwind-policy-completion:${bestCompletion}`,
+        `wrapper-measured-unwind-route-count:${observedUnwindRoutes.length}`,
+      ],
+      routeEvidenceRefIds,
+    );
+  } else if (input.exitStatus.observationState === "known" && stressRequest !== null) {
+    measuredUnwind = reviewedWrapperFact(
+      context,
+      "critical",
+      ["wrapper-measured-unwind:no-score-eligible-capacity"],
+      routeEvidenceRefIds,
+    );
+  } else {
+    measuredUnwind = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.exitStatus], "producer-failed"),
+      "wrapper-measured-unwind-unavailable",
+      routeEvidenceRefIds,
+    );
+  }
+
+  let lossAbsorptionEmergencyControls: V9WrapperLocalDimensionFact;
+  if (
+    context.asset.variantKind === "pure-wrapper" ||
+    context.asset.variantKind === "savings-passthrough"
+  ) {
+    lossAbsorptionEmergencyControls = notApplicableWrapperFact(
+      "wrapper-design-has-no-local-holder-loss-absorption-layer",
+      reviewedFormEvidence,
+    );
+  } else if (input.controlStatus.observationState === "known") {
+    const localControls =
+      context.asset.variantKind === "strategy-vault"
+        ? input.controls.filter((control) => control.controlKind !== "bridge")
+        : [];
+    const controlRisks = localControls.map(wrapperControlRisk);
+    lossAbsorptionEmergencyControls =
+      controlRisks.length > 0
+        ? reviewedWrapperFact(
+            context,
+            worstWrapperRisk([
+              ...controlRisks.map((risk) => risk.assessment),
+              ...(context.asset.variantKind === "risk-absorption" ? (["moderate"] as const) : []),
+            ]),
+            [
+              ...controlRisks.flatMap((risk) => risk.signals),
+              ...(context.asset.variantKind === "risk-absorption"
+                ? ["wrapper-holder-bears-protocol-loss-absorption"]
+                : ["strategy-vault-holder-loss-controls-reviewed"]),
+            ],
+            controlEvidenceRefIds,
+          )
+        : unavailableWrapperFact(
+            "integration-missing",
+            "wrapper-emergency-control-review-has-no-local-controls",
+            controlEvidenceRefIds,
+          );
+  } else {
+    lossAbsorptionEmergencyControls = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.controlStatus]),
+      "wrapper-loss-absorption-or-emergency-control-review-unavailable",
+      controlEvidenceRefIds,
+    );
+  }
+
+  const facts: V9ApplicableWrapperLocalFacts = {
+    schemaVersion: 1,
+    applicability: "wrapper",
+    form,
+    formDisposition: "reviewed",
+    formSignals: [
+      `wrapper-form:${form}`,
+      `wrapper-form-source:${context.asset.variantKind ?? "serial-wrapper-dependency"}`,
+    ],
+    formEvidenceRefIds: reviewedFormEvidence,
+    facts: {
+      contractMutability,
+      custodyEscrow,
+      strategyComplexity,
+      leverage,
+      rehypothecationCorrelation,
+      shareAccountingNavOracle,
+      withdrawalTerms,
+      measuredUnwind,
+      lossAbsorptionEmergencyControls,
+    },
+    riskTransfer: {
+      disposition: "not-applicable",
+      mechanism: "none",
+      maximumParentLossAbsorptionPoints: 0,
+      signals: ["no-documented-parent-loss-absorption-credit"],
+      evidenceRefIds: [],
+    },
+  };
+  return V9WrapperLocalFactsSchema.parse(facts);
+}
+
 function compileAsset(
   fixedInput: ReportCardsFixedInput,
   extension: SafetyScoreV9FactSetExtensionV2,
   asset: AssetExtension,
   researchPayloadSha256: string,
-): V9AssetFactsV2 {
+): V9AssetFactsV3 {
   const context: AssetBuildContext = {
     fixedInput,
     extension,
@@ -2535,6 +3530,7 @@ function compileAsset(
   };
   const implementation = buildImplementation(context);
   const mechanismRiskReview = buildMechanismReview(context);
+  const mechanismExitFacts = buildMechanismExitFacts(context);
   const cdpStressCoverage = buildCdpStressCoverage(context);
   const rawDependencies = buildDependencies(context);
   const reserves = buildReserves(context);
@@ -2545,7 +3541,21 @@ function compileAsset(
   const accessReview = buildAccessReview(context);
   const peg = buildPeg(context);
   const supply = buildSupply(context);
-  const compiledAsset: V9AssetFactsV2 = {
+  const operationalResilience = buildOperationalResilienceFact(context);
+  const wrapperLocalFacts = buildWrapperLocalFacts(context, {
+    implementation,
+    dependencies,
+    reserveStatus: reserves.reserveStatus,
+    reserveExposures: reserves.reserveExposures,
+    exitStatus: routes.exitStatus,
+    exitRoutes: routes.exitRoutes,
+    controlStatus: controls.controlStatus,
+    controls: controls.controls,
+    economicControlReview,
+    peg,
+    supply,
+  });
+  const compiledAsset: V9AssetFactsV3 = {
     assetId: asset.assetId,
     assetIssuerKey: asset.assetIssuerKey ?? null,
     archetype: asset.archetype,
@@ -2554,6 +3564,7 @@ function compileAsset(
     gaps: [...context.gaps.values()],
     implementation,
     mechanismRiskReview,
+    mechanismExitFacts,
     ...(cdpStressCoverage === undefined ? {} : { cdpStressCoverage }),
     dependencies,
     ...reserves,
@@ -2563,6 +3574,8 @@ function compileAsset(
     accessReview,
     peg,
     supply,
+    operationalResilience,
+    wrapperLocalFacts,
   };
   // Normalize once at the producer boundary so every score-bearing pillar,
   // including nested mechanism reviews, shares the same chain identity.
@@ -2576,7 +3589,7 @@ function compileAsset(
 export function compileSafetyScoreV9FactSetFromFixedInput(
   fixedInputValue: unknown,
   extensionValue: unknown,
-): Readonly<CompiledV9FactSetV2> {
+): Readonly<CompiledV9FactSetV3> {
   return compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(fixedInputValue), extensionValue);
 }
 
@@ -2584,7 +3597,7 @@ export function compileSafetyScoreV9FactSetFromFixedInput(
 export function compileSafetyScoreV9FactSetFromNormalizedInput(
   fixedInput: Readonly<ReportCardsFixedInput>,
   extensionValue: unknown,
-): Readonly<CompiledV9FactSetV2> {
+): Readonly<CompiledV9FactSetV3> {
   if (fixedInput.captureKind !== "exact-publication-inputs") {
     throw new Error("Safety Score v9 fact compilation requires exact publication inputs");
   }
@@ -2611,8 +3624,8 @@ export function compileSafetyScoreV9FactSetFromNormalizedInput(
     (latest, entry) => Math.max(latest, entry.cdpStressCoverage.source?.block.timestampUnix ?? 0),
     0,
   );
-  return compileV9FactSetV2({
-    schemaVersion: 2,
+  return compileV9FactSetV3({
+    schemaVersion: 3,
     baseInputGenerationId: fixedInput.baseInputGenerationId,
     asOfSec: fixedInput.clockSec,
     compiledAtSec: extension.compiledAtSec,
@@ -2642,10 +3655,10 @@ export function compileSafetyScoreV9FactSetFromNormalizedInput(
       },
       chainSupply: {
         generationId: extension.sources.chainSupply.generationId,
-        payloadSha256: digest("safety-score-v9.chain-supply.v1", {
-          chainCirculatingById: fixedInput.chainCirculatingById,
-          dexDeploymentSupplyCoverageById: fixedInput.dexDeploymentSupplyCoverageById,
-        }),
+        payloadSha256: digest(
+          "safety-score-v9.chain-supply.v1",
+          safetyScoreV9ChainSupplySourcePayload(fixedInput),
+        ),
         observedAtSec: extension.sources.chainSupply.observedAtSec,
       },
       peg: {

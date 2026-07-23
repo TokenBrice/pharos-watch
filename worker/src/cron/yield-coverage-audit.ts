@@ -1019,6 +1019,7 @@ export async function runYieldCoverageAudit(
     safetySnapshotKind: safetySnapshot.kind,
     safetySnapshotReason: safetySnapshot.reason ?? null,
     safetySnapshotSource: safetySnapshot.source,
+    expectedModel: safetySnapshot.expectedModel,
     safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
   });
   if (safetySnapshot.kind !== "ok" || safetySnapshot.safetyScoreIdentity == null) {
@@ -1026,6 +1027,7 @@ export async function runYieldCoverageAudit(
     await reportAuditProgress("complete", "Yield coverage audit deferred pending an identified safety snapshot", 6, {
       reason,
       safetySnapshotSource: safetySnapshot.source,
+      expectedModel: safetySnapshot.expectedModel,
       safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
     });
     return {
@@ -1034,6 +1036,7 @@ export async function runYieldCoverageAudit(
       metadata: JSON.stringify({
         reason: `safety-snapshot-unavailable:${reason}`,
         safetySnapshotSource: safetySnapshot.source,
+        expectedModel: safetySnapshot.expectedModel,
         safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
         safetyScoresComputed: safetySnapshot.coveredCount,
         safetyScoresExpected: safetySnapshot.trackedCount,
@@ -1192,6 +1195,7 @@ export async function runYieldCoverageAudit(
       strategyLabels: entry.strategies.map((strategy) => strategy.label),
     })),
     poolMeta,
+    expectedModel: safetySnapshot.expectedModel,
     safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
   };
 
@@ -1249,6 +1253,7 @@ export async function runYieldCoverageAudit(
       protocolCategoryCount: protocolCategoryLookup.meta.categorizedProtocolCount,
       quarantineReadyToRestoreCount: quarantineProbe.readyToRestore.length,
       quarantineProbeAttemptedCount: quarantineProbe.summary.attemptedCount,
+      expectedModel: safetySnapshot.expectedModel,
       safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
     }),
   };

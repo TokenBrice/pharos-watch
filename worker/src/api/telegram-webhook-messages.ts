@@ -530,7 +530,13 @@ export function buildStatusMessage(symbol: string, s: StatusForCoin): string {
     ? `Liquidity: ${s.liquidity.score ?? "NR"}${liquidityTvl ? `, TVL ${liquidityTvl}` : ""} (${formatAge(s.liquidity.updatedAt, nowSec)})`
     : null;
   const yieldLine = s.yield
-    ? `Yield: ${s.yield.apy30d.toFixed(2)}% 30d at ${escapeHtml(s.yield.source)}${s.yield.pharosYieldScore != null ? `, PYS ${Math.round(s.yield.pharosYieldScore)}` : ""}`
+    ? `Yield: ${s.yield.apy30d.toFixed(2)}% 30d at ${escapeHtml(s.yield.source)}${
+        s.yield.pharosYieldScore != null
+          ? `, PYS ${Math.round(s.yield.pharosYieldScore)}`
+          : s.yield.pysUnavailableReason
+            ? ", PYS unavailable"
+            : ""
+      }`
     : null;
   const flowSigned = s.flow ? formatTelegramSignedCompactUsd(s.flow.netFlowUsd) : null;
   const flowLine = s.flow && flowSigned ? `Flow 24h: ${flowSigned} (${formatAge(s.flow.updatedAt, nowSec)})` : null;

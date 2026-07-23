@@ -28,9 +28,26 @@ describe("Safety Score v9 evaluation-build manifest", () => {
 
     expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/evaluate-set.ts");
     expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/formula.ts");
+    expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/aggregation.ts");
+    expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/scoped-risk.ts");
+    expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/wrapper-risk.ts");
+    expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/mechanism-profiles.ts");
+    expect(V9_SCORE_EVALUATOR_SOURCE_PATHS).toContain("shared/lib/safety-score-v9/operational-resilience.ts");
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9-fact-set.ts");
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("shared/lib/p4-exit-route-capacity.ts");
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("shared/lib/supply.ts");
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("shared/lib/redemption-backstop-providers.ts");
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("shared/lib/redemption-backstops.ts");
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
+      "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
+    );
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("shared/data/safety-score-v9/mechanism-review-overlays-v1.json");
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
+      "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
+    );
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
+      "worker/src/lib/safety-score-v9-extension-operational-resilience.ts",
+    );
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9-extension-transfer.ts");
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9-extension-shock.ts");
     expect(paths).toContain("shared/lib/safety-score-v9/score.ts");
@@ -83,10 +100,32 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     expect(buildV9EvaluationBuildManifest(root).digest).not.toBe(before.digest);
   });
 
+  it.each([
+    "shared/lib/supply.ts",
+    "shared/lib/redemption-backstop-providers.ts",
+    "shared/lib/redemption-backstops.ts",
+    "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
+  ])("changes the digest when omitted producer closure source %s changes", (path) => {
+    const root = fixtureRoot();
+    const before = buildV9EvaluationBuildManifest(root);
+    writeFileSync(resolve(root, path), `changed ${path}\n`);
+    expect(buildV9EvaluationBuildManifest(root).digest).not.toBe(before.digest);
+  });
+
   it("changes the digest when a score-bearing mechanism overlay changes", () => {
     const root = fixtureRoot();
     const before = buildV9EvaluationBuildManifest(root);
     writeFileSync(resolve(root, "shared/data/safety-score-v9/mechanism-review-overlays-v1.json"), '{"changed":true}\n');
+    expect(buildV9EvaluationBuildManifest(root).digest).not.toBe(before.digest);
+  });
+
+  it("changes the digest when a score-bearing operational-resilience overlay changes", () => {
+    const root = fixtureRoot();
+    const before = buildV9EvaluationBuildManifest(root);
+    writeFileSync(
+      resolve(root, "shared/data/safety-score-v9/operational-resilience-overlays-v1.json"),
+      '{"changed":true}\n',
+    );
     expect(buildV9EvaluationBuildManifest(root).digest).not.toBe(before.digest);
   });
 

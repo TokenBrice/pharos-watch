@@ -124,9 +124,44 @@ describe("Safety Score v9 backing exposure primitives", () => {
 
     expect(result.structuralReasons).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ kind: "speculative-credit", severity: "high", ceiling: 59, materialShare: 0.2 }),
+        expect.objectContaining({
+          kind: "speculative-credit",
+          severity: "high",
+          responsibility: "measured-adverse",
+          ceiling: 59,
+          materialShare: 0.2,
+        }),
       ]),
     );
+  });
+
+  it("does not label the same bounded-unknown reserve classification as measured adverse", () => {
+    const unknownCredit = exposure({
+      key: "credit",
+      weight: 0.2,
+      assetClass: "private-credit",
+      issuer: "borrower",
+    });
+    unknownCredit.status = {
+      ...unknownCredit.status,
+      observationState: "bounded-unknown",
+      evidenceRefIds: [],
+    };
+    const result = evaluateV9ReserveExposures(
+      asset([
+        exposure({ key: "cash", weight: 0.8 }),
+        unknownCredit,
+      ]),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.structuralReasons).toContainEqual(
+      expect.objectContaining({
+        kind: "speculative-credit",
+        responsibility: "integration-missing",
+      }),
+    );
+    expect(result.structuralReasons.some((reason) => reason.responsibility === "measured-adverse")).toBe(false);
   });
 
   it("uses the injected upstream result as an exposure-bounded loss", () => {
@@ -221,6 +256,7 @@ describe("Safety Score v9 backing exposure primitives", () => {
       expect.objectContaining({
         kind: "unsafe-backing",
         severity: "moderate",
+        responsibility: "measured-adverse",
         materialShare: 0.4,
       }),
     );
@@ -369,7 +405,7 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
     inheritedStablecoinBacking: inherited,
   });
 
-  it("inherits a pure 1:1 parent's backing pillar minus the pure discount", () => {
+  it("inherits a pure 1:1 parent's backing pillar without re-pricing the wrapper layer", () => {
     const result = evaluateV9ReserveExposures(
       missingReserveAsset({
         parentAssetId: "parent",
@@ -380,7 +416,7 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
       }),
       V9_CANDIDATE_POLICY_V1,
     );
-    expect(result.score).toBeCloseTo(70, 6); // 75 - pure(5)
+    expect(result.score).toBeCloseTo(75, 6);
     expect(result.rateability).toBe("rateable");
     expect(result.contributions).toContainEqual(
       expect.objectContaining({ componentKey: "reserve:inherited-backing:parent", upstreamAssetId: "parent" }),
@@ -390,7 +426,7 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
     ]);
   });
 
-  it("applies the larger wrapped discount for a staked/vault layer", () => {
+  it("does not apply a second backing discount to a staked/vault layer", () => {
     const result = evaluateV9ReserveExposures(
       missingReserveAsset({
         parentAssetId: "parent",
@@ -401,7 +437,7 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
       }),
       V9_CANDIDATE_POLICY_V1,
     );
-    expect(result.score).toBeCloseTo(63, 6); // 75 - wrapped(12)
+    expect(result.score).toBeCloseTo(75, 6);
   });
 
   it("keeps sub-1 residual at the bounded-unknown quality", () => {
@@ -415,8 +451,7 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
       }),
       V9_CANDIDATE_POLICY_V1,
     );
-    // (90 - 5) * 0.99 + boundedUnknown * 0.01
-    expect(result.score).toBeCloseTo(85 * 0.99 + backing.boundedUnknownQuality * 0.01, 6);
+    expect(result.score).toBeCloseTo(90 * 0.99 + backing.boundedUnknownQuality * 0.01, 6);
   });
 
   it("defers to the fail-closed bounded path when a weak parent cannot beat the floor", () => {
@@ -424,15 +459,15 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
       parentAssetId: "parent",
       parentBackingScore: 40,
       weight: 1,
-      tier: "wrapped" as const, // 40 - 12 = 28 <= boundedUnknown floor (35)
+      tier: "wrapped" as const,
       failureDomains: [{ kind: "reserve-issuer" as const, key: "asset:parent" }],
     };
     const withInheritance = evaluateV9ReserveExposures(missingReserveAsset(inherited), V9_CANDIDATE_POLICY_V1);
-    expect(withInheritance.score).toBeCloseTo(backing.boundedUnknownQuality, 6);
+    expect(withInheritance.score).toBeCloseTo(40, 6);
     expect(withInheritance.contributions).toContainEqual(
-      expect.objectContaining({ componentKey: "reserve:unclassified-residual" }),
+      expect.objectContaining({ componentKey: "reserve:inherited-backing:parent" }),
     );
-    expect(withInheritance.unresolved).not.toContainEqual(
+    expect(withInheritance.unresolved).toContainEqual(
       expect.objectContaining({ code: "partial-reserve-review" }),
     );
   });

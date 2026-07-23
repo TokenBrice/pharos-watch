@@ -1,5 +1,6 @@
 import type {
   V9AssetFactsV2,
+  V9EvidenceResponsibility,
   V9FailureDomainRef,
   V9FactGapV2,
   V9FactStatusV2,
@@ -75,21 +76,6 @@ export interface V9BackingAssetInput {
   readonly trackRecordMonths?: number;
 }
 
-/**
- * Points shaved off the parent's backing pillar when a stablecoin-collateralized
- * wrapper inherits it. The discount prices ONLY the added wrapper layer, never
- * the parent's own risk (that already lives in the parent's grade — e.g. sUSDe's
- * basis-trade risk is in USDe's backing, so sUSDe must not be double-penalized):
- *  - pure (~5pt): a 1:1 holding wrapper adds only a thin mint/redeem contract
- *    layer, most of whose failure surface is already scored in the control
- *    pillar; a small backing haircut acknowledges the layer without double count.
- *  - wrapped (~12pt): an ERC-4626 vault / staked / lending / bridged variant adds
- *    a materially larger smart-contract + share-accounting (and often
- *    withdrawal-queue / bridge) layer over the parent, warranting a larger — but
- *    still bounded — haircut off the parent's backing pillar.
- */
-const V9_WRAPPER_BACKING_INHERITANCE_DISCOUNT = { pure: 5, wrapped: 12 } as const;
-
 /** Minimum mapped single-parent weight for a wrapper to qualify as ~100% backed. */
 export const V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT = 0.99;
 
@@ -110,11 +96,20 @@ export type V9BackingSignalRule = V9BackingSemanticPolicy["structural"]["unsafeE
 export interface V9BackingStructuralReason {
   readonly kind: V9StructuralSignalKind;
   readonly severity: V9Severity;
+  readonly responsibility: V9EvidenceResponsibility;
   readonly pathKey: string;
   readonly materialShare: number | null;
   readonly ceiling: number;
   readonly evidenceRefIds: readonly string[];
   readonly failureDomains: readonly V9FailureDomainRef[];
+}
+
+export function v9StructuralResponsibilityForStatus(
+  status: V9FactStatusV2,
+): V9EvidenceResponsibility {
+  return status.applicability.state === "required" && status.observationState === "known"
+    ? "measured-adverse"
+    : "integration-missing";
 }
 
 export interface V9BackingContribution {
@@ -390,10 +385,11 @@ interface ReserveEvaluation {
 /**
  * Reserve evaluation for a stablecoin-collateralized wrapper: the whole reserve
  * is one tracked, rated parent, so the reserve score is the parent's backing
- * pillar minus the tiered wrapper discount. Concentration is intentionally NOT
- * re-penalized — the parent's backing pillar already prices its own internal
- * diversification, so a fresh single-asset concentration hit would double-count.
- * Returns null (defer to the generic path) when the discounted quality does not
+ * pillar. Wrapper-local accounting, control, and withdrawal risk belong in the
+ * wrapper's own pillars; incomplete local review is handled once by the
+ * fact-aware parent limit. Concentration is intentionally NOT re-penalized —
+ * the parent's backing pillar already prices its own internal diversification.
+ * Returns null (defer to the generic path) when the inherited quality does not
  * exceed the bounded-unknown floor: a weak parent is no evidence to credit above
  * the fail-closed baseline.
  */
@@ -403,9 +399,8 @@ function inheritedStablecoinReserveEvaluation(
   policy: V9BackingEvaluationPolicy,
 ): ReserveEvaluation | null {
   const backing = backingPolicy(policy);
-  const discount = V9_WRAPPER_BACKING_INHERITANCE_DISCOUNT[inherited.tier];
   const weight = Math.max(0, Math.min(1, inherited.weight));
-  const inheritedQuality = clampScore(inherited.parentBackingScore - discount);
+  const inheritedQuality = clampScore(inherited.parentBackingScore);
   // Any sub-1 residual stays at the fail-closed bounded-unknown quality.
   const score = clampScore(decimalSnap(inheritedQuality * weight + backing.boundedUnknownQuality * (1 - weight)));
   if (score <= backing.boundedUnknownQuality + SCORE_EPSILON) return null;
@@ -521,6 +516,7 @@ export function evaluateV9ReserveExposures(
 
   const contributions: V9BackingContribution[] = [];
   const sovereignExemptComponentKeys = new Set<string>();
+  const measuredFailureDomainsByComponent = new Map<string, ReadonlySet<string>>();
   const unresolved: V9BackingUnresolvedReason[] = [];
   const structuralReasons: V9BackingStructuralReason[] = [];
   if (asset.reserveStatus.observationState === "stale" || asset.reserveStatus.observationState === "bounded-unknown") {
@@ -558,9 +554,10 @@ export function evaluateV9ReserveExposures(
     const requiredUnknown = exposure.status.applicability.state === "unresolved";
     const confidenceMultiplier =
       exposure.evidenceClass === "issuer-attested" ? backing.reserve.issuerAttestedConfidenceMultiplier : 1;
+    const classifiedScore = scoreV9ReserveExposureClassification(exposure, policy) * confidenceMultiplier;
     let score =
       state === "known" || state === "stale"
-        ? scoreV9ReserveExposureClassification(exposure, policy) * confidenceMultiplier
+        ? classifiedScore
         : backing.boundedUnknownQuality;
     // The availability materiality is decided HERE from the aggregate root
     // weight and never read from the projected reason codes: a split that reads
@@ -621,6 +618,15 @@ export function evaluateV9ReserveExposures(
       );
     }
     const failureDomains = canonicalDomains([...exposure.failureDomains, ...(upstream?.failureDomains ?? [])]);
+    const responsibility = v9StructuralResponsibilityForStatus(exposure.status);
+    measuredFailureDomainsByComponent.set(
+      pathKey,
+      new Set(
+        responsibility === "measured-adverse"
+          ? exposure.failureDomains.map(domainKey)
+          : [],
+      ),
+    );
     // Reshape-v3 T4b (owner ruling 2026-07-22, R1): sovereign debt classes are
     // exempt from the reserve-ISSUER concentration measure. Concentration
     // prices counterparty/default clustering; the sovereign whose paper the
@@ -652,6 +658,7 @@ export function evaluateV9ReserveExposures(
     if (material && exposure.assetClass === "private-credit" && exposure.issuerOrObligorKey === null) {
       structuralReasons.push(
         createV9BackingStructuralReason(policy, backing.structural.speculativeCreditSignal, {
+          responsibility,
           pathKey,
           materialShare: materialityWeight,
           evidenceRefIds: uniqueSorted(exposure.status.evidenceRefIds),
@@ -662,6 +669,11 @@ export function evaluateV9ReserveExposures(
     if (material && score <= backing.structural.unsafeExposureQuality) {
       structuralReasons.push(
         createV9BackingStructuralReason(policy, backing.structural.unsafeExposureSignal, {
+          responsibility:
+            responsibility === "measured-adverse" &&
+            classifiedScore <= backing.structural.unsafeExposureQuality
+              ? "measured-adverse"
+              : "integration-missing",
           pathKey,
           materialShare: materialityWeight,
           evidenceRefIds: uniqueSorted(exposure.status.evidenceRefIds),
@@ -676,20 +688,37 @@ export function evaluateV9ReserveExposures(
   // 12% row, so a named split cannot dodge the structural cap (VER2-002). One
   // reason is emitted per crossing obligor group with the union of evidence
   // and failure domains.
-  const obligorGroups = new Map<string, { share: number; evidence: string[]; failureDomains: V9FailureDomainRef[] }>();
+  const obligorGroups = new Map<
+    string,
+    {
+      share: number;
+      evidence: string[];
+      failureDomains: V9FailureDomainRef[];
+      measured: boolean;
+    }
+  >();
   for (const exposure of exposures) {
     if (exposure.assetClass !== "private-credit" || exposure.issuerOrObligorKey === null) continue;
     const key = exposure.issuerOrObligorKey;
-    const group = obligorGroups.get(key) ?? { share: 0, evidence: [], failureDomains: [] };
+    const group = obligorGroups.get(key) ?? {
+      share: 0,
+      evidence: [],
+      failureDomains: [],
+      measured: true,
+    };
     group.share += exposure.weight;
     group.evidence.push(...exposure.status.evidenceRefIds);
     group.failureDomains.push(...exposure.failureDomains);
+    group.measured =
+      group.measured &&
+      v9StructuralResponsibilityForStatus(exposure.status) === "measured-adverse";
     obligorGroups.set(key, group);
   }
   for (const [key, group] of [...obligorGroups].sort((left, right) => compareText(left[0], right[0]))) {
     if (!isV9MaterialShare(group.share, threshold)) continue;
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.speculativeCreditSignal, {
+        responsibility: group.measured ? "measured-adverse" : "integration-missing",
         pathKey: `same-obligor:${key}`,
         materialShare: group.share,
         evidenceRefIds: uniqueSorted(group.evidence),
@@ -723,7 +752,13 @@ export function evaluateV9ReserveExposures(
 
   const domainGroups = new Map<
     string,
-    { domain: V9FailureDomainRef; share: number; exposures: string[]; evidence: string[] }
+    {
+      domain: V9FailureDomainRef;
+      share: number;
+      exposures: string[];
+      evidence: string[];
+      measured: boolean;
+    }
   >();
   for (const contribution of contributions.filter((entry) => entry.source === "reserve-exposure")) {
     for (const domain of contribution.failureDomains) {
@@ -732,10 +767,19 @@ export function evaluateV9ReserveExposures(
       // their custodian domains still count.
       if (domain.kind === "reserve-issuer" && sovereignExemptComponentKeys.has(contribution.componentKey)) continue;
       const key = domainKey(domain);
-      const group = domainGroups.get(key) ?? { domain, share: 0, exposures: [], evidence: [] };
+      const group = domainGroups.get(key) ?? {
+        domain,
+        share: 0,
+        exposures: [],
+        evidence: [],
+        measured: true,
+      };
       group.share += contribution.normalizedWeight;
       group.exposures.push(contribution.componentKey);
       group.evidence.push(...contribution.evidenceRefIds);
+      group.measured =
+        group.measured &&
+        (measuredFailureDomainsByComponent.get(contribution.componentKey)?.has(key) ?? false);
       domainGroups.set(key, group);
     }
   }
@@ -749,6 +793,7 @@ export function evaluateV9ReserveExposures(
   for (const group of commonModes) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.commonModeSignal, {
+        responsibility: group.measured ? "measured-adverse" : "integration-missing",
         pathKey: `common-mode:${domainKey(group.domain)}`,
         materialShare: group.share,
         evidenceRefIds: uniqueSorted(group.evidence),
@@ -909,6 +954,7 @@ function evaluateV9ArchetypeBackingInternal(
     if (component.fact.quality === "failed" && structuralSignal !== undefined) {
       structuralReasons.push(
         createV9BackingStructuralReason(policy, structuralSignal, {
+          responsibility: v9StructuralResponsibilityForStatus(component.fact.status),
           pathKey,
           materialShare: null,
           evidenceRefIds: uniqueSorted(component.fact.status.evidenceRefIds),

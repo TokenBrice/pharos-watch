@@ -16,6 +16,8 @@ interface ResolveYieldSourcesParams {
   dlPools: DlPool[];
   onChainRates: Map<string, { rate: number }>;
   safetyScores: Map<string, SafetyScoreSnapshot>;
+  safetySnapshotAvailable: boolean;
+  expectedModel: "v8" | "v9";
   riskFreeRates: ParsedYieldBenchmarkRegistry;
   signal?: AbortSignal;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -31,6 +33,8 @@ export async function resolveYieldSources({
   dlPools,
   onChainRates,
   safetyScores,
+  safetySnapshotAvailable,
+  expectedModel,
   riskFreeRates,
   signal,
   chainRpcs,
@@ -56,6 +60,8 @@ export async function resolveYieldSources({
     dlPools,
     supplementalCandidates,
     safetyScores,
+    safetySnapshotAvailable,
+    expectedModel,
     stablecoinSupplyById,
   });
 

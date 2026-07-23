@@ -39,6 +39,16 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 import { isCurrentSafetyScoreV8Identity } from "../lib/safety-score-current-identity";
+import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
+import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
+import type { ReportCardCachePayload } from "../lib/report-card-cache";
+import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
+import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9-consumer-freshness";
+import {
+  REPORT_CARDS_V9_ACTIVATION_CACHE_KEY,
+  type ReportCardsV9ActivationMarker,
+} from "../lib/safety-score-active-source";
 
 type StableMethodologyVersions = {
   pegScore: string;
@@ -112,18 +122,119 @@ async function gzipBytes(input: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(buffer);
 }
 
-function buildMethodologyVersions(): StableMethodologyVersions {
+function buildMethodologyVersions(reportCardVersion: string): StableMethodologyVersions {
   return {
     pegScore: SAFETY_SCORE_METHODOLOGY_VERSION,
     dews: DEPEG_DEWS_METHODOLOGY_VERSION,
     liquidityScore: LIQUIDITY_METHODOLOGY_VERSION,
     psi: PSI_METHODOLOGY_VERSION,
-    reportCard: SAFETY_SCORE_METHODOLOGY_VERSION,
+    reportCard: reportCardVersion,
     chainHealth: CHAIN_HEALTH_METHODOLOGY_VERSION,
     redemptionBackstop: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
     pricingPipeline: PRICING_PIPELINE_METHODOLOGY_VERSION,
     yieldMethodology: YIELD_METHODOLOGY_VERSION,
   };
+}
+
+type SnapshotSafetySource =
+  | {
+      kind: "ok";
+      model: "v8";
+      identity: SafetyScorePublicationIdentity;
+      reportCards: ReportCardCachePayload;
+      updatedAt: number;
+      activationUpdatedAt: null;
+    }
+  | {
+      kind: "ok";
+      model: "v9";
+      identity: SafetyScorePublicationIdentity;
+      reportCards: ReportCardsV9Response;
+      updatedAt: number;
+      activationUpdatedAt: number;
+      marker: ReportCardsV9ActivationMarker;
+    }
+  | {
+      kind: "error";
+      expectedModel: "v8" | "v9";
+      reason: string;
+      updatedAt: number | null;
+    };
+
+async function loadSnapshotSafetySource(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<SnapshotSafetySource> {
+  const active = await loadActiveSafetyScoreSource(db, signal);
+  throwIfAborted(signal);
+
+  if (active.kind === "error") {
+    return {
+      kind: "error",
+      expectedModel: active.expectedModel,
+      reason: active.reason,
+      updatedAt: active.activationUpdatedAt,
+    };
+  }
+
+  if (active.kind === "v9") {
+    if (!isSafetyScoreV9SnapshotFresh(active.snapshot)) {
+      return {
+        kind: "error",
+        expectedModel: "v9",
+        reason: "stale-cache",
+        updatedAt: active.snapshot.updatedAt,
+      };
+    }
+    return {
+      kind: "ok",
+      model: "v9",
+      identity: active.snapshot.safetyScoreIdentity,
+      reportCards: {
+        ...active.snapshot,
+        lifecycle: "active",
+      },
+      updatedAt: active.snapshot.updatedAt,
+      activationUpdatedAt: active.activationUpdatedAt,
+      marker: active.marker,
+    };
+  }
+
+  const reportCardCache = await loadReportCardCache(db, {
+    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+    requireCompleteness: true,
+  });
+  throwIfAborted(signal);
+  if (reportCardCache.kind !== "ok" || !isCurrentSafetyScoreV8Identity(reportCardCache.payload.safetyScoreIdentity)) {
+    return {
+      kind: "error",
+      expectedModel: "v8",
+      reason: reportCardCache.kind === "ok" ? "identity-mismatch" : reportCardCache.reason,
+      updatedAt: reportCardCache.updatedAt,
+    };
+  }
+
+  return {
+    kind: "ok",
+    model: "v8",
+    identity: reportCardCache.payload.safetyScoreIdentity,
+    reportCards: reportCardCache.payload,
+    updatedAt: reportCardCache.updatedAt,
+    activationUpdatedAt: null,
+  };
+}
+
+function safetySourcesMatch(
+  first: Extract<SnapshotSafetySource, { kind: "ok" }>,
+  second: SnapshotSafetySource,
+): boolean {
+  return (
+    second.kind === "ok"
+    && first.model === second.model
+    && first.updatedAt === second.updatedAt
+    && first.activationUpdatedAt === second.activationUpdatedAt
+    && safetyScorePublicationIdentitiesMatch(first.identity, second.identity)
+  );
 }
 
 function utcDayStartSec(nowSec: number): number {
@@ -249,28 +360,22 @@ export async function snapshotPublicDataset(
     );
   }
 
-  // --- 2. Report-card cache (required and freshness-gated) ---
-  const reportCardCache = await loadReportCardCache(db, {
-    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-    requireCompleteness: true,
-  });
-  throwIfAborted(signal);
-  if (reportCardCache.kind !== "ok" || !isCurrentSafetyScoreV8Identity(reportCardCache.payload.safetyScoreIdentity)) {
-    const cacheReason = reportCardCache.kind === "ok" ? "identity-mismatch" : reportCardCache.reason;
-    const cacheUpdatedAt = reportCardCache.updatedAt;
-    console.warn(`[snapshot-public-dataset] Report-card cache unavailable: ${cacheReason}`);
+  // --- 2. Active Safety Score publication (required and identity-bound) ---
+  const safetySource = await loadSnapshotSafetySource(db, signal);
+  if (safetySource.kind === "error") {
+    console.warn(`[snapshot-public-dataset] Active Safety Score unavailable: ${safetySource.reason}`);
     return {
       status: "degraded",
       itemCount: 0,
       metadata: JSON.stringify({
-        reason: "report_card_cache_unavailable",
-        cacheReason,
-        updatedAt: cacheUpdatedAt,
+        reason: "active_safety_score_unavailable",
+        expectedModel: safetySource.expectedModel,
+        sourceReason: safetySource.reason,
+        updatedAt: safetySource.updatedAt,
       }),
     };
   }
-  const reportCards = reportCardCache.payload;
-  const safetyScoreIdentity = reportCards.safetyScoreIdentity;
+  const { reportCards, identity: safetyScoreIdentity } = safetySource;
 
   // --- 3. Latest PSI row (required to be the completed prior UTC day) ---
   let psiRow: StabilityIndexRow | null = null;
@@ -349,7 +454,7 @@ export async function snapshotPublicDataset(
     };
   }
 
-  const methodologyVersions = buildMethodologyVersions();
+  const methodologyVersions = buildMethodologyVersions(safetyScoreIdentity.methodologyVersion);
   const snapshotMetadata = {
     ...methodologyVersions,
     safetyScoreIdentity,
@@ -418,11 +523,83 @@ export async function snapshotPublicDataset(
 
   try {
     throwIfAborted(signal);
+    const recheckedSafetySource = await loadSnapshotSafetySource(db, signal);
+    if (!safetySourcesMatch(safetySource, recheckedSafetySource)) {
+      return {
+        status: "degraded",
+        itemCount: 0,
+        metadata: JSON.stringify({
+          reason: "active_safety_score_changed_before_insert",
+          expectedModel: safetySource.model,
+          expectedPublicationGenerationId: safetyScoreIdentity.publicationGenerationId,
+          observedModel: recheckedSafetySource.kind === "ok"
+            ? recheckedSafetySource.model
+            : recheckedSafetySource.expectedModel,
+          observedPublicationGenerationId: recheckedSafetySource.kind === "ok"
+            ? recheckedSafetySource.identity.publicationGenerationId
+            : null,
+          sourceReason: recheckedSafetySource.kind === "error"
+            ? recheckedSafetySource.reason
+            : "identity-mismatch",
+        }),
+      };
+    }
+
+    const publicationFenceSql = safetySource.model === "v8"
+      ? `NOT EXISTS (
+           SELECT 1 FROM cache WHERE key = ?
+         )
+         AND EXISTS (
+           SELECT 1
+           FROM cache
+           WHERE key = ?
+             AND COALESCE(
+               json_extract(value, '$.publicationGenerationId'),
+               json_extract(value, '$.payload.publicationGenerationId')
+             ) = ?
+         )`
+      : `EXISTS (
+           SELECT 1
+           FROM cache
+           WHERE key = ?
+             AND updated_at = ?
+             AND json_extract(value, '$.policyId') = ?
+             AND json_extract(value, '$.policyDigest') = ?
+             AND json_extract(value, '$.evaluationBuildDigest') = ?
+             AND json_extract(value, '$.methodologyVersion') = ?
+         )
+         AND EXISTS (
+           SELECT 1
+           FROM cache
+           WHERE key = ?
+             AND COALESCE(
+               json_extract(value, '$.identity.publicationGenerationId'),
+               json_extract(value, '$.candidate.publicationGenerationId')
+             ) = ?
+         )`;
+    const publicationFenceBinds = safetySource.model === "v8"
+      ? [
+          REPORT_CARDS_V9_ACTIVATION_CACHE_KEY,
+          "report_card_cache",
+          safetyScoreIdentity.publicationGenerationId,
+        ]
+      : [
+          REPORT_CARDS_V9_ACTIVATION_CACHE_KEY,
+          safetySource.activationUpdatedAt,
+          safetySource.marker.policyId,
+          safetySource.marker.policyDigest,
+          safetySource.marker.evaluationBuildDigest,
+          safetySource.marker.methodologyVersion,
+          "report-cards:v9-shadow",
+          safetyScoreIdentity.publicationGenerationId,
+        ];
+
     const result = await db
       .prepare(
         `INSERT OR IGNORE INTO public_snapshots
          (snapshot_date, payload_gz, methodology_versions, content_hash, byte_size, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+         SELECT ?, ?, ?, ?, ?, ?
+         WHERE ${publicationFenceSql}`,
       )
       .bind(
         snapshotDate,
@@ -431,9 +608,22 @@ export async function snapshotPublicDataset(
         contentHash,
         byteSize,
         nowSec,
+        ...publicationFenceBinds,
       )
       .run();
     if (result.meta.changes === 0) {
+      const snapshotNowExists = await loadExistingSnapshot(db, snapshotDate);
+      if (!snapshotNowExists) {
+        return {
+          status: "degraded",
+          itemCount: 0,
+          metadata: JSON.stringify({
+            reason: "active_safety_score_changed_before_insert",
+            expectedModel: safetySource.model,
+            expectedPublicationGenerationId: safetyScoreIdentity.publicationGenerationId,
+          }),
+        };
+      }
       return {
         itemCount: 0,
         metadata: JSON.stringify({
@@ -463,6 +653,8 @@ export async function snapshotPublicDataset(
       byteSize,
       compressedSize: payloadGz.byteLength,
       stablecoinCount: stablecoinsCache.payload.peggedAssets.length,
+      safetyScoreModel: safetySource.model,
+      safetyScorePublicationGenerationId: safetyScoreIdentity.publicationGenerationId,
       ...(stablecoinsCacheRetryAttempts > 0
         ? {
           stablecoinsCacheRetryAttempts,

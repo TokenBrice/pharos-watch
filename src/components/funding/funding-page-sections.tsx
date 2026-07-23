@@ -3,6 +3,7 @@ import { ExternalLink, Heart, Star, Wallet, Wrench } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress, formatEventDate } from "@shared/lib/format";
 import { clampScore } from "@shared/lib/math";
@@ -168,21 +169,73 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
         </div>
 
         {monthlyHistory.length > 0 ? (
-          <div className="space-y-1.5">
-            <p className="pharos-kicker text-muted-foreground">Previous months</p>
-            <ul className="flex flex-wrap gap-1.5">
-              {monthlyHistory.map((m) => (
-                <li key={m.monthKey} className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs font-medium">
-                  <span className="text-muted-foreground">{m.label}</span>
-                  <span className="pharos-numeric font-semibold text-foreground">
-                    {formatCoveragePct(m.communityUsd, monthlyTargetUsd)}
-                  </span>
-                  <span className="pharos-numeric text-muted-foreground">
-                    {USD_COMPACT.format(m.communityUsd)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <div className="space-y-2.5">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <p className="text-sm font-medium text-foreground">Previous months</p>
+              <p className="text-xs text-muted-foreground">
+                Coverage against the {USD_COMPACT.format(monthlyTargetUsd)} monthly goal
+              </p>
+            </div>
+            <TableFrame
+              tableId="funding-previous-months"
+              chrome="bare"
+              className="overflow-hidden rounded-lg border border-border/60"
+              tableClassName="table-fixed text-sm"
+              tableProps={{ "aria-label": "Previous monthly funding coverage" }}
+              viewportProps={{
+                mobileScrollHint: false,
+                scrollShadow: false,
+                horizontal: false,
+                overscrollX: false,
+                compactBottomPadding: false,
+              }}
+            >
+              <TableHeader className="bg-muted/35">
+                <TableRow rowIntent="static" className="hover:bg-transparent">
+                  <TableHead scope="col" className="h-9 w-[38%] px-3 text-xs font-medium">
+                    Month
+                  </TableHead>
+                  <TableHead scope="col" className="h-9 w-[31%] px-3 text-right text-xs font-medium">
+                    Community
+                  </TableHead>
+                  <TableHead scope="col" className="h-9 w-[31%] px-3 text-right text-xs font-medium">
+                    Coverage
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {monthlyHistory.map((m) => {
+                  const coveragePct = monthlyTargetUsd > 0
+                    ? (m.communityUsd / monthlyTargetUsd) * 100
+                    : 0;
+                  return (
+                    <TableRow key={m.monthKey} rowIntent="static" className="hover:bg-muted/20">
+                      <TableHead scope="row" className="h-auto px-3 py-2.5 font-medium text-foreground">
+                        {m.label}
+                      </TableHead>
+                      <TableCell className="px-3 py-2.5 text-right">
+                        <span className="pharos-numeric text-foreground">
+                          {USD_COMPACT.format(m.communityUsd)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5">
+                        <div className="flex items-center justify-end gap-3">
+                          <div className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:block">
+                            <div
+                              className="h-full rounded-full bg-foreground/55"
+                              style={{ width: `${clampScore(coveragePct)}%` }}
+                            />
+                          </div>
+                          <span className="pharos-numeric min-w-10 text-right font-semibold text-foreground">
+                            {formatCoveragePct(m.communityUsd, monthlyTargetUsd)}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </TableFrame>
           </div>
         ) : null}
 
@@ -258,6 +311,10 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
           <span>Total / month</span>
           <span className="pharos-numeric">{USD_COMPACT.format(total)}</span>
         </div>
+        <p className="rounded-lg border border-border/60 bg-muted/25 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+          TokenBrice also sponsored $5,800 in one-time design expenses for the full website redesign and logo.
+          These exceptional expenses are not included in the monthly total above.
+        </p>
         <div className="space-y-0.5 text-xs text-muted-foreground">
           <p>
             This month: {USD_COMPACT.format(currentCommunityUsd)} community ·{" "}

@@ -2,16 +2,19 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   ALERT_SAFETY_SOURCE_CACHE_KEY,
+  assessActiveAlertSafetySource,
   alertSafetyIdentitiesAreComparable,
-  assessAlertSafetySourceCache,
   buildAlertSafetySnapshotEnvelope,
-  getAlertSafetySourceGeneration,
   parseAlertSafetySnapshotEnvelope,
   type AlertSafetySnapshotEnvelope,
   type AlertSafetySourceAssessment,
   type AlertSafetySourceSnapshot,
 } from "../lib/alert-safety-source-cache";
 import { getCache, setCache } from "../lib/db-cache";
+import {
+  loadActiveSafetyScoreSource,
+  type ActiveSafetyScoreSource,
+} from "../lib/safety-score-active-source";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { loadTelegramDewsCurrentRows } from "../lib/stress-signals-current-rows";
 import type { PendingCapacitySnapshot } from "./telegram-pending";
@@ -25,7 +28,6 @@ import {
   buildDepegSnapshot,
   buildDewsAlertableSnapshot,
   buildDewsSnapshot,
-  buildSafetySnapshot,
   filterAlertableBands,
   isSnapshotMissingOrStale,
   parseSnapshotMap,
@@ -115,6 +117,7 @@ export interface DispatchSourceData {
   depegCache: CachedValue;
   safetyCache: CachedValue;
   safetySourceCache: CachedValue;
+  activeSafetySource?: ActiveSafetyScoreSource;
   launchCache: CachedValue;
   /** Producer-written current drift id-set (four-hourly reserve slot). */
   reserveCache: CachedValue;
@@ -178,6 +181,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     depegCache,
     safetyCache,
     safetySourceCache,
+    activeSafetySource,
     launchCache,
     reserveCache,
     reserveDispatchedCache,
@@ -217,6 +221,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     getCache(db, SNAPSHOT_KEYS.depeg),
     getCache(db, SNAPSHOT_KEYS.safety),
     getCache(db, ALERT_SAFETY_SOURCE_CACHE_KEY),
+    loadActiveSafetyScoreSource(db),
     getCache(db, SNAPSHOT_KEYS.launch),
     getCache(db, SNAPSHOT_KEYS.reserve),
     getCache(db, SNAPSHOT_KEYS.reserveDispatched),
@@ -232,6 +237,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     depegCache,
     safetyCache,
     safetySourceCache,
+    activeSafetySource,
     launchCache,
     reserveCache,
     reserveDispatchedCache,
@@ -243,20 +249,33 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
   const previousDewsAlertableSnapshot =
     parseSnapshotMap<DewsSnapshot>(sourceData.dewsAlertableCache) ?? filterAlertableBands(previousDewsSnapshot);
   const previousDepegSnapshot = parseSnapshotMap<DepegSnapshot>(sourceData.depegCache);
-  const safetySourceAssessment = assessAlertSafetySourceCache(sourceData.safetySourceCache, {
-    expectedGeneration: getAlertSafetySourceGeneration(),
-    nowSec,
-    producerIntervalSec: CRON_INTERVALS["publish-report-card-cache"],
-  });
+  const safetySourceAssessment = assessActiveAlertSafetySource(
+    sourceData.activeSafetySource ?? {
+      kind: "v8",
+      expectedModel: "v8",
+      reason: "activation-marker-missing",
+      activationUpdatedAt: null,
+    },
+    sourceData.safetySourceCache,
+    {
+      nowSec,
+      producerIntervalSec: CRON_INTERVALS["publish-report-card-cache"],
+    },
+  );
   const currentSafetySnapshot =
     safetySourceAssessment.state === "ok"
-      ? (safetySourceAssessment.envelope?.snapshot ?? buildSafetySnapshot(sourceData.safetyRows))
+      ? (safetySourceAssessment.envelope?.snapshot ?? null)
       : null;
   const previousSafetyEnvelope = parseAlertSafetySnapshotEnvelope(sourceData.safetyCache);
   const previousSafetySnapshot = previousSafetyEnvelope?.snapshot ?? null;
+  const safetyBaselineContinuityLost =
+    sourceData.safetyCache != null &&
+    nowSec - sourceData.safetyCache.updatedAt >=
+      CRON_INTERVALS["dispatch-telegram-alerts"] * 2;
   const safetySnapshotNeedsSeed =
     currentSafetySnapshot != null &&
     (previousSafetyEnvelope == null ||
+      safetyBaselineContinuityLost ||
       isSnapshotMissingOrStale(sourceData.safetyCache, nowSec) ||
       previousSafetyEnvelope.generation !== (safetySourceAssessment.generation ?? "") ||
       !previousSafetyEnvelope.safetyScoreIdentity ||

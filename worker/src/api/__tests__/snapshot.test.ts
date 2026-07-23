@@ -2,9 +2,18 @@ import { describe, expect, it } from "vitest";
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../test-helpers/report-cards-v9";
 import { handleSnapshotCoin, handleSnapshotDay, handleSnapshotsIndex } from "../snapshot";
 
 const ISO_DATE = "2026-05-16";
+const V8_SAFETY_SCORE_IDENTITY = buildSafetyScoreV8PublicationIdentity({
+  methodologyVersion: "7.25",
+  baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+  publicationGenerationId: "report-cards:7.25:1779105600",
+});
 
 const SAMPLE_ENVELOPE = {
   snapshotDate: ISO_DATE,
@@ -20,11 +29,7 @@ const SAMPLE_ENVELOPE = {
     pricingPipeline: "1.0",
     yieldMethodology: "1.0",
   },
-  safetyScoreIdentity: buildSafetyScoreV8PublicationIdentity({
-    methodologyVersion: "7.25",
-    baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
-    publicationGenerationId: "report-cards:7.25:1779105600",
-  }),
+  safetyScoreIdentity: V8_SAFETY_SCORE_IDENTITY,
   stablecoins: [
     {
       id: "usdc-circle",
@@ -44,10 +49,21 @@ const SAMPLE_ENVELOPE = {
     },
   ],
   reportCards: {
+    methodologyVersion: "7.25",
     scores: {
       "usdc-circle": { score: 92.4, grade: "A-" },
     },
     updatedAt: 1779105600,
+    safetyScoreIdentity: V8_SAFETY_SCORE_IDENTITY,
+    publicationGenerationId: V8_SAFETY_SCORE_IDENTITY.publicationGenerationId,
+    completeness: {
+      generationId: V8_SAFETY_SCORE_IDENTITY.publicationGenerationId,
+      methodologyVersion: "7.25",
+      expectedCount: 2,
+      scoredCount: 1,
+      notRatedCount: 1,
+      notRatedIds: ["usdt-tether"],
+    },
   },
   psi: {
     computedAt: 1779062400,
@@ -90,8 +106,9 @@ const V9_SAFETY_SCORE_IDENTITY = {
   publicationGenerationId: "safety-score-v9:9.0:1779105600",
 } satisfies SafetyScorePublicationIdentity;
 
-type SnapshotEnvelope = Omit<typeof SAMPLE_ENVELOPE, "safetyScoreIdentity"> & {
-  safetyScoreIdentity: SafetyScorePublicationIdentity;
+type SnapshotEnvelope = Omit<typeof SAMPLE_ENVELOPE, "safetyScoreIdentity" | "reportCards"> & {
+  safetyScoreIdentity?: SafetyScorePublicationIdentity;
+  reportCards: unknown;
 };
 
 async function gzipText(value: string): Promise<Uint8Array> {
@@ -99,14 +116,19 @@ async function gzipText(value: string): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-async function buildSnapshotRow(envelope: SnapshotEnvelope = SAMPLE_ENVELOPE) {
+async function buildSnapshotRow(
+  envelope: SnapshotEnvelope = SAMPLE_ENVELOPE,
+  options: { includeMetadataIdentity?: boolean } = {},
+) {
   const jsonText = JSON.stringify(envelope);
   return {
     snapshot_date: envelope.snapshotDate,
     payload_gz: await gzipText(jsonText),
     methodology_versions: JSON.stringify({
       ...envelope.methodologyVersions,
-      safetyScoreIdentity: envelope.safetyScoreIdentity,
+      ...(options.includeMetadataIdentity === false
+        ? {}
+        : { safetyScoreIdentity: envelope.safetyScoreIdentity }),
     }),
     content_hash: "abc123def456abc123def456abc123def456abc123def456abc123def456abc1",
     byte_size: new TextEncoder().encode(jsonText).byteLength,
@@ -173,9 +195,24 @@ describe("handleSnapshotsIndex", () => {
   });
 
   it("preserves a valid V9 identity in snapshot index and coin responses", async () => {
+    const cards = [
+      makeWorkerV9Card({ id: "usdc-circle", score: 92, grade: "A-" }),
+      makeWorkerV9Card({ id: "usdt-tether", score: 81, grade: "B" }),
+    ];
     const row = await buildSnapshotRow({
       ...SAMPLE_ENVELOPE,
+      methodologyVersions: {
+        ...SAMPLE_ENVELOPE.methodologyVersions,
+        reportCard: V9_SAFETY_SCORE_IDENTITY.methodologyVersion,
+      },
       safetyScoreIdentity: V9_SAFETY_SCORE_IDENTITY,
+      reportCards: makeWorkerReportCardsV9Response({
+        lifecycle: "active",
+        safetyScoreIdentity: V9_SAFETY_SCORE_IDENTITY,
+        asOfSec: 1779105500,
+        updatedAt: 1779105600,
+        cards,
+      }),
     });
     const indexDb = mockD1([{ match: "FROM public_snapshots", rows: [row] }]);
 
@@ -192,6 +229,32 @@ describe("handleSnapshotsIndex", () => {
 
     expect(coinBody.safetyScoreIdentity).toEqual(V9_SAFETY_SCORE_IDENTITY);
   });
+
+  it.each(["2026-07-13", "2026-07-14", "2026-07-15"])(
+    "keeps the %s partial-identity transition readable without claiming a verified identity",
+    async (transitionDate) => {
+      const {
+        safetyScoreIdentity: _omittedIdentity,
+        ...transitionalEnvelope
+      } = {
+        ...SAMPLE_ENVELOPE,
+        snapshotDate: transitionDate,
+      };
+      const row = await buildSnapshotRow(transitionalEnvelope, {
+        includeMetadataIdentity: false,
+      });
+      const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+
+      const response = await handleSnapshotCoin(db, transitionDate, "usdc-circle");
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        safetyScoreIdentity: unknown;
+        scores: { reportCard: { grade: string } | null };
+      };
+      expect(body.safetyScoreIdentity).toBeNull();
+      expect(body.scores.reportCard?.grade).toBe("A-");
+    },
+  );
 });
 
 describe("handleSnapshotDay", () => {
@@ -219,6 +282,100 @@ describe("handleSnapshotDay", () => {
     expect(body.snapshotDate).toBe(ISO_DATE);
     expect(body.stablecoins.map((c) => c.id).sort()).toEqual(["usdc-circle", "usdt-tether"]);
     expect(res.headers.get("etag")).toBe(`"${row.content_hash}"`);
+  });
+
+  it("rejects an identified snapshot whose completeness does not match its cards", async () => {
+    const row = await buildSnapshotRow({
+      ...SAMPLE_ENVELOPE,
+      reportCards: {
+        ...SAMPLE_ENVELOPE.reportCards,
+        completeness: {
+          ...SAMPLE_ENVELOPE.reportCards.completeness,
+          scoredCount: 2,
+          notRatedCount: 0,
+          notRatedIds: [],
+        },
+      },
+    });
+    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+
+    const response = await handleSnapshotDay(db, ISO_DATE);
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Snapshot safety identity corrupted",
+    });
+  });
+
+  it("rejects an identified snapshot whose embedded card identity diverges", async () => {
+    const row = await buildSnapshotRow({
+      ...SAMPLE_ENVELOPE,
+      reportCards: {
+        ...SAMPLE_ENVELOPE.reportCards,
+        safetyScoreIdentity: {
+          ...V8_SAFETY_SCORE_IDENTITY,
+          publicationGenerationId: "report-cards:7.25:other",
+        },
+      },
+    });
+    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+
+    const response = await handleSnapshotDay(db, ISO_DATE);
+    expect(response.status).toBe(500);
+  });
+
+  it("rejects an identity-less snapshot after the bounded transition window", async () => {
+    const snapshotDate = "2026-07-16";
+    const {
+      safetyScoreIdentity: _outerIdentity,
+      ...identityLessEnvelope
+    } = {
+      ...SAMPLE_ENVELOPE,
+      snapshotDate,
+      reportCards: {
+        scores: SAMPLE_ENVELOPE.reportCards.scores,
+        updatedAt: SAMPLE_ENVELOPE.reportCards.updatedAt,
+      },
+    };
+    const row = await buildSnapshotRow(identityLessEnvelope, {
+      includeMetadataIdentity: false,
+    });
+    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+
+    const response = await handleSnapshotDay(db, snapshotDate);
+    expect(response.status).toBe(500);
+  });
+
+  it("rejects a V9 snapshot whose completeness diverges from its native cards", async () => {
+    const cards = [
+      makeWorkerV9Card({ id: "usdc-circle" }),
+      makeWorkerV9Card({ id: "usdt-tether" }),
+    ];
+    const validV9 = makeWorkerReportCardsV9Response({
+      lifecycle: "active",
+      safetyScoreIdentity: V9_SAFETY_SCORE_IDENTITY,
+      asOfSec: 1779105500,
+      updatedAt: 1779105600,
+      cards,
+    });
+    const row = await buildSnapshotRow({
+      ...SAMPLE_ENVELOPE,
+      methodologyVersions: {
+        ...SAMPLE_ENVELOPE.methodologyVersions,
+        reportCard: V9_SAFETY_SCORE_IDENTITY.methodologyVersion,
+      },
+      safetyScoreIdentity: V9_SAFETY_SCORE_IDENTITY,
+      reportCards: {
+        ...validV9,
+        completeness: {
+          ...validV9.completeness,
+          expectedCount: 3,
+        },
+      },
+    });
+    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
+
+    const response = await handleSnapshotDay(db, ISO_DATE);
+    expect(response.status).toBe(500);
   });
 });
 

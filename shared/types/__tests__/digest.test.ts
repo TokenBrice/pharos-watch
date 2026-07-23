@@ -24,4 +24,57 @@ describe("DigestSnapshotResponseSchema", () => {
     expect(parsed.inputData?.totalMcapUsd).toBeUndefined();
     expect(parsed.inputData?.safetyScores?.mentionedCoins[0]).toEqual({ symbol: "USDX" });
   });
+
+  it("preserves a fully identified V9 safety section without legacy dimensions", () => {
+    const identity = {
+      model: "v9" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: "9.0",
+      policyId: "safety-score-v9",
+      policyDigest: "a".repeat(64),
+      evaluationBuildDigest: "b".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+      publicationGenerationId: "report-cards:v9:1",
+    };
+    const pillar = {
+      score: 88,
+      evidenceLevel: "strong",
+      freshness: "current",
+      reasons: [{ code: "bounded-mechanism-review", message: "Reviewed" }],
+    };
+    const parsed = DigestSnapshotResponseSchema.parse({
+      date: "2026-07-23",
+      inputData: {
+        safetyContext: {
+          status: "available",
+          expectedModel: "v9",
+          identity,
+          publishedAt: 1_785_000_000,
+          reason: null,
+        },
+        safetyScores: {
+          model: "v9",
+          mentionedCoins: [{
+            symbol: "USDT",
+            grade: "A",
+            score: 88,
+            pillars: { backing: pillar, exit: pillar, control: pillar },
+            reasonCodes: ["bounded-mechanism-review"],
+            caps: [],
+            bindingCap: null,
+          }],
+          gradeDistribution: { A: 1 },
+          provenance: { ...identity, publishedAt: 1_785_000_000 },
+        },
+      },
+      prevInputData: null,
+      depegEvents: [],
+      blacklistEvents: [],
+    });
+
+    expect(parsed.inputData?.safetyScores).toMatchObject({
+      model: "v9",
+      mentionedCoins: [{ symbol: "USDT", pillars: { backing: { score: 88 } } }],
+    });
+  });
 });
