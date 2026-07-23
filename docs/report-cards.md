@@ -42,13 +42,11 @@ artifact was supplied to the Friday judge, so those evidence gates fail
 closed. The candidate is still not calibration-ready: real-A evidence
 freshness, F-count, upper-cohort breadth, IQR, adverse-control, composite-replay,
 and causal-attribution gates fail or remain incomplete. The captures were
-locally rekeyed and therefore are calibration evidence, not activation-window
-evidence. Independent holdout validation, release-cohort coverage, a later
-owner-frozen release candidate, and at least 8 consecutive verified shadow
-days plus two elapsed cycles of the four-hour slowest score-bearing producer
-remain mandatory before any public or downstream cutover. The window must also
-cover at least two distinct observed and archived `liveReserves` and
-`redemption` generations. See
+locally rekeyed and therefore remain calibration evidence. Under the
+2026-07-23 owner ruling, release cohorts and a consecutive-day shadow window
+are no longer activation prerequisites. Calibration continues until the owner
+declares the candidate ready, then a fresh exact-capture sanity packet is run
+against deployed HEAD before the owner writes the public activation key. See
 [Safety Score V9 readiness](./process/safety-score-v9-readiness.md), the
 [single-publisher rollout contract](./process/safety-score-v9-rollout.md), and
 the [consumer ledger](./process/safety-score-v9-consumer-ledger.md).

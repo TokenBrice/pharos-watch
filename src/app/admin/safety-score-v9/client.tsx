@@ -572,16 +572,13 @@ function HistoryTable({ model }: { model: SafetyScoreV9WorkspaceModel }) {
             UTC day
           </TableHead>
           <TableHead scope="col" className="px-3 py-2.5">
-            Qualification
+            Advisory checks
           </TableHead>
           <TableHead scope="col" className="px-3 py-2.5">
             Run counts
           </TableHead>
           <TableHead scope="col" className="px-3 py-2.5">
-            Replay evidence
-          </TableHead>
-          <TableHead scope="col" className="px-3 py-2.5">
-            Blockers / latest error
+            Findings / latest error
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -589,9 +586,6 @@ function HistoryTable({ model }: { model: SafetyScoreV9WorkspaceModel }) {
         {model.history.map((day) => {
           const selected = day.selectedRun;
           const qualifies = selected?.qualification.qualifies === true;
-          const evidence = selected?.archiveSelectionReasons.length
-            ? `${selected.archiveSelectionReasons.map(titleCaseSafetyScoreV9Token).join(" · ")} · ${selected.artifactKeys.length} artifacts`
-            : "Routine summary only";
           const blockers = selected?.qualification.blockers.map(titleCaseSafetyScoreV9Token).join(" · ") || "None";
           const latestError = day.latestError
             ? `${titleCaseSafetyScoreV9Token(day.latestError.stage)}: ${day.latestError.message}`
@@ -603,13 +597,12 @@ function HistoryTable({ model }: { model: SafetyScoreV9WorkspaceModel }) {
               </TableHead>
               <TableCell className="px-3 py-3">
                 <StatusChip tone={qualifies ? "success" : "danger"}>
-                  {qualifies ? "Qualifies" : selected ? "Does not qualify" : "No successful run"}
+                  {qualifies ? "Pass" : selected ? "Attention" : "No successful run"}
                 </StatusChip>
               </TableCell>
               <TableCell className="px-3 py-3 pharos-numeric text-foreground">
                 {day.attemptCounts.successful} succeeded · {day.attemptCounts.failed} failed
               </TableCell>
-              <TableCell className="whitespace-normal px-3 py-3 text-muted-foreground">{evidence}</TableCell>
               <TableCell className="whitespace-normal px-3 py-3 text-muted-foreground">
                 {latestError ?? blockers}
               </TableCell>
@@ -652,30 +645,30 @@ function CandidateWorkspace({
               Safety Score V9 candidate
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              Internal inspection of the weakest-path candidate, its replay evidence, and its movement from the active
+              Internal inspection of the weakest-path candidate, its exact identity, and its movement from the active
               V8 model. This surface does not publish or activate V9.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <StatusChip tone="danger">
+            <StatusChip tone="neutral">
               <ShieldAlert className="mr-1.5 size-3.5" aria-hidden="true" />
-              No-go for activation
+              Advisory shadow
             </StatusChip>
             <StatusChip tone="neutral">V8 remains active</StatusChip>
           </div>
         </div>
 
         <div
-          className="mt-4 flex items-start gap-3 border-y border-red-500/30 bg-red-500/5 px-4 py-3 text-red-900 dark:text-red-200"
+          className="mt-4 flex items-start gap-3 border-y border-amber-500/35 bg-amber-500/5 px-4 py-3 text-amber-950 dark:text-amber-200"
           role="status"
         >
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <div>
-            <p className="text-sm font-semibold">This candidate cannot be promoted from this workspace.</p>
+            <p className="text-sm font-semibold">This workspace is an observation surface.</p>
             <p className="mt-0.5 text-xs leading-relaxed opacity-90">
-              {model.blockers.length > 0
-                ? `${model.blockers.length} release blockers or unresolved reviews are visible below.`
-                : "The response contract is candidate-only and activation remains independently gated."}
+              {model.findings.length > 0
+                ? `${model.findings.length} advisory findings or unresolved reviews are visible below.`
+                : "No advisory finding is recorded for the retained shadow generation."}
             </p>
           </div>
         </div>
@@ -698,8 +691,8 @@ function CandidateWorkspace({
             detail="Supply weighted"
           />
           <Metric
-            label="Qualifying days"
-            value={String(model.qualifyingDayCount)}
+            label="Passing streak"
+            value={String(model.passingDayStreak)}
             detail={`${model.history.length} retained`}
           />
           <Metric
@@ -707,8 +700,8 @@ function CandidateWorkspace({
             value={
               model.currentDay?.selectedRun
                 ? model.currentDay.selectedRun.qualification.qualifies
-                  ? "qualifying"
-                  : "blocked"
+                  ? "pass"
+                  : "attention"
                 : "missing"
             }
             detail={model.currentDay?.utcDay}
@@ -718,17 +711,14 @@ function CandidateWorkspace({
         <div className="mt-4 flex flex-col gap-1 border-t border-border/70 pt-3 sm:flex-row sm:items-baseline sm:justify-between">
           <p className="text-xs font-semibold text-foreground">Latest shadow run · live identity</p>
           <p className="text-xs text-muted-foreground">
-            Published {formatSafetyScoreV9Timestamp(model.displayCandidate.publishedAtSec)}
-            {model.displayIsLatest
-              ? " · the qualifying selection and coverage floors below reflect an earlier run"
-              : ""}
+            Published {formatSafetyScoreV9Timestamp(model.candidate.publishedAtSec)}
           </p>
         </div>
 
         <div className="flex flex-col gap-2 border-b border-border/70 py-3 sm:flex-row sm:items-center">
           <span className="shrink-0 text-xs font-medium text-muted-foreground">Grade distribution</span>
           <div className="flex flex-wrap gap-2">
-            {model.displayGradeCounts.map(({ grade: value, count }) => (
+            {model.gradeCounts.map(({ grade: value, count }) => (
               <span key={value} className="inline-flex items-center gap-1.5">
                 <SafetyGradeBadge grade={value} showScore={false} size="xs" />
                 <span className="pharos-numeric text-xs text-muted-foreground">{count}</span>
@@ -738,57 +728,57 @@ function CandidateWorkspace({
         </div>
 
         <dl className="mt-4 grid gap-x-6 border-y border-border/60 sm:grid-cols-2 lg:grid-cols-4">
-          <IdentityValue label="Candidate ID" value={model.displayCandidate.candidateId} />
+          <IdentityValue label="Candidate ID" value={model.candidate.candidateId} />
           <IdentityValue
             label="Policy"
-            value={`${model.displayCandidate.policyVersion} · ${model.displayCandidate.policy.semanticDigest}`}
+            value={`${model.candidate.policyVersion} · ${model.candidate.policy.semanticDigest}`}
           />
-          <IdentityValue label="Publication generation" value={model.displayCandidate.publicationGenerationId} />
-          <IdentityValue label="Evaluation build" value={model.displayCandidate.evaluationBuildDigest} />
-          <IdentityValue label="Base input" value={model.displayCandidate.baseInputGenerationId} />
-          <IdentityValue label="Fact set" value={model.displayCandidate.factSetDigest} />
+          <IdentityValue label="Publication generation" value={model.candidate.publicationGenerationId} />
+          <IdentityValue label="Evaluation build" value={model.candidate.evaluationBuildDigest} />
+          <IdentityValue label="Base input" value={model.candidate.baseInputGenerationId} />
+          <IdentityValue label="Fact set" value={model.candidate.factSetDigest} />
           <IdentityValue
             label="Published"
-            value={formatSafetyScoreV9Timestamp(model.displayCandidate.publishedAtSec)}
+            value={formatSafetyScoreV9Timestamp(model.candidate.publishedAtSec)}
           />
-          <IdentityValue label="Evidence as of" value={formatSafetyScoreV9Timestamp(model.displayCandidate.asOfSec)} />
+          <IdentityValue label="Evidence as of" value={formatSafetyScoreV9Timestamp(model.candidate.asOfSec)} />
         </dl>
       </section>
 
-      <section aria-labelledby="v9-blockers-title">
+      <section aria-labelledby="v9-findings-title">
         <SectionHeading
-          id="v9-blockers-title"
-          title="Qualification and coverage"
-          description="Release floors, unresolved evidence, and blockers recorded against the exact shadow generation."
+          id="v9-findings-title"
+          title="Shadow checks and coverage"
+          description="Advisory coverage checks, unresolved evidence, and review findings for the exact shadow generation."
           trailing={
-            <StatusChip tone={model.blockers.length > 0 ? "danger" : "success"}>
-              {model.blockers.length} blockers
+            <StatusChip tone={model.findings.length > 0 ? "warning" : "success"}>
+              {model.findings.length} findings
             </StatusChip>
           }
         />
         <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Activation blockers</h3>
-            {model.blockers.length > 0 ? (
+            <h3 className="text-sm font-semibold text-foreground">Advisory findings</h3>
+            {model.findings.length > 0 ? (
               <ul className="mt-2 divide-y divide-border/60 border-y border-border/60">
-                {model.blockers.map((blocker) => (
-                  <li key={blocker} className="flex gap-2 py-2.5 text-sm text-muted-foreground">
+                {model.findings.map((finding) => (
+                  <li key={finding} className="flex gap-2 py-2.5 text-sm text-muted-foreground">
                     <AlertTriangle
-                      className="mt-0.5 size-4 shrink-0 text-red-700 dark:text-red-400"
+                      className="mt-0.5 size-4 shrink-0 text-amber-700 dark:text-amber-400"
                       aria-hidden="true"
                     />
-                    <span>{blocker}</span>
+                    <span>{finding}</span>
                   </li>
                 ))}
               </ul>
             ) : (
               <p className="mt-2 border-y border-border/60 py-4 text-sm text-muted-foreground">
-                No generation-level blocker is recorded. Candidate-only lifecycle gating still applies.
+                No advisory finding is recorded for this generation.
               </p>
             )}
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Coverage floors</h3>
+            <h3 className="text-sm font-semibold text-foreground">Coverage checks</h3>
             <ul className="mt-2 divide-y divide-border/60 border-y border-border/60">
               {response.envelope.coverage.coverageFloors.map((floor) => (
                 <li key={floor.id} className="flex items-start justify-between gap-3 py-2.5">
@@ -872,7 +862,7 @@ function CandidateWorkspace({
         <SectionHeading
           id="v9-review-title"
           title="V8 to V9 review queue"
-          description="Material score, grade, cap, and downstream-threshold movements that require classification before release."
+          description="Material score, grade, cap, and downstream-threshold movements retained for owner review."
           trailing={
             <StatusChip tone={model.pendingReviewCount > 0 ? "warning" : "success"}>
               {model.pendingReviewCount} pending
@@ -893,11 +883,11 @@ function CandidateWorkspace({
         <SectionHeading
           id="v9-history-title"
           title="Recent shadow days"
-          description="One compact summary per UTC day, including same-day retry counts, selected-run qualification, and deliberately archived replay evidence."
+          description="One compact summary per UTC day, including same-day retry counts and advisory checks."
           trailing={
-            <StatusChip tone={model.qualifyingDayCount === model.history.length ? "success" : "warning"}>
+            <StatusChip tone={model.passingDayStreak === model.history.length ? "success" : "warning"}>
               <Clock3 className="mr-1.5 size-3.5" aria-hidden="true" />
-              {model.qualifyingDayCount} qualifying
+              {model.passingDayStreak} day streak
             </StatusChip>
           }
         />

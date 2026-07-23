@@ -40,6 +40,7 @@ import {
 import { dexPriceConfidenceForSourceFamily } from "./constants";
 import { computeDurabilityScore, computeLiquidityScore } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
+import { logWorkerEvent } from "../../lib/structured-log";
 import {
   accumulateGlobalAggregate,
   aggregateProtocolSources,
@@ -837,7 +838,14 @@ export async function computeDexPrices(
     await pruneExpiredDexPriceStages(db, generationId, nowSec, signal);
   } catch (error) {
     rethrowIfAborted(error, signal);
-    console.warn(`[dex-liquidity] Failed to prune expired DEX price stages: ${String(error)}`);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "expired_price_stage_prune_failed",
+      job: "sync-dex-liquidity",
+      message: "Failed to prune expired DEX price stages",
+      error,
+    });
   }
   const existingRows = await db.prepare("SELECT stablecoin_id FROM dex_prices").all<{ stablecoin_id: string }>();
   const existingIds = new Set((existingRows.results ?? []).map((row) => row.stablecoin_id));

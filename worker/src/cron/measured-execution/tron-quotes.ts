@@ -10,6 +10,7 @@ import {
 import { keccak256 } from "viem/utils";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
+import { tryParseJson } from "../../lib/json-parse";
 import { tronBase58ToHex, tronHexAddressToBase58 } from "../../lib/tron-address";
 import { SUNSWAP_V2_ROUTER_QUOTE_URL } from "./tron-registry";
 
@@ -47,11 +48,9 @@ async function fetchBoundedJson(
   const text = await response.text();
   if (!response.ok) throw new Error(`http-${response.status}`);
   if (text.length > MAX_RESPONSE_CHARS) throw new Error("response-too-large");
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    throw new Error("invalid-json");
-  }
+  const parsed = tryParseJson(text, { onFailure: () => undefined });
+  if (parsed === null) throw new Error("invalid-json");
+  return parsed;
 }
 
 async function tronRpc(

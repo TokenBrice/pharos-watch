@@ -196,8 +196,6 @@ export function makeSafetyScoreV9AdminAvailableResponse(): AvailableAdminRespons
     status: "available",
     envelope,
     diff,
-    latestEnvelope: structuredClone(envelope),
-    latestDiff: structuredClone(diff),
     movementReviews: [],
     history: [
       {

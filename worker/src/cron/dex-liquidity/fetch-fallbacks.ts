@@ -30,6 +30,7 @@ import {
   type PoolIdentity,
 } from "./pool-identity";
 import { toErrorMessage } from "../../lib/error-utils";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 const WEAK_COVERAGE_MIN_POOL_COUNT = 3;
 const WEAK_COVERAGE_MIN_PROTOCOL_COUNT = 2;
@@ -196,7 +197,15 @@ export async function fetchDsFallbackPools(
       try {
         await recordOutcome(db, DEXSCREENER_LIQUIDITY_CIRCUIT, successfulRequests > 0);
       } catch (err) {
-        console.warn("[dex-liquidity] DexScreener fallback circuit telemetry failed (non-fatal):", err);
+        logWorkerEvent({
+          scope: "lib",
+          level: "warn",
+          event: "fallback_circuit_telemetry_failed",
+          job: "sync-dex-liquidity",
+          provider: "dexscreener",
+          message: "Fallback circuit telemetry failed",
+          error: err,
+        });
       }
     }
   };

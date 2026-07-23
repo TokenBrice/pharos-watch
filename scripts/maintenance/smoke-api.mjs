@@ -26,6 +26,7 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/stability-index",
   "/api/report-cards",
   "/api/report-cards/v9",
+  "/api/report-cards/v9-preview",
   "/api/report-cards/v9-preview-412d818c031b7bc5",
   "/api/depeg-resolver",
   "/api/depeg-resolver-review",
@@ -309,20 +310,31 @@ export const ENDPOINT_ASSERTIONS = {
     );
     return `${body.cards.length} cards`;
   },
-  "/api/report-cards/v9-preview-412d818c031b7bc5": (result) => {
-    assert(result.status === 200, `/api/report-cards/v9-preview-412d818c031b7bc5 returned ${result.status}`);
+  "/api/report-cards/v9-preview": (result) => {
+    assert(result.status === 200, `/api/report-cards/v9-preview returned ${result.status}`);
     const body = stripMeta(result.body);
     assert(
       body && body.lifecycle === "shadow",
-      "/api/report-cards/v9-preview-412d818c031b7bc5 must preserve lifecycle=shadow",
+      "/api/report-cards/v9-preview must preserve lifecycle=shadow",
     );
     assert(
       Array.isArray(body.cards) && body.cards.length > 0,
-      "/api/report-cards/v9-preview-412d818c031b7bc5 returned no cards",
+      "/api/report-cards/v9-preview returned no cards",
     );
     assert(
       body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
-      "/api/report-cards/v9-preview-412d818c031b7bc5 missing methodology.version",
+      "/api/report-cards/v9-preview missing methodology.version",
+    );
+    return `${body.cards.length} shadow cards`;
+  },
+  "/api/report-cards/v9-preview-412d818c031b7bc5": (result) => {
+    assert(result.status === 200, `Legacy V9 preview alias returned ${result.status}`);
+    const body = stripMeta(result.body);
+    assert(body && body.lifecycle === "shadow", "Legacy V9 preview alias must preserve lifecycle=shadow");
+    assert(Array.isArray(body.cards) && body.cards.length > 0, "Legacy V9 preview alias returned no cards");
+    assert(
+      body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
+      "Legacy V9 preview alias missing methodology.version",
     );
     return `${body.cards.length} shadow cards`;
   },

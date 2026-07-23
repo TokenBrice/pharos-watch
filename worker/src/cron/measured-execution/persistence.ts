@@ -18,13 +18,20 @@ import {
 } from "@shared/types/tron-measured-execution";
 import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { parseJson } from "../../lib/json-parse";
 
-export const DEX_MEASURED_TARGET_SURFACE = "dex-measured-execution-targets";
-export const DEX_MEASURED_QUOTE_SURFACE = "dex-measured-execution-quotes";
+const DEX_MEASURED_TARGET_SURFACE = "dex-measured-execution-targets";
+const DEX_MEASURED_QUOTE_SURFACE = "dex-measured-execution-quotes";
 /** Superseded/failed generations are operator forensics only; nothing reads them after supersession. */
 const GENERATION_RETENTION_SEC = 3 * 24 * 60 * 60;
 /** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
 const GENERATION_PRUNE_MAX_PER_RUN = 16;
+
+function parsePersistedJson(value: string, context: string): unknown {
+  const parsed = parseJson(value, { onFailure: () => undefined });
+  if (!parsed.ok) throw new Error(`Invalid ${context}: ${parsed.message}`);
+  return parsed.value;
+}
 
 interface SurfaceGenerationRow {
   generation_id: string;
@@ -294,7 +301,7 @@ export async function loadLatestPublishedDexMeasuredTargets(
     signal,
   );
   const targets = (result.results ?? []).map((row) =>
-    DexMeasuredExecutionTargetSchema.parse(JSON.parse(row.target_json)),
+    DexMeasuredExecutionTargetSchema.parse(parsePersistedJson(row.target_json, "DEX measured target JSON")),
   );
   if (
     (generation.expected_rows != null && generation.expected_rows !== targets.length) ||
@@ -458,7 +465,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   }
   const targetGenerationIds = new Set(quoteRows.map((row) => row.target_generation_id));
   const dependency = generation.dependency_snapshot_json
-    ? (JSON.parse(generation.dependency_snapshot_json) as { targetGenerationId?: string })
+    ? (parsePersistedJson(generation.dependency_snapshot_json, "DEX measured dependency JSON") as { targetGenerationId?: string })
     : {};
   const targetGenerationId =
     (targetGenerationIds.values().next().value as string | undefined) ?? dependency.targetGenerationId;
@@ -484,7 +491,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     .all<TargetRow>();
   const targets = new Map(
     (targetResult.results ?? []).map((row) => {
-      const target = DexMeasuredExecutionTargetSchema.parse(JSON.parse(row.target_json));
+      const target = DexMeasuredExecutionTargetSchema.parse(parsePersistedJson(row.target_json, "DEX measured target JSON"));
       return [target.targetId, target] as const;
     }),
   );
@@ -503,7 +510,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     if (!quotedTarget)
       throw new Error(`Measured quote ${row.target_id} has no row in target generation ${targetGenerationId}`);
     const profile = row.quote_profile_json
-      ? DexMeasuredExecutionProfileSchema.parse(JSON.parse(row.quote_profile_json))
+      ? DexMeasuredExecutionProfileSchema.parse(parsePersistedJson(row.quote_profile_json, "DEX measured profile JSON"))
       : null;
     if (
       (row.status === "measured" &&
@@ -530,8 +537,8 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   };
 }
 
-export const SOLANA_MEASURED_TARGET_SURFACE = "dex-solana-measured-execution-targets";
-export const SOLANA_MEASURED_QUOTE_SURFACE = "dex-solana-measured-execution-quotes";
+const SOLANA_MEASURED_TARGET_SURFACE = "dex-solana-measured-execution-targets";
+const SOLANA_MEASURED_QUOTE_SURFACE = "dex-solana-measured-execution-quotes";
 
 export interface PublishedSolanaMeasuredTargets {
   generationId: string;
@@ -566,8 +573,8 @@ export function buildSolanaMeasuredQuoteGenerationId(nowSec: number): string {
   return generationId("dex-solana-measured-quotes", nowSec);
 }
 
-export const TRON_MEASURED_TARGET_SURFACE = "dex-tron-measured-execution-targets";
-export const TRON_MEASURED_QUOTE_SURFACE = "dex-tron-measured-execution-quotes";
+const TRON_MEASURED_TARGET_SURFACE = "dex-tron-measured-execution-targets";
+const TRON_MEASURED_QUOTE_SURFACE = "dex-tron-measured-execution-quotes";
 
 export interface PublishedTronMeasuredTargets {
   generationId: string;
@@ -792,7 +799,9 @@ async function loadLatestPublishedNativeMeasuredTargets<
     3,
     signal,
   );
-  const targets = (result.results ?? []).map((row) => config.targetSchema.parse(JSON.parse(row.target_json)));
+  const targets = (result.results ?? []).map((row) =>
+    config.targetSchema.parse(parsePersistedJson(row.target_json, `${config.label} measured target JSON`)),
+  );
   if (
     (generation.expected_rows != null && generation.expected_rows !== targets.length) ||
     (generation.published_rows != null && generation.published_rows !== targets.length)
@@ -973,7 +982,7 @@ async function loadLatestPublishedNativeMeasuredQuoteEvidence<
 
   const targetGenerationIds = new Set(quoteRows.map((row) => row.target_generation_id));
   const dependency = generation.dependency_snapshot_json
-    ? (JSON.parse(generation.dependency_snapshot_json) as { targetGenerationId?: string })
+    ? (parsePersistedJson(generation.dependency_snapshot_json, `${config.label} measured dependency JSON`) as { targetGenerationId?: string })
     : {};
   const targetGenerationId =
     (targetGenerationIds.values().next().value as string | undefined) ?? dependency.targetGenerationId;
@@ -1003,7 +1012,7 @@ async function loadLatestPublishedNativeMeasuredQuoteEvidence<
     .all<TargetRow>();
   const targets = new Map<string, TTarget>(
     (targetResult.results ?? []).map((row) => {
-      const target = config.targetSchema.parse(JSON.parse(row.target_json));
+      const target = config.targetSchema.parse(parsePersistedJson(row.target_json, `${config.label} measured target JSON`));
       return [target.targetId, target];
     }),
   );
@@ -1026,7 +1035,9 @@ async function loadLatestPublishedNativeMeasuredQuoteEvidence<
   for (const row of quoteRows) {
     const quotedTarget = targets.get(row.target_id);
     if (!quotedTarget) throw new Error(`${config.label} measured quote ${row.target_id} has no target row`);
-    const profile = row.quote_profile_json ? config.profileSchema.parse(JSON.parse(row.quote_profile_json)) : null;
+    const profile = row.quote_profile_json
+      ? config.profileSchema.parse(parsePersistedJson(row.quote_profile_json, `${config.label} measured profile JSON`))
+      : null;
     if (
       (row.status === "measured" &&
         (profile == null ||

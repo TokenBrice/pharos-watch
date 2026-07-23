@@ -23,6 +23,7 @@ import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildCriticalDailyLeadRequirements } from "./daily-digest/critical-lead-requirements";
 import { attachDigestEditorialAudit } from "./daily-digest/digest-intelligence";
+import { logWorkerEvent } from "../lib/structured-log";
 
 export { classifyRegime } from "./daily-digest/prompt";
 
@@ -421,7 +422,14 @@ export async function generateDailyDigest(
       signal,
     );
   } catch (err) {
-    console.error("[daily-digest] Failed to persist depeg lifecycle flags:", err);
+    logWorkerEvent({
+      scope: "lib",
+      level: "error",
+      event: "depeg_lifecycle_flags_persist_failed",
+      job: "daily-digest",
+      message: "Failed to persist depeg lifecycle flags",
+      error: err,
+    });
   }
   const qualityMetadata = formatQualityMetadata(digestCopy.qualityIssues);
   await reportDigestProgress(reportProgress, {

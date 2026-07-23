@@ -17,6 +17,7 @@ import {
 } from "@shared/lib/api-endpoints";
 import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import { tryParseJson } from "../lib/json-parse";
 import {
   SafetyScorePublicationIdentitySchema,
   type SafetyScorePublicationIdentity,
@@ -53,27 +54,19 @@ async function gunzipToString(bytes: Uint8Array): Promise<string> {
 }
 
 function safeParseMethodology(value: string): Record<string, string> | null {
-  try {
-    const parsed = JSON.parse(value);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    return Object.fromEntries(
-      Object.entries(parsed).filter(([, version]) => typeof version === "string"),
-    ) as Record<string, string>;
-  } catch {
-    return null;
-  }
+  const parsed = tryParseJson(value, { onFailure: () => undefined });
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  return Object.fromEntries(
+    Object.entries(parsed).filter(([, version]) => typeof version === "string"),
+  ) as Record<string, string>;
 }
 
 function safeParseSafetyScoreIdentity(value: string): SafetyScorePublicationIdentity | null {
-  try {
-    const parsed = JSON.parse(value);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    return SafetyScorePublicationIdentitySchema.safeParse(
-      (parsed as { safetyScoreIdentity?: unknown }).safetyScoreIdentity,
-    ).data ?? null;
-  } catch {
-    return null;
-  }
+  const parsed = tryParseJson(value, { onFailure: () => undefined });
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  return SafetyScorePublicationIdentitySchema.safeParse(
+    (parsed as { safetyScoreIdentity?: unknown }).safetyScoreIdentity,
+  ).data ?? null;
 }
 
 async function loadSnapshotRow(db: D1Database, date: string): Promise<PublicSnapshotRow | null> {
@@ -170,7 +163,11 @@ export const handleSnapshotCoin = withErrorHandler("snapshot-coin", async (
     liquidity?: { stablecoinId: string }[];
   };
   try {
-    envelope = JSON.parse(await gunzipToString(loaded.bytes));
+    const parsed = tryParseJson(await gunzipToString(loaded.bytes), { onFailure: () => undefined });
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("Snapshot envelope is not an object");
+    }
+    envelope = parsed as typeof envelope;
   } catch (err) {
     console.error(`[snapshot-coin] decompress/parse failed for ${date}:`, err);
     return errorResponse(500, "Snapshot payload corrupted");

@@ -88,7 +88,7 @@ export interface V9BackingAssetInput {
  *    withdrawal-queue / bridge) layer over the parent, warranting a larger — but
  *    still bounded — haircut off the parent's backing pillar.
  */
-export const V9_WRAPPER_BACKING_INHERITANCE_DISCOUNT = { pure: 5, wrapped: 12 } as const;
+const V9_WRAPPER_BACKING_INHERITANCE_DISCOUNT = { pure: 5, wrapped: 12 } as const;
 
 /** Minimum mapped single-parent weight for a wrapper to qualify as ~100% backed. */
 export const V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT = 0.99;
@@ -165,7 +165,7 @@ export interface V9ArchetypeBackingInput {
   readonly additionalStructuralReasons?: readonly V9BackingStructuralReason[];
 }
 
-export const SCORE_EPSILON = 0.000001;
+const SCORE_EPSILON = 0.000001;
 
 /**
  * The single materiality predicate shared by projection (evaluate-set) and

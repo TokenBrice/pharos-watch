@@ -94,8 +94,6 @@ describe("publishReportCardCache", () => {
       utcDay: "2023-11-14",
       publicationGenerationId: "v9-shadow-generation",
       candidateId: "v9-candidate",
-      qualifying: false,
-      qualificationBlockers: ["coverage-floor-failed"],
       pendingReviewCount: 1,
     });
   });
@@ -157,7 +155,7 @@ describe("publishReportCardCache", () => {
     expect(JSON.parse(result.metadata!)).toMatchObject({
       v9Shadow: {
         status: "published",
-        qualifying: false,
+        pendingReviewCount: 1,
       },
     });
   });

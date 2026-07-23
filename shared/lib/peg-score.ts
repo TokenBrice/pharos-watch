@@ -3,7 +3,7 @@ import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
 import { DAY_SECONDS } from "./time-constants";
 
 export const PEG_SCORE_LOOKBACK_SEC = Math.ceil(4 * 365.25 * DAY_SECONDS);
-export const RECENT_PEG_WINDOW_DAYS = 90;
+const RECENT_PEG_WINDOW_DAYS = 90;
 const LOW_CONFIDENCE_WEIGHT = 0.5;
 const MAGNITUDE_FLOOR_DIVISOR = 2000;
 const ACTIVE_DEPEG_FLOOR = 5;

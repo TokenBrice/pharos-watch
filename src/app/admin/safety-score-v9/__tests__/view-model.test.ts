@@ -3,10 +3,9 @@ import { buildSafetyScoreV9WorkspaceModel, filterSafetyScoreV9AssetRows } from "
 import { makeSafetyScoreV9AdminAvailableResponse } from "@/test-utils/safety-score-v9-admin-fixture";
 
 describe("Safety Score V9 admin view model", () => {
-  it("keeps activation at no-go and reconciles blockers, grades, reviews, and current generation", () => {
+  it("reconciles advisory findings, grades, reviews, and the current generation", () => {
     const model = buildSafetyScoreV9WorkspaceModel(makeSafetyScoreV9AdminAvailableResponse());
 
-    expect(model.isNoGo).toBe(true);
     expect(model.currentDay?.selectedRun?.identity.publicationGenerationId).toBe("v9-generation-1");
     expect(model.currentDay?.attemptCounts).toEqual({ successful: 1, failed: 0 });
     expect(model.gradeCounts).toEqual([
@@ -14,41 +13,13 @@ describe("Safety Score V9 admin view model", () => {
       { grade: "NR", count: 1 },
     ]);
     expect(model.reviewRows.map((row) => row.id)).toEqual(["coin-a"]);
-    expect(model.blockers).toEqual(
+    expect(model.findings).toEqual(
       expect.arrayContaining([
         "Independent validation is not sealed",
         "rated-coverage: Only half rated",
         "1 material movement reviews remain pending",
       ]),
     );
-  });
-
-  it("follows the latest run for the header identity and histogram while floors stay on the qualifying selection", () => {
-    const response = makeSafetyScoreV9AdminAvailableResponse();
-    response.latestEnvelope.candidate.candidateId = "v9-candidate-2";
-    response.latestEnvelope.candidate.publicationGenerationId = "v9-generation-2";
-    response.latestEnvelope.candidate.cards[0]!.grade = "A";
-
-    const model = buildSafetyScoreV9WorkspaceModel(response);
-
-    // The header follows the latest successful run (the live identity).
-    expect(model.displayIsLatest).toBe(true);
-    expect(model.displayCandidate.candidateId).toBe("v9-candidate-2");
-    expect(model.displayCandidate.publicationGenerationId).toBe("v9-generation-2");
-    expect(model.displayGradeCounts).toEqual([
-      { grade: "A", count: 1 },
-      { grade: "NR", count: 1 },
-    ]);
-
-    // The qualifying selection, current day, histogram source, and floors are
-    // unchanged — they still describe the pinned earliest-in-window run.
-    expect(model.candidate.publicationGenerationId).toBe("v9-generation-1");
-    expect(model.currentDay?.selectedRun?.identity.publicationGenerationId).toBe("v9-generation-1");
-    expect(model.gradeCounts).toEqual([
-      { grade: "A+", count: 1 },
-      { grade: "NR", count: 1 },
-    ]);
-    expect(model.failedCoverageFloors.map((floor) => floor.id)).toEqual(["rated-coverage"]);
   });
 
   it("filters asset rows by grade, review requirement, ID, and reason code", () => {
@@ -67,6 +38,25 @@ describe("Safety Score V9 admin view model", () => {
     expect(
       filterSafetyScoreV9AssetRows(rows, { query: "", grade: "all", reviewOnly: true }).map(({ card }) => card.id),
     ).toEqual(["coin-a"]);
+  });
+
+  it("reports the current consecutive passing-day streak across identity rotations", () => {
+    const response = makeSafetyScoreV9AdminAvailableResponse();
+    const template = response.history[0]!;
+    response.history = ["2026-07-13", "2026-07-12", "2026-07-10"].map((utcDay) => ({
+      ...structuredClone(template),
+      utcDay,
+      selectedRun: {
+        ...structuredClone(template.selectedRun!),
+        identity: {
+          ...structuredClone(template.selectedRun!.identity),
+          publicationGenerationId: `v9-shadow:${utcDay}`,
+        },
+        qualification: { qualifies: true, blockers: [] },
+      },
+    }));
+
+    expect(buildSafetyScoreV9WorkspaceModel(response).passingDayStreak).toBe(2);
   });
 
   it("projects durable semantic reviews without rewriting the retained diff", () => {
@@ -100,7 +90,7 @@ describe("Safety Score V9 admin view model", () => {
       status: "classified",
       disposition: "intended-methodology-change",
     });
-    expect(model.blockers).not.toContain("1 material movement reviews remain pending");
+    expect(model.findings).not.toContain("1 material movement reviews remain pending");
     expect(response.diff.cards[0]?.review.status).toBe("pending");
   });
 });

@@ -24,7 +24,7 @@ export function safetyScoreV9TransferDeploymentKey(chainId: string, contractOrTo
   return `${chainId}:${canonicalTransferTokenId(contractOrTokenId)}`;
 }
 
-export const SafetyScoreV9ReviewedTransferDeploymentSchema = z
+const SafetyScoreV9ReviewedTransferDeploymentSchema = z
   .object({
     chainId: CanonicalChainIdSchema,
     contractOrTokenId: CanonicalTextSchema,
@@ -35,7 +35,7 @@ export const SafetyScoreV9ReviewedTransferDeploymentSchema = z
   })
   .strict();
 
-export const SafetyScoreV9ReviewedTransferFactSchema = z
+const SafetyScoreV9ReviewedTransferFactSchema = z
   .object({
     assetId: CanonicalTextSchema,
     reviewedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -92,10 +92,6 @@ export function computeSafetyScoreV9ReviewedTransferFactsDigest(
 
 export const SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact> = new Map(
   REVIEWED_TRANSFER_FILE.reviews.map((review) => [review.assetId, review]),
-);
-
-export const SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS_DIGEST = computeSafetyScoreV9ReviewedTransferFactsDigest(
-  SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS.values(),
 );
 
 export interface SafetyScoreV9TransferMaterialScope {

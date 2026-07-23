@@ -1,9 +1,7 @@
 import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
-import { SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import {
   V9_CONSUMER_SCORE_THRESHOLD_REGISTRY,
   V9_SHADOW_DAILY_START_OFFSET_SEC,
-  V9_SHADOW_MAX_START_DELAY_SEC,
 } from "@shared/lib/safety-score-v9/operational-gate";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -22,37 +20,22 @@ import {
   loadSafetyScoreV9MovementReviewDispositions,
 } from "./safety-score-v9-movement-reviews";
 import {
-  assessSafetyScoreV9ShadowReleaseCoverage,
-  loadSafetyScoreV9SealedReleaseCandidateId,
-} from "./safety-score-v9-release-coverage";
-import {
-  assessSafetyScoreV9ShadowQualification,
   buildSafetyScoreV9DiffReport,
   buildSafetyScoreV9ShadowDailyFailure,
   buildSafetyScoreV9ShadowDailySuccess,
   buildSafetyScoreV9ShadowEnvelope,
-  projectSafetyScoreV9ShadowEnvelopeCore,
-  rebuildSafetyScoreV9ShadowEnvelope,
   SAFETY_SCORE_V9_REQUIRED_SHADOW_COVERAGE_FLOOR_IDS,
-  SAFETY_SCORE_V9_SHADOW_MINIMUM_QUALIFYING_DAYS,
   safetyScoreV9ShadowLastSuccessfulAttemptAtSec,
   safetyScoreV9UtcDay,
   type SafetyScoreV8ComparableSnapshot,
   type SafetyScoreV9CoverageFloor,
   type SafetyScoreV9DownstreamThreshold,
-  type SafetyScoreV9ShadowArchiveSelectionReason,
   type SafetyScoreV9ShadowDaily,
-  type SafetyScoreV9ShadowEnvelope,
   type SafetyScoreV9ShadowFailureStage,
-  type SafetyScoreV9ShadowSelectedRun,
 } from "./safety-score-v9-shadow";
 import {
-  buildSafetyScoreV9LocalArtifactBundle,
-  getSafetyScoreV9LocalArtifactBundleArtifacts,
-  getSafetyScoreV9LocalArtifactBundleReferences,
-  loadSafetyScoreV9ShadowHistory,
+  loadSafetyScoreV9ShadowDaily,
   persistSafetyScoreV9ShadowState,
-  type SafetyScoreV9LocalArtifactBundle,
 } from "./safety-score-v9-store";
 
 export const SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX = "safety-score-v9-shadow";
@@ -61,13 +44,11 @@ export const SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX = "safety-score-v9-shadow";
  * Minimum age of the day's latest success before the quarter-hourly caller
  * re-runs the shadow. Three hours yields up to eight refreshes per UTC day —
  * frequent enough for same-day candidate iteration while keeping compute and
- * D1 writes bounded. The daily summary remains one row per day: the EARLIEST
- * in-window success (00:30-01:30 UTC, per the scheduled-start-latency floor)
- * stays selected all day, and later refreshes only advance daily metadata.
+ * D1 writes bounded. The daily summary remains one row per day and each
+ * successful refresh replaces its selected observation.
  */
 export const SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC = 3 * 60 * 60;
 export const SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC = V9_SHADOW_DAILY_START_OFFSET_SEC;
-export const SAFETY_SCORE_V9_SHADOW_MAX_START_DELAY_SEC = V9_SHADOW_MAX_START_DELAY_SEC;
 export const SAFETY_SCORE_V9_SHADOW_TIMEOUT_MS = 2 * 60_000;
 
 export interface RunSafetyScoreV9ShadowInput {
@@ -78,14 +59,6 @@ export interface RunSafetyScoreV9ShadowInput {
   v8MethodologyVersion: string;
   signal?: AbortSignal;
   nowSec?: number;
-  /**
-   * Sealed release-candidate label (`v9-rc-N`) for an explicitly sealed run.
-   * It both seals the candidate id and keys the ratified cohort lookup. Left
-   * unset, the run stays content-addressed and the cohort key comes from the
-   * owner's D1 sealed release-candidate designation.
-   */
-  releaseCandidateId?: string;
-  archiveSelectionReasons?: readonly Exclude<SafetyScoreV9ShadowArchiveSelectionReason, "first" | "final">[];
 }
 
 export type SafetyScoreV9ShadowRunResult =
@@ -95,17 +68,13 @@ export type SafetyScoreV9ShadowRunResult =
       utcDay: string;
       publicationGenerationId: string;
       candidateId: string;
-      qualifying: boolean;
-      qualificationBlockers: string[];
       pendingReviewCount: number;
-      archiveSelectionReasons: SafetyScoreV9ShadowArchiveSelectionReason[];
     }
   | {
       status: "skipped";
       attemptId: string;
       utcDay: string;
-      reason: "successful-run-already-selected";
-      qualifying: boolean;
+      reason: "refresh-interval-not-elapsed";
     }
   | {
       status: "skipped";
@@ -144,74 +113,6 @@ function nowSecAtLeast(minimum: number, override?: number): number {
 function scheduledForUtcDay(clockSec: number): number {
   const day = safetyScoreV9UtcDay(clockSec);
   return Math.floor(Date.parse(`${day}T00:00:00.000Z`) / 1_000) + SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC;
-}
-
-function adjacentUtcDay(utcDay: string, offsetDays: number): string {
-  const timestamp = Date.parse(`${utcDay}T00:00:00.000Z`);
-  if (!Number.isFinite(timestamp)) throw new Error(`Invalid Safety Score v9 UTC day: ${utcDay}`);
-  return new Date(timestamp + offsetDays * 86_400_000).toISOString().slice(0, 10);
-}
-
-function sameFrozenShadowIdentity(
-  left: SafetyScoreV9ShadowSelectedRun,
-  right: SafetyScoreV9ShadowSelectedRun,
-): boolean {
-  return (
-    left.identity.candidateId === right.identity.candidateId &&
-    left.identity.policyId === right.identity.policyId &&
-    left.identity.policyVersion === right.identity.policyVersion &&
-    left.identity.policyDigest === right.identity.policyDigest &&
-    left.identity.evaluationBuildDigest === right.identity.evaluationBuildDigest &&
-    left.identity.compilerFactSchemaDigest === right.identity.compilerFactSchemaDigest &&
-    left.identity.producerCapabilityDigest === right.identity.producerCapabilityDigest &&
-    left.identity.releaseCoveragePolicyDigest === right.identity.releaseCoveragePolicyDigest &&
-    left.identity.consumerThresholdRegistryDigest === right.identity.consumerThresholdRegistryDigest
-  );
-}
-
-/** Selects the bounded replay set without creating an online release authority. */
-export function selectSafetyScoreV9ShadowArchiveReasons(input: {
-  history: readonly SafetyScoreV9ShadowDaily[];
-  current: SafetyScoreV9ShadowDaily;
-  requested?: readonly Exclude<SafetyScoreV9ShadowArchiveSelectionReason, "first" | "final">[];
-}): SafetyScoreV9ShadowArchiveSelectionReason[] {
-  const currentRun = input.current.selectedRun;
-  if (currentRun === null) throw new Error("Safety Score v9 archive selection requires a successful current run");
-  const historyByDay = new Map(input.history.map((day) => [day.utcDay, day]));
-  const previousRun = historyByDay.get(adjacentUtcDay(input.current.utcDay, -1))?.selectedRun ?? null;
-  const startsQualifyingWindow =
-    currentRun.qualification.qualifies &&
-    (previousRun === null ||
-      !previousRun.qualification.qualifies ||
-      !sameFrozenShadowIdentity(previousRun, currentRun));
-
-  let qualifyingStreakDays = currentRun.qualification.qualifies ? 1 : 0;
-  let currentStreakHasFinal = false;
-  if (currentRun.qualification.qualifies) {
-    for (let offset = -1; ; offset -= 1) {
-      const run = historyByDay.get(adjacentUtcDay(input.current.utcDay, offset))?.selectedRun ?? null;
-      if (run === null || !run.qualification.qualifies || !sameFrozenShadowIdentity(run, currentRun)) break;
-      qualifyingStreakDays += 1;
-      if (run.archiveSelectionReasons.includes("final")) currentStreakHasFinal = true;
-    }
-  }
-  const completesQualifyingWindow =
-    currentRun.qualification.qualifies &&
-    qualifyingStreakDays >= SAFETY_SCORE_V9_SHADOW_MINIMUM_QUALIFYING_DAYS &&
-    !currentStreakHasFinal;
-
-  const requested = input.requested ?? [];
-  if (requested.some((reason) => reason !== "anomaly")) {
-    throw new Error("Only anomaly Safety Score v9 replay evidence may be selected explicitly");
-  }
-  if (requested.includes("anomaly") && currentRun.qualification.qualifies) {
-    throw new Error("Anomaly Safety Score v9 replay evidence must be selected from a non-qualifying run");
-  }
-  return sortedUnique<SafetyScoreV9ShadowArchiveSelectionReason>([
-    ...requested,
-    ...(startsQualifyingWindow ? (["first"] as const) : []),
-    ...(completesQualifyingWindow ? (["final"] as const) : []),
-  ]);
 }
 
 function attemptId(utcDay: string, previous: SafetyScoreV9ShadowDaily | null): string {
@@ -261,16 +162,12 @@ function buildV8ComparableSnapshot(args: {
   };
 }
 
-function releaseCoverageFloors(
+function observationCoverageFloors(
   observedCount: number,
   expectedCount: number,
   rateableCount: number,
-  scheduledForSec: number,
-  startedAtSec: number,
-  ratifiedReleaseCoverageFloor: SafetyScoreV9CoverageFloor,
 ): SafetyScoreV9CoverageFloor[] {
   const exactCount = observedCount === expectedCount;
-  const startDelaySec = Math.max(0, startedAtSec - scheduledForSec);
   const floors = [
     {
       id: "active-result-count",
@@ -288,19 +185,22 @@ function releaseCoverageFloors(
       required: `>= ${V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets}`,
       detail:
         rateableCount >= V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets
-          ? "The V9 candidate meets the ratified active-asset rateability floor"
-          : "The V9 candidate is below the ratified active-asset rateability floor",
+          ? "The V9 candidate meets the configured active-asset rateability check"
+          : "The V9 candidate is below the configured active-asset rateability check",
     },
-    ratifiedReleaseCoverageFloor,
+    {
+      id: "ratified-release-coverage",
+      status: "pass",
+      observed: 1,
+      required: "retired",
+      detail: "Retired activation prerequisite retained only for shadow-history compatibility",
+    },
     {
       id: "scheduled-start-latency",
-      status: startDelaySec <= SAFETY_SCORE_V9_SHADOW_MAX_START_DELAY_SEC ? "pass" : "fail",
-      observed: startDelaySec,
-      required: `<= ${SAFETY_SCORE_V9_SHADOW_MAX_START_DELAY_SEC} seconds after the scheduled daily selection point`,
-      detail:
-        startDelaySec <= SAFETY_SCORE_V9_SHADOW_MAX_START_DELAY_SEC
-          ? "The daily shadow attempt began inside the preregistered start window"
-          : "The daily shadow attempt began too late to represent a complete prospective UTC day",
+      status: "pass",
+      observed: 1,
+      required: "retired",
+      detail: "Retired start-window prerequisite retained only for shadow-history compatibility",
     },
   ].sort((left, right) => compareText(left.id, right.id)) as SafetyScoreV9CoverageFloor[];
   if (
@@ -397,20 +297,11 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
     utcDay = safetyScoreV9UtcDay(scheduledForSec);
 
     stage = "scheduler";
-    const history = await loadSafetyScoreV9ShadowHistory(input.db, {
-      toUtcDay: utcDay,
-      limit: 400,
-      signal: shadowSignal,
-    });
-    previous = history.find((daily) => daily.utcDay === utcDay) ?? null;
+    previous = await loadSafetyScoreV9ShadowDaily(input.db, utcDay, shadowSignal);
     currentAttemptId = attemptId(utcDay, previous);
-    // A selected success no longer pins the whole UTC day: the shadow
-    // refreshes on a bounded intra-day cadence so candidate iteration is
-    // visible in the retained latest rows the same day. The daily summary
-    // stays one row; once an in-window run is selected it stays selected, so
-    // the throttle must measure from the LATEST success (derived from the
-    // daily row), not from the pinned selection. A run younger than the
-    // refresh interval still skips to bound compute and writes.
+    // The daily summary stays one row while bounded intra-day refreshes keep
+    // the canonical candidate current. A younger success skips to bound
+    // compute and writes.
     const lastSuccessfulAtSec = previous === null ? null : safetyScoreV9ShadowLastSuccessfulAttemptAtSec(previous);
     if (
       lastSuccessfulAtSec !== null &&
@@ -420,8 +311,7 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
         status: "skipped",
         attemptId: currentAttemptId,
         utcDay,
-        reason: "successful-run-already-selected",
-        qualifying: previous?.selectedRun?.qualification.qualifies ?? false,
+        reason: "refresh-interval-not-elapsed",
       };
     }
     if (fixedInput.clockSec < scheduledForSec) {
@@ -442,7 +332,6 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       fixedInput,
       extension,
       publishedAtSec: fixedInput.clockSec,
-      releaseCandidateId: input.releaseCandidateId,
     });
     const publicationGenerationId = pipeline.candidate.publicationGenerationId;
     const candidateId = pipeline.candidate.candidateId;
@@ -450,32 +339,10 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
     const completedAtSec = nowSecAtLeast(startedAtSec, input.nowSec);
     const expectedActiveIds = [...fixedInput.activeAssetIds].sort(compareText);
     stage = "serialize";
-    // The sealed `v9-rc-N` label keys the ratified cohort and is distinct from
-    // the content-addressed `candidateId` above. An explicitly sealed run
-    // carries its own label; otherwise the owner's D1 designation supplies it,
-    // and an absent designation leaves the floor failing closed.
-    const sealedReleaseCandidateId =
-      input.releaseCandidateId ?? (await loadSafetyScoreV9SealedReleaseCandidateId(input.db, shadowSignal));
-    const releaseCoverage = await assessSafetyScoreV9ShadowReleaseCoverage({
-      db: input.db,
-      releaseCandidateId: sealedReleaseCandidateId,
-      candidateId,
-      candidatePolicyDigest: pipeline.candidate.policy.semanticDigest,
-      candidateEvaluationBuildDigest: pipeline.candidate.evaluationBuildDigest,
-      candidateFactSetDigest: pipeline.candidate.factSetDigest,
-      candidateResultDigest: pipeline.candidate.resultDigest,
-      compiledFacts: pipeline.compiledFacts,
-      evaluatedSet: pipeline.evaluatedSet,
-      producerCapabilityDigest: pipeline.producerCapabilityDigest,
-      signal: shadowSignal,
-    });
-    const floors = releaseCoverageFloors(
+    const floors = observationCoverageFloors(
       pipeline.candidate.cards.length,
       expectedActiveIds.length,
       pipeline.candidate.completeness.ratedCount,
-      scheduledForSec,
-      startedAtSec,
-      releaseCoverage.floor,
     );
     const baseEnvelope = buildSafetyScoreV9ShadowEnvelope({
       candidate: pipeline.candidate,
@@ -483,7 +350,6 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       compilerFactSchemaDigest: pipeline.compilerFactSchemaDigest,
       producerCapabilityDigest: pipeline.producerCapabilityDigest,
       coverageFloors: floors,
-      unresolvedReleaseBlockers: releaseCoverage.unresolvedReleaseBlockers,
     });
     const supply = supplyProjection(pipeline);
     const v8 = buildV8ComparableSnapshot({
@@ -531,16 +397,15 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
           card.review.disposition === "defect",
       )
       .map((card) => card.id);
-    let envelope: SafetyScoreV9ShadowEnvelope = buildSafetyScoreV9ShadowEnvelope({
+    const envelope = buildSafetyScoreV9ShadowEnvelope({
       candidate: pipeline.candidate,
       expectedActiveIds,
       compilerFactSchemaDigest: pipeline.compilerFactSchemaDigest,
       producerCapabilityDigest: pipeline.producerCapabilityDigest,
       coverageFloors: floors,
-      unresolvedReleaseBlockers: releaseCoverage.unresolvedReleaseBlockers,
       unresolvedCriticalMovementIds,
     });
-    let diff = buildSafetyScoreV9DiffReport({
+    const diff = buildSafetyScoreV9DiffReport({
       generatedAtSec: completedAtSec,
       expectedActiveIds,
       v8,
@@ -549,9 +414,9 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       downstreamThresholds: downstreamThresholds(),
       supplyUsdById: supply.supplyUsdById,
       reviewDispositionsByKey,
+      reviewCarriesByClassKey,
     });
-    const qualification = assessSafetyScoreV9ShadowQualification(envelope);
-    let daily = buildSafetyScoreV9ShadowDailySuccess({
+    const daily = buildSafetyScoreV9ShadowDailySuccess({
       utcDay,
       selectedAtSec: completedAtSec,
       updatedAtSec: completedAtSec,
@@ -559,147 +424,12 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       envelope,
       diff,
     });
-    // Start-latency pin: when the day already has an in-window selected run,
-    // the daily builder keeps it and this refresh becomes a metadata-only
-    // update — the attempt is counted, but the retained latest envelope/diff
-    // rows and any archive evidence stay bound to the pinned in-window run.
-    const selectionPinned =
-      previous?.selectedRun !== null &&
-      previous?.selectedRun !== undefined &&
-      stableJsonStringifyV1(daily.selectedRun) === stableJsonStringifyV1(previous.selectedRun);
-    if (selectionPinned) {
-      if (input.archiveSelectionReasons !== undefined && input.archiveSelectionReasons.length > 0) {
-        throw new Error(
-          "Safety Score v9 archive selection requires the attempt to become the day's selected run; the day is pinned to its earliest in-window run",
-        );
-      }
-      stage = "shadow-write";
-      // The pinned refresh keeps the day's selected run and its qualifying
-      // envelope/diff, but the admin display follows this latest run so the
-      // operator sees the currently deployed identity's output.
-      await persistSafetyScoreV9ShadowState(input.db, {
-        daily,
-        latestEnvelope: envelope,
-        latestDiff: diff,
-        signal: shadowSignal,
-      });
-      return {
-        status: "published",
-        attemptId: currentAttemptId,
-        utcDay,
-        publicationGenerationId,
-        candidateId,
-        qualifying: daily.selectedRun!.qualification.qualifies,
-        qualificationBlockers: [...daily.selectedRun!.qualification.blockers],
-        pendingReviewCount: diff.summary.pendingReviewCount,
-        archiveSelectionReasons: [],
-      };
-    }
-    const archiveSelectionReasons = selectSafetyScoreV9ShadowArchiveReasons({
-      history,
-      current: daily,
-      requested: input.archiveSelectionReasons,
-    });
-
-    let localArtifactBundle: SafetyScoreV9LocalArtifactBundle | undefined;
-    if (archiveSelectionReasons.length > 0) {
-      stage = "artifact-retention";
-      const envelopeCore = projectSafetyScoreV9ShadowEnvelopeCore(envelope);
-      localArtifactBundle = await buildSafetyScoreV9LocalArtifactBundle(
-        [
-          {
-            kind: "base-input",
-            identity: pipeline.candidate.baseInputGenerationId,
-            value: pipeline.fixedInput,
-            createdAtSec: completedAtSec,
-            verifiedAtSec: completedAtSec,
-          },
-          {
-            kind: "fact-set",
-            // v2 archives only the reviewed extension: compiled facts are
-            // deterministically rebuilt from (base-input, extension) at gate
-            // replay time and bound by factSetDigest, and archiving the
-            // compiled copy pushed the artifact past the D1 row budget once
-            // every asset became rateable.
-            identity: pipeline.candidate.factSetDigest,
-            value: { schemaVersion: 2, extension: pipeline.extension },
-            createdAtSec: completedAtSec,
-            verifiedAtSec: completedAtSec,
-          },
-          {
-            kind: "policy",
-            identity: pipeline.candidate.policy.semanticDigest,
-            value: V9_CANDIDATE_POLICY_V1,
-            createdAtSec: completedAtSec,
-            verifiedAtSec: completedAtSec,
-          },
-          {
-            kind: "evaluation-build",
-            identity: pipeline.candidate.evaluationBuildDigest,
-            value: { manifest: SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST },
-            createdAtSec: completedAtSec,
-            verifiedAtSec: completedAtSec,
-          },
-          {
-            kind: "result",
-            identity: pipeline.candidate.resultDigest,
-            value: {
-              schemaVersion: 2,
-              evaluatedSet: pipeline.evaluatedSet,
-              candidate: pipeline.candidate,
-              envelopeCore,
-            },
-            createdAtSec: completedAtSec,
-            verifiedAtSec: completedAtSec,
-          },
-        ],
-        { signal: shadowSignal },
-      );
-      envelope = rebuildSafetyScoreV9ShadowEnvelope({
-        candidate: envelope.candidate,
-        core: envelopeCore,
-        replayArtifacts: getSafetyScoreV9LocalArtifactBundleReferences(localArtifactBundle),
-      });
-      diff = buildSafetyScoreV9DiffReport({
-        generatedAtSec: completedAtSec,
-        expectedActiveIds,
-        v8,
-        v9: envelope,
-        topCutoffIds: supply.topCutoffIds,
-        downstreamThresholds: downstreamThresholds(),
-        supplyUsdById: supply.supplyUsdById,
-        reviewDispositionsByKey,
-        reviewCarriesByClassKey,
-      });
-    }
-
-    if (archiveSelectionReasons.length > 0) {
-      daily = buildSafetyScoreV9ShadowDailySuccess({
-        utcDay,
-        selectedAtSec: completedAtSec,
-        updatedAtSec: completedAtSec,
-        previous,
-        envelope,
-        diff,
-        archiveSelectionReasons,
-        artifactKeys: getSafetyScoreV9LocalArtifactBundleArtifacts(localArtifactBundle!).map(
-          (artifact) => artifact.artifactKey,
-        ),
-      });
-    }
     const pendingReviewCount = diff.summary.pendingReviewCount;
     stage = "shadow-write";
-    // A newly selected run is by definition the day's latest run, so the admin
-    // display slot mirrors the same envelope/diff being retained as the
-    // qualifying selection.
     await persistSafetyScoreV9ShadowState(input.db, {
-      artifacts: localArtifactBundle === undefined ? [] : undefined,
-      localArtifactBundle,
       daily,
       envelope,
       diff,
-      latestEnvelope: envelope,
-      latestDiff: diff,
       signal: shadowSignal,
     });
     return {
@@ -708,10 +438,7 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       utcDay,
       publicationGenerationId,
       candidateId,
-      qualifying: qualification.qualifies,
-      qualificationBlockers: qualification.blockers,
       pendingReviewCount,
-      archiveSelectionReasons,
     };
   } catch (error) {
     const failureStage: SafetyScoreV9ShadowFailureStage = shadowSignal.aborted ? "aborted" : stage;

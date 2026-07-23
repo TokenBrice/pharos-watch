@@ -14,7 +14,7 @@ import {
   type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
-import type { DexMeasuredExecutionAdapter, DexMeasuredExecutionRpcBudget, DexMeasuredRawQuotePoint } from "./profiles";
+import type { DexMeasuredExecutionRpcBudget, DexMeasuredRawQuotePoint } from "./profiles";
 
 const FLUID_RESOLVER_ABI = parseAbi([
   "function estimateSwapIn(address dex_,bool swap0To1_,uint256 amountIn_,uint256 minAmountOut_) view returns (uint256 amountOut_)",
@@ -569,25 +569,3 @@ export function validateFluidResolverProfileProof(profile: DexMeasuredExecutionP
   }
   return [...issues];
 }
-
-export const FLUID_RESOLVER_ADAPTER: DexMeasuredExecutionAdapter = {
-  profileId: FLUID_RESOLVER_ADAPTER_PROFILE_ID,
-  async quotePoints(input) {
-    const outcomes = await quoteFluidResolverRequests({
-      requests: input.inputNotionalsUsd.map((inputUsd) => ({
-        target: input.target,
-        inputUsd,
-        blockNumber: input.blockNumber,
-        endpointAddress: input.endpointAddress,
-      })),
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-    });
-    return {
-      points: outcomes.flatMap((outcome) => (outcome.point ? [outcome.point] : [])),
-      failures: outcomes.flatMap((outcome) =>
-        outcome.failureReason ? [{ inputUsd: outcome.inputUsd, reason: outcome.failureReason }] : [],
-      ),
-    };
-  },
-};

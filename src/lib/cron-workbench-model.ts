@@ -325,7 +325,7 @@ export function isCronRunNotStarted(run: Pick<CronRun, "metadata">): boolean {
   );
 }
 
-export function isCronRunPlatformAbandoned(run: Pick<CronRun, "metadata">): boolean {
+function isCronRunPlatformAbandoned(run: Pick<CronRun, "metadata">): boolean {
   return (
     readMetadataString(run.metadata, "reason") === "stale-slot-reconciled"
     && !isCronRunNotStarted(run)

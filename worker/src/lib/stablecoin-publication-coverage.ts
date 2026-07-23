@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { parseJsonObject } from "./json-parse";
 
 export const ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS = 2;
 
@@ -281,7 +282,8 @@ function parsePersistedMissingState(value: unknown): MissingActivePriceDetail | 
 
 function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoinActivePriceCoverage | null {
   try {
-    const metadata = JSON.parse(metadataJson) as Record<string, unknown>;
+    const metadata = parseJsonObject(metadataJson, { onFailure: () => undefined });
+    if (!metadata) return null;
     const rawCoverage = metadata.activePriceCoverage;
     if (!rawCoverage || typeof rawCoverage !== "object" || Array.isArray(rawCoverage)) return null;
     const coverage = rawCoverage as Record<string, unknown>;

@@ -18,6 +18,7 @@ import {
   validateDigestModelOutput,
 } from "../daily-digest/response";
 import { accumulateAnthropicStream } from "./anthropic-stream";
+import { tryParseJson } from "../../lib/json-parse";
 
 interface RequestDigestCopyOptions {
   db: D1Database;
@@ -209,7 +210,9 @@ export async function requestDigestCopy(
           title: parsed.digestTitle,
           text: parsed.digestText,
           extended: parsed.digestExtended,
-          meta: parsed.digestMeta ? JSON.parse(parsed.digestMeta) : null,
+          meta: parsed.digestMeta
+            ? tryParseJson(parsed.digestMeta, { onFailure: () => undefined })
+            : null,
         }),
         "",
         "Fix ONLY what the quality checks flag; keep everything else. Return ONLY corrected JSON with the same schema. Do not add markdown fences or commentary.",
@@ -252,11 +255,9 @@ export async function requestDigestCopy(
 export function markDigestMetaBlocked(digestMeta: string | null): string {
   let parsed: Record<string, unknown> = {};
   if (digestMeta) {
-    try {
-      const decoded = JSON.parse(digestMeta) as unknown;
-      if (decoded && typeof decoded === "object") parsed = decoded as Record<string, unknown>;
-    } catch {
-      // Unparseable meta still gets a valid blocked wrapper.
+    const decoded = tryParseJson(digestMeta, { onFailure: () => undefined });
+    if (decoded && typeof decoded === "object" && !Array.isArray(decoded)) {
+      parsed = decoded as Record<string, unknown>;
     }
   }
   parsed.qualityGate = "blocked";

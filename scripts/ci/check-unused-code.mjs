@@ -31,12 +31,27 @@ const MODULE_ALLOWLIST = new Set([
   // Script-only Safety Score v9 evidence queue producer/parser. The maintenance
   // CLI and its tests live outside this runtime-only dependency graph.
   "shared/lib/safety-score-v9/evidence-gap-queue.ts",
+  // Protocol measurement schemas are consumed by scripts/lib/mechanism-measurement,
+  // which is intentionally outside this runtime-only dependency graph.
+  "shared/lib/protocol-api-sources/index.ts",
   // refreshing-bar.tsx + use-row-cursor.ts are now consumed by the power-user
   // tables (Wave 9: stablecoin-table, screener-table, depeg-tracker-table).
   // Filter summary helpers; per-tracker adoption deferred. (command-palette-verbs.ts
   // is now consumed by src/components/command-palette.tsx.)
 ]);
 const EXPORT_ALLOWLIST = new Set([
+  "shared/lib/protocol-api-sources/decimal.ts::CANONICAL_DECIMAL_PATTERN",
+  "shared/lib/protocol-api-sources/decimal.ts::JSON_NUMBER_TOKEN_KEY",
+  "shared/lib/protocol-api-sources/decimal.ts::jsonNumberToken",
+  "shared/lib/protocol-api-sources/decimal.ts::canonicalizeDecimal",
+  "shared/lib/protocol-api-sources/decimal.ts::DecimalSourceSchema",
+  "shared/lib/protocol-api-sources/decimal.ts::JsonNumberDecimalSourceSchema",
+  "shared/lib/protocol-api-sources/decimal.ts::CanonicalDecimalSchema",
+  "shared/lib/protocol-api-sources/ethena.ts::ETHENA_PROTOCOL_API_URLS",
+  "shared/lib/protocol-api-sources/ethena.ts::EthenaCollateralizationStatusSchema",
+  "shared/lib/protocol-api-sources/ethena.ts::EthenaProofOfReservesSchema",
+  "shared/lib/protocol-api-sources/falcon.ts::FALCON_TRANSPARENCY_URL",
+  "shared/lib/protocol-api-sources/falcon.ts::FalconTransparencySchema",
   // Identity markers consumed by worker/src/__mocks__/__tests__/vitest-aliases.test.ts via vitest path aliases (not visible to static analysis).
   "worker/src/__mocks__/satori-stub.ts::__stub",
   "worker/src/__mocks__/wasm-module-stub.ts::__stub",
@@ -104,10 +119,15 @@ const EXPORT_ALLOWLIST = new Set([
   // their inputs coupled to the production policy, timing, and envelope schemas.
   "shared/lib/safety-score-v9-research.ts::loadV9MethodologyPolicy",
   "shared/lib/safety-score-v9/scenario-evaluator.ts::V9_SCENARIO_QUALITY_PILLARS",
+  // Retained inside published digests for historical identity compatibility
+  // after their activation-gate roles were retired.
+  "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts::SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST",
+  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MINIMUM_QUALIFYING_DAYS",
   "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MINIMUM_PRODUCER_CYCLES",
+  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MAX_START_DELAY_SEC",
+  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MOVEMENT_ADJUDICATION_SCOPE",
   "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_SCORE_BEARING_PRODUCER_INTERVALS_SEC",
   "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_SLOWEST_SCORE_BEARING_SOURCE_KEYS",
-  "worker/src/lib/safety-score-v9-shadow.ts::SafetyScoreV9ShadowEnvelopeCoreSchema",
   // Evidence queue entrypoints are consumed by its maintenance CLI and CLI
   // contract tests, both outside the runtime graph scanned here.
   "shared/lib/safety-score-v9/evidence-gap-queue.ts::buildV9EvidenceGapQueue",

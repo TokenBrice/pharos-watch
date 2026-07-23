@@ -13,7 +13,7 @@ import {
   type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
-import type { DexMeasuredExecutionAdapter, DexMeasuredExecutionRpcBudget, DexMeasuredRawQuotePoint } from "./profiles";
+import type { DexMeasuredExecutionRpcBudget, DexMeasuredRawQuotePoint } from "./profiles";
 import { getDexMeasuredExecutionDeployment } from "./registry";
 
 const QUOTER_V2_ABI = parseAbi([
@@ -393,7 +393,7 @@ export function encodeV3FactoryGetPool(target: DexMeasuredExecutionTarget): `0x$
   });
 }
 
-export function decodeV3FactoryGetPool(returnData: `0x${string}`): `0x${string}` | null {
+function decodeV3FactoryGetPool(returnData: `0x${string}`): `0x${string}` | null {
   try {
     const value = decodeFunctionResult({
       abi: V3_FACTORY_ABI,
@@ -597,25 +597,3 @@ export function validateQuoterV2ProfileProof(profile: DexMeasuredExecutionProfil
   }
   return [...issues];
 }
-
-export const QUOTER_V2_ADAPTER: DexMeasuredExecutionAdapter = {
-  profileId: "quoter-v2",
-  async quotePoints(input) {
-    const outcomes = await quoteQuoterV2Requests({
-      requests: input.inputNotionalsUsd.map((inputUsd) => ({
-        target: input.target,
-        inputUsd,
-        endpointAddress: input.endpointAddress,
-      })),
-      blockNumber: input.blockNumber,
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-    });
-    return {
-      points: outcomes.flatMap((outcome) => (outcome.point ? [outcome.point] : [])),
-      failures: outcomes.flatMap((outcome) =>
-        outcome.failureReason ? [{ inputUsd: outcome.inputUsd, reason: outcome.failureReason }] : [],
-      ),
-    };
-  },
-};

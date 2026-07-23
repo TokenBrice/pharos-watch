@@ -3,7 +3,7 @@ import { parseJsonObject } from "./json-parse";
 
 export const MAX_PERSISTED_CRON_METADATA_BYTES = 64 * 1_024 - 1;
 // The scheduled wrapper appends bounded lease and slot identity after a producer returns.
-export const SCHEDULED_CRON_METADATA_ENRICHMENT_HEADROOM_BYTES = 4 * 1_024;
+const SCHEDULED_CRON_METADATA_ENRICHMENT_HEADROOM_BYTES = 4 * 1_024;
 export const MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES =
   MAX_PERSISTED_CRON_METADATA_BYTES - SCHEDULED_CRON_METADATA_ENRICHMENT_HEADROOM_BYTES;
 const MAX_TOP_LEVEL_DIAGNOSTICS = 80;

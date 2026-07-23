@@ -7,19 +7,19 @@
 // standing mention. Constants owner-ratified 2026-07-18.
 
 /** An event this recent counts as breaking news and may hard-lead. */
-export const NEWLY_CRITICAL_WINDOW_H = 48;
+const NEWLY_CRITICAL_WINDOW_H = 48;
 
 /** A day-over-day worsening this large re-qualifies an old event for a hard lead. */
-export const RE_ESCALATION_BPS = 500;
+const RE_ESCALATION_BPS = 500;
 
 /** One event may hard-lead at most this many consecutive editions... */
 export const MAX_CONSECUTIVE_HARD_LEADS = 2;
 
 /** ...and at most this many editions within the trailing quota window. */
-export const MAX_LEADS_PER_WINDOW = 3;
+const MAX_LEADS_PER_WINDOW = 3;
 
 /** Number of trailing editions the lead quota is evaluated over. */
-export const LEAD_QUOTA_WINDOW = 7;
+const LEAD_QUOTA_WINDOW = 7;
 
 export interface LeadStreakSummary {
   /** Consecutive editions (newest backwards) this candidate led. */

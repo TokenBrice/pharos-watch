@@ -4,6 +4,7 @@ import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import { errorResponse, jsonFreshResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
+import { tryParseJson } from "../lib/json-parse";
 import {
   loadPublishedReportCardsV9Snapshot,
   ReportCardsV9SnapshotUnavailableError,
@@ -35,18 +36,19 @@ export const ActivationMarkerSchema = z.object({
 export type ReportCardsV9ActivationMarker = z.infer<typeof ActivationMarkerSchema>;
 
 function parseActivationMarker(value: string): ReportCardsV9ActivationMarker | null {
-  try {
-    return ActivationMarkerSchema.parse(JSON.parse(value));
-  } catch {
-    return null;
-  }
+  const parsed = tryParseJson(value, { onFailure: () => undefined });
+  return ActivationMarkerSchema.safeParse(parsed).data ?? null;
 }
 
-function snapshotResponse(snapshot: ReportCardsV9Response, lifecycle: ReportCardsV9Response["lifecycle"]): Response {
+function snapshotResponse(
+  snapshot: ReportCardsV9Response,
+  lifecycle: ReportCardsV9Response["lifecycle"],
+  cacheControl: string = CACHE_PROFILES.standard,
+): Response {
   return jsonFreshResponse(
     { ...snapshot, lifecycle },
     {
-      cacheControl: CACHE_PROFILES.standard,
+      cacheControl,
       updatedAt: snapshot.updatedAt,
       maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
     },
@@ -107,7 +109,7 @@ export const handleReportCardsV9Preview = withErrorHandler(
   "report-cards-v9-preview",
   async (db: D1Database): Promise<Response> => {
     try {
-      return snapshotResponse(await loadPublishedReportCardsV9Snapshot(db), "shadow");
+      return snapshotResponse(await loadPublishedReportCardsV9Snapshot(db), "shadow", CACHE_PROFILES.noStore);
     } catch (error) {
       if (error instanceof ReportCardsV9SnapshotUnavailableError) {
         return errorResponse(503, error.message);

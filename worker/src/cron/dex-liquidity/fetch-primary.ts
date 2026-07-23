@@ -34,6 +34,7 @@ import {
 import { resolveTrackedStablecoinId } from "./token-resolution";
 import { toErrorMessage } from "../../lib/error-utils";
 import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
 const CURVE_API_FETCH_CONCURRENCY = 4;
@@ -223,9 +224,15 @@ export async function fetchDataSources(
         dlProtocolsAvailable = dexProjects.size > 0;
         await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, dlProtocolsAvailable);
         if (dlProtocolsAvailable) {
-          console.log(
-            `[dex-liquidity] Indexed ${dexProjects.size} active DEX projects, ${protocolTvlCaps.size} with TVL caps`,
-          );
+          logWorkerEvent({
+            scope: "lib",
+            level: "info",
+            event: "active_dex_projects_loaded",
+            job: "sync-dex-liquidity",
+            provider: "defillama",
+            message: "Active DEX projects loaded",
+            metadata: { projectCount: dexProjects.size, tvlCapCount: protocolTvlCaps.size },
+          });
         } else {
           console.warn("[dex-liquidity] DeFiLlama protocols response had zero active DEX projects — degraded");
         }

@@ -3,7 +3,6 @@ import {
   V9_CONSUMER_SCORE_THRESHOLD_REGISTRY_DIGEST,
   V9_SHADOW_DIFF_ABSOLUTE_REVIEW_DELTA,
   V9_SHADOW_DIFF_TOP_CUTOFF_REVIEW_DELTA,
-  V9_SHADOW_MINIMUM_QUALIFYING_DAYS,
   V9_SHADOW_MOVEMENT_REVIEW_CARRY_SCORE_DRIFT,
   V9_SHADOW_RELEASE_COVERAGE_POLICY_DIGEST,
   V9_SHADOW_REQUIRED_COVERAGE_FLOOR_IDS,
@@ -18,7 +17,6 @@ import {
 import { z } from "zod";
 
 const SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION = 1;
-export const SAFETY_SCORE_V9_SHADOW_MINIMUM_QUALIFYING_DAYS = V9_SHADOW_MINIMUM_QUALIFYING_DAYS;
 export const SAFETY_SCORE_V9_REQUIRED_SHADOW_COVERAGE_FLOOR_IDS = V9_SHADOW_REQUIRED_COVERAGE_FLOOR_IDS;
 const SAFETY_SCORE_V9_DIFF_ABSOLUTE_REVIEW_DELTA = V9_SHADOW_DIFF_ABSOLUTE_REVIEW_DELTA;
 const SAFETY_SCORE_V9_DIFF_TOP_CUTOFF_REVIEW_DELTA = V9_SHADOW_DIFF_TOP_CUTOFF_REVIEW_DELTA;
@@ -71,7 +69,7 @@ function safetyScoreV9ActiveIdsDigest(ids: readonly string[]): string {
   );
 }
 
-export const SafetyScoreV9ReplayArtifactKindSchema = z.enum([
+const SafetyScoreV9ReplayArtifactKindSchema = z.enum([
   "base-input",
   "fact-set",
   "policy",
@@ -267,50 +265,6 @@ export const SafetyScoreV9ShadowEnvelopeSchema = z
   });
 export type SafetyScoreV9ShadowEnvelope = z.infer<typeof SafetyScoreV9ShadowEnvelopeSchema>;
 
-/**
- * The non-self-referential part of a retained shadow envelope. The result
- * artifact stores this core; the full envelope is recovered by attaching the
- * five content-addressed artifact references loaded from D1.
- */
-export const SafetyScoreV9ShadowEnvelopeCoreSchema = z
-  .object({
-    schemaVersion: z.literal(SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION),
-    compilerFactSchemaDigest: Sha256Schema,
-    producerCapabilityDigest: Sha256Schema,
-    releaseCoveragePolicyDigest: Sha256Schema,
-    consumerThresholdRegistryDigest: Sha256Schema,
-    coverage: SafetyScoreV9ShadowCoverageSchema,
-  })
-  .strict();
-export type SafetyScoreV9ShadowEnvelopeCore = z.infer<typeof SafetyScoreV9ShadowEnvelopeCoreSchema>;
-
-export function projectSafetyScoreV9ShadowEnvelopeCore(
-  envelopeInput: SafetyScoreV9ShadowEnvelope,
-): SafetyScoreV9ShadowEnvelopeCore {
-  const envelope = SafetyScoreV9ShadowEnvelopeSchema.parse(envelopeInput);
-  return SafetyScoreV9ShadowEnvelopeCoreSchema.parse({
-    schemaVersion: envelope.schemaVersion,
-    compilerFactSchemaDigest: envelope.compilerFactSchemaDigest,
-    producerCapabilityDigest: envelope.producerCapabilityDigest,
-    releaseCoveragePolicyDigest: envelope.releaseCoveragePolicyDigest,
-    consumerThresholdRegistryDigest: envelope.consumerThresholdRegistryDigest,
-    coverage: envelope.coverage,
-  });
-}
-
-export function rebuildSafetyScoreV9ShadowEnvelope(args: {
-  candidate: SafetyScoreV9Response;
-  core: SafetyScoreV9ShadowEnvelopeCore;
-  replayArtifacts: readonly SafetyScoreV9ReplayArtifact[];
-}): SafetyScoreV9ShadowEnvelope {
-  const core = SafetyScoreV9ShadowEnvelopeCoreSchema.parse(args.core);
-  return SafetyScoreV9ShadowEnvelopeSchema.parse({
-    ...core,
-    candidate: args.candidate,
-    replayArtifacts: [...args.replayArtifacts].sort((left, right) => compareText(left.kind, right.kind)),
-  });
-}
-
 export interface BuildSafetyScoreV9ShadowEnvelopeInput {
   candidate: SafetyScoreV9Response;
   expectedActiveIds: readonly string[];
@@ -321,9 +275,7 @@ export interface BuildSafetyScoreV9ShadowEnvelopeInput {
   futureDatedEvidenceIds?: readonly string[];
   coverageFloors: readonly SafetyScoreV9CoverageFloor[];
   publicationRegression?: boolean;
-  unresolvedReleaseBlockers?: readonly string[];
   unresolvedCriticalMovementIds?: readonly string[];
-  replayArtifacts?: readonly SafetyScoreV9ReplayArtifact[];
 }
 
 export function buildSafetyScoreV9ShadowEnvelope(
@@ -381,10 +333,10 @@ export function buildSafetyScoreV9ShadowEnvelope(
       futureDatedEvidenceIds: sortedUnique(input.futureDatedEvidenceIds ?? []),
       coverageFloors: [...input.coverageFloors].sort((left, right) => compareText(left.id, right.id)),
       publicationRegression: input.publicationRegression ?? false,
-      unresolvedReleaseBlockers: sortedUnique(input.unresolvedReleaseBlockers ?? []),
+      unresolvedReleaseBlockers: [],
       unresolvedCriticalMovementIds: sortedUnique(input.unresolvedCriticalMovementIds ?? []),
     },
-    replayArtifacts: [...(input.replayArtifacts ?? [])].sort((left, right) => compareText(left.kind, right.kind)),
+    replayArtifacts: [],
   });
 }
 
@@ -440,11 +392,9 @@ export function assessSafetyScoreV9ShadowQualification(
   if (coverage.unresolvedReleaseBlockers.length > 0) {
     blockers.add("unresolved-release-blocker");
   }
-  // Movement adjudication is deliberately NOT a daily blocker. Whether V9's treatment of an
-  // asset is correct is a one-time question about the methodology transition, not evidence that
-  // the pipeline ran stably today; re-adjudicating because a score moved a point measures
-  // neither. `unresolvedCriticalMovementIds` stays recorded on every run and is enforced once,
-  // at window end, by the offline gate. Every pipeline-stability floor above still gates daily.
+  // Movement review is deliberately separate from the retained daily health checks.
+  // `unresolvedCriticalMovementIds` remains visible to the owner, but neither it nor
+  // this advisory qualification authorizes or vetoes activation.
   const canonicalBlockers = [...blockers].sort(compareText);
   return SafetyScoreV9ShadowQualificationSchema.parse({
     qualifies: canonicalBlockers.length === 0,
@@ -670,7 +620,7 @@ function computeSafetyScoreV9DiffReviewKey(input: {
 /**
  * Class of a movement: everything that states *what kind of change this is*, with exact
  * magnitude removed. Magnitude is not dropped — it is delegated to the reviewed-score anchor,
- * which bounds drift at `V9_SHADOW_MOVEMENT_REVIEW_CARRY_SCORE_DRIFT` for the whole window
+ * which bounds drift at `V9_SHADOW_MOVEMENT_REVIEW_CARRY_SCORE_DRIFT` across carried observations
  * rather than bucketing it (buckets would reintroduce boundary oscillation).
  *
  * Retained, deliberately: full V8 and V9 reason-code sets plus the new/removed sets. Cause must
@@ -681,8 +631,8 @@ function computeSafetyScoreV9DiffReviewKey(input: {
  * - `v8.score`, `v9.score`, `scoreDelta`, `absoluteScoreDelta` — bounded by the anchor.
  * - `v9WeakestPillar.score` — continuous and unquantised, so it has no rounding deadband; the
  *   pillar *name* is retained, and the score is bounded by the anchor.
- * - `bindingCap.limit` — a cap retune is a policy change, which moves `policyDigest` and so
- *   breaks the frozen window identity outright.
+ * - `bindingCap.limit` — a cap retune moves `policyDigest`, so it cannot inherit a carry from
+ *   the prior candidate identity.
  * - `flags.absoluteScoreDeltaAtLeast5`, `flags.topCutoffScoreDeltaAtLeast2` — pure restatements
  *   of magnitude against a fixed threshold, already bounded by the anchor.
  */
@@ -1114,7 +1064,6 @@ const SafetyScoreV9ShadowFailureStageSchema = z.enum([
 export type SafetyScoreV9ShadowFailureStage = z.infer<typeof SafetyScoreV9ShadowFailureStageSchema>;
 
 const SafetyScoreV9ShadowArchiveSelectionReasonSchema = z.enum(["anomaly", "final", "first"]);
-export type SafetyScoreV9ShadowArchiveSelectionReason = z.infer<typeof SafetyScoreV9ShadowArchiveSelectionReasonSchema>;
 
 const SafetyScoreV9ShadowLatestErrorSchema = z
   .object({
@@ -1213,21 +1162,10 @@ export const SafetyScoreV9ShadowDailySchema = z
   });
 export type SafetyScoreV9ShadowDaily = z.infer<typeof SafetyScoreV9ShadowDailySchema>;
 
-/** Coverage-floor ID proving the day's selected run started inside the preregistered 00:30–01:30 UTC window. */
-export const SAFETY_SCORE_V9_SHADOW_START_LATENCY_FLOOR_ID = "scheduled-start-latency";
-
-function selectedRunStartedInWindow(selectedRun: SafetyScoreV9ShadowSelectedRun): boolean {
-  return selectedRun.coverage.coverageFloors.some(
-    (floor) => floor.id === SAFETY_SCORE_V9_SHADOW_START_LATENCY_FLOOR_ID && floor.status === "pass",
-  );
-}
-
 /**
  * Latest same-day success time derivable from the compact daily row. A failed
- * attempt stamps latestError.atSec === updatedAtSec, so any row whose latest
- * activity was a success has updatedAtSec ahead of its latest error. Pinned
- * rows keep their in-window selected run while refreshes advance updatedAtSec,
- * which is exactly the signal the refresh throttle needs.
+ * attempt stamps latestError.atSec === updatedAtSec, so a row whose latest
+ * activity was a success has updatedAtSec ahead of its latest error.
  */
 export function safetyScoreV9ShadowLastSuccessfulAttemptAtSec(daily: SafetyScoreV9ShadowDaily): number | null {
   const parsed = SafetyScoreV9ShadowDailySchema.parse(daily);
@@ -1280,15 +1218,10 @@ export function buildSafetyScoreV9ShadowDailySuccess(input: {
   previous?: SafetyScoreV9ShadowDaily | null;
   envelope: SafetyScoreV9ShadowEnvelope;
   diff: SafetyScoreV9DiffReport;
-  archiveSelectionReasons?: readonly SafetyScoreV9ShadowArchiveSelectionReason[];
-  artifactKeys?: readonly string[];
 }): SafetyScoreV9ShadowDaily {
   const previous = assertDailyPredecessor(input.previous, input.utcDay, input.updatedAtSec);
-  // Intra-day refreshes re-select while no in-window run exists: the day's
-  // selected run is the LATEST success, so the compact daily row, the retained
-  // latest candidate/diff rows, and any evidence-day artifacts stay coherent
-  // while the candidate iterates during the day. The gate still counts the day
-  // once. A re-selection older than the current selected run fails closed.
+  // The selected run is the latest same-day success, keeping the compact row
+  // and canonical candidate/diff coherent while the candidate iterates.
   if (
     previous?.selectedRun !== null &&
     previous?.selectedRun !== undefined &&
@@ -1312,28 +1245,6 @@ export function buildSafetyScoreV9ShadowDailySuccess(input: {
   ) {
     throw new Error("Safety Score v9 daily diff identity does not match the selected candidate");
   }
-  // Start-latency pin: once the day has a selected success whose own
-  // scheduled-start-latency floor passes (the preregistered 00:30-01:30 UTC
-  // start window), that EARLIEST in-window run stays selected for the rest of
-  // the UTC day. Later refreshes still record attempts and advance the daily
-  // metadata, but they must not steal selection, because re-selecting a late
-  // run is what made every day's selected run fail the start-latency floor.
-  if (previous?.selectedRun !== null && previous?.selectedRun !== undefined && selectedRunStartedInWindow(previous.selectedRun)) {
-    if ((input.archiveSelectionReasons?.length ?? 0) > 0 || (input.artifactKeys?.length ?? 0) > 0) {
-      throw new Error("Safety Score v9 archive evidence requires the attempt to become the day's selected run");
-    }
-    return SafetyScoreV9ShadowDailySchema.parse({
-      schemaVersion: SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION,
-      utcDay: input.utcDay,
-      updatedAtSec: input.updatedAtSec,
-      attemptCounts: {
-        successful: previous.attemptCounts.successful + 1,
-        failed: previous.attemptCounts.failed,
-      },
-      selectedRun: previous.selectedRun,
-      latestError: previous.latestError,
-    });
-  }
   return SafetyScoreV9ShadowDailySchema.parse({
     schemaVersion: SAFETY_SCORE_V9_SHADOW_SCHEMA_VERSION,
     utcDay: input.utcDay,
@@ -1349,8 +1260,8 @@ export function buildSafetyScoreV9ShadowDailySuccess(input: {
       movement: diff.summary,
       qualification: assessSafetyScoreV9ShadowQualification(envelope),
       diffReportDigest: diff.reportDigest,
-      archiveSelectionReasons: sortedUnique(input.archiveSelectionReasons ?? []),
-      artifactKeys: sortedUnique(input.artifactKeys ?? []),
+      archiveSelectionReasons: [],
+      artifactKeys: [],
     },
     latestError: previous?.latestError ?? null,
   });

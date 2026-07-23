@@ -118,6 +118,7 @@
           }
         ],
         "liquidationMechanism": "Indigo liquidations use a two-step freeze and liquidation flow. When an ADA-backed iUSD CDP breaches its branch ratio, the iUSD Stability Pool burns deposited iUSD against the debt and distributes seized ADA collateral to depositors.",
+        "liquidationDelaySec": 0,
         "backstop": "The iUSD Stability Pool is the documented liquidation backstop and is observable through Indigo's public stability-pool indexer. No separate recapitalization layer was established from the reviewed primary sources.",
         "shutdownOrBadDebtBehavior": "The reviewed public documentation does not establish the exact stale-or-missing-price behavior, a global shutdown path, or a residual-debt cure if the iUSD Stability Pool cannot absorb a liquidation.",
         "failureDomainKeys": [
@@ -177,6 +178,7 @@
           }
         ],
         "liquidationMechanism": "Indigo liquidations use a two-step freeze and liquidation flow. When a NIGHT-backed iUSD CDP breaches its branch ratio, the iUSD Stability Pool burns deposited iUSD against the debt and distributes seized NIGHT collateral to depositors.",
+        "liquidationDelaySec": 0,
         "backstop": "The iUSD Stability Pool is the documented liquidation backstop and is observable through Indigo's public stability-pool indexer. No separate recapitalization layer was established from the reviewed primary sources.",
         "shutdownOrBadDebtBehavior": "The reviewed public documentation does not establish the exact stale-or-missing-price behavior, a global shutdown path, or a residual-debt cure if the iUSD Stability Pool cannot absorb a liquidation.",
         "failureDomainKeys": [

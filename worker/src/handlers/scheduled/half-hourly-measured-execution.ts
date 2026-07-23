@@ -11,16 +11,13 @@ import { syncTronDexMeasuredExecution } from "../../cron/measured-execution/tron
 import { throwIfAborted } from "../../lib/abort";
 import type { CronResult } from "../../lib/cron-logger";
 import { toErrorMessage } from "../../lib/error-utils";
+import { tryParseJson } from "../../lib/json-parse";
 import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
 
 function parseMetadata(value: string | undefined): unknown {
   if (!value) return null;
-  try {
-    return JSON.parse(value) as unknown;
-  } catch {
-    return value;
-  }
+  return tryParseJson(value, { onFailure: () => undefined }) ?? value;
 }
 
 async function settleMeasuredExecutionLane(name: string, run: Promise<CronResult>): Promise<CronResult> {
