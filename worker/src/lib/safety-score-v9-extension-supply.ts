@@ -3,6 +3,7 @@ import { resolveChainId } from "@shared/lib/chains";
 import { V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX } from "@shared/lib/safety-score-v9/facts";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
+import { safetyScoreV9ChainRows } from "./safety-score-v9-supply-attribution";
 
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type SupplyReview = NonNullable<ExtensionAsset["supplyReview"]>;
@@ -38,7 +39,7 @@ export function buildSafetyScoreV9SupplyReview(
   assetId: string,
   profile: BridgeRouteRiskProfile | undefined,
 ): SupplyReview | null {
-  const chainRows = fixedInput.chainCirculatingById[assetId] ?? {};
+  const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
   const chains = Object.keys(chainRows).sort(compareText);
   const totalUsd = chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
   if (chains.length === 0 || totalUsd <= 0) return null;

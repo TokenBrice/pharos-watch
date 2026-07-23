@@ -72,6 +72,10 @@ import {
   V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX,
 } from "./safety-score-v9-extension-supply";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
+import {
+  safetyScoreV9ChainRows,
+  safetyScoreV9ChainSupplySourceGenerationId,
+} from "./safety-score-v9-supply-attribution";
 
 export type V9ExtensionRegistryMeta = Pick<
   StablecoinMeta,
@@ -1072,7 +1076,7 @@ function transferMaterialScope(
   assetId: string,
   meta: V9ExtensionRegistryMeta,
 ): SafetyScoreV9TransferMaterialScope {
-  const rows = fixedInput.chainCirculatingById[assetId] ?? {};
+  const rows = safetyScoreV9ChainRows(fixedInput, assetId);
   const totalSupplyUsd = Object.values(rows).reduce((sum, row) => sum + row.current, 0);
   if (totalSupplyUsd <= 0) {
     return {
@@ -1855,10 +1859,14 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     reserves: fixedInput.liveReserveMap,
     provenance: fixedInput.liveReserveProvenanceMap,
   });
-  const chainSupplyGenerationDigest = digest("safety-score-v9.chain-supply.v1", {
-    chainCirculatingById: fixedInput.chainCirculatingById,
-    dexDeploymentSupplyCoverageById: fixedInput.dexDeploymentSupplyCoverageById,
-  });
+  const chainSupplyGenerationId = safetyScoreV9ChainSupplySourceGenerationId(fixedInput);
+  const chainSupplyObservedAtSec = maximumObservedAt(
+    Object.values(fixedInput.safetyScoreV9SupplyAttributionById).map(
+      (attribution) => attribution.observedAtSec,
+    ),
+    fixedInput.updatedAt,
+    clockSec,
+  );
   const pegGenerationDigest = digest("safety-score-v9.peg.v1", {
     pegDataById: fixedInput.pegDataById,
     navPriceById: fixedInput.navPriceById ?? {},
@@ -1882,8 +1890,8 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       maxAgeSec: CRON_INTERVALS["sync-live-reserves"] * 2,
     },
     chainSupply: {
-      generationId: `chain-supply:v1:${chainSupplyGenerationDigest}`,
-      observedAtSec: boundedObservedAt(fixedInput.updatedAt, clockSec),
+      generationId: chainSupplyGenerationId,
+      observedAtSec: chainSupplyObservedAtSec,
       maxAgeSec: CRON_INTERVALS["sync-stablecoins"] * 2,
     },
     peg: {
@@ -1941,7 +1949,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       addDependencyEvidence(meta, reviewEvidence);
       addWrapperCustodyEvidence(meta, reviewEvidence);
       const supplyReview = buildSafetyScoreV9SupplyReview(fixedInput, assetId, meta.bridgeRouteRisk);
-      const deployedChainCount = Object.keys(fixedInput.chainCirculatingById[assetId] ?? {}).length;
+      const deployedChainCount = Object.keys(safetyScoreV9ChainRows(fixedInput, assetId)).length;
       const assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(assetId, metaById);
       const mint = adaptMintReview(meta, reviewEvidence, clockSec);
       const oracle = adaptOracleReview(meta, archetype, reviewEvidence, clockSec);

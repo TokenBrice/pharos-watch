@@ -53,6 +53,16 @@ const NavPriceObservationSchema = z.strictObject({
   confidence: z.enum(["high", "medium", "low", "unknown"]),
 });
 
+const SafetyScoreV9SupplyAttributionSchema = z.strictObject({
+  model: z.literal("canonical-lock-mint-partition-v1"),
+  observedAtSec: z.number().int().nonnegative(),
+  currentSupplyUsdByChain: z
+    .record(z.string().trim().min(1), z.number().finite().positive())
+    .refine((rows) => Object.keys(rows).length >= 2, {
+      message: "V9 lock/mint attribution requires canonical and pooled supply rows",
+    }),
+});
+
 const DexDeploymentSupplyCoverageSchema: z.ZodType<DexDeploymentSupplyCoverage> = z.strictObject({
   totalSupplyUsd: z.number().finite().positive(),
   observedSupplyUsd: z.number().finite().nonnegative(),
@@ -129,6 +139,11 @@ const FixedInputPayloadFields = {
         observedAtSec: z.number().int().nonnegative().nullable(),
       }),
     )
+    .default({}),
+  // V9-only supply attribution remains separate from chainCirculatingById:
+  // the latter is an exact V8 replay input and must match the public snapshot.
+  safetyScoreV9SupplyAttributionById: z
+    .record(z.string(), SafetyScoreV9SupplyAttributionSchema)
     .default({}),
   dexDeploymentSupplyCoverageById: z.record(z.string(), DexDeploymentSupplyCoverageSchema).default({}),
   collateralDriftCoins: z
@@ -459,12 +474,14 @@ export type ReportCardsFixedInputDraft = Omit<
   | "inputMethodologyVersions"
   | "baseInputGenerationId"
   | "aggregateCirculatingById"
+  | "safetyScoreV9SupplyAttributionById"
 > & {
   captureKind: ReportCardsFixedInput["captureKind"];
   activeAssetIds?: string[];
   // Optional so reconstruction and test drafts that carry no aggregate bucket
   // keep compiling; the schema default fills in an empty record.
   aggregateCirculatingById?: ReportCardsFixedInput["aggregateCirculatingById"];
+  safetyScoreV9SupplyAttributionById?: ReportCardsFixedInput["safetyScoreV9SupplyAttributionById"];
 };
 
 export function createReportCardsFixedInput(draft: ReportCardsFixedInputDraft): ReportCardsFixedInput {
@@ -594,6 +611,26 @@ function assertFixedInputConsistency(input: ReportCardsFixedInput): void {
       throw new Error("Exact fixed input producer methodology versions do not match its score-bearing payload rows");
     }
   }
+  for (const [assetId, attribution] of Object.entries(input.safetyScoreV9SupplyAttributionById)) {
+    if (!input.activeAssetIds.includes(assetId)) {
+      throw new Error(`V9 supply attribution targets inactive asset ${assetId}`);
+    }
+    if (attribution.observedAtSec > input.clockSec) {
+      throw new Error(`V9 supply attribution for ${assetId} is later than the scoring clock`);
+    }
+    const aggregate = input.aggregateCirculatingById[assetId];
+    const aggregateSupplyUsd = Object.values(aggregate?.circulating ?? {}).reduce((sum, value) => sum + value, 0);
+    const attributedSupplyUsd = Object.values(attribution.currentSupplyUsdByChain).reduce(
+      (sum, value) => sum + value,
+      0,
+    );
+    const toleranceUsd = Math.max(0.000001, aggregateSupplyUsd * 1e-12);
+    if (aggregateSupplyUsd <= 0 || Math.abs(attributedSupplyUsd - aggregateSupplyUsd) > toleranceUsd) {
+      throw new Error(
+        `V9 supply attribution for ${assetId} does not conserve aggregate circulating USD`,
+      );
+    }
+  }
   const expectedBaseInputGenerationId = deriveReportCardsBaseInputGenerationId(input);
   if (input.baseInputGenerationId !== expectedBaseInputGenerationId) {
     throw new Error(
@@ -711,6 +748,17 @@ export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
     liveReserveMap: sortedRecord(input.liveReserveMap),
     chainCirculatingById: sortedRecord(input.chainCirculatingById),
     aggregateCirculatingById: sortedRecord(input.aggregateCirculatingById),
+    safetyScoreV9SupplyAttributionById: sortedRecord(
+      Object.fromEntries(
+        Object.entries(input.safetyScoreV9SupplyAttributionById).map(([assetId, attribution]) => [
+          assetId,
+          {
+            ...attribution,
+            currentSupplyUsdByChain: sortedRecord(attribution.currentSupplyUsdByChain),
+          },
+        ]),
+      ),
+    ),
     dexDeploymentSupplyCoverageById: sortedRecord(input.dexDeploymentSupplyCoverageById),
     liveReserveProvenanceMap: sortedRecord(input.liveReserveProvenanceMap),
     collateralDriftCoins: [...input.collateralDriftCoins].sort((left, right) => left.id.localeCompare(right.id)),

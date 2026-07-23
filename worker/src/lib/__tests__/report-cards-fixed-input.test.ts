@@ -27,6 +27,7 @@ import {
   parseReportCardsFixedInputCacheValue,
   serializeNormalizedReportCardsReplay,
 } from "../report-cards-fixed-input";
+import { safetyScoreV9ChainSupplySourceGenerationId } from "../safety-score-v9-supply-attribution";
 
 function fixedInput(dexLiqMap: Record<string, DexLiquidityData> = {}) {
   const dexUpdatedAt = Object.values(dexLiqMap)[0]?.updatedAt ?? 1_783_891_100;
@@ -245,6 +246,64 @@ describe("fixed report-card input replay", () => {
     expect(first).toBe(second);
     expect(first).toBe(`${JSON.stringify(normalizeSharedReportCardsReplayPayload(snapshot), null, 2)}\n`);
     expect(JSON.parse(first).cards.length).toBeGreaterThan(300);
+  });
+
+  it("persists V9-only supply attribution without changing V8 replay or base identity", async () => {
+    const aggregateSupplyUsd = 2_480_000_000;
+    const aggregateInput = normalizeFixedInput(
+      withoutBaseInputGenerationId({
+        ...exactFixedInput(),
+        aggregateCirculatingById: {
+          "xaut-tether": {
+            circulating: { peggedGOLD: aggregateSupplyUsd },
+            observedAtSec: 1_783_891_200,
+          },
+        },
+      }),
+    );
+    const attributedInput = normalizeFixedInput({
+      ...aggregateInput,
+      safetyScoreV9SupplyAttributionById: {
+        "xaut-tether": {
+          model: "canonical-lock-mint-partition-v1",
+          observedAtSec: 1_783_891_200,
+          currentSupplyUsdByChain: {
+            "XAUt0 lock-mint pool": 104_122_040.252,
+            Ethereum: aggregateSupplyUsd - 104_122_040.252,
+          },
+        },
+      },
+    });
+
+    expect(attributedInput.baseInputGenerationId).toBe(aggregateInput.baseInputGenerationId);
+    expect(safetyScoreV9ChainSupplySourceGenerationId(attributedInput)).not.toBe(
+      safetyScoreV9ChainSupplySourceGenerationId(aggregateInput),
+    );
+    expect(serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(attributedInput))).toBe(
+      serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(aggregateInput)),
+    );
+    expect(Object.keys(attributedInput.chainCirculatingById["xaut-tether"] ?? {})).toEqual([]);
+
+    const entry = await buildReportCardsFixedInputCacheEntry(attributedInput);
+    const roundTrip = await parseReportCardsFixedInputCacheValue(entry.value);
+    expect(roundTrip.safetyScoreV9SupplyAttributionById).toEqual(
+      attributedInput.safetyScoreV9SupplyAttributionById,
+    );
+
+    expect(() =>
+      normalizeFixedInput({
+        ...attributedInput,
+        safetyScoreV9SupplyAttributionById: {
+          "xaut-tether": {
+            ...attributedInput.safetyScoreV9SupplyAttributionById["xaut-tether"]!,
+            currentSupplyUsdByChain: {
+              Ethereum: 1,
+              "XAUt0 lock-mint pool": 1,
+            },
+          },
+        },
+      }),
+    ).toThrow("does not conserve aggregate circulating USD");
   });
 
   it("normalizes equivalent record insertion orders", () => {

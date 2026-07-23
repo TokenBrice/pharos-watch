@@ -10,13 +10,20 @@ import { buildReportCardsFixedInputCacheEntry } from "../lib/report-cards-fixed-
 import { recordCronFailure } from "../lib/cron-logger";
 import { runSafetyScoreV9ShadowAfterV8Publication } from "../lib/safety-score-v9-shadow-runner";
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
+import type { ChainRpcConfig } from "../lib/chain-registry";
 
-export async function publishReportCardCache(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+export async function publishReportCardCache(
+  db: D1Database,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<CronResult> {
   throwIfAborted(signal);
 
   const snapshot = await buildReportCardsSnapshot(db, {
     publishPegAnalytics: true,
     captureFixedInput: true,
+    ...(chainRpcs ? { chainRpcs } : {}),
+    ...(signal ? { signal } : {}),
   });
 
   throwIfAborted(signal);

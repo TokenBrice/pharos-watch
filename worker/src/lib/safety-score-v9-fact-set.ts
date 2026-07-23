@@ -86,6 +86,11 @@ import {
   type SafetyScoreV9OperationalResilienceOverlay,
 } from "./safety-score-v9-extension-operational-resilience";
 import { hydrateSafetyScoreV9ShockCoverageExtension } from "./safety-score-v9-extension-shock";
+import {
+  safetyScoreV9ChainRows,
+  safetyScoreV9ChainSupplyObservedAtSec,
+  safetyScoreV9ChainSupplySourcePayload,
+} from "./safety-score-v9-supply-attribution";
 
 const CanonicalTextSchema = z.string().trim().min(1);
 const UnixSecondsSchema = z.number().int().nonnegative();
@@ -2761,7 +2766,9 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
 
 function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
   const source = context.extension.sources.chainSupply;
-  const chainRows = context.fixedInput.chainCirculatingById[context.asset.assetId] ?? {};
+  const v9Attribution =
+    context.fixedInput.safetyScoreV9SupplyAttributionById[context.asset.assetId];
+  const chainRows = safetyScoreV9ChainRows(context.fixedInput, context.asset.assetId);
   const chains = Object.keys(chainRows).sort(compareText);
   const circulatingUsd = chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
   // A per-chain map that is present but sums to zero carries no more supply
@@ -2777,10 +2784,17 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
     createV9EvidenceReference(
       {
         evidenceId: `${context.asset.assetId}:chain-supply`,
-        sourceId: "report-cards-chain-circulating",
+        sourceId:
+          v9Attribution === undefined
+            ? "report-cards-chain-circulating"
+            : "safety-score-v9-lock-mint-attribution",
         sourceGenerationId: source.generationId,
         disposition: "observed",
-        observedAtSec: source.observedAtSec,
+        observedAtSec: safetyScoreV9ChainSupplyObservedAtSec(
+          context.fixedInput,
+          context.asset.assetId,
+          source.observedAtSec,
+        ),
         contentSha256: digest("safety-score-v9.chain-supply.v1", chainRows),
         maxAgeSec: source.maxAgeSec,
       },
@@ -3641,10 +3655,10 @@ export function compileSafetyScoreV9FactSetFromNormalizedInput(
       },
       chainSupply: {
         generationId: extension.sources.chainSupply.generationId,
-        payloadSha256: digest("safety-score-v9.chain-supply.v1", {
-          chainCirculatingById: fixedInput.chainCirculatingById,
-          dexDeploymentSupplyCoverageById: fixedInput.dexDeploymentSupplyCoverageById,
-        }),
+        payloadSha256: digest(
+          "safety-score-v9.chain-supply.v1",
+          safetyScoreV9ChainSupplySourcePayload(fixedInput),
+        ),
         observedAtSec: extension.sources.chainSupply.observedAtSec,
       },
       peg: {

@@ -84,7 +84,10 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
 
   await runIfCacheSafe("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
   await runIfCacheSafe("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
-  await runIfCacheSafe("publish-report-card-cache", (signal) => publishReportCardCache(runtime.db, signal));
+  await runIfCacheSafe(
+    "publish-report-card-cache",
+    (signal) => publishReportCardCache(runtime.db, signal, runtime.chainRpcs),
+  );
 
   outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "compute-depeg-resolver", (signal) =>
     computeDepegResolver({

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
+import xautMetaSource from "@shared/data/stablecoins/coins/xaut-tether.json";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9SupplyReview, safetyScoreV9RouteSupplyShare } from "../safety-score-v9-extension-supply";
+import { deriveLockMintSupplyPartition } from "../safety-score-v9-supply-attribution";
 
 function fixedInputStub(chainCirculating: Record<string, { current: number }>): ReportCardsFixedInput {
   return { chainCirculatingById: { alpha: chainCirculating } } as unknown as ReportCardsFixedInput;
@@ -180,5 +182,67 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     );
     const betaUnmatchedDomain = beta.failureDomains.find((domain) => domain.key.includes("unmatched-chain-label-pool"));
     expect(alpha.failureDomains).not.toContainEqual(betaUnmatchedDomain);
+  });
+
+  it("conserves aggregate-only XAUT across free canonical supply and the XAUt0 lock/mint pool", () => {
+    const aggregateSupplyUsd = 2_480_000_000;
+    const partition = deriveLockMintSupplyPartition({
+      aggregateSupplyUsd,
+      canonicalTotalSupplyRaw: 707_747_089_000n,
+      lockboxBalancesRaw: [29_714_544_713n],
+      canonicalChainLabel: "Ethereum",
+      pooledRepresentationLabel: "XAUt0 lock-mint pool",
+    });
+    expect(partition).not.toBeNull();
+    expect(partition!.canonicalSupplyUsd + partition!.pooledRepresentationSupplyUsd).toBe(aggregateSupplyUsd);
+
+    const fixedInput = {
+      chainCirculatingById: {
+        "xaut-tether": {},
+      },
+      aggregateCirculatingById: {
+        "xaut-tether": {
+          circulating: { peggedGOLD: aggregateSupplyUsd },
+          observedAtSec: 1_774_000_000,
+        },
+      },
+      safetyScoreV9SupplyAttributionById: {
+        "xaut-tether": {
+          model: "canonical-lock-mint-partition-v1",
+          observedAtSec: 1_774_000_000,
+          currentSupplyUsdByChain: partition!.currentSupplyUsdByChain,
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+    const review = buildSafetyScoreV9SupplyReview(
+      fixedInput,
+      "xaut-tether",
+      xautMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile,
+    );
+
+    expect(review).not.toBeNull();
+    expect(review!.selectedBridgeRoutes).toHaveLength(2);
+    expect(review!.selectedBridgeRoutes).toContainEqual(
+      expect.objectContaining({
+        deploymentRouteKey: "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+        reviewState: "selected-reviewed",
+        reviewedRouteKind: "native",
+      }),
+    );
+    expect(review!.selectedBridgeRoutes).toContainEqual(
+      expect.objectContaining({
+        deploymentRouteKey: "unmatched-chain-label-pool:xaut-tether",
+        reviewState: "unmatched",
+      }),
+    );
+    expect(review!.selectedRouteSupplyShare).toBeCloseTo(0.95801530635, 10);
+    expect(review!.unknownRouteSupplyShare).toBeCloseTo(0.04198469365, 10);
+    expect(review!.unreviewedRouteSupplyShare).toBe(0);
+    expect(
+      review!.selectedBridgeRoutes.reduce((sum, route) => sum + route.supplyUsd, 0),
+    ).toBe(aggregateSupplyUsd);
+    expect(
+      review!.selectedBridgeRoutes.filter((route) => route.deploymentRouteKey.includes("xaut0-omnichain")),
+    ).toEqual([]);
   });
 });
