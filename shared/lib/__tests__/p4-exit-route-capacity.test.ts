@@ -71,6 +71,34 @@ describe("P4 DEX exit route observations", () => {
     };
   }
 
+  function withObservationHistory(
+    profile: DexMeasuredExecutionPublicProfile,
+    successfulObservationCount: number,
+    conservativeExecutableUsd: number,
+  ): DexMeasuredExecutionPublicProfile {
+    const conservativeCapacityCurve = profile.capacityCurve.map((point) => {
+      const executableUsd = Math.min(point.executableUsd, conservativeExecutableUsd);
+      return {
+        ...point,
+        executableUsd,
+        completionRatio: executableUsd / point.requestedNotionalUsd,
+      };
+    });
+    return {
+      ...profile,
+      observationHistory: {
+        completeProducerCycleCount: successfulObservationCount,
+        successfulObservationCount,
+        consecutiveSuccessCount: successfulObservationCount,
+        observationWindowStartedAt: profile.quotedAt - 1_000,
+        observationWindowEndedAt: profile.quotedAt + 10,
+        latestOperationalFailureAt: null,
+        conservativeStatistic: "pointwise-minimum",
+        conservativeCapacityCurve,
+      },
+    };
+  }
+
   it("routes a retained DL UUID through its independently bound physical CL pool", () => {
     const observedAt = 1_752_560_000;
     const physicalPoolId = "ethereum:0x3333333333333333333333333333333333333333";
@@ -107,8 +135,75 @@ describe("P4 DEX exit route observations", () => {
       observedAt: observedAt - 60,
       freshnessSeconds: 60,
       output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+      confidence: "medium",
     });
     expect(result.observations[0]?.routeId).toContain("3333333333333333333333333333333333333333");
+  });
+
+  it("uses the pointwise-minimum curve and requires two successful cycles for high confidence", () => {
+    const observedAt = 1_752_560_000;
+    const physicalPoolId = "ethereum:0x3333333333333333333333333333333333333333";
+    const profile = withObservationHistory(measuredProfile(observedAt - 60), 2, 750_000);
+    profile.observationHistory = {
+      ...profile.observationHistory!,
+      completeProducerCycleCount: 3,
+      consecutiveSuccessCount: 0,
+      latestOperationalFailureAt: profile.observationHistory!.observationWindowEndedAt,
+    };
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt,
+      retainedPools: [
+        {
+          poolId: "defillama-yields-uuid",
+          project: "uniswap-v3",
+          chain: "ethereum",
+          tvlUsd: 2_000_000,
+          symbol: "USDC-USDT",
+          poolType: "uniswap-v3",
+          source: "dl",
+          extra: {
+            measuredExecution: profile,
+            measuredExecutionPhysicalPoolId: physicalPoolId,
+          },
+        },
+      ],
+    });
+
+    expect(result.observations[0]).toMatchObject({
+      routeFamily: "dex-amm",
+      confidence: "high",
+      executableUsd: 750_000,
+      observationHistory: {
+        completeProducerCycleCount: 3,
+        successfulObservationCount: 2,
+        consecutiveSuccessCount: 0,
+        conservativeStatistic: "pointwise-minimum",
+      },
+    });
+    expect(result.observations[0]?.capacityCurve).toEqual(profile.observationHistory?.conservativeCapacityCurve);
+
+    const immature = withObservationHistory(measuredProfile(observedAt - 60), 1, 750_000);
+    const immatureResult = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt,
+      retainedPools: [
+        {
+          poolId: "defillama-yields-uuid",
+          project: "uniswap-v3",
+          chain: "ethereum",
+          tvlUsd: 2_000_000,
+          symbol: "USDC-USDT",
+          poolType: "uniswap-v3",
+          source: "dl",
+          extra: {
+            measuredExecution: immature,
+            measuredExecutionPhysicalPoolId: physicalPoolId,
+          },
+        },
+      ],
+    });
+    expect(immatureResult.observations[0]?.confidence).toBe("medium");
   });
 
   it("keeps stale, conflicting, and marginal-failed measured profiles in the incomplete denominator", () => {

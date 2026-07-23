@@ -21,6 +21,7 @@ import {
 import {
   DEX_MEASURED_FRESHNESS_MAX_SEC,
   DexMeasuredExecutionPublicProfileSchema,
+  isDexMeasuredExecutionObservationHistoryMature,
   type DexMeasuredExecutionPublicProfile,
 } from "../types/measured-execution";
 
@@ -527,6 +528,26 @@ function validateMeasuredExecutionProfile(
     issues.push("marginal-failure-with-positive-capacity");
   }
   issues.push(...validateExitRouteCapacityCurve(profile.capacityCurve));
+  if (profile.observationHistory) {
+    const history = profile.observationHistory;
+    const currentByPoint = new Map(
+      profile.capacityCurve.map((point) => [`${point.requestedNotionalUsd}:${point.maxCostBps}`, point] as const),
+    );
+    if (history.observationWindowEndedAt < profile.quotedAt) issues.push("history-before-selected-quote");
+    if (history.observationWindowEndedAt > context.observedAt + 60) issues.push("future-history");
+    for (const point of history.conservativeCapacityCurve) {
+      const current = currentByPoint.get(`${point.requestedNotionalUsd}:${point.maxCostBps}`);
+      if (!current || point.executableUsd > current.executableUsd + 0.01) {
+        issues.push("invalid-conservative-history");
+        break;
+      }
+    }
+    issues.push(
+      ...validateExitRouteCapacityCurve(history.conservativeCapacityCurve).map(
+        (issue) => `invalid-conservative-history:${issue}`,
+      ),
+    );
+  }
   return [...new Set(issues)];
 }
 
@@ -873,7 +894,9 @@ export function buildP4DexExitRouteObservations(params: {
         }
         continue;
       }
-      const referencePoint = measuredProfile.capacityCurve.find(
+      const capacityCurve =
+        measuredProfile.observationHistory?.conservativeCapacityCurve ?? measuredProfile.capacityCurve;
+      const referencePoint = capacityCurve.find(
         (point) => point.requestedNotionalUsd === REFERENCE_NOTIONAL_USD && point.maxCostBps === REFERENCE_COST_BPS,
       );
       if (!referencePoint) {
@@ -884,6 +907,18 @@ export function buildP4DexExitRouteObservations(params: {
       const output = outputFromAmmToken(pool.chain, measuredProfile.tokenOut);
       const outputIdentity = canonicalExitRouteAssetKey(pool.chain, measuredProfile.tokenOut.address);
       const physicalPool = { ...pool, poolId: measuredProfile.poolId };
+      const observationHistory = measuredProfile.observationHistory;
+      // The producer already bounds every included cycle to its latest complete
+      // publication. At consumption time, keep that summary only while its end
+      // and the separately validated selected quote are both fresh.
+      const historyIsFresh =
+        observationHistory != null &&
+        params.observedAt - observationHistory.observationWindowEndedAt <= DEX_MEASURED_FRESHNESS_MAX_SEC &&
+        observationHistory.observationWindowEndedAt <= params.observedAt + 60;
+      const confidence =
+        historyIsFresh && isDexMeasuredExecutionObservationHistoryMature(observationHistory)
+          ? capability.confidence
+          : "medium";
       observations.push({
         routeId: buildDexRouteId([
           normalizedKey(params.stablecoinId),
@@ -905,12 +940,13 @@ export function buildP4DexExitRouteObservations(params: {
         completionRatio: referencePoint.completionRatio,
         output,
         evidenceKind: capability.outputEvidenceKind,
-        confidence: capability.confidence,
+        confidence,
         scoreEligible: true,
         observedAt: measuredProfile.quotedAt,
         freshnessSeconds: Math.max(0, params.observedAt - measuredProfile.quotedAt),
         commonModeKeys: commonModeKeys(physicalPool, output),
-        capacityCurve: measuredProfile.capacityCurve,
+        capacityCurve,
+        ...(observationHistory ? { observationHistory } : {}),
       });
       evidenceCounts[capability.outputEvidenceKind] = (evidenceCounts[capability.outputEvidenceKind] ?? 0) + 1;
       scoreEligiblePoolCount++;

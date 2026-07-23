@@ -164,10 +164,24 @@ export function resolveMeasuredExecutionCronStatus(input: {
   return input.failedCount > 0 || input.cursorWriteStatus === "write-failed" ? "degraded" : "ok";
 }
 
+export function hasCompleteDexMeasuredQuoteProgress(input: {
+  target: DexMeasuredExecutionTarget;
+  points: readonly Pick<DexMeasuredRawQuotePoint, "inputUsd">[];
+  stopped: boolean;
+}): boolean {
+  if (input.points.length === 0) return false;
+  if (input.stopped) return true;
+  return getDexMeasuredExecutionProbeNotionals(input.target.retainedTvlUsd).every((notional) =>
+    input.points.some((point) => Math.abs(point.inputUsd - notional) <= 0.02),
+  );
+}
+
 function markBudgetStop(states: readonly TargetQuoteState[], reason: string | null): void {
   if (!reason) return;
   for (const state of states) {
-    if (!state.failedReason) state.failedReason = reason;
+    if (!state.failedReason && !hasCompleteDexMeasuredQuoteProgress(state)) {
+      state.failedReason = reason;
+    }
   }
 }
 

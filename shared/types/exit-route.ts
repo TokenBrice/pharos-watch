@@ -95,6 +95,54 @@ export const ExitRouteCapacityPointSchema = z.object({
 });
 export type ExitRouteCapacityPoint = z.infer<typeof ExitRouteCapacityPointSchema>;
 
+export const ExitRouteObservationHistorySchema = z
+  .object({
+    completeProducerCycleCount: z.number().int().positive(),
+    successfulObservationCount: z.number().int().positive(),
+    consecutiveSuccessCount: z.number().int().nonnegative(),
+    observationWindowStartedAt: z.number().int().nonnegative(),
+    observationWindowEndedAt: z.number().int().nonnegative(),
+    latestOperationalFailureAt: z.number().int().nonnegative().nullable(),
+    conservativeStatistic: z.literal("pointwise-minimum"),
+    conservativeCapacityCurve: z.array(ExitRouteCapacityPointSchema).min(1).max(16),
+  })
+  .strict()
+  .superRefine((history, ctx) => {
+    if (history.successfulObservationCount > history.completeProducerCycleCount) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["successfulObservationCount"],
+        message: "Successful observations cannot exceed complete producer cycles",
+      });
+    }
+    if (history.consecutiveSuccessCount > history.successfulObservationCount) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["consecutiveSuccessCount"],
+        message: "Consecutive successes cannot exceed successful observations",
+      });
+    }
+    if (history.observationWindowEndedAt < history.observationWindowStartedAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["observationWindowEndedAt"],
+        message: "Observation window cannot end before it starts",
+      });
+    }
+    if (
+      history.latestOperationalFailureAt !== null &&
+      (history.latestOperationalFailureAt < history.observationWindowStartedAt ||
+        history.latestOperationalFailureAt > history.observationWindowEndedAt)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["latestOperationalFailureAt"],
+        message: "Operational failure must fall inside the observation window",
+      });
+    }
+  });
+export type ExitRouteObservationHistory = z.infer<typeof ExitRouteObservationHistorySchema>;
+
 export const MAX_EXIT_ROUTE_COMMON_MODE_KEYS = 16;
 export const MAX_DEX_EXIT_ROUTE_OBSERVATIONS = 10;
 
@@ -117,6 +165,7 @@ const ExitRouteObservationBaseSchema = z.object({
   freshnessSeconds: z.number().int().nonnegative(),
   commonModeKeys: z.array(z.string().min(1)).max(MAX_EXIT_ROUTE_COMMON_MODE_KEYS),
   capacityCurve: z.array(ExitRouteCapacityPointSchema).min(1).max(16).optional(),
+  observationHistory: ExitRouteObservationHistorySchema.optional(),
 });
 
 const DEX_EXIT_ROUTE_FAMILIES = new Set<ExitRouteFamily>(["dex-amm", "dex-orderbook"]);
@@ -134,6 +183,46 @@ function enforceDexExitRouteLane(observation: z.infer<typeof ExitRouteObservatio
   }
   if (!DEX_EXIT_EVIDENCE_KINDS.has(observation.evidenceKind)) {
     ctx.addIssue({ code: "custom", path: ["evidenceKind"], message: "DEX observations require DEX evidence" });
+  }
+  if (observation.observationHistory && observation.evidenceKind !== "measured-executable-depth") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["observationHistory"],
+      message: "Producer-cycle history requires measured executable-depth evidence",
+    });
+  }
+  if (observation.observationHistory) {
+    const curve = observation.capacityCurve;
+    const historyCurve = observation.observationHistory.conservativeCapacityCurve;
+    const curveByPoint = new Map(
+      (curve ?? []).map((point) => [`${point.requestedNotionalUsd}:${point.maxCostBps}`, point] as const),
+    );
+    const historyMatchesScoredCurve =
+      curve?.length === historyCurve.length &&
+      historyCurve.every((point) => {
+        const scored = curveByPoint.get(`${point.requestedNotionalUsd}:${point.maxCostBps}`);
+        return (
+          scored?.executableUsd === point.executableUsd &&
+          scored.completionRatio === point.completionRatio
+        );
+      });
+    if (!historyMatchesScoredCurve) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["capacityCurve"],
+        message: "Measured route capacity must use the conservative history curve",
+      });
+    }
+    if (
+      observation.observationHistory.observationWindowEndedAt >
+      observation.observedAt + observation.freshnessSeconds + 60
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["observationHistory", "observationWindowEndedAt"],
+        message: "Producer-cycle history cannot be newer than the observation clock",
+      });
+    }
   }
 }
 
@@ -153,6 +242,13 @@ function enforceRedemptionExitRouteLane(
       code: "custom",
       path: ["evidenceKind"],
       message: "redemption observations require redemption evidence",
+    });
+  }
+  if (observation.observationHistory) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["observationHistory"],
+      message: "Producer-cycle history is only supported for measured DEX evidence",
     });
   }
   if (observation.routeFamily === "eventual-redemption" && observation.scoreEligible) {

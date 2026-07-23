@@ -23,6 +23,7 @@ import { logWorkerEvent } from "../../lib/structured-log";
 export interface DexMeasuredExecutionJoinDiagnostics {
   targetCount: number;
   measuredCount: number;
+  lastKnownGoodCount: number;
   gatedCount: number;
   failuresByReason: Record<string, number>;
   quoteGenerationId: string | null;
@@ -108,6 +109,7 @@ export function joinDexMeasuredExecutionEvidence(input: {
   const diagnostics: DexMeasuredExecutionJoinDiagnostics = {
     targetCount: 0,
     measuredCount: 0,
+    lastKnownGoodCount: 0,
     gatedCount: 0,
     failuresByReason: {},
     quoteGenerationId: input.evidence?.quoteGenerationId ?? null,
@@ -150,8 +152,8 @@ export function joinDexMeasuredExecutionEvidence(input: {
         profile: quote.profile,
         quotedTarget: quote.quotedTarget,
         currentTarget: target,
-        expectedTargetGenerationId: input.evidence.targetGenerationId,
-        expectedQuoteGenerationId: input.evidence.quoteGenerationId,
+        expectedTargetGenerationId: quote.targetGenerationId,
+        expectedQuoteGenerationId: quote.quoteGenerationId,
         nowSec: input.nowSec,
       });
       const adapterIssues = deploymentIssues(quote.profile);
@@ -161,7 +163,13 @@ export function joinDexMeasuredExecutionEvidence(input: {
         fail(mapValidationGate(issues), issues.join(","));
         continue;
       }
-      pool.extra.measuredExecution = toDexMeasuredExecutionPublicProfile(quote.profile);
+      pool.extra.measuredExecution = toDexMeasuredExecutionPublicProfile(quote.profile, {
+        ...(quote.observationHistory ? { observationHistory: quote.observationHistory } : {}),
+      });
+      const lastKnownGoodDetail =
+        quote.resolution === "last-known-good"
+          ? `last-known-good-after:${quote.latestFailureReason ?? "quote-missing"}`
+          : undefined;
       const curvePolicy =
         quote.profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID
           ? getCurveCryptoSwapShadowPolicy(quote.profile.chain, quote.profile.executionEndpoint.address)
@@ -176,9 +184,10 @@ export function joinDexMeasuredExecutionEvidence(input: {
         pool.extra.measuredExecutionDiagnostic = {
           adapterProfileId: target.adapterProfileId,
           targetId: target.targetId,
-          detail: "shadow-score-ineligible",
+          detail: ["shadow-score-ineligible", lastKnownGoodDetail].filter(Boolean).join(","),
         };
         diagnostics.measuredCount++;
+        if (quote.resolution === "last-known-good") diagnostics.lastKnownGoodCount++;
         diagnostics.gatedCount++;
         increment(diagnostics.failuresByReason, `${target.adapterProfileId}:activation-pending`);
         continue;
@@ -189,8 +198,10 @@ export function joinDexMeasuredExecutionEvidence(input: {
       pool.extra.measuredExecutionDiagnostic = {
         adapterProfileId: target.adapterProfileId,
         targetId: target.targetId,
+        ...(lastKnownGoodDetail ? { detail: lastKnownGoodDetail } : {}),
       };
       diagnostics.measuredCount++;
+      if (quote.resolution === "last-known-good") diagnostics.lastKnownGoodCount++;
     }
   }
   return diagnostics;
