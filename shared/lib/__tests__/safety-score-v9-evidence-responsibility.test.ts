@@ -10,6 +10,7 @@ import {
   V9ScoringInputSchema,
   type V9StructuralSignal,
 } from "../../types/safety-score-v9";
+import type { V9PillarAdverseAttribution } from "../safety-score-v9/formula";
 
 const DIGEST = "a".repeat(64);
 const BUILD_DIGEST = "b".repeat(64);
@@ -439,6 +440,32 @@ describe("Safety Score v9 evidence responsibility", () => {
       expect(trace.adverseAttribution.length).toBeGreaterThan(0);
       expect(trace.adverseAttribution.every((fact) => fact.responsibility === "measured-adverse")).toBe(true);
     }
+  });
+
+  it("keeps a low measured pillar score rated when its causal attribution is explicit", () => {
+    const measuredExitCapacity = {
+      source: "pillar-score",
+      path: "pillar:exit:route:dex:fixture:capacity",
+      message: "The measured primary exit route had immaterial executable capacity.",
+      responsibility: "measured-adverse",
+    } satisfies V9PillarAdverseAttribution;
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(55),
+          exit: pillar(0, { adverseAttribution: [measuredExitCapacity] }),
+          control: pillar(75),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("F");
+    expect(trace.finalScore).not.toBeNull();
+    expect(trace.nrReasons).not.toContainEqual(
+      expect.objectContaining({ field: "adverseAttribution" }),
+    );
+    expect(trace.adverseAttribution).toEqual([measuredExitCapacity]);
   });
 
   it.each([

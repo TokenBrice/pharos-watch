@@ -1191,6 +1191,57 @@ describe("Safety Score v9 normalized fact protocol", () => {
     expect(diagnosticEvaluated.trace.caps.map((cap) => cap.kind)).not.toContain("evidence:limited");
   });
 
+  it("attributes an immaterial score-bearing lower-bound exit instead of withholding its F score", () => {
+    const input = coreFixture();
+    const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
+    const beta = input.assets.find((asset) => asset.assetId === "beta")! as unknown as V9AssetFactsV2;
+    const routeEvidence = alpha.evidence.find((evidence) => evidence.evidenceId === "evidence:route")!;
+    const measuredRoute = structuredClone(
+      alpha.exitRoutes.find((route) => route.routeId === "amm-main")!,
+    );
+    measuredRoute.coverageClass = "exact-lower-bound";
+    measuredRoute.capacityCurve = measuredRoute.capacityCurve.map((point) => ({
+      ...point,
+      executableUsd: 1,
+      completionRatio: 1 / point.requestedNotionalUsd,
+      executionCostBps: point.maxCostBps,
+    }));
+    beta.evidence.push(routeEvidence);
+    beta.exitStatus = knownStatus(routeEvidence.evidenceId, "exit.portfolio.reviewed");
+    beta.exitRoutes = [measuredRoute];
+
+    const evaluated = evaluateV9FactSet(
+      compileV9FactSetV2(input),
+      V9_CANDIDATE_POLICY_V1,
+    ).assets.find((asset) => asset.assetId === "beta")!;
+    const primaryRoute = evaluated.exit.routes.find(
+      (route) => route.routeKey === evaluated.exit.primaryRouteKey,
+    )!;
+
+    expect(primaryRoute.capsApplied).toContain("immaterial-executable-capacity");
+    expect(evaluated.scoreInput.pillars.exit).toMatchObject({
+      score: 0,
+      adverseAttribution: [
+        {
+          source: "pillar-score",
+          path: `pillar:exit:route:${measuredRoute.routeKey}:capacity`,
+          responsibility: "measured-adverse",
+        },
+      ],
+    });
+    expect(evaluated.trace.finalGrade).toBe("F");
+    expect(evaluated.trace.finalScore).not.toBeNull();
+    expect(evaluated.trace.nrReasons).not.toContainEqual(
+      expect.objectContaining({ field: "adverseAttribution" }),
+    );
+    expect(evaluated.trace.adverseAttribution).toContainEqual(
+      expect.objectContaining({
+        source: "pillar-score",
+        path: `pillar:exit:route:${measuredRoute.routeKey}:capacity`,
+      }),
+    );
+  });
+
   it("keeps ceiling reasons limited and NR conditions insufficient", () => {
     const ceilingInput = coreFixture();
     const ceilingAsset = ceilingInput.assets[0]! as unknown as V9AssetFactsV2;

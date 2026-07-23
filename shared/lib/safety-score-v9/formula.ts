@@ -54,11 +54,15 @@ export interface V9CapTrace extends V9StructuralCap {
 }
 
 export interface V9AdverseAttribution {
-  source: "active-depeg" | "parent-score" | "peg-performance" | "reason" | "structural-signal";
+  source: "active-depeg" | "parent-score" | "peg-performance" | "pillar-score" | "reason" | "structural-signal";
   path: string;
   message: string;
   responsibility: "measured-adverse";
 }
+
+export type V9PillarAdverseAttribution = V9AdverseAttribution & {
+  source: "pillar-score";
+};
 
 export type V9ParentAdverseAttribution = V9AdverseAttribution & {
   source: "parent-score";
@@ -596,6 +600,7 @@ function scoreV9InputWithCaps(
   limitedPillarCount = 0,
   backingLimited = false,
   propagatedParentAdverseAttribution: readonly V9ParentAdverseAttribution[] = [],
+  measuredPillarAdverseAttribution: readonly V9PillarAdverseAttribution[] = [],
 ): V9ScoreTrace {
   assertV9ValidatedPolicyEnvelope(policy);
   const input = V9ScoringInputSchema.parse(rawInput);
@@ -893,6 +898,7 @@ function scoreV9InputWithCaps(
   }
 
   const adverseAttribution = canonicalAdverseAttribution([
+    ...measuredPillarAdverseAttribution,
     ...unresolvedFacts.flatMap<V9AdverseAttribution>((fact) =>
       unresolvedFactAffectedScore(fact, bindingCandidate, policy)
         ? [{
@@ -1026,6 +1032,7 @@ export function scoreV9Input(
   limitedPillarCount = 0,
   backingLimited = false,
   propagatedParentAdverseAttribution: readonly V9ParentAdverseAttribution[] = [],
+  measuredPillarAdverseAttribution: readonly V9PillarAdverseAttribution[] = [],
 ): V9ScoreTrace {
   return scoreV9InputWithCaps(
     rawInput,
@@ -1035,6 +1042,7 @@ export function scoreV9Input(
     limitedPillarCount,
     backingLimited,
     propagatedParentAdverseAttribution,
+    measuredPillarAdverseAttribution,
   );
 }
 

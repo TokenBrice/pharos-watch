@@ -12,6 +12,7 @@ import {
   type V9AdverseAttribution,
   type V9NRReason,
   type V9ParentAdverseAttribution,
+  type V9PillarAdverseAttribution,
   type V9ScoreTrace,
 } from "./formula";
 import type { V9OperationalResilienceResult } from "./operational-resilience";
@@ -30,6 +31,7 @@ export interface V9PillarEvaluation {
   evidenceLevel: V9EvidenceLevel;
   reasons: readonly V9PillarReason[];
   structuralSignals: readonly V9StructuralSignal[];
+  adverseAttribution?: readonly V9PillarAdverseAttribution[];
 }
 
 export interface V9ProductionScoreIdentity {
@@ -220,6 +222,9 @@ export function scoreV9EvaluatedAsset(
   // and control are limited, so it must be scored, never withheld to NR.
   const backingLimited = input.pillars.backing.evidenceLevel === "limited";
   const normalizedScoreBearingReasons = normalizeReasonList(scoreBearingReasons(input), envelope);
+  const measuredPillarAdverseAttribution = PILLAR_KEYS.flatMap(
+    (pillar) => input.pillars[pillar].adverseAttribution ?? [],
+  );
   const trace = scoreV9Input(
     {
       assetId: input.assetId,
@@ -243,6 +248,7 @@ export function scoreV9EvaluatedAsset(
     limitedPillarCount,
     backingLimited,
     input.parent.propagatedAdverseAttribution ?? [],
+    measuredPillarAdverseAttribution,
   );
   return {
     ...trace,

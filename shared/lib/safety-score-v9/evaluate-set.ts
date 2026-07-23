@@ -50,7 +50,11 @@ import {
   type V9ExitStressRequest,
 } from "./exit";
 import { isV9UncanonicalizedChainPoolRoute, readCompiledV9FactSetForEvaluation } from "./facts";
-import { decimalSnap, hasV9PreExitDangerSignal } from "./formula";
+import {
+  decimalSnap,
+  hasV9PreExitDangerSignal,
+  type V9PillarAdverseAttribution,
+} from "./formula";
 import {
   evaluateV9OperationalResilience,
   type V9OperationalResilienceBlockers,
@@ -404,6 +408,33 @@ function exitPillar(
     result.primaryRouteKey === null
       ? null
       : (asset.exitRoutes.find((route) => route.routeKey === result.primaryRouteKey) ?? null);
+  const primaryTrace =
+    result.primaryRouteKey === null
+      ? null
+      : (result.routes.find((route) => route.routeKey === result.primaryRouteKey) ?? null);
+  const capacityFloor = primaryTrace?.capsApplied.find(
+    (cap) => cap === "zero-executable-capacity" || cap === "immaterial-executable-capacity",
+  );
+  const capacityAttribution: readonly V9PillarAdverseAttribution[] =
+    primary !== null &&
+    primaryTrace?.included === true &&
+    primaryTrace.capacityPoint !== null &&
+    primary.status.observationState === "known" &&
+    primary.scoreEligible &&
+    primary.lane === "dex" &&
+    primary.coverageClass !== "diagnostic" &&
+    envelope.policy.semantic.exit.scoreableEvidenceKinds.dex.includes(primary.evidenceKind) &&
+    capacityFloor !== undefined
+      ? [{
+          source: "pillar-score",
+          path: `pillar:exit:route:${primary.routeKey}:capacity`,
+          message:
+            capacityFloor === "zero-executable-capacity"
+              ? `The score-bearing ${primary.coverageClass} measurement for primary exit route ${primary.routeKey} had zero executable capacity for the ${primaryTrace.capacityPoint.requestedNotionalUsd} USD stress request at ${primaryTrace.capacityPoint.maxCostBps} bps.`
+              : `The score-bearing ${primary.coverageClass} measurement for primary exit route ${primary.routeKey} had ${primaryTrace.capacityPoint.executableUsd} USD of executable capacity for the ${primaryTrace.capacityPoint.requestedNotionalUsd} USD stress request at ${primaryTrace.capacityPoint.maxCostBps} bps, below the policy-derived material-capacity floor.`,
+          responsibility: "measured-adverse",
+        }]
+      : [];
   const primaryStrong =
     primary !== null &&
     primary.status.observationState === "known" &&
@@ -441,6 +472,7 @@ function exitPillar(
       }),
     ),
     structuralSignals: [],
+    adverseAttribution: capacityAttribution,
   };
 }
 
