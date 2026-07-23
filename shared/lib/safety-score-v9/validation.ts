@@ -47,6 +47,25 @@ export function verifyV9ReleaseCandidateSealDigest(seal: V9ReleaseCandidateSeal)
   return parsed.sealDigest === computeV9ReleaseCandidateSealDigest(sealPayload(parsed));
 }
 
+function computeV9HistoricalHoldoutValidationReportDigest(
+  report: Omit<V9HistoricalHoldoutValidationReport, "reportDigest">,
+): string {
+  return sha256Hex(
+    stableJsonStringifyV1({
+      domain: V9_HOLDOUT_VALIDATION_REPORT_DIGEST_DOMAIN,
+      report,
+    }),
+  );
+}
+
+export function verifyV9HistoricalHoldoutValidationReportDigest(
+  report: V9HistoricalHoldoutValidationReport,
+): boolean {
+  const parsed = V9HistoricalHoldoutValidationReportSchema.parse(report);
+  const { reportDigest, ...payload } = parsed;
+  return reportDigest === computeV9HistoricalHoldoutValidationReportDigest(payload);
+}
+
 /** Commit to the exact reviewed outcomes and scorer results, independent of input array order. */
 export function computeV9HoldoutOutcomeSetDigest(cases: readonly V9HoldoutCaseEvaluation[]): string {
   const payload = V9HoldoutOutcomeSetCommitmentPayloadSchema.parse({
@@ -320,8 +339,6 @@ export function evaluateV9HistoricalHoldout(
     },
     noGoReasons: orderedNoGoReasons,
   };
-  const reportDigest = sha256Hex(
-    stableJsonStringifyV1({ domain: V9_HOLDOUT_VALIDATION_REPORT_DIGEST_DOMAIN, report: reportWithoutDigest }),
-  );
+  const reportDigest = computeV9HistoricalHoldoutValidationReportDigest(reportWithoutDigest);
   return V9HistoricalHoldoutValidationReportSchema.parse({ ...reportWithoutDigest, reportDigest });
 }

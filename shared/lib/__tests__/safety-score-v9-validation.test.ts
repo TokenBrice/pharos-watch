@@ -4,6 +4,7 @@ import {
   computeV9HoldoutOutcomeSetDigest,
   createV9ReleaseCandidateSeal,
   evaluateV9HistoricalHoldout,
+  verifyV9HistoricalHoldoutValidationReportDigest,
   verifyV9ReleaseCandidateSealDigest,
 } from "../safety-score-v9/validation";
 import {
@@ -199,6 +200,11 @@ describe("Safety Score v9 independent holdout validation", () => {
     expect(report.rateability.adverse.rateabilityBps).toBe(10_000);
     expect(report.separation.medianGap).toBeGreaterThanOrEqual(15);
     expect(report.matchedPairs).toMatchObject({ registered: 8, passing: 8, orderingBps: 10_000 });
+    expect(verifyV9HistoricalHoldoutValidationReportDigest(report)).toBe(true);
+
+    const tampered = clone(report);
+    tampered.separation.medianGap = tampered.separation.medianGap! + 1;
+    expect(verifyV9HistoricalHoldoutValidationReportDigest(tampered)).toBe(false);
   });
 
   it("commits exact outcome, score, and result payloads independent of case order", () => {
