@@ -293,6 +293,50 @@ describe("CronsSection", () => {
     expect(screen.getAllByTitle(/2582\.4s \(2582400ms\)/).length).toBeGreaterThan(0);
   });
 
+  it("distinguishes an abandoned execution from downstream jobs that never started", () => {
+    const abandonedRun = {
+      startedAt: 1_699_999_000,
+      durationMs: 2_580_000,
+      status: "error" as const,
+      metadata: {
+        reason: "stale-slot-reconciled",
+        progressUpdatedAt: 1_699_999_059,
+        reconciledAt: 1_700_001_580,
+      },
+    };
+    const notStartedRun = {
+      startedAt: 1_700_001_580,
+      durationMs: 0,
+      status: "error" as const,
+      metadata: {
+        reason: "stale-slot-reconciled",
+        childDisposition: "not_started",
+        reconciledAt: 1_700_001_580,
+      },
+    };
+    renderCrons({
+      groups: [
+        makeGroup([
+          [
+            "sync-live-reserves",
+            makeCronStatus({ healthy: false, lastRun: abandonedRun, recentRuns: [abandonedRun] }),
+          ],
+          [
+            "sync-kinesis-supply",
+            makeCronStatus({ healthy: false, lastRun: notStartedRun, recentRuns: [notStartedRun] }),
+          ],
+        ]),
+      ],
+    });
+
+    expect(screen.getAllByText("Abandoned").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Not started: upstream abandoned").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("59s").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("N/A").length).toBeGreaterThan(0);
+    fireEvent.click(within(screen.getByTestId("cron-row-sync-live-reserves")).getByRole("button"));
+    expect(screen.getAllByText("Last heartbeat after 59s; reconciled 42m 1s later.").length).toBeGreaterThan(0);
+  });
+
   it("surfaces running lease, stale artifacts, orphaned progress, and latest attempt evidence", () => {
     const cron = makeCronStatus({
       healthy: false,
