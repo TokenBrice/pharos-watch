@@ -5,7 +5,7 @@
       "name": "Physical silver reserves",
       "pct": 100,
       "risk": "very-low",
-      "assetClass": "other",
+      "assetClass": "commodity-allocated",
       "issuerOrObligor": "Kinesis Monetary System and Allocated Bullion Exchange",
       "riskFactors": [
         "market",

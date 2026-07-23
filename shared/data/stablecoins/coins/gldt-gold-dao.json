@@ -83,7 +83,7 @@
       "name": "Locked GLD NFTs representing physical gold bars in Swiss vaults",
       "pct": 100,
       "risk": "low",
-      "assetClass": "other",
+      "assetClass": "commodity-allocated",
       "issuerOrObligor": "Gold DAO GLD NFT swap canister over physical gold bars held in Swiss vaults",
       "riskFactors": [
         "custody",

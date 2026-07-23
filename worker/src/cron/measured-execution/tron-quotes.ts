@@ -8,7 +8,7 @@ import {
   type TronMeasuredExecutionTarget,
 } from "@shared/types/tron-measured-execution";
 import { keccak256 } from "viem/utils";
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { tronBase58ToHex, tronHexAddressToBase58 } from "../../lib/tron-address";
 import { SUNSWAP_V2_ROUTER_QUOTE_URL } from "./tron-registry";
@@ -16,6 +16,7 @@ import { SUNSWAP_V2_ROUTER_QUOTE_URL } from "./tron-registry";
 const TRONGRID_JSON_RPC = "https://api.trongrid.io/jsonrpc";
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_RESPONSE_CHARS = 2_000_000;
+const SUN_ROUTER_REQUEST_SPACING_MS = 1_000;
 const GET_PAIR_SELECTOR = "0xe6a43905";
 const TOKEN0_SELECTOR = "0x0dfe1681";
 const TOKEN1_SELECTOR = "0xd21220a7";
@@ -280,6 +281,7 @@ export async function quoteTronMeasuredTarget(input: {
   target: TronMeasuredExecutionTarget;
   inputUsd: number;
   trongridApiKey?: string | null;
+  routerRequestSpacingMs?: number;
   signal?: AbortSignal;
   fetchImpl?: FetchLike;
 }): Promise<TronMeasuredExecutionQuotePointProof> {
@@ -307,6 +309,7 @@ export async function quoteTronMeasuredTarget(input: {
   url.searchParams.set("typeList", "SUNSWAP_V2");
   let body: unknown;
   try {
+    await sleepWithSignal(input.routerRequestSpacingMs ?? SUN_ROUTER_REQUEST_SPACING_MS, input.signal);
     body = await fetchBoundedJson(url.toString(), {}, input.signal, fetchImpl);
   } catch (error) {
     rethrowIfAborted(error, input.signal);

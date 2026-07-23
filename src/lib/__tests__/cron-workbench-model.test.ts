@@ -9,6 +9,7 @@ import {
   formatCronAttemptStatusClass,
   formatCronDuration,
   formatCronRunStatus,
+  formatCronRunTiming,
   type CronWorkbenchFilters,
   type CronWorkbenchGroupInput,
 } from "@/lib/cron-workbench-model";
@@ -232,6 +233,44 @@ describe("cron workbench model", () => {
     });
     expect(formatCronDuration(750)).toEqual({ label: "750ms", exactLabel: "0.75s (750ms)" });
     expect(formatCronDuration(61_000).label).toBe("1m 1s");
+  });
+
+  it("separates stale-slot runtime from reconciliation delay and labels downstream jobs not started", () => {
+    const abandonedRun = {
+      startedAt: 1_000,
+      durationMs: 2_580_000,
+      status: "error" as const,
+      metadata: {
+        reason: "stale-slot-reconciled",
+        progressUpdatedAt: 1_059,
+        reconciledAt: 3_580,
+      },
+    };
+    expect(formatCronRunStatus(abandonedRun.status, abandonedRun.metadata)).toBe("Abandoned");
+    expect(formatCronRunTiming(abandonedRun)).toEqual({
+      duration: { label: "59s", exactLabel: "59s (59000ms)" },
+      unavailableLabel: null,
+      note: "Last heartbeat after 59s; reconciled 42m 1s later.",
+    });
+
+    const notStartedRun = {
+      startedAt: 3_580,
+      durationMs: 0,
+      status: "error" as const,
+      metadata: {
+        reason: "stale-slot-reconciled",
+        childDisposition: "not_started",
+        reconciledAt: 3_580,
+      },
+    };
+    expect(formatCronRunStatus(notStartedRun.status, notStartedRun.metadata)).toBe(
+      "Not started: upstream abandoned",
+    );
+    expect(formatCronRunTiming(notStartedRun)).toEqual({
+      duration: null,
+      unavailableLabel: "N/A",
+      note: "Did not start because the parent slot was abandoned.",
+    });
   });
 
   it("retains lease, orphan, and latest-attempt evidence on selected model rows", () => {

@@ -1119,7 +1119,11 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "sbold-k3-capital": defineStablecoinRedeemConfig({
     reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
-    capacityModel: { kind: "reserve-sync-metadata" },
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      liveCapacityConfidence: "documented-bound",
+      basis: "strategy-buffer",
+    },
     executionModel: "rules-based-nav",
     costModel: fixedFee(
       0,
@@ -1145,7 +1149,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "sBOLD exits into BOLD through ERC-4626 withdrawal/redeem mechanics; downstream BOLD par exit remains Liquity's collateral-redemption route.",
       "K3 docs note deposit and withdrawal operations can be temporarily restricted when accumulated collateral exposure exceeds configured operational limits.",
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle BOLD balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
+      "Fresh ERC-4626 reserve telemetry measures same-run Stability-Pool-withdrawable BOLD from the vault's own calcFragments() liquid-BOLD word (compounded SP deposits) rather than the idle BOLD balance, which sits at ~1 BOLD because sBOLD deploys its BOLD into Liquity V2 Stability Pools; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model. Verified on Ethereum at block 25585860 (2026-07-23): calcFragments() returned boldAmount == totalAssets == 0x06615c0dee43f9767b13a5 (~77M BOLD) with collInBold 0, while the asset balanceOf(vault) was ~1 BOLD (the dead share); the liquid-BOLD word is the exact value sBOLD._maxWithdraw caps redemptions at.",
+      "Live SP-withdrawable capacity is scored at documented-bound confidence (modelConfidence medium), not the adapter's live-direct default: the measured liquid-BOLD excludes not-yet-swapped collateral gains and K3 can temporarily restrict withdrawals on collateral-exposure thresholds, so the read is a bounded proxy for instantaneous redeemability rather than an unconditional direct quote.",
     ],
   }),
   "ybold-yearn": defineStablecoinRedeemConfig({

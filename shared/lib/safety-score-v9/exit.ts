@@ -39,6 +39,8 @@ export interface V9ExitEvaluationRoute {
   scoreEligible: boolean;
   coverageClass: "exact-complete" | "exact-lower-bound" | "diagnostic";
   evidenceKind: string;
+  /** The route's reviewed fee is undisclosed: modeled capacity with an unbounded cost. */
+  feeEvidence?: "undisclosed-reviewed" | null;
   observationConfidence: "high" | "medium" | "low" | "unknown";
   modelConfidence: "high" | "medium" | "low";
   access: V9ExitAccess;
@@ -400,7 +402,28 @@ function evaluateRoute(
   route: V9ExitEvaluationRoute,
   request: V9ExitStressRequest,
   envelope: V9ValidatedPolicyEnvelope,
+  preExitDangerHeld: boolean,
 ): V9ExitRouteTrace {
+  // Danger-held exclusion (owner ruling 2026-07-23): the SIM-EXIT-L2
+  // undisclosed-fee lever emits modeled capacity for an opaque-fee route, but an
+  // asset already held down by a non-exit adverse fact does not get to buy exit
+  // credit back with it. The route reverts to the pre-lever unsupported
+  // same-notional exclusion — byte-identical to how a zero-capacity undisclosed
+  // route resolved before the lever — so the pre-exit danger that gates the
+  // credit never feeds back through the exit pillar it is measured on. Every
+  // other route, and every route on a non-danger-held asset, is unaffected.
+  if (preExitDangerHeld && route.feeEvidence === "undisclosed-reviewed") {
+    return {
+      routeKey: route.routeKey,
+      score: null,
+      included: false,
+      exclusionReason: "unsupported-same-notional-route",
+      capacityPoint: null,
+      components: null,
+      confidenceFactor: null,
+      capsApplied: [],
+    };
+  }
   const resolvedCapacity = resolveIncludedRouteCapacity(route, request, envelope);
   if (resolvedCapacity.state === "excluded") {
     return {
@@ -523,6 +546,13 @@ function evaluateRoute(
     score = policy.documentedTermsCreditCeiling;
     capsApplied.push("evidence-kind:documented-terms");
   }
+  // An undisclosed-reviewed fee leaves the route's exit cost unbounded even
+  // though its modeled capacity is emitted, so its credit is ceilinged below
+  // what a cost-bounded route can earn (SIM-EXIT-L2 lever).
+  if (route.feeEvidence === "undisclosed-reviewed" && score > policy.undisclosedFeeRouteScoreCeiling) {
+    score = policy.undisclosedFeeRouteScoreCeiling;
+    capsApplied.push("fee-evidence:undisclosed-reviewed");
+  }
   return {
     routeKey: route.routeKey,
     score: roundTraceScore(clampScore(score)),
@@ -620,6 +650,7 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
     scoreEligible: route.scoreEligible,
     coverageClass: route.coverageClass,
     evidenceKind: route.evidenceKind,
+    feeEvidence: route.feeEvidence ?? null,
     observationConfidence: route.observationConfidence,
     modelConfidence: route.modelConfidence,
     ...access,
@@ -651,6 +682,7 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
 export function evaluateV9ExitAssetFacts(
   asset: Pick<V9AssetFactsV2, "supply" | "exitStatus" | "exitRoutes">,
   envelope: V9ValidatedPolicyEnvelope,
+  preExitDangerHeld = false,
 ): V9ExitEvaluationResult {
   return evaluateV9Exit(
     {
@@ -660,6 +692,7 @@ export function evaluateV9ExitAssetFacts(
           ? "reviewed-complete"
           : "incomplete",
       routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
+      preExitDangerHeld,
     },
     envelope,
   );
@@ -682,6 +715,8 @@ export function evaluateV9Exit(
     circulatingUsd: number | null;
     portfolioStatus?: "reviewed-complete" | "incomplete";
     routes: readonly V9ExitEvaluationRoute[];
+    /** The asset is held down by a pre-exit adverse fact; undisclosed-fee routes earn no credit. */
+    preExitDangerHeld?: boolean;
   },
   envelope: V9ValidatedPolicyEnvelope,
 ): V9ExitEvaluationResult {
@@ -705,7 +740,7 @@ export function evaluateV9Exit(
     };
   }
   const routes = [...args.routes].sort((left, right) => left.routeKey.localeCompare(right.routeKey));
-  const traces = routes.map((route) => evaluateRoute(route, stressRequest, envelope));
+  const traces = routes.map((route) => evaluateRoute(route, stressRequest, envelope, args.preExitDangerHeld ?? false));
   const evaluated = traces
     .flatMap((trace, index) => (trace.score === null ? [] : [{ trace, route: routes[index]!, score: trace.score }]))
     .sort((left, right) => right.score - left.score || left.route.routeKey.localeCompare(right.route.routeKey));
@@ -731,9 +766,17 @@ export function evaluateV9Exit(
     (candidate) =>
       candidate.route.routeKey !== primary.route.routeKey && routesAreIndependent(primary.route, candidate.route),
   );
-  const diversificationBonus = independent
-    ? Math.min(100 - primary.score, independent.score * envelope.policy.semantic.exit.independentRouteBenefitLimit)
-    : 0;
+  // An undisclosed-reviewed fee route's credit is bounded by its ceiling and must
+  // stay bounded at the portfolio level too: it neither earns nor donates the
+  // independent-route bonus, so opaque-fee routes cannot stack past the ceiling
+  // or lift a stronger primary (adversarial-review hardening of SIM-EXIT-L2).
+  const undisclosedFeeInvolved =
+    primary.route.feeEvidence === "undisclosed-reviewed" ||
+    independent?.route.feeEvidence === "undisclosed-reviewed";
+  const diversificationBonus =
+    independent && !undisclosedFeeInvolved
+      ? Math.min(100 - primary.score, independent.score * envelope.policy.semantic.exit.independentRouteBenefitLimit)
+      : 0;
   const hasOtherIncludedRoute = evaluated.length > 1;
   return {
     score: roundTraceScore(primary.score + diversificationBonus),

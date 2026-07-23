@@ -26,7 +26,8 @@
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
       "riskFactors": ["duration", "liquidity", "custody"],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "seven-days",
+      "maturityDaysMax": 364
     }
   ],
   "reserveReview": {

@@ -15,8 +15,9 @@ import {
 } from "../fetch-slipstream";
 
 const ABI = parseAbi([
-  "function all(uint256 _limit, uint256 _offset) view returns ((address lp,string symbol,uint8 decimals,uint256 liquidity,int24 type,int24 tick,uint160 sqrt_ratio,address token0,uint256 reserve0,uint256 staked0,address token1,uint256 reserve1,uint256 staked1,address gauge,uint256 gauge_liquidity,bool gauge_alive,address fee,address bribe,address factory,uint256 emissions,address emissions_token,uint256 pool_fee,uint256 unstaked_fee,uint256 token0_fees,uint256 token1_fees,address nfpm,address alm,address root)[])",
-  "function tokens(uint256 _limit, uint256 _offset, address _account, address[] _addresses) view returns ((address token_address,string symbol,uint8 decimals,uint256 account_balance,bool listed)[])",
+  "function allPoolsLength() view returns (uint256)",
+  "function all(uint256 _limit, uint256 _offset, uint256 _filter) view returns ((address lp,string symbol,uint8 decimals,uint256 liquidity,int24 type,int24 tick,uint160 sqrt_ratio,address token0,uint256 reserve0,uint256 staked0,address token1,uint256 reserve1,uint256 staked1,address gauge,uint256 gauge_liquidity,bool gauge_alive,address fee,address bribe,address factory,uint256 emissions,address emissions_token,uint256 emissions_cap,uint256 pool_fee,uint256 unstaked_fee,uint256 token0_fees,uint256 token1_fees,uint256 locked,uint256 emerging,uint32 created_at,address nfpm,address alm,address root)[])",
+  "function tokens(uint256 _limit, uint256 _offset, address _account, address[] _addresses) view returns ((address token_address,string symbol,uint8 decimals,uint256 account_balance,bool listed,bool emerging)[])",
 ]);
 
 describe("sqrtRatioToSpotPrice", () => {
@@ -80,6 +81,7 @@ describe("Sugar ABI projection", () => {
       reserve1: 50_000_000n,
       staked1: 12n,
       gauge: "0x0000000000000000000000000000000000000001",
+      factory: "0x5e7BB104d84c7CB9B682AaC2F3d509f5F406809A",
       pool_fee: 5n,
       emissions: 13n,
     });
@@ -96,8 +98,8 @@ describe("Sugar ABI projection", () => {
       "0x0000000000000000000000000000000000000033",
     ]);
     expect(projected.map((pool) => Object.keys(pool))).toEqual([
-      ["lp", "type", "token0", "reserve0", "token1", "reserve1", "sqrt_ratio", "pool_fee"],
-      ["lp", "type", "token0", "reserve0", "token1", "reserve1", "sqrt_ratio", "pool_fee"],
+      ["lp", "type", "token0", "reserve0", "token1", "reserve1", "sqrt_ratio", "pool_fee", "factory"],
+      ["lp", "type", "token0", "reserve0", "token1", "reserve1", "sqrt_ratio", "pool_fee", "factory"],
     ]);
     expect(projected.map((pool) => pool.reserve0)).toEqual([20n, 30n]);
   });
@@ -141,6 +143,16 @@ describe("fetchSlipstreamPools", () => {
     vi.mocked(fetchEvmCallHexAtBlock)
       .mockResolvedValueOnce(encodeFunctionResult({
         abi: ABI,
+        functionName: "allPoolsLength",
+        result: 10n,
+      }))
+      .mockResolvedValueOnce(encodeFunctionResult({
+        abi: ABI,
+        functionName: "allPoolsLength",
+        result: 1n,
+      }))
+      .mockResolvedValueOnce(encodeFunctionResult({
+        abi: ABI,
         functionName: "all",
         result: [{
           lp: "0x00000000000000000000000000000000000000aa",
@@ -161,13 +173,17 @@ describe("fetchSlipstreamPools", () => {
           gauge_alive: false,
           fee: "0x0000000000000000000000000000000000000000",
           bribe: "0x0000000000000000000000000000000000000000",
-          factory: "0x0000000000000000000000000000000000000000",
+          factory: "0x5e7BB104d84c7CB9B682AaC2F3d509f5F406809A",
           emissions: 0n,
           emissions_token: "0x0000000000000000000000000000000000000000",
+          emissions_cap: 0n,
           pool_fee: 1n,
           unstaked_fee: 0n,
           token0_fees: 0n,
           token1_fees: 0n,
+          locked: 0n,
+          emerging: 0n,
+          created_at: 0,
           nfpm: "0x0000000000000000000000000000000000000000",
           alm: "0x0000000000000000000000000000000000000000",
           root: "0x0000000000000000000000000000000000000000",
@@ -183,6 +199,7 @@ describe("fetchSlipstreamPools", () => {
             decimals: 6,
             account_balance: 0n,
             listed: true,
+            emerging: false,
           },
           {
             token_address: "0x00000000000000000000000000000000000000cc",
@@ -190,6 +207,7 @@ describe("fetchSlipstreamPools", () => {
             decimals: 18,
             account_balance: 0n,
             listed: true,
+            emerging: false,
           },
         ],
       }));

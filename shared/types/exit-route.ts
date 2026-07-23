@@ -109,6 +109,8 @@ const ExitRouteObservationBaseSchema = z.object({
   completionRatio: z.number().finite().min(0).max(1),
   output: ExitRouteOutputSchema,
   evidenceKind: ExitRouteEvidenceKindSchema,
+  /** Set when the route's reviewed fee is the undisclosed-reviewed class: capacity is modeled but cost is unbounded. */
+  feeEvidence: z.literal("undisclosed-reviewed").optional(),
   confidence: ExitRouteConfidenceSchema,
   scoreEligible: z.boolean(),
   observedAt: z.number().int().nonnegative(),

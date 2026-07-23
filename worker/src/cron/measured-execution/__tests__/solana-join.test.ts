@@ -59,7 +59,7 @@ describe("Solana measured execution join", () => {
     const target = fixtureTarget();
     const route = {
       provider: "jupiter-swap-api" as const,
-      label: "Orca V2" as const,
+      label: "Whirlpool" as const,
       poolId: POOL,
       inputMint: USDC,
       outputMint: USDT,

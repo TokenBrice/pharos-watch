@@ -202,8 +202,29 @@ describe("derived supply-model route observations", () => {
       now,
     );
     expect(undisclosed).toMatchObject({ scoreEligible: false, executableUsd: 0, completionRatio: 0 });
+    expect(undisclosed).not.toHaveProperty("feeEvidence");
     const overCost = deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, feeBps: 250 }, now);
     expect(overCost).toMatchObject({ scoreEligible: false, executableUsd: 0 });
+    expect(overCost).not.toHaveProperty("feeEvidence");
+    // A cost-bounded fixed-bps row keeps its measured capacity and stays untagged.
+    expect(deriveSupplyModelExitRouteObservation(supplyFullEntry, now)).not.toHaveProperty("feeEvidence");
+  });
+
+  it("emits modeled capacity tagged undisclosed-reviewed for a reviewed opaque fee (SIM-EXIT-L2)", () => {
+    const observation = deriveSupplyModelExitRouteObservation(
+      { ...supplyFullEntry, feeModelKind: "undisclosed-reviewed", feeBps: null },
+      now,
+    );
+    // Modeled capacity is emitted (min of request and the documented full-supply
+    // basis), tagged, but never fact-level score eligible: the cost is unbounded.
+    expect(observation).toMatchObject({
+      executableUsd: 5_000_000,
+      completionRatio: 1,
+      evidenceKind: "documented-terms",
+      feeEvidence: "undisclosed-reviewed",
+      scoreEligible: false,
+    });
+    expect(observation!.capacityCurve!.every((point) => point.executableUsd > 0)).toBe(true);
   });
 
   it("arms capacity from a reviewed documented fee ceiling on the static config (T1)", () => {

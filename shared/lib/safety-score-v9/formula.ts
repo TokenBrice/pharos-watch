@@ -342,6 +342,51 @@ export function hasV9DangerSignal(
   );
 }
 
+export interface V9PreExitDangerInput {
+  structuralSignals: readonly V9StructuralSignal[];
+  pegScore: number | null;
+  pegApplicable: boolean;
+  activeDepegBps: number | null;
+}
+
+/**
+ * The pre-exit subset of the danger predicate, used to withhold the SIM-EXIT-L2
+ * undisclosed-fee exit credit from an asset already held down by a non-exit
+ * adverse fact (owner ruling 2026-07-23). Deliberately a strict subset of
+ * `hasV9DangerSignal`: it keeps the active-depeg, sub-0.9 measured-peg,
+ * fired-`signal:*:critical`-cap and active-control-incident clauses, and drops
+ * every clause that exit credit can itself move — the sub-floor-pillar,
+ * parent-cap, and unsupported-design clauses — so the exit lever can never feed
+ * back into the gate that governs it. Centralized mint is taken at the `f-gate`
+ * threshold (critical only), not `>= high`: a concentrated-but-verified mint is
+ * already priced in-pillar (control 25 + the high@59 cap), so withholding a
+ * measured exit route for it would double-count a fact the score already carries
+ * and would wrongly floor an otherwise-creditable measured exit (e.g. the Nest
+ * RWA coins, which carry centralized-mint:high yet have no other pre-exit
+ * danger and are owner-ruled to keep their measured sub-floor exits).
+ */
+export function hasV9PreExitDangerSignal(input: V9PreExitDangerInput, policy: V9ValidatedPolicyEnvelope): boolean {
+  assertV9ValidatedPolicyEnvelope(policy);
+  const firedCriticalSignal = resolveV9StructuralCaps(input.structuralSignals, policy).some(
+    (cap) => cap.kind.startsWith("signal:") && cap.kind.endsWith(":critical"),
+  );
+  const activeDepeg = input.activeDepegBps !== null && input.activeDepegBps > 0;
+  const centralizedMint = input.structuralSignals.some(
+    (signal) => signal.kind === "centralized-mint" && signal.severity === "critical",
+  );
+  // Mirrors the formula's `pegMultiplierRaw` for the danger check: an unverified
+  // or not-applicable peg reads as par (1), never as a measured-peg danger.
+  const pegMultiplier =
+    input.pegApplicable && input.pegScore !== null
+      ? input.pegScore === 0
+        ? 0
+        : (input.pegScore / 100) ** policy.policy.semantic.formula.pegExponent
+      : 1;
+  const measuredPeg = pegMultiplier < DANGER_PEG_MULTIPLIER_FLOOR;
+  const activeControlIncident = input.structuralSignals.some((signal) => signal.kind === "active-control-incident");
+  return firedCriticalSignal || activeDepeg || centralizedMint || measuredPeg || activeControlIncident;
+}
+
 function capPriority(source: V9CapTrace["source"], policy: V9ValidatedPolicyEnvelope): number {
   const priority = policy.policy.semantic.formula.capTiePriority.indexOf(source);
   return priority === -1 ? policy.policy.semantic.formula.capTiePriority.length : priority;

@@ -756,6 +756,7 @@ const V9BackingPolicySchema = z
             "tokenized-security": ScoreSchema,
             "fund-share": ScoreSchema,
             "protocol-position": ScoreSchema,
+            "commodity-allocated": ScoreSchema,
             other: ScoreSchema,
           })
           .strict(),
@@ -784,6 +785,7 @@ const V9BackingPolicySchema = z
             "tokenized-security",
             "fund-share",
             "protocol-position",
+            "commodity-allocated",
             "other",
           ]),
         ),
@@ -901,7 +903,7 @@ const V9ControlPolicySchema = z
         // A reconciled, non-adverse mint posture with >= seasonedCreditMinMonths
         // of incident-free track record earns seasonedCreditPoints, capped below
         // the next posture rung so a credit can never relabel the posture class.
-        seasonedCreditPoints: z.number().finite().min(0).max(5).default(0),
+        seasonedCreditPoints: z.number().finite().min(0).max(10).default(0),
         seasonedCreditMinMonths: z.number().int().positive().default(60),
       })
       .strict(),
@@ -1042,6 +1044,10 @@ const V9ExitPolicySchema = z
     // reach. Applied as a min on top of the settlement haircut and reliability
     // gates; stronger evidence kinds are uncapped.
     documentedTermsCreditCeiling: ScoreSchema,
+    // Credit ceiling for a route whose reviewed fee is the undisclosed-reviewed
+    // class: modeled capacity is emitted but the exit cost is unbounded, so the
+    // scored contribution is capped below what a cost-bounded route can earn.
+    undisclosedFeeRouteScoreCeiling: ScoreSchema,
   })
   .strict();
 

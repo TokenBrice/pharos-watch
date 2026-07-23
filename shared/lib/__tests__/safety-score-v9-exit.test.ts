@@ -671,3 +671,86 @@ describe("Lever 3 issuer/protocol redemption credit", () => {
     expect(result.reasons).toContain("unsupported-same-notional-route");
   });
 });
+
+describe("SIM-EXIT-L2 undisclosed-fee credit and danger-held exclusion", () => {
+  const undisclosed = (overrides: Partial<V9ExitEvaluationRoute> = {}) =>
+    route({ routeKey: "redemption:undisclosed", feeEvidence: "undisclosed-reviewed", ...overrides });
+
+  it("ceilings an undisclosed-reviewed route's credit at the policy ceiling", () => {
+    const ceiling = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.undisclosedFeeRouteScoreCeiling;
+    const result = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [undisclosed()] }, V9_CANDIDATE_POLICY_V1);
+    const trace = result.routes.find((entry) => entry.routeKey === "redemption:undisclosed");
+    // Without the ceiling this strong route scores well above 52; the cap binds.
+    expect(trace?.score).not.toBeNull();
+    expect(trace!.score!).toBeLessThanOrEqual(ceiling);
+    expect(trace!.capsApplied).toContain("fee-evidence:undisclosed-reviewed");
+  });
+
+  it("withholds all undisclosed-fee credit from a pre-exit danger-held asset (byte-identical to pre-lever exclusion)", () => {
+    const held = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [undisclosed()], preExitDangerHeld: true },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const heldTrace = held.routes.find((entry) => entry.routeKey === "redemption:undisclosed");
+    expect(heldTrace?.score).toBeNull();
+    expect(heldTrace?.exclusionReason).toBe("unsupported-same-notional-route");
+    expect(heldTrace?.capsApplied).toEqual([]);
+    expect(held.primaryRouteKey).toBeNull();
+    // The same route on a non-danger-held asset keeps its (ceilinged) credit.
+    const credited = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [undisclosed()], preExitDangerHeld: false },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(credited.routes.find((entry) => entry.routeKey === "redemption:undisclosed")?.score).not.toBeNull();
+  });
+
+  it("leaves a route without an undisclosed fee untouched by the ceiling and the danger gate", () => {
+    const documented = route({ routeKey: "redemption:documented", evidenceKind: "documented-terms" });
+    const base = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [documented] }, V9_CANDIDATE_POLICY_V1);
+    const baseTrace = base.routes.find((entry) => entry.routeKey === "redemption:documented");
+    expect(baseTrace?.capsApplied).not.toContain("fee-evidence:undisclosed-reviewed");
+    // The danger gate only excludes the undisclosed-fee class, so a documented
+    // route on a danger-held asset scores exactly as it does otherwise.
+    const held = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [documented], preExitDangerHeld: true },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(held.routes.find((entry) => entry.routeKey === "redemption:documented")?.score).toEqual(baseTrace?.score);
+  });
+});
+
+describe("undisclosed-fee routes stay bounded at the portfolio level", () => {
+  const undisclosedAt = (routeKey: string, routeFamily: V9ExitEvaluationRoute["routeFamily"]) =>
+    route({
+      routeKey,
+      feeEvidence: "undisclosed-reviewed",
+      routeFamily,
+    });
+
+  it("two independent undisclosed-fee routes cannot stack past the ceiling via the diversification bonus", () => {
+    const ceiling = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.undisclosedFeeRouteScoreCeiling;
+    const result = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        routes: [undisclosedAt("redemption:opaque-a", "issuer-redemption"), undisclosedAt("dex:opaque-b", "dex-amm")],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.diversificationBonus).toBe(0);
+    expect(result.score).toBeLessThanOrEqual(ceiling);
+  });
+
+  it("an undisclosed-fee secondary donates no diversification bonus to a disclosed primary", () => {
+    const disclosedPrimary = route({ routeKey: "dex:disclosed-primary" });
+    const solo = evaluateV9Exit({ circulatingUsd: 20_000_000, routes: [disclosedPrimary] }, V9_CANDIDATE_POLICY_V1);
+    const paired = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        routes: [route({ routeKey: "dex:disclosed-primary" }), undisclosedAt("redemption:opaque-c", "issuer-redemption")],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(paired.diversificationBonus).toBe(0);
+    expect(paired.score).toBe(solo.score);
+  });
+});

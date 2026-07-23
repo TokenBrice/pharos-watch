@@ -107,6 +107,14 @@ export interface V9OracleControlReview {
   status: V9FactStatusV2;
   tier: V9OracleTier | null;
   branches: readonly V9OracleBranchReview[];
+  /**
+   * Worst severity band from weak market branches whose measured debt share is
+   * below the deployment-materiality threshold. Such branches do not drive the
+   * material-only top-level {@link tier}; this surfaces them as one non-binding
+   * oracle diagnostic. Absent when the branch-materiality lever is inactive or
+   * no sub-material weak branch exists. Derived in `adaptOracleReview`.
+   */
+  subMaterialWeakBand?: "moderate" | "low";
 }
 
 export interface V9BridgeRouteControlReview {
@@ -740,7 +748,10 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         grading.attestationOnlyReconciled,
       ].sort((left, right) => left - right);
       const nextRung = ladder.find((value) => value > gradedPostureScore);
-      const ceiling = nextRung === undefined ? gradedPostureScore : nextRung;
+      // Strictly below the next rung: a seasoned credit rewards longevity but can
+      // never make a lower posture class read identical to the class above it
+      // (adversarial-review finding on the credit widening to 10).
+      const ceiling = nextRung === undefined ? gradedPostureScore : nextRung - 1;
       return Math.min(gradedPostureScore + grading.seasonedCreditPoints, ceiling);
     })();
     components.push({
@@ -898,6 +909,22 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
           materialSharePct: null,
           controlKeys: linkedControls.map((control) => control.controlKey),
           failureDomains,
+        });
+      }
+      // Weak market branches below the deployment-materiality threshold do not
+      // drive the material-only tier above, but stay visible as one non-binding
+      // diagnostic (5-10% -> moderate@74 ceiling, <5% -> low). It carries a
+      // single synthetic failure domain so it never trips the common-mode
+      // multi-branch oracle cap, and its ceiling sits above a healthy composite.
+      if (oracle.subMaterialWeakBand !== undefined) {
+        addStructuralFailure({
+          kind: "weak-oracle-branch",
+          severity: oracle.subMaterialWeakBand,
+          binding: true,
+          reason: `Weak oracle branches below the materiality threshold contribute a ${oracle.subMaterialWeakBand} diagnostic.`,
+          materialSharePct: null,
+          controlKeys: [],
+          failureDomains: [{ kind: "oracle-feed", key: `oracle:${args.facts.assetId}:sub-material-weak` }],
         });
       }
     }

@@ -114,8 +114,17 @@ reviews remain append-only evidence; they do not control the active model.
 
 Activation is prohibited until all V9 correctness gates and the prospective
 shadow gate pass for one frozen candidate identity. The shadow window must
-include at least 14 consecutive UTC days and at least two elapsed cycles of the
+include at least 8 consecutive UTC days and at least two elapsed cycles of the
 slowest score-bearing producer. That producer cadence is four hours.
+
+Amendment (owner ruling, 2026-07-23): the window was shortened from 14 to 8
+consecutive UTC days. The calibration program's final identity rotation ships
+with a fully replay-verified stacked counterfactual, per-lever attribution,
+and pin byte-checks, so the window's remaining purpose — proving day-to-day
+pipeline stability on a frozen identity — needs fewer days to demonstrate.
+Every daily gate below, movement adjudication, the coverage floors, and the
+first/final-day replay-evidence requirement are unchanged; only the day count
+moves. The trade was ruled to meet the July release commitment.
 
 Every counted day requires:
 

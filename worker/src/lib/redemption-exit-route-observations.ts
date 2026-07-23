@@ -293,9 +293,12 @@ export function deriveSupplyModelExitRouteObservation(
   // or (T1, owner ruling 2026-07-22 R3/R4) a reviewed documented ceiling
   // (`feeBpsMax`) on the same static config that already supplies this route's
   // output composition — both producer and shadow read the identical registry,
-  // so derivations stay byte-identical. Formula and undisclosed fees remain
-  // unbounded and earn no capacity: a ceiling exists only where a primary
-  // source states one.
+  // so derivations stay byte-identical. Formula and documented-variable fees
+  // without a stated ceiling remain unbounded and earn no capacity: a ceiling
+  // exists only where a primary source states one. A reviewed
+  // `undisclosed-reviewed` fee (SIM-EXIT-L2) emits its modeled capacity with a
+  // bounded-unknown cost and stays non-score-eligible; the exit policy ceilings
+  // its credit via `semantic.exit.undisclosedFeeRouteScoreCeiling`.
   const staticConfig = getRedemptionBackstopConfig(entry.stablecoinId);
   const feeBoundBps =
     entry.feeModelKind === "fixed-bps" && entry.feeBps != null
@@ -304,11 +307,12 @@ export function deriveSupplyModelExitRouteObservation(
         ? staticConfig.costModel.feeBpsMax
         : null;
   const withinCost = feeBoundBps != null && feeBoundBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps;
+  const undisclosedReviewedFee = entry.feeModelKind === "undisclosed-reviewed";
   const requests = [...new Set([...REDEMPTION_CAPACITY_CURVE_REQUESTS_USD, modeledExitSizeUsd])]
     .filter((request) => request <= Math.max(modeledExitSizeUsd, eventualUsd))
     .sort((left, right) => left - right);
   const capacityCurve = requests.map((request) => {
-    const executableUsd = withinCost ? Math.min(request, eventualUsd) : 0;
+    const executableUsd = withinCost || undisclosedReviewedFee ? Math.min(request, eventualUsd) : 0;
     return {
       requestedNotionalUsd: request,
       maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
@@ -333,6 +337,7 @@ export function deriveSupplyModelExitRouteObservation(
       outputAssets: getRedemptionBackstopConfig(entry.stablecoinId)?.outputAssets,
     }),
     evidenceKind: "documented-terms",
+    ...(undisclosedReviewedFee ? { feeEvidence: "undisclosed-reviewed" as const } : {}),
     confidence: "medium",
     scoreEligible: routeFamily !== "eventual-redemption" && withinCost,
     observedAt: reviewTimestamp,

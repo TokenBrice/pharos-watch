@@ -53,7 +53,10 @@ describe("adaptFraxBalanceSheet", () => {
     const usdc = result.slices.find((s) => s.name.startsWith("USDC"));
     const usdb = result.slices.find((s) => s.name.startsWith("USDB"));
     expect(ustb!.coinId).toBe("ustb-superstate");
-    expect(wtgxx!.coinId).toBe("wtgxx-wisdomtree");
+    // wtgxx-wisdomtree is a quarantined no-supply record that can never rate,
+    // so this slice is intentionally left unlinked and scores on its own
+    // fund-share asset class instead.
+    expect(wtgxx!.coinId).toBeUndefined();
     expect(buidl!.coinId).toBe("buidl-blackrock");
     expect(usdc!.coinId).toBe("usdc-circle");
     expect(usdb).toMatchObject({ name: "USDB (Bridge)" });

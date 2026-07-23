@@ -164,6 +164,26 @@ function getReserveTotalIssue(coin: StablecoinMeta): string | null {
   return null;
 }
 
+// D2 honesty guard (owner ruling 2026-07-23): the privileged commodity-allocated
+// reserve class (quality 90, maturity N/A) is admissible only when the coin's peg
+// IS the vaulted metal — USD-pegged metal reserves must stay on their risk class.
+const METAL_PEG_CURRENCIES: ReadonlySet<string> = new Set(["GOLD", "SILVER"]);
+
+export function getCommodityAllocatedPegMatchIssues(
+  coin: Pick<StablecoinMeta, "flags" | "reserves">,
+): string[] {
+  const issues: string[] = [];
+  (coin.reserves ?? []).forEach((reserve, index) => {
+    if (reserve.assetClass === "commodity-allocated" && !METAL_PEG_CURRENCIES.has(coin.flags.pegCurrency)) {
+      issues.push(
+        `reserves[${index}] "${reserve.name}" uses assetClass commodity-allocated but pegCurrency ` +
+          `${coin.flags.pegCurrency} is not a matching metal peg (allowed: ${[...METAL_PEG_CURRENCIES].join(", ")})`,
+      );
+    }
+  });
+  return issues;
+}
+
 function getDependencyTotalIssue(coin: StablecoinMeta): string | null {
   if (!coin.dependencies || coin.dependencies.length === 0) return null;
 
@@ -498,6 +518,10 @@ function runStablecoinDataCheck(): void {
       const dependencyTotalIssue = getDependencyTotalIssue(entry.coin);
       if (dependencyTotalIssue) {
         reportError(`${entry.file} (${entry.coin.id}): ${dependencyTotalIssue}`);
+      }
+
+      for (const pegMatchIssue of getCommodityAllocatedPegMatchIssues(entry.coin)) {
+        reportError(`${entry.file} (${entry.coin.id}): ${pegMatchIssue}`);
       }
 
       for (const overlapIssue of getDependencyReserveOverlapIssues(entry.coin)) {

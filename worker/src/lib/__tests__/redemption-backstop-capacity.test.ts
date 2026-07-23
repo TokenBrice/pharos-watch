@@ -546,3 +546,59 @@ describe("resolveRedemptionCapacity — reserve-sync over-provisioned clamp", ()
     expect(result.notes.some((n) => /exceeds current supply/i.test(n))).toBe(true);
   });
 });
+
+describe("resolveRedemptionCapacity — reserve-sync live capacity confidence override", () => {
+  const now = 1_780_000_000;
+  const baseSnapshot = (metadata: Record<string, unknown>): ReserveSnapshotMetadataRecord => ({
+    stablecoinId: "lusd-liquity",
+    fetchedAt: now - 60,
+    source: "liquity-v1",
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    syncStatus: "ok",
+    warningCount: 0,
+    warnings: [],
+    metadata,
+  });
+
+  const liveRedemptionSnapshot = (): ReserveSnapshotMetadataRecord =>
+    baseSnapshot({
+      freshnessMode: "not-applicable",
+      redemption: {
+        capacityUsd: 800_000,
+        capacityRatioOfSupply: 0.8,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "unknown",
+        routeStatusSource: "onchain",
+      },
+    });
+
+  it("labels the adapter's live-direct capacity as live-direct with no override", async () => {
+    const db = {} as D1Database;
+    const result = await resolveRedemptionCapacity(db, "lusd-liquity", { kind: "reserve-sync-metadata" }, 1_000_000, now, {
+      reserveSnapshotMetadata: liveRedemptionSnapshot(),
+    });
+    expect(result.capacityConfidence).toBe("live-direct");
+    expect(result.immediateCapacityUsd).toBe(800_000);
+  });
+
+  it("re-labels the measured live capacity to documented-bound when liveCapacityConfidence is set, preserving the capacity value", async () => {
+    const db = {} as D1Database;
+    // Mirrors the sBOLD SP-withdrawable read: a bounded proxy for redeemability
+    // whose measured capacity still scores, but at documented-bound confidence so
+    // deriveModelConfidence lands on "medium" rather than the live-direct "high".
+    const result = await resolveRedemptionCapacity(
+      db,
+      "lusd-liquity",
+      { kind: "reserve-sync-metadata", liveCapacityConfidence: "documented-bound", basis: "strategy-buffer" },
+      1_000_000,
+      now,
+      { reserveSnapshotMetadata: liveRedemptionSnapshot() },
+    );
+    expect(result.capacityConfidence).toBe("documented-bound");
+    expect(result.capacityProfile?.capacityProfileConfidence).toBe("documented-bound");
+    expect(result.capacityBasis).toBe("strategy-buffer");
+    expect(result.immediateCapacityUsd).toBe(800_000);
+  });
+});

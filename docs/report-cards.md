@@ -44,7 +44,7 @@ freshness, F-count, upper-cohort breadth, IQR, adverse-control, composite-replay
 and causal-attribution gates fail or remain incomplete. The captures were
 locally rekeyed and therefore are calibration evidence, not activation-window
 evidence. Independent holdout validation, release-cohort coverage, a later
-owner-frozen release candidate, and at least 14 consecutive verified shadow
+owner-frozen release candidate, and at least 8 consecutive verified shadow
 days plus two elapsed cycles of the four-hour slowest score-bearing producer
 remain mandatory before any public or downstream cutover. The window must also
 cover at least two distinct observed and archived `liveReserves` and

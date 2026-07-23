@@ -139,6 +139,12 @@ async function runReservePostSyncWatchdog(runtime: ScheduledRuntimeContext, sign
 }
 
 export const LIVE_RESERVE_SLOT_JOBS = flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS.fourHourlyReserveSync);
+export const LIVE_RESERVE_CHILD_PREREQUISITES = {
+  "sync-live-reserves": [],
+  "sync-redemption-backstops": ["sync-live-reserves"],
+  "sync-kinesis-supply": [],
+  "reserve-post-sync-watchdog": ["sync-live-reserves"],
+} as const;
 
 function checkpointIdentity(checkpoint: ScheduledRecoveryCheckpoint): ScheduledCheckpointIdentity {
   return {
@@ -234,11 +240,23 @@ function buildReserveSyncSlotGroups(
               faultInjection,
             ),
         },
+      ],
+    },
+    {
+      mode: "serial",
+      label: "redemption-backstops",
+      tasks: [
         {
           job: "sync-redemption-backstops",
           errorMessage: "[hourly-live-reserves] Redemption backstops sync failed:",
           run: (signal) => syncRedemptionBackstops(runtime.db, signal),
         },
+      ],
+    },
+    {
+      mode: "serial",
+      label: "kinesis-supply",
+      tasks: [
         {
           job: "sync-kinesis-supply",
           errorMessage: "[hourly-live-reserves] Kinesis supply sync failed:",
@@ -259,12 +277,11 @@ function buildReserveSyncSlotGroups(
     },
   ];
   const shouldRunJobs = new Set<string>();
-  let upstreamCompleted = isReserveQueueExhausted(checkpoint);
   for (const group of groups) {
     for (const task of group.tasks) {
       const taskCompleted = checkpoint.childDispositions[task.job] === "completed";
-      if (!upstreamCompleted || !taskCompleted) shouldRunJobs.add(task.job);
-      upstreamCompleted = upstreamCompleted && taskCompleted;
+      const durableFrontierCompleted = task.job !== "sync-live-reserves" || isReserveQueueExhausted(checkpoint);
+      if (!taskCompleted || !durableFrontierCompleted) shouldRunJobs.add(task.job);
     }
   }
   return groups.map((group) => ({
@@ -313,9 +330,11 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
     ? await loadReserveRecoveryFaultInjectionController(runtime.db, checkpoint)
     : null;
   await faultInjection?.trigger("after_checkpoint");
-  const [reserveAdapterGroup, postSyncGroup] = buildReserveSyncSlotGroups(runtime, checkpoint, faultInjection);
-  const syncTask = reserveAdapterGroup?.tasks.find((task) => task.job === "sync-live-reserves");
-  const adapterSidecarTasks = reserveAdapterGroup?.tasks.filter((task) => task.job !== "sync-live-reserves") ?? [];
+  const [reserveAdapterGroup, redemptionGroup, kinesisGroup, postSyncGroup] =
+    buildReserveSyncSlotGroups(runtime, checkpoint, faultInjection);
+  const syncTask = reserveAdapterGroup?.tasks[0];
+  const redemptionTasks = redemptionGroup?.tasks ?? [];
+  const kinesisTasks = kinesisGroup?.tasks ?? [];
   const postSyncTasks = postSyncGroup?.tasks ?? [];
   const mainSummary = syncTask
     ? await runScheduledSlotGroups(runtime, "four-hourly reserve sync slot", [
@@ -331,56 +350,36 @@ export async function runFourHourlyReserveSyncSlot(runtime: ScheduledRuntimeCont
   }
   const mainFailedAfterQueueExhaustion = mainSummary.jobsErrored > 0 && isReserveQueueExhausted(checkpointAfterMain);
   const summaries: ScheduledSlotSummary[] = [mainSummary];
-  if (!isReserveQueueExhausted(checkpointAfterMain)) {
+  const reserveStageCompleted =
+    isReserveQueueExhausted(checkpointAfterMain)
+    && mainSummary.jobsErrored === 0
+    && mainSummary.jobsSkipped === 0;
+  if (!reserveStageCompleted) {
     summaries.push(
       await recordBlockedReserveTasks(
         runtime,
         identity,
-        [...adapterSidecarTasks, ...postSyncTasks],
+        redemptionTasks,
         "sync-live-reserves",
       ),
     );
-  } else if (mainSummary.jobsErrored > 0) {
+  } else if (redemptionTasks.length > 0 && redemptionGroup) {
+    summaries.push(await runScheduledSlotGroups(runtime, "four-hourly reserve sync slot", [redemptionGroup]));
+  }
+  if (kinesisTasks.length > 0 && kinesisGroup) {
+    summaries.push(await runScheduledSlotGroups(runtime, "four-hourly reserve sync slot", [kinesisGroup]));
+  }
+  if (!reserveStageCompleted) {
     summaries.push(
       await recordBlockedReserveTasks(
         runtime,
         identity,
-        [...adapterSidecarTasks, ...postSyncTasks],
+        postSyncTasks,
         "sync-live-reserves",
       ),
     );
-  } else if (mainSummary.jobsSkipped > 0) {
-    summaries.push(
-      await recordBlockedReserveTasks(
-        runtime,
-        identity,
-        [...adapterSidecarTasks, ...postSyncTasks],
-        "sync-live-reserves",
-      ),
-    );
-  } else {
-    const adapterSidecarSummary =
-      adapterSidecarTasks.length > 0 && reserveAdapterGroup
-        ? await runScheduledSlotGroups(runtime, "four-hourly reserve sync slot", [
-            {
-              ...reserveAdapterGroup,
-              tasks: adapterSidecarTasks,
-            },
-          ])
-        : buildScheduledSlotSummary([]);
-    summaries.push(adapterSidecarSummary);
-    if (adapterSidecarSummary.jobsErrored > 0 || adapterSidecarSummary.jobsSkipped > 0) {
-      summaries.push(
-        await recordBlockedReserveTasks(
-          runtime,
-          identity,
-          postSyncTasks,
-          adapterSidecarSummary.jobs.find((job) => job.outcome === "skipped")?.job ?? "reserve-sidecars",
-        ),
-      );
-    } else if (postSyncGroup) {
-      summaries.push(await runScheduledSlotGroups(runtime, "four-hourly reserve sync slot", [postSyncGroup]));
-    }
+  } else if (postSyncTasks.length > 0 && postSyncGroup) {
+    summaries.push(await runScheduledSlotGroups(runtime, "four-hourly reserve sync slot", [postSyncGroup]));
   }
   const summary = mergeScheduledSlotSummaries(summaries);
   const checkpointAfterChildren = await loadScheduledCheckpoint(runtime.db, identity);

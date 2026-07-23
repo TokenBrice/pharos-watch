@@ -62,7 +62,9 @@ export const SolanaMeasuredRaydiumRouteProofSchema = CommonRouteProofSchema.exte
 
 export const SolanaMeasuredOrcaRouteProofSchema = CommonRouteProofSchema.extend({
   provider: z.literal("jupiter-swap-api"),
-  label: z.literal("Orca V2"),
+  // Preserve historical proofs while accepting Jupiter's current label for
+  // the same Orca Whirlpool program.
+  label: z.enum(["Orca V2", "Whirlpool"]),
   contextSlot: z.number().int().nonnegative(),
 });
 

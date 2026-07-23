@@ -151,7 +151,11 @@ Promotion drill:
 3. Set the preview version to `reconcile`. Within one poll after the exact child
    lease expires, require one `platform_abandoned` source attempt, one `ready`
    successor, exact pending-attempt cleanup, and explicit `not_started`
-   dispositions. A duplicate poll must prepare nothing.
+   dispositions. Seed more than five finished checkpoints with obsolete queue
+   hashes and require the compatible checkpoint to remain visible before the
+   bounded candidate limit; obsolete rows must retire in bounded batches without
+   clearing any unrelated pending domain attempt. A duplicate poll must prepare
+   nothing.
 4. Set the preview version to `recover`. Require the next attempt number,
    unchanged queue hash, no duplicate authoritative reserve write, terminal
    child accounting exactly once, and no pending/ownership ghost. A forced
@@ -161,6 +165,10 @@ Promotion drill:
    a later poll. On completion it may CAS-retire only the exact source cohort's
    owned global cursor after an acceptable reserve result; error outcomes and a
    newer normal-run cursor must remain byte-for-byte unchanged.
+   Completed Kinesis work must remain completed across a reserve or redemption
+   retry; the reserve watchdog may run after reserve completion even when
+   redemption fails, while redemption and watchdog remain blocked when the
+   reserve frontier itself is unfinished.
 5. Repeat `shadow -> reconcile -> recover` in production. Hold each promotion
    until its evidence is captured. Roll back immediately to `reconcile` to stop
    claims, `shadow` to stop mutation, or `off` to stop scans; checkpoint dual

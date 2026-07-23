@@ -1004,10 +1004,10 @@ describe("Safety Score v9 normalized fact protocol", () => {
         )!.severity;
     };
 
-    expect(evaluateBridgeSeverity(0.0499)).toBe("low");
-    expect(evaluateBridgeSeverity(0.05)).toBe("moderate");
-    expect(evaluateBridgeSeverity(0.0999)).toBe("moderate");
-    expect(evaluateBridgeSeverity(0.1)).toBe("high");
+    expect(evaluateBridgeSeverity(0.0999)).toBe("low");
+    expect(evaluateBridgeSeverity(0.1)).toBe("moderate");
+    expect(evaluateBridgeSeverity(0.2499)).toBe("moderate");
+    expect(evaluateBridgeSeverity(0.25)).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "aggregate-mismatch")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "contradictory-share")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "missing-capability")).toBe("high");

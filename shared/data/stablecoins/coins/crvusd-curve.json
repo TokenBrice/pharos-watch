@@ -18,8 +18,8 @@
   "detailProvider": "defillama",
   "geckoId": "crvusd",
   "oracleRisk": {
-    "tier": "single-source-or-laggy",
-    "summary": "Nine debt-bearing Ethereum controllers use market-specific Curve EMA and aggregate-stable-price routes. Modern Chainlink clamps were disabled at the reviewed block, while legacy sfrxETH requires an unchecked Chainlink answer; tBTC, weETH, cbBTC, and LBTC add single-pool conversion dependencies without alternate feeds.",
+    "tier": "standard-external",
+    "summary": "Nine debt-bearing Ethereum controllers use market-specific Curve EMA and aggregate-stable-price routes. Modern Chainlink clamps were disabled at the reviewed block, while legacy sfrxETH requires an unchecked Chainlink answer; tBTC, weETH, cbBTC, and LBTC add single-pool conversion dependencies without alternate feeds. Per-branch debt shares (debtSharePct) were read from the Curve crvUSD markets API at Ethereum block 25584850 (2026-07-22); the current sfrxETH controller's share was not resolved in that read and is treated as material.",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
@@ -60,6 +60,10 @@
       {
         "label": "Pinned Curve stablecoin repository",
         "url": "https://github.com/curvefi/curve-stablecoin/tree/6b0c3096841d46e8d6790630b6443d5510dd87e8"
+      },
+      {
+        "label": "Curve crvUSD markets API (Ethereum)",
+        "url": "https://prices.curve.finance/v1/crvusd/markets/ethereum"
       }
     ],
     "branches": [
@@ -106,6 +110,7 @@
         "liquidationDelaySec": 0,
         "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
         "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 0.45,
         "failureDomainKeys": [
           "curve-legacy-sfrxeth-oracle",
           "curve-llamma-liquidators",
@@ -182,6 +187,7 @@
         "liquidationDelaySec": 0,
         "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
         "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 25.5,
         "failureDomainKeys": [
           "curve-modern-tricrypto-ema",
           "curve-aggregate-stable-price",
@@ -251,6 +257,7 @@
         "liquidationDelaySec": 0,
         "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
         "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 50.2,
         "failureDomainKeys": [
           "curve-modern-tricrypto-ema",
           "curve-aggregate-stable-price",
@@ -320,6 +327,7 @@
         "liquidationDelaySec": 0,
         "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
         "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 5.1,
         "failureDomainKeys": [
           "curve-modern-tricrypto-ema",
           "curve-aggregate-stable-price",
@@ -460,6 +468,7 @@
         "liquidationDelaySec": 0,
         "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
         "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 9.33,
         "failureDomainKeys": [
           "curve:tbtc-single-pool-ema",
           "curve-aggregate-stable-price",
@@ -518,6 +527,7 @@
         "liquidationDelaySec": 0,
         "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
         "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 0.42,
         "failureDomainKeys": [
           "curve:weeth-weth-single-pool",
           "curve-modern-weth-oracle",
@@ -575,6 +585,7 @@
         "liquidationDelaySec": 0,
         "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
         "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 5.34,
         "failureDomainKeys": [
           "curve:cbbtc-wbtc-single-pool",
           "curve-modern-wbtc-oracle",
@@ -632,6 +643,7 @@
         "liquidationDelaySec": 0,
         "backstop": "There is no Stability Pool, insurance fund, protocol bad-debt buyer, or committed auction backstop. LLAMMA inventory is used first and an external liquidator must provide the remaining crvUSD.",
         "shutdownOrBadDebtBehavior": "Recorded debt decreases only after the liquidation amount is fully covered. If liquidation is unavailable or uneconomic, the unhealthy loan remains open; the reviewed controller and factory define no global shutdown, settlement, write-off, or debt-socialization path.",
+        "debtSharePct": 0,
         "failureDomainKeys": [
           "curve:lbtc-wbtc-single-pool",
           "curve-modern-wbtc-oracle",

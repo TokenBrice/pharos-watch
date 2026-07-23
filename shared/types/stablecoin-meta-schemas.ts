@@ -298,6 +298,7 @@ export const OracleRiskBranchSchema: z.ZodType<OracleRiskBranch> = z
     liquidationDelaySec: z.number().finite().int().nonnegative().optional(),
     backstop: z.string().min(12).optional(),
     shutdownOrBadDebtBehavior: z.string().min(12).optional(),
+    debtSharePct: z.number().finite().min(0).max(100).optional(),
     failureDomainKeys: z.array(z.string().min(1)).min(1).optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
   })
@@ -360,6 +361,20 @@ export const OracleRiskProfileSchema: z.ZodType<OracleRiskProfile> = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "multi-branch oracleRisk profiles require branches",
+        path: ["branches"],
+      });
+    }
+    // Materiality shares are measured facts; a profile claiming more than the
+    // whole debt is self-contradictory (unmeasured branches stay fail-closed,
+    // so under-coverage is safe — over-coverage is not).
+    const declaredShareTotal = (profile.branches ?? []).reduce(
+      (sum, branch) => sum + (branch.debtSharePct ?? 0),
+      0,
+    );
+    if (declaredShareTotal > 100.5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `oracleRisk branch debtSharePct total ${declaredShareTotal} exceeds 100`,
         path: ["branches"],
       });
     }

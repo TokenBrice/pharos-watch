@@ -5,7 +5,7 @@
       "name": "Physical gold bars (London Good Delivery, LBMA-accredited London vaults)",
       "pct": 100,
       "risk": "very-low",
-      "assetClass": "other",
+      "assetClass": "commodity-allocated",
       "issuerOrObligor": "Paxos Trust Company, N.A. and allocated gold held in LBMA-accredited London vaults",
       "riskFactors": [
         "custody",

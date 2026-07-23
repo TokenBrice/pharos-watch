@@ -41,7 +41,11 @@ import {
 } from "../../../lib/reserve-recovery-fault-injection";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 import type { ScheduledRuntimeContext } from "../context";
-import { LIVE_RESERVE_SLOT_JOBS, runFourHourlyReserveSyncSlot } from "../hourly-live-reserves";
+import {
+  LIVE_RESERVE_CHILD_PREREQUISITES,
+  LIVE_RESERVE_SLOT_JOBS,
+  runFourHourlyReserveSyncSlot,
+} from "../hourly-live-reserves";
 
 const WORKER_VERSION = "reserve-recovery-composite-v1";
 const OLD_QUEUE_HASH = `old-${LIVE_RESERVE_QUEUE_HASH}`;
@@ -84,6 +88,7 @@ function reconcile(db: D1Database, nowSec: number) {
     scheduleKey: "fourHourlyReserveSync",
     job: CHECKPOINT_JOB,
     childJobs: LIVE_RESERVE_SLOT_JOBS,
+    childPrerequisites: LIVE_RESERVE_CHILD_PREREQUISITES,
     expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
     staleAfterSec: 120,
     nowSec,
@@ -94,6 +99,7 @@ function claim(db: D1Database, owner: string, nowSec: number) {
   return claimNextScheduledCheckpointRecovery(db, {
     job: CHECKPOINT_JOB,
     childJobs: LIVE_RESERVE_SLOT_JOBS,
+    childPrerequisites: LIVE_RESERVE_CHILD_PREREQUISITES,
     owner,
     leaseSec: 15 * 60,
     expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
@@ -196,6 +202,7 @@ describe("reserve recovery composite", () => {
       slotStartedAt: legacy.slotStartedAt,
       job: legacy.job,
       childJobs: LIVE_RESERVE_SLOT_JOBS,
+      childPrerequisites: LIVE_RESERVE_CHILD_PREREQUISITES,
       nowSec: nowSec - 9_998,
     });
     const legacyBytesBefore = checkpointBytes(sqlite, legacySlotStartedAt);
