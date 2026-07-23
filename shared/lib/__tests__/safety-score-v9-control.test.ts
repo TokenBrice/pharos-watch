@@ -266,6 +266,77 @@ describe("Safety Score v9 economic control", () => {
     ]);
   });
 
+  it("surfaces a sub-material weak oracle branch as a non-binding moderate diagnostic without dragging the component", () => {
+    const oracleControl = control("oracle:core", "oracle");
+    const oracle: V9OracleControlReview = {
+      status: requiredKnown("oracle"),
+      tier: "standard-external",
+      subMaterialWeakBand: "moderate",
+      branches: ["feed", "collateral-parameter", "liquidation", "backstop", "shutdown-bad-debt"].map((branch) => ({
+        branch: branch as V9OracleControlReview["branches"][number]["branch"],
+        status: requiredKnown(`oracle.${branch}`),
+        controlKey: oracleControl.controlKey,
+        mechanismKey: "mechanism:cdp-core",
+        inheritedFromAssetId: null,
+      })),
+    };
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: { ...facts([oracleControl]), assetId: "crvusd-fixture", archetype: "cdp" },
+        mint: noMint(),
+        oracle,
+      }),
+    );
+
+    // The oracle component keeps the material-only standard-external quality (70);
+    // it is not dragged by the sub-material weak branches.
+    expect(result.components.find((component) => component.kind === "oracle")).toMatchObject({
+      posture: "standard-external",
+      score: 70,
+    });
+    // Exactly one weak-oracle-branch diagnostic, at moderate, with a single
+    // synthetic failure domain so the common-mode multi-branch cap never fires.
+    expect(result.structuralFailures.filter((failure) => failure.kind === "weak-oracle-branch")).toEqual([
+      expect.objectContaining({
+        kind: "weak-oracle-branch",
+        severity: "moderate",
+        binding: true,
+        controlKeys: [],
+        failureDomains: [{ kind: "oracle-feed", key: "oracle:crvusd-fixture:sub-material-weak" }],
+      }),
+    ]);
+    // The control result itself is the min binding component (70); the moderate
+    // ceiling (74) is applied downstream and stays above a healthy composite.
+    expect(result.score).toBe(70);
+  });
+
+  it("still fails a material weak oracle tier closed at high (cdp-enosys-shape stays capped)", () => {
+    const oracleControl = control("oracle:core", "oracle");
+    const oracle: V9OracleControlReview = {
+      status: requiredKnown("oracle"),
+      tier: "single-source-or-laggy",
+      branches: ["feed", "collateral-parameter", "liquidation", "backstop", "shutdown-bad-debt"].map((branch) => ({
+        branch: branch as V9OracleControlReview["branches"][number]["branch"],
+        status: requiredKnown(`oracle.${branch}`),
+        controlKey: oracleControl.controlKey,
+        mechanismKey: "mechanism:cdp-core",
+        inheritedFromAssetId: null,
+      })),
+    };
+    const result = evaluateV9EconomicControl(
+      args({ facts: { ...facts([oracleControl]), archetype: "cdp" }, mint: noMint(), oracle }),
+    );
+
+    expect(result.components.find((component) => component.kind === "oracle")).toMatchObject({
+      posture: "single-source-or-laggy",
+      score: 45,
+    });
+    expect(result.structuralFailures.filter((failure) => failure.kind === "weak-oracle-branch")).toEqual([
+      expect.objectContaining({ kind: "weak-oracle-branch", severity: "high", binding: true }),
+    ]);
+    expect(result.score).toBe(45);
+  });
+
   it("emits a traceable high structural failure for an unbounded mint path with no active incident", () => {
     const mintControl = control("mint:hot-wallet", "mint", {
       authority: { authorityKey: "authority:issuer", model: "eoa", threshold: null },
@@ -898,37 +969,46 @@ describe("Safety Score v9 economic control", () => {
     expect(absent.reasons).toEqual([]);
     expect(absent.score).toBe(90);
 
-    // Pool at 4.99% without any joined control: the proof tolerates it as an
+    // Pool at 9.99% without any joined control: the proof tolerates it as an
     // accepted bounded row and the condition stays visible as a diagnostic.
-    const smooth = resultFor(0.0499, { withPoolControl: false });
+    const smooth = resultFor(0.0999, { withPoolControl: false });
     expect(smooth.reasons.map((reason) => reason.code)).toEqual(["immaterial-unrecognized-chain-pool"]);
     expect(smooth.reasons[0]).toMatchObject({ critical: false, path: "supply:unrecognized-chain-pool" });
     expect(smooth.score).toBe(90);
 
-    // Pool at exactly 5% without a joined control fails closed exactly as
+    // Pool at exactly 10% without a joined control fails closed exactly as
     // before: the ordinary per-row join is required and the diagnostic is not
     // emitted.
-    const floor = resultFor(0.05, { withPoolControl: false });
+    const floor = resultFor(0.1, { withPoolControl: false });
     expect(floor.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
     expect(floor.reasons.map((reason) => reason.code)).not.toContain("immaterial-unrecognized-chain-pool");
 
-    // At 5% the joined subthreshold control still discharges the row, exactly
-    // as before the ruling — no diagnostic, no pool-driven reason.
-    const floorWithControl = resultFor(0.05, { withPoolControl: true });
-    expect(floorWithControl.reasons).toEqual([]);
+    // At exactly 10% the pool row is material at the RULED-D-J floor, and
+    // — since D1 (2026-07-22) rebanded commonModeShareThreshold to the same
+    // 10% as the pre-existing (unrelated) deploymentMaterialSharePct — the
+    // joined pool control now also crosses bindingByMateriality's gate, so a
+    // merely bounded-unknown control no longer discharges the row on its own;
+    // it must be resolved. Below 10% neither gate fires and a joined control
+    // still discharges cleanly regardless of resolution state (see `smooth`/
+    // `named` above, both sub-floor).
+    const floorWithControl = resultFor(0.1, { withPoolControl: true });
+    expect(floorWithControl.reasons.map((reason) => reason.code)).toEqual([
+      "material-bridge-supply-unmatched",
+      "selected-bridge-route-unresolved",
+    ]);
     expect(floorWithControl.score).toBe(90);
 
     // Named unmatched rows are unaffected by the pool tolerance: with their
     // own joined subthreshold controls they pass, and the pool stays
     // diagnostic.
-    const named = resultFor(0.0499, {
+    const named = resultFor(0.0999, {
       withPoolControl: false,
       namedUnmatched: [{ key: "unmatched-chain:fixture-asset:bsc", share: 0.02 }],
     });
     expect(named.reasons.map((reason) => reason.code)).toEqual(["immaterial-unrecognized-chain-pool"]);
 
     // A named unmatched row without a joined control still fails the proof.
-    const namedOpen = resultFor(0.0499, {
+    const namedOpen = resultFor(0.0999, {
       withPoolControl: false,
       namedUnmatched: [{ key: "unmatched-chain:fixture-asset:bsc", share: 0.02, withControl: false }],
     });

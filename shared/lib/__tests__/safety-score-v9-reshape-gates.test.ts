@@ -282,7 +282,8 @@ describe("Reshape-v3 T5 — seasoned-issuer credit (R2)", () => {
   const policy = POLICY.policy.semantic;
 
   it("policy carries the ruled credit knobs", () => {
-    expect(policy.control.mintPostureGrading.seasonedCreditPoints).toBe(5);
+    // D5 (2026-07-22): T5 mint seasoned credit 5 -> 10, still next-rung-capped.
+    expect(policy.control.mintPostureGrading.seasonedCreditPoints).toBe(10);
     expect(policy.control.mintPostureGrading.seasonedCreditMinMonths).toBe(60);
     expect(policy.backing.assuranceSeasonedCredit).toEqual({ points: 3, minMonths: 60 });
   });
