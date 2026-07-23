@@ -21,7 +21,9 @@ import { buildSolanaMeasuredExecutionProfile } from "./solana-profiles";
 import { fetchSolanaCurrentSlot, quoteSolanaMeasuredTarget } from "./solana-quotes";
 
 const SOLANA_ADMISSION_SOURCE_KEY = "measured-execution:solana-admission";
-const MAX_TARGETS_PER_RUN = 8;
+// Twelve admissions per half-hour cover the current inventory almost three
+// times during a 72-hour evidence window without adding request concurrency.
+const MAX_TARGETS_PER_RUN = 12;
 const SOLANA_RUNTIME_BUDGET_MS = 7 * 60 * 1_000;
 
 interface SolanaQuoteState {

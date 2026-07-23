@@ -20,7 +20,9 @@ import { buildTronMeasuredExecutionProfile } from "./tron-profiles";
 import { quoteTronMeasuredTarget } from "./tron-quotes";
 
 const TRON_ADMISSION_SOURCE_KEY = "measured-execution:tron-admission";
-const MAX_TARGETS_PER_RUN = 8;
+// Two targets can still cycle the full current inventory more than thirteen
+// times in 72 hours. The smaller batch avoids bursting Sun's public router.
+const MAX_TARGETS_PER_RUN = 2;
 const TRON_RUNTIME_BUDGET_MS = 7 * 60 * 1_000;
 const REQUEST_HEADROOM_MS = 20_000;
 
@@ -118,9 +120,12 @@ export async function syncTronDexMeasuredExecution(
   }));
 
   let completed = 0;
+  let rateLimitStopped = false;
+  let lastAttemptedTargetId: string | null = null;
   for (const state of states) {
     if (state.failureReason) continue;
     throwIfAborted(signal);
+    lastAttemptedTargetId = state.target.targetId;
     try {
       state.profile = await measureTarget({
         target: state.target,
@@ -133,6 +138,9 @@ export async function syncTronDexMeasuredExecution(
     } catch (error) {
       rethrowIfAborted(error, signal);
       state.failureReason = toErrorMessage(error).slice(0, 300);
+      if (state.failureReason.startsWith("http-429")) {
+        rateLimitStopped = true;
+      }
     }
     completed++;
     await reportProgress?.({
@@ -142,6 +150,14 @@ export async function syncTronDexMeasuredExecution(
       itemsTotal: admitted.size,
       metadata: { activation: "shadow", targetGenerationId: targetGeneration.generationId },
     });
+    if (rateLimitStopped) break;
+  }
+  if (rateLimitStopped) {
+    for (const state of states) {
+      if (admitted.has(state.target.targetId) && !state.profile && state.failureReason == null) {
+        state.failureReason = "rate-limit-deferred";
+      }
+    }
   }
 
   const outcomes: TronMeasuredQuoteOutcome[] = states.map((state) => state.profile
@@ -168,11 +184,13 @@ export async function syncTronDexMeasuredExecution(
 
   let cursorWriteStatus: "not-needed" | "written" | "missing-table" | "write-failed" = "not-needed";
   const deferredCount = targetGeneration.targets.length - admitted.size;
-  if (deferredCount > 0 && nextCursor) {
+  const rateLimitDeferredCount = states.filter((state) => state.failureReason === "rate-limit-deferred").length;
+  const effectiveNextCursor = rateLimitStopped ? lastAttemptedTargetId : nextCursor;
+  if ((deferredCount > 0 || rateLimitStopped) && effectiveNextCursor) {
     const cursorWrite = await writeDexSourcePaginationState({
       db,
       sourceKey: TRON_ADMISSION_SOURCE_KEY,
-      cursor: nextCursor,
+      cursor: effectiveNextCursor,
       cycleStartedAt: admissionState.cycleStartedAt ?? startedAt,
       nowSec: publishedAt,
       completed: false,
@@ -187,7 +205,10 @@ export async function syncTronDexMeasuredExecution(
         : cursorWrite.errorClass;
   }
   const attemptedFailureCount = states.filter(
-    (state) => admitted.has(state.target.targetId) && !state.profile,
+    (state) =>
+      admitted.has(state.target.targetId) &&
+      !state.profile &&
+      state.failureReason !== "rate-limit-deferred",
   ).length;
   const metadata = {
     activation: "shadow",
@@ -198,8 +219,10 @@ export async function syncTronDexMeasuredExecution(
     failedCount: publication.failedCount,
     attemptedFailureCount,
     deferredCount,
+    rateLimitDeferredCount,
+    rateLimitStopped,
     admissionCursor,
-    nextAdmissionCursor: nextCursor,
+    nextAdmissionCursor: effectiveNextCursor,
     cursorWriteStatus,
     failuresByReason: outcomes.reduce<Record<string, number>>((counts, outcome) => {
       if (outcome.status === "failed") {

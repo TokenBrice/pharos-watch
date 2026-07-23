@@ -3,17 +3,21 @@ import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "
 import { throwIfAborted } from "../../lib/abort";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { resolveTrackedStablecoinId } from "./token-resolution";
+import { buildChainAddressKey, resolveTrackedStablecoinId } from "./token-resolution";
 import { classifyClPoolType, normalizeFeeRateFromBps } from "./direct-source-helpers";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import { toErrorMessage } from "../../lib/error-utils";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-const PAGE_SIZE = 500;
-const MAX_PAGES = 8;
+const PAGE_SIZE = 100;
+const MAX_CL_PAGES = 50;
+const TOKEN_BATCH_SIZE = 100;
+const POOL_COUNT_ABI = parseAbi([
+  "function allPoolsLength() view returns (uint256)",
+]);
 const SUGAR_ABI = parseAbi([
-  "function all(uint256 _limit, uint256 _offset) view returns ((address lp,string symbol,uint8 decimals,uint256 liquidity,int24 type,int24 tick,uint160 sqrt_ratio,address token0,uint256 reserve0,uint256 staked0,address token1,uint256 reserve1,uint256 staked1,address gauge,uint256 gauge_liquidity,bool gauge_alive,address fee,address bribe,address factory,uint256 emissions,address emissions_token,uint256 pool_fee,uint256 unstaked_fee,uint256 token0_fees,uint256 token1_fees,address nfpm,address alm,address root)[])",
-  "function tokens(uint256 _limit, uint256 _offset, address _account, address[] _addresses) view returns ((address token_address,string symbol,uint8 decimals,uint256 account_balance,bool listed)[])",
+  "function all(uint256 _limit, uint256 _offset, uint256 _filter) view returns ((address lp,string symbol,uint8 decimals,uint256 liquidity,int24 type,int24 tick,uint160 sqrt_ratio,address token0,uint256 reserve0,uint256 staked0,address token1,uint256 reserve1,uint256 staked1,address gauge,uint256 gauge_liquidity,bool gauge_alive,address fee,address bribe,address factory,uint256 emissions,address emissions_token,uint256 emissions_cap,uint256 pool_fee,uint256 unstaked_fee,uint256 token0_fees,uint256 token1_fees,uint256 locked,uint256 emerging,uint32 created_at,address nfpm,address alm,address root)[])",
+  "function tokens(uint256 _limit, uint256 _offset, address _account, address[] _addresses) view returns ((address token_address,string symbol,uint8 decimals,uint256 account_balance,bool listed,bool emerging)[])",
 ]);
 
 type SlipstreamProtocol = "aerodrome-slipstream" | "velodrome-slipstream";
@@ -27,6 +31,7 @@ type SugarPool = {
   reserve1: bigint;
   sqrt_ratio: bigint;
   pool_fee: bigint;
+  factory: string;
 };
 
 type SugarToken = {
@@ -48,6 +53,7 @@ export function projectSugarPoolPage(decoded: readonly SugarPool[]): SugarPool[]
       reserve1: pool.reserve1,
       sqrt_ratio: pool.sqrt_ratio,
       pool_fee: pool.pool_fee,
+      factory: pool.factory,
     });
   }
   return pools;
@@ -65,14 +71,23 @@ export function projectSugarTokens(decoded: readonly SugarToken[]): Map<string, 
   return tokens;
 }
 
-const SLIPSTREAM_CONFIG: Record<SlipstreamProtocol, { chain: string; sugarAddress: string }> = {
+const SLIPSTREAM_CONFIG: Record<SlipstreamProtocol, {
+  chain: string;
+  sugarAddress: string;
+  v2FactoryAddress: string;
+  clFactoryAddress: string;
+}> = {
   "aerodrome-slipstream": {
     chain: "base",
-    sugarAddress: "0x27fc745390d1f4BaF8D184FBd97748340f786634",
+    sugarAddress: "0x69dD9db6d8f8E7d83887A704f447b1a584b599A1",
+    v2FactoryAddress: "0x420DD381b31aEf6683db6B902084cB0FFECe40Da",
+    clFactoryAddress: "0x5e7BB104d84c7CB9B682AaC2F3d509f5F406809A",
   },
   "velodrome-slipstream": {
     chain: "optimism",
-    sugarAddress: "0xA64db2D254f07977609def75c3A7db3eDc72EE1D",
+    sugarAddress: "0x347512180804A8B40AA7525AE932a31198F074aA",
+    v2FactoryAddress: "0xF1046053aa5682b4F9a81b5481394DA16BE5FF5a",
+    clFactoryAddress: "0xCc0bDDB707055e04e497aB22a59c2aF4391cd12F",
   },
 };
 
@@ -132,27 +147,57 @@ function normalizeAddress(address: string): string {
 }
 
 async function fetchSugarPools(
-  chain: string,
-  sugarAddress: string,
+  config: (typeof SLIPSTREAM_CONFIG)[SlipstreamProtocol],
+  chainAddressToId: Map<string, string>,
   chainRpcs: Map<string, ChainRpcConfig> | undefined,
   signal?: AbortSignal,
 ): Promise<SugarPool[]> {
   const pools: SugarPool[] = [];
 
-  for (let page = 0; page < MAX_PAGES; page++) {
-    throwIfAborted(signal);
+  const fetchPoolCount = async (factoryAddress: string): Promise<number> => {
     const data = encodeFunctionData({
-      abi: SUGAR_ABI,
-      functionName: "all",
-      args: [BigInt(PAGE_SIZE), BigInt(page * PAGE_SIZE)],
+      abi: POOL_COUNT_ABI,
+      functionName: "allPoolsLength",
     });
-    const result = await fetchEvmCallHexAtBlock(chain, sugarAddress, data, "latest", {
+    const result = await fetchEvmCallHexAtBlock(config.chain, factoryAddress, data, "latest", {
       signal,
       timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
       chainRpcs,
-      gas: "0x5B8D80",
     });
-    if (!result) break;
+    if (!result) throw new Error(`pool-count-unavailable:${factoryAddress}`);
+    const decoded = decodeFunctionResult({
+      abi: POOL_COUNT_ABI,
+      functionName: "allPoolsLength",
+      data: result,
+    });
+    const count = Number(decoded);
+    if (!Number.isSafeInteger(count) || count < 0) throw new Error(`pool-count-invalid:${factoryAddress}`);
+    return count;
+  };
+
+  // Sugar orders factories as registered. These reviewed deployments each
+  // have one V2 factory before the activation-candidate CL factory.
+  const firstClOffset = await fetchPoolCount(config.v2FactoryAddress);
+  const clPoolCount = await fetchPoolCount(config.clFactoryAddress);
+  if (Math.ceil(clPoolCount / PAGE_SIZE) > MAX_CL_PAGES) {
+    throw new Error(`cl-pagination-cap:${clPoolCount}`);
+  }
+
+  for (let page = 0; page * PAGE_SIZE < clPoolCount; page++) {
+    throwIfAborted(signal);
+    const pageSize = Math.min(PAGE_SIZE, clPoolCount - page * PAGE_SIZE);
+    const data = encodeFunctionData({
+      abi: SUGAR_ABI,
+      functionName: "all",
+      args: [BigInt(pageSize), BigInt(firstClOffset + page * PAGE_SIZE), 0n],
+    });
+    const result = await fetchEvmCallHexAtBlock(config.chain, config.sugarAddress, data, "latest", {
+      signal,
+      timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
+      chainRpcs,
+      gas: "0x1C9C380",
+    });
+    if (!result) throw new Error(`cl-page-unavailable:${page}`);
 
     const decoded = decodeFunctionResult({
       abi: SUGAR_ABI,
@@ -160,12 +205,21 @@ async function fetchSugarPools(
       data: result,
     }) as readonly SugarPool[];
 
-    if (decoded.length === 0) break;
-    pools.push(...projectSugarPoolPage(decoded));
-    if (decoded.length < PAGE_SIZE) break;
-    if (page === MAX_PAGES - 1) {
-      throw new Error(`pagination cap reached at page ${page + 1}; resumeFromOffset=${MAX_PAGES * PAGE_SIZE}`);
+    if (decoded.length !== pageSize) {
+      throw new Error(`cl-page-incomplete:${page}:${decoded.length}/${pageSize}`);
     }
+    if (decoded.some((pool) =>
+      normalizeAddress(pool.factory) !== normalizeAddress(config.clFactoryAddress) ||
+      Number(pool.type) <= 0
+    )) {
+      throw new Error(`cl-factory-boundary-drift:${page}`);
+    }
+    pools.push(...projectSugarPoolPage(decoded).filter((pool) =>
+      (
+        chainAddressToId.has(buildChainAddressKey(config.chain, pool.token0)) ||
+        chainAddressToId.has(buildChainAddressKey(config.chain, pool.token1))
+      ),
+    ));
   }
 
   return pools;
@@ -179,26 +233,30 @@ async function fetchSugarTokens(
   signal?: AbortSignal,
 ): Promise<Map<string, SugarToken>> {
   if (addresses.length === 0) return new Map();
-  const data = encodeFunctionData({
-    abi: SUGAR_ABI,
-    functionName: "tokens",
-    args: [BigInt(addresses.length), 0n, ZERO_ADDRESS, addresses as `0x${string}`[]],
-  });
-  const result = await fetchEvmCallHexAtBlock(chain, sugarAddress, data, "latest", {
-    signal,
-    timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
-    chainRpcs,
-    gas: "0x5B8D80",
-  });
-  if (!result) return new Map();
-
-  const decoded = decodeFunctionResult({
-    abi: SUGAR_ABI,
-    functionName: "tokens",
-    data: result,
-  }) as readonly SugarToken[];
-
-  return projectSugarTokens(decoded);
+  const tokens = new Map<string, SugarToken>();
+  for (let offset = 0; offset < addresses.length; offset += TOKEN_BATCH_SIZE) {
+    throwIfAborted(signal);
+    const batch = addresses.slice(offset, offset + TOKEN_BATCH_SIZE);
+    const data = encodeFunctionData({
+      abi: SUGAR_ABI,
+      functionName: "tokens",
+      args: [0n, 0n, ZERO_ADDRESS, batch as `0x${string}`[]],
+    });
+    const result = await fetchEvmCallHexAtBlock(chain, sugarAddress, data, "latest", {
+      signal,
+      timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
+      chainRpcs,
+      gas: "0x1C9C380",
+    });
+    if (!result) throw new Error(`token-batch-unavailable:${offset}`);
+    const decoded = decodeFunctionResult({
+      abi: SUGAR_ABI,
+      functionName: "tokens",
+      data: result,
+    }) as readonly SugarToken[];
+    for (const [address, token] of projectSugarTokens(decoded)) tokens.set(address, token);
+  }
+  return tokens;
 }
 
 export async function fetchSlipstreamPools(
@@ -212,7 +270,7 @@ export async function fetchSlipstreamPools(
   const config = SLIPSTREAM_CONFIG[protocol];
   const errors: string[] = [];
   try {
-    const clPools = await fetchSugarPools(config.chain, config.sugarAddress, chainRpcs, signal);
+    const clPools = await fetchSugarPools(config, chainAddressToId, chainRpcs, signal);
     const tokenAddresses = Array.from(new Set(
       clPools.flatMap((pool) => [normalizeAddress(pool.token0), normalizeAddress(pool.token1)]),
     ));
