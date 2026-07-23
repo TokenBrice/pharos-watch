@@ -25,8 +25,8 @@ is tested, and its material V8/V9 diff has a reviewed artifact.
 - `Diff: pending` means no reviewed consumer-specific V8/V9 evidence is yet
   recorded and therefore the row remains `OPEN`.
 
-The temporary `/v9-preview-412d818c031b7bc5/` reviewer page and its opaque
-read endpoint are deliberately outside the activation dispositions below. They
+The temporary `/v9-preview/` reviewer page and its stable read endpoint are
+deliberately outside the activation dispositions below. They
 render only the strict `lifecycle: "shadow"` projection, retain a V9-specific
 query identity, and expose no V8 fallback or admin data. Their existence does
 not close C01 or C02: external compatibility, active-route behavior, full

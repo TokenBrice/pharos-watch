@@ -20,12 +20,13 @@ Rollback restores the retained V8-compatible Worker and Pages deployments; it
 does not depend on continuously recomputing and publishing V8 beside V9.
 
 The temporary feedback preview is a narrow exception to private shadowing. Its
-opaque page and API paths are read-only, unlinked, and `noindex`; the API returns
+stable page and API paths are read-only, unlinked, and `noindex`; the API returns
 only the strict public projection with `lifecycle: "shadow"`. The route does not
 expose admin diffs, history, movement reviews, or mutations, and it does not
-read or write the V9 activation marker. The opaque URL limits accidental
-discovery but is not an authentication boundary. Preview feedback is evidence
-for review only and closes no activation gate or consumer-ledger blocker.
+read or write the V9 activation marker. The preview revalidates the latest
+canonical shadow publication on each page visit instead of pinning contributor
+links to one evaluation build. Preview feedback is evidence for review only and
+closes no activation gate or consumer-ledger blocker.
 
 The rollout deliberately has no:
 

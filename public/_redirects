@@ -11,6 +11,11 @@
 /telegram/ /pharoswatchbot/ 301
 /telegram /pharoswatchbot/ 301
 
+# The V9 contributor preview now follows the latest production build at a stable URL.
+/v9-preview-412d818c031b7bc5/* /v9-preview/:splat 301
+/v9-preview-412d818c031b7bc5/ /v9-preview/ 301
+/v9-preview-412d818c031b7bc5 /v9-preview/ 301
+
 # Stablecoin selector route was renamed to picker; preserve old snapshot links.
 /screener/selector/* /screener/picker/:splat 301
 /screener/selector/ /screener/picker/ 301

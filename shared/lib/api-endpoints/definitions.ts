@@ -482,8 +482,16 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
   }),
   publicGet({
-    key: "report-cards-v9-preview-412d818c031b7bc5",
+    key: "report-cards-v9-preview",
     path: API_PATHS.reportCardsV9Preview(),
+    cacheBypass: true,
+    strictContract: true,
+    probeGroup: "manual",
+  }),
+  publicGet({
+    key: "report-cards-v9-preview-legacy",
+    path: API_PATHS.reportCardsV9PreviewLegacy(),
+    cacheBypass: true,
     strictContract: true,
     probeGroup: "manual",
   }),

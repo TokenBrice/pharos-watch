@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 
-const PREVIEW_PATH = "/v9-preview-412d818c031b7bc5/";
+const PREVIEW_PATH = "/v9-preview/";
 
 export const metadata = buildPageMetadata({
   title: "Safety Score V9 Shadow Preview",

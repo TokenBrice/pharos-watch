@@ -23,7 +23,7 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
 import { createPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
 import { CRON_1MIN, CRON_30MIN, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
-import { useHealth } from "../api-hooks";
+import { useHealth, useReportCardsV9Preview } from "../api-hooks";
 import { useRequestSourceStats } from "../use-request-source-stats";
 import { useStatus } from "../use-status";
 import { useEndpointProbes } from "../use-endpoint-probes";
@@ -218,6 +218,19 @@ describe("query polling policy", () => {
     expect(options.staleTime).toBe(CRON_1MIN);
     expect(options.refetchInterval).toBe(2 * CRON_1MIN);
     expect(options.retry).toBe(1);
+  });
+
+  it("revalidates the V9 contributor preview whenever it mounts", () => {
+    useReportCardsV9Preview();
+    const options = useQueryMock.mock.calls[0][0] as {
+      queryKey: unknown[];
+      staleTime: number;
+      placeholderData?: unknown;
+    };
+
+    expect(options.queryKey).toEqual(["report-cards", "v9", "preview"]);
+    expect(options.staleTime).toBe(0);
+    expect(options.placeholderData).toBeUndefined();
   });
 
   it("useStabilityIndexLight reuses registered meta polling", () => {

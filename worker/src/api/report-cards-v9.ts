@@ -42,11 +42,15 @@ function parseActivationMarker(value: string): ReportCardsV9ActivationMarker | n
   }
 }
 
-function snapshotResponse(snapshot: ReportCardsV9Response, lifecycle: ReportCardsV9Response["lifecycle"]): Response {
+function snapshotResponse(
+  snapshot: ReportCardsV9Response,
+  lifecycle: ReportCardsV9Response["lifecycle"],
+  cacheControl: string = CACHE_PROFILES.standard,
+): Response {
   return jsonFreshResponse(
     { ...snapshot, lifecycle },
     {
-      cacheControl: CACHE_PROFILES.standard,
+      cacheControl,
       updatedAt: snapshot.updatedAt,
       maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
     },
@@ -107,7 +111,7 @@ export const handleReportCardsV9Preview = withErrorHandler(
   "report-cards-v9-preview",
   async (db: D1Database): Promise<Response> => {
     try {
-      return snapshotResponse(await loadPublishedReportCardsV9Snapshot(db), "shadow");
+      return snapshotResponse(await loadPublishedReportCardsV9Snapshot(db), "shadow", CACHE_PROFILES.noStore);
     } catch (error) {
       if (error instanceof ReportCardsV9SnapshotUnavailableError) {
         return errorResponse(503, error.message);

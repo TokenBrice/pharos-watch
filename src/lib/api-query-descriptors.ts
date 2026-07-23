@@ -286,7 +286,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   ),
   reportCardsV9Preview: defineApiQuery(
     {
-      queryKey: ["report-cards", "v9", "preview-412d818c031b7bc5"] as const,
+      queryKey: ["report-cards", "v9", "preview"] as const,
       path: API_PATHS.reportCardsV9Preview(),
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
       metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
