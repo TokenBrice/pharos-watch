@@ -1,5 +1,5 @@
 {
-  "last_updated_at": 1784451502,
+  "last_updated_at": 1784810583,
   "donations": [
     {
       "chain": "ethereum",
@@ -684,6 +684,30 @@
       "amount_decimal": 0.294903535961297,
       "usd_at_receipt": 521.74,
       "price_note": "coingecko-historical-2026-06-05"
+    },
+    {
+      "chain": "base",
+      "tx_hash": "0xa5d4632f8056e51fc255d95e62b6f7e1d1d0652224238cbcf999a6cfdd08f7f0",
+      "block_timestamp": 1784649673,
+      "from_address": "0xd68c9d2cd96463061e6ed0799bb100d87fe14802",
+      "display": "0xd68c9d...4802",
+      "kind": "community",
+      "asset_symbol": "USDC",
+      "amount_decimal": 365.84,
+      "usd_at_receipt": 365.84,
+      "price_note": "stablecoin-1-to-1"
+    },
+    {
+      "chain": "ethereum",
+      "tx_hash": "0x40b3cc3b2e8af2caf92d63ec06f38a5d9e6a7c3f5c6f8830df0db06f0182f131",
+      "block_timestamp": 1784678399,
+      "from_address": "0x839584a151b8867151b0a888c051b0b1cbfc207a",
+      "display": "flowcompass.eth",
+      "kind": "community",
+      "asset_symbol": "ETH",
+      "amount_decimal": 0.030198631603724473,
+      "usd_at_receipt": 57.46,
+      "price_note": "coingecko-historical-2026-07-21"
     }
   ]
 }
