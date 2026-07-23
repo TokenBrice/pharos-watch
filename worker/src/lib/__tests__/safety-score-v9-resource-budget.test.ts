@@ -9,6 +9,7 @@ import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safet
 import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
+const TEST_DIRECTORY = resolve(import.meta.dirname);
 const HEAP_LIMIT_MIB = 128;
 let temporaryDirectory = "";
 let bundledProbe = "";
@@ -20,9 +21,9 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
     buildSync({
       stdin: {
         contents: `
-          import { buildSafetyScoreV9ShadowCandidateFromNormalizedInput } from "./worker/src/lib/safety-score-v9-candidate.ts";
-          import { createSafetyScoreV9FullRegistryInput } from "./worker/src/lib/__tests__/fixtures/safety-score-v9-full-registry-input.ts";
-          import { buildSafetyScoreV9ShadowEnvelope, computeSafetyScoreV9ShadowEnvelopeDigest } from "./worker/src/lib/safety-score-v9-shadow.ts";
+          import { buildSafetyScoreV9ShadowCandidateFromNormalizedInput } from "../safety-score-v9-candidate.ts";
+          import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input.ts";
+          import { buildSafetyScoreV9ShadowEnvelope, computeSafetyScoreV9ShadowEnvelopeDigest } from "../safety-score-v9-shadow.ts";
 
           const fixedInput = createSafetyScoreV9FullRegistryInput();
           const shadow = buildSafetyScoreV9ShadowCandidateFromNormalizedInput({
@@ -47,7 +48,7 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
           }));
         `,
         loader: "ts",
-        resolveDir: ROOT,
+        resolveDir: TEST_DIRECTORY,
         sourcefile: "safety-score-v9-resource-probe.ts",
       },
       outfile: bundledProbe,
