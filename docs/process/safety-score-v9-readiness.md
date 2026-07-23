@@ -1,24 +1,52 @@
 # Safety Score v9 Readiness
 
 This document describes the Safety Score V9 candidate compiler, evaluator,
-shadow pipeline, calibration corpus, and current activation gate. It does not
-define an active Safety Score methodology. Production remains on Safety Score
-v8.17 and P4 same-notional scoring remains shadow-only.
+shadow pipeline, calibration corpus, and recorded readiness findings. It does
+not define an active Safety Score methodology. Production remains on Safety
+Score v8.17 and P4 same-notional scoring remains shadow-only.
 
 Release mechanics are governed by the
-[single-publisher V9 rollout contract](./safety-score-v9-rollout.md). Candidate
-readiness and rollout readiness are independent: neither can override the
-other.
+[V9 rollout contract](./safety-score-v9-rollout.md). Readiness reports inform
+the owner; they do not authorize or veto the owner's activation-key write.
 
 ## Durable Artifacts
 
-- `shared/data/safety-score-v9/historical-fixtures-v1.json`: 26 point-in-time fixtures (12 adverse, 14 resilient). Every source publication is at or before the fixture `asOf`; adverse outcome windows start at or after `asOf`. Each source now declares its capture state, and each fixture separates fact-freeze from outcome-annotation provenance. The legacy corpus honestly records all 26 sources as unarchived and all authoring controls as retrospective/unverified, so it cannot clear activation evidence integrity.
+- `shared/data/safety-score-v9/historical-fixtures-v1.json`: 26 point-in-time fixtures (12 adverse, 14 resilient). Every source publication is at or before the fixture `asOf`; adverse outcome windows start at or after `asOf`. Each source now declares its capture state, and each fixture separates fact-freeze from outcome-annotation provenance. The legacy corpus honestly records all 26 sources as unarchived and all authoring controls as retrospective/unverified, so its evidence-integrity limitations remain visible to the owner.
 - `shared/data/safety-score-v9/calibration-cohort-v1.json`: 24 active assets spanning fiat anchors, CDPs, wrappers, private credit, synthetic designs, RWA funds, bridge scope, dependencies, and missing-evidence cases.
 - `shared/data/safety-score-v9/matched-invariants-v1.ts`: expectation-free transformations for redemption, optional routes, reserve and bridge materiality, dependency availability, oracle common mode, evidence criticality, and parent propagation.
 - `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`: the explicit candidate-only methodology policy, including formula order and constants, evidence dispositions, exit and materiality policy, structural limits, and the complete reason-code registry. It has lifecycle `candidate` and no release version; it is not an active `9.0` policy.
 - `shared/data/safety-score-v9/golden-scenarios-v1.ts`: the durable 30-case archetype corpus and 32 ordering constraints used for policy sensitivity and the research evaluator. Expectations remain outside production-shaped scoring inputs.
 - `shared/data/safety-score-v9/exit-route-calibration-v1.json`: all-active P4 producer coverage, calibrated coverage floors, legacy-versus-active score movements, and the activation disposition.
 - `shared/data/safety-score-v9/readiness-baseline-v1.json`: final all-active compiler output, itemized manual-evidence audit, calibration-cohort dispositions, historical calibration, route coverage, shadow evaluation, and go/no-go recommendation.
+
+## Activation Readiness Contract
+
+Owner ruling, 2026-07-23: the identity-bound D1 cache key
+`safety-score-v9:public-activation` is the sole runtime activation switch. The
+owner writes it only after one fresh exact capture replays at deployed `HEAD`
+and the one-shot packet confirms:
+
+- byte-identical U, EURS, and MIM pins, with TUSD reviewed against its watch
+  semantics;
+- a green anchor table;
+- three reproductions of the composite A+ case;
+- no unexplained grade-band movement from the last live shadow row; and
+- green score-bearing producers in `cron_runs`.
+
+The rated-count regression alarm must also be quiet. The former identity freeze,
+qualifying-day window, sealed release-cohort row, and consumer-ledger gate are
+retired. The production cohort-mint caller formerly tracked as task #24 is
+closed as won't-build.
+
+Daily rows, the unlisted preview, movement reviews, coverage evaluations,
+readiness output, and the consumer ledger remain advisory observation surfaces.
+Their findings should be investigated, but no streak, cohort, ledger status, or
+generated recommendation can replace or override the owner decision.
+
+Policy, compiler, evaluation-build, fact-set, producer-capability, source
+generation, and result digests remain part of every retained record. Identity
+rotations carry no procedural release cost; each accepted rotation still gets
+same-input replay and adversarial review before it becomes the next candidate.
 
 ## Implementation Status
 
@@ -52,20 +80,17 @@ The V9 implementation establishes candidate infrastructure without changing prod
   producer capability `6b2a7a9287636425b75304d2f88bdb7a422ed3e8b53a3ffe1971796798e35ad8`,
   and candidate ID
   `safety-score-v9-candidate:v1:9589f4bec11e7a066232cc2167a6c6ea9438a5bcc76c0a0fa4c70b5a0de4fecd`.
-  It has not been deployed or frozen for qualification.
-- **IDENTITY FREEZE RESCINDED BY OWNER RULING 2026-07-16; CALIBRATION SPRINT IN
-  EFFECT:** deployed Batch 5 remains policy `5f4f92eec713b65b30d60e3cd8d05a613ab86b4512db4dead699c9b85c30f15e`
+  It remains an identity record rather than an activation token.
+- **CALIBRATION IDENTITY HANDLING:** deployed Batch 5 used policy
+  `5f4f92eec713b65b30d60e3cd8d05a613ab86b4512db4dead699c9b85c30f15e`
   and build `ad5870b23bd1e09b586edb123c504aa0729e0d5d9b3b5201c6830b6d7f336dff`;
-  it no longer accrues activation days. The owner reopened the identity after
+  the owner reopened that identity on 2026-07-16 after
   confirming that the shipped evaluator applies the 5% material-share gate only
   to chain common mode, while the Batch 5 ruling requires it across domain kinds.
-  Identity-bound changes to policy, engine, schema, or producer capability may
-  proceed only through retained same-input calibration replays. A later explicit
-  owner re-freeze of a deployed identity is required before any prospective
-  qualifying window can begin. Each kept identity-bound batch also pays the
-  deterministic digest pin, generated manifest, and readiness-pin refresh cost;
-  batch same-day changes so those identity updates happen once, never against a
-  stale manifest.
+  The 2026-07-23 ruling supersedes future freeze and day-accrual mechanics.
+  Changes to policy, engine, schema, or producer capability may proceed through
+  retained same-input calibration replays and adversarial review. Deterministic
+  digest pins and generated manifests remain record-keeping, not release gates.
 - The 2026-07-15 Batch 3 calibration revision (owner rulings 2026-07-15)
   applies the two ruled cap changes and nothing else. (1) The mint posture gains
   a distinct `unbounded-reconciled` rung (`mintPostureQuality` = 55) for an
@@ -165,7 +190,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
   gates that every V8-graded asset is V9-rateable up to that allowlist.
   Against the 2026-07-14T04:49Z exact capture (replayed with the local
   extension builder across registry drift, so a labeled drift measurement
-  rather than activation evidence) the candidate rates 358 of 361 assets and
+  rather than a deployed exact replay) the candidate rates 358 of 361 assets and
   100.00% of tracked supply weight; the three `NR` assets are
   unresolved-archetype classifications. Grade-band re-anchoring against the
   resulting compressed distribution remains an open owner calibration
@@ -181,7 +206,7 @@ The V9 implementation establishes candidate infrastructure without changing prod
   cannot be used as an unsourced substitute for a failed or unavailable read.
   This is candidate-only evaluator behavior and does not change active V8.17;
   its final identity must be carried by a regenerated evaluation-build digest
-  before replay or freeze, coordinated with the release owner.
+  before replay, coordinated with the release owner.
 - The shadow extension builder now maps reviewed repository evidence into the
   strict fact set instead of clamping every fact to an unresolved state: peg
   references from the registry peg currency, chain-supply bridge materiality
@@ -213,23 +238,23 @@ The V9 implementation establishes candidate infrastructure without changing prod
   evidence scores at bounded-unknown levels beneath labeled reason ceilings,
   so the 2026-07-14 drift-labeled replay rates 358 of 361 assets (100.00%
   supply weight) with only unresolved-archetype assets reason-coded `NR`.
-  The rateability floors are met in that research measurement, but every
-  shadow day remains non-qualifying until a publication-exact capture with a
-  matching registry reproduces it and the remaining activation gates pass.
+  The rateability floors are met in that research measurement. A fresh
+  publication-exact capture with a matching registry is still required for the
+  owner's one-shot pre-flip packet, but no shadow day accrues release credit.
 - The `sync-cl-exit-depth` producer now captures generation-fenced Uniswap V3,
   PancakeSwap V3, and Fluid measured-depth profiles. All reviewed deployment
   cohorts are explicitly `activation-pending`: their observations stay
   score-ineligible until archive replay, executed-swap equivalence, independent
-  cross-checks, drift analysis, and the required prospective shadow evidence
-  are approved. Curve CryptoSwap remains a separate shadow adapter and is never
-  interpreted through the StableSwap model.
+  cross-checks, and drift analysis are approved. This producer-specific
+  score-eligibility review is separate from V9 public activation. Curve
+  CryptoSwap remains a separate shadow adapter and is never interpreted through
+  the StableSwap model.
 - After a valid V8 publication commits, the Worker runs V9 in a separate
   failure domain. It retains latest candidate/diff state and one compact daily
-  summary. Full replay artifacts are retained only for selected first, final,
-  or distinct anomaly evidence. The four-hour slowest producer cadence is
-  proven from elapsed time and source generations, not by archiving every
-  producer cycle. A V9 compile, retention, or D1 failure cannot suppress or
-  replace V8, and a later same-day retry may still select a success.
+  summary for observation. A V9 compile, retention, or D1 failure cannot
+  suppress or replace V8, and a later same-day retry may still select a
+  success. The activation-day exact replay is captured explicitly rather than
+  inferred from daily shadow summaries.
 - `GET /api/admin-safety-score-v9` and the internal admin workspace expose only
   exact retained candidate state. Material movements use append-only semantic
   review keys through `POST /api/admin-safety-score-v9/reviews`; a review record
@@ -241,74 +266,41 @@ The V9 implementation establishes candidate infrastructure without changing prod
   scores, deltas and the continuous weakest-pillar score are delegated to a
   reviewed-score anchor. A carry applies only when both the reviewed V8 and V9
   scores are within `V9_SHADOW_MOVEMENT_REVIEW_CARRY_SCORE_DRIFT` (3 points) of
-  today's, which bounds cumulative drift for the whole window rather than per
-  run. Any class change — a grade, reason code, cap kind or crossing-set move —
+  today's, which bounds cumulative drift across observations. Any class change
+  — a grade, reason code, cap kind or crossing-set move —
   expires the carry and re-pends the movement, so a `defect`-class movement can
   never inherit a benign disposition. The exact review key and the reviewed
   scores stay recorded, and each carried card names the review it came from, so
   a reviewer can always separate what was adjudicated from what was carried.
-- The read-only `safety-score-v9:shadow-gate` evaluator accepts compact daily
-  summaries plus the selected immutable artifact rows and derives replay status
-  by rebuilding each candidate. It requires at least 8 consecutive UTC days
-  (14 before the 2026-07-23 owner amendment recorded below),
-  at least two elapsed cycles of the four-hour slowest score-bearing producer,
-  and at least two distinct observed and archived `liveReserves` and
-  `redemption` generations for one frozen candidate/policy/build/capability and
-  operational-policy identity. It also requires exact active-ID and coverage
-  evidence, resolved blockers, and passed first/final/anomaly replays.
-  It cannot authorize or activate production at runtime.
-- **Movement adjudication is evaluated at window end, not per day.** Pipeline
-  stability and methodology adjudication are distinct properties: whether V9's
-  treatment of an asset is correct is a one-time question about the transition,
-  not evidence that today's run was stable. Re-adjudicating an asset because its
-  score moved a point serves neither. `unresolvedCriticalMovementIds` and
-  `pendingReviewCount` are therefore recorded on every run but enforced once, on
-  the final day of the window, by the offline gate. "Nothing ships
-  unadjudicated" is preserved exactly. Every pipeline-stability floor —
-  active-result-count, minimum-rateable-assets, scheduled-start-latency,
-  ratified-release-coverage, replayability and no-compiler-exceptions — still
-  gates every single day.
-- The `ratified-release-coverage` floor intentionally fails closed until the
-  frozen V9-9 release cohort and its passing report are wired into the shadow
-  producer. Every daily run therefore remains non-qualifying and activation is
-  hard-blocked even if the operational shadow infrastructure is deployed.
-  Wiring it requires TWO distinct owner-supplied artifacts, because the floor
-  works with two different identifiers:
-  - The **sealed release-candidate label** (`v9-rc-N`) names an owner-ratified
-    release line and is the primary key of `safety_score_v9_release_cohorts`.
-  - The **content-addressed candidate id**
-    (`safety-score-v9-candidate:v1:<sha256>`) names one day's exact evaluation
-    and is what the coverage report's policy, evaluation-build, fact-set, and
-    result digests bind to. It is computed per run and is never a cohort key.
-
-  A shadow run computes the second and must be told the first, so the owner
-  must supply, out of band in production D1:
-  1. the ratified cohort row itself, keyed by the sealed label; and
-  2. one `cache` row designating which sealed label is under the gate —
-     key `safety-score-v9:sealed-release-candidate`, value
-     `{"schemaVersion":1,"releaseCandidateId":"v9-rc-N"}`.
-
-  The designation only SELECTS a cohort; it authorizes nothing. A missing,
-  malformed, or wrong designation resolves to no cohort row, or to a cohort
-  whose policy/evaluation-build digests do not match the day's candidate, and
-  the floor fails closed with `ratified-release-coverage-unavailable` either
-  way. Until both artifacts exist the floor remains the standing release
-  blocker by design.
+- Daily operational evaluations still expose exact active-ID counts, rateable
+  counts, candidate and producer identities, current observation timing, and
+  movement queues. Their check and streak projections are admin diagnostics
+  only. Movement dispositions remain useful review evidence but do not make a
+  day count and are not enforced by an offline window-end gate.
+- The sealed `v9-rc-N` cohort path and
+  `safety-score-v9:sealed-release-candidate` designation are retired from
+  activation. Existing cohort records may remain as historical data, but no
+  production cohort-mint caller will be built and no cohort coverage result
+  blocks the owner.
+- The public switch is instead the identity-bound
+  `safety-score-v9:public-activation` cache row. It binds policy ID, policy
+  digest, evaluation-build digest, and methodology version to the canonical
+  snapshot; missing, malformed, or mismatched values keep the endpoint dark.
 - Safety history now dual-writes identity-rich V2 rows while preserving the
   public V8 compatibility response. Methodology-boundary rows are excluded from
   continuous V8 history, and no V9 cutover baseline writer exists yet.
 
 These are implemented candidate and operational boundaries, not completed
-readiness gates. Report-card fixed-input capture, calibration, replay, and
+methodology work. Report-card fixed-input capture, calibration, replay, and
 readiness share canonical registry, DEX, redemption, producer-methodology, and
 base-input identities; declared provenance is not trusted on its own.
 Production remains on v8.17. The candidate policy is neither independently
-validated nor authorized as Safety Score 9.0, and the public V9/consumer cutover
-path is deliberately absent.
+validated nor authorized as Safety Score 9.0. Only the owner can authorize the
+public endpoint through the activation key.
 
 ## Compiler Boundary
 
-`shared/lib/safety-score-v9-compiler.ts` converts the exact active `StablecoinMeta` and fixed report-card sets into `CompiledV9AssetInput` records. Compilation fails on duplicate, missing, or unexpected report-card IDs. The readiness generator combines DEX observations with redemption observations from the fixed publication input before compiling exit evidence. It uses the fixed publication clock as `compilerEvidenceAsOf`; later observations are rejected by the compiler and counted as provenance blockers instead of moving the as-of boundary forward. Exact fixed-input normalization rejects missing DEX methodology provenance or declared producer-version sets that disagree with the score-bearing DEX, peg, and redemption rows; calibration reprojects those versions instead of copying the declaration. The readiness generator validates the fixed-input shape and binds schema-v3 registry, generation, fingerprint, methodology, normalized report-card replay payload, and replay metadata to the committed calibration. It also imports the calibration artifact's decision, activation-ready flag, consistency flag, and blocker list into the final recommendation; recomputed coverage cannot override an explicit hold. Readiness remains blocked unless the fixed capture is schema v3 `exact-publication-inputs`, the calibration source records `exact-publication-inputs`, no mismatch bypass was used, the calibration explicitly authorizes activation, and every binding agrees.
+`shared/lib/safety-score-v9-compiler.ts` converts the exact active `StablecoinMeta` and fixed report-card sets into `CompiledV9AssetInput` records. Compilation fails on duplicate, missing, or unexpected report-card IDs. The readiness generator combines DEX observations with redemption observations from the fixed publication input before compiling exit evidence. It uses the fixed publication clock as `compilerEvidenceAsOf`; later observations are rejected by the compiler and counted as provenance blockers instead of moving the as-of boundary forward. Exact fixed-input normalization rejects missing DEX methodology provenance or declared producer-version sets that disagree with the score-bearing DEX, peg, and redemption rows; calibration reprojects those versions instead of copying the declaration. The readiness generator validates the fixed-input shape and binds schema-v3 registry, generation, fingerprint, methodology, normalized report-card replay payload, and replay metadata to the committed calibration. It also imports the calibration artifact's decision, activation-ready flag, consistency flag, and blocker list into its recommendation; recomputed coverage cannot override an explicit hold. The generator reports no-go unless the fixed capture is schema v3 `exact-publication-inputs`, the calibration source records `exact-publication-inputs`, no mismatch bypass was used, the calibration explicitly authorizes activation, and every binding agrees. That recommendation is advisory under the 2026-07-23 activation contract.
 
 The compiler may carry structured pillar, peg, parent, evidence, implementation-age, failure-domain, and unresolved facts. The historical compiler accepts `HistoricalV9FactsInput`, a strict facts-only projection that excludes outcome labels and outcome annotation provenance at the type and runtime schema boundary. It must not accept or store:
 
@@ -428,11 +420,8 @@ ignored research workspace's anchor-coherence plan):
    per-coin AUSD mint-supervision ruling, a DOLA mechanism-overlay honesty
    downgrade, and cap/ceiling reason-string corrections that were
    foregrounding the wrong driver for measured-share caps.
-   `docs/process/safety-score-v9-rollout.md` records the paired
-   qualifying-window amendment (14 to 8 consecutive UTC days) that ships
-   with this batch. This entry records the batch's scope; its policy and
-   evaluation-build digests are added here once the batch is deployed and
-   the identity is frozen.
+   This entry records the batch's scope; its policy and evaluation-build
+   digests remain useful identity records.
 
 The final candidate identity of the chain is policy digest
 `76bb98ce18a7f798a2953fb3fce86c36b4809994cfbcb4310d0a7b9e4d3037d1` and
@@ -457,16 +446,16 @@ byte-identical under the new build digest).
 Every batch was accepted against the same pinned 2026-07-16 exact input
 with per-change causal attribution and byte-identical adverse projections;
 batch 5 was additionally verified against the fresh 2026-07-18 production
-envelope. These are calibration results, not activation evidence; V8.17
-remains the public methodology and the recorded no-go ruling stands until
-a qualifying window under an owner-frozen deployed identity completes.
+envelope. These are calibration results, not the fresh pre-flip packet; V8.17
+remains the public methodology. The owner will make the activation decision
+from a fresh one-shot sanity packet for the deployed identity.
 
 ## 2026-07-16 Real-A Calibration Result
 
 The latest calibration projection uses registry fingerprint
 `b7c6f74a5eb4183571a50a4b5b41ee3fdedf8cf5d97b8830e9192b3867e50fb6`
 and the candidate identities pinned in Implementation Status. It remains a
-local reviewed-registry projection rather than activation evidence: the three
+local reviewed-registry projection rather than the fresh pre-flip packet: the three
 production inputs were captured before that registry evidence was deployed and
 were rekeyed locally. V8.17 remains the public methodology.
 
@@ -534,7 +523,7 @@ success.
 | Existing live asset at 83-86/A              | Fail: BOLD is 84/A, but 15/34 score-bearing references are freshness-unassessed |
 | A+ composite at least 87                    | Fail closed: 88/A+ fixture exists, but no trusted composite replay was supplied |
 | Three fresh, stable captures                | Pass: distinct, fresh, matching, and no movement over 3 points                  |
-| Same qualifying real A across captures      | Fail: BOLD does not pass evidence freshness                                     |
+| Same defensible real A across captures      | Fail: BOLD does not pass evidence freshness                                     |
 | Causal attribution for every improvement    | Fail closed: no bound attribution artifact was supplied                         |
 | F at most 180                               | Fail: 186 retained, 182 fresh                                                   |
 | C- or better at least 35                    | Fail: 33                                                                        |
@@ -544,14 +533,15 @@ success.
 | Score IQR at least 12                       | Fail: 9                                                                         |
 | Adverse controls unchanged                  | Fail: USDD retained; U on fresh input                                           |
 
-**Latest ruling: not calibration-ready.** The batch proves that V9 can produce
+**Recorded calibration ruling: not calibration-ready.** The batch proves that V9 can produce
 an A-range numerical output for an existing live stablecoin without moving
 grade bands, weights, floors, or known-risk caps. It does not yet prove a
 defensible real A under the written evidence-freshness contract. It also
 materially reduces evidence compression, but the distribution gate and the
 adverse-control gate fail while the composite-replay and causal-attribution
-gates remain incomplete. V9 stays shadow-only, qualifying days remain zero, and
-no activation or public cutover is authorized.
+checks remain incomplete. These findings remain inputs to the owner review.
+V9 stays shadow-only because the public activation key has not been written;
+there is no longer a qualifying-day requirement.
 
 ## Prior 2026-07-16 Calibration Sprint Result
 
@@ -616,7 +606,7 @@ delta is zero. Outside the top 30, scUSD moves +1 when its measured DEX exit
 changes and Last USD moves -1 when a fresh active-depeg event lowers its peg
 score; both remain F. The captures were produced against registry `1778128d...`
 and then rekeyed to the local `2a821e9b...` metadata revision, so they are valid
-calibration projections, not release-window or activation evidence.
+calibration projections, not the fresh exact pre-flip sanity capture.
 
 **Sprint decision: no-go.** The candidate clears full-cohort reconciliation,
 the allowed A-range alternative, adverse-control preservation, causal top-30
@@ -625,15 +615,15 @@ USDC does not reach B-range, and only two real assets rather than five are B- or
 better. The smallest evidenced remaining causes are USDC's real Hyperliquid
 exposure, GHO's shared mint controller, and LUSD's unsafe liquidation mechanics;
 none justifies policy tuning solely to reach a grade. Keep the candidate available
-for dark diagnostics only. V8.17 remains public, qualifying days remain zero,
-and activation stays blocked until a later owner re-freeze and a new prospective
-window.
+for dark diagnostics only. V8.17 remains public. This dated calibration ruling
+remains evidence for the owner; it no longer starts, stops, or resets a
+prospective release process.
 
 ## Legacy 2026-07-13 Recorded Result
 
-Baseline generated at `2026-07-13T02:00:00.000Z` from report cards observed at `2026-07-13T01:00:16.000Z`; the fixed compiler evidence boundary is `2026-07-13T01:02:53.000Z`. The inputs use the fixed v8.16 legacy replay and the P4a observations stored in that fixed input. The available fixed input is schema v1 `legacy-unverified`, not a publication-exact schema v3 capture. It also cannot bind generation/fingerprint metadata to the committed calibration, its normalized replay payload and methodology differ from the calibrated replay, and 381 supplied evidence timestamps are later than its clock. The committed P4 calibration is itself a public reconstruction produced with methodology and registry mismatch allowances. Each condition independently blocks readiness.
+Baseline generated at `2026-07-13T02:00:00.000Z` from report cards observed at `2026-07-13T01:00:16.000Z`; the fixed compiler evidence boundary is `2026-07-13T01:02:53.000Z`. The inputs use the fixed v8.16 legacy replay and the P4a observations stored in that fixed input. The available fixed input is schema v1 `legacy-unverified`, not a publication-exact schema v3 capture. It also cannot bind generation/fingerprint metadata to the committed calibration, its normalized replay payload and methodology differ from the calibrated replay, and 381 supplied evidence timestamps are later than its clock. The committed P4 calibration is itself a public reconstruction produced with methodology and registry mismatch allowances. Each condition independently makes the recorded readiness recommendation no-go.
 
-| Gate                                                      |                 Result |
+| Recorded check                                            |                 Result |
 | --------------------------------------------------------- | ---------------------: |
 | Baseline active registry / active report cards            |              360 / 360 |
 | Fixed input schema / capture kind                         | v1 / legacy-unverified |
@@ -669,7 +659,7 @@ The separate static P7 audit has exact route rows for all 218 applicable multi-d
 
 All 24 calibration-cohort assets are `reason-coded-critical-unresolved` and candidate `NR` in the recorded baseline; the stored dispositions expose the exact blocking facts for manual audit. That shadow pass likewise produced `NR` for all 360 snapshot assets, including 305 entries that were graded in its V8 input. These figures remain bound to the dated artifact above; the live active registry can change independently. The result is a deliberate fail-closed outcome of the stricter itemized contracts, not a compiler omission.
 
-Only 3 of 12 adverse fixtures and 5 of 14 resilient fixtures are currently rateable; the other 9 in each outcome class are `NR`. There are no false negatives among the three rateable adverse cases, while all nine resilient `NR` cases count as conservative false positives because critical point-in-time evidence was unresolved. Those denominators make the limitation explicit: this is calibration debt, not evidence that the candidate has already proved broad historical separation. The corpus has passed only source-date chronology. Its source pages are mutable and unarchived, and its original author separation/outcome access was not preserved; readiness therefore records both conditions as explicit no-go blockers rather than presenting a look-ahead-proof claim. P4 remains on `hold` because its source is a public reconstruction with methodology/registry bypasses and calibrated DEX coverage is 0 eligible assets against the 45-asset floor; redemption coverage clears its 27-asset floor at 31. The historical P4 generation predates the per-pool `scoreEligiblePoolCount` field, so its 21 observations remain visible but fail closed as incomplete pool coverage. Active replay makes 244 exit scores `NR` and changes 140 overall grades.
+Only 3 of 12 adverse fixtures and 5 of 14 resilient fixtures are currently rateable; the other 9 in each outcome class are `NR`. There are no false negatives among the three rateable adverse cases, while all nine resilient `NR` cases count as conservative false positives because critical point-in-time evidence was unresolved. Those denominators make the limitation explicit: this is calibration debt, not evidence that the candidate has already proved broad historical separation. The corpus has passed only source-date chronology. Its source pages are mutable and unarchived, and its original author separation/outcome access was not preserved; readiness therefore records both conditions as explicit no-go findings rather than presenting a look-ahead-proof claim. P4 remains on `hold` because its source is a public reconstruction with methodology/registry bypasses and calibrated DEX coverage is 0 eligible assets against the 45-asset floor; redemption coverage clears its 27-asset floor at 31. The historical P4 generation predates the per-pool `scoreEligiblePoolCount` field, so its 21 observations remain visible but fail closed as incomplete pool coverage. Active replay makes 244 exit scores `NR` and changes 140 overall grades.
 
 ## Local Artifact Reproduction
 
@@ -702,10 +692,10 @@ npm run safety-score-v9:sensitivity -- \
 
 When those ignored files are present, each output above is byte-reproducible. A clean clone cannot rebuild the tracked calibration or readiness JSON until the corresponding fixed inputs are archived in a durable, content-addressed location. The calibration remains a historical drift record and cannot authorize activation; its two mismatch flags are intentional historical-drift allowances.
 
-## Activation-Exact Capture
+## One-Shot Pre-Flip Capture
 
-For a later prospective qualification window, capture and replay the deployed,
-owner-frozen identity under distinct V9 filenames rather than overwriting the
+On the day the owner declares the candidate ready, capture and replay the
+deployed identity under distinct V9 filenames rather than overwriting the
 legacy baseline inputs:
 
 ```bash
@@ -722,7 +712,7 @@ npm run report-cards:replay -- \
 npm run safety-score-v9:replay -- \
   --input agents/safety-score-v9/artifacts/fixed-v9-publication-exact.json \
   --output agents/safety-score-v9/artifacts/replay-v9-candidate.json \
-  --published-at 2026-07-13T02:00:00.000Z \
+  --published-at <exact-capture-time> \
   --publication-epoch 0
 ```
 
@@ -731,15 +721,14 @@ D1 JSON query result. The V9 replay accepts the normalized exact JSON or raw
 envelope, uses only its explicit publication time and epoch, and emits the
 pipeline intermediates and identities needed for byte comparison. The sprint
 captures prove that path, but their registry rekey means they are calibration
-projections rather than publication-exact activation evidence. A qualifying
-capture must match the deployed registry, producer generation, policy, build,
-compiler, and capability without rekey or mismatch allowance. Public-endpoint
-reconstruction and the calibration-only methodology/registry mismatch flags
-remain ineligible for activation evidence. An optional `v9-rc-N` label does not
-promote the candidate or authorize release.
+projections rather than the fresh pre-flip packet. The packet must match the
+deployed registry, producer generation, policy, build, compiler, and capability
+without rekey or mismatch allowance. Public-endpoint reconstruction and
+calibration-only methodology/registry mismatch flags do not satisfy that
+same-input check.
 
 Files under `agents/` are ignored fixed-input/research working artifacts, not a
-durable evidence archive. An exact schema-v3 capture with matching deployed
-registry, producer generation, fingerprint, methodology, and replay bindings
-remains an activation blocker. Production remains on V8.17; V9 stays shadow-only
-and no activation is authorized while the recorded decision is no-go.
+durable record. Use the exact schema-v3 capture to run the pins/watch, anchor,
+composite-A+ x3, distribution, and producer-health checks described above.
+Production remains on V8.17 and V9 stays shadow-only until the owner writes the
+matching `safety-score-v9:public-activation` key.

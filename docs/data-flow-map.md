@@ -63,20 +63,21 @@ reader also accepts legacy plain envelopes during rolling deploys.
 The report-card publication flow also runs a candidate-only Safety Score V9
 sidecar after the atomic V8 publication commits. It reuses the exact normalized
 base generation, adds reviewed V9 facts, and writes the latest candidate/diff,
-one compact summary per UTC day, selected content-addressed replay evidence,
-and append-only movement reviews. A failed attempt can be retried later on the
-same day; routine successful runs do not retain a full artifact bundle.
+one current observation per UTC day, and append-only movement reviews. A failed
+attempt can be retried later on the same day, and a later successful refresh
+replaces that day's current candidate observation.
 `GET /api/admin-safety-score-v9` and its review mutation remain the operator
 surface. The additive `GET /api/report-cards/v9` route now exposes a strict,
-fully identified contract only after its owner activation marker matches. A
+fully identified contract only after its owner activation key matches. A
 separate cache-bypassed read endpoint and unlisted `noindex` page expose the
 latest canonical strict projection with `lifecycle: "shadow"` for external
 feedback; they do not expose admin diffs, history, movement reviews, or
 mutations. Shadow state still does
 not feed `GET /api/report-cards`, the active frontend, yield,
 Telegram, chain analytics, or V8-compatible public history; those remain V8 until the
-independent validation, coverage, shadow-window, and consumer-cutover gates are
-satisfied. See [Safety Score V9 Rollout](./process/safety-score-v9-rollout.md).
+owner activates V9. Daily rows, movement reviews, and the preview are advisory
+inputs to that decision, not activation gates. See
+[Safety Score V9 Rollout](./process/safety-score-v9-rollout.md).
 
 ## Scheduling Backbone
 
