@@ -27,6 +27,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/freeze-stablecoin.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-coverage-report.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-evidence-gap-queue.ts"),
+    strict("scripts/maintenance/generate-safety-score-v9-holdout-status.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-missing-data-registry.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-readiness.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-shock-coverage-attestations.ts"),
@@ -58,6 +59,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("worker/scripts/reconcile-night-watch-blacklist.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
     strict("worker/scripts/replay-report-cards-fixed-input.ts"),
     strict("worker/scripts/replay-safety-score-v9.ts"),
+    strict("worker/scripts/validate-safety-score-v9-production.ts"),
     strict("worker/scripts/yield-history-cleanup.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
   ]),
   exemptions: Object.freeze([
@@ -158,6 +160,11 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/populate-bridge-route-deployments.ts", "build"),
     exempt("scripts/maintenance/prepare-workspace.mjs", "build"),
     exempt("scripts/maintenance/profile-vitest.mjs", "test"),
+    exempt(
+      "scripts/maintenance/replay-safety-score-v9-aggregation.ts",
+      "build",
+      "Deterministic counterfactual analysis reads a local replay and only writes an optional local report.",
+    ),
     exempt("scripts/maintenance/report-build-size.mjs", "read-only"),
     exempt("scripts/maintenance/run-critical-contracts.mjs", "test"),
     exempt("scripts/maintenance/run-critical-coverage.mjs", "test"),

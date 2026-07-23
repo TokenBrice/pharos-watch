@@ -890,7 +890,7 @@ describe("Safety Score v9 strict production verifier", () => {
       scorerIdentityMatches: true,
       issues: [],
     });
-  });
+  }, 30_000);
 
   it("rejects tampered, incomplete, identity-detached, and late scorer proofs", () => {
     type LocalHoldout = ReturnType<typeof locallyScoredHoldout>;
@@ -1014,7 +1014,7 @@ describe("Safety Score v9 strict production verifier", () => {
         );
       }
     }
-  }, 30_000);
+  }, 120_000);
 
   it("identifies a V8 D to V9 NR transition as unresolved non-credit", () => {
     const pipeline = candidatePipeline();

@@ -1,9 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAlertSafetySourceGeneration } from "../../lib/alert-safety-source-cache";
 
-const mockGetCache = vi.fn();
-const mockSetCache = vi.fn();
-const mockDeleteCache = vi.fn();
+const {
+  mockGetCache,
+  mockSetCache,
+  mockDeleteCache,
+} = vi.hoisted(() => ({
+  mockGetCache: vi.fn(),
+  mockSetCache: vi.fn(),
+  mockDeleteCache: vi.fn(),
+}));
 
 vi.mock("../../lib/db-cache", () => ({
   getCache: mockGetCache,
