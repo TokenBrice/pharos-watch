@@ -40,6 +40,14 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   "jpym-mento": [{ chain: "celo" }],
   "zarm-mento": [{ chain: "celo" }],
   "xofm-mento": [{ chain: "celo" }],
+  // sUSDS and sDAI are Sky savings NAV wrappers with no DefiLlama market row
+  // (llamaId null), so upstream supplies no per-chain breakdown and the
+  // CoinGecko intake lanes leave chainCirculating empty. Aggregate the verified
+  // native + canonical-bridge deployments (contracts sourced from the coin JSONs)
+  // so the V9 supply review reconciles real per-chain rows instead of capping on
+  // runtime-bridge-materiality-unavailable.
+  "susds-sky": [{ chain: "ethereum" }, { chain: "base" }, { chain: "optimism" }, { chain: "arbitrum" }],
+  "sdai-sky": [{ chain: "ethereum" }, { chain: "base" }, { chain: "optimism" }],
 };
 
 export function isZephyrScannerSupplyId(id: string): boolean {
