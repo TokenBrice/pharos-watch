@@ -12,9 +12,8 @@ implementation and review status. Neither document authorizes activation.
 
 ## Current State
 
-The current code is ready to be deployed for production shadow observation,
-subject to the normal release checks. That statement is deliberately narrower
-than scoring readiness:
+The current release scope is limited to production shadow observation, subject
+to the normal release checks. That scope does not establish scoring readiness:
 
 - V9 remains a candidate with no public release version.
 - A valid V8 publication is still the prerequisite for each V9 shadow attempt.
