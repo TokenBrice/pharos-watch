@@ -244,8 +244,8 @@
         "tron",
         "xrpl"
       ],
-      "commonModeShareThreshold": 0.05,
-      "commonModeHighShareThreshold": 0.1,
+      "commonModeShareThreshold": 0.1,
+      "commonModeHighShareThreshold": 0.25,
       "matureVenues": [
         "balancer",
         "curve",
@@ -283,6 +283,7 @@
           "tokenized-security": 75,
           "fund-share": 82,
           "protocol-position": 65,
+          "commodity-allocated": 90,
           "other": 40
         },
         "liquidityQuality": {
@@ -297,7 +298,8 @@
           "stablecoin",
           "cryptoasset",
           "hedged-crypto",
-          "protocol-position"
+          "protocol-position",
+          "commodity-allocated"
         ],
         "maturityBands": [
           {
@@ -786,7 +788,8 @@
       },
       "boundedUnknownScore": 35,
       "boundedCostScore": 50,
-      "documentedTermsCreditCeiling": 80
+      "documentedTermsCreditCeiling": 80,
+      "undisclosedFeeRouteScoreCeiling": 52
     },
     "control": {
       "mintPostureQuality": {
@@ -801,7 +804,7 @@
       "mintPostureGrading": {
         "prudentialReconciled": 80,
         "attestationOnlyReconciled": 70,
-        "seasonedCreditPoints": 5,
+        "seasonedCreditPoints": 10,
         "seasonedCreditMinMonths": 60
       },
       "oracleTierQuality": {
