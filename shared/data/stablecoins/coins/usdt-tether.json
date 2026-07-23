@@ -555,7 +555,8 @@
             "liquidity",
             "custody"
           ],
-          "liquidityHorizon": "one-day"
+          "liquidityHorizon": "one-day",
+          "maturityDaysMax": 364
         },
         {
           "name": "Overnight reverse repurchase agreements",

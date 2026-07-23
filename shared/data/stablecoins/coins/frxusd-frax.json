@@ -570,7 +570,6 @@
       "name": "WTGXX (WisdomTree Government Money Market)",
       "pct": 53,
       "risk": "low",
-      "coinId": "wtgxx-wisdomtree",
       "assetClass": "fund-share",
       "issuerOrObligor": "WisdomTree Treasury Money Market Digital Fund",
       "riskFactors": [
@@ -680,6 +679,16 @@
     "knownUnknownExposure": "No unclassified reserve exposure is present in the official balance sheet or the live adapter output.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "WTGXX (WisdomTree Government Money Market)",
+        "pct": 53,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "wtgxx-wisdomtree is a quarantined no-supply record (permitted runtime sources report no positive circulating supply or market cap) that can never carry a live score, so this slice is scored on its own fund-share asset class rather than linked as a dependency edge.",
+        "candidateCoinIds": [
+          "wtgxx-wisdomtree"
+        ]
+      },
       {
         "reserveIndex": 3,
         "reserveName": "USDB (Bridge)",

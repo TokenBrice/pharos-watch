@@ -5,7 +5,7 @@
       "name": "Physical gold bars (LBMA 99.99%)",
       "pct": 100,
       "risk": "medium",
-      "assetClass": "other",
+      "assetClass": "commodity-allocated",
       "issuerOrObligor": "LBMA 99.99% physical gold",
       "riskFactors": ["market", "custody", "liquidity", "counterparty"],
       "liquidityHorizon": "unknown"

@@ -260,7 +260,7 @@
       "name": "Physical gold reserves",
       "pct": 100,
       "risk": "low",
-      "assetClass": "other",
+      "assetClass": "commodity-allocated",
       "issuerOrObligor": "Streamex Ltd. and Monetary Metals lease counterparties",
       "riskFactors": [
         "market",
