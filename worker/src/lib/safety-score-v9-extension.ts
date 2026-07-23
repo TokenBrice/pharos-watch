@@ -265,9 +265,11 @@ function overlayReviewedReserveClassification(
   const riskFactors = live.riskFactors?.length ? [...live.riskFactors] : [...(reviewed.riskFactors ?? [])];
   const liquidityHorizon = live.liquidityHorizon ?? reviewed.liquidityHorizon ?? null;
   const maturityDaysMax = live.maturityDaysMax ?? reviewed.maturityDaysMax ?? null;
+  const trackedAssetId = live.coinId ?? reviewed.coinId ?? null;
   const usesReviewedMetadata =
     (live.assetClass == null && reviewed.assetClass != null) ||
     (live.issuerOrObligor == null && (reviewed.issuerOrObligor != null || reviewed.coinId != null)) ||
+    (live.coinId == null && reviewed.coinId != null) ||
     (!live.riskFactors?.length && Boolean(reviewed.riskFactors?.length)) ||
     (live.liquidityHorizon == null && reviewed.liquidityHorizon != null) ||
     (live.maturityDaysMax == null && reviewed.maturityDaysMax != null);
@@ -281,6 +283,11 @@ function overlayReviewedReserveClassification(
     riskFactors: [...new Set(riskFactors)].sort(compareText),
     liquidityHorizon,
     maturityDaysMax,
+    ...(reviewedNonLink
+      ? { trackedAssetId: null }
+      : trackedAssetId
+        ? { trackedAssetId }
+        : {}),
     ...(reviewedNonLink ? { trackedAssetDisposition: "reviewed-non-link" as const } : {}),
     failureDomains: issuerOrObligorKey
       ? [{ kind: "reserve-issuer", key: issuerOrObligorKey }]
@@ -337,18 +344,30 @@ function dependencyReserveSlices(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
 ): ReserveSlice[] {
+  const reviewedMatches = reviewedReserveMatches(liveReserves, meta, clockSec);
+  const reviewedByLiveIndex = new Map(
+    reviewedMatches.map((match) => [match.liveIndex, match.reviewed]),
+  );
   const nonLinkReviewedIndexes = new Set(
     meta.reserveReview?.nonLinkDispositions?.map((disposition) => disposition.reserveIndex) ?? [],
   );
   const nonLinkLiveIndexes = new Set(
-    reviewedReserveMatches(liveReserves, meta, clockSec)
+    reviewedMatches
       .filter((match) => nonLinkReviewedIndexes.has(match.reviewedIndex))
       .map((match) => match.liveIndex),
   );
   return liveReserves.map((slice, liveIndex) => {
-    if (!nonLinkLiveIndexes.has(liveIndex)) return slice;
-    const { coinId: _coinId, depType: _depType, ...unlinked } = slice;
-    return unlinked;
+    if (nonLinkLiveIndexes.has(liveIndex)) {
+      const { coinId: _coinId, depType: _depType, ...unlinked } = slice;
+      return unlinked;
+    }
+    const reviewed = reviewedByLiveIndex.get(liveIndex);
+    if (!reviewed?.coinId || slice.coinId) return slice;
+    return {
+      ...slice,
+      coinId: reviewed.coinId,
+      ...(reviewed.depType ? { depType: reviewed.depType } : {}),
+    };
   });
 }
 
@@ -869,14 +888,12 @@ function prepareDependency(
     .map((dependency) => ({
       id: dependency.id,
       type: dependency.type ?? "collateral",
-      weight: dependency.weight,
     }))
     .sort((left, right) => compareText(`${left.type}:${left.id}`, `${right.type}:${right.id}`));
   const reviewedBaseRelationships = (meta.dependencyReview?.relationships ?? [])
     .map((relationship) => ({
       id: relationship.id,
       type: relationship.type,
-      weight: relationship.weight,
     }))
     .sort((left, right) => compareText(`${left.type}:${left.id}`, `${right.type}:${right.id}`));
   const uniqueReviewedBaseRelationships = [
@@ -898,12 +915,22 @@ function prepareDependency(
   }
   const reviewedRelationships =
     meta.dependencyReview && reviewMatchesDerived
-      ? meta.dependencyReview.relationships.map((relationship) => ({
-          id: relationship.id,
-          type: relationship.type,
-          weight: relationship.weight,
-          economicRole: relationship.economicRole ?? defaultV9DependencyEconomicRole(relationship.type),
-        }))
+      ? meta.dependencyReview.relationships.map((relationship) => {
+          const derivedRelationship = derived.dependencies.find(
+            (dependency) =>
+              dependency.id === relationship.id &&
+              (dependency.type ?? "collateral") === relationship.type,
+          );
+          if (!derivedRelationship) {
+            throw new Error(`Reviewed dependency relationship did not match derived structure for ${meta.id}`);
+          }
+          return {
+            id: relationship.id,
+            type: relationship.type,
+            weight: derivedRelationship.weight,
+            economicRole: relationship.economicRole ?? defaultV9DependencyEconomicRole(relationship.type),
+          };
+        })
       : null;
   const dependencyRelationships =
     reviewedRelationships ??
@@ -1992,7 +2019,11 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         pegReference: buildPegReference(meta),
         supplyReview,
         operationalResilience: getSafetyScoreV9OperationalResilienceOverlay(assetId, clockSec),
-        wrapperCustodyReview: meta.variantKind === "strategy-vault" && meta.custodyProfile
+        wrapperCustodyReview:
+          (meta.variantKind === "savings-passthrough" ||
+            meta.variantKind === "risk-absorption" ||
+            meta.variantKind === "strategy-vault") &&
+          meta.custodyProfile
           ? {
               providers: meta.custodyProfile.providers.map((provider) => ({
                 providerKey: provider.name,

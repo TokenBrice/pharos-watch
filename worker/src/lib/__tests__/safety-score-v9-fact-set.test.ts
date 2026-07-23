@@ -1291,20 +1291,45 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         .scoreInput.dependencyReasons.map((reason) => reason.code),
     ).toContain("unreviewed-dependency-relationships");
 
-    const mismatchedMeta = new Map(metaById);
-    mismatchedMeta.set("alpha", {
+    const weightDriftMeta = new Map(metaById);
+    weightDriftMeta.set("alpha", {
       ...metaById.get("alpha")!,
       dependencyReview: {
         ...dependencyReview,
         relationships: [{ ...dependencyReview.relationships[0]!, weight: 0.4 }],
       },
     });
-    const mismatched = buildSafetyScoreV9BaselineExtension(fixed, { metaById: mismatchedMeta });
-    expect(mismatched.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
+    const weightDrift = buildSafetyScoreV9BaselineExtension(fixed, { metaById: weightDriftMeta });
+    expect(weightDrift.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
       diagnostics: {
         graphState: "unresolved",
-        issueCodes: ["collateral-edge-exposure-unmapped:beta", "dependency-review-mismatch"],
+        issueCodes: ["collateral-edge-exposure-unmapped:beta"],
       },
+      edges: [{ upstreamAssetId: "beta", dependencyType: "collateral", weight: 0.5 }],
+    });
+
+    const structuralDriftMeta = new Map(metaById);
+    structuralDriftMeta.set("alpha", {
+      ...metaById.get("alpha")!,
+      dependencyReview: {
+        ...dependencyReview,
+        relationships: [{ ...dependencyReview.relationships[0]!, id: "gamma" }],
+      },
+    });
+    const structuralDrift = buildSafetyScoreV9BaselineExtension(fixed, { metaById: structuralDriftMeta });
+    expect(structuralDrift.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
+      diagnostics: {
+        graphState: "unresolved",
+        issueCodes: expect.arrayContaining(["dependency-review-mismatch"]),
+      },
+      edges: [
+        expect.objectContaining({
+          upstreamAssetId: "beta",
+          dependencyType: "collateral",
+          economicRole: "basket-exposure",
+          weight: 0.5,
+        }),
+      ],
     });
 
     const mappedFixed = exactTwoAssetFixedInput({ mapAlphaCollateral: true });
@@ -1332,6 +1357,96 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         .assets.find((asset) => asset.assetId === "alpha")!
         .scoreInput.dependencyReasons.map((reason) => reason.code),
     ).not.toContain("unreviewed-dependency-relationships");
+
+    const reviewedLiveLinkMeta = new Map(metaById);
+    reviewedLiveLinkMeta.set("alpha", {
+      ...metaById.get("alpha")!,
+      reserves: [
+        {
+          name: "Beta stablecoin",
+          pct: 50,
+          risk: "low",
+          coinId: "beta",
+          depType: "collateral",
+          assetClass: "stablecoin",
+          issuerOrObligor: "Beta issuer",
+          riskFactors: ["counterparty"],
+          liquidityHorizon: "immediate",
+        },
+        {
+          name: "Custodied cash",
+          pct: 50,
+          risk: "very-low",
+          assetClass: "cash",
+          issuerOrObligor: "issuer:alpha",
+          riskFactors: ["custody", "counterparty"],
+          liquidityHorizon: "immediate",
+          maturityDaysMax: 0,
+        },
+      ],
+      reserveReview: {
+        reviewedAt: "1970-01-01",
+        reviewer: "Fixture reviewer",
+        confidence: "verified",
+        sources: [{ label: "Fixture reserve review", url: "https://example.com/reserves/alpha" }],
+        rationale: "The live Beta reserve row is linked by a reviewed one-to-one identity.",
+        compositionBasis: "Fixture composition",
+        compositionAsOf: "1970-01-01",
+        scope: "full-composition",
+        knownUnknownExposure: "No unknown exposure.",
+        knownUnknownExposurePct: 0,
+      },
+    });
+    const reviewedLiveLinkOriginal = exactTwoAssetFixedInput({ mapAlphaCollateral: true });
+    const reviewedLiveReserveMap = structuredClone(reviewedLiveLinkOriginal.liveReserveMap);
+    delete reviewedLiveReserveMap.alpha![0]!.coinId;
+    delete reviewedLiveReserveMap.alpha![0]!.depType;
+    const {
+      schemaVersion: omittedReviewedSchemaVersion,
+      activeAssetIds: omittedReviewedActiveAssetIds,
+      dexPayloadFingerprint: omittedReviewedDexPayloadFingerprint,
+      redemptionPayloadFingerprint: omittedReviewedRedemptionPayloadFingerprint,
+      registryFingerprint: omittedReviewedRegistryFingerprint,
+      inputMethodologyVersions: omittedReviewedInputMethodologyVersions,
+      baseInputGenerationId: omittedReviewedBaseInputGenerationId,
+      ...reviewedLiveLinkDraft
+    } = reviewedLiveLinkOriginal;
+    void [
+      omittedReviewedSchemaVersion,
+      omittedReviewedActiveAssetIds,
+      omittedReviewedDexPayloadFingerprint,
+      omittedReviewedRedemptionPayloadFingerprint,
+      omittedReviewedRegistryFingerprint,
+      omittedReviewedInputMethodologyVersions,
+      omittedReviewedBaseInputGenerationId,
+    ];
+    const reviewedLiveLinkFixed = createReportCardsFixedInput({
+      ...reviewedLiveLinkDraft,
+      activeAssetIds: ["alpha", "beta"],
+      liveReserveMap: reviewedLiveReserveMap,
+    });
+    const reviewedLiveLink = buildSafetyScoreV9BaselineExtension(reviewedLiveLinkFixed, {
+      metaById: reviewedLiveLinkMeta,
+    });
+    expect(reviewedLiveLink.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
+      source: "live-reserve",
+      dependencyFromLive: true,
+      diagnostics: { graphState: "valid", issueCodes: [] },
+      edges: [{ upstreamAssetId: "beta", dependencyType: "collateral", weight: 0.5 }],
+    });
+    const compiledReviewedLiveLink = compileSafetyScoreV9FactSetFromFixedInput(
+      reviewedLiveLinkFixed,
+      reviewedLiveLink,
+    );
+    expect(
+      compiledReviewedLiveLink.assets
+        .find((asset) => asset.assetId === "alpha")!
+        .reserveExposures.find((exposure) => exposure.trackedAssetId === "beta"),
+    ).toMatchObject({
+      weight: 0.5,
+      assetClass: "stablecoin",
+      status: { observationState: "known" },
+    });
 
     const retainedNullClassification = structuredClone(mapped);
     retainedNullClassification.assets
@@ -1419,6 +1534,105 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       }),
     ]);
     expect(edges.every((edge) => edge.evidenceRefIds.length > 0)).toBe(true);
+  });
+
+  it("derives only form-positive native savings wrapper-local facts", () => {
+    const original = exactTwoAssetFixedInput({ mapAlphaCollateral: true });
+    const {
+      schemaVersion: omittedSchemaVersion,
+      activeAssetIds: omittedActiveAssetIds,
+      dexPayloadFingerprint: omittedDexPayloadFingerprint,
+      redemptionPayloadFingerprint: omittedRedemptionPayloadFingerprint,
+      registryFingerprint: omittedRegistryFingerprint,
+      inputMethodologyVersions: omittedInputMethodologyVersions,
+      baseInputGenerationId: omittedBaseInputGenerationId,
+      ...draft
+    } = original;
+    void [
+      omittedSchemaVersion,
+      omittedActiveAssetIds,
+      omittedDexPayloadFingerprint,
+      omittedRedemptionPayloadFingerprint,
+      omittedRegistryFingerprint,
+      omittedInputMethodologyVersions,
+      omittedBaseInputGenerationId,
+    ];
+    const parentReserve = structuredClone(original.liveReserveMap.alpha![0]!);
+    parentReserve.pct = 100;
+    const fixed = createReportCardsFixedInput({
+      ...draft,
+      activeAssetIds: ["alpha", "beta"],
+      liveReserveMap: { ...draft.liveReserveMap, alpha: [parentReserve] },
+    });
+    const metaById = new Map<string, V9ExtensionRegistryMeta>([
+      [
+        "alpha",
+        {
+          id: "alpha",
+          mechanismArchetype: "fiat-cash",
+          launchDate: "1970-01-01",
+          variantOf: "beta",
+          variantKind: "savings-passthrough",
+          flags: {
+            backing: "crypto-backed",
+            pegCurrency: "USD",
+            governance: "decentralized",
+            yieldBearing: true,
+            rwa: false,
+            navToken: true,
+          },
+        },
+      ],
+      ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "1970-01-01" }],
+    ]);
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+    const alpha = baseline.assets.find((asset) => asset.assetId === "alpha")!;
+    alpha.economicControlReview = {
+      mint: {
+        status: notApplicableStatus("v9.control.mint-review"),
+        controlKey: null,
+        reconciliation: "not-applicable",
+        supervision: "none",
+        upgrade: { state: "not-applicable", controlKey: null },
+      },
+      oracle: {
+        status: notApplicableStatus("v9.control.oracle-review"),
+        tier: null,
+        branches: [],
+      },
+      bridge: {
+        status: notApplicableStatus("v9.control.bridge-review"),
+        routes: [],
+      },
+    };
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const compiledAlpha = compiled.assets.find((asset) => asset.assetId === "alpha")!;
+    expect(compiledAlpha.economicControlReview.mint).toMatchObject({
+      status: { observationState: "known" },
+      reconciliation: "not-applicable",
+    });
+    expect(compiledAlpha.peg.status.observationState).toBe("known");
+    expect(compiledAlpha.peg.referenceKind).toBe("nav");
+    const wrapper = compiledAlpha.wrapperLocalFacts;
+    expect(wrapper).toMatchObject({
+      applicability: "wrapper",
+      form: "native-staked",
+      facts: {
+        custodyEscrow: { disposition: "issuer-undisclosed", assessment: null },
+        strategyComplexity: { disposition: "reviewed", assessment: "low" },
+        leverage: { disposition: "issuer-undisclosed", assessment: null },
+        rehypothecationCorrelation: { disposition: "issuer-undisclosed", assessment: null },
+        shareAccountingNavOracle: { disposition: "reviewed", assessment: "moderate" },
+      },
+    });
+    if (wrapper.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
+    for (const factKey of [
+      "strategyComplexity",
+      "shareAccountingNavOracle",
+    ] as const) {
+      expect(wrapper.facts[factKey].evidenceRefIds.length).toBeGreaterThan(0);
+    }
   });
 
   it("reconciles curated collateral only when no live reserve snapshot exists", () => {

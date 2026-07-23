@@ -24,6 +24,7 @@ export function buildSafetyScoreV9ReserveClassifications(slices: readonly Reserv
         liquidityHorizon: slice.liquidityHorizon ?? null,
         maturityDaysMax: slice.maturityDaysMax ?? null,
         failureDomains: issuerOrObligorKey ? [{ kind: "reserve-issuer" as const, key: issuerOrObligorKey }] : [],
+        trackedAssetId: slice.coinId ?? null,
       };
     });
 }

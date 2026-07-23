@@ -192,6 +192,7 @@ const ReserveClassificationSchema = z
     liquidityHorizon: z.enum(["immediate", "one-day", "seven-days", "over-seven-days", "unknown"]).nullable(),
     maturityDaysMax: z.number().int().nonnegative().nullable(),
     failureDomains: FailureDomainsSchema,
+    trackedAssetId: CanonicalTextSchema.nullable().optional(),
     trackedAssetDisposition: z.enum(["source", "reviewed-non-link"]).optional(),
   })
   .strict();
@@ -1471,7 +1472,9 @@ function buildReserves(context: AssetBuildContext): {
       ? issuerAttestedEvidenceIds
       : [reserveSourceEvidence(context, exposureKey, groupedSlices)];
     const reviewedNonLink = classification?.trackedAssetDisposition === "reviewed-non-link";
-    const trackedAssetId = reviewedNonLink ? null : (raw.coinId ?? null);
+    const trackedAssetId = reviewedNonLink
+      ? null
+      : (raw.coinId ?? classification?.trackedAssetId ?? null);
     const issuerOrObligorKey = classification?.issuerOrObligorKey ?? raw.issuerOrObligor ?? null;
     const assetClass = classification?.assetClass ?? raw.assetClass ?? (trackedAssetId ? ("stablecoin" as const) : null);
     const failureDomains = stableFailureDomains([
@@ -3071,7 +3074,6 @@ function buildWrapperLocalFacts(
       ...(route.output.valuation?.evidenceRefIds ?? []),
     ]),
   ]);
-
   let contractMutability: V9WrapperLocalDimensionFact;
   const upgrade = input.economicControlReview.mint.upgrade;
   if (input.economicControlReview.mint.status.observationState !== "known") {
@@ -3164,30 +3166,51 @@ function buildWrapperLocalFacts(
     );
   }
 
-  const strategyComplexity =
-    form === "pure" && wrapperEdge !== undefined
-      ? reviewedWrapperFact(
-          context,
-          "none",
-          ["pure-wrapper-has-no-local-strategy"],
-          reviewedFormEvidence,
-        )
-      : input.reserveExposures.some((exposure) => exposure.assetClass === "private-credit") ||
-          (custody?.knownUnknownExposureShare ?? 0) > 0
-        ? reviewedWrapperFact(
-            context,
-            "high",
-            [
-              "wrapper-strategy-has-reviewed-private-or-unknown-credit-exposure",
-              `wrapper-strategy-reserve-components:${input.reserveExposures.length}`,
-            ],
-            reserveEvidenceRefIds,
-          )
-        : unavailableWrapperFact(
-            "integration-missing",
-            "wrapper-strategy-complexity-review-unavailable",
-            reviewedFormEvidence,
-          );
+  let strategyComplexity: V9WrapperLocalDimensionFact;
+  if (form === "pure" && wrapperEdge !== undefined) {
+    strategyComplexity = reviewedWrapperFact(
+      context,
+      "none",
+      ["pure-wrapper-has-no-local-strategy"],
+      reviewedFormEvidence,
+    );
+  } else if (
+    context.asset.variantKind === "savings-passthrough" ||
+    context.asset.variantKind === "risk-absorption"
+  ) {
+    const riskAbsorption = context.asset.variantKind === "risk-absorption";
+    strategyComplexity = reviewedWrapperFact(
+      context,
+      riskAbsorption ? "moderate" : "low",
+      [
+        riskAbsorption
+          ? "native-wrapper-adds-reviewed-loss-absorption-layer"
+          : "native-wrapper-is-single-parent-savings-passthrough",
+      ],
+      reviewedFormEvidence,
+    );
+  } else if (context.asset.variantKind === "strategy-vault") {
+    const highComplexity =
+      input.reserveExposures.some((exposure) => exposure.assetClass === "private-credit") ||
+      (custody?.knownUnknownExposureShare ?? 0) > 0;
+    strategyComplexity = reviewedWrapperFact(
+      context,
+      highComplexity ? "high" : "moderate",
+      [
+        highComplexity
+          ? "strategy-vault-has-private-or-unknown-credit-exposure"
+          : "strategy-vault-adds-third-party-allocation-layer",
+        `wrapper-strategy-reserve-components:${input.reserveExposures.length}`,
+      ],
+      uniqueEvidenceRefIds([...reviewedFormEvidence, ...reserveEvidenceRefIds]),
+    );
+  } else {
+    strategyComplexity = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.reserveStatus]),
+      "wrapper-strategy-complexity-review-unavailable",
+      reserveEvidenceRefIds,
+    );
+  }
 
   let leverage: V9WrapperLocalDimensionFact;
   if (form === "pure" && wrapperEdge !== undefined) {
@@ -3263,6 +3286,30 @@ function buildWrapperLocalFacts(
       "none",
       ["pure-wrapper-fixed-parent-claim-accounting"],
       reviewedFormEvidence,
+    );
+  } else if (
+    (context.asset.variantKind === "savings-passthrough" ||
+      context.asset.variantKind === "risk-absorption" ||
+      context.asset.variantKind === "strategy-vault") &&
+    input.peg.referenceKind === "nav" &&
+    input.peg.status.observationState === "known"
+  ) {
+    const oracleTier = input.economicControlReview.oracle.tier;
+    const weakOracle =
+      oracleTier === "single-source-or-laggy" || oracleTier === "opaque-or-unknown";
+    shareAccountingNavOracle = reviewedWrapperFact(
+      context,
+      weakOracle ? "high" : "moderate",
+      [
+        `wrapper-share-form:${context.asset.variantKind}`,
+        `wrapper-share-reference-kind:${input.peg.referenceKind}`,
+        `wrapper-share-oracle-tier:${oracleTier ?? "not-applicable"}`,
+      ],
+      uniqueEvidenceRefIds([
+        ...reviewedFormEvidence,
+        ...input.peg.status.evidenceRefIds,
+        ...input.economicControlReview.oracle.status.evidenceRefIds,
+      ]),
     );
   } else {
     shareAccountingNavOracle = unavailableWrapperFact(
