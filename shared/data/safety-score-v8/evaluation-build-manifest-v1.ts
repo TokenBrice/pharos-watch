@@ -114,7 +114,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/core.ts",
-      "sha256": "c220101dd4f75a8c40e4decb0c1f37f61e9d42bd996ca5635cd3cb2b0602b893"
+      "sha256": "00a328cf5208e9b552b5f591d9c83a2bddc8e06d258d6c394595076e2e9388df"
     },
     {
       "path": "shared/types/dependency-types.ts",
@@ -122,7 +122,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/exit-route.ts",
-      "sha256": "f5b821a73eee229d35d24ffa1e1bedb4b92b7e275df321d6c8a1757507d83880"
+      "sha256": "84e63472063f812ba259f2e2386b5a773d15c81e91d391010c581e1cae414a0e"
     },
     {
       "path": "shared/types/market.ts",
@@ -138,7 +138,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/reserves.ts",
-      "sha256": "a87b137b92260908c33ec30d3264f295eaebe7922bda90f47810399aa3c1f950"
+      "sha256": "1afeffc1c13d667564a3431ff297d0985404a82618ceb38785e4f0498eecae1b"
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
@@ -149,7 +149,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
       "sha256": "e70bfddf6d253f0d37ed74449dff45e9af02858d80c0ca0931579796c080b85e"
     }
   ],
-  "digest": "c2a0b3b4e71635a090342ae4df261c5f7a005b1d8715acdf5ddbbdba00029277"
+  "digest": "e9feda6fc28d10f2b2e490d234f48310665fb1a1c10024698ca746731547fa6f"
 } as const;
 
 export const SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST =
