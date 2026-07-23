@@ -21,7 +21,10 @@ vi.mock("viem/utils", async (importOriginal) => ({
   keccak256: viemMocks.keccak256,
 }));
 
-import { buildDexMeasuredExecutionProfile } from "../profiles";
+import {
+  buildDexMeasuredExecutionProfile,
+  createDexMeasuredExecutionRpcBudget,
+} from "../profiles";
 import {
   FLUID_RESOLVER_ADAPTER_PROFILE_ID,
   FLUID_RESOLVER_DEPLOYMENTS,
@@ -372,6 +375,68 @@ describe("Fluid quote outcomes", () => {
     expect(outcomes[0]?.failureReason).toBe("invalid-quote-input");
     expect(rpcMocks.fetchEvmCodeAtBlock).not.toHaveBeenCalled();
     expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+  });
+
+  it("attributes only the request rejected by the hard RPC budget to that budget", async () => {
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+      async (
+        _chain: string,
+        _calls: unknown,
+        _blockNumber: number,
+        options: { beforeRequest?: () => boolean },
+      ) => {
+        options.beforeRequest?.();
+        return null;
+      },
+    );
+    const deployment = getFluidResolverDeployment("ethereum");
+    if (deployment == null) throw new Error("missing Ethereum deployment fixture");
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 0,
+      deadlineMs: Date.now() + 60_000,
+    });
+
+    const outcomes = await quoteFluidResolverRequests({
+      requests: [{
+        target: makeTarget(),
+        inputUsd: 1_000,
+        blockNumber: ETHEREUM_BLOCK,
+        endpointAddress: deployment.endpointAddress,
+      }],
+      chainRpcs: new Map(),
+      rpcBudget: budget,
+      deploymentVerified: true,
+    });
+
+    expect(outcomes[0]?.failureReason).toBe("request-budget-exhausted");
+  });
+
+  it("does not relabel a genuine resolver revert from an already stopped budget", async () => {
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+      async (_chain: string, calls: Array<{ label: string }>) =>
+        calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
+    );
+    const deployment = getFluidResolverDeployment("ethereum");
+    if (deployment == null) throw new Error("missing Ethereum deployment fixture");
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 0,
+      deadlineMs: Date.now() + 60_000,
+    });
+    expect(budget.tryConsume()).toBe(false);
+
+    const outcomes = await quoteFluidResolverRequests({
+      requests: [{
+        target: makeTarget(),
+        inputUsd: 1_000,
+        blockNumber: ETHEREUM_BLOCK,
+        endpointAddress: deployment.endpointAddress,
+      }],
+      chainRpcs: new Map(),
+      rpcBudget: budget,
+      deploymentVerified: true,
+    });
+
+    expect(outcomes[0]?.failureReason).toBe("resolver-revert");
   });
 
   it("fails every block cohort before quoting when its resolver code hash drifts", async () => {

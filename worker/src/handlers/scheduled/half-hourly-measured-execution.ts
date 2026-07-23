@@ -24,14 +24,12 @@ function hasNonDurableShadowDeferral(metadata: unknown): boolean {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false;
   const row = metadata as Record<string, unknown>;
   const cursorWriteStatus = row.cursorWriteStatus;
-  const deferredCount = row.deferredCount;
+  const hasDeferredWork = [row.deferredCount, row.rateLimitDeferredCount].some(
+    (value) => typeof value === "number" && value > 0,
+  );
   return (
     cursorWriteStatus === "write-failed" ||
-    (
-      typeof deferredCount === "number" &&
-      deferredCount > 0 &&
-      cursorWriteStatus !== "written"
-    )
+    (hasDeferredWork && cursorWriteStatus !== "written")
   );
 }
 

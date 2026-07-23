@@ -5,7 +5,10 @@ import {
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
-import { buildDexMeasuredExecutionProfile } from "../profiles";
+import {
+  buildDexMeasuredExecutionProfile,
+  createDexMeasuredExecutionRpcBudget,
+} from "../profiles";
 import {
   CURVE_CRYPTOSWAP_ADAPTER,
   CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID,
@@ -396,6 +399,54 @@ describe("Curve CryptoSwap quote transport", () => {
     expect(sizes).toEqual([8, 4, 4, 1]);
     expect(outcomes).toHaveLength(9);
     expect(outcomes.every((outcome) => outcome.point?.amountOutRaw === "0")).toBe(true);
+  });
+
+  it("attributes only a budget-rejected pool call to the hard RPC budget", async () => {
+    const executeMulticall = vi.fn(async (input: {
+      onBudgetStop?: (reason: "request-budget-exhausted") => void;
+    }) => {
+      input.onBudgetStop?.("request-budget-exhausted");
+      return null;
+    });
+    const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
+    const target = makeTarget();
+
+    const outcomes = await quote({
+      requests: [{
+        target,
+        inputUsd: 1_000,
+        blockNumber: ETHEREUM_BLOCK,
+        endpointAddress: TWOCRYPTO_POOL,
+      }],
+      chainRpcs: new Map(),
+    });
+
+    expect(outcomes[0]?.failureReason).toBe("request-budget-exhausted");
+  });
+
+  it("does not relabel a genuine pool revert from an already stopped budget", async () => {
+    const executeMulticall = vi.fn(async (input: { calls: readonly { label: string }[] }) =>
+      input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" as const })),
+    );
+    const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 0,
+      deadlineMs: Date.now() + 60_000,
+    });
+    expect(budget.tryConsume()).toBe(false);
+
+    const outcomes = await quote({
+      requests: [{
+        target: makeTarget(),
+        inputUsd: 1_000,
+        blockNumber: ETHEREUM_BLOCK,
+        endpointAddress: TWOCRYPTO_POOL,
+      }],
+      chainRpcs: new Map(),
+      rpcBudget: budget,
+    });
+
+    expect(outcomes[0]?.failureReason).toBe("pool-revert");
   });
 
   it("runs no more than three chain lanes and only one request per chain at a time", async () => {

@@ -52,6 +52,7 @@ const MAX_RPC_REQUESTS = 800;
 const RPC_ADMISSION_HEADROOM = 64;
 const MAX_ADMISSION_RPC_REQUESTS = MAX_RPC_REQUESTS - RPC_ADMISSION_HEADROOM;
 const CONSERVATIVE_MULTICALL_BATCH_SIZE = 8;
+const MAX_ADMISSION_ROTATION_CYCLES = 2;
 const MAX_RUNTIME_MS = 8 * 60 * 1_000;
 const REFINEMENT_ROUNDS = 3;
 const MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:quote-admission";
@@ -231,13 +232,42 @@ export function admitTargetsWithinBudget(
   return { admitted, deferred, oversized, oversizedCoinIds, estimatedRpcRequests, nextCursor };
 }
 
+export function estimateAdmissionRotationCycles(
+  targets: readonly DexMeasuredExecutionTarget[],
+  options: { cursor?: string | null; maxEstimatedRpcRequests?: number; refinementRounds?: number } = {},
+): number | null {
+  if (targets.length === 0) return 0;
+  const uncovered = new Set(targets.map((target) => target.targetId));
+  const seenCursors = new Set<string>();
+  let cursor = options.cursor ?? null;
+  const maximumCycles = new Set(targets.map((target) => target.stablecoinId)).size + 1;
+
+  for (let cycle = 1; cycle <= maximumCycles; cycle++) {
+    const cursorKey = cursor ?? "<start>";
+    if (seenCursors.has(cursorKey)) return null;
+    seenCursors.add(cursorKey);
+    const admission = admitTargetsWithinBudget(targets, {
+      ...options,
+      cursor,
+    });
+    for (const targetId of admission.oversized) uncovered.delete(targetId);
+    for (const targetId of admission.admitted) uncovered.delete(targetId);
+    if (uncovered.size === 0) return cycle;
+    cursor = admission.nextCursor;
+  }
+  return null;
+}
+
 export function resolveMeasuredExecutionCronStatus(input: {
   attemptedFailureCount: number;
   deferredCount: number;
+  admissionRotationCycles: number | null;
   cursorWriteStatus: "not-needed" | "written" | "missing-table" | "write-failed";
 }): "ok" | "degraded" {
   return (
     input.attemptedFailureCount > 0 ||
+    input.admissionRotationCycles === null ||
+    input.admissionRotationCycles > MAX_ADMISSION_ROTATION_CYCLES ||
     input.cursorWriteStatus === "write-failed" ||
     (input.deferredCount > 0 && input.cursorWriteStatus !== "written")
   )
@@ -257,19 +287,6 @@ export function hasCompleteDexMeasuredQuoteProgress(input: {
   );
 }
 
-export function resolveMeasuredExecutionQuoteFailureReason(
-  failureReason: string | undefined,
-  runtimeBudgetStopReason?: string | null,
-): string {
-  const budgetSensitiveFailure =
-    failureReason === "quoter-rpc-unavailable" ||
-    failureReason === "resolver-revert" ||
-    failureReason === "pool-revert";
-  return runtimeBudgetStopReason && budgetSensitiveFailure
-    ? runtimeBudgetStopReason
-    : failureReason ?? "quote-failed";
-}
-
 function markBudgetStop(states: readonly TargetQuoteState[], reason: string | null): void {
   if (!reason) return;
   for (const state of states) {
@@ -282,13 +299,9 @@ function markBudgetStop(states: readonly TargetQuoteState[], reason: string | nu
 function applyQuoteOutcome(
   state: TargetQuoteState,
   outcome: { point?: DexMeasuredRawQuotePoint; failureReason?: string },
-  runtimeBudgetStopReason?: string | null,
 ): void {
   if (!outcome.point) {
-    state.failedReason = resolveMeasuredExecutionQuoteFailureReason(
-      outcome.failureReason,
-      runtimeBudgetStopReason,
-    );
+    state.failedReason = outcome.failureReason ?? "quote-failed";
     return;
   }
   state.points.push(outcome.point);
@@ -338,6 +351,9 @@ export async function syncDexMeasuredExecution(
     estimatedRpcRequests,
     nextCursor,
   } = admitTargetsWithinBudget(targetGeneration.targets, {
+    cursor: admissionCursor,
+  });
+  const admissionRotationCycles = estimateAdmissionRotationCycles(targetGeneration.targets, {
     cursor: admissionCursor,
   });
   const budgetDeferredCount = deferred.size - oversized.size;
@@ -563,7 +579,7 @@ export async function syncDexMeasuredExecution(
             rpcBudget,
           });
           outcomes.forEach((outcome, index) =>
-            applyQuoteOutcome(adapterRequests[index]!.state, outcome, rpcBudget.stopReason),
+            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
           );
         } else if (kind === "fluid-resolver") {
           const outcomes = await quoteFluidResolverRequests({
@@ -579,7 +595,7 @@ export async function syncDexMeasuredExecution(
             deploymentVerified: true,
           });
           outcomes.forEach((outcome, index) =>
-            applyQuoteOutcome(adapterRequests[index]!.state, outcome, rpcBudget.stopReason),
+            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
           );
         } else {
           const outcomes = await quoteCurveCryptoSwapRequests({
@@ -595,7 +611,7 @@ export async function syncDexMeasuredExecution(
             rpcBudget,
           });
           outcomes.forEach((outcome, index) =>
-            applyQuoteOutcome(adapterRequests[index]!.state, outcome, rpcBudget.stopReason),
+            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
           );
         }
         if (rpcBudget.isChainCircuitOpen(adapterRequests[0]!.state.target.chain)) {
@@ -763,6 +779,7 @@ export async function syncDexMeasuredExecution(
     budgetDeferredCount,
     admissionEstimatedRpcRequests: estimatedRpcRequests,
     admissionRpcRequestLimit: MAX_ADMISSION_RPC_REQUESTS,
+    admissionRotationCycles,
     admissionCursor,
     nextAdmissionCursor: nextCursor,
     cursorWriteStatus,
@@ -773,6 +790,9 @@ export async function syncDexMeasuredExecution(
       ...(cursorWriteStatus === "write-failed" ? ["admission-cursor-write-failed"] : []),
       ...(budgetDeferredCount > 0 && cursorWriteStatus !== "written"
         ? ["admission-cursor-not-persisted"]
+        : []),
+      ...(admissionRotationCycles === null || admissionRotationCycles > MAX_ADMISSION_ROTATION_CYCLES
+        ? ["admission-rotation-exceeds-freshness"]
         : []),
     ],
     quoteCallCount,
@@ -791,6 +811,7 @@ export async function syncDexMeasuredExecution(
     status: resolveMeasuredExecutionCronStatus({
       attemptedFailureCount,
       deferredCount: budgetDeferredCount,
+      admissionRotationCycles,
       cursorWriteStatus,
     }),
     itemCount: publication.measuredCount,

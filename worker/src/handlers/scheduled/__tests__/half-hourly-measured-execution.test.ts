@@ -7,7 +7,7 @@ function result(
   status: NonNullable<CronResult["status"]>,
   lane: string,
   attemptedFailureCount = 0,
-  cursor?: { deferredCount: number; cursorWriteStatus: string },
+  cursor?: { deferredCount: number; cursorWriteStatus: string; rateLimitDeferredCount?: number },
 ): CronResult {
   return {
     status,
@@ -54,6 +54,20 @@ describe("half-hourly measured execution result aggregation", () => {
         cursorWriteStatus: "write-failed",
       }),
       result("ok", "tron"),
+    );
+
+    expect(merged.status).toBe("degraded");
+  });
+
+  it("preserves a non-durable Tron rate-limit tail as degradation", () => {
+    const merged = mergeMeasuredExecutionResults(
+      result("ok", "evm"),
+      result("ok", "solana"),
+      result("degraded", "tron", 0, {
+        deferredCount: 0,
+        rateLimitDeferredCount: 2,
+        cursorWriteStatus: "missing-table",
+      }),
     );
 
     expect(merged.status).toBe("degraded");

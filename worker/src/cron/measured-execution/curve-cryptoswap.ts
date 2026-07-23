@@ -15,7 +15,12 @@ import {
   type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
-import type { DexMeasuredExecutionAdapter, DexMeasuredExecutionRpcBudget, DexMeasuredRawQuotePoint } from "./profiles";
+import type {
+  DexMeasuredExecutionAdapter,
+  DexMeasuredExecutionBudgetStopReason,
+  DexMeasuredExecutionRpcBudget,
+  DexMeasuredRawQuotePoint,
+} from "./profiles";
 
 const CURVE_CRYPTOSWAP_ABI = parseAbi(["function get_dy(uint256 i,uint256 j,uint256 dx) view returns (uint256)"]);
 const CURVE_CRYPTOSWAP_DEPENDENCY_ABI = parseAbi([
@@ -395,6 +400,7 @@ export async function verifyCurveCryptoSwapDeployment(input: {
 }
 
 export type CurveCryptoSwapQuoteFailure =
+  | DexMeasuredExecutionBudgetStopReason
   | "unsupported-chain-or-pool"
   | "invalid-pinned-block"
   | "invalid-quote-input"
@@ -444,6 +450,7 @@ interface CurveCryptoSwapQuoteDependencies {
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     rpcBudget?: DexMeasuredExecutionRpcBudget;
+    onBudgetStop?: (reason: DexMeasuredExecutionBudgetStopReason) => void;
   }): Promise<EvmMulticall3Result[] | null>;
 }
 
@@ -701,6 +708,11 @@ async function runWithConcurrency<T>(
 }
 
 export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwapQuoteDependencies) {
+  interface AdaptiveChunkResult {
+    results: EvmMulticall3Result[];
+    budgetStopReasonsByLabel: Map<string, DexMeasuredExecutionBudgetStopReason>;
+  }
+
   async function executeAdaptiveChunk(input: {
     chain: string;
     calls: readonly EvmMulticall3Call[];
@@ -708,18 +720,47 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<EvmMulticall3Result[]> {
-    if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.chain)) return [];
-    const result = await dependencies.executeMulticall(input);
-    input.rpcBudget?.recordChainResult(input.chain, result != null);
-    if (result != null) return result;
+  }): Promise<AdaptiveChunkResult> {
+    if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.chain)) {
+      return { results: [], budgetStopReasonsByLabel: new Map() };
+    }
+    let budgetStopReason: DexMeasuredExecutionBudgetStopReason | null = null;
+    const result = await dependencies.executeMulticall({
+      ...input,
+      onBudgetStop: (reason) => {
+        budgetStopReason = reason;
+      },
+    });
+    if (result != null) {
+      input.rpcBudget?.recordChainResult(input.chain, true);
+      return { results: result, budgetStopReasonsByLabel: new Map() };
+    }
+    if (budgetStopReason == null && input.rpcBudget && Date.now() >= input.rpcBudget.deadlineMs) {
+      budgetStopReason = "runtime-deadline-exceeded";
+    }
+    if (budgetStopReason != null) {
+      return {
+        results: [],
+        budgetStopReasonsByLabel: new Map(input.calls.map((call) => [call.label, budgetStopReason!])),
+      };
+    }
+    input.rpcBudget?.recordChainResult(input.chain, false);
     if (input.calls.length === 1) {
-      return [{ label: input.calls[0]!.label, success: false, returnData: "0x" }];
+      return {
+        results: [{ label: input.calls[0]!.label, success: false, returnData: "0x" }],
+        budgetStopReasonsByLabel: new Map(),
+      };
     }
     const midpoint = Math.ceil(input.calls.length / 2);
     const left = await executeAdaptiveChunk({ ...input, calls: input.calls.slice(0, midpoint) });
     const right = await executeAdaptiveChunk({ ...input, calls: input.calls.slice(midpoint) });
-    return [...left, ...right];
+    return {
+      results: [...left.results, ...right.results],
+      budgetStopReasonsByLabel: new Map([
+        ...left.budgetStopReasonsByLabel,
+        ...right.budgetStopReasonsByLabel,
+      ]),
+    };
   }
 
   return async function quoteCurveCryptoSwapRequests(input: {
@@ -763,7 +804,7 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
             callData: request.callData,
             allowFailure: true,
           }));
-          const results = await executeAdaptiveChunk({
+          const chunkResult = await executeAdaptiveChunk({
             chain: chunk[0]!.policy.chain,
             calls,
             blockNumber: chunk[0]!.blockNumber,
@@ -771,11 +812,13 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
             signal: input.signal,
             rpcBudget: input.rpcBudget,
           });
-          const byLabel = new Map(results.map((result) => [result.label, result]));
+          const byLabel = new Map(chunkResult.results.map((result) => [result.label, result]));
           for (const request of chunk) {
             const result = byLabel.get(request.label);
-            const decoded =
-              result == null
+            const budgetFailure = chunkResult.budgetStopReasonsByLabel.get(request.label);
+            const decoded = budgetFailure
+              ? { failureReason: budgetFailure }
+              : result == null
                 ? { failureReason: "pool-revert" as const }
                 : decodeCurveCryptoSwapQuotePoint(request, result);
             outcomes[request.index] = {
@@ -801,7 +844,16 @@ export const quoteCurveCryptoSwapRequests = createCurveCryptoSwapQuoteExecutor({
       timeoutMs: 30_000,
       maxRetries: 1,
       ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-      ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
+      ...(input.rpcBudget
+        ? {
+            beforeRequest: () => {
+              const consumed = input.rpcBudget!.tryConsume();
+              const reason = input.rpcBudget!.stopReason;
+              if (!consumed && reason) input.onBudgetStop?.(reason);
+              return consumed;
+            },
+          }
+        : {}),
       gas: CURVE_MULTICALL_GAS,
       multicallBatchSize: Math.min(CURVE_MULTICALL_BATCH_SIZE, input.calls.length),
     }),

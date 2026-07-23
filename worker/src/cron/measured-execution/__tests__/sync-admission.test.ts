@@ -4,15 +4,16 @@ import type { DexMeasuredExecutionTarget } from "@shared/types/measured-executio
 import {
   admitTargetsWithinBudget,
   estimateAdmissionCohortRpcRequests,
+  estimateAdmissionRotationCycles,
   hasCompleteDexMeasuredQuoteProgress,
   resolveMeasuredExecutionCronStatus,
-  resolveMeasuredExecutionQuoteFailureReason,
 } from "../sync";
 
 function target(
   stablecoinId: string,
   retainedTvlUsd: number,
   suffix = stablecoinId,
+  overrides: Partial<DexMeasuredExecutionTarget> = {},
 ): DexMeasuredExecutionTarget {
   return {
     schemaVersion: "dex-measured-target-v1",
@@ -40,6 +41,7 @@ function target(
     retainedTvlUsd,
     retainedPoolPriceUsd: 1,
     capturedAt: 1_000,
+    ...overrides,
   };
 }
 
@@ -47,6 +49,34 @@ describe("measured execution overflow admission", () => {
   it("estimates each execution phase plus singleton-retry headroom", () => {
     expect(estimateAdmissionCohortRpcRequests([target("coin-low", 100_000)])).toBe(7);
     expect(estimateAdmissionCohortRpcRequests([target("coin-high", 10_000_000)])).toBe(10);
+  });
+
+  it("counts phase-separated batches at adapter and batch boundaries", () => {
+    const lowTargets = (count: number) =>
+      Array.from({ length: count }, (_, index) =>
+        target("coin-a", 100_000, `coin-a-${index}`),
+      );
+    expect(estimateAdmissionCohortRpcRequests(lowTargets(8))).toBe(14);
+    expect(estimateAdmissionCohortRpcRequests(lowTargets(9))).toBe(21);
+    expect(
+      estimateAdmissionCohortRpcRequests([
+        target("coin-a", 100_000),
+        target("coin-b", 100_000, "coin-b", {
+          chain: "base",
+          adapterProfileId: "pancakeswap-v3-quoter-v2",
+          protocol: "pancakeswap",
+        }),
+      ]),
+    ).toBe(14);
+    expect(
+      estimateAdmissionCohortRpcRequests([
+        target("coin-a", 100_000),
+        target("coin-b", 100_000, "coin-b", {
+          adapterProfileId: "fluid-resolver-measured",
+          protocol: "fluid",
+        }),
+      ]),
+    ).toBe(12);
   });
 
   it("rotates the deterministic coin-level tail instead of starving it", () => {
@@ -99,6 +129,9 @@ describe("measured execution overflow admission", () => {
     ]);
     expect([...third.admitted]).toEqual(["target-coin-c"]);
     expect(new Set([...first.admitted, ...second.admitted, ...third.admitted]).size).toBe(6);
+    expect(
+      estimateAdmissionRotationCycles(targets, { maxEstimatedRpcRequests: 10 }),
+    ).toBe(3);
   });
 
   it("surfaces an oversized coin group and continues admitting later groups", () => {
@@ -121,6 +154,7 @@ describe("measured execution overflow admission", () => {
       resolveMeasuredExecutionCronStatus({
         attemptedFailureCount: 0,
         deferredCount: 2,
+        admissionRotationCycles: 2,
         cursorWriteStatus: "written",
       }),
     ).toBe("ok");
@@ -128,6 +162,7 @@ describe("measured execution overflow admission", () => {
       resolveMeasuredExecutionCronStatus({
         attemptedFailureCount: 0,
         deferredCount: 0,
+        admissionRotationCycles: 1,
         cursorWriteStatus: "missing-table",
       }),
     ).toBe("ok");
@@ -135,6 +170,7 @@ describe("measured execution overflow admission", () => {
       resolveMeasuredExecutionCronStatus({
         attemptedFailureCount: 0,
         deferredCount: 2,
+        admissionRotationCycles: 2,
         cursorWriteStatus: "missing-table",
       }),
     ).toBe("degraded");
@@ -142,6 +178,7 @@ describe("measured execution overflow admission", () => {
       resolveMeasuredExecutionCronStatus({
         attemptedFailureCount: 0,
         deferredCount: 2,
+        admissionRotationCycles: 2,
         cursorWriteStatus: "write-failed",
       }),
     ).toBe("degraded");
@@ -149,30 +186,29 @@ describe("measured execution overflow admission", () => {
       resolveMeasuredExecutionCronStatus({
         attemptedFailureCount: 1,
         deferredCount: 0,
+        admissionRotationCycles: 1,
         cursorWriteStatus: "not-needed",
       }),
     ).toBe("degraded");
   });
 
-  it("attributes unresolved adapter work to a hard runtime budget stop", () => {
+  it("degrades rotation that cannot refresh every admitted target within one hour", () => {
     expect(
-      resolveMeasuredExecutionQuoteFailureReason(
-        "quoter-rpc-unavailable",
-        "request-budget-exhausted",
-      ),
-    ).toBe("request-budget-exhausted");
+      resolveMeasuredExecutionCronStatus({
+        attemptedFailureCount: 0,
+        deferredCount: 2,
+        admissionRotationCycles: 3,
+        cursorWriteStatus: "written",
+      }),
+    ).toBe("degraded");
     expect(
-      resolveMeasuredExecutionQuoteFailureReason("quoter-rpc-unavailable", null),
-    ).toBe("quoter-rpc-unavailable");
-    expect(
-      resolveMeasuredExecutionQuoteFailureReason("resolver-revert", "request-budget-exhausted"),
-    ).toBe("request-budget-exhausted");
-    expect(
-      resolveMeasuredExecutionQuoteFailureReason("pool-revert", "runtime-budget-exhausted"),
-    ).toBe("runtime-budget-exhausted");
-    expect(
-      resolveMeasuredExecutionQuoteFailureReason("invalid-quote-input", "request-budget-exhausted"),
-    ).toBe("invalid-quote-input");
+      resolveMeasuredExecutionCronStatus({
+        attemptedFailureCount: 0,
+        deferredCount: 2,
+        admissionRotationCycles: null,
+        cursorWriteStatus: "written",
+      }),
+    ).toBe("degraded");
   });
 });
 
