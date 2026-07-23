@@ -388,7 +388,8 @@ export async function logCronRun(
     ? AbortSignal.any([ac.signal, options.abortSignal])
     : ac.signal;
   const timeoutError = new CronTimeoutError(job, timeoutMs, getCronTimeoutBudgetMetadata(timeoutBudget));
-  let resolvedResult: CronResult | void;
+  let resolvedResult: CronResult | void = undefined;
+  let persistingCompletedTelemetry = false;
   let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
   let progressActivated = false;
   let progressState: Required<Omit<CronProgressUpdate, "metadata">> & { metadata: Record<string, unknown> | null } = {
@@ -477,6 +478,7 @@ export async function logCronRun(
     const publicationCount = productivity.publications?.length ?? 0;
     const persistedMetadata = compactCronMetadataForPersistence(resolvedResult?.metadata).metadata;
     const producer = options?.producer;
+    persistingCompletedTelemetry = true;
     if (producer) {
       await runWithOverloadRetry(() =>
         db.prepare(
@@ -541,7 +543,13 @@ export async function logCronRun(
           .run(),
       );
     }
+    persistingCompletedTelemetry = false;
   } catch (e) {
+    if (persistingCompletedTelemetry) {
+      const { name, message } = classifyError(e);
+      console.error(`[db] Failed to persist completed cron result for ${job}: ${name}: ${message}`);
+      return resolvedResult;
+    }
     const terminalMetadata = compactCronMetadataForPersistence(serializeTerminalCronMetadata(e)).metadata;
     try {
       const completedAt = Math.floor(Date.now() / 1000);

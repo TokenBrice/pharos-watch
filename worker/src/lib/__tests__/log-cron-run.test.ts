@@ -288,4 +288,104 @@ describe("logCronRun", () => {
     expect(new Set(attemptedKeys).size).toBe(1);
     expect(committedKeys.size).toBe(1);
   });
+
+  it("does not rewrite a completed producer as failed when terminal cron telemetry stays overloaded", async () => {
+    vi.useFakeTimers();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cronRunStatements: string[] = [];
+    const overloadedDb = {
+      prepare: (sql: string) => ({
+        bind: () => ({
+          run: async () => {
+            if (sql.includes("INSERT INTO cron_runs")) {
+              cronRunStatements.push(sql);
+              throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
+            }
+            return { success: true, meta: { changes: 1 } };
+          },
+          first: async () => null,
+          all: async () => ({ results: [], success: true, meta: {} }),
+        }),
+      }),
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+    const result = {
+      status: "ok" as const,
+      itemCount: 255,
+      metadata: JSON.stringify({ stage: "finalized" }),
+    };
+
+    try {
+      const completion = logCronRun(overloadedDb, "sync-live-reserves", async () => result, {
+        producer: {
+          scheduleKey: "fourHourlyAt11",
+          producerPath: "fourHourlyAt11",
+          producerKind: "scheduled-job",
+          invocationId: "invocation-1",
+        },
+      });
+      const expectation = expect(completion).resolves.toEqual(result);
+      await vi.runAllTimersAsync();
+      await expectation;
+
+      expect(cronRunStatements).toHaveLength(4);
+      expect(cronRunStatements.every((sql) => !sql.includes("'error'"))).toBe(true);
+      expect(consoleError).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to persist completed cron result for sync-live-reserves"),
+      );
+    } finally {
+      consoleError.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not overwrite a committed cron result when producer history telemetry fails", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cronRunWrites: Array<{ sql: string; args: unknown[] }> = [];
+    const historyFailureDb = {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => ({
+          run: async () => {
+            if (sql.includes("INSERT INTO cron_runs")) {
+              cronRunWrites.push({ sql, args });
+            }
+            if (sql.includes("INSERT INTO worker_producer_history")) {
+              throw new Error("producer history unavailable");
+            }
+            return { success: true, meta: { changes: 1 } };
+          },
+          first: async () => null,
+          all: async () => ({ results: [], success: true, meta: {} }),
+        }),
+      }),
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+    const result = { status: "ok" as const, itemCount: 12 };
+
+    try {
+      await expect(
+        logCronRun(historyFailureDb, "sync-live-reserves", async () => result, {
+          producer: {
+            scheduleKey: "fourHourlyAt11",
+            producerPath: "fourHourlyAt11",
+            producerKind: "scheduled-job",
+            invocationId: "invocation-2",
+          },
+        }),
+      ).resolves.toEqual(result);
+
+      expect(cronRunWrites).toHaveLength(1);
+      expect(cronRunWrites[0].args[3]).toBe("ok");
+      expect(cronRunWrites[0].sql).not.toContain("'error'");
+      expect(consoleError).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to persist completed cron result for sync-live-reserves"),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
 });

@@ -556,8 +556,9 @@ async function logCronRun(
 - Executes the job function
 - On normal completion: inserts row into `cron_runs` with `status = resolvedResult.status ?? "ok"`, `item_count`, and `metadata`; returned statuses such as `degraded`, `skipped_locked`, `skipped_neutral`, or `error` are preserved
 - Assigns each append-only run insert an `idempotency_key`; the partial unique index makes an ambiguous committed D1 overload retry a no-op instead of duplicate telemetry
+- If terminal `cron_runs` or producer-history persistence still fails after its bounded overload retries, logs the telemetry failure and returns the completed job result; an observability write cannot rewrite a fulfilled producer as failed or block dependent jobs
 - On lease contention: inserts row with `status='skipped_locked'` and lease metadata
-- On error: inserts a terminal row and re-throws a typed aggregate through the slot fence
+- When the job itself throws: inserts a terminal row and re-throws a typed aggregate through the slot fence
 - On completion/error of a progress-reporting job: clears the corresponding `cron_run_progress` row
 - Returns the job's `CronResult` when the handler provides one
 - Persisted cron metadata is compacted globally below 64 KiB; rich in-process results are not copied wholesale into `cron_runs`. The stablecoin producer applies its domain-aware compaction below 60 KiB, reserving 4 KiB for wrapper-owned lease and slot enrichment so publication and active-price coverage remain top-level health evidence.

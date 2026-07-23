@@ -318,11 +318,26 @@ function readMetadataNumber(metadata: Record<string, unknown> | undefined, key: 
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+type CronRunNotStartedReason =
+  | "upstream-abandoned"
+  | "upstream-incomplete"
+  | "upstream-failure"
+  | "upstream-blocked";
+
+function getCronRunNotStartedReason(run: Pick<CronRun, "metadata">): CronRunNotStartedReason | null {
+  if (readMetadataString(run.metadata, "childDisposition") !== "not_started") return null;
+  if (readMetadataString(run.metadata, "reason") === "stale-slot-reconciled") {
+    return "upstream-abandoned";
+  }
+  const skippedReason = readMetadataString(run.metadata, "skippedReason");
+  for (const reason of ["upstream-incomplete", "upstream-failure", "upstream-blocked"] as const) {
+    if (skippedReason?.startsWith(`${reason}:`)) return reason;
+  }
+  return null;
+}
+
 export function isCronRunNotStarted(run: Pick<CronRun, "metadata">): boolean {
-  return (
-    readMetadataString(run.metadata, "reason") === "stale-slot-reconciled"
-    && readMetadataString(run.metadata, "childDisposition") === "not_started"
-  );
+  return getCronRunNotStartedReason(run) != null;
 }
 
 function isCronRunPlatformAbandoned(run: Pick<CronRun, "metadata">): boolean {
@@ -336,7 +351,11 @@ export function formatCronRunStatus(
   status: CronRunStatus | null | undefined,
   metadata?: Record<string, unknown>,
 ): string {
-  if (isCronRunNotStarted({ metadata })) return "Not started: upstream abandoned";
+  const notStartedReason = getCronRunNotStartedReason({ metadata });
+  if (notStartedReason === "upstream-abandoned") return "Not started: upstream abandoned";
+  if (notStartedReason === "upstream-incomplete") return "Not started: upstream incomplete";
+  if (notStartedReason === "upstream-failure") return "Not started: prerequisite failed";
+  if (notStartedReason === "upstream-blocked") return "Not started: prerequisite blocked";
   if (isCronRunPlatformAbandoned({ metadata })) return "Abandoned";
   return status ? RUN_STATUS_LABELS[status] : "No runs";
 }
@@ -383,11 +402,14 @@ export function formatCronDuration(durationMs: number): FormattedCronDuration {
 }
 
 export function formatCronRunTiming(run: CronRun): FormattedCronRunTiming {
-  if (isCronRunNotStarted(run)) {
+  const notStartedReason = getCronRunNotStartedReason(run);
+  if (notStartedReason) {
     return {
       duration: null,
       unavailableLabel: "N/A",
-      note: "Did not start because the parent slot was abandoned.",
+      note: notStartedReason === "upstream-abandoned"
+        ? "Did not start because the parent slot was abandoned."
+        : "Did not start because the prerequisite job did not complete.",
     };
   }
   if (!isCronRunPlatformAbandoned(run)) {
