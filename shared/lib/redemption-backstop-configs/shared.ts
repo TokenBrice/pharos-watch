@@ -69,6 +69,17 @@ export type RedemptionCapacityModel =
       fallbackRatio?: number;
       fallbackUsd?: number;
       confidence?: StaticRedemptionCapacityConfidence;
+      /**
+       * Overrides the adapter-derived capacity confidence on the resolved
+       * live-telemetry path. Use when a live reserve read is a bounded proxy
+       * for true redeemability — e.g. sBOLD's Stability-Pool-withdrawable BOLD,
+       * which K3 can temporarily restrict on collateral-exposure thresholds — so
+       * the measured capacity still scores but at a documented-bound confidence
+       * (modelConfidence "medium") rather than the adapter's live-direct default
+       * (which would resolve to "high"). Distinct from `confidence`, which only
+       * labels the fallback path when live metadata is unavailable.
+       */
+      liveCapacityConfidence?: StaticRedemptionCapacityConfidence;
       basis?: RedemptionCapacityBasis;
     };
 

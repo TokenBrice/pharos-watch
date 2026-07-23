@@ -295,6 +295,9 @@
       }
     },
     "params": {
+      "redemptionLiquidity": {
+        "source": "sbold-sp-withdrawable"
+      },
       "slice": {
         "name": "BOLD deployed into Liquity V2 Stability Pools",
         "risk": "medium",

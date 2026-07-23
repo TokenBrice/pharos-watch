@@ -333,6 +333,17 @@ const yearnV3WithdrawableRedemptionLiquiditySchema = z
   })
   .strict();
 
+// Reviewer-asserted K3 sBOLD path: the vault deploys its BOLD into Liquity V2
+// Stability Pools (idle balance ~0), so the adapter measures same-run
+// SP-withdrawable BOLD from the vault's own calcFragments() liquid-BOLD word —
+// the value _maxWithdraw caps redemptions at — instead of the idle balance,
+// which understates such vaults to ~0.
+const sboldSpWithdrawableRedemptionLiquiditySchema = z
+  .object({
+    source: z.literal("sbold-sp-withdrawable"),
+  })
+  .strict();
+
 const erc4626SingleAssetParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
@@ -342,6 +353,7 @@ const erc4626SingleAssetParamsSchema = z
         morphoVaultV2RedemptionLiquiditySchema,
         atomicFullBackingRedemptionLiquiditySchema,
         yearnV3WithdrawableRedemptionLiquiditySchema,
+        sboldSpWithdrawableRedemptionLiquiditySchema,
       ])
       .optional(),
     rpcUrl: AbsoluteUrlSchema.optional(),

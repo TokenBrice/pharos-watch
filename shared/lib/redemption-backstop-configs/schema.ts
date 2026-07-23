@@ -78,6 +78,7 @@ const RedemptionCapacityModelSchema: z.ZodType<RedemptionCapacityModel> = z.disc
     fallbackRatio: RatioSchema.optional(),
     fallbackUsd: NonNegativeNumberSchema.optional(),
     confidence: StaticCapacityConfidenceSchema.optional(),
+    liveCapacityConfidence: StaticCapacityConfidenceSchema.optional(),
     basis: RedemptionCapacityBasisSchema.optional(),
   }),
 ]);
