@@ -47,6 +47,7 @@ import {
   BRIDGE_ROUTE_SEMANTICS_VALUES,
   COIN_NOTICE_TYPE_VALUES,
   DEPENDENCY_TYPE_VALUES,
+  V9_DEPENDENCY_ECONOMIC_ROLE_VALUES,
   FEATURED_CONTENT_TYPE_VALUES,
   GENIUS_APPLICABILITY_VALUES,
   GENIUS_AUTHORIZATION_STATUS_VALUES,
@@ -1230,6 +1231,7 @@ export const DependencyReviewSchema: z.ZodType<DependencyReview> = z
             id: z.string().min(1),
             weight: DependencyWeightNumberSchema,
             type: z.enum(DEPENDENCY_TYPE_VALUES),
+            economicRole: z.enum(V9_DEPENDENCY_ECONOMIC_ROLE_VALUES).optional(),
             reason: z.string().min(1),
           })
           .strict(),

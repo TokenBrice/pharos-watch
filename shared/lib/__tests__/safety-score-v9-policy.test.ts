@@ -28,7 +28,7 @@ describe("Safety Score v9 methodology policy", () => {
     // ROTATION-1 (owner rulings 2026-07-23): share-band materiality 0.10/0.25, T5 credit 10,
     // undisclosedFeeRouteScoreCeiling 52, commodity-allocated reserve class.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "beda6d683e6b334bf4d9f3943810d9a16287407e0184e9d07fe52088572c662a",
+      "c65b25522159dcaaf62ac99e906496d8538551ad279f79d557f06422980fc7f0",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);
@@ -237,6 +237,7 @@ describe("Safety Score v9 methodology policy", () => {
       code: "material-reserve-slice-unstructured" as const,
       reason: "Missing reviewed fields.",
       critical: true,
+      responsibility: "integration-missing" as const,
     };
     expect(resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, raw.code)).toMatchObject({
       critical: false,
@@ -253,7 +254,12 @@ describe("Safety Score v9 methodology policy", () => {
     expect(normalized[0]?.critical).toBe(false);
     expect(() => assertV9UnresolvedFactsMatchPolicy(V9_CANDIDATE_POLICY_V1, normalized)).not.toThrow();
     expect(() =>
-      V9UnresolvedFactSchema.parse({ code: "future-unregistered-reason", reason: "Unknown.", critical: true }),
+      V9UnresolvedFactSchema.parse({
+        code: "future-unregistered-reason",
+        reason: "Unknown.",
+        critical: true,
+        responsibility: "method-unsupported",
+      }),
     ).toThrow();
   });
 

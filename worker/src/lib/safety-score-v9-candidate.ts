@@ -6,7 +6,7 @@ import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "@shared
 import { buildSafetyScoreV9Response } from "@shared/lib/safety-score-v9/public";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import type { CompiledV9FactSetV2 } from "@shared/types/safety-score-v9-facts";
+import type { CompiledV9FactSetV3 } from "@shared/types/safety-score-v9-facts";
 import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { z } from "zod";
@@ -38,14 +38,16 @@ const SafetyScoreV9CompilerFactSchemaIdentityV1Schema = z
     schemaVersion: z.literal(1),
     fixedInputSchemaVersion: z.literal(3),
     factExtensionSchemaVersion: z.literal(2),
-    compiledFactSchemaVersion: z.literal(2),
+    compiledFactSchemaVersion: z.literal(3),
     compiledFactSchemaCapabilities: z.tuple([
       z.literal("canonical-chain-supply-distribution.v1"),
       z.literal("exit-route-modeled-confidence.v1"),
+      z.literal("fact-gap-responsibility.v1"),
       z.literal("journaled-cdp-shock-coverage.v1"),
       z.literal("reviewed-transfer-deployments.v1"),
+      z.literal("wrapper-local-facts.v1"),
     ]),
-    compilerAdapter: z.literal("exact-fixed-input-to-v9-facts.v1"),
+    compilerAdapter: z.literal("exact-fixed-input-to-v9-facts.v2"),
     evaluationBuildDigest: Sha256Schema,
   })
   .strict();
@@ -126,7 +128,7 @@ export interface BuildSafetyScoreV9CandidateFromNormalizedInput extends Omit<
 export interface SafetyScoreV9CandidatePipelineResult {
   fixedInput: Readonly<ReportCardsFixedInput>;
   extension: Readonly<SafetyScoreV9FactSetExtensionV2>;
-  compiledFacts: Readonly<CompiledV9FactSetV2>;
+  compiledFacts: Readonly<CompiledV9FactSetV3>;
   evaluatedSet: Readonly<V9EvaluatedSet>;
   candidate: Readonly<SafetyScoreV9Response>;
   compilerFactSchemaIdentity: Readonly<SafetyScoreV9CompilerFactSchemaIdentityV1>;
@@ -178,7 +180,7 @@ export function computeSafetyScoreV9CandidateId(identityValue: SafetyScoreV9Cand
 function compilerFactSchemaIdentity(
   fixedInput: ReportCardsFixedInput,
   extension: SafetyScoreV9FactSetExtensionV2,
-  compiledFacts: CompiledV9FactSetV2,
+  compiledFacts: CompiledV9FactSetV3,
 ): SafetyScoreV9CompilerFactSchemaIdentityV1 {
   return SafetyScoreV9CompilerFactSchemaIdentityV1Schema.parse({
     schemaVersion: 1,
@@ -188,10 +190,12 @@ function compilerFactSchemaIdentity(
     compiledFactSchemaCapabilities: [
       "canonical-chain-supply-distribution.v1",
       "exit-route-modeled-confidence.v1",
+      "fact-gap-responsibility.v1",
       "journaled-cdp-shock-coverage.v1",
       "reviewed-transfer-deployments.v1",
+      "wrapper-local-facts.v1",
     ],
-    compilerAdapter: "exact-fixed-input-to-v9-facts.v1",
+    compilerAdapter: "exact-fixed-input-to-v9-facts.v2",
     evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
   });
 }

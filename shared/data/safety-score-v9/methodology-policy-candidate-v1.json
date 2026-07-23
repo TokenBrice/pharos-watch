@@ -899,6 +899,40 @@
         "peg-unverified": 60
       }
     },
+    "operationalResilience": {
+      "minimumLiveHistoryMonths": 36,
+      "maximumCredit": {
+        "backing": 3,
+        "exit": 8,
+        "control": 3
+      },
+      "confidenceMultipliers": {
+        "issuer-reported": 0.5,
+        "independent-assurance": 0.85,
+        "audited": 1,
+        "measured": 1
+      },
+      "redemption": {
+        "minimumCumulativeSupplyRatio": 0.5,
+        "minimumPeakStressSupplyRatio": 0.05,
+        "cumulativeCredit": 2,
+        "stressCredit": 3
+      },
+      "marketDepth": {
+        "minimumCompleteCycles": 3,
+        "minimumCompletionRatio": 0.8,
+        "credit": 2
+      },
+      "stressEpisodes": {
+        "minimumEpisodes": 2,
+        "maximumRecoverySec": 604800,
+        "credit": 2
+      },
+      "reconciliation": {
+        "minimumHistoryMonths": 24,
+        "credit": 3
+      }
+    },
     "historicalValidation": {
       "noRiskSignalScore": 90,
       "severityQuality": {
@@ -909,7 +943,10 @@
       }
     },
     "decisions": {
-      "formulaOrder": "quality-peg-caps",
+      "formulaOrder": "continuous-quality-peg-scoped-risk-caps",
+      "weakestPathAggregation": "smooth-bounded-headroom",
+      "deploymentRisk": "exposure-weighted-local-hard-cap-global",
+      "evidenceResponsibility": "explicit-risk-availability-split",
       "parentPropagation": "required-parent-ceiling",
       "collateralUpstreamUnknown": "exposure-bounded-unless-serial-claim-unestablished",
       "dependencyScc": "member-and-descendant-treatment",

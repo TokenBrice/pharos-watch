@@ -9,6 +9,12 @@ const VARIANT_DISPLAY: Record<
     chipClass: string;
   }
 > = {
+  "pure-wrapper": {
+    shortLabel: "Wrapped",
+    fullLabel: "Pure wrapper variant",
+    badgeClass: "border-slate-500/25 bg-slate-500/10 text-slate-700 dark:text-slate-300",
+    chipClass: "border-slate-500/25 bg-slate-500/10 text-slate-700 dark:text-slate-300",
+  },
   "savings-passthrough": {
     shortLabel: "Savings",
     fullLabel: "Savings variant",

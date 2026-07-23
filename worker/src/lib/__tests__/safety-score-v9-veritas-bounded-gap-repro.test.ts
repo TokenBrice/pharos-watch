@@ -25,7 +25,14 @@ describe("VERITAS finding VER-012: access gaps violate their reason owner contra
     const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(fixedInput, extension);
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
 
-    expect(evaluated.assets.every((asset) => asset.trace.finalGrade !== "NR")).toBe(true);
+    // The deliberately sparse baseline extension can now be NR for unrelated
+    // producer-owned exit evidence. Access review gaps themselves must remain
+    // non-withholding and bound to the control owner.
+    expect(
+      evaluated.assets.every((asset) =>
+        asset.trace.nrReasons.every((reason) => reason.code !== "missing-access-review"),
+      ),
+    ).toBe(true);
 
     const accessGaps = compiled.assets.flatMap((asset) =>
       asset.gaps.flatMap((gap) =>

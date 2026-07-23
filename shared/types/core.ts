@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { DependencyType } from "./dependency-types";
+import type { DependencyType, V9DependencyEconomicRole } from "./dependency-types";
 import type { LiveReservesConfig } from "./live-reserves";
 import type { CauseOfDeath } from "./cause-of-death";
 import type { ReserveSlice } from "./reserves";
@@ -12,6 +12,7 @@ import {
   type StablecoinStatus,
 } from "./stablecoin-taxonomy";
 export type { DependencyType } from "./dependency-types";
+export type { V9DependencyEconomicRole } from "./dependency-types";
 export type { ReserveRisk, ReserveSlice } from "./reserves";
 export {
   GOVERNANCE_TYPE_VALUES,
@@ -28,7 +29,13 @@ export type {
   StablecoinStatus,
 } from "./stablecoin-taxonomy";
 export { RESERVE_RISK_VALUES, ReserveRiskSchema } from "./reserves";
-export { DEPENDENCY_TYPE_VALUES, DependencyTypeSchema } from "./dependency-types";
+export {
+  DEPENDENCY_TYPE_VALUES,
+  DependencyTypeSchema,
+  V9_DEPENDENCY_ECONOMIC_ROLE_VALUES,
+  V9DependencyEconomicRoleSchema,
+  defaultV9DependencyEconomicRole,
+} from "./dependency-types";
 
 // --- Flag-based classification ---
 
@@ -200,6 +207,8 @@ export interface DependencyReviewRelationship {
   id: string;
   weight: number;
   type: DependencyType;
+  /** Explicit V9 propagation role; absent retained reviews use the legacy topology default. */
+  economicRole?: V9DependencyEconomicRole;
   reason: string;
 }
 
@@ -864,6 +873,7 @@ export const INFRASTRUCTURE_LABELS: Record<Infrastructure, string> = {
 };
 
 export const VARIANT_KIND_VALUES = [
+  "pure-wrapper",
   "savings-passthrough",
   "strategy-vault",
   "risk-absorption",

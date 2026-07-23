@@ -353,9 +353,15 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(left.compilerFactSchemaIdentity.compiledFactSchemaCapabilities).toEqual([
       "canonical-chain-supply-distribution.v1",
       "exit-route-modeled-confidence.v1",
+      "fact-gap-responsibility.v1",
       "journaled-cdp-shock-coverage.v1",
       "reviewed-transfer-deployments.v1",
+      "wrapper-local-facts.v1",
     ]);
+    expect(left.compilerFactSchemaIdentity).toMatchObject({
+      compiledFactSchemaVersion: 3,
+      compilerAdapter: "exact-fixed-input-to-v9-facts.v2",
+    });
     expect(left.producerCapabilityIdentity.sourceAdapters.dexExitRoutes).toBe("fixed-input.dex-exit-observations.v2");
     expect(left.producerCapabilityIdentity.sourceAdapters.redemptionExitRoutes).toBe(
       "fixed-input.redemption-exit-observations.v2",
@@ -483,7 +489,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(() => buildSafetyScoreV9Candidate({ ...args, releaseCandidateId: "candidate-latest" })).toThrow();
   });
 
-  it("keeps reviewed-metadata enrichment not rated while critical V9 reviews remain absent", () => {
+  it("keeps reviewed metadata not rated when score-bearing exit evidence is absent", () => {
     const result = buildSafetyScoreV9Candidate({
       // The reviewed registry metadata resolves the mechanism, control, mint,
       // and access reviews, but this capture has no exit-route observations, so
@@ -498,9 +504,8 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(result.extension.assets[0]).toMatchObject({
       assetId: "usdc-circle",
       // Reviewed reserve/proof-of-reserves and mint-authority evidence enriches
-      // the mechanism, control, and mint reviews to resolved states; the
-      // absent exit-route reviews stay bounded, so the asset rates under the
-      // exit-unverified ceiling instead of reason-coding NR.
+      // the mechanism, control, and mint reviews to resolved states. That
+      // enrichment cannot substitute for a missing score-bearing exit pillar.
       mechanismRiskReview: {
         archetype: "fiat-cash",
         // D1 fiat-cash overlays are active: USDC's claim/custody components are
@@ -520,14 +525,13 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       accessReview: { transfer: { posture: "restrictable" } },
     });
     expect(result.candidate.cards).toHaveLength(1);
-    expect(result.candidate.cards[0]).toMatchObject({ id: "usdc-circle", score: 55, grade: "C" });
-    expect(result.candidate.cards[0]!.nrReasons).toEqual([]);
-    expect(result.candidate.cards[0]!.caps.map((cap) => cap.kind)).toContain("reason:missing-same-notional-route");
+    expect(result.candidate.cards[0]).toMatchObject({ id: "usdc-circle", score: null, grade: "NR" });
+    expect(result.candidate.cards[0]!.nrReasons.length).toBeGreaterThan(0);
     expect(result.candidate.completeness).toEqual({
       expectedCount: 1,
-      ratedCount: 1,
-      notRatedCount: 0,
-      notRatedIds: [],
+      ratedCount: 0,
+      notRatedCount: 1,
+      notRatedIds: ["usdc-circle"],
     });
   });
 
@@ -590,7 +594,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       policyVersion: "candidate-v2",
       completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
     });
-    expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 81, grade: "A-" });
+    expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 77, grade: "B+" });
     expect(result.evaluatedSet.assets[0]!.trace.finalScore).toBe(result.candidate.cards[0]!.score);
   });
 });

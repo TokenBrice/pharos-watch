@@ -100,6 +100,21 @@ describe("getFilterTags — tracked variants", () => {
   it("emits no variant tags when variant metadata is absent", () => {
     const tags = getFilterTags(makeCoin());
     expect(tags).not.toContain("variant-tracked");
+    expect(tags).not.toContain("variant-pure-wrapper");
+    expect(tags).not.toContain("variant-savings-passthrough");
+    expect(tags).not.toContain("variant-strategy-vault");
+    expect(tags).not.toContain("variant-risk-absorption");
+    expect(tags).not.toContain("variant-bond-maturity");
+  });
+
+  it("emits tracked pure-wrapper tags", () => {
+    const tags = getFilterTags(makeCoin({
+      variantOf: "base-coin",
+      variantKind: "pure-wrapper",
+    }));
+
+    expect(tags).toContain("variant-tracked");
+    expect(tags).toContain("variant-pure-wrapper");
     expect(tags).not.toContain("variant-savings-passthrough");
     expect(tags).not.toContain("variant-strategy-vault");
     expect(tags).not.toContain("variant-risk-absorption");

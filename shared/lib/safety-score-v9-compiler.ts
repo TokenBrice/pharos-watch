@@ -24,6 +24,7 @@ import { isDexExitRouteCoverageComplete } from "./p4-exit-route-capacity";
 import { isExitRouteObservationScoreEligible } from "./redemption-backstop-scoring";
 import { collectCriticalControlIdentities, type CriticalControlIdentityOccurrence } from "./control-identities";
 import { mergeExitRouteObservations } from "./safety-score-v9/exit-observation-set";
+import { V9_LEGACY_RESPONSIBILITY_BY_REASON } from "./safety-score-v9/facts";
 import { assertV9ValidatedPolicyEnvelope, normalizeV9UnresolvedFacts } from "./safety-score-v9/policy";
 import { scoreV9ReserveExposureClassification } from "./safety-score-v9/backing";
 
@@ -52,7 +53,13 @@ export interface CompileV9AssetOptions {
 }
 
 function unresolved(code: V9ReasonCode, reason: string, critical: boolean, path?: string): V9UnresolvedFact {
-  return { code, reason, critical, ...(path ? { path } : {}) };
+  return {
+    code,
+    reason,
+    critical,
+    ...(path ? { path } : {}),
+    responsibility: V9_LEGACY_RESPONSIBILITY_BY_REASON[code],
+  };
 }
 
 function parseTimestamp(value: string | number | undefined): Date | null {
@@ -370,6 +377,7 @@ function compileBackingPillar(
     structuralSignals.push({
       kind: "critical-dependency",
       severity: "high",
+      responsibility: "integration-missing",
       reason: `Material upstream ratings are unavailable: ${materialUnavailable
         .map((entry) => entry.id)
         .sort()
@@ -776,6 +784,7 @@ function compileOracleControlPath(args: {
         structuralSignals.push({
           kind: "weak-oracle-branch",
           severity: branch.tier === "opaque-or-unknown" ? "critical" : "high",
+          responsibility: branch.tier === "opaque-or-unknown" ? "issuer-undisclosed" : "measured-adverse",
           reason: `${branch.label} resolves to ${branch.tier}.`,
           failureDomainKeys: branch.failureDomainKeys ?? [`oracle:${meta.id}:${branch.id}`],
           evidence: oracleEvidence,
@@ -786,6 +795,7 @@ function compileOracleControlPath(args: {
     structuralSignals.push({
       kind: "weak-oracle-branch",
       severity: oracle.tier === "opaque-or-unknown" ? "critical" : "high",
+      responsibility: oracle.tier === "opaque-or-unknown" ? "issuer-undisclosed" : "measured-adverse",
       reason: `Reviewed oracle profile resolves to ${oracle.tier}.`,
       failureDomainKeys: [`oracle:${meta.id}`],
       evidence: oracleEvidence,
@@ -915,6 +925,7 @@ function compileControlPillar(
       structuralSignals.push({
         kind: "active-control-incident",
         severity: "critical",
+        responsibility: "measured-adverse",
         reason: incident.summary,
         failureDomainKeys: [`mint:${meta.id}`],
         evidence: incidentEvidence,
@@ -924,6 +935,7 @@ function compileControlPillar(
       structuralSignals.push({
         kind: "centralized-mint",
         severity: "critical",
+        responsibility: "measured-adverse",
         reason: "Reviewed mint authority is unbounded or compromised.",
         failureDomainKeys: [`mint:${meta.id}`],
         evidence: mintEvidence,
@@ -932,6 +944,7 @@ function compileControlPillar(
       structuralSignals.push({
         kind: "centralized-mint",
         severity: "moderate",
+        responsibility: "measured-adverse",
         reason: "Reviewed mint authority is concentrated in one administrator path.",
         failureDomainKeys: [`mint:${meta.id}`],
         evidence: mintEvidence,
@@ -952,6 +965,7 @@ function compileControlPillar(
       structuralSignals.push({
         kind: "unreviewed-upgrade",
         severity: "high",
+        responsibility: "issuer-undisclosed",
         reason: "Mint-critical implementation upgradeability is not reviewed.",
         failureDomainKeys: [`upgrade:${meta.id}`],
         evidence: mintEvidence,
@@ -1252,6 +1266,7 @@ function appendCommonControlSignals(args: {
     structuralSignals.push({
       kind: "critical-dependency",
       severity: "moderate",
+      responsibility: "measured-adverse",
       reason: `Critical control identity ${key} is reused across ${domain.assetIds.length} active asset${
         domain.assetIds.length === 1 ? "" : "s"
       } and ${paths.join(", ")} paths.`,
@@ -1263,6 +1278,7 @@ function appendCommonControlSignals(args: {
       structuralSignals.push({
         kind: "centralized-mint",
         severity: "moderate",
+        responsibility: "measured-adverse",
         reason: `Mint-critical control identity ${key} is shared by ${domain.assetIds.length} active assets.`,
         failureDomainKeys: [key],
         evidence: uniqueEvidence(evidence),
@@ -1466,6 +1482,7 @@ export function compileHistoricalFixtureToV9Input(
   const structuralSignals: V9StructuralSignal[] = fixture.facts.riskSignals.map((signal) => ({
     kind: signal.kind,
     severity: signal.severity,
+    responsibility: "measured-adverse",
     reason: signal.reason,
     failureDomainKeys: [`historical:${fixture.assetId}:${signal.kind}`],
     evidence,

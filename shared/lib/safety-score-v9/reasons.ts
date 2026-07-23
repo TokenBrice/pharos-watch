@@ -1,7 +1,10 @@
 import {
   V9FactGapV2Schema,
+  V9FactGapV3Schema,
   V9TypedFactPathSchema,
+  type V9EvidenceResponsibility,
   type V9FactGapV2,
+  type V9FactGapV3,
   type V9ObservationState,
   type V9TypedFactPath,
 } from "../../types/safety-score-v9-facts";
@@ -38,6 +41,23 @@ export function createV9FactGap(args: {
   evidenceRefIds?: readonly string[];
 }): V9FactGapV2 {
   return V9FactGapV2Schema.parse({
+    ...args,
+    evidenceRefIds: [...(args.evidenceRefIds ?? [])],
+  });
+}
+
+export function createV9FactGapV3(args: {
+  gapId: string;
+  reasonCode: V9ReasonCode;
+  ownerDomain: V9ReasonOwnerDomain;
+  policyRuleId: string;
+  observationState: Exclude<V9ObservationState, "known">;
+  responsibility: V9EvidenceResponsibility;
+  path: V9TypedFactPath;
+  message: string;
+  evidenceRefIds?: readonly string[];
+}): V9FactGapV3 {
+  return V9FactGapV3Schema.parse({
     ...args,
     evidenceRefIds: [...(args.evidenceRefIds ?? [])],
   });

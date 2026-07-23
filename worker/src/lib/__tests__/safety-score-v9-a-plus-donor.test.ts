@@ -1599,12 +1599,18 @@ describe("Safety Score v9 real-donor A+ fixture", { timeout: 30_000 }, () => {
       observedAtSec: redemptionReview.output!.valuation!.observedAtSec,
     });
 
-    expect(card).toMatchObject({ id: COMPOSITE_ID, score: 89, grade: "A+", evidence: { level: "strong" } });
+    expect(card).toMatchObject({ id: COMPOSITE_ID, score: 88, grade: "A+", evidence: { level: "strong" } });
     expect(evaluated).toMatchObject({
       backing: { score: 92.42609075 },
       exit: { score: 79.44 },
       control: { score: 95 },
-      trace: { pegMultiplier: 1, weightedQuality: 88.5244, preCapScore: 88.5244, bindingCap: null },
+      trace: {
+        pegMultiplier: 1,
+        weightedQuality: 88.5244,
+        aggregation: { weightedQuality: 88.5244, weakestScore: 79.44, headroom: 20, score: 87.9473 },
+        preCapScore: 87.9473,
+        bindingCap: null,
+      },
     });
     const rawAuditScore = evaluated.trace.pillarContributions.reduce(
       (sum, contribution) => sum + contribution.score * contribution.weight,
@@ -1619,15 +1625,7 @@ describe("Safety Score v9 real-donor A+ fixture", { timeout: 30_000 }, () => {
     expect(compiled.gaps).toEqual([]);
     expect(card.nrReasons).toEqual([]);
     expect(card.evidence).toMatchObject({ level: "strong", reasons: [] });
-    expect(card.caps).toHaveLength(1);
-    expect(card.caps[0]).toMatchObject({
-      kind: "bounded-compensability",
-      limit: 99.44,
-      source: "bounded-compensability",
-      binding: false,
-    });
-    expect(card.caps.filter((cap) => Number.isFinite(cap.limit))).toHaveLength(1);
-    expect(card.caps.map((cap) => cap.source)).toEqual(["bounded-compensability"]);
+    expect(card.caps).toEqual([]);
     expect(card.bindingCap).toBeNull();
     expect(evaluated.trace.bindingCap).toBeNull();
 

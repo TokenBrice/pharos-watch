@@ -6,6 +6,7 @@ import {
   type V9ResolvedUpstreamExposure,
 } from "@shared/lib/safety-score-v9/backing";
 import { scoreV9Input } from "@shared/lib/safety-score-v9/formula";
+import { V9_LEGACY_RESPONSIBILITY_BY_REASON } from "@shared/lib/safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 
 function knownStatus(evidenceId: string): V9FactStatusV2 {
@@ -82,6 +83,7 @@ function scoreBacking(result: ReturnType<typeof evaluateV9ReserveExposures>) {
         code: reason.code,
         reason: `${reason.code} at ${reason.pathKey}`,
         critical: false,
+        responsibility: V9_LEGACY_RESPONSIBILITY_BY_REASON[reason.code],
       })),
     },
     V9_CANDIDATE_POLICY_V1,

@@ -11,6 +11,7 @@ import {
 import {
   scoreV9Input,
   scoreV9InputWithScenarioCaps,
+  type V9AttributedScenarioCap,
   type V9ScoreTrace,
   type V9StructuralCap,
 } from "./safety-score-v9/formula";
@@ -29,6 +30,10 @@ export {
   type V9ScoreTrace,
 } from "./safety-score-v9/formula";
 
+export interface V9ResearchScenarioCap extends V9StructuralCap {
+  pricedInPillar?: V9QualityPillar;
+}
+
 const V9_QUALITY_PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];
 
 function compareCodeUnits(left: string, right: string): number {
@@ -39,9 +44,13 @@ function compareCodeUnits(left: string, right: string): number {
 export function scoreV9ResearchScenarioInput(
   rawInput: V9ScoringInput,
   policy: V9ValidatedPolicyEnvelope,
-  scenarioCaps: readonly V9StructuralCap[],
+  scenarioCaps: readonly V9ResearchScenarioCap[],
 ): V9ScoreTrace {
-  return scoreV9InputWithScenarioCaps(rawInput, policy, scenarioCaps);
+  const attributedCaps: V9AttributedScenarioCap[] = scenarioCaps.map((cap) => ({
+    ...cap,
+    responsibility: "measured-adverse",
+  }));
+  return scoreV9InputWithScenarioCaps(rawInput, policy, attributedCaps);
 }
 
 function weakestEvidenceLevel(input: CompiledV9AssetInput, policy: V9ValidatedPolicyEnvelope): V9EvidenceLevel {

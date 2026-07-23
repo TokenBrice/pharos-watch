@@ -11,6 +11,34 @@
     "rwa": true,
     "navToken": false
   },
+  "variantOf": "m-m0",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "m-m0",
+  "dependencyReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "OpenAI Codex Safety Score V9 dependency review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "M0 Wrapped M documentation",
+        "url": "https://docs.m0.org/"
+      },
+      {
+        "label": "Wrapped M Token source",
+        "url": "https://github.com/m0-foundation/wrapped-m-token"
+      }
+    ],
+    "rationale": "wM is a direct non-rebasing 1:1 claim on M: wrapping escrows M and unwrapping returns M. The complete parent claim therefore propagates serially, while wrapper-local contract and migration controls remain separately scored.",
+    "relationships": [
+      {
+        "id": "m-m0",
+        "weight": 1,
+        "type": "wrapper",
+        "economicRole": "serial-claim",
+        "reason": "Every wM unit is a direct wrapper claim on escrowed M."
+      }
+    ]
+  },
   "infrastructures": [
     "m0"
   ],

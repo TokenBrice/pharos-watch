@@ -365,6 +365,40 @@ describe("Safety Score v9 economic control", () => {
     );
   });
 
+  it("keeps a deployment-local mint's exact share and domain separate from upgrade control", () => {
+    const mintControl = control("mint:local", "mint", {
+      scope: "deployment",
+      economicLossScope: "deployment",
+      materialSupplyShare: 0.1,
+      capSemantics: { kind: "unbounded", bound: null },
+      claimImpairment: "unbounded",
+    });
+    const upgradeControl = control("upgrade:global", "upgrade", {
+      scope: "global",
+      economicLossScope: "global-claim",
+      materialSupplyShare: null,
+    });
+    const result = evaluateV9EconomicControl(
+      args({
+        facts: facts([mintControl, upgradeControl]),
+        mint: {
+          ...boundedMint(mintControl.controlKey),
+          upgrade: { state: "reviewed", controlKey: upgradeControl.controlKey },
+        },
+      }),
+    );
+    const mintFailure = result.structuralFailures.find(
+      (failure) => failure.kind === "centralized-mint",
+    );
+
+    expect(mintFailure).toMatchObject({
+      materialSharePct: 10,
+      controlKeys: [mintControl.controlKey],
+      failureDomains: [{ kind: "mint-control", key: mintControl.controlKey }],
+    });
+    expect(mintFailure?.controlKeys).not.toContain(upgradeControl.controlKey);
+  });
+
   it("applies the R3 reconciled-mint ladder by reviewed supervision", () => {
     const mintControl = control("mint:hot-wallet", "mint", {
       authority: { authorityKey: "authority:issuer", model: "eoa", threshold: null },
@@ -526,7 +560,8 @@ describe("Safety Score v9 economic control", () => {
         kind: "unreviewed-upgrade",
         severity: "high",
         binding: true,
-        controlKeys: [mintControl.controlKey],
+        controlKeys: [],
+        failureDomains: [],
       }),
     );
   });
@@ -626,6 +661,46 @@ describe("Safety Score v9 economic control", () => {
     expect(evaluateBridge(null)).toMatchObject({ binding: true, severity: "high" });
     // Opaque topology stays critical regardless of share.
     expect(evaluateBridge(0.15, "opaque-or-unknown")).toMatchObject({ binding: true, severity: "critical" });
+  });
+
+  it("moves known adverse deployment control out of the whole-asset pillar while preserving fail-closed cases", () => {
+    const mintControl = control("mint:global", "mint", {
+      capSemantics: { kind: "raiseable", bound: { amount: 0.1, unit: "supply-fraction" } },
+    });
+    const bridgeControl = control("bridge:polygon", "bridge", {
+      scope: "deployment",
+      economicLossScope: "deployment",
+      materialSupplyShare: 0.15,
+    });
+    const evaluateBridge = (tier: V9BridgeControlReview["routes"][number]["tier"], share: number | null) =>
+      evaluateV9EconomicControl(
+        args({
+          facts: facts([mintControl, { ...bridgeControl, materialSupplyShare: share }]),
+          mint: boundedMint(mintControl.controlKey),
+          bridge: {
+            status: requiredKnown("bridge"),
+            routes: [{ controlKey: bridgeControl.controlKey, tier }],
+          },
+        }),
+      );
+
+    const scoped = evaluateBridge("external-lock-mint", 0.15);
+    expect(scoped.score).toBe(70);
+    expect(scoped.components.find((component) => component.kind === "bridge")).toMatchObject({
+      score: 45,
+      binding: false,
+    });
+    expect(scoped.structuralFailures).toContainEqual(
+      expect.objectContaining({ kind: "material-bridge", binding: true, materialSharePct: 15 }),
+    );
+
+    const unknownShare = evaluateBridge("external-lock-mint", null);
+    expect(unknownShare.score).toBe(45);
+    expect(unknownShare.components.find((component) => component.kind === "bridge")?.binding).toBe(true);
+
+    const nonAdverse = evaluateBridge("canonical-rollup-bridge", 0.15);
+    expect(nonAdverse.score).toBe(70);
+    expect(nonAdverse.components.find((component) => component.kind === "bridge")?.binding).toBe(true);
   });
 
   it("keeps unresolved access-only and below-threshold deployment controls nonbinding under a known aggregate", () => {

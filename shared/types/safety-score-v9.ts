@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
+import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
 
 export const V9QualityPillarSchema = z.enum(["backing", "exit", "control"]);
 export type V9QualityPillar = z.infer<typeof V9QualityPillarSchema>;
@@ -79,6 +80,7 @@ export const V9UnresolvedFactSchema = z
     reason: z.string().min(1),
     critical: z.boolean(),
     path: z.string().min(1).optional(),
+    responsibility: V9EvidenceResponsibilitySchema,
   })
   .strict();
 export type V9UnresolvedFact = z.infer<typeof V9UnresolvedFactSchema>;
@@ -144,10 +146,42 @@ export const V9StructuralSignalSchema = z
     severity: V9SeveritySchema,
     reason: z.string().min(1),
     materialSharePct: z.number().finite().min(0).max(100).optional(),
+    economicLossScope: z
+      .enum(["access-only", "deployment", "reserve-claim", "global-claim"])
+      .optional(),
+    exposureKey: z.string().min(1).optional(),
+    riskEventKey: z.string().min(1).optional(),
+    recoveryPath: z
+      .enum([
+        "none",
+        "protocol-recovery",
+        "issuer-remediation",
+        "deployment-migration",
+        "market-substitution",
+        "unknown",
+      ])
+      .optional(),
+    expectedRecoverySec: z.number().int().nonnegative().nullable().optional(),
+    lossAbsorptionPct: z.number().finite().min(0).max(100).optional(),
+    evidenceConfidence: z.enum(["high", "medium", "low", "unknown"]).optional(),
+    responsibility: V9EvidenceResponsibilitySchema.optional(),
+    pricedInPillar: V9QualityPillarSchema.optional(),
     failureDomainKeys: z.array(z.string().min(1)).default([]),
     evidence: z.array(V9EvidenceReferenceSchema).default([]),
   })
-  .strict();
+  .strict()
+  .superRefine((signal, ctx) => {
+    if (
+      signal.economicLossScope === "deployment" &&
+      (signal.exposureKey === undefined || signal.riskEventKey === undefined)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["exposureKey"],
+        message: "Deployment-scoped signals require explicit exposure and risk-event identities",
+      });
+    }
+  });
 export type V9StructuralSignal = z.infer<typeof V9StructuralSignalSchema>;
 
 export const CompiledV9AssetInputSchema = z
@@ -631,6 +665,9 @@ const V9FormulaPolicySchema = z
         control: z.number().finite().min(0).max(1),
       })
       .strict(),
+    // Smooth weakest-path saturation parameters. These retain the existing
+    // policy keys so candidate sensitivity paths remain stable, but they no
+    // longer create a hard `weakest + headroom` final-score cap.
     compensabilityHeadroom: ScoreSchema,
     controlCompensabilityHeadroom: ScoreSchema,
     pegExponent: z.number().finite().min(0).max(1),
@@ -1111,6 +1148,55 @@ const V9StructuralPolicySchema = z
   })
   .strict();
 
+const V9OperationalResiliencePolicySchema = z
+  .object({
+    minimumLiveHistoryMonths: z.number().int().nonnegative(),
+    maximumCredit: z
+      .object({
+        backing: ScoreSchema,
+        exit: ScoreSchema,
+        control: ScoreSchema,
+      })
+      .strict(),
+    confidenceMultipliers: z
+      .object({
+        "issuer-reported": z.number().finite().min(0).max(1),
+        "independent-assurance": z.number().finite().min(0).max(1),
+        audited: z.number().finite().min(0).max(1),
+        measured: z.number().finite().min(0).max(1),
+      })
+      .strict(),
+    redemption: z
+      .object({
+        minimumCumulativeSupplyRatio: z.number().finite().nonnegative(),
+        minimumPeakStressSupplyRatio: z.number().finite().nonnegative(),
+        cumulativeCredit: ScoreSchema,
+        stressCredit: ScoreSchema,
+      })
+      .strict(),
+    marketDepth: z
+      .object({
+        minimumCompleteCycles: z.number().int().positive(),
+        minimumCompletionRatio: z.number().finite().min(0).max(1),
+        credit: ScoreSchema,
+      })
+      .strict(),
+    stressEpisodes: z
+      .object({
+        minimumEpisodes: z.number().int().positive(),
+        maximumRecoverySec: z.number().int().positive(),
+        credit: ScoreSchema,
+      })
+      .strict(),
+    reconciliation: z
+      .object({
+        minimumHistoryMonths: z.number().int().positive(),
+        credit: ScoreSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
 const V9HistoricalValidationPolicySchema = z
   .object({
     noRiskSignalScore: ScoreSchema,
@@ -1122,7 +1208,10 @@ const V9HistoricalValidationPolicySchema = z
 
 const V9DecisionPolicySchema = z
   .object({
-    formulaOrder: z.literal("quality-peg-caps"),
+    formulaOrder: z.literal("continuous-quality-peg-scoped-risk-caps"),
+    weakestPathAggregation: z.literal("smooth-bounded-headroom"),
+    deploymentRisk: z.literal("exposure-weighted-local-hard-cap-global"),
+    evidenceResponsibility: z.literal("explicit-risk-availability-split"),
     parentPropagation: z.literal("required-parent-ceiling"),
     collateralUpstreamUnknown: z.literal("exposure-bounded-unless-serial-claim-unestablished"),
     dependencyScc: z.literal("member-and-descendant-treatment"),
@@ -1144,6 +1233,7 @@ export const V9MethodologySemanticSchema = z
     exit: V9ExitPolicySchema,
     control: V9ControlPolicySchema,
     structural: V9StructuralPolicySchema,
+    operationalResilience: V9OperationalResiliencePolicySchema,
     historicalValidation: V9HistoricalValidationPolicySchema,
     decisions: V9DecisionPolicySchema,
     accessPostureVocabulary: z

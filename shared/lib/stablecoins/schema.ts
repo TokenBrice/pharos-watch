@@ -7,6 +7,7 @@ import { fuzzyDateRange } from "../classification/resolve-implementation-launch-
 import { DetailProviderSchema, PEG_CURRENCY_VALUES } from "../../types/core";
 import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
 import { FullReserveCompositionSchema } from "../../types/reserves";
+import { defaultV9DependencyEconomicRole } from "../../types/dependency-types";
 import {
   CoinNoticeSchema,
   BlacklistabilityReviewSchema,
@@ -455,10 +456,12 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
       });
     }
     if (meta.dependencyReview != null) {
-      const reviewedRelationships = new Map<string, { index: number; weight: number }>();
+      const reviewedRelationships = new Map<string, { index: number; weight: number }[]>();
+      const reviewedRoleKeys = new Set<string>();
       for (let index = 0; index < meta.dependencyReview.relationships.length; index += 1) {
         const relationship = meta.dependencyReview.relationships[index];
         const key = `${relationship.id}::${relationship.type}`;
+        const roleKey = `${key}::${relationship.economicRole ?? defaultV9DependencyEconomicRole(relationship.type)}`;
         if (!isCanonicalStablecoinId(relationship.id)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -466,19 +469,29 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
             path: ["dependencyReview", "relationships", index, "id"],
           });
         }
-        if (reviewedRelationships.has(key)) {
+        if (reviewedRoleKeys.has(roleKey)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `duplicate dependencyReview relationship ${key}`,
+            message: `duplicate dependencyReview relationship role ${roleKey}`,
             path: ["dependencyReview", "relationships", index],
           });
         }
-        reviewedRelationships.set(key, { index, weight: relationship.weight });
+        reviewedRoleKeys.add(roleKey);
+        reviewedRelationships.set(key, [
+          ...(reviewedRelationships.get(key) ?? []),
+          { index, weight: relationship.weight },
+        ]);
       }
 
-      const manualWeights = new Map<string, number>();
-      for (let index = 0; index < manualDependencies.length; index += 1) {
-        const dependency = manualDependencies[index];
+      const reviewableDependencies = [
+        ...manualDependencies,
+        ...(meta.variantOf
+          ? [{ id: meta.variantOf, weight: 1, type: "wrapper" as const }]
+          : []),
+      ];
+      const reviewedWeights = new Map<string, number>();
+      for (let index = 0; index < reviewableDependencies.length; index += 1) {
+        const dependency = reviewableDependencies[index];
         if (dependency.type == null) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -487,11 +500,11 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
           });
         }
         const key = `${dependency.id}::${dependency.type ?? "collateral"}`;
-        manualWeights.set(key, (manualWeights.get(key) ?? 0) + dependency.weight);
+        reviewedWeights.set(key, (reviewedWeights.get(key) ?? 0) + dependency.weight);
       }
-      for (const [key, manualWeight] of manualWeights) {
-        const reviewedRelationship = reviewedRelationships.get(key);
-        if (reviewedRelationship == null) {
+      for (const [key, authoredWeight] of reviewedWeights) {
+        const relationships = reviewedRelationships.get(key);
+        if (relationships == null) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: `dependencyReview is missing manual relationship ${key}`,
@@ -499,16 +512,18 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta> = StablecoinMe
           });
           continue;
         }
-        if (Math.abs(reviewedRelationship.weight - manualWeight) > REVIEW_QUANTITATIVE_TOLERANCE) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: `dependencyReview relationship ${key} weight must match the authored dependency weight`,
-            path: ["dependencyReview", "relationships", reviewedRelationship.index, "weight"],
-          });
+        for (const relationship of relationships) {
+          if (Math.abs(relationship.weight - authoredWeight) > REVIEW_QUANTITATIVE_TOLERANCE) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: `dependencyReview relationship ${key} weight must match the authored dependency weight`,
+              path: ["dependencyReview", "relationships", relationship.index, "weight"],
+            });
+          }
         }
       }
       for (const key of reviewedRelationships.keys()) {
-        if (manualWeights.has(key)) continue;
+        if (reviewedWeights.has(key)) continue;
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `dependencyReview relationship ${key} is not manual-only metadata`,

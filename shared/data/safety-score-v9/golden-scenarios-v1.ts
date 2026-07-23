@@ -50,7 +50,7 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
     name: "USDT-like liquid anchor",
     archetype: "fiat-backed-anchor",
     description:
-      "Exceptionally deep global liquidity and a long peg history with materially weaker control assurances and less complete reserve transparency; the control-compensability headroom now lets the composite reflect the pillar blend (A) rather than being cut to A- by the flat compensability cap.",
+      "Exceptionally deep global liquidity and a long peg history with materially weaker control assurances and less complete reserve transparency. Without explicit operational-resilience evidence, the continuous weakest-path composite remains B+.",
     pillars: { backing: 87, exit: 96, control: 61 },
     pegScore: 98,
     pegApplicable: true,
@@ -58,9 +58,9 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
     trackRecordMonths: 120,
     structuralCaps: [],
     expected: {
-      allowedGrades: ["A"],
-      minScore: 82,
-      maxScore: 84,
+      allowedGrades: ["B+"],
+      minScore: 76,
+      maxScore: 79,
       expectedBindingCapKind: null,
       expectedRated: true,
     },
@@ -227,7 +227,7 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
       allowedGrades: ["C+"],
       minScore: 60,
       maxScore: 64,
-      expectedBindingCapKind: "unsafe-backing",
+      expectedBindingCapKind: null,
       expectedRated: true,
     },
   },
@@ -731,7 +731,7 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
     name: "Verified unbounded mint with supply reconciliation",
     archetype: "fiat-backed-anchor",
     description:
-      "The same unbounded mint path, but supply is provably reconciled against reserves; the graduated high-severity centralized-mint ceiling replaces the critical one, and the control-compensability headroom now lets the composite land at its honest pillar blend (C) instead of being cut to D. The blend sits just below both the reconciled ceiling (59) and the compensability limit (25+30=55), so neither binds.",
+      "The same unbounded mint path, but supply is provably reconciled against reserves. Reconciliation improves the result over an unreconciled path, while smooth weakest-path aggregation keeps the control score of 25 economically binding enough that backing and liquidity cannot lift the asset out of D.",
     pillars: { backing: 60, exit: 70, control: 25 },
     pegScore: 99,
     pegApplicable: true,
@@ -742,12 +742,13 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
         kind: "signal:centralized-mint:high",
         limit: 59,
         reason: "Minting is economically unbounded but supply is reconciled against reserves.",
+        pricedInPillar: "control",
       },
     ],
     expected: {
-      allowedGrades: ["C"],
-      minScore: 54,
-      maxScore: 56,
+      allowedGrades: ["D"],
+      minScore: 42,
+      maxScore: 44,
       expectedBindingCapKind: null,
       expectedRated: true,
     },
@@ -781,11 +782,9 @@ export const GOLDEN_SCENARIOS: Scenario[] = [
       },
     ],
     expected: {
-      allowedGrades: ["F", "D"],
-      minScore: 28,
-      maxScore: 42,
-      expectedBindingCapKind: "evidence-floor:d",
-      expectedRated: true,
+      allowedGrades: ["NR"],
+      expectedBindingCapKind: null,
+      expectedRated: false,
     },
   },
 ];
@@ -993,14 +992,8 @@ export const PAIRWISE_CONSTRAINTS: PairwiseConstraint[] = [
   {
     higherId: "reconciled-unbounded-mint-anchor",
     lowerId: "unbounded-unreconciled-mint-anchor",
-    minGap: 5,
+    minGap: 4,
     rationale:
-      "Provable supply reconciliation must be worth a clear margin on an otherwise unbounded mint path; bounded compensability limits the spread while the control pillar itself stays weak.",
-  },
-  {
-    higherId: "unverified-mint-anchor",
-    lowerId: "fully-unverified-parity-cohort",
-    minGap: 10,
-    rationale: "Partial verification with solid backing and exit evidence must outrank a fully unverified asset.",
+      "Provable supply reconciliation removes the critical 39 ceiling while leaving the same weak control posture; the smooth composite consequently lands one four-point band above the capped path.",
   },
 ];

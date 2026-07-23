@@ -32,15 +32,14 @@ describe("VERITAS-II finding decimal snapping crosses genuine nearest and floor 
     expect(trace.finalScore).toBe(Math.round(belowHalf));
   });
 
-  it("floors a genuine below-integer compensability cap without snapping it upward", () => {
+  it("does not recreate a weakest-plus-headroom cap near an integer boundary", () => {
     const weakest = 39.999_999_999_995;
-    const trueCap = weakest + V9_CANDIDATE_POLICY_V1.policy.semantic.formula.compensabilityHeadroom;
-    expect(trueCap).toBeLessThan(60);
-    expect(Math.floor(trueCap)).toBe(59);
-
     const trace = score({ backing: weakest, exit: 100, control: 95 });
 
-    expect(trace.bindingCap).toMatchObject({ kind: "bounded-compensability", limit: trueCap });
-    expect(trace.finalScore).toBe(Math.floor(trueCap));
+    expect(trace.bindingCap).toBeNull();
+    expect(trace.caps.map((cap) => cap.kind)).not.toContain("bounded-compensability");
+    expect(trace.aggregation?.method).toBe("smooth-bounded-headroom");
+    expect(trace.preCapScore).toBe(58.7987);
+    expect(trace.finalScore).toBe(59);
   });
 });

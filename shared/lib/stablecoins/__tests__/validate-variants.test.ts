@@ -64,6 +64,35 @@ describe("validateVariantRelationships", () => {
     expect(validateVariantRelationships([parent, child])).toEqual([]);
   });
 
+  it("accepts a non-NAV pure 1:1 wrapper", () => {
+    const parent = makeParent("parent-a", "tbill");
+    const child = makeChild("child-a", "parent-a", {
+      mechanismArchetype: "tbill",
+      variantKind: "pure-wrapper",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: true,
+        navToken: false,
+      },
+    });
+
+    expect(validateVariantRelationships([parent, child])).toEqual([]);
+  });
+
+  it("rejects a NAV-accreting asset labeled as a pure wrapper", () => {
+    const parent = makeParent("parent-a", "tbill");
+    const child = makeChild("child-a", "parent-a", {
+      variantKind: "pure-wrapper",
+    });
+
+    expect(validateVariantRelationships([parent, child])).toEqual([
+      expect.stringContaining("pure-wrapper variants must keep flags.navToken === false"),
+    ]);
+  });
+
   it("passes when a child has no declared archetype (inherits from parent)", () => {
     const parent = makeParent("parent-a", "cdp");
     const child = makeChild("child-a", "parent-a");

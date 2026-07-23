@@ -357,13 +357,21 @@
         "url": "https://www.asterdex.com/en/usdf"
       }
     ],
-    "rationale": "USDF is minted from and redeemed to USDT at the protocol's 1:1 reference. This is a serial mechanism dependency on USDT, separate from the undisclosed composition of the actively managed backing basket.",
+    "rationale": "USDF is minted from and redeemed to USDT at the protocol's 1:1 reference. USDT therefore supplies both the holder exit asset and the reference unit, while USDF's actively managed backing and local controls remain distinct rather than inheriting USDT as a mechanically identical wrapper claim.",
     "relationships": [
       {
         "id": "usdt-tether",
         "weight": 1,
         "type": "mechanism",
-        "reason": "USDT is the protocol's 1:1 mint input, redemption output, and unit of account for USDF."
+        "economicRole": "exit-dependency",
+        "reason": "USDT is the protocol's 1:1 redemption output for USDF."
+      },
+      {
+        "id": "usdt-tether",
+        "weight": 1,
+        "type": "mechanism",
+        "economicRole": "oracle-nav",
+        "reason": "USDT is the protocol's 1:1 reference unit for USDF mint and redemption accounting."
       }
     ]
   },

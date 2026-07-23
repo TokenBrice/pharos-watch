@@ -7,7 +7,11 @@ import {
   canonicalV9RouteKey,
   computeV9FactSetDigest,
   parseCompiledV9FactSetV2,
+  parseCompiledV9FactSetV3,
   projectPublicV9FactSetV2,
+  readCompiledV9FactSetForEvaluation,
+  upgradeCompiledV9FactSetV2,
+  upgradeV9FactGapV2,
 } from "../safety-score-v9/facts";
 import {
   createV9EvidenceReference,
@@ -15,7 +19,7 @@ import {
   notApplicableV9Fact,
   requiredV9Applicability,
 } from "../safety-score-v9/evidence";
-import { createV9FactGap, optionalExitV9Path } from "../safety-score-v9/reasons";
+import { createV9FactGap, createV9FactGapV3, optionalExitV9Path } from "../safety-score-v9/reasons";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "../stable-json";
 import type { V9AssetFactsV2 } from "../../types/safety-score-v9-facts";
@@ -742,8 +746,14 @@ describe("Safety Score v9 normalized fact protocol", () => {
     expect(dexSignal(oneEligible, "delta")).toBeUndefined();
 
     const twoEligible = evaluateSharedDex(true, true);
-    expect(dexSignal(twoEligible, "alpha")).toMatchObject({ severity: "high" });
-    expect(dexSignal(twoEligible, "delta")).toMatchObject({ severity: "high" });
+    expect(dexSignal(twoEligible, "alpha")).toMatchObject({
+      severity: "high",
+      responsibility: "measured-adverse",
+    });
+    expect(dexSignal(twoEligible, "delta")).toMatchObject({
+      severity: "high",
+      responsibility: "measured-adverse",
+    });
   });
 
   it("joins dependency-owned mint-control groups through asset issuer identity", () => {
@@ -793,12 +803,24 @@ describe("Safety Score v9 normalized fact protocol", () => {
     expect(signal(sameIssuer, "gamma")).toMatchObject({ severity: "low" });
 
     const crossIssuer = evaluateSharedMint("issuer:shared", "issuer:other");
-    expect(signal(crossIssuer, "beta")).toMatchObject({ severity: "high" });
-    expect(signal(crossIssuer, "gamma")).toMatchObject({ severity: "high" });
+    expect(signal(crossIssuer, "beta")).toMatchObject({
+      severity: "high",
+      responsibility: "measured-adverse",
+    });
+    expect(signal(crossIssuer, "gamma")).toMatchObject({
+      severity: "high",
+      responsibility: "measured-adverse",
+    });
 
     const unresolved = evaluateSharedMint("issuer:shared", null);
-    expect(signal(unresolved, "beta")).toMatchObject({ severity: "high" });
-    expect(signal(unresolved, "gamma")).toMatchObject({ severity: "high" });
+    expect(signal(unresolved, "beta")).toMatchObject({
+      severity: "high",
+      responsibility: "integration-missing",
+    });
+    expect(signal(unresolved, "gamma")).toMatchObject({
+      severity: "high",
+      responsibility: "integration-missing",
+    });
   });
 
   it("derives bridge share bounds through reviewed control and deployment joins", () => {
@@ -818,7 +840,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
       | "stale-review"
       | "unmatched"
       | "wrong-kind";
-    const evaluateBridgeSeverity = (
+    const evaluateBridgeSignal = (
       targetShare: number,
       variant: BridgeJoinVariant = "known",
       requestedDomainKey = "protocol:fixture-bridge",
@@ -1001,8 +1023,13 @@ describe("Safety Score v9 normalized fact protocol", () => {
         .find((asset) => asset.assetId === "alpha")!
         .scoreInput.dependencyStructuralSignals.find((signal) =>
           signal.failureDomainKeys.includes(`bridge-route:${requestedDomainKey}`),
-        )!.severity;
+        )!;
     };
+    const evaluateBridgeSeverity = (
+      targetShare: number,
+      variant: BridgeJoinVariant = "known",
+      requestedDomainKey = "protocol:fixture-bridge",
+    ) => evaluateBridgeSignal(targetShare, variant, requestedDomainKey).severity;
 
     expect(evaluateBridgeSeverity(0.0999)).toBe("low");
     expect(evaluateBridgeSeverity(0.1)).toBe("moderate");
@@ -1023,6 +1050,14 @@ describe("Safety Score v9 normalized fact protocol", () => {
     expect(evaluateBridgeSeverity(0.0499, "wrong-kind")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "stale-control")).toBe("high");
     expect(evaluateBridgeSeverity(0.0499, "stale-review")).toBe("high");
+    expect(evaluateBridgeSignal(0.25)).toMatchObject({
+      severity: "high",
+      responsibility: "measured-adverse",
+    });
+    expect(evaluateBridgeSignal(0.0499, "aggregate-mismatch")).toMatchObject({
+      severity: "high",
+      responsibility: "integration-missing",
+    });
   });
 
   it("does not treat a control-only bridge domain as exact supply attribution", () => {
@@ -1349,11 +1384,65 @@ describe("Safety Score v9 normalized fact protocol", () => {
     expect(
       retained.assets.every((asset) => !Object.prototype.hasOwnProperty.call(asset.supply, "chainDistribution")),
     ).toBe(true);
+    expect(
+      retained.assets.every((asset) => !Object.prototype.hasOwnProperty.call(asset, "operationalResilience")),
+    ).toBe(true);
 
     const retainedBytes = stableJsonStringifyV1(retained);
     const reparsed = parseCompiledV9FactSetV2(JSON.parse(retainedBytes));
     expect(stableJsonStringifyV1(reparsed)).toBe(retainedBytes);
     expect(reparsed.v9FactSetDigest).toBe(retained.v9FactSetDigest);
+  });
+
+  it("strictly upgrades retained V2 gaps into the responsibility-bearing V3 evaluator contract", () => {
+    const retained = compileV9FactSetV2(coreFixture());
+    const retainedBytes = stableJsonStringifyV1(retained);
+    const upgraded = upgradeCompiledV9FactSetV2(retained);
+    const read = readCompiledV9FactSetForEvaluation(JSON.parse(retainedBytes));
+
+    expect(read.sourceSchemaVersion).toBe(2);
+    expect(read.sourceFactSetDigest).toBe(retained.v9FactSetDigest);
+    expect(read.factSet).toEqual(upgraded);
+    expect(upgraded.schemaVersion).toBe(3);
+    expect(parseCompiledV9FactSetV3(upgraded)).toEqual(upgraded);
+    expect(
+      upgraded.assets.every((asset) => !Object.prototype.hasOwnProperty.call(asset, "operationalResilience")),
+    ).toBe(true);
+    expect(upgraded.v9FactSetDigest).not.toBe(retained.v9FactSetDigest);
+    expect(upgraded.assets[0]!.gaps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          reasonCode: "unsupported-same-notional-route",
+          responsibility: "method-unsupported",
+        }),
+      ]),
+    );
+    expect(stableJsonStringifyV1(parseCompiledV9FactSetV2(JSON.parse(retainedBytes)))).toBe(retainedBytes);
+
+    const evaluated = evaluateV9FactSet(retained, V9_CANDIDATE_POLICY_V1);
+    expect(evaluated.factSetDigest).toBe(retained.v9FactSetDigest);
+    expect(evaluated.assets[0]!.trace.unresolvedFacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "unsupported-same-notional-route",
+          responsibility: "method-unsupported",
+        }),
+      ]),
+    );
+  });
+
+  it("fails retained V2 no-exit ambiguity closed without weakening native V3 measured outcomes", () => {
+    const legacyGap = {
+      ...coreFixture().assets[0]!.gaps[0]!,
+      reasonCode: "no-viable-exit-path" as const,
+    };
+    expect(upgradeV9FactGapV2(legacyGap).responsibility).toBe("method-unsupported");
+    expect(
+      createV9FactGapV3({
+        ...legacyGap,
+        responsibility: "measured-adverse",
+      }).responsibility,
+    ).toBe("measured-adverse");
   });
 
   it("canonicalizes the retained Hyperliquid alias and applies R2 maturity after collisions", () => {

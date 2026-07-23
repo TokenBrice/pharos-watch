@@ -8,6 +8,7 @@ import {
   type V9DependencyPlanningEdge,
 } from "../safety-score-v9/dependencies";
 import { scoreV9Input } from "../safety-score-v9/formula";
+import { V9_LEGACY_RESPONSIBILITY_BY_REASON } from "../safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 function knownStatus(evidenceId: string): V9FactStatusV2 {
@@ -48,7 +49,7 @@ function edge(
     edgeKey,
     upstreamAssetId,
     dependencyType: role === "serial" ? "wrapper" : "collateral",
-    pathKind: role === "serial" ? "serial-dependency" : "collateral-exposure",
+    economicRole: role === "serial" ? "serial-claim" : "basket-exposure",
     weight,
     failureDomains: [{ kind: "reserve-issuer", key: `asset:${upstreamAssetId}` }],
   };
@@ -93,6 +94,7 @@ function scoreBacking(result: ReturnType<typeof evaluateV9ReserveExposures>) {
         code: reason.code,
         reason: `${reason.code} at ${reason.pathKey}`,
         critical: false,
+        responsibility: V9_LEGACY_RESPONSIBILITY_BY_REASON[reason.code],
       })),
     },
     V9_CANDIDATE_POLICY_V1,
@@ -114,9 +116,9 @@ describe("VERITAS-II finding VER2-001: transitive wrapper splits evade aggregate
       ],
     });
     const resolved = resolveV9DependencyInputs(plan, [
-      { assetId: "root", score: null },
-      { assetId: "wrapper-a", score: null },
-      { assetId: "wrapper-b", score: null },
+      { assetId: "root", score: null, backingScore: null },
+      { assetId: "wrapper-a", score: null, backingScore: null },
+      { assetId: "wrapper-b", score: null, backingScore: null },
     ]);
     expect(resolved.find((entry) => entry.assetId === "wrapper-a")?.serial[0]?.blocked).toBe(true);
     expect(resolved.find((entry) => entry.assetId === "wrapper-b")?.serial[0]?.blocked).toBe(true);

@@ -2255,6 +2255,61 @@
       }
     },
     {
+      "assetId": "fpi-frax",
+      "archetype": "algorithmic",
+      "reviewedAt": "2026-07-23",
+      "sources": [
+        {
+          "label": "Frax FPI overview (CPI target, 100% collateral-ratio design, FPIS backstop, and monthly oracle updates)",
+          "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+        },
+        {
+          "label": "Frax FPI Controller Pool (FRAX mint and redemption path)",
+          "url": "https://docs.frax.com/protocol/assets/fpi/controller_pool"
+        },
+        {
+          "label": "Frax FPI collateral API (reviewed reserve composition)",
+          "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
+        }
+      ],
+      "notes": "FPI is an inflation-index hybrid, not an uncollateralized reflexive dollar. Frax documents a CPI-U target updated through the protocol oracle, a 100%-collateral-ratio design, FRAX mint and redemption through the Controller Pool, and FPIS sales when AMO yield trails the target inflation rate. The reviewed 2026-07-15 collateral snapshot identifies 81.7% FRAX, 10.7% staked Convex FPI/FRAX LP, 6.2% FXS, and 1.4% Fraxswap FRAX/FPIS. The profile therefore records 0.817 directly identified exogenous stablecoin backing, 0.076 explicitly reflexive FXS/FPIS exposure, and leaves the LP remainder outside either claim instead of pretending it is cash. Collateral coverage, the oracle path, the reflexive backstop, and protocol redemption are supported, while reserve unwind depth, emergency recovery, and a holder loss-recovery waterfall remain issuer-undisclosed. No grade target is encoded: those unavailable facts remain bounded in their own mechanism components, and the 81.7% FRAX reserve dependency remains separately evaluated.",
+      "metrics": {},
+      "profileReview": {
+        "profile": "inflation-index-hybrid",
+        "exogenousBackingShare": 0.817,
+        "reflexiveBackingShare": 0.076,
+        "contractionCapacityRatio": 0.817,
+        "facts": {
+          "collateralCoverage": {
+            "disposition": "supported",
+            "quality": "adequate"
+          },
+          "contractionLiquidity": {
+            "disposition": "issuer-undisclosed"
+          },
+          "indexOracle": {
+            "disposition": "supported",
+            "quality": "adequate"
+          },
+          "reflexiveBackstop": {
+            "disposition": "supported",
+            "quality": "limited"
+          },
+          "emergencyRecovery": {
+            "disposition": "issuer-undisclosed"
+          },
+          "lossRecovery": {
+            "disposition": "issuer-undisclosed"
+          },
+          "protocolRedemption": {
+            "disposition": "supported",
+            "quality": "adequate"
+          }
+        }
+      },
+      "components": {}
+    },
+    {
       "assetId": "ausd-agora",
       "archetype": "fiat-cash",
       "reviewedAt": "2026-07-15",
@@ -4042,15 +4097,54 @@
         {
           "label": "Tether Gold reports index",
           "url": "https://gold.tether.to/reports"
+        },
+        {
+          "label": "Tether Gold FAQ (allocated-bar ownership and physical redemption terms)",
+          "url": "https://gold.tether.to/faq"
         }
       ],
-      "notes": "Carried forward from the 2026-07-15 review and re-verified 2026-07-20 against the BDO March 31, 2026 ISAE 3000R reasonable-assurance report: BDO reconciles 707,747.090 XAUT in circulation to 707,747.139 fine troy ounces of LBMA Good Delivery gold vaulted in Switzerland, states that the Gold Reserves are owned by the XAUT token holders rather than by TG Commodities, S.A. de C.V., and the issuer is authorized under El Salvador's stablecoin regime (CNAD); the supervised issuer, holder ownership, inventory and ledger reconciliation, and current reasonable-assurance conclusion support strong claim and segregation. Custody continuity was re-examined and remains uncurated: the BDO report refers only to unnamed custodian(s) engaged by the Company as representative of token holders, the public FAQ does not name the vault operator, and no primary source identifies the Swiss custodian. NOT established: custodian identity, custody allocation across vaults or providers, reserve-wide rehypothecation prohibitions, and custodian replacement or insolvency-continuity mechanics.",
+      "notes": "Carried forward from the 2026-07-15 review and re-verified 2026-07-20 against the BDO March 31, 2026 ISAE 3000R reasonable-assurance report: BDO reconciles 707,747.090 XAUT in circulation to 707,747.139 fine troy ounces of LBMA Good Delivery gold vaulted in Switzerland, states that the Gold Reserves are owned by XAUT token holders rather than by TG Commodities, S.A. de C.V., and identifies allocated London Good Delivery bars. The FAQ documents physical redemption in whole-bar lots subject to account and delivery conditions. The resulting allocated-commodity profile separates title, allocation, segregation, assurance, and redemption from the still-undisclosed custody and insurance facts. Custody continuity remains issuer-undisclosed: the report refers only to unnamed custodian(s), and no reviewed primary source identifies the Swiss vault operator, provider shares, reserve-wide rehypothecation prohibitions, insurance terms, substitute-custodian arrangements, or insolvency-continuity mechanics. Bankruptcy remoteness is limited because holder ownership is documented but no independent legal opinion tests treatment in an issuer or custodian insolvency.",
       "metrics": {},
-      "components": {
-        "claimAndSegregation": {
-          "quality": "strong"
+      "profileReview": {
+        "profile": "allocated-commodity-claim",
+        "facts": {
+          "holderTitle": {
+            "disposition": "supported",
+            "quality": "strong"
+          },
+          "physicalAllocation": {
+            "disposition": "supported",
+            "quality": "strong"
+          },
+          "custodianSegregation": {
+            "disposition": "supported",
+            "quality": "adequate"
+          },
+          "bankruptcyRemoteness": {
+            "disposition": "supported",
+            "quality": "limited"
+          },
+          "custodyContinuity": {
+            "disposition": "issuer-undisclosed"
+          },
+          "auditCadence": {
+            "disposition": "supported",
+            "quality": "adequate"
+          },
+          "reserveReconciliation": {
+            "disposition": "supported",
+            "quality": "strong"
+          },
+          "insurance": {
+            "disposition": "issuer-undisclosed"
+          },
+          "physicalRedemption": {
+            "disposition": "supported",
+            "quality": "limited"
+          }
         }
-      }
+      },
+      "components": {}
     },
     {
       "assetId": "xo-exodus",

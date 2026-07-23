@@ -36,6 +36,7 @@ interface BuildRedemptionExitRouteObservationInput {
   capacityKind?: RedemptionLiveCapacityKind;
   freshnessKind?: RedemptionLiveFreshnessKind;
   sourceTimestamp?: number;
+  settlementDelaySec?: number;
   resolvedFeeBps: number | null;
   now: number;
 }
@@ -213,13 +214,17 @@ export function buildRedemptionExitRouteObservation(
   );
   const point = capacityCurve.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd)!;
   const { scope, commonModeKeys } = resolveScopeAndCommonModes(input.stablecoinId, input.config.routeFamily);
+  const settlementHorizonSec = Math.max(
+    DERIVED_SETTLEMENT_HORIZON_CEILING_SEC[input.config.settlementModel],
+    input.settlementDelaySec ?? 0,
+  );
 
   return {
     routeId: `redemption:${input.stablecoinId}:${input.config.routeFamily}`,
     routeFamily: input.config.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
     scope,
     ...point,
-    settlementHorizonSec: SAME_NOTIONAL_EXIT_REQUEST_POLICY.settlementHorizonSec,
+    settlementHorizonSec,
     output: resolveOutput(input.stablecoinId, input.config),
     evidenceKind: evidence.evidenceKind,
     confidence: evidence.confidence,

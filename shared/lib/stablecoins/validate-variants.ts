@@ -125,8 +125,10 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
       errors.push(`${meta.id}: pegReferenceId must equal variantOf`);
     }
 
-    if (meta.flags.navToken !== true) {
-      errors.push(`${meta.id}: tracked variants must keep flags.navToken === true`);
+    if (meta.variantKind === "pure-wrapper" && meta.flags.navToken === true) {
+      errors.push(`${meta.id}: pure-wrapper variants must keep flags.navToken === false`);
+    } else if (meta.variantKind !== "pure-wrapper" && meta.flags.navToken !== true) {
+      errors.push(`${meta.id}: non-pure tracked variants must keep flags.navToken === true`);
     }
 
     if (

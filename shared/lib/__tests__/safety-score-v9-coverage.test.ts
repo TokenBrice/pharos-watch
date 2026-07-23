@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../../data/safety-score-v9/evaluation-build-manifest-v1";
-import { compileV9FactSetV2 } from "../safety-score-v9/compile";
+import { compileV9FactSetV3 } from "../safety-score-v9/compile";
 import { computeV9CoverageEvaluationProjectionDigest, evaluateV9ReleaseCoverage } from "../safety-score-v9/coverage";
 
 const AS_OF_SEC = 1_000;
@@ -161,6 +161,11 @@ function asset(assetId: string, index: number) {
       edges: [],
       diagnostics: { graphState: "valid" as const, issueCodes: [], sccMemberAssetIds: [] },
     },
+    wrapperLocalFacts: {
+      schemaVersion: 1 as const,
+      applicability: "not-wrapper" as const,
+      evidenceRefIds: [],
+    },
     reserveStatus: notApplicableStatus("reserve.not-applicable"),
     reserveExposures: [],
     exitStatus: routes.length > 0 ? knownStatus("exit") : notApplicableStatus("exit.not-applicable"),
@@ -233,8 +238,8 @@ function fixture(withShockCoverage = false) {
     ...SOURCES,
     ...(shockCoverage === null ? {} : { shockCoverage }),
   };
-  const factSet = compileV9FactSetV2({
-    schemaVersion: 2,
+  const factSet = compileV9FactSetV3({
+    schemaVersion: 3,
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
     asOfSec: AS_OF_SEC,
     compiledAtSec: 1_100,

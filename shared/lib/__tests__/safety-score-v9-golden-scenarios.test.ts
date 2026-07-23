@@ -28,7 +28,7 @@ describe("Safety Score v9 durable golden corpus", () => {
   });
 
   it("passes the complete ordering-constraint set", () => {
-    expect(PAIRWISE_CONSTRAINTS).toHaveLength(32);
+    expect(PAIRWISE_CONSTRAINTS).toHaveLength(31);
     const traces = new Map(
       GOLDEN_SCENARIOS.map((scenario) => [scenario.id, scoreV9GoldenScenario(scenario, V9_CANDIDATE_POLICY_V1)]),
     );

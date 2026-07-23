@@ -49,7 +49,7 @@ describe("redemption same-notional route observations", () => {
       routeId: "redemption:usdc-circle:offchain-issuer",
       routeFamily: "issuer-redemption",
       requestedNotionalUsd: 5_000_000,
-      settlementHorizonSec: 300,
+      settlementHorizonSec: 3_600,
       maxCostBps: 200,
       executableUsd: 5_000_000,
       completionRatio: 1,
@@ -71,7 +71,14 @@ describe("redemption same-notional route observations", () => {
       config: { ...config, settlementModel: "same-day" },
       capacityProfile: { ...profile, scoringHorizon: "daily" },
     });
-    expect(delayed?.scoreEligible).toBe(false);
+    expect(delayed).toMatchObject({ scoreEligible: false, settlementHorizonSec: 86_400 });
+
+    const queued = build({
+      config: { ...config, settlementModel: "queued" },
+      capacityProfile: { ...profile, scoringHorizon: "queued" },
+      settlementDelaySec: 30 * 86_400,
+    });
+    expect(queued).toMatchObject({ scoreEligible: false, settlementHorizonSec: 30 * 86_400 });
 
     const expensive = build({
       config: { ...config, costModel: { kind: "fee-bps", feeBps: 250 } },

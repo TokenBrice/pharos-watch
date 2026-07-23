@@ -87,13 +87,16 @@ function structuralSignal(args: {
   severity: V9Severity;
   failureDomainKey: string;
   materialSharePct?: number;
+  pricedInPillar?: "backing" | "exit" | "control";
 }): V9StructuralSignal {
   if (!args.failureDomainKey.trim()) throw new Error("Stress failure-domain key is required");
   return {
     kind: "critical-dependency",
     severity: args.severity,
+    responsibility: "measured-adverse",
     reason: args.reason,
     ...(args.materialSharePct !== undefined ? { materialSharePct: args.materialSharePct } : {}),
+    ...(args.pricedInPillar !== undefined ? { pricedInPillar: args.pricedInPillar } : {}),
     failureDomainKeys: [args.failureDomainKey],
     evidence: [],
   };
@@ -145,6 +148,7 @@ export function evaluateV9StressState(
           code,
           path: `stress:route-removal:${shock.routeKey}`,
           message: resolveV9ReasonPolicy(envelope, code).reason.publicLabel,
+          responsibility: "measured-adverse",
         })),
       };
       break;
@@ -158,6 +162,7 @@ export function evaluateV9StressState(
           reason: `Stress compromises economic control domain ${shock.failureDomainKey}.`,
           severity: shock.severity,
           failureDomainKey: shock.failureDomainKey,
+          pricedInPillar: "control",
         }),
       ];
       break;
@@ -170,6 +175,7 @@ export function evaluateV9StressState(
           code: "missing-parent-score",
           path: `stress:upstream:${shock.upstreamAssetId}`,
           message: `Required upstream ${shock.upstreamAssetId} is unavailable under stress.`,
+          responsibility: "measured-adverse",
         },
       ];
       break;

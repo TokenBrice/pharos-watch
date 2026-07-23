@@ -2,6 +2,7 @@ import type { V9SyntheticDeltaNeutralMechanismRiskReview } from "../../../types/
 import {
   createV9BackingStructuralReason,
   evaluateV9ArchetypeBacking,
+  v9StructuralResponsibilityForStatus,
   type V9BackingAssetInput,
   type V9BackingEvaluationPolicy,
   type V9BackingResult,
@@ -23,6 +24,7 @@ export function evaluateV9SyntheticDeltaNeutralBacking(
   if (review.hedgeCoverageRatio < backing.structural.synthetic.minimumHedgeCoverageRatio) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.synthetic.hedgeSignal, {
+        responsibility: v9StructuralResponsibilityForStatus(review.hedgeReconciliation.status),
         pathKey: "mechanism:hedge-reconciliation",
         materialShare: null,
         evidenceRefIds: review.hedgeReconciliation.status.evidenceRefIds,
@@ -33,6 +35,7 @@ export function evaluateV9SyntheticDeltaNeutralBacking(
   if (review.lossAbsorptionShare < backing.structural.synthetic.minimumLossAbsorptionShare) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.synthetic.lossAbsorptionSignal, {
+        responsibility: v9StructuralResponsibilityForStatus(review.lossAbsorption.status),
         pathKey: "mechanism:loss-absorption",
         materialShare: review.lossAbsorptionShare,
         evidenceRefIds: review.lossAbsorption.status.evidenceRefIds,
@@ -44,6 +47,7 @@ export function evaluateV9SyntheticDeltaNeutralBacking(
     if (venue.share < backing.structural.commonModeShare) continue;
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.commonModeSignal, {
+        responsibility: v9StructuralResponsibilityForStatus(review.venueAndCustody.status),
         pathKey: `venue:${venue.venueKey}`,
         materialShare: venue.share,
         evidenceRefIds: review.venueAndCustody.status.evidenceRefIds,

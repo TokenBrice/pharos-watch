@@ -1,6 +1,7 @@
 import {
   createV9BackingStructuralReason,
   evaluateV9ArchetypeBacking,
+  v9StructuralResponsibilityForStatus,
   type V9BackingAssetInput,
   type V9BackingEvaluationPolicy,
   type V9BackingResult,
@@ -20,6 +21,7 @@ export function evaluateV9AlgorithmicBacking(
   if (review.reflexiveBackingShare >= backing.structural.algorithmic.materialReflexiveShare) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.algorithmic.signal, {
+        responsibility: v9StructuralResponsibilityForStatus(review.confidenceAndIncentives.status),
         pathKey: "mechanism:confidence-and-incentives",
         materialShare: review.reflexiveBackingShare,
         evidenceRefIds: review.confidenceAndIncentives.status.evidenceRefIds,

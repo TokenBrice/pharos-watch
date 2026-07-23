@@ -1,6 +1,7 @@
 import {
   createV9BackingStructuralReason,
   evaluateV9ArchetypeBacking,
+  v9StructuralResponsibilityForStatus,
   type V9BackingAssetInput,
   type V9BackingEvaluationPolicy,
   type V9BackingResult,
@@ -200,6 +201,7 @@ export function evaluateV9CdpBacking(
         policy,
         { kind: cdpPolicy.collateralizationSignal.kind, severity },
         {
+          responsibility: v9StructuralResponsibilityForStatus(review.collateralizationParameters.status),
           pathKey: "mechanism:collateralization-parameters",
           materialShare: null,
           evidenceRefIds: review.collateralizationParameters.status.evidenceRefIds,
@@ -214,6 +216,7 @@ export function evaluateV9CdpBacking(
   ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.cdp.liquidationSignal, {
+        responsibility: v9StructuralResponsibilityForStatus(review.liquidationMechanics.status),
         pathKey:
           liquidationCapacity.selectedPath === "stress-measurement"
             ? "mechanism:liquidation-mechanics:stress-measurement"

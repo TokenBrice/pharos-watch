@@ -36,7 +36,7 @@ function dependencyEdge(upstreamAssetId: string, assetId: string, role: "serial"
     edgeKey: `${role}:${upstreamAssetId}:${assetId}`,
     upstreamAssetId,
     dependencyType: role === "serial" ? "wrapper" : "collateral",
-    pathKind: role === "serial" ? "serial-dependency" : "collateral-exposure",
+    economicRole: role === "serial" ? "serial-claim" : "basket-exposure",
     weight: role === "serial" ? 1 : 0.25,
     failureDomains: [],
   };
@@ -128,7 +128,11 @@ describe("VERITAS II dependency invariants", () => {
 
       const resolved = resolveV9DependencyInputs(
         plan,
-        ASSET_IDS.map((assetId, index) => ({ assetId, score: 90 - index })),
+        ASSET_IDS.map((assetId, index) => ({
+          assetId,
+          score: 90 - index,
+          backingScore: 90 - index,
+        })),
       );
       expect(
         resolved.flatMap((entry) => entry.serial),
