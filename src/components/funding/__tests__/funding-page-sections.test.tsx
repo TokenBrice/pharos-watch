@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import {
   FundingKpiRow,
   CostBreakdown,
@@ -61,7 +61,7 @@ describe("FundingKpiRow", () => {
     expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toContain("<1%");
   });
 
-  it("renders previous-month coverage chips when monthlyHistory is provided", () => {
+  it("renders previous-month funding and coverage in a comparison table", () => {
     render(
       <FundingKpiRow
         summary={{
@@ -72,13 +72,25 @@ describe("FundingKpiRow", () => {
           lifetimeCommunityDonorCount: 18,
         }}
         monthlyTargetUsd={1709}
-        monthlyHistory={[{ monthKey: "2026-04", label: "Apr 2026", communityUsd: 690 }]}
+        monthlyHistory={[
+          { monthKey: "2026-05", label: "May 2026", communityUsd: 866 },
+          { monthKey: "2026-04", label: "Apr 2026", communityUsd: 690 },
+        ]}
       />,
     );
     expect(screen.getByText("Previous months")).toBeTruthy();
-    expect(screen.getByText("Apr 2026")).toBeTruthy();
+    expect(screen.getByText(/Coverage against the \$1,709 monthly goal/)).toBeTruthy();
+    const table = screen.getByRole("table", { name: "Previous monthly funding coverage" });
+    expect(within(table).getByRole("columnheader", { name: "Month" })).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: "Community" })).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: "Coverage" })).toBeTruthy();
+    const mayRow = within(table).getByRole("row", { name: /May 2026/ });
+    expect(within(mayRow).getByText("$866")).toBeTruthy();
+    expect(within(mayRow).getByText("51%")).toBeTruthy();
+    const aprilRow = within(table).getByRole("row", { name: /Apr 2026/ });
+    expect(within(aprilRow).getByText("$690")).toBeTruthy();
     // 690 / 1709 ≈ 40.4% → "40%"
-    expect(screen.getByText("40%")).toBeTruthy();
+    expect(within(aprilRow).getByText("40%")).toBeTruthy();
   });
 
   it("shows cold-start copy when lifetime community is zero", () => {
@@ -109,6 +121,8 @@ describe("CostBreakdown", () => {
     expect(screen.getByText(/1,540/)).toBeTruthy(); // total
     // Open gap is derived: max(0, total - community) = 1540 - 300 = 1240
     expect(screen.getByText(/This month: \$300 community · \$1,240 still open/)).toBeTruthy();
+    expect(screen.getByText(/TokenBrice also sponsored \$5,800 in one-time design expenses/)).toBeTruthy();
+    expect(screen.getByText(/not included in the monthly total/)).toBeTruthy();
   });
 });
 
