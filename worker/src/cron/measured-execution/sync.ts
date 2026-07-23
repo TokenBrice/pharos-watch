@@ -199,7 +199,7 @@ export function admitTargetsWithinBudget(
   let estimatedRpcRequests = 0;
   const admittedTargets: DexMeasuredExecutionTarget[] = [];
   let nextCursor = options.cursor ?? null;
-  let overflowed = false;
+  let cursorFrozen = false;
   for (const [stablecoinId, coinTargets] of rotated) {
     const refinementRounds = options.refinementRounds ?? REFINEMENT_ROUNDS;
     const coinEstimatedRpcRequests = estimateAdmissionCohortRpcRequests(
@@ -218,16 +218,15 @@ export function admitTargetsWithinBudget(
       [...admittedTargets, ...coinTargets],
       refinementRounds,
     );
-    if (overflowed || candidateEstimatedRpcRequests > maxEstimatedRpcRequests) {
-      if (!overflowed && admitted.size === 0) nextCursor = stablecoinId;
-      overflowed = true;
+    if (candidateEstimatedRpcRequests > maxEstimatedRpcRequests) {
+      cursorFrozen = true;
       for (const target of coinTargets) deferred.add(target.targetId);
       continue;
     }
     estimatedRpcRequests = candidateEstimatedRpcRequests;
     admittedTargets.push(...coinTargets);
     for (const target of coinTargets) admitted.add(target.targetId);
-    nextCursor = stablecoinId;
+    if (!cursorFrozen) nextCursor = stablecoinId;
   }
   return { admitted, deferred, oversized, oversizedCoinIds, estimatedRpcRequests, nextCursor };
 }

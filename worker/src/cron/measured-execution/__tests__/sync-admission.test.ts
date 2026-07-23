@@ -134,6 +134,36 @@ describe("measured execution overflow admission", () => {
     ).toBe(3);
   });
 
+  it("packs later cohorts while resuming at the first deferred cohort", () => {
+    const targets = [
+      target("coin-a", 10_000_000),
+      target("coin-b", 100_000, "coin-b-1"),
+      target("coin-b", 100_000, "coin-b-2"),
+      target("coin-b", 100_000, "coin-b-3"),
+      target("coin-b", 100_000, "coin-b-4"),
+      target("coin-c", 100_000),
+    ];
+    const first = admitTargetsWithinBudget(targets, { maxEstimatedRpcRequests: 11 });
+    const second = admitTargetsWithinBudget(targets, {
+      cursor: first.nextCursor,
+      maxEstimatedRpcRequests: 11,
+    });
+
+    expect([...first.admitted]).toEqual(["target-coin-a", "target-coin-c"]);
+    expect([...first.deferred]).toEqual([
+      "target-coin-b-1",
+      "target-coin-b-2",
+      "target-coin-b-3",
+      "target-coin-b-4",
+    ]);
+    expect(first.estimatedRpcRequests).toBe(11);
+    expect(first.nextCursor).toBe("coin-a");
+    expect([...second.admitted]).toContain("target-coin-b-1");
+    expect(
+      estimateAdmissionRotationCycles(targets, { maxEstimatedRpcRequests: 11 }),
+    ).toBe(2);
+  });
+
   it("surfaces an oversized coin group and continues admitting later groups", () => {
     const admission = admitTargetsWithinBudget(
       [
