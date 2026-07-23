@@ -32,6 +32,7 @@ import {
 import { evaluateV9Backing } from "./archetypes";
 import { selectV9CdpLiquidationCapacity } from "./archetypes/cdp";
 import { evaluateV9EconomicControlAssetFacts, type V9EconomicControlResult } from "./control";
+import { assertV9FactSetCompiledInProcess } from "./compile";
 import {
   buildV9DependencyEvaluationPlan,
   projectV9RoleDependencyPillarLimits,
@@ -2072,6 +2073,7 @@ export function evaluateValidatedV9FactSet(
   factSet: CompiledV9FactSetV3,
   envelope: V9ValidatedPolicyEnvelope,
 ): Readonly<V9EvaluatedSet> {
+  assertV9FactSetCompiledInProcess(factSet);
   return evaluateV9FactSetRead(
     {
       sourceSchemaVersion: 3,

@@ -1,4 +1,5 @@
 import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   V9_CONSUMER_SCORE_THRESHOLD_REGISTRY,
   V9_SHADOW_DAILY_START_OFFSET_SEC,
@@ -49,6 +50,7 @@ export const SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX = "safety-score-v9-shadow";
 export const SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC = 30 * 60;
 export const SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC = V9_SHADOW_DAILY_START_OFFSET_SEC;
 export const SAFETY_SCORE_V9_SHADOW_TIMEOUT_MS = 2 * 60_000;
+const SAFETY_SCORE_V9_SHADOW_CALLER_INTERVAL_SEC = CRON_INTERVALS["publish-report-card-cache"];
 
 export interface RunSafetyScoreV9ShadowInput {
   db: D1Database;
@@ -121,6 +123,11 @@ function nowSecAtLeast(minimum: number, override?: number): number {
 function scheduledForUtcDay(clockSec: number): number {
   const day = safetyScoreV9UtcDay(clockSec);
   return Math.floor(Date.parse(`${day}T00:00:00.000Z`) / 1_000) + SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC;
+}
+
+function shadowCallerSlotSec(atSec: number): number {
+  return Math.floor(atSec / SAFETY_SCORE_V9_SHADOW_CALLER_INTERVAL_SEC) *
+    SAFETY_SCORE_V9_SHADOW_CALLER_INTERVAL_SEC;
 }
 
 function attemptId(utcDay: string, previous: SafetyScoreV9ShadowDaily | null): string {
@@ -301,6 +308,7 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       throw new Error("Safety Score v9 shadow clock must be epoch seconds");
     }
     let fixedInput = normalizeFixedInput(input.fixedInput);
+    startedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
     const scheduledForSec = scheduledForUtcDay(fixedInput.clockSec);
     utcDay = safetyScoreV9UtcDay(scheduledForSec);
 
@@ -313,7 +321,8 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
     const lastSuccessfulAtSec = previous === null ? null : safetyScoreV9ShadowLastSuccessfulAttemptAtSec(previous);
     if (
       lastSuccessfulAtSec !== null &&
-      fixedInput.clockSec - lastSuccessfulAtSec < SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC
+      shadowCallerSlotSec(startedAtSec) - shadowCallerSlotSec(lastSuccessfulAtSec) <
+        SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC
     ) {
       return {
         status: "skipped",
@@ -332,7 +341,6 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       };
     }
 
-    startedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
     stage = "v9-enrichment";
     if (input.prepareFixedInput) {
       const preparedFixedInput = normalizeFixedInput(

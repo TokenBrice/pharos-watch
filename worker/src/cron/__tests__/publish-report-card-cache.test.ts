@@ -24,7 +24,7 @@ vi.mock("../../lib/safety-score-v9-supply-attribution", () => ({
 }));
 
 vi.mock("../../lib/safety-score-v9-shadow-runner", () => ({
-  SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC: 3 * 60 * 60,
+  SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC: 30 * 60,
   runSafetyScoreV9ShadowAfterV8Publication: mockRunSafetyScoreV9Shadow,
 }));
 

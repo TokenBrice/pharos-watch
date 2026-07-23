@@ -2,8 +2,11 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { buildSync } from "esbuild";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9-extension";
+import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
 const HEAP_LIMIT_MIB = 128;
@@ -36,6 +39,7 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
           process.stdout.write(JSON.stringify({
             expected: fixedInput.activeAssetIds.length,
             cards: shadow.candidate.cards.length,
+            rated: shadow.candidate.completeness.ratedCount,
             supplies: Object.keys(shadow.supplyUsdById).length,
             factDigest: shadow.candidate.factSetDigest,
             resultDigest: shadow.candidate.resultDigest,
@@ -60,6 +64,24 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
     if (temporaryDirectory) rmSync(temporaryDirectory, { recursive: true, force: true });
   });
 
+  it("keeps the deterministic fixture materially representative", () => {
+    const fixedInput = createSafetyScoreV9FullRegistryInput();
+    const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput);
+    const researchEvidenceCount = extension.assets.reduce(
+      (count, asset) => count + asset.researchEvidence.length,
+      0,
+    );
+    const componentEvidenceCount = extension.assets.reduce(
+      (count, asset) => count + asset.componentEvidence.length,
+      0,
+    );
+
+    expect(extension.assets.length).toBeGreaterThan(300);
+    expect(stableJsonStringifyV1(extension).length).toBeGreaterThan(6_500_000);
+    expect(researchEvidenceCount).toBeGreaterThan(5_000);
+    expect(componentEvidenceCount).toBeGreaterThan(3_000);
+  });
+
   it(`compiles and evaluates the full active registry within ${HEAP_LIMIT_MIB} MiB of old-space`, () => {
     const result = spawnSync(
       process.execPath,
@@ -76,6 +98,7 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
     const output = JSON.parse(result.stdout) as {
       expected: number;
       cards: number;
+      rated: number;
       supplies: number;
       factDigest: string;
       resultDigest: string;
@@ -83,6 +106,7 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
     };
     expect(output.expected).toBeGreaterThan(300);
     expect(output.cards).toBe(output.expected);
+    expect(output.rated).toBeGreaterThan(output.expected / 3);
     expect(output.supplies).toBe(output.expected);
     expect(output.factDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(output.resultDigest).toMatch(/^[a-f0-9]{64}$/);

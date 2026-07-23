@@ -2,12 +2,46 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-versi
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createReportCardsFixedInput } from "../../report-cards-fixed-input";
 
-const CLOCK_SEC = 2_000_000_000;
+// Keep reviewed registry evidence current at this deterministic V9 calibration snapshot.
+const CLOCK_SEC = 1_784_808_000;
 const DEX_UPDATED_AT_SEC = CLOCK_SEC - 100;
 
+function resourceRoute(assetId: string) {
+  const requestedNotionalUsd = 100_000;
+  return {
+    routeId: `dex:resource:${assetId}`,
+    routeFamily: "dex-amm" as const,
+    scope: {
+      kind: "chain-contract" as const,
+      chain: "ethereum",
+      contractOrPoolId: `${assetId}:resource-pool`,
+      protocol: "resource-fixture",
+    },
+    requestedNotionalUsd,
+    settlementHorizonSec: 300,
+    maxCostBps: 200,
+    executableUsd: requestedNotionalUsd * 0.8,
+    completionRatio: 0.8,
+    output: { kind: "fiat" as const, currency: "USD", assetKeys: ["fiat:USD"] },
+    evidenceKind: "reserve-based-amm-simulation" as const,
+    confidence: "high" as const,
+    scoreEligible: true,
+    observedAt: DEX_UPDATED_AT_SEC,
+    freshnessSeconds: CLOCK_SEC - DEX_UPDATED_AT_SEC,
+    commonModeKeys: ["chain:ethereum", "protocol:resource-fixture"],
+    capacityCurve: [100_000, 1_000_000, 10_000_000, 100_000_000].map((notional) => ({
+      requestedNotionalUsd: notional,
+      maxCostBps: 200,
+      executableUsd: notional * 0.8,
+      completionRatio: 0.8,
+    })),
+  };
+}
+
 /**
- * Sparse but production-scale exact input for resource tests. Every active
- * registry overlay is compiled without coupling the gate to a production read.
+ * Production-scale exact input for resource tests. It combines every active
+ * registry overlay with deterministic peg, reserve, supply, and route rows
+ * without coupling the gate to a production read.
  */
 export function createSafetyScoreV9FullRegistryInput() {
   return createReportCardsFixedInput({
@@ -26,16 +60,61 @@ export function createSafetyScoreV9FullRegistryInput() {
       dexLiquidity: { updatedAt: DEX_UPDATED_AT_SEC, ageSeconds: 100, stale: false },
       redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
     },
-    pegDataById: {},
+    pegDataById: Object.fromEntries(
+      ACTIVE_STABLECOINS.map((coin) => [
+        coin.id,
+        {
+          id: coin.id,
+          symbol: coin.symbol,
+          name: coin.name,
+          pegType: "peggedUSD",
+          pegCurrency: "USD",
+          governance: coin.flags.governance,
+          currentDeviationBps: 1,
+          pegScore: 99,
+          priceSource: "resource-fixture",
+          priceObservedAt: DEX_UPDATED_AT_SEC,
+          pegPct: 99,
+          severityScore: 0,
+          spreadPenalty: 0,
+          eventCount: 0,
+          worstDeviationBps: 1,
+          activeDepeg: false,
+          lastEventAt: null,
+          trackingSpanDays: 365,
+          methodologyVersion: "resource-fixture",
+        },
+      ]),
+    ),
     activeDepegPeakBpsById: {},
     dexLiqMap: Object.fromEntries(
       ACTIVE_STABLECOINS.map((coin) => [
         coin.id,
         {
-          liquidityScore: null,
-          concentrationHhi: null,
-          poolCount: 0,
-          chainCount: 0,
+          liquidityScore: 80,
+          concentrationHhi: 0.5,
+          poolCount: 1,
+          chainCount: 1,
+          coverageClass: "primary",
+          coverageConfidence: 1,
+          liquidityEvidenceClass: "measured",
+          hasMeasuredLiquidityEvidence: true,
+          effectiveTvlUsd: 10_000_000,
+          balanceMeasuredTvlUsd: 10_000_000,
+          organicMeasuredTvlUsd: 10_000_000,
+          exitRouteObservations: [resourceRoute(coin.id)],
+          exitRouteObservationCoverage: {
+            status: "populated",
+            capabilityMatrixVersion: "p4a.4",
+            retainedPoolCount: 1,
+            observationCount: 1,
+            scoreEligibleObservationCount: 1,
+            scoreEligiblePoolCount: 1,
+            scoreEligibleCapabilityPoolCount: 1,
+            unsupportedPoolCount: 0,
+            evidenceCounts: { "reserve-based-amm-simulation": 1 },
+            unsupportedReasons: {},
+          },
           methodologyVersion: "resource-fixture",
           updatedAt: DEX_UPDATED_AT_SEC,
         },
@@ -46,9 +125,42 @@ export function createSafetyScoreV9FullRegistryInput() {
     resolvedBlacklistStatuses: Object.fromEntries(
       ACTIVE_STABLECOINS.map((coin) => [coin.id, false]),
     ),
-    liveReserveMap: {},
-    liveReserveProvenanceMap: {},
-    chainCirculatingById: {},
+    liveReserveMap: Object.fromEntries(
+      ACTIVE_STABLECOINS.map((coin) => [
+        coin.id,
+        [
+          {
+            name: "Resource fixture reserves",
+            pct: 100,
+            risk: "very-low",
+            assetClass: "cash",
+            issuerOrObligor: `issuer:${coin.id}`,
+            riskFactors: ["custody", "counterparty"],
+            liquidityHorizon: "immediate",
+            maturityDaysMax: 0,
+          },
+        ],
+      ]),
+    ),
+    liveReserveProvenanceMap: Object.fromEntries(
+      ACTIVE_STABLECOINS.map((coin) => [
+        coin.id,
+        { source: "resource-fixture", fetchedAt: DEX_UPDATED_AT_SEC },
+      ]),
+    ),
+    chainCirculatingById: Object.fromEntries(
+      ACTIVE_STABLECOINS.map((coin) => [
+        coin.id,
+        {
+          ethereum: {
+            current: 10_000_000,
+            circulatingPrevDay: 10_000_000,
+            circulatingPrevWeek: 10_000_000,
+            circulatingPrevMonth: 10_000_000,
+          },
+        },
+      ]),
+    ),
     dexDeploymentSupplyCoverageById: {},
     collateralDriftCoins: [],
     liveToFallbackCoins: [],
