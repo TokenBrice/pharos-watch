@@ -2,7 +2,6 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 import { evaluateV9ReleaseCoverage } from "@shared/lib/safety-score-v9/coverage";
-import { parseCompiledV9FactSetV2 } from "@shared/lib/safety-score-v9/facts";
 import {
   V9CoverageEvaluationSnapshotV1Schema,
   V9ReleaseCohortManifestV1Schema,
@@ -14,7 +13,7 @@ import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfReq
 const USAGE = `Usage: npx tsx scripts/maintenance/generate-safety-score-v9-coverage-report.ts [options]
 
 Options:
-  --fact-set <path>       Compiled V2 fact-set JSON (required)
+  --fact-set <path>       Native compiled V3 fact-set JSON (required)
   --evaluation <path>     Identity-preserving V9 evaluation snapshot JSON (required)
   --manifest <path>       Frozen release-cohort manifest JSON (required)
   --output <path>         Strict coverage report JSON (required)
@@ -43,7 +42,7 @@ export function generateV9CoverageReportFromArtifacts(input: {
 }): V9ReleaseCoverageReportV1 {
   return V9ReleaseCoverageReportV1Schema.parse(
     evaluateV9ReleaseCoverage({
-      factSet: parseCompiledV9FactSetV2(input.factSet),
+      factSet: input.factSet,
       evaluation: V9CoverageEvaluationSnapshotV1Schema.parse(input.evaluation),
       manifest: V9ReleaseCohortManifestV1Schema.parse(input.manifest),
     }),

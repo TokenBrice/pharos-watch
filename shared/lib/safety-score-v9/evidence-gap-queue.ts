@@ -1,29 +1,34 @@
 import {
   V9EvidenceGapQueueCoreV1Schema,
+  V9EvidenceGapQueueCoreV2Schema,
   V9EvidenceGapQueueV1Schema,
+  V9EvidenceGapQueueV2Schema,
   type V9EvidenceGapAction,
   type V9EvidenceGapMaterialityV1,
   type V9EvidenceGapPolicyBindingIssue,
   type V9EvidenceGapQueueCoreV1,
-  type V9EvidenceGapQueueEntryV1,
-  type V9EvidenceGapQueueV1,
+  type V9EvidenceGapQueueCoreV2,
+  type V9EvidenceGapQueueEntryV2,
+  type V9EvidenceGapQueue,
+  type V9EvidenceGapQueueV2,
   type V9EvidenceGapSupplyWeightV1,
 } from "../../types/safety-score-v9-evidence-queue";
 import {
   isUsdDenominatedSupplyKind,
-  type CompiledV9FactSetV2,
-  type V9AssetFactsV2,
-  type V9FactGapV2,
+  type V9AssetFactsV3,
+  type V9FactGapV3,
   type V9FactStatusV2,
 } from "../../types/safety-score-v9-facts";
+import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
 import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
-import { parseCompiledV9FactSetV2 } from "./facts";
+import { readCompiledV9FactSetForEvaluation } from "./facts";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 
-const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN = "safety-score-v9.evidence-gap-queue.v1";
-const V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN = "safety-score-v9.evidence-gap-key.v1";
+const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V1 = "safety-score-v9.evidence-gap-queue.v1";
+const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V2 = "safety-score-v9.evidence-gap-queue.v2";
+const V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN_V2 = "safety-score-v9.evidence-gap-key.v2";
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -37,7 +42,7 @@ function deepFreeze<T>(value: T): Readonly<T> {
   return value;
 }
 
-function statusesForAsset(asset: V9AssetFactsV2): V9FactStatusV2[] {
+function statusesForAsset(asset: V9AssetFactsV3): V9FactStatusV2[] {
   const mechanismStatuses = asset.mechanismRiskReview.review
     ? Object.values(asset.mechanismRiskReview.review).flatMap((value) =>
         value !== null && typeof value === "object" && "status" in value
@@ -68,7 +73,7 @@ function statusesForAsset(asset: V9AssetFactsV2): V9FactStatusV2[] {
   ];
 }
 
-function gapApplicability(asset: V9AssetFactsV2, gap: V9FactGapV2): "required" | "unresolved" {
+function gapApplicability(asset: V9AssetFactsV3, gap: V9FactGapV3): "required" | "unresolved" {
   const references = statusesForAsset(asset).filter((status) => status.gapIds.includes(gap.gapId));
   if (references.length === 0) throw new Error(`Safety Score v9 gap ${gap.gapId} is not referenced by a fact status`);
   const states = [...new Set(references.map((status) => status.applicability.state))];
@@ -78,7 +83,7 @@ function gapApplicability(asset: V9AssetFactsV2, gap: V9FactGapV2): "required" |
   return states.includes("unresolved") ? "unresolved" : "required";
 }
 
-function materialityForGap(asset: V9AssetFactsV2, gap: V9FactGapV2): V9EvidenceGapMaterialityV1 {
+function materialityForGap(asset: V9AssetFactsV3, gap: V9FactGapV3): V9EvidenceGapMaterialityV1 {
   const path = gap.path;
   if (path.kind === "serial-dependency") return { basis: "serial-claim", fractionOfAsset: 1 };
   if (path.kind === "collateral-exposure") {
@@ -106,7 +111,7 @@ function materialityForGap(asset: V9AssetFactsV2, gap: V9FactGapV2): V9EvidenceG
 }
 
 function supplyWeightForGap(
-  asset: V9AssetFactsV2,
+  asset: V9AssetFactsV3,
   materiality: V9EvidenceGapMaterialityV1,
 ): V9EvidenceGapSupplyWeightV1 {
   const canonicalUsd = asset.supply.circulatingUsd;
@@ -138,7 +143,7 @@ function supplyWeightForGap(
 }
 
 function actionForGap(
-  gap: V9FactGapV2,
+  gap: V9FactGapV3,
   applicability: "required" | "unresolved",
   policyBindingIssues: readonly V9EvidenceGapPolicyBindingIssue[],
 ): V9EvidenceGapAction {
@@ -151,33 +156,34 @@ function actionForGap(
   return "adjudicate-bounded-unknown";
 }
 
-function queueKey(asset: V9AssetFactsV2, gap: V9FactGapV2): string {
+function queueKey(asset: V9AssetFactsV3, gap: V9FactGapV3): string {
   return sha256Hex(
     stableJsonStringifyV1({
-      domain: V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN,
+      domain: V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN_V2,
       gap: {
         assetId: asset.assetId,
         gapId: gap.gapId,
         reasonCode: gap.reasonCode,
         ownerDomain: gap.ownerDomain,
         policyRuleId: gap.policyRuleId,
+        responsibility: gap.responsibility,
         path: gap.path,
       },
     }),
   );
 }
 
-function severityRank(value: V9EvidenceGapQueueEntryV1["releaseSeverity"]): number {
+function severityRank(value: V9EvidenceGapQueueEntryV2["releaseSeverity"]): number {
   return value === "release-blocker" ? 0 : value === "review-required" ? 1 : 2;
 }
 
-function priorityWeight(entry: Omit<V9EvidenceGapQueueEntryV1, "priority">): number {
+function priorityWeight(entry: Omit<V9EvidenceGapQueueEntryV2, "priority">): number {
   return entry.supplyWeight.materialityWeightedUsd ?? entry.supplyWeight.canonicalUsd ?? -1;
 }
 
 function comparePriority(
-  left: Omit<V9EvidenceGapQueueEntryV1, "priority">,
-  right: Omit<V9EvidenceGapQueueEntryV1, "priority">,
+  left: Omit<V9EvidenceGapQueueEntryV2, "priority">,
+  right: Omit<V9EvidenceGapQueueEntryV2, "priority">,
 ): number {
   return (
     severityRank(left.releaseSeverity) - severityRank(right.releaseSeverity) ||
@@ -196,27 +202,47 @@ function countBy<T extends string>(values: readonly T[]): Array<{ key: T; count:
     .sort((left, right) => compareText(left.key, right.key));
 }
 
-function computeV9EvidenceGapQueueDigest(core: V9EvidenceGapQueueCoreV1): string {
+function computeV9EvidenceGapQueueV1Digest(core: V9EvidenceGapQueueCoreV1): string {
   const parsed = V9EvidenceGapQueueCoreV1Schema.parse(core);
-  return sha256Hex(stableJsonStringifyV1({ domain: V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN, queue: parsed }));
+  return sha256Hex(stableJsonStringifyV1({ domain: V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V1, queue: parsed }));
 }
 
-export function parseV9EvidenceGapQueue(input: unknown): V9EvidenceGapQueueV1 {
-  const parsed = V9EvidenceGapQueueV1Schema.parse(input);
-  const { queueDigest, ...core } = parsed;
-  const expected = computeV9EvidenceGapQueueDigest(core);
+function computeV9EvidenceGapQueueV2Digest(core: V9EvidenceGapQueueCoreV2): string {
+  const parsed = V9EvidenceGapQueueCoreV2Schema.parse(core);
+  return sha256Hex(stableJsonStringifyV1({ domain: V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V2, queue: parsed }));
+}
+
+function assertQueueDigest(queueDigest: string, expected: string): void {
   if (queueDigest !== expected) {
     throw new Error(`Safety Score v9 evidence-gap queue digest ${queueDigest} does not match ${expected}`);
   }
-  return parsed;
 }
 
-/** Build a policy-backed work queue directly from normalized V2 gap records. */
+export function parseV9EvidenceGapQueue(input: unknown): V9EvidenceGapQueue {
+  const schemaVersion =
+    input !== null && typeof input === "object" ? (input as { schemaVersion?: unknown }).schemaVersion : undefined;
+  if (schemaVersion === 1) {
+    const parsed = V9EvidenceGapQueueV1Schema.parse(input);
+    const { queueDigest, ...core } = parsed;
+    assertQueueDigest(queueDigest, computeV9EvidenceGapQueueV1Digest(core));
+    return parsed;
+  }
+  if (schemaVersion === 2) {
+    const parsed = V9EvidenceGapQueueV2Schema.parse(input);
+    const { queueDigest, ...core } = parsed;
+    assertQueueDigest(queueDigest, computeV9EvidenceGapQueueV2Digest(core));
+    return parsed;
+  }
+  throw new Error(`Unsupported Safety Score v9 evidence-gap queue schema version: ${String(schemaVersion)}`);
+}
+
+/** Build a policy-backed work queue from native V3 or explicitly upgraded retained V2 facts. */
 export function buildV9EvidenceGapQueue(args: {
-  factSet: CompiledV9FactSetV2;
+  factSet: unknown;
   policy: V9ValidatedPolicyEnvelope;
-}): Readonly<V9EvidenceGapQueueV1> {
-  const factSet = parseCompiledV9FactSetV2(args.factSet);
+}): Readonly<V9EvidenceGapQueueV2> {
+  const factSetRead = readCompiledV9FactSetForEvaluation(args.factSet);
+  const factSet = factSetRead.factSet;
   assertV9ValidatedPolicyEnvelope(args.policy);
   const unordered = factSet.assets.flatMap((asset) =>
     asset.gaps.map((gap) => {
@@ -264,7 +290,8 @@ export function buildV9EvidenceGapQueue(args: {
         publicLabel: reasonPolicy.reason.publicLabel,
         message: gap.message,
         evidenceRefIds: gap.evidenceRefIds,
-      } satisfies Omit<V9EvidenceGapQueueEntryV1, "priority">;
+        responsibility: gap.responsibility,
+      } satisfies Omit<V9EvidenceGapQueueEntryV2, "priority">;
       return entry;
     }),
   );
@@ -277,12 +304,20 @@ export function buildV9EvidenceGapQueue(args: {
     action: key,
     count,
   }));
-  const core = V9EvidenceGapQueueCoreV1Schema.parse({
-    schemaVersion: 1,
+  const responsibilityCounts = [...V9EvidenceResponsibilitySchema.options]
+    .sort(compareText)
+    .map((responsibility) => ({
+      responsibility,
+      count: entries.filter((entry) => entry.responsibility === responsibility).length,
+    }));
+  const core = V9EvidenceGapQueueCoreV2Schema.parse({
+    schemaVersion: 2,
     purpose: "evidence-work-queue-not-release-gate",
     status: entries.length === 0 ? "clear" : "work-required",
     facts: {
-      factSetDigest: factSet.v9FactSetDigest,
+      sourceSchemaVersion: factSetRead.sourceSchemaVersion,
+      sourceFactSetDigest: factSetRead.sourceFactSetDigest,
+      evaluationFactSetDigest: factSet.v9FactSetDigest,
       baseInputGenerationId: factSet.baseInputGenerationId,
       asOfSec: factSet.asOfSec,
       compiledAtSec: factSet.compiledAtSec,
@@ -301,8 +336,11 @@ export function buildV9EvidenceGapQueue(args: {
       unavailableSupplyWeightGapCount: entries.filter((entry) => entry.supplyWeight.state === "unavailable").length,
       domainCounts,
       actionCounts,
+      responsibilityCounts,
     },
     entries,
   });
-  return deepFreeze(parseV9EvidenceGapQueue({ ...core, queueDigest: computeV9EvidenceGapQueueDigest(core) }));
+  return deepFreeze(
+    V9EvidenceGapQueueV2Schema.parse({ ...core, queueDigest: computeV9EvidenceGapQueueV2Digest(core) }),
+  );
 }

@@ -4,12 +4,12 @@ import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
-import { parseCompiledV9FactSetV2 } from "@shared/lib/safety-score-v9/facts";
+import { readCompiledV9FactSetForEvaluation } from "@shared/lib/safety-score-v9/facts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
-import type { V9AssetFactsV2 } from "@shared/types/safety-score-v9-facts";
+import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import {
-  V9EvidenceGapQueueV1Schema,
-  type V9EvidenceGapQueueEntryV1,
+  V9EvidenceGapQueueV2Schema,
+  type V9EvidenceGapQueueEntryV2,
 } from "@shared/types/safety-score-v9-evidence-queue";
 import { SafetyScoreV9ResponseSchema, type SafetyScoreV9Card } from "@shared/types/safety-score-v9-public";
 import { loadPerCoinStablecoinEntries, type StablecoinSourceEntry } from "../lib/stablecoin-catalog-sources";
@@ -370,7 +370,7 @@ const SCORE_PROJECTION_WORK_TYPE_BY_REASON: Partial<Record<string, V9MissingData
 };
 
 export function classifyV9MissingDataWorkType(
-  entry: Pick<V9EvidenceGapQueueEntryV1, "reasonCode" | "path">,
+  entry: Pick<V9EvidenceGapQueueEntryV2, "reasonCode" | "path">,
 ): V9MissingDataWorkType {
   if (entry.reasonCode === "missing-pillar-evidence" && entry.path.kind === "local-component") {
     if (entry.path.componentKey === "chain-supply") return "CHAIN_SUPPLY";
@@ -387,7 +387,7 @@ export function classifyV9ScoreProjectionWorkType(reasonCode: string): V9Missing
   return SCORE_PROJECTION_WORK_TYPE_BY_REASON[reasonCode] ?? null;
 }
 
-function mechanismResolutionMode(entry: V9EvidenceGapQueueEntryV1): V9MissingDataResolutionMode {
+function mechanismResolutionMode(entry: V9EvidenceGapQueueEntryV2): V9MissingDataResolutionMode {
   const componentKey = entry.path.kind === "local-component" ? entry.path.componentKey : "";
   if (entry.archetype === "fiat-cash") {
     if (componentKey.endsWith("assuranceAndReconciliation") || componentKey === "mechanism-risk-review") {
@@ -406,7 +406,7 @@ function mechanismResolutionMode(entry: V9EvidenceGapQueueEntryV1): V9MissingDat
 
 function resolutionModeFor(
   workType: V9MissingDataWorkType,
-  entry: V9EvidenceGapQueueEntryV1,
+  entry: V9EvidenceGapQueueEntryV2,
   context: unknown,
 ): V9MissingDataResolutionMode {
   if (workType === "MECHANISM_REVIEW") return mechanismResolutionMode(entry);
@@ -421,7 +421,12 @@ function resolutionModeFor(
   return "agent-curation";
 }
 
-function evidenceAction(entry: V9EvidenceGapQueueEntryV1, mode: V9MissingDataResolutionMode): string {
+function evidenceAction(entry: V9EvidenceGapQueueEntryV2, mode: V9MissingDataResolutionMode): string {
+  if (entry.responsibility === "issuer-undisclosed") return "obtain-issuer-or-onchain-disclosure";
+  if (entry.responsibility === "integration-missing") return "repair-fact-integration";
+  if (entry.responsibility === "producer-failed") return "repair-or-refresh-producer";
+  if (entry.responsibility === "method-unsupported") return "define-reviewed-methodology-capability";
+  if (entry.responsibility === "measured-adverse") return "adjudicate-measured-adverse-evidence";
   if (mode === "producer-runtime") return "implement-or-refresh-producer-capability";
   if (mode === "mixed-curation-and-runtime") return "reconcile-metadata-then-refresh-producer";
   if (mode === "methodology-capability") return "define-reviewed-methodology-capability";
@@ -434,7 +439,7 @@ function evidenceAction(entry: V9EvidenceGapQueueEntryV1, mode: V9MissingDataRes
 
 function scoreProjectionResolutionMode(
   workType: V9MissingDataWorkType,
-  archetype: V9EvidenceGapQueueEntryV1["archetype"],
+  archetype: V9EvidenceGapQueueEntryV2["archetype"],
 ): V9MissingDataResolutionMode {
   if (workType === "BRIDGE_MATERIALITY" || workType === "CHAIN_SUPPLY" || workType === "PEG_INPUT") {
     return "mixed-curation-and-runtime";
@@ -458,7 +463,7 @@ function normalizeComponentKey(value: string): string {
   return value.replace(/[^a-z0-9]/giu, "").toLowerCase();
 }
 
-function mechanismContext(asset: V9AssetFactsV2, componentKey: string): unknown {
+function mechanismContext(asset: V9AssetFactsV3, componentKey: string): unknown {
   if (componentKey === "mechanism-risk-review") return asset.mechanismRiskReview;
   const requested = componentKey.split(":").at(-1) ?? componentKey;
   const review = asset.mechanismRiskReview.review as unknown as Record<string, unknown> | null;
@@ -472,7 +477,7 @@ function mechanismContext(asset: V9AssetFactsV2, componentKey: string): unknown 
   };
 }
 
-function routeSummary(route: V9AssetFactsV2["exitRoutes"][number]) {
+function routeSummary(route: V9AssetFactsV3["exitRoutes"][number]) {
   return {
     routeKey: route.routeKey,
     routeId: route.routeId,
@@ -486,7 +491,7 @@ function routeSummary(route: V9AssetFactsV2["exitRoutes"][number]) {
   };
 }
 
-function currentFactContext(entry: V9EvidenceGapQueueEntryV1, asset: V9AssetFactsV2): unknown {
+function currentFactContext(entry: V9EvidenceGapQueueEntryV2, asset: V9AssetFactsV3): unknown {
   const path = entry.path;
   if (path.kind === "collateral-exposure") {
     return asset.reserveExposures.find((exposure) => exposure.exposureKey === path.exposureKey) ?? null;
@@ -550,7 +555,7 @@ function currentFactContext(entry: V9EvidenceGapQueueEntryV1, asset: V9AssetFact
   return null;
 }
 
-function currentWorkTypeContext(workType: V9MissingDataWorkType, asset: V9AssetFactsV2): unknown {
+function currentWorkTypeContext(workType: V9MissingDataWorkType, asset: V9AssetFactsV3): unknown {
   switch (workType) {
     case "ACCESS_REVIEW":
       return asset.accessReview;
@@ -795,13 +800,16 @@ export interface GenerateV9MissingDataRegistryInput {
 
 export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegistryInput) {
   const replay = ReplayArtifactSchema.parse(input.replay).pipeline;
-  const facts = parseCompiledV9FactSetV2(replay.compiledFacts);
-  const queue = V9EvidenceGapQueueV1Schema.parse(
-    buildV9EvidenceGapQueue({ factSet: facts, policy: loadV9MethodologyPolicy(input.policy) }),
+  const factSetRead = readCompiledV9FactSetForEvaluation(replay.compiledFacts);
+  const facts = factSetRead.factSet;
+  const queue = V9EvidenceGapQueueV2Schema.parse(
+    buildV9EvidenceGapQueue({ factSet: replay.compiledFacts, policy: loadV9MethodologyPolicy(input.policy) }),
   );
   const candidate = replay.candidate;
+  const candidateFactSetDigest =
+    factSetRead.sourceSchemaVersion === 2 ? factSetRead.sourceFactSetDigest : facts.v9FactSetDigest;
   if (
-    candidate.factSetDigest !== facts.v9FactSetDigest ||
+    candidate.factSetDigest !== candidateFactSetDigest ||
     candidate.baseInputGenerationId !== facts.baseInputGenerationId ||
     candidate.policy.id !== queue.policy.policyId ||
     candidate.policy.semanticDigest !== queue.policy.semanticDigest
@@ -812,7 +820,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
   const factById = new Map(facts.assets.map((asset) => [asset.assetId, asset]));
   const cardById = new Map(candidate.cards.map((card) => [card.id, card]));
   const sourceById = new Map(input.catalogEntries.map((entry) => [entry.id, entry]));
-  const entriesById = new Map<string, V9EvidenceGapQueueEntryV1[]>();
+  const entriesById = new Map<string, V9EvidenceGapQueueEntryV2[]>();
   for (const entry of queue.entries) {
     const existing = entriesById.get(entry.assetId) ?? [];
     existing.push(entry);
@@ -864,6 +872,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         ownerDomain: entry.ownerDomain,
         factOwnerDomain: entry.factOwnerDomain,
         policyRuleId: entry.policyRuleId,
+        responsibility: entry.responsibility,
         applicability: entry.applicability,
         observationState: entry.observationState,
         path: entry.path,
@@ -925,6 +934,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
           ownerDomain: scoreProjectionOwnerDomain(workType),
           factOwnerDomain: scoreProjectionOwnerDomain(workType),
           policyRuleId: null,
+          responsibility: null,
           applicability: "required",
           observationState: scoreProjectionObservationState(reason.reasonCode),
           path: { kind: "score-projection", scorePath: reason.path },
@@ -1026,6 +1036,9 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       publicationGenerationId: candidate.publicationGenerationId,
       baseInputGenerationId: candidate.baseInputGenerationId,
       factSetDigest: candidate.factSetDigest,
+      sourceFactSetSchemaVersion: factSetRead.sourceSchemaVersion,
+      sourceFactSetDigest: factSetRead.sourceFactSetDigest,
+      evaluationFactSetDigest: facts.v9FactSetDigest,
       resultDigest: candidate.resultDigest,
       queueDigest: queue.queueDigest,
       policyId: candidate.policy.id,
@@ -1041,6 +1054,8 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         "Every compiled fact gap is represented exactly once. Every score-visible missing or bounded reason is listed under scoreProjectionGaps; a supplemental task is added when no compiled fact task covers its workstream.",
       policyBindingWarning:
         "Policy-binding issues are queue-contract defects, not substitutes for evidence work. Each affected item preserves the defect and supplies a separate evidence action.",
+      responsibilityWarning:
+        "Compiled fact tasks identify whether evidence is measured adverse, issuer-undisclosed, integration-missing, producer-failed, or method-unsupported. Score-projection-only tasks carry null because they have no compiled fact-gap responsibility.",
       pointInTimeWarning:
         "This registry is bound to one immutable production replay. Regenerate it after coordinated data batches; resolved task IDs disappear and new gaps receive new IDs.",
     },
@@ -1069,6 +1084,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       claimGroupCount,
       criticalItemCount: queue.entries.filter((entry) => entry.critical).length,
       policyBindingReviewCount: queue.entries.filter((entry) => entry.policyBindingIssues.length > 0).length,
+      responsibilityCounts: queue.summary.responsibilityCounts,
       observationStateCounts: countBy(registryItems, (entry) => entry.observationState),
       gradeCounts: countBy(candidate.cards, (card) => card.grade),
       workTypeCounts: countBy(allItems, (item) => item.workType),

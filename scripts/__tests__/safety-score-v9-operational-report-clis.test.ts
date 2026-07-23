@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import policyAsset from "../../shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../../shared/data/safety-score-v9/evaluation-build-manifest-v1";
-import { compileV9FactSetV2 } from "../../shared/lib/safety-score-v9/compile";
+import { compileV9FactSetV2, compileV9FactSetV3 } from "../../shared/lib/safety-score-v9/compile";
 import { computeV9CoverageEvaluationProjectionDigest } from "../../shared/lib/safety-score-v9/coverage";
 import { buildV9EvidenceGapQueue, parseV9EvidenceGapQueue } from "../../shared/lib/safety-score-v9/evidence-gap-queue";
+import { upgradeCompiledV9FactSetV2 } from "../../shared/lib/safety-score-v9/facts";
 import { loadV9MethodologyPolicy } from "../../shared/lib/safety-score-v9/policy";
+import { sha256Hex } from "../../shared/lib/sha256";
+import { stableJsonStringifyV1 } from "../../shared/lib/stable-json";
 import {
   computeV9HoldoutOutcomeSetDigest,
   createV9ReleaseCandidateSeal,
@@ -13,7 +16,11 @@ import {
   V9ReleaseCoverageReportV1Schema,
   type V9CoverageEvaluationProjectionPayloadV1,
 } from "../../shared/types/safety-score-v9-coverage";
-import { V9EvidenceGapQueueV1Schema } from "../../shared/types/safety-score-v9-evidence-queue";
+import {
+  V9EvidenceGapQueueV1Schema,
+  V9EvidenceGapQueueV2Schema,
+} from "../../shared/types/safety-score-v9-evidence-queue";
+import type { V9EvidenceResponsibility } from "../../shared/types/safety-score-v9-fact-primitives";
 import type { V9FactSetCoreV2 } from "../../shared/types/safety-score-v9-facts";
 import {
   V9_HOLDOUT_VALIDATION_THRESHOLDS,
@@ -222,9 +229,16 @@ function factSetCore(message = "Launch date evidence has not been established.")
   };
 }
 
+function factSetV3WithResponsibility(responsibility: V9EvidenceResponsibility) {
+  const upgraded = structuredClone(upgradeCompiledV9FactSetV2(compileV9FactSetV2(factSetCore())));
+  const { v9FactSetDigest: _upgradedDigest, ...core } = upgraded;
+  core.assets[0]!.gaps[0]!.responsibility = responsibility;
+  return compileV9FactSetV3(core);
+}
+
 function coverageArtifacts() {
   const policy = loadV9MethodologyPolicy(policyAsset);
-  const factSet = compileV9FactSetV2(factSetCore());
+  const factSet = upgradeCompiledV9FactSetV2(compileV9FactSetV2(factSetCore()));
   const evaluationPayload: V9CoverageEvaluationProjectionPayloadV1 = {
     schemaVersion: 1 as const,
     factSetDigest: factSet.v9FactSetDigest,
@@ -433,17 +447,30 @@ describe("Safety Score v9 evidence-gap queue", () => {
     );
     const queue = buildV9EvidenceGapQueue({ factSet, policy: loadV9MethodologyPolicy(policyAsset) });
 
-    expect(V9EvidenceGapQueueV1Schema.parse(queue)).toEqual(queue);
+    expect(V9EvidenceGapQueueV2Schema.parse(queue)).toEqual(queue);
     expect(queue).toMatchObject({
+      schemaVersion: 2,
       purpose: "evidence-work-queue-not-release-gate",
       status: "work-required",
+      facts: {
+        sourceSchemaVersion: 2,
+        sourceFactSetDigest: factSet.v9FactSetDigest,
+      },
       summary: {
         gapCount: 1,
         criticalGapCount: 0,
         knownSupplyWeightGapCount: 1,
         policyBindingMismatchGapCount: 0,
+        responsibilityCounts: expect.arrayContaining([
+          { responsibility: "integration-missing", count: 1 },
+          { responsibility: "issuer-undisclosed", count: 0 },
+          { responsibility: "measured-adverse", count: 0 },
+          { responsibility: "method-unsupported", count: 0 },
+          { responsibility: "producer-failed", count: 0 },
+        ]),
       },
     });
+    expect(queue.facts.evaluationFactSetDigest).not.toBe(queue.facts.sourceFactSetDigest);
     expect(queue.entries[0]).toMatchObject({
       priority: 1,
       assetId: "asset-001",
@@ -454,6 +481,7 @@ describe("Safety Score v9 evidence-gap queue", () => {
       applicability: "required",
       observationState: "missing",
       action: "collect-evidence",
+      responsibility: "integration-missing",
       releaseSeverity: "review-required",
       treatment: "ceiling",
       critical: false,
@@ -464,6 +492,56 @@ describe("Safety Score v9 evidence-gap queue", () => {
     expect(buildV9EvidenceGapQueue({ factSet, policy: loadV9MethodologyPolicy(policyAsset) }).queueDigest).toBe(
       queue.queueDigest,
     );
+  });
+
+  it.each([
+    "issuer-undisclosed",
+    "integration-missing",
+    "producer-failed",
+    "method-unsupported",
+    "measured-adverse",
+  ] as const)("preserves native V3 %s responsibility", (responsibility) => {
+    const factSet = factSetV3WithResponsibility(responsibility);
+    const queue = buildV9EvidenceGapQueue({ factSet, policy: loadV9MethodologyPolicy(policyAsset) });
+
+    expect(queue.facts).toMatchObject({
+      sourceSchemaVersion: 3,
+      sourceFactSetDigest: factSet.v9FactSetDigest,
+      evaluationFactSetDigest: factSet.v9FactSetDigest,
+    });
+    expect(queue.entries[0]?.responsibility).toBe(responsibility);
+    expect(queue.summary.responsibilityCounts.find((entry) => entry.responsibility === responsibility)?.count).toBe(1);
+  });
+
+  it("keeps retained V1 queue artifacts parseable under their original digest domain", () => {
+    const current = buildV9EvidenceGapQueue({
+      factSet: compileV9FactSetV2(factSetCore()),
+      policy: loadV9MethodologyPolicy(policyAsset),
+    });
+    const { responsibilityCounts: _responsibilityCounts, ...summary } = current.summary;
+    const entries = current.entries.map(({ responsibility: _responsibility, ...entry }) => entry);
+    const core = {
+      schemaVersion: 1 as const,
+      purpose: current.purpose,
+      status: current.status,
+      facts: {
+        factSetDigest: current.facts.sourceFactSetDigest,
+        baseInputGenerationId: current.facts.baseInputGenerationId,
+        asOfSec: current.facts.asOfSec,
+        compiledAtSec: current.facts.compiledAtSec,
+      },
+      policy: current.policy,
+      summary,
+      entries,
+    };
+    const retained = V9EvidenceGapQueueV1Schema.parse({
+      ...core,
+      queueDigest: sha256Hex(
+        stableJsonStringifyV1({ domain: "safety-score-v9.evidence-gap-queue.v1", queue: core }),
+      ),
+    });
+
+    expect(parseV9EvidenceGapQueue(retained)).toEqual(retained);
   });
 
   it("keeps the semantic queue key stable across message edits and rejects digest tampering", () => {
@@ -605,6 +683,22 @@ describe("Safety Score v9 operational report CLIs", () => {
     expect(report?.blockers.map((blocker) => blocker.code)).toContain("evaluation-projection-digest-mismatch");
   });
 
+  it("rejects retained V2 facts when the coverage report cannot represent the upgraded identity", () => {
+    const artifacts = coverageArtifacts();
+    const retainedV2 = compileV9FactSetV2(factSetCore());
+    const { io } = memoryIo({
+      facts: retainedV2,
+      evaluation: artifacts.evaluation,
+      manifest: artifacts.manifest,
+    });
+    expect(() =>
+      runV9CoverageReportCli(
+        ["--fact-set", "facts", "--evaluation", "evaluation", "--manifest", "manifest", "--output", "out"],
+        io,
+      ),
+    ).toThrow("requires a native V3 fact set");
+  });
+
   it("writes a deterministic sealed-holdout no-go report and optionally enforces pass", () => {
     const input = validationInput();
     const { io, writes } = memoryIo({ input });
@@ -630,6 +724,11 @@ describe("Safety Score v9 operational report CLIs", () => {
     const argv = ["--fact-set", "facts", "--policy", "policy", "--output", "queue.json"];
     const queue = runV9EvidenceGapQueueCli(argv, io);
     expect(queue?.status).toBe("work-required");
+    expect(queue?.facts).toMatchObject({
+      sourceSchemaVersion: 2,
+      sourceFactSetDigest: factSet.v9FactSetDigest,
+    });
+    expect(queue?.entries[0]?.responsibility).toBe("integration-missing");
     expect(parseV9EvidenceGapQueue(JSON.parse(writes.get("queue.json")!))).toEqual(queue);
     expect(() => runV9EvidenceGapQueueCli([...argv, "--require-clear"], io)).toThrow("contains 1 gap");
   });
