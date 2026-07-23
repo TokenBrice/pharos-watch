@@ -47,6 +47,7 @@ import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { getCache } from "../../lib/db-cache";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { initMetrics } from "../dex-liquidity/pool-helpers";
 import {
   computeDepthStability,
@@ -724,6 +725,70 @@ describe("dex-liquidity scoring", () => {
       cappedProtocols: 1,
       reducedTvlUsd: 50_000,
     });
+  });
+
+  it("publishes normalized Aerodrome Slipstream rows into the shadow target inventory", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const metrics = initMetrics("usdc-circle", "USDC");
+    const poolId = "base:0x1111111111111111111111111111111111111111";
+    metrics.topPools = [
+      {
+        poolId,
+        project: "aerodrome",
+        chain: "Base",
+        tvlUsd: 250_000,
+        symbol: "USDC / USDbC",
+        volumeUsd1d: 25_000,
+        volumeUsd7d: 175_000,
+        poolType: "aerodrome-slipstream-1bp",
+        source: "direct_api",
+      },
+    ];
+    const target: DexMeasuredExecutionTarget = {
+      schemaVersion: "dex-measured-target-v1",
+      targetId: "normalized-aerodrome-slipstream-target",
+      stablecoinId: "usdc-circle",
+      adapterProfileId: "aerodrome-slipstream-quoter-v2",
+      protocol: "aerodrome-slipstream",
+      chain: "base",
+      poolId,
+      poolTokenAddresses: [
+        "0x2222222222222222222222222222222222222222",
+        "0x3333333333333333333333333333333333333333",
+      ],
+      tokenIn: {
+        address: "0x2222222222222222222222222222222222222222",
+        symbol: "USDC",
+        decimals: 6,
+        referencePriceUsd: 1,
+        trackedAssetId: "usdc-circle",
+      },
+      tokenOut: {
+        address: "0x3333333333333333333333333333333333333333",
+        symbol: "USDbC",
+        decimals: 6,
+        referencePriceUsd: 1,
+      },
+      tickSpacing: 1,
+      retainedTvlUsd: 250_000,
+      retainedPoolPriceUsd: 1,
+      capturedAt: 1_700_000_000,
+    };
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["usdc-circle", metrics]]),
+      new Map(),
+      undefined,
+      1_700_000_100,
+      new Map(),
+      new Map(),
+      undefined,
+      new Map(),
+      new Map([["usdc-circle|base:0x1111111111111111111111111111111111111111", target]]),
+    );
+
+    expect(result.diagnostics.measuredExecution.inventoryTargetCount).toBe(1);
   });
 
   it("applies DefiLlama protocol caps to Carbon DeFi chain-suffixed secondary rows", async () => {

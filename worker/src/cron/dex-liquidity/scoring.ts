@@ -373,12 +373,15 @@ export async function computeStablecoinScores(
     const retainedPools = m.topPools;
     for (const pool of retainedPools) {
       const existingTarget = pool.extra?.measuredExecutionTarget;
+      const isAerodromeSlipstream =
+        (pool.project === "aerodrome" || pool.project === "aerodrome-slipstream") &&
+        pool.poolType.startsWith("aerodrome-slipstream");
       const candidate =
         pool.project === "pancakeswap" && pool.poolType.startsWith("pancakeswap-v3")
           ? pancakeMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
           : pool.project === "fluid" && pool.poolType.includes("fluid")
             ? fluidMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
-            : pool.project === "aerodrome-slipstream" && pool.poolType.startsWith("aerodrome-slipstream")
+            : isAerodromeSlipstream
               ? slipstreamMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
             : existingTarget;
       const adapterProfileId =
@@ -386,7 +389,7 @@ export async function computeStablecoinScores(
           ? "pancakeswap-v3-quoter-v2"
           : pool.project === "fluid"
             ? "fluid-resolver-measured"
-            : pool.project === "aerodrome-slipstream"
+            : isAerodromeSlipstream
               ? "aerodrome-slipstream-quoter-v2"
             : existingTarget?.adapterProfileId;
       if (!adapterProfileId) continue;
