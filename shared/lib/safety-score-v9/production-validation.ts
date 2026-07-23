@@ -18,7 +18,6 @@ import {
   type V9ProductionSupplementalValidationEvidence,
   type V9ProductionSyntheticAPlusReport,
   type V9ProductionV8ClassificationReport,
-  type V9ProductionV8MovementClassification,
   type V9ProductionValidationEvidenceReport,
 } from "../../types/safety-score-v9-production-validation";
 import { V9GradeSchema, type V9Grade } from "../../types/safety-score-v9";
@@ -336,12 +335,27 @@ function canonicalFailureDomains(value: unknown, label: string): unknown[] {
 export function toV9ProductionSupplyCents(value: unknown): number | null {
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
   const decimal = value.toString().toLowerCase();
-  const match = /^([0-9]+)(?:\.([0-9]+))?(?:e([+-]?[0-9]+))?$/.exec(decimal);
-  if (!match) return null;
-  const fraction = match[2] ?? "";
-  const exponent = Number(match[3] ?? "0");
+  const exponentIndex = decimal.indexOf("e");
+  const significand = exponentIndex === -1 ? decimal : decimal.slice(0, exponentIndex);
+  const exponentText = exponentIndex === -1 ? "0" : decimal.slice(exponentIndex + 1);
+  if (exponentIndex !== -1 && decimal.indexOf("e", exponentIndex + 1) !== -1) return null;
+
+  const decimalPointIndex = significand.indexOf(".");
+  const integerDigits = decimalPointIndex === -1 ? significand : significand.slice(0, decimalPointIndex);
+  const fraction = decimalPointIndex === -1 ? "" : significand.slice(decimalPointIndex + 1);
+  if (decimalPointIndex !== -1 && significand.indexOf(".", decimalPointIndex + 1) !== -1) return null;
+  if (decimalPointIndex !== -1 && fraction.length === 0) return null;
+
+  const unsignedExponent =
+    exponentText[0] === "+" || exponentText[0] === "-" ? exponentText.slice(1) : exponentText;
+  const isAsciiDigits = (text: string): boolean =>
+    text.length > 0 && [...text].every((character) => character >= "0" && character <= "9");
+  if (!isAsciiDigits(integerDigits) || (fraction.length > 0 && !isAsciiDigits(fraction))) return null;
+  if (!isAsciiDigits(unsignedExponent)) return null;
+
+  const exponent = Number(exponentText);
   if (!Number.isSafeInteger(exponent)) return null;
-  const unscaled = BigInt(`${match[1]}${fraction}`);
+  const unscaled = BigInt(`${integerDigits}${fraction}`);
   const centScale = exponent - fraction.length + 2;
   let cents: bigint;
   if (centScale >= 0) {

@@ -10,7 +10,6 @@ import { ContractDeploymentSchema } from "./stablecoin-meta-schemas";
 import {
   DexExitRouteObservationSchema,
   ExitRouteObservationCoverageSchema,
-  ExitRouteObservationHistorySchema,
   ExitRouteObservationSchema,
 } from "./exit-route";
 import { DexMeasuredExecutionPublicProfileSchema } from "./measured-execution";

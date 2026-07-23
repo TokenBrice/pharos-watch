@@ -29,6 +29,7 @@ const DIGEST_SAFETY_CLAIM_PATTERNS: readonly {
   {
     marker: "symbol-grade",
     pattern:
+      // eslint-disable-next-line security/detect-unsafe-regex -- Bounded symbol width and disjoint token branches make this expression linear.
       /\b[A-Z][A-Z0-9-]{1,14}\s+(?:is|was|remains?|holds?|sits?|moved|fell|rose|slipped|climbed)\s+(?:at\s+|an?\s+)?(?:A[+-]|B[+-]?|C[+-]?|D[+-]?|F|NR)\b/,
   },
 ];

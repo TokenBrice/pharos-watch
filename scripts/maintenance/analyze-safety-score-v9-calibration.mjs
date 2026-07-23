@@ -4,9 +4,10 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { compileV9FactSetV2 } from "../../shared/lib/safety-score-v9/compile.ts";
+import { compileV9FactSetV2, compileV9FactSetV3 } from "../../shared/lib/safety-score-v9/compile.ts";
 import { evaluateV9FactSet } from "../../shared/lib/safety-score-v9/evaluate-set.ts";
 import { V9_CANDIDATE_POLICY_V1 } from "../../shared/lib/safety-score-v9/policy.ts";
+import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../../shared/data/safety-score-v9/evaluation-build-manifest-v1.ts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const TSX_CLI_PATH = fileURLToPath(import.meta.resolve("tsx/cli"));
@@ -321,9 +322,23 @@ function assertCompilerIdentity(value, label) {
     "journaled-cdp-shock-coverage.v1",
     "reviewed-transfer-deployments.v1",
   ];
+  const currentCapabilities = [
+    "canonical-chain-supply-distribution.v1",
+    "canonical-lock-mint-supply-attribution.v1",
+    "exit-route-modeled-confidence.v1",
+    "fact-gap-responsibility.v1",
+    "journaled-cdp-shock-coverage.v1",
+    "reviewed-transfer-deployments.v1",
+    "wrapper-local-facts.v1",
+  ];
+  const currentProduction =
+    identity.evaluationBuildDigest === SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST &&
+    stableStringify(identity.compiledFactSchemaCapabilities) === stableStringify(currentCapabilities);
   const productionProfile = historicalBaseline
     ? "historical"
-    : stableStringify(identity.compiledFactSchemaCapabilities) === stableStringify(shockCoverageCapabilities)
+    : currentProduction
+      ? "current"
+      : stableStringify(identity.compiledFactSchemaCapabilities) === stableStringify(shockCoverageCapabilities)
       ? "shock-coverage"
       : stableStringify(identity.compiledFactSchemaCapabilities) === stableStringify(transferFactCapabilities)
         ? "transfer-fact"
@@ -331,6 +346,8 @@ function assertCompilerIdentity(value, label) {
   const expectedCapabilities =
     productionProfile === "historical"
       ? ["canonical-chain-supply-distribution.v1"]
+      : productionProfile === "current"
+        ? currentCapabilities
       : productionProfile === "shock-coverage"
         ? shockCoverageCapabilities
         : productionProfile === "transfer-fact"
@@ -340,9 +357,10 @@ function assertCompilerIdentity(value, label) {
     identity.schemaVersion !== 1 ||
     identity.fixedInputSchemaVersion !== 3 ||
     identity.factExtensionSchemaVersion !== 2 ||
-    identity.compiledFactSchemaVersion !== 2 ||
+    identity.compiledFactSchemaVersion !== (productionProfile === "current" ? 3 : 2) ||
     stableStringify(identity.compiledFactSchemaCapabilities) !== stableStringify(expectedCapabilities) ||
-    identity.compilerAdapter !== "exact-fixed-input-to-v9-facts.v1"
+    identity.compilerAdapter !==
+      (productionProfile === "current" ? "exact-fixed-input-to-v9-facts.v2" : "exact-fixed-input-to-v9-facts.v1")
   ) {
     throw new Error(`${label} compiler identity does not match its closed production profile`);
   }
@@ -351,7 +369,11 @@ function assertCompilerIdentity(value, label) {
 }
 
 function assertProducerIdentity(value, label, productionProfile) {
-  const includesReviewedTransfers = productionProfile === "transfer-fact" || productionProfile === "shock-coverage";
+  const includesReviewedTransfers =
+    productionProfile === "current" ||
+    productionProfile === "transfer-fact" ||
+    productionProfile === "shock-coverage";
+  const includesShockCoverage = productionProfile === "current" || productionProfile === "shock-coverage";
   const identity = requireExactKeys(
     value,
     [
@@ -379,7 +401,7 @@ function assertProducerIdentity(value, label, productionProfile) {
       "chainSupply",
       "peg",
       "researchOverlays",
-      ...(productionProfile === "shock-coverage" ? ["shockCoverage"] : []),
+      ...(includesShockCoverage ? ["shockCoverage"] : []),
     ],
     `${label} producer source adapters`,
   );
@@ -405,12 +427,15 @@ function assertProducerIdentity(value, label, productionProfile) {
     dexExitRoutes: `fixed-input.dex-exit-observations.${routeAdapterVersion}`,
     redemptionExitRoutes: `fixed-input.redemption-exit-observations.${routeAdapterVersion}`,
     liveReserves: "fixed-input.live-reserves.v1",
-    chainSupply: "fixed-input.usd-circulating-supply.v2",
+    chainSupply:
+      productionProfile === "current"
+        ? "fixed-input.usd-circulating-supply.v3"
+        : "fixed-input.usd-circulating-supply.v2",
     peg: "fixed-input.peg-summary.v1",
     researchOverlays: includesReviewedTransfers
       ? "v9-fact-extension.review-overlays.v3"
       : "v9-fact-extension.review-overlays.v2",
-    ...(productionProfile === "shock-coverage" ? { shockCoverage: "journal-registry.cdp-shock-coverage.v1" } : {}),
+    ...(includesShockCoverage ? { shockCoverage: "journal-registry.cdp-shock-coverage.v1" } : {}),
   };
   if (
     identity.schemaVersion !== 1 ||
@@ -527,9 +552,16 @@ export function computeCalibrationBaseInputGenerationId(input) {
 
 export function computeCalibrationFactSetDigest(compiledFacts) {
   const facts = requireRecord(compiledFacts, "compiled facts");
+  const domain =
+    facts.schemaVersion === 2
+      ? "safety-score-v9.normalized-facts.v2"
+      : facts.schemaVersion === 3
+        ? "safety-score-v9.normalized-facts.v3"
+        : null;
+  if (domain === null) throw new Error("compiled facts has an unsupported schema version");
   return sha256(
     stableStringify({
-      domain: "safety-score-v9.normalized-facts.v2",
+      domain,
       factSet: {
         schemaVersion: facts.schemaVersion,
         baseInputGenerationId: facts.baseInputGenerationId,
@@ -729,7 +761,9 @@ function assertReplay(replay, label) {
     dexExitRoutes: pipeline.extension?.routeFreshness?.dexMaxAgeSec,
     redemptionExitRoutes: pipeline.extension?.routeFreshness?.redemptionMaxAgeSec,
     documentedTermsExitRoutes: pipeline.extension?.routeFreshness?.documentedTermsMaxAgeSec,
-    ...(productionProfile === "transfer-fact" || productionProfile === "shock-coverage"
+    ...(productionProfile === "current" ||
+      productionProfile === "transfer-fact" ||
+      productionProfile === "shock-coverage"
       ? { accessReviews: 31_536_000 }
       : {}),
     liveReserves: pipeline.extension?.sources?.liveReserves?.maxAgeSec,
@@ -1523,7 +1557,14 @@ function evaluateCompositeReplay(replay) {
 
 function currentSemanticsCounterfactual(baseline) {
   const { v9FactSetDigest: _historicalDigest, ...core } = baseline.pipeline.compiledFacts;
-  const compiled = compileV9FactSetV2(core);
+  const compiled =
+    core.schemaVersion === 3
+      ? compileV9FactSetV3(core)
+      : core.schemaVersion === 2
+        ? compileV9FactSetV2(core)
+        : (() => {
+            throw new Error("baseline compiled facts has an unsupported schema version");
+          })();
   return evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1);
 }
 

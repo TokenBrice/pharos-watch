@@ -695,7 +695,7 @@ describe("Safety Score history V2", () => {
 
     await expect(
       loadActiveV8SafetyScoreHistorySource({} as D1Database),
-    ).rejects.toThrow(new RegExp(reason));
+    ).rejects.toThrow(reason);
     activeSourceSpy.mockRestore();
   });
 });

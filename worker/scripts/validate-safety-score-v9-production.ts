@@ -61,9 +61,14 @@ function localSourceReceipt(): V9ProductionSourceReceipt {
 }
 
 const DEFAULT_IO: V9ProductionValidationIo = {
-  readJson: (path) => JSON.parse(readFileSync(path, "utf8")) as unknown,
+  readJson: (path) => {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- Paths are explicit operator CLI inputs.
+    return JSON.parse(readFileSync(path, "utf8")) as unknown;
+  },
   writeText: (path, contents) => {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- The output path is an explicit operator CLI input.
     mkdirSync(dirname(path), { recursive: true });
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- The output path is an explicit operator CLI input.
     writeFileSync(path, contents, "utf8");
   },
   sourceReceipt: localSourceReceipt,

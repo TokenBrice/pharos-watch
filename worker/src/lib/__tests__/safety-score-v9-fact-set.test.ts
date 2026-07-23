@@ -10,10 +10,7 @@ import wrappedMSource from "@shared/data/stablecoins/coins/wm-m0.json";
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
-import {
-  buildV9DependencyEvaluationPlan,
-  projectV9RoleDependencyPillarLimits,
-} from "@shared/lib/safety-score-v9/dependencies";
+import { buildV9DependencyEvaluationPlan } from "@shared/lib/safety-score-v9/dependencies";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
   evaluateV9Exit,
@@ -2577,7 +2574,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "e9feda6fc28d10f2b2e490d234f48310665fb1a1c10024698ca746731547fa6f",
+      "61ac37016707212ba5925a786b076201189bcdf1a22668ddd3ea31a27d06c9a1",
     );
   });
 
