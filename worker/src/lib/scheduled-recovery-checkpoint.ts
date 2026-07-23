@@ -98,6 +98,10 @@ export interface AbandonedCheckpointPreparation {
   currentDomainAttemptId: string | null;
 }
 
+export type ScheduledChildPrerequisites = Readonly<
+  Partial<Record<string, readonly string[]>>
+>;
+
 export type ScheduledRecoveryBlocker =
   | "active-child-lease"
   | "active-recovery-lease"
@@ -126,8 +130,21 @@ export interface ScheduledRecoveryEligibilityInspection {
   observedAt: number;
   staleBefore: number;
   readyCheckpointCount: number;
+  incompatibleCheckpointCount: number;
   eligibleCheckpointCount: number;
   candidates: ScheduledRecoveryEligibilityCandidate[];
+}
+
+export interface IncompatibleScheduledCheckpointRetirementSummary {
+  observedAt: number;
+  candidates: number;
+  retired: number;
+  skippedActiveChildLease: number;
+  retiredCheckpoints: Array<{
+    slotStartedAt: number;
+    attemptNo: number;
+    queueHash: string;
+  }>;
 }
 
 interface ScheduledRecoveryEligibilityRow extends ScheduledCheckpointRow {
@@ -163,6 +180,8 @@ const CHECKPOINT_COLUMNS = [
 
 const ACTIVE_CHECKPOINT_STATES: readonly ScheduledCheckpointState[] = ["running", "recovering"];
 const PLATFORM_ABANDONED_ERROR = "scheduled invocation ended before terminal checkpoint";
+const QUEUE_HASH_DRIFT_RETIREMENT_ERROR =
+  "scheduled recovery checkpoint retired because its queue hash no longer matches the active queue";
 
 export class ScheduledCheckpointOwnershipLostError extends Error {
   constructor(identity: ScheduledCheckpointIdentity) {
@@ -553,28 +572,34 @@ async function prepareCheckpointAttemptForRecovery(
   db: D1Database,
   checkpoint: ScheduledRecoveryCheckpoint,
   childJobs: readonly string[],
+  childPrerequisites: ScheduledChildPrerequisites | undefined,
   timestamp: number,
 ): Promise<AbandonedCheckpointPreparation | null> {
   const completedJobs = await loadCompletedCronJobsForSlot(db, checkpoint.slotStartedAt, childJobs);
   const abandonedChildDispositions = { ...checkpoint.childDispositions };
   const recoveryChildDispositions = { ...checkpoint.childDispositions };
   const queueExhausted = checkpoint.nextItemKey === null && checkpoint.itemsDone === checkpoint.itemsTotal;
+  const preservedCompletedJobs = new Set<string>();
   let upstreamCompleted = queueExhausted;
   for (const childJob of childJobs) {
     const childCompleted =
       completedJobs.has(childJob)
       || checkpoint.childDispositions[childJob] === "completed";
-    if (
-      upstreamCompleted
-      && childCompleted
-    ) {
+    const prerequisitesCompleted = childPrerequisites
+      ? (childPrerequisites[childJob] ?? []).every((prerequisite) => preservedCompletedJobs.has(prerequisite))
+      : upstreamCompleted;
+    const durableFrontierCompleted = childJob !== checkpoint.job || queueExhausted;
+    if (prerequisitesCompleted && durableFrontierCompleted && childCompleted) {
       abandonedChildDispositions[childJob] = "completed";
       recoveryChildDispositions[childJob] = "completed";
+      preservedCompletedJobs.add(childJob);
     } else {
       abandonedChildDispositions[childJob] = "platform_abandoned";
       recoveryChildDispositions[childJob] = "not_started";
     }
-    upstreamCompleted = upstreamCompleted && childCompleted;
+    if (!childPrerequisites) {
+      upstreamCompleted = upstreamCompleted && childCompleted;
+    }
   }
 
   const recoveryAttemptNo = checkpoint.attemptNo + 1;
@@ -653,6 +678,7 @@ export async function prepareScheduledCheckpointRecoveryForSlot(
     slotStartedAt: number;
     job: string;
     childJobs: readonly string[];
+    childPrerequisites?: ScheduledChildPrerequisites;
     nowSec?: number;
   },
 ): Promise<AbandonedCheckpointPreparation | null> {
@@ -664,7 +690,13 @@ export async function prepareScheduledCheckpointRecoveryForSlot(
     input.job,
   );
   if (!checkpoint) return null;
-  return prepareCheckpointAttemptForRecovery(db, checkpoint, input.childJobs, timestamp);
+  return prepareCheckpointAttemptForRecovery(
+    db,
+    checkpoint,
+    input.childJobs,
+    input.childPrerequisites,
+    timestamp,
+  );
 }
 
 export async function inspectScheduledCheckpointRecoveryEligibility(
@@ -681,7 +713,7 @@ export async function inspectScheduledCheckpointRecoveryEligibility(
   const timestamp = input.nowSec ?? nowSec();
   const staleBefore = timestamp - Math.max(60, input.staleAfterSec);
   const limit = Math.max(1, Math.min(input.limit ?? 5, 25));
-  const [rows, readyRow] = await Promise.all([
+  const [rows, countsRow] = await Promise.all([
     runWithOverloadRetry(() =>
       db
         .prepare(
@@ -694,21 +726,25 @@ export async function inspectScheduledCheckpointRecoveryEligibility(
               AND s.slot_started_at = c.slot_started_at
             WHERE c.schedule_key = ? AND c.job = ?
               AND c.state IN ('running', 'recovering', 'ready')
+              AND c.queue_hash = ?
             ORDER BY c.updated_at ASC, c.slot_started_at ASC, c.attempt_no DESC
             LIMIT ?`,
         )
-        .bind(input.scheduleKey, input.job, limit)
+        .bind(input.scheduleKey, input.job, input.expectedQueueHash, limit)
         .all<ScheduledRecoveryEligibilityRow>(),
     ),
     runWithOverloadRetry(() =>
       db
         .prepare(
-          `SELECT COUNT(*) AS count
+          `SELECT
+             SUM(CASE WHEN state = 'ready' AND queue_hash = ? THEN 1 ELSE 0 END) AS ready_count,
+             SUM(CASE WHEN queue_hash <> ? THEN 1 ELSE 0 END) AS incompatible_count
              FROM worker_scheduled_checkpoints
-            WHERE schedule_key = ? AND job = ? AND state = 'ready'`,
+            WHERE schedule_key = ? AND job = ?
+              AND state IN ('running', 'recovering', 'ready')`,
         )
-        .bind(input.scheduleKey, input.job)
-        .first<{ count: number }>(),
+        .bind(input.expectedQueueHash, input.expectedQueueHash, input.scheduleKey, input.job)
+        .first<{ ready_count: number | null; incompatible_count: number | null }>(),
     ),
   ]);
 
@@ -758,10 +794,175 @@ export async function inspectScheduledCheckpointRecoveryEligibility(
   return {
     observedAt: timestamp,
     staleBefore,
-    readyCheckpointCount: readyRow?.count ?? 0,
+    readyCheckpointCount: countsRow?.ready_count ?? 0,
+    incompatibleCheckpointCount: countsRow?.incompatible_count ?? 0,
     eligibleCheckpointCount: candidates.filter((candidate) => candidate.eligible).length,
     candidates,
   };
+}
+
+export async function retireIncompatibleScheduledCheckpointRecoveries(
+  db: D1Database,
+  input: {
+    scheduleKey: string;
+    job: string;
+    childJobs: readonly string[];
+    expectedQueueHash: string;
+    nowSec?: number;
+    limit?: number;
+  },
+): Promise<IncompatibleScheduledCheckpointRetirementSummary> {
+  const timestamp = input.nowSec ?? nowSec();
+  const limit = Math.max(1, Math.min(input.limit ?? 5, 25));
+  const rows = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT ${CHECKPOINT_COLUMNS.split(", ").map((column) => `c.${column}`).join(", ")}
+           FROM worker_scheduled_checkpoints c
+           JOIN cron_slot_executions s
+             ON s.slot_key = c.schedule_key
+            AND s.slot_started_at = c.slot_started_at
+          WHERE c.schedule_key = ? AND c.job = ?
+            AND c.state IN ('running', 'recovering', 'ready')
+            AND c.queue_hash <> ?
+            AND s.state = 'finished'
+            AND (
+              c.state <> 'recovering'
+              OR c.recovery_lease_until IS NULL
+              OR c.recovery_lease_until < ?
+            )
+          ORDER BY c.updated_at ASC, c.slot_started_at ASC, c.attempt_no DESC
+          LIMIT ?`,
+      )
+      .bind(input.scheduleKey, input.job, input.expectedQueueHash, timestamp, limit)
+      .all<ScheduledCheckpointRow>(),
+  );
+  const checkpoints = (rows.results ?? []).map(mapCheckpointRow);
+  const summary: IncompatibleScheduledCheckpointRetirementSummary = {
+    observedAt: timestamp,
+    candidates: checkpoints.length,
+    retired: 0,
+    skippedActiveChildLease: 0,
+    retiredCheckpoints: [],
+  };
+
+  for (const checkpoint of checkpoints) {
+    if (await hasActiveChildLeaseForScheduledSlot(db, checkpoint.scheduleKey, checkpoint.slotStartedAt, timestamp)) {
+      summary.skippedActiveChildLease++;
+      continue;
+    }
+    const childDispositions = { ...checkpoint.childDispositions };
+    for (const childJob of input.childJobs) {
+      if (childDispositions[childJob] !== "completed") {
+        childDispositions[childJob] = "platform_abandoned";
+      }
+    }
+    const statements: D1PreparedStatement[] = [
+      db
+        .prepare(
+          `UPDATE worker_scheduled_checkpoints
+              SET state = 'platform_abandoned', error = ?, completed_at = ?, updated_at = ?,
+                  child_dispositions_json = ?, current_item_key = NULL, current_domain_attempt_id = NULL,
+                  recovery_owner = NULL, recovery_lease_until = NULL
+            WHERE ${identityWhereSql()}
+              AND queue_hash = ?
+              AND queue_hash <> ?
+              AND state IN ('running', 'recovering', 'ready')
+              AND (
+                state <> 'recovering'
+                OR recovery_lease_until IS NULL
+                OR recovery_lease_until < ?
+              )`,
+        )
+        .bind(
+          QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
+          timestamp,
+          timestamp,
+          JSON.stringify(childDispositions),
+          ...identityBinds(checkpoint),
+          checkpoint.queueHash,
+          input.expectedQueueHash,
+          timestamp,
+        ),
+    ];
+    if (checkpoint.currentItemKey && checkpoint.currentDomainAttemptId) {
+      const retiredCheckpointExistsSql = `EXISTS (
+        SELECT 1
+          FROM worker_scheduled_checkpoints
+         WHERE ${identityWhereSql()}
+           AND state = 'platform_abandoned'
+           AND error = ?
+           AND completed_at = ?
+      )`;
+      const retirementBinds = [
+        ...identityBinds(checkpoint),
+        QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
+        timestamp,
+      ];
+      const metadata = JSON.stringify({
+        reason: "queue-hash-drift",
+        failureCategory: "platform-abandoned",
+        expectedQueueHash: input.expectedQueueHash,
+        checkpointQueueHash: checkpoint.queueHash,
+        reconciledAt: timestamp,
+      });
+      statements.push(
+        db
+          .prepare(
+            `INSERT OR IGNORE INTO reserve_sync_attempt_history (
+               stablecoin_id, attempted_at, adapter_key, breaker_key, attempt_id,
+               status, warnings, warning_count, last_error, metadata
+             )
+             SELECT stablecoin_id, COALESCE(last_attempted_at, ?), adapter_key, breaker_key,
+                    pending_attempt_id, 'error', NULL, 0, ?, ?
+               FROM reserve_sync_state
+              WHERE stablecoin_id = ?
+                AND pending_attempt_id = ?
+                AND last_attempt_id = ?
+                AND ${retiredCheckpointExistsSql}`,
+          )
+          .bind(
+            timestamp,
+            QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
+            metadata,
+            checkpoint.currentItemKey,
+            checkpoint.currentDomainAttemptId,
+            checkpoint.currentDomainAttemptId,
+            ...retirementBinds,
+          ),
+        db
+          .prepare(
+            `UPDATE reserve_sync_state
+                SET pending_attempt_id = NULL,
+                    last_status = 'error',
+                    last_error = ?,
+                    metadata = ?
+              WHERE stablecoin_id = ?
+                AND pending_attempt_id = ?
+                AND last_attempt_id = ?
+                AND ${retiredCheckpointExistsSql}`,
+          )
+          .bind(
+            QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
+            metadata,
+            checkpoint.currentItemKey,
+            checkpoint.currentDomainAttemptId,
+            checkpoint.currentDomainAttemptId,
+            ...retirementBinds,
+          ),
+      );
+    }
+    const results = await runWithOverloadRetry(() => db.batch(statements));
+    if (((results[0] as D1Result | undefined)?.meta.changes ?? 0) !== 1) continue;
+    summary.retired++;
+    summary.retiredCheckpoints.push({
+      slotStartedAt: checkpoint.slotStartedAt,
+      attemptNo: checkpoint.attemptNo,
+      queueHash: checkpoint.queueHash,
+    });
+  }
+
+  return summary;
 }
 
 export async function prepareEligibleScheduledCheckpointRecoveries(
@@ -770,6 +971,7 @@ export async function prepareEligibleScheduledCheckpointRecoveries(
     scheduleKey: string;
     job: string;
     childJobs: readonly string[];
+    childPrerequisites?: ScheduledChildPrerequisites;
     expectedQueueHash: string;
     staleAfterSec: number;
     nowSec?: number;
@@ -788,6 +990,7 @@ export async function prepareEligibleScheduledCheckpointRecoveries(
       slotStartedAt: candidate.slotStartedAt,
       job: input.job,
       childJobs: input.childJobs,
+      childPrerequisites: input.childPrerequisites,
       nowSec: inspection.observedAt,
     });
     if (result) prepared.push(result);
@@ -799,22 +1002,32 @@ async function requeueExpiredRecoveries(
   db: D1Database,
   job: string,
   childJobs: readonly string[],
+  childPrerequisites: ScheduledChildPrerequisites | undefined,
   timestamp: number,
+  expectedQueueHash?: string,
 ): Promise<void> {
+  const queueHashPredicate = expectedQueueHash ? " AND queue_hash = ?" : "";
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
         `SELECT ${CHECKPOINT_COLUMNS}
            FROM worker_scheduled_checkpoints
           WHERE job = ? AND state = 'recovering' AND recovery_lease_until < ?
+          ${queueHashPredicate}
           ORDER BY updated_at ASC
           LIMIT 5`,
       )
-      .bind(job, timestamp)
+      .bind(job, timestamp, ...(expectedQueueHash ? [expectedQueueHash] : []))
       .all<ScheduledCheckpointRow>(),
   );
   for (const row of rows.results ?? []) {
-    await prepareCheckpointAttemptForRecovery(db, mapCheckpointRow(row), childJobs, timestamp);
+    await prepareCheckpointAttemptForRecovery(
+      db,
+      mapCheckpointRow(row),
+      childJobs,
+      childPrerequisites,
+      timestamp,
+    );
   }
 }
 
@@ -823,6 +1036,7 @@ export async function claimNextScheduledCheckpointRecovery(
   input: {
     job: string;
     childJobs: readonly string[];
+    childPrerequisites?: ScheduledChildPrerequisites;
     owner: string;
     leaseSec: number;
     expectedQueueHash?: string;
@@ -830,17 +1044,26 @@ export async function claimNextScheduledCheckpointRecovery(
   },
 ): Promise<ScheduledRecoveryCheckpoint | null> {
   const timestamp = input.nowSec ?? nowSec();
-  await requeueExpiredRecoveries(db, input.job, input.childJobs, timestamp);
+  await requeueExpiredRecoveries(
+    db,
+    input.job,
+    input.childJobs,
+    input.childPrerequisites,
+    timestamp,
+    input.expectedQueueHash,
+  );
+  const queueHashPredicate = input.expectedQueueHash ? " AND queue_hash = ?" : "";
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
         `SELECT ${CHECKPOINT_COLUMNS}
            FROM worker_scheduled_checkpoints
           WHERE job = ? AND state = 'ready'
+          ${queueHashPredicate}
           ORDER BY updated_at ASC, slot_started_at ASC
           LIMIT 5`,
       )
-      .bind(input.job)
+      .bind(input.job, ...(input.expectedQueueHash ? [input.expectedQueueHash] : []))
       .all<ScheduledCheckpointRow>(),
   );
 

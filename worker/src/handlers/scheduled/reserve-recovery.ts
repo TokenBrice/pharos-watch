@@ -3,9 +3,14 @@ import {
   claimNextScheduledCheckpointRecovery,
   inspectScheduledCheckpointRecoveryEligibility,
   prepareEligibleScheduledCheckpointRecoveries,
+  retireIncompatibleScheduledCheckpointRecoveries,
 } from "../../lib/scheduled-recovery-checkpoint";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./context";
-import { LIVE_RESERVE_SLOT_JOBS, runFourHourlyReserveSyncSlot } from "./hourly-live-reserves";
+import {
+  LIVE_RESERVE_CHILD_PREREQUISITES,
+  LIVE_RESERVE_SLOT_JOBS,
+  runFourHourlyReserveSyncSlot,
+} from "./hourly-live-reserves";
 import { runSingleScheduledJob } from "./slot-groups";
 import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
@@ -51,10 +56,18 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     limit: 1,
     signal,
   });
+  const incompatibleRetirement = await retireIncompatibleScheduledCheckpointRecoveries(runtime.db, {
+    scheduleKey: "fourHourlyReserveSync",
+    job: RECOVERY_CHECKPOINT_JOB,
+    childJobs: LIVE_RESERVE_SLOT_JOBS,
+    expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
+    limit: 5,
+  });
   const preparation = await prepareEligibleScheduledCheckpointRecoveries(runtime.db, {
     scheduleKey: "fourHourlyReserveSync",
     job: RECOVERY_CHECKPOINT_JOB,
     childJobs: LIVE_RESERVE_SLOT_JOBS,
+    childPrerequisites: LIVE_RESERVE_CHILD_PREREQUISITES,
     expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
     staleAfterSec: RECOVERY_STALE_AFTER_SEC,
     limit: 1,
@@ -68,12 +81,17 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     });
     return {
       status: "ok" as const,
-      itemCount: preparation.prepared.length,
+      itemCount: preparation.prepared.length + incompatibleRetirement.retired,
       metadata: JSON.stringify({
         mode,
-        disposition: preparation.prepared.length > 0 ? "recovery-prepared" : "no-reconciliation-due",
+        disposition: preparation.prepared.length > 0
+          ? "recovery-prepared"
+          : incompatibleRetirement.retired > 0
+            ? "incompatible-checkpoints-retired"
+            : "no-reconciliation-due",
         checkpointsClaimed: 0,
         sweep,
+        incompatibleRetirement,
         preparation,
         inspection,
       }),
@@ -83,6 +101,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
   const checkpoint = await claimNextScheduledCheckpointRecovery(runtime.db, {
     job: RECOVERY_CHECKPOINT_JOB,
     childJobs: LIVE_RESERVE_SLOT_JOBS,
+    childPrerequisites: LIVE_RESERVE_CHILD_PREREQUISITES,
     owner: runtime.invocationId ?? createLeaseOwner("reserve-recovery"),
     leaseSec: RECOVERY_LEASE_SEC,
     expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
@@ -96,6 +115,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
         mode,
         checkpointsClaimed: 0,
         sweep,
+        incompatibleRetirement,
         preparation,
       }),
     };
@@ -127,6 +147,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
       disposition: recoveryDeferred ? "recovery-deferred" : "recovery-executed",
       mode,
       checkpointsClaimed: 1,
+      incompatibleRetirement,
       originalScheduleKey: checkpoint.scheduleKey,
       originalSlotStartedAt: checkpoint.slotStartedAt,
       recoveryAttemptNo: checkpoint.attemptNo,

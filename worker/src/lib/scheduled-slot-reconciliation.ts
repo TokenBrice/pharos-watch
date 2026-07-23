@@ -212,10 +212,12 @@ async function insertSyntheticStaleCronRun(
   fence?: StaleSlotReconciliationFence,
 ): Promise<boolean> {
   const startedAt = progress.started_at || slot.started_at || slot.slot_started_at;
-  const durationMs = Math.max(0, nowSec - startedAt) * 1000;
+  const activeDurationMs = Math.max(0, progress.updated_at - startedAt) * 1000;
+  const reconciliationDelayMs = Math.max(0, nowSec - progress.updated_at) * 1000;
   const error = "scheduled slot heartbeat stale; child job progress abandoned";
   const metadata = JSON.stringify({
     reason: "stale-slot-reconciled",
+    failureCategory: "platform-abandoned",
     slotKey: slot.slot_key,
     slotStartedAt: slot.slot_started_at,
     slotOwner: slot.execution_owner,
@@ -224,6 +226,8 @@ async function insertSyntheticStaleCronRun(
     leaseOwner: progress.lease_owner,
     leaseUntil: lease.lease_until,
     reconciledAt: nowSec,
+    activeDurationMs,
+    reconciliationDelayMs,
   });
   const idempotencyKey = ["scheduled-slot-stale", slot.slot_key, slot.slot_started_at, progress.job, startedAt].join(
     ":",
@@ -271,7 +275,7 @@ async function insertSyntheticStaleCronRun(
       .bind(
         progress.job,
         startedAt,
-        durationMs,
+        activeDurationMs,
         error,
         metadata,
         slot.slot_started_at,
