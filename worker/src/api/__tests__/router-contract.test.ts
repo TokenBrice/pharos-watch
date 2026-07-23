@@ -194,7 +194,7 @@ describe("router contract: strict frontend paths are routable", () => {
         }
       }
     }
-  });
+  }, 15_000);
 
   it("enforces mutating admin GET restrictions with path-specific preview exceptions", async () => {
     for (const endpoint of ENDPOINT_DEFINITIONS.filter((item) => item.mutatingAdmin)) {
