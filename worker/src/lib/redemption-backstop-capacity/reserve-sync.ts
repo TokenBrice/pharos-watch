@@ -165,6 +165,10 @@ export async function resolveReserveSyncCapacity(
       liveMetadata.immediateRedeemableUsd != null
         ? liveMetadata.immediateRedeemableUsd
         : (supplyUsd as number) * (liveMetadata.immediateRedeemableRatio as number);
+    // A config may downgrade the adapter-derived live confidence when the live
+    // read is a bounded proxy for redeemability (e.g. sBOLD SP-withdrawable BOLD);
+    // the measured capacity value is still used, only its confidence label changes.
+    const liveCapacityConfidence = model.liveCapacityConfidence ?? liveMetadata.capacityConfidence;
     const {
       hasSupplyCeiling,
       hasPositiveSupply,
@@ -177,7 +181,7 @@ export async function resolveReserveSyncCapacity(
       supplyUsd,
       dailyLimitUsd: liveMetadata.dailyLimitUsd,
       queueDepthUsd: liveMetadata.queueDepthUsd,
-      capacityProfileConfidence: liveMetadata.capacityConfidence,
+      capacityProfileConfidence: liveCapacityConfidence,
       applyDailyLimit: true,
       includeEventualSupplyInProfile: true,
     });
@@ -201,9 +205,9 @@ export async function resolveReserveSyncCapacity(
         REDEMPTION_BACKSTOP_PROVIDER_DEFINITIONS[REDEMPTION_BACKSTOP_PROVIDER_IDS.RESERVE_SYNC_METADATA]
           .defaultSourceMode,
       resolutionState: "resolved",
-      capacityConfidence: liveMetadata.capacityConfidence,
+      capacityConfidence: liveCapacityConfidence,
       // routeFamily=null: recomputed with the real routeFamily in redemption-backstop-sources.ts; not read downstream here.
-      capacityBasis: resolveCapacityBasis(null, model, liveMetadata.capacityConfidence),
+      capacityBasis: resolveCapacityBasis(null, model, liveCapacityConfidence),
       capacitySemantics,
       ...(liveMetadata.capacityKind ? { capacityKind: liveMetadata.capacityKind } : {}),
       ...(liveMetadata.freshnessKind ? { freshnessKind: liveMetadata.freshnessKind } : {}),

@@ -60,14 +60,20 @@ interface YearnV3WithdrawableRedemptionLiquidityConfig {
   settlementDelaySec?: number;
 }
 
+interface SboldSpWithdrawableRedemptionLiquidityConfig {
+  source: "sbold-sp-withdrawable";
+}
+
 type RedemptionLiquidityConfig =
   | MorphoVaultV1RedemptionLiquidityConfig
   | MorphoVaultV2RedemptionLiquidityConfig
   | AtomicFullBackingRedemptionLiquidityConfig
-  | YearnV3WithdrawableRedemptionLiquidityConfig;
+  | YearnV3WithdrawableRedemptionLiquidityConfig
+  | SboldSpWithdrawableRedemptionLiquidityConfig;
 
 type MorphoVaultLiquiditySource = "morpho-vault-v1-liquidity" | "morpho-vault-v2-liquidity";
 type YearnV3WithdrawableLiquiditySource = "yearn-v3-withdrawable";
+type SboldSpWithdrawableLiquiditySource = "sbold-sp-withdrawable";
 
 interface MorphoVaultLiquidityTelemetry {
   source: MorphoVaultLiquiditySource;
@@ -83,6 +89,11 @@ interface YearnV3WithdrawableLiquidityTelemetry {
   settlementDelaySec: number;
 }
 
+interface SboldSpWithdrawableLiquidityTelemetry {
+  source: SboldSpWithdrawableLiquiditySource;
+  withdrawableRaw: bigint;
+}
+
 interface RedemptionCapacityTelemetry {
   capacityUsd: number;
   capacityRaw: string;
@@ -90,7 +101,8 @@ interface RedemptionCapacityTelemetry {
     | "erc4626-idle-underlying"
     | "erc4626-atomic-full-backing"
     | MorphoVaultLiquiditySource
-    | YearnV3WithdrawableLiquiditySource;
+    | YearnV3WithdrawableLiquiditySource
+    | SboldSpWithdrawableLiquiditySource;
   freshnessKind: "same-run-onchain" | "same-run-api";
   routeStatusSource: "onchain" | "protocol-api";
   idleUnderlyingBalanceRaw?: string;
@@ -98,6 +110,7 @@ interface RedemptionCapacityTelemetry {
   capacityRatioOfSupply?: number;
   settlementDelaySec?: number;
   yearnV3WithdrawableRaw?: string;
+  sboldSpWithdrawableRaw?: string;
   morphoVaultV1LiquidityRaw?: string;
   morphoVaultV1LiquidityUsd?: number;
   morphoVaultV2LiquidityRaw?: string;
@@ -165,6 +178,14 @@ const YEARN_V3_STRATEGIES_SELECTOR = "0x39ebf823";
 const YEARN_V3_MAX_REDEEM_SELECTOR = "0xd905777e";
 const ABI_WORD_HEX_LENGTH = 64;
 const MAX_YEARN_V3_QUEUE_LENGTH = 10;
+// K3 sBOLD calcFragments() -> (totalBold, boldAmount, collValue, collInBold).
+// Word index 1 (boldAmount) is the compounded BOLD across the vault's Liquity V2
+// Stability Pools — the on-demand SP-withdrawable amount that sBOLD._maxWithdraw
+// caps redemptions at, and which excludes not-yet-swapped collateral (index 3).
+// Selector = keccak256("calcFragments()")[:4]; verified against the deployed
+// vault (see sbold-k3-capital redemption config evidence note).
+const SBOLD_CALC_FRAGMENTS_SELECTOR = "0x160b71df";
+const SBOLD_CALC_FRAGMENTS_LIQUID_BOLD_WORD_INDEX = 1;
 
 const MORPHO_VAULT_V1_LIQUIDITY_QUERY = `
 query PharosVaultV1Liquidity($address: String!, $chainId: Int!) {
@@ -432,6 +453,32 @@ async function fetchYearnV3WithdrawableLiquidityTelemetry(args: {
   };
 }
 
+async function fetchSboldSpWithdrawableLiquidityTelemetry(args: {
+  coinId: string;
+  call: (data: string) => Promise<string | null>;
+}): Promise<{
+  telemetry: SboldSpWithdrawableLiquidityTelemetry | null;
+  warnings: LiveReserveWarning[];
+}> {
+  const result = await args.call(SBOLD_CALC_FRAGMENTS_SELECTOR);
+  const withdrawableRaw = parseAbiUint256Word(result, SBOLD_CALC_FRAGMENTS_LIQUID_BOLD_WORD_INDEX);
+  if (withdrawableRaw == null) {
+    return {
+      telemetry: null,
+      warnings: [
+        reserveDegradedWarning(
+          "sbold-sp-withdrawable-unavailable",
+          `sBOLD calcFragments() Stability-Pool-withdrawable probe failed for ${args.coinId}`,
+        ),
+      ],
+    };
+  }
+  return {
+    telemetry: { source: "sbold-sp-withdrawable", withdrawableRaw },
+    warnings: [],
+  };
+}
+
 function parseOptionalNonNegativeNumber(value: unknown): number | undefined {
   if (value == null) return undefined;
   const parsed = typeof value === "number" ? value : Number(value);
@@ -673,6 +720,7 @@ function buildRedemptionCapacityTelemetry(
   supplyAssetsRaw: bigint,
   morphoVaultLiquidity: MorphoVaultLiquidityTelemetry | null,
   yearnV3WithdrawableLiquidity: YearnV3WithdrawableLiquidityTelemetry | null,
+  sboldSpWithdrawableLiquidity: SboldSpWithdrawableLiquidityTelemetry | null,
   atomicFullBacking: boolean,
 ): RedemptionCapacityTelemetry | null {
   const underlyingDecimals = decodeErc20Decimals(underlyingDecimalsRaw);
@@ -702,6 +750,7 @@ function buildRedemptionCapacityTelemetry(
   const idleCapacityRaw = idleUnderlyingBalanceRaw ?? 0n;
   const morphoCapacityRaw = morphoVaultLiquidity?.liquidityRaw ?? 0n;
   const yearnCapacityRaw = yearnV3WithdrawableLiquidity?.withdrawableRaw ?? 0n;
+  const sboldCapacityRaw = sboldSpWithdrawableLiquidity?.withdrawableRaw ?? 0n;
   let capacitySource: RedemptionCapacityTelemetry["capacitySource"] = "erc4626-idle-underlying";
   let uncappedCapacityRaw = idleCapacityRaw;
   if (morphoCapacityRaw > uncappedCapacityRaw) {
@@ -712,11 +761,16 @@ function buildRedemptionCapacityTelemetry(
     capacitySource = yearnV3WithdrawableLiquidity?.source ?? "yearn-v3-withdrawable";
     uncappedCapacityRaw = yearnCapacityRaw;
   }
+  if (sboldCapacityRaw > uncappedCapacityRaw) {
+    capacitySource = sboldSpWithdrawableLiquidity?.source ?? "sbold-sp-withdrawable";
+    uncappedCapacityRaw = sboldCapacityRaw;
+  }
   if (
     uncappedCapacityRaw === 0n
     && idleUnderlyingBalanceRaw == null
     && morphoVaultLiquidity == null
     && yearnV3WithdrawableLiquidity == null
+    && sboldSpWithdrawableLiquidity == null
   ) {
     return null;
   }
@@ -743,6 +797,9 @@ function buildRedemptionCapacityTelemetry(
           settlementDelaySec: yearnV3WithdrawableLiquidity.settlementDelaySec,
           yearnV3WithdrawableRaw: yearnV3WithdrawableLiquidity.withdrawableRaw.toString(),
         }
+      : {}),
+    ...(capacitySource === "sbold-sp-withdrawable" && sboldSpWithdrawableLiquidity
+      ? { sboldSpWithdrawableRaw: sboldSpWithdrawableLiquidity.withdrawableRaw.toString() }
       : {}),
     ...(morphoVaultLiquidity?.source === "morpho-vault-v1-liquidity"
       ? {
@@ -861,6 +918,7 @@ export async function fetchErc4626SingleAssetReserves(
     const atomicFullBacking = sliceConfig.redemptionLiquidity?.source === "atomic-full-backing";
     let morphoVaultLiquidity: MorphoVaultLiquidityTelemetry | null = null;
     let yearnV3WithdrawableLiquidity: YearnV3WithdrawableLiquidityTelemetry | null = null;
+    let sboldSpWithdrawableLiquidity: SboldSpWithdrawableLiquidityTelemetry | null = null;
     if (sliceConfig.redemptionLiquidity?.source === "morpho-vault-v2") {
       const morphoResult = await fetchMorphoVaultV2LiquidityTelemetry({
         coinId: coin.id,
@@ -899,6 +957,13 @@ export async function fetchErc4626SingleAssetReserves(
       });
       warnings.push(...yearnResult.warnings);
       yearnV3WithdrawableLiquidity = yearnResult.telemetry;
+    } else if (sliceConfig.redemptionLiquidity?.source === "sbold-sp-withdrawable") {
+      const sboldResult = await fetchSboldSpWithdrawableLiquidityTelemetry({
+        coinId: coin.id,
+        call,
+      });
+      warnings.push(...sboldResult.warnings);
+      sboldSpWithdrawableLiquidity = sboldResult.telemetry;
     }
     redemptionCapacity = buildRedemptionCapacityTelemetry(
       idleUnderlyingBalanceRaw,
@@ -906,6 +971,7 @@ export async function fetchErc4626SingleAssetReserves(
       convertToAssetsRaw ?? totalAssetsRaw,
       morphoVaultLiquidity,
       yearnV3WithdrawableLiquidity,
+      sboldSpWithdrawableLiquidity,
       atomicFullBacking,
     );
   }
@@ -948,6 +1014,9 @@ export async function fetchErc4626SingleAssetReserves(
               : {}),
             ...(redemptionCapacity.yearnV3WithdrawableRaw != null
               ? { yearnV3WithdrawableRaw: redemptionCapacity.yearnV3WithdrawableRaw }
+              : {}),
+            ...(redemptionCapacity.sboldSpWithdrawableRaw != null
+              ? { sboldSpWithdrawableRaw: redemptionCapacity.sboldSpWithdrawableRaw }
               : {}),
             ...(redemptionCapacity.morphoVaultV2LiquidityRaw != null
               ? { morphoVaultV2LiquidityRaw: redemptionCapacity.morphoVaultV2LiquidityRaw }

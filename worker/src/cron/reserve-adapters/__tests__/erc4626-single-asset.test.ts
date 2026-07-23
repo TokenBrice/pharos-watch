@@ -69,6 +69,25 @@ function cloneConfigWithYearnV3Withdrawable(config: LiveReservesConfig): LiveRes
   return cloned;
 }
 
+function cloneConfigWithSboldSpWithdrawable(config: LiveReservesConfig): LiveReservesConfig {
+  const cloned = structuredClone(config) as LiveReservesConfig & {
+    params: { redemptionLiquidity?: { source: "sbold-sp-withdrawable" } };
+  };
+  cloned.params.redemptionLiquidity = { source: "sbold-sp-withdrawable" };
+  return cloned;
+}
+
+// sBOLD calcFragments() -> (totalBold, boldAmount, collValue, collInBold). The
+// adapter reads word index 1 (boldAmount = compounded Stability-Pool BOLD).
+function calcFragmentsResult(boldAmountRaw: bigint | number): string {
+  return `0x${[
+    uint256Result(100_000_000n).slice(2), // totalBold (unused by the adapter)
+    uint256Result(boldAmountRaw).slice(2), // boldAmount — the withdrawable word
+    uint256Result(0).slice(2), // collValue
+    uint256Result(0).slice(2), // collInBold (not-yet-swapped collateral)
+  ].join("")}`;
+}
+
 describe("fetchErc4626SingleAssetReserves", () => {
   beforeEach(() => {
     resetRpcMocks();
@@ -487,6 +506,127 @@ describe("fetchErc4626SingleAssetReserves", () => {
         settlementDelaySec: 0,
       },
     });
+  });
+
+  it("uses sBOLD Stability-Pool-withdrawable capacity from calcFragments instead of the ~0 idle balance", async () => {
+    const calcFragmentsCalls: Array<{ to?: string; data: string }> = [];
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
+      const call = body.params[0];
+      if (call.data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (call.data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x70a08231")) {
+        // Idle BOLD balance is ~1 unit (dead share); the real backing is deployed to SPs.
+        return jsonResponse({ result: uint256Result(1_000_000n) });
+      }
+      if (call.data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      if (call.data === "0x160b71df") {
+        calcFragmentsCalls.push(call);
+        return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      cloneConfigWithSboldSpWithdrawable(coin!.liveReservesConfig!),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "1000000",
+      redemptionCapacityRaw: "85000000",
+      redemptionCapacitySource: "sbold-sp-withdrawable",
+      sboldSpWithdrawableRaw: "85000000",
+      underlyingDecimals: 6,
+      redemption: {
+        capacityUsd: 85,
+        capacityRatioOfSupply: 0.85,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "unknown",
+        routeStatusSource: "onchain",
+      },
+    });
+    expect(calcFragmentsCalls).toHaveLength(1);
+  });
+
+  it("degrades sBOLD to the idle balance when the calcFragments probe cannot be decoded", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      const call = body.params[0];
+      if (call.data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (call.data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(1_000_000n) });
+      }
+      if (call.data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      if (call.data === "0x160b71df") {
+        return jsonResponse({ result: "0x" });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      cloneConfigWithSboldSpWithdrawable(coin!.liveReservesConfig!),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.warnings).toEqual([
+      expect.objectContaining({
+        code: "sbold-sp-withdrawable-unavailable",
+        severity: "warning",
+      }),
+    ]);
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "1000000",
+      redemptionCapacitySource: "erc4626-idle-underlying",
+      redemption: {
+        capacityUsd: 1,
+        routeStatus: "degraded",
+      },
+    });
+    expect(result.metadata).not.toHaveProperty("sboldSpWithdrawableRaw");
   });
 
   it("uses validated Morpho V2 vault liquidity when it exceeds idle underlying balance", async () => {
