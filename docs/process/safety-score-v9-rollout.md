@@ -138,6 +138,11 @@ non-comparable history baseline and must not emit an organic upgrade/downgrade
 fan-out. Incoherent consumers remain fail-closed or explicitly degraded until
 their normal producer refreshes.
 
+`executeSafetyScoreHistoryBoundaryOperation()` remains the prepared cutover
+path for V2 history. It is not routed or scheduled, requires the exact approved
+publication identity and timestamps, writes null-previous non-comparable
+baselines, and fails conflicting replays.
+
 ## Activation
 
 Activation is an owner operation:
