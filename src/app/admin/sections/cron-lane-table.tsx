@@ -20,6 +20,8 @@ import {
   formatCronAttemptStatusClass,
   formatCronDuration,
   formatCronRunStatus,
+  formatCronRunTiming,
+  isCronRunNotStarted,
   type BudgetOnlySurfaceRow,
   type CronImpactFilter,
   type CronRunningFilter,
@@ -90,8 +92,11 @@ function formatTimestamp(timestampSeconds: number | null | undefined): string {
   return new Date(timestampSeconds * 1000).toLocaleString(undefined, { timeZoneName: "short" });
 }
 
-function formatDurationValue(duration: FormattedCronDuration | null): React.ReactNode {
-  if (!duration) return "Unknown";
+function formatDurationValue(
+  duration: FormattedCronDuration | null,
+  unavailableLabel: "Unknown" | "N/A" = "Unknown",
+): React.ReactNode {
+  if (!duration) return unavailableLabel;
   return (
     <span title={duration.exactLabel}>
       {duration.label}
@@ -122,6 +127,7 @@ const RECENT_RUN_TONE_COPY: Readonly<Record<RecentRunTone, { label: string; clas
 };
 
 function getRecentRunTone(run: CronRun): RecentRunTone {
+  if (isCronRunNotStarted(run)) return "skipped";
   if (run.status === "ok") return "success";
   if (run.status === "degraded") return "warning";
   if (run.status.startsWith("skipped_")) return "skipped";
@@ -151,14 +157,16 @@ function CronRunDots({ runs }: { runs: CronRun[] }) {
     <div className="flex items-center gap-1" role="list" aria-label="Recent run outcomes, newest first">
       {runs.map((run, index) => {
         const tone = getRecentRunTone(run);
-        const duration = formatCronDuration(run.durationMs);
-        const label = `${RECENT_RUN_TONE_COPY[tone].label}: ${formatTimestamp(run.startedAt)}, ${duration.label}; raw status ${run.status}`;
+        const timing = formatCronRunTiming(run);
+        const durationLabel = timing.duration?.label ?? timing.unavailableLabel ?? "Unknown";
+        const outcomeLabel = formatCronRunStatus(run.status, run.metadata);
+        const label = `${outcomeLabel}: ${formatTimestamp(run.startedAt)}, ${durationLabel}; raw status ${run.status}`;
         return (
           <span
             key={`${run.startedAt}-${index}`}
             role="listitem"
             aria-label={label}
-            title={`${label}; ${duration.exactLabel}`}
+            title={`${label}${timing.duration ? `; ${timing.duration.exactLabel}` : ""}${timing.note ? `; ${timing.note}` : ""}`}
           >
             <span
               className={cn("block size-2.5 rounded-full", RECENT_RUN_TONE_COPY[tone].className)}
@@ -227,7 +235,7 @@ function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
                   : index === 0
                     ? "No reserve queue metadata"
                     : "Metadata retained for latest run only";
-            const duration = formatCronDuration(run.durationMs);
+            const timing = formatCronRunTiming(run);
 
             return (
               <div
@@ -236,14 +244,24 @@ function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
               >
                 <span className="min-w-0">
                   <Badge
-                    className={`max-w-full whitespace-normal break-words text-left text-[11px] leading-tight ${getCronStatusColor(run.status)}`}
+                    className={`max-w-full whitespace-normal break-words text-left text-[11px] leading-tight ${getCronStatusColor(
+                      isCronRunNotStarted(run) ? "skipped_neutral" : run.status,
+                    )}`}
                   >
-                    {formatCronRunStatus(run.status)}
+                    {formatCronRunStatus(run.status, run.metadata)}
                   </Badge>
                   <span className="mt-1 block break-all font-mono text-[10px] text-muted-foreground">{run.status}</span>
                 </span>
-                <span className="font-mono tabular-nums text-muted-foreground" title={duration.exactLabel}>
-                  {duration.label}
+                <span
+                  className="font-mono tabular-nums text-muted-foreground"
+                  title={timing.duration?.exactLabel ?? timing.note ?? undefined}
+                >
+                  {formatDurationValue(timing.duration, timing.unavailableLabel ?? "Unknown")}
+                  {timing.note ? (
+                    <span className="mt-1 block max-w-48 whitespace-normal font-sans text-[10px] leading-tight">
+                      {timing.note}
+                    </span>
+                  ) : null}
                 </span>
                 <span className="min-w-0 break-words text-muted-foreground">{reserveQueue}</span>
               </div>
@@ -444,7 +462,7 @@ function LatestAttemptEvidence({ row }: { row: CronWorkbenchRow }) {
 
 function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; nowSeconds: number }) {
   const lastRun = row.cron.lastRun;
-  const lastRunDuration = lastRun ? formatCronDuration(lastRun.durationMs) : null;
+  const lastRunTiming = lastRun ? formatCronRunTiming(lastRun) : null;
   const metadataSummary = summarizeCronMetadata(row.job, lastRun?.metadata);
 
   return (
@@ -501,8 +519,19 @@ function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; nowSecond
         </div>
         <div className="min-w-0">
           <dt className="text-muted-foreground">Latest runtime</dt>
-          <dd className="mt-1 font-mono tabular-nums text-foreground">{formatDurationValue(lastRunDuration)}</dd>
+          <dd className="mt-1 font-mono tabular-nums text-foreground">
+            {formatDurationValue(
+              lastRunTiming?.duration ?? null,
+              lastRunTiming?.unavailableLabel ?? "Unknown",
+            )}
+          </dd>
         </div>
+        {lastRunTiming?.note ? (
+          <div className="col-span-2 min-w-0">
+            <dt className="text-muted-foreground">Reconciliation timing</dt>
+            <dd className="mt-1 text-foreground">{lastRunTiming.note}</dd>
+          </div>
+        ) : null}
       </dl>
 
       {row.cron.inFlight ? (
@@ -985,7 +1014,7 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                 {group.rows.map((row) => {
                   const isSelected = selectedRow?.key === row.key;
                   const lastRun = row.cron.lastRun;
-                  const duration = lastRun ? formatCronDuration(lastRun.durationMs) : null;
+                  const timing = lastRun ? formatCronRunTiming(lastRun) : null;
                   const errorStreak = countConsecutiveStatus(row.cron.recentRuns ?? [], "error");
                   const skippedStreak = countConsecutiveStatus(row.cron.recentRuns ?? [], "skipped_locked");
                   const artifacts = row.cron.staleArtifacts?.length ?? 0;
@@ -1056,7 +1085,7 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                         <div className="text-muted-foreground">completed {formatLastGood(row, nowSeconds)}</div>
                       </TableCell>
                       <TableCell className="px-3 py-2 align-top font-mono tabular-nums text-muted-foreground">
-                        {formatDurationValue(duration)}
+                        {formatDurationValue(timing?.duration ?? null, timing?.unavailableLabel ?? "Unknown")}
                       </TableCell>
                       <TableCell className="px-3 py-2 align-top font-mono tabular-nums text-muted-foreground">
                         {lastRun ? (lastRun.itemCount ?? "N/A") : (row.cron.telemetryUnknown ? "Unknown" : "N/A")}

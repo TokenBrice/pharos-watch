@@ -1,6 +1,7 @@
 import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, getCronStatusImpact } from "@shared/lib/cron-jobs";
 import type {
   BudgetOnlySurfaceStatus,
+  CronRun,
   CronRunStatus,
   CronStatus,
   StatusResponse,
@@ -97,6 +98,12 @@ export interface CronWorkbenchModel {
 export interface FormattedCronDuration {
   label: string;
   exactLabel: string;
+}
+
+export interface FormattedCronRunTiming {
+  duration: FormattedCronDuration | null;
+  unavailableLabel: "N/A" | null;
+  note: string | null;
 }
 
 export interface BudgetOnlySurfaceRow {
@@ -301,7 +308,36 @@ export function classifyCronWorkbenchState(cron: CronStatus): CronWorkbenchState
   return "healthy";
 }
 
-export function formatCronRunStatus(status: CronRunStatus | null | undefined): string {
+function readMetadataString(metadata: Record<string, unknown> | undefined, key: string): string | null {
+  const value = metadata?.[key];
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function readMetadataNumber(metadata: Record<string, unknown> | undefined, key: string): number | null {
+  const value = metadata?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+export function isCronRunNotStarted(run: Pick<CronRun, "metadata">): boolean {
+  return (
+    readMetadataString(run.metadata, "reason") === "stale-slot-reconciled"
+    && readMetadataString(run.metadata, "childDisposition") === "not_started"
+  );
+}
+
+export function isCronRunPlatformAbandoned(run: Pick<CronRun, "metadata">): boolean {
+  return (
+    readMetadataString(run.metadata, "reason") === "stale-slot-reconciled"
+    && !isCronRunNotStarted(run)
+  );
+}
+
+export function formatCronRunStatus(
+  status: CronRunStatus | null | undefined,
+  metadata?: Record<string, unknown>,
+): string {
+  if (isCronRunNotStarted({ metadata })) return "Not started: upstream abandoned";
+  if (isCronRunPlatformAbandoned({ metadata })) return "Abandoned";
   return status ? RUN_STATUS_LABELS[status] : "No runs";
 }
 
@@ -346,6 +382,46 @@ export function formatCronDuration(durationMs: number): FormattedCronDuration {
   return { label: parts.join(" "), exactLabel: formatExactSeconds(safeDurationMs) };
 }
 
+export function formatCronRunTiming(run: CronRun): FormattedCronRunTiming {
+  if (isCronRunNotStarted(run)) {
+    return {
+      duration: null,
+      unavailableLabel: "N/A",
+      note: "Did not start because the parent slot was abandoned.",
+    };
+  }
+  if (!isCronRunPlatformAbandoned(run)) {
+    return {
+      duration: formatCronDuration(run.durationMs),
+      unavailableLabel: null,
+      note: null,
+    };
+  }
+
+  const metadataActiveDurationMs = readMetadataNumber(run.metadata, "activeDurationMs");
+  const progressUpdatedAt = readMetadataNumber(run.metadata, "progressUpdatedAt");
+  const reconciledAt = readMetadataNumber(run.metadata, "reconciledAt");
+  const activeDurationMs =
+    metadataActiveDurationMs
+    ?? (progressUpdatedAt == null ? null : Math.max(0, progressUpdatedAt - run.startedAt) * 1000);
+  const metadataReconciliationDelayMs = readMetadataNumber(run.metadata, "reconciliationDelayMs");
+  const reconciliationDelayMs =
+    metadataReconciliationDelayMs
+    ?? (progressUpdatedAt == null || reconciledAt == null
+      ? null
+      : Math.max(0, reconciledAt - progressUpdatedAt) * 1000);
+  const duration = formatCronDuration(activeDurationMs ?? run.durationMs);
+  const reconciliationDelay =
+    reconciliationDelayMs == null ? null : formatCronDuration(reconciliationDelayMs);
+  return {
+    duration,
+    unavailableLabel: null,
+    note: reconciliationDelay
+      ? `Last heartbeat after ${duration.label}; reconciled ${reconciliationDelay.label} later.`
+      : `Last heartbeat after ${duration.label}; reconciliation time was not reported.`,
+  };
+}
+
 export function buildCronWorkbenchModel(
   groups: readonly CronWorkbenchGroupInput[],
   filters: CronWorkbenchFilters = DEFAULT_CRON_WORKBENCH_FILTERS,
@@ -381,7 +457,7 @@ export function buildCronWorkbenchModel(
             ? "Failed (latest required run)"
             : inheritedRequiredOutcome === "degraded"
               ? "Completed with warnings (latest required run)"
-              : formatCronRunStatus(rawStatus),
+              : formatCronRunStatus(rawStatus, cron.lastRun?.metadata),
         registryIndex: getRegistryIndex(job),
         sourceIndex,
       };
