@@ -278,6 +278,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       // T1: the issuer fee page states the redemption fee outright — 0.10%
       // (greater of that or $1,000) — a citable documented ceiling.
       feeBpsMax: 10,
+      minFeeUsd: 1000,
     },
     docs: [
       sourceRef("Tether Transparency", "https://tether.to/en/transparency", ["capacity"]),

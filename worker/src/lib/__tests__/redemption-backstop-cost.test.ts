@@ -79,6 +79,23 @@ describe("resolveCostScenarioScores", () => {
     expect(scores?.institutional).toBe(100);
   });
 
+  it("applies minimum documented fees to small redemption scenarios", () => {
+    const scores = resolveCostScenarioScores(
+      {
+        kind: "dynamic-or-unclear",
+        confidence: "formula",
+        feeBpsMax: 10,
+        minFeeUsd: 1000,
+        feeDescription: "0.10% with a $1,000 minimum",
+      },
+      null,
+    );
+
+    expect(scores?.retail).toBe(40);
+    expect(scores?.activeUser).toBe(40);
+    expect(scores?.institutional).toBe(100);
+  });
+
   it("uses documented fee ranges for scenario scoring", () => {
     const scores = resolveCostScenarioScores(
       {
