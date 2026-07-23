@@ -364,6 +364,20 @@ export const OracleRiskProfileSchema: z.ZodType<OracleRiskProfile> = z
         path: ["branches"],
       });
     }
+    // Materiality shares are measured facts; a profile claiming more than the
+    // whole debt is self-contradictory (unmeasured branches stay fail-closed,
+    // so under-coverage is safe — over-coverage is not).
+    const declaredShareTotal = (profile.branches ?? []).reduce(
+      (sum, branch) => sum + (branch.debtSharePct ?? 0),
+      0,
+    );
+    if (declaredShareTotal > 100.5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `oracleRisk branch debtSharePct total ${declaredShareTotal} exceeds 100`,
+        path: ["branches"],
+      });
+    }
     if (profile.branchModel === "single-path" && profile.branches?.length) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
