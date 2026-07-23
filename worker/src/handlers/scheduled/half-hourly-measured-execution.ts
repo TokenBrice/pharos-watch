@@ -33,14 +33,16 @@ async function settleMeasuredExecutionLane(name: string, run: Promise<CronResult
   }
 }
 
-function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResult, tron: CronResult): CronResult {
+export function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResult, tron: CronResult): CronResult {
   const evmStatus = evm.status ?? "ok";
   const solanaStatus = solana.status ?? "ok";
   const tronStatus = tron.status ?? "ok";
+  // Native lanes are activation-gated shadows: retain their degraded diagnostics
+  // without changing active EVM health, while invocation errors remain terminal.
   const status =
     evmStatus === "error" || solanaStatus === "error" || tronStatus === "error"
       ? "error"
-      : evmStatus === "degraded" || solanaStatus === "degraded" || tronStatus === "degraded"
+      : evmStatus === "degraded"
         ? "degraded"
         : evmStatus === "skipped_neutral" && solanaStatus === "skipped_neutral" && tronStatus === "skipped_neutral"
           ? "skipped_neutral"
@@ -53,6 +55,7 @@ function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResult, tron
     status,
     itemCount: (evm.itemCount ?? 0) + (solana.itemCount ?? 0) + (tron.itemCount ?? 0),
     metadata: JSON.stringify({
+      laneStatuses: { evm: evmStatus, solana: solanaStatus, tron: tronStatus },
       evm: parseMetadata(evm.metadata),
       solana: parseMetadata(solana.metadata),
       tron: parseMetadata(tron.metadata),
