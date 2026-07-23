@@ -487,6 +487,7 @@ describe("tracked stablecoin metadata", () => {
       "fxsave-f-x-protocol",
       "susn-noon",
       "syzusd-yuzu",
+      "wm-m0",
       "sdusd-dtrinity",
       "wsrusd-reservoir",
       "srusd-reservoir",

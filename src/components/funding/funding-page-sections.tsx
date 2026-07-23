@@ -3,7 +3,7 @@ import { ExternalLink, Heart, Star, Wallet, Wrench } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/copy-button";
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
+import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress, formatEventDate } from "@shared/lib/format";
 import { clampScore } from "@shared/lib/math";
@@ -176,55 +176,66 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
                 Coverage against the {USD_COMPACT.format(monthlyTargetUsd)} monthly goal
               </p>
             </div>
-            <div className="overflow-hidden rounded-lg border border-border/60">
-              <table className="w-full table-fixed text-sm" aria-label="Previous monthly funding coverage">
-                <TableHeader className="bg-muted/35">
-                  <TableRow rowIntent="static" className="hover:bg-transparent">
-                    <TableHead scope="col" className="h-9 w-[38%] px-3 text-xs font-medium">
-                      Month
-                    </TableHead>
-                    <TableHead scope="col" className="h-9 w-[31%] px-3 text-right text-xs font-medium">
-                      Community
-                    </TableHead>
-                    <TableHead scope="col" className="h-9 w-[31%] px-3 text-right text-xs font-medium">
-                      Coverage
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {monthlyHistory.map((m) => {
-                    const coveragePct = monthlyTargetUsd > 0
-                      ? (m.communityUsd / monthlyTargetUsd) * 100
-                      : 0;
-                    return (
-                      <TableRow key={m.monthKey} rowIntent="static" className="hover:bg-muted/20">
-                        <TableHead scope="row" className="h-auto px-3 py-2.5 font-medium text-foreground">
-                          {m.label}
-                        </TableHead>
-                        <TableCell className="px-3 py-2.5 text-right">
-                          <span className="pharos-numeric text-foreground">
-                            {USD_COMPACT.format(m.communityUsd)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="px-3 py-2.5">
-                          <div className="flex items-center justify-end gap-3">
-                            <div className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:block">
-                              <div
-                                className="h-full rounded-full bg-foreground/55"
-                                style={{ width: `${clampScore(coveragePct)}%` }}
-                              />
-                            </div>
-                            <span className="pharos-numeric min-w-10 text-right font-semibold text-foreground">
-                              {formatCoveragePct(m.communityUsd, monthlyTargetUsd)}
-                            </span>
+            <TableFrame
+              tableId="funding-previous-months"
+              chrome="bare"
+              className="overflow-hidden rounded-lg border border-border/60"
+              tableClassName="table-fixed text-sm"
+              tableProps={{ "aria-label": "Previous monthly funding coverage" }}
+              viewportProps={{
+                mobileScrollHint: false,
+                scrollShadow: false,
+                horizontal: false,
+                overscrollX: false,
+                compactBottomPadding: false,
+              }}
+            >
+              <TableHeader className="bg-muted/35">
+                <TableRow rowIntent="static" className="hover:bg-transparent">
+                  <TableHead scope="col" className="h-9 w-[38%] px-3 text-xs font-medium">
+                    Month
+                  </TableHead>
+                  <TableHead scope="col" className="h-9 w-[31%] px-3 text-right text-xs font-medium">
+                    Community
+                  </TableHead>
+                  <TableHead scope="col" className="h-9 w-[31%] px-3 text-right text-xs font-medium">
+                    Coverage
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {monthlyHistory.map((m) => {
+                  const coveragePct = monthlyTargetUsd > 0
+                    ? (m.communityUsd / monthlyTargetUsd) * 100
+                    : 0;
+                  return (
+                    <TableRow key={m.monthKey} rowIntent="static" className="hover:bg-muted/20">
+                      <TableHead scope="row" className="h-auto px-3 py-2.5 font-medium text-foreground">
+                        {m.label}
+                      </TableHead>
+                      <TableCell className="px-3 py-2.5 text-right">
+                        <span className="pharos-numeric text-foreground">
+                          {USD_COMPACT.format(m.communityUsd)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-3 py-2.5">
+                        <div className="flex items-center justify-end gap-3">
+                          <div className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:block">
+                            <div
+                              className="h-full rounded-full bg-foreground/55"
+                              style={{ width: `${clampScore(coveragePct)}%` }}
+                            />
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </table>
-            </div>
+                          <span className="pharos-numeric min-w-10 text-right font-semibold text-foreground">
+                            {formatCoveragePct(m.communityUsd, monthlyTargetUsd)}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </TableFrame>
           </div>
         ) : null}
 
