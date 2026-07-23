@@ -10,7 +10,8 @@ export const V9_SHADOW_REQUIRED_COVERAGE_FLOOR_IDS = [
   "scheduled-start-latency",
 ] as const;
 
-export const V9_SHADOW_MINIMUM_QUALIFYING_DAYS = 14;
+// Shortened from 14 by owner ruling 2026-07-23 (rollout amendment; daily gates unchanged).
+export const V9_SHADOW_MINIMUM_QUALIFYING_DAYS = 8;
 export const V9_SHADOW_MINIMUM_PRODUCER_CYCLES = 2;
 export const V9_SHADOW_DAILY_START_OFFSET_SEC = 30 * 60;
 export const V9_SHADOW_MAX_START_DELAY_SEC = 60 * 60;

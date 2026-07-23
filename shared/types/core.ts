@@ -740,6 +740,12 @@ export interface OracleRiskBranch {
   liquidationDelaySec?: number;
   backstop?: string;
   shutdownOrBadDebtBehavior?: string;
+  /**
+   * Measured share of outstanding debt attributable to this branch's market, in
+   * percent (0-100). Undefined means the share is unmeasured: the V9 oracle
+   * branch-materiality lever then treats the branch as material (fail-closed).
+   */
+  debtSharePct?: number;
   failureDomainKeys?: string[];
   sources?: StablecoinLink[];
 }

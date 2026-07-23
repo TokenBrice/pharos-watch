@@ -86,7 +86,11 @@ function buildOutputReview(
 ): RouteOutputReview | null {
   const output = observation.output;
   if (output.kind !== "tracked-stablecoin" && output.kind !== "fiat" && output.kind !== "collateral") return null;
-  const assetKeys = resolvedExitRouteOutputAssetKeys(output);
+  // Collateral outputs without enumerated asset keys are still USD-normalized
+  // by the producer at observation time, so they take the same reviewed par
+  // valuation as the enumerated collateral branch under a generic key.
+  const assetKeys =
+    resolvedExitRouteOutputAssetKeys(output) ?? (output.kind === "collateral" ? ["collateral:mixed"] : null);
   if (assetKeys === null) return null;
   const observedAtSec = Math.min(observation.observedAt, fixedInput.clockSec);
   const shared = {

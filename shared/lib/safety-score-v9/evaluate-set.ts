@@ -43,7 +43,7 @@ import {
   type V9ExitStressRequest,
 } from "./exit";
 import { isV9UncanonicalizedChainPoolRoute, parseCompiledV9FactSetV2 } from "./facts";
-import { decimalSnap } from "./formula";
+import { decimalSnap, hasV9PreExitDangerSignal } from "./formula";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 import {
   scoreV9EvaluatedAsset,
@@ -680,12 +680,20 @@ function proportionalCommonModeSeverity(
   return isV9MaterialShare(share, materiality.commonModeHighShareThreshold) ? high : "moderate";
 }
 
-export function commonModeSignalSeverity(
+interface V9CommonModeShareInfo {
+  share: number | null;
+  mature: boolean;
+}
+
+// Factored out of commonModeSignalSeverity so the reason-text builder in
+// commonModeSignalsByAsset can render the same measured share it graded
+// against, instead of re-deriving it. Returns null for domain kinds that
+// carry no proportional share (reserve-issuer and the fail-closed defaults).
+function commonModeShareForDomain(
   failureDomain: V9FailureDomainRef,
   context: V9CommonModeContext,
   materiality: V9ValidatedPolicyEnvelope["policy"]["semantic"]["materiality"],
-): V9Severity {
-  const high = materiality.commonModeSignal.severity;
+): V9CommonModeShareInfo | null {
   switch (failureDomain.kind) {
     case "chain": {
       const chainId = resolveChainId(failureDomain.key) ?? failureDomain.key.toLowerCase();
@@ -704,51 +712,79 @@ export function commonModeSignalSeverity(
       const share = context.supplyExposure.complete
         ? clampShare((context.supplyExposure.shareBySlug.get(chainId) ?? 0) + unattributedAddon)
         : null;
-      return proportionalCommonModeSeverity(share, materiality.matureChains.includes(chainId), materiality);
+      return { share, mature: materiality.matureChains.includes(chainId) };
     }
-    case "reserve-issuer":
-      // Single-obligor exposure is already priced by backing concentration;
-      // keep the signal diagnostic (non-capping) to avoid double-counting.
-      return "low";
     case "dex-protocol":
-      return proportionalCommonModeSeverity(
-        context.dexExposureByDomain.get(domainKey(failureDomain))?.upper ?? null,
+      return {
+        share: context.dexExposureByDomain.get(domainKey(failureDomain))?.upper ?? null,
         // Measured-execution routes carry versioned protocol keys
         // ("uniswap-v3", "pancakeswap-v3"); venue maturity is a property of
         // the venue family, so membership is tested on the version-stripped
         // family key.
-        materiality.matureVenues.includes(venueFamilyKey(failureDomain.key)),
-        materiality,
-      );
+        mature: materiality.matureVenues.includes(venueFamilyKey(failureDomain.key)),
+      };
     case "bridge-route": {
       const exposure = context.bridgeExposureByDomain.get(domainKey(failureDomain));
-      return proportionalCommonModeSeverity(
-        exposure !== undefined && exposure.reviewedTiersComplete ? exposure.shareBounds.upper : null,
-        false,
-        materiality,
-      );
+      return {
+        share: exposure !== undefined && exposure.reviewedTiersComplete ? exposure.shareBounds.upper : null,
+        mature: false,
+      };
     }
     default:
-      return high;
+      return null;
   }
 }
 
-function commonModeReasonQualifier(kind: V9FailureDomainRef["kind"], severity: V9Severity): string {
+export function commonModeSignalSeverity(
+  failureDomain: V9FailureDomainRef,
+  context: V9CommonModeContext,
+  materiality: V9ValidatedPolicyEnvelope["policy"]["semantic"]["materiality"],
+): V9Severity {
+  if (failureDomain.kind === "reserve-issuer") {
+    // Single-obligor exposure is already priced by backing concentration;
+    // keep the signal diagnostic (non-capping) to avoid double-counting.
+    return "low";
+  }
+  const shareInfo = commonModeShareForDomain(failureDomain, context, materiality);
+  if (!shareInfo) return materiality.commonModeSignal.severity;
+  return proportionalCommonModeSeverity(shareInfo.share, shareInfo.mature, materiality);
+}
+
+// Renders a materiality share as a percentage string for reason text, e.g.
+// 0.1083 -> "10.8%", 0.25 -> "25%".
+function formatCommonModeSharePct(share: number): string {
+  const rounded = Math.round(share * 1000) / 10;
+  return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}%`;
+}
+
+function commonModeReasonQualifier(
+  kind: V9FailureDomainRef["kind"],
+  severity: V9Severity,
+  materiality: V9ValidatedPolicyEnvelope["policy"]["semantic"]["materiality"],
+  shareUnavailable: boolean,
+): string {
+  const lowPct = formatCommonModeSharePct(materiality.commonModeShareThreshold);
+  const highPct = formatCommonModeSharePct(materiality.commonModeHighShareThreshold);
   if (kind === "chain") {
     if (severity === "low")
-      return "reviewed mature chain or conservative exposure upper bound below 5%, diagnostic only";
-    if (severity === "moderate") return "conservative non-mature exposure upper bound from 5% to below 10%";
-    return "conservative exposure upper bound at or above 10%, or chain inventory unavailable";
+      return `reviewed mature chain or conservative exposure upper bound below ${lowPct}, diagnostic only`;
+    if (severity === "moderate") return `conservative non-mature exposure upper bound from ${lowPct} to below ${highPct}`;
+    // The unavailable disjunction only applies to the fail-closed case (no
+    // reviewed chain inventory); a measured share at or above the high
+    // threshold states its own bound instead of reusing that phrasing.
+    return shareUnavailable
+      ? "chain inventory unavailable, treated at the high-severity floor"
+      : `conservative exposure upper bound at or above ${highPct}`;
   }
   if (kind === "dex-protocol") {
-    if (severity === "low") return "reviewed mature venue or proven exposure below 5%, diagnostic only";
-    if (severity === "moderate") return "reviewed non-mature exposure from 5% to below 10%";
-    return "exposure at or above 10%, or unknown venue concentration";
+    if (severity === "low") return `reviewed mature venue or proven exposure below ${lowPct}, diagnostic only`;
+    if (severity === "moderate") return `reviewed non-mature exposure from ${lowPct} to below ${highPct}`;
+    return shareUnavailable ? "unknown venue concentration" : `exposure at or above ${highPct}`;
   }
   if (kind === "bridge-route") {
-    if (severity === "low") return "proven exposure below 5%, diagnostic only";
-    if (severity === "moderate") return "reviewed exposure from 5% to below 10%";
-    return "exposure at or above 10%, or unknown/unattributed bridge exposure";
+    if (severity === "low") return `proven exposure below ${lowPct}, diagnostic only`;
+    if (severity === "moderate") return `reviewed exposure from ${lowPct} to below ${highPct}`;
+    return shareUnavailable ? "unknown/unattributed bridge exposure" : `exposure at or above ${highPct}`;
   }
   if (kind === "reserve-issuer") {
     return "single-obligor exposure priced in backing, diagnostic only";
@@ -822,18 +858,37 @@ function commonModeSignalsByAsset(
     const controlAssetDomainId = v9ControlAssetDomainId(group.failureDomain);
     for (const assetId of assetIds) {
       const parentControlled = isV9ParentControlledCommonModeMember(assetId, controlAssetDomainId, plan.serialPaths);
+      const context = contextFor(assetId);
       const severity = parentControlled
         ? "low"
-        : (mintControlSeverity ?? commonModeSignalSeverity(group.failureDomain, contextFor(assetId), materiality));
+        : (mintControlSeverity ?? commonModeSignalSeverity(group.failureDomain, context, materiality));
+      // Only the proportional (chain/dex-protocol/bridge-route) domains carry
+      // a per-asset measured share; parent-controlled and mint/upgrade-control
+      // groups keep their existing group-first phrasing below.
+      const shareInfo =
+        parentControlled || mintControlSeverity !== null
+          ? null
+          : commonModeShareForDomain(group.failureDomain, context, materiality);
+      const shareUnavailable = severity === "high" && shareInfo !== null && shareInfo.share === null;
       const qualifier = parentControlled
         ? "own required parent's controller, priced by the parent cap, diagnostic only"
         : mintControlSeverity === "low"
           ? "same-issuer controller, diagnostic only"
-          : commonModeReasonQualifier(group.failureDomain.kind, severity);
+          : commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, shareUnavailable);
+      const groupClause = `${effectiveMembers.length} reviewed paths across ${assetIds.length} assets share ${key}`;
+      // Where the coin's own measured share drives the severity (moderate, or
+      // high with a measured — not unavailable — share), lead the reason with
+      // that share and demote the cross-asset group trigger to secondary
+      // context; readers otherwise misread the group count as the driver.
+      const ownShare = severity !== "low" && shareInfo !== null ? shareInfo.share : null;
+      const reason =
+        ownShare !== null
+          ? `This asset's own reviewed share is ${formatCommonModeSharePct(ownShare)} at ${key}, ${qualifier} (also ${groupClause}).`
+          : `${groupClause}, ${qualifier}.`;
       const signal: V9StructuralSignal = {
         ...materiality.commonModeSignal,
         severity,
-        reason: `${effectiveMembers.length} reviewed paths across ${assetIds.length} assets share ${key}, ${qualifier}.`,
+        reason,
         failureDomainKeys: [key],
         evidence: [],
       };
@@ -1186,7 +1241,6 @@ export function evaluateV9FactSet(
       asset.mechanismRiskReview.review === null
         ? createUnavailableV9BackingResult(backingAsset, asset, envelope)
         : evaluateV9Backing(backingAsset, asset.mechanismRiskReview.review, envelope);
-    const exit = evaluateV9ExitAssetFacts(asset, envelope);
     const control = evaluateV9EconomicControlAssetFacts(
       asset,
       {
@@ -1202,10 +1256,32 @@ export function evaluateV9FactSet(
       transfer: asset.accessReview.transfer,
       freezeReviews: asset.accessReview.freeze.reviews,
     });
+    const peg = pegInput(asset, envelope);
+    const backingPillarEvaluation = backingPillar(backing, envelope);
+    const controlPillarEvaluation = controlPillar(control, envelope);
+    // The exit pillar's SIM-EXIT-L2 undisclosed-fee credit is withheld from an
+    // asset already held down by a non-exit adverse fact. The gate reads the same
+    // structural-signal set the scorer assembles (backing + control + dependency;
+    // the exit pillar itself contributes none) plus the measured peg, so the exit
+    // credit never feeds back into the pre-exit gate that governs it.
+    const preExitDangerHeld = hasV9PreExitDangerSignal(
+      {
+        structuralSignals: [
+          ...backingPillarEvaluation.structuralSignals,
+          ...controlPillarEvaluation.structuralSignals,
+          ...(commonSignals.get(assetId) ?? []),
+        ],
+        pegScore: peg.score,
+        pegApplicable: peg.applicable,
+        activeDepegBps: peg.activeDepegBps,
+      },
+      envelope,
+    );
+    const exit = evaluateV9ExitAssetFacts(asset, envelope, preExitDangerHeld);
     const pillars = {
-      backing: backingPillar(backing, envelope),
+      backing: backingPillarEvaluation,
       exit: exitPillar(asset, exit, envelope),
-      control: controlPillar(control, envelope),
+      control: controlPillarEvaluation,
     };
     const methodologyReasons =
       asset.implementation.launchedAtSec === null
@@ -1221,7 +1297,7 @@ export function evaluateV9FactSet(
       assetId,
       identity,
       pillars,
-      peg: pegInput(asset, envelope),
+      peg,
       trackRecordMonths: conservativeTrackRecordMonths(asset.implementation.launchedAtSec, factSet.asOfSec),
       parent: parentInput(resolved, evaluatedById, wrapperStrategyTier, envelope),
       dependencyReasons: dependencyReasons(asset, resolved, dependencyPlan, envelope),

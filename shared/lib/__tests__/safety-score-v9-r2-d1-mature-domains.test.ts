@@ -11,12 +11,13 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
  *   R2/D5: add "tron", "hyperliquid", and "xrpl" to matureChains
  *   D1: add "raydium" to semantic.materiality.matureVenues
  *
- * The proportional common-mode thresholds themselves shipped in PR #530 and do
- * not move: mature ecosystem domains are diagnostic (low) at ANY share;
- * otherwise proven exposure <5% is diagnostic, 5%-<10% is moderate, and >=10%
- * OR UNKNOWN share is high (fail-closed).
+ * The proportional common-mode thresholds shipped in PR #530 and were
+ * rebanded by D1 (2026-07-22, 0.05/0.1 -> 0.10/0.25): mature ecosystem
+ * domains are diagnostic (low) at ANY share; otherwise proven exposure <10%
+ * is diagnostic, 10%-<25% is moderate, and >=25% OR UNKNOWN share is high
+ * (fail-closed).
  *
- * The ACTIVE tables pin those threshold semantics at the 4.99/5/9.99/10%
+ * The ACTIVE tables pin those threshold semantics at the 9.99/10/24.99/25%
  * boundaries and at unknown share for BOTH domains, using a test-local
  * materiality fixture that already lists the ruled new members — this proves
  * the membership semantics generalize to tron/hyperliquid/xrpl/raydium the moment
@@ -64,16 +65,16 @@ function contextForVenue(venueKey: string, upperShare: number | null): V9CommonM
 }
 
 const CHAIN_BOUNDARIES: readonly { share: number | null; expected: string }[] = [
-  { share: 0.0499, expected: "low" },
-  { share: 0.05, expected: "moderate" },
-  { share: 0.0999, expected: "moderate" },
-  { share: 0.1, expected: "high" },
+  { share: 0.0999, expected: "low" },
+  { share: 0.1, expected: "moderate" },
+  { share: 0.2499, expected: "moderate" },
+  { share: 0.25, expected: "high" },
   { share: 0.5, expected: "high" },
   { share: null, expected: "high" },
 ];
 
-describe("R2/D1 threshold boundary semantics — active (PR #530 behavior must survive)", () => {
-  it("grades a non-mature chain domain at the ruled 5%/10% boundaries and unknown share", () => {
+describe("R2/D1 threshold boundary semantics — active (D1 2026-07-22 rebanded 0.05/0.1 -> 0.10/0.25)", () => {
+  it("grades a non-mature chain domain at the ruled 10%/25% boundaries and unknown share", () => {
     const domain: V9FailureDomainRef = { kind: "chain", key: "futurenet" };
     for (const { share, expected } of CHAIN_BOUNDARIES) {
       expect(
@@ -83,12 +84,12 @@ describe("R2/D1 threshold boundary semantics — active (PR #530 behavior must s
     }
   });
 
-  it("fails closed when unattributed supply share pushes the conservative upper bound to >=10%", () => {
+  it("fails closed when unattributed supply share pushes the conservative upper bound to >=25%", () => {
     const domain: V9FailureDomainRef = { kind: "chain", key: "futurenet" };
     const context: V9CommonModeContext = {
       supplyExposure: {
-        shareBySlug: new Map([["futurenet", 0.0499]]),
-        unattributedShare: 0.06,
+        shareBySlug: new Map([["futurenet", 0.2]]),
+        unattributedShare: 0.05,
         unmatchedChainLabelPoolShare: 0,
         complete: true,
       },
@@ -110,7 +111,7 @@ describe("R2/D1 threshold boundary semantics — active (PR #530 behavior must s
     }
   });
 
-  it("grades a non-mature DEX venue domain at the ruled 5%/10% boundaries and unknown share", () => {
+  it("grades a non-mature DEX venue domain at the ruled 10%/25% boundaries and unknown share", () => {
     const domain: V9FailureDomainRef = { kind: "dex-protocol", key: "futuredex" };
     for (const { share, expected } of CHAIN_BOUNDARIES) {
       expect(
@@ -146,7 +147,7 @@ describe("R2/D1 threshold boundary semantics — active (PR #530 behavior must s
     }
     const unruled: V9FailureDomainRef = { kind: "dex-protocol", key: "futuredex-v2" };
     expect(commonModeSignalSeverity(unruled, contextForVenue("futuredex-v2", null), STAGE_B_MATERIALITY)).toBe("high");
-    expect(commonModeSignalSeverity(unruled, contextForVenue("futuredex-v2", 0.07), STAGE_B_MATERIALITY)).toBe(
+    expect(commonModeSignalSeverity(unruled, contextForVenue("futuredex-v2", 0.15), STAGE_B_MATERIALITY)).toBe(
       "moderate",
     );
   });
@@ -177,8 +178,10 @@ describe("R2/D1/D5 ruled policy membership — Stage B", () => {
   });
 
   it("keeps the fail-closed thresholds unchanged by the membership edit", () => {
-    expect(CANDIDATE_MATERIALITY.commonModeShareThreshold).toBe(0.05);
-    expect(CANDIDATE_MATERIALITY.commonModeHighShareThreshold).toBe(0.1);
+    // D1 (2026-07-22) rebanded these 0.05/0.1 -> 0.10/0.25; the membership
+    // edit itself (this describe block) leaves them untouched either way.
+    expect(CANDIDATE_MATERIALITY.commonModeShareThreshold).toBe(0.1);
+    expect(CANDIDATE_MATERIALITY.commonModeHighShareThreshold).toBe(0.25);
     expect(CANDIDATE_MATERIALITY.commonModeSignal).toEqual({ kind: "critical-dependency", severity: "high" });
   });
 

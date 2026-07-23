@@ -20,9 +20,11 @@ import type {
   MintAuthorityProfile,
   OracleRiskBranch,
   OracleRiskProfile,
+  OracleRiskTier,
   StablecoinLink,
   StablecoinMeta,
 } from "@shared/types/core";
+import { ORACLE_RISK_TIER_VALUES } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import {
   RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT,
@@ -1102,6 +1104,50 @@ function buildPegReference(meta: V9ExtensionRegistryMeta): ExtensionAsset["pegRe
 
 const ORACLE_FREE_ARCHETYPES = new Set(["fiat-cash", "tbill", "rwa-credit-fund"]);
 
+// V9 oracle branch-materiality lever (owner ruling 2026-07-23). A multi-branch
+// CDP should be graded on the per-market oracle branches that carry material
+// debt, not dragged to its worst branch regardless of that branch's size. The
+// lever is active only once at least one branch carries a measured share;
+// otherwise the reviewed aggregate tier stands (fail-safe for unmeasured
+// multi-branch profiles, so byte-held assets never move). Within an active
+// profile a branch is material when its measured share reaches the shared
+// deployment-materiality floor OR its share is unmeasured (fail-closed). Weak
+// branches below the floor stop driving the top tier but leave a graded,
+// non-binding diagnostic: >= the moderate floor -> moderate@74, else low.
+const ORACLE_BRANCH_MATERIAL_SHARE_PCT = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct;
+const ORACLE_SUB_MATERIAL_MODERATE_MIN_SHARE_PCT = 5;
+
+function isWeakOracleTier(tier: OracleRiskTier): boolean {
+  return tier === "single-source-or-laggy" || tier === "opaque-or-unknown";
+}
+
+export function deriveOracleBranchMateriality(
+  branches: readonly OracleRiskBranch[],
+  authoredTier: OracleRiskTier,
+): { tier: OracleRiskTier; subMaterialWeakBand?: "moderate" | "low" } {
+  const measured = branches.some((branch) => branch.debtSharePct !== undefined);
+  if (!measured) return { tier: authoredTier };
+  const isMaterial = (branch: OracleRiskBranch): boolean =>
+    branch.debtSharePct === undefined || branch.debtSharePct >= ORACLE_BRANCH_MATERIAL_SHARE_PCT;
+  const materialTiers = branches.filter(isMaterial).map((branch) => branch.tier);
+  const tier =
+    materialTiers.length === 0
+      ? authoredTier
+      : materialTiers.reduce((worst, candidate) =>
+          ORACLE_RISK_TIER_VALUES.indexOf(candidate) > ORACLE_RISK_TIER_VALUES.indexOf(worst) ? candidate : worst,
+        );
+  const subMaterialWeak = branches.filter(
+    (branch) => branch.debtSharePct !== undefined && !isMaterial(branch) && isWeakOracleTier(branch.tier),
+  );
+  if (subMaterialWeak.length === 0) return { tier };
+  const subMaterialWeakBand = subMaterialWeak.some(
+    (branch) => branch.debtSharePct! >= ORACLE_SUB_MATERIAL_MODERATE_MIN_SHARE_PCT,
+  )
+    ? "moderate"
+    : "low";
+  return { tier, subMaterialWeakBand };
+}
+
 function adaptOracleReview(
   meta: V9ExtensionRegistryMeta,
   archetype: string,
@@ -1159,6 +1205,12 @@ function adaptOracleReview(
     profile.branchApplicability?.disposition === "branches-required"
       ? reviewedObservationState(confidence)
       : "bounded-unknown";
+  const branchesRequired =
+    profile.branchApplicability?.disposition === "branches-required" && !!profile.branches?.length;
+  const materiality =
+    branchesRequired && topState !== "missing"
+      ? deriveOracleBranchMateriality(profile.branches!, profile.tier)
+      : { tier: profile.tier };
   const branches =
     profile.branchApplicability?.disposition === "branches-required" && profile.branches?.length
       ? ORACLE_BRANCH_ADAPTERS.map(([branchKind, predicate]) => {
@@ -1190,7 +1242,10 @@ function adaptOracleReview(
       `oracle:${meta.id}`,
       topState === "known" || topState === "bounded-unknown" ? evidenceKeys : [],
     ),
-    tier: topState === "missing" ? null : profile.tier,
+    tier: topState === "missing" ? null : materiality.tier,
+    ...(materiality.subMaterialWeakBand !== undefined
+      ? { subMaterialWeakBand: materiality.subMaterialWeakBand }
+      : {}),
     branches,
   };
 }

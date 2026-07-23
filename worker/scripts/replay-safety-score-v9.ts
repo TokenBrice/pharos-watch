@@ -14,6 +14,8 @@ import {
   parseReportCardsFixedInputCacheValue,
   type ReportCardsFixedInput,
 } from "../src/lib/report-cards-fixed-input";
+import { deriveSupplyModelExitRouteObservation } from "../src/lib/redemption-exit-route-observations";
+import { computeRedemptionPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import {
   buildSafetyScoreV9Candidate,
   type SafetyScoreV9CandidatePipelineResult,
@@ -63,6 +65,44 @@ function isFixedInputCacheEnvelope(value: unknown): boolean {
 export async function parseSafetyScoreV9ReplayFixedInput(value: unknown): Promise<ReportCardsFixedInput> {
   if (isFixedInputCacheEnvelope(value)) return parseReportCardsFixedInputCacheValue(value);
   return normalizeFixedInput(value);
+}
+
+/**
+ * SIM-EXIT-L2 replay-lane emulation: a captured supply-model redemption row
+ * carries the observation the producer derived with the code that was live at
+ * capture time, and the shadow pipeline never re-derives when a native
+ * observation exists. Re-derive exactly the lever class (undisclosed-reviewed
+ * fee) with the current shared derivation so the frozen capture reflects what
+ * the producer republishes after this code ships. Every other row keeps its
+ * captured observation byte-for-byte.
+ */
+function rederiveUndisclosedFeeObservations(
+  fixedInput: ReportCardsFixedInput,
+): ReportCardsFixedInput | Omit<ReportCardsFixedInput, "baseInputGenerationId"> {
+  const map: ReportCardsFixedInput["redemptionBackstopMap"] = { ...fixedInput.redemptionBackstopMap };
+  let changed = false;
+  for (const [assetId, entry] of Object.entries(map)) {
+    if (!entry || entry.feeModelKind !== "undisclosed-reviewed") continue;
+    const profile = entry.capacityProfile;
+    if (!profile || (profile.exitRouteObservations?.length ?? 0) === 0) continue;
+    const derived = deriveSupplyModelExitRouteObservation(
+      { ...entry, capacityProfile: { ...profile, exitRouteObservations: undefined } },
+      fixedInput.clockSec,
+    );
+    if (!derived) continue;
+    map[assetId] = { ...entry, capacityProfile: { ...profile, exitRouteObservations: [derived] } };
+    changed = true;
+  }
+  if (!changed) return fixedInput;
+  // The substituted payload carries new producer bytes: refresh the payload
+  // fingerprint and drop the stored base generation id so `normalizeFixedInput`
+  // re-derives it from its own normalized payload, exactly like a fresh capture.
+  const { baseInputGenerationId: _stale, ...next } = fixedInput;
+  return {
+    ...next,
+    redemptionBackstopMap: map,
+    redemptionPayloadFingerprint: computeRedemptionPayloadFingerprint(map, fixedInput.redemptionGenerationId),
+  };
 }
 
 export function parseSafetyScoreV9PublishedAtSec(value: unknown): number {
@@ -121,7 +161,9 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
     "--release-candidate-id must match v9-rc-N",
   );
 
-  const fixedInput = await parseSafetyScoreV9ReplayFixedInput(readJson(values.input));
+  const fixedInput = rederiveUndisclosedFeeObservations(
+    await parseSafetyScoreV9ReplayFixedInput(readJson(values.input)),
+  );
   const extension = typeof values.extension === "string" ? readJson(values.extension) : undefined;
   const artifact = buildSafetyScoreV9ReplayArtifact({
     fixedInput,

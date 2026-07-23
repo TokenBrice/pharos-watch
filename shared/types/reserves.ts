@@ -20,6 +20,7 @@ const RESERVE_ASSET_CLASS_VALUES = [
   "tokenized-security",
   "fund-share",
   "protocol-position",
+  "commodity-allocated",
   "other",
 ] as const;
 export type ReserveAssetClass = (typeof RESERVE_ASSET_CLASS_VALUES)[number];

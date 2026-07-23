@@ -279,6 +279,7 @@ export const V9ReserveAssetClassSchema = z.enum([
   "tokenized-security",
   "fund-share",
   "protocol-position",
+  "commodity-allocated",
   "other",
 ]);
 
@@ -462,6 +463,8 @@ const V9ExitRouteFactV2Schema = z
       "manual-review",
     ]),
     coverageClass: z.enum(["exact-complete", "exact-lower-bound", "diagnostic"]),
+    /** Carried from the route observation: the reviewed fee is undisclosed, so the modeled capacity has no cost bound. */
+    feeEvidence: z.literal("undisclosed-reviewed").optional(),
     settlementModel: z.enum(["atomic", "same-day", "bounded-delay", "queued", "eventual", "unknown"]),
     settlementSlaSec: z.number().int().nonnegative().nullable(),
     settlementEvidenceRefIds: CanonicalStringArraySchema,
@@ -724,6 +727,12 @@ const V9OracleControlReviewV2Schema = z
       ])
       .nullable(),
     branches: canonicalArrayBy(V9OracleBranchReviewV2Schema, (branch) => branch.branch),
+    // Worst severity band contributed by weak market branches whose measured
+    // debt share is below the deployment-materiality threshold. These branches
+    // do not drive the (material-only) top-level tier; the control lane surfaces
+    // them as a single non-binding oracle diagnostic. Absent when the oracle
+    // branch-materiality lever is inactive or no sub-material weak branch exists.
+    subMaterialWeakBand: z.enum(["moderate", "low"]).optional(),
   })
   .strict()
   .superRefine((review, ctx) => {

@@ -298,6 +298,7 @@ export const OracleRiskBranchSchema: z.ZodType<OracleRiskBranch> = z
     liquidationDelaySec: z.number().finite().int().nonnegative().optional(),
     backstop: z.string().min(12).optional(),
     shutdownOrBadDebtBehavior: z.string().min(12).optional(),
+    debtSharePct: z.number().finite().min(0).max(100).optional(),
     failureDomainKeys: z.array(z.string().min(1)).min(1).optional(),
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
   })
