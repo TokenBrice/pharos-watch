@@ -176,7 +176,7 @@
       "name": "Physical gold bullion (99.99% Japanese LBMA Good Delivery brands, Loomis/GM custody)",
       "pct": 100,
       "risk": "medium",
-      "assetClass": "other",
+      "assetClass": "commodity-allocated",
       "issuerOrObligor": "Kinka (BVI) Ltd.; Gold Management LLC and Loomis International",
       "riskFactors": [
         "counterparty",

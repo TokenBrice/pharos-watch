@@ -5,7 +5,7 @@
       "name": "Allocated LBMA Good Delivery PAMP gold (Swiss vaults)",
       "pct": 100,
       "risk": "very-low",
-      "assetClass": "other",
+      "assetClass": "commodity-allocated",
       "issuerOrObligor": "Allocated LBMA-certified PAMP physical gold",
       "riskFactors": [
         "custody",

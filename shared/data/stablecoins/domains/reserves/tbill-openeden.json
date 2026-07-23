@@ -8,7 +8,8 @@
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
       "riskFactors": ["duration", "liquidity", "custody", "concentration"],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 364
     },
     {
       "name": "Dreyfus Institutional Preferred Treasury Obligations Fund",
