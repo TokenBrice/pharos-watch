@@ -36,44 +36,38 @@ function toHexWord(value: number): string {
   return (value >>> 0).toString(16).padStart(8, "0");
 }
 
-export function sha256Hex(input: string): string {
-  const bytes = encoder.encode(input);
-  const bitLength = bytes.length * 8;
-  const paddingBytes = (64 - ((bytes.length + 1 + 8) % 64)) % 64;
-  const padded = new Uint8Array(bytes.length + 1 + paddingBytes + 8);
-  padded.set(bytes);
-  padded[bytes.length] = 0x80;
+class Sha256Accumulator {
+  private readonly h = new Uint32Array(INITIAL_HASH);
+  private readonly w = new Uint32Array(64);
+  private readonly buffer = new Uint8Array(64);
+  private bufferLength = 0;
+  private bytesHashed = 0;
+  private finalized = false;
 
-  const view = new DataView(padded.buffer);
-  view.setUint32(padded.length - 8, Math.floor(bitLength / 0x1_0000_0000));
-  view.setUint32(padded.length - 4, bitLength >>> 0);
-
-  const h = new Uint32Array(INITIAL_HASH);
-  const w = new Uint32Array(64);
-
-  for (let offset = 0; offset < padded.length; offset += 64) {
+  private processBlock(bytes: Uint8Array, offset: number): void {
+    const view = new DataView(bytes.buffer, bytes.byteOffset + offset, 64);
     for (let i = 0; i < 16; i += 1) {
-      w[i] = view.getUint32(offset + i * 4);
+      this.w[i] = view.getUint32(i * 4);
     }
     for (let i = 16; i < 64; i += 1) {
-      const s0 = rotr(w[i - 15]!, 7) ^ rotr(w[i - 15]!, 18) ^ (w[i - 15]! >>> 3);
-      const s1 = rotr(w[i - 2]!, 17) ^ rotr(w[i - 2]!, 19) ^ (w[i - 2]! >>> 10);
-      w[i] = (w[i - 16]! + s0 + w[i - 7]! + s1) >>> 0;
+      const s0 = rotr(this.w[i - 15]!, 7) ^ rotr(this.w[i - 15]!, 18) ^ (this.w[i - 15]! >>> 3);
+      const s1 = rotr(this.w[i - 2]!, 17) ^ rotr(this.w[i - 2]!, 19) ^ (this.w[i - 2]! >>> 10);
+      this.w[i] = (this.w[i - 16]! + s0 + this.w[i - 7]! + s1) >>> 0;
     }
 
-    let a = h[0]!;
-    let b = h[1]!;
-    let c = h[2]!;
-    let d = h[3]!;
-    let e = h[4]!;
-    let f = h[5]!;
-    let g = h[6]!;
-    let hh = h[7]!;
+    let a = this.h[0]!;
+    let b = this.h[1]!;
+    let c = this.h[2]!;
+    let d = this.h[3]!;
+    let e = this.h[4]!;
+    let f = this.h[5]!;
+    let g = this.h[6]!;
+    let hh = this.h[7]!;
 
     for (let i = 0; i < 64; i += 1) {
       const s1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
       const ch = (e & f) ^ (~e & g);
-      const temp1 = (hh + s1 + ch + K[i]! + w[i]!) >>> 0;
+      const temp1 = (hh + s1 + ch + K[i]! + this.w[i]!) >>> 0;
       const s0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
       const maj = (a & b) ^ (a & c) ^ (b & c);
       const temp2 = (s0 + maj) >>> 0;
@@ -88,15 +82,89 @@ export function sha256Hex(input: string): string {
       a = (temp1 + temp2) >>> 0;
     }
 
-    h[0] = (h[0]! + a) >>> 0;
-    h[1] = (h[1]! + b) >>> 0;
-    h[2] = (h[2]! + c) >>> 0;
-    h[3] = (h[3]! + d) >>> 0;
-    h[4] = (h[4]! + e) >>> 0;
-    h[5] = (h[5]! + f) >>> 0;
-    h[6] = (h[6]! + g) >>> 0;
-    h[7] = (h[7]! + hh) >>> 0;
+    this.h[0] = (this.h[0]! + a) >>> 0;
+    this.h[1] = (this.h[1]! + b) >>> 0;
+    this.h[2] = (this.h[2]! + c) >>> 0;
+    this.h[3] = (this.h[3]! + d) >>> 0;
+    this.h[4] = (this.h[4]! + e) >>> 0;
+    this.h[5] = (this.h[5]! + f) >>> 0;
+    this.h[6] = (this.h[6]! + g) >>> 0;
+    this.h[7] = (this.h[7]! + hh) >>> 0;
   }
 
-  return Array.from(h, toHexWord).join("");
+  update(bytes: Uint8Array): void {
+    if (this.finalized) throw new Error("Cannot update a finalized SHA-256 digest");
+    if (this.bytesHashed + bytes.byteLength > Math.floor(Number.MAX_SAFE_INTEGER / 8)) {
+      throw new RangeError("SHA-256 input is too large");
+    }
+    this.bytesHashed += bytes.byteLength;
+
+    let offset = 0;
+    if (this.bufferLength > 0) {
+      const copied = Math.min(64 - this.bufferLength, bytes.byteLength);
+      this.buffer.set(bytes.subarray(0, copied), this.bufferLength);
+      this.bufferLength += copied;
+      offset += copied;
+      if (this.bufferLength === 64) {
+        this.processBlock(this.buffer, 0);
+        this.bufferLength = 0;
+      }
+    }
+
+    while (offset + 64 <= bytes.byteLength) {
+      this.processBlock(bytes, offset);
+      offset += 64;
+    }
+    if (offset < bytes.byteLength) {
+      this.buffer.set(bytes.subarray(offset), 0);
+      this.bufferLength = bytes.byteLength - offset;
+    }
+  }
+
+  digestHex(): string {
+    if (this.finalized) throw new Error("SHA-256 digest has already been finalized");
+    this.finalized = true;
+
+    const finalLength = this.bufferLength < 56 ? 64 : 128;
+    const finalBlocks = new Uint8Array(finalLength);
+    finalBlocks.set(this.buffer.subarray(0, this.bufferLength));
+    finalBlocks[this.bufferLength] = 0x80;
+
+    const bitLength = this.bytesHashed * 8;
+    const view = new DataView(finalBlocks.buffer);
+    view.setUint32(finalLength - 8, Math.floor(bitLength / 0x1_0000_0000));
+    view.setUint32(finalLength - 4, bitLength >>> 0);
+    for (let offset = 0; offset < finalLength; offset += 64) {
+      this.processBlock(finalBlocks, offset);
+    }
+    return Array.from(this.h, toHexWord).join("");
+  }
+}
+
+/**
+ * Hash UTF-8 text without first joining every chunk into one large string.
+ * A trailing UTF-16 high surrogate is carried across chunk boundaries so the
+ * result matches hashing the concatenated JavaScript string.
+ */
+export function sha256HexFromUtf8Chunks(chunks: Iterable<string>): string {
+  const digest = new Sha256Accumulator();
+  let pendingHighSurrogate = "";
+
+  for (const chunk of chunks) {
+    if (typeof chunk !== "string") throw new TypeError("SHA-256 text chunks must be strings");
+    let text = pendingHighSurrogate + chunk;
+    pendingHighSurrogate = "";
+    const finalCodeUnit = text.charCodeAt(text.length - 1);
+    if (finalCodeUnit >= 0xd800 && finalCodeUnit <= 0xdbff) {
+      pendingHighSurrogate = text.slice(-1);
+      text = text.slice(0, -1);
+    }
+    if (text.length > 0) digest.update(encoder.encode(text));
+  }
+  if (pendingHighSurrogate.length > 0) digest.update(encoder.encode(pendingHighSurrogate));
+  return digest.digestHex();
+}
+
+export function sha256Hex(input: string): string {
+  return sha256HexFromUtf8Chunks([input]);
 }

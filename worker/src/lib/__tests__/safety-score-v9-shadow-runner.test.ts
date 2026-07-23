@@ -144,6 +144,10 @@ describe("Safety Score V9 shadow runner", { timeout: 30_000 }, () => {
     mockLoadReviewCarries.mockResolvedValue({});
   });
 
+  it("uses the 30-minute calibration refresh cadence", () => {
+    expect(SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC).toBe(30 * 60);
+  });
+
   it("persists one current canonical observation without release artifacts", async () => {
     const result = await runSafetyScoreV9ShadowAfterV8Publication(input());
 
@@ -219,21 +223,23 @@ describe("Safety Score V9 shadow runner", { timeout: 30_000 }, () => {
     expect(mockPersistState).not.toHaveBeenCalled();
   });
 
-  it("replaces the same-day canonical observation after the refresh interval", async () => {
+  it("replaces the same-day canonical observation after two caller slots despite scheduler jitter", async () => {
     const dayStartSec = Math.floor(CLOCK_SEC / 86_400) * 86_400;
     const firstClockSec = dayStartSec + SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC + 300;
     await runSafetyScoreV9ShadowAfterV8Publication(input(firstClockSec));
     const first = mockPersistState.mock.calls[0]![1];
 
-    const refreshClockSec = firstClockSec + SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC + 60;
+    const refreshClockSec = firstClockSec + SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC;
     mockLoadDaily.mockResolvedValue(first.daily);
     mockPersistState.mockClear();
-    const result = await runSafetyScoreV9ShadowAfterV8Publication(input(refreshClockSec));
+    const refreshInput = input(refreshClockSec);
+    refreshInput.nowSec = refreshClockSec + 1;
+    const result = await runSafetyScoreV9ShadowAfterV8Publication(refreshInput);
 
     expect(result).toMatchObject({ status: "published" });
     const refreshed = mockPersistState.mock.calls[0]![1];
     expect(refreshed.daily.attemptCounts).toEqual({ successful: 2, failed: 0 });
-    expect(refreshed.daily.selectedRun.selectedAtSec).toBe(refreshClockSec + 10);
+    expect(refreshed.daily.selectedRun.selectedAtSec).toBe(refreshClockSec + 1);
     expect(refreshed.daily.selectedRun.qualification).toEqual(first.daily.selectedRun.qualification);
     expect(refreshed.envelope).toBeDefined();
     expect(refreshed.diff).toBeDefined();

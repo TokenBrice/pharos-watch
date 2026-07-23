@@ -58,7 +58,7 @@ changes. Use these sources:
   evaluation-build, compiler-schema, producer-capability, and candidate
   identity.
 - `worker/src/lib/safety-score-v9-shadow-runner.ts` owns the caught shadow
-  execution and three-hour refresh bound.
+  execution and 30-minute refresh bound.
 - `worker/src/lib/safety-score-active-source.ts` owns active-model selection and
   the activation-key contract.
 - `worker/src/lib/safety-score-v9-production-verifier.ts` and
@@ -213,7 +213,7 @@ generation identity.
 ## Production Shadow Evidence
 
 After a valid V8 publication, the Worker may refresh the private V9 latest
-candidate at most once every three hours. It retains:
+candidate at most once every 30 minutes. It retains:
 
 - `report-cards:v9-fixed-input:exact`, the exact attempted V9 input paired by
   base and source generation identity;

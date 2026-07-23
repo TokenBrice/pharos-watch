@@ -21,8 +21,8 @@ import {
   type V9WrapperLocalFactKey,
 } from "../../types/safety-score-v9-wrapper";
 import { V9_REASON_CODES, type V9ReasonCode } from "../../types/safety-score-v9";
-import { sha256Hex } from "../sha256";
-import { stableJsonStringifyV1 } from "../stable-json";
+import { sha256HexFromUtf8Chunks } from "../sha256";
+import { stableJsonStringifyChunksV1 } from "../stable-json";
 
 const V9_FACT_SET_DIGEST_DOMAINS = {
   2: "safety-score-v9.normalized-facts.v2",
@@ -60,36 +60,45 @@ export function canonicalV9RouteKey(lane: "dex" | "redemption", sourceGeneration
 type V9FactSetCore = V9FactSetCoreV2 | V9FactSetCoreV3;
 type CompiledV9FactSet = CompiledV9FactSetV2 | CompiledV9FactSetV3;
 
-function projectV9FactSetDigestPayload(input: V9FactSetCore | CompiledV9FactSet) {
-  const normalized =
+function parseV9FactSetDigestInput(input: V9FactSetCore | CompiledV9FactSet): V9FactSetCore | CompiledV9FactSet {
+  return (
     input.schemaVersion === 2
       ? "v9FactSetDigest" in input
         ? CompiledV9FactSetV2Schema.parse(input)
         : V9FactSetCoreV2Schema.parse(input)
       : "v9FactSetDigest" in input
         ? CompiledV9FactSetV3Schema.parse(input)
-        : V9FactSetCoreV3Schema.parse(input);
+        : V9FactSetCoreV3Schema.parse(input)
+  );
+}
+
+function projectValidatedV9FactSetDigestPayload(input: V9FactSetCore | CompiledV9FactSet) {
   return {
-    schemaVersion: normalized.schemaVersion,
-    baseInputGenerationId: normalized.baseInputGenerationId,
-    asOfSec: normalized.asOfSec,
-    sourceFingerprints: normalized.sourceFingerprints,
-    activeAssetIds: normalized.activeAssetIds,
-    assets: normalized.assets,
+    schemaVersion: input.schemaVersion,
+    baseInputGenerationId: input.baseInputGenerationId,
+    asOfSec: input.asOfSec,
+    sourceFingerprints: input.sourceFingerprints,
+    activeAssetIds: input.activeAssetIds,
+    assets: input.assets,
   };
 }
 
-export function computeV9FactSetDigest(input: V9FactSetCore | CompiledV9FactSet): string {
-  return sha256Hex(
-    stableJsonStringifyV1({
+/** Hash a schema-validated fact set without cloning its full object graph. */
+export function computeValidatedV9FactSetDigest(input: V9FactSetCore | CompiledV9FactSet): string {
+  return sha256HexFromUtf8Chunks(
+    stableJsonStringifyChunksV1({
       domain: V9_FACT_SET_DIGEST_DOMAINS[input.schemaVersion],
-      factSet: projectV9FactSetDigestPayload(input),
+      factSet: projectValidatedV9FactSetDigestPayload(input),
     }),
   );
 }
 
+export function computeV9FactSetDigest(input: V9FactSetCore | CompiledV9FactSet): string {
+  return computeValidatedV9FactSetDigest(parseV9FactSetDigestInput(input));
+}
+
 function assertV9FactSetDigest(factSet: CompiledV9FactSet): void {
-  const expected = computeV9FactSetDigest(factSet);
+  const expected = computeValidatedV9FactSetDigest(factSet);
   if (factSet.v9FactSetDigest !== expected) {
     throw new Error(`Safety Score v9 fact-set digest ${factSet.v9FactSetDigest} does not match ${expected}`);
   }

@@ -1,6 +1,10 @@
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { computeDexLiquidityPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
+import {
+  evaluateV9FactSet,
+  evaluateValidatedV9FactSet,
+} from "@shared/lib/safety-score-v9/evaluate-set";
 import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
@@ -9,10 +13,14 @@ import { describe, expect, it } from "vitest";
 import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   buildSafetyScoreV9Candidate,
+  buildSafetyScoreV9ShadowCandidateFromNormalizedInput,
   computeSafetyScoreV9CandidateId,
   computeSafetyScoreV9ProducerCapabilityDigest,
 } from "../safety-score-v9-candidate";
-import type { SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9-fact-set";
+import {
+  compileSafetyScoreV9FactSetFromValidatedExtension,
+  type SafetyScoreV9FactSetExtensionV2,
+} from "../safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
 
 const AS_OF_SEC = 1_784_505_600;
@@ -382,6 +390,45 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(left.producerCapabilityDigest).toBe(
       computeSafetyScoreV9ProducerCapabilityDigest(left.producerCapabilityIdentity),
     );
+  });
+
+  it("keeps strict, trusted, full, and compact paths identical with provenance guards", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const full = buildSafetyScoreV9Candidate({
+      fixedInput,
+      extension: reviewedExtension(fixedInput),
+      publishedAtSec: PUBLISHED_AT_SEC,
+    });
+    const strictEvaluation = evaluateV9FactSet(full.compiledFacts, V9_CANDIDATE_POLICY_V1);
+    const trustedEvaluation = evaluateValidatedV9FactSet(full.compiledFacts, V9_CANDIDATE_POLICY_V1);
+    const trustedCompilation = compileSafetyScoreV9FactSetFromValidatedExtension(
+      full.fixedInput,
+      full.extension,
+    );
+    const compact = buildSafetyScoreV9ShadowCandidateFromNormalizedInput({
+      fixedInput: full.fixedInput,
+      extension: full.extension,
+      publishedAtSec: PUBLISHED_AT_SEC,
+    });
+
+    expect(trustedEvaluation).toEqual(strictEvaluation);
+    expect(trustedEvaluation).toEqual(full.evaluatedSet);
+    expect(trustedCompilation).toEqual(full.compiledFacts);
+    expect(compact).toEqual({
+      candidate: full.candidate,
+      compilerFactSchemaDigest: full.compilerFactSchemaDigest,
+      producerCapabilityDigest: full.producerCapabilityDigest,
+      supplyUsdById: { alpha: 10_000_000 },
+    });
+    expect(() =>
+      evaluateValidatedV9FactSet(structuredClone(full.compiledFacts), V9_CANDIDATE_POLICY_V1),
+    ).toThrow("requires an in-process compiled fact set");
+    expect(() =>
+      compileSafetyScoreV9FactSetFromValidatedExtension(
+        full.fixedInput,
+        structuredClone(full.extension),
+      ),
+    ).toThrow("requires an in-process materialized extension");
   });
 
   it("keeps one candidate across point-in-time generations and binds each publication to exact results", () => {

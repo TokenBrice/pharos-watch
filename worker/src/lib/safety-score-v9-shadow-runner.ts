@@ -1,4 +1,5 @@
 import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   V9_CONSUMER_SCORE_THRESHOLD_REGISTRY,
   V9_SHADOW_DAILY_START_OFFSET_SEC,
@@ -11,10 +12,9 @@ import { V9_RELEASE_COVERAGE_FLOORS } from "@shared/types/safety-score-v9-covera
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 import type { ReportCardPublicationCompleteness } from "./report-card-publication";
 import {
-  buildSafetyScoreV9CandidateFromNormalizedInput,
-  type SafetyScoreV9CandidatePipelineResult,
+  buildSafetyScoreV9ShadowCandidateFromNormalizedInput,
+  type SafetyScoreV9ShadowCandidateResult,
 } from "./safety-score-v9-candidate";
-import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./safety-score-v9-extension";
 import {
   loadSafetyScoreV9MovementReviewCarries,
   loadSafetyScoreV9MovementReviewDispositions,
@@ -42,14 +42,15 @@ export const SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX = "safety-score-v9-shadow";
 
 /**
  * Minimum age of the day's latest success before the quarter-hourly caller
- * re-runs the shadow. Three hours yields up to eight refreshes per UTC day —
- * frequent enough for same-day candidate iteration while keeping compute and
- * D1 writes bounded. The daily summary remains one row per day and each
- * successful refresh replaces its selected observation.
+ * re-runs the shadow. Thirty minutes yields up to 48 refreshes per UTC day for
+ * active calibration while still skipping every other V8 publication. The
+ * daily summary remains one row per day and each successful refresh replaces
+ * its selected observation.
  */
-export const SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC = 3 * 60 * 60;
+export const SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC = 30 * 60;
 export const SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC = V9_SHADOW_DAILY_START_OFFSET_SEC;
 export const SAFETY_SCORE_V9_SHADOW_TIMEOUT_MS = 2 * 60_000;
+const SAFETY_SCORE_V9_SHADOW_CALLER_INTERVAL_SEC = CRON_INTERVALS["publish-report-card-cache"];
 
 export interface RunSafetyScoreV9ShadowInput {
   db: D1Database;
@@ -122,6 +123,11 @@ function nowSecAtLeast(minimum: number, override?: number): number {
 function scheduledForUtcDay(clockSec: number): number {
   const day = safetyScoreV9UtcDay(clockSec);
   return Math.floor(Date.parse(`${day}T00:00:00.000Z`) / 1_000) + SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC;
+}
+
+function shadowCallerSlotSec(atSec: number): number {
+  return Math.floor(atSec / SAFETY_SCORE_V9_SHADOW_CALLER_INTERVAL_SEC) *
+    SAFETY_SCORE_V9_SHADOW_CALLER_INTERVAL_SEC;
 }
 
 function attemptId(utcDay: string, previous: SafetyScoreV9ShadowDaily | null): string {
@@ -235,12 +241,12 @@ function downstreamThresholds(): SafetyScoreV9DownstreamThreshold[] {
   );
 }
 
-function supplyProjection(pipeline: SafetyScoreV9CandidatePipelineResult): {
+function supplyProjection(pipeline: SafetyScoreV9ShadowCandidateResult): {
   supplyUsdById: Record<string, number>;
   topCutoffIds: Set<string>;
 } {
-  const supplies = pipeline.compiledFacts.assets
-    .map((asset) => ({ id: asset.assetId, supplyUsd: asset.supply.circulatingUsd ?? 0 }))
+  const supplies = Object.entries(pipeline.supplyUsdById)
+    .map(([id, supplyUsd]) => ({ id, supplyUsd }))
     .sort((left, right) => right.supplyUsd - left.supplyUsd || compareText(left.id, right.id));
   const cutoff = supplies[Math.min(24, supplies.length - 1)]?.supplyUsd ?? Number.POSITIVE_INFINITY;
   return {
@@ -302,6 +308,7 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       throw new Error("Safety Score v9 shadow clock must be epoch seconds");
     }
     let fixedInput = normalizeFixedInput(input.fixedInput);
+    startedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
     const scheduledForSec = scheduledForUtcDay(fixedInput.clockSec);
     utcDay = safetyScoreV9UtcDay(scheduledForSec);
 
@@ -314,7 +321,8 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
     const lastSuccessfulAtSec = previous === null ? null : safetyScoreV9ShadowLastSuccessfulAttemptAtSec(previous);
     if (
       lastSuccessfulAtSec !== null &&
-      fixedInput.clockSec - lastSuccessfulAtSec < SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC
+      shadowCallerSlotSec(startedAtSec) - shadowCallerSlotSec(lastSuccessfulAtSec) <
+        SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC
     ) {
       return {
         status: "skipped",
@@ -333,7 +341,6 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       };
     }
 
-    startedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
     stage = "v9-enrichment";
     if (input.prepareFixedInput) {
       const preparedFixedInput = normalizeFixedInput(
@@ -347,11 +354,9 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       }
       fixedInput = preparedFixedInput;
     }
-    const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput);
     stage = "compile";
-    const pipeline = buildSafetyScoreV9CandidateFromNormalizedInput({
+    const pipeline = buildSafetyScoreV9ShadowCandidateFromNormalizedInput({
       fixedInput,
-      extension,
       publishedAtSec: fixedInput.clockSec,
     });
     const publicationGenerationId = pipeline.candidate.publicationGenerationId;

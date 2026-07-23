@@ -639,6 +639,7 @@ export const SafetyScoreV9FactSetExtensionV2Schema = z
 
 export type SafetyScoreV9FactSetExtensionV2 = z.infer<typeof SafetyScoreV9FactSetExtensionV2Schema>;
 type AssetExtension = SafetyScoreV9FactSetExtensionV2["assets"][number];
+const materializedExtensions = new WeakSet<object>();
 type ExtensionControlOverlay = Extract<
   NonNullable<AssetExtension["controlReview"]>,
   { state: "reviewed-controls" }
@@ -648,9 +649,11 @@ export function materializeSafetyScoreV9FactSetExtension(
   fixedInput: Readonly<ReportCardsFixedInput>,
   extensionValue: unknown,
 ): Readonly<SafetyScoreV9FactSetExtensionV2> {
-  return SafetyScoreV9FactSetExtensionV2Schema.parse(
+  const extension = SafetyScoreV9FactSetExtensionV2Schema.parse(
     hydrateSafetyScoreV9ShockCoverageExtension(extensionValue, fixedInput.clockSec),
   );
+  materializedExtensions.add(extension);
+  return extension;
 }
 
 interface AssetBuildContext {
@@ -3598,10 +3601,26 @@ export function compileSafetyScoreV9FactSetFromNormalizedInput(
   fixedInput: Readonly<ReportCardsFixedInput>,
   extensionValue: unknown,
 ): Readonly<CompiledV9FactSetV3> {
+  return compileSafetyScoreV9FactSetFromValidatedExtension(
+    fixedInput,
+    materializeSafetyScoreV9FactSetExtension(fixedInput, extensionValue),
+  );
+}
+
+/**
+ * Trusted same-process path for an extension just returned by
+ * materializeSafetyScoreV9FactSetExtension().
+ */
+export function compileSafetyScoreV9FactSetFromValidatedExtension(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  extension: SafetyScoreV9FactSetExtensionV2,
+): Readonly<CompiledV9FactSetV3> {
+  if (!materializedExtensions.has(extension)) {
+    throw new Error("Trusted Safety Score v9 compilation requires an in-process materialized extension");
+  }
   if (fixedInput.captureKind !== "exact-publication-inputs") {
     throw new Error("Safety Score v9 fact compilation requires exact publication inputs");
   }
-  const extension = materializeSafetyScoreV9FactSetExtension(fixedInput, extensionValue);
   if (extension.registryFingerprint !== fixedInput.registryFingerprint) {
     throw new Error(
       `Safety Score v9 extension registry fingerprint ${extension.registryFingerprint} does not match fixed input ${fixedInput.registryFingerprint}`,
