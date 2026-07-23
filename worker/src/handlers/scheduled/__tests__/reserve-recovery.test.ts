@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   claim: vi.fn(),
   inspect: vi.fn(),
   prepare: vi.fn(),
+  retireIncompatible: vi.fn(),
   sweep: vi.fn(),
   runReserveSlot: vi.fn(),
   createRuntime: vi.fn(),
@@ -14,11 +15,18 @@ vi.mock("../../../lib/scheduled-recovery-checkpoint", () => ({
   claimNextScheduledCheckpointRecovery: mocks.claim,
   inspectScheduledCheckpointRecoveryEligibility: mocks.inspect,
   prepareEligibleScheduledCheckpointRecoveries: mocks.prepare,
+  retireIncompatibleScheduledCheckpointRecoveries: mocks.retireIncompatible,
 }));
 vi.mock("../../../lib/scheduled-slot-fence", () => ({
   sweepStaleScheduledSlotExecutions: mocks.sweep,
 }));
 vi.mock("../hourly-live-reserves", () => ({
+  LIVE_RESERVE_CHILD_PREREQUISITES: {
+    "sync-live-reserves": [],
+    "sync-redemption-backstops": ["sync-live-reserves"],
+    "sync-kinesis-supply": [],
+    "reserve-post-sync-watchdog": ["sync-live-reserves"],
+  },
   LIVE_RESERVE_SLOT_JOBS: [
     "sync-live-reserves",
     "sync-redemption-backstops",
@@ -37,6 +45,7 @@ const EMPTY_INSPECTION = {
   observedAt: 1_000,
   staleBefore: 880,
   readyCheckpointCount: 0,
+  incompatibleCheckpointCount: 0,
   eligibleCheckpointCount: 0,
   candidates: [],
 };
@@ -67,6 +76,13 @@ describe("reserve recovery mode", () => {
     vi.clearAllMocks();
     mocks.inspect.mockResolvedValue(EMPTY_INSPECTION);
     mocks.sweep.mockResolvedValue({ slotsReconciled: 0 });
+    mocks.retireIncompatible.mockResolvedValue({
+      observedAt: 1_000,
+      candidates: 0,
+      retired: 0,
+      skippedActiveChildLease: 0,
+      retiredCheckpoints: [],
+    });
     mocks.prepare.mockResolvedValue({ inspection: EMPTY_INSPECTION, prepared: [] });
     mocks.claim.mockResolvedValue(null);
     mocks.runReserveSlot.mockResolvedValue({ jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 });
@@ -78,6 +94,7 @@ describe("reserve recovery mode", () => {
     expect(result.jobsErrored).toBe(0);
     expect(mocks.inspect).not.toHaveBeenCalled();
     expect(mocks.sweep).not.toHaveBeenCalled();
+    expect(mocks.retireIncompatible).not.toHaveBeenCalled();
     expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.claim).not.toHaveBeenCalled();
   });
@@ -94,6 +111,7 @@ describe("reserve recovery mode", () => {
     expect(result.jobsErrored).toBe(0);
     expect(mocks.inspect).toHaveBeenCalledTimes(1);
     expect(mocks.sweep).not.toHaveBeenCalled();
+    expect(mocks.retireIncompatible).not.toHaveBeenCalled();
     expect(mocks.prepare).not.toHaveBeenCalled();
     expect(mocks.claim).not.toHaveBeenCalled();
   });
@@ -108,6 +126,7 @@ describe("reserve recovery mode", () => {
 
     expect(result.jobsErrored).toBe(0);
     expect(mocks.sweep).toHaveBeenCalledTimes(1);
+    expect(mocks.retireIncompatible).toHaveBeenCalledTimes(1);
     expect(mocks.prepare).toHaveBeenCalledTimes(1);
     expect(mocks.claim).not.toHaveBeenCalled();
     expect(mocks.runReserveSlot).not.toHaveBeenCalled();

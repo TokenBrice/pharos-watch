@@ -2079,8 +2079,14 @@ describe("runScheduledSlotWithFence", () => {
         status: "error",
         slot_started_at: staleSlotStartedAt,
         error: "scheduled slot heartbeat stale; child job progress abandoned",
+        duration_ms: 1_780_000,
       }),
     ]);
+    expect(JSON.parse(db.getRuns()[0]?.metadata ?? "{}")).toMatchObject({
+      failureCategory: "platform-abandoned",
+      activeDurationMs: 1_780_000,
+      reconciliationDelayMs: 1_800_000,
+    });
     expect(db.getProgress("sync-yield-data")).toBeUndefined();
     expect(db.getLease("sync-yield-data")).toBeUndefined();
     const staleSlot = db.getSlot("hourlyYieldSync", staleSlotStartedAt);

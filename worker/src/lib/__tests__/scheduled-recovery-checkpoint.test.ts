@@ -13,6 +13,7 @@ import {
   inspectScheduledCheckpointRecoveryEligibility,
   prepareEligibleScheduledCheckpointRecoveries,
   prepareScheduledCheckpointRecoveryForSlot,
+  retireIncompatibleScheduledCheckpointRecoveries,
   ScheduledCheckpointOwnershipLostError,
   setScheduledCheckpointChildDisposition,
 } from "../scheduled-recovery-checkpoint";
@@ -23,6 +24,12 @@ const CHILD_JOBS = [
   "sync-kinesis-supply",
   "reserve-post-sync-watchdog",
 ] as const;
+const CHILD_PREREQUISITES = {
+  "sync-live-reserves": [],
+  "sync-redemption-backstops": ["sync-live-reserves"],
+  "sync-kinesis-supply": [],
+  "reserve-post-sync-watchdog": ["sync-live-reserves"],
+} as const;
 
 const MIGRATIONS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../migrations");
 
@@ -270,6 +277,50 @@ describe("scheduled recovery checkpoint", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM worker_scheduled_checkpoints").get()).toEqual({ count: 2 });
   });
 
+  it("preserves completed independent children when the reserve frontier is unfinished", async () => {
+    const { db } = harness();
+    const checkpoint = await beginScheduledCheckpoint(db, {
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 1_600,
+      job: "sync-live-reserves",
+      invocationId: "slot-owner-1",
+      queueHash: "queue-a",
+      nextItemKey: "coin-b",
+      itemsTotal: 276,
+      childJobs: CHILD_JOBS,
+      nowSec: 1_601,
+    });
+    await setScheduledCheckpointChildDisposition(
+      db,
+      checkpoint,
+      "sync-kinesis-supply",
+      "completed",
+      1_602,
+    );
+
+    await prepareScheduledCheckpointRecoveryForSlot(db, {
+      scheduleKey: checkpoint.scheduleKey,
+      slotStartedAt: checkpoint.slotStartedAt,
+      job: checkpoint.job,
+      childJobs: CHILD_JOBS,
+      childPrerequisites: CHILD_PREREQUISITES,
+      nowSec: 1_610,
+    });
+
+    const ready = await loadScheduledCheckpoint(db, {
+      scheduleKey: checkpoint.scheduleKey,
+      slotStartedAt: checkpoint.slotStartedAt,
+      job: checkpoint.job,
+      attemptNo: 2,
+    });
+    expect(ready?.childDispositions).toEqual({
+      "sync-live-reserves": "not_started",
+      "sync-redemption-backstops": "not_started",
+      "sync-kinesis-supply": "completed",
+      "reserve-post-sync-watchdog": "not_started",
+    });
+  });
+
   it("allows only one recovery owner to win the ready-checkpoint CAS", async () => {
     const { db } = harness();
     const first = await beginScheduledCheckpoint(db, {
@@ -469,7 +520,7 @@ describe("scheduled recovery checkpoint", () => {
     });
   });
 
-  it("reports active leases and queue drift as read-only recovery blockers", async () => {
+  it("reports incompatible checkpoints without mutating their active leases", async () => {
     const { sqlite, db } = harness();
     await beginScheduledCheckpoint(db, {
       scheduleKey: "fourHourlyReserveSync",
@@ -506,10 +557,20 @@ describe("scheduled recovery checkpoint", () => {
     });
 
     expect(inspection.eligibleCheckpointCount).toBe(0);
-    expect(inspection.candidates[0]?.blockers).toEqual([
-      "queue-hash-drift",
-      "active-child-lease",
-    ]);
+    expect(inspection.incompatibleCheckpointCount).toBe(1);
+    expect(inspection.candidates).toEqual([]);
+    const retirement = await retireIncompatibleScheduledCheckpointRecoveries(db, {
+      scheduleKey: "fourHourlyReserveSync",
+      job: "sync-live-reserves",
+      childJobs: CHILD_JOBS,
+      expectedQueueHash: "queue-b",
+      nowSec: 3_100,
+    });
+    expect(retirement).toMatchObject({
+      candidates: 1,
+      retired: 0,
+      skippedActiveChildLease: 1,
+    });
     expect(sqlite.prepare("SELECT state FROM worker_scheduled_checkpoints WHERE attempt_no = 1").get())
       .toEqual({ state: "running" });
   });
@@ -564,5 +625,195 @@ describe("scheduled recovery checkpoint", () => {
       abandonedAttemptNo: 1,
       recoveryAttemptNo: 2,
     })]);
+  });
+
+  it("selects a compatible recovery before the limit despite older incompatible checkpoints", async () => {
+    const { sqlite, db } = harness();
+    for (let index = 0; index < 6; index++) {
+      const slotStartedAt = 5_000 + index;
+      await beginScheduledCheckpoint(db, {
+        scheduleKey: "fourHourlyReserveSync",
+        slotStartedAt,
+        job: "sync-live-reserves",
+        invocationId: `old-owner-${index}`,
+        queueHash: "queue-old",
+        nextItemKey: "coin-old",
+        itemsTotal: 100,
+        childJobs: CHILD_JOBS,
+        nowSec: 5_001 + index,
+      });
+      sqlite.prepare(
+        `INSERT INTO cron_slot_executions (
+           slot_key, slot_started_at, state, result_status, execution_owner,
+           execution_generation, started_at, finished_at, updated_at
+         ) VALUES ('fourHourlyReserveSync', ?, 'finished', 'error', ?, 1, ?, ?, ?)`,
+      ).run(slotStartedAt, `old-owner-${index}`, slotStartedAt, 5_100 + index, 5_100 + index);
+    }
+    await beginScheduledCheckpoint(db, {
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 6_000,
+      job: "sync-live-reserves",
+      invocationId: "current-owner",
+      queueHash: "queue-current",
+      nextItemKey: "coin-current",
+      itemsTotal: 100,
+      childJobs: CHILD_JOBS,
+      nowSec: 6_001,
+    });
+    sqlite.prepare(
+      `INSERT INTO cron_slot_executions (
+         slot_key, slot_started_at, state, result_status, execution_owner,
+         execution_generation, started_at, finished_at, updated_at
+       ) VALUES ('fourHourlyReserveSync', 6000, 'finished', 'error', 'current-owner', 1, 6000, 6010, 6010)`,
+    ).run();
+
+    const prepared = await prepareEligibleScheduledCheckpointRecoveries(db, {
+      scheduleKey: "fourHourlyReserveSync",
+      job: "sync-live-reserves",
+      childJobs: CHILD_JOBS,
+      expectedQueueHash: "queue-current",
+      staleAfterSec: 120,
+      nowSec: 6_200,
+      limit: 1,
+    });
+
+    expect(prepared.inspection).toMatchObject({
+      incompatibleCheckpointCount: 6,
+      eligibleCheckpointCount: 1,
+      candidates: [expect.objectContaining({ slotStartedAt: 6_000, queueHash: "queue-current" })],
+    });
+    expect(prepared.prepared).toEqual([expect.objectContaining({
+      abandonedAttemptNo: 1,
+      recoveryAttemptNo: 2,
+    })]);
+    expect(sqlite.prepare(
+      "SELECT COUNT(*) AS count FROM worker_scheduled_checkpoints WHERE queue_hash = 'queue-old' AND state = 'running'",
+    ).get()).toEqual({ count: 6 });
+  });
+
+  it("filters incompatible ready checkpoints before the bounded claim window", async () => {
+    const { db } = harness();
+    for (let index = 0; index < 6; index++) {
+      const checkpoint = await beginScheduledCheckpoint(db, {
+        scheduleKey: "fourHourlyReserveSync",
+        slotStartedAt: 7_000 + index,
+        job: "sync-live-reserves",
+        invocationId: `old-owner-${index}`,
+        queueHash: "queue-old",
+        nextItemKey: "coin-old",
+        itemsTotal: 100,
+        childJobs: CHILD_JOBS,
+        nowSec: 7_001 + index,
+      });
+      await prepareScheduledCheckpointRecoveryForSlot(db, {
+        scheduleKey: checkpoint.scheduleKey,
+        slotStartedAt: checkpoint.slotStartedAt,
+        job: checkpoint.job,
+        childJobs: CHILD_JOBS,
+        nowSec: 7_100 + index,
+      });
+    }
+    const current = await beginScheduledCheckpoint(db, {
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 8_000,
+      job: "sync-live-reserves",
+      invocationId: "current-owner",
+      queueHash: "queue-current",
+      nextItemKey: "coin-current",
+      itemsTotal: 100,
+      childJobs: CHILD_JOBS,
+      nowSec: 8_001,
+    });
+    await prepareScheduledCheckpointRecoveryForSlot(db, {
+      scheduleKey: current.scheduleKey,
+      slotStartedAt: current.slotStartedAt,
+      job: current.job,
+      childJobs: CHILD_JOBS,
+      nowSec: 8_100,
+    });
+
+    const claimed = await claimNextScheduledCheckpointRecovery(db, {
+      job: "sync-live-reserves",
+      childJobs: CHILD_JOBS,
+      owner: "recovery-owner",
+      leaseSec: 60,
+      expectedQueueHash: "queue-current",
+      nowSec: 8_101,
+    });
+
+    expect(claimed).toMatchObject({
+      slotStartedAt: 8_000,
+      attemptNo: 2,
+      queueHash: "queue-current",
+      state: "recovering",
+    });
+  });
+
+  it("retires finished incompatible checkpoints and clears only their pending domain attempt", async () => {
+    const { sqlite, db } = harness();
+    const checkpoint = await beginScheduledCheckpoint(db, {
+      scheduleKey: "fourHourlyReserveSync",
+      slotStartedAt: 9_000,
+      job: "sync-live-reserves",
+      invocationId: "old-owner",
+      queueHash: "queue-old",
+      nextItemKey: "coin-old",
+      itemsTotal: 100,
+      childJobs: CHILD_JOBS,
+      nowSec: 9_001,
+    });
+    await markScheduledCheckpointItemStarted(db, checkpoint, {
+      itemKey: "coin-old",
+      domainAttemptId: "domain-attempt-old",
+      itemsDone: 40,
+      itemsTotal: 100,
+      nowSec: 9_010,
+    });
+    sqlite.prepare(
+      `INSERT INTO reserve_sync_state (
+         stablecoin_id, adapter_key, breaker_key, last_attempted_at, last_status,
+         last_attempt_id, pending_attempt_id
+       ) VALUES ('coin-old', 'adapter', 'breaker', 9010, 'skipped', 'domain-attempt-old', 'domain-attempt-old')`,
+    ).run();
+    sqlite.prepare(
+      `INSERT INTO cron_slot_executions (
+         slot_key, slot_started_at, state, result_status, execution_owner,
+         execution_generation, started_at, finished_at, updated_at
+       ) VALUES ('fourHourlyReserveSync', 9000, 'finished', 'error', 'old-owner', 1, 9000, 9020, 9020)`,
+    ).run();
+
+    const retirement = await retireIncompatibleScheduledCheckpointRecoveries(db, {
+      scheduleKey: "fourHourlyReserveSync",
+      job: "sync-live-reserves",
+      childJobs: CHILD_JOBS,
+      expectedQueueHash: "queue-current",
+      nowSec: 9_100,
+    });
+
+    expect(retirement).toMatchObject({
+      candidates: 1,
+      retired: 1,
+      skippedActiveChildLease: 0,
+      retiredCheckpoints: [{ slotStartedAt: 9_000, attemptNo: 1, queueHash: "queue-old" }],
+    });
+    expect(sqlite.prepare(
+      "SELECT state, current_item_key, current_domain_attempt_id FROM worker_scheduled_checkpoints WHERE slot_started_at = 9000",
+    ).get()).toEqual({
+      state: "platform_abandoned",
+      current_item_key: null,
+      current_domain_attempt_id: null,
+    });
+    expect(sqlite.prepare(
+      "SELECT pending_attempt_id, last_error FROM reserve_sync_state WHERE stablecoin_id = 'coin-old'",
+    ).get()).toMatchObject({
+      pending_attempt_id: null,
+      last_error: expect.stringContaining("queue hash"),
+    });
+    expect(sqlite.prepare(
+      "SELECT status, attempt_id FROM reserve_sync_attempt_history WHERE stablecoin_id = 'coin-old'",
+    ).get()).toEqual({
+      status: "error",
+      attempt_id: "domain-attempt-old",
+    });
   });
 });
