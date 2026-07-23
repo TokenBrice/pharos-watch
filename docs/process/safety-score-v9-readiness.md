@@ -390,6 +390,48 @@ ignored research workspace's anchor-coherence plan):
    reserve dependency. The six adverse projections stay byte-identical —
    USDD 39, U 32, USDai 39, EURS 21, MIM 0, TUSD 48 (TUSD holds no measured
    routes).
+8. ROTATION-1 (2026-07-23 owner rulings D1-D6, the calibration program's
+   final identity rotation before release): five levers ship as one
+   identity-bound batch. Proportional common-mode severity banding extends
+   the existing chain-materiality treatment to `critical-dependency`
+   signals: `commonModeShareThreshold` moves 0.05 to 0.10 and
+   `commonModeHighShareThreshold` moves 0.10 to 0.25 in
+   `methodology-policy-candidate-v1.json`, so a measured common-mode share
+   under 10% stays low, 10% to under 25% grades moderate (79), and 25% or
+   more — or an unknown/unattributed share — stays fail-closed high (64);
+   pinned shares remain final per the existing measurement-finality ruling.
+   A new peg-matched `commodity-allocated` reserve-asset class (quality 90,
+   maturity not applicable) is admitted only where the reserve's held metal
+   equals the coin's peg metal (XAUT, PAXG, KAU, KAG, XAUM); a metal reserve
+   behind a non-metal peg keeps scoring as `other` (40) — the peg-match
+   predicate guards against relabeling an unrelated commodity position as
+   peg-matched collateral. Reviewed redemption routes gain two exit
+   credits: `buildOutputReview` (`worker/src/lib/safety-score-v9-extension-routes.ts`)
+   now values an unenumerated-asset collateral-basket output at the same
+   USD-normalized par valuation and mixed-collateral quality discount as an
+   enumerated one instead of returning null, and a reviewed resolved/open
+   route with a disclosed-as-undisclosed fee earns modeled capacity under a
+   new `undisclosedFeeRouteScoreCeiling` (52) instead of zero, gated by an
+   explicit exclusion for any coin carrying an active danger signal so the
+   credit cannot reach the hard-danger set. The oracle lane gains branch
+   materiality: a new `OracleRiskBranch.debtSharePct` field lets
+   `adaptOracleReview` (`worker/src/lib/safety-score-v9-extension.ts`) feed
+   `evaluateV9EconomicControl` (`shared/lib/safety-score-v9/control.ts`) a
+   share-gated worst-MATERIAL-branch read instead of an unconditional
+   worst-of-all-branches read; a weak branch under 10% of measured debt no
+   longer drags the whole CDP to the worst tier by itself, and a branch with
+   no measured share keeps failing closed at the worst tier. Seasoned-issuer
+   mint credit widens: `control.mintPostureGrading.seasonedCreditPoints`
+   moves 5 to 10, still bounded by the next mint-posture rung and still
+   unavailable to pinned or hard-danger coins. Riders in the same batch: a
+   per-coin AUSD mint-supervision ruling, a DOLA mechanism-overlay honesty
+   downgrade, and cap/ceiling reason-string corrections that were
+   foregrounding the wrong driver for measured-share caps.
+   `docs/process/safety-score-v9-rollout.md` records the paired
+   qualifying-window amendment (14 to 8 consecutive UTC days) that ships
+   with this batch. This entry records the batch's scope; its policy and
+   evaluation-build digests are added here once the batch is deployed and
+   the identity is frozen.
 
 The final candidate identity of the chain is policy digest
 `76bb98ce18a7f798a2953fb3fce86c36b4809994cfbcb4310d0a7b9e4d3037d1` and
