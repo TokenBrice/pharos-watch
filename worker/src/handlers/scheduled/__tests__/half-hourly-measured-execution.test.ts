@@ -7,11 +7,12 @@ function result(
   status: NonNullable<CronResult["status"]>,
   lane: string,
   attemptedFailureCount = 0,
+  cursor?: { deferredCount: number; cursorWriteStatus: string },
 ): CronResult {
   return {
     status,
     itemCount: 1,
-    metadata: JSON.stringify({ lane, attemptedFailureCount }),
+    metadata: JSON.stringify({ lane, attemptedFailureCount, ...cursor }),
     productivity: { productive: true, reason: `${lane}-published` },
   };
 }
@@ -39,6 +40,19 @@ describe("half-hourly measured execution result aggregation", () => {
     const merged = mergeMeasuredExecutionResults(
       result("degraded", "evm", 1),
       result("ok", "solana"),
+      result("ok", "tron"),
+    );
+
+    expect(merged.status).toBe("degraded");
+  });
+
+  it("preserves a non-durable shadow deferral as degradation", () => {
+    const merged = mergeMeasuredExecutionResults(
+      result("ok", "evm"),
+      result("degraded", "solana", 0, {
+        deferredCount: 4,
+        cursorWriteStatus: "write-failed",
+      }),
       result("ok", "tron"),
     );
 

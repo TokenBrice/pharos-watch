@@ -20,6 +20,21 @@ function parseMetadata(value: string | undefined): unknown {
   return tryParseJson(value, { onFailure: () => undefined }) ?? value;
 }
 
+function hasNonDurableShadowDeferral(metadata: unknown): boolean {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false;
+  const row = metadata as Record<string, unknown>;
+  const cursorWriteStatus = row.cursorWriteStatus;
+  const deferredCount = row.deferredCount;
+  return (
+    cursorWriteStatus === "write-failed" ||
+    (
+      typeof deferredCount === "number" &&
+      deferredCount > 0 &&
+      cursorWriteStatus !== "written"
+    )
+  );
+}
+
 async function settleMeasuredExecutionLane(name: string, run: Promise<CronResult>): Promise<CronResult> {
   try {
     return await run;
@@ -37,12 +52,19 @@ export function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResul
   const evmStatus = evm.status ?? "ok";
   const solanaStatus = solana.status ?? "ok";
   const tronStatus = tron.status ?? "ok";
+  const evmMetadata = parseMetadata(evm.metadata);
+  const solanaMetadata = parseMetadata(solana.metadata);
+  const tronMetadata = parseMetadata(tron.metadata);
+  const shadowCursorFailure =
+    hasNonDurableShadowDeferral(solanaMetadata) ||
+    hasNonDurableShadowDeferral(tronMetadata);
   // Native lanes are activation-gated shadows: retain their degraded diagnostics
-  // without changing active EVM health, while invocation errors remain terminal.
+  // without changing active EVM health. Invocation errors remain terminal, and
+  // non-durable deferrals remain degraded because they can starve the shadow tail.
   const status =
     evmStatus === "error" || solanaStatus === "error" || tronStatus === "error"
       ? "error"
-      : evmStatus === "degraded"
+      : evmStatus === "degraded" || shadowCursorFailure
         ? "degraded"
         : evmStatus === "skipped_neutral" && solanaStatus === "skipped_neutral" && tronStatus === "skipped_neutral"
           ? "skipped_neutral"
@@ -56,9 +78,9 @@ export function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResul
     itemCount: (evm.itemCount ?? 0) + (solana.itemCount ?? 0) + (tron.itemCount ?? 0),
     metadata: JSON.stringify({
       laneStatuses: { evm: evmStatus, solana: solanaStatus, tron: tronStatus },
-      evm: parseMetadata(evm.metadata),
-      solana: parseMetadata(solana.metadata),
-      tron: parseMetadata(tron.metadata),
+      evm: evmMetadata,
+      solana: solanaMetadata,
+      tron: tronMetadata,
     }),
     productivity: {
       productive,

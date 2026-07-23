@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import {
   admitTargetsWithinBudget,
-  estimateTargetAdmissionRpcRequests,
+  estimateAdmissionCohortRpcRequests,
   hasCompleteDexMeasuredQuoteProgress,
   resolveMeasuredExecutionCronStatus,
   resolveMeasuredExecutionQuoteFailureReason,
@@ -44,23 +44,23 @@ function target(
 }
 
 describe("measured execution overflow admission", () => {
-  it("estimates batch, pool-binding, and singleton-retry request headroom per target", () => {
-    expect(estimateTargetAdmissionRpcRequests(target("coin-low", 100_000))).toBe(2);
-    expect(estimateTargetAdmissionRpcRequests(target("coin-high", 10_000_000))).toBe(3);
+  it("estimates each execution phase plus singleton-retry headroom", () => {
+    expect(estimateAdmissionCohortRpcRequests([target("coin-low", 100_000)])).toBe(7);
+    expect(estimateAdmissionCohortRpcRequests([target("coin-high", 10_000_000)])).toBe(10);
   });
 
   it("rotates the deterministic coin-level tail instead of starving it", () => {
     const targets = [target("coin-a", 100_000), target("coin-b", 100_000), target("coin-c", 100_000)];
     const first = admitTargetsWithinBudget(targets, {
-      maxEstimatedRpcRequests: 2,
+      maxEstimatedRpcRequests: 7,
     });
     const second = admitTargetsWithinBudget(targets, {
       cursor: first.nextCursor,
-      maxEstimatedRpcRequests: 2,
+      maxEstimatedRpcRequests: 7,
     });
     const third = admitTargetsWithinBudget(targets, {
       cursor: second.nextCursor,
-      maxEstimatedRpcRequests: 2,
+      maxEstimatedRpcRequests: 7,
     });
 
     expect([...first.admitted]).toEqual(["target-coin-a"]);
@@ -75,23 +75,30 @@ describe("measured execution overflow admission", () => {
     const targets = [
       target("coin-a", 100_000, "coin-a-1"),
       target("coin-a", 100_000, "coin-a-2"),
+      target("coin-a", 100_000, "coin-a-3"),
+      target("coin-a", 100_000, "coin-a-4"),
       target("coin-b", 10_000_000),
       target("coin-c", 100_000),
     ];
-    const first = admitTargetsWithinBudget(targets, { maxEstimatedRpcRequests: 4 });
+    const first = admitTargetsWithinBudget(targets, { maxEstimatedRpcRequests: 10 });
     const second = admitTargetsWithinBudget(targets, {
       cursor: first.nextCursor,
-      maxEstimatedRpcRequests: 4,
+      maxEstimatedRpcRequests: 10,
     });
     const third = admitTargetsWithinBudget(targets, {
       cursor: second.nextCursor,
-      maxEstimatedRpcRequests: 4,
+      maxEstimatedRpcRequests: 10,
     });
 
     expect([...first.admitted]).toEqual(["target-coin-b"]);
-    expect([...second.admitted]).toEqual(["target-coin-a-1", "target-coin-a-2"]);
+    expect([...second.admitted]).toEqual([
+      "target-coin-a-1",
+      "target-coin-a-2",
+      "target-coin-a-3",
+      "target-coin-a-4",
+    ]);
     expect([...third.admitted]).toEqual(["target-coin-c"]);
-    expect(new Set([...first.admitted, ...second.admitted, ...third.admitted]).size).toBe(4);
+    expect(new Set([...first.admitted, ...second.admitted, ...third.admitted]).size).toBe(6);
   });
 
   it("surfaces an oversized coin group and continues admitting later groups", () => {
@@ -101,7 +108,7 @@ describe("measured execution overflow admission", () => {
         target("coin-a", 100_000, "coin-a-2"),
         target("coin-b", 100_000),
       ],
-      { maxEstimatedRpcRequests: 3 },
+      { maxEstimatedRpcRequests: 7 },
     );
 
     expect(admission.oversizedCoinIds).toEqual(["coin-a"]);
@@ -147,7 +154,7 @@ describe("measured execution overflow admission", () => {
     ).toBe("degraded");
   });
 
-  it("attributes unresolved quoter work to a hard runtime budget stop", () => {
+  it("attributes unresolved adapter work to a hard runtime budget stop", () => {
     expect(
       resolveMeasuredExecutionQuoteFailureReason(
         "quoter-rpc-unavailable",
@@ -157,6 +164,15 @@ describe("measured execution overflow admission", () => {
     expect(
       resolveMeasuredExecutionQuoteFailureReason("quoter-rpc-unavailable", null),
     ).toBe("quoter-rpc-unavailable");
+    expect(
+      resolveMeasuredExecutionQuoteFailureReason("resolver-revert", "request-budget-exhausted"),
+    ).toBe("request-budget-exhausted");
+    expect(
+      resolveMeasuredExecutionQuoteFailureReason("pool-revert", "runtime-budget-exhausted"),
+    ).toBe("runtime-budget-exhausted");
+    expect(
+      resolveMeasuredExecutionQuoteFailureReason("invalid-quote-input", "request-budget-exhausted"),
+    ).toBe("invalid-quote-input");
   });
 });
 

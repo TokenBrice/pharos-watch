@@ -112,17 +112,57 @@ function deploymentForTarget(target: DexMeasuredExecutionTarget): TargetDeployme
   return deployment ? { kind: "quoter-v2", config: deployment } : null;
 }
 
-export function estimateTargetAdmissionRpcRequests(
-  target: DexMeasuredExecutionTarget,
+function countAdmissionBatches<T>(
+  values: readonly T[],
+  groupKey: (value: T) => string,
+): number {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    const key = groupKey(value);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.values()].reduce(
+    (sum, count) => sum + Math.ceil(count / CONSERVATIVE_MULTICALL_BATCH_SIZE),
+    0,
+  );
+}
+
+export function estimateAdmissionCohortRpcRequests(
+  targets: readonly DexMeasuredExecutionTarget[],
   refinementRounds = REFINEMENT_ROUNDS,
 ): number {
-  const batchedCalls =
-    1 +
-    getDexMeasuredExecutionProbeNotionals(target.retainedTvlUsd).length +
-    refinementRounds;
-  // Reserve one serialized inner-revert confirmation per target. Binding and
-  // quote calls otherwise share the smallest active adapter batch size.
-  return 1 + Math.ceil(batchedCalls / CONSERVATIVE_MULTICALL_BATCH_SIZE);
+  const executable = targets.flatMap((target) => {
+    const deployment = deploymentForTarget(target);
+    return deployment ? [{ target, deployment }] : [];
+  });
+  const quoterRows = executable.filter((row) => row.deployment.kind === "quoter-v2");
+  const quoteGroupKey = (row: typeof executable[number]) =>
+    `${row.target.chain}:${row.deployment.kind}`;
+  let estimatedRequests = countAdmissionBatches(
+    quoterRows,
+    (row) => {
+      const deployment = row.deployment;
+      return deployment.kind === "quoter-v2"
+        ? `${row.target.chain}:${deployment.config.adapterProfileId}:${deployment.config.factoryAddress}`
+        : `${row.target.chain}:unsupported`;
+    },
+  );
+
+  const probeNotionals = [...new Set(
+    executable.flatMap((row) => getDexMeasuredExecutionProbeNotionals(row.target.retainedTvlUsd)),
+  )];
+  for (const notional of probeNotionals) {
+    estimatedRequests += countAdmissionBatches(
+      executable.filter((row) =>
+        getDexMeasuredExecutionProbeNotionals(row.target.retainedTvlUsd).includes(notional),
+      ),
+      quoteGroupKey,
+    );
+  }
+  estimatedRequests += refinementRounds * countAdmissionBatches(executable, quoteGroupKey);
+  // Quoter inner reverts receive serialized confirmation; reserve one per target.
+  estimatedRequests += quoterRows.length;
+  return estimatedRequests;
 }
 
 export function admitTargetsWithinBudget(
@@ -156,16 +196,14 @@ export function admitTargetsWithinBudget(
   const oversizedCoinIds: string[] = [];
   const maxEstimatedRpcRequests = options.maxEstimatedRpcRequests ?? MAX_ADMISSION_RPC_REQUESTS;
   let estimatedRpcRequests = 0;
+  const admittedTargets: DexMeasuredExecutionTarget[] = [];
   let nextCursor = options.cursor ?? null;
   let overflowed = false;
   for (const [stablecoinId, coinTargets] of rotated) {
-    const coinEstimatedRpcRequests = coinTargets.reduce(
-      (sum, target) =>
-        sum + estimateTargetAdmissionRpcRequests(
-          target,
-          options.refinementRounds ?? REFINEMENT_ROUNDS,
-        ),
-      0,
+    const refinementRounds = options.refinementRounds ?? REFINEMENT_ROUNDS;
+    const coinEstimatedRpcRequests = estimateAdmissionCohortRpcRequests(
+      coinTargets,
+      refinementRounds,
     );
     if (coinEstimatedRpcRequests > maxEstimatedRpcRequests) {
       oversizedCoinIds.push(stablecoinId);
@@ -175,13 +213,18 @@ export function admitTargetsWithinBudget(
       }
       continue;
     }
-    if (overflowed || estimatedRpcRequests + coinEstimatedRpcRequests > maxEstimatedRpcRequests) {
+    const candidateEstimatedRpcRequests = estimateAdmissionCohortRpcRequests(
+      [...admittedTargets, ...coinTargets],
+      refinementRounds,
+    );
+    if (overflowed || candidateEstimatedRpcRequests > maxEstimatedRpcRequests) {
       if (!overflowed && admitted.size === 0) nextCursor = stablecoinId;
       overflowed = true;
       for (const target of coinTargets) deferred.add(target.targetId);
       continue;
     }
-    estimatedRpcRequests += coinEstimatedRpcRequests;
+    estimatedRpcRequests = candidateEstimatedRpcRequests;
+    admittedTargets.push(...coinTargets);
     for (const target of coinTargets) admitted.add(target.targetId);
     nextCursor = stablecoinId;
   }
@@ -218,7 +261,11 @@ export function resolveMeasuredExecutionQuoteFailureReason(
   failureReason: string | undefined,
   runtimeBudgetStopReason?: string | null,
 ): string {
-  return runtimeBudgetStopReason && failureReason === "quoter-rpc-unavailable"
+  const budgetSensitiveFailure =
+    failureReason === "quoter-rpc-unavailable" ||
+    failureReason === "resolver-revert" ||
+    failureReason === "pool-revert";
+  return runtimeBudgetStopReason && budgetSensitiveFailure
     ? runtimeBudgetStopReason
     : failureReason ?? "quote-failed";
 }
@@ -531,7 +578,9 @@ export async function syncDexMeasuredExecution(
             rpcBudget,
             deploymentVerified: true,
           });
-          outcomes.forEach((outcome, index) => applyQuoteOutcome(adapterRequests[index]!.state, outcome));
+          outcomes.forEach((outcome, index) =>
+            applyQuoteOutcome(adapterRequests[index]!.state, outcome, rpcBudget.stopReason),
+          );
         } else {
           const outcomes = await quoteCurveCryptoSwapRequests({
             requests: adapterRequests.map(({ state, inputUsd }) => ({
@@ -545,7 +594,9 @@ export async function syncDexMeasuredExecution(
             signal,
             rpcBudget,
           });
-          outcomes.forEach((outcome, index) => applyQuoteOutcome(adapterRequests[index]!.state, outcome));
+          outcomes.forEach((outcome, index) =>
+            applyQuoteOutcome(adapterRequests[index]!.state, outcome, rpcBudget.stopReason),
+          );
         }
         if (rpcBudget.isChainCircuitOpen(adapterRequests[0]!.state.target.chain)) {
           for (const { state } of adapterRequests) state.failedReason = "chain-circuit-open";
