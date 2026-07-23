@@ -748,7 +748,10 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         grading.attestationOnlyReconciled,
       ].sort((left, right) => left - right);
       const nextRung = ladder.find((value) => value > gradedPostureScore);
-      const ceiling = nextRung === undefined ? gradedPostureScore : nextRung;
+      // Strictly below the next rung: a seasoned credit rewards longevity but can
+      // never make a lower posture class read identical to the class above it
+      // (adversarial-review finding on the credit widening to 10).
+      const ceiling = nextRung === undefined ? gradedPostureScore : nextRung - 1;
       return Math.min(gradedPostureScore + grading.seasonedCreditPoints, ceiling);
     })();
     components.push({
