@@ -32,11 +32,11 @@ afterEach(() => {
 });
 
 describe("SafetyScoreV9Client", () => {
-  it("presents the candidate as an explicit no-go while exposing pillar and review evidence", () => {
+  it("presents the candidate as advisory while exposing pillar and review evidence", () => {
     render(<SafetyScoreV9Client />);
 
     expect(screen.getByRole("heading", { level: 1, name: "Safety Score V9 candidate" })).toBeTruthy();
-    expect(screen.getByText("No-go for activation")).toBeTruthy();
+    expect(screen.getByText("Advisory shadow")).toBeTruthy();
     expect(screen.getByText("V8 remains active")).toBeTruthy();
     expect(screen.getByText("Candidate asset cards")).toBeTruthy();
     expect(screen.getByText("Grade distribution")).toBeTruthy();
@@ -46,17 +46,16 @@ describe("SafetyScoreV9Client", () => {
     expect(screen.getByText("Independent validation is not sealed")).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Run counts" })).toBeTruthy();
     expect(screen.getByText("1 succeeded · 0 failed")).toBeTruthy();
-    expect(screen.getByText("Routine summary only")).toBeTruthy();
   });
 
-  it("filters the candidate workbench without hiding the release state", () => {
+  it("filters the candidate workbench without hiding the advisory state", () => {
     render(<SafetyScoreV9Client />);
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Filter assets" }), { target: { value: "coin-b" } });
     const assetTable = screen.getByRole("table", { name: "Safety Score V9 candidate cards and V8 comparison" });
     expect(within(assetTable).queryByText("coin-a")).toBeNull();
     expect(within(assetTable).getByText("coin-b")).toBeTruthy();
-    expect(screen.getByText("No-go for activation")).toBeTruthy();
+    expect(screen.getByText("Advisory shadow")).toBeTruthy();
   });
 
   it("renders a guarded unavailable state and never implies activation", () => {

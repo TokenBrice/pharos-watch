@@ -99,7 +99,6 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/lib/__tests__/safety-score-v9-extension-mechanism.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-extension-routes.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-fact-set.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-release-coverage.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-shadow-runner.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-shadow.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-store.test.ts",

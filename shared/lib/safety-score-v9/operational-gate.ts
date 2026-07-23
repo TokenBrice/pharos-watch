@@ -10,7 +10,9 @@ export const V9_SHADOW_REQUIRED_COVERAGE_FLOOR_IDS = [
   "scheduled-start-latency",
 ] as const;
 
-// Shortened from 14 by owner ruling 2026-07-23 (rollout amendment; daily gates unchanged).
+// Legacy release-window values remain in the published operational digest for
+// identity compatibility. No activation gate consumes them after the
+// 2026-07-23 owner ruling.
 export const V9_SHADOW_MINIMUM_QUALIFYING_DAYS = 8;
 export const V9_SHADOW_MINIMUM_PRODUCER_CYCLES = 2;
 export const V9_SHADOW_DAILY_START_OFFSET_SEC = 30 * 60;
@@ -19,14 +21,14 @@ export const V9_SHADOW_DIFF_ABSOLUTE_REVIEW_DELTA = 5;
 export const V9_SHADOW_DIFF_TOP_CUTOFF_REVIEW_DELTA = 2;
 /**
  * Maximum score drift, in points, that a recorded movement disposition may carry across.
- * Anchored to the reviewed V8 and V9 scores, so cumulative drift is bounded for the whole
- * window rather than per run. Sits strictly inside the declared
+ * Anchored to the reviewed V8 and V9 scores, so cumulative drift is bounded across
+ * observations rather than per run. Sits strictly inside the declared
  * `V9_SHADOW_DIFF_ABSOLUTE_REVIEW_DELTA` materiality standard.
  */
 export const V9_SHADOW_MOVEMENT_REVIEW_CARRY_SCORE_DRIFT = 3;
 /**
- * Movement adjudication is a property of the methodology transition, not of the pipeline, so
- * it is evaluated once at window end. Pipeline-stability floors still gate every day.
+ * Legacy identity field retained in the operational digest. Movement reviews
+ * are now advisory and are not evaluated by an activation gate.
  */
 export const V9_SHADOW_MOVEMENT_ADJUDICATION_SCOPE = "window-end-v1";
 const V9_SHADOW_ARCHIVE_SELECTION_POLICY = "first-final-distinct-anomaly-v1";

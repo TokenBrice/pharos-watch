@@ -3,6 +3,7 @@ import {
   SafetyScoreV9DiffReportSchema,
   SafetyScoreV9ReplayArtifactSchema,
   SafetyScoreV9ShadowDailySchema,
+  SafetyScoreV9ShadowEnvelopeSchema,
   assessSafetyScoreV9ShadowQualification,
   buildSafetyScoreV9DiffReport,
   buildSafetyScoreV9ShadowDailyFailure,
@@ -184,13 +185,13 @@ function envelope(
     compilerExceptions?: string[];
     futureDatedEvidenceIds?: string[];
     publicationRegression?: boolean;
-    unresolvedReleaseBlockers?: string[];
+    historicalUnresolvedReleaseBlockers?: string[];
     unresolvedCriticalMovementIds?: string[];
     candidateOverrides?: Partial<SafetyScoreV9Response>;
   } = {},
 ): SafetyScoreV9ShadowEnvelope {
   const candidateInput = candidate(cards, options.candidateOverrides);
-  return buildSafetyScoreV9ShadowEnvelope({
+  const current = buildSafetyScoreV9ShadowEnvelope({
     candidate: candidateInput,
     expectedActiveIds: options.expectedActiveIds ?? cards.map((card) => card.id),
     compilerFactSchemaDigest: COMPILER_SCHEMA_DIGEST,
@@ -200,14 +201,23 @@ function envelope(
     futureDatedEvidenceIds: options.futureDatedEvidenceIds,
     coverageFloors: options.coverageFloors ?? [PASSING_FLOOR],
     publicationRegression: options.publicationRegression,
-    unresolvedReleaseBlockers: options.unresolvedReleaseBlockers,
     unresolvedCriticalMovementIds: options.unresolvedCriticalMovementIds,
-    replayArtifacts: options.replayArtifacts ?? replayArtifacts(candidateInput),
+  });
+  if (options.replayArtifacts === undefined && options.historicalUnresolvedReleaseBlockers === undefined) return current;
+  return SafetyScoreV9ShadowEnvelopeSchema.parse({
+    ...current,
+    coverage: {
+      ...current.coverage,
+      unresolvedReleaseBlockers: [...(options.historicalUnresolvedReleaseBlockers ?? [])].sort(),
+    },
+    replayArtifacts: [...(options.replayArtifacts ?? [])].sort((left, right) =>
+      left.kind < right.kind ? -1 : left.kind > right.kind ? 1 : 0,
+    ),
   });
 }
 
 describe("Safety Score V9 shadow envelope", () => {
-  it("binds exact candidate identities, coverage, compact results, and replay artifacts", () => {
+  it("binds exact candidate identities and compact current observations", () => {
     const result = envelope([
       v9Card("zeta", null, "NR", { reasonCodes: ["insufficient-evidence"] }),
       v9Card("alpha", 90, "A"),
@@ -233,13 +243,7 @@ describe("Safety Score V9 shadow envelope", () => {
         notRatedResultCount: 1,
       },
     });
-    expect(result.replayArtifacts.map((artifact) => artifact.kind)).toEqual([
-      "base-input",
-      "evaluation-build",
-      "fact-set",
-      "policy",
-      "result",
-    ]);
+    expect(result.replayArtifacts).toEqual([]);
   });
 
   it("refuses active lifecycle and replay artifacts bound to another identity", () => {
@@ -255,8 +259,8 @@ describe("Safety Score V9 shadow envelope", () => {
     expect(() => envelope(undefined, { replayArtifacts: artifacts })).toThrow("Replay artifact identity");
   });
 
-  it("qualifies an exact covered generation without requiring retained artifacts", () => {
-    expect(assessSafetyScoreV9ShadowQualification(envelope(undefined, { replayArtifacts: [] }))).toEqual({
+  it("qualifies an exact covered generation without retained artifacts", () => {
+    expect(assessSafetyScoreV9ShadowQualification(envelope())).toEqual({
       qualifies: true,
       blockers: [],
     });
@@ -266,13 +270,12 @@ describe("Safety Score V9 shadow envelope", () => {
     const candidateInput = candidate([v9Card("alpha", 90, "A")]);
     const result = envelope(candidateInput.cards, {
       expectedActiveIds: ["alpha", "missing"],
-      replayArtifacts: [replayArtifact("base-input", candidateInput, "pending")],
       coverageFloors: [{ ...PASSING_FLOOR, status: "fail", detail: "Coverage is below the floor" }],
       duplicateIds: ["alpha"],
       compilerExceptions: ["compiler-exception:alpha"],
       futureDatedEvidenceIds: ["alpha"],
       publicationRegression: true,
-      unresolvedReleaseBlockers: ["release-owner-review"],
+      historicalUnresolvedReleaseBlockers: ["release-owner-review"],
       unresolvedCriticalMovementIds: ["alpha"],
     });
 
@@ -351,7 +354,7 @@ function dailyDiff(shadow: SafetyScoreV9ShadowEnvelope) {
 }
 
 function successfulDaily(previous: SafetyScoreV9ShadowDaily | null = null) {
-  const shadow = envelope(undefined, { replayArtifacts: [] });
+  const shadow = envelope();
   return buildSafetyScoreV9ShadowDailySuccess({
     utcDay: "2026-07-13",
     selectedAtSec: SCHEDULED_FOR + 15,
@@ -406,35 +409,6 @@ describe("Safety Score V9 compact daily history", () => {
     expect(recovered.latestError).toMatchObject({ stage: "compile", code: "compile-failed" });
   });
 
-  it("requires all five artifact keys only when a run is selected for archive", () => {
-    const shadow = envelope(undefined, { replayArtifacts: [] });
-    const diff = dailyDiff(shadow);
-    expect(() =>
-      buildSafetyScoreV9ShadowDailySuccess({
-        utcDay: "2026-07-13",
-        selectedAtSec: SCHEDULED_FOR + 15,
-        updatedAtSec: SCHEDULED_FOR + 20,
-        envelope: shadow,
-        diff,
-        archiveSelectionReasons: ["anomaly"],
-      }),
-    ).toThrow("one replay artifact of every kind");
-
-    const artifactKeys = (["base-input", "evaluation-build", "fact-set", "policy", "result"] as const).map(
-      (kind, index) => `${kind}:${digest(String(index + 2))}`,
-    );
-    const archived = buildSafetyScoreV9ShadowDailySuccess({
-      utcDay: "2026-07-13",
-      selectedAtSec: SCHEDULED_FOR + 15,
-      updatedAtSec: SCHEDULED_FOR + 20,
-      envelope: shadow,
-      diff,
-      archiveSelectionReasons: ["anomaly"],
-      artifactKeys,
-    });
-    expect(archived.selectedRun).toMatchObject({ archiveSelectionReasons: ["anomaly"], artifactKeys });
-  });
-
   it("re-selects the same UTC day with a later success and rejects backwards selection", () => {
     const daily = successfulDaily();
     // Intra-day refresh: a later success re-selects the day and increments
@@ -454,38 +428,29 @@ describe("Safety Score V9 compact daily history", () => {
   });
 });
 
-const START_LATENCY_FLOOR_PASS: SafetyScoreV9CoverageFloor = {
+const RETIRED_START_FLOOR: SafetyScoreV9CoverageFloor = {
   id: "scheduled-start-latency",
   status: "pass",
-  observed: 300,
-  required: "<= 3600 seconds after the scheduled daily selection point",
-  detail: "The daily shadow attempt began inside the preregistered start window",
-};
-const START_LATENCY_FLOOR_FAIL: SafetyScoreV9CoverageFloor = {
-  ...START_LATENCY_FLOOR_PASS,
-  status: "fail",
-  observed: 7_200,
-  detail: "The daily shadow attempt began too late to represent a complete prospective UTC day",
+  observed: 1,
+  required: "retired",
+  detail: "Retired start-window prerequisite retained only for shadow-history compatibility",
 };
 
-const PIN_DAY = "2026-07-13";
-const PIN_DAY_START_SEC = Date.parse(`${PIN_DAY}T00:00:00.000Z`) / 1_000;
-const IN_WINDOW_EARLY_SEC = PIN_DAY_START_SEC + 1_800 + 120;
-const IN_WINDOW_LATE_SEC = PIN_DAY_START_SEC + 1_800 + 3_000;
-const AFTER_WINDOW_SEC = PIN_DAY_START_SEC + 4 * 3_600;
-const LATE_DAY_SEC = PIN_DAY_START_SEC + 8 * 3_600;
+const OBSERVATION_DAY = "2026-07-13";
+const OBSERVATION_DAY_START_SEC = Date.parse(`${OBSERVATION_DAY}T00:00:00.000Z`) / 1_000;
+const FIRST_OBSERVATION_SEC = OBSERVATION_DAY_START_SEC + 1_800 + 120;
+const LATER_OBSERVATION_SEC = OBSERVATION_DAY_START_SEC + 4 * 3_600;
+const LATEST_OBSERVATION_SEC = OBSERVATION_DAY_START_SEC + 8 * 3_600;
 
 function latencyDaily(
   previous: SafetyScoreV9ShadowDaily | null,
   selectedAtSec: number,
-  inWindow: boolean,
 ): SafetyScoreV9ShadowDaily {
   const shadow = envelope(undefined, {
-    replayArtifacts: [],
-    coverageFloors: [inWindow ? START_LATENCY_FLOOR_PASS : START_LATENCY_FLOOR_FAIL],
+    coverageFloors: [RETIRED_START_FLOOR],
   });
   return buildSafetyScoreV9ShadowDailySuccess({
-    utcDay: PIN_DAY,
+    utcDay: OBSERVATION_DAY,
     selectedAtSec,
     updatedAtSec: selectedAtSec + 5,
     previous: previous ?? undefined,
@@ -494,60 +459,34 @@ function latencyDaily(
   });
 }
 
-describe("Safety Score V9 scheduled-start-latency selection pin", () => {
-  it("pins the earliest in-window success while later refreshes only advance daily metadata", () => {
-    const first = latencyDaily(null, IN_WINDOW_EARLY_SEC, true);
-    expect(first.selectedRun?.selectedAtSec).toBe(IN_WINDOW_EARLY_SEC);
+describe("Safety Score V9 current daily observation", () => {
+  it("replaces an earlier observation on every successful refresh", () => {
+    const first = latencyDaily(null, FIRST_OBSERVATION_SEC);
+    expect(first.selectedRun?.selectedAtSec).toBe(FIRST_OBSERVATION_SEC);
 
-    const refreshed = latencyDaily(first, AFTER_WINDOW_SEC, false);
+    const refreshed = latencyDaily(first, LATER_OBSERVATION_SEC);
     expect(refreshed.attemptCounts).toEqual({ successful: 2, failed: 0 });
-    expect(refreshed.updatedAtSec).toBe(AFTER_WINDOW_SEC + 5);
-    expect(refreshed.selectedRun).toEqual(first.selectedRun);
+    expect(refreshed.updatedAtSec).toBe(LATER_OBSERVATION_SEC + 5);
+    expect(refreshed.selectedRun?.selectedAtSec).toBe(LATER_OBSERVATION_SEC);
+    expect(refreshed.selectedRun?.qualification).toEqual({
+      qualifies: true,
+      blockers: [],
+    });
     expect(SafetyScoreV9ShadowDailySchema.parse(refreshed)).toEqual(refreshed);
 
-    const lateAgain = latencyDaily(refreshed, LATE_DAY_SEC, false);
-    expect(lateAgain.selectedRun).toEqual(first.selectedRun);
+    const lateAgain = latencyDaily(refreshed, LATEST_OBSERVATION_SEC);
+    expect(lateAgain.selectedRun?.selectedAtSec).toBe(LATEST_OBSERVATION_SEC);
     expect(lateAgain.attemptCounts.successful).toBe(3);
   });
 
-  it("keeps the earliest of multiple in-window successes", () => {
-    const first = latencyDaily(null, IN_WINDOW_EARLY_SEC, true);
-    const second = latencyDaily(first, IN_WINDOW_LATE_SEC, true);
-    expect(second.selectedRun?.selectedAtSec).toBe(IN_WINDOW_EARLY_SEC);
-    expect(second.attemptCounts.successful).toBe(2);
-  });
-
-  it("re-selects the latest success while no in-window run exists", () => {
-    const first = latencyDaily(null, AFTER_WINDOW_SEC, false);
-    const refreshed = latencyDaily(first, LATE_DAY_SEC, false);
-    expect(refreshed.selectedRun?.selectedAtSec).toBe(LATE_DAY_SEC);
-    expect(refreshed.attemptCounts.successful).toBe(2);
-  });
-
-  it("pins a pre-deploy in-window row loaded from storage", () => {
-    // Rows written before the pin shipped carry no extra fields: the pin
-    // reads only the selected run's own coverage floors, so a stored row
-    // round-tripped through the canonical schema behaves identically.
-    const stored = SafetyScoreV9ShadowDailySchema.parse(
-      JSON.parse(JSON.stringify(latencyDaily(null, IN_WINDOW_EARLY_SEC, true))),
-    );
-    const refreshed = latencyDaily(stored, AFTER_WINDOW_SEC, false);
-    expect(refreshed.selectedRun).toEqual(stored.selectedRun);
-
-    const storedLate = SafetyScoreV9ShadowDailySchema.parse(
-      JSON.parse(JSON.stringify(latencyDaily(null, AFTER_WINDOW_SEC, false))),
-    );
-    expect(latencyDaily(storedLate, LATE_DAY_SEC, false).selectedRun?.selectedAtSec).toBe(LATE_DAY_SEC);
-  });
-
-  it("keeps the backwards re-selection guard ahead of the pin", () => {
-    const first = latencyDaily(null, IN_WINDOW_EARLY_SEC, true);
-    const shadow = envelope(undefined, { replayArtifacts: [], coverageFloors: [START_LATENCY_FLOOR_FAIL] });
+  it("keeps the backwards re-selection guard", () => {
+    const first = latencyDaily(null, FIRST_OBSERVATION_SEC);
+    const shadow = envelope(undefined, { coverageFloors: [RETIRED_START_FLOOR] });
     expect(() =>
       buildSafetyScoreV9ShadowDailySuccess({
-        utcDay: PIN_DAY,
-        selectedAtSec: IN_WINDOW_EARLY_SEC - 1,
-        updatedAtSec: IN_WINDOW_EARLY_SEC + 10,
+        utcDay: OBSERVATION_DAY,
+        selectedAtSec: FIRST_OBSERVATION_SEC - 1,
+        updatedAtSec: FIRST_OBSERVATION_SEC + 10,
         previous: first,
         envelope: shadow,
         diff: dailyDiff(shadow),
@@ -555,45 +494,32 @@ describe("Safety Score V9 scheduled-start-latency selection pin", () => {
     ).toThrow("cannot move the selected run backwards");
   });
 
-  it("refuses archive evidence that cannot bind to the pinned run", () => {
-    const first = latencyDaily(null, IN_WINDOW_EARLY_SEC, true);
-    const shadow = envelope(undefined, { replayArtifacts: [], coverageFloors: [START_LATENCY_FLOOR_FAIL] });
-    expect(() =>
-      buildSafetyScoreV9ShadowDailySuccess({
-        utcDay: PIN_DAY,
-        selectedAtSec: AFTER_WINDOW_SEC,
-        updatedAtSec: AFTER_WINDOW_SEC + 5,
-        previous: first,
-        envelope: shadow,
-        diff: dailyDiff(shadow),
-        archiveSelectionReasons: ["anomaly"],
-      }),
-    ).toThrow("to become the day's selected run");
-  });
+  it("derives the latest success time for refresh throttling across failures", () => {
+    const first = latencyDaily(null, FIRST_OBSERVATION_SEC);
+    expect(safetyScoreV9ShadowLastSuccessfulAttemptAtSec(first)).toBe(FIRST_OBSERVATION_SEC + 5);
 
-  it("derives the latest success time for refresh throttling across pins and failures", () => {
-    const first = latencyDaily(null, IN_WINDOW_EARLY_SEC, true);
-    expect(safetyScoreV9ShadowLastSuccessfulAttemptAtSec(first)).toBe(IN_WINDOW_EARLY_SEC + 5);
-
-    const pinnedRefresh = latencyDaily(first, AFTER_WINDOW_SEC, false);
-    expect(safetyScoreV9ShadowLastSuccessfulAttemptAtSec(pinnedRefresh)).toBe(AFTER_WINDOW_SEC + 5);
+    const refreshed = latencyDaily(first, LATER_OBSERVATION_SEC);
+    expect(safetyScoreV9ShadowLastSuccessfulAttemptAtSec(refreshed)).toBe(LATER_OBSERVATION_SEC + 5);
 
     const failed = buildSafetyScoreV9ShadowDailyFailure({
-      utcDay: PIN_DAY,
-      updatedAtSec: LATE_DAY_SEC,
-      previous: pinnedRefresh,
-      failure: { atSec: LATE_DAY_SEC, stage: "compile", code: "compile-failed", message: "Fact compilation failed" },
+      utcDay: OBSERVATION_DAY,
+      updatedAtSec: LATEST_OBSERVATION_SEC,
+      previous: refreshed,
+      failure: {
+        atSec: LATEST_OBSERVATION_SEC,
+        stage: "compile",
+        code: "compile-failed",
+        message: "Fact compilation failed",
+      },
     });
-    // A failed latest attempt falls back to the pinned selection time so a
-    // retry is never throttled by the failure itself.
-    expect(safetyScoreV9ShadowLastSuccessfulAttemptAtSec(failed)).toBe(IN_WINDOW_EARLY_SEC);
+    expect(safetyScoreV9ShadowLastSuccessfulAttemptAtSec(failed)).toBe(LATER_OBSERVATION_SEC);
 
     expect(
       safetyScoreV9ShadowLastSuccessfulAttemptAtSec(
         buildSafetyScoreV9ShadowDailyFailure({
-          utcDay: PIN_DAY,
-          updatedAtSec: IN_WINDOW_EARLY_SEC,
-          failure: { atSec: IN_WINDOW_EARLY_SEC, stage: "compile", code: "compile-failed", message: "Compile failed" },
+          utcDay: OBSERVATION_DAY,
+          updatedAtSec: FIRST_OBSERVATION_SEC,
+          failure: { atSec: FIRST_OBSERVATION_SEC, stage: "compile", code: "compile-failed", message: "Compile failed" },
         }),
       ),
     ).toBeNull();
@@ -985,14 +911,14 @@ describe("Safety Score V8/V9 movement disposition carry", () => {
   });
 });
 
-describe("Safety Score V9 daily qualification scope", () => {
+describe("Safety Score V9 daily advisory checks", () => {
   it("does not block a day on unresolved movement adjudication alone", () => {
     const result = envelope([v9Card("alpha", 90, "A")], {
       unresolvedCriticalMovementIds: ["alpha"],
     });
 
     expect(assessSafetyScoreV9ShadowQualification(result)).toEqual({ qualifies: true, blockers: [] });
-    // The record is still carried on the run for the window-end gate to enforce.
+    // The movement remains visible to the owner without changing the advisory check.
     expect(result.coverage.unresolvedCriticalMovementIds).toEqual(["alpha"]);
   });
 

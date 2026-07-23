@@ -104,10 +104,15 @@ const EXPORT_ALLOWLIST = new Set([
   // their inputs coupled to the production policy, timing, and envelope schemas.
   "shared/lib/safety-score-v9-research.ts::loadV9MethodologyPolicy",
   "shared/lib/safety-score-v9/scenario-evaluator.ts::V9_SCENARIO_QUALITY_PILLARS",
+  // Retained inside published digests for historical identity compatibility
+  // after their activation-gate roles were retired.
+  "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts::SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST",
+  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MINIMUM_QUALIFYING_DAYS",
   "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MINIMUM_PRODUCER_CYCLES",
+  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MAX_START_DELAY_SEC",
+  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MOVEMENT_ADJUDICATION_SCOPE",
   "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_SCORE_BEARING_PRODUCER_INTERVALS_SEC",
   "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_SLOWEST_SCORE_BEARING_SOURCE_KEYS",
-  "worker/src/lib/safety-score-v9-shadow.ts::SafetyScoreV9ShadowEnvelopeCoreSchema",
   // Evidence queue entrypoints are consumed by its maintenance CLI and CLI
   // contract tests, both outside the runtime graph scanned here.
   "shared/lib/safety-score-v9/evidence-gap-queue.ts::buildV9EvidenceGapQueue",

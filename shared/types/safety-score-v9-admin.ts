@@ -302,15 +302,8 @@ export const SafetyScoreV9AdminResponseSchema = z.discriminatedUnion("status", [
     .object({
       schemaVersion: z.literal(SAFETY_SCORE_V9_ADMIN_RESPONSE_SCHEMA_VERSION),
       status: z.literal("available"),
-      // The pinned qualifying selection: drives the coverage floors, the review
-      // queue, and the activation accounting.
       envelope: SafetyScoreV9AdminShadowEnvelopeSchema,
       diff: SafetyScoreV9AdminDiffReportSchema,
-      // The most recent successful run: drives the "live identity" display
-      // (histogram, digests, published timestamp). Falls back to the selected
-      // pair before the first post-deploy refresh has landed.
-      latestEnvelope: SafetyScoreV9AdminShadowEnvelopeSchema,
-      latestDiff: SafetyScoreV9AdminDiffReportSchema,
       movementReviews: z.array(SafetyScoreV9MovementReviewRecordSchema),
       history: z.array(SafetyScoreV9AdminShadowDaySchema),
     })

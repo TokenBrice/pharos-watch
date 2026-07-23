@@ -12,24 +12,17 @@ export interface SafetyScoreV9AssetRow {
 }
 
 export interface SafetyScoreV9WorkspaceModel {
-  /** The pinned qualifying selection: drives floors, blockers, asset rows, and reviews. */
+  /** The retained daily selection: drives advisory checks, asset rows, and reviews. */
   candidate: SafetyScoreV9Response;
-  /** The most recent successful run: the currently deployed identity shown in the header. */
-  displayCandidate: SafetyScoreV9Response;
-  /** Whether the displayed latest run differs from the pinned qualifying selection. */
-  displayIsLatest: boolean;
   currentDay: ShadowDay | null;
-  blockers: string[];
+  findings: string[];
   failedCoverageFloors: AvailableResponse["envelope"]["coverage"]["coverageFloors"];
   gradeCounts: Array<{ grade: V9Grade; count: number }>;
-  /** Grade distribution of the latest run, shown in the header histogram. */
-  displayGradeCounts: Array<{ grade: V9Grade; count: number }>;
   assetRows: SafetyScoreV9AssetRow[];
   reviewRows: DiffCard[];
   pendingReviewCount: number;
   history: AvailableResponse["history"];
-  qualifyingDayCount: number;
-  isNoGo: true;
+  passingDayStreak: number;
 }
 
 const GRADE_ORDER: readonly V9Grade[] = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"];
@@ -50,6 +43,25 @@ function findCurrentDay(response: AvailableResponse): ShadowDay | null {
       .sort((left, right) => (right.selectedRun?.selectedAtSec ?? 0) - (left.selectedRun?.selectedAtSec ?? 0))[0] ??
     null
   );
+}
+
+function passingDayStreak(history: readonly ShadowDay[]): number {
+  const days = [...history].sort((left, right) => compareText(right.utcDay, left.utcDay));
+  let previousTimestamp: number | null = null;
+  let streak = 0;
+  for (const day of days) {
+    const timestamp = Date.parse(`${day.utcDay}T00:00:00.000Z`);
+    if (
+      !Number.isFinite(timestamp) ||
+      day.selectedRun?.qualification.qualifies !== true ||
+      (previousTimestamp !== null && previousTimestamp - timestamp !== 86_400_000)
+    ) {
+      break;
+    }
+    streak += 1;
+    previousTimestamp = timestamp;
+  }
+  return streak;
 }
 
 export function buildSafetyScoreV9WorkspaceModel(response: AvailableResponse): SafetyScoreV9WorkspaceModel {
@@ -94,15 +106,6 @@ export function buildSafetyScoreV9WorkspaceModel(response: AvailableResponse): S
     count: candidate.cards.filter((card) => card.grade === grade).length,
   })).filter(({ count }) => count > 0);
 
-  // The header follows the latest successful run so the operator sees the
-  // currently deployed identity. It is deliberately independent of the pinned
-  // qualifying selection that drives the floors, blockers, and review queue.
-  const displayCandidate = response.latestEnvelope.candidate;
-  const displayGradeCounts = GRADE_ORDER.map((grade) => ({
-    grade,
-    count: displayCandidate.cards.filter((card) => card.grade === grade).length,
-  })).filter(({ count }) => count > 0);
-
   const diffById = new Map(resolvedDiffCards.map((card) => [card.id, card] as const));
   const assetRows = candidate.cards
     .map((card) => ({ card, diff: diffById.get(card.id) ?? null }))
@@ -125,19 +128,15 @@ export function buildSafetyScoreV9WorkspaceModel(response: AvailableResponse): S
 
   return {
     candidate,
-    displayCandidate,
-    displayIsLatest: displayCandidate.publicationGenerationId !== candidate.publicationGenerationId,
     currentDay,
-    blockers: [...blockerSet].sort(compareText),
+    findings: [...blockerSet].sort(compareText),
     failedCoverageFloors,
     gradeCounts,
-    displayGradeCounts,
     assetRows,
     reviewRows,
     pendingReviewCount,
     history: [...response.history].sort((left, right) => compareText(right.utcDay, left.utcDay)),
-    qualifyingDayCount: response.history.filter((day) => day.selectedRun?.qualification.qualifies === true).length,
-    isNoGo: true,
+    passingDayStreak: passingDayStreak(response.history),
   };
 }
 

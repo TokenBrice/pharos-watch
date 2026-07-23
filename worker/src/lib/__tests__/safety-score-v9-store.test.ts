@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { sha256Hex as legacySha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public";
 import { describe, expect, it, vi } from "vitest";
@@ -13,29 +12,18 @@ import {
   buildSafetyScoreV9ShadowDailySuccess,
   buildSafetyScoreV9ShadowEnvelope,
   type SafetyScoreV8ComparableSnapshot,
-  type SafetyScoreV9CoverageFloor,
-  type SafetyScoreV9ReplayArtifactKind,
 } from "../safety-score-v9-shadow";
 import {
   SAFETY_SCORE_V9_SHADOW_CACHE_KEYS,
-  SAFETY_SCORE_V9_SHADOW_CACHE_MAX_COMPRESSED_BYTES,
-  SAFETY_SCORE_V9_SHADOW_CACHE_MAX_STORED_BYTES,
-  SafetyScoreV9StoreConflictError,
-  buildSafetyScoreV9LocalArtifactBundle,
-  buildSafetyScoreV9ReplayArtifact,
-  getSafetyScoreV9LocalArtifactBundleArtifacts,
-  getSafetyScoreV9LocalArtifactBundleReferences,
-  loadDisplaySafetyScoreV9DiffReport,
-  loadDisplaySafetyScoreV9ShadowEnvelope,
   loadLatestSafetyScoreV9DiffReport,
   loadLatestSafetyScoreV9ShadowEnvelope,
-  loadSafetyScoreV9ReplayArtifact,
   loadSafetyScoreV9ShadowHistory,
-  parseSafetyScoreV9ReplayArtifact,
-  persistSafetyScoreV9ReplayArtifact,
   persistSafetyScoreV9ShadowState,
-  type SafetyScoreV9StoredReplayArtifact,
 } from "../safety-score-v9-store";
+import {
+  SAFETY_SCORE_V9_SHADOW_CACHE_MAX_COMPRESSED_BYTES,
+  SAFETY_SCORE_V9_SHADOW_CACHE_MAX_STORED_BYTES,
+} from "../safety-score-v9-cache-codec";
 
 const SHADOW_MIGRATION_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -166,42 +154,13 @@ function productionScaleCandidate(): SafetyScoreV9Response {
   };
 }
 
-const ARTIFACT_IDENTITIES: Record<SafetyScoreV9ReplayArtifactKind, string> = {
-  "base-input": BASE_INPUT_GENERATION_ID,
-  "fact-set": FACT_SET_DIGEST,
-  policy: POLICY_DIGEST,
-  "evaluation-build": EVALUATION_BUILD_DIGEST,
-  result: RESULT_DIGEST,
-};
-
-const ARTIFACT_KINDS = ["base-input", "fact-set", "policy", "evaluation-build", "result"] as const;
-
-function artifactInput(kind: SafetyScoreV9ReplayArtifactKind) {
-  return {
-    kind,
-    identity: ARTIFACT_IDENTITIES[kind],
-    value: { artifact: kind, version: 1 },
-    createdAtSec: SCHEDULED_FOR_SEC + 21,
-  };
-}
-
-async function buildArtifactSet(): Promise<SafetyScoreV9StoredReplayArtifact[]> {
-  return Promise.all(ARTIFACT_KINDS.map((kind) => buildSafetyScoreV9ReplayArtifact(artifactInput(kind))));
-}
-
-function buildSuccessfulState(
-  candidateValue: SafetyScoreV9Response,
-  references: Awaited<ReturnType<typeof parseSafetyScoreV9ReplayArtifact>>["reference"][],
-  artifactKeys: string[],
-  coverageFloors: SafetyScoreV9CoverageFloor[] = [],
-) {
+function successfulState(candidateValue = candidate()) {
   const envelope = buildSafetyScoreV9ShadowEnvelope({
     candidate: candidateValue,
     expectedActiveIds: candidateValue.cards.map((card) => card.id),
     compilerFactSchemaDigest: COMPILER_FACT_SCHEMA_DIGEST,
     producerCapabilityDigest: PRODUCER_CAPABILITY_DIGEST,
-    coverageFloors,
-    replayArtifacts: references,
+    coverageFloors: [],
   });
   const v8: SafetyScoreV8ComparableSnapshot = {
     model: "v8",
@@ -226,279 +185,22 @@ function buildSuccessfulState(
     updatedAtSec: SCHEDULED_FOR_SEC + 24,
     envelope,
     diff,
-    archiveSelectionReasons: artifactKeys.length > 0 ? ["first"] : [],
-    artifactKeys,
   });
   return { envelope, diff, daily };
 }
 
-async function successfulState(
-  archived = false,
-  candidateValue = candidate(),
-  coverageFloors: SafetyScoreV9CoverageFloor[] = [],
-) {
-  const artifacts = archived ? await buildArtifactSet() : [];
-  const references = await Promise.all(
-    artifacts.map(async (artifact) => (await parseSafetyScoreV9ReplayArtifact(artifact)).reference),
-  );
-  return {
-    artifacts,
-    ...buildSuccessfulState(
-      candidateValue,
-      references,
-      artifacts.map((artifact) => artifact.artifactKey),
-      coverageFloors,
-    ),
-  };
-}
-
-async function locallyBundledSuccessfulState(candidateValue = candidate()) {
-  const localArtifactBundle = await buildSafetyScoreV9LocalArtifactBundle(ARTIFACT_KINDS.map(artifactInput));
-  const artifacts = getSafetyScoreV9LocalArtifactBundleArtifacts(localArtifactBundle);
-  return {
-    localArtifactBundle,
-    ...buildSuccessfulState(
-      candidateValue,
-      [...getSafetyScoreV9LocalArtifactBundleReferences(localArtifactBundle)],
-      artifacts.map((artifact) => artifact.artifactKey),
-    ),
-  };
-}
-
-describe("Safety Score v9 replay artifacts", () => {
-  it("round-trips canonical JSON and rejects a checksum mutation", async () => {
-    const artifact = await buildSafetyScoreV9ReplayArtifact({
-      kind: "policy",
-      identity: POLICY_DIGEST,
-      value: { zeta: [3, 2, 1], alpha: "stable" },
-      createdAtSec: SCHEDULED_FOR_SEC,
-    });
-    const parsed = await parseSafetyScoreV9ReplayArtifact<{ alpha: string; zeta: number[] }>(artifact, {
-      expectedKind: "policy",
-      expectedIdentity: POLICY_DIGEST,
-    });
-
-    expect(parsed.value).toEqual({ alpha: "stable", zeta: [3, 2, 1] });
-    expect(parsed.canonicalJson).toBe('{"alpha":"stable","zeta":[3,2,1]}');
-    expect(parsed.reference).toMatchObject({
-      kind: "policy",
-      identity: POLICY_DIGEST,
-      artifactRef: artifact.artifactKey,
-      contentSha256: artifact.contentSha256,
-      verification: { status: "verified", observedContentSha256: artifact.contentSha256 },
-    });
-
-    const wrongChecksum = digest("9");
-    await expect(
-      parseSafetyScoreV9ReplayArtifact({
-        ...artifact,
-        artifactKey: `policy:${wrongChecksum}`,
-        contentSha256: wrongChecksum,
-      }),
-    ).rejects.toThrow("checksum mismatch");
-
-    const bomPayload = await gzipBase64Utf8(`\uFEFF${parsed.canonicalJson}`);
-    const bomContentSha256 = legacySha256Hex(`\uFEFF${parsed.canonicalJson}`);
-    await expect(
-      parseSafetyScoreV9ReplayArtifact({
-        ...artifact,
-        artifactKey: `policy:${bomContentSha256}`,
-        contentSha256: bomContentSha256,
-        payload: bomPayload.payload,
-        storedBytes: bomPayload.payload.length,
-        uncompressedBytes: bomPayload.uncompressedBytes,
-      }),
-    ).rejects.toThrow("Malformed Safety Score v9 replay artifact JSON");
-  });
-
-  it("preserves a surrogate pair across the streaming UTF-8 chunk boundary", async () => {
-    const canonicalPrefix = '{"padding":"';
-    const padding = `${"a".repeat(65_535 - canonicalPrefix.length)}\u{1f600}tail`;
-    const expectedCanonicalJson = stableJsonStringifyV1({ padding });
-    expect(expectedCanonicalJson.charCodeAt(65_535)).toBeGreaterThanOrEqual(0xd800);
-    expect(expectedCanonicalJson.charCodeAt(65_536)).toBeGreaterThanOrEqual(0xdc00);
-
-    const artifact = await buildSafetyScoreV9ReplayArtifact({
-      kind: "result",
-      identity: RESULT_DIGEST,
-      value: { padding },
-      createdAtSec: SCHEDULED_FOR_SEC,
-    });
-    const parsed = await parseSafetyScoreV9ReplayArtifact<{ padding: string }>(artifact);
-
-    expect(parsed.canonicalJson).toBe(expectedCanonicalJson);
-    expect(parsed.value).toEqual({ padding });
-    expect(artifact.uncompressedBytes).toBe(new TextEncoder().encode(expectedCanonicalJson).byteLength);
-
-    const legacyPayload = await gzipBase64Utf8(expectedCanonicalJson);
-    const legacyContentSha256 = legacySha256Hex(expectedCanonicalJson);
-    const legacyArtifact: SafetyScoreV9StoredReplayArtifact = {
-      ...artifact,
-      artifactKey: `result:${legacyContentSha256}`,
-      contentSha256: legacyContentSha256,
-      payload: legacyPayload.payload,
-      storedBytes: legacyPayload.payload.length,
-      uncompressedBytes: legacyPayload.uncompressedBytes,
-    };
-    await expect(parseSafetyScoreV9ReplayArtifact(legacyArtifact)).resolves.toMatchObject({
-      canonicalJson: expectedCanonicalJson,
-      value: { padding },
-    });
-  });
-
-  it("rejects configured byte limits and an already-aborted build", async () => {
-    await expect(
-      buildSafetyScoreV9ReplayArtifact(
-        {
-          kind: "result",
-          identity: RESULT_DIGEST,
-          value: { padding: "x".repeat(200) },
-          createdAtSec: SCHEDULED_FOR_SEC,
-        },
-        { maxUncompressedBytes: 32 },
-      ),
-    ).rejects.toThrow("maximum is 32");
-
-    await expect(
-      buildSafetyScoreV9ReplayArtifact(
-        {
-          kind: "result",
-          identity: RESULT_DIGEST,
-          value: { padding: "\u00e9".repeat(100) },
-          createdAtSec: SCHEDULED_FOR_SEC,
-        },
-        { maxUncompressedBytes: 150 },
-      ),
-    ).rejects.toThrow("maximum is 150");
-
-    const controller = new AbortController();
-    controller.abort(new Error("shadow store stopped"));
-    await expect(
-      buildSafetyScoreV9ReplayArtifact(
-        {
-          kind: "result",
-          identity: RESULT_DIGEST,
-          value: { ok: true },
-          createdAtSec: SCHEDULED_FOR_SEC,
-        },
-        { signal: controller.signal },
-      ),
-    ).rejects.toThrow("shadow store stopped");
-  });
-
-  it("rejects an impossible stored payload before attempting base64 encoding", async () => {
-    const originalBtoa = btoa;
-    const encode = vi.fn(() => {
-      throw new Error("unexpected base64 encoding");
-    });
-    vi.stubGlobal("btoa", encode);
-    try {
-      await expect(
-        buildSafetyScoreV9ReplayArtifact(
-          {
-            kind: "result",
-            identity: RESULT_DIGEST,
-            value: { padding: "x".repeat(4_096) },
-            createdAtSec: SCHEDULED_FOR_SEC,
-          },
-          { maxStoredBytes: 1 },
-        ),
-      ).rejects.toThrow("compressed byte limit");
-      expect(encode).not.toHaveBeenCalled();
-    } finally {
-      vi.stubGlobal("btoa", originalBtoa);
-    }
-  });
-
-  it("uses an immutable insert and fails closed when one identity changes content", async () => {
-    const { sqlite, db } = createTestDatabase();
-    const prepare = vi.spyOn(db, "prepare");
-    const original = await buildSafetyScoreV9ReplayArtifact({
-      kind: "fact-set",
-      identity: FACT_SET_DIGEST,
-      value: { generation: 1 },
-      createdAtSec: SCHEDULED_FOR_SEC,
-    });
-    const conflict = await buildSafetyScoreV9ReplayArtifact({
-      kind: "fact-set",
-      identity: FACT_SET_DIGEST,
-      value: { generation: 2 },
-      createdAtSec: SCHEDULED_FOR_SEC + 1,
-    });
-
-    await expect(persistSafetyScoreV9ReplayArtifact(db, original)).resolves.toEqual(original);
-    await expect(persistSafetyScoreV9ReplayArtifact(db, original)).resolves.toEqual(original);
-    await expect(persistSafetyScoreV9ReplayArtifact(db, conflict)).rejects.toBeInstanceOf(
-      SafetyScoreV9StoreConflictError,
-    );
-
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_artifacts").get()).toEqual({ count: 1 });
-    const sql = prepare.mock.calls.map(([statement]) => statement).join("\n");
-    expect(sql).toContain("ON CONFLICT DO NOTHING");
-    expect(sql).not.toMatch(/INSERT\s+OR\s+REPLACE/i);
-    await expect(loadSafetyScoreV9ReplayArtifact(db, "fact-set", FACT_SET_DIGEST)).resolves.toEqual(original);
-  });
-});
-
 describe("Safety Score v9 shadow state persistence", () => {
-  it("trusts only an immutable locally built artifact bundle and still verifies external artifacts", async () => {
-    const localState = await locallyBundledSuccessfulState();
-    const externalState = await successfulState(true);
-    expect(Object.isFrozen(localState.localArtifactBundle)).toBe(true);
-    expect(Object.getPrototypeOf(localState.localArtifactBundle)).toBeNull();
-    expect(() =>
-      Object.setPrototypeOf(localState.localArtifactBundle, {
-        read: () => ({ artifacts: [], references: [] }),
-      }),
-    ).toThrow(TypeError);
-    const { sqlite, db } = createTestDatabase();
-    const originalDecompressionStream = DecompressionStream;
-    vi.stubGlobal(
-      "DecompressionStream",
-      class {
-        constructor() {
-          throw new Error("unexpected replay artifact decompression");
-        }
-      },
-    );
-
-    try {
-      await expect(persistSafetyScoreV9ShadowState(db, localState)).resolves.toBeUndefined();
-      await expect(persistSafetyScoreV9ShadowState(db, localState)).resolves.toBeUndefined();
-      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_artifacts").get()).toEqual({ count: 5 });
-
-      const storedBaseInput = sqlite
-        .prepare("SELECT payload FROM safety_score_v9_artifacts WHERE artifact_kind = 'base-input'")
-        .get() as { payload: string };
-      const replacement = storedBaseInput.payload[0] === "A" ? "B" : "A";
-      sqlite
-        .prepare("UPDATE safety_score_v9_artifacts SET payload = ? WHERE artifact_kind = 'base-input'")
-        .run(`${replacement}${storedBaseInput.payload.slice(1)}`);
-      await expect(persistSafetyScoreV9ShadowState(db, localState)).rejects.toThrow(
-        "unexpected replay artifact decompression",
-      );
-
-      const externalDb = createTestDatabase().db;
-      await expect(persistSafetyScoreV9ShadowState(externalDb, externalState)).rejects.toThrow(
-        "unexpected replay artifact decompression",
-      );
-    } finally {
-      vi.stubGlobal("DecompressionStream", originalDecompressionStream);
-    }
-
-    const forgedBundle = structuredClone(localState.localArtifactBundle) as typeof localState.localArtifactBundle;
-    const forgedState = { ...localState, localArtifactBundle: forgedBundle };
-    await expect(persistSafetyScoreV9ShadowState(createTestDatabase().db, forgedState)).rejects.toThrow(
-      "Invalid locally built Safety Score v9 artifact bundle",
-    );
-  });
-
-  it("persists one compact daily row and atomic latest cache values without routine artifacts", async () => {
+  it("persists one compact daily row and atomic canonical cache values", async () => {
     const { sqlite, db } = createTestDatabase();
     const state = await successfulState();
 
     await persistSafetyScoreV9ShadowState(db, state);
 
+    expect(state.envelope.replayArtifacts).toEqual([]);
+    expect(state.daily.selectedRun).toMatchObject({
+      archiveSelectionReasons: [],
+      artifactKeys: [],
+    });
     expect(
       sqlite
         .prepare(
@@ -525,7 +227,7 @@ describe("Safety Score v9 shadow state persistence", () => {
 
   it("round-trips a production-scale semantic envelope above the D1 value limit", async () => {
     const { sqlite, db } = createTestDatabase();
-    const state = await successfulState(false, productionScaleCandidate());
+    const state = await successfulState(productionScaleCandidate());
     const semanticBytes = new TextEncoder().encode(stableJsonStringifyV1(state.envelope)).byteLength;
     expect(semanticBytes).toBeGreaterThan(2_000_000);
 
@@ -562,7 +264,7 @@ describe("Safety Score v9 shadow state persistence", () => {
     await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(state.diff);
   }, 15_000);
 
-  it("continues to read legacy plain canonical latest values", async () => {
+  it("continues to read legacy plain canonical cache values", async () => {
     const { sqlite, db } = createTestDatabase();
     const state = await successfulState();
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
@@ -636,7 +338,7 @@ describe("Safety Score v9 shadow state persistence", () => {
     );
   });
 
-  it("increments a failed daily row on retry and retains selected archives only when requested", async () => {
+  it("increments a failed daily row before the first successful canonical state", async () => {
     const { sqlite, db } = createTestDatabase();
     const failure = buildSafetyScoreV9ShadowDailyFailure({
       utcDay: "2023-11-14",
@@ -649,7 +351,7 @@ describe("Safety Score v9 shadow state persistence", () => {
       },
     });
     await persistSafetyScoreV9ShadowState(db, { daily: failure });
-    const state = await successfulState(true);
+    const state = await successfulState();
     state.daily = buildSafetyScoreV9ShadowDailySuccess({
       utcDay: "2023-11-14",
       selectedAtSec: SCHEDULED_FOR_SEC + 23,
@@ -657,8 +359,6 @@ describe("Safety Score v9 shadow state persistence", () => {
       previous: failure,
       envelope: state.envelope,
       diff: state.diff,
-      archiveSelectionReasons: ["first"],
-      artifactKeys: state.artifacts.map((artifact) => artifact.artifactKey),
     });
     await persistSafetyScoreV9ShadowState(db, state);
 
@@ -668,10 +368,10 @@ describe("Safety Score v9 shadow state persistence", () => {
       successful_attempt_count: 1,
       failed_attempt_count: 1,
     });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_artifacts").get()).toEqual({ count: 5 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_artifacts").get()).toEqual({ count: 0 });
   });
 
-  it("atomically re-selects a newer intra-day success and records later failures", async () => {
+  it("atomically replaces the same-day canonical state and records later failures", async () => {
     const { sqlite, db } = createTestDatabase();
     const original = await successfulState();
     await persistSafetyScoreV9ShadowState(db, original);
@@ -683,7 +383,7 @@ describe("Safety Score v9 shadow state persistence", () => {
       publicationGenerationId: "v9-shadow:refreshed-generation",
       resultDigest: digest("8"),
     };
-    const refreshed = await successfulState(false, refreshedCandidate);
+    const refreshed = await successfulState(refreshedCandidate);
     refreshed.daily = buildSafetyScoreV9ShadowDailySuccess({
       utcDay: original.daily.utcDay,
       selectedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60,
@@ -697,6 +397,7 @@ describe("Safety Score v9 shadow state persistence", () => {
     await expect(loadSafetyScoreV9ShadowHistory(db)).resolves.toEqual([refreshed.daily]);
     await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(refreshed.envelope);
     await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(refreshed.diff);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_shadow_daily").get()).toEqual({ count: 1 });
 
     const failure = buildSafetyScoreV9ShadowDailyFailure({
       utcDay: refreshed.daily.utcDay,
@@ -726,132 +427,9 @@ describe("Safety Score v9 shadow state persistence", () => {
     });
   });
 
-  it("persists a pinned in-window selection as a daily-only metadata update", async () => {
-    const latencyFloor: SafetyScoreV9CoverageFloor = {
-      id: "scheduled-start-latency",
-      status: "pass",
-      observed: 300,
-      required: "<= 3600 seconds after the scheduled daily selection point",
-      detail: "The daily shadow attempt began inside the preregistered start window",
-    };
+  it("rolls back the daily row and canonical cache when the paired write fails", async () => {
     const { sqlite, db } = createTestDatabase();
-    const original = await successfulState(false, candidate(), [latencyFloor]);
-    await persistSafetyScoreV9ShadowState(db, original);
-
-    // A later same-day refresh recomputes a full candidate state, but the
-    // daily builder pins the in-window selection and persists no latest rows.
-    const refreshedCandidate = {
-      ...candidate(),
-      candidateId: "candidate-v9-store-late-refresh",
-      policyVersion: "candidate-v9-store-late-refresh",
-      publicationGenerationId: "v9-shadow:late-refresh-generation",
-      resultDigest: digest("8"),
-    };
-    const late = await successfulState(false, refreshedCandidate, [
-      { ...latencyFloor, status: "fail", observed: 7_200 },
-    ]);
-    const pinnedDaily = buildSafetyScoreV9ShadowDailySuccess({
-      utcDay: original.daily.utcDay,
-      selectedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60,
-      updatedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60 + 1,
-      previous: original.daily,
-      envelope: late.envelope,
-      diff: late.diff,
-    });
-    expect(pinnedDaily.selectedRun).toEqual(original.daily.selectedRun);
-
-    await expect(persistSafetyScoreV9ShadowState(db, { daily: pinnedDaily })).resolves.toBeUndefined();
-
-    // The retained latest envelope/diff stay bound to the pinned in-window
-    // run while the compact daily row advances.
-    await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(original.envelope);
-    await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(original.diff);
-    await expect(loadSafetyScoreV9ShadowHistory(db)).resolves.toEqual([pinnedDaily]);
-    expect(
-      sqlite
-        .prepare(
-          "SELECT successful_attempt_count, failed_attempt_count, selected_run_at_sec FROM safety_score_v9_shadow_daily",
-        )
-        .get(),
-    ).toEqual({
-      successful_attempt_count: 2,
-      failed_attempt_count: 0,
-      selected_run_at_sec: original.daily.selectedRun?.selectedAtSec,
-    });
-
-    // A different selection still cannot land without its latest state.
-    await expect(persistSafetyScoreV9ShadowState(db, { daily: late.daily })).rejects.toThrow(
-      "must persist its latest envelope and diff",
-    );
-  });
-
-  it("advances the display-latest cache on a pinned refresh while the qualifying selection stays pinned", async () => {
-    const latencyFloor: SafetyScoreV9CoverageFloor = {
-      id: "scheduled-start-latency",
-      status: "pass",
-      observed: 300,
-      required: "<= 3600 seconds after the scheduled daily selection point",
-      detail: "The daily shadow attempt began inside the preregistered start window",
-    };
-    const { db } = createTestDatabase();
-    const original = await successfulState(false, candidate(), [latencyFloor]);
-    // The day's first (selected) run writes both the qualifying selection and
-    // the display slot to the same run.
-    await persistSafetyScoreV9ShadowState(db, {
-      ...original,
-      latestEnvelope: original.envelope,
-      latestDiff: original.diff,
-    });
-    await expect(loadDisplaySafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(original.envelope);
-    await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(original.envelope);
-
-    const lateCandidate = {
-      ...candidate(),
-      candidateId: "candidate-v9-store-display-latest",
-      policyVersion: "candidate-v9-store-display-latest",
-      publicationGenerationId: "v9-shadow:display-latest-generation",
-      resultDigest: digest("8"),
-    };
-    const late = await successfulState(false, lateCandidate, [{ ...latencyFloor, status: "fail", observed: 7_200 }]);
-    const pinnedDaily = buildSafetyScoreV9ShadowDailySuccess({
-      utcDay: original.daily.utcDay,
-      selectedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60,
-      updatedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60 + 1,
-      previous: original.daily,
-      envelope: late.envelope,
-      diff: late.diff,
-    });
-    expect(pinnedDaily.selectedRun).toEqual(original.daily.selectedRun);
-
-    await expect(
-      persistSafetyScoreV9ShadowState(db, {
-        daily: pinnedDaily,
-        latestEnvelope: late.envelope,
-        latestDiff: late.diff,
-      }),
-    ).resolves.toBeUndefined();
-
-    // The display slot follows the latest run, while the qualifying selection,
-    // its canonical envelope/diff, and the daily selected run stay pinned.
-    await expect(loadDisplaySafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(late.envelope);
-    await expect(loadDisplaySafetyScoreV9DiffReport(db)).resolves.toEqual(late.diff);
-    await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(original.envelope);
-    await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(original.diff);
-    await expect(loadSafetyScoreV9ShadowHistory(db)).resolves.toEqual([pinnedDaily]);
-
-    // A display pair whose diff does not describe its envelope fails closed.
-    await expect(
-      persistSafetyScoreV9ShadowState(db, {
-        daily: pinnedDaily,
-        latestEnvelope: late.envelope,
-        latestDiff: original.diff,
-      }),
-    ).rejects.toThrow("latest display diff identity does not match its envelope");
-  });
-
-  it("rolls back selected artifacts, daily state, and envelope when the atomic latest write fails", async () => {
-    const { sqlite, db } = createTestDatabase();
-    const state = await successfulState(true);
+    const state = await successfulState();
     sqlite.exec(`
       CREATE TRIGGER reject_v9_diff_cache
       BEFORE INSERT ON cache
@@ -862,12 +440,12 @@ describe("Safety Score v9 shadow state persistence", () => {
     `);
 
     await expect(persistSafetyScoreV9ShadowState(db, state)).rejects.toThrow("injected v9 diff cache failure");
-    for (const table of ["safety_score_v9_artifacts", "safety_score_v9_shadow_daily", "cache"]) {
+    for (const table of ["safety_score_v9_shadow_daily", "cache"]) {
       expect(sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get(), table).toEqual({ count: 0 });
     }
   });
 
-  it("keeps the first selected success when another writer wins after preflight", async () => {
+  it("keeps the winning canonical state when another writer wins after preflight", async () => {
     const { sqlite, db } = createTestDatabase();
     const raceDb = createSqliteD1(sqlite);
     const loser = await successfulState();
@@ -878,7 +456,7 @@ describe("Safety Score v9 shadow state persistence", () => {
       publicationGenerationId: "v9-shadow:race-winner",
       resultDigest: digest("8"),
     };
-    const winner = await successfulState(false, winnerCandidate);
+    const winner = await successfulState(winnerCandidate);
     const originalBatch = db.batch.bind(db);
     vi.spyOn(db, "batch").mockImplementation(async (statements) => {
       await persistSafetyScoreV9ShadowState(raceDb, winner);
@@ -899,7 +477,7 @@ describe("Safety Score v9 shadow state persistence", () => {
     await persistSafetyScoreV9ShadowState(raceDb, original);
 
     const buildRefresh = async (label: string, selectedAtSec: number) => {
-      const refreshed = await successfulState(false, {
+      const refreshed = await successfulState({
         ...candidate(),
         candidateId: `candidate-v9-race-${label}`,
         policyVersion: `candidate-v9-race-${label}`,
@@ -931,7 +509,7 @@ describe("Safety Score v9 shadow state persistence", () => {
     await expect(loadLatestSafetyScoreV9DiffReport(raceDb)).resolves.toEqual(winner.diff);
   });
 
-  it("fails closed when the latest envelope cache is malformed", async () => {
+  it("fails closed when the canonical envelope cache is malformed", async () => {
     const { sqlite, db } = createTestDatabase();
     sqlite
       .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
