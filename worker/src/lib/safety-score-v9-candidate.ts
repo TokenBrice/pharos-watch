@@ -1,6 +1,6 @@
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
-import { evaluateV9FactSet, type V9EvaluatedSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import { evaluateValidatedV9FactSet, type V9EvaluatedSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { DEX_ROUTE_SOURCE_CAPABILITIES } from "@shared/lib/p4-exit-route-capacity";
 import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9Response } from "@shared/lib/safety-score-v9/public";
@@ -11,7 +11,7 @@ import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { z } from "zod";
 import {
-  compileSafetyScoreV9FactSetFromNormalizedInput,
+  compileSafetyScoreV9FactSetFromValidatedExtension,
   materializeSafetyScoreV9FactSetExtension,
   type SafetyScoreV9FactSetExtensionV2,
 } from "./safety-score-v9-fact-set";
@@ -137,6 +137,13 @@ export interface SafetyScoreV9CandidatePipelineResult {
   producerCapabilityIdentity: Readonly<SafetyScoreV9ProducerCapabilityIdentityV1>;
   producerCapabilityDigest: string;
   candidateIdentity: Readonly<SafetyScoreV9CandidateIdentityV1>;
+}
+
+export interface SafetyScoreV9ShadowCandidateResult {
+  candidate: Readonly<SafetyScoreV9Response>;
+  compilerFactSchemaDigest: string;
+  producerCapabilityDigest: string;
+  supplyUsdById: Readonly<Record<string, number>>;
 }
 
 function compareText(left: string, right: string): number {
@@ -295,8 +302,8 @@ export function buildSafetyScoreV9CandidateFromNormalizedInput(
     fixedInput,
     input.extension ?? buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput),
   );
-  const compiledFacts = compileSafetyScoreV9FactSetFromNormalizedInput(fixedInput, extension);
-  const evaluatedSet = evaluateV9FactSet(compiledFacts, policy);
+  const compiledFacts = compileSafetyScoreV9FactSetFromValidatedExtension(fixedInput, extension);
+  const evaluatedSet = evaluateValidatedV9FactSet(compiledFacts, policy);
   const compilerIdentity = compilerFactSchemaIdentity(fixedInput, extension, compiledFacts);
   const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
   const capabilityIdentity = producerCapabilityIdentity(fixedInput, extension);
@@ -349,5 +356,26 @@ export function buildSafetyScoreV9CandidateFromNormalizedInput(
     producerCapabilityIdentity: capabilityIdentity,
     producerCapabilityDigest,
     candidateIdentity,
+  });
+}
+
+/**
+ * Compact runtime projection for the shadow publisher. Full pipeline state is
+ * retained only by replay and verification callers.
+ */
+export function buildSafetyScoreV9ShadowCandidateFromNormalizedInput(
+  input: BuildSafetyScoreV9CandidateFromNormalizedInput,
+): Readonly<SafetyScoreV9ShadowCandidateResult> {
+  const pipeline = buildSafetyScoreV9CandidateFromNormalizedInput(input);
+  return deepFreeze({
+    candidate: pipeline.candidate,
+    compilerFactSchemaDigest: pipeline.compilerFactSchemaDigest,
+    producerCapabilityDigest: pipeline.producerCapabilityDigest,
+    supplyUsdById: Object.fromEntries(
+      pipeline.compiledFacts.assets.map((asset) => [
+        asset.assetId,
+        asset.supply.circulatingUsd ?? 0,
+      ]),
+    ),
   });
 }

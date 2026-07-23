@@ -59,8 +59,53 @@ function stringifyCanonical(value: unknown): string {
   return `{${entries.join(",")}}`;
 }
 
+function* stringifyCanonicalChunks(value: unknown): Generator<string> {
+  if (value === null) {
+    yield "null";
+    return;
+  }
+  if (value === undefined) return;
+
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    yield JSON.stringify(value);
+    return;
+  }
+  if (Array.isArray(value)) {
+    yield "[";
+    for (let index = 0; index < value.length; index += 1) {
+      if (index > 0) yield ",";
+      yield* stringifyCanonicalChunks(value[index]);
+    }
+    yield "]";
+    return;
+  }
+
+  const objectValue = value as Record<string, unknown>;
+  const keys = Object.keys(objectValue)
+    .filter((key) => objectValue[key] !== undefined)
+    .sort();
+  yield "{";
+  for (let index = 0; index < keys.length; index += 1) {
+    const key = keys[index]!;
+    if (index > 0) yield ",";
+    yield JSON.stringify(key);
+    yield ":";
+    yield* stringifyCanonicalChunks(objectValue[key]);
+  }
+  yield "}";
+}
+
 /** Deterministic JSON for runtime-neutral identity and digest projections. */
 export function stableJsonStringifyV1(value: unknown): string {
   assertPlainStableJsonValue(value, "$");
   return stringifyCanonical(value);
+}
+
+/**
+ * The exact V1 canonical byte stream without materializing the complete JSON
+ * string. Intended for large digest payloads.
+ */
+export function stableJsonStringifyChunksV1(value: unknown): Iterable<string> {
+  assertPlainStableJsonValue(value, "$");
+  return stringifyCanonicalChunks(value);
 }

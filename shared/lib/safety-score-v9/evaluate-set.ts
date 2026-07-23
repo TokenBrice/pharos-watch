@@ -49,7 +49,11 @@ import {
   type V9ExitEvaluationResult,
   type V9ExitStressRequest,
 } from "./exit";
-import { isV9UncanonicalizedChainPoolRoute, readCompiledV9FactSetForEvaluation } from "./facts";
+import {
+  isV9UncanonicalizedChainPoolRoute,
+  readCompiledV9FactSetForEvaluation,
+  type V9EvaluationFactSetRead,
+} from "./facts";
 import {
   decimalSnap,
   hasV9PreExitDangerSignal,
@@ -1822,13 +1826,11 @@ function evaluatedSetDigestPayload(result: Omit<V9EvaluatedSet, "evaluatedSetDig
   };
 }
 
-/** Evaluate one exact, compiled active-asset set under one explicit candidate policy. */
-export function evaluateV9FactSet(
-  input: CompiledV9FactSetV2 | CompiledV9FactSetV3,
+function evaluateV9FactSetRead(
+  factSetRead: V9EvaluationFactSetRead,
   envelope: V9ValidatedPolicyEnvelope,
 ): Readonly<V9EvaluatedSet> {
   assertV9ValidatedPolicyEnvelope(envelope);
-  const factSetRead = readCompiledV9FactSetForEvaluation(input);
   const factSet = factSetRead.factSet;
   const assetsById = new Map(factSet.assets.map((asset) => [asset.assetId, asset]));
   const dependencyPlan = buildV9DependencyEvaluationPlan({
@@ -2051,4 +2053,31 @@ export function evaluateV9FactSet(
     stableJsonStringifyV1({ domain: V9_EVALUATED_SET_DIGEST_DOMAIN, result: evaluatedSetDigestPayload(core) }),
   );
   return deepFreeze({ ...core, evaluatedSetDigest }) as Readonly<V9EvaluatedSet>;
+}
+
+/** Evaluate one untrusted compiled active-asset set after strict validation. */
+export function evaluateV9FactSet(
+  input: CompiledV9FactSetV2 | CompiledV9FactSetV3,
+  envelope: V9ValidatedPolicyEnvelope,
+): Readonly<V9EvaluatedSet> {
+  return evaluateV9FactSetRead(readCompiledV9FactSetForEvaluation(input), envelope);
+}
+
+/**
+ * Trusted same-process path for a V3 fact set just returned by
+ * compileV9FactSetV3(). Stored, replayed, or otherwise external facts must use
+ * evaluateV9FactSet() so their schema and digest are verified first.
+ */
+export function evaluateValidatedV9FactSet(
+  factSet: CompiledV9FactSetV3,
+  envelope: V9ValidatedPolicyEnvelope,
+): Readonly<V9EvaluatedSet> {
+  return evaluateV9FactSetRead(
+    {
+      sourceSchemaVersion: 3,
+      sourceFactSetDigest: factSet.v9FactSetDigest,
+      factSet,
+    },
+    envelope,
+  );
 }

@@ -3598,10 +3598,23 @@ export function compileSafetyScoreV9FactSetFromNormalizedInput(
   fixedInput: Readonly<ReportCardsFixedInput>,
   extensionValue: unknown,
 ): Readonly<CompiledV9FactSetV3> {
+  return compileSafetyScoreV9FactSetFromValidatedExtension(
+    fixedInput,
+    materializeSafetyScoreV9FactSetExtension(fixedInput, extensionValue),
+  );
+}
+
+/**
+ * Trusted same-process path for an extension just returned by
+ * materializeSafetyScoreV9FactSetExtension().
+ */
+export function compileSafetyScoreV9FactSetFromValidatedExtension(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  extension: SafetyScoreV9FactSetExtensionV2,
+): Readonly<CompiledV9FactSetV3> {
   if (fixedInput.captureKind !== "exact-publication-inputs") {
     throw new Error("Safety Score v9 fact compilation requires exact publication inputs");
   }
-  const extension = materializeSafetyScoreV9FactSetExtension(fixedInput, extensionValue);
   if (extension.registryFingerprint !== fixedInput.registryFingerprint) {
     throw new Error(
       `Safety Score v9 extension registry fingerprint ${extension.registryFingerprint} does not match fixed input ${fixedInput.registryFingerprint}`,
