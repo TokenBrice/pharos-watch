@@ -3,7 +3,13 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-versi
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../test-helpers/report-cards-v9";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
+import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9-consumer-freshness";
 import { snapshotPublicDataset } from "../snapshot-public-dataset";
 
 const ISO_DATE = "2026-05-16";
@@ -142,6 +148,29 @@ function getInsertBinds(db: MockD1Database): unknown[] | undefined {
   return db.getHistory().find((entry) => entry.sql.includes("INSERT OR IGNORE INTO public_snapshots"))?.binds;
 }
 
+function activeV9(updatedAt = NOW_SEC) {
+  const snapshot = makeWorkerReportCardsV9Response({
+    asOfSec: updatedAt - 60,
+    updatedAt,
+    cards: [
+      makeWorkerV9Card({ id: "usdc-circle", score: 92, grade: "A-" }),
+      makeWorkerV9Card({ id: "usdt-tether", score: 88, grade: "A" }),
+    ],
+  });
+  return {
+    kind: "v9" as const,
+    expectedModel: "v9" as const,
+    marker: {
+      policyId: snapshot.safetyScoreIdentity.policyId,
+      policyDigest: snapshot.safetyScoreIdentity.policyDigest,
+      evaluationBuildDigest: snapshot.safetyScoreIdentity.evaluationBuildDigest,
+      methodologyVersion: snapshot.safetyScoreIdentity.methodologyVersion,
+    },
+    activationUpdatedAt: NOW_SEC - 30,
+    snapshot,
+  };
+}
+
 describe("snapshotPublicDataset", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -150,6 +179,7 @@ describe("snapshotPublicDataset", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("throws before D1 work when the cron signal is already aborted", async () => {
@@ -273,6 +303,15 @@ describe("snapshotPublicDataset", () => {
     expect(methodologyVersions).toHaveProperty("dews");
     expect(methodologyVersions).toHaveProperty("psi");
     expect(methodologyVersions).toHaveProperty("liquidityScore");
+    const insert = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT OR IGNORE INTO public_snapshots")
+    );
+    expect(insert?.sql).toContain("json_extract(value, '$.publicationGenerationId')");
+    expect(insert?.binds.slice(-3)).toEqual([
+      "safety-score-v9:public-activation",
+      "report_card_cache",
+      REPORT_CARD_PUBLICATION_GENERATION_ID,
+    ]);
   });
 
   it("compresses a JSON envelope that round-trips back to the expected shape", async () => {
@@ -331,7 +370,7 @@ describe("snapshotPublicDataset", () => {
 
     const result = await snapshotPublicDataset(db);
     expect(result.status).toBe("degraded");
-    expect(result.metadata).toContain("report_card_cache_unavailable");
+    expect(result.metadata).toContain("active_safety_score_unavailable");
     expect(getInsertBinds(db)).toBeUndefined();
   });
 
@@ -355,8 +394,9 @@ describe("snapshotPublicDataset", () => {
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      reason: "report_card_cache_unavailable",
-      cacheReason: "identity-missing",
+      reason: "active_safety_score_unavailable",
+      expectedModel: "v8",
+      sourceReason: "identity-missing",
     });
     expect(getInsertBinds(db)).toBeUndefined();
   });
@@ -383,8 +423,9 @@ describe("snapshotPublicDataset", () => {
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      reason: "report_card_cache_unavailable",
-      cacheReason: "identity-mismatch",
+      reason: "active_safety_score_unavailable",
+      expectedModel: "v8",
+      sourceReason: "identity-mismatch",
     });
     expect(getInsertBinds(db)).toBeUndefined();
   });
@@ -423,8 +464,111 @@ describe("snapshotPublicDataset", () => {
 
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      reason: "report_card_cache_unavailable",
-      cacheReason: "invalid-payload",
+      reason: "active_safety_score_unavailable",
+      expectedModel: "v8",
+      sourceReason: "invalid-payload",
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("writes the complete active V9 publication with model-aware methodology metadata", async () => {
+    const source = activeV9();
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockResolvedValue(source);
+    const db = buildDb();
+
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.itemCount).toBe(1);
+    const binds = getInsertBinds(db);
+    const envelope = JSON.parse(await gunzipToText(binds?.[1] as Uint8Array)) as {
+      methodologyVersions: { reportCard: string };
+      safetyScoreIdentity: { model: string; publicationGenerationId: string };
+      reportCards: { lifecycle: string; cards: Array<{ id: string }> };
+    };
+    expect(envelope.methodologyVersions.reportCard).toBe(
+      source.snapshot.safetyScoreIdentity.methodologyVersion,
+    );
+    expect(envelope.safetyScoreIdentity).toEqual(source.snapshot.safetyScoreIdentity);
+    expect(envelope.reportCards.lifecycle).toBe("active");
+    expect(envelope.reportCards.cards.map((card) => card.id)).toEqual([
+      "usdc-circle",
+      "usdt-tether",
+    ]);
+
+    const insert = db.getHistory().find((entry) =>
+      entry.sql.includes("INSERT OR IGNORE INTO public_snapshots")
+    );
+    expect(insert?.sql).toContain("json_extract(value, '$.policyId')");
+    expect(insert?.sql).toContain("json_extract(value, '$.identity.publicationGenerationId')");
+    expect(insert?.binds.slice(-8)).toEqual([
+      "safety-score-v9:public-activation",
+      source.activationUpdatedAt,
+      source.marker.policyId,
+      source.marker.policyDigest,
+      source.marker.evaluationBuildDigest,
+      source.marker.methodologyVersion,
+      "report-cards:v9-shadow",
+      source.snapshot.safetyScoreIdentity.publicationGenerationId,
+    ]);
+  });
+
+  it("does not seal a stale active V9 publication", async () => {
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockResolvedValue(activeV9(NOW_SEC - SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC - 1));
+    const db = buildDb();
+
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "active_safety_score_unavailable",
+      expectedModel: "v9",
+      sourceReason: "stale-cache",
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("does not seal a V9 envelope when rollback races the immutable insert", async () => {
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockResolvedValueOnce(activeV9())
+      .mockResolvedValueOnce({
+        kind: "v8",
+        expectedModel: "v8",
+        reason: "activation-marker-missing",
+        activationUpdatedAt: null,
+      });
+    const db = buildDb();
+
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "active_safety_score_changed_before_insert",
+      expectedModel: "v9",
+      observedModel: "v8",
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("does not seal a V8 envelope when activation races the immutable insert", async () => {
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockResolvedValueOnce({
+        kind: "v8",
+        expectedModel: "v8",
+        reason: "activation-marker-missing",
+        activationUpdatedAt: null,
+      })
+      .mockResolvedValueOnce(activeV9());
+    const db = buildDb();
+
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "active_safety_score_changed_before_insert",
+      expectedModel: "v8",
+      observedModel: "v9",
     });
     expect(getInsertBinds(db)).toBeUndefined();
   });

@@ -1789,7 +1789,8 @@ Lists immutable public daily dataset snapshots written by the `snapshot-public-d
   "snapshots": [
     {
       "snapshotDate": "2026-05-17",
-      "methodologyVersions": { "safetyScore": "5.9", "psi": "3.0" },
+      "methodologyVersions": { "reportCard": "7.25", "psi": "3.3" },
+      "safetyScoreIdentity": { "model": "v8", "methodologyVersion": "7.25", "...": "..." },
       "contentHash": "sha256-hex",
       "byteSize": 1234567,
       "createdAt": 1778976000
@@ -1803,6 +1804,7 @@ Lists immutable public daily dataset snapshots written by the `snapshot-public-d
 | `snapshots`                       | `array`                   | Snapshot index sorted newest first            |
 | `snapshots[].snapshotDate`        | `string`                  | UTC snapshot date in `YYYY-MM-DD` format      |
 | `snapshots[].methodologyVersions` | `Record<string, string>?` | Methodology versions embedded in the snapshot |
+| `snapshots[].safetyScoreIdentity` | `object \| null`          | Exact immutable V8/V9 publication identity; `null` for legacy and the bounded July 13-15 transition rows |
 | `snapshots[].contentHash`         | `string`                  | Snapshot payload hash used by dated `ETag`s   |
 | `snapshots[].byteSize`            | `number`                  | Uncompressed JSON payload size in bytes       |
 | `snapshots[].createdAt`           | `number`                  | Snapshot creation timestamp in Unix seconds   |
@@ -1813,7 +1815,9 @@ Lists immutable public daily dataset snapshots written by the `snapshot-public-d
 
 Returns the full immutable public dataset snapshot for a UTC date. The worker reads the gzipped payload from D1, decompresses it, and returns the original JSON envelope.
 
-The writer fails closed for required cache/table reads and marks the cron run `degraded` without inserting a snapshot when the DEWS or DEX liquidity section read fails. DEWS rows must match the exact timestamp, row count, and stablecoin-ID digest in `cache["dews:published-generation"]`; a missing pointer, failed partial generation, or coverage mismatch cannot be sealed into an immutable snapshot. A successful empty DEX read may still publish an empty `liquidityRows` section, while failed reads are never silently omitted from an `ok` snapshot.
+The writer fails closed for required cache/table reads and marks the cron run `degraded` without inserting a snapshot when the active Safety Score, DEWS, or DEX liquidity section is unavailable. It accepts only the complete identified active Safety Score publication: V8 uses the strict compact cache and V9 must be no older than two three-hour producer cadences. The identity is embedded in the row metadata, envelope, and report-card payload. Immediately before insert, the writer reloads the active source and uses an activation-marker predicate in the insert itself, so activation, rollback, or a publication change cannot seal a mixed-model immutable row.
+
+DEWS rows must match the exact timestamp, row count, and stablecoin-ID digest in `cache["dews:published-generation"]`; a missing pointer, failed partial generation, or coverage mismatch cannot be sealed into an immutable snapshot. A successful empty DEX read may still publish an empty `liquidity` section, while failed reads are never silently omitted from an `ok` snapshot. Reads validate identified V8/V9 identities, card membership, and completeness before serving. Legacy rows remain readable, and known partial-identity rows from July 13-15, 2026 are served without asserting a verified identity.
 
 **Cache:** immutable-snapshot
 
@@ -1830,12 +1834,13 @@ PublicSnapshotEnvelope {
   snapshotDate,
   generatedAt,
   methodologyVersions,
-  stablecoinRows,
+  safetyScoreIdentity,
+  stablecoins,
   fxFallbackRates,
   reportCards,
   psi,
-  dewsRows,
-  liquidityRows
+  dews,
+  liquidity
 }
 ```
 
@@ -1847,7 +1852,7 @@ PublicSnapshotEnvelope {
 
 ### `GET /api/snapshot/:date/stablecoin/:id`
 
-Returns a per-stablecoin projection from a dated public dataset snapshot. The projection includes the stablecoin row plus the matching report-card, DEWS, and liquidity rows when those datasets were present in the snapshot.
+Returns a per-stablecoin projection from a dated public dataset snapshot. The projection includes the immutable `safetyScoreIdentity`, stablecoin row, and matching V8 score entry or native V9 card plus DEWS and liquidity rows when those datasets were present in the snapshot.
 
 **Cache:** immutable-snapshot
 
@@ -2339,6 +2344,8 @@ Dynamic Open Graph PNG images used by share buttons and page metadata.
 - `500` with `text/plain` body when OG image rendering fails
 
 `/api/og/stablecoin/:id` accepts tracked public stablecoin IDs only. The renderer assembles each card from cached stablecoin, DEWS, PSI, report-card, depeg, liquidity, and mint/burn data on the worker. `/api/og/chain/:id` accepts `CHAIN_META` chain IDs and renders supply, 7d trend, dominance, chain-health, and top-stablecoin data from the same cached stablecoins payload that backs `/api/chains`.
+
+Safety-dependent OG routes resolve the identified active V8/V9 source, require complete current data, and return `X-Safety-Score-Model` plus `X-Safety-Score-Status: current|degraded`. V9 is stale after two missed three-hour producer cadences. Degraded cards label Safety Score data unavailable and do not render a numeric zero as an aggregate score. The safety-summary average is descriptive only and is never converted back into an asset grade.
 
 ---
 

@@ -23,6 +23,7 @@ export interface StablecoinCardData {
   variantLabel?: string | null;
   variantParentSymbol?: string | null;
   isFrozen?: boolean;
+  safetyModel?: "v8" | "v9" | null;
   lastUpdated?: string;
 }
 
@@ -114,7 +115,12 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
   
   // Build primary metrics row (5 items - PSI removed as it's market-wide)
   const primaryMetrics: Metric[] = [
-    { label: "GRADE", value: data.grade, color: gradeColor, size: "large" as const },
+    {
+      label: data.safetyModel ? `${data.safetyModel.toUpperCase()} GRADE` : "GRADE",
+      value: data.grade,
+      color: gradeColor,
+      size: "large" as const,
+    },
     { label: "PEG", value: `$${data.pegPrice.toFixed(4)}`, color: TEXT_SECONDARY },
     { label: "PEG SCORE", value: data.pegScore != null ? data.pegScore.toFixed(1) : "—", color: TEXT_SECONDARY },
     { label: "DEWS", value: data.dewsBand, color: dewsColor },

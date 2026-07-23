@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 // Plain `satori` entry (Node build) — deliberately NOT the aliased
 // `satori/standalone` stub, so the smoke tests below exercise the real
@@ -14,6 +14,12 @@ import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
+import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9-consumer-freshness";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../test-helpers/report-cards-v9";
 import { deriveStablecoinOgCardData, handleOg } from "../og";
 import { StablecoinCard, type StablecoinCardData } from "../../lib/og-templates/stablecoin-card";
 
@@ -22,9 +28,16 @@ vi.mock("satori/standalone", () => ({
   default: vi.fn(async () => "<svg></svg>"),
 }));
 import { StabilityIndexCard, type StabilityIndexCardData } from "../../lib/og-templates/stability-index-card";
-import { SafetyScoresCard } from "../../lib/og-templates/safety-scores-card";
+import {
+  SafetyScoresCard,
+  type SafetyScoresCardData,
+} from "../../lib/og-templates/safety-scores-card";
 import { DepegCard, type DepegCardData } from "../../lib/og-templates/depeg-card";
 import { ChainCard, type ChainCardData } from "../../lib/og-templates/chain-card";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("stablecoin OG card data", () => {
   it("derives flow7d and sparkline data", () => {
@@ -149,6 +162,33 @@ describe("stablecoin OG card data", () => {
       ]);
     }
 
+    function activeV9(updatedAt = nowSec) {
+      const snapshot = makeWorkerReportCardsV9Response({
+        lifecycle: "active",
+        asOfSec: updatedAt - 60,
+        updatedAt,
+        cards: [
+          makeWorkerV9Card({
+            id: "usdt-tether",
+            score: 88,
+            grade: "B+",
+          }),
+        ],
+      });
+      return {
+        kind: "v9" as const,
+        expectedModel: "v9" as const,
+        marker: {
+          policyId: snapshot.safetyScoreIdentity.policyId,
+          policyDigest: snapshot.safetyScoreIdentity.policyDigest,
+          evaluationBuildDigest: snapshot.safetyScoreIdentity.evaluationBuildDigest,
+          methodologyVersion: snapshot.safetyScoreIdentity.methodologyVersion,
+        },
+        activationUpdatedAt: nowSec - 30,
+        snapshot,
+      };
+    }
+
     async function renderedCardData(db: D1Database, path: string): Promise<StablecoinCardData> {
       const satoriMock = vi.mocked(satoriStandalone);
       satoriMock.mockClear();
@@ -197,7 +237,7 @@ describe("stablecoin OG card data", () => {
       const element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
       expect(element.props.data).toMatchObject({
         grade: "NR",
-        lastUpdated: "DEGRADED: Safety score unavailable",
+        lastUpdated: "DEGRADED: V8 safety score unavailable",
       });
     });
 
@@ -234,8 +274,79 @@ describe("stablecoin OG card data", () => {
       const element = calls[calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
       expect(element.props.data).toMatchObject({
         grade: "NR",
-        lastUpdated: "DEGRADED: Safety score unavailable",
+        lastUpdated: "DEGRADED: V8 safety score unavailable",
       });
+    });
+
+    it("renders the complete active V9 publication with explicit model provenance", async () => {
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+        .mockResolvedValue(activeV9());
+      const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
+
+      const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
+
+      expect(res?.headers.get("X-Safety-Score-Model")).toBe("v9");
+      expect(res?.headers.get("X-Safety-Score-Status")).toBe("current");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{
+        data: StablecoinCardData;
+      }>;
+      expect(element.props.data).toMatchObject({
+        grade: "B+",
+        safetyModel: "v9",
+      });
+      expect(renderToStaticMarkup(element)).toContain("V9 GRADE");
+    });
+
+    it("degrades a structurally valid active V9 publication after two producer cadences", async () => {
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+        .mockResolvedValue(activeV9(nowSec - SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC - 1));
+      const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
+
+      const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
+
+      expect(res?.headers.get("X-Safety-Score-Model")).toBe("v9");
+      expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
+      expect(res?.headers.get("X-Safety-Score-Reason")).toBe("stale-cache");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{
+        data: StablecoinCardData;
+      }>;
+      expect(element.props.data).toMatchObject({
+        grade: "NR",
+        safetyModel: null,
+      });
+    });
+
+    it("converges from V8 to V9 on the next render without mixing score rows", async () => {
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+        .mockResolvedValueOnce({
+          kind: "v8",
+          expectedModel: "v8",
+          reason: "activation-marker-missing",
+          activationUpdatedAt: null,
+        })
+        .mockResolvedValueOnce(activeV9());
+      const db = makeOgDb(
+        [makeAsset({ id: "usdt-tether", symbol: "USDT" })],
+        completeReportCardCache(nowSec),
+      );
+
+      const v8Response = await handleOg(db, "/api/og/stablecoin/usdt-tether");
+      const firstCalls = vi.mocked(satoriStandalone).mock.calls;
+      const firstElement = firstCalls[firstCalls.length - 1]?.[0] as React.ReactElement<{
+        data: StablecoinCardData;
+      }>;
+      const v9Response = await handleOg(db, "/api/og/stablecoin/usdt-tether");
+      const secondCalls = vi.mocked(satoriStandalone).mock.calls;
+      const secondElement = secondCalls[secondCalls.length - 1]?.[0] as React.ReactElement<{
+        data: StablecoinCardData;
+      }>;
+
+      expect(v8Response?.headers.get("X-Safety-Score-Model")).toBe("v8");
+      expect(firstElement.props.data).toMatchObject({ grade: "A", safetyModel: "v8" });
+      expect(v9Response?.headers.get("X-Safety-Score-Model")).toBe("v9");
+      expect(secondElement.props.data).toMatchObject({ grade: "B+", safetyModel: "v9" });
     });
 
     it("renders a cacheable degraded state for a different V8 evaluation build", async () => {
@@ -273,6 +384,23 @@ describe("stablecoin OG card data", () => {
       expect(res?.headers.get("Cache-Control")).toBe("public, max-age=900, s-maxage=900");
       expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
       expect(res?.headers.get("X-Safety-Score-Reason")).toBe("stale-cache");
+    });
+
+    it("renders a degraded safety aggregate as unavailable rather than 0.0", async () => {
+      const db = makeOgDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
+
+      const res = await handleOg(db, "/api/og/safety-scores");
+
+      expect(res?.headers.get("X-Safety-Score-Status")).toBe("degraded");
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1]?.[0] as React.ReactElement<{
+        data: SafetyScoresCardData;
+      }>;
+      expect(element.props.data.pulseScore).toBeNull();
+      const markup = renderToStaticMarkup(element);
+      expect(markup).toContain("NR");
+      expect(markup).toContain("Safety score unavailable");
+      expect(markup).not.toContain("0.0");
     });
 
     it("anchors 24h price change to the latest snapshot instead of wall-clock time", async () => {
@@ -706,6 +834,39 @@ describe("og cards render through satori", () => {
           ],
           trend: -0.4,
           lastUpdated: "2026-06-10 07:30 UTC",
+        }}
+      />,
+    );
+    expect(svg).toContain("<svg");
+  });
+
+  it("renders the safety-scores unavailable aggregate without a numeric zero", async () => {
+    const svg = await renderSvg(
+      <SafetyScoresCard
+        data={{
+          gradeDistribution: {
+            "A+": 0,
+            A: 0,
+            "A-": 0,
+            "B+": 0,
+            B: 0,
+            "B-": 0,
+            "C+": 0,
+            C: 0,
+            "C-": 0,
+            D: 0,
+            F: 0,
+            NR: 0,
+          },
+          pulseGrade: null,
+          pulseScore: null,
+          coverageRatio: 0,
+          totalCoins: 401,
+          topPerformers: [],
+          bottomPerformers: [],
+          trend: null,
+          safetyModel: null,
+          lastUpdated: "DEGRADED: V9 safety score unavailable",
         }}
       />,
     );

@@ -17,6 +17,7 @@ vi.mock("../../lib/report-cards-fixed-input", () => ({
 }));
 
 vi.mock("../../lib/safety-score-v9-shadow-runner", () => ({
+  SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC: 3 * 60 * 60,
   runSafetyScoreV9ShadowAfterV8Publication: mockRunSafetyScoreV9Shadow,
 }));
 

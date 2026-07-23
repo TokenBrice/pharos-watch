@@ -17,6 +17,7 @@ export interface ChainCardData {
   healthScore: number | null;
   healthBand: string | null;
   topStablecoins: ChainCardTopStablecoin[];
+  safetyModel?: "v8" | "v9" | null;
   lastUpdated?: string;
 }
 
@@ -78,7 +79,9 @@ export function ChainCard({ data }: { data: ChainCardData }) {
           </span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <MetricLabel fontSize={13}>CHAIN HEALTH</MetricLabel>
+          <MetricLabel fontSize={13}>
+            {data.safetyModel ? `CHAIN HEALTH · ${data.safetyModel.toUpperCase()} INPUT` : "CHAIN HEALTH"}
+          </MetricLabel>
           <span style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
             <span style={{ fontSize: 30, fontWeight: 700, color: bandColor }}>
               {data.healthScore != null ? data.healthScore.toFixed(0) : "NR"}
