@@ -157,10 +157,11 @@ function buildCapacityPoint(
   scoringCapacityUsd: number,
   config: RedemptionBackstopConfig,
   resolvedFeeBps: number | null,
+  boundedUnknownFee: boolean,
 ): ExitRouteCapacityPoint {
   const costBps = resolveCostBps(config, resolvedFeeBps, requestedNotionalUsd);
   const executableUsd =
-    costBps != null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps
+    (costBps != null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps) || boundedUnknownFee
       ? Math.min(requestedNotionalUsd, scoringCapacityUsd)
       : 0;
   return {
@@ -198,6 +199,14 @@ export function buildRedemptionExitRouteObservation(
     input.capacityProfile.scoringHorizon === "immediate" &&
     (input.config.settlementModel === "atomic" || input.config.settlementModel === "immediate");
   const mainCostBps = resolveCostBps(input.config, input.resolvedFeeBps, modeledExitSizeUsd);
+  // A reviewed route with a documented but unbounded fee still proves that the
+  // capacity exists. Preserve that capacity and let V9's explicit
+  // undisclosed-fee ceiling bound its score instead of converting uncertainty
+  // about cost into a false zero-liquidity observation.
+  const boundedUnknownFee =
+    mainCostBps === null &&
+    evidence.supportsScoring &&
+    input.config.costModel.kind === "dynamic-or-unclear";
   const scoreEligible =
     input.resolutionState === "resolved" &&
     input.routeStatus === "open" &&
@@ -210,7 +219,13 @@ export function buildRedemptionExitRouteObservation(
     .filter((request) => request <= Math.max(modeledExitSizeUsd, maxCurveRequest))
     .sort((left, right) => left - right);
   const capacityCurve = requests.map((request) =>
-    buildCapacityPoint(request, input.scoringCapacityUsd!, input.config, input.resolvedFeeBps),
+    buildCapacityPoint(
+      request,
+      input.scoringCapacityUsd!,
+      input.config,
+      input.resolvedFeeBps,
+      boundedUnknownFee,
+    ),
   );
   const point = capacityCurve.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd)!;
   const { scope, commonModeKeys } = resolveScopeAndCommonModes(input.stablecoinId, input.config.routeFamily);
@@ -227,6 +242,7 @@ export function buildRedemptionExitRouteObservation(
     settlementHorizonSec,
     output: resolveOutput(input.stablecoinId, input.config),
     evidenceKind: evidence.evidenceKind,
+    ...(boundedUnknownFee ? { feeEvidence: "undisclosed-reviewed" as const } : {}),
     confidence: evidence.confidence,
     scoreEligible,
     observedAt: evidence.observedAt,
@@ -299,11 +315,11 @@ export function deriveSupplyModelExitRouteObservation(
   // (`feeBpsMax`) on the same static config that already supplies this route's
   // output composition — both producer and shadow read the identical registry,
   // so derivations stay byte-identical. Formula and documented-variable fees
-  // without a stated ceiling remain unbounded and earn no capacity: a ceiling
-  // exists only where a primary source states one. A reviewed
-  // `undisclosed-reviewed` fee (SIM-EXIT-L2) emits its modeled capacity with a
-  // bounded-unknown cost and stays non-score-eligible; the exit policy ceilings
-  // its credit via `semantic.exit.undisclosedFeeRouteScoreCeiling`.
+  // without a stated ceiling remain cost-unbounded: they preserve the reviewed
+  // capacity but stay non-score-eligible and carry the same bounded-unknown fee
+  // marker as an `undisclosed-reviewed` route (SIM-EXIT-L2). The exit policy,
+  // rather than the producer, then bounds all such credit via
+  // `semantic.exit.undisclosedFeeRouteScoreCeiling`.
   const staticConfig = getRedemptionBackstopConfig(entry.stablecoinId);
   const feeBoundBps =
     entry.feeModelKind === "fixed-bps" && entry.feeBps != null
@@ -312,12 +328,18 @@ export function deriveSupplyModelExitRouteObservation(
         ? staticConfig.costModel.feeBpsMax
         : null;
   const withinCost = feeBoundBps != null && feeBoundBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps;
-  const undisclosedReviewedFee = entry.feeModelKind === "undisclosed-reviewed";
+  const boundedUnknownFee =
+    feeBoundBps === null &&
+    (
+      entry.feeModelKind === "undisclosed-reviewed" ||
+      entry.feeModelKind === "documented-variable" ||
+      entry.feeModelKind === "formula"
+    );
   const requests = [...new Set([...REDEMPTION_CAPACITY_CURVE_REQUESTS_USD, modeledExitSizeUsd])]
     .filter((request) => request <= Math.max(modeledExitSizeUsd, eventualUsd))
     .sort((left, right) => left - right);
   const capacityCurve = requests.map((request) => {
-    const executableUsd = withinCost || undisclosedReviewedFee ? Math.min(request, eventualUsd) : 0;
+    const executableUsd = withinCost || boundedUnknownFee ? Math.min(request, eventualUsd) : 0;
     return {
       requestedNotionalUsd: request,
       maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
@@ -342,7 +364,7 @@ export function deriveSupplyModelExitRouteObservation(
       outputAssets: getRedemptionBackstopConfig(entry.stablecoinId)?.outputAssets,
     }),
     evidenceKind: "documented-terms",
-    ...(undisclosedReviewedFee ? { feeEvidence: "undisclosed-reviewed" as const } : {}),
+    ...(boundedUnknownFee ? { feeEvidence: "undisclosed-reviewed" as const } : {}),
     confidence: "medium",
     scoreEligible: routeFamily !== "eventual-redemption" && withinCost,
     observedAt: reviewTimestamp,

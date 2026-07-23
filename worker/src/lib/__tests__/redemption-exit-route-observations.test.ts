@@ -87,6 +87,29 @@ describe("redemption same-notional route observations", () => {
     expect(expensive).toMatchObject({ scoreEligible: false, executableUsd: 0, completionRatio: 0 });
   });
 
+  it("preserves reviewed capacity when only the variable fee bound is unknown", () => {
+    const observation = build({
+      config: {
+        ...config,
+        costModel: {
+          kind: "dynamic-or-unclear",
+          feeDescription: "The issuer documents a variable redemption fee without a numeric ceiling.",
+          confidence: "undisclosed-reviewed",
+          feeModelKind: "documented-variable",
+        },
+      },
+      resolvedFeeBps: null,
+    });
+
+    expect(observation).toMatchObject({
+      executableUsd: 5_000_000,
+      completionRatio: 1,
+      feeEvidence: "undisclosed-reviewed",
+      scoreEligible: false,
+    });
+    expect(observation!.capacityCurve!.every((point) => point.executableUsd > 0)).toBe(true);
+  });
+
   it("uses fresh direct telemetry as high-confidence route evidence", () => {
     const observedAt = Date.UTC(2026, 6, 13, 10) / 1_000;
     const observation = build({
@@ -203,13 +226,17 @@ describe("derived supply-model route observations", () => {
     }
   });
 
-  it("carries a zero executable bound when the published fee model states no fixed bound", () => {
-    const undisclosed = deriveSupplyModelExitRouteObservation(
+  it("preserves reviewed capacity under the bounded-unknown fee ceiling", () => {
+    const variable = deriveSupplyModelExitRouteObservation(
       { ...supplyFullEntry, feeModelKind: "documented-variable", feeBps: null },
       now,
     );
-    expect(undisclosed).toMatchObject({ scoreEligible: false, executableUsd: 0, completionRatio: 0 });
-    expect(undisclosed).not.toHaveProperty("feeEvidence");
+    expect(variable).toMatchObject({
+      scoreEligible: false,
+      executableUsd: 5_000_000,
+      completionRatio: 1,
+      feeEvidence: "undisclosed-reviewed",
+    });
     const overCost = deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, feeBps: 250 }, now);
     expect(overCost).toMatchObject({ scoreEligible: false, executableUsd: 0 });
     expect(overCost).not.toHaveProperty("feeEvidence");
@@ -248,9 +275,9 @@ describe("derived supply-model route observations", () => {
       completionRatio: 1,
       scoreEligible: true,
     });
-    // usdc-circle's config has no feeBpsMax: documented-variable stays unarmed
-    // (asserted by the zero-bound test above) — the ceiling only exists where a
-    // primary source states one.
+    // usdc-circle's config has no feeBpsMax: documented-variable keeps its
+    // reviewed capacity under the bounded-unknown marker, while only a primary
+    // source numeric ceiling can make the route producer-level score eligible.
   });
 
   it("resolves derived outputs from the reviewed static config's outputAssets", () => {

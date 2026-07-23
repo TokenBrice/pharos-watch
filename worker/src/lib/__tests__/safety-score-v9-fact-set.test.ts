@@ -34,7 +34,10 @@ import {
   buildSafetyScoreV9BaselineExtension,
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9-extension";
-import { buildSafetyScoreV9RouteReviews } from "../safety-score-v9-extension-routes";
+import {
+  buildSafetyScoreV9RetainedRedemptionRoutes,
+  buildSafetyScoreV9RouteReviews,
+} from "../safety-score-v9-extension-routes";
 import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9-extension-operational-resilience";
 import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9-extension-shock";
 import type { SafetyScoreV9ReviewedTransferFact } from "../safety-score-v9-extension-transfer";
@@ -539,6 +542,81 @@ function queuedRedemptionFixedInput() {
     ...draft,
     redemptionGenerationId: "redemption:fixture",
     redemptionBackstopMap: { alpha: redemption },
+    redemptionStale: false,
+    inputFreshness: {
+      ...draft.inputFreshness,
+      redemptionBackstops: {
+        updatedAt: OBSERVED_AT_SEC,
+        ageSeconds: AS_OF_SEC - OBSERVED_AT_SEC,
+        stale: false,
+      },
+    },
+  });
+}
+
+function boundedUnknownFeeRedemptionFixedInput() {
+  const assetId = "usdc-circle";
+  const base = exactFixedInput({ assetId });
+  const redemption: RedemptionBackstopEntry = {
+    stablecoinId: "usdc-circle",
+    score: null,
+    effectiveExitScore: null,
+    dexLiquidityScore: null,
+    accessScore: 40,
+    settlementScore: 65,
+    executionCertaintyScore: 60,
+    capacityScore: null,
+    outputAssetQualityScore: 100,
+    costScore: 40,
+    routeFamily: "offchain-issuer",
+    accessModel: "issuer-api",
+    settlementModel: "atomic",
+    executionModel: "rules-based-nav",
+    outputAssetType: "stable-single",
+    provider: "supply-full-model",
+    sourceMode: "estimated",
+    resolutionState: "resolved",
+    routeStatus: "open",
+    routeStatusSource: "static-config",
+    holderEligibility: "any-holder",
+    capacityConfidence: "documented-bound",
+    capacitySemantics: "eventual-only",
+    capacityProfile: {
+      immediateUsd: null,
+      eventualUsd: 10_000_000,
+      scoringUsd: null,
+      scoringHorizon: "eventual",
+      capacityProfileConfidence: "documented-bound",
+      modeledExitSizeUsd: 10_000_000,
+    },
+    feeConfidence: "undisclosed-reviewed",
+    feeModelKind: "documented-variable",
+    modelConfidence: "high",
+    immediateCapacityUsd: null,
+    immediateCapacityRatio: null,
+    feeBps: null,
+    queueEnabled: false,
+    methodologyVersion: "4.18",
+    updatedAt: OBSERVED_AT_SEC,
+    docs: {
+      label: "Fixture redemption terms",
+      url: "https://example.com/redemption",
+      reviewedAt: "1970-01-01",
+    },
+  };
+  const {
+    schemaVersion: _schemaVersion,
+    dexPayloadFingerprint: _dexPayloadFingerprint,
+    redemptionPayloadFingerprint: _redemptionPayloadFingerprint,
+    registryFingerprint: _registryFingerprint,
+    inputMethodologyVersions: _inputMethodologyVersions,
+    baseInputGenerationId: _baseInputGenerationId,
+    ...draft
+  } = base;
+  return createReportCardsFixedInput({
+    ...draft,
+    redemptionGenerationId: "redemption:bounded-unknown-fee",
+    redemptionBackstopMap: { [assetId]: redemption },
     redemptionStale: false,
     inputFreshness: {
       ...draft.inputFreshness,
@@ -1553,6 +1631,40 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       horizon: "queued",
       settlementDelaySec: 30 * 86_400,
       capsApplied: expect.arrayContaining(["queue-backlog:0.65", "minimum-redeem:0.75"]),
+    });
+  });
+
+  it("preserves reviewed capacity and applies the bounded-unknown fee ceiling end to end", () => {
+    const fixed = boundedUnknownFeeRedemptionFixedInput();
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.assetId = "usdc-circle";
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "usdc-circle");
+    reviewed.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, "usdc-circle");
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+    const redemption = compiled.assets[0]!.exitRoutes.find((route) => route.lane === "redemption")!;
+    expect(redemption).toMatchObject({
+      feeEvidence: "undisclosed-reviewed",
+      scoreEligible: false,
+      status: { observationState: "known" },
+    });
+    expect(redemption.capacityCurve.every((point) => point.executableUsd > 0)).toBe(true);
+
+    const exit = evaluateV9Exit(
+      {
+        circulatingUsd: 10_000_000,
+        portfolioStatus: "reviewed-complete",
+        routes: [projectV9ExitEvaluationRoute(redemption)],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const ceiling = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.undisclosedFeeRouteScoreCeiling;
+    expect(exit.score).toBeGreaterThan(0);
+    expect(exit.score).toBeLessThanOrEqual(ceiling);
+    expect(exit.routes[0]).toMatchObject({
+      included: true,
+      capsApplied: expect.arrayContaining(["fee-evidence:undisclosed-reviewed"]),
     });
   });
 
