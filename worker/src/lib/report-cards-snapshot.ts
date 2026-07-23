@@ -26,8 +26,6 @@ import {
   type FixedDexLiquidityRow,
   type ReportCardsFixedInput,
 } from "./report-cards-fixed-input";
-import type { ChainRpcConfig } from "./chain-registry";
-import { captureSafetyScoreV9SupplyAttributionById } from "./safety-score-v9-supply-attribution";
 
 export { ReportCardsSnapshotUnavailableError } from "./report-cards-snapshot-inputs";
 export { topologicalOrder } from "./report-cards-snapshot-card";
@@ -70,8 +68,6 @@ export interface BuildReportCardsSnapshotOptions {
   preloadedStablecoinsCache?: StablecoinsCacheLoadResult;
   sameNotionalScoringMode?: "legacy" | "active";
   captureFixedInput?: boolean;
-  chainRpcs?: Map<string, ChainRpcConfig>;
-  signal?: AbortSignal;
 }
 
 interface DexPublicationRow {
@@ -213,8 +209,6 @@ export async function buildReportCardsSnapshot(
     preloadedStablecoinsCache,
     sameNotionalScoringMode = "legacy",
     captureFixedInput = false,
-    chainRpcs,
-    signal,
   }: BuildReportCardsSnapshotOptions = {},
 ): Promise<ReportCardsSnapshot> {
   const {
@@ -371,12 +365,6 @@ export async function buildReportCardsSnapshot(
     methodologyVersion: redemptionSnapshotProvenance.methodologyVersion,
   });
   const registryFingerprint = computeReportCardsRegistryFingerprint();
-  const safetyScoreV9SupplyAttributionById = await captureSafetyScoreV9SupplyAttributionById(
-    peggedAssets,
-    pegAnalytics.nowSec,
-    chainRpcs,
-    signal,
-  );
   const fixedInput = createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
     capturedAt: new Date(pegAnalytics.nowSec * 1_000).toISOString(),
@@ -406,7 +394,6 @@ export async function buildReportCardsSnapshot(
         { circulating: asset.circulating, observedAtSec: asset.supplyObservedAt ?? null },
       ]),
     ),
-    safetyScoreV9SupplyAttributionById,
     dexDeploymentSupplyCoverageById,
     collateralDriftCoins,
     liveToFallbackCoins,

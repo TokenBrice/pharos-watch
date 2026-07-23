@@ -61,11 +61,14 @@ bounded decompression; its decoded public V8 JSON is unchanged, and the new
 reader also accepts legacy plain envelopes during rolling deploys.
 
 The report-card publication flow also runs a candidate-only Safety Score V9
-sidecar after the atomic V8 publication commits. It reuses the exact normalized
-base generation, adds reviewed V9 facts, and writes the latest candidate/diff,
-one current observation per UTC day, and append-only movement reviews. A failed
-attempt can be retried later on the same day, and a later successful refresh
-replaces that day's current candidate observation.
+sidecar after the atomic V8 publication commits. When a shadow refresh is due,
+it reuses the exact normalized base generation, performs any bounded V9-only
+enrichment, persists that attempt input at `report-cards:v9-fixed-input:exact`,
+and writes the latest candidate/diff, one current observation per UTC day, and
+append-only movement reviews. Shadow enrichment, exact-input, compile, or
+persistence failure cannot unwind the V8 batch. A failed attempt can be retried
+later on the same day, and a later successful refresh replaces that day's
+current candidate observation.
 `GET /api/admin-safety-score-v9` and its review mutation remain the operator
 surface. The additive `GET /api/report-cards/v9` route now exposes a strict,
 fully identified contract only after its owner activation key matches. A

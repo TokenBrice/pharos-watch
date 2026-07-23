@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig } from "../chain-registry";
-import type { StablecoinData } from "@shared/types/market";
+import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 
 const rpcMocks = vi.hoisted(() => ({
   fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
@@ -28,14 +28,20 @@ function uint256(value: bigint): `0x${string}` {
   return `0x${value.toString(16).padStart(64, "0")}`;
 }
 
-function xautAsset(chainCirculating: StablecoinData["chainCirculating"] = {}): StablecoinData {
+function xautFixedInput(
+  chainCirculating: Record<string, { current: number }> = {},
+): ReportCardsFixedInput {
   return {
-    id: "xaut-tether",
-    name: "Tether Gold",
-    symbol: "XAUT",
-    circulating: { peggedGOLD: XAUT_AGGREGATE_SUPPLY_USD },
-    chainCirculating,
-  } as unknown as StablecoinData;
+    activeAssetIds: ["xaut-tether"],
+    clockSec: OBSERVED_AT_SEC,
+    chainCirculatingById: { "xaut-tether": chainCirculating },
+    aggregateCirculatingById: {
+      "xaut-tether": {
+        circulating: { peggedGOLD: XAUT_AGGREGATE_SUPPLY_USD },
+        observedAtSec: OBSERVED_AT_SEC,
+      },
+    },
+  } as unknown as ReportCardsFixedInput;
 }
 
 function chainRpcs(): Map<string, ChainRpcConfig> {
@@ -90,16 +96,15 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
         returnData: uint256(XAUT0_LOCKBOX_BALANCE_RAW),
       },
     ]);
-    const asset = xautAsset();
-    const before = structuredClone(asset);
+    const fixedInput = xautFixedInput();
+    const before = structuredClone(fixedInput);
 
     const captured = await captureSafetyScoreV9SupplyAttributionById(
-      [asset],
-      OBSERVED_AT_SEC,
+      fixedInput,
       chainRpcs(),
     );
 
-    expect(asset).toEqual(before);
+    expect(fixedInput).toEqual(before);
     expect(captured["xaut-tether"]).toMatchObject({
       model: "canonical-lock-mint-partition-v1",
       observedAtSec: OBSERVED_AT_SEC,
@@ -127,19 +132,11 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
   });
 
   it("preserves a real upstream chain map and fails closed on unavailable evidence", async () => {
-    const existing = {
-      Ethereum: {
-        current: XAUT_AGGREGATE_SUPPLY_USD,
-        circulatingPrevDay: XAUT_AGGREGATE_SUPPLY_USD,
-        circulatingPrevWeek: XAUT_AGGREGATE_SUPPLY_USD,
-        circulatingPrevMonth: XAUT_AGGREGATE_SUPPLY_USD,
-      },
-    };
+    const existing = { Ethereum: { current: XAUT_AGGREGATE_SUPPLY_USD } };
 
     await expect(
       captureSafetyScoreV9SupplyAttributionById(
-        [xautAsset(existing)],
-        OBSERVED_AT_SEC,
+        xautFixedInput(existing),
         chainRpcs(),
       ),
     ).resolves.toEqual({});
@@ -148,8 +145,7 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
     await expect(
       captureSafetyScoreV9SupplyAttributionById(
-        [xautAsset()],
-        OBSERVED_AT_SEC,
+        xautFixedInput(),
         chainRpcs(),
       ),
     ).resolves.toEqual({});

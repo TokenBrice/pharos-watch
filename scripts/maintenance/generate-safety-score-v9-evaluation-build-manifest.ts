@@ -127,6 +127,7 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "worker/src/lib/safety-score-v9-extension-transfer.ts",
   "worker/src/lib/safety-score-v9-fact-set.ts",
   "worker/src/lib/safety-score-v9-fact-set-boundary.ts",
+  "worker/src/lib/safety-score-v9-supply-attribution.ts",
 ] as const;
 
 export const V9_EVALUATION_BUILD_SOURCE_PATHS = [

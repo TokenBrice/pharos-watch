@@ -211,6 +211,7 @@ function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
 }
 
 export const REPORT_CARDS_FIXED_INPUT_CACHE_KEY = "report-cards:fixed-input:exact";
+export const SAFETY_SCORE_V9_FIXED_INPUT_CACHE_KEY = "report-cards:v9-fixed-input:exact";
 const REPORT_CARDS_FIXED_INPUT_CACHE_MAX_BYTES = 1_900_000;
 
 const FixedInputCacheEnvelopeSchema = z.object({
@@ -249,8 +250,10 @@ async function gunzipText(bytes: Uint8Array): Promise<string> {
   return new Response(stream).text();
 }
 
-export async function buildReportCardsFixedInputCacheEntry(
+async function buildFixedInputCacheEntry(
+  key: string,
   value: unknown,
+  includeV9SupplyAttribution: boolean,
   safetyScoreIdentity?: SafetyScoreV8PublicationIdentity,
 ): Promise<{ key: string; value: string; storedBytes: number; uncompressedBytes: number }> {
   const input = normalizeFixedInput(value);
@@ -267,7 +270,8 @@ export async function buildReportCardsFixedInputCacheEntry(
   ) {
     throw new Error("Exact report-card fixed input does not match its Safety Score publication identity");
   }
-  const payload = JSON.stringify(input);
+  const { safetyScoreV9SupplyAttributionById: _v9SupplyAttribution, ...v8Input } = input;
+  const payload = JSON.stringify(includeV9SupplyAttribution ? input : v8Input);
   const uncompressedBytes = new TextEncoder().encode(payload);
   const compressed = await gzipBytes(uncompressedBytes);
   const envelope = JSON.stringify({
@@ -287,11 +291,35 @@ export async function buildReportCardsFixedInputCacheEntry(
     );
   }
   return {
-    key: REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
+    key,
     value: envelope,
     storedBytes,
     uncompressedBytes: uncompressedBytes.byteLength,
   };
+}
+
+export function buildReportCardsFixedInputCacheEntry(
+  value: unknown,
+  safetyScoreIdentity?: SafetyScoreV8PublicationIdentity,
+): Promise<{ key: string; value: string; storedBytes: number; uncompressedBytes: number }> {
+  return buildFixedInputCacheEntry(
+    REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
+    value,
+    false,
+    safetyScoreIdentity,
+  );
+}
+
+export function buildSafetyScoreV9FixedInputCacheEntry(
+  value: unknown,
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentity,
+): Promise<{ key: string; value: string; storedBytes: number; uncompressedBytes: number }> {
+  return buildFixedInputCacheEntry(
+    SAFETY_SCORE_V9_FIXED_INPUT_CACHE_KEY,
+    value,
+    true,
+    safetyScoreIdentity,
+  );
 }
 
 export interface ReportCardsFixedInputCacheArtifact {

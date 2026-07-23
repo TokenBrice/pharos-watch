@@ -1,9 +1,7 @@
 import { CHAIN_META } from "@shared/lib/chains";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinData } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "./abort";
 import type { ChainRpcConfig } from "./chain-registry";
 import {
@@ -11,7 +9,7 @@ import {
   type EvmMulticall3Result,
 } from "./evm-rpc";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "./evm-selectors";
-import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
+import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 
 interface LockMintSupplyAttributionConfig {
   canonicalChain: string;
@@ -92,17 +90,17 @@ function decodeUint256(result: EvmMulticall3Result | undefined): bigint | null {
 }
 
 async function observeLockMintSupplyPartition(
-  asset: StablecoinData,
+  assetId: string,
+  aggregateSupplyUsd: number,
   config: LockMintSupplyAttributionConfig,
   chainRpcs: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<LockMintSupplyPartition | null> {
-  const meta = ACTIVE_META_BY_ID.get(asset.id);
+  const meta = ACTIVE_META_BY_ID.get(assetId);
   const canonicalContract = meta?.contracts?.find((contract) => contract.chain === config.canonicalChain);
   const canonicalChain = CHAIN_META[config.canonicalChain];
   if (!canonicalContract || canonicalChain?.type !== "evm" || !chainRpcs.has(config.canonicalChain)) return null;
 
-  const aggregateSupplyUsd = getCirculatingRaw(asset);
   if (!Number.isFinite(aggregateSupplyUsd) || aggregateSupplyUsd <= 0) return null;
 
   const calls = [
@@ -150,37 +148,63 @@ async function observeLockMintSupplyPartition(
  * row or the V8 chain map used by exact replay.
  */
 export async function captureSafetyScoreV9SupplyAttributionById(
-  assets: readonly StablecoinData[],
-  observedAtSec: number,
+  fixedInput: Readonly<ReportCardsFixedInput>,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<V9SupplyAttributionById> {
   if (!chainRpcs || chainRpcs.size === 0) return {};
-  const assetsById = new Map(assets.map((asset) => [asset.id, asset]));
+  const activeAssetIds = new Set(fixedInput.activeAssetIds);
   const attributionById: V9SupplyAttributionById = {};
 
   for (const [assetId, config] of Object.entries(LOCK_MINT_SUPPLY_ATTRIBUTIONS)) {
     throwIfAborted(signal);
-    const asset = assetsById.get(assetId);
-    if (!asset) continue;
-    const existingSupplyUsd = Object.values(asset.chainCirculating).reduce((sum, row) => sum + row.current, 0);
+    if (!activeAssetIds.has(assetId)) continue;
+    const existingSupplyUsd = Object.values(fixedInput.chainCirculatingById[assetId] ?? {}).reduce(
+      (sum, row) => sum + row.current,
+      0,
+    );
     if (existingSupplyUsd > 0) continue;
+    const aggregateSupplyUsd = Object.values(
+      fixedInput.aggregateCirculatingById[assetId]?.circulating ?? {},
+    ).reduce((sum, value) => sum + value, 0);
 
     try {
-      const partition = await observeLockMintSupplyPartition(asset, config, chainRpcs, signal);
+      const partition = await observeLockMintSupplyPartition(
+        assetId,
+        aggregateSupplyUsd,
+        config,
+        chainRpcs,
+        signal,
+      );
       if (!partition) continue;
       attributionById[assetId] = {
         model: "canonical-lock-mint-partition-v1",
-        observedAtSec,
+        observedAtSec: fixedInput.clockSec,
         currentSupplyUsdByChain: partition.currentSupplyUsdByChain,
       };
     } catch (error) {
       rethrowIfAborted(error, signal);
-      console.warn(`[safety-score-v9] Supply attribution failed for ${asset.symbol}:`, error);
+      console.warn(`[safety-score-v9] Supply attribution failed for ${assetId}:`, error);
     }
   }
 
   return attributionById;
+}
+
+export async function enrichSafetyScoreV9FixedInputSupply(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
+): Promise<ReportCardsFixedInput> {
+  const safetyScoreV9SupplyAttributionById = await captureSafetyScoreV9SupplyAttributionById(
+    fixedInput,
+    chainRpcs,
+    signal,
+  );
+  return normalizeFixedInput({
+    ...fixedInput,
+    safetyScoreV9SupplyAttributionById,
+  });
 }
 
 export function safetyScoreV9ChainRows(

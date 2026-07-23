@@ -405,7 +405,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "quarter-hourly",
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
-    maxConnections: 0,
+    maxConnections: 1, // Due-only V9 shadow enrichment uses one Ethereum multicall after V8 commits.
     connectionGroup: "quarter-hourly-chain",
   },
   {

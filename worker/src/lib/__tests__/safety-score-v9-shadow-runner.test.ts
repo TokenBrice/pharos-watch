@@ -172,17 +172,37 @@ describe("Safety Score V9 shadow runner", { timeout: 30_000 }, () => {
   });
 
   it("skips until the bounded refresh interval elapses", async () => {
-    await runSafetyScoreV9ShadowAfterV8Publication(input());
+    const prepareFixedInput = vi.fn(async (fixedInput: unknown) => fixedInput);
+    await runSafetyScoreV9ShadowAfterV8Publication({ ...input(), prepareFixedInput });
     mockLoadDaily.mockResolvedValue(mockPersistState.mock.calls[0]![1].daily);
     mockPersistState.mockClear();
 
-    await expect(runSafetyScoreV9ShadowAfterV8Publication(input())).resolves.toEqual({
+    await expect(
+      runSafetyScoreV9ShadowAfterV8Publication({ ...input(), prepareFixedInput }),
+    ).resolves.toEqual({
       status: "skipped",
       attemptId: `safety-score-v9-shadow:${UTC_DAY}:2`,
       utcDay: UTC_DAY,
       reason: "refresh-interval-not-elapsed",
     });
+    expect(prepareFixedInput).toHaveBeenCalledTimes(1);
     expect(mockPersistState).not.toHaveBeenCalled();
+  });
+
+  it("allows only V9 supply attribution to change during shadow preparation", async () => {
+    const result = await runSafetyScoreV9ShadowAfterV8Publication({
+      ...input(),
+      prepareFixedInput: async (fixedInput) => ({
+        ...fixedInput,
+        capturedAt: "2026-07-24T00:00:00.000Z",
+      }),
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      stage: "v9-enrichment",
+      message: "Safety Score v9 preparation changed the authoritative V8 fixed input",
+    });
   });
 
   it("waits until the post-producer daily observation point", async () => {

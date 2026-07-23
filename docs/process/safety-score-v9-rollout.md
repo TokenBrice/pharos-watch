@@ -80,8 +80,14 @@ or persistence failure cannot suppress or replace V8 publication.
 
 The private latest entries are:
 
+- `report-cards:v9-fixed-input:exact`: the normalized V8 base generation plus
+  any bounded V9-only evidence used by the latest attempted shadow refresh;
 - `report-cards:v9-shadow`: the latest strict candidate envelope; and
 - `report-cards:v9-shadow:diff`: the latest V8/V9 movement report.
+
+Evidence capture must export the V9 exact-input key, not the atomic V8
+`report-cards:fixed-input:exact` key, and verify that its base and source
+generation identities match the selected shadow row.
 
 The Worker also retains one compact `safety_score_v9_shadow_daily` row per UTC
 day. The row records candidate identity, result counts, coverage observations,
@@ -201,7 +207,11 @@ The operator records the incident and deployment identities, removes the
 public-activation key so the versioned endpoint fails closed, and restores the
 retained V8-compatible Worker or Pages deployment where necessary. Verify V8
 publication, append the non-comparable V8 history boundary, reseed safety-alert
-state, and keep incoherent derived surfaces degraded until they refresh.
+state, and keep incoherent derived surfaces degraded until they refresh. A
+restored Worker must complete its first quarter-hourly V8 report-card
+publication before evaluation-build-bound compact caches and consumers are
+considered converged; request-time V8 report cards may use their identified
+compute fallback during that bounded interval.
 
 D1 migrations are not reversed during rollback. Cloudflare deployment history
 is the immediate code target; Git remains the durable source record.

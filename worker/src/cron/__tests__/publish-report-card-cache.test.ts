@@ -5,6 +5,8 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared
 
 const mockBuildReportCardsSnapshot = vi.fn();
 const mockBuildFixedInputCacheEntry = vi.fn();
+const mockBuildV9FixedInputCacheEntry = vi.fn();
+const mockEnrichV9FixedInput = vi.fn();
 const mockRunSafetyScoreV9Shadow = vi.fn();
 const mockSetCacheMany = vi.fn();
 
@@ -14,6 +16,11 @@ vi.mock("../../lib/report-cards-snapshot", () => ({
 
 vi.mock("../../lib/report-cards-fixed-input", () => ({
   buildReportCardsFixedInputCacheEntry: mockBuildFixedInputCacheEntry,
+  buildSafetyScoreV9FixedInputCacheEntry: mockBuildV9FixedInputCacheEntry,
+}));
+
+vi.mock("../../lib/safety-score-v9-supply-attribution", () => ({
+  enrichSafetyScoreV9FixedInputSupply: mockEnrichV9FixedInput,
 }));
 
 vi.mock("../../lib/safety-score-v9-shadow-runner", () => ({
@@ -80,6 +87,8 @@ describe("publishReportCardCache", () => {
   beforeEach(() => {
     mockBuildReportCardsSnapshot.mockReset();
     mockBuildFixedInputCacheEntry.mockReset();
+    mockBuildV9FixedInputCacheEntry.mockReset();
+    mockEnrichV9FixedInput.mockReset();
     mockRunSafetyScoreV9Shadow.mockReset();
     mockSetCacheMany.mockReset();
     mockSetCacheMany.mockResolvedValue(undefined);
@@ -89,13 +98,26 @@ describe("publishReportCardCache", () => {
       storedBytes: 256,
       uncompressedBytes: 512,
     }));
-    mockRunSafetyScoreV9Shadow.mockResolvedValue({
-      status: "published",
-      attemptId: "safety-score-v9-shadow:scheduled:2023-11-14",
-      utcDay: "2023-11-14",
-      publicationGenerationId: "v9-shadow-generation",
-      candidateId: "v9-candidate",
-      pendingReviewCount: 1,
+    mockBuildV9FixedInputCacheEntry.mockImplementation(async (_fixedInput, safetyScoreIdentity) => ({
+      key: "report-cards:v9-fixed-input:exact",
+      value: JSON.stringify({ fixed: "v9-input-envelope", safetyScoreIdentity }),
+      storedBytes: 320,
+      uncompressedBytes: 640,
+    }));
+    mockEnrichV9FixedInput.mockImplementation(async (fixedInput) => ({
+      ...fixedInput,
+      safetyScoreV9SupplyAttributionById: {},
+    }));
+    mockRunSafetyScoreV9Shadow.mockImplementation(async (shadowInput) => {
+      await shadowInput.prepareFixedInput?.(shadowInput.fixedInput, new AbortController().signal);
+      return {
+        status: "published",
+        attemptId: "safety-score-v9-shadow:scheduled:2023-11-14",
+        utcDay: "2023-11-14",
+        publicationGenerationId: "v9-shadow-generation",
+        candidateId: "v9-candidate",
+        pendingReviewCount: 1,
+      };
     });
   });
 
@@ -110,10 +132,10 @@ describe("publishReportCardCache", () => {
       publishPegAnalytics: true,
       captureFixedInput: true,
     });
-    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
+    expect(mockSetCacheMany).toHaveBeenCalledTimes(2);
     expect(mockRunSafetyScoreV9Shadow).toHaveBeenCalledTimes(1);
     expect(mockSetCacheMany.mock.invocationCallOrder[0]).toBeLessThan(
-      mockRunSafetyScoreV9Shadow.mock.invocationCallOrder[0]!,
+      mockEnrichV9FixedInput.mock.invocationCallOrder[0]!,
     );
     const entries = mockSetCacheMany.mock.calls[0]?.[1] as Array<{ key: string; value: string }>;
     expect(entries.map((entry) => entry.key)).toEqual([
@@ -152,8 +174,13 @@ describe("publishReportCardCache", () => {
     });
     expect(entries[2]?.value).toContain('"usdc-circle"');
     expect(parsed[3]).toMatchObject({ fixed: "input-envelope" });
+    const v9Entries = mockSetCacheMany.mock.calls[1]?.[1] as Array<{ key: string; value: string }>;
+    expect(v9Entries.map((entry) => entry.key)).toEqual(["report-cards:v9-fixed-input:exact"]);
+    expect(JSON.parse(v9Entries[0]!.value)).toMatchObject({ fixed: "v9-input-envelope" });
     expect(snapshot.payload).not.toHaveProperty("fixedInput");
     expect(JSON.parse(result.metadata!)).toMatchObject({
+      v9FixedInputCacheBytes: 320,
+      v9FixedInputUncompressedBytes: 640,
       v9Shadow: {
         status: "published",
         pendingReviewCount: 1,
@@ -181,6 +208,21 @@ describe("publishReportCardCache", () => {
     expect(result.productivity?.productive).toBe(true);
     expect(JSON.parse(result.metadata!)).toMatchObject({
       publicationGenerationId: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
+      v9Shadow: { status: "failed", stage: "scheduler", code: "Error" },
+    });
+  });
+
+  it("keeps the committed V8 publication authoritative when V9 input enrichment fails", async () => {
+    mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
+    mockEnrichV9FixedInput.mockRejectedValue(new Error("shadow RPC unavailable"));
+
+    const result = await publishReportCardCache({} as D1Database);
+
+    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
+    expect(result.productivity?.productive).toBe(true);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      publicationGenerationId: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
+      v9FixedInputCacheBytes: null,
       v9Shadow: { status: "failed", stage: "scheduler", code: "Error" },
     });
   });

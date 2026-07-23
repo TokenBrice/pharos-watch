@@ -215,6 +215,8 @@ generation identity.
 After a valid V8 publication, the Worker may refresh the private V9 latest
 candidate at most once every three hours. It retains:
 
+- `report-cards:v9-fixed-input:exact`, the exact attempted V9 input paired by
+  base and source generation identity;
 - `report-cards:v9-shadow`, the strict candidate envelope;
 - `report-cards:v9-shadow:diff`, the V8/V9 movement report;
 - one compact `safety_score_v9_shadow_daily` row per UTC day; and

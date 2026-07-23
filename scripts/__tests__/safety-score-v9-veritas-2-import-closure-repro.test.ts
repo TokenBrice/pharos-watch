@@ -24,6 +24,11 @@ const OMITTED_SCORE_BEARING_IMPORTS = [
     importedBy: "worker/src/lib/safety-score-v9-fact-set.ts",
     importSpecifier: "@shared/lib/exit-route-output",
   },
+  {
+    path: "worker/src/lib/safety-score-v9-supply-attribution.ts",
+    importedBy: "worker/src/lib/safety-score-v9-fact-set.ts",
+    importSpecifier: "./safety-score-v9-supply-attribution",
+  },
 ] as const;
 
 function fixtureRoot(): string {

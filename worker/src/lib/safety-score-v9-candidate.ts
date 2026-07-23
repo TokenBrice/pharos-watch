@@ -41,6 +41,7 @@ const SafetyScoreV9CompilerFactSchemaIdentityV1Schema = z
     compiledFactSchemaVersion: z.literal(3),
     compiledFactSchemaCapabilities: z.tuple([
       z.literal("canonical-chain-supply-distribution.v1"),
+      z.literal("canonical-lock-mint-supply-attribution.v1"),
       z.literal("exit-route-modeled-confidence.v1"),
       z.literal("fact-gap-responsibility.v1"),
       z.literal("journaled-cdp-shock-coverage.v1"),
@@ -68,7 +69,7 @@ const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
         dexExitRoutes: z.literal("fixed-input.dex-exit-observations.v2"),
         redemptionExitRoutes: z.literal("fixed-input.redemption-exit-observations.v2"),
         liveReserves: z.literal("fixed-input.live-reserves.v1"),
-        chainSupply: z.literal("fixed-input.usd-circulating-supply.v2"),
+        chainSupply: z.literal("fixed-input.usd-circulating-supply.v3"),
         peg: z.literal("fixed-input.peg-summary.v1"),
         researchOverlays: z.literal("v9-fact-extension.review-overlays.v3"),
         shockCoverage: z.literal("journal-registry.cdp-shock-coverage.v1"),
@@ -189,6 +190,7 @@ function compilerFactSchemaIdentity(
     compiledFactSchemaVersion: compiledFacts.schemaVersion,
     compiledFactSchemaCapabilities: [
       "canonical-chain-supply-distribution.v1",
+      "canonical-lock-mint-supply-attribution.v1",
       "exit-route-modeled-confidence.v1",
       "fact-gap-responsibility.v1",
       "journaled-cdp-shock-coverage.v1",
@@ -215,7 +217,7 @@ function producerCapabilityIdentity(
       dexExitRoutes: "fixed-input.dex-exit-observations.v2",
       redemptionExitRoutes: "fixed-input.redemption-exit-observations.v2",
       liveReserves: "fixed-input.live-reserves.v1",
-      chainSupply: "fixed-input.usd-circulating-supply.v2",
+      chainSupply: "fixed-input.usd-circulating-supply.v3",
       peg: "fixed-input.peg-summary.v1",
       researchOverlays: "v9-fact-extension.review-overlays.v3",
       shockCoverage: "journal-registry.cdp-shock-coverage.v1",

@@ -352,6 +352,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(left.candidate.factSetDigest).toBe(left.compiledFacts.v9FactSetDigest);
     expect(left.compilerFactSchemaIdentity.compiledFactSchemaCapabilities).toEqual([
       "canonical-chain-supply-distribution.v1",
+      "canonical-lock-mint-supply-attribution.v1",
       "exit-route-modeled-confidence.v1",
       "fact-gap-responsibility.v1",
       "journaled-cdp-shock-coverage.v1",
@@ -366,7 +367,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(left.producerCapabilityIdentity.sourceAdapters.redemptionExitRoutes).toBe(
       "fixed-input.redemption-exit-observations.v2",
     );
-    expect(left.producerCapabilityIdentity.sourceAdapters.chainSupply).toBe("fixed-input.usd-circulating-supply.v2");
+    expect(left.producerCapabilityIdentity.sourceAdapters.chainSupply).toBe("fixed-input.usd-circulating-supply.v3");
     expect(left.producerCapabilityIdentity.sourceAdapters.researchOverlays).toBe(
       "v9-fact-extension.review-overlays.v3",
     );
