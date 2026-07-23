@@ -166,7 +166,7 @@ function blockerCodes(report: ReturnType<typeof evaluateSafetyScoreV9ShadowGate>
 }
 
 describe("Safety Score v9 offline shadow gate", () => {
-  it("passes 14 consecutive summaries with frozen identities and verified selected replays", () => {
+  it("passes a qualifying window above the 8-day minimum with frozen identities and verified selected replays", () => {
     const summaries = passingSummaries();
     const report = evaluateSafetyScoreV9ShadowGate({
       summaries: [...summaries].reverse(),
@@ -202,7 +202,7 @@ describe("Safety Score v9 offline shadow gate", () => {
   });
 
   it("rejects short or non-consecutive windows and days without a successful selection", () => {
-    const summaries = passingSummaries().slice(1);
+    const summaries = passingSummaries().slice(7);
     summaries.splice(3, 1);
     const noSuccess = summaries[5]!;
     summaries[5] = SafetyScoreV9ShadowDailySchema.parse({

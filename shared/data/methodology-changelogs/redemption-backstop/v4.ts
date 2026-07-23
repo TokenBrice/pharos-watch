@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.20",
+    title: "sBOLD Stability Pool capacity and bounded opaque-fee evidence",
+    date: "2026-07-23",
+    effectiveAt: 1784790320,
+    summary:
+      "sBOLD now measures same-run BOLD withdrawability from its Liquity V2 Stability Pool positions instead of treating the vault's near-zero idle BOLD balance as its executable buffer. Reviewed full-supply routes with an undisclosed fee can also publish capacity evidence tagged as bounded-unknown cost, while remaining ineligible for current redemption scoring without a numeric cost bound.",
+    impact: [
+      "`sbold-k3-capital` reads the BOLD amount returned by the vault's `calcFragments()` liquidity view and caps live capacity at the amount the vault can withdraw from its Stability Pool positions",
+      "sBOLD's live capacity uses documented-bound confidence and a strategy-buffer basis because collateral gains are excluded and K3 can temporarily restrict withdrawals when collateral exposure breaches its operational threshold",
+      "A failed sBOLD liquidity read fails closed instead of falling back to full NAV or the vault's total assets",
+      "Reviewed `undisclosed-reviewed` supply-model routes retain modeled capacity in `exitRouteObservations` with `feeEvidence: \"undisclosed-reviewed\"`, but the producer keeps them non-score-eligible until a fixed fee or reviewed numeric ceiling bounds same-notional cost",
+      "Current opaque-fee redemption scores and effective-exit blending remain unchanged; downstream candidate models may consume the tagged capacity only under their own explicit opaque-fee ceiling",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.19",
     title: "Fail-closed capacity for mixed reserve buckets",
     date: "2026-07-18",
