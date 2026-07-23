@@ -30,7 +30,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Prepare target branch
+      - name: Validate target branch ownership
         env:
           ASSET_ID: ${{ matrix.asset }}
           GH_TOKEN: ${{ github.token }}
@@ -55,22 +55,17 @@ jobs:
               echo "::error title=Closed unmerged mechanism refresh::${BRANCH} has closed-unmerged PR history; refusing to recreate it."
               exit 1
             fi
-            git checkout -B "$BRANCH" origin/main
           elif [ "$REMOTE_STATUS" -ne 0 ]; then
             echo "::error title=Mechanism refresh branch lookup failed::Could not inspect ${BRANCH}."
             exit 1
           elif [ "$OPEN_PR_COUNT" -eq 1 ]; then
-            git fetch origin "${BRANCH}:refs/remotes/origin/${BRANCH}"
-            git checkout -B "$BRANCH" "origin/$BRANCH"
-            git rebase origin/main
+            : "Existing open refresh PR may be updated after trusted capture completes."
           elif [ "$OPEN_PR_COUNT" -gt 1 ]; then
             echo "::error title=Ambiguous mechanism refresh PR::${BRANCH} has ${OPEN_PR_COUNT} open PRs."
             exit 1
           else
             git fetch origin "${BRANCH}:refs/remotes/origin/${BRANCH}"
-            if git merge-base --is-ancestor "origin/$BRANCH" origin/main; then
-              git checkout -B "$BRANCH" origin/main
-            else
+            if ! git merge-base --is-ancestor "origin/$BRANCH" origin/main; then
               echo "::error title=Unowned mechanism refresh history::${BRANCH} has unmerged commits but no open PR; refusing to overwrite it."
               exit 1
             fi
@@ -174,6 +169,73 @@ jobs:
           set -euo pipefail
           ROOT="shared/data/safety-score-v9/mechanism-measurements/${ASSET_ID}"
           BRANCH="automated/protocol-api-mechanism-refresh/${ASSET_ID}"
+          ARTIFACT_TMP="$(mktemp -d)"
+          trap 'rm -rf "$ARTIFACT_TMP"' EXIT
+          NEW_FILES="$(git ls-files --others --exclude-standard -- "$ROOT")"
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            mkdir -p "$ARTIFACT_TMP/$(dirname "$path")"
+            cp "$path" "$ARTIFACT_TMP/$path"
+          done <<< "$NEW_FILES"
+
+          PR_HISTORY="$(gh pr list --repo "$GITHUB_REPOSITORY" --state all --base main --head "$BRANCH" --limit 100 --json number,state,mergedAt)"
+          OPEN_PR_COUNT="$(jq '[.[] | select(.state == "OPEN")] | length' <<< "$PR_HISTORY")"
+          CLOSED_UNMERGED_COUNT="$(jq '[.[] | select(.state == "CLOSED" and .mergedAt == null)] | length' <<< "$PR_HISTORY")"
+          set +e
+          git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null
+          REMOTE_STATUS=$?
+          set -e
+          if [ "$REMOTE_STATUS" -eq 2 ]; then
+            if [ "$OPEN_PR_COUNT" -ne 0 ]; then
+              echo "::error title=Inconsistent mechanism refresh branch::${BRANCH} has an open PR but no remote branch."
+              exit 1
+            fi
+            if [ "$CLOSED_UNMERGED_COUNT" -ne 0 ]; then
+              echo "::error title=Closed unmerged mechanism refresh::${BRANCH} has closed-unmerged PR history; refusing to recreate it."
+              exit 1
+            fi
+            git checkout -B "$BRANCH" origin/main
+          elif [ "$REMOTE_STATUS" -ne 0 ]; then
+            echo "::error title=Mechanism refresh branch lookup failed::Could not inspect ${BRANCH}."
+            exit 1
+          elif [ "$OPEN_PR_COUNT" -eq 1 ]; then
+            git fetch origin "${BRANCH}:refs/remotes/origin/${BRANCH}"
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+            git rebase origin/main
+          elif [ "$OPEN_PR_COUNT" -gt 1 ]; then
+            echo "::error title=Ambiguous mechanism refresh PR::${BRANCH} has ${OPEN_PR_COUNT} open PRs."
+            exit 1
+          else
+            git fetch origin "${BRANCH}:refs/remotes/origin/${BRANCH}"
+            if git merge-base --is-ancestor "origin/$BRANCH" origin/main; then
+              git checkout -B "$BRANCH" origin/main
+            else
+              echo "::error title=Unowned mechanism refresh history::${BRANCH} has unmerged commits but no open PR; refusing to overwrite it."
+              exit 1
+            fi
+          fi
+
+          while IFS=$'\t' read -r status path; do
+            [ -z "$status" ] && continue
+            if [ "$status" != "A" ]; then
+              echo "::error title=Non-append-only mechanism PR::${path} has status ${status}."
+              exit 1
+            fi
+            case "$path" in
+              "$ROOT"/*-protocol-api.json) ;;
+              *)
+                echo "::error title=Unexpected mechanism PR diff::${path} is outside the target artifact set."
+                exit 1
+                ;;
+            esac
+          done < <(git diff --name-status origin/main...HEAD)
+
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            mkdir -p "$(dirname "$path")"
+            cp "$ARTIFACT_TMP/$path" "$path"
+          done <<< "$NEW_FILES"
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- "$ROOT"

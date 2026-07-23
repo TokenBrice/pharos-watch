@@ -33,7 +33,9 @@ The weekly workflow runs an explicit matrix over `usde-ethena` and `usdf-falcon`
 - `automated/protocol-api-mechanism-refresh/usde-ethena`
 - `automated/protocol-api-mechanism-refresh/usdf-falcon`
 
-If a target already has an open refresh PR, the workflow checks out that branch and rebases it onto `origin/main` before capturing another snapshot. This preserves unmerged append-only history. With no open PR, the workflow inspects the remote branch and PR history before starting from `origin/main`; closed-unmerged, orphaned, or otherwise ambiguous branch state fails for operator review.
+The workflow captures and replays evidence from the trusted default checkout. It inspects the target branch and PR history before capture, but it does not check out an existing automation branch until after the focused producer test, repository-wide replay, and local additions-only artifact validation pass. This keeps repository-local actions, npm lifecycle behavior, and producer scripts sourced from `main` rather than from an unreviewed refresh PR branch.
+
+If a target already has an open refresh PR and a new artifact was produced, the token-gated update step copies the validated artifact aside, checks out that branch, rebases it onto `origin/main`, revalidates the pre-existing PR diff as append-only target artifacts, restores the new artifact, and commits it. This preserves unmerged append-only history. With no open PR, the workflow inspects the remote branch and PR history before starting from `origin/main`; closed-unmerged, orphaned, or otherwise ambiguous branch state fails for operator review.
 
 Jobs use target-specific concurrency, stage only the target's evidence directory, run focused tests and repository-wide replay, and require the PR diff to contain additions only under that directory. They open or update a non-auto-merge PR only after those checks pass.
 
