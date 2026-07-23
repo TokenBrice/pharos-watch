@@ -81,6 +81,22 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Legacy bad-debt row denominated in the protocol's own token; self-referential, reviewed, no coinId link applies.",
   ],
   [
+    "dola-inverse-finance::Endogenous DOLA leg of sUSDe-DOLA Curve LP collateral::USDe",
+    "This row isolates the endogenous DOLA half of the LP; sUSDe only identifies the paired pool, while the external sUSDe half carries the upstream coinId.",
+  ],
+  [
+    "dola-inverse-finance::Endogenous DOLA leg of sUSDe-DOLA Curve LP collateral::DOLA",
+    "The isolated DOLA half is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
+    "dola-inverse-finance::Endogenous DOLA leg of sUSDS-DOLA Curve LP collateral::USDS",
+    "This row isolates the endogenous DOLA half of the LP; sUSDS only identifies the paired pool, while the external sUSDS half carries the upstream coinId.",
+  ],
+  [
+    "dola-inverse-finance::Endogenous DOLA leg of sUSDS-DOLA Curve LP collateral::DOLA",
+    "The isolated DOLA half is subject self exposure, not an upstream dependency edge.",
+  ],
+  [
     "uty-xsy::USDC deposits swept to custodial managed backing::USDC",
     "The reviewed sources establish the USDC mint and redemption envelope but not the current assets or positions held after the custodial sweep.",
   ],

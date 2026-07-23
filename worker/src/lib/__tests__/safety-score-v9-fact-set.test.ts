@@ -1464,7 +1464,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "c2a0b3b4e71635a090342ae4df261c5f7a005b1d8715acdf5ddbbdba00029277",
+      "e9feda6fc28d10f2b2e490d234f48310665fb1a1c10024698ca746731547fa6f",
     );
   });
 
