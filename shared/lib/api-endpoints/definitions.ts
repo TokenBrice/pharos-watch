@@ -1115,6 +1115,11 @@ const BASE_ENDPOINT_DEFINITIONS = [
     path: API_PATHS.adminSafetyScoreV9Review(),
     probeGroup: "manual",
   }),
+  adminMutation({
+    key: "admin-safety-score-v9-history-boundary",
+    path: API_PATHS.adminSafetyScoreV9HistoryBoundary(),
+    probeGroup: "manual",
+  }),
   adminGet({
     key: "status-probe-history",
     path: API_PATHS.statusProbeHistory(),

@@ -131,6 +131,8 @@ export async function runYieldCoordinatorFetchStage(params: YieldCoordinatorFetc
       supplementalFallbackMode: loadedState.supplementalMeta.fallbackMode,
       onChainCooldownActive: loadedState.onChainCooldownActive,
       onChainCooldownRemainingSec: loadedState.onChainCooldownRemainingSec,
+      expectedSafetyModel: loadedState.safetySnapshot.expectedModel,
+      safetySnapshotAvailable: loadedState.safetySnapshotAvailable,
     },
   });
 
@@ -146,6 +148,7 @@ export async function runYieldCoordinatorFetchStage(params: YieldCoordinatorFetc
         trackedCount: loadedState.safetySnapshot.trackedCount,
         coverageRatio: loadedState.safetyCoverageRatio,
         reason: loadedState.safetySnapshot.reason ?? null,
+        expectedModel: loadedState.safetySnapshot.expectedModel,
       },
     });
   }

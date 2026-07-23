@@ -129,6 +129,39 @@ describe("Safety Score history boundary operation", () => {
     expect(statements).toHaveLength(0);
   });
 
+  it("rejects boundary timestamps outside the source-to-operation interval", async () => {
+    const source = v9Snapshot();
+    const beforeSource = statementRecorder();
+    const afterOperation = statementRecorder();
+
+    await expect(
+      executeSafetyScoreHistoryBoundaryOperation(
+        beforeSource.db,
+        {
+          operation: "activate-v9",
+          expectedIdentity: source.safetyScoreIdentity,
+          recordedAtSec: source.updatedAt - 1,
+          createdAtSec: source.updatedAt + 10,
+        },
+        { loadV9Snapshot: async () => source },
+      ),
+    ).rejects.toThrow(/cannot predate its approved source/);
+    await expect(
+      executeSafetyScoreHistoryBoundaryOperation(
+        afterOperation.db,
+        {
+          operation: "activate-v9",
+          expectedIdentity: source.safetyScoreIdentity,
+          recordedAtSec: source.updatedAt + 11,
+          createdAtSec: source.updatedAt + 10,
+        },
+        { loadV9Snapshot: async () => source },
+      ),
+    ).rejects.toThrow(/cannot postdate its operation/);
+    expect(beforeSource.statements).toHaveLength(0);
+    expect(afterOperation.statements).toHaveLength(0);
+  });
+
   it("uses distinct non-comparable rollback and restoration transition kinds", async () => {
     const v8 = v8Source();
     const v9 = v9Snapshot();

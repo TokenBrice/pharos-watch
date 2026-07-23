@@ -267,7 +267,11 @@ import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import * as safetyScoresModule from "../../lib/safety-scores";
 import * as yieldConfigModule from "../yield-config";
 import * as yieldSourcesModule from "../yield-sync/sources";
-import { appendOptionalYieldCandidate, type YieldCandidateAppendStatus } from "../yield-sync/resolve-helpers";
+import {
+  appendOptionalYieldCandidate,
+  appendPoolFamilyYieldSources,
+  type YieldCandidateAppendStatus,
+} from "../yield-sync/resolve-helpers";
 import { loadTier1PrevRateRows } from "../yield-sync/resolve-tracked-sources";
 import { loadOndoOracleAnchorRow } from "../yield-sync/tracked-optional-source-registry";
 import type { ResolvedYieldCandidate, ResolvedYieldEntry } from "../yield-sync/types";
@@ -297,6 +301,8 @@ function setupDefaultMocks() {
     coveredCount: 4,
     trackedCount: 4,
     coverageRatio: 1,
+    source: "report-card-cache",
+    expectedModel: "v8",
     // The producer now requires a publication identity before rating rows.
     safetyScoreIdentity: {
       model: "v8",
@@ -306,6 +312,9 @@ function setupDefaultMocks() {
       baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
       publicationGenerationId: "report-cards-test",
     },
+    publicationGenerationId: "report-cards-test",
+    methodologyVersion: "vTEST",
+    publishedAt: Math.floor(Date.now() / 1000),
     scores: new Map([
       ["sdai-maker", { score: 85, grade: "A-" }],
       ["usde-ethena", { score: 70, grade: "B" }],
@@ -1691,6 +1700,66 @@ describe("optional source budgets", () => {
     const stmts = getWriteStatements();
     const bestRow = findYieldDataRow(stmts, "sdai-maker", "pool-sdai-native");
     expect(bestRow).toBeDefined();
+  });
+});
+
+describe("auto-lending safety availability", () => {
+  const usdcPool = {
+    pool: "pool-usdc-aave",
+    chain: "Ethereum",
+    project: "aave-v3",
+    symbol: "USDC",
+    tvlUsd: 10_000_000,
+    apy: 3.5,
+    apyBase: 3.5,
+    apyReward: null,
+    apyMean30d: 3.4,
+    stablecoin: true,
+    exposure: "single" as const,
+    underlyingTokens: null,
+  };
+
+  it("retains eligible lending candidates as unrated when the expected safety snapshot is unavailable", () => {
+    const resolved: ResolvedYieldEntry[] = [];
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    appendPoolFamilyYieldSources({
+      resolved,
+      dlPools: [usdcPool],
+      supplementalCandidates: [],
+      safetyScores: new Map(),
+      safetySnapshotAvailable: false,
+      expectedModel: "v9",
+      stablecoinSupplyById: new Map(),
+    });
+
+    expect(resolved).toEqual([
+      expect.objectContaining({
+        id: "usdc-circle",
+        yield: expect.objectContaining({
+          sourceKey: "pool-usdc-aave",
+          dataSource: "defillama-auto",
+        }),
+      }),
+    ]);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("V9 safety snapshot unavailable"));
+    warnSpy.mockRestore();
+  });
+
+  it("preserves the safety threshold for an available V8 snapshot", () => {
+    const resolved: ResolvedYieldEntry[] = [];
+
+    appendPoolFamilyYieldSources({
+      resolved,
+      dlPools: [usdcPool],
+      supplementalCandidates: [],
+      safetyScores: new Map([["usdc-circle", { score: 49, grade: "D" }]]),
+      safetySnapshotAvailable: true,
+      expectedModel: "v8",
+      stablecoinSupplyById: new Map(),
+    });
+
+    expect(resolved).toHaveLength(0);
   });
 });
 

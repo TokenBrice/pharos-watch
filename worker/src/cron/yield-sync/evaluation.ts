@@ -12,6 +12,7 @@ import type {
   YieldOpportunityRisk,
   YieldSafetyProvenance,
   YieldSafetyReason,
+  YieldSourceRisk,
   YieldSourceInputMeta,
 } from "@shared/types/yield";
 import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
@@ -70,6 +71,17 @@ function getHistoryRowsForStats(
 ): YieldHistorySnapshotRow[] {
   if (dataSource !== "onchain") return rows;
   return rows.filter((row) => !isOnChainBootstrapYieldSeed(row));
+}
+
+function removeUnavailableSafetyDerivedSourceRisk(sourceRisk: YieldSourceRisk | null): YieldSourceRisk | null {
+  if (sourceRisk == null) return null;
+  const { opportunityRisk: _opportunityRisk, ...independentSourceRisk } = sourceRisk;
+  return {
+    ...independentSourceRisk,
+    underlyingSafetyScore: null,
+    trancheSafetyScore: null,
+    trancheSafetyPenalty: null,
+  };
 }
 
 export interface EvaluateYieldSourcesInput {
@@ -307,7 +319,9 @@ function evaluateYieldSourceGroup(
         : underlyingSafetyGrade === "NR"
           ? "report-card-grade-not-rated"
           : null;
-    let sourceRisk = y.sourceRisk ?? null;
+    let sourceRisk = safetySnapshotUnavailable
+      ? removeUnavailableSafetyDerivedSourceRisk(y.sourceRisk ?? null)
+      : y.sourceRisk ?? null;
     if (!safetySnapshotUnavailable && isRoycoDawnTrancheSourceRisk(sourceRisk)) {
       const trancheSafety = computeRoycoDawnTrancheSafetyScore({
         underlyingSafetyScore,

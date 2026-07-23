@@ -283,8 +283,19 @@ type YieldDataTestRow = {
   yield_source: string;
   yield_type: string;
   data_source: string;
+  safety_score: number | null;
+  safety_grade: string;
+  pharos_yield_score: number | null;
   exchange_rate_prev: number | null;
   is_best: number;
+};
+
+type YieldHistoryTestRow = {
+  stablecoin_id: string;
+  source_key: string;
+  pys_at_publish: number | null;
+  safety_at_publish: number | null;
+  pys_inputs_at_publish: string | null;
 };
 
 function getPublishedYieldRows(db: MockHistoryDb): YieldDataTestRow[] {
@@ -298,6 +309,16 @@ function findPublishedYieldRow(
   predicate: (row: YieldDataTestRow) => boolean,
 ): YieldDataTestRow | undefined {
   return getPublishedYieldRows(db).find((row) => row.stablecoin_id === stablecoinId && predicate(row));
+}
+
+function findPublishedYieldHistoryRow(
+  db: MockHistoryDb,
+  stablecoinId: string,
+  predicate: (row: YieldHistoryTestRow) => boolean,
+): YieldHistoryTestRow | undefined {
+  const entry = db.getHistory().find((item) => item.sql.includes("INSERT OR IGNORE INTO yield_history"));
+  const rows = entry ? (JSON.parse(String(entry.binds[0] ?? "[]")) as YieldHistoryTestRow[]) : [];
+  return rows.find((row) => row.stablecoin_id === stablecoinId && predicate(row));
 }
 
 function getYieldRankingsCachePayload(db: MockHistoryDb): unknown {
@@ -387,6 +408,19 @@ function resetSyncYieldDataTest() {
     coveredCount: 4,
     trackedCount: 4,
     coverageRatio: 1,
+    source: "report-card-cache",
+    expectedModel: "v8",
+    safetyScoreIdentity: {
+      model: "v8",
+      schemaVersion: 1,
+      methodologyVersion: "vTEST",
+      evaluationBuildDigest: "a".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+      publicationGenerationId: "report-cards-test",
+    },
+    publicationGenerationId: "report-cards-test",
+    methodologyVersion: "vTEST",
+    publishedAt: Math.floor(Date.now() / 1000),
     scores: new Map([
       ["100", { score: 80, grade: "B+" }],
       ["usdc-circle", { score: 78, grade: "B+" }],
@@ -430,6 +464,7 @@ export {
   makeCacheWriteFailureDb,
   getPublishedYieldRows,
   findPublishedYieldRow,
+  findPublishedYieldHistoryRow,
   getYieldRankingsCachePayload,
   makeYieldOrphanDb,
   makeBrokenYieldRankingsDb,
@@ -440,6 +475,7 @@ export {
   type CronProgressUpdate,
   type MockHistoryDb,
   type YieldDataTestRow,
+  type YieldHistoryTestRow,
   fixtureMockD1,
   fixtureSyncYieldData,
   fixtureBatchExecute,

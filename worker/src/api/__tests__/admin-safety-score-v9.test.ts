@@ -22,7 +22,14 @@ import {
   SAFETY_SCORE_V9_SHADOW_CACHE_KEYS,
   persistSafetyScoreV9ShadowState,
 } from "../../lib/safety-score-v9-store";
-import { handleAdminSafetyScoreV9, handleAdminSafetyScoreV9MovementReview } from "../admin-safety-score-v9";
+import type { SafetyScoreHistoryBoundaryOperationInput } from "../../lib/safety-score-history-boundary-operation";
+import {
+  SAFETY_SCORE_HISTORY_BOUNDARY_REQUEST_SCHEMA_VERSION,
+  SafetyScoreHistoryBoundaryResponseSchema,
+  createHandleAdminSafetyScoreV9HistoryBoundary,
+  handleAdminSafetyScoreV9,
+  handleAdminSafetyScoreV9MovementReview,
+} from "../admin-safety-score-v9";
 
 const migrationPath = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -144,6 +151,20 @@ function reviewRequest(body: unknown, options: { idempotencyKey?: string; adminH
   if (options.idempotencyKey !== undefined) headers.set("Idempotency-Key", options.idempotencyKey);
   if (options.adminHeader !== false) headers.set("X-Pharos-Admin", "1");
   return new Request("https://ops-api.pharos.watch/api/admin-safety-score-v9/reviews", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+}
+
+function historyBoundaryRequest(
+  body: unknown,
+  options: { idempotencyKey?: string; adminHeader?: boolean } = {},
+) {
+  const headers = new Headers({ "Content-Type": "application/json" });
+  if (options.idempotencyKey !== undefined) headers.set("Idempotency-Key", options.idempotencyKey);
+  if (options.adminHeader !== false) headers.set("X-Pharos-Admin", "1");
+  return new Request("https://ops-api.pharos.watch/api/admin-safety-score-v9/history-boundary", {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -390,6 +411,99 @@ describe("admin Safety Score v9 movement reviews", () => {
     });
     expect(missingKey.status).toBe(400);
     expect(missingKey.headers.get("Cache-Control")).toBe("no-store");
+    sqlite.close();
+  });
+});
+
+describe("admin Safety Score history boundary", () => {
+  const expectedIdentity = {
+    model: "v9" as const,
+    schemaVersion: 1 as const,
+    methodologyVersion: candidate().policyVersion,
+    policyId: candidate().policy.id,
+    policyDigest,
+    evaluationBuildDigest,
+    baseInputGenerationId,
+    publicationGenerationId: candidate().publicationGenerationId,
+  };
+  const body = {
+    schemaVersion: SAFETY_SCORE_HISTORY_BOUNDARY_REQUEST_SCHEMA_VERSION,
+    operation: "activate-v9" as const,
+    expectedIdentity,
+    recordedAtSec: scheduledForSec + 100,
+  };
+
+  it("invokes only the exact idempotent boundary operation and never writes the activation marker", async () => {
+    const { sqlite, db } = createTestDatabase();
+    const executeBoundary = vi.fn(async (_db: D1Database, input: SafetyScoreHistoryBoundaryOperationInput) => ({
+      operation: input.operation,
+      transitionKind: "methodology-boundary-baseline" as const,
+      identity: input.expectedIdentity,
+      recordedAtSec: input.recordedAtSec,
+      cardCount: 1,
+      changes: 1,
+    }));
+    const handler = createHandleAdminSafetyScoreV9HistoryBoundary({
+      executeBoundary,
+      nowSec: () => scheduledForSec + 101,
+    });
+
+    const first = await handler({
+      db,
+      request: historyBoundaryRequest(body, { idempotencyKey: "history-boundary-001" }),
+      trustedAdmin: true,
+    });
+    expect(first.status).toBe(201);
+    expect(first.headers.get("X-Idempotent-Replay")).toBe("false");
+    const parsed = SafetyScoreHistoryBoundaryResponseSchema.parse(await first.json());
+    expect(parsed).toMatchObject({
+      status: "recorded",
+      operation: "activate-v9",
+      transitionKind: "methodology-boundary-baseline",
+      identity: expectedIdentity,
+      recordedAtSec: scheduledForSec + 100,
+      cardCount: 1,
+      changes: 1,
+    });
+    expect(executeBoundary).toHaveBeenCalledWith(db, {
+      operation: "activate-v9",
+      expectedIdentity,
+      recordedAtSec: scheduledForSec + 100,
+      createdAtSec: scheduledForSec + 101,
+      signal: expect.any(AbortSignal),
+    });
+
+    const replay = await handler({
+      db,
+      request: historyBoundaryRequest(body, { idempotencyKey: "history-boundary-001" }),
+      trustedAdmin: true,
+    });
+    expect(replay.status).toBe(201);
+    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+    expect(await replay.json()).toEqual(parsed);
+    expect(executeBoundary).toHaveBeenCalledTimes(1);
+    expect(
+      sqlite.prepare("SELECT COUNT(*) AS count FROM cache WHERE key = ?").get("safety-score-v9:public-activation"),
+    ).toEqual({ count: 0 });
+    sqlite.close();
+  });
+
+  it("rejects a model-incompatible operation before invoking the boundary primitive", async () => {
+    const { sqlite, db } = createTestDatabase();
+    const executeBoundary = vi.fn();
+    const handler = createHandleAdminSafetyScoreV9HistoryBoundary({ executeBoundary });
+
+    const response = await handler({
+      db,
+      request: historyBoundaryRequest(
+        { ...body, operation: "rollback-v8" },
+        { idempotencyKey: "history-boundary-002" },
+      ),
+      trustedAdmin: true,
+    });
+
+    expect(response.status).toBe(400);
+    expect(executeBoundary).not.toHaveBeenCalled();
     sqlite.close();
   });
 });

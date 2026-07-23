@@ -15,6 +15,7 @@ import { loadMintBurnFirstHourRows } from "../mint-burn-hourly-queries";
 import { readDewsPublishedGenerationResult } from "../dews-publication-pointer";
 import { loadReportCardCache } from "../report-card-cache";
 import { isCurrentSafetyScoreV8Identity } from "../safety-score-current-identity";
+import { loadActiveSafetyScoreSource } from "../safety-score-active-source";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
   return {
@@ -162,6 +163,39 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now
     return null;
   }
   if (target.type === "report-card-publication") {
+    let active;
+    try {
+      active = await loadActiveSafetyScoreSource(db);
+    } catch (err) {
+      logWorkerEvent({
+        scope: "status",
+        level: "error",
+        event: "report_card_publication_freshness_read_failed",
+        route: "status",
+        source: "safety_score_active_source",
+        message: "Failed to resolve the expected active Safety Score source for dataset freshness",
+        error: err,
+      });
+      return null;
+    }
+    if (active.kind === "v9") return active.snapshot.updatedAt;
+    if (active.kind === "error") {
+      logWorkerEvent({
+        scope: "status",
+        level: "warn",
+        event: "report_card_publication_freshness_unavailable",
+        route: "status",
+        source: "safety_score_active_source",
+        message: "Failed to validate the expected active V9 report-card publication for dataset freshness",
+        metadata: {
+          reason: active.reason,
+          expectedModel: active.expectedModel,
+          activationUpdatedAt: active.activationUpdatedAt,
+        },
+      });
+      return null;
+    }
+
     let published: Awaited<ReturnType<typeof loadReportCardCache>>;
     try {
       published = await loadReportCardCache(db, { requireCompleteness: true });

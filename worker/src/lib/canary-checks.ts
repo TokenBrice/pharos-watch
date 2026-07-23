@@ -12,6 +12,7 @@ import { getCache } from "./db-cache";
 import { parseRiskFreeRatesCache } from "../cron/yield-sync/cache";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
 import { isCurrentSafetyScoreV8Identity } from "./safety-score-current-identity";
+import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
 
 export { normalizeWorkerCanaryMode } from "./worker-canary-mode";
@@ -458,7 +459,54 @@ async function checkDewsLatestSignal(db: D1Database, observedAt: number) {
   }
 }
 
-async function checkReportCardCacheMethodology(db: D1Database) {
+export async function checkReportCardCacheMethodology(db: D1Database) {
+  const active = await loadActiveSafetyScoreSource(db);
+  if (active.kind === "error") {
+    return {
+      status: "error" as const,
+      severity: "error" as const,
+      error: `active Safety Score source ${active.reason}`,
+      metadata: {
+        reason: active.reason,
+        expectedModel: active.expectedModel,
+        activationUpdatedAt: active.activationUpdatedAt,
+        activationMarker: active.marker,
+        safetyScoreIdentity: active.snapshot?.safetyScoreIdentity ?? null,
+        maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+      },
+    };
+  }
+  if (active.kind === "v9") {
+    const ageMs = Math.max(0, Date.now() - active.snapshot.updatedAt * 1_000);
+    const metadata = {
+      expectedModel: active.expectedModel,
+      activationUpdatedAt: active.activationUpdatedAt,
+      activationMarker: active.marker,
+      updatedAt: active.snapshot.updatedAt,
+      scoreCount: active.snapshot.cards.length,
+      methodologyVersion: active.snapshot.methodology.version,
+      safetyScoreIdentity: active.snapshot.safetyScoreIdentity,
+      maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+    };
+    if (ageMs > REPORT_CARD_CACHE_MAX_AGE_MS) {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: "active Safety Score V9 snapshot stale-cache",
+        metadata: { ...metadata, reason: "stale-cache", ageMs },
+      };
+    }
+    if (active.snapshot.cards.length === 0) {
+      return {
+        status: "degraded" as const,
+        severity: "warning" as const,
+        error: "active Safety Score V9 snapshot has no score entries",
+        metadata,
+      };
+    }
+    return { status: "ok" as const, severity: "info" as const, metadata };
+  }
+
   const cache = await loadReportCardCache(db, {
     maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
     requireCompleteness: true,
@@ -500,6 +548,8 @@ async function checkReportCardCacheMethodology(db: D1Database) {
   }
   const scoreCount = Object.keys(cache.payload.scores).length;
   const metadata = {
+    expectedModel: active.expectedModel,
+    activationExpectation: active.reason,
     updatedAt: cache.updatedAt,
     scoreCount,
     methodologyVersion: cache.payload.methodologyVersion,
@@ -616,7 +666,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "report-card-cache-methodology",
     label: "Report-card cache methodology",
-    description: "The report-card score cache is fresh and matches the expected generation/methodology contract.",
+    description: "The expected active Safety Score source is fresh and matches its identity-bound publication contract.",
     run: checkReportCardCacheMethodology,
   },
   {

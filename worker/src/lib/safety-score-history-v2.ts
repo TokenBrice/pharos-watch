@@ -19,6 +19,7 @@ import {
   type SafetyScorePublicationIdentity,
   type SafetyScoreV8PublicationIdentity,
 } from "@shared/types/safety-score-publication";
+import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
 
 export type SafetyScoreHistoryV2TransitionKind =
   | "initial-baseline"
@@ -34,6 +35,16 @@ export interface ActiveV8SafetyScoreHistorySource {
   snapshot: ReportCardsResponse;
   identity: SafetyScoreHistoryV8Identity;
   publishedAtSec: number;
+}
+
+export class ActiveV8SafetyScoreHistorySourceInactiveError extends Error {
+  readonly expectedModel = "v9" as const;
+  readonly reason = "active-model-v9" as const;
+
+  constructor() {
+    super("Canonical Safety Score V8 history source is inactive because Safety Score V9 is active");
+    this.name = "ActiveV8SafetyScoreHistorySourceInactiveError";
+  }
 }
 
 export interface SafetyScoreHistoryCompatibilityRow {
@@ -104,14 +115,24 @@ export function safetyScoreHistoryIdentitiesAreComparable(
 }
 
 /**
- * Loads the canonical V8 snapshot only when its identity exactly matches the
- * canonical exact fixed-input artifact written in the same publication batch.
+ * Loads the canonical V8 snapshot only while V8 is explicitly active and its
+ * identity exactly matches the fixed-input artifact from the same batch.
  */
 export async function loadActiveV8SafetyScoreHistorySource(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<ActiveV8SafetyScoreHistorySource> {
   throwIfAborted(signal);
+  const activeSource = await loadActiveSafetyScoreSource(db, signal);
+  throwIfAborted(signal);
+  if (activeSource.kind === "v9") {
+    throw new ActiveV8SafetyScoreHistorySourceInactiveError();
+  }
+  if (activeSource.kind === "error") {
+    throw new Error(
+      `Canonical Safety Score V8 history source rejected by expected V9 state (${activeSource.reason}): ${activeSource.detail}`,
+    );
+  }
   const caches = await getCaches(db, [REPORT_CARDS_SNAPSHOT_CACHE_KEY, REPORT_CARDS_FIXED_INPUT_CACHE_KEY]);
   throwIfAborted(signal);
   const parsedSnapshot = await parsePublishedReportCardsSnapshotCacheValue(

@@ -309,7 +309,26 @@ describe("evaluateYieldSources", () => {
 
   it("keeps rows explicit NR when the identified compact safety snapshot is unavailable", () => {
     const unavailable = evaluateYieldSources(baseEvaluationInput({
-      resolved: [{ id: "coin-a", symbol: "A", yield: resolvedYield({}) }],
+      resolved: [{
+        id: "coin-a",
+        symbol: "A",
+        yield: resolvedYield({
+          sourceRisk: {
+            venueProtocol: "aave-v3",
+            underlyingSafetyScore: 80,
+            trancheSafetyScore: 72,
+            trancheSafetyPenalty: 8,
+            opportunityRisk: {
+              opportunityClass: "lending",
+              underlyingSafetyScore: 80,
+              opportunitySafetyScore: 72,
+              opportunitySafetyPenalty: 8,
+              venueReviewed: true,
+              missingCriticalEvidence: [],
+            },
+          },
+        }),
+      }],
       safetySnapshotAvailable: false,
       safetyScores: new Map([["coin-a", { score: 80, grade: "B+" }]]),
     })).evaluatedSources[0];
@@ -326,6 +345,13 @@ describe("evaluateYieldSources", () => {
       scoreQualified: false,
     });
     expect(unavailable?.warnings).toContain("safety-unrated");
+    expect(unavailable?.sourceRisk).toMatchObject({
+      venueProtocol: "aave-v3",
+      underlyingSafetyScore: null,
+      trancheSafetyScore: null,
+      trancheSafetyPenalty: null,
+    });
+    expect(unavailable?.sourceRisk?.opportunityRisk).toBeUndefined();
   });
 
   it("uses risk-adjusted utility for same-tier arbitration when a source-risk penalty is present", () => {

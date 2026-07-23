@@ -12,6 +12,7 @@ export const ChainsFreshnessMetaSchema = z.object({
       ageSeconds: z.number().nullable().optional(),
       status: z.enum(["fresh", "degraded", "stale", "unavailable"]),
       reason: z.string().nullable().optional(),
+      expectedModel: z.enum(["v8", "v9"]).optional(),
       inputsStale: z.boolean().optional(),
       staleInputs: z.array(z.string()).optional(),
     }),

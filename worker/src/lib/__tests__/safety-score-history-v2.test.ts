@@ -2,8 +2,9 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import * as activeSafetyScoreSource from "../safety-score-active-source";
 import { buildReportCardsFixedInputCacheEntry, createReportCardsFixedInput } from "../report-cards-fixed-input";
 import { buildPublishedReportCardsSnapshotCacheEntry } from "../report-cards-snapshot-cache";
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
@@ -13,6 +14,7 @@ import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
 import type { ReportCard } from "@shared/types/report-cards";
 import {
+  ActiveV8SafetyScoreHistorySourceInactiveError,
   SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL,
   fetchSafetyScoreHistoryCompatibilityRows,
   fetchSafetyScoreHistoryV2Rows,
@@ -640,7 +642,7 @@ describe("Safety Score history V2", () => {
     `)).toThrow();
   });
 
-  it("loads the canonical V8 snapshot only when its exact fixed-input identity agrees", async () => {
+  it("loads the canonical V8 snapshot with no activation marker only when its exact fixed-input identity agrees", async () => {
     const sqlite = new DatabaseSync(":memory:");
     createLegacySchema(sqlite);
     sqlite.exec(HISTORY_V2_MIGRATION);
@@ -666,5 +668,34 @@ describe("Safety Score history V2", () => {
       .prepare("UPDATE cache SET value = ? WHERE key = ?")
       .run(JSON.stringify(mismatchedFixed), artifacts.fixed.key);
     await expect(loadActiveV8SafetyScoreHistorySource(db)).rejects.toThrow(/identities disagree|identity mismatch/);
+  });
+
+  it("rejects the V8 history source when a valid activation selects V9", async () => {
+    const activeSourceSpy = vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValueOnce({
+      kind: "v9",
+      expectedModel: "v9",
+    } as never);
+
+    await expect(
+      loadActiveV8SafetyScoreHistorySource({} as D1Database),
+    ).rejects.toBeInstanceOf(ActiveV8SafetyScoreHistorySourceInactiveError);
+    activeSourceSpy.mockRestore();
+  });
+
+  it.each([
+    ["a malformed marker", "activation-marker-invalid"],
+    ["a mismatched activation identity", "v9-identity-mismatch"],
+  ] as const)("rejects the V8 history source for %s", async (_label, reason) => {
+    const activeSourceSpy = vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValueOnce({
+      kind: "error",
+      expectedModel: "v9",
+      reason,
+      detail: `test ${reason}`,
+    } as never);
+
+    await expect(
+      loadActiveV8SafetyScoreHistorySource({} as D1Database),
+    ).rejects.toThrow(new RegExp(reason));
+    activeSourceSpy.mockRestore();
   });
 });

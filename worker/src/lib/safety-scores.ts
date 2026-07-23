@@ -10,6 +10,10 @@ import {
 } from "./report-card-cache";
 import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
 import { isCurrentSafetyScoreV8Identity } from "./safety-score-current-identity";
+import {
+  loadActiveSafetyScoreSource,
+  type ActiveSafetyScoreSource,
+} from "./safety-score-active-source";
 
 interface SafetyResult {
   score: number;
@@ -70,6 +74,7 @@ export type SafetyScoresSnapshotResult = SafetyScoresResultMap | SafetyScoresRes
 
 export type PublishedSafetyScoresResultMap = SafetyScoresResultMap & {
   source: "report-card-cache";
+  expectedModel: "v8" | "v9";
   safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
   publicationGenerationId: string | null;
   methodologyVersion: string | null;
@@ -128,6 +133,7 @@ async function loadPublishedSafetyScoresSnapshot(db: D1Database): Promise<Publis
     return {
       ...toMapResult("degraded", new Map(), ACTIVE_STABLECOINS.length, `report-card-cache:${cached.reason}`),
       source: "report-card-cache",
+      expectedModel: "v8",
       safetyScoreIdentity: null,
       publicationGenerationId: null,
       methodologyVersion: null,
@@ -144,6 +150,7 @@ async function loadPublishedSafetyScoresSnapshot(db: D1Database): Promise<Publis
         "report-card-cache:identity-mismatch",
       ),
       source: "report-card-cache",
+      expectedModel: "v8",
       safetyScoreIdentity: cached.payload.safetyScoreIdentity ?? null,
       publicationGenerationId: cached.payload.publicationGenerationId ?? null,
       methodologyVersion: cached.payload.methodologyVersion,
@@ -163,10 +170,29 @@ async function loadPublishedSafetyScoresSnapshot(db: D1Database): Promise<Publis
       degradedInputs ? "report-card-cache:degraded-inputs" : undefined,
     ),
     source: "report-card-cache",
+    expectedModel: "v8",
     safetyScoreIdentity: cached.payload.safetyScoreIdentity!,
     publicationGenerationId: cached.payload.publicationGenerationId!,
     methodologyVersion: cached.payload.methodologyVersion,
     publishedAt: cached.payload.updatedAt,
+  };
+}
+
+function v9ExpectedPublishedSafetyScoresResult(
+  activeSource: Exclude<ActiveSafetyScoreSource, { kind: "v8" }>,
+): PublishedSafetyScoresResultMap {
+  const reason = activeSource.kind === "v9"
+    ? "active-safety-score:v9"
+    : `active-safety-score:${activeSource.reason}`;
+  const trackedCount = activeSource.snapshot?.completeness.expectedCount ?? ACTIVE_STABLECOINS.length;
+  return {
+    ...toMapResult("degraded", new Map(), trackedCount, reason),
+    source: "report-card-cache",
+    expectedModel: activeSource.expectedModel,
+    safetyScoreIdentity: null,
+    publicationGenerationId: null,
+    methodologyVersion: null,
+    publishedAt: null,
   };
 }
 
@@ -179,8 +205,8 @@ async function loadPublishedSafetyScoresSnapshot(db: D1Database): Promise<Publis
  * returns coverage statistics alongside the scored results.
  *
  * Computed mode preserves partial scores on failure. Published-cache mode
- * fails closed with an empty map unless the active-ID completeness manifest,
- * methodology, freshness, and generation identity all validate.
+ * reads V8 only while the activation marker is absent, then fails closed with
+ * an empty map unless completeness, freshness, and generation identity validate.
  *
  * @param db - D1 database handle.
  * @param options.outputMode - "map" returns an id→{grade,score} lookup suitable
@@ -212,6 +238,10 @@ export async function computeSafetyScoresSnapshot(
   if (options.sourceMode === "published-cache") {
     if (outputMode !== "map") {
       throw new Error("published-cache safety scores support map output only");
+    }
+    const activeSource = await loadActiveSafetyScoreSource(db);
+    if (activeSource.kind !== "v8") {
+      return v9ExpectedPublishedSafetyScoresResult(activeSource);
     }
     return loadPublishedSafetyScoresSnapshot(db);
   }

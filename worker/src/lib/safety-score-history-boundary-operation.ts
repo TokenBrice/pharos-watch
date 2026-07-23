@@ -50,6 +50,7 @@ export interface SafetyScoreHistoryBoundaryOperationDependencies {
 
 interface BoundarySource {
   identity: SafetyScorePublicationIdentity;
+  observedAtSec: number;
   cards: SafetyScoreHistoryBoundaryCard[];
 }
 
@@ -102,6 +103,7 @@ async function loadBoundarySource(
     const source = await (dependencies.loadV8Source ?? loadActiveV8SafetyScoreHistorySource)(db, signal);
     return {
       identity: source.identity,
+      observedAtSec: source.publishedAtSec,
       cards: sortAndValidateCards(
         source.snapshot.cards
           .filter((card) => card.isDefunct !== true && !FROZEN_IDS.has(card.id))
@@ -113,6 +115,7 @@ async function loadBoundarySource(
   const snapshot = await (dependencies.loadV9Snapshot ?? loadPublishedReportCardsV9Snapshot)(db, signal);
   return {
     identity: snapshot.safetyScoreIdentity,
+    observedAtSec: snapshot.updatedAt,
     cards: sortAndValidateCards(
       snapshot.cards
         .filter((card) => !FROZEN_IDS.has(card.id))
@@ -123,7 +126,7 @@ async function loadBoundarySource(
 
 /**
  * Writes the pre-approved model-cutover baseline and nothing else. It is not
- * routed or scheduled: deployment/runbook code must supply the exact expected
+ * scheduled: the bounded admin route/runbook must supply the exact expected
  * identity, so a changed cache cannot silently create a history boundary.
  */
 export async function executeSafetyScoreHistoryBoundaryOperation(
@@ -145,6 +148,12 @@ export async function executeSafetyScoreHistoryBoundaryOperation(
   throwIfAborted(input.signal);
   if (!safetyScoreHistoryIdentitiesMatch(expectedIdentity, source.identity)) {
     throw new Error(`Safety Score ${input.operation} boundary source identity does not match the approved identity`);
+  }
+  if (input.recordedAtSec < source.observedAtSec) {
+    throw new Error(`Safety Score ${input.operation} boundary cannot predate its approved source`);
+  }
+  if (input.recordedAtSec > input.createdAtSec) {
+    throw new Error(`Safety Score ${input.operation} boundary cannot postdate its operation`);
   }
 
   const transitionKind = transitionFor(input.operation);

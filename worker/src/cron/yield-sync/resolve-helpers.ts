@@ -505,6 +505,7 @@ function appendDeterministicAutoLending(params: {
   resolved: ResolvedYieldEntry[];
   dlPools: DlPool[];
   safetyScores: Map<string, SafetyScoreSnapshot>;
+  safetySnapshotAvailable: boolean;
   stablecoinSupplyById: Map<string, number>;
   autoDiscoveredIds: Set<string>;
 }): number {
@@ -517,9 +518,11 @@ function appendDeterministicAutoLending(params: {
     if (!pool) continue;
     if (isAutoLendingCollisionBlockedForStablecoin(stablecoinId, pool)) continue;
 
-    const safetyScore = params.safetyScores.get(stablecoinId)?.score ?? 0;
-    const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
-    if (!bypassSafety && safetyScore < MIN_SAFETY_SCORE_FOR_YIELD) continue;
+    if (params.safetySnapshotAvailable) {
+      const safetyScore = params.safetyScores.get(stablecoinId)?.score ?? 0;
+      const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
+      if (!bypassSafety && safetyScore < MIN_SAFETY_SCORE_FOR_YIELD) continue;
+    }
 
     const requiredMinTvlUsd = getRequiredLendingOpportunityTvlUsd({
       stablecoinId,
@@ -552,6 +555,7 @@ function appendDynamicAutoLending(params: {
   resolved: ResolvedYieldEntry[];
   dlPools: DlPool[];
   safetyScores: Map<string, SafetyScoreSnapshot>;
+  safetySnapshotAvailable: boolean;
   stablecoinSupplyById: Map<string, number>;
   autoDiscoveredIds: Set<string>;
   reservedPoolIds: Set<string>;
@@ -563,7 +567,10 @@ function appendDynamicAutoLending(params: {
       !params.autoDiscoveredIds.has(meta.id)
       && meta.flags.pegCurrency !== "GOLD"
       && meta.flags.pegCurrency !== "SILVER"
-      && (params.safetyScores.get(meta.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD,
+      && (
+        !params.safetySnapshotAvailable
+        || (params.safetyScores.get(meta.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD
+      ),
   );
   const identityLookups = buildYieldIdentityLookups();
 
@@ -627,6 +634,8 @@ export function appendPoolFamilyYieldSources(params: {
   dlPools: DlPool[];
   supplementalCandidates: ResolvedYieldCandidate[];
   safetyScores: Map<string, SafetyScoreSnapshot>;
+  safetySnapshotAvailable: boolean;
+  expectedModel: "v8" | "v9";
   stablecoinSupplyById: Map<string, number>;
 }): void {
   appendResolvedYieldCandidates(params.resolved, params.supplementalCandidates, params.stablecoinSupplyById);
@@ -637,11 +646,18 @@ export function appendPoolFamilyYieldSources(params: {
 
   const reservedExplicitPoolIds = buildReservedYieldPoolIds();
   const autoDiscoveredIds = new Set<string>();
+  if (!params.safetySnapshotAvailable) {
+    const expectedModel = params.expectedModel ?? "unknown";
+    console.warn(
+      `[sync-yield-data] ${expectedModel.toUpperCase()} safety snapshot unavailable; retaining eligible auto-lending candidates as unrated`,
+    );
+  }
 
   const deterministicCount = appendDeterministicAutoLending({
     resolved: params.resolved,
     dlPools: params.dlPools,
     safetyScores: params.safetyScores,
+    safetySnapshotAvailable: params.safetySnapshotAvailable,
     stablecoinSupplyById: params.stablecoinSupplyById,
     autoDiscoveredIds,
   });
@@ -650,6 +666,7 @@ export function appendPoolFamilyYieldSources(params: {
     resolved: params.resolved,
     dlPools: params.dlPools,
     safetyScores: params.safetyScores,
+    safetySnapshotAvailable: params.safetySnapshotAvailable,
     stablecoinSupplyById: params.stablecoinSupplyById,
     autoDiscoveredIds,
     reservedPoolIds: reservedExplicitPoolIds,

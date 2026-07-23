@@ -8,6 +8,12 @@ import {
   SafetyScoreV9MovementReviewRequestSchema,
   SafetyScoreV9MovementReviewResponseSchema,
 } from "@shared/types/safety-score-v9-review";
+import {
+  SafetyScorePublicationIdentitySchema,
+  SafetyScoreV8PublicationIdentitySchema,
+  SafetyScoreV9PublicationIdentitySchema,
+} from "@shared/types/safety-score-publication";
+import { z } from "zod";
 import { parseRequestJsonWithSchema } from "../lib/api-utils";
 import { isWellFormedIdempotencyKey } from "../lib/idempotency";
 import {
@@ -28,6 +34,57 @@ import {
   persistSafetyScoreV9MovementReview,
   SafetyScoreV9MovementReviewConflictError,
 } from "../lib/safety-score-v9-movement-reviews";
+import {
+  executeSafetyScoreHistoryBoundaryOperation,
+  type SafetyScoreHistoryBoundaryOperationInput,
+  type SafetyScoreHistoryBoundaryOperationResult,
+} from "../lib/safety-score-history-boundary-operation";
+
+export const SAFETY_SCORE_HISTORY_BOUNDARY_REQUEST_SCHEMA_VERSION = 1;
+export const SAFETY_SCORE_HISTORY_BOUNDARY_RESPONSE_SCHEMA_VERSION = 1;
+
+const SafetyScoreHistoryBoundaryRequestBaseSchema = z
+  .object({
+    schemaVersion: z.literal(SAFETY_SCORE_HISTORY_BOUNDARY_REQUEST_SCHEMA_VERSION),
+    recordedAtSec: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const SafetyScoreHistoryBoundaryRequestSchema = z.discriminatedUnion("operation", [
+  SafetyScoreHistoryBoundaryRequestBaseSchema.extend({
+    operation: z.literal("activate-v9"),
+    expectedIdentity: SafetyScoreV9PublicationIdentitySchema,
+  }).strict(),
+  SafetyScoreHistoryBoundaryRequestBaseSchema.extend({
+    operation: z.literal("rollback-v8"),
+    expectedIdentity: SafetyScoreV8PublicationIdentitySchema,
+  }).strict(),
+  SafetyScoreHistoryBoundaryRequestBaseSchema.extend({
+    operation: z.literal("restore-v9"),
+    expectedIdentity: SafetyScoreV9PublicationIdentitySchema,
+  }).strict(),
+]);
+
+export const SafetyScoreHistoryBoundaryResponseSchema = z
+  .object({
+    schemaVersion: z.literal(SAFETY_SCORE_HISTORY_BOUNDARY_RESPONSE_SCHEMA_VERSION),
+    status: z.literal("recorded"),
+    operation: z.enum(["activate-v9", "rollback-v8", "restore-v9"]),
+    transitionKind: z.enum(["methodology-boundary-baseline", "rollback-baseline", "restoration-baseline"]),
+    identity: SafetyScorePublicationIdentitySchema,
+    recordedAtSec: z.number().int().nonnegative(),
+    cardCount: z.number().int().nonnegative(),
+    changes: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export interface SafetyScoreHistoryBoundaryRouteDependencies {
+  executeBoundary?: (
+    db: D1Database,
+    input: SafetyScoreHistoryBoundaryOperationInput,
+  ) => Promise<SafetyScoreHistoryBoundaryOperationResult>;
+  nowSec?: () => number;
+}
 
 function unavailable(reason: Extract<SafetyScoreV9AdminResponse, { status: "unavailable" }>["reason"]): Response {
   return adminJsonResponse(
@@ -142,3 +199,64 @@ export const handleAdminSafetyScoreV9MovementReview = makeIdempotentAdminRoute<A
   "admin-safety-score-v9-review",
   handleAdminSafetyScoreV9MovementReviewTrusted,
 );
+
+export function createHandleAdminSafetyScoreV9HistoryBoundary(
+  dependencies: SafetyScoreHistoryBoundaryRouteDependencies = {},
+): (context: AdminRouteContext) => Promise<Response> {
+  const executeBoundary = dependencies.executeBoundary ?? executeSafetyScoreHistoryBoundaryOperation;
+  const currentTimeSec = dependencies.nowSec ?? (() => Math.floor(Date.now() / 1_000));
+
+  return makeIdempotentAdminRoute<AdminRouteContext>(
+    "route-admin-safety-score-v9-history-boundary",
+    "admin-safety-score-v9-history-boundary",
+    async ({ db, request }) => {
+      if (!isWellFormedIdempotencyKey(request.headers.get("Idempotency-Key"))) {
+        return adminErrorResponse(400, "A valid Idempotency-Key header between 8 and 128 characters is required");
+      }
+
+      const parsed = await parseRequestJsonWithSchema(request, SafetyScoreHistoryBoundaryRequestSchema, {
+        invalidJsonMessage: "Invalid Safety Score history boundary body",
+        bodyTooLargeMessage: "Safety Score history boundary body is too large",
+        formatSchemaError: (issues) => issues[0]?.message ?? "Invalid Safety Score history boundary body",
+        responseOptions: { noStore: true },
+        maxBytes: 16 * 1024,
+      });
+      if (parsed instanceof Response) return parsed;
+
+      try {
+        const result = await executeBoundary(db, {
+          operation: parsed.operation,
+          expectedIdentity: parsed.expectedIdentity,
+          recordedAtSec: parsed.recordedAtSec,
+          createdAtSec: currentTimeSec(),
+          signal: request.signal,
+        });
+        return adminJsonResponse(
+          SafetyScoreHistoryBoundaryResponseSchema.parse({
+            schemaVersion: SAFETY_SCORE_HISTORY_BOUNDARY_RESPONSE_SCHEMA_VERSION,
+            status: "recorded",
+            ...result,
+          }),
+          { status: 201 },
+        );
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          (
+            /boundary source identity does not match the approved identity/.test(error.message) ||
+            /boundary source has no eligible cards/.test(error.message)
+          )
+        ) {
+          return adminErrorResponse(409, error.message);
+        }
+        return adminErrorResponse(503, "Safety Score history boundary could not be recorded");
+      }
+    },
+  );
+}
+
+/**
+ * Bounded operator action only. Activation remains a separate runbook step;
+ * this handler never writes or removes the public activation marker.
+ */
+export const handleAdminSafetyScoreV9HistoryBoundary = createHandleAdminSafetyScoreV9HistoryBoundary();

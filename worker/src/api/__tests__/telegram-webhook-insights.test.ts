@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
@@ -14,7 +14,12 @@ import type { StatusForCoin } from "../telegram-webhook-status";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 
 const mocks = vi.hoisted(() => ({
+  loadActiveSafetyScoreSource: vi.fn(),
   loadActiveV8SafetyScoreHistorySource: vi.fn(),
+}));
+
+vi.mock("../../lib/safety-score-active-source", () => ({
+  loadActiveSafetyScoreSource: mocks.loadActiveSafetyScoreSource,
 }));
 
 vi.mock("../../lib/safety-score-history-v2", () => ({
@@ -116,6 +121,16 @@ describe("buildBriefMessage", () => {
 });
 
 describe("buildTopMessage", () => {
+  beforeEach(() => {
+    mocks.loadActiveSafetyScoreSource.mockReset().mockResolvedValue({
+      kind: "v8",
+      expectedModel: "v8",
+      reason: "activation-marker-missing",
+      activationUpdatedAt: null,
+    });
+    mocks.loadActiveV8SafetyScoreHistorySource.mockReset();
+  });
+
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -314,6 +329,70 @@ describe("buildTopMessage", () => {
       expect(message).toContain("health NR (null)");
       expect(message).not.toMatch(/health \d/);
     }
+  });
+
+  it.each([
+    [
+      "an active V9 marker",
+      { kind: "v9", expectedModel: "v9" },
+      "expected model V9",
+    ],
+    [
+      "a malformed V9 marker",
+      { kind: "error", expectedModel: "v9", reason: "activation-marker-invalid" },
+      "expected model V9, activation marker invalid",
+    ],
+    [
+      "a mismatched V9 identity",
+      { kind: "error", expectedModel: "v9", reason: "v9-identity-mismatch" },
+      "expected model V9, v9 identity mismatch",
+    ],
+  ] as const)("withholds direct chain health and PYS for %s", async (
+    _label,
+    activeSource,
+    expectedReason,
+  ) => {
+    mocks.loadActiveSafetyScoreSource.mockResolvedValue(activeSource);
+    const updatedAt = Math.floor(Date.now() / 1000);
+    const chainsDb = makeTopChainsDb(makeCompleteReportCardCache(updatedAt), updatedAt);
+    const yieldDb = mockD1([
+      {
+        match: "FROM yield_data",
+        rows: [
+          {
+            stablecoin_id: "usdc-circle",
+            symbol: "USDC",
+            current_apy: 4.4,
+            apy_30d: 4.2,
+            yield_source: "Aave V3",
+            pharos_yield_score: 99,
+            source_tvl_usd: 12_000_000,
+          },
+        ],
+      },
+    ]);
+
+    const [chainsMessage, yieldMessage] = await Promise.all([
+      buildTopMessage(chainsDb, "chains"),
+      buildTopMessage(yieldDb, "yield"),
+    ]);
+
+    expect(chainsMessage).toContain("Top chains by stablecoin supply");
+    expect(chainsMessage).toContain("Ethereum");
+    expect(chainsMessage).toContain("health NR (null)");
+    expect(chainsMessage).toContain(`Chain health unavailable; ${expectedReason}.`);
+    expect(
+      chainsDb.getHistory().some((entry) => entry.binds.includes("report_card_cache")),
+    ).toBe(false);
+
+    expect(yieldMessage).toContain(`Top yields (PYS unavailable; ${expectedReason})`);
+    expect(yieldMessage).toContain("USDC");
+    expect(yieldMessage).toContain("4.20% 30d");
+    expect(yieldMessage).toContain("PYS unavailable");
+    expect(yieldMessage).not.toContain("PYS 99");
+    const yieldSql = yieldDb.getHistory().find((entry) => entry.sql.includes("FROM yield_data"))?.sql ?? "";
+    expect(yieldSql).toContain("ORDER BY apy_30d DESC");
+    expect(yieldSql).not.toContain("ORDER BY pharos_yield_score");
   });
 
   it("suggests the closest /top view for one-character typos", async () => {

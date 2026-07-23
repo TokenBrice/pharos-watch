@@ -19,9 +19,21 @@ vi.mock("../../lib/db", async (importOriginal) => {
   };
 });
 
+vi.mock("../../lib/cron-logger", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/cron-logger")>();
+  return {
+    ...actual,
+    recordCronFailure: vi.fn(),
+  };
+});
+
 import { snapshotSafetyGradeHistory } from "../snapshot-safety-grade-history";
 import { batchExecute } from "../../lib/db";
-import { loadActiveV8SafetyScoreHistorySource } from "../../lib/safety-score-history-v2";
+import { recordCronFailure } from "../../lib/cron-logger";
+import {
+  ActiveV8SafetyScoreHistorySourceInactiveError,
+  loadActiveV8SafetyScoreHistorySource,
+} from "../../lib/safety-score-history-v2";
 
 const DIGEST = "a".repeat(64);
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"b".repeat(64)}`;
@@ -163,6 +175,7 @@ describe("snapshotSafetyGradeHistory", () => {
       .mockReset()
       .mockImplementation(async (_db, stmts) => stmts.length);
     vi.mocked(loadActiveV8SafetyScoreHistorySource).mockReset();
+    vi.mocked(recordCronFailure).mockReset();
   });
 
   afterEach(() => {
@@ -180,6 +193,28 @@ describe("snapshotSafetyGradeHistory", () => {
 
     expect(result).toMatchObject({ status: "error", itemCount: 0 });
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ reason: "active-model-source-unavailable" });
+    expect(batchExecute).not.toHaveBeenCalled();
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("skips V8 history intentionally without recording a false failure when V9 is active", async () => {
+    vi.mocked(loadActiveV8SafetyScoreHistorySource).mockRejectedValue(
+      new ActiveV8SafetyScoreHistorySourceInactiveError(),
+    );
+    const db = mockD1([]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result).toEqual({
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "active-model-v9",
+        expectedModel: "v9",
+        historyWritesSkipped: true,
+      }),
+    });
+    expect(recordCronFailure).not.toHaveBeenCalled();
     expect(batchExecute).not.toHaveBeenCalled();
     expect(db.getHistory()).toEqual([]);
   });
