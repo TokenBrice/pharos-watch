@@ -290,7 +290,7 @@ describe("scoreV9EvaluatedAsset", () => {
     expect(unavailable.finalGrade).toBe("NR");
     expect(unavailable.adverseAttribution).toEqual([]);
     expect(unattributed.bindingCap?.source).toBe("parent");
-    expect(unattributed.finalGrade).toBe("NR");
+    expect(unattributed.finalGrade).toBe("D");
     expect(unattributed.adverseAttribution).toEqual([]);
     expect(nonbinding).toEqual([]);
     expect(childLowerThanParent.finalGrade).toBe("D");

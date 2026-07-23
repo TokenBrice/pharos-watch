@@ -755,14 +755,11 @@ function refineCard(
         message: "V9 aggregation trace must match the card's pillar summary",
       });
     }
-    if (
-      (card.grade === "D" || card.grade === "F") &&
-      scoreTrace.adverseAttribution.items.length === 0
-    ) {
+    if (card.grade === "F" && scoreTrace.adverseAttribution.items.length === 0) {
       ctx.addIssue({
         code: "custom",
         path: ["scoreTrace", "adverseAttribution"],
-        message: "A V9 D or F card requires causal measured-adverse attribution",
+        message: "A V9 F card requires causal measured-adverse attribution",
       });
     }
   }

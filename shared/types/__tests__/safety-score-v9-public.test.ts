@@ -173,6 +173,31 @@ describe("SafetyScoreV9ResponseSchema", () => {
     );
   });
 
+  it("allows bounded D without measured attribution but keeps F danger-attributed", () => {
+    const bounded = currentResponse() as unknown as {
+      cards: Array<{
+        score: number;
+        grade: string;
+        scoreTrace: {
+          stages: { publishedScore: number };
+          adverseAttribution: { items: unknown[] };
+        };
+      }>;
+    };
+    bounded.cards[0]!.score = 45;
+    bounded.cards[0]!.grade = "D";
+    bounded.cards[0]!.scoreTrace.stages.publishedScore = 45;
+    expect(SafetyScoreV9CurrentResponseSchema.parse(bounded).cards[0]?.grade).toBe("D");
+
+    const unattributedDanger = structuredClone(bounded);
+    unattributedDanger.cards[0]!.score = 35;
+    unattributedDanger.cards[0]!.grade = "F";
+    unattributedDanger.cards[0]!.scoreTrace.stages.publishedScore = 35;
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(unattributedDanger)).toThrow(
+      /F card requires causal measured-adverse attribution/,
+    );
+  });
+
   it("does not permit an active lifecycle or a final 9.0 policy label", () => {
     const invalid = structuredClone(response()) as Record<string, unknown>;
     invalid.lifecycle = "active";

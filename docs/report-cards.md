@@ -32,7 +32,10 @@ dependencies, peg behavior, and stress propagation. The current candidate also
 distinguishes missing integration evidence from measured adverse evidence,
 models exit capacity across stress horizons, scopes loss to exposed holder
 slices, preserves dependency roles and live weights, and evaluates wrapper-local
-and mechanism-specific risk explicitly.
+and mechanism-specific risk explicitly. Bounded producer and methodology gaps
+remain rateable under the reason registry's ceilings instead of becoming `NR`;
+a naturally computed D can reflect multiple bounded weaknesses, while F remains
+reserved for causally attributed measured danger.
 
 Candidate failures cannot affect V8 publication. A production deployment of V9
 scorer or producer code only changes the private shadow output; it does not

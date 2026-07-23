@@ -112,12 +112,7 @@ const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
 // Deliberately DECOUPLED from the frozen D3 attribution predicate (0.90),
 // which is not a tunable knob and is untouched by this constant.
 const F_GATE_PEG_MULTIPLIER_FLOOR = 0.8;
-const NON_ECONOMIC_RESPONSIBILITIES = new Set<V9EvidenceResponsibility>([
-  "integration-missing",
-  "producer-failed",
-  "method-unsupported",
-]);
-const LOW_RISK_GRADES = new Set<V9Grade>(["D", "F"]);
+const DANGER_ONLY_GRADES = new Set<V9Grade>(["F"]);
 
 function compareCodeUnits(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -672,25 +667,54 @@ function scoreV9InputWithCaps(
   for (const fact of unresolvedFacts) {
     const resolved = resolveV9ReasonPolicy(policy, fact.code);
     const responsibility = fact.responsibility;
-    if (NON_ECONOMIC_RESPONSIBILITIES.has(responsibility)) {
+    if (responsibility === "integration-missing") {
       // Integration-owned gaps remain explicit confidence diagnostics when the
       // compiler can still produce a bounded pillar. Missing pillars are
       // withheld above, so turning every integration backlog item into NR
       // would erase otherwise rateable assets and let Pharos coverage dictate
-      // the public risk distribution. Producer failures and unsupported
-      // methods still withhold score-bearing facts unless policy marks them
-      // diagnostic; fresh LKG observations are carried only in
-      // `unresolvedEvidence` and never enter this score-bearing list.
-      if (
-        (responsibility !== "integration-missing" || resolved.critical) &&
-        resolved.reason.defaultTreatment !== "diagnostic"
-      ) {
+      // the public risk distribution.
+      if (resolved.critical) {
         nrReasons.push({
           code: fact.code,
           field: fact.path,
           message: fact.reason,
           responsibility,
         });
+      }
+      continue;
+    }
+    if (responsibility === "producer-failed") {
+      // A producer outage is an availability state, not evidence that the
+      // asset became unsafe. Fresh LKG facts do not enter this score-bearing
+      // list. When the compiler can still produce a policy-bounded pillar,
+      // retain the score under that reason's ceiling; a genuinely missing or
+      // unbounded required fact is still withheld by the pillar/critical gates.
+      if (resolved.critical) {
+        nrReasons.push({
+          code: fact.code,
+          field: fact.path,
+          message: fact.reason,
+          responsibility,
+        });
+      } else if (resolved.ceiling) {
+        reasonCeilings.push({ source: "evidence", ...resolved.ceiling, reason: fact.reason });
+      }
+      continue;
+    }
+    if (responsibility === "method-unsupported") {
+      // Method responsibility describes why the fact is unresolved; the
+      // reviewed reason registry still owns its treatment. A globally bounded
+      // unsupported method is provisional under its ceiling, while genuinely
+      // unbounded applicability/integrity failures remain NR.
+      if (resolved.critical) {
+        nrReasons.push({
+          code: fact.code,
+          field: fact.path,
+          message: fact.reason,
+          responsibility,
+        });
+      } else if (resolved.ceiling) {
+        reasonCeilings.push({ source: "evidence", ...resolved.ceiling, reason: fact.reason });
       }
       continue;
     }
@@ -958,20 +982,20 @@ function scoreV9InputWithCaps(
       : []),
   ]);
 
-  // D and F are public risk claims, not catch-all uncertainty buckets. Keep the
-  // latent score and cap trace for internal ordering, but withhold the public
-  // grade when no measured adverse fact can be cited. Issuer nondisclosure
-  // still affects the latent pillar/cap calculation; adapter, producer, and
-  // methodology gaps remain explicit NR reasons instead of economic weakness.
+  // F is a public danger claim, not a catch-all uncertainty bucket. D remains
+  // available for a naturally computed combination of bounded material
+  // weaknesses; the separate limited-backing gate above withholds genuinely
+  // unassessable assets. An F still requires a measured adverse fact so
+  // integration, producer, and methodology gaps cannot masquerade as danger.
   if (
     finalScore !== null &&
-    LOW_RISK_GRADES.has(gradeForScore(finalScore, policy)) &&
+    DANGER_ONLY_GRADES.has(gradeForScore(finalScore, policy)) &&
     adverseAttribution.length === 0
   ) {
     effectiveNrReasons.push({
       code: "insufficient-evidence",
       field: "adverseAttribution",
-      message: "A D or F rating requires at least one attributable measured-adverse fact.",
+      message: "An F rating requires at least one attributable measured-adverse fact.",
       responsibility: "method-unsupported",
     });
     finalScore = null;

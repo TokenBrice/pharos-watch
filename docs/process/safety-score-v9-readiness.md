@@ -78,13 +78,17 @@ not per-asset exceptions.
 
 Every material gap is classified by who or what caused the uncertainty:
 measured adverse evidence, issuer non-disclosure, missing integration, producer
-failure, or unsupported methodology. Low D/F ratings require causal
+failure, or unsupported methodology. The reason registry remains authoritative:
+a bounded reason retains a provisional score under its configured ceiling,
+while an unbounded required fact remains `NR`. A naturally computed D can
+represent multiple bounded material weaknesses, but F requires causal
 measured-adverse attribution. Missing plumbing stays visible as evidence debt
-instead of being presented as observed economic failure.
+instead of being presented as observed economic failure or danger.
 
 Impact: assets are not pushed into the lowest grades merely because Pharos has
 not integrated a source, while genuinely bad measured outcomes remain
-score-bearing and explainable.
+score-bearing and explainable. The separate limited-backing gate still
+withholds assets whose minimum evidence contract is not met.
 
 ### 2. Multi-Horizon Exit Capacity
 
@@ -227,7 +231,8 @@ a preferred histogram:
 
 1. Did the exact candidate compile for the complete active registry?
 2. Which assets are rated and which are reason-coded `NR`?
-3. Which D/F results have measured-adverse attribution?
+3. Which D results reflect measured weakness versus bounded uncertainty, and
+   which F results carry the required measured-adverse attribution?
 4. Did the eight workstreams reduce unexplained C/D concentration without
    removing real structural caps?
 5. How did USDT, DAI-family assets, USDG, XAUT, Frax-family assets, wrappers,

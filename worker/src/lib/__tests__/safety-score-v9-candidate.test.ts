@@ -537,11 +537,11 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(() => buildSafetyScoreV9Candidate({ ...args, releaseCandidateId: "candidate-latest" })).toThrow();
   });
 
-  it("keeps reviewed metadata not rated when score-bearing exit evidence is absent", () => {
+  it("keeps reviewed metadata provisionally rateable when bounded exit evidence is absent", () => {
     const result = buildSafetyScoreV9Candidate({
       // The reviewed registry metadata resolves the mechanism, control, mint,
-      // and access reviews, but this capture has no exit-route observations, so
-      // the route pillar stays absent and the asset remains NR.
+      // and access reviews. This capture has no exit-route observations, so
+      // the compiler retains a conservative bounded exit pillar.
       fixedInput: exactFixedInput("usdc-circle", 12, {
         includeDexObservations: false,
         includeObservedDexCoverage: false,
@@ -553,7 +553,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       assetId: "usdc-circle",
       // Reviewed reserve/proof-of-reserves and mint-authority evidence enriches
       // the mechanism, control, and mint reviews to resolved states. That
-      // enrichment cannot substitute for a missing score-bearing exit pillar.
+      // enrichment cannot substitute for a measured exit route.
       mechanismRiskReview: {
         archetype: "fiat-cash",
         // D1 fiat-cash overlays are active: USDC's claim/custody components are
@@ -573,13 +573,14 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       accessReview: { transfer: { posture: "restrictable" } },
     });
     expect(result.candidate.cards).toHaveLength(1);
-    expect(result.candidate.cards[0]).toMatchObject({ id: "usdc-circle", score: null, grade: "NR" });
-    expect(result.candidate.cards[0]!.nrReasons.length).toBeGreaterThan(0);
+    expect(result.candidate.cards[0]).toMatchObject({ id: "usdc-circle", score: 53, grade: "C-" });
+    expect(result.candidate.cards[0]!.nrReasons).toEqual([]);
+    expect(result.candidate.cards[0]!.reasonCodes).toContain("missing-same-notional-route");
     expect(result.candidate.completeness).toEqual({
       expectedCount: 1,
-      ratedCount: 0,
-      notRatedCount: 1,
-      notRatedIds: ["usdc-circle"],
+      ratedCount: 1,
+      notRatedCount: 0,
+      notRatedIds: [],
     });
   });
 

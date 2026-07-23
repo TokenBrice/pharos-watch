@@ -93,7 +93,7 @@ describe("Safety Score v9 evidence responsibility", () => {
     );
   });
 
-  it("withholds a score-bearing producer failure when no last-known-good fact remains", () => {
+  it("keeps a bounded producer failure rateable under its evidence ceiling", () => {
     const failedAdapter = scoreV9EvaluatedAsset(
       input({
         pillars: {
@@ -105,12 +105,88 @@ describe("Safety Score v9 evidence responsibility", () => {
       V9_CANDIDATE_POLICY_V1,
     );
 
-    expect(failedAdapter.finalGrade).toBe("NR");
-    expect(failedAdapter.finalScore).toBeNull();
-    expect(failedAdapter.nrReasons).toContainEqual(
+    expect(failedAdapter.finalGrade).toBe("C-");
+    expect(failedAdapter.finalScore).toBe(54);
+    expect(failedAdapter.nrReasons).toEqual([]);
+    expect(failedAdapter.caps).toContainEqual(
       expect.objectContaining({
-        code: "missing-runtime-route-evidence",
+        source: "evidence",
+        kind: "reason:missing-runtime-route-evidence",
+        limit: 65,
+      }),
+    );
+    expect(failedAdapter.unresolvedFacts).toContainEqual(
+      expect.objectContaining({
+        path: "exit:dex",
         responsibility: "producer-failed",
+      }),
+    );
+  });
+
+  it("keeps a bounded unsupported method provisional under its policy ceiling", () => {
+    const unsupportedDependencyReview = reason({
+      code: "unreviewed-dependency-relationships",
+      path: "dependency:graph",
+      message: "The dependency graph cannot yet evaluate this relationship.",
+      responsibility: "method-unsupported",
+    });
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(80),
+          exit: pillar(80),
+          control: pillar(70, {
+            evidenceLevel: "limited",
+            reasons: [unsupportedDependencyReview],
+          }),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("B-");
+    expect(trace.finalScore).toBe(69);
+    expect(trace.nrReasons).toEqual([]);
+    expect(trace.caps).toContainEqual(
+      expect.objectContaining({
+        source: "evidence",
+        kind: "evidence:limited",
+        limit: 69,
+      }),
+    );
+    expect(trace.unresolvedFacts).toContainEqual(
+      expect.objectContaining({
+        path: "dependency:graph",
+        responsibility: "method-unsupported",
+      }),
+    );
+  });
+
+  it("keeps an unbounded required method failure as NR", () => {
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(95, {
+            reasons: [reason({
+              code: "missing-pillar-evidence",
+              path: "backing:required-claim",
+              message: "The required backing method cannot establish this claim.",
+              responsibility: "method-unsupported",
+            })],
+          }),
+          exit: pillar(95),
+          control: pillar(95),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.finalScore).toBeNull();
+    expect(trace.nrReasons).toContainEqual(
+      expect.objectContaining({
+        code: "missing-pillar-evidence",
+        responsibility: "method-unsupported",
       }),
     );
   });
@@ -394,7 +470,7 @@ describe("Safety Score v9 evidence responsibility", () => {
     );
   });
 
-  it("requires every rated D/F example to cite measured-adverse attribution", () => {
+  it("carries measured attribution through rated D/F examples when facts support it", () => {
     const measuredReason = reason({
       code: "no-viable-exit-path",
       path: "exit:redemption",
@@ -440,6 +516,24 @@ describe("Safety Score v9 evidence responsibility", () => {
       expect(trace.adverseAttribution.length).toBeGreaterThan(0);
       expect(trace.adverseAttribution.every((fact) => fact.responsibility === "measured-adverse")).toBe(true);
     }
+  });
+
+  it("keeps a naturally computed bounded D rateable without inventing adverse attribution", () => {
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(45),
+          exit: pillar(45),
+          control: pillar(50),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("D");
+    expect(trace.finalScore).not.toBeNull();
+    expect(trace.nrReasons).toEqual([]);
+    expect(trace.adverseAttribution).toEqual([]);
   });
 
   it("keeps a low measured pillar score rated when its causal attribution is explicit", () => {
