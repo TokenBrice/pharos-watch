@@ -126,7 +126,7 @@ export function parseOrcaExactRouteProof(
   const swapInfo = route.swapInfo;
   if (
     swapInfo.ammKey !== target.poolId ||
-    swapInfo.label !== "Orca V2" ||
+    swapInfo.label !== "Whirlpool" ||
     swapInfo.inputMint !== target.tokenIn.address ||
     swapInfo.outputMint !== target.tokenOut.address ||
     swapInfo.inAmount !== amountInRaw ||
@@ -135,7 +135,7 @@ export function parseOrcaExactRouteProof(
     return null;
   return {
     provider: "jupiter-swap-api",
-    label: "Orca V2",
+    label: "Whirlpool",
     poolId: target.poolId,
     inputMint: target.tokenIn.address,
     outputMint: target.tokenOut.address,
@@ -227,7 +227,7 @@ export async function quoteSolanaMeasuredTarget(input: {
     url.searchParams.set("slippageBps", "0");
     url.searchParams.set("onlyDirectRoutes", "true");
     url.searchParams.set("restrictIntermediateTokens", "true");
-    url.searchParams.set("dexes", "Orca V2");
+    url.searchParams.set("dexes", "Whirlpool");
     const headers = input.jupiterApiKey?.trim() ? { "x-api-key": input.jupiterApiKey.trim() } : undefined;
     const body = await fetchBoundedJson(url.toString(), { headers }, input.signal, fetchImpl);
     route = parseOrcaExactRouteProof(body, input.target, amountInRaw);

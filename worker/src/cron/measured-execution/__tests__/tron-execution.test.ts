@@ -185,7 +185,12 @@ describe("Tron SunSwap measured execution", () => {
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
     }) as typeof fetch;
 
-    const point = await quoteTronMeasuredTarget({ target: target(), inputUsd: 1_000, fetchImpl });
+    const point = await quoteTronMeasuredTarget({
+      target: target(),
+      inputUsd: 1_000,
+      routerRequestSpacingMs: 0,
+      fetchImpl,
+    });
     expect(point).toMatchObject({
       amountInRaw: "1000000000",
       amountOutRaw: "3031844470",

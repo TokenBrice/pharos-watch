@@ -10,7 +10,12 @@ import { describe, expect, it } from "vitest";
 import type { DexApiPool } from "../../../lib/dex-api-types";
 import { buildSolanaMeasuredExecutionTargets, buildSolanaMeasuredPoolDirectionKey } from "../solana-inventory";
 import { buildSolanaMeasuredExecutionProfile } from "../solana-profiles";
-import { buildSolanaMeasuredQuotePoint, parseOrcaExactRouteProof, parseRaydiumExactRouteProof } from "../solana-quotes";
+import {
+  buildSolanaMeasuredQuotePoint,
+  parseOrcaExactRouteProof,
+  parseRaydiumExactRouteProof,
+  quoteSolanaMeasuredTarget,
+} from "../solana-quotes";
 import { SOLANA_MEASURED_EXECUTION_ADAPTERS } from "../solana-registry";
 
 const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -117,6 +122,43 @@ describe("Solana measured execution inventory and registry", () => {
 });
 
 describe("Solana exact quote parsing", () => {
+  it("requests Jupiter's current Whirlpool route label", async () => {
+    const current = target();
+    const fetchImpl = async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      expect(url.searchParams.get("dexes")).toBe("Whirlpool");
+      return new Response(JSON.stringify({
+        inputMint: USDC,
+        inAmount: "1000000000",
+        outputMint: USDT,
+        outAmount: "995000000",
+        otherAmountThreshold: "995000000",
+        swapMode: "ExactIn",
+        slippageBps: 0,
+        contextSlot: 1_005,
+        routePlan: [{
+          percent: 100,
+          swapInfo: {
+            ammKey: ORCA_POOL,
+            label: "Whirlpool",
+            inputMint: USDC,
+            outputMint: USDT,
+            inAmount: "1000000000",
+            outAmount: "995000000",
+          },
+        }],
+      }));
+    };
+    await expect(quoteSolanaMeasuredTarget({
+      target: current,
+      inputUsd: 1_000,
+      fetchImpl: fetchImpl as typeof fetch,
+    })).resolves.toMatchObject({
+      amountInRaw: "1000000000",
+      route: { label: "Whirlpool", poolId: ORCA_POOL },
+    });
+  });
+
   it("accepts an ordinary Orca Jupiter quote without an updateContextSlot extension", () => {
     const current = target();
     const body = {
@@ -133,7 +175,7 @@ describe("Solana exact quote parsing", () => {
           percent: 100,
           swapInfo: {
             ammKey: ORCA_POOL,
-            label: "Orca V2",
+            label: "Whirlpool",
             inputMint: USDC,
             outputMint: USDT,
             inAmount: "1000000000",
@@ -201,7 +243,7 @@ describe("Solana measured profile replay", () => {
             percent: 100,
             swapInfo: {
               ammKey: ORCA_POOL,
-              label: "Orca V2",
+              label: "Whirlpool",
               inputMint: USDC,
               outputMint: USDT,
               inAmount: "1000000000",
