@@ -24,6 +24,7 @@ import {
   completeTelegramAlertSourceEvent,
   expireTelegramAlertSourceEvent,
   loadOldestIncompleteTelegramAlertSourceEvent,
+  suppressIncomparableTelegramSafetySourceEvent,
   type TelegramAlertSourceEvent,
 } from "./telegram-alert-source-events";
 import { expireTelegramTargetPlanSource } from "./telegram-alert-target-plans";
@@ -145,6 +146,12 @@ export async function recoverIncompleteTelegramSourceEvent(args: {
   const { safetySourceAssessment } = snapshotState;
 
   let sourceEvent = await loadOldestIncompleteTelegramAlertSourceEvent(db);
+  if (sourceEvent) {
+    sourceEvent = suppressIncomparableTelegramSafetySourceEvent(
+      sourceEvent,
+      snapshotState.currentSnapshots.safety,
+    );
+  }
   const resumedSourceEvent = sourceEvent != null;
   if (sourceEvent?.status === "baseline_committed") {
     const recovery = await db

@@ -1,12 +1,17 @@
 import type { TelegramAlertType } from "@shared/types/status";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { buildInClause, chunkArray } from "../../lib/db";
 import {
   isValidPendingSourceEventId,
-  parsePendingAlertScope,
+  parsePendingAlertProvenance,
   parsePendingMarkupPolicy,
   type PendingAlertScopeItem,
   type PendingMarkupPolicyV1,
 } from "../../lib/telegram-pending-provenance";
+import {
+  alertSafetyIdentitiesAreComparable,
+  loadActiveAlertSafetySourceAssessment,
+} from "../../lib/alert-safety-source-cache";
 import {
   listTelegramPresets,
   resolveTelegramPresetTargets,
@@ -72,6 +77,7 @@ interface ParsedPendingIntent {
   kind: "risk-alert";
   row: PendingAlertRow;
   scope: PendingAlertScopeItem[];
+  safetyScoreIdentity: SafetyScorePublicationIdentity | null;
   markupPolicy: PendingMarkupPolicyV1;
 }
 
@@ -156,6 +162,9 @@ function parseIntent(
     row.markup_policy_json,
   ];
   if (provenance.every((value) => value == null)) {
+    if (row.alert_type === "safety") {
+      return { kind: "cancel", row, reason: "safety_identity_missing" };
+    }
     return {
       kind: "eligible",
       row,
@@ -184,7 +193,7 @@ function parseIntent(
       reason: "preference_provenance_invalid",
     };
   }
-  const scope = parsePendingAlertScope(row.alert_scope_json);
+  const scope = parsePendingAlertProvenance(row.alert_scope_json);
   if (scope.kind !== "ok") {
     return {
       kind: "defer",
@@ -202,7 +211,23 @@ function parseIntent(
       reason: markup.kind === "invalid" ? markup.reason : "preference_provenance_incomplete",
     };
   }
-  return { kind: "risk-alert", row, scope: scope.value, markupPolicy: markup.value };
+  return {
+    kind: "risk-alert",
+    row,
+    scope: scope.value.scope,
+    safetyScoreIdentity: scope.value.safetyScoreIdentity,
+    markupPolicy: markup.value,
+  };
+}
+
+async function loadCurrentSafetyIdentity(
+  db: D1Database,
+  nowSec: number,
+): Promise<SafetyScorePublicationIdentity | null> {
+  const assessment = await loadActiveAlertSafetySourceAssessment(db, nowSec);
+  return assessment.state === "ok"
+    ? (assessment.envelope?.safetyScoreIdentity ?? null)
+    : null;
 }
 
 async function revalidatePersonalizedRecap(
@@ -369,7 +394,7 @@ export async function revalidatePendingAlertPreferences(
   presetOptions: TelegramPresetResolveOptions = {},
 ): Promise<PendingPreferenceRevalidation[]> {
   const outcomes = new Map<number, PendingPreferenceRevalidation>();
-  const intents: ParsedPendingIntent[] = [];
+  let intents: ParsedPendingIntent[] = [];
   const recapIntents: ParsedRecapIntent[] = [];
   for (const row of rows) {
     const parsed = parseIntent(row, nowSec);
@@ -379,6 +404,34 @@ export async function revalidatePendingAlertPreferences(
   }
   for (const intent of recapIntents) {
     outcomes.set(intent.row.id, await revalidatePersonalizedRecap(db, intent, nowSec));
+  }
+  const safetyIntents = intents.filter((intent) =>
+    intent.scope.some((item) => item.family === "safety"));
+  if (safetyIntents.length > 0) {
+    const currentSafetyIdentity = await loadCurrentSafetyIdentity(db, nowSec);
+    const retained: ParsedPendingIntent[] = [];
+    for (const intent of intents) {
+      if (!intent.scope.some((item) => item.family === "safety")) {
+        retained.push(intent);
+        continue;
+      }
+      const reason = intent.safetyScoreIdentity == null
+        ? "safety_identity_missing"
+        : currentSafetyIdentity == null
+          ? "safety_identity_unavailable"
+          : !alertSafetyIdentitiesAreComparable(
+              intent.safetyScoreIdentity,
+              currentSafetyIdentity,
+            )
+            ? "safety_identity_changed"
+            : null;
+      if (reason) {
+        outcomes.set(intent.row.id, { kind: "cancel", row: intent.row, reason });
+      } else {
+        retained.push(intent);
+      }
+    }
+    intents = retained;
   }
   if (intents.length === 0) return rows.flatMap((row) => outcomes.get(row.id) ?? []);
 

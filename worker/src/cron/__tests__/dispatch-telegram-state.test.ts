@@ -10,6 +10,13 @@ import {
   buildAlertReserveSourceEnvelope,
 } from "../../lib/alert-reserve-source-cache";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import {
+  getAlertSafetySourceGeneration,
+  getAlertSafetyV9SourceGeneration,
+} from "../../lib/alert-safety-source-cache";
+import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
+import { buildDewsChanges, buildSafetyChanges } from "../telegram-alert-changes";
 
 const nowSec = Math.floor(Date.now() / 1000);
 const completedDewsAt = nowSec - 60;
@@ -55,6 +62,53 @@ function sourceData(overrides: Partial<DispatchSourceData> = {}): DispatchSource
     reserveDispatchedCache: cache([]),
     ...overrides,
   };
+}
+
+function v8Identity(publicationGenerationId: string) {
+  return {
+    model: "v8" as const,
+    schemaVersion: 1 as const,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    evaluationBuildDigest: "a".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+    publicationGenerationId,
+  };
+}
+
+function v8Source(
+  grade: string,
+  score: number,
+  publicationGenerationId = "report-cards:v8:test",
+) {
+  return cache({
+    generation: getAlertSafetySourceGeneration(SAFETY_SCORE_METHODOLOGY_VERSION),
+    safetyScoreIdentity: v8Identity(publicationGenerationId),
+    publicationGenerationId,
+    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    publishedAt: nowSec - 60,
+    snapshot: {
+      "usdc-circle": { grade, score, methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION },
+    },
+  });
+}
+
+function safetyBaseline(
+  generation: string,
+  identity: ReturnType<typeof v8Identity> | ReturnType<typeof makeWorkerReportCardsV9Response>["safetyScoreIdentity"],
+  grade: string,
+  score: number,
+) {
+  return cache({
+    generation,
+    safetyScoreIdentity: identity,
+    snapshot: {
+      "usdc-circle": {
+        grade,
+        score,
+        methodologyVersion: identity.methodologyVersion,
+      },
+    },
+  });
 }
 
 function freshnessRow(updatedAt: number) {
@@ -291,5 +345,179 @@ describe("buildDispatchSnapshotState reserve baseline handling", () => {
     expect(healthyRun.reserveSourceAssessment.state).toBe("ok");
     expect(healthyRun.previousReserveDriftIds).toEqual(["usdc-circle"]);
     expect(healthyRun.currentReserveDriftIds).toEqual(["usdc-circle"]);
+  });
+});
+
+describe("buildDispatchSnapshotState active safety model", () => {
+  it("fails closed for an invalid V9 activation while unrelated DEWS changes remain alertable", () => {
+    const state = buildDispatchSnapshotState(
+      sourceData({
+        activeSafetySource: {
+          kind: "error",
+          expectedModel: "v9",
+          reason: "v9-identity-mismatch",
+          activationUpdatedAt: nowSec - 30,
+          marker: null,
+          snapshot: null,
+          detail: "mismatch",
+        },
+        safetySourceCache: v8Source("A", 91),
+        dewsRows: [{
+          stablecoin_id: "usdc-circle",
+          score: 72,
+          band: "ALERT",
+          signals_json: signalsJson,
+        }],
+        dewsCache: cache({ "usdc-circle": "CALM" }),
+        dewsAlertableCache: cache({ "usdc-circle": "CALM" }),
+      }),
+      nowSec,
+    );
+
+    expect(state.safetySourceAssessment).toMatchObject({
+      state: "corrupt",
+      expectedModel: "v9",
+      failureReason: "v9-identity-mismatch",
+    });
+    expect(state.currentSafetySnapshot).toBeNull();
+    expect(
+      buildDewsChanges(
+        sourceData().dewsRows.concat({
+          stablecoin_id: "usdc-circle",
+          score: 72,
+          band: "ALERT",
+          signals_json: signalsJson,
+        }),
+        state.safeDewsAlertable,
+        state.safeDewsSnapshot,
+        () => "USDC",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("cold-seeds V8 to V9 activation and suppresses the apparent grade fan-out", () => {
+    const response = makeWorkerReportCardsV9Response({
+      updatedAt: nowSec - 60,
+      asOfSec: nowSec - 120,
+      cards: [makeWorkerV9Card({ grade: "A", score: 91 })],
+    });
+    const state = buildDispatchSnapshotState(
+      sourceData({
+        activeSafetySource: {
+          kind: "v9",
+          expectedModel: "v9",
+          marker: {
+            policyId: response.safetyScoreIdentity.policyId,
+            policyDigest: response.safetyScoreIdentity.policyDigest,
+            evaluationBuildDigest: response.safetyScoreIdentity.evaluationBuildDigest,
+            methodologyVersion: response.safetyScoreIdentity.methodologyVersion,
+          },
+          activationUpdatedAt: nowSec - 30,
+          snapshot: response,
+        },
+        safetyCache: safetyBaseline(
+          getAlertSafetySourceGeneration(SAFETY_SCORE_METHODOLOGY_VERSION),
+          v8Identity("report-cards:v8:prior"),
+          "D",
+          44,
+        ),
+        safetySourceCache: v8Source("D", 44, "report-cards:v8:current"),
+      }),
+      nowSec,
+    );
+
+    expect(state.safetySourceAssessment.expectedModel).toBe("v9");
+    expect(state.currentSafetySnapshot?.["usdc-circle"]).toMatchObject({ grade: "A", score: 91 });
+    expect(state.currentSnapshots.safety?.generation).toBe(
+      getAlertSafetyV9SourceGeneration(response.safetyScoreIdentity.methodologyVersion),
+    );
+    expect(state.safetySnapshotNeedsSeed).toBe(true);
+    expect(state.safeSafetySnapshot).toEqual({});
+    expect(buildSafetyChanges(state.currentSafetySnapshot, state.safeSafetySnapshot, () => "USDC").changes)
+      .toEqual([]);
+  });
+
+  it("cold-seeds a V9 to V8 rollback, then restores ordinary V8 grade comparisons", () => {
+    const response = makeWorkerReportCardsV9Response({
+      updatedAt: nowSec - 60,
+      asOfSec: nowSec - 120,
+    });
+    const rollback = buildDispatchSnapshotState(
+      sourceData({
+        activeSafetySource: {
+          kind: "v8",
+          expectedModel: "v8",
+          reason: "activation-marker-missing",
+          activationUpdatedAt: null,
+        },
+        safetyCache: safetyBaseline(
+          getAlertSafetyV9SourceGeneration(response.safetyScoreIdentity.methodologyVersion),
+          response.safetyScoreIdentity,
+          "A",
+          91,
+        ),
+        safetySourceCache: v8Source("B", 75, "report-cards:v8:rollback"),
+      }),
+      nowSec,
+    );
+    expect(rollback.safetySnapshotNeedsSeed).toBe(true);
+    expect(rollback.currentSafetySnapshot?.["usdc-circle"].grade).toBe("B");
+    expect(rollback.safeSafetySnapshot).toEqual({});
+
+    const restored = buildDispatchSnapshotState(
+      sourceData({
+        activeSafetySource: {
+          kind: "v8",
+          expectedModel: "v8",
+          reason: "activation-marker-missing",
+          activationUpdatedAt: null,
+        },
+        safetyCache: safetyBaseline(
+          getAlertSafetySourceGeneration(SAFETY_SCORE_METHODOLOGY_VERSION),
+          v8Identity("report-cards:v8:baseline"),
+          "C",
+          64,
+        ),
+        safetySourceCache: v8Source("B", 75, "report-cards:v8:new-publication"),
+      }),
+      nowSec,
+    );
+    expect(restored.safetySnapshotNeedsSeed).toBe(false);
+    expect(
+      buildSafetyChanges(restored.currentSafetySnapshot, restored.safeSafetySnapshot, () => "USDC").changes,
+    ).toHaveLength(1);
+  });
+
+  it("re-seeds after a missed safety baseline window instead of replaying blind-period changes", () => {
+    const identity = v8Identity("report-cards:v8:continuity");
+    const state = buildDispatchSnapshotState(
+      sourceData({
+        activeSafetySource: {
+          kind: "v8",
+          expectedModel: "v8",
+          reason: "activation-marker-missing",
+          activationUpdatedAt: null,
+        },
+        safetyCache: {
+          ...safetyBaseline(
+            getAlertSafetySourceGeneration(SAFETY_SCORE_METHODOLOGY_VERSION),
+            identity,
+            "C",
+            58,
+          ),
+          updatedAt: nowSec - CRON_INTERVALS["dispatch-telegram-alerts"] * 2,
+        },
+        safetySourceCache: v8Source("A", 91, "report-cards:v8:continuity-next"),
+      }),
+      nowSec,
+    );
+
+    expect(state.safetySnapshotNeedsSeed).toBe(true);
+    expect(state.safeSafetySnapshot).toEqual({});
+    expect(buildSafetyChanges(
+      state.currentSafetySnapshot,
+      state.safeSafetySnapshot,
+      () => "USDC",
+    ).changes).toEqual([]);
   });
 });

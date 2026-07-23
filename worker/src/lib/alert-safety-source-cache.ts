@@ -1,4 +1,6 @@
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { isRecord } from "@shared/lib/type-guards";
 import {
   DIMENSION_WEIGHTS,
@@ -18,6 +20,12 @@ import {
   type SafetyScoreV8PublicationIdentity,
 } from "@shared/types/safety-score-publication";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import {
+  loadActiveSafetyScoreSource,
+  type ActiveSafetyScoreSource,
+} from "./safety-score-active-source";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9-consumer-freshness";
+import { getCache } from "./db-cache";
 
 export const ALERT_SAFETY_SOURCE_CACHE_KEY = "alert:safety-source-cache";
 const ALERT_SAFETY_SOURCE_SCHEMA_VERSION = "1";
@@ -90,6 +98,14 @@ export interface AlertSafetyV9ExplainSnapshot {
   reasons: Array<{ code: string; message: string }>;
   bindingCap: { kind: string; limit: number; reason: string } | null;
   weakestPillar: { pillar: string; score: number } | null;
+  pillars: Record<
+    "backing" | "exit" | "control",
+    {
+      score: number | null;
+      evidenceLevel: string;
+      freshness: string;
+    }
+  >;
 }
 
 export interface AlertSafetyV9SourceRow extends AlertSafetySourceRow {
@@ -108,7 +124,7 @@ export type AlertSafetySourceSnapshot = Record<string, AlertSafetySourceRow>;
 
 export interface AlertSafetySourceEnvelope {
   generation: string;
-  safetyScoreIdentity: SafetyScoreV8PublicationIdentity;
+  safetyScoreIdentity: SafetyScorePublicationIdentity;
   publicationGenerationId?: string;
   methodologyVersion: string;
   publishedAt: number;
@@ -127,6 +143,8 @@ export interface AlertSafetySourceAssessment {
   ageSeconds: number | null;
   generation: string | null;
   envelope: AlertSafetySourceEnvelope | null;
+  expectedModel?: "v8" | "v9";
+  failureReason?: string;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -360,6 +378,63 @@ function parseExplainSnapshot(value: unknown): AlertSafetyExplainSnapshot | unde
   };
 }
 
+function parseV9ExplainSnapshot(value: unknown): AlertSafetyV9ExplainSnapshot | undefined {
+  const record = asRecord(value);
+  if (!record || !Array.isArray(record.reasons)) return undefined;
+  const reasons = record.reasons.flatMap((value) => {
+    const reason = asRecord(value);
+    return reason && typeof reason.code === "string" && typeof reason.message === "string"
+      ? [{ code: reason.code, message: truncateDetail(reason.message) }]
+      : [];
+  });
+  if (reasons.length !== record.reasons.length) return undefined;
+
+  const capRecord = record.bindingCap === null ? null : asRecord(record.bindingCap);
+  const bindingCap = capRecord &&
+    typeof capRecord.kind === "string" &&
+    typeof capRecord.limit === "number" &&
+    Number.isFinite(capRecord.limit) &&
+    typeof capRecord.reason === "string"
+    ? {
+        kind: capRecord.kind,
+        limit: capRecord.limit,
+        reason: truncateDetail(capRecord.reason),
+      }
+    : null;
+  if (record.bindingCap !== null && bindingCap === null) return undefined;
+
+  const weakestRecord = record.weakestPillar === null ? null : asRecord(record.weakestPillar);
+  const weakestPillar = weakestRecord &&
+    typeof weakestRecord.pillar === "string" &&
+    typeof weakestRecord.score === "number" &&
+    Number.isFinite(weakestRecord.score)
+    ? { pillar: weakestRecord.pillar, score: weakestRecord.score }
+    : null;
+  if (record.weakestPillar !== null && weakestPillar === null) return undefined;
+
+  const pillarsRecord = asRecord(record.pillars);
+  if (!pillarsRecord) return undefined;
+  const pillars = {} as AlertSafetyV9ExplainSnapshot["pillars"];
+  for (const pillar of ["backing", "exit", "control"] as const) {
+    const value = asRecord(pillarsRecord[pillar]);
+    if (
+      !value ||
+      !isFiniteNumberOrNull(value.score) ||
+      typeof value.evidenceLevel !== "string" ||
+      typeof value.freshness !== "string"
+    ) {
+      return undefined;
+    }
+    pillars[pillar] = {
+      score: value.score,
+      evidenceLevel: value.evidenceLevel,
+      freshness: value.freshness,
+    };
+  }
+
+  return { reasons, bindingCap, weakestPillar, pillars };
+}
+
 function parseSnapshotRow(value: unknown): AlertSafetySourceRow | null {
   const record = asRecord(value);
   if (!record) return null;
@@ -382,6 +457,10 @@ function parseSnapshotRow(value: unknown): AlertSafetySourceRow | null {
   const explain = parseExplainSnapshot(record.explain);
   if (explain) {
     row.explain = explain;
+  }
+  const v9Explain = parseV9ExplainSnapshot(record.v9Explain);
+  if (v9Explain) {
+    (row as AlertSafetyV9SourceRow).v9Explain = v9Explain;
   }
   return row;
 }
@@ -484,6 +563,10 @@ function buildRawInputSnapshotFromCard(card: ReportCard): AlertSafetyRawInputSna
 
 export function getAlertSafetySourceGeneration(methodologyVersion = SAFETY_SCORE_METHODOLOGY_VERSION): string {
   return `safety-${methodologyVersion}-alert-source-v${ALERT_SAFETY_SOURCE_SCHEMA_VERSION}`;
+}
+
+export function getAlertSafetyV9SourceGeneration(methodologyVersion: string): string {
+  return `safety-v9-${methodologyVersion}-alert-source-v${ALERT_SAFETY_SOURCE_SCHEMA_VERSION}`;
 }
 
 /**
@@ -658,8 +741,35 @@ export function buildAlertSafetyV9SourceEnvelope(
           ? null
           : { kind: card.bindingCap.kind, limit: card.bindingCap.limit, reason: truncateDetail(card.bindingCap.reason) },
         weakestPillar: card.weakestPillar,
+        pillars: Object.fromEntries(
+          (["backing", "exit", "control"] as const).map((pillar) => [pillar, {
+            score: card.pillars[pillar].score,
+            evidenceLevel: card.pillars[pillar].evidenceLevel,
+            freshness: card.pillars[pillar].freshness,
+          }]),
+        ) as AlertSafetyV9ExplainSnapshot["pillars"],
       },
     }])),
+  };
+}
+
+/**
+ * Projects a marker-authorized V9 publication into the model-neutral alert
+ * source contract. Activation, rather than the cached response lifecycle
+ * label, is the authority that permits alert use.
+ */
+export function buildActiveAlertSafetyV9SourceEnvelope(
+  snapshot: ReportCardsV9Response,
+): AlertSafetySourceEnvelope | null {
+  const shadow = buildAlertSafetyV9SourceEnvelope(snapshot, { allowShadowLifecycle: true });
+  if (!shadow) return null;
+  return {
+    generation: getAlertSafetyV9SourceGeneration(shadow.safetyScoreIdentity.methodologyVersion),
+    safetyScoreIdentity: shadow.safetyScoreIdentity,
+    publicationGenerationId: shadow.safetyScoreIdentity.publicationGenerationId,
+    methodologyVersion: shadow.safetyScoreIdentity.methodologyVersion,
+    publishedAt: shadow.publishedAt,
+    snapshot: shadow.snapshot,
   };
 }
 
@@ -773,6 +883,85 @@ export function assessAlertSafetySourceCache(
   };
 }
 
+/**
+ * Selects the alert source from the central activation decision. A present but
+ * invalid V9 activation never falls back to the still-produced V8 cache.
+ */
+export function assessActiveAlertSafetySource(
+  activeSource: ActiveSafetyScoreSource,
+  v8Cached: { value: string; updatedAt: number } | null,
+  options: {
+    nowSec: number;
+    producerIntervalSec: number;
+  },
+): AlertSafetySourceAssessment {
+  if (activeSource.kind === "v8") {
+    return {
+      ...assessAlertSafetySourceCache(v8Cached, {
+        expectedGeneration: getAlertSafetySourceGeneration(),
+        nowSec: options.nowSec,
+        producerIntervalSec: options.producerIntervalSec,
+      }),
+      expectedModel: "v8",
+    };
+  }
+  if (activeSource.kind === "error") {
+    return {
+      state: activeSource.reason === "v9-snapshot-unavailable" ? "missing" : "corrupt",
+      ageSeconds: null,
+      generation: null,
+      envelope: null,
+      expectedModel: "v9",
+      failureReason: activeSource.reason,
+    };
+  }
+
+  const envelope = buildActiveAlertSafetyV9SourceEnvelope(activeSource.snapshot);
+  if (!envelope) {
+    return {
+      state: "corrupt",
+      ageSeconds: null,
+      generation: null,
+      envelope: null,
+      expectedModel: "v9",
+      failureReason: "v9-snapshot-invalid",
+    };
+  }
+  const ageSeconds = Math.max(0, options.nowSec - envelope.publishedAt);
+  if (ageSeconds > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC) {
+    return {
+      state: "stale",
+      ageSeconds,
+      generation: envelope.generation,
+      envelope,
+      expectedModel: "v9",
+      failureReason: "v9-snapshot-stale",
+    };
+  }
+  return {
+    state: "ok",
+    ageSeconds,
+    generation: envelope.generation,
+    envelope,
+    expectedModel: "v9",
+  };
+}
+
+export async function loadActiveAlertSafetySourceAssessment(
+  db: D1Database,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<AlertSafetySourceAssessment> {
+  const activeSource = await loadActiveSafetyScoreSource(db, signal);
+  const v8Cached = activeSource.kind === "v8"
+    ? await getCache(db, ALERT_SAFETY_SOURCE_CACHE_KEY)
+    : null;
+  return assessActiveAlertSafetySource(activeSource, v8Cached, {
+    nowSec,
+    producerIntervalSec: CRON_INTERVALS["publish-report-card-cache"],
+  });
+}
+
 export function buildAlertSafetySnapshotEnvelope(
   snapshot: AlertSafetySourceSnapshot,
   generation: string,
@@ -819,14 +1008,5 @@ export function alertSafetyIdentitiesAreComparable(
   left: SafetyScorePublicationIdentity,
   right: SafetyScorePublicationIdentity,
 ): boolean {
-  if (
-    left.model !== right.model ||
-    left.schemaVersion !== right.schemaVersion ||
-    left.methodologyVersion !== right.methodologyVersion ||
-    left.evaluationBuildDigest !== right.evaluationBuildDigest
-  ) {
-    return false;
-  }
-  if (left.model === "v8") return right.model === "v8";
-  return right.model === "v9" && left.policyId === right.policyId && left.policyDigest === right.policyDigest;
+  return safetyScorePublicationIdentitiesAreComparable(left, right);
 }

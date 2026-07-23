@@ -268,6 +268,7 @@ async function dispatchTelegramAlertsImpl(
       dewsIds,
       depegIds,
       safetyIds,
+      safetyScoreIdentity,
       launchIds,
       reserveIds,
     } = dispatchEvents;
@@ -365,6 +366,7 @@ async function dispatchTelegramAlertsImpl(
         dewsIds,
         depegIds,
         safetyIds,
+        safetyScoreIdentity,
         launchIds,
         reserveIds,
       },

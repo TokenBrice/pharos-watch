@@ -34,6 +34,7 @@ export type TelegramFanoutPlanEvents = Pick<
   | "depegResolved"
   | "depegWorsening"
   | "safetyChanges"
+  | "safetyScoreIdentity"
   | "launchPromoted"
   | "reservePromoted"
 >;
@@ -252,6 +253,7 @@ export function buildTelegramFanoutPlan(args: {
     nowSec,
     formatBudget,
     sourceEventId: args.sourceEventId,
+    safetyScoreIdentity: args.events.safetyScoreIdentity ?? null,
   });
 
   return {

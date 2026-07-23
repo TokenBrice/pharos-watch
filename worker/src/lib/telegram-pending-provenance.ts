@@ -1,5 +1,9 @@
 import { isTelegramAlertType, type TelegramAlertType } from "@shared/types/status";
 import { isRecord } from "@shared/lib/type-guards";
+import {
+  SafetyScorePublicationIdentitySchema,
+  type SafetyScorePublicationIdentity,
+} from "@shared/types/safety-score-publication";
 import type { ConsolidatedAlerts } from "./telegram-alerts-formatting";
 import type { LinkPreviewOptions } from "./telegram";
 import { parseJson } from "./json-parse";
@@ -14,6 +18,11 @@ const STABLECOIN_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,79}$/;
 export interface PendingAlertScopeItem {
   stablecoinId: string;
   family: TelegramAlertType;
+}
+
+export interface PendingAlertProvenance {
+  scope: PendingAlertScopeItem[];
+  safetyScoreIdentity: SafetyScorePublicationIdentity | null;
 }
 
 export interface PendingMarkupPolicyV1 {
@@ -50,15 +59,29 @@ function normalizePendingAlertScope(
   return normalized;
 }
 
-export function serializePendingAlertScope(items: readonly PendingAlertScopeItem[]): string {
-  const serialized = JSON.stringify(normalizePendingAlertScope(items));
+export function serializePendingAlertScope(
+  items: readonly PendingAlertScopeItem[],
+  safetyScoreIdentity?: SafetyScorePublicationIdentity | null,
+): string {
+  const scope = normalizePendingAlertScope(items);
+  const serialized = JSON.stringify(
+    safetyScoreIdentity
+      ? {
+          version: 2,
+          scope,
+          safetyScoreIdentity: SafetyScorePublicationIdentitySchema.parse(safetyScoreIdentity),
+        }
+      : scope,
+  );
   if (serialized.length > MAX_PENDING_ALERT_SCOPE_JSON_CHARS) {
     throw new Error("Telegram pending alert scope exceeds the persisted JSON limit");
   }
   return serialized;
 }
 
-export function parsePendingAlertScope(value: string | null): ParsedPendingJson<PendingAlertScopeItem[]> {
+export function parsePendingAlertProvenance(
+  value: string | null,
+): ParsedPendingJson<PendingAlertProvenance> {
   if (value == null) return { kind: "legacy" };
   if (value.length === 0 || value.length > MAX_PENDING_ALERT_SCOPE_JSON_CHARS) {
     return { kind: "invalid", reason: "preference_scope_size_invalid" };
@@ -66,11 +89,27 @@ export function parsePendingAlertScope(value: string | null): ParsedPendingJson<
   const parsedResult = parseJson(value);
   if (!parsedResult.ok) return { kind: "invalid", reason: "preference_scope_json_invalid" };
   const parsed = parsedResult.value;
-  if (!Array.isArray(parsed) || parsed.length === 0 || parsed.length > MAX_PENDING_ALERT_SCOPE_ITEMS) {
+  const rawScope = Array.isArray(parsed)
+    ? parsed
+    : isRecord(parsed) && parsed.version === 2
+      ? parsed.scope
+      : null;
+  const identity = Array.isArray(parsed)
+    ? null
+    : isRecord(parsed) && parsed.version === 2
+      ? SafetyScorePublicationIdentitySchema.safeParse(parsed.safetyScoreIdentity)
+      : null;
+  if (
+    rawScope == null ||
+    !Array.isArray(rawScope) ||
+    rawScope.length === 0 ||
+    rawScope.length > MAX_PENDING_ALERT_SCOPE_ITEMS ||
+    (identity != null && !identity.success)
+  ) {
     return { kind: "invalid", reason: "preference_scope_shape_invalid" };
   }
   const items: PendingAlertScopeItem[] = [];
-  for (const item of parsed) {
+  for (const item of rawScope) {
     if (
       !isRecord(item) ||
       typeof item.stablecoinId !== "string" ||
@@ -82,10 +121,23 @@ export function parsePendingAlertScope(value: string | null): ParsedPendingJson<
     items.push({ stablecoinId: item.stablecoinId, family: item.family });
   }
   try {
-    return { kind: "ok", value: normalizePendingAlertScope(items) };
+    return {
+      kind: "ok",
+      value: {
+        scope: normalizePendingAlertScope(items),
+        safetyScoreIdentity: identity?.success ? identity.data : null,
+      },
+    };
   } catch {
     return { kind: "invalid", reason: "preference_scope_item_invalid" };
   }
+}
+
+export function parsePendingAlertScope(value: string | null): ParsedPendingJson<PendingAlertScopeItem[]> {
+  const parsed = parsePendingAlertProvenance(value);
+  return parsed.kind === "ok"
+    ? { kind: "ok", value: parsed.value.scope }
+    : parsed;
 }
 
 function collectScopeItems(

@@ -1,5 +1,6 @@
 import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DepegEventCloseReason } from "@shared/types/market";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-utils";
 import { getCache } from "../lib/db-cache";
@@ -59,6 +60,7 @@ export interface TelegramDispatchEvents {
   dewsIds: string[];
   depegIds: string[];
   safetyIds: string[];
+  safetyScoreIdentity?: SafetyScorePublicationIdentity | null;
   launchIds: string[];
   reserveIds: string[];
 }
@@ -274,6 +276,10 @@ export async function buildTelegramDispatchEvents(
     dewsIds,
     depegIds,
     safetyIds,
+    safetyScoreIdentity:
+      safetyIds.length > 0
+        ? (snapshotState.currentSnapshots?.safety?.safetyScoreIdentity ?? null)
+        : null,
     launchIds,
     reserveIds,
   };

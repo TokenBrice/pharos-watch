@@ -4,7 +4,11 @@ import {
 } from "@shared/lib/report-card-core";
 import type { DimensionKey } from "@shared/types/report-cards";
 import type { SafetyChange } from "../lib/telegram-alerts";
-import type { AlertSafetySourceRow } from "../lib/alert-safety-source-cache";
+import type {
+  AlertSafetySourceRow,
+  AlertSafetyV9ExplainSnapshot,
+  AlertSafetyV9SourceRow,
+} from "../lib/alert-safety-source-cache";
 import { SAFETY_GRADE_RANK, type SafetySnapshot } from "./telegram-alert-snapshots";
 
 const DIMENSION_KEYS: readonly DimensionKey[] = [
@@ -62,18 +66,84 @@ export type SafetyChangeWithExplain = SafetyChange & {
 
 /** Native V9 explanation for a model-aware caller; V8 formatting remains unchanged. */
 export function buildV9SafetyReason(
-  current: Pick<AlertSafetySourceRow, "grade" | "score"> & { v9Explain?: { reasons: Array<{ message: string }>; bindingCap: { reason: string } | null; weakestPillar: { pillar: string; score: number } | null } },
-  previous?: Pick<AlertSafetySourceRow, "grade" | "score"> & { v9Explain?: { bindingCap: { reason: string } | null } },
+  current: Pick<AlertSafetySourceRow, "grade" | "score"> & {
+    v9Explain?: {
+      reasons: Array<{ code?: string; message: string }>;
+      bindingCap: { kind?: string; limit?: number; reason: string } | null;
+      weakestPillar: { pillar: string; score: number } | null;
+      pillars?: AlertSafetyV9ExplainSnapshot["pillars"];
+    };
+  },
+  previous?: Pick<AlertSafetySourceRow, "grade" | "score"> & {
+    v9Explain?: {
+      reasons?: Array<{ code?: string; message: string }>;
+      bindingCap?: { kind?: string; limit?: number; reason: string } | null;
+      weakestPillar?: { pillar: string; score: number } | null;
+      pillars?: AlertSafetyV9ExplainSnapshot["pillars"];
+    };
+  },
 ): string {
-  if (current.v9Explain?.bindingCap && current.v9Explain.bindingCap.reason !== previous?.v9Explain?.bindingCap?.reason) {
+  if (
+    current.v9Explain?.bindingCap &&
+    (
+      current.v9Explain.bindingCap.reason !== previous?.v9Explain?.bindingCap?.reason ||
+      current.v9Explain.bindingCap.kind !== previous?.v9Explain?.bindingCap?.kind ||
+      current.v9Explain.bindingCap.limit !== previous?.v9Explain?.bindingCap?.limit
+    )
+  ) {
     return `Reason: ${ensureSentence(current.v9Explain.bindingCap.reason)}`;
   }
-  const reason = current.v9Explain?.reasons[0]?.message;
+
+  const overallDirection = compareGradeOrScore(
+    previous?.grade ?? current.grade,
+    current.grade,
+    previous?.score ?? null,
+    current.score,
+  );
+  const pillarMovement = largestV9PillarMovement(
+    current.v9Explain?.pillars,
+    previous?.v9Explain?.pillars,
+    overallDirection,
+  );
+  if (pillarMovement) {
+    const direction = pillarMovement.current > pillarMovement.previous ? "improved" : "fell";
+    return `Reason: ${capitalize(pillarMovement.pillar)} pillar ${direction} from ${Math.round(pillarMovement.previous)} to ${Math.round(pillarMovement.current)}.`;
+  }
+
+  const previousReasons = new Set(previous?.v9Explain?.reasons?.map((reason) => reason.code ?? reason.message) ?? []);
+  const reason = current.v9Explain?.reasons.find(
+    (candidate) => !previousReasons.has(candidate.code ?? candidate.message),
+  )?.message
+    ?? current.v9Explain?.reasons[0]?.message;
   if (reason) return `Reason: ${ensureSentence(reason)}`;
   if (current.v9Explain?.weakestPillar) {
     return `Reason: Weakest pillar is ${current.v9Explain.weakestPillar.pillar} (${Math.round(current.v9Explain.weakestPillar.score)}).`;
   }
   return `Reason: Safety Score is ${current.grade}${current.score == null ? "." : ` (${Math.round(current.score)}).`}`;
+}
+
+function largestV9PillarMovement(
+  current: AlertSafetyV9ExplainSnapshot["pillars"] | undefined,
+  previous: AlertSafetyV9ExplainSnapshot["pillars"] | undefined,
+  overallDirection: Direction,
+): { pillar: keyof AlertSafetyV9ExplainSnapshot["pillars"]; current: number; previous: number } | null {
+  if (!current || !previous) return null;
+  const movements = (["backing", "exit", "control"] as const)
+    .flatMap((pillar) => {
+      const currentScore = current[pillar].score;
+      const previousScore = previous[pillar].score;
+      return currentScore == null || previousScore == null || currentScore === previousScore
+        ? []
+        : [{ pillar, current: currentScore, previous: previousScore }];
+    });
+  const directional = overallDirection === "upgrade"
+    ? movements.filter((movement) => movement.current > movement.previous)
+    : overallDirection === "downgrade"
+      ? movements.filter((movement) => movement.current < movement.previous)
+      : [];
+  return (directional.length > 0 ? directional : movements)
+    .sort((left, right) =>
+      Math.abs(right.current - right.previous) - Math.abs(left.current - left.previous))[0] ?? null;
 }
 
 type Direction = "upgrade" | "downgrade" | "mixed" | "flat";
@@ -85,14 +155,20 @@ export function addSafetyReasonLines(
   currentContextLines: ReadonlyMap<string, string> = new Map(),
 ): SafetyChangeWithExplain[] {
   return changes.map((change) => {
-    const previousExplain = readExplain(previousSafetySnapshot?.[change.stablecoinId]);
-    const currentExplain = readExplain(currentSafetySnapshot?.[change.stablecoinId]);
+    const previousRow = previousSafetySnapshot?.[change.stablecoinId];
+    const currentRow = currentSafetySnapshot?.[change.stablecoinId];
+    const previousExplain = readExplain(previousRow);
+    const currentExplain = readExplain(currentRow);
     const enriched: SafetyChangeWithExplain = {
       ...change,
       previousExplain,
       currentExplain,
     };
-    enriched.contextLine = buildSafetyReasonLine(enriched, currentContextLines.get(change.stablecoinId));
+    const currentV9 = currentRow as AlertSafetyV9SourceRow | undefined;
+    const previousV9 = previousRow as AlertSafetyV9SourceRow | undefined;
+    enriched.contextLine = currentV9?.v9Explain
+      ? buildV9SafetyReason(currentV9, previousV9)
+      : buildSafetyReasonLine(enriched, currentContextLines.get(change.stablecoinId));
     return enriched;
   });
 }
@@ -371,6 +447,10 @@ function sanitizeDetail(value: string | undefined): string | undefined {
 function ensureSentence(value: string): string {
   const trimmed = value.trim();
   return /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function capitalize(value: string): string {
+  return value.length === 0 ? value : `${value[0]!.toUpperCase()}${value.slice(1)}`;
 }
 
 function truncate(value: string, max: number): string {

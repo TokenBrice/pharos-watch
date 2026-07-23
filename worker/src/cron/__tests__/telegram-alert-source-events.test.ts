@@ -15,6 +15,7 @@ import {
   loadTelegramAlertSourceEvent,
   persistTelegramAlertSourceEvent,
   resolveTelegramAlertSourcePresetPages,
+  suppressIncomparableTelegramSafetySourceEvent,
 } from "../telegram-alert-source-events";
 import type { TelegramAlertSnapshots } from "../telegram-alert-snapshots";
 import { persistTelegramAlertJobManifests } from "../telegram-alert-jobs";
@@ -28,6 +29,26 @@ const MIGRATION_SQL = readFileSync(
   "utf8",
 );
 const NOW = 1_800_000_000;
+
+const V8_IDENTITY = {
+  model: "v8" as const,
+  schemaVersion: 1 as const,
+  methodologyVersion: "8.0-test",
+  evaluationBuildDigest: "a".repeat(64),
+  baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+  publicationGenerationId: "report-cards:v8:1",
+};
+
+const V9_IDENTITY = {
+  model: "v9" as const,
+  schemaVersion: 1 as const,
+  methodologyVersion: "candidate-v9.0",
+  policyId: "safety-score-v9",
+  policyDigest: "c".repeat(64),
+  evaluationBuildDigest: "d".repeat(64),
+  baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}`,
+  publicationGenerationId: "report-cards:v9:1",
+};
 
 interface Harness {
   sqlite: DatabaseSync;
@@ -221,6 +242,69 @@ function insertPresetFollower(
 }
 
 describe("Telegram alert source-event resolution", () => {
+  it("suppresses stale queued safety work at a model boundary while preserving other families", async () => {
+    const source = await buildTelegramAlertSourceEvent({
+      events: {
+        ...events(),
+        safetyChanges: [{
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          oldGrade: "B",
+          newGrade: "A",
+          oldScore: 78,
+          newScore: 91,
+        }],
+        safetyIds: ["usdc-circle"],
+        safetyScoreIdentity: V8_IDENTITY,
+      },
+      baseline: {
+        ...baseline(),
+        safety: {
+          generation: "safety-8.0-test-alert-source-v1",
+          safetyScoreIdentity: V8_IDENTITY,
+          snapshot: {
+            "usdc-circle": { grade: "A", score: 91, methodologyVersion: "8.0-test" },
+          },
+        },
+      },
+      detectedAt: NOW,
+    });
+
+    const reconciled = suppressIncomparableTelegramSafetySourceEvent(source, {
+      generation: "safety-v9-candidate-v9.0-alert-source-v1",
+      safetyScoreIdentity: V9_IDENTITY,
+      snapshot: {
+        "usdc-circle": { grade: "B-", score: 80, methodologyVersion: "candidate-v9.0" },
+      },
+    });
+
+    expect(reconciled.events.dewsChanges).toHaveLength(1);
+    expect(reconciled.events.dewsIds).toEqual(["usdc-circle"]);
+    expect(reconciled.events.safetyChanges).toEqual([]);
+    expect(reconciled.events.safetyIds).toEqual([]);
+    expect(reconciled.events.safetyScoreIdentity).toBeNull();
+    expect(reconciled.baseline.safety?.safetyScoreIdentity).toEqual(V9_IDENTITY);
+  });
+
+  it("rejects newly persisted safety events without model provenance", async () => {
+    await expect(buildTelegramAlertSourceEvent({
+      events: {
+        ...events(),
+        safetyChanges: [{
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          oldGrade: "B",
+          newGrade: "A",
+          oldScore: 78,
+          newScore: 91,
+        }],
+        safetyIds: ["usdc-circle"],
+      },
+      baseline: baseline(),
+      detectedAt: NOW,
+    })).rejects.toThrow("exact Safety Score identity");
+  });
+
   it("holds the baseline through preset resolution failure and resumes the immutable event", async () => {
     const harness = createHarness();
     insertPresetFollower(harness.sqlite, "preset-chat");

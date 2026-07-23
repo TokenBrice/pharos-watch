@@ -1,4 +1,8 @@
 import type { TelegramAlertType } from "@shared/types/status";
+import {
+  SafetyScorePublicationIdentitySchema,
+  type SafetyScorePublicationIdentity,
+} from "@shared/types/safety-score-publication";
 import { batchExecute, buildInClause, executeAtomicBatch, prepareMultiRowInsertStatements } from "../lib/db";
 import { sha256Hex } from "../lib/hash";
 import {
@@ -17,6 +21,7 @@ import {
   buildTelegramSnapshotCacheEntries,
   type TelegramAlertSnapshots,
 } from "./telegram-alert-snapshots";
+import { alertSafetyIdentitiesAreComparable } from "../lib/alert-safety-source-cache";
 
 const SOURCE_EVENT_SCHEMA_VERSION = 1;
 const PRESET_PAGE_SIZE = 100;
@@ -111,7 +116,10 @@ export interface TelegramAlertSourceResolution {
   resolutionFailures: number;
 }
 
-function parseEvents(payload: string): TelegramDispatchEvents {
+function parseEvents(
+  payload: string,
+  fallbackSafetyIdentity: SafetyScorePublicationIdentity | null,
+): TelegramDispatchEvents {
   const parsed = parseJson(payload);
   if (!parsed.ok) throw new Error("Telegram source event payload is invalid JSON");
   const value = parsed.value as Partial<Record<keyof TelegramDispatchEvents, unknown>> | null;
@@ -136,7 +144,16 @@ function parseEvents(payload: string): TelegramDispatchEvents {
   if (typeof value.suppressedMethodologyChanges !== "number") {
     throw new Error("Telegram source event payload has invalid methodology metadata");
   }
-  return value as unknown as TelegramDispatchEvents;
+  const parsedIdentity = value.safetyScoreIdentity == null
+    ? null
+    : SafetyScorePublicationIdentitySchema.safeParse(value.safetyScoreIdentity);
+  if (parsedIdentity && !parsedIdentity.success) {
+    throw new Error("Telegram source event payload has invalid safety identity");
+  }
+  return {
+    ...(value as unknown as TelegramDispatchEvents),
+    safetyScoreIdentity: parsedIdentity?.data ?? fallbackSafetyIdentity,
+  };
 }
 
 function parseBaseline(payload: string): TelegramAlertSnapshots {
@@ -160,14 +177,18 @@ function mapSourceEvent(row: TelegramAlertSourceEventRow): TelegramAlertSourceEv
   if (row.schema_version !== SOURCE_EVENT_SCHEMA_VERSION) {
     throw new Error(`Unsupported Telegram source event schema version ${row.schema_version}`);
   }
+  const baseline = parseBaseline(row.baseline_payload);
   return {
     sourceEventId: row.source_event_id,
     schemaVersion: 1,
     status: row.status,
     detectedAt: Number(row.detected_at),
     expiresAt: Number(row.expires_at),
-    events: parseEvents(row.event_payload),
-    baseline: parseBaseline(row.baseline_payload),
+    events: parseEvents(
+      row.event_payload,
+      baseline.safety?.safetyScoreIdentity ?? null,
+    ),
+    baseline,
     attemptCount: Number(row.attempt_count),
     lastAttemptAt: row.last_attempt_at == null ? null : Number(row.last_attempt_at),
     lastErrorClass: row.last_error_class ?? null,
@@ -202,6 +223,9 @@ export async function buildTelegramAlertSourceEvent(args: {
   baseline: TelegramAlertSnapshots;
   detectedAt: number;
 }): Promise<TelegramAlertSourceEvent> {
+  if (args.events.safetyIds.length > 0 && args.events.safetyScoreIdentity == null) {
+    throw new Error("Telegram safety source event requires an exact Safety Score identity");
+  }
   const eventPayload = JSON.stringify(args.events);
   const baselinePayload = JSON.stringify(args.baseline);
   const digest = await sha256Hex(JSON.stringify({
@@ -223,6 +247,40 @@ export async function buildTelegramAlertSourceEvent(args: {
     lastErrorClass: null,
     baselineCommittedAt: null,
     completedAt: null,
+  };
+}
+
+/**
+ * Removes stale safety work from an in-flight durable source event at a model,
+ * policy, methodology, or build boundary. Other alert families and their
+ * immutable membership resolution continue from the same source event.
+ */
+export function suppressIncomparableTelegramSafetySourceEvent(
+  source: TelegramAlertSourceEvent,
+  currentSafety: TelegramAlertSnapshots["safety"],
+): TelegramAlertSourceEvent {
+  if (source.events.safetyIds.length === 0) return source;
+  const sourceIdentity = source.events.safetyScoreIdentity ?? null;
+  const currentIdentity = currentSafety?.safetyScoreIdentity ?? null;
+  if (
+    sourceIdentity &&
+    currentIdentity &&
+    alertSafetyIdentitiesAreComparable(sourceIdentity, currentIdentity)
+  ) {
+    return source;
+  }
+  return {
+    ...source,
+    events: {
+      ...source.events,
+      safetyChanges: [],
+      safetyIds: [],
+      safetyScoreIdentity: null,
+    },
+    baseline: {
+      ...source.baseline,
+      safety: currentSafety ?? null,
+    },
   };
 }
 

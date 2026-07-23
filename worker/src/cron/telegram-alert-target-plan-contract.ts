@@ -8,6 +8,7 @@ import type { BatchMessage } from "../lib/telegram";
 import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../lib/telegram-constants";
 import {
   parsePendingAlertScope,
+  parsePendingAlertProvenance,
   parsePendingMarkupPolicy,
   serializePendingAlertScope,
   serializePendingMarkupPolicy,
@@ -90,6 +91,12 @@ export async function serializeTelegramTargetPlan(
   ) {
     throw new Error("Telegram target plan requires complete immutable provenance");
   }
+  if (
+    routed.alertScope.some((item) => item.family === "safety") &&
+    !routed.safetyScoreIdentity
+  ) {
+    throw new Error("Telegram safety target plan requires a Safety Score identity");
+  }
 
   const messages = expandSubscriberChunks([routed]);
   if (messages.length === 0 || messages.length > TELEGRAM_TARGET_PLAN_MAX_CHUNKS) {
@@ -106,7 +113,10 @@ export async function serializeTelegramTargetPlan(
   if (itemKeys.length === 0 || itemKeys.length > TELEGRAM_TARGET_PLAN_MAX_ITEMS) {
     throw new Error(`Telegram target plan item count is outside 1-${TELEGRAM_TARGET_PLAN_MAX_ITEMS}`);
   }
-  const alertScopeJson = serializePendingAlertScope(routed.alertScope);
+  const alertScopeJson = serializePendingAlertScope(
+    routed.alertScope,
+    routed.safetyScoreIdentity,
+  );
   const payload: PersistedTelegramTargetPlanV1 = {
     schemaVersion: TELEGRAM_TARGET_PLAN_SCHEMA_VERSION,
     sourceEventId: routed.sourceEventId,
@@ -186,7 +196,12 @@ export async function parseTelegramTargetPlan(
     return { kind: "invalid", reason: "target_plan_alert_types_invalid" };
   }
   const alertScope = parsePendingAlertScope(value.alertScopeJson);
-  if (alertScope.kind !== "ok" || alertScope.value.length > TELEGRAM_TARGET_PLAN_MAX_ITEMS) {
+  const provenance = parsePendingAlertProvenance(value.alertScopeJson);
+  if (
+    alertScope.kind !== "ok" ||
+    provenance.kind !== "ok" ||
+    alertScope.value.length > TELEGRAM_TARGET_PLAN_MAX_ITEMS
+  ) {
     return { kind: "invalid", reason: "target_plan_scope_invalid" };
   }
   const itemKeys = normalizedItemKeys(value.itemKeys);

@@ -1,5 +1,9 @@
 import { isRecord, numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { isTelegramAlertType } from "@shared/types/status";
+import {
+  SafetyScorePublicationIdentitySchema,
+  type SafetyScorePublicationIdentity,
+} from "@shared/types/safety-score-publication";
 import { getCache, setCache } from "../lib/db-cache";
 import {
   TELEGRAM_ALERT_TTL_SEC,
@@ -79,6 +83,10 @@ function normalizeCachedOverflowPlan(value: unknown, _nowSec: number): OverflowP
     ? value.sourceEventId
     : undefined;
   const preferenceGeneration = rawEntry ? finiteNumber(rawEntry.preferenceGeneration) : null;
+  const parsedSafetyIdentity = value.safetyScoreIdentity == null
+    ? null
+    : SafetyScorePublicationIdentitySchema.safeParse(value.safetyScoreIdentity);
+  if (parsedSafetyIdentity && !parsedSafetyIdentity.success) return null;
 
   if (
     chatId == null || chatId.length === 0 || chatId.length > 200 ||
@@ -106,6 +114,7 @@ function normalizeCachedOverflowPlan(value: unknown, _nowSec: number): OverflowP
     chatId,
     alertType,
     ...(sourceEventId ? { sourceEventId } : {}),
+    ...(parsedSafetyIdentity?.data ? { safetyScoreIdentity: parsedSafetyIdentity.data } : {}),
     estimatedChunks: Math.max(1, Math.min(64, Math.floor(estimatedChunks))),
     expiresAt: Math.floor(expiresAt),
     entry: {
@@ -264,6 +273,7 @@ export function buildOverflowAwareSubscriberQueue(args: {
   nowSec: number;
   formatBudget: number;
   sourceEventId?: string;
+  safetyScoreIdentity?: SafetyScorePublicationIdentity | null;
 }): {
   plannedQueue: PlannedSubscriberAlert[];
   subscriberQueue: RoutedSubscriberAlert[];
@@ -281,7 +291,11 @@ export function buildOverflowAwareSubscriberQueue(args: {
       entry.quietHoursEndUtc,
       entry.timezone,
     );
-  const plannedQueue = planSubscriberQueue(args.alertsByChat, args.sourceEventId);
+  const plannedQueue = planSubscriberQueue(
+    args.alertsByChat,
+    args.sourceEventId,
+    args.safetyScoreIdentity,
+  );
   const { toFormat, overflowPlanned, overflowFormatBudget } = splitFreshPlansForOverflowPriority(
     plannedQueue,
     args.overflowBacklog,

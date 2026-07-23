@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { DimensionKey, ReportCard, ReportCardDimension, ReportCardGrade } from "@shared/types";
 import {
   assessAlertSafetySourceCache,
+  assessActiveAlertSafetySource,
   alertSafetyIdentitiesAreComparable,
   buildAlertSafetySnapshotEnvelope,
   buildAlertSafetySourceEnvelope,
   buildAlertSafetyV9SourceEnvelope,
+  getAlertSafetyV9SourceGeneration,
   getAlertSafetySourceGeneration,
   parseAlertSafetySnapshotEnvelope,
 } from "../alert-safety-source-cache";
@@ -87,6 +89,7 @@ describe("alert safety source cache", () => {
     };
     expect(alertSafetyIdentitiesAreComparable(v8, v9)).toBe(false);
     expect(alertSafetyIdentitiesAreComparable(v9, { ...v9, policyDigest: "f".repeat(64) })).toBe(false);
+    expect(alertSafetyIdentitiesAreComparable(v9, { ...v9, evaluationBuildDigest: "f".repeat(64) })).toBe(false);
     expect(alertSafetyIdentitiesAreComparable(v9, { ...v9, publicationGenerationId: "report-cards:v9:2" })).toBe(true);
   });
 
@@ -128,6 +131,144 @@ describe("alert safety source cache", () => {
       { ...response, completeness: { ...response.completeness, expectedCount: 2 } },
       { allowShadowLifecycle: true },
     )).toBeNull();
+  });
+
+  it("selects a healthy marker-authorized V9 snapshot without projecting V8 dimensions", () => {
+    const response = makeWorkerReportCardsV9Response({
+      updatedAt: 1_700_000_000,
+      asOfSec: 1_699_999_900,
+      cards: [makeWorkerV9Card({
+        grade: "A",
+        score: 91,
+        pillars: {
+          backing: {
+            score: 94,
+            evidenceLevel: "strong",
+            freshness: "current",
+            components: ["reviewed"],
+            reasons: [],
+          },
+          exit: {
+            score: 88,
+            evidenceLevel: "adequate",
+            freshness: "current",
+            components: ["reviewed"],
+            reasons: [],
+          },
+          control: {
+            score: 92,
+            evidenceLevel: "adequate",
+            freshness: "current",
+            components: ["reviewed"],
+            reasons: [],
+          },
+        },
+      })],
+    });
+    const assessment = assessActiveAlertSafetySource(
+      {
+        kind: "v9",
+        expectedModel: "v9",
+        marker: {
+          policyId: response.safetyScoreIdentity.policyId,
+          policyDigest: response.safetyScoreIdentity.policyDigest,
+          evaluationBuildDigest: response.safetyScoreIdentity.evaluationBuildDigest,
+          methodologyVersion: response.safetyScoreIdentity.methodologyVersion,
+        },
+        activationUpdatedAt: 1_700_000_001,
+        snapshot: response,
+      },
+      null,
+      { nowSec: 1_700_000_060, producerIntervalSec: 900 },
+    );
+
+    expect(assessment).toMatchObject({
+      state: "ok",
+      expectedModel: "v9",
+      generation: getAlertSafetyV9SourceGeneration("candidate-v9.0"),
+      envelope: {
+        safetyScoreIdentity: response.safetyScoreIdentity,
+        snapshot: {
+          "usdc-circle": {
+            grade: "A",
+            score: 91,
+            methodologyVersion: "candidate-v9.0",
+            v9Explain: {
+              pillars: {
+                backing: { score: 94, evidenceLevel: "strong" },
+                exit: { score: 88 },
+                control: { score: 92 },
+              },
+            },
+          },
+        },
+      },
+    });
+    expect(assessment.envelope?.snapshot["usdc-circle"].explain).toBeUndefined();
+  });
+
+  it("uses the V9 shadow cadence rather than the V8 cache cadence for freshness", () => {
+    const response = makeWorkerReportCardsV9Response({
+      updatedAt: 1_700_000_000,
+      asOfSec: 1_699_999_900,
+    });
+    const activeSource = {
+      kind: "v9" as const,
+      expectedModel: "v9" as const,
+      marker: {
+        policyId: response.safetyScoreIdentity.policyId,
+        policyDigest: response.safetyScoreIdentity.policyDigest,
+        evaluationBuildDigest: response.safetyScoreIdentity.evaluationBuildDigest,
+        methodologyVersion: response.safetyScoreIdentity.methodologyVersion,
+      },
+      activationUpdatedAt: 1_700_000_001,
+      snapshot: response,
+    };
+
+    expect(assessActiveAlertSafetySource(
+      activeSource,
+      null,
+      { nowSec: response.updatedAt + 31 * 60, producerIntervalSec: 900 },
+    ).state).toBe("ok");
+    expect(assessActiveAlertSafetySource(
+      activeSource,
+      null,
+      { nowSec: response.updatedAt + 6 * 60 * 60 + 1, producerIntervalSec: 900 },
+    )).toMatchObject({
+      state: "stale",
+      failureReason: "v9-snapshot-stale",
+    });
+  });
+
+  it("fails closed on an invalid V9 activation instead of falling back to a healthy V8 cache", () => {
+    const v8Cached = {
+      value: JSON.stringify(sourceEnvelope(
+        { "usdc-circle": { grade: "A", score: 90, methodologyVersion: "7.09" } },
+        "7.09",
+        1_700_000_000,
+      )),
+      updatedAt: 1_700_000_000,
+    };
+    const assessment = assessActiveAlertSafetySource(
+      {
+        kind: "error",
+        expectedModel: "v9",
+        reason: "v9-identity-mismatch",
+        activationUpdatedAt: 1_700_000_001,
+        marker: null,
+        snapshot: null,
+        detail: "mismatch",
+      },
+      v8Cached,
+      { nowSec: 1_700_000_060, producerIntervalSec: 900 },
+    );
+
+    expect(assessment).toMatchObject({
+      state: "corrupt",
+      expectedModel: "v9",
+      failureReason: "v9-identity-mismatch",
+      envelope: null,
+    });
   });
 
   it("builds a generation-aware envelope with explain data", () => {
