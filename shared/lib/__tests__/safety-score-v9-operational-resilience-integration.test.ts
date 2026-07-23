@@ -467,6 +467,86 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
     expect(persistentMarketDepthContribution(factSet)).toBeUndefined();
   });
 
+  it("keeps diagnostic issuer opacity visible without suppressing resilience credit", () => {
+    const base = compiledFactSet([
+      measuredRoute({
+        routeId: "deep-route",
+        physicalResourceKey: "pool:deep",
+        executableUsdAtStress: 10_000_000,
+      }),
+    ]);
+    const diagnostic = mutateFactSet(base, (asset) => {
+      const gap = createV9FactGapV3({
+        gapId: "gap:diagnostic-issuer-opacity",
+        reasonCode: "immaterial-unrecognized-chain-pool",
+        ownerDomain: "control",
+        policyRuleId: "control.deployment.common-mode",
+        observationState: "bounded-unknown",
+        responsibility: "issuer-undisclosed",
+        path: {
+          kind: "deployment-control",
+          deploymentKey: "deployment:unrecognized-chain-pool",
+          controlKey: "control:unrecognized-chain-pool",
+        },
+        message: "The issuer has not broken out an immaterial chain-label pool.",
+        evidenceRefIds: [BASE_EVIDENCE_ID],
+      });
+      asset.gaps.push(gap);
+      asset.controls.push({
+        controlKey: "control:unrecognized-chain-pool",
+        deploymentKey: "deployment:unrecognized-chain-pool",
+        sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+        controlKind: "bridge",
+        scope: "deployment",
+        status: createV9FactStatus({
+          applicability: requiredV9Applicability("control.deployment.common-mode"),
+          observationState: "bounded-unknown",
+          evidenceRefIds: [BASE_EVIDENCE_ID],
+          gapIds: [gap.gapId],
+        }),
+        capabilities: ["bridge-mint"],
+        capSemantics: { kind: "unknown", bound: null },
+        claimImpairment: "unknown",
+        economicLossScope: "unknown",
+        authority: null,
+        delaySec: null,
+        materialSupplyShare: 0.05,
+        incidentState: "unknown",
+        failureDomains: [],
+      });
+      asset.supply.selectedBridgeRoutes = [
+        {
+          deploymentRouteKey: "ethereum:native",
+          supplyUsd: 95_000_000,
+          supplyShare: 0.95,
+          reviewState: "selected-reviewed",
+          reviewedRouteKind: "native",
+        },
+        {
+          deploymentRouteKey: "unmatched-chain-label-pool:fixture-asset",
+          supplyUsd: 5_000_000,
+          supplyShare: 0.05,
+          reviewState: "unmatched",
+        },
+      ];
+      asset.supply.selectedRouteSupplyShare = 0.95;
+      asset.supply.unknownRouteSupplyShare = 0.05;
+    });
+    const evaluated = evaluatedAsset(diagnostic);
+
+    expect(evaluated.scoreInput.pillars.control.reasons).toContainEqual(
+      expect.objectContaining({
+        code: "immaterial-unrecognized-chain-pool",
+        responsibility: "issuer-undisclosed",
+      }),
+    );
+    expect(evaluated.operationalResilience).toMatchObject({
+      eligible: true,
+      blockerCodes: [],
+    });
+    expect(persistentMarketDepthContribution(diagnostic)).toBeDefined();
+  });
+
   it("blocks resilience credit for ordinary and peg issuer opacity", () => {
     const base = compiledFactSet([
       measuredRoute({

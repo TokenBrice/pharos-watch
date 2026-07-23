@@ -743,6 +743,7 @@ function operationalResilienceBlockers(
   dependencyReasonsInput: readonly V9PillarReason[],
   dependencySignals: readonly V9StructuralSignal[],
   methodologyReasons: readonly V9PillarReason[],
+  envelope: V9ValidatedPolicyEnvelope,
 ): V9OperationalResilienceBlockers {
   const pillarSignals = [
     ...pillars.backing.structuralSignals,
@@ -757,9 +758,14 @@ function operationalResilienceBlockers(
     ...dependencyReasonsInput,
     ...methodologyReasons,
   ];
-  const issuerOpacity = scoreBearingReasons.some(
-    (reason) => reason.responsibility === "issuer-undisclosed",
-  );
+  const issuerOpacity = scoreBearingReasons.some((reason) => {
+    if (reason.responsibility !== "issuer-undisclosed") return false;
+    // Visibility-only diagnostics do not reduce a pillar, impose a ceiling, or
+    // make the score unavailable. Treating one as material issuer opacity
+    // would let an immaterial disclosure gap erase independently documented
+    // operating history. Pillar, ceiling, and NR reasons remain blockers.
+    return resolveV9ReasonPolicy(envelope, reason.code).reason.defaultTreatment !== "diagnostic";
+  });
   const globalReserveImpairment = pillarSignals.some(
     (signal) =>
       (signal.economicLossScope === "reserve-claim" || signal.economicLossScope === "global-claim") &&
@@ -1934,6 +1940,7 @@ export function evaluateV9FactSet(
               dependencyReasonsInput,
               dependencySignals,
               methodologyReasons,
+              envelope,
             ),
           );
     const creditedPillars = applyOperationalResilienceCredits(basePillars, operationalResilience);
