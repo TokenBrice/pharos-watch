@@ -766,9 +766,17 @@ export function evaluateV9Exit(
     (candidate) =>
       candidate.route.routeKey !== primary.route.routeKey && routesAreIndependent(primary.route, candidate.route),
   );
-  const diversificationBonus = independent
-    ? Math.min(100 - primary.score, independent.score * envelope.policy.semantic.exit.independentRouteBenefitLimit)
-    : 0;
+  // An undisclosed-reviewed fee route's credit is bounded by its ceiling and must
+  // stay bounded at the portfolio level too: it neither earns nor donates the
+  // independent-route bonus, so opaque-fee routes cannot stack past the ceiling
+  // or lift a stronger primary (adversarial-review hardening of SIM-EXIT-L2).
+  const undisclosedFeeInvolved =
+    primary.route.feeEvidence === "undisclosed-reviewed" ||
+    independent?.route.feeEvidence === "undisclosed-reviewed";
+  const diversificationBonus =
+    independent && !undisclosedFeeInvolved
+      ? Math.min(100 - primary.score, independent.score * envelope.policy.semantic.exit.independentRouteBenefitLimit)
+      : 0;
   const hasOtherIncludedRoute = evaluated.length > 1;
   return {
     score: roundTraceScore(primary.score + diversificationBonus),
