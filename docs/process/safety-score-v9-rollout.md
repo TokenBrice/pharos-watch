@@ -2,7 +2,7 @@
 
 > **Current state:** Safety Score v8.17 remains the public model. V9 retains one
 > compact shadow row per UTC day and may refresh its private latest candidate
-> every three hours after a valid V8 publication. The owner-approved, unlisted
+> every 30 minutes after a valid V8 publication. The owner-approved, unlisted
 > read-only preview remains a shadow consumer. The versioned public V9 endpoint
 > remains dark until the owner writes the identity-bound activation key.
 

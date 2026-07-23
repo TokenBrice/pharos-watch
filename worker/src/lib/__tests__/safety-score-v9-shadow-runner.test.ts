@@ -144,6 +144,10 @@ describe("Safety Score V9 shadow runner", { timeout: 30_000 }, () => {
     mockLoadReviewCarries.mockResolvedValue({});
   });
 
+  it("uses the 30-minute calibration refresh cadence", () => {
+    expect(SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC).toBe(30 * 60);
+  });
+
   it("persists one current canonical observation without release artifacts", async () => {
     const result = await runSafetyScoreV9ShadowAfterV8Publication(input());
 

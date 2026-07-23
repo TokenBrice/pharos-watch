@@ -11,10 +11,9 @@ import { V9_RELEASE_COVERAGE_FLOORS } from "@shared/types/safety-score-v9-covera
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 import type { ReportCardPublicationCompleteness } from "./report-card-publication";
 import {
-  buildSafetyScoreV9CandidateFromNormalizedInput,
-  type SafetyScoreV9CandidatePipelineResult,
+  buildSafetyScoreV9ShadowCandidateFromNormalizedInput,
+  type SafetyScoreV9ShadowCandidateResult,
 } from "./safety-score-v9-candidate";
-import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./safety-score-v9-extension";
 import {
   loadSafetyScoreV9MovementReviewCarries,
   loadSafetyScoreV9MovementReviewDispositions,
@@ -42,12 +41,12 @@ export const SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX = "safety-score-v9-shadow";
 
 /**
  * Minimum age of the day's latest success before the quarter-hourly caller
- * re-runs the shadow. Three hours yields up to eight refreshes per UTC day —
- * frequent enough for same-day candidate iteration while keeping compute and
- * D1 writes bounded. The daily summary remains one row per day and each
- * successful refresh replaces its selected observation.
+ * re-runs the shadow. Thirty minutes yields up to 48 refreshes per UTC day for
+ * active calibration while still skipping every other V8 publication. The
+ * daily summary remains one row per day and each successful refresh replaces
+ * its selected observation.
  */
-export const SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC = 3 * 60 * 60;
+export const SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC = 30 * 60;
 export const SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC = V9_SHADOW_DAILY_START_OFFSET_SEC;
 export const SAFETY_SCORE_V9_SHADOW_TIMEOUT_MS = 2 * 60_000;
 
@@ -235,12 +234,12 @@ function downstreamThresholds(): SafetyScoreV9DownstreamThreshold[] {
   );
 }
 
-function supplyProjection(pipeline: SafetyScoreV9CandidatePipelineResult): {
+function supplyProjection(pipeline: SafetyScoreV9ShadowCandidateResult): {
   supplyUsdById: Record<string, number>;
   topCutoffIds: Set<string>;
 } {
-  const supplies = pipeline.compiledFacts.assets
-    .map((asset) => ({ id: asset.assetId, supplyUsd: asset.supply.circulatingUsd ?? 0 }))
+  const supplies = Object.entries(pipeline.supplyUsdById)
+    .map(([id, supplyUsd]) => ({ id, supplyUsd }))
     .sort((left, right) => right.supplyUsd - left.supplyUsd || compareText(left.id, right.id));
   const cutoff = supplies[Math.min(24, supplies.length - 1)]?.supplyUsd ?? Number.POSITIVE_INFINITY;
   return {
@@ -347,11 +346,9 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       }
       fixedInput = preparedFixedInput;
     }
-    const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput);
     stage = "compile";
-    const pipeline = buildSafetyScoreV9CandidateFromNormalizedInput({
+    const pipeline = buildSafetyScoreV9ShadowCandidateFromNormalizedInput({
       fixedInput,
-      extension,
       publishedAtSec: fixedInput.clockSec,
     });
     const publicationGenerationId = pipeline.candidate.publicationGenerationId;
