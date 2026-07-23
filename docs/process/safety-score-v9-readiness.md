@@ -249,7 +249,8 @@ The V9 implementation establishes candidate infrastructure without changing prod
   a reviewer can always separate what was adjudicated from what was carried.
 - The read-only `safety-score-v9:shadow-gate` evaluator accepts compact daily
   summaries plus the selected immutable artifact rows and derives replay status
-  by rebuilding each candidate. It requires at least 14 consecutive UTC days,
+  by rebuilding each candidate. It requires at least 8 consecutive UTC days
+  (14 before the 2026-07-23 owner amendment recorded below),
   at least two elapsed cycles of the four-hour slowest score-bearing producer,
   and at least two distinct observed and archived `liveReserves` and
   `redemption` generations for one frozen candidate/policy/build/capability and
