@@ -47,13 +47,13 @@ All ecosystem monetary aggregates use the `core-stablecoins-v1` universe: active
 | Stability Index | `stability_index_samples` + `stability_index` | Current PSI from latest 30-minute sample, yesterday's from daily table |
 | Blacklist activity | `blacklist_events` (rolling last 24h) | Event count, total USD affected; threshold: ≥2 events OR >$10M single; zero-value bursts are artifact-risk candidates |
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" with material daily/weekly thresholds |
-| Safety scores | computed real-time | Report card grades for mentioned coins + 2 "tension" coins (high peg score but low overall grade — structurally fragile despite stable peg) |
+| Safety scores | identified active canonical publication | V8 grades and dimensions while the activation marker is absent; native V9 grades, three pillars, reviewed reasons, and caps after an exact V9 activation identity is satisfied |
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >100 bps AND mcap >$20M; top 5 by impact score |
 | Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (safe-haven vs risky net flows via `buildFlightToQualityClassification()`), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net flow |
 | Total mcap ATH | derived from core-marked `daily_digest` rows (`json_extract` on stored `totalMcapUsd`) | Anchors current core total mcap against its post-cutover Digest-window ATH value and date |
 | DEWS stress | `stress_signals` + `stress_signal_history` | Band distribution (CALM/WATCH/ALERT/WARNING/DANGER), all band changes (any rank-changing band move), elevated coins (ALERT+ with mcap >$10M) |
 | Historical context | `stability_index` + `supply_history` | PSI precedent (last time score was at/below current), band streak, supply mover ATH and largest historical weekly change |
-| Grade transitions | `safety_grade_history` | Report card grade changes (last 48h) with dimensional context; methodology re-grade guard (>15 simultaneous changes that are >=80% one-directional excluded) |
+| Grade transitions | `safety_score_history_v2` | Organic report-card grade changes from the active model/policy/build (last 48h); activation, rollback, restoration, and methodology/build baselines are excluded |
 | PSI contributors | `stability_index_samples` (input_snapshot) | Top 3 coins driving PSI severity by market impact (|bps| x mcap x factor) |
 | Yield anomalies | `yield_data` (is_best rows) | Coins with active warning signals (spike, divergence, tvl-outflow); APY vs 7d/30d averages; filtered to mcap >$10M |
 | DEX liquidity shifts | `dex_liquidity_history` | Day-over-day score changes >=8 points; TVL comparison; filtered to mcap >$10M |
@@ -79,7 +79,7 @@ The digest intelligence pass runs after editorial candidates are built and befor
 - `calmNarrativeFrame`: a fallback editorial frame for calm regimes so quiet days can explain what changed, what did not happen, and what would make the next day less calm.
 - `editorialAudit`: added after the LLM response is parsed; stores top/usable/suppressed/momentum candidate ids, required lead ids, declared `leadSignalId`, used candidate ids, and quality issue codes.
 
-Safety score computation is shared with the yield cron via `worker/src/lib/safety-scores.ts` (`computeSafetyScoresSnapshot()`), so grade lookups use one canonical scoring path.
+Digest safety reads resolve through `worker/src/lib/identified-active-safety-score-source.ts`. A missing V9 activation marker selects the exact canonical V8 publication; a present marker selects only the identity-matched canonical V9 publication. Invalid or unavailable V9 never triggers V8 computation or fallback.
 
 The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassification()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, aligned with the public `/api/mint-burn-flows` classification path.
 
@@ -121,7 +121,7 @@ The active-depeg collector also computes **lifecycle review flags** over the ful
 
 Digest generation now fails closed on stablecoins-cache availability: if the cached stablecoin payload is missing, malformed, or otherwise non-`ok`, the cron returns `status: "degraded"` and skips regeneration instead of synthesizing a false zero-mcap digest.
 
-Safety-score enrichment also uses explicit degraded semantics. When `computeSafetyScoresSnapshot()` returns a degraded result, the digest still renders from the remaining inputs, but the safety section is omitted and the cron metadata records the degraded reason rather than fabricating distribution stats from an empty score set.
+Safety-score enrichment also uses explicit degraded semantics. When the expected active publication is unavailable or mismatched, the digest still renders from the remaining inputs, but the safety section and grade movers are omitted and `safetyContext` records the expected model and reason. Healthy output carries the full model, schema, methodology/policy, evaluation-build, base-input, and publication-generation identity. Copy authored without an identified publication is hard-blocked if deterministic claim markers find Safety Score, report-card, grade/rating, V9-pillar, or binding-cap language; a degraded edition is deliverable only when its copy is safety-free.
 
 All collectors now distinguish "no signal" from "collector failed". If the active-depeg, blacklist-activity, supply-velocity, resolved-depeg, mint-burn, liquidity-shift, PSI-contributor, total-mcap-ATH, historical-context, or cross-day-trend queries error, `generateDailyDigest()` still stores the digest but:
 
@@ -153,7 +153,7 @@ CREATE TABLE daily_digest (
 CREATE INDEX idx_daily_digest_generated_at ON daily_digest(generated_at);
 ```
 
-The full `input_data` JSON is stored verbatim so detail pages can reconstruct the contextual snapshot for any historical date without re-fetching live data. It includes the deterministic intelligence fields listed above when generated by the current pipeline. When one of the early collectors fails, `input_data.degradedSources` records the failed collector keys (`active-depegs-query`, `blacklist-activity-query`, `supply-velocity-query`, etc.).
+The full `input_data` JSON is stored verbatim so detail pages can reconstruct the contextual snapshot for any historical date without re-fetching live data. It includes the deterministic intelligence fields listed above and the authored `safetyContext` when generated by the current pipeline. When one of the early collectors fails, `input_data.degradedSources` records the failed collector keys (`active-depegs-query`, `blacklist-activity-query`, `supply-velocity-query`, etc.).
 
 The `digest_meta` column stores structured metadata about editorial choices (lead signal, tone, featured coins) for variety enforcement across consecutive digests. Older rows with `NULL` `digest_meta` fall back to raw text comparison.
 
@@ -232,7 +232,7 @@ Active tracked additions are queued earlier by `worker/src/cron/sync-stablecoins
 
 Appendix snapshot writes are stored with the immutable edition and committed atomically with its `sent` transition after every chunk is accepted. A failed or partial channel delivery therefore does not lose pending additions.
 
-Telegram delivery is keyed by immutable daily or weekly edition. The outbox stores the target chat, exact ordered chunk array, accepted-chunk cursor, and owner/generation-fenced state. Confirmed retryable HTTP responses return the edition to `pending` with bounded exponential or Telegram `retry_after` backoff. A timeout/network failure, expired `sending` owner, or persistence failure after acceptance becomes `execution_unknown` and is never replayed automatically. Confirmed permanent rejection becomes `failed_permanent`. The five-minute digest-trigger slot drains due `pending` editions without rerunning Anthropic or re-rendering copy; operator reconciliation for terminal states is documented in [`runbooks/telegram-digest-outbox.md`](./runbooks/telegram-digest-outbox.md).
+Telegram delivery is keyed by immutable daily or weekly edition. The outbox stores the target chat, exact ordered chunk array, authored safety context, accepted-chunk cursor, and owner/generation-fenced state. An edition containing safety content is sent only while its complete Safety Score publication identity remains current; another model, policy, build, base input, or generation terminalizes it before a Bot API effect. A safety-free digest authored during an explicit degraded state remains deliverable; enqueue and delivery both reject persisted Safety Score or grade claims paired with an unavailable context. Confirmed retryable HTTP responses return the edition to `pending` with bounded exponential or Telegram `retry_after` backoff. A timeout/network failure, expired `sending` owner, or persistence failure after acceptance becomes `execution_unknown` and is never replayed automatically. Confirmed permanent rejection becomes `failed_permanent`. The five-minute digest-trigger slot drains due `pending` editions without rerunning Anthropic or re-rendering copy; operator reconciliation for terminal states is documented in [`runbooks/telegram-digest-outbox.md`](./runbooks/telegram-digest-outbox.md).
 
 A same-day forced regeneration can render different copy after that immutable Telegram edition is already `sent`. The enqueue result reports the payload mismatch for auditability, but the digest cron treats the already-sent state as an idempotent skip instead of a delivery warning because no pending payload can be replaced and no resend is allowed. A mismatch while the edition is still pending remains degraded and operator-visible.
 
@@ -270,12 +270,12 @@ Possible channel values include `"no-creds"`, `"ok"`, `"failed: <truncated error
 
 **File:** `worker/src/cron/weekly-recap.ts`
 **Schedule:** Mondays only in the `daily-0810` slot (`"10 8 * * *"`)
-**Dedup guard:** returns `skipped_neutral` outside Monday UTC or when a recent weekly row is already delivered; retries a recent row with `digest_meta.telegramDelivered = false` unless its delivery status is `skipped: quality-gate`
+**Dedup guard:** returns `skipped_neutral` outside Monday UTC or when a recent weekly row is already delivered; retries a recent row with `digest_meta.telegramDelivered = false` only while its delivery status is non-terminal. Quality-gate, `execution_unknown`, and `failed_permanent` rows require review rather than automatic weekly reruns.
 **Period semantics:** trailing daily editions available at the Monday 08:10 UTC start, not a strict Monday-Sunday calendar week. `digest_meta.periodType` is `"trailing-daily-editions"`.
 
 ### Data collection
 
-Fetches the last 15 daily digests (`LIMIT 15`, cutoff `now - 15d`, excluding weekly entries via `json_extract(digest_meta, '$.type') != 'weekly'`), splits them at a UTC-day boundary (`todayTs - 6d`, last Tuesday 00:00 UTC for the Monday run), and aggregates both summary ranges and weekly signal leaderboards for the current week plus basic aggregates for the prior week:
+Fetches the last 15 daily digests (`LIMIT 15`, cutoff `now - 15d`, excluding weekly entries via `json_extract(digest_meta, '$.type') != 'weekly'`), splits them at a UTC-day boundary (`todayTs - 6d`, last Tuesday 00:00 UTC for the Monday run), and aggregates both summary ranges and weekly signal leaderboards for the current week plus basic aggregates for the prior week. Structured safety fields and raw daily title/summary copy are retained only when their authored model, schema, methodology, policy, and evaluator build are comparable with the active weekly source; incompatible or unbound raw copy is withheld from the prompt.
 
 | Metric | Derivation |
 |--------|-----------|
@@ -289,7 +289,7 @@ Fetches the last 15 daily digests (`LIMIT 15`, cutoff `now - 15d`, excluding wee
 | Supply signals | Biggest weekly movers and daily velocity reversals/acceleration/deceleration |
 | DEWS signals | Top band changes and max ALERT+ mcap |
 | Blacklist total | Sum of `blacklistActivity.eventCount` and `totalAmountUsd`; top events by value |
-| Grade transitions | Sum of `gradeTransitions.length` across all days |
+| Grade transitions | Deduplicated V2 organic transitions comparable with the active model/policy/build; boundary and cross-identity rows are excluded |
 | Gauge range | Min/max `mintBurnFlows.gaugeScore` (null if <3 data points) |
 | Other anomalies | Top mint/burn pressure, yield anomalies, and liquidity shifts |
 | Forward-look scoreboard | sum of daily `forwardLookOutcomes` statuses | `{hit, missed, pending, expired}` across the week's editions; the prompt instructs the recap to publish the score and own the misses |
@@ -310,7 +310,7 @@ Requires >=5 current-week daily digests to proceed. Prior-week coverage below 5 
 
 ### Storage
 
-Stored in the same `daily_digest` table. The `digest_meta` column includes `"type": "weekly"`, `"periodType": "trailing-daily-editions"`, `weekStart` and `weekEnd` date strings, and Telegram delivery fields (`telegramDelivered`, `telegramDeliveryStatus`, `telegramDeliveryUpdatedAt`, and `telegramDeliveredAt` after success). The `input_data` column stores the `WeeklyInputData` aggregation (not raw `DigestInputData`).
+Stored in the same `daily_digest` table. The `digest_meta` column includes `"type": "weekly"`, `"periodType": "trailing-daily-editions"`, `weekStart` and `weekEnd` date strings, the authored safety context, and Telegram delivery fields (`telegramDelivered`, `telegramDeliveryStatus`, `telegramDeliveryUpdatedAt`, and `telegramDeliveredAt` after success). The `input_data` column stores the `WeeklyInputData` aggregation (not raw `DigestInputData`) with the exact active safety identity or an explicit unavailable state.
 
 ### Distribution
 

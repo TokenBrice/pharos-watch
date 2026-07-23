@@ -1,4 +1,5 @@
-import type { DigestInputData } from "@shared/types/digest";
+import type { DigestInputData, DigestSafetyContext } from "@shared/types/digest";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 
 export type WeeklyRiskKind = "depeg" | "dews" | "mint-burn" | "blacklist" | "grade" | "yield" | "liquidity" | "supply";
 
@@ -48,6 +49,8 @@ export interface WeeklyInputData {
   weekStartDate: string;
   weekEndDate: string;
   periodType: "trailing-daily-editions";
+  safetyContext?: DigestSafetyContext;
+  degradedSources?: string[];
   dailyDigests: { date: string; title: string; text: string; inputData: DigestInputData }[];
   psiRange: { min: number; max: number; start: number; end: number; dominantBand: string };
   mcapRange: { start: number; end: number; netChange: number; pctChange: number | null };
@@ -66,7 +69,17 @@ export interface WeeklyInputData {
     maxAlertPlusMcapUsd: number;
     topPressureSignals: { symbol: string; intensity: number; net24hUsd: number; date: string }[];
     topBlacklistEvents: { symbol: string; chain: string; type: string; amountUsd: number; date: string }[];
-    topGradeTransitions: { symbol: string; fromGrade: string; toGrade: string; mcapUsd: number; date: string }[];
+    topGradeTransitions: {
+      historyId: string;
+      recordedAt: number;
+      model: SafetyScorePublicationIdentity["model"];
+      safetyScoreIdentity: SafetyScorePublicationIdentity;
+      symbol: string;
+      fromGrade: string;
+      toGrade: string;
+      mcapUsd: number;
+      date: string;
+    }[];
     topYieldAnomalies: { symbol: string; apy: number; warnings: string[]; mcapUsd: number; date: string }[];
     topLiquidityShifts: { symbol: string; scoreDelta: number; mcapUsd: number; date: string }[];
   };

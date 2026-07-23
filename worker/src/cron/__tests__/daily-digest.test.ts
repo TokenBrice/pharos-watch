@@ -118,8 +118,8 @@ vi.mock("../../lib/stablecoins-cache", () => ({
   loadStablecoinsCache: vi.fn(),
 }));
 
-vi.mock("../../lib/safety-score-history-v2", () => ({
-  loadActiveV8SafetyScoreHistorySource: vi.fn(),
+vi.mock("../../lib/identified-active-safety-score-source", () => ({
+  loadIdentifiedActiveSafetyScoreSource: vi.fn(),
 }));
 
 vi.mock("../../lib/flight-to-quality-classification", () => ({
@@ -171,20 +171,29 @@ import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
 import type { DigestInputData } from "@shared/types/digest";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import {
-  loadActiveV8SafetyScoreHistorySource,
-  type ActiveV8SafetyScoreHistorySource,
-} from "../../lib/safety-score-history-v2";
+  loadIdentifiedActiveSafetyScoreSource,
+  type IdentifiedActiveSafetyScoreSource,
+} from "../../lib/identified-active-safety-score-source";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { postDigestTweet } from "../../lib/twitter";
 import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
 import { deliverTelegramDigestEdition, enqueueTelegramDigestEdition } from "../../lib/telegram-digest-outbox";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../test-helpers/report-cards-v9";
 
 const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
 
-function canonicalSafetySource(cards: unknown[]): ActiveV8SafetyScoreHistorySource {
+function canonicalSafetySource(
+  cards: unknown[],
+): Extract<IdentifiedActiveSafetyScoreSource, { kind: "v8" }> {
   return {
+    kind: "v8",
+    expectedModel: "v8",
+    activationUpdatedAt: null,
     identity: {
       model: "v8" as const,
       schemaVersion: 1 as const,
@@ -195,7 +204,7 @@ function canonicalSafetySource(cards: unknown[]): ActiveV8SafetyScoreHistorySour
     },
     publishedAtSec: 123,
     snapshot: { cards },
-  } as unknown as ActiveV8SafetyScoreHistorySource;
+  } as unknown as Extract<IdentifiedActiveSafetyScoreSource, { kind: "v8" }>;
 }
 
 function makeParsedFixture(
@@ -487,7 +496,7 @@ describe("generateDailyDigest", () => {
         updatedAt: Math.floor(Date.now() / 1000),
       });
 
-    vi.mocked(loadActiveV8SafetyScoreHistorySource)
+    vi.mocked(loadIdentifiedActiveSafetyScoreSource)
       .mockReset()
       .mockResolvedValue(
         canonicalSafetySource([
@@ -824,16 +833,122 @@ describe("generateDailyDigest", () => {
     expect(getInsertDigestBinds(db as MockD1Database)).toBeUndefined();
   });
 
-  it("omits safety summary output when the canonical snapshot identity is unavailable", async () => {
-    vi.mocked(loadActiveV8SafetyScoreHistorySource).mockRejectedValueOnce(new Error("identity mismatch"));
+  it("omits safety inputs and blocks unbound safety claims when the canonical identity is unavailable", async () => {
+    vi.mocked(loadIdentifiedActiveSafetyScoreSource).mockResolvedValueOnce({
+      kind: "error",
+      expectedModel: "v9",
+      reason: "v9-identity-mismatch",
+      detail: "identity mismatch",
+      activationUpdatedAt: Math.floor(Date.now() / 1000),
+    });
 
     const db = mockD1(makeBaseTables());
     const result = await generateDailyDigest(db, "anthropic-key");
 
     expect(result.status).toBe("degraded");
     const insertBinds = getInsertDigestBinds(db as MockD1Database);
-    const storedInput = JSON.parse(String(insertBinds?.[3])) as { safetyScores?: unknown };
+    const storedInput = JSON.parse(String(insertBinds?.[3])) as {
+      safetyScores?: unknown;
+      safetyContext?: { status: string; expectedModel: string; reason: string };
+      editorialAudit?: { qualityIssueCodes?: string[] };
+    };
     expect(storedInput.safetyScores).toBeUndefined();
+    expect(storedInput.safetyContext).toMatchObject({
+      status: "unavailable",
+      expectedModel: "v9",
+      reason: "v9-identity-mismatch",
+    });
+    expect(JSON.parse(String(insertBinds?.[5]))).toMatchObject({ qualityGate: "blocked" });
+    expect(storedInput.editorialAudit).toMatchObject({
+      qualityIssueCodes: expect.arrayContaining(["unbound-safety-copy"]),
+    });
+    expect(result.metadata).toContain("unbound-safety-copy");
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+  });
+
+  it("publishes only canonical V9 grades, pillars, reasons, caps, and full identity", async () => {
+    const cap = {
+      kind: "redemption-access",
+      limit: 82,
+      source: "structural" as const,
+      reason: "Primary redemption remains eligibility-gated",
+      binding: true,
+    };
+    const backing = {
+      score: 91,
+      evidenceLevel: "strong" as const,
+      freshness: "current" as const,
+      components: ["reserves"],
+      reasons: [{
+        code: "bounded-mechanism-review" as const,
+        message: "Reviewed reserve reporting is current",
+        path: "pillars.backing",
+      }],
+    };
+    const card = makeWorkerV9Card({
+      id: "usdt-tether",
+      grade: "A",
+      score: 88,
+      pillars: {
+        backing,
+        exit: { ...backing, score: 86, components: ["liquidity"] },
+        control: { ...backing, score: 84, components: ["governance"] },
+      },
+      caps: [cap],
+      bindingCap: cap,
+      reasonCodes: ["bounded-mechanism-review"],
+    });
+    const snapshot = makeWorkerReportCardsV9Response({ cards: [card] });
+    vi.mocked(loadIdentifiedActiveSafetyScoreSource).mockResolvedValueOnce({
+      kind: "v9",
+      expectedModel: "v9",
+      identity: snapshot.safetyScoreIdentity,
+      publishedAtSec: snapshot.updatedAt,
+      activationUpdatedAt: snapshot.updatedAt - 10,
+      snapshot,
+    });
+
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(db, "anthropic-key");
+
+    expect(result.itemCount).toBe(1);
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    const storedInput = JSON.parse(String(insertBinds?.[3]));
+    expect(storedInput.safetyContext).toMatchObject({
+      status: "available",
+      expectedModel: "v9",
+      identity: snapshot.safetyScoreIdentity,
+    });
+    expect(storedInput.safetyScores).toMatchObject({
+      model: "v9",
+      provenance: {
+        ...snapshot.safetyScoreIdentity,
+        publishedAt: snapshot.updatedAt,
+      },
+      mentionedCoins: [{
+        symbol: "USDT",
+        grade: "A",
+        score: 88,
+        pillars: {
+          backing: { score: 91 },
+          exit: { score: 86 },
+          control: { score: 84 },
+        },
+        reasonCodes: ["bounded-mechanism-review"],
+        bindingCap: {
+          kind: "redemption-access",
+          limit: 82,
+        },
+      }],
+    });
+    expect(storedInput.safetyScores.medianGrade).toBeUndefined();
+    const body = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: { content: string }[];
+    };
+    expect(body.messages[0].content).toContain("Safety Scores (V9");
+    expect(body.messages[0].content).toContain("backing=91, exit=86, control=84");
+    expect(body.messages[0].content).not.toContain("peg=95");
   });
 
   it("fails early on DB data-collection error and does not call Claude", async () => {
@@ -1093,11 +1208,21 @@ describe("generateDailyDigest", () => {
       },
       // Organic V2 grade transitions in last 48h
       {
-        match: "ORDER BY ABS(score - prev_score) DESC",
+        match: "ORDER BY ABS(COALESCE(score, 0) - COALESCE(prev_score, 0)) DESC",
         rows: [
           {
+            history_id: "safety-score-history:v2:test",
             stablecoin_id: "usdt-tether",
             recorded_at: todayTs,
+            model: "v8",
+            identity_schema_version: 1,
+            methodology_version: SAFETY_SCORE_METHODOLOGY_VERSION,
+            policy_id: null,
+            policy_digest: null,
+            evaluation_build_digest: "a".repeat(64),
+            base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`,
+            model_publication_generation_id: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:123`,
+            transition_kind: "organic-grade-change",
             grade: "A-",
             score: 80,
             prev_grade: "A",
@@ -2014,7 +2139,7 @@ describe("totalMcapAth enrichment", () => {
     vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
     vi.mocked(fetchWithRetry).mockReset();
     vi.mocked(loadStablecoinsCache).mockReset();
-    vi.mocked(loadActiveV8SafetyScoreHistorySource).mockReset();
+    vi.mocked(loadIdentifiedActiveSafetyScoreSource).mockReset();
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
   });
   afterEach(() => {
@@ -2040,7 +2165,7 @@ describe("totalMcapAth enrichment", () => {
       },
       updatedAt: nowSec,
     });
-    vi.mocked(loadActiveV8SafetyScoreHistorySource).mockResolvedValue(
+    vi.mocked(loadIdentifiedActiveSafetyScoreSource).mockResolvedValue(
       canonicalSafetySource([
         {
           id: "usdt-tether",

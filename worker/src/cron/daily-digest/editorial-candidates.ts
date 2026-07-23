@@ -279,13 +279,14 @@ function addDewsCandidates(candidates: DigestEditorialCandidate[], data: DigestI
 
 function addRiskCandidates(candidates: DigestEditorialCandidate[], data: DigestInputData): void {
   for (const transition of data.gradeTransitions ?? []) {
-    const downgraded = transition.toScore < transition.fromScore;
+    const scoreDelta = (transition.toScore ?? 0) - (transition.fromScore ?? 0);
+    const downgraded = scoreDelta < 0;
     addCandidate(candidates, {
       id: candidateId("grade", [transition.symbol, transition.fromGrade, transition.toGrade]),
       kind: "grade",
       title: `${transition.symbol} grade ${downgraded ? "fell" : "rose"} to ${transition.toGrade}`,
       symbols: [transition.symbol],
-      impactScore: Math.abs(transition.toScore - transition.fromScore) * transition.mcapUsd / 1_000_000_000,
+      impactScore: Math.abs(scoreDelta) * transition.mcapUsd / 1_000_000_000,
       novelty: downgraded ? "worsening" : "improving",
       confidence: confidenceForData(data.degradedSources, "grade"),
       artifactRisk: transition.mcapUsd < 20_000_000 ? "medium" : "low",
@@ -293,7 +294,7 @@ function addRiskCandidates(candidates: DigestEditorialCandidate[], data: DigestI
         `${transition.fromGrade} (${transition.fromScore}) -> ${transition.toGrade} (${transition.toScore})`,
         `${formatCurrency(transition.mcapUsd)} market cap`,
       ],
-      whyItMatters: "A report-card move converts scattered risk dimensions into a single reader-facing change.",
+      whyItMatters: "A report-card move summarizes a material change in the active model's reviewed safety evidence.",
     });
   }
 

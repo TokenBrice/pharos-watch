@@ -6,6 +6,15 @@ import { parseJson } from "./json-parse";
 import { buildTelegramMessage, sendToChat, type TelegramCreds } from "./telegram";
 import { splitMessage } from "./telegram-alerts";
 import type { TelegramDigestSuccessAction } from "./telegram-digest-appendices";
+import {
+  DigestSafetyContextSchema,
+  type DigestSafetyContext,
+} from "@shared/types/digest";
+import {
+  checkDigestSafetyContextForDelivery,
+  findUnboundDigestSafetyClaimMarkers,
+  parseDigestSafetyContext,
+} from "./digest-safety-context";
 
 export const TELEGRAM_DIGEST_OUTBOX_CLAIM_TTL_SEC = 120;
 const TELEGRAM_DIGEST_OUTBOX_DRAIN_LIMIT = 4;
@@ -28,6 +37,7 @@ interface TelegramDigestOutboxRow {
   target_chat_id: string;
   payload_chunks_json: string;
   success_actions_json: string;
+  safety_context_json: string;
   state: TelegramDigestOutboxState;
   next_chunk_index: number;
   attempts: number;
@@ -45,6 +55,7 @@ interface TelegramDigestOutboxClaim {
   generation: number;
   chunks: string[];
   successActions: TelegramDigestSuccessAction[];
+  safetyContext: DigestSafetyContext;
 }
 
 export interface EnqueueTelegramDigestEditionInput {
@@ -58,6 +69,7 @@ export interface EnqueueTelegramDigestEditionInput {
   editionNumber?: number | null;
   appendixHtml?: string | null;
   successActions?: readonly TelegramDigestSuccessAction[];
+  safetyContext: DigestSafetyContext;
 }
 
 export interface EnqueueTelegramDigestEditionResult {
@@ -122,6 +134,14 @@ function parseSuccessActions(raw: string): TelegramDigestSuccessAction[] {
   return parsed as TelegramDigestSuccessAction[];
 }
 
+function parseStoredSafetyContext(raw: string): DigestSafetyContext {
+  const result = parseJson(raw);
+  if (!result.ok) throw new Error("Telegram digest safety context must be valid JSON");
+  const context = parseDigestSafetyContext(result.value);
+  if (!context) throw new Error("Telegram digest safety context is invalid");
+  return context;
+}
+
 function createDeliveryOwner(): string {
   const cryptoObject = (globalThis as typeof globalThis & {
     crypto?: { randomUUID?: () => string };
@@ -148,7 +168,7 @@ async function loadEdition(
     db
       .prepare(
         `SELECT edition_key, digest_kind, digest_generated_at, target_chat_id,
-                payload_chunks_json, success_actions_json, state, next_chunk_index,
+                payload_chunks_json, success_actions_json, safety_context_json, state, next_chunk_index,
                 attempts, next_attempt_at, delivery_owner, delivery_generation,
                 delivery_claim_expires_at, last_error_class, last_status_code
            FROM telegram_digest_outbox
@@ -175,15 +195,26 @@ export async function enqueueTelegramDigestEdition(
   const chunks = splitMessage(rendered);
   const payloadJson = JSON.stringify(chunks);
   const successActionsJson = JSON.stringify(input.successActions ?? []);
+  const safetyContext = DigestSafetyContextSchema.parse(input.safetyContext);
+  const unboundSafetyClaimMarkers = findUnboundDigestSafetyClaimMarkers(
+    safetyContext,
+    { extended: rendered },
+  );
+  if (unboundSafetyClaimMarkers.length > 0) {
+    throw new Error(
+      `Telegram digest copy has Safety Score claims without an identified publication (${unboundSafetyClaimMarkers.join(", ")})`,
+    );
+  }
+  const safetyContextJson = JSON.stringify(safetyContext);
   const nowSec = Math.floor(Date.now() / 1000);
   const insert = await runWithOverloadRetry(() =>
     db
       .prepare(
         `INSERT OR IGNORE INTO telegram_digest_outbox (
            edition_key, digest_kind, digest_generated_at, target_chat_id,
-           payload_chunks_json, success_actions_json, state, next_attempt_at,
+           payload_chunks_json, success_actions_json, safety_context_json, state, next_attempt_at,
            created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
       )
       .bind(
         input.editionKey,
@@ -192,6 +223,7 @@ export async function enqueueTelegramDigestEdition(
         input.targetChatId,
         payloadJson,
         successActionsJson,
+        safetyContextJson,
         nowSec,
         nowSec,
         nowSec,
@@ -205,6 +237,7 @@ export async function enqueueTelegramDigestEdition(
   if (!row) throw new Error(`Telegram digest outbox insert was not confirmed (${input.editionKey})`);
   const payloadMatched = row.payload_chunks_json === payloadJson
     && row.success_actions_json === successActionsJson
+    && row.safety_context_json === safetyContextJson
     && row.target_chat_id === input.targetChatId;
   if (!payloadMatched) {
     console.warn(`[telegram-digest-outbox] Preserving immutable existing edition ${input.editionKey}`);
@@ -295,6 +328,7 @@ async function claimEdition(
     generation: Number(row.delivery_generation),
     chunks: parseStringArray(row.payload_chunks_json, "Telegram digest payload"),
     successActions: parseSuccessActions(row.success_actions_json),
+    safetyContext: parseStoredSafetyContext(row.safety_context_json),
   };
 }
 
@@ -626,6 +660,55 @@ export async function deliverTelegramDigestEdition(
       chunksSent: 0,
       nextChunkIndex: claim.row.next_chunk_index,
       errorClass: "target_chat_mismatch",
+    });
+  }
+
+  const unboundSafetyClaimMarkers = findUnboundDigestSafetyClaimMarkers(
+    claim.safetyContext,
+    { extended: claim.chunks.join("\n") },
+  );
+  if (unboundSafetyClaimMarkers.length > 0) {
+    const errorClass = `unbound_safety_copy:${unboundSafetyClaimMarkers.join(",")}`;
+    await markPermanentFailure(db, claim, nowSec, errorClass, null);
+    return buildDeliveryResult(claim, "failed_permanent", "failed_permanent", {
+      chunksSent: 0,
+      nextChunkIndex: claim.row.next_chunk_index,
+      errorClass,
+    });
+  }
+
+  try {
+    const safetyCheck = await checkDigestSafetyContextForDelivery(db, claim.safetyContext, signal);
+    if (safetyCheck.kind === "stale") {
+      await markPermanentFailure(db, claim, nowSec, `stale_safety_identity:${safetyCheck.reason}`, null);
+      return buildDeliveryResult(claim, "failed_permanent", "failed_permanent", {
+        chunksSent: 0,
+        nextChunkIndex: claim.row.next_chunk_index,
+        errorClass: `stale_safety_identity:${safetyCheck.reason}`,
+      });
+    }
+    if (safetyCheck.kind === "unavailable") {
+      await returnToPending(
+        db,
+        claim,
+        nowSec,
+        `safety_identity_unavailable:${safetyCheck.reason}`,
+        null,
+        null,
+      );
+      return buildDeliveryResult(claim, "pending", "pending", {
+        chunksSent: 0,
+        nextChunkIndex: claim.row.next_chunk_index,
+        errorClass: `safety_identity_unavailable:${safetyCheck.reason}`,
+      });
+    }
+  } catch (error) {
+    const errorClass = `safety_identity_check_failed:${toErrorMessage(error).slice(0, 120)}`;
+    await returnToPending(db, claim, nowSec, errorClass, null, null);
+    return buildDeliveryResult(claim, "pending", "pending", {
+      chunksSent: 0,
+      nextChunkIndex: claim.row.next_chunk_index,
+      errorClass,
     });
   }
 

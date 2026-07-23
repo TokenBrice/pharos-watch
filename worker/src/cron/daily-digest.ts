@@ -23,7 +23,12 @@ import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildCriticalDailyLeadRequirements } from "./daily-digest/critical-lead-requirements";
 import { attachDigestEditorialAudit } from "./daily-digest/digest-intelligence";
+import type { DigestValidationIssue } from "./daily-digest/response";
 import { logWorkerEvent } from "../lib/structured-log";
+import {
+  checkDigestSafetyContextForDelivery,
+  findUnboundDigestSafetyClaimMarkers,
+} from "../lib/digest-safety-context";
 
 export { classifyRegime } from "./daily-digest/prompt";
 
@@ -231,6 +236,27 @@ export async function generateDailyDigest(
     });
     return { status: "degraded", itemCount: 0, metadata: "skipped: anthropic circuit open" };
   }
+  const unboundSafetyClaimMarkers = findUnboundDigestSafetyClaimMarkers(
+    inputData.safetyContext,
+    {
+      title: digestCopy.digestTitle,
+      text: digestCopy.digestText,
+      extended: digestCopy.digestExtended,
+    },
+  );
+  const safetyCopyIssues: DigestValidationIssue[] = unboundSafetyClaimMarkers.length > 0
+    ? [{
+        code: "unbound-safety-copy",
+        severity: "hard",
+        message: `Safety Score copy requires an identified publication (${unboundSafetyClaimMarkers.join(", ")})`,
+      }]
+    : [];
+  const qualityIssues = [...digestCopy.qualityIssues, ...safetyCopyIssues];
+  const hasBlockingQualityIssues =
+    digestCopy.hasBlockingQualityIssues || safetyCopyIssues.length > 0;
+  if (safetyCopyIssues.length > 0) {
+    degradedReasons.push("unbound-safety-copy");
+  }
   await reportDigestProgress(reportProgress, {
     stage: "llm-generation-complete",
     message: "Received daily digest copy from Anthropic",
@@ -241,13 +267,18 @@ export async function generateDailyDigest(
       countTotals: {
         textChars: digestCopy.digestText.length,
         extendedChars: digestCopy.digestExtended.length,
-        qualityIssues: digestCopy.qualityIssues.length,
+        qualityIssues: qualityIssues.length,
       },
-      blockingQualityIssues: digestCopy.hasBlockingQualityIssues,
+      blockingQualityIssues: hasBlockingQualityIssues,
     },
   });
 
-  const storedInputData = attachDigestEditorialAudit({ inputData, digestMeta: digestCopy.digestMeta, qualityIssues: digestCopy.qualityIssues, leadRequirements });
+  const storedInputData = attachDigestEditorialAudit({
+    inputData,
+    digestMeta: digestCopy.digestMeta,
+    qualityIssues,
+    leadRequirements,
+  });
   const now = Math.floor(Date.now() / 1000);
   const digestDate = formatIsoDate(now);
   await reportDigestProgress(reportProgress, {
@@ -266,7 +297,7 @@ export async function generateDailyDigest(
     digestExtended: digestCopy.digestExtended || null,
     // Hard quality failures are stored for inspection but never published:
     // the blocked flag keeps the row out of public reads and numbering.
-    digestMeta: digestCopy.hasBlockingQualityIssues
+    digestMeta: hasBlockingQualityIssues
       ? markDigestMetaBlocked(digestCopy.digestMeta)
       : digestCopy.digestMeta,
     signal,
@@ -278,7 +309,7 @@ export async function generateDailyDigest(
     .all<{ cnt: number }>();
   throwIfAborted(signal);
   const editionNumber = (countResult.results?.[0] as { cnt: number } | undefined)?.cnt ?? null;
-  const qualityGateStatus = digestCopy.hasBlockingQualityIssues ? "skipped: quality-gate" : null;
+  const qualityGateStatus = hasBlockingQualityIssues ? "skipped: quality-gate" : null;
   throwIfAborted(signal);
   await reportDigestProgress(reportProgress, {
     stage: "twitter-delivery",
@@ -297,6 +328,16 @@ export async function generateDailyDigest(
     logPrefix: "daily-digest",
     channelLabel: "Twitter",
     deliver: async (creds) => {
+      if (inputData.safetyContext) {
+        const safetyCheck = await checkDigestSafetyContextForDelivery(db, inputData.safetyContext, signal);
+        if (safetyCheck.kind !== "ok") {
+          const reason = safetyCheck.kind === "stale"
+            ? "stale-safety-identity"
+            : "safety-identity-unavailable";
+          degradedReasons.push(reason);
+          return `skipped: ${reason}`;
+        }
+      }
       const markerKey = getTwitterSentMarkerKey(digestDate);
       try {
         const markerClaimed = await claimDigestSentMarker(
@@ -366,6 +407,13 @@ export async function generateDailyDigest(
         editionNumber,
         appendixHtml: telegramAppendices?.appendixHtml ?? null,
         successActions: telegramAppendices?.successActions ?? [],
+        safetyContext: inputData.safetyContext ?? {
+          status: "unavailable",
+          expectedModel: "v9",
+          identity: null,
+          publishedAt: null,
+          reason: "source-load-failed",
+        },
       }, signal);
       if (!enqueueResult.payloadMatched && enqueueResult.state !== "sent") {
         degradedReasons.push("telegram-outbox-payload-mismatch");
@@ -431,7 +479,7 @@ export async function generateDailyDigest(
       error: err,
     });
   }
-  const qualityMetadata = formatQualityMetadata(digestCopy.qualityIssues);
+  const qualityMetadata = formatQualityMetadata(qualityIssues);
   await reportDigestProgress(reportProgress, {
     stage: "complete",
     message: "Completed daily digest generation",
@@ -444,7 +492,7 @@ export async function generateDailyDigest(
         textChars: digestCopy.digestText.length,
         extendedChars: digestCopy.digestExtended.length,
         degradedReasons: degradedReasons.length,
-        qualityIssues: digestCopy.qualityIssues.length,
+        qualityIssues: qualityIssues.length,
         lifecycleFlags: lifecycleFlags.length,
       },
       twitterStatus: tweetStatus,
@@ -457,7 +505,7 @@ export async function generateDailyDigest(
     : "";
   return {
     itemCount: 1,
-    ...(degradedReasons.length > 0 || digestCopy.hasBlockingQualityIssues ? { status: "degraded" as const } : {}),
+    ...(degradedReasons.length > 0 || hasBlockingQualityIssues ? { status: "degraded" as const } : {}),
     metadata: `${digestCopy.digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}${degradedReasons.length > 0 ? `, degraded: ${degradedReasons.join("|")}` : ""}${qualityMetadata}${lifecycleMetadata}`,
   };
 }

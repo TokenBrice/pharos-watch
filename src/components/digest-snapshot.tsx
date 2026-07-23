@@ -309,26 +309,63 @@ export function DigestSnapshot({ date }: { date: string }) {
             title="Safety Scores"
             icon={<Shield className="h-4 w-4" aria-hidden="true" />}
           >
-            {inputData.safetyScores.mentionedCoins.length > 0 && (
-              <ul className="space-y-0.5">
-                {inputData.safetyScores.mentionedCoins.map((c) => (
-                  <li key={c.symbol} className="text-xs text-foreground/90">
-                    <span className="font-medium">{c.symbol}</span>:{" "}
-                    <span className="font-medium">{c.grade ?? "n/a"}</span>{" "}
-                    <span className="text-muted-foreground">
-                      ({c.score ?? "n/a"}
-                      {c.peg != null && `, peg=${c.peg}`}
-                      {c.liq != null && `, liq=${c.liq}`})
-                    </span>
-                  </li>
-                ))}
-              </ul>
+            {inputData.safetyScores.model === "v9" ? (
+              <>
+                {inputData.safetyScores.mentionedCoins.length > 0 && (
+                  <ul className="space-y-1">
+                    {inputData.safetyScores.mentionedCoins.map((coin) => (
+                      <li key={coin.symbol} className="text-xs text-foreground/90">
+                        <span className="font-medium">{coin.symbol}</span>:{" "}
+                        <span className="font-medium">{coin.grade}</span>{" "}
+                        <span className="text-muted-foreground">
+                          ({coin.score ?? "NR"}; backing={coin.pillars.backing.score ?? "NR"},{" "}
+                          exit={coin.pillars.exit.score ?? "NR"}, control={coin.pillars.control.score ?? "NR"})
+                        </span>
+                        {coin.bindingCap && (
+                          <span className="block text-muted-foreground">
+                            Cap {coin.bindingCap.kind} at {coin.bindingCap.limit}: {coin.bindingCap.reason}
+                          </span>
+                        )}
+                        {coin.reasonCodes.length > 0 && (
+                          <span className="block text-muted-foreground">
+                            {coin.reasonCodes.join(", ")}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  V9 distribution:{" "}
+                  {Object.entries(inputData.safetyScores.gradeDistribution)
+                    .map(([grade, count]) => `${grade} ${count}`)
+                    .join(", ")}
+                </p>
+              </>
+            ) : (
+              <>
+                {inputData.safetyScores.mentionedCoins.length > 0 && (
+                  <ul className="space-y-0.5">
+                    {inputData.safetyScores.mentionedCoins.map((coin) => (
+                      <li key={coin.symbol} className="text-xs text-foreground/90">
+                        <span className="font-medium">{coin.symbol}</span>:{" "}
+                        <span className="font-medium">{coin.grade ?? "n/a"}</span>{" "}
+                        <span className="text-muted-foreground">
+                          ({coin.score ?? "n/a"}
+                          {coin.peg != null && `, peg=${coin.peg}`}
+                          {coin.liq != null && `, liq=${coin.liq}`})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Median {inputData.safetyScores.medianGrade},{" "}
+                  {inputData.safetyScores.aboveBCount} above B,{" "}
+                  {inputData.safetyScores.fCount} rated F
+                </p>
+              </>
             )}
-            <p className="text-xs text-muted-foreground">
-              Median {inputData.safetyScores.medianGrade},{" "}
-              {inputData.safetyScores.aboveBCount} above B,{" "}
-              {inputData.safetyScores.fCount} rated F
-            </p>
           </SnapshotCard>
         )}
 

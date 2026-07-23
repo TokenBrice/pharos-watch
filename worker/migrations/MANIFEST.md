@@ -164,6 +164,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0218     | `0218_authoritative_vault_rates.sql`                         | Add durable last-good vault-rate cache for authoritative parent-derived pricing degradation                                                              |
 | 0219     | `0219_depeg_recovery_confirmation.sql`                       | Add the first-seen recovery timestamp used to require a persistent 15-minute recovery before closing a live depeg event                                   |
 | 0220     | `0220_safety_score_v9_movement_review_carry.sql`             | Add the movement-review class key and reviewed score anchors that let a recorded disposition carry across runs while the movement class is unchanged     |
+| 0221     | `0221_telegram_digest_safety_identity.sql`                   | Bind immutable daily and weekly Telegram editions to their authored Safety Score identity and mark legacy rows unbound                                   |
 
 ## Retired Individual Migrations
 
@@ -267,6 +268,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0218_authoritative_vault_rates.sql`: roll back cached-rate degradation by restoring the prior Worker; reads/writes tolerate a missing table, so the additive table can stay (or be dropped later in a coordinated cleanup) without affecting older Workers.
 - `0219_depeg_recovery_confirmation.sql`: roll back recovery confirmation by restoring the prior Worker. Keep the nullable timestamp column; older Workers ignore it, and retained values are inert until a confirming Worker is redeployed.
 - `0220_safety_score_v9_movement_review_carry.sql`: roll back disposition carry by restoring the prior Worker. Keep the added columns; older Workers select an explicit column list that excludes them, so the additive columns are inert until a carrying Worker is redeployed.
+- `0221_telegram_digest_safety_identity.sql`: roll back digest identity fencing by restoring the prior Worker. Keep the additive context column; older Workers ignore it. Do not replay a `failed_permanent` legacy or stale-identity edition without reviewing its archived digest input and current Safety Score identity.
 
 ## Rollback Procedure
 

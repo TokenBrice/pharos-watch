@@ -1,14 +1,24 @@
-import type { DigestInputData } from "@shared/types/digest";
+import type {
+  DigestInputData,
+  DigestSafetyContext,
+  DigestV9SafetyCap,
+  DigestV9SafetyCoin,
+} from "@shared/types/digest";
 import type { StablecoinData } from "@shared/types/market";
-import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 
 export interface CanonicalSafetyGradeRow {
   id: string;
   symbol: string;
+  model: SafetyScorePublicationIdentity["model"];
   grade: string;
-  score: number;
+  score: number | null;
   pegScore: number | null;
   liqScore: number | null;
+  v9Pillars?: DigestV9SafetyCoin["pillars"];
+  v9ReasonCodes?: string[];
+  v9Caps?: DigestV9SafetyCap[];
+  v9BindingCap?: DigestV9SafetyCap | null;
 }
 
 export interface CollectorContext {
@@ -33,7 +43,8 @@ export interface CollectorResult<T> {
 export interface SafetyScoresResult {
   safetyScores: DigestInputData["safetyScores"];
   safetyGrades: CanonicalSafetyGradeRow[] | undefined;
-  safetyIdentity: SafetyScoreV8PublicationIdentity | undefined;
+  safetyIdentity: SafetyScorePublicationIdentity | undefined;
+  safetyContext: DigestSafetyContext;
 }
 
 export function collectorOk<T>(value: T): CollectorResult<T> {

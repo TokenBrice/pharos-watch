@@ -280,7 +280,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   for (const d of topDepegs) mentionedSymbols.add(d.symbol);
   if (biggestSupplyChange) mentionedSymbols.add(biggestSupplyChange.symbol);
   if (supplyVelocity) for (const v of supplyVelocity) mentionedSymbols.add(v.coin);
-  const { safetyScores, safetyGrades, safetyIdentity } = await collectSafetyScores(
+  const { safetyScores, safetyGrades, safetyIdentity, safetyContext } = await collectSafetyScores(
     ctx,
     mentionedSymbols,
     degradedReasons,
@@ -359,6 +359,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     // by editorial-candidates.ts for confidence scoring; kept separate so the LLM
     // prompt block and editorial scoring read from their own stable field.
     ...(degradedReasons.length > 0 ? { degradedSources: [...degradedReasons] } : {}),
+    safetyContext,
     activeDepegCount,
     topDepegs,
     biggestSupplyChange,

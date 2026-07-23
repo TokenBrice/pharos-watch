@@ -22,9 +22,16 @@ import { formatQualityMetadata } from "./digest/quality-metadata";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import { getMetaString } from "./daily-digest/digest-intelligence-utils";
+import type { DigestValidationIssue } from "./daily-digest/response";
 import { buildWeeklyInputData } from "./weekly-recap/input-data";
 import { WEEKLY_SYSTEM_PROMPT, buildWeeklyLeadRequirements, buildWeeklyPrompt } from "./weekly-recap/prompt";
 import type { DailyDigestSourceRow } from "./weekly-recap/types";
+import type { DigestSafetyContext } from "@shared/types/digest";
+import {
+  digestSafetyContextFromPersistedInput,
+  findUnboundDigestSafetyClaimMarkers,
+  loadDigestSafetyContext,
+} from "../lib/digest-safety-context";
 
 interface ExistingWeeklyDigestRow {
   generated_at: number;
@@ -32,6 +39,7 @@ interface ExistingWeeklyDigestRow {
   digest_text: string;
   digest_extended: string | null;
   digest_meta: string | null;
+  input_data: string | null;
 }
 
 interface WeeklyDigestMeta {
@@ -91,7 +99,9 @@ function encodeWeeklyDigestMeta(
 
 function shouldRetryExistingWeeklyTelegram(meta: WeeklyDigestMeta): boolean {
   if (meta.telegramDelivered !== false) return false;
-  return meta.telegramDeliveryStatus !== "skipped: quality-gate";
+  const status = meta.telegramDeliveryStatus ?? "";
+  if (status === "skipped: quality-gate") return false;
+  return !/\b(?:execution_unknown|failed_permanent)\b/.test(status);
 }
 
 async function updateWeeklyTelegramDeliveryMeta(
@@ -124,6 +134,7 @@ async function deliverWeeklyDigestToTelegram(params: {
   digestText: string;
   generatedAt: number;
   weekStartLabel: string;
+  safetyContext: DigestSafetyContext;
   signal?: AbortSignal;
 }): Promise<string> {
   const date = formatIsoDate(params.generatedAt);
@@ -139,6 +150,7 @@ async function deliverWeeklyDigestToTelegram(params: {
       title: tgTitle,
       extended: params.digestExtended ?? params.digestText,
       date: `${date}-weekly`,
+      safetyContext: params.safetyContext,
     }, params.signal);
     if (!enqueueResult.payloadMatched) {
       throw new Error(`Immutable Telegram digest edition differs (${editionKey})`);
@@ -222,7 +234,7 @@ export async function generateWeeklyRecap(
   const weekStart = Math.floor(Date.now() / 1000) - 2 * SECONDS.ONE_DAY;
   const existing = await db
     .prepare(
-      `SELECT generated_at, digest_title, digest_text, digest_extended, digest_meta
+      `SELECT generated_at, digest_title, digest_text, digest_extended, digest_meta, input_data
          FROM daily_digest
         WHERE generated_at >= ?
           AND json_extract(digest_meta, '$.type') = 'weekly'
@@ -260,6 +272,22 @@ export async function generateWeeklyRecap(
         existingGeneratedAt: existing.generated_at,
       },
     });
+    let existingInput: unknown = null;
+    try {
+      existingInput = existing.input_data ? JSON.parse(existing.input_data) : null;
+    } catch (error) {
+      logMalformedJsonPath(
+        {
+          scope: "cron",
+          owner: "weekly-recap",
+          context: "daily_digest.input_data",
+          reason: "json-parse-failed",
+          source: "daily_digest",
+          updatedAt: existing.generated_at,
+        },
+        error,
+      );
+    }
     const retryStatus = await deliverWeeklyDigestToTelegram({
       db,
       telegramCreds,
@@ -268,6 +296,7 @@ export async function generateWeeklyRecap(
       digestText: existing.digest_text,
       generatedAt: existing.generated_at,
       weekStartLabel: getMetaString(existingMeta, "weekStart") ?? formatIsoDate(existing.generated_at),
+      safetyContext: digestSafetyContextFromPersistedInput(existingInput),
       signal,
     });
     await updateWeeklyTelegramDeliveryMeta(db, existing, {
@@ -386,7 +415,20 @@ export async function generateWeeklyRecap(
     return { metadata: `skipped: only ${currentRows.length} daily digests available in current week (need 5+)` };
   }
 
-  const weeklyData = buildWeeklyInputData(currentRows, priorRows);
+  let safetyContext: DigestSafetyContext;
+  try {
+    safetyContext = await loadDigestSafetyContext(db, signal);
+  } catch (error) {
+    console.error("[weekly-recap] Failed to resolve active Safety Score source:", error);
+    safetyContext = {
+      status: "unavailable",
+      expectedModel: "v9",
+      identity: null,
+      publishedAt: null,
+      reason: "source-load-failed",
+    };
+  }
+  const weeklyData = buildWeeklyInputData(currentRows, priorRows, safetyContext);
   if (!weeklyData) {
     await reportDigestProgress(reportProgress, {
       stage: "input-unavailable",
@@ -455,6 +497,24 @@ export async function generateWeeklyRecap(
     });
     return { metadata: "skipped: anthropic circuit open" };
   }
+  const unboundSafetyClaimMarkers = findUnboundDigestSafetyClaimMarkers(
+    safetyContext,
+    {
+      title: digestCopy.digestTitle,
+      text: digestCopy.digestText,
+      extended: digestCopy.digestExtended,
+    },
+  );
+  const safetyCopyIssues: DigestValidationIssue[] = unboundSafetyClaimMarkers.length > 0
+    ? [{
+        code: "unbound-safety-copy",
+        severity: "hard",
+        message: `Safety Score copy requires an identified publication (${unboundSafetyClaimMarkers.join(", ")})`,
+      }]
+    : [];
+  const qualityIssues = [...digestCopy.qualityIssues, ...safetyCopyIssues];
+  const hasBlockingQualityIssues =
+    digestCopy.hasBlockingQualityIssues || safetyCopyIssues.length > 0;
   await reportDigestProgress(reportProgress, {
     stage: "llm-generation-complete",
     message: "Received weekly recap copy from Anthropic",
@@ -465,9 +525,9 @@ export async function generateWeeklyRecap(
       countTotals: {
         textChars: digestCopy.digestText.length,
         extendedChars: digestCopy.digestExtended.length,
-        qualityIssues: digestCopy.qualityIssues.length,
+        qualityIssues: qualityIssues.length,
       },
-      blockingQualityIssues: digestCopy.hasBlockingQualityIssues,
+      blockingQualityIssues: hasBlockingQualityIssues,
     },
   });
 
@@ -481,6 +541,7 @@ export async function generateWeeklyRecap(
       periodType: weeklyData.periodType,
       weekStart: weeklyData.weekStartDate,
       weekEnd: weeklyData.weekEndDate,
+      safetyContext: weeklyData.safetyContext,
     },
   });
 
@@ -499,7 +560,7 @@ export async function generateWeeklyRecap(
     },
   });
   // Hard quality failures are stored for inspection but never published.
-  const storedDigestMeta = digestCopy.hasBlockingQualityIssues
+  const storedDigestMeta = hasBlockingQualityIssues
     ? markDigestMetaBlocked(initialDigestMeta)
     : initialDigestMeta;
 
@@ -516,7 +577,7 @@ export async function generateWeeklyRecap(
   throwIfAborted(signal);
 
   // Post to Telegram
-  const qualityGateStatus = digestCopy.hasBlockingQualityIssues ? "skipped: quality-gate" : null;
+  const qualityGateStatus = hasBlockingQualityIssues ? "skipped: quality-gate" : null;
   throwIfAborted(signal);
   await reportDigestProgress(reportProgress, {
     stage: "telegram-delivery",
@@ -538,6 +599,7 @@ export async function generateWeeklyRecap(
       digestText: digestCopy.digestText,
       generatedAt: nowSec,
       weekStartLabel: weeklyData.weekStartDate,
+      safetyContext,
       signal,
     }));
   await updateWeeklyTelegramDeliveryMeta(
@@ -552,7 +614,7 @@ export async function generateWeeklyRecap(
     },
   );
 
-  const qualityMetadata = formatQualityMetadata(digestCopy.qualityIssues);
+  const qualityMetadata = formatQualityMetadata(qualityIssues);
 
   await reportDigestProgress(reportProgress, {
     stage: "complete",
@@ -564,7 +626,7 @@ export async function generateWeeklyRecap(
       countTotals: {
         textChars: digestCopy.digestText.length,
         extendedChars: digestCopy.digestExtended.length,
-        qualityIssues: digestCopy.qualityIssues.length,
+        qualityIssues: qualityIssues.length,
       },
       telegramStatus,
       usedRawTextFallback: digestCopy.usedRawTextFallback,
@@ -572,7 +634,11 @@ export async function generateWeeklyRecap(
   });
   return {
     itemCount: 1,
-    ...(digestCopy.usedRawTextFallback || digestCopy.hasBlockingQualityIssues ? { status: "degraded" as const } : {}),
+    ...(digestCopy.usedRawTextFallback ||
+    hasBlockingQualityIssues ||
+    safetyContext.status === "unavailable"
+      ? { status: "degraded" as const }
+      : {}),
     metadata: `weekly: ${digestCopy.digestText.length} chars, telegram: ${telegramStatus}${digestCopy.usedRawTextFallback ? ", degraded: raw-text-fallback" : ""}${qualityMetadata}`,
   };
 }
