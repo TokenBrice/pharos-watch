@@ -126,7 +126,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/market.ts",
-      "sha256": "716234c8072a403902b0a78f42b53d9987e36fe2e4b5a62422ad6cda85940e6f"
+      "sha256": "718c5d9a1d63d3ec373b6bdac0c1848032486ebd4ab6a338bc62afd02226d786"
     },
     {
       "path": "shared/types/redemption.ts",
@@ -149,7 +149,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
       "sha256": "e70bfddf6d253f0d37ed74449dff45e9af02858d80c0ca0931579796c080b85e"
     }
   ],
-  "digest": "61ac37016707212ba5925a786b076201189bcdf1a22668ddd3ea31a27d06c9a1"
+  "digest": "47ff7e12f20cb577f29a0aec4348b4b6068f4c6d0143183a486d078d38f06bd1"
 } as const;
 
 export const SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST =
