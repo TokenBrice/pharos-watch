@@ -12,7 +12,7 @@ import {
 } from "./fallback-cache";
 import { runFallbackPriceEnrichmentPhase } from "./fallback-enrichment";
 import { hydrateFallbackFxPhase } from "./fallback-fx";
-import { overlayFallbackCuratedAggregateSupply, runFallbackIntakePhase } from "./fallback-intake";
+import { runFallbackIntakePhase } from "./fallback-intake";
 import {
   publishFallbackStablecoinsCache,
   runFallbackDepegFollowThrough,
@@ -56,10 +56,6 @@ export async function syncViaCoingeckoFallback(
   const { assets } = intake;
 
   const { previousAssetsById } = await restoreFallbackCacheState({ db, assets });
-  // Curated NAV wrappers (llamaId null) get a fresh per-chain on-chain supply
-  // overlay here so the fallback lane no longer nulls their V9 chain breakdown;
-  // a failed probe leaves the restore's previous-row carry intact.
-  await overlayFallbackCuratedAggregateSupply(assets, signal);
   const {
     fxFallbackRates,
     validationReferences,

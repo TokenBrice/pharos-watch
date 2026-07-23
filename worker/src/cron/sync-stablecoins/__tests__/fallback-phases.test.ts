@@ -3,7 +3,6 @@ import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import {
   buildFallbackAssetsFromCoinGecko,
   buildInsufficientFallbackResult,
-  overlayFallbackCuratedAggregateSupply,
 } from "../fallback-intake";
 import { restoreFallbackCacheState, runFallbackStalenessGate } from "../fallback-cache";
 import { runFallbackDepegFollowThrough } from "../fallback-publish";
@@ -18,10 +17,6 @@ const fallbackMocks = vi.hoisted(() => ({
   queueTrackedAdditionsNotice: vi.fn(async (..._args: unknown[]) => undefined),
 }));
 
-const onchainSupplyMocks = vi.hoisted(() => ({
-  fetchCuratedAggregateOnChainMcap: vi.fn(),
-}));
-
 vi.mock("../post-enrichment", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../post-enrichment")>()),
   runDepegPipeline: fallbackMocks.runDepegPipeline,
@@ -29,11 +24,6 @@ vi.mock("../post-enrichment", async (importOriginal) => ({
 
 vi.mock("../telegram-tracked-additions", () => ({
   queueTrackedAdditionsNotice: fallbackMocks.queueTrackedAdditionsNotice,
-}));
-
-vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../supplemental-assets/onchain-supply")>()),
-  fetchCuratedAggregateOnChainMcap: onchainSupplyMocks.fetchCuratedAggregateOnChainMcap,
 }));
 
 const NOW_SEC = 1_700_000_000;
@@ -353,80 +343,5 @@ describe("CoinGecko fallback phases", () => {
       "fallback-",
       " (CG fallback)",
     );
-  });
-});
-
-describe("overlayFallbackCuratedAggregateSupply", () => {
-  beforeEach(() => {
-    onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockReset();
-  });
-
-  it("attaches the full per-chain map for a curated NAV wrapper and probes only curated assets", async () => {
-    onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue({
-      mcap: 4_884_400_000,
-      supplySource: "onchain-total-supply",
-      chainCirculating: {
-        Ethereum: 4_517_720_000,
-        Base: 11_478_000,
-        Optimism: 4_876_000,
-        Arbitrum: 346_620_000,
-      },
-    });
-    const susds = makeAsset({
-      id: "susds-sky",
-      symbol: "sUSDS",
-      geckoId: "susds",
-      price: 1.06,
-      supplySource: "coingecko-fallback",
-      circulating: { peggedUSD: 4_600_000_000 },
-      chainCirculating: {},
-      chains: [],
-    });
-    // Not a curated aggregate id: it must be skipped without an on-chain probe.
-    const other = makeAsset({ id: "fixture-usd", chainCirculating: { Ethereum: { current: 1 } } });
-
-    await overlayFallbackCuratedAggregateSupply([other, susds]);
-
-    expect(onchainSupplyMocks.fetchCuratedAggregateOnChainMcap).toHaveBeenCalledTimes(1);
-    const [meta, priceUsd] = onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mock.calls[0]!;
-    expect((meta as { id: string }).id).toBe("susds-sky");
-    // Single basis: the CG NAV price is passed straight through to the probe.
-    expect(priceUsd).toBe(1.06);
-
-    expect(susds.supplySource).toBe("onchain-total-supply");
-    expect(susds.circulating).toEqual({ peggedUSD: 4_884_400_000 });
-    expect(susds.chains).toEqual(["Ethereum", "Base", "Optimism", "Arbitrum"]);
-    expect(susds.chainCirculating).toEqual({
-      Ethereum: { current: 4_517_720_000, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
-      Base: { current: 11_478_000, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
-      Optimism: { current: 4_876_000, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
-      Arbitrum: { current: 346_620_000, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
-    });
-    expect(other.chainCirculating).toEqual({ Ethereum: { current: 1 } });
-  });
-
-  it("fails closed to the restored previous-row carry when a configured chain read fails", async () => {
-    onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue(null);
-    const restoredCarry = { Ethereum: { current: 4_000_000_000 } };
-    const susds = makeAsset({
-      id: "susds-sky",
-      symbol: "sUSDS",
-      geckoId: "susds",
-      price: 1.06,
-      supplySource: "coingecko-fallback",
-      circulating: { peggedUSD: 4_600_000_000 },
-      chainCirculating: restoredCarry,
-      chains: ["Ethereum"],
-    });
-
-    await overlayFallbackCuratedAggregateSupply([susds]);
-
-    expect(onchainSupplyMocks.fetchCuratedAggregateOnChainMcap).toHaveBeenCalledTimes(1);
-    // No partial map: the restored carry, its chains, and supply source are all preserved.
-    expect(susds.chainCirculating).toBe(restoredCarry);
-    expect(susds.chainCirculating).toEqual({ Ethereum: { current: 4_000_000_000 } });
-    expect(susds.chains).toEqual(["Ethereum"]);
-    expect(susds.circulating).toEqual({ peggedUSD: 4_600_000_000 });
-    expect(susds.supplySource).toBe("coingecko-fallback");
   });
 });

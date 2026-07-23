@@ -68,57 +68,6 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     expect(safetyScoreV9RouteSupplyShare(null, "ethereum:native")).toBeNull();
   });
 
-  it("reconciles the curated-aggregate NAV wrapper capture shape instead of nulling", () => {
-    // Mirrors the per-chain map the sUSDS/sDAI fallback + fiat-cg overlay now
-    // emits (CHAIN_META display labels) once the curated aggregate probe is
-    // wired: without a populated chainCirculatingById this asset would fall to
-    // the aggregate-only path and cap V9 on runtime-bridge-materiality.
-    const review = buildSafetyScoreV9SupplyReview(
-      fixedInputStub({
-        Ethereum: { current: 4_517_720_000 },
-        Base: { current: 11_478_000 },
-        Optimism: { current: 4_876_000 },
-        Arbitrum: { current: 346_620_000 },
-      }),
-      "alpha",
-      profile([
-        {
-          id: "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
-          reviewDisposition: "reviewed",
-          routeClass: "native",
-          issuanceModel: "native-issuance",
-        } as unknown as BridgeRoutes[number],
-        {
-          id: "base:0x5875eee11cf8398102fdad704c9e96607675467a",
-          reviewDisposition: "reviewed",
-        } as unknown as BridgeRoutes[number],
-        {
-          id: "optimism:0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
-          reviewDisposition: "reviewed",
-        } as unknown as BridgeRoutes[number],
-        {
-          id: "arbitrum:0xddb46999f8891663a8f2828d25298f70416d7610",
-          reviewDisposition: "reviewed",
-        } as unknown as BridgeRoutes[number],
-      ]),
-    );
-
-    expect(review).not.toBeNull();
-    expect(review!.selectedBridgeRoutes.map((route) => route.deploymentRouteKey)).toEqual([
-      "arbitrum:0xddb46999f8891663a8f2828d25298f70416d7610",
-      "base:0x5875eee11cf8398102fdad704c9e96607675467a",
-      "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
-      "optimism:0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
-    ]);
-    expect(review!.selectedRouteSupplyShare).toBe(1);
-    expect(review!.unknownRouteSupplyShare).toBe(0);
-    expect(
-      review!.selectedBridgeRoutes.find(
-        (route) => route.deploymentRouteKey === "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
-      ),
-    ).toMatchObject({ reviewState: "selected-reviewed", reviewedRouteKind: "native" });
-  });
-
   it("normalizes captured display names to route chain ids", () => {
     const review = buildSafetyScoreV9SupplyReview(
       fixedInputStub({ Ethereum: { current: 60 }, "OP Mainnet": { current: 25 }, BSC: { current: 15 } }),

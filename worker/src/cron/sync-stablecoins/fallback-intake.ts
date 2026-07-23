@@ -1,13 +1,9 @@
-import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
-import { throwIfAborted } from "../../lib/abort";
 import type { CronResult } from "./shared";
 import { buildSyncMetadata } from "./shared";
 import { reportStablecoinsStage } from "./runtime";
 import type { PeggedAsset } from "./enrich-prices";
-import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
-import { toPositiveFiniteNumber } from "./supplemental-assets/shared";
 import type {
   FallbackIntakeInput,
   FallbackIntakeOutput,
@@ -89,45 +85,4 @@ export async function runFallbackIntakePhase(
   }
 
   return { assets };
-}
-
-/**
- * Overlays fresh curated-aggregate on-chain per-chain circulating supply onto
- * fallback assets whose upstream market row carries no chain breakdown (Sky
- * savings NAV wrappers such as sUSDS/sDAI have a null DefiLlama id, so the
- * CoinGecko intake hardcodes an empty `chainCirculating`). Run this after the
- * previous-cache restore so a successful probe supersedes the carried row. If
- * any configured chain read fails the probe returns null and the asset keeps its
- * restored carry — fail closed per asset, never a partial map. Both curated
- * assets are USD NAV tokens, so the per-chain supply shares the V9 review derives
- * are price-invariant and the aggregate reuses the same on-chain-units x price
- * basis as `circulating`. The probe reads each contract sequentially, so the
- * added calls stay within Cloudflare's 6-connection per-trigger pool.
- */
-export async function overlayFallbackCuratedAggregateSupply(
-  assets: PeggedAsset[],
-  signal?: AbortSignal,
-): Promise<void> {
-  for (const asset of assets) {
-    throwIfAborted(signal);
-    const meta = ACTIVE_META_BY_ID.get(String(asset.id));
-    if (!meta || !selectCuratedAggregateOnchainSupplyProbeContracts(meta)) continue;
-
-    const priceUsd = toPositiveFiniteNumber(asset.price) ?? (meta.flags.pegCurrency === "USD" ? 1 : null);
-    if (priceUsd == null) continue;
-
-    const onChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, undefined, signal);
-    if (!onChainMcap?.chainCirculating) continue;
-
-    const pegKey = `pegged${meta.flags.pegCurrency}`;
-    asset.circulating = { [pegKey]: onChainMcap.mcap };
-    asset.supplySource = onChainMcap.supplySource;
-    asset.chainCirculating = Object.fromEntries(
-      Object.entries(onChainMcap.chainCirculating).map(([chainLabel, current]) => [
-        chainLabel,
-        { current, circulatingPrevDay: 0, circulatingPrevWeek: 0, circulatingPrevMonth: 0 },
-      ]),
-    );
-    asset.chains = Object.keys(onChainMcap.chainCirculating);
-  }
 }
