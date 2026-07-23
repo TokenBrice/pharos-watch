@@ -15,11 +15,11 @@ export const SOLANA_MEASURED_TARGET_SCHEMA_VERSION = "solana-measured-target-v1"
 export const SOLANA_MEASURED_EXECUTION_SCHEMA_VERSION = "solana-measured-execution-v1" as const;
 export const SOLANA_MEASURED_MAX_SLOT_WINDOW = 512;
 export const SOLANA_MEASURED_MAX_CONTEXT_SLOT_LAG = 2_250;
-export const SOLANA_MEASURED_MAX_CONTEXT_SLOT_LEAD = 250;
+const SOLANA_MEASURED_MAX_CONTEXT_SLOT_LEAD = 250;
 
 const SolanaAddressSchema = z.string().regex(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/);
 
-export const SolanaMeasuredExecutionTokenSchema = z.object({
+const SolanaMeasuredExecutionTokenSchema = z.object({
   address: SolanaAddressSchema,
   symbol: z.string().min(1).max(64),
   decimals: z.number().int().min(0).max(255),
@@ -54,13 +54,13 @@ const CommonRouteProofSchema = z.object({
   outputAmount: z.string().regex(/^[0-9]+$/),
 });
 
-export const SolanaMeasuredRaydiumRouteProofSchema = CommonRouteProofSchema.extend({
+const SolanaMeasuredRaydiumRouteProofSchema = CommonRouteProofSchema.extend({
   provider: z.literal("raydium-trade-api"),
   responseId: z.string().min(1).max(128),
   lastPoolPriceX64: z.string().regex(/^[1-9][0-9]*$/),
 });
 
-export const SolanaMeasuredOrcaRouteProofSchema = CommonRouteProofSchema.extend({
+const SolanaMeasuredOrcaRouteProofSchema = CommonRouteProofSchema.extend({
   provider: z.literal("jupiter-swap-api"),
   // Preserve historical proofs while accepting Jupiter's current label for
   // the same Orca Whirlpool program.
@@ -68,13 +68,13 @@ export const SolanaMeasuredOrcaRouteProofSchema = CommonRouteProofSchema.extend(
   contextSlot: z.number().int().nonnegative(),
 });
 
-export const SolanaMeasuredRouteProofSchema = z.discriminatedUnion("provider", [
+const SolanaMeasuredRouteProofSchema = z.discriminatedUnion("provider", [
   SolanaMeasuredRaydiumRouteProofSchema,
   SolanaMeasuredOrcaRouteProofSchema,
 ]);
 export type SolanaMeasuredRouteProof = z.infer<typeof SolanaMeasuredRouteProofSchema>;
 
-export const SolanaMeasuredExecutionQuotePointProofSchema = z.object({
+const SolanaMeasuredExecutionQuotePointProofSchema = z.object({
   amountInRaw: z.string().regex(/^[1-9][0-9]*$/),
   amountOutRaw: z.string().regex(/^[0-9]+$/),
   inputUsd: z.number().finite().positive(),

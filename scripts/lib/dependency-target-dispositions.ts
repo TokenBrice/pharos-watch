@@ -40,6 +40,19 @@ function adapterReview(
  */
 export const DEPENDENCY_TARGET_DISPOSITIONS: readonly DependencyTargetDisposition[] = [
   {
+    targetId: "usr-resolv",
+    expectedLifecycle: "frozen",
+    action: "retain-reviewed-link",
+    reviewer: "Codex dependency review",
+    reviewedAt: "2026-07-23",
+    sources: [
+      { label: "Pharos frozen stablecoin snapshot", url: "https://pharos.watch/stablecoin/usr-resolv" },
+      { label: "Inverse Finance DOLA transparency", url: "https://www.inverse.finance/transparency" },
+    ],
+    rationale:
+      "DOLA's reviewed reserve composition includes USR. USR is frozen after its market failure, so retain the historical reserve dependency without treating the unavailable upstream as scoreable.",
+  },
+  {
     targetId: "cetes-etherfuse",
     expectedLifecycle: "quarantined",
     action: "retain-reviewed-link",

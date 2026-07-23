@@ -3,7 +3,6 @@ import { CACHE_AVAILABILITY_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import {
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
-  DEPEG_RECOVERY_THRESHOLD_RATIO,
   DEX_FRESHNESS_SEC,
   DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
   DEPEG_EVENT_MIN_SUPPLY_USD,
@@ -14,6 +13,7 @@ import {
   DEPEG_PENDING_MIN_AGE_SEC,
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_SECONDARY_THRESHOLD_RATIO,
+  DEPEG_RECOVERY_THRESHOLD_RATIO,
 } from "@shared/lib/depeg-config";
 
 /** Returns the appropriate depeg threshold for a given peg type */
@@ -36,7 +36,6 @@ export {
   DEPEG_PENDING_MIN_AGE_SEC,
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_SECONDARY_THRESHOLD_RATIO,
-  DEPEG_RECOVERY_THRESHOLD_RATIO,
 };
 /** Minimum per-pool liquidity required for a DEX price observation to be stored. */
 export const DEX_PRICE_OBSERVATION_MIN_TVL_USD = 50_000;

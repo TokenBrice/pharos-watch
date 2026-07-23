@@ -6,7 +6,6 @@ export {
   updateApiKey,
 } from "./api-key-admin";
 export {
-  authenticateApiKeyFromFreshCache,
   authenticateApiKey,
   parseApiKeyToken,
 } from "./api-key-auth";
@@ -25,5 +24,4 @@ export {
   API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES,
   API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES,
   resetApiKeyStateForTests,
-  type AuthenticatedApiKey,
 } from "./api-key-core";

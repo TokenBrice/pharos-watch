@@ -71,7 +71,7 @@ const RANKINGS_HEADER_VISIBILITY: Record<string, string> = {
 
 const STATIC_PROFILE_LINKS = HOMEPAGE_TOP_CORE_STABLECOINS.slice(0, 8);
 
-export function HomepageStaticProfileDirectory(): React.JSX.Element {
+function HomepageStaticProfileDirectory(): React.JSX.Element {
   return (
     <nav aria-label="Leading stablecoin profiles" className="space-y-2.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -106,7 +106,7 @@ export function HomepageStaticProfileDirectory(): React.JSX.Element {
 
 /* Mirrors the loaded section's order — header, external toolbar, table shell,
  * peg browse strip beneath — so content doesn't jump when the chunk mounts. */
-export function RankingsSectionFallback() {
+function RankingsSectionFallback() {
   return (
     <div className="space-y-5">
       <div className="space-y-1.5">

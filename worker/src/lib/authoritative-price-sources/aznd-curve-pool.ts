@@ -12,7 +12,7 @@ import {
   type PriceSourceProvider,
 } from "./helpers";
 
-export const AZND_CURVE_SOURCE = "curve-thin-onchain";
+const AZND_CURVE_SOURCE = "curve-thin-onchain";
 
 const AZND_ID = "aznd-mu-digital";
 const USDC_ID = "usdc-circle";

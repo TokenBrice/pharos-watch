@@ -85,6 +85,7 @@
           }
         ],
         "liquidationMechanism": "When an FBTC account exceeds the 90% liquidation LTV, withdrawals are restricted and Avalon sells part of the collateral on centralized exchanges through its high-frequency execution system until the account reaches the 80% recovery LTV.",
+        "liquidationDelaySec": 0,
         "backstop": "The reviewed USDa documentation describes collateral sale and institutional custody providers but does not identify a contractual reserve fund, insurance module, or permissionless recapitalization backstop for residual bad debt.",
         "shutdownOrBadDebtBehavior": "The reviewed USDa materials do not document a global shutdown settlement or a contractual process for allocating losses that remain after centralized-exchange collateral liquidation.",
         "failureDomainKeys": [

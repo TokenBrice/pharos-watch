@@ -13,6 +13,8 @@ import {
   responseFromBufferedBody,
 } from "../../lib/pricing-provider-lifecycle";
 import { getCache, setCache } from "../../lib/db-cache";
+import { parseJson, tryParseJson } from "../../lib/json-parse";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { CmcCategoryResponseSchema, CmcLatestQuotesResponseSchema } from "../../lib/schemas";
 import {
   createPricingAssetAttempt,
@@ -145,14 +147,22 @@ async function loadVerifiedCmcQuotes(db: D1Database | undefined): Promise<CmcVer
   try {
     const row = await getCache(db, CMC_VERIFIED_QUOTES_CACHE_KEY);
     if (!row) return [];
-    const parsed = JSON.parse(row.value) as unknown;
+    const parsed = tryParseJson(row.value, { onFailure: () => undefined });
     if (!Array.isArray(parsed)) return [];
     return parsed
       .slice(0, CMC_VERIFIED_QUOTES_MAX_ENTRIES)
       .map(parseVerifiedCmcQuote)
       .filter((entry): entry is CmcVerifiedTargetedQuote => entry != null);
   } catch (error) {
-    console.warn("[enrich-prices] Failed to load verified CMC targeted quotes:", error);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "verified_quotes_load_failed",
+      job: "sync-stablecoins",
+      provider: "coinmarketcap",
+      message: "Failed to load verified targeted quotes",
+      error,
+    });
     return [];
   }
 }
@@ -249,7 +259,15 @@ async function persistVerifiedCmcQuotes(
       JSON.stringify([...merged.values()].slice(-CMC_VERIFIED_QUOTES_MAX_ENTRIES)),
     );
   } catch (error) {
-    console.warn("[enrich-prices] Failed to persist verified CMC targeted quotes:", error);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "verified_quotes_persist_failed",
+      job: "sync-stablecoins",
+      provider: "coinmarketcap",
+      message: "Failed to persist verified targeted quotes",
+      error,
+    });
   }
 }
 
@@ -345,17 +363,16 @@ async function fetchTargetedCmcQuotes(params: {
     };
   }
 
-  let json: unknown;
-  try {
-    json = JSON.parse(result.body);
-  } catch (error) {
+  const jsonResult = parseJson(result.body, { onFailure: () => undefined });
+  if (!jsonResult.ok) {
     return {
       resolved: 0,
       acceptedQuotes: [],
-      diagnostic: failAllAttempts(applyJsonParseFailureDiagnostic(diagnostic, error)),
+      diagnostic: failAllAttempts(applyJsonParseFailureDiagnostic(diagnostic, jsonResult.message)),
       rateLimited: false,
     };
   }
+  const json = jsonResult.value;
   const parsed = CmcLatestQuotesResponseSchema.safeParse(json);
   if (!parsed.success) {
     return {
@@ -586,13 +603,12 @@ export async function runCmcPass(
       });
 
       if (cmcResult?.response.ok) {
-        let cmcJson: unknown;
-        try {
-          cmcJson = JSON.parse(cmcResult.body);
-        } catch (error) {
-          diagnostics.push(applyJsonParseFailureDiagnostic(diagnostic, error));
+        const cmcJsonResult = parseJson(cmcResult.body, { onFailure: () => undefined });
+        if (!cmcJsonResult.ok) {
+          diagnostics.push(applyJsonParseFailureDiagnostic(diagnostic, cmcJsonResult.message));
           return recordFailureAndReturn();
         }
+        const cmcJson = cmcJsonResult.value;
         const parsed = CmcCategoryResponseSchema.safeParse(cmcJson);
         if (!parsed.success) {
           diagnostics.push({

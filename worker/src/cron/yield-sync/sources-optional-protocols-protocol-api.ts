@@ -12,6 +12,7 @@ import {
   fetchEtherfuseCetesIssuance,
 } from "./etherfuse-cetes";
 import type { ResolvedYield } from "./types";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 interface HashnoteReport {
   roundId: string;
@@ -349,7 +350,16 @@ export async function fetchReProtocolReusdeSource(signal?: AbortSignal): Promise
     };
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-    console.warn("[yield] Re Protocol reUSDe source failed:", error);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "optional_yield_source_failed",
+      job: "sync-yield-data",
+      provider: "re-protocol",
+      source: "reUSDe",
+      message: "Optional yield source failed",
+      error,
+    });
     return null;
   }
 }

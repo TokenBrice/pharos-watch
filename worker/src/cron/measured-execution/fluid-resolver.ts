@@ -570,7 +570,7 @@ export function validateFluidResolverProfileProof(profile: DexMeasuredExecutionP
   return [...issues];
 }
 
-export const FLUID_RESOLVER_ADAPTER: DexMeasuredExecutionAdapter = {
+const FLUID_RESOLVER_ADAPTER: DexMeasuredExecutionAdapter = {
   profileId: FLUID_RESOLVER_ADAPTER_PROFILE_ID,
   async quotePoints(input) {
     const outcomes = await quoteFluidResolverRequests({

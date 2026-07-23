@@ -342,7 +342,7 @@ export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: n
   return new Response(cached.value, { headers });
 }
 
-export async function readCachedMintBurnFlowResponse(
+async function readCachedMintBurnFlowResponse(
   db: D1Database,
   cacheKey: string,
 ): Promise<Response | null> {

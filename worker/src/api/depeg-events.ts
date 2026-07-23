@@ -29,6 +29,7 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-version";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { DepegPendingIncident } from "@shared/types/market";
 import { toErrorMessage } from "../lib/error-utils";
+import { logWorkerEvent } from "../lib/structured-log";
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";
 
@@ -197,7 +198,14 @@ async function loadThresholdCrossingCount(db: D1Database, stablecoinId: string):
     return typeof row?.total === "number" && Number.isFinite(row.total) ? Math.max(0, row.total) : null;
   } catch (err) {
     if (!isMissingTableError(err)) {
-      console.error("[depeg-events] Unexpected error loading threshold-crossing count:", toErrorMessage(err));
+      logWorkerEvent({
+        scope: "api",
+        level: "error",
+        event: "threshold_crossing_count_failed",
+        route: "depeg-events",
+        message: "Unexpected error loading threshold-crossing count",
+        error: toErrorMessage(err),
+      });
     }
     return null;
   }

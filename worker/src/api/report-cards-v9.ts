@@ -4,6 +4,7 @@ import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import { errorResponse, jsonFreshResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCache } from "../lib/db-cache";
+import { tryParseJson } from "../lib/json-parse";
 import {
   loadPublishedReportCardsV9Snapshot,
   ReportCardsV9SnapshotUnavailableError,
@@ -35,11 +36,8 @@ export const ActivationMarkerSchema = z.object({
 export type ReportCardsV9ActivationMarker = z.infer<typeof ActivationMarkerSchema>;
 
 function parseActivationMarker(value: string): ReportCardsV9ActivationMarker | null {
-  try {
-    return ActivationMarkerSchema.parse(JSON.parse(value));
-  } catch {
-    return null;
-  }
+  const parsed = tryParseJson(value, { onFailure: () => undefined });
+  return ActivationMarkerSchema.safeParse(parsed).data ?? null;
 }
 
 function snapshotResponse(

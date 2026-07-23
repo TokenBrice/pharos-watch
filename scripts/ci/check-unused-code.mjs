@@ -31,12 +31,27 @@ const MODULE_ALLOWLIST = new Set([
   // Script-only Safety Score v9 evidence queue producer/parser. The maintenance
   // CLI and its tests live outside this runtime-only dependency graph.
   "shared/lib/safety-score-v9/evidence-gap-queue.ts",
+  // Protocol measurement schemas are consumed by scripts/lib/mechanism-measurement,
+  // which is intentionally outside this runtime-only dependency graph.
+  "shared/lib/protocol-api-sources/index.ts",
   // refreshing-bar.tsx + use-row-cursor.ts are now consumed by the power-user
   // tables (Wave 9: stablecoin-table, screener-table, depeg-tracker-table).
   // Filter summary helpers; per-tracker adoption deferred. (command-palette-verbs.ts
   // is now consumed by src/components/command-palette.tsx.)
 ]);
 const EXPORT_ALLOWLIST = new Set([
+  "shared/lib/protocol-api-sources/decimal.ts::CANONICAL_DECIMAL_PATTERN",
+  "shared/lib/protocol-api-sources/decimal.ts::JSON_NUMBER_TOKEN_KEY",
+  "shared/lib/protocol-api-sources/decimal.ts::jsonNumberToken",
+  "shared/lib/protocol-api-sources/decimal.ts::canonicalizeDecimal",
+  "shared/lib/protocol-api-sources/decimal.ts::DecimalSourceSchema",
+  "shared/lib/protocol-api-sources/decimal.ts::JsonNumberDecimalSourceSchema",
+  "shared/lib/protocol-api-sources/decimal.ts::CanonicalDecimalSchema",
+  "shared/lib/protocol-api-sources/ethena.ts::ETHENA_PROTOCOL_API_URLS",
+  "shared/lib/protocol-api-sources/ethena.ts::EthenaCollateralizationStatusSchema",
+  "shared/lib/protocol-api-sources/ethena.ts::EthenaProofOfReservesSchema",
+  "shared/lib/protocol-api-sources/falcon.ts::FALCON_TRANSPARENCY_URL",
+  "shared/lib/protocol-api-sources/falcon.ts::FalconTransparencySchema",
   // Identity markers consumed by worker/src/__mocks__/__tests__/vitest-aliases.test.ts via vitest path aliases (not visible to static analysis).
   "worker/src/__mocks__/satori-stub.ts::__stub",
   "worker/src/__mocks__/wasm-module-stub.ts::__stub",

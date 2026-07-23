@@ -12,7 +12,7 @@ export const DEX_MEASURED_FRESHNESS_MAX_SEC = 2 * 30 * 60;
 
 const CanonicalEvmAddressSchema = z.string().regex(/^0x[a-f0-9]{40}$/);
 
-export const DexMeasuredExecutionTokenSchema = z.object({
+const DexMeasuredExecutionTokenSchema = z.object({
   address: CanonicalEvmAddressSchema,
   symbol: z.string().min(1).max(64),
   decimals: z.number().int().min(0).max(255),
@@ -44,7 +44,7 @@ export const DexMeasuredExecutionTargetSchema = z.object({
 });
 export type DexMeasuredExecutionTarget = z.infer<typeof DexMeasuredExecutionTargetSchema>;
 
-export const DexMeasuredExecutionQuotePointProofSchema = z.object({
+const DexMeasuredExecutionQuotePointProofSchema = z.object({
   amountInRaw: z.string().regex(/^[1-9][0-9]*$/),
   amountOutRaw: z.string().regex(/^[0-9]+$/),
   callData: z.string().regex(/^0x[0-9a-f]+$/),
@@ -58,7 +58,7 @@ export const DexMeasuredExecutionQuotePointProofSchema = z.object({
 });
 export type DexMeasuredExecutionQuotePointProof = z.infer<typeof DexMeasuredExecutionQuotePointProofSchema>;
 
-export const DexMeasuredExecutionPoolBindingProofSchema = z.object({
+const DexMeasuredExecutionPoolBindingProofSchema = z.object({
   factoryAddress: CanonicalEvmAddressSchema,
   factoryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
   resolvedPoolAddress: CanonicalEvmAddressSchema,

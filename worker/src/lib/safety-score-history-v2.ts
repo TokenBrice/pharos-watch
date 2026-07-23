@@ -152,7 +152,7 @@ export function safetyScoreLegacyHistoryV2Id(stablecoinId: string, recordedAt: n
   return `safety-score-history:v2:legacy:${encodeURIComponent(stablecoinId)}:${recordedAt}`;
 }
 
-export function safetyScoreHistoryV2Id(input: {
+function safetyScoreHistoryV2Id(input: {
   stablecoinId: string;
   recordedAt: number;
   identity: SafetyScoreHistoryIdentity;

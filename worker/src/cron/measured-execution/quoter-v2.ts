@@ -393,7 +393,7 @@ export function encodeV3FactoryGetPool(target: DexMeasuredExecutionTarget): `0x$
   });
 }
 
-export function decodeV3FactoryGetPool(returnData: `0x${string}`): `0x${string}` | null {
+function decodeV3FactoryGetPool(returnData: `0x${string}`): `0x${string}` | null {
   try {
     const value = decodeFunctionResult({
       abi: V3_FACTORY_ABI,
@@ -598,7 +598,7 @@ export function validateQuoterV2ProfileProof(profile: DexMeasuredExecutionProfil
   return [...issues];
 }
 
-export const QUOTER_V2_ADAPTER: DexMeasuredExecutionAdapter = {
+const QUOTER_V2_ADAPTER: DexMeasuredExecutionAdapter = {
   profileId: "quoter-v2",
   async quotePoints(input) {
     const outcomes = await quoteQuoterV2Requests({

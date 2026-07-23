@@ -18,6 +18,7 @@ import {
 import { loadLatestPublishedDexMeasuredQuoteEvidence, type LoadedDexMeasuredQuoteEvidence } from "./persistence";
 import { validateQuoterV2ProfileProof } from "./quoter-v2";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "./registry";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 export interface DexMeasuredExecutionJoinDiagnostics {
   targetCount: number;
@@ -43,7 +44,14 @@ export async function loadDexMeasuredExecutionJoinEvidence(
   try {
     return await loadLatestPublishedDexMeasuredQuoteEvidence(db, signal);
   } catch (error) {
-    console.warn("[measured-execution] Failed to load quote generation:", error);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "quote_generation_load_failed",
+      job: "sync-cl-exit-depth",
+      message: "Failed to load measured-execution quote generation",
+      error,
+    });
     return null;
   }
 }

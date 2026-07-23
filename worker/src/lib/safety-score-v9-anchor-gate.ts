@@ -12,7 +12,7 @@ import type { V9Grade, V9ValidatedPolicyEnvelope } from "@shared/types/safety-sc
  * alternative, so a later ruling changes one data field.
  */
 
-export const SAFETY_SCORE_V9_ANCHOR_GATE_SCHEMA_VERSION = 1;
+const SAFETY_SCORE_V9_ANCHOR_GATE_SCHEMA_VERSION = 1;
 
 export type V9RatedGrade = Exclude<V9Grade, "NR">;
 

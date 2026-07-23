@@ -20,44 +20,44 @@
     "branchCount": 147
   },
   "shared/lib/safety-score-v9/control.ts": {
-    "fileLines": 775,
-    "maxFunctionLines": 484,
-    "branchCount": 105
+    "fileLines": 1170,
+    "maxFunctionLines": 640,
+    "branchCount": 166
   },
   "shared/lib/safety-score-v9/coverage.ts": {
-    "fileLines": 928,
-    "maxFunctionLines": 643,
+    "fileLines": 934,
+    "maxFunctionLines": 653,
     "branchCount": 48
   },
   "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
-    "fileLines": 859,
+    "fileLines": 898,
     "maxFunctionLines": 44,
     "branchCount": 5
   },
   "shared/types/market.ts": {
-    "fileLines": 923,
-    "maxFunctionLines": 32,
-    "branchCount": 13
+    "fileLines": 1037,
+    "maxFunctionLines": 42,
+    "branchCount": 17
   },
   "shared/types/safety-score-v9.ts": {
-    "fileLines": 1469,
-    "maxFunctionLines": 357,
-    "branchCount": 67
+    "fileLines": 1590,
+    "maxFunctionLines": 377,
+    "branchCount": 70
   },
   "shared/types/safety-score-v9-facts.ts": {
-    "fileLines": 1431,
-    "maxFunctionLines": 147,
-    "branchCount": 149
+    "fileLines": 1625,
+    "maxFunctionLines": 153,
+    "branchCount": 168
   },
   "shared/types/stablecoin-meta-schemas.ts": {
-    "fileLines": 1277,
+    "fileLines": 1302,
     "maxFunctionLines": 179,
-    "branchCount": 71
+    "branchCount": 72
   },
   "worker/src/api/stablecoin-detail.ts": {
-    "fileLines": 152,
-    "maxFunctionLines": 42,
-    "branchCount": 6
+    "fileLines": 163,
+    "maxFunctionLines": 52,
+    "branchCount": 8
   },
   "worker/src/api/feedback.ts": {
     "fileLines": 8,
@@ -75,8 +75,8 @@
     "branchCount": 2
   },
   "src/components/stablecoin-table.tsx": {
-    "fileLines": 234,
-    "maxFunctionLines": 183,
+    "fileLines": 237,
+    "maxFunctionLines": 185,
     "branchCount": 4
   },
   "src/components/yield-history-chart.tsx": {
@@ -90,18 +90,18 @@
     "branchCount": 6
   },
   "src/app/yield/client.tsx": {
-    "fileLines": 635,
-    "maxFunctionLines": 438,
-    "branchCount": 55
+    "fileLines": 615,
+    "maxFunctionLines": 431,
+    "branchCount": 50
   },
   "worker/src/cron/sync-stablecoins.ts": {
-    "fileLines": 220,
-    "maxFunctionLines": 186,
+    "fileLines": 234,
+    "maxFunctionLines": 197,
     "branchCount": 9
   },
   "src/app/methodology/sections/core/stability-index-section.tsx": {
-    "fileLines": 205,
-    "maxFunctionLines": 128,
+    "fileLines": 251,
+    "maxFunctionLines": 150,
     "branchCount": 0
   },
   "src/app/methodology/sections/core/safety-scores-section.tsx": {
@@ -110,8 +110,8 @@
     "branchCount": 0
   },
   "src/app/methodology/sections/core/liquidity-section.tsx": {
-    "fileLines": 154,
-    "maxFunctionLines": 146,
+    "fileLines": 172,
+    "maxFunctionLines": 164,
     "branchCount": 0
   },
   "src/app/methodology/sections/core/mint-burn-flow-section.tsx": {
@@ -200,34 +200,34 @@
     "branchCount": 0
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 422,
-    "maxFunctionLines": 371,
-    "branchCount": 25
+    "fileLines": 464,
+    "maxFunctionLines": 410,
+    "branchCount": 29
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 397,
-    "maxFunctionLines": 308,
-    "branchCount": 9
+    "fileLines": 419,
+    "maxFunctionLines": 303,
+    "branchCount": 10
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
-    "fileLines": 498,
-    "maxFunctionLines": 176,
-    "branchCount": 40
+    "fileLines": 1147,
+    "maxFunctionLines": 391,
+    "branchCount": 86
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 838,
-    "maxFunctionLines": 165,
-    "branchCount": 21
+    "fileLines": 1117,
+    "maxFunctionLines": 240,
+    "branchCount": 24
   },
   "worker/src/cron/dex-liquidity/orchestrator-analysis.ts": {
-    "fileLines": 658,
-    "maxFunctionLines": 380,
+    "fileLines": 675,
+    "maxFunctionLines": 381,
     "branchCount": 45
   },
   "worker/src/cron/dex-liquidity/staging-merge.ts": {
-    "fileLines": 647,
-    "maxFunctionLines": 370,
-    "branchCount": 70
+    "fileLines": 726,
+    "maxFunctionLines": 366,
+    "branchCount": 83
   },
   "worker/src/cron/sync-mint-burn.ts": {
     "fileLines": 364,
@@ -250,18 +250,18 @@
     "branchCount": 49
   },
   "worker/src/cron/compute-dews.ts": {
-    "fileLines": 261,
-    "maxFunctionLines": 185,
+    "fileLines": 262,
+    "maxFunctionLines": 186,
     "branchCount": 11
   },
   "worker/src/cron/depeg-detection/decision-engine.ts": {
-    "fileLines": 790,
-    "maxFunctionLines": 142,
-    "branchCount": 53
+    "fileLines": 746,
+    "maxFunctionLines": 134,
+    "branchCount": 54
   },
   "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
-    "fileLines": 101,
-    "maxFunctionLines": 59,
+    "fileLines": 103,
+    "maxFunctionLines": 61,
     "branchCount": 1
   },
   "worker/src/cron/sync-blacklist.ts": {
@@ -290,7 +290,7 @@
     "branchCount": 0
   },
   "worker/src/cron/yield-sync/sources.ts": {
-    "fileLines": 32,
+    "fileLines": 33,
     "maxFunctionLines": 0,
     "branchCount": 0
   },
@@ -305,34 +305,34 @@
     "branchCount": 0
   },
   "worker/src/lib/scheduled-slot-fence.ts": {
-    "fileLines": 710,
-    "maxFunctionLines": 168,
+    "fileLines": 717,
+    "maxFunctionLines": 160,
     "branchCount": 45
   },
   "worker/src/lib/status-evaluation.ts": {
-    "fileLines": 252,
-    "maxFunctionLines": 129,
+    "fileLines": 254,
+    "maxFunctionLines": 131,
     "branchCount": 2
   },
   "worker/src/lib/status-reliability.ts": {
-    "fileLines": 28,
+    "fileLines": 24,
     "maxFunctionLines": 0,
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 1050,
-    "maxFunctionLines": 161,
-    "branchCount": 139
+    "fileLines": 1858,
+    "maxFunctionLines": 209,
+    "branchCount": 231
   },
   "worker/src/lib/safety-score-v9-fact-set.ts": {
-    "fileLines": 2186,
-    "maxFunctionLines": 224,
-    "branchCount": 144
+    "fileLines": 2679,
+    "maxFunctionLines": 228,
+    "branchCount": 195
   },
   "worker/src/lib/safety-score-v9-shadow.ts": {
-    "fileLines": 1184,
-    "maxFunctionLines": 175,
-    "branchCount": 74
+    "fileLines": 1294,
+    "maxFunctionLines": 198,
+    "branchCount": 85
   },
   "worker/src/lib/telegram-usage-analytics.ts": {
     "fileLines": 604,

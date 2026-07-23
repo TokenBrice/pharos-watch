@@ -51,7 +51,7 @@ const MAX_QUOTE_CALLS = 6_400;
 const MAX_RPC_REQUESTS = 800;
 const MAX_RUNTIME_MS = 8 * 60 * 1_000;
 const REFINEMENT_ROUNDS = 3;
-export const MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:quote-admission";
+const MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:quote-admission";
 
 type TargetDeployment =
   | { kind: "quoter-v2"; config: DexMeasuredExecutionDeployment }

@@ -196,12 +196,11 @@ export function useReportCardsV9(overrides?: V9QueryControlOverrides) {
   });
 }
 
-/** Read-only V9 shadow query that revalidates whenever the feedback page mounts. */
+/** Read-only V9 shadow query using the registered producer polling window. */
 export function useReportCardsV9Preview(overrides?: V9QueryControlOverrides) {
   return useRegisteredApiQuery<ReportCardsV9Response>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Preview, {
     ...overrides,
     keepPreviousData: false,
-    staleTime: 0,
   });
 }
 

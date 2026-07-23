@@ -15,14 +15,6 @@
     "reviewAfter": "2026-09-16",
     "nextAction": "Separate Mini App state/auth orchestration and preset mutation handling from the route presentation shell."
   },
-  "src/components/tape/event-card.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Surfaced after the projector module batch (PSI/DEWS/mint-burn/yield) widened per-event-class rendering. Split per-event-class card families in a follow-up tape UI pass once the event taxonomy stabilizes.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
   "worker/src/api/backfill-supply-history.ts": {
     "disposition": "queued-p4",
     "notes": "Backfill supply history combines request validation, historical source selection, D1 repair planning, and mutation orchestration in one admin handler. Keep explicitly waived until a focused supply-history admin cleanup can split validation/source planning from write execution.",
@@ -47,14 +39,6 @@
     "reviewAfter": "2026-09-23",
     "nextAction": "Extract Morpho V1/V2 liquidity telemetry helpers from the ERC-4626 reserve adapter while preserving the existing adapter contract and tests."
   },
-  "worker/src/cron/weekly-recap.ts": {
-    "disposition": "queued-p4",
-    "notes": "Weekly recap input assembly grew with week-over-week deltas, weekly signal leaderboards, and split parse-row plumbing. Keep waived until the digest prompt rewrite stabilizes; a follow-up pass should extract aggregation vs. prompt rendering into separate modules.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
   "worker/src/cron/yield-coverage-audit.ts": {
     "disposition": "queued-p4",
     "notes": "Coverage-audit module crossed the file-lines hotspot floor when the v8.291 stale-auto-lending-override queue lane landed. The growth is additive queue/recommendation assembly, not deeper branching; keep it queued for a dedicated split of queue-item builders from audit orchestration.",
@@ -62,14 +46,6 @@
     "createdAt": "2026-06-11",
     "reviewAfter": "2026-09-11",
     "nextAction": "Extract operator-queue item builders (gap/protocol/quarantine/stale-override) into a yield-coverage-audit-queue module behind the existing buildCoverageAuditOperatorQueue API."
-  },
-  "worker/src/lib/depeg-resolver-incident-store.ts": {
-    "disposition": "queued-p4",
-    "notes": "DDRv2 incident store centralizes canonical incident upserts, lock-state projection, D1 row mapping, and compatibility reads. It surfaced after the compute cron split because store ownership is now clearer; split row mappers from mutation methods in a focused DDR store pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-30",
-    "reviewAfter": "2026-08-30",
-    "nextAction": "Extract canonical incident row mapping and lock-state mutation helpers behind the existing store API."
   },
   "worker/src/cron/telegram-pending/drain.ts": {
     "disposition": "queued-p4",
@@ -87,14 +63,6 @@
     "reviewAfter": "2026-10-11",
     "nextAction": "Split probe, cron, issue, and operator-decision projections into focused model helpers while preserving the exported dashboard types."
   },
-  "src/app/admin/sections/cron-lane-table.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The admin cron-lane table owns lane projections, budget diagnostics, status details, and the full table rendering surface. Its file size is now a candidate even though the public component remains a single operational view.",
-    "owner": "worker-infrastructure",
-    "createdAt": "2026-07-11",
-    "reviewAfter": "2026-10-11",
-    "nextAction": "Extract cron-lane row modeling and budget/status detail cells into focused modules, leaving CronLaneTable as the composition shell."
-  },
   "worker/src/cron/yield-sync/evaluation.ts": {
     "disposition": "queued-p4",
     "notes": "Yield evaluation still coordinates source qualification, benchmark policy, arbitration, history, and cooperative progress reporting. The long evaluation function needs a dedicated split that preserves deterministic ranking behavior.",
@@ -111,14 +79,6 @@
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract API-key query/mutation state and dialog orchestration into focused hooks, leaving ApiKeysPanel responsible for composition."
   },
-  "src/components/status/admin-action-execution-dialog.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The admin action dialog owns action-specific input state, validation, confirmation, execution, and result rendering across several operational commands. Its long component needs a command-model split before additional actions are introduced.",
-    "owner": "worker-infrastructure",
-    "createdAt": "2026-07-11",
-    "reviewAfter": "2026-10-11",
-    "nextAction": "Extract action-specific form models and execution-result rendering, leaving the dialog to coordinate selection, confirmation, and submission."
-  },
   "src/app/admin/status-dashboard/triage-summary.tsx": {
     "disposition": "queued-p4",
     "notes": "The status triage summary renders the complete operator decision surface, including issue grouping, evidence context, next steps, and supporting diagnostics. Its long render function should be split by triage section without changing prioritization behavior.",
@@ -126,5 +86,45 @@
     "createdAt": "2026-07-11",
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract issue, evidence, and next-step presentation sections into focused components while keeping TriageSummary as the ordered composition boundary."
+  },
+  "shared/lib/safety-score-v9/evaluate-set.ts": {
+    "disposition": "queued-p4",
+    "notes": "The V9 set evaluator owns deterministic cohort evaluation and aggregation after activation simplification. Its current file and branch size should be reduced only in a focused behavior-preserving pass.",
+    "owner": "safety-score-v9",
+    "createdAt": "2026-07-23",
+    "reviewAfter": "2026-10-23",
+    "nextAction": "Separate per-asset evaluation from set-level aggregation without reintroducing activation orchestration."
+  },
+  "shared/lib/p4-exit-route-capacity.ts": {
+    "disposition": "queued-p4",
+    "notes": "Exit-route capacity combines heterogeneous observation validation and conservative scoring policy. The branch count warrants a focused policy decomposition after the current evidence model stabilizes.",
+    "owner": "safety-score-v9",
+    "createdAt": "2026-07-23",
+    "reviewAfter": "2026-10-23",
+    "nextAction": "Extract observation-family validation helpers while preserving the existing scoring contract."
+  },
+  "worker/src/cron/measured-execution/persistence.ts": {
+    "disposition": "queued-p4",
+    "notes": "Measured-execution persistence shares generation publication invariants across EVM, Solana, and Tron. The file is large but intentionally centralized for the current rollout.",
+    "owner": "measured-execution",
+    "createdAt": "2026-07-23",
+    "reviewAfter": "2026-10-23",
+    "nextAction": "Extract the native-chain generic persistence path behind the existing publication interfaces."
+  },
+  "worker/src/cron/measured-execution/sync.ts": {
+    "disposition": "queued-p4",
+    "notes": "The EVM measured-execution coordinator currently owns admission, target publication, quote execution, and diagnostics. Its long function should be split after production behavior is established.",
+    "owner": "measured-execution",
+    "createdAt": "2026-07-23",
+    "reviewAfter": "2026-10-23",
+    "nextAction": "Extract admission and quote-batch orchestration while retaining the current cron result contract."
+  },
+  "worker/src/cron/telegram-retention-cleanup.ts": {
+    "disposition": "queued-p4",
+    "notes": "Telegram retention cleanup coordinates several bounded deletion families under one scheduled job. The long function is operationally straightforward but should be decomposed before further retention policies are added.",
+    "owner": "telegram-delivery",
+    "createdAt": "2026-07-23",
+    "reviewAfter": "2026-10-23",
+    "nextAction": "Extract per-table retention operations and keep the scheduled coordinator limited to sequencing and totals."
   }
 }

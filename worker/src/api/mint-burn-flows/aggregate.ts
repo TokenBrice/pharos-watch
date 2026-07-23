@@ -36,7 +36,7 @@ import {
   selectLargestEvents,
 } from "../mint-burn-flows-shared";
 
-export const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
+const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
 export const TRACKED_IDS = new Set(ACTIVE_MINT_BURN_CONFIGS.map((config) => config.stablecoinId));
 export const REPORT_CARD_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 

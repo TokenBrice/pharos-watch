@@ -79,6 +79,7 @@
         ],
         "liquidationMechanism": "Abracadabra's permissionless liquidate() lets any caller liquidate one or more undercollateralized users in a single call, with partial liquidation supported via maxBorrowParts; the liquidator repays MIM debt and receives seized yvWETH plus the configured liquidation multiplier as incentive.",
         "liquidationDelaySec": 0,
+        "backstop": "No contractual insurance or recapitalization backstop is documented; residual cauldron bad debt has instead been addressed through ad hoc DAO treasury MIM buybacks.",
         "shutdownOrBadDebtBehavior": "Abracadabra's public documentation does not describe a formal shutdown, insurance fund, or bad-debt-socialization mechanism for cauldrons; the CauldronOwner can deprecate a cauldron and cut its MIM borrow capacity, but historical under-collateralized bad debt from cauldron exploits (2024-01, 2025-03, 2025-10, recorded in this asset's mintIncidents) has been absorbed through ad hoc DAO treasury MIM buybacks rather than a documented protocol backstop.",
         "failureDomainKeys": ["mim-cauldron:0xed510639e1b07c9145cd570f8dd0ca885f760e09", "oracle-owner-safe:0xdf2c270f610dc35d8ffda5b453e74db5471e126b"],
         "sources": [
@@ -127,6 +128,7 @@
         ],
         "liquidationMechanism": "Abracadabra's permissionless liquidate() lets any caller liquidate one or more undercollateralized users in a single call, with partial liquidation supported via maxBorrowParts; the liquidator repays MIM debt and receives seized WETH plus the configured liquidation multiplier as incentive.",
         "liquidationDelaySec": 0,
+        "backstop": "No contractual insurance or recapitalization backstop is documented; residual cauldron bad debt has instead been addressed through ad hoc DAO treasury MIM buybacks.",
         "shutdownOrBadDebtBehavior": "Abracadabra's public documentation does not describe a formal shutdown, insurance fund, or bad-debt-socialization mechanism for cauldrons; the CauldronOwner can deprecate a cauldron and cut its MIM borrow capacity, but historical under-collateralized bad debt from cauldron exploits (2024-01, 2025-03, 2025-10, recorded in this asset's mintIncidents) has been absorbed through ad hoc DAO treasury MIM buybacks rather than a documented protocol backstop.",
         "failureDomainKeys": ["mim-cauldron:0x390db10e65b5ab920c19149c919d970ad9d18a41", "oracle-owner-eoa:0xfddfe525054efaad204600d00ca86adb1cc2ea8a"],
         "sources": [
@@ -175,6 +177,7 @@
         ],
         "liquidationMechanism": "Abracadabra's permissionless liquidate() lets any caller liquidate one or more undercollateralized users in a single call, with partial liquidation supported via maxBorrowParts; the liquidator repays MIM debt and receives seized WBTC plus the configured liquidation multiplier as incentive.",
         "liquidationDelaySec": 0,
+        "backstop": "No contractual insurance or recapitalization backstop is documented; residual cauldron bad debt has instead been addressed through ad hoc DAO treasury MIM buybacks.",
         "shutdownOrBadDebtBehavior": "Abracadabra's public documentation does not describe a formal shutdown, insurance fund, or bad-debt-socialization mechanism for cauldrons; the CauldronOwner can deprecate a cauldron and cut its MIM borrow capacity, but historical under-collateralized bad debt from cauldron exploits (2024-01, 2025-03, 2025-10, recorded in this asset's mintIncidents) has been absorbed through ad hoc DAO treasury MIM buybacks rather than a documented protocol backstop.",
         "failureDomainKeys": ["mim-cauldron:0x5ec47ee69bede0b6c2a2fc0d9d094df16c192498", "oracle-owner-safe:0xdf2c270f610dc35d8ffda5b453e74db5471e126b"],
         "sources": [
@@ -223,6 +226,7 @@
         ],
         "liquidationMechanism": "Abracadabra's permissionless liquidate() lets any caller liquidate one or more undercollateralized users in a single call, with partial liquidation supported via maxBorrowParts; the liquidator repays MIM debt and receives seized yvDAI plus the configured liquidation multiplier as incentive.",
         "liquidationDelaySec": 0,
+        "backstop": "No contractual insurance or recapitalization backstop is documented; residual cauldron bad debt has instead been addressed through ad hoc DAO treasury MIM buybacks.",
         "shutdownOrBadDebtBehavior": "Abracadabra's public documentation does not describe a formal shutdown, insurance fund, or bad-debt-socialization mechanism for cauldrons; the CauldronOwner can deprecate a cauldron and cut its MIM borrow capacity, but historical under-collateralized bad debt from cauldron exploits (2024-01, 2025-03, 2025-10, recorded in this asset's mintIncidents) has been absorbed through ad hoc DAO treasury MIM buybacks rather than a documented protocol backstop.",
         "failureDomainKeys": ["mim-cauldron:0x7ce7d9ed62b9a6c5ace1c6ec9aeb115fa3064757", "oracle-owner-safe:0xdf2c270f610dc35d8ffda5b453e74db5471e126b", "dai-peg-not-independently-priced"],
         "sources": [

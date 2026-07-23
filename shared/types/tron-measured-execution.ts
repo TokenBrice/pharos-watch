@@ -19,7 +19,7 @@ const TronAddressSchema = z.string().regex(/^T[1-9A-HJ-NP-Za-km-z]{33}$/);
 const CodeHashSchema = z.string().regex(/^0x[0-9a-f]{64}$/);
 const PositiveIntegerStringSchema = z.string().regex(/^[1-9][0-9]*$/);
 
-export const TronMeasuredExecutionTokenSchema = z.object({
+const TronMeasuredExecutionTokenSchema = z.object({
   address: TronAddressSchema,
   symbol: z.string().min(1).max(64),
   decimals: z.number().int().min(0).max(255),
@@ -50,7 +50,7 @@ export const TronMeasuredExecutionTargetSchema = z.object({
 });
 export type TronMeasuredExecutionTarget = z.infer<typeof TronMeasuredExecutionTargetSchema>;
 
-export const TronMeasuredRouteProofSchema = z.object({
+const TronMeasuredRouteProofSchema = z.object({
   provider: z.literal("sun-smart-router"),
   poolId: TronAddressSchema,
   factoryAddress: TronAddressSchema,
@@ -72,7 +72,7 @@ export const TronMeasuredRouteProofSchema = z.object({
 });
 export type TronMeasuredRouteProof = z.infer<typeof TronMeasuredRouteProofSchema>;
 
-export const TronMeasuredExecutionQuotePointProofSchema = z.object({
+const TronMeasuredExecutionQuotePointProofSchema = z.object({
   amountInRaw: PositiveIntegerStringSchema,
   amountOutRaw: PositiveIntegerStringSchema,
   inputUsd: z.number().finite().positive(),

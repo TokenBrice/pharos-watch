@@ -20,6 +20,8 @@ import {
 import { buildInClause } from "../lib/db";
 import { isRecord } from "@shared/lib/type-guards";
 import { safetyScoreV8PublicationIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
+import { tryParseJson } from "../lib/json-parse";
+import { logWorkerEvent } from "../lib/structured-log";
 import {
   SafetyScoreV8PublicationIdentitySchema,
   type SafetyScoreV8PublicationIdentity,
@@ -96,10 +98,14 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
         ? buildFlightToQualityClassificationFromV8Cache(reportCardCache.payload)
         : { kind: "unavailable", reason: reportCardCache.reason };
   } catch (error) {
-    console.warn(
-      "[mint-burn-flows] Failed to load report-card FTQ classification:",
-      error instanceof Error ? error.message : error,
-    );
+    logWorkerEvent({
+      scope: "api",
+      level: "warn",
+      event: "ftq_classification_load_failed",
+      route: "mint-burn-flows",
+      message: "Failed to load report-card FTQ classification",
+      error,
+    });
     classification = { kind: "unavailable", reason: "cache-read-failed" };
   }
   const gradeClassification = classification.kind === "ok" ? classification.classification : null;
@@ -217,12 +223,8 @@ async function reconcileCachedAggregateSafetyResponse(
   const fallback = cachedFlowFallbackResponse(cached);
   if (!fallback.ok) return fallback;
 
-  let payload: unknown;
-  try {
-    payload = JSON.parse(cached.value) as unknown;
-  } catch {
-    return fallback;
-  }
+  const payload = tryParseJson(cached.value, { onFailure: () => undefined });
+  if (payload === null) return fallback;
   if (!cachedAggregateNeedsSafetyValidation(payload) || !isRecord(payload)) return fallback;
 
   const cachedIdentity = cachedAggregateSafetyIdentity(payload);
@@ -235,10 +237,14 @@ async function reconcileCachedAggregateSafetyResponse(
       });
       reason = cachedAggregateSafetyReason(cachedIdentity, reportCardCache);
     } catch (error) {
-      console.warn(
-        "[mint-burn-flows] Failed to validate cached FTQ classification:",
-        error instanceof Error ? error.message : error,
-      );
+      logWorkerEvent({
+        scope: "api",
+        level: "warn",
+        event: "cached_ftq_validation_failed",
+        route: "mint-burn-flows",
+        message: "Failed to validate cached FTQ classification",
+        error,
+      });
       reason = "cache-read-failed";
     }
   }

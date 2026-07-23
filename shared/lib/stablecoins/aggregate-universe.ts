@@ -11,7 +11,7 @@ export function isCoreAggregateStablecoinId(stablecoinId: string): boolean {
   return isCoreAggregateListingClass(getListingClass(stablecoinId));
 }
 
-export function hasListingClass(stablecoinId: string, listingClass: ListingClass): boolean {
+function hasListingClass(stablecoinId: string, listingClass: ListingClass): boolean {
   return getListingClass(stablecoinId) === listingClass;
 }
 
@@ -26,7 +26,7 @@ export function filterStablecoinsByListingClass<T extends StablecoinIdentity>(
   return rows.filter((row) => hasListingClass(row.id, listingClass));
 }
 
-export function filterRowsByStablecoinIds<T extends StablecoinIdentity>(
+function filterRowsByStablecoinIds<T extends StablecoinIdentity>(
   rows: readonly T[],
   stablecoinIds: ReadonlySet<string>,
 ): T[] {

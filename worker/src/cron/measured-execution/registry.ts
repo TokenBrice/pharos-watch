@@ -22,7 +22,7 @@ export interface DexMeasuredExecutionDeployment {
  * hashes were pinned from the deployed runtime code and are checked again at
  * the exact quote block before an adapter can publish measured evidence.
  */
-export const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeployment[] = [
+const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeployment[] = [
   {
     adapterProfileId: "uniswap-v3-quoter-v2",
     protocol: "uniswap-v3",

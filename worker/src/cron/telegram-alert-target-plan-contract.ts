@@ -254,7 +254,7 @@ export async function parseTelegramTargetPlan(
   };
 }
 
-export function targetPlanMessageToBatchMessage(
+function targetPlanMessageToBatchMessage(
   plan: PersistedTelegramTargetPlanV1,
   message: PersistedTelegramTargetMessageV1,
 ): BatchMessage {

@@ -6,6 +6,7 @@ import type {
 } from "@shared/types/solana-measured-execution";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
+import { tryParseJson } from "../../lib/json-parse";
 
 const RAYDIUM_TRADE_API = "https://transaction-v1.raydium.io/compute/swap-base-in";
 const JUPITER_QUOTE_API = "https://api.jup.ag/swap/v1/quote";
@@ -55,11 +56,9 @@ async function fetchBoundedJson(
   const text = await response.text();
   if (!response.ok) throw new Error(`quote-http-${response.status}`);
   if (text.length > MAX_RESPONSE_CHARS) throw new Error("quote-response-too-large");
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    throw new Error("quote-invalid-json");
-  }
+  const parsed = tryParseJson(text, { onFailure: () => undefined });
+  if (parsed === null) throw new Error("quote-invalid-json");
+  return parsed;
 }
 
 export function parseRaydiumExactRouteProof(
@@ -257,7 +256,7 @@ export async function fetchSolanaCurrentSlot(
       });
       const text = await response.text();
       if (!response.ok || text.length > MAX_RESPONSE_CHARS) continue;
-      const body = JSON.parse(text) as unknown;
+      const body = tryParseJson(text, { onFailure: () => undefined });
       if (isRecord(body) && integer(body.result)) return body.result;
     } catch (error) {
       rethrowIfAborted(error, signal);

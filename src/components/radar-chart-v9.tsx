@@ -84,7 +84,7 @@ export function buildV9RadarDataset(
   };
 }
 
-export function CompareV9Radar({ series, cohortSeries, size = 300 }: {
+function CompareV9Radar({ series, cohortSeries, size = 300 }: {
   series: readonly V9RadarSeries[];
   cohortSeries?: readonly V9RadarSeries[];
   size?: number;

@@ -35,6 +35,7 @@ import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./s
 import { buildEditorialCandidates } from "./editorial-candidates";
 import { buildStandingConditions, collectCauseContext } from "./cause-context";
 import { buildDigestIntelligence, parseStoredDigestInput } from "./digest-intelligence";
+import { tryParseJson } from "../../lib/json-parse";
 
 function consumeCollectorResult<T>(result: CollectorResult<T>, degradedReasons: string[]): T {
   if (result.degradedReason) {
@@ -105,12 +106,10 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     .filter((title): title is string => Boolean(title));
   const recentLeadSignalIds = (leadHistoryRows.results ?? []).map((row) => {
     if (!row.digest_meta) return null;
-    try {
-      const parsed = JSON.parse(row.digest_meta) as { leadSignalId?: unknown };
-      return typeof parsed.leadSignalId === "string" ? parsed.leadSignalId : null;
-    } catch {
-      return null;
-    }
+    const parsed = tryParseJson(row.digest_meta, { onFailure: () => undefined });
+    return parsed && typeof parsed === "object" && typeof (parsed as { leadSignalId?: unknown }).leadSignalId === "string"
+      ? (parsed as { leadSignalId: string }).leadSignalId
+      : null;
   });
   const degradedReasons: string[] = [];
 
@@ -261,12 +260,11 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   let parsedComponents: { severity: number; breadth: number; stressBreadth?: number; trend: number } | null = null;
   if (currentPsiSource) {
-    try {
-      parsedComponents = JSON.parse(currentPsiSource.components);
-    } catch (err) {
-      console.warn("[daily-digest] Failed to parse PSI components JSON:", err instanceof Error ? err.message : err);
-      parsedComponents = null;
-    }
+    const parsed = tryParseJson(currentPsiSource.components, {
+      context: "daily-digest PSI components",
+      onFailure: (failure) => console.warn("[daily-digest] Failed to parse PSI components JSON:", failure.message),
+    });
+    parsedComponents = parsed as typeof parsedComponents;
   }
   const stabilityIndex =
     currentPsiSource && displayScore != null && displayBand && parsedComponents != null
