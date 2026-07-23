@@ -12,7 +12,6 @@ import {
   serializePendingAlertScope,
   serializePendingMarkupPolicy,
   isValidPendingSourceEventId,
-  type PendingAlertScopeItem,
 } from "../lib/telegram-pending-provenance";
 import { expandSubscriberChunks, type RoutedSubscriberAlert } from "./dispatch-telegram-routing";
 import { listTelegramAlertItemKeys } from "./telegram-alert-event-lineage";
@@ -251,30 +250,6 @@ export async function parseTelegramTargetPlan(
       itemKeys,
       messages,
     },
-  };
-}
-
-function targetPlanMessageToBatchMessage(
-  plan: PersistedTelegramTargetPlanV1,
-  message: PersistedTelegramTargetMessageV1,
-): BatchMessage {
-  const scope = parsePendingAlertScope(plan.alertScopeJson);
-  const markup = parsePendingMarkupPolicy(message.markupPolicyJson);
-  if (scope.kind !== "ok" || markup.kind !== "ok") {
-    throw new Error("Telegram target plan cannot be reconstructed from invalid provenance");
-  }
-  return {
-    chatId: plan.chatId,
-    html: message.html,
-    canonicalHtml: plan.canonicalHtml,
-    disableNotification: plan.disableNotification,
-    chunkIndex: message.chunkIndex,
-    ...(plan.alertTypes.length === 1 ? { alertType: plan.alertTypes[0] } : {}),
-    sourceEventId: plan.sourceEventId,
-    preferenceGeneration: plan.preferenceGeneration,
-    alertScope: scope.value as PendingAlertScopeItem[],
-    ...(markup.value.replyMarkup ? { replyMarkup: markup.value.replyMarkup } : {}),
-    ...(markup.value.linkPreviewOptions ? { linkPreviewOptions: markup.value.linkPreviewOptions } : {}),
   };
 }
 

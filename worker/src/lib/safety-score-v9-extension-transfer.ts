@@ -94,10 +94,6 @@ export const SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS: ReadonlyMap<string, Safety
   REVIEWED_TRANSFER_FILE.reviews.map((review) => [review.assetId, review]),
 );
 
-const SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS_DIGEST = computeSafetyScoreV9ReviewedTransferFactsDigest(
-  SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS.values(),
-);
-
 export interface SafetyScoreV9TransferMaterialScope {
   authoritativeDeploymentKeys: readonly string[];
   materialDeploymentKeys: readonly string[];

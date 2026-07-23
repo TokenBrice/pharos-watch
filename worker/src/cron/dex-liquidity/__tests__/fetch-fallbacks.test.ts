@@ -291,10 +291,7 @@ describe("DexScreener fallback identity", () => {
       const result = await fetchDsFallbackPools(createMockDb(), new Map(), new Map(), createKnownPoolIdentityIndex());
 
       expect(result.newPools.get("usdc-circle")).toHaveLength(1);
-      expect(warn).toHaveBeenCalledWith(
-        "[dex-liquidity] DexScreener fallback circuit telemetry failed (non-fatal):",
-        expect.any(Error),
-      );
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('"event":"fallback_circuit_telemetry_failed"'));
     } finally {
       warn.mockRestore();
     }

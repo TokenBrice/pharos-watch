@@ -27,6 +27,7 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/report-cards",
   "/api/report-cards/v9",
   "/api/report-cards/v9-preview",
+  "/api/report-cards/v9-preview-412d818c031b7bc5",
   "/api/depeg-resolver",
   "/api/depeg-resolver-review",
   "/api/redemption-backstops",

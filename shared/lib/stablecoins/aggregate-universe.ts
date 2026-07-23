@@ -25,10 +25,3 @@ export function filterStablecoinsByListingClass<T extends StablecoinIdentity>(
 ): T[] {
   return rows.filter((row) => hasListingClass(row.id, listingClass));
 }
-
-function filterRowsByStablecoinIds<T extends StablecoinIdentity>(
-  rows: readonly T[],
-  stablecoinIds: ReadonlySet<string>,
-): T[] {
-  return rows.filter((row) => stablecoinIds.has(row.id));
-}

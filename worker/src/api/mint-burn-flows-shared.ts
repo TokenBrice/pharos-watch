@@ -342,14 +342,6 @@ export function cachedFlowFallbackResponse(cached: { value: string; updatedAt: n
   return new Response(cached.value, { headers });
 }
 
-async function readCachedMintBurnFlowResponse(
-  db: D1Database,
-  cacheKey: string,
-): Promise<Response | null> {
-  const cached = await getCache(db, cacheKey);
-  return cached ? cachedFlowFallbackResponse(cached) : null;
-}
-
 export async function finalizeMintBurnFlowResponse(
   db: D1Database,
   cacheKey: string,

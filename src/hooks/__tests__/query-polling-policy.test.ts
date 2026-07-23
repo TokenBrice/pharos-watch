@@ -21,7 +21,7 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
 });
 
 import { createPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
-import { CRON_1MIN, CRON_30MIN, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
+import { CRON_1MIN, CRON_15MIN, CRON_30MIN, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { useHealth, useReportCardsV9Preview } from "../api-hooks";
 import { useRequestSourceStats } from "../use-request-source-stats";
@@ -220,7 +220,7 @@ describe("query polling policy", () => {
     expect(options.retry).toBe(1);
   });
 
-  it("revalidates the V9 contributor preview whenever it mounts", () => {
+  it("uses the V9 producer polling window for the contributor preview", () => {
     useReportCardsV9Preview();
     const options = useQueryMock.mock.calls[0][0] as {
       queryKey: unknown[];
@@ -229,7 +229,7 @@ describe("query polling policy", () => {
     };
 
     expect(options.queryKey).toEqual(["report-cards", "v9", "preview"]);
-    expect(options.staleTime).toBe(0);
+    expect(options.staleTime).toBe(CRON_15MIN);
     expect(options.placeholderData).toBeUndefined();
   });
 
