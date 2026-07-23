@@ -189,7 +189,6 @@
     "check:og-case-studies": "tsx scripts/maintenance/build-og-case-studies.ts --check",
     "generate:case-study-client-index": "tsx scripts/maintenance/generate-case-study-client-index.ts",
     "check:case-study-client-index": "tsx scripts/maintenance/generate-case-study-client-index.ts --check",
-    "format": "prettier --write .",
     "prepare": "node scripts/maintenance/prepare-workspace.mjs"
   },
   "dependencies": {
@@ -209,8 +208,9 @@
     "d3-force": "^3.0.0",
     "github-slugger": "^2.0.0",
     "html-to-image": "^1.11.13",
+    "lossless-json": "4.3.0",
     "lucide-react": "1.25.0",
-    "next": "16.2.10",
+    "next": "16.2.11",
     "next-themes": "^0.4.6",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -239,11 +239,10 @@
     "beasties": "0.4.2",
     "d3-geo": "3.1.1",
     "eslint": "^9.39.4",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.2.11",
     "eslint-plugin-security": "^4.0.1",
     "jsdom": "^29.1.1",
     "madge": "8.0.0",
-    "prettier": "3.9.5",
     "tailwindcss": "4.3.2",
     "topojson-client": "3.1.0",
     "tsx": "^4.23.0",
@@ -251,12 +250,14 @@
     "typescript": "~5.9.0",
     "typescript-eslint": "^8.63.0",
     "vitest": "^4.1.10",
+    "wrangler": "4.112.0",
     "yaml": "2.9.0"
   },
   "overrides": {
     "next": {
       "postcss": "8.5.15"
     },
+    "sharp": "0.35.3",
     "viem": {
       "ws": "8.21.0"
     }

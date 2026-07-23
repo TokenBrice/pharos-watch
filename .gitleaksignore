@@ -238,3 +238,7 @@ af54646449278a67f151c798373fa06c466cebd4:shared/data/safety-score-v9/transfer-re
 6dbbaea96aa22a5126f59482c95c46372a9e9617:shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts:generic-api-key:54
 6dbbaea96aa22a5126f59482c95c46372a9e9617:shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts:generic-api-key:60
 6dbbaea96aa22a5126f59482c95c46372a9e9617:shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts:generic-api-key:414
+
+# Falcon public protocol asset labels captured in a mechanism evidence snapshot,
+# not credentials. One fingerprint covers the five labels on the minified line.
+5eb3338c978d5687018e9c354773b74134541862:shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/2026-07-22T09-33-02.000Z-0d20c67470ca-protocol-api.json:generic-api-key:1

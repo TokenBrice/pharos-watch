@@ -267,7 +267,7 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
 
 - Cloudflare deployment uses the lockfile-installed local Wrangler CLI rather than `cloudflare/wrangler-action`.
 - Worker production custom-domain routes, bindings, and cron triggers remain declared in `worker/wrangler.toml` and deploy together through `wrangler deploy --strict`.
-- The root npm workspace installs one shared dependency graph; Worker commands run from `worker/` with `npx --no-install`.
+- The root and Worker manifests keep the same pinned Wrangler version: root scripts own the shared install and dependency overrides, while Worker commands run from `worker/` with `npx --no-install`.
 - The Pages release restores build cache state but does not install Playwright. Cold-cache runs remain valid.
 
 ### Failure Stop and Surface Classification
