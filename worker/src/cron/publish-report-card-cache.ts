@@ -9,7 +9,6 @@ import { buildReportCardPublicationPlan } from "../lib/report-card-publication";
 import {
   buildReportCardsFixedInputCacheEntry,
   buildSafetyScoreV9FixedInputCacheEntry,
-  normalizeFixedInput,
 } from "../lib/report-cards-fixed-input";
 import { recordCronFailure } from "../lib/cron-logger";
 import { runSafetyScoreV9ShadowAfterV8Publication } from "../lib/safety-score-v9-shadow-runner";
@@ -134,12 +133,12 @@ export async function publishReportCardCache(
           supplyFixedInput,
           v9PegProvenanceSource,
         );
-        const v9FixedInput = normalizeFixedInput({
+        const v9FixedInput = {
           ...supplyFixedInput,
           evidenceJournalById,
           supplyAttributionJournalById,
           pegProvenanceById,
-        });
+        };
         const v9FixedInputEntry = await buildSafetyScoreV9FixedInputCacheEntry(
           v9FixedInput,
           safetyScoreIdentity,
