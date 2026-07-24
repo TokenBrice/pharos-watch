@@ -1932,6 +1932,38 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const liveExposures = compileSafetyScoreV9FactSetFromFixedInput(withLive, liveFirst).assets[0]!.reserveExposures;
     expect(liveExposures).toEqual([expect.objectContaining({ provenance: "live", weight: 1 })]);
     expect(liveExposures[0]).not.toHaveProperty("evidenceClass");
+
+    const curatedFallbackFixed = structuredClone(noLive);
+    curatedFallbackFixed.liveToFallbackCoins = ["alpha"];
+    curatedFallbackFixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(curatedFallbackFixed);
+    const curatedFallbackMeta: V9ExtensionRegistryMeta = {
+      ...meta,
+      proofOfReserves: undefined,
+      mintAuthority: {
+        ...meta.mintAuthority!,
+        supervision: "attestation-only",
+      },
+    };
+    const curatedFallbackExtension = buildSafetyScoreV9BaselineExtension(curatedFallbackFixed, {
+      metaById: new Map([["alpha", curatedFallbackMeta]]),
+    });
+    expect(curatedFallbackExtension.assets[0]!.reviewedStaticReserveRows).toMatchObject({
+      evidenceClass: "static-validated",
+      provenance: "curated-fallback",
+    });
+    const curatedFallbackExposures = compileSafetyScoreV9FactSetFromFixedInput(
+      curatedFallbackFixed,
+      curatedFallbackExtension,
+    ).assets[0]!.reserveExposures;
+    expect(curatedFallbackExposures).toHaveLength(2);
+    expect(curatedFallbackExposures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          provenance: "curated-fallback",
+          evidenceClass: "static-validated",
+        }),
+      ]),
+    );
   });
 
   it("compiles exact base facts and explicit reviews without consulting v8 score outputs", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ReserveSlice } from "@shared/types/reserves";
 import {
+  buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
   buildSafetyScoreV9ReviewedStaticReserveRows,
   resolveSafetyScoreV9AssetIssuerKey,
   type V9ExtensionRegistryMeta,
@@ -425,5 +426,50 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(mismatchedPeriod, CLOCK_SEC)).toBeNull();
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(futurePeriod, CLOCK_SEC)).toBeNull();
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(staleReport, CLOCK_SEC)).toBeNull();
+  });
+});
+
+describe("Phase 1 D6 reviewed curated fallback admission", () => {
+  it("admits a current verified full composition at static-validated confidence", () => {
+    const admitted = buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
+      eligibleReserveMeta({ proofOfReserves: undefined }),
+      CLOCK_SEC,
+    );
+
+    expect(admitted).toMatchObject({
+      evidenceClass: "static-validated",
+      provenance: "curated-fallback",
+    });
+    expect(admitted?.rows).toHaveLength(2);
+  });
+
+  it("fails closed for stale, probable, partial, unsourced, or incomplete compositions", () => {
+    const base = eligibleReserveMeta({ proofOfReserves: undefined });
+    const cases = [
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        reserveReview: { ...base.reserveReview!, compositionAsOf: "2026-06-15" },
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        reserveReview: { ...base.reserveReview!, confidence: "probable" },
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        reserveReview: { ...base.reserveReview!, scope: "selected-slices" },
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        reserveReview: { ...base.reserveReview!, sources: [] },
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        reserves: [{ ...base.reserves![0]!, pct: 50 }],
+      }),
+    ];
+
+    for (const meta of cases) {
+      expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, CLOCK_SEC)).toBeNull();
+    }
   });
 });

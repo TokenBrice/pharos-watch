@@ -474,7 +474,8 @@ const ReviewedStaticReserveRowsSchema = z
       ReserveSliceSchema,
       (row) => `${computeSafetyScoreV9ReserveExposureKey(row)}:${stableJsonStringifyV1(row)}`,
     ).refine((rows) => rows.length > 0, { message: "Reviewed static reserve admission requires rows" }),
-    evidenceClass: z.enum(["independent", "issuer-attested"]),
+    evidenceClass: z.enum(["independent", "issuer-attested", "static-validated"]),
+    provenance: z.enum(["curated", "curated-fallback"]).default("curated"),
   })
   .strict();
 
@@ -1549,7 +1550,7 @@ function buildReserves(context: AssetBuildContext): {
       sourceGenerationId: reviewedStatic
         ? context.extension.sources.researchOverlays.generationId
         : context.extension.sources.liveReserves.generationId,
-      provenance: reviewedStatic ? "curated" : "live",
+      provenance: reviewedStatic ? reviewedStatic.provenance : "live",
       ...(reviewedStatic
         ? {
             evidenceClass: reviewedStatic.evidenceClass,

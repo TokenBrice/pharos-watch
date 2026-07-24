@@ -407,7 +407,7 @@ const V9ReserveExposureFactV2Schema = z
     classificationKey: CanonicalTextSchema,
     sourceGenerationId: CanonicalTextSchema,
     provenance: z.enum(["live", "curated", "curated-fallback"]),
-    evidenceClass: z.enum(["independent", "issuer-attested"]).optional(),
+    evidenceClass: z.enum(["independent", "issuer-attested", "static-validated"]).optional(),
     status: V9FactStatusV2Schema,
     name: CanonicalTextSchema,
     weight: PositiveFractionSchema,

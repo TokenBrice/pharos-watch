@@ -56,6 +56,11 @@ Persistent measured market depth is eligible for the same bounded operational-
 resilience credit across the mature cohort. Canonical implementation history
 provides only the age gate; the credit still requires repeated score-eligible
 execution observations and does not require a bespoke asset overlay.
+When the exact input records that a configured live-reserve asset fell back to
+its registry composition, V9 can use that fallback only if its review is
+verified, sourced, complete, composition-dated, and no more than 31 days old.
+Those exposures remain labeled `curated-fallback` and receive the same 0.80
+confidence multiplier as other admitted non-independent reserve evidence.
 V9-only reviewed redemption terms may add a documented minimum redemption or
 replace a frozen settlement assumption with an equally or more conservative
 model. They cannot improve the captured settlement model, reduce a captured

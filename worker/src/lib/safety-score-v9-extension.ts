@@ -430,6 +430,7 @@ const CORROBORATING_ASSURANCE_METHODS = new Set([
 ]);
 const DIRECT_RESERVE_ASSURANCE_METHODS = new Set(["audit", "examination"]);
 const ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC = 31_536_000;
+const REVIEWED_CURATED_FALLBACK_RESERVE_MAX_AGE_SEC = 31 * 86_400;
 
 function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {
   const sorted = [...rows].sort(
@@ -519,6 +520,41 @@ export function buildSafetyScoreV9ReviewedStaticReserveRows(
   return {
     rows: normalizeReviewedStaticReserveRows(rows),
     evidenceClass,
+    provenance: "curated",
+  };
+}
+
+/**
+ * Admit the exact registry fallback used by the report-card capture only when
+ * its reviewed composition is complete, verified, sourced, and still current.
+ * This is weaker than direct assurance and therefore retains the policy's
+ * static-evidence confidence discount.
+ */
+export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
+  meta: V9ExtensionRegistryMeta,
+  clockSec: number,
+): ReviewedStaticReserveRows | null {
+  const rows = meta.reserves ?? [];
+  const review = meta.reserveReview;
+  const reviewedAtSec = conservativeDateEndSec(review?.reviewedAt, clockSec);
+  const compositionAtSec = conservativeDateEndSec(review?.compositionAsOf, clockSec);
+  if (
+    rows.length === 0 ||
+    review?.scope !== "full-composition" ||
+    review.confidence !== "verified" ||
+    review.sources.length === 0 ||
+    reviewedAtSec === null ||
+    compositionAtSec === null ||
+    reviewedAtSec < compositionAtSec ||
+    clockSec - compositionAtSec > REVIEWED_CURATED_FALLBACK_RESERVE_MAX_AGE_SEC ||
+    !validateReserveCompositionTotal(rows, "full")
+  ) {
+    return null;
+  }
+  return {
+    rows: normalizeReviewedStaticReserveRows(rows),
+    evidenceClass: "static-validated",
+    provenance: "curated-fallback",
   };
 }
 
@@ -528,8 +564,29 @@ function addReviewedStaticReserveEvidence(
   evidence: ReviewEvidenceBuilder,
 ): void {
   const review = meta.reserveReview;
+  if (!admitted || !review) return;
+  if (admitted.provenance === "curated-fallback") {
+    evidence.add({
+      componentKeys: [
+        "reviewed-static-reserves",
+        ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
+      ],
+      sourceId: "stablecoin-meta.reviewed-curated-fallback-reserves",
+      reviewedAt: review.compositionAsOf!,
+      confidence: confidenceForResearch(review.confidence),
+      sources: review.sources,
+      payload: {
+        reserveReview: review,
+        reserves: admitted.rows,
+        evidenceClass: admitted.evidenceClass,
+        provenance: admitted.provenance,
+      },
+      maxAgeSec: REVIEWED_CURATED_FALLBACK_RESERVE_MAX_AGE_SEC,
+    });
+    return;
+  }
   const report = meta.proofOfReserves?.latestReport;
-  if (!admitted || !review || !report) return;
+  if (!report) return;
   const sources = [...review.sources, ...report.sources].filter(
     (source, index, all) => all.findIndex((candidate) => candidate.url === source.url) === index,
   );
@@ -547,6 +604,7 @@ function addReviewedStaticReserveEvidence(
       reserves: admitted.rows,
       proofOfReserves: meta.proofOfReserves,
       evidenceClass: admitted.evidenceClass,
+      provenance: admitted.provenance,
     },
     maxAgeSec: ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC,
   });
@@ -2065,6 +2123,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       maxAgeSec: 31_536_000,
     },
   } satisfies SafetyScoreV9FactSetExtensionV2["sources"];
+  const liveToFallbackAssetIds = new Set(fixedInput.liveToFallbackCoins);
 
   return {
     schemaVersion: 2,
@@ -2083,7 +2142,12 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
       const liveReserves = fixedInput.liveReserveMap[assetId] ?? [];
       const reviewedStaticReserveRows =
-        liveReserves.length === 0 ? buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec) : null;
+        liveReserves.length === 0
+          ? buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec) ??
+            (liveToFallbackAssetIds.has(assetId)
+              ? buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec)
+              : null)
+          : null;
       const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
       const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
       const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);

@@ -222,6 +222,12 @@ designed:
   the route trace.
 - Reviewed reserve links project exact tracked-asset identity into compiled
   exposures while retaining the live weight.
+- When the exact report-card input records that a live-reserve asset used its
+  registry fallback, V9 may admit those rows only from a verified, sourced,
+  full-composition review no more than 31 days old. The facts retain
+  `curated-fallback` provenance and the existing 0.80 static-evidence
+  confidence multiplier; an absent fallback signal, partial review, stale
+  composition, or incomplete total remains unavailable.
 - Wrapper custody, leverage, and rehypothecation remain unavailable unless
   explicitly evidenced. A wrapper fallback discount is attributed to those
   bounded local gaps only when it exceeds the reviewed local-risk discount;
