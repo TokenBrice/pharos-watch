@@ -130,12 +130,15 @@ function executeInvariant(invariant: MatchedV9Invariant): void {
       const unavailable = score(invariant.variants.unavailable);
       expect(strong.finalScore, invariant.id).toBe(absent.finalScore);
       expect(weak.finalScore!, invariant.id).toBeLessThan(strong.finalScore ?? 0);
-      // An integration-owned unavailable dependency stays explicit without
-      // inventing additional economic weakness beyond the measured weak path.
+      // An integration-owned unavailable dependency stays rateable under its
+      // configured bounded-evidence ceiling.
       expect(unavailable.finalGrade, invariant.id).not.toBe("NR");
       expect(unavailable.finalScore!, invariant.id).toBeLessThanOrEqual(weak.finalScore!);
-      expect(unavailable.caps.map((cap) => cap.kind), invariant.id).not.toContain(
-        "reason:material-dependency-unavailable",
+      expect(unavailable.caps, invariant.id).toContainEqual(
+        expect.objectContaining({
+          kind: "reason:material-dependency-unavailable",
+          limit: 69,
+        }),
       );
       expect(unavailable.unresolvedFacts, invariant.id).toContainEqual(
         expect.objectContaining({

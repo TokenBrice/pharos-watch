@@ -1644,14 +1644,14 @@
       "pathKinds": [
         "local-component"
       ],
-      "defaultFactClass": "missing-serial-required",
-      "boundedness": "unbounded",
+      "defaultFactClass": "optional-unsupported",
+      "boundedness": "not-applicable",
       "permittedTreatments": [
-        "NR"
+        "diagnostic"
       ],
-      "defaultTreatment": "NR",
-      "releaseSeverity": "release-blocker",
-      "publicLabel": "Access review lacks dated evidence",
+      "defaultTreatment": "diagnostic",
+      "releaseSeverity": "review-required",
+      "publicLabel": "Categorical access posture review lacks dated evidence",
       "auditClassification": "missing-data"
     },
     {

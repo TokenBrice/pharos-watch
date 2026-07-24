@@ -91,6 +91,7 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
     finalScore: options.score,
     finalGrade: options.grade,
     adverseAttribution: [],
+    boundedUncertaintyAttribution: [],
     unresolvedFacts: [],
     nrReasons,
     propagatedParentReasons: [],
@@ -200,7 +201,7 @@ describe("Safety Score v9 public projection", () => {
     });
 
     expect(response.model).toBe("v9-critical-path");
-    expect(response.schemaVersion).toBe(2);
+    expect(response.schemaVersion).toBe(3);
     expect(response.lifecycle).toBe("candidate");
     expect(response.cards.map((card) => card.id)).toEqual(["capped", "complete", "dependency", "not-rated"]);
     expect(response.completeness).toEqual({
@@ -217,7 +218,7 @@ describe("Safety Score v9 public projection", () => {
       { code: "missing-pillar", field: "pillars.backing", message: "Backing is missing.", origin: "asset" },
     ]);
     expect(response.resultDigest).toMatch(/^[a-f0-9]{64}$/);
-    expect(response.cards.every((card) => card.scoreTrace.schemaVersion === 1)).toBe(true);
+    expect(response.cards.every((card) => card.scoreTrace.schemaVersion === 2)).toBe(true);
   });
 
   it("publishes the applied role limit with its exact evidence and failure domains", () => {
@@ -256,7 +257,7 @@ describe("Safety Score v9 public projection", () => {
     const card = projectSafetyScoreV9Card(
       fixture("role-dependent", {
         score: 91,
-        grade: "A",
+        grade: "A+",
         pillars: { backing: 92, exit: 90, control: 88 },
         qualityScore: 91,
         pegAdjustedScore: 91,
@@ -325,7 +326,7 @@ describe("Safety Score v9 public projection", () => {
         code: "unresolved-control-identity",
         path: "access:governance",
         reason: "Governance is unresolved.",
-        critical: true,
+        critical: false,
         responsibility: "issuer-undisclosed",
       },
     ];
@@ -340,7 +341,7 @@ describe("Safety Score v9 public projection", () => {
       accessPosture: { unknownFields: ["governance", "transfer"] },
       stressStateDigest: DIGESTS.stress,
       scoreTrace: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         legacyAliases: {
           qualityScore: "weighted-pillar-mean",
           pegAdjustedScore: "post-deployment-pre-cap-score",
@@ -367,6 +368,10 @@ describe("Safety Score v9 public projection", () => {
           unresolvedExposures: [],
         },
         adverseAttribution: { semantics: "causal-measured-adverse-v1", items: [] },
+        boundedUncertaintyAttribution: {
+          semantics: "causal-bounded-uncertainty-v1",
+          items: [],
+        },
         evidenceResponsibility: { semantics: "limiting-fact-owner-v1", totalFactCount: 2 },
       },
     });
@@ -375,7 +380,7 @@ describe("Safety Score v9 public projection", () => {
       {
         responsibility: "issuer-undisclosed",
         factCount: 1,
-        criticalFactCount: 1,
+        criticalFactCount: 0,
         reasonCodes: ["unresolved-control-identity"],
       },
       { responsibility: "measured-adverse", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
@@ -391,7 +396,7 @@ describe("Safety Score v9 public projection", () => {
   });
 
   it("attributes exposure-weighted deployment loss and causal adverse evidence", () => {
-    const input = fixture("deployment-risk", { score: 80, grade: "B" });
+    const input = fixture("deployment-risk", { score: 80, grade: "A-" });
     input.trace.baseAssetScore = 91.8;
     input.trace.deploymentAdjustedScore = 88.8;
     input.trace.preCapScore = 88.8;

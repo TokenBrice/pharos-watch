@@ -10,9 +10,12 @@ import type {
 import {
   scoreV9Input,
   type V9AdverseAttribution,
+  type V9BoundedUncertaintyAttribution,
   type V9NRReason,
   type V9ParentAdverseAttribution,
+  type V9ParentBoundedUncertaintyAttribution,
   type V9PillarAdverseAttribution,
+  type V9PillarReasonProvenance,
   type V9ScoreTrace,
 } from "./formula";
 import type { V9OperationalResilienceResult } from "./operational-resilience";
@@ -62,6 +65,8 @@ export interface V9ProductionScoreInput {
     score: number | null;
     propagatedReasons: readonly V9NRReason[];
     propagatedAdverseAttribution?: readonly V9ParentAdverseAttribution[];
+    propagatedBoundedUncertaintyAttribution?:
+      readonly V9ParentBoundedUncertaintyAttribution[];
     wrapperParentLimit?: V9WrapperParentLimit | null;
   };
   dependencyReasons: readonly V9PillarReason[];
@@ -146,6 +151,89 @@ export function resolveV9SerialParentAdverseAttribution(
   );
 }
 
+export function propagateV9SerialParentBoundedUncertaintyAttribution(
+  upstreamAssetId: string,
+  attribution: readonly V9BoundedUncertaintyAttribution[],
+): V9ParentBoundedUncertaintyAttribution[] {
+  const pathPrefix = `parent:${upstreamAssetId}:`;
+  const messagePrefix = `Required parent ${upstreamAssetId}: `;
+  return [
+    ...new Map(
+      attribution.map((item) => {
+        const alreadyAttributed =
+          item.source === "parent-score" && item.path.startsWith(pathPrefix);
+        const propagated: V9ParentBoundedUncertaintyAttribution = {
+          ...item,
+          source: "parent-score",
+          path: alreadyAttributed ? item.path : `${pathPrefix}${item.path}`,
+          message:
+            alreadyAttributed && item.message.startsWith(messagePrefix)
+              ? item.message
+              : `${messagePrefix}${item.message}`,
+        };
+        return [
+          [
+            propagated.code,
+            propagated.path,
+            propagated.message,
+            propagated.responsibility,
+            propagated.boundedness,
+          ].join("\u0000"),
+          propagated,
+        ];
+      }),
+    ).values(),
+  ].sort(
+    (left, right) =>
+      compareText(left.code, right.code) ||
+      compareText(left.path, right.path) ||
+      compareText(left.message, right.message) ||
+      compareText(left.responsibility, right.responsibility) ||
+      compareText(left.boundedness, right.boundedness),
+  );
+}
+
+export function resolveV9SerialParentBoundedUncertaintyAttribution(
+  parentScore: number | null,
+  parents: readonly {
+    upstreamAssetId: string;
+    score: number | null;
+    blocked: boolean;
+    boundedUncertaintyAttribution: readonly V9BoundedUncertaintyAttribution[];
+  }[],
+): V9ParentBoundedUncertaintyAttribution[] {
+  if (parentScore === null) return [];
+  return [
+    ...new Map(
+      parents
+        .filter((parent) => !parent.blocked && parent.score === parentScore)
+        .flatMap((parent) =>
+          propagateV9SerialParentBoundedUncertaintyAttribution(
+            parent.upstreamAssetId,
+            parent.boundedUncertaintyAttribution,
+          ),
+        )
+        .map((item) => [
+          [
+            item.code,
+            item.path,
+            item.message,
+            item.responsibility,
+            item.boundedness,
+          ].join("\u0000"),
+          item,
+        ]),
+    ).values(),
+  ].sort(
+    (left, right) =>
+      compareText(left.code, right.code) ||
+      compareText(left.path, right.path) ||
+      compareText(left.message, right.message) ||
+      compareText(left.responsibility, right.responsibility) ||
+      compareText(left.boundedness, right.boundedness),
+  );
+}
+
 function worstEvidenceLevel(
   input: V9ProductionScoreInput["pillars"],
   envelope: V9ValidatedPolicyEnvelope,
@@ -188,6 +276,48 @@ function scoreBearingReasons(input: V9ProductionScoreInput): V9PillarReason[] {
   ];
 }
 
+function wrapperLocalAttribution(limit: V9WrapperParentLimit | null | undefined): {
+  adverse: V9AdverseAttribution[];
+  bounded: V9BoundedUncertaintyAttribution[];
+} {
+  if (limit === null || limit === undefined || limit.appliedDiscount <= 0) {
+    return { adverse: [], bounded: [] };
+  }
+  const fallbackDeterminesDiscount =
+    !limit.factsComplete &&
+    limit.fallbackDiscount > limit.localRiskDiscount;
+  if (fallbackDeterminesDiscount) {
+    return {
+      adverse: [],
+      bounded: limit.missingFacts.map((fact) => ({
+        source: "wrapper-local",
+        code: "bounded-mechanism-review",
+        path: `wrapper-local:${fact.factClass}`,
+        message:
+          `Wrapper-local ${fact.factClass} is ${fact.disposition}; ` +
+          `the ${limit.form} fallback discount bounds the unresolved local layer.`,
+        responsibility: fact.disposition,
+        boundedness: "exposure-bounded",
+      })),
+    };
+  }
+  return {
+    adverse: limit.adjustments.flatMap((adjustment) =>
+      adjustment.discountPoints <= 0
+        ? []
+        : [{
+            source: "wrapper-local",
+            path: `wrapper-local:${adjustment.factKey}`,
+            message:
+              `Reviewed wrapper-local ${adjustment.factKey} risk contributes ` +
+              `${adjustment.discountPoints} discount points.`,
+            responsibility: "measured-adverse",
+          }],
+    ),
+    bounded: [],
+  };
+}
+
 function validateIdentity(identity: V9ProductionScoreIdentity): void {
   if (!/^[a-f0-9]{64}$/.test(identity.factSetDigest)) throw new Error("Invalid Safety Score v9 fact-set digest");
   if (!/^report-cards-input:v1:[a-f0-9]{64}$/.test(identity.baseInputGenerationId)) {
@@ -222,9 +352,17 @@ export function scoreV9EvaluatedAsset(
   // and control are limited, so it must be scored, never withheld to NR.
   const backingLimited = input.pillars.backing.evidenceLevel === "limited";
   const normalizedScoreBearingReasons = normalizeReasonList(scoreBearingReasons(input), envelope);
+  const pillarReasonProvenance: V9PillarReasonProvenance[] = PILLAR_KEYS.flatMap(
+    (pillar) =>
+      normalizeReasonList(input.pillars[pillar].reasons, envelope).map((fact) => ({
+        pillar,
+        fact,
+      })),
+  );
   const measuredPillarAdverseAttribution = PILLAR_KEYS.flatMap(
     (pillar) => input.pillars[pillar].adverseAttribution ?? [],
   );
+  const wrapperAttribution = wrapperLocalAttribution(input.parent.wrapperParentLimit);
   const trace = scoreV9Input(
     {
       assetId: input.assetId,
@@ -249,6 +387,10 @@ export function scoreV9EvaluatedAsset(
     backingLimited,
     input.parent.propagatedAdverseAttribution ?? [],
     measuredPillarAdverseAttribution,
+    input.parent.propagatedBoundedUncertaintyAttribution ?? [],
+    wrapperAttribution.adverse,
+    wrapperAttribution.bounded,
+    pillarReasonProvenance,
   );
   return {
     ...trace,

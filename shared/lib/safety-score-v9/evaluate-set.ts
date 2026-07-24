@@ -73,6 +73,7 @@ import {
 } from "./wrapper-risk";
 import {
   resolveV9SerialParentAdverseAttribution,
+  resolveV9SerialParentBoundedUncertaintyAttribution,
   scoreV9EvaluatedAsset,
   type V9PillarEvaluation,
   type V9PillarReason,
@@ -1765,12 +1766,23 @@ function parentInput(
         evaluatedById.get(dependency.upstreamAssetId)?.trace.adverseAttribution ?? [],
     })),
   );
+  const propagatedBoundedUncertaintyAttribution =
+    resolveV9SerialParentBoundedUncertaintyAttribution(
+      rawScore,
+      inputs.serial.map((dependency) => ({
+        ...dependency,
+        boundedUncertaintyAttribution:
+          evaluatedById.get(dependency.upstreamAssetId)?.trace
+            .boundedUncertaintyAttribution ?? [],
+      })),
+    );
   if (rawScore === null || wrapperTier === undefined) {
     return {
       required,
       score: rawScore,
       propagatedReasons,
       propagatedAdverseAttribution,
+      propagatedBoundedUncertaintyAttribution,
       wrapperParentLimit: null,
     };
   }
@@ -1794,11 +1806,22 @@ function parentInput(
       "strategy-vault": fallback.vault,
     },
   });
+  const cMinusFloor =
+    envelope.policy.semantic.formula.gradeThresholds.find((threshold) => threshold.grade === "C-")?.minScore;
+  if (cMinusFloor === undefined) {
+    throw new Error("Safety Score v9 policy has no C- grade threshold");
+  }
+  const parentItselfExplainsLowGrade = rawScore < cMinusFloor;
   return {
     required,
     score: decimalSnap(wrapperLimit.limit),
     propagatedReasons,
-    propagatedAdverseAttribution,
+    propagatedAdverseAttribution:
+      parentItselfExplainsLowGrade ? propagatedAdverseAttribution : [],
+    propagatedBoundedUncertaintyAttribution:
+      parentItselfExplainsLowGrade
+        ? propagatedBoundedUncertaintyAttribution
+        : [],
     wrapperParentLimit: wrapperLimit,
   };
 }
