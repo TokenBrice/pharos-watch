@@ -9,6 +9,7 @@ const mockBuildV9FixedInputCacheEntry = vi.fn();
 const mockNormalizeFixedInput = vi.fn();
 const mockEnrichV9FixedInput = vi.fn();
 const mockLoadEvidenceJournal = vi.fn();
+const mockCapturePegProvenance = vi.fn();
 const mockRunSafetyScoreV9Shadow = vi.fn();
 const mockSetCacheMany = vi.fn();
 
@@ -28,6 +29,10 @@ vi.mock("../../lib/safety-score-v9-supply-attribution", () => ({
 
 vi.mock("../../lib/report-card-evidence-journal-store", () => ({
   loadReportCardEvidenceJournalByIdV1: mockLoadEvidenceJournal,
+}));
+
+vi.mock("../../lib/safety-score-v9-peg-provenance", () => ({
+  captureSafetyScoreV9PegProvenanceById: mockCapturePegProvenance,
 }));
 
 vi.mock("../../lib/safety-score-v9-shadow-runner", () => ({
@@ -87,6 +92,10 @@ function validSnapshot() {
       sourceGeneration: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
       baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
     },
+    v9PegProvenanceSource: {
+      clockSec: 1_700_000_000,
+      eventsByCoin: new Map(),
+    },
   };
 }
 
@@ -98,6 +107,7 @@ describe("publishReportCardCache", () => {
     mockNormalizeFixedInput.mockReset();
     mockEnrichV9FixedInput.mockReset();
     mockLoadEvidenceJournal.mockReset();
+    mockCapturePegProvenance.mockReset();
     mockRunSafetyScoreV9Shadow.mockReset();
     mockSetCacheMany.mockReset();
     mockSetCacheMany.mockResolvedValue(undefined);
@@ -118,6 +128,9 @@ describe("publishReportCardCache", () => {
       safetyScoreV9SupplyAttributionById: {},
     }));
     mockLoadEvidenceJournal.mockResolvedValue({});
+    mockCapturePegProvenance.mockReturnValue({
+      "usdc-circle": { marker: "compact-peg-provenance" },
+    });
     mockNormalizeFixedInput.mockImplementation((value) => value);
     mockRunSafetyScoreV9Shadow.mockImplementation(async (shadowInput) => {
       await shadowInput.prepareFixedInput?.(shadowInput.fixedInput, new AbortController().signal);
@@ -149,8 +162,22 @@ describe("publishReportCardCache", () => {
       mockEnrichV9FixedInput.mock.invocationCallOrder[0]!,
     );
     expect(mockLoadEvidenceJournal).toHaveBeenCalledTimes(1);
+    expect(mockCapturePegProvenance).toHaveBeenCalledWith(
+      expect.objectContaining({
+        safetyScoreV9SupplyAttributionById: {},
+      }),
+      expect.objectContaining({
+        clockSec: 1_700_000_000,
+        eventsByCoin: expect.any(Map),
+      }),
+    );
     expect(mockBuildV9FixedInputCacheEntry).toHaveBeenCalledWith(
-      expect.objectContaining({ evidenceJournalById: {} }),
+      expect.objectContaining({
+        evidenceJournalById: {},
+        pegProvenanceById: {
+          "usdc-circle": { marker: "compact-peg-provenance" },
+        },
+      }),
       expect.anything(),
     );
     const entries = mockSetCacheMany.mock.calls[0]?.[1] as Array<{ key: string; value: string }>;
@@ -194,6 +221,8 @@ describe("publishReportCardCache", () => {
     expect(v9Entries.map((entry) => entry.key)).toEqual(["report-cards:v9-fixed-input:exact"]);
     expect(JSON.parse(v9Entries[0]!.value)).toMatchObject({ fixed: "v9-input-envelope" });
     expect(snapshot.payload).not.toHaveProperty("fixedInput");
+    expect(snapshot.payload).not.toHaveProperty("v9PegProvenanceSource");
+    expect(entries.every((entry) => !entry.value.includes("eventsByCoin"))).toBe(true);
     expect(JSON.parse(result.metadata!)).toMatchObject({
       v9FixedInputCacheBytes: 320,
       v9FixedInputUncompressedBytes: 640,
@@ -246,6 +275,23 @@ describe("publishReportCardCache", () => {
   it("keeps the committed V8 publication authoritative when the diagnostic journal read fails", async () => {
     mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
     mockLoadEvidenceJournal.mockRejectedValue(new Error("journal D1 unavailable"));
+
+    const result = await publishReportCardCache({} as D1Database);
+
+    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
+    expect(result.productivity?.productive).toBe(true);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      publicationGenerationId: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
+      v9FixedInputCacheBytes: null,
+      v9Shadow: { status: "failed", stage: "scheduler", code: "Error" },
+    });
+  });
+
+  it("keeps the committed V8 publication authoritative when peg provenance capture fails", async () => {
+    mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
+    mockCapturePegProvenance.mockImplementation(() => {
+      throw new Error("peg provenance summary mismatch");
+    });
 
     const result = await publishReportCardCache({} as D1Database);
 

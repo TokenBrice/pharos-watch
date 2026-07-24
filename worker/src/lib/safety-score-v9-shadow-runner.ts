@@ -105,8 +105,13 @@ function sortedUnique<T extends string>(values: readonly T[]): T[] {
   return [...new Set(values)].sort(compareText);
 }
 
-function fixedInputWithoutV9SupplyAttribution(input: Readonly<ReportCardsFixedInput>) {
-  const { safetyScoreV9SupplyAttributionById: _v9SupplyAttribution, ...baseInput } = input;
+function fixedInputWithoutV9Enrichment(input: Readonly<ReportCardsFixedInput>) {
+  const {
+    safetyScoreV9SupplyAttributionById: _v9SupplyAttribution,
+    evidenceJournalById: _evidenceJournal,
+    pegProvenanceById: _pegProvenance,
+    ...baseInput
+  } = input;
   return baseInput;
 }
 
@@ -347,8 +352,8 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
         await input.prepareFixedInput(fixedInput, shadowSignal),
       );
       if (
-        stableJsonStringifyV1(fixedInputWithoutV9SupplyAttribution(preparedFixedInput)) !==
-        stableJsonStringifyV1(fixedInputWithoutV9SupplyAttribution(fixedInput))
+        stableJsonStringifyV1(fixedInputWithoutV9Enrichment(preparedFixedInput)) !==
+        stableJsonStringifyV1(fixedInputWithoutV9Enrichment(fixedInput))
       ) {
         throw new Error("Safety Score v9 preparation changed the authoritative V8 fixed input");
       }

@@ -31,6 +31,11 @@ import {
 } from "@shared/types/safety-score-publication";
 import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/types/report-card-evidence-journal";
 import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
+import {
+  projectSafetyScoreV9PegScoreResult,
+  projectSafetyScoreV9PegSummary,
+  SafetyScoreV9PegProvenanceSummarySchema,
+} from "./safety-score-v9-peg-provenance";
 import { buildLiveReportCards } from "./report-cards-snapshot-card";
 import {
   buildDefunctReportCards,
@@ -149,6 +154,11 @@ const FixedInputPayloadFields = {
   // Diagnostic-only producer provenance. This is carried in the private V9
   // envelope but intentionally excluded from every score-bearing identity.
   evidenceJournalById: ReportCardEvidenceJournalByIdV1Schema.default({}),
+  // V9-only historical peg evidence quality. Raw depeg events never enter the
+  // fixed input; only canonical score-neutral summaries and their digests do.
+  pegProvenanceById: z
+    .record(z.string(), SafetyScoreV9PegProvenanceSummarySchema)
+    .default({}),
   dexDeploymentSupplyCoverageById: z.record(z.string(), DexDeploymentSupplyCoverageSchema).default({}),
   collateralDriftCoins: z
     .array(z.object({ id: z.string(), liveScore: z.number(), curatedScore: z.number(), delta: z.number() }))
@@ -277,6 +287,7 @@ async function buildFixedInputCacheEntry(
   const {
     safetyScoreV9SupplyAttributionById: _v9SupplyAttribution,
     evidenceJournalById: _evidenceJournal,
+    pegProvenanceById: _pegProvenance,
     ...v8Input
   } = input;
   const payload = JSON.stringify(includeV9OnlyFields ? input : v8Input);
@@ -512,6 +523,7 @@ export type ReportCardsFixedInputDraft = Omit<
   | "aggregateCirculatingById"
   | "safetyScoreV9SupplyAttributionById"
   | "evidenceJournalById"
+  | "pegProvenanceById"
 > & {
   captureKind: ReportCardsFixedInput["captureKind"];
   activeAssetIds?: string[];
@@ -520,6 +532,7 @@ export type ReportCardsFixedInputDraft = Omit<
   aggregateCirculatingById?: ReportCardsFixedInput["aggregateCirculatingById"];
   safetyScoreV9SupplyAttributionById?: ReportCardsFixedInput["safetyScoreV9SupplyAttributionById"];
   evidenceJournalById?: ReportCardsFixedInput["evidenceJournalById"];
+  pegProvenanceById?: ReportCardsFixedInput["pegProvenanceById"];
 };
 
 export function createReportCardsFixedInput(draft: ReportCardsFixedInputDraft): ReportCardsFixedInput {
@@ -679,6 +692,34 @@ function assertFixedInputConsistency(input: ReportCardsFixedInput): void {
       }
     }
   }
+  const pegProvenanceIds = Object.keys(input.pegProvenanceById);
+  if (pegProvenanceIds.length > 0) {
+    assertSameIds(
+      pegProvenanceIds,
+      Object.keys(input.pegDataById),
+      "V9 peg provenance rows",
+    );
+  }
+  for (const [assetId, summary] of Object.entries(input.pegProvenanceById)) {
+    const pegSummary = input.pegDataById[assetId];
+    if (!pegSummary || summary.assetId !== assetId) {
+      throw new Error(`V9 peg provenance does not match peg row ${assetId}`);
+    }
+    if (
+      summary.clockSec !== input.clockSec ||
+      summary.trackingStartSec !== (pegSummary.historyCoverage?.startedAt ?? null)
+    ) {
+      throw new Error(`V9 peg provenance clock/coverage does not match peg row ${assetId}`);
+    }
+    if (
+      stableJsonStringifyV1(
+        projectSafetyScoreV9PegScoreResult(summary.legacyInclusive.result),
+      ) !==
+      stableJsonStringifyV1(projectSafetyScoreV9PegSummary(pegSummary))
+    ) {
+      throw new Error(`V9 peg provenance score does not match peg row ${assetId}`);
+    }
+  }
   const expectedBaseInputGenerationId = deriveReportCardsBaseInputGenerationId(input);
   if (input.baseInputGenerationId !== expectedBaseInputGenerationId) {
     throw new Error(
@@ -808,6 +849,7 @@ export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
       ),
     ),
     evidenceJournalById: ReportCardEvidenceJournalByIdV1Schema.parse(input.evidenceJournalById),
+    pegProvenanceById: sortedRecord(input.pegProvenanceById),
     dexDeploymentSupplyCoverageById: sortedRecord(input.dexDeploymentSupplyCoverageById),
     liveReserveProvenanceMap: sortedRecord(input.liveReserveProvenanceMap),
     collateralDriftCoins: [...input.collateralDriftCoins].sort((left, right) => left.id.localeCompare(right.id)),

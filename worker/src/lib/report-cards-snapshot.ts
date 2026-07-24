@@ -26,6 +26,7 @@ import {
   type FixedDexLiquidityRow,
   type ReportCardsFixedInput,
 } from "./report-cards-fixed-input";
+import type { SafetyScoreV9PegProvenanceSource } from "./safety-score-v9-peg-provenance";
 
 export { ReportCardsSnapshotUnavailableError } from "./report-cards-snapshot-inputs";
 export { topologicalOrder } from "./report-cards-snapshot-card";
@@ -56,6 +57,8 @@ export interface ReportCardsSnapshot {
   liveToFallbackCoins?: string[];
   /** Exact in-memory scoring inputs, present only for the publication cron. */
   fixedInput?: ReportCardsFixedInput;
+  /** Ephemeral raw source for post-V8 V9 enrichment; never serialized. */
+  v9PegProvenanceSource?: SafetyScoreV9PegProvenanceSource;
 }
 
 export interface BuildReportCardsSnapshotOptions {
@@ -398,5 +401,12 @@ export async function buildReportCardsSnapshot(
     collateralDriftCoins,
     liveToFallbackCoins,
   });
-  return { ...snapshot, fixedInput };
+  return {
+    ...snapshot,
+    fixedInput,
+    v9PegProvenanceSource: {
+      clockSec: pegAnalytics.nowSec,
+      eventsByCoin: pegAnalytics.eventsByCoin,
+    },
+  };
 }
