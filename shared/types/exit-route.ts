@@ -87,12 +87,24 @@ export const ExitRouteOutputSchema = z.object({
 });
 export type ExitRouteOutput = z.infer<typeof ExitRouteOutputSchema>;
 
-export const ExitRouteCapacityPointSchema = z.object({
-  requestedNotionalUsd: z.number().finite().positive(),
-  maxCostBps: z.number().finite().nonnegative(),
-  executableUsd: z.number().finite().nonnegative(),
-  completionRatio: z.number().finite().min(0).max(1),
-});
+export const ExitRouteCapacityPointSchema = z
+  .object({
+    requestedNotionalUsd: z.number().finite().positive(),
+    maxCostBps: z.number().finite().nonnegative(),
+    executableUsd: z.number().finite().nonnegative(),
+    completionRatio: z.number().finite().min(0).max(1),
+    /** Realized cost of the defining passing quote; absent on legacy or zero-capacity points. */
+    executionCostBps: z.number().finite().nonnegative().optional(),
+  })
+  .superRefine((point, ctx) => {
+    if (point.executionCostBps != null && point.executionCostBps > point.maxCostBps) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["executionCostBps"],
+        message: "Realized execution cost exceeds the request limit",
+      });
+    }
+  });
 export type ExitRouteCapacityPoint = z.infer<typeof ExitRouteCapacityPointSchema>;
 
 export const ExitRouteObservationHistorySchema = z
@@ -211,7 +223,8 @@ function enforceDexExitRouteLane(observation: z.infer<typeof ExitRouteObservatio
         const scored = curveByPoint.get(`${point.requestedNotionalUsd}:${point.maxCostBps}`);
         return (
           scored?.executableUsd === point.executableUsd &&
-          scored.completionRatio === point.completionRatio
+          scored.completionRatio === point.completionRatio &&
+          scored.executionCostBps === point.executionCostBps
         );
       });
     if (!historyMatchesScoredCurve) {

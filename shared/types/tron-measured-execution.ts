@@ -8,6 +8,7 @@ import {
   DEX_MEASURED_MAX_COST_BPS,
   DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO,
   buildDexMeasuredCapacityCurve,
+  dexMeasuredCapacityPointMatchesProof,
   getDexMeasuredExecutionProbeNotionals,
 } from "./measured-execution";
 
@@ -308,7 +309,11 @@ export function validateTronMeasuredExecutionProfile(input: {
     recomputedProof.filter((point): point is NonNullable<typeof point> => point != null),
     profile.retainedTvlUsdAtQuote,
   );
-  if (rebuiltCurve.some((point, index) => JSON.stringify(point) !== JSON.stringify(profile.capacityCurve[index]))) {
+  if (
+    rebuiltCurve.some(
+      (point, index) => !dexMeasuredCapacityPointMatchesProof(profile.capacityCurve[index], point),
+    )
+  ) {
     issues.add("invalid-capacity-curve");
   }
 

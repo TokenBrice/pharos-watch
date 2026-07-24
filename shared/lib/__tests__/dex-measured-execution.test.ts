@@ -12,6 +12,7 @@ import {
   type DexMeasuredExecutionQuotePointProof,
   type DexMeasuredExecutionTarget,
 } from "../../types/measured-execution";
+import { ExitRouteCapacityPointSchema } from "../../types/exit-route";
 
 const TOKEN_IN = {
   address: "0x1111111111111111111111111111111111111111",
@@ -160,6 +161,49 @@ describe("DEX measured execution contract", () => {
       1_000_000,
     );
     expect(curve.map((point) => point.executableUsd)).toEqual([55_000, 55_000, 55_000, 55_000]);
+    expect(curve.map((point) => point.executionCostBps)).toEqual([
+      expect.closeTo(181.8181818, 6),
+      expect.closeTo(181.8181818, 6),
+      expect.closeTo(181.8181818, 6),
+      expect.closeTo(181.8181818, 6),
+    ]);
+  });
+
+  it("bounds an optional realized point cost and accepts legacy omission", () => {
+    const point = {
+      requestedNotionalUsd: 100_000,
+      maxCostBps: 200,
+      executableUsd: 100_000,
+      completionRatio: 1,
+    };
+    expect(ExitRouteCapacityPointSchema.safeParse(point).success).toBe(true);
+    expect(ExitRouteCapacityPointSchema.safeParse({ ...point, executionCostBps: 37 }).success).toBe(true);
+    expect(ExitRouteCapacityPointSchema.safeParse({ ...point, executionCostBps: 201 }).success).toBe(false);
+  });
+
+  it("validates legacy points without cost but rejects a false realized cost", () => {
+    const nowSec = 10_000;
+    const legacy = profile(nowSec);
+    legacy.capacityCurve = legacy.capacityCurve.map(({ executionCostBps: _cost, ...point }) => point);
+    expect(validateDexMeasuredExecutionProfile({
+      profile: legacy,
+      quotedTarget: target(nowSec),
+      currentTarget: target(nowSec),
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec,
+    })).toEqual([]);
+
+    const tampered = profile(nowSec);
+    tampered.capacityCurve[0]!.executionCostBps = 1;
+    expect(validateDexMeasuredExecutionProfile({
+      profile: tampered,
+      quotedTarget: target(nowSec),
+      currentTarget: target(nowSec),
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec,
+    })).toContain("invalid-capacity-curve");
   });
 
   it("accepts a fresh identity-consistent lower-bound profile", () => {

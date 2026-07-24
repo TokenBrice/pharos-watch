@@ -249,6 +249,28 @@ describe("fixed report-card input replay", () => {
     expect(JSON.parse(first).cards.length).toBeGreaterThan(300);
   });
 
+  it("keeps the V8 replay byte-identical when measured points add realized cost", () => {
+    const legacyRoute = {
+      ...route("dex:usdt:measured", ["chain:ethereum"], ["ethereum:0xa0b8"]),
+      evidenceKind: "measured-executable-depth" as const,
+    };
+    const realizedRoute = {
+      ...legacyRoute,
+      capacityCurve: legacyRoute.capacityCurve?.map((point) => ({
+        ...point,
+        executionCostBps: 20,
+      })),
+    };
+    const legacy = fixedInput({ "usdt-tether": dexRow([legacyRoute]) });
+    const realized = fixedInput({ "usdt-tether": dexRow([realizedRoute]) });
+
+    expect(
+      serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(realized)),
+    ).toBe(
+      serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(legacy)),
+    );
+  });
+
   it("persists V9-only supply attribution without changing V8 replay or base identity", async () => {
     const aggregateSupplyUsd = 2_480_000_000;
     const aggregateInput = normalizeFixedInput(

@@ -247,30 +247,62 @@ function rawAmountToUsd(rawAmount: string, decimals: number, referencePriceUsd: 
 
 /** Build fixed P4 points from quoted passing inputs only; never interpolates. */
 export function buildDexMeasuredCapacityCurve(
-  proof: readonly Pick<DexMeasuredExecutionQuotePointProof, "inputUsd" | "passesCostBound">[],
+  proof: readonly Pick<DexMeasuredExecutionQuotePointProof, "inputUsd" | "costBps" | "passesCostBound">[],
   retainedTvlUsd: number,
 ): z.infer<typeof ExitRouteCapacityPointSchema>[] {
   const tvlBound = retainedTvlUsd * 1.5;
-  const passingInputs = proof
+  const passingQuotes = proof
     .filter((point) => point.passesCostBound && point.inputUsd <= tvlBound)
-    .map((point) => point.inputUsd)
-    .filter((value) => Number.isFinite(value) && value > 0)
-    .sort((left, right) => left - right);
+    .filter(
+      (point) =>
+        Number.isFinite(point.inputUsd) &&
+        point.inputUsd > 0 &&
+        Number.isFinite(point.costBps) &&
+        point.costBps >= 0 &&
+        point.costBps <= DEX_MEASURED_MAX_COST_BPS,
+    )
+    .sort((left, right) => left.inputUsd - right.inputUsd || right.costBps - left.costBps);
 
   return DEX_MEASURED_CAPACITY_NOTIONALS_USD.map((requestedNotionalUsd) => {
-    const executableUsd = roundUsd(
-      passingInputs.reduce(
-        (largest, inputUsd) => inputUsd <= requestedNotionalUsd ? Math.max(largest, inputUsd) : largest,
-        0,
-      ),
+    const definingQuote = passingQuotes.reduce<(typeof passingQuotes)[number] | null>(
+      (largest, quote) =>
+        quote.inputUsd <= requestedNotionalUsd &&
+        (largest === null ||
+          quote.inputUsd > largest.inputUsd ||
+          (quote.inputUsd === largest.inputUsd && quote.costBps > largest.costBps))
+          ? quote
+          : largest,
+      null,
     );
+    const executableUsd = roundUsd(definingQuote?.inputUsd ?? 0);
     return {
       requestedNotionalUsd,
       maxCostBps: DEX_MEASURED_MAX_COST_BPS,
       executableUsd,
       completionRatio: roundRatio(executableUsd / requestedNotionalUsd),
+      ...(definingQuote ? { executionCostBps: definingQuote.costBps } : {}),
     };
   });
+}
+
+/**
+ * New profiles attest realized capacity-point cost. Legacy profiles remain
+ * valid when that additive field is absent; V9 then uses the request bound.
+ */
+export function dexMeasuredCapacityPointMatchesProof(
+  claimed: z.infer<typeof ExitRouteCapacityPointSchema> | undefined,
+  rebuilt: z.infer<typeof ExitRouteCapacityPointSchema>,
+): boolean {
+  return (
+    claimed != null &&
+    claimed.requestedNotionalUsd === rebuilt.requestedNotionalUsd &&
+    claimed.maxCostBps === rebuilt.maxCostBps &&
+    Math.abs(claimed.executableUsd - rebuilt.executableUsd) <= 0.01 &&
+    Math.abs(claimed.completionRatio - rebuilt.completionRatio) <= 0.000001 &&
+    (claimed.executionCostBps == null ||
+      (rebuilt.executionCostBps != null &&
+        Math.abs(claimed.executionCostBps - rebuilt.executionCostBps) <= 0.02))
+  );
 }
 
 /**
@@ -405,14 +437,9 @@ export function validateDexMeasuredExecutionProfile(input: {
     recomputedProof.filter((point): point is NonNullable<typeof point> => point != null),
     profile.retainedTvlUsdAtQuote,
   );
-  const curveMatches = rebuiltCurve.every((rebuilt, index) => {
-    const claimed = profile.capacityCurve[index];
-    return claimed != null &&
-      claimed.requestedNotionalUsd === rebuilt.requestedNotionalUsd &&
-      claimed.maxCostBps === rebuilt.maxCostBps &&
-      Math.abs(claimed.executableUsd - rebuilt.executableUsd) <= 0.01 &&
-      Math.abs(claimed.completionRatio - rebuilt.completionRatio) <= 0.000001;
-  });
+  const curveMatches = rebuiltCurve.every((rebuilt, index) =>
+    dexMeasuredCapacityPointMatchesProof(profile.capacityCurve[index], rebuilt),
+  );
   if (!curveMatches) issues.add("invalid-capacity-curve");
 
   const sortedProof = [...profile.quoteProof].sort((left, right) => left.inputUsd - right.inputUsd);

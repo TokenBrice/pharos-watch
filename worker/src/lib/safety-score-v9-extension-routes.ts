@@ -34,13 +34,13 @@ function capacityPoints(observation: ExitRouteObservation): RouteReview["executi
       completionRatio: observation.completionRatio,
     },
   ];
-  // The producer bounds execution inside maxCostBps but does not report the
-  // realized marginal cost, so the review carries the conservative bound.
+  // New measured points retain the defining quote's realized cost. Legacy
+  // points omit it and keep the prior conservative request-bound behavior.
   return points
     .map((point) => ({
       requestedNotionalUsd: point.requestedNotionalUsd,
       maxCostBps: point.maxCostBps,
-      executionCostBps: point.maxCostBps,
+      executionCostBps: point.executionCostBps ?? point.maxCostBps,
     }))
     .sort((left, right) =>
       compareText(

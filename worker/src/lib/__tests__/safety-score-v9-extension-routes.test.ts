@@ -583,6 +583,31 @@ describe("buildDexRouteReview model-confidence derivation", () => {
     });
   });
 
+  it("uses realized measured cost and preserves the legacy request-bound fallback", () => {
+    const fixedInput = fixedInputStub(undefined);
+    const realized = dexObservation("measured-executable-depth");
+    realized.capacityCurve = [
+      {
+        requestedNotionalUsd: realized.requestedNotionalUsd,
+        maxCostBps: realized.maxCostBps,
+        executableUsd: realized.executableUsd,
+        completionRatio: realized.completionRatio,
+        executionCostBps: 37,
+      },
+    ];
+    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
+      "usdc-circle": { exitRouteObservations: [realized] },
+    };
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]?.executionCosts).toEqual([
+      { requestedNotionalUsd: 1_000_000, maxCostBps: 50, executionCostBps: 37 },
+    ]);
+
+    delete realized.capacityCurve[0]!.executionCostBps;
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]?.executionCosts).toEqual([
+      { requestedNotionalUsd: 1_000_000, maxCostBps: 50, executionCostBps: 50 },
+    ]);
+  });
+
   it("grades repeated measured executable depth as high model confidence", () => {
     expect(dexReviewFor("measured-executable-depth", true)).toMatchObject({
       lane: "dex",
