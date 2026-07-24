@@ -213,6 +213,47 @@ describe("Safety Score v9 operational resilience", () => {
     });
   });
 
+  it("uses canonical implementation history to qualify measured depth without an editorial overlay", () => {
+    const result = evaluateV9OperationalResilience(
+      null,
+      MEASURED_DEPTH,
+      POLICY,
+      NO_BLOCKERS,
+      {
+        minimumLiveHistoryMonths: 120,
+        evidenceRefIds: ["implementation-launch"],
+      },
+    );
+
+    expect(result).toMatchObject({
+      eligible: true,
+      eligibility: {
+        documentedLiveHistoryMonths: 120,
+        confidence: "implementation-history",
+        evidenceRefIds: ["implementation-launch"],
+        satisfied: true,
+      },
+      pillarCredits: { backing: 0, exit: 2, control: 0 },
+      contributions: [
+        {
+          component: "persistent-market-depth",
+          confidence: "measured",
+          points: 2,
+        },
+      ],
+    });
+
+    expect(
+      evaluateV9OperationalResilience(
+        null,
+        MEASURED_DEPTH,
+        POLICY,
+        NO_BLOCKERS,
+        { minimumLiveHistoryMonths: 35, evidenceRefIds: ["implementation-launch"] },
+      ).eligible,
+    ).toBe(false);
+  });
+
   it("evaluates cumulative and stress redemption claims independently", () => {
     const input = facts();
     input.stressEpisodes = [];

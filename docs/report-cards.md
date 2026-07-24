@@ -52,6 +52,10 @@ the Exit pillar instead of requiring the raw route `scoreEligible` flag. This
 does not mutate that flag or broaden generic route eligibility; routes with
 undisclosed reviewed fees remain excluded from this fact path because the later
 pre-exit danger gate is not available during fact compilation.
+Persistent measured market depth is eligible for the same bounded operational-
+resilience credit across the mature cohort. Canonical implementation history
+provides only the age gate; the credit still requires repeated score-eligible
+execution observations and does not require a bespoke asset overlay.
 Missing categorical access-posture review remains visible but does not make an
 otherwise established score unrateable. New candidate cards use score-trace
 schema v2 inside candidate-response schema v3 and public-report schema v2.

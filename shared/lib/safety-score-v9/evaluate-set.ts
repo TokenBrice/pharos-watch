@@ -1927,6 +1927,7 @@ function evaluateV9FactSetRead(
         : undefined;
     const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById);
     const wrapperStrategyTier = resolveV9WrapperStrategyTier(asset, resolved, inheritedStablecoinBacking);
+    const trackRecordMonths = conservativeTrackRecordMonths(asset.implementation.launchedAtSec, factSet.asOfSec);
     const backingAsset = {
       assetId: asset.assetId,
       reserveStatus: asset.reserveStatus,
@@ -1943,7 +1944,7 @@ function evaluateV9FactSetRead(
         ? {}
         : { cdpLiquidationCapacitySelection: liquidationCapacitySelection }),
       ...(inheritedStablecoinBacking === undefined ? {} : { inheritedStablecoinBacking }),
-      trackRecordMonths: conservativeTrackRecordMonths(asset.implementation.launchedAtSec, factSet.asOfSec),
+      trackRecordMonths,
     };
     const backing =
       asset.mechanismRiskReview.review === null
@@ -1953,7 +1954,7 @@ function evaluateV9FactSetRead(
       asset,
       {
         assetId: asset.assetId,
-        trackRecordMonths: conservativeTrackRecordMonths(asset.implementation.launchedAtSec, factSet.asOfSec),
+        trackRecordMonths,
         ...asset.economicControlReview,
       },
       envelope,
@@ -2003,12 +2004,22 @@ function evaluateV9FactSetRead(
         : [];
     const dependencyReasonsInput = dependencyReasons(asset, resolved, dependencyPlan, envelope);
     const dependencySignals = commonSignals.get(assetId) ?? [];
+    const measuredMarketDepth = measuredOperationalMarketDepth(asset, exit, envelope);
+    const implementationHistory =
+      asset.implementation.status.observationState === "known" &&
+      asset.implementation.launchedAtSec !== null
+        ? {
+            minimumLiveHistoryMonths: trackRecordMonths,
+            evidenceRefIds: asset.implementation.status.evidenceRefIds,
+          }
+        : null;
     const operationalResilience =
-      asset.operationalResilience === null || asset.operationalResilience === undefined
+      (asset.operationalResilience === null || asset.operationalResilience === undefined) &&
+      measuredMarketDepth === null
         ? null
         : evaluateV9OperationalResilience(
-            asset.operationalResilience,
-            measuredOperationalMarketDepth(asset, exit, envelope),
+            asset.operationalResilience ?? null,
+            measuredMarketDepth,
             envelope.policy.semantic.operationalResilience,
             operationalResilienceBlockers(
               asset,
@@ -2020,6 +2031,7 @@ function evaluateV9FactSetRead(
               methodologyReasons,
               envelope,
             ),
+            implementationHistory,
           );
     const creditedPillars = applyOperationalResilienceCredits(basePillars, operationalResilience);
     const pillars = applyRoleDependencyPillarLimits(creditedPillars, resolved, envelope);
@@ -2028,7 +2040,7 @@ function evaluateV9FactSetRead(
       identity,
       pillars,
       peg,
-      trackRecordMonths: conservativeTrackRecordMonths(asset.implementation.launchedAtSec, factSet.asOfSec),
+      trackRecordMonths,
       parent: parentInput(
         asset,
         resolved,

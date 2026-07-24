@@ -167,6 +167,11 @@ requires current, attributable evidence. Visibility-only diagnostics do not
 erase otherwise valid resilience evidence, while issuer-undisclosed material
 facts still block credit.
 
+Canonical implementation history can satisfy only the maturity gate for
+producer-measured market depth. The depth credit itself remains cohort-wide,
+requires repeated successful score-eligible execution observations at the
+policy notional, and does not depend on an asset-specific editorial overlay.
+
 Impact: long-lived assets with demonstrated stress performance can receive
 bounded recognition without turning age, size, or reputation into an
 unconditional safety override.
