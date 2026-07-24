@@ -21,7 +21,7 @@ const digest = (character: string) => character.repeat(64);
 function snapshot(): ReportCardsV9Response {
   return {
     model: "v9",
-    schemaVersion: 2,
+    schemaVersion: 3,
     lifecycle: "shadow",
     safetyScoreIdentity: {
       model: "v9",

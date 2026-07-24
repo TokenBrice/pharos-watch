@@ -75,6 +75,7 @@ import {
 import {
   resolveV9SerialParentAdverseAttribution,
   resolveV9SerialParentBoundedUncertaintyAttribution,
+  projectV9DependencyScore,
   scoreV9EvaluatedAsset,
   type V9PillarEvaluation,
   type V9PillarReason,
@@ -84,7 +85,7 @@ import {
 import { createV9PublicStressState, type V9PublicStressState } from "./stress";
 import { computeV9ResultDigest, projectCompactV9ScoreTrace, type V9CompactScoreTrace } from "./trace";
 
-const V9_EVALUATED_SET_DIGEST_DOMAIN = "safety-score-v9.evaluated-set.v1";
+const V9_EVALUATED_SET_DIGEST_DOMAIN = "safety-score-v9.evaluated-set.v2";
 
 export interface V9EvaluatedAsset {
   assetId: string;
@@ -126,6 +127,40 @@ export function projectV9EffectiveBackingPillarScore(
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function marketRankByAsset(
+  assets: readonly V9AssetFactsV3[],
+  activeAssetIds: readonly string[],
+): ReadonlyMap<string, number> {
+  const active = new Set(activeAssetIds);
+  const ranked = assets
+    .filter(
+      (asset) =>
+        active.has(asset.assetId) &&
+        asset.supply.status.observationState === "known" &&
+        asset.supply.circulatingUsd !== null,
+    )
+    .map((asset) => ({
+      assetId: asset.assetId,
+      circulatingUsd: asset.supply.circulatingUsd!,
+    }))
+    .sort(
+      (left, right) =>
+        right.circulatingUsd - left.circulatingUsd ||
+        compareText(left.assetId, right.assetId),
+    );
+  const result = new Map<string, number>();
+  let previousSupply: number | null = null;
+  let rank = 0;
+  ranked.forEach((asset, index) => {
+    if (previousSupply === null || asset.circulatingUsd !== previousSupply) {
+      rank = index + 1;
+      previousSupply = asset.circulatingUsd;
+    }
+    result.set(asset.assetId, rank);
+  });
+  return result;
 }
 
 function uniqueSorted<T extends string>(values: readonly T[]): T[] {
@@ -1904,6 +1939,7 @@ function evaluateV9FactSetRead(
   assertV9ValidatedPolicyEnvelope(envelope);
   const factSet = factSetRead.factSet;
   const assetsById = new Map(factSet.assets.map((asset) => [asset.assetId, asset]));
+  const marketRanks = marketRankByAsset(factSet.assets, factSet.activeAssetIds);
   const dependencyPlan = buildV9DependencyEvaluationPlan({
     activeAssetIds: factSet.activeAssetIds,
     assets: factSet.assets,
@@ -1930,7 +1966,7 @@ function evaluateV9FactSetRead(
       dependencyPlan,
       [...evaluatedById.values()].map((result) => ({
         assetId: result.assetId,
-        score: result.trace.finalScore,
+        score: projectV9DependencyScore(result.trace),
         backingScore: projectV9EffectiveBackingPillarScore(result),
         exitScore: result.scoreInput.pillars.exit.score,
         accessScore: upstreamExitAccessScore(result.exit),
@@ -2064,6 +2100,7 @@ function evaluateV9FactSetRead(
     const pillars = applyRoleDependencyPillarLimits(creditedPillars, resolved, envelope);
     const scoreInput: V9ProductionScoreInput = {
       assetId,
+      marketRank: marketRanks.get(assetId) ?? null,
       identity,
       pillars,
       peg,

@@ -193,6 +193,42 @@ function realAFixture(freshnessState: "current" | "stale" | "not-assessed" = "cu
 }
 
 describe("Safety Score V9 calibration analysis", { timeout: 30_000 }, () => {
+  it("verifies both homogeneous legacy and adjustment-aware result digests", () => {
+    const replay = productionReplay();
+    expect(computeCalibrationResultDigest(replay.pipeline.evaluatedSet)).toBe(
+      replay.pipeline.evaluatedSet.scoreResultDigest,
+    );
+
+    const legacy = structuredClone(replay.pipeline.evaluatedSet);
+    for (const asset of legacy.assets) {
+      delete asset.trace.inheritableScore;
+      delete asset.trace.scoreAdjustments;
+    }
+    expect(computeCalibrationResultDigest(legacy)).toMatch(/^[a-f0-9]{64}$/);
+    expect(computeCalibrationResultDigest(legacy)).not.toBe(
+      replay.pipeline.evaluatedSet.scoreResultDigest,
+    );
+  });
+
+  it("rejects partial or mixed result-digest trace contracts", () => {
+    const partial = structuredClone(productionReplay().pipeline.evaluatedSet);
+    delete partial.assets[0]!.trace.scoreAdjustments;
+    expect(() => computeCalibrationResultDigest(partial)).toThrow(
+      /both inheritableScore and scoreAdjustments/,
+    );
+
+    const mixed = structuredClone(
+      productionReplay(BASE_CLOCK_SEC, {
+        activeAssetIds: ["usdc-circle", "usdt-tether"],
+      }).pipeline.evaluatedSet,
+    );
+    delete mixed.assets[0]!.trace.inheritableScore;
+    delete mixed.assets[0]!.trace.scoreAdjustments;
+    expect(() => computeCalibrationResultDigest(mixed)).toThrow(
+      /one homogeneous result-digest trace version/,
+    );
+  });
+
   it("accepts an untampered candidate only after a trusted production rerun", () => {
     const replay = productionReplay();
     const report = analyzeV9Calibration(structuredClone(replay), replay);

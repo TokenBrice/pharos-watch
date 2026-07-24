@@ -85,10 +85,12 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
     deploymentAdjustments: [],
     unresolvedDeploymentSignals: [],
     preCapScore: pegAdjustedScore,
+    scoreAdjustments: [],
     caps,
     bindingCap: caps.find((cap) => cap.binding) ?? null,
     structuralSignals: [],
     finalScore: options.score,
+    inheritableScore: options.score,
     finalGrade: options.grade,
     adverseAttribution: [],
     boundedUncertaintyAttribution: [],
@@ -201,7 +203,7 @@ describe("Safety Score v9 public projection", () => {
     });
 
     expect(response.model).toBe("v9-critical-path");
-    expect(response.schemaVersion).toBe(3);
+    expect(response.schemaVersion).toBe(4);
     expect(response.lifecycle).toBe("candidate");
     expect(response.cards.map((card) => card.id)).toEqual(["capped", "complete", "dependency", "not-rated"]);
     expect(response.completeness).toEqual({
@@ -218,7 +220,7 @@ describe("Safety Score v9 public projection", () => {
       { code: "missing-pillar", field: "pillars.backing", message: "Backing is missing.", origin: "asset" },
     ]);
     expect(response.resultDigest).toMatch(/^[a-f0-9]{64}$/);
-    expect(response.cards.every((card) => card.scoreTrace.schemaVersion === 2)).toBe(true);
+    expect(response.cards.every((card) => card.scoreTrace.schemaVersion === 3)).toBe(true);
   });
 
   it("publishes the applied role limit with its exact evidence and failure domains", () => {
@@ -341,7 +343,7 @@ describe("Safety Score v9 public projection", () => {
       accessPosture: { unknownFields: ["governance", "transfer"] },
       stressStateDigest: DIGESTS.stress,
       scoreTrace: {
-        schemaVersion: 2,
+        schemaVersion: 3,
         legacyAliases: {
           qualityScore: "weighted-pillar-mean",
           pegAdjustedScore: "post-deployment-pre-cap-score",
@@ -477,6 +479,53 @@ describe("Safety Score v9 public projection", () => {
       semantics: "causal-measured-adverse-v1",
       items: input.trace.adverseAttribution,
     });
+  });
+
+  it("projects the native USDT premium as an explicit score stage", () => {
+    const cap: V9CapTrace = {
+      source: "structural",
+      kind: "signal:centralized-mint:low",
+      limit: 87,
+      reason: "Eligible USDT market-anchor cap relief.",
+      binding: true,
+    };
+    const input = fixture("usdt-tether", {
+      score: 87,
+      grade: "A+",
+      pillars: { backing: 95, exit: 95, control: 95 },
+      qualityScore: 95,
+      pegAdjustedScore: 99,
+      caps: [cap],
+    });
+    input.trace.baseAssetScore = 95;
+    input.trace.deploymentAdjustedScore = 95;
+    input.trace.inheritableScore = 83;
+    input.trace.scoreAdjustments = [{
+      source: "asset-premium",
+      kind: "market-anchor-longevity",
+      label: "#1 & Longevity Premium",
+      configuredPoints: 4,
+      appliedPoints: 4,
+      scoreBefore: 95,
+      scoreAfter: 99,
+      publishedScoreBefore: 83,
+      publishedScoreAfter: 87,
+      capRelief: {
+        source: "structural",
+        kind: "signal:centralized-mint:low",
+        fromLimit: 83,
+        toLimit: 87,
+      },
+    }];
+
+    const card = projectSafetyScoreV9Card(input);
+
+    expect(card.scoreTrace.stages).toMatchObject({
+      deploymentAdjustedScore: 95,
+      preCapScore: 99,
+      publishedScore: 87,
+    });
+    expect(card.scoreTrace.scoreAdjustments).toEqual(input.trace.scoreAdjustments);
   });
 
   it("rejects duplicate assets and mixed evaluator identities", () => {

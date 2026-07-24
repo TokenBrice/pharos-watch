@@ -91,9 +91,9 @@ function currentResponse() {
     schemaVersion: number;
     cards: Array<{ scoreTrace?: unknown }>;
   };
-  current.schemaVersion = 3;
+  current.schemaVersion = 4;
   current.cards[0]!.scoreTrace = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     legacyAliases: {
       qualityScore: "weighted-pillar-mean",
       pegAdjustedScore: "post-deployment-pre-cap-score",
@@ -142,9 +142,97 @@ function currentResponse() {
         { responsibility: "producer-failed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
       ],
     },
+    scoreAdjustments: [],
     wrapperParentLimit: null,
   };
   return current;
+}
+
+interface MutableAdjustmentFixture {
+  source: string;
+  kind: string;
+  label: string;
+  configuredPoints: number;
+  appliedPoints: number;
+  scoreBefore: number;
+  scoreAfter: number;
+  publishedScoreBefore: number;
+  publishedScoreAfter: number;
+  capRelief: {
+    source: string;
+    kind: string;
+    fromLimit: number;
+    toLimit: number;
+  };
+}
+
+interface MutableAdjustedCardFixture {
+  score: number;
+  grade: string;
+  pegAdjustedScore: number;
+  caps: Array<{
+    kind: string;
+    limit: number;
+    source: string;
+    reason: string;
+    binding: boolean;
+  }>;
+  bindingCap: {
+    kind: string;
+    limit: number;
+    source: string;
+    reason: string;
+    binding: boolean;
+  } | null;
+  scoreTrace: {
+    stages: { preCapScore: number; publishedScore: number };
+    scoreAdjustments: MutableAdjustmentFixture[];
+  };
+}
+
+type MutableAdjustedResponseFixture =
+  Omit<ReturnType<typeof currentResponse>, "cards"> & {
+    cards: MutableAdjustedCardFixture[];
+  };
+
+function adjustedResponse(): MutableAdjustedResponseFixture {
+  const adjusted = currentResponse() as unknown as MutableAdjustedResponseFixture;
+  const card = adjusted.cards[0]!;
+  const structuralCap = {
+    kind: "signal:centralized-mint:low",
+    limit: 94,
+    source: "structural",
+    reason: "The premium relieves only the named low-severity structural cap.",
+    binding: true,
+  };
+  card.score = 94;
+  card.grade = "A+";
+  card.pegAdjustedScore = 96;
+  card.caps = [
+    { ...card.caps[0]!, binding: false },
+    structuralCap,
+  ];
+  card.bindingCap = structuralCap;
+  card.scoreTrace.stages.preCapScore = 96;
+  card.scoreTrace.stages.publishedScore = 94;
+  card.scoreTrace.scoreAdjustments = [{
+    source: "asset-premium",
+    kind: "market-anchor-longevity",
+    label: "#1 & Longevity Premium",
+    configuredPoints: 4,
+    appliedPoints: 4,
+    scoreBefore: 92,
+    scoreAfter: 96,
+    publishedScoreBefore: 83,
+    publishedScoreAfter: 94,
+    capRelief: {
+      source: "structural",
+      kind: "signal:centralized-mint:low",
+      fromLimit: 83,
+      toLimit: 94,
+    },
+  }];
+  return adjusted;
 }
 
 describe("SafetyScoreV9ResponseSchema", () => {
@@ -157,12 +245,12 @@ describe("SafetyScoreV9ResponseSchema", () => {
 
   it("requires the self-describing score trace on every current candidate card", () => {
     const parsed = SafetyScoreV9CurrentResponseSchema.parse(currentResponse());
-    expect(parsed.schemaVersion).toBe(3);
+    expect(parsed.schemaVersion).toBe(4);
     expect(parsed.cards[0]?.scoreTrace.aggregation?.method).toBe("smooth-bounded-headroom");
     expect(parsed.cards[0]?.scoreTrace.legacyAliases.pegAdjustedScore).toBe(
       "post-deployment-pre-cap-score",
     );
-    expect(SafetyScoreV9ResponseSchema.parse(parsed).schemaVersion).toBe(3);
+    expect(SafetyScoreV9ResponseSchema.parse(parsed).schemaVersion).toBe(4);
 
     const missingTrace = currentResponse();
     delete missingTrace.cards[0]!.scoreTrace;
@@ -184,6 +272,7 @@ describe("SafetyScoreV9ResponseSchema", () => {
     const trace = previous.cards[0]!.scoreTrace as Record<string, unknown>;
     trace.schemaVersion = 1;
     delete trace.boundedUncertaintyAttribution;
+    delete trace.scoreAdjustments;
 
     const parsed = SafetyScoreV9ResponseSchema.parse(previous);
     expect(parsed.schemaVersion).toBe(2);
@@ -194,11 +283,28 @@ describe("SafetyScoreV9ResponseSchema", () => {
     ).toBe(1);
   });
 
-  it("cannot downgrade a response-v3 candidate by relabeling only its traces", () => {
+  it("retains exact schema-v3 and trace-v2 causal artifacts", () => {
+    const causal = currentResponse();
+    causal.schemaVersion = 3;
+    const trace = causal.cards[0]!.scoreTrace as Record<string, unknown>;
+    trace.schemaVersion = 2;
+    delete trace.scoreAdjustments;
+
+    const parsed = SafetyScoreV9ResponseSchema.parse(causal);
+    expect(parsed.schemaVersion).toBe(3);
+    expect(
+      "scoreTrace" in parsed.cards[0]! &&
+      !("scoreAdjustments" in parsed.cards[0]!.scoreTrace),
+    ).toBe(true);
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(causal)).toThrow();
+  });
+
+  it("cannot downgrade a response-v4 candidate by relabeling only its traces", () => {
     const downgraded = currentResponse();
     const trace = downgraded.cards[0]!.scoreTrace as Record<string, unknown>;
     trace.schemaVersion = 1;
     delete trace.boundedUncertaintyAttribution;
+    delete trace.scoreAdjustments;
 
     expect(() => SafetyScoreV9ResponseSchema.parse(downgraded)).toThrow();
   });
@@ -410,6 +516,33 @@ describe("SafetyScoreV9ResponseSchema", () => {
     ratedCritical.cards[0]!.scoreTrace.evidenceResponsibility.summaries[0]!.criticalFactCount = 1;
     expect(() => SafetyScoreV9CurrentResponseSchema.parse(ratedCritical)).toThrow(
       /cannot retain critical unresolved facts/,
+    );
+  });
+
+  it("reconciles every score adjustment to its ordinary score and relieved card cap", () => {
+    const valid = adjustedResponse();
+    expect(SafetyScoreV9CurrentResponseSchema.parse(valid).cards[0]?.score).toBe(94);
+
+    const missingCap = adjustedResponse();
+    missingCap.cards[0]!.caps = missingCap.cards[0]!.caps.filter(
+      (cap) => cap.source !== "structural",
+    );
+    missingCap.cards[0]!.bindingCap = null;
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(missingCap)).toThrow(
+      /cap relief must match exactly one current card cap/,
+    );
+
+    const impossibleOrdinaryScore = adjustedResponse();
+    impossibleOrdinaryScore.cards[0]!.scoreTrace.scoreAdjustments[0]!.publishedScoreBefore = 95;
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(impossibleOrdinaryScore)).toThrow(
+      /permitted rounding headroom/,
+    );
+
+    const fictionalRelief = adjustedResponse();
+    fictionalRelief.cards[0]!.scoreTrace.scoreAdjustments[0]!.capRelief.kind =
+      "signal:unsafe-backing:low";
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(fictionalRelief)).toThrow(
+      /cap relief must match exactly one current card cap/,
     );
   });
 

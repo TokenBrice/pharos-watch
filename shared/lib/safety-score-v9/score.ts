@@ -2,12 +2,14 @@ import type {
   V9EvidenceResponsibility,
 } from "../../types/safety-score-v9-facts";
 import type {
+  V9AssetPremiumPolicy,
   V9EvidenceLevel,
   V9ReasonCode,
   V9StructuralSignal,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import {
+  applyV9AssetPremium,
   scoreV9Input,
   type V9AdverseAttribution,
   type V9BoundedUncertaintyAttribution,
@@ -47,6 +49,8 @@ export interface V9ProductionScoreIdentity {
 
 export interface V9ProductionScoreInput {
   assetId: string;
+  /** Supply rank at the fixed evaluation clock; absent values cannot qualify for rank-gated policy. */
+  marketRank?: number | null;
   identity: V9ProductionScoreIdentity;
   pillars: {
     backing: V9PillarEvaluation;
@@ -84,6 +88,13 @@ export interface V9ProductionScoreTrace extends V9ScoreTrace {
   sourceGenerations: Readonly<Record<string, string>>;
   operationalResilience: V9OperationalResilienceResult | null;
   wrapperParentLimit: V9WrapperParentLimit | null;
+}
+
+/** Premiums are public-only score adjustments and never propagate downstream. */
+export function projectV9DependencyScore(
+  trace: Pick<V9ScoreTrace, "inheritableScore">,
+): number | null {
+  return trace.inheritableScore;
 }
 
 const PILLAR_KEYS = ["backing", "exit", "control"] as const;
@@ -337,6 +348,101 @@ function validateIdentity(identity: V9ProductionScoreIdentity): void {
   }
 }
 
+function resolvesOnlyPremiumCap(
+  trace: V9ScoreTrace,
+  premium: V9AssetPremiumPolicy,
+): boolean {
+  const bindingCapAllowed =
+    trace.bindingCap === null ||
+    (
+      trace.bindingCap.source === premium.capRelief.source &&
+      trace.bindingCap.kind === premium.capRelief.kind &&
+      trace.bindingCap.limit === premium.capRelief.fromLimit
+    );
+  if (!bindingCapAllowed) return false;
+  return trace.caps.every(
+    (cap) =>
+      (
+        cap.source === premium.capRelief.source &&
+        cap.kind === premium.capRelief.kind &&
+        cap.limit === premium.capRelief.fromLimit
+      ) ||
+      cap.limit >= premium.maximumPublishedScore,
+  );
+}
+
+/**
+ * Resolve a policy-defined asset premium from the ordinary score only. This is
+ * intentionally separate from formula application so the premium cannot make
+ * itself eligible.
+ */
+export function resolveV9AssetPremium(
+  input: V9ProductionScoreInput,
+  ordinaryTrace: V9ScoreTrace,
+  envelope: V9ValidatedPolicyEnvelope,
+): V9AssetPremiumPolicy | null {
+  const premium = envelope.policy.semantic.formula.assetPremiums.find(
+    (candidate) => candidate.assetId === input.assetId,
+  );
+  if (premium === undefined) return null;
+  if (
+    ordinaryTrace.finalScore === null ||
+    ordinaryTrace.preCapScore === null ||
+    ordinaryTrace.finalScore < premium.minimumBaseScore ||
+    ordinaryTrace.finalScore >= premium.maximumPublishedScore ||
+    input.marketRank !== premium.requiredMarketRank ||
+    input.trackRecordMonths < premium.minimumTrackRecordMonths ||
+    input.parent.required ||
+    input.pillars.exit.score === null ||
+    input.pillars.exit.score < premium.minimumExitScore ||
+    !input.peg.applicable ||
+    input.peg.score === null ||
+    input.peg.reasons.length > 0 ||
+    input.peg.activeDepegBps !== null ||
+    ordinaryTrace.adverseAttribution.some(
+      (attribution) => attribution.source === "peg-performance",
+    ) ||
+    !resolvesOnlyPremiumCap(ordinaryTrace, premium)
+  ) {
+    return null;
+  }
+  const evidenceRank = envelope.policy.semantic.evidence.rank;
+  const requiredEvidenceRank = evidenceRank[premium.requiredEvidenceLevel];
+  if (
+    PILLAR_KEYS.some(
+      (pillar) => evidenceRank[input.pillars[pillar].evidenceLevel] > requiredEvidenceRank,
+    )
+  ) {
+    return null;
+  }
+  const resilience = input.operationalResilience;
+  if (
+    resilience === null ||
+    resilience === undefined ||
+    !resilience.eligible ||
+    resilience.blockerCodes.length > 0
+  ) {
+    return null;
+  }
+  const contributed = new Set(
+    resilience.contributions.map((contribution) => contribution.component),
+  );
+  if (
+    premium.requiredOperationalComponents.some(
+      (component) => !contributed.has(component),
+    )
+  ) {
+    return null;
+  }
+  const hasRelievableCap = ordinaryTrace.caps.some(
+    (cap) =>
+      cap.source === premium.capRelief.source &&
+      cap.kind === premium.capRelief.kind &&
+      cap.limit === premium.capRelief.fromLimit,
+  );
+  return hasRelievableCap ? premium : null;
+}
+
 /** Assemble one production-shaped score from pure pillar and dependency results. */
 export function scoreV9EvaluatedAsset(
   input: V9ProductionScoreInput,
@@ -372,7 +478,7 @@ export function scoreV9EvaluatedAsset(
     (pillar) => input.pillars[pillar].adverseAttribution ?? [],
   );
   const wrapperAttribution = wrapperLocalAttribution(input.parent.wrapperParentLimit);
-  const trace = scoreV9Input(
+  const ordinaryTrace = scoreV9Input(
     {
       assetId: input.assetId,
       pillars: {
@@ -401,6 +507,11 @@ export function scoreV9EvaluatedAsset(
     wrapperAttribution.bounded,
     pillarReasonProvenance,
   );
+  const premium = resolveV9AssetPremium(input, ordinaryTrace, envelope);
+  const trace =
+    premium === null
+      ? ordinaryTrace
+      : applyV9AssetPremium(ordinaryTrace, premium, envelope);
   return {
     ...trace,
     operationalResilience: input.operationalResilience ?? null,

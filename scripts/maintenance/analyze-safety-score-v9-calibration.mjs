@@ -575,9 +575,26 @@ export function computeCalibrationFactSetDigest(compiledFacts) {
   );
 }
 
-function compactTrace(trace) {
+function traceResultDigestVersion(trace) {
+  const hasInheritableScore = Object.prototype.hasOwnProperty.call(
+    trace,
+    "inheritableScore",
+  );
+  const hasScoreAdjustments = Object.prototype.hasOwnProperty.call(
+    trace,
+    "scoreAdjustments",
+  );
+  if (hasInheritableScore !== hasScoreAdjustments) {
+    throw new Error(
+      "evaluated trace must carry both inheritableScore and scoreAdjustments or neither",
+    );
+  }
+  return hasInheritableScore ? 2 : 1;
+}
+
+function compactTrace(trace, resultDigestVersion = traceResultDigestVersion(trace)) {
   const contributions = new Map(trace.pillarContributions.map((entry) => [entry.pillar, entry.score]));
-  return {
+  const legacy = {
     assetId: trace.assetId,
     score: trace.finalScore,
     grade: trace.finalGrade,
@@ -597,15 +614,39 @@ function compactTrace(trace) {
     evaluationBuildDigest: trace.evaluationBuildDigest,
     asOfSec: trace.asOfSec,
   };
+  return resultDigestVersion === 1
+    ? legacy
+    : {
+        ...legacy,
+        inheritableScore: trace.inheritableScore,
+        scoreAdjustments: trace.scoreAdjustments,
+      };
 }
 
 export function computeCalibrationResultDigest(evaluatedSet) {
   const evaluated = requireRecord(evaluatedSet, "evaluated set");
   if (!Array.isArray(evaluated.assets)) throw new Error("evaluated set assets must be an array");
+  const versions = new Set(
+    evaluated.assets.map((asset) => traceResultDigestVersion(asset.trace)),
+  );
+  if (versions.size === 0) {
+    throw new Error("evaluated set must contain at least one score trace");
+  }
+  if (versions.size !== 1) {
+    throw new Error(
+      "evaluated set must contain one homogeneous result-digest trace version",
+    );
+  }
+  const resultDigestVersion = versions.values().next().value;
   const results = evaluated.assets
-    .map((asset) => compactTrace(asset.trace))
+    .map((asset) => compactTrace(asset.trace, resultDigestVersion))
     .sort((left, right) => compareText(left.assetId, right.assetId));
-  return sha256(stableStringify({ domain: "safety-score-v9.result.v1", results }));
+  return sha256(
+    stableStringify({
+      domain: `safety-score-v9.result.v${resultDigestVersion}`,
+      results,
+    }),
+  );
 }
 
 export function computeCalibrationIdentityDigest(domain, identity) {

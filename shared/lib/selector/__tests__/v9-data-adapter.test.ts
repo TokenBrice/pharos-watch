@@ -44,7 +44,7 @@ function card(): SafetyScoreV9CurrentCard {
     },
     stressStateDigest: null,
     scoreTrace: {
-      schemaVersion: 2,
+      schemaVersion: 3,
       legacyAliases: {
         qualityScore: "weighted-pillar-mean",
         pegAdjustedScore: "post-deployment-pre-cap-score",
@@ -90,6 +90,7 @@ function card(): SafetyScoreV9CurrentCard {
           { responsibility: "producer-failed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
         ],
       },
+      scoreAdjustments: [],
       wrapperParentLimit: null,
     },
   };
@@ -109,7 +110,7 @@ function response(overrides: Partial<ReportCardsV9Response> = {}): ReportCardsV9
   };
   return {
     model: "v9",
-    schemaVersion: 2,
+    schemaVersion: 3,
     lifecycle: "shadow",
     safetyScoreIdentity: identity,
     methodology: {

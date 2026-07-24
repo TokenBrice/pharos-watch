@@ -1118,7 +1118,7 @@ function completenessIssues(
   if (candidate.completeness.expectedCount !== fixedInput.activeAssetIds.length) {
     issues.push("candidate expected count does not match the production active set");
   }
-  if (candidate.schemaVersion !== 2) {
+  if (candidate.schemaVersion !== 4) {
     issues.push("candidate uses the legacy public schema instead of the production trace contract");
   }
   if (candidate.cards.some((card) => !("scoreTrace" in card) || card.scoreTrace === undefined)) {

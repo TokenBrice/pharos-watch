@@ -122,7 +122,31 @@
         "pure": 3,
         "staked": 5,
         "vault": 10
-      }
+      },
+      "assetPremiums": [
+        {
+          "assetId": "usdt-tether",
+          "kind": "market-anchor-longevity",
+          "label": "#1 & Longevity Premium",
+          "points": 4,
+          "maximumPublishedScore": 87,
+          "minimumBaseScore": 83,
+          "minimumTrackRecordMonths": 120,
+          "requiredMarketRank": 1,
+          "minimumExitScore": 90,
+          "requiredEvidenceLevel": "strong",
+          "requiredOperationalComponents": [
+            "stress-redemption",
+            "reserve-reconciliation"
+          ],
+          "capRelief": {
+            "source": "structural",
+            "kind": "signal:centralized-mint:low",
+            "fromLimit": 83,
+            "toLimit": 87
+          }
+        }
+      ]
     },
     "evidence": {
       "ceilings": {

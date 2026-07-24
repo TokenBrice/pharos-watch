@@ -87,7 +87,7 @@ export function makeWorkerV9Card(
   return {
     ...card,
     scoreTrace: overrides.scoreTrace ?? {
-      schemaVersion: 2,
+      schemaVersion: 3,
       legacyAliases: {
         qualityScore: "weighted-pillar-mean",
         pegAdjustedScore: "post-deployment-pre-cap-score",
@@ -138,6 +138,7 @@ export function makeWorkerV9Card(
           { responsibility: "producer-failed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
         ],
       },
+      scoreAdjustments: [],
       wrapperParentLimit: null,
     },
   };
@@ -159,7 +160,7 @@ export function makeWorkerReportCardsV9Response(
   };
   return {
     model: "v9",
-    schemaVersion: 2,
+    schemaVersion: 3,
     lifecycle: "shadow",
     safetyScoreIdentity: identity,
     methodology: {

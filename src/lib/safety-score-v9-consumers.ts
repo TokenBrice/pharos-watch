@@ -1,6 +1,11 @@
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
-import type { SafetyScorePublicationIdentity, SafetyScoreV9Card, V9Grade } from "@shared/types";
+import type {
+  SafetyScorePublicationIdentity,
+  SafetyScoreV9Card,
+  SafetyScoreV9CurrentCard,
+  V9Grade,
+} from "@shared/types";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
 
 export type V9ConsumerIdentity = ReportCardsV9Response["safetyScoreIdentity"];
@@ -71,7 +76,7 @@ export function selectV9Card(
   input: unknown,
   expectedIdentity: V9ConsumerIdentity,
   cardId: string,
-): V9ConsumerResult<SafetyScoreV9Card> {
+): V9ConsumerResult<SafetyScoreV9CurrentCard> {
   const response = resolveV9ConsumerResponse(input, expectedIdentity);
   if (response.status === "unavailable") return response;
   const card = response.value.cards.find((candidate) => candidate.id === cardId);

@@ -202,6 +202,39 @@ Impact: materially different stablecoin designs are judged on the failure
 paths they actually have, while common evidence and integrity rules remain
 consistent across the cohort.
 
+## Explicit Market-Anchor Adjustment
+
+The eight workstreams remain cohort-wide framework changes. Separately, the
+candidate policy contains one explicit native-asset adjustment for
+`usdt-tether`, labeled `#1 & Longevity Premium`. It adds four pre-cap points and
+raises only the low centralized-mint limit from 83 to the A+ floor of 87.
+
+Eligibility is computed from the ordinary score before the adjustment. Every
+condition must hold in the same exact fixed-input evaluation:
+
+- ordinary published score at least 83;
+- fixed-clock circulating-USD market rank exactly 1;
+- at least 120 months of implementation history;
+- strong evidence on Backing, Exit, and Economic Control;
+- Exit score at least 90;
+- an observed applicable peg with no unresolved peg reason, active depeg, or
+  measured historical-peg danger attribution;
+- operational-resilience eligibility with no blockers and score-bearing
+  stress-redemption plus reserve-reconciliation contributions;
+- no serial parent; and
+- no binding cap other than the named low centralized-mint limit, and no other
+  candidate cap below 87.
+
+The adjustment cannot relax active-depeg, evidence, parent, track-record, or
+other structural limits. Its trace records the ordinary and adjusted raw and
+published scores plus the exact cap relief. The ordinary post-cap score remains
+the score supplied to serial dependencies; wrappers and downstream claims do
+not inherit either the points or the cap relief. If DEX evidence degrades enough
+to take Exit below 90 or evidence below strong, the adjustment is withheld.
+
+This policy entry is V9-only candidate behavior. It does not change V8, does
+not establish readiness, and does not authorize activation.
+
 ## Producer And Fact Fidelity
 
 Several supporting corrections are required for those workstreams to behave as
@@ -264,13 +297,15 @@ Candidate-only attribution remains outside the public V8 fixed input. Shared
 producer and evidence corrections may improve inputs consumed by both models;
 they do not change which model is public, and they do not activate V9.
 
-Current candidate cards use score-trace schema v2 and response schema v3 for
-bounded-D attribution. Strict readers retain response-v2/trace-v1 compatibility
-for already persisted shadow artifacts, while new output must satisfy the v3
-causal and score-grade reconciliation rules. The separate public report
-projection uses report-response schema v2 with the same trace-v2 cards. Its
-live producer and consumers are current-only; report-v1/trace-v1 is available
-only through the explicitly named historical compatibility reader.
+Current candidate cards use score-trace schema v3 and response schema v4 for
+bounded-D attribution plus explicit policy score adjustments. Strict readers
+retain exact response-v3/trace-v2 and response-v2/trace-v1 compatibility for
+already persisted shadow artifacts; parsing those artifacts does not inject
+the trace-v3 adjustment field. New output must satisfy the v4 response and v3
+trace reconciliation rules. The separate public report projection uses
+report-response schema v3 with the same trace-v3 cards. Its live producer and
+consumers are current-only; report-v2/trace-v2 and report-v1/trace-v1 are
+available only through the explicitly named historical compatibility reader.
 
 ## Compiler Boundary
 

@@ -310,7 +310,7 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): SafetyScoreV9Cur
       : roundTrace(trace.baseAssetScore - trace.deploymentAdjustedScore);
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     legacyAliases: {
       qualityScore: "weighted-pillar-mean",
       pegAdjustedScore: "post-deployment-pre-cap-score",
@@ -373,6 +373,10 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): SafetyScoreV9Cur
       totalFactCount: trace.unresolvedFacts.length,
       summaries: responsibilitySummaries,
     },
+    scoreAdjustments: trace.scoreAdjustments.map((adjustment) => ({
+      ...adjustment,
+      capRelief: { ...adjustment.capRelief },
+    })),
     wrapperParentLimit:
       trace.wrapperParentLimit === null
         ? null
@@ -482,7 +486,7 @@ export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs)
   const notRatedIds = cards.filter((card) => card.grade === "NR").map((card) => card.id);
   return SafetyScoreV9CurrentResponseSchema.parse({
     model: "v9-critical-path",
-    schemaVersion: 3,
+    schemaVersion: 4,
     lifecycle: "candidate",
     candidateId: args.candidateId,
     policyVersion: args.policyVersion,

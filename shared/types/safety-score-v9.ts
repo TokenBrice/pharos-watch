@@ -656,6 +656,90 @@ const V9MultiplierBandSchema = z
   .object({ threshold: z.number().finite().nonnegative(), multiplier: z.number().finite().min(0).max(1) })
   .strict();
 
+export const V9AssetPremiumKindSchema = z.enum(["market-anchor-longevity"]);
+export type V9AssetPremiumKind = z.infer<typeof V9AssetPremiumKindSchema>;
+
+export const V9OperationalResilienceComponentSchema = z.enum([
+  "cumulative-redemption",
+  "stress-redemption",
+  "persistent-market-depth",
+  "stress-recovery",
+  "reserve-reconciliation",
+]);
+export type V9OperationalResilienceComponent = z.infer<
+  typeof V9OperationalResilienceComponentSchema
+>;
+
+const V9AssetPremiumPolicySchema = z
+  .object({
+    assetId: z.string().min(1),
+    kind: V9AssetPremiumKindSchema,
+    label: z.string().min(1),
+    points: z.number().finite().positive().max(20),
+    maximumPublishedScore: ScoreSchema,
+    minimumBaseScore: ScoreSchema,
+    minimumTrackRecordMonths: z.number().int().positive(),
+    requiredMarketRank: z.number().int().positive(),
+    minimumExitScore: ScoreSchema,
+    requiredEvidenceLevel: V9EvidenceLevelSchema,
+    requiredOperationalComponents: z
+      .array(V9OperationalResilienceComponentSchema)
+      .min(1),
+    capRelief: z
+      .object({
+        source: z.literal("structural"),
+        kind: z.string().min(1),
+        fromLimit: ScoreSchema,
+        toLimit: ScoreSchema,
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((premium, ctx) => {
+    const capKindParts = premium.capRelief.kind.split(":");
+    if (
+      capKindParts.length !== 3 ||
+      capKindParts[0] !== "signal" ||
+      !V9StructuralSignalKindSchema.safeParse(capKindParts[1]).success ||
+      !V9SeveritySchema.safeParse(capKindParts[2]).success
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["capRelief", "kind"],
+        message: "Asset premium cap relief must name one exact registered structural signal",
+      });
+    }
+    if (premium.minimumBaseScore >= premium.maximumPublishedScore) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["minimumBaseScore"],
+        message: "Asset premium minimum base score must remain below its maximum published score",
+      });
+    }
+    if (premium.capRelief.fromLimit >= premium.capRelief.toLimit) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["capRelief"],
+        message: "Asset premium cap relief must increase the named cap",
+      });
+    }
+    if (premium.capRelief.toLimit !== premium.maximumPublishedScore) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["capRelief", "toLimit"],
+        message: "Asset premium cap relief must stop at the maximum published score",
+      });
+    }
+    if (new Set(premium.requiredOperationalComponents).size !== premium.requiredOperationalComponents.length) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requiredOperationalComponents"],
+        message: "Asset premium operational components cannot contain duplicates",
+      });
+    }
+  });
+export type V9AssetPremiumPolicy = z.infer<typeof V9AssetPremiumPolicySchema>;
+
 const V9FormulaPolicySchema = z
   .object({
     pillarWeights: z
@@ -711,6 +795,7 @@ const V9FormulaPolicySchema = z
     wrapperStrategyCap: z
       .object({ pure: ScoreSchema, staked: ScoreSchema, vault: ScoreSchema })
       .strict(),
+    assetPremiums: z.array(V9AssetPremiumPolicySchema).default([]),
   })
   .strict();
 
@@ -1341,6 +1426,34 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
       "Wrapper-strategy discounts must be monotonic: pure <= staked <= vault",
     );
   }
+  const assetPremiumIds = formula.assetPremiums.map((premium) => premium.assetId);
+  if (new Set(assetPremiumIds).size !== assetPremiumIds.length) {
+    addPolicyIssue(
+      ctx,
+      ["semantic", "formula", "assetPremiums"],
+      "Asset premiums must have unique asset IDs",
+    );
+  }
+  formula.assetPremiums.forEach((premium, index) => {
+    const [signalPrefix, signalKind, severity] = premium.capRelief.kind.split(":");
+    const configuredLimit =
+      signalPrefix === "signal" &&
+      signalKind in policy.semantic.structural.signalLimits &&
+      severity in policy.semantic.structural.signalLimits[
+        signalKind as keyof typeof policy.semantic.structural.signalLimits
+      ]
+        ? policy.semantic.structural.signalLimits[
+            signalKind as keyof typeof policy.semantic.structural.signalLimits
+          ][severity as V9Severity]
+        : undefined;
+    if (configuredLimit !== premium.capRelief.fromLimit) {
+      addPolicyIssue(
+        ctx,
+        ["semantic", "formula", "assetPremiums", index, "capRelief", "fromLimit"],
+        "Asset premium cap relief must match the configured structural limit",
+      );
+    }
+  });
 
   const grades = formula.gradeThresholds;
   if (
@@ -1365,6 +1478,35 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
   if (grades[grades.length - 1]?.minScore !== 0) {
     addPolicyIssue(ctx, ["semantic", "formula", "gradeThresholds"], "F threshold must begin at zero");
   }
+  const aFloor = grades.find((entry) => entry.grade === "A")?.minScore;
+  const aPlusFloor = grades.find((entry) => entry.grade === "A+")?.minScore;
+  formula.assetPremiums.forEach((premium, index) => {
+    if (premium.minimumBaseScore !== aFloor) {
+      addPolicyIssue(
+        ctx,
+        ["semantic", "formula", "assetPremiums", index, "minimumBaseScore"],
+        "Asset premium eligibility must begin at the configured A floor",
+      );
+    }
+    if (premium.maximumPublishedScore !== aPlusFloor) {
+      addPolicyIssue(
+        ctx,
+        ["semantic", "formula", "assetPremiums", index, "maximumPublishedScore"],
+        "Asset premium publication must stop at the configured A+ floor",
+      );
+    }
+    if (
+      aFloor !== undefined &&
+      aPlusFloor !== undefined &&
+      premium.points < aPlusFloor - aFloor
+    ) {
+      addPolicyIssue(
+        ctx,
+        ["semantic", "formula", "assetPremiums", index, "points"],
+        "Asset premium points must span the configured A-to-A+ threshold gap",
+      );
+    }
+  });
 
   const trackBands = formula.trackRecordCeilings;
   if (trackBands[0]?.minMonthsInclusive !== 0) {

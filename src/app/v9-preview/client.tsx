@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { RefreshCw, Search } from "lucide-react";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { gradeRange, type ReportCardGradeRange } from "@shared/lib/report-cards";
-import type { SafetyScoreV9Card } from "@shared/types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import { SafetyGradeDistributionBar } from "@/components/safety-grade-distribution-bar";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -33,7 +33,7 @@ function titleCase(value: string): string {
     .join(" ");
 }
 
-function compareCards(left: SafetyScoreV9Card, right: SafetyScoreV9Card): number {
+function compareCards(left: SafetyScoreV9CurrentCard, right: SafetyScoreV9CurrentCard): number {
   if (left.score === null && right.score !== null) return 1;
   if (left.score !== null && right.score === null) return -1;
   if (left.score !== null && right.score !== null && left.score !== right.score) {
@@ -42,7 +42,7 @@ function compareCards(left: SafetyScoreV9Card, right: SafetyScoreV9Card): number
   return left.id.localeCompare(right.id);
 }
 
-function buildGradeCounts(cards: readonly SafetyScoreV9Card[]): Record<ReportCardGradeRange, number> {
+function buildGradeCounts(cards: readonly SafetyScoreV9CurrentCard[]): Record<ReportCardGradeRange, number> {
   const counts: Record<ReportCardGradeRange, number> = { A: 0, B: 0, C: 0, D: 0, F: 0, NR: 0 };
   for (const card of cards) counts[gradeRange(card.grade)] += 1;
   return counts;
@@ -59,7 +59,13 @@ function Metric({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-function PillarValue({ card, pillar }: { card: SafetyScoreV9Card; pillar: keyof SafetyScoreV9Card["pillars"] }) {
+function PillarValue({
+  card,
+  pillar,
+}: {
+  card: SafetyScoreV9CurrentCard;
+  pillar: keyof SafetyScoreV9CurrentCard["pillars"];
+}) {
   const value = card.pillars[pillar];
   return (
     <div>
@@ -69,7 +75,7 @@ function PillarValue({ card, pillar }: { card: SafetyScoreV9Card; pillar: keyof 
   );
 }
 
-function PreviewTable({ cards }: { cards: readonly SafetyScoreV9Card[] }) {
+function PreviewTable({ cards }: { cards: readonly SafetyScoreV9CurrentCard[] }) {
   return (
     <TableFrame
       tableId="safety-score-v9-shadow-preview"
@@ -128,12 +134,22 @@ function PreviewTable({ cards }: { cards: readonly SafetyScoreV9Card[] }) {
                 </div>
               </TableHead>
               <TableCell className="px-3 py-3">
-                <SafetyGradeBadge
-                  grade={card.grade}
-                  score={card.score === null ? null : Math.round(card.score)}
-                  showScore
-                  size="xs"
-                />
+                <div className="flex min-w-[10rem] flex-col items-start gap-1.5">
+                  <SafetyGradeBadge
+                    grade={card.grade}
+                    score={card.score === null ? null : Math.round(card.score)}
+                    showScore
+                    size="xs"
+                  />
+                  {card.scoreTrace.scoreAdjustments.map((adjustment) => (
+                    <span
+                      key={adjustment.kind}
+                      className="max-w-[11rem] text-[11px] leading-4 text-emerald-700 dark:text-emerald-400"
+                    >
+                      {adjustment.label} +{adjustment.appliedPoints.toFixed(0)}
+                    </span>
+                  ))}
+                </div>
               </TableCell>
               <TableCell className="px-3 py-3">
                 <PillarValue card={card} pillar="backing" />

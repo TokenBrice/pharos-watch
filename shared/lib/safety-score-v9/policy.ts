@@ -30,6 +30,21 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
     schemaVersion: policy.schemaVersion,
     semantic: {
       ...policy.semantic,
+      formula: {
+        ...policy.semantic.formula,
+        assetPremiums: [...policy.semantic.formula.assetPremiums]
+          .map((premium) => ({
+            ...premium,
+            requiredOperationalComponents: sortedUnique(
+              premium.requiredOperationalComponents,
+            ),
+          }))
+          .sort(
+            (left, right) =>
+              compareCodeUnits(left.assetId, right.assetId) ||
+              compareCodeUnits(left.kind, right.kind),
+          ),
+      },
       materiality: {
         ...policy.semantic.materiality,
         matureChains: sortedUnique(policy.semantic.materiality.matureChains),

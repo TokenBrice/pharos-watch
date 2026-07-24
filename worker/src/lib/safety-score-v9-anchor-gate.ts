@@ -77,14 +77,14 @@ export interface V9AnchorContract {
 
 /**
  * The ruled anchor set. Grade references resolve against the candidate
- * policy's gradeThresholds: A=83, A-=80, B+=75, B=70, C+=60, C=55, D=40.
+ * policy's gradeThresholds: A+=87, A=83, A-=80, B+=75, B=70, C+=60, C=55, D=40.
  */
 export const SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1 = {
   schemaVersion: 1,
   anchors: [
     { id: "usdc-circle", minGrade: "A", label: "A-anchor" },
     { id: "bold-liquity", minGrade: "A", label: "A-anchor" },
-    { id: "usdt-tether", minGrade: "A-", label: "USDT resilience anchor" },
+    { id: "usdt-tether", minGrade: "A+", label: "USDT market-anchor and longevity target" },
     { id: "dai-makerdao", minGrade: "B", label: "DAI current-facts anchor" },
     { id: "sdai-sky", minGrade: "B-", label: "sDAI current-facts anchor" },
     { id: "sbold-k3-capital", minGrade: "B-", label: "sBOLD measured-withdrawal anchor" },

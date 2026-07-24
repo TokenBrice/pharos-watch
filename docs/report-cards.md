@@ -56,6 +56,21 @@ Persistent measured market depth is eligible for the same bounded operational-
 resilience credit across the mature cohort. Canonical implementation history
 provides only the age gate; the credit still requires repeated score-eligible
 execution observations and does not require a bespoke asset overlay.
+The candidate policy has one explicit native-asset adjustment for
+`usdt-tether`: the `#1 & Longevity Premium` adds four pre-cap points and relaxes
+only the low centralized-mint limit from 83 to the A+ floor of 87. It applies
+only when the ordinary, premium-free result is already at least A (83), USDT is
+ranked first by fixed-clock circulating USD, has at least 120 months of
+implementation history, all three pillars have strong evidence, Exit is at
+least 90, the peg is observed with no unresolved peg reason, active depeg, or
+measured historical-peg danger attribution, and operational resilience is
+unblocked with both stress-redemption and reserve-reconciliation contributions.
+Native status is mandatory, and any other binding cap blocks the adjustment; a
+nonbinding cap below 87 also blocks it rather than becoming newly binding after
+relief. The trace retains the ordinary score as the dependency score, so
+wrappers and other downstream claims cannot inherit the four points or the cap
+relief. A degraded route generation therefore remains degraded rather than
+receiving a reputation override.
 When the exact input records that a configured live-reserve asset fell back to
 its registry composition, V9 can use that fallback only if its review is
 verified, sourced, complete, composition-dated, and no more than 31 days old.
@@ -74,10 +89,14 @@ V8 redemption producer. A reviewed slower model without a contractual SLA uses
 the model's conservative comparison horizon rather than inventing a numeric SLA.
 Missing categorical access-posture review remains visible but does not make an
 otherwise established score unrateable. New candidate cards use score-trace
-schema v2 inside candidate-response schema v3 and public-report schema v2.
-Candidate artifact readers retain response-v2/trace-v1 compatibility, and an
-explicit historical report reader retains report-v1/trace-v1 snapshots. Live
-report producers and consumers accept only report-v2/trace-v2.
+schema v3 inside candidate-response schema v4 and public-report schema v3.
+Trace v3 requires an explicit `scoreAdjustments` list, empty for ordinary cards
+and populated with the ordinary and adjusted stages when the market-anchor
+policy applies. Retained response-v3/trace-v2 and response-v2/trace-v1
+candidate artifacts remain exact and do not gain that field during parsing.
+The explicitly named historical report reader likewise retains both
+report-v2/trace-v2 and report-v1/trace-v1 snapshots. Live report producers and
+consumers accept only report-v3/trace-v3.
 
 Candidate failures cannot affect V8 publication. A production deployment of V9
 scorer or producer code only changes the private shadow output; it does not

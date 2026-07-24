@@ -86,13 +86,13 @@ function scoreTrace(spec: CardSpec) {
     spec.grade === "D" || spec.grade === "F"
       ? [{
           source: "pillar-score" as const,
-          path: "pillars.backing",
+          path: "pillar:backing:fixture",
           message: "Fixture measured-adverse pillar attribution.",
           responsibility: "measured-adverse" as const,
         }]
       : [];
   return {
-    schemaVersion: 1 as const,
+    schemaVersion: 3 as const,
     legacyAliases: {
       qualityScore: "weighted-pillar-mean" as const,
       pegAdjustedScore: "post-deployment-pre-cap-score" as const,
@@ -129,6 +129,10 @@ function scoreTrace(spec: CardSpec) {
       semantics: "causal-measured-adverse-v1" as const,
       items: adverse,
     },
+    boundedUncertaintyAttribution: {
+      semantics: "causal-bounded-uncertainty-v1" as const,
+      items: [],
+    },
     evidenceResponsibility: {
       semantics: "limiting-fact-owner-v1" as const,
       totalFactCount: 0,
@@ -145,6 +149,7 @@ function scoreTrace(spec: CardSpec) {
         reasonCodes: [],
       })),
     },
+    scoreAdjustments: [],
   };
 }
 
@@ -399,7 +404,7 @@ function generation(index: number, specs: readonly CardSpec[] = PASSING_SPECS) {
       },
       candidate: {
         model: "v9-critical-path",
-        schemaVersion: 2,
+        schemaVersion: 4,
         lifecycle: "candidate",
         candidateId: "safety-score-v9-candidate:fixture",
         policyVersion: "candidate-v2",
