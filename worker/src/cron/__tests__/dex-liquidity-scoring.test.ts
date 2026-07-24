@@ -676,6 +676,80 @@ describe("dex-liquidity scoring", () => {
     });
   });
 
+  it("keeps exact AMM evidence scoreable when its measured target rotates out", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const metrics = initMetrics("usdc-circle", "USDC");
+    metrics.topPools = [{
+      poolId: "ethereum:0x0000000000000000000000000000000000000010",
+      project: "pancakeswap",
+      chain: "Ethereum",
+      tvlUsd: 2_000_000,
+      symbol: "USDC-USDT",
+      volumeUsd1d: 100_000,
+      volumeUsd7d: 700_000,
+      poolType: "pancakeswap-v3-1bp",
+      source: "dl",
+      extra: {
+        ammExecutionModel: {
+          source: "uniswap-v2",
+          invariant: "constant-product",
+          trackedTokenIndex: 0,
+          feeRate: 0.003,
+          tokens: [
+            {
+              address: "0x0000000000000000000000000000000000000011",
+              symbol: "USDC",
+              decimals: 6,
+              balance: 1_000_000,
+              referencePriceUsd: 1,
+              referencePriceSource: "tracked-market",
+              trackedAssetId: "usdc-circle",
+            },
+            {
+              address: "0x0000000000000000000000000000000000000012",
+              symbol: "USDT",
+              decimals: 6,
+              balance: 1_000_000,
+              referencePriceUsd: 1,
+              referencePriceSource: "tracked-market",
+              trackedAssetId: "usdt-tether",
+            },
+          ],
+        },
+        executionCapabilityGate: {
+          family: "measured-execution",
+          reason: "target-unresolved",
+        },
+      },
+    }];
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["usdc-circle", metrics]]),
+      new Map(),
+    );
+    const routeResult = result.scores.get("usdc-circle") as {
+      exitRouteObservations?: Array<{ evidenceKind: string; scoreEligible: boolean }>;
+      exitRouteObservationCoverage?: {
+        scoreEligiblePoolCount?: number;
+        scoreEligibleCapabilityPoolCount?: number;
+        unsupportedReasons: Record<string, number>;
+      };
+    } | undefined;
+
+    expect(routeResult?.exitRouteObservations).toContainEqual(
+      expect.objectContaining({
+        evidenceKind: "reserve-based-amm-simulation",
+        scoreEligible: true,
+      }),
+    );
+    expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
+      scoreEligiblePoolCount: 1,
+      scoreEligibleCapabilityPoolCount: 1,
+      unsupportedReasons: {},
+    });
+  });
+
   it("fails coverage closed when reviewed route capabilities overflow the bounded payload", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
     const metrics = initMetrics("usdc-circle", "USDC");

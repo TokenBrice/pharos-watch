@@ -18,6 +18,7 @@ import type { SolanaMeasuredExecutionTarget } from "@shared/types/solana-measure
 import type { TronMeasuredExecutionTarget } from "@shared/types/tron-measured-execution";
 import { buildMeasuredPoolDirectionKey } from "../measured-execution/inventory";
 import {
+  applyDexMeasuredExecutionGate,
   buildDexMeasuredExecutionRetainedRoutePools,
   joinDexMeasuredExecutionEvidence,
   loadDexMeasuredExecutionJoinEvidence,
@@ -583,7 +584,7 @@ export async function computeStablecoinScores(
         delete pool.extra.measuredExecution;
         delete pool.extra.measuredExecutionProfile;
         delete pool.extra.measuredExecutionPhysicalPoolId;
-        pool.extra.executionCapabilityGate = { family: "measured-execution", reason: "target-unresolved" };
+        applyDexMeasuredExecutionGate(pool, "target-unresolved");
         pool.extra.measuredExecutionDiagnostic = { adapterProfileId };
         continue;
       }

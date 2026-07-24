@@ -56,6 +56,20 @@ function gate(reason: DexExecutionCapabilityGate["reason"]): DexExecutionCapabil
   return { family: "measured-execution", reason };
 }
 
+export function applyDexMeasuredExecutionGate(
+  pool: PoolEntry,
+  reason: DexExecutionCapabilityGate["reason"],
+): void {
+  pool.extra = { ...(pool.extra ?? {}) };
+  if (pool.extra.ammExecutionModel) {
+    if (pool.extra.executionCapabilityGate?.family === "measured-execution") {
+      delete pool.extra.executionCapabilityGate;
+    }
+    return;
+  }
+  pool.extra.executionCapabilityGate = gate(reason);
+}
+
 function increment(record: Record<string, number>, reason: string): void {
   record[reason] = (record[reason] ?? 0) + 1;
 }
@@ -456,7 +470,7 @@ export function joinDexMeasuredExecutionEvidence(input: {
           for (const target of packetTargets) {
             increment(diagnostics.failuresByReason, `${target.adapterProfileId}:${reason}`);
           }
-          if (!pool.extra?.ammExecutionModel) pool.extra!.executionCapabilityGate = gate(reason);
+          applyDexMeasuredExecutionGate(pool, reason);
         };
         const packetPolicyValid =
           packetTargets.length === 2 &&
@@ -548,12 +562,7 @@ export function joinDexMeasuredExecutionEvidence(input: {
       delete pool.extra.measuredExecutionProfile;
       pool.extra.measuredExecutionPhysicalPoolId = target.poolId;
       const fail = (reason: DexExecutionCapabilityGate["reason"], detail?: string) => {
-        if (
-          target.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID ||
-          !pool.extra?.ammExecutionModel
-        ) {
-          pool.extra!.executionCapabilityGate = gate(reason);
-        }
+        applyDexMeasuredExecutionGate(pool, reason);
         pool.extra!.measuredExecutionDiagnostic = {
           adapterProfileId: target.adapterProfileId,
           targetId: target.targetId,

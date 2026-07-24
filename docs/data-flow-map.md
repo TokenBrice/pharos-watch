@@ -63,7 +63,10 @@ exposes proof-free profiles and explicit capability gates through the existing
 DEX API. Mature fresh last-known-good profiles can remain route-only across a
 temporary liquidity shortlist rotation, without re-entering aggregate liquidity
 or V8 scoring; for the 3pool the route compiler reconstructs both sibling
-directions from the same retained packet or admits neither. Native Solana and
+directions from the same retained packet or admits neither. A measured target
+rotation or quote failure leaves an independently complete exact AMM model
+available instead of attaching a measurement gate to that fallback; unrelated
+capability gates and actual measured/exact conflicts still fail closed. Native Solana and
 Tron joins apply explicit reviewed active/shadow registry policy after full
 proof and current-target validation. Only active native profiles enter the P4
 capacity compiler and physical-pool completeness denominator; shadow profiles
