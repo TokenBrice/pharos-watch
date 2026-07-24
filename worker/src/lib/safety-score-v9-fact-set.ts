@@ -6,6 +6,7 @@ import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capaci
 import { canonicalV9DependencyEdgeKey, canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import { deriveV9WindowedPegScore } from "@shared/lib/safety-score-v9/formula";
 import {
+  evaluateV9ExitAssetFacts,
   resolveV9ExitCapacityAtRequest,
   selectV9ExitStressRequest,
 } from "@shared/lib/safety-score-v9/exit";
@@ -3391,14 +3392,32 @@ function buildWrapperLocalFacts(
     );
   }
 
-  const observedUnwindRoutes = input.exitRoutes.filter(
-    (route) => route.status.observationState === "known" && route.scoreEligible && route.capacityCurve.length > 0,
-  );
-  let measuredUnwind: V9WrapperLocalDimensionFact;
   const stressRequest =
     input.supply.status.observationState === "known"
       ? selectV9ExitStressRequest(input.supply.circulatingUsd, V9_CANDIDATE_POLICY_V1)
       : null;
+  const admittedDocumentedUnwindRouteKeys =
+    stressRequest === null
+      ? new Set<string>()
+      : new Set(
+          evaluateV9ExitAssetFacts(
+            {
+              supply: input.supply,
+              exitStatus: input.exitStatus,
+              exitRoutes: [...input.exitRoutes],
+            },
+            V9_CANDIDATE_POLICY_V1,
+          ).routes.flatMap((route) => (route.included ? [route.routeKey] : [])),
+        );
+  const observedUnwindRoutes = input.exitRoutes.filter(
+    (route) =>
+      (route.status.observationState === "known" && route.scoreEligible && route.capacityCurve.length > 0) ||
+      // Undisclosed-fee credit is conditionally withheld by a later danger gate
+      // that is unavailable while facts are being compiled.
+      (route.feeEvidence !== "undisclosed-reviewed" &&
+        admittedDocumentedUnwindRouteKeys.has(route.routeKey)),
+  );
+  let measuredUnwind: V9WrapperLocalDimensionFact;
   const stressCompletions =
     stressRequest === null
       ? []

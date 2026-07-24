@@ -47,6 +47,11 @@ low serial parent, or the wrapper's own local layer; a D with neither trace is
 withheld.
 For an incomplete wrapper, fallback uncertainty is causal only when its
 discount exceeds the reviewed local-risk discount.
+Wrapper unwind facts use the same documented-redemption admission decision as
+the Exit pillar instead of requiring the raw route `scoreEligible` flag. This
+does not mutate that flag or broaden generic route eligibility; routes with
+undisclosed reviewed fees remain excluded from this fact path because the later
+pre-exit danger gate is not available during fact compilation.
 Missing categorical access-posture review remains visible but does not make an
 otherwise established score unrateable. New candidate cards use score-trace
 schema v2 inside candidate-response schema v3 and public-report schema v2.

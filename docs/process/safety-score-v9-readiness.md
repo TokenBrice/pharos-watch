@@ -204,6 +204,10 @@ designed:
   bounded local gaps only when it exceeds the reviewed local-risk discount;
   otherwise the applied discount is attributed to the reviewed adjustments
   that caused it.
+- Wrapper measured-unwind facts share the Exit pillar's documented-redemption
+  admission result. This recognizes reliable reviewed redemption without
+  changing raw route score eligibility; undisclosed-fee routes remain excluded
+  because their later danger gate is unavailable during fact compilation.
 - Every evidence owner, including a missing Pharos integration, receives the
   reason registry's configured ceiling when that reason is score-bearing.
 - Where a provider publishes only aggregate lock-mint supply, a V9-only

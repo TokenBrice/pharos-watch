@@ -1536,7 +1536,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(edges.every((edge) => edge.evidenceRefIds.length > 0)).toBe(true);
   });
 
-  it("derives only form-positive native savings wrapper-local facts", () => {
+  it("derives native savings facts and shares documented-redemption admission with exit evaluation", () => {
     const original = exactTwoAssetFixedInput({ mapAlphaCollateral: true });
     const {
       schemaVersion: omittedSchemaVersion,
@@ -1559,10 +1559,32 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ];
     const parentReserve = structuredClone(original.liveReserveMap.alpha![0]!);
     parentReserve.pct = 100;
+    const documentedRedemptionInput = queuedRedemptionFixedInput();
+    const documentedRedemption = structuredClone(documentedRedemptionInput.redemptionBackstopMap.alpha!);
+    const documentedObservation = documentedRedemption.capacityProfile!.exitRouteObservations![0]!;
+    documentedObservation.requestedNotionalUsd = 10_000_000;
+    documentedObservation.executableUsd = 10_000_000;
+    documentedObservation.completionRatio = 1;
+    documentedObservation.capacityCurve = [
+      ...documentedObservation.capacityCurve!,
+      {
+        requestedNotionalUsd: 10_000_000,
+        maxCostBps: 200,
+        executableUsd: 10_000_000,
+        completionRatio: 1,
+      },
+    ];
     const fixed = createReportCardsFixedInput({
       ...draft,
       activeAssetIds: ["alpha", "beta"],
       liveReserveMap: { ...draft.liveReserveMap, alpha: [parentReserve] },
+      redemptionGenerationId: documentedRedemptionInput.redemptionGenerationId,
+      redemptionBackstopMap: { alpha: documentedRedemption },
+      redemptionStale: false,
+      inputFreshness: {
+        ...draft.inputFreshness,
+        redemptionBackstops: documentedRedemptionInput.inputFreshness.redemptionBackstops,
+      },
     });
     const metaById = new Map<string, V9ExtensionRegistryMeta>([
       [
@@ -1587,6 +1609,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ]);
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
     const alpha = baseline.assets.find((asset) => asset.assetId === "alpha")!;
+    alpha.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+    alpha.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, "alpha");
     alpha.economicControlReview = {
       mint: {
         status: notApplicableStatus("v9.control.mint-review"),
@@ -1608,6 +1632,25 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     const compiledAlpha = compiled.assets.find((asset) => asset.assetId === "alpha")!;
+    const documentedRoute = compiledAlpha.exitRoutes.find((route) => route.lane === "redemption")!;
+    expect(documentedRoute).toMatchObject({
+      scoreEligible: false,
+      status: { observationState: "known" },
+    });
+    const evaluatedExit = evaluateV9Exit(
+      {
+        circulatingUsd: compiledAlpha.supply.circulatingUsd,
+        portfolioStatus: "reviewed-complete",
+        routes: compiledAlpha.exitRoutes.map(projectV9ExitEvaluationRoute),
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const evaluatedDocumentedRoute = evaluatedExit.routes.find(
+      (route) => route.routeKey === documentedRoute.routeKey,
+    );
+    expect(evaluatedDocumentedRoute, JSON.stringify(evaluatedDocumentedRoute)).toMatchObject({
+      included: true,
+    });
     expect(compiledAlpha.economicControlReview.mint).toMatchObject({
       status: { observationState: "known" },
       reconciliation: "not-applicable",
@@ -1624,6 +1667,11 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         leverage: { disposition: "issuer-undisclosed", assessment: null },
         rehypothecationCorrelation: { disposition: "issuer-undisclosed", assessment: null },
         shareAccountingNavOracle: { disposition: "reviewed", assessment: "moderate" },
+        measuredUnwind: {
+          disposition: "reviewed",
+          assessment: "none",
+          signals: expect.arrayContaining(["wrapper-measured-unwind-route-count:2"]),
+        },
       },
     });
     if (wrapper.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
