@@ -308,6 +308,81 @@ describe("Safety Score v9 backing exposure primitives", () => {
     );
   });
 
+  it("exempts allocated-commodity issuer domains while retaining custodian concentration", () => {
+    const separateCustodians = evaluateV9ReserveExposures(
+      asset([
+        exposure({
+          key: "gold-a",
+          weight: 0.5,
+          assetClass: "commodity-allocated",
+          issuer: "physical-gold",
+          custodian: "vault-a",
+        }),
+        exposure({
+          key: "gold-b",
+          weight: 0.5,
+          assetClass: "commodity-allocated",
+          issuer: "physical-gold",
+          custodian: "vault-b",
+        }),
+      ]),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const sharedCustodian = evaluateV9ReserveExposures(
+      asset([
+        exposure({
+          key: "gold-a",
+          weight: 0.5,
+          assetClass: "commodity-allocated",
+          issuer: "physical-gold",
+          custodian: "shared-vault",
+        }),
+        exposure({
+          key: "gold-b",
+          weight: 0.5,
+          assetClass: "commodity-allocated",
+          issuer: "physical-gold",
+          custodian: "shared-vault",
+        }),
+      ]),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const ordinaryIssuer = evaluateV9ReserveExposures(
+      asset([
+        exposure({ key: "cash-a", weight: 0.5, issuer: "bank", custodian: "bank-vault-a" }),
+        exposure({ key: "cash-b", weight: 0.5, issuer: "bank", custodian: "bank-vault-b" }),
+      ]),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    const separateConcentration = separateCustodians.contributions.find(
+      (entry) => entry.componentKey === "reserve:concentration",
+    );
+    const sharedConcentration = sharedCustodian.contributions.find(
+      (entry) => entry.componentKey === "reserve:concentration",
+    );
+    const ordinaryConcentration = ordinaryIssuer.contributions.find(
+      (entry) => entry.componentKey === "reserve:concentration",
+    );
+
+    expect(separateConcentration).toMatchObject({ score: 75 });
+    expect(separateConcentration?.failureDomains).toEqual(
+      expect.arrayContaining([
+        { kind: "reserve-custodian", key: "vault-a" },
+        { kind: "reserve-custodian", key: "vault-b" },
+      ]),
+    );
+    expect(separateConcentration?.failureDomains).not.toContainEqual({
+      kind: "reserve-issuer",
+      key: "physical-gold",
+    });
+    expect(sharedConcentration).toMatchObject({ score: 35 });
+    expect(ordinaryConcentration).toMatchObject({ score: 35 });
+    expect(separateCustodians.contributions.find((entry) => entry.componentKey === "reserve:gold-a")?.score).toBe(
+      93.9,
+    );
+  });
+
   it("preserves known reserves while charging an absent mechanism review at authored component weights", () => {
     const gap: V9FactGapV2 = {
       gapId: "gap:mechanism-review",
@@ -484,6 +559,63 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
       V9_CANDIDATE_POLICY_V1,
     );
     expect(result.score).toBeCloseTo(75, 6);
+  });
+
+  it("uses verified live parent backing without rerunning the child archetype", () => {
+    const liveAsset: V9BackingAssetInput = {
+      ...asset([
+        exposure({
+          key: "parent",
+          weight: 1,
+          assetClass: "stablecoin",
+          trackedAssetId: "parent",
+          issuer: "asset:parent",
+          provenance: "live",
+        }),
+      ]),
+      assetId: "wrapper",
+      inheritedStablecoinBacking: {
+        parentAssetId: "parent",
+        parentBackingScore: 82,
+        weight: 1,
+        tier: "wrapped",
+        failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+      },
+    };
+    const failedFact = (key: string) => ({
+      status: knownStatus(`mechanism:${key}`),
+      quality: "failed" as const,
+      failureDomains: [{ kind: "reserve-issuer" as const, key: `child:${key}` }],
+    });
+    const result = evaluateV9ArchetypeBacking(
+      {
+        archetype: "fiat-cash",
+        asset: liveAsset,
+        components: [
+          { componentKey: "claim-and-segregation", fact: failedFact("claim") },
+          { componentKey: "custody-continuity", fact: failedFact("custody") },
+          { componentKey: "assurance-and-reconciliation", fact: failedFact("assurance") },
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.score).toBe(82);
+    expect(result.contributions).toEqual([
+      expect.objectContaining({
+        componentKey: "reserve:concentration",
+        observationState: "known",
+        provenance: "live",
+      }),
+      expect.objectContaining({
+        componentKey: "reserve:inherited-backing:parent",
+        observationState: "known",
+        provenance: "live",
+        upstreamAssetId: "parent",
+      }),
+    ]);
+    expect(result.contributions.some((entry) => entry.source === "mechanism")).toBe(false);
+    expect(result.unresolved).toEqual([]);
   });
 
   it("keeps sub-1 residual at the bounded-unknown quality", () => {

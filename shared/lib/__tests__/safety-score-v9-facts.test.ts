@@ -651,6 +651,102 @@ describe("Safety Score v9 normalized fact protocol", () => {
     );
   });
 
+  it("inherits verified live wrapper backing monotonically without escaping the parent cap", () => {
+    const evaluateWithParentQuality = (quality: "adequate" | "strong", parentWeight = 1) => {
+      const input = coreFixture();
+      const child = input.assets[1]! as unknown as V9AssetFactsV2;
+      const parent = input.assets[2]! as unknown as V9AssetFactsV2;
+      child.assetId = "child";
+      parent.assetId = "parent";
+      child.variantKind = "savings-passthrough";
+      child.reserveStatus = knownStatus("evidence:base", "backing.wrapper-live-parent");
+      child.reserveExposures = [
+        {
+          exposureKey: "exposure:parent",
+          classificationKey: "stablecoin:parent",
+          sourceGenerationId: SOURCE_FINGERPRINTS.liveReserves.generationId,
+          provenance: "live",
+          status: knownStatus("evidence:base", "backing.wrapper-live-parent"),
+          name: "Parent stablecoin",
+          weight: parentWeight,
+          trackedAssetId: parent.assetId,
+          assetClass: "protocol-position",
+          issuerOrObligorKey: "asset:parent",
+          riskFactors: ["counterparty"],
+          liquidityHorizon: "immediate",
+          maturityDaysMax: null,
+          failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+        },
+      ];
+      child.dependencies = {
+        status: knownStatus("evidence:base", "dependencies.wrapper-parent"),
+        sourceGenerationId: SOURCE_FINGERPRINTS.liveReserves.generationId,
+        source: "variant",
+        baseSource: "live-reserve",
+        dependencyFromLive: true,
+        mappedLiveReserveWeight: parentWeight,
+        fallbackReason: null,
+        edges: [
+          {
+            edgeKey: canonicalV9DependencyEdgeKey("wrapper", parent.assetId),
+            upstreamAssetId: parent.assetId,
+            dependencyType: "wrapper",
+            pathKind: "serial-dependency",
+            weight: 1,
+            economicRole: "serial-claim",
+            evidenceRefIds: ["evidence:base"],
+            failureDomains: [{ kind: "mint-control", key: "asset:parent" }],
+          },
+        ],
+        diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
+      };
+      const parentReview = parent.mechanismRiskReview.review;
+      if (parentReview === null || parentReview.archetype !== "algorithmic") {
+        throw new Error("Expected algorithmic parent fixture");
+      }
+      for (const component of [
+        parentReview.contractionCapacity,
+        parentReview.confidenceAndIncentives,
+        parentReview.oracleAndControlAssumptions,
+        parentReview.emergencyRecovery,
+        parentReview.lossRecovery,
+      ]) {
+        component.quality = quality;
+      }
+      input.activeAssetIds = [child.assetId, parent.assetId];
+      input.assets = [child as never, parent as never];
+
+      const evaluated = evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+      return {
+        child: evaluated.assets.find((asset) => asset.assetId === child.assetId)!,
+        parent: evaluated.assets.find((asset) => asset.assetId === parent.assetId)!,
+      };
+    };
+
+    const adequate = evaluateWithParentQuality("adequate");
+    const strong = evaluateWithParentQuality("strong");
+    const belowThreshold = evaluateWithParentQuality("strong", 0.98);
+    for (const result of [adequate, strong]) {
+      expect(result.child.backing.score).toBeCloseTo(result.parent.backing.score!, 12);
+      expect(result.child.backing.contributions).toContainEqual(
+        expect.objectContaining({
+          componentKey: "reserve:inherited-backing:parent",
+          observationState: "known",
+          provenance: "live",
+        }),
+      );
+      expect(result.child.backing.contributions.some((entry) => entry.source === "mechanism")).toBe(false);
+      expect(result.child.trace.finalScore).toBeLessThanOrEqual(result.parent.trace.finalScore!);
+    }
+    expect(strong.child.backing.score!).toBeGreaterThan(adequate.child.backing.score!);
+    expect(
+      belowThreshold.child.backing.contributions.some((entry) =>
+        entry.componentKey.startsWith("reserve:inherited-backing:"),
+      ),
+    ).toBe(false);
+    expect(belowThreshold.child.backing.contributions.some((entry) => entry.source === "mechanism")).toBe(true);
+  });
+
   it("deduplicates overlapping DEX physical resources before applying common-mode materiality", () => {
     const input = coreFixture();
     const alpha = input.assets[0]! as unknown as V9AssetFactsV2;

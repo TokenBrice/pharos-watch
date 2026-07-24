@@ -1557,32 +1557,52 @@ function resolvedBackingExposures(
 }
 
 /**
- * A wrapper whose exact reserve envelope carries no scored exposures but whose
- * whole backing is a single ~100% tracked, rated parent (a reviewed curated
- * collateral holding, or a declared variant/staked layer) inherits that parent's
- * backing pillar. This threads the parent's backing score to backing, which
- * applies the tiered wrapper discount and the bounded-unknown floor. Partial or
- * multi-asset baskets, manual-only dependency guesses, and any envelope with a
- * live/attested exposure keep the generic reserve path.
+ * A wrapper whose whole backing is one ~100% tracked, rated parent inherits that
+ * parent's backing pillar. Missing reserve envelopes retain the reviewed
+ * curated/variant path; a present envelope qualifies only when it is one known,
+ * verified live exposure matching the sole serial wrapper parent.
  */
 function resolveInheritedStablecoinBacking(
   asset: V9AssetFactsV2 | V9AssetFactsV3,
   resolved: V9ResolvedDependencyInputs,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
 ): V9InheritedStablecoinBacking | undefined {
-  if (asset.reserveExposures.length > 0) return undefined;
   if (asset.reserveStatus.applicability.state === "not-applicable") return undefined;
   if (resolved.cycleBlocked) return undefined;
-  // A reviewed curated composition or a declared variant — never a manual-only
-  // dependency guess or an unmapped live envelope.
-  if (asset.dependencies.source !== "variant" && asset.dependencies.baseSource !== "curated-reserve") {
-    return undefined;
-  }
   if (resolved.serial.length + resolved.basket.length !== 1) return undefined;
   const wrapped = resolved.serial.length === 1;
   const upstreamAssetId = wrapped ? resolved.serial[0].upstreamAssetId : resolved.basket[0].upstreamAssetId;
-  const weight = wrapped ? 1 : resolved.basket[0].weight;
   if (wrapped && resolved.serial[0].blocked) return undefined;
+  let weight: number;
+  if (asset.reserveExposures.length === 0) {
+    // A reviewed curated composition or a declared variant — never a
+    // manual-only dependency guess or an unmapped live envelope.
+    if (asset.dependencies.source !== "variant" && asset.dependencies.baseSource !== "curated-reserve") {
+      return undefined;
+    }
+    weight = wrapped ? 1 : resolved.basket[0].weight;
+  } else {
+    if (!wrapped || asset.reserveExposures.length !== 1) return undefined;
+    const exposure = asset.reserveExposures[0]!;
+    const hasWrapperEdge = asset.dependencies.edges.some(
+      (edge) =>
+        edge.pathKind === "serial-dependency" &&
+        edge.dependencyType === "wrapper" &&
+        edge.upstreamAssetId === upstreamAssetId,
+    );
+    if (
+      !hasWrapperEdge ||
+      asset.reserveStatus.applicability.state !== "required" ||
+      asset.reserveStatus.observationState !== "known" ||
+      exposure.provenance !== "live" ||
+      exposure.status.applicability.state !== "required" ||
+      exposure.status.observationState !== "known" ||
+      exposure.trackedAssetId !== upstreamAssetId
+    ) {
+      return undefined;
+    }
+    weight = exposure.weight;
+  }
   if (weight < V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT) return undefined;
   const parent = evaluatedById.get(upstreamAssetId);
   if (!parent || projectV9EffectiveBackingPillarScore(parent) === null) return undefined;
