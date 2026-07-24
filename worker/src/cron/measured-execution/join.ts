@@ -1,4 +1,5 @@
 import {
+  isDexMeasuredExecutionObservationHistoryMature,
   toDexMeasuredExecutionPublicProfile,
   validateDexMeasuredExecutionProfile,
   type DexMeasuredExecutionProfile,
@@ -29,6 +30,8 @@ export interface DexMeasuredExecutionJoinDiagnostics {
   quoteGenerationId: string | null;
   targetGenerationId: string | null;
 }
+
+export type DexMeasuredExecutionRetainedRoutePools = Map<string, PoolEntry[]>;
 
 function gate(reason: DexExecutionCapabilityGate["reason"]): DexExecutionCapabilityGate {
   return { family: "measured-execution", reason };
@@ -99,6 +102,121 @@ function mapValidationGate(issues: readonly string[]): DexExecutionCapabilityGat
     return "deployment-code-mismatch";
   }
   return "invalid-observation";
+}
+
+function currentMeasuredTargetIds(poolsByStablecoin: ReadonlyMap<string, readonly PoolEntry[]>): Set<string> {
+  return new Set(
+    [...poolsByStablecoin.values()].flatMap((pools) =>
+      pools.flatMap((pool) => {
+        const targetId = pool.extra?.measuredExecutionTarget?.targetId;
+        return targetId ? [targetId] : [];
+      }),
+    ),
+  );
+}
+
+function currentPhysicalPoolKeys(poolsByStablecoin: ReadonlyMap<string, readonly PoolEntry[]>): Set<string> {
+  return new Set(
+    [...poolsByStablecoin.entries()].flatMap(([stablecoinId, pools]) =>
+      pools.map((pool) => `${stablecoinId}:${pool.chain.toLowerCase()}:${pool.poolId.toLowerCase()}`),
+    ),
+  );
+}
+
+/**
+ * Retain mature measured routes across a bounded shortlist rotation.
+ *
+ * The quote ledger already validates and freshness-bounds last-known-good
+ * profiles. This projection keeps those profiles available to the route
+ * compiler when their physical pool falls out of the next display/liquidity
+ * shortlist. The returned pools are route-only: callers must not merge them
+ * into aggregate TVL, volume, or V8 liquidity scoring.
+ */
+export function buildDexMeasuredExecutionRetainedRoutePools(input: {
+  poolsByStablecoin: ReadonlyMap<string, readonly PoolEntry[]>;
+  evidence: LoadedDexMeasuredQuoteEvidence | null;
+  nowSec: number;
+}): DexMeasuredExecutionRetainedRoutePools {
+  const retained = new Map<string, PoolEntry[]>();
+  if (!input.evidence) return retained;
+
+  const currentTargetIds = currentMeasuredTargetIds(input.poolsByStablecoin);
+  const currentPoolKeys = currentPhysicalPoolKeys(input.poolsByStablecoin);
+  const retainedPoolKeys = new Set<string>();
+  const entries = [...input.evidence.byTargetId.entries()].sort(([left], [right]) => left.localeCompare(right));
+
+  for (const [targetId, quote] of entries) {
+    if (
+      currentTargetIds.has(targetId) ||
+      quote.resolution !== "last-known-good" ||
+      quote.status !== "measured" ||
+      quote.profile === null ||
+      !isDexMeasuredExecutionObservationHistoryMature(quote.observationHistory)
+    ) {
+      continue;
+    }
+    const target = quote.quotedTarget;
+    const profile = quote.profile;
+    if (!input.poolsByStablecoin.has(target.stablecoinId)) continue;
+    if (
+      profile.adapterProfileId !== "uniswap-v3-quoter-v2" &&
+      profile.adapterProfileId !== "pancakeswap-v3-quoter-v2" &&
+      profile.adapterProfileId !== "aerodrome-slipstream-quoter-v2"
+    ) {
+      continue;
+    }
+    if (!isDexMeasuredExecutionDeploymentScoreEligible(profile.adapterProfileId, profile.chain)) continue;
+    const issues = [
+      ...validateDexMeasuredExecutionProfile({
+        profile,
+        quotedTarget: target,
+        currentTarget: target,
+        expectedTargetGenerationId: quote.targetGenerationId,
+        expectedQuoteGenerationId: quote.quoteGenerationId,
+        nowSec: input.nowSec,
+      }),
+      ...deploymentIssues(profile),
+    ];
+    if (issues.length > 0) continue;
+
+    const physicalPoolKey =
+      `${target.stablecoinId}:${profile.chain.toLowerCase()}:${profile.poolId.toLowerCase()}`;
+    if (currentPoolKeys.has(physicalPoolKey) || retainedPoolKeys.has(physicalPoolKey)) continue;
+    retainedPoolKeys.add(physicalPoolKey);
+    const pools = retained.get(target.stablecoinId) ?? [];
+    pools.push({
+      poolId: profile.poolId,
+      project: profile.protocol,
+      chain: profile.chain,
+      tvlUsd: profile.retainedTvlUsdAtQuote,
+      symbol: `${profile.tokenIn.symbol}-${profile.tokenOut.symbol}`,
+      volumeUsd1d: 0,
+      poolType:
+        profile.adapterProfileId === "pancakeswap-v3-quoter-v2"
+          ? "pancakeswap-v3-measured-retained"
+          : profile.adapterProfileId === "aerodrome-slipstream-quoter-v2"
+            ? "aerodrome-slipstream-measured-retained"
+            : "uniswap-v3-measured-retained",
+      source: profile.adapterProfileId === "uniswap-v3-quoter-v2" ? "dl" : "direct_api",
+      price: profile.tokenIn.referencePriceUsd,
+      extra: {
+        measuredExecutionTarget: target,
+        measuredExecution: toDexMeasuredExecutionPublicProfile(profile, {
+          observationHistory: quote.observationHistory,
+        }),
+        measuredExecutionProfile: profile,
+        measuredExecutionPhysicalPoolId: profile.poolId,
+        measuredExecutionDiagnostic: {
+          adapterProfileId: target.adapterProfileId,
+          targetId,
+          detail: `route-retained-after:${quote.latestFailureReason ?? "shortlist-rotation"}`,
+        },
+      },
+    });
+    retained.set(target.stablecoinId, pools);
+  }
+
+  return retained;
 }
 
 export function joinDexMeasuredExecutionEvidence(input: {

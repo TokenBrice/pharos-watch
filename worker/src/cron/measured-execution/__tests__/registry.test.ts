@@ -7,8 +7,9 @@ import {
 } from "../registry";
 
 describe("measured execution deployment registry", () => {
-  it("activates exactly the 2026-07-17 owner-ratified QuoterV2 cohort", () => {
+  it("activates exactly the owner-ratified QuoterV2 cohorts", () => {
     expect([...DEX_MEASURED_EXECUTION_SCORE_ELIGIBLE_DEPLOYMENT_KEYS].sort()).toEqual([
+      "aerodrome-slipstream-quoter-v2:base",
       "pancakeswap-v3-quoter-v2:base",
       "pancakeswap-v3-quoter-v2:bsc",
       "pancakeswap-v3-quoter-v2:ethereum",
@@ -19,11 +20,11 @@ describe("measured execution deployment registry", () => {
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "ethereum")).toBe(true);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "Ethereum")).toBe(true);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("pancakeswap-v3-quoter-v2", "bsc")).toBe(true);
+    expect(isDexMeasuredExecutionDeploymentScoreEligible("aerodrome-slipstream-quoter-v2", "base")).toBe(true);
   });
 
   it("keeps unratified deployments shadow-only fail-closed", () => {
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "optimism")).toBe(false);
-    expect(isDexMeasuredExecutionDeploymentScoreEligible("aerodrome-slipstream-quoter-v2", "base")).toBe(false);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("raydium", "solana")).toBe(false);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("", "")).toBe(false);
   });
@@ -40,7 +41,7 @@ describe("measured execution deployment registry", () => {
     });
   });
 
-  it("pins the initial Base Aerodrome Slipstream factory and QuoterV2 for shadow capture", () => {
+  it("pins the active Base Aerodrome Slipstream factory and QuoterV2", () => {
     expect(getDexMeasuredExecutionDeployment("aerodrome-slipstream-quoter-v2", "Base")).toEqual({
       adapterProfileId: "aerodrome-slipstream-quoter-v2",
       protocol: "aerodrome-slipstream",

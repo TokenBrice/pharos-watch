@@ -86,6 +86,14 @@ export function LiquidityMethodologySection() {
             generic Solidly forks or deployments on Avalanche, Linea, or Sonic.
           </p>
           <p>
+            Base Aerodrome Slipstream pools can also publish measured exact-execution profiles. Each profile pins the
+            reviewed factory and QuoterV2 runtimes, proves the retained pool through the factory&apos;s exact token and
+            tick-spacing binding, and revalidates identity, prices, freshness, capacity monotonicity, and the retained
+            TVL ceiling before scoring. Mature fresh profiles remain route-only if a pool temporarily rotates out of
+            the display shortlist; they never re-enter aggregate liquidity, price consensus, target publication, or V8
+            scoring. Optimism Uniswap V3, Solana CLMM, and SunSwap measurements remain shadow-only.
+          </p>
+          <p>
             Repeated sightings of the same physical pool across direct API, staged, and fallback sources are collapsed
             before DEX price aggregation. Exact direct price evidence can rejoin only when the same canonical pool
             survives final scoring and both records clear the price-observation floor; derived or mismatched identities

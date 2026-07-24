@@ -13,6 +13,7 @@ import type { SolanaMeasuredExecutionTarget } from "@shared/types/solana-measure
 import type { TronMeasuredExecutionTarget } from "@shared/types/tron-measured-execution";
 import { buildMeasuredPoolDirectionKey } from "../measured-execution/inventory";
 import {
+  buildDexMeasuredExecutionRetainedRoutePools,
   joinDexMeasuredExecutionEvidence,
   loadDexMeasuredExecutionJoinEvidence,
   stripDexMeasuredExecutionInternalFields,
@@ -59,6 +60,41 @@ export const DEX_LIQUIDITY_SCORING_BATCH_SIZE = 25;
 const DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS = ACTIVE_STABLECOINS.length + 1;
 const DEX_PRICE_STAGE_RETENTION_SEC = 7 * 24 * 60 * 60;
 export const DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN = 8;
+
+function routeEvidenceRank(pool: LiquidityMetrics["topPools"][number]): number {
+  if (pool.extra?.measuredExecution) return 0;
+  if (pool.extra?.ammExecutionModel) return 1;
+  if (pool.extra?.executionCapabilityGate) return 2;
+  if (pool.poolType === "orderbook" && (pool.extra?.orderbookDepthUsd ?? 0) > 0) return 3;
+  return 4;
+}
+
+export function selectDexRouteObservationPools(
+  currentPools: readonly LiquidityMetrics["topPools"][number][],
+  retainedMeasuredPools: readonly LiquidityMetrics["topPools"][number][],
+): LiquidityMetrics["topPools"] {
+  const byPhysicalPool = new Map<string, LiquidityMetrics["topPools"][number]>();
+  for (const pool of [...currentPools, ...retainedMeasuredPools]) {
+    const physicalPoolId = pool.extra?.measuredExecutionPhysicalPoolId ?? pool.poolId;
+    const key = `${pool.chain.toLowerCase()}:${physicalPoolId.toLowerCase()}`;
+    const previous = byPhysicalPool.get(key);
+    if (
+      previous === undefined ||
+      routeEvidenceRank(pool) < routeEvidenceRank(previous) ||
+      (routeEvidenceRank(pool) === routeEvidenceRank(previous) && pool.tvlUsd > previous.tvlUsd)
+    ) {
+      byPhysicalPool.set(key, pool);
+    }
+  }
+  return [...byPhysicalPool.values()]
+    .sort(
+      (left, right) =>
+        routeEvidenceRank(left) - routeEvidenceRank(right) ||
+        right.tvlUsd - left.tvlUsd ||
+        left.poolId.localeCompare(right.poolId),
+    )
+    .slice(0, MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+}
 
 const DEX_PRICE_EXACT_CURRENT_GENERATION_SQL = `
   SELECT generation.generation_id
@@ -476,6 +512,11 @@ export async function computeStablecoinScores(
     evidence: joinEvidence,
     nowSec: routeObservedAt,
   });
+  const retainedMeasuredRoutePools = buildDexMeasuredExecutionRetainedRoutePools({
+    poolsByStablecoin: preparedRetainedPools,
+    evidence: joinEvidence,
+    nowSec: routeObservedAt,
+  });
   joinEvidence?.byTargetId.clear();
   const solanaJoinEvidence = await loadSolanaMeasuredExecutionJoinEvidence(db, signal);
   const solanaMeasuredExecutionJoin = joinSolanaMeasuredExecutionEvidence({
@@ -511,9 +552,9 @@ export async function computeStablecoinScores(
     throwIfAborted(signal);
     const retainedPools = preparedRetainedPools.get(id) ?? [];
     const rebuilt = rebuildMetricsFromPools(retainedPools);
-    const routeObservationPools = [...rebuilt.visiblePools, ...(p4OnlyRetainedPools.get(id) ?? [])].slice(
-      0,
-      MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
+    const routeObservationPools = selectDexRouteObservationPools(
+      [...rebuilt.visiblePools, ...(p4OnlyRetainedPools.get(id) ?? [])],
+      retainedMeasuredRoutePools.get(id) ?? [],
     );
     const routeObservationResult = buildP4DexExitRouteObservations({
       stablecoinId: id,

@@ -7,7 +7,10 @@ vi.mock("../quoter-v2", async () => {
 
 import { buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { PoolEntry } from "../../dex-liquidity/types";
-import { joinDexMeasuredExecutionEvidence } from "../join";
+import {
+  buildDexMeasuredExecutionRetainedRoutePools,
+  joinDexMeasuredExecutionEvidence,
+} from "../join";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 import { getDexMeasuredExecutionDeployment } from "../registry";
 import {
@@ -59,6 +62,53 @@ function target(chain: string = "ethereum"): DexMeasuredExecutionTarget {
       tokenOutAddress: input.tokenOut.address,
       poolTokenAddresses: input.poolTokenAddresses,
       feePips: input.feePips,
+    }),
+  };
+}
+
+function slipstreamTarget(): DexMeasuredExecutionTarget {
+  const input = {
+    schemaVersion: "dex-measured-target-v1" as const,
+    stablecoinId: "usdc-circle",
+    adapterProfileId: "aerodrome-slipstream-quoter-v2",
+    protocol: "aerodrome-slipstream",
+    chain: "base",
+    poolId: "base:0x3333333333333333333333333333333333333333",
+    poolTokenAddresses: [
+      "0x1111111111111111111111111111111111111111",
+      "0x2222222222222222222222222222222222222222",
+    ] as [`0x${string}`, `0x${string}`],
+    tokenIn: {
+      address: "0x1111111111111111111111111111111111111111" as const,
+      symbol: "USDC",
+      decimals: 6,
+      referencePriceUsd: 1,
+      trackedAssetId: "usdc-circle",
+    },
+    tokenOut: {
+      address: "0x2222222222222222222222222222222222222222" as const,
+      symbol: "USDT",
+      decimals: 6,
+      referencePriceUsd: 1,
+      trackedAssetId: "usdt-tether",
+    },
+    tickSpacing: 1,
+    retainedTvlUsd: 100_000,
+    retainedPoolPriceUsd: 1,
+    capturedAt: 1_000,
+  };
+  return {
+    ...input,
+    targetId: buildDexMeasuredExecutionTargetId({
+      adapterProfileId: input.adapterProfileId,
+      stablecoinId: input.stablecoinId,
+      chain: input.chain,
+      protocol: input.protocol,
+      poolId: input.poolId,
+      tokenInAddress: input.tokenIn.address,
+      tokenOutAddress: input.tokenOut.address,
+      poolTokenAddresses: input.poolTokenAddresses,
+      tickSpacing: input.tickSpacing,
     }),
   };
 }
@@ -135,6 +185,123 @@ describe("measured execution join activation", () => {
       reason: "activation-pending",
     });
     expect(diagnostics).toMatchObject({ measuredCount: 1, gatedCount: 1 });
+  });
+
+  it("admits a valid Base Aerodrome Slipstream profile after activation", () => {
+    const measuredTarget = slipstreamTarget();
+    const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
+    if (deployment == null) throw new Error("missing Base Slipstream deployment");
+    const profile = buildDexMeasuredExecutionProfile({
+      target: measuredTarget,
+      targetGenerationId: "target-generation",
+      quoteGenerationId: "quote-generation",
+      quotedAt: 1_060,
+      blockNumber: 49_039_054,
+      endpointAddress: deployment.endpointAddress,
+      endpointCodeHash: deployment.expectedCodeHash,
+      points: [
+        {
+          amountInRaw: "1000000000",
+          amountOutRaw: "999000000",
+          callData: "0x01",
+          returnData: "0x01",
+          inputUsd: 1_000,
+          outputUsd: 999,
+          costBps: 10,
+          passesCostBound: true,
+        },
+        {
+          amountInRaw: "100000000000",
+          amountOutRaw: "99900000000",
+          callData: "0x02",
+          returnData: "0x02",
+          inputUsd: 100_000,
+          outputUsd: 99_900,
+          costBps: 10,
+          passesCostBound: true,
+        },
+      ],
+    });
+    const pool: PoolEntry = {
+      poolId: measuredTarget.poolId,
+      project: measuredTarget.protocol,
+      chain: measuredTarget.chain,
+      tvlUsd: measuredTarget.retainedTvlUsd,
+      symbol: "USDC-USDT",
+      volumeUsd1d: 0,
+      poolType: "aerodrome-slipstream-1bp",
+      source: "direct_api",
+      extra: { measuredExecutionTarget: measuredTarget },
+    };
+
+    const diagnostics = joinDexMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]),
+      evidence: {
+        quoteGenerationId: "quote-generation",
+        targetGenerationId: "target-generation",
+        publishedAt: 1_060,
+        byTargetId: new Map([
+          [
+            measuredTarget.targetId,
+            {
+              quotedTarget: measuredTarget,
+              status: "measured",
+              failureReason: null,
+              profile,
+              quoteGenerationId: "quote-generation",
+              targetGenerationId: "target-generation",
+              resolution: "latest",
+              latestFailureReason: null,
+            },
+          ],
+        ]),
+      },
+      nowSec: 1_060,
+    });
+
+    expect(pool.extra?.measuredExecution).toBeDefined();
+    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    expect(diagnostics).toMatchObject({ measuredCount: 1, gatedCount: 0 });
+
+    const retained = buildDexMeasuredExecutionRetainedRoutePools({
+      poolsByStablecoin: new Map([[measuredTarget.stablecoinId, []]]),
+      evidence: {
+        quoteGenerationId: "quote-generation",
+        targetGenerationId: "target-generation",
+        publishedAt: 1_060,
+        byTargetId: new Map([
+          [
+            measuredTarget.targetId,
+            {
+              quotedTarget: measuredTarget,
+              status: "measured",
+              failureReason: null,
+              profile,
+              quoteGenerationId: "quote-generation",
+              targetGenerationId: "target-generation",
+              resolution: "last-known-good",
+              latestFailureReason: "quote-missing",
+              observationHistory: {
+                completeProducerCycleCount: 2,
+                successfulObservationCount: 2,
+                consecutiveSuccessCount: 2,
+                observationWindowStartedAt: 1_000,
+                observationWindowEndedAt: 1_060,
+                latestOperationalFailureAt: null,
+                conservativeStatistic: "pointwise-minimum",
+                conservativeCapacityCurve: profile.capacityCurve,
+              },
+            },
+          ],
+        ]),
+      },
+      nowSec: 1_060,
+    });
+    expect(retained.get(measuredTarget.stablecoinId)?.[0]).toMatchObject({
+      project: "aerodrome-slipstream",
+      poolType: "aerodrome-slipstream-measured-retained",
+      source: "direct_api",
+    });
   });
 
   it("admits a fresh last-known-good profile with its original generation identity and quote clock", () => {
@@ -220,6 +387,181 @@ describe("measured execution join activation", () => {
     );
     expect(pool.extra?.executionCapabilityGate).toBeUndefined();
     expect(diagnostics).toMatchObject({ measuredCount: 1, lastKnownGoodCount: 1, gatedCount: 0 });
+  });
+
+  it("retains a mature last-known-good route when its pool rotates out of the current shortlist", () => {
+    const measuredTarget = target();
+    const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
+    if (deployment == null) throw new Error("missing Ethereum QuoterV2 deployment");
+    const profile = buildDexMeasuredExecutionProfile({
+      target: measuredTarget,
+      targetGenerationId: "target-generation-lkg",
+      quoteGenerationId: "quote-generation-lkg",
+      quotedAt: 1_060,
+      blockNumber: 25_536_894,
+      endpointAddress: deployment.endpointAddress,
+      endpointCodeHash: deployment.expectedCodeHash,
+      points: [
+        {
+          amountInRaw: "1000000000",
+          amountOutRaw: "999000000",
+          callData: "0x01",
+          returnData: "0x01",
+          inputUsd: 1_000,
+          outputUsd: 999,
+          costBps: 10,
+          passesCostBound: true,
+        },
+        {
+          amountInRaw: "100000000000",
+          amountOutRaw: "99900000000",
+          callData: "0x02",
+          returnData: "0x02",
+          inputUsd: 100_000,
+          outputUsd: 99_900,
+          costBps: 10,
+          passesCostBound: true,
+        },
+      ],
+    });
+    const evidence = {
+      quoteGenerationId: "quote-generation-latest",
+      targetGenerationId: "target-generation-latest",
+      publishedAt: 2_000,
+      byTargetId: new Map([
+        [
+          measuredTarget.targetId,
+          {
+            quotedTarget: measuredTarget,
+            status: "measured" as const,
+            failureReason: null,
+            profile,
+            quoteGenerationId: "quote-generation-lkg",
+            targetGenerationId: "target-generation-lkg",
+            resolution: "last-known-good" as const,
+            latestFailureReason: "quote-missing",
+            observationHistory: {
+              completeProducerCycleCount: 3,
+              successfulObservationCount: 2,
+              consecutiveSuccessCount: 2,
+              observationWindowStartedAt: 1_000,
+              observationWindowEndedAt: 2_000,
+              latestOperationalFailureAt: null,
+              conservativeStatistic: "pointwise-minimum" as const,
+              conservativeCapacityCurve: profile.capacityCurve,
+            },
+          },
+        ],
+      ]),
+    };
+
+    const retained = buildDexMeasuredExecutionRetainedRoutePools({
+      poolsByStablecoin: new Map([[measuredTarget.stablecoinId, []]]),
+      evidence,
+      nowSec: 2_000,
+    });
+
+    expect(retained.get(measuredTarget.stablecoinId)).toEqual([
+      expect.objectContaining({
+        poolId: measuredTarget.poolId,
+        project: "uniswap-v3",
+        source: "dl",
+        extra: expect.objectContaining({
+          measuredExecutionPhysicalPoolId: measuredTarget.poolId,
+          measuredExecution: expect.objectContaining({
+            targetId: measuredTarget.targetId,
+            observationHistory: expect.objectContaining({ successfulObservationCount: 2 }),
+          }),
+        }),
+      }),
+    ]);
+  });
+
+  it("does not retain an immature, stale, or still-current measured route", () => {
+    const measuredTarget = target();
+    const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
+    if (deployment == null) throw new Error("missing Ethereum QuoterV2 deployment");
+    const profile = buildDexMeasuredExecutionProfile({
+      target: measuredTarget,
+      targetGenerationId: "target-generation-lkg",
+      quoteGenerationId: "quote-generation-lkg",
+      quotedAt: 1_060,
+      blockNumber: 25_536_894,
+      endpointAddress: deployment.endpointAddress,
+      endpointCodeHash: deployment.expectedCodeHash,
+      points: [
+        {
+          amountInRaw: "1000000000",
+          amountOutRaw: "999000000",
+          callData: "0x01",
+          returnData: "0x01",
+          inputUsd: 1_000,
+          outputUsd: 999,
+          costBps: 10,
+          passesCostBound: true,
+        },
+      ],
+    });
+    const quote = {
+      quotedTarget: measuredTarget,
+      status: "measured" as const,
+      failureReason: null,
+      profile,
+      quoteGenerationId: "quote-generation-lkg",
+      targetGenerationId: "target-generation-lkg",
+      resolution: "last-known-good" as const,
+      latestFailureReason: "quote-missing",
+      observationHistory: {
+        completeProducerCycleCount: 1,
+        successfulObservationCount: 1,
+        consecutiveSuccessCount: 1,
+        observationWindowStartedAt: 1_060,
+        observationWindowEndedAt: 1_060,
+        latestOperationalFailureAt: null,
+        conservativeStatistic: "pointwise-minimum" as const,
+        conservativeCapacityCurve: profile.capacityCurve,
+      },
+    };
+    const evidence = {
+      quoteGenerationId: "quote-generation-latest",
+      targetGenerationId: "target-generation-latest",
+      publishedAt: 2_000,
+      byTargetId: new Map([[measuredTarget.targetId, quote]]),
+    };
+    const currentPool: PoolEntry = {
+      poolId: measuredTarget.poolId,
+      project: measuredTarget.protocol,
+      chain: measuredTarget.chain,
+      tvlUsd: measuredTarget.retainedTvlUsd,
+      symbol: "USDC-USDT",
+      volumeUsd1d: 0,
+      poolType: "uniswap-v3-1bp",
+      source: "dl",
+      extra: { measuredExecutionTarget: measuredTarget },
+    };
+
+    expect(
+      buildDexMeasuredExecutionRetainedRoutePools({
+        poolsByStablecoin: new Map([[measuredTarget.stablecoinId, []]]),
+        evidence,
+        nowSec: 2_000,
+      }).size,
+    ).toBe(0);
+    quote.observationHistory.successfulObservationCount = 2;
+    expect(
+      buildDexMeasuredExecutionRetainedRoutePools({
+        poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [currentPool]]]),
+        evidence,
+        nowSec: 2_000,
+      }).size,
+    ).toBe(0);
+    expect(
+      buildDexMeasuredExecutionRetainedRoutePools({
+        poolsByStablecoin: new Map([[measuredTarget.stablecoinId, []]]),
+        evidence,
+        nowSec: 4_661,
+      }).size,
+    ).toBe(0);
   });
 
   it("rejects a last-known-good profile once its original quote clock is stale", () => {
