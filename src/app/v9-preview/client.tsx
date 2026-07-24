@@ -192,7 +192,7 @@ function PreviewTable({ cards }: { cards: readonly SafetyScoreV9CurrentCard[] })
 }
 
 export function SafetyScoreV9PreviewClient() {
-  const { data, isLoading, error, refetch } = useReportCardsV9Preview();
+  const { data, isLoading, isFetching, error, refetch } = useReportCardsV9Preview();
   const [search, setSearch] = useState("");
   const gradeCounts = useMemo(() => buildGradeCounts(data?.cards ?? []), [data?.cards]);
   const cards = useMemo(() => {
@@ -217,14 +217,26 @@ export function SafetyScoreV9PreviewClient() {
 
   if (error || !data) {
     return (
-      <div className="pharos-empty-note flex flex-col items-start gap-3" role="alert">
+      <div
+        className="pharos-empty-note flex flex-col items-start gap-3"
+        role="alert"
+        aria-busy={isFetching || undefined}
+      >
         <div>
           <p className="font-medium text-foreground">V9 shadow ratings are temporarily unavailable.</p>
           <p className="mt-1 text-sm text-muted-foreground">The live V8 ratings are unaffected.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => void refetch()}>
-          <RefreshCw className="h-4 w-4" aria-hidden="true" />
-          Retry
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isFetching}
+          onClick={() => void refetch()}
+        >
+          <RefreshCw
+            className={`h-4 w-4 ${isFetching ? "animate-spin motion-reduce:animate-none" : ""}`}
+            aria-hidden="true"
+          />
+          {isFetching ? "Retrying" : "Retry"}
         </Button>
       </div>
     );

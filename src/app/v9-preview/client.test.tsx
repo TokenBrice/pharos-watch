@@ -65,6 +65,7 @@ describe("SafetyScoreV9PreviewClient", () => {
     useReportCardsV9Preview.mockReturnValue({
       data: undefined,
       isLoading: false,
+      isFetching: false,
       error: new Error("offline"),
       refetch,
     });
@@ -74,6 +75,24 @@ describe("SafetyScoreV9PreviewClient", () => {
     expect(screen.getByRole("alert").textContent).toContain("live V8 ratings are unaffected");
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows visible progress while retrying the unavailable preview", () => {
+    useReportCardsV9Preview.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isFetching: true,
+      error: new Error("offline"),
+      refetch: vi.fn(),
+    });
+
+    render(<SafetyScoreV9PreviewClient />);
+
+    const alert = screen.getByRole("alert");
+    const retry = screen.getByRole("button", { name: "Retrying" });
+    expect(alert.getAttribute("aria-busy")).toBe("true");
+    expect((retry as HTMLButtonElement).disabled).toBe(true);
+    expect(retry.querySelector("svg")?.getAttribute("class")).toContain("animate-spin");
   });
 
   it("renders an accessible loading state", () => {
