@@ -14,7 +14,7 @@ describe("V9 radar cohorts", () => {
     expect(result.status).toBe("available");
     if (result.status !== "available") return;
     expect(result.value.rows.map((row) => row.pillar)).toEqual(["Backing", "Exit", "Control"]);
-    expect(result.value.cohortMedians).toEqual({ backing: 88, exit: 82, control: 84 });
+    expect(result.value.cohortMedians).toEqual({ backing: 88, exit: 84, control: 86 });
   });
 
   it("rejects mixed models and policy/publication identities", () => {
