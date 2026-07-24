@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   buildDexPriceChallengerPublicationPlan,
   DEX_PRICE_CHALLENGER_BATCH_SIZE,
@@ -190,17 +191,21 @@ describe("challenger publish", () => {
     });
 
     expect(result.publishedStablecoins).toBe(1);
-    expect(batches.map((batch) => batch.length)).toEqual([25, 25, 2]);
+    expect(batches.map((batch) => batch.length)).toEqual([5, 1, 1]);
     expect(Math.max(...batches.map((batch) => batch.length))).toBeLessThanOrEqual(DEX_PRICE_CHALLENGER_BATCH_SIZE);
     expect(maxConstructedStatements()).toBeLessThanOrEqual(DEX_PRICE_CHALLENGER_BATCH_SIZE);
 
     const statements = batches.flat();
-    expect(statements).toHaveLength(52);
-    expect(statements.slice(0, 50).every((statement) => statement.sql.includes("INSERT INTO dex_price_challengers")))
+    expect(statements).toHaveLength(7);
+    expect(statements.slice(0, 5).every((statement) => statement.sql.includes("INSERT INTO dex_price_challengers")))
       .toBe(true);
-    expect(statements[50]?.sql).toContain("INSERT INTO dex_price_challenger_snapshots");
-    expect(statements[51]?.sql).toContain("DELETE FROM dex_price_challengers");
-    expect(statements.slice(0, 50).map((statement) => statement.binds[2])).toEqual(
+    expect(statements[5]?.sql).toContain("INSERT INTO dex_price_challenger_snapshots");
+    expect(statements[6]?.sql).toContain("DELETE FROM dex_price_challengers");
+    expect(
+      statements.slice(0, 5).flatMap((statement) =>
+        statement.binds.filter((_, bindIndex) => bindIndex % 8 === 2)
+      ),
+    ).toEqual(
       Array.from({ length: 50 }, (_, index) => `pool-${String(index).padStart(2, "0")}`),
     );
   });
@@ -225,11 +230,16 @@ describe("challenger publish", () => {
     const { db, batches } = makePublishDb((batchIndex) => {
       if (batchIndex === 1) throw new Error("challenger payload batch failed");
     });
+    const stablecoinIds = ACTIVE_STABLECOINS.slice(0, 6).map((meta) => meta.id);
 
     await expect(publishDexPriceChallengerSnapshots(db, {
       snapshotAt: 1_700_000_000,
-      retainedPoolsByStablecoin: new Map([["usdt-tether", challengerPools(60)]]),
-      sourceCoverageCompleteByStablecoin: new Map([["usdt-tether", true]]),
+      retainedPoolsByStablecoin: new Map(
+        stablecoinIds.map((stablecoinId) => [stablecoinId, challengerPools(60)]),
+      ),
+      sourceCoverageCompleteByStablecoin: new Map(
+        stablecoinIds.map((stablecoinId) => [stablecoinId, true]),
+      ),
       minPoolTvlUsd: 20_000,
     })).rejects.toThrow("challenger payload batch failed");
 
