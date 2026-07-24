@@ -2406,6 +2406,59 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ]);
   });
 
+  it("withholds XAUT when no reconciled V2 supply packet can establish global chain supply", () => {
+    const fixed = exactFixedInput({
+      assetId: "xaut-tether",
+      clockSec: Date.parse("2026-07-24T09:00:00Z") / 1_000,
+      chainSupplyByChain: {},
+      omitLiveReserve: true,
+    });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "xaut-tether",
+          xautMetaSource as unknown as V9ExtensionRegistryMeta,
+        ],
+      ]),
+    });
+    const compiled =
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const xaut = compiled.assets[0]!;
+
+    expect(xaut.supply.status.observationState).toBe("missing");
+    expect(xaut.gaps).toContainEqual(
+      expect.objectContaining({
+        reasonCode: "missing-pillar-evidence",
+        ownerDomain: "evidence",
+        responsibility: "producer-failed",
+        path: {
+          kind: "local-component",
+          componentKey: "chain-supply",
+        },
+      }),
+    );
+
+    const evaluated = evaluateV9FactSet(
+      compiled,
+      V9_CANDIDATE_POLICY_V1,
+    ).assets[0]!;
+    expect(evaluated.trace.finalScore).toBeNull();
+    expect(evaluated.trace.finalGrade).toBe("NR");
+    expect(evaluated.trace.nrReasons).toContainEqual(
+      expect.objectContaining({
+        code: "missing-pillar-evidence",
+        responsibility: "producer-failed",
+      }),
+    );
+    expect(evaluated.trace.unresolvedFacts).toContainEqual(
+      expect.objectContaining({
+        code: "missing-pillar-evidence",
+        critical: true,
+        responsibility: "producer-failed",
+      }),
+    );
+  });
+
   it("fails closed when the XAUt0 group reaches the materiality floor", () => {
     const clockSec = Date.parse("2026-07-24T09:00:00Z") / 1_000;
     const aggregateSupplyUsd = 2_480_000_000;
@@ -3209,7 +3262,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "47ff7e12f20cb577f29a0aec4348b4b6068f4c6d0143183a486d078d38f06bd1",
+      "460715a6b420fd1d5b4019cc6e57d976ed53ec92678bf5314a63fcef2d5dcba2",
     );
   });
 
