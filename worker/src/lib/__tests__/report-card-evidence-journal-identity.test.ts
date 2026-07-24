@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { createReportCardEvidenceJournalV1 } from "@shared/types/report-card-evidence-journal";
+import {
+  createReportCardEvidenceJournalV1,
+  type ReserveEvidenceSourceOriginClass,
+} from "@shared/types/report-card-evidence-journal";
 import {
   buildReportCardsFixedInputCacheEntry,
   buildReportCardsSnapshotFromFixedInput,
@@ -53,14 +56,17 @@ function singleAssetFixedInput() {
   });
 }
 
-function journalRecord(clockSec: number) {
+function journalRecord(
+  clockSec: number,
+  sourceOriginClass: ReserveEvidenceSourceOriginClass = "onchain-observation",
+) {
   return createReportCardEvidenceJournalV1({
     schemaVersion: 1,
     lane: "reserve",
     assetId: ASSET_ID,
     attemptId: "reserve-fixture:accepted",
     sourceId: "fixture-reserve-adapter",
-    sourceOriginClass: "onchain-observation",
+    sourceOriginClass,
     attemptCode: "reserve.collector.attempted",
     admissionCode: "reserve.admission.accepted",
     fallbackCode: "reserve.fallback.not-used",
@@ -158,5 +164,53 @@ describe("diagnostic reserve evidence journal identity boundary", () => {
         [ASSET_ID]: [expect.objectContaining({ attemptId: "reserve-fixture:accepted" })],
       },
     });
+  });
+
+  it("keeps adapter source-origin corrections outside public and score identities", () => {
+    const base = singleAssetFixedInput();
+    const withOrigin = (sourceOriginClass: ReserveEvidenceSourceOriginClass) =>
+      normalizeFixedInput({
+        ...base,
+        evidenceJournalById: {
+          [ASSET_ID]: [journalRecord(base.clockSec, sourceOriginClass)],
+        },
+      });
+    const onchain = withOrigin("onchain-observation");
+    const issuer = withOrigin("issuer-attested");
+
+    expect(issuer.evidenceJournalById[ASSET_ID]?.[0]?.journalId).not.toBe(
+      onchain.evidenceJournalById[ASSET_ID]?.[0]?.journalId,
+    );
+    expect(issuer.baseInputGenerationId).toBe(onchain.baseInputGenerationId);
+    expect(
+      serializeNormalizedReportCardsReplay(
+        buildReportCardsSnapshotFromFixedInput(issuer, { allowRegistryMismatch: true }),
+      ),
+    ).toBe(
+      serializeNormalizedReportCardsReplay(
+        buildReportCardsSnapshotFromFixedInput(onchain, { allowRegistryMismatch: true }),
+      ),
+    );
+
+    const publishedAtSec = base.clockSec + 1;
+    const issuerPipeline = buildSafetyScoreV9Candidate({
+      fixedInput: issuer,
+      extension: buildSafetyScoreV9BaselineExtension(issuer),
+      publishedAtSec,
+    });
+    const onchainPipeline = buildSafetyScoreV9Candidate({
+      fixedInput: onchain,
+      extension: buildSafetyScoreV9BaselineExtension(onchain),
+      publishedAtSec,
+    });
+    expect(issuerPipeline.compiledFacts.v9FactSetDigest).toBe(
+      onchainPipeline.compiledFacts.v9FactSetDigest,
+    );
+    expect(issuerPipeline.evaluatedSet.scoreResultDigest).toBe(
+      onchainPipeline.evaluatedSet.scoreResultDigest,
+    );
+    expect(stableJsonStringifyV1(issuerPipeline.candidate)).toBe(
+      stableJsonStringifyV1(onchainPipeline.candidate),
+    );
   });
 });

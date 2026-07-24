@@ -60,6 +60,10 @@ export const ReserveEvidenceSourceOriginClassSchema = z.enum([
   "unknown",
 ]);
 
+export type ReserveEvidenceSourceOriginClass = z.infer<
+  typeof ReserveEvidenceSourceOriginClassSchema
+>;
+
 const ReportCardEvidenceJournalSourceBlockV1Schema = z
   .object({
     chainId: SafeIdentifierSchema,

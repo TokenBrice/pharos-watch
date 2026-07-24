@@ -5,6 +5,7 @@ import {
   ReserveEvidenceAdmissionCodeSchema,
   ReserveEvidenceAttemptCodeSchema,
   ReserveEvidenceFallbackCodeSchema,
+  ReserveEvidenceSourceOriginClassSchema,
   createReportCardEvidenceJournalV1,
   type ReportCardEvidenceJournalV1Payload,
 } from "../report-card-evidence-journal";
@@ -61,6 +62,13 @@ describe("ReportCardEvidenceJournalV1", () => {
       "reserve.fallback.reviewed-sidecar",
       "reserve.fallback.last-known-good",
       "reserve.fallback.unavailable",
+    ]);
+    expect(ReserveEvidenceSourceOriginClassSchema.options).toEqual([
+      "issuer-attested",
+      "onchain-observation",
+      "independent-assurance",
+      "reviewed-curation",
+      "unknown",
     ]);
   });
 

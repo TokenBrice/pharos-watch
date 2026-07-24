@@ -6,12 +6,14 @@ import { ACTIVE_STABLECOINS } from "../stablecoins/registry";
 import {
   LIVE_RESERVE_ADAPTER_DESCRIPTORS,
   LIVE_RESERVE_ADAPTER_PROVENANCE,
+  LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES,
   LiveReservesConfigSchema,
   parseLiveReserveAdapterParams,
 } from "../live-reserve-adapters";
 import { getReserveDisplayBadgeKindForAdapter } from "../live-reserve-display";
 import { LIVE_RESERVE_ADAPTER_KEYS } from "../../types/live-reserves";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "../live-reserve-adapters-definitions";
+import { ReserveEvidenceSourceOriginClassSchema } from "../../types/report-card-evidence-journal";
 import {
   LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
@@ -253,6 +255,7 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     expect(Object.keys(liveReserveAdapterSchemaMetadata).sort()).toEqual(keys);
     expect(Object.keys(adapterParamsSchemas).sort()).toEqual(keys);
     expect(Object.keys(LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS).sort()).toEqual(keys);
+    expect(Object.keys(LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES).sort()).toEqual(keys);
     expect(Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS).sort()).toEqual(keys);
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS).toBe(LIVE_RESERVE_ADAPTER_DESCRIPTORS);
 
@@ -266,8 +269,29 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
         liveReserveAdapterSchemaMetadata[adapterKey].primaryInputKinds,
       );
       expect(LIVE_RESERVE_ADAPTER_PROVENANCE[adapterKey]).toBe(descriptor.provenance);
+      expect(LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES[adapterKey]).toBe(
+        descriptor.sourceOriginClass,
+      );
+      expect(ReserveEvidenceSourceOriginClassSchema.safeParse(descriptor.sourceOriginClass).success).toBe(
+        true,
+      );
       expect(getReserveDisplayBadgeKindForAdapter(adapterKey)).toBe(descriptor.displayBadgeKind);
     }
+  });
+
+  it("classifies reviewed issuer feeds without changing their score-bearing evidence class", () => {
+    const issuerAdapters = [
+      "frax-balance-sheet",
+      "frax-fpi-collateral",
+      "tether-transparency",
+      "usdai-proof-of-reserves",
+    ] as const;
+
+    for (const adapterKey of issuerAdapters) {
+      expect(LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES[adapterKey]).toBe("issuer-attested");
+      expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].evidenceClass).toBe("independent");
+    }
+    expect(LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES["3jane-usd3"]).toBe("unknown");
   });
 
   it("rejects unsupported adapter semantics", () => {
