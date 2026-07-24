@@ -6,6 +6,7 @@ import { createReportCardsFixedInput, type ReportCardsFixedInput } from "../repo
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9-extension";
 import {
   buildSafetyScoreV9RetainedRedemptionRoutes,
+  buildSafetyScoreV9RetainedRoutes,
   buildSafetyScoreV9RouteReviews,
 } from "../safety-score-v9-extension-routes";
 
@@ -624,6 +625,89 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     };
     expect(buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(withObservation), "usdc-circle")).toEqual([]);
     expect(buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(undefined), "usdc-circle")).toEqual([]);
+  });
+});
+
+describe("buildSafetyScoreV9RetainedRoutes composed DEX exits", () => {
+  it("composes M's reviewed atomic wrap with captured wM market depth", () => {
+    const fixedInput = fixedInputStub(undefined);
+    const source: ExitRouteObservation = {
+      routeId: "dex:wm-m0:uniswap-v3:wm-usdc",
+      routeFamily: "dex-amm",
+      scope: {
+        kind: "chain-contract",
+        chain: "ethereum",
+        contractOrPoolId: "0x970a7749ecaa4394c8b2bf5f2471f41fd6b79288",
+        protocol: "uniswap-v3",
+      },
+      requestedNotionalUsd: 1_000_000,
+      settlementHorizonSec: 300,
+      maxCostBps: 200,
+      executableUsd: 1_000_000,
+      completionRatio: 1,
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
+      evidenceKind: "measured-executable-depth",
+      adapterProfileId: "uniswap-v3-quoter",
+      executionCostBps: 1.6,
+      confidence: "high",
+      scoreEligible: true,
+      observedAt: NOW,
+      freshnessSeconds: 0,
+      commonModeKeys: ["chain:ethereum", "protocol:uniswap-v3"],
+      capacityCurve: [
+        {
+          requestedNotionalUsd: 1_000_000,
+          maxCostBps: 200,
+          executableUsd: 1_000_000,
+          completionRatio: 1,
+          executionCostBps: 1.6,
+        },
+      ],
+    };
+    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
+      "wm-m0": { exitRouteObservations: [source] },
+    };
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "usdc-circle": { currentDeviationBps: 0, priceObservedAt: NOW },
+    };
+
+    const retained = buildSafetyScoreV9RetainedRoutes(fixedInput, "m-m0");
+    expect(retained).toHaveLength(1);
+    expect(retained[0]).toMatchObject({
+      lane: "dex",
+      observation: {
+        routeId: `composed:m-m0:${source.routeId}`,
+        executableUsd: 1_000_000,
+        output: { trackedAssetIds: ["usdc-circle"] },
+      },
+    });
+    expect(source.routeId).toBe("dex:wm-m0:uniswap-v3:wm-usdc");
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "m-m0")).toEqual([
+      expect.objectContaining({
+        lane: "dex",
+        routeId: `composed:m-m0:${source.routeId}`,
+        holderAccess: "permissionless",
+        settlementModel: "atomic",
+        executionCosts: [
+          {
+            requestedNotionalUsd: 1_000_000,
+            maxCostBps: 200,
+            executionCostBps: 1.6,
+          },
+        ],
+        physicalResourceKeys: [
+          "pool:ethereum:0x970a7749ecaa4394c8b2bf5f2471f41fd6b79288",
+          "wrapper:ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291",
+        ],
+        failureDomains: [
+          {
+            kind: "redemption-rail",
+            key: "wrapper:ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291",
+          },
+        ],
+      }),
+    ]);
   });
 });
 

@@ -26,6 +26,7 @@ type RouteReview = ExtensionAsset["routeReviews"][number];
 type RouteOutputReview = NonNullable<RouteReview["output"]>;
 type RouteValuation = NonNullable<RouteOutputReview["valuation"]>;
 type RedemptionSettlementModel = RedemptionBackstopConfig["settlementModel"];
+type ComposedDexExit = NonNullable<RedemptionBackstopConfig["v9ComposedDexExit"]>;
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -264,6 +265,7 @@ function buildDexRouteReview(
   fixedInput: Readonly<ReportCardsFixedInput>,
   assetId: string,
   observation: ExitRouteObservation,
+  composedExit?: ComposedDexExit,
 ): RouteReview {
   const observationHistory = observation.observationHistory;
   const matureMeasuredHistory =
@@ -291,11 +293,49 @@ function buildDexRouteReview(
     queueDepthUsd: null,
     dailyLimitUsd: null,
     minRedeemUsd: null,
-    physicalResourceKeys: dexPhysicalResourceKeys(observation),
+    physicalResourceKeys: [
+      ...dexPhysicalResourceKeys(observation),
+      ...(composedExit
+        ? [`wrapper:${composedExit.chain}:${composedExit.wrapperContract.toLowerCase()}`]
+        : []),
+    ],
     executionCosts: capacityPoints(observation),
     output: buildOutputReview(fixedInput, observation, fixedInput.dexGenerationId),
-    failureDomains: [],
+    failureDomains: composedExit
+      ? [
+          {
+            kind: "redemption-rail",
+            key: `wrapper:${composedExit.chain}:${composedExit.wrapperContract.toLowerCase()}`,
+          },
+        ]
+      : [],
   };
+}
+
+function composedDexRouteId(assetId: string, observation: ExitRouteObservation): string {
+  return `composed:${assetId}:${observation.routeId}`;
+}
+
+function buildSafetyScoreV9ComposedDexRoutes(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  assetId: string,
+): RetainedRoute[] {
+  const composedExit = getRedemptionBackstopConfig(assetId)?.v9ComposedDexExit;
+  if (!composedExit) return [];
+  const observations =
+    fixedInput.dexLiqMap[composedExit.intermediateAssetId]?.exitRouteObservations ?? [];
+  return observations
+    .filter((observation) => observation.scoreEligible)
+    .map((observation) => ({
+      lane: "dex" as const,
+      observation: {
+        ...observation,
+        routeId: composedDexRouteId(assetId, observation),
+      },
+      disposition: "observed" as const,
+      rejection: null,
+    }))
+    .sort((left, right) => compareText(left.observation.routeId, right.observation.routeId));
 }
 
 function redemptionHolderAccess(entry: RedemptionBackstopEntry): RouteReview["holderAccess"] {
@@ -489,6 +529,15 @@ export function buildSafetyScoreV9RouteReviews(
     for (const key of review.physicalResourceKeys) seenResources.add(key);
     reviews.push(reused ? { ...review, coverageClass: "diagnostic" } : review);
   }
+  const composedExit = getRedemptionBackstopConfig(assetId)?.v9ComposedDexExit;
+  if (composedExit) {
+    for (const retained of buildSafetyScoreV9ComposedDexRoutes(fixedInput, assetId)) {
+      const review = buildDexRouteReview(fixedInput, assetId, retained.observation, composedExit);
+      const reused = review.physicalResourceKeys.some((key) => seenResources.has(key));
+      for (const key of review.physicalResourceKeys) seenResources.add(key);
+      reviews.push(reused ? { ...review, coverageClass: "diagnostic" } : review);
+    }
+  }
   const redemption = fixedInput.redemptionBackstopMap[assetId];
   for (const observation of redemption?.capacityProfile?.exitRouteObservations ?? []) {
     reviews.push(buildRedemptionRouteReview(fixedInput, redemption!, observation));
@@ -515,4 +564,19 @@ export function buildSafetyScoreV9RetainedRedemptionRoutes(
   const observation = deriveSupplyModelExitRouteObservation(redemption, fixedInput.clockSec);
   if (!observation) return [];
   return [{ lane: "redemption", observation, disposition: "observed", rejection: null }];
+}
+
+export function buildSafetyScoreV9RetainedRoutes(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  assetId: string,
+): RetainedRoute[] {
+  return [
+    ...buildSafetyScoreV9ComposedDexRoutes(fixedInput, assetId),
+    ...buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId),
+  ].sort((left, right) =>
+    compareText(
+      `${left.lane}:${left.observation.routeId}`,
+      `${right.lane}:${right.observation.routeId}`,
+    ),
+  );
 }

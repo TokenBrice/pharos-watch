@@ -285,6 +285,12 @@ export function buildSafetyScoreV9Candidate(
 export function buildSafetyScoreV9CandidateFromNormalizedInput(
   input: BuildSafetyScoreV9CandidateFromNormalizedInput,
 ): Readonly<SafetyScoreV9CandidatePipelineResult> {
+  return deepFreeze(buildSafetyScoreV9CandidatePipeline(input));
+}
+
+function buildSafetyScoreV9CandidatePipeline(
+  input: BuildSafetyScoreV9CandidateFromNormalizedInput,
+): SafetyScoreV9CandidatePipelineResult {
   if (!Number.isInteger(input.publishedAtSec) || input.publishedAtSec < 0) {
     throw new Error("Safety Score v9 publication time must be a non-negative integer");
   }
@@ -347,7 +353,7 @@ export function buildSafetyScoreV9CandidateFromNormalizedInput(
     })),
   });
 
-  return deepFreeze({
+  return {
     fixedInput,
     extension,
     compiledFacts,
@@ -358,7 +364,7 @@ export function buildSafetyScoreV9CandidateFromNormalizedInput(
     producerCapabilityIdentity: capabilityIdentity,
     producerCapabilityDigest,
     candidateIdentity,
-  });
+  };
 }
 
 /**
@@ -368,16 +374,82 @@ export function buildSafetyScoreV9CandidateFromNormalizedInput(
 export function buildSafetyScoreV9ShadowCandidateFromNormalizedInput(
   input: BuildSafetyScoreV9CandidateFromNormalizedInput,
 ): Readonly<SafetyScoreV9ShadowCandidateResult> {
-  const pipeline = buildSafetyScoreV9CandidateFromNormalizedInput(input);
+  if (!Number.isInteger(input.publishedAtSec) || input.publishedAtSec < 0) {
+    throw new Error("Safety Score v9 publication time must be a non-negative integer");
+  }
+  const fixedInput = input.fixedInput;
+  if (fixedInput.captureKind !== "exact-publication-inputs") {
+    throw new Error("Safety Score v9 candidate evaluation requires exact publication inputs");
+  }
+  if (input.publishedAtSec < fixedInput.clockSec) {
+    throw new Error("Safety Score v9 candidate publication cannot predate its evidence clock");
+  }
+
+  const policy = input.policy ?? V9_CANDIDATE_POLICY_V1;
+  assertV9ValidatedPolicyEnvelope(policy);
+  const policyVersion = candidatePolicyVersion(policy);
+  let extension: SafetyScoreV9FactSetExtensionV2 | null = materializeSafetyScoreV9FactSetExtension(
+    fixedInput,
+    input.extension ?? buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput),
+  );
+  let compiledFacts: CompiledV9FactSetV3 | null = compileSafetyScoreV9FactSetFromValidatedExtension(
+    fixedInput,
+    extension,
+  );
+  const compilerIdentity = compilerFactSchemaIdentity(fixedInput, extension, compiledFacts);
+  const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
+  const capabilityIdentity = producerCapabilityIdentity(fixedInput, extension);
+  const producerCapabilityDigest = computeSafetyScoreV9ProducerCapabilityDigest(capabilityIdentity);
+  const supplyUsdById = Object.fromEntries(
+    compiledFacts.assets.map((asset) => [asset.assetId, asset.supply.circulatingUsd ?? 0]),
+  );
+
+  // The shadow response does not expose replay intermediates. Release each
+  // large graph as soon as its compact projection has been captured.
+  extension = null;
+  const evaluatedSet = evaluateValidatedV9FactSet(compiledFacts, policy);
+  compiledFacts = null;
+  const candidateIdentity = SafetyScoreV9CandidateIdentityV1Schema.parse({
+    schemaVersion: 1,
+    policyId: policy.policy.policyId,
+    policyDigest: policy.semanticDigest,
+    evaluationBuildDigest: evaluatedSet.evaluationBuildDigest,
+    compilerFactSchemaDigest,
+    producerCapabilityDigest,
+  });
+  const candidateId =
+    input.releaseCandidateId === undefined
+      ? computeSafetyScoreV9CandidateId(candidateIdentity)
+      : ReleaseCandidateIdSchema.parse(input.releaseCandidateId);
+  const publicationGenerationId = `report-cards:v9:candidate:v1:${digest("safety-score-v9.candidate-publication.v1", {
+    candidateId,
+    baseInputGenerationId: evaluatedSet.baseInputGenerationId,
+    factSetDigest: evaluatedSet.factSetDigest,
+    evaluatedSetDigest: evaluatedSet.evaluatedSetDigest,
+    resultDigest: evaluatedSet.scoreResultDigest,
+    publishedAtSec: input.publishedAtSec,
+  })}`;
+  const candidate = buildSafetyScoreV9Response({
+    candidateId,
+    policyVersion,
+    publicationGenerationId,
+    publishedAtSec: input.publishedAtSec,
+    results: evaluatedSet.assets.map((asset) => ({
+      trace: asset.trace,
+      scoreInput: asset.scoreInput,
+      access: asset.access,
+      dependencyInputs: asset.dependencyInputs,
+      stressState: asset.stressState,
+      backing: asset.backing,
+      exit: asset.exit,
+      control: asset.control,
+    })),
+  });
+
   return deepFreeze({
-    candidate: pipeline.candidate,
-    compilerFactSchemaDigest: pipeline.compilerFactSchemaDigest,
-    producerCapabilityDigest: pipeline.producerCapabilityDigest,
-    supplyUsdById: Object.fromEntries(
-      pipeline.compiledFacts.assets.map((asset) => [
-        asset.assetId,
-        asset.supply.circulatingUsd ?? 0,
-      ]),
-    ),
+    candidate,
+    compilerFactSchemaDigest,
+    producerCapabilityDigest,
+    supplyUsdById,
   });
 }

@@ -370,6 +370,7 @@ const ControlOverlaySchema = z
   .object({
     controlKey: CanonicalTextSchema,
     deploymentKey: CanonicalTextSchema,
+    controllerAssetId: CanonicalTextSchema.nullable().optional(),
     controlKind: z.enum(["mint", "upgrade", "custody", "oracle", "bridge", "freeze", "governance"]),
     scope: z.enum(["global", "deployment", "exposure", "route"]),
     capabilities: canonicalArrayBy(LocalControlCapabilitySchema, (value) => value),

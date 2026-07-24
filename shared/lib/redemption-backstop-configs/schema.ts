@@ -21,6 +21,7 @@ import type {
   RedemptionCapacityModel,
   RedemptionCostModel,
   RedemptionCostTerms,
+  RedemptionV9ComposedDexExit,
   RedemptionV9RouteReviewTerms,
 } from "./shared";
 import { isRedemptionSettlementAtLeastAsConservative } from "./shared";
@@ -106,6 +107,14 @@ const RedemptionV9RouteReviewTermsSchema: z.ZodType<RedemptionV9RouteReviewTerms
   minRedeemUsd: NonNegativeNumberSchema.optional(),
   settlementModel: RedemptionSettlementModelSchema.optional(),
 });
+const RedemptionV9ComposedDexExitSchema: z.ZodType<RedemptionV9ComposedDexExit> = z.strictObject({
+  intermediateAssetId: z.string().min(1),
+  conversionModel: z.literal("permissionless-atomic-wrap"),
+  chain: z.string().min(1),
+  wrapperContract: z.string().min(1),
+  reviewedAt: ReviewedAtSchema,
+  docs: z.array(RedemptionDocSourceSchema).min(1),
+});
 
 const RedemptionCostModelSchema: z.ZodType<RedemptionCostModel> = z.discriminatedUnion("kind", [
   z.strictObject({
@@ -135,6 +144,7 @@ export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig>
     costModel: RedemptionCostModelSchema,
     v9RouteCostTerms: RedemptionCostTermsSchema.optional(),
     v9RouteReviewTerms: RedemptionV9RouteReviewTermsSchema.optional(),
+    v9ComposedDexExit: RedemptionV9ComposedDexExitSchema.optional(),
     holderEligibility: RedemptionHolderEligibilitySchema.optional(),
     routeStatus: z.enum(["open", "unknown"]).optional(),
     routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),

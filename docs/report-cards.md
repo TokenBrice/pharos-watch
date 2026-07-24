@@ -87,6 +87,19 @@ model. They cannot improve the captured settlement model, reduce a captured
 minimum, or shorten the route's observation horizon, and they do not mutate the
 V8 redemption producer. A reviewed slower model without a contractual SLA uses
 the model's conservative comparison horizon rather than inventing a numeric SLA.
+The candidate can also compose a reviewed fee-free, permissionless atomic wrap
+with the intermediate asset's captured DEX observations. The composed path
+preserves the measured capacity curve, execution cost, output valuation,
+freshness, and observation history, adds the wrapper contract as a physical
+resource and failure domain, and remains exact-lower-bound coverage. This is a
+V9-only route projection; it neither invents liquidity nor changes the V8 DEX or
+redemption producers.
+Reviewed mint controls may identify the tracked native asset whose issuance
+system owns a controller reused by other products. A shared-controller group
+remains high severity for foreign products, but it is diagnostic for the native
+controller asset and exact serial children already priced by the parent cap.
+This prevents downstream adoption from creating a reverse dependency on the
+base asset while preserving the actual shared-control exposure.
 Missing categorical access-posture review remains visible but does not make an
 otherwise established score unrateable. New candidate cards use score-trace
 schema v3 inside candidate-response schema v4 and public-report schema v3.

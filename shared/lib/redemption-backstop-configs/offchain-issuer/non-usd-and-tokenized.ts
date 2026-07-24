@@ -209,6 +209,21 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "m-m0": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    v9ComposedDexExit: {
+      intermediateAssetId: "wm-m0",
+      conversionModel: "permissionless-atomic-wrap",
+      chain: "ethereum",
+      wrapperContract: "0x437cc33344a0B27A429f795ff6B469C72698B291",
+      reviewedAt: "2026-07-24",
+      docs: [
+        sourceRef(
+          "M0 WrappedMToken source",
+          "https://github.com/m0-foundation/wrapped-m-token/blob/main/src/WrappedMToken.sol",
+          ["route", "fees", "access", "settlement"],
+        ),
+        sourceRef("M0 wM FAQ", "https://www.m0.org/faq", ["route", "fees", "access"]),
+      ],
+    },
     costModel: documentedVariableFee(
       "M0 docs describe $M as fully backed and redeemable 1:1, but direct mint and redemption access is restricted to permissioned minters and no public fee schedule is disclosed",
     ),

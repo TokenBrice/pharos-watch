@@ -696,6 +696,9 @@ const V9DeploymentControlFactV2Schema = z
     controlKey: CanonicalTextSchema,
     deploymentKey: CanonicalTextSchema,
     sourceGenerationId: CanonicalTextSchema,
+    // Optional only for retained fact compatibility. Current compilers emit
+    // the tracked native asset that owns a reused controller when reviewed.
+    controllerAssetId: CanonicalTextSchema.nullable().optional(),
     controlKind: z.enum(["mint", "upgrade", "custody", "oracle", "bridge", "freeze", "governance"]),
     scope: z.enum(["global", "deployment", "exposure", "route"]),
     status: V9FactStatusV2Schema,

@@ -61,7 +61,7 @@ import {
 import { SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
-  buildSafetyScoreV9RetainedRedemptionRoutes,
+  buildSafetyScoreV9RetainedRoutes,
   buildSafetyScoreV9RouteReviews,
 } from "./safety-score-v9-extension-routes";
 import {
@@ -906,6 +906,7 @@ function adaptMintControl(
   return {
     controlKey,
     deploymentKey: `asset:${assetId}`,
+    ...(control.controllerAssetId ? { controllerAssetId: control.controllerAssetId } : {}),
     controlKind,
     scope: "global",
     capabilities,
@@ -2284,7 +2285,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         reserveClassifications,
         reviewedStaticReserveRows,
         routeReviews: buildSafetyScoreV9RouteReviews(fixedInput, assetId),
-        retainedRoutes: buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId),
+        retainedRoutes: buildSafetyScoreV9RetainedRoutes(fixedInput, assetId),
         controlReview:
           controls.length > 0
             ? controlsFullyResolved

@@ -207,4 +207,23 @@ describe("Reshape-v2 D2 — parent-controlled common-mode dedup", () => {
     );
     expect(evaluateSet.isV9ParentControlledCommonModeMember("steakusdt-steakhouse", null, serialPaths as never)).toBe(false);
   });
+
+  it("does not create a reverse dependency from downstream controller reuse", () => {
+    expect(evaluateSet.isV9ControllerOwnedCommonModeMember("usdt-tether", "usdt-tether", serialPaths as never)).toBe(
+      true,
+    );
+    expect(
+      evaluateSet.isV9ControllerOwnedCommonModeMember(
+        "steakusdt-steakhouse",
+        "usdt-tether",
+        serialPaths as never,
+      ),
+    ).toBe(true);
+    expect(evaluateSet.isV9ControllerOwnedCommonModeMember("basket-holder", "usdt-tether", serialPaths as never)).toBe(
+      false,
+    );
+    expect(evaluateSet.isV9ControllerOwnedCommonModeMember("foreign-product", "usdt-tether", serialPaths as never)).toBe(
+      false,
+    );
+  });
 });

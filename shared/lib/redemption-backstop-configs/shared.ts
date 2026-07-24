@@ -34,6 +34,15 @@ export interface RedemptionV9RouteReviewTerms {
   settlementModel?: RedemptionSettlementModel;
 }
 
+export interface RedemptionV9ComposedDexExit {
+  intermediateAssetId: string;
+  conversionModel: "permissionless-atomic-wrap";
+  chain: string;
+  wrapperContract: string;
+  reviewedAt: string;
+  docs: RedemptionDocSource[];
+}
+
 export const REDEMPTION_SETTLEMENT_CONSERVATISM: readonly RedemptionSettlementModel[] = [
   "atomic",
   "immediate",
@@ -137,6 +146,11 @@ export interface RedemptionBackstopConfig {
    * any stricter constraint carried by the captured redemption row.
    */
   v9RouteReviewTerms?: RedemptionV9RouteReviewTerms;
+  /**
+   * Reviewed fee-free wrap composed with the intermediate asset's captured DEX
+   * routes. This is projected only into V9 and does not alter the V8 producer.
+   */
+  v9ComposedDexExit?: RedemptionV9ComposedDexExit;
   holderEligibility?: RedemptionHolderEligibility;
   routeStatus?: Extract<RedemptionRouteStatus, "open" | "unknown">;
   routeExitCorrelation?: RedemptionRouteExitCorrelation;
@@ -231,6 +245,14 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
     costModel: { ...config.costModel },
     ...(config.v9RouteCostTerms ? { v9RouteCostTerms: { ...config.v9RouteCostTerms } } : {}),
     ...(config.v9RouteReviewTerms ? { v9RouteReviewTerms: { ...config.v9RouteReviewTerms } } : {}),
+    ...(config.v9ComposedDexExit
+      ? {
+          v9ComposedDexExit: {
+            ...config.v9ComposedDexExit,
+            docs: config.v9ComposedDexExit.docs.map(cloneRedemptionDocSource),
+          },
+        }
+      : {}),
     ...(config.docs ? { docs: config.docs.map(cloneRedemptionDocSource) } : {}),
     ...(config.notes ? { notes: [...config.notes] } : {}),
   };

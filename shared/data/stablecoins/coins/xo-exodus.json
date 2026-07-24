@@ -137,6 +137,7 @@
       {
         "chain": "ethereum",
         "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+        "controllerAssetId": "m-m0",
         "label": "M0 MinterGateway backing rail",
         "role": "direct-minter",
         "authorityType": "contract",
@@ -233,6 +234,7 @@
       {
         "chain": "solana",
         "address": "9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW",
+        "controllerAssetId": "m-m0",
         "label": "M0 Solana upgrade authority keypair",
         "role": "proxy-admin",
         "authorityType": "eoa",

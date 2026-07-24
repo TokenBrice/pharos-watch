@@ -666,6 +666,23 @@ export function isV9ParentControlledCommonModeMember(
   );
 }
 
+/**
+ * A controller's native asset does not depend on products that reuse its
+ * controller. Exact serial children also defer to their parent cap, while
+ * unrelated products remain exposed to the shared controller.
+ */
+export function isV9ControllerOwnedCommonModeMember(
+  assetId: string,
+  controllerAssetId: string | null,
+  serialPaths: readonly V9DependencyPathPlan[],
+): boolean {
+  return (
+    controllerAssetId !== null &&
+    (assetId === controllerAssetId ||
+      isV9ParentControlledCommonModeMember(assetId, controllerAssetId, serialPaths))
+  );
+}
+
 /** Same-issuer mint groups are diagnostic; every unresolved or crossed join fails closed. */
 export function resolveV9MintControlGroupSeverity(group: V9MintControlGroupIssuerFacts): V9Severity {
   if (group.controllerIssuerKey === null || group.members.length === 0) return "high";
@@ -1462,11 +1479,35 @@ function commonModeSignalsByAsset(
           assetIssuerKey: assetsById.get(assetId)?.assetIssuerKey ?? null,
         };
       });
-      // The accepted D2 matrix has no separate controller-entity fact. Its
-      // bounded proxy is the common member issuer: unresolved or mixed member
-      // identities still fail closed in resolveV9MintControlGroupSeverity.
-      const controllerIssuerKey = members[0]?.assetIssuerKey ?? null;
+      let controllerAssetId: string | null = null;
+      let controllerAttributionComplete = effectiveMembers.length > 0;
+      for (const member of effectiveMembers) {
+        const attributedControllerAssetId =
+          member.owner === "control"
+            ? (assetsById
+                .get(member.assetId)
+                ?.controls.find((control) => control.controlKey === member.pathKey)
+                ?.controllerAssetId ?? null)
+            : null;
+        if (
+          attributedControllerAssetId === null ||
+          (controllerAssetId !== null && controllerAssetId !== attributedControllerAssetId)
+        ) {
+          controllerAttributionComplete = false;
+          break;
+        }
+        controllerAssetId = attributedControllerAssetId;
+      }
+      // Attribution is usable only when every path names the same controller
+      // owner. Retained facts without that field preserve the prior fail-closed
+      // member-issuer proxy.
+      if (!controllerAttributionComplete) controllerAssetId = null;
+      const controllerIssuerKey =
+        controllerAssetId === null
+          ? (members[0]?.assetIssuerKey ?? null)
+          : (assetsById.get(controllerAssetId)?.assetIssuerKey ?? null);
       return {
+        controllerAssetId,
         severity: resolveV9MintControlGroupSeverity({
           controllerIssuerKey,
           members,
@@ -1483,20 +1524,27 @@ function commonModeSignalsByAsset(
     const controlAssetDomainId = v9ControlAssetDomainId(group.failureDomain);
     for (const assetId of assetIds) {
       const parentControlled = isV9ParentControlledCommonModeMember(assetId, controlAssetDomainId, plan.serialPaths);
+      const controllerOwned = isV9ControllerOwnedCommonModeMember(
+        assetId,
+        mintControlAssessment?.controllerAssetId ?? null,
+        plan.serialPaths,
+      );
       const context = contextFor(assetId);
-      const severity = parentControlled
+      const severity = parentControlled || controllerOwned
         ? "low"
         : (mintControlSeverity ?? commonModeSignalSeverity(group.failureDomain, context, materiality));
       // Only the proportional (chain/dex-protocol/bridge-route) domains carry
       // a per-asset measured share; parent-controlled and mint/upgrade-control
       // groups keep their existing group-first phrasing below.
       const shareInfo =
-        parentControlled || mintControlSeverity !== null
+        parentControlled || controllerOwned || mintControlSeverity !== null
           ? null
           : commonModeShareForDomain(group.failureDomain, context, materiality);
       const shareUnavailable = severity === "high" && shareInfo !== null && shareInfo.share === null;
-      const qualifier = parentControlled
-        ? "own required parent's controller, priced by the parent cap, diagnostic only"
+      const qualifier = parentControlled || controllerOwned
+        ? assetId === mintControlAssessment?.controllerAssetId
+          ? "own controller, downstream reuse creates no reverse dependency, diagnostic only"
+          : "own required parent's controller, priced by the parent cap, diagnostic only"
         : mintControlSeverity === "low"
           ? "same-issuer controller, diagnostic only"
           : commonModeReasonQualifier(group.failureDomain.kind, severity, materiality, shareUnavailable);
