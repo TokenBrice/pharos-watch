@@ -131,11 +131,14 @@ function dependencies() {
     }),
     fetchEvmBlockNumber: vi.fn(async (chainId: string) => BLOCK_BY_CHAIN[chainId] ?? null),
     fetchEvmBlockHeader: vi.fn(
-      async (chainId: string, blockNumber: number, _options?: unknown) => ({
-        number: blockNumber,
-        timestamp: TIME_BY_CHAIN[chainId]!,
-        hash: `0x${"a".repeat(64)}` as const,
-      }),
+      async (chainId: string, blockNumber: number | "finalized", _options?: unknown) =>
+        blockNumber === "finalized"
+          ? null
+          : {
+              number: blockNumber,
+              timestamp: TIME_BY_CHAIN[chainId]!,
+              hash: `0x${"a".repeat(64)}` as const,
+            },
     ),
     fetchEvmCodeAtBlock: vi.fn(
       async (chainId: string | undefined, address: string) =>
@@ -204,13 +207,17 @@ describe("wM reviewed deployment observer", () => {
 
   it("walks back from a head newer than the fixed scoring clock", async () => {
     const deps = dependencies();
-    deps.fetchEvmBlockHeader.mockImplementation(async (chainId, blockNumber) => ({
-      number: blockNumber,
-      timestamp: blockNumber === BLOCK_BY_CHAIN[chainId]! - WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN[chainId]!
-        ? CLOCK_SEC + 2
-        : TIME_BY_CHAIN[chainId]!,
-      hash: `0x${"a".repeat(64)}` as const,
-    }));
+    deps.fetchEvmBlockHeader.mockImplementation(async (chainId, blockNumber) =>
+      blockNumber === "finalized"
+        ? null
+        : {
+            number: blockNumber,
+            timestamp: blockNumber === BLOCK_BY_CHAIN[chainId]! - WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN[chainId]!
+              ? CLOCK_SEC + 2
+              : TIME_BY_CHAIN[chainId]!,
+            hash: `0x${"a".repeat(64)}` as const,
+          },
+    );
 
     const attribution = await observe(deps);
 
