@@ -106,6 +106,28 @@ function buildOutputReview(
   const assetKeys =
     resolvedExitRouteOutputAssetKeys(output) ?? (output.kind === "collateral" ? ["collateral:mixed"] : null);
   if (assetKeys === null) return null;
+  const basketWeights = [...(output.basketWeights ?? [])]
+    .flatMap((weight) =>
+      weight.assetId && assetKeys.includes(weight.assetId)
+        ? [{ assetKey: weight.assetId, weight: weight.weight }]
+        : [],
+    )
+    .sort((left, right) => compareText(left.assetKey, right.assetKey));
+  const completePinnedBasket =
+    output.kind === "tracked-stablecoin" &&
+    assetKeys.length > 1 &&
+    basketWeights.length === assetKeys.length &&
+    new Set(basketWeights.map((weight) => weight.assetKey)).size === assetKeys.length &&
+    assetKeys.every((assetKey) => basketWeights.some((weight) => weight.assetKey === assetKey)) &&
+    Math.abs(basketWeights.reduce((sum, weight) => sum + weight.weight, 0) - 1) <= 0.000001 &&
+    observation.outputUnitValueUsd !== undefined &&
+    observation.outputUnitValueUsd <= 2 &&
+    observation.outputUnitValueSourceId !== undefined &&
+    observation.outputUnitValueObservedAt !== undefined &&
+    observation.allInCostBps !== undefined &&
+    (observation.evidenceKind === "onchain-contract-state" ||
+      observation.evidenceKind === "live-reserve-state") &&
+    observation.confidence === "high";
   const observedAtSec = Math.min(observation.observedAt, fixedInput.clockSec);
   const shared = {
     sourceGenerationId,
@@ -148,23 +170,57 @@ function buildOutputReview(
       };
     }
   } else if (output.kind === "tracked-stablecoin" && assetKeys.length > 1) {
-    // A resolved stable basket values at the weakest component's observed
-    // price — conservative without claiming basket weights. Every component
-    // must carry a peg row; a partially-priced basket stays unresolved.
+    // Prefer the weakest known component when every leg is priced. A live
+    // producer may also pin a complete proportional basket and its aggregate
+    // unit value; this is accepted only with source identity, source time,
+    // exact weights, high-confidence live evidence, and the producer's all-in
+    // cost check. Known component downside remains a conservative floor.
     const components = assetKeys.map((assetKey) => ({
       assetKey,
       tracked: trackedStablecoinValuation(fixedInput, assetKey, observedAtSec),
     }));
-    if (components.every((component) => component.tracked !== null)) {
-      const weakest = components.reduce((minimum, component) =>
+    const pricedComponents = components.filter(
+      (component): component is typeof component & { tracked: NonNullable<typeof component.tracked> } =>
+        component.tracked !== null,
+    );
+    const weakest =
+      pricedComponents.length > 0
+        ? pricedComponents.reduce((minimum, component) =>
         component.tracked!.unitValueUsd < minimum.tracked!.unitValueUsd ? component : minimum,
-      );
-      valuation = {
-        referenceAssetKey: weakest.assetKey,
-        ...weakest.tracked!,
-        confidence: "medium",
-        ...shared,
-      };
+          )
+        : null;
+    const weakestKnownValuation = weakest
+      ? {
+          referenceAssetKey: weakest.assetKey,
+          ...weakest.tracked,
+          confidence: "medium" as const,
+          ...shared,
+        }
+      : null;
+    const fullyPricedValuation =
+      weakestKnownValuation && components.every((component) => component.tracked !== null)
+        ? weakestKnownValuation
+        : null;
+    const pinnedValuation = completePinnedBasket
+      ? {
+          basis: "price" as const,
+          referenceAssetKey: `basket:${observation.routeId}`,
+          unitValueUsd: observation.outputUnitValueUsd!,
+          expectedUnitValueUsd: 1,
+          sourceId: observation.outputUnitValueSourceId!,
+          observedAtSec: Math.min(observation.outputUnitValueObservedAt!, observedAtSec),
+          confidence: "high" as const,
+          ...shared,
+        }
+      : null;
+    if (weakestKnownValuation && pinnedValuation) {
+      valuation =
+        weakestKnownValuation.unitValueUsd / weakestKnownValuation.expectedUnitValueUsd <
+          pinnedValuation.unitValueUsd / pinnedValuation.expectedUnitValueUsd
+          ? weakestKnownValuation
+          : pinnedValuation;
+    } else {
+      valuation = fullyPricedValuation ?? pinnedValuation;
     }
   } else if (output.kind === "collateral") {
     // The producer already values executable notional in USD at observation
@@ -183,7 +239,7 @@ function buildOutputReview(
   return {
     kind: output.kind,
     assetKeys,
-    basketWeights: [],
+    basketWeights,
     valuation,
   };
 }

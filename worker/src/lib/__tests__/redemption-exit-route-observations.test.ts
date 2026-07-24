@@ -129,6 +129,51 @@ describe("redemption same-notional route observations", () => {
     });
   });
 
+  it("preserves a source-bound proportional CUSD basket and its all-in value", () => {
+    const cusdConfig = getRedemptionBackstopConfig("cusd-cap");
+    expect(cusdConfig).toBeDefined();
+    const observedAt = Date.UTC(2026, 6, 13, 10) / 1_000;
+    const outputObservedAt = observedAt - 120;
+    const observation = build({
+      stablecoinId: "cusd-cap",
+      config: cusdConfig!,
+      sourceMode: "dynamic",
+      capacityConfidence: "live-direct",
+      capacityKind: "live-direct-bounded",
+      freshnessKind: "same-run-onchain",
+      sourceTimestamp: observedAt,
+      resolvedFeeBps: 0,
+      outputValuation: {
+        sourceId: "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49",
+        observedAt: outputObservedAt,
+        unitValueUsd: 0.999983,
+        basketWeights: [
+          { assetId: "usdc-circle", weight: 0.93 },
+          { assetId: "wtgxx-wisdomtree", weight: 0.07 },
+        ],
+      },
+      now: observedAt + 60,
+    });
+
+    expect(observation).toMatchObject({
+      output: {
+        kind: "tracked-stablecoin",
+        trackedAssetIds: ["usdc-circle", "wtgxx-wisdomtree"],
+        basketWeights: [
+          { assetId: "usdc-circle", weight: 0.93 },
+          { assetId: "wtgxx-wisdomtree", weight: 0.07 },
+        ],
+      },
+      executionCostBps: 0,
+      outputUnitValueUsd: 0.999983,
+      outputUnitValueSourceId:
+        "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49",
+      outputUnitValueObservedAt: outputObservedAt,
+      allInCostBps: expect.closeTo(0.17, 8),
+      scoreEligible: true,
+    });
+  });
+
   it("normalizes fractional live telemetry timestamps before publishing integer observations", () => {
     const observedAt = Date.UTC(2026, 6, 13, 10) / 1_000;
     const observation = build({

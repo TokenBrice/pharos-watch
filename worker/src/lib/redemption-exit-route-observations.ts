@@ -3,6 +3,7 @@ import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backst
 import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ExitRouteCapacityPoint, ExitRouteObservation, ExitRouteOutput } from "@shared/types/market";
+import type { LiveReserveRedemptionOutputValuation } from "@shared/types/live-reserves";
 import type {
   RedemptionBackstopEntry,
   RedemptionCapacityProfile,
@@ -41,6 +42,7 @@ interface BuildRedemptionExitRouteObservationInput {
   sourceTimestamp?: number;
   settlementDelaySec?: number;
   resolvedFeeBps: number | null;
+  outputValuation?: LiveReserveRedemptionOutputValuation | null;
   now: number;
 }
 
@@ -97,6 +99,7 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
 function resolveOutput(
   stablecoinId: string,
   config: Pick<RedemptionBackstopConfig, "routeFamily" | "outputAssetType" | "outputAssets">,
+  outputValuation?: LiveReserveRedemptionOutputValuation | null,
 ): ExitRouteOutput {
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
   if (config.routeFamily === "offchain-issuer") {
@@ -107,9 +110,24 @@ function resolveOutput(
     return outputId ? { kind: "tracked-stablecoin", trackedAssetIds: [outputId] } : { kind: "unresolved-asset" };
   }
   if (config.outputAssetType === "stable-basket") {
-    return config.outputAssets?.length
-      ? { kind: "tracked-stablecoin", trackedAssetIds: [...config.outputAssets] }
-      : { kind: "unresolved-basket" };
+    if (!config.outputAssets?.length) return { kind: "unresolved-basket" };
+    const configuredAssetIds = [...config.outputAssets].sort();
+    const valuationAssetIds = outputValuation?.basketWeights.map((weight) => weight.assetId).sort() ?? [];
+    const valuationMatches =
+      configuredAssetIds.length === valuationAssetIds.length &&
+      configuredAssetIds.every((assetId, index) => assetId === valuationAssetIds[index]);
+    return {
+      kind: "tracked-stablecoin",
+      trackedAssetIds: [...config.outputAssets],
+      ...(valuationMatches
+        ? {
+            basketWeights: outputValuation!.basketWeights.map((weight) => ({
+              assetId: weight.assetId,
+              weight: weight.weight,
+            })),
+          }
+        : {}),
+    };
   }
   if (config.outputAssetType === "bluechip-collateral" || config.outputAssetType === "mixed-collateral") {
     return config.outputAssets?.length
@@ -202,6 +220,20 @@ export function buildRedemptionExitRouteObservation(
     input.capacityProfile.scoringHorizon === "immediate" &&
     (input.config.settlementModel === "atomic" || input.config.settlementModel === "immediate");
   const mainCostBps = resolveCostBps(input.config, input.resolvedFeeBps, modeledExitSizeUsd);
+  const configuredOutputAssetIds = [...(input.config.outputAssets ?? [])].sort();
+  const candidateValuationAssetIds =
+    input.outputValuation?.basketWeights.map((weight) => weight.assetId).sort() ?? [];
+  const outputValuation =
+    input.config.outputAssetType === "stable-basket" &&
+    input.outputValuation &&
+    configuredOutputAssetIds.length === candidateValuationAssetIds.length &&
+    configuredOutputAssetIds.every((assetId, index) => assetId === candidateValuationAssetIds[index])
+      ? input.outputValuation
+      : null;
+  const allInCostBps =
+    mainCostBps != null && outputValuation
+      ? mainCostBps + Math.max(0, (1 - outputValuation.unitValueUsd) * 10_000)
+      : null;
   // A reviewed route with a documented but unbounded fee still proves that the
   // capacity exists. Preserve that capacity and let V9's explicit
   // undisclosed-fee ceiling bound its score instead of converting uncertainty
@@ -216,7 +248,8 @@ export function buildRedemptionExitRouteObservation(
     routeIsImmediate &&
     evidence.supportsScoring &&
     mainCostBps != null &&
-    mainCostBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps;
+    mainCostBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps &&
+    (allInCostBps == null || allInCostBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps);
   const maxCurveRequest = input.supplyUsd != null && input.supplyUsd > 0 ? input.supplyUsd : modeledExitSizeUsd;
   const requests = [...new Set([...REDEMPTION_CAPACITY_CURVE_REQUESTS_USD, modeledExitSizeUsd])]
     .filter((request) => request <= Math.max(modeledExitSizeUsd, maxCurveRequest))
@@ -243,9 +276,18 @@ export function buildRedemptionExitRouteObservation(
     scope,
     ...point,
     settlementHorizonSec,
-    output: resolveOutput(input.stablecoinId, input.config),
+    output: resolveOutput(input.stablecoinId, input.config, outputValuation),
     evidenceKind: evidence.evidenceKind,
     ...(boundedUnknownFee ? { feeEvidence: "undisclosed-reviewed" as const } : {}),
+    ...(outputValuation && mainCostBps != null && allInCostBps != null
+      ? {
+          executionCostBps: mainCostBps,
+          outputUnitValueUsd: outputValuation.unitValueUsd,
+          outputUnitValueSourceId: outputValuation.sourceId,
+          outputUnitValueObservedAt: outputValuation.observedAt,
+          allInCostBps,
+        }
+      : {}),
     confidence: evidence.confidence,
     scoreEligible,
     observedAt: evidence.observedAt,

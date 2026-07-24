@@ -12,12 +12,13 @@ import type {
   RedemptionRouteStatus,
   RedemptionRouteStatusSource,
 } from "@shared/types/redemption";
+import { LiveReserveRedemptionOutputValuationSchema } from "@shared/types/live-reserves";
 import {
   RedemptionHolderEligibilitySchema,
   RedemptionLiveCapacityKindSchema,
   RedemptionLiveFreshnessKindSchema,
 } from "@shared/types/redemption";
-import type { LiveReserveWarning } from "@shared/types/live-reserves";
+import type { LiveReserveRedemptionOutputValuation, LiveReserveWarning } from "@shared/types/live-reserves";
 import {
   hasScoringEligibleLiveReserveFreshness,
   LIVE_RESERVE_FRESHNESS_SEC,
@@ -65,6 +66,7 @@ export interface RedemptionBackstopLiveMetadata {
   routeStatusReviewedAt: string | null;
   v9FpiControllerRouteState: FpiControllerV9RouteState | null;
   v9SfrxusdCrosschainRouteState: SfrxusdCrosschainV9RouteState | null;
+  v9OutputValuation?: LiveReserveRedemptionOutputValuation | null;
 }
 
 interface ParsedRedemptionTelemetry {
@@ -482,6 +484,21 @@ export function readRedemptionBackstopLiveMetadata(
     capacityKind,
     freshnessKind,
   } = parseTelemetryFields(redemptionTelemetry, metadata);
+  const parsedOutputValuation = LiveReserveRedemptionOutputValuationSchema.safeParse(
+    redemptionTelemetry.outputValuation,
+  );
+  const outputValuationPresent = Object.prototype.hasOwnProperty.call(
+    redemptionTelemetry,
+    "outputValuation",
+  );
+  const outputValuationUnknownAsset =
+    parsedOutputValuation.success &&
+    parsedOutputValuation.data.basketWeights.some(
+      (weight) => !TRACKED_META_BY_ID.has(weight.assetId),
+    );
+  const outputValuationFuture =
+    parsedOutputValuation.success &&
+    parsedOutputValuation.data.observedAt > now + MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC;
   const sourceTimestampFuture =
     sourceTimestamp.value != null &&
     sourceTimestamp.value > now + MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC;
@@ -524,6 +541,13 @@ export function readRedemptionBackstopLiveMetadata(
     dailyLimitUsd,
     minRedeemUsd,
   ]);
+  if (outputValuationPresent && !parsedOutputValuation.success) {
+    telemetryWarnings.push("Live redemption output valuation is malformed and was ignored");
+  } else if (outputValuationUnknownAsset) {
+    telemetryWarnings.push("Live redemption output valuation contains an untracked basket asset and was ignored");
+  } else if (outputValuationFuture) {
+    telemetryWarnings.push("Live redemption output valuation has a future source timestamp and was ignored");
+  }
   const resolvedRouteStatus = resolveRouteStatus(redemptionTelemetry);
   if (sourceTimestampFuture) {
     telemetryWarnings.push(
@@ -622,6 +646,15 @@ export function readRedemptionBackstopLiveMetadata(
         ? parseAcceptedSfrxusdCrosschainV9RouteState(
             redemptionTelemetry.v9RouteAttempt,
           )
+        : null,
+    v9OutputValuation:
+      parsedOutputValuation.success &&
+      !outputValuationUnknownAsset &&
+      !outputValuationFuture &&
+      hasScoringEligibleFreshness &&
+      !hasBlockingWarnings &&
+      capacityReason == null
+        ? parsedOutputValuation.data
         : null,
   };
 }
