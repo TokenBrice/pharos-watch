@@ -132,6 +132,7 @@
     "worker/src/lib/safety-score-v9-shadow-runner.ts": 96.7,
     "worker/src/lib/safety-score-v9-shadow.ts": 88.8,
     "worker/src/lib/safety-score-v9-store.ts": 86.6,
+    "worker/src/lib/safety-score-v9-centrifuge-supply-observer.ts": 78.4,
     "worker/src/lib/safety-score-v9-supply-attribution-contract.ts": 93.7,
     "worker/src/lib/safety-score-v9-supply-attribution-journal-store.ts": 86.3,
     "worker/src/lib/safety-score-v9-supply-attribution.ts": 88.7,
