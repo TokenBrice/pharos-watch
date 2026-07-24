@@ -1,9 +1,13 @@
 import {
   buildReportCardsV9DependencyGraph,
-  ReportCardsV9ResponseSchema,
+  REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+  ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9Response,
 } from "@shared/types/report-cards-v9";
-import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public";
+import {
+  SafetyScoreV9CurrentResponseSchema,
+  type SafetyScoreV9Response,
+} from "@shared/types/safety-score-v9-public";
 import { loadLatestSafetyScoreV9ShadowEnvelope } from "./safety-score-v9-store";
 
 export class ReportCardsV9SnapshotUnavailableError extends Error {
@@ -21,35 +25,36 @@ export class ReportCardsV9SnapshotUnavailableError extends Error {
 export function projectSafetyScoreV9CandidateToPublicSnapshot(
   candidate: SafetyScoreV9Response,
 ): ReportCardsV9Response {
-  return ReportCardsV9ResponseSchema.parse({
+  const currentCandidate = SafetyScoreV9CurrentResponseSchema.parse(candidate);
+  return ReportCardsV9CurrentResponseSchema.parse({
     model: "v9",
-    schemaVersion: 1,
+    schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
     lifecycle: "shadow",
     safetyScoreIdentity: {
       model: "v9",
       schemaVersion: 1,
-      methodologyVersion: candidate.policyVersion,
-      policyId: candidate.policy.id,
-      policyDigest: candidate.policy.semanticDigest,
-      evaluationBuildDigest: candidate.evaluationBuildDigest,
-      baseInputGenerationId: candidate.baseInputGenerationId,
-      publicationGenerationId: candidate.publicationGenerationId,
+      methodologyVersion: currentCandidate.policyVersion,
+      policyId: currentCandidate.policy.id,
+      policyDigest: currentCandidate.policy.semanticDigest,
+      evaluationBuildDigest: currentCandidate.evaluationBuildDigest,
+      baseInputGenerationId: currentCandidate.baseInputGenerationId,
+      publicationGenerationId: currentCandidate.publicationGenerationId,
     },
     methodology: {
-      version: candidate.policyVersion,
-      policy: candidate.policy,
+      version: currentCandidate.policyVersion,
+      policy: currentCandidate.policy,
     },
-    asOfSec: candidate.asOfSec,
-    updatedAt: candidate.publishedAtSec,
-    completeness: candidate.completeness,
+    asOfSec: currentCandidate.asOfSec,
+    updatedAt: currentCandidate.publishedAtSec,
+    completeness: currentCandidate.completeness,
     source: {
-      candidateId: candidate.candidateId,
-      factSetDigest: candidate.factSetDigest,
-      resultDigest: candidate.resultDigest,
-      sourceGenerations: candidate.sourceGenerations,
+      candidateId: currentCandidate.candidateId,
+      factSetDigest: currentCandidate.factSetDigest,
+      resultDigest: currentCandidate.resultDigest,
+      sourceGenerations: currentCandidate.sourceGenerations,
     },
-    cards: candidate.cards,
-    dependencyGraph: buildReportCardsV9DependencyGraph(candidate.cards),
+    cards: currentCandidate.cards,
+    dependencyGraph: buildReportCardsV9DependencyGraph(currentCandidate.cards),
   });
 }
 

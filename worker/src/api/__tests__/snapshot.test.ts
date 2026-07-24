@@ -196,8 +196,8 @@ describe("handleSnapshotsIndex", () => {
 
   it("preserves a valid V9 identity in snapshot index and coin responses", async () => {
     const cards = [
-      makeWorkerV9Card({ id: "usdc-circle", score: 92, grade: "A-" }),
-      makeWorkerV9Card({ id: "usdt-tether", score: 81, grade: "B" }),
+      makeWorkerV9Card({ id: "usdc-circle", score: 92, grade: "A+" }),
+      makeWorkerV9Card({ id: "usdt-tether", score: 81, grade: "A-" }),
     ];
     const row = await buildSnapshotRow({
       ...SAMPLE_ENVELOPE,

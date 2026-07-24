@@ -1,9 +1,12 @@
 import { z } from "zod";
 import { SafetyScoreV9PublicationIdentitySchema } from "./safety-score-publication";
 import {
-  SafetyScoreV9CardSchema,
   SafetyScoreV9CompletenessSchema,
+  SafetyScoreV9CurrentCardSchema,
+  SafetyScoreV9PreviousCardSchema,
+  findSafetyScoreV9ParentAttributionIssues,
   type SafetyScoreV9Card,
+  type SafetyScoreV9CurrentCard,
 } from "./safety-score-v9-public";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -12,7 +15,8 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 1;
+export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 2;
+export const REPORT_CARDS_V9_PREVIOUS_RESPONSE_SCHEMA_VERSION = 1;
 
 export const ReportCardsV9DependencyEdgeSchema = z
   .object({
@@ -85,75 +89,133 @@ function isUniqueSorted(values: readonly string[]): boolean {
 }
 
 /**
- * Public V9 report-card wire contract. It is deliberately distinct from the
- * candidate-only V9 evaluator envelope, even while the shadow cache is the
- * current source during the pre-activation period.
+ * Shared public V9 report-card envelope fields. The report contract remains
+ * distinct from the candidate evaluator envelope even while shadow data is its
+ * pre-activation source.
  */
-export const ReportCardsV9ResponseSchema = z
+const ReportCardsV9ResponseShape = {
+  model: z.literal("v9"),
+  lifecycle: z.enum(["shadow", "active"]),
+  safetyScoreIdentity: SafetyScoreV9PublicationIdentitySchema,
+  methodology: z
+    .object({
+      version: z.string().trim().min(1),
+      policy: z.object({ id: z.string().trim().min(1), semanticDigest: Sha256Schema }).strict(),
+    })
+    .strict(),
+  asOfSec: z.number().int().nonnegative(),
+  updatedAt: z.number().int().nonnegative(),
+  completeness: SafetyScoreV9CompletenessSchema,
+  source: z
+    .object({
+      candidateId: z.string().trim().min(1),
+      factSetDigest: Sha256Schema,
+      resultDigest: Sha256Schema,
+      sourceGenerations: z.record(z.string().min(1), z.string().min(1)),
+    })
+    .strict(),
+  dependencyGraph: ReportCardsV9DependencyGraphSchema,
+} as const;
+
+function refineReportCardsV9Response(
+  response: {
+    safetyScoreIdentity: z.infer<typeof SafetyScoreV9PublicationIdentitySchema>;
+    methodology: {
+      version: string;
+      policy: { id: string; semanticDigest: string };
+    };
+    asOfSec: number;
+    updatedAt: number;
+    completeness: z.infer<typeof SafetyScoreV9CompletenessSchema>;
+    cards: readonly SafetyScoreV9Card[];
+    dependencyGraph: ReportCardsV9DependencyGraph;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const identity = response.safetyScoreIdentity;
+  if (
+    identity.methodologyVersion !== response.methodology.version ||
+    identity.policyId !== response.methodology.policy.id ||
+    identity.policyDigest !== response.methodology.policy.semanticDigest
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["safetyScoreIdentity"],
+      message: "V9 public identity must match the response methodology and policy",
+    });
+  }
+  if (response.updatedAt < response.asOfSec) {
+    ctx.addIssue({ code: "custom", path: ["updatedAt"], message: "V9 publication cannot predate evidence" });
+  }
+  if (response.cards.length !== response.completeness.expectedCount) {
+    ctx.addIssue({ code: "custom", path: ["cards"], message: "V9 public card set is not complete" });
+  }
+  const cardIds = response.cards.map((card) => card.id);
+  if (!isUniqueSorted(cardIds)) {
+    ctx.addIssue({ code: "custom", path: ["cards"], message: "V9 public card IDs must be unique and sorted" });
+  }
+  const notRatedIds = response.cards.filter((card) => card.grade === "NR").map((card) => card.id);
+  if (!sameJson(notRatedIds, response.completeness.notRatedIds)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["completeness"],
+      message: "V9 public NR membership must match completeness",
+    });
+  }
+  const expectedGraph = buildReportCardsV9DependencyGraph(response.cards);
+  if (!sameJson(response.dependencyGraph, expectedGraph)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["dependencyGraph"],
+      message: "V9 dependency graph must exactly project the V9 card dependency summaries",
+    });
+  }
+  const currentCards = response.cards.filter(
+    (card): card is SafetyScoreV9CurrentCard =>
+      "scoreTrace" in card && card.scoreTrace.schemaVersion === 2,
+  );
+  for (const issue of findSafetyScoreV9ParentAttributionIssues(currentCards)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["cards"],
+      message: `${issue.cardId}: ${issue.message}`,
+    });
+  }
+}
+
+/** Compatibility reader for report-v1 envelopes carrying retained trace-v1 cards. */
+export const ReportCardsV9PreviousResponseSchema = z
   .object({
-    model: z.literal("v9"),
-    schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
-    lifecycle: z.enum(["shadow", "active"]),
-    safetyScoreIdentity: SafetyScoreV9PublicationIdentitySchema,
-    methodology: z
-      .object({
-        version: z.string().trim().min(1),
-        policy: z.object({ id: z.string().trim().min(1), semanticDigest: Sha256Schema }).strict(),
-      })
-      .strict(),
-    asOfSec: z.number().int().nonnegative(),
-    updatedAt: z.number().int().nonnegative(),
-    completeness: SafetyScoreV9CompletenessSchema,
-    source: z
-      .object({
-        candidateId: z.string().trim().min(1),
-        factSetDigest: Sha256Schema,
-        resultDigest: Sha256Schema,
-        sourceGenerations: z.record(z.string().min(1), z.string().min(1)),
-      })
-      .strict(),
-    cards: z.array(SafetyScoreV9CardSchema),
-    dependencyGraph: ReportCardsV9DependencyGraphSchema,
+    ...ReportCardsV9ResponseShape,
+    schemaVersion: z.literal(REPORT_CARDS_V9_PREVIOUS_RESPONSE_SCHEMA_VERSION),
+    cards: z.array(SafetyScoreV9PreviousCardSchema),
   })
   .strict()
-  .superRefine((response, ctx) => {
-    const identity = response.safetyScoreIdentity;
-    if (
-      identity.methodologyVersion !== response.methodology.version ||
-      identity.policyId !== response.methodology.policy.id ||
-      identity.policyDigest !== response.methodology.policy.semanticDigest
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["safetyScoreIdentity"],
-        message: "V9 public identity must match the response methodology and policy",
-      });
-    }
-    if (response.updatedAt < response.asOfSec) {
-      ctx.addIssue({ code: "custom", path: ["updatedAt"], message: "V9 publication cannot predate evidence" });
-    }
-    if (response.cards.length !== response.completeness.expectedCount) {
-      ctx.addIssue({ code: "custom", path: ["cards"], message: "V9 public card set is not complete" });
-    }
-    const cardIds = response.cards.map((card) => card.id);
-    if (!isUniqueSorted(cardIds)) {
-      ctx.addIssue({ code: "custom", path: ["cards"], message: "V9 public card IDs must be unique and sorted" });
-    }
-    const notRatedIds = response.cards.filter((card) => card.grade === "NR").map((card) => card.id);
-    if (!sameJson(notRatedIds, response.completeness.notRatedIds)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["completeness"],
-        message: "V9 public NR membership must match completeness",
-      });
-    }
-    const expectedGraph = buildReportCardsV9DependencyGraph(response.cards);
-    if (!sameJson(response.dependencyGraph, expectedGraph)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["dependencyGraph"],
-        message: "V9 dependency graph must exactly project the V9 card dependency summaries",
-      });
-    }
-  });
-export type ReportCardsV9Response = z.infer<typeof ReportCardsV9ResponseSchema>;
+  .superRefine(refineReportCardsV9Response);
+export type ReportCardsV9PreviousResponse = z.infer<typeof ReportCardsV9PreviousResponseSchema>;
+
+/** Current public report contract. Report-v2 always carries causal trace-v2 cards. */
+export const ReportCardsV9CurrentResponseSchema = z
+  .object({
+    ...ReportCardsV9ResponseShape,
+    schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
+    cards: z.array(SafetyScoreV9CurrentCardSchema),
+  })
+  .strict()
+  .superRefine(refineReportCardsV9Response);
+export type ReportCardsV9CurrentResponse = z.infer<typeof ReportCardsV9CurrentResponseSchema>;
+
+/**
+ * Live V9 producers and consumers use only the current report contract.
+ */
+export const ReportCardsV9ResponseSchema = ReportCardsV9CurrentResponseSchema;
+export type ReportCardsV9Response = ReportCardsV9CurrentResponse;
+
+/** Explicit historical reader. Never use this union at a live publication boundary. */
+export const ReportCardsV9CompatibleResponseSchema = z.union([
+  ReportCardsV9CurrentResponseSchema,
+  ReportCardsV9PreviousResponseSchema,
+]);
+export type ReportCardsV9CompatibleResponse = z.infer<
+  typeof ReportCardsV9CompatibleResponseSchema
+>;

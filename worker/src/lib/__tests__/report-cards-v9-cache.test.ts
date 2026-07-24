@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public";
-import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
+import {
+  ReportCardsV9CompatibleResponseSchema,
+  ReportCardsV9CurrentResponseSchema,
+  ReportCardsV9PreviousResponseSchema,
+  ReportCardsV9ResponseSchema,
+} from "@shared/types/report-cards-v9";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { serializeSafetyScoreV9ShadowEnvelopeCacheValue } from "../safety-score-v9-cache-codec";
 import { buildSafetyScoreV9ShadowEnvelope } from "../safety-score-v9-shadow";
@@ -24,7 +29,7 @@ function candidate(): SafetyScoreV9Response {
   };
   return {
     model: "v9-critical-path",
-    schemaVersion: 1,
+    schemaVersion: 3,
     lifecycle: "candidate",
     candidateId: "candidate-v9-public-wire",
     policyVersion: "candidate-v9-public-wire",
@@ -42,7 +47,7 @@ function candidate(): SafetyScoreV9Response {
       {
         id: "alpha",
         score: 90,
-        grade: "A",
+        grade: "A+",
         qualityScore: 90,
         pegMultiplier: 1,
         pegAdjustedScore: 90,
@@ -69,6 +74,58 @@ function candidate(): SafetyScoreV9Response {
           reasonCodes: [],
         },
         stressStateDigest: null,
+        scoreTrace: {
+          schemaVersion: 2,
+          legacyAliases: {
+            qualityScore: "weighted-pillar-mean",
+            pegAdjustedScore: "post-deployment-pre-cap-score",
+            score: "post-cap-public-score",
+          },
+          aggregation: {
+            method: "smooth-bounded-headroom",
+            score: 90,
+            weightedPillarMean: 90,
+            weakestPillar: "backing",
+            weakestScore: 90,
+            headroom: 45,
+          },
+          stages: {
+            weightedPillarMean: 90,
+            aggregatedQualityScore: 90,
+            pegMultiplier: 1,
+            baseAssetScore: 90,
+            deploymentAdjustedScore: 90,
+            deploymentAdjustmentPoints: 0,
+            preCapScore: 90,
+            publishedScore: 90,
+          },
+          deploymentRisk: {
+            method: "holder-slice-exposure-weighted-v2",
+            totalAdjustmentPoints: 0,
+            adjustments: [],
+            unresolvedExposures: [],
+          },
+          adverseAttribution: {
+            semantics: "causal-measured-adverse-v1",
+            items: [],
+          },
+          boundedUncertaintyAttribution: {
+            semantics: "causal-bounded-uncertainty-v1",
+            items: [],
+          },
+          evidenceResponsibility: {
+            semantics: "limiting-fact-owner-v1",
+            totalFactCount: 0,
+            summaries: [
+              { responsibility: "integration-missing", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+              { responsibility: "issuer-undisclosed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+              { responsibility: "measured-adverse", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+              { responsibility: "method-unsupported", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+              { responsibility: "producer-failed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+            ],
+          },
+          wrapperParentLimit: null,
+        },
       },
     ],
   };
@@ -95,9 +152,10 @@ describe("published V9 report-card cache", () => {
     const snapshot = await loadPublishedReportCardsV9Snapshot(db);
 
     expect(snapshot).toEqual(ReportCardsV9ResponseSchema.parse(snapshot));
+    expect(snapshot).toEqual(ReportCardsV9CurrentResponseSchema.parse(snapshot));
     expect(snapshot).toMatchObject({
       model: "v9",
-      schemaVersion: 1,
+      schemaVersion: 2,
       lifecycle: "shadow",
       safetyScoreIdentity: {
         model: "v9",
@@ -162,5 +220,63 @@ describe("published V9 report-card cache", () => {
         dependencyGraph: { edges: [] },
       }),
     ).toThrow(/dependency graph/i);
+  });
+
+  it("rejects a public V9 card that omits the current or retained trace", () => {
+    const traceLess = structuredClone(candidate());
+    traceLess.schemaVersion = 1;
+    delete (traceLess.cards[0] as { scoreTrace?: unknown }).scoreTrace;
+
+    expect(() => projectSafetyScoreV9CandidateToPublicSnapshot(traceLess)).toThrow(/scoreTrace/);
+  });
+
+  it("cannot downgrade a report-v2 envelope by relabeling only its traces", () => {
+    const downgraded = structuredClone(
+      projectSafetyScoreV9CandidateToPublicSnapshot(candidate()),
+    );
+    const trace = (
+      downgraded.cards[0] as { scoreTrace: Record<string, unknown> }
+    ).scoreTrace;
+    trace.schemaVersion = 1;
+    delete trace.boundedUncertaintyAttribution;
+
+    expect(() => ReportCardsV9CurrentResponseSchema.parse(downgraded)).toThrow();
+    expect(() => ReportCardsV9ResponseSchema.parse(downgraded)).toThrow();
+  });
+
+  it("retains an explicit report-v1 reader for persisted trace-v1 snapshots", () => {
+    const previous = structuredClone(
+      projectSafetyScoreV9CandidateToPublicSnapshot(candidate()),
+    ) as unknown as Record<string, unknown> & {
+      cards: Array<{ scoreTrace: Record<string, unknown> }>;
+    };
+    previous.schemaVersion = 1;
+    const trace = previous.cards[0]!.scoreTrace;
+    trace.schemaVersion = 1;
+    delete trace.boundedUncertaintyAttribution;
+
+    expect(() => ReportCardsV9PreviousResponseSchema.parse(previous)).not.toThrow();
+    expect(() => ReportCardsV9CompatibleResponseSchema.parse(previous)).not.toThrow();
+    expect(() => ReportCardsV9CurrentResponseSchema.parse(previous)).toThrow();
+    expect(() => ReportCardsV9ResponseSchema.parse(previous)).toThrow();
+  });
+
+  it("rejects report-v1 restamping and stale candidate projection", () => {
+    const restamped = structuredClone(
+      projectSafetyScoreV9CandidateToPublicSnapshot(candidate()),
+    ) as unknown as Record<string, unknown>;
+    restamped.schemaVersion = 1;
+    expect(() => ReportCardsV9CompatibleResponseSchema.parse(restamped)).toThrow();
+
+    const previousCandidate = structuredClone(candidate());
+    previousCandidate.schemaVersion = 2;
+    const trace = (
+      previousCandidate.cards[0] as unknown as {
+        scoreTrace: Record<string, unknown>;
+      }
+    ).scoreTrace;
+    trace.schemaVersion = 1;
+    delete trace.boundedUncertaintyAttribution;
+    expect(() => projectSafetyScoreV9CandidateToPublicSnapshot(previousCandidate)).toThrow();
   });
 });

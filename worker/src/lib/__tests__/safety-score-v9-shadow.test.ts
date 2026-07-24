@@ -19,6 +19,7 @@ import {
   type SafetyScoreV9ShadowDaily,
   type SafetyScoreV9ShadowEnvelope,
 } from "../safety-score-v9-shadow";
+import { scoreToGrade } from "@shared/lib/report-cards";
 import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public";
 
 const digest = (character: string) => character.repeat(64);
@@ -33,7 +34,6 @@ const PRODUCER_CAPABILITY_DIGEST = digest("1");
 function v9Card(
   id: string,
   score: number | null,
-  grade: SafetyScoreV9Response["cards"][number]["grade"],
   options: {
     bindingCap?: { kind: string; limit: number; source: "structural" } | null;
     reasonCodes?: SafetyScoreV9Response["cards"][number]["reasonCodes"];
@@ -53,7 +53,7 @@ function v9Card(
   return {
     id,
     score,
-    grade,
+    grade: scoreToGrade(score),
     qualityScore: score,
     pegMultiplier: score === null ? null : 1,
     pegAdjustedScore: score,
@@ -176,7 +176,7 @@ const PASSING_FLOOR: SafetyScoreV9CoverageFloor = {
 };
 
 function envelope(
-  cards: SafetyScoreV9Response["cards"] = [v9Card("alpha", 90, "A")],
+  cards: SafetyScoreV9Response["cards"] = [v9Card("alpha", 90)],
   options: {
     expectedActiveIds?: string[];
     replayArtifacts?: SafetyScoreV9ReplayArtifact[];
@@ -219,8 +219,8 @@ function envelope(
 describe("Safety Score V9 shadow envelope", () => {
   it("binds exact candidate identities and compact current observations", () => {
     const result = envelope([
-      v9Card("zeta", null, "NR", { reasonCodes: ["insufficient-evidence"] }),
-      v9Card("alpha", 90, "A"),
+      v9Card("zeta", null, { reasonCodes: ["insufficient-evidence"] }),
+      v9Card("alpha", 90),
     ]);
 
     expect(result.candidate.cards.map((card) => card.id)).toEqual(["alpha", "zeta"]);
@@ -253,7 +253,7 @@ describe("Safety Score V9 shadow envelope", () => {
       }),
     ).toThrow(/candidate/);
 
-    const candidateInput = candidate([v9Card("alpha", 90, "A")]);
+    const candidateInput = candidate([v9Card("alpha", 90)]);
     const artifacts = replayArtifacts(candidateInput);
     artifacts[0] = { ...artifacts[0]!, identity: `report-cards-input:v1:${digest("9")}` };
     expect(() => envelope(undefined, { replayArtifacts: artifacts })).toThrow("Replay artifact identity");
@@ -267,7 +267,7 @@ describe("Safety Score V9 shadow envelope", () => {
   });
 
   it("reports every machine qualification blocker without inventing a pass", () => {
-    const candidateInput = candidate([v9Card("alpha", 90, "A")]);
+    const candidateInput = candidate([v9Card("alpha", 90)]);
     const result = envelope(candidateInput.cards, {
       expectedActiveIds: ["alpha", "missing"],
       coverageFloors: [{ ...PASSING_FLOOR, status: "fail", detail: "Coverage is below the floor" }],
@@ -293,7 +293,7 @@ describe("Safety Score V9 shadow envelope", () => {
   });
 
   it("keeps replay verification separate from runtime qualification", () => {
-    const candidateInput = candidate([v9Card("alpha", 90, "A")]);
+    const candidateInput = candidate([v9Card("alpha", 90)]);
     const artifacts = replayArtifacts(candidateInput);
     artifacts[2] = replayArtifact("policy", candidateInput, "checksum-mismatch");
     const result = envelope(candidateInput.cards, { replayArtifacts: artifacts });
@@ -305,7 +305,7 @@ describe("Safety Score V9 shadow envelope", () => {
   });
 
   it("produces the same envelope digest across input permutations", () => {
-    const cards = [v9Card("zeta", 80, "B"), v9Card("alpha", 90, "A")];
+    const cards = [v9Card("zeta", 80), v9Card("alpha", 90)];
     const firstCandidate = candidate(cards);
     const first = envelope(cards, {
       expectedActiveIds: ["zeta", "alpha"],
@@ -345,7 +345,7 @@ function dailyDiff(shadow: SafetyScoreV9ShadowEnvelope) {
   return buildSafetyScoreV9DiffReport({
     generatedAtSec: SCHEDULED_FOR + 15,
     expectedActiveIds: ["alpha"],
-    v8: v8Snapshot([{ id: "alpha", score: 90, grade: "A", bindingCap: null, reasonCodes: [] }]),
+    v8: v8Snapshot([{ id: "alpha", score: 90, grade: "A+", bindingCap: null, reasonCodes: [] }]),
     v9: shadow,
     topCutoffIds: new Set(),
     downstreamThresholds: [],
@@ -539,25 +539,25 @@ function v8Snapshot(cards: SafetyScoreV8ComparableSnapshot["cards"]): SafetyScor
 
 describe("Safety Score V8/V9 shadow diff", () => {
   const v9Cards = [
-    v9Card("cap", 80, "B", {
+    v9Card("cap", 80, {
       bindingCap: { kind: "unsafe-backing", limit: 80, source: "structural" },
     }),
-    v9Card("large", 84, "B+", { reasonCodes: ["partial-reserve-review"] }),
-    v9Card("nr", null, "NR", { reasonCodes: ["insufficient-evidence"] }),
-    v9Card("stable", 89, "A", { reasonCodes: ["partial-reserve-review"] }),
-    v9Card("threshold", 69, "C+"),
-    v9Card("top", 87, "A"),
+    v9Card("large", 84, { reasonCodes: ["partial-reserve-review"] }),
+    v9Card("nr", null, { reasonCodes: ["insufficient-evidence"] }),
+    v9Card("stable", 89, { reasonCodes: ["partial-reserve-review"] }),
+    v9Card("threshold", 69),
+    v9Card("top", 87),
   ];
   const expectedIds = ["cap", "large", "missing", "nr", "stable", "threshold", "top"];
   const shadow = envelope(v9Cards, { expectedActiveIds: expectedIds });
   const v8 = v8Snapshot([
-    { id: "cap", score: 80, grade: "B", bindingCap: null, reasonCodes: [] },
-    { id: "large", score: 90, grade: "A", bindingCap: null, reasonCodes: ["legacy-quality"] },
-    { id: "missing", score: 75, grade: "B-", bindingCap: null, reasonCodes: [] },
-    { id: "nr", score: 80, grade: "B", bindingCap: null, reasonCodes: [] },
-    { id: "stable", score: 90, grade: "A", bindingCap: null, reasonCodes: ["legacy-quality"] },
-    { id: "threshold", score: 71, grade: "C+", bindingCap: null, reasonCodes: [] },
-    { id: "top", score: 89, grade: "A", bindingCap: null, reasonCodes: [] },
+    { id: "cap", score: 80, grade: "A-", bindingCap: null, reasonCodes: [] },
+    { id: "large", score: 90, grade: "A+", bindingCap: null, reasonCodes: ["legacy-quality"] },
+    { id: "missing", score: 75, grade: "B+", bindingCap: null, reasonCodes: [] },
+    { id: "nr", score: 80, grade: "A-", bindingCap: null, reasonCodes: [] },
+    { id: "stable", score: 90, grade: "A+", bindingCap: null, reasonCodes: ["legacy-quality"] },
+    { id: "threshold", score: 71, grade: "B", bindingCap: null, reasonCodes: [] },
+    { id: "top", score: 89, grade: "A+", bindingCap: null, reasonCodes: [] },
   ]);
 
   it("flags every preregistered review threshold and records dispositions", () => {
@@ -653,13 +653,13 @@ describe("Safety Score V8/V9 shadow diff", () => {
   });
 
   it("triggers score review thresholds at their exact inclusive boundaries", () => {
-    const boundaryShadow = envelope([v9Card("large-boundary", 75, "B-"), v9Card("top-boundary", 88, "A")]);
+    const boundaryShadow = envelope([v9Card("large-boundary", 75), v9Card("top-boundary", 88)]);
     const report = buildSafetyScoreV9DiffReport({
       generatedAtSec: 1_700_000_180,
       expectedActiveIds: ["large-boundary", "top-boundary"],
       v8: v8Snapshot([
-        { id: "large-boundary", score: 80, grade: "B", bindingCap: null, reasonCodes: [] },
-        { id: "top-boundary", score: 90, grade: "A", bindingCap: null, reasonCodes: [] },
+        { id: "large-boundary", score: 80, grade: "A-", bindingCap: null, reasonCodes: [] },
+        { id: "top-boundary", score: 90, grade: "A+", bindingCap: null, reasonCodes: [] },
       ]),
       v9: boundaryShadow,
       topCutoffIds: new Set(["top-boundary"]),
@@ -671,7 +671,7 @@ describe("Safety Score V8/V9 shadow diff", () => {
   });
 
   it("keeps semantic review keys across publications and invalidates them when movement or policy changes", () => {
-    const v8Input = v8Snapshot([{ id: "asset", score: 90, grade: "A", bindingCap: null, reasonCodes: [] }]);
+    const v8Input = v8Snapshot([{ id: "asset", score: 90, grade: "A+", bindingCap: null, reasonCodes: [] }]);
     const build = (
       v9: SafetyScoreV9ShadowEnvelope,
       generatedAtSec: number,
@@ -688,8 +688,8 @@ describe("Safety Score V8/V9 shadow diff", () => {
         supplyUsdById: { asset: supplyUsd },
       }).cards[0]!.review.key;
 
-    const first = envelope([v9Card("asset", 84, "B+")]);
-    const nextPublication = envelope([v9Card("asset", 84, "B+")], {
+    const first = envelope([v9Card("asset", 84)]);
+    const nextPublication = envelope([v9Card("asset", 84)], {
       candidateOverrides: {
         publicationGenerationId: "v9-shadow-generation-2",
         factSetDigest: digest("8"),
@@ -699,12 +699,12 @@ describe("Safety Score V8/V9 shadow diff", () => {
     expect(build(nextPublication, 1_700_000_240)).toBe(build(first, 1_700_000_180));
     expect(build(first, 1_700_000_240, 2_000)).toBe(build(first, 1_700_000_180, 1_000));
 
-    const changedMovement = envelope([v9Card("asset", 83, "B+")]);
+    const changedMovement = envelope([v9Card("asset", 83)]);
     expect(build(changedMovement, 1_700_000_300)).not.toBe(build(first, 1_700_000_180));
 
     expect(build(first, 1_700_000_300, 1_000, new Set(["asset"]))).not.toBe(build(first, 1_700_000_180));
 
-    const changedPolicy = envelope([v9Card("asset", 84, "B+")], {
+    const changedPolicy = envelope([v9Card("asset", 84)], {
       candidateOverrides: { policy: { id: "candidate-v1", semanticDigest: digest("8") } },
     });
     expect(build(changedPolicy, 1_700_000_360)).not.toBe(build(first, 1_700_000_180));
@@ -742,11 +742,10 @@ describe("Safety Score V8/V9 movement disposition carry", () => {
     { id: "selector-min-70", label: "Selector minimum score", score: 70, comparison: "at-least" as const },
   ];
 
-  /** Builds one reviewable movement: a V8 A at 90 against a V9 B+ at the supplied score. */
+  /** Builds one reviewable movement: a V8 A+ at 90 against a V9 B+ at the supplied score. */
   function scenario(options: {
     v9Score: number;
     v8Score?: number;
-    v9Grade?: SafetyScoreV9Response["cards"][number]["grade"];
     v9ReasonCodes?: SafetyScoreV9Response["cards"][number]["reasonCodes"];
     v9BindingCap?: { kind: string; limit: number; source: "structural" } | null;
   }) {
@@ -754,11 +753,17 @@ describe("Safety Score V8/V9 movement disposition carry", () => {
       generatedAtSec: 1_700_000_180,
       expectedActiveIds: expectedIds,
       v8: v8Snapshot([
-        { id: "carry", score: options.v8Score ?? 90, grade: "A", bindingCap: null, reasonCodes: ["legacy-quality"] },
+        {
+          id: "carry",
+          score: options.v8Score ?? 90,
+          grade: scoreToGrade(options.v8Score ?? 90),
+          bindingCap: null,
+          reasonCodes: ["legacy-quality"],
+        },
       ]),
       v9: envelope(
         [
-          v9Card("carry", options.v9Score, options.v9Grade ?? "B+", {
+          v9Card("carry", options.v9Score, {
             reasonCodes: options.v9ReasonCodes ?? ["partial-reserve-review"],
             bindingCap: options.v9BindingCap ?? null,
           }),
@@ -786,11 +791,11 @@ describe("Safety Score V8/V9 movement disposition carry", () => {
   }
 
   it("carries a recorded disposition across a sub-threshold score wobble", () => {
-    const { classKey, carry } = recordedCarry(scenario({ v9Score: 84 }), "intended-methodology-change");
+    const { classKey, carry } = recordedCarry(scenario({ v9Score: 75 }), "intended-methodology-change");
 
     // Two points of drift: a new exact key, an unchanged class, inside the D=3 anchor.
     const wobbled = buildSafetyScoreV9DiffReport({
-      ...scenario({ v9Score: 82 }),
+      ...scenario({ v9Score: 77 }),
       reviewCarriesByClassKey: { [classKey]: carry },
     }).cards[0]!;
 
@@ -799,16 +804,16 @@ describe("Safety Score V8/V9 movement disposition carry", () => {
     expect(wobbled.review).toMatchObject({
       status: "classified",
       disposition: "intended-methodology-change",
-      carriedFrom: { reviewKey: carry.reviewKey, reviewedV9Score: 84 },
+      carriedFrom: { reviewKey: carry.reviewKey, reviewedV9Score: 75 },
     });
   });
 
   it("carries across a drifting continuous weakest-pillar score", () => {
     // v9Card derives weakestPillar.score from the card score, so an unquantised pillar move is
     // exactly the zero-deadband case the class key drops in favour of the anchor.
-    const { classKey, carry } = recordedCarry(scenario({ v9Score: 84 }), "intended-methodology-change");
+    const { classKey, carry } = recordedCarry(scenario({ v9Score: 75 }), "intended-methodology-change");
     const drifted = buildSafetyScoreV9DiffReport({
-      ...scenario({ v9Score: 83.5 }),
+      ...scenario({ v9Score: 76.5 }),
       reviewCarriesByClassKey: { [classKey]: carry },
     }).cards[0]!;
 
@@ -817,27 +822,27 @@ describe("Safety Score V8/V9 movement disposition carry", () => {
   });
 
   it("expires the carry when drift exceeds the anchor and re-pends the movement", () => {
-    const { classKey, carry } = recordedCarry(scenario({ v9Score: 84 }), "intended-methodology-change");
+    const { classKey, carry } = recordedCarry(scenario({ v9Score: 75 }), "intended-methodology-change");
 
     const inside = buildSafetyScoreV9DiffReport({
-      ...scenario({ v9Score: 81 }),
+      ...scenario({ v9Score: 78 }),
       reviewCarriesByClassKey: { [classKey]: carry },
     }).cards[0]!;
     expect(inside.review.status).toBe("classified");
 
-    // 84 -> 80.9 is 3.1 points, past the ratified cap.
+    // 75 -> 78.1 is 3.1 points, past the ratified cap.
     const beyond = buildSafetyScoreV9DiffReport({
-      ...scenario({ v9Score: 80.9 }),
+      ...scenario({ v9Score: 78.1 }),
       reviewCarriesByClassKey: { [classKey]: carry },
     }).cards[0]!;
     expect(beyond.review).toMatchObject({ status: "pending", disposition: null, carriedFrom: null });
   });
 
   it("expires the carry when the V8 anchor drifts past the cap", () => {
-    const { classKey, carry } = recordedCarry(scenario({ v9Score: 84, v8Score: 90 }), "intended-methodology-change");
+    const { classKey, carry } = recordedCarry(scenario({ v9Score: 75, v8Score: 90 }), "intended-methodology-change");
 
     const drifted = buildSafetyScoreV9DiffReport({
-      ...scenario({ v9Score: 84, v8Score: 86 }),
+      ...scenario({ v9Score: 75, v8Score: 94 }),
       reviewCarriesByClassKey: { [classKey]: carry },
     }).cards[0]!;
 
@@ -845,15 +850,15 @@ describe("Safety Score V8/V9 movement disposition carry", () => {
   });
 
   const classChanges: Array<[string, Parameters<typeof scenario>[0]]> = [
-    ["a grade change", { v9Score: 84, v9Grade: "B" }],
-    ["a reason-code change", { v9Score: 84, v9ReasonCodes: ["critical-unresolved"] }],
+    ["a grade change", { v9Score: 80 }],
+    ["a reason-code change", { v9Score: 75, v9ReasonCodes: ["critical-unresolved"] }],
     [
       "a binding-cap change",
-      { v9Score: 84, v9BindingCap: { kind: "unsafe-backing", limit: 84, source: "structural" } },
+      { v9Score: 75, v9BindingCap: { kind: "unsafe-backing", limit: 75, source: "structural" } },
     ],
   ];
   it.each(classChanges)("expires the carry on %s", (_label, changed) => {
-    const { classKey, carry } = recordedCarry(scenario({ v9Score: 84 }), "intended-methodology-change");
+    const { classKey, carry } = recordedCarry(scenario({ v9Score: 75 }), "intended-methodology-change");
 
     const report = buildSafetyScoreV9DiffReport({
       ...scenario(changed),
@@ -868,12 +873,12 @@ describe("Safety Score V8/V9 movement disposition carry", () => {
     // A benign movement is adjudicated, then the asset swaps its cause for a defect-class reason
     // code at an identical score. Cause is part of the class, so the benign ruling cannot follow.
     const { classKey, carry } = recordedCarry(
-      scenario({ v9Score: 84, v9ReasonCodes: ["partial-reserve-review"] }),
+      scenario({ v9Score: 75, v9ReasonCodes: ["partial-reserve-review"] }),
       "intended-methodology-change",
     );
 
     const substituted = buildSafetyScoreV9DiffReport({
-      ...scenario({ v9Score: 84, v9ReasonCodes: ["critical-unresolved"] }),
+      ...scenario({ v9Score: 75, v9ReasonCodes: ["critical-unresolved"] }),
       reviewCarriesByClassKey: { [classKey]: carry },
     }).cards[0]!;
 
@@ -882,10 +887,10 @@ describe("Safety Score V8/V9 movement disposition carry", () => {
   });
 
   it("carries a defect disposition without laundering it into a clean review", () => {
-    const { classKey, carry } = recordedCarry(scenario({ v9Score: 84 }), "defect");
+    const { classKey, carry } = recordedCarry(scenario({ v9Score: 75 }), "defect");
 
     const carried = buildSafetyScoreV9DiffReport({
-      ...scenario({ v9Score: 83 }),
+      ...scenario({ v9Score: 77 }),
       reviewCarriesByClassKey: { [classKey]: carry },
     }).cards[0]!;
 
@@ -893,7 +898,7 @@ describe("Safety Score V8/V9 movement disposition carry", () => {
   });
 
   it("prefers an exact-key disposition over any offered carry", () => {
-    const input = scenario({ v9Score: 84 });
+    const input = scenario({ v9Score: 75 });
     const exact = buildSafetyScoreV9DiffReport(input).cards[0]!;
     const { classKey, carry } = recordedCarry(input, "defect");
 
@@ -913,7 +918,7 @@ describe("Safety Score V8/V9 movement disposition carry", () => {
 
 describe("Safety Score V9 daily advisory checks", () => {
   it("does not block a day on unresolved movement adjudication alone", () => {
-    const result = envelope([v9Card("alpha", 90, "A")], {
+    const result = envelope([v9Card("alpha", 90)], {
       unresolvedCriticalMovementIds: ["alpha"],
     });
 
@@ -953,7 +958,7 @@ describe("Safety Score V9 daily advisory checks", () => {
       "future-dated-evidence",
     ],
   ])("still fails the day on %s", (_label, options, expected) => {
-    const result = envelope([v9Card("alpha", 90, "A")], {
+    const result = envelope([v9Card("alpha", 90)], {
       ...options,
       unresolvedCriticalMovementIds: ["alpha"],
     });

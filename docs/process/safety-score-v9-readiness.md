@@ -84,6 +84,17 @@ while an unbounded required fact remains `NR`. A naturally computed D can
 represent multiple bounded material weaknesses, but F requires causal
 measured-adverse attribution. Missing plumbing stays visible as evidence debt
 instead of being presented as observed economic failure or danger.
+Every rated D carries either measured-adverse attribution or a separate causal
+bounded-uncertainty trace. A bounded fact is causal only when its reason belongs
+to a low score-bearing pillar or its configured ceiling binds. Binding serial
+parents propagate the same distinction only when the parent is itself in the
+low-grade range; wrapper-local reviewed discounts and fallback gaps carry their
+own attribution. An arbitrary low composite with neither trace remains `NR`.
+
+Access posture is categorical unless a reviewed fact establishes an economic
+loss path. A missing categorical access review remains visible as
+review-required evidence debt, but it is diagnostic rather than an unbounded
+score claim.
 
 Impact: assets are not pushed into the lowest grades merely because Pharos has
 not integrated a source, while genuinely bad measured outcomes remain
@@ -183,7 +194,12 @@ designed:
 - Reviewed reserve links project exact tracked-asset identity into compiled
   exposures while retaining the live weight.
 - Wrapper custody, leverage, and rehypothecation remain unavailable unless
-  explicitly evidenced.
+  explicitly evidenced. A wrapper fallback discount is attributed to those
+  bounded local gaps only when it exceeds the reviewed local-risk discount;
+  otherwise the applied discount is attributed to the reviewed adjustments
+  that caused it.
+- Every evidence owner, including a missing Pharos integration, receives the
+  reason registry's configured ceiling when that reason is score-bearing.
 - Where a provider publishes only aggregate lock-mint supply, a V9-only
   attribution may partition the existing aggregate liability from canonical
   total supply and observed lockbox balances. It must conserve the aggregate,
@@ -192,6 +208,14 @@ designed:
 
 These are evidence and attribution corrections. They do not change V8 inputs
 or public V8 scoring.
+
+Current candidate cards use score-trace schema v2 and response schema v3 for
+bounded-D attribution. Strict readers retain response-v2/trace-v1 compatibility
+for already persisted shadow artifacts, while new output must satisfy the v3
+causal and score-grade reconciliation rules. The separate public report
+projection uses report-response schema v2 with the same trace-v2 cards. Its
+live producer and consumers are current-only; report-v1/trace-v1 is available
+only through the explicitly named historical compatibility reader.
 
 ## Compiler Boundary
 

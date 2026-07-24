@@ -399,7 +399,7 @@ describe("buildDispatchSnapshotState active safety model", () => {
     const response = makeWorkerReportCardsV9Response({
       updatedAt: nowSec - 60,
       asOfSec: nowSec - 120,
-      cards: [makeWorkerV9Card({ grade: "A", score: 91 })],
+      cards: [makeWorkerV9Card({ grade: "A+", score: 91 })],
     });
     const state = buildDispatchSnapshotState(
       sourceData({
@@ -427,7 +427,7 @@ describe("buildDispatchSnapshotState active safety model", () => {
     );
 
     expect(state.safetySourceAssessment.expectedModel).toBe("v9");
-    expect(state.currentSafetySnapshot?.["usdc-circle"]).toMatchObject({ grade: "A", score: 91 });
+    expect(state.currentSafetySnapshot?.["usdc-circle"]).toMatchObject({ grade: "A+", score: 91 });
     expect(state.currentSnapshots.safety?.generation).toBe(
       getAlertSafetyV9SourceGeneration(response.safetyScoreIdentity.methodologyVersion),
     );

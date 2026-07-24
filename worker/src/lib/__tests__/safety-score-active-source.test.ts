@@ -20,6 +20,9 @@ const digest = (character: string) => character.repeat(64);
 
 function snapshot(): ReportCardsV9Response {
   return {
+    model: "v9",
+    schemaVersion: 2,
+    lifecycle: "shadow",
     safetyScoreIdentity: {
       model: "v9",
       schemaVersion: 1,
@@ -30,7 +33,22 @@ function snapshot(): ReportCardsV9Response {
       baseInputGenerationId: `report-cards-input:v1:${digest("c")}`,
       publicationGenerationId: "safety-score-v9:test",
     },
-  } as ReportCardsV9Response;
+    methodology: {
+      version: "9.0",
+      policy: { id: "safety-score-v9-policy", semanticDigest: digest("a") },
+    },
+    asOfSec: 1_700_000_000,
+    updatedAt: 1_700_000_030,
+    completeness: { expectedCount: 0, ratedCount: 0, notRatedCount: 0, notRatedIds: [] },
+    source: {
+      candidateId: "candidate-v9-active-source-test",
+      factSetDigest: digest("d"),
+      resultDigest: digest("e"),
+      sourceGenerations: { registry: "registry:active-source-test" },
+    },
+    cards: [],
+    dependencyGraph: { edges: [] },
+  };
 }
 
 function markerValue(overrides: Record<string, unknown> = {}): string {
@@ -116,6 +134,20 @@ describe("active Safety Score source", () => {
       expectedModel: "v9",
       reason: "v9-snapshot-unavailable",
       detail: "Canonical Safety Score V9 shadow cache is unavailable",
+    });
+  });
+
+  it("fails closed when activation resolves only a previous report contract", async () => {
+    mockLoadPublishedReportCardsV9Snapshot.mockResolvedValue({
+      ...snapshot(),
+      schemaVersion: 1,
+    });
+
+    await expect(loadActiveSafetyScoreSource(markerDb(markerValue()))).resolves.toMatchObject({
+      kind: "error",
+      expectedModel: "v9",
+      reason: "v9-snapshot-unavailable",
+      detail: "Canonical Safety Score V9 snapshot does not satisfy the current report contract",
     });
   });
 });

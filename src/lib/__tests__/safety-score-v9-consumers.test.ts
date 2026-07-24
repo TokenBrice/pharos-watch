@@ -41,7 +41,7 @@ describe("V9 safety consumer projections", () => {
 
     const cards = [
       makeV9Card({ id: "asset-a", score: 61, grade: "C+", qualityScore: 62, pegAdjustedScore: 61 }),
-      makeV9Card({ id: "asset-b", score: 88, grade: "A-", qualityScore: 90, pegAdjustedScore: 88 }),
+      makeV9Card({ id: "asset-b", score: 88, grade: "A+", qualityScore: 90, pegAdjustedScore: 88 }),
     ];
     const response = makeReportCardsV9Response({ cards });
     const rows = buildV9SafetyTableRows(response, response.safetyScoreIdentity);
@@ -99,11 +99,11 @@ describe("V9 safety consumer projections", () => {
 
   it("builds a three-pillar portfolio aggregate without inventing an asset grade", () => {
     const cards = [
-      makeV9Card({ id: "asset-a", score: 80, grade: "B", qualityScore: 82, pegAdjustedScore: 80 }),
+      makeV9Card({ id: "asset-a", score: 80, grade: "A-", qualityScore: 82, pegAdjustedScore: 80 }),
       makeV9Card({
         id: "asset-b",
         score: 90,
-        grade: "A",
+        grade: "A+",
         qualityScore: 92,
         pegAdjustedScore: 90,
         dependencies: {
@@ -125,7 +125,7 @@ describe("V9 safety consumer projections", () => {
         aggregateLabel: "weighted-safety-aggregate",
         score: 88,
         assetGrade: null,
-        pillars: { backing: 88, exit: 82, control: 84 },
+        pillars: { backing: 92, exit: 88, control: 90 },
         dependencyExposure: [{
           upstreamAssetId: "asset-a",
           dependentAssetId: "asset-b",

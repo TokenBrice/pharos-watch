@@ -108,7 +108,7 @@ function productionScaleCard(id: string, detail: string): SafetyScoreV9Response[
   return {
     id,
     score: 90,
-    grade: "A",
+    grade: "A+",
     qualityScore: 90,
     pegMultiplier: 1,
     pegAdjustedScore: 90,

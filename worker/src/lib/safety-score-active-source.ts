@@ -1,4 +1,7 @@
-import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import {
+  ReportCardsV9CurrentResponseSchema,
+  type ReportCardsV9Response,
+} from "@shared/types/report-cards-v9";
 import { SafetyScoreV9PublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { getCache } from "./db-cache";
 import { tryParseJson } from "./json-parse";
@@ -119,6 +122,19 @@ export async function loadActiveSafetyScoreSource(
       detail: error.message,
     };
   }
+  const currentSnapshot = ReportCardsV9CurrentResponseSchema.safeParse(snapshot);
+  if (!currentSnapshot.success) {
+    return {
+      kind: "error",
+      expectedModel: "v9",
+      reason: "v9-snapshot-unavailable",
+      activationUpdatedAt: activation.updatedAt,
+      marker,
+      snapshot,
+      detail: "Canonical Safety Score V9 snapshot does not satisfy the current report contract",
+    };
+  }
+  snapshot = currentSnapshot.data;
 
   if (!reportCardsV9IdentityMatchesActivationMarker(snapshot, marker)) {
     return {
