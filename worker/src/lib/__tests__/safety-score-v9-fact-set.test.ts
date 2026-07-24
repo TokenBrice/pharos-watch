@@ -1068,23 +1068,20 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         ],
       ]),
     });
+    const overlay = getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", clockSec);
     expect(baseline.assets[0]!.operationalResilience).toEqual(
-      getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", clockSec),
+      overlay,
     );
+    expect(overlay).not.toBeNull();
 
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     const asset = compiled.assets[0]!;
     const operationalEvidence = asset.evidence.filter((evidence) =>
       evidence.evidenceId.startsWith("usdt-tether:operational-resilience:"),
     );
-    expect(operationalEvidence).toHaveLength(4);
+    expect(operationalEvidence).toHaveLength(23);
     expect(new Set(operationalEvidence.map((evidence) => evidence.sourceId))).toEqual(
-      new Set([
-        "tether-2022-05-redemption-stress",
-        "tether-2024-ten-year-milestones",
-        "bdo-2022-q2-reserves-assurance",
-        "bdo-2026-q1-reserves-assurance",
-      ]),
+      new Set(overlay!.sources.map((source) => source.sourceId)),
     );
     expect(asset.operationalResilience).toMatchObject({
       schemaVersion: 1,
@@ -1108,9 +1105,13 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       ],
       reserveReconciliation: {
         reportHistory: {
-          observedReportHistoryMonths: 45,
-          missedMaterialPeriods: null,
-          confidence: "issuer-reported",
+          firstReportPeriodEnd: "2021-03-31",
+          latestReportPeriodEnd: "2026-03-31",
+          observedReportHistoryMonths: 60,
+          reportedCadence: "quarterly",
+          continuityEvidence: "independently-verified",
+          missedMaterialPeriods: 0,
+          confidence: "independent-assurance",
         },
         latestAssurance: {
           level: "reasonable-assurance",
@@ -1122,19 +1123,50 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
     expect(evaluated.operationalResilience).toMatchObject({
       eligible: true,
-      rawPillarCredits: { backing: 0, exit: 1.5, control: 0 },
-      pillarCredits: { backing: 0, exit: 1.5, control: 0 },
-      contributions: [
-        {
-          component: "stress-redemption",
-          confidence: "issuer-reported",
-          confidenceMultiplier: 0.5,
-          points: 1.5,
-        },
-      ],
+      rawPillarCredits: { backing: 2.55, exit: 1.5, control: 2.55 },
+      pillarCredits: { backing: 2.55, exit: 1.5, control: 2.55 },
     });
+    expect(
+      evaluated.operationalResilience?.contributions.map(
+        ({ component, pillar, confidence, confidenceMultiplier, points }) => ({
+          component,
+          pillar,
+          confidence,
+          confidenceMultiplier,
+          points,
+        }),
+      ),
+    ).toEqual([
+      {
+        component: "stress-redemption",
+        pillar: "exit",
+        confidence: "issuer-reported",
+        confidenceMultiplier: 0.5,
+        points: 1.5,
+      },
+      {
+        component: "reserve-reconciliation",
+        pillar: "backing",
+        confidence: "independent-assurance",
+        confidenceMultiplier: 0.85,
+        points: 2.55,
+      },
+      {
+        component: "reserve-reconciliation",
+        pillar: "control",
+        confidence: "independent-assurance",
+        confidenceMultiplier: 0.85,
+        points: 2.55,
+      },
+    ]);
     expect(evaluated.scoreInput.pillars.exit.score).toBe(
       Math.min(100, evaluated.exit.score! + 1.5),
+    );
+    expect(evaluated.scoreInput.pillars.backing.score).toBe(
+      Math.min(100, evaluated.backing.score! + 2.55),
+    );
+    expect(evaluated.scoreInput.pillars.control.score).toBe(
+      Math.min(100, evaluated.control.score! + 2.55),
     );
     expect(evaluated.trace.operationalResilience).toEqual(evaluated.operationalResilience);
 

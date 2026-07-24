@@ -7,7 +7,7 @@
       "reviewedAt": "2026-07-23T12:37:19Z",
       "expiresAt": "2027-07-23T12:37:19Z",
       "reviewer": "Codex V9 Workstream G",
-      "notes": "The May 2022 redemption result is an issuer report, not independent verification. The BDO reports are point-in-time ISAE 3000R reasonable-assurance engagements, not financial-statement audits. No lifetime redemption ratio, peg-recovery interval, report-gap count, or incident-free history is asserted.",
+      "notes": "The May 2022 redemption result is an issuer report, not independent verification. The 21 signed practitioner reports establish an independently verified quarterly sequence from 31 March 2021 through 31 March 2026 with no missing material quarter. The reports are point-in-time reasonable-assurance engagements, not financial-statement audits or evidence of all-times liquidity. No lifetime redemption ratio, peg-recovery interval, or incident-free history is asserted.",
       "sources": [
         {
           "sourceId": "tether-2022-05-redemption-stress",
@@ -26,11 +26,163 @@
           "confidence": "issuer-reported"
         },
         {
+          "sourceId": "moore-2021-q1-reserves-assurance",
+          "label": "Moore Cayman assurance report for 31 March 2021 reserves",
+          "publisher": "Moore Cayman",
+          "publishedAt": "2021-04-27",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2UzdY0r33LkkYfr8VDJwwb/7860230f667ed8622fc068949f5fcf94/tether-assurance-mar-2021-2.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "moore-2021-q2-reserves-assurance",
+          "label": "Moore Cayman assurance report for 30 June 2021 reserves",
+          "publisher": "Moore Cayman",
+          "publishedAt": "2021-08-06",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/VcNv0hgvQ2a3Ochjs5TqR/59e77f0c076544a88f977d1d36b76dbf/tether_assuranceconsolidated_reserves_report_2021-06-30.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "moore-2021-q3-reserves-assurance",
+          "label": "Moore Cayman assurance report for 30 September 2021 reserves",
+          "publisher": "Moore Cayman",
+          "publishedAt": "2021-12-03",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/01lZdtaNYx7jZ4jU5xmlYO/90aa0d5b1e3559c393ff135f987ddbd0/tether-assurance-sept-30-2021.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "mha-2021-q4-reserves-assurance",
+          "label": "MHA Cayman assurance report for 31 December 2021 reserves",
+          "publisher": "MHA Cayman",
+          "publishedAt": "2022-02-19",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/4hiNJsZ98LlZqCJHKzrLpV/2b6338482ef0093382885f80ba6f1083/Tether_Assurance-12-31-21.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "mha-2022-q1-reserves-assurance",
+          "label": "MHA Cayman assurance report for 31 March 2022 reserves",
+          "publisher": "MHA Cayman",
+          "publishedAt": "2022-05-18",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/1np5dpcwuHrWJ4AgUgI3Vn/e0dac722de3cea07766e05c52773748b/Tether_Assurance_Consolidated_Reserves_Report_2022-03-31__3_.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
           "sourceId": "bdo-2022-q2-reserves-assurance",
           "label": "BDO ISAE 3000R assurance report for 30 June 2022 reserves",
           "publisher": "BDO Italia S.p.A.",
           "publishedAt": "2022-08-10",
           "url": "https://assets.ctfassets.net/vyse88cgwfbl/2xJyKdUKicdRUWpC9buRWR/6fe2987698dbbf39b947af718d736ddb/Std_ISAE_3000R_Opinion_30-6-2022_RC134792022BD0303.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2022-q3-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 30 September 2022 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2022-11-10",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/1Xfu4398CIoMiuKjPhvnHM/6d1608c90bb775d2d432b7b24264da28/ESO.02_Std_ISAE_3000R_Opinion_30-9-2022_RC134792022BD0548.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2022-q4-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 31 December 2022 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2023-02-08",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/53L8YRM4ZHCEeqlpKbc3Q8/2e6cbcd1593b3e5ea867718c5938d6c8/Std_ISAE_3000R_Opinion_BDO_31-12-2022_Tether_CRR.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2023-q1-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 31 March 2023 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2023-05-09",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/24G4DuQ0HE7h7EQE6vGy4J/8a8a170edf687ea07b3f86048af8b87b/ESO.03.01_Std_ISAE_3000R_Opinion_31-03-2023_BDO_Tether_CRR.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2023-q2-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 30 June 2023 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2023-07-31",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/63oJePOHqIvrcnXWMPZ1M0/4cfaf2e7cdf80c30b17fdc70faaf741f/ESO.03.01_Std_ISAE_3000R_Opinion_30-06-2023_BDO_Tether_CRR.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2023-q3-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 30 September 2023 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2023-10-31",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/36XORApdEYAq3AsH1FTXRT/9205ac62f2f57178c47ac5e2eca098c0/Std_ISAE_3000R_Opinion_30-09-2023_BDO_Tether_CRR_RC134792023BD0430.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2023-q4-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 31 December 2023 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2024-01-31",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/7DZ8nVyr8zTaWhJqTIsMsH/b8e55bc151c9bb74adf20ff840e84088/ESO.03.01_Std_ISAE_3000R_Opinion_31-12-2023_BDO_Tether_CRR_RC134792023BD0684__1_.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2024-q1-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 31 March 2024 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2024-04-30",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2JwUN6EeDvWi02CyuQd2nJ/d7b3b4c3800ec70abd7282cc79fa2973/ISAE_3000R_-_Opinion_on_Consolidated_Financials_Figures_and_Reserves_Report_31.03.2024_RC134792024BD0043.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2024-q2-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 30 June 2024 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2024-07-31",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/6h4YWqZOXbwtBaPtYgICGy/d7462f312aa15b872f8474322ba90363/ISAE_3000R_-_Opinion_on_Consolidated_Financials_Figures_30.06.2024_RC134792024BD0209.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2024-q3-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 30 September 2024 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2024-10-31",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/5TKa7xwJVLIAnVBMWb7iTq/5688216da5194fce27f4a0f2e808a486/ISAE_3000R_-_Opinion_on_Tether_Consolidated_Financials_Figures_30.09.2024_.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2024-q4-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 31 December 2024 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2025-01-31",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/6L2yLNnLltcCP6ZcTxJrll/aea0ec279fea08637445c8be57f63d87/ISAE_3000R_-_Opinion_on_Tether_Consolidated_Financials_Figures_31.12.2024.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2025-q1-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 31 March 2025 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2025-04-30",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/1LdSmP3HBynDxm6wvkDSsL/c4bcbd1f6fc18a0e8b3a12444ac8ae97/ISAE_3000R_-_Opinion_Tether_International_Financial_Figures___Reserves_Report_31.03.2025_RC187322025BD0040.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2025-q2-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 30 June 2025 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2025-07-31",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2SGAAXnsb1wKByIzkhcbSx/9efa4682b3cd4c62d87a4c88ee729693/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_RC187322025BD0201.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2025-q3-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 30 September 2025 reserves",
+          "publisher": "BDO Italia S.p.A.",
+          "publishedAt": "2025-10-31",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/6GbUTVK4tTYAytefu5daIi/6cac18eb4b526c9c52640a3d2bed9642/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-10-2025.pdf",
+          "confidence": "independent-assurance"
+        },
+        {
+          "sourceId": "bdo-2025-q4-reserves-assurance",
+          "label": "BDO ISAE 3000R assurance report for 31 December 2025 reserves",
+          "publisher": "BDO Advisory Services S.r.l.",
+          "publishedAt": "2026-01-30",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/20d2BoOAd28ZfkiQPYPjGN/4ed12f5939e1e06ee5aceccad4effbe4/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-12-2025.pdf",
           "confidence": "independent-assurance"
         },
         {
@@ -84,15 +236,33 @@
         }
       ],
       "reserveReconciliation": {
-        "firstReportPeriodEnd": "2022-06-30",
+        "firstReportPeriodEnd": "2021-03-31",
         "latestReportPeriodEnd": "2026-03-31",
-        "observedReportHistoryMonths": 45,
+        "observedReportHistoryMonths": 60,
         "reportedCadence": "quarterly",
-        "continuityEvidence": "issuer-reported",
-        "missedMaterialPeriods": null,
+        "continuityEvidence": "independently-verified",
+        "missedMaterialPeriods": 0,
         "historySourceIds": [
+          "moore-2021-q1-reserves-assurance",
+          "moore-2021-q2-reserves-assurance",
+          "moore-2021-q3-reserves-assurance",
+          "mha-2021-q4-reserves-assurance",
+          "mha-2022-q1-reserves-assurance",
           "bdo-2022-q2-reserves-assurance",
-          "tether-2024-ten-year-milestones",
+          "bdo-2022-q3-reserves-assurance",
+          "bdo-2022-q4-reserves-assurance",
+          "bdo-2023-q1-reserves-assurance",
+          "bdo-2023-q2-reserves-assurance",
+          "bdo-2023-q3-reserves-assurance",
+          "bdo-2023-q4-reserves-assurance",
+          "bdo-2024-q1-reserves-assurance",
+          "bdo-2024-q2-reserves-assurance",
+          "bdo-2024-q3-reserves-assurance",
+          "bdo-2024-q4-reserves-assurance",
+          "bdo-2025-q1-reserves-assurance",
+          "bdo-2025-q2-reserves-assurance",
+          "bdo-2025-q3-reserves-assurance",
+          "bdo-2025-q4-reserves-assurance",
           "bdo-2026-q1-reserves-assurance"
         ],
         "latestAssurance": {
