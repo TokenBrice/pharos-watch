@@ -14,31 +14,34 @@ export interface FallbackCrawlerPhaseResult {
   directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
 }
 
+export async function fetchDirectCexOrderbookDepthTelemetry(params: {
+  signal?: AbortSignal;
+  failedSources: string[];
+}): Promise<DirectCexOrderbookDepthSummary | null> {
+  try {
+    return await fetchMajorStablecoinOrderbookDepthSummary(params.signal);
+  } catch (err) {
+    rethrowIfAborted(err, params.signal);
+    console.warn("[dex-liquidity] Direct CEX orderbook depth telemetry failed (non-fatal):", err);
+    params.failedSources.push("direct-cex-orderbook-depth");
+    return null;
+  }
+}
+
 export async function runFallbackCrawlerPhase(params: {
   metrics: Map<string, LiquidityMetrics>;
   priceObservations: Map<string, DexPriceObs[]>;
-  signal?: AbortSignal;
-  failedSources: string[];
+  directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
 }): Promise<FallbackCrawlerPhaseResult> {
   const weakCoverageTargetIdsBeforeFallback = new Set(
     getFallbackTargets(params.metrics, params.priceObservations, { requireTrackedContracts: true }).map(
       (meta) => meta.id,
     ),
   );
-  let directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null = null;
-
   console.log(
     `[dex-liquidity] Discovery staging supplied ${params.priceObservations.size} coins with price observations; ` +
       "inline discovery is disabled in the scoring lane",
   );
-
-  try {
-    directCexOrderbookDepth = await fetchMajorStablecoinOrderbookDepthSummary(params.signal);
-  } catch (err) {
-    rethrowIfAborted(err, params.signal);
-    console.warn("[dex-liquidity] Direct CEX orderbook depth telemetry failed (non-fatal):", err);
-    params.failedSources.push("direct-cex-orderbook-depth");
-  }
 
   const weakCoverageTargetIdsAfterFallback = new Set(
     getFallbackTargets(params.metrics, params.priceObservations, { requireTrackedContracts: true }).map(
@@ -57,6 +60,6 @@ export async function runFallbackCrawlerPhase(params: {
     cgTickerFallbackCoins: 0,
     coverageRecoveredCoins,
     weakCoverageCoinsBeforeFallback: weakCoverageTargetIdsBeforeFallback.size,
-    directCexOrderbookDepth,
+    directCexOrderbookDepth: params.directCexOrderbookDepth,
   };
 }

@@ -13,7 +13,10 @@ export type { SubgraphEnrichmentPhaseResult } from "./orchestrator-phases/subgra
 export { fetchSubgraphEnrichmentPhase } from "./orchestrator-phases/subgraph-enrichment";
 
 export type { FallbackCrawlerPhaseResult } from "./orchestrator-phases/fallback";
-export { runFallbackCrawlerPhase } from "./orchestrator-phases/fallback";
+export {
+  fetchDirectCexOrderbookDepthTelemetry,
+  runFallbackCrawlerPhase,
+} from "./orchestrator-phases/fallback";
 
 export type { AuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases/authoritative";
 export { buildAuthoritativeStagedPoolConfirmationIndex } from "./orchestrator-phases/authoritative";
