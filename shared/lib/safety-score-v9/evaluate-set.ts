@@ -1479,27 +1479,29 @@ function commonModeSignalsByAsset(
           assetIssuerKey: assetsById.get(assetId)?.assetIssuerKey ?? null,
         };
       });
-      const attributedControllerAssetIds = effectiveMembers.map((member) => {
-        if (member.owner !== "control") return null;
-        return (
-          assetsById
-            .get(member.assetId)
-            ?.controls.find((control) => control.controlKey === member.pathKey)
-            ?.controllerAssetId ?? null
-        );
-      });
-      const uniqueControllerAssetIds = uniqueSorted(
-        attributedControllerAssetIds.filter((assetId): assetId is string => assetId !== null),
-      );
+      let controllerAssetId: string | null = null;
+      let controllerAttributionComplete = effectiveMembers.length > 0;
+      for (const member of effectiveMembers) {
+        const attributedControllerAssetId =
+          member.owner === "control"
+            ? (assetsById
+                .get(member.assetId)
+                ?.controls.find((control) => control.controlKey === member.pathKey)
+                ?.controllerAssetId ?? null)
+            : null;
+        if (
+          attributedControllerAssetId === null ||
+          (controllerAssetId !== null && controllerAssetId !== attributedControllerAssetId)
+        ) {
+          controllerAttributionComplete = false;
+          break;
+        }
+        controllerAssetId = attributedControllerAssetId;
+      }
       // Attribution is usable only when every path names the same controller
       // owner. Retained facts without that field preserve the prior fail-closed
       // member-issuer proxy.
-      const controllerAssetId =
-        attributedControllerAssetIds.length > 0 &&
-        attributedControllerAssetIds.every((assetId) => assetId !== null) &&
-        uniqueControllerAssetIds.length === 1
-          ? uniqueControllerAssetIds[0]!
-          : null;
+      if (!controllerAttributionComplete) controllerAssetId = null;
       const controllerIssuerKey =
         controllerAssetId === null
           ? (members[0]?.assetIssuerKey ?? null)

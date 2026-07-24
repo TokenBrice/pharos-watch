@@ -906,7 +906,7 @@ function adaptMintControl(
   return {
     controlKey,
     deploymentKey: `asset:${assetId}`,
-    controllerAssetId: control.controllerAssetId ?? null,
+    ...(control.controllerAssetId ? { controllerAssetId: control.controllerAssetId } : {}),
     controlKind,
     scope: "global",
     capabilities,
@@ -2197,13 +2197,6 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     },
     assets: fixedInput.activeAssetIds.map((assetId) => {
       const meta = metaById.get(assetId)!;
-      for (const control of meta.mintAuthority?.controls ?? []) {
-        if (control.controllerAssetId !== undefined && !activeIds.has(control.controllerAssetId)) {
-          throw new Error(
-            `Safety Score v9 mint controller ${control.label} for ${assetId} references inactive asset ${control.controllerAssetId}`,
-          );
-        }
-      }
       const prepared = preparedById.get(assetId)!;
       const cycle = cycleByAsset.get(assetId);
       const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
