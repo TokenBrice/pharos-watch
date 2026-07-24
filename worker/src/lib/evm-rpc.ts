@@ -300,8 +300,10 @@ async function fetchJsonRpcResult<T>(
   return null;
 }
 
-export function toBlockTag(blockNumberOrTag: number | "latest"): string {
-  return blockNumberOrTag === "latest" ? "latest" : `0x${blockNumberOrTag.toString(16)}`;
+export function toBlockTag(blockNumberOrTag: number | "latest" | "finalized"): string {
+  return typeof blockNumberOrTag === "string"
+    ? blockNumberOrTag
+    : `0x${blockNumberOrTag.toString(16)}`;
 }
 
 function normalizeJsonRpcQuantityHex(value: string): string | null {
@@ -557,23 +559,30 @@ export async function fetchEvmBlockTimestamp(
 
 export async function fetchEvmBlockHeader(
   chainId: string,
-  blockNumber: number,
+  blockNumberOrTag: number | "finalized",
   options?: EvmRpcOptions,
 ): Promise<EvmBlockHeader | null> {
   const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
-  if (urls.length === 0 || !Number.isSafeInteger(blockNumber) || blockNumber < 0) return null;
+  if (
+    urls.length === 0 ||
+    (typeof blockNumberOrTag === "number" &&
+      (!Number.isSafeInteger(blockNumberOrTag) || blockNumberOrTag < 0))
+  ) {
+    return null;
+  }
 
   const block = await fetchJsonRpcResult<EvmBlockResult>(
     urls,
     "eth_getBlockByNumber",
-    [toBlockTag(blockNumber), false],
+    [toBlockTag(blockNumberOrTag), false],
     options,
   );
   const parsedNumber = parseHexInteger(block?.number);
   const timestamp = parseHexInteger(block?.timestamp);
   const hash = block?.hash?.toLowerCase();
   if (
-    parsedNumber !== blockNumber ||
+    parsedNumber === null ||
+    (typeof blockNumberOrTag === "number" && parsedNumber !== blockNumberOrTag) ||
     timestamp === null ||
     !hash ||
     !/^0x[0-9a-f]{64}$/.test(hash)

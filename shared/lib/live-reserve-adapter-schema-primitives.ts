@@ -14,6 +14,7 @@ const LiveReserveDependencyTypeSchema = z.enum(DEPENDENCY_TYPE_VALUES);
 export type LiveReserveInputKind = LiveReserveInput["kind"];
 const AbsoluteUrlSchema = z.string().url();
 const EvmAddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
+const EvmCodeHashSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
 
 const LiveReserveInputSchemaByKind = {
   "http-json": z
@@ -388,6 +389,63 @@ const sboldSpWithdrawableRedemptionLiquiditySchema = z
   })
   .strict();
 
+// Reviewer-pinned sfrxUSD holder route. Ethereum sfrxUSD redemptions are
+// disabled locally; the active path sends shares through Frax's Ethereum hop,
+// redeems against the Fraxtal MintRedeemer inventory, then returns frxUSD.
+// Every mutable identity and safety bound is explicit so the observer can fail
+// closed on route drift rather than falling back to the local idle balance.
+const fraxtalHopWithdrawableRedemptionLiquiditySchema = z
+  .object({
+    source: z.literal("fraxtal-hop-withdrawable"),
+    fraxtalRpcUrl: AbsoluteUrlSchema,
+    maxFinalizedBlockAgeSec: z.number().int().positive(),
+    maxCrossChainBlockSkewSec: z.number().int().positive(),
+    remoteHopAddress: EvmAddressSchema,
+    expectedRemoteHopCodeHash: EvmCodeHashSchema,
+    expectedEthereumSfrxUsdImplementationAddress: EvmAddressSchema,
+    expectedEthereumSfrxUsdProxyCodeHash: EvmCodeHashSchema,
+    expectedEthereumSfrxUsdImplementationCodeHash: EvmCodeHashSchema,
+    expectedEthereumEid: z.number().int().positive(),
+    expectedFraxtalEid: z.number().int().positive(),
+    expectedFraxtalHopAddress: EvmAddressSchema,
+    expectedEthereumFrxUsdOftAddress: EvmAddressSchema,
+    expectedEthereumFrxUsdOftProxyCodeHash: EvmCodeHashSchema,
+    expectedEthereumFrxUsdOftImplementationAddress: EvmAddressSchema,
+    expectedEthereumFrxUsdOftImplementationCodeHash: EvmCodeHashSchema,
+    expectedEthereumSfrxUsdOftAddress: EvmAddressSchema,
+    expectedEthereumSfrxUsdOftProxyCodeHash: EvmCodeHashSchema,
+    expectedEthereumSfrxUsdOftImplementationAddress: EvmAddressSchema,
+    expectedEthereumSfrxUsdOftImplementationCodeHash: EvmCodeHashSchema,
+    expectedEthereumFrxUsdAddress: EvmAddressSchema,
+    expectedEthUsdFeedAddress: EvmAddressSchema,
+    expectedEthUsdFeedCodeHash: EvmCodeHashSchema,
+    expectedEthUsdAggregatorAddress: EvmAddressSchema,
+    expectedEthUsdAggregatorCodeHash: EvmCodeHashSchema,
+    maxEthUsdOracleAgeSec: z.number().int().positive(),
+    expectedFraxtalHopCodeHash: EvmCodeHashSchema,
+    mintRedeemerProxyAddress: EvmAddressSchema,
+    expectedMintRedeemerProxyCodeHash: EvmCodeHashSchema,
+    expectedMintRedeemerImplementationAddress: EvmAddressSchema,
+    expectedMintRedeemerImplementationCodeHash: EvmCodeHashSchema,
+    expectedFrxUsdLockboxAddress: EvmAddressSchema,
+    expectedFrxUsdLockboxProxyCodeHash: EvmCodeHashSchema,
+    expectedFrxUsdLockboxImplementationAddress: EvmAddressSchema,
+    expectedFrxUsdLockboxImplementationCodeHash: EvmCodeHashSchema,
+    expectedSfrxUsdLockboxAddress: EvmAddressSchema,
+    expectedSfrxUsdLockboxProxyCodeHash: EvmCodeHashSchema,
+    expectedSfrxUsdLockboxImplementationAddress: EvmAddressSchema,
+    expectedSfrxUsdLockboxImplementationCodeHash: EvmCodeHashSchema,
+    expectedFraxtalFrxUsdAddress: EvmAddressSchema,
+    expectedFraxtalSfrxUsdAddress: EvmAddressSchema,
+    expectedVaultOracleAddress: EvmAddressSchema,
+    expectedVaultOracleCodeHash: EvmCodeHashSchema,
+    maxOracleToleranceSec: z.number().int().positive(),
+    maxOraclePriceDeviationBps: z.number().finite().nonnegative(),
+    maxRedemptionFeeBps: z.number().finite().nonnegative(),
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+  })
+  .strict();
+
 const erc4626SingleAssetParamsSchema = z
   .object({
     slice: reserveSliceDescriptorSchema,
@@ -398,6 +456,7 @@ const erc4626SingleAssetParamsSchema = z
         atomicFullBackingRedemptionLiquiditySchema,
         yearnV3WithdrawableRedemptionLiquiditySchema,
         sboldSpWithdrawableRedemptionLiquiditySchema,
+        fraxtalHopWithdrawableRedemptionLiquiditySchema,
       ])
       .optional(),
     rpcUrl: AbsoluteUrlSchema.optional(),

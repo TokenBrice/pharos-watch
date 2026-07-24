@@ -298,20 +298,40 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "sfrxusd-frax": defineStablecoinRedeemConfig({
-    capacityModel: { kind: "reserve-sync-metadata" },
+    outputAssets: ["frxusd-frax"],
+    capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
+    settlementModel: "queued",
     executionModel: "rules-based-nav",
-    costModel: fixedFee(
-      0,
-      "Frax docs describe sfrxUSD as redeemable for frxUSD at the current exchange rate with no price impact; no separate wrapper redemption fee is charged.",
+    costModel: undisclosedReviewedFee(
+      "The observer captures the MintRedeemer fee and both LayerZero message quotes, but an all-in holder cost remains unknown until Ethereum transaction gas is measured.",
     ),
-    reviewedAt: "2026-05-17",
+    reviewedAt: "2026-07-24",
     docs: [
-      sourceRef("Frax sfrxUSD docs", "https://docs.frax.com/protocol/assets/frxusd/sfrxusd", ["route", "capacity"]),
-      sourceRef("Frax frxUSD addresses", "https://docs.frax.com/protocol/assets/frxusd/addresses", ["route"]),
+      sourceRef(
+        "Frax sfrxUSD stake and unstake guide",
+        "https://docs.frax.com/frxusd/stake-and-unstake-quickstart-ethereum",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Frax Ethereum RemoteHop",
+        "https://www.codeslaw.app/contracts/ethereum/0x99b5587ab54a49e3f827d10175caf69c0187bfa8",
+        ["route", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Frax Fraxtal Hop",
+        "https://www.codeslaw.app/contracts/fraxtal/0x3e6a2cbafd864e09e6dab9cf035a0abea32bc0bc",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Frax Fraxtal MintRedeemer implementation",
+        "https://www.codeslaw.app/contracts/fraxtal/0xc13d8e8668f5b54d492f5c3e37cf772206f7d0a6",
+        ["capacity", "fees"],
+      ),
     ],
     notes: [
-      "sfrxUSD is an ERC-4626-like savings wrapper over frxUSD and exits immediately back into the underlying at the current exchange rate",
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle frxUSD balance as current direct wrapper capacity; the wrapper does not add a separate queue or access gate beyond the base frxUSD system.",
+      "Ethereum sfrxUSD has local ERC-4626 withdrawals disabled. The modeled holder route sends sfrxUSD through Frax's permissionless Ethereum RemoteHop, redeems it against the Fraxtal MintRedeemer, and returns frxUSD to Ethereum.",
+      "Fresh reserve telemetry fails closed unless finalized state on both chains matches every pinned proxy implementation, runtime bytecode, LayerZero peer, OFT and lockbox identity, token decimal, oracle bound, return-message funding check, fee bound, and Fraxtal frxUSD inventory view.",
+      "Capacity is the current frxUSD inventory that the Fraxtal MintRedeemer reports as withdrawable, capped by the Ethereum sfrxUSD supply. The route remains non-scoreable because no primary-source or measured completion-time upper bound and no all-in transaction-gas cost are available; the conservative queued legacy label is not a settlement SLA.",
     ],
   }),
   "scrvusd-curve": defineStablecoinRedeemConfig({

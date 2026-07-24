@@ -483,6 +483,7 @@ describe("buildRedemptionBackstopEntry", () => {
           routeStatusReason: null,
           routeStatusReviewedAt: null,
           v9FpiControllerRouteState: null,
+          v9SfrxusdCrosschainRouteState: null,
         },
       },
     );

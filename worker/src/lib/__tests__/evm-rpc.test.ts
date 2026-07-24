@@ -446,6 +446,37 @@ describe("evm-rpc helpers", () => {
     ).resolves.toBeNull();
   });
 
+  it("resolves an explicitly finalized block header without relabeling latest state", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          result: {
+            number: "0x10",
+            timestamp: "0x64",
+            hash: `0x${"c".repeat(64)}`,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await expect(
+      fetchEvmBlockHeader("ethereum", "finalized", {
+        extraRpcUrls: ["https://rpc.example"],
+      }),
+    ).resolves.toEqual({
+      number: 16,
+      timestamp: 100,
+      hash: `0x${"c".repeat(64)}`,
+    });
+    const lastCall =
+      fetchWithRetryMock.mock.calls[fetchWithRetryMock.mock.calls.length - 1];
+    const body = JSON.parse(String(lastCall?.[1]?.body)) as {
+      params: unknown[];
+    };
+    expect(body.params).toEqual(["finalized", false]);
+  });
+
   it("resolves the closest block at or before a target timestamp", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(new Response(JSON.stringify({ result: { timestamp: "0x3b6" } }), { status: 200 }))
