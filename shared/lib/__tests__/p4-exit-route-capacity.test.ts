@@ -259,7 +259,7 @@ describe("P4 DEX exit route observations", () => {
       targetId: "curve-stableswap-ng-usdg-usdc",
       targetGenerationId: "curve-ng-target-generation",
       quoteGenerationId: "curve-ng-quote-generation",
-      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v1",
+      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
       protocol: "curve",
       poolId: `ethereum:${poolAddress}`,
       poolTokenAddresses: [usdg, usdc],
@@ -289,6 +289,7 @@ describe("P4 DEX exit route observations", () => {
       stableSwapNgFactoryProvenance: {
         blockNumber: 25_601_359,
         blockHash: `0x${"12".repeat(32)}`,
+        blockCommitment: "finalized",
         factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
         factoryCodeHash: "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
         poolIndex: 563,
@@ -689,7 +690,7 @@ describe("P4 DEX exit route observations", () => {
     });
     expect(mature.observations[0]).toMatchObject({
       evidenceKind: "measured-executable-depth",
-      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v1",
+      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
       confidence: "high",
       scope: { kind: "chain-contract", contractOrPoolId: physicalPoolId },
     });

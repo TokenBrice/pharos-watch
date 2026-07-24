@@ -80,7 +80,7 @@ function curveStableSwapNgTarget(): DexMeasuredExecutionTarget {
     "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
   ];
   return target("usdg-paxos", 20_501_133, "curve-usdg-ng", {
-    adapterProfileId: "curve-stableswap-ng-factory-get-dy-v1",
+    adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
     protocol: "curve",
     chain: "ethereum",
     poolId: "ethereum:0xc061caa073f3d95f80f8e5428d32d2d76f5e1622",

@@ -372,6 +372,7 @@ describe("DEX measured execution contract", () => {
     internal.stableSwapNgFactoryBindingProof = {
       blockNumber: internal.blockNumber,
       blockHash: `0x${"ef".repeat(32)}`,
+      blockCommitment: "finalized",
       factoryAddress: "0x5555555555555555555555555555555555555555",
       factoryCodeHash: `0x${"cd".repeat(32)}`,
       poolIndex: 563,
@@ -397,6 +398,7 @@ describe("DEX measured execution contract", () => {
     expect(publicProfile.stableSwapNgFactoryProvenance).toEqual({
       blockNumber: internal.stableSwapNgFactoryBindingProof.blockNumber,
       blockHash: internal.stableSwapNgFactoryBindingProof.blockHash,
+      blockCommitment: internal.stableSwapNgFactoryBindingProof.blockCommitment,
       factoryAddress: internal.stableSwapNgFactoryBindingProof.factoryAddress,
       factoryCodeHash: internal.stableSwapNgFactoryBindingProof.factoryCodeHash,
       poolIndex: internal.stableSwapNgFactoryBindingProof.poolIndex,
@@ -453,7 +455,7 @@ describe("DEX measured execution contract", () => {
     };
 
     expect(getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId)).toBe(7_200);
-    expect(getDexMeasuredExecutionFreshnessMaxSec("curve-stableswap-ng-factory-get-dy-v1")).toBe(7_200);
+    expect(getDexMeasuredExecutionFreshnessMaxSec("curve-stableswap-ng-factory-get-dy-v2")).toBe(7_200);
     expect(getDexMeasuredExecutionFreshnessMaxSec("uniswap-v3-quoter-v2")).toBe(3_600);
     expect(validateDexMeasuredExecutionProfile({
       profile: retainedProfile,

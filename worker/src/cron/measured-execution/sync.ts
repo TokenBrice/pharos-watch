@@ -547,7 +547,6 @@ export async function syncDexMeasuredExecution(
       } else {
         const verified = await verifyCurveStableSwapNgDeployment({
           policy: deployment.config,
-          blockNumber,
           nowSec: startedAt,
           chainRpcs,
           signal,
@@ -559,6 +558,7 @@ export async function syncDexMeasuredExecution(
           continue;
         }
         for (const state of deploymentRows) {
+          state.blockNumber = verified.blockNumber;
           state.endpointCodeHash = verified.codeHash;
           state.blockObservedAt = verified.blockTimestamp;
           state.curveStableSwapNgRuntimeEvidence = verified.runtimeEvidence;

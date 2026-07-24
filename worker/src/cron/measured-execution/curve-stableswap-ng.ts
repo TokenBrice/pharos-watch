@@ -47,7 +47,7 @@ const CURVE_STABLESWAP_NG_MULTICALL_GAS = "0x1c9c380";
 const EVM_ADDRESS_PATTERN = /^0x[0-9a-f]{40}$/;
 
 export const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID =
-  "curve-stableswap-ng-factory-get-dy-v1" as const;
+  "curve-stableswap-ng-factory-get-dy-v2" as const;
 export const CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES = 3;
 export const CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 
@@ -111,6 +111,7 @@ export type CurveStableSwapNgEligibilityFailure =
   | "block-header-unavailable"
   | "block-header-mismatch"
   | "block-hash-invalid"
+  | "block-commitment-mismatch"
   | "stale-pinned-block"
   | "future-pinned-block"
   | "runtime-code-unavailable"
@@ -120,8 +121,11 @@ export type CurveStableSwapNgEligibilityFailure =
   | "factory-code-absent"
   | "factory-code-hash-mismatch"
   | "factory-membership-mismatch"
+  | "factory-membership-unproven"
   | "pool-token-order-mismatch"
+  | "pool-token-order-unproven"
   | "token-decimals-mismatch"
+  | "token-decimals-unproven"
   | "rpc-failure";
 
 export type CurveStableSwapNgEligibility =
@@ -191,6 +195,9 @@ export function evaluateCurveStableSwapNgEligibility(input: {
   if (!/^0x[0-9a-f]{64}$/.test(proof.blockHash)) {
     return { ok: false, reason: "block-hash-invalid" };
   }
+  if (proof.blockCommitment !== "finalized") {
+    return { ok: false, reason: "block-commitment-mismatch" };
+  }
   if (canonicalHash(proof.factoryCodeHash) == null) {
     return { ok: false, reason: "factory-code-unavailable" };
   }
@@ -241,7 +248,7 @@ interface CurveStableSwapNgVerificationDependencies {
   ): Promise<`0x${string}` | null>;
   fetchBlockHeader(
     chain: string,
-    blockNumber: number,
+    blockNumber: number | "finalized",
     options: Parameters<typeof fetchEvmBlockHeader>[2],
   ): Promise<EvmBlockHeader | null>;
   hashCode?(code: `0x${string}`): `0x${string}`;
@@ -251,6 +258,7 @@ export type CurveStableSwapNgDeploymentVerification =
   | {
       ok: true;
       codeHash: `0x${string}`;
+      blockNumber: number;
       blockTimestamp: number;
       runtimeEvidence: CurveStableSwapNgRuntimeEvidence;
       factoryBindingProof: DexMeasuredExecutionStableSwapNgFactoryBindingProof;
@@ -262,16 +270,12 @@ export function createCurveStableSwapNgDeploymentVerifier(
 ) {
   return async function verifyCurveStableSwapNgDeployment(input: {
     policy?: CurveStableSwapNgPoolPolicy;
-    blockNumber: number;
     nowSec: number;
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     rpcBudget?: DexMeasuredExecutionRpcBudget;
   }): Promise<CurveStableSwapNgDeploymentVerification> {
     const policy = input.policy ?? CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
-    if (!Number.isSafeInteger(input.blockNumber) || input.blockNumber < 0) {
-      return { ok: false, reason: "invalid-pinned-block" };
-    }
     const requestOptions = {
       chainRpcs: input.chainRpcs,
       signal: input.signal,
@@ -280,6 +284,26 @@ export function createCurveStableSwapNgDeploymentVerifier(
       ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
       ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
     };
+
+    const blockHeader = await dependencies.fetchBlockHeader(
+      policy.chain,
+      "finalized",
+      requestOptions,
+    );
+    input.rpcBudget?.recordChainResult(policy.chain, blockHeader != null);
+    if (blockHeader == null) return { ok: false, reason: "block-header-unavailable" };
+    if (!/^0x[0-9a-f]{64}$/.test(blockHeader.hash)) {
+      return { ok: false, reason: "block-hash-invalid" };
+    }
+    const blockTimestamp = blockHeader.timestamp;
+    if (blockTimestamp > input.nowSec + 60) return { ok: false, reason: "future-pinned-block" };
+    if (
+      input.nowSec - blockTimestamp >
+      DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC
+    ) {
+      return { ok: false, reason: "stale-pinned-block" };
+    }
+
     const readCode = async (address: `0x${string}`): Promise<EvmCodeAtBlockResult> => {
       if (input.rpcBudget && !input.rpcBudget.canRequestChain(policy.chain)) {
         return { status: "unavailable" };
@@ -287,7 +311,7 @@ export function createCurveStableSwapNgDeploymentVerifier(
       const result = await dependencies.fetchCodeStatus(
         policy.chain,
         address,
-        input.blockNumber,
+        blockHeader.number,
         requestOptions,
       );
       input.rpcBudget?.recordChainResult(policy.chain, result.status !== "unavailable");
@@ -302,34 +326,12 @@ export function createCurveStableSwapNgDeploymentVerifier(
         policy.chain,
         address,
         callData,
-        input.blockNumber,
+        blockHeader.number,
         requestOptions,
       );
       input.rpcBudget?.recordChainResult(policy.chain, result != null);
       return result;
     };
-
-    const blockHeader = await dependencies.fetchBlockHeader(
-      policy.chain,
-      input.blockNumber,
-      requestOptions,
-    );
-    input.rpcBudget?.recordChainResult(policy.chain, blockHeader != null);
-    if (blockHeader == null) return { ok: false, reason: "block-header-unavailable" };
-    if (blockHeader.number !== input.blockNumber) {
-      return { ok: false, reason: "block-header-mismatch" };
-    }
-    if (!/^0x[0-9a-f]{64}$/.test(blockHeader.hash)) {
-      return { ok: false, reason: "block-hash-invalid" };
-    }
-    const blockTimestamp = blockHeader.timestamp;
-    if (blockTimestamp > input.nowSec + 60) return { ok: false, reason: "future-pinned-block" };
-    if (
-      input.nowSec - blockTimestamp >
-      DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC
-    ) {
-      return { ok: false, reason: "stale-pinned-block" };
-    }
 
     const poolCodeResult = await readCode(policy.poolAddress);
     if (poolCodeResult.status === "unavailable") {
@@ -368,7 +370,7 @@ export function createCurveStableSwapNgDeploymentVerifier(
     const poolListReturnData = await readCall(policy.factoryAddress, poolListCallData);
     const factoryCoinsReturnData = await readCall(policy.factoryAddress, factoryCoinsCallData);
     if (poolListReturnData == null || factoryCoinsReturnData == null) {
-      return { ok: false, reason: "rpc-failure" };
+      return { ok: false, reason: "factory-membership-unproven" };
     }
 
     let registeredPoolAddress: `0x${string}` | null;
@@ -407,7 +409,9 @@ export function createCurveStableSwapNgDeploymentVerifier(
         args: [BigInt(index)],
       }).toLowerCase() as `0x${string}`;
       const coinReturnData = await readCall(policy.poolAddress, coinCallData);
-      if (coinReturnData == null) return { ok: false, reason: "rpc-failure" };
+      if (coinReturnData == null) {
+        return { ok: false, reason: "pool-token-order-unproven" };
+      }
       let poolCoinAddress: `0x${string}` | null = null;
       try {
         poolCoinAddress = canonicalAddress(decodeFunctionResult({
@@ -430,7 +434,9 @@ export function createCurveStableSwapNgDeploymentVerifier(
         functionName: "decimals",
       }).toLowerCase() as `0x${string}`;
       const decimalsReturnData = await readCall(token.address, decimalsCallData);
-      if (decimalsReturnData == null) return { ok: false, reason: "rpc-failure" };
+      if (decimalsReturnData == null) {
+        return { ok: false, reason: "token-decimals-unproven" };
+      }
       let decimals: number;
       try {
         decimals = Number(decodeFunctionResult({
@@ -450,9 +456,27 @@ export function createCurveStableSwapNgDeploymentVerifier(
       });
     }
 
+    const revalidatedBlockHeader = await dependencies.fetchBlockHeader(
+      policy.chain,
+      blockHeader.number,
+      requestOptions,
+    );
+    input.rpcBudget?.recordChainResult(policy.chain, revalidatedBlockHeader != null);
+    if (revalidatedBlockHeader == null) {
+      return { ok: false, reason: "block-header-unavailable" };
+    }
+    if (
+      revalidatedBlockHeader.number !== blockHeader.number ||
+      revalidatedBlockHeader.timestamp !== blockHeader.timestamp ||
+      revalidatedBlockHeader.hash !== blockHeader.hash
+    ) {
+      return { ok: false, reason: "block-header-mismatch" };
+    }
+
     const factoryBindingProof: DexMeasuredExecutionStableSwapNgFactoryBindingProof = {
       blockNumber: blockHeader.number,
       blockHash: blockHeader.hash,
+      blockCommitment: "finalized",
       factoryAddress: policy.factoryAddress,
       factoryCodeHash,
       poolIndex: policy.factoryPoolIndex,
@@ -473,12 +497,19 @@ export function createCurveStableSwapNgDeploymentVerifier(
     const eligibility = evaluateCurveStableSwapNgEligibility({
       chain: policy.chain,
       endpointAddress: policy.poolAddress,
-      blockNumber: input.blockNumber,
+      blockNumber: blockHeader.number,
       nowSec: input.nowSec,
       evidence: runtimeEvidence,
     });
     return eligibility.ok
-      ? { ok: true, codeHash: poolCodeHash, blockTimestamp, runtimeEvidence, factoryBindingProof }
+      ? {
+          ok: true,
+          codeHash: poolCodeHash,
+          blockNumber: blockHeader.number,
+          blockTimestamp,
+          runtimeEvidence,
+          factoryBindingProof,
+        }
       : eligibility;
   };
 }
@@ -863,6 +894,10 @@ export function validateCurveStableSwapNgProfileProof(
   if (!proof) {
     issues.add("factory-binding-proof-missing");
   } else if (policy) {
+    if (
+      proof.blockCommitment !== "finalized" ||
+      proof.blockNumber !== profile.blockNumber
+    ) issues.add("block-binding-mismatch");
     if (
       proof.factoryAddress !== policy.factoryAddress ||
       proof.factoryCodeHash !== policy.expectedFactoryCodeHash ||

@@ -14,7 +14,7 @@ export const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
 
 const CanonicalEvmAddressSchema = z.string().regex(/^0x[a-f0-9]{40}$/);
 const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = "curve-stableswap-main-registry-get-dy-v1";
-const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = "curve-stableswap-ng-factory-get-dy-v1";
+const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = "curve-stableswap-ng-factory-get-dy-v2";
 
 export function getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId: string): number {
   return adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID ||
@@ -127,6 +127,7 @@ export type DexMeasuredExecutionRegistryBindingProof = z.infer<
 const DexMeasuredExecutionStableSwapNgFactoryBindingProofSchema = z.object({
   blockNumber: z.number().int().nonnegative(),
   blockHash: z.string().regex(/^0x[a-f0-9]{64}$/),
+  blockCommitment: z.literal("finalized"),
   factoryAddress: CanonicalEvmAddressSchema,
   factoryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
   poolIndex: z.number().int().nonnegative(),
@@ -208,6 +209,7 @@ export const DexMeasuredExecutionPublicProfileSchema = DexMeasuredExecutionProfi
   stableSwapNgFactoryProvenance: z.object({
     blockNumber: z.number().int().nonnegative(),
     blockHash: z.string().regex(/^0x[a-f0-9]{64}$/),
+    blockCommitment: z.literal("finalized"),
     factoryAddress: CanonicalEvmAddressSchema,
     factoryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
     poolIndex: z.number().int().nonnegative(),
@@ -257,6 +259,7 @@ export function toDexMeasuredExecutionPublicProfile(
           stableSwapNgFactoryProvenance: {
             blockNumber: stableSwapNgFactoryBindingProof.blockNumber,
             blockHash: stableSwapNgFactoryBindingProof.blockHash,
+            blockCommitment: stableSwapNgFactoryBindingProof.blockCommitment,
             factoryAddress: stableSwapNgFactoryBindingProof.factoryAddress,
             factoryCodeHash: stableSwapNgFactoryBindingProof.factoryCodeHash,
             poolIndex: stableSwapNgFactoryBindingProof.poolIndex,

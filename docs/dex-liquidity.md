@@ -317,19 +317,22 @@ runtime-code response is semantic code absence and is never eligible for
 last-known-good retention; an unavailable RPC response remains an operational
 failure subject to the bounded freshness policy.
 
-USDG uses the separate `curve-stableswap-ng-factory-get-dy-v1` profile for the
+USDG uses the separate `curve-stableswap-ng-factory-get-dy-v2` profile for the
 single reviewed Ethereum USDG/USDC pool
-`0xc061caa073f3d95f80f8e5428d32d2d76f5e1622`. At one pinned block the producer
-requires the exact reviewed pool and StableSwap-NG factory runtime hashes,
+`0xc061caa073f3d95f80f8e5428d32d2d76f5e1622`. At one explicitly finalized
+block the producer requires the exact reviewed pool and StableSwap-NG factory
+runtime hashes,
 factory `pool_list(563)` registration, factory `get_coins(pool)` membership,
 pool `coins(0..1)` order, and both token decimals before quoting USDG index 0 to
-USDC index 1 with exact `get_dy(int128,int128,uint256)`. The internal proof
-retains the pinned block number and hash plus raw calls and returns; the public
-profile exposes only proof-free block, factory, pool, and token provenance.
-This allowlist does not enable other StableSwap-NG pools or generic Curve
-factory discovery. A semantic hash, membership, order, decimal, or quote
-failure cannot fall back through a retained measured profile; only an
-operational transport failure may use a still-fresh last-known-good profile.
+USDC index 1 with exact `get_dy(int128,int128,uint256)`. It rereads that numeric
+header after the identity calls and rejects a changed hash. The internal proof
+retains the block number, hash, finalized commitment, and raw calls and returns;
+the public profile exposes only proof-free block, factory, pool, and token
+provenance. This allowlist does not enable other StableSwap-NG pools or generic
+Curve factory discovery. A semantic hash, unproven or mismatched identity,
+order, decimal, or quote failure cannot fall back through a retained measured
+profile; only an operational transport failure may use a still-fresh
+last-known-good profile.
 
 Measured capacity points may also retain the realized cost of the exact passing quote that defines their executable amount. This field is additive: legacy points remain valid without it. The repeated-cycle history still emits the pointwise-minimum capacity; it emits a realized cost only when every supporting cycle retained an exact passing quote at that same minimum amount, using the maximum observed cost across those cycles. A missing exact supporting quote falls back to the 200 bps request bound. This projection is consumed only by the V9 candidate path and does not change aggregate liquidity or V8 scoring.
 

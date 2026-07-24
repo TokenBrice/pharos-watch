@@ -312,7 +312,7 @@ describe("buildCurveStableswapExecutionModel", () => {
       chain: "ethereum",
     })).toBe(`ethereum:${USDG_NG_POOL}`);
     expect(build()).toMatchObject({
-      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v1",
+      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
       stablecoinId: "usdg-paxos",
       poolId: `ethereum:${USDG_NG_POOL}`,
       retainedPoolPriceUsd: 0.9999,

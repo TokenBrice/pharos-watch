@@ -33,7 +33,7 @@ const REFERENCE_COST_BPS = 200;
 const IMMEDIATE_SETTLEMENT_HORIZON_SEC = 300;
 const AMM_EXECUTION_COST_TOLERANCE_BPS = 0.02;
 const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = "curve-stableswap-main-registry-get-dy-v1";
-const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = "curve-stableswap-ng-factory-get-dy-v1";
+const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = "curve-stableswap-ng-factory-get-dy-v2";
 const CURVE_3POOL_ADDRESS = "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7";
 const CURVE_MAIN_REGISTRY_ADDRESS = "0x90e00ace148ca3b23ac1bc8c240c2a7dd9c2d7f5";
 const CURVE_MAIN_REGISTRY_CODE_HASH =
@@ -655,6 +655,7 @@ function validateMeasuredExecutionProfile(
       provenance == null ||
       provenance.blockNumber !== profile.blockNumber ||
       !/^0x[0-9a-f]{64}$/.test(provenance.blockHash) ||
+      provenance.blockCommitment !== "finalized" ||
       provenance.factoryAddress !== CURVE_STABLESWAP_NG_FACTORY_ADDRESS ||
       provenance.factoryCodeHash !== CURVE_STABLESWAP_NG_FACTORY_CODE_HASH ||
       provenance.poolIndex !== CURVE_STABLESWAP_NG_FACTORY_POOL_INDEX ||
