@@ -2793,7 +2793,9 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
         sourceId:
           v9Attribution === undefined
             ? "report-cards-chain-circulating"
-            : "safety-score-v9-lock-mint-attribution",
+            : v9Attribution.model === "canonical-lock-mint-partition-v1"
+              ? "safety-score-v9-lock-mint-attribution"
+              : "safety-score-v9-reviewed-deployment-attribution",
         sourceGenerationId: source.generationId,
         disposition: "observed",
         observedAtSec: safetyScoreV9ChainSupplyObservedAtSec(

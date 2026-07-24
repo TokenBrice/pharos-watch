@@ -9,6 +9,8 @@ const mockBuildV9FixedInputCacheEntry = vi.fn();
 const mockNormalizeFixedInput = vi.fn();
 const mockEnrichV9FixedInput = vi.fn();
 const mockLoadEvidenceJournal = vi.fn();
+const mockAppendSupplyAttributionJournal = vi.fn();
+const mockLoadSupplyAttributionJournal = vi.fn();
 const mockCapturePegProvenance = vi.fn();
 const mockRunSafetyScoreV9Shadow = vi.fn();
 const mockSetCacheMany = vi.fn();
@@ -24,11 +26,16 @@ vi.mock("../../lib/report-cards-fixed-input", () => ({
 }));
 
 vi.mock("../../lib/safety-score-v9-supply-attribution", () => ({
-  enrichSafetyScoreV9FixedInputSupply: mockEnrichV9FixedInput,
+  enrichSafetyScoreV9FixedInputSupplyWithEvidence: mockEnrichV9FixedInput,
 }));
 
 vi.mock("../../lib/report-card-evidence-journal-store", () => ({
   loadReportCardEvidenceJournalByIdV1: mockLoadEvidenceJournal,
+}));
+
+vi.mock("../../lib/safety-score-v9-supply-attribution-journal-store", () => ({
+  appendSupplyAttributionJournalV1: mockAppendSupplyAttributionJournal,
+  loadSupplyAttributionJournalByIdV1: mockLoadSupplyAttributionJournal,
 }));
 
 vi.mock("../../lib/safety-score-v9-peg-provenance", () => ({
@@ -91,6 +98,8 @@ function validSnapshot() {
     fixedInput: {
       sourceGeneration: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
       baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+      activeAssetIds: ["usdc-circle"],
+      clockSec: 1_700_000_000,
     },
     v9PegProvenanceSource: {
       clockSec: 1_700_000_000,
@@ -107,6 +116,8 @@ describe("publishReportCardCache", () => {
     mockNormalizeFixedInput.mockReset();
     mockEnrichV9FixedInput.mockReset();
     mockLoadEvidenceJournal.mockReset();
+    mockAppendSupplyAttributionJournal.mockReset();
+    mockLoadSupplyAttributionJournal.mockReset();
     mockCapturePegProvenance.mockReset();
     mockRunSafetyScoreV9Shadow.mockReset();
     mockSetCacheMany.mockReset();
@@ -124,10 +135,15 @@ describe("publishReportCardCache", () => {
       uncompressedBytes: 640,
     }));
     mockEnrichV9FixedInput.mockImplementation(async (fixedInput) => ({
-      ...fixedInput,
-      safetyScoreV9SupplyAttributionById: {},
+      fixedInput: {
+        ...fixedInput,
+        safetyScoreV9SupplyAttributionById: {},
+      },
+      journalRecords: [],
     }));
     mockLoadEvidenceJournal.mockResolvedValue({});
+    mockAppendSupplyAttributionJournal.mockResolvedValue({ accepted: 0, assets: 0 });
+    mockLoadSupplyAttributionJournal.mockResolvedValue({});
     mockCapturePegProvenance.mockReturnValue({
       "usdc-circle": { marker: "compact-peg-provenance" },
     });
@@ -162,6 +178,7 @@ describe("publishReportCardCache", () => {
       mockEnrichV9FixedInput.mock.invocationCallOrder[0]!,
     );
     expect(mockLoadEvidenceJournal).toHaveBeenCalledTimes(1);
+    expect(mockLoadSupplyAttributionJournal).toHaveBeenCalledTimes(1);
     expect(mockCapturePegProvenance).toHaveBeenCalledWith(
       expect.objectContaining({
         safetyScoreV9SupplyAttributionById: {},
@@ -174,6 +191,7 @@ describe("publishReportCardCache", () => {
     expect(mockBuildV9FixedInputCacheEntry).toHaveBeenCalledWith(
       expect.objectContaining({
         evidenceJournalById: {},
+        supplyAttributionJournalById: {},
         pegProvenanceById: {
           "usdc-circle": { marker: "compact-peg-provenance" },
         },
@@ -282,6 +300,69 @@ describe("publishReportCardCache", () => {
     expect(result.productivity?.productive).toBe(true);
     expect(JSON.parse(result.metadata!)).toMatchObject({
       publicationGenerationId: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
+      v9FixedInputCacheBytes: null,
+      v9Shadow: { status: "failed", stage: "scheduler", code: "Error" },
+    });
+  });
+
+  it("persists the current supply attempt after loading only prior journal evidence", async () => {
+    mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
+    const current = { completedAtSec: 1_700_000_001, attemptId: "current" };
+    const prior = { completedAtSec: 1_699_999_900, attemptId: "prior" };
+    mockEnrichV9FixedInput.mockImplementation(async (fixedInput) => ({
+      fixedInput: {
+        ...fixedInput,
+        activeAssetIds: ["usdc-circle", "wm-m0"],
+        safetyScoreV9SupplyAttributionById: {},
+      },
+      journalRecords: [current],
+    }));
+    mockLoadSupplyAttributionJournal.mockResolvedValue({ "wm-m0": [prior] });
+
+    await publishReportCardCache({} as D1Database);
+
+    expect(mockLoadSupplyAttributionJournal).toHaveBeenCalledWith(
+      expect.anything(),
+      ["wm-m0"],
+      1_700_000_000,
+      expect.any(AbortSignal),
+    );
+    expect(mockLoadSupplyAttributionJournal.mock.invocationCallOrder[0]).toBeLessThan(
+      mockAppendSupplyAttributionJournal.mock.invocationCallOrder[0]!,
+    );
+    expect(mockAppendSupplyAttributionJournal).toHaveBeenCalledWith(
+      expect.anything(),
+      [current],
+      expect.any(Number),
+      expect.any(AbortSignal),
+    );
+    expect(mockBuildV9FixedInputCacheEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        supplyAttributionJournalById: { "wm-m0": [prior] },
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("keeps V8 authoritative when immutable supply-attribution provenance cannot append", async () => {
+    mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
+    mockEnrichV9FixedInput.mockImplementation(async (fixedInput) => ({
+      fixedInput: {
+        ...fixedInput,
+        activeAssetIds: ["usdc-circle", "wm-m0"],
+        safetyScoreV9SupplyAttributionById: {},
+      },
+      journalRecords: [{ completedAtSec: 1_700_000_001 }],
+    }));
+    mockAppendSupplyAttributionJournal.mockRejectedValue(
+      new Error("supply journal unavailable"),
+    );
+
+    const result = await publishReportCardCache({} as D1Database);
+
+    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
+    expect(result.productivity?.productive).toBe(true);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
       v9FixedInputCacheBytes: null,
       v9Shadow: { status: "failed", stage: "scheduler", code: "Error" },
     });

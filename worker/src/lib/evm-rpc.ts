@@ -73,8 +73,15 @@ export type EvmCodeAtBlockResult =
   | { status: "unavailable" };
 
 interface EvmBlockResult {
-  number: string;
-  timestamp: string;
+  number?: string;
+  timestamp?: string;
+  hash?: string;
+}
+
+export interface EvmBlockHeader {
+  number: number;
+  timestamp: number;
+  hash: `0x${string}`;
 }
 
 function stripHexPrefix(value: string): string {
@@ -389,17 +396,33 @@ export async function fetchEvmCodeAtBlock(
   blockNumberOrTag: number | "latest" = "latest",
   options?: EvmRpcOptions,
 ): Promise<`0x${string}` | null> {
+  const result = await fetchEvmCodeStatusAtBlock(
+    chainId,
+    address,
+    blockNumberOrTag,
+    options,
+  );
+  return result.status === "available" ? result.code : null;
+}
+
+export async function fetchEvmStorageAtBlock(
+  chainId: string | undefined,
+  address: string,
+  position: string,
+  blockNumberOrTag: number | "latest" = "latest",
+  options?: EvmRpcOptions,
+): Promise<`0x${string}` | null> {
   const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
   if (urls.length === 0) return null;
 
   const result = await fetchJsonRpcResult<string>(
     urls,
-    "eth_getCode",
-    [address, toBlockTag(blockNumberOrTag)],
+    "eth_getStorageAt",
+    [address, position, toBlockTag(blockNumberOrTag)],
     options,
     {
       acceptResult: (value): value is `0x${string}` => isHexResult(value as string) && value !== "0x",
-      rejectedReason: () => "empty bytecode",
+      rejectedReason: () => "null storage",
     },
   );
   return result as `0x${string}` | null;
@@ -530,6 +553,34 @@ export async function fetchEvmBlockTimestamp(
   );
 
   return parseHexInteger(block?.timestamp);
+}
+
+export async function fetchEvmBlockHeader(
+  chainId: string,
+  blockNumber: number,
+  options?: EvmRpcOptions,
+): Promise<EvmBlockHeader | null> {
+  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  if (urls.length === 0 || !Number.isSafeInteger(blockNumber) || blockNumber < 0) return null;
+
+  const block = await fetchJsonRpcResult<EvmBlockResult>(
+    urls,
+    "eth_getBlockByNumber",
+    [toBlockTag(blockNumber), false],
+    options,
+  );
+  const parsedNumber = parseHexInteger(block?.number);
+  const timestamp = parseHexInteger(block?.timestamp);
+  const hash = block?.hash?.toLowerCase();
+  if (
+    parsedNumber !== blockNumber ||
+    timestamp === null ||
+    !hash ||
+    !/^0x[0-9a-f]{64}$/.test(hash)
+  ) {
+    return null;
+  }
+  return { number: parsedNumber, timestamp, hash: hash as `0x${string}` };
 }
 
 export async function resolveClosestBlockAtOrBeforeTimestamp(

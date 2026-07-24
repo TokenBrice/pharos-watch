@@ -109,6 +109,7 @@ function fixedInputWithoutV9Enrichment(input: Readonly<ReportCardsFixedInput>) {
   const {
     safetyScoreV9SupplyAttributionById: _v9SupplyAttribution,
     evidenceJournalById: _evidenceJournal,
+    supplyAttributionJournalById: _supplyAttributionJournal,
     pegProvenanceById: _pegProvenance,
     ...baseInput
   } = input;

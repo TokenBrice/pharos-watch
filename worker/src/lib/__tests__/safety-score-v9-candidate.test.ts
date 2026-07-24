@@ -364,6 +364,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       "exit-route-modeled-confidence.v1",
       "fact-gap-responsibility.v1",
       "journaled-cdp-shock-coverage.v1",
+      "reviewed-deployment-unit-supply-attribution.v1",
       "reviewed-transfer-deployments.v1",
       "wrapper-local-facts.v1",
     ]);
@@ -375,7 +376,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(left.producerCapabilityIdentity.sourceAdapters.redemptionExitRoutes).toBe(
       "fixed-input.redemption-exit-observations.v2",
     );
-    expect(left.producerCapabilityIdentity.sourceAdapters.chainSupply).toBe("fixed-input.usd-circulating-supply.v3");
+    expect(left.producerCapabilityIdentity.sourceAdapters.chainSupply).toBe("fixed-input.usd-circulating-supply.v4");
     expect(left.producerCapabilityIdentity.sourceAdapters.researchOverlays).toBe(
       "v9-fact-extension.review-overlays.v3",
     );

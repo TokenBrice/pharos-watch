@@ -4,6 +4,7 @@ import { V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX } from "@shared/lib/safety-s
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
 import { safetyScoreV9ChainRows } from "./safety-score-v9-supply-attribution";
+import { normalizeReviewedDeploymentAddress } from "./safety-score-v9-supply-attribution-contract";
 
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type SupplyReview = NonNullable<ExtensionAsset["supplyReview"]>;
@@ -29,6 +30,84 @@ function unmatchedRouteKey(assetId: string, chain: string, routeCount: number): 
   return `${routeCount === 0 ? V9_UNMATCHED_CHAIN_ROUTE_PREFIX : V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX}${assetId}:${canonicalChainKey(chain)}`;
 }
 
+function buildReviewedDeploymentSupplyReview(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  assetId: string,
+  profile: BridgeRouteRiskProfile | undefined,
+): SupplyReview | null {
+  const attribution = fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
+  if (attribution?.model !== "reviewed-deployment-unit-partition-v1" || !profile) return null;
+
+  const routes = profile.routes ?? [];
+  const deployments = attribution.deployments;
+  if (routes.length !== deployments.length || deployments.length === 0) return null;
+  if (new Set(deployments.map((deployment) => deployment.routeId)).size !== deployments.length) {
+    return null;
+  }
+
+  const routeById = new Map(routes.map((route) => [route.id, route]));
+  const totalUsd = deployments.reduce((sum, deployment) => sum + deployment.currentSupplyUsd, 0);
+  if (totalUsd <= 0) return null;
+
+  const selectedBridgeRoutes: SupplyReview["selectedBridgeRoutes"][number][] = [];
+  const failureDomains: SupplyReview["failureDomains"][number][] = [];
+  let reviewedSelectedUsd = 0;
+  let unreviewedUsd = 0;
+  for (const deployment of deployments) {
+    const route = routeById.get(deployment.routeId);
+    const routeContractAddress = route?.contractAddress ??
+      (route?.id.includes(":") ? route.id.slice(route.id.indexOf(":") + 1) : undefined);
+    if (
+      !route ||
+      routeContractAddress === undefined ||
+      canonicalChainKey(route.destinationChain ?? route.id.slice(0, route.id.indexOf(":"))) !==
+        canonicalChainKey(deployment.chainId) ||
+      normalizeReviewedDeploymentAddress(deployment.chainId, routeContractAddress) !==
+        normalizeReviewedDeploymentAddress(deployment.chainId, deployment.contractAddress)
+    ) {
+      return null;
+    }
+
+    const reviewed = route.reviewDisposition === "reviewed";
+    if (reviewed) reviewedSelectedUsd += deployment.currentSupplyUsd;
+    else unreviewedUsd += deployment.currentSupplyUsd;
+    selectedBridgeRoutes.push(
+      reviewed
+        ? {
+            deploymentRouteKey: route.id,
+            supplyUsd: deployment.currentSupplyUsd,
+            supplyShare: deployment.currentSupplyUsd / totalUsd,
+            reviewState: "selected-reviewed",
+            reviewedRouteKind:
+              route.routeClass === "native" || route.issuanceModel === "native-issuance"
+                ? "native"
+                : "controlled",
+          }
+        : {
+            deploymentRouteKey: route.id,
+            supplyUsd: deployment.currentSupplyUsd,
+            supplyShare: deployment.currentSupplyUsd / totalUsd,
+            reviewState: "selected-unresolved",
+          },
+    );
+    for (const key of route.failureDomainKeys?.length ? route.failureDomainKeys : [route.id]) {
+      failureDomains.push({ kind: "bridge-route", key });
+    }
+  }
+
+  return {
+    selectedBridgeRoutes: selectedBridgeRoutes.sort((left, right) =>
+      compareText(left.deploymentRouteKey, right.deploymentRouteKey),
+    ),
+    selectedRouteSupplyShare: Math.min(1, reviewedSelectedUsd / totalUsd),
+    unknownRouteSupplyShare: 0,
+    unreviewedRouteSupplyShare: Math.min(1, unreviewedUsd / totalUsd),
+    failureDomains: [...new Map(failureDomains.map((domain) => [`${domain.kind}:${domain.key}`, domain])).values()].sort(
+      (left, right) => compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
+    ),
+  };
+}
+
 /**
  * Reconciles the exact captured per-chain circulating supply against the
  * reviewed bridge-route rows. Chains without a unique reviewed route row stay
@@ -39,6 +118,19 @@ export function buildSafetyScoreV9SupplyReview(
   assetId: string,
   profile: BridgeRouteRiskProfile | undefined,
 ): SupplyReview | null {
+  const reviewedDeploymentReview = buildReviewedDeploymentSupplyReview(
+    fixedInput,
+    assetId,
+    profile,
+  );
+  if (reviewedDeploymentReview) return reviewedDeploymentReview;
+  if (
+    fixedInput.safetyScoreV9SupplyAttributionById?.[assetId]?.model ===
+    "reviewed-deployment-unit-partition-v1"
+  ) {
+    return null;
+  }
+
   const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
   const chains = Object.keys(chainRows).sort(compareText);
   const totalUsd = chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);

@@ -23,7 +23,7 @@ import {
 import { evaluateV9StressState } from "@shared/lib/safety-score-v9/stress";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput, normalizeFixedInput } from "../report-cards-fixed-input";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
   computeSafetyScoreV9ReserveExposureKey,
@@ -41,6 +41,12 @@ import {
 import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9-extension-operational-resilience";
 import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9-extension-shock";
 import type { SafetyScoreV9ReviewedTransferFact } from "../safety-score-v9-extension-transfer";
+import {
+  buildReviewedDeploymentRouteInventory,
+  deriveReviewedDeploymentUnitPartition,
+  expectedWmDeploymentIdentity,
+  type ReviewedDeploymentSupplyObservation,
+} from "../safety-score-v9-supply-attribution-contract";
 
 const AS_OF_SEC = 10_000;
 const OBSERVED_AT_SEC = 9_900;
@@ -253,6 +259,59 @@ function exactFixedInput(
     dexDeploymentSupplyCoverageById: {},
     collateralDriftCoins: [],
     liveToFallbackCoins: [],
+  });
+}
+
+function withWmReviewedDeploymentAttribution(
+  fixedInput: ReturnType<typeof exactFixedInput>,
+) {
+  const aggregateSupplyUsd = Object.values(
+    fixedInput.aggregateCirculatingById["wm-m0"]?.circulating ?? {},
+  ).reduce((sum, value) => sum + value, 0);
+  const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
+  if (!inventory) throw new Error("Missing wM route inventory");
+  const observations: ReviewedDeploymentSupplyObservation[] = inventory.routes.map((route, index) => {
+    const identity = expectedWmDeploymentIdentity(route.routeId);
+    if (!identity) throw new Error(`Missing wM deployment identity ${route.routeId}`);
+    const common = {
+      routeId: route.routeId,
+      chainId: route.chainId,
+      contractAddress: route.contractAddress,
+      decimals: route.decimals,
+      rawSupply: route.chainId === "ethereum" ? "86712798085682" : route.chainId === "solana" ? "247794997129" : "1",
+      blockNumberOrSlot: (25_000_000 + index).toString(),
+      blockTimeSec: fixedInput.clockSec - 10 + index,
+    };
+    return identity.runtime === "evm"
+      ? {
+          ...common,
+          blockHash: `0x${(index + 1).toString(16).repeat(64)}`,
+          runtimeCodeSha256: identity.runtimeCodeSha256,
+          implementationAddress: identity.implementationAddress,
+          implementationCodeSha256: identity.implementationCodeSha256,
+          underlyingTokenAddress: identity.underlyingTokenAddress,
+          controllerAddress: identity.controllerAddress,
+        }
+      : {
+          ...common,
+          blockHash: "B".repeat(44),
+          programOwner: identity.programOwner,
+          mintAuthority: identity.mintAuthority,
+          controllerAddress: identity.controllerAddress,
+          controllerProgramOwner: identity.controllerProgramOwner,
+        };
+  });
+  const attribution = deriveReviewedDeploymentUnitPartition({
+    assetId: "wm-m0",
+    aggregateSupplyUsd,
+    registryFingerprint: fixedInput.registryFingerprint,
+    scoringClockSec: fixedInput.clockSec,
+    observations,
+  });
+  if (!attribution) throw new Error("Could not derive wM supply attribution");
+  return normalizeFixedInput({
+    ...fixedInput,
+    safetyScoreV9SupplyAttributionById: { "wm-m0": attribution },
   });
 }
 
@@ -2102,6 +2161,72 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(supply.selectedRouteSupplyShare).toBeNull();
     expect(supply.unknownRouteSupplyShare).toBeNull();
     expect(supply.unreviewedRouteSupplyShare).toBeNull();
+  });
+
+  it("compiles exact wM route shares without bridge-materiality uncertainty", () => {
+    const clockSec = Date.parse("2026-07-24T09:00:00Z") / 1_000;
+    const fixed = withWmReviewedDeploymentAttribution(
+      exactFixedInput({
+        assetId: "wm-m0",
+        clockSec,
+        chainSupplyByChain: {},
+        aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
+        omitLiveReserve: true,
+      }),
+    );
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        ["wm-m0", wrappedMSource as unknown as V9ExtensionRegistryMeta],
+      ]),
+    });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const wm = compiled.assets[0]!;
+
+    expect(wm.supply.status.observationState).toBe("known");
+    expect(wm.supply.selectedBridgeRoutes).toHaveLength(5);
+    expect(wm.supply.selectedRouteSupplyShare).toBe(1);
+    expect(wm.supply.unknownRouteSupplyShare).toBe(0);
+    expect(wm.supply.unreviewedRouteSupplyShare).toBe(0);
+    expect(wm.gaps.map((gap) => gap.reasonCode)).not.toContain(
+      "runtime-bridge-materiality-unavailable",
+    );
+    expect(
+      wm.evidence.find((evidence) => evidence.evidenceId === "wm-m0:chain-supply"),
+    ).toMatchObject({ sourceId: "safety-score-v9-reviewed-deployment-attribution" });
+
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.scoreInput.pillars.control.reasons.map((reason) => reason.code)).not.toContain(
+      "runtime-bridge-materiality-unavailable",
+    );
+  });
+
+  it("restores the bridge-materiality cap when the wM packet is absent", () => {
+    const fixed = exactFixedInput({
+      assetId: "wm-m0",
+      clockSec: Date.parse("2026-07-24T09:00:00Z") / 1_000,
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
+      omitLiveReserve: true,
+    });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        ["wm-m0", wrappedMSource as unknown as V9ExtensionRegistryMeta],
+      ]),
+    });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const wm = compiled.assets[0]!;
+
+    expect(wm.supply.chainDistribution).toBeNull();
+    expect(wm.gaps.map((gap) => gap.reasonCode)).toContain(
+      "missing-bridge-routes",
+    );
+    const evaluated = evaluateV9FactSet(
+      compiled,
+      V9_CANDIDATE_POLICY_V1,
+    ).assets[0]!;
+    expect(
+      evaluated.scoreInput.pillars.control.reasons.map((reason) => reason.code),
+    ).toContain("runtime-bridge-materiality-unavailable");
   });
 
   it("keeps supply missing when neither per-chain rows nor a positive aggregate bucket exist", () => {

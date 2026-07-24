@@ -2,6 +2,11 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import {
+  createSupplyAttributionJournalV1,
+  type SupplyAttributionAdmissionCode,
+  type SupplyAttributionJournalV1,
+} from "@shared/types/safety-score-v9-supply-attribution-journal";
 import { rethrowIfAborted, throwIfAborted } from "./abort";
 import type { ChainRpcConfig } from "./chain-registry";
 import {
@@ -10,6 +15,12 @@ import {
 } from "./evm-rpc";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "./evm-selectors";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
+import { buildReviewedDeploymentRouteInventory } from "./safety-score-v9-supply-attribution-contract";
+import {
+  observeWmReviewedDeploymentUnitPartitionAttempt,
+  type WmReviewedDeploymentObservationAttempt,
+  type WmReviewedDeploymentRejectionCode,
+} from "./safety-score-v9-wm-supply-observer";
 
 interface LockMintSupplyAttributionConfig {
   canonicalChain: string;
@@ -35,6 +46,29 @@ export interface LockMintSupplyPartition {
 
 type V9SupplyAttributionById = ReportCardsFixedInput["safetyScoreV9SupplyAttributionById"];
 type V9CurrentChainRows = Record<string, { current: number }>;
+
+export interface SafetyScoreV9SupplyAttributionCapture {
+  attributionById: V9SupplyAttributionById;
+  journalRecords: SupplyAttributionJournalV1[];
+}
+
+function aggregateSupplyUsd(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  assetId: string,
+): number {
+  return Object.values(
+    fixedInput.aggregateCirculatingById[assetId]?.circulating ?? {},
+  ).reduce((sum, value) => sum + value, 0);
+}
+
+function hasUpstreamChainSupply(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  assetId: string,
+): boolean {
+  return Object.values(fixedInput.chainCirculatingById[assetId] ?? {}).some(
+    (row) => row.current > 0,
+  );
+}
 
 /**
  * Partitions an existing aggregate liability by the observed canonical
@@ -143,52 +177,190 @@ async function observeLockMintSupplyPartition(
   });
 }
 
+function admissionCodeForWmRejection(
+  rejectionCode: WmReviewedDeploymentRejectionCode,
+): SupplyAttributionAdmissionCode {
+  switch (rejectionCode) {
+    case "route-inventory-unavailable":
+      return "supply-attribution.admission.rejected-route-inventory";
+    case "deployment-identity-unavailable":
+    case "deployment-identity-mismatch":
+      return "supply-attribution.admission.rejected-identity-drift";
+    case "deployment-state-invalid":
+      return "supply-attribution.admission.rejected-invalid-payload";
+    case "safe-block-unavailable":
+      return "supply-attribution.admission.rejected-stale";
+    case "packet-reconciliation-failed":
+      return "supply-attribution.admission.rejected-reconciliation";
+    case "chain-rpc-unavailable":
+    case "deployment-state-unavailable":
+      return "supply-attribution.admission.rejected-upstream";
+  }
+}
+
+function buildWmSupplyAttributionJournalRecord(input: {
+  fixedInput: Readonly<ReportCardsFixedInput>;
+  attemptId: string;
+  attemptedAtSec: number;
+  completedAtSec: number;
+  outcome: WmReviewedDeploymentObservationAttempt;
+}): SupplyAttributionJournalV1 {
+  const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
+  const outcome = input.outcome;
+  return createSupplyAttributionJournalV1({
+    schemaVersion: 1,
+    lane: "supply-attribution",
+    assetId: "wm-m0",
+    attemptId: input.attemptId,
+    sourceId: "wm.reviewed-deployment-unit-partition.v1",
+    sourceOriginClass: "onchain-observation",
+    baseInputGenerationId: input.fixedInput.baseInputGenerationId,
+    sourceGeneration: input.fixedInput.sourceGeneration,
+    registryFingerprint: input.fixedInput.registryFingerprint,
+    routeInventoryDigest:
+      outcome.status === "accepted"
+        ? outcome.attribution.routeInventoryDigest
+        : inventory?.digest ?? null,
+    attemptCode: "supply-attribution.collector.attempted",
+    admissionCode: outcome.status === "accepted"
+      ? "supply-attribution.admission.accepted"
+      : admissionCodeForWmRejection(outcome.rejectionCode),
+    fallbackCode: outcome.status === "accepted"
+      ? "supply-attribution.fallback.not-used"
+      : "supply-attribution.fallback.aggregate-only",
+    attemptedAtSec: input.attemptedAtSec,
+    completedAtSec: input.completedAtSec,
+    scoringClockSec: input.fixedInput.clockSec,
+    sourceObservedAtSec: outcome.status === "accepted"
+      ? outcome.attribution.observedAtSec
+      : null,
+    failedRouteId:
+      outcome.status === "rejected" ? outcome.failedRouteId : null,
+    contentSha256: outcome.status === "accepted"
+      ? sha256Hex(stableJsonStringifyV1(outcome.attribution))
+      : null,
+  });
+}
+
 /**
  * Captures V9-only supply attribution without mutating the public stablecoin
  * row or the V8 chain map used by exact replay.
  */
+export async function captureSafetyScoreV9SupplyAttribution(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
+): Promise<SafetyScoreV9SupplyAttributionCapture> {
+  const activeAssetIds = new Set(fixedInput.activeAssetIds);
+  const attributionById: V9SupplyAttributionById = {};
+  const journalRecords: SupplyAttributionJournalV1[] = [];
+
+  if (chainRpcs && chainRpcs.size > 0) {
+    for (const [assetId, config] of Object.entries(LOCK_MINT_SUPPLY_ATTRIBUTIONS)) {
+      throwIfAborted(signal);
+      if (!activeAssetIds.has(assetId)) continue;
+      if (hasUpstreamChainSupply(fixedInput, assetId)) continue;
+      const existingAggregateSupplyUsd = aggregateSupplyUsd(fixedInput, assetId);
+
+      try {
+        const partition = await observeLockMintSupplyPartition(
+          assetId,
+          existingAggregateSupplyUsd,
+          config,
+          chainRpcs,
+          signal,
+        );
+        if (!partition) continue;
+        attributionById[assetId] = {
+          model: "canonical-lock-mint-partition-v1",
+          observedAtSec: fixedInput.clockSec,
+          currentSupplyUsdByChain: partition.currentSupplyUsdByChain,
+        };
+      } catch (error) {
+        rethrowIfAborted(error, signal);
+        console.warn(`[safety-score-v9] Supply attribution failed for ${assetId}`);
+      }
+    }
+  }
+
+  if (activeAssetIds.has("wm-m0") && !hasUpstreamChainSupply(fixedInput, "wm-m0")) {
+    const attemptedAtSec = Math.floor(Date.now() / 1_000);
+    const attemptId = `supply-attribution:${crypto.randomUUID()}`;
+    let outcome: WmReviewedDeploymentObservationAttempt;
+    try {
+      outcome =
+        chainRpcs && chainRpcs.size > 0
+          ? await observeWmReviewedDeploymentUnitPartitionAttempt({
+              aggregateSupplyUsd: aggregateSupplyUsd(fixedInput, "wm-m0"),
+              registryFingerprint: fixedInput.registryFingerprint,
+              scoringClockSec: fixedInput.clockSec,
+              chainRpcs,
+              signal,
+            })
+          : {
+              status: "rejected",
+              rejectionCode: "chain-rpc-unavailable",
+              failedRouteId: null,
+            };
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      outcome = {
+        status: "rejected",
+        rejectionCode: "deployment-state-unavailable",
+        failedRouteId: null,
+      };
+    }
+    const completedAtSec = Math.max(
+      attemptedAtSec,
+      Math.floor(Date.now() / 1_000),
+    );
+    if (outcome.status === "accepted") {
+      attributionById["wm-m0"] = outcome.attribution;
+    }
+    journalRecords.push(
+      buildWmSupplyAttributionJournalRecord({
+        fixedInput,
+        attemptId,
+        attemptedAtSec,
+        completedAtSec,
+        outcome,
+      }),
+    );
+  }
+
+  return { attributionById, journalRecords };
+}
+
 export async function captureSafetyScoreV9SupplyAttributionById(
   fixedInput: Readonly<ReportCardsFixedInput>,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<V9SupplyAttributionById> {
-  if (!chainRpcs || chainRpcs.size === 0) return {};
-  const activeAssetIds = new Set(fixedInput.activeAssetIds);
-  const attributionById: V9SupplyAttributionById = {};
+  return (
+    await captureSafetyScoreV9SupplyAttribution(fixedInput, chainRpcs, signal)
+  ).attributionById;
+}
 
-  for (const [assetId, config] of Object.entries(LOCK_MINT_SUPPLY_ATTRIBUTIONS)) {
-    throwIfAborted(signal);
-    if (!activeAssetIds.has(assetId)) continue;
-    const existingSupplyUsd = Object.values(fixedInput.chainCirculatingById[assetId] ?? {}).reduce(
-      (sum, row) => sum + row.current,
-      0,
-    );
-    if (existingSupplyUsd > 0) continue;
-    const aggregateSupplyUsd = Object.values(
-      fixedInput.aggregateCirculatingById[assetId]?.circulating ?? {},
-    ).reduce((sum, value) => sum + value, 0);
-
-    try {
-      const partition = await observeLockMintSupplyPartition(
-        assetId,
-        aggregateSupplyUsd,
-        config,
-        chainRpcs,
-        signal,
-      );
-      if (!partition) continue;
-      attributionById[assetId] = {
-        model: "canonical-lock-mint-partition-v1",
-        observedAtSec: fixedInput.clockSec,
-        currentSupplyUsdByChain: partition.currentSupplyUsdByChain,
-      };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      console.warn(`[safety-score-v9] Supply attribution failed for ${assetId}:`, error);
-    }
-  }
-
-  return attributionById;
+export async function enrichSafetyScoreV9FixedInputSupplyWithEvidence(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
+): Promise<{
+  fixedInput: ReportCardsFixedInput;
+  journalRecords: SupplyAttributionJournalV1[];
+}> {
+  const capture = await captureSafetyScoreV9SupplyAttribution(
+    fixedInput,
+    chainRpcs,
+    signal,
+  );
+  return {
+    fixedInput: normalizeFixedInput({
+      ...fixedInput,
+      safetyScoreV9SupplyAttributionById: capture.attributionById,
+    }),
+    journalRecords: capture.journalRecords,
+  };
 }
 
 export async function enrichSafetyScoreV9FixedInputSupply(
@@ -196,15 +368,12 @@ export async function enrichSafetyScoreV9FixedInputSupply(
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<ReportCardsFixedInput> {
-  const safetyScoreV9SupplyAttributionById = await captureSafetyScoreV9SupplyAttributionById(
+  const capture = await enrichSafetyScoreV9FixedInputSupplyWithEvidence(
     fixedInput,
     chainRpcs,
     signal,
   );
-  return normalizeFixedInput({
-    ...fixedInput,
-    safetyScoreV9SupplyAttributionById,
-  });
+  return capture.fixedInput;
 }
 
 export function safetyScoreV9ChainRows(
@@ -212,10 +381,19 @@ export function safetyScoreV9ChainRows(
   assetId: string,
 ): V9CurrentChainRows {
   const attribution = fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
-  if (attribution) {
+  if (attribution?.model === "canonical-lock-mint-partition-v1") {
     return Object.fromEntries(
       Object.entries(attribution.currentSupplyUsdByChain).map(([chain, current]) => [chain, { current }]),
     );
+  }
+  if (attribution?.model === "reviewed-deployment-unit-partition-v1") {
+    const rows: V9CurrentChainRows = {};
+    for (const deployment of attribution.deployments) {
+      rows[deployment.chainId] = {
+        current: (rows[deployment.chainId]?.current ?? 0) + deployment.currentSupplyUsd,
+      };
+    }
+    return rows;
   }
   return fixedInput.chainCirculatingById[assetId] ?? {};
 }

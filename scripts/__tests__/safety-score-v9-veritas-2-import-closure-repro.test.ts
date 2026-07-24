@@ -29,6 +29,16 @@ const OMITTED_SCORE_BEARING_IMPORTS = [
     importedBy: "worker/src/lib/safety-score-v9-fact-set.ts",
     importSpecifier: "./safety-score-v9-supply-attribution",
   },
+  {
+    path: "worker/src/lib/safety-score-v9-supply-attribution-contract.ts",
+    importedBy: "worker/src/lib/safety-score-v9-supply-attribution.ts",
+    importSpecifier: "./safety-score-v9-supply-attribution-contract",
+  },
+  {
+    path: "worker/src/lib/safety-score-v9-wm-supply-observer.ts",
+    importedBy: "worker/src/lib/safety-score-v9-supply-attribution.ts",
+    importSpecifier: "./safety-score-v9-wm-supply-observer",
+  },
 ] as const;
 
 function fixtureRoot(): string {

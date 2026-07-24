@@ -29,6 +29,12 @@ import {
   serializeNormalizedReportCardsReplay,
 } from "../report-cards-fixed-input";
 import { safetyScoreV9ChainSupplySourceGenerationId } from "../safety-score-v9-supply-attribution";
+import {
+  buildReviewedDeploymentRouteInventory,
+  deriveReviewedDeploymentUnitPartition,
+  expectedWmDeploymentIdentity,
+  type ReviewedDeploymentSupplyObservation,
+} from "../safety-score-v9-supply-attribution-contract";
 
 function fixedInput(dexLiqMap: Record<string, DexLiquidityData> = {}) {
   const dexUpdatedAt = Object.values(dexLiqMap)[0]?.updatedAt ?? 1_783_891_100;
@@ -69,6 +75,55 @@ function fixedInput(dexLiqMap: Record<string, DexLiquidityData> = {}) {
 function withoutBaseInputGenerationId<T extends { baseInputGenerationId: string }>(input: T) {
   const { baseInputGenerationId: _baseInputGenerationId, ...legacy } = input;
   return legacy;
+}
+
+function wmSupplyAttribution(input: {
+  aggregateSupplyUsd: number;
+  registryFingerprint: string;
+  clockSec: number;
+}) {
+  const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
+  if (!inventory) throw new Error("Missing wM route inventory");
+  const observations: ReviewedDeploymentSupplyObservation[] = inventory.routes.map((route, index) => {
+    const identity = expectedWmDeploymentIdentity(route.routeId);
+    if (!identity) throw new Error(`Missing wM identity ${route.routeId}`);
+    const common = {
+      routeId: route.routeId,
+      chainId: route.chainId,
+      contractAddress: route.contractAddress,
+      decimals: route.decimals,
+      rawSupply: route.chainId === "ethereum" ? "86712798085682" : route.chainId === "solana" ? "247794997129" : "1",
+      blockNumberOrSlot: (25_000_000 + index).toString(),
+      blockTimeSec: input.clockSec - 10 + index,
+    };
+    return identity.runtime === "evm"
+      ? {
+          ...common,
+          blockHash: `0x${(index + 1).toString(16).repeat(64)}`,
+          runtimeCodeSha256: identity.runtimeCodeSha256,
+          implementationAddress: identity.implementationAddress,
+          implementationCodeSha256: identity.implementationCodeSha256,
+          underlyingTokenAddress: identity.underlyingTokenAddress,
+          controllerAddress: identity.controllerAddress,
+        }
+      : {
+          ...common,
+          blockHash: "B".repeat(44),
+          programOwner: identity.programOwner,
+          mintAuthority: identity.mintAuthority,
+          controllerAddress: identity.controllerAddress,
+          controllerProgramOwner: identity.controllerProgramOwner,
+        };
+  });
+  const attribution = deriveReviewedDeploymentUnitPartition({
+    assetId: "wm-m0",
+    aggregateSupplyUsd: input.aggregateSupplyUsd,
+    registryFingerprint: input.registryFingerprint,
+    scoringClockSec: input.clockSec,
+    observations,
+  });
+  if (!attribution) throw new Error("Could not derive wM attribution fixture");
+  return attribution;
 }
 
 function route(routeId: string, commonModeKeys: string[], assetKeys: string[]): ExitRouteObservation {
@@ -337,6 +392,91 @@ describe("fixed report-card input replay", () => {
         },
       }),
     ).toThrow("does not conserve aggregate circulating USD");
+  });
+
+  it("round-trips exact wM route attribution only through the V9 envelope", async () => {
+    const aggregateSupplyUsd = 87_020_618.58982982;
+    const aggregateInput = normalizeFixedInput(
+      withoutBaseInputGenerationId({
+        ...exactFixedInput(),
+        aggregateCirculatingById: {
+          "wm-m0": {
+            circulating: { peggedUSD: aggregateSupplyUsd },
+            observedAtSec: 1_783_891_190,
+          },
+        },
+      }),
+    );
+    const attribution = wmSupplyAttribution({
+      aggregateSupplyUsd,
+      registryFingerprint: aggregateInput.registryFingerprint,
+      clockSec: aggregateInput.clockSec,
+    });
+    const attributedInput = normalizeFixedInput({
+      ...aggregateInput,
+      safetyScoreV9SupplyAttributionById: {
+        "wm-m0": {
+          ...attribution,
+          deployments: [...attribution.deployments].reverse(),
+        },
+      },
+    });
+
+    expect(attributedInput.baseInputGenerationId).toBe(aggregateInput.baseInputGenerationId);
+    expect(safetyScoreV9ChainSupplySourceGenerationId(attributedInput)).not.toBe(
+      safetyScoreV9ChainSupplySourceGenerationId(aggregateInput),
+    );
+    expect(serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(attributedInput))).toBe(
+      serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(aggregateInput)),
+    );
+    const direct = attributedInput.safetyScoreV9SupplyAttributionById["wm-m0"]!;
+    expect(direct.model).toBe("reviewed-deployment-unit-partition-v1");
+    if (direct.model !== "reviewed-deployment-unit-partition-v1") {
+      throw new Error("Expected direct deployment attribution");
+    }
+    expect(direct.deployments.map((row) => row.routeId)).toEqual(
+      [...direct.deployments.map((row) => row.routeId)].sort(),
+    );
+    expect(direct.deployments.reduce((sum, row) => sum + row.currentSupplyUsd, 0)).toBe(
+      aggregateSupplyUsd,
+    );
+
+    const v8Entry = await buildReportCardsFixedInputCacheEntry(attributedInput);
+    const v8RoundTrip = await parseReportCardsFixedInputCacheValue(v8Entry.value);
+    expect(v8RoundTrip.safetyScoreV9SupplyAttributionById).toEqual({});
+    const v9Entry = await buildSafetyScoreV9FixedInputCacheEntry(attributedInput, {
+      model: "v8",
+      schemaVersion: 1,
+      methodologyVersion: attributedInput.methodologyVersion,
+      evaluationBuildDigest: "a".repeat(64),
+      baseInputGenerationId: attributedInput.baseInputGenerationId,
+      publicationGenerationId: attributedInput.sourceGeneration,
+    });
+    const v9RoundTrip = await parseReportCardsFixedInputCacheValue(v9Entry.value);
+    expect(v9RoundTrip.safetyScoreV9SupplyAttributionById["wm-m0"]).toEqual(direct);
+
+    expect(() =>
+      normalizeFixedInput({
+        ...attributedInput,
+        safetyScoreV9SupplyAttributionById: {
+          "wm-m0": {
+            ...direct,
+            routeInventoryDigest: "0".repeat(64),
+          },
+        },
+      }),
+    ).toThrow("route inventory mismatch");
+    expect(() =>
+      normalizeFixedInput({
+        ...attributedInput,
+        safetyScoreV9SupplyAttributionById: {
+          "wm-m0": {
+            ...direct,
+            deployments: direct.deployments.slice(1),
+          },
+        },
+      }),
+    ).toThrow("route count mismatch");
   });
 
   it("normalizes equivalent record insertion orders", () => {

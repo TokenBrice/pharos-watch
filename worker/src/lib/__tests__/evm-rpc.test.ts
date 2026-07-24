@@ -20,6 +20,7 @@ const {
   MULTICALL3_ADDRESS,
   encodeMulticall3Aggregate3CallData,
   fetchEvmMulticall3Aggregate3AtBlock,
+  fetchEvmBlockHeader,
   fetchEtherscanProxyHex,
   fetchEtherscanUint256AtBlock,
   fetchEvmBlockNumber,
@@ -404,6 +405,45 @@ describe("evm-rpc helpers", () => {
 
     expect(blockNumber).toBe(16);
     expect(blockTimestamp).toBe(100);
+  });
+
+  it("requires a numbered block header with its canonical hash", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            result: {
+              number: "0x10",
+              timestamp: "0x64",
+              hash: `0x${"A".repeat(64)}`,
+            },
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            result: {
+              number: "0x11",
+              timestamp: "0x64",
+              hash: `0x${"b".repeat(64)}`,
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+
+    await expect(
+      fetchEvmBlockHeader("ethereum", 16, { extraRpcUrls: ["https://rpc.example"] }),
+    ).resolves.toEqual({
+      number: 16,
+      timestamp: 100,
+      hash: `0x${"a".repeat(64)}`,
+    });
+    await expect(
+      fetchEvmBlockHeader("ethereum", 16, { extraRpcUrls: ["https://rpc.example"] }),
+    ).resolves.toBeNull();
   });
 
   it("resolves the closest block at or before a target timestamp", async () => {

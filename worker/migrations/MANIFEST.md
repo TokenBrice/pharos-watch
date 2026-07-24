@@ -166,6 +166,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0220     | `0220_safety_score_v9_movement_review_carry.sql`             | Add the movement-review class key and reviewed score anchors that let a recorded disposition carry across runs while the movement class is unchanged     |
 | 0221     | `0221_telegram_digest_safety_identity.sql`                   | Bind immutable daily and weekly Telegram editions to their authored Safety Score identity and mark legacy rows unbound                                   |
 | 0222     | `0222_report_card_evidence_journal.sql`                      | Add a bounded diagnostic-only reserve evidence-attempt journal for exact V9 fixed-input provenance                                                       |
+| 0223     | `0223_safety_score_v9_supply_attribution_journal.sql`         | Add immutable bounded V9-only supply-attribution attempt, rejection, and aggregate-fallback provenance                                                   |
 
 ## Retired Individual Migrations
 
@@ -200,6 +201,7 @@ Current owner rulings for append-only operational/product tables that are intent
 | `safety_score_v9_shadow_daily` | V9 advisory evidence - retain through V9 observation | One compact row per UTC day retains retry counts, selected candidate identity, advisory coverage/movement checks, legacy artifact-key metadata where present, and bounded failure context for owner review. |
 | `safety_score_history_v2` | Product archive - keep forever | Version-aware score history preserves methodology boundaries, rollback/restoration provenance, and exact model/input identities; public history and Tape can depend on old rows indefinitely. |
 | `report_card_evidence_journal` | Bounded diagnostic provenance - 45 days and 32 rows per asset | The reserve evidence-attempt store prunes by age and per-asset count; exact V9 fixed inputs retain at most the latest two rows per asset and never score from them. |
+| `safety_score_v9_supply_attribution_journal` | Bounded diagnostic provenance - 45 days and 32 rows per asset | Reviewed-deployment attribution attempts retain bounded admission and fallback evidence; private V9 fixed inputs receive at most the latest two rows per asset, and neither V8 nor scoring reads them. |
 
 ## Known Anomalies
 
@@ -272,6 +274,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0220_safety_score_v9_movement_review_carry.sql`: roll back disposition carry by restoring the prior Worker. Keep the added columns; older Workers select an explicit column list that excludes them, so the additive columns are inert until a carrying Worker is redeployed.
 - `0221_telegram_digest_safety_identity.sql`: roll back digest identity fencing by restoring the prior Worker. Keep the additive context column; older Workers ignore it. Do not replay a `failed_permanent` legacy or stale-identity edition without reviewing its archived digest input and current Safety Score identity.
 - `0222_report_card_evidence_journal.sql`: roll back journal capture by restoring the prior Worker. Keep the additive table and indexes; older Workers ignore them, and no journal row participates in V8 publication, V9 fact compilation, scoring, activation, or public responses.
+- `0223_safety_score_v9_supply_attribution_journal.sql`: roll back supply-attribution journal capture by restoring the prior Worker. Keep the additive table and indexes; older Workers ignore them, and no row participates in V8 publication, V9 fact compilation, scoring, activation, or public responses.
 
 ## Rollback Procedure
 

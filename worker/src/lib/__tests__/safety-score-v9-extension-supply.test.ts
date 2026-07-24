@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import xautMetaSource from "@shared/data/stablecoins/coins/xaut-tether.json";
+import wmMetaSource from "@shared/data/stablecoins/coins/wm-m0.json";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9SupplyReview, safetyScoreV9RouteSupplyShare } from "../safety-score-v9-extension-supply";
 import { deriveLockMintSupplyPartition } from "../safety-score-v9-supply-attribution";
@@ -24,6 +25,106 @@ const ETH_ROUTE = {
 } as unknown as BridgeRoutes[number];
 
 describe("buildSafetyScoreV9SupplyReview", () => {
+  it("joins a reviewed deployment packet by exact wM route ID and retains zero supply", () => {
+    const profile = wmMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile;
+    const supplyUsdByChain: Record<string, number> = {
+      ethereum: 86_613_000,
+      arbitrum: 88_000,
+      base: 70_000,
+      plume: 0,
+      solana: 249_000,
+    };
+    const fixedInput = {
+      chainCirculatingById: { "wm-m0": {} },
+      safetyScoreV9SupplyAttributionById: {
+        "wm-m0": {
+          model: "reviewed-deployment-unit-partition-v1",
+          deployments: profile.routes!.map((route) => ({
+            routeId: route.id,
+            chainId: route.destinationChain,
+            contractAddress: route.contractAddress,
+            currentSupplyUsd: supplyUsdByChain[route.destinationChain]!,
+          })),
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+
+    const review = buildSafetyScoreV9SupplyReview(fixedInput, "wm-m0", profile);
+    expect(review).not.toBeNull();
+    expect(review!.selectedBridgeRoutes).toHaveLength(5);
+    expect(review!.selectedRouteSupplyShare).toBe(1);
+    expect(review!.unknownRouteSupplyShare).toBe(0);
+    expect(review!.unreviewedRouteSupplyShare).toBe(0);
+    expect(
+      review!.selectedBridgeRoutes.find((route) => route.deploymentRouteKey.startsWith("plume:")),
+    ).toMatchObject({ supplyUsd: 0, supplyShare: 0, reviewState: "selected-reviewed" });
+  });
+
+  it("keeps same-chain contracts separate when direct route identity is available", () => {
+    const routes = [
+      {
+        id: "ethereum:0x0000000000000000000000000000000000000001",
+        destinationChain: "ethereum",
+        contractAddress: "0x0000000000000000000000000000000000000001",
+        reviewDisposition: "reviewed",
+      },
+      {
+        id: "ethereum:0x0000000000000000000000000000000000000002",
+        destinationChain: "ethereum",
+        contractAddress: "0x0000000000000000000000000000000000000002",
+        reviewDisposition: "reviewed",
+      },
+    ] as unknown as BridgeRoutes;
+    const fixedInput = {
+      chainCirculatingById: { alpha: {} },
+      safetyScoreV9SupplyAttributionById: {
+        alpha: {
+          model: "reviewed-deployment-unit-partition-v1",
+          deployments: routes.map((route, index) => ({
+            routeId: route.id,
+            chainId: "ethereum",
+            contractAddress: route.contractAddress,
+            currentSupplyUsd: index === 0 ? 60 : 40,
+          })),
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+    const review = buildSafetyScoreV9SupplyReview(fixedInput, "alpha", profile(routes));
+
+    expect(review!.selectedBridgeRoutes.map((route) => route.deploymentRouteKey)).toEqual(
+      routes.map((route) => route.id),
+    );
+    expect(review!.selectedBridgeRoutes.map((route) => route.supplyShare)).toEqual([0.6, 0.4]);
+  });
+
+  it("fails closed when a direct packet is partial or mismatched", () => {
+    const routes = [
+      ETH_ROUTE,
+      {
+        id: "base:0x0000000000000000000000000000000000000002",
+        destinationChain: "base",
+        contractAddress: "0x0000000000000000000000000000000000000002",
+        reviewDisposition: "reviewed",
+      } as unknown as BridgeRoutes[number],
+    ];
+    const fixedInput = {
+      chainCirculatingById: { alpha: { ethereum: { current: 100 } } },
+      safetyScoreV9SupplyAttributionById: {
+        alpha: {
+          model: "reviewed-deployment-unit-partition-v1",
+          deployments: [{
+            routeId: ETH_ROUTE.id,
+            chainId: "ethereum",
+            contractAddress: "native",
+            currentSupplyUsd: 100,
+          }],
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+
+    expect(buildSafetyScoreV9SupplyReview(fixedInput, "alpha", profile(routes))).toBeNull();
+  });
+
   it("returns null without supply rows and without routes on a multi-chain asset", () => {
     expect(buildSafetyScoreV9SupplyReview(fixedInputStub({}), "alpha", undefined)).toBeNull();
     expect(
