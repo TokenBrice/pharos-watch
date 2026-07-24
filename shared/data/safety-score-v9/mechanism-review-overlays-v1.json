@@ -1795,7 +1795,7 @@
     {
       "assetId": "buidl-blackrock",
       "archetype": "tbill",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-07-24",
       "sources": [
         {
           "label": "SEC-filed BUIDL/Securitize agreement (authenticated participating shares and transfer-agent controls)",
@@ -1814,18 +1814,75 @@
           "url": "https://www.businesswire.com/news/home/20260326402329/en/BUIDL-tokenized-by-Securitize-is-now-verified-onchain-by-Chronicle-Proof-of-Asset"
         },
         {
-          "label": "Chronicle BUIDL Proof of Asset dashboard reviewed July 15, 2026",
-          "url": "https://chroniclelabs.org/dashboard/proofofasset/blackrock-buidl"
+          "label": "Chronicle BUIDL Proof of Asset holdings and fund-administration dashboard (holdings dated July 22, 2026; proof verified July 24, 2026)",
+          "url": "https://chroniclelabs.org/dashboard/proof-of-asset/blackrock-buidl"
         }
       ],
-      "notes": "The SEC-filed agreement defines BUIDL tokens as authenticated non-voting participating shares, requires confirmation that shares are validly issued, fully paid, and nonassessable, and identifies Securitize as registrar and transfer agent. Securitize identifies the BlackRock USD Institutional Digital Liquidity Fund, BlackRock as manager, and The Bank of New York Mellon as custodian. The agreement defers governing rights, redemptions, and liquidation treatment to a confidential offering memorandum, so public evidence establishes a fund-share representation but not seniority or liquidation priority; fund claim and seniority is limited. No public independent NAV-administrator methodology or current maturity table was established, so NAV valuation and duration and liquidity remain uncurated. Chronicle's BUIDL-specific Proof of Asset release and dashboard provide continuous independent verification of fund holdings, composition, and valuation data. Under the implemented T-bill assurance semantics this supports adequate loss recovery design as an assurance and reconciliation signal; it does not assert a public legal loss waterfall.",
+      "notes": "The SEC-filed agreement defines BUIDL tokens as authenticated non-voting participating shares, requires confirmation that shares are validly issued, fully paid, and nonassessable, and identifies Securitize as registrar and transfer agent. Securitize identifies the BlackRock USD Institutional Digital Liquidity Fund, BlackRock as manager, and The Bank of New York Mellon as custodian. The agreement defers governing rights, redemptions, and liquidation treatment to a confidential offering memorandum, so public evidence establishes a fund-share representation but not seniority or liquidation priority; fund claim and seniority remains limited. New dated evidence reviewed 2026-07-24: Chronicle's independently verified holdings table has source date 2026-07-22 and one shared proof identity across all 15 positions. It reports $2,567,909,823.85 of market value: five overnight tri-party repos with Deutsche Bank ($545M), BofA ($500M), Citi ($500M), J.P. Morgan ($450M), and RBC ($177M), plus ten U.S. Treasury bills totaling $395,909,823.85 and maturing no later than 2026-10-15. The value-weighted maturity from the disclosed position dates is 6.44 days; every position has a maturity date and the maximum is 85 days. Chronicle also reports 2,618,033,868.090449 shares at $1 and identifies BNY Mellon as fund administrator and custodian. navValuation is adequate because a named independent administrator and continuously verified share/NAV and position-level valuation are public, but the confidential offering memorandum and administrator valuation procedures are not. durationAndLiquidity is adequate because the complete dated schedule is public, 84.58% is overnight repo, the remaining bills mature within 85 days, and the dashboard reports daily subscriptions/redemptions; no public liquidity-stress test or unconditional holder liquidity covenant supports strong. Chronicle's continuous proof and full holdings-to-aggregate reconciliation keep lossRecoveryDesign adequate as an assurance signal; they do not establish a legal loss waterfall.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
           "quality": "limited"
         },
+        "navValuation": {
+          "quality": "adequate"
+        },
+        "durationAndLiquidity": {
+          "quality": "adequate"
+        },
         "lossRecoveryDesign": {
           "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "stac-securitize",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-24",
+      "sources": [
+        {
+          "label": "Securitize STAC primary-market page (fund-share structure, qualified-investor access, and offering materials)",
+          "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+        },
+        {
+          "label": "Securitize STAC launch disclosure (AAA CLO mandate, BNY custodian and sub-advisor, BVI private-fund structure)",
+          "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx"
+        },
+        {
+          "label": "SEC Form D for Securitize AAA CLO Tokenized Fund",
+          "url": "https://www.sec.gov/Archives/edgar/data/2095325/000209532525000001/0002095325-25-000001-index.htm"
+        },
+        {
+          "label": "Chronicle STAC Proof of Asset holdings and fund-administration dashboard (holdings dated July 23, 2026; proof verified July 24, 2026)",
+          "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac"
+        }
+      ],
+      "notes": "STAC is a digital share of Securitize AAA CLO Tokenized Fund, Ltd., a BVI private fund offered to qualified investors under Rule 506(c). Securitize's launch disclosure says the unlevered fund invests substantially all assets in U.S. dollar-denominated AAA-rated CLO tranches, names BNY Investments as sub-advisor and The Bank of New York Mellon as custodian, and identifies Securitize Fund Services as administrator. Chronicle's independently verified holdings table has source date 2026-07-23 and one shared proof identity across all 60 positions. It reports $376,279,787.48 of gross market value against $353,794,829.30 NAV and 345,159.08608 shares at $1,025.019603: one $28,029,350 PGIM AAA CLO ETF position and 59 individually identified CLO tranches. Maturity dates cover 92.55% of market value, span 3,836 to 5,473 days from the source date, and have a value-weighted average of 4,499.21 days; the 7.45% PGIM ETF position has no stated maturity and is excluded from that measured average. creditQuality is adequate because the public mandate is AAA CLO exposure and the complete current position identities are independently verified, but position-level rating reports and tranche prospectuses were not reviewed. seniority is limited because the token represents a private-fund share and the offering memorandum that governs share-class and liquidation rights is not public. legalEnforceability is limited: the BVI company and SEC Form D establish entity and offering identity, but Form D is a notice filing rather than prudential authorization and public token-holder governing terms are absent. valuationCadence is adequate with a named administrator, daily Chronicle source dates, verified NAV/share price, and holdings reconciliation; the administrator's valuation manual is not public. maturityAndLiquidity is adequate as an evidence judgment because exact dated positions and the dashboard's daily-redemption, T+3 settlement terms make the long-duration mismatch measurable; the 12.3-year measured WAM and lack of a public stress-liquidity schedule remain adverse inputs rather than missing evidence. custody is adequate because BNY is publicly named as custodian and Chronicle verifies the custodian-derived portfolio, but account-level segregation and replacement terms are not public. recovery is limited because shareholders absorb credit and valuation losses through NAV and no fund-level backstop or public wind-down waterfall was established.",
+      "metrics": {
+        "weightedAverageMaturityDays": 4499.21,
+        "valuationCadenceDays": 1
+      },
+      "components": {
+        "creditQuality": {
+          "quality": "adequate"
+        },
+        "seniority": {
+          "quality": "limited"
+        },
+        "legalEnforceability": {
+          "quality": "limited"
+        },
+        "valuationCadence": {
+          "quality": "adequate"
+        },
+        "maturityAndLiquidity": {
+          "quality": "adequate"
+        },
+        "custody": {
+          "quality": "adequate"
+        },
+        "recovery": {
+          "quality": "limited"
         }
       }
     },
