@@ -267,10 +267,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
   const attributionById: V9SupplyAttributionById = {};
   const journalRecords: SupplyAttributionJournalV1[] = [];
 
-  if (
-    activeAssetIds.has(XAUT_ASSET_ID) &&
-    !hasUpstreamChainSupply(fixedInput, XAUT_ASSET_ID)
-  ) {
+  if (activeAssetIds.has(XAUT_ASSET_ID)) {
     const attemptedAtSec = Math.floor(Date.now() / 1_000);
     const attemptId = `supply-attribution:${crypto.randomUUID()}`;
     let outcome: XautSupplyAttributionObservationAttempt;

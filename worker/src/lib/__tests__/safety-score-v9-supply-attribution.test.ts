@@ -31,7 +31,6 @@ vi.mock("../safety-score-v9-xaut-supply-observer", async (importOriginal) => {
 
 import {
   captureSafetyScoreV9SupplyAttribution,
-  captureSafetyScoreV9SupplyAttributionById,
   deriveLockMintSupplyPartition,
   safetyScoreV9ChainSupplyObservedAtSec,
 } from "../safety-score-v9-supply-attribution";
@@ -214,19 +213,8 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     ).toBe(OBSERVED_AT_SEC - 600);
   });
 
-  it("preserves a real upstream chain map and fails closed on unavailable evidence", async () => {
+  it("rechecks XAUT despite an upstream chain map and fails closed on unavailable evidence", async () => {
     const existing = { Ethereum: { current: XAUT_AGGREGATE_SUPPLY_USD } };
-
-    await expect(
-      captureSafetyScoreV9SupplyAttributionById(
-        xautFixedInput(existing),
-        chainRpcs(),
-      ),
-    ).resolves.toEqual({});
-    expect(
-      rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt,
-    ).not.toHaveBeenCalled();
-
     rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockResolvedValue({
       status: "rejected",
       rejectionCode: "deployment-identity-mismatch",
@@ -234,10 +222,13 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
         "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
     });
     const capture = await captureSafetyScoreV9SupplyAttribution(
-      xautFixedInput(),
+      xautFixedInput(existing),
       chainRpcs(),
     );
     expect(capture.attributionById).toEqual({});
+    expect(
+      rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt,
+    ).toHaveBeenCalledTimes(1);
     expect(capture.journalRecords[0]).toMatchObject({
       admissionCode: "supply-attribution.admission.rejected-identity-drift",
       fallbackCode: "supply-attribution.fallback.aggregate-only",
