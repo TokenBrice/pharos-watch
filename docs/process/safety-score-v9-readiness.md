@@ -129,6 +129,14 @@ Impact: a small reviewed peripheral deployment can impose a bounded adjustment
 without automatically capping the whole asset, while material or unattributed
 exposure remains fail-closed.
 
+One conserved lock/mint representation can be reviewed as a group when the
+canonical lockbox proves the group's aggregate supply but no primary source
+proves its destination split. The group retains its exact route inventory,
+shared failure domains, and aggregate holder share without inventing per-chain
+balances. A group below both deployment and common-mode materiality floors is a
+bounded deployment slice; at either floor it returns to unresolved,
+score-capping treatment.
+
 ### 4. Smooth Bounded Aggregation
 
 The formula uses smooth bounded headroom above the weakest material pillar
@@ -224,9 +232,13 @@ designed:
   reason registry's configured ceiling when that reason is score-bearing.
 - Where a provider publishes only aggregate lock-mint supply, a V9-only
   attribution may partition the existing aggregate liability from canonical
-  total supply and observed lockbox balances. It must conserve the aggregate,
-  count locked backing once, preserve unknown destination allocation, and fail
-  closed when the onchain read is unavailable.
+  circulating liabilities and observed lockbox balances. XAUT requires a fresh
+  configured issuer disclosure whose authorized and not-issued raw amounts
+  reconcile exactly to finalized onchain total supply and the pinned issuer
+  treasury balance; quarantined supply must be zero. It must conserve the
+  aggregate, count locked backing once, preserve unknown destination
+  allocation, and fail closed when either the issuer or onchain evidence is
+  unavailable, stale, skewed, or mismatched.
 
 These are evidence and attribution corrections. They do not change V8 inputs
 or public V8 scoring.

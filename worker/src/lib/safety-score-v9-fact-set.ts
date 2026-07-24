@@ -3,7 +3,11 @@ import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { resolveChainId } from "@shared/lib/chains";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
-import { canonicalV9DependencyEdgeKey, canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
+import {
+  canonicalV9DependencyEdgeKey,
+  canonicalV9RouteKey,
+  isV9RepresentationGroupRoute,
+} from "@shared/lib/safety-score-v9/facts";
 import { deriveV9WindowedPegScore } from "@shared/lib/safety-score-v9/formula";
 import {
   evaluateV9ExitAssetFacts,
@@ -2793,7 +2797,9 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
         sourceId:
           v9Attribution === undefined
             ? "report-cards-chain-circulating"
-            : v9Attribution.model === "canonical-lock-mint-partition-v1"
+            : v9Attribution.model === "canonical-lock-mint-partition-v1" ||
+                v9Attribution.model ===
+                  "canonical-lock-mint-group-partition-v2"
               ? "safety-score-v9-lock-mint-attribution"
               : "safety-score-v9-reviewed-deployment-attribution",
         sourceGenerationId: source.generationId,
@@ -2929,7 +2935,14 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
     unknownRouteSupplyShare: review?.unknownRouteSupplyShare ?? null,
     unreviewedRouteSupplyShare: review?.unreviewedRouteSupplyShare ?? null,
     failureDomains: stableFailureDomains([
-      ...chains.map((chain) => ({ kind: "chain" as const, key: resolveChainId(chain) ?? chain.toLowerCase() })),
+      ...chains.flatMap((chain) =>
+        isV9RepresentationGroupRoute(chain)
+          ? []
+          : [{
+              kind: "chain" as const,
+              key: resolveChainId(chain) ?? chain.toLowerCase(),
+            }],
+      ),
       ...(review?.failureDomains ?? []),
     ]),
   };

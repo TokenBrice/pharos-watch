@@ -7,6 +7,7 @@ import flipcashMetaSource from "@shared/data/stablecoins/coins/usdf-flipcash.jso
 import astherusMetaSource from "@shared/data/stablecoins/coins/usdf-astherus.json";
 import megaMetaSource from "@shared/data/stablecoins/coins/usdm-mega.json";
 import wrappedMSource from "@shared/data/stablecoins/coins/wm-m0.json";
+import xautMetaSource from "@shared/data/stablecoins/coins/xaut-tether.json";
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
@@ -18,6 +19,7 @@ import {
 } from "@shared/lib/safety-score-v9/exit";
 import {
   V9_CANDIDATE_POLICY_V1,
+  loadV9MethodologyPolicy,
   resolveV9ReasonPolicy,
 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9StressState } from "@shared/lib/safety-score-v9/stress";
@@ -47,6 +49,21 @@ import {
   expectedWmDeploymentIdentity,
   type ReviewedDeploymentSupplyObservation,
 } from "../safety-score-v9-supply-attribution-contract";
+import {
+  buildXautTransparencySource,
+  deriveXautRepresentationGroupSupplyAttribution,
+  XAUT0_ADAPTER_ADDRESS,
+  XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+  XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
+  XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
+  XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
+  XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
+  XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
+  XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+  XAUT_CANONICAL_TOKEN_ADDRESS,
+  XAUT_TRANSPARENCY_SOURCE_ID,
+  XAUT_TREASURY_ADDRESS,
+} from "../safety-score-v9-xaut-supply-attribution-contract";
 
 const AS_OF_SEC = 10_000;
 const OBSERVED_AT_SEC = 9_900;
@@ -2198,6 +2215,302 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(evaluated.scoreInput.pillars.control.reasons.map((reason) => reason.code)).not.toContain(
       "runtime-bridge-materiality-unavailable",
     );
+  });
+
+  it("compiles one reviewed XAUt0 group control without destination supply claims", () => {
+    const clockSec = Date.parse("2026-07-24T09:00:00Z") / 1_000;
+    const aggregateSupplyUsd = 2_480_000_000;
+    const fixed = exactFixedInput({
+      assetId: "xaut-tether",
+      clockSec,
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedGOLD: aggregateSupplyUsd },
+      omitLiveReserve: true,
+    });
+    const attribution =
+      deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd,
+        registryFingerprint: fixed.registryFingerprint,
+        scoringClockSec: fixed.clockSec,
+        observation: {
+          chainId: "ethereum",
+          canonicalTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+          adapterAddress: XAUT0_ADAPTER_ADDRESS,
+          decimals: 6,
+          canonicalTotalSupplyRaw: "707747089000",
+          treasuryAddress: XAUT_TREASURY_ADDRESS,
+          treasuryBalanceRaw: "94923429468",
+          adapterLockedSupplyRaw: "29720802896",
+          blockNumber: 25_601_844,
+          blockTimeSec: clockSec - 100,
+          blockHash: `0x${"ab".repeat(32)}`,
+          canonicalRuntimeCodeSha256:
+            XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+          canonicalImplementationAddress:
+            XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
+          canonicalImplementationCodeSha256:
+            XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
+          adapterRuntimeCodeSha256:
+            XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
+          adapterImplementationAddress:
+            XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+          adapterImplementationCodeSha256:
+            XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
+          adapterTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+          adapterEndpointAddress:
+            XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
+          disclosure: {
+            sourceId: XAUT_TRANSPARENCY_SOURCE_ID,
+            sourceConfigDigest:
+              buildXautTransparencySource()!.configDigest,
+            sourceTimestampSec: clockSec - 200,
+            responseSha256: "e".repeat(64),
+            totalAuthorizedRaw: "707747089000",
+            notIssuedRaw: "94923429468",
+            quarantinedRaw: "0",
+          },
+        },
+      });
+    expect(attribution).not.toBeNull();
+    fixed.safetyScoreV9SupplyAttributionById = {
+      "xaut-tether": attribution!,
+    };
+    fixed.baseInputGenerationId =
+      deriveReportCardsBaseInputGenerationId(fixed);
+
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "xaut-tether",
+          xautMetaSource as unknown as V9ExtensionRegistryMeta,
+        ],
+      ]),
+    });
+    const compiled =
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const xaut = compiled.assets[0]!;
+    const groupRow = xaut.supply.selectedBridgeRoutes.find((route) =>
+      route.deploymentRouteKey.startsWith("representation-group:"),
+    );
+    const bridgeControls = xaut.controls.filter(
+      (control) => control.controlKind === "bridge",
+    );
+
+    expect(xaut.supply.selectedBridgeRoutes).toHaveLength(2);
+    expect(groupRow).toMatchObject({
+      reviewState: "selected-reviewed",
+      reviewedRouteKind: "controlled",
+      supplyShare: expect.closeTo(0.04849813227, 9),
+    });
+    expect(xaut.supply.selectedRouteSupplyShare).toBe(1);
+    expect(xaut.supply.unknownRouteSupplyShare).toBe(0);
+    expect(xaut.supply.chainDistribution).toMatchObject({
+      chains: [
+        {
+          chainId: "ethereum",
+          supplyShare: expect.closeTo(0.95150186773, 9),
+        },
+      ],
+      unattributedSupplyShare: expect.closeTo(0.04849813227, 9),
+    });
+    expect(bridgeControls).toHaveLength(1);
+    expect(bridgeControls[0]).toMatchObject({
+      deploymentKey:
+        "representation-group:xaut-tether:xaut0-omnichain",
+      materialSupplyShare: expect.closeTo(0.04849813227, 9),
+      authority: {
+        authorityKey:
+          "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+        model: "unknown",
+      },
+      failureDomains: [
+        {
+          kind: "bridge-route",
+          key: "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+        },
+        {
+          kind: "bridge-route",
+          key: "protocol:xaut0-omnichain",
+        },
+      ],
+    });
+    expect(
+      bridgeControls.some((control) =>
+        attribution!.representationGroup.routeIds.includes(
+          control.deploymentKey,
+        ),
+      ),
+    ).toBe(false);
+
+    const evaluated = evaluateV9FactSet(
+      compiled,
+      V9_CANDIDATE_POLICY_V1,
+    ).assets[0]!;
+    const reasonCodes =
+      evaluated.scoreInput.pillars.control.reasons.map(
+        (reason) => reason.code,
+      );
+    expect(reasonCodes).not.toContain(
+      "immaterial-unrecognized-chain-pool",
+    );
+    expect(reasonCodes).not.toContain(
+      "material-bridge-supply-unmatched",
+    );
+
+    const singleAssetCommonModePolicy = loadV9MethodologyPolicy({
+      ...V9_CANDIDATE_POLICY_V1.policy,
+      policyId: "safety-score-v9-xaut-common-mode-test",
+      semantic: {
+        ...V9_CANDIDATE_POLICY_V1.policy.semantic,
+        materiality: {
+          ...V9_CANDIDATE_POLICY_V1.policy.semantic.materiality,
+          commonControlMinAssets: 1,
+        },
+      },
+    });
+    const commonModeSignals = evaluateV9FactSet(
+      compiled,
+      singleAssetCommonModePolicy,
+    ).assets[0]!.scoreInput.dependencyStructuralSignals.filter((signal) =>
+      signal.failureDomainKeys.some((key) =>
+        key.startsWith("bridge-route:"),
+      ),
+    );
+    expect(commonModeSignals).toEqual([
+      expect.objectContaining({
+        failureDomainKeys: [
+          "bridge-route:contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+        ],
+        materialSharePct: expect.closeTo(4.849813227, 7),
+        severity: "low",
+        responsibility: "measured-adverse",
+      }),
+      expect.objectContaining({
+        failureDomainKeys: [
+          "bridge-route:protocol:xaut0-omnichain",
+        ],
+        materialSharePct: expect.closeTo(4.849813227, 7),
+        severity: "low",
+        responsibility: "measured-adverse",
+      }),
+    ]);
+  });
+
+  it("fails closed when the XAUt0 group reaches the materiality floor", () => {
+    const clockSec = Date.parse("2026-07-24T09:00:00Z") / 1_000;
+    const aggregateSupplyUsd = 2_480_000_000;
+    const fixed = exactFixedInput({
+      assetId: "xaut-tether",
+      clockSec,
+      liquidityScore: 95,
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedGOLD: aggregateSupplyUsd },
+    });
+    const attribution =
+      deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd,
+        registryFingerprint: fixed.registryFingerprint,
+        scoringClockSec: fixed.clockSec,
+        observation: {
+          chainId: "ethereum",
+          canonicalTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+          adapterAddress: XAUT0_ADAPTER_ADDRESS,
+          decimals: 6,
+          canonicalTotalSupplyRaw: "1000000000",
+          treasuryAddress: XAUT_TREASURY_ADDRESS,
+          treasuryBalanceRaw: "100000000",
+          adapterLockedSupplyRaw: "95000000",
+          blockNumber: 25_601_844,
+          blockTimeSec: clockSec - 100,
+          blockHash: `0x${"cd".repeat(32)}`,
+          canonicalRuntimeCodeSha256:
+            XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+          canonicalImplementationAddress:
+            XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
+          canonicalImplementationCodeSha256:
+            XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
+          adapterRuntimeCodeSha256:
+            XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
+          adapterImplementationAddress:
+            XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+          adapterImplementationCodeSha256:
+            XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
+          adapterTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+          adapterEndpointAddress:
+            XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
+          disclosure: {
+            sourceId: XAUT_TRANSPARENCY_SOURCE_ID,
+            sourceConfigDigest:
+              buildXautTransparencySource()!.configDigest,
+            sourceTimestampSec: clockSec - 200,
+            responseSha256: "f".repeat(64),
+            totalAuthorizedRaw: "1000000000",
+            notIssuedRaw: "100000000",
+            quarantinedRaw: "0",
+          },
+        },
+      });
+    expect(attribution).not.toBeNull();
+    expect(95_000_000 / 1_000_000_000).toBeLessThan(0.1);
+    expect(
+      attribution!.representationGroup.currentSupplyUsd /
+        aggregateSupplyUsd,
+    ).toBeCloseTo(95_000_000 / 900_000_000, 12);
+    expect(
+      attribution!.representationGroup.currentSupplyUsd /
+        aggregateSupplyUsd,
+    ).toBeGreaterThanOrEqual(0.1);
+    fixed.safetyScoreV9SupplyAttributionById = {
+      "xaut-tether": attribution!,
+    };
+    fixed.baseInputGenerationId =
+      deriveReportCardsBaseInputGenerationId(fixed);
+
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "xaut-tether",
+          xautMetaSource as unknown as V9ExtensionRegistryMeta,
+        ],
+      ]),
+    });
+    expect(
+      baseline.assets[0]!.supplyReview?.selectedBridgeRoutes.find((route) =>
+        route.deploymentRouteKey.startsWith("representation-group:"),
+      ),
+    ).toMatchObject({
+      reviewState: "selected-unresolved",
+      supplyShare: expect.closeTo(0.10555555556, 9),
+    });
+    expect(
+      baseline.assets[0]!.economicControlReview?.bridge.status
+        .observationState,
+    ).toBe("bounded-unknown");
+
+    const compiled =
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const evaluated = evaluateV9FactSet(
+      compiled,
+      V9_CANDIDATE_POLICY_V1,
+    ).assets[0]!;
+    expect(
+      evaluated.scoreInput.pillars.control.reasons.map(
+        (reason) => reason.code,
+      ),
+    ).toContain("runtime-bridge-materiality-unavailable");
+    expect(evaluated.trace.caps).toContainEqual(
+      expect.objectContaining({
+        kind: "reason:runtime-bridge-materiality-unavailable",
+        limit: 55,
+        source: "reason",
+        binding: true,
+      }),
+    );
+    expect(evaluated.trace.bindingCap).toMatchObject({
+      kind: "reason:runtime-bridge-materiality-unavailable",
+      limit: 55,
+      source: "reason",
+    });
   });
 
   it("restores the bridge-materiality cap when the wM packet is absent", () => {

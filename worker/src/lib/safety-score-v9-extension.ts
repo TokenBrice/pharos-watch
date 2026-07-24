@@ -68,6 +68,7 @@ import {
   buildSafetyScoreV9SupplyReview,
   safetyScoreV9RouteSupplyShare,
   V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
+  V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
   V9_UNMATCHED_CHAIN_ROUTE_PREFIX,
   V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX,
 } from "./safety-score-v9-extension-supply";
@@ -1503,6 +1504,63 @@ function unmatchedBridgeControl(
   };
 }
 
+function representationGroupId(
+  assetId: string,
+  deploymentRouteKey: string,
+): string | null {
+  const prefix = `${V9_REPRESENTATION_GROUP_ROUTE_PREFIX}${assetId}:`;
+  return deploymentRouteKey.startsWith(prefix) &&
+    deploymentRouteKey.length > prefix.length
+    ? deploymentRouteKey.slice(prefix.length)
+    : null;
+}
+
+function representationGroupBridgeControl(
+  assetId: string,
+  route: NonNullable<
+    ExtensionAsset["supplyReview"]
+  >["selectedBridgeRoutes"][number],
+  failureDomains: readonly V9FailureDomainRef[],
+): ControlOverlay {
+  const reviewed = route.reviewState === "selected-reviewed";
+  const authorityDomain =
+    failureDomains.find(
+      (domain) =>
+        domain.kind === "bridge-route" &&
+        domain.key.startsWith("contract:"),
+    ) ?? failureDomains[0];
+  return {
+    controlKey: `bridge-group:${assetId}:${digest(
+      "safety-score-v9.representation-group-bridge-control-key.v1",
+      route.deploymentRouteKey,
+    ).slice(0, 20)}`,
+    deploymentKey: route.deploymentRouteKey,
+    controlKind: "bridge",
+    scope: "deployment",
+    capabilities: ["bridge-mint"],
+    capSemantics: reviewed
+      ? { kind: "unbounded", bound: null }
+      : { kind: "unknown", bound: null },
+    claimImpairment: reviewed ? "unbounded" : "unknown",
+    economicLossScope: reviewed ? "deployment" : "unknown",
+    authority: {
+      authorityKey:
+        authorityDomain?.key ??
+        `bridge-route:${route.deploymentRouteKey}`,
+      // The adapter contract is the observed common mechanism, not proof of
+      // the heterogeneous destination mint authorities.
+      model: "unknown",
+      threshold: null,
+    },
+    delaySec: null,
+    materialSupplyShare: route.supplyShare,
+    incidentState: reviewed ? "none" : "unknown",
+    failureDomains: [...failureDomains].sort((left, right) =>
+      compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
+    ),
+  };
+}
+
 function canonicalRouteChain(routeId: string): string | null {
   const separator = routeId.indexOf(":");
   return separator > 0 ? resolveChainId(routeId.slice(0, separator)) : null;
@@ -1539,6 +1597,27 @@ function hasCompleteSubthresholdBridgeInventory(
 
   const exactRowsByDeployment = new Map(rows.map((row) => [row.deploymentRouteKey, row]));
   for (const row of rows) {
+    if (
+      row.deploymentRouteKey.startsWith(
+        V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
+      )
+    ) {
+      const control = controlsByDeployment.get(row.deploymentRouteKey);
+      if (
+        row.reviewState !== "selected-reviewed" ||
+        control === undefined ||
+        control.scope !== "deployment" ||
+        control.economicLossScope !== "deployment" ||
+        control.materialSupplyShare === null ||
+        Math.abs(control.materialSupplyShare - row.supplyShare) >
+          0.000001 ||
+        row.supplyShare >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD ||
+        row.supplyShare >= COMMON_MODE_MATERIAL_SHARE_THRESHOLD
+      ) {
+        return false;
+      }
+      continue;
+    }
     if (row.reviewState === "selected-reviewed") continue;
     // RULED D-J (2026-07-19): an unrecognized-chain-label pool below the
     // common-mode materiality floor is an accepted bounded row; the proof no
@@ -1573,6 +1652,7 @@ function hasCompleteSubthresholdBridgeInventory(
       continue;
     }
     if (row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX)) continue;
+    if (row.deploymentRouteKey.startsWith(V9_REPRESENTATION_GROUP_ROUTE_PREFIX)) continue;
     const chain = canonicalRouteChain(row.deploymentRouteKey);
     if (chain !== null) presentCanonicalChains.add(chain);
   }
@@ -1651,20 +1731,71 @@ function adaptBridgeReview(
   }
   const profileRoutes = profile.routes ?? [];
   const reviewedRoutes = profileRoutes.filter((route) => route.reviewDisposition === "reviewed");
+  const representationGroups = (
+    supplyReview?.selectedBridgeRoutes ?? []
+  ).flatMap((row) => {
+    const representationId = representationGroupId(
+      meta.id,
+      row.deploymentRouteKey,
+    );
+    if (representationId === null) return [];
+    const members = profileRoutes.filter(
+      (route) => route.representationId === representationId,
+    );
+    const tiers = new Set(members.map((route) => route.riskTier));
+    if (
+      members.length === 0 ||
+      tiers.size !== 1 ||
+      members.some(
+        (route) =>
+          route.reviewDisposition !== "reviewed" ||
+          route.routeClass === "native" ||
+          route.issuanceModel !== "wrapped-representation" ||
+          route.semantics !== "lock-mint",
+      )
+    ) {
+      return [];
+    }
+    return [{
+      control: representationGroupBridgeControl(
+        meta.id,
+        row,
+        supplyReview?.failureDomains ?? [],
+      ),
+      routeIds: members.map((route) => route.id),
+      tier: [...tiers][0]!,
+    }];
+  });
+  const groupedRouteIds = new Set(
+    representationGroups.flatMap((group) => group.routeIds),
+  );
   // Keep every non-native route as a control fact so exact deployment shares
   // remain available even when the route review itself is unresolved.
   const profileControls = profileRoutes
+    .filter((route) => !groupedRouteIds.has(route.id))
     .map((route) => bridgeControl(meta.id, route, safetyScoreV9RouteSupplyShare(supplyReview ?? null, route.id)))
     .filter((control): control is ControlOverlay => control !== null);
   const unmatchedControls = (supplyReview?.selectedBridgeRoutes ?? [])
     .filter((route) => route.reviewState === "unmatched")
     .map((route) => unmatchedBridgeControl(meta.id, route));
-  const controls = [...profileControls, ...unmatchedControls];
+  const controls = [
+    ...profileControls,
+    ...representationGroups.map((group) => group.control),
+    ...unmatchedControls,
+  ].sort((left, right) => compareText(left.controlKey, right.controlKey));
   const controlsByDeployment = new Map(controls.map((control) => [control.deploymentKey, control]));
-  const routes = reviewedRoutes.flatMap((route) => {
-    const control = controlsByDeployment.get(route.id);
-    return control ? [{ controlKey: control.controlKey, tier: route.riskTier }] : [];
-  });
+  const routes = [
+    ...reviewedRoutes
+      .filter((route) => !groupedRouteIds.has(route.id))
+      .flatMap((route) => {
+        const control = controlsByDeployment.get(route.id);
+        return control ? [{ controlKey: control.controlKey, tier: route.riskTier }] : [];
+      }),
+    ...representationGroups.map((group) => ({
+      controlKey: group.control.controlKey,
+      tier: group.tier,
+    })),
+  ].sort((left, right) => compareText(left.controlKey, right.controlKey));
   if (controls.length === 0) {
     return {
       review: {

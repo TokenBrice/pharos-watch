@@ -108,9 +108,9 @@ export async function publishReportCardCache(
             ),
             loadSupplyAttributionJournalByIdV1(
               db,
-              supplyFixedInput.activeAssetIds.includes("wm-m0")
-                ? ["wm-m0"]
-                : [],
+              ["wm-m0", "xaut-tether"].filter((assetId) =>
+                supplyFixedInput.activeAssetIds.includes(assetId),
+              ),
               supplyFixedInput.clockSec,
               shadowSignal,
             ),

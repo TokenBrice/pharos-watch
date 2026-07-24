@@ -40,8 +40,12 @@ import {
 import {
   normalizeReviewedDeploymentAttribution,
   reviewedDeploymentAttributionValidationError,
-  type ReviewedDeploymentUnitPartitionV1,
 } from "./safety-score-v9-supply-attribution-contract";
+import {
+  normalizeXautRepresentationGroupAttribution,
+  XautRepresentationGroupSupplyAttributionV2Schema,
+  xautRepresentationGroupAttributionValidationError,
+} from "./safety-score-v9-xaut-supply-attribution-contract";
 import { buildLiveReportCards } from "./report-cards-snapshot-card";
 import {
   buildDefunctReportCards,
@@ -108,6 +112,7 @@ const ReviewedDeploymentUnitPartitionSchema = z.strictObject({
 
 const SafetyScoreV9SupplyAttributionSchema = z.discriminatedUnion("model", [
   CanonicalLockMintSupplyAttributionSchema,
+  XautRepresentationGroupSupplyAttributionV2Schema,
   ReviewedDeploymentUnitPartitionSchema,
 ]);
 
@@ -723,7 +728,10 @@ function assertFixedInputConsistency(input: ReportCardsFixedInput): void {
     const attributedSupplyUsd =
       attribution.model === "canonical-lock-mint-partition-v1"
         ? Object.values(attribution.currentSupplyUsdByChain).reduce((sum, value) => sum + value, 0)
-        : attribution.deployments.reduce((sum, deployment) => sum + deployment.currentSupplyUsd, 0);
+        : attribution.model === "canonical-lock-mint-group-partition-v2"
+          ? attribution.canonical.currentSupplyUsd +
+            attribution.representationGroup.currentSupplyUsd
+          : attribution.deployments.reduce((sum, deployment) => sum + deployment.currentSupplyUsd, 0);
     const toleranceUsd = Math.max(0.000001, aggregateSupplyUsd * 1e-12);
     if (aggregateSupplyUsd <= 0 || Math.abs(attributedSupplyUsd - aggregateSupplyUsd) > toleranceUsd) {
       throw new Error(
@@ -733,6 +741,19 @@ function assertFixedInputConsistency(input: ReportCardsFixedInput): void {
     if (attribution.model === "reviewed-deployment-unit-partition-v1") {
       const validationError = reviewedDeploymentAttributionValidationError({
         assetId,
+        attribution,
+        aggregateSupplyUsd,
+        registryFingerprint: input.registryFingerprint,
+        clockSec: input.clockSec,
+      });
+      if (validationError) throw new Error(validationError);
+    } else if (attribution.model === "canonical-lock-mint-group-partition-v2") {
+      if (attribution.assetId !== assetId) {
+        throw new Error(
+          `V9 supply attribution key ${assetId} does not match packet asset ${attribution.assetId}`,
+        );
+      }
+      const validationError = xautRepresentationGroupAttributionValidationError({
         attribution,
         aggregateSupplyUsd,
         registryFingerprint: input.registryFingerprint,
@@ -921,7 +942,9 @@ export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
                 ...attribution,
                 currentSupplyUsdByChain: sortedRecord(attribution.currentSupplyUsdByChain),
               }
-            : normalizeReviewedDeploymentAttribution(attribution),
+            : attribution.model === "canonical-lock-mint-group-partition-v2"
+              ? normalizeXautRepresentationGroupAttribution(attribution)
+              : normalizeReviewedDeploymentAttribution(attribution),
         ]),
       ),
     ),

@@ -51,8 +51,14 @@ const SupplyAttributionJournalV1PayloadSchema = z
     lane: z.literal("supply-attribution"),
     assetId: AssetIdSchema,
     attemptId: SafeIdentifierSchema,
-    sourceId: z.literal("wm.reviewed-deployment-unit-partition.v1"),
-    sourceOriginClass: z.literal("onchain-observation"),
+    sourceId: z.enum([
+      "wm.reviewed-deployment-unit-partition.v1",
+      "xaut.canonical-lock-mint-group-partition.v2",
+    ]),
+    sourceOriginClass: z.enum([
+      "onchain-observation",
+      "issuer-disclosure-plus-onchain",
+    ]),
     baseInputGenerationId: SafeIdentifierSchema,
     sourceGeneration: SafeIdentifierSchema,
     registryFingerprint: Sha256Schema,
@@ -69,6 +75,20 @@ const SupplyAttributionJournalV1PayloadSchema = z
   })
   .strict()
   .superRefine((record, ctx) => {
+    const expectedOrigin =
+      record.sourceId ===
+      "xaut.canonical-lock-mint-group-partition.v2"
+        ? "issuer-disclosure-plus-onchain"
+        : "onchain-observation";
+    if (record.sourceOriginClass !== expectedOrigin) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sourceOriginClass"],
+        message:
+          `Supply attribution source ${record.sourceId} requires ` +
+          `${expectedOrigin} origin`,
+      });
+    }
     if (record.completedAtSec < record.attemptedAtSec) {
       ctx.addIssue({
         code: "custom",

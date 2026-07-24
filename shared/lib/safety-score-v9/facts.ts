@@ -43,6 +43,24 @@ export function isV9UncanonicalizedChainPoolRoute(deploymentRouteKey: string): b
   return deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX);
 }
 
+/**
+ * Exact supply held behind one reviewed lock/mint representation whose
+ * destination distribution is not observed. The row carries one bounded
+ * group share and must never be expanded into inferred per-destination shares.
+ */
+export const V9_REPRESENTATION_GROUP_ROUTE_PREFIX = "representation-group:";
+
+export function v9RepresentationGroupRouteKey(
+  assetId: string,
+  representationId: string,
+): string {
+  return `${V9_REPRESENTATION_GROUP_ROUTE_PREFIX}${assetId}:${representationId}`;
+}
+
+export function isV9RepresentationGroupRoute(deploymentRouteKey: string): boolean {
+  return deploymentRouteKey.startsWith(V9_REPRESENTATION_GROUP_ROUTE_PREFIX);
+}
+
 export function canonicalV9DependencyEdgeKey(
   dependencyType: DependencyType,
   upstreamAssetId: string,

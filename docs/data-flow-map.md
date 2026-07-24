@@ -82,12 +82,21 @@ persistence failure cannot unwind the V8 batch. A failed attempt can be retried
 later on the same day, and a later successful refresh replaces that day's
 current candidate observation.
 The V9-only supply-attribution enrichment may also bind an aggregate asset supply
-to a reviewed route-ID inventory. The initial wM observer requires the complete
+to a reviewed route-ID inventory. The wM observer requires the complete
 Ethereum, Arbitrum, Base, Plume, and Solana deployment packet, verifies pinned
 runtime/controller identities at fixed-clock blocks or slots, and conserves the
-existing aggregate supply while allocating it across routes. Any missing,
-duplicate, stale, skewed, identity-mismatched, or non-conserving row rejects the
-whole packet; V8 and public payloads remain unchanged.
+existing aggregate supply while allocating it across routes. The XAUT observer
+binds the configured Tether transparency disclosure to one finalized Ethereum
+token/treasury/adapter observation and the complete reviewed XAUt0
+representation-group inventory. The issuer's `totalAuthorized - notIssued`
+amount is admitted as circulating liabilities only when finalized
+`totalSupply()` and treasury `balanceOf()` independently match the two disclosed
+inputs and quarantined supply is zero. It emits one non-group canonical row and
+one pooled group row carrying the exact locked share of circulating liabilities
+and common failure domains, without claiming destination-chain shares. Any
+missing, duplicate, stale, skewed, issuer/on-chain-mismatched,
+identity-mismatched, inventory-mismatched, materially unresolved, or
+non-conserving packet fails closed; V8 and public payloads remain unchanged.
 Reserve sync may carry a nested candidate-only exact route attempt into the
 redemption-backstop preload and then the V9 extension. The first such path is
 FPI's Controller Pool observation, which is bound to the same successful issuer

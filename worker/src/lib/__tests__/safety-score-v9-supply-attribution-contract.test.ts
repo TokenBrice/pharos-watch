@@ -7,6 +7,24 @@ import {
   reviewedDeploymentAttributionValidationError,
   type ReviewedDeploymentSupplyObservation,
 } from "../safety-score-v9-supply-attribution-contract";
+import {
+  buildXautRepresentationGroupInventory,
+  buildXautTransparencySource,
+  deriveXautRepresentationGroupSupplyAttribution,
+  XAUT0_ADAPTER_ADDRESS,
+  XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+  XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
+  XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
+  XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
+  XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
+  XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
+  XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+  XAUT_CANONICAL_TOKEN_ADDRESS,
+  XAUT_TRANSPARENCY_SOURCE_ID,
+  XAUT_TREASURY_ADDRESS,
+  xautRepresentationGroupAttributionValidationError,
+  type XautLockMintObservation,
+} from "../safety-score-v9-xaut-supply-attribution-contract";
 
 const AGGREGATE_SUPPLY_USD = 87_020_618.58982982;
 const REGISTRY_FINGERPRINT = "a".repeat(64);
@@ -193,5 +211,184 @@ describe("reviewed deployment supply attribution contract", () => {
         clockSec: CLOCK_SEC,
       }),
     ).toContain("registry fingerprint mismatch");
+  });
+});
+
+const XAUT_AGGREGATE_SUPPLY_USD = 2_480_000_000;
+
+function xautObservation(): XautLockMintObservation {
+  return {
+    chainId: "ethereum",
+    canonicalTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+    adapterAddress: XAUT0_ADAPTER_ADDRESS,
+    decimals: 6,
+    canonicalTotalSupplyRaw: "707747089000",
+    treasuryAddress: XAUT_TREASURY_ADDRESS,
+    treasuryBalanceRaw: "94923429468",
+    adapterLockedSupplyRaw: "29720802896",
+    blockNumber: 25_601_844,
+    blockTimeSec: CLOCK_SEC - 100,
+    blockHash: `0x${"ab".repeat(32)}`,
+    canonicalRuntimeCodeSha256:
+      XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+    canonicalImplementationAddress:
+      XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
+    canonicalImplementationCodeSha256:
+      XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
+    adapterRuntimeCodeSha256:
+      XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
+    adapterImplementationAddress:
+      XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+    adapterImplementationCodeSha256:
+      XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
+    adapterTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+    adapterEndpointAddress: XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
+    disclosure: {
+      sourceId: XAUT_TRANSPARENCY_SOURCE_ID,
+      sourceConfigDigest: buildXautTransparencySource()!.configDigest,
+      sourceTimestampSec: CLOCK_SEC - 200,
+      responseSha256: "c".repeat(64),
+      totalAuthorizedRaw: "707747089000",
+      notIssuedRaw: "94923429468",
+      quarantinedRaw: "0",
+    },
+  };
+}
+
+describe("XAUT representation-group supply attribution contract", () => {
+  it("binds all reviewed XAUt0 routes to one conserved group", () => {
+    const inventory = buildXautRepresentationGroupInventory();
+    expect(inventory).toMatchObject({
+      assetId: "xaut-tether",
+      representationId: "xaut0-omnichain",
+      riskTier: "external-lock-mint",
+      commonFailureDomainKeys: ["protocol:xaut0-omnichain"],
+    });
+    expect(inventory!.routes).toHaveLength(14);
+
+    const attribution =
+      deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC,
+        observation: xautObservation(),
+      });
+    expect(attribution).not.toBeNull();
+    expect(
+      attribution!.canonical.currentSupplyUsd +
+        attribution!.representationGroup.currentSupplyUsd,
+    ).toBe(XAUT_AGGREGATE_SUPPLY_USD);
+    expect(
+      attribution!.representationGroup.currentSupplyUsd /
+        XAUT_AGGREGATE_SUPPLY_USD,
+    ).toBeCloseTo(0.04849813227, 10);
+    expect(attribution!.observedAtSec).toBe(CLOCK_SEC - 100);
+    expect(attribution!.representationGroup.routeIds).toEqual(
+      inventory!.routes.map((route) => route.routeId),
+    );
+    expect(
+      attribution!.representationGroup.failureDomainKeys,
+    ).toEqual([
+      "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+      "protocol:xaut0-omnichain",
+    ]);
+  });
+
+  it("rejects inventory, identity, freshness, and conservation drift", () => {
+    const attribution =
+      deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC,
+        observation: xautObservation(),
+      })!;
+    expect(
+      xautRepresentationGroupAttributionValidationError({
+        attribution: {
+          ...attribution,
+          routeInventoryDigest: "0".repeat(64),
+        },
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        clockSec: CLOCK_SEC,
+      }),
+    ).toContain("route inventory mismatch");
+    expect(
+      deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC,
+        observation: {
+          ...xautObservation(),
+          adapterEndpointAddress:
+            "0x0000000000000000000000000000000000000001",
+        },
+      }),
+    ).toBeNull();
+    expect(
+      deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC,
+        observation: {
+          ...xautObservation(),
+          treasuryBalanceRaw: "94923429467",
+        },
+      }),
+    ).toBeNull();
+    expect(
+      deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC,
+        observation: {
+          ...xautObservation(),
+          disclosure: {
+            ...xautObservation().disclosure,
+            quarantinedRaw: "1",
+          },
+        },
+      }),
+    ).toBeNull();
+    expect(
+      xautRepresentationGroupAttributionValidationError({
+        attribution,
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        clockSec: attribution.observedAtSec + 1_801,
+      }),
+    ).toContain("observation time");
+    expect(
+      xautRepresentationGroupAttributionValidationError({
+        attribution: {
+          ...attribution,
+          observation: {
+            ...attribution.observation,
+            disclosure: {
+              ...attribution.observation.disclosure,
+              sourceTimestampSec: CLOCK_SEC - 172_801,
+            },
+          },
+        },
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        clockSec: CLOCK_SEC,
+      }),
+    ).toContain("disclosure time");
+    expect(
+      xautRepresentationGroupAttributionValidationError({
+        attribution: {
+          ...attribution,
+          representationGroup: {
+            ...attribution.representationGroup,
+            currentSupplyUsd:
+              attribution.representationGroup.currentSupplyUsd + 1,
+          },
+        },
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        clockSec: CLOCK_SEC,
+      }),
+    ).toContain("does not conserve");
   });
 });

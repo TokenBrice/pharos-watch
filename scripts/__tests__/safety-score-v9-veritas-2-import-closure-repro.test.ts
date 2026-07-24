@@ -39,6 +39,32 @@ const OMITTED_SCORE_BEARING_IMPORTS = [
     importedBy: "worker/src/lib/safety-score-v9-supply-attribution.ts",
     importSpecifier: "./safety-score-v9-wm-supply-observer",
   },
+  {
+    path: "worker/src/lib/safety-score-v9-xaut-supply-attribution-contract.ts",
+    importedBy: "worker/src/lib/safety-score-v9-supply-attribution.ts",
+    importSpecifier:
+      "./safety-score-v9-xaut-supply-attribution-contract",
+  },
+  {
+    path: "worker/src/lib/safety-score-v9-xaut-supply-observer.ts",
+    importedBy: "worker/src/lib/safety-score-v9-supply-attribution.ts",
+    importSpecifier: "./safety-score-v9-xaut-supply-observer",
+  },
+  {
+    path: "worker/src/lib/evm-rpc.ts",
+    importedBy: "worker/src/lib/safety-score-v9-xaut-supply-observer.ts",
+    importSpecifier: "./evm-rpc",
+  },
+  {
+    path: "worker/src/lib/evm-selectors.ts",
+    importedBy: "worker/src/lib/safety-score-v9-xaut-supply-observer.ts",
+    importSpecifier: "./evm-selectors",
+  },
+  {
+    path: "worker/src/lib/fetch-retry.ts",
+    importedBy: "worker/src/lib/safety-score-v9-xaut-supply-observer.ts",
+    importSpecifier: "./fetch-retry",
+  },
 ] as const;
 
 function fixtureRoot(): string {

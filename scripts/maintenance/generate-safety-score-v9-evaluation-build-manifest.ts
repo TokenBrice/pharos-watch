@@ -127,9 +127,14 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "worker/src/lib/safety-score-v9-extension-transfer.ts",
   "worker/src/lib/safety-score-v9-fact-set.ts",
   "worker/src/lib/safety-score-v9-fact-set-boundary.ts",
+  "worker/src/lib/evm-rpc.ts",
+  "worker/src/lib/evm-selectors.ts",
+  "worker/src/lib/fetch-retry.ts",
   "worker/src/lib/safety-score-v9-supply-attribution.ts",
   "worker/src/lib/safety-score-v9-supply-attribution-contract.ts",
   "worker/src/lib/safety-score-v9-wm-supply-observer.ts",
+  "worker/src/lib/safety-score-v9-xaut-supply-attribution-contract.ts",
+  "worker/src/lib/safety-score-v9-xaut-supply-observer.ts",
 ] as const;
 
 export const V9_EVALUATION_BUILD_SOURCE_PATHS = [

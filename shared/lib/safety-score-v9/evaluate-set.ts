@@ -51,6 +51,7 @@ import {
   type V9ExitStressRequest,
 } from "./exit";
 import {
+  isV9RepresentationGroupRoute,
   isV9UncanonicalizedChainPoolRoute,
   readCompiledV9FactSetForEvaluation,
   type V9EvaluationFactSetRead,
@@ -580,11 +581,8 @@ export interface V9SupplyChainExposure {
   shareBySlug: ReadonlyMap<string, number>;
   unattributedShare: number;
   /**
-   * Supply share carried by the pooled row of raw provider chain labels that
-   * failed canonical resolution (`unmatched-chain-label-pool:<assetId>`). The
-   * pool is the unattributed share's only current source; it is tracked
-   * separately so an immaterial pool can be excluded from the common-mode
-   * unattributed add-on (bounded treatment, RULED D-J 2026-07-19).
+   * Reviewed or conservatively pooled supply with no destination-chain split.
+   * The legacy field name is retained for evaluator/test compatibility.
    */
   unmatchedChainLabelPoolShare: number;
   complete: boolean;
@@ -650,15 +648,20 @@ function clampShare(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
-function unmatchedChainLabelPoolShare(supply: V9AssetFactsV2["supply"]): number {
+function boundedPooledChainShare(supply: V9AssetFactsV2["supply"]): number {
   return supply.selectedBridgeRoutes.reduce(
-    (sum, route) => sum + (isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) ? route.supplyShare : 0),
+    (sum, route) =>
+      sum +
+      (isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) ||
+      isV9RepresentationGroupRoute(route.deploymentRouteKey)
+        ? route.supplyShare
+        : 0),
     0,
   );
 }
 
 function summarizeSupplyChainExposure(supply: V9AssetFactsV2["supply"]): V9SupplyChainExposure {
-  const poolShare = unmatchedChainLabelPoolShare(supply);
+  const poolShare = boundedPooledChainShare(supply);
   if (!isKnownRequiredStatus(supply.status)) {
     return {
       shareBySlug: new Map<string, number>(),
@@ -1069,6 +1072,7 @@ function bridgeSupplyIsConsistent(supply: V9AssetFactsV2["supply"]): boolean {
 
 function summarizeBridgeDomainExposure(
   asset: V9AssetFactsV2 | V9AssetFactsV3,
+  representationGroupMaterialShareThreshold: number,
 ): ReadonlyMap<string, V9BridgeDomainExposure> {
   const controlsByKey = new Map(asset.controls.map((control) => [control.controlKey, control]));
   const selectedByDeployment = new Map(
@@ -1099,8 +1103,20 @@ function summarizeBridgeDomainExposure(
       continue;
     }
     const selected = selectedByDeployment.get(control.deploymentKey);
+    const boundedRepresentationGroupMechanism =
+      isV9RepresentationGroupRoute(control.deploymentKey) &&
+      control.status.applicability.state === "required" &&
+      control.status.observationState === "bounded-unknown" &&
+      control.authority?.model === "unknown" &&
+      control.capSemantics.kind !== "unknown" &&
+      control.claimImpairment !== "unknown" &&
+      control.economicLossScope === "deployment" &&
+      control.materialSupplyShare !== null &&
+      control.materialSupplyShare <
+        representationGroupMaterialShareThreshold;
     const validControl =
-      isKnownRequiredStatus(control.status) &&
+      (isKnownRequiredStatus(control.status) ||
+        boundedRepresentationGroupMechanism) &&
       control.controlKind === "bridge" &&
       control.capabilities.includes("bridge-mint");
     const knownZeroExposure =
@@ -1188,7 +1204,15 @@ function buildCommonModeContext(
   return {
     supplyExposure: summarizeSupplyChainExposure(asset.supply),
     dexExposureByDomain: summarizeDexDomainExposure(asset, envelope),
-    bridgeExposureByDomain: summarizeBridgeDomainExposure(asset),
+    bridgeExposureByDomain: summarizeBridgeDomainExposure(
+      asset,
+      Math.min(
+        envelope.policy.semantic.materiality
+          .deploymentMaterialSharePct / 100,
+        envelope.policy.semantic.materiality
+          .commonModeShareThreshold,
+      ),
+    ),
   };
 }
 
@@ -1231,13 +1255,10 @@ function commonModeShareForDomain(
   switch (failureDomain.kind) {
     case "chain": {
       const chainId = resolveChainId(failureDomain.key) ?? failureDomain.key.toLowerCase();
-      // RULED D-J (2026-07-19): an unrecognized-label pool below the common-mode
-      // materiality floor is a bounded diagnostic condition, so it is excluded
-      // from the conservative unattributed add-on. At or above the floor the
-      // full unattributed share keeps inflating every chain's upper bound (the
-      // fail-closed latency case). The pool is the unattributed share's only
-      // current producer; subtract only the pooled part so any future
-      // unattributed source still counts.
+      // A pooled destination distribution below the common-mode floor is
+      // bounded by its exact aggregate share. This covers both unresolved raw
+      // provider labels and reviewed representation groups; at or above the
+      // floor the full unattributed share remains fail-closed.
       const poolShare = context.supplyExposure.unmatchedChainLabelPoolShare;
       const unattributedAddon =
         poolShare < materiality.commonModeShareThreshold

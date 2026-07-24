@@ -309,21 +309,25 @@ describe("publishReportCardCache", () => {
     mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
     const current = { completedAtSec: 1_700_000_001, attemptId: "current" };
     const prior = { completedAtSec: 1_699_999_900, attemptId: "prior" };
+    const priorXaut = { completedAtSec: 1_699_999_800, attemptId: "prior-xaut" };
     mockEnrichV9FixedInput.mockImplementation(async (fixedInput) => ({
       fixedInput: {
         ...fixedInput,
-        activeAssetIds: ["usdc-circle", "wm-m0"],
+        activeAssetIds: ["usdc-circle", "wm-m0", "xaut-tether"],
         safetyScoreV9SupplyAttributionById: {},
       },
       journalRecords: [current],
     }));
-    mockLoadSupplyAttributionJournal.mockResolvedValue({ "wm-m0": [prior] });
+    mockLoadSupplyAttributionJournal.mockResolvedValue({
+      "wm-m0": [prior],
+      "xaut-tether": [priorXaut],
+    });
 
     await publishReportCardCache({} as D1Database);
 
     expect(mockLoadSupplyAttributionJournal).toHaveBeenCalledWith(
       expect.anything(),
-      ["wm-m0"],
+      ["wm-m0", "xaut-tether"],
       1_700_000_000,
       expect.any(AbortSignal),
     );
@@ -338,7 +342,10 @@ describe("publishReportCardCache", () => {
     );
     expect(mockBuildV9FixedInputCacheEntry).toHaveBeenCalledWith(
       expect.objectContaining({
-        supplyAttributionJournalById: { "wm-m0": [prior] },
+        supplyAttributionJournalById: {
+          "wm-m0": [prior],
+          "xaut-tether": [priorXaut],
+        },
       }),
       expect.anything(),
     );

@@ -61,6 +61,41 @@ describe("Safety Score V9 supply attribution journal", () => {
     ).toEqual([accepted, rejected]);
   });
 
+  it("records XAUT issuer disclosure plus onchain evidence distinctly", () => {
+    const hybrid = createSupplyAttributionJournalV1(
+      payload({
+        assetId: "xaut-tether",
+        sourceId: "xaut.canonical-lock-mint-group-partition.v2",
+        sourceOriginClass: "issuer-disclosure-plus-onchain",
+      }),
+    );
+    expect(hybrid).toMatchObject({
+      assetId: "xaut-tether",
+      sourceOriginClass: "issuer-disclosure-plus-onchain",
+      admissionCode: "supply-attribution.admission.accepted",
+    });
+  });
+
+  it("rejects source and origin pairings that misstate evidence provenance", () => {
+    expect(() =>
+      createSupplyAttributionJournalV1(
+        payload({
+          sourceOriginClass: "issuer-disclosure-plus-onchain",
+        }),
+      ),
+    ).toThrow(/requires onchain-observation origin/);
+    expect(() =>
+      createSupplyAttributionJournalV1(
+        payload({
+          assetId: "xaut-tether",
+          sourceId:
+            "xaut.canonical-lock-mint-group-partition.v2",
+          sourceOriginClass: "onchain-observation",
+        }),
+      ),
+    ).toThrow(/requires issuer-disclosure-plus-onchain origin/);
+  });
+
   it("rejects incoherent state, future source evidence, secrets, and unknown fields", () => {
     expect(() =>
       createSupplyAttributionJournalV1(

@@ -35,6 +35,21 @@ import {
   expectedWmDeploymentIdentity,
   type ReviewedDeploymentSupplyObservation,
 } from "../safety-score-v9-supply-attribution-contract";
+import {
+  buildXautTransparencySource,
+  deriveXautRepresentationGroupSupplyAttribution,
+  XAUT0_ADAPTER_ADDRESS,
+  XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+  XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
+  XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
+  XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
+  XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
+  XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
+  XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+  XAUT_CANONICAL_TOKEN_ADDRESS,
+  XAUT_TRANSPARENCY_SOURCE_ID,
+  XAUT_TREASURY_ADDRESS,
+} from "../safety-score-v9-xaut-supply-attribution-contract";
 
 function fixedInput(dexLiqMap: Record<string, DexLiquidityData> = {}) {
   const dexUpdatedAt = Object.values(dexLiqMap)[0]?.updatedAt ?? 1_783_891_100;
@@ -392,6 +407,125 @@ describe("fixed report-card input replay", () => {
         },
       }),
     ).toThrow("does not conserve aggregate circulating USD");
+  });
+
+  it("validates and round-trips the identity-bound XAUT representation group", async () => {
+    const aggregateSupplyUsd = 2_480_000_000;
+    const aggregateInput = normalizeFixedInput(
+      withoutBaseInputGenerationId({
+        ...exactFixedInput(),
+        aggregateCirculatingById: {
+          "xaut-tether": {
+            circulating: { peggedGOLD: aggregateSupplyUsd },
+            observedAtSec: 1_783_891_100,
+          },
+        },
+      }),
+    );
+    const attribution =
+      deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd,
+        registryFingerprint: aggregateInput.registryFingerprint,
+        scoringClockSec: aggregateInput.clockSec,
+        observation: {
+          chainId: "ethereum",
+          canonicalTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+          adapterAddress: XAUT0_ADAPTER_ADDRESS,
+          decimals: 6,
+          canonicalTotalSupplyRaw: "707747089000",
+          treasuryAddress: XAUT_TREASURY_ADDRESS,
+          treasuryBalanceRaw: "94923429468",
+          adapterLockedSupplyRaw: "29720802896",
+          blockNumber: 25_601_844,
+          blockTimeSec: aggregateInput.clockSec - 100,
+          blockHash: `0x${"ab".repeat(32)}`,
+          canonicalRuntimeCodeSha256:
+            XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+          canonicalImplementationAddress:
+            XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
+          canonicalImplementationCodeSha256:
+            XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
+          adapterRuntimeCodeSha256:
+            XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
+          adapterImplementationAddress:
+            XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+          adapterImplementationCodeSha256:
+            XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
+          adapterTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+          adapterEndpointAddress:
+            XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
+          disclosure: {
+            sourceId: XAUT_TRANSPARENCY_SOURCE_ID,
+            sourceConfigDigest:
+              buildXautTransparencySource()!.configDigest,
+            sourceTimestampSec: aggregateInput.clockSec - 200,
+            responseSha256: "c".repeat(64),
+            totalAuthorizedRaw: "707747089000",
+            notIssuedRaw: "94923429468",
+            quarantinedRaw: "0",
+          },
+        },
+      });
+    expect(attribution).not.toBeNull();
+
+    const attributedInput = normalizeFixedInput({
+      ...aggregateInput,
+      safetyScoreV9SupplyAttributionById: {
+        "xaut-tether": attribution!,
+      },
+    });
+    expect(
+      attributedInput.safetyScoreV9SupplyAttributionById[
+        "xaut-tether"
+      ],
+    ).toEqual(attribution);
+    const v9Entry = await buildSafetyScoreV9FixedInputCacheEntry(
+      attributedInput,
+      {
+        model: "v8",
+        schemaVersion: 1,
+        methodologyVersion: attributedInput.methodologyVersion,
+        evaluationBuildDigest: "a".repeat(64),
+        baseInputGenerationId: attributedInput.baseInputGenerationId,
+        publicationGenerationId: attributedInput.sourceGeneration,
+      },
+    );
+    const roundTrip = await parseReportCardsFixedInputCacheValue(
+      v9Entry.value,
+    );
+    expect(
+      roundTrip.safetyScoreV9SupplyAttributionById["xaut-tether"],
+    ).toEqual(attribution);
+
+    expect(() =>
+      normalizeFixedInput({
+        ...attributedInput,
+        safetyScoreV9SupplyAttributionById: {
+          "xaut-tether": {
+            ...attribution!,
+            routeInventoryDigest: "0".repeat(64),
+          },
+        },
+      }),
+    ).toThrow("route inventory mismatch");
+
+    expect(() =>
+      normalizeFixedInput({
+        ...aggregateInput,
+        aggregateCirculatingById: {
+          ...aggregateInput.aggregateCirculatingById,
+          "usdc-circle": {
+            circulating: { peggedUSD: aggregateSupplyUsd },
+            observedAtSec: 1_783_891_100,
+          },
+        },
+        safetyScoreV9SupplyAttributionById: {
+          "usdc-circle": attribution!,
+        },
+      }),
+    ).toThrow(
+      "V9 supply attribution key usdc-circle does not match packet asset xaut-tether",
+    );
   });
 
   it("round-trips exact wM route attribution only through the V9 envelope", async () => {

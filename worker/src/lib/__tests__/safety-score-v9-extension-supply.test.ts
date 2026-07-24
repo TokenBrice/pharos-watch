@@ -289,7 +289,8 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     const aggregateSupplyUsd = 2_480_000_000;
     const partition = deriveLockMintSupplyPartition({
       aggregateSupplyUsd,
-      canonicalTotalSupplyRaw: 707_747_089_000n,
+      canonicalCirculatingLiabilityRaw:
+        707_747_089_000n - 94_923_429_468n,
       lockboxBalancesRaw: [29_714_544_713n],
       canonicalChainLabel: "Ethereum",
       pooledRepresentationLabel: "XAUt0 lock-mint pool",
@@ -309,9 +310,38 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       },
       safetyScoreV9SupplyAttributionById: {
         "xaut-tether": {
-          model: "canonical-lock-mint-partition-v1",
+          model: "canonical-lock-mint-group-partition-v2",
+          assetId: "xaut-tether",
           observedAtSec: 1_774_000_000,
-          currentSupplyUsdByChain: partition!.currentSupplyUsdByChain,
+          registryFingerprint: "a".repeat(64),
+          routeInventoryDigest: "b".repeat(64),
+          canonical: {
+            routeId:
+              "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+            chainId: "ethereum",
+            currentSupplyUsd: partition!.canonicalSupplyUsd,
+          },
+          representationGroup: {
+            deploymentRouteKey:
+              "representation-group:xaut-tether:xaut0-omnichain",
+            representationId: "xaut0-omnichain",
+            routeIds: (
+              xautMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile
+            ).routes!
+              .filter(
+                (route) =>
+                  route.representationId === "xaut0-omnichain",
+              )
+              .map((route) => route.id)
+              .sort(),
+            riskTier: "external-lock-mint",
+            failureDomainKeys: [
+              "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+              "protocol:xaut0-omnichain",
+            ],
+            currentSupplyUsd:
+              partition!.pooledRepresentationSupplyUsd,
+          },
         },
       },
     } as unknown as ReportCardsFixedInput;
@@ -332,18 +362,86 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     );
     expect(review!.selectedBridgeRoutes).toContainEqual(
       expect.objectContaining({
-        deploymentRouteKey: "unmatched-chain-label-pool:xaut-tether",
-        reviewState: "unmatched",
+        deploymentRouteKey:
+          "representation-group:xaut-tether:xaut0-omnichain",
+        reviewState: "selected-reviewed",
+        reviewedRouteKind: "controlled",
       }),
     );
-    expect(review!.selectedRouteSupplyShare).toBeCloseTo(0.95801530635, 10);
-    expect(review!.unknownRouteSupplyShare).toBeCloseTo(0.04198469365, 10);
+    expect(review!.selectedRouteSupplyShare).toBe(1);
+    expect(review!.unknownRouteSupplyShare).toBe(0);
     expect(review!.unreviewedRouteSupplyShare).toBe(0);
     expect(
       review!.selectedBridgeRoutes.reduce((sum, route) => sum + route.supplyUsd, 0),
     ).toBe(aggregateSupplyUsd);
     expect(
       review!.selectedBridgeRoutes.filter((route) => route.deploymentRouteKey.includes("xaut0-omnichain")),
-    ).toEqual([]);
+    ).toHaveLength(1);
+    expect(review!.failureDomains).toEqual([
+      {
+        kind: "bridge-route",
+        key: "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+      },
+      { kind: "bridge-route", key: "protocol:xaut0-omnichain" },
+    ]);
+  });
+
+  it("fails a representation group closed once its unknown destination split is material", () => {
+    const profile =
+      xautMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile;
+    const fixedInput = {
+      chainCirculatingById: { "xaut-tether": {} },
+      safetyScoreV9SupplyAttributionById: {
+        "xaut-tether": {
+          model: "canonical-lock-mint-group-partition-v2",
+          assetId: "xaut-tether",
+          canonical: {
+            routeId:
+              "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+            chainId: "ethereum",
+            currentSupplyUsd: 88,
+          },
+          representationGroup: {
+            deploymentRouteKey:
+              "representation-group:xaut-tether:xaut0-omnichain",
+            representationId: "xaut0-omnichain",
+            routeIds: profile.routes!
+              .filter(
+                (route) =>
+                  route.representationId === "xaut0-omnichain",
+              )
+              .map((route) => route.id)
+              .sort(),
+            riskTier: "external-lock-mint",
+            failureDomainKeys: [
+              "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+              "protocol:xaut0-omnichain",
+            ],
+            currentSupplyUsd: 12,
+          },
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+
+    const review = buildSafetyScoreV9SupplyReview(
+      fixedInput,
+      "xaut-tether",
+      profile,
+    );
+
+    expect(review).not.toBeNull();
+    expect(
+      review!.selectedBridgeRoutes.find((route) =>
+        route.deploymentRouteKey.startsWith(
+          "representation-group:",
+        ),
+      ),
+    ).toMatchObject({
+      reviewState: "selected-unresolved",
+      supplyShare: 0.12,
+    });
+    expect(review!.selectedRouteSupplyShare).toBe(0.88);
+    expect(review!.unknownRouteSupplyShare).toBe(0);
+    expect(review!.unreviewedRouteSupplyShare).toBe(0.12);
   });
 });
