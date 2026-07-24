@@ -15,11 +15,12 @@ import {
   type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
-import type {
-  DexMeasuredExecutionAdapter,
-  DexMeasuredExecutionBudgetStopReason,
-  DexMeasuredExecutionRpcBudget,
-  DexMeasuredRawQuotePoint,
+import {
+  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+  type DexMeasuredExecutionAdapter,
+  type DexMeasuredExecutionBudgetStopReason,
+  type DexMeasuredExecutionRpcBudget,
+  type DexMeasuredRawQuotePoint,
 } from "./profiles";
 
 const CURVE_CRYPTOSWAP_ABI = parseAbi(["function get_dy(uint256 i,uint256 j,uint256 dx) view returns (uint256)"]);
@@ -307,7 +308,7 @@ export async function verifyCurveCryptoSwapDeployment(input: {
   const requestOptions = {
     chainRpcs: input.chainRpcs,
     signal: input.signal,
-    timeoutMs: 15_000,
+    timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
     ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
     ...(rpcBudget ? { beforeRequest: () => rpcBudget.tryConsume() } : {}),
     maxRetries: 0,
@@ -841,7 +842,7 @@ export const quoteCurveCryptoSwapRequests = createCurveCryptoSwapQuoteExecutor({
     fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
       chainRpcs: input.chainRpcs,
       signal: input.signal,
-      timeoutMs: 30_000,
+      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
       maxRetries: 1,
       ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
       ...(input.rpcBudget

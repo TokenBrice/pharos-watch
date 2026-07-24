@@ -2,7 +2,10 @@ import { keccak256 } from "viem/utils";
 
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { fetchEvmCodeAtBlock } from "../../lib/evm-rpc";
-import type { DexMeasuredExecutionRpcBudget } from "./profiles";
+import {
+  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+  type DexMeasuredExecutionRpcBudget,
+} from "./profiles";
 
 export interface DexMeasuredExecutionDeployment {
   adapterProfileId:
@@ -167,7 +170,7 @@ export async function verifyDexMeasuredExecutionDeployment(input: {
   const code = await fetchEvmCodeAtBlock(input.deployment.chain, input.deployment.endpointAddress, input.blockNumber, {
     chainRpcs: input.chainRpcs,
     signal: input.signal,
-    timeoutMs: 15_000,
+    timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
     ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
     ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
     maxRetries: 0,
@@ -186,7 +189,7 @@ export async function verifyDexMeasuredExecutionDeployment(input: {
     {
       chainRpcs: input.chainRpcs,
       signal: input.signal,
-      timeoutMs: 15_000,
+      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
       ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
       ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
       maxRetries: 0,

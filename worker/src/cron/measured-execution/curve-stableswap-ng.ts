@@ -26,11 +26,12 @@ import {
   type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
-import type {
-  DexMeasuredExecutionAdapter,
-  DexMeasuredExecutionBudgetStopReason,
-  DexMeasuredExecutionRpcBudget,
-  DexMeasuredRawQuotePoint,
+import {
+  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+  type DexMeasuredExecutionAdapter,
+  type DexMeasuredExecutionBudgetStopReason,
+  type DexMeasuredExecutionRpcBudget,
+  type DexMeasuredRawQuotePoint,
 } from "./profiles";
 
 const CURVE_STABLESWAP_NG_POOL_ABI = parseAbi([
@@ -279,7 +280,7 @@ export function createCurveStableSwapNgDeploymentVerifier(
     const requestOptions = {
       chainRpcs: input.chainRpcs,
       signal: input.signal,
-      timeoutMs: 15_000,
+      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
       maxRetries: 0,
       ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
       ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
@@ -402,6 +403,7 @@ export function createCurveStableSwapNgDeploymentVerifier(
     const tokenDecimalsProof:
       DexMeasuredExecutionStableSwapNgFactoryBindingProof["tokenDecimalsProof"] = [];
     for (let index = 0; index < policy.poolTokens.length; index += 1) {
+      throwIfAborted(input.signal);
       const token = policy.poolTokens[index]!;
       const coinCallData = encodeFunctionData({
         abi: CURVE_STABLESWAP_NG_POOL_ABI,
@@ -846,7 +848,7 @@ export const quoteCurveStableSwapNgRequests = createCurveStableSwapNgQuoteExecut
     fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
       chainRpcs: input.chainRpcs,
       signal: input.signal,
-      timeoutMs: 30_000,
+      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
       maxRetries: 1,
       ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
       ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),

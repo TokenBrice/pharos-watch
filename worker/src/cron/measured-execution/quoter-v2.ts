@@ -13,10 +13,11 @@ import {
   type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
-import type {
-  DexMeasuredExecutionBudgetStopReason,
-  DexMeasuredExecutionRpcBudget,
-  DexMeasuredRawQuotePoint,
+import {
+  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+  type DexMeasuredExecutionBudgetStopReason,
+  type DexMeasuredExecutionRpcBudget,
+  type DexMeasuredRawQuotePoint,
 } from "./profiles";
 import { getDexMeasuredExecutionDeployment } from "./registry";
 
@@ -186,7 +187,7 @@ async function executeAdaptiveChunk(input: {
   const result = await fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
     chainRpcs: input.chainRpcs,
     signal: input.signal,
-    timeoutMs: 30_000,
+    timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
     ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
     ...(input.rpcBudget
       ? {
