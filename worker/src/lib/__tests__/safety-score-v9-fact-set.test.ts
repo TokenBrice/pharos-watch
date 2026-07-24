@@ -3426,6 +3426,27 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(stale.exitRoutes[0]!.output.status.observationState).toBe("stale");
   });
 
+  it("uses the measured adapter freshness window for DEX route evidence", () => {
+    const compileMeasured = (adapterProfileId: string) => {
+      const fixed = structuredClone(exactFixedInput());
+      const observation = fixed.dexLiqMap.alpha!.exitRouteObservations![0]!;
+      observation.evidenceKind = "measured-executable-depth";
+      observation.adapterProfileId = adapterProfileId;
+      observation.observedAt = AS_OF_SEC - 4_000;
+      observation.freshnessSeconds = 4_000;
+      fixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixed);
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension()).assets[0]!;
+      return compiled.evidence.find((candidate) => candidate.evidenceId.includes(":route:dex:"))!;
+    };
+
+    expect(compileMeasured("curve-stableswap-main-registry-get-dy-v1")).toMatchObject({
+      freshness: { state: "current", maxAgeSec: 7_200, ageSec: 4_000 },
+    });
+    expect(compileMeasured("uniswap-v3-quoter-v2")).toMatchObject({
+      freshness: { state: "stale", maxAgeSec: 3_600, ageSec: 4_000 },
+    });
+  });
+
   it("derives cdp shock-coverage freshness on the D12 72-hour policy window", () => {
     const maxAgeSec =
       V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp.stressMeasurementFreshness.maxAgeSec;

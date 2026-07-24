@@ -83,6 +83,7 @@ import {
   RedemptionExitRouteObservationSchema,
   type ExitRouteObservation,
 } from "@shared/types/exit-route";
+import { getDexMeasuredExecutionFreshnessMaxSec } from "@shared/types/measured-execution";
 import { ReserveSliceSchema, type ReserveSlice } from "@shared/types/reserves";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
 import { assertSafetyScoreV9ExactExtensionAssets } from "./safety-score-v9-fact-set-boundary";
@@ -1672,7 +1673,12 @@ function routeEvidence(
   // (semantic.exit.documentedTermsMaxAgeSec), not the producer cron cadence.
   const maxAgeSec =
     lane === "dex"
-      ? context.extension.routeFreshness.dexMaxAgeSec
+      ? observation.evidenceKind === "measured-executable-depth"
+        ? Math.max(
+            context.extension.routeFreshness.dexMaxAgeSec,
+            getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? ""),
+          )
+        : context.extension.routeFreshness.dexMaxAgeSec
       : observation.evidenceKind === "documented-terms"
         ? context.extension.routeFreshness.documentedTermsMaxAgeSec
         : context.extension.routeFreshness.redemptionMaxAgeSec;

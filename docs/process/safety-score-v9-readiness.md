@@ -209,7 +209,10 @@ designed:
 
 - Measured execution retains bounded last-known-good observations across
   operational producer failures, preserves quote lineage, and requires repeated
-  successful observations before earning high confidence.
+  successful observations before earning high confidence. Fact compilation
+  uses the measured adapter's validated freshness window, including the
+  two-hour Curve window, instead of shortening every DEX observation to the
+  generic one-hour lane window.
 - Reviewed redemption with an undisclosed numeric fee can preserve bounded
   executable capacity under the opaque-fee ceiling; it does not become a
   permissionless or fee-free route.
