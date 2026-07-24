@@ -7,7 +7,7 @@ import {
   SupplyAttributionJournalV1Schema,
   type SupplyAttributionJournalByIdV1,
   type SupplyAttributionJournalV1,
-} from "@shared/types/safety-score-v9-supply-attribution-journal";
+} from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { throwIfAborted } from "./abort";
 import { parseJson } from "./json-parse";
 

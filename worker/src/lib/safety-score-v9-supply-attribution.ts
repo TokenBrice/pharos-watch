@@ -4,7 +4,7 @@ import {
   createSupplyAttributionJournalV1,
   type SupplyAttributionAdmissionCode,
   type SupplyAttributionJournalV1,
-} from "@shared/types/safety-score-v9-supply-attribution-journal";
+} from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { rethrowIfAborted } from "./abort";
 import type { ChainRpcConfig } from "./chain-registry";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";

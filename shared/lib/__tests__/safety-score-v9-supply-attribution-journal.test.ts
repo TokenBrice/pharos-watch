@@ -34,7 +34,7 @@ function payload(
   };
 }
 
-describe("Safety Score V9 supply attribution journal", () => {
+describe("Safety Score V9 supply attribution journal runtime", () => {
   it("content-addresses bounded accepted and rejected attempt records", () => {
     const accepted = createSupplyAttributionJournalV1(payload());
     const rejected = createSupplyAttributionJournalV1(

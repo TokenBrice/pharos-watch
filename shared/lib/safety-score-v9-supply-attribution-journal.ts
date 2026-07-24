@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { sha256Hex } from "../lib/sha256";
-import { stableJsonStringifyV1 } from "../lib/stable-json";
+import { sha256Hex } from "./sha256";
+import { stableJsonStringifyV1 } from "./stable-json";
 
 export const SUPPLY_ATTRIBUTION_JOURNAL_ENTRY_MAX_BYTES = 1_152;
 export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES = 32 * 1_024;

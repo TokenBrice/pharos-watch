@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   createReportCardEvidenceJournalV1,
   type ReportCardEvidenceJournalV1Payload,
-} from "@shared/types/report-card-evidence-journal";
+} from "@shared/lib/report-card-evidence-journal";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   REPORT_CARD_EVIDENCE_JOURNAL_STORE_MAX_ROWS_PER_ASSET,

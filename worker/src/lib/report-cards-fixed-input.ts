@@ -29,8 +29,8 @@ import {
   SafetyScoreV8PublicationIdentitySchema,
   type SafetyScoreV8PublicationIdentity,
 } from "@shared/types/safety-score-publication";
-import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/types/report-card-evidence-journal";
-import { SupplyAttributionJournalByIdV1Schema } from "@shared/types/safety-score-v9-supply-attribution-journal";
+import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/lib/report-card-evidence-journal";
+import { SupplyAttributionJournalByIdV1Schema } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
 import {
   projectSafetyScoreV9PegScoreResult,

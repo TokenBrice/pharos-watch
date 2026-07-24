@@ -38,7 +38,7 @@ function payload(
   };
 }
 
-describe("ReportCardEvidenceJournalV1", () => {
+describe("report-card evidence journal runtime", () => {
   it("keeps the reserve outcome vocabulary explicit and stable", () => {
     expect(ReserveEvidenceAttemptCodeSchema.options).toEqual([
       "reserve.collector.attempted",

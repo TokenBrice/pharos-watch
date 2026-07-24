@@ -3,7 +3,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   createReportCardEvidenceJournalV1,
   type ReserveEvidenceSourceOriginClass,
-} from "@shared/types/report-card-evidence-journal";
+} from "@shared/lib/report-card-evidence-journal";
 import {
   buildReportCardsFixedInputCacheEntry,
   buildReportCardsSnapshotFromFixedInput,

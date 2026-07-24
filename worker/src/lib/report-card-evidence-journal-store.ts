@@ -7,7 +7,7 @@ import {
   ReportCardEvidenceJournalV1Schema,
   type ReportCardEvidenceJournalByIdV1,
   type ReportCardEvidenceJournalV1,
-} from "@shared/types/report-card-evidence-journal";
+} from "@shared/lib/report-card-evidence-journal";
 import { throwIfAborted } from "./abort";
 import { parseJson } from "./json-parse";
 
