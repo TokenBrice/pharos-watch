@@ -90,6 +90,7 @@ export type V9ExtensionRegistryMeta = Pick<
   | "reserves"
   | "reserveReview"
   | "custodyProfile"
+  | "liveReservesConfig"
   | "proofOfReserves"
   | "genius"
   | "dependencies"
@@ -430,7 +431,7 @@ const CORROBORATING_ASSURANCE_METHODS = new Set([
 ]);
 const DIRECT_RESERVE_ASSURANCE_METHODS = new Set(["audit", "examination"]);
 const ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC = 31_536_000;
-const REVIEWED_CURATED_FALLBACK_RESERVE_MAX_AGE_SEC = 31 * 86_400;
+const REVIEWED_CURATED_RESERVE_MAX_AGE_SEC = 31 * 86_400;
 
 function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {
   const sorted = [...rows].sort(
@@ -525,14 +526,14 @@ export function buildSafetyScoreV9ReviewedStaticReserveRows(
 }
 
 /**
- * Admit the exact registry fallback used by the report-card capture only when
- * its reviewed composition is complete, verified, sourced, and still current.
- * This is weaker than direct assurance and therefore retains the policy's
- * static-evidence confidence discount.
+ * Validate a reviewed registry composition shared by the fallback and
+ * standalone admission paths. This is weaker than direct assurance and
+ * therefore retains the policy's static-evidence confidence discount.
  */
-export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
+function buildSafetyScoreV9ReviewedCuratedReserveRows(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
+  provenance: "curated" | "curated-fallback",
 ): ReviewedStaticReserveRows | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
@@ -546,7 +547,7 @@ export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
     reviewedAtSec === null ||
     compositionAtSec === null ||
     reviewedAtSec < compositionAtSec ||
-    clockSec - compositionAtSec > REVIEWED_CURATED_FALLBACK_RESERVE_MAX_AGE_SEC ||
+    clockSec - compositionAtSec > REVIEWED_CURATED_RESERVE_MAX_AGE_SEC ||
     !validateReserveCompositionTotal(rows, "full")
   ) {
     return null;
@@ -554,8 +555,29 @@ export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
   return {
     rows: normalizeReviewedStaticReserveRows(rows),
     evidenceClass: "static-validated",
-    provenance: "curated-fallback",
+    provenance,
   };
+}
+
+export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
+  meta: V9ExtensionRegistryMeta,
+  clockSec: number,
+): ReviewedStaticReserveRows | null {
+  if (meta.liveReservesConfig == null) return null;
+  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated-fallback");
+}
+
+/**
+ * Assets without a live-reserve producer may use the same tightly bounded
+ * reviewed composition as a static input. Wrappers remain parent-inherited so
+ * a child cannot duplicate or replace the parent's backing facts.
+ */
+export function buildSafetyScoreV9ReviewedStandaloneReserveRows(
+  meta: V9ExtensionRegistryMeta,
+  clockSec: number,
+): ReviewedStaticReserveRows | null {
+  if (meta.liveReservesConfig != null || meta.variantOf != null) return null;
+  return buildSafetyScoreV9ReviewedCuratedReserveRows(meta, clockSec, "curated");
 }
 
 function addReviewedStaticReserveEvidence(
@@ -565,13 +587,16 @@ function addReviewedStaticReserveEvidence(
 ): void {
   const review = meta.reserveReview;
   if (!admitted || !review) return;
-  if (admitted.provenance === "curated-fallback") {
+  if (admitted.evidenceClass === "static-validated") {
     evidence.add({
       componentKeys: [
         "reviewed-static-reserves",
         ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
       ],
-      sourceId: "stablecoin-meta.reviewed-curated-fallback-reserves",
+      sourceId:
+        admitted.provenance === "curated-fallback"
+          ? "stablecoin-meta.reviewed-curated-fallback-reserves"
+          : "stablecoin-meta.reviewed-standalone-reserves",
       reviewedAt: review.compositionAsOf!,
       confidence: confidenceForResearch(review.confidence),
       sources: review.sources,
@@ -581,7 +606,7 @@ function addReviewedStaticReserveEvidence(
         evidenceClass: admitted.evidenceClass,
         provenance: admitted.provenance,
       },
-      maxAgeSec: REVIEWED_CURATED_FALLBACK_RESERVE_MAX_AGE_SEC,
+      maxAgeSec: REVIEWED_CURATED_RESERVE_MAX_AGE_SEC,
     });
     return;
   }
@@ -2144,9 +2169,11 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const reviewedStaticReserveRows =
         liveReserves.length === 0
           ? buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec) ??
-            (liveToFallbackAssetIds.has(assetId)
-              ? buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec)
-              : null)
+            (meta.liveReservesConfig != null
+              ? liveToFallbackAssetIds.has(assetId)
+                ? buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, clockSec)
+                : null
+              : buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, clockSec))
           : null;
       const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
       const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);

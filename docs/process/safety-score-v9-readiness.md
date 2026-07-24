@@ -228,6 +228,11 @@ designed:
   `curated-fallback` provenance and the existing 0.80 static-evidence
   confidence multiplier; an absent fallback signal, partial review, stale
   composition, or incomplete total remains unavailable.
+- A non-wrapper asset without a configured live-reserve producer may admit the
+  same verified, sourced, full, current review as standalone `curated`
+  evidence. It remains `static-validated` and receives the same 0.80
+  confidence multiplier. Configured producers cannot use this path, and
+  wrappers continue to inherit parent backing rather than duplicating it.
 - Wrapper custody, leverage, and rehypothecation remain unavailable unless
   explicitly evidenced. A wrapper fallback discount is attributed to those
   bounded local gaps only when it exceeds the reviewed local-risk discount;

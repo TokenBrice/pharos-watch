@@ -61,6 +61,11 @@ its registry composition, V9 can use that fallback only if its review is
 verified, sourced, complete, composition-dated, and no more than 31 days old.
 Those exposures remain labeled `curated-fallback` and receive the same 0.80
 confidence multiplier as other admitted non-independent reserve evidence.
+A non-wrapper asset with no configured live-reserve producer may use the same
+bounded reviewed composition directly. That standalone path retains `curated`
+provenance, `static-validated` evidence strength, and the 0.80 multiplier; a
+configured producer still requires the exact fallback signal, while wrappers
+continue to inherit their parent's backing.
 V9-only reviewed redemption terms may add a documented minimum redemption or
 replace a frozen settlement assumption with an equally or more conservative
 model. They cannot improve the captured settlement model, reduce a captured
