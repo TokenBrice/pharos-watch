@@ -57,18 +57,18 @@ resilience credit across the mature cohort. Canonical implementation history
 provides only the age gate; the credit still requires repeated score-eligible
 execution observations and does not require a bespoke asset overlay.
 The candidate policy has one explicit native-asset adjustment for
-`usdt-tether`: the `#1 & Longevity Premium` adds four pre-cap points and relaxes
+`usdt-tether`: the `#1 & Longevity Premium` adds 12 pre-cap points and relaxes
 only the low centralized-mint limit from 83 to the A+ floor of 87. It applies
-only when the ordinary, premium-free result is already at least A (83), USDT is
+only when the ordinary, premium-free result is already at least B+ (75), USDT is
 ranked first by fixed-clock circulating USD, has at least 120 months of
 implementation history, all three pillars have strong evidence, Exit is at
-least 90, the peg is observed with no unresolved peg reason, active depeg, or
+least 70, the peg is observed with no unresolved peg reason, active depeg, or
 measured historical-peg danger attribution, and operational resilience is
 unblocked with both stress-redemption and reserve-reconciliation contributions.
 Native status is mandatory, and any other binding cap blocks the adjustment; a
 nonbinding cap below 87 also blocks it rather than becoming newly binding after
 relief. The trace retains the ordinary score as the dependency score, so
-wrappers and other downstream claims cannot inherit the four points or the cap
+wrappers and other downstream claims cannot inherit the 12 points or the cap
 relief. A degraded route generation therefore remains degraded rather than
 receiving a reputation override.
 When the exact input records that a configured live-reserve asset fell back to

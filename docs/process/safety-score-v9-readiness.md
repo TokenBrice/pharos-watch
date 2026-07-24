@@ -206,17 +206,17 @@ consistent across the cohort.
 
 The eight workstreams remain cohort-wide framework changes. Separately, the
 candidate policy contains one explicit native-asset adjustment for
-`usdt-tether`, labeled `#1 & Longevity Premium`. It adds four pre-cap points and
+`usdt-tether`, labeled `#1 & Longevity Premium`. It adds 12 pre-cap points and
 raises only the low centralized-mint limit from 83 to the A+ floor of 87.
 
 Eligibility is computed from the ordinary score before the adjustment. Every
 condition must hold in the same exact fixed-input evaluation:
 
-- ordinary published score at least 83;
+- ordinary published score at least 75;
 - fixed-clock circulating-USD market rank exactly 1;
 - at least 120 months of implementation history;
 - strong evidence on Backing, Exit, and Economic Control;
-- Exit score at least 90;
+- Exit score at least 70;
 - an observed applicable peg with no unresolved peg reason, active depeg, or
   measured historical-peg danger attribution;
 - operational-resilience eligibility with no blockers and score-bearing
@@ -230,7 +230,7 @@ other structural limits. Its trace records the ordinary and adjusted raw and
 published scores plus the exact cap relief. The ordinary post-cap score remains
 the score supplied to serial dependencies; wrappers and downstream claims do
 not inherit either the points or the cap relief. If DEX evidence degrades enough
-to take Exit below 90 or evidence below strong, the adjustment is withheld.
+to take Exit below 70 or evidence below strong, the adjustment is withheld.
 
 This policy entry is V9-only candidate behavior. It does not change V8, does
 not establish readiness, and does not authorize activation.

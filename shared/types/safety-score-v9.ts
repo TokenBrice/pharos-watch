@@ -1478,14 +1478,14 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
   if (grades[grades.length - 1]?.minScore !== 0) {
     addPolicyIssue(ctx, ["semantic", "formula", "gradeThresholds"], "F threshold must begin at zero");
   }
-  const aFloor = grades.find((entry) => entry.grade === "A")?.minScore;
+  const bPlusFloor = grades.find((entry) => entry.grade === "B+")?.minScore;
   const aPlusFloor = grades.find((entry) => entry.grade === "A+")?.minScore;
   formula.assetPremiums.forEach((premium, index) => {
-    if (premium.minimumBaseScore !== aFloor) {
+    if (premium.minimumBaseScore !== bPlusFloor) {
       addPolicyIssue(
         ctx,
         ["semantic", "formula", "assetPremiums", index, "minimumBaseScore"],
-        "Asset premium eligibility must begin at the configured A floor",
+        "Market-anchor premium eligibility must begin at the configured B+ floor",
       );
     }
     if (premium.maximumPublishedScore !== aPlusFloor) {
@@ -1496,14 +1496,14 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
       );
     }
     if (
-      aFloor !== undefined &&
+      bPlusFloor !== undefined &&
       aPlusFloor !== undefined &&
-      premium.points < aPlusFloor - aFloor
+      premium.points < aPlusFloor - bPlusFloor
     ) {
       addPolicyIssue(
         ctx,
         ["semantic", "formula", "assetPremiums", index, "points"],
-        "Asset premium points must span the configured A-to-A+ threshold gap",
+        "Market-anchor premium points must span the configured B+-to-A+ threshold gap",
       );
     }
   });
