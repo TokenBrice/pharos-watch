@@ -71,7 +71,7 @@ const PASSING_SPECS: CardSpec[] = [
   { id: "eurs-stasis", score: 28, grade: "F" },
   { id: "mim-abracadabra", score: 25, grade: "F" },
   { id: "sbold-k3-capital", score: 72.5, grade: "B" },
-  { id: "sdai-makerdao", score: 70.5, grade: "B" },
+  { id: "sdai-sky", score: 70.5, grade: "B" },
   { id: "tusd-trueusd", score: 54, grade: "C-" },
   { id: "u-united-stables", score: 32, grade: "F" },
   { id: "usdc-circle", score: 85, grade: "A" },

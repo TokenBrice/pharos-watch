@@ -1859,7 +1859,7 @@ function validationEvidenceReport(
       minimumGradeVerdict(byId, "dai-current-facts-floor", "dai-makerdao", "B"),
     ),
     acrossGenerationVerdict(replays, (byId) =>
-      minimumGradeVerdict(byId, "sdai-current-facts-floor", "sdai-makerdao", "B-"),
+      minimumGradeVerdict(byId, "sdai-current-facts-floor", "sdai-sky", "B-"),
     ),
     acrossGenerationVerdict(replays, (byId) =>
       minimumGradeVerdict(byId, "bold-a-anchor", "bold-liquity", "A"),
