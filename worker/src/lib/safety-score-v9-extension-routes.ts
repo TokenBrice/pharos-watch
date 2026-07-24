@@ -2,7 +2,9 @@ import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output"
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
 import {
   getRedemptionBackstopConfig,
+  resolveMoreConservativeRedemptionSettlement,
   resolveV9RedemptionRouteCostBpsAtNotional,
+  type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
@@ -11,7 +13,10 @@ import {
   isDexMeasuredExecutionObservationHistoryMature,
 } from "@shared/types/measured-execution";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import { deriveSupplyModelExitRouteObservation } from "./redemption-exit-route-observations";
+import {
+  deriveSupplyModelExitRouteObservation,
+  REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC,
+} from "./redemption-exit-route-observations";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
 
@@ -20,6 +25,7 @@ type RetainedRoute = ExtensionAsset["retainedRoutes"][number];
 type RouteReview = ExtensionAsset["routeReviews"][number];
 type RouteOutputReview = NonNullable<RouteReview["output"]>;
 type RouteValuation = NonNullable<RouteOutputReview["valuation"]>;
+type RedemptionSettlementModel = RedemptionBackstopConfig["settlementModel"];
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -285,21 +291,50 @@ function redemptionCoverageClass(
   return requiresCurrentOpenAttribution && !hasCurrentOpenAttribution ? "diagnostic" : "exact-lower-bound";
 }
 
-function redemptionSettlement(entry: RedemptionBackstopEntry): {
+function redemptionReviewTerms(entry: RedemptionBackstopEntry): {
+  settlementModel: RedemptionSettlementModel;
+  settlementDelaySec: number | undefined;
+  settlementHorizonSec: number;
+  minRedeemUsd: number | null;
+} {
+  const reviewed = getRedemptionBackstopConfig(entry.stablecoinId)?.v9RouteReviewTerms;
+  const settlementModel = reviewed?.settlementModel
+    ? resolveMoreConservativeRedemptionSettlement(entry.settlementModel, reviewed.settlementModel)
+    : entry.settlementModel;
+  const settlementDelaySec =
+    settlementModel === entry.settlementModel ? entry.settlementDelaySec : undefined;
+  const minimums = [entry.minRedeemUsd, reviewed?.minRedeemUsd].filter(
+    (value): value is number => value != null,
+  );
+  return {
+    settlementModel,
+    settlementDelaySec,
+    settlementHorizonSec: Math.max(
+      REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[settlementModel],
+      settlementDelaySec ?? 0,
+    ),
+    minRedeemUsd: minimums.length > 0 ? Math.max(...minimums) : null,
+  };
+}
+
+function redemptionSettlement(
+  settlementModel: RedemptionSettlementModel,
+  settlementDelaySec: number | undefined,
+): {
   settlementModel: RouteReview["settlementModel"];
   settlementSlaSec: number | null;
 } {
-  switch (entry.settlementModel) {
+  switch (settlementModel) {
     case "atomic":
-      return { settlementModel: "atomic", settlementSlaSec: entry.settlementDelaySec ?? 0 };
+      return { settlementModel: "atomic", settlementSlaSec: settlementDelaySec ?? 0 };
     case "immediate":
-      return { settlementModel: "bounded-delay", settlementSlaSec: entry.settlementDelaySec ?? 3_600 };
+      return { settlementModel: "bounded-delay", settlementSlaSec: settlementDelaySec ?? 3_600 };
     case "same-day":
-      return { settlementModel: "same-day", settlementSlaSec: entry.settlementDelaySec ?? 86_400 };
+      return { settlementModel: "same-day", settlementSlaSec: settlementDelaySec ?? 86_400 };
     case "days":
-      return { settlementModel: "bounded-delay", settlementSlaSec: entry.settlementDelaySec ?? null };
+      return { settlementModel: "bounded-delay", settlementSlaSec: settlementDelaySec ?? null };
     case "queued":
-      return { settlementModel: "queued", settlementSlaSec: entry.settlementDelaySec ?? null };
+      return { settlementModel: "queued", settlementSlaSec: settlementDelaySec ?? null };
   }
 }
 
@@ -346,6 +381,7 @@ function buildRedemptionRouteReview(
 ): RouteReview {
   const scope = observation.scope;
   const modelConfidence = observation.modelConfidence ?? entry.modelConfidence;
+  const reviewedTerms = redemptionReviewTerms(entry);
   const physicalResourceKeys =
     scope.kind === "issuer"
       ? [`issuer:${scope.issuerId}`]
@@ -361,10 +397,11 @@ function buildRedemptionRouteReview(
     modelConfidence,
     coverageClass: redemptionCoverageClass(entry, observation),
     capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
-    ...redemptionSettlement(entry),
+    ...redemptionSettlement(reviewedTerms.settlementModel, reviewedTerms.settlementDelaySec),
+    settlementHorizonSec: Math.max(observation.settlementHorizonSec, reviewedTerms.settlementHorizonSec),
     queueDepthUsd: entry.queueDepthUsd ?? null,
     dailyLimitUsd: entry.dailyLimitUsd ?? null,
-    minRedeemUsd: entry.minRedeemUsd ?? null,
+    minRedeemUsd: reviewedTerms.minRedeemUsd,
     physicalResourceKeys,
     executionCosts: redemptionExecutionCosts(entry, observation),
     output: buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId),

@@ -324,6 +324,7 @@ const RouteReviewSchema = z
     capacityScoringHorizon: z.enum(["immediate", "daily", "queued", "eventual", "unknown"]).optional(),
     settlementModel: z.enum(["atomic", "same-day", "bounded-delay", "queued", "eventual", "unknown"]),
     settlementSlaSec: z.number().int().nonnegative().nullable(),
+    settlementHorizonSec: z.number().int().nonnegative().optional(),
     queueDepthUsd: z.number().finite().nonnegative().nullable().optional(),
     dailyLimitUsd: z.number().finite().nonnegative().nullable().optional(),
     minRedeemUsd: z.number().finite().nonnegative().nullable().optional(),
@@ -2000,7 +2001,10 @@ function buildRoute(
     request: {
       requestedNotionalUsd: args.observation.requestedNotionalUsd,
       maxCostBps: args.observation.maxCostBps,
-      settlementHorizonSec: args.observation.settlementHorizonSec,
+      settlementHorizonSec: Math.max(
+        args.observation.settlementHorizonSec,
+        args.review.settlementHorizonSec ?? 0,
+      ),
     },
     capacityCurve,
     output,

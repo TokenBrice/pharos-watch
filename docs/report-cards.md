@@ -56,6 +56,12 @@ Persistent measured market depth is eligible for the same bounded operational-
 resilience credit across the mature cohort. Canonical implementation history
 provides only the age gate; the credit still requires repeated score-eligible
 execution observations and does not require a bespoke asset overlay.
+V9-only reviewed redemption terms may add a documented minimum redemption or
+replace a frozen settlement assumption with an equally or more conservative
+model. They cannot improve the captured settlement model, reduce a captured
+minimum, or shorten the route's observation horizon, and they do not mutate the
+V8 redemption producer. A reviewed slower model without a contractual SLA uses
+the model's conservative comparison horizon rather than inventing a numeric SLA.
 Missing categorical access-posture review remains visible but does not make an
 otherwise established score unrateable. New candidate cards use score-trace
 schema v2 inside candidate-response schema v3 and public-report schema v2.

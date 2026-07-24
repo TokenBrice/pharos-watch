@@ -280,6 +280,10 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       feeBpsMax: 10,
     },
     v9RouteCostTerms: { minFeeUsd: 1_000 },
+    v9RouteReviewTerms: {
+      minRedeemUsd: 100_000,
+      settlementModel: "days",
+    },
     docs: [
       sourceRef("Tether Transparency", "https://tether.to/en/transparency", ["capacity"]),
       sourceRef("Tether legal terms", "https://tether.to/en/legal/", ["route", "capacity", "access"]),

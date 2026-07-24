@@ -243,6 +243,27 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(fixedFeeReview.executionCosts.every((point) => point.executionCostBps === 25)).toBe(true);
   });
 
+  it("projects conservative USDT-only reviewed constraints without changing the captured row", () => {
+    const row = supplyFullRow({
+      stablecoinId: "usdt-tether",
+      settlementModel: "same-day",
+      settlementDelaySec: undefined,
+      minRedeemUsd: undefined,
+      holderEligibility: "verified-customer",
+    });
+    const review = buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]!;
+
+    expect(row).toMatchObject({ settlementModel: "same-day", holderEligibility: "verified-customer" });
+    expect(row.minRedeemUsd).toBeUndefined();
+    expect(review).toMatchObject({
+      holderAccess: "institutional-eligible",
+      settlementModel: "bounded-delay",
+      settlementSlaSec: null,
+      settlementHorizonSec: 14 * 86_400,
+      minRedeemUsd: 100_000,
+    });
+  });
+
   it("keeps pinned redemption fee and output valuation separate in the route review", () => {
     const row = supplyFullRow({ stablecoinId: "fpi-frax", feeBps: null });
     const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!

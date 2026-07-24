@@ -29,6 +29,36 @@ export interface RedemptionCostTerms {
   feeScenario?: RedemptionFeeScenario;
 }
 
+export interface RedemptionV9RouteReviewTerms {
+  minRedeemUsd?: number;
+  settlementModel?: RedemptionSettlementModel;
+}
+
+export const REDEMPTION_SETTLEMENT_CONSERVATISM: readonly RedemptionSettlementModel[] = [
+  "atomic",
+  "immediate",
+  "same-day",
+  "days",
+  "queued",
+];
+
+export function isRedemptionSettlementAtLeastAsConservative(
+  candidate: RedemptionSettlementModel,
+  baseline: RedemptionSettlementModel,
+): boolean {
+  return (
+    REDEMPTION_SETTLEMENT_CONSERVATISM.indexOf(candidate) >=
+    REDEMPTION_SETTLEMENT_CONSERVATISM.indexOf(baseline)
+  );
+}
+
+export function resolveMoreConservativeRedemptionSettlement(
+  left: RedemptionSettlementModel,
+  right: RedemptionSettlementModel,
+): RedemptionSettlementModel {
+  return isRedemptionSettlementAtLeastAsConservative(right, left) ? right : left;
+}
+
 type StaticRedemptionCapacityConfidence = Exclude<RedemptionCapacityConfidence, "live-direct" | "live-proxy">;
 
 export type RedemptionCostModel =
@@ -93,12 +123,20 @@ export interface RedemptionBackstopConfig {
   capacityModel: RedemptionCapacityModel;
   costModel: RedemptionCostModel;
   /**
-   * Reviewed terms projected only by the Safety Score V9 route adapter.
+   * Reviewed cost terms projected only by the Safety Score V9 route adapter.
    *
    * This compatibility overlay keeps evidence corrections made after the V8
    * methodology freeze from changing the public V8 redemption producer.
    */
   v9RouteCostTerms?: RedemptionCostTerms;
+  /**
+   * Reviewed route constraints projected only by the Safety Score V9 adapter.
+   *
+   * Validation permits only settlement semantics that are at least as
+   * conservative as the frozen V8 config. Runtime projection also preserves
+   * any stricter constraint carried by the captured redemption row.
+   */
+  v9RouteReviewTerms?: RedemptionV9RouteReviewTerms;
   holderEligibility?: RedemptionHolderEligibility;
   routeStatus?: Extract<RedemptionRouteStatus, "open" | "unknown">;
   routeExitCorrelation?: RedemptionRouteExitCorrelation;
@@ -192,6 +230,7 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
     capacityModel: { ...config.capacityModel },
     costModel: { ...config.costModel },
     ...(config.v9RouteCostTerms ? { v9RouteCostTerms: { ...config.v9RouteCostTerms } } : {}),
+    ...(config.v9RouteReviewTerms ? { v9RouteReviewTerms: { ...config.v9RouteReviewTerms } } : {}),
     ...(config.docs ? { docs: config.docs.map(cloneRedemptionDocSource) } : {}),
     ...(config.notes ? { notes: [...config.notes] } : {}),
   };

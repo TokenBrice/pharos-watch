@@ -445,14 +445,14 @@ function routeReview(routeId = "dex:primary", observedAt = OBSERVED_AT_SEC) {
   };
 }
 
-function queuedRedemptionFixedInput() {
+function queuedRedemptionFixedInput(settlementHorizonSec = 30 * 86_400) {
   const base = exactFixedInput();
   const observation: ExitRouteObservation = {
     routeId: "redemption:alpha:queue",
     routeFamily: "issuer-redemption",
     scope: { kind: "issuer", issuerId: "alpha" },
     requestedNotionalUsd: 1_000_000,
-    settlementHorizonSec: 30 * 86_400,
+    settlementHorizonSec,
     maxCostBps: 200,
     executableUsd: 1_000_000,
     completionRatio: 1,
@@ -1929,6 +1929,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       queueDepthUsd: 1_500_000,
       dailyLimitUsd: 1_000_000,
       minRedeemUsd: 1_000_000,
+      request: { settlementHorizonSec: 30 * 86_400 },
     });
 
     const exit = evaluateV9Exit(
@@ -1947,6 +1948,18 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       settlementDelaySec: 30 * 86_400,
       capsApplied: expect.arrayContaining(["queue-backlog:0.65", "minimum-redeem:0.75"]),
     });
+  });
+
+  it("never shortens a captured route below the conservative reviewed settlement horizon", () => {
+    const fixed = queuedRedemptionFixedInput(86_400);
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+
+    const redemption = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!.exitRoutes.find(
+      (route) => route.lane === "redemption",
+    )!;
+    expect(redemption.request?.settlementHorizonSec).toBe(30 * 86_400);
   });
 
   it("preserves reviewed capacity and applies the bounded-unknown fee ceiling end to end", () => {

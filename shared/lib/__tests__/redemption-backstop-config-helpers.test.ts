@@ -44,6 +44,7 @@ describe("redemption backstop config helpers", () => {
       capacityModel: { kind: "supply-ratio", ratio: 0.1 },
       costModel: documentedVariableFee("Variable fee schedule"),
       v9RouteCostTerms: { minFeeUsd: 1_000 },
+      v9RouteReviewTerms: { minRedeemUsd: 100_000, settlementModel: "days" },
     });
 
     const alpha = expanded["alpha"]!;
@@ -52,6 +53,7 @@ describe("redemption backstop config helpers", () => {
     alpha.notes!.push("mutated note");
     alpha.costModel.feeDescription = "mutated fee";
     alpha.v9RouteCostTerms!.minFeeUsd = 2_000;
+    alpha.v9RouteReviewTerms!.minRedeemUsd = 200_000;
     if (alpha.capacityModel.kind === "supply-ratio") {
       alpha.capacityModel.ratio = 0.2;
     }
@@ -60,6 +62,7 @@ describe("redemption backstop config helpers", () => {
     expect(beta.notes).toEqual(["fixture note"]);
     expect(beta.costModel.feeDescription).toBe("Variable fee schedule");
     expect(beta.v9RouteCostTerms).toEqual({ minFeeUsd: 1_000 });
+    expect(beta.v9RouteReviewTerms).toEqual({ minRedeemUsd: 100_000, settlementModel: "days" });
     expect(beta.capacityModel).toMatchObject({ kind: "supply-ratio", ratio: 0.1 });
     expect(baseConfig.docs![0]!.supports).toEqual(["route", "fees"]);
   });
@@ -196,10 +199,12 @@ describe("redemption backstop config helpers", () => {
         feeBpsMax: 10,
       },
       v9RouteCostTerms: { minFeeUsd: 1_000 },
+      v9RouteReviewTerms: { minRedeemUsd: 100_000, settlementModel: "days" },
     };
 
     expect(resolveRedemptionCostBpsAtNotional(config.costModel, 100_000)).toBe(10);
     expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 100_000)).toBe(100);
+    expect(config.settlementModel).toBe("same-day");
   });
 
   it("builds documented-bound supply-full fragments with reviewedAt provenance", () => {

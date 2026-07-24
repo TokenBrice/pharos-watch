@@ -77,6 +77,11 @@ describe("getRedemptionBackstopConfig", () => {
         feeBpsMax: 10,
       },
       v9RouteCostTerms: { minFeeUsd: 1_000 },
+      v9RouteReviewTerms: {
+        minRedeemUsd: 100_000,
+        settlementModel: "days",
+      },
+      settlementModel: "same-day",
     });
 
     expect(getRedemptionBackstopConfig("lisusd-lista")).toMatchObject({

@@ -108,6 +108,13 @@ their settlement horizon, cost, evidence kind, output identity, failure domain,
 and observation lineage. Diversification credit requires genuinely independent
 routes.
 
+Reviewed V9-only route constraints may supply a documented minimum redemption
+or a slower settlement class without changing the frozen V8 producer. Validation
+rejects a faster reviewed class, runtime projection keeps the stricter of the
+captured and reviewed terms, and fact compilation uses the longer of the
+captured and reviewed settlement horizons. A conservative modeling horizon is
+not presented as a contractual issuer SLA.
+
 Impact: fast DEX liquidity, issuer redemption, and delayed protocol exits no
 longer collapse into one interchangeable number. A large but slow route cannot
 fully compensate for weak immediate exit capacity.
