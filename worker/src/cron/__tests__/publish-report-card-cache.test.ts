@@ -6,7 +6,9 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared
 const mockBuildReportCardsSnapshot = vi.fn();
 const mockBuildFixedInputCacheEntry = vi.fn();
 const mockBuildV9FixedInputCacheEntry = vi.fn();
+const mockNormalizeFixedInput = vi.fn();
 const mockEnrichV9FixedInput = vi.fn();
+const mockLoadEvidenceJournal = vi.fn();
 const mockRunSafetyScoreV9Shadow = vi.fn();
 const mockSetCacheMany = vi.fn();
 
@@ -17,10 +19,15 @@ vi.mock("../../lib/report-cards-snapshot", () => ({
 vi.mock("../../lib/report-cards-fixed-input", () => ({
   buildReportCardsFixedInputCacheEntry: mockBuildFixedInputCacheEntry,
   buildSafetyScoreV9FixedInputCacheEntry: mockBuildV9FixedInputCacheEntry,
+  normalizeFixedInput: mockNormalizeFixedInput,
 }));
 
 vi.mock("../../lib/safety-score-v9-supply-attribution", () => ({
   enrichSafetyScoreV9FixedInputSupply: mockEnrichV9FixedInput,
+}));
+
+vi.mock("../../lib/report-card-evidence-journal-store", () => ({
+  loadReportCardEvidenceJournalByIdV1: mockLoadEvidenceJournal,
 }));
 
 vi.mock("../../lib/safety-score-v9-shadow-runner", () => ({
@@ -88,7 +95,9 @@ describe("publishReportCardCache", () => {
     mockBuildReportCardsSnapshot.mockReset();
     mockBuildFixedInputCacheEntry.mockReset();
     mockBuildV9FixedInputCacheEntry.mockReset();
+    mockNormalizeFixedInput.mockReset();
     mockEnrichV9FixedInput.mockReset();
+    mockLoadEvidenceJournal.mockReset();
     mockRunSafetyScoreV9Shadow.mockReset();
     mockSetCacheMany.mockReset();
     mockSetCacheMany.mockResolvedValue(undefined);
@@ -108,6 +117,8 @@ describe("publishReportCardCache", () => {
       ...fixedInput,
       safetyScoreV9SupplyAttributionById: {},
     }));
+    mockLoadEvidenceJournal.mockResolvedValue({});
+    mockNormalizeFixedInput.mockImplementation((value) => value);
     mockRunSafetyScoreV9Shadow.mockImplementation(async (shadowInput) => {
       await shadowInput.prepareFixedInput?.(shadowInput.fixedInput, new AbortController().signal);
       return {
@@ -136,6 +147,11 @@ describe("publishReportCardCache", () => {
     expect(mockRunSafetyScoreV9Shadow).toHaveBeenCalledTimes(1);
     expect(mockSetCacheMany.mock.invocationCallOrder[0]).toBeLessThan(
       mockEnrichV9FixedInput.mock.invocationCallOrder[0]!,
+    );
+    expect(mockLoadEvidenceJournal).toHaveBeenCalledTimes(1);
+    expect(mockBuildV9FixedInputCacheEntry).toHaveBeenCalledWith(
+      expect.objectContaining({ evidenceJournalById: {} }),
+      expect.anything(),
     );
     const entries = mockSetCacheMany.mock.calls[0]?.[1] as Array<{ key: string; value: string }>;
     expect(entries.map((entry) => entry.key)).toEqual([
@@ -215,6 +231,21 @@ describe("publishReportCardCache", () => {
   it("keeps the committed V8 publication authoritative when V9 input enrichment fails", async () => {
     mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
     mockEnrichV9FixedInput.mockRejectedValue(new Error("shadow RPC unavailable"));
+
+    const result = await publishReportCardCache({} as D1Database);
+
+    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
+    expect(result.productivity?.productive).toBe(true);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      publicationGenerationId: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
+      v9FixedInputCacheBytes: null,
+      v9Shadow: { status: "failed", stage: "scheduler", code: "Error" },
+    });
+  });
+
+  it("keeps the committed V8 publication authoritative when the diagnostic journal read fails", async () => {
+    mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
+    mockLoadEvidenceJournal.mockRejectedValue(new Error("journal D1 unavailable"));
 
     const result = await publishReportCardCache({} as D1Database);
 

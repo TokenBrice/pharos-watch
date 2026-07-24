@@ -29,6 +29,7 @@ import {
   SafetyScoreV8PublicationIdentitySchema,
   type SafetyScoreV8PublicationIdentity,
 } from "@shared/types/safety-score-publication";
+import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/types/report-card-evidence-journal";
 import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
 import { buildLiveReportCards } from "./report-cards-snapshot-card";
 import {
@@ -145,6 +146,9 @@ const FixedInputPayloadFields = {
   safetyScoreV9SupplyAttributionById: z
     .record(z.string(), SafetyScoreV9SupplyAttributionSchema)
     .default({}),
+  // Diagnostic-only producer provenance. This is carried in the private V9
+  // envelope but intentionally excluded from every score-bearing identity.
+  evidenceJournalById: ReportCardEvidenceJournalByIdV1Schema.default({}),
   dexDeploymentSupplyCoverageById: z.record(z.string(), DexDeploymentSupplyCoverageSchema).default({}),
   collateralDriftCoins: z
     .array(z.object({ id: z.string(), liveScore: z.number(), curatedScore: z.number(), delta: z.number() }))
@@ -253,7 +257,7 @@ async function gunzipText(bytes: Uint8Array): Promise<string> {
 async function buildFixedInputCacheEntry(
   key: string,
   value: unknown,
-  includeV9SupplyAttribution: boolean,
+  includeV9OnlyFields: boolean,
   safetyScoreIdentity?: SafetyScoreV8PublicationIdentity,
 ): Promise<{ key: string; value: string; storedBytes: number; uncompressedBytes: number }> {
   const input = normalizeFixedInput(value);
@@ -270,8 +274,12 @@ async function buildFixedInputCacheEntry(
   ) {
     throw new Error("Exact report-card fixed input does not match its Safety Score publication identity");
   }
-  const { safetyScoreV9SupplyAttributionById: _v9SupplyAttribution, ...v8Input } = input;
-  const payload = JSON.stringify(includeV9SupplyAttribution ? input : v8Input);
+  const {
+    safetyScoreV9SupplyAttributionById: _v9SupplyAttribution,
+    evidenceJournalById: _evidenceJournal,
+    ...v8Input
+  } = input;
+  const payload = JSON.stringify(includeV9OnlyFields ? input : v8Input);
   const uncompressedBytes = new TextEncoder().encode(payload);
   const compressed = await gzipBytes(uncompressedBytes);
   const envelope = JSON.stringify({
@@ -503,6 +511,7 @@ export type ReportCardsFixedInputDraft = Omit<
   | "baseInputGenerationId"
   | "aggregateCirculatingById"
   | "safetyScoreV9SupplyAttributionById"
+  | "evidenceJournalById"
 > & {
   captureKind: ReportCardsFixedInput["captureKind"];
   activeAssetIds?: string[];
@@ -510,6 +519,7 @@ export type ReportCardsFixedInputDraft = Omit<
   // keep compiling; the schema default fills in an empty record.
   aggregateCirculatingById?: ReportCardsFixedInput["aggregateCirculatingById"];
   safetyScoreV9SupplyAttributionById?: ReportCardsFixedInput["safetyScoreV9SupplyAttributionById"];
+  evidenceJournalById?: ReportCardsFixedInput["evidenceJournalById"];
 };
 
 export function createReportCardsFixedInput(draft: ReportCardsFixedInputDraft): ReportCardsFixedInput {
@@ -659,6 +669,16 @@ function assertFixedInputConsistency(input: ReportCardsFixedInput): void {
       );
     }
   }
+  for (const [assetId, records] of Object.entries(input.evidenceJournalById)) {
+    if (!input.activeAssetIds.includes(assetId)) {
+      throw new Error(`Evidence journal targets inactive asset ${assetId}`);
+    }
+    for (const record of records) {
+      if (record.completedAtSec > input.clockSec) {
+        throw new Error(`Evidence journal for ${assetId} is later than the scoring clock`);
+      }
+    }
+  }
   const expectedBaseInputGenerationId = deriveReportCardsBaseInputGenerationId(input);
   if (input.baseInputGenerationId !== expectedBaseInputGenerationId) {
     throw new Error(
@@ -787,6 +807,7 @@ export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
         ]),
       ),
     ),
+    evidenceJournalById: ReportCardEvidenceJournalByIdV1Schema.parse(input.evidenceJournalById),
     dexDeploymentSupplyCoverageById: sortedRecord(input.dexDeploymentSupplyCoverageById),
     liveReserveProvenanceMap: sortedRecord(input.liveReserveProvenanceMap),
     collateralDriftCoins: [...input.collateralDriftCoins].sort((left, right) => left.id.localeCompare(right.id)),

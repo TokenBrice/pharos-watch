@@ -9,12 +9,14 @@ import { buildReportCardPublicationPlan } from "../lib/report-card-publication";
 import {
   buildReportCardsFixedInputCacheEntry,
   buildSafetyScoreV9FixedInputCacheEntry,
+  normalizeFixedInput,
 } from "../lib/report-cards-fixed-input";
 import { recordCronFailure } from "../lib/cron-logger";
 import { runSafetyScoreV9ShadowAfterV8Publication } from "../lib/safety-score-v9-shadow-runner";
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { enrichSafetyScoreV9FixedInputSupply } from "../lib/safety-score-v9-supply-attribution";
+import { loadReportCardEvidenceJournalByIdV1 } from "../lib/report-card-evidence-journal-store";
 
 export async function publishReportCardCache(
   db: D1Database,
@@ -81,11 +83,21 @@ export async function publishReportCardCache(
       db,
       fixedInput,
       prepareFixedInput: async (baseFixedInput, shadowSignal) => {
-        const v9FixedInput = await enrichSafetyScoreV9FixedInputSupply(
+        const supplyFixedInput = await enrichSafetyScoreV9FixedInputSupply(
           baseFixedInput,
           chainRpcs,
           shadowSignal,
         );
+        const evidenceJournalById = await loadReportCardEvidenceJournalByIdV1(
+          db,
+          supplyFixedInput.activeAssetIds,
+          supplyFixedInput.clockSec,
+          shadowSignal,
+        );
+        const v9FixedInput = normalizeFixedInput({
+          ...supplyFixedInput,
+          evidenceJournalById,
+        });
         const v9FixedInputEntry = await buildSafetyScoreV9FixedInputCacheEntry(
           v9FixedInput,
           safetyScoreIdentity,
