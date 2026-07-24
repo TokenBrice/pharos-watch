@@ -27,6 +27,7 @@ function exposure(args: {
     classificationKey: "class:" + args.key,
     sourceGenerationId: "reserves:veritas",
     provenance: "curated",
+    evidenceClass: "independent",
     status: knownStatus("evidence:" + args.key),
     name: args.key,
     weight: args.weight,

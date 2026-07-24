@@ -418,18 +418,19 @@ export function buildReviewedReserveClassifications(
   });
 }
 
-type IssuerAttestedReserveRows = NonNullable<ExtensionAsset["issuerAttestedReserveRows"]>;
+type ReviewedStaticReserveRows = NonNullable<ExtensionAsset["reviewedStaticReserveRows"]>;
 
-const INDEPENDENT_ASSURANCE_METHODS = new Set([
+const CORROBORATING_ASSURANCE_METHODS = new Set([
   "audit",
   "examination",
   "review",
   "agreed-upon-procedures",
   "attestation",
 ]);
+const DIRECT_RESERVE_ASSURANCE_METHODS = new Set(["audit", "examination"]);
 const ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC = 31_536_000;
 
-function normalizeIssuerAttestedReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {
+function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {
   const sorted = [...rows].sort(
     (left, right) =>
       compareText(computeSafetyScoreV9ReserveExposureKey(left), computeSafetyScoreV9ReserveExposureKey(right)) ||
@@ -449,11 +450,36 @@ function normalizeIssuerAttestedReserveRows(rows: readonly ReserveSlice[]): Rese
   });
 }
 
-/** D6: admit reviewed issuer rows only when an independent attestor corroborates a prudential issuer. */
-export function buildSafetyScoreV9IssuerAttestedReserveRows(
+function hasDirectIndependentReserveAssurance(meta: V9ExtensionRegistryMeta): boolean {
+  const review = meta.reserveReview;
+  const report = meta.proofOfReserves?.latestReport;
+  if (!review || !report) return false;
+  const reportSourceUrls = new Set(report.sources.map((source) => source.url));
+  const transparencyIndexUrl = meta.proofOfReserves?.url;
+  return (
+    review.confidence === "verified" &&
+    report.confidence === "verified" &&
+    DIRECT_RESERVE_ASSURANCE_METHODS.has(report.assuranceMethod) &&
+    report.scope === "assets-and-liabilities" &&
+    report.liabilityReconciliation === "full" &&
+    review.sources.some(
+      (source) =>
+        reportSourceUrls.has(source.url) &&
+        source.url !== transparencyIndexUrl,
+    )
+  );
+}
+
+/**
+ * D6: admit reviewed static rows only when an independent attestor corroborates
+ * a prudential issuer. Rows directly reconciled by a verified audit or
+ * examination retain independent evidence strength; corroborated issuer rows
+ * keep the candidate policy's confidence haircut.
+ */
+export function buildSafetyScoreV9ReviewedStaticReserveRows(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
-): IssuerAttestedReserveRows | null {
+): ReviewedStaticReserveRows | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
   const proof = meta.proofOfReserves;
@@ -484,20 +510,20 @@ export function buildSafetyScoreV9IssuerAttestedReserveRows(
     compositionAtSec !== periodEndSec ||
     reportAtSec < periodEndSec ||
     clockSec - compositionAtSec > ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC ||
-    !INDEPENDENT_ASSURANCE_METHODS.has(report.assuranceMethod)
+    !CORROBORATING_ASSURANCE_METHODS.has(report.assuranceMethod)
   ) {
     return null;
   }
+  const evidenceClass = hasDirectIndependentReserveAssurance(meta) ? "independent" : "issuer-attested";
   return {
-    rows: normalizeIssuerAttestedReserveRows(rows),
-    evidenceClass: "issuer-attested",
-    confidenceMultiplier: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.issuerAttestedConfidenceMultiplier,
+    rows: normalizeReviewedStaticReserveRows(rows),
+    evidenceClass,
   };
 }
 
-function addIssuerAttestedReserveEvidence(
+function addReviewedStaticReserveEvidence(
   meta: V9ExtensionRegistryMeta,
-  admitted: IssuerAttestedReserveRows | null,
+  admitted: ReviewedStaticReserveRows | null,
   evidence: ReviewEvidenceBuilder,
 ): void {
   const review = meta.reserveReview;
@@ -508,10 +534,10 @@ function addIssuerAttestedReserveEvidence(
   );
   evidence.add({
     componentKeys: [
-      "issuer-attested-reserves",
+      "reviewed-static-reserves",
       ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
     ],
-    sourceId: "stablecoin-meta.issuer-attested-reserves",
+    sourceId: "stablecoin-meta.reviewed-static-reserves",
     reviewedAt: report.periodEnd,
     confidence: confidenceForResearch(report.confidence),
     sources,
@@ -520,7 +546,6 @@ function addIssuerAttestedReserveEvidence(
       reserves: admitted.rows,
       proofOfReserves: meta.proofOfReserves,
       evidenceClass: admitted.evidenceClass,
-      confidenceMultiplier: admitted.confidenceMultiplier,
     },
     maxAgeSec: ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC,
   });
@@ -1926,9 +1951,9 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const cycle = cycleByAsset.get(assetId);
       const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
       const liveReserves = fixedInput.liveReserveMap[assetId] ?? [];
-      const issuerAttestedReserveRows =
-        liveReserves.length === 0 ? buildSafetyScoreV9IssuerAttestedReserveRows(meta, clockSec) : null;
-      const reserveRows = issuerAttestedReserveRows?.rows ?? liveReserves;
+      const reviewedStaticReserveRows =
+        liveReserves.length === 0 ? buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec) : null;
+      const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
       const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
       const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);
       const mechanismOverlayEvidence = getSafetyScoreV9MechanismOverlayEvidence(assetId, archetype, clockSec);
@@ -1945,7 +1970,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       }
       const reserveClassifications = buildReviewedReserveClassifications(reserveRows, meta, clockSec);
       addReserveClassificationEvidence(meta, reserveClassifications, reviewEvidence);
-      addIssuerAttestedReserveEvidence(meta, issuerAttestedReserveRows, reviewEvidence);
+      addReviewedStaticReserveEvidence(meta, reviewedStaticReserveRows, reviewEvidence);
       addDependencyEvidence(meta, reviewEvidence);
       addWrapperCustodyEvidence(meta, reviewEvidence);
       const supplyReview = buildSafetyScoreV9SupplyReview(fixedInput, assetId, meta.bridgeRouteRisk);
@@ -2001,7 +2026,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         },
         reserveApplicability: { state: "required" },
         reserveClassifications,
-        issuerAttestedReserveRows,
+        reviewedStaticReserveRows,
         routeReviews: buildSafetyScoreV9RouteReviews(fixedInput, assetId),
         retainedRoutes: buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId),
         controlReview:

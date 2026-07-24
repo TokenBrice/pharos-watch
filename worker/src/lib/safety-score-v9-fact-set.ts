@@ -462,14 +462,13 @@ const SupplyReviewSchema = z
   })
   .strict();
 
-const IssuerAttestedReserveRowsSchema = z
+const ReviewedStaticReserveRowsSchema = z
   .object({
     rows: canonicalArrayBy(
       ReserveSliceSchema,
       (row) => `${computeSafetyScoreV9ReserveExposureKey(row)}:${stableJsonStringifyV1(row)}`,
-    ).refine((rows) => rows.length > 0, { message: "Issuer-attested reserve admission requires rows" }),
-    evidenceClass: z.literal("issuer-attested"),
-    confidenceMultiplier: z.number().finite().positive().max(1),
+    ).refine((rows) => rows.length > 0, { message: "Reviewed static reserve admission requires rows" }),
+    evidenceClass: z.enum(["independent", "issuer-attested"]),
   })
   .strict();
 
@@ -525,7 +524,7 @@ const AssetExtensionSchema = z
     dependencies: EffectiveDependenciesOverlaySchema.nullable(),
     reserveApplicability: ReserveApplicabilitySchema,
     reserveClassifications: canonicalArrayBy(ReserveClassificationSchema, (row) => row.exposureKey),
-    issuerAttestedReserveRows: IssuerAttestedReserveRowsSchema.nullable().optional(),
+    reviewedStaticReserveRows: ReviewedStaticReserveRowsSchema.nullable().optional(),
     routeReviews: canonicalArrayBy(RouteReviewSchema, (row) => `${row.lane}:${row.routeId}`),
     retainedRoutes: canonicalArrayBy(
       RetainedRouteSchema,
@@ -1398,7 +1397,7 @@ function buildReserves(context: AssetBuildContext): {
   if (context.asset.reserveApplicability.state === "not-applicable") {
     if (
       (context.fixedInput.liveReserveMap[context.asset.assetId] ?? []).length > 0 ||
-      context.asset.issuerAttestedReserveRows != null
+      context.asset.reviewedStaticReserveRows != null
     ) {
       throw new Error(`Reserve applicability for ${context.asset.assetId} conflicts with captured reserve rows`);
     }
@@ -1416,15 +1415,8 @@ function buildReserves(context: AssetBuildContext): {
   }
 
   const liveSlices = context.fixedInput.liveReserveMap[context.asset.assetId] ?? [];
-  const issuerAttested = liveSlices.length === 0 ? (context.asset.issuerAttestedReserveRows ?? null) : null;
-  if (
-    issuerAttested !== null &&
-    issuerAttested.confidenceMultiplier !==
-      V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.issuerAttestedConfidenceMultiplier
-  ) {
-    throw new Error(`Issuer-attested reserve confidence does not match policy for ${context.asset.assetId}`);
-  }
-  const slices = issuerAttested?.rows ?? liveSlices;
+  const reviewedStatic = liveSlices.length === 0 ? (context.asset.reviewedStaticReserveRows ?? null) : null;
+  const slices = reviewedStatic?.rows ?? liveSlices;
   if (slices.length === 0) {
     return {
       reserveStatus: missingLocalFact(context, {
@@ -1453,13 +1445,13 @@ function buildReserves(context: AssetBuildContext): {
   const envelopeGapIds: string[] = [];
   const envelopeEvidenceIds: string[] = [];
   if (
-    issuerAttested &&
-    !context.asset.componentEvidence.some((binding) => binding.componentKey === "issuer-attested-reserves")
+    reviewedStatic &&
+    !context.asset.componentEvidence.some((binding) => binding.componentKey === "reviewed-static-reserves")
   ) {
-    throw new Error(`Issuer-attested reserve admission has no bound evidence for ${context.asset.assetId}`);
+    throw new Error(`Reviewed static reserve admission has no bound evidence for ${context.asset.assetId}`);
   }
-  const issuerAttestedEvidenceIds = issuerAttested
-    ? componentResearchEvidence(context, "issuer-attested-reserves")
+  const reviewedStaticEvidenceIds = reviewedStatic
+    ? componentResearchEvidence(context, "reviewed-static-reserves")
     : [];
 
   for (const [exposureKey, groupedSlices] of [...grouped].sort(([left], [right]) => compareText(left, right))) {
@@ -1477,8 +1469,8 @@ function buildReserves(context: AssetBuildContext): {
     const classification = classificationByKey.get(exposureKey);
     if (classification) consumedClassifications.add(exposureKey);
     assertCompatibleReserveClassification(context.asset.assetId, raw, classification);
-    const evidenceIds = issuerAttested
-      ? issuerAttestedEvidenceIds
+    const evidenceIds = reviewedStatic
+      ? reviewedStaticEvidenceIds
       : [reserveSourceEvidence(context, exposureKey, groupedSlices)];
     const reviewedNonLink = classification?.trackedAssetDisposition === "reviewed-non-link";
     const trackedAssetId = reviewedNonLink
@@ -1548,13 +1540,13 @@ function buildReserves(context: AssetBuildContext): {
     exposures.push({
       exposureKey,
       classificationKey: classification?.classificationKey ?? `base:${exposureKey}`,
-      sourceGenerationId: issuerAttested
+      sourceGenerationId: reviewedStatic
         ? context.extension.sources.researchOverlays.generationId
         : context.extension.sources.liveReserves.generationId,
-      provenance: issuerAttested ? "curated" : "live",
-      ...(issuerAttested
+      provenance: reviewedStatic ? "curated" : "live",
+      ...(reviewedStatic
         ? {
-            evidenceClass: issuerAttested.evidenceClass,
+            evidenceClass: reviewedStatic.evidenceClass,
           }
         : {}),
       status,

@@ -29,6 +29,7 @@ const reserveExposure = (key: string): V9ReserveExposureFactV2 => ({
   classificationKey: `class:${key}`,
   sourceGenerationId: "reserves:test",
   provenance: "curated",
+  evidenceClass: "independent",
   status: knownStatus(key),
   name: key,
   weight: 0.25,

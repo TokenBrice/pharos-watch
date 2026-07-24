@@ -1866,6 +1866,24 @@ describe("Safety Score v9 normalized fact protocol", () => {
     expect(() => compileV9FactSetV2(input)).toThrow(message);
   });
 
+  it("requires explicit evidence classes for curated reserve rows", () => {
+    const input = coreFixture();
+    const exposure = input.assets[0]!.reserveExposures[0]! as V9AssetFactsV2["reserveExposures"][number];
+    exposure.provenance = "curated";
+    exposure.sourceGenerationId = SOURCE_FINGERPRINTS.researchOverlays.generationId;
+    delete exposure.evidenceClass;
+
+    expect(() => compileV9FactSetV2(input)).toThrow("Curated reserve exposure requires an evidence class");
+  });
+
+  it("rejects static evidence classes on live reserve rows", () => {
+    const input = coreFixture();
+    const exposure = input.assets[0]!.reserveExposures[0]! as V9AssetFactsV2["reserveExposures"][number];
+    exposure.evidenceClass = "independent";
+
+    expect(() => compileV9FactSetV2(input)).toThrow("Live reserve exposure must not carry a static evidence class");
+  });
+
   it.each([
     [
       "execution cost",

@@ -1788,18 +1788,39 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const metaById = new Map([["alpha", meta]]);
     const noLive = exactFixedInput({ omitLiveReserve: true });
     const issuerAttested = buildSafetyScoreV9BaselineExtension(noLive, { metaById });
-    expect(issuerAttested.assets[0]!.issuerAttestedReserveRows).toMatchObject({
+    expect(issuerAttested.assets[0]!.reviewedStaticReserveRows).toMatchObject({
       evidenceClass: "issuer-attested",
-      confidenceMultiplier: 0.8,
     });
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(noLive, issuerAttested).assets[0]!;
     expect(compiled.reserveExposures).toHaveLength(2);
     expect(compiled.reserveExposures.every((exposure) => exposure.evidenceClass === "issuer-attested")).toBe(true);
     expect(compiled.reserveExposures.reduce((sum, exposure) => sum + exposure.weight, 0)).toBeCloseTo(1, 12);
 
+    const reportSources = meta.proofOfReserves!.latestReport!.sources;
+    const independentlyExaminedMeta: V9ExtensionRegistryMeta = {
+      ...meta,
+      reserveReview: {
+        ...meta.reserveReview!,
+        sources: reportSources,
+      },
+    };
+    const independentExtension = buildSafetyScoreV9BaselineExtension(noLive, {
+      metaById: new Map([["alpha", independentlyExaminedMeta]]),
+    });
+    expect(independentExtension.assets[0]!.reviewedStaticReserveRows).toMatchObject({
+      evidenceClass: "independent",
+    });
+    const independentlyCompiled = compileSafetyScoreV9FactSetFromFixedInput(
+      noLive,
+      independentExtension,
+    ).assets[0]!;
+    expect(
+      independentlyCompiled.reserveExposures.every((exposure) => exposure.evidenceClass === "independent"),
+    ).toBe(true);
+
     const withLive = exactFixedInput();
     const liveFirst = buildSafetyScoreV9BaselineExtension(withLive, { metaById });
-    expect(liveFirst.assets[0]!.issuerAttestedReserveRows).toBeNull();
+    expect(liveFirst.assets[0]!.reviewedStaticReserveRows).toBeNull();
     const liveExposures = compileSafetyScoreV9FactSetFromFixedInput(withLive, liveFirst).assets[0]!.reserveExposures;
     expect(liveExposures).toEqual([expect.objectContaining({ provenance: "live", weight: 1 })]);
     expect(liveExposures[0]).not.toHaveProperty("evidenceClass");

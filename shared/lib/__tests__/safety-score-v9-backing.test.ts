@@ -35,6 +35,7 @@ function exposure(args: {
     classificationKey: `class:${args.key}`,
     sourceGenerationId: "reserves:test",
     provenance: args.provenance ?? "curated",
+    ...((args.provenance ?? "curated") === "live" ? {} : { evidenceClass: "independent" as const }),
     status: knownStatus(`evidence:${args.key}`),
     name: args.key,
     weight: args.weight,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ReserveSlice } from "@shared/types/reserves";
 import {
-  buildSafetyScoreV9IssuerAttestedReserveRows,
+  buildSafetyScoreV9ReviewedStaticReserveRows,
   resolveSafetyScoreV9AssetIssuerKey,
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9-extension";
@@ -266,13 +266,86 @@ describe("Phase 1 R5 V9-only peg adapter", () => {
 
 describe("Phase 1 D6 issuer-attested reserve admission", () => {
   it("admits a signed independent report for a prudential issuer at the owner-ratify 0.8 confidence", () => {
-    const admitted = buildSafetyScoreV9IssuerAttestedReserveRows(eligibleReserveMeta(), CLOCK_SEC);
-    expect(admitted).toMatchObject({ evidenceClass: "issuer-attested", confidenceMultiplier: 0.8 });
+    const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(eligibleReserveMeta(), CLOCK_SEC);
+    expect(admitted).toMatchObject({ evidenceClass: "issuer-attested" });
     expect(admitted?.rows).toHaveLength(2);
   });
 
+  it("retains full confidence when the verified examination directly reconciles the reviewed composition", () => {
+    const base = eligibleReserveMeta();
+    const reportSource = base.proofOfReserves!.latestReport!.sources[0]!;
+    const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(
+      eligibleReserveMeta({
+        reserveReview: {
+          ...base.reserveReview!,
+          sources: [reportSource],
+        },
+      }),
+      CLOCK_SEC,
+    );
+
+    expect(admitted).toMatchObject({ evidenceClass: "independent" });
+  });
+
+  it("keeps partial, probable, attestation, and separately sourced reviews at issuer-attested confidence", () => {
+    const base = eligibleReserveMeta();
+    const reportSource = base.proofOfReserves!.latestReport!.sources[0]!;
+    const directlySourced = {
+      ...base.reserveReview!,
+      sources: [reportSource],
+    };
+    const cases = [
+      eligibleReserveMeta({
+        reserveReview: directlySourced,
+        proofOfReserves: {
+          ...base.proofOfReserves!,
+          latestReport: {
+            ...base.proofOfReserves!.latestReport!,
+            liabilityReconciliation: "partial",
+          },
+        },
+      }),
+      eligibleReserveMeta({
+        reserveReview: {
+          ...directlySourced,
+          confidence: "probable",
+        },
+      }),
+      eligibleReserveMeta({
+        reserveReview: directlySourced,
+        proofOfReserves: {
+          ...base.proofOfReserves!,
+          latestReport: {
+            ...base.proofOfReserves!.latestReport!,
+            assuranceMethod: "attestation",
+          },
+        },
+      }),
+      eligibleReserveMeta({
+        reserveReview: {
+          ...directlySourced,
+          sources: [{ label: "Transparency index", url: base.proofOfReserves!.url }],
+        },
+        proofOfReserves: {
+          ...base.proofOfReserves!,
+          latestReport: {
+            ...base.proofOfReserves!.latestReport!,
+            sources: [{ label: "Transparency index", url: base.proofOfReserves!.url }],
+          },
+        },
+      }),
+      eligibleReserveMeta(),
+    ];
+
+    for (const meta of cases) {
+      expect(buildSafetyScoreV9ReviewedStaticReserveRows(meta, CLOCK_SEC)).toMatchObject({
+        evidenceClass: "issuer-attested",
+      });
+    }
+  });
+
   it("normalizes the real USDG-shaped 100.01% rounded composition before fact compilation", () => {
-    const admitted = buildSafetyScoreV9IssuerAttestedReserveRows(
+    const admitted = buildSafetyScoreV9ReviewedStaticReserveRows(
       eligibleReserveMeta({ id: "usdg-paxos", reserves: usdgReserveRows() }),
       CLOCK_SEC,
     );
@@ -304,10 +377,10 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
       },
     });
 
-    expect(buildSafetyScoreV9IssuerAttestedReserveRows(nonPrudential, CLOCK_SEC)).toBeNull();
-    expect(buildSafetyScoreV9IssuerAttestedReserveRows(selfAttested, CLOCK_SEC)).toBeNull();
-    expect(buildSafetyScoreV9IssuerAttestedReserveRows(onchainOnly, CLOCK_SEC)).toBeNull();
-    expect(buildSafetyScoreV9IssuerAttestedReserveRows(unsourced, CLOCK_SEC)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(nonPrudential, CLOCK_SEC)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(selfAttested, CLOCK_SEC)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(onchainOnly, CLOCK_SEC)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(unsourced, CLOCK_SEC)).toBeNull();
   });
 
   it("keeps a USDai-shaped issuer excluded even if curated rows later appear", () => {
@@ -318,7 +391,7 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
       proofOfReserves: undefined,
     });
 
-    expect(buildSafetyScoreV9IssuerAttestedReserveRows(usdai, CLOCK_SEC)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(usdai, CLOCK_SEC)).toBeNull();
   });
 
   it("fails closed when rows are not bound to the signed period or report dates are invalid", () => {
@@ -349,8 +422,8 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
       },
     });
 
-    expect(buildSafetyScoreV9IssuerAttestedReserveRows(mismatchedPeriod, CLOCK_SEC)).toBeNull();
-    expect(buildSafetyScoreV9IssuerAttestedReserveRows(futurePeriod, CLOCK_SEC)).toBeNull();
-    expect(buildSafetyScoreV9IssuerAttestedReserveRows(staleReport, CLOCK_SEC)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(mismatchedPeriod, CLOCK_SEC)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(futurePeriod, CLOCK_SEC)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(staleReport, CLOCK_SEC)).toBeNull();
   });
 });

@@ -584,7 +584,9 @@ export function evaluateV9ReserveExposures(
     const materialityWeight = materialityWeightFor(exposure);
     const requiredUnknown = exposure.status.applicability.state === "unresolved";
     const confidenceMultiplier =
-      exposure.evidenceClass === "issuer-attested" ? backing.reserve.issuerAttestedConfidenceMultiplier : 1;
+      exposure.provenance === "live" || exposure.evidenceClass === "independent"
+        ? 1
+        : backing.reserve.issuerAttestedConfidenceMultiplier;
     const classifiedScore = scoreV9ReserveExposureClassification(exposure, policy) * confidenceMultiplier;
     let score =
       state === "known" || state === "stale"
