@@ -5,6 +5,7 @@ import {
   DEX_MEASURED_MAX_COST_BPS,
   buildDexMeasuredCapacityCurve,
   buildDexMeasuredExecutionTargetId,
+  getDexMeasuredExecutionFreshnessMaxSec,
   getDexMeasuredExecutionProbeNotionals,
   toDexMeasuredExecutionPublicProfile,
   validateDexMeasuredExecutionProfile,
@@ -332,6 +333,40 @@ describe("DEX measured execution contract", () => {
     });
   });
 
+  it("projects raw registry binding proof into proof-free registry provenance", () => {
+    const internal = profile();
+    internal.registryBindingProof = {
+      registryAddress: "0x5555555555555555555555555555555555555555",
+      registryCodeHash: `0x${"cd".repeat(32)}`,
+      registeredPoolAddress: internal.poolId as `0x${string}`,
+      lpTokenAddress: "0x6666666666666666666666666666666666666666",
+      poolTokenAddresses: [TOKEN_IN.address, TOKEN_OUT.address],
+      lpTokenCallData: "0x1234",
+      lpTokenReturnData: "0xabcd",
+      registryCoinsCallData: "0x2345",
+      registryCoinsReturnData: "0xbcde",
+      poolCoinsProof: [
+        { index: 0, callData: "0x3456", returnData: "0xcdef" },
+        { index: 1, callData: "0x4567", returnData: "0xdef0" },
+      ],
+      tokenDecimalsProof: [
+        { tokenAddress: TOKEN_IN.address, decimals: TOKEN_IN.decimals, callData: "0x5678", returnData: "0xef01" },
+        { tokenAddress: TOKEN_OUT.address, decimals: TOKEN_OUT.decimals, callData: "0x6789", returnData: "0xf012" },
+      ],
+    };
+
+    const publicProfile = toDexMeasuredExecutionPublicProfile(internal);
+
+    expect(publicProfile).not.toHaveProperty("registryBindingProof");
+    expect(publicProfile.registryProvenance).toEqual({
+      registryAddress: internal.registryBindingProof.registryAddress,
+      registryCodeHash: internal.registryBindingProof.registryCodeHash,
+      registeredPoolAddress: internal.registryBindingProof.registeredPoolAddress,
+      lpTokenAddress: internal.registryBindingProof.lpTokenAddress,
+      poolTokenAddresses: internal.registryBindingProof.poolTokenAddresses,
+    });
+  });
+
   it("fails closed on stale, tampered, and price-divergent profiles", () => {
     const nowSec = 20_000;
     const tampered = profile(nowSec);
@@ -351,5 +386,51 @@ describe("DEX measured execution contract", () => {
       "quote-price-mismatch",
       "invalid-capacity-curve",
     ]));
+  });
+
+  it("gives only the reviewed Curve StableSwap adapter a two-hour profile ceiling", () => {
+    const nowSec = 20_000;
+    const adapterProfileId = "curve-stableswap-main-registry-get-dy-v1";
+    const targetId = buildDexMeasuredExecutionTargetId({
+      adapterProfileId,
+      stablecoinId: "usd1",
+      chain: "ethereum",
+      protocol: "uniswap-v3",
+      poolId: "0x3333333333333333333333333333333333333333",
+      tokenInAddress: TOKEN_IN.address,
+      tokenOutAddress: TOKEN_OUT.address,
+      feePips: 500,
+    });
+    const currentTarget = {
+      ...target(nowSec),
+      targetId,
+      adapterProfileId,
+      capturedAt: nowSec - 8_000,
+    };
+    const retainedProfile = {
+      ...profile(nowSec),
+      targetId,
+      adapterProfileId,
+      quotedAt: nowSec - 7_199,
+    };
+
+    expect(getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId)).toBe(7_200);
+    expect(getDexMeasuredExecutionFreshnessMaxSec("uniswap-v3-quoter-v2")).toBe(3_600);
+    expect(validateDexMeasuredExecutionProfile({
+      profile: retainedProfile,
+      quotedTarget: currentTarget,
+      currentTarget,
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec,
+    })).not.toContain("stale-observation");
+    expect(validateDexMeasuredExecutionProfile({
+      profile: { ...retainedProfile, quotedAt: nowSec - 7_201 },
+      quotedTarget: currentTarget,
+      currentTarget,
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec,
+    })).toContain("stale-observation");
   });
 });

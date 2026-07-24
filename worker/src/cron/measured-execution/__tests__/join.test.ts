@@ -4,12 +4,17 @@ vi.mock("../quoter-v2", async () => {
   const actual = await vi.importActual<typeof import("../quoter-v2")>("../quoter-v2");
   return { ...actual, validateQuoterV2ProfileProof: vi.fn(() => []) };
 });
+vi.mock("../curve-stableswap", async () => {
+  const actual = await vi.importActual<typeof import("../curve-stableswap")>("../curve-stableswap");
+  return { ...actual, validateCurveStableSwapProfileProof: vi.fn(() => []) };
+});
 
 import { buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { PoolEntry } from "../../dex-liquidity/types";
 import {
   buildDexMeasuredExecutionRetainedRoutePools,
   joinDexMeasuredExecutionEvidence,
+  stripDexMeasuredExecutionInternalFields,
 } from "../join";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
 import { getDexMeasuredExecutionDeployment } from "../registry";
@@ -18,6 +23,92 @@ import {
   CURVE_CRYPTOSWAP_SHADOW_COHORT,
   encodeCurveCryptoSwapGetDy,
 } from "../curve-cryptoswap";
+import {
+  CURVE_3POOL_STABLESWAP_POLICY,
+  CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
+  encodeCurveStableSwapGetDy,
+} from "../curve-stableswap";
+
+function curveStableSwapPacket() {
+  const policy = CURVE_3POOL_STABLESWAP_POLICY;
+  const stablecoinIds = ["dai-makerdao", "usdc-circle", "usdt-tether"];
+  const inputIndex = 2;
+  const poolId = `ethereum:${policy.poolAddress}`;
+  const targets = [0, 1].map((outputIndex): DexMeasuredExecutionTarget => {
+    const tokenInPolicy = policy.poolTokens[inputIndex]!;
+    const tokenOutPolicy = policy.poolTokens[outputIndex]!;
+    const poolTokenAddresses = policy.poolTokens.map((token) => token.address);
+    const base = {
+      schemaVersion: "dex-measured-target-v1" as const,
+      stablecoinId: "usdt-tether",
+      adapterProfileId: CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
+      protocol: "curve",
+      chain: "ethereum",
+      poolId,
+      poolTokenAddresses,
+      tokenIn: {
+        address: tokenInPolicy.address,
+        symbol: tokenInPolicy.symbol,
+        decimals: tokenInPolicy.decimals,
+        referencePriceUsd: 1,
+        trackedAssetId: "usdt-tether",
+      },
+      tokenOut: {
+        address: tokenOutPolicy.address,
+        symbol: tokenOutPolicy.symbol,
+        decimals: tokenOutPolicy.decimals,
+        referencePriceUsd: 1,
+        trackedAssetId: stablecoinIds[outputIndex],
+      },
+      retainedTvlUsd: 160_000_000,
+      retainedPoolPriceUsd: 1,
+      capturedAt: 1_000,
+    };
+    return {
+      ...base,
+      targetId: buildDexMeasuredExecutionTargetId({
+        adapterProfileId: base.adapterProfileId,
+        stablecoinId: base.stablecoinId,
+        chain: base.chain,
+        protocol: base.protocol,
+        poolId: base.poolId,
+        tokenInAddress: base.tokenIn.address,
+        tokenOutAddress: base.tokenOut.address,
+        poolTokenAddresses,
+      }),
+    };
+  });
+  const profiles = targets.map((measuredTarget) => {
+    const inputIndex = measuredTarget.poolTokenAddresses!.indexOf(measuredTarget.tokenIn.address);
+    const outputIndex = measuredTarget.poolTokenAddresses!.indexOf(measuredTarget.tokenOut.address);
+    const points = [1_000, 100_000, 1_000_000, 10_000_000, 25_000_000].map((inputUsd) => {
+      const amountInRaw = BigInt(inputUsd) * 10n ** BigInt(measuredTarget.tokenIn.decimals);
+      const amountOutRaw =
+        BigInt(Math.round(inputUsd * 0.99)) * 10n ** BigInt(measuredTarget.tokenOut.decimals);
+      return {
+        amountInRaw: amountInRaw.toString(),
+        amountOutRaw: amountOutRaw.toString(),
+        callData: encodeCurveStableSwapGetDy({ inputIndex, outputIndex, amountInRaw }),
+        returnData: `0x${amountOutRaw.toString(16).padStart(64, "0")}` as `0x${string}`,
+        inputUsd,
+        outputUsd: inputUsd * 0.99,
+        costBps: 100,
+        passesCostBound: true,
+      };
+    });
+    return buildDexMeasuredExecutionProfile({
+      target: measuredTarget,
+      targetGenerationId: "curve-target-generation",
+      quoteGenerationId: "curve-quote-generation",
+      quotedAt: 1_060,
+      blockNumber: 25_601_051,
+      endpointAddress: policy.poolAddress,
+      endpointCodeHash: policy.expectedPoolCodeHash,
+      points,
+    });
+  });
+  return { targets, profiles };
+}
 
 function target(chain: string = "ethereum"): DexMeasuredExecutionTarget {
   const input = {
@@ -114,6 +205,250 @@ function slipstreamTarget(): DexMeasuredExecutionTarget {
 }
 
 describe("measured execution join activation", () => {
+  it("attaches the reviewed Curve StableSwap directions only as one atomic packet", () => {
+    const { targets, profiles } = curveStableSwapPacket();
+    const pool: PoolEntry = {
+      poolId: "defillama-3pool-row",
+      project: "curve",
+      chain: "ethereum",
+      tvlUsd: 160_000_000,
+      symbol: "DAI-USDC-USDT",
+      volumeUsd1d: 11_000_000,
+      poolType: "curve-stableswap-high-a",
+      source: "dl",
+      extra: {
+        measuredExecutionTargets: targets,
+        ammExecutionModel: {
+          source: "curve",
+          invariant: "stableswap",
+          trackedTokenIndex: 2,
+          feeRate: 0.001,
+          amplification: 4_000 / 9,
+          tokens: CURVE_3POOL_STABLESWAP_POLICY.poolTokens.map((token, index) => ({
+            ...token,
+            balance: 50_000_000,
+            referencePriceUsd: 1,
+            referencePriceSource: "source-token-usd" as const,
+            trackedAssetId: ["dai-makerdao", "usdc-circle", "usdt-tether"][index],
+          })),
+        },
+      },
+    };
+    const byTargetId = new Map(targets.map((measuredTarget, index) => [
+      measuredTarget.targetId,
+      {
+        quotedTarget: measuredTarget,
+        status: "measured" as const,
+        failureReason: null,
+        profile: profiles[index]!,
+        quoteGenerationId: "curve-quote-generation",
+        targetGenerationId: "curve-target-generation",
+        resolution: "latest" as const,
+        latestFailureReason: null,
+        observationHistory: {
+          completeProducerCycleCount: 2,
+          successfulObservationCount: 2,
+          consecutiveSuccessCount: 2,
+          observationWindowStartedAt: 1_000,
+          observationWindowEndedAt: 1_060,
+          latestOperationalFailureAt: null,
+          conservativeStatistic: "pointwise-minimum" as const,
+          conservativeCapacityCurve: profiles[index]!.capacityCurve,
+        },
+      },
+    ]));
+
+    const diagnostics = joinDexMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([["usdt-tether", [pool]]]),
+      evidence: {
+        quoteGenerationId: "curve-quote-generation",
+        targetGenerationId: "curve-target-generation",
+        publishedAt: 1_060,
+        byTargetId,
+      },
+      nowSec: 1_060 + 7_199,
+    });
+
+    expect(pool.extra?.measuredExecutions).toHaveLength(2);
+    expect(pool.extra?.measuredExecutionProfiles).toHaveLength(2);
+    expect(pool.extra?.measuredExecutions?.every(
+      (profile) => profile.quotedAt === 1_060 && profile.blockNumber === 25_601_051,
+    )).toBe(true);
+    expect(pool.extra?.measuredExecutionDiagnostics).toHaveLength(2);
+    expect(pool.extra?.ammExecutionModel).toBeDefined();
+    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    expect(diagnostics).toMatchObject({ targetCount: 2, measuredCount: 2, gatedCount: 0 });
+
+    const expired = joinDexMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([["usdt-tether", [pool]]]),
+      evidence: {
+        quoteGenerationId: "curve-quote-generation",
+        targetGenerationId: "curve-target-generation",
+        publishedAt: 1_060,
+        byTargetId,
+      },
+      nowSec: 1_060 + 7_201,
+    });
+    expect(pool.extra?.measuredExecutions).toBeUndefined();
+    expect(pool.extra?.measuredExecutionProfiles).toBeUndefined();
+    expect(pool.extra?.ammExecutionModel).toBeDefined();
+    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    expect(expired).toMatchObject({ targetCount: 2, measuredCount: 0, gatedCount: 2 });
+
+    stripDexMeasuredExecutionInternalFields([pool]);
+    expect(pool.extra?.measuredExecutionTargets).toBeUndefined();
+    expect(pool.extra?.measuredExecutions).toBeUndefined();
+    expect(pool.extra?.measuredExecutionProfiles).toBeUndefined();
+    expect(pool.extra?.ammExecutionModel).toBeDefined();
+  });
+
+  it("keeps reserve evidence available when one StableSwap direction is missing", () => {
+    const { targets, profiles } = curveStableSwapPacket();
+    const pool: PoolEntry = {
+      poolId: "defillama-3pool-row",
+      project: "curve",
+      chain: "ethereum",
+      tvlUsd: 160_000_000,
+      symbol: "DAI-USDC-USDT",
+      volumeUsd1d: 11_000_000,
+      poolType: "curve-stableswap-high-a",
+      source: "dl",
+      extra: {
+        measuredExecutionTargets: targets,
+        ammExecutionModel: {
+          source: "curve",
+          invariant: "stableswap",
+          trackedTokenIndex: 2,
+          feeRate: 0.001,
+          amplification: 4_000 / 9,
+          tokens: CURVE_3POOL_STABLESWAP_POLICY.poolTokens.map((token, index) => ({
+            ...token,
+            balance: 50_000_000,
+            referencePriceUsd: 1,
+            referencePriceSource: "source-token-usd" as const,
+            trackedAssetId: ["dai-makerdao", "usdc-circle", "usdt-tether"][index],
+          })),
+        },
+      },
+    };
+    const diagnostics = joinDexMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([["usdt-tether", [pool]]]),
+      evidence: {
+        quoteGenerationId: "curve-quote-generation",
+        targetGenerationId: "curve-target-generation",
+        publishedAt: 1_060,
+        byTargetId: new Map([[
+          targets[0]!.targetId,
+          {
+            quotedTarget: targets[0]!,
+            status: "measured",
+            failureReason: null,
+            profile: profiles[0]!,
+            quoteGenerationId: "curve-quote-generation",
+            targetGenerationId: "curve-target-generation",
+            resolution: "latest",
+            latestFailureReason: null,
+          },
+        ]]),
+      },
+      nowSec: 1_060,
+    });
+
+    expect(pool.extra?.measuredExecutions).toBeUndefined();
+    expect(pool.extra?.measuredExecutionProfiles).toBeUndefined();
+    expect(pool.extra?.ammExecutionModel).toBeDefined();
+    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    expect(pool.extra?.measuredExecutionDiagnostics?.every(
+      (diagnostic) => diagnostic.detail === "atomic-direction-missing",
+    )).toBe(true);
+    expect(diagnostics).toMatchObject({ targetCount: 2, measuredCount: 0, gatedCount: 2 });
+  });
+
+  it("retains a mature StableSwap LKG only when both historical siblings validate", () => {
+    const { targets, profiles } = curveStableSwapPacket();
+    const byTargetId = new Map(targets.map((measuredTarget, index) => [
+      measuredTarget.targetId,
+      {
+        quotedTarget: measuredTarget,
+        status: "measured" as const,
+        failureReason: null,
+        profile: profiles[index]!,
+        quoteGenerationId: "curve-quote-generation",
+        targetGenerationId: "curve-target-generation",
+        resolution: "last-known-good" as const,
+        latestFailureReason: "rpc-failure",
+        observationHistory: {
+          completeProducerCycleCount: 3,
+          successfulObservationCount: 3,
+          consecutiveSuccessCount: 2,
+          observationWindowStartedAt: 1_000,
+          observationWindowEndedAt: 1_060,
+          latestOperationalFailureAt: 1_060,
+          conservativeStatistic: "pointwise-minimum" as const,
+          conservativeCapacityCurve: profiles[index]!.capacityCurve,
+        },
+      },
+    ]));
+    const evidence = {
+      quoteGenerationId: "latest-operational-failure",
+      targetGenerationId: "latest-target-generation",
+      publishedAt: 1_120,
+      byTargetId,
+    };
+
+    const retained = buildDexMeasuredExecutionRetainedRoutePools({
+      poolsByStablecoin: new Map([["usdt-tether", []]]),
+      evidence,
+      nowSec: 1_060 + 3_600,
+    });
+
+    expect(retained.get("usdt-tether")).toEqual([
+      expect.objectContaining({
+        poolId: `ethereum:${CURVE_3POOL_STABLESWAP_POLICY.poolAddress}`,
+        poolType: "curve-stableswap-measured-retained",
+        source: "dl",
+        extra: expect.objectContaining({
+          measuredExecutionTargets: expect.arrayContaining(targets),
+          measuredExecutions: expect.arrayContaining([
+            expect.objectContaining({ targetId: targets[0]!.targetId }),
+            expect.objectContaining({ targetId: targets[1]!.targetId }),
+          ]),
+          measuredExecutionProfiles: expect.arrayContaining(profiles),
+        }),
+      }),
+    ]);
+
+    const partial = buildDexMeasuredExecutionRetainedRoutePools({
+      poolsByStablecoin: new Map([["usdt-tether", []]]),
+      evidence: {
+        ...evidence,
+        byTargetId: new Map([[targets[0]!.targetId, byTargetId.get(targets[0]!.targetId)!]]),
+      },
+      nowSec: 1_060 + 3_600,
+    });
+    expect(partial.get("usdt-tether")).toBeUndefined();
+
+    const currentPhysicalPool = buildDexMeasuredExecutionRetainedRoutePools({
+      poolsByStablecoin: new Map([["usdt-tether", [{
+        poolId: "defillama-yields-uuid",
+        project: "curve",
+        chain: "ethereum",
+        tvlUsd: 160_047_206,
+        symbol: "USDT-DAI-USDC",
+        volumeUsd1d: 0,
+        poolType: "curve-stableswap",
+        source: "dl",
+        extra: {
+          measuredExecutionPhysicalPoolId:
+            `ethereum:${CURVE_3POOL_STABLESWAP_POLICY.poolAddress}`,
+        },
+      }]]]),
+      evidence,
+      nowSec: 1_060 + 3_600,
+    });
+    expect(currentPhysicalPool.get("usdt-tether")).toBeUndefined();
+  });
+
   it("keeps a valid QuoterV2 profile score-ineligible while its cohort is in shadow", () => {
     // Optimism is a pinned deployment outside the 2026-07-17 ratified cohort,
     // so it exercises the activation-pending gate.

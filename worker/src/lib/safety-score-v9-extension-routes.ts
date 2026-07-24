@@ -9,7 +9,7 @@ import {
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import {
-  DEX_MEASURED_FRESHNESS_MAX_SEC,
+  getDexMeasuredExecutionFreshnessMaxSec,
   isDexMeasuredExecutionObservationHistoryMature,
 } from "@shared/types/measured-execution";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
@@ -215,7 +215,8 @@ function buildDexRouteReview(
     observation.confidence === "high" &&
     isDexMeasuredExecutionObservationHistoryMature(observationHistory) &&
     observationHistory != null &&
-    fixedInput.clockSec - observationHistory.observationWindowEndedAt <= DEX_MEASURED_FRESHNESS_MAX_SEC &&
+    fixedInput.clockSec - observationHistory.observationWindowEndedAt <=
+      getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? "") &&
     observationHistory.observationWindowEndedAt <= fixedInput.clockSec + 60;
   return {
     lane: "dex",

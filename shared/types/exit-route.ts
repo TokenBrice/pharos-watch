@@ -169,6 +169,8 @@ const ExitRouteObservationBaseSchema = z.object({
   completionRatio: z.number().finite().min(0).max(1),
   output: ExitRouteOutputSchema,
   evidenceKind: ExitRouteEvidenceKindSchema,
+  /** Exact measured-adapter identity when a DEX observation came from a reviewed runtime adapter. */
+  adapterProfileId: z.string().min(1).optional(),
   /** Set when the route's reviewed fee is the undisclosed-reviewed class: capacity is modeled but cost is unbounded. */
   feeEvidence: z.literal("undisclosed-reviewed").optional(),
   /** Fee/slippage cost before valuing the received output asset. */
@@ -203,6 +205,16 @@ function enforceDexExitRouteLane(observation: z.infer<typeof ExitRouteObservatio
   }
   if (!DEX_EXIT_EVIDENCE_KINDS.has(observation.evidenceKind)) {
     ctx.addIssue({ code: "custom", path: ["evidenceKind"], message: "DEX observations require DEX evidence" });
+  }
+  if (
+    observation.adapterProfileId !== undefined &&
+    observation.evidenceKind !== "measured-executable-depth"
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["adapterProfileId"],
+      message: "Measured adapter identity requires measured executable-depth evidence",
+    });
   }
   if (observation.observationHistory && observation.evidenceKind !== "measured-executable-depth") {
     ctx.addIssue({
@@ -251,6 +263,13 @@ function enforceRedemptionExitRouteLane(
   observation: z.infer<typeof ExitRouteObservationBaseSchema>,
   ctx: z.RefinementCtx,
 ) {
+  if (observation.adapterProfileId !== undefined) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["adapterProfileId"],
+      message: "Measured adapter identity is only supported for DEX observations",
+    });
+  }
   if (!REDEMPTION_EXIT_ROUTE_FAMILIES.has(observation.routeFamily)) {
     ctx.addIssue({
       code: "custom",

@@ -4,6 +4,8 @@ import { buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } fr
 import {
   buildSolanaMeasuredQuoteGenerationId,
   buildTronMeasuredQuoteGenerationId,
+  getDexMeasuredHistoryFreshnessSec,
+  isOperationalDexMeasuredFailure,
   loadLatestPublishedDexMeasuredQuoteEvidence,
   publishDexMeasuredQuoteGeneration,
   publishDexMeasuredTargetInventory,
@@ -193,6 +195,23 @@ function evidenceDb(input: {
 }
 
 describe("measured execution publication", () => {
+  it("retains a two-hour StableSwap history window without changing legacy freshness", () => {
+    expect(getDexMeasuredHistoryFreshnessSec("curve-stableswap-main-registry-get-dy-v1")).toBe(7_200);
+    expect(getDexMeasuredHistoryFreshnessSec("uniswap-v3-quoter-v2")).toBe(3_600);
+  });
+
+  it("classifies StableSwap transport outages as operational but not semantic drift", () => {
+    expect(isOperationalDexMeasuredFailure("rpc-failure")).toBe(true);
+    expect(isOperationalDexMeasuredFailure("block-timestamp-unavailable")).toBe(true);
+    expect(isOperationalDexMeasuredFailure("runtime-code-unavailable")).toBe(true);
+    expect(isOperationalDexMeasuredFailure("registry-code-unavailable")).toBe(true);
+    expect(isOperationalDexMeasuredFailure("runtime-code-absent")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("registry-code-absent")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("runtime-code-hash-mismatch")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("registry-membership-mismatch")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("pool-revert")).toBe(false);
+  });
+
   it("rejects an empty target generation before touching the publication pointer", async () => {
     const prepare = vi.fn();
 

@@ -9,9 +9,17 @@ export const DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO = 1.02;
 export const DEX_MEASURED_MARGINAL_NOTIONAL_USD = 1_000;
 export const DEX_MEASURED_CAPACITY_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 export const DEX_MEASURED_FRESHNESS_MAX_SEC = 2 * 30 * 60;
+export const DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC = 2 * 60 * 60;
 export const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
 
 const CanonicalEvmAddressSchema = z.string().regex(/^0x[a-f0-9]{40}$/);
+const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = "curve-stableswap-main-registry-get-dy-v1";
+
+export function getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId: string): number {
+  return adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID
+    ? DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC
+    : DEX_MEASURED_FRESHNESS_MAX_SEC;
+}
 
 export const DexMeasuredExecutionObservationHistorySchema = ExitRouteObservationHistorySchema
   .superRefine((history, ctx) => {
@@ -88,6 +96,32 @@ const DexMeasuredExecutionPoolBindingProofSchema = z.object({
 });
 export type DexMeasuredExecutionPoolBindingProof = z.infer<typeof DexMeasuredExecutionPoolBindingProofSchema>;
 
+const DexMeasuredExecutionRegistryBindingProofSchema = z.object({
+  registryAddress: CanonicalEvmAddressSchema,
+  registryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
+  registeredPoolAddress: CanonicalEvmAddressSchema,
+  lpTokenAddress: CanonicalEvmAddressSchema,
+  poolTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8),
+  lpTokenCallData: z.string().regex(/^0x[0-9a-f]+$/),
+  lpTokenReturnData: z.string().regex(/^0x[0-9a-f]+$/),
+  registryCoinsCallData: z.string().regex(/^0x[0-9a-f]+$/),
+  registryCoinsReturnData: z.string().regex(/^0x[0-9a-f]+$/),
+  poolCoinsProof: z.array(z.object({
+    index: z.number().int().min(0).max(7),
+    callData: z.string().regex(/^0x[0-9a-f]+$/),
+    returnData: z.string().regex(/^0x[0-9a-f]+$/),
+  })).min(2).max(8),
+  tokenDecimalsProof: z.array(z.object({
+    tokenAddress: CanonicalEvmAddressSchema,
+    decimals: z.number().int().min(0).max(255),
+    callData: z.string().regex(/^0x[0-9a-f]+$/),
+    returnData: z.string().regex(/^0x[0-9a-f]+$/),
+  })).min(2).max(8),
+});
+export type DexMeasuredExecutionRegistryBindingProof = z.infer<
+  typeof DexMeasuredExecutionRegistryBindingProofSchema
+>;
+
 export const DexMeasuredExecutionProfileSchema = z.object({
   schemaVersion: z.literal(DEX_MEASURED_EXECUTION_SCHEMA_VERSION),
   kind: z.literal("measured-executable-depth"),
@@ -112,6 +146,7 @@ export const DexMeasuredExecutionProfileSchema = z.object({
     codeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
   }),
   poolBindingProof: DexMeasuredExecutionPoolBindingProofSchema.optional(),
+  registryBindingProof: DexMeasuredExecutionRegistryBindingProofSchema.optional(),
   maxCostBps: z.literal(DEX_MEASURED_MAX_COST_BPS),
   marginalOutputRatio: z.number().finite().nonnegative(),
   capacityCurve: z.array(ExitRouteCapacityPointSchema).length(DEX_MEASURED_CAPACITY_NOTIONALS_USD.length),
@@ -123,12 +158,20 @@ export type DexMeasuredExecutionProfile = z.infer<typeof DexMeasuredExecutionPro
 export const DexMeasuredExecutionPublicProfileSchema = DexMeasuredExecutionProfileSchema.omit({
   quoteProof: true,
   poolBindingProof: true,
+  registryBindingProof: true,
 }).extend({
   observationHistory: DexMeasuredExecutionObservationHistorySchema.optional(),
   poolProvenance: z.object({
     factoryAddress: CanonicalEvmAddressSchema,
     factoryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
     resolvedPoolAddress: CanonicalEvmAddressSchema,
+  }).optional(),
+  registryProvenance: z.object({
+    registryAddress: CanonicalEvmAddressSchema,
+    registryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
+    registeredPoolAddress: CanonicalEvmAddressSchema,
+    lpTokenAddress: CanonicalEvmAddressSchema,
+    poolTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8),
   }).optional(),
 });
 export type DexMeasuredExecutionPublicProfile = z.infer<typeof DexMeasuredExecutionPublicProfileSchema>;
@@ -138,7 +181,12 @@ export function toDexMeasuredExecutionPublicProfile(
   options: { observationHistory?: DexMeasuredExecutionObservationHistory } = {},
 ): DexMeasuredExecutionPublicProfile {
   const parsed = DexMeasuredExecutionProfileSchema.parse(input);
-  const { quoteProof: _quoteProof, poolBindingProof, ...profile } = parsed;
+  const {
+    quoteProof: _quoteProof,
+    poolBindingProof,
+    registryBindingProof,
+    ...profile
+  } = parsed;
   return DexMeasuredExecutionPublicProfileSchema.parse({
     ...profile,
     ...(options.observationHistory ? { observationHistory: options.observationHistory } : {}),
@@ -148,6 +196,17 @@ export function toDexMeasuredExecutionPublicProfile(
             factoryAddress: poolBindingProof.factoryAddress,
             factoryCodeHash: poolBindingProof.factoryCodeHash,
             resolvedPoolAddress: poolBindingProof.resolvedPoolAddress,
+          },
+        }
+      : {}),
+    ...(registryBindingProof
+      ? {
+          registryProvenance: {
+            registryAddress: registryBindingProof.registryAddress,
+            registryCodeHash: registryBindingProof.registryCodeHash,
+            registeredPoolAddress: registryBindingProof.registeredPoolAddress,
+            lpTokenAddress: registryBindingProof.lpTokenAddress,
+            poolTokenAddresses: registryBindingProof.poolTokenAddresses,
           },
         }
       : {}),
@@ -337,7 +396,10 @@ export function validateDexMeasuredExecutionProfile(input: {
   if (profile.tokenIn.trackedAssetId !== currentTarget.stablecoinId) issues.add("tracked-input-mismatch");
   if (profile.quotedAt > input.nowSec + 60) issues.add("future-observation");
   if (profile.quotedAt < quotedTarget.capturedAt) issues.add("observation-before-target");
-  if (input.nowSec - profile.quotedAt > DEX_MEASURED_FRESHNESS_MAX_SEC) issues.add("stale-observation");
+  if (
+    input.nowSec - profile.quotedAt >
+    getDexMeasuredExecutionFreshnessMaxSec(profile.adapterProfileId)
+  ) issues.add("stale-observation");
 
   const retainedPrice = currentTarget.retainedPoolPriceUsd;
   if (

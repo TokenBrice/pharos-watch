@@ -19,19 +19,32 @@ import {
   normalizeExitRouteCorrelationKey,
 } from "./exit-route-identity";
 import {
-  DEX_MEASURED_FRESHNESS_MAX_SEC,
+  getDexMeasuredExecutionFreshnessMaxSec,
   DexMeasuredExecutionPublicProfileSchema,
   isDexMeasuredExecutionObservationHistoryMature,
   type DexMeasuredExecutionPublicProfile,
 } from "../types/measured-execution";
 
-const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.6";
+const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.7";
 
 const DEFAULT_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 const REFERENCE_NOTIONAL_USD = 1_000_000;
 const REFERENCE_COST_BPS = 200;
 const IMMEDIATE_SETTLEMENT_HORIZON_SEC = 300;
 const AMM_EXECUTION_COST_TOLERANCE_BPS = 0.02;
+const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = "curve-stableswap-main-registry-get-dy-v1";
+const CURVE_3POOL_ADDRESS = "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7";
+const CURVE_MAIN_REGISTRY_ADDRESS = "0x90e00ace148ca3b23ac1bc8c240c2a7dd9c2d7f5";
+const CURVE_MAIN_REGISTRY_CODE_HASH =
+  "0x13d7cfcf1cef4bf310fa544567a427771c9be2c16bbf2c6be845d3d5f4cc5f22";
+const CURVE_3POOL_LP_TOKEN = "0x6c3f90f043a72fa612cbac8115ee7e52bde6e490";
+const CURVE_3POOL_TOKEN_ADDRESSES = [
+  "0x6b175474e89094c44da98b954eedeac495271d0f",
+  "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+  "0xdac17f958d2ee523a2206206994597c13d831ec7",
+] as const;
+const CURVE_STABLESWAP_MIN_COMPLETE_CYCLES = 3;
+const CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 export const P4_AMM_MODELED_TVL_MIN_RATIO = 0.5;
 export const P4_AMM_MODELED_TVL_MAX_RATIO = 2;
 
@@ -118,6 +131,26 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     scoreEligible: true,
     limitations: [
       "Activated only for consumer-validated Curve CryptoSwap get_dy profiles from the pinned active pool registry.",
+    ],
+  },
+  {
+    id: "curve-stableswap-main-registry-measured-exact",
+    sourceFamilies: ["dl"],
+    model: "measured-quote",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "absent",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "source-observed",
+    outputEvidenceKind: "measured-executable-depth",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: true,
+    limitations: [
+      "Activated only for the reviewed Ethereum Curve 3pool after pool and main-registry provenance validation.",
+      "High confidence requires three complete producer cycles and three successful observations.",
     ],
   },
   {
@@ -370,6 +403,7 @@ export interface P4DexRoutePoolInput {
     executionCapabilityGate?: DexExecutionCapabilityGate;
     ammExecutionModel?: DexAmmExecutionModel;
     measuredExecution?: DexMeasuredExecutionPublicProfile;
+    measuredExecutions?: DexMeasuredExecutionPublicProfile[];
     measuredExecutionPhysicalPoolId?: string;
   };
 }
@@ -432,8 +466,13 @@ function capabilityById(id: string): DexRouteSourceCapability {
   return capability;
 }
 
-function capabilityForPool(pool: P4DexRoutePoolInput): DexRouteSourceCapability {
-  const measuredProfile = pool.extra?.measuredExecution;
+function capabilityForPool(
+  pool: P4DexRoutePoolInput,
+  options: { ignoreMeasured?: boolean } = {},
+): DexRouteSourceCapability {
+  const measuredProfile = options.ignoreMeasured
+    ? undefined
+    : pool.extra?.measuredExecutions?.[0] ?? pool.extra?.measuredExecution;
   if (measuredProfile) {
     return capabilityById(
       measuredProfile.adapterProfileId === "uniswap-v3-quoter-v2" ||
@@ -441,6 +480,8 @@ function capabilityForPool(pool: P4DexRoutePoolInput): DexRouteSourceCapability 
         ? "quoter-v2-measured-exact"
         : measuredProfile.adapterProfileId === "curve-cryptoswap-get-dy-v1"
           ? "curve-cryptoswap-measured-exact"
+        : measuredProfile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID
+          ? "curve-stableswap-main-registry-measured-exact"
         : "measured-adapter-shadow",
     );
   }
@@ -488,7 +529,10 @@ export function requiresP4DexScoreEligibleCapabilityCoverage(pool: P4DexRoutePoo
   if (pool.extra?.executionCapabilityGate != null) return true;
   const capability = capabilityForPool(pool);
   if (capability.scoreEligible) return true;
-  return pool.extra?.measuredExecution != null && pool.extra?.ammExecutionModel == null;
+  return (
+    pool.extra?.measuredExecution != null ||
+    (pool.extra?.measuredExecutions?.length ?? 0) > 0
+  ) && pool.extra?.ammExecutionModel == null;
 }
 
 function buildCapacityPoint(
@@ -525,7 +569,8 @@ function validateMeasuredExecutionProfile(
   if (
     profile.adapterProfileId !== "uniswap-v3-quoter-v2" &&
     profile.adapterProfileId !== "pancakeswap-v3-quoter-v2" &&
-    profile.adapterProfileId !== "curve-cryptoswap-get-dy-v1"
+    profile.adapterProfileId !== "curve-cryptoswap-get-dy-v1" &&
+    profile.adapterProfileId !== CURVE_STABLESWAP_ADAPTER_PROFILE_ID
   ) {
     issues.push("adapter-not-score-eligible");
   }
@@ -542,13 +587,34 @@ function validateMeasuredExecutionProfile(
     issues.push("retained-physical-pool-mismatch");
   if (profile.tokenIn.trackedAssetId !== context.stablecoinId) issues.push("tracked-input-mismatch");
   if (profile.tokenOut.trackedAssetId === context.stablecoinId) issues.push("self-output-asset");
-  if (profile.poolTokenAddresses?.length !== 2) issues.push("invalid-cl-token-count");
+  if (profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID) {
+    if (
+      profile.chain !== "ethereum" ||
+      profile.poolId !== canonicalExitRouteAssetKey("ethereum", CURVE_3POOL_ADDRESS) ||
+      profile.poolTokenAddresses?.length !== CURVE_3POOL_TOKEN_ADDRESSES.length ||
+      profile.poolTokenAddresses.some((address, index) => address !== CURVE_3POOL_TOKEN_ADDRESSES[index])
+    ) issues.push("invalid-curve-stableswap-identity");
+    const provenance = profile.registryProvenance;
+    if (
+      provenance == null ||
+      provenance.registryAddress !== CURVE_MAIN_REGISTRY_ADDRESS ||
+      provenance.registryCodeHash !== CURVE_MAIN_REGISTRY_CODE_HASH ||
+      provenance.registeredPoolAddress !== CURVE_3POOL_ADDRESS ||
+      provenance.lpTokenAddress !== CURVE_3POOL_LP_TOKEN ||
+      provenance.poolTokenAddresses.length !== CURVE_3POOL_TOKEN_ADDRESSES.length ||
+      provenance.poolTokenAddresses.some((address, index) => address !== CURVE_3POOL_TOKEN_ADDRESSES[index])
+    ) issues.push("physical-pool-provenance-mismatch");
+  } else {
+    if (profile.poolTokenAddresses?.length !== 2) issues.push("invalid-cl-token-count");
+    if (
+      profile.poolProvenance == null ||
+      canonicalExitRouteAssetKey(profile.chain, profile.poolProvenance.resolvedPoolAddress) !== profile.poolId
+    ) issues.push("physical-pool-provenance-mismatch");
+  }
   if (
-    profile.poolProvenance == null ||
-    canonicalExitRouteAssetKey(profile.chain, profile.poolProvenance.resolvedPoolAddress) !== profile.poolId
-  )
-    issues.push("physical-pool-provenance-mismatch");
-  if (context.observedAt - profile.quotedAt > DEX_MEASURED_FRESHNESS_MAX_SEC) issues.push("stale-profile");
+    context.observedAt - profile.quotedAt >
+    getDexMeasuredExecutionFreshnessMaxSec(profile.adapterProfileId)
+  ) issues.push("stale-profile");
   if (profile.quotedAt > context.observedAt + 60) issues.push("future-profile");
   if (
     !Number.isFinite(profile.retainedTvlUsdAtQuote) ||
@@ -583,6 +649,23 @@ function validateMeasuredExecutionProfile(
     );
   }
   return [...new Set(issues)];
+}
+
+function isCompleteCurveStableSwapDirectionPacket(
+  profiles: readonly DexMeasuredExecutionPublicProfile[],
+): boolean {
+  if (profiles.length !== 2) return false;
+  const inputAddress = profiles[0]?.tokenIn.address;
+  if (!inputAddress || !CURVE_3POOL_TOKEN_ADDRESSES.includes(inputAddress as typeof CURVE_3POOL_TOKEN_ADDRESSES[number])) {
+    return false;
+  }
+  const expectedOutputs = CURVE_3POOL_TOKEN_ADDRESSES.filter((address) => address !== inputAddress).sort();
+  const actualOutputs = profiles.map((profile) => profile.tokenOut.address).sort();
+  return (
+    new Set(profiles.map((profile) => profile.tokenIn.address)).size === 1 &&
+    actualOutputs.length === expectedOutputs.length &&
+    actualOutputs.every((address, index) => address === expectedOutputs[index])
+  );
 }
 
 function validateAmmExecutionModel(
@@ -922,7 +1005,7 @@ export function buildP4DexExitRouteObservations(params: {
       unsupportedReasons.invalidRetainedPool = (unsupportedReasons.invalidRetainedPool ?? 0) + 1;
       continue;
     }
-    const capability = capabilityForPool(pool);
+    let capability = capabilityForPool(pool);
     const ammModel = pool.extra?.ammExecutionModel;
     const executionCapabilityGate = pool.extra?.executionCapabilityGate;
     if (executionCapabilityGate != null) {
@@ -934,9 +1017,30 @@ export function buildP4DexExitRouteObservations(params: {
       unsupportedReasons[reason] = (unsupportedReasons[reason] ?? 0) + 1;
       continue;
     }
-    const measuredProfile = pool.extra?.measuredExecution;
-    if (measuredProfile != null) {
-      if (ammModel != null) {
+    const measuredProfiles =
+      pool.extra?.measuredExecutions ??
+      (pool.extra?.measuredExecution ? [pool.extra.measuredExecution] : []);
+    if (measuredProfiles.length > 0) {
+      const isCurveStableSwapPacket = measuredProfiles.every(
+        (profile) => profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
+      );
+      if (
+        isCurveStableSwapPacket &&
+        (
+          !isCompleteCurveStableSwapDirectionPacket(measuredProfiles) ||
+          (ammModel != null &&
+            (ammModel.source !== "curve" || ammModel.invariant !== "stableswap")) ||
+          new Set(measuredProfiles.map((profile) => profile.poolId)).size !== 1 ||
+          new Set(measuredProfiles.map((profile) => profile.quoteGenerationId)).size !== 1 ||
+          new Set(measuredProfiles.map((profile) => profile.blockNumber)).size !== 1
+        )
+      ) {
+        unsupportedPoolCount++;
+        unsupportedReasons.invalidAtomicMeasuredPacket =
+          (unsupportedReasons.invalidAtomicMeasuredPacket ?? 0) + 1;
+        continue;
+      }
+      if (!isCurveStableSwapPacket && (ammModel != null || measuredProfiles.length !== 1)) {
         unsupportedPoolCount++;
         unsupportedReasons.conflictingExecutionCapabilityEvidence =
           (unsupportedReasons.conflictingExecutionCapabilityEvidence ?? 0) + 1;
@@ -948,11 +1052,13 @@ export function buildP4DexExitRouteObservations(params: {
           (unsupportedReasons.shadowMeasuredProfileWithoutGate ?? 0) + 1;
         continue;
       }
-      const profileIssues = validateMeasuredExecutionProfile(measuredProfile, {
-        pool,
-        stablecoinId: params.stablecoinId,
-        observedAt: params.observedAt,
-      });
+      const profileIssues = measuredProfiles.flatMap((profile) =>
+        validateMeasuredExecutionProfile(profile, {
+          pool,
+          stablecoinId: params.stablecoinId,
+          observedAt: params.observedAt,
+        })
+      );
       if (profileIssues.length > 0) {
         unsupportedPoolCount++;
         for (const issue of profileIssues) {
@@ -961,63 +1067,104 @@ export function buildP4DexExitRouteObservations(params: {
         }
         continue;
       }
-      const capacityCurve =
-        measuredProfile.observationHistory?.conservativeCapacityCurve ?? measuredProfile.capacityCurve;
-      const referencePoint = capacityCurve.find(
-        (point) => point.requestedNotionalUsd === REFERENCE_NOTIONAL_USD && point.maxCostBps === REFERENCE_COST_BPS,
-      );
-      if (!referencePoint) {
+      const measuredRows = measuredProfiles.map((profile) => {
+        const capacityCurve =
+          profile.observationHistory?.conservativeCapacityCurve ?? profile.capacityCurve;
+        const referencePoint = capacityCurve.find(
+          (point) =>
+            point.requestedNotionalUsd === REFERENCE_NOTIONAL_USD &&
+            point.maxCostBps === REFERENCE_COST_BPS,
+        );
+        return { profile, capacityCurve, referencePoint };
+      });
+      if (measuredRows.some(({ referencePoint }) => !referencePoint)) {
         unsupportedPoolCount++;
         unsupportedReasons.missingReferencePoint = (unsupportedReasons.missingReferencePoint ?? 0) + 1;
         continue;
       }
-      const output = outputFromAmmToken(pool.chain, measuredProfile.tokenOut);
-      const outputIdentity = canonicalExitRouteAssetKey(pool.chain, measuredProfile.tokenOut.address);
-      const physicalPool = { ...pool, poolId: measuredProfile.poolId };
-      const observationHistory = measuredProfile.observationHistory;
-      // The producer already bounds every included cycle to its latest complete
-      // publication. At consumption time, keep that summary only while its end
-      // and the separately validated selected quote are both fresh.
-      const historyIsFresh =
-        observationHistory != null &&
-        params.observedAt - observationHistory.observationWindowEndedAt <= DEX_MEASURED_FRESHNESS_MAX_SEC &&
-        observationHistory.observationWindowEndedAt <= params.observedAt + 60;
-      const confidence =
-        historyIsFresh && isDexMeasuredExecutionObservationHistoryMature(observationHistory)
-          ? capability.confidence
-          : "medium";
-      observations.push({
-        routeId: buildDexRouteId([
-          normalizedKey(params.stablecoinId),
-          normalizedKey(pool.source),
-          canonicalExitRouteScopedKey(pool.chain, measuredProfile.poolId),
-          outputIdentity,
-        ]),
-        routeFamily: "dex-amm",
-        scope: {
-          kind: "chain-contract",
-          chain: pool.chain,
-          contractOrPoolId: measuredProfile.poolId,
-          protocol: pool.project,
-        },
-        requestedNotionalUsd: referencePoint.requestedNotionalUsd,
-        settlementHorizonSec: IMMEDIATE_SETTLEMENT_HORIZON_SEC,
-        maxCostBps: referencePoint.maxCostBps,
-        executableUsd: referencePoint.executableUsd,
-        completionRatio: referencePoint.completionRatio,
-        output,
-        evidenceKind: capability.outputEvidenceKind,
-        confidence,
-        scoreEligible: true,
-        observedAt: measuredProfile.quotedAt,
-        freshnessSeconds: Math.max(0, params.observedAt - measuredProfile.quotedAt),
-        commonModeKeys: commonModeKeys(physicalPool, output),
-        capacityCurve,
-        ...(observationHistory ? { observationHistory } : {}),
-      });
-      evidenceCounts[capability.outputEvidenceKind] = (evidenceCounts[capability.outputEvidenceKind] ?? 0) + 1;
-      scoreEligiblePoolCount++;
-      continue;
+      const curveStableSwapPacketIsMature =
+        isCurveStableSwapPacket &&
+        measuredRows.every(({ profile }) => {
+          const history = profile.observationHistory;
+          const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(
+            profile.adapterProfileId,
+          );
+          return (
+            history != null &&
+            params.observedAt - history.observationWindowEndedAt <= freshnessMaxSec &&
+            history.observationWindowEndedAt <= params.observedAt + 60 &&
+            history.completeProducerCycleCount >= CURVE_STABLESWAP_MIN_COMPLETE_CYCLES &&
+            history.successfulObservationCount >= CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS
+          );
+        });
+      if (isCurveStableSwapPacket && !curveStableSwapPacketIsMature) {
+        if (ammModel == null) {
+          unsupportedPoolCount++;
+          unsupportedReasons.immatureAtomicMeasuredPacket =
+            (unsupportedReasons.immatureAtomicMeasuredPacket ?? 0) + 1;
+          continue;
+        }
+        capability = capabilityForPool(pool, { ignoreMeasured: true });
+      } else {
+        for (const { profile, capacityCurve, referencePoint } of measuredRows) {
+          const output = outputFromAmmToken(pool.chain, profile.tokenOut);
+          const outputIdentity = canonicalExitRouteAssetKey(pool.chain, profile.tokenOut.address);
+          const physicalPool = { ...pool, poolId: profile.poolId };
+          const observationHistory = profile.observationHistory;
+          const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(
+            profile.adapterProfileId,
+          );
+          // The producer bounds every included cycle to its latest complete
+          // publication. The selected quote and the summary end must both remain fresh.
+          const historyIsFresh =
+            observationHistory != null &&
+            params.observedAt - observationHistory.observationWindowEndedAt <= freshnessMaxSec &&
+            observationHistory.observationWindowEndedAt <= params.observedAt + 60;
+          const historyIsMature =
+            observationHistory != null &&
+            (isCurveStableSwapPacket
+              ? curveStableSwapPacketIsMature
+              : isDexMeasuredExecutionObservationHistoryMature(observationHistory));
+          const confidence =
+            historyIsFresh && historyIsMature
+              ? capability.confidence
+              : "medium";
+          observations.push({
+            routeId: buildDexRouteId([
+              normalizedKey(params.stablecoinId),
+              normalizedKey(pool.source),
+              canonicalExitRouteScopedKey(pool.chain, profile.poolId),
+              outputIdentity,
+            ]),
+            routeFamily: "dex-amm",
+            scope: {
+              kind: "chain-contract",
+              chain: pool.chain,
+              contractOrPoolId: profile.poolId,
+              protocol: pool.project,
+            },
+            requestedNotionalUsd: referencePoint!.requestedNotionalUsd,
+            settlementHorizonSec: IMMEDIATE_SETTLEMENT_HORIZON_SEC,
+            maxCostBps: referencePoint!.maxCostBps,
+            executableUsd: referencePoint!.executableUsd,
+            completionRatio: referencePoint!.completionRatio,
+            output,
+            evidenceKind: capability.outputEvidenceKind,
+            adapterProfileId: profile.adapterProfileId,
+            confidence,
+            scoreEligible: true,
+            observedAt: profile.quotedAt,
+            freshnessSeconds: Math.max(0, params.observedAt - profile.quotedAt),
+            commonModeKeys: commonModeKeys(physicalPool, output),
+            capacityCurve,
+            ...(observationHistory ? { observationHistory } : {}),
+          });
+          evidenceCounts[capability.outputEvidenceKind] =
+            (evidenceCounts[capability.outputEvidenceKind] ?? 0) + 1;
+        }
+        scoreEligiblePoolCount++;
+        continue;
+      }
     }
     if (ammModel != null) {
       const modelIssues = validateAmmExecutionModel(ammModel, {

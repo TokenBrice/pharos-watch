@@ -124,7 +124,7 @@ function capturedNavOutputInput(navObservedAtSec: number): ReportCardsFixedInput
         exitRouteObservations: [route],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.6",
+          capabilityMatrixVersion: "p4a.7",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,
@@ -421,7 +421,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         exitRouteObservations: [route],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.6",
+          capabilityMatrixVersion: "p4a.7",
           retainedPoolCount: 2_418,
           observationCount: 44,
           scoreEligibleObservationCount: 44,
@@ -484,7 +484,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         exitRouteObservations: [route],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.6",
+          capabilityMatrixVersion: "p4a.7",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,
@@ -546,6 +546,7 @@ describe("buildDexRouteReview model-confidence derivation", () => {
   function dexObservation(
     evidenceKind: ExitRouteObservation["evidenceKind"],
     mature = false,
+    adapterProfileId?: string,
   ): ExitRouteObservation {
     const observation: ExitRouteObservation = {
       routeId: `dex:usdc-circle:dl:ethereum%3Apool:${evidenceKind}`,
@@ -558,6 +559,7 @@ describe("buildDexRouteReview model-confidence derivation", () => {
       completionRatio: 0.95,
       output: { kind: "fiat", currency: "USD" },
       evidenceKind,
+      ...(adapterProfileId ? { adapterProfileId } : {}),
       confidence: "high",
       scoreEligible: true,
       observedAt: NOW,
@@ -649,6 +651,35 @@ describe("buildDexRouteReview model-confidence derivation", () => {
       "usdc-circle": { exitRouteObservations: [observation] },
     };
 
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
+      modelConfidence: "medium",
+    });
+  });
+
+  it("uses the reviewed StableSwap adapter's two-hour confidence window", () => {
+    const fixedInput = fixedInputStub(undefined);
+    const observation = dexObservation(
+      "measured-executable-depth",
+      true,
+      "curve-stableswap-main-registry-get-dy-v1",
+    );
+    observation.observationHistory = {
+      ...observation.observationHistory!,
+      completeProducerCycleCount: 3,
+      successfulObservationCount: 3,
+      consecutiveSuccessCount: 3,
+      observationWindowStartedAt: NOW - 7_200,
+      observationWindowEndedAt: NOW - 7_199,
+    };
+    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
+      "usdc-circle": { exitRouteObservations: [observation] },
+    };
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
+      modelConfidence: "high",
+    });
+
+    delete observation.adapterProfileId;
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
       modelConfidence: "medium",
     });

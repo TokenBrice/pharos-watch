@@ -25,6 +25,8 @@ const {
   fetchEvmBlockNumber,
   fetchEvmBlockTimestamp,
   fetchEvmCallHexAtBlock,
+  fetchEvmCodeAtBlock,
+  fetchEvmCodeStatusAtBlock,
   fetchEvmUint256AtBlock,
   parseUint256Hex,
   resolveClosestBlockAtOrBeforeTimestamp,
@@ -373,6 +375,23 @@ describe("evm-rpc helpers", () => {
     expect(result).toBeNull();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[evm-rpc] eth_call failed across 1 RPCs"));
     warnSpy.mockRestore();
+  });
+
+  it("distinguishes absent bytecode from an unavailable code request", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x" }), { status: 200 }))
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x6000" }), { status: 200 }));
+
+    await expect(fetchEvmCodeStatusAtBlock(undefined, "0xPool", "latest", {
+      extraRpcUrls: ["https://rpc.example"],
+    })).resolves.toEqual({ status: "absent" });
+    await expect(fetchEvmCodeStatusAtBlock(undefined, "0xPool", "latest", {
+      extraRpcUrls: ["https://rpc.example"],
+    })).resolves.toEqual({ status: "unavailable" });
+    await expect(fetchEvmCodeAtBlock(undefined, "0xPool", "latest", {
+      extraRpcUrls: ["https://rpc.example"],
+    })).resolves.toBe("0x6000");
   });
 
   it("fetches block numbers and timestamps through the shared RPC path", async () => {

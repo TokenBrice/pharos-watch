@@ -66,7 +66,7 @@ const DEX_PRICE_STAGE_RETENTION_SEC = 7 * 24 * 60 * 60;
 export const DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN = 8;
 
 function routeEvidenceRank(pool: LiquidityMetrics["topPools"][number]): number {
-  if (pool.extra?.measuredExecution) return 0;
+  if (pool.extra?.measuredExecution || (pool.extra?.measuredExecutions?.length ?? 0) > 0) return 0;
   if (pool.extra?.ammExecutionModel) return 1;
   if (pool.extra?.executionCapabilityGate) return 2;
   if (pool.poolType === "orderbook" && (pool.extra?.orderbookDepthUsd ?? 0) > 0) return 3;
@@ -503,6 +503,31 @@ export async function computeStablecoinScores(
 
     const retainedPools = m.topPools;
     for (const pool of retainedPools) {
+      const existingPacketTargets = pool.extra?.measuredExecutionTargets;
+      if (existingPacketTargets) {
+        pool.extra = { ...(pool.extra ?? {}) };
+        if (
+          existingPacketTargets.length !== 2 ||
+          existingPacketTargets.some((target) => target.poolId !== existingPacketTargets[0]!.poolId)
+        ) {
+          delete pool.extra.measuredExecutionTargets;
+          delete pool.extra.measuredExecutions;
+          delete pool.extra.measuredExecutionProfiles;
+          delete pool.extra.measuredExecutionDiagnostics;
+        } else {
+          pool.extra.measuredExecutionTargets = existingPacketTargets.map((target) => ({
+            ...target,
+            retainedTvlUsd: pool.tvlUsd,
+            capturedAt: routeObservedAt,
+          }));
+          pool.extra.measuredExecutionPhysicalPoolId = existingPacketTargets[0]!.poolId;
+          pool.extra.measuredExecutionDiagnostics = existingPacketTargets.map((target) => ({
+            adapterProfileId: target.adapterProfileId,
+            targetId: target.targetId,
+          }));
+        }
+        continue;
+      }
       const existingTarget = pool.extra?.measuredExecutionTarget;
       const isAerodromeSlipstream =
         (pool.project === "aerodrome" || pool.project === "aerodrome-slipstream") &&
@@ -634,6 +659,9 @@ export async function computeStablecoinScores(
   );
   for (const pools of preparedRetainedPools.values()) {
     for (const pool of pools) {
+      for (const target of pool.extra?.measuredExecutionTargets ?? []) {
+        targetInventoryById.set(target.targetId, target);
+      }
       const target = pool.extra?.measuredExecutionTarget;
       if (target) targetInventoryById.set(target.targetId, target);
       const solanaTarget = pool.extra?.solanaMeasuredExecutionTarget;

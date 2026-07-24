@@ -197,6 +197,19 @@ JSON/text fetch callers that need per-request timeout coverage across body consu
 
 - `sync-dex-liquidity` no longer owns discovery. It consumes staged output written by `sync-dex-discovery`.
 - `sync-cl-exit-depth` consumes the previously published retained-pool target generation and atomically publishes the next measured-quote generation. The `10,40` scoring run only joins a fresh published generation and then publishes the next target inventory, so a torn or same-run self-join cannot activate partial evidence.
+- The exact legacy Curve 3pool adapter shares one Ethereum block and one
+  deployment/registry verification across its direction packet. Its two output
+  directions join atomically, including when reconstructing a retained
+  route-only packet. The measured packet becomes score-facing only after both
+  directions have three complete and three successful fresh cycles; until then
+  the reserve simulation stays score-facing. Its last-known-good quote and
+  history use a two-hour ceiling so three half-hour observations survive
+  scheduler jitter; the retained profile keeps its original quote block and
+  timestamp, then falls back to the reserve model on expiry. Exact absent
+  bytecode is semantic drift and cannot retain last-known-good evidence, while
+  an unavailable RPC response remains an operational failure. Other measured
+  adapters retain their one-hour ceiling. This does not widen the EVM
+  request/runtime ceilings.
 - `sync-dex-discovery` is deliberately best-effort. Short per-source request timeouts and the 12-minute shared budget are there to force a partial `degraded` result before the platform can hard-kill the invocation. Lower-priority tier-2/tier-3 candidates are deterministically sharded across their cadence windows so one modulo run does not inherit the entire tier queue at once.
 - Missing-price fallback is intentionally time-bounded so a bad upstream day cannot consume the whole `sync-stablecoins` slot.
 - Replay-safe price continuity has a hard six-hour ceiling and also obeys any shorter per-source `maxTrustedAgeSec`. Low/fallback or non-replay-safe sources are never eligible. The separate verified-CMC provider cache is limited to the original quote's one-hour age, preserves its upstream timestamp, stays fallback confidence, and revalidates identity and peg bounds on reuse.

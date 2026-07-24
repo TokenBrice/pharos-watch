@@ -67,6 +67,11 @@ export interface EvmMulticall3Result {
   returnData: `0x${string}`;
 }
 
+export type EvmCodeAtBlockResult =
+  | { status: "available"; code: `0x${string}` }
+  | { status: "absent" }
+  | { status: "unavailable" };
+
 interface EvmBlockResult {
   number: string;
   timestamp: string;
@@ -351,6 +356,31 @@ export async function fetchEvmCallHexAtBlock(
   });
 
   return result as `0x${string}` | null;
+}
+
+export async function fetchEvmCodeStatusAtBlock(
+  chainId: string | undefined,
+  address: string,
+  blockNumberOrTag: number | "latest" = "latest",
+  options?: EvmRpcOptions,
+): Promise<EvmCodeAtBlockResult> {
+  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  if (urls.length === 0) return { status: "unavailable" };
+
+  const result = await fetchJsonRpcResult<string>(
+    urls,
+    "eth_getCode",
+    [address, toBlockTag(blockNumberOrTag)],
+    options,
+    {
+      acceptResult: (value): value is `0x${string}` =>
+        value === "0x" || isHexResult(value as string),
+      rejectedReason: () => "invalid bytecode",
+    },
+  );
+  if (result == null) return { status: "unavailable" };
+  if (result === "0x") return { status: "absent" };
+  return { status: "available", code: result as `0x${string}` };
 }
 
 export async function fetchEvmCodeAtBlock(

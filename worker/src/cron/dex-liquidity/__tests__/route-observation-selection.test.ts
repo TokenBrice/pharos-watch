@@ -105,4 +105,22 @@ describe("DEX route observation selection", () => {
     expect(selected).toHaveLength(1);
     expect(selected[0]).toBe(retained);
   });
+
+  it("ranks an atomic multi-direction measured packet as one physical pool", () => {
+    const current = Array.from({ length: MAX_DEX_EXIT_ROUTE_OBSERVATIONS }, (_, index) => pool(index));
+    const measured = pool(99);
+    measured.extra = {
+      measuredExecutions: [
+        { targetId: "curve-3pool-usdt-dai" },
+        { targetId: "curve-3pool-usdt-usdc" },
+      ] as DexMeasuredExecutionPublicProfile[],
+      measuredExecutionPhysicalPoolId: measured.poolId,
+    };
+
+    const selected = selectDexRouteObservationPools(current, [measured]);
+
+    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+    expect(selected[0]).toBe(measured);
+    expect(selected.filter((candidate) => candidate.poolId === measured.poolId)).toHaveLength(1);
+  });
 });

@@ -149,10 +149,16 @@ export interface PoolEntry {
     evmV2ExecutionCandidate?: EvmV2ExecutionCandidate;
     /** Internal all-retained target descriptor; stripped before top-pool publication. */
     measuredExecutionTarget?: DexMeasuredExecutionTarget;
+    /** Internal multi-direction packet for reviewed pools; stripped before publication. */
+    measuredExecutionTargets?: DexMeasuredExecutionTarget[];
     /** Proof-free validated capacity/provenance projection retained for P4 and API publication. */
     measuredExecution?: DexMeasuredExecutionPublicProfile;
+    /** Internal multi-direction measured packet consumed by P4 before publication. */
+    measuredExecutions?: DexMeasuredExecutionPublicProfile[];
     /** Internal D1 proof profile; stripped before top-pool publication. */
     measuredExecutionProfile?: DexMeasuredExecutionProfile;
+    /** Internal multi-direction proof packet; stripped before publication. */
+    measuredExecutionProfiles?: DexMeasuredExecutionProfile[];
     /** Target-derived physical pool id consumed by P4 before publication. */
     measuredExecutionPhysicalPoolId?: string;
     /** Internal cohort diagnostics retained in cron metadata, not the public pool envelope. */
@@ -161,6 +167,12 @@ export interface PoolEntry {
       targetId?: string;
       detail?: string;
     };
+    /** Per-direction internal diagnostics for a reviewed measured packet. */
+    measuredExecutionDiagnostics?: {
+      adapterProfileId: string;
+      targetId?: string;
+      detail?: string;
+    }[];
     /** Internal native Solana target; never published. */
     solanaMeasuredExecutionTarget?: SolanaMeasuredExecutionTarget;
     /** Proof-free shadow profile retained for operator/API diagnostics. */
