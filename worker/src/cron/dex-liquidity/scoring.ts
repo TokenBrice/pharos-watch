@@ -1,5 +1,6 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
+import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import {
   buildP4DexExitRouteObservations,
   requiresP4DexScoreEligibleCapabilityCoverage,
@@ -86,7 +87,8 @@ function hasOperationallyInterruptedMeasuredEvidence(
 function routeEvidenceRank(pool: LiquidityMetrics["topPools"][number]): number {
   const hasMeasuredEvidence =
     pool.extra?.measuredExecution !== undefined ||
-    (pool.extra?.measuredExecutions?.length ?? 0) > 0;
+    (pool.extra?.measuredExecutions?.length ?? 0) > 0 ||
+    pool.extra?.nativeMeasuredExecution !== undefined;
   if (hasMeasuredEvidence && !hasOperationallyInterruptedMeasuredEvidence(pool)) return 0;
   if (pool.extra?.ammExecutionModel) return 1;
   if (hasMeasuredEvidence) return 2;
@@ -106,8 +108,11 @@ function selectDexRouteObservationPoolSet(
 ): DexRouteObservationPoolSelection {
   const byPhysicalPool = new Map<string, LiquidityMetrics["topPools"][number]>();
   for (const pool of [...currentPools, ...retainedMeasuredPools]) {
-    const physicalPoolId = pool.extra?.measuredExecutionPhysicalPoolId ?? pool.poolId;
-    const key = `${pool.chain.toLowerCase()}:${physicalPoolId.toLowerCase()}`;
+    const physicalPoolId =
+      pool.extra?.nativeMeasuredExecutionPhysicalPoolId ??
+      pool.extra?.measuredExecutionPhysicalPoolId ??
+      pool.poolId;
+    const key = canonicalExitRouteScopedKey(pool.chain, physicalPoolId);
     const previous = byPhysicalPool.get(key);
     if (
       previous === undefined ||

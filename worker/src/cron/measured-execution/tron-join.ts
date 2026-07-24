@@ -5,7 +5,11 @@ import {
 } from "@shared/types/tron-measured-execution";
 import type { PoolEntry } from "../dex-liquidity/types";
 import { loadLatestPublishedTronMeasuredQuoteEvidence, type LoadedTronMeasuredQuoteEvidence } from "./persistence";
-import { getTronMeasuredExecutionAdapterByProfile } from "./tron-registry";
+import {
+  getTronMeasuredExecutionAdapterByProfile,
+  isTronMeasuredExecutionAdapterScoreEligible,
+  type TronMeasuredExecutionAdapter,
+} from "./tron-registry";
 
 export interface TronMeasuredExecutionJoinDiagnostics {
   targetCount: number;
@@ -45,6 +49,7 @@ export function joinTronMeasuredExecutionEvidence(input: {
   poolsByStablecoin: Map<string, PoolEntry[]>;
   evidence: LoadedTronMeasuredQuoteEvidence | null;
   nowSec: number;
+  resolveAdapterPolicy?: (adapterProfileId: string) => TronMeasuredExecutionAdapter | null;
 }): TronMeasuredExecutionJoinDiagnostics {
   const diagnostics: TronMeasuredExecutionJoinDiagnostics = {
     targetCount: 0,
@@ -63,6 +68,8 @@ export function joinTronMeasuredExecutionEvidence(input: {
       delete pool.extra.tronMeasuredExecution;
       delete pool.extra.tronMeasuredExecutionProfile;
       pool.extra.tronMeasuredExecutionPhysicalPoolId = target.poolId;
+      delete pool.extra.nativeMeasuredExecution;
+      delete pool.extra.nativeMeasuredExecutionPhysicalPoolId;
       const fail = (reason: DexExecutionCapabilityGate["reason"], detail?: string) => {
         pool.extra!.executionCapabilityGate = gate(reason);
         pool.extra!.tronMeasuredExecutionDiagnostic = {
@@ -86,7 +93,9 @@ export function joinTronMeasuredExecutionEvidence(input: {
         fail("quote-failed", quote.failureReason ?? undefined);
         continue;
       }
-      const adapter = getTronMeasuredExecutionAdapterByProfile(quote.profile.adapterProfileId);
+      const adapter = (input.resolveAdapterPolicy ?? getTronMeasuredExecutionAdapterByProfile)(
+        quote.profile.adapterProfileId,
+      );
       if (!adapter || adapter.protocol !== quote.profile.protocol || adapter.poolType !== quote.profile.poolType) {
         fail("invalid-observation", "adapter-registration-mismatch");
         continue;
@@ -103,9 +112,23 @@ export function joinTronMeasuredExecutionEvidence(input: {
         fail(mapValidationGate(issues), issues.join(","));
         continue;
       }
+      const publicProfile = toTronMeasuredExecutionPublicProfile(quote.profile);
       pool.extra.tronMeasuredExecutionProfile = quote.profile;
-      pool.extra.tronMeasuredExecution = toTronMeasuredExecutionPublicProfile(quote.profile);
-      fail("activation-pending", "shadow-score-ineligible");
+      pool.extra.tronMeasuredExecution = publicProfile;
+      if (!isTronMeasuredExecutionAdapterScoreEligible(adapter)) {
+        fail("activation-pending", "shadow-score-ineligible");
+        diagnostics.measuredCount++;
+        continue;
+      }
+      pool.extra.nativeMeasuredExecution = publicProfile;
+      pool.extra.nativeMeasuredExecutionPhysicalPoolId = target.poolId;
+      if (pool.extra.executionCapabilityGate?.family === "measured-execution") {
+        delete pool.extra.executionCapabilityGate;
+      }
+      pool.extra.tronMeasuredExecutionDiagnostic = {
+        adapterProfileId: target.adapterProfileId,
+        targetId: target.targetId,
+      };
       diagnostics.measuredCount++;
     }
   }
@@ -119,5 +142,7 @@ export function stripTronMeasuredExecutionInternalFields(pools: readonly PoolEnt
     delete pool.extra.tronMeasuredExecutionProfile;
     delete pool.extra.tronMeasuredExecutionPhysicalPoolId;
     delete pool.extra.tronMeasuredExecutionDiagnostic;
+    delete pool.extra.nativeMeasuredExecution;
+    delete pool.extra.nativeMeasuredExecutionPhysicalPoolId;
   }
 }

@@ -7,6 +7,14 @@ import {
   type DexMeasuredExecutionPublicProfile,
 } from "@shared/types/measured-execution";
 import {
+  SOLANA_MEASURED_EXECUTION_SCHEMA_VERSION,
+  type SolanaMeasuredExecutionPublicProfile,
+} from "@shared/types/solana-measured-execution";
+import {
+  TRON_MEASURED_EXECUTION_SCHEMA_VERSION,
+  type TronMeasuredExecutionPublicProfile,
+} from "@shared/types/tron-measured-execution";
+import {
   DEX_ROUTE_SOURCE_CAPABILITIES,
   P4_AMM_MODELED_TVL_MAX_RATIO,
   P4_AMM_MODELED_TVL_MIN_RATIO,
@@ -68,6 +76,92 @@ describe("P4 DEX exit route observations", () => {
           completionRatio: executableUsd / requestedNotionalUsd,
         };
       }),
+    };
+  }
+
+  function nativeCapacityCurve() {
+    return DEX_MEASURED_CAPACITY_NOTIONALS_USD.map((requestedNotionalUsd) => {
+      const executableUsd = Math.min(requestedNotionalUsd, 1_000_000);
+      return {
+        requestedNotionalUsd,
+        maxCostBps: DEX_MEASURED_MAX_COST_BPS,
+        executableUsd,
+        completionRatio: executableUsd / requestedNotionalUsd,
+      };
+    });
+  }
+
+  function solanaMeasuredProfile(quotedAt: number): SolanaMeasuredExecutionPublicProfile {
+    return {
+      schemaVersion: SOLANA_MEASURED_EXECUTION_SCHEMA_VERSION,
+      kind: "measured-executable-depth",
+      targetId: "solana-target-1",
+      targetGenerationId: "solana-target-generation",
+      quoteGenerationId: "solana-quote-generation",
+      adapterProfileId: "orca-whirlpool-jupiter-v1",
+      protocol: "orca",
+      chain: "solana",
+      poolId: "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
+      poolType: "orca-whirlpool",
+      tokenIn: {
+        address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        symbol: "USDC",
+        decimals: 6,
+        referencePriceUsd: 1,
+        referencePriceSource: "tracked",
+        trackedAssetId: "usdc-circle",
+      },
+      tokenOut: {
+        address: "Es9vMFrzaCERmJfrF4H2FYDgK5KJY8PYdG7yM7pTz1C",
+        symbol: "USDT",
+        decimals: 6,
+        referencePriceUsd: 1,
+        referencePriceSource: "tracked",
+        trackedAssetId: "usdt-tether",
+      },
+      retainedTvlUsdAtQuote: 2_000_000,
+      retainedPoolPriceUsdAtQuote: 1,
+      quotedAt,
+      slotWindow: { before: 1_000, after: 1_010 },
+      maxCostBps: DEX_MEASURED_MAX_COST_BPS,
+      marginalOutputRatio: 0.999,
+      capacityCurve: nativeCapacityCurve(),
+    };
+  }
+
+  function tronMeasuredProfile(quotedAt: number): TronMeasuredExecutionPublicProfile {
+    return {
+      schemaVersion: TRON_MEASURED_EXECUTION_SCHEMA_VERSION,
+      kind: "measured-executable-depth",
+      targetId: "tron-target-1",
+      targetGenerationId: "tron-target-generation",
+      quoteGenerationId: "tron-quote-generation",
+      adapterProfileId: "sunswap-v2-router-v1",
+      protocol: "sunswap",
+      chain: "tron",
+      poolId: "TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ",
+      poolType: "sunswap-v2",
+      tokenIn: {
+        address: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+        symbol: "USDT",
+        decimals: 6,
+        referencePriceUsd: 1,
+        referencePriceSource: "tracked",
+        trackedAssetId: "usdt-tether",
+      },
+      tokenOut: {
+        address: "TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR",
+        symbol: "WTRX",
+        decimals: 6,
+        referencePriceUsd: 0.3,
+        referencePriceSource: "source-token-usd",
+      },
+      retainedTvlUsdAtQuote: 2_000_000,
+      retainedPoolPriceUsdAtQuote: 1,
+      quotedAt,
+      maxCostBps: DEX_MEASURED_MAX_COST_BPS,
+      marginalOutputRatio: 0.999,
+      capacityCurve: nativeCapacityCurve(),
     };
   }
 
@@ -367,6 +461,121 @@ describe("P4 DEX exit route observations", () => {
       },
     };
   }
+
+  it("emits active Solana and Tron measured profiles into P4 capacity and completeness", () => {
+    const observedAt = 10_000;
+    const cases = [
+      {
+        stablecoinId: "usdc-circle",
+        project: "orca",
+        chain: "Solana",
+        poolType: "orca-whirlpool",
+        profile: solanaMeasuredProfile(observedAt - 60),
+      },
+      {
+        stablecoinId: "usdt-tether",
+        project: "sunswap-v2",
+        chain: "Tron",
+        poolType: "sunswap-v2",
+        profile: tronMeasuredProfile(observedAt - 60),
+      },
+    ];
+
+    for (const testCase of cases) {
+      const result = buildP4DexExitRouteObservations({
+        stablecoinId: testCase.stablecoinId,
+        observedAt,
+        retainedPools: [{
+          poolId: `${testCase.profile.chain}:${testCase.profile.poolId}`,
+          project: testCase.project,
+          chain: testCase.chain,
+          tvlUsd: 2_000_000,
+          symbol: `${testCase.profile.tokenIn.symbol} / ${testCase.profile.tokenOut.symbol}`,
+          poolType: testCase.poolType,
+          source: testCase.profile.chain === "solana" ? "direct_api" : "dl",
+          extra: {
+            nativeMeasuredExecution: testCase.profile,
+            nativeMeasuredExecutionPhysicalPoolId: testCase.profile.poolId,
+          },
+        }],
+      });
+
+      expect(result.observations).toEqual([
+        expect.objectContaining({
+          adapterProfileId: testCase.profile.adapterProfileId,
+          evidenceKind: "measured-executable-depth",
+          executableUsd: 1_000_000,
+          scoreEligible: true,
+          confidence: "medium",
+        }),
+      ]);
+      expect(result.coverage).toMatchObject({
+        status: "populated",
+        scoreEligiblePoolCount: 1,
+        scoreEligibleCapabilityPoolCount: 1,
+        unsupportedPoolCount: 0,
+      });
+      expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(true);
+    }
+  });
+
+  it("keeps invalid or activation-gated native profiles in the incomplete denominator", () => {
+    const observedAt = 10_000;
+    const profile = solanaMeasuredProfile(observedAt - 60);
+    const invalid = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt,
+      retainedPools: [{
+        poolId: `solana:${profile.poolId}`,
+        project: "orca",
+        chain: "Solana",
+        tvlUsd: 2_000_000,
+        symbol: "USDC / USDT",
+        poolType: "orca-whirlpool",
+        source: "direct_api",
+        extra: {
+          nativeMeasuredExecution: profile,
+          nativeMeasuredExecutionPhysicalPoolId: profile.poolId.toLowerCase(),
+        },
+      }],
+    });
+    expect(invalid.observations).toEqual([]);
+    expect(invalid.coverage).toMatchObject({
+      scoreEligiblePoolCount: 0,
+      scoreEligibleCapabilityPoolCount: 1,
+      unsupportedReasons: {
+        "invalidMeasuredExecution:retained-physical-pool-mismatch": 1,
+      },
+    });
+
+    const gatedProfile = tronMeasuredProfile(observedAt - 60);
+    const gated = buildP4DexExitRouteObservations({
+      stablecoinId: "usdt-tether",
+      observedAt,
+      retainedPools: [{
+        poolId: `tron:${gatedProfile.poolId}`,
+        project: "sunswap-v2",
+        chain: "Tron",
+        tvlUsd: 2_000_000,
+        symbol: "USDT / WTRX",
+        poolType: "sunswap-v2",
+        source: "dl",
+        extra: {
+          executionCapabilityGate: { family: "measured-execution", reason: "activation-pending" },
+          nativeMeasuredExecution: gatedProfile,
+          nativeMeasuredExecutionPhysicalPoolId: gatedProfile.poolId,
+        },
+      }],
+    });
+    expect(gated.observations).toEqual([]);
+    expect(gated.coverage).toMatchObject({
+      scoreEligiblePoolCount: 0,
+      scoreEligibleCapabilityPoolCount: 1,
+      unsupportedReasons: {
+        "executionCapabilityGate:measured-execution:activation-pending": 1,
+      },
+    });
+  });
 
   it("routes a retained DL UUID through its independently bound physical CL pool", () => {
     const observedAt = 1_752_560_000;
@@ -1947,6 +2156,9 @@ describe("P4 DEX exit route observations", () => {
       (capability) => capability.id === "raydium-constant-product-exact",
     );
     const evmV2 = DEX_ROUTE_SOURCE_CAPABILITIES.find((capability) => capability.id === "evm-v2-constant-product-exact");
+    const nativeMeasured = DEX_ROUTE_SOURCE_CAPABILITIES.find(
+      (capability) => capability.id === "native-measured-exact",
+    );
 
     expect(orderbook).toMatchObject({
       outputEvidenceKind: "direct-orderbook-depth",
@@ -1975,6 +2187,11 @@ describe("P4 DEX exit route observations", () => {
       exactBalancesOrReserves: "exact",
       poolInvariantParameters: "exact",
       outputEvidenceKind: "reserve-based-amm-simulation",
+      scoreEligible: true,
+    });
+    expect(nativeMeasured).toMatchObject({
+      tokenIdentity: "exact",
+      outputEvidenceKind: "measured-executable-depth",
       scoreEligible: true,
     });
   });

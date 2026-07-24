@@ -201,6 +201,10 @@ export interface PoolEntry {
       targetId?: string;
       detail?: string;
     };
+    /** Validated active native profile promoted into P4, then stripped before publication. */
+    nativeMeasuredExecution?: SolanaMeasuredExecutionPublicProfile | TronMeasuredExecutionPublicProfile;
+    /** Case-sensitive physical pool id paired with the active native P4 profile. */
+    nativeMeasuredExecutionPhysicalPoolId?: string;
   };
 }
 

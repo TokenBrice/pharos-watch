@@ -13,6 +13,7 @@ import { buildTronMeasuredExecutionTargets } from "../tron-inventory";
 import { buildTronMeasuredExecutionProfile } from "../tron-profiles";
 import { parseSunRouterDirectV2Quote, quoteTronMeasuredTarget } from "../tron-quotes";
 import { joinTronMeasuredExecutionEvidence, stripTronMeasuredExecutionInternalFields } from "../tron-join";
+import { getTronMeasuredExecutionAdapterByProfile } from "../tron-registry";
 
 const FACTORY = "TKWJdrQkqHisa1X8HUdHEfREvTzw4pMAaY";
 const POOL = "TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ";
@@ -125,6 +126,10 @@ describe("Tron SunSwap measured execution", () => {
       factoryAddress: FACTORY,
       feeRate: 0.003,
     })]);
+    expect(getTronMeasuredExecutionAdapterByProfile("sunswap-v2-router-v1")).toMatchObject({
+      activation: "shadow",
+      scoreEligible: false,
+    });
   });
 
   it("accepts one direct V2 path and rejects multi-hop or ambiguous paths", () => {
@@ -240,25 +245,44 @@ describe("Tron SunSwap measured execution", () => {
       source: "dl" as const,
       extra: { tronMeasuredExecutionTarget: target() },
     };
+    const evidence = {
+      targetGenerationId: "targets-1",
+      quoteGenerationId: "quotes-1",
+      publishedAt: 1_100,
+      byTargetId: new Map([[target().targetId, {
+        quotedTarget: target(),
+        status: "measured" as const,
+        failureReason: null,
+        profile,
+      }]]),
+    };
     expect(joinTronMeasuredExecutionEvidence({
       poolsByStablecoin: new Map([["usdt-tether", [retainedPool]]]),
-      evidence: {
-        targetGenerationId: "targets-1",
-        quoteGenerationId: "quotes-1",
-        publishedAt: 1_100,
-        byTargetId: new Map([[target().targetId, {
-          quotedTarget: target(),
-          status: "measured",
-          failureReason: null,
-          profile,
-        }]]),
-      },
+      evidence,
       nowSec: 1_100,
     })).toMatchObject({ measuredCount: 1, gatedCount: 1 });
     expect(retainedPool.extra).toMatchObject({
       executionCapabilityGate: { family: "measured-execution", reason: "activation-pending" },
       tronMeasuredExecution: { protocol: "sunswap", poolType: "sunswap-v2" },
     });
+    const activePool = {
+      ...retainedPool,
+      extra: { tronMeasuredExecutionTarget: target() },
+    };
+    expect(joinTronMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([["usdt-tether", [activePool]]]),
+      evidence,
+      nowSec: 1_100,
+      resolveAdapterPolicy: (adapterProfileId) => {
+        const adapter = getTronMeasuredExecutionAdapterByProfile(adapterProfileId);
+        return adapter ? { ...adapter, activation: "active", scoreEligible: true } : null;
+      },
+    })).toMatchObject({ measuredCount: 1, gatedCount: 0 });
+    expect(activePool.extra).toMatchObject({
+      nativeMeasuredExecution: { adapterProfileId: "sunswap-v2-router-v1", poolId: POOL },
+      nativeMeasuredExecutionPhysicalPoolId: POOL,
+    });
+    expect(activePool.extra).not.toHaveProperty("executionCapabilityGate");
     stripTronMeasuredExecutionInternalFields([retainedPool]);
     expect(retainedPool.extra).not.toHaveProperty("tronMeasuredExecutionTarget");
     expect(retainedPool.extra).not.toHaveProperty("tronMeasuredExecutionProfile");
