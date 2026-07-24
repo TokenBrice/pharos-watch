@@ -109,8 +109,8 @@ function evidenceDb(input: {
   }>;
 }) {
   const preparedSql: string[] = [];
-  const makeStmt = (sql: string): Record<string, unknown> => ({
-    bind: () => makeStmt(sql),
+  const makeStmt = (sql: string, binds: unknown[] = []): Record<string, unknown> => ({
+    bind: (...nextBinds: unknown[]) => makeStmt(sql, nextBinds),
     first: async () => {
       if (sql.includes("state IN ('published', 'superseded')")) {
         return {
@@ -137,22 +137,39 @@ function evidenceDb(input: {
       return null;
     },
     all: async () => {
-      if (sql.includes("q.generation_id IN")) {
+      if (sql.includes("SELECT history_generation.generation_id")) {
         return {
-          results: (input.historical ?? []).map((entry, index) => {
-            const profile = entry.profile ?? null;
-            return {
-              generation_id: entry.generationId ?? profile?.quoteGenerationId ?? `quote-generation-failed-${index}`,
-              target_generation_id:
-                entry.targetGenerationId ?? profile?.targetGenerationId ?? `target-generation-failed-${index}`,
-              target_id: entry.target.targetId,
-              status: entry.status ?? "measured",
-              failure_reason: entry.failureReason ?? null,
-              quote_profile_json: profile ? JSON.stringify(profile) : null,
-              quote_published_at: entry.publishedAt ?? 1_900 - index,
-              target_json: JSON.stringify(entry.target),
-            };
-          }),
+          results: (input.historical ?? []).length > 0
+            ? [{ generation_id: "historical-generation" }]
+            : [],
+        };
+      }
+      if (sql.includes("SELECT DISTINCT target_id")) {
+        return {
+          results: [
+            ...new Set((input.historical ?? []).map((entry) => entry.target.targetId)),
+          ].map((target_id) => ({ target_id })),
+        };
+      }
+      if (sql.includes("q.generation_id IN")) {
+        const selectedTargetIds = new Set(JSON.parse(String(binds[2] ?? "[]")) as string[]);
+        return {
+          results: (input.historical ?? [])
+            .filter((entry) => selectedTargetIds.has(entry.target.targetId))
+            .map((entry, index) => {
+              const profile = entry.profile ?? null;
+              return {
+                generation_id: entry.generationId ?? profile?.quoteGenerationId ?? `quote-generation-failed-${index}`,
+                target_generation_id:
+                  entry.targetGenerationId ?? profile?.targetGenerationId ?? `target-generation-failed-${index}`,
+                target_id: entry.target.targetId,
+                status: entry.status ?? "measured",
+                failure_reason: entry.failureReason ?? null,
+                quote_profile_json: profile ? JSON.stringify(profile) : null,
+                quote_published_at: entry.publishedAt ?? 1_900 - index,
+                target_json: JSON.stringify(entry.target),
+              };
+            }),
         };
       }
       if (sql.includes("FROM dex_measured_execution_quotes")) {
@@ -383,6 +400,9 @@ describe("measured execution raw payload policy", () => {
         return null;
       },
       all: async () => {
+        if (sql.includes("SELECT history_generation.generation_id")) {
+          return { results: [] };
+        }
         if (sql.includes("FROM dex_measured_execution_quotes")) {
           return {
             results: [
@@ -468,11 +488,12 @@ describe("measured execution last-known-good selection", () => {
       consecutiveSuccessCount: 0,
       latestOperationalFailureAt: 2_010,
     });
-    const historicalSql = preparedSql.find((sql) => sql.includes("q.generation_id IN"));
+    const historicalSql = preparedSql.find((sql) => sql.includes("SELECT history_generation.generation_id"));
     expect(historicalSql).toContain("state = 'superseded'");
     expect(historicalSql).toContain("published_rows = history_generation.expected_rows");
     expect(historicalSql).toContain("SELECT COUNT(*)");
-    expect(historicalSql).not.toContain("q.status = 'measured'");
+    const historicalRowsSql = preparedSql.find((sql) => sql.includes("q.generation_id IN"));
+    expect(historicalRowsSql).not.toContain("q.status = 'measured'");
   });
 
   it("preserves mature conservative history across a latest operational failure", async () => {
@@ -651,6 +672,41 @@ describe("measured execution last-known-good selection", () => {
       latestFailureReason: "quote-missing",
       quoteGenerationId: "quote-generation-lkg",
       targetGenerationId: "target-generation-lkg",
+    });
+  });
+
+  it("loads and summarizes large historical target sets in bounded batches", async () => {
+    const latestTarget = fixtureTarget("ethereum");
+    const historical = Array.from({ length: 65 }, (_, index) => {
+      const target = fixtureTarget(`history-${index}`);
+      return {
+        target,
+        profile: fixtureProfile(target, {
+          targetGenerationId: `target-generation-${index}`,
+          quoteGenerationId: `quote-generation-${index}`,
+          quotedAt: 1_900,
+        }),
+        publishedAt: 1_900,
+      };
+    });
+    const { db, preparedSql } = evidenceDb({
+      target: latestTarget,
+      latest: {
+        status: "failed",
+        failureReason: "pool-revert",
+        profile: null,
+      },
+      historical,
+    });
+
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+
+    expect(evidence?.byTargetId).toHaveLength(66);
+    expect(preparedSql.filter((sql) => sql.includes("q.generation_id IN"))).toHaveLength(2);
+    expect(evidence?.byTargetId.get(historical[64]!.target.targetId)).toMatchObject({
+      status: "measured",
+      resolution: "last-known-good",
+      quoteGenerationId: "quote-generation-64",
     });
   });
 });
