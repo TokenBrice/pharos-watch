@@ -317,6 +317,8 @@ export interface CurveApiPayload {
 
 export interface CurveLookups {
   curvePoolMap: Map<string, CurvePoolEntry>;
+  /** Exact-address candidates retained when a coin-set fingerprint is ambiguous. */
+  curvePoolCandidatesByFingerprint: Map<string, CurvePoolEntry[]>;
   priceObservations: Map<string, DexPriceObs[]>;
 }
 

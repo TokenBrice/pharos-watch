@@ -71,6 +71,43 @@ describe("P4 DEX exit route observations", () => {
     };
   }
 
+  function curveMeasuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
+    const poolAddress = "0x313698667d7fdd6789a9bc70821309ff891e729a" as const;
+    const crvUsd = "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e" as const;
+    const wbtc = "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599" as const;
+    const base = measuredProfile(quotedAt);
+    return {
+      ...base,
+      adapterProfileId: "curve-cryptoswap-get-dy-v1",
+      protocol: "curve",
+      poolId: `ethereum:${poolAddress}`,
+      poolTokenAddresses: [crvUsd, wbtc],
+      tokenIn: {
+        address: crvUsd,
+        symbol: "crvUSD",
+        decimals: 18,
+        referencePriceUsd: 1,
+        trackedAssetId: "crvusd-curve",
+      },
+      tokenOut: {
+        address: wbtc,
+        symbol: "WBTC",
+        decimals: 8,
+        referencePriceUsd: 65_000,
+      },
+      feePips: undefined,
+      executionEndpoint: {
+        address: poolAddress,
+        codeHash: `0x${"ab".repeat(32)}`,
+      },
+      poolProvenance: {
+        factoryAddress: "0x5555555555555555555555555555555555555555",
+        factoryCodeHash: `0x${"cd".repeat(32)}`,
+        resolvedPoolAddress: poolAddress,
+      },
+    };
+  }
+
   function withObservationHistory(
     profile: DexMeasuredExecutionPublicProfile,
     successfulObservationCount: number,
@@ -204,6 +241,49 @@ describe("P4 DEX exit route observations", () => {
       ],
     });
     expect(immatureResult.observations[0]?.confidence).toBe("medium");
+  });
+
+  it("accepts the active Curve CryptoSwap measured adapter in the existing exact capability matrix", () => {
+    const observedAt = 1_752_560_000;
+    const profile = curveMeasuredProfile(observedAt - 60);
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "crvusd-curve",
+      observedAt,
+      retainedPools: [
+        {
+          poolId: "defillama-yields-uuid",
+          project: "curve",
+          chain: "ethereum",
+          tvlUsd: 2_000_000,
+          symbol: "CRVUSD-WBTC",
+          poolType: "curve-cryptoswap",
+          source: "dl",
+          extra: {
+            measuredExecution: profile,
+            measuredExecutionPhysicalPoolId: profile.poolId,
+          },
+        },
+      ],
+    });
+
+    expect(result.coverage).toMatchObject({
+      capabilityMatrixVersion: "p4a.6",
+      retainedPoolCount: 1,
+      scoreEligibleCapabilityPoolCount: 1,
+      scoreEligiblePoolCount: 1,
+      unsupportedPoolCount: 0,
+      evidenceCounts: { "measured-executable-depth": 1 },
+    });
+    expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(true);
+    expect(result.observations[0]).toMatchObject({
+      scope: { kind: "chain-contract", contractOrPoolId: profile.poolId },
+      output: {
+        kind: "collateral",
+        assetKeys: ["ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"],
+      },
+      evidenceKind: "measured-executable-depth",
+      scoreEligible: true,
+    });
   });
 
   it("keeps stale, conflicting, and marginal-failed measured profiles in the incomplete denominator", () => {

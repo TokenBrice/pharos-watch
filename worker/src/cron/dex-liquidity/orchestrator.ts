@@ -194,6 +194,9 @@ interface DexLiquiditySourceState {
   dataSources: DexLiquidityDataSources;
   lookups: DexLiquidityLookups;
   curvePoolMap: Awaited<ReturnType<typeof buildCurveLookups>>["curvePoolMap"];
+  curvePoolCandidatesByFingerprint: Awaited<
+    ReturnType<typeof buildCurveLookups>
+  >["curvePoolCandidatesByFingerprint"];
   priceObservations: Awaited<ReturnType<typeof buildCurveLookups>>["priceObservations"];
   subgraphEnrichment: DexLiquiditySubgraphEnrichment;
   directApiPhase: DexLiquidityDirectApiPhase;
@@ -459,7 +462,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     retainedPoolCount: dataSources.pools.length,
     skippedUntrackedCount: dataSources.rawPoolCount - dataSources.pools.length,
   };
-  const { curvePoolMap, priceObservations } = await buildCurveLookups(
+  const { curvePoolMap, curvePoolCandidatesByFingerprint, priceObservations } = await buildCurveLookups(
     dataSources.curvePayloads,
     lookups.symbolToIds,
     lookups.symbolToChainScopedIds,
@@ -522,6 +525,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     dataSources,
     lookups,
     curvePoolMap,
+    curvePoolCandidatesByFingerprint,
     priceObservations,
     subgraphEnrichment,
     directApiPhase,
@@ -605,6 +609,7 @@ async function buildDexLiquidityPoolState(
     ctx.syncStartSec,
     sourceState.validationReferences,
     sourceState.subgraphEnrichment.aerodromeV2ExecutionCandidates,
+    sourceState.curvePoolCandidatesByFingerprint,
   );
 
   // Primary pools and enrichment maps have been projected into metrics and the
@@ -615,6 +620,7 @@ async function buildDexLiquidityPoolState(
   sourceState.primaryPoolCounts.pools = [];
   sourceState.dataSources.dexProjects = new Set();
   sourceState.curvePoolMap = new Map();
+  sourceState.curvePoolCandidatesByFingerprint = new Map();
   sourceState.subgraphEnrichment.uniV3PoolFees = new Map();
   sourceState.subgraphEnrichment.uniV3SymbolFees = new Map();
   sourceState.subgraphEnrichment.uniV3PriceObs = new Map();

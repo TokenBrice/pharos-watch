@@ -4,6 +4,7 @@ import {
   buildCurveCryptoSwapMeasuredExecutionTarget,
   buildCurveStableswapExecutionCapability,
   buildCurveStableswapExecutionModel,
+  resolveActiveCurveCryptoSwapCandidateByTvl,
 } from "../process-pools";
 import type { CurvePoolEntry } from "../types";
 
@@ -142,6 +143,40 @@ describe("buildCurveStableswapExecutionModel", () => {
       tokenIn: { address: CRVUSD, trackedAssetId: "crvusd-curve" },
       tokenOut: { address: WBTC, referencePriceUsd: 65_000 },
     });
+  });
+
+  it("resolves only a unique close-TVL candidate from the active CryptoSwap cohort", () => {
+    const active = entry({
+      poolAddress: "0x313698667d7fdd6789a9bc70821309ff891e729a",
+      apiIsBroken: false,
+      registryId: "factory-twocrypto",
+      tvl: 46_403_371,
+      metapoolAdjustedTvl: 46_403_371,
+    });
+    const sibling = entry({
+      poolAddress: "0xd9ff8396554a0d18b2cfbec53e1979b7ecce8373",
+      apiIsBroken: false,
+      registryId: "factory-twocrypto",
+      tvl: 7_494_912,
+      metapoolAdjustedTvl: 7_494_912,
+    });
+
+    expect(resolveActiveCurveCryptoSwapCandidateByTvl([active, sibling], 46_360_886, "ethereum")).toBe(active);
+    expect(resolveActiveCurveCryptoSwapCandidateByTvl([active, sibling], 45_000_000, "ethereum")).toBeNull();
+    expect(
+      resolveActiveCurveCryptoSwapCandidateByTvl(
+        [active, { ...active, poolAddress: sibling.poolAddress, tvl: 46_500_000 }],
+        46_450_000,
+        "ethereum",
+      ),
+    ).toBeNull();
+    expect(
+      resolveActiveCurveCryptoSwapCandidateByTvl(
+        [{ ...active, poolAddress: "0xe79fb88c7937b39b3e1cabd44faefa5258578b2d" }],
+        active.tvl,
+        "ethereum",
+      ),
+    ).toBeNull();
   });
 
   it("fails closed on rate-bearing pools via the coin price spread gate", () => {

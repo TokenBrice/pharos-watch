@@ -101,6 +101,25 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     limitations: ["Activated only for consumer-validated Uniswap V3 and PancakeSwap V3 QuoterV2 profiles."],
   },
   {
+    id: "curve-cryptoswap-measured-exact",
+    sourceFamilies: ["dl"],
+    model: "measured-quote",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "absent",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "source-observed",
+    outputEvidenceKind: "measured-executable-depth",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin", "collateral"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: true,
+    limitations: [
+      "Activated only for consumer-validated Curve CryptoSwap get_dy profiles from the pinned active pool registry.",
+    ],
+  },
+  {
     id: "measured-adapter-shadow",
     sourceFamilies: ["direct_api", "dl"],
     model: "measured-quote",
@@ -419,6 +438,8 @@ function capabilityForPool(pool: P4DexRoutePoolInput): DexRouteSourceCapability 
       measuredProfile.adapterProfileId === "uniswap-v3-quoter-v2" ||
         measuredProfile.adapterProfileId === "pancakeswap-v3-quoter-v2"
         ? "quoter-v2-measured-exact"
+        : measuredProfile.adapterProfileId === "curve-cryptoswap-get-dy-v1"
+          ? "curve-cryptoswap-measured-exact"
         : "measured-adapter-shadow",
     );
   }
@@ -492,7 +513,11 @@ function validateMeasuredExecutionProfile(
 ): string[] {
   const issues: string[] = [];
   if (!DexMeasuredExecutionPublicProfileSchema.safeParse(profile).success) issues.push("invalid-profile-schema");
-  if (profile.adapterProfileId !== "uniswap-v3-quoter-v2" && profile.adapterProfileId !== "pancakeswap-v3-quoter-v2") {
+  if (
+    profile.adapterProfileId !== "uniswap-v3-quoter-v2" &&
+    profile.adapterProfileId !== "pancakeswap-v3-quoter-v2" &&
+    profile.adapterProfileId !== "curve-cryptoswap-get-dy-v1"
+  ) {
     issues.push("adapter-not-score-eligible");
   }
   if (

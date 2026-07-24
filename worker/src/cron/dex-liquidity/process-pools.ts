@@ -59,6 +59,7 @@ const CURVE_STABLESWAP_FEE_BOUND = 0.001;
  * beyond this bound fails closed to shaped TVL evidence.
  */
 const CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD = 1.01;
+const ACTIVE_CURVE_CRYPTOSWAP_MAX_TVL_RELATIVE_DRIFT = 0.005;
 
 export interface CurveStableswapExecutionCapability {
   executionModel: DexAmmExecutionModel | null;
@@ -250,6 +251,32 @@ export function buildCurveCryptoSwapMeasuredExecutionTarget(input: {
   };
 }
 
+/**
+ * Resolve an otherwise ambiguous Curve coin-set join only when the two source
+ * snapshots identify exactly one physical pool by TVL and that address is
+ * already in the reviewed active CryptoSwap cohort.
+ */
+export function resolveActiveCurveCryptoSwapCandidateByTvl(
+  candidates: readonly CurvePoolEntry[],
+  retainedTvlUsd: number,
+  chain: string,
+): CurvePoolEntry | null {
+  if (!Number.isFinite(retainedTvlUsd) || retainedTvlUsd <= 0) return null;
+  const matching = candidates.filter(
+    (candidate) =>
+      Number.isFinite(candidate.tvl) &&
+      candidate.tvl > 0 &&
+      Math.abs(candidate.tvl / retainedTvlUsd - 1) <= ACTIVE_CURVE_CRYPTOSWAP_MAX_TVL_RELATIVE_DRIFT,
+  );
+  if (matching.length !== 1) return null;
+  const candidate = matching[0]!;
+  if (!candidate.poolAddress || !isCryptoSwap(candidate.registryId) || candidate.isMetaPool || candidate.apiIsBroken) {
+    return null;
+  }
+  const policy = getCurveCryptoSwapShadowPolicy(chain, candidate.poolAddress);
+  return policy?.mode === "active" && policy.scoreEligible ? candidate : null;
+}
+
 /** Match DeFiLlama pools to tracked stablecoins and compute per-pool metrics. */
 export function processPoolMetrics(
   pools: LlamaPool[],
@@ -267,6 +294,7 @@ export function processPoolMetrics(
   measuredTargetCapturedAt = Math.floor(Date.now() / 1000),
   validationReferences?: PriceValidationReferences,
   aerodromeV2ExecutionCandidates: Map<string, EvmV2ExecutionCandidate> = new Map(),
+  curvePoolCandidatesByFingerprint: ReadonlyMap<string, readonly CurvePoolEntry[]> = new Map(),
 ): Map<string, LiquidityMetrics> {
   const metrics = new Map<string, LiquidityMetrics>();
   const enforceDexProjectFilter = dexProjects.size > 0;
@@ -305,18 +333,32 @@ export function processPoolMetrics(
         .map((s) => s.toUpperCase())
         .sort()
         .join("-")}`;
+      const activeCryptoSwapTvlMatch =
+        protocol === "curve" && fpCurveKey != null && !curvePoolMap.has(fpCurveKey)
+          ? resolveActiveCurveCryptoSwapCandidateByTvl(
+              curvePoolCandidatesByFingerprint.get(fpCurveKey) ?? [],
+              pool.tvlUsd,
+              chainNorm,
+            )
+          : null;
       const curveData =
         protocol === "curve"
           ? (curvePoolMap.get(addrCurveKey) ??
             (fpCurveKey != null ? curvePoolMap.get(fpCurveKey) : undefined) ??
             curvePoolMap.get(symCurveKey))
           : undefined;
+      const curveMeasuredRouteData =
+        activeCryptoSwapTvlMatch ??
+        (curvePoolMap.has(addrCurveKey) || (fpCurveKey != null && curvePoolMap.has(fpCurveKey))
+          ? curveData
+          : undefined);
       // Track whether the match was address-grade (exact address or unambiguous
       // coin-set fingerprint): metapoolAdjustedTvl and the execution model are only
       // valid for the specific physical Curve pool that matched. Symbol fallbacks
       // may hit a different pool sharing the same token pair, so they keep their
       // own TVL and never carry a model.
-      const curveAddressMatch = curvePoolMap.has(addrCurveKey) || (fpCurveKey != null && curvePoolMap.has(fpCurveKey));
+      const curveAddressMatch =
+        curvePoolMap.has(addrCurveKey) || (fpCurveKey != null && curvePoolMap.has(fpCurveKey));
       const uniV3FeePips = protocol === "uniswap-v3" ? parseUniV3FeePips(pool.poolMeta) : null;
       const uniV3ExecutionKey =
         protocol === "uniswap-v3"
@@ -492,9 +534,9 @@ export function processPoolMetrics(
             : { executionModel: null, gate: null };
         const ammExecutionModel = curveExecutionCapability.executionModel;
         const curveCryptoSwapMeasuredTarget =
-          protocol === "curve" && curveAddressMatch
+          protocol === "curve" && curveMeasuredRouteData
             ? buildCurveCryptoSwapMeasuredExecutionTarget({
-                curveData,
+                curveData: curveMeasuredRouteData,
                 chain: chainNorm,
                 stablecoinId: id,
                 chainAddressToId,
