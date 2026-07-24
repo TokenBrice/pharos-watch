@@ -661,15 +661,15 @@ function validateMeasuredExecutionProfile(
   context: { pool: P4DexRoutePoolInput; stablecoinId: string; observedAt: number },
 ): string[] {
   const issues: string[] = [];
-  const parsedEvm = DexMeasuredExecutionPublicProfileSchema.safeParse(profile);
-  const parsedSolana = SolanaMeasuredExecutionPublicProfileSchema.safeParse(profile);
-  const parsedTron = TronMeasuredExecutionPublicProfileSchema.safeParse(profile);
   const isNative = isNativeMeasuredExecutionAdapter(profile.adapterProfileId);
-  if (
-    isNative
-      ? !parsedSolana.success && !parsedTron.success
-      : !parsedEvm.success
-  ) issues.push("invalid-profile-schema");
+  const schemaValid =
+    profile.adapterProfileId === "raydium-clmm-trade-api-v1" ||
+    profile.adapterProfileId === "orca-whirlpool-jupiter-v1"
+      ? SolanaMeasuredExecutionPublicProfileSchema.safeParse(profile).success
+      : profile.adapterProfileId === "sunswap-v2-router-v1"
+        ? TronMeasuredExecutionPublicProfileSchema.safeParse(profile).success
+        : DexMeasuredExecutionPublicProfileSchema.safeParse(profile).success;
+  if (!schemaValid) issues.push("invalid-profile-schema");
   if (!isNative) {
     if (
       profile.adapterProfileId !== "uniswap-v3-quoter-v2" &&
