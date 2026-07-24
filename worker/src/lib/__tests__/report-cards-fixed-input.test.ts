@@ -110,7 +110,10 @@ function wmSupplyAttribution(input: {
       decimals: route.decimals,
       rawSupply: route.chainId === "ethereum" ? "86712798085682" : route.chainId === "solana" ? "247794997129" : "1",
       blockNumberOrSlot: (25_000_000 + index).toString(),
-      blockTimeSec: input.clockSec - 10 + index,
+      blockTimeSec:
+        route.chainId === "solana"
+          ? input.clockSec + 5
+          : input.clockSec - 10 + index,
     };
     return identity.runtime === "evm"
       ? {
@@ -603,6 +606,7 @@ describe("fixed report-card input replay", () => {
     if (direct.model !== "reviewed-deployment-unit-partition-v1") {
       throw new Error("Expected direct deployment attribution");
     }
+    expect(direct.observedAtSec).toBe(aggregateInput.clockSec + 5);
     expect(direct.deployments.map((row) => row.routeId)).toEqual(
       [...direct.deployments.map((row) => row.routeId)].sort(),
     );

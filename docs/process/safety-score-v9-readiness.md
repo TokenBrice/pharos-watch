@@ -209,7 +209,10 @@ designed:
 
 - Measured execution retains bounded last-known-good observations across
   operational producer failures, preserves quote lineage, and requires repeated
-  successful observations before earning high confidence.
+  successful observations before earning high confidence. Fact compilation
+  uses the measured adapter's validated freshness window, including the
+  two-hour Curve window, instead of shortening every DEX observation to the
+  generic one-hour lane window.
 - Reviewed redemption with an undisclosed numeric fee can preserve bounded
   executable capacity under the opaque-fee ceiling; it does not become a
   permissionless or fee-free route.
@@ -219,6 +222,12 @@ designed:
   the route trace.
 - Reviewed reserve links project exact tracked-asset identity into compiled
   exposures while retaining the live weight.
+- When the exact report-card input records that a live-reserve asset used its
+  registry fallback, V9 may admit those rows only from a verified, sourced,
+  full-composition review no more than 31 days old. The facts retain
+  `curated-fallback` provenance and the existing 0.80 static-evidence
+  confidence multiplier; an absent fallback signal, partial review, stale
+  composition, or incomplete total remains unavailable.
 - Wrapper custody, leverage, and rehypothecation remain unavailable unless
   explicitly evidenced. A wrapper fallback discount is attributed to those
   bounded local gaps only when it exceeds the reviewed local-risk discount;
@@ -239,9 +248,16 @@ designed:
   aggregate, count locked backing once, preserve unknown destination
   allocation, and fail closed when either the issuer or onchain evidence is
   unavailable, stale, skewed, or mismatched.
+- wM's reviewed deployment observer binds every EVM route to a block at or
+  before the fixed scoring clock. Its single Solana route may use the first
+  finalized observation just after that clock only when the complete
+  cross-chain packet remains inside the existing 120-second capture envelope;
+  future EVM state, an all-future packet, stale state, or a wider envelope
+  fails closed with explicit skew provenance.
 
-These are evidence and attribution corrections. They do not change V8 inputs
-or public V8 scoring.
+Candidate-only attribution remains outside the public V8 fixed input. Shared
+producer and evidence corrections may improve inputs consumed by both models;
+they do not change which model is public, and they do not activate V9.
 
 Current candidate cards use score-trace schema v2 and response schema v3 for
 bounded-D attribution. Strict readers retain response-v2/trace-v1 compatibility

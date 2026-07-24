@@ -205,6 +205,53 @@ describe("wM reviewed deployment observer", () => {
     expect(deps.fetchSolanaObservation).toHaveBeenCalledTimes(1);
   });
 
+  it("accepts a finalized Solana observation just after the fixed clock", async () => {
+    const deps = dependencies();
+    deps.fetchSolanaObservation.mockResolvedValue({
+      ...solanaObservation(),
+      blockTimeSec: CLOCK_SEC + 5,
+    });
+
+    const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt(
+      {
+        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        scoringClockSec: CLOCK_SEC,
+        chainRpcs: chainRpcs(),
+      },
+      deps,
+    );
+
+    expect(attempt.status).toBe("accepted");
+    if (attempt.status !== "accepted") throw new Error("Expected accepted wM attribution");
+    expect(attempt.attribution.observedAtSec).toBe(CLOCK_SEC + 5);
+  });
+
+  it("reports an over-wide cross-chain observation envelope as skew", async () => {
+    const deps = dependencies();
+    const solana = solanaObservation();
+    deps.fetchSolanaObservation.mockResolvedValue({
+      ...solana,
+      blockTimeSec: CLOCK_SEC + 121,
+    });
+
+    await expect(
+      observeWmReviewedDeploymentUnitPartitionAttempt(
+        {
+          aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+          registryFingerprint: REGISTRY_FINGERPRINT,
+          scoringClockSec: CLOCK_SEC,
+          chainRpcs: chainRpcs(),
+        },
+        deps,
+      ),
+    ).resolves.toEqual({
+      status: "rejected",
+      rejectionCode: "deployment-observation-skew",
+      failedRouteId: solana.routeId,
+    });
+  });
+
   it("walks back from a head newer than the fixed scoring clock", async () => {
     const deps = dependencies();
     deps.fetchEvmBlockHeader.mockImplementation(async (chainId, blockNumber) =>

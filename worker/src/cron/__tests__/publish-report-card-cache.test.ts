@@ -6,7 +6,6 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared
 const mockBuildReportCardsSnapshot = vi.fn();
 const mockBuildFixedInputCacheEntry = vi.fn();
 const mockBuildV9FixedInputCacheEntry = vi.fn();
-const mockNormalizeFixedInput = vi.fn();
 const mockEnrichV9FixedInput = vi.fn();
 const mockLoadEvidenceJournal = vi.fn();
 const mockAppendSupplyAttributionJournal = vi.fn();
@@ -22,7 +21,6 @@ vi.mock("../../lib/report-cards-snapshot", () => ({
 vi.mock("../../lib/report-cards-fixed-input", () => ({
   buildReportCardsFixedInputCacheEntry: mockBuildFixedInputCacheEntry,
   buildSafetyScoreV9FixedInputCacheEntry: mockBuildV9FixedInputCacheEntry,
-  normalizeFixedInput: mockNormalizeFixedInput,
 }));
 
 vi.mock("../../lib/safety-score-v9-supply-attribution", () => ({
@@ -113,7 +111,6 @@ describe("publishReportCardCache", () => {
     mockBuildReportCardsSnapshot.mockReset();
     mockBuildFixedInputCacheEntry.mockReset();
     mockBuildV9FixedInputCacheEntry.mockReset();
-    mockNormalizeFixedInput.mockReset();
     mockEnrichV9FixedInput.mockReset();
     mockLoadEvidenceJournal.mockReset();
     mockAppendSupplyAttributionJournal.mockReset();
@@ -147,7 +144,6 @@ describe("publishReportCardCache", () => {
     mockCapturePegProvenance.mockReturnValue({
       "usdc-circle": { marker: "compact-peg-provenance" },
     });
-    mockNormalizeFixedInput.mockImplementation((value) => value);
     mockRunSafetyScoreV9Shadow.mockImplementation(async (shadowInput) => {
       await shadowInput.prepareFixedInput?.(shadowInput.fixedInput, new AbortController().signal);
       return {

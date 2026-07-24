@@ -1932,6 +1932,38 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const liveExposures = compileSafetyScoreV9FactSetFromFixedInput(withLive, liveFirst).assets[0]!.reserveExposures;
     expect(liveExposures).toEqual([expect.objectContaining({ provenance: "live", weight: 1 })]);
     expect(liveExposures[0]).not.toHaveProperty("evidenceClass");
+
+    const curatedFallbackFixed = structuredClone(noLive);
+    curatedFallbackFixed.liveToFallbackCoins = ["alpha"];
+    curatedFallbackFixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(curatedFallbackFixed);
+    const curatedFallbackMeta: V9ExtensionRegistryMeta = {
+      ...meta,
+      proofOfReserves: undefined,
+      mintAuthority: {
+        ...meta.mintAuthority!,
+        supervision: "attestation-only",
+      },
+    };
+    const curatedFallbackExtension = buildSafetyScoreV9BaselineExtension(curatedFallbackFixed, {
+      metaById: new Map([["alpha", curatedFallbackMeta]]),
+    });
+    expect(curatedFallbackExtension.assets[0]!.reviewedStaticReserveRows).toMatchObject({
+      evidenceClass: "static-validated",
+      provenance: "curated-fallback",
+    });
+    const curatedFallbackExposures = compileSafetyScoreV9FactSetFromFixedInput(
+      curatedFallbackFixed,
+      curatedFallbackExtension,
+    ).assets[0]!.reserveExposures;
+    expect(curatedFallbackExposures).toHaveLength(2);
+    expect(curatedFallbackExposures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          provenance: "curated-fallback",
+          evidenceClass: "static-validated",
+        }),
+      ]),
+    );
   });
 
   it("compiles exact base facts and explicit reviews without consulting v8 score outputs", () => {
@@ -3424,6 +3456,27 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       freshness: { state: "stale", maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC },
     });
     expect(stale.exitRoutes[0]!.output.status.observationState).toBe("stale");
+  });
+
+  it("uses the measured adapter freshness window for DEX route evidence", () => {
+    const compileMeasured = (adapterProfileId: string) => {
+      const fixed = structuredClone(exactFixedInput());
+      const observation = fixed.dexLiqMap.alpha!.exitRouteObservations![0]!;
+      observation.evidenceKind = "measured-executable-depth";
+      observation.adapterProfileId = adapterProfileId;
+      observation.observedAt = AS_OF_SEC - 4_000;
+      observation.freshnessSeconds = 4_000;
+      fixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixed);
+      const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension()).assets[0]!;
+      return compiled.evidence.find((candidate) => candidate.evidenceId.includes(":route:dex:"))!;
+    };
+
+    expect(compileMeasured("curve-stableswap-main-registry-get-dy-v1")).toMatchObject({
+      freshness: { state: "current", maxAgeSec: 7_200, ageSec: 4_000 },
+    });
+    expect(compileMeasured("uniswap-v3-quoter-v2")).toMatchObject({
+      freshness: { state: "stale", maxAgeSec: 3_600, ageSec: 4_000 },
+    });
   });
 
   it("derives cdp shock-coverage freshness on the D12 72-hour policy window", () => {

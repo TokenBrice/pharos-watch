@@ -5,7 +5,11 @@ import {
   V9_SHADOW_DAILY_START_OFFSET_SEC,
 } from "@shared/lib/safety-score-v9/operational-gate";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { sha256HexFromUtf8Chunks } from "@shared/lib/sha256";
+import {
+  stableJsonStringifyChunksV1,
+  stableJsonStringifyV1,
+} from "@shared/lib/stable-json";
 import type { ReportCard } from "@shared/types/report-cards";
 import type { V9Grade } from "@shared/types/safety-score-v9";
 import { V9_RELEASE_COVERAGE_FLOORS } from "@shared/types/safety-score-v9-coverage";
@@ -114,6 +118,12 @@ function fixedInputWithoutV9Enrichment(input: Readonly<ReportCardsFixedInput>) {
     ...baseInput
   } = input;
   return baseInput;
+}
+
+function fixedInputWithoutV9EnrichmentDigest(input: Readonly<ReportCardsFixedInput>): string {
+  return sha256HexFromUtf8Chunks(
+    stableJsonStringifyChunksV1(fixedInputWithoutV9Enrichment(input)),
+  );
 }
 
 function fallbackNowSec(): number {
@@ -353,8 +363,8 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
         await input.prepareFixedInput(fixedInput, shadowSignal),
       );
       if (
-        stableJsonStringifyV1(fixedInputWithoutV9Enrichment(preparedFixedInput)) !==
-        stableJsonStringifyV1(fixedInputWithoutV9Enrichment(fixedInput))
+        fixedInputWithoutV9EnrichmentDigest(preparedFixedInput) !==
+        fixedInputWithoutV9EnrichmentDigest(fixedInput)
       ) {
         throw new Error("Safety Score v9 preparation changed the authoritative V8 fixed input");
       }
@@ -391,26 +401,38 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       methodologyVersion: input.v8MethodologyVersion,
     });
 
-    const pendingDiff = buildSafetyScoreV9DiffReport({
-      generatedAtSec: completedAtSec,
-      expectedActiveIds,
-      v8,
-      v9: baseEnvelope,
-      topCutoffIds: supply.topCutoffIds,
-      downstreamThresholds: downstreamThresholds(),
-      supplyUsdById: supply.supplyUsdById,
-    });
-    const reviewDispositionsByKey = await loadSafetyScoreV9MovementReviewDispositions(
-      input.db,
-      pendingDiff.cards.flatMap((card) => (card.review.key === null ? [] : [card.review.key])),
-      shadowSignal,
-    );
-    const reviewCarriesByClassKey = await loadSafetyScoreV9MovementReviewCarries(
-      input.db,
-      pendingDiff.cards.flatMap((card) => (card.review.classKey === null ? [] : [card.review.classKey])),
-      shadowSignal,
-    );
-    const reviewedDiff = buildSafetyScoreV9DiffReport({
+    const pendingReviewKeys = (() => {
+      const pendingDiff = buildSafetyScoreV9DiffReport({
+        generatedAtSec: completedAtSec,
+        expectedActiveIds,
+        v8,
+        v9: baseEnvelope,
+        topCutoffIds: supply.topCutoffIds,
+        downstreamThresholds: downstreamThresholds(),
+        supplyUsdById: supply.supplyUsdById,
+      });
+      return {
+        exact: pendingDiff.cards.flatMap((card) =>
+          card.review.key === null ? [] : [card.review.key],
+        ),
+        class: pendingDiff.cards.flatMap((card) =>
+          card.review.classKey === null ? [] : [card.review.classKey],
+        ),
+      };
+    })();
+    const [reviewDispositionsByKey, reviewCarriesByClassKey] = await Promise.all([
+      loadSafetyScoreV9MovementReviewDispositions(
+        input.db,
+        pendingReviewKeys.exact,
+        shadowSignal,
+      ),
+      loadSafetyScoreV9MovementReviewCarries(
+        input.db,
+        pendingReviewKeys.class,
+        shadowSignal,
+      ),
+    ]);
+    const diff = buildSafetyScoreV9DiffReport({
       generatedAtSec: completedAtSec,
       expectedActiveIds,
       v8,
@@ -421,7 +443,7 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       reviewDispositionsByKey,
       reviewCarriesByClassKey,
     });
-    const unresolvedCriticalMovementIds = reviewedDiff.cards
+    const unresolvedCriticalMovementIds = diff.cards
       .filter(
         (card) =>
           card.review.status === "pending" ||
@@ -436,17 +458,6 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       producerCapabilityDigest: pipeline.producerCapabilityDigest,
       coverageFloors: floors,
       unresolvedCriticalMovementIds,
-    });
-    const diff = buildSafetyScoreV9DiffReport({
-      generatedAtSec: completedAtSec,
-      expectedActiveIds,
-      v8,
-      v9: envelope,
-      topCutoffIds: supply.topCutoffIds,
-      downstreamThresholds: downstreamThresholds(),
-      supplyUsdById: supply.supplyUsdById,
-      reviewDispositionsByKey,
-      reviewCarriesByClassKey,
     });
     const daily = buildSafetyScoreV9ShadowDailySuccess({
       utcDay,

@@ -55,11 +55,16 @@ describe("D6 issuer-attested reserve confidence", () => {
     const missingClass = evaluate(reserve());
     const baseline = evaluate(reserve("independent"));
     const discounted = evaluate(reserve("issuer-attested"));
+    const staticValidated = evaluate(reserve("static-validated"));
     const baselineExposure = baseline.contributions.find((row) => row.componentKey === "reserve:cash")?.score;
     const discountedExposure = discounted.contributions.find((row) => row.componentKey === "reserve:cash")?.score;
+    const staticValidatedExposure = staticValidated.contributions.find(
+      (row) => row.componentKey === "reserve:cash",
+    )?.score;
     const missingClassExposure = missingClass.contributions.find((row) => row.componentKey === "reserve:cash")?.score;
     expect(baselineExposure).toBeDefined();
     expect(discountedExposure).toBeCloseTo(baselineExposure! * policyMultiplier, 10);
+    expect(staticValidatedExposure).toBe(discountedExposure);
     expect(missingClassExposure).toBe(discountedExposure);
     expect(discounted.score).toBeLessThan(baseline.score!);
     expect(discounted.unresolved).toEqual([]);

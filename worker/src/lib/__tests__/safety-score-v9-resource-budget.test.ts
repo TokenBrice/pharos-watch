@@ -21,30 +21,140 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
     buildSync({
       stdin: {
         contents: `
+          import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
+          import { sha256HexFromUtf8Chunks } from "@shared/lib/sha256";
+          import { stableJsonStringifyChunksV1 } from "@shared/lib/stable-json";
           import { buildSafetyScoreV9ShadowCandidateFromNormalizedInput } from "../safety-score-v9-candidate.ts";
           import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input.ts";
-          import { buildSafetyScoreV9ShadowEnvelope, computeSafetyScoreV9ShadowEnvelopeDigest } from "../safety-score-v9-shadow.ts";
+          import {
+            buildReportCardsSnapshotFromFixedInput,
+            buildSafetyScoreV9FixedInputCacheEntry,
+            normalizeFixedInput,
+          } from "../report-cards-fixed-input.ts";
+          import {
+            buildSafetyScoreV9DiffReport,
+            buildSafetyScoreV9ShadowEnvelope,
+            computeSafetyScoreV9ShadowEnvelopeDigest,
+          } from "../safety-score-v9-shadow.ts";
+          import {
+            serializeSafetyScoreV9DiffReportCacheValue,
+            serializeSafetyScoreV9ShadowEnvelopeCacheValue,
+          } from "../safety-score-v9-cache-codec.ts";
 
-          const fixedInput = createSafetyScoreV9FullRegistryInput();
-          const shadow = buildSafetyScoreV9ShadowCandidateFromNormalizedInput({
-            fixedInput,
-            publishedAtSec: fixedInput.clockSec,
+          const fixedInput = normalizeFixedInput(createSafetyScoreV9FullRegistryInput());
+          const activeIds = new Set(fixedInput.activeAssetIds);
+          const v8Cards = buildReportCardsSnapshotFromFixedInput(fixedInput).cards
+            .filter((card) => activeIds.has(card.id));
+          const preparedInput = {
+            ...fixedInput,
+            evidenceJournalById: {},
+            supplyAttributionJournalById: {},
+            pegProvenanceById: {},
+          };
+          const safetyScoreIdentity = buildSafetyScoreV8PublicationIdentity({
+            methodologyVersion: fixedInput.methodologyVersion,
+            baseInputGenerationId: fixedInput.baseInputGenerationId,
+            publicationGenerationId: fixedInput.sourceGeneration,
           });
-          const envelope = buildSafetyScoreV9ShadowEnvelope({
+          const fixedInputCache = await buildSafetyScoreV9FixedInputCacheEntry(
+            preparedInput,
+            safetyScoreIdentity,
+          );
+          const runnerInput = normalizeFixedInput(preparedInput);
+          const baseProjection = (input) => {
+            const {
+              safetyScoreV9SupplyAttributionById: _supply,
+              evidenceJournalById: _evidence,
+              supplyAttributionJournalById: _supplyJournal,
+              pegProvenanceById: _peg,
+              ...base
+            } = input;
+            return base;
+          };
+          const baseDigest = (input) => sha256HexFromUtf8Chunks(
+            stableJsonStringifyChunksV1(baseProjection(input)),
+          );
+          if (baseDigest(fixedInput) !== baseDigest(runnerInput)) {
+            throw new Error("Resource probe V9 preparation changed the V8 base input");
+          }
+          const shadow = buildSafetyScoreV9ShadowCandidateFromNormalizedInput({
+            fixedInput: runnerInput,
+            publishedAtSec: runnerInput.clockSec,
+          });
+          const baseEnvelope = buildSafetyScoreV9ShadowEnvelope({
             candidate: shadow.candidate,
-            expectedActiveIds: fixedInput.activeAssetIds,
+            expectedActiveIds: runnerInput.activeAssetIds,
             compilerFactSchemaDigest: shadow.compilerFactSchemaDigest,
             producerCapabilityDigest: shadow.producerCapabilityDigest,
             coverageFloors: [],
           });
+          const v8 = {
+            model: "v8",
+            publicationGenerationId: fixedInput.sourceGeneration,
+            baseInputGenerationId: fixedInput.baseInputGenerationId,
+            methodologyVersion: fixedInput.methodologyVersion,
+            evaluationBuildDigest: safetyScoreIdentity.evaluationBuildDigest,
+            cards: v8Cards.map((card) => ({
+              id: card.id,
+              score: card.overallScore,
+              grade: card.overallGrade,
+              bindingCap: card.overallCapped && card.overallScore !== null
+                ? { kind: "variant-parent", limit: card.overallScore, source: card.rawInputs.variantParentId ?? null }
+                : null,
+              reasonCodes: [],
+            })),
+          };
+          const supplies = Object.entries(shadow.supplyUsdById)
+            .map(([id, supplyUsd]) => ({ id, supplyUsd }))
+            .sort((left, right) => right.supplyUsd - left.supplyUsd || left.id.localeCompare(right.id));
+          const cutoff = supplies[Math.min(24, supplies.length - 1)]?.supplyUsd ?? Number.POSITIVE_INFINITY;
+          const diffInput = {
+            generatedAtSec: runnerInput.clockSec,
+            expectedActiveIds: runnerInput.activeAssetIds,
+            v8,
+            v9: baseEnvelope,
+            topCutoffIds: new Set(supplies.filter((entry) => entry.supplyUsd >= cutoff).map((entry) => entry.id)),
+            downstreamThresholds: [],
+            supplyUsdById: shadow.supplyUsdById,
+          };
+          let pendingDiff = buildSafetyScoreV9DiffReport(diffInput);
+          const reviewKeys = pendingDiff.cards.flatMap((card) =>
+            card.review.key === null ? [] : [card.review.key],
+          );
+          pendingDiff = null;
+          const diff = buildSafetyScoreV9DiffReport({
+            ...diffInput,
+            reviewDispositionsByKey: {},
+            reviewCarriesByClassKey: {},
+          });
+          const unresolvedCriticalMovementIds = diff.cards
+            .filter((card) => card.review.status === "pending")
+            .map((card) => card.id);
+          const envelope = buildSafetyScoreV9ShadowEnvelope({
+            candidate: shadow.candidate,
+            expectedActiveIds: runnerInput.activeAssetIds,
+            compilerFactSchemaDigest: shadow.compilerFactSchemaDigest,
+            producerCapabilityDigest: shadow.producerCapabilityDigest,
+            coverageFloors: [],
+            unresolvedCriticalMovementIds,
+          });
+          const [storedEnvelope, storedDiff] = await Promise.all([
+            serializeSafetyScoreV9ShadowEnvelopeCacheValue(envelope),
+            serializeSafetyScoreV9DiffReportCacheValue(diff),
+          ]);
           process.stdout.write(JSON.stringify({
-            expected: fixedInput.activeAssetIds.length,
+            expected: runnerInput.activeAssetIds.length,
             cards: shadow.candidate.cards.length,
             rated: shadow.candidate.completeness.ratedCount,
             supplies: Object.keys(shadow.supplyUsdById).length,
             factDigest: shadow.candidate.factSetDigest,
             resultDigest: shadow.candidate.resultDigest,
             envelopeDigest: computeSafetyScoreV9ShadowEnvelopeDigest(envelope),
+            diffDigest: diff.reportDigest,
+            reviewKeys: reviewKeys.length,
+            fixedInputCacheBytes: fixedInputCache.storedBytes,
+            storedEnvelopeBytes: storedEnvelope.length,
+            storedDiffBytes: storedDiff.length,
           }));
         `,
         loader: "ts",
@@ -104,6 +214,11 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
       factDigest: string;
       resultDigest: string;
       envelopeDigest: string;
+      diffDigest: string;
+      reviewKeys: number;
+      fixedInputCacheBytes: number;
+      storedEnvelopeBytes: number;
+      storedDiffBytes: number;
     };
     expect(output.expected).toBeGreaterThan(300);
     expect(output.cards).toBe(output.expected);
@@ -112,5 +227,10 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
     expect(output.factDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(output.resultDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(output.envelopeDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(output.diffDigest).toMatch(/^[a-f0-9]{64}$/);
+    expect(output.reviewKeys).toBeGreaterThan(0);
+    expect(output.fixedInputCacheBytes).toBeGreaterThan(0);
+    expect(output.storedEnvelopeBytes).toBeGreaterThan(0);
+    expect(output.storedDiffBytes).toBeGreaterThan(0);
   });
 });
