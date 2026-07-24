@@ -390,7 +390,7 @@
     "witry-brix": "cash-equivalent",
     "scusd-rings": "core-stablecoin",
     "weusd-picwe": "core-stablecoin",
-    "iusd-initia": "core-stablecoin",
+    "iusd-initia": "stablecoin-variant",
     "usdxl-last": "core-stablecoin",
     "dusd-fluid": "core-stablecoin",
     "bnusd-balanced": "core-stablecoin",
