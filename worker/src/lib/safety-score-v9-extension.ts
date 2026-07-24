@@ -1906,6 +1906,7 @@ function adaptBridgeReview(
 
 function adaptMintReview(
   meta: V9ExtensionRegistryMeta,
+  dependencies: PreparedDependency["dependency"],
   evidence: ReviewEvidenceBuilder,
   clockSec: number,
 ): {
@@ -1975,7 +1976,40 @@ function adaptMintReview(
             profile.economicCapSemantics,
           ),
         );
-  const mintControl = controls.find((control) => control.capabilities.includes("mint")) ?? null;
+  const directMintControl = controls.find((control) => control.capabilities.includes("mint")) ?? null;
+  const inheritedFrom = profile.inheritedFrom;
+  const hasExactInheritedWrapperDependency =
+    profile.mintPath === "wrapped-or-variant-inherited" &&
+    inheritedFrom !== undefined &&
+    dependencies.diagnostics.graphState === "valid" &&
+    dependencies.edges.some(
+      (edge) =>
+        edge.dependencyType === "wrapper" &&
+        edge.economicRole === "serial-claim" &&
+        edge.upstreamAssetId === inheritedFrom &&
+        edge.weight === 1 &&
+        edge.failureDomains.some(
+          (domain) => domain.kind === "mint-control" && domain.key === `asset:${inheritedFrom}`,
+        ),
+    );
+  const inheritedShareControlIndex = hasExactInheritedWrapperDependency
+    ? (profile.controls ?? []).findIndex(
+        (control) =>
+          control.role === "wrapper" &&
+          control.directMintAbility === "none" &&
+          control.canRaiseCap === false,
+      )
+    : -1;
+  // An exact serial wrapper does not create durable parent supply. Its reviewed
+  // share-accounting control therefore represents the local mint component when
+  // no explicit durable-mint control exists. The parent mint domain remains on
+  // the serial dependency, while every local upgrade control stays in this
+  // asset's control inventory and continues to constrain the wrapper layer.
+  const inheritedShareControl =
+    directMintControl === null && inheritedShareControlIndex >= 0
+      ? (controls[inheritedShareControlIndex] ?? null)
+      : null;
+  const mintControl = directMintControl ?? inheritedShareControl;
   const referencedUpgradeIndex =
     upgradeability?.controlRef == null
       ? -1
@@ -2198,7 +2232,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const supplyReview = buildSafetyScoreV9SupplyReview(fixedInput, assetId, meta.bridgeRouteRisk);
       const deployedChainCount = Object.keys(safetyScoreV9ChainRows(fixedInput, assetId)).length;
       const assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(assetId, metaById);
-      const mint = adaptMintReview(meta, reviewEvidence, clockSec);
+      const mint = adaptMintReview(meta, prepared.dependency, reviewEvidence, clockSec);
       const oracle = adaptOracleReview(meta, archetype, reviewEvidence, clockSec);
       const bridge = adaptBridgeReview(meta, supplyReview, deployedChainCount, reviewEvidence, clockSec);
       const controls = [...mint.controls, ...bridge.controls].sort((left, right) =>

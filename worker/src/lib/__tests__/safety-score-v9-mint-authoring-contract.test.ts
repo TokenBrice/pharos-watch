@@ -9,9 +9,19 @@ import { createReportCardsFixedInput, normalizeFixedInput } from "../report-card
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
 
-const AS_OF_SEC = 1_783_944_000;
+const AS_OF_SEC = 1_784_851_200;
 const OBSERVED_AT_SEC = AS_OF_SEC - 100;
 const ASSET_ID = "authoring-example";
+const REVIEWED_INHERITED_WRAPPERS = [
+  { assetId: "stusds-sky", parentId: "usds-sky" },
+  { assetId: "sgho-aave", parentId: "gho-aave" },
+  { assetId: "said-gaib", parentId: "aid-gaib" },
+  { assetId: "eearn-ember", parentId: "usdc-circle" },
+] as const;
+const UNRESOLVED_INHERITED_WRAPPER = {
+  assetId: "syzusd-yuzu",
+  parentId: "yzusd-yuzu",
+} as const;
 
 /**
  * AUTHORING-CONTRACT REFERENCE — copy this field shape verbatim.
@@ -66,10 +76,10 @@ export const AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE: MintAuthorityProfile = {
   },
 };
 
-function fixedInput() {
+function fixedInput(activeAssetIds: readonly string[] = [ASSET_ID]) {
   return createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
-    activeAssetIds: [ASSET_ID],
+    activeAssetIds: [...activeAssetIds],
     capturedAt: "2026-07-13T00:00:00.000Z",
     sourceGeneration: `report-cards:fixture:${ASSET_ID}`,
     dexGenerationId: `dex-liquidity-${OBSERVED_AT_SEC}`,
@@ -84,78 +94,93 @@ function fixedInput() {
       dexLiquidity: { updatedAt: OBSERVED_AT_SEC, ageSeconds: 100, stale: false },
       redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
     },
-    pegDataById: {
-      [ASSET_ID]: {
-        id: ASSET_ID,
-        symbol: "EXMPL",
-        name: "Authoring Example",
-        pegType: "peggedUSD",
-        pegCurrency: "USD",
-        governance: "centralized",
-        currentDeviationBps: 1,
-        pegScore: 99,
-        priceSource: "fixture-price",
-        priceObservedAt: OBSERVED_AT_SEC,
-        pegPct: 99,
-        severityScore: 0,
-        spreadPenalty: 0,
-        eventCount: 0,
-        worstDeviationBps: 1,
-        activeDepeg: false,
-        lastEventAt: null,
-        trackingSpanDays: 365,
-        methodologyVersion: "peg:fixture-v1",
-      },
-    },
+    pegDataById: Object.fromEntries(
+      activeAssetIds.map((assetId) => [
+        assetId,
+        {
+          id: assetId,
+          symbol: "EXMPL",
+          name: "Authoring Example",
+          pegType: "peggedUSD",
+          pegCurrency: "USD",
+          governance: "centralized",
+          currentDeviationBps: 1,
+          pegScore: 99,
+          priceSource: "fixture-price",
+          priceObservedAt: OBSERVED_AT_SEC,
+          pegPct: 99,
+          severityScore: 0,
+          spreadPenalty: 0,
+          eventCount: 0,
+          worstDeviationBps: 1,
+          activeDepeg: false,
+          lastEventAt: null,
+          trackingSpanDays: 365,
+          methodologyVersion: "peg:fixture-v1",
+        },
+      ]),
+    ),
     activeDepegPeakBpsById: {},
-    dexLiqMap: {
-      [ASSET_ID]: {
-        liquidityScore: 12,
-        concentrationHhi: 0.5,
-        poolCount: 1,
-        chainCount: 1,
-        coverageClass: "primary",
-        coverageConfidence: 1,
-        liquidityEvidenceClass: "measured",
-        hasMeasuredLiquidityEvidence: true,
-        effectiveTvlUsd: 1_000_000,
-        balanceMeasuredTvlUsd: 1_000_000,
-        organicMeasuredTvlUsd: 1_000_000,
-        exitRouteObservations: [],
-        methodologyVersion: "dex:fixture-v1",
-        updatedAt: OBSERVED_AT_SEC,
-      },
-    },
+    dexLiqMap: Object.fromEntries(
+      activeAssetIds.map((assetId) => [
+        assetId,
+        {
+          liquidityScore: 12,
+          concentrationHhi: 0.5,
+          poolCount: 1,
+          chainCount: 1,
+          coverageClass: "primary",
+          coverageConfidence: 1,
+          liquidityEvidenceClass: "measured",
+          hasMeasuredLiquidityEvidence: true,
+          effectiveTvlUsd: 1_000_000,
+          balanceMeasuredTvlUsd: 1_000_000,
+          organicMeasuredTvlUsd: 1_000_000,
+          exitRouteObservations: [],
+          methodologyVersion: "dex:fixture-v1",
+          updatedAt: OBSERVED_AT_SEC,
+        },
+      ]),
+    ),
     redemptionBackstopMap: {},
     bluechipMap: {},
-    resolvedBlacklistStatuses: { [ASSET_ID]: false },
-    liveReserveMap: {
-      [ASSET_ID]: [
+    resolvedBlacklistStatuses: Object.fromEntries(activeAssetIds.map((assetId) => [assetId, false])),
+    liveReserveMap: Object.fromEntries(
+      activeAssetIds.map((assetId) => [
+        assetId,
+        [
+          {
+            name: "Custodied cash",
+            pct: 100,
+            risk: "very-low",
+            assetClass: "cash",
+            issuerOrObligor: "issuer:example",
+            riskFactors: ["custody", "counterparty"],
+            liquidityHorizon: "immediate",
+            maturityDaysMax: 0,
+          },
+        ],
+      ]),
+    ),
+    liveReserveProvenanceMap: Object.fromEntries(
+      activeAssetIds.map((assetId) => [
+        assetId,
+        { source: "fixture-reserve-api", fetchedAt: OBSERVED_AT_SEC },
+      ]),
+    ),
+    chainCirculatingById: Object.fromEntries(
+      activeAssetIds.map((assetId) => [
+        assetId,
         {
-          name: "Custodied cash",
-          pct: 100,
-          risk: "very-low",
-          assetClass: "cash",
-          issuerOrObligor: "issuer:example",
-          riskFactors: ["custody", "counterparty"],
-          liquidityHorizon: "immediate",
-          maturityDaysMax: 0,
+          ethereum: {
+            current: 10_000_000,
+            circulatingPrevDay: 10_000_000,
+            circulatingPrevWeek: 10_000_000,
+            circulatingPrevMonth: 10_000_000,
+          },
         },
-      ],
-    },
-    liveReserveProvenanceMap: {
-      [ASSET_ID]: { source: "fixture-reserve-api", fetchedAt: OBSERVED_AT_SEC },
-    },
-    chainCirculatingById: {
-      [ASSET_ID]: {
-        ethereum: {
-          current: 10_000_000,
-          circulatingPrevDay: 10_000_000,
-          circulatingPrevWeek: 10_000_000,
-          circulatingPrevMonth: 10_000_000,
-        },
-      },
-    },
+      ]),
+    ),
     dexDeploymentSupplyCoverageById: {},
     collateralDriftCoins: [],
     liveToFallbackCoins: [],
@@ -256,5 +281,122 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     });
     expect(compiled.assets[0]!.controlStatus.observationState).toBe("known");
     expect(evaluated.control.reasons.map((reason) => reason.code)).not.toContain("unresolved-mint-authority");
+  });
+
+  it("binds reviewed inherited wrappers to local share accounting without dropping parent or upgrade controls", () => {
+    const relationships = [...REVIEWED_INHERITED_WRAPPERS, UNRESOLVED_INHERITED_WRAPPER];
+    const activeAssetIds = [
+      ...new Set(relationships.flatMap(({ assetId, parentId }) => [assetId, parentId])),
+    ];
+    const metaById = new Map(
+      activeAssetIds.map((assetId) => {
+        const meta = ACTIVE_META_BY_ID.get(assetId);
+        if (!meta) throw new Error(`expected registry metadata for ${assetId}`);
+        return [assetId, meta] as const;
+      }),
+    );
+    const input = fixedInput(activeAssetIds);
+    const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
+    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+    const evaluatedById = new Map(
+      evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets.map((asset) => [asset.assetId, asset]),
+    );
+
+    for (const { assetId, parentId } of REVIEWED_INHERITED_WRAPPERS) {
+      const profile = metaById.get(assetId)!.mintAuthority!;
+      const asset = extension.assets.find((candidate) => candidate.assetId === assetId)!;
+      const controlReview = asset.controlReview;
+      if (!controlReview || !("controls" in controlReview)) {
+        throw new Error(`expected reviewed controls for ${assetId}`);
+      }
+      const shareControl = controlReview.controls.find(
+        (control) =>
+          control.controlKind === "mint" &&
+          control.capabilities.length === 0 &&
+          control.claimImpairment === "none" &&
+          control.economicLossScope === "access-only",
+      );
+      const localMintControls = controlReview.controls.filter((control) =>
+        control.controlKey.startsWith(`mint-meta:${assetId}:`),
+      );
+      const upgradeControls = localMintControls.filter((control) =>
+        control.capabilities.includes("upgrade"),
+      );
+      const expectedUpgradeCount = (profile.controls ?? []).filter(
+        (control) => control.directMintAbility === "upgrade-only",
+      ).length;
+
+      expect(asset.dependencies?.edges).toContainEqual(
+        expect.objectContaining({
+          dependencyType: "wrapper",
+          economicRole: "serial-claim",
+          upstreamAssetId: parentId,
+          weight: 1,
+          failureDomains: [{ kind: "mint-control", key: `asset:${parentId}` }],
+        }),
+      );
+      expect(shareControl).toBeDefined();
+      expect(asset.economicControlReview?.mint).toMatchObject({
+        status: { observationState: "known" },
+        controlKey: shareControl!.controlKey,
+        reconciliation: "not-applicable",
+        upgrade: { state: "reviewed" },
+      });
+      expect(upgradeControls).toHaveLength(expectedUpgradeCount);
+      expect(upgradeControls).not.toHaveLength(0);
+      expect(localMintControls).toHaveLength(profile.controls?.length ?? 0);
+      const selectedUpgradeControlKey = asset.economicControlReview!.mint.upgrade.controlKey!;
+      expect(
+        evaluatedById.get(assetId)!.control.components.find((component) => component.kind === "mint"),
+      ).toMatchObject({
+        posture: "none-resolved",
+        controlKeys: expect.arrayContaining([shareControl!.controlKey, selectedUpgradeControlKey]),
+      });
+      expect(evaluatedById.get(assetId)!.control.reasons.map((reason) => reason.code)).not.toContain(
+        "missing-mint-authority",
+      );
+    }
+  });
+
+  it("does not substitute share accounting for an explicit unresolved inherited mint path", () => {
+    const { assetId, parentId } = UNRESOLVED_INHERITED_WRAPPER;
+    const activeAssetIds = [assetId, parentId];
+    const metaById = new Map(
+      activeAssetIds.map((id) => {
+        const meta = ACTIVE_META_BY_ID.get(id);
+        if (!meta) throw new Error(`expected registry metadata for ${id}`);
+        return [id, meta] as const;
+      }),
+    );
+    const input = fixedInput(activeAssetIds);
+    const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
+    const asset = extension.assets.find((candidate) => candidate.assetId === assetId)!;
+    const controlReview = asset.controlReview;
+    if (!controlReview || !("controls" in controlReview)) {
+      throw new Error(`expected reviewed controls for ${assetId}`);
+    }
+    const shareControl = controlReview.controls.find(
+      (control) => control.controlKind === "mint" && control.capabilities.length === 0,
+    )!;
+    const selectedControl = controlReview.controls.find(
+      (control) => control.controlKey === asset.economicControlReview?.mint.controlKey,
+    )!;
+
+    expect(asset.dependencies?.edges).toContainEqual(
+      expect.objectContaining({
+        dependencyType: "wrapper",
+        economicRole: "serial-claim",
+        upstreamAssetId: parentId,
+        failureDomains: [{ kind: "mint-control", key: `asset:${parentId}` }],
+      }),
+    );
+    expect(selectedControl.controlKey).not.toBe(shareControl.controlKey);
+    expect(selectedControl.capabilities).toContain("mint");
+
+    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets.find(
+      (candidate) => candidate.assetId === assetId,
+    )!;
+    expect(evaluated.control.reasons.map((reason) => reason.code)).toContain("mint-control-question");
   });
 });
