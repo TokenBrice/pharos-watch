@@ -804,6 +804,7 @@ const MintAuthorityControlSchema: z.ZodType<MintAuthorityControl> = z
   .object({
     chain: z.string().min(1).optional(),
     address: z.string().min(1).optional(),
+    controllerAssetId: z.string().min(1).optional(),
     label: z.string().min(1),
     role: z.enum(MINT_AUTHORITY_CONTROL_ROLE_VALUES),
     authorityType: z.enum(MINT_AUTHORITY_TYPE_VALUES),

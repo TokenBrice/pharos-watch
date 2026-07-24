@@ -72,6 +72,14 @@ export function defineOverride(
       ...overrides,
       ...(overrides.capacityModel ? { capacityModel: { ...overrides.capacityModel } } : {}),
       ...(overrides.costModel ? { costModel: { ...overrides.costModel } } : {}),
+      ...(overrides.v9ComposedDexExit
+        ? {
+            v9ComposedDexExit: {
+              ...overrides.v9ComposedDexExit,
+              docs: overrides.v9ComposedDexExit.docs.map(cloneRedemptionDocSource),
+            },
+          }
+        : {}),
       ...(overrides.docs ? { docs: overrides.docs.map(cloneRedemptionDocSource) } : {}),
       ...(overrides.notes ? { notes: [...overrides.notes] } : {}),
     },

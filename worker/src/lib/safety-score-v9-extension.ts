@@ -61,7 +61,7 @@ import {
 import { SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import {
-  buildSafetyScoreV9RetainedRedemptionRoutes,
+  buildSafetyScoreV9RetainedRoutes,
   buildSafetyScoreV9RouteReviews,
 } from "./safety-score-v9-extension-routes";
 import {
@@ -906,6 +906,7 @@ function adaptMintControl(
   return {
     controlKey,
     deploymentKey: `asset:${assetId}`,
+    controllerAssetId: control.controllerAssetId ?? null,
     controlKind,
     scope: "global",
     capabilities,
@@ -2196,6 +2197,13 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     },
     assets: fixedInput.activeAssetIds.map((assetId) => {
       const meta = metaById.get(assetId)!;
+      for (const control of meta.mintAuthority?.controls ?? []) {
+        if (control.controllerAssetId !== undefined && !activeIds.has(control.controllerAssetId)) {
+          throw new Error(
+            `Safety Score v9 mint controller ${control.label} for ${assetId} references inactive asset ${control.controllerAssetId}`,
+          );
+        }
+      }
       const prepared = preparedById.get(assetId)!;
       const cycle = cycleByAsset.get(assetId);
       const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
@@ -2284,7 +2292,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         reserveClassifications,
         reviewedStaticReserveRows,
         routeReviews: buildSafetyScoreV9RouteReviews(fixedInput, assetId),
-        retainedRoutes: buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId),
+        retainedRoutes: buildSafetyScoreV9RetainedRoutes(fixedInput, assetId),
         controlReview:
           controls.length > 0
             ? controlsFullyResolved

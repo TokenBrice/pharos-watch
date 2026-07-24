@@ -412,6 +412,14 @@ export interface MintAuthorityKeyCustodyAttestation {
 export interface MintAuthorityControl {
   chain?: string;
   address?: string;
+  /**
+   * Tracked native asset whose issuance system owns this controller.
+   *
+   * Use when another product reuses an upstream controller so dependency
+   * analysis can price the downstream reliance without creating a reverse
+   * dependency on the controller's native asset.
+   */
+  controllerAssetId?: string;
   label: string;
   role: MintAuthorityControlRole;
   authorityType: MintAuthorityType;

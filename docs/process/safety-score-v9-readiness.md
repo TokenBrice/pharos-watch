@@ -115,6 +115,12 @@ captured and reviewed terms, and fact compilation uses the longer of the
 captured and reviewed settlement horizons. A conservative modeling horizon is
 not presented as a contractual issuer SLA.
 
+A reviewed fee-free, permissionless atomic wrap may compose with the
+intermediate asset's captured DEX routes. The derived route retains the source
+capacity curve, execution cost, output valuation, observation history, and
+freshness; it also carries both the DEX pool and wrapper contract as physical
+resources and remains exact-lower-bound coverage.
+
 Impact: fast DEX liquidity, issuer redemption, and delayed protocol exits no
 longer collapse into one interchangeable number. A large but slow route cannot
 fully compensate for weak immediate exit capacity.
@@ -156,6 +162,12 @@ structurally while the current live exposure weight remains authoritative.
 Impact: wrappers and reserve-backed assets inherit the relevant upstream risk
 without duplicating or spreading that risk into unrelated pillars. Ordinary
 weight drift no longer discards an otherwise valid reviewed role.
+
+Reviewed controller ownership is directional as well. A native controller
+asset and exact serial children treat downstream reuse as diagnostic, while
+foreign products using that controller retain the high shared-control signal.
+This prevents adoption of a base issuance rail from making the base asset
+depend on its downstream products.
 
 For a rateable basket exposure, the upstream backing score is applied at the
 live exposure weight. An upstream evidence ceiling remains attributable to that

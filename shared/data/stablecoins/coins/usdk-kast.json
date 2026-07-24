@@ -141,6 +141,7 @@
       {
         "chain": "ethereum",
         "address": "0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E",
+        "controllerAssetId": "m-m0",
         "label": "M0 MinterGateway backing rail",
         "role": "direct-minter",
         "authorityType": "contract",
