@@ -1156,7 +1156,13 @@ function summarizeBridgeDomainExposure(
   }
 
   for (const route of asset.supply.selectedBridgeRoutes) {
-    if (route.reviewState !== "selected-reviewed" || validJoinedDeployments.has(route.deploymentRouteKey)) continue;
+    if (
+      route.reviewState !== "selected-reviewed" ||
+      route.reviewedRouteKind === "native" ||
+      validJoinedDeployments.has(route.deploymentRouteKey)
+    ) {
+      continue;
+    }
     const attributableDomain = `bridge-route:${route.deploymentRouteKey}`;
     if (supplyBridgeDomainKeys.has(attributableDomain)) {
       unresolvedDomains.add(attributableDomain);

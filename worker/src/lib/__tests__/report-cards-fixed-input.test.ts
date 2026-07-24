@@ -46,6 +46,7 @@ import {
   XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
   XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
   XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+  XAUT_ASSET_ID,
   XAUT_CANONICAL_TOKEN_ADDRESS,
   XAUT_TRANSPARENCY_SOURCE_ID,
   XAUT_TREASURY_ADDRESS,
@@ -341,14 +342,15 @@ describe("fixed report-card input replay", () => {
     );
   });
 
-  it("persists V9-only supply attribution without changing V8 replay or base identity", async () => {
+  it("persists V9-only legacy supply attribution without changing V8 replay or base identity", async () => {
+    const assetId = "usdt-tether";
     const aggregateSupplyUsd = 2_480_000_000;
     const aggregateInput = normalizeFixedInput(
       withoutBaseInputGenerationId({
         ...exactFixedInput(),
         aggregateCirculatingById: {
-          "xaut-tether": {
-            circulating: { peggedGOLD: aggregateSupplyUsd },
+          [assetId]: {
+            circulating: { peggedUSD: aggregateSupplyUsd },
             observedAtSec: 1_783_891_200,
           },
         },
@@ -357,11 +359,11 @@ describe("fixed report-card input replay", () => {
     const attributedInput = normalizeFixedInput({
       ...aggregateInput,
       safetyScoreV9SupplyAttributionById: {
-        "xaut-tether": {
+        [assetId]: {
           model: "canonical-lock-mint-partition-v1",
           observedAtSec: 1_783_891_200,
           currentSupplyUsdByChain: {
-            "XAUt0 lock-mint pool": 104_122_040.252,
+            Tron: 104_122_040.252,
             Ethereum: aggregateSupplyUsd - 104_122_040.252,
           },
         },
@@ -375,7 +377,7 @@ describe("fixed report-card input replay", () => {
     expect(serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(attributedInput))).toBe(
       serializeNormalizedReportCardsReplay(buildReportCardsSnapshotFromFixedInput(aggregateInput)),
     );
-    expect(Object.keys(attributedInput.chainCirculatingById["xaut-tether"] ?? {})).toEqual([]);
+    expect(Object.keys(attributedInput.chainCirculatingById[assetId] ?? {})).toEqual([]);
 
     const v8Entry = await buildReportCardsFixedInputCacheEntry(attributedInput);
     const v8RoundTrip = await parseReportCardsFixedInputCacheValue(v8Entry.value);
@@ -397,16 +399,49 @@ describe("fixed report-card input replay", () => {
       normalizeFixedInput({
         ...attributedInput,
         safetyScoreV9SupplyAttributionById: {
-          "xaut-tether": {
-            ...attributedInput.safetyScoreV9SupplyAttributionById["xaut-tether"]!,
+          [assetId]: {
+            ...attributedInput.safetyScoreV9SupplyAttributionById[assetId]!,
             currentSupplyUsdByChain: {
               Ethereum: 1,
-              "XAUt0 lock-mint pool": 1,
+              Tron: 1,
             },
           },
         },
       }),
     ).toThrow("does not conserve aggregate circulating USD");
+  });
+
+  it("rejects legacy XAUT V1 attribution packets", () => {
+    const aggregateSupplyUsd = 2_480_000_000;
+    const aggregateInput = normalizeFixedInput(
+      withoutBaseInputGenerationId({
+        ...exactFixedInput(),
+        aggregateCirculatingById: {
+          [XAUT_ASSET_ID]: {
+            circulating: { peggedGOLD: aggregateSupplyUsd },
+            observedAtSec: 1_783_891_200,
+          },
+        },
+      }),
+    );
+
+    expect(() =>
+      normalizeFixedInput({
+        ...aggregateInput,
+        safetyScoreV9SupplyAttributionById: {
+          [XAUT_ASSET_ID]: {
+            model: "canonical-lock-mint-partition-v1",
+            observedAtSec: 1_783_891_200,
+            currentSupplyUsdByChain: {
+              Ethereum: aggregateSupplyUsd - 104_122_040.252,
+              "XAUt0 lock-mint pool": 104_122_040.252,
+            },
+          },
+        },
+      }),
+    ).toThrow(
+      "Legacy XAUT lock/mint attribution is no longer admissible; a reconciled V2 packet is required",
+    );
   });
 
   it("validates and round-trips the identity-bound XAUT representation group", async () => {

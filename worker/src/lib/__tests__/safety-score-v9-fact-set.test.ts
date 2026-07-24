@@ -2315,8 +2315,15 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     });
     expect(bridgeControls).toHaveLength(1);
     expect(bridgeControls[0]).toMatchObject({
+      status: {
+        applicability: { state: "required" },
+        observationState: "bounded-unknown",
+      },
       deploymentKey:
         "representation-group:xaut-tether:xaut0-omnichain",
+      capSemantics: { kind: "unbounded" },
+      claimImpairment: "unbounded",
+      economicLossScope: "deployment",
       materialSupplyShare: expect.closeTo(0.04849813227, 9),
       authority: {
         authorityKey:
@@ -2334,6 +2341,9 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         },
       ],
     });
+    expect(
+      xaut.economicControlReview.bridge.status.observationState,
+    ).toBe("known");
     expect(
       bridgeControls.some((control) =>
         attribution!.representationGroup.routeIds.includes(
@@ -2502,14 +2512,14 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       expect.objectContaining({
         kind: "reason:runtime-bridge-materiality-unavailable",
         limit: 55,
-        source: "reason",
+        source: "evidence",
         binding: true,
       }),
     );
     expect(evaluated.trace.bindingCap).toMatchObject({
       kind: "reason:runtime-bridge-materiality-unavailable",
       limit: 55,
-      source: "reason",
+      source: "evidence",
     });
   });
 

@@ -43,6 +43,7 @@ import {
 } from "./safety-score-v9-supply-attribution-contract";
 import {
   normalizeXautRepresentationGroupAttribution,
+  XAUT_ASSET_ID,
   XautRepresentationGroupSupplyAttributionV2Schema,
   xautRepresentationGroupAttributionValidationError,
 } from "./safety-score-v9-xaut-supply-attribution-contract";
@@ -722,6 +723,14 @@ function assertFixedInputConsistency(input: ReportCardsFixedInput): void {
     }
     if (attribution.observedAtSec > input.clockSec) {
       throw new Error(`V9 supply attribution for ${assetId} is later than the scoring clock`);
+    }
+    if (
+      assetId === XAUT_ASSET_ID &&
+      attribution.model === "canonical-lock-mint-partition-v1"
+    ) {
+      throw new Error(
+        "Legacy XAUT lock/mint attribution is no longer admissible; a reconciled V2 packet is required",
+      );
     }
     const aggregate = input.aggregateCirculatingById[assetId];
     const aggregateSupplyUsd = Object.values(aggregate?.circulating ?? {}).reduce((sum, value) => sum + value, 0);

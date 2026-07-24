@@ -437,6 +437,7 @@ export function safetyScoreV9ChainRows(
     }
     return rows;
   }
+  if (assetId === XAUT_ASSET_ID) return {};
   return fixedInput.chainCirculatingById[assetId] ?? {};
 }
 
