@@ -263,6 +263,52 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     });
   });
 
+  it("journals a bounded post-clock wM Solana-finality packet", async () => {
+    rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt.mockResolvedValue({
+      status: "accepted",
+      attribution: {
+        model: "reviewed-deployment-unit-partition-v1",
+        assetId: "wm-m0",
+        observedAtSec: OBSERVED_AT_SEC + 5,
+        captureStartedAtSec: OBSERVED_AT_SEC - 20,
+        captureEndedAtSec: OBSERVED_AT_SEC + 5,
+        registryFingerprint: "a".repeat(64),
+        routeInventoryDigest: "b".repeat(64),
+        deployments: [],
+      },
+    });
+    const fixedInput = {
+      activeAssetIds: ["wm-m0"],
+      clockSec: OBSERVED_AT_SEC,
+      sourceGeneration: "report-cards:v8:fixture",
+      baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+      registryFingerprint: "a".repeat(64),
+      chainCirculatingById: { "wm-m0": {} },
+      aggregateCirculatingById: {
+        "wm-m0": {
+          circulating: { peggedUSD: 87_020_618.58982982 },
+          observedAtSec: OBSERVED_AT_SEC,
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+
+    const capture = await captureSafetyScoreV9SupplyAttribution(
+      fixedInput,
+      chainRpcs(),
+    );
+
+    expect(capture.attributionById["wm-m0"]).toMatchObject({
+      observedAtSec: OBSERVED_AT_SEC + 5,
+    });
+    expect(capture.journalRecords).toHaveLength(1);
+    expect(capture.journalRecords[0]).toMatchObject({
+      assetId: "wm-m0",
+      sourceId: "wm.reviewed-deployment-unit-partition.v1",
+      admissionCode: "supply-attribution.admission.accepted",
+      sourceObservedAtSec: OBSERVED_AT_SEC + 5,
+    });
+  });
+
   it.each([
     [
       "transparency-source-config-unavailable",
