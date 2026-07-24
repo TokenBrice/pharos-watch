@@ -25,6 +25,13 @@ import {
   resolveCurveStableSwapTokenIndices,
   validateCurveStableSwapProfileProof,
 } from "./curve-stableswap";
+import {
+  CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
+  CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES,
+  CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS,
+  getCurveStableSwapNgPolicy,
+  validateCurveStableSwapNgProfileProof,
+} from "./curve-stableswap-ng";
 import { loadLatestPublishedDexMeasuredQuoteEvidence, type LoadedDexMeasuredQuoteEvidence } from "./persistence";
 import { validateQuoterV2ProfileProof } from "./quoter-v2";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "./registry";
@@ -115,6 +122,17 @@ function deploymentIssues(profile: DexMeasuredExecutionProfile): string[] {
     issues.push(...validateCurveStableSwapProfileProof(profile));
     return issues;
   }
+  if (profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID) {
+    const policy = getCurveStableSwapNgPolicy(profile.chain, profile.executionEndpoint.address);
+    if (!policy) return ["deployment-missing"];
+    const issues: string[] = [];
+    if (profile.executionEndpoint.address !== policy.poolAddress) issues.push("endpoint-address-mismatch");
+    if (profile.executionEndpoint.codeHash !== policy.expectedPoolCodeHash) {
+      issues.push("endpoint-code-hash-mismatch");
+    }
+    issues.push(...validateCurveStableSwapNgProfileProof(profile));
+    return issues;
+  }
   return ["adapter-profile-unsupported"];
 }
 
@@ -174,6 +192,26 @@ function isMatureFreshCurveStableSwapQuote(
   return (
     history.completeProducerCycleCount >= CURVE_STABLESWAP_MIN_COMPLETE_CYCLES &&
     history.successfulObservationCount >= CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS &&
+    nowSec - history.observationWindowEndedAt <= freshnessMaxSec &&
+    history.observationWindowEndedAt <= nowSec + 60
+  );
+}
+
+function isMatureFreshCurveStableSwapNgQuote(
+  quote: LoadedDexMeasuredQuote,
+  nowSec: number,
+): boolean {
+  const profile = quote.profile;
+  const history = quote.observationHistory;
+  if (
+    profile == null ||
+    profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID ||
+    history == null
+  ) return false;
+  const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(profile.adapterProfileId);
+  return (
+    history.completeProducerCycleCount >= CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES &&
+    history.successfulObservationCount >= CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS &&
     nowSec - history.observationWindowEndedAt <= freshnessMaxSec &&
     history.observationWindowEndedAt <= nowSec + 60
   );
@@ -297,12 +335,17 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
   }
 
   for (const [targetId, quote] of entries) {
+    const ngMature = isMatureFreshCurveStableSwapNgQuote(quote, input.nowSec);
     if (
       currentTargetIds.has(targetId) ||
       quote.resolution !== "last-known-good" ||
       quote.status !== "measured" ||
       quote.profile === null ||
-      !isDexMeasuredExecutionObservationHistoryMature(quote.observationHistory)
+      (
+        quote.profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+          ? !ngMature
+          : !isDexMeasuredExecutionObservationHistoryMature(quote.observationHistory)
+      )
     ) {
       continue;
     }
@@ -312,11 +355,15 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
     if (
       profile.adapterProfileId !== "uniswap-v3-quoter-v2" &&
       profile.adapterProfileId !== "pancakeswap-v3-quoter-v2" &&
-      profile.adapterProfileId !== "aerodrome-slipstream-quoter-v2"
+      profile.adapterProfileId !== "aerodrome-slipstream-quoter-v2" &&
+      profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
     ) {
       continue;
     }
-    if (!isDexMeasuredExecutionDeploymentScoreEligible(profile.adapterProfileId, profile.chain)) continue;
+    if (
+      profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID &&
+      !isDexMeasuredExecutionDeploymentScoreEligible(profile.adapterProfileId, profile.chain)
+    ) continue;
     const issues = [
       ...validateDexMeasuredExecutionProfile({
         profile,
@@ -347,8 +394,14 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
           ? "pancakeswap-v3-measured-retained"
           : profile.adapterProfileId === "aerodrome-slipstream-quoter-v2"
             ? "aerodrome-slipstream-measured-retained"
+            : profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+              ? "curve-stableswap-ng-measured-retained"
             : "uniswap-v3-measured-retained",
-      source: profile.adapterProfileId === "uniswap-v3-quoter-v2" ? "dl" : "direct_api",
+      source:
+        profile.adapterProfileId === "uniswap-v3-quoter-v2" ||
+        profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+          ? "dl"
+          : "direct_api",
       price: profile.tokenIn.referencePriceUsd,
       extra: {
         measuredExecutionTarget: target,
@@ -495,7 +548,12 @@ export function joinDexMeasuredExecutionEvidence(input: {
       delete pool.extra.measuredExecutionProfile;
       pool.extra.measuredExecutionPhysicalPoolId = target.poolId;
       const fail = (reason: DexExecutionCapabilityGate["reason"], detail?: string) => {
-        pool.extra!.executionCapabilityGate = gate(reason);
+        if (
+          target.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID ||
+          !pool.extra?.ammExecutionModel
+        ) {
+          pool.extra!.executionCapabilityGate = gate(reason);
+        }
         pool.extra!.measuredExecutionDiagnostic = {
           adapterProfileId: target.adapterProfileId,
           targetId: target.targetId,
@@ -550,6 +608,8 @@ export function joinDexMeasuredExecutionEvidence(input: {
           ? !curvePolicy?.scoreEligible
           : quote.profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID
             ? false
+            : quote.profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+              ? false
           : !isDexMeasuredExecutionDeploymentScoreEligible(quote.profile.adapterProfileId, quote.profile.chain));
       if (activationPending) {
         pool.extra.executionCapabilityGate = gate("activation-pending");

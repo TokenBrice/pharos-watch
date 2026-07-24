@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DexAmmExecutionModelSchema } from "@shared/types/market";
 import {
+  buildCurveStableSwapNgMeasuredExecutionTarget,
   buildCurveStableSwapMeasuredExecutionTargets,
   buildCurveCryptoSwapMeasuredExecutionTarget,
   buildCurveStableswapExecutionCapability,
   buildCurveStableswapExecutionModel,
   resolveActiveCurveCryptoSwapCandidateByTvl,
+  resolveReviewedCurveStableSwapNgPhysicalPoolId,
   resolveReviewedCurveStableSwapPhysicalPoolId,
 } from "../process-pools";
 import type { CurvePoolEntry } from "../types";
@@ -18,6 +20,9 @@ const THREEPOOL = "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7";
 const DAI_3POOL = "0x6b175474e89094c44da98b954eedeac495271d0f";
 const USDC_3POOL = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const USDT_3POOL = "0xdac17f958d2ee523a2206206994597c13d831ec7";
+const USDG_NG = "0xe343167631d89b6ffc58b88d6b7fb0228795491d";
+const USDC_NG = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+const USDG_NG_POOL = "0xc061caa073f3d95f80f8e5428d32d2d76f5e1622";
 
 function entry(overrides: Partial<CurvePoolEntry> = {}): CurvePoolEntry {
   return {
@@ -264,6 +269,78 @@ describe("buildCurveStableswapExecutionModel", () => {
       ["usdc-circle", 1],
       ["usdt-tether", 1],
     ])), "reviewed packet should restore only when every independent price is present").toHaveLength(2);
+  });
+
+  it("builds only the exact reviewed USDG -> USDC StableSwap-NG target", () => {
+    const ngPool = entry({
+      poolAddress: USDG_NG_POOL,
+      apiIsBroken: false,
+      registryId: "factory-stable-ng",
+      A: 3_000,
+      tvl: 20_501_133,
+      metapoolAdjustedTvl: 20_501_133,
+      executionCoins: [
+        { address: USDG_NG, symbol: "USDG", decimals: 6, balance: 10_297_747, usdPrice: 1 },
+        { address: USDC_NG, symbol: "USDC", decimals: 6, balance: 10_203_386, usdPrice: 1 },
+      ],
+    });
+    const addressIds = new Map([
+      [`ethereum:${USDG_NG}`, "usdg-paxos"],
+      [`ethereum:${USDC_NG}`, "usdc-circle"],
+    ]);
+    const prices = new Map([
+      ["usdg-paxos", 0.9999],
+      ["usdc-circle", 1.00001],
+    ]);
+    const build = (overrides: {
+      curveData?: CurvePoolEntry;
+      stablecoinId?: string;
+      prices?: Map<string, number>;
+    } = {}) =>
+      buildCurveStableSwapNgMeasuredExecutionTarget({
+        curveData: overrides.curveData ?? ngPool,
+        chain: "ethereum",
+        stablecoinId: overrides.stablecoinId ?? "usdg-paxos",
+        chainAddressToId: addressIds,
+        stablecoinPriceById: overrides.prices ?? prices,
+        retainedTvlUsd: 20_501_133,
+        capturedAt: 1_784_879_199,
+      });
+
+    expect(resolveReviewedCurveStableSwapNgPhysicalPoolId({
+      curveData: ngPool,
+      chain: "ethereum",
+    })).toBe(`ethereum:${USDG_NG_POOL}`);
+    expect(build()).toMatchObject({
+      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v1",
+      stablecoinId: "usdg-paxos",
+      poolId: `ethereum:${USDG_NG_POOL}`,
+      retainedPoolPriceUsd: 0.9999,
+      tokenIn: {
+        address: USDG_NG,
+        trackedAssetId: "usdg-paxos",
+        referencePriceUsd: 0.9999,
+      },
+      tokenOut: {
+        address: USDC_NG,
+        trackedAssetId: "usdc-circle",
+        referencePriceUsd: 1.00001,
+      },
+    });
+    expect(build({ stablecoinId: "usdc-circle" })).toBeNull();
+    expect(build({ prices: new Map([["usdg-paxos", 1]]) })).toBeNull();
+    expect(build({
+      curveData: {
+        ...ngPool,
+        executionCoins: [...ngPool.executionCoins!].reverse(),
+      },
+    })).toBeNull();
+    expect(build({
+      curveData: { ...ngPool, poolAddress: "0x1111111111111111111111111111111111111111" },
+    })).toBeNull();
+    expect(build({
+      curveData: { ...ngPool, registryId: "main" },
+    })).toBeNull();
   });
 
   it("resolves only a unique close-TVL candidate from the active CryptoSwap cohort", () => {

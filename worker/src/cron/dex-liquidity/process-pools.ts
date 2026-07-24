@@ -39,6 +39,10 @@ import {
   CURVE_3POOL_STABLESWAP_POLICY,
   CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
 } from "../measured-execution/curve-stableswap";
+import {
+  CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
+  CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
+} from "../measured-execution/curve-stableswap-ng";
 import { buildEvmV2ExecutionCandidate } from "./constant-product-v2";
 
 /**
@@ -376,6 +380,119 @@ export function buildCurveStableSwapMeasuredExecutionTargets(input: {
   });
 }
 
+export function resolveReviewedCurveStableSwapNgPhysicalPoolId(input: {
+  curveData: CurvePoolEntry | undefined;
+  chain: string;
+}): string | null {
+  const { curveData } = input;
+  const policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
+  if (
+    input.chain !== policy.chain ||
+    !curveData ||
+    curveData.apiIsBroken ||
+    curveData.isMetaPool ||
+    curveData.registryId.trim().toLowerCase() !== "factory-stable-ng" ||
+    curveData.poolAddress?.toLowerCase() !== policy.poolAddress ||
+    curveData.executionCoins?.length !== policy.poolTokens.length
+  ) return null;
+  for (let index = 0; index < policy.poolTokens.length; index += 1) {
+    const expected = policy.poolTokens[index]!;
+    const actual = curveData.executionCoins[index]!;
+    if (
+      actual.address.toLowerCase() !== expected.address ||
+      actual.symbol.trim().toUpperCase() !== expected.symbol ||
+      actual.decimals !== expected.decimals
+    ) return null;
+  }
+  return canonicalExitRouteAssetKey(input.chain, policy.poolAddress);
+}
+
+/** Build only the reviewed USDG -> USDC StableSwap-NG direction. */
+export function buildCurveStableSwapNgMeasuredExecutionTarget(input: {
+  curveData: CurvePoolEntry | undefined;
+  chain: string;
+  stablecoinId: string;
+  chainAddressToId: Map<string, string>;
+  stablecoinPriceById?: Map<string, number>;
+  retainedTvlUsd: number;
+  capturedAt: number;
+}): DexMeasuredExecutionTarget | null {
+  const { curveData } = input;
+  const policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
+  const physicalPoolId = resolveReviewedCurveStableSwapNgPhysicalPoolId({
+    curveData,
+    chain: input.chain,
+  });
+  if (
+    physicalPoolId == null ||
+    input.stablecoinId !== policy.stablecoinId ||
+    !curveData?.executionCoins
+  ) return null;
+
+  for (let index = 0; index < policy.poolTokens.length; index += 1) {
+    const expected = policy.poolTokens[index]!;
+    const actual = curveData.executionCoins[index]!;
+    if (
+      actual.address.toLowerCase() !== expected.address ||
+      actual.symbol.trim().toUpperCase() !== expected.symbol ||
+      actual.decimals !== expected.decimals ||
+      input.chainAddressToId.get(canonicalExitRouteAssetKey(input.chain, actual.address)) !==
+        expected.trackedAssetId
+    ) return null;
+  }
+
+  const tokenInPolicy = policy.poolTokens[policy.inputIndex];
+  const tokenOutPolicy = policy.poolTokens[policy.outputIndex];
+  const tokenIn = curveData.executionCoins[policy.inputIndex];
+  const tokenOut = curveData.executionCoins[policy.outputIndex];
+  const inputReferencePriceUsd = input.stablecoinPriceById?.get(tokenInPolicy.trackedAssetId);
+  const outputReferencePriceUsd = input.stablecoinPriceById?.get(tokenOutPolicy.trackedAssetId);
+  if (
+    !Number.isFinite(inputReferencePriceUsd) ||
+    !(inputReferencePriceUsd! > 0) ||
+    !Number.isFinite(outputReferencePriceUsd) ||
+    !(outputReferencePriceUsd! > 0)
+  ) return null;
+  const poolTokenAddresses = policy.poolTokens.map((token) => token.address);
+  const targetId = buildDexMeasuredExecutionTargetId({
+    adapterProfileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
+    stablecoinId: input.stablecoinId,
+    chain: input.chain,
+    protocol: "curve",
+    poolId: physicalPoolId,
+    tokenInAddress: tokenInPolicy.address,
+    tokenOutAddress: tokenOutPolicy.address,
+    poolTokenAddresses,
+  });
+  return {
+    schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
+    targetId,
+    stablecoinId: input.stablecoinId,
+    adapterProfileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
+    protocol: "curve",
+    chain: input.chain,
+    poolId: physicalPoolId,
+    poolTokenAddresses,
+    tokenIn: {
+      address: tokenInPolicy.address,
+      symbol: tokenIn.symbol,
+      decimals: tokenIn.decimals,
+      referencePriceUsd: inputReferencePriceUsd!,
+      trackedAssetId: tokenInPolicy.trackedAssetId,
+    },
+    tokenOut: {
+      address: tokenOutPolicy.address,
+      symbol: tokenOut.symbol,
+      decimals: tokenOut.decimals,
+      referencePriceUsd: outputReferencePriceUsd!,
+      trackedAssetId: tokenOutPolicy.trackedAssetId,
+    },
+    retainedTvlUsd: input.retainedTvlUsd,
+    retainedPoolPriceUsd: inputReferencePriceUsd!,
+    capturedAt: input.capturedAt,
+  };
+}
+
 /**
  * Resolve an otherwise ambiguous Curve coin-set join only when the two source
  * snapshots identify exactly one physical pool by TVL and that address is
@@ -682,6 +799,18 @@ export function processPoolMetrics(
                 capturedAt: measuredTargetCapturedAt,
               })
             : [];
+        const curveStableSwapNgMeasuredTarget =
+          protocol === "curve" && curveAddressMatch
+            ? buildCurveStableSwapNgMeasuredExecutionTarget({
+                curveData,
+                chain: chainNorm,
+                stablecoinId: id,
+                chainAddressToId,
+                stablecoinPriceById,
+                retainedTvlUsd: rawContribTvl,
+                capturedAt: measuredTargetCapturedAt,
+              })
+            : null;
         const curveStableSwapPhysicalPoolId =
           protocol === "curve" && curveAddressMatch
             ? resolveReviewedCurveStableSwapPhysicalPoolId({
@@ -702,7 +831,10 @@ export function processPoolMetrics(
                 capturedAt: measuredTargetCapturedAt,
               })
             : null;
-        const measuredExecutionTarget = curveCryptoSwapMeasuredTarget ?? uniV3MeasuredTarget;
+        const measuredExecutionTarget =
+          curveCryptoSwapMeasuredTarget ??
+          curveStableSwapNgMeasuredTarget ??
+          uniV3MeasuredTarget;
         const measuredExecutionGate: DexExecutionCapabilityGate | null =
           protocol === "uniswap-v3" && !uniV3MeasuredTarget
             ? { family: "measured-execution", reason: "target-unresolved" }
@@ -747,7 +879,9 @@ export function processPoolMetrics(
                 : {}),
             ...(ammExecutionModel ? { ammExecutionModel } : {}),
             ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
-            ...(curveExecutionCapability.gate && !curveCryptoSwapMeasuredTarget
+            ...(curveExecutionCapability.gate &&
+            !curveCryptoSwapMeasuredTarget &&
+            !curveStableSwapNgMeasuredTarget
               ? { executionCapabilityGate: curveExecutionCapability.gate }
               : measuredExecutionGate
                 ? { executionCapabilityGate: measuredExecutionGate }

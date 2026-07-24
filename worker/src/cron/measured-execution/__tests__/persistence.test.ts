@@ -197,6 +197,7 @@ function evidenceDb(input: {
 describe("measured execution publication", () => {
   it("retains a two-hour StableSwap history window without changing legacy freshness", () => {
     expect(getDexMeasuredHistoryFreshnessSec("curve-stableswap-main-registry-get-dy-v1")).toBe(7_200);
+    expect(getDexMeasuredHistoryFreshnessSec("curve-stableswap-ng-factory-get-dy-v1")).toBe(7_200);
     expect(getDexMeasuredHistoryFreshnessSec("uniswap-v3-quoter-v2")).toBe(3_600);
   });
 
@@ -205,8 +206,15 @@ describe("measured execution publication", () => {
     expect(isOperationalDexMeasuredFailure("block-timestamp-unavailable")).toBe(true);
     expect(isOperationalDexMeasuredFailure("runtime-code-unavailable")).toBe(true);
     expect(isOperationalDexMeasuredFailure("registry-code-unavailable")).toBe(true);
+    expect(isOperationalDexMeasuredFailure("block-header-unavailable")).toBe(true);
+    expect(isOperationalDexMeasuredFailure("factory-code-unavailable")).toBe(true);
     expect(isOperationalDexMeasuredFailure("runtime-code-absent")).toBe(false);
     expect(isOperationalDexMeasuredFailure("registry-code-absent")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("block-header-mismatch")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("block-hash-invalid")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("factory-code-absent")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("factory-code-hash-mismatch")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("factory-membership-mismatch")).toBe(false);
     expect(isOperationalDexMeasuredFailure("runtime-code-hash-mismatch")).toBe(false);
     expect(isOperationalDexMeasuredFailure("registry-membership-mismatch")).toBe(false);
     expect(isOperationalDexMeasuredFailure("pool-revert")).toBe(false);

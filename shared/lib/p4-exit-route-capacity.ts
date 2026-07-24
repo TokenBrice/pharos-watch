@@ -25,7 +25,7 @@ import {
   type DexMeasuredExecutionPublicProfile,
 } from "../types/measured-execution";
 
-const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.7";
+const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.8";
 
 const DEFAULT_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 const REFERENCE_NOTIONAL_USD = 1_000_000;
@@ -33,6 +33,7 @@ const REFERENCE_COST_BPS = 200;
 const IMMEDIATE_SETTLEMENT_HORIZON_SEC = 300;
 const AMM_EXECUTION_COST_TOLERANCE_BPS = 0.02;
 const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = "curve-stableswap-main-registry-get-dy-v1";
+const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = "curve-stableswap-ng-factory-get-dy-v1";
 const CURVE_3POOL_ADDRESS = "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7";
 const CURVE_MAIN_REGISTRY_ADDRESS = "0x90e00ace148ca3b23ac1bc8c240c2a7dd9c2d7f5";
 const CURVE_MAIN_REGISTRY_CODE_HASH =
@@ -45,6 +46,17 @@ const CURVE_3POOL_TOKEN_ADDRESSES = [
 ] as const;
 const CURVE_STABLESWAP_MIN_COMPLETE_CYCLES = 3;
 const CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS = 3;
+const CURVE_STABLESWAP_NG_POOL_ADDRESS = "0xc061caa073f3d95f80f8e5428d32d2d76f5e1622";
+const CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES = [
+  "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
+  "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+] as const;
+const CURVE_STABLESWAP_NG_FACTORY_ADDRESS = "0x6a8cbed756804b16e05e741edabd5cb544ae21bf";
+const CURVE_STABLESWAP_NG_FACTORY_CODE_HASH =
+  "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd";
+const CURVE_STABLESWAP_NG_FACTORY_POOL_INDEX = 563;
+const CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES = 3;
+const CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 export const P4_AMM_MODELED_TVL_MIN_RATIO = 0.5;
 export const P4_AMM_MODELED_TVL_MAX_RATIO = 2;
 
@@ -150,6 +162,26 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     scoreEligible: true,
     limitations: [
       "Activated only for the reviewed Ethereum Curve 3pool after pool and main-registry provenance validation.",
+      "High confidence requires three complete producer cycles and three successful observations.",
+    ],
+  },
+  {
+    id: "curve-stableswap-ng-factory-measured-exact",
+    sourceFamilies: ["dl"],
+    model: "measured-quote",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "absent",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "source-observed",
+    outputEvidenceKind: "measured-executable-depth",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: true,
+    limitations: [
+      "Activated only for the reviewed Ethereum USDG/USDC StableSwap-NG factory pool.",
       "High confidence requires three complete producer cycles and three successful observations.",
     ],
   },
@@ -482,6 +514,8 @@ function capabilityForPool(
           ? "curve-cryptoswap-measured-exact"
         : measuredProfile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID
           ? "curve-stableswap-main-registry-measured-exact"
+        : measuredProfile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+          ? "curve-stableswap-ng-factory-measured-exact"
         : "measured-adapter-shadow",
     );
   }
@@ -570,7 +604,8 @@ function validateMeasuredExecutionProfile(
     profile.adapterProfileId !== "uniswap-v3-quoter-v2" &&
     profile.adapterProfileId !== "pancakeswap-v3-quoter-v2" &&
     profile.adapterProfileId !== "curve-cryptoswap-get-dy-v1" &&
-    profile.adapterProfileId !== CURVE_STABLESWAP_ADAPTER_PROFILE_ID
+    profile.adapterProfileId !== CURVE_STABLESWAP_ADAPTER_PROFILE_ID &&
+    profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
   ) {
     issues.push("adapter-not-score-eligible");
   }
@@ -603,6 +638,31 @@ function validateMeasuredExecutionProfile(
       provenance.lpTokenAddress !== CURVE_3POOL_LP_TOKEN ||
       provenance.poolTokenAddresses.length !== CURVE_3POOL_TOKEN_ADDRESSES.length ||
       provenance.poolTokenAddresses.some((address, index) => address !== CURVE_3POOL_TOKEN_ADDRESSES[index])
+    ) issues.push("physical-pool-provenance-mismatch");
+  } else if (profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID) {
+    if (
+      profile.chain !== "ethereum" ||
+      profile.poolId !== canonicalExitRouteAssetKey("ethereum", CURVE_STABLESWAP_NG_POOL_ADDRESS) ||
+      profile.poolTokenAddresses?.length !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES.length ||
+      profile.poolTokenAddresses.some(
+        (address, index) => address !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[index],
+      ) ||
+      profile.tokenIn.address !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[0] ||
+      profile.tokenOut.address !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[1]
+    ) issues.push("invalid-curve-stableswap-ng-identity");
+    const provenance = profile.stableSwapNgFactoryProvenance;
+    if (
+      provenance == null ||
+      provenance.blockNumber !== profile.blockNumber ||
+      !/^0x[0-9a-f]{64}$/.test(provenance.blockHash) ||
+      provenance.factoryAddress !== CURVE_STABLESWAP_NG_FACTORY_ADDRESS ||
+      provenance.factoryCodeHash !== CURVE_STABLESWAP_NG_FACTORY_CODE_HASH ||
+      provenance.poolIndex !== CURVE_STABLESWAP_NG_FACTORY_POOL_INDEX ||
+      provenance.registeredPoolAddress !== CURVE_STABLESWAP_NG_POOL_ADDRESS ||
+      provenance.poolTokenAddresses.length !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES.length ||
+      provenance.poolTokenAddresses.some(
+        (address, index) => address !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[index],
+      )
     ) issues.push("physical-pool-provenance-mismatch");
   } else {
     if (profile.poolTokenAddresses?.length !== 2) issues.push("invalid-cl-token-count");
@@ -1024,6 +1084,9 @@ export function buildP4DexExitRouteObservations(params: {
       const isCurveStableSwapPacket = measuredProfiles.every(
         (profile) => profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
       );
+      const isCurveStableSwapNgProfile =
+        measuredProfiles.length === 1 &&
+        measuredProfiles[0]!.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID;
       if (
         isCurveStableSwapPacket &&
         (
@@ -1040,7 +1103,25 @@ export function buildP4DexExitRouteObservations(params: {
           (unsupportedReasons.invalidAtomicMeasuredPacket ?? 0) + 1;
         continue;
       }
-      if (!isCurveStableSwapPacket && (ammModel != null || measuredProfiles.length !== 1)) {
+      if (
+        isCurveStableSwapNgProfile &&
+        (
+          (ammModel != null &&
+            (ammModel.source !== "curve" || ammModel.invariant !== "stableswap")) ||
+          measuredProfiles[0]!.tokenIn.address !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[0] ||
+          measuredProfiles[0]!.tokenOut.address !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[1]
+        )
+      ) {
+        unsupportedPoolCount++;
+        unsupportedReasons.invalidAtomicMeasuredProfile =
+          (unsupportedReasons.invalidAtomicMeasuredProfile ?? 0) + 1;
+        continue;
+      }
+      if (
+        !isCurveStableSwapPacket &&
+        !isCurveStableSwapNgProfile &&
+        (ammModel != null || measuredProfiles.length !== 1)
+      ) {
         unsupportedPoolCount++;
         unsupportedReasons.conflictingExecutionCapabilityEvidence =
           (unsupportedReasons.conflictingExecutionCapabilityEvidence ?? 0) + 1;
@@ -1082,8 +1163,8 @@ export function buildP4DexExitRouteObservations(params: {
         unsupportedReasons.missingReferencePoint = (unsupportedReasons.missingReferencePoint ?? 0) + 1;
         continue;
       }
-      const curveStableSwapPacketIsMature =
-        isCurveStableSwapPacket &&
+      const curveStableSwapMeasuredProfileIsMature =
+        (isCurveStableSwapPacket || isCurveStableSwapNgProfile) &&
         measuredRows.every(({ profile }) => {
           const history = profile.observationHistory;
           const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(
@@ -1093,11 +1174,24 @@ export function buildP4DexExitRouteObservations(params: {
             history != null &&
             params.observedAt - history.observationWindowEndedAt <= freshnessMaxSec &&
             history.observationWindowEndedAt <= params.observedAt + 60 &&
-            history.completeProducerCycleCount >= CURVE_STABLESWAP_MIN_COMPLETE_CYCLES &&
-            history.successfulObservationCount >= CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS
+            history.completeProducerCycleCount >=
+              (
+                isCurveStableSwapNgProfile
+                  ? CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES
+                  : CURVE_STABLESWAP_MIN_COMPLETE_CYCLES
+              ) &&
+            history.successfulObservationCount >=
+              (
+                isCurveStableSwapNgProfile
+                  ? CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS
+                  : CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS
+              )
           );
         });
-      if (isCurveStableSwapPacket && !curveStableSwapPacketIsMature) {
+      if (
+        (isCurveStableSwapPacket || isCurveStableSwapNgProfile) &&
+        !curveStableSwapMeasuredProfileIsMature
+      ) {
         if (ammModel == null) {
           unsupportedPoolCount++;
           unsupportedReasons.immatureAtomicMeasuredPacket =
@@ -1122,8 +1216,8 @@ export function buildP4DexExitRouteObservations(params: {
             observationHistory.observationWindowEndedAt <= params.observedAt + 60;
           const historyIsMature =
             observationHistory != null &&
-            (isCurveStableSwapPacket
-              ? curveStableSwapPacketIsMature
+            (isCurveStableSwapPacket || isCurveStableSwapNgProfile
+              ? curveStableSwapMeasuredProfileIsMature
               : isDexMeasuredExecutionObservationHistoryMature(observationHistory));
           const confidence =
             historyIsFresh && historyIsMature

@@ -215,7 +215,7 @@ function exactFixedInput(
         exitRouteObservations: [route("dex:primary", observedAtSec, args.routeChain ?? "ethereum", clockSec)],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.7",
+          capabilityMatrixVersion: "p4a.8",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,
@@ -2378,7 +2378,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
             ...original.dexLiqMap.alpha!,
             exitRouteObservationCoverage: {
               status: "populated",
-              capabilityMatrixVersion: "p4a.7",
+              capabilityMatrixVersion: "p4a.8",
               retainedPoolCount: 2_380 + exactCapabilityPoolCount,
               observationCount: 1,
               scoreEligibleObservationCount: 1,

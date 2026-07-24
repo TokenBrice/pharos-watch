@@ -367,6 +367,44 @@ describe("DEX measured execution contract", () => {
     });
   });
 
+  it("projects raw StableSwap-NG factory proof into pinned proof-free provenance", () => {
+    const internal = profile();
+    internal.stableSwapNgFactoryBindingProof = {
+      blockNumber: internal.blockNumber,
+      blockHash: `0x${"ef".repeat(32)}`,
+      factoryAddress: "0x5555555555555555555555555555555555555555",
+      factoryCodeHash: `0x${"cd".repeat(32)}`,
+      poolIndex: 563,
+      registeredPoolAddress: internal.poolId as `0x${string}`,
+      poolTokenAddresses: [TOKEN_IN.address, TOKEN_OUT.address],
+      poolListCallData: "0x1234",
+      poolListReturnData: "0xabcd",
+      factoryCoinsCallData: "0x2345",
+      factoryCoinsReturnData: "0xbcde",
+      poolCoinsProof: [
+        { index: 0, callData: "0x3456", returnData: "0xcdef" },
+        { index: 1, callData: "0x4567", returnData: "0xdef0" },
+      ],
+      tokenDecimalsProof: [
+        { tokenAddress: TOKEN_IN.address, decimals: TOKEN_IN.decimals, callData: "0x5678", returnData: "0xef01" },
+        { tokenAddress: TOKEN_OUT.address, decimals: TOKEN_OUT.decimals, callData: "0x6789", returnData: "0xf012" },
+      ],
+    };
+
+    const publicProfile = toDexMeasuredExecutionPublicProfile(internal);
+
+    expect(publicProfile).not.toHaveProperty("stableSwapNgFactoryBindingProof");
+    expect(publicProfile.stableSwapNgFactoryProvenance).toEqual({
+      blockNumber: internal.stableSwapNgFactoryBindingProof.blockNumber,
+      blockHash: internal.stableSwapNgFactoryBindingProof.blockHash,
+      factoryAddress: internal.stableSwapNgFactoryBindingProof.factoryAddress,
+      factoryCodeHash: internal.stableSwapNgFactoryBindingProof.factoryCodeHash,
+      poolIndex: internal.stableSwapNgFactoryBindingProof.poolIndex,
+      registeredPoolAddress: internal.stableSwapNgFactoryBindingProof.registeredPoolAddress,
+      poolTokenAddresses: internal.stableSwapNgFactoryBindingProof.poolTokenAddresses,
+    });
+  });
+
   it("fails closed on stale, tampered, and price-divergent profiles", () => {
     const nowSec = 20_000;
     const tampered = profile(nowSec);
@@ -388,7 +426,7 @@ describe("DEX measured execution contract", () => {
     ]));
   });
 
-  it("gives only the reviewed Curve StableSwap adapter a two-hour profile ceiling", () => {
+  it("gives only the reviewed Curve StableSwap adapters a two-hour profile ceiling", () => {
     const nowSec = 20_000;
     const adapterProfileId = "curve-stableswap-main-registry-get-dy-v1";
     const targetId = buildDexMeasuredExecutionTargetId({
@@ -415,6 +453,7 @@ describe("DEX measured execution contract", () => {
     };
 
     expect(getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId)).toBe(7_200);
+    expect(getDexMeasuredExecutionFreshnessMaxSec("curve-stableswap-ng-factory-get-dy-v1")).toBe(7_200);
     expect(getDexMeasuredExecutionFreshnessMaxSec("uniswap-v3-quoter-v2")).toBe(3_600);
     expect(validateDexMeasuredExecutionProfile({
       profile: retainedProfile,

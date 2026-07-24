@@ -1035,7 +1035,7 @@ describe("processPoolMetrics", () => {
         observedAt: 1_000,
       });
       expect(routeResult.coverage, testCase.name).toMatchObject({
-        capabilityMatrixVersion: "p4a.7",
+        capabilityMatrixVersion: "p4a.8",
         retainedPoolCount: 1,
         scoreEligiblePoolCount: 0,
         scoreEligibleCapabilityPoolCount: 1,

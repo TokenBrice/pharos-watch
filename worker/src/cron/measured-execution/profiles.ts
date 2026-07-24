@@ -6,6 +6,7 @@ import {
   type DexMeasuredExecutionPoolBindingProof,
   type DexMeasuredExecutionQuotePointProof,
   type DexMeasuredExecutionRegistryBindingProof,
+  type DexMeasuredExecutionStableSwapNgFactoryBindingProof,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 
@@ -110,6 +111,7 @@ export function buildDexMeasuredExecutionProfile(input: {
   endpointCodeHash: `0x${string}`;
   poolBindingProof?: DexMeasuredExecutionPoolBindingProof;
   registryBindingProof?: DexMeasuredExecutionRegistryBindingProof;
+  stableSwapNgFactoryBindingProof?: DexMeasuredExecutionStableSwapNgFactoryBindingProof;
   points: readonly DexMeasuredRawQuotePoint[];
 }): DexMeasuredExecutionProfile {
   const sortedPoints = [...input.points].sort((left, right) => left.inputUsd - right.inputUsd);
@@ -154,6 +156,9 @@ export function buildDexMeasuredExecutionProfile(input: {
     },
     ...(input.poolBindingProof ? { poolBindingProof: input.poolBindingProof } : {}),
     ...(input.registryBindingProof ? { registryBindingProof: input.registryBindingProof } : {}),
+    ...(input.stableSwapNgFactoryBindingProof
+      ? { stableSwapNgFactoryBindingProof: input.stableSwapNgFactoryBindingProof }
+      : {}),
     maxCostBps: DEX_MEASURED_MAX_COST_BPS,
     marginalOutputRatio: marginal.outputUsd / marginal.inputUsd,
     capacityCurve: buildDexMeasuredCapacityCurve(quoteProof, input.target.retainedTvlUsd),

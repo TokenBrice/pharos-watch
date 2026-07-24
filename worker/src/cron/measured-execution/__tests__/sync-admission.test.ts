@@ -74,6 +74,34 @@ function curveStableSwapTarget(outputIndex: 0 | 1): DexMeasuredExecutionTarget {
   });
 }
 
+function curveStableSwapNgTarget(): DexMeasuredExecutionTarget {
+  const poolTokens = [
+    "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
+    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+  ];
+  return target("usdg-paxos", 20_501_133, "curve-usdg-ng", {
+    adapterProfileId: "curve-stableswap-ng-factory-get-dy-v1",
+    protocol: "curve",
+    chain: "ethereum",
+    poolId: "ethereum:0xc061caa073f3d95f80f8e5428d32d2d76f5e1622",
+    poolTokenAddresses: poolTokens,
+    tokenIn: {
+      address: poolTokens[0]!,
+      symbol: "USDG",
+      decimals: 6,
+      referencePriceUsd: 1,
+      trackedAssetId: "usdg-paxos",
+    },
+    tokenOut: {
+      address: poolTokens[1]!,
+      symbol: "USDC",
+      decimals: 6,
+      referencePriceUsd: 1,
+      trackedAssetId: "usdc-circle",
+    },
+  });
+}
+
 describe("measured execution overflow admission", () => {
   it("estimates each execution phase plus singleton-retry headroom", () => {
     expect(estimateAdmissionCohortRpcRequests([target("coin-low", 100_000)])).toBe(7);
@@ -117,6 +145,17 @@ describe("measured execution overflow admission", () => {
       "target-curve-3pool-0",
       "target-curve-3pool-1",
     ]);
+    expect(admission.deferred.size).toBe(0);
+  });
+
+  it("admits the reviewed USDG StableSwap-NG route as one exact quote cohort", () => {
+    const measuredTarget = curveStableSwapNgTarget();
+
+    expect(estimateAdmissionCohortRpcRequests([measuredTarget])).toBe(8);
+    const admission = admitTargetsWithinBudget([measuredTarget], {
+      maxEstimatedRpcRequests: 8,
+    });
+    expect([...admission.admitted]).toEqual(["target-curve-usdg-ng"]);
     expect(admission.deferred.size).toBe(0);
   });
 
