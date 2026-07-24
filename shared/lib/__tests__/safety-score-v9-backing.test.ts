@@ -194,7 +194,7 @@ describe("Safety Score v9 backing exposure primitives", () => {
             upstreamAssetId: "parent",
             score: 20,
             evidenceLevel: "limited",
-            reasonCodes: ["material-dependency-unavailable"],
+            reasonCodes: ["missing-reserve-composition"],
             failureDomains: [{ kind: "reserve-issuer", key: "parent" }],
           },
         ],
@@ -205,9 +205,55 @@ describe("Safety Score v9 backing exposure primitives", () => {
     expect(strong.score! - weak.score!).toBeGreaterThan(8);
     expect(weak.unresolved).toContainEqual(
       expect.objectContaining({
-        code: "material-dependency-unavailable",
+        code: "bounded-unknown-reserve-exposure",
         pathKey: "reserve:upstream",
+        treatment: "pillar",
       }),
+    );
+    expect(weak.unresolved).not.toContainEqual(
+      expect.objectContaining({ code: "missing-reserve-composition" }),
+    );
+  });
+
+  it("does not promote a rateable minority upstream ceiling to the whole basket child", () => {
+    const result = evaluateV9ReserveExposures(
+      {
+        ...asset([
+          exposure({ key: "cash", weight: 0.86 }),
+          exposure({
+            key: "buidl-like",
+            weight: 0.14,
+            assetClass: "stablecoin",
+            trackedAssetId: "buidl-like",
+          }),
+        ]),
+        resolvedUpstreamExposures: [
+          {
+            exposureKey: "buidl-like",
+            upstreamAssetId: "buidl-like",
+            score: 50.4,
+            evidenceLevel: "limited",
+            reasonCodes: ["missing-reserve-composition"],
+            failureDomains: [{ kind: "reserve-issuer", key: "buidl-like" }],
+          },
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.contributions.find((entry) => entry.componentKey === "reserve:buidl-like")).toMatchObject({
+      score: 50.4,
+      normalizedWeight: 0.14,
+      upstreamAssetId: "buidl-like",
+    });
+    expect(result.unresolved).toContainEqual({
+      code: "bounded-unknown-reserve-exposure",
+      pathKey: "reserve:buidl-like",
+      gapIds: [],
+      treatment: "pillar",
+    });
+    expect(result.unresolved).not.toContainEqual(
+      expect.objectContaining({ code: "missing-reserve-composition" }),
     );
   });
 

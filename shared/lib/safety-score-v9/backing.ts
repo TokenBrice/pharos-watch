@@ -569,11 +569,19 @@ export function evaluateV9ReserveExposures(
       // For an UNAVAILABLE upstream backing owns the availability decision:
       // drop any projected availability code and recompute it from the root
       // aggregate. An available upstream's projected codes pass through
-      // unchanged.
+      // after whole-upstream ceilings are narrowed to this basket exposure.
+      // Its score already prices the upstream uncertainty at the slice weight;
+      // only serial claims may carry a whole-parent ceiling to the child.
       const projected =
         upstream.score === null
           ? uniqueSorted(upstream.reasonCodes).filter((code) => !AVAILABILITY_REASON_CODES.has(code))
-          : uniqueSorted(upstream.reasonCodes);
+          : uniqueSorted(
+              upstream.reasonCodes.map((code) =>
+                resolveV9ReasonPolicy(policy, code).reason.defaultTreatment === "ceiling"
+                  ? "bounded-unknown-reserve-exposure"
+                  : code,
+              ),
+            );
       unresolved.push(
         ...projected.map((code) => ({
           code,

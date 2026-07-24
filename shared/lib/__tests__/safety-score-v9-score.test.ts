@@ -235,6 +235,48 @@ describe("scoreV9EvaluatedAsset", () => {
     ).toEqual(propagatedBoundedUncertaintyAttribution);
   });
 
+  it("retains a rateable upstream evidence ceiling through a serial parent cap", () => {
+    const parentUncertainty: V9BoundedUncertaintyAttribution = {
+      source: "reason",
+      code: "missing-reserve-composition",
+      path: "backing:reserve-envelope",
+      message: "The parent's reserve composition is missing.",
+      responsibility: "integration-missing",
+      boundedness: "globally-bounded",
+    };
+    const propagatedBoundedUncertaintyAttribution =
+      resolveV9SerialParentBoundedUncertaintyAttribution(
+        60,
+        [{
+          upstreamAssetId: "buidl-like-parent",
+          score: 60,
+          blocked: false,
+          boundedUncertaintyAttribution: [parentUncertainty],
+        }],
+      );
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        assetId: "serial-child",
+        parent: {
+          required: true,
+          score: 60,
+          propagatedReasons: [],
+          propagatedBoundedUncertaintyAttribution,
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalScore).toBe(60);
+    expect(trace.bindingCap).toMatchObject({ source: "parent", limit: 60 });
+    expect(trace.boundedUncertaintyAttribution).toContainEqual({
+      ...parentUncertainty,
+      source: "parent-score",
+      path: `parent:buidl-like-parent:${parentUncertainty.path}`,
+      message: `Required parent buidl-like-parent: ${parentUncertainty.message}`,
+    });
+  });
+
   it("propagates nested wrapper attribution once per serial edge", () => {
     const rootAttribution = propagateV9SerialParentAdverseAttribution(
       "root",

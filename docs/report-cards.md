@@ -34,6 +34,11 @@ models exit capacity across stress horizons, scopes loss to exposed holder
 slices, preserves dependency roles and live weights, and evaluates wrapper-local
 and mechanism-specific risk explicitly. Bounded producer and methodology gaps
 remain rateable under the reason registry's ceilings instead of becoming `NR`;
+a rateable basket dependency contributes its upstream backing score at the live
+exposure weight, but an upstream evidence ceiling does not become a whole-child
+ceiling after that uncertainty has already been priced in the weighted slice.
+Serial parent claims remain globally binding because the child cannot shed that
+claim by diversification.
 a naturally computed D can reflect multiple bounded weaknesses, while F remains
 reserved for causally attributed measured danger. Candidate D cards require
 causal measured weakness or policy-bounded uncertainty. Bounded attribution can

@@ -142,6 +142,12 @@ Impact: wrappers and reserve-backed assets inherit the relevant upstream risk
 without duplicating or spreading that risk into unrelated pillars. Ordinary
 weight drift no longer discards an otherwise valid reviewed role.
 
+For a rateable basket exposure, the upstream backing score is applied at the
+live exposure weight. An upstream evidence ceiling remains attributable to that
+slice and cannot cap the whole downstream asset after the uncertainty has
+already been priced through the weighted score. Serial claims retain their
+whole-parent ceiling because every unit of the child depends on that parent.
+
 ### 6. Wrapper-Local Risk
 
 Wrapper scoring separates parent exposure from local strategy, custody,
