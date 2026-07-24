@@ -119,6 +119,8 @@ function admissionCodeForWmRejection(
       return "supply-attribution.admission.rejected-invalid-payload";
     case "safe-block-unavailable":
       return "supply-attribution.admission.rejected-stale";
+    case "deployment-observation-skew":
+      return "supply-attribution.admission.rejected-skew";
     case "packet-reconciliation-failed":
       return "supply-attribution.admission.rejected-reconciliation";
     case "chain-rpc-unavailable":

@@ -721,7 +721,10 @@ function assertFixedInputConsistency(input: ReportCardsFixedInput): void {
     if (!input.activeAssetIds.includes(assetId)) {
       throw new Error(`V9 supply attribution targets inactive asset ${assetId}`);
     }
-    if (attribution.observedAtSec > input.clockSec) {
+    if (
+      attribution.model !== "reviewed-deployment-unit-partition-v1" &&
+      attribution.observedAtSec > input.clockSec
+    ) {
       throw new Error(`V9 supply attribution for ${assetId} is later than the scoring clock`);
     }
     if (

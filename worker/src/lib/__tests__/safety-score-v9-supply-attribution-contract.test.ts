@@ -5,6 +5,7 @@ import {
   deriveReviewedDeploymentUnitPartition,
   expectedWmDeploymentIdentity,
   reviewedDeploymentAttributionValidationError,
+  reviewedDeploymentObservationTimingIssue,
   type ReviewedDeploymentSupplyObservation,
 } from "../safety-score-v9-supply-attribution-contract";
 import {
@@ -179,8 +180,37 @@ describe("reviewed deployment supply attribution contract", () => {
     expect(derive(mutate())).toBeNull();
   });
 
-  it("rejects future, stale, and cross-chain-skewed observations", () => {
-    expect(derive(observations(), 1_784_881_327)).toBeNull();
+  it("admits only bounded post-clock Solana finality", () => {
+    const boundedSolana = observations().map((row) =>
+      row.chainId === "solana" ? { ...row, blockTimeSec: CLOCK_SEC + 5 } : row,
+    );
+    expect(derive(boundedSolana)).not.toBeNull();
+
+    const futureEvm = observations().map((row) =>
+      row.chainId === "base" ? { ...row, blockTimeSec: CLOCK_SEC + 1 } : row,
+    );
+    expect(derive(futureEvm)).toBeNull();
+    expect(
+      reviewedDeploymentObservationTimingIssue({
+        clockSec: CLOCK_SEC,
+        captureStartedAtSec: Math.min(...futureEvm.map((row) => row.blockTimeSec)),
+        captureEndedAtSec: Math.max(...futureEvm.map((row) => row.blockTimeSec)),
+        observedAtSec: Math.max(...futureEvm.map((row) => row.blockTimeSec)),
+        deployments: futureEvm,
+      }),
+    ).toEqual({
+      code: "future-clock",
+      failedRouteId: "base:0x437cc33344a0b27a429f795ff6b469c72698b291",
+    });
+
+    const allFuture = observations().map((row, index) => ({
+      ...row,
+      blockTimeSec: CLOCK_SEC + index + 1,
+    }));
+    expect(derive(allFuture)).toBeNull();
+  });
+
+  it("rejects stale and cross-chain-skewed observations", () => {
     expect(derive(observations(), 1_784_883_129)).toBeNull();
     expect(
       derive(

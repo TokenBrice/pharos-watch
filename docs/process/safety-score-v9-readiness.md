@@ -248,9 +248,16 @@ designed:
   aggregate, count locked backing once, preserve unknown destination
   allocation, and fail closed when either the issuer or onchain evidence is
   unavailable, stale, skewed, or mismatched.
+- wM's reviewed deployment observer binds every EVM route to a block at or
+  before the fixed scoring clock. Its single Solana route may use the first
+  finalized observation just after that clock only when the complete
+  cross-chain packet remains inside the existing 120-second capture envelope;
+  future EVM state, an all-future packet, stale state, or a wider envelope
+  fails closed with explicit skew provenance.
 
-These are evidence and attribution corrections. They do not change V8 inputs
-or public V8 scoring.
+Candidate-only attribution remains outside the public V8 fixed input. Shared
+producer and evidence corrections may improve inputs consumed by both models;
+they do not change which model is public, and they do not activate V9.
 
 Current candidate cards use score-trace schema v2 and response schema v3 for
 bounded-D attribution. Strict readers retain response-v2/trace-v1 compatibility

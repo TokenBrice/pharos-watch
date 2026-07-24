@@ -18,6 +18,7 @@ import {
   expectedWmDeploymentIdentity,
   normalizeReviewedDeploymentAddress,
   reviewedDeploymentIdentityValidationError,
+  reviewedDeploymentObservationTimingIssue,
   type ReviewedDeploymentSupplyObservation,
   type ReviewedDeploymentUnitPartitionV1,
 } from "./safety-score-v9-supply-attribution-contract";
@@ -50,6 +51,7 @@ export type WmReviewedDeploymentRejectionCode =
   | "deployment-state-unavailable"
   | "deployment-state-invalid"
   | "deployment-identity-mismatch"
+  | "deployment-observation-skew"
   | "packet-reconciliation-failed";
 
 export type WmReviewedDeploymentObservationAttempt =
@@ -474,6 +476,24 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
       };
     }
     observations.push(result.observation);
+  }
+
+  const blockTimes = observations.map((observation) => observation.blockTimeSec);
+  const captureStartedAtSec = Math.min(...blockTimes);
+  const captureEndedAtSec = Math.max(...blockTimes);
+  const timingIssue = reviewedDeploymentObservationTimingIssue({
+    clockSec: input.scoringClockSec,
+    captureStartedAtSec,
+    captureEndedAtSec,
+    observedAtSec: captureEndedAtSec,
+    deployments: observations,
+  });
+  if (timingIssue) {
+    return {
+      status: "rejected",
+      rejectionCode: "deployment-observation-skew",
+      failedRouteId: timingIssue.failedRouteId,
+    };
   }
 
   const attribution = deriveReviewedDeploymentUnitPartition({

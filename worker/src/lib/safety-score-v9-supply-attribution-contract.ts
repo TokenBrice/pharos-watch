@@ -63,6 +63,11 @@ export interface ReviewedDeploymentUnitPartitionV1 {
   deployments: ReviewedDeploymentSupplyRow[];
 }
 
+export interface ReviewedDeploymentObservationTimingIssue {
+  code: "invalid-envelope" | "cross-chain-skew" | "future-clock" | "stale";
+  failedRouteId: string | null;
+}
+
 interface WmEvmIdentity {
   runtime: "evm";
   runtimeCodeSha256: string;
@@ -315,6 +320,91 @@ function hasValidBlockHash(row: ReviewedDeploymentSupplyRow): boolean {
     : SOLANA_BLOCK_HASH_RE.test(row.blockHash);
 }
 
+function boundaryRouteId(
+  deployments: readonly Pick<ReviewedDeploymentSupplyObservation, "routeId" | "blockTimeSec">[],
+  boundary: "earliest" | "latest",
+): string | null {
+  const sorted = [...deployments].sort(
+    (left, right) =>
+      left.blockTimeSec - right.blockTimeSec ||
+      compareText(left.routeId, right.routeId),
+  );
+  return (boundary === "earliest" ? sorted[0] : sorted[sorted.length - 1])?.routeId ?? null;
+}
+
+export function reviewedDeploymentObservationTimingIssue(input: {
+  clockSec: number;
+  captureStartedAtSec: number;
+  captureEndedAtSec: number;
+  observedAtSec: number;
+  deployments: readonly Pick<ReviewedDeploymentSupplyObservation, "routeId" | "blockTimeSec">[];
+}): ReviewedDeploymentObservationTimingIssue | null {
+  if (
+    !Number.isInteger(input.clockSec) ||
+    input.clockSec < 0 ||
+    !Number.isInteger(input.captureStartedAtSec) ||
+    !Number.isInteger(input.captureEndedAtSec) ||
+    !Number.isInteger(input.observedAtSec) ||
+    input.captureStartedAtSec < 0 ||
+    input.deployments.length === 0
+  ) {
+    return { code: "invalid-envelope", failedRouteId: null };
+  }
+  const invalidDeployment = input.deployments.find(
+    (row) => !Number.isInteger(row.blockTimeSec) || row.blockTimeSec < 0,
+  );
+  if (invalidDeployment) {
+    return {
+      code: "invalid-envelope",
+      failedRouteId: invalidDeployment.routeId,
+    };
+  }
+
+  const blockTimes = input.deployments.map((row) => row.blockTimeSec);
+  const earliestBlockTimeSec = Math.min(...blockTimes);
+  const latestBlockTimeSec = Math.max(...blockTimes);
+  if (
+    input.captureStartedAtSec !== earliestBlockTimeSec ||
+    input.captureEndedAtSec !== latestBlockTimeSec ||
+    input.captureStartedAtSec > input.captureEndedAtSec ||
+    input.observedAtSec !== input.captureEndedAtSec
+  ) {
+    return { code: "invalid-envelope", failedRouteId: null };
+  }
+  if (
+    input.captureEndedAtSec - input.captureStartedAtSec >
+    REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC
+  ) {
+    return {
+      code: "cross-chain-skew",
+      failedRouteId: boundaryRouteId(input.deployments, "latest"),
+    };
+  }
+  if (input.captureStartedAtSec > input.clockSec) {
+    return {
+      code: "future-clock",
+      failedRouteId: boundaryRouteId(input.deployments, "earliest"),
+    };
+  }
+  const futureNonSolana = input.deployments.find((row) => {
+    const identity = WM_DEPLOYMENT_IDENTITIES[row.routeId];
+    return row.blockTimeSec > input.clockSec && identity?.runtime !== "solana";
+  });
+  if (futureNonSolana) {
+    return {
+      code: "future-clock",
+      failedRouteId: futureNonSolana.routeId,
+    };
+  }
+  if (input.clockSec - input.observedAtSec > REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC) {
+    return {
+      code: "stale",
+      failedRouteId: boundaryRouteId(input.deployments, "latest"),
+    };
+  }
+  return null;
+}
+
 export function reviewedDeploymentAttributionValidationError(input: {
   assetId: string;
   attribution: ReviewedDeploymentUnitPartitionV1;
@@ -329,20 +419,6 @@ export function reviewedDeploymentAttributionValidationError(input: {
   if (attribution.registryFingerprint !== input.registryFingerprint) {
     return `reviewed deployment registry fingerprint mismatch for ${assetId}`;
   }
-  if (
-    !Number.isInteger(attribution.captureStartedAtSec) ||
-    !Number.isInteger(attribution.captureEndedAtSec) ||
-    !Number.isInteger(attribution.observedAtSec) ||
-    attribution.captureStartedAtSec < 0 ||
-    attribution.captureStartedAtSec > attribution.captureEndedAtSec ||
-    attribution.observedAtSec !== attribution.captureEndedAtSec ||
-    attribution.captureEndedAtSec - attribution.captureStartedAtSec > REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC ||
-    attribution.observedAtSec > input.clockSec ||
-    input.clockSec - attribution.observedAtSec > REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC
-  ) {
-    return `reviewed deployment observation time is invalid for ${assetId}`;
-  }
-
   const inventory = buildReviewedDeploymentRouteInventory(assetId);
   if (!inventory || attribution.routeInventoryDigest !== inventory.digest) {
     return `reviewed deployment route inventory mismatch for ${assetId}`;
@@ -356,6 +432,16 @@ export function reviewedDeploymentAttributionValidationError(input: {
   );
   if (new Set(deployments.map((row) => row.routeId)).size !== deployments.length) {
     return `duplicate reviewed deployment route for ${assetId}`;
+  }
+  const timingIssue = reviewedDeploymentObservationTimingIssue({
+    clockSec: input.clockSec,
+    captureStartedAtSec: attribution.captureStartedAtSec,
+    captureEndedAtSec: attribution.captureEndedAtSec,
+    observedAtSec: attribution.observedAtSec,
+    deployments,
+  });
+  if (timingIssue) {
+    return `reviewed deployment observation time is invalid for ${assetId}: ${timingIssue.code}`;
   }
 
   for (let index = 0; index < inventory.routes.length; index += 1) {

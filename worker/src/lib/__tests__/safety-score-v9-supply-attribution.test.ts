@@ -296,52 +296,64 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     },
   );
 
-  it("restores aggregate-only bridge materiality when the atomic wM capture fails", async () => {
-    rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt.mockResolvedValue({
-      status: "rejected",
-      rejectionCode: "deployment-identity-mismatch",
-      failedRouteId:
-        "base:0x437cc33344a0b27a429f795ff6b469c72698b291",
-    });
-    const fixedInput = {
-      activeAssetIds: ["wm-m0"],
-      clockSec: OBSERVED_AT_SEC,
-      sourceGeneration: "report-cards:v8:fixture",
-      baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
-      registryFingerprint: "a".repeat(64),
-      chainCirculatingById: { "wm-m0": {} },
-      aggregateCirculatingById: {
-        "wm-m0": {
-          circulating: { peggedUSD: 87_020_618.58982982 },
-          observedAtSec: OBSERVED_AT_SEC,
+  it.each([
+    [
+      "deployment-identity-mismatch",
+      "supply-attribution.admission.rejected-identity-drift",
+    ],
+    [
+      "deployment-observation-skew",
+      "supply-attribution.admission.rejected-skew",
+    ],
+  ] as const)(
+    "restores aggregate-only bridge materiality after %s",
+    async (rejectionCode, admissionCode) => {
+      rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt.mockResolvedValue({
+        status: "rejected",
+        rejectionCode,
+        failedRouteId:
+          "base:0x437cc33344a0b27a429f795ff6b469c72698b291",
+      });
+      const fixedInput = {
+        activeAssetIds: ["wm-m0"],
+        clockSec: OBSERVED_AT_SEC,
+        sourceGeneration: "report-cards:v8:fixture",
+        baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+        registryFingerprint: "a".repeat(64),
+        chainCirculatingById: { "wm-m0": {} },
+        aggregateCirculatingById: {
+          "wm-m0": {
+            circulating: { peggedUSD: 87_020_618.58982982 },
+            observedAtSec: OBSERVED_AT_SEC,
+          },
         },
-      },
-    } as unknown as ReportCardsFixedInput;
+      } as unknown as ReportCardsFixedInput;
 
-    const capture = await captureSafetyScoreV9SupplyAttribution(
-      fixedInput,
-      chainRpcs(),
-    );
+      const capture = await captureSafetyScoreV9SupplyAttribution(
+        fixedInput,
+        chainRpcs(),
+      );
 
-    expect(capture.attributionById).not.toHaveProperty("wm-m0");
-    expect(capture.journalRecords).toHaveLength(1);
-    expect(capture.journalRecords[0]).toMatchObject({
-      assetId: "wm-m0",
-      admissionCode: "supply-attribution.admission.rejected-identity-drift",
-      fallbackCode: "supply-attribution.fallback.aggregate-only",
-      failedRouteId:
-        "base:0x437cc33344a0b27a429f795ff6b469c72698b291",
-      contentSha256: null,
-    });
-    expect(
-      buildSafetyScoreV9SupplyReview(
-        {
-          ...fixedInput,
-          safetyScoreV9SupplyAttributionById: capture.attributionById,
-        },
-        "wm-m0",
-        wmMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile,
-      ),
-    ).toBeNull();
-  });
+      expect(capture.attributionById).not.toHaveProperty("wm-m0");
+      expect(capture.journalRecords).toHaveLength(1);
+      expect(capture.journalRecords[0]).toMatchObject({
+        assetId: "wm-m0",
+        admissionCode,
+        fallbackCode: "supply-attribution.fallback.aggregate-only",
+        failedRouteId:
+          "base:0x437cc33344a0b27a429f795ff6b469c72698b291",
+        contentSha256: null,
+      });
+      expect(
+        buildSafetyScoreV9SupplyReview(
+          {
+            ...fixedInput,
+            safetyScoreV9SupplyAttributionById: capture.attributionById,
+          },
+          "wm-m0",
+          wmMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile,
+        ),
+      ).toBeNull();
+    },
+  );
 });
