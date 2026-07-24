@@ -502,6 +502,7 @@ describe("tracked stablecoin metadata", () => {
       "apyusd-apyx",
       "stusd-stoneyield",
       "hbusdt-hyperbeat",
+      "iusd-initia",
     ]);
   });
 

@@ -5,13 +5,14 @@ import {
   encodeFunctionResult,
   keccak256,
   parseAbi,
-  type Hex,
-} from "viem";
+} from "viem/utils";
 import type { EvmMulticall3Call, EvmMulticall3Result } from "../../../lib/evm-rpc";
 import {
   observeFpiControllerRedemptionRoute,
   type FpiControllerRouteReadClient,
 } from "../fpi-controller-redemption";
+
+type Hex = `0x${string}`;
 
 const CONTROLLER_ABI = parseAbi([
   "function FPI_TKN() view returns (address)",

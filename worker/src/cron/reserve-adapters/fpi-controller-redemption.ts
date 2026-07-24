@@ -18,13 +18,13 @@ import {
   encodeFunctionData,
   keccak256,
   parseAbi,
-  type Hex,
-} from "viem";
+} from "viem/utils";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress } from "./evm";
 
 type FpiParams = LiveReserveAdapterParamsByKey["frax-fpi-collateral"];
+type Hex = `0x${string}`;
 
 const CHAIN = "ethereum";
 const BLOCK_MAX_AGE_SEC = 5 * 60;
