@@ -71,6 +71,12 @@ append-only movement reviews. Shadow enrichment, exact-input, compile, or
 persistence failure cannot unwind the V8 batch. A failed attempt can be retried
 later on the same day, and a later successful refresh replaces that day's
 current candidate observation.
+Reserve sync may carry a nested candidate-only exact route attempt into the
+redemption-backstop preload and then the V9 extension. The first such path is
+FPI's Controller Pool observation, which is bound to the same successful issuer
+collateral adapter result and one pinned Ethereum block. Accepted and rejected
+attempts remain outside public V8 reserve, redemption, and report-card payload
+semantics.
 `GET /api/admin-safety-score-v9` and its review mutation remain the operator
 surface. The additive `GET /api/report-cards/v9` route now exposes a strict,
 fully identified contract only after its owner activation key matches. A

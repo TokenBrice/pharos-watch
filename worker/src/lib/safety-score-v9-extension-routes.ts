@@ -123,7 +123,17 @@ function buildOutputReview(
       ...shared,
     };
   } else if (output.kind === "tracked-stablecoin" && assetKeys.length === 1) {
-    const tracked = trackedStablecoinValuation(fixedInput, assetKeys[0]!, observedAtSec);
+    const tracked =
+      observation.outputUnitValueUsd !== undefined
+        ? {
+            basis: "price" as const,
+            unitValueUsd: observation.outputUnitValueUsd,
+            expectedUnitValueUsd: 1,
+            confidence: "high" as const,
+            observedAtSec,
+            sourceId: "redemption-route-pinned-output-value",
+          }
+        : trackedStablecoinValuation(fixedInput, assetKeys[0]!, observedAtSec);
     if (tracked) {
       valuation = {
         referenceAssetKey: assetKeys[0]!,
@@ -250,10 +260,13 @@ function redemptionExecutionModel(entry: RedemptionBackstopEntry): RouteReview["
   return "unknown";
 }
 
-function redemptionExecutionCertainty(entry: RedemptionBackstopEntry): RouteReview["executionCertainty"] {
+function redemptionExecutionCertainty(
+  entry: RedemptionBackstopEntry,
+  modelConfidence: RouteReview["modelConfidence"],
+): RouteReview["executionCertainty"] {
   if (entry.executionModel === "opaque") return "discretionary";
-  if (entry.modelConfidence === "high") return "bounded";
-  if (entry.modelConfidence === "medium") return "conditional";
+  if (modelConfidence === "high") return "bounded";
+  if (modelConfidence === "medium") return "conditional";
   return "discretionary";
 }
 
@@ -305,11 +318,13 @@ function redemptionExecutionCosts(
   ];
   return points
     .map((point) => {
-      const reviewedCostBps = config
-        ? resolveV9RedemptionRouteCostBpsAtNotional(config, point.requestedNotionalUsd, entry.feeBps)
-        : entry.feeBps !== null && Number.isFinite(entry.feeBps)
-          ? entry.feeBps
-          : null;
+      const reviewedCostBps =
+        observation.executionCostBps ??
+        (config
+          ? resolveV9RedemptionRouteCostBpsAtNotional(config, point.requestedNotionalUsd, entry.feeBps)
+          : entry.feeBps !== null && Number.isFinite(entry.feeBps)
+            ? entry.feeBps
+            : null);
       return {
         requestedNotionalUsd: point.requestedNotionalUsd,
         maxCostBps: point.maxCostBps,
@@ -330,6 +345,7 @@ function buildRedemptionRouteReview(
   observation: ExitRouteObservation,
 ): RouteReview {
   const scope = observation.scope;
+  const modelConfidence = observation.modelConfidence ?? entry.modelConfidence;
   const physicalResourceKeys =
     scope.kind === "issuer"
       ? [`issuer:${scope.issuerId}`]
@@ -341,8 +357,8 @@ function buildRedemptionRouteReview(
     routeId: observation.routeId,
     holderAccess: redemptionHolderAccess(entry),
     executionModel: redemptionExecutionModel(entry),
-    executionCertainty: redemptionExecutionCertainty(entry),
-    modelConfidence: entry.modelConfidence,
+    executionCertainty: redemptionExecutionCertainty(entry, modelConfidence),
+    modelConfidence,
     coverageClass: redemptionCoverageClass(entry, observation),
     capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
     ...redemptionSettlement(entry),

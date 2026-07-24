@@ -137,6 +137,12 @@ describe("getRedemptionBackstopConfig", () => {
       reviewedAt: "2026-03-22",
     });
 
+    expect(getRedemptionBackstopConfig("fpi-frax")).toMatchObject({
+      routeFamily: "collateral-redeem",
+      capacityModel: { kind: "reserve-sync-metadata" },
+      costModel: { kind: "dynamic-or-unclear" },
+    });
+
     expect(getRedemptionBackstopConfig("lusd-liquity")).toMatchObject({
       routeFamily: "collateral-redeem",
       accessModel: "permissionless-onchain",

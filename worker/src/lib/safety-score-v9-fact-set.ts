@@ -1632,12 +1632,18 @@ function reconcileCollateralDependencyMappings(
   };
 }
 
-function scopeFailureDomains(observation: ExitRouteObservation): V9FailureDomainRef[] {
+function scopeFailureDomains(
+  observation: ExitRouteObservation,
+  lane: "dex" | "redemption",
+): V9FailureDomainRef[] {
   const scope = observation.scope;
   if (scope.kind === "chain-contract") {
     return [
       { kind: "chain", key: scope.chain },
-      { kind: "dex-protocol", key: scope.protocol },
+      {
+        kind: lane === "dex" ? "dex-protocol" : "redemption-rail",
+        key: scope.protocol,
+      },
     ];
   }
   if (scope.kind === "venue") return [{ kind: "dex-protocol", key: scope.protocol }];
@@ -1782,7 +1788,7 @@ function buildRoute(
     args.retained,
   );
   const evidence = context.evidence.get(evidenceId)!;
-  const baseDomains = scopeFailureDomains(args.observation);
+  const baseDomains = scopeFailureDomains(args.observation, args.lane);
 
   if (!args.review) {
     const gapId = routeGap(

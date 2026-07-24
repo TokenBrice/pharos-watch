@@ -24,6 +24,10 @@ import {
   SCORING_LIVE_RESERVE_EVIDENCE_CLASSES,
   type ReserveSnapshotMetadataRecord,
 } from "./live-reserves-store";
+import {
+  parseAcceptedFpiControllerV9RouteState,
+  type FpiControllerV9RouteState,
+} from "./fpi-controller-redemption-route";
 import { MALFORMED_REDEMPTION_TELEMETRY } from "./live-reserves-store-row-decoding";
 
 export interface RedemptionBackstopLiveMetadata {
@@ -55,6 +59,7 @@ export interface RedemptionBackstopLiveMetadata {
   routeStatusSource: RedemptionRouteStatusSource | null;
   routeStatusReason: string | null;
   routeStatusReviewedAt: string | null;
+  v9FpiControllerRouteState: FpiControllerV9RouteState | null;
 }
 
 interface ParsedRedemptionTelemetry {
@@ -604,5 +609,6 @@ export function readRedemptionBackstopLiveMetadata(
     routeStatusSource: resolvedRouteStatus.routeStatusSource,
     routeStatusReason: resolvedRouteStatus.routeStatusReason,
     routeStatusReviewedAt: resolvedRouteStatus.routeStatusReviewedAt,
+    v9FpiControllerRouteState: parseAcceptedFpiControllerV9RouteState(redemptionTelemetry.v9RouteAttempt),
   };
 }

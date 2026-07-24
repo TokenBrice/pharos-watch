@@ -1,7 +1,9 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
+import { observeFpiControllerRedemptionRoute } from "./fpi-controller-redemption";
 import {
   buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
@@ -431,5 +433,34 @@ export async function fetchFraxFpiCollateralReserves(
   if (!isFpiCollateralResponse(payload)) {
     throw new Error("frax-fpi-collateral adapter requires the FPI collateral API response");
   }
-  return adaptFraxFpiCollateral(payload);
+  // Reserve composition and the V9-only route attempt publish as one adapter
+  // result. If the issuer payload fails, no new or stale route attempt is
+  // attached to an otherwise non-authoritative reserve snapshot.
+  const result = adaptFraxFpiCollateral(payload);
+  const params = parseLiveReserveAdapterParams("frax-fpi-collateral", config.params);
+  const routeAttempt = await observeFpiControllerRedemptionRoute(params, signal, ctx);
+  const routeWarnings: LiveReserveWarning[] =
+    routeAttempt.status === "rejected"
+      ? [
+          {
+            code: "fpi-controller-route-unavailable",
+            message: `FPI Controller Pool V9 route observation rejected: ${routeAttempt.rejectionCode}`,
+            severity: "warning",
+            effect: "info",
+          },
+        ]
+      : [];
+  return {
+    ...result,
+    ...(routeWarnings.length > 0 || (result.warnings?.length ?? 0) > 0
+      ? { warnings: [...(result.warnings ?? []), ...routeWarnings] }
+      : {}),
+    metadata: {
+      ...(result.metadata ?? {}),
+      redemption: {
+        ...(result.metadata?.redemption ?? {}),
+        v9RouteAttempt: routeAttempt,
+      },
+    },
+  };
 }

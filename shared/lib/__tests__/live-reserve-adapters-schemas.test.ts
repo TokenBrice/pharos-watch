@@ -178,6 +178,57 @@ describe("LiveReservesConfigSchema URL validation", () => {
     ).toThrow(/Invalid/);
   });
 
+  it("validates the pinned FPI controller route configuration", () => {
+    const valid = {
+      controllerAddress: "0x2397321b301B80A1C0911d6f9ED4B6033d43cF51",
+      fpiTokenAddress: "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
+      fraxTokenAddress: "0x853d955aCEf822Db058eb8505911ED77F175b99e",
+      expectedControllerCodeHash: "0x8f8968ffbb928926343d4217667f094cc938f359e253ef25ff33ee7b85ec1132",
+      expectedFraxPriceFeedAddress: "0xb9e1e3a9feff48998e45fa90847ed4d467e8bcfd",
+      expectedFraxPriceFeedCodeHash: "0xbd6f524cdc4268b6bd1bb6f77a8821faeea9c52ee9e0afa0b6d948ce82c966c2",
+      expectedFraxPriceFeedDecimals: 8,
+      expectedFpiPriceFeedAddress: "0x59985d79e1e69f659f4ab97db07a35ce73d9174b",
+      expectedFpiPriceFeedCodeHash: "0x2b165ff401e6d9ee29c0ef100b238ecb2fb7c89715104dde46b95547cea302fb",
+      expectedFpiPriceFeedDecimals: 18,
+      expectedCpiTrackerAddress: "0x66b7dff2ac66dc4d6fbb3db1cb627bbb01ff3146",
+      expectedCpiTrackerCodeHash: "0xb989d68e59e9df4ef6d1782d56efe24f44bbb1d9e015c523c6e30adde9a7821d",
+      maxPriceFeedAgeSec: 7_200,
+      fullConfidenceCpiTrackerAgeSec: 62 * 86_400,
+      maxCpiTrackerAgeSec: 366 * 86_400,
+      expectedRedeemFeeE6: 3_000,
+      outputTrackedAssetId: "frax-frax" as const,
+      minOutputPriceUsd: 0.98,
+      maxOutputPriceUsd: 1.02,
+      sourceUrls: ["https://docs.frax.finance/frax-price-index/fpi-controller-pool"],
+    };
+
+    expect(parseLiveReserveAdapterParams("frax-fpi-collateral", valid)).toEqual(valid);
+    expect(() =>
+      parseLiveReserveAdapterParams("frax-fpi-collateral", {
+        ...valid,
+        controllerAddress: "not-an-address",
+      }),
+    ).toThrow();
+    expect(() =>
+      parseLiveReserveAdapterParams("frax-fpi-collateral", {
+        ...valid,
+        expectedControllerCodeHash: "0x1234",
+      }),
+    ).toThrow();
+    expect(() =>
+      parseLiveReserveAdapterParams("frax-fpi-collateral", {
+        ...valid,
+        minOutputPriceUsd: 1.03,
+      }),
+    ).toThrow(/minOutputPriceUsd/);
+    expect(() =>
+      parseLiveReserveAdapterParams("frax-fpi-collateral", {
+        ...valid,
+        fullConfidenceCpiTrackerAgeSec: valid.maxCpiTrackerAgeSec + 1,
+      }),
+    ).toThrow(/fullConfidenceCpiTrackerAgeSec/);
+  });
+
   it("accepts configured live reserve URLs", () => {
     const failures: string[] = [];
 

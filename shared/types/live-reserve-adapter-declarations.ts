@@ -385,7 +385,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   },
   "frax-fpi-collateral": {
     primaryInputKinds: ["http-json"],
-    paramsSchema: "none",
+    paramsSchema: "fraxFpiCollateral",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sharedSourceMode: "none",

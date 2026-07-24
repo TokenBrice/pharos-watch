@@ -243,6 +243,45 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(fixedFeeReview.executionCosts.every((point) => point.executionCostBps === 25)).toBe(true);
   });
 
+  it("keeps pinned redemption fee and output valuation separate in the route review", () => {
+    const row = supplyFullRow({ stablecoinId: "fpi-frax", feeBps: null });
+    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!
+      .observation;
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      exitRouteObservations: [
+        {
+          ...observation,
+          output: { kind: "tracked-stablecoin", trackedAssetIds: ["frax-frax"] },
+          evidenceKind: "onchain-contract-state",
+          executionCostBps: 30,
+          outputUnitValueUsd: 0.98836526,
+          allInCostBps: 145.9983578,
+          modelConfidence: "high",
+          scoreEligible: true,
+        },
+      ],
+    };
+    const fixedInput = fixedInputStub(row);
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "frax-frax": { currentDeviationBps: -500, priceObservedAt: NOW },
+    };
+    const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
+
+    expect(review.executionCosts.every((point) => point.executionCostBps === 30)).toBe(true);
+    expect(review).toMatchObject({ executionCertainty: "bounded", modelConfidence: "high" });
+    expect(review.output).toMatchObject({
+      kind: "tracked-stablecoin",
+      valuation: {
+        basis: "price",
+        referenceAssetKey: "frax-frax",
+        unitValueUsd: 0.98836526,
+        sourceId: "redemption-route-pinned-output-value",
+        confidence: "high",
+      },
+    });
+  });
+
   it("fails static-open live-direct evidence closed only at the v9 adapter", () => {
     const row = liveDirectRow("static-config");
     expect(row.capacityProfile?.exitRouteObservations?.[0]?.scoreEligible).toBe(true);

@@ -2135,6 +2135,49 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ]);
   });
 
+  it("attributes chain-contract redemption routes to a redemption rail, not a DEX protocol", () => {
+    const fixed = queuedRedemptionFixedInput();
+    const observation = fixed.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!;
+    observation.routeFamily = "protocol-redemption";
+    observation.scope = {
+      kind: "chain-contract",
+      chain: "ethereum",
+      contractOrPoolId: "0x2397321b301b80a1c0911d6f9ed4b6033d43cf51",
+      protocol: "frax",
+    };
+    const reviewed = extension();
+    reviewed.assets[0]!.routeReviews.push({
+      ...routeReview(observation.routeId),
+      lane: "redemption",
+      failureDomains: [],
+    });
+
+    const {
+      schemaVersion: omittedSchemaVersion,
+      dexPayloadFingerprint: omittedDexPayloadFingerprint,
+      redemptionPayloadFingerprint: omittedRedemptionPayloadFingerprint,
+      registryFingerprint: omittedRegistryFingerprint,
+      inputMethodologyVersions: omittedInputMethodologyVersions,
+      baseInputGenerationId: omittedBaseInputGenerationId,
+      ...draft
+    } = fixed;
+    void [
+      omittedSchemaVersion,
+      omittedDexPayloadFingerprint,
+      omittedRedemptionPayloadFingerprint,
+      omittedRegistryFingerprint,
+      omittedInputMethodologyVersions,
+      omittedBaseInputGenerationId,
+    ];
+    const rebuilt = createReportCardsFixedInput(draft);
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(rebuilt, reviewed);
+    const redemptionRoute = compiled.assets[0]!.exitRoutes.find((candidate) => candidate.lane === "redemption")!;
+
+    expect(redemptionRoute.failureDomains).toContainEqual({ kind: "chain", key: "ethereum" });
+    expect(redemptionRoute.failureDomains).toContainEqual({ kind: "redemption-rail", key: "frax" });
+    expect(redemptionRoute.failureDomains).not.toContainEqual({ kind: "dex-protocol", key: "frax" });
+  });
+
   it("keeps shaped diagnostic pools out of the DEX completeness denominator without hiding exact gates", () => {
     const fixedWithCoverage = (exactCapabilityPoolCount: number) => {
       const original = exactFixedInput();

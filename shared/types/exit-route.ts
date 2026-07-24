@@ -159,6 +159,14 @@ const ExitRouteObservationBaseSchema = z.object({
   evidenceKind: ExitRouteEvidenceKindSchema,
   /** Set when the route's reviewed fee is the undisclosed-reviewed class: capacity is modeled but cost is unbounded. */
   feeEvidence: z.literal("undisclosed-reviewed").optional(),
+  /** Fee/slippage cost before valuing the received output asset. */
+  executionCostBps: z.number().finite().nonnegative().optional(),
+  /** Pinned USD unit value of the received output asset. */
+  outputUnitValueUsd: z.number().finite().positive().optional(),
+  /** Total input-value loss after execution cost and output-asset valuation. */
+  allInCostBps: z.number().finite().nonnegative().optional(),
+  /** Confidence in the route execution model, distinct from observation freshness/confidence. */
+  modelConfidence: z.enum(["high", "medium", "low"]).optional(),
   confidence: ExitRouteConfidenceSchema,
   scoreEligible: z.boolean(),
   observedAt: z.number().int().nonnegative(),
@@ -256,6 +264,28 @@ function enforceRedemptionExitRouteLane(
       code: "custom",
       path: ["scoreEligible"],
       message: "eventual redemption observations are diagnostic-only",
+    });
+  }
+  if (
+    observation.scoreEligible &&
+    observation.allInCostBps !== undefined &&
+    observation.allInCostBps > observation.maxCostBps
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["allInCostBps"],
+      message: "Score-eligible redemption all-in cost exceeds the request limit",
+    });
+  }
+  if (
+    observation.scoreEligible &&
+    observation.outputUnitValueUsd !== undefined &&
+    observation.allInCostBps === undefined
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["allInCostBps"],
+      message: "A score-eligible redemption with pinned output value requires an all-in cost",
     });
   }
 }

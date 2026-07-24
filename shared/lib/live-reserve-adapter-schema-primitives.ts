@@ -13,6 +13,7 @@ const LiveReserveRiskSchema = ReserveRiskSchema;
 const LiveReserveDependencyTypeSchema = z.enum(DEPENDENCY_TYPE_VALUES);
 export type LiveReserveInputKind = LiveReserveInput["kind"];
 const AbsoluteUrlSchema = z.string().url();
+const EvmAddressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/);
 
 const LiveReserveInputSchemaByKind = {
   "http-json": z
@@ -124,6 +125,49 @@ const fxParamsSchema = z
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
   })
   .strict();
+
+const fraxFpiCollateralParamsSchema = z
+  .object({
+    controllerAddress: EvmAddressSchema,
+    fpiTokenAddress: EvmAddressSchema,
+    fraxTokenAddress: EvmAddressSchema,
+    expectedControllerCodeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+    expectedFraxPriceFeedAddress: EvmAddressSchema,
+    expectedFraxPriceFeedCodeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+    expectedFraxPriceFeedDecimals: z.number().int().nonnegative().max(36),
+    expectedFpiPriceFeedAddress: EvmAddressSchema,
+    expectedFpiPriceFeedCodeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+    expectedFpiPriceFeedDecimals: z.number().int().nonnegative().max(36),
+    expectedCpiTrackerAddress: EvmAddressSchema,
+    expectedCpiTrackerCodeHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+    maxPriceFeedAgeSec: z.number().int().positive(),
+    fullConfidenceCpiTrackerAgeSec: z.number().int().positive(),
+    maxCpiTrackerAgeSec: z.number().int().positive(),
+    expectedRedeemFeeE6: z.number().int().nonnegative().max(1_000_000),
+    outputTrackedAssetId: z.literal("frax-frax"),
+    minOutputPriceUsd: z.number().finite().positive(),
+    maxOutputPriceUsd: z.number().finite().positive(),
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict()
+  .superRefine((params, ctx) => {
+    if (params.minOutputPriceUsd > params.maxOutputPriceUsd) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["minOutputPriceUsd"],
+        message: "minOutputPriceUsd must be less than or equal to maxOutputPriceUsd",
+      });
+    }
+    if (params.fullConfidenceCpiTrackerAgeSec > params.maxCpiTrackerAgeSec) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["fullConfidenceCpiTrackerAgeSec"],
+        message: "fullConfidenceCpiTrackerAgeSec must be less than or equal to maxCpiTrackerAgeSec",
+      });
+    }
+  });
 
 const blastUsdbYieldManagerParamsSchema = z
   .object({
@@ -727,6 +771,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   curatedValidated: curatedValidatedParamsSchema,
   erc4626SingleAsset: erc4626SingleAssetParamsSchema,
   evmBranchBalances: evmBranchBalancesParamsSchema,
+  fraxFpiCollateral: fraxFpiCollateralParamsSchema,
   fx: fxParamsSchema,
   gho: ghoParamsSchema,
   jupusd: jupusdParamsSchema,
