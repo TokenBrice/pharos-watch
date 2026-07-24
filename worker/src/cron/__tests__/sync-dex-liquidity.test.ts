@@ -395,7 +395,7 @@ describe("syncDexLiquidity", () => {
     expect(fetchCgTickersFallback).not.toHaveBeenCalled();
   });
 
-  it("releases identity and staged-observation graphs before bounded market telemetry", async () => {
+  it("fetches bounded market telemetry before pool graphs accumulate", async () => {
     const knownPoolIndex = {
       exactKeys: new Set(["ethereum:0xpool"]),
       derivedKeyCounts: new Map([["derived", 1]]),
@@ -419,13 +419,10 @@ describe("syncDexLiquidity", () => {
       priceObservations: stagedPriceObservations,
     });
     vi.mocked(fetchMajorStablecoinOrderbookDepthSummary).mockImplementationOnce(async () => {
-      expect(knownPoolIndex.exactKeys.size).toBe(0);
-      expect(knownPoolIndex.derivedKeyCounts.size).toBe(0);
-      expect(knownPoolIndex.derivedToExactKeys.size).toBe(0);
-      expect(knownPoolIndex.wildcardKeyCounts.size).toBe(0);
-      expect(knownPoolIndex.wildcardToExactKeys.size).toBe(0);
-      expect(knownPoolIndex.concreteFeeVariantKeys.size).toBe(0);
-      expect(stagedPriceObservations.size).toBe(0);
+      expect(fetchDataSources).not.toHaveBeenCalled();
+      expect(buildKnownPoolAddresses).not.toHaveBeenCalled();
+      expect(processPoolMetrics).not.toHaveBeenCalled();
+      expect(mergeStagedPools).not.toHaveBeenCalled();
       return {
         checkedSymbols: 0,
         venueCount: 0,
