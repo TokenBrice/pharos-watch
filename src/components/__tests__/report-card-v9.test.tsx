@@ -21,7 +21,7 @@ describe("ReportCardV9Detail", () => {
       makeV9Card({
         id: "asset-b",
         score: 80,
-        grade: "B",
+        grade: "A-",
         caps: [bindingCap],
         bindingCap,
         dependencies: {

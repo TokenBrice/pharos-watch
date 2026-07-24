@@ -310,7 +310,7 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): SafetyScoreV9Cur
       : roundTrace(trace.baseAssetScore - trace.deploymentAdjustedScore);
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     legacyAliases: {
       qualityScore: "weighted-pillar-mean",
       pegAdjustedScore: "post-deployment-pre-cap-score",
@@ -353,6 +353,20 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): SafetyScoreV9Cur
             compareText(left.message, right.message),
         )
         .map((attribution) => ({ ...attribution })),
+    },
+    boundedUncertaintyAttribution: {
+      semantics: "causal-bounded-uncertainty-v1",
+      items: [...trace.boundedUncertaintyAttribution]
+        .sort(
+          (left, right) =>
+            compareText(left.source, right.source) ||
+            compareText(left.code, right.code) ||
+            compareText(left.path, right.path) ||
+            compareText(left.message, right.message) ||
+            compareText(left.responsibility, right.responsibility) ||
+            compareText(left.boundedness, right.boundedness),
+        )
+        .map(({ boundedness: _boundedness, ...attribution }) => attribution),
     },
     evidenceResponsibility: {
       semantics: "limiting-fact-owner-v1",
@@ -468,7 +482,7 @@ export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs)
   const notRatedIds = cards.filter((card) => card.grade === "NR").map((card) => card.id);
   return SafetyScoreV9CurrentResponseSchema.parse({
     model: "v9-critical-path",
-    schemaVersion: 2,
+    schemaVersion: 3,
     lifecycle: "candidate",
     candidateId: args.candidateId,
     policyVersion: args.policyVersion,

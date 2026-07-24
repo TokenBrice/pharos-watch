@@ -10,7 +10,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "531e270480435309f57ba8fdcd9aacab201bd89004ab59744e234b5fcad0aea7"
+      "sha256": "7a6c8c831d182ce5e181ed083da07871d6dcddf22b9d34acaa80770a3ce46e35"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -218,7 +218,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/evaluate-set.ts",
-      "sha256": "19a19d4523e8507724705ebc942f235d550df50f10654940be9ce2d101ffad93"
+      "sha256": "dd365614bc07a7d6d40f1169158872445617532841a52e6675fd7227d4d5e559"
     },
     {
       "path": "shared/lib/safety-score-v9/evidence.ts",
@@ -234,7 +234,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/formula.ts",
-      "sha256": "be7ed3fc245100443ae71ea72c537320f4856ccaec3cb86db5554e64d165f01e"
+      "sha256": "6f617d3e46ced1874f665bbff1b056df539f7453574fccc501e094d2d3f43203"
     },
     {
       "path": "shared/lib/safety-score-v9/mechanism-profiles.ts",
@@ -258,7 +258,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/score.ts",
-      "sha256": "07694a8a1c76ea094392e94ee249ad3a121a5a6768cec1a54a9670cd5d7cfc75"
+      "sha256": "81fc724590b5d836cdff8c32d07942aad8687a5832db9d5e7a5e6920b5edfd1e"
     },
     {
       "path": "shared/lib/safety-score-v9/stress.ts",
@@ -405,7 +405,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8e4443a3fa5ca3b324660dd522e3457ffd281d4997ab29543cdcd5f6d8435bd9"
     }
   ],
-  "digest": "2e71272cab042893904ea8c02a6d2ced2c883ff9bd3033a765523773d65da2bf"
+  "digest": "4e2cd4047f8050d70a16e2dd1060947baa8c9179c7e33024a7b32221c1a7dabf"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

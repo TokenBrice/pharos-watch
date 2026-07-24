@@ -9,8 +9,80 @@ import {
   type V9WeakestPathAggregationTrace,
 } from "../../shared/lib/safety-score-v9/aggregation";
 import { decimalSnap } from "../../shared/lib/safety-score-v9/formula";
-import { V9_CANDIDATE_POLICY_V1 } from "../../shared/lib/safety-score-v9/policy";
+import {
+  resolveV9ReasonPolicy,
+  V9_CANDIDATE_POLICY_V1,
+} from "../../shared/lib/safety-score-v9/policy";
 import { applyV9AllocatedScopedRiskAdjustments } from "../../shared/lib/safety-score-v9/scoped-risk";
+import {
+  V9CapSourceSchema,
+  V9ReasonCodeSchema,
+  V9StructuralSignalSchema,
+} from "../../shared/types/safety-score-v9";
+import { V9EvidenceResponsibilitySchema } from "../../shared/types/safety-score-v9-fact-primitives";
+
+const AdverseAttributionSchema = z.object({
+  source: z.enum([
+    "active-depeg",
+    "parent-score",
+    "peg-performance",
+    "pillar-score",
+    "reason",
+    "structural-signal",
+    "track-record",
+    "wrapper-local",
+  ]),
+  path: z.string().min(1),
+  message: z.string().min(1),
+  responsibility: z.literal("measured-adverse"),
+}).strict();
+
+const BoundedUncertaintyAttributionSchema = z.object({
+  source: z.enum(["parent-score", "reason", "wrapper-local"]),
+  code: V9ReasonCodeSchema,
+  path: z.string().min(1),
+  message: z.string().min(1),
+  responsibility: V9EvidenceResponsibilitySchema.exclude(["measured-adverse"]),
+  boundedness: z.enum(["exposure-bounded", "globally-bounded"]),
+}).strict();
+
+const PillarReasonSchema = z.object({
+  code: V9ReasonCodeSchema,
+  path: z.string().min(1),
+  message: z.string().min(1),
+  responsibility: V9EvidenceResponsibilitySchema,
+}).strict();
+
+const PillarAdverseAttributionSchema = AdverseAttributionSchema.extend({
+  source: z.literal("pillar-score"),
+});
+
+const ReplayPillarSchema = z.object({
+  score: z.number().nullable(),
+  reasons: z.array(PillarReasonSchema).default([]),
+  structuralSignals: z.array(V9StructuralSignalSchema).default([]),
+  adverseAttribution: z.array(PillarAdverseAttributionSchema).default([]),
+}).passthrough();
+
+const ReplayPillarsSchema = z.object({
+  backing: ReplayPillarSchema,
+  exit: ReplayPillarSchema,
+  control: ReplayPillarSchema,
+});
+
+const ReplayScoreInputSchema = z.object({
+  pillars: ReplayPillarsSchema,
+  peg: z.object({
+    activeDepegBps: z.number().nonnegative().nullable(),
+    reasons: z.array(PillarReasonSchema).default([]),
+  }).passthrough().default({ activeDepegBps: null, reasons: [] }),
+  parent: z.object({
+    score: z.number().nullable(),
+  }).passthrough().default({ score: null }),
+  dependencyReasons: z.array(PillarReasonSchema).default([]),
+  methodologyReasons: z.array(PillarReasonSchema).default([]),
+  dependencyStructuralSignals: z.array(V9StructuralSignalSchema).default([]),
+}).passthrough();
 
 const ReplaySchema = z.object({
   pipeline: z.object({
@@ -24,13 +96,7 @@ const ReplaySchema = z.object({
       assets: z.array(
         z.object({
           assetId: z.string(),
-          scoreInput: z.object({
-            pillars: z.object({
-              backing: z.object({ score: z.number().nullable() }).passthrough(),
-              exit: z.object({ score: z.number().nullable() }).passthrough(),
-              control: z.object({ score: z.number().nullable() }).passthrough(),
-            }),
-          }).passthrough(),
+          scoreInput: ReplayScoreInputSchema,
           trace: z.object({
             finalScore: z.number().nullable(),
             finalGrade: z.string(),
@@ -42,18 +108,21 @@ const ReplaySchema = z.object({
                 riskEventKey: z.string(),
                 failureDomainKey: z.string(),
                 nominalExposureShare: z.number().min(0).max(1),
-                exposureShare: z.number().min(0).max(1),
-                exposedScore: z.number().min(0).max(100),
-              }).passthrough(),
+                  exposureShare: z.number().min(0).max(1),
+                  exposedScore: z.number().min(0).max(100),
+                  sourceSignalKeys: z.array(z.string().min(1)).default([]),
+                }).passthrough(),
             ).default([]),
             caps: z.array(
               z.object({
-                source: z.string(),
+                source: V9CapSourceSchema,
                 kind: z.string(),
                 limit: z.number(),
+                reason: z.string().min(1),
               }).passthrough(),
             ),
-            adverseAttribution: z.array(z.unknown()).default([]),
+            adverseAttribution: z.array(AdverseAttributionSchema),
+            boundedUncertaintyAttribution: z.array(BoundedUncertaintyAttributionSchema).default([]),
           }).passthrough(),
         }),
       ),
@@ -66,6 +135,10 @@ const SCORE_DECIMALS = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.scoreDecim
 const POLICY_HEADROOM = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.compensabilityHeadroom;
 const POLICY_CONTROL_HEADROOM =
   V9_CANDIDATE_POLICY_V1.policy.semantic.formula.controlCompensabilityHeadroom;
+const C_MINUS_FLOOR =
+  V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds.find(
+    (threshold) => threshold.grade === "C-",
+  )!.minScore;
 
 interface Candidate {
   id: string;
@@ -151,6 +224,237 @@ function gradeForScore(score: number): string {
   );
 }
 
+function capPriority(source: z.infer<typeof V9CapSourceSchema>): number {
+  const priority =
+    V9_CANDIDATE_POLICY_V1.policy.semantic.formula.capTiePriority.indexOf(source);
+  return priority === -1
+    ? V9_CANDIDATE_POLICY_V1.policy.semantic.formula.capTiePriority.length
+    : priority;
+}
+
+type ReplayScoreInput = z.infer<typeof ReplayScoreInputSchema>;
+type ReplayCap = {
+  source: z.infer<typeof V9CapSourceSchema>;
+  kind: string;
+  limit: number;
+  reason: string;
+};
+type ReplayDeploymentAdjustment = {
+  exposureShare: number;
+  exposedScore: number;
+  sourceSignalKeys: readonly string[];
+};
+
+function scoreInputReasons(input: ReplayScoreInput): z.infer<typeof PillarReasonSchema>[] {
+  return [
+    ...input.pillars.backing.reasons,
+    ...input.pillars.exit.reasons,
+    ...input.pillars.control.reasons,
+    ...input.peg.reasons,
+    ...input.dependencyReasons,
+    ...input.methodologyReasons,
+  ];
+}
+
+function scoreInputStructuralSignals(
+  input: ReplayScoreInput,
+): z.infer<typeof V9StructuralSignalSchema>[] {
+  return [
+    ...input.pillars.backing.structuralSignals,
+    ...input.pillars.exit.structuralSignals,
+    ...input.pillars.control.structuralSignals,
+    ...input.dependencyStructuralSignals,
+  ];
+}
+
+function scopedSignalKey(signal: z.infer<typeof V9StructuralSignalSchema>): string {
+  const domains = [...signal.failureDomainKeys].sort();
+  return [
+    "signal",
+    signal.kind,
+    signal.severity,
+    signal.exposureKey ?? "unscoped",
+    signal.riskEventKey ?? "event-unidentified",
+    domains.join("+") || signal.reason,
+  ].join(":");
+}
+
+function structuralAttributionApplies(
+  item: z.infer<typeof AdverseAttributionSchema>,
+  input: ReplayScoreInput,
+  bindingCap: ReplayCap | null,
+  baseAssetScore: number,
+  deploymentAdjustments: readonly ReplayDeploymentAdjustment[],
+): boolean {
+  const signals = scoreInputStructuralSignals(input);
+  const matchingSignals = signals.filter(
+    (signal) =>
+      signal.responsibility === "measured-adverse" &&
+      item.path === `structural:${signal.kind}:${signal.severity}` &&
+      item.message === signal.reason,
+  );
+  return matchingSignals.some((signal) => {
+    if (
+      signal.pricedInPillar !== undefined &&
+      input.pillars[signal.pricedInPillar].structuralSignals.some(
+        (candidate) =>
+          candidate.kind === signal.kind &&
+          candidate.severity === signal.severity &&
+          candidate.reason === signal.reason &&
+          candidate.responsibility === signal.responsibility,
+      )
+    ) {
+      return true;
+    }
+    if (
+      signal.economicLossScope === "deployment" &&
+      deploymentAdjustments.some(
+        (adjustment) =>
+          adjustment.sourceSignalKeys.includes(scopedSignalKey(signal)) &&
+          adjustment.exposureShare > 0 &&
+          baseAssetScore > adjustment.exposedScore,
+      )
+    ) {
+      return true;
+    }
+    if (bindingCap?.source !== "structural") return false;
+    if (
+      bindingCap.kind === `signal:${signal.kind}:${signal.severity}` &&
+      bindingCap.reason === signal.reason
+    ) {
+      return true;
+    }
+    if (
+      bindingCap.kind !== "signal:common-mode-oracle" ||
+      signal.kind !== "weak-oracle-branch"
+    ) {
+      return false;
+    }
+    const oracleDomainCounts = new Map<string, number>();
+    for (const candidate of signals.filter(
+      (value) =>
+        value.kind === "weak-oracle-branch" &&
+        value.responsibility === "measured-adverse",
+    )) {
+      for (const domain of new Set(candidate.failureDomainKeys)) {
+        oracleDomainCounts.set(domain, (oracleDomainCounts.get(domain) ?? 0) + 1);
+      }
+    }
+    return signal.failureDomainKeys.some((domain) => {
+      const count = oracleDomainCounts.get(domain) ?? 0;
+      return (
+        count >=
+          V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.commonModeOracleMinBranches &&
+        bindingCap.reason === `${count} weak oracle branches share ${domain}.`
+      );
+    });
+  });
+}
+
+export function adverseAttributionApplies(
+  item: z.infer<typeof AdverseAttributionSchema>,
+  input: ReplayScoreInput,
+  pegMultiplier: number,
+  bindingCap: ReplayCap | null,
+  baseAssetScore: number,
+  deploymentAdjustments: readonly ReplayDeploymentAdjustment[],
+): boolean {
+  if (item.source === "parent-score" || item.source === "wrapper-local") {
+    return (
+      bindingCap?.source === "parent" &&
+      input.parent.score !== null &&
+      bindingCap.limit === input.parent.score
+    );
+  }
+  if (item.source === "active-depeg") {
+    return (
+      item.path === "peg:active-depeg" &&
+      input.peg.activeDepegBps !== null &&
+      input.peg.activeDepegBps > 0 &&
+      bindingCap?.source === "active-depeg"
+    );
+  }
+  if (item.source === "peg-performance") {
+    return item.path === "peg:historical-performance" && pegMultiplier < 0.9;
+  }
+  if (item.source === "pillar-score") {
+    return (["backing", "exit", "control"] as const).some((pillar) =>
+      input.pillars[pillar].adverseAttribution.some(
+        (candidate) =>
+          candidate.path === item.path &&
+          candidate.message === item.message &&
+          candidate.responsibility === item.responsibility,
+      ),
+    );
+  }
+  if (item.source === "reason") {
+    return scoreInputReasons(input).some((candidate) => {
+      if (
+        candidate.path !== item.path ||
+        candidate.message !== item.message ||
+        candidate.responsibility !== item.responsibility
+      ) {
+        return false;
+      }
+      const policyReason = resolveV9ReasonPolicy(
+        V9_CANDIDATE_POLICY_V1,
+        candidate.code,
+      );
+      if (policyReason.critical || policyReason.reason.defaultTreatment === "pillar") {
+        return true;
+      }
+      return (
+        policyReason.reason.defaultTreatment === "ceiling" &&
+        bindingCap?.source === "evidence" &&
+        bindingCap.kind === `reason:${candidate.code}` &&
+        bindingCap.reason === item.message
+      );
+    });
+  }
+  if (item.source === "structural-signal") {
+    return structuralAttributionApplies(
+      item,
+      input,
+      bindingCap,
+      baseAssetScore,
+      deploymentAdjustments,
+    );
+  }
+  return false;
+}
+
+export function boundedAttributionApplies(
+  item: z.infer<typeof BoundedUncertaintyAttributionSchema>,
+  pillars: z.infer<typeof ReplayPillarsSchema>,
+  bindingCap: ReplayCap | null,
+): boolean {
+  if (item.source === "parent-score" || item.source === "wrapper-local") {
+    return bindingCap?.source === "parent";
+  }
+  const reason = V9_CANDIDATE_POLICY_V1.policy.reasonRegistry.find(
+    (entry) => entry.code === item.code,
+  );
+  const matchesLowPillarReason = (["backing", "exit", "control"] as const).some(
+    (pillar) =>
+      pillars[pillar].score !== null &&
+      pillars[pillar].score! < C_MINUS_FLOOR &&
+      pillars[pillar].reasons.some(
+        (candidate) =>
+          candidate.code === item.code &&
+          candidate.path === item.path &&
+          candidate.message === item.message &&
+          candidate.responsibility === item.responsibility,
+      ),
+  );
+  if (matchesLowPillarReason) return true;
+  return (
+    reason?.defaultTreatment === "ceiling" &&
+    bindingCap?.source === "evidence" &&
+    bindingCap.kind === `reason:${item.code}` &&
+    bindingCap.reason === item.message
+  );
+}
+
 function histogram(rows: readonly { grade: string }[]): Record<string, number> {
   return Object.fromEntries(
     ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"].map((grade) => [
@@ -174,10 +478,11 @@ export function buildV9AggregationCounterfactual(input: unknown, inputPath = "<m
   const evaluated = replay.pipeline.evaluatedSet;
   const results = CANDIDATES.map((candidate) => {
     const assets = evaluated.assets.map((asset) => {
+      const pillarInputs = asset.scoreInput.pillars;
       const pillars = {
-        backing: asset.scoreInput.pillars.backing.score,
-        exit: asset.scoreInput.pillars.exit.score,
-        control: asset.scoreInput.pillars.control.score,
+        backing: pillarInputs.backing.score,
+        exit: pillarInputs.exit.score,
+        control: pillarInputs.control.score,
       };
       if (asset.trace.finalScore === null || asset.trace.pegMultiplier === null || Object.values(pillars).includes(null)) {
         return {
@@ -196,13 +501,39 @@ export function buildV9AggregationCounterfactual(input: unknown, inputPath = "<m
       const retainedCaps = asset.trace.caps.filter((cap) => cap.source !== "bounded-compensability");
       const bindingCap = retainedCaps
         .filter((cap) => cap.limit < quantize(preCap, false))
-        .sort((left, right) => left.limit - right.limit || left.kind.localeCompare(right.kind))[0] ?? null;
+        .sort(
+          (left, right) =>
+            left.limit - right.limit ||
+            capPriority(left.source) - capPriority(right.source) ||
+            left.kind.localeCompare(right.kind),
+        )[0] ?? null;
       const rawScore = Math.min(preCap, bindingCap?.limit ?? 100);
       const candidateScore = quantize(rawScore, bindingCap !== null);
       const candidateGrade = gradeForScore(candidateScore);
+      const adverseAttribution = asset.trace.adverseAttribution.filter((item) =>
+        adverseAttributionApplies(
+          item,
+          asset.scoreInput,
+          asset.trace.pegMultiplier!,
+          bindingCap,
+          baseAssetScore,
+          asset.trace.deploymentAdjustments,
+        ),
+      );
+      const boundedUncertaintyAttribution =
+        asset.trace.boundedUncertaintyAttribution.filter((item) =>
+          boundedAttributionApplies(item, pillarInputs, bindingCap),
+        );
       const score =
-        (candidateGrade === "D" || candidateGrade === "F") &&
-        asset.trace.adverseAttribution.length === 0
+        (
+          candidateGrade === "F" &&
+          adverseAttribution.length === 0
+        ) ||
+        (
+          candidateGrade === "D" &&
+          adverseAttribution.length === 0 &&
+          boundedUncertaintyAttribution.length === 0
+        )
           ? null
           : candidateScore;
       return {
@@ -240,7 +571,7 @@ export function buildV9AggregationCounterfactual(input: unknown, inputPath = "<m
     },
     isolation: {
       retained:
-        "peg multiplier, scoped deployment semantics, non-compensability caps, baseline rateability, and D/F adverse-attribution requirements",
+        "peg multiplier, scoped deployment semantics, non-compensability caps, baseline rateability, D measured-or-bounded attribution, and F measured-adverse attribution",
       changed: "only the weakest-path aggregation",
     },
     results,

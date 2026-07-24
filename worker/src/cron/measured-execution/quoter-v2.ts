@@ -13,7 +13,11 @@ import {
   type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
-import type { DexMeasuredExecutionRpcBudget, DexMeasuredRawQuotePoint } from "./profiles";
+import type {
+  DexMeasuredExecutionBudgetStopReason,
+  DexMeasuredExecutionRpcBudget,
+  DexMeasuredRawQuotePoint,
+} from "./profiles";
 import { getDexMeasuredExecutionDeployment } from "./registry";
 
 const QUOTER_V2_ABI = parseAbi([
@@ -55,6 +59,7 @@ export interface QuoterV2BatchOutcome {
 interface AdaptiveChunkResult {
   results: EvmMulticall3Result[];
   transportFailureLabels: string[];
+  budgetStopReasonsByLabel: Map<string, DexMeasuredExecutionBudgetStopReason>;
 }
 
 async function runWithConcurrency<T>(
@@ -174,26 +179,40 @@ async function executeAdaptiveChunk(input: {
     return {
       results: input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
       transportFailureLabels: input.calls.map((call) => call.label),
+      budgetStopReasonsByLabel: new Map(),
     };
   }
+  let budgetStopReason: DexMeasuredExecutionBudgetStopReason | null = null;
   const result = await fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
     chainRpcs: input.chainRpcs,
     signal: input.signal,
     timeoutMs: 30_000,
     ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-    ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
+    ...(input.rpcBudget
+      ? {
+          beforeRequest: () => {
+            const consumed = input.rpcBudget!.tryConsume();
+            if (!consumed) budgetStopReason = input.rpcBudget!.stopReason;
+            return consumed;
+          },
+        }
+      : {}),
     maxRetries: 0,
     gas: QUOTER_MULTICALL_GAS,
     multicallBatchSize: Math.min(QUOTER_MULTICALL_BATCH_SIZE, input.calls.length),
   });
   if (result != null) {
     input.rpcBudget?.recordChainResult(input.chain, true);
-    return { results: result, transportFailureLabels: [] };
+    return { results: result, transportFailureLabels: [], budgetStopReasonsByLabel: new Map() };
   }
-  if (input.rpcBudget?.stopReason) {
+  if (budgetStopReason == null && input.rpcBudget && Date.now() >= input.rpcBudget.deadlineMs) {
+    budgetStopReason = "runtime-deadline-exceeded";
+  }
+  if (budgetStopReason != null) {
     return {
       results: input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
       transportFailureLabels: input.calls.map((call) => call.label),
+      budgetStopReasonsByLabel: new Map(input.calls.map((call) => [call.label, budgetStopReason!])),
     };
   }
   if (input.calls.length === 1) {
@@ -201,6 +220,7 @@ async function executeAdaptiveChunk(input: {
     return {
       results: [{ label: input.calls[0]!.label, success: false, returnData: "0x" }],
       transportFailureLabels: [input.calls[0]!.label],
+      budgetStopReasonsByLabel: new Map(),
     };
   }
   const midpoint = Math.ceil(input.calls.length / 2);
@@ -209,6 +229,10 @@ async function executeAdaptiveChunk(input: {
   return {
     results: [...left.results, ...right.results],
     transportFailureLabels: [...left.transportFailureLabels, ...right.transportFailureLabels],
+    budgetStopReasonsByLabel: new Map([
+      ...left.budgetStopReasonsByLabel,
+      ...right.budgetStopReasonsByLabel,
+    ]),
   };
 }
 
@@ -298,6 +322,7 @@ export async function quoteQuoterV2Requests(input: {
 
   const resultsByLabel = new Map<string, EvmMulticall3Result>();
   const transportFailureLabels = new Set<string>();
+  const budgetStopReasonsByLabel = new Map<string, DexMeasuredExecutionBudgetStopReason>();
   await runWithConcurrency([...byChain], 3, async ([chain, requests]) => {
     for (let offset = 0; offset < requests.length; offset += QUOTER_MULTICALL_BATCH_SIZE) {
       throwIfAborted(input.signal);
@@ -318,6 +343,9 @@ export async function quoteQuoterV2Requests(input: {
       });
       for (const result of initial.results) resultsByLabel.set(result.label, result);
       for (const label of initial.transportFailureLabels) transportFailureLabels.add(label);
+      for (const [label, reason] of initial.budgetStopReasonsByLabel) {
+        budgetStopReasonsByLabel.set(label, reason);
+      }
 
       const failedCalls = calls.filter((call) => !resultsByLabel.get(call.label)?.success);
       for (const failedCall of failedCalls) {
@@ -331,6 +359,9 @@ export async function quoteQuoterV2Requests(input: {
           rpcBudget: input.rpcBudget,
         });
         for (const result of retry.results) resultsByLabel.set(result.label, result);
+        for (const [label, reason] of retry.budgetStopReasonsByLabel) {
+          budgetStopReasonsByLabel.set(label, reason);
+        }
         if (retry.transportFailureLabels.includes(failedCall.label)) transportFailureLabels.add(failedCall.label);
         else transportFailureLabels.delete(failedCall.label);
       }
@@ -340,6 +371,15 @@ export async function quoteQuoterV2Requests(input: {
   for (const request of valid) {
     const result = resultsByLabel.get(request.label);
     const outcomeIndex = Number.parseInt(request.label.slice(0, request.label.indexOf(":")), 10);
+    const budgetStopReason = budgetStopReasonsByLabel.get(request.label);
+    if (budgetStopReason) {
+      outcomes[outcomeIndex] = {
+        targetId: request.target.targetId,
+        inputUsd: request.inputUsd,
+        failureReason: budgetStopReason,
+      };
+      continue;
+    }
     if (!result || transportFailureLabels.has(request.label)) {
       outcomes[outcomeIndex] = {
         targetId: request.target.targetId,

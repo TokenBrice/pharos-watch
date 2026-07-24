@@ -317,6 +317,56 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     ]);
   });
 
+  it("attributes a request rejected by the hard RPC budget to that budget", async () => {
+    const fixture = REPLAYS[0]!;
+    const target = makeTarget(fixture);
+    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+      async (
+        _chain: string,
+        _calls: unknown,
+        _blockNumber: number,
+        options: { beforeRequest?: () => boolean },
+      ) => {
+        options.beforeRequest?.();
+        return null;
+      },
+    );
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 0,
+      deadlineMs: Date.now() + 60_000,
+    });
+
+    const outcomes = await quoteQuoterV2Requests({
+      requests: [{ target, inputUsd: 1_000, endpointAddress: deployment.endpointAddress }],
+      blockNumber: fixture.blockNumber,
+      chainRpcs: new Map(),
+      rpcBudget: budget,
+    });
+
+    expect(outcomes[0]?.failureReason).toBe("request-budget-exhausted");
+  });
+
+  it("attributes a quote that cannot start before the runtime deadline to that deadline", async () => {
+    const fixture = REPLAYS[0]!;
+    const target = makeTarget(fixture);
+    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 100,
+      deadlineMs: Date.now() - 1,
+    });
+
+    const outcomes = await quoteQuoterV2Requests({
+      requests: [{ target, inputUsd: 1_000, endpointAddress: deployment.endpointAddress }],
+      blockNumber: fixture.blockNumber,
+      chainRpcs: new Map(),
+      rpcBudget: budget,
+    });
+
+    expect(outcomes[0]?.failureReason).toBe("runtime-deadline-exceeded");
+  });
+
   it("retries failed inner quotes as serialized singletons", async () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);

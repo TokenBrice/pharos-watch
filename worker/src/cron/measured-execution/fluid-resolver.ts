@@ -14,7 +14,11 @@ import {
   type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
-import type { DexMeasuredExecutionRpcBudget, DexMeasuredRawQuotePoint } from "./profiles";
+import type {
+  DexMeasuredExecutionBudgetStopReason,
+  DexMeasuredExecutionRpcBudget,
+  DexMeasuredRawQuotePoint,
+} from "./profiles";
 
 const FLUID_RESOLVER_ABI = parseAbi([
   "function estimateSwapIn(address dex_,bool swap0To1_,uint256 amountIn_,uint256 minAmountOut_) view returns (uint256 amountOut_)",
@@ -81,6 +85,7 @@ export const FLUID_RESOLVER_DEPLOYMENTS: readonly FluidResolverDeployment[] = [
 ] as const;
 
 export type FluidResolverFailureReason =
+  | DexMeasuredExecutionBudgetStopReason
   | "unsupported-chain"
   | "resolver-address-mismatch"
   | "resolver-code-unavailable"
@@ -133,6 +138,7 @@ interface FluidResolverQuoteDependencies {
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     rpcBudget?: DexMeasuredExecutionRpcBudget;
+    onBudgetStop?: (reason: DexMeasuredExecutionBudgetStopReason) => void;
   }): Promise<EvmMulticall3Result[] | null>;
 }
 
@@ -391,6 +397,11 @@ async function runWithConcurrency<T>(
 }
 
 function createFluidResolverQuoteExecutor(dependencies: FluidResolverQuoteDependencies) {
+  interface AdaptiveChunkResult {
+    results: EvmMulticall3Result[];
+    budgetStopReasonsByLabel: Map<string, DexMeasuredExecutionBudgetStopReason>;
+  }
+
   async function executeAdaptiveChunk(input: {
     chain: string;
     calls: readonly EvmMulticall3Call[];
@@ -398,26 +409,50 @@ function createFluidResolverQuoteExecutor(dependencies: FluidResolverQuoteDepend
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<EvmMulticall3Result[]> {
+  }): Promise<AdaptiveChunkResult> {
     if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.chain)) {
-      return input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" }));
+      return {
+        results: input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
+        budgetStopReasonsByLabel: new Map(),
+      };
     }
-    const result = await dependencies.executeMulticall(input);
+    let budgetStopReason: DexMeasuredExecutionBudgetStopReason | null = null;
+    const result = await dependencies.executeMulticall({
+      ...input,
+      onBudgetStop: (reason) => {
+        budgetStopReason = reason;
+      },
+    });
     if (result != null) {
       input.rpcBudget?.recordChainResult(input.chain, true);
-      return result;
+      return { results: result, budgetStopReasonsByLabel: new Map() };
     }
-    if (input.rpcBudget?.stopReason) {
-      return input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" }));
+    if (budgetStopReason == null && input.rpcBudget && Date.now() >= input.rpcBudget.deadlineMs) {
+      budgetStopReason = "runtime-deadline-exceeded";
+    }
+    if (budgetStopReason != null) {
+      return {
+        results: input.calls.map((call) => ({ label: call.label, success: false, returnData: "0x" })),
+        budgetStopReasonsByLabel: new Map(input.calls.map((call) => [call.label, budgetStopReason!])),
+      };
     }
     if (input.calls.length === 1) {
       input.rpcBudget?.recordChainResult(input.chain, false);
-      return [{ label: input.calls[0]!.label, success: false, returnData: "0x" }];
+      return {
+        results: [{ label: input.calls[0]!.label, success: false, returnData: "0x" }],
+        budgetStopReasonsByLabel: new Map(),
+      };
     }
     const midpoint = Math.ceil(input.calls.length / 2);
     const left = await executeAdaptiveChunk({ ...input, calls: input.calls.slice(0, midpoint) });
     const right = await executeAdaptiveChunk({ ...input, calls: input.calls.slice(midpoint) });
-    return [...left, ...right];
+    return {
+      results: [...left.results, ...right.results],
+      budgetStopReasonsByLabel: new Map([
+        ...left.budgetStopReasonsByLabel,
+        ...right.budgetStopReasonsByLabel,
+      ]),
+    };
   }
 
   return async function quoteFluidResolverRequests(input: {
@@ -478,7 +513,7 @@ function createFluidResolverQuoteExecutor(dependencies: FluidResolverQuoteDepend
             callData: request.callData,
             allowFailure: true,
           }));
-          const results = await executeAdaptiveChunk({
+          const chunkResult = await executeAdaptiveChunk({
             chain: first.deployment.chain,
             calls,
             blockNumber: first.blockNumber,
@@ -486,11 +521,13 @@ function createFluidResolverQuoteExecutor(dependencies: FluidResolverQuoteDepend
             signal: input.signal,
             rpcBudget: input.rpcBudget,
           });
-          const byLabel = new Map(results.map((result) => [result.label, result]));
+          const byLabel = new Map(chunkResult.results.map((result) => [result.label, result]));
           for (const request of chunk) {
             const result = byLabel.get(request.label);
-            const decoded =
-              result == null
+            const budgetFailure = chunkResult.budgetStopReasonsByLabel.get(request.label);
+            const decoded = budgetFailure
+              ? { failureReason: budgetFailure }
+              : result == null
                 ? { failureReason: "resolver-revert" as const }
                 : decodeFluidResolverQuotePoint(request, result);
             outcomes[request.index] = {
@@ -515,7 +552,16 @@ export const quoteFluidResolverRequests = createFluidResolverQuoteExecutor({
       signal: input.signal,
       timeoutMs: 30_000,
       ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-      ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
+      ...(input.rpcBudget
+        ? {
+            beforeRequest: () => {
+              const consumed = input.rpcBudget!.tryConsume();
+              const reason = input.rpcBudget!.stopReason;
+              if (!consumed && reason) input.onBudgetStop?.(reason);
+              return consumed;
+            },
+          }
+        : {}),
       maxRetries: 0,
       gas: FLUID_MULTICALL_GAS,
       multicallBatchSize: Math.min(FLUID_MULTICALL_BATCH_SIZE, input.calls.length),

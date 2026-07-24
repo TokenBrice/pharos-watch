@@ -16,7 +16,10 @@ import {
   evaluateV9Exit,
   projectV9ExitEvaluationRoute,
 } from "@shared/lib/safety-score-v9/exit";
-import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import {
+  V9_CANDIDATE_POLICY_V1,
+  resolveV9ReasonPolicy,
+} from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9StressState } from "@shared/lib/safety-score-v9/stress";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
@@ -2140,15 +2143,27 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const fiatCompiled = compileSafetyScoreV9FactSetFromFixedInput(withoutPegRow(), extension());
     expect(fiatCompiled.assets[0]!.peg.status.observationState).toBe("missing");
     // A missing producer row is an availability failure, not measured peg
-    // safety. The latent peg multiplier remains visible, but the public rating
-    // is withheld until a current or fresh last-known-good row exists.
+    // safety. The latent peg multiplier remains visible and the rating remains
+    // provisional under the configured bounded-evidence ceiling.
     const fiatTrace = evaluateV9FactSet(fiatCompiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace;
-    expect(fiatTrace.finalGrade).toBe("NR");
-    expect(fiatTrace.finalScore).toBeNull();
+    const missingPegCeiling = resolveV9ReasonPolicy(
+      V9_CANDIDATE_POLICY_V1,
+      "missing-peg-input",
+    ).ceiling!;
+    expect(fiatTrace.finalGrade).not.toBe("NR");
+    expect(fiatTrace.finalScore).toBeLessThanOrEqual(missingPegCeiling.limit);
     expect(fiatTrace.pegMultiplier).toBe(1);
-    expect(fiatTrace.nrReasons).toContainEqual(
+    expect(fiatTrace.caps).toContainEqual(
+      expect.objectContaining({
+        source: "evidence",
+        kind: missingPegCeiling.kind,
+        limit: missingPegCeiling.limit,
+      }),
+    );
+    expect(fiatTrace.unresolvedFacts).toContainEqual(
       expect.objectContaining({ code: "missing-peg-input", responsibility: "producer-failed" }),
     );
+    expect(fiatTrace.nrReasons).toEqual([]);
   });
 
   it("retains an independently observed active depeg when current deviation is unavailable", () => {
@@ -2177,8 +2192,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       compileSafetyScoreV9FactSetFromFixedInput(missingPeak, extension()),
       V9_CANDIDATE_POLICY_V1,
     ).assets[0]!.trace;
-    expect(trace.finalGrade).toBe("NR");
-    expect(missingPeakTrace.finalGrade).toBe("NR");
+    expect(trace.finalGrade).toBe("F");
+    expect(trace.nrReasons).toEqual([]);
+    expect(missingPeakTrace.finalGrade).not.toBe("NR");
+    expect(missingPeakTrace.nrReasons).toEqual([]);
     expect(trace.preCapScore).toBeLessThan(missingPeakTrace.preCapScore!);
   });
 
@@ -2194,10 +2211,23 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       activeDepegBps: null,
     });
     const trace = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace;
-    expect(trace.finalGrade).toBe("NR");
-    expect(trace.nrReasons).toContainEqual(
+    const missingPegCeiling = resolveV9ReasonPolicy(
+      V9_CANDIDATE_POLICY_V1,
+      "missing-peg-input",
+    ).ceiling!;
+    expect(trace.finalGrade).not.toBe("NR");
+    expect(trace.finalScore).toBeLessThanOrEqual(missingPegCeiling.limit);
+    expect(trace.caps).toContainEqual(
+      expect.objectContaining({
+        source: "evidence",
+        kind: missingPegCeiling.kind,
+        limit: missingPegCeiling.limit,
+      }),
+    );
+    expect(trace.unresolvedFacts).toContainEqual(
       expect.objectContaining({ code: "missing-peg-input", responsibility: "producer-failed" }),
     );
+    expect(trace.nrReasons).toEqual([]);
     expect(trace.caps.some((cap) => cap.source === "active-depeg")).toBe(false);
   });
 

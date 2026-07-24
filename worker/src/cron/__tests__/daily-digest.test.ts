@@ -888,7 +888,7 @@ describe("generateDailyDigest", () => {
     };
     const card = makeWorkerV9Card({
       id: "usdt-tether",
-      grade: "A",
+      grade: "A+",
       score: 88,
       pillars: {
         backing,
@@ -928,7 +928,7 @@ describe("generateDailyDigest", () => {
       },
       mentionedCoins: [{
         symbol: "USDT",
-        grade: "A",
+        grade: "A+",
         score: 88,
         pillars: {
           backing: { score: 91 },

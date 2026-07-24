@@ -1,7 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { buildV9AggregationCounterfactual } from "../maintenance/replay-safety-score-v9-aggregation";
+import {
+  boundedAttributionApplies,
+  buildV9AggregationCounterfactual,
+} from "../maintenance/replay-safety-score-v9-aggregation";
 
 const DIGEST = "a".repeat(64);
+
+function pillar(score: number) {
+  return {
+    score,
+    reasons: [] as Array<{
+      code: "bounded-mechanism-review";
+      path: string;
+      message: string;
+      responsibility: "integration-missing";
+    }>,
+    structuralSignals: [],
+    adverseAttribution: [],
+  };
+}
 
 function replay() {
   return {
@@ -18,9 +35,9 @@ function replay() {
             assetId: "deployment-scoped",
             scoreInput: {
               pillars: {
-                backing: { score: 80 },
-                exit: { score: 80 },
-                control: { score: 80 },
+                backing: pillar(80),
+                exit: pillar(80),
+                control: pillar(80),
               },
             },
             trace: {
@@ -39,6 +56,8 @@ function replay() {
                 },
               ],
               caps: [],
+              adverseAttribution: [],
+              boundedUncertaintyAttribution: [],
             },
           },
         ],
@@ -77,9 +96,9 @@ describe("Safety Score v9 aggregation counterfactual", () => {
       const input = replay();
       const asset = input.pipeline.evaluatedSet.assets[0]!;
       asset.scoreInput.pillars = {
-        backing: { score: 100 },
-        exit: { score: 50 },
-        control: { score: control },
+        backing: pillar(100),
+        exit: pillar(50),
+        control: pillar(control),
       };
       asset.trace.deploymentAdjustments = [];
       const output = buildV9AggregationCounterfactual(input);
@@ -124,13 +143,251 @@ describe("Safety Score v9 aggregation counterfactual", () => {
     });
   });
 
-  it("does not manufacture a D or F without baseline measured-adverse attribution", () => {
+  it("does not manufacture a D without measured or bounded baseline attribution", () => {
     const input = replay();
     const asset = input.pipeline.evaluatedSet.assets[0]!;
     asset.scoreInput.pillars = {
-      backing: { score: 35 },
-      exit: { score: 35 },
-      control: { score: 35 },
+      backing: pillar(45),
+      exit: pillar(45),
+      control: pillar(45),
+    };
+    asset.trace.finalScore = 45;
+    asset.trace.finalGrade = "D";
+    asset.trace.deploymentAdjustments = [];
+    const output = buildV9AggregationCounterfactual(input);
+    const candidate = output.results.find(
+      (result) => result.candidateId === "smooth-bounded-headroom:policy",
+    );
+    expect(candidate?.assets[0]).toMatchObject({ score: null, grade: "NR" });
+  });
+
+  it("treats missing legacy bounded attribution as empty evidence", () => {
+    const input = replay();
+    const asset = input.pipeline.evaluatedSet.assets[0]!;
+    asset.scoreInput.pillars = {
+      backing: pillar(45),
+      exit: pillar(45),
+      control: pillar(45),
+    };
+    asset.trace.finalScore = 45;
+    asset.trace.finalGrade = "D";
+    asset.trace.deploymentAdjustments = [];
+    delete (asset.trace as Partial<typeof asset.trace>).boundedUncertaintyAttribution;
+
+    const candidate = buildV9AggregationCounterfactual(input).results.find(
+      (result) => result.candidateId === "smooth-bounded-headroom:policy",
+    );
+    expect(candidate?.assets[0]).toMatchObject({ score: null, grade: "NR" });
+  });
+
+  it("retains a bounded-attributed D but never uses uncertainty to authorize F", () => {
+    const input = replay();
+    const asset = input.pipeline.evaluatedSet.assets[0]!;
+    asset.scoreInput.pillars = {
+      backing: {
+        ...pillar(45),
+        reasons: [{
+          code: "bounded-mechanism-review",
+          path: "backing:review",
+          message: "Backing review is bounded.",
+          responsibility: "integration-missing",
+        }],
+      },
+      exit: pillar(45),
+      control: pillar(45),
+    };
+    asset.trace.finalScore = 45;
+    asset.trace.finalGrade = "D";
+    asset.trace.deploymentAdjustments = [];
+    Object.assign(asset.trace, {
+      boundedUncertaintyAttribution: [{
+        source: "reason",
+        code: "bounded-mechanism-review",
+        path: "backing:review",
+        message: "Backing review is bounded.",
+        responsibility: "integration-missing",
+        boundedness: "exposure-bounded",
+      }],
+    });
+    const output = buildV9AggregationCounterfactual(input);
+    const candidate = output.results.find(
+      (result) => result.candidateId === "smooth-bounded-headroom:policy",
+    );
+    expect(candidate?.assets[0]).toMatchObject({ score: 45, grade: "D" });
+
+    asset.scoreInput.pillars = {
+      backing: pillar(35),
+      exit: pillar(35),
+      control: pillar(35),
+    };
+    asset.trace.finalScore = 35;
+    asset.trace.finalGrade = "F";
+    const dangerOutput = buildV9AggregationCounterfactual(input);
+    const dangerCandidate = dangerOutput.results.find(
+      (result) => result.candidateId === "smooth-bounded-headroom:policy",
+    );
+    expect(dangerCandidate?.assets[0]).toMatchObject({ score: null, grade: "NR" });
+  });
+
+  it("rejects malformed attribution instead of using array presence as evidence", () => {
+    const input = replay();
+    Object.assign(input.pipeline.evaluatedSet.assets[0]!.trace, {
+      boundedUncertaintyAttribution: [{ source: "reason" }],
+    });
+    expect(() => buildV9AggregationCounterfactual(input)).toThrow();
+  });
+
+  it("requires exact pillar or evidence-cap provenance for bounded attribution", () => {
+    const item = {
+      source: "reason" as const,
+      code: "bounded-mechanism-review" as const,
+      path: "backing:review",
+      message: "Backing review is bounded.",
+      responsibility: "integration-missing" as const,
+      boundedness: "exposure-bounded" as const,
+    };
+    const pillars = {
+      backing: pillar(45),
+      exit: pillar(45),
+      control: pillar(45),
+    };
+
+    expect(boundedAttributionApplies(item, pillars, null)).toBe(false);
+    expect(boundedAttributionApplies(item, pillars, {
+      source: "evidence",
+      kind: "reason:bounded-mechanism-review",
+      limit: 69,
+      reason: "A different bounded gap.",
+    })).toBe(false);
+  });
+
+  it("drops structural attribution when its counterfactual cap stops binding", () => {
+    const input = replay();
+    const asset = input.pipeline.evaluatedSet.assets[0]!;
+    asset.scoreInput.pillars = {
+      backing: pillar(20),
+      exit: pillar(80),
+      control: pillar(80),
+    };
+    Object.assign(asset.scoreInput.pillars.backing, {
+      structuralSignals: [{
+        kind: "centralized-mint",
+        severity: "critical",
+        reason: "A single controller can mint without an effective bound.",
+        responsibility: "measured-adverse",
+      }],
+    });
+    Object.assign(asset.trace, {
+      finalScore: 39,
+      finalGrade: "F",
+      deploymentAdjustments: [],
+      caps: [{
+        source: "structural",
+        kind: "signal:centralized-mint:critical",
+        limit: 39,
+        reason: "A single controller can mint without an effective bound.",
+      }],
+      adverseAttribution: [{
+        source: "structural-signal",
+        path: "structural:centralized-mint:critical",
+        message: "A single controller can mint without an effective bound.",
+        responsibility: "measured-adverse",
+      }],
+      boundedUncertaintyAttribution: [],
+    });
+
+    const output = buildV9AggregationCounterfactual(input);
+    const stillCapped = output.results.find(
+      (result) => result.candidateId === "smooth-bounded-headroom:h45",
+    );
+    const capNoLongerBinds = output.results.find(
+      (result) => result.candidateId === "generalized-mean:p-2",
+    );
+    expect(stillCapped?.assets[0]).toMatchObject({
+      score: 39,
+      grade: "F",
+      bindingCap: expect.objectContaining({ source: "structural" }),
+    });
+    expect(capNoLongerBinds?.assets[0]).toMatchObject({
+      score: null,
+      grade: "NR",
+      bindingCap: null,
+    });
+  });
+
+  it("drops parent attribution when the counterfactual parent cap no longer binds", () => {
+    const input = replay();
+    const asset = input.pipeline.evaluatedSet.assets[0]!;
+    asset.scoreInput.pillars = {
+      backing: pillar(40),
+      exit: pillar(40),
+      control: pillar(40),
+    };
+    Object.assign(asset.trace, {
+      finalScore: 45,
+      finalGrade: "D",
+      deploymentAdjustments: [],
+      caps: [{
+        source: "parent",
+        kind: "parent",
+        limit: 45,
+        reason: "Required parent score.",
+      }],
+      adverseAttribution: [{
+        source: "parent-score",
+        path: "parent:upstream:pillar:exit",
+        message: "Required parent upstream: Measured exit weakness.",
+        responsibility: "measured-adverse",
+      }],
+      boundedUncertaintyAttribution: [],
+    });
+
+    const candidate = buildV9AggregationCounterfactual(input).results.find(
+      (result) => result.candidateId === "smooth-bounded-headroom:policy",
+    );
+    expect(candidate?.assets[0]).toMatchObject({
+      score: null,
+      grade: "NR",
+      bindingCap: null,
+    });
+  });
+
+  it("uses production cap-source priority for equal limits", () => {
+    const input = replay();
+    const asset = input.pipeline.evaluatedSet.assets[0]!;
+    Object.assign(asset.trace, {
+      deploymentAdjustments: [],
+      caps: [
+        {
+          source: "evidence",
+          kind: "reason:missing-reserve-composition",
+          limit: 60,
+          reason: "Reserve composition is unavailable.",
+        },
+        {
+          source: "parent",
+          kind: "parent",
+          limit: 60,
+          reason: "Required parent score.",
+        },
+      ],
+    });
+
+    const candidate = buildV9AggregationCounterfactual(input).results.find(
+      (result) => result.candidateId === "smooth-bounded-headroom:policy",
+    );
+    expect(candidate?.assets[0]?.bindingCap).toEqual(
+      expect.objectContaining({ source: "parent", limit: 60 }),
+    );
+  });
+
+  it("does not manufacture F without baseline measured-adverse attribution", () => {
+    const input = replay();
+    const asset = input.pipeline.evaluatedSet.assets[0]!;
+    asset.scoreInput.pillars = {
+      backing: pillar(35),
+      exit: pillar(35),
+      control: pillar(35),
     };
     asset.trace.finalScore = 35;
     asset.trace.finalGrade = "F";
@@ -147,9 +404,9 @@ describe("Safety Score v9 aggregation counterfactual", () => {
       const input = replay();
       const asset = input.pipeline.evaluatedSet.assets[0]!;
       asset.scoreInput.pillars = {
-        backing: { score: baseScore },
-        exit: { score: baseScore },
-        control: { score: baseScore },
+        backing: pillar(baseScore),
+        exit: pillar(baseScore),
+        control: pillar(baseScore),
       };
       asset.trace.deploymentAdjustments = [
         {

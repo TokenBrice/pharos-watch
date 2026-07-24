@@ -153,8 +153,8 @@ function activeV9(updatedAt = NOW_SEC) {
     asOfSec: updatedAt - 60,
     updatedAt,
     cards: [
-      makeWorkerV9Card({ id: "usdc-circle", score: 92, grade: "A-" }),
-      makeWorkerV9Card({ id: "usdt-tether", score: 88, grade: "A" }),
+      makeWorkerV9Card({ id: "usdc-circle", score: 92, grade: "A+" }),
+      makeWorkerV9Card({ id: "usdt-tether", score: 88, grade: "A+" }),
     ],
   });
   return {

@@ -117,6 +117,17 @@ function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
+function formatPrerequisiteEvidence(skippedReason: string | null): string | null {
+  for (const [prefix, label] of [
+    ["upstream-incomplete:", "prerequisite incomplete"],
+    ["upstream-failure:", "prerequisite failed"],
+    ["upstream-blocked:", "prerequisite blocked"],
+  ] as const) {
+    if (skippedReason?.startsWith(prefix)) return `${label}: ${skippedReason.slice(prefix.length)}`;
+  }
+  return null;
+}
+
 type RecentRunTone = "success" | "warning" | "skipped" | "failed";
 
 const RECENT_RUN_TONE_COPY: Readonly<Record<RecentRunTone, { label: string; className: string }>> = {
@@ -1018,6 +1029,8 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                   const errorStreak = countConsecutiveStatus(row.cron.recentRuns ?? [], "error");
                   const skippedStreak = countConsecutiveStatus(row.cron.recentRuns ?? [], "skipped_locked");
                   const artifacts = row.cron.staleArtifacts?.length ?? 0;
+                  const skippedReason = readString(lastRun?.metadata?.skippedReason);
+                  const prerequisiteEvidence = formatPrerequisiteEvidence(skippedReason);
                   return (
                     <TableRow
                       key={row.key}
@@ -1099,10 +1112,12 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                         {skippedStreak > 0 ? <div>lease skips {skippedStreak}</div> : null}
                         {artifacts > 0 ? <div>stale artifacts {artifacts}</div> : null}
                         {row.cron.latestAttempt ? <div>attempt #{row.cron.latestAttempt.attemptNo}</div> : null}
+                        {prerequisiteEvidence ? <div>{prerequisiteEvidence}</div> : null}
                         {row.runningState === "idle" &&
                         errorStreak === 0 &&
                         skippedStreak === 0 &&
                         artifacts === 0 &&
+                        !prerequisiteEvidence &&
                         !row.cron.latestAttempt ? (
                           <div>No extra evidence</div>
                         ) : null}

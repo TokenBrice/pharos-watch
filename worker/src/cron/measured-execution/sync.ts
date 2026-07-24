@@ -49,6 +49,10 @@ import {
 
 const MAX_QUOTE_CALLS = 6_400;
 const MAX_RPC_REQUESTS = 800;
+const RPC_ADMISSION_HEADROOM = 64;
+const MAX_ADMISSION_RPC_REQUESTS = MAX_RPC_REQUESTS - RPC_ADMISSION_HEADROOM;
+const CONSERVATIVE_MULTICALL_BATCH_SIZE = 8;
+const MAX_ADMISSION_ROTATION_CYCLES = 2;
 const MAX_RUNTIME_MS = 8 * 60 * 1_000;
 const REFINEMENT_ROUNDS = 3;
 const MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:quote-admission";
@@ -109,12 +113,68 @@ function deploymentForTarget(target: DexMeasuredExecutionTarget): TargetDeployme
   return deployment ? { kind: "quoter-v2", config: deployment } : null;
 }
 
+function countAdmissionBatches<T>(
+  values: readonly T[],
+  groupKey: (value: T) => string,
+): number {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    const key = groupKey(value);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.values()].reduce(
+    (sum, count) => sum + Math.ceil(count / CONSERVATIVE_MULTICALL_BATCH_SIZE),
+    0,
+  );
+}
+
+export function estimateAdmissionCohortRpcRequests(
+  targets: readonly DexMeasuredExecutionTarget[],
+  refinementRounds = REFINEMENT_ROUNDS,
+): number {
+  const executable = targets.flatMap((target) => {
+    const deployment = deploymentForTarget(target);
+    return deployment ? [{ target, deployment }] : [];
+  });
+  const quoterRows = executable.filter((row) => row.deployment.kind === "quoter-v2");
+  const quoteGroupKey = (row: typeof executable[number]) =>
+    `${row.target.chain}:${row.deployment.kind}`;
+  let estimatedRequests = countAdmissionBatches(
+    quoterRows,
+    (row) => {
+      const deployment = row.deployment;
+      return deployment.kind === "quoter-v2"
+        ? `${row.target.chain}:${deployment.config.adapterProfileId}:${deployment.config.factoryAddress}`
+        : `${row.target.chain}:unsupported`;
+    },
+  );
+
+  const probeNotionals = [...new Set(
+    executable.flatMap((row) => getDexMeasuredExecutionProbeNotionals(row.target.retainedTvlUsd)),
+  )];
+  for (const notional of probeNotionals) {
+    estimatedRequests += countAdmissionBatches(
+      executable.filter((row) =>
+        getDexMeasuredExecutionProbeNotionals(row.target.retainedTvlUsd).includes(notional),
+      ),
+      quoteGroupKey,
+    );
+  }
+  estimatedRequests += refinementRounds * countAdmissionBatches(executable, quoteGroupKey);
+  // Quoter inner reverts receive serialized confirmation; reserve one per target.
+  estimatedRequests += quoterRows.length;
+  return estimatedRequests;
+}
+
 export function admitTargetsWithinBudget(
   targets: readonly DexMeasuredExecutionTarget[],
-  options: { cursor?: string | null; maxQuoteCalls?: number; refinementRounds?: number } = {},
+  options: { cursor?: string | null; maxEstimatedRpcRequests?: number; refinementRounds?: number } = {},
 ): {
   admitted: Set<string>;
   deferred: Set<string>;
+  oversized: Set<string>;
+  oversizedCoinIds: string[];
+  estimatedRpcRequests: number;
   nextCursor: string | null;
 } {
   const byCoin = new Map<string, DexMeasuredExecutionTarget[]>();
@@ -133,35 +193,85 @@ export function admitTargetsWithinBudget(
   }).items;
   const admitted = new Set<string>();
   const deferred = new Set<string>();
-  let estimatedCalls = 0;
+  const oversized = new Set<string>();
+  const oversizedCoinIds: string[] = [];
+  const maxEstimatedRpcRequests = options.maxEstimatedRpcRequests ?? MAX_ADMISSION_RPC_REQUESTS;
+  let estimatedRpcRequests = 0;
+  const admittedTargets: DexMeasuredExecutionTarget[] = [];
   let nextCursor = options.cursor ?? null;
-  let overflowed = false;
+  let cursorFrozen = false;
   for (const [stablecoinId, coinTargets] of rotated) {
-    const coinCalls = coinTargets.reduce(
-      (sum, target) =>
-        sum +
-        getDexMeasuredExecutionProbeNotionals(target.retainedTvlUsd).length +
-        (options.refinementRounds ?? REFINEMENT_ROUNDS),
-      0,
+    const refinementRounds = options.refinementRounds ?? REFINEMENT_ROUNDS;
+    const coinEstimatedRpcRequests = estimateAdmissionCohortRpcRequests(
+      coinTargets,
+      refinementRounds,
     );
-    if (overflowed || estimatedCalls + coinCalls > (options.maxQuoteCalls ?? MAX_QUOTE_CALLS)) {
-      if (!overflowed && admitted.size === 0) nextCursor = stablecoinId;
-      overflowed = true;
+    if (coinEstimatedRpcRequests > maxEstimatedRpcRequests) {
+      oversizedCoinIds.push(stablecoinId);
+      for (const target of coinTargets) {
+        deferred.add(target.targetId);
+        oversized.add(target.targetId);
+      }
+      continue;
+    }
+    const candidateEstimatedRpcRequests = estimateAdmissionCohortRpcRequests(
+      [...admittedTargets, ...coinTargets],
+      refinementRounds,
+    );
+    if (candidateEstimatedRpcRequests > maxEstimatedRpcRequests) {
+      cursorFrozen = true;
       for (const target of coinTargets) deferred.add(target.targetId);
       continue;
     }
-    estimatedCalls += coinCalls;
+    estimatedRpcRequests = candidateEstimatedRpcRequests;
+    admittedTargets.push(...coinTargets);
     for (const target of coinTargets) admitted.add(target.targetId);
-    nextCursor = stablecoinId;
+    if (!cursorFrozen) nextCursor = stablecoinId;
   }
-  return { admitted, deferred, nextCursor };
+  return { admitted, deferred, oversized, oversizedCoinIds, estimatedRpcRequests, nextCursor };
+}
+
+export function estimateAdmissionRotationCycles(
+  targets: readonly DexMeasuredExecutionTarget[],
+  options: { cursor?: string | null; maxEstimatedRpcRequests?: number; refinementRounds?: number } = {},
+): number | null {
+  if (targets.length === 0) return 0;
+  const uncovered = new Set(targets.map((target) => target.targetId));
+  const seenCursors = new Set<string>();
+  let cursor = options.cursor ?? null;
+  const maximumCycles = new Set(targets.map((target) => target.stablecoinId)).size + 1;
+
+  for (let cycle = 1; cycle <= maximumCycles; cycle++) {
+    const cursorKey = cursor ?? "<start>";
+    if (seenCursors.has(cursorKey)) return null;
+    seenCursors.add(cursorKey);
+    const admission = admitTargetsWithinBudget(targets, {
+      ...options,
+      cursor,
+    });
+    for (const targetId of admission.oversized) uncovered.delete(targetId);
+    for (const targetId of admission.admitted) uncovered.delete(targetId);
+    if (uncovered.size === 0) return cycle;
+    cursor = admission.nextCursor;
+  }
+  return null;
 }
 
 export function resolveMeasuredExecutionCronStatus(input: {
-  failedCount: number;
+  attemptedFailureCount: number;
+  deferredCount: number;
+  admissionRotationCycles: number | null;
   cursorWriteStatus: "not-needed" | "written" | "missing-table" | "write-failed";
 }): "ok" | "degraded" {
-  return input.failedCount > 0 || input.cursorWriteStatus === "write-failed" ? "degraded" : "ok";
+  return (
+    input.attemptedFailureCount > 0 ||
+    input.admissionRotationCycles === null ||
+    input.admissionRotationCycles > MAX_ADMISSION_ROTATION_CYCLES ||
+    input.cursorWriteStatus === "write-failed" ||
+    (input.deferredCount > 0 && input.cursorWriteStatus !== "written")
+  )
+    ? "degraded"
+    : "ok";
 }
 
 export function hasCompleteDexMeasuredQuoteProgress(input: {
@@ -232,9 +342,20 @@ export async function syncDexMeasuredExecution(
     "sync-cl-exit-depth",
   );
   const admissionCursor = admissionState.cursor?.trim() || null;
-  const { admitted, deferred, nextCursor } = admitTargetsWithinBudget(targetGeneration.targets, {
+  const {
+    admitted,
+    deferred,
+    oversized,
+    oversizedCoinIds,
+    estimatedRpcRequests,
+    nextCursor,
+  } = admitTargetsWithinBudget(targetGeneration.targets, {
     cursor: admissionCursor,
   });
+  const admissionRotationCycles = estimateAdmissionRotationCycles(targetGeneration.targets, {
+    cursor: admissionCursor,
+  });
+  const budgetDeferredCount = deferred.size - oversized.size;
   const states = targetGeneration.targets.map<TargetQuoteState>((target) => ({
     target,
     deployment: deploymentForTarget(target),
@@ -244,7 +365,11 @@ export async function syncDexMeasuredExecution(
     curveRuntimeEvidence: null,
     poolBindingProof: null,
     points: [],
-    failedReason: deferred.has(target.targetId) ? "budget-deferred" : null,
+    failedReason: oversized.has(target.targetId)
+      ? "admission-coin-group-oversized"
+      : deferred.has(target.targetId)
+        ? "budget-deferred"
+        : null,
     stopped: false,
     bracket: null,
   }));
@@ -452,7 +577,9 @@ export async function syncDexMeasuredExecution(
             signal,
             rpcBudget,
           });
-          outcomes.forEach((outcome, index) => applyQuoteOutcome(adapterRequests[index]!.state, outcome));
+          outcomes.forEach((outcome, index) =>
+            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
+          );
         } else if (kind === "fluid-resolver") {
           const outcomes = await quoteFluidResolverRequests({
             requests: adapterRequests.map(({ state, inputUsd }) => ({
@@ -466,7 +593,9 @@ export async function syncDexMeasuredExecution(
             rpcBudget,
             deploymentVerified: true,
           });
-          outcomes.forEach((outcome, index) => applyQuoteOutcome(adapterRequests[index]!.state, outcome));
+          outcomes.forEach((outcome, index) =>
+            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
+          );
         } else {
           const outcomes = await quoteCurveCryptoSwapRequests({
             requests: adapterRequests.map(({ state, inputUsd }) => ({
@@ -480,7 +609,9 @@ export async function syncDexMeasuredExecution(
             signal,
             rpcBudget,
           });
-          outcomes.forEach((outcome, index) => applyQuoteOutcome(adapterRequests[index]!.state, outcome));
+          outcomes.forEach((outcome, index) =>
+            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
+          );
         }
         if (rpcBudget.isChainCircuitOpen(adapterRequests[0]!.state.target.chain)) {
           for (const { state } of adapterRequests) state.failedReason = "chain-circuit-open";
@@ -613,7 +744,7 @@ export async function syncDexMeasuredExecution(
     signal,
   });
   let cursorWriteStatus: "not-needed" | "written" | "missing-table" | "write-failed" = "not-needed";
-  if (deferred.size > 0 && nextCursor) {
+  if (budgetDeferredCount > 0 && nextCursor) {
     const cursorWrite = await writeDexSourcePaginationState({
       db,
       sourceKey: MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
@@ -632,19 +763,36 @@ export async function syncDexMeasuredExecution(
         : cursorWrite.errorClass;
   }
   await pruneDexMeasuredExecutionGenerations(db, publishedAt, signal);
+  const attemptedFailureCount = outcomes.filter(
+    (outcome) => outcome.status === "failed" && outcome.failureReason !== "budget-deferred",
+  ).length;
+  const quoteFailureCount = Math.max(0, attemptedFailureCount - oversized.size);
   const metadata = {
     targetGenerationId: targetGeneration.generationId,
     quoteGenerationId: publication.generationId,
     targetCount: targetGeneration.targets.length,
     measuredCount: publication.measuredCount,
     failedCount: publication.failedCount,
+    attemptedFailureCount,
     deferredCount: deferred.size,
+    budgetDeferredCount,
+    admissionEstimatedRpcRequests: estimatedRpcRequests,
+    admissionRpcRequestLimit: MAX_ADMISSION_RPC_REQUESTS,
+    admissionRotationCycles,
     admissionCursor,
     nextAdmissionCursor: nextCursor,
     cursorWriteStatus,
+    oversizedCoinIds,
     degradedReasons: [
-      ...(publication.failedCount > 0 ? ["quote-failures"] : []),
+      ...(quoteFailureCount > 0 ? ["quote-failures"] : []),
+      ...(oversizedCoinIds.length > 0 ? ["admission-coin-group-oversized"] : []),
       ...(cursorWriteStatus === "write-failed" ? ["admission-cursor-write-failed"] : []),
+      ...(budgetDeferredCount > 0 && cursorWriteStatus !== "written"
+        ? ["admission-cursor-not-persisted"]
+        : []),
+      ...(admissionRotationCycles === null || admissionRotationCycles > MAX_ADMISSION_ROTATION_CYCLES
+        ? ["admission-rotation-exceeds-freshness"]
+        : []),
     ],
     quoteCallCount,
     rpcRequestCount: rpcBudget.requestsUsed,
@@ -660,7 +808,9 @@ export async function syncDexMeasuredExecution(
   };
   return {
     status: resolveMeasuredExecutionCronStatus({
-      failedCount: publication.failedCount,
+      attemptedFailureCount,
+      deferredCount: budgetDeferredCount,
+      admissionRotationCycles,
       cursorWriteStatus,
     }),
     itemCount: publication.measuredCount,

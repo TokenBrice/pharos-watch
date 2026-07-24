@@ -60,24 +60,17 @@ describe("VERITAS bounded-state invariants", () => {
       }];
       const trace = scoreV9Input(input, V9_CANDIDATE_POLICY_V1);
 
-      const nonEconomic = (
-        responsibility === "integration-missing" ||
-        responsibility === "producer-failed" ||
-        responsibility === "method-unsupported"
-      );
-      const nonEconomicWithhold = nonEconomic && (
-        (responsibility !== "integration-missing" || resolved.critical) &&
-        entry.defaultTreatment !== "diagnostic"
-      );
-
-      if (entry.defaultTreatment === "NR" || nonEconomicWithhold) {
+      const availabilityCannotBoundFact =
+        entry.boundedness === "unbounded" &&
+        responsibility !== "measured-adverse";
+      if (entry.defaultTreatment === "NR" || availabilityCannotBoundFact) {
         expect(trace.finalGrade, entry.code).toBe("NR");
         expect(trace.nrReasons, entry.code).toContainEqual(expect.objectContaining({ code: entry.code }));
         continue;
       }
 
       expect(trace.finalGrade, entry.code).not.toBe("NR");
-      if (entry.defaultTreatment === "ceiling" && !nonEconomic) {
+      if (entry.defaultTreatment === "ceiling") {
         expect(resolved.ceiling, entry.code).not.toBeNull();
         expect(trace.finalScore!, entry.code).toBeLessThanOrEqual(resolved.ceiling!.limit);
         expect(trace.caps, entry.code).toContainEqual(

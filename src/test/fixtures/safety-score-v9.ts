@@ -1,12 +1,15 @@
 import { buildReportCardsV9DependencyGraph, type ReportCardsV9Response } from "@shared/types/report-cards-v9";
-import type { SafetyScoreV9Card } from "@shared/types";
+import { scoreToGrade } from "@shared/lib/report-cards";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 
 const A64 = "a".repeat(64);
 const B64 = "b".repeat(64);
 const C64 = "c".repeat(64);
 const D64 = "d".repeat(64);
 
-export function makeV9Card(overrides: Partial<SafetyScoreV9Card> = {}): SafetyScoreV9Card {
+export function makeV9Card(
+  overrides: Partial<SafetyScoreV9CurrentCard> = {},
+): SafetyScoreV9CurrentCard {
   const pillar = (score: number) => ({
     score,
     evidenceLevel: "adequate" as const,
@@ -14,15 +17,36 @@ export function makeV9Card(overrides: Partial<SafetyScoreV9Card> = {}): SafetySc
     components: ["reviewed-component"],
     reasons: [],
   });
-  return {
+  const score = overrides.score === undefined ? 84 : overrides.score;
+  const grade = overrides.grade ?? scoreToGrade(score);
+  const qualityScore =
+    overrides.qualityScore === undefined ? 86 : overrides.qualityScore;
+  const defaultPillars =
+    qualityScore === null
+      ? {
+          backing: { ...pillar(0), score: null },
+          exit: { ...pillar(0), score: null },
+          control: { ...pillar(0), score: null },
+        }
+      : {
+          backing: pillar(Math.min(100, qualityScore + 2)),
+          exit: pillar(Math.max(0, qualityScore - 2)),
+          control: pillar(qualityScore),
+        };
+  const pillars = overrides.pillars ?? defaultPillars;
+  const weakestPillar =
+    overrides.weakestPillar !== undefined
+      ? overrides.weakestPillar
+      : qualityScore === null
+        ? null
+        : {
+            pillar: "exit" as const,
+            score: pillars.exit.score!,
+          };
+  const card = {
     id: "usdc-circle",
-    score: 84,
-    grade: "B+",
-    qualityScore: 86,
     pegMultiplier: 0.98,
     pegAdjustedScore: 84,
-    pillars: { backing: pillar(88), exit: pillar(82), control: pillar(84) },
-    weakestPillar: { pillar: "exit", score: 82 },
     caps: [],
     bindingCap: null,
     nrReasons: [],
@@ -40,6 +64,75 @@ export function makeV9Card(overrides: Partial<SafetyScoreV9Card> = {}): SafetySc
     dependencies: { serial: [], basket: [], cycleBlocked: false, reasonCodes: [] },
     stressStateDigest: null,
     ...overrides,
+    score,
+    grade,
+    qualityScore,
+    pillars,
+    weakestPillar,
+  } satisfies Omit<SafetyScoreV9CurrentCard, "scoreTrace">;
+  const hasScoreStages =
+    card.qualityScore !== null &&
+    card.pegMultiplier !== null &&
+    card.pegAdjustedScore !== null &&
+    card.score !== null &&
+    card.weakestPillar !== null;
+
+  return {
+    ...card,
+    scoreTrace: overrides.scoreTrace ?? {
+      schemaVersion: 2,
+      legacyAliases: {
+        qualityScore: "weighted-pillar-mean",
+        pegAdjustedScore: "post-deployment-pre-cap-score",
+        score: "post-cap-public-score",
+      },
+      aggregation: hasScoreStages
+        ? {
+            method: "smooth-bounded-headroom",
+            score: card.qualityScore!,
+            weightedPillarMean: card.qualityScore!,
+            weakestPillar: card.weakestPillar!.pillar,
+            weakestScore: card.weakestPillar!.score,
+            headroom: 20,
+          }
+        : null,
+      stages: {
+        weightedPillarMean: card.qualityScore,
+        aggregatedQualityScore: hasScoreStages ? card.qualityScore : null,
+        pegMultiplier: card.pegMultiplier,
+        baseAssetScore: card.pegAdjustedScore,
+        deploymentAdjustedScore: card.pegAdjustedScore,
+        deploymentAdjustmentPoints: hasScoreStages ? 0 : null,
+        preCapScore: card.pegAdjustedScore,
+        publishedScore: card.score,
+      },
+      deploymentRisk: {
+        method: "holder-slice-exposure-weighted-v2",
+        totalAdjustmentPoints: hasScoreStages ? 0 : null,
+        adjustments: [],
+        unresolvedExposures: [],
+      },
+      adverseAttribution: {
+        semantics: "causal-measured-adverse-v1",
+        items: [],
+      },
+      boundedUncertaintyAttribution: {
+        semantics: "causal-bounded-uncertainty-v1",
+        items: [],
+      },
+      evidenceResponsibility: {
+        semantics: "limiting-fact-owner-v1",
+        totalFactCount: 0,
+        summaries: [
+          { responsibility: "integration-missing", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "issuer-undisclosed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "measured-adverse", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "method-unsupported", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "producer-failed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        ],
+      },
+      wrapperParentLimit: null,
+    },
   };
 }
 
@@ -59,7 +152,7 @@ export function makeReportCardsV9Response(
   };
   return {
     model: "v9",
-    schemaVersion: 1,
+    schemaVersion: 2,
     lifecycle: "shadow",
     safetyScoreIdentity,
     methodology: {

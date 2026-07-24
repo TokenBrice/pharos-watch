@@ -138,7 +138,7 @@ describe("alert safety source cache", () => {
       updatedAt: 1_700_000_000,
       asOfSec: 1_699_999_900,
       cards: [makeWorkerV9Card({
-        grade: "A",
+        grade: "A+",
         score: 91,
         pillars: {
           backing: {
@@ -190,7 +190,7 @@ describe("alert safety source cache", () => {
         safetyScoreIdentity: response.safetyScoreIdentity,
         snapshot: {
           "usdc-circle": {
-            grade: "A",
+            grade: "A+",
             score: 91,
             methodologyVersion: "candidate-v9.0",
             v9Explain: {

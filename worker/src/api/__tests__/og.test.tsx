@@ -171,7 +171,7 @@ describe("stablecoin OG card data", () => {
           makeWorkerV9Card({
             id: "usdt-tether",
             score: 88,
-            grade: "B+",
+            grade: "A+",
           }),
         ],
       });
@@ -292,7 +292,7 @@ describe("stablecoin OG card data", () => {
         data: StablecoinCardData;
       }>;
       expect(element.props.data).toMatchObject({
-        grade: "B+",
+        grade: "A+",
         safetyModel: "v9",
       });
       expect(renderToStaticMarkup(element)).toContain("V9 GRADE");
@@ -346,7 +346,7 @@ describe("stablecoin OG card data", () => {
       expect(v8Response?.headers.get("X-Safety-Score-Model")).toBe("v8");
       expect(firstElement.props.data).toMatchObject({ grade: "A", safetyModel: "v8" });
       expect(v9Response?.headers.get("X-Safety-Score-Model")).toBe("v9");
-      expect(secondElement.props.data).toMatchObject({ grade: "B+", safetyModel: "v9" });
+      expect(secondElement.props.data).toMatchObject({ grade: "A+", safetyModel: "v9" });
     });
 
     it("renders a cacheable degraded state for a different V8 evaluation build", async () => {

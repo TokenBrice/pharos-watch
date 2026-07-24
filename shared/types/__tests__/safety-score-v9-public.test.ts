@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9CurrentResponseSchema,
   SafetyScoreV9LegacyResponseSchema,
   SafetyScoreV9ResponseSchema,
@@ -90,9 +91,9 @@ function currentResponse() {
     schemaVersion: number;
     cards: Array<{ scoreTrace?: unknown }>;
   };
-  current.schemaVersion = 2;
+  current.schemaVersion = 3;
   current.cards[0]!.scoreTrace = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     legacyAliases: {
       qualityScore: "weighted-pillar-mean",
       pegAdjustedScore: "post-deployment-pre-cap-score",
@@ -126,6 +127,10 @@ function currentResponse() {
       semantics: "causal-measured-adverse-v1",
       items: [],
     },
+    boundedUncertaintyAttribution: {
+      semantics: "causal-bounded-uncertainty-v1",
+      items: [],
+    },
     evidenceResponsibility: {
       semantics: "limiting-fact-owner-v1",
       totalFactCount: 0,
@@ -152,12 +157,12 @@ describe("SafetyScoreV9ResponseSchema", () => {
 
   it("requires the self-describing score trace on every current candidate card", () => {
     const parsed = SafetyScoreV9CurrentResponseSchema.parse(currentResponse());
-    expect(parsed.schemaVersion).toBe(2);
+    expect(parsed.schemaVersion).toBe(3);
     expect(parsed.cards[0]?.scoreTrace.aggregation?.method).toBe("smooth-bounded-headroom");
     expect(parsed.cards[0]?.scoreTrace.legacyAliases.pegAdjustedScore).toBe(
       "post-deployment-pre-cap-score",
     );
-    expect(SafetyScoreV9ResponseSchema.parse(parsed).schemaVersion).toBe(2);
+    expect(SafetyScoreV9ResponseSchema.parse(parsed).schemaVersion).toBe(3);
 
     const missingTrace = currentResponse();
     delete missingTrace.cards[0]!.scoreTrace;
@@ -170,6 +175,241 @@ describe("SafetyScoreV9ResponseSchema", () => {
     scoreTrace.stages.preCapScore = 91;
     expect(() => SafetyScoreV9CurrentResponseSchema.parse(inconsistentTrace)).toThrow(
       /explicit preCapScore must match/,
+    );
+  });
+
+  it("reads pre-attribution schema-v2 artifacts with an empty bounded trace", () => {
+    const previous = currentResponse();
+    previous.schemaVersion = 2;
+    const trace = previous.cards[0]!.scoreTrace as Record<string, unknown>;
+    trace.schemaVersion = 1;
+    delete trace.boundedUncertaintyAttribution;
+
+    const parsed = SafetyScoreV9ResponseSchema.parse(previous);
+    expect(parsed.schemaVersion).toBe(2);
+    expect("scoreTrace" in parsed.cards[0]!).toBe(true);
+    expect(
+      "scoreTrace" in parsed.cards[0]! &&
+      parsed.cards[0]!.scoreTrace.schemaVersion,
+    ).toBe(1);
+  });
+
+  it("cannot downgrade a response-v3 candidate by relabeling only its traces", () => {
+    const downgraded = currentResponse();
+    const trace = downgraded.cards[0]!.scoreTrace as Record<string, unknown>;
+    trace.schemaVersion = 1;
+    delete trace.boundedUncertaintyAttribution;
+
+    expect(() => SafetyScoreV9ResponseSchema.parse(downgraded)).toThrow();
+  });
+
+  it("requires explicit bounded causality for D and measured causality for F", () => {
+    const bounded = structuredClone(
+      SafetyScoreV9CurrentResponseSchema.parse(currentResponse()),
+    );
+    bounded.cards[0]!.score = 45;
+    bounded.cards[0]!.grade = "D";
+    bounded.cards[0]!.qualityScore = 45;
+    bounded.cards[0]!.pegAdjustedScore = 45;
+    bounded.cards[0]!.pillars = {
+      backing: {
+        score: 45,
+        evidenceLevel: "limited",
+        freshness: "current",
+        components: [],
+        reasons: [{
+          code: "bounded-mechanism-review",
+          path: "backing:mechanism",
+          message: "A bounded backing review remains unresolved.",
+        }],
+      },
+      exit: { ...pillar(45), components: [], reasons: [] },
+      control: { ...pillar(45), components: [], reasons: [] },
+    };
+    bounded.cards[0]!.weakestPillar = { pillar: "backing", score: 45 };
+    bounded.cards[0]!.caps = bounded.cards[0]!.caps.map((cap) => ({ ...cap, binding: false }));
+    bounded.cards[0]!.bindingCap = null;
+    bounded.cards[0]!.reasonCodes = ["bounded-mechanism-review"];
+    bounded.cards[0]!.scoreTrace.aggregation = {
+      method: "smooth-bounded-headroom",
+      score: 45,
+      weightedPillarMean: 45,
+      weakestPillar: "backing",
+      weakestScore: 45,
+      headroom: 45,
+    };
+    Object.assign(bounded.cards[0]!.scoreTrace.stages, {
+      weightedPillarMean: 45,
+      aggregatedQualityScore: 45,
+      baseAssetScore: 45,
+      deploymentAdjustedScore: 45,
+      preCapScore: 45,
+      publishedScore: 45,
+    });
+    bounded.cards[0]!.scoreTrace.boundedUncertaintyAttribution.items = [{
+      source: "reason",
+      code: "bounded-mechanism-review",
+      path: "backing:mechanism",
+      message: "A bounded backing review remains unresolved.",
+      responsibility: "integration-missing",
+    }];
+    bounded.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = 1;
+    bounded.cards[0]!.scoreTrace.evidenceResponsibility.summaries[0] = {
+      responsibility: "integration-missing",
+      factCount: 1,
+      criticalFactCount: 0,
+      reasonCodes: ["bounded-mechanism-review"],
+    };
+    expect(SafetyScoreV9CurrentResponseSchema.parse(bounded).cards[0]?.grade).toBe("D");
+
+    const unownedBoundedTrace = structuredClone(bounded);
+    unownedBoundedTrace.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = 0;
+    unownedBoundedTrace.cards[0]!.scoreTrace.evidenceResponsibility.summaries[0] = {
+      responsibility: "integration-missing",
+      factCount: 0,
+      criticalFactCount: 0,
+      reasonCodes: [],
+    };
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(unownedBoundedTrace)).toThrow(
+      /bounded-uncertainty attribution must reconcile/,
+    );
+
+    const unboundedCode = structuredClone(bounded);
+    unboundedCode.cards[0]!.scoreTrace.boundedUncertaintyAttribution.items[0]!.code =
+      "missing-access-review";
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(unboundedCode)).toThrow(
+      /policy-bounded reason code/,
+    );
+
+    const forgedParent = structuredClone(bounded);
+    forgedParent.cards[0]!.scoreTrace.boundedUncertaintyAttribution.items = [{
+      source: "parent-score",
+      code: "bounded-mechanism-review",
+      path: "parent:ghost:backing:mechanism",
+      message: "Required parent ghost: A bounded backing review remains unresolved.",
+      responsibility: "integration-missing",
+    }];
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(forgedParent)).toThrow(
+      /binding low minimum serial parent/,
+    );
+
+    const forgedPeg = structuredClone(bounded);
+    forgedPeg.cards[0]!.scoreTrace.adverseAttribution.items = [{
+      source: "peg-performance",
+      path: "peg:historical-performance",
+      message: "Measured peg multiplier is 0.1.",
+      responsibility: "measured-adverse",
+    }];
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(forgedPeg)).toThrow(
+      /match the measured danger multiplier/,
+    );
+
+    const impossibleTrackRecord = structuredClone(bounded);
+    impossibleTrackRecord.cards[0]!.scoreTrace.adverseAttribution.items = [{
+      source: "track-record",
+      path: "track-record:<6m",
+      message: "Track record is short.",
+      responsibility: "measured-adverse",
+    }];
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(impossibleTrackRecord)).toThrow(
+      /cannot authorize measured-adverse attribution/,
+    );
+
+    const contradictoryReason = structuredClone(bounded);
+    contradictoryReason.cards[0]!.scoreTrace.adverseAttribution.items = [{
+      source: "reason",
+      path: "backing:mechanism",
+      message: "A bounded backing review remains unresolved.",
+      responsibility: "measured-adverse",
+    }];
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(contradictoryReason)).toThrow(
+      /cannot also be declared as bounded uncertainty/,
+    );
+
+    const unownedMeasuredReason = structuredClone(contradictoryReason);
+    unownedMeasuredReason.cards[0]!.scoreTrace.boundedUncertaintyAttribution.items = [];
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(unownedMeasuredReason)).toThrow(
+      /must reconcile to a measured-adverse evidence reason code/,
+    );
+
+    const reclassifiedBoundedReason = structuredClone(unownedMeasuredReason);
+    reclassifiedBoundedReason.cards[0]!.scoreTrace.evidenceResponsibility.summaries[0] = {
+      responsibility: "integration-missing",
+      factCount: 0,
+      criticalFactCount: 0,
+      reasonCodes: [],
+    };
+    reclassifiedBoundedReason.cards[0]!.scoreTrace.evidenceResponsibility.summaries[2] = {
+      responsibility: "measured-adverse",
+      factCount: 1,
+      criticalFactCount: 0,
+      reasonCodes: ["bounded-mechanism-review"],
+    };
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(reclassifiedBoundedReason)).toThrow(
+      /requires a non-bounded policy reason code/,
+    );
+
+    const higherParent = structuredClone(bounded.cards[0]!);
+    higherParent.score = 40;
+    higherParent.grade = "D";
+    higherParent.caps = [{
+      kind: "parent",
+      limit: 40,
+      source: "parent",
+      reason: "A child cannot rate above its required parent.",
+      binding: true,
+    }];
+    higherParent.bindingCap = higherParent.caps[0]!;
+    higherParent.dependencies.serial = [
+      { upstreamAssetId: "higher", score: 45, blocked: false },
+      { upstreamAssetId: "lower", score: 40, blocked: false },
+    ];
+    higherParent.scoreTrace.stages.publishedScore = 40;
+    higherParent.scoreTrace.adverseAttribution.items = [{
+      source: "parent-score",
+      path: "parent:higher:structural:centralized-mint:high",
+      message: "Required parent higher: Economically effective minting is unbounded.",
+      responsibility: "measured-adverse",
+    }];
+    higherParent.scoreTrace.boundedUncertaintyAttribution.items = [];
+    expect(() => SafetyScoreV9CurrentCardSchema.parse(higherParent)).toThrow(
+      /binding low minimum serial parent/,
+    );
+
+    const tiedParent = structuredClone(higherParent);
+    tiedParent.dependencies.serial[0]!.score = 40;
+    expect(SafetyScoreV9CurrentCardSchema.parse(tiedParent).grade).toBe("D");
+
+    const cycleBlockedParent = structuredClone(tiedParent);
+    cycleBlockedParent.dependencies.cycleBlocked = true;
+    expect(() => SafetyScoreV9CurrentCardSchema.parse(cycleBlockedParent)).toThrow(
+      /binding parent cap must reconcile/,
+    );
+
+    const unattributedD = structuredClone(bounded);
+    unattributedD.cards[0]!.scoreTrace.boundedUncertaintyAttribution.items = [];
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(unattributedD)).toThrow(
+      /D card requires causal measured-adverse or bounded-uncertainty attribution/,
+    );
+
+    const unattributedDanger = structuredClone(bounded);
+    unattributedDanger.cards[0]!.score = 35;
+    unattributedDanger.cards[0]!.grade = "F";
+    unattributedDanger.cards[0]!.scoreTrace.stages.publishedScore = 35;
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(unattributedDanger)).toThrow(
+      /F card requires causal measured-adverse attribution/,
+    );
+
+    const forgedGrade = structuredClone(bounded);
+    forgedGrade.cards[0]!.grade = "C-";
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(forgedGrade)).toThrow(
+      /numeric score and grade band must agree/,
+    );
+
+    const ratedCritical = structuredClone(bounded);
+    ratedCritical.cards[0]!.scoreTrace.evidenceResponsibility.summaries[0]!.criticalFactCount = 1;
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(ratedCritical)).toThrow(
+      /cannot retain critical unresolved facts/,
     );
   });
 

@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
-import type { V9AdverseAttribution } from "../safety-score-v9/formula";
+import type {
+  V9AdverseAttribution,
+  V9BoundedUncertaintyAttribution,
+} from "../safety-score-v9/formula";
 import {
+  propagateV9SerialParentBoundedUncertaintyAttribution,
   propagateV9SerialParentAdverseAttribution,
+  resolveV9SerialParentBoundedUncertaintyAttribution,
   resolveV9SerialParentAdverseAttribution,
   scoreV9EvaluatedAsset,
   type V9PillarEvaluation,
@@ -43,6 +48,15 @@ const ROOT_ADVERSE: V9AdverseAttribution = {
   path: "structural:active-control-incident:critical",
   message: "A measured control incident drives the root score.",
   responsibility: "measured-adverse",
+};
+
+const ROOT_BOUNDED_UNCERTAINTY: V9BoundedUncertaintyAttribution = {
+  source: "reason",
+  code: "bounded-mechanism-review",
+  path: "backing:mechanism:custody-continuity",
+  message: "A bounded backing component remains unresolved.",
+  responsibility: "integration-missing",
+  boundedness: "exposure-bounded",
 };
 
 describe("scoreV9EvaluatedAsset", () => {
@@ -177,6 +191,50 @@ describe("scoreV9EvaluatedAsset", () => {
     ]);
   });
 
+  it("keeps a child rateable when a bounded-uncertainty D parent cap binds", () => {
+    const propagatedBoundedUncertaintyAttribution =
+      resolveV9SerialParentBoundedUncertaintyAttribution(
+        45,
+        [{
+          upstreamAssetId: "root",
+          score: 45,
+          blocked: false,
+          boundedUncertaintyAttribution: [ROOT_BOUNDED_UNCERTAINTY],
+        }],
+      );
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        assetId: "child",
+        parent: {
+          required: true,
+          score: 45,
+          propagatedReasons: [],
+          propagatedBoundedUncertaintyAttribution,
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalScore).toBe(45);
+    expect(trace.finalGrade).toBe("D");
+    expect(trace.bindingCap?.source).toBe("parent");
+    expect(trace.adverseAttribution).toEqual([]);
+    expect(trace.boundedUncertaintyAttribution).toEqual([
+      {
+        ...ROOT_BOUNDED_UNCERTAINTY,
+        source: "parent-score",
+        path: `parent:root:${ROOT_BOUNDED_UNCERTAINTY.path}`,
+        message: `Required parent root: ${ROOT_BOUNDED_UNCERTAINTY.message}`,
+      },
+    ]);
+    expect(
+      propagateV9SerialParentBoundedUncertaintyAttribution(
+        "root",
+        propagatedBoundedUncertaintyAttribution,
+      ),
+    ).toEqual(propagatedBoundedUncertaintyAttribution);
+  });
+
   it("propagates nested wrapper attribution once per serial edge", () => {
     const rootAttribution = propagateV9SerialParentAdverseAttribution(
       "root",
@@ -292,6 +350,7 @@ describe("scoreV9EvaluatedAsset", () => {
     expect(unattributed.bindingCap?.source).toBe("parent");
     expect(unattributed.finalGrade).toBe("NR");
     expect(unattributed.adverseAttribution).toEqual([]);
+    expect(unattributed.boundedUncertaintyAttribution).toEqual([]);
     expect(nonbinding).toEqual([]);
     expect(childLowerThanParent.finalGrade).toBe("D");
     expect(childLowerThanParent.bindingCap).toBeNull();

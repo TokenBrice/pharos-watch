@@ -271,6 +271,36 @@ describe("cron workbench model", () => {
       unavailableLabel: "N/A",
       note: "Did not start because the parent slot was abandoned.",
     });
+
+    const prerequisiteIncompleteRun = {
+      startedAt: 3_600,
+      durationMs: 0,
+      status: "degraded" as const,
+      metadata: {
+        skippedReason: "upstream-incomplete:sync-live-reserves",
+        childDisposition: "not_started",
+      },
+    };
+    expect(formatCronRunStatus(prerequisiteIncompleteRun.status, prerequisiteIncompleteRun.metadata)).toBe(
+      "Not started: upstream incomplete",
+    );
+    expect(formatCronRunTiming(prerequisiteIncompleteRun)).toEqual({
+      duration: null,
+      unavailableLabel: "N/A",
+      note: "Did not start because the prerequisite job did not complete.",
+    });
+
+    for (const [skippedReason, expectedLabel] of [
+      ["upstream-failure:snapshot-safety-grade-history", "Not started: prerequisite failed"],
+      ["upstream-blocked:snapshot-supply", "Not started: prerequisite blocked"],
+    ] as const) {
+      const prerequisiteRun = {
+        ...prerequisiteIncompleteRun,
+        metadata: { skippedReason, childDisposition: "not_started" },
+      };
+      expect(formatCronRunStatus(prerequisiteRun.status, prerequisiteRun.metadata)).toBe(expectedLabel);
+      expect(formatCronRunTiming(prerequisiteRun).unavailableLabel).toBe("N/A");
+    }
   });
 
   it("retains lease, orphan, and latest-attempt evidence on selected model rows", () => {

@@ -20,6 +20,19 @@ function parseMetadata(value: string | undefined): unknown {
   return tryParseJson(value, { onFailure: () => undefined }) ?? value;
 }
 
+function hasNonDurableShadowDeferral(metadata: unknown): boolean {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false;
+  const row = metadata as Record<string, unknown>;
+  const cursorWriteStatus = row.cursorWriteStatus;
+  const hasDeferredWork = [row.deferredCount, row.rateLimitDeferredCount].some(
+    (value) => typeof value === "number" && value > 0,
+  );
+  return (
+    cursorWriteStatus === "write-failed" ||
+    (hasDeferredWork && cursorWriteStatus !== "written")
+  );
+}
+
 async function settleMeasuredExecutionLane(name: string, run: Promise<CronResult>): Promise<CronResult> {
   try {
     return await run;
@@ -33,14 +46,23 @@ async function settleMeasuredExecutionLane(name: string, run: Promise<CronResult
   }
 }
 
-function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResult, tron: CronResult): CronResult {
+export function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResult, tron: CronResult): CronResult {
   const evmStatus = evm.status ?? "ok";
   const solanaStatus = solana.status ?? "ok";
   const tronStatus = tron.status ?? "ok";
+  const evmMetadata = parseMetadata(evm.metadata);
+  const solanaMetadata = parseMetadata(solana.metadata);
+  const tronMetadata = parseMetadata(tron.metadata);
+  const shadowCursorFailure =
+    hasNonDurableShadowDeferral(solanaMetadata) ||
+    hasNonDurableShadowDeferral(tronMetadata);
+  // Native lanes are activation-gated shadows: retain their degraded diagnostics
+  // without changing active EVM health. Invocation errors remain terminal, and
+  // non-durable deferrals remain degraded because they can starve the shadow tail.
   const status =
     evmStatus === "error" || solanaStatus === "error" || tronStatus === "error"
       ? "error"
-      : evmStatus === "degraded" || solanaStatus === "degraded" || tronStatus === "degraded"
+      : evmStatus === "degraded" || shadowCursorFailure
         ? "degraded"
         : evmStatus === "skipped_neutral" && solanaStatus === "skipped_neutral" && tronStatus === "skipped_neutral"
           ? "skipped_neutral"
@@ -53,9 +75,10 @@ function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResult, tron
     status,
     itemCount: (evm.itemCount ?? 0) + (solana.itemCount ?? 0) + (tron.itemCount ?? 0),
     metadata: JSON.stringify({
-      evm: parseMetadata(evm.metadata),
-      solana: parseMetadata(solana.metadata),
-      tron: parseMetadata(tron.metadata),
+      laneStatuses: { evm: evmStatus, solana: solanaStatus, tron: tronStatus },
+      evm: evmMetadata,
+      solana: solanaMetadata,
+      tron: tronMetadata,
     }),
     productivity: {
       productive,

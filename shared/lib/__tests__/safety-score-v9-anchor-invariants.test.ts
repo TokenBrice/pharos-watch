@@ -149,7 +149,7 @@ describe("anchor-coherence invariants — active", () => {
       { backing: 70, exit: 65, control: 50 },
       { backing: 45, exit: 40, control: 35 },
     ]) {
-      const base = score({ pillars }).finalScore!;
+      const baseTrace = score({ pillars });
       const variants = [
         { unresolved: [boundedCeilingFact("missing-reserve-composition")] },
         { structuralSignals: [signal("critical-dependency", "high")] },
@@ -161,10 +161,22 @@ describe("anchor-coherence invariants — active", () => {
       ];
       for (const variant of variants) {
         const candidate = score({ pillars, ...variant });
+        const addsOnlyUncertainty = !("structuralSignals" in variant);
+        if (baseTrace.finalScore === null && addsOnlyUncertainty) {
+          expect(candidate.finalScore, JSON.stringify(variant)).toBeNull();
+          expect(candidate.finalGrade, JSON.stringify(variant)).toBe("NR");
+          continue;
+        }
         if (candidate.finalScore === null) {
           expect(candidate.finalGrade, JSON.stringify(variant)).toBe("NR");
         } else {
-          expect(candidate.finalScore, JSON.stringify(variant)).toBeLessThanOrEqual(base);
+          const baselineComparable =
+            baseTrace.finalScore ??
+            (baseTrace.preCapScore === null ? null : Math.round(baseTrace.preCapScore));
+          expect(baselineComparable).not.toBeNull();
+          expect(candidate.finalScore, JSON.stringify(variant)).toBeLessThanOrEqual(
+            baselineComparable!,
+          );
         }
       }
     }

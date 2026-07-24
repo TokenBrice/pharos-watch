@@ -15,6 +15,7 @@ import {
   normalizeV9UnresolvedFacts,
   resolveV9ReasonPolicy,
 } from "../safety-score-v9/policy";
+import { V9_BOUNDED_ATTRIBUTION_REASON_CODES } from "../../types/safety-score-v9-public";
 
 function candidateClone(): V9MethodologyPolicy {
   return structuredClone(V9_CANDIDATE_POLICY_V1.policy);
@@ -28,7 +29,7 @@ describe("Safety Score v9 methodology policy", () => {
     // ROTATION-1 (owner rulings 2026-07-23): share-band materiality 0.10/0.25, T5 credit 10,
     // undisclosedFeeRouteScoreCeiling 52, commodity-allocated reserve class.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "c65b25522159dcaaf62ac99e906496d8538551ad279f79d557f06422980fc7f0",
+      "252458185ce45da7327db498f19ed42e7cf9014454870bf9582fa5ccdb64ff51",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);
@@ -82,7 +83,6 @@ describe("Safety Score v9 methodology policy", () => {
       "historical-critical-input",
       "implementation-parent-cycle",
       "insufficient-evidence",
-      "missing-access-review",
       "missing-archetype",
       "missing-parent-score",
       "missing-pillar",
@@ -94,6 +94,20 @@ describe("Safety Score v9 methodology policy", () => {
       expect(entry.ceilingRule, entry.code).not.toBeNull();
       expect(resolveV9ReasonPolicy(V9_CANDIDATE_POLICY_V1, entry.code).ceiling?.limit, entry.code).toBeGreaterThan(0);
     }
+  });
+
+  it("keeps the public bounded-attribution code set aligned with policy", () => {
+    const policyBounded = V9_CANDIDATE_POLICY_V1.policy.reasonRegistry
+      .filter(
+        (entry) =>
+          (entry.boundedness === "exposure-bounded" ||
+            entry.boundedness === "globally-bounded") &&
+          (entry.defaultTreatment === "pillar" ||
+            entry.defaultTreatment === "ceiling"),
+      )
+      .map((entry) => entry.code)
+      .sort();
+    expect([...V9_BOUNDED_ATTRIBUTION_REASON_CODES].sort()).toEqual(policyBounded);
   });
 
   it("binds aggregate gaps to explicit local-component policy paths", () => {

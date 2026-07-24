@@ -141,7 +141,7 @@ describe("v9 research handoff contracts", () => {
     expect(trace.nrReasons).toEqual([]);
   });
 
-  it("keeps an integration-owned implementation-date gap diagnostic", () => {
+  it("applies the configured ceiling to an integration-owned implementation-date gap", () => {
     const trace = scoreV9Input(
       {
         assetId: "integration-owned-implementation-date",
@@ -165,8 +165,12 @@ describe("v9 research handoff contracts", () => {
       V9_CANDIDATE_POLICY_V1,
     );
 
-    expect(trace.finalScore).toBe(95);
-    expect(trace.caps.some((cap) => cap.kind === "reason:missing-implementation-date")).toBe(false);
+    expect(trace.finalScore).toBe(79);
+    expect(trace.bindingCap).toMatchObject({
+      source: "evidence",
+      kind: "reason:missing-implementation-date",
+      limit: 79,
+    });
     expect(trace.nrReasons).toEqual([]);
   });
 

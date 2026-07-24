@@ -24,7 +24,7 @@ describe("SafetyScoreV9PreviewClient", () => {
       makeV9Card({
         id: "usdt-tether",
         score: 72,
-        grade: "B-",
+        grade: "B",
         qualityScore: 74,
         pegAdjustedScore: 72,
       }),
@@ -40,11 +40,12 @@ describe("SafetyScoreV9PreviewClient", () => {
 
     expect(screen.getByText("USDC")).toBeTruthy();
     expect(screen.getByText("USDT")).toBeTruthy();
-    expect(screen.getByLabelText("Safety grade B+, score 84")).toBeTruthy();
+    expect(screen.getByLabelText("Safety grade A, score 84")).toBeTruthy();
     expect(screen.getByText("2 of 2 assets")).toBeTruthy();
     expect(screen.getByText("Grade distribution")).toBeTruthy();
     expect(screen.getByText("2 assets")).toBeTruthy();
-    expect(document.querySelector('[title="Grade B: 2"]')).toBeTruthy();
+    expect(document.querySelector('[title="Grade A: 1"]')).toBeTruthy();
+    expect(document.querySelector('[title="Grade B: 1"]')).toBeTruthy();
     expect(screen.getByText("Strong")).toBeTruthy();
     expect(screen.queryByText("Unknown")).toBeNull();
 
@@ -55,7 +56,8 @@ describe("SafetyScoreV9PreviewClient", () => {
     expect(screen.queryByText("USDC")).toBeNull();
     expect(screen.getByText("USDT")).toBeTruthy();
     expect(screen.getByText("1 of 2 assets")).toBeTruthy();
-    expect(document.querySelector('[title="Grade B: 2"]')).toBeTruthy();
+    expect(document.querySelector('[title="Grade A: 1"]')).toBeTruthy();
+    expect(document.querySelector('[title="Grade B: 1"]')).toBeTruthy();
   });
 
   it("shows a retryable unavailable state without implying V8 is affected", () => {

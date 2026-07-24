@@ -93,7 +93,7 @@ describe("Safety Score v9 evidence responsibility", () => {
     );
   });
 
-  it("withholds a score-bearing producer failure when no last-known-good fact remains", () => {
+  it("keeps a bounded producer failure rateable under its evidence ceiling", () => {
     const failedAdapter = scoreV9EvaluatedAsset(
       input({
         pillars: {
@@ -105,12 +105,185 @@ describe("Safety Score v9 evidence responsibility", () => {
       V9_CANDIDATE_POLICY_V1,
     );
 
-    expect(failedAdapter.finalGrade).toBe("NR");
-    expect(failedAdapter.finalScore).toBeNull();
-    expect(failedAdapter.nrReasons).toContainEqual(
+    expect(failedAdapter.finalGrade).toBe("C-");
+    expect(failedAdapter.finalScore).toBe(54);
+    expect(failedAdapter.nrReasons).toEqual([]);
+    expect(failedAdapter.caps).toContainEqual(
       expect.objectContaining({
-        code: "missing-runtime-route-evidence",
+        source: "evidence",
+        kind: "reason:missing-runtime-route-evidence",
+        limit: 65,
+      }),
+    );
+    expect(failedAdapter.unresolvedFacts).toContainEqual(
+      expect.objectContaining({
+        path: "exit:dex",
         responsibility: "producer-failed",
+      }),
+    );
+  });
+
+  it("keeps a bounded unsupported method provisional under its policy ceiling", () => {
+    const unsupportedDependencyReview = reason({
+      code: "unreviewed-dependency-relationships",
+      path: "dependency:graph",
+      message: "The dependency graph cannot yet evaluate this relationship.",
+      responsibility: "method-unsupported",
+    });
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(80),
+          exit: pillar(80),
+          control: pillar(70, {
+            evidenceLevel: "limited",
+            reasons: [unsupportedDependencyReview],
+          }),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("B-");
+    expect(trace.finalScore).toBe(69);
+    expect(trace.nrReasons).toEqual([]);
+    expect(trace.caps).toContainEqual(
+      expect.objectContaining({
+        source: "evidence",
+        kind: "evidence:limited",
+        limit: 69,
+      }),
+    );
+    expect(trace.unresolvedFacts).toContainEqual(
+      expect.objectContaining({
+        path: "dependency:graph",
+        responsibility: "method-unsupported",
+      }),
+    );
+  });
+
+  it("attributes a shared evidence ceiling only to its binding reason instance", () => {
+    const bindingDependencyGap = reason({
+      code: "unreviewed-dependency-relationships",
+      path: "dependency:collateral:parent-a",
+      message: "Collateral dependency parent-a is not exactly mapped.",
+      responsibility: "integration-missing",
+    });
+    const siblingDependencyGap = reason({
+      code: "unreviewed-dependency-relationships",
+      path: "dependency:collateral:parent-b",
+      message: "Collateral dependency parent-b is not exactly mapped.",
+      responsibility: "integration-missing",
+    });
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        dependencyReasons: [bindingDependencyGap, siblingDependencyGap],
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.bindingCap).toMatchObject({
+      source: "evidence",
+      kind: "reason:unreviewed-dependency-relationships",
+      reason: bindingDependencyGap.message,
+    });
+    expect(trace.boundedUncertaintyAttribution).toEqual([
+      expect.objectContaining({
+        source: "reason",
+        code: bindingDependencyGap.code,
+        path: bindingDependencyGap.path,
+        message: bindingDependencyGap.message,
+      }),
+    ]);
+  });
+
+  it("withholds an unbounded unsupported method even when the proved fact would be pillar-scored", () => {
+    const unsupportedExitMethod = reason({
+      code: "no-viable-exit-path",
+      path: "exit:viable-path",
+      message: "The current method cannot establish whether a viable exit path exists.",
+      responsibility: "method-unsupported",
+    });
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(95),
+          exit: pillar(95, { reasons: [unsupportedExitMethod] }),
+          control: pillar(95),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.finalScore).toBeNull();
+    expect(trace.nrReasons).toContainEqual(
+      expect.objectContaining({
+        code: "no-viable-exit-path",
+        responsibility: "method-unsupported",
+      }),
+    );
+  });
+
+  it("withholds unbounded uncertainty regardless of which non-measured owner caused it", () => {
+    for (const responsibility of [
+      "integration-missing",
+      "issuer-undisclosed",
+      "producer-failed",
+    ] as const) {
+      const unboundedExit = reason({
+        code: "no-viable-exit-path",
+        path: "exit:viable-path",
+        message: "The evidence owner cannot establish whether a viable exit path exists.",
+        responsibility,
+      });
+      const trace = scoreV9EvaluatedAsset(
+        input({
+          assetId: `unbounded-${responsibility}`,
+          pillars: {
+            backing: pillar(95),
+            exit: pillar(95, { reasons: [unboundedExit] }),
+            control: pillar(95),
+          },
+        }),
+        V9_CANDIDATE_POLICY_V1,
+      );
+
+      expect(trace.finalGrade, responsibility).toBe("NR");
+      expect(trace.nrReasons, responsibility).toContainEqual(
+        expect.objectContaining({
+          code: "no-viable-exit-path",
+          responsibility,
+        }),
+      );
+    }
+  });
+
+  it("keeps an unbounded required method failure as NR", () => {
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(95, {
+            reasons: [reason({
+              code: "missing-pillar-evidence",
+              path: "backing:required-claim",
+              message: "The required backing method cannot establish this claim.",
+              responsibility: "method-unsupported",
+            })],
+          }),
+          exit: pillar(95),
+          control: pillar(95),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.finalScore).toBeNull();
+    expect(trace.nrReasons).toContainEqual(
+      expect.objectContaining({
+        code: "missing-pillar-evidence",
+        responsibility: "method-unsupported",
       }),
     );
   });
@@ -143,6 +316,56 @@ describe("Safety Score v9 evidence responsibility", () => {
       expect.objectContaining({
         path: "backing:mechanism:review",
         responsibility: "integration-missing",
+      }),
+    );
+  });
+
+  it("applies the registry ceiling to a bounded integration-owned gap", () => {
+    const integrationGap = reason({
+      code: "missing-reserve-composition",
+      path: "backing:reserve:composition",
+      message: "Pharos has not integrated the current reserve composition.",
+      responsibility: "integration-missing",
+    });
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(95, { reasons: [integrationGap] }),
+          exit: pillar(95),
+          control: pillar(95),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalScore).toBe(60);
+    expect(trace.bindingCap).toEqual(
+      expect.objectContaining({
+        source: "evidence",
+        kind: "reason:missing-reserve-composition",
+        limit: 60,
+      }),
+    );
+  });
+
+  it("keeps missing categorical access review diagnostic rather than score-bearing", () => {
+    const accessGap = reason({
+      code: "missing-access-review",
+      path: "gap:control:local-component:asset:gap:access:freeze",
+      message: "The categorical freeze-reach review is not current.",
+      responsibility: "integration-missing",
+    });
+    const trace = scoreV9EvaluatedAsset(
+      input({ unresolvedEvidence: [accessGap] }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("A+");
+    expect(trace.nrReasons).toEqual([]);
+    expect(trace.unresolvedFacts).toContainEqual(
+      expect.objectContaining({
+        code: "missing-access-review",
+        critical: false,
       }),
     );
   });
@@ -394,7 +617,7 @@ describe("Safety Score v9 evidence responsibility", () => {
     );
   });
 
-  it("requires every rated D/F example to cite measured-adverse attribution", () => {
+  it("carries measured attribution through rated D/F examples when facts support it", () => {
     const measuredReason = reason({
       code: "no-viable-exit-path",
       path: "exit:redemption",
@@ -440,6 +663,315 @@ describe("Safety Score v9 evidence responsibility", () => {
       expect(trace.adverseAttribution.length).toBeGreaterThan(0);
       expect(trace.adverseAttribution.every((fact) => fact.responsibility === "measured-adverse")).toBe(true);
     }
+  });
+
+  it("keeps a naturally computed bounded D rateable without inventing adverse attribution", () => {
+    const boundedBacking = reason({
+      code: "bounded-mechanism-review",
+      path: "backing:mechanism:custody-continuity",
+      message: "A bounded backing component remains unresolved.",
+      responsibility: "integration-missing",
+    });
+    const boundedExit = reason({
+      code: "missing-runtime-route-evidence",
+      path: "exit:dex",
+      message: "The latest route adapter failed within a bounded exit method.",
+      responsibility: "producer-failed",
+    });
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(45, { reasons: [boundedBacking] }),
+          exit: pillar(45, { reasons: [boundedExit] }),
+          control: pillar(50),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("D");
+    expect(trace.finalScore).not.toBeNull();
+    expect(trace.nrReasons).toEqual([]);
+    expect(trace.adverseAttribution).toEqual([]);
+    expect(trace.boundedUncertaintyAttribution).toEqual([
+      expect.objectContaining({
+        source: "reason",
+        code: "bounded-mechanism-review",
+        responsibility: "integration-missing",
+        boundedness: "exposure-bounded",
+      }),
+      expect.objectContaining({
+        source: "reason",
+        code: "missing-runtime-route-evidence",
+        responsibility: "producer-failed",
+        boundedness: "globally-bounded",
+      }),
+    ]);
+  });
+
+  it("withholds an arbitrary D with no measured or bounded causal trace", () => {
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(45),
+          exit: pillar(45),
+          control: pillar(50),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.finalScore).toBeNull();
+    expect(trace.nrReasons).toContainEqual(
+      expect.objectContaining({ field: "boundedUncertaintyAttribution" }),
+    );
+    expect(trace.adverseAttribution).toEqual([]);
+    expect(trace.boundedUncertaintyAttribution).toEqual([]);
+  });
+
+  it("does not relabel a policy-bounded missing-data reason as measured adverse", () => {
+    const mislabeledBoundedGap = reason({
+      code: "bounded-mechanism-review",
+      path: "backing:review",
+      message: "A bounded backing review remains unresolved.",
+      responsibility: "measured-adverse",
+    });
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(45, { reasons: [mislabeledBoundedGap] }),
+          exit: pillar(45),
+          control: pillar(50),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.finalScore).toBeNull();
+    expect(trace.adverseAttribution).toEqual([]);
+    expect(trace.boundedUncertaintyAttribution).toEqual([]);
+  });
+
+  it("does not let an unrelated bounded reason authorize a D", () => {
+    const unrelatedControlGap = reason({
+      code: "bounded-mechanism-review",
+      path: "control:unrelated",
+      message: "An unrelated control review remains bounded.",
+      responsibility: "integration-missing",
+    });
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(35),
+          exit: pillar(35),
+          control: pillar(95, { reasons: [unrelatedControlGap] }),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.boundedUncertaintyAttribution).toEqual([]);
+  });
+
+  it("does not infer pillar provenance from a non-pillar reason path", () => {
+    const prefixedMethodologyGap = reason({
+      code: "bounded-mechanism-review",
+      path: "backing:misleading-methodology-path",
+      message: "A methodology-owned review uses a pillar-like path.",
+      responsibility: "integration-missing",
+    });
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(45),
+          exit: pillar(45),
+          control: pillar(50),
+        },
+        methodologyReasons: [prefixedMethodologyGap],
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.nrReasons).toContainEqual(
+      expect.objectContaining({ field: "boundedUncertaintyAttribution" }),
+    );
+    expect(trace.boundedUncertaintyAttribution).toEqual([]);
+  });
+
+  it("does not let a nonbinding one-basis-point depeg authorize a D", () => {
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(45),
+          exit: pillar(45),
+          control: pillar(45),
+        },
+        peg: { applicable: true, score: 100, activeDepegBps: 1, reasons: [] },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.adverseAttribution).toEqual([]);
+  });
+
+  it("attributes a fallback wrapper discount to its bounded local gaps", () => {
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        parent: {
+          required: true,
+          score: 45,
+          propagatedReasons: [],
+          wrapperParentLimit: {
+            schemaVersion: 1,
+            parentScore: 50,
+            form: "native-staked",
+            treatment: "fallback-discount",
+            localRiskDiscount: 0,
+            fallbackDiscount: 5,
+            appliedDiscount: 5,
+            riskTransfer: {
+              disposition: "reviewed",
+              mechanism: "none",
+              requestedCredit: 0,
+              appliedCredit: 0,
+            },
+            limit: 45,
+            factsComplete: false,
+            missingFacts: [{
+              factClass: "measuredUnwind",
+              disposition: "integration-missing",
+            }],
+            adjustments: [],
+          },
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("D");
+    expect(trace.adverseAttribution).toEqual([]);
+    expect(trace.boundedUncertaintyAttribution).toEqual([
+      expect.objectContaining({
+        source: "wrapper-local",
+        code: "bounded-mechanism-review",
+        path: "wrapper-local:measuredUnwind",
+      }),
+    ]);
+  });
+
+  it("attributes an incomplete wrapper to reviewed risk when it exceeds the fallback", () => {
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        parent: {
+          required: true,
+          score: 44,
+          propagatedReasons: [],
+          wrapperParentLimit: {
+            schemaVersion: 1,
+            parentScore: 50,
+            form: "strategy-vault",
+            treatment: "fallback-discount",
+            localRiskDiscount: 6,
+            fallbackDiscount: 5,
+            appliedDiscount: 6,
+            riskTransfer: {
+              disposition: "reviewed",
+              mechanism: "none",
+              requestedCredit: 0,
+              appliedCredit: 0,
+            },
+            limit: 44,
+            factsComplete: false,
+            missingFacts: [{
+              factClass: "custodyEscrow",
+              disposition: "issuer-undisclosed",
+            }],
+            adjustments: [
+              {
+                factKey: "measuredUnwind",
+                disposition: "reviewed",
+                assessment: "critical",
+                maximumDiscountPoints: 5,
+                discountPoints: 5,
+              },
+              {
+                factKey: "contractMutability",
+                disposition: "reviewed",
+                assessment: "moderate",
+                maximumDiscountPoints: 2,
+                discountPoints: 1,
+              },
+            ],
+          },
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("D");
+    expect(trace.adverseAttribution).toEqual([
+      expect.objectContaining({
+        source: "wrapper-local",
+        path: "wrapper-local:contractMutability",
+      }),
+      expect.objectContaining({
+        source: "wrapper-local",
+        path: "wrapper-local:measuredUnwind",
+      }),
+    ]);
+    expect(trace.boundedUncertaintyAttribution).toEqual([]);
+  });
+
+  it("attributes a reviewed wrapper discount to measured local risk", () => {
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        parent: {
+          required: true,
+          score: 45,
+          propagatedReasons: [],
+          wrapperParentLimit: {
+            schemaVersion: 1,
+            parentScore: 50,
+            form: "strategy-vault",
+            treatment: "local-facts",
+            localRiskDiscount: 5,
+            fallbackDiscount: 0,
+            appliedDiscount: 5,
+            riskTransfer: {
+              disposition: "reviewed",
+              mechanism: "none",
+              requestedCredit: 0,
+              appliedCredit: 0,
+            },
+            limit: 45,
+            factsComplete: true,
+            missingFacts: [],
+            adjustments: [{
+              factKey: "measuredUnwind",
+              disposition: "reviewed",
+              assessment: "critical",
+              maximumDiscountPoints: 5,
+              discountPoints: 5,
+            }],
+          },
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalGrade).toBe("D");
+    expect(trace.adverseAttribution).toEqual([
+      expect.objectContaining({
+        source: "wrapper-local",
+        path: "wrapper-local:measuredUnwind",
+      }),
+    ]);
+    expect(trace.boundedUncertaintyAttribution).toEqual([]);
   });
 
   it("keeps a low measured pillar score rated when its causal attribution is explicit", () => {

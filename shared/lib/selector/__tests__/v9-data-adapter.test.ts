@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildReportCardsV9DependencyGraph, type ReportCardsV9Response } from "../../../types/report-cards-v9";
-import type { SafetyScoreV9Card } from "../../../types/safety-score-v9-public";
+import type { SafetyScoreV9CurrentCard } from "../../../types/safety-score-v9-public";
 import { buildV9SelectorSnapshot, V9SelectorSnapshotUnavailableError } from "../v9-data-adapter";
 
 const digest = (value: string) => value.repeat(64);
 
-function card(): SafetyScoreV9Card {
+function card(): SafetyScoreV9CurrentCard {
   const pillar = {
     score: 80,
     evidenceLevel: "adequate" as const,
@@ -16,7 +16,7 @@ function card(): SafetyScoreV9Card {
   return {
     id: "asset-a",
     score: 80,
-    grade: "B",
+    grade: "A-",
     qualityScore: 82,
     pegMultiplier: 0.98,
     pegAdjustedScore: 80,
@@ -43,6 +43,55 @@ function card(): SafetyScoreV9Card {
       reasonCodes: [],
     },
     stressStateDigest: null,
+    scoreTrace: {
+      schemaVersion: 2,
+      legacyAliases: {
+        qualityScore: "weighted-pillar-mean",
+        pegAdjustedScore: "post-deployment-pre-cap-score",
+        score: "post-cap-public-score",
+      },
+      aggregation: {
+        method: "smooth-bounded-headroom",
+        score: 82,
+        weightedPillarMean: 82,
+        weakestPillar: "backing",
+        weakestScore: 80,
+        headroom: 20,
+      },
+      stages: {
+        weightedPillarMean: 82,
+        aggregatedQualityScore: 82,
+        pegMultiplier: 0.98,
+        baseAssetScore: 80,
+        deploymentAdjustedScore: 80,
+        deploymentAdjustmentPoints: 0,
+        preCapScore: 80,
+        publishedScore: 80,
+      },
+      deploymentRisk: {
+        method: "holder-slice-exposure-weighted-v2",
+        totalAdjustmentPoints: 0,
+        adjustments: [],
+        unresolvedExposures: [],
+      },
+      adverseAttribution: { semantics: "causal-measured-adverse-v1", items: [] },
+      boundedUncertaintyAttribution: {
+        semantics: "causal-bounded-uncertainty-v1",
+        items: [],
+      },
+      evidenceResponsibility: {
+        semantics: "limiting-fact-owner-v1",
+        totalFactCount: 0,
+        summaries: [
+          { responsibility: "integration-missing", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "issuer-undisclosed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "measured-adverse", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "method-unsupported", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "producer-failed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        ],
+      },
+      wrapperParentLimit: null,
+    },
   };
 }
 
@@ -60,7 +109,7 @@ function response(overrides: Partial<ReportCardsV9Response> = {}): ReportCardsV9
   };
   return {
     model: "v9",
-    schemaVersion: 1,
+    schemaVersion: 2,
     lifecycle: "shadow",
     safetyScoreIdentity: identity,
     methodology: {
@@ -93,7 +142,7 @@ describe("V9 selector data adapter", () => {
       rows: [{
         id: "asset-a",
         safetyScore: 80,
-        safetyGrade: "B",
+        safetyGrade: "A-",
         pillars: expect.any(Object),
         accessPosture: expect.any(Object),
         dependencies: expect.any(Object),

@@ -54,7 +54,14 @@ export interface V9CapTrace extends V9StructuralCap {
 }
 
 export interface V9AdverseAttribution {
-  source: "active-depeg" | "parent-score" | "peg-performance" | "pillar-score" | "reason" | "structural-signal";
+  source:
+    | "active-depeg"
+    | "parent-score"
+    | "peg-performance"
+    | "pillar-score"
+    | "reason"
+    | "structural-signal"
+    | "wrapper-local";
   path: string;
   message: string;
   responsibility: "measured-adverse";
@@ -67,6 +74,29 @@ export type V9PillarAdverseAttribution = V9AdverseAttribution & {
 export type V9ParentAdverseAttribution = V9AdverseAttribution & {
   source: "parent-score";
 };
+
+export type V9BoundedUncertaintyResponsibility = Exclude<
+  V9EvidenceResponsibility,
+  "measured-adverse"
+>;
+
+export interface V9BoundedUncertaintyAttribution {
+  source: "parent-score" | "reason" | "wrapper-local";
+  code: V9ReasonCode;
+  path: string;
+  message: string;
+  responsibility: V9BoundedUncertaintyResponsibility;
+  boundedness: "exposure-bounded" | "globally-bounded";
+}
+
+export type V9ParentBoundedUncertaintyAttribution = V9BoundedUncertaintyAttribution & {
+  source: "parent-score";
+};
+
+export interface V9PillarReasonProvenance {
+  pillar: V9QualityPillar;
+  fact: V9UnresolvedFact;
+}
 
 export interface V9ScoreTrace {
   assetId: string;
@@ -94,6 +124,7 @@ export interface V9ScoreTrace {
   finalScore: number | null;
   finalGrade: V9Grade;
   adverseAttribution: readonly V9AdverseAttribution[];
+  boundedUncertaintyAttribution: readonly V9BoundedUncertaintyAttribution[];
   unresolvedFacts: readonly V9UnresolvedFact[];
   nrReasons: readonly V9NRReason[];
   propagatedParentReasons: readonly V9NRReason[];
@@ -112,12 +143,7 @@ const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
 // Deliberately DECOUPLED from the frozen D3 attribution predicate (0.90),
 // which is not a tunable knob and is untouched by this constant.
 const F_GATE_PEG_MULTIPLIER_FLOOR = 0.8;
-const NON_ECONOMIC_RESPONSIBILITIES = new Set<V9EvidenceResponsibility>([
-  "integration-missing",
-  "producer-failed",
-  "method-unsupported",
-]);
-const LOW_RISK_GRADES = new Set<V9Grade>(["D", "F"]);
+const DANGER_ONLY_GRADES = new Set<V9Grade>(["F"]);
 
 function compareCodeUnits(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -163,6 +189,34 @@ function canonicalAdverseAttribution(
       compareCodeUnits(left.source, right.source) ||
       compareCodeUnits(left.path, right.path) ||
       compareCodeUnits(left.message, right.message),
+  );
+}
+
+function canonicalBoundedUncertaintyAttribution(
+  values: readonly V9BoundedUncertaintyAttribution[],
+): V9BoundedUncertaintyAttribution[] {
+  return [
+    ...new Map(
+      values.map((value) => [
+        [
+          value.source,
+          value.code,
+          value.path,
+          value.message,
+          value.responsibility,
+          value.boundedness,
+        ].join("\u0000"),
+        value,
+      ]),
+    ).values(),
+  ].sort(
+    (left, right) =>
+      compareCodeUnits(left.source, right.source) ||
+      compareCodeUnits(left.code, right.code) ||
+      compareCodeUnits(left.path, right.path) ||
+      compareCodeUnits(left.message, right.message) ||
+      compareCodeUnits(left.responsibility, right.responsibility) ||
+      compareCodeUnits(left.boundedness, right.boundedness),
   );
 }
 
@@ -304,6 +358,12 @@ function unresolvedFactAffectedScore(
 ): boolean {
   if (fact.responsibility !== "measured-adverse") return false;
   const resolved = resolveV9ReasonPolicy(policy, fact.code);
+  if (
+    resolved.reason.boundedness === "exposure-bounded" ||
+    resolved.reason.boundedness === "globally-bounded"
+  ) {
+    return false;
+  }
   if (resolved.critical || resolved.reason.defaultTreatment === "pillar") return true;
   return (
     resolved.ceiling !== null &&
@@ -311,6 +371,66 @@ function unresolvedFactAffectedScore(
     bindingCap.kind === resolved.ceiling.kind &&
     bindingCap.limit === resolved.ceiling.limit
   );
+}
+
+function boundedUncertaintyForFact(
+  fact: V9UnresolvedFact,
+  pillars: V9ScoringInput["pillars"],
+  bindingCap: Omit<V9CapTrace, "binding"> | null,
+  policy: V9ValidatedPolicyEnvelope,
+  pillarReasonProvenance: readonly V9PillarReasonProvenance[],
+): V9BoundedUncertaintyAttribution | null {
+  if (
+    fact.responsibility === undefined ||
+    fact.responsibility === "measured-adverse" ||
+    fact.path === undefined
+  ) {
+    return null;
+  }
+  const resolved = resolveV9ReasonPolicy(policy, fact.code);
+  if (
+    resolved.critical ||
+    (
+      resolved.reason.boundedness !== "exposure-bounded" &&
+      resolved.reason.boundedness !== "globally-bounded"
+    ) ||
+    (
+      resolved.reason.defaultTreatment !== "pillar" &&
+      resolved.reason.defaultTreatment !== "ceiling"
+    )
+  ) {
+    return null;
+  }
+  const cMinusFloor =
+    policy.policy.semantic.formula.gradeThresholds.find((threshold) => threshold.grade === "C-")?.minScore;
+  if (cMinusFloor === undefined) {
+    throw new Error("Safety Score v9 policy has no C- grade threshold");
+  }
+  const pillarReasonAffectedScore = pillarReasonProvenance.some(
+    (candidate) =>
+      candidate.fact.code === fact.code &&
+      candidate.fact.path === fact.path &&
+      candidate.fact.reason === fact.reason &&
+      candidate.fact.responsibility === fact.responsibility &&
+      pillars[candidate.pillar] !== null &&
+      pillars[candidate.pillar]! < cMinusFloor,
+  );
+  const ceilingAffectedScore =
+    resolved.reason.defaultTreatment === "ceiling" &&
+    resolved.ceiling !== null &&
+    bindingCap?.source === "evidence" &&
+    bindingCap.kind === resolved.ceiling.kind &&
+    bindingCap.limit === resolved.ceiling.limit &&
+    bindingCap.reason === fact.reason;
+  if (!pillarReasonAffectedScore && !ceilingAffectedScore) return null;
+  return {
+    source: "reason",
+    code: fact.code,
+    path: fact.path,
+    message: fact.reason,
+    responsibility: fact.responsibility,
+    boundedness: resolved.reason.boundedness,
+  };
 }
 
 export interface V9ReserveLossFacts {
@@ -601,6 +721,12 @@ function scoreV9InputWithCaps(
   backingLimited = false,
   propagatedParentAdverseAttribution: readonly V9ParentAdverseAttribution[] = [],
   measuredPillarAdverseAttribution: readonly V9PillarAdverseAttribution[] = [],
+  propagatedParentBoundedUncertaintyAttribution:
+    readonly V9ParentBoundedUncertaintyAttribution[] = [],
+  wrapperLocalAdverseAttribution: readonly V9AdverseAttribution[] = [],
+  wrapperLocalBoundedUncertaintyAttribution:
+    readonly V9BoundedUncertaintyAttribution[] = [],
+  pillarReasonProvenance: readonly V9PillarReasonProvenance[] = [],
 ): V9ScoreTrace {
   assertV9ValidatedPolicyEnvelope(policy);
   const input = V9ScoringInputSchema.parse(rawInput);
@@ -672,29 +798,63 @@ function scoreV9InputWithCaps(
   for (const fact of unresolvedFacts) {
     const resolved = resolveV9ReasonPolicy(policy, fact.code);
     const responsibility = fact.responsibility;
-    if (NON_ECONOMIC_RESPONSIBILITIES.has(responsibility)) {
+    const uncertaintyIsUnbounded =
+      responsibility !== "measured-adverse" &&
+      resolved.reason.boundedness === "unbounded";
+    if (responsibility === "integration-missing") {
       // Integration-owned gaps remain explicit confidence diagnostics when the
       // compiler can still produce a bounded pillar. Missing pillars are
       // withheld above, so turning every integration backlog item into NR
       // would erase otherwise rateable assets and let Pharos coverage dictate
-      // the public risk distribution. Producer failures and unsupported
-      // methods still withhold score-bearing facts unless policy marks them
-      // diagnostic; fresh LKG observations are carried only in
-      // `unresolvedEvidence` and never enter this score-bearing list.
-      if (
-        (responsibility !== "integration-missing" || resolved.critical) &&
-        resolved.reason.defaultTreatment !== "diagnostic"
-      ) {
+      // the public risk distribution.
+      if (resolved.critical || uncertaintyIsUnbounded) {
         nrReasons.push({
           code: fact.code,
           field: fact.path,
           message: fact.reason,
           responsibility,
         });
+      } else if (resolved.ceiling) {
+        reasonCeilings.push({ source: "evidence", ...resolved.ceiling, reason: fact.reason });
       }
       continue;
     }
-    if (resolved.critical) {
+    if (responsibility === "producer-failed") {
+      // A producer outage is an availability state, not evidence that the
+      // asset became unsafe. Fresh LKG facts do not enter this score-bearing
+      // list. When the compiler can still produce a policy-bounded pillar,
+      // retain the score under that reason's ceiling; a genuinely missing or
+      // unbounded required fact is still withheld by the pillar/critical gates.
+      if (resolved.critical || uncertaintyIsUnbounded) {
+        nrReasons.push({
+          code: fact.code,
+          field: fact.path,
+          message: fact.reason,
+          responsibility,
+        });
+      } else if (resolved.ceiling) {
+        reasonCeilings.push({ source: "evidence", ...resolved.ceiling, reason: fact.reason });
+      }
+      continue;
+    }
+    if (responsibility === "method-unsupported") {
+      // Method responsibility describes why the fact is unresolved; the
+      // reviewed reason registry still owns its treatment. A globally bounded
+      // unsupported method is provisional under its ceiling, while genuinely
+      // unbounded applicability/integrity failures remain NR.
+      if (resolved.critical || uncertaintyIsUnbounded) {
+        nrReasons.push({
+          code: fact.code,
+          field: fact.path,
+          message: fact.reason,
+          responsibility,
+        });
+      } else if (resolved.ceiling) {
+        reasonCeilings.push({ source: "evidence", ...resolved.ceiling, reason: fact.reason });
+      }
+      continue;
+    }
+    if (resolved.critical || uncertaintyIsUnbounded) {
       nrReasons.push({
         code: fact.code,
         field: fact.path,
@@ -940,7 +1100,10 @@ function scoreV9InputWithCaps(
     ...(bindingCandidate?.source === "parent"
       ? propagatedParentAdverseAttribution
       : []),
-    ...(input.activeDepegBps !== null && input.activeDepegBps > 0
+    ...(bindingCandidate?.source === "parent"
+      ? wrapperLocalAdverseAttribution
+      : []),
+    ...(bindingCandidate?.source === "active-depeg"
       ? [{
           source: "active-depeg" as const,
           path: "peg:active-depeg",
@@ -957,21 +1120,53 @@ function scoreV9InputWithCaps(
         }]
       : []),
   ]);
+  const boundedUncertaintyAttribution = canonicalBoundedUncertaintyAttribution([
+    ...unresolvedFacts.flatMap((fact) => {
+      const attribution = boundedUncertaintyForFact(
+        fact,
+        input.pillars,
+        bindingCandidate,
+        policy,
+        pillarReasonProvenance,
+      );
+      return attribution === null ? [] : [attribution];
+    }),
+    ...(bindingCandidate?.source === "parent"
+      ? propagatedParentBoundedUncertaintyAttribution
+      : []),
+    ...(bindingCandidate?.source === "parent"
+      ? wrapperLocalBoundedUncertaintyAttribution
+      : []),
+  ]);
 
-  // D and F are public risk claims, not catch-all uncertainty buckets. Keep the
-  // latent score and cap trace for internal ordering, but withhold the public
-  // grade when no measured adverse fact can be cited. Issuer nondisclosure
-  // still affects the latent pillar/cap calculation; adapter, producer, and
-  // methodology gaps remain explicit NR reasons instead of economic weakness.
+  // A low public grade needs a causal account. D may be measured weakness or a
+  // provisional result shaped by explicit policy-bounded uncertainty. F remains
+  // danger-only and therefore always requires measured-adverse attribution.
+  const attributedGrade =
+    finalScore === null ? null : gradeForScore(finalScore, policy);
   if (
     finalScore !== null &&
-    LOW_RISK_GRADES.has(gradeForScore(finalScore, policy)) &&
+    attributedGrade === "D" &&
+    adverseAttribution.length === 0 &&
+    boundedUncertaintyAttribution.length === 0
+  ) {
+    effectiveNrReasons.push({
+      code: "insufficient-evidence",
+      field: "boundedUncertaintyAttribution",
+      message: "A D rating requires causal measured-adverse or bounded-uncertainty attribution.",
+      responsibility: "method-unsupported",
+    });
+    finalScore = null;
+  } else if (
+    finalScore !== null &&
+    attributedGrade !== null &&
+    DANGER_ONLY_GRADES.has(attributedGrade) &&
     adverseAttribution.length === 0
   ) {
     effectiveNrReasons.push({
       code: "insufficient-evidence",
       field: "adverseAttribution",
-      message: "A D or F rating requires at least one attributable measured-adverse fact.",
+      message: "An F rating requires at least one attributable measured-adverse fact.",
       responsibility: "method-unsupported",
     });
     finalScore = null;
@@ -1018,6 +1213,7 @@ function scoreV9InputWithCaps(
     finalScore,
     finalGrade: finalScore === null ? "NR" : gradeForScore(finalScore, policy),
     adverseAttribution,
+    boundedUncertaintyAttribution,
     unresolvedFacts,
     nrReasons: effectiveNrReasons,
     propagatedParentReasons,
@@ -1033,6 +1229,12 @@ export function scoreV9Input(
   backingLimited = false,
   propagatedParentAdverseAttribution: readonly V9ParentAdverseAttribution[] = [],
   measuredPillarAdverseAttribution: readonly V9PillarAdverseAttribution[] = [],
+  propagatedParentBoundedUncertaintyAttribution:
+    readonly V9ParentBoundedUncertaintyAttribution[] = [],
+  wrapperLocalAdverseAttribution: readonly V9AdverseAttribution[] = [],
+  wrapperLocalBoundedUncertaintyAttribution:
+    readonly V9BoundedUncertaintyAttribution[] = [],
+  pillarReasonProvenance: readonly V9PillarReasonProvenance[] = [],
 ): V9ScoreTrace {
   return scoreV9InputWithCaps(
     rawInput,
@@ -1043,6 +1245,10 @@ export function scoreV9Input(
     backingLimited,
     propagatedParentAdverseAttribution,
     measuredPillarAdverseAttribution,
+    propagatedParentBoundedUncertaintyAttribution,
+    wrapperLocalAdverseAttribution,
+    wrapperLocalBoundedUncertaintyAttribution,
+    pillarReasonProvenance,
   );
 }
 
