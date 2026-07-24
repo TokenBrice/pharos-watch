@@ -8,7 +8,15 @@ import {
 import { rethrowIfAborted } from "./abort";
 import type { ChainRpcConfig } from "./chain-registry";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
-import { buildReviewedDeploymentRouteInventory } from "./safety-score-v9-supply-attribution-contract";
+import {
+  CENTRIFUGE_BURN_MINT_ASSET_IDS,
+  buildReviewedDeploymentRouteInventory,
+} from "./safety-score-v9-supply-attribution-contract";
+import {
+  observeCentrifugeReviewedDeploymentUnitPartitionAttempt,
+  type CentrifugeReviewedDeploymentObservationAttempt,
+  type CentrifugeReviewedDeploymentRejectionCode,
+} from "./safety-score-v9-centrifuge-supply-observer";
 import {
   observeWmReviewedDeploymentUnitPartitionAttempt,
   type WmReviewedDeploymentObservationAttempt,
@@ -107,7 +115,9 @@ export function deriveLockMintSupplyPartition(input: {
 }
 
 function admissionCodeForWmRejection(
-  rejectionCode: WmReviewedDeploymentRejectionCode,
+  rejectionCode:
+    | WmReviewedDeploymentRejectionCode
+    | CentrifugeReviewedDeploymentRejectionCode,
 ): SupplyAttributionAdmissionCode {
   switch (rejectionCode) {
     case "route-inventory-unavailable":
@@ -127,6 +137,55 @@ function admissionCodeForWmRejection(
     case "deployment-state-unavailable":
       return "supply-attribution.admission.rejected-upstream";
   }
+}
+
+function buildCentrifugeSupplyAttributionJournalRecord(input: {
+  assetId: string;
+  fixedInput: Readonly<ReportCardsFixedInput>;
+  attemptId: string;
+  attemptedAtSec: number;
+  completedAtSec: number;
+  outcome: CentrifugeReviewedDeploymentObservationAttempt;
+}): SupplyAttributionJournalV1 {
+  const inventory = buildReviewedDeploymentRouteInventory(input.assetId);
+  const outcome = input.outcome;
+  return createSupplyAttributionJournalV1({
+    schemaVersion: 1,
+    lane: "supply-attribution",
+    assetId: input.assetId,
+    attemptId: input.attemptId,
+    sourceId: "centrifuge.reviewed-deployment-unit-partition.v1",
+    sourceOriginClass: "onchain-observation",
+    baseInputGenerationId: input.fixedInput.baseInputGenerationId,
+    sourceGeneration: input.fixedInput.sourceGeneration,
+    registryFingerprint: input.fixedInput.registryFingerprint,
+    routeInventoryDigest:
+      outcome.status === "accepted"
+        ? outcome.attribution.routeInventoryDigest
+        : inventory?.digest ?? null,
+    attemptCode: "supply-attribution.collector.attempted",
+    admissionCode:
+      outcome.status === "accepted"
+        ? "supply-attribution.admission.accepted"
+        : admissionCodeForWmRejection(outcome.rejectionCode),
+    fallbackCode:
+      outcome.status === "accepted"
+        ? "supply-attribution.fallback.not-used"
+        : "supply-attribution.fallback.aggregate-only",
+    attemptedAtSec: input.attemptedAtSec,
+    completedAtSec: input.completedAtSec,
+    scoringClockSec: input.fixedInput.clockSec,
+    sourceObservedAtSec:
+      outcome.status === "accepted"
+        ? outcome.attribution.observedAtSec
+        : null,
+    failedRouteId:
+      outcome.status === "rejected" ? outcome.failedRouteId : null,
+    contentSha256:
+      outcome.status === "accepted"
+        ? sha256Hex(stableJsonStringifyV1(outcome.attribution))
+        : null,
+  });
 }
 
 function admissionCodeForXautRejection(
@@ -353,6 +412,59 @@ export async function captureSafetyScoreV9SupplyAttribution(
     }
     journalRecords.push(
       buildWmSupplyAttributionJournalRecord({
+        fixedInput,
+        attemptId,
+        attemptedAtSec,
+        completedAtSec,
+        outcome,
+      }),
+    );
+  }
+
+  for (const assetId of CENTRIFUGE_BURN_MINT_ASSET_IDS) {
+    if (
+      !activeAssetIds.has(assetId) ||
+      hasUpstreamChainSupply(fixedInput, assetId)
+    ) {
+      continue;
+    }
+    const attemptedAtSec = Math.floor(Date.now() / 1_000);
+    const attemptId = `supply-attribution:${crypto.randomUUID()}`;
+    let outcome: CentrifugeReviewedDeploymentObservationAttempt;
+    try {
+      outcome =
+        chainRpcs && chainRpcs.size > 0
+          ? await observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
+              assetId,
+              aggregateSupplyUsd: aggregateSupplyUsd(fixedInput, assetId),
+              registryFingerprint: fixedInput.registryFingerprint,
+              scoringClockSec: fixedInput.clockSec,
+              chainRpcs,
+              signal,
+            })
+          : {
+              status: "rejected",
+              rejectionCode: "chain-rpc-unavailable",
+              failedRouteId: null,
+            };
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      outcome = {
+        status: "rejected",
+        rejectionCode: "deployment-state-unavailable",
+        failedRouteId: null,
+      };
+    }
+    const completedAtSec = Math.max(
+      attemptedAtSec,
+      Math.floor(Date.now() / 1_000),
+    );
+    if (outcome.status === "accepted") {
+      attributionById[assetId] = outcome.attribution;
+    }
+    journalRecords.push(
+      buildCentrifugeSupplyAttributionJournalRecord({
+        assetId,
         fixedInput,
         attemptId,
         attemptedAtSec,

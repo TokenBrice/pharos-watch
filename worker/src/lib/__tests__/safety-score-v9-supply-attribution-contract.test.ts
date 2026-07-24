@@ -3,6 +3,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   buildReviewedDeploymentRouteInventory,
   deriveReviewedDeploymentUnitPartition,
+  expectedCentrifugeDeploymentIdentity,
   expectedWmDeploymentIdentity,
   reviewedDeploymentAttributionValidationError,
   reviewedDeploymentObservationTimingIssue,
@@ -241,6 +242,146 @@ describe("reviewed deployment supply attribution contract", () => {
         clockSec: CLOCK_SEC,
       }),
     ).toContain("registry fingerprint mismatch");
+  });
+});
+
+const CENTRIFUGE_AGGREGATE_SUPPLY_USD = 51_033_069.79770032;
+
+function centrifugeObservations(
+  assetId = "acrdx-anemoy-apollo",
+): ReviewedDeploymentSupplyObservation[] {
+  const inventory = buildReviewedDeploymentRouteInventory(assetId);
+  if (!inventory) throw new Error(`Missing ${assetId} route inventory`);
+  return inventory.routes.map((route, index) => {
+    const identity = expectedCentrifugeDeploymentIdentity(
+      assetId,
+      route.routeId,
+    );
+    if (!identity) throw new Error(`Missing identity for ${route.routeId}`);
+    const common = {
+      routeId: route.routeId,
+      chainId: route.chainId,
+      contractAddress: route.contractAddress,
+      decimals: route.decimals,
+      rawSupply:
+        route.chainId === "base" || route.chainId === "solana"
+          ? "0"
+          : (10n ** BigInt(route.decimals) * BigInt(index + 1)).toString(),
+      blockNumberOrSlot: (43_000_000 + index).toString(),
+      blockTimeSec: CLOCK_SEC - 30 + index,
+    };
+    return identity.runtime === "evm"
+      ? {
+          ...common,
+          blockHash: `0x${(index + 1).toString(16).repeat(64)}`,
+          runtimeCodeSha256: identity.runtimeCodeSha256,
+          controllerAddress: identity.controllerAddress,
+        }
+      : {
+          ...common,
+          blockHash: "C".repeat(44),
+          programOwner: identity.programOwner,
+          mintAuthority: identity.mintAuthority,
+          controllerAddress: identity.controllerAddress,
+          controllerProgramOwner: identity.controllerProgramOwner,
+        };
+  });
+}
+
+function deriveCentrifuge(
+  rows = centrifugeObservations(),
+): ReturnType<typeof deriveReviewedDeploymentUnitPartition> {
+  return deriveReviewedDeploymentUnitPartition({
+    assetId: "acrdx-anemoy-apollo",
+    aggregateSupplyUsd: CENTRIFUGE_AGGREGATE_SUPPLY_USD,
+    registryFingerprint: REGISTRY_FINGERPRINT,
+    scoringClockSec: CLOCK_SEC,
+    observations: rows,
+  });
+}
+
+describe("Centrifuge burn/mint deployment supply attribution contract", () => {
+  it("binds each supported asset to its complete official inventory", () => {
+    expect(
+      buildReviewedDeploymentRouteInventory("jtrsy-anemoy")!.routes,
+    ).toHaveLength(8);
+    expect(
+      buildReviewedDeploymentRouteInventory("acrdx-anemoy-apollo")!.routes,
+    ).toHaveLength(5);
+
+    const attribution = deriveCentrifuge();
+    expect(attribution).not.toBeNull();
+    expect(
+      attribution!.deployments.reduce(
+        (sum, row) => sum + row.currentSupplyUsd,
+        0,
+      ),
+    ).toBe(CENTRIFUGE_AGGREGATE_SUPPLY_USD);
+    expect(
+      attribution!.deployments.filter((row) => row.rawSupply === "0"),
+    ).toEqual([
+      expect.objectContaining({ chainId: "base", currentSupplyUsd: 0 }),
+      expect.objectContaining({ chainId: "solana", currentSupplyUsd: 0 }),
+    ]);
+    expect(
+      stableJsonStringifyV1(
+        deriveCentrifuge(centrifugeObservations().reverse()),
+      ),
+    ).toBe(stableJsonStringifyV1(attribution));
+  });
+
+  it.each([
+    [
+      "an omitted Solana route",
+      () =>
+        centrifugeObservations().filter((row) => row.chainId !== "solana"),
+    ],
+    [
+      "EVM runtime-code drift",
+      () =>
+        centrifugeObservations().map((row) =>
+          row.chainId === "ethereum"
+            ? { ...row, runtimeCodeSha256: "0".repeat(64) }
+            : row,
+        ),
+    ],
+    [
+      "an unexpected proxy identity",
+      () =>
+        centrifugeObservations().map((row) =>
+          row.chainId === "base"
+            ? {
+                ...row,
+                implementationAddress:
+                  "0x0000000000000000000000000000000000000001",
+              }
+            : row,
+        ),
+    ],
+    [
+      "Solana authority drift",
+      () =>
+        centrifugeObservations().map((row) =>
+          row.chainId === "solana"
+            ? {
+                ...row,
+                mintAuthority:
+                  "11111111111111111111111111111111",
+              }
+            : row,
+        ),
+    ],
+    [
+      "a post-clock Solana observation",
+      () =>
+        centrifugeObservations().map((row) =>
+          row.chainId === "solana"
+            ? { ...row, blockTimeSec: CLOCK_SEC + 1 }
+            : row,
+        ),
+    ],
+  ])("fails closed for %s", (_label, mutate) => {
+    expect(deriveCentrifuge(mutate())).toBeNull();
   });
 });
 

@@ -78,6 +78,11 @@
       "chain": "monad",
       "address": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
       "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj",
+      "decimals": 6
     }
   ],
   "canBeBlacklisted": true,
@@ -97,18 +102,17 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "JTRSY is native on Ethereum (Centrifuge V3 hub). Spoke-chain share tokens are minted by the Centrifuge V3 Spoke contract (ward=1 verified on each chain) on hub-authorized protocol messages; no third-party bridge token carries the claim.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-    "confidence": "probable",
+    "summary": "JTRSY uses Centrifuge V3's native burn-and-mint share bridge. The protocol burns shares through the source-chain Spoke before hub-authorized destination minting; the official deployment registry lists the complete Ethereum, Base, Arbitrum, Avalanche, Plume, BNB Chain, Monad, and Solana inventory.",
+    "reviewedAt": "2026-07-24",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Codex V9 runtime supply audit",
+    "confidence": "verified",
     "protocols": [
       {
-        "source": "l2beat",
-        "name": "Across",
-        "slug": "across",
-        "url": "https://l2beat.com/interop/protocols/across",
+        "source": "docs",
+        "name": "Centrifuge V3 native share bridge",
+        "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/",
         "bridgeTypes": [
-          "Non-minting"
+          "burnAndMint"
         ]
       }
     ],
@@ -118,8 +122,12 @@
         "url": "https://www.anemoy.io/funds/jtrsy"
       },
       {
-        "label": "L2BEAT Across",
-        "url": "https://l2beat.com/interop/protocols/across"
+        "label": "Centrifuge protocol deployments",
+        "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+      },
+      {
+        "label": "Centrifuge share-token bridge guide",
+        "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
       }
     ],
     "routes": [
@@ -316,6 +324,44 @@
         "failureDomainKeys": [
           "protocol:centrifuge-v3",
           "contract:monad:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ]
+      },
+      {
+        "id": "solana:JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj",
+        "sourceChain": "ethereum",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj",
+        "protocol": "Centrifuge V3 native share bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "solana",
+        "controllerAddress": "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Centrifuge's official deployment registry identifies this exact JTRSY Solana mint. Finalized RPC at slot 434941163 returned Token-2022 ownership, symbol JTRSY, 6 decimals, zero current supply, and the pinned direct mint/freeze/permanent-delegate authority. Centrifuge V3 burns source-chain shares before hub-authorized destination minting.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-24",
+        "observedBlock": 434941163,
+        "sources": [
+          {
+            "label": "Centrifuge protocol deployments",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Centrifuge share-token bridge guide",
+            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+          },
+          {
+            "label": "JTRSY on Solscan",
+            "url": "https://solscan.io/token/JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "authority:solana:3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb"
         ]
       }
     ]

@@ -5,9 +5,25 @@ import wmMetaSource from "@shared/data/stablecoins/coins/wm-m0.json";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 
 const rpcMocks = vi.hoisted(() => ({
+  observeCentrifugeReviewedDeploymentUnitPartitionAttempt: vi.fn(),
   observeXautRepresentationGroupSupplyAttributionAttempt: vi.fn(),
   observeWmReviewedDeploymentUnitPartitionAttempt: vi.fn(),
 }));
+
+vi.mock(
+  "../safety-score-v9-centrifuge-supply-observer",
+  async (importOriginal) => {
+    const original =
+      await importOriginal<
+        typeof import("../safety-score-v9-centrifuge-supply-observer")
+      >();
+    return {
+      ...original,
+      observeCentrifugeReviewedDeploymentUnitPartitionAttempt:
+        rpcMocks.observeCentrifugeReviewedDeploymentUnitPartitionAttempt,
+    };
+  },
+);
 
 vi.mock("../safety-score-v9-wm-supply-observer", async (importOriginal) => {
   const original =
@@ -81,6 +97,7 @@ function chainRpcs(): Map<string, ChainRpcConfig> {
 
 describe("Safety Score V9 lock/mint supply attribution", () => {
   beforeEach(() => {
+    rpcMocks.observeCentrifugeReviewedDeploymentUnitPartitionAttempt.mockReset();
     rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockReset();
     rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt.mockReset();
   });
@@ -356,4 +373,117 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
       ).toBeNull();
     },
   );
+});
+
+describe("Safety Score V9 Centrifuge burn/mint supply attribution", () => {
+  const assetId = "acrdx-anemoy-apollo";
+  const aggregateSupplyUsd = 51_033_069.79770032;
+
+  beforeEach(() => {
+    rpcMocks.observeCentrifugeReviewedDeploymentUnitPartitionAttempt.mockReset();
+  });
+
+  function fixedInput(
+    chainCirculating: Record<string, { current: number }> = {},
+  ): ReportCardsFixedInput {
+    return {
+      activeAssetIds: [assetId],
+      clockSec: OBSERVED_AT_SEC,
+      sourceGeneration: "report-cards:v8:fixture",
+      baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+      registryFingerprint: "a".repeat(64),
+      chainCirculatingById: { [assetId]: chainCirculating },
+      aggregateCirculatingById: {
+        [assetId]: {
+          circulating: { peggedUSD: aggregateSupplyUsd },
+          observedAtSec: OBSERVED_AT_SEC,
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+  }
+
+  it("admits one complete onchain packet and journals its provenance", async () => {
+    rpcMocks.observeCentrifugeReviewedDeploymentUnitPartitionAttempt
+      .mockResolvedValue({
+        status: "accepted",
+        attribution: {
+          model: "reviewed-deployment-unit-partition-v1",
+          assetId,
+          observedAtSec: OBSERVED_AT_SEC - 10,
+          captureStartedAtSec: OBSERVED_AT_SEC - 30,
+          captureEndedAtSec: OBSERVED_AT_SEC - 10,
+          registryFingerprint: "a".repeat(64),
+          routeInventoryDigest: "b".repeat(64),
+          deployments: [],
+        },
+      });
+
+    const capture = await captureSafetyScoreV9SupplyAttribution(
+      fixedInput(),
+      chainRpcs(),
+    );
+
+    expect(capture.attributionById[assetId]).toMatchObject({
+      model: "reviewed-deployment-unit-partition-v1",
+      observedAtSec: OBSERVED_AT_SEC - 10,
+    });
+    expect(
+      rpcMocks.observeCentrifugeReviewedDeploymentUnitPartitionAttempt,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assetId,
+        aggregateSupplyUsd,
+        registryFingerprint: "a".repeat(64),
+        scoringClockSec: OBSERVED_AT_SEC,
+      }),
+    );
+    expect(capture.journalRecords).toHaveLength(1);
+    expect(capture.journalRecords[0]).toMatchObject({
+      assetId,
+      sourceId: "centrifuge.reviewed-deployment-unit-partition.v1",
+      sourceOriginClass: "onchain-observation",
+      admissionCode: "supply-attribution.admission.accepted",
+      fallbackCode: "supply-attribution.fallback.not-used",
+      sourceObservedAtSec: OBSERVED_AT_SEC - 10,
+    });
+  });
+
+  it("skips attribution when an upstream chain partition already exists", async () => {
+    const capture = await captureSafetyScoreV9SupplyAttribution(
+      fixedInput({ Ethereum: { current: aggregateSupplyUsd } }),
+      chainRpcs(),
+    );
+
+    expect(capture.attributionById).toEqual({});
+    expect(capture.journalRecords).toEqual([]);
+    expect(
+      rpcMocks.observeCentrifugeReviewedDeploymentUnitPartitionAttempt,
+    ).not.toHaveBeenCalled();
+  });
+
+  it("fails closed to aggregate-only when any deployment identity drifts", async () => {
+    rpcMocks.observeCentrifugeReviewedDeploymentUnitPartitionAttempt
+      .mockResolvedValue({
+        status: "rejected",
+        rejectionCode: "deployment-identity-mismatch",
+        failedRouteId:
+          "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+      });
+
+    const capture = await captureSafetyScoreV9SupplyAttribution(
+      fixedInput(),
+      chainRpcs(),
+    );
+
+    expect(capture.attributionById).not.toHaveProperty(assetId);
+    expect(capture.journalRecords[0]).toMatchObject({
+      assetId,
+      sourceId: "centrifuge.reviewed-deployment-unit-partition.v1",
+      admissionCode: "supply-attribution.admission.rejected-identity-drift",
+      fallbackCode: "supply-attribution.fallback.aggregate-only",
+      failedRouteId:
+        "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+      contentSha256: null,
+    });
+  });
 });
