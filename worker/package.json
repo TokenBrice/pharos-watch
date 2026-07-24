@@ -16,9 +16,9 @@
     "wrangler": "4.112.0"
   },
   "dependencies": {
-    "@cf-wasm/resvg": "^0.3.4",
+    "@cf-wasm/resvg": "^0.3.5",
     "react": "^19.2.7",
-    "satori": "^0.26.0",
+    "satori": "^0.28.0",
     "viem": "2.55.4",
     "zod": "^4.4.3"
   }
