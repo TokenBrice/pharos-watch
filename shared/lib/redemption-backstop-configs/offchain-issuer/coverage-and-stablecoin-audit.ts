@@ -279,6 +279,7 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       // (greater of that or $1,000) — a citable documented ceiling.
       feeBpsMax: 10,
     },
+    v9RouteCostTerms: { minFeeUsd: 1_000 },
     docs: [
       sourceRef("Tether Transparency", "https://tether.to/en/transparency", ["capacity"]),
       sourceRef("Tether legal terms", "https://tether.to/en/legal/", ["route", "capacity", "access"]),

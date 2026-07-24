@@ -16,7 +16,12 @@ import {
   NonNegativeNumberSchema,
   PositiveNumberSchema,
 } from "../../types";
-import type { RedemptionBackstopConfig, RedemptionCapacityModel, RedemptionCostModel } from "./shared";
+import type {
+  RedemptionBackstopConfig,
+  RedemptionCapacityModel,
+  RedemptionCostModel,
+  RedemptionCostTerms,
+} from "./shared";
 
 type RedemptionBackstopDocSourceConfig = NonNullable<RedemptionBackstopConfig["docs"]>[number];
 
@@ -94,6 +99,8 @@ const RedemptionCostShapeSchema = {
   feeScenario: RedemptionFeeScenarioSchema.optional(),
 };
 
+const RedemptionCostTermsSchema: z.ZodType<RedemptionCostTerms> = z.strictObject(RedemptionCostShapeSchema);
+
 const RedemptionCostModelSchema: z.ZodType<RedemptionCostModel> = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("fee-bps"),
@@ -120,6 +127,7 @@ export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig>
     outputAssetType: RedemptionOutputAssetTypeSchema,
     capacityModel: RedemptionCapacityModelSchema,
     costModel: RedemptionCostModelSchema,
+    v9RouteCostTerms: RedemptionCostTermsSchema.optional(),
     holderEligibility: RedemptionHolderEligibilitySchema.optional(),
     routeStatus: z.enum(["open", "unknown"]).optional(),
     routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),

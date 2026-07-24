@@ -214,6 +214,35 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
   });
 
+  it("projects reviewed fixed and minimum fees when captured rows omit feeBps", () => {
+    const row = supplyFullRow({
+      stablecoinId: "usdt-tether",
+      feeBps: null,
+      feeConfidence: "undisclosed-reviewed",
+      feeModelKind: "documented-variable",
+    });
+    const review = buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]!;
+
+    expect(review.executionCosts).toEqual(
+      expect.arrayContaining([
+        { requestedNotionalUsd: 100_000, maxCostBps: 200, executionCostBps: 100 },
+        { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executionCostBps: 10 },
+        { requestedNotionalUsd: 5_000_000, maxCostBps: 200, executionCostBps: 10 },
+        { requestedNotionalUsd: 25_000_000, maxCostBps: 200, executionCostBps: 10 },
+      ]),
+    );
+
+    const fixedFeeRow = supplyFullRow({
+      stablecoinId: "ousd-origin-protocol",
+      feeBps: null,
+    });
+    const fixedFeeReview = buildSafetyScoreV9RouteReviews(
+      fixedInputStub(fixedFeeRow),
+      fixedFeeRow.stablecoinId,
+    )[0]!;
+    expect(fixedFeeReview.executionCosts.every((point) => point.executionCostBps === 25)).toBe(true);
+  });
+
   it("fails static-open live-direct evidence closed only at the v9 adapter", () => {
     const row = liveDirectRow("static-config");
     expect(row.capacityProfile?.exitRouteObservations?.[0]?.scoreEligible).toBe(true);

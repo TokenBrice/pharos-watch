@@ -1,3 +1,4 @@
+import { BPS_PER_UNIT } from "../math";
 import { trackedRedemptionDocSources } from "../redemption-backstop-docs";
 import type {
   RedemptionAccessModel,
@@ -17,8 +18,8 @@ import type {
   RedemptionSettlementModel,
 } from "../../types";
 
-// Keep the scenario fields in sync with RedemptionCostShapeSchema in schema.ts.
-interface RedemptionCostScenarioConfig {
+// Keep these fields in sync with RedemptionCostShapeSchema in schema.ts.
+export interface RedemptionCostTerms {
   flatFeeUsd?: number;
   minFeeUsd?: number;
   feeBpsMin?: number;
@@ -36,13 +37,13 @@ export type RedemptionCostModel =
       feeBps: number;
       feeDescription?: string;
       confidence?: Extract<RedemptionFeeConfidence, "fixed">;
-    } & RedemptionCostScenarioConfig)
+    } & RedemptionCostTerms)
   | ({
       kind: "dynamic-or-unclear";
       feeDescription?: string;
       confidence?: Exclude<RedemptionFeeConfidence, "fixed">;
       feeModelKind?: Exclude<RedemptionFeeModelKind, "fixed-bps">;
-    } & RedemptionCostScenarioConfig);
+    } & RedemptionCostTerms);
 
 export type RedemptionCapacityModel =
   | {
@@ -91,6 +92,13 @@ export interface RedemptionBackstopConfig {
   outputAssetType: RedemptionOutputAssetType;
   capacityModel: RedemptionCapacityModel;
   costModel: RedemptionCostModel;
+  /**
+   * Reviewed terms projected only by the Safety Score V9 route adapter.
+   *
+   * This compatibility overlay keeps evidence corrections made after the V8
+   * methodology freeze from changing the public V8 redemption producer.
+   */
+  v9RouteCostTerms?: RedemptionCostTerms;
   holderEligibility?: RedemptionHolderEligibility;
   routeStatus?: Extract<RedemptionRouteStatus, "open" | "unknown">;
   routeExitCorrelation?: RedemptionRouteExitCorrelation;
@@ -183,6 +191,7 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
     ...config,
     capacityModel: { ...config.capacityModel },
     costModel: { ...config.costModel },
+    ...(config.v9RouteCostTerms ? { v9RouteCostTerms: { ...config.v9RouteCostTerms } } : {}),
     ...(config.docs ? { docs: config.docs.map(cloneRedemptionDocSource) } : {}),
     ...(config.notes ? { notes: [...config.notes] } : {}),
   };
@@ -194,6 +203,52 @@ export function cloneRedemptionDocSource(doc: RedemptionDocSource): RedemptionDo
     url: doc.url,
     ...(doc.supports ? { supports: [...doc.supports] } : {}),
   };
+}
+
+/**
+ * Resolve the effective redemption cost at one requested notional.
+ *
+ * Fresh numeric telemetry takes precedence over the reviewed percentage
+ * fallback. Reviewed minimum and fixed-dollar charges still apply because they
+ * are separate terms of the same fee schedule.
+ */
+export function resolveRedemptionCostBpsAtNotional(
+  costModel: RedemptionCostModel,
+  requestedNotionalUsd: number,
+  resolvedFeeBps: number | null = null,
+): number | null {
+  if (!Number.isFinite(requestedNotionalUsd) || requestedNotionalUsd <= 0) return null;
+  const observedFeeBps =
+    resolvedFeeBps != null && Number.isFinite(resolvedFeeBps) && resolvedFeeBps >= 0
+      ? resolvedFeeBps
+      : null;
+  const normalFeeBps =
+    observedFeeBps ??
+    costModel.feeBpsMax ??
+    costModel.feeBpsMin ??
+    (costModel.kind === "fee-bps" ? costModel.feeBps : null);
+  const variableFeeBps =
+    costModel.feeScenario === "stress" && costModel.stressFeeBps != null
+      ? costModel.stressFeeBps
+      : normalFeeBps;
+  const fixedCostUsd = (costModel.flatFeeUsd ?? 0) + (costModel.gasOrBridgeCostUsd ?? 0);
+  if (variableFeeBps == null && costModel.minFeeUsd == null && fixedCostUsd === 0) return null;
+  if (variableFeeBps != null && costModel.minFeeUsd == null && fixedCostUsd === 0) return variableFeeBps;
+  const percentageFeeUsd = ((variableFeeBps ?? 0) * requestedNotionalUsd) / BPS_PER_UNIT;
+  const variableFeeUsd = Math.max(percentageFeeUsd, costModel.minFeeUsd ?? 0);
+  return ((variableFeeUsd + fixedCostUsd) / requestedNotionalUsd) * BPS_PER_UNIT;
+}
+
+export function resolveV9RedemptionRouteCostBpsAtNotional(
+  config: RedemptionBackstopConfig,
+  requestedNotionalUsd: number,
+  resolvedFeeBps: number | null = null,
+): number | null {
+  return resolveRedemptionCostBpsAtNotional(
+    { ...config.costModel, ...config.v9RouteCostTerms },
+    requestedNotionalUsd,
+    resolvedFeeBps,
+  );
 }
 
 export function fixedFee(feeBps: number, feeDescription?: string): RedemptionCostModel {

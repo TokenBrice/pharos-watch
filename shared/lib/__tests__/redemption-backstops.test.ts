@@ -70,6 +70,15 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
   it("captures candidate-specific fee and output details", () => {
+    expect(getRedemptionBackstopConfig("usdt-tether")).toMatchObject({
+      costModel: {
+        kind: "dynamic-or-unclear",
+        feeDescription: "0.10% with a $1,000 minimum",
+        feeBpsMax: 10,
+      },
+      v9RouteCostTerms: { minFeeUsd: 1_000 },
+    });
+
     expect(getRedemptionBackstopConfig("lisusd-lista")).toMatchObject({
       routeFamily: "psm-swap",
       capacityModel: { kind: "supply-ratio", ratio: 0.15 },

@@ -3,10 +3,15 @@ import { REDEMPTION_BACKSTOP_CONFIGS } from "./redemption-backstop-configs";
 import type { RedemptionBackstopConfig } from "./redemption-backstop-configs/shared";
 
 export { REDEMPTION_BACKSTOP_CONFIGS };
+export {
+  resolveRedemptionCostBpsAtNotional,
+  resolveV9RedemptionRouteCostBpsAtNotional,
+} from "./redemption-backstop-configs/shared";
 export type {
   RedemptionBackstopConfig,
   RedemptionCapacityModel,
   RedemptionCostModel,
+  RedemptionCostTerms,
 } from "./redemption-backstop-configs/shared";
 
 for (const stablecoinId of Object.keys(REDEMPTION_BACKSTOP_CONFIGS)) {

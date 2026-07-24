@@ -1,5 +1,9 @@
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
+import {
+  getRedemptionBackstopConfig,
+  resolveV9RedemptionRouteCostBpsAtNotional,
+} from "@shared/lib/redemption-backstops";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import {
@@ -290,6 +294,7 @@ function redemptionExecutionCosts(
   entry: RedemptionBackstopEntry,
   observation: ExitRouteObservation,
 ): RouteReview["executionCosts"] {
+  const config = getRedemptionBackstopConfig(entry.stablecoinId);
   const points = observation.capacityCurve ?? [
     {
       requestedNotionalUsd: observation.requestedNotionalUsd,
@@ -299,14 +304,18 @@ function redemptionExecutionCosts(
     },
   ];
   return points
-    .map((point) => ({
-      requestedNotionalUsd: point.requestedNotionalUsd,
-      maxCostBps: point.maxCostBps,
-      executionCostBps:
-        entry.feeBps !== null && Number.isFinite(entry.feeBps)
-          ? Math.min(entry.feeBps, point.maxCostBps)
-          : point.maxCostBps,
-    }))
+    .map((point) => {
+      const reviewedCostBps = config
+        ? resolveV9RedemptionRouteCostBpsAtNotional(config, point.requestedNotionalUsd, entry.feeBps)
+        : entry.feeBps !== null && Number.isFinite(entry.feeBps)
+          ? entry.feeBps
+          : null;
+      return {
+        requestedNotionalUsd: point.requestedNotionalUsd,
+        maxCostBps: point.maxCostBps,
+        executionCostBps: reviewedCostBps ?? point.maxCostBps,
+      };
+    })
     .sort((left, right) =>
       compareText(
         `${left.maxCostBps}:${left.requestedNotionalUsd}`,
