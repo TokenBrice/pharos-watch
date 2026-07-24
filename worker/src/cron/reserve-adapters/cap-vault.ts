@@ -1,8 +1,19 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { formatAddress } from "@shared/lib/format";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
-import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddress } from "../../lib/evm-selectors";
+import type {
+  LiveReserveRedemptionOutputValuation,
+  LiveReservesConfig,
+  LiveReserveWarning,
+} from "@shared/types/live-reserves";
+import { parseChainlinkLatestRoundData } from "../../lib/chainlink-round-data";
+import {
+  DECIMALS_SELECTOR,
+  LATEST_ROUND_DATA_SELECTOR,
+  TOTAL_SUPPLY_SELECTOR,
+  encodeAddress,
+} from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import { resolveCoinContractAddress } from "./evm";
 import {
@@ -15,6 +26,7 @@ import {
   requireOnchainInput,
   slicesFromValues,
 } from "./helpers";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "./validate";
 import { validateDecimals } from "./slice-math";
 import { decodeAddressArrayWord, decodeBoolWord } from "./abi-decode";
 
@@ -27,6 +39,7 @@ const PAUSED_SELECTOR = "0x2e48152c";
 // Inherited from Cap's Minter; returns a ray (1e27 = 100%) flat redeem fee.
 const GET_REDEEM_FEE_SELECTOR = "0xc6d98f1a";
 const REDEEM_FEE_RAY_SCALE = 10n ** 27n;
+const WTGXX_ASSET_ID = "wtgxx-wisdomtree";
 
 function redeemFeeBpsFromRay(raw: bigint): number {
   return Number((raw * 10_000n + REDEEM_FEE_RAY_SCALE / 2n) / REDEEM_FEE_RAY_SCALE);
@@ -58,6 +71,9 @@ interface CapVaultAssetState {
    * assumption. Configured non-USD-like assets must provide priceUsd.
    */
   priceUsd?: number;
+  /** Source-bound current unit value used for the proportional output basket. */
+  priceSourceId?: string;
+  priceObservedAt?: number;
   /**
    * True when the asset's paused() call returned a value that could not be decoded.
    * When true, `paused` is conservatively set to true.
@@ -100,6 +116,92 @@ function isRecognizedUsdLikeReserve(asset: CapVaultAssetState): boolean {
 function priceForCapAsset(asset: CapVaultAssetState): number {
   if (asset.priceUsd != null) return asset.priceUsd;
   return 1.0;
+}
+
+function isTrackedFixedPegStablecoin(asset: CapVaultAssetState): boolean {
+  if (asset.coinId?.match(/^(usdc|usdt|pyusd|rlusd|usdp|gusd|usds|dai)-/)) return true;
+  return /^(usdc|usdt|pyusd|rlusd|usdp|gusd|usds|dai)$/i.test(asset.name);
+}
+
+function buildOutputValuation(args: {
+  assets: readonly CapVaultAssetState[];
+  totalReserveUsd: number;
+  supplyUsd: number | null;
+}): LiveReserveRedemptionOutputValuation | null {
+  if (
+    args.assets.length < 2 ||
+    args.supplyUsd == null ||
+    !Number.isFinite(args.supplyUsd) ||
+    args.supplyUsd <= 0 ||
+    !Number.isFinite(args.totalReserveUsd) ||
+    args.totalReserveUsd <= 0
+  ) {
+    return null;
+  }
+  if (
+    args.assets.some(
+      (asset) =>
+        !asset.coinId ||
+        (!isTrackedFixedPegStablecoin(asset) &&
+          (!asset.priceSourceId || asset.priceObservedAt == null)),
+    )
+  ) {
+    return null;
+  }
+  const sourceBoundAssets = args.assets.filter(
+    (asset) => asset.priceSourceId && asset.priceObservedAt != null,
+  );
+  if (sourceBoundAssets.length === 0) return null;
+  const unitValueUsd = args.totalReserveUsd / args.supplyUsd;
+  if (!Number.isFinite(unitValueUsd) || unitValueUsd <= 0) return null;
+  return {
+    sourceId: `cap-vault:${[...new Set(sourceBoundAssets.map((asset) => asset.priceSourceId!))].sort().join("+")}`,
+    observedAt: Math.min(...sourceBoundAssets.map((asset) => asset.priceObservedAt!)),
+    unitValueUsd,
+    basketWeights: args.assets.map((asset) => ({
+      assetId: asset.coinId!,
+      weight: (asset.totalSupplied * priceForCapAsset(asset)) / args.totalReserveUsd,
+    })),
+  };
+}
+
+async function resolveSourceBoundOutputPrice(
+  asset: CapVaultAssetState,
+  onchain: ReturnType<typeof makeOnchainCallers>,
+  now: number,
+): Promise<CapVaultAssetState> {
+  if (asset.coinId !== WTGXX_ASSET_ID) return asset;
+  const navConfig = TRACKED_META_BY_ID.get(WTGXX_ASSET_ID)?.liveReservesConfig;
+  if (navConfig?.adapter !== "chainlink-nav") {
+    throw new Error("cap-vault: WTGXX output valuation requires the tracked Chainlink NAV config");
+  }
+  const params = parseLiveReserveAdapterParams("chainlink-nav", navConfig.params);
+  const [rawDecimals, rawRoundData] = await Promise.all([
+    onchain.uint256(params.oracleAddress, DECIMALS_SELECTOR),
+    onchain.raw(params.oracleAddress, LATEST_ROUND_DATA_SELECTOR),
+  ]);
+  if (rawDecimals == null || rawRoundData == null) {
+    throw new Error("cap-vault: WTGXX Chainlink NAV read failed");
+  }
+  const decimals = validateDecimals(rawDecimals, "cap-vault: WTGXX Chainlink NAV decimals");
+  const round = parseChainlinkLatestRoundData(rawRoundData, "cap-vault: WTGXX Chainlink NAV");
+  if (round.updatedAt > now + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
+    throw new Error(`cap-vault: WTGXX Chainlink NAV timestamp is in the future (${round.updatedAt - now}s)`);
+  }
+  const maxAgeSec = params.maxOracleAgeSec ?? 345_600;
+  if (now - round.updatedAt > maxAgeSec) {
+    throw new Error(`cap-vault: WTGXX Chainlink NAV is stale (${now - round.updatedAt}s > ${maxAgeSec}s)`);
+  }
+  const priceUsd = decimalNumberFromBigInt(round.answer, decimals);
+  if (!Number.isFinite(priceUsd) || priceUsd <= 0) {
+    throw new Error("cap-vault: WTGXX Chainlink NAV is not a positive finite value");
+  }
+  return {
+    ...asset,
+    priceUsd,
+    priceSourceId: `chainlink-nav:${params.oracleAddress.toLowerCase()}`,
+    priceObservedAt: round.updatedAt,
+  };
 }
 
 export function adaptCapVaultState(args: {
@@ -151,6 +253,11 @@ export function adaptCapVaultState(args: {
     (sum, asset) => sum + asset.totalSupplied * priceForCapAsset(asset),
     0,
   );
+  const outputValuation = buildOutputValuation({
+    assets: activeAssets,
+    totalReserveUsd,
+    supplyUsd: args.supplyUsd,
+  });
   const immediateRedeemableUsd = activeAssets.reduce(
     (sum, asset) => sum + (asset.paused ? 0 : Math.max(0, asset.available) * priceForCapAsset(asset)),
     0,
@@ -217,6 +324,7 @@ export function adaptCapVaultState(args: {
         settlementDelaySec: 0,
         sourceUrls: ["https://docs.cap.app/concepts/vault"],
         feeBps: args.redemptionFeeBps,
+        ...(outputValuation ? { outputValuation } : {}),
       }),
     },
   };
@@ -310,8 +418,13 @@ export async function fetchCapVaultReserves(
     } satisfies CapVaultAssetState;
   }));
 
+  const now = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
+  const sourceBoundAssetStates = await Promise.all(
+    assetStates.map((asset) => resolveSourceBoundOutputPrice(asset, onchain, now)),
+  );
+
   return adaptCapVaultState({
-    assets: assetStates,
+    assets: sourceBoundAssetStates,
     supplyUsd,
     contractAddress,
     redemptionFeeBps,

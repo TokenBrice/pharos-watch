@@ -35,7 +35,7 @@
   "geckoId": "blackrock-usd-institutional-digital-liquidity-fund",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://chroniclelabs.org/dashboard/proofofassets",
+    "url": "https://chroniclelabs.org/dashboard/proof-of-asset/blackrock-buidl",
     "provider": "Chronicle Proof of Asset",
     "attestorTier": "niche",
     "cadence": "real-time",
@@ -45,6 +45,10 @@
     {
       "label": "Website",
       "url": "https://securitize.io/blackrock/buidl"
+    },
+    {
+      "label": "Proof of Asset",
+      "url": "https://chroniclelabs.org/dashboard/proof-of-asset/blackrock-buidl"
     },
     {
       "label": "Twitter",

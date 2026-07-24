@@ -74,6 +74,64 @@ describe("ReportCardV9Detail", () => {
     expect(screen.getByText("Required pillar evidence is missing.")).toBeTruthy();
   });
 
+  it("explains an applied market-anchor premium", () => {
+    const premiumCap = {
+      source: "structural" as const,
+      kind: "signal:centralized-mint:low",
+      limit: 87,
+      reason: "The market-anchor policy relieves the ordinary 83 limit.",
+      binding: true,
+    };
+    const card = makeV9Card({
+      id: "usdt-tether",
+      score: 87,
+      grade: "A+",
+      qualityScore: 95,
+      pegMultiplier: 1,
+      pegAdjustedScore: 99,
+      pillars: {
+        backing: { score: 95, evidenceLevel: "strong", freshness: "current", components: [], reasons: [] },
+        exit: { score: 95, evidenceLevel: "strong", freshness: "current", components: [], reasons: [] },
+        control: { score: 95, evidenceLevel: "strong", freshness: "current", components: [], reasons: [] },
+      },
+      weakestPillar: { pillar: "backing", score: 95 },
+      caps: [premiumCap],
+      bindingCap: premiumCap,
+    });
+    card.scoreTrace.stages.baseAssetScore = 95;
+    card.scoreTrace.stages.deploymentAdjustedScore = 95;
+    card.scoreTrace.scoreAdjustments = [{
+      source: "asset-premium",
+      kind: "market-anchor-longevity",
+      label: "#1 & Longevity Premium",
+      configuredPoints: 4,
+      appliedPoints: 4,
+      scoreBefore: 95,
+      scoreAfter: 99,
+      publishedScoreBefore: 83,
+      publishedScoreAfter: 87,
+      capRelief: {
+        source: "structural",
+        kind: "signal:centralized-mint:low",
+        fromLimit: 83,
+        toLimit: 87,
+      },
+    }];
+    const response = makeReportCardsV9Response({ cards: [card] });
+
+    render(
+      <ReportCardV9Detail
+        response={response}
+        expectedIdentity={response.safetyScoreIdentity}
+        cardId={card.id}
+      />,
+    );
+
+    expect(screen.getByText("#1 & Longevity Premium")).toBeTruthy();
+    expect(screen.getByText("+4")).toBeTruthy();
+    expect(screen.getByText(/Ordinary score 83 to published score 87/)).toBeTruthy();
+  });
+
   it("does not render stale data after an expected identity change", () => {
     const response = makeReportCardsV9Response();
     render(

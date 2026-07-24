@@ -2,18 +2,69 @@
   "id": "buidl-blackrock",
   "reserves": [
     {
-      "name": "Cash, U.S. Treasury bills, and repurchase agreements",
-      "pct": 100,
+      "name": "Tri-party repo — Deutsche Bank AG",
+      "pct": 21.223487,
       "risk": "very-low",
-      "assetClass": "other",
-      "issuerOrObligor": "United States Treasury and institutional repo counterparties",
+      "assetClass": "repo",
+      "issuerOrObligor": "Deutsche Bank AG",
       "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
+    },
+    {
+      "name": "Tri-party repo — BofA Securities",
+      "pct": 19.471089,
+      "risk": "very-low",
+      "assetClass": "repo",
+      "issuerOrObligor": "BofA Securities Inc.",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
+    },
+    {
+      "name": "Tri-party repo — Citigroup Global Markets",
+      "pct": 19.471089,
+      "risk": "very-low",
+      "assetClass": "repo",
+      "issuerOrObligor": "Citigroup Global Markets",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
+    },
+    {
+      "name": "Tri-party repo — J.P. Morgan Securities",
+      "pct": 17.52398,
+      "risk": "very-low",
+      "assetClass": "repo",
+      "issuerOrObligor": "J.P. Morgan Securities",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
+    },
+    {
+      "name": "Tri-party repo — Royal Bank of Canada",
+      "pct": 6.892765,
+      "risk": "very-low",
+      "assetClass": "repo",
+      "issuerOrObligor": "Royal Bank of Canada",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 1
+    },
+    {
+      "name": "U.S. Treasury bills",
+      "pct": 15.41759,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": ["duration", "liquidity", "custody"],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 85
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-17",
-    "reviewer": "Kimi FIAT-CTRL shard-02 control-evidence review",
+    "reviewedAt": "2026-07-24",
+    "reviewer": "Codex Chronicle Proof of Asset review",
     "confidence": "verified",
     "sources": [
       {
@@ -29,25 +80,17 @@
         "url": "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652"
       },
       {
-        "label": "Chronicle Proof of Asset BUIDL verification launch",
-        "url": "https://chroniclelabs.org/blog/buidl-tokenized-by-securitize-is-now-verified-onchain-by-chronicle-proof-of-asset"
+        "label": "Chronicle BUIDL Proof of Asset holdings dashboard (source date 2026-07-22; proof verified 2026-07-24)",
+        "url": "https://chroniclelabs.org/dashboard/proof-of-asset/blackrock-buidl"
       }
     ],
-    "rationale": "Current issuer materials confirm that BUIDL invests across cash, Treasury bills, and repurchase agreements but do not publish a durable category split. The prior 60/30/10 estimate was therefore replaced by the supported aggregate basket.",
-    "compositionBasis": "BlackRock/Securitize stated investment categories",
-    "compositionAsOf": "2026-04-28",
+    "rationale": "Chronicle's independently verified holdings table identifies all 15 positions as of 2026-07-22: five overnight tri-party repo positions totaling $2.172 billion and ten U.S. Treasury bills totaling $395.910 million. The six curated slices preserve each repo counterparty and aggregate only the same-obligor Treasury bills; percentages are derived from the reported $2.568 billion aggregate portfolio market value.",
+    "compositionBasis": "Chronicle Proof of Asset position-level market values",
+    "compositionAsOf": "2026-07-22",
     "scope": "full-composition",
-    "knownUnknownExposure": "The allocation among cash, Treasury bills, and repurchase agreements is not captured in the reviewed durable sources. PricewaterhouseCoopers LLP is the Fund's retained independent auditor and shareholders receive an annual audited financial report within about 120 days of fiscal year-end (issuer-stated, 2024-05-04), but those audited reports are not published; public assurance is instead the real-time Chronicle Proof of Asset verification launched 2026-03-26. The reviewed public materials do not provide a public periodic assets-and-liabilities assurance report or documented loss-recovery waterfall for token holders, so the mechanism loss-recovery component remains unresolved.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Cash, U.S. Treasury bills, and repurchase agreements",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The fund mandate identifies the categories but not current category weights."
-      }
-    ]
+    "knownUnknownExposure": "No unidentified position remains in the dated holdings table. Chronicle reports $2.568 billion of portfolio market value against 2.618 billion outstanding shares at $1, a 98.09% gross-holdings-to-share-value reference; Pharos preserves that reconciliation separately and does not treat it as proof of a contractual collateralization ratio. The public sources still do not disclose a token-holder loss waterfall or the confidential offering memorandum.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
   },
   "custodyProfile": {
     "providers": [

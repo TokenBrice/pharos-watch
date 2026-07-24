@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ReserveSlice } from "@shared/types/reserves";
 import {
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
+  buildSafetyScoreV9ReviewedStandaloneReserveRows,
   buildSafetyScoreV9ReviewedStaticReserveRows,
   resolveSafetyScoreV9AssetIssuerKey,
   type V9ExtensionRegistryMeta,
@@ -11,6 +12,12 @@ import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/e
 
 const CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
 const WINDOW_SEC = Math.ceil(3 * 365.25 * 86_400);
+const LIVE_RESERVES_CONFIG: NonNullable<V9ExtensionRegistryMeta["liveReservesConfig"]> = {
+  adapter: "curated-validated",
+  version: 1,
+  semantics: "collateral-mix",
+  inputs: { primary: { kind: "onchain-solana" } },
+};
 
 function mintMeta(id: string, overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {
   return {
@@ -432,7 +439,7 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
 describe("Phase 1 D6 reviewed curated fallback admission", () => {
   it("admits a current verified full composition at static-validated confidence", () => {
     const admitted = buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
-      eligibleReserveMeta({ proofOfReserves: undefined }),
+      eligibleReserveMeta({ proofOfReserves: undefined, liveReservesConfig: LIVE_RESERVES_CONFIG }),
       CLOCK_SEC,
     );
 
@@ -444,11 +451,93 @@ describe("Phase 1 D6 reviewed curated fallback admission", () => {
   });
 
   it("fails closed for stale, probable, partial, unsourced, or incomplete compositions", () => {
+    const base = eligibleReserveMeta({
+      proofOfReserves: undefined,
+      liveReservesConfig: LIVE_RESERVES_CONFIG,
+    });
+    const cases = [
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        liveReservesConfig: LIVE_RESERVES_CONFIG,
+        reserveReview: { ...base.reserveReview!, compositionAsOf: "2026-06-15" },
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        liveReservesConfig: LIVE_RESERVES_CONFIG,
+        reserveReview: { ...base.reserveReview!, confidence: "probable" },
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        liveReservesConfig: LIVE_RESERVES_CONFIG,
+        reserveReview: { ...base.reserveReview!, scope: "selected-slices" },
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        liveReservesConfig: LIVE_RESERVES_CONFIG,
+        reserveReview: { ...base.reserveReview!, sources: [] },
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        liveReservesConfig: LIVE_RESERVES_CONFIG,
+        reserves: [{ ...base.reserves![0]!, pct: 50 }],
+      }),
+    ];
+
+    for (const meta of cases) {
+      expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, CLOCK_SEC)).toBeNull();
+    }
+  });
+
+  it("requires a configured producer for fallback provenance", () => {
+    expect(
+      buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
+        eligibleReserveMeta({ proofOfReserves: undefined }),
+        CLOCK_SEC,
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("Phase 1 D6 reviewed standalone reserve admission", () => {
+  it("admits a current verified full composition at static-validated confidence", () => {
+    const admitted = buildSafetyScoreV9ReviewedStandaloneReserveRows(
+      eligibleReserveMeta({ proofOfReserves: undefined }),
+      CLOCK_SEC,
+    );
+
+    expect(admitted).toMatchObject({
+      evidenceClass: "static-validated",
+      provenance: "curated",
+    });
+    expect(admitted?.rows).toHaveLength(2);
+  });
+
+  it("fails closed for producer-backed assets, wrappers, invalid dates, and incomplete reviews", () => {
     const base = eligibleReserveMeta({ proofOfReserves: undefined });
     const cases = [
       eligibleReserveMeta({
         proofOfReserves: undefined,
-        reserveReview: { ...base.reserveReview!, compositionAsOf: "2026-06-15" },
+        liveReservesConfig: LIVE_RESERVES_CONFIG,
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        variantOf: "usdc-circle",
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        reserveReview: { ...base.reserveReview!, compositionAsOf: "2026-07-18" },
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        reserveReview: { ...base.reserveReview!, compositionAsOf: undefined },
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        reserveReview: { ...base.reserveReview!, reviewedAt: "2026-06-29" },
+      }),
+      eligibleReserveMeta({
+        proofOfReserves: undefined,
+        reserveReview: { ...base.reserveReview!, reviewedAt: "2026-07-18" },
       }),
       eligibleReserveMeta({
         proofOfReserves: undefined,
@@ -469,7 +558,7 @@ describe("Phase 1 D6 reviewed curated fallback admission", () => {
     ];
 
     for (const meta of cases) {
-      expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, CLOCK_SEC)).toBeNull();
+      expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(meta, CLOCK_SEC)).toBeNull();
     }
   });
 });

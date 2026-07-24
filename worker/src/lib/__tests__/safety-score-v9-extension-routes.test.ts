@@ -392,6 +392,91 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]!.output?.valuation).toBeNull();
   });
 
+  it("uses a complete source-bound producer valuation for CUSD when WTGXX has no peg row", () => {
+    const reviewedRow = supplyFullRow({
+      stablecoinId: "cusd-cap",
+      routeFamily: "basket-redeem",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-basket",
+      outputAssetType: "stable-basket",
+      feeBps: 0,
+    });
+    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(
+      fixedInputStub(reviewedRow),
+      reviewedRow.stablecoinId,
+    )[0]!.observation;
+    const row = {
+      ...reviewedRow,
+      sourceMode: "dynamic",
+      routeStatusSource: "onchain",
+      capacityConfidence: "live-direct",
+      capacityKind: "live-direct-bounded",
+      modelConfidence: "high",
+    } satisfies RedemptionBackstopEntry;
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      scoringUsd: 30_000_000,
+      scoringHorizon: "immediate",
+      exitRouteObservations: [
+        {
+          ...observation,
+          output: {
+            kind: "tracked-stablecoin",
+            trackedAssetIds: ["usdc-circle", "wtgxx-wisdomtree"],
+            basketWeights: [
+              { assetId: "usdc-circle", weight: 0.93 },
+              { assetId: "wtgxx-wisdomtree", weight: 0.07 },
+            ],
+          },
+          evidenceKind: "onchain-contract-state",
+          confidence: "high",
+          executionCostBps: 0,
+          outputUnitValueUsd: 0.999983,
+          outputUnitValueSourceId:
+            "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49",
+          outputUnitValueObservedAt: NOW - 120,
+          allInCostBps: 0.17,
+          scoreEligible: true,
+          observedAt: NOW,
+          freshnessSeconds: 0,
+        },
+      ],
+    };
+    const fixedInput = fixedInputStub(row);
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "usdc-circle": { currentDeviationBps: 2, priceObservedAt: NOW },
+    };
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "cusd-cap")[0]?.output).toMatchObject({
+      basketWeights: [
+        { assetKey: "usdc-circle", weight: 0.93 },
+        { assetKey: "wtgxx-wisdomtree", weight: 0.07 },
+      ],
+      valuation: {
+        basis: "price",
+        referenceAssetKey: "basket:redemption:cusd-cap:basket-redeem",
+        unitValueUsd: 0.999983,
+        expectedUnitValueUsd: 1,
+        sourceId: "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49",
+        observedAtSec: NOW - 120,
+        confidence: "high",
+      },
+    });
+
+    // A known component trading below the pinned aggregate remains the
+    // conservative floor even though the other component has no peg row.
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "usdc-circle": { currentDeviationBps: -5, priceObservedAt: NOW },
+    };
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "cusd-cap")[0]?.output?.valuation).toMatchObject({
+      referenceAssetKey: "usdc-circle",
+      unitValueUsd: 0.9995,
+      sourceId: "report-cards-peg-summary",
+      confidence: "medium",
+    });
+  });
+
   it("values production-shaped tracked DEX output aliases by canonical stablecoin id", () => {
     const fixedInput = fixedInputStub(undefined);
     const route: ExitRouteObservation = {

@@ -1,5 +1,7 @@
 import {
   V9ScoringInputSchema,
+  type V9AssetPremiumKind,
+  type V9AssetPremiumPolicy,
   type V9CapSource,
   type V9Grade,
   type V9QualityPillar,
@@ -118,16 +120,37 @@ export interface V9ScoreTrace {
   deploymentAdjustments: readonly V9ScopedRiskAdjustment[];
   unresolvedDeploymentSignals: readonly V9ScopedRiskSignal[];
   preCapScore: number | null;
+  scoreAdjustments: readonly V9ScoreAdjustmentTrace[];
   caps: readonly V9CapTrace[];
   bindingCap: V9CapTrace | null;
   structuralSignals: readonly V9StructuralSignal[];
   finalScore: number | null;
+  /** Ordinary post-cap score consumed by downstream serial dependencies. */
+  inheritableScore: number | null;
   finalGrade: V9Grade;
   adverseAttribution: readonly V9AdverseAttribution[];
   boundedUncertaintyAttribution: readonly V9BoundedUncertaintyAttribution[];
   unresolvedFacts: readonly V9UnresolvedFact[];
   nrReasons: readonly V9NRReason[];
   propagatedParentReasons: readonly V9NRReason[];
+}
+
+export interface V9ScoreAdjustmentTrace {
+  source: "asset-premium";
+  kind: V9AssetPremiumKind;
+  label: string;
+  configuredPoints: number;
+  appliedPoints: number;
+  scoreBefore: number;
+  scoreAfter: number;
+  publishedScoreBefore: number;
+  publishedScoreAfter: number;
+  capRelief: {
+    source: "structural";
+    kind: string;
+    fromLimit: number;
+    toLimit: number;
+  };
 }
 
 const SCORE_MIN = 0;
@@ -712,6 +735,94 @@ function capPriority(source: V9CapTrace["source"], policy: V9ValidatedPolicyEnve
   return priority === -1 ? policy.policy.semantic.formula.capTiePriority.length : priority;
 }
 
+/**
+ * Apply one explicit asset premium after the ordinary score has established
+ * eligibility. The adjustment remains pre-cap, and only its named cap relief
+ * changes; every other candidate cap is recomputed unchanged.
+ */
+export function applyV9AssetPremium(
+  trace: V9ScoreTrace,
+  premium: V9AssetPremiumPolicy,
+  policy: V9ValidatedPolicyEnvelope,
+): V9ScoreTrace {
+  assertV9ValidatedPolicyEnvelope(policy);
+  if (trace.assetId !== premium.assetId) {
+    throw new Error(
+      `Safety Score v9 ${trace.assetId} cannot apply premium for ${premium.assetId}`,
+    );
+  }
+  if (trace.finalScore === null || trace.preCapScore === null) {
+    throw new Error(`Safety Score v9 ${trace.assetId} cannot apply an asset premium to NR`);
+  }
+  if (trace.scoreAdjustments.length > 0) {
+    throw new Error(`Safety Score v9 ${trace.assetId} already has a score adjustment`);
+  }
+  const matchingCap = trace.caps.find(
+    (cap) =>
+      cap.source === premium.capRelief.source &&
+      cap.kind === premium.capRelief.kind &&
+      cap.limit === premium.capRelief.fromLimit,
+  );
+  if (!matchingCap) {
+    throw new Error(
+      `Safety Score v9 ${trace.assetId} premium cannot resolve cap ${premium.capRelief.kind}`,
+    );
+  }
+
+  const adjustedPreCapRaw = clampScore(trace.preCapScore + premium.points);
+  const appliedPoints = roundTo(adjustedPreCapRaw - trace.preCapScore, 4);
+  if (appliedPoints <= 0) return trace;
+
+  const adjustedCandidates = trace.caps.map<Omit<V9CapTrace, "binding">>((cap) => ({
+    source: cap.source,
+    kind: cap.kind,
+    limit: cap === matchingCap ? premium.capRelief.toLimit : cap.limit,
+    reason: cap.reason,
+  }));
+  const formula = policy.policy.semantic.formula;
+  const quantizedUncapped = roundTo(adjustedPreCapRaw, formula.scoreDecimals);
+  const bindingCandidate =
+    [...adjustedCandidates]
+      .filter((cap) => floorTo(cap.limit, formula.scoreDecimals) < quantizedUncapped)
+      .sort(
+        (left, right) =>
+          left.limit - right.limit ||
+          capPriority(left.source, policy) - capPriority(right.source, policy) ||
+          compareCodeUnits(left.kind, right.kind),
+      )[0] ?? null;
+  const rawFinal = Math.min(adjustedPreCapRaw, bindingCandidate?.limit ?? SCORE_MAX);
+  const finalScore = bindingCandidate
+    ? floorTo(rawFinal, formula.scoreDecimals)
+    : roundTo(rawFinal, formula.scoreDecimals);
+  const caps = adjustedCandidates.map<V9CapTrace>((cap) => ({
+    ...cap,
+    binding: cap === bindingCandidate,
+  }));
+  const scoreAfter = roundTo(adjustedPreCapRaw, 4);
+  const publishedScoreBefore = trace.finalScore;
+
+  return {
+    ...trace,
+    preCapScore: scoreAfter,
+    scoreAdjustments: [{
+      source: "asset-premium",
+      kind: premium.kind,
+      label: premium.label,
+      configuredPoints: premium.points,
+      appliedPoints,
+      scoreBefore: trace.preCapScore,
+      scoreAfter,
+      publishedScoreBefore,
+      publishedScoreAfter: finalScore,
+      capRelief: { ...premium.capRelief },
+    }],
+    caps,
+    bindingCap: bindingCandidate ? { ...bindingCandidate, binding: true } : null,
+    finalScore,
+    finalGrade: gradeForScore(finalScore, policy),
+  };
+}
+
 function scoreV9InputWithCaps(
   rawInput: V9ScoringInput,
   policy: V9ValidatedPolicyEnvelope,
@@ -1207,10 +1318,12 @@ function scoreV9InputWithCaps(
       })) ?? [],
     unresolvedDeploymentSignals: scopedRisk?.unresolvedDeploymentSignals ?? [],
     preCapScore: preCapScoreRaw === null ? null : roundTo(preCapScoreRaw, 4),
+    scoreAdjustments: [],
     caps: finalCaps,
     bindingCap: finalBindingCap,
     structuralSignals: input.structuralSignals,
     finalScore,
+    inheritableScore: finalScore,
     finalGrade: finalScore === null ? "NR" : gradeForScore(finalScore, policy),
     adverseAttribution,
     boundedUncertaintyAttribution,

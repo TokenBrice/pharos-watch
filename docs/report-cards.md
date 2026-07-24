@@ -56,11 +56,31 @@ Persistent measured market depth is eligible for the same bounded operational-
 resilience credit across the mature cohort. Canonical implementation history
 provides only the age gate; the credit still requires repeated score-eligible
 execution observations and does not require a bespoke asset overlay.
+The candidate policy has one explicit native-asset adjustment for
+`usdt-tether`: the `#1 & Longevity Premium` adds four pre-cap points and relaxes
+only the low centralized-mint limit from 83 to the A+ floor of 87. It applies
+only when the ordinary, premium-free result is already at least A (83), USDT is
+ranked first by fixed-clock circulating USD, has at least 120 months of
+implementation history, all three pillars have strong evidence, Exit is at
+least 90, the peg is observed with no unresolved peg reason, active depeg, or
+measured historical-peg danger attribution, and operational resilience is
+unblocked with both stress-redemption and reserve-reconciliation contributions.
+Native status is mandatory, and any other binding cap blocks the adjustment; a
+nonbinding cap below 87 also blocks it rather than becoming newly binding after
+relief. The trace retains the ordinary score as the dependency score, so
+wrappers and other downstream claims cannot inherit the four points or the cap
+relief. A degraded route generation therefore remains degraded rather than
+receiving a reputation override.
 When the exact input records that a configured live-reserve asset fell back to
 its registry composition, V9 can use that fallback only if its review is
 verified, sourced, complete, composition-dated, and no more than 31 days old.
 Those exposures remain labeled `curated-fallback` and receive the same 0.80
 confidence multiplier as other admitted non-independent reserve evidence.
+A non-wrapper asset with no configured live-reserve producer may use the same
+bounded reviewed composition directly. That standalone path retains `curated`
+provenance, `static-validated` evidence strength, and the 0.80 multiplier; a
+configured producer still requires the exact fallback signal, while wrappers
+continue to inherit their parent's backing.
 V9-only reviewed redemption terms may add a documented minimum redemption or
 replace a frozen settlement assumption with an equally or more conservative
 model. They cannot improve the captured settlement model, reduce a captured
@@ -69,10 +89,14 @@ V8 redemption producer. A reviewed slower model without a contractual SLA uses
 the model's conservative comparison horizon rather than inventing a numeric SLA.
 Missing categorical access-posture review remains visible but does not make an
 otherwise established score unrateable. New candidate cards use score-trace
-schema v2 inside candidate-response schema v3 and public-report schema v2.
-Candidate artifact readers retain response-v2/trace-v1 compatibility, and an
-explicit historical report reader retains report-v1/trace-v1 snapshots. Live
-report producers and consumers accept only report-v2/trace-v2.
+schema v3 inside candidate-response schema v4 and public-report schema v3.
+Trace v3 requires an explicit `scoreAdjustments` list, empty for ordinary cards
+and populated with the ordinary and adjusted stages when the market-anchor
+policy applies. Retained response-v3/trace-v2 and response-v2/trace-v1
+candidate artifacts remain exact and do not gain that field during parsing.
+The explicitly named historical report reader likewise retains both
+report-v2/trace-v2 and report-v1/trace-v1 snapshots. Live report producers and
+consumers accept only report-v3/trace-v3.
 
 Candidate failures cannot affect V8 publication. A production deployment of V9
 scorer or producer code only changes the private shadow output; it does not
@@ -137,8 +161,9 @@ As of Safety Score v8.0 the Mint Authority Score feeds the **Decentralization** 
   - redemption contribution is scaled by current executable capacity versus modeled exit size (`min(max(supply × 5%, $100k), $25M)`) and by model confidence
   - the 10% diversification bonus applies only when the redemption route is plausibly independent from the DEX path (`independent-issuer-rail`)
 - P4 same-notional scoring is currently shadow-only. DEX and redemption producers can publish optional capacity curves under the same 200 bps / 300 second request, with typed output identities and failure-domain keys. Production snapshot construction defaults to `legacy`; ordinary fixed replay does the same, while the calibration command explicitly computes separate legacy and active results. No production methodology or score changes while the activation gate remains closed.
-- V9 DEX route reviews use a measured capacity point's retained realized execution cost when present. Repeated-cycle curves take the maximum exact cost observed at the emitted pointwise-minimum capacity; a legacy point or a cycle without that exact supporting quote keeps the conservative request-bound cost. This changes neither the V8 liquidity input nor the public report-card path.
+- V9 DEX route reviews use a measured capacity point's retained realized execution cost when present. Repeated-cycle curves take the maximum exact cost observed at the emitted pointwise-minimum capacity; a legacy point or a cycle without that exact supporting quote keeps the conservative request-bound cost. The bounded producer route set keeps uninterrupted measured profiles first but ranks current exact AMM evidence ahead of last-known-good profiles whose newest complete measured cycle failed operationally, so aging outage evidence cannot evict the current exact fallback. This changes neither the V8 liquidity input nor the public report-card path.
 - FPI's candidate extension may consume an accepted same-block Controller Pool observation as a `protocol-redemption` route. It values capacity from the input FPI amount at the CPI peg, carries the FRAX output identity explicitly, and combines the live execution fee with pinned FRAX output valuation before comparing the route with the request's cost ceiling. Bounded but older CPI tracker state lowers model confidence; rejected or missing observations contribute no route.
+- A live proportional stable-basket route may use a producer-pinned aggregate output value only when the captured observation also carries complete normalized asset weights, a source identity and source timestamp, high-confidence onchain/live-reserve evidence, and an all-in cost bound. Known component downside remains a conservative floor. Cap cUSD is the first such route: its producer carries current USDC + WTGXX weights and a WTGXX Chainlink-NAV-bound output unit; incomplete static baskets such as DLLR do not qualify.
 - Explicit `active` replay is fail-closed: it never restores legacy DEX or redemption values when the modeled request, fixed scoring clock, or eligible modeled-request observations are absent. DEX observations accept only `dex-amm` / `dex-orderbook` families; live redemption observations accept only `issuer-redemption` / `protocol-redemption`, while `eventual-redemption` remains diagnostic-only. Future-dated observations are rejected. Exact DEX observations may replace the aggregate path only when the score-eligible pool count equals the explicit count of retained pools with a reviewed executable capability. Generic shaped TVL stays diagnostic and outside that denominator, while failed or gated exact-capability pools stay inside and fail coverage closed. Aggregate observation count is not a completeness proxy. Partial producer coverage remains shadow evidence and can preserve the aggregate DEX floor while other eligible modeled routes are compared.
 - Freshness is lane-specific in active replay. Generic live DEX evidence uses twice the 30-minute DEX producer interval (1 hour), while measured adapters retain their own validated window when longer (currently 2 hours for exact Curve StableSwap observations). Live redemption evidence uses twice the 4-hour redemption producer interval (8 hours), and reviewed `documented-terms` evidence retains a separate one-year review window. An active caller must supply the fixed observation clock and the applicable live-lane maximum age: a missing DEX maximum age makes live DEX observations ineligible, and a missing live-redemption maximum age does the same for live redemption observations. A curated non-independent or `unknown` route correlation vetoes the diversification bonus; `independent-issuer-rail` only permits the structural output/failure-domain checks and cannot override them.
 - The historical complete producer generation contains 21 exact DEX observations across 7 populated assets and 31 eligible redemption assets, but it predates the per-pool completeness counter. Current calibration therefore treats all DEX coverage as incomplete, makes 244 active-mode exit scores `NR`, and changes 140 overall grades. The recorded gate requires at least 45 DEX-eligible and 27 redemption-eligible assets and returns `hold`; no Safety Score version change is made while it is closed.

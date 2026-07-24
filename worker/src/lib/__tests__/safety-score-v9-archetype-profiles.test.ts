@@ -9,6 +9,7 @@ import {
   projectV9MechanismProfile,
 } from "@shared/lib/safety-score-v9/mechanism-profiles";
 import { resolveV9WrapperStrategyTier } from "@shared/lib/safety-score-v9/evaluate-set";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { COLLATERAL_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/collateral-redeem";
 import { OFFCHAIN_ISSUER_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/offchain-issuer";
 import { QUEUE_REDEEM_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs/queue-redeem";
@@ -37,6 +38,39 @@ function namedOverlay(assetId: string) {
 }
 
 describe("Safety Score v9 production-shaped archetype fixtures", () => {
+  it("admits the dated Chronicle BUIDL and STAC reviews as complete mechanism evidence", () => {
+    const buidl = buildSafetyScoreV9MechanismReview(
+      PROFILE_FIXED_INPUT,
+      ACTIVE_META_BY_ID.get("buidl-blackrock")!,
+      "tbill",
+    );
+    const stac = buildSafetyScoreV9MechanismReview(
+      PROFILE_FIXED_INPUT,
+      ACTIVE_META_BY_ID.get("stac-securitize")!,
+      "rwa-credit-fund",
+    );
+
+    expect(buidl).toMatchObject({
+      archetype: "tbill",
+      fundClaimAndSeniority: { status: { observationState: "known" }, quality: "limited" },
+      navValuation: { status: { observationState: "known" }, quality: "adequate" },
+      durationAndLiquidity: { status: { observationState: "known" }, quality: "adequate" },
+      lossRecoveryDesign: { status: { observationState: "known" }, quality: "adequate" },
+    });
+    expect(stac).toMatchObject({
+      archetype: "rwa-credit-fund",
+      weightedAverageMaturityDays: 4499.21,
+      valuationCadenceDays: 1,
+      creditQuality: { status: { observationState: "known" }, quality: "adequate" },
+      seniority: { status: { observationState: "known" }, quality: "limited" },
+      legalEnforceability: { status: { observationState: "known" }, quality: "limited" },
+      valuationCadence: { status: { observationState: "known" }, quality: "adequate" },
+      maturityAndLiquidity: { status: { observationState: "known" }, quality: "adequate" },
+      custody: { status: { observationState: "known" }, quality: "adequate" },
+      recovery: { status: { observationState: "known" }, quality: "limited" },
+    });
+  });
+
   it("carries XAUT allocated-commodity facts and explicit issuer nondisclosure into backing", () => {
     const overlay = namedOverlay("xaut-tether");
     expect(overlay.profileReview?.profile).toBe("allocated-commodity-claim");

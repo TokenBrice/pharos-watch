@@ -244,6 +244,7 @@ export async function buildRedemptionBackstopEntry(
         ...(capacity.freshnessKind ? { freshnessKind: capacity.freshnessKind } : {}),
         ...(capacity.sourceTimestamp != null ? { sourceTimestamp: capacity.sourceTimestamp } : {}),
         ...(capacity.settlementDelaySec != null ? { settlementDelaySec: capacity.settlementDelaySec } : {}),
+        ...(liveMetadata.v9OutputValuation ? { outputValuation: liveMetadata.v9OutputValuation } : {}),
         resolvedFeeBps: staticFields.feeBps,
         now,
       });

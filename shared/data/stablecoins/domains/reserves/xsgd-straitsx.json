@@ -2,41 +2,59 @@
   "id": "xsgd-straitsx",
   "reserves": [
     {
-      "name": "SGD reserve assets in permitted financial-institution trust accounts",
-      "pct": 100,
+      "name": "SGD cash",
+      "pct": 56.476785,
       "risk": "very-low",
-      "assetClass": "bank-deposit",
-      "issuerOrObligor": "CIMB, DBS, Standard Chartered Singapore, or other MAS-permitted financial institutions",
-      "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
-      "liquidityHorizon": "unknown"
+      "assetClass": "cash",
+      "issuerOrObligor": "Undisclosed MAS-permitted safeguarding institution",
+      "riskFactors": ["counterparty", "custody", "concentration"],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Short-dated MAS/government SGD bills or eligible overnight reverse repos",
+      "pct": 43.523215,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Monetary Authority of Singapore or an eligible highly rated overnight reverse-repo counterparty",
+      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "liquidityHorizon": "seven-days",
+      "maturityDaysMax": 90
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex backing review; OpenAI Codex class-level normalization",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-24",
+    "reviewer": "Codex XSGD reserve report review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "StraitsX XSGD reserve attestations",
-        "url": "https://www.straitsx.com/xsgd"
+        "label": "KK Yap & Associates XSGD SCS Reserve Account Report — 31 May 2026",
+        "url": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a44bcf4afadd295291e1be8_XSGD_SCS_Reserve_Account_Report_(31_May_2026).docx.pdf"
       },
       {
         "label": "StraitsX reserve-backing disclosures",
         "url": "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures"
       }
     ],
-    "rationale": "StraitsX states that XSGD is fully backed at all times by SGD reserve assets in segregated trust accounts at named or otherwise MAS-permitted financial institutions. The full bank-deposit reserve class is identified; the issuer does not publish current provider-level weights, so no unsupported institution allocation is recorded.",
-    "compositionBasis": "Current StraitsX reserve policy and attestation index; provider-level allocation undisclosed",
+    "rationale": "KK Yap & Associates' independent SSAE 3000 (Revised) examination reports SGD 15,013,117 cash and SGD 11,569,694 short-dated MAS/government bills or eligible overnight reverse repos, against SGD 26,582,811 total reserves. Percentages are calculated against that reported reserve total. The report confirms that the assets are held in a trust account with an MAS-permitted safeguarding institution, but it does not split the second reported category between bills and overnight reverse repos or identify the institution.",
+    "compositionBasis": "KK Yap & Associates independent examination as of 31 May 2026",
+    "compositionAsOf": "2026-05-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "No direct reserve category is unidentified. The issuer does not publish the current provider allocation, account terms, or liquidity profile.",
+    "knownUnknownExposure": "The independent examination discloses the complete current reserve allocation between cash and a defined short-dated MAS/government-bill or eligible overnight-repo category. It does not split that second category between bills and repos, identify the safeguarding institution, or publish provider-level allocation.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "SGD reserve assets in permitted financial-institution trust accounts",
-        "pct": 100,
-      "disposition": "untracked-exogenous-asset",
-      "rationale": "SGD bank deposits are external fiat reserve assets rather than a tracked stablecoin dependency; provider weights remain a custody detail."
+        "reserveName": "SGD cash",
+        "pct": 56.476785,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "SGD cash is an external fiat reserve asset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Short-dated MAS/government SGD bills or eligible overnight reverse repos",
+        "pct": 43.523215,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The independent report identifies this as a permitted SGD sovereign-bill or highly rated overnight reverse-repo reserve category; neither component is a tracked stablecoin dependency."
       }
     ]
   },

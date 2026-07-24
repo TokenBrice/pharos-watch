@@ -53,6 +53,7 @@ const SupplyAttributionJournalV1PayloadSchema = z
     attemptId: SafeIdentifierSchema,
     sourceId: z.enum([
       "wm.reviewed-deployment-unit-partition.v1",
+      "centrifuge.reviewed-deployment-unit-partition.v1",
       "xaut.canonical-lock-mint-group-partition.v2",
     ]),
     sourceOriginClass: z.enum([

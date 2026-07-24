@@ -88,6 +88,28 @@ interface WmSolanaIdentity {
 
 export type WmDeploymentIdentity = WmEvmIdentity | WmSolanaIdentity;
 
+export interface CentrifugeEvmDeploymentIdentity {
+  runtime: "evm";
+  liabilityModel: "protocol-burn-mint";
+  runtimeCodeSha256: string;
+  controllerAddress: string;
+  safeBlockLag: number;
+  extraRpcUrls?: readonly string[];
+}
+
+export interface CentrifugeSolanaDeploymentIdentity {
+  runtime: "solana";
+  liabilityModel: "protocol-burn-mint";
+  programOwner: string;
+  mintAuthority: string;
+  controllerAddress: string;
+  controllerProgramOwner: string;
+}
+
+export type CentrifugeDeploymentIdentity =
+  | CentrifugeEvmDeploymentIdentity
+  | CentrifugeSolanaDeploymentIdentity;
+
 const WM_IMPLEMENTATION = "0x813b926b1d096e117721bd1eb017fba122302da0";
 const WM_UNDERLYING_M = "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b";
 const M0_PORTAL = "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd";
@@ -137,6 +159,141 @@ export const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdent
     controllerProgramOwner: "BPFLoaderUpgradeab1e11111111111111111111111",
   },
 };
+
+export const CENTRIFUGE_V3_SPOKE_ADDRESS =
+  "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab";
+const CENTRIFUGE_SOLANA_MINT_AUTHORITY =
+  "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb";
+const SOLANA_TOKEN_2022_PROGRAM =
+  "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+const SOLANA_SYSTEM_PROGRAM = "11111111111111111111111111111111";
+
+export const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
+  Record<string, Readonly<Record<string, CentrifugeDeploymentIdentity>>>
+> = {
+  "jtrsy-anemoy": {
+    "ethereum:0x8c213ee79581ff4984583c6a801e5263418c4b86": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "8a1922fd0a610c5408c2fedcf59694120a00c71e2fe0cc411b398a6088aa22c4",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 2,
+    },
+    "base:0x8c213ee79581ff4984583c6a801e5263418c4b86": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "7215d5b91d33b4e1d1d40a5e57a665d79e83bc1d059dbbf6ad23ae031b472af8",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 12,
+    },
+    "arbitrum:0x8c213ee79581ff4984583c6a801e5263418c4b86": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "37692f6a0b36e15fbd2dad86bba1b2e64c2967ebbb4257fe39587c6ee47d5abd",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 96,
+    },
+    "avalanche:0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "2a7fd349137bf64fdc2d0c295a48dcaf728539a3a98cd99a4143f28acb2afe47",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 10,
+    },
+    "plume:0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "390adf7418ac002dcb256005648f81dced42b36976d93d0007112fe75b17ea0b",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 24,
+      extraRpcUrls: ["https://rpc.plume.org"],
+    },
+    "bsc:0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "3350d2cf5af41a41e141d5becfb2f0e6b3aa3fdb29947f222c00e728d4b72396",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 30,
+    },
+    "monad:0xc18e6f730896971a79d748e8dea61067a9bc6040": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "48d61022deeca312150f0a1fcf585e5e0fcb55d0e6c620c1880a7bcccd56173f",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 10,
+      extraRpcUrls: [
+        "https://rpc.monad.xyz",
+        "https://rpc1.monad.xyz",
+      ],
+    },
+    "solana:JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj": {
+      runtime: "solana",
+      liabilityModel: "protocol-burn-mint",
+      programOwner: SOLANA_TOKEN_2022_PROGRAM,
+      mintAuthority: CENTRIFUGE_SOLANA_MINT_AUTHORITY,
+      controllerAddress: CENTRIFUGE_SOLANA_MINT_AUTHORITY,
+      controllerProgramOwner: SOLANA_SYSTEM_PROGRAM,
+    },
+  },
+  "acrdx-anemoy-apollo": {
+    "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "4013ef4e7e372b27a793ddb12e1ac86b6cd6677f361014d3c06a61e7171cc6e1",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 2,
+    },
+    "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "0212b631a7889adf5f74857c3768a211a2a25dce9c57e5630d25f6f1c056860c",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 24,
+      extraRpcUrls: ["https://rpc.plume.org"],
+    },
+    "monad:0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "5c903ebeaedc9bbbef618bab8106f93c4fae50fb2b8e15870bf346056f9bd1c5",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 10,
+      extraRpcUrls: [
+        "https://rpc.monad.xyz",
+        "https://rpc1.monad.xyz",
+      ],
+    },
+    "base:0x9477724bb54ad5417de8baff29e59df3fb4da74f": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "2d9d20e9b8c196f718da3e531685c39a9e562f1ca30fd4c2483a4b42e0813a08",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 12,
+    },
+    "solana:ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G": {
+      runtime: "solana",
+      liabilityModel: "protocol-burn-mint",
+      programOwner: SOLANA_TOKEN_2022_PROGRAM,
+      mintAuthority: CENTRIFUGE_SOLANA_MINT_AUTHORITY,
+      controllerAddress: CENTRIFUGE_SOLANA_MINT_AUTHORITY,
+      controllerProgramOwner: SOLANA_SYSTEM_PROGRAM,
+    },
+  },
+};
+
+export const CENTRIFUGE_BURN_MINT_ASSET_IDS = Object.freeze(
+  Object.keys(CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES).sort(compareText),
+);
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -274,12 +431,74 @@ function allocateAggregateSupply(
   }));
 }
 
+function expectedReviewedDeploymentIdentity(
+  assetId: string,
+  routeId: string,
+): WmDeploymentIdentity | CentrifugeDeploymentIdentity | undefined {
+  return assetId === "wm-m0"
+    ? WM_DEPLOYMENT_IDENTITIES[routeId]
+    : CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId];
+}
+
+function reviewedDeploymentInventoryValidationError(
+  assetId: string,
+  inventory: ReviewedDeploymentRouteInventory,
+): string | null {
+  if (assetId === "wm-m0") return null;
+  const identities = CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId];
+  const meta = ACTIVE_META_BY_ID.get(assetId);
+  const routes = meta?.bridgeRouteRisk?.routes ?? [];
+  if (!identities || routes.length !== inventory.routes.length) {
+    return `unsupported reviewed deployment attribution asset ${assetId}`;
+  }
+  const identityRouteIds = Object.keys(identities).sort(compareText);
+  if (
+    identityRouteIds.length !== inventory.routes.length ||
+    identityRouteIds.some(
+      (routeId, index) => routeId !== inventory.routes[index]?.routeId,
+    )
+  ) {
+    return `reviewed deployment identity inventory mismatch for ${assetId}`;
+  }
+  for (const route of routes) {
+    if (
+      route.reviewDisposition !== "reviewed" ||
+      (route.semantics !== "native-mint" && route.semantics !== "burn-mint") ||
+      (route.issuanceModel !== "native-issuance" &&
+        route.issuanceModel !== "bridge-representation") ||
+      route.representationId != null
+    ) {
+      return `reviewed deployment liability model is unsupported for ${assetId}:${route.id}`;
+    }
+  }
+  return null;
+}
+
 export function reviewedDeploymentIdentityValidationError(
   row: ReviewedDeploymentSupplyObservation,
+  assetId = "wm-m0",
 ): string | null {
-  const expected = WM_DEPLOYMENT_IDENTITIES[row.routeId];
-  if (!expected) return `unsupported wM deployment ${row.routeId}`;
+  const expected = expectedReviewedDeploymentIdentity(assetId, row.routeId);
+  if (!expected) return `unsupported reviewed deployment ${assetId}:${row.routeId}`;
   if (expected.runtime === "evm") {
+    if ("liabilityModel" in expected) {
+      if (
+        row.runtimeCodeSha256 !== expected.runtimeCodeSha256 ||
+        row.controllerAddress?.toLowerCase() !== expected.controllerAddress ||
+        row.implementationAddress !== undefined ||
+        row.implementationCodeSha256 !== undefined ||
+        row.underlyingTokenAddress !== undefined
+      ) {
+        return `Centrifuge EVM identity mismatch for ${row.routeId}`;
+      }
+      if (
+        !SHA256_RE.test(row.runtimeCodeSha256) ||
+        !EVM_ADDRESS_RE.test(row.controllerAddress?.toLowerCase() ?? "")
+      ) {
+        return `malformed Centrifuge EVM identity for ${row.routeId}`;
+      }
+      return null;
+    }
     if (
       row.runtimeCodeSha256 !== expected.runtimeCodeSha256 ||
       row.implementationAddress?.toLowerCase() !== expected.implementationAddress ||
@@ -312,8 +531,11 @@ export function reviewedDeploymentIdentityValidationError(
   return null;
 }
 
-function hasValidBlockHash(row: ReviewedDeploymentSupplyRow): boolean {
-  const expected = WM_DEPLOYMENT_IDENTITIES[row.routeId];
+function hasValidBlockHash(
+  assetId: string,
+  row: ReviewedDeploymentSupplyRow,
+): boolean {
+  const expected = expectedReviewedDeploymentIdentity(assetId, row.routeId);
   if (!expected) return false;
   return expected.runtime === "evm"
     ? EVM_BLOCK_HASH_RE.test(row.blockHash)
@@ -333,6 +555,7 @@ function boundaryRouteId(
 }
 
 export function reviewedDeploymentObservationTimingIssue(input: {
+  assetId?: string;
   clockSec: number;
   captureStartedAtSec: number;
   captureEndedAtSec: number;
@@ -386,14 +609,21 @@ export function reviewedDeploymentObservationTimingIssue(input: {
       failedRouteId: boundaryRouteId(input.deployments, "earliest"),
     };
   }
-  const futureNonSolana = input.deployments.find((row) => {
-    const identity = WM_DEPLOYMENT_IDENTITIES[row.routeId];
-    return row.blockTimeSec > input.clockSec && identity?.runtime !== "solana";
+  const futureUnsupportedBySource = input.deployments.find((row) => {
+    const assetId = input.assetId ?? "wm-m0";
+    const identity = expectedReviewedDeploymentIdentity(
+      assetId,
+      row.routeId,
+    );
+    return (
+      row.blockTimeSec > input.clockSec &&
+      (assetId !== "wm-m0" || identity?.runtime !== "solana")
+    );
   });
-  if (futureNonSolana) {
+  if (futureUnsupportedBySource) {
     return {
       code: "future-clock",
-      failedRouteId: futureNonSolana.routeId,
+      failedRouteId: futureUnsupportedBySource.routeId,
     };
   }
   if (input.clockSec - input.observedAtSec > REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC) {
@@ -413,7 +643,11 @@ export function reviewedDeploymentAttributionValidationError(input: {
   clockSec: number;
 }): string | null {
   const { assetId, attribution } = input;
-  if (assetId !== "wm-m0" || attribution.assetId !== assetId) {
+  if (
+    attribution.assetId !== assetId ||
+    (assetId !== "wm-m0" &&
+      CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId] == null)
+  ) {
     return `unsupported reviewed deployment attribution asset ${assetId}`;
   }
   if (attribution.registryFingerprint !== input.registryFingerprint) {
@@ -423,6 +657,11 @@ export function reviewedDeploymentAttributionValidationError(input: {
   if (!inventory || attribution.routeInventoryDigest !== inventory.digest) {
     return `reviewed deployment route inventory mismatch for ${assetId}`;
   }
+  const inventoryError = reviewedDeploymentInventoryValidationError(
+    assetId,
+    inventory,
+  );
+  if (inventoryError) return inventoryError;
   if (attribution.deployments.length !== inventory.routes.length) {
     return `reviewed deployment route count mismatch for ${assetId}`;
   }
@@ -434,6 +673,7 @@ export function reviewedDeploymentAttributionValidationError(input: {
     return `duplicate reviewed deployment route for ${assetId}`;
   }
   const timingIssue = reviewedDeploymentObservationTimingIssue({
+    assetId,
     clockSec: input.clockSec,
     captureStartedAtSec: attribution.captureStartedAtSec,
     captureEndedAtSec: attribution.captureEndedAtSec,
@@ -455,13 +695,16 @@ export function reviewedDeploymentAttributionValidationError(input: {
       !RAW_SUPPLY_RE.test(row.rawSupply) ||
       !/^(0|[1-9][0-9]*)$/.test(row.blockNumberOrSlot) ||
       !Number.isInteger(row.blockTimeSec) ||
-      !hasValidBlockHash(row) ||
+      !hasValidBlockHash(assetId, row) ||
       row.blockTimeSec < attribution.captureStartedAtSec ||
       row.blockTimeSec > attribution.captureEndedAtSec
     ) {
       return `reviewed deployment route observation mismatch for ${assetId}:${row.routeId}`;
     }
-    const identityError = reviewedDeploymentIdentityValidationError(row);
+    const identityError = reviewedDeploymentIdentityValidationError(
+      row,
+      assetId,
+    );
     if (identityError) return identityError;
   }
 
@@ -488,7 +731,12 @@ export function deriveReviewedDeploymentUnitPartition(input: {
   observations: readonly ReviewedDeploymentSupplyObservation[];
 }): ReviewedDeploymentUnitPartitionV1 | null {
   const inventory = buildReviewedDeploymentRouteInventory(input.assetId);
-  if (!inventory || input.assetId !== "wm-m0") return null;
+  if (
+    !inventory ||
+    reviewedDeploymentInventoryValidationError(input.assetId, inventory)
+  ) {
+    return null;
+  }
 
   const observations = [...input.observations].sort((left, right) =>
     compareText(left.routeId, right.routeId),
@@ -535,6 +783,13 @@ export function normalizeReviewedDeploymentAddress(chainId: string, address: str
 
 export function expectedWmDeploymentIdentity(routeId: string): WmDeploymentIdentity | undefined {
   return WM_DEPLOYMENT_IDENTITIES[routeId];
+}
+
+export function expectedCentrifugeDeploymentIdentity(
+  assetId: string,
+  routeId: string,
+): CentrifugeDeploymentIdentity | undefined {
+  return CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId];
 }
 
 export function normalizedReviewedDeploymentController(

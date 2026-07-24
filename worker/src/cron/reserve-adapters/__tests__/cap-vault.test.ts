@@ -370,6 +370,11 @@ describe("fetchCapVaultReserves", () => {
     return `0x${offset}${length}${encodedAddresses}`;
   }
 
+  function encodeLatestRoundData(answer: bigint, updatedAt: number): `0x${string}` {
+    const word = (value: bigint) => value.toString(16).padStart(64, "0");
+    return `0x${word(1n)}${word(answer)}${word(BigInt(updatedAt))}${word(BigInt(updatedAt))}${word(1n)}`;
+  }
+
   // Encodes a single-address dynamic-array result for assets() = [assetAddress]
   function encodeSingleAddressArray(address: string): string {
     return encodeAddressArray([address]);
@@ -400,6 +405,50 @@ describe("fetchCapVaultReserves", () => {
   }
 
   const encodedFalse = `0x${encodeUint256(0n)}`;
+  const wtgxxAddress = "0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c";
+  const basketConfig: LiveReservesConfig = {
+    ...config,
+    params: {
+      assets: [
+        {
+          address: assetAddress,
+          name: "USDC",
+          risk: "low",
+          coinId: "usdc-circle",
+          priceUsd: 1,
+        },
+        {
+          address: wtgxxAddress,
+          name: "WTGXX",
+          risk: "low",
+          coinId: "wtgxx-wisdomtree",
+          depType: "collateral",
+          priceUsd: 1,
+        },
+      ],
+    },
+  };
+
+  function primeWtgxxBasketMocks(navObservedAt: number) {
+    vi.mocked(fetchOnchainRawCall)
+      .mockResolvedValueOnce(encodeAddressArray([assetAddress, wtgxxAddress]))
+      .mockResolvedValueOnce(encodedFalse)
+      .mockResolvedValueOnce(encodedFalse)
+      .mockResolvedValueOnce(encodeLatestRoundData(100_000_000n, navObservedAt));
+
+    vi.mocked(fetchOnchainUint256)
+      .mockResolvedValueOnce(100_000000000000000000n) // vault totalSupply (18 decimals)
+      .mockResolvedValueOnce(0n) // vault getRedeemFee() (ray)
+      .mockResolvedValueOnce(6n) // USDC decimals
+      .mockResolvedValueOnce(50_000000n) // USDC totalSupplies
+      .mockResolvedValueOnce(0n) // USDC totalBorrows
+      .mockResolvedValueOnce(50_000000n) // USDC available
+      .mockResolvedValueOnce(18n) // WTGXX decimals
+      .mockResolvedValueOnce(50_000000000000000000n) // WTGXX totalSupplies
+      .mockResolvedValueOnce(0n) // WTGXX totalBorrows
+      .mockResolvedValueOnce(50_000000000000000000n) // WTGXX available
+      .mockResolvedValueOnce(8n); // WTGXX Chainlink NAV decimals
+  }
 
   it("fails closed when the vault contract is not configured for the input chain", async () => {
     const unsupportedCoin = {
@@ -560,50 +609,15 @@ describe("fetchCapVaultReserves", () => {
   });
 
   it("maps current cusd-cap WTGXX vault asset when explicitly configured", async () => {
-    const wtgxxAddress = "0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c";
-
-    vi.mocked(fetchOnchainRawCall)
-      .mockResolvedValueOnce(encodeAddressArray([assetAddress, wtgxxAddress]))
-      .mockResolvedValueOnce(encodedFalse)
-      .mockResolvedValueOnce(encodedFalse);
-
-    vi.mocked(fetchOnchainUint256)
-      .mockResolvedValueOnce(100_000000000000000000n) // vault totalSupply (18 decimals)
-      .mockResolvedValueOnce(0n) // vault getRedeemFee() (ray)
-      .mockResolvedValueOnce(6n) // USDC decimals
-      .mockResolvedValueOnce(50_000000n) // USDC totalSupplies
-      .mockResolvedValueOnce(0n) // USDC totalBorrows
-      .mockResolvedValueOnce(50_000000n) // USDC available
-      .mockResolvedValueOnce(18n) // WTGXX decimals
-      .mockResolvedValueOnce(50_000000000000000000n) // WTGXX totalSupplies
-      .mockResolvedValueOnce(0n) // WTGXX totalBorrows
-      .mockResolvedValueOnce(50_000000000000000000n); // WTGXX available
+    const now = Date.UTC(2026, 6, 24) / 1_000;
+    const navObservedAt = now - 60;
+    primeWtgxxBasketMocks(navObservedAt);
 
     const result = await fetchCapVaultReserves(
       coin,
-      {
-        ...config,
-        params: {
-          assets: [
-            {
-              address: assetAddress,
-              name: "USDC",
-              risk: "low",
-              coinId: "usdc-circle",
-              priceUsd: 1,
-            },
-            {
-              address: wtgxxAddress,
-              name: "WTGXX",
-              risk: "low",
-              coinId: "wtgxx-wisdomtree",
-              depType: "collateral",
-              priceUsd: 1,
-            },
-          ],
-        },
-      },
+      basketConfig,
       makeSignal(),
+      { nowSec: now },
     );
 
     expect(result.slices).toEqual([
@@ -615,6 +629,29 @@ describe("fetchCapVaultReserves", () => {
       assetCount: 2,
       totalReserveUsd: 100,
       immediateRedeemableUsd: 100,
+      redemption: {
+        outputValuation: {
+          sourceId: "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49",
+          observedAt: navObservedAt,
+          unitValueUsd: 1,
+          basketWeights: [
+            { assetId: "usdc-circle", weight: 0.5 },
+            { assetId: "wtgxx-wisdomtree", weight: 0.5 },
+          ],
+        },
+      },
     });
+  });
+
+  it("fails the CUSD basket snapshot closed when WTGXX Chainlink NAV is stale", async () => {
+    const now = Date.UTC(2026, 6, 24) / 1_000;
+    primeWtgxxBasketMocks(now - 345_601);
+
+    await expect(fetchCapVaultReserves(
+      coin,
+      basketConfig,
+      makeSignal(),
+      { nowSec: now },
+    )).rejects.toThrow(/WTGXX Chainlink NAV is stale/);
   });
 });

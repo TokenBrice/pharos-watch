@@ -2,10 +2,12 @@ import { z } from "zod";
 import { SafetyScoreV9PublicationIdentitySchema } from "./safety-score-publication";
 import {
   SafetyScoreV9CompletenessSchema,
+  SafetyScoreV9CausalCardSchema,
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9PreviousCardSchema,
   findSafetyScoreV9ParentAttributionIssues,
   type SafetyScoreV9Card,
+  type SafetyScoreV9CausalCard,
   type SafetyScoreV9CurrentCard,
 } from "./safety-score-v9-public";
 
@@ -15,8 +17,9 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 2;
-export const REPORT_CARDS_V9_PREVIOUS_RESPONSE_SCHEMA_VERSION = 1;
+export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 3;
+export const REPORT_CARDS_V9_PREVIOUS_RESPONSE_SCHEMA_VERSION = 2;
+export const REPORT_CARDS_V9_LEGACY_RESPONSE_SCHEMA_VERSION = 1;
 
 export const ReportCardsV9DependencyEdgeSchema = z
   .object({
@@ -171,8 +174,14 @@ function refineReportCardsV9Response(
     });
   }
   const currentCards = response.cards.filter(
-    (card): card is SafetyScoreV9CurrentCard =>
-      "scoreTrace" in card && card.scoreTrace.schemaVersion === 2,
+    (
+      card,
+    ): card is SafetyScoreV9CurrentCard | SafetyScoreV9CausalCard =>
+      "scoreTrace" in card &&
+      (
+        card.scoreTrace.schemaVersion === 2 ||
+        card.scoreTrace.schemaVersion === 3
+      ),
   );
   for (const issue of findSafetyScoreV9ParentAttributionIssues(currentCards)) {
     ctx.addIssue({
@@ -184,17 +193,32 @@ function refineReportCardsV9Response(
 }
 
 /** Compatibility reader for report-v1 envelopes carrying retained trace-v1 cards. */
-export const ReportCardsV9PreviousResponseSchema = z
+export const ReportCardsV9LegacyResponseSchema = z
   .object({
     ...ReportCardsV9ResponseShape,
-    schemaVersion: z.literal(REPORT_CARDS_V9_PREVIOUS_RESPONSE_SCHEMA_VERSION),
+    schemaVersion: z.literal(REPORT_CARDS_V9_LEGACY_RESPONSE_SCHEMA_VERSION),
     cards: z.array(SafetyScoreV9PreviousCardSchema),
   })
   .strict()
   .superRefine(refineReportCardsV9Response);
-export type ReportCardsV9PreviousResponse = z.infer<typeof ReportCardsV9PreviousResponseSchema>;
+export type ReportCardsV9LegacyResponse = z.infer<
+  typeof ReportCardsV9LegacyResponseSchema
+>;
 
-/** Current public report contract. Report-v2 always carries causal trace-v2 cards. */
+/** Compatibility reader for report-v2 envelopes carrying causal trace-v2 cards. */
+export const ReportCardsV9PreviousResponseSchema = z
+  .object({
+    ...ReportCardsV9ResponseShape,
+    schemaVersion: z.literal(REPORT_CARDS_V9_PREVIOUS_RESPONSE_SCHEMA_VERSION),
+    cards: z.array(SafetyScoreV9CausalCardSchema),
+  })
+  .strict()
+  .superRefine(refineReportCardsV9Response);
+export type ReportCardsV9PreviousResponse = z.infer<
+  typeof ReportCardsV9PreviousResponseSchema
+>;
+
+/** Current public report contract. Report-v3 always carries score-adjustment trace-v3 cards. */
 export const ReportCardsV9CurrentResponseSchema = z
   .object({
     ...ReportCardsV9ResponseShape,
@@ -215,6 +239,7 @@ export type ReportCardsV9Response = ReportCardsV9CurrentResponse;
 export const ReportCardsV9CompatibleResponseSchema = z.union([
   ReportCardsV9CurrentResponseSchema,
   ReportCardsV9PreviousResponseSchema,
+  ReportCardsV9LegacyResponseSchema,
 ]);
 export type ReportCardsV9CompatibleResponse = z.infer<
   typeof ReportCardsV9CompatibleResponseSchema

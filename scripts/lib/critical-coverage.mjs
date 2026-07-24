@@ -134,6 +134,7 @@ export const CRITICAL_FILES = [
   "worker/src/lib/safety-score-v9-shadow-runner.ts",
   "worker/src/lib/safety-score-v9-shadow.ts",
   "worker/src/lib/safety-score-v9-store.ts",
+  "worker/src/lib/safety-score-v9-centrifuge-supply-observer.ts",
   "worker/src/lib/safety-score-v9-supply-attribution-contract.ts",
   "worker/src/lib/safety-score-v9-supply-attribution-journal-store.ts",
   "worker/src/lib/safety-score-v9-supply-attribution.ts",

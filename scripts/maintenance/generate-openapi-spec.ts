@@ -26,6 +26,7 @@ function nullableRef(name: string) {
 
 const stringOrNull = { type: ["string", "null"] };
 const numberOrNull = { type: ["number", "null"] };
+const numberScore = { type: "number", minimum: 0, maximum: 100 };
 const sourceConfidenceTierEnum = ["deterministic", "curated", "discovered", "fallback"];
 const yieldSourceRoleEnum = [
   "canonical-holder",
@@ -373,9 +374,47 @@ function render() {
             scoreTrace: schemaRef("ReportCardsV9ScoreTrace"),
           },
         },
+        ReportCardsV9ScoreAdjustment: {
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "source",
+            "kind",
+            "label",
+            "configuredPoints",
+            "appliedPoints",
+            "scoreBefore",
+            "scoreAfter",
+            "publishedScoreBefore",
+            "publishedScoreAfter",
+            "capRelief",
+          ],
+          properties: {
+            source: { const: "asset-premium" },
+            kind: { enum: ["market-anchor-longevity"] },
+            label: { type: "string", minLength: 1 },
+            configuredPoints: { type: "number", exclusiveMinimum: 0, maximum: 20 },
+            appliedPoints: { type: "number", exclusiveMinimum: 0, maximum: 20 },
+            scoreBefore: numberScore,
+            scoreAfter: numberScore,
+            publishedScoreBefore: numberScore,
+            publishedScoreAfter: numberScore,
+            capRelief: {
+              type: "object",
+              additionalProperties: false,
+              required: ["source", "kind", "fromLimit", "toLimit"],
+              properties: {
+                source: { const: "structural" },
+                kind: { type: "string", minLength: 1 },
+                fromLimit: numberScore,
+                toLimit: numberScore,
+              },
+            },
+          },
+        },
         ReportCardsV9ScoreTrace: {
           type: "object",
-          description: "Current causal scoring trace. Detailed nested fields are additive within trace schema v2.",
+          description: "Current causal scoring trace with explicit policy-defined score adjustments.",
           required: [
             "schemaVersion",
             "legacyAliases",
@@ -385,10 +424,11 @@ function render() {
             "adverseAttribution",
             "boundedUncertaintyAttribution",
             "evidenceResponsibility",
+            "scoreAdjustments",
             "wrapperParentLimit",
           ],
           properties: {
-            schemaVersion: { const: 2 },
+            schemaVersion: { const: 3 },
             legacyAliases: { type: "object" },
             aggregation: { type: ["object", "null"] },
             stages: { type: "object" },
@@ -396,6 +436,11 @@ function render() {
             adverseAttribution: { type: "object" },
             boundedUncertaintyAttribution: { type: "object" },
             evidenceResponsibility: { type: "object" },
+            scoreAdjustments: {
+              type: "array",
+              maxItems: 1,
+              items: schemaRef("ReportCardsV9ScoreAdjustment"),
+            },
             wrapperParentLimit: { type: ["object", "null"] },
           },
           additionalProperties: false,
@@ -431,7 +476,7 @@ function render() {
           ],
           properties: {
             model: { const: "v9" },
-            schemaVersion: { const: 2 },
+            schemaVersion: { const: 3 },
             lifecycle: { enum: ["shadow", "active"] },
             safetyScoreIdentity: schemaRef("SafetyScoreV9PublicationIdentity"),
             methodology: {

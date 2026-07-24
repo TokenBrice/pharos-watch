@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { V9DependencyEconomicRoleSchema } from "./dependency-types";
 import {
+  V9AssetPremiumKindSchema,
   V9CapSourceSchema,
   V9EvidenceLevelSchema,
   V9GradeSchema,
@@ -34,6 +35,7 @@ const RESPONSIBILITIES = [
   "producer-failed",
 ] as const;
 const SCORE_TOLERANCE = 0.0002;
+const PUBLIC_SCORE_ROUNDING_HEADROOM = 0.5;
 const C_MINUS_MIN_SCORE = 50;
 const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
 const V9_CURRENT_GRADE_THRESHOLDS = [
@@ -753,6 +755,82 @@ export const SafetyScoreV9WrapperParentLimitSchema = z
   });
 export type SafetyScoreV9WrapperParentLimit = z.infer<typeof SafetyScoreV9WrapperParentLimitSchema>;
 
+const SafetyScoreV9ScoreAdjustmentSchema = z
+  .object({
+    source: z.literal("asset-premium"),
+    kind: V9AssetPremiumKindSchema,
+    label: z.string().min(1),
+    configuredPoints: z.number().finite().positive().max(20),
+    appliedPoints: z.number().finite().positive().max(20),
+    scoreBefore: ScoreSchema,
+    scoreAfter: ScoreSchema,
+    publishedScoreBefore: ScoreSchema,
+    publishedScoreAfter: ScoreSchema,
+    capRelief: z
+      .object({
+        source: z.literal("structural"),
+        kind: z.string().min(1),
+        fromLimit: ScoreSchema,
+        toLimit: ScoreSchema,
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((adjustment, ctx) => {
+    if (!numbersAgree(adjustment.scoreAfter - adjustment.scoreBefore, adjustment.appliedPoints)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["appliedPoints"],
+        message: "V9 score adjustment points must reconcile its score stages",
+      });
+    }
+    if (adjustment.appliedPoints > adjustment.configuredPoints + SCORE_TOLERANCE) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["appliedPoints"],
+        message: "V9 score adjustment cannot exceed its configured points",
+      });
+    }
+    if (adjustment.capRelief.fromLimit >= adjustment.capRelief.toLimit) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["capRelief"],
+        message: "V9 score adjustment cap relief must increase the named limit",
+      });
+    }
+    if (
+      adjustment.publishedScoreBefore >
+      adjustment.scoreBefore + PUBLIC_SCORE_ROUNDING_HEADROOM + SCORE_TOLERANCE
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["publishedScoreBefore"],
+        message: "V9 ordinary published score exceeds its permitted rounding headroom",
+      });
+    }
+    if (adjustment.publishedScoreBefore > adjustment.capRelief.fromLimit + SCORE_TOLERANCE) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["publishedScoreBefore"],
+        message: "V9 ordinary published score cannot exceed the original cap limit",
+      });
+    }
+    if (adjustment.publishedScoreAfter + SCORE_TOLERANCE < adjustment.publishedScoreBefore) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["publishedScoreAfter"],
+        message: "V9 score adjustment cannot reduce the published score",
+      });
+    }
+    if (adjustment.publishedScoreAfter > adjustment.capRelief.toLimit + SCORE_TOLERANCE) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["publishedScoreAfter"],
+        message: "V9 score adjustment cannot publish above its relieved cap",
+      });
+    }
+  });
+
 const SafetyScoreV9ScoreTraceCommonSchema = z
   .object({
     legacyAliases: z
@@ -782,8 +860,17 @@ const SafetyScoreV9ScoreTraceCommonSchema = z
   })
   .strict();
 type SafetyScoreV9ScoreTraceCommon = z.infer<typeof SafetyScoreV9ScoreTraceCommonSchema>;
+const SafetyScoreV9AdjustedScoreTraceCommonSchema =
+  SafetyScoreV9ScoreTraceCommonSchema
+    .extend({
+      scoreAdjustments: z.array(SafetyScoreV9ScoreAdjustmentSchema).max(1),
+    })
+    .strict();
+type SafetyScoreV9AdjustedScoreTraceCommon = z.infer<
+  typeof SafetyScoreV9AdjustedScoreTraceCommonSchema
+>;
 
-function refineScoreTraceCommon(
+function refineScoreTraceBaseStages(
   trace: SafetyScoreV9ScoreTraceCommon,
   ctx: z.RefinementCtx,
 ): void {
@@ -820,6 +907,13 @@ function refineScoreTraceCommon(
       message: "V9 deployment trace total must match the score-stage adjustment",
     });
   }
+}
+
+function refineUnadjustedScoreTrace(
+  trace: SafetyScoreV9ScoreTraceCommon,
+  ctx: z.RefinementCtx,
+): void {
+  refineScoreTraceBaseStages(trace, ctx);
   if (!numbersAgree(trace.stages.deploymentAdjustedScore, trace.stages.preCapScore)) {
     ctx.addIssue({
       code: "custom",
@@ -829,18 +923,90 @@ function refineScoreTraceCommon(
   }
 }
 
+function refineAdjustedScoreTrace(
+  trace: SafetyScoreV9AdjustedScoreTraceCommon,
+  ctx: z.RefinementCtx,
+): void {
+  refineScoreTraceBaseStages(trace, ctx);
+  let expectedPreCapScore = trace.stages.deploymentAdjustedScore;
+  for (const [index, adjustment] of trace.scoreAdjustments.entries()) {
+    if (!numbersAgree(expectedPreCapScore, adjustment.scoreBefore)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["scoreAdjustments", index, "scoreBefore"],
+        message: "V9 score adjustment must start from the preceding score stage",
+      });
+    }
+    expectedPreCapScore = adjustment.scoreAfter;
+  }
+  if (!numbersAgree(expectedPreCapScore, trace.stages.preCapScore)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["stages", "preCapScore"],
+      message: "V9 pre-cap score must match the final score-adjustment stage",
+    });
+  }
+  const finalAdjustment =
+    trace.scoreAdjustments[trace.scoreAdjustments.length - 1];
+  if (
+    finalAdjustment !== undefined &&
+    !numbersAgree(trace.stages.publishedScore, finalAdjustment.publishedScoreAfter)
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["stages", "publishedScore"],
+      message: "V9 published score must match the final score adjustment",
+    });
+  }
+}
+
+function refineBoundedUncertaintyTrace(
+  trace: {
+    boundedUncertaintyAttribution: z.infer<
+      typeof SafetyScoreV9BoundedUncertaintyAttributionTraceSchema
+    >;
+    evidenceResponsibility: z.infer<
+      typeof SafetyScoreV9EvidenceResponsibilityTraceSchema
+    >;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const responsibilityByName = new Map(
+    trace.evidenceResponsibility.summaries.map((summary) => [
+      summary.responsibility,
+      summary,
+    ]),
+  );
+  for (const item of trace.boundedUncertaintyAttribution.items) {
+    if (item.source !== "reason") continue;
+    const summary = responsibilityByName.get(item.responsibility);
+    if (
+      summary === undefined ||
+      summary.factCount === 0 ||
+      !summary.reasonCodes.includes(item.code)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["boundedUncertaintyAttribution", "items"],
+        message:
+          "V9 direct bounded-uncertainty attribution must reconcile to an owned unresolved fact",
+      });
+    }
+  }
+}
+
 /** Strict reader for schema-v1 traces persisted before bounded D attribution. */
 export const SafetyScoreV9PreviousScoreTraceSchema =
   SafetyScoreV9ScoreTraceCommonSchema
     .extend({ schemaVersion: z.literal(1) })
     .strict()
-    .superRefine(refineScoreTraceCommon);
+    .superRefine(refineUnadjustedScoreTrace);
 export type SafetyScoreV9PreviousScoreTrace = z.infer<
   typeof SafetyScoreV9PreviousScoreTraceSchema
 >;
 
-/** Current trace. Schema v2 makes causal bounded-D attribution explicit. */
-export const SafetyScoreV9ScoreTraceSchema =
+/** Retained trace-v2 reader for causal bounded-D attribution. */
+export const SafetyScoreV9CausalScoreTraceSchema =
   SafetyScoreV9ScoreTraceCommonSchema
     .extend({
       schemaVersion: z.literal(2),
@@ -849,28 +1015,25 @@ export const SafetyScoreV9ScoreTraceSchema =
     })
     .strict()
     .superRefine((trace, ctx) => {
-      refineScoreTraceCommon(trace, ctx);
-      const responsibilityByName = new Map(
-        trace.evidenceResponsibility.summaries.map((summary) => [
-          summary.responsibility,
-          summary,
-        ]),
-      );
-      for (const item of trace.boundedUncertaintyAttribution.items) {
-        if (item.source !== "reason") continue;
-        const summary = responsibilityByName.get(item.responsibility);
-        if (
-          summary === undefined ||
-          summary.factCount === 0 ||
-          !summary.reasonCodes.includes(item.code)
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["boundedUncertaintyAttribution", "items"],
-            message: "V9 direct bounded-uncertainty attribution must reconcile to an owned unresolved fact",
-          });
-        }
-      }
+      refineUnadjustedScoreTrace(trace, ctx);
+      refineBoundedUncertaintyTrace(trace, ctx);
+    });
+export type SafetyScoreV9CausalScoreTrace = z.infer<
+  typeof SafetyScoreV9CausalScoreTraceSchema
+>;
+
+/** Current trace. Schema v3 adds explicit policy-defined score adjustments. */
+export const SafetyScoreV9ScoreTraceSchema =
+  SafetyScoreV9AdjustedScoreTraceCommonSchema
+    .extend({
+      schemaVersion: z.literal(3),
+      boundedUncertaintyAttribution:
+        SafetyScoreV9BoundedUncertaintyAttributionTraceSchema,
+    })
+    .strict()
+    .superRefine((trace, ctx) => {
+      refineAdjustedScoreTrace(trace, ctx);
+      refineBoundedUncertaintyTrace(trace, ctx);
     });
 export type SafetyScoreV9ScoreTrace = z.infer<typeof SafetyScoreV9ScoreTraceSchema>;
 
@@ -921,7 +1084,9 @@ function attributedSerialParent(
 }
 
 function refineCard(
-  card: SafetyScoreV9CardBase & { scoreTrace?: SafetyScoreV9ScoreTrace },
+  card: SafetyScoreV9CardBase & {
+    scoreTrace?: SafetyScoreV9ScoreTrace | SafetyScoreV9CausalScoreTrace;
+  },
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
 ): void {
   const scoreTrace = card.scoreTrace;
@@ -982,6 +1147,41 @@ function refineCard(
           path: ["scoreTrace", "stages", field],
           message: `V9 explicit ${field} must match its retained card field`,
         });
+      }
+    }
+    if ("scoreAdjustments" in scoreTrace) {
+      for (const [index, adjustment] of scoreTrace.scoreAdjustments.entries()) {
+        const relievedCaps = card.caps.filter(
+          (cap) =>
+            cap.source === adjustment.capRelief.source &&
+            cap.kind === adjustment.capRelief.kind,
+        );
+        if (
+          relievedCaps.length !== 1 ||
+          !numbersAgree(relievedCaps[0]!.limit, adjustment.capRelief.toLimit)
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["scoreTrace", "scoreAdjustments", index, "capRelief"],
+            message: "V9 score adjustment cap relief must match exactly one current card cap",
+          });
+        }
+        const unchangedCaps = card.caps.filter(
+          (cap) =>
+            cap.source !== adjustment.capRelief.source ||
+            cap.kind !== adjustment.capRelief.kind,
+        );
+        if (
+          unchangedCaps.some(
+            (cap) => adjustment.publishedScoreBefore > cap.limit + SCORE_TOLERANCE,
+          )
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["scoreTrace", "scoreAdjustments", index, "publishedScoreBefore"],
+            message: "V9 ordinary published score cannot exceed an unchanged card cap",
+          });
+        }
       }
     }
     if (
@@ -1359,6 +1559,20 @@ export type SafetyScoreV9PreviousCard = z.infer<
   typeof SafetyScoreV9PreviousCardSchema
 >;
 
+export const SafetyScoreV9CausalCardSchema = z
+  .object({
+    ...SafetyScoreV9CardShape,
+    scoreTrace: SafetyScoreV9CausalScoreTraceSchema,
+  })
+  .strict()
+  .superRefine((card, ctx) => {
+    refineLegacyCard(card, ctx);
+    refineCard(card, ctx);
+  });
+export type SafetyScoreV9CausalCard = z.infer<
+  typeof SafetyScoreV9CausalCardSchema
+>;
+
 export const SafetyScoreV9CurrentCardSchema = z
   .object({
     ...SafetyScoreV9CardShape,
@@ -1373,6 +1587,7 @@ export type SafetyScoreV9CurrentCard = z.infer<typeof SafetyScoreV9CurrentCardSc
 
 export const SafetyScoreV9CardSchema = z.union([
   SafetyScoreV9CurrentCardSchema,
+  SafetyScoreV9CausalCardSchema,
   SafetyScoreV9PreviousCardSchema,
   SafetyScoreV9LegacyCardSchema,
 ]);
@@ -1384,7 +1599,7 @@ export interface SafetyScoreV9ParentAttributionIssue {
 }
 
 export function findSafetyScoreV9ParentAttributionIssues(
-  cards: readonly SafetyScoreV9CurrentCard[],
+  cards: readonly (SafetyScoreV9CurrentCard | SafetyScoreV9CausalCard)[],
 ): SafetyScoreV9ParentAttributionIssue[] {
   const cardsById = new Map(cards.map((card) => [card.id, card]));
   const issues: SafetyScoreV9ParentAttributionIssue[] = [];
@@ -1473,7 +1688,10 @@ function refineResponse(
     publishedAtSec: number;
     completeness: z.infer<typeof SafetyScoreV9CompletenessSchema>;
     cards: readonly (SafetyScoreV9CardBase & {
-      scoreTrace?: SafetyScoreV9ScoreTrace | SafetyScoreV9PreviousScoreTrace;
+      scoreTrace?:
+        | SafetyScoreV9ScoreTrace
+        | SafetyScoreV9CausalScoreTrace
+        | SafetyScoreV9PreviousScoreTrace;
     })[];
   },
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
@@ -1493,7 +1711,11 @@ function refineResponse(
     ctx.addIssue({ code: "custom", path: ["completeness"], message: "V9 NR membership does not reconcile" });
   }
   const currentCards = response.cards.filter(
-    (card): card is SafetyScoreV9CurrentCard => card.scoreTrace?.schemaVersion === 2,
+    (
+      card,
+    ): card is SafetyScoreV9CurrentCard | SafetyScoreV9CausalCard =>
+      card.scoreTrace?.schemaVersion === 2 ||
+      card.scoreTrace?.schemaVersion === 3,
   );
   for (const issue of findSafetyScoreV9ParentAttributionIssues(currentCards)) {
     ctx.addIssue({
@@ -1528,11 +1750,24 @@ export type SafetyScoreV9PreviousResponse = z.infer<
   typeof SafetyScoreV9PreviousResponseSchema
 >;
 
+/** Compatibility reader for schema-v3 envelopes carrying causal trace-v2 cards. */
+export const SafetyScoreV9CausalResponseSchema = z
+  .object({
+    ...SafetyScoreV9ResponseShape,
+    schemaVersion: z.literal(3),
+    cards: z.array(SafetyScoreV9CausalCardSchema),
+  })
+  .strict()
+  .superRefine((response, ctx) => refineResponse(response, ctx));
+export type SafetyScoreV9CausalResponse = z.infer<
+  typeof SafetyScoreV9CausalResponseSchema
+>;
+
 /** Current pre-release envelope. Active V9 is deliberately not part of this contract. */
 export const SafetyScoreV9CurrentResponseSchema = z
   .object({
     ...SafetyScoreV9ResponseShape,
-    schemaVersion: z.literal(3),
+    schemaVersion: z.literal(4),
     cards: z.array(SafetyScoreV9CurrentCardSchema),
   })
   .strict()
@@ -1541,10 +1776,11 @@ export type SafetyScoreV9CurrentResponse = z.infer<typeof SafetyScoreV9CurrentRe
 
 /**
  * Compatibility reader for stored shadow artifacts. New candidate production
- * must use SafetyScoreV9CurrentResponseSchema and always emits schema version 3.
+ * must use SafetyScoreV9CurrentResponseSchema and always emits schema version 4.
  */
 export const SafetyScoreV9ResponseSchema = z.union([
   SafetyScoreV9CurrentResponseSchema,
+  SafetyScoreV9CausalResponseSchema,
   SafetyScoreV9PreviousResponseSchema,
   SafetyScoreV9LegacyResponseSchema,
 ]);
@@ -1552,6 +1788,6 @@ export type SafetyScoreV9Response = Omit<
   SafetyScoreV9LegacyResponse,
   "schemaVersion" | "cards"
 > & {
-  schemaVersion: 1 | 2 | 3;
+  schemaVersion: 1 | 2 | 3 | 4;
   cards: SafetyScoreV9Card[];
 };

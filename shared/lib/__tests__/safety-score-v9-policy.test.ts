@@ -28,9 +28,10 @@ describe("Safety Score v9 methodology policy", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBeNull();
     // ROTATION-1 (owner rulings 2026-07-23): share-band materiality 0.10/0.25, T5 credit 10,
     // undisclosedFeeRouteScoreCeiling 52, commodity-allocated reserve class and
-    // non-counterparty reserve-issuer concentration exemption.
+    // non-counterparty reserve-issuer concentration exemption, plus the
+    // fail-closed native-USDT market-anchor and longevity premium.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "3e4741741dbd864a265b357422d80092b43cf834740e20315d447651c31ac179",
+      "fd2bbac8408f47dc2ce86b737ce275e3b447b085dfb6b892fbb2c1f3495e6855",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);
@@ -54,6 +55,7 @@ describe("Safety Score v9 methodology policy", () => {
     reordered.semantic.accessPostureVocabulary.governance.reverse();
     reordered.semantic.backing.reserve.maturityNotApplicableClasses.reverse();
     reordered.semantic.backing.archetypes.cdp.serialComponentKeys.reverse();
+    reordered.semantic.formula.assetPremiums[0]!.requiredOperationalComponents.reverse();
 
     const loaded = loadV9MethodologyPolicy(reordered);
     expect(loaded.semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);

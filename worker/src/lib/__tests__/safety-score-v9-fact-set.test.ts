@@ -1939,6 +1939,12 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const curatedFallbackMeta: V9ExtensionRegistryMeta = {
       ...meta,
       proofOfReserves: undefined,
+      liveReservesConfig: {
+        adapter: "curated-validated",
+        version: 1,
+        semantics: "collateral-mix",
+        inputs: { primary: { kind: "onchain-solana" } },
+      },
       mintAuthority: {
         ...meta.mintAuthority!,
         supervision: "attestation-only",
@@ -1951,6 +1957,13 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       evidenceClass: "static-validated",
       provenance: "curated-fallback",
     });
+    expect(curatedFallbackExtension.assets[0]!.researchEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceId: "stablecoin-meta.reviewed-curated-fallback-reserves",
+        }),
+      ]),
+    );
     const curatedFallbackExposures = compileSafetyScoreV9FactSetFromFixedInput(
       curatedFallbackFixed,
       curatedFallbackExtension,
@@ -1964,6 +1977,59 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         }),
       ]),
     );
+
+    const noFallbackSignal = structuredClone(noLive);
+    noFallbackSignal.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(noFallbackSignal);
+    const configuredWithoutFallback = buildSafetyScoreV9BaselineExtension(noFallbackSignal, {
+      metaById: new Map([["alpha", curatedFallbackMeta]]),
+    });
+    expect(configuredWithoutFallback.assets[0]!.reviewedStaticReserveRows).toBeNull();
+
+    const standaloneMeta: V9ExtensionRegistryMeta = {
+      ...curatedFallbackMeta,
+      liveReservesConfig: undefined,
+    };
+    const standaloneExtension = buildSafetyScoreV9BaselineExtension(noFallbackSignal, {
+      metaById: new Map([["alpha", standaloneMeta]]),
+    });
+    expect(standaloneExtension.assets[0]!.reviewedStaticReserveRows).toMatchObject({
+      evidenceClass: "static-validated",
+      provenance: "curated",
+    });
+    const standaloneAsset = standaloneExtension.assets[0]!;
+    expect(standaloneAsset.researchEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceId: "stablecoin-meta.reviewed-standalone-reserves",
+        }),
+      ]),
+    );
+    const standaloneExposures = compileSafetyScoreV9FactSetFromFixedInput(
+      noFallbackSignal,
+      standaloneExtension,
+    ).assets[0]!.reserveExposures;
+    expect(standaloneExposures).toHaveLength(2);
+    expect(standaloneExposures).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          provenance: "curated",
+          evidenceClass: "static-validated",
+        }),
+      ]),
+    );
+
+    const wrapperExtension = buildSafetyScoreV9BaselineExtension(noFallbackSignal, {
+      metaById: new Map([["alpha", { ...standaloneMeta, variantOf: "beta" }]]),
+    });
+    expect(wrapperExtension.assets[0]!.reviewedStaticReserveRows).toBeNull();
+
+    const standaloneWithStrayFallbackSignal = buildSafetyScoreV9BaselineExtension(curatedFallbackFixed, {
+      metaById: new Map([["alpha", standaloneMeta]]),
+    });
+    expect(standaloneWithStrayFallbackSignal.assets[0]!.reviewedStaticReserveRows).toMatchObject({
+      evidenceClass: "static-validated",
+      provenance: "curated",
+    });
   });
 
   it("compiles exact base facts and explicit reviews without consulting v8 score outputs", () => {
@@ -3294,7 +3360,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "460715a6b420fd1d5b4019cc6e57d976ed53ec92678bf5314a63fcef2d5dcba2",
+      "da8bbd7462e5b4cfb9151b4ebce13220e88a2a3707d514e9a3956b56d31a1ad4",
     );
   });
 

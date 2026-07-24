@@ -76,6 +76,20 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
     });
   });
 
+  it("records Centrifuge deployment packets as onchain evidence", () => {
+    const onchain = createSupplyAttributionJournalV1(
+      payload({
+        assetId: "acrdx-anemoy-apollo",
+        sourceId: "centrifuge.reviewed-deployment-unit-partition.v1",
+      }),
+    );
+    expect(onchain).toMatchObject({
+      assetId: "acrdx-anemoy-apollo",
+      sourceOriginClass: "onchain-observation",
+      admissionCode: "supply-attribution.admission.accepted",
+    });
+  });
+
   it("rejects source and origin pairings that misstate evidence provenance", () => {
     expect(() =>
       createSupplyAttributionJournalV1(

@@ -85,7 +85,13 @@ The V9-only supply-attribution enrichment may also bind an aggregate asset suppl
 to a reviewed route-ID inventory. The wM observer requires the complete
 Ethereum, Arbitrum, Base, Plume, and Solana deployment packet, verifies pinned
 runtime/controller identities at fixed-clock blocks or slots, and conserves the
-existing aggregate supply while allocating it across routes. The XAUT observer
+existing aggregate supply while allocating it across routes. The Centrifuge
+observer applies the same all-or-nothing rule only to the allowlisted JTRSY and
+ACRDX burn/mint inventories: it binds every official EVM deployment to exact
+runtime code, a non-proxy implementation slot, and the authorized Centrifuge
+Spoke, then binds the official Token-2022 Solana mint to its exact direct
+authority in one finalized context. It never admits lock/mint or adapter
+inventories whose `totalSupply()` sums could double-count backing. The XAUT observer
 binds the configured Tether transparency disclosure to one finalized Ethereum
 token/treasury/adapter observation and the complete reviewed XAUt0
 representation-group inventory. The issuer's `totalAuthorized - notIssued`

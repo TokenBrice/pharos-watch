@@ -85,6 +85,46 @@ describe("DEX route observation selection", () => {
     expect(selected).not.toContain(generic[MAX_DEX_EXIT_ROUTE_OBSERVATIONS + 4]);
   });
 
+  it("does not let operationally interrupted measured evidence crowd current exact evidence out of the bound", () => {
+    const interrupted = Array.from({ length: MAX_DEX_EXIT_ROUTE_OBSERVATIONS }, (_, index) => {
+      const candidate = pool(index);
+      candidate.extra = {
+        measuredExecution: {
+          targetId: `interrupted-target-${index}`,
+          observationHistory: {
+            completeProducerCycleCount: 3,
+            successfulObservationCount: 2,
+            consecutiveSuccessCount: 0,
+            observationWindowStartedAt: 1_000,
+            observationWindowEndedAt: 4_600,
+            latestOperationalFailureAt: 4_600,
+            conservativeStatistic: "pointwise-minimum",
+            conservativeCapacityCurve: [100_000, 1_000_000, 10_000_000, 25_000_000].map(
+              (requestedNotionalUsd) => ({
+                requestedNotionalUsd,
+                maxCostBps: 200,
+                executableUsd: requestedNotionalUsd,
+                completionRatio: 1,
+              }),
+            ),
+          },
+        } as DexMeasuredExecutionPublicProfile,
+      };
+      return candidate;
+    });
+    const exact = pool(99);
+    exact.tvlUsd = 10_000;
+    exact.extra = {
+      ammExecutionModel: exactExecutionModel(),
+    };
+
+    const selected = selectDexRouteObservationPools([...interrupted, exact], []);
+
+    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+    expect(selected[0]).toBe(exact);
+    expect(selected).not.toContain(interrupted[0]);
+  });
+
   it("deduplicates by physical pool and keeps measured evidence ahead of current exact evidence", () => {
     const current = pool(1);
     current.extra = {

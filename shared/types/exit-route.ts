@@ -177,6 +177,10 @@ const ExitRouteObservationBaseSchema = z.object({
   executionCostBps: z.number().finite().nonnegative().optional(),
   /** Pinned USD unit value of the received output asset. */
   outputUnitValueUsd: z.number().finite().positive().optional(),
+  /** Producer source identity for a pinned output valuation. */
+  outputUnitValueSourceId: z.string().min(1).optional(),
+  /** Source observation time for a pinned output valuation. */
+  outputUnitValueObservedAt: z.number().int().nonnegative().optional(),
   /** Total input-value loss after execution cost and output-asset valuation. */
   allInCostBps: z.number().finite().nonnegative().optional(),
   /** Confidence in the route execution model, distinct from observation freshness/confidence. */
@@ -318,6 +322,27 @@ function enforceRedemptionExitRouteLane(
       code: "custom",
       path: ["allInCostBps"],
       message: "A score-eligible redemption with pinned output value requires an all-in cost",
+    });
+  }
+  if (
+    (observation.outputUnitValueSourceId !== undefined ||
+      observation.outputUnitValueObservedAt !== undefined) &&
+    observation.outputUnitValueUsd === undefined
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["outputUnitValueUsd"],
+      message: "Pinned output valuation provenance requires an output unit value",
+    });
+  }
+  if (
+    observation.outputUnitValueObservedAt !== undefined &&
+    observation.outputUnitValueObservedAt > observation.observedAt + 60
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["outputUnitValueObservedAt"],
+      message: "Pinned output valuation cannot be newer than its route observation",
     });
   }
 }

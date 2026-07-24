@@ -90,7 +90,52 @@ export interface LiveReserveRedemptionTelemetry extends Record<string, unknown> 
   minRedeemUsd?: number;
   feeBps?: number;
   sourceUrls?: string[];
+  /**
+   * Optional producer-pinned value of a proportional redemption basket.
+   * This is only score-bearing after the consumer verifies the source-bound
+   * timestamp and complete normalized basket weights.
+   */
+  outputValuation?: LiveReserveRedemptionOutputValuation;
 }
+
+export interface LiveReserveRedemptionOutputValuation {
+  sourceId: string;
+  observedAt: number;
+  unitValueUsd: number;
+  basketWeights: Array<{
+    assetId: string;
+    weight: number;
+  }>;
+}
+
+export const LiveReserveRedemptionOutputValuationSchema: z.ZodType<LiveReserveRedemptionOutputValuation> = z
+  .object({
+    sourceId: z.string().trim().min(1),
+    observedAt: z.number().int().nonnegative(),
+    unitValueUsd: z.number().finite().positive(),
+    basketWeights: z
+      .array(
+        z
+          .object({
+            assetId: z.string().trim().min(1),
+            weight: z.number().finite().positive().max(1),
+          })
+          .strict(),
+      )
+      .min(2)
+      .max(16)
+      .superRefine((weights, ctx) => {
+        const assetIds = new Set(weights.map((weight) => weight.assetId));
+        if (assetIds.size !== weights.length) {
+          ctx.addIssue({ code: "custom", message: "Output basket asset ids must be unique" });
+        }
+        const total = weights.reduce((sum, weight) => sum + weight.weight, 0);
+        if (Math.abs(total - 1) > 0.000001) {
+          ctx.addIssue({ code: "custom", message: "Output basket weights must sum to 1" });
+        }
+      }),
+  })
+  .strict();
 
 export interface LiveReserveScoringPolicy {
   maxSourceAgeSec?: number;
@@ -227,6 +272,7 @@ export const LiveReserveRedemptionTelemetrySchema: z.ZodType<LiveReserveRedempti
     minRedeemUsd: z.number().finite().optional(),
     feeBps: z.number().finite().optional(),
     sourceUrls: z.array(HttpUrlSchema).optional(),
+    outputValuation: LiveReserveRedemptionOutputValuationSchema.optional(),
   })
   .passthrough();
 

@@ -65,12 +65,34 @@ const DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS = ACTIVE_STABLECOINS.length + 1;
 const DEX_PRICE_STAGE_RETENTION_SEC = 7 * 24 * 60 * 60;
 export const DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN = 8;
 
+function hasOperationallyInterruptedMeasuredEvidence(
+  pool: LiquidityMetrics["topPools"][number],
+): boolean {
+  const profiles = [
+    ...(pool.extra?.measuredExecution ? [pool.extra.measuredExecution] : []),
+    ...(pool.extra?.measuredExecutions ?? []),
+  ];
+  return profiles.some((profile) => {
+    const history = profile.observationHistory;
+    return (
+      history !== undefined &&
+      history.consecutiveSuccessCount === 0 &&
+      history.latestOperationalFailureAt !== null &&
+      history.latestOperationalFailureAt === history.observationWindowEndedAt
+    );
+  });
+}
+
 function routeEvidenceRank(pool: LiquidityMetrics["topPools"][number]): number {
-  if (pool.extra?.measuredExecution || (pool.extra?.measuredExecutions?.length ?? 0) > 0) return 0;
+  const hasMeasuredEvidence =
+    pool.extra?.measuredExecution !== undefined ||
+    (pool.extra?.measuredExecutions?.length ?? 0) > 0;
+  if (hasMeasuredEvidence && !hasOperationallyInterruptedMeasuredEvidence(pool)) return 0;
   if (pool.extra?.ammExecutionModel) return 1;
-  if (pool.extra?.executionCapabilityGate) return 2;
-  if (pool.poolType === "orderbook" && (pool.extra?.orderbookDepthUsd ?? 0) > 0) return 3;
-  return 4;
+  if (hasMeasuredEvidence) return 2;
+  if (pool.extra?.executionCapabilityGate) return 3;
+  if (pool.poolType === "orderbook" && (pool.extra?.orderbookDepthUsd ?? 0) > 0) return 4;
+  return 5;
 }
 
 interface DexRouteObservationPoolSelection {

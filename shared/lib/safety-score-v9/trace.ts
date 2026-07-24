@@ -1,17 +1,20 @@
 import type { V9Grade, V9QualityPillar, V9ReasonCode } from "../../types/safety-score-v9";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
+import type { V9ScoreAdjustmentTrace } from "./formula";
 import type { V9ProductionScoreTrace } from "./score";
 
-const V9_RESULT_DIGEST_DOMAIN = "safety-score-v9.result.v1";
+const V9_RESULT_DIGEST_DOMAIN = "safety-score-v9.result.v2";
 
 export interface V9CompactScoreTrace {
   assetId: string;
   score: number | null;
+  inheritableScore: number | null;
   grade: V9Grade;
   pillars: Readonly<Record<V9QualityPillar, number | null>>;
   weakestPillar: { pillar: V9QualityPillar; score: number } | null;
   bindingCap: { kind: string; limit: number; source: string } | null;
+  scoreAdjustments: readonly V9ScoreAdjustmentTrace[];
   reasonCodes: readonly V9ReasonCode[];
   factSetDigest: string;
   policyId: string;
@@ -29,6 +32,7 @@ export function projectCompactV9ScoreTrace(trace: V9ProductionScoreTrace): V9Com
   return {
     assetId: trace.assetId,
     score: trace.finalScore,
+    inheritableScore: trace.inheritableScore,
     grade: trace.finalGrade,
     pillars: {
       backing: contributions.get("backing") ?? null,
@@ -39,6 +43,10 @@ export function projectCompactV9ScoreTrace(trace: V9ProductionScoreTrace): V9Com
     bindingCap: trace.bindingCap
       ? { kind: trace.bindingCap.kind, limit: trace.bindingCap.limit, source: trace.bindingCap.source }
       : null,
+    scoreAdjustments: trace.scoreAdjustments.map((adjustment) => ({
+      ...adjustment,
+      capRelief: { ...adjustment.capRelief },
+    })),
     reasonCodes: [...new Set(trace.nrReasons.map((reason) => reason.code))].sort(compareText),
     factSetDigest: trace.factSetDigest,
     policyId: trace.policyId,

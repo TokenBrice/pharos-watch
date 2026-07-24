@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { FileCheck2, Link2, LockKeyhole, ShieldCheck } from "lucide-react";
+import { Award, FileCheck2, Link2, LockKeyhole, ShieldCheck } from "lucide-react";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
-import type { SafetyScoreV9Card } from "@shared/types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
@@ -50,7 +50,7 @@ function V9Unavailable({ reason }: { reason: V9ConsumerUnavailableReason }) {
   );
 }
 
-function PillarRows({ card }: { card: SafetyScoreV9Card }) {
+function PillarRows({ card }: { card: SafetyScoreV9CurrentCard }) {
   return (
     <div className="divide-y divide-border/40 border-y border-border/40">
       {PILLARS.map(([key, label]) => {
@@ -80,7 +80,7 @@ function PillarRows({ card }: { card: SafetyScoreV9Card }) {
   );
 }
 
-function DependencyRows({ card }: { card: SafetyScoreV9Card }) {
+function DependencyRows({ card }: { card: SafetyScoreV9CurrentCard }) {
   const dependencies = [
     ...card.dependencies.serial.map((dependency) => ({
       id: dependency.upstreamAssetId,
@@ -117,6 +117,30 @@ function DependencyRows({ card }: { card: SafetyScoreV9Card }) {
         );
       })}
     </ul>
+  );
+}
+
+function ScoreAdjustment({ card }: { card: SafetyScoreV9CurrentCard }) {
+  const adjustment = card.scoreTrace.scoreAdjustments[0];
+  if (adjustment === undefined) return null;
+  return (
+    <section aria-labelledby={`${card.id}-v9-score-adjustment`}>
+      <div className="mb-2 flex items-center gap-2">
+        <Award className="h-4 w-4 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
+        <h3 id={`${card.id}-v9-score-adjustment`} className="text-sm font-semibold">
+          {adjustment.label}
+        </h3>
+        <span className="font-mono text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+          +{adjustment.appliedPoints.toFixed(0)}
+        </span>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Ordinary score {adjustment.publishedScoreBefore.toFixed(0)} to published score{" "}
+        {adjustment.publishedScoreAfter.toFixed(0)}. The {adjustment.capRelief.kind} limit is
+        relaxed from {adjustment.capRelief.fromLimit.toFixed(0)} to{" "}
+        {adjustment.capRelief.toLimit.toFixed(0)} for this asset only.
+      </p>
+    </section>
   );
 }
 
@@ -160,6 +184,8 @@ export function ReportCardV9Detail({ response, expectedIdentity, cardId }: Repor
         </div>
 
         <PillarRows card={card} />
+
+        <ScoreAdjustment card={card} />
 
         {bindingCap ? (
           <section aria-labelledby={`${card.id}-v9-cap`}>

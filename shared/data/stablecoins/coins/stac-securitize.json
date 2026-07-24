@@ -34,7 +34,7 @@
   "geckoId": "securitize-tokenized-aaa-clo-fund",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://chroniclelabs.org/dashboard/proofofasset/securitize-stac",
+    "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac",
     "provider": "Chronicle Proof of Asset",
     "attestorTier": "niche",
     "cadence": "real-time"
@@ -46,7 +46,7 @@
     },
     {
       "label": "Proof of Asset",
-      "url": "https://chroniclelabs.org/dashboard/proofofasset/securitize-stac"
+      "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac"
     },
     {
       "label": "CoinGecko",
@@ -303,11 +303,11 @@
   "governanceQuality": "regulated-entity",
   "reserves": [
     {
-      "name": "AAA CLO fund portfolio",
+      "name": "AAA CLO tranches and PGIM AAA CLO ETF",
       "pct": 100,
       "risk": "high",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Securitize AAA CLO Tokenized Fund, Ltd. portfolio of U.S. dollar AAA CLO tranches (BNY Investments sub-advisor)",
+      "assetClass": "public-credit",
+      "issuerOrObligor": "Diversified CLO issuers held by Securitize AAA CLO Tokenized Fund, Ltd.",
       "riskFactors": [
         "credit",
         "duration",
@@ -316,7 +316,8 @@
         "counterparty",
         "concentration"
       ],
-      "liquidityHorizon": "over-seven-days"
+      "liquidityHorizon": "over-seven-days",
+      "maturityDaysMax": 5473
     }
   ],
   "custodyProfile": {
@@ -350,14 +351,14 @@
       },
       {
         "label": "Chronicle STAC proof of asset",
-        "url": "https://chroniclelabs.org/dashboard/proofofasset/securitize-stac"
+        "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac"
       }
     ],
     "uncertainty": "The fund documentation names BNY as custodian and BNY Investments as sub-advisor for the BVI private fund holding the CLO portfolio, a structure that holds fund assets apart from Securitize's own balance sheet. Account-level segregation terms, rehypothecation restrictions, and custody of any interim cash balances are not publicly reproduced."
   },
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 curation pass",
+    "reviewedAt": "2026-07-24",
+    "reviewer": "Codex Chronicle Proof of Asset review",
     "confidence": "verified",
     "sources": [
       {
@@ -369,24 +370,17 @@
         "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx"
       },
       {
-        "label": "Chronicle STAC proof of asset",
-        "url": "https://chroniclelabs.org/dashboard/proofofasset/securitize-stac"
+        "label": "Chronicle STAC Proof of Asset holdings dashboard (source date 2026-07-23; proof verified 2026-07-24)",
+        "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac"
       }
     ],
-    "rationale": "Securitize identifies STAC as a tokenized AAA CLO fund share investing substantially all assets in U.S. dollar-denominated AAA-rated CLO tranches, and Chronicle publishes the proof-of-asset surface. The reviewed public issuer and attestor surfaces do not publish a current holdings schedule, issuer/tranche weights, or any residual cash allocation, so the static envelope is retained without fabricating constituent weights.",
-    "compositionBasis": "Securitize fund mandate and proof-of-asset disclosure",
+    "rationale": "Chronicle's independently verified holdings table identifies all 60 positions as of 2026-07-23: one $28.03 million PGIM AAA CLO ETF position and 59 individually identified CLO tranches, totaling $376.28 million of portfolio market value. The static reserve view aggregates those uniformly high-risk public-credit positions into one scoring bucket; the Chronicle source preserves every position identity, value, and disclosed maturity.",
+    "compositionBasis": "Chronicle Proof of Asset position-level market values",
+    "compositionAsOf": "2026-07-23",
     "scope": "full-composition",
-    "knownUnknownExposure": "The sole disclosed portfolio category is AAA CLO exposure; current tranche, issuer, maturity, and residual-cash weights are not published.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "AAA CLO fund portfolio",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The issuer identifies the AAA CLO strategy but does not publish current constituent or residual-cash weights."
-      }
-    ]
+    "knownUnknownExposure": "No unidentified position remains in the dated holdings table. Disclosed maturities cover 92.55% of market value and span 3,836 to 5,473 days from the source date; the 7.45% PGIM AAA CLO ETF position has no stated maturity. Chronicle reports $376.28 million of gross holdings against $353.79 million NAV, retained as a 1.0636 gross-holdings-to-NAV reference rather than a contractual collateralization ratio.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
   },
   "yieldConfig": {
     "yieldSource": "Securitize Tokenized AAA CLO Fund NAV",

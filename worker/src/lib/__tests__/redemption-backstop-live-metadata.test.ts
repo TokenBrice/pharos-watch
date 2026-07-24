@@ -81,6 +81,64 @@ function decodedLegacyRecoveredRowMetadata(metadata: Record<string, unknown>): R
 }
 
 describe("readRedemptionBackstopLiveMetadata", () => {
+  it("accepts a complete source-bound Cap output basket with current direct capacity", () => {
+    const outputValuation = {
+      sourceId: "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49",
+      observedAt: now - 120,
+      unitValueUsd: 0.999983,
+      basketWeights: [
+        { assetId: "usdc-circle", weight: 0.93 },
+        { assetId: "wtgxx-wisdomtree", weight: 0.07 },
+      ],
+    };
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "cusd-cap",
+      snapshot("cusd-cap", {
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd: 30_000_000,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+          routeStatus: "open",
+          routeStatusSource: "onchain",
+          outputValuation,
+        },
+      }),
+      now,
+    );
+
+    expect(metadata.canUseCapacity).toBe(true);
+    expect(metadata.v9OutputValuation).toEqual(outputValuation);
+  });
+
+  it("drops malformed Cap output weights without discarding valid capacity", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "cusd-cap",
+      snapshot("cusd-cap", {
+        freshnessMode: "not-applicable",
+        redemption: {
+          capacityUsd: 30_000_000,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+          outputValuation: {
+            sourceId: "cap-vault:chainlink-nav:test",
+            observedAt: now - 120,
+            unitValueUsd: 1,
+            basketWeights: [
+              { assetId: "usdc-circle", weight: 0.9 },
+              { assetId: "wtgxx-wisdomtree", weight: 0.2 },
+            ],
+          },
+        },
+      }),
+      now,
+    );
+
+    expect(metadata.canUseCapacity).toBe(true);
+    expect(metadata.v9OutputValuation).toBeNull();
+    expect(metadata.capacityNotes).toContain("Live redemption output valuation is malformed and was ignored");
+  });
+
   it.each(["2026-02-30", "2026-13-01", "20260512", "May 12, 2026"])(
     "drops invalid routeStatusReviewedAt value %s",
     (routeStatusReviewedAt) => {
