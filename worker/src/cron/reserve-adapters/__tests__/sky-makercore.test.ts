@@ -41,6 +41,8 @@ vi.mock("../helpers", async (importOriginal) => {
 });
 
 import { fetchJsonWithRetry, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
+import { getReserveAdapter } from "../index";
+import { validateAdapterOutput } from "../validate";
 
 const signal = AbortSignal.timeout(5000);
 const SKY_LITE_PSM_USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -346,6 +348,49 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     expect(result.metadata?.skyStablecoinsModuleCollateralUsd).toBe(4000000000);
     expect(result.metadata?.details).toMatchObject({ litePsmCapacity: "unavailable" });
   });
+
+  it.each([
+    ["zero", "0", false, false],
+    ["immaterial", "1", true, false],
+    ["material", "1000000000", true, true],
+  ] as const)(
+    "lets the shared materiality policy classify %s unknown debt",
+    async (_label, unknownDebt, emitsDiscovery, degraded) => {
+      vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+        count: 2,
+        results: [
+          {
+            group: "stablecoins",
+            group_name: "Stablecoins",
+            debt: "9000000000",
+            collateral: "9000000000",
+            datetime: "2026-04-05T17:33:24",
+          },
+          {
+            group: "new-module",
+            group_name: "New Module",
+            debt: unknownDebt,
+            collateral: unknownDebt,
+            datetime: "2026-04-05T17:33:24",
+          },
+        ],
+      });
+
+      const result = await fetchSkyMakercoreReserves(coin, config, signal);
+      expect(
+        result.warnings?.some((warning) => warning.code === "unknown-asset" && warning.effect === "info") ?? false,
+      ).toBe(emitsDiscovery);
+      const validation = validateAdapterOutput(result, {
+        adapter: getReserveAdapter("sky-makercore") ?? undefined,
+        now: Date.parse("2026-04-05T17:34:24Z") / 1_000,
+      });
+      expect(
+        validation.warnings.some(
+          (warning) => warning.code === "material-unknown-exposure" && warning.effect === "degraded",
+        ),
+      ).toBe(degraded);
+    },
+  );
 
   it("propagates aborts from the optional LitePSM capacity read", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({

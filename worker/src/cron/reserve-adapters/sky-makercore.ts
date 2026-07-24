@@ -12,6 +12,7 @@ import {
   makeOnchainCallers,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
+  reserveInfoWarning,
   SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
   slicesFromValues,
   summarizeSourceTimestamps,
@@ -215,9 +216,14 @@ export async function fetchSkyMakercoreReserves(
 
   const timestampSummary = resolveSkyTimestampSummary(groups);
 
-  const unknown = listUnknownGroups(groups);
+  const totalDebt = groups.reduce((sum, g) => sum + parseNumericString(g.debt), 0);
+  const unknownDebt = groups
+    .filter((g) => !KNOWN_GROUPS.has(g.group))
+    .reduce((sum, g) => sum + parseNumericString(g.debt), 0);
+  const unknownExposurePct = totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0;
+  const unknown = listUnknownGroups(groups.filter((group) => parseNumericString(group.debt) > 0));
   const warnings: LiveReserveWarning[] = unknown.map((group) =>
-    reserveDegradedWarning("unknown-asset", `Sky module bucketed into other: ${group}`),
+    reserveInfoWarning("unknown-asset", `Sky module bucketed into other: ${group}`),
   );
   if (timestampSummary && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC) {
     warnings.push(
@@ -228,10 +234,6 @@ export async function fetchSkyMakercoreReserves(
     );
   }
 
-  const totalDebt = groups.reduce((sum, g) => sum + parseNumericString(g.debt), 0);
-  const unknownDebt = groups
-    .filter((g) => !KNOWN_GROUPS.has(g.group))
-    .reduce((sum, g) => sum + parseNumericString(g.debt), 0);
   const litePsmCapacity = await fetchSkyLitePsmUsdcCapacity(signal, ctx);
   const redemptionMetadata = litePsmCapacity
     ? buildRedemptionSnapshotMetadata({
@@ -270,7 +272,7 @@ export async function fetchSkyMakercoreReserves(
             "module-groups-api",
             "Sky groups payload did not expose a trustworthy snapshot timestamp",
           )),
-      unknownExposurePct: totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0,
+      unknownExposurePct,
       details: {
         psmComposition: SKY_PSM_COMPOSITION_NOTE,
         ...(litePsmCapacity ? {} : { litePsmCapacity: "unavailable" }),
