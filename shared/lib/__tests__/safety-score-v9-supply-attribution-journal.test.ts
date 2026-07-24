@@ -110,6 +110,43 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
     ).toThrow(/requires issuer-disclosure-plus-onchain origin/);
   });
 
+  it("admits only the bounded wM finality exception after the scoring clock", () => {
+    expect(() =>
+      createSupplyAttributionJournalV1(
+        payload({
+          completedAtSec: 220,
+          sourceObservedAtSec: 220,
+        }),
+      ),
+    ).not.toThrow();
+    expect(() =>
+      createSupplyAttributionJournalV1(
+        payload({
+          completedAtSec: 221,
+          sourceObservedAtSec: 221,
+        }),
+      ),
+    ).toThrow(/scoring clock/);
+    expect(() =>
+      createSupplyAttributionJournalV1(
+        payload({
+          completedAtSec: 101,
+          sourceObservedAtSec: 102,
+        }),
+      ),
+    ).toThrow(/scoring clock/);
+    expect(() =>
+      createSupplyAttributionJournalV1(
+        payload({
+          assetId: "xaut-tether",
+          sourceId: "xaut.canonical-lock-mint-group-partition.v2",
+          sourceOriginClass: "issuer-disclosure-plus-onchain",
+          sourceObservedAtSec: 101,
+        }),
+      ),
+    ).toThrow(/scoring clock/);
+  });
+
   it("rejects incoherent state, future source evidence, secrets, and unknown fields", () => {
     expect(() =>
       createSupplyAttributionJournalV1(
@@ -123,7 +160,12 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
     ).toThrow(/aggregate-only fallback/);
     expect(() =>
       createSupplyAttributionJournalV1(
-        payload({ sourceObservedAtSec: 101 }),
+        payload({
+          assetId: "xaut-tether",
+          sourceId: "xaut.canonical-lock-mint-group-partition.v2",
+          sourceOriginClass: "issuer-disclosure-plus-onchain",
+          sourceObservedAtSec: 101,
+        }),
       ),
     ).toThrow(/scoring clock/);
     expect(() =>

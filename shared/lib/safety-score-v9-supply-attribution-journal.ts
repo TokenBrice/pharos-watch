@@ -6,6 +6,7 @@ export const SUPPLY_ATTRIBUTION_JOURNAL_ENTRY_MAX_BYTES = 1_152;
 export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES = 32 * 1_024;
 export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET = 2;
 export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS = 32;
+const WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC = 120;
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const AssetIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,127}$/);
@@ -118,14 +119,25 @@ const SupplyAttributionJournalV1PayloadSchema = z
           "Accepted supply attribution requires content and source time without a failed route",
       });
     }
+    const boundedWmPostClockObservation =
+      record.assetId === "wm-m0" &&
+      record.sourceId === "wm.reviewed-deployment-unit-partition.v1" &&
+      record.sourceObservedAtSec !== null &&
+      record.sourceObservedAtSec > record.scoringClockSec &&
+      record.sourceObservedAtSec - record.scoringClockSec <=
+        WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC &&
+      record.sourceObservedAtSec <= record.completedAtSec;
     if (
       record.sourceObservedAtSec !== null &&
-      record.sourceObservedAtSec > record.scoringClockSec
+      record.sourceObservedAtSec > record.scoringClockSec &&
+      !boundedWmPostClockObservation
     ) {
       ctx.addIssue({
         code: "custom",
         path: ["sourceObservedAtSec"],
-        message: "Supply attribution evidence cannot follow its scoring clock",
+        message:
+          "Supply attribution evidence cannot follow its scoring clock " +
+          "outside the bounded wM finality exception",
       });
     }
 
