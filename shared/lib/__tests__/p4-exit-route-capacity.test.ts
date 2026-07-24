@@ -602,6 +602,8 @@ describe("P4 DEX exit route observations", () => {
     // the same balances would allow.
     const point = observation.capacityCurve!.find((entry) => entry.requestedNotionalUsd === 1_000_000)!;
     expect(point.completionRatio).toBe(1);
+    expect(point.executionCostBps).toBeGreaterThan(0);
+    expect(point.executionCostBps).toBeLessThanOrEqual(point.maxCostBps);
 
     // Amplification monotonicity: a flatter curve (higher A) executes at
     // least as much as a lower-A pool with identical balances.
@@ -627,6 +629,76 @@ describe("P4 DEX exit route observations", () => {
     }).observations[0]!.capacityCurve!;
     const totalOf = (curve: typeof drained) => curve.reduce((total, entry) => total + entry.executableUsd, 0);
     expect(totalOf(drained)).toBeLessThan(totalOf(balanced));
+  });
+
+  it("retains realized cost for a full 25m Curve 3pool-style USDT exit", () => {
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdt-tether",
+      observedAt: 1_753_343_891,
+      retainedPools: [
+        {
+          poolId: "ethereum:0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
+          project: "curve",
+          chain: "ethereum",
+          tvlUsd: 160_047_206,
+          symbol: "DAI / USDC / USDT",
+          poolType: "curve-stableswap",
+          source: "dl",
+          extra: {
+            ammExecutionModel: {
+              source: "curve",
+              invariant: "stableswap",
+              trackedTokenIndex: 2,
+              // The pools endpoint omits the fee, so production retains the
+              // reviewed conservative 10 bps reserve-simulation bound.
+              feeRate: 0.001,
+              amplification: 4000 / 9,
+              tokens: [
+                {
+                  address: "0x6b175474e89094c44da98b954eedeac495271d0f",
+                  symbol: "DAI",
+                  decimals: 18,
+                  balance: 28_348_143.889771747,
+                  referencePriceUsd: 1,
+                  referencePriceSource: "source-token-usd",
+                  trackedAssetId: "dai-makerdao",
+                },
+                {
+                  address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                  symbol: "USDC",
+                  decimals: 6,
+                  balance: 28_486_107.228271,
+                  referencePriceUsd: 1,
+                  referencePriceSource: "source-token-usd",
+                  trackedAssetId: "usdc-circle",
+                },
+                {
+                  address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+                  symbol: "USDT",
+                  decimals: 6,
+                  balance: 103_289_773.79734,
+                  referencePriceUsd: 0.9992518040104241,
+                  referencePriceSource: "source-token-usd",
+                  trackedAssetId: "usdt-tether",
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    const usdcRoute = result.observations.find(
+      (observation) => observation.output.trackedAssetIds?.[0] === "usdc-circle",
+    );
+    const point = usdcRoute?.capacityCurve?.find((entry) => entry.requestedNotionalUsd === 25_000_000);
+    expect(point).toMatchObject({
+      executableUsd: 25_000_000,
+      completionRatio: 1,
+      maxCostBps: 200,
+    });
+    expect(point?.executionCostBps).toBeCloseTo(54.39051, 5);
+    expect(point?.executionCostBps).toBeLessThan(200);
   });
 
   it("scores Balancer stableswap models and rejects other stableswap sources", () => {
@@ -685,6 +757,15 @@ describe("P4 DEX exit route observations", () => {
       confidence: "high",
       output: { kind: "collateral" },
     });
+    expect(
+      result.observations[0]!.capacityCurve!.every(
+        (point) =>
+          point.executableUsd === 0 ||
+          (point.completionRatio === 1
+            ? point.executionCostBps != null && point.executionCostBps <= point.maxCostBps
+            : point.executionCostBps == null),
+      ),
+    ).toBe(true);
 
     const rejected = buildP4DexExitRouteObservations({
       stablecoinId: "usdc-circle",
@@ -882,7 +963,9 @@ describe("P4 DEX exit route observations", () => {
     expect(result.observations[0]!.executableUsd).toBeLessThan(90_000);
     expect(result.observations[0]!.commonModeKeys).toContain("token:solana:UsdtMint");
     expect(result.observations[0]!.routeId).toBe("dex:usdc-circle:direct-api:solana%3Araydium-pool:solana%3AUsdtMint");
-    expect(validateExitRouteCapacityCurve(result.observations[0]!.capacityCurve!)).toEqual([]);
+    const capacityCurve = result.observations[0]!.capacityCurve!;
+    expect(validateExitRouteCapacityCurve(capacityCurve)).toEqual([]);
+    expect(capacityCurve.every((point) => point.completionRatio < 1 && point.executionCostBps == null)).toBe(true);
   });
 
   it("simulates a factory-verified EVM V2 constant-product exit", () => {
@@ -940,6 +1023,59 @@ describe("P4 DEX exit route observations", () => {
       output: { kind: "collateral" },
       scoreEligible: true,
     });
+  });
+
+  it("omits realized cost when an exact AMM route has zero executable capacity", () => {
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt: 1_720_000_000,
+      retainedPools: [
+        {
+          poolId: "ethereum:0x0000000000000000000000000000000000000001",
+          project: "uniswap-v2",
+          chain: "ethereum",
+          tvlUsd: 1_500_000,
+          symbol: "USDC / TOKEN",
+          poolType: "uniswap-v2",
+          source: "dl",
+          extra: {
+            ammExecutionModel: {
+              source: "uniswap-v2",
+              invariant: "constant-product",
+              trackedTokenIndex: 0,
+              feeRate: 0.003,
+              tokens: [
+                {
+                  address: "0x0000000000000000000000000000000000000011",
+                  symbol: "USDC",
+                  decimals: 6,
+                  balance: 1_000_000,
+                  referencePriceUsd: 1,
+                  referencePriceSource: "tracked-market",
+                  trackedAssetId: "usdc-circle",
+                },
+                {
+                  address: "0x0000000000000000000000000000000000000012",
+                  symbol: "TOKEN",
+                  decimals: 18,
+                  balance: 1_000_000,
+                  referencePriceUsd: 0.5,
+                  referencePriceSource: "tracked-market",
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    expect(result.observations).toHaveLength(1);
+    expect(result.observations[0]!.capacityCurve!.every((point) => point.executableUsd === 0)).toBe(true);
+    expect(
+      result.observations[0]!.capacityCurve!.every(
+        (point) => !Object.prototype.hasOwnProperty.call(point, "executionCostBps"),
+      ),
+    ).toBe(true);
   });
 
   it("keeps case-distinct Solana pool and mint identities in distinct routes", () => {
@@ -1221,6 +1357,7 @@ describe("P4 DEX exit route observations", () => {
     });
     expect(result.observations[0]!.executableUsd).toBeGreaterThan(0);
     expect(result.observations[0]!.executableUsd).toBeLessThan(1_000_000);
+    expect(result.observations[0]!.capacityCurve![0]!.executionCostBps).toBeUndefined();
   });
 
   it("quarantines incomplete weighted models instead of falling back to TVL", () => {

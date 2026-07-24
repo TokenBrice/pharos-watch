@@ -31,6 +31,7 @@ const DEFAULT_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as co
 const REFERENCE_NOTIONAL_USD = 1_000_000;
 const REFERENCE_COST_BPS = 200;
 const IMMEDIATE_SETTLEMENT_HORIZON_SEC = 300;
+const AMM_EXECUTION_COST_TOLERANCE_BPS = 0.02;
 export const P4_AMM_MODELED_TVL_MIN_RATIO = 0.5;
 export const P4_AMM_MODELED_TVL_MAX_RATIO = 2;
 
@@ -482,6 +483,14 @@ function capabilityForPool(pool: P4DexRoutePoolInput): DexRouteSourceCapability 
   return capabilityById("discovery-pool-shaped");
 }
 
+export function requiresP4DexScoreEligibleCapabilityCoverage(pool: P4DexRoutePoolInput): boolean {
+  if (!Number.isFinite(pool.tvlUsd) || pool.tvlUsd <= 0 || !pool.poolId || !pool.project || !pool.chain) return true;
+  if (pool.extra?.executionCapabilityGate != null) return true;
+  const capability = capabilityForPool(pool);
+  if (capability.scoreEligible) return true;
+  return pool.extra?.measuredExecution != null && pool.extra?.ammExecutionModel == null;
+}
+
 function buildCapacityPoint(
   requestedNotionalUsd: number,
   maxCostBps: number,
@@ -758,14 +767,50 @@ function executableAmmInputUsd(
   return lower;
 }
 
+function realizedAmmExecutionCostBps(
+  model: DexAmmExecutionModel,
+  outputTokenIndex: number,
+  requestedNotionalUsd: number,
+  executableUsd: number,
+  maxCostBps: number,
+): number | null {
+  if (!Number.isFinite(executableUsd) || executableUsd <= 0) return null;
+  const input = model.tokens[model.trackedTokenIndex];
+  const output = model.tokens[outputTokenIndex];
+  if (!input || !output || !Number.isFinite(input.referencePriceUsd) || input.referencePriceUsd <= 0) return null;
+  const inputAmount = executableUsd / input.referencePriceUsd;
+  const outputAmount = simulateAmmOutput(model, outputTokenIndex, inputAmount);
+  const outputUsd = outputAmount * output.referencePriceUsd;
+  if (!Number.isFinite(outputUsd) || outputUsd < 0) return null;
+  const realizedCostBps = Math.max(0, (1 - outputUsd / executableUsd) * 10_000);
+  if (!Number.isFinite(realizedCostBps) || realizedCostBps > maxCostBps + AMM_EXECUTION_COST_TOLERANCE_BPS) {
+    return null;
+  }
+  if (
+    executableUsd + 0.01 < requestedNotionalUsd &&
+    realizedCostBps >= maxCostBps - AMM_EXECUTION_COST_TOLERANCE_BPS
+  ) {
+    return null;
+  }
+  return Math.round(Math.min(maxCostBps, realizedCostBps) * 1_000_000) / 1_000_000;
+}
+
 function buildAmmCapacityCurve(model: DexAmmExecutionModel, outputTokenIndex: number): ExitRouteCapacityPoint[] {
-  return DEFAULT_NOTIONALS_USD.map((notional) =>
-    buildCapacityPoint(
+  return DEFAULT_NOTIONALS_USD.map((notional) => {
+    const point = buildCapacityPoint(
       notional,
       REFERENCE_COST_BPS,
       executableAmmInputUsd(model, outputTokenIndex, notional, REFERENCE_COST_BPS),
-    ),
-  );
+    );
+    const executionCostBps = realizedAmmExecutionCostBps(
+      model,
+      outputTokenIndex,
+      point.requestedNotionalUsd,
+      point.executableUsd,
+      point.maxCostBps,
+    );
+    return executionCostBps == null ? point : { ...point, executionCostBps };
+  });
 }
 
 function outputFromAmmToken(
@@ -869,10 +914,10 @@ export function buildP4DexExitRouteObservations(params: {
   let scoreEligibleCapabilityPoolCount = 0;
 
   for (const pool of params.retainedPools) {
+    if (requiresP4DexScoreEligibleCapabilityCoverage(pool)) scoreEligibleCapabilityPoolCount++;
     if (!Number.isFinite(pool.tvlUsd) || pool.tvlUsd <= 0 || !pool.poolId || !pool.project || !pool.chain) {
       // An invalid retained row cannot prove that it belongs to a diagnostic-only
       // capability, so keep it in the executable denominator and fail closed.
-      scoreEligibleCapabilityPoolCount++;
       unsupportedPoolCount++;
       unsupportedReasons.invalidRetainedPool = (unsupportedReasons.invalidRetainedPool ?? 0) + 1;
       continue;
@@ -881,7 +926,6 @@ export function buildP4DexExitRouteObservations(params: {
     const ammModel = pool.extra?.ammExecutionModel;
     const executionCapabilityGate = pool.extra?.executionCapabilityGate;
     if (executionCapabilityGate != null) {
-      scoreEligibleCapabilityPoolCount++;
       unsupportedPoolCount++;
       const reason =
         ammModel == null
@@ -890,7 +934,6 @@ export function buildP4DexExitRouteObservations(params: {
       unsupportedReasons[reason] = (unsupportedReasons[reason] ?? 0) + 1;
       continue;
     }
-    if (capability.scoreEligible) scoreEligibleCapabilityPoolCount++;
     const measuredProfile = pool.extra?.measuredExecution;
     if (measuredProfile != null) {
       if (ammModel != null) {
@@ -900,7 +943,6 @@ export function buildP4DexExitRouteObservations(params: {
         continue;
       }
       if (!capability.scoreEligible) {
-        scoreEligibleCapabilityPoolCount++;
         unsupportedPoolCount++;
         unsupportedReasons.shadowMeasuredProfileWithoutGate =
           (unsupportedReasons.shadowMeasuredProfileWithoutGate ?? 0) + 1;
