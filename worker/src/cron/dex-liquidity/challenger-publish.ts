@@ -1,11 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../lib/abort";
-import {
-  batchExecute,
-  chunkArray,
-  D1_MAX_BOUND_PARAMETERS,
-  executeAtomicBatch,
-} from "../../lib/db";
+import { batchExecute } from "../../lib/db";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { requireFiniteNumber } from "../../lib/number-utils";
 import type { PoolEntry } from "./types";
@@ -63,9 +58,18 @@ const CHALLENGER_COVERAGE_TARGET = 0.95;
 const CHALLENGER_HARD_CAP = 50;
 /** Bound prepared challenger rows independently of the full active asset set. */
 export const DEX_PRICE_CHALLENGER_BATCH_SIZE = 25;
+const CHALLENGER_D1_MAX_BOUND_PARAMETERS = 100;
 const CHALLENGER_PAYLOAD_COLUMN_COUNT = 8;
 const CHALLENGER_SNAPSHOT_COLUMN_COUNT = 5;
-const CHALLENGER_CLEANUP_ID_BATCH_SIZE = D1_MAX_BOUND_PARAMETERS - 1;
+const CHALLENGER_CLEANUP_ID_BATCH_SIZE = CHALLENGER_D1_MAX_BOUND_PARAMETERS - 1;
+
+function chunkRows<T>(rows: readonly T[], chunkSize: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < rows.length; index += chunkSize) {
+    chunks.push(rows.slice(index, index + chunkSize));
+  }
+  return chunks;
+}
 
 function prepareMultiRowStatements(
   db: D1Database,
@@ -79,8 +83,8 @@ function prepareMultiRowStatements(
     throw new Error(`DEX challenger publication expected ${columnCount} binds per row`);
   }
 
-  const rowsPerStatement = Math.floor(D1_MAX_BOUND_PARAMETERS / columnCount);
-  return chunkArray(rows, rowsPerStatement).map((rowChunk) => {
+  const rowsPerStatement = Math.floor(CHALLENGER_D1_MAX_BOUND_PARAMETERS / columnCount);
+  return chunkRows(rows, rowsPerStatement).map((rowChunk) => {
     const placeholders = `(${new Array(columnCount).fill("?").join(", ")})`;
     return db
       .prepare(`${sqlPrefix} VALUES ${new Array(rowChunk.length).fill(placeholders).join(", ")} ${conflictClause}`)
@@ -359,9 +363,17 @@ export async function publishDexPriceChallengerSnapshots(
     snapshotRows,
     CHALLENGER_SNAPSHOT_COLUMN_COUNT,
   );
-  await executeAtomicBatch(db, snapshotStatements, { signal });
+  if (snapshotStatements.length > DEX_PRICE_CHALLENGER_BATCH_SIZE) {
+    throw new Error(
+      `DEX challenger snapshot publication exceeds one atomic batch (${snapshotStatements.length} statements)`,
+    );
+  }
+  await batchExecute(db, snapshotStatements, {
+    chunkSize: DEX_PRICE_CHALLENGER_BATCH_SIZE,
+    signal,
+  });
 
-  const cleanupStatements = chunkArray(cleanupStablecoinIds, CHALLENGER_CLEANUP_ID_BATCH_SIZE).map((idChunk) =>
+  const cleanupStatements = chunkRows(cleanupStablecoinIds, CHALLENGER_CLEANUP_ID_BATCH_SIZE).map((idChunk) =>
     db
       .prepare(
         `DELETE FROM dex_price_challengers
