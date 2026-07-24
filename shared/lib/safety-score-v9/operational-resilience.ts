@@ -21,6 +21,16 @@ export interface V9OperationalResilienceMeasuredMarketDepth {
   evidenceRefIds: readonly string[];
 }
 
+/**
+ * Canonical launch history can qualify independently measured market depth for
+ * resilience credit without requiring an asset-specific editorial overlay.
+ * It is eligibility-only and cannot create a scored contribution by itself.
+ */
+export interface V9OperationalResilienceImplementationHistory {
+  minimumLiveHistoryMonths: number;
+  evidenceRefIds: readonly string[];
+}
+
 export interface V9OperationalResilienceBlockers {
   activeDepeg: boolean;
   globalReserveImpairment: boolean;
@@ -57,7 +67,7 @@ export interface V9OperationalResilienceContribution {
 export interface V9OperationalResilienceEligibilityTrace {
   requiredLiveHistoryMonths: number;
   documentedLiveHistoryMonths: number | null;
-  confidence: V9OperationalResilienceClaimConfidence | null;
+  confidence: V9OperationalResilienceClaimConfidence | "implementation-history" | null;
   evidenceRefIds: readonly string[];
   satisfied: boolean;
 }
@@ -160,21 +170,46 @@ function activeBlockerCodes(
 
 function eligibilityTrace(
   fact: V9OperationalResilienceFact | null,
+  implementationHistory: V9OperationalResilienceImplementationHistory | null,
   policy: V9OperationalResiliencePolicy,
 ): V9OperationalResilienceEligibilityTrace {
   const history = fact?.liveHistoryEligibility ?? null;
-  const multiplier =
-    history === null ? 0 : confidenceMultiplier(history.confidence, policy);
+  const overlayEligible =
+    history !== null &&
+    history.treatment === "eligibility-only" &&
+    history.minimumLiveHistoryMonths >= policy.minimumLiveHistoryMonths &&
+    confidenceMultiplier(history.confidence, policy) > 0;
+  if (overlayEligible) {
+    return {
+      requiredLiveHistoryMonths: policy.minimumLiveHistoryMonths,
+      documentedLiveHistoryMonths: history.minimumLiveHistoryMonths,
+      confidence: history.confidence,
+      evidenceRefIds: canonicalEvidence(history.evidenceRefIds),
+      satisfied: true,
+    };
+  }
+  if (implementationHistory !== null) {
+    nonNegativeInteger(
+      implementationHistory.minimumLiveHistoryMonths,
+      "implementation live history",
+    );
+    const evidenceRefIds = canonicalEvidence(implementationHistory.evidenceRefIds);
+    return {
+      requiredLiveHistoryMonths: policy.minimumLiveHistoryMonths,
+      documentedLiveHistoryMonths: implementationHistory.minimumLiveHistoryMonths,
+      confidence: "implementation-history",
+      evidenceRefIds,
+      satisfied:
+        implementationHistory.minimumLiveHistoryMonths >= policy.minimumLiveHistoryMonths &&
+        evidenceRefIds.length > 0,
+    };
+  }
   return {
     requiredLiveHistoryMonths: policy.minimumLiveHistoryMonths,
     documentedLiveHistoryMonths: history?.minimumLiveHistoryMonths ?? null,
     confidence: history?.confidence ?? null,
     evidenceRefIds: canonicalEvidence(history?.evidenceRefIds ?? []),
-    satisfied:
-      history !== null &&
-      history.treatment === "eligibility-only" &&
-      history.minimumLiveHistoryMonths >= policy.minimumLiveHistoryMonths &&
-      multiplier > 0,
+    satisfied: false,
   };
 }
 
@@ -189,10 +224,11 @@ export function evaluateV9OperationalResilience(
   measuredMarketDepth: V9OperationalResilienceMeasuredMarketDepth | null,
   policy: V9OperationalResiliencePolicy,
   blockers: V9OperationalResilienceBlockers,
+  implementationHistory: V9OperationalResilienceImplementationHistory | null = null,
 ): V9OperationalResilienceResult {
-  const eligibility = eligibilityTrace(fact, policy);
+  const eligibility = eligibilityTrace(fact, implementationHistory, policy);
   const blockerCodes = activeBlockerCodes(fact, blockers);
-  if (!eligibility.satisfied || blockerCodes.length > 0 || fact === null) {
+  if (!eligibility.satisfied || blockerCodes.length > 0) {
     return {
       eligible: false,
       eligibility,
@@ -227,7 +263,7 @@ export function evaluateV9OperationalResilience(
   };
 
   const cumulativeRatio =
-    fact.redemptionThroughput?.cumulativeLifetimeRedeemedSupplyRatio ?? null;
+    fact?.redemptionThroughput?.cumulativeLifetimeRedeemedSupplyRatio ?? null;
   if (cumulativeRatio !== null) {
     finiteNonNegative(cumulativeRatio.value, "cumulative redeemed supply ratio");
     if (cumulativeRatio.value >= policy.redemption.minimumCumulativeSupplyRatio) {
@@ -241,7 +277,7 @@ export function evaluateV9OperationalResilience(
     }
   }
 
-  const qualifyingStressWindows = (fact.redemptionThroughput?.stressWindows ?? [])
+  const qualifyingStressWindows = (fact?.redemptionThroughput?.stressWindows ?? [])
     .filter((window) => {
       finiteNonNegative(
         window.redeemedSupplyRatioLowerBound,
@@ -305,7 +341,7 @@ export function evaluateV9OperationalResilience(
     }
   }
 
-  const qualifyingEpisodes = fact.stressEpisodes
+  const qualifyingEpisodes = (fact?.stressEpisodes ?? [])
     .filter((episode) => {
       if (episode.recoveredWithinSec !== null) {
         finiteNonNegative(
@@ -345,7 +381,7 @@ export function evaluateV9OperationalResilience(
     );
   }
 
-  const reconciliation = fact.reserveReconciliation;
+  const reconciliation = fact?.reserveReconciliation ?? null;
   if (reconciliation !== null) {
     nonNegativeInteger(
       reconciliation.reportHistory.observedReportHistoryMonths,

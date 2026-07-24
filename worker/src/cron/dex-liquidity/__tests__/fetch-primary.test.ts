@@ -571,14 +571,26 @@ describe("buildCurveLookups", () => {
       },
     ];
 
-    const { curvePoolMap } = await buildCurveLookups(curvePayloads, new Map(), new Map(), new Map());
+    const { curvePoolMap, curvePoolCandidatesByFingerprint } = await buildCurveLookups(
+      curvePayloads,
+      new Map(),
+      new Map(),
+      new Map(),
+    );
 
     const duplicatedFingerprint = `fp:ethereum:curve:${[USDC, USDT].sort().join(":")}`;
     expect(curvePoolMap.has(duplicatedFingerprint)).toBe(false);
+    expect(curvePoolCandidatesByFingerprint.get(duplicatedFingerprint)?.map((entry) => entry.poolAddress)).toEqual([
+      "0x1111111111111111111111111111111111111111",
+      "0x3333333333333333333333333333333333333333",
+    ]);
     const uniqueFingerprint = `fp:ethereum:curve:${[USDC, "0x853d955acef822db058eb8505911ed77f175b99e"].sort().join(":")}`;
     expect(curvePoolMap.get(uniqueFingerprint)).toBe(
       curvePoolMap.get("ethereum:0x2222222222222222222222222222222222222222"),
     );
+    expect(curvePoolCandidatesByFingerprint.get(uniqueFingerprint)).toEqual([
+      curvePoolMap.get("ethereum:0x2222222222222222222222222222222222222222"),
+    ]);
     // Address keys stay intact for all three pools.
     expect(curvePoolMap.has("ethereum:0x1111111111111111111111111111111111111111")).toBe(true);
     expect(curvePoolMap.has("ethereum:0x3333333333333333333333333333333333333333")).toBe(true);

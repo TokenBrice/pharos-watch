@@ -111,11 +111,15 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
  * by the fork-equivalence, cross-check, drift, and shadow evidence packet at
  * agents/safety-score-v9/results/cl-activation-evidence-2026-07-17/packet.md
  * (120/120 exact provider reproductions; failures confined to producer
- * startup generations). Keys not listed here remain shadow-only fail-closed.
- * Restored 2026-07-20 after the #592 security rollup emptied the cohort as an
- * over-broad artifact (owner ruling).
+ * startup generations). Base Aerodrome Slipstream was admitted to shadow V9
+ * route scoring on 2026-07-24 after full target rotation, consumer replay,
+ * binding checks, and independent historical-block quote reproduction. Keys
+ * not listed here remain shadow-only fail-closed. The initial cohort was
+ * restored 2026-07-20 after the #592 security rollup emptied it as an
+ * over-broad artifact.
  */
 export const DEX_MEASURED_EXECUTION_SCORE_ELIGIBLE_DEPLOYMENT_KEYS: readonly string[] = [
+  "aerodrome-slipstream-quoter-v2:base",
   "uniswap-v3-quoter-v2:ethereum",
   "uniswap-v3-quoter-v2:polygon",
   "uniswap-v3-quoter-v2:arbitrum",

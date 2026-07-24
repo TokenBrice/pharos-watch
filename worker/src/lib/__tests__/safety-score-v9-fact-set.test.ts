@@ -7,6 +7,7 @@ import flipcashMetaSource from "@shared/data/stablecoins/coins/usdf-flipcash.jso
 import astherusMetaSource from "@shared/data/stablecoins/coins/usdf-astherus.json";
 import megaMetaSource from "@shared/data/stablecoins/coins/usdm-mega.json";
 import wrappedMSource from "@shared/data/stablecoins/coins/wm-m0.json";
+import xautMetaSource from "@shared/data/stablecoins/coins/xaut-tether.json";
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
@@ -18,12 +19,13 @@ import {
 } from "@shared/lib/safety-score-v9/exit";
 import {
   V9_CANDIDATE_POLICY_V1,
+  loadV9MethodologyPolicy,
   resolveV9ReasonPolicy,
 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9StressState } from "@shared/lib/safety-score-v9/stress";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { createReportCardsFixedInput, normalizeFixedInput } from "../report-cards-fixed-input";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
   computeSafetyScoreV9ReserveExposureKey,
@@ -41,6 +43,27 @@ import {
 import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9-extension-operational-resilience";
 import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9-extension-shock";
 import type { SafetyScoreV9ReviewedTransferFact } from "../safety-score-v9-extension-transfer";
+import {
+  buildReviewedDeploymentRouteInventory,
+  deriveReviewedDeploymentUnitPartition,
+  expectedWmDeploymentIdentity,
+  type ReviewedDeploymentSupplyObservation,
+} from "../safety-score-v9-supply-attribution-contract";
+import {
+  buildXautTransparencySource,
+  deriveXautRepresentationGroupSupplyAttribution,
+  XAUT0_ADAPTER_ADDRESS,
+  XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+  XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
+  XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
+  XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
+  XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
+  XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
+  XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+  XAUT_CANONICAL_TOKEN_ADDRESS,
+  XAUT_TRANSPARENCY_SOURCE_ID,
+  XAUT_TREASURY_ADDRESS,
+} from "../safety-score-v9-xaut-supply-attribution-contract";
 
 const AS_OF_SEC = 10_000;
 const OBSERVED_AT_SEC = 9_900;
@@ -209,7 +232,7 @@ function exactFixedInput(
         exitRouteObservations: [route("dex:primary", observedAtSec, args.routeChain ?? "ethereum", clockSec)],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.6",
+          capabilityMatrixVersion: "p4a.8",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,
@@ -253,6 +276,59 @@ function exactFixedInput(
     dexDeploymentSupplyCoverageById: {},
     collateralDriftCoins: [],
     liveToFallbackCoins: [],
+  });
+}
+
+function withWmReviewedDeploymentAttribution(
+  fixedInput: ReturnType<typeof exactFixedInput>,
+) {
+  const aggregateSupplyUsd = Object.values(
+    fixedInput.aggregateCirculatingById["wm-m0"]?.circulating ?? {},
+  ).reduce((sum, value) => sum + value, 0);
+  const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
+  if (!inventory) throw new Error("Missing wM route inventory");
+  const observations: ReviewedDeploymentSupplyObservation[] = inventory.routes.map((route, index) => {
+    const identity = expectedWmDeploymentIdentity(route.routeId);
+    if (!identity) throw new Error(`Missing wM deployment identity ${route.routeId}`);
+    const common = {
+      routeId: route.routeId,
+      chainId: route.chainId,
+      contractAddress: route.contractAddress,
+      decimals: route.decimals,
+      rawSupply: route.chainId === "ethereum" ? "86712798085682" : route.chainId === "solana" ? "247794997129" : "1",
+      blockNumberOrSlot: (25_000_000 + index).toString(),
+      blockTimeSec: fixedInput.clockSec - 10 + index,
+    };
+    return identity.runtime === "evm"
+      ? {
+          ...common,
+          blockHash: `0x${(index + 1).toString(16).repeat(64)}`,
+          runtimeCodeSha256: identity.runtimeCodeSha256,
+          implementationAddress: identity.implementationAddress,
+          implementationCodeSha256: identity.implementationCodeSha256,
+          underlyingTokenAddress: identity.underlyingTokenAddress,
+          controllerAddress: identity.controllerAddress,
+        }
+      : {
+          ...common,
+          blockHash: "B".repeat(44),
+          programOwner: identity.programOwner,
+          mintAuthority: identity.mintAuthority,
+          controllerAddress: identity.controllerAddress,
+          controllerProgramOwner: identity.controllerProgramOwner,
+        };
+  });
+  const attribution = deriveReviewedDeploymentUnitPartition({
+    assetId: "wm-m0",
+    aggregateSupplyUsd,
+    registryFingerprint: fixedInput.registryFingerprint,
+    scoringClockSec: fixedInput.clockSec,
+    observations,
+  });
+  if (!attribution) throw new Error("Could not derive wM supply attribution");
+  return normalizeFixedInput({
+    ...fixedInput,
+    safetyScoreV9SupplyAttributionById: { "wm-m0": attribution },
   });
 }
 
@@ -445,14 +521,14 @@ function routeReview(routeId = "dex:primary", observedAt = OBSERVED_AT_SEC) {
   };
 }
 
-function queuedRedemptionFixedInput() {
+function queuedRedemptionFixedInput(settlementHorizonSec = 30 * 86_400) {
   const base = exactFixedInput();
   const observation: ExitRouteObservation = {
     routeId: "redemption:alpha:queue",
     routeFamily: "issuer-redemption",
     scope: { kind: "issuer", issuerId: "alpha" },
     requestedNotionalUsd: 1_000_000,
-    settlementHorizonSec: 30 * 86_400,
+    settlementHorizonSec,
     maxCostBps: 200,
     executableUsd: 1_000_000,
     completionRatio: 1,
@@ -1068,23 +1144,20 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         ],
       ]),
     });
+    const overlay = getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", clockSec);
     expect(baseline.assets[0]!.operationalResilience).toEqual(
-      getSafetyScoreV9OperationalResilienceOverlay("usdt-tether", clockSec),
+      overlay,
     );
+    expect(overlay).not.toBeNull();
 
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     const asset = compiled.assets[0]!;
     const operationalEvidence = asset.evidence.filter((evidence) =>
       evidence.evidenceId.startsWith("usdt-tether:operational-resilience:"),
     );
-    expect(operationalEvidence).toHaveLength(4);
+    expect(operationalEvidence).toHaveLength(23);
     expect(new Set(operationalEvidence.map((evidence) => evidence.sourceId))).toEqual(
-      new Set([
-        "tether-2022-05-redemption-stress",
-        "tether-2024-ten-year-milestones",
-        "bdo-2022-q2-reserves-assurance",
-        "bdo-2026-q1-reserves-assurance",
-      ]),
+      new Set(overlay!.sources.map((source) => source.sourceId)),
     );
     expect(asset.operationalResilience).toMatchObject({
       schemaVersion: 1,
@@ -1108,9 +1181,13 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       ],
       reserveReconciliation: {
         reportHistory: {
-          observedReportHistoryMonths: 45,
-          missedMaterialPeriods: null,
-          confidence: "issuer-reported",
+          firstReportPeriodEnd: "2021-03-31",
+          latestReportPeriodEnd: "2026-03-31",
+          observedReportHistoryMonths: 60,
+          reportedCadence: "quarterly",
+          continuityEvidence: "independently-verified",
+          missedMaterialPeriods: 0,
+          confidence: "independent-assurance",
         },
         latestAssurance: {
           level: "reasonable-assurance",
@@ -1122,19 +1199,50 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
     expect(evaluated.operationalResilience).toMatchObject({
       eligible: true,
-      rawPillarCredits: { backing: 0, exit: 1.5, control: 0 },
-      pillarCredits: { backing: 0, exit: 1.5, control: 0 },
-      contributions: [
-        {
-          component: "stress-redemption",
-          confidence: "issuer-reported",
-          confidenceMultiplier: 0.5,
-          points: 1.5,
-        },
-      ],
+      rawPillarCredits: { backing: 2.55, exit: 1.5, control: 2.55 },
+      pillarCredits: { backing: 2.55, exit: 1.5, control: 2.55 },
     });
+    expect(
+      evaluated.operationalResilience?.contributions.map(
+        ({ component, pillar, confidence, confidenceMultiplier, points }) => ({
+          component,
+          pillar,
+          confidence,
+          confidenceMultiplier,
+          points,
+        }),
+      ),
+    ).toEqual([
+      {
+        component: "stress-redemption",
+        pillar: "exit",
+        confidence: "issuer-reported",
+        confidenceMultiplier: 0.5,
+        points: 1.5,
+      },
+      {
+        component: "reserve-reconciliation",
+        pillar: "backing",
+        confidence: "independent-assurance",
+        confidenceMultiplier: 0.85,
+        points: 2.55,
+      },
+      {
+        component: "reserve-reconciliation",
+        pillar: "control",
+        confidence: "independent-assurance",
+        confidenceMultiplier: 0.85,
+        points: 2.55,
+      },
+    ]);
     expect(evaluated.scoreInput.pillars.exit.score).toBe(
       Math.min(100, evaluated.exit.score! + 1.5),
+    );
+    expect(evaluated.scoreInput.pillars.backing.score).toBe(
+      Math.min(100, evaluated.backing.score! + 2.55),
+    );
+    expect(evaluated.scoreInput.pillars.control.score).toBe(
+      Math.min(100, evaluated.control.score! + 2.55),
     );
     expect(evaluated.trace.operationalResilience).toEqual(evaluated.operationalResilience);
 
@@ -1536,7 +1644,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(edges.every((edge) => edge.evidenceRefIds.length > 0)).toBe(true);
   });
 
-  it("derives only form-positive native savings wrapper-local facts", () => {
+  it("derives native savings facts and shares documented-redemption admission with exit evaluation", () => {
     const original = exactTwoAssetFixedInput({ mapAlphaCollateral: true });
     const {
       schemaVersion: omittedSchemaVersion,
@@ -1559,10 +1667,32 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ];
     const parentReserve = structuredClone(original.liveReserveMap.alpha![0]!);
     parentReserve.pct = 100;
+    const documentedRedemptionInput = queuedRedemptionFixedInput();
+    const documentedRedemption = structuredClone(documentedRedemptionInput.redemptionBackstopMap.alpha!);
+    const documentedObservation = documentedRedemption.capacityProfile!.exitRouteObservations![0]!;
+    documentedObservation.requestedNotionalUsd = 10_000_000;
+    documentedObservation.executableUsd = 10_000_000;
+    documentedObservation.completionRatio = 1;
+    documentedObservation.capacityCurve = [
+      ...documentedObservation.capacityCurve!,
+      {
+        requestedNotionalUsd: 10_000_000,
+        maxCostBps: 200,
+        executableUsd: 10_000_000,
+        completionRatio: 1,
+      },
+    ];
     const fixed = createReportCardsFixedInput({
       ...draft,
       activeAssetIds: ["alpha", "beta"],
       liveReserveMap: { ...draft.liveReserveMap, alpha: [parentReserve] },
+      redemptionGenerationId: documentedRedemptionInput.redemptionGenerationId,
+      redemptionBackstopMap: { alpha: documentedRedemption },
+      redemptionStale: false,
+      inputFreshness: {
+        ...draft.inputFreshness,
+        redemptionBackstops: documentedRedemptionInput.inputFreshness.redemptionBackstops,
+      },
     });
     const metaById = new Map<string, V9ExtensionRegistryMeta>([
       [
@@ -1587,6 +1717,8 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ]);
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
     const alpha = baseline.assets.find((asset) => asset.assetId === "alpha")!;
+    alpha.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+    alpha.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, "alpha");
     alpha.economicControlReview = {
       mint: {
         status: notApplicableStatus("v9.control.mint-review"),
@@ -1608,6 +1740,25 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
     const compiledAlpha = compiled.assets.find((asset) => asset.assetId === "alpha")!;
+    const documentedRoute = compiledAlpha.exitRoutes.find((route) => route.lane === "redemption")!;
+    expect(documentedRoute).toMatchObject({
+      scoreEligible: false,
+      status: { observationState: "known" },
+    });
+    const evaluatedExit = evaluateV9Exit(
+      {
+        circulatingUsd: compiledAlpha.supply.circulatingUsd,
+        portfolioStatus: "reviewed-complete",
+        routes: compiledAlpha.exitRoutes.map(projectV9ExitEvaluationRoute),
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const evaluatedDocumentedRoute = evaluatedExit.routes.find(
+      (route) => route.routeKey === documentedRoute.routeKey,
+    );
+    expect(evaluatedDocumentedRoute, JSON.stringify(evaluatedDocumentedRoute)).toMatchObject({
+      included: true,
+    });
     expect(compiledAlpha.economicControlReview.mint).toMatchObject({
       status: { observationState: "known" },
       reconciliation: "not-applicable",
@@ -1624,6 +1775,11 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         leverage: { disposition: "issuer-undisclosed", assessment: null },
         rehypothecationCorrelation: { disposition: "issuer-undisclosed", assessment: null },
         shareAccountingNavOracle: { disposition: "reviewed", assessment: "moderate" },
+        measuredUnwind: {
+          disposition: "reviewed",
+          assessment: "none",
+          signals: expect.arrayContaining(["wrapper-measured-unwind-route-count:2"]),
+        },
       },
     });
     if (wrapper.applicability !== "wrapper") throw new Error("Expected wrapper-local facts");
@@ -1740,18 +1896,39 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const metaById = new Map([["alpha", meta]]);
     const noLive = exactFixedInput({ omitLiveReserve: true });
     const issuerAttested = buildSafetyScoreV9BaselineExtension(noLive, { metaById });
-    expect(issuerAttested.assets[0]!.issuerAttestedReserveRows).toMatchObject({
+    expect(issuerAttested.assets[0]!.reviewedStaticReserveRows).toMatchObject({
       evidenceClass: "issuer-attested",
-      confidenceMultiplier: 0.8,
     });
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(noLive, issuerAttested).assets[0]!;
     expect(compiled.reserveExposures).toHaveLength(2);
     expect(compiled.reserveExposures.every((exposure) => exposure.evidenceClass === "issuer-attested")).toBe(true);
     expect(compiled.reserveExposures.reduce((sum, exposure) => sum + exposure.weight, 0)).toBeCloseTo(1, 12);
 
+    const reportSources = meta.proofOfReserves!.latestReport!.sources;
+    const independentlyExaminedMeta: V9ExtensionRegistryMeta = {
+      ...meta,
+      reserveReview: {
+        ...meta.reserveReview!,
+        sources: reportSources,
+      },
+    };
+    const independentExtension = buildSafetyScoreV9BaselineExtension(noLive, {
+      metaById: new Map([["alpha", independentlyExaminedMeta]]),
+    });
+    expect(independentExtension.assets[0]!.reviewedStaticReserveRows).toMatchObject({
+      evidenceClass: "independent",
+    });
+    const independentlyCompiled = compileSafetyScoreV9FactSetFromFixedInput(
+      noLive,
+      independentExtension,
+    ).assets[0]!;
+    expect(
+      independentlyCompiled.reserveExposures.every((exposure) => exposure.evidenceClass === "independent"),
+    ).toBe(true);
+
     const withLive = exactFixedInput();
     const liveFirst = buildSafetyScoreV9BaselineExtension(withLive, { metaById });
-    expect(liveFirst.assets[0]!.issuerAttestedReserveRows).toBeNull();
+    expect(liveFirst.assets[0]!.reviewedStaticReserveRows).toBeNull();
     const liveExposures = compileSafetyScoreV9FactSetFromFixedInput(withLive, liveFirst).assets[0]!.reserveExposures;
     expect(liveExposures).toEqual([expect.objectContaining({ provenance: "live", weight: 1 })]);
     expect(liveExposures[0]).not.toHaveProperty("evidenceClass");
@@ -1828,6 +2005,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       queueDepthUsd: 1_500_000,
       dailyLimitUsd: 1_000_000,
       minRedeemUsd: 1_000_000,
+      request: { settlementHorizonSec: 30 * 86_400 },
     });
 
     const exit = evaluateV9Exit(
@@ -1846,6 +2024,18 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       settlementDelaySec: 30 * 86_400,
       capsApplied: expect.arrayContaining(["queue-backlog:0.65", "minimum-redeem:0.75"]),
     });
+  });
+
+  it("never shortens a captured route below the conservative reviewed settlement horizon", () => {
+    const fixed = queuedRedemptionFixedInput(86_400);
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
+
+    const redemption = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!.exitRoutes.find(
+      (route) => route.lane === "redemption",
+    )!;
+    expect(redemption.request?.settlementHorizonSec).toBe(30 * 86_400);
   });
 
   it("preserves reviewed capacity and applies the bounded-unknown fee ceiling end to end", () => {
@@ -1990,6 +2180,431 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(supply.unreviewedRouteSupplyShare).toBeNull();
   });
 
+  it("compiles exact wM route shares without bridge-materiality uncertainty", () => {
+    const clockSec = Date.parse("2026-07-24T09:00:00Z") / 1_000;
+    const fixed = withWmReviewedDeploymentAttribution(
+      exactFixedInput({
+        assetId: "wm-m0",
+        clockSec,
+        chainSupplyByChain: {},
+        aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
+        omitLiveReserve: true,
+      }),
+    );
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        ["wm-m0", wrappedMSource as unknown as V9ExtensionRegistryMeta],
+      ]),
+    });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const wm = compiled.assets[0]!;
+
+    expect(wm.supply.status.observationState).toBe("known");
+    expect(wm.supply.selectedBridgeRoutes).toHaveLength(5);
+    expect(wm.supply.selectedRouteSupplyShare).toBe(1);
+    expect(wm.supply.unknownRouteSupplyShare).toBe(0);
+    expect(wm.supply.unreviewedRouteSupplyShare).toBe(0);
+    expect(wm.gaps.map((gap) => gap.reasonCode)).not.toContain(
+      "runtime-bridge-materiality-unavailable",
+    );
+    expect(
+      wm.evidence.find((evidence) => evidence.evidenceId === "wm-m0:chain-supply"),
+    ).toMatchObject({ sourceId: "safety-score-v9-reviewed-deployment-attribution" });
+
+    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.scoreInput.pillars.control.reasons.map((reason) => reason.code)).not.toContain(
+      "runtime-bridge-materiality-unavailable",
+    );
+  });
+
+  it("compiles one reviewed XAUt0 group control without destination supply claims", () => {
+    const clockSec = Date.parse("2026-07-24T09:00:00Z") / 1_000;
+    const aggregateSupplyUsd = 2_480_000_000;
+    const fixed = exactFixedInput({
+      assetId: "xaut-tether",
+      clockSec,
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedGOLD: aggregateSupplyUsd },
+      omitLiveReserve: true,
+    });
+    const attribution =
+      deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd,
+        registryFingerprint: fixed.registryFingerprint,
+        scoringClockSec: fixed.clockSec,
+        observation: {
+          chainId: "ethereum",
+          canonicalTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+          adapterAddress: XAUT0_ADAPTER_ADDRESS,
+          decimals: 6,
+          canonicalTotalSupplyRaw: "707747089000",
+          treasuryAddress: XAUT_TREASURY_ADDRESS,
+          treasuryBalanceRaw: "94923429468",
+          adapterLockedSupplyRaw: "29720802896",
+          blockNumber: 25_601_844,
+          blockTimeSec: clockSec - 100,
+          blockHash: `0x${"ab".repeat(32)}`,
+          canonicalRuntimeCodeSha256:
+            XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+          canonicalImplementationAddress:
+            XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
+          canonicalImplementationCodeSha256:
+            XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
+          adapterRuntimeCodeSha256:
+            XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
+          adapterImplementationAddress:
+            XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+          adapterImplementationCodeSha256:
+            XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
+          adapterTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+          adapterEndpointAddress:
+            XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
+          disclosure: {
+            sourceId: XAUT_TRANSPARENCY_SOURCE_ID,
+            sourceConfigDigest:
+              buildXautTransparencySource()!.configDigest,
+            sourceTimestampSec: clockSec - 200,
+            responseSha256: "e".repeat(64),
+            totalAuthorizedRaw: "707747089000",
+            notIssuedRaw: "94923429468",
+            quarantinedRaw: "0",
+          },
+        },
+      });
+    expect(attribution).not.toBeNull();
+    fixed.safetyScoreV9SupplyAttributionById = {
+      "xaut-tether": attribution!,
+    };
+    fixed.baseInputGenerationId =
+      deriveReportCardsBaseInputGenerationId(fixed);
+
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "xaut-tether",
+          xautMetaSource as unknown as V9ExtensionRegistryMeta,
+        ],
+      ]),
+    });
+    const compiled =
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const xaut = compiled.assets[0]!;
+    const groupRow = xaut.supply.selectedBridgeRoutes.find((route) =>
+      route.deploymentRouteKey.startsWith("representation-group:"),
+    );
+    const bridgeControls = xaut.controls.filter(
+      (control) => control.controlKind === "bridge",
+    );
+
+    expect(xaut.supply.selectedBridgeRoutes).toHaveLength(2);
+    expect(groupRow).toMatchObject({
+      reviewState: "selected-reviewed",
+      reviewedRouteKind: "controlled",
+      supplyShare: expect.closeTo(0.04849813227, 9),
+    });
+    expect(xaut.supply.selectedRouteSupplyShare).toBe(1);
+    expect(xaut.supply.unknownRouteSupplyShare).toBe(0);
+    expect(xaut.supply.chainDistribution).toMatchObject({
+      chains: [
+        {
+          chainId: "ethereum",
+          supplyShare: expect.closeTo(0.95150186773, 9),
+        },
+      ],
+      unattributedSupplyShare: expect.closeTo(0.04849813227, 9),
+    });
+    expect(bridgeControls).toHaveLength(1);
+    expect(bridgeControls[0]).toMatchObject({
+      status: {
+        applicability: { state: "required" },
+        observationState: "bounded-unknown",
+      },
+      deploymentKey:
+        "representation-group:xaut-tether:xaut0-omnichain",
+      capSemantics: { kind: "unbounded" },
+      claimImpairment: "unbounded",
+      economicLossScope: "deployment",
+      materialSupplyShare: expect.closeTo(0.04849813227, 9),
+      authority: {
+        authorityKey:
+          "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+        model: "unknown",
+      },
+      failureDomains: [
+        {
+          kind: "bridge-route",
+          key: "contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+        },
+        {
+          kind: "bridge-route",
+          key: "protocol:xaut0-omnichain",
+        },
+      ],
+    });
+    expect(
+      xaut.economicControlReview.bridge.status.observationState,
+    ).toBe("known");
+    expect(
+      bridgeControls.some((control) =>
+        attribution!.representationGroup.routeIds.includes(
+          control.deploymentKey,
+        ),
+      ),
+    ).toBe(false);
+
+    const evaluated = evaluateV9FactSet(
+      compiled,
+      V9_CANDIDATE_POLICY_V1,
+    ).assets[0]!;
+    const reasonCodes =
+      evaluated.scoreInput.pillars.control.reasons.map(
+        (reason) => reason.code,
+      );
+    expect(reasonCodes).not.toContain(
+      "immaterial-unrecognized-chain-pool",
+    );
+    expect(reasonCodes).not.toContain(
+      "material-bridge-supply-unmatched",
+    );
+
+    const singleAssetCommonModePolicy = loadV9MethodologyPolicy({
+      ...V9_CANDIDATE_POLICY_V1.policy,
+      policyId: "safety-score-v9-xaut-common-mode-test",
+      semantic: {
+        ...V9_CANDIDATE_POLICY_V1.policy.semantic,
+        materiality: {
+          ...V9_CANDIDATE_POLICY_V1.policy.semantic.materiality,
+          commonControlMinAssets: 1,
+        },
+      },
+    });
+    const commonModeSignals = evaluateV9FactSet(
+      compiled,
+      singleAssetCommonModePolicy,
+    ).assets[0]!.scoreInput.dependencyStructuralSignals.filter((signal) =>
+      signal.failureDomainKeys.some((key) =>
+        key.startsWith("bridge-route:"),
+      ),
+    );
+    expect(commonModeSignals).toEqual([
+      expect.objectContaining({
+        failureDomainKeys: [
+          "bridge-route:contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+        ],
+        materialSharePct: expect.closeTo(4.849813227, 7),
+        severity: "low",
+        responsibility: "measured-adverse",
+      }),
+      expect.objectContaining({
+        failureDomainKeys: [
+          "bridge-route:protocol:xaut0-omnichain",
+        ],
+        materialSharePct: expect.closeTo(4.849813227, 7),
+        severity: "low",
+        responsibility: "measured-adverse",
+      }),
+    ]);
+  });
+
+  it("withholds XAUT when no reconciled V2 supply packet can establish global chain supply", () => {
+    const fixed = exactFixedInput({
+      assetId: "xaut-tether",
+      clockSec: Date.parse("2026-07-24T09:00:00Z") / 1_000,
+      chainSupplyByChain: {},
+      omitLiveReserve: true,
+    });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "xaut-tether",
+          xautMetaSource as unknown as V9ExtensionRegistryMeta,
+        ],
+      ]),
+    });
+    const compiled =
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const xaut = compiled.assets[0]!;
+
+    expect(xaut.supply.status.observationState).toBe("missing");
+    expect(xaut.gaps).toContainEqual(
+      expect.objectContaining({
+        reasonCode: "missing-pillar-evidence",
+        ownerDomain: "evidence",
+        responsibility: "producer-failed",
+        path: {
+          kind: "local-component",
+          componentKey: "chain-supply",
+        },
+      }),
+    );
+
+    const evaluated = evaluateV9FactSet(
+      compiled,
+      V9_CANDIDATE_POLICY_V1,
+    ).assets[0]!;
+    expect(evaluated.trace.finalScore).toBeNull();
+    expect(evaluated.trace.finalGrade).toBe("NR");
+    expect(evaluated.trace.nrReasons).toContainEqual(
+      expect.objectContaining({
+        code: "missing-pillar-evidence",
+        responsibility: "producer-failed",
+      }),
+    );
+    expect(evaluated.trace.unresolvedFacts).toContainEqual(
+      expect.objectContaining({
+        code: "missing-pillar-evidence",
+        critical: true,
+        responsibility: "producer-failed",
+      }),
+    );
+  });
+
+  it("fails closed when the XAUt0 group reaches the materiality floor", () => {
+    const clockSec = Date.parse("2026-07-24T09:00:00Z") / 1_000;
+    const aggregateSupplyUsd = 2_480_000_000;
+    const fixed = exactFixedInput({
+      assetId: "xaut-tether",
+      clockSec,
+      liquidityScore: 95,
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedGOLD: aggregateSupplyUsd },
+    });
+    const attribution =
+      deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd,
+        registryFingerprint: fixed.registryFingerprint,
+        scoringClockSec: fixed.clockSec,
+        observation: {
+          chainId: "ethereum",
+          canonicalTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+          adapterAddress: XAUT0_ADAPTER_ADDRESS,
+          decimals: 6,
+          canonicalTotalSupplyRaw: "1000000000",
+          treasuryAddress: XAUT_TREASURY_ADDRESS,
+          treasuryBalanceRaw: "100000000",
+          adapterLockedSupplyRaw: "95000000",
+          blockNumber: 25_601_844,
+          blockTimeSec: clockSec - 100,
+          blockHash: `0x${"cd".repeat(32)}`,
+          canonicalRuntimeCodeSha256:
+            XAUT_CANONICAL_RUNTIME_CODE_SHA256,
+          canonicalImplementationAddress:
+            XAUT_CANONICAL_IMPLEMENTATION_ADDRESS,
+          canonicalImplementationCodeSha256:
+            XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
+          adapterRuntimeCodeSha256:
+            XAUT0_ADAPTER_RUNTIME_CODE_SHA256,
+          adapterImplementationAddress:
+            XAUT0_ADAPTER_IMPLEMENTATION_ADDRESS,
+          adapterImplementationCodeSha256:
+            XAUT0_ADAPTER_IMPLEMENTATION_CODE_SHA256,
+          adapterTokenAddress: XAUT_CANONICAL_TOKEN_ADDRESS,
+          adapterEndpointAddress:
+            XAUT0_LAYERZERO_ENDPOINT_ADDRESS,
+          disclosure: {
+            sourceId: XAUT_TRANSPARENCY_SOURCE_ID,
+            sourceConfigDigest:
+              buildXautTransparencySource()!.configDigest,
+            sourceTimestampSec: clockSec - 200,
+            responseSha256: "f".repeat(64),
+            totalAuthorizedRaw: "1000000000",
+            notIssuedRaw: "100000000",
+            quarantinedRaw: "0",
+          },
+        },
+      });
+    expect(attribution).not.toBeNull();
+    expect(95_000_000 / 1_000_000_000).toBeLessThan(0.1);
+    expect(
+      attribution!.representationGroup.currentSupplyUsd /
+        aggregateSupplyUsd,
+    ).toBeCloseTo(95_000_000 / 900_000_000, 12);
+    expect(
+      attribution!.representationGroup.currentSupplyUsd /
+        aggregateSupplyUsd,
+    ).toBeGreaterThanOrEqual(0.1);
+    fixed.safetyScoreV9SupplyAttributionById = {
+      "xaut-tether": attribution!,
+    };
+    fixed.baseInputGenerationId =
+      deriveReportCardsBaseInputGenerationId(fixed);
+
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "xaut-tether",
+          xautMetaSource as unknown as V9ExtensionRegistryMeta,
+        ],
+      ]),
+    });
+    expect(
+      baseline.assets[0]!.supplyReview?.selectedBridgeRoutes.find((route) =>
+        route.deploymentRouteKey.startsWith("representation-group:"),
+      ),
+    ).toMatchObject({
+      reviewState: "selected-unresolved",
+      supplyShare: expect.closeTo(0.10555555556, 9),
+    });
+    expect(
+      baseline.assets[0]!.economicControlReview?.bridge.status
+        .observationState,
+    ).toBe("bounded-unknown");
+
+    const compiled =
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const evaluated = evaluateV9FactSet(
+      compiled,
+      V9_CANDIDATE_POLICY_V1,
+    ).assets[0]!;
+    expect(
+      evaluated.scoreInput.pillars.control.reasons.map(
+        (reason) => reason.code,
+      ),
+    ).toContain("runtime-bridge-materiality-unavailable");
+    expect(evaluated.trace.caps).toContainEqual(
+      expect.objectContaining({
+        kind: "reason:runtime-bridge-materiality-unavailable",
+        limit: 55,
+        source: "evidence",
+        binding: true,
+      }),
+    );
+    expect(evaluated.trace.bindingCap).toMatchObject({
+      kind: "reason:runtime-bridge-materiality-unavailable",
+      limit: 55,
+      source: "evidence",
+    });
+  });
+
+  it("restores the bridge-materiality cap when the wM packet is absent", () => {
+    const fixed = exactFixedInput({
+      assetId: "wm-m0",
+      clockSec: Date.parse("2026-07-24T09:00:00Z") / 1_000,
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedUSD: 87_020_618.58982982 },
+      omitLiveReserve: true,
+    });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        ["wm-m0", wrappedMSource as unknown as V9ExtensionRegistryMeta],
+      ]),
+    });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    const wm = compiled.assets[0]!;
+
+    expect(wm.supply.chainDistribution).toBeNull();
+    expect(wm.gaps.map((gap) => gap.reasonCode)).toContain(
+      "missing-bridge-routes",
+    );
+    const evaluated = evaluateV9FactSet(
+      compiled,
+      V9_CANDIDATE_POLICY_V1,
+    ).assets[0]!;
+    expect(
+      evaluated.scoreInput.pillars.control.reasons.map((reason) => reason.code),
+    ).toContain("runtime-bridge-materiality-unavailable");
+  });
+
   it("keeps supply missing when neither per-chain rows nor a positive aggregate bucket exist", () => {
     const absent = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput({ chainSupplyByChain: {} }), extension())
       .assets[0]!.supply;
@@ -2066,6 +2681,49 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ]);
   });
 
+  it("attributes chain-contract redemption routes to a redemption rail, not a DEX protocol", () => {
+    const fixed = queuedRedemptionFixedInput();
+    const observation = fixed.redemptionBackstopMap.alpha!.capacityProfile!.exitRouteObservations![0]!;
+    observation.routeFamily = "protocol-redemption";
+    observation.scope = {
+      kind: "chain-contract",
+      chain: "ethereum",
+      contractOrPoolId: "0x2397321b301b80a1c0911d6f9ed4b6033d43cf51",
+      protocol: "frax",
+    };
+    const reviewed = extension();
+    reviewed.assets[0]!.routeReviews.push({
+      ...routeReview(observation.routeId),
+      lane: "redemption",
+      failureDomains: [],
+    });
+
+    const {
+      schemaVersion: omittedSchemaVersion,
+      dexPayloadFingerprint: omittedDexPayloadFingerprint,
+      redemptionPayloadFingerprint: omittedRedemptionPayloadFingerprint,
+      registryFingerprint: omittedRegistryFingerprint,
+      inputMethodologyVersions: omittedInputMethodologyVersions,
+      baseInputGenerationId: omittedBaseInputGenerationId,
+      ...draft
+    } = fixed;
+    void [
+      omittedSchemaVersion,
+      omittedDexPayloadFingerprint,
+      omittedRedemptionPayloadFingerprint,
+      omittedRegistryFingerprint,
+      omittedInputMethodologyVersions,
+      omittedBaseInputGenerationId,
+    ];
+    const rebuilt = createReportCardsFixedInput(draft);
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(rebuilt, reviewed);
+    const redemptionRoute = compiled.assets[0]!.exitRoutes.find((candidate) => candidate.lane === "redemption")!;
+
+    expect(redemptionRoute.failureDomains).toContainEqual({ kind: "chain", key: "ethereum" });
+    expect(redemptionRoute.failureDomains).toContainEqual({ kind: "redemption-rail", key: "frax" });
+    expect(redemptionRoute.failureDomains).not.toContainEqual({ kind: "dex-protocol", key: "frax" });
+  });
+
   it("keeps shaped diagnostic pools out of the DEX completeness denominator without hiding exact gates", () => {
     const fixedWithCoverage = (exactCapabilityPoolCount: number) => {
       const original = exactFixedInput();
@@ -2096,7 +2754,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
             ...original.dexLiqMap.alpha!,
             exitRouteObservationCoverage: {
               status: "populated",
-              capabilityMatrixVersion: "p4a.6",
+              capabilityMatrixVersion: "p4a.8",
               retainedPoolCount: 2_380 + exactCapabilityPoolCount,
               observationCount: 1,
               scoreEligibleObservationCount: 1,
@@ -2604,7 +3262,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "47ff7e12f20cb577f29a0aec4348b4b6068f4c6d0143183a486d078d38f06bd1",
+      "460715a6b420fd1d5b4019cc6e57d976ed53ec92678bf5314a63fcef2d5dcba2",
     );
   });
 

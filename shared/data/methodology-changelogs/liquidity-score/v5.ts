@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.88",
+    title: "Exact-route continuity and Base Slipstream execution",
+    date: "2026-07-24",
+    effectiveAt: 1784851200,
+    summary:
+      "Reviewed Base Aerodrome Slipstream pools can contribute factory-bound QuoterV2 execution profiles, while mature fresh routes remain available to the Safety Score V9 exact-route envelope across bounded pool-shortlist rotation.",
+    impact: [
+      "Activation is limited to the reviewed Base Aerodrome Slipstream factory and QuoterV2 runtimes; Optimism Uniswap V3, Solana CLMM, SunSwap, Fluid, and other unratified cohorts remain shadow-only",
+      "Every accepted profile must prove the retained pool through the factory's exact token and signed tick-spacing binding and pass independent generation, identity, price, freshness, curve, and retained-TVL validation",
+      "Mature fresh last-known-good profiles can remain in the bounded route-only observation set across a temporary liquidity shortlist rotation without changing aggregate TVL, volume, visible pools, price consensus, target publication, or V8 liquidity scoring",
+      "Missing, stale, price-drifted, malformed, or identity-mismatched profiles remain capability-gated; aggregate liquidity is never substituted as executable depth",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.87",
     title: "Base Aerodrome volatile exact execution",
     date: "2026-07-22",

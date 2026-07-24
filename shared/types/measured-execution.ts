@@ -9,9 +9,19 @@ export const DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO = 1.02;
 export const DEX_MEASURED_MARGINAL_NOTIONAL_USD = 1_000;
 export const DEX_MEASURED_CAPACITY_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
 export const DEX_MEASURED_FRESHNESS_MAX_SEC = 2 * 30 * 60;
+export const DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC = 2 * 60 * 60;
 export const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
 
 const CanonicalEvmAddressSchema = z.string().regex(/^0x[a-f0-9]{40}$/);
+const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = "curve-stableswap-main-registry-get-dy-v1";
+const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = "curve-stableswap-ng-factory-get-dy-v2";
+
+export function getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId: string): number {
+  return adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID ||
+    adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+    ? DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC
+    : DEX_MEASURED_FRESHNESS_MAX_SEC;
+}
 
 export const DexMeasuredExecutionObservationHistorySchema = ExitRouteObservationHistorySchema
   .superRefine((history, ctx) => {
@@ -88,6 +98,61 @@ const DexMeasuredExecutionPoolBindingProofSchema = z.object({
 });
 export type DexMeasuredExecutionPoolBindingProof = z.infer<typeof DexMeasuredExecutionPoolBindingProofSchema>;
 
+const DexMeasuredExecutionRegistryBindingProofSchema = z.object({
+  registryAddress: CanonicalEvmAddressSchema,
+  registryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
+  registeredPoolAddress: CanonicalEvmAddressSchema,
+  lpTokenAddress: CanonicalEvmAddressSchema,
+  poolTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8),
+  lpTokenCallData: z.string().regex(/^0x[0-9a-f]+$/),
+  lpTokenReturnData: z.string().regex(/^0x[0-9a-f]+$/),
+  registryCoinsCallData: z.string().regex(/^0x[0-9a-f]+$/),
+  registryCoinsReturnData: z.string().regex(/^0x[0-9a-f]+$/),
+  poolCoinsProof: z.array(z.object({
+    index: z.number().int().min(0).max(7),
+    callData: z.string().regex(/^0x[0-9a-f]+$/),
+    returnData: z.string().regex(/^0x[0-9a-f]+$/),
+  })).min(2).max(8),
+  tokenDecimalsProof: z.array(z.object({
+    tokenAddress: CanonicalEvmAddressSchema,
+    decimals: z.number().int().min(0).max(255),
+    callData: z.string().regex(/^0x[0-9a-f]+$/),
+    returnData: z.string().regex(/^0x[0-9a-f]+$/),
+  })).min(2).max(8),
+});
+export type DexMeasuredExecutionRegistryBindingProof = z.infer<
+  typeof DexMeasuredExecutionRegistryBindingProofSchema
+>;
+
+const DexMeasuredExecutionStableSwapNgFactoryBindingProofSchema = z.object({
+  blockNumber: z.number().int().nonnegative(),
+  blockHash: z.string().regex(/^0x[a-f0-9]{64}$/),
+  blockCommitment: z.literal("finalized"),
+  factoryAddress: CanonicalEvmAddressSchema,
+  factoryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
+  poolIndex: z.number().int().nonnegative(),
+  registeredPoolAddress: CanonicalEvmAddressSchema,
+  poolTokenAddresses: z.array(CanonicalEvmAddressSchema).length(2),
+  poolListCallData: z.string().regex(/^0x[0-9a-f]+$/),
+  poolListReturnData: z.string().regex(/^0x[0-9a-f]+$/),
+  factoryCoinsCallData: z.string().regex(/^0x[0-9a-f]+$/),
+  factoryCoinsReturnData: z.string().regex(/^0x[0-9a-f]+$/),
+  poolCoinsProof: z.array(z.object({
+    index: z.number().int().min(0).max(1),
+    callData: z.string().regex(/^0x[0-9a-f]+$/),
+    returnData: z.string().regex(/^0x[0-9a-f]+$/),
+  })).length(2),
+  tokenDecimalsProof: z.array(z.object({
+    tokenAddress: CanonicalEvmAddressSchema,
+    decimals: z.number().int().min(0).max(255),
+    callData: z.string().regex(/^0x[0-9a-f]+$/),
+    returnData: z.string().regex(/^0x[0-9a-f]+$/),
+  })).length(2),
+});
+export type DexMeasuredExecutionStableSwapNgFactoryBindingProof = z.infer<
+  typeof DexMeasuredExecutionStableSwapNgFactoryBindingProofSchema
+>;
+
 export const DexMeasuredExecutionProfileSchema = z.object({
   schemaVersion: z.literal(DEX_MEASURED_EXECUTION_SCHEMA_VERSION),
   kind: z.literal("measured-executable-depth"),
@@ -112,6 +177,8 @@ export const DexMeasuredExecutionProfileSchema = z.object({
     codeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
   }),
   poolBindingProof: DexMeasuredExecutionPoolBindingProofSchema.optional(),
+  registryBindingProof: DexMeasuredExecutionRegistryBindingProofSchema.optional(),
+  stableSwapNgFactoryBindingProof: DexMeasuredExecutionStableSwapNgFactoryBindingProofSchema.optional(),
   maxCostBps: z.literal(DEX_MEASURED_MAX_COST_BPS),
   marginalOutputRatio: z.number().finite().nonnegative(),
   capacityCurve: z.array(ExitRouteCapacityPointSchema).length(DEX_MEASURED_CAPACITY_NOTIONALS_USD.length),
@@ -123,12 +190,31 @@ export type DexMeasuredExecutionProfile = z.infer<typeof DexMeasuredExecutionPro
 export const DexMeasuredExecutionPublicProfileSchema = DexMeasuredExecutionProfileSchema.omit({
   quoteProof: true,
   poolBindingProof: true,
+  registryBindingProof: true,
+  stableSwapNgFactoryBindingProof: true,
 }).extend({
   observationHistory: DexMeasuredExecutionObservationHistorySchema.optional(),
   poolProvenance: z.object({
     factoryAddress: CanonicalEvmAddressSchema,
     factoryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
     resolvedPoolAddress: CanonicalEvmAddressSchema,
+  }).optional(),
+  registryProvenance: z.object({
+    registryAddress: CanonicalEvmAddressSchema,
+    registryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
+    registeredPoolAddress: CanonicalEvmAddressSchema,
+    lpTokenAddress: CanonicalEvmAddressSchema,
+    poolTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8),
+  }).optional(),
+  stableSwapNgFactoryProvenance: z.object({
+    blockNumber: z.number().int().nonnegative(),
+    blockHash: z.string().regex(/^0x[a-f0-9]{64}$/),
+    blockCommitment: z.literal("finalized"),
+    factoryAddress: CanonicalEvmAddressSchema,
+    factoryCodeHash: z.string().regex(/^0x[a-f0-9]{64}$/),
+    poolIndex: z.number().int().nonnegative(),
+    registeredPoolAddress: CanonicalEvmAddressSchema,
+    poolTokenAddresses: z.array(CanonicalEvmAddressSchema).length(2),
   }).optional(),
 });
 export type DexMeasuredExecutionPublicProfile = z.infer<typeof DexMeasuredExecutionPublicProfileSchema>;
@@ -138,7 +224,13 @@ export function toDexMeasuredExecutionPublicProfile(
   options: { observationHistory?: DexMeasuredExecutionObservationHistory } = {},
 ): DexMeasuredExecutionPublicProfile {
   const parsed = DexMeasuredExecutionProfileSchema.parse(input);
-  const { quoteProof: _quoteProof, poolBindingProof, ...profile } = parsed;
+  const {
+    quoteProof: _quoteProof,
+    poolBindingProof,
+    registryBindingProof,
+    stableSwapNgFactoryBindingProof,
+    ...profile
+  } = parsed;
   return DexMeasuredExecutionPublicProfileSchema.parse({
     ...profile,
     ...(options.observationHistory ? { observationHistory: options.observationHistory } : {}),
@@ -148,6 +240,31 @@ export function toDexMeasuredExecutionPublicProfile(
             factoryAddress: poolBindingProof.factoryAddress,
             factoryCodeHash: poolBindingProof.factoryCodeHash,
             resolvedPoolAddress: poolBindingProof.resolvedPoolAddress,
+          },
+        }
+      : {}),
+    ...(registryBindingProof
+      ? {
+          registryProvenance: {
+            registryAddress: registryBindingProof.registryAddress,
+            registryCodeHash: registryBindingProof.registryCodeHash,
+            registeredPoolAddress: registryBindingProof.registeredPoolAddress,
+            lpTokenAddress: registryBindingProof.lpTokenAddress,
+            poolTokenAddresses: registryBindingProof.poolTokenAddresses,
+          },
+        }
+      : {}),
+    ...(stableSwapNgFactoryBindingProof
+      ? {
+          stableSwapNgFactoryProvenance: {
+            blockNumber: stableSwapNgFactoryBindingProof.blockNumber,
+            blockHash: stableSwapNgFactoryBindingProof.blockHash,
+            blockCommitment: stableSwapNgFactoryBindingProof.blockCommitment,
+            factoryAddress: stableSwapNgFactoryBindingProof.factoryAddress,
+            factoryCodeHash: stableSwapNgFactoryBindingProof.factoryCodeHash,
+            poolIndex: stableSwapNgFactoryBindingProof.poolIndex,
+            registeredPoolAddress: stableSwapNgFactoryBindingProof.registeredPoolAddress,
+            poolTokenAddresses: stableSwapNgFactoryBindingProof.poolTokenAddresses,
           },
         }
       : {}),
@@ -247,30 +364,62 @@ function rawAmountToUsd(rawAmount: string, decimals: number, referencePriceUsd: 
 
 /** Build fixed P4 points from quoted passing inputs only; never interpolates. */
 export function buildDexMeasuredCapacityCurve(
-  proof: readonly Pick<DexMeasuredExecutionQuotePointProof, "inputUsd" | "passesCostBound">[],
+  proof: readonly Pick<DexMeasuredExecutionQuotePointProof, "inputUsd" | "costBps" | "passesCostBound">[],
   retainedTvlUsd: number,
 ): z.infer<typeof ExitRouteCapacityPointSchema>[] {
   const tvlBound = retainedTvlUsd * 1.5;
-  const passingInputs = proof
+  const passingQuotes = proof
     .filter((point) => point.passesCostBound && point.inputUsd <= tvlBound)
-    .map((point) => point.inputUsd)
-    .filter((value) => Number.isFinite(value) && value > 0)
-    .sort((left, right) => left - right);
+    .filter(
+      (point) =>
+        Number.isFinite(point.inputUsd) &&
+        point.inputUsd > 0 &&
+        Number.isFinite(point.costBps) &&
+        point.costBps >= 0 &&
+        point.costBps <= DEX_MEASURED_MAX_COST_BPS,
+    )
+    .sort((left, right) => left.inputUsd - right.inputUsd || right.costBps - left.costBps);
 
   return DEX_MEASURED_CAPACITY_NOTIONALS_USD.map((requestedNotionalUsd) => {
-    const executableUsd = roundUsd(
-      passingInputs.reduce(
-        (largest, inputUsd) => inputUsd <= requestedNotionalUsd ? Math.max(largest, inputUsd) : largest,
-        0,
-      ),
+    const definingQuote = passingQuotes.reduce<(typeof passingQuotes)[number] | null>(
+      (largest, quote) =>
+        quote.inputUsd <= requestedNotionalUsd &&
+        (largest === null ||
+          quote.inputUsd > largest.inputUsd ||
+          (quote.inputUsd === largest.inputUsd && quote.costBps > largest.costBps))
+          ? quote
+          : largest,
+      null,
     );
+    const executableUsd = roundUsd(definingQuote?.inputUsd ?? 0);
     return {
       requestedNotionalUsd,
       maxCostBps: DEX_MEASURED_MAX_COST_BPS,
       executableUsd,
       completionRatio: roundRatio(executableUsd / requestedNotionalUsd),
+      ...(definingQuote ? { executionCostBps: definingQuote.costBps } : {}),
     };
   });
+}
+
+/**
+ * New profiles attest realized capacity-point cost. Legacy profiles remain
+ * valid when that additive field is absent; V9 then uses the request bound.
+ */
+export function dexMeasuredCapacityPointMatchesProof(
+  claimed: z.infer<typeof ExitRouteCapacityPointSchema> | undefined,
+  rebuilt: z.infer<typeof ExitRouteCapacityPointSchema>,
+): boolean {
+  return (
+    claimed != null &&
+    claimed.requestedNotionalUsd === rebuilt.requestedNotionalUsd &&
+    claimed.maxCostBps === rebuilt.maxCostBps &&
+    Math.abs(claimed.executableUsd - rebuilt.executableUsd) <= 0.01 &&
+    Math.abs(claimed.completionRatio - rebuilt.completionRatio) <= 0.000001 &&
+    (claimed.executionCostBps == null ||
+      (rebuilt.executionCostBps != null &&
+        Math.abs(claimed.executionCostBps - rebuilt.executionCostBps) <= 0.02))
+  );
 }
 
 /**
@@ -305,7 +454,10 @@ export function validateDexMeasuredExecutionProfile(input: {
   if (profile.tokenIn.trackedAssetId !== currentTarget.stablecoinId) issues.add("tracked-input-mismatch");
   if (profile.quotedAt > input.nowSec + 60) issues.add("future-observation");
   if (profile.quotedAt < quotedTarget.capturedAt) issues.add("observation-before-target");
-  if (input.nowSec - profile.quotedAt > DEX_MEASURED_FRESHNESS_MAX_SEC) issues.add("stale-observation");
+  if (
+    input.nowSec - profile.quotedAt >
+    getDexMeasuredExecutionFreshnessMaxSec(profile.adapterProfileId)
+  ) issues.add("stale-observation");
 
   const retainedPrice = currentTarget.retainedPoolPriceUsd;
   if (
@@ -405,14 +557,9 @@ export function validateDexMeasuredExecutionProfile(input: {
     recomputedProof.filter((point): point is NonNullable<typeof point> => point != null),
     profile.retainedTvlUsdAtQuote,
   );
-  const curveMatches = rebuiltCurve.every((rebuilt, index) => {
-    const claimed = profile.capacityCurve[index];
-    return claimed != null &&
-      claimed.requestedNotionalUsd === rebuilt.requestedNotionalUsd &&
-      claimed.maxCostBps === rebuilt.maxCostBps &&
-      Math.abs(claimed.executableUsd - rebuilt.executableUsd) <= 0.01 &&
-      Math.abs(claimed.completionRatio - rebuilt.completionRatio) <= 0.000001;
-  });
+  const curveMatches = rebuiltCurve.every((rebuilt, index) =>
+    dexMeasuredCapacityPointMatchesProof(profile.capacityCurve[index], rebuilt),
+  );
   if (!curveMatches) issues.add("invalid-capacity-curve");
 
   const sortedProof = [...profile.quoteProof].sort((left, right) => left.inputUsd - right.inputUsd);

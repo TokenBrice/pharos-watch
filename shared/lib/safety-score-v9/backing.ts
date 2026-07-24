@@ -382,6 +382,27 @@ interface ReserveEvaluation {
   readonly rateability: "rateable" | "NR";
 }
 
+function verifiedLiveInheritedExposure(
+  asset: V9BackingAssetInput,
+  inherited: V9InheritedStablecoinBacking,
+): V9ReserveExposureFactV2 | undefined {
+  if (
+    asset.reserveStatus.applicability.state !== "required" ||
+    asset.reserveStatus.observationState !== "known" ||
+    asset.reserveExposures.length !== 1
+  ) {
+    return undefined;
+  }
+  const exposure = asset.reserveExposures[0]!;
+  return exposure.provenance === "live" &&
+    exposure.status.applicability.state === "required" &&
+    exposure.status.observationState === "known" &&
+    exposure.trackedAssetId === inherited.parentAssetId &&
+    exposure.weight >= V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT
+    ? exposure
+    : undefined;
+}
+
 /**
  * Reserve evaluation for a stablecoin-collateralized wrapper: the whole reserve
  * is one tracked, rated parent, so the reserve score is the parent's backing
@@ -404,9 +425,15 @@ function inheritedStablecoinReserveEvaluation(
   // Any sub-1 residual stays at the fail-closed bounded-unknown quality.
   const score = clampScore(decimalSnap(inheritedQuality * weight + backing.boundedUnknownQuality * (1 - weight)));
   if (score <= backing.boundedUnknownQuality + SCORE_EPSILON) return null;
-  const evidenceRefIds = uniqueSorted(asset.reserveStatus.evidenceRefIds);
+  const liveExposure = verifiedLiveInheritedExposure(asset, inherited);
+  const evidenceRefIds = uniqueSorted([
+    ...asset.reserveStatus.evidenceRefIds,
+    ...(liveExposure?.status.evidenceRefIds ?? []),
+  ]);
   const failureDomains = canonicalDomains(inherited.failureDomains);
   const componentKey = `reserve:inherited-backing:${inherited.parentAssetId}`;
+  const observationState = liveExposure === undefined ? "bounded-unknown" : "known";
+  const provenance = liveExposure?.provenance ?? null;
   return {
     score,
     contributions: [
@@ -416,8 +443,8 @@ function inheritedStablecoinReserveEvaluation(
         score,
         normalizedWeight: 1,
         weightedScore: score,
-        observationState: "bounded-unknown",
-        provenance: null,
+        observationState,
+        provenance,
         evidenceRefIds,
         failureDomains,
         upstreamAssetId: inherited.parentAssetId,
@@ -428,25 +455,25 @@ function inheritedStablecoinReserveEvaluation(
         score,
         normalizedWeight: backing.reserve.concentrationWeight,
         weightedScore: score * backing.reserve.concentrationWeight,
-        observationState: "bounded-unknown",
-        provenance: null,
+        observationState,
+        provenance,
         evidenceRefIds,
         failureDomains,
         upstreamAssetId: null,
       },
     ],
     structuralReasons: [],
-    // A collateral-exposure ceiling reason keeps the pillar evidence bounded
-    // ("limited"): the backing is inferred from the parent, not directly
-    // observed from a live/attested composition.
-    unresolved: [
-      {
-        code: "partial-reserve-review",
-        pathKey: componentKey,
-        gapIds: [],
-        treatment: resolveV9ReasonPolicy(policy, "partial-reserve-review").reason.defaultTreatment,
-      },
-    ],
+    unresolved:
+      liveExposure === undefined
+        ? [
+            {
+              code: "partial-reserve-review",
+              pathKey: componentKey,
+              gapIds: [],
+              treatment: resolveV9ReasonPolicy(policy, "partial-reserve-review").reason.defaultTreatment,
+            },
+          ]
+        : [],
     rateability: "rateable",
   };
 }
@@ -515,7 +542,11 @@ export function evaluateV9ReserveExposures(
   }
 
   const contributions: V9BackingContribution[] = [];
-  const sovereignExemptComponentKeys = new Set<string>();
+  const issuerConcentrationExemptClasses = new Set<ReserveAssetClass>([
+    ...backing.reserve.sovereignConcentrationExemptClasses,
+    ...backing.reserve.nonCounterpartyReserveIssuerConcentrationExemptClasses,
+  ]);
+  const issuerConcentrationExemptComponentKeys = new Set<string>();
   const measuredFailureDomainsByComponent = new Map<string, ReadonlySet<string>>();
   const unresolved: V9BackingUnresolvedReason[] = [];
   const structuralReasons: V9BackingStructuralReason[] = [];
@@ -553,7 +584,9 @@ export function evaluateV9ReserveExposures(
     const materialityWeight = materialityWeightFor(exposure);
     const requiredUnknown = exposure.status.applicability.state === "unresolved";
     const confidenceMultiplier =
-      exposure.evidenceClass === "issuer-attested" ? backing.reserve.issuerAttestedConfidenceMultiplier : 1;
+      exposure.provenance === "live" || exposure.evidenceClass === "independent"
+        ? 1
+        : backing.reserve.issuerAttestedConfidenceMultiplier;
     const classifiedScore = scoreV9ReserveExposureClassification(exposure, policy) * confidenceMultiplier;
     let score =
       state === "known" || state === "stale"
@@ -569,11 +602,19 @@ export function evaluateV9ReserveExposures(
       // For an UNAVAILABLE upstream backing owns the availability decision:
       // drop any projected availability code and recompute it from the root
       // aggregate. An available upstream's projected codes pass through
-      // unchanged.
+      // after whole-upstream ceilings are narrowed to this basket exposure.
+      // Its score already prices the upstream uncertainty at the slice weight;
+      // only serial claims may carry a whole-parent ceiling to the child.
       const projected =
         upstream.score === null
           ? uniqueSorted(upstream.reasonCodes).filter((code) => !AVAILABILITY_REASON_CODES.has(code))
-          : uniqueSorted(upstream.reasonCodes);
+          : uniqueSorted(
+              upstream.reasonCodes.map((code) =>
+                resolveV9ReasonPolicy(policy, code).reason.defaultTreatment === "ceiling"
+                  ? "bounded-unknown-reserve-exposure"
+                  : code,
+              ),
+            );
       unresolved.push(
         ...projected.map((code) => ({
           code,
@@ -627,17 +668,10 @@ export function evaluateV9ReserveExposures(
           : [],
       ),
     );
-    // Reshape-v3 T4b (owner ruling 2026-07-22, R1): sovereign debt classes are
-    // exempt from the reserve-ISSUER concentration measure. Concentration
-    // prices counterparty/default clustering; the sovereign whose paper the
-    // class ladder already prices (treasury-bill 96, government-security 92)
-    // is not a clustered counterparty in that sense. Custodian domains and
-    // every non-sovereign class remain fully counted.
-    if (
-      exposure.assetClass !== null &&
-      (backing.reserve.sovereignConcentrationExemptClasses as readonly string[]).includes(exposure.assetClass)
-    ) {
-      sovereignExemptComponentKeys.add(pathKey);
+    // These classes do not represent a counterparty obligation at the
+    // reserve-issuer layer. Custodian domains remain fully counted.
+    if (exposure.assetClass !== null && issuerConcentrationExemptClasses.has(exposure.assetClass)) {
+      issuerConcentrationExemptComponentKeys.add(pathKey);
     }
     contributions.push({
       componentKey: pathKey,
@@ -763,9 +797,12 @@ export function evaluateV9ReserveExposures(
   for (const contribution of contributions.filter((entry) => entry.source === "reserve-exposure")) {
     for (const domain of contribution.failureDomains) {
       if (domain.kind !== "reserve-issuer" && domain.kind !== "reserve-custodian") continue;
-      // T4b: sovereign-class rows do not feed ISSUER concentration (see above);
-      // their custodian domains still count.
-      if (domain.kind === "reserve-issuer" && sovereignExemptComponentKeys.has(contribution.componentKey)) continue;
+      if (
+        domain.kind === "reserve-issuer" &&
+        issuerConcentrationExemptComponentKeys.has(contribution.componentKey)
+      ) {
+        continue;
+      }
       const key = domainKey(domain);
       const group = domainGroups.get(key) ?? {
         domain,
@@ -878,6 +915,36 @@ function evaluateV9ArchetypeBackingInternal(
   }
 
   const reserve = evaluateV9ReserveExposures(input.asset, policy);
+  const verifiedLiveInheritance =
+    input.asset.inheritedStablecoinBacking === undefined
+      ? undefined
+      : verifiedLiveInheritedExposure(input.asset, input.asset.inheritedStablecoinBacking);
+  if (
+    verifiedLiveInheritance !== undefined &&
+    reserve.contributions.some(
+      (contribution) =>
+        contribution.componentKey ===
+        `reserve:inherited-backing:${input.asset.inheritedStablecoinBacking!.parentAssetId}`,
+    )
+  ) {
+    return finalizeBackingResult({
+      assetId: input.asset.assetId,
+      archetype: input.archetype,
+      policyId: policy.policy.policyId,
+      policySemanticDigest: policy.semanticDigest,
+      rateability: reserve.rateability,
+      score: reserve.score,
+      pillarCeiling:
+        reserve.structuralReasons.length === 0
+          ? null
+          : Math.min(...reserve.structuralReasons.map((reason) => reason.ceiling)),
+      contributions: reserve.contributions,
+      structuralReasons: reserve.structuralReasons,
+      unresolved: reserve.unresolved,
+      evidenceRefIds: reserve.contributions.flatMap((contribution) => contribution.evidenceRefIds),
+      failureDomains: reserve.contributions.flatMap((contribution) => contribution.failureDomains),
+    });
+  }
   const contributions = [...reserve.contributions];
   const unresolved = [...reserve.unresolved];
   const structuralReasons = [...reserve.structuralReasons, ...(input.additionalStructuralReasons ?? [])];

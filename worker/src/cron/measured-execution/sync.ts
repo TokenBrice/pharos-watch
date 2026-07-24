@@ -2,6 +2,8 @@ import {
   getDexMeasuredExecutionProbeNotionals,
   validateDexMeasuredExecutionProfile,
   type DexMeasuredExecutionPoolBindingProof,
+  type DexMeasuredExecutionRegistryBindingProof,
+  type DexMeasuredExecutionStableSwapNgFactoryBindingProof,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
@@ -46,6 +48,24 @@ import {
   type CurveCryptoSwapPoolPolicy,
   type CurveCryptoSwapRuntimeEvidence,
 } from "./curve-cryptoswap";
+import {
+  CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
+  getCurveStableSwapPolicy,
+  quoteCurveStableSwapRequests,
+  validateCurveStableSwapProfileProof,
+  verifyCurveStableSwapDeployment,
+  type CurveStableSwapPoolPolicy,
+  type CurveStableSwapRuntimeEvidence,
+} from "./curve-stableswap";
+import {
+  CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
+  getCurveStableSwapNgPolicy,
+  quoteCurveStableSwapNgRequests,
+  validateCurveStableSwapNgProfileProof,
+  verifyCurveStableSwapNgDeployment,
+  type CurveStableSwapNgPoolPolicy,
+  type CurveStableSwapNgRuntimeEvidence,
+} from "./curve-stableswap-ng";
 
 const MAX_QUOTE_CALLS = 6_400;
 const MAX_RPC_REQUESTS = 800;
@@ -63,6 +83,14 @@ type TargetDeployment =
   | {
       kind: "curve-cryptoswap";
       config: CurveCryptoSwapPoolPolicy & { endpointAddress: `0x${string}` };
+    }
+  | {
+      kind: "curve-stableswap";
+      config: CurveStableSwapPoolPolicy & { endpointAddress: `0x${string}` };
+    }
+  | {
+      kind: "curve-stableswap-ng";
+      config: CurveStableSwapNgPoolPolicy & { endpointAddress: `0x${string}` };
     };
 
 interface TargetQuoteState {
@@ -72,7 +100,11 @@ interface TargetQuoteState {
   blockObservedAt: number | null;
   endpointCodeHash: `0x${string}` | null;
   curveRuntimeEvidence: CurveCryptoSwapRuntimeEvidence | null;
+  curveStableSwapRuntimeEvidence: CurveStableSwapRuntimeEvidence | null;
+  curveStableSwapNgRuntimeEvidence: CurveStableSwapNgRuntimeEvidence | null;
   poolBindingProof: DexMeasuredExecutionPoolBindingProof | null;
+  registryBindingProof: DexMeasuredExecutionRegistryBindingProof | null;
+  stableSwapNgFactoryBindingProof: DexMeasuredExecutionStableSwapNgFactoryBindingProof | null;
   points: DexMeasuredRawQuotePoint[];
   failedReason: string | null;
   stopped: boolean;
@@ -107,6 +139,24 @@ function deploymentForTarget(target: DexMeasuredExecutionTarget): TargetDeployme
     const policy = getCurveCryptoSwapShadowPolicy(target.chain, endpointAddress);
     return policy?.scoreEligible && policy.mode === "active"
       ? { kind: "curve-cryptoswap", config: { ...policy, endpointAddress: policy.poolAddress } }
+      : null;
+  }
+  if (target.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID) {
+    const prefix = `${target.chain.trim().toLowerCase()}:`;
+    if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
+    const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
+    const policy = getCurveStableSwapPolicy(target.chain, endpointAddress);
+    return policy?.scoreEligible && policy.mode === "active"
+      ? { kind: "curve-stableswap", config: { ...policy, endpointAddress: policy.poolAddress } }
+      : null;
+  }
+  if (target.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID) {
+    const prefix = `${target.chain.trim().toLowerCase()}:`;
+    if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
+    const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
+    const policy = getCurveStableSwapNgPolicy(target.chain, endpointAddress);
+    return policy?.scoreEligible && policy.mode === "active"
+      ? { kind: "curve-stableswap-ng", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }
   const deployment = getDexMeasuredExecutionDeployment(target.adapterProfileId, target.chain);
@@ -363,7 +413,11 @@ export async function syncDexMeasuredExecution(
     blockObservedAt: null,
     endpointCodeHash: null,
     curveRuntimeEvidence: null,
+    curveStableSwapRuntimeEvidence: null,
+    curveStableSwapNgRuntimeEvidence: null,
     poolBindingProof: null,
+    registryBindingProof: null,
+    stableSwapNgFactoryBindingProof: null,
     points: [],
     failedReason: oversized.has(target.targetId)
       ? "admission-coin-group-oversized"
@@ -453,7 +507,7 @@ export async function syncDexMeasuredExecution(
           continue;
         }
         for (const state of deploymentRows) state.endpointCodeHash = verified.codeHash;
-      } else {
+      } else if (deployment.kind === "curve-cryptoswap") {
         const verified = await verifyCurveCryptoSwapDeployment({
           policy: deployment.config,
           blockNumber,
@@ -469,6 +523,46 @@ export async function syncDexMeasuredExecution(
         for (const state of deploymentRows) {
           state.endpointCodeHash = verified.codeHash;
           state.curveRuntimeEvidence = verified.runtimeEvidence;
+        }
+      } else if (deployment.kind === "curve-stableswap") {
+        const verified = await verifyCurveStableSwapDeployment({
+          policy: deployment.config,
+          blockNumber,
+          nowSec: startedAt,
+          chainRpcs,
+          signal,
+          rpcBudget,
+        });
+        if (!verified.ok) {
+          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
+          else for (const state of deploymentRows) state.failedReason = verified.reason;
+          continue;
+        }
+        for (const state of deploymentRows) {
+          state.endpointCodeHash = verified.codeHash;
+          state.blockObservedAt = verified.blockTimestamp;
+          state.curveStableSwapRuntimeEvidence = verified.runtimeEvidence;
+          state.registryBindingProof = verified.registryBindingProof;
+        }
+      } else {
+        const verified = await verifyCurveStableSwapNgDeployment({
+          policy: deployment.config,
+          nowSec: startedAt,
+          chainRpcs,
+          signal,
+          rpcBudget,
+        });
+        if (!verified.ok) {
+          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
+          else for (const state of deploymentRows) state.failedReason = verified.reason;
+          continue;
+        }
+        for (const state of deploymentRows) {
+          state.blockNumber = verified.blockNumber;
+          state.endpointCodeHash = verified.codeHash;
+          state.blockObservedAt = verified.blockTimestamp;
+          state.curveStableSwapNgRuntimeEvidence = verified.runtimeEvidence;
+          state.stableSwapNgFactoryBindingProof = verified.factoryBindingProof;
         }
       }
       if (rpcBudget.stopReason) {
@@ -540,7 +634,12 @@ export async function syncDexMeasuredExecution(
         state.deployment != null &&
         state.blockNumber != null &&
         state.endpointCodeHash != null &&
-        (state.deployment.kind !== "quoter-v2" || state.poolBindingProof != null),
+        (state.deployment.kind !== "quoter-v2" || state.poolBindingProof != null) &&
+        (state.deployment.kind !== "curve-stableswap" || state.registryBindingProof != null) &&
+        (
+          state.deployment.kind !== "curve-stableswap-ng" ||
+          state.stableSwapNgFactoryBindingProof != null
+        ),
     );
     if (runnable.length === 0) return;
     if (quoteCallCount + runnable.length > MAX_QUOTE_CALLS) {
@@ -596,7 +695,7 @@ export async function syncDexMeasuredExecution(
           outcomes.forEach((outcome, index) =>
             applyQuoteOutcome(adapterRequests[index]!.state, outcome),
           );
-        } else {
+        } else if (kind === "curve-cryptoswap") {
           const outcomes = await quoteCurveCryptoSwapRequests({
             requests: adapterRequests.map(({ state, inputUsd }) => ({
               target: state.target,
@@ -604,6 +703,40 @@ export async function syncDexMeasuredExecution(
               blockNumber: state.blockNumber!,
               endpointAddress: state.deployment!.config.endpointAddress,
               runtimeEvidence: state.curveRuntimeEvidence ?? undefined,
+            })),
+            chainRpcs,
+            signal,
+            rpcBudget,
+          });
+          outcomes.forEach((outcome, index) =>
+            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
+          );
+        } else if (kind === "curve-stableswap") {
+          const outcomes = await quoteCurveStableSwapRequests({
+            requests: adapterRequests.map(({ state, inputUsd }) => ({
+              target: state.target,
+              inputUsd,
+              blockNumber: state.blockNumber!,
+              blockObservedAt: state.blockObservedAt!,
+              endpointAddress: state.deployment!.config.endpointAddress,
+              runtimeEvidence: state.curveStableSwapRuntimeEvidence ?? undefined,
+            })),
+            chainRpcs,
+            signal,
+            rpcBudget,
+          });
+          outcomes.forEach((outcome, index) =>
+            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
+          );
+        } else {
+          const outcomes = await quoteCurveStableSwapNgRequests({
+            requests: adapterRequests.map(({ state, inputUsd }) => ({
+              target: state.target,
+              inputUsd,
+              blockNumber: state.blockNumber!,
+              blockObservedAt: state.blockObservedAt!,
+              endpointAddress: state.deployment!.config.endpointAddress,
+              runtimeEvidence: state.curveStableSwapNgRuntimeEvidence ?? undefined,
             })),
             chainRpcs,
             signal,
@@ -685,6 +818,10 @@ export async function syncDexMeasuredExecution(
         endpointAddress: state.deployment.config.endpointAddress,
         endpointCodeHash: state.endpointCodeHash,
         ...(state.poolBindingProof ? { poolBindingProof: state.poolBindingProof } : {}),
+        ...(state.registryBindingProof ? { registryBindingProof: state.registryBindingProof } : {}),
+        ...(state.stableSwapNgFactoryBindingProof
+          ? { stableSwapNgFactoryBindingProof: state.stableSwapNgFactoryBindingProof }
+          : {}),
         points: state.points,
       });
       const genericIssues = validateDexMeasuredExecutionProfile({
@@ -700,7 +837,11 @@ export async function syncDexMeasuredExecution(
           ? validateQuoterV2ProfileProof(profile)
           : state.deployment.kind === "fluid-resolver"
             ? validateFluidResolverProfileProof(profile)
-            : validateCurveCryptoSwapProfileProof(profile);
+            : state.deployment.kind === "curve-cryptoswap"
+              ? validateCurveCryptoSwapProfileProof(profile)
+              : state.deployment.kind === "curve-stableswap"
+                ? validateCurveStableSwapProfileProof(profile)
+                : validateCurveStableSwapNgProfileProof(profile);
       if (genericIssues.length > 0 || adapterIssues.length > 0) {
         throw new Error([...genericIssues, ...adapterIssues].join(","));
       }

@@ -9,12 +9,19 @@ import { buildReportCardPublicationPlan } from "../lib/report-card-publication";
 import {
   buildReportCardsFixedInputCacheEntry,
   buildSafetyScoreV9FixedInputCacheEntry,
+  normalizeFixedInput,
 } from "../lib/report-cards-fixed-input";
 import { recordCronFailure } from "../lib/cron-logger";
 import { runSafetyScoreV9ShadowAfterV8Publication } from "../lib/safety-score-v9-shadow-runner";
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import { enrichSafetyScoreV9FixedInputSupply } from "../lib/safety-score-v9-supply-attribution";
+import { enrichSafetyScoreV9FixedInputSupplyWithEvidence } from "../lib/safety-score-v9-supply-attribution";
+import { loadReportCardEvidenceJournalByIdV1 } from "../lib/report-card-evidence-journal-store";
+import {
+  appendSupplyAttributionJournalV1,
+  loadSupplyAttributionJournalByIdV1,
+} from "../lib/safety-score-v9-supply-attribution-journal-store";
+import { captureSafetyScoreV9PegProvenanceById } from "../lib/safety-score-v9-peg-provenance";
 
 export async function publishReportCardCache(
   db: D1Database,
@@ -31,7 +38,11 @@ export async function publishReportCardCache(
   throwIfAborted(signal);
 
   const publication = buildReportCardPublicationPlan(snapshot.cards, snapshot.methodology.version, snapshot.updatedAt);
-  const { fixedInput, ...publicSnapshot } = snapshot;
+  const {
+    fixedInput,
+    v9PegProvenanceSource,
+    ...publicSnapshot
+  } = snapshot;
   if (!fixedInput) {
     throw new Error("Report-card publication did not produce its exact fixed-input artifact");
   }
@@ -81,11 +92,54 @@ export async function publishReportCardCache(
       db,
       fixedInput,
       prepareFixedInput: async (baseFixedInput, shadowSignal) => {
-        const v9FixedInput = await enrichSafetyScoreV9FixedInputSupply(
+        const supplyCapture = await enrichSafetyScoreV9FixedInputSupplyWithEvidence(
           baseFixedInput,
           chainRpcs,
           shadowSignal,
         );
+        const supplyFixedInput = supplyCapture.fixedInput;
+        const [evidenceJournalById, supplyAttributionJournalById] =
+          await Promise.all([
+            loadReportCardEvidenceJournalByIdV1(
+              db,
+              supplyFixedInput.activeAssetIds,
+              supplyFixedInput.clockSec,
+              shadowSignal,
+            ),
+            loadSupplyAttributionJournalByIdV1(
+              db,
+              ["wm-m0", "xaut-tether"].filter((assetId) =>
+                supplyFixedInput.activeAssetIds.includes(assetId),
+              ),
+              supplyFixedInput.clockSec,
+              shadowSignal,
+            ),
+          ]);
+        if (supplyCapture.journalRecords.length > 0) {
+          const journalNowSec = Math.max(
+            Math.floor(Date.now() / 1_000),
+            ...supplyCapture.journalRecords.map((record) => record.completedAtSec),
+          );
+          await appendSupplyAttributionJournalV1(
+            db,
+            supplyCapture.journalRecords,
+            journalNowSec,
+            shadowSignal,
+          );
+        }
+        if (!v9PegProvenanceSource) {
+          throw new Error("Report-card publication did not retain its ephemeral V9 peg evidence source");
+        }
+        const pegProvenanceById = captureSafetyScoreV9PegProvenanceById(
+          supplyFixedInput,
+          v9PegProvenanceSource,
+        );
+        const v9FixedInput = normalizeFixedInput({
+          ...supplyFixedInput,
+          evidenceJournalById,
+          supplyAttributionJournalById,
+          pegProvenanceById,
+        });
         const v9FixedInputEntry = await buildSafetyScoreV9FixedInputCacheEntry(
           v9FixedInput,
           safetyScoreIdentity,

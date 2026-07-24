@@ -331,6 +331,7 @@
         "issuerAttestedConfidenceMultiplier": 0.8,
         "concentrationWeight": 0.15,
         "sovereignConcentrationExemptClasses": ["treasury-bill", "government-security"],
+        "nonCounterpartyReserveIssuerConcentrationExemptClasses": ["commodity-allocated"],
         "concentrationBands": [
           {
             "minShareInclusive": 0,

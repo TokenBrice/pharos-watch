@@ -93,6 +93,34 @@ describe("Safety Score v9 evidence responsibility", () => {
     );
   });
 
+  it("withholds a policy-critical gap even when it enters through supplemental unresolved evidence", () => {
+    const criticalGap = reason({
+      code: "missing-pillar-evidence",
+      path: "gap:evidence:local-component:asset:gap:supply",
+      message: "Global chain supply is unavailable.",
+    });
+    const trace = scoreV9EvaluatedAsset(
+      input({ unresolvedEvidence: [criticalGap] }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.finalScore).toBeNull();
+    expect(trace.finalGrade).toBe("NR");
+    expect(trace.nrReasons).toContainEqual(
+      expect.objectContaining({
+        code: "missing-pillar-evidence",
+        responsibility: "producer-failed",
+      }),
+    );
+    expect(trace.unresolvedFacts).toContainEqual(
+      expect.objectContaining({
+        code: "missing-pillar-evidence",
+        critical: true,
+        responsibility: "producer-failed",
+      }),
+    );
+  });
+
   it("keeps a bounded producer failure rateable under its evidence ceiling", () => {
     const failedAdapter = scoreV9EvaluatedAsset(
       input({

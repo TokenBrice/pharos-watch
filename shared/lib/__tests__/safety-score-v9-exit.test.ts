@@ -327,6 +327,51 @@ describe("evaluateV9Exit", () => {
     expect(impaired.score).toBeLessThan(par.score!);
   });
 
+  it("distinguishes the bounded-unknown cost sentinel from measured execution costs", () => {
+    const traceAtCost = (executionCostBps: number) => {
+      const result = evaluateV9Exit(
+        {
+          circulatingUsd: 20_000_000,
+          routes: [
+            route({
+              routeKey: "dex:measured-cost",
+              lane: "dex",
+              routeFamily: "dex-amm",
+              evidenceKind: "measured-executable-depth",
+              capacityCurve: [
+                {
+                  requestedNotionalUsd: 1_000_000,
+                  maxCostBps: 200,
+                  executableUsd: 1_000_000,
+                  completionRatio: 1,
+                  executionCostBps,
+                },
+              ],
+            }),
+          ],
+        },
+        V9_CANDIDATE_POLICY_V1,
+      );
+      return result.routes.find((entry) => entry.routeKey === "dex:measured-cost")!;
+    };
+
+    const boundedUnknown = traceAtCost(200);
+    const favorableMeasured = traceAtCost(80);
+    const adverseMeasured = traceAtCost(180);
+
+    expect(boundedUnknown.components?.cost).toBe(
+      V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedCostScore,
+    );
+    expect(favorableMeasured.components?.cost).toBeGreaterThan(boundedUnknown.components!.cost);
+    expect(favorableMeasured.score).toBeGreaterThan(boundedUnknown.score!);
+    expect(adverseMeasured.components?.cost).toBeLessThan(boundedUnknown.components!.cost);
+    expect(adverseMeasured.score).toBeLessThan(boundedUnknown.score!);
+
+    const measuredCosts = [0, 20, 50, 80, 100, 120, 150, 180, 199];
+    const measuredScores = measuredCosts.map((cost) => traceAtCost(cost).score!);
+    expect(measuredScores.every((score, index) => index === 0 || score <= measuredScores[index - 1]!)).toBe(true);
+  });
+
   it("floors a zero-capacity route to zero instead of letting an undisclosed cost carry it", () => {
     // The exact shape that scored 35.61 before the floor: capacity carries 25%
     // of the ladder, so access/settlement/execution/output plus a

@@ -2,8 +2,26 @@ import { describe, expect, it } from "vitest";
 import type { DexMeasuredExecutionProfile } from "@shared/types/measured-execution";
 import { summarizeDexMeasuredExecutionHistory, type DexMeasuredExecutionHistoryCycle } from "../history";
 
-function profile(generationId: string, quotedAt: number, executableUsd: readonly number[]): DexMeasuredExecutionProfile {
+function profile(
+  generationId: string,
+  quotedAt: number,
+  executableUsd: readonly number[],
+  executionCostBps: readonly number[] = [10, 20, 30, 40],
+): DexMeasuredExecutionProfile {
   const notionals = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
+  const quoteProof = [...new Map(executableUsd.map((inputUsd, index) => [
+    inputUsd,
+    {
+      amountInRaw: String(Math.round(inputUsd * 1_000_000)),
+      amountOutRaw: String(Math.round(inputUsd * (1 - executionCostBps[index]! / 10_000) * 1_000_000)),
+      callData: "0x01",
+      returnData: "0x01",
+      inputUsd,
+      outputUsd: inputUsd * (1 - executionCostBps[index]! / 10_000),
+      costBps: executionCostBps[index]!,
+      passesCostBound: true,
+    },
+  ] as const)).values()];
   return {
     schemaVersion: "dex-measured-execution-v1",
     kind: "measured-executable-depth",
@@ -44,28 +62,22 @@ function profile(generationId: string, quotedAt: number, executableUsd: readonly
       executableUsd: executableUsd[index]!,
       completionRatio: executableUsd[index]! / requestedNotionalUsd,
     })),
-    quoteProof: [
-      {
-        amountInRaw: "1",
-        amountOutRaw: "1",
-        callData: "0x01",
-        returnData: "0x01",
-        inputUsd: 1,
-        outputUsd: 1,
-        costBps: 0,
-        passesCostBound: true,
-      },
-    ],
+    quoteProof,
   };
 }
 
-function measured(generationId: string, publishedAt: number, values: readonly number[]): DexMeasuredExecutionHistoryCycle {
+function measured(
+  generationId: string,
+  publishedAt: number,
+  values: readonly number[],
+  executionCostBps?: readonly number[],
+): DexMeasuredExecutionHistoryCycle {
   return {
     generationId,
     publishedAt,
     status: "measured",
     operationalFailure: false,
-    profile: profile(generationId, publishedAt, values),
+    profile: profile(generationId, publishedAt, values, executionCostBps),
   };
 }
 
@@ -75,9 +87,9 @@ describe("summarizeDexMeasuredExecutionHistory", () => {
       nowSec: 2_000,
       freshnessMaxSec: 1_000,
       cycles: [
-        measured("g3", 1_900, [100_000, 900_000, 8_000_000, 9_000_000]),
-        measured("g2", 1_700, [90_000, 1_000_000, 7_000_000, 10_000_000]),
-        measured("g1", 1_500, [100_000, 800_000, 9_000_000, 8_000_000]),
+        measured("g3", 1_900, [100_000, 900_000, 8_000_000, 9_000_000], [10, 20, 30, 40]),
+        measured("g2", 1_700, [90_000, 1_000_000, 7_000_000, 10_000_000], [15, 5, 35, 10]),
+        measured("g1", 1_500, [100_000, 800_000, 9_000_000, 8_000_000], [12, 25, 15, 45]),
       ],
     });
 
@@ -92,6 +104,32 @@ describe("summarizeDexMeasuredExecutionHistory", () => {
       800_000,
       7_000_000,
       8_000_000,
+    ]);
+    // The profiles prove different defining capacities and do not all retain a
+    // quote at the emitted pointwise minimum, so cost fails back to the bound.
+    expect(result?.conservativeCapacityCurve.map((point) => point.executionCostBps)).toEqual([
+      200,
+      200,
+      200,
+      200,
+    ]);
+  });
+
+  it("uses the maximum realized cost when every cycle proves the emitted capacity", () => {
+    const result = summarizeDexMeasuredExecutionHistory({
+      nowSec: 2_000,
+      freshnessMaxSec: 1_000,
+      cycles: [
+        measured("g2", 1_900, [100_000, 900_000, 8_000_000, 9_000_000], [10, 40, 30, 45]),
+        measured("g1", 1_700, [100_000, 900_000, 8_000_000, 9_000_000], [15, 20, 35, 25]),
+      ],
+    });
+
+    expect(result?.conservativeCapacityCurve.map((point) => point.executionCostBps)).toEqual([
+      15,
+      40,
+      35,
+      45,
     ]);
   });
 

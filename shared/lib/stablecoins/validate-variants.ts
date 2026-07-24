@@ -24,7 +24,19 @@ function collectDirectWrapperParentCandidates(meta: StablecoinMeta): string[] {
     }
   }
 
+  for (const relationship of meta.dependencyReview?.relationships ?? []) {
+    if (relationship.type === "wrapper" && relationship.economicRole === "serial-claim") {
+      candidates.add(relationship.id);
+    }
+  }
+
   return [...candidates];
+}
+
+function hasReviewedSerialWrapperRelationship(meta: StablecoinMeta): boolean {
+  return (meta.dependencyReview?.relationships ?? []).some(
+    (relationship) => relationship.type === "wrapper" && relationship.economicRole === "serial-claim",
+  );
 }
 
 function hasOtherTrackedLinkedExposure(
@@ -44,6 +56,12 @@ function hasOtherTrackedLinkedExposure(
     }
   }
 
+  for (const relationship of meta.dependencyReview?.relationships ?? []) {
+    if (relationship.id !== parentId && metaById.has(relationship.id)) {
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -57,7 +75,7 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
     if (
       !hasVariantFields(meta) &&
       isActiveStablecoinMeta(meta) &&
-      meta.flags.navToken === true &&
+      (meta.flags.navToken === true || hasReviewedSerialWrapperRelationship(meta)) &&
       meta.flags.pegCurrency === "USD"
     ) {
       const activeNonNavParents = collectDirectWrapperParentCandidates(meta).filter((id) => {
@@ -72,7 +90,7 @@ export function validateVariantRelationships(tracked: StablecoinMeta[]): string[
         }
 
         errors.push(
-          `${meta.id}: active USD navToken has direct wrapper exposure to ${parentId} but does not declare variantOf / variantKind. ` +
+          `${meta.id}: active USD ${meta.flags.navToken === true ? "navToken" : "asset with a reviewed serial wrapper"} has direct wrapper exposure to ${parentId} but does not declare variantOf / variantKind. ` +
             `Fix: add variantOf "${parentId}" with the appropriate variantKind, or remove the direct wrapper parent signal if this is not a tracked parent-child variant.`,
         );
       }

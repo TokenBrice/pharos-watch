@@ -267,12 +267,18 @@ function normalizeReasonList(reasons: readonly V9PillarReason[], envelope: V9Val
     }));
 }
 
-function scoreBearingReasons(input: V9ProductionScoreInput): V9PillarReason[] {
+function scoreBearingReasons(
+  input: V9ProductionScoreInput,
+  envelope: V9ValidatedPolicyEnvelope,
+): V9PillarReason[] {
   return [
     ...PILLAR_KEYS.flatMap((pillar) => input.pillars[pillar].reasons),
     ...input.peg.reasons,
     ...input.dependencyReasons,
     ...(input.methodologyReasons ?? []),
+    ...(input.unresolvedEvidence ?? []).filter(
+      (reason) => resolveV9ReasonPolicy(envelope, reason.code).critical,
+    ),
   ];
 }
 
@@ -351,7 +357,10 @@ export function scoreV9EvaluatedAsset(
   // a strong-backing asset is assessable (we know it is backed) even if exit
   // and control are limited, so it must be scored, never withheld to NR.
   const backingLimited = input.pillars.backing.evidenceLevel === "limited";
-  const normalizedScoreBearingReasons = normalizeReasonList(scoreBearingReasons(input), envelope);
+  const normalizedScoreBearingReasons = normalizeReasonList(
+    scoreBearingReasons(input, envelope),
+    envelope,
+  );
   const pillarReasonProvenance: V9PillarReasonProvenance[] = PILLAR_KEYS.flatMap(
     (pillar) =>
       normalizeReasonList(input.pillars[pillar].reasons, envelope).map((fact) => ({
@@ -397,7 +406,10 @@ export function scoreV9EvaluatedAsset(
     operationalResilience: input.operationalResilience ?? null,
     wrapperParentLimit: input.parent.wrapperParentLimit ?? null,
     unresolvedFacts: normalizeReasonList(
-      [...scoreBearingReasons(input), ...(input.unresolvedEvidence ?? [])],
+      [
+        ...scoreBearingReasons(input, envelope),
+        ...(input.unresolvedEvidence ?? []),
+      ],
       envelope,
     ),
     factSetDigest: input.identity.factSetDigest,

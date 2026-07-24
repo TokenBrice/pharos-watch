@@ -415,6 +415,37 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
     });
   });
 
+  it("credits persistent measured depth without a bespoke operational overlay", () => {
+    const factSet = mutateFactSet(
+      compiledFactSet([
+        measuredRoute({
+          routeId: "deep-route",
+          physicalResourceKey: "pool:deep",
+          executableUsdAtStress: 10_000_000,
+        }),
+      ]),
+      (asset) => {
+        asset.operationalResilience = null;
+      },
+    );
+    const evaluated = evaluatedAsset(factSet);
+
+    expect(evaluated.operationalResilience).toMatchObject({
+      eligible: true,
+      eligibility: {
+        confidence: "implementation-history",
+        evidenceRefIds: [BASE_EVIDENCE_ID],
+        satisfied: true,
+      },
+      pillarCredits: { backing: 0, exit: 2, control: 0 },
+    });
+    expect(persistentMarketDepthContribution(factSet)).toMatchObject({
+      component: "persistent-market-depth",
+      confidence: "measured",
+      points: 2,
+    });
+  });
+
   it("uses distinct physical capacity instead of summing shared resources twice", () => {
     const request = selectV9ExitStressRequest(SUPPLY_USD, V9_CANDIDATE_POLICY_V1)!;
     const first = measuredRoute({

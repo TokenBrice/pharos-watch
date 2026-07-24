@@ -68,6 +68,7 @@ import {
   buildSafetyScoreV9SupplyReview,
   safetyScoreV9RouteSupplyShare,
   V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
+  V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
   V9_UNMATCHED_CHAIN_ROUTE_PREFIX,
   V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX,
 } from "./safety-score-v9-extension-supply";
@@ -418,18 +419,19 @@ export function buildReviewedReserveClassifications(
   });
 }
 
-type IssuerAttestedReserveRows = NonNullable<ExtensionAsset["issuerAttestedReserveRows"]>;
+type ReviewedStaticReserveRows = NonNullable<ExtensionAsset["reviewedStaticReserveRows"]>;
 
-const INDEPENDENT_ASSURANCE_METHODS = new Set([
+const CORROBORATING_ASSURANCE_METHODS = new Set([
   "audit",
   "examination",
   "review",
   "agreed-upon-procedures",
   "attestation",
 ]);
+const DIRECT_RESERVE_ASSURANCE_METHODS = new Set(["audit", "examination"]);
 const ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC = 31_536_000;
 
-function normalizeIssuerAttestedReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {
+function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {
   const sorted = [...rows].sort(
     (left, right) =>
       compareText(computeSafetyScoreV9ReserveExposureKey(left), computeSafetyScoreV9ReserveExposureKey(right)) ||
@@ -449,11 +451,36 @@ function normalizeIssuerAttestedReserveRows(rows: readonly ReserveSlice[]): Rese
   });
 }
 
-/** D6: admit reviewed issuer rows only when an independent attestor corroborates a prudential issuer. */
-export function buildSafetyScoreV9IssuerAttestedReserveRows(
+function hasDirectIndependentReserveAssurance(meta: V9ExtensionRegistryMeta): boolean {
+  const review = meta.reserveReview;
+  const report = meta.proofOfReserves?.latestReport;
+  if (!review || !report) return false;
+  const reportSourceUrls = new Set(report.sources.map((source) => source.url));
+  const transparencyIndexUrl = meta.proofOfReserves?.url;
+  return (
+    review.confidence === "verified" &&
+    report.confidence === "verified" &&
+    DIRECT_RESERVE_ASSURANCE_METHODS.has(report.assuranceMethod) &&
+    report.scope === "assets-and-liabilities" &&
+    report.liabilityReconciliation === "full" &&
+    review.sources.some(
+      (source) =>
+        reportSourceUrls.has(source.url) &&
+        source.url !== transparencyIndexUrl,
+    )
+  );
+}
+
+/**
+ * D6: admit reviewed static rows only when an independent attestor corroborates
+ * a prudential issuer. Rows directly reconciled by a verified audit or
+ * examination retain independent evidence strength; corroborated issuer rows
+ * keep the candidate policy's confidence haircut.
+ */
+export function buildSafetyScoreV9ReviewedStaticReserveRows(
   meta: V9ExtensionRegistryMeta,
   clockSec: number,
-): IssuerAttestedReserveRows | null {
+): ReviewedStaticReserveRows | null {
   const rows = meta.reserves ?? [];
   const review = meta.reserveReview;
   const proof = meta.proofOfReserves;
@@ -484,20 +511,20 @@ export function buildSafetyScoreV9IssuerAttestedReserveRows(
     compositionAtSec !== periodEndSec ||
     reportAtSec < periodEndSec ||
     clockSec - compositionAtSec > ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC ||
-    !INDEPENDENT_ASSURANCE_METHODS.has(report.assuranceMethod)
+    !CORROBORATING_ASSURANCE_METHODS.has(report.assuranceMethod)
   ) {
     return null;
   }
+  const evidenceClass = hasDirectIndependentReserveAssurance(meta) ? "independent" : "issuer-attested";
   return {
-    rows: normalizeIssuerAttestedReserveRows(rows),
-    evidenceClass: "issuer-attested",
-    confidenceMultiplier: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.issuerAttestedConfidenceMultiplier,
+    rows: normalizeReviewedStaticReserveRows(rows),
+    evidenceClass,
   };
 }
 
-function addIssuerAttestedReserveEvidence(
+function addReviewedStaticReserveEvidence(
   meta: V9ExtensionRegistryMeta,
-  admitted: IssuerAttestedReserveRows | null,
+  admitted: ReviewedStaticReserveRows | null,
   evidence: ReviewEvidenceBuilder,
 ): void {
   const review = meta.reserveReview;
@@ -508,10 +535,10 @@ function addIssuerAttestedReserveEvidence(
   );
   evidence.add({
     componentKeys: [
-      "issuer-attested-reserves",
+      "reviewed-static-reserves",
       ...admitted.rows.map((row) => `reserve-classification:${computeSafetyScoreV9ReserveExposureKey(row)}`),
     ],
-    sourceId: "stablecoin-meta.issuer-attested-reserves",
+    sourceId: "stablecoin-meta.reviewed-static-reserves",
     reviewedAt: report.periodEnd,
     confidence: confidenceForResearch(report.confidence),
     sources,
@@ -520,7 +547,6 @@ function addIssuerAttestedReserveEvidence(
       reserves: admitted.rows,
       proofOfReserves: meta.proofOfReserves,
       evidenceClass: admitted.evidenceClass,
-      confidenceMultiplier: admitted.confidenceMultiplier,
     },
     maxAgeSec: ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC,
   });
@@ -1478,6 +1504,63 @@ function unmatchedBridgeControl(
   };
 }
 
+function representationGroupId(
+  assetId: string,
+  deploymentRouteKey: string,
+): string | null {
+  const prefix = `${V9_REPRESENTATION_GROUP_ROUTE_PREFIX}${assetId}:`;
+  return deploymentRouteKey.startsWith(prefix) &&
+    deploymentRouteKey.length > prefix.length
+    ? deploymentRouteKey.slice(prefix.length)
+    : null;
+}
+
+function representationGroupBridgeControl(
+  assetId: string,
+  route: NonNullable<
+    ExtensionAsset["supplyReview"]
+  >["selectedBridgeRoutes"][number],
+  failureDomains: readonly V9FailureDomainRef[],
+): ControlOverlay {
+  const reviewed = route.reviewState === "selected-reviewed";
+  const authorityDomain =
+    failureDomains.find(
+      (domain) =>
+        domain.kind === "bridge-route" &&
+        domain.key.startsWith("contract:"),
+    ) ?? failureDomains[0];
+  return {
+    controlKey: `bridge-group:${assetId}:${digest(
+      "safety-score-v9.representation-group-bridge-control-key.v1",
+      route.deploymentRouteKey,
+    ).slice(0, 20)}`,
+    deploymentKey: route.deploymentRouteKey,
+    controlKind: "bridge",
+    scope: "deployment",
+    capabilities: ["bridge-mint"],
+    capSemantics: reviewed
+      ? { kind: "unbounded", bound: null }
+      : { kind: "unknown", bound: null },
+    claimImpairment: reviewed ? "unbounded" : "unknown",
+    economicLossScope: reviewed ? "deployment" : "unknown",
+    authority: {
+      authorityKey:
+        authorityDomain?.key ??
+        `bridge-route:${route.deploymentRouteKey}`,
+      // The adapter contract is the observed common mechanism, not proof of
+      // the heterogeneous destination mint authorities.
+      model: "unknown",
+      threshold: null,
+    },
+    delaySec: null,
+    materialSupplyShare: route.supplyShare,
+    incidentState: reviewed ? "none" : "unknown",
+    failureDomains: [...failureDomains].sort((left, right) =>
+      compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
+    ),
+  };
+}
+
 function canonicalRouteChain(routeId: string): string | null {
   const separator = routeId.indexOf(":");
   return separator > 0 ? resolveChainId(routeId.slice(0, separator)) : null;
@@ -1514,6 +1597,27 @@ function hasCompleteSubthresholdBridgeInventory(
 
   const exactRowsByDeployment = new Map(rows.map((row) => [row.deploymentRouteKey, row]));
   for (const row of rows) {
+    if (
+      row.deploymentRouteKey.startsWith(
+        V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
+      )
+    ) {
+      const control = controlsByDeployment.get(row.deploymentRouteKey);
+      if (
+        row.reviewState !== "selected-reviewed" ||
+        control === undefined ||
+        control.scope !== "deployment" ||
+        control.economicLossScope !== "deployment" ||
+        control.materialSupplyShare === null ||
+        Math.abs(control.materialSupplyShare - row.supplyShare) >
+          0.000001 ||
+        row.supplyShare >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD ||
+        row.supplyShare >= COMMON_MODE_MATERIAL_SHARE_THRESHOLD
+      ) {
+        return false;
+      }
+      continue;
+    }
     if (row.reviewState === "selected-reviewed") continue;
     // RULED D-J (2026-07-19): an unrecognized-chain-label pool below the
     // common-mode materiality floor is an accepted bounded row; the proof no
@@ -1548,6 +1652,7 @@ function hasCompleteSubthresholdBridgeInventory(
       continue;
     }
     if (row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX)) continue;
+    if (row.deploymentRouteKey.startsWith(V9_REPRESENTATION_GROUP_ROUTE_PREFIX)) continue;
     const chain = canonicalRouteChain(row.deploymentRouteKey);
     if (chain !== null) presentCanonicalChains.add(chain);
   }
@@ -1626,20 +1731,71 @@ function adaptBridgeReview(
   }
   const profileRoutes = profile.routes ?? [];
   const reviewedRoutes = profileRoutes.filter((route) => route.reviewDisposition === "reviewed");
+  const representationGroups = (
+    supplyReview?.selectedBridgeRoutes ?? []
+  ).flatMap((row) => {
+    const representationId = representationGroupId(
+      meta.id,
+      row.deploymentRouteKey,
+    );
+    if (representationId === null) return [];
+    const members = profileRoutes.filter(
+      (route) => route.representationId === representationId,
+    );
+    const tiers = new Set(members.map((route) => route.riskTier));
+    if (
+      members.length === 0 ||
+      tiers.size !== 1 ||
+      members.some(
+        (route) =>
+          route.reviewDisposition !== "reviewed" ||
+          route.routeClass === "native" ||
+          route.issuanceModel !== "wrapped-representation" ||
+          route.semantics !== "lock-mint",
+      )
+    ) {
+      return [];
+    }
+    return [{
+      control: representationGroupBridgeControl(
+        meta.id,
+        row,
+        supplyReview?.failureDomains ?? [],
+      ),
+      routeIds: members.map((route) => route.id),
+      tier: [...tiers][0]!,
+    }];
+  });
+  const groupedRouteIds = new Set(
+    representationGroups.flatMap((group) => group.routeIds),
+  );
   // Keep every non-native route as a control fact so exact deployment shares
   // remain available even when the route review itself is unresolved.
   const profileControls = profileRoutes
+    .filter((route) => !groupedRouteIds.has(route.id))
     .map((route) => bridgeControl(meta.id, route, safetyScoreV9RouteSupplyShare(supplyReview ?? null, route.id)))
     .filter((control): control is ControlOverlay => control !== null);
   const unmatchedControls = (supplyReview?.selectedBridgeRoutes ?? [])
     .filter((route) => route.reviewState === "unmatched")
     .map((route) => unmatchedBridgeControl(meta.id, route));
-  const controls = [...profileControls, ...unmatchedControls];
+  const controls = [
+    ...profileControls,
+    ...representationGroups.map((group) => group.control),
+    ...unmatchedControls,
+  ].sort((left, right) => compareText(left.controlKey, right.controlKey));
   const controlsByDeployment = new Map(controls.map((control) => [control.deploymentKey, control]));
-  const routes = reviewedRoutes.flatMap((route) => {
-    const control = controlsByDeployment.get(route.id);
-    return control ? [{ controlKey: control.controlKey, tier: route.riskTier }] : [];
-  });
+  const routes = [
+    ...reviewedRoutes
+      .filter((route) => !groupedRouteIds.has(route.id))
+      .flatMap((route) => {
+        const control = controlsByDeployment.get(route.id);
+        return control ? [{ controlKey: control.controlKey, tier: route.riskTier }] : [];
+      }),
+    ...representationGroups.map((group) => ({
+      controlKey: group.control.controlKey,
+      tier: group.tier,
+    })),
+  ].sort((left, right) => compareText(left.controlKey, right.controlKey));
   if (controls.length === 0) {
     return {
       review: {
@@ -1926,9 +2082,9 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const cycle = cycleByAsset.get(assetId);
       const archetype = resolveMechanismArchetype(meta, metaById) ?? "unresolved";
       const liveReserves = fixedInput.liveReserveMap[assetId] ?? [];
-      const issuerAttestedReserveRows =
-        liveReserves.length === 0 ? buildSafetyScoreV9IssuerAttestedReserveRows(meta, clockSec) : null;
-      const reserveRows = issuerAttestedReserveRows?.rows ?? liveReserves;
+      const reviewedStaticReserveRows =
+        liveReserves.length === 0 ? buildSafetyScoreV9ReviewedStaticReserveRows(meta, clockSec) : null;
+      const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
       const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
       const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);
       const mechanismOverlayEvidence = getSafetyScoreV9MechanismOverlayEvidence(assetId, archetype, clockSec);
@@ -1945,7 +2101,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       }
       const reserveClassifications = buildReviewedReserveClassifications(reserveRows, meta, clockSec);
       addReserveClassificationEvidence(meta, reserveClassifications, reviewEvidence);
-      addIssuerAttestedReserveEvidence(meta, issuerAttestedReserveRows, reviewEvidence);
+      addReviewedStaticReserveEvidence(meta, reviewedStaticReserveRows, reviewEvidence);
       addDependencyEvidence(meta, reviewEvidence);
       addWrapperCustodyEvidence(meta, reviewEvidence);
       const supplyReview = buildSafetyScoreV9SupplyReview(fixedInput, assetId, meta.bridgeRouteRisk);
@@ -2001,7 +2157,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         },
         reserveApplicability: { state: "required" },
         reserveClassifications,
-        issuerAttestedReserveRows,
+        reviewedStaticReserveRows,
         routeReviews: buildSafetyScoreV9RouteReviews(fixedInput, assetId),
         retainedRoutes: buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, assetId),
         controlReview:

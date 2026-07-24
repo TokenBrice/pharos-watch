@@ -1,32 +1,49 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig } from "../chain-registry";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
+import wmMetaSource from "@shared/data/stablecoins/coins/wm-m0.json";
+import type { BridgeRouteRiskProfile } from "@shared/types/core";
 
 const rpcMocks = vi.hoisted(() => ({
-  fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
+  observeXautRepresentationGroupSupplyAttributionAttempt: vi.fn(),
+  observeWmReviewedDeploymentUnitPartitionAttempt: vi.fn(),
 }));
 
-vi.mock("../evm-rpc", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../evm-rpc")>();
+vi.mock("../safety-score-v9-wm-supply-observer", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("../safety-score-v9-wm-supply-observer")>();
   return {
     ...original,
-    fetchEvmMulticall3Aggregate3AtBlock: rpcMocks.fetchEvmMulticall3Aggregate3AtBlock,
+    observeWmReviewedDeploymentUnitPartitionAttempt:
+      rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt,
+  };
+});
+
+vi.mock("../safety-score-v9-xaut-supply-observer", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("../safety-score-v9-xaut-supply-observer")>();
+  return {
+    ...original,
+    observeXautRepresentationGroupSupplyAttributionAttempt:
+      rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt,
   };
 });
 
 import {
-  captureSafetyScoreV9SupplyAttributionById,
+  captureSafetyScoreV9SupplyAttribution,
   deriveLockMintSupplyPartition,
+  safetyScoreV9ChainRows,
+  safetyScoreV9ChainSupplyObservedAtSec,
 } from "../safety-score-v9-supply-attribution";
+import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9-extension-supply";
 
 const XAUT_TOTAL_SUPPLY_RAW = 707_747_089_000n;
+const XAUT_NOT_ISSUED_RAW = 94_923_429_468n;
+const XAUT_CIRCULATING_LIABILITY_RAW =
+  XAUT_TOTAL_SUPPLY_RAW - XAUT_NOT_ISSUED_RAW;
 const XAUT0_LOCKBOX_BALANCE_RAW = 29_714_544_713n;
 const XAUT_AGGREGATE_SUPPLY_USD = 2_480_000_000;
 const OBSERVED_AT_SEC = 1_774_000_000;
-
-function uint256(value: bigint): `0x${string}` {
-  return `0x${value.toString(16).padStart(64, "0")}`;
-}
 
 function xautFixedInput(
   chainCirculating: Record<string, { current: number }> = {},
@@ -34,6 +51,9 @@ function xautFixedInput(
   return {
     activeAssetIds: ["xaut-tether"],
     clockSec: OBSERVED_AT_SEC,
+    sourceGeneration: "report-cards:v8:fixture",
+    baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+    registryFingerprint: "a".repeat(64),
     chainCirculatingById: { "xaut-tether": chainCirculating },
     aggregateCirculatingById: {
       "xaut-tether": {
@@ -61,13 +81,15 @@ function chainRpcs(): Map<string, ChainRpcConfig> {
 
 describe("Safety Score V9 lock/mint supply attribution", () => {
   beforeEach(() => {
-    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockReset();
+    rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockReset();
+    rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt.mockReset();
   });
 
   it("partitions aggregate XAUT without double-counting its XAUt0 lockbox", () => {
     const partition = deriveLockMintSupplyPartition({
       aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
-      canonicalTotalSupplyRaw: XAUT_TOTAL_SUPPLY_RAW,
+      canonicalCirculatingLiabilityRaw:
+        XAUT_CIRCULATING_LIABILITY_RAW,
       lockboxBalancesRaw: [XAUT0_LOCKBOX_BALANCE_RAW],
       canonicalChainLabel: "Ethereum",
       pooledRepresentationLabel: "XAUt0 lock-mint pool",
@@ -78,76 +100,248 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
       XAUT_AGGREGATE_SUPPLY_USD,
     );
     expect(partition!.pooledRepresentationSupplyUsd / XAUT_AGGREGATE_SUPPLY_USD).toBeCloseTo(
-      0.04198469365,
+      0.04848792022,
       10,
     );
   });
 
-  it("captures a same-block V9-only partition and leaves the public/V8 row unchanged", async () => {
-    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue([
-      {
-        label: "canonical-total-supply",
-        success: true,
-        returnData: uint256(XAUT_TOTAL_SUPPLY_RAW),
+  it("captures an identity-bound V9-only group partition and leaves the source row unchanged", async () => {
+    const representationGroupSupplyUsd =
+      XAUT_AGGREGATE_SUPPLY_USD * 0.04198469365;
+    rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockResolvedValue({
+      status: "accepted",
+      attribution: {
+        model: "canonical-lock-mint-group-partition-v2",
+        assetId: "xaut-tether",
+        observedAtSec: OBSERVED_AT_SEC - 100,
+        registryFingerprint: "a".repeat(64),
+        routeInventoryDigest: "b".repeat(64),
+        canonical: {
+          routeId:
+            "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+          chainId: "ethereum",
+          currentSupplyUsd:
+            XAUT_AGGREGATE_SUPPLY_USD - representationGroupSupplyUsd,
+        },
+        representationGroup: {
+          deploymentRouteKey:
+            "representation-group:xaut-tether:xaut0-omnichain",
+          representationId: "xaut0-omnichain",
+          routeIds: ["arbitrum:xaut0"],
+          riskTier: "external-lock-mint",
+          failureDomainKeys: ["protocol:xaut0-omnichain"],
+          currentSupplyUsd: representationGroupSupplyUsd,
+        },
+        observation: {
+          blockTimeSec: OBSERVED_AT_SEC - 100,
+        },
       },
-      {
-        label: "lockbox-balance:0",
-        success: true,
-        returnData: uint256(XAUT0_LOCKBOX_BALANCE_RAW),
-      },
-    ]);
+    });
     const fixedInput = xautFixedInput();
     const before = structuredClone(fixedInput);
 
-    const captured = await captureSafetyScoreV9SupplyAttributionById(
+    const capture = await captureSafetyScoreV9SupplyAttribution(
+      fixedInput,
+      chainRpcs(),
+    );
+    const captured = capture.attributionById;
+
+    expect(fixedInput).toEqual(before);
+    expect(captured["xaut-tether"]).toMatchObject({
+      model: "canonical-lock-mint-group-partition-v2",
+      observedAtSec: OBSERVED_AT_SEC - 100,
+    });
+    const attribution = captured["xaut-tether"]!;
+    if (attribution.model !== "canonical-lock-mint-group-partition-v2") {
+      throw new Error("Expected canonical lock/mint group attribution");
+    }
+    expect(
+      attribution.canonical.currentSupplyUsd +
+        attribution.representationGroup.currentSupplyUsd,
+    ).toBe(XAUT_AGGREGATE_SUPPLY_USD);
+    expect(
+      rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        registryFingerprint: "a".repeat(64),
+        scoringClockSec: OBSERVED_AT_SEC,
+      }),
+    );
+    expect(capture.journalRecords).toHaveLength(1);
+    expect(capture.journalRecords[0]).toMatchObject({
+      assetId: "xaut-tether",
+      sourceId: "xaut.canonical-lock-mint-group-partition.v2",
+      sourceOriginClass: "issuer-disclosure-plus-onchain",
+      admissionCode: "supply-attribution.admission.accepted",
+      fallbackCode: "supply-attribution.fallback.not-used",
+    });
+  });
+
+  it("ages an attributed USD partition from its older aggregate observation", () => {
+    const fixedInput = xautFixedInput();
+    fixedInput.aggregateCirculatingById[
+      "xaut-tether"
+    ]!.observedAtSec = OBSERVED_AT_SEC - 900;
+    fixedInput.safetyScoreV9SupplyAttributionById = {
+      "xaut-tether": {
+        model: "canonical-lock-mint-partition-v1",
+        observedAtSec: OBSERVED_AT_SEC - 100,
+        currentSupplyUsdByChain: {
+          Ethereum: XAUT_AGGREGATE_SUPPLY_USD * 0.96,
+          "XAUt0 lock-mint pool": XAUT_AGGREGATE_SUPPLY_USD * 0.04,
+        },
+      },
+    };
+
+    expect(
+      safetyScoreV9ChainSupplyObservedAtSec(
+        fixedInput,
+        "xaut-tether",
+        OBSERVED_AT_SEC,
+      ),
+    ).toBe(OBSERVED_AT_SEC - 900);
+
+    fixedInput.aggregateCirculatingById[
+      "xaut-tether"
+    ]!.observedAtSec = null;
+    expect(
+      safetyScoreV9ChainSupplyObservedAtSec(
+        fixedInput,
+        "xaut-tether",
+        OBSERVED_AT_SEC - 600,
+      ),
+    ).toBe(OBSERVED_AT_SEC - 600);
+  });
+
+  it("rechecks XAUT despite an upstream chain map and fails closed on unavailable evidence", async () => {
+    const existing = { Ethereum: { current: XAUT_AGGREGATE_SUPPLY_USD } };
+    const fixedInput = xautFixedInput(existing);
+    rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockResolvedValue({
+      status: "rejected",
+      rejectionCode: "deployment-identity-mismatch",
+      failedRouteId:
+        "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+    });
+    const capture = await captureSafetyScoreV9SupplyAttribution(
+      fixedInput,
+      chainRpcs(),
+    );
+    expect(capture.attributionById).toEqual({});
+    expect(
+      safetyScoreV9ChainRows(
+        {
+          ...fixedInput,
+          safetyScoreV9SupplyAttributionById: capture.attributionById,
+        },
+        "xaut-tether",
+      ),
+    ).toEqual({});
+    expect(
+      rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt,
+    ).toHaveBeenCalledTimes(1);
+    expect(capture.journalRecords[0]).toMatchObject({
+      admissionCode: "supply-attribution.admission.rejected-identity-drift",
+      fallbackCode: "supply-attribution.fallback.aggregate-only",
+    });
+  });
+
+  it.each([
+    [
+      "transparency-source-config-unavailable",
+      "supply-attribution.admission.rejected-identity-drift",
+    ],
+    [
+      "transparency-source-unavailable",
+      "supply-attribution.admission.rejected-upstream",
+    ],
+    [
+      "transparency-payload-invalid",
+      "supply-attribution.admission.rejected-invalid-payload",
+    ],
+    [
+      "transparency-stale",
+      "supply-attribution.admission.rejected-stale",
+    ],
+    [
+      "transparency-clock-skew",
+      "supply-attribution.admission.rejected-skew",
+    ],
+    [
+      "transparency-onchain-mismatch",
+      "supply-attribution.admission.rejected-reconciliation",
+    ],
+    [
+      "transparency-liability-state-invalid",
+      "supply-attribution.admission.rejected-reconciliation",
+    ],
+  ] as const)(
+    "maps %s to %s without a generic deployment error",
+    async (rejectionCode, admissionCode) => {
+      rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt
+        .mockResolvedValue({
+          status: "rejected",
+          rejectionCode,
+          failedRouteId: null,
+        });
+      const capture = await captureSafetyScoreV9SupplyAttribution(
+        xautFixedInput(),
+        chainRpcs(),
+      );
+      expect(capture.journalRecords[0]).toMatchObject({
+        sourceOriginClass: "issuer-disclosure-plus-onchain",
+        admissionCode,
+        fallbackCode: "supply-attribution.fallback.aggregate-only",
+      });
+    },
+  );
+
+  it("restores aggregate-only bridge materiality when the atomic wM capture fails", async () => {
+    rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt.mockResolvedValue({
+      status: "rejected",
+      rejectionCode: "deployment-identity-mismatch",
+      failedRouteId:
+        "base:0x437cc33344a0b27a429f795ff6b469c72698b291",
+    });
+    const fixedInput = {
+      activeAssetIds: ["wm-m0"],
+      clockSec: OBSERVED_AT_SEC,
+      sourceGeneration: "report-cards:v8:fixture",
+      baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+      registryFingerprint: "a".repeat(64),
+      chainCirculatingById: { "wm-m0": {} },
+      aggregateCirculatingById: {
+        "wm-m0": {
+          circulating: { peggedUSD: 87_020_618.58982982 },
+          observedAtSec: OBSERVED_AT_SEC,
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+
+    const capture = await captureSafetyScoreV9SupplyAttribution(
       fixedInput,
       chainRpcs(),
     );
 
-    expect(fixedInput).toEqual(before);
-    expect(captured["xaut-tether"]).toMatchObject({
-      model: "canonical-lock-mint-partition-v1",
-      observedAtSec: OBSERVED_AT_SEC,
+    expect(capture.attributionById).not.toHaveProperty("wm-m0");
+    expect(capture.journalRecords).toHaveLength(1);
+    expect(capture.journalRecords[0]).toMatchObject({
+      assetId: "wm-m0",
+      admissionCode: "supply-attribution.admission.rejected-identity-drift",
+      fallbackCode: "supply-attribution.fallback.aggregate-only",
+      failedRouteId:
+        "base:0x437cc33344a0b27a429f795ff6b469c72698b291",
+      contentSha256: null,
     });
-    const rows = captured["xaut-tether"]!.currentSupplyUsdByChain;
-    expect(Object.keys(rows)).toEqual(["Ethereum", "XAUt0 lock-mint pool"]);
-    expect(Object.values(rows).reduce((sum, value) => sum + value, 0)).toBe(XAUT_AGGREGATE_SUPPLY_USD);
-    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledTimes(1);
-    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledWith(
-      "ethereum",
-      [
-        expect.objectContaining({
-          label: "canonical-total-supply",
-          target: "0x68749665ff8d2d112fa859aa293f07a622782f38",
-          callData: "0x18160ddd",
-        }),
-        expect.objectContaining({
-          label: "lockbox-balance:0",
-          target: "0x68749665ff8d2d112fa859aa293f07a622782f38",
-        }),
-      ],
-      "latest",
-      expect.objectContaining({ chainRpcs: expect.any(Map) }),
-    );
-  });
-
-  it("preserves a real upstream chain map and fails closed on unavailable evidence", async () => {
-    const existing = { Ethereum: { current: XAUT_AGGREGATE_SUPPLY_USD } };
-
-    await expect(
-      captureSafetyScoreV9SupplyAttributionById(
-        xautFixedInput(existing),
-        chainRpcs(),
+    expect(
+      buildSafetyScoreV9SupplyReview(
+        {
+          ...fixedInput,
+          safetyScoreV9SupplyAttributionById: capture.attributionById,
+        },
+        "wm-m0",
+        wmMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile,
       ),
-    ).resolves.toEqual({});
-    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
-
-    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
-    await expect(
-      captureSafetyScoreV9SupplyAttributionById(
-        xautFixedInput(),
-        chainRpcs(),
-      ),
-    ).resolves.toEqual({});
+    ).toBeNull();
   });
 });

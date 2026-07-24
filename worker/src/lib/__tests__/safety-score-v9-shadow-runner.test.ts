@@ -3,6 +3,10 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-versi
 import type { ReportCard } from "@shared/types/report-cards";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import {
+  buildSafetyScoreV9PegProvenanceSummary,
+  projectSafetyScoreV9PegSummary,
+} from "../safety-score-v9-peg-provenance";
 
 const mockLoadDaily = vi.fn();
 const mockPersistState = vi.fn();
@@ -30,6 +34,7 @@ const {
 } = await import("../safety-score-v9-shadow-runner");
 
 const CLOCK_SEC = 2_000_000_000;
+const TRACKING_START_SEC = CLOCK_SEC - 365 * 86_400;
 const SOURCE_GENERATION = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${CLOCK_SEC}`;
 const UTC_DAY = new Date(CLOCK_SEC * 1_000).toISOString().slice(0, 10);
 
@@ -51,7 +56,32 @@ function exactFixedInput(clockSec = CLOCK_SEC) {
       dexLiquidity: { updatedAt: clockSec - 100, ageSeconds: 100, stale: false },
       redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
     },
-    pegDataById: {},
+    pegDataById: {
+      "usdc-circle": {
+        id: "usdc-circle",
+        symbol: "USDC",
+        name: "USD Coin",
+        pegType: "peggedUSD",
+        pegCurrency: "USD",
+        governance: "centralized",
+        currentDeviationBps: 0,
+        pegScore: 100,
+        pegPct: 100,
+        severityScore: 100,
+        spreadPenalty: 0,
+        eventCount: 0,
+        worstDeviationBps: null,
+        activeDepeg: false,
+        lastEventAt: null,
+        trackingSpanDays: 365,
+        historyCoverage: {
+          startedAt: TRACKING_START_SEC,
+          source: "first-observation",
+          status: "verified",
+        },
+        methodologyVersion: "peg-score:fixture-v1",
+      },
+    },
     activeDepegPeakBpsById: {},
     dexLiqMap: {
       "usdc-circle": {
@@ -193,7 +223,7 @@ describe("Safety Score V9 shadow runner", { timeout: 30_000 }, () => {
     expect(mockPersistState).not.toHaveBeenCalled();
   });
 
-  it("allows only V9 supply attribution to change during shadow preparation", async () => {
+  it("rejects authoritative V8 changes during V9-only preparation", async () => {
     const result = await runSafetyScoreV9ShadowAfterV8Publication({
       ...input(),
       prepareFixedInput: async (fixedInput) => ({
@@ -207,6 +237,34 @@ describe("Safety Score V9 shadow runner", { timeout: 30_000 }, () => {
       stage: "v9-enrichment",
       message: "Safety Score v9 preparation changed the authoritative V8 fixed input",
     });
+  });
+
+  it("accepts score-neutral peg provenance without changing candidate bytes", async () => {
+    await runSafetyScoreV9ShadowAfterV8Publication(input());
+    const baseCandidate = mockPersistState.mock.calls[0]![1].envelope.candidate;
+    mockPersistState.mockClear();
+
+    const result = await runSafetyScoreV9ShadowAfterV8Publication({
+      ...input(),
+      prepareFixedInput: async (fixedInput) => ({
+        ...fixedInput,
+        pegProvenanceById: {
+          "usdc-circle": buildSafetyScoreV9PegProvenanceSummary({
+            assetId: "usdc-circle",
+            events: [],
+            trackingStartSec: TRACKING_START_SEC,
+            clockSec: fixedInput.clockSec,
+            expectedLegacyInclusive: projectSafetyScoreV9PegSummary(
+              fixedInput.pegDataById["usdc-circle"]!,
+            ),
+          }),
+        },
+      }),
+    });
+
+    expect(result).toMatchObject({ status: "published" });
+    const diagnosticCandidate = mockPersistState.mock.calls[0]![1].envelope.candidate;
+    expect(JSON.stringify(diagnosticCandidate)).toBe(JSON.stringify(baseCandidate));
   });
 
   it("waits until the post-producer daily observation point", async () => {

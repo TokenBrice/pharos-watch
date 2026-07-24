@@ -20,11 +20,14 @@ const {
   MULTICALL3_ADDRESS,
   encodeMulticall3Aggregate3CallData,
   fetchEvmMulticall3Aggregate3AtBlock,
+  fetchEvmBlockHeader,
   fetchEtherscanProxyHex,
   fetchEtherscanUint256AtBlock,
   fetchEvmBlockNumber,
   fetchEvmBlockTimestamp,
   fetchEvmCallHexAtBlock,
+  fetchEvmCodeAtBlock,
+  fetchEvmCodeStatusAtBlock,
   fetchEvmUint256AtBlock,
   parseUint256Hex,
   resolveClosestBlockAtOrBeforeTimestamp,
@@ -375,6 +378,23 @@ describe("evm-rpc helpers", () => {
     warnSpy.mockRestore();
   });
 
+  it("distinguishes absent bytecode from an unavailable code request", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x" }), { status: 200 }))
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x6000" }), { status: 200 }));
+
+    await expect(fetchEvmCodeStatusAtBlock(undefined, "0xPool", "latest", {
+      extraRpcUrls: ["https://rpc.example"],
+    })).resolves.toEqual({ status: "absent" });
+    await expect(fetchEvmCodeStatusAtBlock(undefined, "0xPool", "latest", {
+      extraRpcUrls: ["https://rpc.example"],
+    })).resolves.toEqual({ status: "unavailable" });
+    await expect(fetchEvmCodeAtBlock(undefined, "0xPool", "latest", {
+      extraRpcUrls: ["https://rpc.example"],
+    })).resolves.toBe("0x6000");
+  });
+
   it("fetches block numbers and timestamps through the shared RPC path", async () => {
     fetchWithRetryMock
       .mockResolvedValueOnce(new Response(JSON.stringify({ result: "0x10" }), { status: 200 }))
@@ -385,6 +405,76 @@ describe("evm-rpc helpers", () => {
 
     expect(blockNumber).toBe(16);
     expect(blockTimestamp).toBe(100);
+  });
+
+  it("requires a numbered block header with its canonical hash", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            result: {
+              number: "0x10",
+              timestamp: "0x64",
+              hash: `0x${"A".repeat(64)}`,
+            },
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            result: {
+              number: "0x11",
+              timestamp: "0x64",
+              hash: `0x${"b".repeat(64)}`,
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+
+    await expect(
+      fetchEvmBlockHeader("ethereum", 16, { extraRpcUrls: ["https://rpc.example"] }),
+    ).resolves.toEqual({
+      number: 16,
+      timestamp: 100,
+      hash: `0x${"a".repeat(64)}`,
+    });
+    await expect(
+      fetchEvmBlockHeader("ethereum", 16, { extraRpcUrls: ["https://rpc.example"] }),
+    ).resolves.toBeNull();
+  });
+
+  it("resolves an explicitly finalized block header without relabeling latest state", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          result: {
+            number: "0x10",
+            timestamp: "0x64",
+            hash: `0x${"c".repeat(64)}`,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await expect(
+      fetchEvmBlockHeader("ethereum", "finalized", {
+        extraRpcUrls: ["https://rpc.example"],
+      }),
+    ).resolves.toEqual({
+      number: 16,
+      timestamp: 100,
+      hash: `0x${"c".repeat(64)}`,
+    });
+    const lastCall =
+      fetchWithRetryMock.mock.calls[fetchWithRetryMock.mock.calls.length - 1];
+    const body = JSON.parse(String(lastCall?.[1]?.body)) as {
+      params: unknown[];
+    };
+    expect(body.params).toEqual(["finalized", false]);
   });
 
   it("resolves the closest block at or before a target timestamp", async () => {

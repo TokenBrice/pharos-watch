@@ -16,7 +16,8 @@ export function SafetyScoresOverview() {
         decentralization, dependency risk), then a peg stability multiplier that penalizes coins with poor pegs
         while barely affecting well-pegged ones. The exit-liquidity dimension blends raw DEX liquidity with
         redemption-backstop quality only when the route has usable current evidence. Reviewer-gated wrapper capacity
-        can come from same-run withdrawable strategy or Stability Pool balances rather than idle underlying alone;
+        can come from same-run withdrawable strategy or Stability Pool balances, or an exact cross-chain route whose
+        endpoints and executable inventory are validated together, rather than idle underlying alone;
         reviewed opaque fees can preserve capacity evidence for bounded downstream analysis but do not make the
         current redemption route score-eligible without a numeric cost bound. Reserve data is a separate
         resilience input: live reserve sync can improve collateral quality only when the latest snapshot is fresh,

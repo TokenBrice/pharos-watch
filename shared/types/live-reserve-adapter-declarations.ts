@@ -7,6 +7,7 @@ import type {
   LiveReserveSourceSharingMode,
   ReserveDisplayBadgeKind,
 } from "./live-reserve-core";
+import type { ReserveEvidenceSourceOriginClass } from "./report-card-evidence-journal";
 import {
   BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC,
   DASHBOARD_SOURCE_MAX_AGE_SEC,
@@ -110,6 +111,7 @@ type LiveReserveAdapterDescriptorDeclaration = {
   paramsSchema: string;
   sourceModel: LiveReserveSourceModel;
   evidenceClass: LiveReserveEvidenceClass;
+  sourceOriginClass?: ReserveEvidenceSourceOriginClass;
   sharedSourceMode: LiveReserveSourceSharingMode;
   configValidation: LiveReserveAdapterConfigValidationPolicy;
   redemptionTelemetry: {
@@ -374,6 +376,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
     configValidation: CONFIG_ATTESTATION_V1_V2,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
@@ -385,9 +388,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   },
   "frax-fpi-collateral": {
     primaryInputKinds: ["http-json"],
-    paramsSchema: "none",
+    paramsSchema: "fraxFpiCollateral",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
@@ -764,6 +768,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "tetherTransparency",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    sourceOriginClass: "issuer-attested",
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
@@ -824,6 +829,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     paramsSchema: "none",
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
+    sourceOriginClass: "issuer-attested",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V2,
     redemptionTelemetry: { capacity: "none", fee: "none" },

@@ -86,6 +86,37 @@ describe("validateRedemptionBackstopRegistry", () => {
     ).toContain("lower-bound redemption capacity");
   });
 
+  it("allows V9 route reviews to preserve or worsen settlement but never improve it", () => {
+    expect(
+      RedemptionBackstopConfigSchema.safeParse({
+        ...baseConfig,
+        v9RouteReviewTerms: { minRedeemUsd: 100_000, settlementModel: "days" },
+      }).success,
+    ).toBe(true);
+
+    const faster = RedemptionBackstopConfigSchema.safeParse({
+      ...baseConfig,
+      settlementModel: "days",
+      v9RouteReviewTerms: { settlementModel: "same-day" },
+    });
+    expect(faster.success).toBe(false);
+    if (!faster.success) {
+      expect(faster.error.issues).toContainEqual(
+        expect.objectContaining({
+          path: ["v9RouteReviewTerms", "settlementModel"],
+          message: "V9 reviewed settlement cannot be faster than the frozen settlement model",
+        }),
+      );
+    }
+
+    expect(
+      RedemptionBackstopConfigSchema.safeParse({
+        ...baseConfig,
+        v9RouteReviewTerms: { minRedeemUsd: -1 },
+      }).success,
+    ).toBe(false);
+  });
+
   it("surfaces reviewed redemption policy entries in the audit report", () => {
     const result = validateFixture([
       {

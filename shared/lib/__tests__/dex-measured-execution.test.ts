@@ -5,6 +5,7 @@ import {
   DEX_MEASURED_MAX_COST_BPS,
   buildDexMeasuredCapacityCurve,
   buildDexMeasuredExecutionTargetId,
+  getDexMeasuredExecutionFreshnessMaxSec,
   getDexMeasuredExecutionProbeNotionals,
   toDexMeasuredExecutionPublicProfile,
   validateDexMeasuredExecutionProfile,
@@ -12,6 +13,7 @@ import {
   type DexMeasuredExecutionQuotePointProof,
   type DexMeasuredExecutionTarget,
 } from "../../types/measured-execution";
+import { ExitRouteCapacityPointSchema } from "../../types/exit-route";
 
 const TOKEN_IN = {
   address: "0x1111111111111111111111111111111111111111",
@@ -160,6 +162,49 @@ describe("DEX measured execution contract", () => {
       1_000_000,
     );
     expect(curve.map((point) => point.executableUsd)).toEqual([55_000, 55_000, 55_000, 55_000]);
+    expect(curve.map((point) => point.executionCostBps)).toEqual([
+      expect.closeTo(181.8181818, 6),
+      expect.closeTo(181.8181818, 6),
+      expect.closeTo(181.8181818, 6),
+      expect.closeTo(181.8181818, 6),
+    ]);
+  });
+
+  it("bounds an optional realized point cost and accepts legacy omission", () => {
+    const point = {
+      requestedNotionalUsd: 100_000,
+      maxCostBps: 200,
+      executableUsd: 100_000,
+      completionRatio: 1,
+    };
+    expect(ExitRouteCapacityPointSchema.safeParse(point).success).toBe(true);
+    expect(ExitRouteCapacityPointSchema.safeParse({ ...point, executionCostBps: 37 }).success).toBe(true);
+    expect(ExitRouteCapacityPointSchema.safeParse({ ...point, executionCostBps: 201 }).success).toBe(false);
+  });
+
+  it("validates legacy points without cost but rejects a false realized cost", () => {
+    const nowSec = 10_000;
+    const legacy = profile(nowSec);
+    legacy.capacityCurve = legacy.capacityCurve.map(({ executionCostBps: _cost, ...point }) => point);
+    expect(validateDexMeasuredExecutionProfile({
+      profile: legacy,
+      quotedTarget: target(nowSec),
+      currentTarget: target(nowSec),
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec,
+    })).toEqual([]);
+
+    const tampered = profile(nowSec);
+    tampered.capacityCurve[0]!.executionCostBps = 1;
+    expect(validateDexMeasuredExecutionProfile({
+      profile: tampered,
+      quotedTarget: target(nowSec),
+      currentTarget: target(nowSec),
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec,
+    })).toContain("invalid-capacity-curve");
   });
 
   it("accepts a fresh identity-consistent lower-bound profile", () => {
@@ -288,6 +333,80 @@ describe("DEX measured execution contract", () => {
     });
   });
 
+  it("projects raw registry binding proof into proof-free registry provenance", () => {
+    const internal = profile();
+    internal.registryBindingProof = {
+      registryAddress: "0x5555555555555555555555555555555555555555",
+      registryCodeHash: `0x${"cd".repeat(32)}`,
+      registeredPoolAddress: internal.poolId as `0x${string}`,
+      lpTokenAddress: "0x6666666666666666666666666666666666666666",
+      poolTokenAddresses: [TOKEN_IN.address, TOKEN_OUT.address],
+      lpTokenCallData: "0x1234",
+      lpTokenReturnData: "0xabcd",
+      registryCoinsCallData: "0x2345",
+      registryCoinsReturnData: "0xbcde",
+      poolCoinsProof: [
+        { index: 0, callData: "0x3456", returnData: "0xcdef" },
+        { index: 1, callData: "0x4567", returnData: "0xdef0" },
+      ],
+      tokenDecimalsProof: [
+        { tokenAddress: TOKEN_IN.address, decimals: TOKEN_IN.decimals, callData: "0x5678", returnData: "0xef01" },
+        { tokenAddress: TOKEN_OUT.address, decimals: TOKEN_OUT.decimals, callData: "0x6789", returnData: "0xf012" },
+      ],
+    };
+
+    const publicProfile = toDexMeasuredExecutionPublicProfile(internal);
+
+    expect(publicProfile).not.toHaveProperty("registryBindingProof");
+    expect(publicProfile.registryProvenance).toEqual({
+      registryAddress: internal.registryBindingProof.registryAddress,
+      registryCodeHash: internal.registryBindingProof.registryCodeHash,
+      registeredPoolAddress: internal.registryBindingProof.registeredPoolAddress,
+      lpTokenAddress: internal.registryBindingProof.lpTokenAddress,
+      poolTokenAddresses: internal.registryBindingProof.poolTokenAddresses,
+    });
+  });
+
+  it("projects raw StableSwap-NG factory proof into pinned proof-free provenance", () => {
+    const internal = profile();
+    internal.stableSwapNgFactoryBindingProof = {
+      blockNumber: internal.blockNumber,
+      blockHash: `0x${"ef".repeat(32)}`,
+      blockCommitment: "finalized",
+      factoryAddress: "0x5555555555555555555555555555555555555555",
+      factoryCodeHash: `0x${"cd".repeat(32)}`,
+      poolIndex: 563,
+      registeredPoolAddress: internal.poolId as `0x${string}`,
+      poolTokenAddresses: [TOKEN_IN.address, TOKEN_OUT.address],
+      poolListCallData: "0x1234",
+      poolListReturnData: "0xabcd",
+      factoryCoinsCallData: "0x2345",
+      factoryCoinsReturnData: "0xbcde",
+      poolCoinsProof: [
+        { index: 0, callData: "0x3456", returnData: "0xcdef" },
+        { index: 1, callData: "0x4567", returnData: "0xdef0" },
+      ],
+      tokenDecimalsProof: [
+        { tokenAddress: TOKEN_IN.address, decimals: TOKEN_IN.decimals, callData: "0x5678", returnData: "0xef01" },
+        { tokenAddress: TOKEN_OUT.address, decimals: TOKEN_OUT.decimals, callData: "0x6789", returnData: "0xf012" },
+      ],
+    };
+
+    const publicProfile = toDexMeasuredExecutionPublicProfile(internal);
+
+    expect(publicProfile).not.toHaveProperty("stableSwapNgFactoryBindingProof");
+    expect(publicProfile.stableSwapNgFactoryProvenance).toEqual({
+      blockNumber: internal.stableSwapNgFactoryBindingProof.blockNumber,
+      blockHash: internal.stableSwapNgFactoryBindingProof.blockHash,
+      blockCommitment: internal.stableSwapNgFactoryBindingProof.blockCommitment,
+      factoryAddress: internal.stableSwapNgFactoryBindingProof.factoryAddress,
+      factoryCodeHash: internal.stableSwapNgFactoryBindingProof.factoryCodeHash,
+      poolIndex: internal.stableSwapNgFactoryBindingProof.poolIndex,
+      registeredPoolAddress: internal.stableSwapNgFactoryBindingProof.registeredPoolAddress,
+      poolTokenAddresses: internal.stableSwapNgFactoryBindingProof.poolTokenAddresses,
+    });
+  });
+
   it("fails closed on stale, tampered, and price-divergent profiles", () => {
     const nowSec = 20_000;
     const tampered = profile(nowSec);
@@ -307,5 +426,52 @@ describe("DEX measured execution contract", () => {
       "quote-price-mismatch",
       "invalid-capacity-curve",
     ]));
+  });
+
+  it("gives only the reviewed Curve StableSwap adapters a two-hour profile ceiling", () => {
+    const nowSec = 20_000;
+    const adapterProfileId = "curve-stableswap-main-registry-get-dy-v1";
+    const targetId = buildDexMeasuredExecutionTargetId({
+      adapterProfileId,
+      stablecoinId: "usd1",
+      chain: "ethereum",
+      protocol: "uniswap-v3",
+      poolId: "0x3333333333333333333333333333333333333333",
+      tokenInAddress: TOKEN_IN.address,
+      tokenOutAddress: TOKEN_OUT.address,
+      feePips: 500,
+    });
+    const currentTarget = {
+      ...target(nowSec),
+      targetId,
+      adapterProfileId,
+      capturedAt: nowSec - 8_000,
+    };
+    const retainedProfile = {
+      ...profile(nowSec),
+      targetId,
+      adapterProfileId,
+      quotedAt: nowSec - 7_199,
+    };
+
+    expect(getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId)).toBe(7_200);
+    expect(getDexMeasuredExecutionFreshnessMaxSec("curve-stableswap-ng-factory-get-dy-v2")).toBe(7_200);
+    expect(getDexMeasuredExecutionFreshnessMaxSec("uniswap-v3-quoter-v2")).toBe(3_600);
+    expect(validateDexMeasuredExecutionProfile({
+      profile: retainedProfile,
+      quotedTarget: currentTarget,
+      currentTarget,
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec,
+    })).not.toContain("stale-observation");
+    expect(validateDexMeasuredExecutionProfile({
+      profile: { ...retainedProfile, quotedAt: nowSec - 7_201 },
+      quotedTarget: currentTarget,
+      currentTarget,
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec,
+    })).toContain("stale-observation");
   });
 });

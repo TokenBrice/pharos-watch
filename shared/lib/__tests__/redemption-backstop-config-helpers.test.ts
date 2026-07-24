@@ -13,7 +13,9 @@ import {
   expandIds,
   fixedFee,
   NO_PUBLIC_NUMERIC_REDEMPTION_FEE,
+  resolveRedemptionCostBpsAtNotional,
   resolveDefaultHolderEligibility,
+  resolveV9RedemptionRouteCostBpsAtNotional,
   sourceRef,
   undisclosedReviewedFee,
   type RedemptionBackstopConfig,
@@ -41,6 +43,8 @@ describe("redemption backstop config helpers", () => {
       ...baseConfig,
       capacityModel: { kind: "supply-ratio", ratio: 0.1 },
       costModel: documentedVariableFee("Variable fee schedule"),
+      v9RouteCostTerms: { minFeeUsd: 1_000 },
+      v9RouteReviewTerms: { minRedeemUsd: 100_000, settlementModel: "days" },
     });
 
     const alpha = expanded["alpha"]!;
@@ -48,6 +52,8 @@ describe("redemption backstop config helpers", () => {
     alpha.docs![0]!.supports!.push("capacity");
     alpha.notes!.push("mutated note");
     alpha.costModel.feeDescription = "mutated fee";
+    alpha.v9RouteCostTerms!.minFeeUsd = 2_000;
+    alpha.v9RouteReviewTerms!.minRedeemUsd = 200_000;
     if (alpha.capacityModel.kind === "supply-ratio") {
       alpha.capacityModel.ratio = 0.2;
     }
@@ -55,6 +61,8 @@ describe("redemption backstop config helpers", () => {
     expect(beta.docs![0]!.supports).toEqual(["route", "fees"]);
     expect(beta.notes).toEqual(["fixture note"]);
     expect(beta.costModel.feeDescription).toBe("Variable fee schedule");
+    expect(beta.v9RouteCostTerms).toEqual({ minFeeUsd: 1_000 });
+    expect(beta.v9RouteReviewTerms).toEqual({ minRedeemUsd: 100_000, settlementModel: "days" });
     expect(beta.capacityModel).toMatchObject({ kind: "supply-ratio", ratio: 0.1 });
     expect(baseConfig.docs![0]!.supports).toEqual(["route", "fees"]);
   });
@@ -149,6 +157,54 @@ describe("redemption backstop config helpers", () => {
       feeModelKind: "undisclosed-reviewed",
     });
     expect(resolveFeeModelKind(undisclosed)).toBe("undisclosed-reviewed");
+  });
+
+  it("projects percentage, minimum, and fixed redemption terms at each notional", () => {
+    const reviewedSchedule = {
+      ...documentedVariableFee("10 bps with a $1,000 minimum"),
+      feeBpsMax: 10,
+      minFeeUsd: 1_000,
+    };
+    expect(resolveRedemptionCostBpsAtNotional(reviewedSchedule, 100_000)).toBe(100);
+    expect(resolveRedemptionCostBpsAtNotional(reviewedSchedule, 1_000_000)).toBe(10);
+    expect(resolveRedemptionCostBpsAtNotional(reviewedSchedule, 25_000_000)).toBe(10);
+    expect(resolveRedemptionCostBpsAtNotional(fixedFee(35), 3_793_482.4984454736)).toBe(35);
+
+    const fixedCosts = {
+      kind: "fee-bps" as const,
+      feeBps: 0,
+      flatFeeUsd: 25,
+      gasOrBridgeCostUsd: 25,
+    };
+    expect(resolveRedemptionCostBpsAtNotional(fixedCosts, 100_000)).toBe(5);
+  });
+
+  it("prefers current numeric telemetry while preserving separate reviewed minimum charges", () => {
+    const reviewedSchedule = {
+      ...documentedVariableFee("5-75 bps with a $1,000 minimum", "formula"),
+      feeBpsMin: 5,
+      feeBpsMax: 75,
+      minFeeUsd: 1_000,
+    };
+    expect(resolveRedemptionCostBpsAtNotional(reviewedSchedule, 100_000, 5)).toBe(100);
+    expect(resolveRedemptionCostBpsAtNotional(reviewedSchedule, 1_000_000, 5)).toBe(10);
+    expect(resolveRedemptionCostBpsAtNotional(undisclosedReviewedFee(), 1_000_000)).toBeNull();
+  });
+
+  it("keeps post-freeze route terms isolated to the V9 projector", () => {
+    const config: RedemptionBackstopConfig = {
+      ...createBaseConfig(),
+      costModel: {
+        ...documentedVariableFee("10 bps with a $1,000 minimum"),
+        feeBpsMax: 10,
+      },
+      v9RouteCostTerms: { minFeeUsd: 1_000 },
+      v9RouteReviewTerms: { minRedeemUsd: 100_000, settlementModel: "days" },
+    };
+
+    expect(resolveRedemptionCostBpsAtNotional(config.costModel, 100_000)).toBe(10);
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 100_000)).toBe(100);
+    expect(config.settlementModel).toBe("same-day");
   });
 
   it("builds documented-bound supply-full fragments with reviewedAt provenance", () => {

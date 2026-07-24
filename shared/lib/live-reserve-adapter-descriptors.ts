@@ -1,4 +1,5 @@
 import type { LiveReserveEvidenceClass, ReserveDisplayBadgeKind } from "../types/live-reserve-core";
+import type { ReserveEvidenceSourceOriginClass } from "../types/report-card-evidence-journal";
 import {
   LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS,
   LIVE_RESERVE_ADAPTER_KEYS,
@@ -36,6 +37,7 @@ export type LiveReserveAdapterDescriptorMap = {
   [K in LiveReserveAdapterKey]: LiveReserveAdapterDeclarationMap[K] & {
     key: K;
     params: (typeof LIVE_RESERVE_PARAM_SCHEMAS)[LiveReserveAdapterDeclarationMap[K]["paramsSchema"]];
+    sourceOriginClass: ReserveEvidenceSourceOriginClass;
     displayBadgeKind: ReserveDisplayBadgeKind;
     provenance: LiveReserveAdapterProvenance;
   };
@@ -44,6 +46,8 @@ export type LiveReserveAdapterDescriptorMap = {
 export const LIVE_RESERVE_ADAPTER_DESCRIPTORS = Object.fromEntries(
   Object.entries(LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS).map(([key, declaration]) => {
     const provenance = "provenance" in declaration ? declaration.provenance : ACTIVE_PROVENANCE;
+    const sourceOriginClass =
+      "sourceOriginClass" in declaration ? declaration.sourceOriginClass : "unknown";
     const displayBadgeKind =
       "displayBadgeKind" in declaration
         ? declaration.displayBadgeKind
@@ -54,6 +58,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTORS = Object.fromEntries(
         ...declaration,
         key,
         params: LIVE_RESERVE_PARAM_SCHEMAS[declaration.paramsSchema],
+        sourceOriginClass,
         provenance,
         displayBadgeKind,
       },
@@ -80,6 +85,13 @@ export const LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS = Object.fromEntries(
 ) as {
   [K in LiveReserveAdapterKey]: LiveReserveAdapterDeclarationMap[K]["primaryInputKinds"];
 };
+
+export const LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES = Object.fromEntries(
+  LIVE_RESERVE_ADAPTER_KEYS.map((key) => [
+    key,
+    LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].sourceOriginClass,
+  ]),
+) as Record<LiveReserveAdapterKey, ReserveEvidenceSourceOriginClass>;
 
 export const adapterParamsSchemas = Object.fromEntries(
   LIVE_RESERVE_ADAPTER_KEYS.map((key) => [key, LIVE_RESERVE_ADAPTER_DESCRIPTORS[key].params]),

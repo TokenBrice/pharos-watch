@@ -16,7 +16,14 @@ import {
   NonNegativeNumberSchema,
   PositiveNumberSchema,
 } from "../../types";
-import type { RedemptionBackstopConfig, RedemptionCapacityModel, RedemptionCostModel } from "./shared";
+import type {
+  RedemptionBackstopConfig,
+  RedemptionCapacityModel,
+  RedemptionCostModel,
+  RedemptionCostTerms,
+  RedemptionV9RouteReviewTerms,
+} from "./shared";
+import { isRedemptionSettlementAtLeastAsConservative } from "./shared";
 
 type RedemptionBackstopDocSourceConfig = NonNullable<RedemptionBackstopConfig["docs"]>[number];
 
@@ -94,6 +101,12 @@ const RedemptionCostShapeSchema = {
   feeScenario: RedemptionFeeScenarioSchema.optional(),
 };
 
+const RedemptionCostTermsSchema: z.ZodType<RedemptionCostTerms> = z.strictObject(RedemptionCostShapeSchema);
+const RedemptionV9RouteReviewTermsSchema: z.ZodType<RedemptionV9RouteReviewTerms> = z.strictObject({
+  minRedeemUsd: NonNegativeNumberSchema.optional(),
+  settlementModel: RedemptionSettlementModelSchema.optional(),
+});
+
 const RedemptionCostModelSchema: z.ZodType<RedemptionCostModel> = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("fee-bps"),
@@ -120,6 +133,8 @@ export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig>
     outputAssetType: RedemptionOutputAssetTypeSchema,
     capacityModel: RedemptionCapacityModelSchema,
     costModel: RedemptionCostModelSchema,
+    v9RouteCostTerms: RedemptionCostTermsSchema.optional(),
+    v9RouteReviewTerms: RedemptionV9RouteReviewTermsSchema.optional(),
     holderEligibility: RedemptionHolderEligibilitySchema.optional(),
     routeStatus: z.enum(["open", "unknown"]).optional(),
     routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),
@@ -130,6 +145,17 @@ export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig>
     notes: z.array(z.string()).optional(),
   })
   .superRefine((config, ctx) => {
+    const reviewedSettlement = config.v9RouteReviewTerms?.settlementModel;
+    if (
+      reviewedSettlement &&
+      !isRedemptionSettlementAtLeastAsConservative(reviewedSettlement, config.settlementModel)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["v9RouteReviewTerms", "settlementModel"],
+        message: "V9 reviewed settlement cannot be faster than the frozen settlement model",
+      });
+    }
     if (config.outputAssets) {
       if (new Set(config.outputAssets).size !== config.outputAssets.length) {
         ctx.addIssue({ code: "custom", path: ["outputAssets"], message: "outputAssets cannot contain duplicates" });

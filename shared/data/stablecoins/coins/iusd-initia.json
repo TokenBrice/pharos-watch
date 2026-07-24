@@ -11,6 +11,38 @@
     "rwa": false,
     "navToken": false
   },
+  "variantOf": "ausd-agora",
+  "variantKind": "pure-wrapper",
+  "pegReferenceId": "ausd-agora",
+  "dependencyReview": {
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Initia iusd-vault resources",
+        "url": "https://rest.initia.xyz/initia/move/v1/accounts/0x2981d7952151389d3820c4d4e2602e6ce4e8df7c2675ef88626efa110fa20aa6/resources"
+      },
+      {
+        "label": "Initia iUSD/AUSD0 route resources",
+        "url": "https://rest.initia.xyz/initia/move/v1/accounts/0xf407bcfb373a0ff7f6ddc765a1e2f51056334afaf9bdeb8ecdebb877f0249be2/resources"
+      },
+      {
+        "label": "LayerZero AUSD deployment announcement",
+        "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains"
+      }
+    ],
+    "rationale": "Initia's reviewed vault and AUSD0 OFT resources establish that every iUSD is minted 1:1 against deposited AUSD0, the Initia representation of Agora AUSD. The complete holder claim therefore propagates serially from AUSD, while the local vault, OFT, LayerZero, and Initia controls remain wrapper-local risks.",
+    "relationships": [
+      {
+        "id": "ausd-agora",
+        "weight": 1,
+        "type": "wrapper",
+        "economicRole": "serial-claim",
+        "reason": "Every iUSD unit is a direct 1:1 wrapper claim on AUSD0 deposited in the Initia iusd-vault."
+      }
+    ]
+  },
   "collateral": "1:1 reserve in Agora AUSD bridged to Initia via LayerZero; AUSD itself is backed by short-dated U.S. Treasury bills, overnight reverse repos, and cash held in a bankruptcy-remote Delaware Statutory Trust managed by VanEck and custodied by State Street",
   "pegMechanism": "iUSD is a single-chain wrapper of bridged Agora AUSD on Initia. Each iUSD is minted against an equal amount of AUSD locked at the Initia LayerZero bridge endpoint; reserve yield from the underlying AUSD is redirected by Initia into ecosystem incentives (Echelon lending, liquidity programs, Cabal vaults) rather than to holders. Holder redemption ultimately depends on the AUSD bridge and Agora's direct USD redemption.",
   "mechanismArchetype": "fiat-cash",
@@ -93,7 +125,7 @@
       "pct": 100,
       "risk": "low",
       "coinId": "ausd-agora",
-      "depType": "collateral",
+      "depType": "wrapper",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Agora AUSD and the Initia LayerZero AUSD0 OFT",
       "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],

@@ -108,6 +108,13 @@ their settlement horizon, cost, evidence kind, output identity, failure domain,
 and observation lineage. Diversification credit requires genuinely independent
 routes.
 
+Reviewed V9-only route constraints may supply a documented minimum redemption
+or a slower settlement class without changing the frozen V8 producer. Validation
+rejects a faster reviewed class, runtime projection keeps the stricter of the
+captured and reviewed terms, and fact compilation uses the longer of the
+captured and reviewed settlement horizons. A conservative modeling horizon is
+not presented as a contractual issuer SLA.
+
 Impact: fast DEX liquidity, issuer redemption, and delayed protocol exits no
 longer collapse into one interchangeable number. A large but slow route cannot
 fully compensate for weak immediate exit capacity.
@@ -121,6 +128,14 @@ attribution determine the affected slice.
 Impact: a small reviewed peripheral deployment can impose a bounded adjustment
 without automatically capping the whole asset, while material or unattributed
 exposure remains fail-closed.
+
+One conserved lock/mint representation can be reviewed as a group when the
+canonical lockbox proves the group's aggregate supply but no primary source
+proves its destination split. The group retains its exact route inventory,
+shared failure domains, and aggregate holder share without inventing per-chain
+balances. A group below both deployment and common-mode materiality floors is a
+bounded deployment slice; at either floor it returns to unresolved,
+score-capping treatment.
 
 ### 4. Smooth Bounded Aggregation
 
@@ -142,6 +157,12 @@ Impact: wrappers and reserve-backed assets inherit the relevant upstream risk
 without duplicating or spreading that risk into unrelated pillars. Ordinary
 weight drift no longer discards an otherwise valid reviewed role.
 
+For a rateable basket exposure, the upstream backing score is applied at the
+live exposure weight. An upstream evidence ceiling remains attributable to that
+slice and cannot cap the whole downstream asset after the uncertainty has
+already been priced through the weighted score. Serial claims retain their
+whole-parent ceiling because every unit of the child depends on that parent.
+
 ### 6. Wrapper-Local Risk
 
 Wrapper scoring separates parent exposure from local strategy, custody,
@@ -160,6 +181,11 @@ reserve reconciliation, assurance history, and incident handling. Credit
 requires current, attributable evidence. Visibility-only diagnostics do not
 erase otherwise valid resilience evidence, while issuer-undisclosed material
 facts still block credit.
+
+Canonical implementation history can satisfy only the maturity gate for
+producer-measured market depth. The depth credit itself remains cohort-wide,
+requires repeated successful score-eligible execution observations at the
+policy notional, and does not depend on an asset-specific editorial overlay.
 
 Impact: long-lived assets with demonstrated stress performance can receive
 bounded recognition without turning age, size, or reputation into an
@@ -198,13 +224,21 @@ designed:
   bounded local gaps only when it exceeds the reviewed local-risk discount;
   otherwise the applied discount is attributed to the reviewed adjustments
   that caused it.
+- Wrapper measured-unwind facts share the Exit pillar's documented-redemption
+  admission result. This recognizes reliable reviewed redemption without
+  changing raw route score eligibility; undisclosed-fee routes remain excluded
+  because their later danger gate is unavailable during fact compilation.
 - Every evidence owner, including a missing Pharos integration, receives the
   reason registry's configured ceiling when that reason is score-bearing.
 - Where a provider publishes only aggregate lock-mint supply, a V9-only
   attribution may partition the existing aggregate liability from canonical
-  total supply and observed lockbox balances. It must conserve the aggregate,
-  count locked backing once, preserve unknown destination allocation, and fail
-  closed when the onchain read is unavailable.
+  circulating liabilities and observed lockbox balances. XAUT requires a fresh
+  configured issuer disclosure whose authorized and not-issued raw amounts
+  reconcile exactly to finalized onchain total supply and the pinned issuer
+  treasury balance; quarantined supply must be zero. It must conserve the
+  aggregate, count locked backing once, preserve unknown destination
+  allocation, and fail closed when either the issuer or onchain evidence is
+  unavailable, stale, skewed, or mismatched.
 
 These are evidence and attribution corrections. They do not change V8 inputs
 or public V8 scoring.

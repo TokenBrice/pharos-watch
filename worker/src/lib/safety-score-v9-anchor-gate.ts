@@ -86,7 +86,7 @@ export const SAFETY_SCORE_V9_ANCHOR_CONTRACT_V1 = {
     { id: "bold-liquity", minGrade: "A", label: "A-anchor" },
     { id: "usdt-tether", minGrade: "A-", label: "USDT resilience anchor" },
     { id: "dai-makerdao", minGrade: "B", label: "DAI current-facts anchor" },
-    { id: "sdai-makerdao", minGrade: "B-", label: "sDAI current-facts anchor" },
+    { id: "sdai-sky", minGrade: "B-", label: "sDAI current-facts anchor" },
     { id: "sbold-k3-capital", minGrade: "B-", label: "sBOLD measured-withdrawal anchor" },
     { id: "lusd-liquity", minGrade: "B+", label: "LUSD anchor" },
     { id: "pyusd-paypal", minGrade: "B", label: "B-anchor" },

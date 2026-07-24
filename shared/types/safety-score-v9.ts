@@ -845,6 +845,11 @@ const V9BackingPolicySchema = z
         // the reserve-ISSUER concentration measure — the class ladder already
         // prices the sovereign; concentration prices counterparty clustering.
         sovereignConcentrationExemptClasses: z.array(z.enum(["treasury-bill", "government-security"])).default([]),
+        // Allocated commodities are reserve assets, not issuer obligations.
+        // Exempt only their reserve-issuer domain; custodian domains still count.
+        nonCounterpartyReserveIssuerConcentrationExemptClasses: z
+          .array(z.enum(["commodity-allocated"]))
+          .default([]),
       })
       .strict(),
     structural: z

@@ -29,7 +29,7 @@ function passingCards(): V9AnchorGateCard[] {
     card("bold-liquity", 84, "cdp"),
     card("usdt-tether", 80),
     card("dai-makerdao", 72, "cdp"),
-    card("sdai-makerdao", 70, "wrapper"),
+    card("sdai-sky", 70, "wrapper"),
     card("sbold-k3-capital", 70, "wrapper"),
     card("lusd-liquity", 76, "cdp"),
     card("pyusd-paypal", 71),
@@ -170,7 +170,7 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
       card("bold-liquity", 83, "cdp"),
       card("usdt-tether", 80),
       card("dai-makerdao", 70, "cdp"),
-      card("sdai-makerdao", 65, "wrapper"),
+      card("sdai-sky", 65, "wrapper"),
       card("sbold-k3-capital", 65, "wrapper"),
       card("lusd-liquity", 75, "cdp"),
       card("pyusd-paypal", 70),
@@ -205,7 +205,7 @@ describe("evaluateSafetyScoreV9AnchorGate", () => {
     expect(report.decision).toBe("gate-passed");
     expect(verdict(report, "anchor:usdt-tether").required).toBe("score ≥ 80 (A-)");
     expect(verdict(report, "anchor:dai-makerdao").required).toBe("score ≥ 70 (B)");
-    expect(verdict(report, "anchor:sdai-makerdao").required).toBe("score ≥ 65 (B-)");
+    expect(verdict(report, "anchor:sdai-sky").required).toBe("score ≥ 65 (B-)");
     expect(verdict(report, "anchor:sbold-k3-capital").required).toBe("score ≥ 65 (B-)");
     expect(verdict(report, "anchor:ausd-agora").required).toBe("score ≥ 60 (C+)");
     expect(verdict(report, "anchor:zchf-frankencoin").required).toBe("score ≥ 60 (C+)");

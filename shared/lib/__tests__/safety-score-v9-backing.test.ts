@@ -35,6 +35,7 @@ function exposure(args: {
     classificationKey: `class:${args.key}`,
     sourceGenerationId: "reserves:test",
     provenance: args.provenance ?? "curated",
+    ...((args.provenance ?? "curated") === "live" ? {} : { evidenceClass: "independent" as const }),
     status: knownStatus(`evidence:${args.key}`),
     name: args.key,
     weight: args.weight,
@@ -194,7 +195,7 @@ describe("Safety Score v9 backing exposure primitives", () => {
             upstreamAssetId: "parent",
             score: 20,
             evidenceLevel: "limited",
-            reasonCodes: ["material-dependency-unavailable"],
+            reasonCodes: ["missing-reserve-composition"],
             failureDomains: [{ kind: "reserve-issuer", key: "parent" }],
           },
         ],
@@ -205,9 +206,55 @@ describe("Safety Score v9 backing exposure primitives", () => {
     expect(strong.score! - weak.score!).toBeGreaterThan(8);
     expect(weak.unresolved).toContainEqual(
       expect.objectContaining({
-        code: "material-dependency-unavailable",
+        code: "bounded-unknown-reserve-exposure",
         pathKey: "reserve:upstream",
+        treatment: "pillar",
       }),
+    );
+    expect(weak.unresolved).not.toContainEqual(
+      expect.objectContaining({ code: "missing-reserve-composition" }),
+    );
+  });
+
+  it("does not promote a rateable minority upstream ceiling to the whole basket child", () => {
+    const result = evaluateV9ReserveExposures(
+      {
+        ...asset([
+          exposure({ key: "cash", weight: 0.86 }),
+          exposure({
+            key: "buidl-like",
+            weight: 0.14,
+            assetClass: "stablecoin",
+            trackedAssetId: "buidl-like",
+          }),
+        ]),
+        resolvedUpstreamExposures: [
+          {
+            exposureKey: "buidl-like",
+            upstreamAssetId: "buidl-like",
+            score: 50.4,
+            evidenceLevel: "limited",
+            reasonCodes: ["missing-reserve-composition"],
+            failureDomains: [{ kind: "reserve-issuer", key: "buidl-like" }],
+          },
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.contributions.find((entry) => entry.componentKey === "reserve:buidl-like")).toMatchObject({
+      score: 50.4,
+      normalizedWeight: 0.14,
+      upstreamAssetId: "buidl-like",
+    });
+    expect(result.unresolved).toContainEqual({
+      code: "bounded-unknown-reserve-exposure",
+      pathKey: "reserve:buidl-like",
+      gapIds: [],
+      treatment: "pillar",
+    });
+    expect(result.unresolved).not.toContainEqual(
+      expect.objectContaining({ code: "missing-reserve-composition" }),
     );
   });
 
@@ -259,6 +306,81 @@ describe("Safety Score v9 backing exposure primitives", () => {
         responsibility: "measured-adverse",
         materialShare: 0.4,
       }),
+    );
+  });
+
+  it("exempts allocated-commodity issuer domains while retaining custodian concentration", () => {
+    const separateCustodians = evaluateV9ReserveExposures(
+      asset([
+        exposure({
+          key: "gold-a",
+          weight: 0.5,
+          assetClass: "commodity-allocated",
+          issuer: "physical-gold",
+          custodian: "vault-a",
+        }),
+        exposure({
+          key: "gold-b",
+          weight: 0.5,
+          assetClass: "commodity-allocated",
+          issuer: "physical-gold",
+          custodian: "vault-b",
+        }),
+      ]),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const sharedCustodian = evaluateV9ReserveExposures(
+      asset([
+        exposure({
+          key: "gold-a",
+          weight: 0.5,
+          assetClass: "commodity-allocated",
+          issuer: "physical-gold",
+          custodian: "shared-vault",
+        }),
+        exposure({
+          key: "gold-b",
+          weight: 0.5,
+          assetClass: "commodity-allocated",
+          issuer: "physical-gold",
+          custodian: "shared-vault",
+        }),
+      ]),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const ordinaryIssuer = evaluateV9ReserveExposures(
+      asset([
+        exposure({ key: "cash-a", weight: 0.5, issuer: "bank", custodian: "bank-vault-a" }),
+        exposure({ key: "cash-b", weight: 0.5, issuer: "bank", custodian: "bank-vault-b" }),
+      ]),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    const separateConcentration = separateCustodians.contributions.find(
+      (entry) => entry.componentKey === "reserve:concentration",
+    );
+    const sharedConcentration = sharedCustodian.contributions.find(
+      (entry) => entry.componentKey === "reserve:concentration",
+    );
+    const ordinaryConcentration = ordinaryIssuer.contributions.find(
+      (entry) => entry.componentKey === "reserve:concentration",
+    );
+
+    expect(separateConcentration).toMatchObject({ score: 75 });
+    expect(separateConcentration?.failureDomains).toEqual(
+      expect.arrayContaining([
+        { kind: "reserve-custodian", key: "vault-a" },
+        { kind: "reserve-custodian", key: "vault-b" },
+      ]),
+    );
+    expect(separateConcentration?.failureDomains).not.toContainEqual({
+      kind: "reserve-issuer",
+      key: "physical-gold",
+    });
+    expect(sharedConcentration).toMatchObject({ score: 35 });
+    expect(ordinaryConcentration).toMatchObject({ score: 35 });
+    expect(separateCustodians.contributions.find((entry) => entry.componentKey === "reserve:gold-a")?.score).toBe(
+      93.9,
     );
   });
 
@@ -438,6 +560,63 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
       V9_CANDIDATE_POLICY_V1,
     );
     expect(result.score).toBeCloseTo(75, 6);
+  });
+
+  it("uses verified live parent backing without rerunning the child archetype", () => {
+    const liveAsset: V9BackingAssetInput = {
+      ...asset([
+        exposure({
+          key: "parent",
+          weight: 1,
+          assetClass: "stablecoin",
+          trackedAssetId: "parent",
+          issuer: "asset:parent",
+          provenance: "live",
+        }),
+      ]),
+      assetId: "wrapper",
+      inheritedStablecoinBacking: {
+        parentAssetId: "parent",
+        parentBackingScore: 82,
+        weight: 1,
+        tier: "wrapped",
+        failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+      },
+    };
+    const failedFact = (key: string) => ({
+      status: knownStatus(`mechanism:${key}`),
+      quality: "failed" as const,
+      failureDomains: [{ kind: "reserve-issuer" as const, key: `child:${key}` }],
+    });
+    const result = evaluateV9ArchetypeBacking(
+      {
+        archetype: "fiat-cash",
+        asset: liveAsset,
+        components: [
+          { componentKey: "claim-and-segregation", fact: failedFact("claim") },
+          { componentKey: "custody-continuity", fact: failedFact("custody") },
+          { componentKey: "assurance-and-reconciliation", fact: failedFact("assurance") },
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.score).toBe(82);
+    expect(result.contributions).toEqual([
+      expect.objectContaining({
+        componentKey: "reserve:concentration",
+        observationState: "known",
+        provenance: "live",
+      }),
+      expect.objectContaining({
+        componentKey: "reserve:inherited-backing:parent",
+        observationState: "known",
+        provenance: "live",
+        upstreamAssetId: "parent",
+      }),
+    ]);
+    expect(result.contributions.some((entry) => entry.source === "mechanism")).toBe(false);
+    expect(result.unresolved).toEqual([]);
   });
 
   it("keeps sub-1 residual at the bounded-unknown quality", () => {

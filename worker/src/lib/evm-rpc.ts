@@ -67,9 +67,21 @@ export interface EvmMulticall3Result {
   returnData: `0x${string}`;
 }
 
+export type EvmCodeAtBlockResult =
+  | { status: "available"; code: `0x${string}` }
+  | { status: "absent" }
+  | { status: "unavailable" };
+
 interface EvmBlockResult {
-  number: string;
-  timestamp: string;
+  number?: string;
+  timestamp?: string;
+  hash?: string;
+}
+
+export interface EvmBlockHeader {
+  number: number;
+  timestamp: number;
+  hash: `0x${string}`;
 }
 
 function stripHexPrefix(value: string): string {
@@ -288,8 +300,10 @@ async function fetchJsonRpcResult<T>(
   return null;
 }
 
-export function toBlockTag(blockNumberOrTag: number | "latest"): string {
-  return blockNumberOrTag === "latest" ? "latest" : `0x${blockNumberOrTag.toString(16)}`;
+export function toBlockTag(blockNumberOrTag: number | "latest" | "finalized"): string {
+  return typeof blockNumberOrTag === "string"
+    ? blockNumberOrTag
+    : `0x${blockNumberOrTag.toString(16)}`;
 }
 
 function normalizeJsonRpcQuantityHex(value: string): string | null {
@@ -353,9 +367,50 @@ export async function fetchEvmCallHexAtBlock(
   return result as `0x${string}` | null;
 }
 
+export async function fetchEvmCodeStatusAtBlock(
+  chainId: string | undefined,
+  address: string,
+  blockNumberOrTag: number | "latest" = "latest",
+  options?: EvmRpcOptions,
+): Promise<EvmCodeAtBlockResult> {
+  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  if (urls.length === 0) return { status: "unavailable" };
+
+  const result = await fetchJsonRpcResult<string>(
+    urls,
+    "eth_getCode",
+    [address, toBlockTag(blockNumberOrTag)],
+    options,
+    {
+      acceptResult: (value): value is `0x${string}` =>
+        value === "0x" || isHexResult(value as string),
+      rejectedReason: () => "invalid bytecode",
+    },
+  );
+  if (result == null) return { status: "unavailable" };
+  if (result === "0x") return { status: "absent" };
+  return { status: "available", code: result as `0x${string}` };
+}
+
 export async function fetchEvmCodeAtBlock(
   chainId: string | undefined,
   address: string,
+  blockNumberOrTag: number | "latest" = "latest",
+  options?: EvmRpcOptions,
+): Promise<`0x${string}` | null> {
+  const result = await fetchEvmCodeStatusAtBlock(
+    chainId,
+    address,
+    blockNumberOrTag,
+    options,
+  );
+  return result.status === "available" ? result.code : null;
+}
+
+export async function fetchEvmStorageAtBlock(
+  chainId: string | undefined,
+  address: string,
+  position: string,
   blockNumberOrTag: number | "latest" = "latest",
   options?: EvmRpcOptions,
 ): Promise<`0x${string}` | null> {
@@ -364,12 +419,12 @@ export async function fetchEvmCodeAtBlock(
 
   const result = await fetchJsonRpcResult<string>(
     urls,
-    "eth_getCode",
-    [address, toBlockTag(blockNumberOrTag)],
+    "eth_getStorageAt",
+    [address, position, toBlockTag(blockNumberOrTag)],
     options,
     {
       acceptResult: (value): value is `0x${string}` => isHexResult(value as string) && value !== "0x",
-      rejectedReason: () => "empty bytecode",
+      rejectedReason: () => "null storage",
     },
   );
   return result as `0x${string}` | null;
@@ -500,6 +555,41 @@ export async function fetchEvmBlockTimestamp(
   );
 
   return parseHexInteger(block?.timestamp);
+}
+
+export async function fetchEvmBlockHeader(
+  chainId: string,
+  blockNumberOrTag: number | "finalized",
+  options?: EvmRpcOptions,
+): Promise<EvmBlockHeader | null> {
+  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  if (
+    urls.length === 0 ||
+    (typeof blockNumberOrTag === "number" &&
+      (!Number.isSafeInteger(blockNumberOrTag) || blockNumberOrTag < 0))
+  ) {
+    return null;
+  }
+
+  const block = await fetchJsonRpcResult<EvmBlockResult>(
+    urls,
+    "eth_getBlockByNumber",
+    [toBlockTag(blockNumberOrTag), false],
+    options,
+  );
+  const parsedNumber = parseHexInteger(block?.number);
+  const timestamp = parseHexInteger(block?.timestamp);
+  const hash = block?.hash?.toLowerCase();
+  if (
+    parsedNumber === null ||
+    (typeof blockNumberOrTag === "number" && parsedNumber !== blockNumberOrTag) ||
+    timestamp === null ||
+    !hash ||
+    !/^0x[0-9a-f]{64}$/.test(hash)
+  ) {
+    return null;
+  }
+  return { number: parsedNumber, timestamp, hash: hash as `0x${string}` };
 }
 
 export async function resolveClosestBlockAtOrBeforeTimestamp(

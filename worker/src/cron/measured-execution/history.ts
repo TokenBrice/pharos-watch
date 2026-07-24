@@ -16,6 +16,26 @@ function pointKey(point: DexMeasuredExecutionProfile["capacityCurve"][number]): 
   return `${point.requestedNotionalUsd}:${point.maxCostBps}`;
 }
 
+function supportingQuoteCostBps(
+  profile: DexMeasuredExecutionProfile,
+  point: DexMeasuredExecutionProfile["capacityCurve"][number],
+  executableUsd: number,
+): number | null {
+  if (executableUsd <= 0 || point.executableUsd + 0.01 < executableUsd) return null;
+  const proofCosts = profile.quoteProof
+    .filter(
+      (quote) =>
+        quote.passesCostBound &&
+        Math.abs(quote.inputUsd - executableUsd) <= 0.02 &&
+        quote.costBps <= point.maxCostBps,
+    )
+    .map((quote) => quote.costBps);
+  if (proofCosts.length > 0) return Math.max(...proofCosts);
+  return Math.abs(point.executableUsd - executableUsd) <= 0.01
+    ? point.executionCostBps ?? null
+    : null;
+}
+
 function conservativeCurve(
   profiles: readonly DexMeasuredExecutionProfile[],
 ): DexMeasuredExecutionObservationHistory["conservativeCapacityCurve"] | null {
@@ -28,11 +48,21 @@ function conservativeCurve(
     const matching = curves.map((curve) => curve.get(pointKey(point)));
     if (matching.some((candidate) => candidate === undefined)) return null;
     const executableUsd = Math.min(...matching.map((candidate) => candidate!.executableUsd));
+    const realizedCosts = profiles.map((profile, index) =>
+      supportingQuoteCostBps(profile, matching[index]!, executableUsd),
+    );
+    const executionCostBps =
+      executableUsd <= 0
+        ? null
+        : realizedCosts.every((cost): cost is number => cost != null)
+          ? Math.max(...realizedCosts)
+          : point.maxCostBps;
     return {
       requestedNotionalUsd: point.requestedNotionalUsd,
       maxCostBps: point.maxCostBps,
       executableUsd,
       completionRatio: executableUsd / point.requestedNotionalUsd,
+      ...(executionCostBps == null ? {} : { executionCostBps }),
     };
   });
   return result.some((point) => point === null)

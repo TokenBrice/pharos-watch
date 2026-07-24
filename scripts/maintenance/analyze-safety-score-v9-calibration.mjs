@@ -328,6 +328,7 @@ function assertCompilerIdentity(value, label) {
     "exit-route-modeled-confidence.v1",
     "fact-gap-responsibility.v1",
     "journaled-cdp-shock-coverage.v1",
+    "reviewed-deployment-unit-supply-attribution.v1",
     "reviewed-transfer-deployments.v1",
     "wrapper-local-facts.v1",
   ];
@@ -429,7 +430,7 @@ function assertProducerIdentity(value, label, productionProfile) {
     liveReserves: "fixed-input.live-reserves.v1",
     chainSupply:
       productionProfile === "current"
-        ? "fixed-input.usd-circulating-supply.v3"
+        ? "fixed-input.usd-circulating-supply.v4"
         : "fixed-input.usd-circulating-supply.v2",
     peg: "fixed-input.peg-summary.v1",
     researchOverlays: includesReviewedTransfers

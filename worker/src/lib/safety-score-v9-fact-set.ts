@@ -3,9 +3,14 @@ import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { resolveChainId } from "@shared/lib/chains";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
-import { canonicalV9DependencyEdgeKey, canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
+import {
+  canonicalV9DependencyEdgeKey,
+  canonicalV9RouteKey,
+  isV9RepresentationGroupRoute,
+} from "@shared/lib/safety-score-v9/facts";
 import { deriveV9WindowedPegScore } from "@shared/lib/safety-score-v9/formula";
 import {
+  evaluateV9ExitAssetFacts,
   resolveV9ExitCapacityAtRequest,
   selectV9ExitStressRequest,
 } from "@shared/lib/safety-score-v9/exit";
@@ -323,6 +328,7 @@ const RouteReviewSchema = z
     capacityScoringHorizon: z.enum(["immediate", "daily", "queued", "eventual", "unknown"]).optional(),
     settlementModel: z.enum(["atomic", "same-day", "bounded-delay", "queued", "eventual", "unknown"]),
     settlementSlaSec: z.number().int().nonnegative().nullable(),
+    settlementHorizonSec: z.number().int().nonnegative().optional(),
     queueDepthUsd: z.number().finite().nonnegative().nullable().optional(),
     dailyLimitUsd: z.number().finite().nonnegative().nullable().optional(),
     minRedeemUsd: z.number().finite().nonnegative().nullable().optional(),
@@ -461,14 +467,13 @@ const SupplyReviewSchema = z
   })
   .strict();
 
-const IssuerAttestedReserveRowsSchema = z
+const ReviewedStaticReserveRowsSchema = z
   .object({
     rows: canonicalArrayBy(
       ReserveSliceSchema,
       (row) => `${computeSafetyScoreV9ReserveExposureKey(row)}:${stableJsonStringifyV1(row)}`,
-    ).refine((rows) => rows.length > 0, { message: "Issuer-attested reserve admission requires rows" }),
-    evidenceClass: z.literal("issuer-attested"),
-    confidenceMultiplier: z.number().finite().positive().max(1),
+    ).refine((rows) => rows.length > 0, { message: "Reviewed static reserve admission requires rows" }),
+    evidenceClass: z.enum(["independent", "issuer-attested"]),
   })
   .strict();
 
@@ -524,7 +529,7 @@ const AssetExtensionSchema = z
     dependencies: EffectiveDependenciesOverlaySchema.nullable(),
     reserveApplicability: ReserveApplicabilitySchema,
     reserveClassifications: canonicalArrayBy(ReserveClassificationSchema, (row) => row.exposureKey),
-    issuerAttestedReserveRows: IssuerAttestedReserveRowsSchema.nullable().optional(),
+    reviewedStaticReserveRows: ReviewedStaticReserveRowsSchema.nullable().optional(),
     routeReviews: canonicalArrayBy(RouteReviewSchema, (row) => `${row.lane}:${row.routeId}`),
     retainedRoutes: canonicalArrayBy(
       RetainedRouteSchema,
@@ -1397,7 +1402,7 @@ function buildReserves(context: AssetBuildContext): {
   if (context.asset.reserveApplicability.state === "not-applicable") {
     if (
       (context.fixedInput.liveReserveMap[context.asset.assetId] ?? []).length > 0 ||
-      context.asset.issuerAttestedReserveRows != null
+      context.asset.reviewedStaticReserveRows != null
     ) {
       throw new Error(`Reserve applicability for ${context.asset.assetId} conflicts with captured reserve rows`);
     }
@@ -1415,15 +1420,8 @@ function buildReserves(context: AssetBuildContext): {
   }
 
   const liveSlices = context.fixedInput.liveReserveMap[context.asset.assetId] ?? [];
-  const issuerAttested = liveSlices.length === 0 ? (context.asset.issuerAttestedReserveRows ?? null) : null;
-  if (
-    issuerAttested !== null &&
-    issuerAttested.confidenceMultiplier !==
-      V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.issuerAttestedConfidenceMultiplier
-  ) {
-    throw new Error(`Issuer-attested reserve confidence does not match policy for ${context.asset.assetId}`);
-  }
-  const slices = issuerAttested?.rows ?? liveSlices;
+  const reviewedStatic = liveSlices.length === 0 ? (context.asset.reviewedStaticReserveRows ?? null) : null;
+  const slices = reviewedStatic?.rows ?? liveSlices;
   if (slices.length === 0) {
     return {
       reserveStatus: missingLocalFact(context, {
@@ -1452,13 +1450,13 @@ function buildReserves(context: AssetBuildContext): {
   const envelopeGapIds: string[] = [];
   const envelopeEvidenceIds: string[] = [];
   if (
-    issuerAttested &&
-    !context.asset.componentEvidence.some((binding) => binding.componentKey === "issuer-attested-reserves")
+    reviewedStatic &&
+    !context.asset.componentEvidence.some((binding) => binding.componentKey === "reviewed-static-reserves")
   ) {
-    throw new Error(`Issuer-attested reserve admission has no bound evidence for ${context.asset.assetId}`);
+    throw new Error(`Reviewed static reserve admission has no bound evidence for ${context.asset.assetId}`);
   }
-  const issuerAttestedEvidenceIds = issuerAttested
-    ? componentResearchEvidence(context, "issuer-attested-reserves")
+  const reviewedStaticEvidenceIds = reviewedStatic
+    ? componentResearchEvidence(context, "reviewed-static-reserves")
     : [];
 
   for (const [exposureKey, groupedSlices] of [...grouped].sort(([left], [right]) => compareText(left, right))) {
@@ -1476,8 +1474,8 @@ function buildReserves(context: AssetBuildContext): {
     const classification = classificationByKey.get(exposureKey);
     if (classification) consumedClassifications.add(exposureKey);
     assertCompatibleReserveClassification(context.asset.assetId, raw, classification);
-    const evidenceIds = issuerAttested
-      ? issuerAttestedEvidenceIds
+    const evidenceIds = reviewedStatic
+      ? reviewedStaticEvidenceIds
       : [reserveSourceEvidence(context, exposureKey, groupedSlices)];
     const reviewedNonLink = classification?.trackedAssetDisposition === "reviewed-non-link";
     const trackedAssetId = reviewedNonLink
@@ -1547,13 +1545,13 @@ function buildReserves(context: AssetBuildContext): {
     exposures.push({
       exposureKey,
       classificationKey: classification?.classificationKey ?? `base:${exposureKey}`,
-      sourceGenerationId: issuerAttested
+      sourceGenerationId: reviewedStatic
         ? context.extension.sources.researchOverlays.generationId
         : context.extension.sources.liveReserves.generationId,
-      provenance: issuerAttested ? "curated" : "live",
-      ...(issuerAttested
+      provenance: reviewedStatic ? "curated" : "live",
+      ...(reviewedStatic
         ? {
-            evidenceClass: issuerAttested.evidenceClass,
+            evidenceClass: reviewedStatic.evidenceClass,
           }
         : {}),
       status,
@@ -1639,12 +1637,18 @@ function reconcileCollateralDependencyMappings(
   };
 }
 
-function scopeFailureDomains(observation: ExitRouteObservation): V9FailureDomainRef[] {
+function scopeFailureDomains(
+  observation: ExitRouteObservation,
+  lane: "dex" | "redemption",
+): V9FailureDomainRef[] {
   const scope = observation.scope;
   if (scope.kind === "chain-contract") {
     return [
       { kind: "chain", key: scope.chain },
-      { kind: "dex-protocol", key: scope.protocol },
+      {
+        kind: lane === "dex" ? "dex-protocol" : "redemption-rail",
+        key: scope.protocol,
+      },
     ];
   }
   if (scope.kind === "venue") return [{ kind: "dex-protocol", key: scope.protocol }];
@@ -1789,7 +1793,7 @@ function buildRoute(
     args.retained,
   );
   const evidence = context.evidence.get(evidenceId)!;
-  const baseDomains = scopeFailureDomains(args.observation);
+  const baseDomains = scopeFailureDomains(args.observation, args.lane);
 
   if (!args.review) {
     const gapId = routeGap(
@@ -2001,7 +2005,10 @@ function buildRoute(
     request: {
       requestedNotionalUsd: args.observation.requestedNotionalUsd,
       maxCostBps: args.observation.maxCostBps,
-      settlementHorizonSec: args.observation.settlementHorizonSec,
+      settlementHorizonSec: Math.max(
+        args.observation.settlementHorizonSec,
+        args.review.settlementHorizonSec ?? 0,
+      ),
     },
     capacityCurve,
     output,
@@ -2790,7 +2797,11 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
         sourceId:
           v9Attribution === undefined
             ? "report-cards-chain-circulating"
-            : "safety-score-v9-lock-mint-attribution",
+            : v9Attribution.model === "canonical-lock-mint-partition-v1" ||
+                v9Attribution.model ===
+                  "canonical-lock-mint-group-partition-v2"
+              ? "safety-score-v9-lock-mint-attribution"
+              : "safety-score-v9-reviewed-deployment-attribution",
         sourceGenerationId: source.generationId,
         disposition: "observed",
         observedAtSec: safetyScoreV9ChainSupplyObservedAtSec(
@@ -2924,7 +2935,14 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
     unknownRouteSupplyShare: review?.unknownRouteSupplyShare ?? null,
     unreviewedRouteSupplyShare: review?.unreviewedRouteSupplyShare ?? null,
     failureDomains: stableFailureDomains([
-      ...chains.map((chain) => ({ kind: "chain" as const, key: resolveChainId(chain) ?? chain.toLowerCase() })),
+      ...chains.flatMap((chain) =>
+        isV9RepresentationGroupRoute(chain)
+          ? []
+          : [{
+              kind: "chain" as const,
+              key: resolveChainId(chain) ?? chain.toLowerCase(),
+            }],
+      ),
       ...(review?.failureDomains ?? []),
     ]),
   };
@@ -3391,14 +3409,32 @@ function buildWrapperLocalFacts(
     );
   }
 
-  const observedUnwindRoutes = input.exitRoutes.filter(
-    (route) => route.status.observationState === "known" && route.scoreEligible && route.capacityCurve.length > 0,
-  );
-  let measuredUnwind: V9WrapperLocalDimensionFact;
   const stressRequest =
     input.supply.status.observationState === "known"
       ? selectV9ExitStressRequest(input.supply.circulatingUsd, V9_CANDIDATE_POLICY_V1)
       : null;
+  const admittedDocumentedUnwindRouteKeys =
+    stressRequest === null
+      ? new Set<string>()
+      : new Set(
+          evaluateV9ExitAssetFacts(
+            {
+              supply: input.supply,
+              exitStatus: input.exitStatus,
+              exitRoutes: [...input.exitRoutes],
+            },
+            V9_CANDIDATE_POLICY_V1,
+          ).routes.flatMap((route) => (route.included ? [route.routeKey] : [])),
+        );
+  const observedUnwindRoutes = input.exitRoutes.filter(
+    (route) =>
+      (route.status.observationState === "known" && route.scoreEligible && route.capacityCurve.length > 0) ||
+      // Undisclosed-fee credit is conditionally withheld by a later danger gate
+      // that is unavailable while facts are being compiled.
+      (route.feeEvidence !== "undisclosed-reviewed" &&
+        admittedDocumentedUnwindRouteKeys.has(route.routeKey)),
+  );
+  let measuredUnwind: V9WrapperLocalDimensionFact;
   const stressCompletions =
     stressRequest === null
       ? []

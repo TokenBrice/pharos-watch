@@ -304,6 +304,7 @@ export async function buildCurveLookups(
   references?: PriceValidationReferences,
 ): Promise<CurveLookups> {
   const curvePoolMap = new Map<string, CurvePoolEntry>();
+  const curvePoolCandidatesByFingerprint = new Map<string, CurvePoolEntry[]>();
   const priceObservations = new Map<string, DexPriceObs[]>();
   // DeFiLlama yields rows carry UUID pool ids, so the address key alone never
   // matches them; the coin-set fingerprint gives an address-grade join. Two
@@ -423,12 +424,19 @@ export async function buildCurveLookups(
           pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD &&
           !ambiguousFingerprints.has(fingerprintKey)
         ) {
+          const candidates = curvePoolCandidatesByFingerprint.get(fingerprintKey) ?? [];
+          candidates.push(entry);
+          curvePoolCandidatesByFingerprint.set(fingerprintKey, candidates);
           if (curvePoolMap.has(fingerprintKey)) {
             curvePoolMap.delete(fingerprintKey);
             ambiguousFingerprints.add(fingerprintKey);
           } else {
             curvePoolMap.set(fingerprintKey, entry);
           }
+        } else if (fingerprintKey && pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD) {
+          const candidates = curvePoolCandidatesByFingerprint.get(fingerprintKey) ?? [];
+          candidates.push(entry);
+          curvePoolCandidatesByFingerprint.set(fingerprintKey, candidates);
         }
         // Also store by symbol combo for fallback matching
         curvePoolMap.set(`${chain}:${coinSymbols}`, entry);
@@ -479,7 +487,7 @@ export async function buildCurveLookups(
     `[dex-liquidity] Indexed ${curvePoolMap.size} Curve pools, ${priceObservations.size} coins with Curve price obs`,
   );
 
-  return { curvePoolMap, priceObservations };
+  return { curvePoolMap, curvePoolCandidatesByFingerprint, priceObservations };
 }
 
 /** Collect all pool addresses from existing sources for dedup against GT */

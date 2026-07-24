@@ -181,6 +181,36 @@ function makeDexPricePool(overrides: Partial<PoolEntry> & Pick<PoolEntry, "poolI
   };
 }
 
+function curveExecutionModel(): NonNullable<NonNullable<PoolEntry["extra"]>["ammExecutionModel"]> {
+  return {
+    source: "curve",
+    invariant: "stableswap",
+    trackedTokenIndex: 0,
+    feeRate: 0.0004,
+    amplification: 200,
+    tokens: [
+      {
+        address: "0x0000000000000000000000000000000000000011",
+        symbol: "USDC",
+        decimals: 6,
+        balance: 50_000,
+        referencePriceUsd: 1,
+        referencePriceSource: "tracked-market",
+        trackedAssetId: "usdc-circle",
+      },
+      {
+        address: "0x0000000000000000000000000000000000000012",
+        symbol: "USDT",
+        decimals: 6,
+        balance: 50_000,
+        referencePriceUsd: 1,
+        referencePriceSource: "tracked-market",
+        trackedAssetId: "usdt-tether",
+      },
+    ],
+  };
+}
+
 describe("dex-liquidity scoring", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -566,7 +596,7 @@ describe("dex-liquidity scoring", () => {
     });
   });
 
-  it("reuses the full sanitized retained pool graph while metrics expose only the top ten", async () => {
+  it("selects exact route evidence below the display top ten without changing the visible pool list", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
     const metrics = initMetrics("usdc-circle", "USDC");
     const originalPools = Array.from({ length: 12 }, (_, index): PoolEntry => ({
@@ -575,7 +605,7 @@ describe("dex-liquidity scoring", () => {
       chain: "Ethereum",
       tvlUsd: 100_000 - index,
       symbol: "USDC-USDT",
-      volumeUsd1d: 10_000,
+      volumeUsd1d: 20_000 - index,
       volumeUsd7d: 70_000,
       poolType: "curve-stableswap",
       source: "dl",
@@ -583,6 +613,11 @@ describe("dex-liquidity scoring", () => {
         balanceRatio: 0.99,
         balanceDetails: [{ symbol: "USDC", balancePct: 50, isTracked: true }],
         measurement: { tvlMeasured: true, balanceMeasured: true },
+        ...(index === 10
+          ? {
+              ammExecutionModel: curveExecutionModel(),
+            }
+          : {}),
         measuredExecutionTarget: undefined,
         measuredExecutionProfile: {} as NonNullable<PoolEntry["extra"]>["measuredExecutionProfile"],
         measuredExecutionPhysicalPoolId: `pool-${index}`,
@@ -597,9 +632,36 @@ describe("dex-liquidity scoring", () => {
       new Map(),
     );
     const retainedPools = result.retainedPoolsByStablecoin.get("usdc-circle") ?? [];
+    const routeResult = result.scores.get("usdc-circle") as {
+      exitRouteObservations?: Array<{
+        scope: { contractOrPoolId?: string };
+        evidenceKind: string;
+        scoreEligible: boolean;
+      }>;
+      exitRouteObservationCoverage?: {
+        retainedPoolCount: number;
+        scoreEligiblePoolCount?: number;
+        scoreEligibleCapabilityPoolCount?: number;
+      };
+    } | undefined;
 
     expect(retainedPools).toHaveLength(12);
     expect(metrics.topPools).toHaveLength(10);
+    expect(metrics.topPools.map((pool) => pool.poolId)).toEqual(
+      Array.from({ length: 10 }, (_, index) => `ethereum:pool-${index}`),
+    );
+    expect(routeResult?.exitRouteObservations).toContainEqual(
+      expect.objectContaining({
+        scope: expect.objectContaining({ contractOrPoolId: "ethereum:pool-10" }),
+        evidenceKind: "reserve-based-amm-simulation",
+        scoreEligible: true,
+      }),
+    );
+    expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
+      retainedPoolCount: 10,
+      scoreEligiblePoolCount: 1,
+      scoreEligibleCapabilityPoolCount: 1,
+    });
     retainedPools.forEach((pool, index) => {
       expect(pool).toBe(originalPools[index]);
       expect(pool.extra).toMatchObject({
@@ -612,6 +674,225 @@ describe("dex-liquidity scoring", () => {
       expect(pool.extra).not.toHaveProperty("measuredExecutionPhysicalPoolId");
       expect(pool.extra).not.toHaveProperty("measuredExecutionDiagnostic");
     });
+  });
+
+  it("fails coverage closed when reviewed route capabilities overflow the bounded payload", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const metrics = initMetrics("usdc-circle", "USDC");
+    metrics.topPools = Array.from({ length: 11 }, (_, index): PoolEntry => ({
+      poolId: `ethereum:exact-pool-${index}`,
+      project: "curve",
+      chain: "Ethereum",
+      tvlUsd: 100_000 - index,
+      symbol: "USDC-USDT",
+      volumeUsd1d: 20_000 - index,
+      volumeUsd7d: 140_000 - index,
+      poolType: "curve-stableswap",
+      source: "dl",
+      extra: { ammExecutionModel: curveExecutionModel() },
+    }));
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["usdc-circle", metrics]]),
+      new Map(),
+    );
+    const routeResult = result.scores.get("usdc-circle") as {
+      exitRouteObservations?: Array<{ scope: { contractOrPoolId?: string } }>;
+      exitRouteObservationCoverage?: {
+        retainedPoolCount: number;
+        observationCount: number;
+        scoreEligibleObservationCount: number;
+        scoreEligiblePoolCount?: number;
+        scoreEligibleCapabilityPoolCount?: number;
+        unsupportedPoolCount: number;
+        unsupportedReasons: Record<string, number>;
+      };
+    } | undefined;
+
+    expect(metrics.topPools.map((pool) => pool.poolId)).toEqual(
+      Array.from({ length: 10 }, (_, index) => `ethereum:exact-pool-${index}`),
+    );
+    expect(routeResult?.exitRouteObservations).toHaveLength(10);
+    expect(routeResult?.exitRouteObservations).not.toContainEqual(
+      expect.objectContaining({
+        scope: expect.objectContaining({ contractOrPoolId: "ethereum:exact-pool-10" }),
+      }),
+    );
+    expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
+      retainedPoolCount: 11,
+      observationCount: 10,
+      scoreEligibleObservationCount: 10,
+      scoreEligiblePoolCount: 10,
+      scoreEligibleCapabilityPoolCount: 11,
+      unsupportedPoolCount: 1,
+      unsupportedReasons: { routeSelectionCapabilityOverflow: 1 },
+    });
+  });
+
+  it("bounds multi-output exact routes and fails coverage closed when observations overflow", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const metrics = initMetrics("usdc-circle", "USDC");
+    const balancerPool: PoolEntry = {
+      poolId: "ethereum:balancer-three-token",
+      project: "balancer",
+      chain: "Ethereum",
+      tvlUsd: 300_000,
+      symbol: "USDC-USDT-DAI",
+      volumeUsd1d: 30_000,
+      volumeUsd7d: 210_000,
+      poolType: "balancer-weighted",
+      source: "direct_api",
+      extra: {
+        ammExecutionModel: {
+          source: "balancer",
+          invariant: "weighted-constant-mean",
+          trackedTokenIndex: 0,
+          feeRate: 0.001,
+          tokens: [
+            {
+              address: "0x0000000000000000000000000000000000000011",
+              symbol: "USDC",
+              decimals: 6,
+              balance: 100_000,
+              referencePriceUsd: 1,
+              referencePriceSource: "tracked-market",
+              trackedAssetId: "usdc-circle",
+              weight: 0.34,
+            },
+            {
+              address: "0x0000000000000000000000000000000000000012",
+              symbol: "USDT",
+              decimals: 6,
+              balance: 100_000,
+              referencePriceUsd: 1,
+              referencePriceSource: "tracked-market",
+              trackedAssetId: "usdt-tether",
+              weight: 0.33,
+            },
+            {
+              address: "0x0000000000000000000000000000000000000013",
+              symbol: "DAI",
+              decimals: 18,
+              balance: 100_000,
+              referencePriceUsd: 1,
+              referencePriceSource: "tracked-market",
+              trackedAssetId: "dai-makerdao",
+              weight: 0.33,
+            },
+          ],
+        },
+      },
+    };
+    metrics.topPools = [
+      balancerPool,
+      ...Array.from({ length: 9 }, (_, index): PoolEntry => ({
+        poolId: `ethereum:curve-pool-${index}`,
+        project: "curve",
+        chain: "Ethereum",
+        tvlUsd: 100_000 - index,
+        symbol: "USDC-USDT",
+        volumeUsd1d: 20_000 - index,
+        volumeUsd7d: 140_000 - index,
+        poolType: "curve-stableswap",
+        source: "dl",
+        extra: { ammExecutionModel: curveExecutionModel() },
+      })),
+    ];
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["usdc-circle", metrics]]),
+      new Map(),
+    );
+    const routeResult = result.scores.get("usdc-circle") as {
+      exitRouteObservations?: unknown[];
+      exitRouteObservationCoverage?: {
+        retainedPoolCount: number;
+        observationCount: number;
+        scoreEligibleObservationCount: number;
+        scoreEligiblePoolCount?: number;
+        scoreEligibleCapabilityPoolCount?: number;
+        unsupportedPoolCount: number;
+        unsupportedReasons: Record<string, number>;
+      };
+    } | undefined;
+
+    expect(routeResult?.exitRouteObservations).toHaveLength(10);
+    expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
+      retainedPoolCount: 10,
+      observationCount: 10,
+      scoreEligibleObservationCount: 10,
+      scoreEligiblePoolCount: 9,
+      scoreEligibleCapabilityPoolCount: 10,
+      unsupportedPoolCount: 1,
+      unsupportedReasons: { routeObservationPayloadOverflow: 1 },
+    });
+  });
+
+  it("keeps pool coverage complete when clipping only extra outputs from represented pools", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const metrics = initMetrics("usdc-circle", "USDC");
+    metrics.topPools = Array.from({ length: 2 }, (_, poolIndex): PoolEntry => ({
+      poolId: `ethereum:balancer-eight-token-${poolIndex}`,
+      project: "balancer",
+      chain: "Ethereum",
+      tvlUsd: 400_000 - poolIndex,
+      symbol: "USDC-MULTI",
+      volumeUsd1d: 30_000 - poolIndex,
+      volumeUsd7d: 210_000 - poolIndex,
+      poolType: "balancer-weighted",
+      source: "direct_api",
+      extra: {
+        ammExecutionModel: {
+          source: "balancer",
+          invariant: "weighted-constant-mean",
+          trackedTokenIndex: 0,
+          feeRate: 0.001,
+          tokens: Array.from({ length: 8 }, (_, tokenIndex) => ({
+            address: `0x${(poolIndex * 16 + tokenIndex + 1).toString(16).padStart(40, "0")}`,
+            symbol: tokenIndex === 0 ? "USDC" : `TOKEN-${poolIndex}-${tokenIndex}`,
+            decimals: 18,
+            balance: 50_000,
+            referencePriceUsd: 1,
+            referencePriceSource: "tracked-market" as const,
+            ...(tokenIndex === 0 ? { trackedAssetId: "usdc-circle" } : {}),
+            weight: 0.125,
+          })),
+        },
+      },
+    }));
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["usdc-circle", metrics]]),
+      new Map(),
+    );
+    const routeResult = result.scores.get("usdc-circle") as {
+      exitRouteObservations?: unknown[];
+      exitRouteObservationCoverage?: {
+        retainedPoolCount: number;
+        observationCount: number;
+        scoreEligibleObservationCount: number;
+        scoreEligiblePoolCount?: number;
+        scoreEligibleCapabilityPoolCount?: number;
+        unsupportedPoolCount: number;
+        unsupportedReasons: Record<string, number>;
+      };
+    } | undefined;
+
+    expect(routeResult?.exitRouteObservations).toHaveLength(10);
+    expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
+      retainedPoolCount: 2,
+      observationCount: 10,
+      scoreEligibleObservationCount: 10,
+      scoreEligiblePoolCount: 2,
+      scoreEligibleCapabilityPoolCount: 2,
+      unsupportedPoolCount: 0,
+    });
+    expect(routeResult?.exitRouteObservationCoverage?.unsupportedReasons).not.toHaveProperty(
+      "routeObservationPayloadOverflow",
+    );
   });
 
   it("treats missing stability and volume-history tables as first-run state", async () => {

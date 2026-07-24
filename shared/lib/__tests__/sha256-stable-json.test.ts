@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { sha256Hex, sha256HexFromUtf8Chunks } from "../sha256";
+import { sha256Hex, sha256HexFromBytes, sha256HexFromUtf8Chunks } from "../sha256";
 import {
   stableJsonStringifyChunksV1,
   stableJsonStringifyV1,
@@ -11,6 +11,13 @@ function nodeSha256(value: string): string {
 }
 
 describe("incremental SHA-256", () => {
+  it("hashes raw bytes without UTF-8 re-encoding", () => {
+    const bytes = Uint8Array.from([0, 127, 128, 255]);
+    expect(sha256HexFromBytes(bytes)).toBe(
+      createHash("sha256").update(bytes).digest("hex"),
+    );
+  });
+
   it.each([
     "",
     "abc",

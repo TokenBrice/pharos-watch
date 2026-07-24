@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { type LiveReserveAdapterKey } from "../types/live-reserves";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS, LIVE_RESERVE_ADAPTER_DESCRIPTORS } from "./live-reserve-adapter-descriptors";
+import {
+  LIVE_RESERVE_ADAPTER_DEFINITIONS,
+  LIVE_RESERVE_ADAPTER_DESCRIPTORS,
+  LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES,
+} from "./live-reserve-adapter-descriptors";
 import { LiveReservesConfigSchema } from "./live-reserve-adapters-config";
 import {
   adapterParamsSchemas,
@@ -17,6 +21,7 @@ export {
   LiveReservesConfigSchema,
   LIVE_RESERVE_ADAPTER_DESCRIPTORS,
   LIVE_RESERVE_ADAPTER_DEFINITIONS,
+  LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES,
   LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
   LIVE_RESERVE_ADAPTER_PROVENANCE,
   LIVE_RESERVE_ADAPTER_STATUS_VALUES,

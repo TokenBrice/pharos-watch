@@ -356,4 +356,10 @@ describe("Reshape-v3 T4b — sovereign concentration exemption (R1)", () => {
       "government-security",
     ]);
   });
+
+  it("exempts only allocated commodities through the non-counterparty issuer rule", () => {
+    expect(POLICY.policy.semantic.backing.reserve.nonCounterpartyReserveIssuerConcentrationExemptClasses).toEqual([
+      "commodity-allocated",
+    ]);
+  });
 });

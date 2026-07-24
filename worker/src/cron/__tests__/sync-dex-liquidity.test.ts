@@ -656,7 +656,11 @@ describe("syncDexLiquidity", () => {
       expect(pancakeResult.pools).toEqual([]);
       return sourceData;
     });
-    vi.mocked(buildCurveLookups).mockResolvedValueOnce({ curvePoolMap, priceObservations: new Map() });
+    vi.mocked(buildCurveLookups).mockResolvedValueOnce({
+      curvePoolMap,
+      curvePoolCandidatesByFingerprint: new Map(),
+      priceObservations: new Map(),
+    });
     vi.mocked(fetchUniV3Data).mockResolvedValueOnce({
       uniV3PoolFees,
       uniV3SymbolFees: new Map(),

@@ -1,10 +1,25 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, it, expect } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+
+const requestMocks = vi.hoisted(() => ({
+  fetchJsonWithRetry: vi.fn(),
+}));
+
+vi.mock("../helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../helpers")>();
+  return {
+    ...actual,
+    fetchJsonWithRetry: requestMocks.fetchJsonWithRetry,
+  };
+});
+
 import {
   adaptFraxBalanceSheet,
   adaptFraxFpiCollateral,
+  fetchFraxFpiCollateralReserves,
   type FraxBalanceSheetResponse,
   type FraxFpiCollateralResponse,
 } from "../frax";
@@ -13,6 +28,10 @@ const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const FRAX_BALANCE_SHEET_FIXTURE = JSON.parse(
   readFileSync(join(FIXTURES_DIR, "frax-balance-sheet.json"), "utf8"),
 ) as FraxBalanceSheetResponse;
+
+beforeEach(() => {
+  requestMocks.fetchJsonWithRetry.mockReset();
+});
 
 /* ---------- v2 balance-sheet tests ---------- */
 
@@ -207,6 +226,27 @@ const FPI_COLLATERAL_SAMPLE: FraxFpiCollateralResponse = {
 };
 
 describe("adaptFraxFpiCollateral", () => {
+  it("publishes no route metadata when the atomic issuer payload fails", async () => {
+    requestMocks.fetchJsonWithRetry.mockRejectedValueOnce(new Error("issuer API unavailable"));
+    const coin = TRACKED_META_BY_ID.get("fpi-frax");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    let publishedResult: Awaited<ReturnType<typeof fetchFraxFpiCollateralReserves>> | null = null;
+    await expect(
+      fetchFraxFpiCollateralReserves(
+        coin!,
+        coin!.liveReservesConfig!,
+        new AbortController().signal,
+      ).then((result) => {
+        publishedResult = result;
+        return result;
+      }),
+    ).rejects.toThrow("issuer API unavailable");
+
+    expect(publishedResult).toBeNull();
+    expect(requestMocks.fetchJsonWithRetry).toHaveBeenCalledTimes(1);
+  });
+
   it("excludes self-held FPI from collateral slices and nets it against liabilities", () => {
     const result = adaptFraxFpiCollateral(FPI_COLLATERAL_SAMPLE);
 

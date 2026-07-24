@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import initiaIusdAsset from "../../../data/stablecoins/coins/iusd-initia.json";
 import { deriveEffectiveDependencies } from "../../dependency-derivation";
 import { resolveBlacklistStatuses, type BlacklistStatus } from "../../report-card-blacklist-matchers";
 import type { StablecoinMeta, VariantKind } from "../../../types";
@@ -84,5 +85,36 @@ describe("stablecoin variants", () => {
         reserves: undefined,
       }),
     ).toEqual([{ id: "usds-sky", weight: 1, type: "wrapper" }]);
+  });
+
+  it("models Initia iUSD as a pure serial wrapper of AUSD", () => {
+    const iusd = initiaIusdAsset as StablecoinMeta;
+
+    expect(iusd).toMatchObject({
+      variantOf: "ausd-agora",
+      variantKind: "pure-wrapper",
+      pegReferenceId: "ausd-agora",
+      flags: { navToken: false },
+      dependencyReview: {
+        relationships: [
+          {
+            id: "ausd-agora",
+            weight: 1,
+            type: "wrapper",
+            economicRole: "serial-claim",
+          },
+        ],
+      },
+    });
+    expect(iusd.reserves).toContainEqual(
+      expect.objectContaining({
+        pct: 100,
+        coinId: "ausd-agora",
+        depType: "wrapper",
+      }),
+    );
+    expect(deriveEffectiveDependencies(iusd)).toEqual([
+      { id: "ausd-agora", weight: 1, type: "wrapper" },
+    ]);
   });
 });

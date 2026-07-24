@@ -51,6 +51,7 @@ import {
   type V9ExitStressRequest,
 } from "./exit";
 import {
+  isV9RepresentationGroupRoute,
   isV9UncanonicalizedChainPoolRoute,
   readCompiledV9FactSetForEvaluation,
   type V9EvaluationFactSetRead,
@@ -580,11 +581,8 @@ export interface V9SupplyChainExposure {
   shareBySlug: ReadonlyMap<string, number>;
   unattributedShare: number;
   /**
-   * Supply share carried by the pooled row of raw provider chain labels that
-   * failed canonical resolution (`unmatched-chain-label-pool:<assetId>`). The
-   * pool is the unattributed share's only current source; it is tracked
-   * separately so an immaterial pool can be excluded from the common-mode
-   * unattributed add-on (bounded treatment, RULED D-J 2026-07-19).
+   * Reviewed or conservatively pooled supply with no destination-chain split.
+   * The legacy field name is retained for evaluator/test compatibility.
    */
   unmatchedChainLabelPoolShare: number;
   complete: boolean;
@@ -650,15 +648,20 @@ function clampShare(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
-function unmatchedChainLabelPoolShare(supply: V9AssetFactsV2["supply"]): number {
+function boundedPooledChainShare(supply: V9AssetFactsV2["supply"]): number {
   return supply.selectedBridgeRoutes.reduce(
-    (sum, route) => sum + (isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) ? route.supplyShare : 0),
+    (sum, route) =>
+      sum +
+      (isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) ||
+      isV9RepresentationGroupRoute(route.deploymentRouteKey)
+        ? route.supplyShare
+        : 0),
     0,
   );
 }
 
 function summarizeSupplyChainExposure(supply: V9AssetFactsV2["supply"]): V9SupplyChainExposure {
-  const poolShare = unmatchedChainLabelPoolShare(supply);
+  const poolShare = boundedPooledChainShare(supply);
   if (!isKnownRequiredStatus(supply.status)) {
     return {
       shareBySlug: new Map<string, number>(),
@@ -1069,6 +1072,7 @@ function bridgeSupplyIsConsistent(supply: V9AssetFactsV2["supply"]): boolean {
 
 function summarizeBridgeDomainExposure(
   asset: V9AssetFactsV2 | V9AssetFactsV3,
+  representationGroupMaterialShareThreshold: number,
 ): ReadonlyMap<string, V9BridgeDomainExposure> {
   const controlsByKey = new Map(asset.controls.map((control) => [control.controlKey, control]));
   const selectedByDeployment = new Map(
@@ -1099,8 +1103,20 @@ function summarizeBridgeDomainExposure(
       continue;
     }
     const selected = selectedByDeployment.get(control.deploymentKey);
+    const boundedRepresentationGroupMechanism =
+      isV9RepresentationGroupRoute(control.deploymentKey) &&
+      control.status.applicability.state === "required" &&
+      control.status.observationState === "bounded-unknown" &&
+      control.authority?.model === "unknown" &&
+      control.capSemantics.kind !== "unknown" &&
+      control.claimImpairment !== "unknown" &&
+      control.economicLossScope === "deployment" &&
+      control.materialSupplyShare !== null &&
+      control.materialSupplyShare <
+        representationGroupMaterialShareThreshold;
     const validControl =
-      isKnownRequiredStatus(control.status) &&
+      (isKnownRequiredStatus(control.status) ||
+        boundedRepresentationGroupMechanism) &&
       control.controlKind === "bridge" &&
       control.capabilities.includes("bridge-mint");
     const knownZeroExposure =
@@ -1140,7 +1156,13 @@ function summarizeBridgeDomainExposure(
   }
 
   for (const route of asset.supply.selectedBridgeRoutes) {
-    if (route.reviewState !== "selected-reviewed" || validJoinedDeployments.has(route.deploymentRouteKey)) continue;
+    if (
+      route.reviewState !== "selected-reviewed" ||
+      route.reviewedRouteKind === "native" ||
+      validJoinedDeployments.has(route.deploymentRouteKey)
+    ) {
+      continue;
+    }
     const attributableDomain = `bridge-route:${route.deploymentRouteKey}`;
     if (supplyBridgeDomainKeys.has(attributableDomain)) {
       unresolvedDomains.add(attributableDomain);
@@ -1188,7 +1210,15 @@ function buildCommonModeContext(
   return {
     supplyExposure: summarizeSupplyChainExposure(asset.supply),
     dexExposureByDomain: summarizeDexDomainExposure(asset, envelope),
-    bridgeExposureByDomain: summarizeBridgeDomainExposure(asset),
+    bridgeExposureByDomain: summarizeBridgeDomainExposure(
+      asset,
+      Math.min(
+        envelope.policy.semantic.materiality
+          .deploymentMaterialSharePct / 100,
+        envelope.policy.semantic.materiality
+          .commonModeShareThreshold,
+      ),
+    ),
   };
 }
 
@@ -1231,13 +1261,10 @@ function commonModeShareForDomain(
   switch (failureDomain.kind) {
     case "chain": {
       const chainId = resolveChainId(failureDomain.key) ?? failureDomain.key.toLowerCase();
-      // RULED D-J (2026-07-19): an unrecognized-label pool below the common-mode
-      // materiality floor is a bounded diagnostic condition, so it is excluded
-      // from the conservative unattributed add-on. At or above the floor the
-      // full unattributed share keeps inflating every chain's upper bound (the
-      // fail-closed latency case). The pool is the unattributed share's only
-      // current producer; subtract only the pooled part so any future
-      // unattributed source still counts.
+      // A pooled destination distribution below the common-mode floor is
+      // bounded by its exact aggregate share. This covers both unresolved raw
+      // provider labels and reviewed representation groups; at or above the
+      // floor the full unattributed share remains fail-closed.
       const poolShare = context.supplyExposure.unmatchedChainLabelPoolShare;
       const unattributedAddon =
         poolShare < materiality.commonModeShareThreshold
@@ -1557,32 +1584,52 @@ function resolvedBackingExposures(
 }
 
 /**
- * A wrapper whose exact reserve envelope carries no scored exposures but whose
- * whole backing is a single ~100% tracked, rated parent (a reviewed curated
- * collateral holding, or a declared variant/staked layer) inherits that parent's
- * backing pillar. This threads the parent's backing score to backing, which
- * applies the tiered wrapper discount and the bounded-unknown floor. Partial or
- * multi-asset baskets, manual-only dependency guesses, and any envelope with a
- * live/attested exposure keep the generic reserve path.
+ * A wrapper whose whole backing is one ~100% tracked, rated parent inherits that
+ * parent's backing pillar. Missing reserve envelopes retain the reviewed
+ * curated/variant path; a present envelope qualifies only when it is one known,
+ * verified live exposure matching the sole serial wrapper parent.
  */
 function resolveInheritedStablecoinBacking(
   asset: V9AssetFactsV2 | V9AssetFactsV3,
   resolved: V9ResolvedDependencyInputs,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
 ): V9InheritedStablecoinBacking | undefined {
-  if (asset.reserveExposures.length > 0) return undefined;
   if (asset.reserveStatus.applicability.state === "not-applicable") return undefined;
   if (resolved.cycleBlocked) return undefined;
-  // A reviewed curated composition or a declared variant — never a manual-only
-  // dependency guess or an unmapped live envelope.
-  if (asset.dependencies.source !== "variant" && asset.dependencies.baseSource !== "curated-reserve") {
-    return undefined;
-  }
   if (resolved.serial.length + resolved.basket.length !== 1) return undefined;
   const wrapped = resolved.serial.length === 1;
   const upstreamAssetId = wrapped ? resolved.serial[0].upstreamAssetId : resolved.basket[0].upstreamAssetId;
-  const weight = wrapped ? 1 : resolved.basket[0].weight;
   if (wrapped && resolved.serial[0].blocked) return undefined;
+  let weight: number;
+  if (asset.reserveExposures.length === 0) {
+    // A reviewed curated composition or a declared variant — never a
+    // manual-only dependency guess or an unmapped live envelope.
+    if (asset.dependencies.source !== "variant" && asset.dependencies.baseSource !== "curated-reserve") {
+      return undefined;
+    }
+    weight = wrapped ? 1 : resolved.basket[0].weight;
+  } else {
+    if (!wrapped || asset.reserveExposures.length !== 1) return undefined;
+    const exposure = asset.reserveExposures[0]!;
+    const hasWrapperEdge = asset.dependencies.edges.some(
+      (edge) =>
+        edge.pathKind === "serial-dependency" &&
+        edge.dependencyType === "wrapper" &&
+        edge.upstreamAssetId === upstreamAssetId,
+    );
+    if (
+      !hasWrapperEdge ||
+      asset.reserveStatus.applicability.state !== "required" ||
+      asset.reserveStatus.observationState !== "known" ||
+      exposure.provenance !== "live" ||
+      exposure.status.applicability.state !== "required" ||
+      exposure.status.observationState !== "known" ||
+      exposure.trackedAssetId !== upstreamAssetId
+    ) {
+      return undefined;
+    }
+    weight = exposure.weight;
+  }
   if (weight < V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT) return undefined;
   const parent = evaluatedById.get(upstreamAssetId);
   if (!parent || projectV9EffectiveBackingPillarScore(parent) === null) return undefined;
@@ -1907,6 +1954,7 @@ function evaluateV9FactSetRead(
         : undefined;
     const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById);
     const wrapperStrategyTier = resolveV9WrapperStrategyTier(asset, resolved, inheritedStablecoinBacking);
+    const trackRecordMonths = conservativeTrackRecordMonths(asset.implementation.launchedAtSec, factSet.asOfSec);
     const backingAsset = {
       assetId: asset.assetId,
       reserveStatus: asset.reserveStatus,
@@ -1923,7 +1971,7 @@ function evaluateV9FactSetRead(
         ? {}
         : { cdpLiquidationCapacitySelection: liquidationCapacitySelection }),
       ...(inheritedStablecoinBacking === undefined ? {} : { inheritedStablecoinBacking }),
-      trackRecordMonths: conservativeTrackRecordMonths(asset.implementation.launchedAtSec, factSet.asOfSec),
+      trackRecordMonths,
     };
     const backing =
       asset.mechanismRiskReview.review === null
@@ -1933,7 +1981,7 @@ function evaluateV9FactSetRead(
       asset,
       {
         assetId: asset.assetId,
-        trackRecordMonths: conservativeTrackRecordMonths(asset.implementation.launchedAtSec, factSet.asOfSec),
+        trackRecordMonths,
         ...asset.economicControlReview,
       },
       envelope,
@@ -1983,12 +2031,22 @@ function evaluateV9FactSetRead(
         : [];
     const dependencyReasonsInput = dependencyReasons(asset, resolved, dependencyPlan, envelope);
     const dependencySignals = commonSignals.get(assetId) ?? [];
+    const measuredMarketDepth = measuredOperationalMarketDepth(asset, exit, envelope);
+    const implementationHistory =
+      asset.implementation.status.observationState === "known" &&
+      asset.implementation.launchedAtSec !== null
+        ? {
+            minimumLiveHistoryMonths: trackRecordMonths,
+            evidenceRefIds: asset.implementation.status.evidenceRefIds,
+          }
+        : null;
     const operationalResilience =
-      asset.operationalResilience === null || asset.operationalResilience === undefined
+      (asset.operationalResilience === null || asset.operationalResilience === undefined) &&
+      measuredMarketDepth === null
         ? null
         : evaluateV9OperationalResilience(
-            asset.operationalResilience,
-            measuredOperationalMarketDepth(asset, exit, envelope),
+            asset.operationalResilience ?? null,
+            measuredMarketDepth,
             envelope.policy.semantic.operationalResilience,
             operationalResilienceBlockers(
               asset,
@@ -2000,6 +2058,7 @@ function evaluateV9FactSetRead(
               methodologyReasons,
               envelope,
             ),
+            implementationHistory,
           );
     const creditedPillars = applyOperationalResilienceCredits(basePillars, operationalResilience);
     const pillars = applyRoleDependencyPillarLimits(creditedPillars, resolved, envelope);
@@ -2008,7 +2067,7 @@ function evaluateV9FactSetRead(
       identity,
       pillars,
       peg,
-      trackRecordMonths: conservativeTrackRecordMonths(asset.implementation.launchedAtSec, factSet.asOfSec),
+      trackRecordMonths,
       parent: parentInput(
         asset,
         resolved,

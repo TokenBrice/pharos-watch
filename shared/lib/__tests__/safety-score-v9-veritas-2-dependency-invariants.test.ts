@@ -70,6 +70,7 @@ function exposure(key: string, weight: number, trackedAssetId: string | null): V
     classificationKey: `class:${key}`,
     sourceGenerationId: "reserves:veritas-2",
     provenance: "curated",
+    evidenceClass: "independent",
     status: knownStatus(`evidence:${key}`),
     name: key,
     weight,

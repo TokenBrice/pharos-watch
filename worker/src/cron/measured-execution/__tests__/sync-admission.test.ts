@@ -45,6 +45,63 @@ function target(
   };
 }
 
+function curveStableSwapTarget(outputIndex: 0 | 1): DexMeasuredExecutionTarget {
+  const poolTokens = [
+    "0x6b175474e89094c44da98b954eedeac495271d0f",
+    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "0xdac17f958d2ee523a2206206994597c13d831ec7",
+  ];
+  return target("usdt-tether", 160_000_000, `curve-3pool-${outputIndex}`, {
+    adapterProfileId: "curve-stableswap-main-registry-get-dy-v1",
+    protocol: "curve",
+    chain: "ethereum",
+    poolId: "ethereum:0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7",
+    poolTokenAddresses: poolTokens,
+    tokenIn: {
+      address: poolTokens[2]!,
+      symbol: "USDT",
+      decimals: 6,
+      referencePriceUsd: 0.99925,
+      trackedAssetId: "usdt-tether",
+    },
+    tokenOut: {
+      address: poolTokens[outputIndex]!,
+      symbol: outputIndex === 0 ? "DAI" : "USDC",
+      decimals: outputIndex === 0 ? 18 : 6,
+      referencePriceUsd: 1,
+      trackedAssetId: outputIndex === 0 ? "dai-makerdao" : "usdc-circle",
+    },
+  });
+}
+
+function curveStableSwapNgTarget(): DexMeasuredExecutionTarget {
+  const poolTokens = [
+    "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
+    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+  ];
+  return target("usdg-paxos", 20_501_133, "curve-usdg-ng", {
+    adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
+    protocol: "curve",
+    chain: "ethereum",
+    poolId: "ethereum:0xc061caa073f3d95f80f8e5428d32d2d76f5e1622",
+    poolTokenAddresses: poolTokens,
+    tokenIn: {
+      address: poolTokens[0]!,
+      symbol: "USDG",
+      decimals: 6,
+      referencePriceUsd: 1,
+      trackedAssetId: "usdg-paxos",
+    },
+    tokenOut: {
+      address: poolTokens[1]!,
+      symbol: "USDC",
+      decimals: 6,
+      referencePriceUsd: 1,
+      trackedAssetId: "usdc-circle",
+    },
+  });
+}
+
 describe("measured execution overflow admission", () => {
   it("estimates each execution phase plus singleton-retry headroom", () => {
     expect(estimateAdmissionCohortRpcRequests([target("coin-low", 100_000)])).toBe(7);
@@ -77,6 +134,29 @@ describe("measured execution overflow admission", () => {
         }),
       ]),
     ).toBe(12);
+  });
+
+  it("recognizes both reviewed StableSwap directions as one quote-batch cohort", () => {
+    const packet = [curveStableSwapTarget(0), curveStableSwapTarget(1)];
+
+    expect(estimateAdmissionCohortRpcRequests(packet)).toBe(8);
+    const admission = admitTargetsWithinBudget(packet, { maxEstimatedRpcRequests: 8 });
+    expect([...admission.admitted]).toEqual([
+      "target-curve-3pool-0",
+      "target-curve-3pool-1",
+    ]);
+    expect(admission.deferred.size).toBe(0);
+  });
+
+  it("admits the reviewed USDG StableSwap-NG route as one exact quote cohort", () => {
+    const measuredTarget = curveStableSwapNgTarget();
+
+    expect(estimateAdmissionCohortRpcRequests([measuredTarget])).toBe(8);
+    const admission = admitTargetsWithinBudget([measuredTarget], {
+      maxEstimatedRpcRequests: 8,
+    });
+    expect([...admission.admitted]).toEqual(["target-curve-usdg-ng"]);
+    expect(admission.deferred.size).toBe(0);
   });
 
   it("rotates the deterministic coin-level tail instead of starving it", () => {

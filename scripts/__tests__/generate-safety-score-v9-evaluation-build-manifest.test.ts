@@ -50,6 +50,27 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     );
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9-extension-transfer.ts");
     expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain("worker/src/lib/safety-score-v9-extension-shock.ts");
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
+      "worker/src/lib/safety-score-v9-supply-attribution-contract.ts",
+    );
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
+      "worker/src/lib/safety-score-v9-wm-supply-observer.ts",
+    );
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
+      "worker/src/lib/safety-score-v9-xaut-supply-attribution-contract.ts",
+    );
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
+      "worker/src/lib/safety-score-v9-xaut-supply-observer.ts",
+    );
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
+      "worker/src/lib/evm-rpc.ts",
+    );
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
+      "worker/src/lib/evm-selectors.ts",
+    );
+    expect(V9_FACT_PRODUCER_SOURCE_PATHS).toContain(
+      "worker/src/lib/fetch-retry.ts",
+    );
     expect(paths).toContain("shared/lib/safety-score-v9/score.ts");
     expect(paths).toContain("worker/src/lib/safety-score-v9-fact-set.ts");
     expect(paths).not.toContain("shared/lib/safety-score-v9/public.ts");

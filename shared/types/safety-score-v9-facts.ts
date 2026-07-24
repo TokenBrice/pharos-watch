@@ -421,6 +421,20 @@ const V9ReserveExposureFactV2Schema = z
   })
   .strict()
   .superRefine((exposure, ctx) => {
+    if (exposure.provenance === "live" && exposure.evidenceClass !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evidenceClass"],
+        message: "Live reserve exposure must not carry a static evidence class",
+      });
+    }
+    if (exposure.provenance !== "live" && exposure.evidenceClass === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evidenceClass"],
+        message: "Curated reserve exposure requires an evidence class",
+      });
+    }
     if (exposure.status.observationState === "known" && exposure.status.applicability.state === "required") {
       if (exposure.assetClass === null) {
         ctx.addIssue({ code: "custom", path: ["assetClass"], message: "Known reserve exposure requires asset class" });

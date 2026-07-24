@@ -38,20 +38,32 @@ This map links each major Pharos data domain from upstream source to frontend co
 | Timeline / Tape events                | Depeg, freeze, safety-score, PSI, DEWS, mint/burn, yield, methodology, cemetery, and lifecycle source tables/static registries                                                                                                                                                                                                                                                                                                               | `worker/src/cron/project-tape.ts` projects source transitions through class-specific tape projectors on the DEWS/PSI DB-only lane                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `tape_events`                                                                                                                                                                                                                                                               | `GET /api/events`                                                                                                                                                                                             | `useEvents`, `useLatestEvents`, `useTimelineFeedData`                                                                                                                                                                       | `/timeline/` cross-class event feed and homepage timeline modules                                                                                     |
 
 The DEX flow has an additive measured-execution subflow. Pinned Uniswap
-V3 and PancakeSwap V3 QuoterV2/factory RPC reads, the Fluid resolver
-adapter, reviewed Curve CryptoSwap `get_dy` pools, native Solana
+V3, PancakeSwap V3, and Base Aerodrome Slipstream QuoterV2/factory RPC
+reads, the Fluid resolver adapter, reviewed Curve CryptoSwap `get_dy` pools,
+the exact Ethereum legacy Curve 3pool StableSwap `get_dy(int128,int128,uint256)`
+deployment, native Solana
 Raydium CLMM/Orca Whirlpool exact quotes, and shadow Tron SunSwap V2
 factory/reserve plus SUN Smart Router proofs enter
 `worker/src/cron/measured-execution/` through the isolated
 `sync-cl-exit-depth` job. Curve CryptoSwap activation verifies pinned runtime
 code/dependency identities and the on-chain `coins(i)` order before active
-quotes can become score-eligible, so external pool metadata cannot choose the
-physical quote indices alone. The prior retained-pool target generation is
+quotes can become score-eligible. The legacy 3pool path separately binds the
+pool and main-registry runtime hashes, registry LP token, registry and pool
+token order, and token decimals at the quote block. Its two counter-stablecoin
+directions are joined atomically, so a partial packet falls back to the existing
+reserve simulation instead of satisfying physical-pool coverage. The measured
+packet remains diagnostic until both directions have three complete and three
+successful fresh cycles. External pool
+metadata therefore cannot choose physical quote indices alone. The prior
+retained-pool target generation is
 stored in `dex_measured_execution_targets`; raw proof and validated quote
 profiles are generation-fenced in `dex_measured_execution_quotes`. The following
 `sync-dex-liquidity` run consumes only a published prior quote generation and
 exposes proof-free profiles and explicit capability gates through the existing
-DEX API. Unreviewed measured deployment cohorts remain score-ineligible while
+DEX API. Mature fresh last-known-good profiles can remain route-only across a
+temporary liquidity shortlist rotation, without re-entering aggregate liquidity
+or V8 scoring; for the 3pool the route compiler reconstructs both sibling
+directions from the same retained packet or admits neither. Unreviewed measured deployment cohorts remain score-ineligible while
 their activation evidence is pending. SunSwap census rows are excluded from
 liquidity scoring and price consensus; its latest-only TronGrid state reads are
 accepted only inside a bounded before/after block bracket.
@@ -69,6 +81,28 @@ append-only movement reviews. Shadow enrichment, exact-input, compile, or
 persistence failure cannot unwind the V8 batch. A failed attempt can be retried
 later on the same day, and a later successful refresh replaces that day's
 current candidate observation.
+The V9-only supply-attribution enrichment may also bind an aggregate asset supply
+to a reviewed route-ID inventory. The wM observer requires the complete
+Ethereum, Arbitrum, Base, Plume, and Solana deployment packet, verifies pinned
+runtime/controller identities at fixed-clock blocks or slots, and conserves the
+existing aggregate supply while allocating it across routes. The XAUT observer
+binds the configured Tether transparency disclosure to one finalized Ethereum
+token/treasury/adapter observation and the complete reviewed XAUt0
+representation-group inventory. The issuer's `totalAuthorized - notIssued`
+amount is admitted as circulating liabilities only when finalized
+`totalSupply()` and treasury `balanceOf()` independently match the two disclosed
+inputs and quarantined supply is zero. It emits one non-group canonical row and
+one pooled group row carrying the exact locked share of circulating liabilities
+and common failure domains, without claiming destination-chain shares. Any
+missing, duplicate, stale, skewed, issuer/on-chain-mismatched,
+identity-mismatched, inventory-mismatched, materially unresolved, or
+non-conserving packet fails closed; V8 and public payloads remain unchanged.
+Reserve sync may carry a nested candidate-only exact route attempt into the
+redemption-backstop preload and then the V9 extension. The first such path is
+FPI's Controller Pool observation, which is bound to the same successful issuer
+collateral adapter result and one pinned Ethereum block. Accepted and rejected
+attempts remain outside public V8 reserve, redemption, and report-card payload
+semantics.
 `GET /api/admin-safety-score-v9` and its review mutation remain the operator
 surface. The additive `GET /api/report-cards/v9` route now exposes a strict,
 fully identified contract only after its owner activation key matches. A

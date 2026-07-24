@@ -141,6 +141,12 @@ class Sha256Accumulator {
   }
 }
 
+export function sha256HexFromBytes(bytes: Uint8Array): string {
+  const digest = new Sha256Accumulator();
+  digest.update(bytes);
+  return digest.digestHex();
+}
+
 /**
  * Hash UTF-8 text without first joining every chunk into one large string.
  * A trailing UTF-16 high surrogate is carried across chunk boundaries so the

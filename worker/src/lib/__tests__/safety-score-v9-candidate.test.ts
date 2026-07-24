@@ -364,6 +364,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       "exit-route-modeled-confidence.v1",
       "fact-gap-responsibility.v1",
       "journaled-cdp-shock-coverage.v1",
+      "reviewed-deployment-unit-supply-attribution.v1",
       "reviewed-transfer-deployments.v1",
       "wrapper-local-facts.v1",
     ]);
@@ -375,7 +376,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(left.producerCapabilityIdentity.sourceAdapters.redemptionExitRoutes).toBe(
       "fixed-input.redemption-exit-observations.v2",
     );
-    expect(left.producerCapabilityIdentity.sourceAdapters.chainSupply).toBe("fixed-input.usd-circulating-supply.v3");
+    expect(left.producerCapabilityIdentity.sourceAdapters.chainSupply).toBe("fixed-input.usd-circulating-supply.v4");
     expect(left.producerCapabilityIdentity.sourceAdapters.researchOverlays).toBe(
       "v9-fact-extension.review-overlays.v3",
     );
@@ -627,6 +628,52 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
     expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", grade: "A+" });
     expect(result.candidate.cards[0]!.score).toBeGreaterThanOrEqual(87);
     expect(result.evaluatedSet.assets[0]!.trace.bindingCap).toBeNull();
+  });
+
+  it("changes only V9 exit economics when measured points retain realized cost", () => {
+    const fixedInput = exactFixedInput("alpha");
+    const observation = fixedInput.dexLiqMap.alpha!.exitRouteObservations![0]!;
+    observation.evidenceKind = "measured-executable-depth";
+    observation.capacityCurve = observation.capacityCurve!.map((point) => ({
+      ...point,
+      executionCostBps: 20,
+    }));
+    fixedInput.dexPayloadFingerprint = computeDexLiquidityPayloadFingerprint(
+      fixedInput.dexLiqMap,
+      fixedInput.dexGenerationId,
+    );
+    fixedInput.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixedInput);
+
+    const baselineExtension = buildSafetyScoreV9BaselineExtension(fixedInput, {
+      metaById: new Map([["alpha", { id: "alpha", mechanismArchetype: "fiat-cash" }]]),
+    });
+    const realizedExtension = reviewedExtension(fixedInput);
+    realizedExtension.assets[0]!.routeReviews[0]!.executionCosts =
+      baselineExtension.assets[0]!.routeReviews[0]!.executionCosts;
+    const boundedExtension = structuredClone(realizedExtension);
+    boundedExtension.assets[0]!.routeReviews[0]!.executionCosts =
+      boundedExtension.assets[0]!.routeReviews[0]!.executionCosts.map((point) => ({
+        ...point,
+        executionCostBps: point.maxCostBps,
+      }));
+
+    const realized = buildSafetyScoreV9Candidate({
+      fixedInput,
+      extension: realizedExtension,
+      publishedAtSec: PUBLISHED_AT_SEC,
+    });
+    const bounded = buildSafetyScoreV9Candidate({
+      fixedInput,
+      extension: boundedExtension,
+      publishedAtSec: PUBLISHED_AT_SEC,
+    });
+    const realizedInput = realized.evaluatedSet.assets[0]!.scoreInput;
+    const boundedInput = bounded.evaluatedSet.assets[0]!.scoreInput;
+
+    expect(realizedInput.pillars.exit.score).toBeGreaterThan(boundedInput.pillars.exit.score!);
+    expect(realizedInput.pillars.backing).toEqual(boundedInput.pillars.backing);
+    expect(realizedInput.pillars.control).toEqual(boundedInput.pillars.control);
+    expect(realizedInput.peg).toEqual(boundedInput.peg);
   });
 
   it("publishes a strict rated candidate from a supplied reviewed extension", () => {

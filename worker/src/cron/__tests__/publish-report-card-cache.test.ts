@@ -6,7 +6,12 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared
 const mockBuildReportCardsSnapshot = vi.fn();
 const mockBuildFixedInputCacheEntry = vi.fn();
 const mockBuildV9FixedInputCacheEntry = vi.fn();
+const mockNormalizeFixedInput = vi.fn();
 const mockEnrichV9FixedInput = vi.fn();
+const mockLoadEvidenceJournal = vi.fn();
+const mockAppendSupplyAttributionJournal = vi.fn();
+const mockLoadSupplyAttributionJournal = vi.fn();
+const mockCapturePegProvenance = vi.fn();
 const mockRunSafetyScoreV9Shadow = vi.fn();
 const mockSetCacheMany = vi.fn();
 
@@ -17,10 +22,24 @@ vi.mock("../../lib/report-cards-snapshot", () => ({
 vi.mock("../../lib/report-cards-fixed-input", () => ({
   buildReportCardsFixedInputCacheEntry: mockBuildFixedInputCacheEntry,
   buildSafetyScoreV9FixedInputCacheEntry: mockBuildV9FixedInputCacheEntry,
+  normalizeFixedInput: mockNormalizeFixedInput,
 }));
 
 vi.mock("../../lib/safety-score-v9-supply-attribution", () => ({
-  enrichSafetyScoreV9FixedInputSupply: mockEnrichV9FixedInput,
+  enrichSafetyScoreV9FixedInputSupplyWithEvidence: mockEnrichV9FixedInput,
+}));
+
+vi.mock("../../lib/report-card-evidence-journal-store", () => ({
+  loadReportCardEvidenceJournalByIdV1: mockLoadEvidenceJournal,
+}));
+
+vi.mock("../../lib/safety-score-v9-supply-attribution-journal-store", () => ({
+  appendSupplyAttributionJournalV1: mockAppendSupplyAttributionJournal,
+  loadSupplyAttributionJournalByIdV1: mockLoadSupplyAttributionJournal,
+}));
+
+vi.mock("../../lib/safety-score-v9-peg-provenance", () => ({
+  captureSafetyScoreV9PegProvenanceById: mockCapturePegProvenance,
 }));
 
 vi.mock("../../lib/safety-score-v9-shadow-runner", () => ({
@@ -79,6 +98,12 @@ function validSnapshot() {
     fixedInput: {
       sourceGeneration: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
       baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+      activeAssetIds: ["usdc-circle"],
+      clockSec: 1_700_000_000,
+    },
+    v9PegProvenanceSource: {
+      clockSec: 1_700_000_000,
+      eventsByCoin: new Map(),
     },
   };
 }
@@ -88,7 +113,12 @@ describe("publishReportCardCache", () => {
     mockBuildReportCardsSnapshot.mockReset();
     mockBuildFixedInputCacheEntry.mockReset();
     mockBuildV9FixedInputCacheEntry.mockReset();
+    mockNormalizeFixedInput.mockReset();
     mockEnrichV9FixedInput.mockReset();
+    mockLoadEvidenceJournal.mockReset();
+    mockAppendSupplyAttributionJournal.mockReset();
+    mockLoadSupplyAttributionJournal.mockReset();
+    mockCapturePegProvenance.mockReset();
     mockRunSafetyScoreV9Shadow.mockReset();
     mockSetCacheMany.mockReset();
     mockSetCacheMany.mockResolvedValue(undefined);
@@ -105,9 +135,19 @@ describe("publishReportCardCache", () => {
       uncompressedBytes: 640,
     }));
     mockEnrichV9FixedInput.mockImplementation(async (fixedInput) => ({
-      ...fixedInput,
-      safetyScoreV9SupplyAttributionById: {},
+      fixedInput: {
+        ...fixedInput,
+        safetyScoreV9SupplyAttributionById: {},
+      },
+      journalRecords: [],
     }));
+    mockLoadEvidenceJournal.mockResolvedValue({});
+    mockAppendSupplyAttributionJournal.mockResolvedValue({ accepted: 0, assets: 0 });
+    mockLoadSupplyAttributionJournal.mockResolvedValue({});
+    mockCapturePegProvenance.mockReturnValue({
+      "usdc-circle": { marker: "compact-peg-provenance" },
+    });
+    mockNormalizeFixedInput.mockImplementation((value) => value);
     mockRunSafetyScoreV9Shadow.mockImplementation(async (shadowInput) => {
       await shadowInput.prepareFixedInput?.(shadowInput.fixedInput, new AbortController().signal);
       return {
@@ -136,6 +176,27 @@ describe("publishReportCardCache", () => {
     expect(mockRunSafetyScoreV9Shadow).toHaveBeenCalledTimes(1);
     expect(mockSetCacheMany.mock.invocationCallOrder[0]).toBeLessThan(
       mockEnrichV9FixedInput.mock.invocationCallOrder[0]!,
+    );
+    expect(mockLoadEvidenceJournal).toHaveBeenCalledTimes(1);
+    expect(mockLoadSupplyAttributionJournal).toHaveBeenCalledTimes(1);
+    expect(mockCapturePegProvenance).toHaveBeenCalledWith(
+      expect.objectContaining({
+        safetyScoreV9SupplyAttributionById: {},
+      }),
+      expect.objectContaining({
+        clockSec: 1_700_000_000,
+        eventsByCoin: expect.any(Map),
+      }),
+    );
+    expect(mockBuildV9FixedInputCacheEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evidenceJournalById: {},
+        supplyAttributionJournalById: {},
+        pegProvenanceById: {
+          "usdc-circle": { marker: "compact-peg-provenance" },
+        },
+      }),
+      expect.anything(),
     );
     const entries = mockSetCacheMany.mock.calls[0]?.[1] as Array<{ key: string; value: string }>;
     expect(entries.map((entry) => entry.key)).toEqual([
@@ -178,6 +239,8 @@ describe("publishReportCardCache", () => {
     expect(v9Entries.map((entry) => entry.key)).toEqual(["report-cards:v9-fixed-input:exact"]);
     expect(JSON.parse(v9Entries[0]!.value)).toMatchObject({ fixed: "v9-input-envelope" });
     expect(snapshot.payload).not.toHaveProperty("fixedInput");
+    expect(snapshot.payload).not.toHaveProperty("v9PegProvenanceSource");
+    expect(entries.every((entry) => !entry.value.includes("eventsByCoin"))).toBe(true);
     expect(JSON.parse(result.metadata!)).toMatchObject({
       v9FixedInputCacheBytes: 320,
       v9FixedInputUncompressedBytes: 640,
@@ -215,6 +278,108 @@ describe("publishReportCardCache", () => {
   it("keeps the committed V8 publication authoritative when V9 input enrichment fails", async () => {
     mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
     mockEnrichV9FixedInput.mockRejectedValue(new Error("shadow RPC unavailable"));
+
+    const result = await publishReportCardCache({} as D1Database);
+
+    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
+    expect(result.productivity?.productive).toBe(true);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      publicationGenerationId: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
+      v9FixedInputCacheBytes: null,
+      v9Shadow: { status: "failed", stage: "scheduler", code: "Error" },
+    });
+  });
+
+  it("keeps the committed V8 publication authoritative when the diagnostic journal read fails", async () => {
+    mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
+    mockLoadEvidenceJournal.mockRejectedValue(new Error("journal D1 unavailable"));
+
+    const result = await publishReportCardCache({} as D1Database);
+
+    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
+    expect(result.productivity?.productive).toBe(true);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      publicationGenerationId: `report-cards:${METHODOLOGY_VERSION}:1700000000`,
+      v9FixedInputCacheBytes: null,
+      v9Shadow: { status: "failed", stage: "scheduler", code: "Error" },
+    });
+  });
+
+  it("persists the current supply attempt after loading only prior journal evidence", async () => {
+    mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
+    const current = { completedAtSec: 1_700_000_001, attemptId: "current" };
+    const prior = { completedAtSec: 1_699_999_900, attemptId: "prior" };
+    const priorXaut = { completedAtSec: 1_699_999_800, attemptId: "prior-xaut" };
+    mockEnrichV9FixedInput.mockImplementation(async (fixedInput) => ({
+      fixedInput: {
+        ...fixedInput,
+        activeAssetIds: ["usdc-circle", "wm-m0", "xaut-tether"],
+        safetyScoreV9SupplyAttributionById: {},
+      },
+      journalRecords: [current],
+    }));
+    mockLoadSupplyAttributionJournal.mockResolvedValue({
+      "wm-m0": [prior],
+      "xaut-tether": [priorXaut],
+    });
+
+    await publishReportCardCache({} as D1Database);
+
+    expect(mockLoadSupplyAttributionJournal).toHaveBeenCalledWith(
+      expect.anything(),
+      ["wm-m0", "xaut-tether"],
+      1_700_000_000,
+      expect.any(AbortSignal),
+    );
+    expect(mockLoadSupplyAttributionJournal.mock.invocationCallOrder[0]).toBeLessThan(
+      mockAppendSupplyAttributionJournal.mock.invocationCallOrder[0]!,
+    );
+    expect(mockAppendSupplyAttributionJournal).toHaveBeenCalledWith(
+      expect.anything(),
+      [current],
+      expect.any(Number),
+      expect.any(AbortSignal),
+    );
+    expect(mockBuildV9FixedInputCacheEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        supplyAttributionJournalById: {
+          "wm-m0": [prior],
+          "xaut-tether": [priorXaut],
+        },
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("keeps V8 authoritative when immutable supply-attribution provenance cannot append", async () => {
+    mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
+    mockEnrichV9FixedInput.mockImplementation(async (fixedInput) => ({
+      fixedInput: {
+        ...fixedInput,
+        activeAssetIds: ["usdc-circle", "wm-m0"],
+        safetyScoreV9SupplyAttributionById: {},
+      },
+      journalRecords: [{ completedAtSec: 1_700_000_001 }],
+    }));
+    mockAppendSupplyAttributionJournal.mockRejectedValue(
+      new Error("supply journal unavailable"),
+    );
+
+    const result = await publishReportCardCache({} as D1Database);
+
+    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
+    expect(result.productivity?.productive).toBe(true);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      v9FixedInputCacheBytes: null,
+      v9Shadow: { status: "failed", stage: "scheduler", code: "Error" },
+    });
+  });
+
+  it("keeps the committed V8 publication authoritative when peg provenance capture fails", async () => {
+    mockBuildReportCardsSnapshot.mockResolvedValue(validSnapshot());
+    mockCapturePegProvenance.mockImplementation(() => {
+      throw new Error("peg provenance summary mismatch");
+    });
 
     const result = await publishReportCardCache({} as D1Database);
 

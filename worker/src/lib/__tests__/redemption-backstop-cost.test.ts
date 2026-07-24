@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import {
   REDEMPTION_FEE_SCORE_BREAKPOINTS,
   resolveCostScenarioScores,
   resolveBoundedFeeScore,
+  resolveRedemptionStaticFields,
 } from "../redemption-backstop-cost";
 
 describe("resolveBoundedFeeScore", () => {
@@ -93,5 +95,28 @@ describe("resolveCostScenarioScores", () => {
 
     expect(scores?.activeUser).toBe(60);
     expect(scores?.institutional).toBe(60);
+  });
+});
+
+describe("V8 compatibility", () => {
+  it("does not apply V9-only USDT route terms to legacy cost scenarios", () => {
+    const config = getRedemptionBackstopConfig("usdt-tether")!;
+    const fields = resolveRedemptionStaticFields("usdt-tether", config, {
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      outputAssetQualityScore: 100,
+    });
+
+    expect(config.costModel).not.toHaveProperty("minFeeUsd");
+    expect(fields).toMatchObject({
+      costScore: 100,
+      feeBps: null,
+      costScenarioScores: {
+        retail: 100,
+        activeUser: 100,
+        institutional: 100,
+      },
+    });
   });
 });

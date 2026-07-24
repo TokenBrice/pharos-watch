@@ -40,6 +40,8 @@ import {
   buildRedemptionExitRouteObservation,
   deriveSupplyModelExitRouteObservation,
 } from "./redemption-exit-route-observations";
+import { buildFpiControllerV9ExitRouteObservation } from "./fpi-controller-redemption-route";
+import { buildSfrxusdCrosschainV9ExitRouteObservation } from "./sfrxusd-crosschain-redemption-route";
 
 function resolveStaticFields(
   stablecoinId: string,
@@ -211,23 +213,40 @@ export async function buildRedemptionBackstopEntry(
         ...(modeledExitSizeUsd != null ? { modeledExitSizeUsd } : {}),
       }
     : undefined;
-  const exitRouteObservation = buildRedemptionExitRouteObservation({
-    stablecoinId,
-    config,
-    capacityProfile: baseCapacityProfile,
-    scoringCapacityUsd: capacity.scoringCapacityUsd,
-    supplyUsd,
-    routeStatus,
-    resolutionState,
-    sourceMode: capacity.sourceMode,
-    capacityConfidence: capacity.capacityConfidence,
-    ...(capacity.capacityKind ? { capacityKind: capacity.capacityKind } : {}),
-    ...(capacity.freshnessKind ? { freshnessKind: capacity.freshnessKind } : {}),
-    ...(capacity.sourceTimestamp != null ? { sourceTimestamp: capacity.sourceTimestamp } : {}),
-    ...(capacity.settlementDelaySec != null ? { settlementDelaySec: capacity.settlementDelaySec } : {}),
-    resolvedFeeBps: staticFields.feeBps,
-    now,
-  });
+  const exitRouteObservation = liveMetadata.v9SfrxusdCrosschainRouteState
+    ? buildSfrxusdCrosschainV9ExitRouteObservation({
+        state: liveMetadata.v9SfrxusdCrosschainRouteState,
+        modeledExitSizeUsd,
+        routeStatus,
+        resolutionState,
+        now,
+      })
+    : (liveMetadata.v9FpiControllerRouteState
+        ? buildFpiControllerV9ExitRouteObservation({
+            state: liveMetadata.v9FpiControllerRouteState,
+            modeledExitSizeUsd,
+            routeStatus,
+            resolutionState,
+            now,
+          })
+        : null) ??
+      buildRedemptionExitRouteObservation({
+        stablecoinId,
+        config,
+        capacityProfile: baseCapacityProfile,
+        scoringCapacityUsd: capacity.scoringCapacityUsd,
+        supplyUsd,
+        routeStatus,
+        resolutionState,
+        sourceMode: capacity.sourceMode,
+        capacityConfidence: capacity.capacityConfidence,
+        ...(capacity.capacityKind ? { capacityKind: capacity.capacityKind } : {}),
+        ...(capacity.freshnessKind ? { freshnessKind: capacity.freshnessKind } : {}),
+        ...(capacity.sourceTimestamp != null ? { sourceTimestamp: capacity.sourceTimestamp } : {}),
+        ...(capacity.settlementDelaySec != null ? { settlementDelaySec: capacity.settlementDelaySec } : {}),
+        resolvedFeeBps: staticFields.feeBps,
+        now,
+      });
   const capacityProfile = baseCapacityProfile
     ? {
         ...baseCapacityProfile,

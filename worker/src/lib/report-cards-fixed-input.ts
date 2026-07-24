@@ -29,7 +29,24 @@ import {
   SafetyScoreV8PublicationIdentitySchema,
   type SafetyScoreV8PublicationIdentity,
 } from "@shared/types/safety-score-publication";
+import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/lib/report-card-evidence-journal";
+import { SupplyAttributionJournalByIdV1Schema } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
+import {
+  projectSafetyScoreV9PegScoreResult,
+  projectSafetyScoreV9PegSummary,
+  SafetyScoreV9PegProvenanceSummarySchema,
+} from "./safety-score-v9-peg-provenance";
+import {
+  normalizeReviewedDeploymentAttribution,
+  reviewedDeploymentAttributionValidationError,
+} from "./safety-score-v9-supply-attribution-contract";
+import {
+  normalizeXautRepresentationGroupAttribution,
+  XAUT_ASSET_ID,
+  XautRepresentationGroupSupplyAttributionV2Schema,
+  xautRepresentationGroupAttributionValidationError,
+} from "./safety-score-v9-xaut-supply-attribution-contract";
 import { buildLiveReportCards } from "./report-cards-snapshot-card";
 import {
   buildDefunctReportCards,
@@ -53,7 +70,7 @@ const NavPriceObservationSchema = z.strictObject({
   confidence: z.enum(["high", "medium", "low", "unknown"]),
 });
 
-const SafetyScoreV9SupplyAttributionSchema = z.strictObject({
+const CanonicalLockMintSupplyAttributionSchema = z.strictObject({
   model: z.literal("canonical-lock-mint-partition-v1"),
   observedAtSec: z.number().int().nonnegative(),
   currentSupplyUsdByChain: z
@@ -62,6 +79,43 @@ const SafetyScoreV9SupplyAttributionSchema = z.strictObject({
       message: "V9 lock/mint attribution requires canonical and pooled supply rows",
     }),
 });
+
+const ReviewedDeploymentSupplyRowSchema = z.strictObject({
+  routeId: z.string().trim().min(1),
+  chainId: z.string().trim().min(1),
+  contractAddress: z.string().trim().min(1),
+  decimals: z.number().int().min(0).max(36),
+  rawSupply: z.string().regex(/^(0|[1-9][0-9]*)$/),
+  blockNumberOrSlot: z.string().regex(/^(0|[1-9][0-9]*)$/),
+  blockTimeSec: z.number().int().nonnegative(),
+  blockHash: z.string().trim().min(1),
+  runtimeCodeSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  implementationAddress: z.string().trim().min(1).optional(),
+  implementationCodeSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  underlyingTokenAddress: z.string().trim().min(1).optional(),
+  controllerAddress: z.string().trim().min(1).optional(),
+  controllerProgramOwner: z.string().trim().min(1).optional(),
+  programOwner: z.string().trim().min(1).optional(),
+  mintAuthority: z.string().trim().min(1).optional(),
+  currentSupplyUsd: z.number().finite().nonnegative(),
+});
+
+const ReviewedDeploymentUnitPartitionSchema = z.strictObject({
+  model: z.literal("reviewed-deployment-unit-partition-v1"),
+  assetId: z.string().trim().min(1),
+  observedAtSec: z.number().int().nonnegative(),
+  captureStartedAtSec: z.number().int().nonnegative(),
+  captureEndedAtSec: z.number().int().nonnegative(),
+  registryFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+  routeInventoryDigest: z.string().regex(/^[a-f0-9]{64}$/),
+  deployments: z.array(ReviewedDeploymentSupplyRowSchema).min(2),
+});
+
+const SafetyScoreV9SupplyAttributionSchema = z.discriminatedUnion("model", [
+  CanonicalLockMintSupplyAttributionSchema,
+  XautRepresentationGroupSupplyAttributionV2Schema,
+  ReviewedDeploymentUnitPartitionSchema,
+]);
 
 const DexDeploymentSupplyCoverageSchema: z.ZodType<DexDeploymentSupplyCoverage> = z.strictObject({
   totalSupplyUsd: z.number().finite().positive(),
@@ -144,6 +198,18 @@ const FixedInputPayloadFields = {
   // the latter is an exact V8 replay input and must match the public snapshot.
   safetyScoreV9SupplyAttributionById: z
     .record(z.string(), SafetyScoreV9SupplyAttributionSchema)
+    .default({}),
+  // Diagnostic-only producer provenance. This is carried in the private V9
+  // envelope but intentionally excluded from every score-bearing identity.
+  evidenceJournalById: ReportCardEvidenceJournalByIdV1Schema.default({}),
+  // Supply-attribution attempts complete after the source snapshot clock, so
+  // only prior bounded rows can enter a private V9 exact-input envelope.
+  supplyAttributionJournalById:
+    SupplyAttributionJournalByIdV1Schema.default({}),
+  // V9-only historical peg evidence quality. Raw depeg events never enter the
+  // fixed input; only canonical score-neutral summaries and their digests do.
+  pegProvenanceById: z
+    .record(z.string(), SafetyScoreV9PegProvenanceSummarySchema)
     .default({}),
   dexDeploymentSupplyCoverageById: z.record(z.string(), DexDeploymentSupplyCoverageSchema).default({}),
   collateralDriftCoins: z
@@ -253,7 +319,7 @@ async function gunzipText(bytes: Uint8Array): Promise<string> {
 async function buildFixedInputCacheEntry(
   key: string,
   value: unknown,
-  includeV9SupplyAttribution: boolean,
+  includeV9OnlyFields: boolean,
   safetyScoreIdentity?: SafetyScoreV8PublicationIdentity,
 ): Promise<{ key: string; value: string; storedBytes: number; uncompressedBytes: number }> {
   const input = normalizeFixedInput(value);
@@ -270,8 +336,14 @@ async function buildFixedInputCacheEntry(
   ) {
     throw new Error("Exact report-card fixed input does not match its Safety Score publication identity");
   }
-  const { safetyScoreV9SupplyAttributionById: _v9SupplyAttribution, ...v8Input } = input;
-  const payload = JSON.stringify(includeV9SupplyAttribution ? input : v8Input);
+  const {
+    safetyScoreV9SupplyAttributionById: _v9SupplyAttribution,
+    evidenceJournalById: _evidenceJournal,
+    supplyAttributionJournalById: _supplyAttributionJournal,
+    pegProvenanceById: _pegProvenance,
+    ...v8Input
+  } = input;
+  const payload = JSON.stringify(includeV9OnlyFields ? input : v8Input);
   const uncompressedBytes = new TextEncoder().encode(payload);
   const compressed = await gzipBytes(uncompressedBytes);
   const envelope = JSON.stringify({
@@ -503,6 +575,9 @@ export type ReportCardsFixedInputDraft = Omit<
   | "baseInputGenerationId"
   | "aggregateCirculatingById"
   | "safetyScoreV9SupplyAttributionById"
+  | "evidenceJournalById"
+  | "supplyAttributionJournalById"
+  | "pegProvenanceById"
 > & {
   captureKind: ReportCardsFixedInput["captureKind"];
   activeAssetIds?: string[];
@@ -510,6 +585,9 @@ export type ReportCardsFixedInputDraft = Omit<
   // keep compiling; the schema default fills in an empty record.
   aggregateCirculatingById?: ReportCardsFixedInput["aggregateCirculatingById"];
   safetyScoreV9SupplyAttributionById?: ReportCardsFixedInput["safetyScoreV9SupplyAttributionById"];
+  evidenceJournalById?: ReportCardsFixedInput["evidenceJournalById"];
+  supplyAttributionJournalById?: ReportCardsFixedInput["supplyAttributionJournalById"];
+  pegProvenanceById?: ReportCardsFixedInput["pegProvenanceById"];
 };
 
 export function createReportCardsFixedInput(draft: ReportCardsFixedInputDraft): ReportCardsFixedInput {
@@ -646,17 +724,105 @@ function assertFixedInputConsistency(input: ReportCardsFixedInput): void {
     if (attribution.observedAtSec > input.clockSec) {
       throw new Error(`V9 supply attribution for ${assetId} is later than the scoring clock`);
     }
+    if (
+      assetId === XAUT_ASSET_ID &&
+      attribution.model === "canonical-lock-mint-partition-v1"
+    ) {
+      throw new Error(
+        "Legacy XAUT lock/mint attribution is no longer admissible; a reconciled V2 packet is required",
+      );
+    }
     const aggregate = input.aggregateCirculatingById[assetId];
     const aggregateSupplyUsd = Object.values(aggregate?.circulating ?? {}).reduce((sum, value) => sum + value, 0);
-    const attributedSupplyUsd = Object.values(attribution.currentSupplyUsdByChain).reduce(
-      (sum, value) => sum + value,
-      0,
-    );
+    const attributedSupplyUsd =
+      attribution.model === "canonical-lock-mint-partition-v1"
+        ? Object.values(attribution.currentSupplyUsdByChain).reduce((sum, value) => sum + value, 0)
+        : attribution.model === "canonical-lock-mint-group-partition-v2"
+          ? attribution.canonical.currentSupplyUsd +
+            attribution.representationGroup.currentSupplyUsd
+          : attribution.deployments.reduce((sum, deployment) => sum + deployment.currentSupplyUsd, 0);
     const toleranceUsd = Math.max(0.000001, aggregateSupplyUsd * 1e-12);
     if (aggregateSupplyUsd <= 0 || Math.abs(attributedSupplyUsd - aggregateSupplyUsd) > toleranceUsd) {
       throw new Error(
         `V9 supply attribution for ${assetId} does not conserve aggregate circulating USD`,
       );
+    }
+    if (attribution.model === "reviewed-deployment-unit-partition-v1") {
+      const validationError = reviewedDeploymentAttributionValidationError({
+        assetId,
+        attribution,
+        aggregateSupplyUsd,
+        registryFingerprint: input.registryFingerprint,
+        clockSec: input.clockSec,
+      });
+      if (validationError) throw new Error(validationError);
+    } else if (attribution.model === "canonical-lock-mint-group-partition-v2") {
+      if (attribution.assetId !== assetId) {
+        throw new Error(
+          `V9 supply attribution key ${assetId} does not match packet asset ${attribution.assetId}`,
+        );
+      }
+      const validationError = xautRepresentationGroupAttributionValidationError({
+        attribution,
+        aggregateSupplyUsd,
+        registryFingerprint: input.registryFingerprint,
+        clockSec: input.clockSec,
+      });
+      if (validationError) throw new Error(validationError);
+    }
+  }
+  for (const [assetId, records] of Object.entries(input.evidenceJournalById)) {
+    if (!input.activeAssetIds.includes(assetId)) {
+      throw new Error(`Evidence journal targets inactive asset ${assetId}`);
+    }
+    for (const record of records) {
+      if (record.completedAtSec > input.clockSec) {
+        throw new Error(`Evidence journal for ${assetId} is later than the scoring clock`);
+      }
+    }
+  }
+  for (const [assetId, records] of Object.entries(
+    input.supplyAttributionJournalById,
+  )) {
+    if (!input.activeAssetIds.includes(assetId)) {
+      throw new Error(
+        `Supply attribution journal targets inactive asset ${assetId}`,
+      );
+    }
+    for (const record of records) {
+      if (record.completedAtSec > input.clockSec) {
+        throw new Error(
+          `Supply attribution journal for ${assetId} is later than the scoring clock`,
+        );
+      }
+    }
+  }
+  const pegProvenanceIds = Object.keys(input.pegProvenanceById);
+  if (pegProvenanceIds.length > 0) {
+    assertSameIds(
+      pegProvenanceIds,
+      Object.keys(input.pegDataById),
+      "V9 peg provenance rows",
+    );
+  }
+  for (const [assetId, summary] of Object.entries(input.pegProvenanceById)) {
+    const pegSummary = input.pegDataById[assetId];
+    if (!pegSummary || summary.assetId !== assetId) {
+      throw new Error(`V9 peg provenance does not match peg row ${assetId}`);
+    }
+    if (
+      summary.clockSec !== input.clockSec ||
+      summary.trackingStartSec !== (pegSummary.historyCoverage?.startedAt ?? null)
+    ) {
+      throw new Error(`V9 peg provenance clock/coverage does not match peg row ${assetId}`);
+    }
+    if (
+      stableJsonStringifyV1(
+        projectSafetyScoreV9PegScoreResult(summary.legacyInclusive.result),
+      ) !==
+      stableJsonStringifyV1(projectSafetyScoreV9PegSummary(pegSummary))
+    ) {
+      throw new Error(`V9 peg provenance score does not match peg row ${assetId}`);
     }
   }
   const expectedBaseInputGenerationId = deriveReportCardsBaseInputGenerationId(input);
@@ -780,13 +946,23 @@ export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
       Object.fromEntries(
         Object.entries(input.safetyScoreV9SupplyAttributionById).map(([assetId, attribution]) => [
           assetId,
-          {
-            ...attribution,
-            currentSupplyUsdByChain: sortedRecord(attribution.currentSupplyUsdByChain),
-          },
+          attribution.model === "canonical-lock-mint-partition-v1"
+            ? {
+                ...attribution,
+                currentSupplyUsdByChain: sortedRecord(attribution.currentSupplyUsdByChain),
+              }
+            : attribution.model === "canonical-lock-mint-group-partition-v2"
+              ? normalizeXautRepresentationGroupAttribution(attribution)
+              : normalizeReviewedDeploymentAttribution(attribution),
         ]),
       ),
     ),
+    evidenceJournalById: ReportCardEvidenceJournalByIdV1Schema.parse(input.evidenceJournalById),
+    supplyAttributionJournalById:
+      SupplyAttributionJournalByIdV1Schema.parse(
+        input.supplyAttributionJournalById,
+      ),
+    pegProvenanceById: sortedRecord(input.pegProvenanceById),
     dexDeploymentSupplyCoverageById: sortedRecord(input.dexDeploymentSupplyCoverageById),
     liveReserveProvenanceMap: sortedRecord(input.liveReserveProvenanceMap),
     collateralDriftCoins: [...input.collateralDriftCoins].sort((left, right) => left.id.localeCompare(right.id)),

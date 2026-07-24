@@ -70,6 +70,20 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
   it("captures candidate-specific fee and output details", () => {
+    expect(getRedemptionBackstopConfig("usdt-tether")).toMatchObject({
+      costModel: {
+        kind: "dynamic-or-unclear",
+        feeDescription: "0.10% with a $1,000 minimum",
+        feeBpsMax: 10,
+      },
+      v9RouteCostTerms: { minFeeUsd: 1_000 },
+      v9RouteReviewTerms: {
+        minRedeemUsd: 100_000,
+        settlementModel: "days",
+      },
+      settlementModel: "same-day",
+    });
+
     expect(getRedemptionBackstopConfig("lisusd-lista")).toMatchObject({
       routeFamily: "psm-swap",
       capacityModel: { kind: "supply-ratio", ratio: 0.15 },
@@ -126,6 +140,12 @@ describe("getRedemptionBackstopConfig", () => {
       capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "dynamic-or-unclear", confidence: "formula" },
       reviewedAt: "2026-03-22",
+    });
+
+    expect(getRedemptionBackstopConfig("fpi-frax")).toMatchObject({
+      routeFamily: "collateral-redeem",
+      capacityModel: { kind: "reserve-sync-metadata" },
+      costModel: { kind: "dynamic-or-unclear" },
     });
 
     expect(getRedemptionBackstopConfig("lusd-liquity")).toMatchObject({

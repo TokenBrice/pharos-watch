@@ -1,6 +1,10 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
-import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
+import {
+  buildP4DexExitRouteObservations,
+  requiresP4DexScoreEligibleCapabilityCoverage,
+  type P4DexRouteObservationResult,
+} from "@shared/lib/p4-exit-route-capacity";
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
 import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
@@ -13,6 +17,7 @@ import type { SolanaMeasuredExecutionTarget } from "@shared/types/solana-measure
 import type { TronMeasuredExecutionTarget } from "@shared/types/tron-measured-execution";
 import { buildMeasuredPoolDirectionKey } from "../measured-execution/inventory";
 import {
+  buildDexMeasuredExecutionRetainedRoutePools,
   joinDexMeasuredExecutionEvidence,
   loadDexMeasuredExecutionJoinEvidence,
   stripDexMeasuredExecutionInternalFields,
@@ -59,6 +64,132 @@ export const DEX_LIQUIDITY_SCORING_BATCH_SIZE = 25;
 const DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS = ACTIVE_STABLECOINS.length + 1;
 const DEX_PRICE_STAGE_RETENTION_SEC = 7 * 24 * 60 * 60;
 export const DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN = 8;
+
+function routeEvidenceRank(pool: LiquidityMetrics["topPools"][number]): number {
+  if (pool.extra?.measuredExecution || (pool.extra?.measuredExecutions?.length ?? 0) > 0) return 0;
+  if (pool.extra?.ammExecutionModel) return 1;
+  if (pool.extra?.executionCapabilityGate) return 2;
+  if (pool.poolType === "orderbook" && (pool.extra?.orderbookDepthUsd ?? 0) > 0) return 3;
+  return 4;
+}
+
+interface DexRouteObservationPoolSelection {
+  pools: LiquidityMetrics["topPools"];
+  omittedScoreEligibleCapabilityPoolCount: number;
+}
+
+function selectDexRouteObservationPoolSet(
+  currentPools: readonly LiquidityMetrics["topPools"][number][],
+  retainedMeasuredPools: readonly LiquidityMetrics["topPools"][number][],
+): DexRouteObservationPoolSelection {
+  const byPhysicalPool = new Map<string, LiquidityMetrics["topPools"][number]>();
+  for (const pool of [...currentPools, ...retainedMeasuredPools]) {
+    const physicalPoolId = pool.extra?.measuredExecutionPhysicalPoolId ?? pool.poolId;
+    const key = `${pool.chain.toLowerCase()}:${physicalPoolId.toLowerCase()}`;
+    const previous = byPhysicalPool.get(key);
+    if (
+      previous === undefined ||
+      routeEvidenceRank(pool) < routeEvidenceRank(previous) ||
+      (routeEvidenceRank(pool) === routeEvidenceRank(previous) && pool.tvlUsd > previous.tvlUsd)
+    ) {
+      byPhysicalPool.set(key, pool);
+    }
+  }
+  const ranked = [...byPhysicalPool.values()].sort(
+    (left, right) =>
+      routeEvidenceRank(left) - routeEvidenceRank(right) ||
+      right.tvlUsd - left.tvlUsd ||
+      left.poolId.localeCompare(right.poolId),
+  );
+  return {
+    pools: ranked.slice(0, MAX_DEX_EXIT_ROUTE_OBSERVATIONS),
+    omittedScoreEligibleCapabilityPoolCount: ranked
+      .slice(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
+      .filter(requiresP4DexScoreEligibleCapabilityCoverage).length,
+  };
+}
+
+export function selectDexRouteObservationPools(
+  currentPools: readonly LiquidityMetrics["topPools"][number][],
+  retainedMeasuredPools: readonly LiquidityMetrics["topPools"][number][],
+): LiquidityMetrics["topPools"] {
+  return selectDexRouteObservationPoolSet(currentPools, retainedMeasuredPools).pools;
+}
+
+function scoreEligibleRoutePhysicalPoolKey(observation: ExitRouteObservation): string | null {
+  if (!observation.scoreEligible) return null;
+  switch (observation.scope.kind) {
+    case "chain-contract":
+      return `chain-contract:${observation.scope.chain}:${observation.scope.contractOrPoolId}`;
+    case "venue":
+      return `venue:${observation.scope.venue}:${observation.scope.protocol}`;
+    case "issuer":
+      return `issuer:${observation.scope.issuerId}`;
+    case "protocol":
+      return `protocol:${observation.scope.chain ?? ""}:${observation.scope.protocol}`;
+  }
+}
+
+function applyDexRouteObservationBounds(
+  result: P4DexRouteObservationResult,
+  omittedScoreEligibleCapabilityPoolCount: number,
+): P4DexRouteObservationResult {
+  const droppedObservationCount = Math.max(0, result.observations.length - MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+  if (omittedScoreEligibleCapabilityPoolCount === 0 && droppedObservationCount === 0) return result;
+
+  const observations = result.observations.slice(0, MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+  const fullScoreEligiblePoolKeys = new Set(
+    result.observations.map(scoreEligibleRoutePhysicalPoolKey).filter((key): key is string => key != null),
+  );
+  const emittedScoreEligiblePoolKeys = new Set(
+    observations.map(scoreEligibleRoutePhysicalPoolKey).filter((key): key is string => key != null),
+  );
+  const omittedScoreEligibleObservationPoolCount = [...fullScoreEligiblePoolKeys].filter(
+    (key) => !emittedScoreEligiblePoolKeys.has(key),
+  ).length;
+  const evidenceCounts =
+    droppedObservationCount === 0
+      ? result.coverage.evidenceCounts
+      : observations.reduce<Record<string, number>>((counts, observation) => {
+          counts[observation.evidenceKind] = (counts[observation.evidenceKind] ?? 0) + 1;
+          return counts;
+        }, {});
+
+  return {
+    observations,
+    coverage: {
+      ...result.coverage,
+      retainedPoolCount: result.coverage.retainedPoolCount + omittedScoreEligibleCapabilityPoolCount,
+      observationCount: observations.length,
+      scoreEligibleObservationCount: observations.filter((observation) => observation.scoreEligible).length,
+      scoreEligiblePoolCount: emittedScoreEligiblePoolKeys.size,
+      scoreEligibleCapabilityPoolCount:
+        (result.coverage.scoreEligibleCapabilityPoolCount ?? 0) + omittedScoreEligibleCapabilityPoolCount,
+      unsupportedPoolCount:
+        result.coverage.unsupportedPoolCount +
+        omittedScoreEligibleCapabilityPoolCount +
+        omittedScoreEligibleObservationPoolCount,
+      evidenceCounts,
+      unsupportedReasons: {
+        ...result.coverage.unsupportedReasons,
+        ...(omittedScoreEligibleCapabilityPoolCount > 0
+          ? {
+              routeSelectionCapabilityOverflow:
+                (result.coverage.unsupportedReasons.routeSelectionCapabilityOverflow ?? 0) +
+                omittedScoreEligibleCapabilityPoolCount,
+            }
+          : {}),
+        ...(omittedScoreEligibleObservationPoolCount > 0
+          ? {
+              routeObservationPayloadOverflow:
+                (result.coverage.unsupportedReasons.routeObservationPayloadOverflow ?? 0) +
+                omittedScoreEligibleObservationPoolCount,
+            }
+          : {}),
+      },
+    },
+  };
+}
 
 const DEX_PRICE_EXACT_CURRENT_GENERATION_SQL = `
   SELECT generation.generation_id
@@ -372,6 +503,31 @@ export async function computeStablecoinScores(
 
     const retainedPools = m.topPools;
     for (const pool of retainedPools) {
+      const existingPacketTargets = pool.extra?.measuredExecutionTargets;
+      if (existingPacketTargets) {
+        pool.extra = { ...(pool.extra ?? {}) };
+        if (
+          existingPacketTargets.length !== 2 ||
+          existingPacketTargets.some((target) => target.poolId !== existingPacketTargets[0]!.poolId)
+        ) {
+          delete pool.extra.measuredExecutionTargets;
+          delete pool.extra.measuredExecutions;
+          delete pool.extra.measuredExecutionProfiles;
+          delete pool.extra.measuredExecutionDiagnostics;
+        } else {
+          pool.extra.measuredExecutionTargets = existingPacketTargets.map((target) => ({
+            ...target,
+            retainedTvlUsd: pool.tvlUsd,
+            capturedAt: routeObservedAt,
+          }));
+          pool.extra.measuredExecutionPhysicalPoolId = existingPacketTargets[0]!.poolId;
+          pool.extra.measuredExecutionDiagnostics = existingPacketTargets.map((target) => ({
+            adapterProfileId: target.adapterProfileId,
+            targetId: target.targetId,
+          }));
+        }
+        continue;
+      }
       const existingTarget = pool.extra?.measuredExecutionTarget;
       const isAerodromeSlipstream =
         (pool.project === "aerodrome" || pool.project === "aerodrome-slipstream") &&
@@ -476,6 +632,11 @@ export async function computeStablecoinScores(
     evidence: joinEvidence,
     nowSec: routeObservedAt,
   });
+  const retainedMeasuredRoutePools = buildDexMeasuredExecutionRetainedRoutePools({
+    poolsByStablecoin: preparedRetainedPools,
+    evidence: joinEvidence,
+    nowSec: routeObservedAt,
+  });
   joinEvidence?.byTargetId.clear();
   const solanaJoinEvidence = await loadSolanaMeasuredExecutionJoinEvidence(db, signal);
   const solanaMeasuredExecutionJoin = joinSolanaMeasuredExecutionEvidence({
@@ -498,6 +659,9 @@ export async function computeStablecoinScores(
   );
   for (const pools of preparedRetainedPools.values()) {
     for (const pool of pools) {
+      for (const target of pool.extra?.measuredExecutionTargets ?? []) {
+        targetInventoryById.set(target.targetId, target);
+      }
       const target = pool.extra?.measuredExecutionTarget;
       if (target) targetInventoryById.set(target.targetId, target);
       const solanaTarget = pool.extra?.solanaMeasuredExecutionTarget;
@@ -511,15 +675,18 @@ export async function computeStablecoinScores(
     throwIfAborted(signal);
     const retainedPools = preparedRetainedPools.get(id) ?? [];
     const rebuilt = rebuildMetricsFromPools(retainedPools);
-    const routeObservationPools = [...rebuilt.visiblePools, ...(p4OnlyRetainedPools.get(id) ?? [])].slice(
-      0,
-      MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
+    const routeObservationPoolSelection = selectDexRouteObservationPoolSet(
+      [...retainedPools, ...(p4OnlyRetainedPools.get(id) ?? [])],
+      retainedMeasuredRoutePools.get(id) ?? [],
     );
-    const routeObservationResult = buildP4DexExitRouteObservations({
-      stablecoinId: id,
-      retainedPools: routeObservationPools,
-      observedAt: routeObservedAt,
-    });
+    const routeObservationResult = applyDexRouteObservationBounds(
+      buildP4DexExitRouteObservations({
+        stablecoinId: id,
+        retainedPools: routeObservationPoolSelection.pools,
+        observedAt: routeObservedAt,
+      }),
+      routeObservationPoolSelection.omittedScoreEligibleCapabilityPoolCount,
+    );
     stripDexMeasuredExecutionInternalFields(retainedPools);
     stripSolanaMeasuredExecutionInternalFields(retainedPools);
     stripTronMeasuredExecutionInternalFields(retainedPools);

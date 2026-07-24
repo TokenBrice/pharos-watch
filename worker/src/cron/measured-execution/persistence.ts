@@ -1,5 +1,6 @@
 import {
-  DEX_MEASURED_FRESHNESS_MAX_SEC,
+  DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC,
+  getDexMeasuredExecutionFreshnessMaxSec,
   DexMeasuredExecutionProfileSchema,
   DexMeasuredExecutionTargetSchema,
   type DexMeasuredExecutionObservationHistory,
@@ -32,6 +33,12 @@ const DEX_MEASURED_QUOTE_SURFACE = "dex-measured-execution-quotes";
 const GENERATION_RETENTION_SEC = 3 * 24 * 60 * 60;
 /** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
 const GENERATION_PRUNE_MAX_PER_RUN = 16;
+const DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC =
+  DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC;
+
+export function getDexMeasuredHistoryFreshnessSec(adapterProfileId: string): number {
+  return getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId);
+}
 
 function parsePersistedJson(value: string, context: string): unknown {
   const parsed = parseJson(value, { onFailure: () => undefined });
@@ -108,9 +115,15 @@ const OPERATIONAL_DEX_MEASURED_FAILURE_REASONS = new Set([
   "block-number-unavailable",
   "budget-deferred",
   "chain-circuit-open",
+  "block-header-unavailable",
+  "block-timestamp-unavailable",
+  "factory-code-unavailable",
   "quote-call-budget-exhausted",
   "quoter-rpc-unavailable",
+  "registry-code-unavailable",
   "request-budget-exhausted",
+  "rpc-failure",
+  "runtime-code-unavailable",
   "runtime-deadline-exceeded",
 ]);
 
@@ -609,13 +622,21 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
           .bind(
             DEX_MEASURED_QUOTE_SURFACE,
             DEX_MEASURED_QUOTE_SURFACE,
-            latestPublishedAt - DEX_MEASURED_FRESHNESS_MAX_SEC,
+            latestPublishedAt - DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC,
           )
           .all<HistoricalQuoteRow>(),
       3,
       signal,
     );
     for (const row of historicalResult.results ?? []) {
+      const currentTarget = targets.get(row.target_id);
+      if (
+        currentTarget &&
+        latestPublishedAt - row.quote_published_at >
+          getDexMeasuredHistoryFreshnessSec(currentTarget.adapterProfileId)
+      ) {
+        continue;
+      }
       const recordCycle = (cycle: DexMeasuredExecutionHistoryCycle) => {
         const cycles = historyCyclesByTargetId.get(row.target_id) ?? [];
         cycles.push(cycle);
@@ -699,7 +720,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     const observationHistory = summarizeDexMeasuredExecutionHistory({
       cycles: historyCyclesByTargetId.get(targetId) ?? [],
       nowSec: latestPublishedAt,
-      freshnessMaxSec: DEX_MEASURED_FRESHNESS_MAX_SEC,
+      freshnessMaxSec: getDexMeasuredHistoryFreshnessSec(entry.profile.adapterProfileId),
     });
     if (observationHistory) {
       byTargetId.set(targetId, { ...entry, observationHistory });

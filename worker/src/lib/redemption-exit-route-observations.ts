@@ -15,7 +15,10 @@ const REDEMPTION_CAPACITY_CURVE_REQUESTS_USD = [100_000, 1_000_000, 5_000_000, 2
 // Conservative documented ceilings for projecting a reviewed settlement model
 // onto an observation horizon. Only "atomic" satisfies the same-notional
 // request horizon; every other model is published as diagnostic evidence.
-const DERIVED_SETTLEMENT_HORIZON_CEILING_SEC: Record<RedemptionBackstopEntry["settlementModel"], number> = {
+export const REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC: Record<
+  RedemptionBackstopEntry["settlementModel"],
+  number
+> = {
   atomic: SAME_NOTIONAL_EXIT_REQUEST_POLICY.settlementHorizonSec,
   immediate: 3_600,
   "same-day": 86_400,
@@ -230,7 +233,7 @@ export function buildRedemptionExitRouteObservation(
   const point = capacityCurve.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd)!;
   const { scope, commonModeKeys } = resolveScopeAndCommonModes(input.stablecoinId, input.config.routeFamily);
   const settlementHorizonSec = Math.max(
-    DERIVED_SETTLEMENT_HORIZON_CEILING_SEC[input.config.settlementModel],
+    REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[input.config.settlementModel],
     input.settlementDelaySec ?? 0,
   );
 
@@ -355,7 +358,7 @@ export function deriveSupplyModelExitRouteObservation(
     routeFamily,
     scope,
     ...point,
-    settlementHorizonSec: DERIVED_SETTLEMENT_HORIZON_CEILING_SEC[entry.settlementModel],
+    settlementHorizonSec: REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[entry.settlementModel],
     // Published rows do not carry outputAssets; the reviewed static config of
     // the same code version supplies the documented output composition.
     output: resolveOutput(entry.stablecoinId, {

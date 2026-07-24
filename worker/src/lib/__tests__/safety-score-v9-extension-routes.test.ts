@@ -124,7 +124,7 @@ function capturedNavOutputInput(navObservedAtSec: number): ReportCardsFixedInput
         exitRouteObservations: [route],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.6",
+          capabilityMatrixVersion: "p4a.8",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,
@@ -211,6 +211,95 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       lane: "redemption",
       executionCertainty: "bounded",
       modelConfidence: "high",
+    });
+  });
+
+  it("projects reviewed fixed and minimum fees when captured rows omit feeBps", () => {
+    const row = supplyFullRow({
+      stablecoinId: "usdt-tether",
+      feeBps: null,
+      feeConfidence: "undisclosed-reviewed",
+      feeModelKind: "documented-variable",
+    });
+    const review = buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]!;
+
+    expect(review.executionCosts).toEqual(
+      expect.arrayContaining([
+        { requestedNotionalUsd: 100_000, maxCostBps: 200, executionCostBps: 100 },
+        { requestedNotionalUsd: 1_000_000, maxCostBps: 200, executionCostBps: 10 },
+        { requestedNotionalUsd: 5_000_000, maxCostBps: 200, executionCostBps: 10 },
+        { requestedNotionalUsd: 25_000_000, maxCostBps: 200, executionCostBps: 10 },
+      ]),
+    );
+
+    const fixedFeeRow = supplyFullRow({
+      stablecoinId: "ousd-origin-protocol",
+      feeBps: null,
+    });
+    const fixedFeeReview = buildSafetyScoreV9RouteReviews(
+      fixedInputStub(fixedFeeRow),
+      fixedFeeRow.stablecoinId,
+    )[0]!;
+    expect(fixedFeeReview.executionCosts.every((point) => point.executionCostBps === 25)).toBe(true);
+  });
+
+  it("projects conservative USDT-only reviewed constraints without changing the captured row", () => {
+    const row = supplyFullRow({
+      stablecoinId: "usdt-tether",
+      settlementModel: "same-day",
+      settlementDelaySec: undefined,
+      minRedeemUsd: undefined,
+      holderEligibility: "verified-customer",
+    });
+    const review = buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]!;
+
+    expect(row).toMatchObject({ settlementModel: "same-day", holderEligibility: "verified-customer" });
+    expect(row.minRedeemUsd).toBeUndefined();
+    expect(review).toMatchObject({
+      holderAccess: "institutional-eligible",
+      settlementModel: "bounded-delay",
+      settlementSlaSec: null,
+      settlementHorizonSec: 14 * 86_400,
+      minRedeemUsd: 100_000,
+    });
+  });
+
+  it("keeps pinned redemption fee and output valuation separate in the route review", () => {
+    const row = supplyFullRow({ stablecoinId: "fpi-frax", feeBps: null });
+    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!
+      .observation;
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      exitRouteObservations: [
+        {
+          ...observation,
+          output: { kind: "tracked-stablecoin", trackedAssetIds: ["frax-frax"] },
+          evidenceKind: "onchain-contract-state",
+          executionCostBps: 30,
+          outputUnitValueUsd: 0.98836526,
+          allInCostBps: 145.9983578,
+          modelConfidence: "high",
+          scoreEligible: true,
+        },
+      ],
+    };
+    const fixedInput = fixedInputStub(row);
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "frax-frax": { currentDeviationBps: -500, priceObservedAt: NOW },
+    };
+    const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
+
+    expect(review.executionCosts.every((point) => point.executionCostBps === 30)).toBe(true);
+    expect(review).toMatchObject({ executionCertainty: "bounded", modelConfidence: "high" });
+    expect(review.output).toMatchObject({
+      kind: "tracked-stablecoin",
+      valuation: {
+        basis: "price",
+        referenceAssetKey: "frax-frax",
+        unitValueUsd: 0.98836526,
+        sourceId: "redemption-route-pinned-output-value",
+        confidence: "high",
+      },
     });
   });
 
@@ -332,7 +421,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         exitRouteObservations: [route],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.6",
+          capabilityMatrixVersion: "p4a.8",
           retainedPoolCount: 2_418,
           observationCount: 44,
           scoreEligibleObservationCount: 44,
@@ -395,7 +484,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         exitRouteObservations: [route],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.6",
+          capabilityMatrixVersion: "p4a.8",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,
@@ -457,6 +546,7 @@ describe("buildDexRouteReview model-confidence derivation", () => {
   function dexObservation(
     evidenceKind: ExitRouteObservation["evidenceKind"],
     mature = false,
+    adapterProfileId?: string,
   ): ExitRouteObservation {
     const observation: ExitRouteObservation = {
       routeId: `dex:usdc-circle:dl:ethereum%3Apool:${evidenceKind}`,
@@ -469,6 +559,7 @@ describe("buildDexRouteReview model-confidence derivation", () => {
       completionRatio: 0.95,
       output: { kind: "fiat", currency: "USD" },
       evidenceKind,
+      ...(adapterProfileId ? { adapterProfileId } : {}),
       confidence: "high",
       scoreEligible: true,
       observedAt: NOW,
@@ -515,6 +606,31 @@ describe("buildDexRouteReview model-confidence derivation", () => {
     });
   });
 
+  it("uses realized measured cost and preserves the legacy request-bound fallback", () => {
+    const fixedInput = fixedInputStub(undefined);
+    const realized = dexObservation("measured-executable-depth");
+    realized.capacityCurve = [
+      {
+        requestedNotionalUsd: realized.requestedNotionalUsd,
+        maxCostBps: realized.maxCostBps,
+        executableUsd: realized.executableUsd,
+        completionRatio: realized.completionRatio,
+        executionCostBps: 37,
+      },
+    ];
+    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
+      "usdc-circle": { exitRouteObservations: [realized] },
+    };
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]?.executionCosts).toEqual([
+      { requestedNotionalUsd: 1_000_000, maxCostBps: 50, executionCostBps: 37 },
+    ]);
+
+    delete realized.capacityCurve[0]!.executionCostBps;
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]?.executionCosts).toEqual([
+      { requestedNotionalUsd: 1_000_000, maxCostBps: 50, executionCostBps: 50 },
+    ]);
+  });
+
   it("grades repeated measured executable depth as high model confidence", () => {
     expect(dexReviewFor("measured-executable-depth", true)).toMatchObject({
       lane: "dex",
@@ -535,6 +651,35 @@ describe("buildDexRouteReview model-confidence derivation", () => {
       "usdc-circle": { exitRouteObservations: [observation] },
     };
 
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
+      modelConfidence: "medium",
+    });
+  });
+
+  it("uses the reviewed StableSwap adapter's two-hour confidence window", () => {
+    const fixedInput = fixedInputStub(undefined);
+    const observation = dexObservation(
+      "measured-executable-depth",
+      true,
+      "curve-stableswap-main-registry-get-dy-v1",
+    );
+    observation.observationHistory = {
+      ...observation.observationHistory!,
+      completeProducerCycleCount: 3,
+      successfulObservationCount: 3,
+      consecutiveSuccessCount: 3,
+      observationWindowStartedAt: NOW - 7_200,
+      observationWindowEndedAt: NOW - 7_199,
+    };
+    (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
+      "usdc-circle": { exitRouteObservations: [observation] },
+    };
+
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
+      modelConfidence: "high",
+    });
+
+    delete observation.adapterProfileId;
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
       modelConfidence: "medium",
     });

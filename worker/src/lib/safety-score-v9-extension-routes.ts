@@ -1,13 +1,22 @@
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
+import {
+  getRedemptionBackstopConfig,
+  resolveMoreConservativeRedemptionSettlement,
+  resolveV9RedemptionRouteCostBpsAtNotional,
+  type RedemptionBackstopConfig,
+} from "@shared/lib/redemption-backstops";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import {
-  DEX_MEASURED_FRESHNESS_MAX_SEC,
+  getDexMeasuredExecutionFreshnessMaxSec,
   isDexMeasuredExecutionObservationHistoryMature,
 } from "@shared/types/measured-execution";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
-import { deriveSupplyModelExitRouteObservation } from "./redemption-exit-route-observations";
+import {
+  deriveSupplyModelExitRouteObservation,
+  REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC,
+} from "./redemption-exit-route-observations";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
 
@@ -16,6 +25,7 @@ type RetainedRoute = ExtensionAsset["retainedRoutes"][number];
 type RouteReview = ExtensionAsset["routeReviews"][number];
 type RouteOutputReview = NonNullable<RouteReview["output"]>;
 type RouteValuation = NonNullable<RouteOutputReview["valuation"]>;
+type RedemptionSettlementModel = RedemptionBackstopConfig["settlementModel"];
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -30,13 +40,13 @@ function capacityPoints(observation: ExitRouteObservation): RouteReview["executi
       completionRatio: observation.completionRatio,
     },
   ];
-  // The producer bounds execution inside maxCostBps but does not report the
-  // realized marginal cost, so the review carries the conservative bound.
+  // New measured points retain the defining quote's realized cost. Legacy
+  // points omit it and keep the prior conservative request-bound behavior.
   return points
     .map((point) => ({
       requestedNotionalUsd: point.requestedNotionalUsd,
       maxCostBps: point.maxCostBps,
-      executionCostBps: point.maxCostBps,
+      executionCostBps: point.executionCostBps ?? point.maxCostBps,
     }))
     .sort((left, right) =>
       compareText(
@@ -119,7 +129,17 @@ function buildOutputReview(
       ...shared,
     };
   } else if (output.kind === "tracked-stablecoin" && assetKeys.length === 1) {
-    const tracked = trackedStablecoinValuation(fixedInput, assetKeys[0]!, observedAtSec);
+    const tracked =
+      observation.outputUnitValueUsd !== undefined
+        ? {
+            basis: "price" as const,
+            unitValueUsd: observation.outputUnitValueUsd,
+            expectedUnitValueUsd: 1,
+            confidence: "high" as const,
+            observedAtSec,
+            sourceId: "redemption-route-pinned-output-value",
+          }
+        : trackedStablecoinValuation(fixedInput, assetKeys[0]!, observedAtSec);
     if (tracked) {
       valuation = {
         referenceAssetKey: assetKeys[0]!,
@@ -195,7 +215,8 @@ function buildDexRouteReview(
     observation.confidence === "high" &&
     isDexMeasuredExecutionObservationHistoryMature(observationHistory) &&
     observationHistory != null &&
-    fixedInput.clockSec - observationHistory.observationWindowEndedAt <= DEX_MEASURED_FRESHNESS_MAX_SEC &&
+    fixedInput.clockSec - observationHistory.observationWindowEndedAt <=
+      getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? "") &&
     observationHistory.observationWindowEndedAt <= fixedInput.clockSec + 60;
   return {
     lane: "dex",
@@ -246,10 +267,13 @@ function redemptionExecutionModel(entry: RedemptionBackstopEntry): RouteReview["
   return "unknown";
 }
 
-function redemptionExecutionCertainty(entry: RedemptionBackstopEntry): RouteReview["executionCertainty"] {
+function redemptionExecutionCertainty(
+  entry: RedemptionBackstopEntry,
+  modelConfidence: RouteReview["modelConfidence"],
+): RouteReview["executionCertainty"] {
   if (entry.executionModel === "opaque") return "discretionary";
-  if (entry.modelConfidence === "high") return "bounded";
-  if (entry.modelConfidence === "medium") return "conditional";
+  if (modelConfidence === "high") return "bounded";
+  if (modelConfidence === "medium") return "conditional";
   return "discretionary";
 }
 
@@ -268,21 +292,50 @@ function redemptionCoverageClass(
   return requiresCurrentOpenAttribution && !hasCurrentOpenAttribution ? "diagnostic" : "exact-lower-bound";
 }
 
-function redemptionSettlement(entry: RedemptionBackstopEntry): {
+function redemptionReviewTerms(entry: RedemptionBackstopEntry): {
+  settlementModel: RedemptionSettlementModel;
+  settlementDelaySec: number | undefined;
+  settlementHorizonSec: number;
+  minRedeemUsd: number | null;
+} {
+  const reviewed = getRedemptionBackstopConfig(entry.stablecoinId)?.v9RouteReviewTerms;
+  const settlementModel = reviewed?.settlementModel
+    ? resolveMoreConservativeRedemptionSettlement(entry.settlementModel, reviewed.settlementModel)
+    : entry.settlementModel;
+  const settlementDelaySec =
+    settlementModel === entry.settlementModel ? entry.settlementDelaySec : undefined;
+  const minimums = [entry.minRedeemUsd, reviewed?.minRedeemUsd].filter(
+    (value): value is number => value != null,
+  );
+  return {
+    settlementModel,
+    settlementDelaySec,
+    settlementHorizonSec: Math.max(
+      REDEMPTION_SETTLEMENT_HORIZON_CEILING_SEC[settlementModel],
+      settlementDelaySec ?? 0,
+    ),
+    minRedeemUsd: minimums.length > 0 ? Math.max(...minimums) : null,
+  };
+}
+
+function redemptionSettlement(
+  settlementModel: RedemptionSettlementModel,
+  settlementDelaySec: number | undefined,
+): {
   settlementModel: RouteReview["settlementModel"];
   settlementSlaSec: number | null;
 } {
-  switch (entry.settlementModel) {
+  switch (settlementModel) {
     case "atomic":
-      return { settlementModel: "atomic", settlementSlaSec: entry.settlementDelaySec ?? 0 };
+      return { settlementModel: "atomic", settlementSlaSec: settlementDelaySec ?? 0 };
     case "immediate":
-      return { settlementModel: "bounded-delay", settlementSlaSec: entry.settlementDelaySec ?? 3_600 };
+      return { settlementModel: "bounded-delay", settlementSlaSec: settlementDelaySec ?? 3_600 };
     case "same-day":
-      return { settlementModel: "same-day", settlementSlaSec: entry.settlementDelaySec ?? 86_400 };
+      return { settlementModel: "same-day", settlementSlaSec: settlementDelaySec ?? 86_400 };
     case "days":
-      return { settlementModel: "bounded-delay", settlementSlaSec: entry.settlementDelaySec ?? null };
+      return { settlementModel: "bounded-delay", settlementSlaSec: settlementDelaySec ?? null };
     case "queued":
-      return { settlementModel: "queued", settlementSlaSec: entry.settlementDelaySec ?? null };
+      return { settlementModel: "queued", settlementSlaSec: settlementDelaySec ?? null };
   }
 }
 
@@ -290,6 +343,7 @@ function redemptionExecutionCosts(
   entry: RedemptionBackstopEntry,
   observation: ExitRouteObservation,
 ): RouteReview["executionCosts"] {
+  const config = getRedemptionBackstopConfig(entry.stablecoinId);
   const points = observation.capacityCurve ?? [
     {
       requestedNotionalUsd: observation.requestedNotionalUsd,
@@ -299,14 +353,20 @@ function redemptionExecutionCosts(
     },
   ];
   return points
-    .map((point) => ({
-      requestedNotionalUsd: point.requestedNotionalUsd,
-      maxCostBps: point.maxCostBps,
-      executionCostBps:
-        entry.feeBps !== null && Number.isFinite(entry.feeBps)
-          ? Math.min(entry.feeBps, point.maxCostBps)
-          : point.maxCostBps,
-    }))
+    .map((point) => {
+      const reviewedCostBps =
+        observation.executionCostBps ??
+        (config
+          ? resolveV9RedemptionRouteCostBpsAtNotional(config, point.requestedNotionalUsd, entry.feeBps)
+          : entry.feeBps !== null && Number.isFinite(entry.feeBps)
+            ? entry.feeBps
+            : null);
+      return {
+        requestedNotionalUsd: point.requestedNotionalUsd,
+        maxCostBps: point.maxCostBps,
+        executionCostBps: reviewedCostBps ?? point.maxCostBps,
+      };
+    })
     .sort((left, right) =>
       compareText(
         `${left.maxCostBps}:${left.requestedNotionalUsd}`,
@@ -321,6 +381,8 @@ function buildRedemptionRouteReview(
   observation: ExitRouteObservation,
 ): RouteReview {
   const scope = observation.scope;
+  const modelConfidence = observation.modelConfidence ?? entry.modelConfidence;
+  const reviewedTerms = redemptionReviewTerms(entry);
   const physicalResourceKeys =
     scope.kind === "issuer"
       ? [`issuer:${scope.issuerId}`]
@@ -332,14 +394,15 @@ function buildRedemptionRouteReview(
     routeId: observation.routeId,
     holderAccess: redemptionHolderAccess(entry),
     executionModel: redemptionExecutionModel(entry),
-    executionCertainty: redemptionExecutionCertainty(entry),
-    modelConfidence: entry.modelConfidence,
+    executionCertainty: redemptionExecutionCertainty(entry, modelConfidence),
+    modelConfidence,
     coverageClass: redemptionCoverageClass(entry, observation),
     capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
-    ...redemptionSettlement(entry),
+    ...redemptionSettlement(reviewedTerms.settlementModel, reviewedTerms.settlementDelaySec),
+    settlementHorizonSec: Math.max(observation.settlementHorizonSec, reviewedTerms.settlementHorizonSec),
     queueDepthUsd: entry.queueDepthUsd ?? null,
     dailyLimitUsd: entry.dailyLimitUsd ?? null,
-    minRedeemUsd: entry.minRedeemUsd ?? null,
+    minRedeemUsd: reviewedTerms.minRedeemUsd,
     physicalResourceKeys,
     executionCosts: redemptionExecutionCosts(entry, observation),
     output: buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId),
