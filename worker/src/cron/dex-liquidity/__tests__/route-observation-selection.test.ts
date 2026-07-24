@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { DexMeasuredExecutionPublicProfile } from "@shared/types/measured-execution";
+import type { SolanaMeasuredExecutionPublicProfile } from "@shared/types/solana-measured-execution";
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
 import { selectDexRouteObservationPools } from "../scoring";
 import type { PoolEntry } from "../types";
@@ -162,5 +163,37 @@ describe("DEX route observation selection", () => {
     expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
     expect(selected[0]).toBe(measured);
     expect(selected.filter((candidate) => candidate.poolId === measured.poolId)).toHaveLength(1);
+  });
+
+  it("preserves case-sensitive non-EVM physical pool identities", () => {
+    const upper = pool(1);
+    upper.chain = "Solana";
+    upper.poolId = "solana:AbCdEf123";
+    const lower = pool(2);
+    lower.chain = "Solana";
+    lower.poolId = "solana:abcdef123";
+
+    const selected = selectDexRouteObservationPools([upper, lower], []);
+
+    expect(selected).toHaveLength(2);
+    expect(selected).toEqual(expect.arrayContaining([upper, lower]));
+  });
+
+  it("prioritizes an active native measured profile in the bounded route set", () => {
+    const current = Array.from({ length: MAX_DEX_EXIT_ROUTE_OBSERVATIONS }, (_, index) => pool(index));
+    const native = pool(99);
+    native.chain = "Solana";
+    native.poolId = "solana:Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE";
+    native.extra = {
+      nativeMeasuredExecution: {
+        targetId: "native-target",
+      } as SolanaMeasuredExecutionPublicProfile,
+      nativeMeasuredExecutionPhysicalPoolId: "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE",
+    };
+
+    const selected = selectDexRouteObservationPools(current, [native]);
+
+    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+    expect(selected[0]).toBe(native);
   });
 });

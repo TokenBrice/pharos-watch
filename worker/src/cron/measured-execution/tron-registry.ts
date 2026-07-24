@@ -7,18 +7,24 @@ export const SUNSWAP_V2_PAIR_CODE_HASH =
   "0x41625dc36ebfc3d0d2d89132975e84ad64738f2b4ee892f4561cbf33796d14d8" as const;
 export const SUNSWAP_V2_ROUTER_QUOTE_URL = "https://rot.endjgfsv.link/swap/routerUniversal" as const;
 
-export interface TronMeasuredExecutionAdapter {
+interface TronMeasuredExecutionAdapterIdentity {
   adapterProfileId: "sunswap-v2-router-v1";
   protocol: "sunswap";
   poolType: "sunswap-v2";
-  activation: "shadow";
 }
+
+export type TronMeasuredExecutionAdapter = TronMeasuredExecutionAdapterIdentity &
+  (
+    | { activation: "shadow"; scoreEligible: false }
+    | { activation: "active"; scoreEligible: true }
+  );
 
 const SUNSWAP_V2_ADAPTER: TronMeasuredExecutionAdapter = {
   adapterProfileId: "sunswap-v2-router-v1",
   protocol: "sunswap",
   poolType: "sunswap-v2",
   activation: "shadow",
+  scoreEligible: false,
 };
 
 export function getTronMeasuredExecutionAdapter(
@@ -32,4 +38,10 @@ export function getTronMeasuredExecutionAdapterByProfile(
   adapterProfileId: string,
 ): TronMeasuredExecutionAdapter | null {
   return adapterProfileId === SUNSWAP_V2_ADAPTER.adapterProfileId ? SUNSWAP_V2_ADAPTER : null;
+}
+
+export function isTronMeasuredExecutionAdapterScoreEligible(
+  adapter: TronMeasuredExecutionAdapter,
+): boolean {
+  return adapter.activation === "active" && adapter.scoreEligible;
 }

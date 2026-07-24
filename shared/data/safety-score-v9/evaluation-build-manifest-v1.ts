@@ -10,7 +10,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "c3ee9420cf0c3669c465bf525b532919ba8304889e5ccb16e8a030f49dd05686"
+      "sha256": "9a4a2eee8097326eedf7c003bdd7f674b2e116764917df29508dddcc825bbf71"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -50,7 +50,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/p4-exit-route-capacity.ts",
-      "sha256": "5e40000c56907b3c2fae4926ba51f68c72cc6eba61c262ee8c3869087cdd4210"
+      "sha256": "60d4a8c4a118e81d17c543cad8f56c4bf9fa60fe1316f3f12f6068d23503c759"
     },
     {
       "path": "shared/lib/redemption-backstop-capacity.ts",
@@ -346,7 +346,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9.ts",
-      "sha256": "30dfeca3c858b73a61ecefbcb4c64233c9eaea9e899a89a5250d16c124c46df6"
+      "sha256": "7e14119ddb7d00a20df41eff2fd35f4880fa5562cd12bb92323e4084d975b96d"
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
@@ -437,7 +437,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "4975f2ee93c68be8481d2dc4977128552912a7936ab9ba368c3ce2d91e4fd060"
     }
   ],
-  "digest": "62d6fcda4ad20e620842b0007ede99ddd54a5737cc2cf5f1e5c06bddfca7587f"
+  "digest": "4bb6c8ca74b479f0b3c6f8484d7ddab255db26442c01dd354b87f0ab80165109"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

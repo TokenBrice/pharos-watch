@@ -118,7 +118,7 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
       finalScore: 87,
       inheritableScore: 83,
       finalGrade: "A+",
-      preCapScore: 99,
+      preCapScore: 100,
       bindingCap: {
         source: "structural",
         kind: "signal:centralized-mint:low",
@@ -128,10 +128,10 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
         source: "asset-premium",
         kind: "market-anchor-longevity",
         label: "#1 & Longevity Premium",
-        configuredPoints: 4,
-        appliedPoints: 4,
+        configuredPoints: 12,
+        appliedPoints: 5,
         scoreBefore: 95,
-        scoreAfter: 99,
+        scoreAfter: 100,
         publishedScoreBefore: 83,
         publishedScoreAfter: 87,
         capRelief: {
@@ -145,7 +145,7 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
     expect(projectV9DependencyScore(trace)).toBe(83);
   });
 
-  it("handles the production rounding boundary without treating either cap as binding", () => {
+  it("handles the production rounding boundary while binding only the relieved cap", () => {
     const input = healthyInput();
     input.pillars = {
       backing: pillar(74.7481),
@@ -160,18 +160,22 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
 
     expect(trace.scoreAdjustments[0]).toMatchObject({
       scoreBefore: 82.5364,
-      scoreAfter: 86.5364,
+      scoreAfter: 94.5364,
       publishedScoreBefore: 83,
       publishedScoreAfter: 87,
     });
     expect(trace.inheritableScore).toBe(83);
     expect(trace.finalScore).toBe(87);
-    expect(trace.bindingCap).toBeNull();
+    expect(trace.bindingCap).toMatchObject({
+      source: "structural",
+      kind: "signal:centralized-mint:low",
+      limit: 87,
+    });
     expect(trace.caps).toEqual([
       expect.objectContaining({
         kind: "signal:centralized-mint:low",
         limit: 87,
-        binding: false,
+        binding: true,
       }),
     ]);
   });
@@ -262,20 +266,46 @@ describe("Safety Score V9 USDT market-anchor premium", () => {
     );
   });
 
-  it("keeps premium eligibility and publication aligned to the A and A+ floors", () => {
+  it("lifts the current production-shaped healthy B+ base to the A+ floor", () => {
+    const input = healthyInput();
+    input.pillars = {
+      backing: pillar(74.748258875),
+      exit: pillar(73.88),
+      control: pillar(81.55, {
+        structuralSignals: [signal("centralized-mint", "low")],
+      }),
+    };
+    input.peg.score = 99;
+
+    const trace = scoreV9EvaluatedAsset(input, V9_CANDIDATE_POLICY_V1);
+
+    expect(trace).toMatchObject({
+      finalScore: 87,
+      inheritableScore: 76,
+      finalGrade: "A+",
+      scoreAdjustments: [{
+        configuredPoints: 12,
+        appliedPoints: 12,
+        publishedScoreBefore: 76,
+        publishedScoreAfter: 87,
+      }],
+    });
+  });
+
+  it("keeps premium eligibility and publication aligned to the B+ and A+ floors", () => {
     const invalid = structuredClone(
       V9_CANDIDATE_POLICY_V1.policy,
     ) as V9MethodologyPolicy;
-    invalid.semantic.formula.assetPremiums[0]!.minimumBaseScore = 82;
+    invalid.semantic.formula.assetPremiums[0]!.minimumBaseScore = 74;
 
     expect(V9MethodologyPolicySchema.safeParse(invalid).success).toBe(false);
   });
 
-  it("requires enough configured points to cross the A-to-A+ threshold gap", () => {
+  it("requires enough configured points to cross the B+-to-A+ threshold gap", () => {
     const invalid = structuredClone(
       V9_CANDIDATE_POLICY_V1.policy,
     ) as V9MethodologyPolicy;
-    invalid.semantic.formula.assetPremiums[0]!.points = 3;
+    invalid.semantic.formula.assetPremiums[0]!.points = 11;
 
     expect(V9MethodologyPolicySchema.safeParse(invalid).success).toBe(false);
   });

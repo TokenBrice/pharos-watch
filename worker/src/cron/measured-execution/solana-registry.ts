@@ -1,14 +1,18 @@
 import type { DexApiPool } from "../../lib/dex-api-types";
 import type { SolanaMeasuredExecutionTarget } from "@shared/types/solana-measured-execution";
 
-export interface SolanaMeasuredExecutionAdapterRegistration {
+interface SolanaMeasuredExecutionAdapterIdentity {
   adapterProfileId: SolanaMeasuredExecutionTarget["adapterProfileId"];
   protocol: SolanaMeasuredExecutionTarget["protocol"];
   poolType: SolanaMeasuredExecutionTarget["poolType"];
   provider: "raydium-trade-api" | "jupiter-swap-api";
-  scoreEligible: false;
-  activation: "shadow";
 }
+
+export type SolanaMeasuredExecutionAdapterRegistration = SolanaMeasuredExecutionAdapterIdentity &
+  (
+    | { activation: "shadow"; scoreEligible: false }
+    | { activation: "active"; scoreEligible: true }
+  );
 
 export const SOLANA_MEASURED_EXECUTION_ADAPTERS: readonly SolanaMeasuredExecutionAdapterRegistration[] = [
   {
@@ -42,4 +46,10 @@ export function getSolanaMeasuredExecutionAdapterByProfile(
   adapterProfileId: string,
 ): SolanaMeasuredExecutionAdapterRegistration | null {
   return SOLANA_MEASURED_EXECUTION_ADAPTERS.find((entry) => entry.adapterProfileId === adapterProfileId) ?? null;
+}
+
+export function isSolanaMeasuredExecutionAdapterScoreEligible(
+  adapter: SolanaMeasuredExecutionAdapterRegistration,
+): boolean {
+  return adapter.activation === "active" && adapter.scoreEligible;
 }

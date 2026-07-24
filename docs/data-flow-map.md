@@ -63,10 +63,19 @@ exposes proof-free profiles and explicit capability gates through the existing
 DEX API. Mature fresh last-known-good profiles can remain route-only across a
 temporary liquidity shortlist rotation, without re-entering aggregate liquidity
 or V8 scoring; for the 3pool the route compiler reconstructs both sibling
-directions from the same retained packet or admits neither. Unreviewed measured deployment cohorts remain score-ineligible while
-their activation evidence is pending. SunSwap census rows are excluded from
-liquidity scoring and price consensus; its latest-only TronGrid state reads are
-accepted only inside a bounded before/after block bracket.
+directions from the same retained packet or admits neither. A measured target
+rotation or quote failure leaves an independently complete exact AMM model
+available instead of attaching a measurement gate to that fallback; unrelated
+capability gates and actual measured/exact conflicts still fail closed. Native Solana and
+Tron joins apply explicit reviewed active/shadow registry policy after full
+proof and current-target validation. Only active native profiles enter the P4
+capacity compiler and physical-pool completeness denominator; shadow profiles
+retain `activation-pending`, and case-sensitive native pool identities remain
+case-sensitive through route selection. Unreviewed measured deployment cohorts
+remain score-ineligible while their activation evidence is pending. SunSwap
+census rows are excluded from liquidity scoring and price consensus; its
+latest-only TronGrid state reads are accepted only inside a bounded before/after
+block bracket.
 
 The private `report-cards:snapshot` row is checksum-verified gzip/base64 with
 bounded decompression; its decoded public V8 JSON is unchanged, and the new

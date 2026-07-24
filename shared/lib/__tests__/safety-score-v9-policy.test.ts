@@ -31,7 +31,7 @@ describe("Safety Score v9 methodology policy", () => {
     // non-counterparty reserve-issuer concentration exemption, plus the
     // fail-closed native-USDT market-anchor and longevity premium.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "fd2bbac8408f47dc2ce86b737ce275e3b447b085dfb6b892fbb2c1f3495e6855",
+      "1698715f9af37bab6f41e2f086e2da4c7cf958e7e2dfcb3e5e841cf9aa278679",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);

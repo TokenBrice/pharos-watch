@@ -285,6 +285,78 @@ function slipstreamTarget(): DexMeasuredExecutionTarget {
 }
 
 describe("measured execution join activation", () => {
+  it("keeps an independent exact AMM fallback available after a quote failure", () => {
+    const measuredTarget = target();
+    const pool: PoolEntry = {
+      poolId: measuredTarget.poolId,
+      project: measuredTarget.protocol,
+      chain: measuredTarget.chain,
+      tvlUsd: measuredTarget.retainedTvlUsd,
+      symbol: "USDC-USDT",
+      volumeUsd1d: 10_000,
+      poolType: "uniswap-v3",
+      source: "dl",
+      extra: {
+        measuredExecutionTarget: measuredTarget,
+        ammExecutionModel: {
+          source: "uniswap-v2",
+          invariant: "constant-product",
+          trackedTokenIndex: 0,
+          feeRate: 0.003,
+          tokens: [
+            {
+              ...measuredTarget.tokenIn,
+              balance: 1_000_000,
+              referencePriceSource: "tracked-market",
+            },
+            {
+              ...measuredTarget.tokenOut,
+              balance: 1_000_000,
+              referencePriceSource: "tracked-market",
+            },
+          ],
+        },
+        executionCapabilityGate: {
+          family: "measured-execution",
+          reason: "target-unresolved",
+        },
+      },
+    };
+
+    const diagnostics = joinDexMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]),
+      evidence: {
+        quoteGenerationId: "failed-generation",
+        targetGenerationId: "target-generation",
+        publishedAt: 1_060,
+        byTargetId: new Map([[
+          measuredTarget.targetId,
+          {
+            quotedTarget: measuredTarget,
+            status: "failed",
+            failureReason: "rpc-failure",
+            profile: null,
+            quoteGenerationId: "failed-generation",
+            targetGenerationId: "target-generation",
+            resolution: "latest",
+            latestFailureReason: "rpc-failure",
+          },
+        ]]),
+      },
+      nowSec: 1_060,
+    });
+
+    expect(pool.extra?.measuredExecution).toBeUndefined();
+    expect(pool.extra?.ammExecutionModel).toBeDefined();
+    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    expect(diagnostics).toMatchObject({
+      targetCount: 1,
+      measuredCount: 0,
+      gatedCount: 1,
+      failuresByReason: { "uniswap-v3-quoter-v2:quote-failed": 1 },
+    });
+  });
+
   it("attaches the reviewed Curve StableSwap directions only as one atomic packet", () => {
     const { targets, profiles } = curveStableSwapPacket();
     const pool: PoolEntry = {

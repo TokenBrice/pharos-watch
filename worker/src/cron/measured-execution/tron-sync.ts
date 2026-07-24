@@ -20,11 +20,11 @@ import { buildTronMeasuredExecutionProfile } from "./tron-profiles";
 import { quoteTronMeasuredTarget } from "./tron-quotes";
 
 const TRON_ADMISSION_SOURCE_KEY = "measured-execution:tron-admission";
-// Two targets can still cycle the full current inventory more than thirteen
-// times in 72 hours. The smaller batch avoids bursting Sun's public router.
-const MAX_TARGETS_PER_RUN = 2;
-const TRON_RUNTIME_BUDGET_MS = 7 * 60 * 1_000;
-const REQUEST_HEADROOM_MS = 20_000;
+// Twelve serialized targets cover the current inventory inside the one-hour
+// consumer freshness window while preserving the public-router pacing.
+export const TRON_MEASURED_TARGETS_PER_RUN = 12;
+export const TRON_MEASURED_RUNTIME_BUDGET_MS = 7 * 60 * 1_000;
+export const TRON_MEASURED_REQUEST_HEADROOM_MS = 20_000;
 
 interface TronQuoteState {
   target: TronMeasuredExecutionTarget;
@@ -35,7 +35,7 @@ interface TronQuoteState {
 export function admitTronMeasuredTargets(
   targets: readonly TronMeasuredExecutionTarget[],
   cursor: string | null,
-  limit = MAX_TARGETS_PER_RUN,
+  limit = TRON_MEASURED_TARGETS_PER_RUN,
 ): { admitted: Set<string>; nextCursor: string | null } {
   const ranked = [...targets].sort(
     (left, right) => right.retainedTvlUsd - left.retainedTvlUsd || left.targetId.localeCompare(right.targetId),
@@ -59,7 +59,7 @@ async function measureTarget(input: {
   const points: TronMeasuredExecutionQuotePointProof[] = [];
   for (const inputUsd of getDexMeasuredExecutionProbeNotionals(input.target.retainedTvlUsd)) {
     throwIfAborted(input.signal);
-    if (Date.now() + REQUEST_HEADROOM_MS >= input.deadlineMs) throw new Error("producer-deadline");
+    if (Date.now() + TRON_MEASURED_REQUEST_HEADROOM_MS >= input.deadlineMs) throw new Error("producer-deadline");
     const point = await quoteTronMeasuredTarget({
       target: input.target,
       inputUsd,
@@ -96,8 +96,8 @@ export async function syncTronDexMeasuredExecution(
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
   const startedAt = Math.floor(Date.now() / 1_000);
-  const deadlineMs = Date.now() + TRON_RUNTIME_BUDGET_MS;
-  const deadlineSignal = AbortSignal.timeout(TRON_RUNTIME_BUDGET_MS);
+  const deadlineMs = Date.now() + TRON_MEASURED_RUNTIME_BUDGET_MS;
+  const deadlineSignal = AbortSignal.timeout(TRON_MEASURED_RUNTIME_BUDGET_MS);
   const producerSignal = signal ? AbortSignal.any([signal, deadlineSignal]) : deadlineSignal;
   const targetGeneration = await loadLatestPublishedTronMeasuredTargets(db, signal);
   if (!targetGeneration || targetGeneration.targets.length === 0) {

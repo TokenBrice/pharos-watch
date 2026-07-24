@@ -5,7 +5,11 @@ import {
 import type { DexExecutionCapabilityGate } from "@shared/types/market";
 import type { PoolEntry } from "../dex-liquidity/types";
 import { loadLatestPublishedSolanaMeasuredQuoteEvidence, type LoadedSolanaMeasuredQuoteEvidence } from "./persistence";
-import { getSolanaMeasuredExecutionAdapterByProfile } from "./solana-registry";
+import {
+  getSolanaMeasuredExecutionAdapterByProfile,
+  isSolanaMeasuredExecutionAdapterScoreEligible,
+  type SolanaMeasuredExecutionAdapterRegistration,
+} from "./solana-registry";
 
 export interface SolanaMeasuredExecutionJoinDiagnostics {
   targetCount: number;
@@ -45,6 +49,7 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
   poolsByStablecoin: Map<string, PoolEntry[]>;
   evidence: LoadedSolanaMeasuredQuoteEvidence | null;
   nowSec: number;
+  resolveAdapterPolicy?: (adapterProfileId: string) => SolanaMeasuredExecutionAdapterRegistration | null;
 }): SolanaMeasuredExecutionJoinDiagnostics {
   const diagnostics: SolanaMeasuredExecutionJoinDiagnostics = {
     targetCount: 0,
@@ -63,6 +68,8 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
       delete pool.extra.solanaMeasuredExecution;
       delete pool.extra.solanaMeasuredExecutionProfile;
       pool.extra.solanaMeasuredExecutionPhysicalPoolId = target.poolId;
+      delete pool.extra.nativeMeasuredExecution;
+      delete pool.extra.nativeMeasuredExecutionPhysicalPoolId;
       const fail = (reason: DexExecutionCapabilityGate["reason"], detail?: string) => {
         pool.extra!.executionCapabilityGate = gate(reason);
         pool.extra!.solanaMeasuredExecutionDiagnostic = {
@@ -86,7 +93,9 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
         fail("quote-failed", quote.failureReason ?? undefined);
         continue;
       }
-      const adapter = getSolanaMeasuredExecutionAdapterByProfile(quote.profile.adapterProfileId);
+      const adapter = (input.resolveAdapterPolicy ?? getSolanaMeasuredExecutionAdapterByProfile)(
+        quote.profile.adapterProfileId,
+      );
       if (!adapter || adapter.protocol !== quote.profile.protocol || adapter.poolType !== quote.profile.poolType) {
         fail("invalid-observation", "adapter-registration-mismatch");
         continue;
@@ -103,11 +112,23 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
         fail(mapValidationGate(issues), issues.join(","));
         continue;
       }
+      const publicProfile = toSolanaMeasuredExecutionPublicProfile(quote.profile);
       pool.extra.solanaMeasuredExecutionProfile = quote.profile;
-      pool.extra.solanaMeasuredExecution = toSolanaMeasuredExecutionPublicProfile(quote.profile);
-      // Both registrations remain shadow-only until replayed production evidence
-      // is reviewed; a deployed producer never activates scoring by itself.
-      fail("activation-pending", "shadow-score-ineligible");
+      pool.extra.solanaMeasuredExecution = publicProfile;
+      if (!isSolanaMeasuredExecutionAdapterScoreEligible(adapter)) {
+        fail("activation-pending", "shadow-score-ineligible");
+        diagnostics.measuredCount++;
+        continue;
+      }
+      pool.extra.nativeMeasuredExecution = publicProfile;
+      pool.extra.nativeMeasuredExecutionPhysicalPoolId = target.poolId;
+      if (pool.extra.executionCapabilityGate?.family === "measured-execution") {
+        delete pool.extra.executionCapabilityGate;
+      }
+      pool.extra.solanaMeasuredExecutionDiagnostic = {
+        adapterProfileId: target.adapterProfileId,
+        targetId: target.targetId,
+      };
       diagnostics.measuredCount++;
     }
   }
@@ -121,5 +142,7 @@ export function stripSolanaMeasuredExecutionInternalFields(pools: readonly PoolE
     delete pool.extra.solanaMeasuredExecutionProfile;
     delete pool.extra.solanaMeasuredExecutionPhysicalPoolId;
     delete pool.extra.solanaMeasuredExecutionDiagnostic;
+    delete pool.extra.nativeMeasuredExecution;
+    delete pool.extra.nativeMeasuredExecutionPhysicalPoolId;
   }
 }
