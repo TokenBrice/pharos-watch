@@ -42,7 +42,7 @@ V3, PancakeSwap V3, and Base Aerodrome Slipstream QuoterV2/factory RPC
 reads, the Fluid resolver adapter, reviewed Curve CryptoSwap `get_dy` pools,
 the exact Ethereum legacy Curve 3pool StableSwap `get_dy(int128,int128,uint256)`
 deployment, native Solana
-Raydium CLMM/Orca Whirlpool exact quotes, and shadow Tron SunSwap V2
+Raydium CLMM/Orca Whirlpool exact quotes, and reviewed Tron SunSwap V2
 factory/reserve plus SUN Smart Router proofs enter
 `worker/src/cron/measured-execution/` through the isolated
 `sync-cl-exit-depth` job. Curve CryptoSwap activation verifies pinned runtime
@@ -72,10 +72,12 @@ proof and current-target validation. Only active native profiles enter the P4
 capacity compiler and physical-pool completeness denominator; shadow profiles
 retain `activation-pending`, and case-sensitive native pool identities remain
 case-sensitive through route selection. Unreviewed measured deployment cohorts
-remain score-ineligible while their activation evidence is pending. SunSwap
-census rows are excluded from liquidity scoring and price consensus; its
-latest-only TronGrid state reads are accepted only inside a bounded before/after
-block bracket.
+remain score-ineligible while their activation evidence is pending. The reviewed
+SunSwap V2 registry is active; missing, failed, stale, multi-hop-only, or
+identity-mismatched profiles remain target-level fail-closed. SunSwap census
+rows are excluded from liquidity scoring and price consensus; its latest-only
+TronGrid state reads are accepted only inside a bounded before/after block
+bracket.
 
 The private `report-cards:snapshot` row is checksum-verified gzip/base64 with
 bounded decompression; its decoded public V8 JSON is unchanged, and the new

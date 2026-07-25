@@ -91,7 +91,14 @@ export function LiquidityMethodologySection() {
             tick-spacing binding, and revalidates identity, prices, freshness, capacity monotonicity, and the retained
             TVL ceiling before scoring. Mature fresh profiles remain route-only if a pool temporarily rotates out of
             the display shortlist; they never re-enter aggregate liquidity, price consensus, target publication, or V8
-            scoring. Optimism Uniswap V3, Solana CLMM, and SunSwap measurements remain shadow-only.
+            scoring. Optimism Uniswap V3 and Solana CLMM measurements remain shadow-only.
+          </p>
+          <p>
+            Reviewed SunSwap V2 routes on Tron can publish exact-execution profiles after proving the canonical factory
+            and pair runtimes, exact pair binding and reserves, one direct SUN Smart Router path, the reviewed 0.3%
+            constant-product output, and a bounded latest-state block bracket. Missing, stale, failed, multi-hop-only,
+            or identity-mismatched evidence remains capability-gated per target. The SunSwap census still does not enter
+            aggregate liquidity, price consensus, direct-source precedence, visible pool selection, or V8 scoring.
           </p>
           <p>
             Repeated sightings of the same physical pool across direct API, staged, and fallback sources are collapsed
