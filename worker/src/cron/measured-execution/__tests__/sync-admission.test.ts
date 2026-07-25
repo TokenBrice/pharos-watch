@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import {
   admitTargetsWithinBudget,
+  estimateAdmissionCohortRpcRequestBreakdown,
   estimateAdmissionCohortRpcRequests,
   estimateAdmissionRotationCycles,
   hasCompleteDexMeasuredQuoteProgress,
@@ -103,9 +104,10 @@ function curveStableSwapNgTarget(): DexMeasuredExecutionTarget {
 }
 
 describe("measured execution overflow admission", () => {
-  it("estimates each execution phase plus singleton-retry headroom", () => {
-    expect(estimateAdmissionCohortRpcRequests([target("coin-low", 100_000)])).toBe(7);
-    expect(estimateAdmissionCohortRpcRequests([target("coin-high", 10_000_000)])).toBe(10);
+  it("estimates setup, execution phases, and singleton-retry headroom", () => {
+    expect(estimateAdmissionCohortRpcRequestBreakdown([target("coin-low", 100_000)]))
+      .toEqual({ setupRpcRequests: 3, quoteRpcRequests: 7, totalRpcRequests: 10 });
+    expect(estimateAdmissionCohortRpcRequests([target("coin-high", 10_000_000)])).toBe(13);
   });
 
   it("counts phase-separated batches at adapter and batch boundaries", () => {
@@ -113,8 +115,8 @@ describe("measured execution overflow admission", () => {
       Array.from({ length: count }, (_, index) =>
         target("coin-a", 100_000, `coin-a-${index}`),
       );
-    expect(estimateAdmissionCohortRpcRequests(lowTargets(8))).toBe(14);
-    expect(estimateAdmissionCohortRpcRequests(lowTargets(9))).toBe(21);
+    expect(estimateAdmissionCohortRpcRequests(lowTargets(8))).toBe(17);
+    expect(estimateAdmissionCohortRpcRequests(lowTargets(9))).toBe(24);
     expect(
       estimateAdmissionCohortRpcRequests([
         target("coin-a", 100_000),
@@ -124,7 +126,7 @@ describe("measured execution overflow admission", () => {
           protocol: "pancakeswap",
         }),
       ]),
-    ).toBe(14);
+    ).toBe(20);
     expect(
       estimateAdmissionCohortRpcRequests([
         target("coin-a", 100_000),
@@ -133,14 +135,18 @@ describe("measured execution overflow admission", () => {
           protocol: "fluid",
         }),
       ]),
-    ).toBe(12);
+    ).toBe(16);
   });
 
   it("recognizes both reviewed StableSwap directions as one quote-batch cohort", () => {
     const packet = [curveStableSwapTarget(0), curveStableSwapTarget(1)];
 
-    expect(estimateAdmissionCohortRpcRequests(packet)).toBe(8);
-    const admission = admitTargetsWithinBudget(packet, { maxEstimatedRpcRequests: 8 });
+    expect(estimateAdmissionCohortRpcRequestBreakdown(packet)).toEqual({
+      setupRpcRequests: 12,
+      quoteRpcRequests: 8,
+      totalRpcRequests: 20,
+    });
+    const admission = admitTargetsWithinBudget(packet, { maxEstimatedRpcRequests: 20 });
     expect([...admission.admitted]).toEqual([
       "target-curve-3pool-0",
       "target-curve-3pool-1",
@@ -151,9 +157,13 @@ describe("measured execution overflow admission", () => {
   it("admits the reviewed USDG StableSwap-NG route as one exact quote cohort", () => {
     const measuredTarget = curveStableSwapNgTarget();
 
-    expect(estimateAdmissionCohortRpcRequests([measuredTarget])).toBe(8);
+    expect(estimateAdmissionCohortRpcRequestBreakdown([measuredTarget])).toEqual({
+      setupRpcRequests: 11,
+      quoteRpcRequests: 8,
+      totalRpcRequests: 19,
+    });
     const admission = admitTargetsWithinBudget([measuredTarget], {
-      maxEstimatedRpcRequests: 8,
+      maxEstimatedRpcRequests: 19,
     });
     expect([...admission.admitted]).toEqual(["target-curve-usdg-ng"]);
     expect(admission.deferred.size).toBe(0);
@@ -162,15 +172,15 @@ describe("measured execution overflow admission", () => {
   it("rotates the deterministic coin-level tail instead of starving it", () => {
     const targets = [target("coin-a", 100_000), target("coin-b", 100_000), target("coin-c", 100_000)];
     const first = admitTargetsWithinBudget(targets, {
-      maxEstimatedRpcRequests: 7,
+      maxEstimatedRpcRequests: 10,
     });
     const second = admitTargetsWithinBudget(targets, {
       cursor: first.nextCursor,
-      maxEstimatedRpcRequests: 7,
+      maxEstimatedRpcRequests: 10,
     });
     const third = admitTargetsWithinBudget(targets, {
       cursor: second.nextCursor,
-      maxEstimatedRpcRequests: 7,
+      maxEstimatedRpcRequests: 10,
     });
 
     expect([...first.admitted]).toEqual(["target-coin-a"]);
@@ -190,14 +200,14 @@ describe("measured execution overflow admission", () => {
       target("coin-b", 10_000_000),
       target("coin-c", 100_000),
     ];
-    const first = admitTargetsWithinBudget(targets, { maxEstimatedRpcRequests: 10 });
+    const first = admitTargetsWithinBudget(targets, { maxEstimatedRpcRequests: 13 });
     const second = admitTargetsWithinBudget(targets, {
       cursor: first.nextCursor,
-      maxEstimatedRpcRequests: 10,
+      maxEstimatedRpcRequests: 13,
     });
     const third = admitTargetsWithinBudget(targets, {
       cursor: second.nextCursor,
-      maxEstimatedRpcRequests: 10,
+      maxEstimatedRpcRequests: 13,
     });
 
     expect([...first.admitted]).toEqual(["target-coin-b"]);
@@ -210,7 +220,7 @@ describe("measured execution overflow admission", () => {
     expect([...third.admitted]).toEqual(["target-coin-c"]);
     expect(new Set([...first.admitted, ...second.admitted, ...third.admitted]).size).toBe(6);
     expect(
-      estimateAdmissionRotationCycles(targets, { maxEstimatedRpcRequests: 10 }),
+      estimateAdmissionRotationCycles(targets, { maxEstimatedRpcRequests: 13 }),
     ).toBe(3);
   });
 
@@ -223,10 +233,10 @@ describe("measured execution overflow admission", () => {
       target("coin-b", 100_000, "coin-b-4"),
       target("coin-c", 100_000),
     ];
-    const first = admitTargetsWithinBudget(targets, { maxEstimatedRpcRequests: 11 });
+    const first = admitTargetsWithinBudget(targets, { maxEstimatedRpcRequests: 14 });
     const second = admitTargetsWithinBudget(targets, {
       cursor: first.nextCursor,
-      maxEstimatedRpcRequests: 11,
+      maxEstimatedRpcRequests: 14,
     });
 
     expect([...first.admitted]).toEqual(["target-coin-a", "target-coin-c"]);
@@ -236,11 +246,11 @@ describe("measured execution overflow admission", () => {
       "target-coin-b-3",
       "target-coin-b-4",
     ]);
-    expect(first.estimatedRpcRequests).toBe(11);
+    expect(first.estimatedRpcRequests).toBe(14);
     expect(first.nextCursor).toBe("coin-a");
     expect([...second.admitted]).toContain("target-coin-b-1");
     expect(
-      estimateAdmissionRotationCycles(targets, { maxEstimatedRpcRequests: 11 }),
+      estimateAdmissionRotationCycles(targets, { maxEstimatedRpcRequests: 14 }),
     ).toBe(2);
   });
 
@@ -251,7 +261,7 @@ describe("measured execution overflow admission", () => {
         target("coin-a", 100_000, "coin-a-2"),
         target("coin-b", 100_000),
       ],
-      { maxEstimatedRpcRequests: 7 },
+      { maxEstimatedRpcRequests: 10 },
     );
 
     expect(admission.oversizedCoinIds).toEqual(["coin-a"]);

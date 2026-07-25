@@ -70,8 +70,8 @@ import {
 
 const MAX_QUOTE_CALLS = 6_400;
 const MAX_RPC_REQUESTS = 800;
-const RPC_ADMISSION_HEADROOM = 64;
-const MAX_ADMISSION_RPC_REQUESTS = MAX_RPC_REQUESTS - RPC_ADMISSION_HEADROOM;
+const RPC_ADMISSION_FRAGMENTATION_HEADROOM = 96;
+const MAX_ADMISSION_RPC_REQUESTS = MAX_RPC_REQUESTS - RPC_ADMISSION_FRAGMENTATION_HEADROOM;
 const CONSERVATIVE_MULTICALL_BATCH_SIZE = 8;
 const MAX_ADMISSION_ROTATION_CYCLES = 2;
 const MAX_RUNTIME_MS = 8 * 60 * 1_000;
@@ -179,18 +179,55 @@ function countAdmissionBatches<T>(
   );
 }
 
-export function estimateAdmissionCohortRpcRequests(
+function estimateDeploymentSetupRpcRequests(deployment: TargetDeployment): number {
+  switch (deployment.kind) {
+    case "quoter-v2":
+      return 2; // Quoter and factory bytecode.
+    case "fluid-resolver":
+      return 1; // Resolver bytecode.
+    case "curve-cryptoswap":
+      return 10; // Pool/dependency code, dependency addresses, coins, and kill-state probe.
+    case "curve-stableswap":
+      return 5 + deployment.config.poolTokens.length * 2;
+    case "curve-stableswap-ng":
+      return 6 + deployment.config.poolTokens.length * 2;
+  }
+}
+
+export interface AdmissionRpcRequestEstimate {
+  setupRpcRequests: number;
+  quoteRpcRequests: number;
+  totalRpcRequests: number;
+}
+
+export function estimateAdmissionCohortRpcRequestBreakdown(
   targets: readonly DexMeasuredExecutionTarget[],
   refinementRounds = REFINEMENT_ROUNDS,
-): number {
+): AdmissionRpcRequestEstimate {
   const executable = targets.flatMap((target) => {
     const deployment = deploymentForTarget(target);
     return deployment ? [{ target, deployment }] : [];
   });
+  const chainSetupRpcRequests = new Set(
+    executable.map((row) => row.target.chain.trim().toLowerCase()),
+  ).size;
+  const deployments = new Map<string, TargetDeployment>();
+  for (const row of executable) {
+    const deploymentKey = [
+      row.target.chain.trim().toLowerCase(),
+      row.deployment.kind,
+      row.deployment.config.endpointAddress,
+    ].join(":");
+    if (!deployments.has(deploymentKey)) deployments.set(deploymentKey, row.deployment);
+  }
+  const deploymentSetupRpcRequests = [...deployments.values()].reduce(
+    (sum, deployment) => sum + estimateDeploymentSetupRpcRequests(deployment),
+    0,
+  );
   const quoterRows = executable.filter((row) => row.deployment.kind === "quoter-v2");
   const quoteGroupKey = (row: typeof executable[number]) =>
     `${row.target.chain}:${row.deployment.kind}`;
-  let estimatedRequests = countAdmissionBatches(
+  let quoteRpcRequests = countAdmissionBatches(
     quoterRows,
     (row) => {
       const deployment = row.deployment;
@@ -204,17 +241,29 @@ export function estimateAdmissionCohortRpcRequests(
     executable.flatMap((row) => getDexMeasuredExecutionProbeNotionals(row.target.retainedTvlUsd)),
   )];
   for (const notional of probeNotionals) {
-    estimatedRequests += countAdmissionBatches(
+    quoteRpcRequests += countAdmissionBatches(
       executable.filter((row) =>
         getDexMeasuredExecutionProbeNotionals(row.target.retainedTvlUsd).includes(notional),
       ),
       quoteGroupKey,
     );
   }
-  estimatedRequests += refinementRounds * countAdmissionBatches(executable, quoteGroupKey);
+  quoteRpcRequests += refinementRounds * countAdmissionBatches(executable, quoteGroupKey);
   // Quoter inner reverts receive serialized confirmation; reserve one per target.
-  estimatedRequests += quoterRows.length;
-  return estimatedRequests;
+  quoteRpcRequests += quoterRows.length;
+  const setupRpcRequests = chainSetupRpcRequests + deploymentSetupRpcRequests;
+  return {
+    setupRpcRequests,
+    quoteRpcRequests,
+    totalRpcRequests: setupRpcRequests + quoteRpcRequests,
+  };
+}
+
+export function estimateAdmissionCohortRpcRequests(
+  targets: readonly DexMeasuredExecutionTarget[],
+  refinementRounds = REFINEMENT_ROUNDS,
+): number {
+  return estimateAdmissionCohortRpcRequestBreakdown(targets, refinementRounds).totalRpcRequests;
 }
 
 export function admitTargetsWithinBudget(
@@ -226,6 +275,8 @@ export function admitTargetsWithinBudget(
   oversized: Set<string>;
   oversizedCoinIds: string[];
   estimatedRpcRequests: number;
+  estimatedSetupRpcRequests: number;
+  estimatedQuoteRpcRequests: number;
   nextCursor: string | null;
 } {
   const byCoin = new Map<string, DexMeasuredExecutionTarget[]>();
@@ -248,6 +299,8 @@ export function admitTargetsWithinBudget(
   const oversizedCoinIds: string[] = [];
   const maxEstimatedRpcRequests = options.maxEstimatedRpcRequests ?? MAX_ADMISSION_RPC_REQUESTS;
   let estimatedRpcRequests = 0;
+  let estimatedSetupRpcRequests = 0;
+  let estimatedQuoteRpcRequests = 0;
   const admittedTargets: DexMeasuredExecutionTarget[] = [];
   let nextCursor = options.cursor ?? null;
   let cursorFrozen = false;
@@ -265,21 +318,32 @@ export function admitTargetsWithinBudget(
       }
       continue;
     }
-    const candidateEstimatedRpcRequests = estimateAdmissionCohortRpcRequests(
+    const candidateEstimate = estimateAdmissionCohortRpcRequestBreakdown(
       [...admittedTargets, ...coinTargets],
       refinementRounds,
     );
-    if (candidateEstimatedRpcRequests > maxEstimatedRpcRequests) {
+    if (candidateEstimate.totalRpcRequests > maxEstimatedRpcRequests) {
       cursorFrozen = true;
       for (const target of coinTargets) deferred.add(target.targetId);
       continue;
     }
-    estimatedRpcRequests = candidateEstimatedRpcRequests;
+    estimatedRpcRequests = candidateEstimate.totalRpcRequests;
+    estimatedSetupRpcRequests = candidateEstimate.setupRpcRequests;
+    estimatedQuoteRpcRequests = candidateEstimate.quoteRpcRequests;
     admittedTargets.push(...coinTargets);
     for (const target of coinTargets) admitted.add(target.targetId);
     if (!cursorFrozen) nextCursor = stablecoinId;
   }
-  return { admitted, deferred, oversized, oversizedCoinIds, estimatedRpcRequests, nextCursor };
+  return {
+    admitted,
+    deferred,
+    oversized,
+    oversizedCoinIds,
+    estimatedRpcRequests,
+    estimatedSetupRpcRequests,
+    estimatedQuoteRpcRequests,
+    nextCursor,
+  };
 }
 
 export function estimateAdmissionRotationCycles(
@@ -399,6 +463,8 @@ export async function syncDexMeasuredExecution(
     oversized,
     oversizedCoinIds,
     estimatedRpcRequests,
+    estimatedSetupRpcRequests,
+    estimatedQuoteRpcRequests,
     nextCursor,
   } = admitTargetsWithinBudget(targetGeneration.targets, {
     cursor: admissionCursor,
@@ -919,7 +985,11 @@ export async function syncDexMeasuredExecution(
     deferredCount: deferred.size,
     budgetDeferredCount,
     admissionEstimatedRpcRequests: estimatedRpcRequests,
+    admissionSetupEstimatedRpcRequests: estimatedSetupRpcRequests,
+    admissionQuoteEstimatedRpcRequests: estimatedQuoteRpcRequests,
     admissionRpcRequestLimit: MAX_ADMISSION_RPC_REQUESTS,
+    admissionFragmentationReserveRpcRequests: RPC_ADMISSION_FRAGMENTATION_HEADROOM,
+    admissionRpcHardLimit: MAX_RPC_REQUESTS,
     admissionRotationCycles,
     admissionCursor,
     nextAdmissionCursor: nextCursor,

@@ -170,7 +170,7 @@ export async function loadTelegramDeliverySliRollup(
 
   const core = await db
     .prepare(
-      `WITH recent_sources AS (
+      `WITH recent_sources AS MATERIALIZED (
        SELECT source_event_id, detected_at, expires_at, target_plan_completed_at
          FROM telegram_alert_source_events
         WHERE detected_at >= ? AND detected_at <= ?
@@ -179,9 +179,10 @@ export async function loadTelegramDeliverySliRollup(
               target.target_expires_at, target.final_delivery_state,
               target.final_delivery_at, source.target_plan_completed_at,
               COALESCE(target.target_expires_at, job.expires_at, source.expires_at) AS effective_expires_at
-         FROM telegram_alert_job_targets target
-         JOIN recent_sources source ON source.source_event_id = target.source_event_id
+         FROM recent_sources source
+         CROSS JOIN telegram_alert_job_targets target INDEXED BY idx_tajt_authoritative_ready
          LEFT JOIN telegram_alert_jobs job ON job.job_id = target.job_id
+        WHERE target.source_event_id = source.source_event_id
      )
      SELECT
        (SELECT COUNT(*) FROM recent_sources) AS source_count,
@@ -220,7 +221,11 @@ export async function loadTelegramDeliverySliRollup(
 
   const familyAttribution = await db
     .prepare(
-      `WITH family_flags AS (
+      `WITH recent_sources AS MATERIALIZED (
+       SELECT source_event_id
+         FROM telegram_alert_source_events
+        WHERE detected_at >= ? AND detected_at <= ?
+     ), family_flags AS (
        SELECT target.job_id, target.target_key,
               COALESCE(MAX(item.item_key LIKE 'dews:%'), 0) AS dews,
               COALESCE(MAX(item.item_key LIKE 'depeg-%'), 0) AS depeg,
@@ -228,12 +233,12 @@ export async function loadTelegramDeliverySliRollup(
               COALESCE(MAX(item.item_key LIKE 'launch:%'), 0) AS launch,
               COALESCE(MAX(item.item_key LIKE 'reserve:%'), 0) AS reserve,
               COALESCE(MAX(item.item_key LIKE 'freeze:%'), 0) AS freeze
-         FROM telegram_alert_job_targets target
-         JOIN telegram_alert_source_events source ON source.source_event_id = target.source_event_id
+         FROM recent_sources source
+         CROSS JOIN telegram_alert_job_targets target INDEXED BY idx_tajt_authoritative_ready
          LEFT JOIN telegram_alert_job_target_items item
            ON item.job_id = target.job_id
           AND item.target_key = target.target_key
-        WHERE source.detected_at >= ? AND source.detected_at <= ?
+        WHERE target.source_event_id = source.source_event_id
         GROUP BY target.job_id, target.target_key
      ), attributed AS (
        SELECT *, dews + depeg + safety + launch + reserve + freeze AS family_count FROM family_flags

@@ -3,27 +3,33 @@ import { getStatusCronDisplay } from "@/lib/status/cron-config";
 import { CRON_GROUPS, CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 
 describe("status cron config", () => {
-  it("maps the split DEX pipeline onto separate cron groups", () => {
+  it("maps the split DEX pipeline onto separate cron slots", () => {
     expect(getStatusCronDisplay("sync-dex-discovery")).toEqual({
       group: "multi-hourly",
       label: "DEX pool discovery",
       schedule: "6 */2 * * *",
       triggerMode: "isolated",
     });
-    expect(getStatusCronDisplay("sync-dex-liquidity")).toEqual({
+    expect(getStatusCronDisplay("sync-dex-liquidity-stage")).toEqual({
       group: "half-hourly",
-      label: "DEX liquidity scoring",
+      label: "DEX liquidity source stage",
       schedule: "10,40 * * * *",
       triggerMode: "isolated",
     });
+    expect(getStatusCronDisplay("sync-dex-liquidity")).toEqual({
+      group: "half-hourly",
+      label: "DEX liquidity scoring",
+      schedule: "16,46 * * * *",
+      triggerMode: "shared",
+    });
   });
 
-  it("maps stablecoin charts to the dedicated half-hourly charts slot", () => {
+  it("maps stablecoin charts to the shared half-hourly charts slot", () => {
     expect(getStatusCronDisplay("sync-stablecoin-charts")).toEqual({
       group: "half-hourly",
       label: "Stablecoin charts",
       schedule: "16,46 * * * *",
-      triggerMode: "isolated",
+      triggerMode: "shared",
     });
   });
 

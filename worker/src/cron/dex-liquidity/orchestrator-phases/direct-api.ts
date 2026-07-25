@@ -331,8 +331,8 @@ export async function runDirectApiFetchPhase(
   lookups?: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
 ): Promise<DirectApiFetchPhaseResult> {
   const providerContext = createProviderExecutionContextForJob({
-    job: "sync-dex-liquidity",
-    laneId: "sync-dex-liquidity:direct-api",
+    job: "sync-dex-liquidity-stage",
+    laneId: "sync-dex-liquidity-stage:direct-api",
     laneMaxConcurrent: DIRECT_API_FETCH_PHASE_CONCURRENCY,
     db,
     signal,

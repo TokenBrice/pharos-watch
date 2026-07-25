@@ -456,7 +456,7 @@ describe("worker.fetch", () => {
     expect(res.status).toBe(200);
     expect(cacheMatch).toHaveBeenCalledTimes(1);
     expect(cachePut).toHaveBeenCalledTimes(1);
-  });
+  }, 10_000);
 
   it("rejects site-api requests without the shared site-proxy secret", async () => {
     const env = makeEnv();

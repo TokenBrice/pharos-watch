@@ -52,6 +52,7 @@ const cronMocks = vi.hoisted(() => ({
   syncLiveReserves: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncRedemptionBackstops: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncKinesisSupply: vi.fn(async () => ({ status: "ok", itemCount: 2, metadata: "{}" })),
+  stageDexLiquidityScoring: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncDexLiquidity: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncYieldData: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncYieldSupplemental: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -259,7 +260,11 @@ vi.mock("../cron/sync-usds-status", () => ({ syncUsdsStatus: cronMocks.syncUsdsS
 vi.mock("../cron/sync-live-reserves", () => ({ syncLiveReserves: cronMocks.syncLiveReserves }));
 vi.mock("../cron/sync-redemption-backstops", () => ({ syncRedemptionBackstops: cronMocks.syncRedemptionBackstops }));
 vi.mock("../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: cronMocks.syncKinesisSupply }));
-vi.mock("../cron/dex-liquidity/orchestrator", () => ({ syncDexLiquidity: cronMocks.syncDexLiquidity }));
+vi.mock("../cron/dex-liquidity/orchestrator", () => ({
+  syncDexLiquidity: cronMocks.syncDexLiquidity,
+  stageDexLiquidityScoring: cronMocks.stageDexLiquidityScoring,
+  consumeDexLiquidityScoringStage: cronMocks.syncDexLiquidity,
+}));
 vi.mock("../cron/sync-yield-data", () => ({ syncYieldData: cronMocks.syncYieldData }));
 vi.mock("../cron/sync-yield-supplemental", () => ({ syncYieldSupplemental: cronMocks.syncYieldSupplemental }));
 vi.mock("../cron/sync-bluechip", () => ({ syncBluechip: cronMocks.syncBluechip }));
@@ -688,7 +693,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.publishReportCardCache).toHaveBeenCalledTimes(1);
   });
 
-  it("runs dex only on the 10,40 DEX trigger", async () => {
+  it("runs only DEX source staging on the 10,40 trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -703,13 +708,14 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
-    expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
+    expect(cronMocks.stageDexLiquidityScoring).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncDexLiquidity).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
   });
 
-  it("runs charts only on the dedicated 16,46 charts trigger", async () => {
+  it("runs staged DEX scoring before charts on the 16,46 trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -724,7 +730,11 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
-    expect(cronMocks.syncDexLiquidity).not.toHaveBeenCalled();
+    expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
+    expect(cronMocks.stageDexLiquidityScoring).not.toHaveBeenCalled();
+    expect(cronMocks.syncStablecoinCharts.mock.invocationCallOrder[0]).toBeGreaterThan(
+      cronMocks.syncDexLiquidity.mock.invocationCallOrder[0],
+    );
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
   });
@@ -753,8 +763,8 @@ describe("worker.scheduled", () => {
     );
   });
 
-  it("contains sync-dex-liquidity failures within the 30-min cron", async () => {
-    cronMocks.syncDexLiquidity.mockRejectedValueOnce(new Error("dex failed"));
+  it("contains DEX source-stage failures within the 10,40 cron", async () => {
+    cronMocks.stageDexLiquidityScoring.mockRejectedValueOnce(new Error("dex stage failed"));
 
     const { ctx, waits } = makeCtx();
     const env = {
@@ -769,7 +779,8 @@ describe("worker.scheduled", () => {
     );
     await Promise.all(waits);
 
-    expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
+    expect(cronMocks.stageDexLiquidityScoring).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncDexLiquidity).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();

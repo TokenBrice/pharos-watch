@@ -4,7 +4,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
 
 ## Slot Context
 
-- `sync-yield-data` now runs on a dedicated hourly trigger at `20 * * * *`, after the `10,40 * * * *` DEX lane and `16,46 * * * *` charts lane have had time to settle. It does not depend on the separate `26,56 * * * *` DEWS / PSI lane.
+- `sync-yield-data` now runs on a dedicated hourly trigger at `20 * * * *`, after the `10,40 * * * *` DEX source stage and the `16,46 * * * *` scoring-then-charts chain have had time to settle. It does not depend on the separate `26,56 * * * *` DEWS / PSI lane.
 - `sync-yield-supplemental` runs on its own slower `25 */4 * * *` trigger and feeds a cache snapshot that the hourly publisher consumes.
 - The hourly publisher is now the freshness path for `yield-rankings`; optional upstream families are deliberately kept off that path.
 - vaults.fyi is an optional gated supplemental source. It is disabled unless `VAULTS_FYI_ENABLED=true` and `VAULTS_FYI_API_KEY` are configured; without `VAULTS_FYI_RANKABLE_VAULTS`, it records audit-only inventory telemetry and emits no production candidates. Supplemental telemetry distinguishes `disabled`, `no-key`, and `invalid-config` skip reasons so ops can tell flag-off, missing secret, and malformed enable flag states apart.

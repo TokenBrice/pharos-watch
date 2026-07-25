@@ -52,6 +52,7 @@ const CRON_TIMEOUT_OVERRIDES_MS: Record<string, number> = {
   // The producer stops RPC work at eight minutes, leaving one minute to publish
   // a complete quote generation and record the cron result.
   "sync-cl-exit-depth": 9 * 60_000,
+  "sync-dex-liquidity-stage": 13 * 60_000,
   "sync-dex-liquidity": 13 * 60_000,
   "sync-dex-discovery": 13 * 60_000,
   "sync-yield-data": 10 * 60_000,

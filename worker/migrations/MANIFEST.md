@@ -167,6 +167,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0221     | `0221_telegram_digest_safety_identity.sql`                   | Bind immutable daily and weekly Telegram editions to their authored Safety Score identity and mark legacy rows unbound                                   |
 | 0222     | `0222_report_card_evidence_journal.sql`                      | Add a bounded diagnostic-only reserve evidence-attempt journal for exact V9 fixed-input provenance                                                       |
 | 0223     | `0223_safety_score_v9_supply_attribution_journal.sql`         | Add immutable bounded V9-only supply-attribution attempt, rejection, and aggregate-fallback provenance                                                   |
+| 0224     | `0224_dex_liquidity_scoring_stage.sql`                        | Add generation-fenced bounded DEX pool-state chunks for the split source-build and scoring invocations                                                    |
 
 ## Retired Individual Migrations
 
@@ -275,6 +276,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0221_telegram_digest_safety_identity.sql`: roll back digest identity fencing by restoring the prior Worker. Keep the additive context column; older Workers ignore it. Do not replay a `failed_permanent` legacy or stale-identity edition without reviewing its archived digest input and current Safety Score identity.
 - `0222_report_card_evidence_journal.sql`: roll back journal capture by restoring the prior Worker. Keep the additive table and indexes; older Workers ignore them, and no journal row participates in V8 publication, V9 fact compilation, scoring, activation, or public responses.
 - `0223_safety_score_v9_supply_attribution_journal.sql`: roll back supply-attribution journal capture by restoring the prior Worker. Keep the additive table and indexes; older Workers ignore them, and no row participates in V8 publication, V9 fact compilation, scoring, activation, or public responses.
+- `0224_dex_liquidity_scoring_stage.sql`: roll back the split scoring lane by restoring the prior Worker. Keep the additive generation/chunk tables; older Workers ignore them. Incomplete generations are never public data and can be pruned after rollback.
 
 ## Rollback Procedure
 

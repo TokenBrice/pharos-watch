@@ -178,8 +178,9 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "half-hourly",
     intervalSec: 3600,
     scheduleKey: "halfHourlyChartsOffset",
-    triggerMode: "isolated",
+    triggerMode: "shared",
     maxConnections: 1, // Single DL stablecoincharts/all fetch
+    connectionGroup: "half-hourly-scoring-charts-chain",
   },
   {
     job: "sync-fx-rates",
@@ -353,12 +354,21 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     maxConnections: 5, // Three EVM chain lanes plus serialized Solana and Tron quote streams.
   },
   {
-    job: "sync-dex-liquidity",
-    label: "DEX liquidity scoring",
+    job: "sync-dex-liquidity-stage",
+    label: "DEX liquidity source stage",
     group: "half-hourly",
     scheduleKey: "halfHourlyOffset",
     triggerMode: "isolated",
     maxConnections: 5, // Nested direct-API peak; below the platform header-wait ceiling and repo budget.
+  },
+  {
+    job: "sync-dex-liquidity",
+    label: "DEX liquidity scoring",
+    group: "half-hourly",
+    scheduleKey: "halfHourlyChartsOffset",
+    triggerMode: "shared",
+    maxConnections: 0, // D1-only consumer of the complete source-stage generation.
+    connectionGroup: "half-hourly-scoring-charts-chain",
   },
   {
     job: "sync-yield-data",

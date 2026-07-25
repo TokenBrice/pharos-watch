@@ -52,6 +52,7 @@
     "sync-cl-exit-depth",
     "sync-dex-discovery",
     "sync-dex-liquidity",
+    "sync-dex-liquidity-stage",
     "sync-fx-rates",
     "sync-kinesis-supply",
     "sync-live-reserves",
