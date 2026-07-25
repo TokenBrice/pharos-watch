@@ -251,7 +251,7 @@ export function SafetyScoreV9PreviewClient() {
       .sort(compareCards);
   }, [data?.cards, search]);
 
-  if (apiKey === null) {
+  if (!apiKey) {
     return (
       <PreviewAccessForm
         apiKey={apiKeyInput}
