@@ -116,6 +116,8 @@ export interface LoadedDexMeasuredQuoteEvidence {
       status: "measured" | "failed";
       failureReason: string | null;
       profile: DexMeasuredExecutionProfile | null;
+      /** Scoring-only lazy form; validated once on read and materialized per consumer target. */
+      deferredProfileJson?: string;
       quoteGenerationId: string;
       targetGenerationId: string;
       resolution: "latest" | "last-known-good";
@@ -143,6 +145,16 @@ const OPERATIONAL_DEX_MEASURED_FAILURE_REASONS = new Set([
 
 export function isOperationalDexMeasuredFailure(reason: string | null | undefined): boolean {
   return reason != null && OPERATIONAL_DEX_MEASURED_FAILURE_REASONS.has(reason);
+}
+
+export function materializeDexMeasuredQuoteProfile(
+  entry: LoadedDexMeasuredQuoteEvidence["byTargetId"] extends Map<string, infer T> ? T : never,
+): DexMeasuredExecutionProfile | null {
+  if (entry.profile) return entry.profile;
+  if (!entry.deferredProfileJson) return null;
+  return DexMeasuredExecutionProfileSchema.parse(
+    parsePersistedJson(entry.deferredProfileJson, "DEX measured deferred profile JSON"),
+  );
 }
 
 function generationId(prefix: string, nowSec: number): string {
@@ -190,6 +202,7 @@ async function loadCurrentMeasuredQuoteEvidence<
   label: string;
   targetSchema: { parse(value: unknown): TTarget };
   profileSchema: { parse(value: unknown): TProfile };
+  deferProfiles?: boolean;
   signal?: AbortSignal;
 }): Promise<{
   quoteGenerationId: string;
@@ -202,6 +215,7 @@ async function loadCurrentMeasuredQuoteEvidence<
       status: "measured" | "failed";
       failureReason: string | null;
       profile: TProfile | null;
+      deferredProfileJson?: string;
     }
   >;
 } | null> {
@@ -333,7 +347,10 @@ async function loadCurrentMeasuredQuoteEvidence<
         quotedTarget,
         status: row.status,
         failureReason: row.failure_reason,
-        profile,
+        profile: input.deferProfiles ? null : profile,
+        ...(input.deferProfiles && row.quote_profile_json
+          ? { deferredProfileJson: row.quote_profile_json }
+          : {}),
       });
       afterTargetId = row.target_id;
     }
@@ -669,6 +686,7 @@ export async function publishDexMeasuredQuoteGeneration(input: {
 export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   db: D1Database,
   signal?: AbortSignal,
+  options: { deferProfiles?: boolean } = {},
 ): Promise<LoadedDexMeasuredQuoteEvidence | null> {
   const currentEvidence = await loadCurrentMeasuredQuoteEvidence({
     db,
@@ -677,6 +695,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     label: "DEX",
     targetSchema: DexMeasuredExecutionTargetSchema,
     profileSchema: DexMeasuredExecutionProfileSchema,
+    deferProfiles: options.deferProfiles,
     signal,
   });
   if (!currentEvidence) return null;
@@ -690,6 +709,8 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     LoadedDexMeasuredQuoteEvidence["byTargetId"] extends Map<string, infer T> ? T : never
   >();
   const historyCyclesByTargetId = new Map<string, DexMeasuredExecutionHistoryCycle[]>();
+  const currentProfileJsonByTargetId = new Map<string, string>();
+  const historyFinalizedTargetIds = new Set<string>();
   for (const [targetId, current] of currentEvidence.byTargetId) {
     const entry = {
       ...current,
@@ -699,6 +720,9 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
       latestFailureReason: current.failureReason,
     } as const;
     byTargetId.set(targetId, entry);
+    if (current.deferredProfileJson) {
+      currentProfileJsonByTargetId.set(targetId, current.deferredProfileJson);
+    }
     historyCyclesByTargetId.set(targetId, [
       {
         generationId: quoteGenerationId,
@@ -711,6 +735,18 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     ]);
   }
   currentEvidence.byTargetId.clear();
+  const populateCurrentHistoryProfile = (targetId: string) => {
+    const profileJson = currentProfileJsonByTargetId.get(targetId);
+    if (!profileJson) return;
+    const cycles = historyCyclesByTargetId.get(targetId);
+    const currentCycle = cycles?.find((cycle) => cycle.generationId === quoteGenerationId);
+    if (currentCycle?.status === "measured" && currentCycle.profile === null) {
+      currentCycle.profile = DexMeasuredExecutionProfileSchema.parse(
+        parsePersistedJson(profileJson, "DEX measured deferred history profile JSON"),
+      );
+    }
+    currentProfileJsonByTargetId.delete(targetId);
+  };
 
   // A transport or runtime-budget failure says nothing about executable depth.
   // Reuse the newest still-fresh measured row for that exact target identity;
@@ -862,7 +898,10 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
             quotedTarget: targetResult.data,
             status: "measured",
             failureReason: null,
-            profile,
+            profile: options.deferProfiles ? null : profile,
+            ...(options.deferProfiles && row.quote_profile_json
+              ? { deferredProfileJson: row.quote_profile_json }
+              : {}),
             quoteGenerationId: row.generation_id,
             targetGenerationId: row.target_generation_id,
             resolution: "last-known-good",
@@ -871,18 +910,21 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
         }
         historicalRows.length = 0;
         for (const targetId of targetIdBatch) {
+          populateCurrentHistoryProfile(targetId);
           const entry = byTargetId.get(targetId);
-          if (entry?.status === "measured" && entry.profile !== null) {
+          const profile = entry ? materializeDexMeasuredQuoteProfile(entry) : null;
+          if (entry?.status === "measured" && profile !== null) {
             const observationHistory = summarizeDexMeasuredExecutionHistory({
               cycles: historyCyclesByTargetId.get(targetId) ?? [],
               nowSec: latestPublishedAt,
-              freshnessMaxSec: getDexMeasuredHistoryFreshnessSec(entry.profile.adapterProfileId),
+              freshnessMaxSec: getDexMeasuredHistoryFreshnessSec(profile.adapterProfileId),
             });
             if (observationHistory) {
               byTargetId.set(targetId, { ...entry, observationHistory });
             }
           }
           historyCyclesByTargetId.delete(targetId);
+          historyFinalizedTargetIds.add(targetId);
         }
       }
     }
@@ -891,15 +933,22 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   }
 
   for (const [targetId, entry] of byTargetId) {
-    if (entry.status !== "measured" || entry.profile === null) continue;
+    if (historyFinalizedTargetIds.has(targetId)) continue;
+    populateCurrentHistoryProfile(targetId);
+    const profile = materializeDexMeasuredQuoteProfile(entry);
+    if (entry.status !== "measured" || profile === null) {
+      historyCyclesByTargetId.delete(targetId);
+      continue;
+    }
     const observationHistory = summarizeDexMeasuredExecutionHistory({
       cycles: historyCyclesByTargetId.get(targetId) ?? [],
       nowSec: latestPublishedAt,
-      freshnessMaxSec: getDexMeasuredHistoryFreshnessSec(entry.profile.adapterProfileId),
+      freshnessMaxSec: getDexMeasuredHistoryFreshnessSec(profile.adapterProfileId),
     });
     if (observationHistory) {
       byTargetId.set(targetId, { ...entry, observationHistory });
     }
+    historyCyclesByTargetId.delete(targetId);
   }
 
   return {

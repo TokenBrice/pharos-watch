@@ -113,7 +113,6 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
         continue;
       }
       const publicProfile = toSolanaMeasuredExecutionPublicProfile(quote.profile);
-      pool.extra.solanaMeasuredExecutionProfile = quote.profile;
       pool.extra.solanaMeasuredExecution = publicProfile;
       if (!isSolanaMeasuredExecutionAdapterScoreEligible(adapter)) {
         fail("activation-pending", "shadow-score-ineligible");

@@ -423,7 +423,7 @@ describe("measured execution join activation", () => {
     });
 
     expect(pool.extra?.measuredExecutions).toHaveLength(2);
-    expect(pool.extra?.measuredExecutionProfiles).toHaveLength(2);
+    expect(pool.extra?.measuredExecutionProfiles).toBeUndefined();
     expect(pool.extra?.measuredExecutions?.every(
       (profile) => profile.quotedAt === 1_060 && profile.blockNumber === 25_601_051,
     )).toBe(true);
@@ -715,10 +715,10 @@ describe("measured execution join activation", () => {
             expect.objectContaining({ targetId: targets[0]!.targetId }),
             expect.objectContaining({ targetId: targets[1]!.targetId }),
           ]),
-          measuredExecutionProfiles: expect.arrayContaining(profiles),
         }),
       }),
     ]);
+    expect(retained.get("usdt-tether")?.[0]?.extra?.measuredExecutionProfiles).toBeUndefined();
 
     const partial = buildDexMeasuredExecutionRetainedRoutePools({
       poolsByStablecoin: new Map([["usdt-tether", []]]),

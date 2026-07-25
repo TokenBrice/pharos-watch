@@ -113,7 +113,6 @@ export function joinTronMeasuredExecutionEvidence(input: {
         continue;
       }
       const publicProfile = toTronMeasuredExecutionPublicProfile(quote.profile);
-      pool.extra.tronMeasuredExecutionProfile = quote.profile;
       pool.extra.tronMeasuredExecution = publicProfile;
       if (!isTronMeasuredExecutionAdapterScoreEligible(adapter)) {
         fail("activation-pending", "shadow-score-ineligible");

@@ -32,7 +32,11 @@ import {
   getCurveStableSwapNgPolicy,
   validateCurveStableSwapNgProfileProof,
 } from "./curve-stableswap-ng";
-import { loadLatestPublishedDexMeasuredQuoteEvidence, type LoadedDexMeasuredQuoteEvidence } from "./persistence";
+import {
+  loadLatestPublishedDexMeasuredQuoteEvidence,
+  materializeDexMeasuredQuoteProfile,
+  type LoadedDexMeasuredQuoteEvidence,
+} from "./persistence";
 import { validateQuoterV2ProfileProof } from "./quoter-v2";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "./registry";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -79,7 +83,7 @@ export async function loadDexMeasuredExecutionJoinEvidence(
   signal?: AbortSignal,
 ): Promise<LoadedDexMeasuredQuoteEvidence | null> {
   try {
-    return await loadLatestPublishedDexMeasuredQuoteEvidence(db, signal);
+    return await loadLatestPublishedDexMeasuredQuoteEvidence(db, signal, { deferProfiles: true });
   } catch (error) {
     logWorkerEvent({
       scope: "lib",
@@ -195,7 +199,7 @@ function isMatureFreshCurveStableSwapQuote(
   quote: LoadedDexMeasuredQuote,
   nowSec: number,
 ): boolean {
-  const profile = quote.profile;
+  const profile = materializeDexMeasuredQuoteProfile(quote);
   const history = quote.observationHistory;
   if (
     profile == null ||
@@ -215,7 +219,7 @@ function isMatureFreshCurveStableSwapNgQuote(
   quote: LoadedDexMeasuredQuote,
   nowSec: number,
 ): boolean {
-  const profile = quote.profile;
+  const profile = materializeDexMeasuredQuoteProfile(quote);
   const history = quote.observationHistory;
   if (
     profile == null ||
@@ -255,7 +259,7 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
 
   const curvePackets = new Map<string, Array<{ targetId: string; quote: LoadedDexMeasuredQuote }>>();
   for (const [targetId, quote] of entries) {
-    const profile = quote.profile;
+    const profile = materializeDexMeasuredQuoteProfile(quote);
     const target = quote.quotedTarget;
     if (
       currentTargetIds.has(targetId) ||
@@ -284,7 +288,9 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
   for (const packet of curvePackets.values()) {
     if (packet.length !== 2) continue;
     const targets = packet.map(({ quote }) => quote.quotedTarget);
-    const profiles = packet.map(({ quote }) => quote.profile!);
+    const profiles = packet.map(({ quote }) => materializeDexMeasuredQuoteProfile(quote));
+    if (profiles.some((profile) => profile === null)) continue;
+    const measuredProfiles = profiles as DexMeasuredExecutionProfile[];
     if (
       targets.some(
         (target) =>
@@ -294,25 +300,25 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
           !resolveCurveStableSwapTokenIndices(target).ok,
       ) ||
       new Set(targets.map((target) => target.tokenOut.address)).size !== 2 ||
-      new Set(profiles.map((profile) => profile.tokenIn.address)).size !== 1 ||
-      new Set(profiles.map((profile) => profile.tokenOut.address)).size !== 2
+      new Set(measuredProfiles.map((profile) => profile.tokenIn.address)).size !== 1 ||
+      new Set(measuredProfiles.map((profile) => profile.tokenOut.address)).size !== 2
     ) {
       continue;
     }
-    const issues = packet.flatMap(({ quote }) => [
+    const issues = packet.flatMap(({ quote }, index) => [
       ...validateDexMeasuredExecutionProfile({
-        profile: quote.profile,
+        profile: measuredProfiles[index],
         quotedTarget: quote.quotedTarget,
         currentTarget: quote.quotedTarget,
         expectedTargetGenerationId: quote.targetGenerationId,
         expectedQuoteGenerationId: quote.quoteGenerationId,
         nowSec: input.nowSec,
       }),
-      ...deploymentIssues(quote.profile!),
+      ...deploymentIssues(measuredProfiles[index]!),
     ]);
     if (issues.length > 0) continue;
 
-    const profile = profiles[0]!;
+    const profile = measuredProfiles[0]!;
     const stablecoinId = targets[0]!.stablecoinId;
     const physicalPoolKey =
       `${stablecoinId}:${profile.chain.toLowerCase()}:${profile.poolId.toLowerCase()}`;
@@ -323,20 +329,19 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
       poolId: profile.poolId,
       project: profile.protocol,
       chain: profile.chain,
-      tvlUsd: Math.min(...profiles.map((candidate) => candidate.retainedTvlUsdAtQuote)),
-      symbol: `${profile.tokenIn.symbol}-${profiles.map((candidate) => candidate.tokenOut.symbol).join("/")}`,
+      tvlUsd: Math.min(...measuredProfiles.map((candidate) => candidate.retainedTvlUsdAtQuote)),
+      symbol: `${profile.tokenIn.symbol}-${measuredProfiles.map((candidate) => candidate.tokenOut.symbol).join("/")}`,
       volumeUsd1d: 0,
       poolType: "curve-stableswap-measured-retained",
       source: "dl",
       price: profile.tokenIn.referencePriceUsd,
       extra: {
         measuredExecutionTargets: targets,
-        measuredExecutions: packet.map(({ quote }) =>
-          toDexMeasuredExecutionPublicProfile(quote.profile!, {
+        measuredExecutions: packet.map(({ quote }, index) =>
+          toDexMeasuredExecutionPublicProfile(measuredProfiles[index]!, {
             observationHistory: quote.observationHistory!,
           })
         ),
-        measuredExecutionProfiles: profiles,
         measuredExecutionPhysicalPoolId: profile.poolId,
         measuredExecutionDiagnostics: packet.map(({ targetId, quote }) => ({
           adapterProfileId: quote.quotedTarget.adapterProfileId,
@@ -349,14 +354,15 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
   }
 
   for (const [targetId, quote] of entries) {
+    const profile = materializeDexMeasuredQuoteProfile(quote);
     const ngMature = isMatureFreshCurveStableSwapNgQuote(quote, input.nowSec);
     if (
       currentTargetIds.has(targetId) ||
       quote.resolution !== "last-known-good" ||
       quote.status !== "measured" ||
-      quote.profile === null ||
+      profile === null ||
       (
-        quote.profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+        profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
           ? !ngMature
           : !isDexMeasuredExecutionObservationHistoryMature(quote.observationHistory)
       )
@@ -364,7 +370,6 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
       continue;
     }
     const target = quote.quotedTarget;
-    const profile = quote.profile;
     if (!input.poolsByStablecoin.has(target.stablecoinId)) continue;
     if (
       profile.adapterProfileId !== "uniswap-v3-quoter-v2" &&
@@ -422,7 +427,6 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
         measuredExecution: toDexMeasuredExecutionPublicProfile(profile, {
           observationHistory: quote.observationHistory,
         }),
-        measuredExecutionProfile: profile,
         measuredExecutionPhysicalPoolId: profile.poolId,
         measuredExecutionDiagnostic: {
           adapterProfileId: target.adapterProfileId,
@@ -493,34 +497,38 @@ export function joinDexMeasuredExecutionEvidence(input: {
         const packet = packetTargets.map((target) => ({
           target,
           quote: input.evidence!.byTargetId.get(target.targetId),
+          profile: null as DexMeasuredExecutionProfile | null,
         }));
         if (packet.some(({ quote }) => !quote)) {
           failPacket("quote-missing", "atomic-direction-missing");
           continue;
         }
-        if (packet.some(({ quote }) => quote!.status !== "measured" || !quote!.profile)) {
+        for (const entry of packet) {
+          entry.profile = entry.quote ? materializeDexMeasuredQuoteProfile(entry.quote) : null;
+        }
+        if (packet.some(({ quote, profile }) => quote!.status !== "measured" || !profile)) {
           failPacket(
             "quote-failed",
             packet.map(({ target, quote }) => `${target.targetId}:${quote!.failureReason ?? "profile-missing"}`).join(","),
           );
           continue;
         }
-        const issues = packet.flatMap(({ target, quote }) => [
+        const issues = packet.flatMap(({ target, quote, profile }) => [
           ...validateDexMeasuredExecutionProfile({
-            profile: quote!.profile,
+            profile,
             quotedTarget: quote!.quotedTarget,
             currentTarget: target,
             expectedTargetGenerationId: quote!.targetGenerationId,
             expectedQuoteGenerationId: quote!.quoteGenerationId,
             nowSec: input.nowSec,
           }),
-          ...deploymentIssues(quote!.profile!),
+          ...deploymentIssues(profile!),
         ]);
         if (issues.length > 0) {
           failPacket(mapValidationGate(issues), issues.join(","));
           continue;
         }
-        const profiles = packet.map(({ quote }) => quote!.profile!);
+        const profiles = packet.map(({ profile }) => profile!);
         if (
           new Set(profiles.map((profile) => profile.quoteGenerationId)).size !== 1 ||
           new Set(profiles.map((profile) => profile.targetGenerationId)).size !== 1 ||
@@ -531,9 +539,8 @@ export function joinDexMeasuredExecutionEvidence(input: {
           failPacket("generation-mismatch", "atomic-direction-generation-mismatch");
           continue;
         }
-        pool.extra.measuredExecutionProfiles = profiles;
-        pool.extra.measuredExecutions = packet.map(({ quote }) =>
-          toDexMeasuredExecutionPublicProfile(quote!.profile!, {
+        pool.extra.measuredExecutions = packet.map(({ quote, profile }) =>
+          toDexMeasuredExecutionPublicProfile(profile!, {
             ...(quote!.observationHistory ? { observationHistory: quote!.observationHistory } : {}),
           })
         );
@@ -580,27 +587,26 @@ export function joinDexMeasuredExecutionEvidence(input: {
         fail("quote-missing");
         continue;
       }
-      if (quote.status !== "measured" || !quote.profile) {
+      const profile = materializeDexMeasuredQuoteProfile(quote);
+      if (quote.status !== "measured" || !profile) {
         fail("quote-failed", quote.failureReason ?? undefined);
         continue;
       }
-      pool.extra.measuredExecutionProfile = quote.profile;
       const genericIssues = validateDexMeasuredExecutionProfile({
-        profile: quote.profile,
+        profile,
         quotedTarget: quote.quotedTarget,
         currentTarget: target,
         expectedTargetGenerationId: quote.targetGenerationId,
         expectedQuoteGenerationId: quote.quoteGenerationId,
         nowSec: input.nowSec,
       });
-      const adapterIssues = deploymentIssues(quote.profile);
+      const adapterIssues = deploymentIssues(profile);
       const issues = [...genericIssues, ...adapterIssues];
       if (issues.length > 0) {
-        delete pool.extra.measuredExecutionProfile;
         fail(mapValidationGate(issues), issues.join(","));
         continue;
       }
-      pool.extra.measuredExecution = toDexMeasuredExecutionPublicProfile(quote.profile, {
+      pool.extra.measuredExecution = toDexMeasuredExecutionPublicProfile(profile, {
         ...(quote.observationHistory ? { observationHistory: quote.observationHistory } : {}),
       });
       const lastKnownGoodDetail =
@@ -608,18 +614,18 @@ export function joinDexMeasuredExecutionEvidence(input: {
           ? `last-known-good-after:${quote.latestFailureReason ?? "quote-missing"}`
           : undefined;
       const curvePolicy =
-        quote.profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID
-          ? getCurveCryptoSwapShadowPolicy(quote.profile.chain, quote.profile.executionEndpoint.address)
+        profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID
+          ? getCurveCryptoSwapShadowPolicy(profile.chain, profile.executionEndpoint.address)
           : null;
       const activationPending =
-        quote.profile.adapterProfileId === FLUID_RESOLVER_ADAPTER_PROFILE_ID ||
-        (quote.profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID
+        profile.adapterProfileId === FLUID_RESOLVER_ADAPTER_PROFILE_ID ||
+        (profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID
           ? !curvePolicy?.scoreEligible
-          : quote.profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID
+          : profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID
             ? false
-            : quote.profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+            : profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
               ? false
-          : !isDexMeasuredExecutionDeploymentScoreEligible(quote.profile.adapterProfileId, quote.profile.chain));
+          : !isDexMeasuredExecutionDeploymentScoreEligible(profile.adapterProfileId, profile.chain));
       if (activationPending) {
         pool.extra.executionCapabilityGate = gate("activation-pending");
         pool.extra.measuredExecutionDiagnostic = {
