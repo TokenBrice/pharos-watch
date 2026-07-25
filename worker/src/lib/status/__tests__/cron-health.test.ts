@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 import { loadCronHealth } from "../cron-health";
 
 interface SeedRun {
@@ -18,6 +19,7 @@ function makeCronRow(job: string, status: string, ageSec: number, now: number): 
     error: status === "error" ? "test-error" : null,
     item_count: 1,
     metadata: null,
+    schedule_key: null,
   };
 }
 
@@ -175,6 +177,97 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     expect(snapshot.cronHistoryQueryFailed).toBe(false);
     expect(snapshot.crons["sync-stablecoins"]?.telemetryUnknown).toBe(false);
     expect(snapshot.crons["sync-stablecoins"]?.recentRuns.length).toBeGreaterThan(0);
+  });
+
+  it("ignores legacy false daily-digest failures synthesized from idle conditional polls", async () => {
+    const rows = seedWithOverrides(NOW, []);
+    rows.push({
+      ...makeCronRow("daily-digest", "error", 10, NOW),
+      schedule_key: "digestTriggerPoll",
+      metadata: JSON.stringify({
+        reason: "stale-slot-reconciled",
+        childDisposition: "not_started",
+        slotKey: "digestTriggerPoll",
+      }),
+    });
+    rows.sort((left, right) => (right.started_at as number) - (left.started_at as number));
+    const db = makeDb(NOW, rows);
+
+    const snapshot = await loadCronHealth(db, NOW);
+    const historyQueries = db.getHistory().filter((entry) => entry.sql.includes("UNION ALL"));
+
+    expect(historyQueries.every((entry) =>
+      entry.sql.includes("schedule_key = 'digestTriggerPoll'")
+      && entry.sql.includes("$.childDisposition"),
+    )).toBe(true);
+    expect(snapshot.crons["daily-digest"]?.lastRun?.status).toBe("ok");
+    expect(snapshot.crons["daily-digest"]?.recentRuns).toHaveLength(1);
+    expect(snapshot.crons["daily-digest"]?.healthy).toBe(true);
+  });
+
+  it("filters legacy idle-poll failures before the history limit without hiding a real forced run", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        `INSERT INTO cron_runs
+           (job, started_at, duration_ms, status, error, item_count, metadata, schedule_key)
+         VALUES (?, ?, 100, ?, ?, 1, ?, ?)`,
+      );
+      for (let offset = 1; offset <= 11; offset++) {
+        insert.run(
+          "daily-digest",
+          NOW - offset,
+          "error",
+          "scheduled slot abandoned before child job started",
+          JSON.stringify({
+            reason: "stale-slot-reconciled",
+            childDisposition: "not_started",
+            slotKey: "digestTriggerPoll",
+          }),
+          "digestTriggerPoll",
+        );
+      }
+      insert.run(
+        "daily-digest",
+        NOW - 20,
+        "degraded",
+        null,
+        JSON.stringify({ forced: true, requestId: "request-a" }),
+        "digestTriggerPoll",
+      );
+      insert.run(
+        "daily-digest",
+        NOW - 19,
+        "error",
+        "scheduled slot abandoned while daily-digest was running",
+        JSON.stringify({
+          reason: "stale-slot-reconciled",
+          failureCategory: "platform-abandoned",
+          progressStage: "generation",
+        }),
+        "digestTriggerPoll",
+      );
+      insert.run(
+        "daily-digest",
+        NOW - 30,
+        "ok",
+        null,
+        JSON.stringify({ edition: "daily" }),
+        "daily0805Utc",
+      );
+
+      const snapshot = await loadCronHealth(db, NOW);
+
+      expect(snapshot.crons["daily-digest"]?.lastRun?.status).toBe("error");
+      expect(snapshot.crons["daily-digest"]?.recentRuns.map((run) => run.status)).toEqual([
+        "error",
+        "degraded",
+        "ok",
+      ]);
+      expect(snapshot.crons["daily-digest"]?.healthy).toBe(false);
+    } finally {
+      sqlite.close();
+    }
   });
 });
 

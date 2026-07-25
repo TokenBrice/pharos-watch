@@ -272,6 +272,17 @@ describe("Telegram delivery SLI rollup", () => {
   it("caps the scan window and reports empty, stale, and bounded dimensions honestly", async () => {
     const { sqlite, db } = setupLatestSchema();
     insertSource(sqlite, "too-old", NOW - 8 * 86_400, NOW - 7 * 86_400, NOW - 8 * 86_400 + 60);
+    insertJob(sqlite, "too-old-job", "too-old", "depeg", NOW - 8 * 86_400, NOW - 7 * 86_400);
+    insertTarget(sqlite, {
+      jobId: "too-old-job",
+      sourceId: "too-old",
+      key: "too-old-target",
+      alertType: "depeg",
+      createdAt: NOW - 8 * 86_400,
+      state: "accepted",
+      finalAt: NOW - 8 * 86_400 + 10,
+    });
+    insertTargetItems(sqlite, "too-old-job", "too-old", "too-old-target", ["depeg-triggered:old"]);
 
     const empty = await loadTelegramDeliverySliRollup(db, { nowSec: NOW, lookbackSec: 30 * 86_400 });
     expect(empty.window).toMatchObject({ lookbackSec: 7 * 86_400, bounded: true });
@@ -307,6 +318,30 @@ describe("Telegram delivery SLI rollup", () => {
       ],
       truncated: true,
     });
+  });
+
+  it("materializes the bounded source window and forces the source-first target index", async () => {
+    const { sqlite, db } = setupLatestSchema();
+    insertSource(sqlite, "indexed-event", NOW - 100, NOW + 1_000, NOW - 90);
+    const preparedSql: string[] = [];
+    const instrumented = {
+      ...db,
+      prepare: (sql: string) => {
+        preparedSql.push(sql);
+        return db.prepare(sql);
+      },
+    } as D1Database;
+
+    await loadTelegramDeliverySliRollup(instrumented, { nowSec: NOW });
+
+    const sourceTargetQueries = preparedSql.filter((sql) => sql.includes("recent_sources"));
+    expect(sourceTargetQueries).toHaveLength(2);
+    for (const sql of sourceTargetQueries) {
+      expect(sql).toContain("recent_sources AS MATERIALIZED");
+      expect(sql).toContain("CROSS JOIN telegram_alert_job_targets target INDEXED BY idx_tajt_authoritative_ready");
+      const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${sql}`).all(NOW - 86_400, NOW);
+      expect(JSON.stringify(plan)).toContain("idx_tajt_authoritative_ready");
+    }
   });
 
   it("attributes a mixed target explicitly from item lineage", async () => {

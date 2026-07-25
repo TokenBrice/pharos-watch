@@ -55,7 +55,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
        ) VALUES (?, ?, 1000, 'ok', 1, ?, ?, ?, ?, 'scheduled-job', ?, ?, 1, 0)`,
       )
       .run(
-        "sync-dex-liquidity",
+        "sync-dex-liquidity-stage",
         slotStartedAt,
         slotStartedAt,
         "original-run",
@@ -66,7 +66,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       );
     await recordProducerOutcome(db, {
       scheduleKey: "halfHourlyOffset",
-      job: "sync-dex-liquidity",
+      job: "sync-dex-liquidity-stage",
       producerPath: "halfHourlyOffset",
       producerKind: "scheduled-job",
       invocationId: "shared-invocation",
@@ -132,7 +132,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
     const { sqlite, db } = createMigratedDb();
     const nowSec = 1_772_004_000;
     const slotStartedAt = nowSec - 3_600;
-    const idempotencyKey = ["scheduled-slot-not-started", "halfHourlyOffset", slotStartedAt, "sync-dex-liquidity"].join(
+    const idempotencyKey = ["scheduled-slot-not-started", "halfHourlyOffset", slotStartedAt, "sync-dex-liquidity-stage"].join(
       ":",
     );
     sqlite
@@ -162,7 +162,7 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
        ) VALUES (?, ?, ?, 'error', ?, 0, ?, ?, ?, ?, ?, 'scheduled-job', ?, ?, 0, 0, NULL)`,
       )
       .run(
-        "sync-dex-liquidity",
+        "sync-dex-liquidity-stage",
         nowSec,
         0,
         "scheduled slot heartbeat stale; child job never started",
@@ -270,6 +270,157 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
         error: "Error: sweep failed",
       },
     ]);
+    sqlite.close();
+  });
+
+  it("orders synthetic no-progress evidence at the original slot time without replacing a newer success", async () => {
+    const { sqlite, db } = createMigratedDb();
+    const nowSec = 1_772_004_000;
+    const slotStartedAt = nowSec - 3_600;
+    const slotInvokedAt = slotStartedAt + 7;
+    const slotUpdatedAt = slotStartedAt + 120;
+    const newerStartedAt = slotStartedAt + 1_800;
+    sqlite.prepare(
+      `INSERT INTO cron_slot_executions (
+       slot_key, slot_started_at, state, result_status, execution_owner,
+       started_at, finished_at, updated_at, metadata, execution_generation,
+       invocation_id, worker_version
+     ) VALUES ('halfHourlyOffset', ?, 'running', NULL, 'old-owner', ?, NULL, ?, NULL, 1, 'old-invocation', 'worker-version')`,
+    ).run(slotStartedAt, slotInvokedAt, slotUpdatedAt);
+    sqlite.prepare(
+      `INSERT INTO cron_runs (
+       job, started_at, duration_ms, status, item_count, slot_started_at,
+       idempotency_key, schedule_key, producer_path, producer_kind,
+       invocation_id, worker_version, productive, publication_count
+     ) VALUES ('sync-dex-liquidity-stage', ?, 1000, 'ok', 10, ?, 'newer-ok',
+               'halfHourlyOffset', 'halfHourlyOffset', 'scheduled-job',
+               'newer-invocation', 'worker-version', 1, 0)`,
+    ).run(newerStartedAt, newerStartedAt);
+    await recordProducerOutcome(db, {
+      scheduleKey: "halfHourlyOffset",
+      job: "sync-dex-liquidity-stage",
+      producerPath: "halfHourlyOffset",
+      producerKind: "scheduled-job",
+      invocationId: "newer-invocation",
+      workerVersion: "worker-version",
+      slotStartedAt: newerStartedAt,
+      idempotencyKey: "newer-ok",
+      invokedAt: newerStartedAt,
+      completedAt: newerStartedAt + 1,
+      outcome: "ok",
+      itemCount: 10,
+      productivity: { productive: true },
+    });
+
+    const summary = await sweepStaleScheduledSlotExecutions(db, {
+      nowSec,
+      staleAfterSec: 1_200,
+      slotKey: "halfHourlyOffset",
+    });
+
+    expect(summary).toMatchObject({ syntheticCronRuns: 1, notStartedCronRuns: 1 });
+    expect(sqlite.prepare(
+      `SELECT started_at, status
+         FROM cron_runs
+        WHERE job = 'sync-dex-liquidity-stage'
+        ORDER BY started_at DESC`,
+    ).all()).toEqual([
+      { started_at: newerStartedAt, status: "ok" },
+      { started_at: slotInvokedAt, status: "error" },
+    ]);
+    expect(sqlite.prepare(
+      `SELECT invoked_at, completed_at, outcome, metadata_json
+         FROM worker_producer_history
+        WHERE invocation_id = 'old-invocation'`,
+    ).get()).toMatchObject({
+      invoked_at: slotInvokedAt,
+      completed_at: slotUpdatedAt,
+      outcome: "not_started",
+    });
+    expect(JSON.parse(String((sqlite.prepare(
+      `SELECT metadata_json
+         FROM worker_producer_history
+        WHERE invocation_id = 'old-invocation'`,
+    ).get() as { metadata_json: string }).metadata_json))).toMatchObject({ reconciledAt: nowSec });
+    expect(sqlite.prepare(
+      `SELECT last_invocation_id, last_outcome, last_invoked_at
+         FROM worker_producer_heads
+        WHERE job = 'sync-dex-liquidity-stage'`,
+    ).get()).toEqual({
+      last_invocation_id: "newer-invocation",
+      last_outcome: "ok",
+      last_invoked_at: newerStartedAt,
+    });
+    sqlite.close();
+  });
+
+  it("does not invent daily-digest failures for idle polls but reconciles durable started progress", async () => {
+    const { sqlite, db } = createMigratedDb();
+    const nowSec = 1_772_004_000;
+    const idleSlotStartedAt = nowSec - 3_600;
+    sqlite.prepare(
+      `INSERT INTO cron_slot_executions (
+       slot_key, slot_started_at, state, result_status, execution_owner,
+       started_at, finished_at, updated_at, metadata, execution_generation,
+       invocation_id, worker_version
+     ) VALUES ('digestTriggerPoll', ?, 'running', NULL, 'idle-owner', ?, NULL, ?, NULL, 1,
+               'idle-invocation', 'worker-version')`,
+    ).run(idleSlotStartedAt, idleSlotStartedAt, idleSlotStartedAt + 30);
+
+    const idleSummary = await sweepStaleScheduledSlotExecutions(db, {
+      nowSec,
+      staleAfterSec: 1_200,
+      slotKey: "digestTriggerPoll",
+    });
+    expect(idleSummary).toMatchObject({ syntheticCronRuns: 0, notStartedCronRuns: 0 });
+    expect(sqlite.prepare(
+      `SELECT COUNT(*) AS count
+         FROM cron_runs
+        WHERE job = 'daily-digest'`,
+    ).get()).toEqual({ count: 0 });
+
+    const startedSlotStartedAt = nowSec - 1_800;
+    const progressStartedAt = startedSlotStartedAt + 5;
+    const progressUpdatedAt = startedSlotStartedAt + 100;
+    sqlite.prepare(
+      `INSERT INTO cron_slot_executions (
+       slot_key, slot_started_at, state, result_status, execution_owner,
+       started_at, finished_at, updated_at, metadata, execution_generation,
+       invocation_id, worker_version
+     ) VALUES ('digestTriggerPoll', ?, 'running', NULL, 'started-owner', ?, NULL, ?, NULL, 1,
+               'started-invocation', 'worker-version')`,
+    ).run(startedSlotStartedAt, startedSlotStartedAt, progressUpdatedAt);
+    sqlite.prepare(
+      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+       VALUES ('daily-digest', 'digest-lease', ?, ?, ?)`,
+    ).run(nowSec - 200, progressUpdatedAt, progressUpdatedAt);
+    sqlite.prepare(
+      `INSERT INTO cron_run_progress (
+       job, started_at, updated_at, stage, items_done, items_total,
+       message, lease_owner, metadata, slot_started_at
+     ) VALUES ('daily-digest', ?, ?, 'generation', 0, 1, 'Generating', 'digest-lease', NULL, ?)`,
+    ).run(progressStartedAt, progressUpdatedAt, startedSlotStartedAt);
+
+    const startedSummary = await sweepStaleScheduledSlotExecutions(db, {
+      nowSec,
+      staleAfterSec: 1_200,
+      slotKey: "digestTriggerPoll",
+    });
+    expect(startedSummary).toMatchObject({ syntheticCronRuns: 1, notStartedCronRuns: 0 });
+    expect(sqlite.prepare(
+      `SELECT started_at, status
+         FROM cron_runs
+        WHERE job = 'daily-digest'`,
+    ).get()).toEqual({ started_at: progressStartedAt, status: "error" });
+    expect(sqlite.prepare(
+      `SELECT invoked_at, completed_at, outcome
+         FROM worker_producer_history
+        WHERE job = 'daily-digest'`,
+    ).get()).toEqual({
+      invoked_at: progressStartedAt,
+      completed_at: progressUpdatedAt,
+      outcome: "abandoned",
+    });
     sqlite.close();
   });
 });

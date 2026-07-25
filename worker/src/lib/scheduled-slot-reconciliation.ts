@@ -311,7 +311,9 @@ async function insertSyntheticStaleCronRun(
     slotStartedAt: slot.slot_started_at,
     idempotencyKey,
     invokedAt: startedAt,
-    completedAt: nowSec,
+    // Preserve the last durable child heartbeat as the logical terminal time.
+    // Reconciliation time stays in metadata and must not outrank a newer run.
+    completedAt: progress.updated_at,
     outcome: "abandoned",
     itemCount: null,
     metadata,
@@ -343,6 +345,8 @@ async function insertSyntheticNotStartedCronRun(
     return false;
   }
   const error = "scheduled slot abandoned before child job started";
+  const invokedAt = slot.started_at || slot.slot_started_at;
+  const completedAt = Math.max(invokedAt, slot.updated_at);
   const metadata = JSON.stringify({
     reason: "stale-slot-reconciled",
     failureCategory: "platform-abandoned",
@@ -380,7 +384,7 @@ async function insertSyntheticNotStartedCronRun(
       )
       .bind(
         job,
-        nowSec,
+        invokedAt,
         error,
         metadata,
         slot.slot_started_at,
@@ -415,8 +419,8 @@ async function insertSyntheticNotStartedCronRun(
     workerVersion: slot.worker_version ?? null,
     slotStartedAt: slot.slot_started_at,
     idempotencyKey,
-    invokedAt: nowSec,
-    completedAt: nowSec,
+    invokedAt,
+    completedAt,
     outcome: "not_started",
     itemCount: 0,
     metadata,
@@ -493,7 +497,10 @@ async function reconcileStaleSlotArtifacts(
     }
   }
 
-  for (const job of stillMissingProgressJobs) {
+  const unconditionallyDueMissingJobs = stillMissingProgressJobs.filter(
+    (job) => !(slot.slot_key === "digestTriggerPoll" && job === "daily-digest"),
+  );
+  for (const job of unconditionallyDueMissingJobs) {
     if (await insertSyntheticNotStartedCronRun(db, slot, job, nowSec, fence)) {
       summary.notStartedCronRuns++;
       summary.syntheticCronRuns++;

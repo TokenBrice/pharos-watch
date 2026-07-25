@@ -45,7 +45,18 @@ const CRON_HISTORY_ROWS_PER_JOB = 10;
 // latest-N subquery, so keep batches to five jobs or fewer.
 const CRON_HISTORY_QUERY_JOB_BATCH_SIZE = 5;
 
-const CRON_HISTORY_SELECT_COLUMNS = "job, started_at, duration_ms, status, error, item_count, metadata";
+const CRON_HISTORY_SELECT_COLUMNS =
+  "job, started_at, duration_ms, status, error, item_count, metadata, schedule_key";
+const LEGACY_IDLE_DIGEST_RECONCILIATION_SQL_FILTER = `NOT (
+  job = 'daily-digest'
+  AND schedule_key = 'digestTriggerPoll'
+  AND CASE
+    WHEN metadata IS NOT NULL AND json_valid(metadata)
+      THEN COALESCE(json_extract(metadata, '$.reason') = 'stale-slot-reconciled', 0)
+        AND COALESCE(json_extract(metadata, '$.childDisposition') = 'not_started', 0)
+    ELSE 0
+  END
+)`;
 
 function parseMetadataObject(value: string | null | undefined): Record<string, unknown> | undefined {
   if (!value) return undefined;
@@ -132,6 +143,7 @@ function buildCronHistoryQuery(jobCount: number): string {
          SELECT ${CRON_HISTORY_SELECT_COLUMNS}
            FROM cron_runs
           WHERE job = ?
+            AND ${LEGACY_IDLE_DIGEST_RECONCILIATION_SQL_FILTER}
           ORDER BY started_at DESC
           LIMIT ${CRON_HISTORY_ROWS_PER_JOB}
        )`
@@ -160,6 +172,7 @@ interface CronHistoryRow {
   error: string | null;
   item_count: number | null;
   metadata: string | null;
+  schedule_key: string | null;
 }
 
 interface CronLeaseRow {
@@ -509,9 +522,21 @@ export async function loadCronHealth(
 
   const cronByJob = new Map<string, CronRun[]>();
   for (const row of cronRows.results ?? []) {
+    const parsedMeta = parseMetadataObject(row.metadata);
+    // Compatibility for false failures written before idle digest-trigger
+    // polls were excluded from not-started reconciliation. The SQL predicate
+    // preserves the ten useful history rows; this in-memory guard also keeps
+    // mocked/adapted D1 implementations honest.
+    if (
+      row.job === "daily-digest"
+      && row.schedule_key === "digestTriggerPoll"
+      && parsedMeta?.reason === "stale-slot-reconciled"
+      && parsedMeta.childDisposition === "not_started"
+    ) {
+      continue;
+    }
     const runs = cronByJob.get(row.job) ?? [];
     if (runs.length < 10) {
-      const parsedMeta = parseMetadataObject(row.metadata);
       const parsedStatus = parseCronRunStatus(row.status);
       runs.push({
         startedAt: row.started_at,
