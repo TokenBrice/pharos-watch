@@ -446,6 +446,19 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
     });
   });
 
+  it("does not let implementation history qualify an immature operational overlay", () => {
+    const factSet = mutateFactSet(compiledFactSet([]), (asset) => {
+      asset.operationalResilience!.liveHistoryEligibility.minimumLiveHistoryMonths = 12;
+    });
+    const evaluated = evaluatedAsset(factSet);
+
+    expect(evaluated.operationalResilience).toMatchObject({
+      eligible: false,
+      pillarCredits: { backing: 0, exit: 0, control: 0 },
+      contributions: [],
+    });
+  });
+
   it("uses distinct physical capacity instead of summing shared resources twice", () => {
     const request = selectV9ExitStressRequest(SUPPLY_USD, V9_CANDIDATE_POLICY_V1)!;
     const first = measuredRoute({
