@@ -1,8 +1,18 @@
 import type { StablecoinMeta } from "../../types";
+import { defaultV9DependencyEconomicRole } from "../../types/dependency-types";
 import { isActiveStablecoinMeta, isReadableStablecoinMeta } from "./status";
 
 function hasVariantFields(meta: StablecoinMeta): boolean {
   return meta.variantOf != null || meta.variantKind != null;
+}
+
+function isReviewedSerialWrapper(
+  relationship: NonNullable<StablecoinMeta["dependencyReview"]>["relationships"][number],
+): boolean {
+  return (
+    relationship.type === "wrapper" &&
+    (relationship.economicRole ?? defaultV9DependencyEconomicRole(relationship.type)) === "serial-claim"
+  );
 }
 
 function collectDirectWrapperParentCandidates(meta: StablecoinMeta): string[] {
@@ -25,7 +35,7 @@ function collectDirectWrapperParentCandidates(meta: StablecoinMeta): string[] {
   }
 
   for (const relationship of meta.dependencyReview?.relationships ?? []) {
-    if (relationship.type === "wrapper" && relationship.economicRole === "serial-claim") {
+    if (isReviewedSerialWrapper(relationship)) {
       candidates.add(relationship.id);
     }
   }
@@ -34,9 +44,7 @@ function collectDirectWrapperParentCandidates(meta: StablecoinMeta): string[] {
 }
 
 function hasReviewedSerialWrapperRelationship(meta: StablecoinMeta): boolean {
-  return (meta.dependencyReview?.relationships ?? []).some(
-    (relationship) => relationship.type === "wrapper" && relationship.economicRole === "serial-claim",
-  );
+  return (meta.dependencyReview?.relationships ?? []).some(isReviewedSerialWrapper);
 }
 
 function hasOtherTrackedLinkedExposure(
