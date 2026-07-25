@@ -56,6 +56,11 @@ import {
 import { buildSolanaMeasuredExecutionTargets } from "../measured-execution/solana-inventory";
 import { buildTronMeasuredExecutionTargets } from "../measured-execution/tron-inventory";
 import { enrichEvmV2ExecutionModels } from "./constant-product-v2";
+import {
+  loadDexLiquidityScoringStage,
+  markDexLiquidityScoringStageConsumed,
+  persistDexLiquidityScoringStage,
+} from "./scoring-stage";
 
 const DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES = new Set(["defillama-yields", "defillama-protocols"]);
 
@@ -164,12 +169,107 @@ export async function syncDexLiquidity(
 
   const sourceState = await loadDexLiquiditySourceState(ctx);
   const poolState = await buildDexLiquidityPoolState(ctx, sourceState);
-  const scoreState = await scoreDexLiquidityPoolState(ctx, sourceState, poolState);
-  const persistenceState = await persistDexLiquidityScoreState(ctx, sourceState, poolState, scoreState);
-  return buildDexLiquidityCronResult(sourceState, poolState, scoreState, persistenceState);
+  const scoringSourceState = buildDexLiquidityScoringSourceState(sourceState);
+  const scoreState = await scoreDexLiquidityPoolState(ctx, scoringSourceState, poolState);
+  const persistenceState = await persistDexLiquidityScoreState(ctx, scoringSourceState, poolState, scoreState);
+  return buildDexLiquidityCronResult(scoringSourceState, poolState, scoreState, persistenceState);
 }
 
-interface DexLiquidityRunContext {
+export async function stageDexLiquidityScoring(
+  db: D1Database,
+  graphApiKey: string | null,
+  signal?: AbortSignal,
+  coingeckoApiKey?: string | null,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  reportProgress?: CronProgressReporter,
+  sourceSlotStartedAt?: number,
+): Promise<CronResult> {
+  const syncStartSec = Math.floor(Date.now() / 1000);
+  const ctx: DexLiquidityRunContext = {
+    db,
+    graphApiKey,
+    signal,
+    coingeckoApiKey,
+    chainRpcs,
+    reportProgress,
+    syncStartSec,
+  };
+  const sourceState = await loadDexLiquiditySourceState(ctx);
+  const poolState = await buildDexLiquidityPoolState(ctx, sourceState);
+  const scoringSourceState = buildDexLiquidityScoringSourceState(sourceState);
+  const stored = await persistDexLiquidityScoringStage(
+    db,
+    {
+      sourceSlotStartedAt: sourceSlotStartedAt ?? syncStartSec,
+      syncStartSec,
+      sourceState: scoringSourceState,
+      poolState,
+    },
+    signal,
+  );
+
+  return {
+    status: scoringSourceState.criticalSourceFailures.length > 0 ? "degraded" : "ok",
+    itemCount: poolState.metrics.size,
+    metadata: JSON.stringify({
+      generationId: stored.generationId,
+      sourceSlotStartedAt: stored.sourceSlotStartedAt,
+      syncStartSec,
+      chunkCount: stored.chunkCount,
+      recordCount: stored.recordCount,
+      payloadBytes: stored.payloadBytes,
+      rowsRead: scoringSourceState.primaryRawPoolCount,
+      failedSources: scoringSourceState.failedSources,
+      fallbackSignals: scoringSourceState.fallbackSignals,
+    }),
+  };
+}
+
+export async function consumeDexLiquidityScoringStage(
+  db: D1Database,
+  signal?: AbortSignal,
+  reportProgress?: CronProgressReporter,
+  consumerSlotStartedAt?: number,
+): Promise<CronResult> {
+  const expectedSourceSlotStartedAt =
+    consumerSlotStartedAt == null ? undefined : consumerSlotStartedAt - 6 * 60;
+  const staged = await loadDexLiquidityScoringStage(
+    db,
+    {
+      nowSec: Math.floor(Date.now() / 1000),
+      expectedSourceSlotStartedAt,
+    },
+    signal,
+  );
+  const ctx: DexLiquidityRunContext = {
+    db,
+    graphApiKey: null,
+    signal,
+    reportProgress,
+    syncStartSec: staged.syncStartSec,
+  };
+  const scoreState = await scoreDexLiquidityPoolState(ctx, staged.sourceState, staged.poolState);
+  const persistenceState = await persistDexLiquidityScoreState(
+    ctx,
+    staged.sourceState,
+    staged.poolState,
+    scoreState,
+  );
+  const result = buildDexLiquidityCronResult(
+    staged.sourceState,
+    staged.poolState,
+    scoreState,
+    persistenceState,
+  );
+  try {
+    await markDexLiquidityScoringStageConsumed(db, staged.generationId, Math.floor(Date.now() / 1000), signal);
+  } catch (error) {
+    console.warn("[dex-liquidity] Failed to mark scoring stage consumed after publication", error);
+  }
+  return result;
+}
+
+export interface DexLiquidityRunContext {
   db: D1Database;
   graphApiKey: string | null;
   syncStartSec: number;
@@ -216,7 +316,29 @@ interface DexLiquiditySourceState {
   directCexOrderbookDepth: DexLiquidityFallbackPhase["directCexOrderbookDepth"];
 }
 
-interface DexLiquidityPoolState {
+export interface DexLiquidityDirectApiSourceSummary {
+  circuitEvents: DexLiquidityDirectApiPhase["circuitEvents"];
+  sourceWarnings: DexLiquidityDirectApiPhase["sourceWarnings"];
+  pagination: Array<
+    { source: string } & NonNullable<DexLiquidityDirectApiPhase["results"][number]["result"]["pagination"]>
+  >;
+}
+
+export interface DexLiquidityScoringSourceState {
+  validationReferences: Awaited<ReturnType<typeof loadPriceValidationReferences>>;
+  stablecoinMcapById: Awaited<ReturnType<typeof loadTrackedStablecoinMaps>>["stablecoinMcapById"];
+  protocolTvlCaps: DexLiquidityDataSources["protocolTvlCaps"];
+  priceObservations: Awaited<ReturnType<typeof buildCurveLookups>>["priceObservations"];
+  dlYieldsAvailable: boolean;
+  dlProtocolsAvailable: boolean;
+  primaryRawPoolCount: number;
+  failedSources: string[];
+  criticalSourceFailures: string[];
+  fallbackSignals: string[];
+  directApiSourceSummary: DexLiquidityDirectApiSourceSummary;
+}
+
+export interface DexLiquidityPoolState {
   fallback: DexLiquidityFallbackPhase;
   metrics: Map<string, LiquidityMetrics>;
   pancakeMeasuredExecutionTargets: ReturnType<typeof buildPancakeMeasuredExecutionTargets>;
@@ -248,6 +370,30 @@ interface DexLiquidityPersistenceState {
   challengerPublication: Awaited<ReturnType<typeof publishDexPriceChallengerSnapshots>>;
   dexPriceDiagnostics: Awaited<ReturnType<typeof computeDexPrices>>;
   historicalSnapshot: DexLiquidityHistoricalSnapshot;
+}
+
+export function buildDexLiquidityScoringSourceState(
+  sourceState: DexLiquiditySourceState,
+): DexLiquidityScoringSourceState {
+  return {
+    validationReferences: sourceState.validationReferences,
+    stablecoinMcapById: sourceState.stablecoinMcapById,
+    protocolTvlCaps: sourceState.dataSources.protocolTvlCaps,
+    priceObservations: sourceState.priceObservations,
+    dlYieldsAvailable: sourceState.dataSources.dlYieldsAvailable,
+    dlProtocolsAvailable: sourceState.dataSources.dlProtocolsAvailable,
+    primaryRawPoolCount: sourceState.primaryPoolCounts.rawPoolCount,
+    failedSources: sourceState.failedSources,
+    criticalSourceFailures: sourceState.criticalSourceFailures,
+    fallbackSignals: sourceState.fallbackSignals,
+    directApiSourceSummary: {
+      circuitEvents: sourceState.directApiPhase.circuitEvents,
+      sourceWarnings: sourceState.directApiPhase.sourceWarnings,
+      pagination: sourceState.directApiPhase.results.flatMap((entry) =>
+        entry.result.pagination ? [{ source: entry.circuitKey, ...entry.result.pagination }] : [],
+      ),
+    },
+  };
 }
 
 function getPersistenceSkipReason(criticalSourceFailures: string[]): string | null {
@@ -767,7 +913,7 @@ async function buildDexLiquidityPoolState(
 
 async function scoreDexLiquidityPoolState(
   ctx: DexLiquidityRunContext,
-  sourceState: DexLiquiditySourceState,
+  sourceState: DexLiquidityScoringSourceState,
   poolState: DexLiquidityPoolState,
 ): Promise<DexLiquidityScoreState> {
   await reportDexLiquidityProgress(ctx, {
@@ -792,7 +938,7 @@ async function scoreDexLiquidityPoolState(
   } = await computeStablecoinScores(
     ctx.db,
     poolState.metrics,
-    sourceState.dataSources.protocolTvlCaps,
+    sourceState.protocolTvlCaps,
     sourceState.stablecoinMcapById,
     ctx.syncStartSec,
     poolState.pancakeMeasuredExecutionTargets,
@@ -808,7 +954,7 @@ async function scoreDexLiquidityPoolState(
     globalAgg,
     retainedPoolsByStablecoin,
     priceObservations: sourceState.priceObservations,
-    protocolTvlCaps: sourceState.dataSources.protocolTvlCaps,
+    protocolTvlCaps: sourceState.protocolTvlCaps,
     diagnostics,
     stagedMergedCount: poolState.stagedMergedCount,
     stagedSkippedCount: poolState.stagedSkippedCount,
@@ -817,8 +963,8 @@ async function scoreDexLiquidityPoolState(
     dsFallbackCoins: poolState.fallback.dsFallbackCoins,
     cgTickerFallbackCoins: poolState.fallback.cgTickerFallbackCoins,
     directCexOrderbookDepth: poolState.fallback.directCexOrderbookDepth,
-    dlYieldsAvailable: sourceState.dataSources.dlYieldsAvailable,
-    dlProtocolsAvailable: sourceState.dataSources.dlProtocolsAvailable,
+    dlYieldsAvailable: sourceState.dlYieldsAvailable,
+    dlProtocolsAvailable: sourceState.dlProtocolsAvailable,
     criticalSourceFailures: sourceState.criticalSourceFailures,
   });
 
@@ -876,7 +1022,7 @@ async function scoreDexLiquidityPoolState(
 
 async function persistDexLiquidityScoreState(
   ctx: DexLiquidityRunContext,
-  sourceState: DexLiquiditySourceState,
+  sourceState: DexLiquidityScoringSourceState,
   poolState: DexLiquidityPoolState,
   scoreState: DexLiquidityScoreState,
 ): Promise<DexLiquidityPersistenceState> {
@@ -1083,7 +1229,7 @@ async function persistDexLiquidityScoreState(
 }
 
 function buildDexLiquidityCronResult(
-  sourceState: DexLiquiditySourceState,
+  sourceState: DexLiquidityScoringSourceState,
   poolState: DexLiquidityPoolState,
   scoreState: DexLiquidityScoreState,
   persistenceState: DexLiquidityPersistenceState,
@@ -1100,7 +1246,7 @@ function buildDexLiquidityCronResult(
     itemCount: scoreState.scoreResults.size,
     metadata: JSON.stringify(
       buildDexLiquidityCronMetadata({
-        rowsRead: sourceState.primaryPoolCounts.rawPoolCount,
+        rowsRead: sourceState.primaryRawPoolCount,
         rowsWritten: persistenceState.persistence.skipped ? 0 : scoreState.scoreResults.size,
         stagedPoolsMerged: poolState.stagedMergedCount,
         stagedPoolsSkipped: poolState.stagedSkippedCount,
@@ -1112,11 +1258,9 @@ function buildDexLiquidityCronResult(
         directApiSourceSummary: {
           acceptedByProtocolChain: poolState.directApiIntegration.acceptedByProtocolChain,
           excludedByReason: poolState.directApiIntegration.excludedByReason,
-          circuitEvents: sourceState.directApiPhase.circuitEvents,
-          sourceWarnings: sourceState.directApiPhase.sourceWarnings,
-          pagination: sourceState.directApiPhase.results.flatMap((entry) =>
-            entry.result.pagination ? [{ source: entry.circuitKey, ...entry.result.pagination }] : [],
-          ),
+          circuitEvents: sourceState.directApiSourceSummary.circuitEvents,
+          sourceWarnings: sourceState.directApiSourceSummary.sourceWarnings,
+          pagination: sourceState.directApiSourceSummary.pagination,
         },
         sourceCoverage: scoreState.analysis.sourceCoverage,
         challengerPublication: persistenceState.challengerPublication,
