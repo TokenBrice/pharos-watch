@@ -363,6 +363,7 @@ async function flushScoringStatements(
 
 const HISTORY_CONFIDENCE_MIN = 0.75;
 const MIN_STABILITY_SAMPLES = 7;
+const HISTORY_STABILITY_BATCH_SIZE = 512;
 const PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO = 2.5;
 const DISPLAY_PRICE_RATIO_MIN = 0.5,
   DISPLAY_PRICE_RATIO_MAX = 2.0;
@@ -419,7 +420,8 @@ function weightedRatio(sum: number, total: number, places = 4): number | null {
   return total > 0 ? roundTo(sum / total, places) : null;
 }
 
-async function loadConfidentHistoryStability(db: D1Database): Promise<{
+/** @internal Exported for testing only. */
+export async function loadConfidentHistoryStability(db: D1Database): Promise<{
   tvlStabilityMap: Map<string, number>;
   volumeStabilityMap: Map<string, number>;
 }> {
@@ -428,34 +430,68 @@ async function loadConfidentHistoryStability(db: D1Database): Promise<{
   const tvlStabilityMap = new Map<string, number>();
   const volumeStabilityMap = new Map<string, number>();
 
-  const histRows = await db
-    .prepare(
-      `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, coverage_confidence
-       FROM dex_liquidity_history
-       WHERE snapshot_date >= ?
-       ORDER BY stablecoin_id, snapshot_date`,
-    )
-    .bind(thirtyDaysAgo)
-    .all<{
-      stablecoin_id: string;
-      total_tvl_usd: number;
-      total_volume_24h_usd: number;
-      coverage_confidence: number | null;
-    }>();
-
   const tvlByCoin = new Map<string, number[]>();
   const volumeByCoin = new Map<string, number[]>();
-  for (const row of histRows.results ?? []) {
-    const confidence = row.coverage_confidence ?? 0;
-    if (confidence < HISTORY_CONFIDENCE_MIN) continue;
+  let cursorStablecoinId = "";
+  let cursorSnapshotDate = -1;
 
-    const tvlSeries = tvlByCoin.get(row.stablecoin_id) ?? [];
-    tvlSeries.push(row.total_tvl_usd);
-    tvlByCoin.set(row.stablecoin_id, tvlSeries);
+  while (true) {
+    const historyResult = await db
+      .prepare(
+        `SELECT stablecoin_id, snapshot_date, total_tvl_usd, total_volume_24h_usd, coverage_confidence
+         FROM dex_liquidity_history
+         WHERE snapshot_date >= ?
+           AND (stablecoin_id > ? OR (stablecoin_id = ? AND snapshot_date > ?))
+         ORDER BY stablecoin_id, snapshot_date
+         LIMIT ?`,
+      )
+      .bind(
+        thirtyDaysAgo,
+        cursorStablecoinId,
+        cursorStablecoinId,
+        cursorSnapshotDate,
+        HISTORY_STABILITY_BATCH_SIZE,
+      )
+      .all<{
+        stablecoin_id: string;
+        snapshot_date: number;
+        total_tvl_usd: number;
+        total_volume_24h_usd: number;
+        coverage_confidence: number | null;
+      }>();
+    const rows: Array<
+      | {
+          stablecoin_id: string;
+          snapshot_date: number;
+          total_tvl_usd: number;
+          total_volume_24h_usd: number;
+          coverage_confidence: number | null;
+        }
+      | undefined
+    > = historyResult.results ?? [];
+    const rowCount = rows.length;
+    if (rowCount === 0) break;
 
-    const volumeSeries = volumeByCoin.get(row.stablecoin_id) ?? [];
-    volumeSeries.push(row.total_volume_24h_usd);
-    volumeByCoin.set(row.stablecoin_id, volumeSeries);
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+      const row = rows[rowIndex];
+      rows[rowIndex] = undefined;
+      if (!row) continue;
+      cursorStablecoinId = row.stablecoin_id;
+      cursorSnapshotDate = row.snapshot_date;
+
+      const confidence = row.coverage_confidence ?? 0;
+      if (confidence < HISTORY_CONFIDENCE_MIN) continue;
+
+      const tvlSeries = tvlByCoin.get(row.stablecoin_id) ?? [];
+      tvlSeries.push(row.total_tvl_usd);
+      tvlByCoin.set(row.stablecoin_id, tvlSeries);
+
+      const volumeSeries = volumeByCoin.get(row.stablecoin_id) ?? [];
+      volumeSeries.push(row.total_volume_24h_usd);
+      volumeByCoin.set(row.stablecoin_id, volumeSeries);
+    }
+    rows.length = 0;
+    if (rowCount < HISTORY_STABILITY_BATCH_SIZE) break;
   }
 
   for (const [coinId, tvls] of tvlByCoin) {
