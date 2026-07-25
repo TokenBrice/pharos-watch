@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.89",
+    title: "Reviewed SunSwap V2 direct execution",
+    date: "2026-07-25",
+    effectiveAt: 1784937600,
+    summary:
+      "Current direct SunSwap V2 routes can contribute factory-bound, reserve-reproduced execution profiles to the Safety Score V9 exact-route envelope after full-generation production validation.",
+    impact: [
+      "Activation is limited to the reviewed SunSwap V2 factory, pair runtime, and SUN Smart Router profile on Tron; Raydium CLMM, Orca Whirlpool, and other native cohorts remain shadow-only",
+      "Every accepted profile must prove the exact factory pair, token order, reserves, direct route, 0.3% constant-product output, bounded latest-state block bracket, freshness, and current target identity",
+      "Missing, failed, stale, malformed, multi-hop-only, or identity-mismatched routes remain target-level capability gates; no stale proof or manual capacity substitutes for current direct evidence",
+      "SunSwap census rows remain excluded from liquidity scoring, price consensus, direct-source precedence, visible pool selection, and V8 liquidity scoring",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.88",
     title: "Exact-route continuity and Base Slipstream execution",
     date: "2026-07-24",
