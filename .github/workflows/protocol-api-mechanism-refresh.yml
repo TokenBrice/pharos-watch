@@ -171,6 +171,9 @@ jobs:
           BRANCH="automated/protocol-api-mechanism-refresh/${ASSET_ID}"
           ARTIFACT_TMP="$(mktemp -d)"
           trap 'rm -rf "$ARTIFACT_TMP"' EXIT
+          EMPTY_HOOKS="$ARTIFACT_TMP/empty-git-hooks"
+          mkdir -p "$EMPTY_HOOKS"
+          git config core.hooksPath "$EMPTY_HOOKS"
           NEW_FILES="$(git ls-files --others --exclude-standard -- "$ROOT")"
           while IFS= read -r path; do
             [ -z "$path" ] && continue
