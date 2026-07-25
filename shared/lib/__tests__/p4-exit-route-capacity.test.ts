@@ -81,6 +81,7 @@ describe("P4 DEX exit route observations", () => {
 
   function aerodromeMeasuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
     const profile = measuredProfile(quotedAt);
+    if (!profile.poolProvenance) throw new Error("Measured fixture must retain pool provenance");
     return {
       ...profile,
       adapterProfileId: "aerodrome-slipstream-quoter-v2",

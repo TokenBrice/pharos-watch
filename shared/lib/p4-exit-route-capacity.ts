@@ -139,7 +139,9 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     outputKinds: ["tracked-stablecoin", "collateral"],
     commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
     scoreEligible: true,
-    limitations: ["Activated only for consumer-validated Uniswap V3 and PancakeSwap V3 QuoterV2 profiles."],
+    limitations: [
+      "Activated only for consumer-validated Uniswap V3, PancakeSwap V3, and Aerodrome Slipstream QuoterV2 profiles.",
+    ],
   },
   {
     id: "curve-cryptoswap-measured-exact",
