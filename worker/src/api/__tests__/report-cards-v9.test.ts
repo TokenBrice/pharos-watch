@@ -163,12 +163,14 @@ describe("handleReportCardsV9Preview", () => {
     const endpoint = getRouteMatch("/api/report-cards/v9-preview")?.endpoint;
     expect(endpoint?.key).toBe("report-cards-v9-preview");
     expect(endpoint?.cacheBypass).toBe(true);
+    expect(endpoint?.siteDataAccess).toBe("denied");
   });
 
   it("keeps the original opaque endpoint as a cache-bypassed deployment compatibility alias", () => {
     const endpoint = getRouteMatch("/api/report-cards/v9-preview-412d818c031b7bc5")?.endpoint;
     expect(endpoint?.key).toBe("report-cards-v9-preview-legacy");
     expect(endpoint?.cacheBypass).toBe(true);
+    expect(endpoint?.siteDataAccess).toBe("denied");
   });
 
   it("returns explicit unavailability without reading or recomputing V8", async () => {

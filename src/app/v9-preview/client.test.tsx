@@ -12,6 +12,13 @@ vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name }: { name: string }) => <span data-testid="logo">{name}</span>,
 }));
 
+function unlockPreview() {
+  fireEvent.change(screen.getByLabelText("Reviewer API key"), {
+    target: { value: "ph_live_preview_test_key" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Load preview" }));
+}
+
 describe("SafetyScoreV9PreviewClient", () => {
   afterEach(() => {
     cleanup();
@@ -37,6 +44,7 @@ describe("SafetyScoreV9PreviewClient", () => {
     });
 
     render(<SafetyScoreV9PreviewClient />);
+    unlockPreview();
 
     expect(screen.getByText("USDC")).toBeTruthy();
     expect(screen.getByText("USDT")).toBeTruthy();
@@ -71,6 +79,7 @@ describe("SafetyScoreV9PreviewClient", () => {
     });
 
     render(<SafetyScoreV9PreviewClient />);
+    unlockPreview();
 
     expect(screen.getByRole("alert").textContent).toContain("live V8 ratings are unaffected");
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
@@ -87,6 +96,7 @@ describe("SafetyScoreV9PreviewClient", () => {
     });
 
     render(<SafetyScoreV9PreviewClient />);
+    unlockPreview();
 
     const alert = screen.getByRole("alert");
     const retry = screen.getByRole("button", { name: "Retrying" });
@@ -104,7 +114,25 @@ describe("SafetyScoreV9PreviewClient", () => {
     });
 
     render(<SafetyScoreV9PreviewClient />);
+    unlockPreview();
 
     expect(screen.getByRole("status", { name: "Loading V9 shadow ratings" })).toBeTruthy();
+  });
+
+  it("keeps the preview locked until a reviewer submits an API key", () => {
+    useReportCardsV9Preview.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isFetching: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<SafetyScoreV9PreviewClient />);
+
+    expect(screen.getByText("Reviewer access required")).toBeTruthy();
+    expect(useReportCardsV9Preview).toHaveBeenLastCalledWith(null);
+    unlockPreview();
+    expect(useReportCardsV9Preview).toHaveBeenLastCalledWith("ph_live_preview_test_key");
   });
 });

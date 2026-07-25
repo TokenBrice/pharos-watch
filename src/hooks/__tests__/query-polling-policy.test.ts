@@ -29,6 +29,7 @@ import { useStatus } from "../use-status";
 import { useEndpointProbes } from "../use-endpoint-probes";
 import { useStabilityIndexLight } from "../use-stability-index-light";
 import { useTelegramPulse } from "../use-telegram-pulse";
+import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 
 function mockQueryReturn() {
   useQueryMock.mockReturnValue({
@@ -220,17 +221,34 @@ describe("query polling policy", () => {
     expect(options.retry).toBe(1);
   });
 
-  it("uses the V9 producer polling window for the contributor preview", () => {
-    useReportCardsV9Preview();
+  it("uses the V9 producer polling window and reviewer key for the contributor preview", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify(makeReportCardsV9Response()), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    useReportCardsV9Preview("ph_live_preview_test_key");
     const options = useQueryMock.mock.calls[0][0] as {
       queryKey: unknown[];
       staleTime: number;
+      enabled: boolean;
       placeholderData?: unknown;
+      queryFn: (context: ReturnType<typeof queryContext>) => Promise<unknown>;
     };
 
     expect(options.queryKey).toEqual(["report-cards", "v9", "preview"]);
     expect(options.staleTime).toBe(CRON_15MIN);
+    expect(options.enabled).toBe(true);
     expect(options.placeholderData).toBeUndefined();
+    await options.queryFn(queryContext(options.queryKey));
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(new Headers(init.headers).get("X-API-Key")).toBe("ph_live_preview_test_key");
+
+    useQueryMock.mockClear();
+    useReportCardsV9Preview(null);
+    expect(useQueryMock.mock.calls[0][0]).toMatchObject({ enabled: false });
   });
 
   it("useStabilityIndexLight reuses registered meta polling", () => {
