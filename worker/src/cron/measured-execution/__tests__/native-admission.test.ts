@@ -30,16 +30,13 @@ describe("native measured-execution admission", () => {
     expect(admission.nextCursor).toBe("solana-11");
   });
 
-  it("admits twelve SunSwap targets and covers the current cohort across two half-hour runs", () => {
+  it("admits the complete current SunSwap cohort in one half-hour evidence cycle", () => {
     const targets = tronTargets(21);
-    const first = admitTronMeasuredTargets(targets, null);
-    const second = admitTronMeasuredTargets(targets, first.nextCursor);
+    const admission = admitTronMeasuredTargets(targets, null);
 
-    expect(TRON_MEASURED_TARGETS_PER_RUN).toBe(12);
-    expect(first.admitted.size).toBe(12);
-    expect(first.nextCursor).toBe("tron-11");
-    expect(second.admitted.size).toBe(12);
-    expect(new Set([...first.admitted, ...second.admitted]).size).toBe(21);
+    expect(TRON_MEASURED_TARGETS_PER_RUN).toBe(21);
+    expect(admission.admitted.size).toBe(21);
+    expect(admission.nextCursor).toBe("tron-20");
   });
 
   it("retains the seven-minute producer budget and final-request headroom", () => {
