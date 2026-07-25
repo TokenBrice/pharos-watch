@@ -265,13 +265,10 @@ const CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES: readonly V9ExitEvaluationRoute[
  * issuer-, protocol-, and eventual-redemption families and admitted only after
  * hard-gating on a known observation, a resolved output, non-diagnostic
  * coverage, at least one enumerated failure domain, and a documented,
- * live-reserve, or on-chain redemption evidence kind. This gate decides only
- * *eligibility* for the discounted credit; whether the route actually clears
- * notional is settled downstream by its measured capacity curve. An impaired,
- * frozen, or discretionary route does not survive as a viable exit because a
- * redemption that cannot clear reports a zero (or immaterial) capacity curve, so
- * the zero-capacity floor drops it exactly as before this relaxation — the pin
- * safety here is that data invariant, not the family membership.
+ * live-reserve, or on-chain redemption evidence kind. Native issuer/protocol
+ * observations must also pass the producer-side scoreEligible gate because that
+ * aggregate is the scorer's only downstream representation of open route
+ * status, resolution, immediacy, evidence support, and cost bounds.
  */
 function isCreditableNonAtomicRedemption(
   route: V9ExitEvaluationRoute,
@@ -279,6 +276,7 @@ function isCreditableNonAtomicRedemption(
 ): boolean {
   if (route.lane !== "redemption") return false;
   if (!CREDITABLE_NON_ATOMIC_REDEMPTION_FAMILIES.includes(route.routeFamily)) return false;
+  if (route.routeFamily !== "eventual-redemption" && !route.scoreEligible) return false;
   if (route.observationState !== "known") return false;
   if (route.outputResolved !== true) return false;
   if (route.coverageClass === "diagnostic") return false;

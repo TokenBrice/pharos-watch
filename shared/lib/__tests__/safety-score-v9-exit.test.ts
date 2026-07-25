@@ -549,8 +549,10 @@ describe("reliable non-atomic redemption credit", () => {
 // Lever 3 (V9 scoring reshape): the exit pillar now credits documented,
 // reliable issuer- and protocol-redemption channels — not only the derived
 // eventual-redemption family — while every reliability gate and the
-// all-zero-capacity floor stay in force. Impaired/frozen routes are excluded by
-// reporting zero capacity, so relaxing the family gate cannot lift them.
+// all-zero-capacity floor stay in force. Native issuer/protocol observations
+// must still carry producer-side score eligibility, which is the scorer's only
+// downstream representation of open route status, resolution, immediacy,
+// evidence support, and bounded costs.
 describe("Lever 3 issuer/protocol redemption credit", () => {
   const floor = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore;
 
@@ -558,9 +560,7 @@ describe("Lever 3 issuer/protocol redemption credit", () => {
     return route({
       routeKey: "redemption:issuer-documented",
       routeFamily: "issuer-redemption",
-      // A native issuer observation fails the atomic-only score gate; credit now
-      // comes from the reliability gate, not scoreEligible.
-      scoreEligible: false,
+      scoreEligible: true,
       coverageClass: "exact-lower-bound",
       evidenceKind: "documented-terms",
       access: "issuer-api",
@@ -586,6 +586,17 @@ describe("Lever 3 issuer/protocol redemption credit", () => {
     // its evidence with only the T+1 settlement haircut.
     expect(result.score!).toBeGreaterThan(floor);
     expect(result.score!).toBeGreaterThan(55);
+  });
+
+  it("does not credit a native issuer redemption when producer-side score eligibility fails", () => {
+    const result = evaluateV9Exit(
+      { circulatingUsd: 20_000_000, routes: [documentedRedemption({ scoreEligible: false })] },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.primaryRouteKey).toBeNull();
+    expect(result.score).toBe(floor);
+    expect(result.reasons).toContain("unsupported-same-notional-route");
   });
 
   it("credits a documented, nonzero-capacity protocol redemption above the bounded floor", () => {
