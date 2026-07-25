@@ -559,6 +559,14 @@ function isNativeMeasuredExecutionAdapter(adapterProfileId: string): boolean {
   );
 }
 
+function isQuoterV2MeasuredExecutionAdapter(adapterProfileId: string): boolean {
+  return (
+    adapterProfileId === "uniswap-v3-quoter-v2" ||
+    adapterProfileId === "pancakeswap-v3-quoter-v2" ||
+    adapterProfileId === "aerodrome-slipstream-quoter-v2"
+  );
+}
+
 function capabilityForPool(
   pool: P4DexRoutePoolInput,
   options: { ignoreMeasured?: boolean } = {},
@@ -570,8 +578,7 @@ function capabilityForPool(
     return capabilityById(
       isNativeMeasuredExecutionAdapter(measuredProfile.adapterProfileId)
         ? "native-measured-exact"
-        : measuredProfile.adapterProfileId === "uniswap-v3-quoter-v2" ||
-        measuredProfile.adapterProfileId === "pancakeswap-v3-quoter-v2"
+        : isQuoterV2MeasuredExecutionAdapter(measuredProfile.adapterProfileId)
         ? "quoter-v2-measured-exact"
         : measuredProfile.adapterProfileId === "curve-cryptoswap-get-dy-v1"
           ? "curve-cryptoswap-measured-exact"
@@ -672,8 +679,7 @@ function validateMeasuredExecutionProfile(
   if (!schemaValid) issues.push("invalid-profile-schema");
   if (!isNative) {
     if (
-      profile.adapterProfileId !== "uniswap-v3-quoter-v2" &&
-      profile.adapterProfileId !== "pancakeswap-v3-quoter-v2" &&
+      !isQuoterV2MeasuredExecutionAdapter(profile.adapterProfileId) &&
       profile.adapterProfileId !== "curve-cryptoswap-get-dy-v1" &&
       profile.adapterProfileId !== CURVE_STABLESWAP_ADAPTER_PROFILE_ID &&
       profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
