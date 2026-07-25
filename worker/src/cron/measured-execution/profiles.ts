@@ -10,6 +10,8 @@ import {
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 
+export const DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS = 15_000;
+
 export interface DexMeasuredRawQuotePoint extends DexMeasuredExecutionQuotePointProof {
   adapterMetadata?: Record<string, string | number | boolean>;
 }

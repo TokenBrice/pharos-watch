@@ -24,7 +24,10 @@ import {
   validateQuoterV2ProfileProof,
 } from "../quoter-v2";
 import { getDexMeasuredExecutionDeployment } from "../registry";
-import { createDexMeasuredExecutionRpcBudget } from "../profiles";
+import {
+  createDexMeasuredExecutionRpcBudget,
+  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+} from "../profiles";
 
 interface ReplayFixture {
   name: string;
@@ -315,6 +318,9 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.map((call) => call[1].length)).toEqual([
       8, 4, 2, 2, 4, 2, 2,
     ]);
+    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.every(
+      (call) => call[3]?.timeoutMs === DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+    )).toBe(true);
   });
 
   it("attributes a request rejected by the hard RPC budget to that budget", async () => {

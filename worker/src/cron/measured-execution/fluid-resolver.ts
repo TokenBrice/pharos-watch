@@ -14,10 +14,11 @@ import {
   type EvmMulticall3Call,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
-import type {
-  DexMeasuredExecutionBudgetStopReason,
-  DexMeasuredExecutionRpcBudget,
-  DexMeasuredRawQuotePoint,
+import {
+  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+  type DexMeasuredExecutionBudgetStopReason,
+  type DexMeasuredExecutionRpcBudget,
+  type DexMeasuredRawQuotePoint,
 } from "./profiles";
 
 const FLUID_RESOLVER_ABI = parseAbi([
@@ -182,7 +183,7 @@ export async function verifyFluidResolverDeployment(input: {
   const code = await fetchEvmCodeAtBlock(input.deployment.chain, input.deployment.endpointAddress, input.blockNumber, {
     chainRpcs: input.chainRpcs,
     signal: input.signal,
-    timeoutMs: 15_000,
+    timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
     ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
     ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
     maxRetries: 0,
@@ -550,7 +551,7 @@ export const quoteFluidResolverRequests = createFluidResolverQuoteExecutor({
     fetchEvmMulticall3Aggregate3AtBlock(input.chain, input.calls, input.blockNumber, {
       chainRpcs: input.chainRpcs,
       signal: input.signal,
-      timeoutMs: 30_000,
+      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
       ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
       ...(input.rpcBudget
         ? {

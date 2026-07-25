@@ -23,6 +23,7 @@ import {
 import {
   buildDexMeasuredExecutionProfile,
   createDexMeasuredExecutionRpcBudget,
+  DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
 import { quoteQuoterV2Requests, resolveQuoterV2PoolBindings, validateQuoterV2ProfileProof } from "./quoter-v2";
@@ -449,7 +450,7 @@ export async function syncDexMeasuredExecution(
     const blockNumber = await fetchEvmBlockNumber(chain, {
       chainRpcs,
       signal,
-      timeoutMs: 15_000,
+      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
       deadlineMs: rpcBudget.deadlineMs,
       beforeRequest: () => rpcBudget.tryConsume(),
       maxRetries: 0,
