@@ -12,7 +12,11 @@ import { tronBase58ToHex } from "../../../lib/tron-address";
 import { buildTronMeasuredExecutionTargets } from "../tron-inventory";
 import { buildTronMeasuredExecutionProfile } from "../tron-profiles";
 import { parseSunRouterDirectV2Quote, quoteTronMeasuredTarget } from "../tron-quotes";
-import { joinTronMeasuredExecutionEvidence, stripTronMeasuredExecutionInternalFields } from "../tron-join";
+import {
+  joinTronMeasuredExecutionEvidence,
+  releaseTronMeasuredExecutionProofFields,
+  stripTronMeasuredExecutionInternalFields,
+} from "../tron-join";
 import { getTronMeasuredExecutionAdapterByProfile } from "../tron-registry";
 
 const FACTORY = "TKWJdrQkqHisa1X8HUdHEfREvTzw4pMAaY";
@@ -309,6 +313,11 @@ describe("Tron SunSwap measured execution", () => {
       tronMeasuredExecutionDiagnostic: { detail: "exact-route-mismatch" },
     });
     expect(failedPool.extra).not.toHaveProperty("nativeMeasuredExecution");
+    releaseTronMeasuredExecutionProofFields([retainedPool]);
+    expect(retainedPool.extra).not.toHaveProperty("tronMeasuredExecutionTarget");
+    expect(retainedPool.extra).not.toHaveProperty("tronMeasuredExecutionProfile");
+    expect(retainedPool.extra).toHaveProperty("tronMeasuredExecution");
+    expect(retainedPool.extra).toHaveProperty("tronMeasuredExecutionPhysicalPoolId", POOL);
     stripTronMeasuredExecutionInternalFields([retainedPool]);
     expect(retainedPool.extra).not.toHaveProperty("tronMeasuredExecutionTarget");
     expect(retainedPool.extra).not.toHaveProperty("tronMeasuredExecutionProfile");

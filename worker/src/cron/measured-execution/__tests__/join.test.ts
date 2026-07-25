@@ -20,6 +20,7 @@ import type { PoolEntry } from "../../dex-liquidity/types";
 import {
   buildDexMeasuredExecutionRetainedRoutePools,
   joinDexMeasuredExecutionEvidence,
+  releaseDexMeasuredExecutionProofFields,
   stripDexMeasuredExecutionInternalFields,
 } from "../join";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
@@ -430,6 +431,13 @@ describe("measured execution join activation", () => {
     expect(pool.extra?.ammExecutionModel).toBeDefined();
     expect(pool.extra?.executionCapabilityGate).toBeUndefined();
     expect(diagnostics).toMatchObject({ targetCount: 2, measuredCount: 2, gatedCount: 0 });
+
+    const releasedPool = { ...pool, extra: { ...pool.extra } };
+    releaseDexMeasuredExecutionProofFields([releasedPool]);
+    expect(releasedPool.extra?.measuredExecutionTargets).toBeUndefined();
+    expect(releasedPool.extra?.measuredExecutionProfiles).toBeUndefined();
+    expect(releasedPool.extra?.measuredExecutions).toHaveLength(2);
+    expect(releasedPool.extra?.measuredExecutionPhysicalPoolId).toBe(targets[0]!.poolId);
 
     const expired = joinDexMeasuredExecutionEvidence({
       poolsByStablecoin: new Map([["usdt-tether", [pool]]]),

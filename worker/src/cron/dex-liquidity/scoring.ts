@@ -22,6 +22,7 @@ import {
   buildDexMeasuredExecutionRetainedRoutePools,
   joinDexMeasuredExecutionEvidence,
   loadDexMeasuredExecutionJoinEvidence,
+  releaseDexMeasuredExecutionProofFields,
   stripDexMeasuredExecutionInternalFields,
   type DexMeasuredExecutionJoinDiagnostics,
 } from "../measured-execution/join";
@@ -34,6 +35,7 @@ import { buildSolanaMeasuredPoolDirectionKey } from "../measured-execution/solan
 import {
   joinSolanaMeasuredExecutionEvidence,
   loadSolanaMeasuredExecutionJoinEvidence,
+  releaseSolanaMeasuredExecutionProofFields,
   stripSolanaMeasuredExecutionInternalFields,
   type SolanaMeasuredExecutionJoinDiagnostics,
 } from "../measured-execution/solana-join";
@@ -41,6 +43,7 @@ import { buildTronMeasuredPoolDirectionKey } from "../measured-execution/tron-in
 import {
   joinTronMeasuredExecutionEvidence,
   loadTronMeasuredExecutionJoinEvidence,
+  releaseTronMeasuredExecutionProofFields,
   stripTronMeasuredExecutionInternalFields,
   type TronMeasuredExecutionJoinDiagnostics,
 } from "../measured-execution/tron-join";
@@ -716,6 +719,67 @@ export async function computeStablecoinScores(
   slipstreamMeasuredTargets.clear();
   tronMeasuredTargets.clear();
 
+  const inventoryTargetCount = targetInventoryById.size;
+  const solanaInventoryTargetCount = solanaTargetInventoryById.size;
+  const tronInventoryTargetCount = tronTargetInventoryById.size;
+  let targetPublication: ScoreDiagnostics["measuredExecution"]["targetPublication"];
+  if (inventoryTargetCount === 0) {
+    targetPublication = { status: "skipped", reason: "no-applicable-targets" };
+  } else {
+    try {
+      const publication = await publishDexMeasuredTargetInventory({
+        db,
+        targets: [...targetInventoryById.values()],
+        capturedAt: routeObservedAt,
+        signal,
+      });
+      targetPublication = { status: "published", ...publication };
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      targetPublication = { status: "failed", reason: String(error).slice(0, 500) };
+    } finally {
+      targetInventoryById.clear();
+    }
+  }
+  let solanaTargetPublication: ScoreDiagnostics["measuredExecution"]["solanaTargetPublication"];
+  if (solanaInventoryTargetCount === 0) {
+    solanaTargetPublication = { status: "skipped", reason: "no-applicable-targets" };
+  } else {
+    try {
+      const publication = await publishSolanaMeasuredTargetInventory({
+        db,
+        targets: [...solanaTargetInventoryById.values()],
+        capturedAt: routeObservedAt,
+        signal,
+      });
+      solanaTargetPublication = { status: "published", ...publication };
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      solanaTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
+    } finally {
+      solanaTargetInventoryById.clear();
+    }
+  }
+  let tronTargetPublication: ScoreDiagnostics["measuredExecution"]["tronTargetPublication"];
+  if (tronInventoryTargetCount === 0) {
+    tronTargetPublication = { status: "skipped", reason: "no-applicable-targets" };
+  } else {
+    try {
+      const publication = await publishTronMeasuredTargetInventory({
+        db,
+        targets: [...tronTargetInventoryById.values()],
+        capturedAt: routeObservedAt,
+        signal,
+      });
+      tronTargetPublication = { status: "published", ...publication };
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      tronTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
+    } finally {
+      tronTargetInventoryById.clear();
+    }
+  }
+
   const joinEvidence = await loadDexMeasuredExecutionJoinEvidence(db, signal);
   const measuredExecutionJoin = joinDexMeasuredExecutionEvidence({
     poolsByStablecoin: preparedRetainedPools,
@@ -727,6 +791,12 @@ export async function computeStablecoinScores(
     evidence: joinEvidence,
     nowSec: routeObservedAt,
   });
+  for (const pools of preparedRetainedPools.values()) {
+    releaseDexMeasuredExecutionProofFields(pools);
+  }
+  for (const pools of retainedMeasuredRoutePools.values()) {
+    releaseDexMeasuredExecutionProofFields(pools);
+  }
   joinEvidence?.byTargetId.clear();
   const solanaJoinEvidence = await loadSolanaMeasuredExecutionJoinEvidence(db, signal);
   const solanaMeasuredExecutionJoin = joinSolanaMeasuredExecutionEvidence({
@@ -734,6 +804,9 @@ export async function computeStablecoinScores(
     evidence: solanaJoinEvidence,
     nowSec: routeObservedAt,
   });
+  for (const pools of preparedRetainedPools.values()) {
+    releaseSolanaMeasuredExecutionProofFields(pools);
+  }
   solanaJoinEvidence?.byTargetId.clear();
   const tronJoinEvidence = await loadTronMeasuredExecutionJoinEvidence(db, signal);
   const tronMeasuredExecutionJoin = joinTronMeasuredExecutionEvidence({
@@ -741,6 +814,9 @@ export async function computeStablecoinScores(
     evidence: tronJoinEvidence,
     nowSec: routeObservedAt,
   });
+  for (const pools of preparedRetainedPools.values()) {
+    releaseTronMeasuredExecutionProofFields(pools);
+  }
   tronJoinEvidence?.byTargetId.clear();
 
   for (const [id, m] of [...metrics].filter(([stablecoinId]) => ACTIVE_IDS.has(stablecoinId))) {
@@ -833,58 +909,6 @@ export async function computeStablecoinScores(
     results.set(id, fullScoreResult);
   }
 
-  let targetPublication: ScoreDiagnostics["measuredExecution"]["targetPublication"];
-  if (targetInventoryById.size === 0) {
-    targetPublication = { status: "skipped", reason: "no-applicable-targets" };
-  } else {
-    try {
-      const publication = await publishDexMeasuredTargetInventory({
-        db,
-        targets: [...targetInventoryById.values()],
-        capturedAt: routeObservedAt,
-        signal,
-      });
-      targetPublication = { status: "published", ...publication };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      targetPublication = { status: "failed", reason: String(error).slice(0, 500) };
-    }
-  }
-  let solanaTargetPublication: ScoreDiagnostics["measuredExecution"]["solanaTargetPublication"];
-  if (solanaTargetInventoryById.size === 0) {
-    solanaTargetPublication = { status: "skipped", reason: "no-applicable-targets" };
-  } else {
-    try {
-      const publication = await publishSolanaMeasuredTargetInventory({
-        db,
-        targets: [...solanaTargetInventoryById.values()],
-        capturedAt: routeObservedAt,
-        signal,
-      });
-      solanaTargetPublication = { status: "published", ...publication };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      solanaTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
-    }
-  }
-  let tronTargetPublication: ScoreDiagnostics["measuredExecution"]["tronTargetPublication"];
-  if (tronTargetInventoryById.size === 0) {
-    tronTargetPublication = { status: "skipped", reason: "no-applicable-targets" };
-  } else {
-    try {
-      const publication = await publishTronMeasuredTargetInventory({
-        db,
-        targets: [...tronTargetInventoryById.values()],
-        capturedAt: routeObservedAt,
-        signal,
-      });
-      tronTargetPublication = { status: "published", ...publication };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      tronTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
-    }
-  }
-
   // Global protocol-level TVL cap: when reducing excess, chain TVLs are
   // distributed proportionally rather than attributed to the chain with the
   // most excess. Exact chain attribution would require per-pool chain data
@@ -939,9 +963,9 @@ export async function computeStablecoinScores(
         join: measuredExecutionJoin,
         solanaJoin: solanaMeasuredExecutionJoin,
         tronJoin: tronMeasuredExecutionJoin,
-        inventoryTargetCount: targetInventoryById.size,
-        solanaInventoryTargetCount: solanaTargetInventoryById.size,
-        tronInventoryTargetCount: tronTargetInventoryById.size,
+        inventoryTargetCount,
+        solanaInventoryTargetCount,
+        tronInventoryTargetCount,
         targetPublication,
         solanaTargetPublication,
         tronTargetPublication,

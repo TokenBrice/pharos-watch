@@ -135,13 +135,20 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
   return diagnostics;
 }
 
-export function stripSolanaMeasuredExecutionInternalFields(pools: readonly PoolEntry[]): void {
+export function releaseSolanaMeasuredExecutionProofFields(pools: readonly PoolEntry[]): void {
   for (const pool of pools) {
     if (!pool.extra) continue;
     delete pool.extra.solanaMeasuredExecutionTarget;
     delete pool.extra.solanaMeasuredExecutionProfile;
-    delete pool.extra.solanaMeasuredExecutionPhysicalPoolId;
     delete pool.extra.solanaMeasuredExecutionDiagnostic;
+  }
+}
+
+export function stripSolanaMeasuredExecutionInternalFields(pools: readonly PoolEntry[]): void {
+  releaseSolanaMeasuredExecutionProofFields(pools);
+  for (const pool of pools) {
+    if (!pool.extra) continue;
+    delete pool.extra.solanaMeasuredExecutionPhysicalPoolId;
     delete pool.extra.nativeMeasuredExecution;
     delete pool.extra.nativeMeasuredExecutionPhysicalPoolId;
   }

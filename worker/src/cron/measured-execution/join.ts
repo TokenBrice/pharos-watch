@@ -648,16 +648,23 @@ export function joinDexMeasuredExecutionEvidence(input: {
   return diagnostics;
 }
 
-export function stripDexMeasuredExecutionInternalFields(pools: readonly PoolEntry[]): void {
+export function releaseDexMeasuredExecutionProofFields(pools: readonly PoolEntry[]): void {
   for (const pool of pools) {
     if (!pool.extra) continue;
     delete pool.extra.measuredExecutionTarget;
     delete pool.extra.measuredExecutionTargets;
     delete pool.extra.measuredExecutionProfile;
     delete pool.extra.measuredExecutionProfiles;
-    delete pool.extra.measuredExecutions;
-    delete pool.extra.measuredExecutionPhysicalPoolId;
     delete pool.extra.measuredExecutionDiagnostic;
     delete pool.extra.measuredExecutionDiagnostics;
+  }
+}
+
+export function stripDexMeasuredExecutionInternalFields(pools: readonly PoolEntry[]): void {
+  releaseDexMeasuredExecutionProofFields(pools);
+  for (const pool of pools) {
+    if (!pool.extra) continue;
+    delete pool.extra.measuredExecutions;
+    delete pool.extra.measuredExecutionPhysicalPoolId;
   }
 }
