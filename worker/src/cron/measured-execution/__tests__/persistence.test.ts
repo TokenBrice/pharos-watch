@@ -4,6 +4,7 @@ import { buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } fr
 import {
   buildSolanaMeasuredQuoteGenerationId,
   buildTronMeasuredQuoteGenerationId,
+  DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE,
   getDexMeasuredHistoryFreshnessSec,
   isOperationalDexMeasuredFailure,
   loadLatestPublishedDexMeasuredQuoteEvidence,
@@ -112,6 +113,13 @@ function evidenceDb(input: {
   const makeStmt = (sql: string, binds: unknown[] = []): Record<string, unknown> => ({
     bind: (...nextBinds: unknown[]) => makeStmt(sql, nextBinds),
     first: async () => {
+      if (sql.includes("COUNT(*) AS row_count")) {
+        return {
+          row_count: 1,
+          min_target_generation_id: "target-generation-latest",
+          max_target_generation_id: "target-generation-latest",
+        };
+      }
       if (sql.includes("state IN ('published', 'superseded')")) {
         return {
           generation_id: "target-generation-latest",
@@ -169,7 +177,22 @@ function evidenceDb(input: {
                 quote_published_at: entry.publishedAt ?? 1_900 - index,
                 target_json: JSON.stringify(entry.target),
               };
-            }),
+          }),
+        };
+      }
+      if (sql.includes("JOIN dex_measured_execution_targets")) {
+        return {
+          results: [
+            {
+              generation_id: "quote-generation-latest",
+              target_generation_id: "target-generation-latest",
+              target_id: input.target.targetId,
+              status: input.latest.status,
+              failure_reason: input.latest.failureReason,
+              quote_profile_json: input.latest.profile ? JSON.stringify(input.latest.profile) : null,
+              target_json: JSON.stringify(input.target),
+            },
+          ],
         };
       }
       if (sql.includes("FROM dex_measured_execution_quotes")) {
@@ -375,6 +398,13 @@ describe("measured execution raw payload policy", () => {
     const makeStmt = (sql: string): Record<string, unknown> => ({
       bind: () => makeStmt(sql),
       first: async () => {
+        if (sql.includes("COUNT(*) AS row_count")) {
+          return {
+            row_count: 1,
+            min_target_generation_id: "target-generation",
+            max_target_generation_id: "target-generation",
+          };
+        }
         if (sql.includes("state IN ('published', 'superseded')")) {
           return {
             generation_id: "target-generation",
@@ -403,7 +433,7 @@ describe("measured execution raw payload policy", () => {
         if (sql.includes("SELECT history_generation.generation_id")) {
           return { results: [] };
         }
-        if (sql.includes("FROM dex_measured_execution_quotes")) {
+        if (sql.includes("JOIN dex_measured_execution_targets")) {
           return {
             results: [
               {
@@ -413,6 +443,7 @@ describe("measured execution raw payload policy", () => {
                 status: "measured",
                 failure_reason: null,
                 quote_profile_json: JSON.stringify(profile),
+                target_json: JSON.stringify(measuredTarget),
               },
             ],
           };
@@ -441,13 +472,101 @@ describe("measured execution raw payload policy", () => {
     const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
 
     expect(evidence?.quoteGenerationId).toBe("quote-generation");
-    const quoteSelect = preparedSql.find((sql) => sql.includes("FROM dex_measured_execution_quotes"));
+    const quoteSelect = preparedSql.find((sql) => sql.includes("JOIN dex_measured_execution_targets"));
     expect(quoteSelect).toBeDefined();
     expect(quoteSelect).not.toContain("raw_quote_payload_json");
     const entry = evidence?.byTargetId.get(measuredTarget.targetId);
     expect(entry?.status).toBe("measured");
     expect(entry?.profile).toBeTruthy();
     expect(entry).not.toHaveProperty("rawPayload");
+  });
+
+  it("loads current target and profile JSON in bounded keyset pages", async () => {
+    const targets = Array.from({ length: 65 }, (_, index) => fixtureTarget(`test-chain-${index}`)).sort((a, b) =>
+      a.targetId < b.targetId ? -1 : a.targetId > b.targetId ? 1 : 0,
+    );
+    const profiles = new Map(
+      targets.map((target) => [
+        target.targetId,
+        fixtureProfile(target, {
+          targetGenerationId: "target-generation",
+          quoteGenerationId: "quote-generation",
+        }),
+      ]),
+    );
+    const preparedSql: string[] = [];
+    const makeStmt = (sql: string, binds: unknown[] = []): Record<string, unknown> => ({
+      bind: (...nextBinds: unknown[]) => makeStmt(sql, nextBinds),
+      first: async () => {
+        if (sql.includes("COUNT(*) AS row_count")) {
+          return {
+            row_count: targets.length,
+            min_target_generation_id: "target-generation",
+            max_target_generation_id: "target-generation",
+          };
+        }
+        if (sql.includes("state IN ('published', 'superseded')")) {
+          return {
+            generation_id: "target-generation",
+            state: "superseded",
+            started_at: 1_000,
+            published_at: 1_010,
+            expected_rows: targets.length,
+            published_rows: targets.length,
+            dependency_snapshot_json: null,
+          };
+        }
+        if (sql.includes("WHERE surface = ? AND state = 'published'")) {
+          return {
+            generation_id: "quote-generation",
+            state: "published",
+            started_at: 1_050,
+            published_at: 1_060,
+            expected_rows: targets.length,
+            published_rows: targets.length,
+            dependency_snapshot_json: JSON.stringify({ targetGenerationId: "target-generation" }),
+          };
+        }
+        return null;
+      },
+      all: async () => {
+        if (sql.includes("JOIN dex_measured_execution_targets")) {
+          const afterTargetId = String(binds[2]);
+          const pageSize = Number(binds[3]);
+          return {
+            results: targets
+              .filter((target) => target.targetId > afterTargetId)
+              .slice(0, pageSize)
+              .map((target) => ({
+                generation_id: "quote-generation",
+                target_generation_id: "target-generation",
+                target_id: target.targetId,
+                status: "measured",
+                failure_reason: null,
+                quote_profile_json: JSON.stringify(profiles.get(target.targetId)),
+                target_json: JSON.stringify(target),
+              })),
+          };
+        }
+        if (sql.includes("SELECT history_generation.generation_id")) {
+          return { results: [] };
+        }
+        return { results: [] };
+      },
+    });
+    const db = {
+      prepare: (sql: string) => {
+        preparedSql.push(sql);
+        return makeStmt(sql);
+      },
+    } as unknown as D1Database;
+
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+
+    expect(evidence?.byTargetId.size).toBe(targets.length);
+    expect(
+      preparedSql.filter((sql) => sql.includes("JOIN dex_measured_execution_targets")),
+    ).toHaveLength(Math.ceil(targets.length / DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE));
   });
 });
 

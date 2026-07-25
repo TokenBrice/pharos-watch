@@ -37,6 +37,8 @@ const DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC =
   DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC;
 /** Preserve the full window while keeping proof-heavy history rows below the scoring graph's heap peak. */
 const DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE = 16;
+/** Bound raw target/profile JSON beside the assembled DEX pool graph. */
+export const DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE = 32;
 
 export function getDexMeasuredHistoryFreshnessSec(adapterProfileId: string): number {
   return getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId);
@@ -76,6 +78,16 @@ interface QuoteRow {
 interface HistoricalQuoteRow extends QuoteRow {
   quote_published_at: number;
   target_json: string;
+}
+
+interface CurrentQuoteWithTargetRow extends QuoteRow {
+  target_json: string;
+}
+
+interface QuoteGenerationSummaryRow {
+  row_count: number;
+  min_target_generation_id: string | null;
+  max_target_generation_id: string | null;
 }
 
 export interface DexMeasuredQuoteOutcome {
@@ -162,6 +174,180 @@ async function latestPublishedGeneration(
     3,
     signal,
   );
+}
+
+async function loadCurrentMeasuredQuoteEvidence<
+  TTarget extends { targetId: string },
+  TProfile extends {
+    targetId: string;
+    targetGenerationId: string;
+    quoteGenerationId: string;
+  },
+>(input: {
+  db: D1Database;
+  quoteSurface: string;
+  targetSurface: string;
+  label: string;
+  targetSchema: { parse(value: unknown): TTarget };
+  profileSchema: { parse(value: unknown): TProfile };
+  signal?: AbortSignal;
+}): Promise<{
+  quoteGenerationId: string;
+  targetGenerationId: string;
+  publishedAt: number;
+  byTargetId: Map<
+    string,
+    {
+      quotedTarget: TTarget;
+      status: "measured" | "failed";
+      failureReason: string | null;
+      profile: TProfile | null;
+    }
+  >;
+} | null> {
+  const generation = await latestPublishedGeneration(input.db, input.quoteSurface, input.signal);
+  if (!generation) return null;
+  const summary = await runWithOverloadRetry(
+    () =>
+      input.db
+        .prepare(
+          `SELECT COUNT(*) AS row_count,
+                  MIN(target_generation_id) AS min_target_generation_id,
+                  MAX(target_generation_id) AS max_target_generation_id
+           FROM dex_measured_execution_quotes
+           WHERE generation_id = ?`,
+        )
+        .bind(generation.generation_id)
+        .first<QuoteGenerationSummaryRow>(),
+    3,
+    input.signal,
+  );
+  const rowCount = Number(summary?.row_count ?? -1);
+  if (
+    rowCount < 0 ||
+    (generation.expected_rows != null && generation.expected_rows !== rowCount) ||
+    (generation.published_rows != null && generation.published_rows !== rowCount)
+  ) {
+    throw new Error(`Published ${input.label} measured quote generation ${generation.generation_id} is incomplete`);
+  }
+  const dependency = generation.dependency_snapshot_json
+    ? (parsePersistedJson(
+        generation.dependency_snapshot_json,
+        `${input.label} measured dependency JSON`,
+      ) as { targetGenerationId?: string })
+    : {};
+  const targetGenerationId = summary?.min_target_generation_id ?? dependency.targetGenerationId;
+  if (
+    !targetGenerationId ||
+    summary?.min_target_generation_id !== summary?.max_target_generation_id ||
+    dependency.targetGenerationId !== targetGenerationId
+  ) {
+    throw new Error(
+      `Published ${input.label} measured quote generation ${generation.generation_id} has a torn target dependency`,
+    );
+  }
+  const targetGeneration = await input.db
+    .prepare(
+      `SELECT generation_id, state, started_at, published_at, expected_rows, published_rows, dependency_snapshot_json
+       FROM surface_publication_generations
+       WHERE surface = ? AND generation_id = ? AND state IN ('published', 'superseded')`,
+    )
+    .bind(input.targetSurface, targetGenerationId)
+    .first<SurfaceGenerationRow>();
+  if (!targetGeneration) {
+    throw new Error(`${input.label} measured target generation ${targetGenerationId} was not published`);
+  }
+  if (
+    (targetGeneration.expected_rows != null && targetGeneration.expected_rows !== rowCount) ||
+    (targetGeneration.published_rows != null && targetGeneration.published_rows !== rowCount)
+  ) {
+    throw new Error(`${input.label} measured quote generation ${generation.generation_id} has incomplete targets`);
+  }
+
+  const byTargetId = new Map<
+    string,
+    {
+      quotedTarget: TTarget;
+      status: "measured" | "failed";
+      failureReason: string | null;
+      profile: TProfile | null;
+    }
+  >();
+  let afterTargetId = "";
+  while (byTargetId.size < rowCount) {
+    const pageResult = await runWithOverloadRetry(
+      () =>
+        input.db
+          .prepare(
+            `SELECT q.generation_id, q.target_generation_id, q.target_id, q.status, q.failure_reason,
+                    q.quote_profile_json, t.target_json
+             FROM dex_measured_execution_quotes q
+             JOIN dex_measured_execution_targets t
+               ON t.generation_id = q.target_generation_id AND t.target_id = q.target_id
+             WHERE q.generation_id = ? AND q.target_generation_id = ? AND q.target_id > ?
+             ORDER BY q.target_id
+             LIMIT ?`,
+          )
+          .bind(
+            generation.generation_id,
+            targetGenerationId,
+            afterTargetId,
+            DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE,
+          )
+          .all<CurrentQuoteWithTargetRow>(),
+      3,
+      input.signal,
+    );
+    const page: Array<CurrentQuoteWithTargetRow | undefined> = pageResult.results ?? [];
+    if (page.length === 0) break;
+    for (let rowIndex = 0; rowIndex < page.length; rowIndex++) {
+      const row = page[rowIndex];
+      page[rowIndex] = undefined;
+      if (!row) continue;
+      if (row.target_id <= afterTargetId || byTargetId.has(row.target_id)) {
+        throw new Error(`${input.label} measured quote evidence pagination did not advance`);
+      }
+      const quotedTarget = input.targetSchema.parse(
+        parsePersistedJson(row.target_json, `${input.label} measured target JSON`),
+      );
+      if (quotedTarget.targetId !== row.target_id) {
+        throw new Error(`${input.label} measured quote ${row.target_id} has a mismatched target row`);
+      }
+      const profile = row.quote_profile_json
+        ? input.profileSchema.parse(
+            parsePersistedJson(row.quote_profile_json, `${input.label} measured profile JSON`),
+          )
+        : null;
+      if (
+        (row.status === "measured" &&
+          (profile == null ||
+            row.failure_reason != null ||
+            profile.targetId !== row.target_id ||
+            profile.targetGenerationId !== targetGenerationId ||
+            profile.quoteGenerationId !== generation.generation_id)) ||
+        (row.status === "failed" && (profile != null || !row.failure_reason?.trim()))
+      ) {
+        throw new Error(`${input.label} measured quote row ${row.target_id} has a torn terminal identity`);
+      }
+      byTargetId.set(row.target_id, {
+        quotedTarget,
+        status: row.status,
+        failureReason: row.failure_reason,
+        profile,
+      });
+      afterTargetId = row.target_id;
+    }
+    page.length = 0;
+  }
+  if (byTargetId.size !== rowCount) {
+    throw new Error(`Published ${input.label} measured quote generation ${generation.generation_id} is incomplete`);
+  }
+  return {
+    quoteGenerationId: generation.generation_id,
+    targetGenerationId,
+    publishedAt: generation.published_at ?? generation.started_at,
+    byTargetId,
+  };
 }
 
 async function markGenerationFailed(db: D1Database, surface: string, id: string, reason: string): Promise<void> {
@@ -484,125 +670,47 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<LoadedDexMeasuredQuoteEvidence | null> {
-  const generation = await latestPublishedGeneration(db, DEX_MEASURED_QUOTE_SURFACE, signal);
-  if (!generation) return null;
-  const quoteResult = await runWithOverloadRetry(
-    () =>
-      db
-        .prepare(
-          `SELECT generation_id, target_generation_id, target_id, status, failure_reason,
-            quote_profile_json
-     FROM dex_measured_execution_quotes
-     WHERE generation_id = ?
-     ORDER BY stablecoin_id, target_id`,
-        )
-        .bind(generation.generation_id)
-        .all<QuoteRow>(),
-    3,
+  const currentEvidence = await loadCurrentMeasuredQuoteEvidence({
+    db,
+    quoteSurface: DEX_MEASURED_QUOTE_SURFACE,
+    targetSurface: DEX_MEASURED_TARGET_SURFACE,
+    label: "DEX",
+    targetSchema: DexMeasuredExecutionTargetSchema,
+    profileSchema: DexMeasuredExecutionProfileSchema,
     signal,
-  );
-  const quoteRows: Array<QuoteRow | undefined> = quoteResult.results ?? [];
-  if (
-    (generation.expected_rows != null && generation.expected_rows !== quoteRows.length) ||
-    (generation.published_rows != null && generation.published_rows !== quoteRows.length)
-  ) {
-    throw new Error(`Published measured quote generation ${generation.generation_id} is incomplete`);
-  }
-  const targetGenerationIds = new Set<string>();
-  for (const row of quoteRows) {
-    if (row) targetGenerationIds.add(row.target_generation_id);
-  }
-  const dependency = generation.dependency_snapshot_json
-    ? (parsePersistedJson(generation.dependency_snapshot_json, "DEX measured dependency JSON") as { targetGenerationId?: string })
-    : {};
-  const targetGenerationId =
-    (targetGenerationIds.values().next().value as string | undefined) ?? dependency.targetGenerationId;
-  if (!targetGenerationId || targetGenerationIds.size > 1 || dependency.targetGenerationId !== targetGenerationId) {
-    throw new Error(`Published measured quote generation ${generation.generation_id} has a torn target dependency`);
-  }
-  const targetGeneration = await db
-    .prepare(
-      `SELECT generation_id, state, started_at, published_at, expected_rows, published_rows, dependency_snapshot_json
-     FROM surface_publication_generations
-     WHERE surface = ? AND generation_id = ? AND state IN ('published', 'superseded')`,
-    )
-    .bind(DEX_MEASURED_TARGET_SURFACE, targetGenerationId)
-    .first<SurfaceGenerationRow>();
-  if (!targetGeneration) throw new Error(`Measured quote target generation ${targetGenerationId} was not published`);
-  const targetResult = await db
-    .prepare(
-      `SELECT generation_id, target_id, target_json
-     FROM dex_measured_execution_targets
-     WHERE generation_id = ?`,
-    )
-    .bind(targetGenerationId)
-    .all<TargetRow>();
-  const targetRows: Array<TargetRow | undefined> = targetResult.results ?? [];
-  const targets = new Map<string, DexMeasuredExecutionTarget>();
-  for (let rowIndex = 0; rowIndex < targetRows.length; rowIndex++) {
-    const row = targetRows[rowIndex];
-    targetRows[rowIndex] = undefined;
-    if (!row) continue;
-    const target = DexMeasuredExecutionTargetSchema.parse(
-      parsePersistedJson(row.target_json, "DEX measured target JSON"),
-    );
-    targets.set(target.targetId, target);
-  }
-  targetRows.length = 0;
-  if (
-    (targetGeneration.expected_rows != null && targetGeneration.expected_rows !== targets.size) ||
-    (targetGeneration.published_rows != null && targetGeneration.published_rows !== targets.size)
-  ) {
-    throw new Error(`Measured quote target generation ${targetGenerationId} is incomplete`);
-  }
+  });
+  if (!currentEvidence) return null;
+  const {
+    quoteGenerationId,
+    targetGenerationId,
+    publishedAt: latestPublishedAt,
+  } = currentEvidence;
   const byTargetId = new Map<
     string,
     LoadedDexMeasuredQuoteEvidence["byTargetId"] extends Map<string, infer T> ? T : never
   >();
   const historyCyclesByTargetId = new Map<string, DexMeasuredExecutionHistoryCycle[]>();
-  const latestPublishedAt = generation.published_at ?? generation.started_at;
-  for (let rowIndex = 0; rowIndex < quoteRows.length; rowIndex++) {
-    const row = quoteRows[rowIndex];
-    quoteRows[rowIndex] = undefined;
-    if (!row) continue;
-    const quotedTarget = targets.get(row.target_id);
-    if (!quotedTarget)
-      throw new Error(`Measured quote ${row.target_id} has no row in target generation ${targetGenerationId}`);
-    const profile = row.quote_profile_json
-      ? DexMeasuredExecutionProfileSchema.parse(parsePersistedJson(row.quote_profile_json, "DEX measured profile JSON"))
-      : null;
-    if (
-      (row.status === "measured" &&
-        (profile == null ||
-          row.failure_reason != null ||
-          profile.targetId !== row.target_id ||
-          profile.targetGenerationId !== targetGenerationId ||
-          profile.quoteGenerationId !== generation.generation_id)) ||
-      (row.status === "failed" && (profile != null || !row.failure_reason?.trim()))
-    )
-      throw new Error(`Measured quote row ${row.target_id} has a torn terminal identity`);
+  for (const [targetId, current] of currentEvidence.byTargetId) {
     const entry = {
-      quotedTarget,
-      status: row.status,
-      failureReason: row.failure_reason,
-      profile,
-      quoteGenerationId: generation.generation_id,
+      ...current,
+      quoteGenerationId,
       targetGenerationId,
       resolution: "latest",
-      latestFailureReason: row.failure_reason,
+      latestFailureReason: current.failureReason,
     } as const;
-    byTargetId.set(row.target_id, entry);
-    historyCyclesByTargetId.set(row.target_id, [
+    byTargetId.set(targetId, entry);
+    historyCyclesByTargetId.set(targetId, [
       {
-        generationId: generation.generation_id,
+        generationId: quoteGenerationId,
         publishedAt: latestPublishedAt,
-        status: row.status,
-        operationalFailure: row.status === "failed" && isOperationalDexMeasuredFailure(row.failure_reason),
-        profile,
+        status: current.status,
+        operationalFailure:
+          current.status === "failed" && isOperationalDexMeasuredFailure(current.failureReason),
+        profile: current.profile,
       },
     ]);
   }
-  quoteRows.length = 0;
+  currentEvidence.byTargetId.clear();
 
   // A transport or runtime-budget failure says nothing about executable depth.
   // Reuse the newest still-fresh measured row for that exact target identity;
@@ -679,7 +787,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
           const row = historicalRows[rowIndex];
           historicalRows[rowIndex] = undefined;
           if (!row) continue;
-          const currentTarget = targets.get(row.target_id);
+          const currentTarget = byTargetId.get(row.target_id)?.quotedTarget;
           if (
             currentTarget &&
             latestPublishedAt - row.quote_published_at >
@@ -795,7 +903,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   }
 
   return {
-    quoteGenerationId: generation.generation_id,
+    quoteGenerationId,
     targetGenerationId,
     publishedAt: latestPublishedAt,
     byTargetId,
@@ -1221,125 +1329,15 @@ async function loadLatestPublishedNativeMeasuredQuoteEvidence<
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<NativeLoadedQuoteEvidence<TTarget, TProfile> | null> {
-  const generation = await latestPublishedGeneration(db, config.quoteSurface, signal);
-  if (!generation) return null;
-  const quoteResult = await runWithOverloadRetry(
-    () =>
-      db
-        .prepare(
-          `SELECT generation_id, target_generation_id, target_id, status, failure_reason, quote_profile_json
-       FROM dex_measured_execution_quotes
-       WHERE generation_id = ?
-       ORDER BY stablecoin_id, target_id`,
-        )
-        .bind(generation.generation_id)
-        .all<QuoteRow>(),
-    3,
+  return loadCurrentMeasuredQuoteEvidence({
+    db,
+    quoteSurface: config.quoteSurface,
+    targetSurface: config.targetSurface,
+    label: config.label,
+    targetSchema: config.targetSchema,
+    profileSchema: config.profileSchema,
     signal,
-  );
-  const quoteRows: Array<QuoteRow | undefined> = quoteResult.results ?? [];
-  if (
-    (generation.expected_rows != null && generation.expected_rows !== quoteRows.length) ||
-    (generation.published_rows != null && generation.published_rows !== quoteRows.length)
-  ) {
-    throw new Error(`Published ${config.label} measured quote generation ${generation.generation_id} is incomplete`);
-  }
-
-  const targetGenerationIds = new Set<string>();
-  for (const row of quoteRows) {
-    if (row) targetGenerationIds.add(row.target_generation_id);
-  }
-  const dependency = generation.dependency_snapshot_json
-    ? (parsePersistedJson(generation.dependency_snapshot_json, `${config.label} measured dependency JSON`) as { targetGenerationId?: string })
-    : {};
-  const targetGenerationId =
-    (targetGenerationIds.values().next().value as string | undefined) ?? dependency.targetGenerationId;
-  if (!targetGenerationId || targetGenerationIds.size > 1 || dependency.targetGenerationId !== targetGenerationId) {
-    throw new Error(
-      `Published ${config.label} measured quote generation ${generation.generation_id} has a torn target dependency`,
-    );
-  }
-  const targetGeneration = await db
-    .prepare(
-      `SELECT generation_id, state, started_at, published_at, expected_rows, published_rows, dependency_snapshot_json
-     FROM surface_publication_generations
-     WHERE surface = ? AND generation_id = ? AND state IN ('published', 'superseded')`,
-    )
-    .bind(config.targetSurface, targetGenerationId)
-    .first<SurfaceGenerationRow>();
-  if (!targetGeneration) {
-    throw new Error(`${config.label} measured target generation ${targetGenerationId} was not published`);
-  }
-  const targetResult = await db
-    .prepare(
-      `SELECT generation_id, target_id, target_json
-     FROM dex_measured_execution_targets
-     WHERE generation_id = ?`,
-    )
-    .bind(targetGenerationId)
-    .all<TargetRow>();
-  const targetRows: Array<TargetRow | undefined> = targetResult.results ?? [];
-  const targets = new Map<string, TTarget>();
-  for (let rowIndex = 0; rowIndex < targetRows.length; rowIndex++) {
-    const row = targetRows[rowIndex];
-    targetRows[rowIndex] = undefined;
-    if (!row) continue;
-    const target = config.targetSchema.parse(
-      parsePersistedJson(row.target_json, `${config.label} measured target JSON`),
-    );
-    targets.set(target.targetId, target);
-  }
-  targetRows.length = 0;
-  if (
-    (targetGeneration.expected_rows != null && targetGeneration.expected_rows !== targets.size) ||
-    (targetGeneration.published_rows != null && targetGeneration.published_rows !== targets.size)
-  ) {
-    throw new Error(`${config.label} measured target generation ${targetGenerationId} is incomplete`);
-  }
-
-  const byTargetId = new Map<
-    string,
-    {
-      quotedTarget: TTarget;
-      status: "measured" | "failed";
-      failureReason: string | null;
-      profile: TProfile | null;
-    }
-  >();
-  for (let rowIndex = 0; rowIndex < quoteRows.length; rowIndex++) {
-    const row = quoteRows[rowIndex];
-    quoteRows[rowIndex] = undefined;
-    if (!row) continue;
-    const quotedTarget = targets.get(row.target_id);
-    if (!quotedTarget) throw new Error(`${config.label} measured quote ${row.target_id} has no target row`);
-    const profile = row.quote_profile_json
-      ? config.profileSchema.parse(parsePersistedJson(row.quote_profile_json, `${config.label} measured profile JSON`))
-      : null;
-    if (
-      (row.status === "measured" &&
-        (profile == null ||
-          row.failure_reason != null ||
-          profile.targetId !== row.target_id ||
-          profile.targetGenerationId !== targetGenerationId ||
-          profile.quoteGenerationId !== generation.generation_id)) ||
-      (row.status === "failed" && (profile != null || !row.failure_reason?.trim()))
-    ) {
-      throw new Error(`${config.label} measured quote row ${row.target_id} has a torn terminal identity`);
-    }
-    byTargetId.set(row.target_id, {
-      quotedTarget,
-      status: row.status,
-      failureReason: row.failure_reason,
-      profile,
-    });
-  }
-  quoteRows.length = 0;
-  return {
-    quoteGenerationId: generation.generation_id,
-    targetGenerationId,
-    publishedAt: generation.published_at ?? generation.started_at,
-    byTargetId,
-  };
+  });
 }
 
 export async function publishSolanaMeasuredTargetInventory(input: {
