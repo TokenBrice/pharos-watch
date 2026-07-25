@@ -7,8 +7,8 @@ function buildRuntime(prepare: D1Database["prepare"]): ScheduledRuntimeContext {
     db: { prepare } as D1Database,
     env: {} as ScheduledRuntimeContext["env"],
     ctx: {} as ExecutionContext,
-    cron: "17,47 * * * *",
-    scheduleKey: "halfHourlyOffset",
+    cron: "16,46 * * * *",
+    scheduleKey: "halfHourlyChartsOffset",
     scheduledTimeMs: null,
     slotStartedAt: 1_772_000_000,
     mintBurnDisabledIds: [],
@@ -45,11 +45,11 @@ describe("logSkippedCronRun", () => {
       "degraded",
       expect.any(String),
       1_772_000_000,
-      "scheduled-preflight:halfHourlyOffset:1772000000:sync-dex-liquidity:circuit-open",
-      "halfHourlyOffset",
-      "halfHourlyOffset",
+      "scheduled-preflight:halfHourlyChartsOffset:1772000000:sync-dex-liquidity:circuit-open",
+      "halfHourlyChartsOffset",
+      "halfHourlyChartsOffset",
       "scheduled-job",
-      "scheduled:halfHourlyOffset:1772000000",
+      "scheduled:halfHourlyChartsOffset:1772000000",
       null,
       null,
     );
@@ -60,7 +60,7 @@ describe("logSkippedCronRun", () => {
       skippedReason: "circuit-open",
       message: "DEX circuit open",
       slotStartedAt: 1_772_000_000,
-      scheduleKey: "halfHourlyOffset",
+      scheduleKey: "halfHourlyChartsOffset",
     });
     expect(metadata).not.toHaveProperty("skipped");
   });

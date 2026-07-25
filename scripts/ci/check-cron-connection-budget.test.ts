@@ -28,12 +28,14 @@ describe("check-cron-connection-budget", () => {
     expect(report.failed).toBe(false);
   });
 
-  it("models sync-dex-liquidity at its nested direct-API peak", () => {
+  it("models sync-dex-liquidity-stage at its nested direct-API peak", () => {
     const report = evaluateCronConnectionBudget();
     const halfHourlyOffset = report.triggerReports.find((trigger) => trigger.scheduleKey === "halfHourlyOffset");
-    const syncDexLiquidity = CRON_CONNECTION_BUDGET_ENTRIES.find((entry) => entry.job === "sync-dex-liquidity");
+    const syncDexLiquidityStage = CRON_CONNECTION_BUDGET_ENTRIES.find(
+      (entry) => entry.job === "sync-dex-liquidity-stage",
+    );
 
-    expect(syncDexLiquidity?.maxConnections).toBe(5);
+    expect(syncDexLiquidityStage?.maxConnections).toBe(5);
     expect(halfHourlyOffset?.totalConnections).toBe(5);
     expect(report.headroomFullTriggers.map((trigger) => trigger.scheduleKey)).toContain("halfHourlyOffset");
     expect(report.failed).toBe(false);

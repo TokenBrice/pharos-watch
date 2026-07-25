@@ -366,7 +366,7 @@ describe("provider-execution", () => {
 
   it("derives scheduled provider context limits from cron connection metadata", () => {
     const context = createProviderExecutionContextForJob({
-      job: "sync-dex-liquidity",
+      job: "sync-dex-liquidity-stage",
       laneId: "dex-direct-api",
       laneMaxConcurrent: 2,
     });
@@ -374,7 +374,7 @@ describe("provider-execution", () => {
     expect(context.laneMaxConcurrent).toBe(2);
     expect(() =>
       createProviderExecutionContextForJob({
-        job: "sync-dex-liquidity",
+        job: "sync-dex-liquidity-stage",
         laneMaxConcurrent: 6,
       }),
     ).toThrow(/declared job budget is 5/);
