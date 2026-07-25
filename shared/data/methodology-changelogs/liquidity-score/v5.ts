@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.90",
+    title: "Paused SunSwap V2 scoring after rollout",
+    date: "2026-07-25",
+    effectiveAt: 1784937600,
+    summary:
+      "SunSwap V2 exact-execution collection remains live, but its profiles return to shadow-only status after the first two active DEX-scoring invocations exceeded the Worker memory limit.",
+    impact: [
+      "The SunSwap V2 adapter is score-ineligible and valid profiles retain the activation-pending capability gate while the scoring consumer's memory behavior is remediated and revalidated",
+      "The complete 21-target producer remains enabled so direct-route reliability, identity, reserve, output, and block-bracket evidence continue to accumulate",
+      "Missing, failed, stale, malformed, multi-hop-only, or identity-mismatched routes remain target-level capability gates; no stale proof or manual capacity substitutes for current direct evidence",
+      "SunSwap census rows remain excluded from liquidity scoring, price consensus, direct-source precedence, visible pool selection, and V8 liquidity scoring",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.89",
     title: "Reviewed SunSwap V2 direct execution",
     date: "2026-07-25",
