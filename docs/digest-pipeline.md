@@ -175,6 +175,8 @@ Read endpoints are public, but they do not all share the same cache profile: `GE
 | `GET /api/digest-snapshot?date=YYYY-MM-DD-weekly` | Input data for a weekly recap slug; the handler strips `-weekly` for date parsing and returns the weekly snapshot when that digest row exists |
 | `POST /api/trigger-digest` *(admin)* | **Deferred**: writes a `digest:force-run-request` flag into the D1 `cache` table and returns 202. A dedicated `*/5 * * * *` polling cron (`digestTriggerPoll`) runs the digest under scheduled-event wall-clock (up to 15 min) and persists outcome to `digest:last-trigger-result`. Expected latency: ≤ 5 min. Requires Access service-token headers on `ops-api.pharos.watch`. See [`worker-and-api-limits.md`](./worker-and-api-limits.md#manual-trigger-runtime-model) for the rationale. |
 
+An idle `digestTriggerPoll` with no force-run request is a neutral conditional poll, not an omitted daily-digest execution. Stale-slot reconciliation therefore creates no synthetic `daily-digest` failure when no durable child progress exists. If a forced digest did start and left durable progress before losing ownership, the sweeper still records the real abandoned attempt using its original progress timestamps.
+
 ---
 
 ## Distribution
