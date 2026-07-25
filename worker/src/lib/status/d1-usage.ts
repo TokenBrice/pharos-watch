@@ -345,7 +345,7 @@ export async function getD1UsageSummary(
       ? databaseInfo.read_replication.mode
       : null,
     capacity,
-    archive,
+    ...(db ? { archive } : {}),
     ...analytics,
   };
 }

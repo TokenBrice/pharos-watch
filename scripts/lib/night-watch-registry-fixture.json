@@ -11,6 +11,7 @@
     "fourHourlyReserveSync",
     "fourHourlyYieldSupplemental",
     "halfHourlyChartsOffset",
+    "halfHourlyDexArchive",
     "halfHourlyMeasuredExecution",
     "halfHourlyMintBurnCritical",
     "halfHourlyMintBurnExtended",
@@ -23,6 +24,7 @@
     "twoHourlyDexDiscovery"
   ],
   "jobIds": [
+    "archive-dex-generations",
     "compute-depeg-resolver",
     "compute-dews",
     "cron-duration-watchdog",

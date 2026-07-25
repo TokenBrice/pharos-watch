@@ -11,6 +11,7 @@ describe("env contract manifest", () => {
     expect(getRuntimeEnvKeys("worker", "required")).toEqual([
       "CF_VERSION_METADATA",
       "DB",
+      "EVIDENCE_ARCHIVE",
       "CORS_ORIGIN",
       "GITHUB_PAT",
       "FEEDBACK_IP_SALT",
@@ -56,6 +57,7 @@ describe("env contract manifest", () => {
     const operatorBlock = renderOperatorOriginAccessEnvBlock();
 
     expect(workerBlock).toContain("| `CF_ACCESS_TEAM_DOMAIN` | `string` | optional | required | - |");
+    expect(workerBlock).toContain("| `EVIDENCE_ARCHIVE` | `R2Bucket` | required | - | - |");
     expect(workerBlock).toContain("| `TELEGRAM_BOT_TOKEN_PREVIOUS` | `string` | optional | - | - |");
     expect(workerBlock).toContain("| `VAULTS_FYI_API_KEY` | `string` | optional | - | - |");
     expect(workerBlock).toContain("| `VAULTS_FYI_ENABLED` | `string` | optional | - | - |");
