@@ -1184,6 +1184,9 @@ describe("dex-liquidity scoring", () => {
       retainedPoolPriceUsd: 1,
       capturedAt: 1_700_000_000,
     };
+    const slipstreamTargets = new Map([
+      ["usdc-circle|base:0x1111111111111111111111111111111111111111", target],
+    ]);
 
     const result = await computeStablecoinScores(
       db,
@@ -1195,10 +1198,11 @@ describe("dex-liquidity scoring", () => {
       new Map(),
       undefined,
       new Map(),
-      new Map([["usdc-circle|base:0x1111111111111111111111111111111111111111", target]]),
+      slipstreamTargets,
     );
 
     expect(result.diagnostics.measuredExecution.inventoryTargetCount).toBe(1);
+    expect(slipstreamTargets).toHaveLength(0);
   });
 
   it("applies DefiLlama protocol caps to Carbon DeFi chain-suffixed secondary rows", async () => {

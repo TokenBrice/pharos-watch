@@ -517,12 +517,12 @@ export async function computeStablecoinScores(
   protocolTvlCaps: Map<string, number>,
   mcapById?: Map<string, number>,
   routeObservedAtSec = Math.floor(Date.now() / 1000),
-  pancakeMeasuredTargets: ReadonlyMap<string, DexMeasuredExecutionTarget> = new Map(),
-  fluidMeasuredTargets: ReadonlyMap<string, DexMeasuredExecutionTarget> = new Map(),
+  pancakeMeasuredTargets: Map<string, DexMeasuredExecutionTarget> = new Map(),
+  fluidMeasuredTargets: Map<string, DexMeasuredExecutionTarget> = new Map(),
   signal?: AbortSignal,
-  solanaMeasuredTargets: ReadonlyMap<string, SolanaMeasuredExecutionTarget> = new Map(),
-  slipstreamMeasuredTargets: ReadonlyMap<string, DexMeasuredExecutionTarget> = new Map(),
-  tronMeasuredTargets: ReadonlyMap<string, TronMeasuredExecutionTarget> = new Map(),
+  solanaMeasuredTargets: Map<string, SolanaMeasuredExecutionTarget> = new Map(),
+  slipstreamMeasuredTargets: Map<string, DexMeasuredExecutionTarget> = new Map(),
+  tronMeasuredTargets: Map<string, TronMeasuredExecutionTarget> = new Map(),
 ): Promise<{
   scores: Map<string, FullScoreResult>;
   globalAgg: GlobalAgg;
@@ -690,6 +690,32 @@ export async function computeStablecoinScores(
     preparedRetainedPools.set(id, retainedPools);
   }
 
+  const targetInventoryById = new Map<string, DexMeasuredExecutionTarget>();
+  const solanaTargetInventoryById = new Map<string, SolanaMeasuredExecutionTarget>();
+  const tronTargetInventoryById = new Map(
+    [...tronMeasuredTargets.values()].map((target) => [target.targetId, target] as const),
+  );
+  for (const pools of preparedRetainedPools.values()) {
+    for (const pool of pools) {
+      for (const target of pool.extra?.measuredExecutionTargets ?? []) {
+        targetInventoryById.set(target.targetId, target);
+      }
+      const target = pool.extra?.measuredExecutionTarget;
+      if (target) targetInventoryById.set(target.targetId, target);
+      const solanaTarget = pool.extra?.solanaMeasuredExecutionTarget;
+      if (solanaTarget) solanaTargetInventoryById.set(solanaTarget.targetId, solanaTarget);
+      const tronTarget = pool.extra?.tronMeasuredExecutionTarget;
+      if (tronTarget) tronTargetInventoryById.set(tronTarget.targetId, tronTarget);
+    }
+  }
+  // The adjusted target inventory and retained pools now own every downstream
+  // descriptor. Release the producer maps before proof-heavy evidence is loaded.
+  pancakeMeasuredTargets.clear();
+  fluidMeasuredTargets.clear();
+  solanaMeasuredTargets.clear();
+  slipstreamMeasuredTargets.clear();
+  tronMeasuredTargets.clear();
+
   const joinEvidence = await loadDexMeasuredExecutionJoinEvidence(db, signal);
   const measuredExecutionJoin = joinDexMeasuredExecutionEvidence({
     poolsByStablecoin: preparedRetainedPools,
@@ -716,24 +742,6 @@ export async function computeStablecoinScores(
     nowSec: routeObservedAt,
   });
   tronJoinEvidence?.byTargetId.clear();
-  const targetInventoryById = new Map<string, DexMeasuredExecutionTarget>();
-  const solanaTargetInventoryById = new Map<string, SolanaMeasuredExecutionTarget>();
-  const tronTargetInventoryById = new Map(
-    [...tronMeasuredTargets.values()].map((target) => [target.targetId, target] as const),
-  );
-  for (const pools of preparedRetainedPools.values()) {
-    for (const pool of pools) {
-      for (const target of pool.extra?.measuredExecutionTargets ?? []) {
-        targetInventoryById.set(target.targetId, target);
-      }
-      const target = pool.extra?.measuredExecutionTarget;
-      if (target) targetInventoryById.set(target.targetId, target);
-      const solanaTarget = pool.extra?.solanaMeasuredExecutionTarget;
-      if (solanaTarget) solanaTargetInventoryById.set(solanaTarget.targetId, solanaTarget);
-      const tronTarget = pool.extra?.tronMeasuredExecutionTarget;
-      if (tronTarget) tronTargetInventoryById.set(tronTarget.targetId, tronTarget);
-    }
-  }
 
   for (const [id, m] of [...metrics].filter(([stablecoinId]) => ACTIVE_IDS.has(stablecoinId))) {
     throwIfAborted(signal);
