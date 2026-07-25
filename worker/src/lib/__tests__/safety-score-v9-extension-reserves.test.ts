@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ReserveSlice } from "@shared/types/reserves";
-import { buildReviewedReserveClassifications, type V9ExtensionRegistryMeta } from "../safety-score-v9-extension";
+import {
+  buildReviewedReserveClassifications,
+  buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
+  type V9ExtensionRegistryMeta,
+} from "../safety-score-v9-extension";
 import { buildSafetyScoreV9ReserveClassifications } from "../safety-score-v9-extension-reserves";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;
@@ -27,6 +31,46 @@ function reviewedMeta(
     },
   };
 }
+
+describe("buildSafetyScoreV9ReviewedCuratedFallbackReserveRows", () => {
+  it("rejects fallback reserve evidence with known-unknown exposure", () => {
+    const rows: ReserveSlice[] = [
+      { name: "Opaque basket", pct: 40, risk: "medium" },
+      { name: "Treasury bills", pct: 60, risk: "very-low" },
+    ];
+    const admitted = buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
+      reviewedMeta(rows, {
+        knownUnknownExposure: "Opaque basket constituents are not fully split.",
+        knownUnknownExposurePct: 40,
+        nonLinkDispositions: [
+          {
+            reserveIndex: 0,
+            reserveName: "Opaque basket",
+            pct: 40,
+            disposition: "basket-needs-split",
+            rationale: "The basket weights are unresolved.",
+          },
+        ],
+      }),
+      CLOCK_SEC,
+    );
+
+    expect(admitted).toBeNull();
+  });
+
+  it("admits complete current verified fallback reserve evidence", () => {
+    const admitted = buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
+      reviewedMeta([{ name: "Treasury bills", pct: 100, risk: "very-low" }]),
+      CLOCK_SEC,
+    );
+
+    expect(admitted).toMatchObject({
+      evidenceClass: "static-validated",
+      provenance: "curated-fallback",
+      rows: [{ name: "Treasury bills", pct: 100, risk: "very-low" }],
+    });
+  });
+});
 
 describe("buildReviewedReserveClassifications", () => {
   it("classifies exact tracked-asset slices without guessing from vague labels", () => {

@@ -431,6 +431,7 @@ const CORROBORATING_ASSURANCE_METHODS = new Set([
 const DIRECT_RESERVE_ASSURANCE_METHODS = new Set(["audit", "examination"]);
 const ISSUER_ATTESTED_RESERVE_MAX_AGE_SEC = 31_536_000;
 const REVIEWED_CURATED_FALLBACK_RESERVE_MAX_AGE_SEC = 31 * 86_400;
+const UNRESOLVED_RESERVE_FALLBACK_DISPOSITIONS = new Set(["basket-needs-split", "insufficient-evidence"]);
 
 function normalizeReviewedStaticReserveRows(rows: readonly ReserveSlice[]): ReserveSlice[] {
   const sorted = [...rows].sort(
@@ -542,6 +543,10 @@ export function buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(
     rows.length === 0 ||
     review?.scope !== "full-composition" ||
     review.confidence !== "verified" ||
+    review.knownUnknownExposurePct !== 0 ||
+    review.nonLinkDispositions?.some((disposition) =>
+      UNRESOLVED_RESERVE_FALLBACK_DISPOSITIONS.has(disposition.disposition),
+    ) === true ||
     review.sources.length === 0 ||
     reviewedAtSec === null ||
     compositionAtSec === null ||
