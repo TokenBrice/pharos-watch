@@ -55,6 +55,9 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   halfHourlyChartsOffset: {
     jobChains: [["sync-dex-liquidity", "sync-stablecoin-charts"]],
   },
+  halfHourlyDexArchive: {
+    jobChains: [["archive-dex-generations"]],
+  },
   dewsPsiOffset: {
     jobChains: [["compute-dews", "stability-index", "project-tape"]],
   },

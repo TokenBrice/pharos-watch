@@ -6,6 +6,7 @@ export interface WorkerVersionMetadata {
 
 export interface Env {
   DB: D1Database;
+  EVIDENCE_ARCHIVE: R2Bucket;
   TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT: RateLimit;
   TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT: RateLimit;
   TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT: RateLimit;
@@ -78,6 +79,8 @@ export interface Env {
   WORKER_RESERVE_RECOVERY_MODE?: string;
   WORKER_RESERVE_FAULT_INJECTION_ENABLED?: string;
   WORKER_CANARY_MODE?: string;
+  DEX_MEASURED_ARCHIVE_MODE?: string;
+  DEX_LIQUIDITY_ARCHIVE_MODE?: string;
 }
 
 export interface WorkerEnvIssue {

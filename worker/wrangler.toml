@@ -50,6 +50,7 @@ crons = [
   "0,30 * * * *",
   "10,40 * * * *",
   "16,46 * * * *",
+  "19,49 * * * *",
   "26,56 * * * *",
   "11 */4 * * *",
   "20 * * * *",
@@ -68,6 +69,11 @@ crons = [
 binding = "DB"
 database_name = "stablecoin-db"
 database_id = "8f3f54ca-e035-4cdf-9ec5-a4fbbe48b27a"
+
+[[r2_buckets]]
+binding = "EVIDENCE_ARCHIVE"
+bucket_name = "pharos-dex-evidence-archive"
+preview_bucket_name = "pharos-dex-evidence-archive-preview"
 
 [[ratelimits]]
 name = "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT"
@@ -103,9 +109,11 @@ ADDRESS_PRICE_PROVIDERS_ENABLED = "coingecko-onchain-address"
 CF_ACCESS_TEAM_DOMAIN = "pharos-watch"
 CF_ACCESS_OPS_API_AUD = "72e74ead7cedf76e5c79f2bd0dd999aecd7d5b4e05fa1f9d696aed6a2cd31869"
 WORKER_JOB_LEDGER_MODE = "shadow"
-WORKER_JOB_LEDGER_ALLOWLIST = "sync-dex-discovery,sync-live-reserves,reserve-recovery,sync-cl-exit-depth,sync-dex-liquidity-stage,sync-dex-liquidity,sync-stablecoins,sync-yield-data"
+WORKER_JOB_LEDGER_ALLOWLIST = "sync-dex-discovery,sync-live-reserves,reserve-recovery,sync-cl-exit-depth,sync-dex-liquidity-stage,sync-dex-liquidity,archive-dex-generations,sync-stablecoins,sync-yield-data"
 WORKER_CANARY_MODE = "status"
 WORKER_RESERVE_RECOVERY_MODE = "shadow"
+DEX_MEASURED_ARCHIVE_MODE = "off"
+DEX_LIQUIDITY_ARCHIVE_MODE = "off"
 # Personalized recap is public. Set this to `off` for the kill switch or `canary`
 # with chat IDs from `wrangler secret put TELEGRAM_RECAP_ROLLOUT_CHAT_IDS`.
 TELEGRAM_RECAP_ROLLOUT_MODE = "public"

@@ -54,6 +54,9 @@ const CRON_TIMEOUT_OVERRIDES_MS: Record<string, number> = {
   "sync-cl-exit-depth": 9 * 60_000,
   "sync-dex-liquidity-stage": 13 * 60_000,
   "sync-dex-liquidity": 13 * 60_000,
+  // Archive work stops at six minutes and reserves one minute for manifest,
+  // lease, and cron terminal telemetry.
+  "archive-dex-generations": 7 * 60_000,
   "sync-dex-discovery": 13 * 60_000,
   "sync-yield-data": 10 * 60_000,
   "sync-yield-supplemental": 12 * 60_000,

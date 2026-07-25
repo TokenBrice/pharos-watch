@@ -22,6 +22,12 @@ function formatCount(value: number | null): string {
   return Math.round(value).toLocaleString();
 }
 
+function formatGrowth(value: number | null): string {
+  if (value == null || !Number.isFinite(value)) return "Collecting";
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${formatBytes(value)}/day`;
+}
+
 function formatCapacityForecast(capacity: NonNullable<D1UsageSummary["capacity"]>): {
   value: string;
   subtext: string;
@@ -67,6 +73,7 @@ export function D1UsageCard({
 
   const checkedAgeSeconds = Math.max(0, nowSeconds - summary.checkedAt);
   const capacityForecast = summary.capacity ? formatCapacityForecast(summary.capacity) : null;
+  const growthWindows = summary.capacity?.growthWindows ?? [];
 
   return (
     <Card>
@@ -96,6 +103,14 @@ export function D1UsageCard({
               subtext={capacityForecast.subtext}
             />
           ) : null}
+          {growthWindows.map((window) => (
+            <StatTile
+              key={window.window}
+              label={`${window.window} D1 Growth`}
+              value={formatGrowth(window.growthBytesPerDay)}
+              subtext={`${window.sampleCount.toLocaleString()} samples · ${window.spanHours.toLocaleString()}h span${summary.capacity?.conservativeWindow === window.window ? " · runway basis" : ""}`}
+            />
+          ))}
           <StatTile
             label="Rows Read (24h)"
             value={formatCount(summary.rowsRead24h)}
@@ -114,6 +129,17 @@ export function D1UsageCard({
         </div>
 
         <div className="space-y-1 text-xs text-muted-foreground">
+          {summary.archive ? (
+            <div>
+              DEX archive: {summary.archive.releaseStage} · {summary.archive.manifestCount.toLocaleString()} manifests · normal reads R2-independent
+            </div>
+          ) : null}
+          {summary.archive?.familyStates.map((family) => (
+            <div key={family.family}>
+              {family.family}: {family.effectiveMode} · {family.verifiedObjectCount.toLocaleString()} verified · {family.verifiedPendingDeleteCount.toLocaleString()} pending delete
+              {family.configError ? ` · ${family.configError}` : ""}
+            </div>
+          ))}
           <div>
             Database: {summary.databaseName ?? "unknown"} · {summary.databaseId}
           </div>
