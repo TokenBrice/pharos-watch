@@ -392,6 +392,39 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     },
   );
 
+  it("degrades when an unknown module has malformed debt", async () => {
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
+      count: 2,
+      results: [
+        {
+          group: "stablecoins",
+          group_name: "Stablecoins",
+          debt: "9000000000",
+          collateral: "9000000000",
+          datetime: "2026-04-05T17:33:24",
+        },
+        {
+          group: "new-module",
+          group_name: "New Module",
+          debt: "1,000,000,000",
+          collateral: "1000000000",
+          datetime: "2026-04-05T17:33:24",
+        },
+      ],
+    });
+
+    const result = await fetchSkyMakercoreReserves(coin, config, signal);
+
+    expect(result.metadata?.unknownExposurePct).toBe(0);
+    expect(result.warnings).toContainEqual(
+      expect.objectContaining({
+        code: "unknown-asset",
+        effect: "degraded",
+        message: expect.stringContaining("new-module"),
+      }),
+    );
+  });
+
   it("propagates aborts from the optional LitePSM capacity read", async () => {
     vi.mocked(fetchJsonWithRetry).mockResolvedValue({
       count: 2,
