@@ -8,6 +8,7 @@ import {
   getDexMeasuredHistoryFreshnessSec,
   isOperationalDexMeasuredFailure,
   loadLatestPublishedDexMeasuredQuoteEvidence,
+  materializeDexMeasuredQuoteProfile,
   publishDexMeasuredQuoteGeneration,
   publishDexMeasuredTargetInventory,
   publishSolanaMeasuredQuoteGeneration,
@@ -561,9 +562,18 @@ describe("measured execution raw payload policy", () => {
       },
     } as unknown as D1Database;
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, {
+      deferProfiles: true,
+    });
 
     expect(evidence?.byTargetId.size).toBe(targets.length);
+    expect([...evidence!.byTargetId.values()].every((entry) => entry.profile === null)).toBe(true);
+    expect(
+      [...evidence!.byTargetId.values()].every((entry) => typeof entry.deferredProfileJson === "string"),
+    ).toBe(true);
+    expect(materializeDexMeasuredQuoteProfile(evidence!.byTargetId.get(targets[0]!.targetId)!)).toEqual(
+      profiles.get(targets[0]!.targetId),
+    );
     expect(
       preparedSql.filter((sql) => sql.includes("JOIN dex_measured_execution_targets")),
     ).toHaveLength(Math.ceil(targets.length / DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE));
@@ -588,7 +598,9 @@ describe("measured execution last-known-good selection", () => {
       historical: [{ target: measuredTarget, profile: historicalProfile }],
     });
 
-    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
+    const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db, undefined, {
+      deferProfiles: true,
+    });
     const entry = evidence?.byTargetId.get(measuredTarget.targetId);
 
     expect(entry).toMatchObject({
@@ -599,8 +611,9 @@ describe("measured execution last-known-good selection", () => {
       resolution: "last-known-good",
       latestFailureReason: "request-budget-exhausted",
     });
-    expect(entry?.profile?.quotedAt).toBe(1_900);
-    expect(entry?.profile?.quoteGenerationId).toBe("quote-generation-lkg");
+    expect(entry?.profile).toBeNull();
+    expect(materializeDexMeasuredQuoteProfile(entry!)?.quotedAt).toBe(1_900);
+    expect(materializeDexMeasuredQuoteProfile(entry!)?.quoteGenerationId).toBe("quote-generation-lkg");
     expect(entry?.observationHistory).toMatchObject({
       completeProducerCycleCount: 2,
       successfulObservationCount: 1,
