@@ -80,6 +80,21 @@ function defineDynamicRouteFromDescriptor(
   return defineDynamicRoute(descriptor.pattern, descriptor.routeDependencies, descriptor.methods, handle);
 }
 
+function rejectMalformedStablecoinOgPath(pathname: string): Response | null {
+  const match = pathname.match(/^\/api\/og\/stablecoin\/(.+)$/);
+  if (!match) return null;
+
+  try {
+    decodeURIComponent(match[1]);
+    return null;
+  } catch {
+    return new Response("Malformed URI", {
+      status: 400,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
+}
+
 const DYNAMIC_ROUTE_DEFINITIONS = [
   defineDynamicRouteFromDescriptor("stablecoin-summary", (routeCtx, match) =>
     resolveDynamicStablecoinRoute(match, async (canonicalId) => {
@@ -100,6 +115,9 @@ const DYNAMIC_ROUTE_DEFINITIONS = [
     }),
   ),
   defineDynamicRouteFromDescriptor("og-image", async (routeCtx) => {
+    const malformedPathResponse = rejectMalformedStablecoinOgPath(routeCtx.url.pathname);
+    if (malformedPathResponse) return malformedPathResponse;
+
     const { handleOg } = await import("../api/og");
     return handleOg(routeCtx.db, routeCtx.url.pathname, routeCtx.request.method).then(
       (response) => response ?? errorResponse(404, "Unknown OG route"),
