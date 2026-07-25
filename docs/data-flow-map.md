@@ -72,8 +72,10 @@ proof and current-target validation. Only active native profiles enter the P4
 capacity compiler and physical-pool completeness denominator; shadow profiles
 retain `activation-pending`, and case-sensitive native pool identities remain
 case-sensitive through route selection. Unreviewed measured deployment cohorts
-remain score-ineligible while their activation evidence is pending. The reviewed
-SunSwap V2 registry is active; missing, failed, stale, multi-hop-only, or
+remain score-ineligible while their activation evidence is pending. SunSwap V2
+returned to shadow after its first two active DEX-scoring invocations exceeded
+the Worker memory limit; valid profiles retain `activation-pending` while the
+consumer is remediated. Missing, failed, stale, multi-hop-only, or
 identity-mismatched profiles remain target-level fail-closed. SunSwap census
 rows are excluded from liquidity scoring and price consensus; its latest-only
 TronGrid state reads are accepted only inside a bounded before/after block
