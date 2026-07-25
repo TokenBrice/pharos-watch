@@ -199,14 +199,14 @@ function isMatureFreshCurveStableSwapQuote(
   quote: LoadedDexMeasuredQuote,
   nowSec: number,
 ): boolean {
-  const profile = materializeDexMeasuredQuoteProfile(quote);
   const history = quote.observationHistory;
   if (
-    profile == null ||
-    profile.adapterProfileId !== CURVE_STABLESWAP_ADAPTER_PROFILE_ID ||
+    quote.quotedTarget.adapterProfileId !== CURVE_STABLESWAP_ADAPTER_PROFILE_ID ||
     history == null
   ) return false;
-  const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(profile.adapterProfileId);
+  const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(
+    quote.quotedTarget.adapterProfileId,
+  );
   return (
     history.completeProducerCycleCount >= CURVE_STABLESWAP_MIN_COMPLETE_CYCLES &&
     history.successfulObservationCount >= CURVE_STABLESWAP_MIN_SUCCESSFUL_OBSERVATIONS &&
@@ -219,14 +219,14 @@ function isMatureFreshCurveStableSwapNgQuote(
   quote: LoadedDexMeasuredQuote,
   nowSec: number,
 ): boolean {
-  const profile = materializeDexMeasuredQuoteProfile(quote);
   const history = quote.observationHistory;
   if (
-    profile == null ||
-    profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID ||
+    quote.quotedTarget.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID ||
     history == null
   ) return false;
-  const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(profile.adapterProfileId);
+  const freshnessMaxSec = getDexMeasuredExecutionFreshnessMaxSec(
+    quote.quotedTarget.adapterProfileId,
+  );
   return (
     history.completeProducerCycleCount >= CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES &&
     history.successfulObservationCount >= CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS &&
@@ -257,20 +257,27 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
   const retainedPoolKeys = new Set<string>();
   const entries = [...input.evidence.byTargetId.entries()].sort(([left], [right]) => left.localeCompare(right));
 
-  const curvePackets = new Map<string, Array<{ targetId: string; quote: LoadedDexMeasuredQuote }>>();
+  const curvePackets = new Map<
+    string,
+    Array<{
+      targetId: string;
+      quote: LoadedDexMeasuredQuote;
+      profile: DexMeasuredExecutionProfile;
+    }>
+  >();
   for (const [targetId, quote] of entries) {
-    const profile = materializeDexMeasuredQuoteProfile(quote);
     const target = quote.quotedTarget;
     if (
       currentTargetIds.has(targetId) ||
       quote.resolution !== "last-known-good" ||
       quote.status !== "measured" ||
-      profile == null ||
       !isMatureFreshCurveStableSwapQuote(quote, input.nowSec) ||
       !input.poolsByStablecoin.has(target.stablecoinId)
     ) {
       continue;
     }
+    const profile = materializeDexMeasuredQuoteProfile(quote);
+    if (profile == null) continue;
     const key = [
       target.stablecoinId,
       profile.chain.toLowerCase(),
@@ -281,16 +288,14 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
       profile.tokenIn.address,
     ].join("|");
     const packet = curvePackets.get(key) ?? [];
-    packet.push({ targetId, quote });
+    packet.push({ targetId, quote, profile });
     curvePackets.set(key, packet);
   }
 
   for (const packet of curvePackets.values()) {
     if (packet.length !== 2) continue;
     const targets = packet.map(({ quote }) => quote.quotedTarget);
-    const profiles = packet.map(({ quote }) => materializeDexMeasuredQuoteProfile(quote));
-    if (profiles.some((profile) => profile === null)) continue;
-    const measuredProfiles = profiles as DexMeasuredExecutionProfile[];
+    const measuredProfiles = packet.map(({ profile }) => profile);
     if (
       targets.some(
         (target) =>
@@ -354,31 +359,30 @@ export function buildDexMeasuredExecutionRetainedRoutePools(input: {
   }
 
   for (const [targetId, quote] of entries) {
-    const profile = materializeDexMeasuredQuoteProfile(quote);
-    const ngMature = isMatureFreshCurveStableSwapNgQuote(quote, input.nowSec);
+    const target = quote.quotedTarget;
     if (
       currentTargetIds.has(targetId) ||
       quote.resolution !== "last-known-good" ||
       quote.status !== "measured" ||
-      profile === null ||
-      (
-        profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
-          ? !ngMature
-          : !isDexMeasuredExecutionObservationHistoryMature(quote.observationHistory)
-      )
+      !input.poolsByStablecoin.has(target.stablecoinId)
     ) {
       continue;
     }
-    const target = quote.quotedTarget;
-    if (!input.poolsByStablecoin.has(target.stablecoinId)) continue;
     if (
-      profile.adapterProfileId !== "uniswap-v3-quoter-v2" &&
-      profile.adapterProfileId !== "pancakeswap-v3-quoter-v2" &&
-      profile.adapterProfileId !== "aerodrome-slipstream-quoter-v2" &&
-      profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+      target.adapterProfileId !== "uniswap-v3-quoter-v2" &&
+      target.adapterProfileId !== "pancakeswap-v3-quoter-v2" &&
+      target.adapterProfileId !== "aerodrome-slipstream-quoter-v2" &&
+      target.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
     ) {
       continue;
     }
+    const historyMature =
+      target.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+        ? isMatureFreshCurveStableSwapNgQuote(quote, input.nowSec)
+        : isDexMeasuredExecutionObservationHistoryMature(quote.observationHistory);
+    if (!historyMature) continue;
+    const profile = materializeDexMeasuredQuoteProfile(quote);
+    if (profile === null) continue;
     if (
       profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID &&
       !isDexMeasuredExecutionDeploymentScoreEligible(profile.adapterProfileId, profile.chain)

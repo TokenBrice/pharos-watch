@@ -1185,10 +1185,23 @@ describe("measured execution join activation", () => {
       }).size,
     ).toBe(0);
     quote.observationHistory.successfulObservationCount = 2;
+    const currentEvidence = {
+      ...evidence,
+      byTargetId: new Map([
+        [
+          measuredTarget.targetId,
+          {
+            ...quote,
+            profile: null,
+            deferredProfileJson: "not-json",
+          },
+        ],
+      ]),
+    };
     expect(
       buildDexMeasuredExecutionRetainedRoutePools({
         poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [currentPool]]]),
-        evidence,
+        evidence: currentEvidence,
         nowSec: 2_000,
       }).size,
     ).toBe(0);
