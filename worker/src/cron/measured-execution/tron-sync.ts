@@ -20,9 +20,9 @@ import { buildTronMeasuredExecutionProfile } from "./tron-profiles";
 import { quoteTronMeasuredTarget } from "./tron-quotes";
 
 const TRON_ADMISSION_SOURCE_KEY = "measured-execution:tron-admission";
-// Twelve serialized targets cover the current inventory inside the one-hour
-// consumer freshness window while preserving the public-router pacing.
-export const TRON_MEASURED_TARGETS_PER_RUN = 12;
+// The native consumer reads one published generation, so the current SunSwap
+// cohort must fit in one serialized run instead of rotating across generations.
+export const TRON_MEASURED_TARGETS_PER_RUN = 21;
 export const TRON_MEASURED_RUNTIME_BUDGET_MS = 7 * 60 * 1_000;
 export const TRON_MEASURED_REQUEST_HEADROOM_MS = 20_000;
 
