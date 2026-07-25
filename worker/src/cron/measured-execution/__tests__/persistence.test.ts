@@ -702,7 +702,7 @@ describe("measured execution last-known-good selection", () => {
     const evidence = await loadLatestPublishedDexMeasuredQuoteEvidence(db);
 
     expect(evidence?.byTargetId).toHaveLength(66);
-    expect(preparedSql.filter((sql) => sql.includes("q.generation_id IN"))).toHaveLength(2);
+    expect(preparedSql.filter((sql) => sql.includes("q.generation_id IN"))).toHaveLength(5);
     expect(evidence?.byTargetId.get(historical[64]!.target.targetId)).toMatchObject({
       status: "measured",
       resolution: "last-known-good",

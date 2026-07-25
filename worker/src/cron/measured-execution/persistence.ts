@@ -35,7 +35,8 @@ const GENERATION_RETENTION_SEC = 3 * 24 * 60 * 60;
 const GENERATION_PRUNE_MAX_PER_RUN = 16;
 const DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC =
   DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC;
-const DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE = 64;
+/** Preserve the full window while keeping proof-heavy history rows below the scoring graph's heap peak. */
+const DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE = 16;
 
 export function getDexMeasuredHistoryFreshnessSec(adapterProfileId: string): number {
   return getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId);
@@ -500,14 +501,17 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     3,
     signal,
   );
-  const quoteRows = quoteResult.results ?? [];
+  const quoteRows: Array<QuoteRow | undefined> = quoteResult.results ?? [];
   if (
     (generation.expected_rows != null && generation.expected_rows !== quoteRows.length) ||
     (generation.published_rows != null && generation.published_rows !== quoteRows.length)
   ) {
     throw new Error(`Published measured quote generation ${generation.generation_id} is incomplete`);
   }
-  const targetGenerationIds = new Set(quoteRows.map((row) => row.target_generation_id));
+  const targetGenerationIds = new Set<string>();
+  for (const row of quoteRows) {
+    if (row) targetGenerationIds.add(row.target_generation_id);
+  }
   const dependency = generation.dependency_snapshot_json
     ? (parsePersistedJson(generation.dependency_snapshot_json, "DEX measured dependency JSON") as { targetGenerationId?: string })
     : {};
@@ -533,13 +537,17 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
     )
     .bind(targetGenerationId)
     .all<TargetRow>();
-  const targetRows = targetResult.results ?? [];
-  const targets = new Map(
-    targetRows.map((row) => {
-      const target = DexMeasuredExecutionTargetSchema.parse(parsePersistedJson(row.target_json, "DEX measured target JSON"));
-      return [target.targetId, target] as const;
-    }),
-  );
+  const targetRows: Array<TargetRow | undefined> = targetResult.results ?? [];
+  const targets = new Map<string, DexMeasuredExecutionTarget>();
+  for (let rowIndex = 0; rowIndex < targetRows.length; rowIndex++) {
+    const row = targetRows[rowIndex];
+    targetRows[rowIndex] = undefined;
+    if (!row) continue;
+    const target = DexMeasuredExecutionTargetSchema.parse(
+      parsePersistedJson(row.target_json, "DEX measured target JSON"),
+    );
+    targets.set(target.targetId, target);
+  }
   targetRows.length = 0;
   if (
     (targetGeneration.expected_rows != null && targetGeneration.expected_rows !== targets.size) ||
@@ -553,7 +561,10 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   >();
   const historyCyclesByTargetId = new Map<string, DexMeasuredExecutionHistoryCycle[]>();
   const latestPublishedAt = generation.published_at ?? generation.started_at;
-  for (const row of quoteRows) {
+  for (let rowIndex = 0; rowIndex < quoteRows.length; rowIndex++) {
+    const row = quoteRows[rowIndex];
+    quoteRows[rowIndex] = undefined;
+    if (!row) continue;
     const quotedTarget = targets.get(row.target_id);
     if (!quotedTarget)
       throw new Error(`Measured quote ${row.target_id} has no row in target generation ${targetGenerationId}`);
@@ -663,8 +674,11 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
           3,
           signal,
         );
-        const historicalRows = historicalResult.results ?? [];
-        for (const row of historicalRows) {
+        const historicalRows: Array<HistoricalQuoteRow | undefined> = historicalResult.results ?? [];
+        for (let rowIndex = 0; rowIndex < historicalRows.length; rowIndex++) {
+          const row = historicalRows[rowIndex];
+          historicalRows[rowIndex] = undefined;
+          if (!row) continue;
           const currentTarget = targets.get(row.target_id);
           if (
             currentTarget &&
@@ -1223,7 +1237,7 @@ async function loadLatestPublishedNativeMeasuredQuoteEvidence<
     3,
     signal,
   );
-  const quoteRows = quoteResult.results ?? [];
+  const quoteRows: Array<QuoteRow | undefined> = quoteResult.results ?? [];
   if (
     (generation.expected_rows != null && generation.expected_rows !== quoteRows.length) ||
     (generation.published_rows != null && generation.published_rows !== quoteRows.length)
@@ -1231,7 +1245,10 @@ async function loadLatestPublishedNativeMeasuredQuoteEvidence<
     throw new Error(`Published ${config.label} measured quote generation ${generation.generation_id} is incomplete`);
   }
 
-  const targetGenerationIds = new Set(quoteRows.map((row) => row.target_generation_id));
+  const targetGenerationIds = new Set<string>();
+  for (const row of quoteRows) {
+    if (row) targetGenerationIds.add(row.target_generation_id);
+  }
   const dependency = generation.dependency_snapshot_json
     ? (parsePersistedJson(generation.dependency_snapshot_json, `${config.label} measured dependency JSON`) as { targetGenerationId?: string })
     : {};
@@ -1261,12 +1278,18 @@ async function loadLatestPublishedNativeMeasuredQuoteEvidence<
     )
     .bind(targetGenerationId)
     .all<TargetRow>();
-  const targets = new Map<string, TTarget>(
-    (targetResult.results ?? []).map((row) => {
-      const target = config.targetSchema.parse(parsePersistedJson(row.target_json, `${config.label} measured target JSON`));
-      return [target.targetId, target];
-    }),
-  );
+  const targetRows: Array<TargetRow | undefined> = targetResult.results ?? [];
+  const targets = new Map<string, TTarget>();
+  for (let rowIndex = 0; rowIndex < targetRows.length; rowIndex++) {
+    const row = targetRows[rowIndex];
+    targetRows[rowIndex] = undefined;
+    if (!row) continue;
+    const target = config.targetSchema.parse(
+      parsePersistedJson(row.target_json, `${config.label} measured target JSON`),
+    );
+    targets.set(target.targetId, target);
+  }
+  targetRows.length = 0;
   if (
     (targetGeneration.expected_rows != null && targetGeneration.expected_rows !== targets.size) ||
     (targetGeneration.published_rows != null && targetGeneration.published_rows !== targets.size)
@@ -1283,7 +1306,10 @@ async function loadLatestPublishedNativeMeasuredQuoteEvidence<
       profile: TProfile | null;
     }
   >();
-  for (const row of quoteRows) {
+  for (let rowIndex = 0; rowIndex < quoteRows.length; rowIndex++) {
+    const row = quoteRows[rowIndex];
+    quoteRows[rowIndex] = undefined;
+    if (!row) continue;
     const quotedTarget = targets.get(row.target_id);
     if (!quotedTarget) throw new Error(`${config.label} measured quote ${row.target_id} has no target row`);
     const profile = row.quote_profile_json
@@ -1307,6 +1333,7 @@ async function loadLatestPublishedNativeMeasuredQuoteEvidence<
       profile,
     });
   }
+  quoteRows.length = 0;
   return {
     quoteGenerationId: generation.generation_id,
     targetGenerationId,
