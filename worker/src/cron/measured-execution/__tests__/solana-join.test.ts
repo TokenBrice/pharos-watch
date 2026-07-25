@@ -8,7 +8,11 @@ import type { PoolEntry } from "../../dex-liquidity/types";
 import type { LoadedSolanaMeasuredQuoteEvidence } from "../persistence";
 import { buildSolanaMeasuredExecutionProfile } from "../solana-profiles";
 import { buildSolanaMeasuredQuotePoint } from "../solana-quotes";
-import { joinSolanaMeasuredExecutionEvidence, stripSolanaMeasuredExecutionInternalFields } from "../solana-join";
+import {
+  joinSolanaMeasuredExecutionEvidence,
+  releaseSolanaMeasuredExecutionProofFields,
+  stripSolanaMeasuredExecutionInternalFields,
+} from "../solana-join";
 import { getSolanaMeasuredExecutionAdapterByProfile } from "../solana-registry";
 
 const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -134,6 +138,12 @@ describe("Solana measured execution join", () => {
     });
     expect(pool.extra?.solanaMeasuredExecution).toBeDefined();
     expect(pool.extra?.solanaMeasuredExecution).not.toHaveProperty("quoteProof");
+
+    releaseSolanaMeasuredExecutionProofFields([pool]);
+    expect(pool.extra?.solanaMeasuredExecutionTarget).toBeUndefined();
+    expect(pool.extra?.solanaMeasuredExecutionProfile).toBeUndefined();
+    expect(pool.extra?.solanaMeasuredExecution).toBeDefined();
+    expect(pool.extra?.solanaMeasuredExecutionPhysicalPoolId).toBe(POOL);
 
     stripSolanaMeasuredExecutionInternalFields([pool]);
     expect(pool.extra?.solanaMeasuredExecutionTarget).toBeUndefined();

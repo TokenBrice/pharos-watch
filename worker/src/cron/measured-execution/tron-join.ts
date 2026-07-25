@@ -135,13 +135,20 @@ export function joinTronMeasuredExecutionEvidence(input: {
   return diagnostics;
 }
 
-export function stripTronMeasuredExecutionInternalFields(pools: readonly PoolEntry[]): void {
+export function releaseTronMeasuredExecutionProofFields(pools: readonly PoolEntry[]): void {
   for (const pool of pools) {
     if (!pool.extra) continue;
     delete pool.extra.tronMeasuredExecutionTarget;
     delete pool.extra.tronMeasuredExecutionProfile;
-    delete pool.extra.tronMeasuredExecutionPhysicalPoolId;
     delete pool.extra.tronMeasuredExecutionDiagnostic;
+  }
+}
+
+export function stripTronMeasuredExecutionInternalFields(pools: readonly PoolEntry[]): void {
+  releaseTronMeasuredExecutionProofFields(pools);
+  for (const pool of pools) {
+    if (!pool.extra) continue;
+    delete pool.extra.tronMeasuredExecutionPhysicalPoolId;
     delete pool.extra.nativeMeasuredExecution;
     delete pool.extra.nativeMeasuredExecutionPhysicalPoolId;
   }
