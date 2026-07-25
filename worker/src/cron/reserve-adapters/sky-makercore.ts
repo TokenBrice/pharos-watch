@@ -232,9 +232,13 @@ export async function fetchSkyMakercoreReserves(
   const warnings: LiveReserveWarning[] = unknown.map((group) =>
     reserveInfoWarning("unknown-asset", `Sky module bucketed into other: ${group}`),
   );
-  for (const group of unknownGroups.filter((group) => hasMalformedDebt(group.debt))) {
+  for (const group of groups.filter((group) => hasMalformedDebt(group.debt))) {
+    const knownGroup = KNOWN_GROUPS.has(group.group);
     warnings.push(
-      reserveDegradedWarning("unknown-asset", `Sky module has malformed debt and cannot be classified: ${group.group}`),
+      reserveDegradedWarning(
+        knownGroup ? "malformed-debt" : "unknown-asset",
+        `Sky module has malformed debt and cannot be classified: ${group.group}`,
+      ),
     );
   }
   if (timestampSummary && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC) {
