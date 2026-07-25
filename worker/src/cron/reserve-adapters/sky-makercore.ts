@@ -86,6 +86,12 @@ function parseNumericString(raw: string): number {
   return parsePositiveNumber(raw) ?? 0;
 }
 
+function hasMalformedDebt(raw: string): boolean {
+  if (raw.trim() === "") return true;
+  const debt = Number(raw);
+  return !Number.isFinite(debt) || debt < 0;
+}
+
 // ---------------------------------------------------------------------------
 // Pure helpers (exported for tests)
 // ---------------------------------------------------------------------------
@@ -221,10 +227,16 @@ export async function fetchSkyMakercoreReserves(
     .filter((g) => !KNOWN_GROUPS.has(g.group))
     .reduce((sum, g) => sum + parseNumericString(g.debt), 0);
   const unknownExposurePct = totalDebt > 0 ? (unknownDebt / totalDebt) * 100 : 0;
-  const unknown = listUnknownGroups(groups.filter((group) => parseNumericString(group.debt) > 0));
+  const unknownGroups = groups.filter((group) => !KNOWN_GROUPS.has(group.group));
+  const unknown = listUnknownGroups(unknownGroups.filter((group) => parseNumericString(group.debt) > 0));
   const warnings: LiveReserveWarning[] = unknown.map((group) =>
     reserveInfoWarning("unknown-asset", `Sky module bucketed into other: ${group}`),
   );
+  for (const group of unknownGroups.filter((group) => hasMalformedDebt(group.debt))) {
+    warnings.push(
+      reserveDegradedWarning("unknown-asset", `Sky module has malformed debt and cannot be classified: ${group.group}`),
+    );
+  }
   if (timestampSummary && timestampSummary.sourceTimestampSpreadSec > SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC) {
     warnings.push(
       reserveDegradedWarning(
