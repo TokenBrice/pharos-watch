@@ -27,11 +27,13 @@ import {
   type YieldRankingsResponse,
 } from "@shared/types";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
+import { PUBLIC_API_KEY_HEADER } from "@shared/lib/public-api-contract";
 import {
   createApiQueryFn,
   createApiPollingQueryOptions,
   createApiPollingQueryOptionsWithMeta,
   createStaticQueryOptions,
+  type ApiQueryOptions,
   type ApiQueryWithMetaResult,
   type PollingQueryControlOptions,
   unwrapApiQueryWithMetaResult,
@@ -47,7 +49,7 @@ import type { ApiMeta } from "@/lib/api";
 export type { StabilityContributor };
 export type { NonUsdSharePoint } from "@/lib/api-query-descriptors";
 
-export type QueryControlOverrides = PollingQueryControlOptions;
+export type QueryControlOverrides = PollingQueryControlOptions & Pick<ApiQueryOptions<unknown>, "fetchInit">;
 export type V9QueryControlOverrides = Omit<QueryControlOverrides, "keepPreviousData">;
 
 type QueryWithMetaEnvelope<T> = { data: T; meta: ApiMeta | null };
@@ -196,10 +198,19 @@ export function useReportCardsV9(overrides?: V9QueryControlOverrides) {
   });
 }
 
-/** Read-only V9 shadow query using the registered producer polling window. */
-export function useReportCardsV9Preview(overrides?: V9QueryControlOverrides) {
+/** API-key-gated V9 shadow query using the registered producer polling window. */
+export function useReportCardsV9Preview(apiKey: string | null, overrides?: V9QueryControlOverrides) {
+  const headers = new Headers(overrides?.fetchInit?.headers);
+  if (apiKey) headers.set(PUBLIC_API_KEY_HEADER, apiKey);
   return useRegisteredApiQuery<ReportCardsV9Response>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Preview, {
     ...overrides,
+    enabled: Boolean(apiKey) && overrides?.enabled !== false,
+    fetchInit: apiKey
+      ? {
+          ...overrides?.fetchInit,
+          headers,
+        }
+      : undefined,
     keepPreviousData: false,
   });
 }

@@ -266,6 +266,33 @@ describe("validateVariantRelationships", () => {
     expect(errors[0]).toContain("does not declare variantOf / variantKind");
   });
 
+  it("applies the default serial-claim role to reviewed wrapper relationships", () => {
+    const parent = makeParent("parent-a", "fiat-cash");
+    const child = makeCoin({
+      id: "missing-default-role-variant",
+      dependencyReview: {
+        reviewedAt: "2026-07-21",
+        reviewer: "test",
+        confidence: "verified",
+        sources: [{ label: "Wrapper evidence", url: "https://example.com/wrapper" }],
+        rationale: "The reviewed relationship is a direct 1:1 wrapper claim.",
+        relationships: [
+          {
+            id: "parent-a",
+            weight: 1,
+            type: "wrapper",
+            reason: "Every child unit is a direct claim on one parent unit.",
+          },
+        ],
+      },
+    });
+
+    const errors = validateVariantRelationships([parent, child]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("active USD asset with a reviewed serial wrapper");
+    expect(errors[0]).toContain("does not declare variantOf / variantKind");
+  });
+
   it("does not infer a missing variant for mixed-strategy NAV tokens", () => {
     const parentA = makeParent("parent-a", "fiat-cash");
     const parentB = makeParent("parent-b", "fiat-cash");

@@ -184,7 +184,7 @@ describe("challenger publish", () => {
     const { db, batches, maxConstructedStatements } = makePublishDb();
 
     const result = await publishDexPriceChallengerSnapshots(db, {
-      snapshotAt: 1_700_000_000,
+      snapshotAt: 1_700_000_000.9,
       retainedPoolsByStablecoin: new Map([["usdt-tether", challengerPools(60)]]),
       sourceCoverageCompleteByStablecoin: new Map([["usdt-tether", true]]),
       minPoolTvlUsd: 20_000,
@@ -201,6 +201,9 @@ describe("challenger publish", () => {
       .toBe(true);
     expect(statements[5]?.sql).toContain("INSERT INTO dex_price_challenger_snapshots");
     expect(statements[6]?.sql).toContain("DELETE FROM dex_price_challengers");
+    expect(statements.slice(0, 5).every((statement) => statement.binds[1] === 1_700_000_000)).toBe(true);
+    expect(statements[5]?.binds[1]).toBe(1_700_000_000);
+    expect(statements[6]?.binds[0]).toBe(1_700_000_000);
     expect(
       statements.slice(0, 5).flatMap((statement) =>
         statement.binds.filter((_, bindIndex) => bindIndex % 8 === 2)

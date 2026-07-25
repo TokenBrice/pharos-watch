@@ -170,7 +170,6 @@ function activeBlockerCodes(
 
 function eligibilityTrace(
   fact: V9OperationalResilienceFact | null,
-  implementationHistory: V9OperationalResilienceImplementationHistory | null,
   policy: V9OperationalResiliencePolicy,
 ): V9OperationalResilienceEligibilityTrace {
   const history = fact?.liveHistoryEligibility ?? null;
@@ -188,6 +187,19 @@ function eligibilityTrace(
       satisfied: true,
     };
   }
+  return {
+    requiredLiveHistoryMonths: policy.minimumLiveHistoryMonths,
+    documentedLiveHistoryMonths: history?.minimumLiveHistoryMonths ?? null,
+    confidence: history?.confidence ?? null,
+    evidenceRefIds: canonicalEvidence(history?.evidenceRefIds ?? []),
+    satisfied: false,
+  };
+}
+
+function implementationEligibilityTrace(
+  implementationHistory: V9OperationalResilienceImplementationHistory | null,
+  policy: V9OperationalResiliencePolicy,
+): V9OperationalResilienceEligibilityTrace {
   if (implementationHistory !== null) {
     nonNegativeInteger(
       implementationHistory.minimumLiveHistoryMonths,
@@ -206,9 +218,9 @@ function eligibilityTrace(
   }
   return {
     requiredLiveHistoryMonths: policy.minimumLiveHistoryMonths,
-    documentedLiveHistoryMonths: history?.minimumLiveHistoryMonths ?? null,
-    confidence: history?.confidence ?? null,
-    evidenceRefIds: canonicalEvidence(history?.evidenceRefIds ?? []),
+    documentedLiveHistoryMonths: null,
+    confidence: null,
+    evidenceRefIds: [],
     satisfied: false,
   };
 }
@@ -226,9 +238,18 @@ export function evaluateV9OperationalResilience(
   blockers: V9OperationalResilienceBlockers,
   implementationHistory: V9OperationalResilienceImplementationHistory | null = null,
 ): V9OperationalResilienceResult {
-  const eligibility = eligibilityTrace(fact, implementationHistory, policy);
+  const overlayEligibility = eligibilityTrace(fact, policy);
+  const depthEligibility = implementationEligibilityTrace(implementationHistory, policy);
+  const eligibility =
+    !overlayEligibility.satisfied && measuredMarketDepth !== null && depthEligibility.satisfied
+      ? depthEligibility
+      : overlayEligibility;
   const blockerCodes = activeBlockerCodes(fact, blockers);
-  if (!eligibility.satisfied || blockerCodes.length > 0) {
+  if (
+    (!overlayEligibility.satisfied &&
+      !(measuredMarketDepth !== null && depthEligibility.satisfied)) ||
+    blockerCodes.length > 0
+  ) {
     return {
       eligible: false,
       eligibility,
@@ -262,8 +283,9 @@ export function evaluateV9OperationalResilience(
     });
   };
 
-  const cumulativeRatio =
-    fact?.redemptionThroughput?.cumulativeLifetimeRedeemedSupplyRatio ?? null;
+  const cumulativeRatio = overlayEligibility.satisfied
+    ? fact?.redemptionThroughput?.cumulativeLifetimeRedeemedSupplyRatio ?? null
+    : null;
   if (cumulativeRatio !== null) {
     finiteNonNegative(cumulativeRatio.value, "cumulative redeemed supply ratio");
     if (cumulativeRatio.value >= policy.redemption.minimumCumulativeSupplyRatio) {
@@ -277,7 +299,9 @@ export function evaluateV9OperationalResilience(
     }
   }
 
-  const qualifyingStressWindows = (fact?.redemptionThroughput?.stressWindows ?? [])
+  const qualifyingStressWindows = (
+    overlayEligibility.satisfied ? fact?.redemptionThroughput?.stressWindows ?? [] : []
+  )
     .filter((window) => {
       finiteNonNegative(
         window.redeemedSupplyRatioLowerBound,
@@ -341,7 +365,7 @@ export function evaluateV9OperationalResilience(
     }
   }
 
-  const qualifyingEpisodes = (fact?.stressEpisodes ?? [])
+  const qualifyingEpisodes = (overlayEligibility.satisfied ? fact?.stressEpisodes ?? [] : [])
     .filter((episode) => {
       if (episode.recoveredWithinSec !== null) {
         finiteNonNegative(
@@ -381,7 +405,7 @@ export function evaluateV9OperationalResilience(
     );
   }
 
-  const reconciliation = fact?.reserveReconciliation ?? null;
+  const reconciliation = overlayEligibility.satisfied ? fact?.reserveReconciliation ?? null : null;
   if (reconciliation !== null) {
     nonNegativeInteger(
       reconciliation.reportHistory.observedReportHistoryMonths,

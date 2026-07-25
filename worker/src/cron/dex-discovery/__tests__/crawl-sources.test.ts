@@ -589,6 +589,33 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('Chain "plasma"'));
   });
 
+  it("contains optional Curve timeouts without failing the coin crawl", async () => {
+    const timeout = new DOMException("The operation was aborted due to timeout", "TimeoutError");
+
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({ ok: true, pools: [] });
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url) => {
+      if (String(url).includes("api.curve.finance")) throw timeout;
+      return {
+        response: new Response(null, { status: 200 }),
+        body: { tickers: [] },
+      };
+    });
+
+    await expect(
+      crawlCoin(
+        createMockDb(),
+        "usdc-circle",
+        [{ chain: "ethereum", address: "0xabc", decimals: 6 }],
+        "test-key",
+        new Set(),
+      ),
+    ).resolves.toMatchObject({
+      pools: [],
+      unresolvedChains: [],
+    });
+  });
+
   it("reports chains unsupported by every discovery pool provider", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 

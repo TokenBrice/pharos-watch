@@ -79,6 +79,18 @@ describe("P4 DEX exit route observations", () => {
     };
   }
 
+  function aerodromeMeasuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
+    const profile = measuredProfile(quotedAt);
+    if (!profile.poolProvenance) throw new Error("Measured fixture must retain pool provenance");
+    return {
+      ...profile,
+      adapterProfileId: "aerodrome-slipstream-quoter-v2",
+      protocol: "aerodrome-slipstream",
+      chain: "base",
+      poolId: `base:${profile.poolProvenance.resolvedPoolAddress}`,
+    };
+  }
+
   function nativeCapacityCurve() {
     return DEX_MEASURED_CAPACITY_NOTIONALS_USD.map((requestedNotionalUsd) => {
       const executableUsd = Math.min(requestedNotionalUsd, 1_000_000);
@@ -725,6 +737,40 @@ describe("P4 DEX exit route observations", () => {
       evidenceKind: "measured-executable-depth",
       scoreEligible: true,
     });
+  });
+
+  it("accepts the active Base Aerodrome Slipstream adapter as exact measured evidence", () => {
+    const observedAt = 1_752_560_000;
+    const profile = aerodromeMeasuredProfile(observedAt - 60);
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt,
+      retainedPools: [{
+        poolId: "defillama-yields-uuid",
+        project: "aerodrome-slipstream",
+        chain: "base",
+        tvlUsd: 2_000_000,
+        symbol: "USDC-USDT",
+        poolType: "aerodrome-slipstream",
+        source: "dl",
+        extra: {
+          measuredExecution: profile,
+          measuredExecutionPhysicalPoolId: profile.poolId,
+        },
+      }],
+    });
+
+    expect(result.observations[0]).toMatchObject({
+      adapterProfileId: "aerodrome-slipstream-quoter-v2",
+      evidenceKind: "measured-executable-depth",
+      scoreEligible: true,
+    });
+    expect(result.coverage).toMatchObject({
+      scoreEligibleCapabilityPoolCount: 1,
+      scoreEligiblePoolCount: 1,
+      unsupportedPoolCount: 0,
+    });
+    expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(true);
   });
 
   it("keeps the 3pool reserve model score-facing until the atomic packet matures", () => {

@@ -269,13 +269,15 @@ designed:
   exposures while retaining the live weight.
 - When the exact report-card input records that a live-reserve asset used its
   registry fallback, V9 may admit those rows only from a verified, sourced,
-  full-composition review no more than 31 days old. The facts retain
+  full-composition review no more than 31 days old, with zero reviewed
+  known-unknown exposure and no unresolved `basket-needs-split` or
+  `insufficient-evidence` disposition. The facts retain
   `curated-fallback` provenance and the existing 0.80 static-evidence
   confidence multiplier; an absent fallback signal, partial review, stale
-  composition, or incomplete total remains unavailable.
+  composition, incomplete total, or unresolved exposure remains unavailable.
 - A non-wrapper asset without a configured live-reserve producer may admit the
-  same verified, sourced, full, current review as standalone `curated`
-  evidence. It remains `static-validated` and receives the same 0.80
+  same resolved, verified, sourced, full, current review as standalone
+  `curated` evidence. It remains `static-validated` and receives the same 0.80
   confidence multiplier. Configured producers cannot use this path, and
   wrappers continue to inherit parent backing rather than duplicating it.
 - Wrapper custody, leverage, and rehypothecation remain unavailable unless

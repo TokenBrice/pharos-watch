@@ -169,7 +169,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-04",
   "launchPhase": "beta",
-  "launchPhaseDetail": "kUSD v2 is live on Base (first PSM mint 2026-05-14), but Pharos treats it as pre-active until a usable runtime price path exists. The protocol is in a genesis, capacity-capped phase: supply is about 1,113 USD, DefiLlama stablecoin id 402 exposes supply with price=null, CoinGecko does not resolve a Kerne USD coin, and the v1 WETH/Hyperliquid hedge vault leg is disclosed-degraded and excluded from reserves so kUSD is currently 100% USDC-backed through three PSM reserves. Staking wrapper skUSD (ERC-4626, 0xdEd74F7E) is deployed with a published live APY but near-zero third-party stake. Admin is a 2-of-3 Gnosis Safe; hourly signed proof of reserves is published at kerne.fi/verify.",
+  "launchPhaseDetail": "kUSD v2 is live on Base (first PSM mint 2026-05-14), but Pharos treats it as pre-active until a usable runtime price path exists. The protocol is in a genesis, capacity-capped phase: supply is about 1,113 USD, DefiLlama stablecoin id 402 exposes supply with price=null, CoinGecko does not resolve a Kerne USD coin, and the v1 WETH/Hyperliquid hedge vault leg is disclosed-degraded and excluded from reserves so kUSD is currently 100% USDC-backed through three PSM reserves. Staking wrapper skUSD (ERC-4626, 0x96F5102C15b839757f811A98CEc3725Ac21DfA14) is deployed with a published live APY but near-zero third-party stake. The previous skUSD (0xdEd74F7E) is retired. Admin is a 2-of-3 Gnosis Safe; hourly signed proof of reserves is published at kerne.fi/verify.",
   "featuredContent": [
     {
       "type": "article",

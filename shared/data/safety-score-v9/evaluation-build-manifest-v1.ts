@@ -50,7 +50,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/p4-exit-route-capacity.ts",
-      "sha256": "ef57d4c185f5234909c74f2eee53172a8ba6affb1aecde19ee0fb23ae85bb0bd"
+      "sha256": "134c7725cf3d8b12a1673d08b8c6a637e1f068e3bf1b10473f29d08412a2747a"
     },
     {
       "path": "shared/lib/redemption-backstop-capacity.ts",
@@ -242,7 +242,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/operational-resilience.ts",
-      "sha256": "d4deba18727f0f07583c073624618dd19286dd970139b2e416443f37bd37d7e9"
+      "sha256": "6843f87895267d6b8a36d2c5b55d15662ef7de1ef7a4bf079e291684bab184fa"
     },
     {
       "path": "shared/lib/safety-score-v9/policy.ts",
@@ -406,7 +406,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension.ts",
-      "sha256": "4cd89d84470f6e80019a58f0c68287c6e44c67d890b4a67b7c85d128a8bdebc0"
+      "sha256": "fecbd122633e981a5d1f80837e0b1bdb5a20990b25b3806d450729ba818c97ba"
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set-boundary.ts",
@@ -437,7 +437,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "4975f2ee93c68be8481d2dc4977128552912a7936ab9ba368c3ce2d91e4fd060"
     }
   ],
-  "digest": "e5852bd8358b8765b55253a0f70296420fcc58db544de252b86d3b1b2a1ca78b"
+  "digest": "6175c081cb978651120c1c39f0e6140a8d678f56b46d196d4df06c989351eee4"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -28,31 +28,36 @@ export async function crawlCurvePoolsStage(input: {
 
   const checks = await Promise.all(
     [...targetsByChain].map(async ([chain, targets]): Promise<DexDeploymentProviderCheck[]> => {
-      const result = await fetchJsonWithRetry<CurveApiPayload>(
-        `${CURVE_API_BASE}/${chain}`,
-        {
-          headers: { "User-Agent": USER_AGENT },
-          signal: buildStageSignal(input.context.signal, input.context.deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.curve),
-        },
-        1,
-        { timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.curve },
-      );
-      const payload = result?.body ?? null;
+      try {
+        const result = await fetchJsonWithRetry<CurveApiPayload>(
+          `${CURVE_API_BASE}/${chain}`,
+          {
+            headers: { "User-Agent": USER_AGENT },
+            signal: buildStageSignal(input.context.signal, input.context.deadlineMs, DISCOVERY_STAGE_TIMEOUT_MS.curve),
+          },
+          1,
+          { timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.curve },
+        );
+        const payload = result?.body ?? null;
 
-      const poolData = payload?.data?.poolData;
-      if (!Array.isArray(poolData)) {
+        const poolData = payload?.data?.poolData;
+        if (!Array.isArray(poolData)) {
+          return targets.map(({ address }) => ({ chain, address, provider: "curve", status: "failure" }));
+        }
+        return targets.map(({ address }) => {
+          const tokenAddress = canonicalExitRouteScopedId(chain, address);
+          const observedPoolCount = poolData.filter(
+            (pool) =>
+              pool.isBroken !== true &&
+              pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD &&
+              pool.coins?.some((coin) => canonicalExitRouteScopedId(chain, coin.address) === tokenAddress),
+          ).length;
+          return { chain, address, provider: "curve", status: "success", observedPoolCount };
+        });
+      } catch (err) {
+        if (input.context.signal?.aborted) throw err;
         return targets.map(({ address }) => ({ chain, address, provider: "curve", status: "failure" }));
       }
-      return targets.map(({ address }) => {
-        const tokenAddress = canonicalExitRouteScopedId(chain, address);
-        const observedPoolCount = poolData.filter(
-          (pool) =>
-            pool.isBroken !== true &&
-            pool.usdTotal >= DEX_LIQUIDITY_POOL_MIN_TVL_USD &&
-            pool.coins?.some((coin) => canonicalExitRouteScopedId(chain, coin.address) === tokenAddress),
-        ).length;
-        return { chain, address, provider: "curve", status: "success", observedPoolCount };
-      });
     }),
   );
   return { providerChecks: checks.flat() };

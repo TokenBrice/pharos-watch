@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { ReserveSlice } from "@shared/types/reserves";
-import { buildReviewedReserveClassifications, type V9ExtensionRegistryMeta } from "../safety-score-v9-extension";
+import {
+  buildReviewedReserveClassifications,
+  buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
+  buildSafetyScoreV9ReviewedStandaloneReserveRows,
+  type V9ExtensionRegistryMeta,
+} from "../safety-score-v9-extension";
 import { buildSafetyScoreV9ReserveClassifications } from "../safety-score-v9-extension-reserves";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;
@@ -27,6 +32,63 @@ function reviewedMeta(
     },
   };
 }
+
+describe("reviewed curated reserve admission", () => {
+  const opaqueRows: ReserveSlice[] = [
+    { name: "Opaque basket", pct: 40, risk: "medium" },
+    { name: "Treasury bills", pct: 60, risk: "very-low" },
+  ];
+  const unresolvedReview = {
+    knownUnknownExposure: "Opaque basket constituents are not fully split.",
+    knownUnknownExposurePct: 40,
+    nonLinkDispositions: [
+      {
+        reserveIndex: 0,
+        reserveName: "Opaque basket",
+        pct: 40,
+        disposition: "basket-needs-split" as const,
+        rationale: "The basket weights are unresolved.",
+      },
+    ],
+  };
+
+  it("rejects unresolved known-unknown exposure on live fallback and standalone paths", () => {
+    const fallbackMeta = reviewedMeta(opaqueRows, unresolvedReview);
+    fallbackMeta.liveReservesConfig = {
+      adapter: "curated-validated",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: { primary: { kind: "onchain-solana" } },
+    };
+
+    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(fallbackMeta, CLOCK_SEC)).toBeNull();
+    expect(
+      buildSafetyScoreV9ReviewedStandaloneReserveRows(reviewedMeta(opaqueRows, unresolvedReview), CLOCK_SEC),
+    ).toBeNull();
+  });
+
+  it("admits complete current verified fallback and standalone reserve evidence", () => {
+    const rows = [{ name: "Treasury bills", pct: 100, risk: "very-low" as const }];
+    const fallbackMeta = reviewedMeta(rows);
+    fallbackMeta.liveReservesConfig = {
+      adapter: "curated-validated",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: { primary: { kind: "onchain-solana" } },
+    };
+
+    expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(fallbackMeta, CLOCK_SEC)).toMatchObject({
+      evidenceClass: "static-validated",
+      provenance: "curated-fallback",
+      rows,
+    });
+    expect(buildSafetyScoreV9ReviewedStandaloneReserveRows(reviewedMeta(rows), CLOCK_SEC)).toMatchObject({
+      evidenceClass: "static-validated",
+      provenance: "curated",
+      rows,
+    });
+  });
+});
 
 describe("buildReviewedReserveClassifications", () => {
   it("classifies exact tracked-asset slices without guessing from vague labels", () => {

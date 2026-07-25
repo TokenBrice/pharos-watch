@@ -190,12 +190,16 @@ describe("validate-ci parity", () => {
     expect(source.match(/git checkout -B "\$BRANCH" origin\/main/g)).toHaveLength(2);
     expect(source).toContain('git checkout -B "$BRANCH" "origin/$BRANCH"');
     expect(source).toContain("git rebase origin/main");
+    expect(source).toContain('git config core.hooksPath "$EMPTY_HOOKS"');
+    expect(source.indexOf('git config core.hooksPath "$EMPTY_HOOKS"')).toBeLessThan(
+      source.indexOf('git checkout -B "$BRANCH" "origin/$BRANCH"'),
+    );
     expect(source).toContain('git merge-base --is-ancestor "origin/$BRANCH" origin/main');
     expect(source).toContain("has unmerged commits but no open PR");
     expect(source).toContain("refusing to overwrite it");
     expect(source).toContain('measure-protocol-api-mechanism-metrics.ts --asset "$ASSET_ID"');
     expect(source).toContain("measure-protocol-api-mechanism-metrics.ts --replay-all");
-    expect(source.match(/git diff --name-status origin\/main\.\.\.HEAD/g)).toHaveLength(2);
+    expect(source.match(/git diff --name-status origin\/main\.\.\.HEAD/g)).toHaveLength(3);
     expect(source).toContain('if [ "$status" != "A" ]');
     expect(source).toContain('git diff --quiet -- "$ROOT"');
     expect(source).toContain('git ls-files --others --exclude-standard -- "$ROOT"');

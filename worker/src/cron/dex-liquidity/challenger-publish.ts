@@ -268,6 +268,7 @@ export async function publishDexPriceChallengerSnapshots(
   skippedStablecoins: number;
   missingTables: boolean;
 }> {
+  const snapshotAt = Math.floor(requireFiniteNumber(input.snapshotAt, "dex-price-challengers: snapshotAt"));
   const state = await detectDexPriceChallengerTableState(db);
   if (!state.challengersTable || !state.snapshotsTable) {
     return {
@@ -314,7 +315,7 @@ export async function publishDexPriceChallengerSnapshots(
     );
     const plan = buildDexPriceChallengerPublicationPlan({
       stablecoinId,
-      snapshotAt: input.snapshotAt,
+      snapshotAt,
       rows,
       sourceCoverageComplete: input.sourceCoverageCompleteByStablecoin.get(stablecoinId) ?? false,
     });
@@ -380,7 +381,7 @@ export async function publishDexPriceChallengerSnapshots(
          WHERE snapshot_at < ?
            AND stablecoin_id IN (${new Array(idChunk.length).fill("?").join(", ")})`,
       )
-      .bind(input.snapshotAt, ...idChunk)
+      .bind(snapshotAt, ...idChunk)
   );
   await batchExecute(db, cleanupStatements, {
     chunkSize: DEX_PRICE_CHALLENGER_BATCH_SIZE,
