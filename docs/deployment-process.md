@@ -251,7 +251,9 @@ Current explicitly deferred major cohort:
 
 Current risk-accepted transitive advisories (triage reference for the weekly `dependency-audit.yml` run):
 
-None as of 2026-06-26. The production-scope check is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`) and reflects the deployed surface. Run it directly for dependency changes. The weekly `dependency-audit.yml` job deliberately runs the broader `npm audit --audit-level=high` over the full lockfile as advisory input.
+- `brace-expansion` / `GHSA-mh99-v99m-4gvg` (accepted 2026-07-25; review by 2026-08-15): the affected v1 copies are dev-only transitive dependencies of ESLint through `minimatch@3`. They process repository-owned lint/config patterns, are absent from production installs, and are not reachable from user input or a deployed request path. The patched `brace-expansion@5` export is not compatible with these parents, and npm currently offers only breaking parent upgrades; retain this exception until the lint toolchain adopts a compatible patched dependency.
+
+The production-scope check is `npm run audit:deps` (`npm audit --audit-level=high --omit=dev`) and reflects the deployed surface. Run it directly for dependency changes. The weekly `dependency-audit.yml` job deliberately runs the broader `npm audit --audit-level=high` over the full lockfile as advisory input.
 
 When the weekly job finds a new high/critical full-lockfile advisory, fix it, pin it away, or document the reviewed unreachable/dev-only risk acceptance here before treating the red job as accepted. Do not run `npm audit fix --force` outside a dedicated dependency tranche; forced fixes can downgrade or cross major lines.
 

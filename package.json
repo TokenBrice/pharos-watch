@@ -256,9 +256,7 @@
     "yaml": "2.9.0"
   },
   "overrides": {
-    "next": {
-      "postcss": "8.5.15"
-    },
+    "postcss": "8.5.23",
     "sharp": "0.35.3",
     "viem": {
       "ws": "8.21.0"
