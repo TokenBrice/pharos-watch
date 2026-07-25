@@ -54,6 +54,7 @@ import {
   computeDexPrices,
   computeStablecoinScores,
   DEX_LIQUIDITY_SCORING_BATCH_SIZE,
+  loadConfidentHistoryStability,
 } from "../dex-liquidity/scoring";
 import type { PoolEntry } from "../dex-liquidity/types";
 
@@ -215,6 +216,60 @@ describe("dex-liquidity scoring", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.clearAllMocks();
+  });
+
+  it("loads confidence history in bounded keyset pages without changing stability", async () => {
+    const historyRows = Array.from({ length: 1_025 }, (_, index) => ({
+      stablecoin_id: index < 700 ? "usdc-circle" : "usdt-tether",
+      snapshot_date: index < 700 ? index + 1 : index - 699,
+      total_tvl_usd: index < 700 ? 1_000_000 : 2_000_000,
+      total_volume_24h_usd: index < 700 ? 100_000 : 200_000,
+      coverage_confidence: 1,
+    }));
+    let queryCount = 0;
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (
+          _thirtyDaysAgo: number,
+          cursorStablecoinId: string,
+          _sameCursorStablecoinId: string,
+          cursorSnapshotDate: number,
+          limit: number,
+        ) => ({
+          all: async () => {
+            queryCount++;
+            return {
+              results: historyRows
+                .filter(
+                  (row) =>
+                    row.stablecoin_id > cursorStablecoinId ||
+                    (row.stablecoin_id === cursorStablecoinId && row.snapshot_date > cursorSnapshotDate),
+                )
+                .slice(0, limit),
+              success: true,
+              meta: {},
+            };
+          },
+        }),
+        sql,
+      }),
+    } as unknown as D1Database;
+
+    const result = await loadConfidentHistoryStability(db);
+
+    expect(queryCount).toBe(3);
+    expect(result.tvlStabilityMap).toEqual(
+      new Map([
+        ["usdc-circle", 1],
+        ["usdt-tether", 1],
+      ]),
+    );
+    expect(result.volumeStabilityMap).toEqual(
+      new Map([
+        ["usdc-circle", 1],
+        ["usdt-tether", 1],
+      ]),
+    );
   });
 
   it("filters and scales pools, truncates visible pools, and computes deduped global aggregates", async () => {
