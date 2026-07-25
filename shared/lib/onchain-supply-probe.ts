@@ -50,6 +50,14 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   "sdai-sky": [{ chain: "ethereum" }, { chain: "base" }, { chain: "optimism" }],
 };
 
+// These canonical-chain totalSupply values already include tokens escrowed for
+// the listed lock/mint representations. Reallocate that supply across chains
+// instead of adding representation supplies to the canonical total.
+export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, string>> = {
+  "susds-sky": "ethereum",
+  "sdai-sky": "ethereum",
+};
+
 export function isZephyrScannerSupplyId(id: string): boolean {
   return ZEPHYR_SCANNER_SUPPLY_IDS.has(id);
 }

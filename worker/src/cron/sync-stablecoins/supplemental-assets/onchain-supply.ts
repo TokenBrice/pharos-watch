@@ -2,6 +2,7 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import { CHAIN_META } from "@shared/lib/chains";
 import {
+  CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
   CURATED_ONCHAIN_SUPPLY_CONTRACTS,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSingleOnchainSupplyProbeContract,
@@ -110,6 +111,7 @@ async function fetchOnChainSupplyForContract(input: {
 }): Promise<{
   mcap: number;
   supplySource: SupplementalOnChainSupplySource;
+  chain: string;
   chainLabel: string;
 } | null> {
   const probeInput = buildProbeInput(input.supplyContract.chain);
@@ -146,7 +148,7 @@ async function fetchOnChainSupplyForContract(input: {
       console.log(
         `[fiat-cg] ${chainLabel} supply fallback for ${input.meta.symbol}: ${supply.toFixed(2)} units -> $${mcap.toFixed(2)} mcap`,
       );
-      return { mcap, supplySource, chainLabel };
+      return { mcap, supplySource, chain: input.supplyContract.chain, chainLabel };
     }
   } catch (err) {
     const chainLabel = input.supplyContract.chain === "solana" ? "Solana" : "EVM";
@@ -198,6 +200,9 @@ export async function fetchCuratedAggregateOnChainMcap(
 
   let totalMcap = 0;
   const chainCirculating: Record<string, number> = {};
+  const canonicalSupplyChain = CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id];
+  let canonicalResult: { mcap: number; chainLabel: string } | null = null;
+  let representationMcap = 0;
   for (const { config: curated, contract: supplyContract } of selectedContracts) {
     throwIfAborted(signal);
 
@@ -213,8 +218,22 @@ export async function fetchCuratedAggregateOnChainMcap(
       return null;
     }
 
-    totalMcap += result.mcap;
+    if (canonicalSupplyChain) {
+      if (result.chain === canonicalSupplyChain) {
+        canonicalResult = result;
+      } else {
+        representationMcap += result.mcap;
+      }
+    } else {
+      totalMcap += result.mcap;
+    }
     chainCirculating[result.chainLabel] = (chainCirculating[result.chainLabel] ?? 0) + result.mcap;
+  }
+
+  if (canonicalSupplyChain) {
+    if (!canonicalResult || representationMcap >= canonicalResult.mcap) return null;
+    totalMcap = canonicalResult.mcap;
+    chainCirculating[canonicalResult.chainLabel] = canonicalResult.mcap - representationMcap;
   }
 
   if (!Number.isFinite(totalMcap) || totalMcap <= 0) return null;
