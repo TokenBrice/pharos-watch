@@ -143,4 +143,16 @@ describe("report-card V9 publication input health", () => {
       state: "unavailable",
     });
   });
+
+  it("marks a completed empty redemption snapshot as not applicable", async () => {
+    const inputs = await loadReportCardsSnapshotInputs(db(), {
+      preloadedStablecoinsCache: stablecoinsCache(),
+    });
+
+    expect(inputs.v9PublicationInputHealth.redemption).toEqual({
+      state: "not-applicable",
+      generationId: "redemption:current",
+      updatedAtSec: NOW_SEC - 60,
+    });
+  });
 });

@@ -16,7 +16,6 @@ import {
 } from "./stablecoins-cache";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
-import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
 import type { ReserveSlice } from "@shared/types/core";
@@ -62,9 +61,6 @@ const EMPTY_DEX_LIQUIDITY_SNAPSHOT: DexLiquidityLoadResult = {
 
 const REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC = CRON_INTERVALS["sync-dex-liquidity"] * 2;
 const REPORT_CARD_REDEMPTION_FRESHNESS_SEC = CRON_INTERVALS["sync-redemption-backstops"] * 2;
-const HAS_APPLICABLE_REDEMPTION_CONFIG = ACTIVE_STABLECOINS.some(
-  (coin) => REDEMPTION_BACKSTOP_CONFIGS[coin.id] !== undefined,
-);
 const HAS_APPLICABLE_LIVE_RESERVE_CONFIG = ACTIVE_STABLECOINS.some(
   (coin) => coin.liveReservesConfig !== undefined,
 );
@@ -456,8 +452,11 @@ export async function loadReportCardsSnapshotInputs(
       : dexFreshness.stale
         ? "stale"
         : "current";
+  const hasApplicableRedemption =
+    redemptionSnapshotUnavailable ||
+    Object.keys(redemptionBackstopSnapshot.map).length > 0;
   const redemptionState: V9PublicationInputHealth["redemption"]["state"] =
-    !HAS_APPLICABLE_REDEMPTION_CONFIG
+    !hasApplicableRedemption
       ? "not-applicable"
       : redemptionSnapshotUnavailable
         ? "unavailable"
