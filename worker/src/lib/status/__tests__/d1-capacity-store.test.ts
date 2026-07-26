@@ -16,8 +16,8 @@ describe("D1 capacity observation store", () => {
       {
         match: "SELECT observed_at, database_size_bytes",
         rows: [
-          { observed_at: NOW - 2 * 86_400, database_size_bytes: 3_800_000_000 },
-          { observed_at: NOW - 86_400, database_size_bytes: 3_900_000_000 },
+          { observed_at: NOW - 23 * 3600, database_size_bytes: 3_977_000_000 },
+          { observed_at: NOW - 12 * 3600, database_size_bytes: 3_988_000_000 },
           { observed_at: NOW, database_size_bytes: 4_000_000_000 },
         ],
       },
@@ -27,8 +27,9 @@ describe("D1 capacity observation store", () => {
     const assessment = await refreshD1CapacityAssessment(db, 4_000_000_000, NOW);
 
     expect(assessment.utilizationPercent).toBe(40);
-    expect(assessment.forecastBasis).toBe("linear-30d");
-    expect(assessment.growthBytesPerDay).toBe(100_000_000);
+    expect(assessment.forecastBasis).toBe("linear-window");
+    expect(assessment.conservativeWindow).toBe("24h");
+    expect(assessment.growthBytesPerDay).toBe(24_000_000);
     expect(db.getHistory().some((entry) => entry.binds[0] === D1_CAPACITY_CACHE_KEY)).toBe(true);
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });

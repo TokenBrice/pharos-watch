@@ -196,4 +196,57 @@ export interface D1UsageSummary {
   rowsWritten24h: number | null;
   /** Optional while an older Worker or a not-yet-initialized observation store is serving status. */
   capacity?: D1CapacityAssessment | null;
+  /** Private-R2 DEX evidence archive control-plane telemetry. */
+  archive?: DexArchiveStatus | null;
+}
+
+export interface DexArchiveFamilyStatus {
+  family: "measured-execution" | "liquidity";
+  configuredMode: string;
+  effectiveMode: "off" | "shadow" | "delete";
+  configError: string | null;
+  eligibleGenerationCount: number;
+  eligibleRowCount: number;
+  eligibleLogicalBytes: number;
+  verifiedPendingDeleteCount: number;
+  oldestEligibleAt: number | null;
+  oldestVerifiedPendingDeleteAt: number | null;
+  uploadedObjectCount: number;
+  verifiedObjectCount: number;
+  deletedGenerationCount: number;
+  archivedUncompressedBytes: number;
+  archivedStoredBytes: number;
+  deletedSourceRowCount: number;
+  deletedSourceBytes: number;
+  objectsWritten24h: number;
+  sourceRowsDeleted24h: number;
+  sourceBytesDeleted24h: number;
+  orphanObjectCount: number;
+  missingObjectCount: number;
+  lifecycleDriftCount: number;
+  lastUploadAt: number | null;
+  lastVerifiedAt: number | null;
+  lastDeleteAt: number | null;
+  lastSuccessAt: number | null;
+  lastErrorAt: number | null;
+  lastError: string | null;
+  lastRunAt: number | null;
+  updatedAt: number;
+}
+
+export interface DexArchiveStatus {
+  checkedAt: number;
+  releaseStage: "foundation" | "measured-shadow" | "measured-delete" | "liquidity-shadow" | "liquidity-delete";
+  objectSchemaVersion: 1;
+  logicalRetentionDays: 30;
+  lifecycleExpiryDays: 35;
+  manifestRetentionDays: 90;
+  maxObjectsPerInvocation: 12;
+  normalReadDependsOnR2: false;
+  manifestCount: number;
+  uploadedManifestCount: number;
+  verifiedManifestCount: number;
+  sourceDeletedManifestCount: number;
+  failedManifestCount: number;
+  familyStates: DexArchiveFamilyStatus[];
 }

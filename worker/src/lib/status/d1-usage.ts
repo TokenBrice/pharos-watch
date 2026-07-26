@@ -9,6 +9,7 @@ import {
   loadCachedD1CapacityAssessment,
   refreshD1CapacityAssessment,
 } from "./d1-capacity-store";
+import { loadDexArchiveStatus } from "./dex-archive-status";
 
 interface D1DatabaseInfoResult {
   uuid?: string;
@@ -314,6 +315,22 @@ export async function getD1UsageSummary(
     fetchAnalytics(config, windowStartIso, windowEndIso),
   ]);
   const capacity = await assessDatabaseCapacity(databaseInfo, nowSeconds, db);
+  let archive: D1UsageSummary["archive"] = null;
+  if (db) {
+    try {
+      archive = await loadDexArchiveStatus(db, nowSeconds);
+    } catch (error) {
+      logWorkerEvent({
+        scope: "status",
+        level: "warn",
+        event: "dex_archive_status_failed",
+        route: "status",
+        source: "dex_archive_family_state",
+        message: "DEX archive status query failed",
+        error,
+      });
+    }
+  }
 
   return {
     checkedAt,
@@ -328,6 +345,7 @@ export async function getD1UsageSummary(
       ? databaseInfo.read_replication.mode
       : null,
     capacity,
+    ...(db ? { archive } : {}),
     ...analytics,
   };
 }

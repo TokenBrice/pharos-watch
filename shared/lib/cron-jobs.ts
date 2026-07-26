@@ -19,6 +19,7 @@ const CRON_SCHEDULE_DEFINITIONS = {
   halfHourlyMeasuredExecution: { schedule: "0,30 * * * *", intervalSec: 1800, offsetSec: 0 },
   halfHourlyOffset: { schedule: "10,40 * * * *", intervalSec: 1800, offsetSec: 10 * 60 },
   halfHourlyChartsOffset: { schedule: "16,46 * * * *", intervalSec: 1800, offsetSec: 16 * 60 },
+  halfHourlyDexArchive: { schedule: "19,49 * * * *", intervalSec: 1800, offsetSec: 19 * 60 },
   dewsPsiOffset: { schedule: "26,56 * * * *", intervalSec: 1800, offsetSec: 26 * 60 },
   fourHourlyReserveSync: { schedule: "11 */4 * * *", intervalSec: 4 * 3600, offsetSec: 11 * 60 },
   hourlyYieldSync: { schedule: "20 * * * *", intervalSec: 3600, offsetSec: 20 * 60 },
@@ -369,6 +370,15 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     triggerMode: "shared",
     maxConnections: 0, // D1-only consumer of the complete source-stage generation.
     connectionGroup: "half-hourly-scoring-charts-chain",
+  },
+  {
+    job: "archive-dex-generations",
+    label: "DEX evidence archive",
+    group: "half-hourly",
+    scheduleKey: "halfHourlyDexArchive",
+    triggerMode: "isolated",
+    maxConnections: 1, // Sequential private-R2 object write/read verification; never overlaps a second R2 request.
+    connectionGroup: "dex-archive-chain",
   },
   {
     job: "sync-yield-data",

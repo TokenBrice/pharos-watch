@@ -143,6 +143,8 @@ inputs to that decision, not activation gates. See
 
 Cron expressions are deployed from `worker/wrangler.toml`; `shared/lib/cron-jobs.ts` owns canonical schedule/job metadata and `shared/lib/scheduled-runner-registry.ts` owns expression-to-runner dispatch. Use [Worker Infrastructure: Cron Scheduling](./worker-infrastructure.md#cron-scheduling) for execution details and `npm run check:cron-sync` / `npm run check:cron-connections` for the authoritative live inventory and connection-budget report.
 
+The `19,49` `archive-dex-generations` lane is a one-way cold-evidence sink from completed D1 generation tables to private R2. D1 manifests and family state are the only status/read-side surface; API, browser, scoring, and producer paths have no R2 edge. Archive verification may permit bounded D1 cleanup in later guarded modes, but archive failure only retains source rows. See [DEX Evidence Archive](./runbooks/dex-evidence-archive.md).
+
 ## Freshness Contract (Frontend)
 
 API hooks that use `useApiQuery` follow the interval supplied by their caller:

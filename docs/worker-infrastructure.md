@@ -64,7 +64,7 @@ The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `fun
 
 Operational telemetry control: set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` on the Worker and/or Pages site-data environment to stop low-value route/source attribution writes. This disables Worker `api_request_consumer_stats` route/source writes and Pages `site_data_request_stats` writes, while preserving API-key authentication, D1-backed rate limiting, last-used metadata updates, and per-key public API load telemetry. During keyed public-API spikes, set `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` on the Worker to pause only `api_key_request_stats` writes; auth, rate limiting, and last-used metadata still run.
 
-Scheduled job attempt ledger: unset `WORKER_JOB_LEDGER_MODE` defaults to `off`, but the checked-in Worker config sets `shadow` with `WORKER_JOB_LEDGER_ALLOWLIST=sync-dex-discovery,sync-live-reserves,reserve-recovery,sync-cl-exit-depth,sync-dex-liquidity-stage,sync-dex-liquidity,sync-stablecoins,sync-yield-data`. Shadow mode records best-effort attempts without changing the job result. `write` makes bootstrap, heartbeat, lease-state, and terminal ledger write failures fail the owned job, so promote only after two clean observed cycles. Status reads and the raw-snapshot read-scope fingerprint follow the same mode and effective allowlist; `off` issues no attempt-health query. Rollback is `shadow` or `off`.
+Scheduled job attempt ledger: unset `WORKER_JOB_LEDGER_MODE` defaults to `off`, but the checked-in Worker config sets `shadow` with `WORKER_JOB_LEDGER_ALLOWLIST=sync-dex-discovery,sync-live-reserves,reserve-recovery,sync-cl-exit-depth,sync-dex-liquidity-stage,sync-dex-liquidity,archive-dex-generations,sync-stablecoins,sync-yield-data`. Shadow mode records best-effort attempts without changing the job result. `write` makes bootstrap, heartbeat, lease-state, and terminal ledger write failures fail the owned job, so promote only after two clean observed cycles. Status reads and the raw-snapshot read-scope fingerprint follow the same mode and effective allowlist; `off` issues no attempt-health query. Rollback is `shadow` or `off`.
 
 Measured DEX execution has its own `0,30 * * * *` scheduled slot and `sync-cl-exit-depth` lease. The slot permits three concurrent EVM chain lanes plus serialized Solana and Tron streams and caps EVM work at 800 actual RPC requests and eight minutes. Whole EVM coin cohorts are admitted against a 704-request estimate that includes one block read per chain, deduplicated deployment verification, quote batches, refinement, and serialized Quoter confirmation; the remaining 96 requests are reserved for adaptive fragmentation and other nondeterministic overhead. A non-fitting cohort anchors the next cursor while later whole cohorts may fill remaining capacity. Solana admits 12 targets per run; Tron admits the complete current 21-target SunSwap inventory because the native consumer reads one published generation and cannot combine a two-run rotation. Both streams record progress through the shared scheduled-runner path. Durable EVM cursor deferral is healthy partial coverage only while the inventory rotates within two half-hour runs; attempted quote failures, oversized coin groups, a longer rotation, or a missing/failed cursor write remain degraded. Each native stream has a seven-minute producer-scoped network deadline; Tron also uses 15-second request timeouts and admits no new request inside its final 20 seconds.
 
@@ -101,6 +101,7 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | Binding | Type | Worker | Pages ops | Pages site-data | Description |
 | --- | --- | --- | --- | --- | --- |
 | `DB` | `D1Database` | required | - | required | Primary D1 binding for worker reads/writes; Pages uses it for optional site-data attribution telemetry and required atomic selector-snapshot write quotas. |
+| `EVIDENCE_ARCHIVE` | `R2Bucket` | required | - | - | Private Standard R2 binding for immutable DEX generation evidence; normal product reads never depend on it. |
 | `CF_VERSION_METADATA` | `WorkerVersionMetadata` | required | - | - | Cloudflare version metadata binding attached to scheduled attempt and checkpoint telemetry for deployment correlation. |
 | `TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT` | `RateLimit` | required | - | - | Cloudflare pre-authentication rate limiter for Telegram webhook requests. |
 | `TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT` | `RateLimit` | required | - | - | Cloudflare pre-authentication rate limiter for Telegram Mini App session requests. |
@@ -170,6 +171,8 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `WORKER_RESERVE_RECOVERY_MODE` | `string` | optional | - | - | Reserve interruption recovery mode. Unset or `off` skips recovery scans; `shadow` reads eligibility only; `reconcile` seals abandoned attempts and prepares replay without claiming; `recover` also claims and replays prepared attempts. |
 | `WORKER_RESERVE_FAULT_INJECTION_ENABLED` | `string` | optional | - | - | Explicit preview-only arming gate for reserve recovery fault injection. Only a normalized literal `true` enables the test harness; unset or any other value disables it. |
 | `WORKER_CANARY_MODE` | `string` | optional | - | - | Data-invariant mode: `off` skips, `shadow` records only, `status` degrades on findings, and `alert` turns critical findings into terminal errors. |
+| `DEX_MEASURED_ARCHIVE_MODE` | `string` | optional | - | - | Measured-execution archive rollout mode: `off`, `shadow`, or `delete`; invalid values fail closed to `off`. |
+| `DEX_LIQUIDITY_ARCHIVE_MODE` | `string` | optional | - | - | DEX-liquidity archive rollout mode: `off`, `shadow`, or `delete`; invalid values fail closed to `off`. |
 | `OPS_UI_ORIGIN` | `string` | reserved | optional | optional | Ops UI origin override; reserved on the worker and active on Pages host-gating / same-origin checks. |
 | `OPS_API_ORIGIN` | `string` | reserved | optional | - | Ops API origin override; reserved on the worker and active on the Pages admin proxy upstream hop. |
 | `CF_ACCESS_OPS_UI_AUD` | `string` | reserved | required | - | Cloudflare Access audience used by the Pages ops proxy to verify the inbound UI JWT. |
@@ -498,6 +501,8 @@ Do not maintain a second schedule table in this document:
 
 Fetch-heavy work uses isolated or offset lanes so it does not compete with the quarter-hourly core pipeline. DB-only work may share a slot when ordering is explicit. Budget-only side work is modeled even when it is not a `/api/status` job. Reserve recovery remains independent of the reserve invocation it is intended to reconcile.
 
+The private DEX evidence archive owns `19,49 * * * *` as an isolated one-connection lane. Release A runs the job with both family modes `off` and records only control-plane/status rows; it cannot select source generations or write R2. Later guarded releases use one sequential Standard R2 request at a time, stop archive work after six minutes, and reserve the seventh wrapper minute for manifest, lease, and terminal status writes. The isolated lane is intentional: an R2 outage must delay archival and deletion without sharing or failing the DEX producer invocation.
+
 ### Cron Slot Capacity and Connection Pool Budget
 
 Cloudflare limits each invocation to six simultaneous outbound requests that are still waiting for response headers; a request releases that slot once headers arrive. Pharos deliberately models the stricter case as a trigger-wide **6-request budget**, so every job dispatched by one cron invocation competes inside the same static ceiling. See [Worker and API Limits](./worker-and-api-limits.md#connection-budget-operating-assumption).
@@ -621,6 +626,7 @@ All leased jobs emit wrapper-owned progress milestones. Current producers with c
 - `sync-dex-discovery`
 - `sync-dex-liquidity-stage`
 - `sync-dex-liquidity`
+- `archive-dex-generations`
 - `sync-yield-data`
 - `sync-yield-supplemental`
 - `daily-digest`
