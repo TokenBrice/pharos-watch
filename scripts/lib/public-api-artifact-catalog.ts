@@ -456,26 +456,6 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     },
   },
   {
-    key: "report-cards-v9-preview",
-    summary: "Safety Score V9 feedback preview",
-    description: "Read-only, unlisted feedback projection of the canonical V9 shadow candidate. It preserves lifecycle=shadow and does not activate or replace the V8 product.",
-    tags: ["Risk"],
-    responseSchema: "ReportCardsV9Response",
-    postman: {
-      folder: "Risk and market structure",
-    },
-  },
-  {
-    key: "report-cards-v9-preview-legacy",
-    summary: "Safety Score V9 feedback preview (legacy alias)",
-    description: "Compatibility alias for the original opaque V9 feedback endpoint. New consumers use /api/report-cards/v9-preview.",
-    tags: ["Risk"],
-    responseSchema: "ReportCardsV9Response",
-    postman: {
-      folder: "Risk and market structure",
-    },
-  },
-  {
     key: "depeg-resolver",
     summary: "Depeg Duration Resolver",
     description:

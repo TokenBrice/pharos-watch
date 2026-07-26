@@ -128,10 +128,10 @@ semantics.
 `GET /api/admin-safety-score-v9` and its review mutation remain the operator
 surface. The additive `GET /api/report-cards/v9` route now exposes a strict,
 fully identified contract only after its owner activation key matches. A
-separate cache-bypassed, public-API-key-metered read endpoint and unlisted
+separate cache-bypassed, API-key-exempt read endpoint and unlisted
 `noindex` page expose the latest canonical strict projection with
-`lifecycle: "shadow"` for external feedback; the page keeps its reviewer key
-only in component memory, and neither surface exposes admin diffs, history,
+`lifecycle: "shadow"` for external feedback; the page loads that projection
+directly, and neither surface exposes admin diffs, history,
 movement reviews, or mutations. Shadow state still does
 not feed `GET /api/report-cards`, the active frontend, yield,
 Telegram, chain analytics, or V8-compatible public history; those remain V8 until the

@@ -221,7 +221,7 @@ describe("query polling policy", () => {
     expect(options.retry).toBe(1);
   });
 
-  it("uses the V9 producer polling window and reviewer key for the contributor preview", async () => {
+  it("loads the contributor preview without an API key", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify(makeReportCardsV9Response()), {
         status: 200,
@@ -229,26 +229,22 @@ describe("query polling policy", () => {
       }),
     );
 
-    useReportCardsV9Preview("ph_live_preview_test_key");
+    useReportCardsV9Preview();
     const options = useQueryMock.mock.calls[0][0] as {
       queryKey: unknown[];
       staleTime: number;
-      enabled: boolean;
+      enabled?: boolean;
       placeholderData?: unknown;
       queryFn: (context: ReturnType<typeof queryContext>) => Promise<unknown>;
     };
 
     expect(options.queryKey).toEqual(["report-cards", "v9", "preview"]);
     expect(options.staleTime).toBe(CRON_15MIN);
-    expect(options.enabled).toBe(true);
+    expect(options.enabled).not.toBe(false);
     expect(options.placeholderData).toBeUndefined();
     await options.queryFn(queryContext(options.queryKey));
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(new Headers(init.headers).get("X-API-Key")).toBe("ph_live_preview_test_key");
-
-    useQueryMock.mockClear();
-    useReportCardsV9Preview(null);
-    expect(useQueryMock.mock.calls[0][0]).toMatchObject({ enabled: false });
+    expect(new Headers(init.headers).has("X-API-Key")).toBe(false);
   });
 
   it("useStabilityIndexLight reuses registered meta polling", () => {
