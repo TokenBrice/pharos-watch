@@ -40,7 +40,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "fpi-frax", dustThreshold: 10_000 },
   { stablecoinId: "usdq-quantoz", dustThreshold: 10_000 },
   { stablecoinId: "usdx-hex-trust", dustThreshold: 10_000 },
-  { stablecoinId: "mim-abracadabra", dustThreshold: 10_000 },
   { stablecoinId: "usat-tether", dustThreshold: 10_000 },
   { stablecoinId: "zeusd-zoth", dustThreshold: 10_000 },
   { stablecoinId: "ggbr-goldfish-gold", dustThreshold: 10 },

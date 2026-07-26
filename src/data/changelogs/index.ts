@@ -19,6 +19,7 @@ import { entry as e20260628 } from "./2026-06-28";
 import { entry as e20260705 } from "./2026-07-05";
 import { entry as e20260712 } from "./2026-07-12";
 import { entry as e20260719 } from "./2026-07-19";
+import { entry as e20260726 } from "./2026-07-26";
 
 const all: ChangelogEntry[] = [
   e20260308,
@@ -40,6 +41,7 @@ const all: ChangelogEntry[] = [
   e20260705,
   e20260712,
   e20260719,
+  e20260726,
 ];
 
 export const changelogs: ChangelogEntry[] = all.sort(

@@ -1076,5 +1076,219 @@
         }
       ]
     }
+  },
+  {
+    "id": "mim-abracadabra",
+    "capturedAt": "2026-07-26T14:40:59.734Z",
+    "peggedAssetRow": {
+      "id": "mim-abracadabra",
+      "name": "Magic Internet Money",
+      "symbol": "MIM",
+      "geckoId": "magic-internet-money",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.09400157738573703,
+      "priceSource": "coingecko+curve-onchain",
+      "priceConfidence": "high",
+      "priceUpdatedAt": 1785076223,
+      "priceObservedAt": 1785076223,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1785076213,
+      "consensusSources": [
+        "coingecko",
+        "curve-onchain"
+      ],
+      "agreeSources": [
+        "coingecko",
+        "curve-onchain"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 3052952.323370994
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 3052952.347067066
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 3043691.5259626023
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 3140250.616179657
+      },
+      "chainCirculating": {
+        "OP Mainnet": {
+          "current": 5528.867772579501,
+          "circulatingPrevDay": 5465.336182155765,
+          "circulatingPrevWeek": 5402.836957711364,
+          "circulatingPrevMonth": 4924.01555652418
+        },
+        "Kava": {
+          "current": 186031.07462435376,
+          "circulatingPrevDay": 185928.32632191392,
+          "circulatingPrevWeek": 185836.1076149853,
+          "circulatingPrevMonth": 185351.64593504716
+        },
+        "Moonriver": {
+          "current": 23601.833178686178,
+          "circulatingPrevDay": 23601.833178686178,
+          "circulatingPrevWeek": 23752.72789653074,
+          "circulatingPrevMonth": 39686.977660997356
+        },
+        "Berachain": {
+          "current": 698.9471644078161,
+          "circulatingPrevDay": 698.9471644078161,
+          "circulatingPrevWeek": 698.9471644078161,
+          "circulatingPrevMonth": 698.9471644078161
+        },
+        "Base": {
+          "current": 652.1323141611238,
+          "circulatingPrevDay": 652.1323141611238,
+          "circulatingPrevWeek": 652.1323141611238,
+          "circulatingPrevMonth": 568.4586300109464
+        },
+        "BSC": {
+          "current": 7483.61791200452,
+          "circulatingPrevDay": 7473.64659905422,
+          "circulatingPrevWeek": 7464.331819842635,
+          "circulatingPrevMonth": 7493.614262346558
+        },
+        "Ethereum": {
+          "current": 1506195.1450293479,
+          "circulatingPrevDay": 1512019.9963324477,
+          "circulatingPrevWeek": 1508668.8649936598,
+          "circulatingPrevMonth": 1571092.05385695
+        },
+        "Linea": {
+          "current": 258.1552538287402,
+          "circulatingPrevDay": 258.1552538287402,
+          "circulatingPrevWeek": 258.1552538287402,
+          "circulatingPrevMonth": 258.1552538287402
+        },
+        "Polygon": {
+          "current": 2226.0048362509565,
+          "circulatingPrevDay": 2226.0048362509565,
+          "circulatingPrevWeek": 2226.0048362509565,
+          "circulatingPrevMonth": 2223.9904094051967
+        },
+        "Avalanche": {
+          "current": 426692.8444371273,
+          "circulatingPrevDay": 418577.0551234429,
+          "circulatingPrevWeek": 414963.3099668439,
+          "circulatingPrevMonth": 364891.58491857414
+        },
+        "Nibiru": {
+          "current": 1161.6323717265968,
+          "circulatingPrevDay": 1161.6323717265968,
+          "circulatingPrevWeek": 1161.6323717265968,
+          "circulatingPrevMonth": 28362.283540432007
+        },
+        "Arbitrum": {
+          "current": 607153.7738035786,
+          "circulatingPrevDay": 610191.3144164238,
+          "circulatingPrevWeek": 609080.4239500111,
+          "circulatingPrevMonth": 658788.8222179249
+        },
+        "Blast": {
+          "current": 131952.58100645433,
+          "circulatingPrevDay": 131911.6497816908,
+          "circulatingPrevWeek": 131911.6497816908,
+          "circulatingPrevMonth": 131869.2938379093
+        },
+        "Fantom": {
+          "current": 153315.71366648626,
+          "circulatingPrevDay": 152786.31719087478,
+          "circulatingPrevWeek": 151614.40104095105,
+          "circulatingPrevMonth": 144040.772935299
+        }
+      },
+      "chains": [
+        "Ethereum",
+        "Arbitrum",
+        "Avalanche",
+        "Kava",
+        "Fantom",
+        "Blast",
+        "Moonriver",
+        "BSC",
+        "OP Mainnet",
+        "Polygon",
+        "Nibiru",
+        "Berachain",
+        "Base",
+        "Linea"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3",
+          "decimals": 18
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0xfea7a6a0b346362bf88a9e4a88416b77a57d6c2a",
+          "decimals": 18
+        },
+        {
+          "chain": "avalanche",
+          "address": "0x130966628846bfd36ff31a822705796e8cb8c18d",
+          "decimals": 18
+        },
+        {
+          "chain": "fantom",
+          "address": "0x82f0b8b456c1a451378467398982d4834b6829c1",
+          "decimals": 18
+        },
+        {
+          "chain": "bsc",
+          "address": "0xfe19f0b51438fd612f6fd59c1dbb3ea319f433ba",
+          "decimals": 18
+        },
+        {
+          "chain": "optimism",
+          "address": "0xb153fb3d196a8eb25522705560ac152eeec57901",
+          "decimals": 18
+        },
+        {
+          "chain": "polygon",
+          "address": "0x49a0400587a7f65072c87c4910449fdcc5c47242",
+          "decimals": 18
+        },
+        {
+          "chain": "kava",
+          "address": "0x471ee749ba270eb4c1165b5ad95e614947f6fceb",
+          "decimals": 18
+        },
+        {
+          "chain": "blast",
+          "address": "0x76da31d7c9cbeae102aff34d3398bc450c8374c1",
+          "decimals": 18
+        },
+        {
+          "chain": "moonriver",
+          "address": "0x0cae51e1032e8461f4806e26332c030e34de3adb",
+          "decimals": 18
+        },
+        {
+          "chain": "nibiru",
+          "address": "0xfcfc58685101e2914cbcf7551b432500db84eaa8",
+          "decimals": 18
+        },
+        {
+          "chain": "base",
+          "address": "0x4a3a6dd60a34bb2aba60d73b4c88315e9ceb6a3d",
+          "decimals": 18
+        },
+        {
+          "chain": "linea",
+          "address": "0xdd3b8084af79b9bae3d1b668c0de08ccc2c9429a",
+          "decimals": 18
+        },
+        {
+          "chain": "berachain",
+          "address": "0x5B82028cfc477C4E7ddA7FF33d59A23FA7Be002a",
+          "decimals": 18
+        }
+      ]
+    }
   }
 ]

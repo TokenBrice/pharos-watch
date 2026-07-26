@@ -2,6 +2,17 @@
   "id": "mim-abracadabra",
   "name": "Magic Internet Money",
   "symbol": "MIM",
+  "status": "frozen",
+  "frozenAt": "2026-07-26",
+  "obituary": {
+    "causeOfDeath": "liquidity-drain",
+    "deathDate": "2026-07",
+    "epitaph": "The magic ran out at nine cents",
+    "obituary": "Once one of DeFi's largest CDP stablecoins, MIM peaked above $3.6B before repeated cauldron exploits and years of thinning liquidity hollowed out its market. The final break began on June 8, 2026. Abracadabra injected liquidity, offered SPELL incentives, raised rates across every cauldron, and suspended Curve bribes to force debt repayment, but none restored the peg. By July 26 MIM traded near $0.09 with roughly $3M circulating after seven weeks below peg, leaving no credible liquidity or arbitrage path back to one dollar.",
+    "peakMcap": 3637068698,
+    "sourceUrl": "https://kerne.fi/insights/mim-depeg-onchain-collateral-still-lost-peg",
+    "sourceLabel": "Kerne Insights"
+  },
   "oneLiner": "MIM is Abracadabra's CDP-style stablecoin minted against interest-bearing tokens and crypto collateral in cauldron vaults, with automatic liquidations.",
   "flags": {
     "backing": "crypto-backed",
@@ -992,60 +1003,6 @@
         "rationale": "WETH is crypto collateral rather than a tracked stablecoin dependency."
       }
     ]
-  },
-  "liveReservesConfig": {
-    "adapter": "abracadabra",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "mim-abracadabra",
-    "display": {
-      "url": "https://app.abracadabra.money/",
-      "label": "Abracadabra cauldrons"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "bentoBoxAddress": "0xd96f48665a1410c0cd669a88898eca36b9fc2cce",
-      "cauldrons": [
-        {
-          "address": "0xed510639E1b07c9145CD570F8Dd0CA885F760E09",
-          "collateralSymbol": "yvWETH",
-          "collateralAddress": "0xa258C4606Ca8206D8aA700cE2143D7db854D168c",
-          "collateralDecimals": 18,
-          "risk": "high",
-          "version": 4
-        },
-        {
-          "address": "0x390Db10e65b5ab920C19149C919D970ad9d18A41",
-          "collateralSymbol": "WETH",
-          "collateralAddress": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-          "collateralDecimals": 18,
-          "risk": "low",
-          "version": 2
-        },
-        {
-          "address": "0x5ec47EE69BEde0b6C2A2fC0D9d094dF16C192498",
-          "collateralSymbol": "WBTC",
-          "collateralAddress": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
-          "collateralDecimals": 8,
-          "risk": "medium",
-          "version": 2
-        },
-        {
-          "address": "0x7Ce7D9ED62B9A6c5aCe1c6Ec9aeb115FA3064757",
-          "collateralSymbol": "yvDAI",
-          "collateralAddress": "0xdA816459F1AB5631232FE5e97a05BBBb94970c95",
-          "collateralDecimals": 18,
-          "risk": "medium",
-          "version": 2
-        }
-      ]
-    }
   },
   "launchDate": "2021-05-25",
   "notices": [

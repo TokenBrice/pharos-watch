@@ -377,7 +377,6 @@ describe("mint-burn-contracts top-200 Ethereum additions", () => {
     { stablecoinId: "fpi-frax", symbol: "FPI", address: "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "usdq-quantoz", symbol: "USDQ", address: "0xc83e27f270cce0a3a3a29521173a83f402c1768b", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "usdx-hex-trust", symbol: "USDX", address: "0xf8750b54d86be7ae9e32b4a0c826811198d63313", decimals: 18, dustThreshold: 10_000 },
-    { stablecoinId: "mim-abracadabra", symbol: "MIM", address: "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "usat-tether", symbol: "USAT", address: "0x07041776f5007aca2a54844f50503a18a72a8b68", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "ggbr-goldfish-gold", symbol: "GGBR", address: "0x7e2ac793f3e692f388e66c7dc28f739d13b0b71a", decimals: 18, dustThreshold: 10 },
     { stablecoinId: "xsgd-straitsx", symbol: "XSGD", address: "0x70e8de73ce538da2beed35d14187f6959a8eca96", decimals: 6, dustThreshold: 10_000 },
