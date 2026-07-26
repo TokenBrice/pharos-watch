@@ -395,7 +395,14 @@ Detects simultaneous outflows from risky stablecoins and inflows to safe havens.
 
 ## Retention
 
-`mint_burn_events` is **append-only by product decision** (settled with owner, 2026-06-10): it is the immutable on-chain event log behind /flows history and Telegram flow alerts, and no retention pruning is applied. The growth budget is enforced by the daily `mint-burn-growth-watchdog` cron (`worker/src/cron/mint-burn-growth-watchdog.ts`, 03:00 UTC slot): it counts table rows and reports degraded status once the count crosses **2.3M rows**, the row-count proxy for the agreed ~5 GB D1 revisit point (at ~1.43M rows the whole database measured 3.09 GB of the 10 GB cap; D1 disallows `PRAGMA page_count`). When the watchdog reports degraded, revisit the decision: document a raised budget, or archive rows older than N months into the dated snapshot export.
+The critical `sync-mint-burn` producer owns bounded cleanup after ingestion:
+
+- Individual `mint_burn_events` rows are retained for at least **8 days**. An older row is eligible only after its USD valuation is settled (`amount_usd` is present or price repair is explicitly `recovered`/`irreducible`), its stablecoin/chain/hour aggregate exists, and the Tape projector cursor has passed its timestamp. Unpriced, pending-repair, unaggregated, and not-yet-projected rows remain protected regardless of age.
+- `mint_burn_hourly` buckets are retained for at least **95 days**, preserving the public 90-day aggregate window with a five-day operating margin.
+- Deletes run oldest-first in 10,000-row statements, capped at 50,000 event rows and 25,000 hourly rows per critical run. The extended lane does not run cleanup.
+- Cron metadata reports each family's cutoff, deleted count, oldest remaining and eligible timestamp, cap state, duration, and error. A cleanup error degrades an otherwise successful critical run without discarding successful ingestion; the other retention family still gets its bounded attempt.
+
+The daily `mint-burn-growth-watchdog` cron remains a fail-safe rather than the retention owner. It reports degraded at **2.3M event rows**, the existing proxy for the agreed ~5 GB investigation point, so operators can detect cleanup that is not converging, an unexpectedly large protected backlog, or abnormal producer growth. D1 disallows `PRAGMA page_count`, hence the row-count proxy.
 
 ## Database Schema
 
@@ -403,7 +410,7 @@ Exact columns, constraints, and indexes live in `worker/migrations/0000_baseline
 
 ### mint_burn_events (current excerpt; baseline plus later indexes)
 
-`mint_burn_events` is the append-only, transaction-addressable event ledger. It preserves token-native amount, optional event valuation and its source timestamp, chain/transaction provenance, counterparty, burn classification, and economic-flow classification. `standard`, `bridge_transfer`, and `atomic_roundtrip` semantics decide whether a row contributes to aggregates; burn rows additionally distinguish effective burns, bridge burns, and review-required evidence.
+`mint_burn_events` is the transaction-addressable recent event ledger with the protected 8-day retention policy above. It preserves token-native amount, optional event valuation and its source timestamp, chain/transaction provenance, counterparty, burn classification, and economic-flow classification. `standard`, `bridge_transfer`, and `atomic_roundtrip` semantics decide whether a row contributes to aggregates; burn rows additionally distinguish effective burns, bridge burns, and review-required evidence.
 
 Migration `0178_historical_data_debt_closure.sql` owns bounded historical price-repair state and its backlog index. Repair provenance distinguishes retryable unclassified debt, aggregate rebuild pending, recovered rows, and irreducible exact-day gaps; it also binds mutation attempts to their operator run and pre-run Time Travel bookmark. Migration `0097_mbe_flow_type_ts_index.sql` owns flow-classification query support. Exact index membership stays in the migrations.
 
@@ -436,7 +443,7 @@ Parameters, response fields, cache/freshness behavior, and errors are canonical 
 
 ### GET /api/mint-burn-events
 
-The event feed exposes the classified, valuation-aware ledger for one stablecoin. The detail-page history deliberately uses the counted view so bridge transfers, review-required burns, and atomic roundtrips do not appear as ordinary economic flow.
+The event feed exposes the recent classified, valuation-aware ledger for one stablecoin. Safely settled, aggregated, and Tape-projected rows remain available for at least 8 days; the separate hourly aggregate keeps 90 days of public flow history. The detail-page history deliberately uses the counted view so bridge transfers, review-required burns, and atomic roundtrips do not appear as ordinary economic flow.
 
 Filters, cursor/offset pagination, ordering, response fields, cache/freshness behavior, and errors are canonical in [API Reference: `GET /api/mint-burn-events`](./api-reference.md#get-apimint-burn-events).
 

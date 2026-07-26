@@ -488,6 +488,7 @@ describe("syncMintBurn", () => {
     expect(meta.jobName).toBe("sync-mint-burn-extended");
     expect(meta.criticalCoverage.contractsEnabled).toBe(0);
     expect(meta.sourceCoverage.contractsEnabled).toBe(1);
+    expect(meta.retention).toBeUndefined();
   });
 
   it("does not advance when one eventDef fails with no safe frontier", async () => {
@@ -599,6 +600,41 @@ describe("syncMintBurn", () => {
     expect(usdt?.rowsDropped).toBe(2);
     expect(usdt?.advanceReason).toBe("full-success-empty");
     expect(usdt?.advancedTo).toBe(21_949_999);
+    expect(meta.retention).toMatchObject({
+      error: null,
+      eventRows: { error: null },
+      hourlyRows: { error: null },
+    });
+    expect(meta.retention.eventRows.deletedRows).toEqual(expect.any(Number));
+    expect(meta.retention.hourlyRows.deletedRows).toEqual(expect.any(Number));
+  });
+
+  it("degrades a successful critical run when retention reports an error", async () => {
+    const baseDb = makeDb();
+    const db = new Proxy(baseDb, {
+      get(target, property, receiver) {
+        if (property !== "prepare") return Reflect.get(target, property, receiver);
+        return (sql: string) => {
+          if (!sql.includes("pharos:mint-burn:event-retention-delete")) {
+            return target.prepare(sql);
+          }
+          const statement = {
+            bind: () => statement as unknown as D1PreparedStatement,
+            run: async () => {
+              throw new Error("retention write failed");
+            },
+          };
+          return statement as unknown as D1PreparedStatement;
+        };
+      },
+    }) as D1Database;
+
+    const result = await syncMintBurn(db, "alchemy-key", { lane: "critical" });
+    const meta = JSON.parse(result.metadata);
+
+    expect(result.status).toBe("degraded");
+    expect(meta.retention.error).toContain("eventRows: retention write failed");
+    expect(meta.retention.hourlyRows.error).toBeNull();
   });
 
   it("marks run as degraded after consecutive degraded streak", async () => {
