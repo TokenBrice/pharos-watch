@@ -192,7 +192,9 @@ describe("evaluateAccessGate", () => {
     expect(apiKeyMocks.recordApiKeyUsage).toHaveBeenCalledWith(db, validKey, "/api/stablecoins");
   });
 
-  it("serves both V9 preview aliases without API-key authentication", async () => {
+  it("requires API-key authentication for both V9 preview aliases", async () => {
+    apiKeyMocks.authenticateApiKey.mockResolvedValue({ kind: "invalid" });
+
     for (const path of [
       "/api/report-cards/v9-preview",
       "/api/report-cards/v9-preview-412d818c031b7bc5",
@@ -200,11 +202,11 @@ describe("evaluateAccessGate", () => {
       const request = new Request(`https://api.pharos.watch${path}`);
       const result = await evaluateAccessGate(request, new URL(request.url), makeEnv() as never);
 
-      expect(result.response).toBeNull();
+      expect(result.response?.status).toBe(401);
       expect(result.apiKey).toBeNull();
       expect(result.requestLane).toBe("public-api");
     }
-    expect(apiKeyMocks.authenticateApiKey).not.toHaveBeenCalled();
+    expect(apiKeyMocks.authenticateApiKey).toHaveBeenCalledTimes(2);
   });
 
   it("uses the isolate-local limiter when public GET rate-limit storage fails", async () => {

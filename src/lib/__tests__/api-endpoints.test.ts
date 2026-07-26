@@ -648,14 +648,11 @@ describe("api endpoint registry", () => {
     expect(getPublicApiAccess("/api/public-status-history")).toBe("protected");
     expect(getPublicApiAccess("/api/events")).toBe("protected");
     expect(getPublicApiAccess("/api/telegram-pulse")).toBe("protected");
-    expect(getPublicApiAccess("/api/report-cards/v9-preview")).toBe("exempt");
-    expect(getPublicApiAccess("/api/report-cards/v9-preview-412d818c031b7bc5")).toBe("exempt");
     expect(getPublicApiAccess("/api/og/stablecoin/usdt-tether")).toBe("exempt");
     expect(isProtectedPublicApiPath("/api/stablecoins")).toBe(true);
     expect(isProtectedPublicApiPath("/api/health")).toBe(false);
     expect(isProtectedPublicApiPath("/api/public-status-history")).toBe(true);
     expect(isProtectedPublicApiPath("/api/telegram-pulse")).toBe(true);
-    expect(isProtectedPublicApiPath("/api/report-cards/v9-preview")).toBe(false);
     expect(getSiteDataAccess("/api/stablecoins")).toBe("allowed");
     expect(getSiteDataAccess("/api/public-status-history")).toBe("allowed");
     expect(getSiteDataAccess("/api/events")).toBe("allowed");

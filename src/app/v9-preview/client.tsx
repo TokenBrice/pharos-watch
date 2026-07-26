@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { RefreshCw, Search } from "lucide-react";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { gradeRange, type ReportCardGradeRange } from "@shared/lib/report-cards";
@@ -191,8 +191,53 @@ function PreviewTable({ cards }: { cards: readonly SafetyScoreV9CurrentCard[] })
   );
 }
 
+function PreviewAccessForm({
+  apiKey,
+  onApiKeyChange,
+  onSubmit,
+}: {
+  apiKey: string;
+  onApiKeyChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <form className="pharos-empty-note max-w-xl space-y-4" onSubmit={onSubmit}>
+      <div>
+        <h2 className="font-medium text-foreground">Reviewer access required</h2>
+        <p id="v9-preview-api-key-help" className="mt-1 text-sm text-muted-foreground">
+          Enter a Pharos public API key to load the fresh shadow snapshot. The key stays only in this page&apos;s
+          memory and is cleared when you leave or reload.
+        </p>
+      </div>
+      <label className="block space-y-2">
+        <span className="text-sm font-medium text-foreground">Reviewer API key</span>
+        <Input
+          type="password"
+          value={apiKey}
+          onChange={(event) => onApiKeyChange(event.target.value)}
+          aria-describedby="v9-preview-api-key-help"
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+      </label>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" size="sm" disabled={!apiKey.trim()}>
+          Load preview
+        </Button>
+        <a href="/api/" className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground">
+          Request an API key
+        </a>
+      </div>
+    </form>
+  );
+}
+
 export function SafetyScoreV9PreviewClient() {
-  const { data, isLoading, isFetching, error, refetch } = useReportCardsV9Preview();
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const { data, isLoading, isFetching, error, refetch } = useReportCardsV9Preview(apiKey);
   const [search, setSearch] = useState("");
   const gradeCounts = useMemo(() => buildGradeCounts(data?.cards ?? []), [data?.cards]);
   const cards = useMemo(() => {
@@ -205,6 +250,20 @@ export function SafetyScoreV9PreviewClient() {
       })
       .sort(compareCards);
   }, [data?.cards, search]);
+
+  if (!apiKey) {
+    return (
+      <PreviewAccessForm
+        apiKey={apiKeyInput}
+        onApiKeyChange={setApiKeyInput}
+        onSubmit={(event) => {
+          event.preventDefault();
+          const nextApiKey = apiKeyInput.trim();
+          if (nextApiKey) setApiKey(nextApiKey);
+        }}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -238,6 +297,16 @@ export function SafetyScoreV9PreviewClient() {
               aria-hidden="true"
             />
             {isFetching ? "Retrying" : "Retry"}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setApiKeyInput("");
+              setApiKey(null);
+            }}
+          >
+            Use another key
           </Button>
         </div>
       </div>
