@@ -142,6 +142,13 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
+    provenance: {
+      status: "retired",
+      rationale:
+        "MIM entered the frozen archive on 2026-07-26 after its terminal depeg; retain the adapter only for historical review and re-evaluate if the protocol resumes active issuance.",
+      parkedSince: "2026-07-26",
+      nextReview: "2027-01-26",
+    },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,

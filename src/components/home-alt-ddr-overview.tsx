@@ -14,8 +14,8 @@ import { formatPercentFromRatio } from "@shared/lib/format";
 import { DDR_RESOLUTION_TIER_VALUES, type DdrResolutionTier } from "@shared/types/depeg-resolver";
 import {
   formatDurationSec,
-  getCurrentDeviationBps,
   getDuration,
+  getLiveCurrentDeviationBps,
   getPeakDeviationBps,
   getResolution,
   NOW_DOT_TONE,
@@ -67,14 +67,14 @@ interface ForecastItem {
 
 /** Worst gap first: live deviation if present, else this event's peak. */
 function rowSeverity(row: DdrDisplayRow): number {
-  const now = getCurrentDeviationBps(row);
+  const now = getLiveCurrentDeviationBps(row);
   if (now != null) return Math.abs(now);
   return Math.abs(getPeakDeviationBps(row));
 }
 
 function toForecastItem(row: DdrDisplayRow): ForecastItem {
   const duration = getDuration(row);
-  const nowBps = getCurrentDeviationBps(row);
+  const nowBps = getLiveCurrentDeviationBps(row);
   const benchmarked = !duration.suppressed && duration.medianSec != null;
   return {
     id: row.stablecoinId,

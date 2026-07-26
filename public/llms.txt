@@ -1,6 +1,6 @@
 # Pharos
 
-> Pharos tracks 337 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
+> Pharos tracks 336 active stablecoins across major chains with depeg alerts, liquidity scores, on-chain safety signals, dependency-risk scoring, and report-card-style risk summaries. Data refreshes multiple times per day from the Pharos Cloudflare Worker API.
 
 ## Core Data
 
@@ -16,7 +16,7 @@
 - [FreezeWatch](https://pharos.watch/freezewatch/): Issuer freeze events and exposure.
 - [Dependency Map](https://pharos.watch/dependency-map/): Inter-stablecoin dependency graph.
 - [Coverage](https://pharos.watch/coverage/): What Pharos tracks and what it does not.
-- [Cemetery](https://pharos.watch/cemetery/): 106 defunct stablecoins and their causes of death.
+- [Cemetery](https://pharos.watch/cemetery/): 107 defunct stablecoins and their causes of death.
 - [Stablecoin Cemetery dataset (JSON)](https://pharos.watch/datasets/stablecoin-cemetery.json): Citation-ready dataset of failed, discontinued, and abandoned stablecoins.
 - [Stablecoin Cemetery dataset (CSV)](https://pharos.watch/datasets/stablecoin-cemetery.csv): Tabular export of the Stablecoin Cemetery dataset.
 - [Upcoming](https://pharos.watch/upcoming/): Pre-launch stablecoins Pharos is tracking.
@@ -265,7 +265,6 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [f(x) USD Saving (fxSAVE)](https://pharos.watch/stablecoin/fxsave-f-x-protocol/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Noble Dollar (USDN)](https://pharos.watch/stablecoin/usdn-noble/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [SMARDEX USDN (USDN)](https://pharos.watch/stablecoin/usdn-smardex/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Magic Internet Money (MIM)](https://pharos.watch/stablecoin/mim-abracadabra/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [USD CoinVertible (USDCV)](https://pharos.watch/stablecoin/usdcv-societe-generale-forge/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Honey (HONEY)](https://pharos.watch/stablecoin/honey-berachain/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Frankencoin (ZCHF)](https://pharos.watch/stablecoin/zchf-frankencoin/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Swiss Franc.

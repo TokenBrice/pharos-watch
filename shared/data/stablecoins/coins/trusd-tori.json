@@ -53,7 +53,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-03",
   "launchPhase": "beta",
-  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; Sepolia and Base Sepolia testnet live; Ethereum mainnet pre-deposit vault opened Jun 23, 2026 with a $50M cap, Accountable proof-of-solvency, Nexus Mutual cover, and a 30-day lock while full protocol launch remains pending; verified Ethereum mainnet token contracts now live with the pre-deposit vault filled to its $50M cap (~$50.1M circulating listed on DefiLlama stablecoins as of Jul 12, 2026), but no price source yet lists trUSD (CoinGecko remains a preview listing), so it stays pre-launch until a fetchable price path exists; the pre-deposit phase remains active, and Tori's official app says withdrawals enable after the protocol launches without providing a public launch date",
+  "launchPhaseDetail": "Dual audits completed (Sherlock Jan 2026, Nethermind Mar 2026); seed round led by Delphi Ventures announced Mar 25; Sepolia and Base Sepolia testnet live; Ethereum mainnet pre-deposit vault opened Jun 23, 2026 with a $50M cap, Accountable proof-of-solvency, Nexus Mutual cover, and a 30-day lock while full protocol launch remains pending; verified Ethereum mainnet token contracts now live with the pre-deposit vault filled to its $50M cap (~$50.2M circulating listed on DefiLlama stablecoins as of Jul 26, 2026); DefiLlama's stablecoin price feed now carries trUSD at an exact 1.00, which may be a peg default rather than a traded quote, while CoinGecko still returns null price and market cap with zero circulating supply, so it stays pre-launch until the runtime price and market-cap gate accepts a path; the pre-deposit phase remains active, and Tori's official app says withdrawals enable after the protocol launches without providing a public launch date",
   "featuredContent": [
     {
       "type": "tweet",
@@ -135,6 +135,13 @@
       "title": "Pre-deposit phase remains active",
       "description": "Tori's official app continues to label the vault as pre-deposit, states a 30-day deposit lock, and says withdrawals will be enabled after the protocol launches. It does not disclose a public launch date.",
       "sourceUrl": "https://app.tori.finance/earn"
+    },
+    {
+      "date": "2026-07-26",
+      "type": "milestone",
+      "title": "DefiLlama stablecoin price feed now carries trUSD at $1.00",
+      "description": "DefiLlama's stablecoinprices endpoint returns tori-trusd = 1.00 for the 2026-07-26 snapshot, alongside ~$50.23M circulating on Ethereum. CoinGecko (tori-trusd) still returns null price, null market cap, and zero circulating supply against a 47.2M total supply, so the only price path is DefiLlama's, whose exact-1.00 value may be a peg default rather than a traded quote. Date reflects observation, not a stated listing date.",
+      "sourceUrl": "https://stablecoins.llama.fi/stablecoinprices"
     }
   ],
   "yieldConfig": {

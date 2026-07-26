@@ -7,7 +7,7 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:8fe2b47d37b43132baa44a8015bd5dcbc0cc24738001d21f9de15b760a0036a2",
+  "sourceChecksum": "sha256:c2fe7cb620aa4eba6f4fb4df127955d7968074ce21814b170caef65aaec08e7e",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
@@ -16,12 +16,12 @@
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "checksum": "sha256:1cf35fb9c3ed556cd82b89b2efc3d14f0aa25edb1a765e0e534b6ff8a865aeb8",
+      "checksum": "sha256:6849d714220daa64ffa3f7ae002492a8e41eefa6e9d19f4e11595ef8723da63c",
       "role": "Generated tracked-stablecoin aggregate used for frozen cemetery rows."
     }
   ],
   "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
-  "rowCount": 106,
+  "rowCount": 107,
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -48,6 +48,97 @@
     "pharosUrl": "Canonical Pharos URL: the frozen detail page when archived data is available, otherwise the cemetery anchor."
   },
   "rows": [
+    {
+      "id": "mim-abracadabra",
+      "name": "Magic Internet Money",
+      "symbol": "MIM",
+      "llamaId": "10",
+      "logoUrl": "https://pharos.watch/logos/10-mim.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "liquidity-drain",
+      "causeLabel": "Liquidity Drain",
+      "deathDate": "2026-07",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 3637068698,
+      "epitaph": "The magic ran out at nine cents",
+      "obituary": "Once one of DeFi's largest CDP stablecoins, MIM peaked above $3.6B before repeated cauldron exploits and years of thinning liquidity hollowed out its market. The final break began on June 8, 2026. Abracadabra injected liquidity, offered SPELL incentives, raised rates across every cauldron, and suspended Curve bribes to force debt repayment, but none restored the peg. By July 26 MIM traded near $0.09 with roughly $3M circulating after seven weeks below peg, leaving no credible liquidity or arbitrage path back to one dollar.",
+      "sourceUrl": "https://kerne.fi/insights/mim-depeg-onchain-collateral-still-lost-peg",
+      "sourceLabel": "Kerne Insights",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3",
+          "decimals": 18
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0xfea7a6a0b346362bf88a9e4a88416b77a57d6c2a",
+          "decimals": 18
+        },
+        {
+          "chain": "avalanche",
+          "address": "0x130966628846bfd36ff31a822705796e8cb8c18d",
+          "decimals": 18
+        },
+        {
+          "chain": "fantom",
+          "address": "0x82f0b8b456c1a451378467398982d4834b6829c1",
+          "decimals": 18
+        },
+        {
+          "chain": "bsc",
+          "address": "0xfe19f0b51438fd612f6fd59c1dbb3ea319f433ba",
+          "decimals": 18
+        },
+        {
+          "chain": "optimism",
+          "address": "0xb153fb3d196a8eb25522705560ac152eeec57901",
+          "decimals": 18
+        },
+        {
+          "chain": "polygon",
+          "address": "0x49a0400587a7f65072c87c4910449fdcc5c47242",
+          "decimals": 18
+        },
+        {
+          "chain": "kava",
+          "address": "0x471ee749ba270eb4c1165b5ad95e614947f6fceb",
+          "decimals": 18
+        },
+        {
+          "chain": "blast",
+          "address": "0x76da31d7c9cbeae102aff34d3398bc450c8374c1",
+          "decimals": 18
+        },
+        {
+          "chain": "moonriver",
+          "address": "0x0cae51e1032e8461f4806e26332c030e34de3adb",
+          "decimals": 18
+        },
+        {
+          "chain": "nibiru",
+          "address": "0xfcfc58685101e2914cbcf7551b432500db84eaa8",
+          "decimals": 18
+        },
+        {
+          "chain": "base",
+          "address": "0x4a3a6dd60a34bb2aba60d73b4c88315e9ceb6a3d",
+          "decimals": 18
+        },
+        {
+          "chain": "linea",
+          "address": "0xdd3b8084af79b9bae3d1b668c0de08ccc2c9429a",
+          "decimals": 18
+        },
+        {
+          "chain": "berachain",
+          "address": "0x5B82028cfc477C4E7ddA7FF33d59A23FA7Be002a",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/mim-abracadabra/"
+    },
     {
       "id": "susd-synthetix",
       "name": "sUSD",

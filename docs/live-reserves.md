@@ -413,7 +413,7 @@ This table reflects the shared adapter registry. `Configured coins` can be `0` f
 | Adapter                      | Primary input                                    | Semantics                                             | Configured coins |
 | ---------------------------- | ------------------------------------------------ | ----------------------------------------------------- | ---------------- |
 | `3jane-usd3`                 | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `abracadabra`                | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
+| `abracadabra`                | `onchain-evm`                                    | `collateral-mix`                                      | 0                |
 | `accountable`                | `http-json`                                      | `collateral-mix` / `protocol-reserve`                 | 7                |
 | `anzen-usdz`                 | `onchain-evm`                                    | `single-asset`                                        | 1                |
 | `asymmetry`                  | `http-json`                                      | `collateral-mix`                                      | 1                |
@@ -510,6 +510,7 @@ Current unbound registered adapters are explicit:
 | --------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ | ----------- |
 | `openeden-usdo`       | `parked`  | OpenEden USDO adapter is retained, but its live config was suspended because OpenEden's gateway blocks Cloudflare Worker egress; rebind once the issuer allowlists our egress. | 2026-06-25   | 2026-12-25  |
 | `usdh-native-markets` | `retired` | Native Markets USDH entered the frozen archive after its USDC migration; retain the adapter only for historical review and re-evaluate if the issuer resumes the product.      | 2026-07-11   | 2026-10-11  |
+| `abracadabra`         | `retired` | MIM entered the frozen archive after its terminal depeg; retain the adapter only for historical review and re-evaluate if the protocol resumes active issuance.                    | 2026-07-26   | 2027-01-26  |
 
 `parked` and `retired` descriptors carry `parkedSince` and `nextReview` ISO dates. Default cadence is a six-month review window; when `nextReview` passes, the adapter is up for one of: revival under an active coin binding, status downgrade to `retired`, or full removal alongside its tests and fixtures. The registry test asserts both fields are populated for every non-active entry.
 

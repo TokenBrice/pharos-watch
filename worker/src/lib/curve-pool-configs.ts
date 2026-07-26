@@ -414,17 +414,6 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     chain: "ethereum",
     useUnderlying: true,
   },
-  // MIM/3Crv metapool (~$2M TVL)
-  {
-    stablecoinId: "mim-abracadabra",
-    poolAddress: "0x5a6A4D54456819380173272A5E8E9B9904BdF41B",
-    inputIndex: 2,  // USDC (underlying)
-    outputIndex: 0, // MIM (underlying)
-    inputDecimals: 6,
-    outputDecimals: 18,
-    chain: "ethereum",
-    useUnderlying: true,
-  },
   // GUSD/3Crv metapool (~$1.9M TVL)
   {
     stablecoinId: "gusd-gemini",
