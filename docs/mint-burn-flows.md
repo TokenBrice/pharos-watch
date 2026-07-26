@@ -395,12 +395,13 @@ Detects simultaneous outflows from risky stablecoins and inflows to safe havens.
 
 ## Retention
 
-The critical `sync-mint-burn` producer owns bounded cleanup after ingestion:
+The critical `sync-mint-burn` producer owns bounded cleanup and aggregation-evidence repair after ingestion:
 
-- Individual `mint_burn_events` rows are retained for at least **8 days**. An older row is eligible only after its USD valuation is settled (`amount_usd` is present or price repair is explicitly `recovered`/`irreducible`), its stablecoin/chain/hour aggregate exists, and the Tape projector cursor has passed its timestamp. Unpriced, pending-repair, unaggregated, and not-yet-projected rows remain protected regardless of age.
-- `mint_burn_hourly` buckets are retained for at least **95 days**, preserving the public 90-day aggregate window with a five-day operating margin.
-- Deletes run oldest-first in 10,000-row statements, capped at 50,000 event rows and 25,000 hourly rows per critical run. The extended lane does not run cleanup.
-- Cron metadata reports each family's cutoff, deleted count, oldest remaining and eligible timestamp, cap state, duration, and error. A cleanup error degrades an otherwise successful critical run without discarding successful ingestion; the other retention family still gets its bounded attempt.
+- Individual `mint_burn_events` rows are retained for at least **8 days**. An older row is eligible only after its USD valuation is settled (`amount_usd` is present or price repair is explicitly `recovered`/`irreducible`), its stablecoin/chain/hour aggregate exists, and the Tape projector cursor has passed its timestamp. Unpriced, pending-repair, and not-yet-projected rows remain protected regardless of age.
+- A missing hourly bucket for terminal, projected raw rows is rebuilt oldest-first from the still-retained events before deletion. A candidate hour containing unresolved or pending price-repair debt is not rebuilt or pruned. Historical price repair likewise recalculates and verifies only its affected hours, so raw turnover cannot erase unrelated aggregate history.
+- `mint_burn_hourly` buckets are retained for at least **95 days**, preserving the public 90-day aggregate window with a five-day operating margin. Cleanup never removes a bucket while any raw event still depends on it as aggregation evidence.
+- Repairs are capped at 5,000 hourly buckets per critical run. Deletes run oldest-first in 10,000-row statements, capped at 50,000 event rows and 25,000 hourly rows per critical run. The extended lane does not run cleanup.
+- Cron metadata reports aggregation repair cutoff, repaired count, oldest repairable timestamp, cap state, duration, and error, plus each deletion family's cutoff, deleted count, oldest remaining and eligible timestamp, cap state, duration, and error. A cleanup stage error degrades an otherwise successful critical run without discarding successful ingestion; the remaining stages still get their bounded attempts.
 
 The daily `mint-burn-growth-watchdog` cron remains a fail-safe rather than the retention owner. It reports degraded at **2.3M event rows**, the existing proxy for the agreed ~5 GB investigation point, so operators can detect cleanup that is not converging, an unexpectedly large protected backlog, or abnormal producer growth. D1 disallows `PRAGMA page_count`, hence the row-count proxy.
 

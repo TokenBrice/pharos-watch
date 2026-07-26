@@ -24,15 +24,26 @@ function setupDb(): { sqlite: DatabaseSync; db: D1Database } {
       id TEXT PRIMARY KEY,
       stablecoin_id TEXT NOT NULL,
       chain_id TEXT NOT NULL,
+      direction TEXT NOT NULL DEFAULT 'mint',
+      amount REAL NOT NULL DEFAULT 1,
       amount_usd REAL,
       timestamp INTEGER NOT NULL,
-      price_repair_status TEXT
+      price_repair_status TEXT,
+      burn_type TEXT,
+      flow_type TEXT NOT NULL DEFAULT 'standard'
     );
     CREATE INDEX idx_mbe2_ts ON mint_burn_events(timestamp DESC);
+    CREATE INDEX idx_mbe_coin_chain_ts
+      ON mint_burn_events(stablecoin_id, chain_id, timestamp DESC);
     CREATE TABLE mint_burn_hourly (
       stablecoin_id TEXT NOT NULL,
       chain_id TEXT NOT NULL,
       hour_ts INTEGER NOT NULL,
+      mint_count INTEGER NOT NULL DEFAULT 0,
+      burn_count INTEGER NOT NULL DEFAULT 0,
+      mint_volume_usd REAL NOT NULL DEFAULT 0,
+      burn_volume_usd REAL NOT NULL DEFAULT 0,
+      net_flow_usd REAL NOT NULL DEFAULT 0,
       PRIMARY KEY (stablecoin_id, chain_id, hour_ts)
     );
     CREATE INDEX idx_mbh_ts ON mint_burn_hourly(hour_ts DESC);
@@ -121,6 +132,7 @@ describe("mint/burn retention", () => {
     insertEvent(sqlite, {
       id: "protected-no-hourly",
       timestamp: noHourlyTimestamp,
+      amountUsd: null,
       withHourly: false,
     });
     insertEvent(sqlite, { id: "boundary", timestamp: eventCutoff });
@@ -148,6 +160,13 @@ describe("mint/burn retention", () => {
       deletedRows: 2,
       oldestRemainingAt: noHourlyTimestamp,
       oldestEligibleAt: null,
+      cappedAtLimit: false,
+      error: null,
+    });
+    expect(result.aggregationRepair).toMatchObject({
+      cutoff: eventCutoff,
+      repairedRows: 0,
+      oldestRepairableAt: null,
       cappedAtLimit: false,
       error: null,
     });
@@ -277,6 +296,109 @@ describe("mint/burn retention", () => {
     ).toEqual({ count: 0 });
   });
 
+  it("rebuilds missing terminal hourly evidence before pruning raw rows", async () => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const oldTimestamp = NOW_SEC - MINT_BURN_HOURLY_RETENTION_SEC - HOUR_SEC;
+    insertEvent(sqlite, {
+      id: "stranded-terminal",
+      timestamp: oldTimestamp,
+      withHourly: false,
+    });
+
+    const result = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
+      repairCandidateEventLimit: 2,
+      repairRunLimit: 1,
+      eventBatchLimit: 2,
+      eventRunLimit: 2,
+      hourlyBatchLimit: 2,
+      hourlyRunLimit: 2,
+    });
+
+    expect(result.aggregationRepair).toMatchObject({
+      repairedRows: 1,
+      oldestRepairableAt: null,
+      cappedAtLimit: false,
+      error: null,
+    });
+    expect(result.eventRows.deletedRows).toBe(1);
+    expect(result.hourlyRows.deletedRows).toBe(1);
+    expect(eventIds(sqlite)).toEqual([]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly").get()).toEqual({
+      count: 0,
+    });
+  });
+
+  it("does not rebuild or prune a missing hour with unresolved price debt", async () => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const oldTimestamp = NOW_SEC - MINT_BURN_HOURLY_RETENTION_SEC - HOUR_SEC;
+    insertEvent(sqlite, {
+      id: "terminal-sibling",
+      timestamp: oldTimestamp,
+      withHourly: false,
+    });
+    insertEvent(sqlite, {
+      id: "unresolved-sibling",
+      timestamp: oldTimestamp + 1,
+      amountUsd: null,
+      withHourly: false,
+    });
+
+    const result = await pruneMintBurnRetention(db, NOW_SEC);
+
+    expect(result.aggregationRepair).toMatchObject({
+      repairedRows: 0,
+      oldestRepairableAt: null,
+      cappedAtLimit: false,
+      error: null,
+    });
+    expect(result.eventRows.deletedRows).toBe(0);
+    expect(result.hourlyRows.deletedRows).toBe(0);
+    expect(eventIds(sqlite)).toEqual(["terminal-sibling", "unresolved-sibling"]);
+  });
+
+  it("continues aggregation-evidence repair after its hourly limit is reached", async () => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const oldTimestamp = NOW_SEC - MINT_BURN_HOURLY_RETENTION_SEC - 4 * HOUR_SEC;
+    for (let index = 0; index < 3; index += 1) {
+      insertEvent(sqlite, {
+        id: `stranded-hour-${index}`,
+        timestamp: oldTimestamp + index * HOUR_SEC,
+        withHourly: false,
+      });
+    }
+
+    const first = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
+      repairCandidateEventLimit: 3,
+      repairRunLimit: 2,
+      eventBatchLimit: 3,
+      eventRunLimit: 3,
+      hourlyBatchLimit: 3,
+      hourlyRunLimit: 3,
+    });
+
+    expect(first.aggregationRepair.repairedRows).toBe(2);
+    expect(first.aggregationRepair.cappedAtLimit).toBe(true);
+    expect(first.aggregationRepair.oldestRepairableAt).not.toBeNull();
+    expect(eventIds(sqlite)).toEqual(["stranded-hour-2"]);
+
+    const second = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
+      repairCandidateEventLimit: 3,
+      repairRunLimit: 2,
+      eventBatchLimit: 3,
+      eventRunLimit: 3,
+      hourlyBatchLimit: 3,
+      hourlyRunLimit: 3,
+    });
+
+    expect(second.aggregationRepair.repairedRows).toBe(1);
+    expect(second.aggregationRepair.cappedAtLimit).toBe(false);
+    expect(second.aggregationRepair.oldestRepairableAt).toBeNull();
+    expect(eventIds(sqlite)).toEqual([]);
+  });
+
   it("reports a family cleanup error without preventing the other family", async () => {
     const { sqlite, db } = setupDb();
     openDb = sqlite;
@@ -301,6 +423,36 @@ describe("mint/burn retention", () => {
     expect(result.eventRows.error).toBe("event retention unavailable");
     expect(result.hourlyRows.error).toBeNull();
     expect(result.error).toContain("eventRows: event retention unavailable");
+  });
+
+  it("reports aggregation repair failure without preventing bounded deletion", async () => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const cutoff = NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC;
+    insertEvent(sqlite, { id: "eligible-after-repair-error", timestamp: cutoff - 1 });
+    const failingDb = {
+      ...db,
+      prepare(sql: string) {
+        if (!sql.includes("pharos:mint-burn:aggregation-evidence-repair")) {
+          return db.prepare(sql);
+        }
+        const statement = {
+          bind: () => statement as unknown as D1PreparedStatement,
+          run: async () => {
+            throw new Error("aggregation repair unavailable");
+          },
+        };
+        return statement as unknown as D1PreparedStatement;
+      },
+    } as D1Database;
+
+    const result = await pruneMintBurnRetention(failingDb, NOW_SEC);
+
+    expect(result.aggregationRepair.error).toBe("aggregation repair unavailable");
+    expect(result.eventRows.deletedRows).toBe(1);
+    expect(result.eventRows.error).toBeNull();
+    expect(result.hourlyRows.error).toBeNull();
+    expect(result.error).toContain("aggregationRepair: aggregation repair unavailable");
   });
 
   it("throws before D1 work when already aborted", async () => {
