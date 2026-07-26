@@ -314,7 +314,7 @@ Unless an endpoint section explicitly says `Authentication: exempt`, routes in t
 
 Generated from `public/openapi.json` (`Pharos API` v1.0.0). The OpenAPI artifact intentionally excludes Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, Telegram Mini App endpoints, and dynamic OG image routes. Those endpoints are documented in the hand-written sections below.
 
-Total documented public operations: **42**.
+Total documented public operations: **40**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
@@ -340,8 +340,6 @@ Total documented public operations: **42**.
 | GET | `/api/redemption-backstops` | Redemption backstops | Risk, Reserves | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/report-cards` | Report cards | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/report-cards/v9` | Safety Score V9 report cards (shadow) | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
-| GET | `/api/report-cards/v9-preview` | Safety Score V9 feedback preview | Risk | none | — | 200, 400, 503 |
-| GET | `/api/report-cards/v9-preview-412d818c031b7bc5` | Safety Score V9 feedback preview (legacy alias) | Risk | none | — | 200, 400, 503 |
 | GET | `/api/safety-score-history` | Safety score history | Risk, History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history-v2` | Safety score history (identity-aware) | Risk, History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/snapshot/{date}/stablecoin/{stablecoinId}` | Public snapshot projection for a single coin | Digest, Stablecoins, History | X-API-Key | `date`, `stablecoinId` | 200, 400, 401, 429, 503 |
