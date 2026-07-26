@@ -410,12 +410,21 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "quarter-hourly-chain",
   },
   {
+    job: "sync-v9-supply-attribution",
+    label: "V9 supply attribution",
+    group: "quarter-hourly",
+    scheduleKey: "quarterHourly",
+    triggerMode: "shared",
+    maxConnections: 3,
+    connectionGroup: "quarter-hourly-chain",
+  },
+  {
     job: "publish-report-card-cache",
     label: "Report-card cache",
     group: "quarter-hourly",
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
-    maxConnections: 1, // Due-only V9 shadow enrichment uses one Ethereum multicall after V8 commits.
+    maxConnections: 0, // V9 consumes the isolated attribution generation from D1.
     connectionGroup: "quarter-hourly-chain",
   },
   {

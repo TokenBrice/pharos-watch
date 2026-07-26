@@ -42,6 +42,7 @@ const cronMocks = vi.hoisted(() => ({
   runCronStalenessWatchdog: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotChainSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  syncSafetyScoreV9SupplyAttribution: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   publishReportCardCache: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   computeDepegResolver: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSafetyGradeHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -248,6 +249,9 @@ vi.mock("../cron/cron-staleness-watchdog", () => ({
 }));
 vi.mock("../cron/snapshot-supply", () => ({ snapshotSupply: cronMocks.snapshotSupply }));
 vi.mock("../cron/snapshot-chain-supply", () => ({ snapshotChainSupply: cronMocks.snapshotChainSupply }));
+vi.mock("../cron/sync-v9-supply-attribution", () => ({
+  syncSafetyScoreV9SupplyAttribution: cronMocks.syncSafetyScoreV9SupplyAttribution,
+}));
 vi.mock("../cron/publish-report-card-cache", () => ({ publishReportCardCache: cronMocks.publishReportCardCache }));
 vi.mock("../cron/compute-depeg-resolver", () => ({ computeDepegResolver: cronMocks.computeDepegResolver }));
 vi.mock("../cron/snapshot-safety-grade-history", () => ({
@@ -448,7 +452,13 @@ describe("worker.scheduled", () => {
     );
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncSafetyScoreV9SupplyAttribution).toHaveBeenCalledTimes(1);
     expect(cronMocks.publishReportCardCache).toHaveBeenCalledTimes(1);
+    expect(
+      cronMocks.syncSafetyScoreV9SupplyAttribution.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      cronMocks.publishReportCardCache.mock.invocationCallOrder[0],
+    );
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
     // stability-index and compute-dews run on the decoupled DEWS/PSI trigger
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
@@ -655,6 +665,7 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).not.toHaveBeenCalled();
+    expect(cronMocks.syncSafetyScoreV9SupplyAttribution).not.toHaveBeenCalled();
     expect(cronMocks.publishReportCardCache).not.toHaveBeenCalled();
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
     expect(cronMocks.runStatusSelfCheck).not.toHaveBeenCalled();
@@ -690,6 +701,7 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncSafetyScoreV9SupplyAttribution).toHaveBeenCalledTimes(1);
     expect(cronMocks.publishReportCardCache).toHaveBeenCalledTimes(1);
   });
 

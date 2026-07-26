@@ -111,7 +111,7 @@ const ReviewedDeploymentUnitPartitionSchema = z.strictObject({
   deployments: z.array(ReviewedDeploymentSupplyRowSchema).min(2),
 });
 
-const SafetyScoreV9SupplyAttributionSchema = z.discriminatedUnion("model", [
+export const SafetyScoreV9SupplyAttributionSchema = z.discriminatedUnion("model", [
   CanonicalLockMintSupplyAttributionSchema,
   XautRepresentationGroupSupplyAttributionV2Schema,
   ReviewedDeploymentUnitPartitionSchema,

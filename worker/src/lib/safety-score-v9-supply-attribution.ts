@@ -48,7 +48,14 @@ type V9CurrentChainRows = Record<string, { current: number }>;
 
 export interface SafetyScoreV9SupplyAttributionCapture {
   attributionById: V9SupplyAttributionById;
+  captureClockSec: number;
+  expectedAssetIds: string[];
   journalRecords: SupplyAttributionJournalV1[];
+}
+
+export interface SafetyScoreV9SupplyAttributionCaptureOptions {
+  clockMode: "source" | "wall";
+  notBeforeSec?: number;
 }
 
 function aggregateSupplyUsd(
@@ -66,6 +73,18 @@ function hasUpstreamChainSupply(
 ): boolean {
   return Object.values(fixedInput.chainCirculatingById[assetId] ?? {}).some(
     (row) => row.current > 0,
+  );
+}
+
+export function safetyScoreV9SupplyAttributionExpectedAssetIds(
+  fixedInput: Readonly<ReportCardsFixedInput>,
+): string[] {
+  const activeAssetIds = new Set(fixedInput.activeAssetIds);
+  return SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS.filter(
+    (assetId) =>
+      activeAssetIds.has(assetId) &&
+      (assetId === XAUT_ASSET_ID ||
+        !hasUpstreamChainSupply(fixedInput, assetId)),
   );
 }
 
@@ -123,6 +142,7 @@ function buildCentrifugeSupplyAttributionJournalRecord(input: {
   attemptId: string;
   attemptedAtSec: number;
   completedAtSec: number;
+  captureClockSec: number;
   outcome: CentrifugeReviewedDeploymentObservationAttempt;
 }): SupplyAttributionJournalV1 {
   const inventory = buildReviewedDeploymentRouteInventory(input.assetId);
@@ -157,7 +177,7 @@ function buildCentrifugeSupplyAttributionJournalRecord(input: {
       : {}),
     attemptedAtSec: input.attemptedAtSec,
     completedAtSec: input.completedAtSec,
-    scoringClockSec: input.fixedInput.clockSec,
+    scoringClockSec: input.captureClockSec,
     sourceObservedAtSec:
       outcome.status === "accepted"
         ? outcome.attribution.observedAtSec
@@ -176,6 +196,7 @@ function buildXautSupplyAttributionJournalRecord(input: {
   attemptId: string;
   attemptedAtSec: number;
   completedAtSec: number;
+  captureClockSec: number;
   outcome: XautSupplyAttributionObservationAttempt;
 }): SupplyAttributionJournalV1 {
   const inventory = buildXautRepresentationGroupInventory();
@@ -210,7 +231,7 @@ function buildXautSupplyAttributionJournalRecord(input: {
       : {}),
     attemptedAtSec: input.attemptedAtSec,
     completedAtSec: input.completedAtSec,
-    scoringClockSec: input.fixedInput.clockSec,
+    scoringClockSec: input.captureClockSec,
     sourceObservedAtSec:
       outcome.status === "accepted"
         ? outcome.attribution.observedAtSec
@@ -229,6 +250,7 @@ function buildWmSupplyAttributionJournalRecord(input: {
   attemptId: string;
   attemptedAtSec: number;
   completedAtSec: number;
+  captureClockSec: number;
   outcome: WmReviewedDeploymentObservationAttempt;
 }): SupplyAttributionJournalV1 {
   const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
@@ -259,7 +281,7 @@ function buildWmSupplyAttributionJournalRecord(input: {
       : {}),
     attemptedAtSec: input.attemptedAtSec,
     completedAtSec: input.completedAtSec,
-    scoringClockSec: input.fixedInput.clockSec,
+    scoringClockSec: input.captureClockSec,
     sourceObservedAtSec: outcome.status === "accepted"
       ? outcome.attribution.observedAtSec
       : null,
@@ -279,13 +301,41 @@ export async function captureSafetyScoreV9SupplyAttribution(
   fixedInput: Readonly<ReportCardsFixedInput>,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
+  options: SafetyScoreV9SupplyAttributionCaptureOptions = {
+    clockMode: "source",
+  },
 ): Promise<SafetyScoreV9SupplyAttributionCapture> {
-  const activeAssetIds = new Set(fixedInput.activeAssetIds);
+  if (
+    options.notBeforeSec !== undefined &&
+    (!Number.isSafeInteger(options.notBeforeSec) ||
+      options.notBeforeSec < fixedInput.clockSec)
+  ) {
+    throw new Error(
+      "Supply attribution capture floor must be a safe integer at or after its exact V8 source clock",
+    );
+  }
+  let captureClockSec = fixedInput.clockSec;
+  const observationClockSec = (attemptedAtSec: number): number => {
+    const clockSec =
+      options.clockMode === "wall"
+        ? Math.max(
+            fixedInput.clockSec,
+            options.notBeforeSec ?? 0,
+            attemptedAtSec,
+          )
+        : fixedInput.clockSec;
+    captureClockSec = Math.max(captureClockSec, clockSec);
+    return clockSec;
+  };
+  const expectedAssetIds =
+    safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput);
+  const expectedAssetIdSet = new Set(expectedAssetIds);
   const attributionById: V9SupplyAttributionById = {};
   const journalRecords: SupplyAttributionJournalV1[] = [];
 
-  if (activeAssetIds.has(XAUT_ASSET_ID)) {
+  if (expectedAssetIdSet.has(XAUT_ASSET_ID)) {
     const attemptedAtSec = Math.floor(Date.now() / 1_000);
+    const scoringClockSec = observationClockSec(attemptedAtSec);
     const attemptId = `supply-attribution:${crypto.randomUUID()}`;
     let outcome: XautSupplyAttributionObservationAttempt;
     try {
@@ -297,7 +347,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
                 XAUT_ASSET_ID,
               ),
               registryFingerprint: fixedInput.registryFingerprint,
-              scoringClockSec: fixedInput.clockSec,
+              scoringClockSec,
               chainRpcs,
               signal,
             })
@@ -329,13 +379,15 @@ export async function captureSafetyScoreV9SupplyAttribution(
         attemptId,
         attemptedAtSec,
         completedAtSec,
+        captureClockSec: scoringClockSec,
         outcome,
       }),
     );
   }
 
-  if (activeAssetIds.has("wm-m0") && !hasUpstreamChainSupply(fixedInput, "wm-m0")) {
+  if (expectedAssetIdSet.has("wm-m0")) {
     const attemptedAtSec = Math.floor(Date.now() / 1_000);
+    const scoringClockSec = observationClockSec(attemptedAtSec);
     const attemptId = `supply-attribution:${crypto.randomUUID()}`;
     let outcome: WmReviewedDeploymentObservationAttempt;
     try {
@@ -344,7 +396,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
           ? await observeWmReviewedDeploymentUnitPartitionAttempt({
               aggregateSupplyUsd: aggregateSupplyUsd(fixedInput, "wm-m0"),
               registryFingerprint: fixedInput.registryFingerprint,
-              scoringClockSec: fixedInput.clockSec,
+              scoringClockSec,
               chainRpcs,
               signal,
             })
@@ -374,19 +426,16 @@ export async function captureSafetyScoreV9SupplyAttribution(
         attemptId,
         attemptedAtSec,
         completedAtSec,
+        captureClockSec: scoringClockSec,
         outcome,
       }),
     );
   }
 
   for (const assetId of CENTRIFUGE_BURN_MINT_ASSET_IDS) {
-    if (
-      !activeAssetIds.has(assetId) ||
-      hasUpstreamChainSupply(fixedInput, assetId)
-    ) {
-      continue;
-    }
+    if (!expectedAssetIdSet.has(assetId)) continue;
     const attemptedAtSec = Math.floor(Date.now() / 1_000);
+    const scoringClockSec = observationClockSec(attemptedAtSec);
     const attemptId = `supply-attribution:${crypto.randomUUID()}`;
     let outcome: CentrifugeReviewedDeploymentObservationAttempt;
     try {
@@ -396,7 +445,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
               assetId,
               aggregateSupplyUsd: aggregateSupplyUsd(fixedInput, assetId),
               registryFingerprint: fixedInput.registryFingerprint,
-              scoringClockSec: fixedInput.clockSec,
+              scoringClockSec,
               chainRpcs,
               signal,
             })
@@ -427,12 +476,18 @@ export async function captureSafetyScoreV9SupplyAttribution(
         attemptId,
         attemptedAtSec,
         completedAtSec,
+        captureClockSec: scoringClockSec,
         outcome,
       }),
     );
   }
 
-  return { attributionById, journalRecords };
+  return {
+    attributionById,
+    captureClockSec,
+    expectedAssetIds,
+    journalRecords,
+  };
 }
 
 export async function captureSafetyScoreV9SupplyAttributionById(

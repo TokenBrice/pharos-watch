@@ -1,6 +1,6 @@
 import { buildReportCardsSnapshot } from "../lib/report-cards-snapshot";
 import { ALERT_SAFETY_SOURCE_CACHE_KEY, buildAlertSafetySourceEnvelope } from "../lib/alert-safety-source-cache";
-import { setCacheMany } from "../lib/db-cache";
+import { getCache, setCacheMany } from "../lib/db-cache";
 import { buildReportCardCacheEntry } from "../lib/report-card-cache";
 import { buildPublishedReportCardsSnapshotCacheEntry } from "../lib/report-cards-snapshot-cache";
 import type { CronResult } from "../lib/cron-logger";
@@ -13,22 +13,21 @@ import {
 import { recordCronFailure } from "../lib/cron-logger";
 import { runSafetyScoreV9ShadowAfterV8Publication } from "../lib/safety-score-v9-shadow-runner";
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
-import type { ChainRpcConfig } from "../lib/chain-registry";
 import {
-  enrichSafetyScoreV9FixedInputSupplyWithEvidence,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS,
 } from "../lib/safety-score-v9-supply-attribution";
 import { loadReportCardEvidenceJournalByIdV1 } from "../lib/report-card-evidence-journal-store";
+import { loadSupplyAttributionJournalByIdV1 } from "../lib/safety-score-v9-supply-attribution-journal-store";
 import {
-  appendSupplyAttributionJournalV1,
-  loadSupplyAttributionJournalByIdV1,
-} from "../lib/safety-score-v9-supply-attribution-journal-store";
+  applySafetyScoreV9SupplyAttributionGeneration,
+  parseSafetyScoreV9SupplyAttributionGeneration,
+  SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
+} from "../lib/safety-score-v9-supply-attribution-generation";
 import { captureSafetyScoreV9PegProvenanceById } from "../lib/safety-score-v9-peg-provenance";
 
 export async function publishReportCardCache(
   db: D1Database,
   signal?: AbortSignal,
-  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<CronResult> {
   throwIfAborted(signal);
 
@@ -89,17 +88,55 @@ export async function publishReportCardCache(
   let v9Shadow: Record<string, unknown>;
   let v9FixedInputCacheBytes: number | null = null;
   let v9FixedInputUncompressedBytes: number | null = null;
+  let supplyAttributionGenerationState:
+    Record<string, unknown> = { status: "not-due" };
   try {
     v9Shadow = await runSafetyScoreV9ShadowAfterV8Publication({
       db,
       fixedInput,
       prepareFixedInput: async (baseFixedInput, shadowSignal) => {
-        const supplyCapture = await enrichSafetyScoreV9FixedInputSupplyWithEvidence(
-          baseFixedInput,
-          chainRpcs,
-          shadowSignal,
+        const generationCache = await getCache(
+          db,
+          SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
         );
-        const supplyFixedInput = supplyCapture.fixedInput;
+        let generation = null;
+        let generationParseError = false;
+        if (generationCache) {
+          try {
+            generation =
+              parseSafetyScoreV9SupplyAttributionGeneration(
+                generationCache.value,
+              );
+          } catch {
+            generationParseError = true;
+          }
+        }
+        const generationApplication =
+          applySafetyScoreV9SupplyAttributionGeneration(
+            baseFixedInput,
+            generation,
+          );
+        supplyAttributionGenerationState = generationParseError
+          ? {
+              status: "incompatible",
+              generationId: null,
+              reason: "generation-malformed",
+            }
+          : generationApplication.status === "applied"
+            ? {
+                status: generationApplication.status,
+                generationId: generationApplication.generationId,
+                acceptedCount:
+                  generationApplication.acceptedAssetIds.length,
+                rejectedCount:
+                  generationApplication.rejectedAssetIds.length,
+              }
+            : {
+                status: generationApplication.status,
+                generationId: generationApplication.generationId,
+                reason: generationApplication.reason,
+              };
+        const supplyFixedInput = generationApplication.fixedInput;
         const [evidenceJournalById, supplyAttributionJournalById] =
           await Promise.all([
             loadReportCardEvidenceJournalByIdV1(
@@ -118,18 +155,6 @@ export async function publishReportCardCache(
               shadowSignal,
             ),
           ]);
-        if (supplyCapture.journalRecords.length > 0) {
-          const journalNowSec = Math.max(
-            Math.floor(Date.now() / 1_000),
-            ...supplyCapture.journalRecords.map((record) => record.completedAtSec),
-          );
-          await appendSupplyAttributionJournalV1(
-            db,
-            supplyCapture.journalRecords,
-            journalNowSec,
-            shadowSignal,
-          );
-        }
         if (!v9PegProvenanceSource) {
           throw new Error("Report-card publication did not retain its ephemeral V9 peg evidence source");
         }
@@ -210,6 +235,7 @@ export async function publishReportCardCache(
       fixedInputUncompressedBytes: fixedInputEntry.uncompressedBytes,
       v9FixedInputCacheBytes,
       v9FixedInputUncompressedBytes,
+      supplyAttributionGeneration: supplyAttributionGenerationState,
       safetyScoreIdentity,
       v9Shadow,
     }),

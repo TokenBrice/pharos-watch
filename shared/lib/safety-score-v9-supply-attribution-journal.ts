@@ -16,7 +16,9 @@ const SafeIdentifierSchema = z
   .min(1)
   .max(192)
   .regex(/^[A-Za-z0-9][A-Za-z0-9._:@/-]*$/);
-const JournalIdSchema = z.string().regex(/^supply-attribution-evidence:v1:[a-f0-9]{64}$/);
+export const SupplyAttributionJournalIdSchema = z
+  .string()
+  .regex(/^supply-attribution-evidence:v1:[a-f0-9]{64}$/);
 
 const SECRET_BEARING_TEXT_PATTERNS = [
   /(?:https?|wss?):\/\//i,
@@ -350,7 +352,7 @@ export function computeSupplyAttributionJournalIdV1(
 
 export const SupplyAttributionJournalV1Schema =
   SupplyAttributionJournalV1PayloadSchema.extend({
-    journalId: JournalIdSchema,
+    journalId: SupplyAttributionJournalIdSchema,
   })
     .strict()
     .superRefine((record, ctx) => {

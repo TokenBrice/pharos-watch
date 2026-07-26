@@ -156,11 +156,16 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     });
     const fixedInput = xautFixedInput();
     const before = structuredClone(fixedInput);
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(
+      (OBSERVED_AT_SEC + 60) * 1_000,
+    );
 
     const capture = await captureSafetyScoreV9SupplyAttribution(
       fixedInput,
       chainRpcs(),
-    );
+      undefined,
+      { clockMode: "wall" },
+    ).finally(() => nowSpy.mockRestore());
     const captured = capture.attributionById;
 
     expect(fixedInput).toEqual(before);
@@ -182,14 +187,16 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
       expect.objectContaining({
         aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
         registryFingerprint: "a".repeat(64),
-        scoringClockSec: OBSERVED_AT_SEC,
+        scoringClockSec: OBSERVED_AT_SEC + 60,
       }),
     );
+    expect(capture.captureClockSec).toBe(OBSERVED_AT_SEC + 60);
     expect(capture.journalRecords).toHaveLength(1);
     expect(capture.journalRecords[0]).toMatchObject({
       assetId: "xaut-tether",
       sourceId: "xaut.canonical-lock-mint-group-partition.v2",
       sourceOriginClass: "issuer-disclosure-plus-onchain",
+      scoringClockSec: OBSERVED_AT_SEC + 60,
       admissionCode: "supply-attribution.admission.accepted",
       fallbackCode: "supply-attribution.fallback.not-used",
     });
