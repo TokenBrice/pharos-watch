@@ -135,7 +135,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["fxsave-f-x-protocol", "f(x) USD Saving", "fxSAVE"],
   ["usdn-noble", "Noble Dollar", "USDN"],
   ["usdn-smardex", "SMARDEX USDN", "USDN"],
-  ["mim-abracadabra", "Magic Internet Money", "MIM"],
+  ["mim-abracadabra", "Magic Internet Money", "MIM", "frozen", "2026-07-26"],
   ["usdcv-societe-generale-forge", "USD CoinVertible", "USDCV"],
   ["honey-berachain", "Honey", "HONEY"],
   ["zchf-frankencoin", "Frankencoin", "ZCHF"],

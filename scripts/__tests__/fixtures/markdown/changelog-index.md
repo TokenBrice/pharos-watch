@@ -6,6 +6,19 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-07-20 to 2026-07-26
+
+Pharos gets a blog, the V9 safety model opens to outside reviewers, and DEX scoring splits to fit its memory budget.
+
+- **Pharos blog**: A file-based blog ships with a hub, post pages, an RSS feed, cover images, and a homepage banner, wired into navigation, the footer, and the sitemap. The first post marks six months of Pharos.
+- **V9 opens for review**: Three reshape rounds make an F mean danger rather than missing data, re-anchor the backing scale, and calibrate USDT as the market anchor. An unlisted preview page opens candidate grades to outside reviewers.
+- **Evidence curation waves**: Curation waves resolved reserve itemization, dependency attribution, redemption-fee ceilings, and upgrade authority across more than 120 assets, plus reviewed fixes for kUSD, Kerne skUSD, yBOLD, XSGD, and Mento.
+- **Measured exit routes**: Exact-route measurement now covers Curve 3pool, USDG StableSwap-NG, the FPI Controller Pool, and sfrxUSD cross-chain exits, and exact fallbacks survive quote failures and RPC outages instead of vanishing.
+- **Redemption backstop v4.20**: sBOLD stability-pool withdrawability becomes a measured redemption source, Tether minimum redemption fees are modeled, and documented fee ceilings now bound exit costs across reviewed rails.
+- **Memory and cron repair**: DEX scoring splits across scheduled invocations after a memory regression, evidence is paged rather than loaded whole, and cron admission becomes phase-aware, freshness-checked, and starvation-free.
+- **Leaner retention**: Retention now bounds DEX staging to three days, redemption history to 90 days, and reserve history to 30 days, with mint-and-burn retention scoped to application lookbacks and the DEX evidence archive retired.
+- **Dependency hygiene**: High-severity and production PostCSS advisories are cleared, the dead webhook alert transport is removed along with its documentation, and CI refresh tokens are isolated from branch hooks.
+
 ## 2026-07-13 to 2026-07-19
 
 USD3 arrives, USX is frozen after its collapse, Safety Score reaches v8.17, and pricing degrades gracefully.
