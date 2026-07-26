@@ -1,7 +1,8 @@
-import { throwIfAborted } from "../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { runWithOverloadRetry } from "../lib/cron-lease";
+import { toErrorMessage } from "../lib/error-utils";
 import {
   TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
   countTelegramProcessedUpdateBacklog,
@@ -19,6 +20,7 @@ const DAY_SEC = 24 * 60 * 60;
 const ALERT_AUDIT_RETENTION_SEC = 90 * DAY_SEC;
 const AUTHORITATIVE_WORKFLOW_RETENTION_SEC = DAY_SEC;
 const AUTHORITATIVE_REPLAY_RETENTION_SEC = 14 * DAY_SEC;
+const STALE_UNRESOLVED_RETENTION_SEC = 30 * DAY_SEC;
 const USAGE_DAILY_RETENTION_SEC = 400 * DAY_SEC;
 const CHAT_DIAGNOSTICS_RETENTION_SEC = 90 * DAY_SEC;
 const SHORT_LIVED_CHAT_CACHE_RETENTION_SEC = 7 * DAY_SEC;
@@ -31,6 +33,7 @@ const TELEGRAM_PROCESSED_UPDATE_PRUNE_TIME_BUDGET_MS = 2_000;
 interface TelegramRetentionCleanupOptions {
   monotonicNow?: () => number;
   processedUpdateTimeBudgetMs?: number;
+  highGrowthDeleteLimit?: number;
 }
 
 interface ProcessedUpdateDeleteResult extends CappedDeleteResult {
@@ -38,6 +41,23 @@ interface ProcessedUpdateDeleteResult extends CappedDeleteResult {
   remainingBacklog: TelegramProcessedUpdateBacklog;
   timeBudgetExhausted: boolean;
   timeBudgetMs: number;
+}
+
+interface TelegramHighGrowthRetentionResult {
+  terminalCutoff: number;
+  unresolvedCutoff: number;
+  rowLimit: number;
+  legacyTargetItemsPruned: number;
+  legacyTargetsPruned: number;
+  legacyTerminalJobsPruned: number;
+  staleUnresolvedJobsPruned: number;
+  staleUnresolvedSourcesPruned: number;
+  oldestLegacyTargetRemainingAt: number | null;
+  oldestLegacyTargetEligibleAt: number | null;
+  oldestUnresolvedSourceRemainingAt: number | null;
+  cappedAtLimit: boolean;
+  durationMs: number;
+  error: string | null;
 }
 
 async function pruneTelegramProcessedUpdatesCapped(
@@ -133,6 +153,254 @@ async function deleteSourceChildrenOlderThanCapped(
   };
 }
 
+async function pruneTelegramHighGrowthRetention(
+  db: D1Database,
+  nowSec: number,
+  highGrowthDeleteLimit: number,
+  signal?: AbortSignal,
+): Promise<TelegramHighGrowthRetentionResult> {
+  const startedAtMs = Date.now();
+  const terminalCutoff = nowSec - AUTHORITATIVE_REPLAY_RETENTION_SEC;
+  const unresolvedCutoff = nowSec - STALE_UNRESOLVED_RETENTION_SEC;
+  const result: TelegramHighGrowthRetentionResult = {
+    terminalCutoff,
+    unresolvedCutoff,
+    rowLimit: highGrowthDeleteLimit,
+    legacyTargetItemsPruned: 0,
+    legacyTargetsPruned: 0,
+    legacyTerminalJobsPruned: 0,
+    staleUnresolvedJobsPruned: 0,
+    staleUnresolvedSourcesPruned: 0,
+    oldestLegacyTargetRemainingAt: null,
+    oldestLegacyTargetEligibleAt: null,
+    oldestUnresolvedSourceRemainingAt: null,
+    cappedAtLimit: false,
+    durationMs: 0,
+    error: null,
+  };
+
+  const legacyTerminalTargetPredicate = `
+    target.plan_generation IS NULL
+    AND target.created_at < ?
+    AND target.status IN ('sent', 'failed', 'expired')
+    AND (
+      target.final_delivery_state IS NULL
+      OR target.final_delivery_state IN ('accepted', 'failed', 'cancelled', 'expired')
+    )
+    AND target.effect_state NOT IN ('claimed', 'sending', 'execution_unknown')
+    AND NOT EXISTS (
+      SELECT 1 FROM telegram_pending_alerts pending
+       WHERE pending.dedupe_key = target.pending_dedupe_key
+         AND pending.delivery_state IN ('pending', 'sending', 'execution_unknown')
+    )`;
+  const legacyDeletableTargetPredicate = `
+    ${legacyTerminalTargetPredicate}
+    AND NOT EXISTS (
+      SELECT 1 FROM telegram_alert_job_target_items item
+       WHERE item.job_id = target.job_id
+         AND item.target_key = target.target_key
+    )`;
+
+  try {
+    const legacyTargetItems = await deleteSourceChildrenOlderThanCapped(
+      db,
+      `/* pharos:telegram:legacy-terminal-target-items-retention */
+       DELETE FROM telegram_alert_job_target_items
+        WHERE rowid IN (
+          SELECT item.rowid
+            FROM telegram_alert_job_targets target
+            JOIN telegram_alert_job_target_items item
+              ON item.job_id = target.job_id
+             AND item.target_key = target.target_key
+           WHERE ${legacyTerminalTargetPredicate}
+           ORDER BY target.created_at ASC, target.rowid ASC, item.rowid ASC
+           LIMIT ?
+        )`,
+      terminalCutoff,
+      signal,
+      highGrowthDeleteLimit,
+    );
+    result.legacyTargetItemsPruned = legacyTargetItems.pruned;
+    result.cappedAtLimit ||= legacyTargetItems.cappedAtLimit;
+    throwIfAborted(signal);
+
+    const legacyTargets = await deleteSourceChildrenOlderThanCapped(
+      db,
+      `/* pharos:telegram:legacy-terminal-targets-retention */
+       DELETE FROM telegram_alert_job_targets
+        WHERE rowid IN (
+          SELECT target.rowid
+            FROM telegram_alert_job_targets target
+           WHERE ${legacyDeletableTargetPredicate}
+           ORDER BY target.created_at ASC, target.rowid ASC
+           LIMIT ?
+        )`,
+      terminalCutoff,
+      signal,
+      highGrowthDeleteLimit,
+    );
+    result.legacyTargetsPruned = legacyTargets.pruned;
+    result.cappedAtLimit ||= legacyTargets.cappedAtLimit;
+    throwIfAborted(signal);
+
+    const legacyTerminalJobs = await deleteOlderThanCapped(
+      db,
+      `/* pharos:telegram:legacy-terminal-jobs-retention */
+       DELETE FROM telegram_alert_jobs
+        WHERE created_at < ?
+          AND job_id IN (
+            SELECT job.job_id
+              FROM telegram_alert_jobs job
+             WHERE job.created_at < ?
+               AND job.status IN ('sent', 'expired')
+               AND NOT EXISTS (
+                 SELECT 1 FROM telegram_alert_job_targets target
+                  WHERE target.job_id = job.job_id
+               )
+               AND NOT EXISTS (
+                 SELECT 1 FROM telegram_alert_source_events source
+                  WHERE source.source_event_id = job.source_event_id
+               )
+             ORDER BY job.created_at ASC, job.job_id ASC
+             LIMIT ?
+          )`,
+      terminalCutoff,
+      signal,
+    );
+    result.legacyTerminalJobsPruned = legacyTerminalJobs.pruned;
+    result.cappedAtLimit ||= legacyTerminalJobs.cappedAtLimit;
+    throwIfAborted(signal);
+
+    const staleUnresolvedJobs = await deleteOlderThanCapped(
+      db,
+      `/* pharos:telegram:stale-unresolved-jobs-retention */
+       DELETE FROM telegram_alert_jobs
+        WHERE created_at < ?
+          AND job_id IN (
+            SELECT job.job_id
+              FROM telegram_alert_jobs job
+             WHERE job.created_at < ?
+               AND job.status IN ('discovered', 'queued')
+               AND NOT EXISTS (
+                 SELECT 1 FROM telegram_alert_job_targets target
+                  WHERE target.job_id = job.job_id
+               )
+               AND NOT EXISTS (
+                 SELECT 1 FROM telegram_alert_source_events source
+                  WHERE source.source_event_id = job.source_event_id
+               )
+             ORDER BY job.created_at ASC, job.job_id ASC
+             LIMIT ?
+          )`,
+      unresolvedCutoff,
+      signal,
+    );
+    result.staleUnresolvedJobsPruned = staleUnresolvedJobs.pruned;
+    result.cappedAtLimit ||= staleUnresolvedJobs.cappedAtLimit;
+    throwIfAborted(signal);
+
+    let staleUnresolvedSourcesPruned = 0;
+    while (staleUnresolvedSourcesPruned < RETENTION_DELETE_BATCH_LIMIT) {
+      throwIfAborted(signal);
+      const batchLimit = Math.min(
+        RETENTION_DELETE_BATCH_LIMIT,
+        RETENTION_DELETE_BATCH_LIMIT - staleUnresolvedSourcesPruned,
+      );
+      const deleted = await runWithOverloadRetry(
+        () => db
+          .prepare(
+            `/* pharos:telegram:stale-unresolved-sources-retention */
+             DELETE FROM telegram_alert_source_events
+              WHERE detected_at < ?
+                AND rowid IN (
+                  SELECT source.rowid
+                    FROM telegram_alert_source_events source
+                   WHERE source.detected_at < ?
+                     AND source.expires_at < ?
+                     AND source.status IN ('resolving', 'planned', 'baseline_committed')
+                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_plan_items child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_plans child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_plan_pages child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_planning_subscribers child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_target_expiry_progress child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_source_resolution_targets child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_source_resolution_memberships child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_source_resolution_pages child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_job_target_items child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_job_targets child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_jobs child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_pending_alerts child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_alert_dead_letters child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_freeze_alert_targets child WHERE child.source_event_id = source.source_event_id)
+                     AND NOT EXISTS (SELECT 1 FROM telegram_freeze_alert_events child WHERE child.source_event_id = source.source_event_id)
+                   ORDER BY source.detected_at ASC, source.rowid ASC
+                   LIMIT ?
+                )`,
+          )
+          .bind(unresolvedCutoff, unresolvedCutoff, nowSec, batchLimit)
+          .run(),
+        3,
+        signal,
+      );
+      const batchPruned = Number(deleted.meta?.changes ?? 0);
+      staleUnresolvedSourcesPruned += batchPruned;
+      if (batchPruned < batchLimit) break;
+    }
+    result.staleUnresolvedSourcesPruned = staleUnresolvedSourcesPruned;
+    result.cappedAtLimit ||= staleUnresolvedSourcesPruned >= RETENTION_DELETE_BATCH_LIMIT;
+    throwIfAborted(signal);
+
+    const oldestLegacyTarget = await runWithOverloadRetry(
+      () => db
+        .prepare(
+          `SELECT MIN(created_at) AS oldest_remaining_at
+             FROM telegram_alert_job_targets
+            WHERE plan_generation IS NULL`,
+        )
+        .first<{ oldest_remaining_at: number | null }>(),
+      3,
+      signal,
+    );
+    result.oldestLegacyTargetRemainingAt = oldestLegacyTarget?.oldest_remaining_at ?? null;
+
+    const oldestEligibleTarget = await runWithOverloadRetry(
+      () => db
+        .prepare(
+          `/* pharos:telegram:legacy-terminal-targets-oldest-eligible */
+           SELECT target.created_at AS oldest_eligible_at
+             FROM telegram_alert_job_targets target
+            WHERE ${legacyTerminalTargetPredicate}
+            ORDER BY target.created_at ASC, target.rowid ASC
+            LIMIT 1`,
+        )
+        .bind(terminalCutoff)
+        .first<{ oldest_eligible_at: number | null }>(),
+      3,
+      signal,
+    );
+    result.oldestLegacyTargetEligibleAt = oldestEligibleTarget?.oldest_eligible_at ?? null;
+
+    const oldestUnresolvedSource = await runWithOverloadRetry(
+      () => db
+        .prepare(
+          `SELECT MIN(detected_at) AS oldest_remaining_at
+             FROM telegram_alert_source_events
+            WHERE status IN ('resolving', 'planned', 'baseline_committed')`,
+        )
+        .first<{ oldest_remaining_at: number | null }>(),
+      3,
+      signal,
+    );
+    result.oldestUnresolvedSourceRemainingAt = oldestUnresolvedSource?.oldest_remaining_at ?? null;
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    result.error = toErrorMessage(error).slice(0, 500);
+  }
+
+  result.durationMs = Math.max(0, Date.now() - startedAtMs);
+  return result;
+}
+
 async function deleteCachePrefixOlderThanCapped(
   db: D1Database,
   prefix: string,
@@ -196,6 +464,17 @@ export async function runTelegramRetentionCleanup(
   const workflowCutoff = nowSec - AUTHORITATIVE_WORKFLOW_RETENTION_SEC;
   const replayCutoff = nowSec - AUTHORITATIVE_REPLAY_RETENTION_SEC;
   const alertAuditCutoff = nowSec - ALERT_AUDIT_RETENTION_SEC;
+  const highGrowthDeleteLimit = options.highGrowthDeleteLimit ?? HIGH_VOLUME_RETENTION_DELETE_LIMIT;
+  if (!Number.isSafeInteger(highGrowthDeleteLimit) || highGrowthDeleteLimit <= 0) {
+    throw new RangeError("Telegram high-growth retention row limit must be a positive safe integer.");
+  }
+  const highGrowthRetention = await pruneTelegramHighGrowthRetention(
+    db,
+    nowSec,
+    highGrowthDeleteLimit,
+    signal,
+  );
+  throwIfAborted(signal);
   const targetPlanItems = await deleteSourceChildrenOlderThanCapped(
     db,
     `DELETE FROM telegram_alert_target_plan_items
@@ -717,6 +996,11 @@ export async function runTelegramRetentionCleanup(
   const totalPruned =
     processedUpdates.pruned +
     recapTargets.deletedTargets +
+    highGrowthRetention.legacyTargetItemsPruned +
+    highGrowthRetention.legacyTargetsPruned +
+    highGrowthRetention.legacyTerminalJobsPruned +
+    highGrowthRetention.staleUnresolvedJobsPruned +
+    highGrowthRetention.staleUnresolvedSourcesPruned +
     targetPlanItems.pruned +
     targetPlans.pruned +
     targetPlanPages.pruned +
@@ -748,6 +1032,7 @@ export async function runTelegramRetentionCleanup(
     groupWelcomeCache.pruned +
     reEngagementWarningCache.pruned;
   const retentionDeleteCapped =
+    highGrowthRetention.cappedAtLimit ||
     targetPlanItems.cappedAtLimit ||
     targetPlans.cappedAtLimit ||
     planningSubscribers.cappedAtLimit ||
@@ -755,11 +1040,17 @@ export async function runTelegramRetentionCleanup(
     jobTargets.cappedAtLimit;
 
   return createCronResult({
-    status: "ok",
+    status: highGrowthRetention.error ? "degraded" : "ok",
     itemCount: totalPruned,
     metadata: {
       processedUpdatesPruned: processedUpdates.pruned,
       recapTargetsPruned: recapTargets.deletedTargets,
+      highGrowthRetention: { ...highGrowthRetention },
+      legacyTargetItemsPruned: highGrowthRetention.legacyTargetItemsPruned,
+      legacyTargetsPruned: highGrowthRetention.legacyTargetsPruned,
+      legacyTerminalJobsPruned: highGrowthRetention.legacyTerminalJobsPruned,
+      staleUnresolvedJobsPruned: highGrowthRetention.staleUnresolvedJobsPruned,
+      staleUnresolvedSourcesPruned: highGrowthRetention.staleUnresolvedSourcesPruned,
       targetPlanItemsPruned: targetPlanItems.pruned,
       targetPlansPruned: targetPlans.pruned,
       targetPlanPagesPruned: targetPlanPages.pruned,
@@ -813,6 +1104,7 @@ export async function runTelegramRetentionCleanup(
       cappedAtLimit: {
         processedUpdates: processedUpdates.cappedAtLimit,
         recapTargets: recapTargets.cappedAtLimit,
+        highGrowthRetention: highGrowthRetention.cappedAtLimit,
         targetPlanItems: targetPlanItems.cappedAtLimit,
         targetPlans: targetPlans.cappedAtLimit,
         targetPlanPages: targetPlanPages.cappedAtLimit,
@@ -848,6 +1140,7 @@ export async function runTelegramRetentionCleanup(
         alertAudit: ALERT_AUDIT_RETENTION_SEC / DAY_SEC,
         authoritativeWorkflow: AUTHORITATIVE_WORKFLOW_RETENTION_SEC / DAY_SEC,
         authoritativeReplay: AUTHORITATIVE_REPLAY_RETENTION_SEC / DAY_SEC,
+        staleUnresolved: STALE_UNRESOLVED_RETENTION_SEC / DAY_SEC,
         recapTargetsTerminal: 90,
         usageDaily: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
         watcherLifecycle: USAGE_DAILY_RETENTION_SEC / DAY_SEC,
