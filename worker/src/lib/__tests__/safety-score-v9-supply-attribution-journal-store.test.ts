@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import {
+  SupplyAttributionJournalV1Schema,
+  computeSupplyAttributionJournalIdV1,
   createSupplyAttributionJournalV1,
   type SupplyAttributionJournalV1Payload,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
@@ -66,6 +68,7 @@ describe("Safety Score V9 supply attribution journal store", () => {
       const second = record("supply-attribution:2", 200, {
         admissionCode: "supply-attribution.admission.rejected-stale",
         fallbackCode: "supply-attribution.fallback.aggregate-only",
+        rejectionCode: "safe-block-unavailable",
         sourceObservedAtSec: null,
         failedRouteId: null,
         contentSha256: null,
@@ -93,10 +96,100 @@ describe("Safety Score V9 supply attribution journal store", () => {
         ...secondPayload,
         admissionCode:
           "supply-attribution.admission.rejected-reconciliation",
+        rejectionCode: "packet-reconciliation-failed",
       });
       await expect(
         appendSupplyAttributionJournalV1(db, [conflicting], 402),
       ).rejects.toThrow(/UNIQUE constraint failed/);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("loads immutable V1 rows written before leaf diagnostics", async () => {
+    const { sqlite, db } = openDb();
+    try {
+      const current = record("supply-attribution:legacy", 100, {
+        admissionCode: "supply-attribution.admission.rejected-stale",
+        fallbackCode: "supply-attribution.fallback.aggregate-only",
+        rejectionCode: "safe-block-unavailable",
+        sourceObservedAtSec: null,
+        contentSha256: null,
+      });
+      const {
+        journalId: _journalId,
+        rejectionCode: _rejectionCode,
+        ...legacyPayload
+      } = current;
+      const legacy = SupplyAttributionJournalV1Schema.parse({
+        ...legacyPayload,
+        journalId: computeSupplyAttributionJournalIdV1(legacyPayload),
+      });
+      const payloadJson = JSON.stringify(legacy);
+      sqlite
+        .prepare(
+          `INSERT INTO safety_score_v9_supply_attribution_journal (
+             journal_id, schema_version, lane, asset_id, attempt_id,
+             attempted_at, completed_at, source_id, admission_code,
+             fallback_code, payload_json, payload_bytes, recorded_at
+           ) VALUES (?, 1, 'supply-attribution', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          legacy.journalId,
+          legacy.assetId,
+          legacy.attemptId,
+          legacy.attemptedAtSec,
+          legacy.completedAtSec,
+          legacy.sourceId,
+          legacy.admissionCode,
+          legacy.fallbackCode,
+          payloadJson,
+          new TextEncoder().encode(payloadJson).byteLength,
+          101,
+        );
+
+      await expect(
+        loadSupplyAttributionJournalByIdV1(db, ["wm-m0"], 200),
+      ).resolves.toEqual({ "wm-m0": [legacy] });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("rejects new writes that bypass the exact rejection leaf factory guard", async () => {
+    const { sqlite, db } = openDb();
+    try {
+      const current = record("supply-attribution:missing-leaf", 100, {
+        admissionCode: "supply-attribution.admission.rejected-stale",
+        fallbackCode: "supply-attribution.fallback.aggregate-only",
+        rejectionCode: "safe-block-unavailable",
+        sourceObservedAtSec: null,
+        contentSha256: null,
+      });
+      const {
+        journalId: _journalId,
+        rejectionCode: _rejectionCode,
+        ...legacyPayload
+      } = current;
+      const synthesizedWithoutLeaf = SupplyAttributionJournalV1Schema.parse({
+        ...legacyPayload,
+        journalId: computeSupplyAttributionJournalIdV1(legacyPayload),
+      });
+
+      await expect(
+        appendSupplyAttributionJournalV1(
+          db,
+          [synthesizedWithoutLeaf],
+          200,
+        ),
+      ).rejects.toThrow(/exact leaf code/);
+      expect(
+        sqlite
+          .prepare(
+            "SELECT COUNT(*) AS count FROM safety_score_v9_supply_attribution_journal",
+          )
+          .get(),
+      ).toEqual({ count: 0 });
     } finally {
       sqlite.close();
     }

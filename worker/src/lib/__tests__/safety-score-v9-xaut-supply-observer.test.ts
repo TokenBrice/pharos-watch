@@ -279,12 +279,14 @@ describe("XAUT representation-group supply observer", () => {
       body: null,
       scoringClockSec: BLOCK_TIME_SEC + 100,
       rejectionCode: "transparency-source-unavailable",
+      rejectedSourceObservedAtSec: null,
     },
     {
       label: "malformed payload",
       body: "{}",
       scoringClockSec: BLOCK_TIME_SEC + 100,
       rejectionCode: "transparency-payload-invalid",
+      rejectedSourceObservedAtSec: null,
     },
     {
       label: "future disclosure",
@@ -293,6 +295,7 @@ describe("XAUT representation-group supply observer", () => {
       }),
       scoringClockSec: BLOCK_TIME_SEC + 100,
       rejectionCode: "transparency-clock-skew",
+      rejectedSourceObservedAtSec: BLOCK_TIME_SEC + 101,
     },
     {
       label: "stale disclosure",
@@ -301,22 +304,30 @@ describe("XAUT representation-group supply observer", () => {
       }),
       scoringClockSec: BLOCK_TIME_SEC,
       rejectionCode: "transparency-stale",
+      rejectedSourceObservedAtSec: BLOCK_TIME_SEC - 172_801,
     },
     {
       label: "quarantined liabilities",
       body: transparencyBody({ quarantined: "0.000001" }),
       scoringClockSec: BLOCK_TIME_SEC + 100,
       rejectionCode: "transparency-liability-state-invalid",
+      rejectedSourceObservedAtSec: null,
     },
     {
       label: "on-chain mismatch",
       body: transparencyBody({ notIssued: "94923.429467" }),
       scoringClockSec: BLOCK_TIME_SEC + 100,
       rejectionCode: "transparency-onchain-mismatch",
+      rejectedSourceObservedAtSec: null,
     },
   ])(
     "rejects $label with a disclosure-specific code",
-    async ({ body, scoringClockSec, rejectionCode }) => {
+    async ({
+      body,
+      scoringClockSec,
+      rejectionCode,
+      rejectedSourceObservedAtSec,
+    }) => {
       const dependencies = observerDependencies();
       dependencies.fetchTetherTransparencyText.mockResolvedValueOnce(
         body,
@@ -334,6 +345,7 @@ describe("XAUT representation-group supply observer", () => {
       ).resolves.toMatchObject({
         status: "rejected",
         rejectionCode,
+        rejectedSourceObservedAtSec,
       });
     },
   );
@@ -406,6 +418,7 @@ describe("XAUT representation-group supply observer", () => {
     ).resolves.toMatchObject({
       status: "rejected",
       rejectionCode: "observation-stale",
+      rejectedSourceObservedAtSec: BLOCK_TIME_SEC,
     });
     expect(stale.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
 

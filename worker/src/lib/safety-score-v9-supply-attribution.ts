@@ -1,8 +1,8 @@
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
+  admissionCodeForSupplyAttributionRejection,
   createSupplyAttributionJournalV1,
-  type SupplyAttributionAdmissionCode,
   type SupplyAttributionJournalV1,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { rethrowIfAborted } from "./abort";
@@ -15,12 +15,10 @@ import {
 import {
   observeCentrifugeReviewedDeploymentUnitPartitionAttempt,
   type CentrifugeReviewedDeploymentObservationAttempt,
-  type CentrifugeReviewedDeploymentRejectionCode,
 } from "./safety-score-v9-centrifuge-supply-observer";
 import {
   observeWmReviewedDeploymentUnitPartitionAttempt,
   type WmReviewedDeploymentObservationAttempt,
-  type WmReviewedDeploymentRejectionCode,
 } from "./safety-score-v9-wm-supply-observer";
 import {
   buildXautRepresentationGroupInventory,
@@ -29,10 +27,15 @@ import {
 import {
   observeXautRepresentationGroupSupplyAttributionAttempt,
   type XautSupplyAttributionObservationAttempt,
-  type XautSupplyAttributionRejectionCode,
 } from "./safety-score-v9-xaut-supply-observer";
 
 const LOCK_MINT_SHARE_SCALE = 10n ** 15n;
+
+export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS = Object.freeze([
+  "wm-m0",
+  XAUT_ASSET_ID,
+  ...CENTRIFUGE_BURN_MINT_ASSET_IDS,
+]);
 
 export interface LockMintSupplyPartition {
   currentSupplyUsdByChain: Record<string, number>;
@@ -114,31 +117,6 @@ export function deriveLockMintSupplyPartition(input: {
   };
 }
 
-function admissionCodeForWmRejection(
-  rejectionCode:
-    | WmReviewedDeploymentRejectionCode
-    | CentrifugeReviewedDeploymentRejectionCode,
-): SupplyAttributionAdmissionCode {
-  switch (rejectionCode) {
-    case "route-inventory-unavailable":
-      return "supply-attribution.admission.rejected-route-inventory";
-    case "deployment-identity-unavailable":
-    case "deployment-identity-mismatch":
-      return "supply-attribution.admission.rejected-identity-drift";
-    case "deployment-state-invalid":
-      return "supply-attribution.admission.rejected-invalid-payload";
-    case "safe-block-unavailable":
-      return "supply-attribution.admission.rejected-stale";
-    case "deployment-observation-skew":
-      return "supply-attribution.admission.rejected-skew";
-    case "packet-reconciliation-failed":
-      return "supply-attribution.admission.rejected-reconciliation";
-    case "chain-rpc-unavailable":
-    case "deployment-state-unavailable":
-      return "supply-attribution.admission.rejected-upstream";
-  }
-}
-
 function buildCentrifugeSupplyAttributionJournalRecord(input: {
   assetId: string;
   fixedInput: Readonly<ReportCardsFixedInput>;
@@ -167,11 +145,16 @@ function buildCentrifugeSupplyAttributionJournalRecord(input: {
     admissionCode:
       outcome.status === "accepted"
         ? "supply-attribution.admission.accepted"
-        : admissionCodeForWmRejection(outcome.rejectionCode),
+        : admissionCodeForSupplyAttributionRejection(
+            outcome.rejectionCode,
+          ),
     fallbackCode:
       outcome.status === "accepted"
         ? "supply-attribution.fallback.not-used"
         : "supply-attribution.fallback.aggregate-only",
+    ...(outcome.status === "rejected"
+      ? { rejectionCode: outcome.rejectionCode }
+      : {}),
     attemptedAtSec: input.attemptedAtSec,
     completedAtSec: input.completedAtSec,
     scoringClockSec: input.fixedInput.clockSec,
@@ -186,41 +169,6 @@ function buildCentrifugeSupplyAttributionJournalRecord(input: {
         ? sha256Hex(stableJsonStringifyV1(outcome.attribution))
         : null,
   });
-}
-
-function admissionCodeForXautRejection(
-  rejectionCode: XautSupplyAttributionRejectionCode,
-): SupplyAttributionAdmissionCode {
-  switch (rejectionCode) {
-    case "route-inventory-unavailable":
-      return "supply-attribution.admission.rejected-route-inventory";
-    case "transparency-source-config-unavailable":
-      return "supply-attribution.admission.rejected-identity-drift";
-    case "transparency-payload-invalid":
-      return "supply-attribution.admission.rejected-invalid-payload";
-    case "transparency-liability-state-invalid":
-      return "supply-attribution.admission.rejected-reconciliation";
-    case "transparency-clock-skew":
-      return "supply-attribution.admission.rejected-skew";
-    case "transparency-stale":
-      return "supply-attribution.admission.rejected-stale";
-    case "transparency-onchain-mismatch":
-      return "supply-attribution.admission.rejected-reconciliation";
-    case "transparency-source-unavailable":
-      return "supply-attribution.admission.rejected-upstream";
-    case "deployment-identity-mismatch":
-      return "supply-attribution.admission.rejected-identity-drift";
-    case "deployment-state-invalid":
-      return "supply-attribution.admission.rejected-invalid-payload";
-    case "finalized-block-unavailable":
-    case "observation-stale":
-      return "supply-attribution.admission.rejected-stale";
-    case "packet-reconciliation-failed":
-      return "supply-attribution.admission.rejected-reconciliation";
-    case "chain-rpc-unavailable":
-    case "deployment-state-unavailable":
-      return "supply-attribution.admission.rejected-upstream";
-  }
 }
 
 function buildXautSupplyAttributionJournalRecord(input: {
@@ -250,18 +198,23 @@ function buildXautSupplyAttributionJournalRecord(input: {
     admissionCode:
       outcome.status === "accepted"
         ? "supply-attribution.admission.accepted"
-        : admissionCodeForXautRejection(outcome.rejectionCode),
+        : admissionCodeForSupplyAttributionRejection(
+            outcome.rejectionCode,
+          ),
     fallbackCode:
       outcome.status === "accepted"
         ? "supply-attribution.fallback.not-used"
         : "supply-attribution.fallback.aggregate-only",
+    ...(outcome.status === "rejected"
+      ? { rejectionCode: outcome.rejectionCode }
+      : {}),
     attemptedAtSec: input.attemptedAtSec,
     completedAtSec: input.completedAtSec,
     scoringClockSec: input.fixedInput.clockSec,
     sourceObservedAtSec:
       outcome.status === "accepted"
         ? outcome.attribution.observedAtSec
-        : null,
+        : outcome.rejectedSourceObservedAtSec,
     failedRouteId:
       outcome.status === "rejected" ? outcome.failedRouteId : null,
     contentSha256:
@@ -297,10 +250,13 @@ function buildWmSupplyAttributionJournalRecord(input: {
     attemptCode: "supply-attribution.collector.attempted",
     admissionCode: outcome.status === "accepted"
       ? "supply-attribution.admission.accepted"
-      : admissionCodeForWmRejection(outcome.rejectionCode),
+      : admissionCodeForSupplyAttributionRejection(outcome.rejectionCode),
     fallbackCode: outcome.status === "accepted"
       ? "supply-attribution.fallback.not-used"
       : "supply-attribution.fallback.aggregate-only",
+    ...(outcome.status === "rejected"
+      ? { rejectionCode: outcome.rejectionCode }
+      : {}),
     attemptedAtSec: input.attemptedAtSec,
     completedAtSec: input.completedAtSec,
     scoringClockSec: input.fixedInput.clockSec,
@@ -348,6 +304,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
           : {
               status: "rejected",
               rejectionCode: "chain-rpc-unavailable",
+              rejectedSourceObservedAtSec: null,
               failedRouteId: null,
             };
     } catch (error) {
@@ -355,6 +312,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
       outcome = {
         status: "rejected",
         rejectionCode: "deployment-state-unavailable",
+        rejectedSourceObservedAtSec: null,
         failedRouteId: null,
       };
     }

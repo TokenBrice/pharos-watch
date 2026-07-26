@@ -189,7 +189,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "wsrusd-reservoir": defineStablecoinRedeemConfig({
-    outputAssets: ["rusd-reservoir"],
+    outputAssets: ["usdc-circle"],
     executionModel: "rules-based-nav",
     capacityModel: {
       kind: "reserve-sync-metadata",
@@ -212,6 +212,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
     ],
     notes: [
+      "The modeled route composes the ERC-4626 unwrap into rUSD with the downstream Reservoir PSM exit, so its final output is USDC",
       "Fresh live reserve telemetry uses the current USDC position as the immediate redeemable lower bound",
       "When the timestamp-less Reservoir balance-sheet feed cannot meet scoring-grade freshness requirements, the route falls back to the reviewed 25 bps minimum USDC PSM balance documented by Reservoir",
     ],
@@ -854,7 +855,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "srusd-reservoir": defineStablecoinRedeemConfig({
-    outputAssets: ["rusd-reservoir"],
+    outputAssets: ["usdc-circle"],
     capacityModel: {
       kind: "reserve-sync-metadata",
       fallbackRatio: 0.0025,
@@ -882,6 +883,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
     ],
     notes: [
+      "The modeled route composes the srUSD exit into rUSD with the downstream Reservoir PSM exit, so its final output is USDC",
       "Fresh reserve telemetry uses Reservoir's balance-sheet feed; when it is unavailable, the route falls back to Reservoir's documented 25 bps minimum USDC PSM balance",
     ],
   }),

@@ -47,6 +47,15 @@ function canonicalRecords(
   const canonical = records
     .map((value) => {
       const record = SupplyAttributionJournalV1Schema.parse(value);
+      if (
+        record.admissionCode !==
+          "supply-attribution.admission.accepted" &&
+        record.rejectionCode === undefined
+      ) {
+        throw new Error(
+          "New rejected supply attribution journal records require an exact leaf code",
+        );
+      }
       if (!ACTIVE_IDS.has(record.assetId)) {
         throw new Error(
           `Supply attribution journal rejects inactive asset ${record.assetId}`,

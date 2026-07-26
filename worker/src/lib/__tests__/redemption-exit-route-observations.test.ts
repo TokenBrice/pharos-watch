@@ -382,6 +382,25 @@ describe("derived supply-model route observations", () => {
     });
   });
 
+  it.each(["srusd-reservoir", "wsrusd-reservoir"] as const)(
+    "resolves the composed %s redemption route to its final USDC output",
+    (stablecoinId) => {
+      const configured = getRedemptionBackstopConfig(stablecoinId);
+      expect(configured).toBeDefined();
+
+      expect(
+        build({
+          stablecoinId,
+          config: configured!,
+          resolvedFeeBps: null,
+        })?.output,
+      ).toEqual({
+        kind: "tracked-stablecoin",
+        trackedAssetIds: ["usdc-circle"],
+      });
+    },
+  );
+
   it("shapes the sourced redemption-tail outputs and keeps incomplete claims fail-closed", () => {
     const buildConfigured = (
       stablecoinId: string,

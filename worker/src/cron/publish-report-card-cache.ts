@@ -14,7 +14,10 @@ import { recordCronFailure } from "../lib/cron-logger";
 import { runSafetyScoreV9ShadowAfterV8Publication } from "../lib/safety-score-v9-shadow-runner";
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import { enrichSafetyScoreV9FixedInputSupplyWithEvidence } from "../lib/safety-score-v9-supply-attribution";
+import {
+  enrichSafetyScoreV9FixedInputSupplyWithEvidence,
+  SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS,
+} from "../lib/safety-score-v9-supply-attribution";
 import { loadReportCardEvidenceJournalByIdV1 } from "../lib/report-card-evidence-journal-store";
 import {
   appendSupplyAttributionJournalV1,
@@ -107,8 +110,9 @@ export async function publishReportCardCache(
             ),
             loadSupplyAttributionJournalByIdV1(
               db,
-              ["wm-m0", "xaut-tether"].filter((assetId) =>
-                supplyFixedInput.activeAssetIds.includes(assetId),
+              SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS.filter(
+                (assetId) =>
+                  supplyFixedInput.activeAssetIds.includes(assetId),
               ),
               supplyFixedInput.clockSec,
               shadowSignal,

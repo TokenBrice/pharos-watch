@@ -25,6 +25,12 @@ vi.mock("../../lib/report-cards-fixed-input", () => ({
 
 vi.mock("../../lib/safety-score-v9-supply-attribution", () => ({
   enrichSafetyScoreV9FixedInputSupplyWithEvidence: mockEnrichV9FixedInput,
+  SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS: [
+    "wm-m0",
+    "xaut-tether",
+    "acrdx-anemoy-apollo",
+    "jtrsy-anemoy",
+  ],
 }));
 
 vi.mock("../../lib/report-card-evidence-journal-store", () => ({
@@ -306,10 +312,24 @@ describe("publishReportCardCache", () => {
     const current = { completedAtSec: 1_700_000_001, attemptId: "current" };
     const prior = { completedAtSec: 1_699_999_900, attemptId: "prior" };
     const priorXaut = { completedAtSec: 1_699_999_800, attemptId: "prior-xaut" };
+    const priorAcrdx = {
+      completedAtSec: 1_699_999_700,
+      attemptId: "prior-acrdx",
+    };
+    const priorJtrsy = {
+      completedAtSec: 1_699_999_600,
+      attemptId: "prior-jtrsy",
+    };
     mockEnrichV9FixedInput.mockImplementation(async (fixedInput) => ({
       fixedInput: {
         ...fixedInput,
-        activeAssetIds: ["usdc-circle", "wm-m0", "xaut-tether"],
+        activeAssetIds: [
+          "usdc-circle",
+          "wm-m0",
+          "xaut-tether",
+          "acrdx-anemoy-apollo",
+          "jtrsy-anemoy",
+        ],
         safetyScoreV9SupplyAttributionById: {},
       },
       journalRecords: [current],
@@ -317,13 +337,20 @@ describe("publishReportCardCache", () => {
     mockLoadSupplyAttributionJournal.mockResolvedValue({
       "wm-m0": [prior],
       "xaut-tether": [priorXaut],
+      "acrdx-anemoy-apollo": [priorAcrdx],
+      "jtrsy-anemoy": [priorJtrsy],
     });
 
     await publishReportCardCache({} as D1Database);
 
     expect(mockLoadSupplyAttributionJournal).toHaveBeenCalledWith(
       expect.anything(),
-      ["wm-m0", "xaut-tether"],
+      [
+        "wm-m0",
+        "xaut-tether",
+        "acrdx-anemoy-apollo",
+        "jtrsy-anemoy",
+      ],
       1_700_000_000,
       expect.any(AbortSignal),
     );
@@ -341,6 +368,8 @@ describe("publishReportCardCache", () => {
         supplyAttributionJournalById: {
           "wm-m0": [prior],
           "xaut-tether": [priorXaut],
+          "acrdx-anemoy-apollo": [priorAcrdx],
+          "jtrsy-anemoy": [priorJtrsy],
         },
       }),
       expect.anything(),

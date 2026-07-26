@@ -15,6 +15,7 @@ import {
   encodeBalanceOfCallData,
   TOTAL_SUPPLY_SELECTOR,
 } from "./evm-selectors";
+import { tryParseJson } from "./json-parse";
 import {
   buildXautTransparencySource,
   buildXautRepresentationGroupInventory,
@@ -72,6 +73,7 @@ export type XautSupplyAttributionObservationAttempt =
   | {
       status: "rejected";
       rejectionCode: XautSupplyAttributionRejectionCode;
+      rejectedSourceObservedAtSec: number | null;
       failedRouteId: string | null;
     };
 
@@ -271,8 +273,14 @@ export function parseXautTransparencyDisclosure(
 function reject(
   rejectionCode: XautSupplyAttributionRejectionCode,
   failedRouteId: string | null,
+  rejectedSourceObservedAtSec: number | null = null,
 ): XautSupplyAttributionObservationAttempt {
-  return { status: "rejected", rejectionCode, failedRouteId };
+  return {
+    status: "rejected",
+    rejectionCode,
+    rejectedSourceObservedAtSec,
+    failedRouteId,
+  };
 }
 
 async function finalizedHeaderAtScoringClock(
@@ -295,6 +303,7 @@ async function finalizedHeaderAtScoringClock(
     header.number > 0;
     rewind += 1
   ) {
+    throwIfAborted(signal);
     header = await dependencies.fetchEvmBlockHeader(
       XAUT_CANONICAL_CHAIN_ID,
       header.number - 1,
@@ -346,10 +355,10 @@ export async function observeXautRepresentationGroupSupplyAttributionAttempt(
   if (transparencyText === null) {
     return reject("transparency-source-unavailable", null);
   }
-  let transparencyPayload: unknown;
-  try {
-    transparencyPayload = JSON.parse(transparencyText);
-  } catch {
+  const transparencyPayload = tryParseJson(transparencyText, {
+    onFailure: () => undefined,
+  });
+  if (transparencyPayload === null) {
     return reject("transparency-payload-invalid", null);
   }
   const disclosure = parseXautTransparencyDisclosure(
@@ -359,13 +368,21 @@ export async function observeXautRepresentationGroupSupplyAttributionAttempt(
     return reject("transparency-payload-invalid", null);
   }
   if (disclosure.sourceTimestampSec > input.scoringClockSec) {
-    return reject("transparency-clock-skew", null);
+    return reject(
+      "transparency-clock-skew",
+      null,
+      disclosure.sourceTimestampSec,
+    );
   }
   if (
     input.scoringClockSec - disclosure.sourceTimestampSec >
     XAUT_DISCLOSURE_MAX_AGE_SEC
   ) {
-    return reject("transparency-stale", null);
+    return reject(
+      "transparency-stale",
+      null,
+      disclosure.sourceTimestampSec,
+    );
   }
   if (BigInt(disclosure.quarantinedRaw) !== 0n) {
     return reject("transparency-liability-state-invalid", null);
@@ -382,7 +399,7 @@ export async function observeXautRepresentationGroupSupplyAttributionAttempt(
     input.scoringClockSec - blockHeader.timestamp >
     XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC
   ) {
-    return reject("observation-stale", null);
+    return reject("observation-stale", null, blockHeader.timestamp);
   }
 
   const options = rpcOptions(input.chainRpcs, input.signal);

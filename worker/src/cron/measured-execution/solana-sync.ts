@@ -17,13 +17,19 @@ import {
   publishSolanaMeasuredQuoteGeneration,
   type SolanaMeasuredQuoteOutcome,
 } from "./persistence";
+import {
+  getSolanaMeasuredExecutionPriorityTarget,
+  SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS,
+} from "./solana-registry";
 import { buildSolanaMeasuredExecutionProfile } from "./solana-profiles";
 import { fetchSolanaCurrentSlot, quoteSolanaMeasuredTarget } from "./solana-quotes";
 
 const SOLANA_ADMISSION_SOURCE_KEY = "measured-execution:solana-admission";
-// Twelve admissions per half-hour cover the current inventory almost three
-// times during a 72-hour evidence window without adding request concurrency.
-const MAX_TARGETS_PER_RUN = 12;
+// Preserve twelve cursor-rotated admissions while reserving one additional
+// serialized slot for each exact reviewed priority target. This keeps the
+// priority evidence inside its one-hour freshness window without reducing
+// general inventory coverage or adding request concurrency.
+export const SOLANA_MEASURED_ROTATING_TARGETS_PER_RUN = 12;
 const SOLANA_RUNTIME_BUDGET_MS = 7 * 60 * 1_000;
 
 interface SolanaQuoteState {
@@ -35,19 +41,60 @@ interface SolanaQuoteState {
 export function admitSolanaMeasuredTargets(
   targets: readonly SolanaMeasuredExecutionTarget[],
   cursor: string | null,
-  limit = MAX_TARGETS_PER_RUN,
-): { admitted: Set<string>; nextCursor: string | null } {
-  const ranked = [...targets].sort(
+  rotatingLimit = SOLANA_MEASURED_ROTATING_TARGETS_PER_RUN,
+): {
+  admitted: Set<string>;
+  nextCursor: string | null;
+  priorityExpectedCount: number;
+  priorityObservedCount: number;
+  rotatingAdmittedCount: number;
+  missingPriorityPolicyIds: string[];
+} {
+  const priorityByPolicyId = new Map<string, SolanaMeasuredExecutionTarget>();
+  const rotatingTargets: SolanaMeasuredExecutionTarget[] = [];
+  for (const target of targets) {
+    const priority = getSolanaMeasuredExecutionPriorityTarget(target);
+    if (priority) {
+      priorityByPolicyId.set(priority.policyId, target);
+    } else {
+      rotatingTargets.push(target);
+    }
+  }
+  const priorityRows = SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS.flatMap((entry) => {
+    const target = priorityByPolicyId.get(entry.policyId);
+    return target ? [target] : [];
+  });
+  const ranked = rotatingTargets.sort(
     (left, right) => right.retainedTvlUsd - left.retainedTvlUsd || left.targetId.localeCompare(right.targetId),
   );
   const rotated = rotateFromCursor(ranked, cursor, (target) => target.targetId, {
     startAfterCursor: true,
   }).items;
-  const admittedRows = rotated.slice(0, Math.max(0, limit));
+  const rotatingRows = rotated.slice(0, Math.max(0, rotatingLimit));
   return {
-    admitted: new Set(admittedRows.map((target) => target.targetId)),
-    nextCursor: admittedRows[admittedRows.length - 1]?.targetId ?? cursor,
+    admitted: new Set([...priorityRows, ...rotatingRows].map((target) => target.targetId)),
+    nextCursor: rotatingRows[rotatingRows.length - 1]?.targetId ?? cursor,
+    priorityExpectedCount: SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS.length,
+    priorityObservedCount: priorityRows.length,
+    rotatingAdmittedCount: rotatingRows.length,
+    missingPriorityPolicyIds: SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS
+      .filter((entry) => !priorityByPolicyId.has(entry.policyId))
+      .map((entry) => entry.policyId),
   };
+}
+
+export function orderAdmittedSolanaMeasuredTargets(
+  targets: readonly SolanaMeasuredExecutionTarget[],
+  admitted: ReadonlySet<string>,
+): SolanaMeasuredExecutionTarget[] {
+  return targets
+    .flatMap((target, index) =>
+      admitted.has(target.targetId)
+        ? [{ target, index, priority: getSolanaMeasuredExecutionPriorityTarget(target) !== null }]
+        : [],
+    )
+    .sort((left, right) => Number(right.priority) - Number(left.priority) || left.index - right.index)
+    .map(({ target }) => target);
 }
 
 async function measureTarget(input: {
@@ -119,17 +166,25 @@ export async function syncSolanaDexMeasuredExecution(
 
   const admissionState = await readDexSourcePaginationState(db, SOLANA_ADMISSION_SOURCE_KEY, "sync-cl-exit-depth");
   const admissionCursor = admissionState.cursor?.trim() || null;
-  const { admitted, nextCursor } = admitSolanaMeasuredTargets(targetGeneration.targets, admissionCursor);
+  const {
+    admitted,
+    nextCursor,
+    priorityExpectedCount,
+    priorityObservedCount,
+    rotatingAdmittedCount,
+    missingPriorityPolicyIds,
+  } = admitSolanaMeasuredTargets(targetGeneration.targets, admissionCursor);
   const quoteGenerationId = buildSolanaMeasuredQuoteGenerationId(startedAt);
   const states: SolanaQuoteState[] = targetGeneration.targets.map((target) => ({
     target,
     profile: null,
     failureReason: admitted.has(target.targetId) ? null : "budget-deferred",
   }));
+  const stateByTargetId = new Map(states.map((state) => [state.target.targetId, state] as const));
 
   let completed = 0;
-  for (const state of states) {
-    if (state.failureReason) continue;
+  for (const target of orderAdmittedSolanaMeasuredTargets(targetGeneration.targets, admitted)) {
+    const state = stateByTargetId.get(target.targetId)!;
     throwIfAborted(signal);
     try {
       state.profile = await measureTarget({
@@ -187,7 +242,7 @@ export async function syncSolanaDexMeasuredExecution(
       cycleStartedAt: admissionState.cycleStartedAt ?? startedAt,
       nowSec: publishedAt,
       completed: false,
-      pagesFetched: admitted.size,
+      pagesFetched: rotatingAdmittedCount,
       diagnostics: [`deferred-targets:${deferredCount}`, `target-generation:${targetGeneration.generationId}`],
       job: "sync-cl-exit-depth",
     });
@@ -211,6 +266,11 @@ export async function syncSolanaDexMeasuredExecution(
     failedCount: publication.failedCount,
     attemptedFailureCount,
     deferredCount,
+    priorityExpectedCount,
+    priorityObservedCount,
+    priorityAdmittedCount: priorityObservedCount,
+    rotatingAdmittedCount,
+    missingPriorityPolicyIds,
     admissionCursor,
     nextAdmissionCursor: nextCursor,
     cursorWriteStatus,
@@ -223,7 +283,12 @@ export async function syncSolanaDexMeasuredExecution(
     }, {}),
   };
   return {
-    status: attemptedFailureCount > 0 || cursorWriteStatus === "write-failed" ? "degraded" : "ok",
+    status:
+      attemptedFailureCount > 0 ||
+      missingPriorityPolicyIds.length > 0 ||
+      cursorWriteStatus === "write-failed"
+        ? "degraded"
+        : "ok",
     itemCount: publication.measuredCount,
     metadata: JSON.stringify(metadata),
     productivity: {

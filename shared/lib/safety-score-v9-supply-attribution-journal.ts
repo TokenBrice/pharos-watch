@@ -41,6 +41,116 @@ export type SupplyAttributionAdmissionCode = z.infer<
   typeof SupplyAttributionAdmissionCodeSchema
 >;
 
+export const SupplyAttributionRejectionCodeSchema = z.enum([
+  "route-inventory-unavailable",
+  "deployment-identity-unavailable",
+  "chain-rpc-unavailable",
+  "safe-block-unavailable",
+  "deployment-state-unavailable",
+  "deployment-state-invalid",
+  "deployment-identity-mismatch",
+  "deployment-observation-skew",
+  "packet-reconciliation-failed",
+  "transparency-source-config-unavailable",
+  "transparency-source-unavailable",
+  "transparency-payload-invalid",
+  "transparency-stale",
+  "transparency-clock-skew",
+  "transparency-onchain-mismatch",
+  "transparency-liability-state-invalid",
+  "finalized-block-unavailable",
+  "observation-stale",
+]);
+
+export type SupplyAttributionRejectionCode = z.infer<
+  typeof SupplyAttributionRejectionCodeSchema
+>;
+
+const SUPPLY_ATTRIBUTION_ADMISSION_BY_REJECTION_CODE = {
+  "route-inventory-unavailable":
+    "supply-attribution.admission.rejected-route-inventory",
+  "deployment-identity-unavailable":
+    "supply-attribution.admission.rejected-identity-drift",
+  "chain-rpc-unavailable":
+    "supply-attribution.admission.rejected-upstream",
+  "safe-block-unavailable":
+    "supply-attribution.admission.rejected-stale",
+  "deployment-state-unavailable":
+    "supply-attribution.admission.rejected-upstream",
+  "deployment-state-invalid":
+    "supply-attribution.admission.rejected-invalid-payload",
+  "deployment-identity-mismatch":
+    "supply-attribution.admission.rejected-identity-drift",
+  "deployment-observation-skew":
+    "supply-attribution.admission.rejected-skew",
+  "packet-reconciliation-failed":
+    "supply-attribution.admission.rejected-reconciliation",
+  "transparency-source-config-unavailable":
+    "supply-attribution.admission.rejected-identity-drift",
+  "transparency-source-unavailable":
+    "supply-attribution.admission.rejected-upstream",
+  "transparency-payload-invalid":
+    "supply-attribution.admission.rejected-invalid-payload",
+  "transparency-stale":
+    "supply-attribution.admission.rejected-stale",
+  "transparency-clock-skew":
+    "supply-attribution.admission.rejected-skew",
+  "transparency-onchain-mismatch":
+    "supply-attribution.admission.rejected-reconciliation",
+  "transparency-liability-state-invalid":
+    "supply-attribution.admission.rejected-reconciliation",
+  "finalized-block-unavailable":
+    "supply-attribution.admission.rejected-stale",
+  "observation-stale":
+    "supply-attribution.admission.rejected-stale",
+} as const satisfies Readonly<
+  Record<SupplyAttributionRejectionCode, SupplyAttributionAdmissionCode>
+>;
+
+export function admissionCodeForSupplyAttributionRejection(
+  rejectionCode: SupplyAttributionRejectionCode,
+): SupplyAttributionAdmissionCode {
+  return SUPPLY_ATTRIBUTION_ADMISSION_BY_REJECTION_CODE[rejectionCode];
+}
+
+const REVIEWED_DEPLOYMENT_REJECTION_CODES =
+  new Set<SupplyAttributionRejectionCode>([
+    "route-inventory-unavailable",
+    "deployment-identity-unavailable",
+    "chain-rpc-unavailable",
+    "safe-block-unavailable",
+    "deployment-state-unavailable",
+    "deployment-state-invalid",
+    "deployment-identity-mismatch",
+    "deployment-observation-skew",
+    "packet-reconciliation-failed",
+  ]);
+
+const XAUT_REJECTION_CODES = new Set<SupplyAttributionRejectionCode>([
+  "route-inventory-unavailable",
+  "transparency-source-config-unavailable",
+  "transparency-source-unavailable",
+  "transparency-payload-invalid",
+  "transparency-stale",
+  "transparency-clock-skew",
+  "transparency-onchain-mismatch",
+  "transparency-liability-state-invalid",
+  "chain-rpc-unavailable",
+  "finalized-block-unavailable",
+  "observation-stale",
+  "deployment-state-unavailable",
+  "deployment-state-invalid",
+  "deployment-identity-mismatch",
+  "packet-reconciliation-failed",
+]);
+
+const TIMESTAMPED_REJECTION_CODES =
+  new Set<SupplyAttributionRejectionCode>([
+    "transparency-stale",
+    "transparency-clock-skew",
+    "observation-stale",
+  ]);
+
 export const SupplyAttributionFallbackCodeSchema = z.enum([
   "supply-attribution.fallback.not-used",
   "supply-attribution.fallback.aggregate-only",
@@ -68,6 +178,9 @@ const SupplyAttributionJournalV1PayloadSchema = z
     attemptCode: z.literal("supply-attribution.collector.attempted"),
     admissionCode: SupplyAttributionAdmissionCodeSchema,
     fallbackCode: SupplyAttributionFallbackCodeSchema,
+    // Optional only so immutable V1 rows written before exact leaf diagnostics
+    // continue to parse and retain their original content-addressed IDs.
+    rejectionCode: SupplyAttributionRejectionCodeSchema.optional(),
     attemptedAtSec: z.number().int().nonnegative(),
     completedAtSec: z.number().int().nonnegative(),
     scoringClockSec: z.number().int().nonnegative(),
@@ -100,6 +213,57 @@ const SupplyAttributionJournalV1PayloadSchema = z
     }
     const accepted =
       record.admissionCode === "supply-attribution.admission.accepted";
+    const allowedRejectionCodes =
+      record.sourceId ===
+      "xaut.canonical-lock-mint-group-partition.v2"
+        ? XAUT_REJECTION_CODES
+        : REVIEWED_DEPLOYMENT_REJECTION_CODES;
+    if (
+      record.rejectionCode !== undefined &&
+      !allowedRejectionCodes.has(record.rejectionCode)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["rejectionCode"],
+        message:
+          `Supply attribution source ${record.sourceId} cannot emit ` +
+          `${record.rejectionCode}`,
+      });
+    }
+    if (accepted && record.rejectionCode !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["rejectionCode"],
+        message: "Accepted supply attribution cannot carry a rejection code",
+      });
+    }
+    if (
+      !accepted &&
+      record.rejectionCode !== undefined &&
+      record.admissionCode !==
+        admissionCodeForSupplyAttributionRejection(record.rejectionCode)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["admissionCode"],
+        message:
+          `Supply attribution rejection ${record.rejectionCode} requires ` +
+          `${admissionCodeForSupplyAttributionRejection(record.rejectionCode)}`,
+      });
+    }
+    if (
+      record.rejectionCode !== undefined &&
+      TIMESTAMPED_REJECTION_CODES.has(record.rejectionCode) &&
+      record.sourceObservedAtSec === null
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sourceObservedAtSec"],
+        message:
+          `Supply attribution rejection ${record.rejectionCode} requires ` +
+          "its rejected source timestamp",
+      });
+    }
     if (accepted !== (record.fallbackCode === "supply-attribution.fallback.not-used")) {
       ctx.addIssue({
         code: "custom",
@@ -108,15 +272,17 @@ const SupplyAttributionJournalV1PayloadSchema = z
       });
     }
     if (
-      accepted !==
-      (record.contentSha256 !== null &&
-        record.sourceObservedAtSec !== null &&
-        record.failedRouteId === null)
+      accepted
+        ? record.contentSha256 === null ||
+          record.sourceObservedAtSec === null ||
+          record.failedRouteId !== null
+        : record.contentSha256 !== null
     ) {
       ctx.addIssue({
         code: "custom",
         message:
-          "Accepted supply attribution requires content and source time without a failed route",
+          "Accepted supply attribution requires content and source time " +
+          "without a failed route; rejected attribution cannot carry content",
       });
     }
     const boundedWmPostClockObservation =
@@ -127,10 +293,16 @@ const SupplyAttributionJournalV1PayloadSchema = z
       record.sourceObservedAtSec - record.scoringClockSec <=
         WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC &&
       record.sourceObservedAtSec <= record.completedAtSec;
+    const rejectedXautClockSkew =
+      !accepted &&
+      record.sourceId ===
+        "xaut.canonical-lock-mint-group-partition.v2" &&
+      record.rejectionCode === "transparency-clock-skew";
     if (
       record.sourceObservedAtSec !== null &&
       record.sourceObservedAtSec > record.scoringClockSec &&
-      !boundedWmPostClockObservation
+      !boundedWmPostClockObservation &&
+      !rejectedXautClockSkew
     ) {
       ctx.addIssue({
         code: "custom",
@@ -200,6 +372,14 @@ export function createSupplyAttributionJournalV1(
   value: SupplyAttributionJournalV1Payload,
 ): SupplyAttributionJournalV1 {
   const payload = SupplyAttributionJournalV1PayloadSchema.parse(value);
+  if (
+    payload.admissionCode !== "supply-attribution.admission.accepted" &&
+    payload.rejectionCode === undefined
+  ) {
+    throw new Error(
+      "New rejected supply attribution journal records require an exact leaf code",
+    );
+  }
   return SupplyAttributionJournalV1Schema.parse({
     ...payload,
     journalId: computeSupplyAttributionJournalIdV1(payload),
