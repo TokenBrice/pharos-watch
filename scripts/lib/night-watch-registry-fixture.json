@@ -61,6 +61,7 @@
     "sync-redemption-backstops",
     "sync-stablecoin-charts",
     "sync-stablecoins",
+    "sync-v9-supply-attribution",
     "sync-usds-status",
     "sync-yield-data",
     "sync-yield-supplemental",

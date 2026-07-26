@@ -233,6 +233,9 @@ af54646449278a67f151c798373fa06c466cebd4:shared/data/safety-score-v9/transfer-re
 3ac98ddd56c91b9930c5440d8dab770e105a3b5e:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:4199
 3ac98ddd56c91b9930c5440d8dab770e105a3b5e:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:4231
 3ac98ddd56c91b9930c5440d8dab770e105a3b5e:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:4267
+# Public Solana pool and token identifiers used by the measured-execution registry.
+f22fff401e2d5dfeb1efd4e6d988685826e41313:worker/src/cron/measured-execution/solana-registry.ts:generic-api-key:66
+f22fff401e2d5dfeb1efd4e6d988685826e41313:worker/src/cron/measured-execution/solana-registry.ts:generic-api-key:68
 # Midas Final-Terms PDFs (SOL-FEES wave-5 sources): GitBook CDN file URLs embed
 # public access tokens; these are public-document links, not credentials.
 6dbbaea96aa22a5126f59482c95c46372a9e9617:shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts:generic-api-key:54
