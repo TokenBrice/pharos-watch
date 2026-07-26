@@ -101,8 +101,8 @@
   "status": "pre-launch",
   "announcedDate": "2026-03",
   "expectedLaunchDate": "2026-H2",
-  "launchPhase": "testnet",
-  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint, OSL Group, and PantherTrade completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. The original end-of-Q2 2026 phased rollout target closed on June 30, 2026 with no public circulating token and no disclosed deployment contract address, so Pharos now tracks the launch as a broader H2 2026 rollout pending a sourced narrower date.",
+  "launchPhase": "launching-soon",
+  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS01, effective April 10 2026; JV between Standard Chartered, HKT, and Animoca Brands; 1:1 backed by HKD-denominated high-quality liquid assets. On May 13 2026, Anchorpoint, OSL Group, and PantherTrade completed a full-lifecycle test transfer on Ethereum mainnet (fiat funding, reserve, mint, transfer, full redemption) without putting tokens into circulation — confirming Ethereum as the deployment chain. The original end-of-Q2 2026 phased rollout target closed on June 30, 2026 with no public circulating token. On July 21 2026 Caixin reported, citing people familiar with the plans, that Anchorpoint will launch HKDAP within the month with distribution through licensed exchanges OSL and HashKey, which are already testing payment and fund use cases. Anchorpoint has issued no confirming press release and no deployment contract address is public, so Pharos keeps the H2 2026 window and treats the July date as unofficial.",
   "featuredContent": [
     {
       "type": "article",
@@ -117,6 +117,13 @@
       "title": "OSL and Anchorpoint complete HKDAP stablecoin test transfers on Ethereum",
       "description": "Anchorpoint and OSL Group complete a full-lifecycle HKDAP test on Ethereum mainnet — fiat funding through mint, transfer, and redemption — ahead of a phased Q2 2026 launch.",
       "source": "OSL"
+    },
+    {
+      "type": "article",
+      "url": "https://www.caixinglobal.com/2026-07-21/standard-chartered-backed-venture-said-to-launch-hong-kong-stablecoin-this-month-102466664.html",
+      "title": "Standard Chartered-backed venture said to launch Hong Kong stablecoin this month",
+      "description": "Caixin reports Anchorpoint will issue HKDAP within July 2026, distributed through OSL and HashKey, ahead of a joint announcement with Standard Chartered.",
+      "source": "Caixin Global"
     }
   ],
   "milestones": [
@@ -139,6 +146,13 @@
       "title": "HKDAP completes full-lifecycle test transfer on Ethereum mainnet with OSL Group",
       "description": "Anchorpoint and OSL Group execute an end-to-end production-grade test (fiat funding, reserve, mint, transfer, full redemption) on Ethereum mainnet; tokens were not placed into public circulation. Confirms Ethereum as the deployment chain.",
       "sourceUrl": "https://www.osl.com/hk-en/press-release/osl-anchorpoint-complete-hkdap-stablecoin-test-transfers-ethereum"
+    },
+    {
+      "date": "2026-07-21",
+      "type": "milestone",
+      "title": "Caixin reports HKDAP launch planned within July, distributed via OSL and HashKey",
+      "description": "Citing people familiar with the matter, Caixin reports Anchorpoint will launch HKDAP this month, with licensed exchanges OSL Group and HashKey Exchange distributing it and already testing online-payment and digital-asset-fund use cases. A joint Standard Chartered / Anchorpoint announcement is said to be roughly two weeks out. No official issuer confirmation and no deployment contract address published.",
+      "sourceUrl": "https://www.caixinglobal.com/2026-07-21/standard-chartered-backed-venture-said-to-launch-hong-kong-stablecoin-this-month-102466664.html"
     }
   ],
   "dateHistory": [

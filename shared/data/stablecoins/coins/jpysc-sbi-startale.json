@@ -111,6 +111,13 @@
       "title": "JPYSC goes live (closed-loop) — issued by Shinsei Trust & Banking, distributed via SBI VC Trade",
       "description": "Japan's first trust-bank-backed yen stablecoin launches with first issuance the same day; ~$63M of cash plus up to 50% JGB reserves held in segregated trust accounts under the Type III electronic payment instrument framework. Initial phase is closed-loop — SBI VC Trade account holders only, with no external-wallet withdrawals or public-chain circulation yet.",
       "sourceUrl": "https://www.cryptotimes.io/2026/06/24/sbi-and-startale-launch-jpysc-japans-first-trust-backed-yen-stablecoin/"
+    },
+    {
+      "date": "2026-07-16",
+      "type": "milestone",
+      "title": "SBI VC Trade opens applications for JPYSC Lending, Japan's first trust-based yen stablecoin lending service",
+      "description": "Applications opened July 16 2026 with the lending period starting July 23; a promotional 3% annualized yield applies over a 12-week term, with standard yields projected at 1-3% thereafter. The service runs inside the SBI VC Trade account environment and does not change JPYSC's closed-loop status.",
+      "sourceUrl": "https://www.fintechobserver.com/sbi-vc-trade-launches-japans-first-trust-based-yen-stablecoin-lending-service-with-3-promotional-yield/"
     }
   ]
 }
