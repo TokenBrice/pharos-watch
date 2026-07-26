@@ -228,6 +228,55 @@ describe("mint/burn retention", () => {
     expect(eventIds(sqlite)).toEqual([]);
   });
 
+  it("keeps old hourly evidence until a capped raw-event backlog drains", async () => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const oldTimestamp = NOW_SEC - MINT_BURN_HOURLY_RETENTION_SEC - HOUR_SEC;
+    const oldHour = hourFor(oldTimestamp);
+    for (let index = 0; index < 5; index += 1) {
+      insertEvent(sqlite, {
+        id: `old-eligible-${index}`,
+        timestamp: oldTimestamp + index,
+      });
+    }
+
+    const first = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
+      eventBatchLimit: 2,
+      eventRunLimit: 3,
+      hourlyBatchLimit: 2,
+      hourlyRunLimit: 2,
+    });
+
+    expect(first.eventRows.deletedRows).toBe(3);
+    expect(first.eventRows.cappedAtLimit).toBe(true);
+    expect(first.hourlyRows.deletedRows).toBe(0);
+    expect(first.hourlyRows.oldestEligibleAt).toBeNull();
+    expect(eventIds(sqlite)).toHaveLength(2);
+    expect(
+      sqlite
+        .prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly WHERE hour_ts = ?")
+        .get(oldHour),
+    ).toEqual({ count: 1 });
+
+    const second = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
+      eventBatchLimit: 2,
+      eventRunLimit: 3,
+      hourlyBatchLimit: 2,
+      hourlyRunLimit: 2,
+    });
+
+    expect(second.eventRows.deletedRows).toBe(2);
+    expect(second.eventRows.cappedAtLimit).toBe(false);
+    expect(second.hourlyRows.deletedRows).toBe(1);
+    expect(second.hourlyRows.oldestEligibleAt).toBeNull();
+    expect(eventIds(sqlite)).toEqual([]);
+    expect(
+      sqlite
+        .prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly WHERE hour_ts = ?")
+        .get(oldHour),
+    ).toEqual({ count: 0 });
+  });
+
   it("reports a family cleanup error without preventing the other family", async () => {
     const { sqlite, db } = setupDb();
     openDb = sqlite;

@@ -201,10 +201,18 @@ async function pruneHourlyRows(
       `/* pharos:mint-burn:hourly-retention-delete */
        DELETE FROM mint_burn_hourly
         WHERE rowid IN (
-          SELECT rowid
-            FROM mint_burn_hourly
-           WHERE hour_ts < ?
-           ORDER BY hour_ts ASC
+          SELECT hourly.rowid
+            FROM mint_burn_hourly hourly
+           WHERE hourly.hour_ts < ?
+             AND NOT EXISTS (
+               SELECT 1
+                 FROM mint_burn_events event
+                WHERE event.stablecoin_id = hourly.stablecoin_id
+                  AND event.chain_id = hourly.chain_id
+                  AND event.timestamp >= hourly.hour_ts
+                  AND event.timestamp < hourly.hour_ts + 3600
+             )
+           ORDER BY hourly.hour_ts ASC
            LIMIT ?
         )`,
       (limit) => [cutoff, limit],
@@ -227,10 +235,18 @@ async function pruneHourlyRows(
     const oldestEligible = await runWithOverloadRetry(
       () => db
         .prepare(
-          `SELECT hour_ts AS oldest_eligible_at
-             FROM mint_burn_hourly
-            WHERE hour_ts < ?
-            ORDER BY hour_ts ASC
+          `SELECT hourly.hour_ts AS oldest_eligible_at
+             FROM mint_burn_hourly hourly
+            WHERE hourly.hour_ts < ?
+              AND NOT EXISTS (
+                SELECT 1
+                  FROM mint_burn_events event
+                 WHERE event.stablecoin_id = hourly.stablecoin_id
+                   AND event.chain_id = hourly.chain_id
+                   AND event.timestamp >= hourly.hour_ts
+                   AND event.timestamp < hourly.hour_ts + 3600
+              )
+            ORDER BY hourly.hour_ts ASC
             LIMIT 1`,
         )
         .bind(cutoff)
