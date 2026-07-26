@@ -9,6 +9,18 @@ interface DexArchiveManifestSummaryRow {
   failed_manifest_count: number;
 }
 
+function releaseStage(
+  familyStates: Awaited<ReturnType<typeof loadDexArchiveFamilyStates>>,
+): DexArchiveStatus["releaseStage"] {
+  const measured = familyStates.find((family) => family.family === "measured-execution");
+  const liquidity = familyStates.find((family) => family.family === "liquidity");
+  if (liquidity?.effectiveMode === "delete") return "liquidity-delete";
+  if (liquidity?.effectiveMode === "shadow") return "liquidity-shadow";
+  if (measured?.effectiveMode === "delete") return "measured-delete";
+  if (measured?.effectiveMode === "shadow") return "measured-shadow";
+  return "foundation";
+}
+
 export async function loadDexArchiveStatus(
   db: D1Database,
   checkedAt: number,
@@ -29,7 +41,7 @@ export async function loadDexArchiveStatus(
   ]);
   return {
     checkedAt,
-    releaseStage: "foundation",
+    releaseStage: releaseStage(familyStates),
     objectSchemaVersion: 1,
     logicalRetentionDays: 30,
     lifecycleExpiryDays: 35,

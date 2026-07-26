@@ -501,7 +501,7 @@ Do not maintain a second schedule table in this document:
 
 Fetch-heavy work uses isolated or offset lanes so it does not compete with the quarter-hourly core pipeline. DB-only work may share a slot when ordering is explicit. Budget-only side work is modeled even when it is not a `/api/status` job. Reserve recovery remains independent of the reserve invocation it is intended to reconcile.
 
-The private DEX evidence archive owns `19,49 * * * *` as an isolated one-connection lane. Release A runs the job with both family modes `off` and records only control-plane/status rows; it cannot select source generations or write R2. Later guarded releases use one sequential Standard R2 request at a time, stop archive work after six minutes, and reserve the seventh wrapper minute for manifest, lease, and terminal status writes. The isolated lane is intentional: an R2 outage must delay archival and deletion without sharing or failing the DEX producer invocation.
+The private DEX evidence archive owns `19,49 * * * *` as an isolated one-connection lane. The measured-shadow release selects only complete superseded EVM, Solana, and Tron quote generations older than three hours, packages their exact target closure, and performs create-only upload plus full download verification; complete unreferenced targets use a separate target-only object. Liquidity and archive-owned early deletion remain hard-gated `off`. Work uses one sequential Standard R2 request at a time, stops after six minutes, and reserves the seventh wrapper minute for manifest, lease, and terminal status writes. The isolated lane is intentional: an R2 outage must delay archival and deletion without sharing or failing the DEX producer invocation.
 
 ### Cron Slot Capacity and Connection Pool Budget
 

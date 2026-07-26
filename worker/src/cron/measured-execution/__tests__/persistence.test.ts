@@ -859,9 +859,9 @@ describe("measured execution generation prune", () => {
     const nowSec = 1_700_000_000;
     await pruneDexMeasuredExecutionGenerations(db, nowSec);
 
-    expect(batched).toHaveLength(3);
+    expect(batched).toHaveLength(6);
     const cutoff = nowSec - 3 * 24 * 60 * 60;
-    const [quotes, targets, ledger] = batched;
+    const [quotes, targets, dependencies, quoteManifest, targetManifest, ledger] = batched;
 
     expect(quotes.sql).toContain("DELETE FROM dex_measured_execution_quotes");
     expect(quotes.sql).toContain("state IN ('failed', 'rejected', 'superseded')");
@@ -873,7 +873,6 @@ describe("measured execution generation prune", () => {
       cutoff,
       16,
     ]);
-
     expect(targets.sql).toContain("DELETE FROM dex_measured_execution_targets");
     expect(targets.sql).toContain("NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)");
     expect(targets.sql).toContain("ORDER BY started_at ASC LIMIT ?");
@@ -884,6 +883,14 @@ describe("measured execution generation prune", () => {
       cutoff,
       16,
     ]);
+    expect(dependencies.sql).toContain("UPDATE dex_archive_manifest_dependencies");
+    expect(dependencies.binds).toEqual([nowSec]);
+    expect(quoteManifest.sql).toContain("UPDATE dex_archive_manifests");
+    expect(quoteManifest.sql).toContain("family = 'measured-quote-generation'");
+    expect(quoteManifest.sql).toContain("JOIN dex_measured_execution_targets");
+    expect(quoteManifest.binds).toEqual([nowSec, cutoff]);
+    expect(targetManifest.sql).toContain("family = 'measured-target-generation'");
+    expect(targetManifest.binds).toEqual([nowSec, cutoff]);
 
     expect(ledger.sql).toContain("DELETE FROM surface_publication_generations");
     expect(ledger.sql).toContain("state IN ('failed', 'rejected', 'superseded')");
@@ -898,5 +905,31 @@ describe("measured execution generation prune", () => {
       "dex-tron-measured-execution-quotes",
       cutoff,
     ]);
+  });
+
+  it("requires verified quote or target coverage while shadow mode is active", async () => {
+    const batched: Array<{ sql: string; binds: unknown[] }> = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => ({ sql, binds }),
+      }),
+      batch: async (stmts: Array<{ sql: string; binds: unknown[] }>) => {
+        batched.push(...stmts);
+        return stmts.map(() => ({ meta: { changes: 0 } }));
+      },
+    } as unknown as D1Database;
+
+    await pruneDexMeasuredExecutionGenerations(
+      db,
+      1_700_000_000,
+      undefined,
+      "shadow",
+    );
+
+    expect(batched[0]!.sql).toContain("m.family = 'measured-quote-generation'");
+    expect(batched[0]!.sql).toContain("m.verified_at IS NOT NULL");
+    expect(batched[1]!.sql).toContain("m.family = 'measured-target-generation'");
+    expect(batched[1]!.sql).toContain("dex_archive_manifest_dependencies");
+    expect(batched[1]!.sql).toContain("m.verified_at IS NOT NULL");
   });
 });

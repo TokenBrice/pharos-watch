@@ -28,4 +28,21 @@ describe("DEX archive status", () => {
       sqlite.close();
     }
   });
+
+  it("derives the measured-shadow stage from compact family state", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      sqlite.prepare(
+        `UPDATE dex_archive_family_state
+            SET configured_mode = 'shadow', effective_mode = 'shadow'
+          WHERE family = 'measured-execution'`,
+      ).run();
+      await expect(loadDexArchiveStatus(db, 1_800_000_000)).resolves.toMatchObject({
+        releaseStage: "measured-shadow",
+        normalReadDependsOnR2: false,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
 });

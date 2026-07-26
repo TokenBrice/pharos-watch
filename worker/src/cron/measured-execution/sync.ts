@@ -433,6 +433,7 @@ export async function syncDexMeasuredExecution(
   chainRpcs: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
+  archiveMode?: string,
 ): Promise<CronResult> {
   const startedAtMs = Date.now();
   const startedAt = Math.floor(startedAtMs / 1_000);
@@ -970,7 +971,7 @@ export async function syncDexMeasuredExecution(
         ? "write-failed"
         : cursorWrite.errorClass;
   }
-  await pruneDexMeasuredExecutionGenerations(db, publishedAt, signal);
+  await pruneDexMeasuredExecutionGenerations(db, publishedAt, signal, archiveMode);
   const attemptedFailureCount = outcomes.filter(
     (outcome) => outcome.status === "failed" && outcome.failureReason !== "budget-deferred",
   ).length;

@@ -28,6 +28,11 @@ const INPUT: DexArchiveArtifactInput = {
         ["quote-123", "b", null],
       ],
     },
+    {
+      name: "dex_measured_execution_targets",
+      columns: ["generation_id", "target_id"],
+      rows: [["target-122", "a"]],
+    },
   ],
   rowCount: 2,
   dependencyRowCount: 1,

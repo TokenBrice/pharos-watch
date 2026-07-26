@@ -196,5 +196,19 @@ export async function verifyDexArchiveArtifact(
   ) {
     throw new Error("DEX archive identity or count verification failed");
   }
-  return parsed as unknown as DexArchiveArtifact;
+  const artifact = parsed as unknown as DexArchiveArtifact;
+  const tables = new Map(artifact.tables.map((table) => [table.name, table]));
+  const quoteRows = tables.get("dex_measured_execution_quotes")?.rows.length ?? 0;
+  const targetRows = tables.get("dex_measured_execution_targets")?.rows.length ?? 0;
+  if (
+    (artifact.family === "measured-quote-generation"
+      && (quoteRows !== artifact.rowCount || targetRows !== artifact.dependencyRowCount))
+    || (artifact.family === "measured-target-generation"
+      && (targetRows !== artifact.rowCount || artifact.dependencyRowCount !== 0))
+    || artifact.dependencyGenerationIds.length
+      !== (artifact.family === "measured-quote-generation" ? 1 : 0)
+  ) {
+    throw new Error("DEX archive table or dependency count verification failed");
+  }
+  return artifact;
 }

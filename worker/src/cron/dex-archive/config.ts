@@ -40,3 +40,18 @@ export function enforceDexArchiveFoundationMode(
     configError: `archive mode "${resolved.configuredMode}" is not active in the foundation release`,
   };
 }
+
+/**
+ * Release B permits measured-execution uploads and verification in shadow
+ * mode. Delete remains fail-closed until the separately observed Release C.
+ */
+export function enforceDexArchiveMeasuredShadowMode(
+  resolved: ResolvedDexArchiveMode,
+): ResolvedDexArchiveMode {
+  if (resolved.effectiveMode === "off" || resolved.effectiveMode === "shadow") return resolved;
+  return {
+    ...resolved,
+    effectiveMode: "off",
+    configError: `archive mode "${resolved.configuredMode}" is not active for measured execution before the delete release`,
+  };
+}
