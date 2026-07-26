@@ -179,6 +179,7 @@ export async function syncDexDiscovery(
   let budgetExhausted = false;
   let stagingWritesSkippedForBudget = 0;
   let cleanupSkippedForBudget = false;
+  let cleanup: Awaited<ReturnType<typeof cleanupStaging>> | null = null;
   let deploymentOutcomesWritten = 0;
   const failedCoins: string[] = [];
   const failedCoinErrors: Record<string, string> = {};
@@ -326,7 +327,7 @@ export async function syncDexDiscovery(
     }
 
     if (hasDiscoveryFinalizationWindow(deadlineMs)) {
-      await cleanupStaging(db, nowSec, signal);
+      cleanup = await cleanupStaging(db, nowSec, signal);
     } else {
       cleanupSkippedForBudget = true;
       budgetExhausted = true;
@@ -343,13 +344,14 @@ export async function syncDexDiscovery(
         budgetExhausted,
         stagingWritesSkippedForBudget,
         cleanupSkippedForBudget,
+        cleanup,
         runSeq,
         deploymentOutcomesWritten,
       },
     });
 
     return {
-      status: failedCoins.length > 0 || budgetExhausted ? "degraded" : "ok",
+      status: failedCoins.length > 0 || budgetExhausted || cleanup?.error != null ? "degraded" : "ok",
       itemCount: coinsCrawled,
       metadata: JSON.stringify({
         coinsCrawled,
@@ -358,6 +360,7 @@ export async function syncDexDiscovery(
         budgetExhausted,
         stagingWritesSkippedForBudget,
         cleanupSkippedForBudget,
+        cleanup,
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         runSeq,
         deploymentOutcomesWritten,
@@ -380,6 +383,7 @@ export async function syncDexDiscovery(
         budgetExhausted,
         stagingWritesSkippedForBudget,
         cleanupSkippedForBudget,
+        cleanup,
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         runSeq,
         deploymentOutcomesWritten,

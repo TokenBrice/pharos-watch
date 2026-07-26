@@ -143,8 +143,6 @@ inputs to that decision, not activation gates. See
 
 Cron expressions are deployed from `worker/wrangler.toml`; `shared/lib/cron-jobs.ts` owns canonical schedule/job metadata and `shared/lib/scheduled-runner-registry.ts` owns expression-to-runner dispatch. Use [Worker Infrastructure: Cron Scheduling](./worker-infrastructure.md#cron-scheduling) for execution details and `npm run check:cron-sync` / `npm run check:cron-connections` for the authoritative live inventory and connection-budget report.
 
-The `19,49` `archive-dex-generations` lane is a one-way cold-evidence sink from completed D1 generation tables to private R2. D1 manifests and family state are the only status/read-side surface; API, browser, scoring, and producer paths have no R2 edge. Archive verification may permit bounded D1 cleanup in later guarded modes, but archive failure only retains source rows. See [DEX Evidence Archive](./runbooks/dex-evidence-archive.md).
-
 ## Freshness Contract (Frontend)
 
 API hooks that use `useApiQuery` follow the interval supplied by their caller:
@@ -165,6 +163,7 @@ Defined centrally in `src/hooks/use-api-query.ts`. Cron-backed hooks should pass
 - `/api/dex-liquidity` is meta-aware on the frontend: the page uses worker freshness metadata (and degraded-run `Warning` headers) rather than client fetch time to assess staleness.
 - Liquidity history now carries `coverageClass` / `coverageConfidence`; trend and durability consumers should treat low-confidence snapshots as informational, not authoritative baselines.
 - `dex_liquidity_history` is retained for the public 365-day history window; older daily snapshots are pruned during successful `sync-dex-liquidity` persistence instead of living as an indefinite research archive.
+- Transient measured-execution, scoring-stage, liquidity-run, price-run, and pool-staging rows are pruned by their owning producers in bounded oldest-first D1 passes. Cleanup telemetry is additive to cron metadata and cleanup failure cannot invalidate an already successful publication.
 - Admin/backfill endpoints bypass edge cache via `cacheBypass` flags in `shared/lib/api-endpoints/`.
 - The stablecoins cache loader distinguishes `ok`, `degraded`, and `error` states. Operator-facing or published consumers (`/status`, daily digest, safety snapshot) now fail closed on non-`ok` cache reads instead of treating broken cache state as an empty valid dataset.
 - `consensusSources` flows from the price-consensus cron stage through the `stablecoins` cache → `/api/stablecoins` and `/api/peg-summary` → `useStablecoins` / `usePegSummary` hooks → `PriceTransparencyCard` on the detail page and `CoverageBadge` source-count enrichment on the coverage page.

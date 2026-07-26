@@ -1,6 +1,7 @@
 import { batchExecute } from "../../lib/db";
-import { throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { toErrorMessage } from "../../lib/error-utils";
 import { STAGED_POOL_MAX_TVL_USD, type DiscoveryMeta, type StagedPool } from "./types";
 
 const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_staging
@@ -29,8 +30,9 @@ ON CONFLICT(pool_id, stablecoin_id) DO UPDATE SET
   refreshed_at = excluded.refreshed_at`;
 
 const STAGING_BATCH_SIZE = 50;
-const STAGING_DELETE_TTL_SEC = 172800; // 48h
-const STAGING_RAW_JSON_TTL_SEC = 21600; // 6h
+const STAGING_DELETE_TTL_SEC = 30 * 60 * 60;
+const STAGING_RAW_JSON_TTL_SEC = 4 * 60 * 60;
+const STAGING_CLEANUP_MAX_ROWS_PER_RUN = 1_000;
 const RUN_SEQ_KEY = "discovery_run_seq";
 const ORDERBOOK_POOL_ID_PREFIX = "orderbook:";
 
@@ -188,20 +190,98 @@ export async function updateDiscoveryMeta(
 
 /**
  * Cleanup stale staging data.
- * - Delete rows where refreshed_at < nowSec - 48h (172800)
- * - NULL out raw_json where refreshed_at < nowSec - 6h (21600) to save storage
+ * - Delete rows older than 30 hours, preserving the complete 24-hour scoring window.
+ * - NULL raw provider payloads after four hours.
+ * - Bound both oldest-first passes so a retention shortening drains gradually.
  */
-export async function cleanupStaging(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<void> {
-  throwIfAborted(signal);
-  await batchExecute(db, [
-    db
-      .prepare("DELETE FROM dex_pool_staging WHERE refreshed_at < ?")
-      .bind(nowSec - STAGING_DELETE_TTL_SEC),
-    db
-      .prepare("UPDATE dex_pool_staging SET raw_json = NULL WHERE raw_json IS NOT NULL AND refreshed_at < ?")
-      .bind(nowSec - STAGING_RAW_JSON_TTL_SEC),
-  ], { chunkSize: 2, signal });
-  throwIfAborted(signal);
+export interface DexPoolStagingRetentionResult {
+  rowCutoff: number;
+  rawJsonCutoff: number;
+  deletedRows: number;
+  rawJsonClearedRows: number;
+  oldestRemainingAt: number | null;
+  oldestRawJsonRemainingAt: number | null;
+  durationMs: number;
+  error: string | null;
+}
+
+export async function cleanupStaging(
+  db: D1Database,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<DexPoolStagingRetentionResult> {
+  const startedAtMs = Date.now();
+  const result: DexPoolStagingRetentionResult = {
+    rowCutoff: nowSec - STAGING_DELETE_TTL_SEC,
+    rawJsonCutoff: nowSec - STAGING_RAW_JSON_TTL_SEC,
+    deletedRows: 0,
+    rawJsonClearedRows: 0,
+    oldestRemainingAt: null,
+    oldestRawJsonRemainingAt: null,
+    durationMs: 0,
+    error: null,
+  };
+  try {
+    const deleted = await runWithOverloadRetry(
+      () => db
+        .prepare(
+          `DELETE FROM dex_pool_staging
+            WHERE rowid IN (
+              SELECT rowid
+                FROM dex_pool_staging
+               WHERE refreshed_at < ?
+               ORDER BY refreshed_at ASC, rowid ASC
+               LIMIT ?
+            )`,
+        )
+        .bind(result.rowCutoff, STAGING_CLEANUP_MAX_ROWS_PER_RUN)
+        .run(),
+      3,
+      signal,
+    );
+    result.deletedRows = Number(deleted.meta?.changes ?? 0);
+    const rawJson = await runWithOverloadRetry(
+      () => db
+        .prepare(
+          `UPDATE dex_pool_staging
+              SET raw_json = NULL
+            WHERE rowid IN (
+              SELECT rowid
+                FROM dex_pool_staging
+               WHERE raw_json IS NOT NULL
+                 AND refreshed_at < ?
+               ORDER BY refreshed_at ASC, rowid ASC
+               LIMIT ?
+            )`,
+        )
+        .bind(result.rawJsonCutoff, STAGING_CLEANUP_MAX_ROWS_PER_RUN)
+        .run(),
+      3,
+      signal,
+    );
+    result.rawJsonClearedRows = Number(rawJson.meta?.changes ?? 0);
+    const oldest = await runWithOverloadRetry(
+      () => db
+        .prepare(
+          `SELECT MIN(refreshed_at) AS oldest_remaining_at,
+                  MIN(CASE WHEN raw_json IS NOT NULL THEN refreshed_at END) AS oldest_raw_json_remaining_at
+             FROM dex_pool_staging`,
+        )
+        .first<{
+          oldest_remaining_at: number | null;
+          oldest_raw_json_remaining_at: number | null;
+        }>(),
+      3,
+      signal,
+    );
+    result.oldestRemainingAt = oldest?.oldest_remaining_at ?? null;
+    result.oldestRawJsonRemainingAt = oldest?.oldest_raw_json_remaining_at ?? null;
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    result.error = toErrorMessage(error).slice(0, 500);
+  }
+  result.durationMs = Math.max(0, Date.now() - startedAtMs);
+  return result;
 }
 
 /**

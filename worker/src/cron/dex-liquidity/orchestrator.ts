@@ -209,7 +209,9 @@ export async function stageDexLiquidityScoring(
   );
 
   return {
-    status: scoringSourceState.criticalSourceFailures.length > 0 ? "degraded" : "ok",
+    status: scoringSourceState.criticalSourceFailures.length > 0 || stored.retention.error
+      ? "degraded"
+      : "ok",
     itemCount: poolState.metrics.size,
     metadata: JSON.stringify({
       generationId: stored.generationId,
@@ -218,6 +220,7 @@ export async function stageDexLiquidityScoring(
       chunkCount: stored.chunkCount,
       recordCount: stored.recordCount,
       payloadBytes: stored.payloadBytes,
+      retention: stored.retention,
       rowsRead: scoringSourceState.primaryRawPoolCount,
       failedSources: scoringSourceState.failedSources,
       fallbackSignals: scoringSourceState.fallbackSignals,
@@ -1238,6 +1241,7 @@ function buildDexLiquidityCronResult(
     criticalSourceFailures: sourceState.criticalSourceFailures,
     analysis: scoreState.analysis,
     persistence: persistenceState.persistence,
+    dexPriceDiagnostics: persistenceState.dexPriceDiagnostics,
     historicalSnapshot: persistenceState.historicalSnapshot,
   });
 

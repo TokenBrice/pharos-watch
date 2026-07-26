@@ -19,8 +19,10 @@ import {
   type TronMeasuredExecutionProfile,
   type TronMeasuredExecutionTarget,
 } from "@shared/types/tron-measured-execution";
+import { rethrowIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
+import { toErrorMessage } from "../../lib/error-utils";
 import { parseJson } from "../../lib/json-parse";
 import {
   summarizeDexMeasuredExecutionHistory,
@@ -29,8 +31,8 @@ import {
 
 const DEX_MEASURED_TARGET_SURFACE = "dex-measured-execution-targets";
 const DEX_MEASURED_QUOTE_SURFACE = "dex-measured-execution-quotes";
-/** Superseded generations remain available for bounded history and operator forensics. */
-const GENERATION_RETENTION_SEC = 3 * 24 * 60 * 60;
+/** Retain the complete two-hour scoring window plus one missed producer cycle. */
+const GENERATION_RETENTION_SEC = 3 * 60 * 60;
 /** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
 const GENERATION_PRUNE_MAX_PER_RUN = 16;
 const DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC =
@@ -1457,52 +1459,42 @@ export async function loadLatestPublishedTronMeasuredQuoteEvidence(
   return loadLatestPublishedNativeMeasuredQuoteEvidence(TRON_PERSISTENCE, db, signal);
 }
 
+export interface DexMeasuredExecutionRetentionResult {
+  cutoff: number;
+  deletedRows: number;
+  deletedQuoteRows: number;
+  deletedTargetRows: number;
+  deletedGenerationRows: number;
+  oldestRemainingAt: number | null;
+  durationMs: number;
+  error: string | null;
+}
+
 export async function pruneDexMeasuredExecutionGenerations(
   db: D1Database,
   nowSec: number,
   signal?: AbortSignal,
-  archiveMode?: string,
-): Promise<void> {
+): Promise<DexMeasuredExecutionRetentionResult> {
+  const startedAtMs = Date.now();
   const cutoff = nowSec - GENERATION_RETENTION_SEC;
-  const normalizedArchiveMode = archiveMode?.trim().toLowerCase();
-  const requireVerifiedArchive =
-    normalizedArchiveMode === "shadow" || normalizedArchiveMode === "delete";
-  const quoteArchiveGate = requireVerifiedArchive
-    ? ` AND EXISTS (
-         SELECT 1 FROM dex_archive_manifests m
-          WHERE m.family = 'measured-quote-generation'
-            AND m.generation_id = surface_publication_generations.generation_id
-            AND m.verified_at IS NOT NULL
-       )`
-    : "";
-  const targetArchiveGate = requireVerifiedArchive
-    ? ` AND (
-         EXISTS (
-           SELECT 1 FROM dex_archive_manifests m
-            WHERE m.family = 'measured-target-generation'
-              AND m.generation_id = surface_publication_generations.generation_id
-              AND m.verified_at IS NOT NULL
-         )
-         OR EXISTS (
-           SELECT 1
-             FROM dex_archive_manifest_dependencies d
-             JOIN dex_archive_manifests m
-               ON m.family = d.family AND m.generation_id = d.generation_id
-            WHERE d.dependency_generation_id = surface_publication_generations.generation_id
-              AND m.verified_at IS NOT NULL
-         )
-       )`
-    : "";
-  await batchExecute(
-    db,
-    [
-      db
+  const result: DexMeasuredExecutionRetentionResult = {
+    cutoff,
+    deletedRows: 0,
+    deletedQuoteRows: 0,
+    deletedTargetRows: 0,
+    deletedGenerationRows: 0,
+    oldestRemainingAt: null,
+    durationMs: 0,
+    error: null,
+  };
+  try {
+    const quotes = await runWithOverloadRetry(
+      () => db
         .prepare(
           `DELETE FROM dex_measured_execution_quotes
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
          WHERE surface IN (?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
-         ${quoteArchiveGate}
          ORDER BY started_at ASC LIMIT ?
        )`,
         )
@@ -1512,14 +1504,20 @@ export async function pruneDexMeasuredExecutionGenerations(
           TRON_MEASURED_QUOTE_SURFACE,
           cutoff,
           GENERATION_PRUNE_MAX_PER_RUN,
-        ),
-      db
+        )
+        .run(),
+      3,
+      signal,
+    );
+    result.deletedQuoteRows = Number(quotes.meta?.changes ?? 0);
+
+    const targets = await runWithOverloadRetry(
+      () => db
         .prepare(
           `DELETE FROM dex_measured_execution_targets
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
          WHERE surface IN (?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
-         ${targetArchiveGate}
          ORDER BY started_at ASC LIMIT ?
        )
        AND generation_id NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)`,
@@ -1530,66 +1528,34 @@ export async function pruneDexMeasuredExecutionGenerations(
           TRON_MEASURED_TARGET_SURFACE,
           cutoff,
           GENERATION_PRUNE_MAX_PER_RUN,
-        ),
-      db
-        .prepare(
-          `UPDATE dex_archive_manifest_dependencies
-              SET source_deleted_at = COALESCE(source_deleted_at, ?)
-            WHERE source_deleted_at IS NULL
-              AND NOT EXISTS (
-                SELECT 1 FROM dex_measured_execution_targets t
-                 WHERE t.generation_id = dex_archive_manifest_dependencies.dependency_generation_id
-              )`,
         )
-        .bind(nowSec),
-      db
-        .prepare(
-          `UPDATE dex_archive_manifests
-              SET source_deleted_at = COALESCE(source_deleted_at, ?)
-            WHERE family = 'measured-quote-generation'
-              AND verified_at IS NOT NULL
-              AND source_deleted_at IS NULL
-              AND source_slot_started_at < ?
-              AND NOT EXISTS (
-                SELECT 1 FROM dex_measured_execution_quotes q
-                 WHERE q.generation_id = dex_archive_manifests.generation_id
-              )
-              AND NOT EXISTS (
-                SELECT 1
-                  FROM dex_archive_manifest_dependencies d
-                  JOIN dex_measured_execution_targets t
-                    ON t.generation_id = d.dependency_generation_id
-                 WHERE d.family = dex_archive_manifests.family
-                   AND d.generation_id = dex_archive_manifests.generation_id
-              )`,
-        )
-        .bind(nowSec, cutoff),
-      db
-        .prepare(
-          `UPDATE dex_archive_manifests
-              SET source_deleted_at = COALESCE(source_deleted_at, ?)
-            WHERE family = 'measured-target-generation'
-              AND verified_at IS NOT NULL
-              AND source_deleted_at IS NULL
-              AND source_slot_started_at < ?
-              AND NOT EXISTS (
-                SELECT 1 FROM dex_measured_execution_targets t
-                 WHERE t.generation_id = dex_archive_manifests.generation_id
-              )`,
-        )
-        .bind(nowSec, cutoff),
-      db
+        .run(),
+      3,
+      signal,
+    );
+    result.deletedTargetRows = Number(targets.meta?.changes ?? 0);
+
+    const generations = await runWithOverloadRetry(
+      () => db
         .prepare(
           `DELETE FROM surface_publication_generations
-       WHERE surface IN (?, ?, ?, ?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
-       AND NOT EXISTS (
-         SELECT 1 FROM dex_measured_execution_quotes q
-         WHERE q.generation_id = surface_publication_generations.generation_id
-            OR q.target_generation_id = surface_publication_generations.generation_id
-       )
-       AND NOT EXISTS (
-         SELECT 1 FROM dex_measured_execution_targets t
-         WHERE t.generation_id = surface_publication_generations.generation_id
+       WHERE rowid IN (
+         SELECT candidate.rowid
+           FROM surface_publication_generations candidate
+          WHERE candidate.surface IN (?, ?, ?, ?, ?, ?)
+            AND candidate.state IN ('failed', 'rejected', 'superseded')
+            AND candidate.started_at < ?
+            AND NOT EXISTS (
+              SELECT 1 FROM dex_measured_execution_quotes q
+               WHERE q.generation_id = candidate.generation_id
+                  OR q.target_generation_id = candidate.generation_id
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM dex_measured_execution_targets t
+               WHERE t.generation_id = candidate.generation_id
+            )
+          ORDER BY candidate.started_at ASC, candidate.generation_id ASC
+          LIMIT ?
        )`,
         )
         .bind(
@@ -1600,8 +1566,51 @@ export async function pruneDexMeasuredExecutionGenerations(
           TRON_MEASURED_TARGET_SURFACE,
           TRON_MEASURED_QUOTE_SURFACE,
           cutoff,
-        ),
-    ],
-    { signal },
-  );
+          GENERATION_PRUNE_MAX_PER_RUN,
+        )
+        .run(),
+      3,
+      signal,
+    );
+    result.deletedGenerationRows = Number(generations.meta?.changes ?? 0);
+
+    const oldest = await runWithOverloadRetry(
+      () => db
+        .prepare(
+          `SELECT MIN(candidate.started_at) AS oldest_remaining_at
+             FROM surface_publication_generations candidate
+            WHERE candidate.surface IN (?, ?, ?, ?, ?, ?)
+              AND (
+                EXISTS (
+                  SELECT 1 FROM dex_measured_execution_quotes q
+                   WHERE q.generation_id = candidate.generation_id
+                      OR q.target_generation_id = candidate.generation_id
+                )
+                OR EXISTS (
+                  SELECT 1 FROM dex_measured_execution_targets t
+                   WHERE t.generation_id = candidate.generation_id
+                )
+              )`,
+        )
+        .bind(
+          DEX_MEASURED_TARGET_SURFACE,
+          DEX_MEASURED_QUOTE_SURFACE,
+          SOLANA_MEASURED_TARGET_SURFACE,
+          SOLANA_MEASURED_QUOTE_SURFACE,
+          TRON_MEASURED_TARGET_SURFACE,
+          TRON_MEASURED_QUOTE_SURFACE,
+        )
+        .first<{ oldest_remaining_at: number | null }>(),
+      3,
+      signal,
+    );
+    result.oldestRemainingAt = oldest?.oldest_remaining_at ?? null;
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    result.error = toErrorMessage(error).slice(0, 500);
+  }
+  result.deletedRows =
+    result.deletedQuoteRows + result.deletedTargetRows + result.deletedGenerationRows;
+  result.durationMs = Math.max(0, Date.now() - startedAtMs);
+  return result;
 }

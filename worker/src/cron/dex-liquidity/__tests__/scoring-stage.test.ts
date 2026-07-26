@@ -11,6 +11,7 @@ import {
   encodeDexLiquidityScoringStageChunks,
   loadDexLiquidityScoringStage,
   persistDexLiquidityScoringStage,
+  pruneScoringStages,
   type DexLiquidityScoringStageChunk,
 } from "../scoring-stage";
 import type { LiquidityMetrics, PoolEntry } from "../types";
@@ -379,5 +380,73 @@ describe("DEX liquidity scoring stage", () => {
     invalidPool.metrics.get("major")!.totalTvlUsd = Number.NaN;
     expect(() => [...encodeDexLiquidityScoringStageChunks(sourceState(), invalidPool)])
       .toThrow("non-finite");
+  });
+
+  it("deletes consumed stages on the next bounded pass and abandons only rows older than two hours", async () => {
+    const harness = createLatestSchemaSqlite();
+    openDatabases.push(harness.sqlite);
+    const nowSec = 100_000;
+    const cutoff = nowSec - 2 * 60 * 60;
+    const insertStage = harness.sqlite.prepare(
+      `INSERT INTO dex_liquidity_scoring_stages (
+         generation_id, schema_version, state, source_slot_started_at,
+         sync_started_at, created_at, expected_chunk_count, written_chunk_count,
+         expected_record_count, payload_bytes
+       ) VALUES (?, 1, ?, ?, ?, ?, 1, 1, 1, 2)`,
+    );
+    const insertChunk = harness.sqlite.prepare(
+      `INSERT INTO dex_liquidity_scoring_stage_chunks (
+         generation_id, chunk_index, payload_json, payload_bytes, record_count, created_at
+       ) VALUES (?, 0, '{}', 2, 1, ?)`,
+    );
+    const seed = (generationId: string, state: string, createdAt: number, slot: number) => {
+      insertStage.run(generationId, state, slot, slot, createdAt);
+      insertChunk.run(generationId, createdAt);
+    };
+    seed("consumed-a", "consumed", cutoff + 100, 1);
+    seed("consumed-b", "consumed", cutoff + 101, 2);
+    seed("consumed-c", "consumed", cutoff + 102, 3);
+    seed("ready-old", "ready", cutoff - 1, 4);
+    seed("failed-old", "failed", cutoff - 2, 5);
+    seed("ready-boundary", "ready", cutoff, 6);
+    seed("writing-recent", "writing", nowSec - 60, 7);
+    seed("current-ready", "ready", cutoff - 100, 8);
+
+    const first = await pruneScoringStages(harness.db, "current-ready", nowSec);
+    const second = await pruneScoringStages(harness.db, "current-ready", nowSec);
+    const third = await pruneScoringStages(harness.db, "current-ready", nowSec);
+
+    expect(first).toMatchObject({
+      cutoff,
+      deletedChunkRows: 2,
+      deletedStageRows: 2,
+      deletedRows: 4,
+      error: null,
+    });
+    expect(second.deletedStageRows).toBe(2);
+    expect(third.deletedStageRows).toBe(1);
+    expect(
+      harness.sqlite
+        .prepare("SELECT generation_id FROM dex_liquidity_scoring_stages ORDER BY generation_id")
+        .all()
+        .map((row) => row.generation_id),
+    ).toEqual(["current-ready", "ready-boundary", "writing-recent"]);
+  });
+
+  it("reports scoring-stage cleanup errors without throwing", async () => {
+    const db = {
+      prepare: () => ({
+        bind: () => ({
+          run: async () => {
+            throw new Error("scoring-stage retention unavailable");
+          },
+        }),
+      }),
+    } as unknown as D1Database;
+
+    const retention = await pruneScoringStages(db, "current-ready", 100_000);
+
+    expect(retention.deletedRows).toBe(0);
+    expect(retention.error).toBe("scoring-stage retention unavailable");
   });
 });

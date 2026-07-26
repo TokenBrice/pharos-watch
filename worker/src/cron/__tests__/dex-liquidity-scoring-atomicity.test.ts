@@ -252,12 +252,21 @@ describe("DEX scoring publication atomicity", () => {
       insertStage.run(`failed-${index}`, `failed-coin-${index}`, NOW_SEC - 10 * 24 * 60 * 60 + index);
     }
     insertStage.run("recent-failed", "recent-coin", NOW_SEC - 60);
+    insertStage.run("at-cutoff", "boundary-coin", NOW_SEC - 3 * 60 * 60);
     insertStage.run(GENERATION_ID, "live-coin", NOW_SEC - 30 * 24 * 60 * 60);
     insertStage.run(explicitlyProtected, "in-flight-coin", NOW_SEC - 30 * 24 * 60 * 60);
+    sqlite.prepare(
+      `INSERT INTO dex_liquidity_publication_generations (
+         generation_id, started_at, state, expected_row_count, written_row_count, created_at
+       ) VALUES ('active-staged', ?, 'staged', 1, 1, ?)`,
+    ).run(NOW_SEC - 30 * 24 * 60 * 60, NOW_SEC - 30 * 24 * 60 * 60);
+    insertStage.run("active-staged", "active-coin", NOW_SEC - 30 * 24 * 60 * 60);
 
-    const pruned = await pruneExpiredDexPriceStages(db, explicitlyProtected, NOW_SEC);
+    const retention = await pruneExpiredDexPriceStages(db, explicitlyProtected, NOW_SEC);
 
-    expect(pruned).toBe(DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN);
+    expect(retention.deletedRows).toBe(DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN);
+    expect(retention.cutoff).toBe(NOW_SEC - 3 * 60 * 60);
+    expect(retention.error).toBeNull();
     expect(
       sqlite
         .prepare("SELECT generation_id FROM dex_price_run_rows ORDER BY generation_id")
@@ -265,11 +274,30 @@ describe("DEX scoring publication atomicity", () => {
         .map((row) => row.generation_id),
     ).toEqual([
       GENERATION_ID,
+      "active-staged",
+      "at-cutoff",
       explicitlyProtected,
       "failed-8",
       "failed-9",
       "recent-failed",
     ].sort());
+  });
+
+  it("reports price-stage cleanup errors without throwing", async () => {
+    const db = {
+      prepare: () => ({
+        bind: () => ({
+          run: async () => {
+            throw new Error("price-stage retention unavailable");
+          },
+        }),
+      }),
+    } as unknown as D1Database;
+
+    const retention = await pruneExpiredDexPriceStages(db, GENERATION_ID, NOW_SEC);
+
+    expect(retention.deletedRows).toBe(0);
+    expect(retention.error).toBe("price-stage retention unavailable");
   });
 
   it("keeps every public depth value intact when a later staging batch fails", async () => {

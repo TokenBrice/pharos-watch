@@ -94,13 +94,7 @@ export async function runHalfHourlyMeasuredExecutionSlot(runtime: ScheduledRunti
       const [evm, solana, tron] = await Promise.all([
         settleMeasuredExecutionLane(
           "evm",
-          syncDexMeasuredExecution(
-            runtime.db,
-            runtime.chainRpcs,
-            signal,
-            reportProgress,
-            runtime.env.DEX_MEASURED_ARCHIVE_MODE,
-          ),
+          syncDexMeasuredExecution(runtime.db, runtime.chainRpcs, signal, reportProgress),
         ),
         settleMeasuredExecutionLane(
           "solana",

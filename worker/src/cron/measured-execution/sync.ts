@@ -433,7 +433,6 @@ export async function syncDexMeasuredExecution(
   chainRpcs: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
-  archiveMode?: string,
 ): Promise<CronResult> {
   const startedAtMs = Date.now();
   const startedAt = Math.floor(startedAtMs / 1_000);
@@ -971,7 +970,7 @@ export async function syncDexMeasuredExecution(
         ? "write-failed"
         : cursorWrite.errorClass;
   }
-  await pruneDexMeasuredExecutionGenerations(db, publishedAt, signal, archiveMode);
+  const retention = await pruneDexMeasuredExecutionGenerations(db, publishedAt, signal);
   const attemptedFailureCount = outcomes.filter(
     (outcome) => outcome.status === "failed" && outcome.failureReason !== "budget-deferred",
   ).length;
@@ -1006,11 +1005,13 @@ export async function syncDexMeasuredExecution(
       ...(admissionRotationCycles === null || admissionRotationCycles > MAX_ADMISSION_ROTATION_CYCLES
         ? ["admission-rotation-exceeds-freshness"]
         : []),
+      ...(retention.error ? ["retention-cleanup-failed"] : []),
     ],
     quoteCallCount,
     rpcRequestCount: rpcBudget.requestsUsed,
     runtimeBudgetStopReason: rpcBudget.stopReason,
     openChainCircuits: rpcBudget.openChains,
+    retention,
     failuresByReason: outcomes.reduce<Record<string, number>>((counts, outcome) => {
       if (outcome.status === "failed") {
         const reason = outcome.failureReason ?? "unknown";
@@ -1020,12 +1021,14 @@ export async function syncDexMeasuredExecution(
     }, {}),
   };
   return {
-    status: resolveMeasuredExecutionCronStatus({
-      attemptedFailureCount,
-      deferredCount: budgetDeferredCount,
-      admissionRotationCycles,
-      cursorWriteStatus,
-    }),
+    status: retention.error
+      ? "degraded"
+      : resolveMeasuredExecutionCronStatus({
+          attemptedFailureCount,
+          deferredCount: budgetDeferredCount,
+          admissionRotationCycles,
+          cursorWriteStatus,
+        }),
     itemCount: publication.measuredCount,
     metadata: JSON.stringify(metadata),
     productivity: {

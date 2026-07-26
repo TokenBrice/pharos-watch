@@ -48,7 +48,6 @@ const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec
   "sync-cl-exit-depth": LONG_RUNNING_LEASE_OPTIONS,
   "sync-dex-liquidity-stage": LONG_RUNNING_LEASE_OPTIONS,
   "sync-dex-liquidity": LONG_RUNNING_LEASE_OPTIONS,
-  "archive-dex-generations": LONG_RUNNING_LEASE_OPTIONS,
   "sync-dex-discovery": LONG_RUNNING_LEASE_OPTIONS,
   "sync-yield-data": LONG_RUNNING_LEASE_OPTIONS,
   "sync-yield-supplemental": LONG_RUNNING_LEASE_OPTIONS,
