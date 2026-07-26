@@ -94,10 +94,6 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
             supplyAttributionJournalById: {},
             pegProvenanceById: exactSeed.pegProvenanceById,
           };
-          const fixedInputCache = await buildSafetyScoreV9FixedInputCacheEntry(
-            preparedInput,
-            safetyScoreIdentity,
-          );
           const runnerInput = normalizeFixedInput(preparedInput);
           const baseProjection = (input) => {
             const {
@@ -176,6 +172,10 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
             coverageFloors: [],
             unresolvedCriticalMovementIds,
           });
+          const fixedInputCache = await buildSafetyScoreV9FixedInputCacheEntry(
+            runnerInput,
+            safetyScoreIdentity,
+          );
           const [storedEnvelope, storedDiff] = await Promise.all([
             serializeSafetyScoreV9ShadowEnvelopeCacheValue(envelope),
             serializeSafetyScoreV9DiffReportCacheValue(diff),

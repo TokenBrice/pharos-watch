@@ -459,14 +459,6 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       }
       fixedInput = preparedFixedInput;
     }
-    const exactInput = await buildSafetyScoreV9FixedInputCacheEntry(
-      fixedInput,
-      buildSafetyScoreV8PublicationIdentity({
-        methodologyVersion: input.v8MethodologyVersion,
-        baseInputGenerationId: fixedInput.baseInputGenerationId,
-        publicationGenerationId: input.v8Publication.generationId,
-      }),
-    );
     stage = "compile";
     const pipeline = buildSafetyScoreV9ShadowCandidateFromNormalizedInput({
       fixedInput,
@@ -625,6 +617,14 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       diff,
     });
     const pendingReviewCount = diff.summary.pendingReviewCount;
+    const exactInput = await buildSafetyScoreV9FixedInputCacheEntry(
+      fixedInput,
+      buildSafetyScoreV8PublicationIdentity({
+        methodologyVersion: input.v8MethodologyVersion,
+        baseInputGenerationId: fixedInput.baseInputGenerationId,
+        publicationGenerationId: input.v8Publication.generationId,
+      }),
+    );
     stage = "shadow-write";
     await persistSafetyScoreV9ShadowState(input.db, {
       daily,
