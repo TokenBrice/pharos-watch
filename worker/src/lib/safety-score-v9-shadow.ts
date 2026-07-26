@@ -1057,6 +1057,7 @@ const SafetyScoreV9ShadowFailureStageSchema = z.enum([
   "compile",
   "score",
   "serialize",
+  "publication-gate",
   "artifact-retention",
   "shadow-write",
   "aborted",

@@ -194,6 +194,16 @@ export function makeSafetyScoreV9AdminAvailableResponse(): AvailableAdminRespons
   return {
     schemaVersion: 1,
     status: "available",
+    publicationHealth: {
+      schemaVersion: 1,
+      status: "current",
+      acceptedPublicationGenerationId:
+        envelope.candidate.publicationGenerationId,
+      acceptedAtSec: envelope.candidate.publishedAtSec,
+      attemptedAtSec: envelope.candidate.publishedAtSec,
+      heldSinceSec: null,
+      reasons: [],
+    },
     envelope,
     diff,
     movementReviews: [],

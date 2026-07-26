@@ -39,6 +39,15 @@ function snapshot(): ReportCardsV9Response {
     },
     asOfSec: 1_700_000_000,
     updatedAt: 1_700_000_030,
+    publicationHealth: {
+      schemaVersion: 1,
+      status: "current",
+      acceptedPublicationGenerationId: "safety-score-v9:test",
+      acceptedAtSec: 1_700_000_030,
+      attemptedAtSec: 1_700_000_030,
+      heldSinceSec: null,
+      reasons: [],
+    },
     completeness: { expectedCount: 0, ratedCount: 0, notRatedCount: 0, notRatedIds: [] },
     source: {
       candidateId: "candidate-v9-active-source-test",

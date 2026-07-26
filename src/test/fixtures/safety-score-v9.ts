@@ -151,6 +151,7 @@ export function makeReportCardsV9Response(
     baseInputGenerationId: `report-cards-input:v1:${C64}`,
     publicationGenerationId: "v9-publication-1",
   };
+  const updatedAt = overrides.updatedAt ?? 1_752_534_060;
   return {
     model: "v9",
     schemaVersion: 3,
@@ -161,7 +162,17 @@ export function makeReportCardsV9Response(
       policy: { id: safetyScoreIdentity.policyId, semanticDigest: safetyScoreIdentity.policyDigest },
     },
     asOfSec: 1_752_534_000,
-    updatedAt: 1_752_534_060,
+    updatedAt,
+    publicationHealth: overrides.publicationHealth ?? {
+      schemaVersion: 1,
+      status: "current",
+      acceptedPublicationGenerationId:
+        safetyScoreIdentity.publicationGenerationId,
+      acceptedAtSec: updatedAt,
+      attemptedAtSec: updatedAt,
+      heldSinceSec: null,
+      reasons: [],
+    },
     completeness: {
       expectedCount: cards.length,
       ratedCount: cards.filter((card) => card.grade !== "NR").length,

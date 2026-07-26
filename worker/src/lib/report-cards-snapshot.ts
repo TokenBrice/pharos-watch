@@ -225,6 +225,7 @@ export async function buildReportCardsSnapshot(
     liquidityStale,
     redemptionStale,
     inputFreshness,
+    v9PublicationInputHealth,
   } = await loadReportCardsSnapshotInputs(db, { preloadedStablecoinsCache });
 
   const peggedAssets: StablecoinData[] = stablecoinsCached.payload.peggedAssets;
@@ -381,6 +382,19 @@ export async function buildReportCardsSnapshot(
     liquidityStale,
     redemptionStale,
     inputFreshness: scoringInputFreshness,
+    v9PublicationInputHealth: {
+      ...v9PublicationInputHealth,
+      dex: {
+        ...v9PublicationInputHealth.dex,
+        generationId: dexPublication.generationId,
+        updatedAtSec: dexPublication.updatedAt,
+      },
+      redemption: {
+        ...v9PublicationInputHealth.redemption,
+        generationId: redemptionGenerationId,
+        updatedAtSec: redemptionUpdatedAt,
+      },
+    },
     pegDataById: Object.fromEntries(nonNavPegDataById),
     navPriceById: buildNavPriceById(peggedAssets, pegAnalytics.nowSec),
     activeDepegPeakBpsById: Object.fromEntries(activeDepegPeakBpsById),

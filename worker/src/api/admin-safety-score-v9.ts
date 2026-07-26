@@ -26,6 +26,7 @@ import {
 import {
   loadLatestSafetyScoreV9DiffReport,
   loadLatestSafetyScoreV9ShadowEnvelope,
+  loadSafetyScoreV9PublicationHealth,
   loadSafetyScoreV9ShadowHistory,
 } from "../lib/safety-score-v9-store";
 import {
@@ -122,6 +123,20 @@ export const handleAdminSafetyScoreV9 = makeAdminRoute<AdminRouteContext>(
     try {
       const envelope = await loadLatestSafetyScoreV9ShadowEnvelope(db, request.signal);
       if (envelope === null) return unavailable("shadow-envelope-unavailable");
+      const publicationHealth = await loadSafetyScoreV9PublicationHealth(
+        db,
+        request.signal,
+      );
+      if (publicationHealth === null) {
+        return unavailable("stored-shadow-invalid");
+      }
+      if (
+        publicationHealth.acceptedPublicationGenerationId !==
+          envelope.candidate.publicationGenerationId ||
+        publicationHealth.acceptedAtSec !== envelope.candidate.publishedAtSec
+      ) {
+        return unavailable("stored-shadow-invalid");
+      }
 
       const diff = await loadLatestSafetyScoreV9DiffReport(db, request.signal);
       if (diff === null) return unavailable("shadow-diff-unavailable");
@@ -139,6 +154,7 @@ export const handleAdminSafetyScoreV9 = makeAdminRoute<AdminRouteContext>(
         SafetyScoreV9AdminResponseSchema.parse({
           schemaVersion: SAFETY_SCORE_V9_ADMIN_RESPONSE_SCHEMA_VERSION,
           status: "available",
+          publicationHealth,
           envelope,
           diff,
           movementReviews,

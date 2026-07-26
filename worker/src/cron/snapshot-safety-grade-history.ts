@@ -5,15 +5,18 @@ import { throwIfAborted } from "../lib/abort";
 import type { ReportCardGrade } from "@shared/types/report-cards";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import type { ReportCardsResponse } from "@shared/types/report-cards";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import {
   ActiveV8SafetyScoreHistorySourceInactiveError,
   fetchLatestSafetyScoreHistoryV2Rows,
   loadActiveV8SafetyScoreHistorySource,
   prepareSafetyScoreHistoryBoundaryWrite,
+  prepareSafetyScoreHistoryV2Write,
   prepareV8OrganicSafetyScoreHistoryWrites,
   safetyScoreHistoryIdentitiesAreComparable,
   safetyScoreHistoryIdentityFromV2Row,
 } from "../lib/safety-score-history-v2";
+import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 
 interface LatestSafetyGradeRow {
   stablecoin_id: string;
@@ -32,14 +35,64 @@ function hasDegradedReportCardInputs(snapshot: ReportCardsResponse): boolean {
   );
 }
 
+interface HistoryCard {
+  id: string;
+  grade: ReportCardGrade;
+  score: number | null;
+}
+
 export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
 
   const nowSec = Math.floor(Date.now() / 1000);
   const snapshotDay = Math.floor(nowSec / DAY_SECONDS) * DAY_SECONDS;
-  let source;
+  let identity: SafetyScorePublicationIdentity;
+  let liveCards: HistoryCard[];
+  let degradedReportCardInputs: boolean;
   try {
-    source = await loadActiveV8SafetyScoreHistorySource(db, signal);
+    const active = await loadActiveSafetyScoreSource(db, signal);
+    if (active.kind === "error") {
+      throw new Error(
+        `Canonical Safety Score V9 source unavailable (${active.reason}): ${active.detail}`,
+      );
+    }
+    if (active.kind === "v9") {
+      if (active.snapshot.publicationHealth.status === "held") {
+        return {
+          status: "degraded" as const,
+          itemCount: 0,
+          metadata: JSON.stringify({
+            reason: "v9-publication-held",
+            expectedModel: "v9",
+            historyWritesSkipped: true,
+          }),
+        };
+      }
+      identity = active.snapshot.safetyScoreIdentity;
+      liveCards = active.snapshot.cards
+        .filter((card) => !FROZEN_IDS.has(card.id))
+        .map((card) => ({
+          id: card.id,
+          grade: card.grade,
+          score: card.score,
+        }));
+      degradedReportCardInputs = false;
+    } else {
+      const source = await loadActiveV8SafetyScoreHistorySource(db, signal);
+      identity = source.identity;
+      liveCards = source.snapshot.cards
+        .filter(
+          (card) =>
+            card.isDefunct !== true && !FROZEN_IDS.has(card.id),
+        )
+        .map((card) => ({
+          id: card.id,
+          grade: card.overallGrade,
+          score: card.overallScore,
+        }));
+      degradedReportCardInputs =
+        hasDegradedReportCardInputs(source.snapshot);
+    }
   } catch (err) {
     if (err instanceof ActiveV8SafetyScoreHistorySourceInactiveError) {
       return {
@@ -61,10 +114,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
       metadata: JSON.stringify({ reason: "active-model-source-unavailable", error: String(err).slice(0, 200) }),
     };
   }
-  const { snapshot, identity } = source;
   const methodologyVersion = identity.methodologyVersion;
-  const liveCards = snapshot.cards.filter((card) => card.isDefunct !== true && !FROZEN_IDS.has(card.id));
-  const degradedReportCardInputs = hasDegradedReportCardInputs(snapshot);
 
   const [latestRows, latestV2Rows] = await Promise.all([
     db
@@ -104,6 +154,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     let latest = latestByCoin.get(card.id);
     const latestV2 = latestV2ByCoin.get(card.id);
     let requiresIdentityBoundary = false;
+    let previousIdentity: SafetyScorePublicationIdentity | null = null;
     if (latestV2) {
       try {
         const latestIdentity = safetyScoreHistoryIdentityFromV2Row(latestV2);
@@ -120,6 +171,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
             score: latestV2.score,
             recorded_at: latestV2.recorded_at,
           };
+          previousIdentity = latestIdentity;
         }
       } catch {
         suppressedIdentityTransitions++;
@@ -142,8 +194,8 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         prepareSafetyScoreHistoryBoundaryWrite(db, {
           stablecoinId: card.id,
           recordedAt: snapshotDay,
-          grade: card.overallGrade,
-          score: card.overallScore,
+          grade: card.grade,
+          score: card.score,
           transitionKind: "methodology-boundary-baseline",
           identity,
           createdAt: nowSec,
@@ -158,41 +210,76 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         continue;
       }
       seeded++;
-      stmts.push(
-        ...prepareV8OrganicSafetyScoreHistoryWrites(db, {
+      if (identity.model === "v8") {
+        stmts.push(
+          ...prepareV8OrganicSafetyScoreHistoryWrites(db, {
+            stablecoinId: card.id,
+            recordedAt: snapshotDay,
+            grade: card.grade,
+            score: card.score,
+            prevGrade: null,
+            prevScore: null,
+            transitionKind: "initial-baseline",
+            identity,
+            createdAt: nowSec,
+          }),
+        );
+      } else {
+        stmts.push(prepareSafetyScoreHistoryV2Write(db, {
           stablecoinId: card.id,
           recordedAt: snapshotDay,
-          grade: card.overallGrade,
-          score: card.overallScore,
+          grade: card.grade,
+          score: card.score,
           prevGrade: null,
           prevScore: null,
           transitionKind: "initial-baseline",
           identity,
           createdAt: nowSec,
-        }),
-      );
+        }));
+      }
       continue;
     }
 
-    if (latest.grade !== card.overallGrade) {
+    if (latest.grade !== card.grade) {
       if (degradedReportCardInputs) {
         suppressedTransitions++;
         continue;
       }
       changed++;
-      stmts.push(
-        ...prepareV8OrganicSafetyScoreHistoryWrites(db, {
+      if (identity.model === "v8") {
+        stmts.push(
+          ...prepareV8OrganicSafetyScoreHistoryWrites(db, {
+            stablecoinId: card.id,
+            recordedAt: snapshotDay,
+            grade: card.grade,
+            score: card.score,
+            prevGrade: latest.grade,
+            prevScore: latest.score,
+            transitionKind: "organic-grade-change",
+            identity,
+            createdAt: nowSec,
+          }),
+        );
+      } else {
+        if (previousIdentity === null) {
+          suppressedIdentityTransitions++;
+          suppressedTransitions++;
+          changed--;
+          continue;
+        }
+        stmts.push(prepareSafetyScoreHistoryV2Write(db, {
           stablecoinId: card.id,
           recordedAt: snapshotDay,
-          grade: card.overallGrade,
-          score: card.overallScore,
+          grade: card.grade,
+          score: card.score,
           prevGrade: latest.grade,
           prevScore: latest.score,
           transitionKind: "organic-grade-change",
           identity,
+          previousIdentity,
           createdAt: nowSec,
-        }),
-      );
+        }));
+      }
       continue;
     }
 

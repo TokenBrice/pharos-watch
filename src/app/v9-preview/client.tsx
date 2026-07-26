@@ -246,11 +246,28 @@ export function SafetyScoreV9PreviewClient() {
 
   return (
     <div className="space-y-5">
-      <dl className="grid divide-y divide-border/60 border-y border-border/70 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+      {data.publicationHealth.status === "held" ? (
+        <div
+          className="border-y border-amber-500/35 bg-amber-500/5 px-4 py-3 text-sm text-amber-950 dark:text-amber-200"
+          role="status"
+        >
+          Ratings held at the last verified snapshot since{" "}
+          {formatTimestamp(data.publicationHealth.heldSinceSec!)} UTC because{" "}
+          {data.publicationHealth.reasons
+            .map((reason) => titleCase(reason.code))
+            .join(", ")}.
+        </div>
+      ) : null}
+
+      <dl className="grid divide-y divide-border/60 border-y border-border/70 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         <Metric label="Rated assets" value={data.completeness.ratedCount} />
         <Metric label="Not rated" value={data.completeness.notRatedCount} />
         <Metric label="Methodology" value={data.methodology.version} />
-        <Metric label="Published" value={`${formatTimestamp(data.updatedAt)} UTC`} />
+        <Metric label="Accepted" value={`${formatTimestamp(data.updatedAt)} UTC`} />
+        <Metric
+          label="Attempted"
+          value={`${formatTimestamp(data.publicationHealth.attemptedAtSec)} UTC`}
+        />
       </dl>
 
       <SafetyGradeDistributionBar gradeCounts={gradeCounts} totalCards={data.cards.length} totalLabel="assets" />

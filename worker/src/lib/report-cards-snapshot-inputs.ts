@@ -16,12 +16,15 @@ import {
 } from "./stablecoins-cache";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
+import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexDeploymentSupplyCoverage } from "@shared/lib/report-card-peg-liquidity";
 import type { ReserveSlice } from "@shared/types/core";
 import type { StablecoinData } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { LiveReserveSnapshotProvenance } from "./live-reserves-store";
 import { parseJsonObject } from "./json-parse";
+import type { V9PublicationInputHealth } from "./safety-score-v9-publication-assessment";
 
 export class ReportCardsSnapshotUnavailableError extends Error {
   constructor(message: string) {
@@ -45,6 +48,7 @@ export interface ReportCardsSnapshotInputs {
   liquidityStale: boolean;
   redemptionStale: boolean;
   inputFreshness: ReportCardsInputFreshness;
+  v9PublicationInputHealth: V9PublicationInputHealth;
 }
 
 export interface LoadReportCardsSnapshotInputsOptions {
@@ -58,6 +62,12 @@ const EMPTY_DEX_LIQUIDITY_SNAPSHOT: DexLiquidityLoadResult = {
 
 const REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC = CRON_INTERVALS["sync-dex-liquidity"] * 2;
 const REPORT_CARD_REDEMPTION_FRESHNESS_SEC = CRON_INTERVALS["sync-redemption-backstops"] * 2;
+const HAS_APPLICABLE_REDEMPTION_CONFIG = ACTIVE_STABLECOINS.some(
+  (coin) => REDEMPTION_BACKSTOP_CONFIGS[coin.id] !== undefined,
+);
+const HAS_APPLICABLE_LIVE_RESERVE_CONFIG = ACTIVE_STABLECOINS.some(
+  (coin) => coin.liveReservesConfig !== undefined,
+);
 
 type DeploymentOutcome = "observed_pools" | "verified_no_pools" | "provider_inaccessible";
 
@@ -434,6 +444,27 @@ export async function loadReportCardsSnapshotInputs(
     );
   }
 
+  const dexFreshness = buildFreshnessEntry(
+    dexLiquiditySnapshot.latestUpdatedAt,
+    nowSec,
+    REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC,
+    dexLiquiditySnapshotResult.status === "rejected",
+  );
+  const dexState: V9PublicationInputHealth["dex"]["state"] =
+    dexLiquiditySnapshotResult.status === "rejected"
+      ? "unavailable"
+      : dexFreshness.stale
+        ? "stale"
+        : "current";
+  const redemptionState: V9PublicationInputHealth["redemption"]["state"] =
+    !HAS_APPLICABLE_REDEMPTION_CONFIG
+      ? "not-applicable"
+      : redemptionSnapshotUnavailable
+        ? "unavailable"
+        : redemptionFreshness.stale
+          ? "stale"
+          : "current";
+
   return {
     stablecoinsCached,
     bluechipCached,
@@ -449,13 +480,30 @@ export async function loadReportCardsSnapshotInputs(
     liquidityStale,
     redemptionStale,
     inputFreshness: {
-      dexLiquidity: buildFreshnessEntry(
-        dexLiquiditySnapshot.latestUpdatedAt,
-        nowSec,
-        REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC,
-        dexLiquiditySnapshotResult.status === "rejected",
-      ),
+      dexLiquidity: dexFreshness,
       redemptionBackstops: redemptionFreshness,
+    },
+    v9PublicationInputHealth: {
+      dex: {
+        state: dexState,
+        generationId:
+          dexLiquiditySnapshot.latestUpdatedAt === null
+            ? null
+            : `dex-liquidity-${dexLiquiditySnapshot.latestUpdatedAt}`,
+        updatedAtSec: dexLiquiditySnapshot.latestUpdatedAt,
+      },
+      redemption: {
+        state: redemptionState,
+        generationId: redemptionBackstopSnapshot.runId ?? null,
+        updatedAtSec: redemptionBackstopSnapshot.latestUpdatedAt,
+      },
+      liveReserves: {
+        state:
+          HAS_APPLICABLE_LIVE_RESERVE_CONFIG &&
+          liveReserveMapResult.status === "rejected"
+            ? "unavailable"
+            : "available",
+      },
     },
   };
 }

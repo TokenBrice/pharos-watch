@@ -112,5 +112,19 @@ describe("buildFlightToQualityClassification", () => {
       { ...snapshot, completeness: { ...snapshot.completeness, expectedCount: 2 } },
       { allowShadowLifecycle: true },
     )).toEqual({ kind: "unavailable", reason: "source-contract-invalid" });
+
+    expect(buildFlightToQualityClassificationFromV9Snapshot(
+      {
+        ...snapshot,
+        publicationHealth: {
+          ...snapshot.publicationHealth,
+          status: "held",
+          attemptedAtSec: snapshot.updatedAt + 1_800,
+          heldSinceSec: snapshot.updatedAt + 1_800,
+          reasons: [{ code: "dex-stale" }],
+        },
+      },
+      { allowShadowLifecycle: true },
+    )).toEqual({ kind: "unavailable", reason: "publication-held" });
   });
 });

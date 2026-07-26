@@ -33,6 +33,11 @@ export function buildV9SelectorSnapshot(
   if (!parsed.success) {
     throw new V9SelectorSnapshotUnavailableError("V9 selector source contract failed");
   }
+  if (parsed.data.publicationHealth.status === "held") {
+    throw new V9SelectorSnapshotUnavailableError(
+      "V9 selector source publication is held",
+    );
+  }
   if (canonicalIdentity(parsed.data.safetyScoreIdentity) !== canonicalIdentity(expectedIdentity)) {
     throw new V9SelectorSnapshotUnavailableError("V9 selector source identity mismatch");
   }

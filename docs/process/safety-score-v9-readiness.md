@@ -353,12 +353,22 @@ loading their runner graphs. It retains:
 
 - `report-cards:v9-peg-provenance-seed:exact`, the compact exact seed paired
   atomically with the source V8 publication;
-- `report-cards:v9-fixed-input:exact`, the exact attempted V9 input paired by
+- `report-cards:v9-fixed-input:exact`, the exact accepted V9 input paired by
   base and source generation identity;
 - `report-cards:v9-shadow`, the strict candidate envelope;
 - `report-cards:v9-shadow:diff`, the V8/V9 movement report;
+- `report-cards:v9-shadow:publication-health`, the bounded current/held
+  publication state;
 - one compact `safety_score_v9_shadow_daily` row per UTC day; and
 - attempt health in `cron_runs`.
+
+Candidate compilation is diagnostic until the publication acceptance fence
+passes. The fence holds stale or unavailable applicable score inputs, failed
+active-result or rated-count floors, and newly binding producer-failed
+downgrades or NR transitions. A hold retains the last accepted scores,
+timestamp, diff, and exact replay input; acceptance commits all canonical
+records and current health atomically. Healthy measured-adverse changes remain
+publishable.
 
 The first post-release observations should answer factual questions, not target
 a preferred histogram:

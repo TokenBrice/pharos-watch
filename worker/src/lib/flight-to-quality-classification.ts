@@ -38,6 +38,7 @@ export type FlightToQualityClassificationResult =
         | "identity-not-current"
         | "identity-mismatch"
         | "lifecycle-not-approved"
+        | "publication-held"
         | "source-contract-invalid";
     };
 
@@ -96,19 +97,25 @@ export function buildFlightToQualityClassificationFromV8Cache(
 }
 
 /**
- * Explicit model-aware V9 adapter. The V9 publication remains shadow-only;
- * callers must opt in deliberately and no V8 caller may reach this path.
+ * Explicit model-aware V9 adapter. Shadow callers must opt in deliberately;
+ * an active V9 publication is accepted directly.
  */
 export function buildFlightToQualityClassificationFromV9Snapshot(
   snapshot: ReportCardsV9Response,
   options: { allowShadowLifecycle: boolean; expectedIdentity?: SafetyScorePublicationIdentity | null },
 ): FlightToQualityClassificationResult {
-  if (snapshot.lifecycle !== "shadow" || !options.allowShadowLifecycle) {
+  if (
+    snapshot.lifecycle !== "active" &&
+    (snapshot.lifecycle !== "shadow" || !options.allowShadowLifecycle)
+  ) {
     return { kind: "unavailable", reason: "lifecycle-not-approved" };
   }
   const parsed = ReportCardsV9ResponseSchema.safeParse(snapshot);
   if (!parsed.success) return { kind: "unavailable", reason: "source-contract-invalid" };
   const source = parsed.data;
+  if (source.publicationHealth.status === "held") {
+    return { kind: "unavailable", reason: "publication-held" };
+  }
   return buildFlightToQualityClassification({
     scores: Object.fromEntries(source.cards.map((card) => [card.id, { score: card.score ?? 0, grade: card.grade }])),
     safetyScoreIdentity: source.safetyScoreIdentity,

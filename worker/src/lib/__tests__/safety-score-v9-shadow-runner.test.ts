@@ -8,7 +8,12 @@ import {
   projectSafetyScoreV9PegSummary,
 } from "../safety-score-v9-peg-provenance";
 
+const { mockAssessPublication } = vi.hoisted(() => ({
+  mockAssessPublication: vi.fn(),
+}));
 const mockLoadDaily = vi.fn();
+const mockLoadEnvelope = vi.fn();
+const mockLoadPublicationHealth = vi.fn();
 const mockPersistState = vi.fn();
 const mockLoadReviewDispositions = vi.fn();
 const mockLoadReviewCarries = vi.fn();
@@ -17,6 +22,8 @@ vi.mock("../safety-score-v9-store", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../safety-score-v9-store")>();
   return {
     ...actual,
+    loadLatestSafetyScoreV9ShadowEnvelope: mockLoadEnvelope,
+    loadSafetyScoreV9PublicationHealth: mockLoadPublicationHealth,
     loadSafetyScoreV9ShadowDaily: mockLoadDaily,
     persistSafetyScoreV9ShadowState: mockPersistState,
   };
@@ -27,6 +34,16 @@ vi.mock("../safety-score-v9-movement-reviews", () => ({
   loadSafetyScoreV9MovementReviewCarries: mockLoadReviewCarries,
 }));
 
+vi.mock("../safety-score-v9-publication-assessment", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("../safety-score-v9-publication-assessment")
+  >();
+  return {
+    ...actual,
+    assessV9Publication: mockAssessPublication,
+  };
+});
+
 const {
   SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC,
   SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC,
@@ -35,7 +52,6 @@ const {
 
 const CLOCK_SEC = 2_000_000_000;
 const TRACKING_START_SEC = CLOCK_SEC - 365 * 86_400;
-const SOURCE_GENERATION = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${CLOCK_SEC}`;
 const UTC_DAY = new Date(CLOCK_SEC * 1_000).toISOString().slice(0, 10);
 
 function exactFixedInput(clockSec = CLOCK_SEC) {
@@ -55,6 +71,19 @@ function exactFixedInput(clockSec = CLOCK_SEC) {
     inputFreshness: {
       dexLiquidity: { updatedAt: clockSec - 100, ageSeconds: 100, stale: false },
       redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
+    },
+    v9PublicationInputHealth: {
+      dex: {
+        state: "current",
+        generationId: `dex-liquidity-${clockSec - 100}`,
+        updatedAtSec: clockSec - 100,
+      },
+      redemption: {
+        state: "not-applicable",
+        generationId: null,
+        updatedAtSec: null,
+      },
+      liveReserves: { state: "available" },
     },
     pegDataById: {
       "usdc-circle": {
@@ -150,7 +179,7 @@ function input(clockSec = CLOCK_SEC) {
     fixedInput: exactFixedInput(clockSec),
     v8Cards: [v8Card()],
     v8Publication: {
-      generationId: SOURCE_GENERATION,
+      generationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${clockSec}`,
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       expectedCount: 1,
       scoredCount: 1,
@@ -165,13 +194,23 @@ function input(clockSec = CLOCK_SEC) {
 describe("Safety Score V9 shadow runner", { timeout: 30_000 }, () => {
   beforeEach(() => {
     mockLoadDaily.mockReset();
+    mockLoadEnvelope.mockReset();
+    mockLoadPublicationHealth.mockReset();
     mockPersistState.mockReset();
     mockLoadReviewDispositions.mockReset();
     mockLoadReviewCarries.mockReset();
+    mockAssessPublication.mockReset();
     mockLoadDaily.mockResolvedValue(null);
+    mockLoadEnvelope.mockResolvedValue(null);
+    mockLoadPublicationHealth.mockResolvedValue(null);
     mockPersistState.mockResolvedValue(undefined);
     mockLoadReviewDispositions.mockResolvedValue({});
     mockLoadReviewCarries.mockResolvedValue({});
+    mockAssessPublication.mockImplementation(({ inputHealth }) =>
+      inputHealth.dex.state === "stale"
+        ? { decision: "hold", reasons: [{ code: "dex-stale" }] }
+        : { decision: "accept", reasons: [] },
+    );
   });
 
   it("uses the 30-minute calibration refresh cadence", () => {
@@ -184,7 +223,22 @@ describe("Safety Score V9 shadow runner", { timeout: 30_000 }, () => {
     expect(result).toMatchObject({ status: "published", utcDay: UTC_DAY });
     expect(mockPersistState).toHaveBeenCalledTimes(1);
     const persisted = mockPersistState.mock.calls[0]![1];
-    expect(Object.keys(persisted).sort()).toEqual(["daily", "diff", "envelope", "signal"]);
+    expect(Object.keys(persisted).sort()).toEqual([
+      "daily",
+      "diff",
+      "envelope",
+      "exactInput",
+      "publicationClockSec",
+      "publicationHealth",
+      "signal",
+    ]);
+    expect(persisted.exactInput.key).toBe(
+      "report-cards:v9-fixed-input:exact",
+    );
+    expect(persisted.publicationHealth).toMatchObject({
+      status: "current",
+      attemptedAtSec: CLOCK_SEC,
+    });
     expect(persisted.envelope.candidate.baseInputGenerationId).toBe(input().fixedInput.baseInputGenerationId);
     expect(persisted.envelope.replayArtifacts).toEqual([]);
     expect(persisted.envelope.coverage.unresolvedReleaseBlockers).toEqual([]);
@@ -202,6 +256,90 @@ describe("Safety Score V9 shadow runner", { timeout: 30_000 }, () => {
       utcDay: UTC_DAY,
       attemptCounts: { successful: 1, failed: 0 },
       selectedRun: { archiveSelectionReasons: [], artifactKeys: [] },
+    });
+  });
+
+  it("holds stale DEX input without writing canonical state or exact input, then recovers", async () => {
+    const heldInput = input();
+    heldInput.fixedInput = {
+      ...heldInput.fixedInput,
+      v9PublicationInputHealth: {
+        ...heldInput.fixedInput.v9PublicationInputHealth,
+        dex: {
+          ...heldInput.fixedInput.v9PublicationInputHealth.dex,
+          state: "stale",
+        },
+      },
+    };
+
+    const held = await runSafetyScoreV9ShadowAfterV8Publication(heldInput);
+    expect(held).toMatchObject({
+      status: "held",
+      utcDay: UTC_DAY,
+      reasons: [{ code: "dex-stale" }],
+    });
+    const persistedHold = mockPersistState.mock.calls[0]![1];
+    expect(Object.keys(persistedHold).sort()).toEqual([
+      "daily",
+      "publicationClockSec",
+      "publicationHealth",
+      "signal",
+    ]);
+    expect(persistedHold.daily).toMatchObject({
+      attemptCounts: { successful: 0, failed: 1 },
+      latestError: { stage: "publication-gate" },
+    });
+    expect(persistedHold.publicationHealth).toMatchObject({
+      status: "held",
+      heldSinceSec: CLOCK_SEC,
+      attemptedAtSec: CLOCK_SEC,
+    });
+
+    mockLoadDaily.mockResolvedValue(persistedHold.daily);
+    mockLoadPublicationHealth.mockResolvedValue(
+      persistedHold.publicationHealth,
+    );
+    mockPersistState.mockClear();
+    const recovery = await runSafetyScoreV9ShadowAfterV8Publication(
+      input(CLOCK_SEC + SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC),
+    );
+    expect(recovery).toMatchObject({ status: "published" });
+    expect(mockPersistState.mock.calls[0]![1].publicationHealth).toMatchObject({
+      status: "current",
+      heldSinceSec: null,
+      reasons: [],
+    });
+
+    const recoveredState = mockPersistState.mock.calls[0]![1];
+    mockLoadDaily.mockResolvedValue(recoveredState.daily);
+    mockLoadPublicationHealth.mockResolvedValue(
+      recoveredState.publicationHealth,
+    );
+    mockPersistState.mockClear();
+    const laterClock =
+      CLOCK_SEC + 2 * SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC;
+    const laterFailureInput = input(laterClock);
+    laterFailureInput.fixedInput = {
+      ...laterFailureInput.fixedInput,
+      v9PublicationInputHealth: {
+        ...laterFailureInput.fixedInput.v9PublicationInputHealth,
+        dex: {
+          ...laterFailureInput.fixedInput.v9PublicationInputHealth.dex,
+          state: "stale",
+        },
+      },
+    };
+
+    await expect(
+      runSafetyScoreV9ShadowAfterV8Publication(laterFailureInput),
+    ).resolves.toMatchObject({
+      status: "held",
+      reasons: [{ code: "dex-stale" }],
+    });
+    expect(mockPersistState.mock.calls[0]![1].publicationHealth).toMatchObject({
+      status: "held",
+      heldSinceSec: laterClock,
+      attemptedAtSec: laterClock,
     });
   });
 

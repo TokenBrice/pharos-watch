@@ -17,6 +17,7 @@ import {
   SAFETY_SCORE_V9_SHADOW_CACHE_KEYS,
   loadLatestSafetyScoreV9DiffReport,
   loadLatestSafetyScoreV9ShadowEnvelope,
+  loadSafetyScoreV9PublicationHealth,
   loadSafetyScoreV9ShadowHistory,
   persistSafetyScoreV9ShadowState,
 } from "../safety-score-v9-store";
@@ -186,7 +187,28 @@ function successfulState(candidateValue = candidate()) {
     envelope,
     diff,
   });
-  return { envelope, diff, daily };
+  return {
+    envelope,
+    diff,
+    daily,
+    exactInput: {
+      key: "report-cards:v9-fixed-input:exact",
+      value: JSON.stringify({
+        generation: candidateValue.publicationGenerationId,
+      }),
+    },
+    publicationHealth: {
+      schemaVersion: 1 as const,
+      status: "current" as const,
+      acceptedPublicationGenerationId:
+        candidateValue.publicationGenerationId,
+      acceptedAtSec: candidateValue.publishedAtSec,
+      attemptedAtSec: candidateValue.publishedAtSec,
+      heldSinceSec: null,
+      reasons: [],
+    },
+    publicationClockSec: candidateValue.publishedAtSec,
+  };
 }
 
 describe("Safety Score v9 shadow state persistence", () => {
@@ -219,9 +241,12 @@ describe("Safety Score v9 shadow state persistence", () => {
       consumer_threshold_registry_digest: state.envelope.consumerThresholdRegistryDigest,
     });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_artifacts").get()).toEqual({ count: 0 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 2 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 4 });
     await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(state.envelope);
     await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(state.diff);
+    await expect(loadSafetyScoreV9PublicationHealth(db)).resolves.toEqual(
+      state.publicationHealth,
+    );
     await expect(loadSafetyScoreV9ShadowHistory(db)).resolves.toEqual([state.daily]);
   });
 
@@ -237,7 +262,7 @@ describe("Safety Score v9 shadow state persistence", () => {
       key: string;
       value: string;
     }>;
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(4);
     for (const row of rows) {
       const storedBytes = new TextEncoder().encode(row.value).byteLength;
       expect(storedBytes).toBeLessThanOrEqual(SAFETY_SCORE_V9_SHADOW_CACHE_MAX_STORED_BYTES);
@@ -263,6 +288,65 @@ describe("Safety Score v9 shadow state persistence", () => {
     await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(state.envelope);
     await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(state.diff);
   }, 15_000);
+
+  it("persists a hold without changing the canonical envelope, diff, or exact input", async () => {
+    const { sqlite, db } = createTestDatabase();
+    const accepted = await successfulState();
+    await persistSafetyScoreV9ShadowState(db, accepted);
+    const before = sqlite
+      .prepare(
+        "SELECT key, value, updated_at FROM cache WHERE key != ? ORDER BY key",
+      )
+      .all(SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.publicationHealth);
+
+    const attemptedAtSec = accepted.publicationClockSec + 1_800;
+    const heldDaily = buildSafetyScoreV9ShadowDailyFailure({
+      utcDay: accepted.daily.utcDay,
+      updatedAtSec: attemptedAtSec + 5,
+      previous: accepted.daily,
+      failure: {
+        atSec: attemptedAtSec + 5,
+        stage: "publication-gate",
+        code: "safety-score-v9-publication-held",
+        message: "Safety Score v9 publication held: dex-stale",
+      },
+    });
+    await persistSafetyScoreV9ShadowState(db, {
+      daily: heldDaily,
+      publicationHealth: {
+        ...accepted.publicationHealth,
+        status: "held",
+        attemptedAtSec,
+        heldSinceSec: attemptedAtSec,
+        reasons: [{ code: "dex-stale" }],
+      },
+      publicationClockSec: attemptedAtSec,
+    });
+
+    expect(
+      sqlite
+        .prepare(
+          "SELECT key, value, updated_at FROM cache WHERE key != ? ORDER BY key",
+        )
+        .all(SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.publicationHealth),
+    ).toEqual(before);
+    await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(
+      accepted.envelope,
+    );
+    await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(
+      accepted.diff,
+    );
+    await expect(loadSafetyScoreV9PublicationHealth(db)).resolves.toMatchObject(
+      {
+        status: "held",
+        acceptedPublicationGenerationId:
+          accepted.envelope.candidate.publicationGenerationId,
+        attemptedAtSec,
+        heldSinceSec: attemptedAtSec,
+        reasons: [{ code: "dex-stale" }],
+      },
+    );
+  });
 
   it("continues to read legacy plain canonical cache values", async () => {
     const { sqlite, db } = createTestDatabase();
@@ -382,6 +466,7 @@ describe("Safety Score v9 shadow state persistence", () => {
       policyVersion: "candidate-v9-store-refreshed",
       publicationGenerationId: "v9-shadow:refreshed-generation",
       resultDigest: digest("8"),
+      publishedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60,
     };
     const refreshed = await successfulState(refreshedCandidate);
     refreshed.daily = buildSafetyScoreV9ShadowDailySuccess({
@@ -483,6 +568,7 @@ describe("Safety Score v9 shadow state persistence", () => {
         policyVersion: `candidate-v9-race-${label}`,
         publicationGenerationId: `v9-shadow:race-${label}`,
         resultDigest: digest(label === "winner" ? "8" : "9"),
+        publishedAtSec: selectedAtSec,
       });
       refreshed.daily = buildSafetyScoreV9ShadowDailySuccess({
         utcDay: original.daily.utcDay,

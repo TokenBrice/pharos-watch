@@ -158,6 +158,7 @@ export function makeWorkerReportCardsV9Response(
     baseInputGenerationId: `report-cards-input:v1:${digest("c")}`,
     publicationGenerationId: "report-cards:v9:1",
   };
+  const updatedAt = overrides.updatedAt ?? 110;
   return {
     model: "v9",
     schemaVersion: 3,
@@ -168,7 +169,16 @@ export function makeWorkerReportCardsV9Response(
       policy: { id: identity.policyId, semanticDigest: identity.policyDigest },
     },
     asOfSec: 100,
-    updatedAt: 110,
+    updatedAt,
+    publicationHealth: overrides.publicationHealth ?? {
+      schemaVersion: 1,
+      status: "current",
+      acceptedPublicationGenerationId: identity.publicationGenerationId,
+      acceptedAtSec: updatedAt,
+      attemptedAtSec: updatedAt,
+      heldSinceSec: null,
+      reasons: [],
+    },
     completeness: {
       expectedCount: cards.length,
       ratedCount: cards.filter((card) => card.grade !== "NR").length,

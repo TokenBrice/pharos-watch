@@ -42,6 +42,16 @@ function snapshot(): ReportCardsV9Response {
     },
     asOfSec: 1_700_000_000,
     updatedAt: 1_700_000_030,
+    publicationHealth: {
+      schemaVersion: 1,
+      status: "current",
+      acceptedPublicationGenerationId:
+        "report-cards:v9:candidate:handler-test",
+      acceptedAtSec: 1_700_000_030,
+      attemptedAtSec: 1_700_000_030,
+      heldSinceSec: null,
+      reasons: [],
+    },
     completeness: { expectedCount: 0, ratedCount: 0, notRatedCount: 0, notRatedIds: [] },
     source: {
       candidateId: "candidate-v9-handler-test",
@@ -127,6 +137,32 @@ describe("handleReportCardsV9", () => {
     expect(endpoint?.cacheBypass).toBe(true);
   });
 
+  it("serves the last accepted active snapshot as held without V8 fallback", async () => {
+    const held = snapshot();
+    held.publicationHealth = {
+      ...held.publicationHealth,
+      status: "held",
+      attemptedAtSec: held.updatedAt + 1_800,
+      heldSinceSec: held.updatedAt + 1_800,
+      reasons: [{ code: "dex-stale" }],
+    };
+    mockLoadPublishedReportCardsV9Snapshot.mockResolvedValue(held);
+
+    const response = await handleReportCardsV9(markerDb(approvedMarker()));
+    const body = await response.json() as ReportCardsV9Response;
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Safety-Score-Status")).toBe("held");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(body.updatedAt).toBe(held.updatedAt);
+    expect(body.publicationHealth).toMatchObject({
+      status: "held",
+      acceptedAtSec: held.updatedAt,
+      attemptedAtSec: held.updatedAt + 1_800,
+    });
+    expect(mockBuildReportCardsSnapshot).not.toHaveBeenCalled();
+  });
+
   it("returns explicit unavailability without reading or recomputing V8", async () => {
     mockLoadPublishedReportCardsV9Snapshot.mockRejectedValue(
       new MockV9UnavailableError("Canonical Safety Score V9 shadow cache is unavailable"),
@@ -165,6 +201,27 @@ describe("handleReportCardsV9Preview", () => {
     expect(endpoint?.cacheBypass).toBe(true);
     expect(endpoint?.publicApiAccess).toBe("exempt");
     expect(endpoint?.siteDataAccess).toBe("denied");
+  });
+
+  it("keeps accepted and attempted times distinct while the preview is held", async () => {
+    const held = snapshot();
+    held.publicationHealth = {
+      ...held.publicationHealth,
+      status: "held",
+      attemptedAtSec: held.updatedAt + 900,
+      heldSinceSec: held.updatedAt + 900,
+      reasons: [{ code: "live-reserves-unavailable" }],
+    };
+    mockLoadPublishedReportCardsV9Snapshot.mockResolvedValue(held);
+
+    const response = await handleReportCardsV9Preview(mockD1());
+    const body = await response.json() as ReportCardsV9Response;
+
+    expect(body.updatedAt).toBe(held.updatedAt);
+    expect(body.publicationHealth.acceptedAtSec).toBe(held.updatedAt);
+    expect(body.publicationHealth.attemptedAtSec).toBe(held.updatedAt + 900);
+    expect(response.headers.get("X-Safety-Score-Status")).toBe("held");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("keeps the original opaque endpoint as a cache-bypassed deployment compatibility alias", () => {

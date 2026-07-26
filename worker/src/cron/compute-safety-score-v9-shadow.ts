@@ -3,7 +3,7 @@ import {
   safetyScoreV8PublicationIdentitiesMatch,
 } from "@shared/lib/safety-score-v8-publication";
 import { throwIfAborted } from "../lib/abort";
-import { getCaches, setCacheMany } from "../lib/db-cache";
+import { getCaches } from "../lib/db-cache";
 import type {
   CronProgressReporter,
   CronResult,
@@ -12,7 +12,6 @@ import { loadReportCardEvidenceJournalByIdV1 } from "../lib/report-card-evidence
 import { buildReportCardPublicationPlan } from "../lib/report-card-publication";
 import {
   buildReportCardsSnapshotFromFixedInput,
-  buildSafetyScoreV9FixedInputCacheEntry,
   parseReportCardsFixedInputCacheArtifact,
   REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
   type ReportCardsFixedInputCacheArtifact,
@@ -160,9 +159,6 @@ export async function computeSafetyScoreV9Shadow(
 
   let supplyAttributionGenerationState:
     Record<string, unknown> = { status: "not-due" };
-  let v9FixedInputCacheBytes: number | null = null;
-  let v9FixedInputUncompressedBytes: number | null = null;
-
   const shadow = await runSafetyScoreV9ShadowAfterV8Publication({
     db,
     fixedInput: v9SeedInput,
@@ -243,18 +239,9 @@ export async function computeSafetyScoreV9Shadow(
         evidenceJournalById,
         supplyAttributionJournalById,
       };
-      const v9FixedInputEntry =
-        await buildSafetyScoreV9FixedInputCacheEntry(
-          v9FixedInput,
-          expectedIdentity,
-        );
-      await setCacheMany(db, [v9FixedInputEntry], shadowSignal);
-      v9FixedInputCacheBytes = v9FixedInputEntry.storedBytes;
-      v9FixedInputUncompressedBytes =
-        v9FixedInputEntry.uncompressedBytes;
       await reportProgress?.({
-        stage: "fixed-input-written",
-        message: "Persisted exact V9 shadow input",
+        stage: "fixed-input-prepared",
+        message: "Prepared exact V9 shadow input for publication assessment",
       });
       return v9FixedInput;
     },
@@ -283,8 +270,6 @@ export async function computeSafetyScoreV9Shadow(
     metadata: JSON.stringify({
       sourceGenerationId: fixedInput.sourceGeneration,
       baseInputGenerationId: fixedInput.baseInputGenerationId,
-      v9FixedInputCacheBytes,
-      v9FixedInputUncompressedBytes,
       pegProvenance: {
         status: "applied",
         assetCount: Object.keys(
@@ -301,7 +286,9 @@ export async function computeSafetyScoreV9Shadow(
           ? "v9-shadow-published"
           : shadow.status === "skipped"
             ? shadow.reason
-            : "v9-shadow-failed",
+            : shadow.status === "held"
+              ? "v9-shadow-held"
+              : "v9-shadow-failed",
     },
   };
 }

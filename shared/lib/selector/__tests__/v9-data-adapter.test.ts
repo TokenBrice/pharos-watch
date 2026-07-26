@@ -108,6 +108,7 @@ function response(overrides: Partial<ReportCardsV9Response> = {}): ReportCardsV9
     baseInputGenerationId: `report-cards-input:v1:${digest("c")}`,
     publicationGenerationId: "publication-v9-1",
   };
+  const updatedAt = overrides.updatedAt ?? 110;
   return {
     model: "v9",
     schemaVersion: 3,
@@ -118,7 +119,16 @@ function response(overrides: Partial<ReportCardsV9Response> = {}): ReportCardsV9
       policy: { id: identity.policyId, semanticDigest: identity.policyDigest },
     },
     asOfSec: 100,
-    updatedAt: 110,
+    updatedAt,
+    publicationHealth: overrides.publicationHealth ?? {
+      schemaVersion: 1,
+      status: "current",
+      acceptedPublicationGenerationId: identity.publicationGenerationId,
+      acceptedAtSec: updatedAt,
+      attemptedAtSec: updatedAt,
+      heldSinceSec: null,
+      reasons: [],
+    },
     completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
     source: {
       candidateId: "candidate-v9.0",

@@ -726,6 +726,7 @@ export function buildAlertSafetyV9SourceEnvelope(
   const parsed = ReportCardsV9ResponseSchema.safeParse(snapshot);
   if (!parsed.success) return null;
   const source = parsed.data;
+  if (source.publicationHealth.status === "held") return null;
   return {
     generation: `safety-v9-alert-source-v${ALERT_SAFETY_SOURCE_SCHEMA_VERSION}`,
     lifecycle: "shadow",

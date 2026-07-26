@@ -48,6 +48,16 @@ const v9Snapshot = {
   updatedAt: 200,
   cards: [],
   safetyScoreIdentity: v9Identity,
+  publicationHealth: {
+    schemaVersion: 1,
+    status: "current",
+    acceptedPublicationGenerationId:
+      v9Identity.publicationGenerationId,
+    acceptedAtSec: 200,
+    attemptedAtSec: 200,
+    heldSinceSec: null,
+    reasons: [],
+  },
 } as unknown as ReportCardsV9Response;
 const activeV8 = {
   kind: "v8" as const,
@@ -93,6 +103,32 @@ describe("identified active Safety Score source", () => {
       publishedAtSec: 200,
       activationUpdatedAt: 190,
       snapshot: v9Snapshot,
+    });
+    expect(mocks.loadActiveV8SafetyScoreHistorySource).not.toHaveBeenCalled();
+  });
+
+  it("treats held active V9 as unavailable without consulting V8", async () => {
+    mocks.loadActiveSafetyScoreSource.mockResolvedValue({
+      ...activeV9,
+      snapshot: {
+        ...v9Snapshot,
+        publicationHealth: {
+          ...v9Snapshot.publicationHealth,
+          status: "held",
+          attemptedAtSec: 300,
+          heldSinceSec: 300,
+          reasons: [{ code: "dex-stale" }],
+        },
+      },
+    });
+
+    await expect(loadIdentifiedActiveSafetyScoreSource(db)).resolves.toEqual({
+      kind: "error",
+      expectedModel: "v9",
+      reason: "v9-publication-held",
+      detail:
+        "Canonical Safety Score V9 ratings are held at the last verified snapshot",
+      activationUpdatedAt: 190,
     });
     expect(mocks.loadActiveV8SafetyScoreHistorySource).not.toHaveBeenCalled();
   });

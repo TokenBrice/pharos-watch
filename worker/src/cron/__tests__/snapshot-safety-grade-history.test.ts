@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReportCard, ReportCardGrade } from "@shared/types/report-cards";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1, type MockPreparedStatement } from "../../test-helpers/__shared/mock-d1";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../test-helpers/report-cards-v9";
 
 vi.mock("../../lib/safety-score-history-v2", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/safety-score-history-v2")>();
@@ -27,9 +31,14 @@ vi.mock("../../lib/cron-logger", async (importOriginal) => {
   };
 });
 
+vi.mock("../../lib/safety-score-active-source", () => ({
+  loadActiveSafetyScoreSource: vi.fn(),
+}));
+
 import { snapshotSafetyGradeHistory } from "../snapshot-safety-grade-history";
 import { batchExecute } from "../../lib/db";
 import { recordCronFailure } from "../../lib/cron-logger";
+import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import {
   ActiveV8SafetyScoreHistorySourceInactiveError,
   loadActiveV8SafetyScoreHistorySource,
@@ -38,6 +47,12 @@ import {
 const DIGEST = "a".repeat(64);
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"b".repeat(64)}`;
 const MODEL_PUBLICATION_GENERATION_ID = "report-cards:8.17:1777770000";
+const ACTIVE_V8 = {
+  kind: "v8" as const,
+  expectedModel: "v8" as const,
+  reason: "activation-marker-missing" as const,
+  activationUpdatedAt: null,
+};
 
 function makeCard(id: string, grade: ReportCardGrade, score: number | null, isDefunct = false): ReportCard {
   const dim = { grade, score, detail: "ok" };
@@ -175,6 +190,9 @@ describe("snapshotSafetyGradeHistory", () => {
       .mockReset()
       .mockImplementation(async (_db, stmts) => stmts.length);
     vi.mocked(loadActiveV8SafetyScoreHistorySource).mockReset();
+    vi.mocked(loadActiveSafetyScoreSource)
+      .mockReset()
+      .mockResolvedValue(ACTIVE_V8);
     vi.mocked(recordCronFailure).mockReset();
   });
 
@@ -216,6 +234,105 @@ describe("snapshotSafetyGradeHistory", () => {
     });
     expect(recordCronFailure).not.toHaveBeenCalled();
     expect(batchExecute).not.toHaveBeenCalled();
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("writes identity-rich V9 history without a legacy V8 row", async () => {
+    const snapshot = makeWorkerReportCardsV9Response({
+      cards: [
+        makeWorkerV9Card({
+          id: "usdc-circle",
+          grade: "A",
+          score: 84,
+        }),
+      ],
+    });
+    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue({
+      kind: "v9",
+      expectedModel: "v9",
+      marker: {
+        policyId: snapshot.safetyScoreIdentity.policyId,
+        policyDigest: snapshot.safetyScoreIdentity.policyDigest,
+        evaluationBuildDigest:
+          snapshot.safetyScoreIdentity.evaluationBuildDigest,
+        methodologyVersion:
+          snapshot.safetyScoreIdentity.methodologyVersion,
+      },
+      activationUpdatedAt: snapshot.updatedAt,
+      snapshot,
+    });
+    const db = mockD1([
+      { match: "FROM safety_grade_history h", rows: [] },
+      { match: "FROM safety_score_history_v2", rows: [] },
+    ]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result).toMatchObject({ itemCount: 1 });
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    const statements = vi.mocked(batchExecute).mock
+      .calls[0][1] as MockPreparedStatement[];
+    expect(statements).toHaveLength(1);
+    expect(statements[0].sql).toContain(
+      "INSERT INTO safety_score_history_v2",
+    );
+    expect(statements[0].boundValues).toMatchObject({
+      3: "v9",
+      11: "initial-baseline",
+      12: "A",
+      13: 84,
+    });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      model: "v9",
+      seeded: 1,
+      v2RowsWritten: 1,
+    });
+    expect(
+      statements.some((statement) =>
+        statement.sql.includes("safety_grade_history"),
+      ),
+    ).toBe(false);
+    expect(loadActiveV8SafetyScoreHistorySource).not.toHaveBeenCalled();
+  });
+
+  it("writes no V9 history row while publication is held", async () => {
+    const snapshot = makeWorkerReportCardsV9Response();
+    snapshot.publicationHealth = {
+      ...snapshot.publicationHealth,
+      status: "held",
+      attemptedAtSec: snapshot.updatedAt + 1_800,
+      heldSinceSec: snapshot.updatedAt + 1_800,
+      reasons: [{ code: "dex-stale" }],
+    };
+    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue({
+      kind: "v9",
+      expectedModel: "v9",
+      marker: {
+        policyId: snapshot.safetyScoreIdentity.policyId,
+        policyDigest: snapshot.safetyScoreIdentity.policyDigest,
+        evaluationBuildDigest:
+          snapshot.safetyScoreIdentity.evaluationBuildDigest,
+        methodologyVersion:
+          snapshot.safetyScoreIdentity.methodologyVersion,
+      },
+      activationUpdatedAt: snapshot.updatedAt,
+      snapshot,
+    });
+    const db = mockD1([]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result).toEqual({
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "v9-publication-held",
+        expectedModel: "v9",
+        historyWritesSkipped: true,
+      }),
+    });
+    expect(batchExecute).not.toHaveBeenCalled();
+    expect(loadActiveV8SafetyScoreHistorySource).not.toHaveBeenCalled();
     expect(db.getHistory()).toEqual([]);
   });
 

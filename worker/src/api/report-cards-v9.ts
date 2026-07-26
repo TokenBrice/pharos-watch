@@ -24,12 +24,16 @@ function snapshotResponse(
   lifecycle: ReportCardsV9Response["lifecycle"],
   cacheControl: string = CACHE_PROFILES.standard,
 ): Response {
+  const held = snapshot.publicationHealth.status === "held";
   return jsonFreshResponse(
     { ...snapshot, lifecycle },
     {
-      cacheControl,
+      cacheControl: held ? CACHE_PROFILES.noStore : cacheControl,
       updatedAt: snapshot.updatedAt,
       maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
+      headers: {
+        "X-Safety-Score-Status": held ? "held" : "current",
+      },
     },
   );
 }
