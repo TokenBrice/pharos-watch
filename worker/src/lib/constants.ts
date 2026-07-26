@@ -254,8 +254,10 @@ export const GT_PROBE_TIMEOUT_MS = 5_000;
 /** Retries for the serialized GT probe path. */
 export const GT_PROBE_MAX_RETRIES = 1;
 
-/** Shared wall-clock budget for the serialized GT probe pass inside sync-stablecoins. */
+/** Shared wall-clock budget when the serialized GT probe is run in an isolated context. */
 export const GT_PROBE_RUN_BUDGET_MS = 90_000;
+/** Maximum retained response body for any GeckoTerminal probe request. */
+export const GT_PROBE_RESPONSE_MAX_BYTES = 1_000_000;
 
 /**
  * Anthropic digest generation request timeout.

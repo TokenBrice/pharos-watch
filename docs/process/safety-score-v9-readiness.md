@@ -344,9 +344,15 @@ generation identity.
 
 ## Production Shadow Evidence
 
-After a valid V8 publication, the Worker may refresh the private V9 latest
-candidate at most once every 30 minutes. It retains:
+After a valid V8 publication, the dedicated fenced shadow trigger may refresh
+the private V9 latest candidate at most once every 30 minutes. It accepts only
+the compact provenance seed written atomically with that V8 generation, with
+the exact peg-input key set and matching full V8 identity. V9 owns a D1-backed
+memory-lane lease while it runs; later scheduled invocations wait before
+loading their runner graphs. It retains:
 
+- `report-cards:v9-peg-provenance-seed:exact`, the compact exact seed paired
+  atomically with the source V8 publication;
 - `report-cards:v9-fixed-input:exact`, the exact attempted V9 input paired by
   base and source generation identity;
 - `report-cards:v9-shadow`, the strict candidate envelope;

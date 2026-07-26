@@ -9,6 +9,11 @@ import {
   hasCompleteDexMeasuredQuoteProgress,
   resolveMeasuredExecutionCronStatus,
 } from "../sync";
+import {
+  UNISWAP_V4_ADAPTER_PROFILE_ID,
+  UNISWAP_V4_HOOK_FREE_ADDRESS,
+  computeUniswapV4PoolId,
+} from "../uniswap-v4";
 
 function target(
   stablecoinId: string,
@@ -136,6 +141,49 @@ describe("measured execution overflow admission", () => {
         }),
       ]),
     ).toBe(16);
+  });
+
+  it("budgets V4 runtime bindings and pinned pool-state proof", () => {
+    const poolTokenAddresses = [
+      "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    ] as const;
+    const poolId = computeUniswapV4PoolId({
+      currency0: poolTokenAddresses[0],
+      currency1: poolTokenAddresses[1],
+      feePips: 100,
+      tickSpacing: 1,
+      hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+    });
+    const measuredTarget = target("usdc-circle", 20_000_000, "uniswap-v4", {
+      adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
+      protocol: "uniswap-v4",
+      poolId: `ethereum:${poolId}`,
+      poolTokenAddresses: [...poolTokenAddresses],
+      tokenIn: {
+        address: poolTokenAddresses[0],
+        symbol: "USDC",
+        decimals: 6,
+        referencePriceUsd: 1,
+        trackedAssetId: "usdc-circle",
+      },
+      tokenOut: {
+        address: poolTokenAddresses[1],
+        symbol: "USDT",
+        decimals: 6,
+        referencePriceUsd: 1,
+        trackedAssetId: "usdt-tether",
+      },
+      feePips: 100,
+      tickSpacing: 1,
+      hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+    });
+
+    expect(estimateAdmissionCohortRpcRequestBreakdown([measuredTarget])).toEqual({
+      setupRpcRequests: 5,
+      quoteRpcRequests: 9,
+      totalRpcRequests: 14,
+    });
   });
 
   it("recognizes both reviewed StableSwap directions as one quote-batch cohort", () => {

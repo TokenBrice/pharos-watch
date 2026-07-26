@@ -171,6 +171,13 @@ export interface RedemptionBackstopConfig {
    * resolution — leave unset when the output composition is not documented.
    */
   outputAssets?: string[];
+  /**
+   * Complete reviewed output identities that cannot yet be represented as
+   * tracked, priceable `outputAssets`. These stay explicitly unresolved and
+   * never make an output scoreable; they only preserve bounded diagnostics
+   * instead of collapsing a known untracked basket into an anonymous gap.
+   */
+  unresolvedOutputAssetKeys?: string[];
   docs?: RedemptionDocSource[];
   reviewedAt?: string;
   notes?: string[];
@@ -252,6 +259,10 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
             docs: config.v9ComposedDexExit.docs.map(cloneRedemptionDocSource),
           },
         }
+      : {}),
+    ...(config.outputAssets ? { outputAssets: [...config.outputAssets] } : {}),
+    ...(config.unresolvedOutputAssetKeys
+      ? { unresolvedOutputAssetKeys: [...config.unresolvedOutputAssetKeys] }
       : {}),
     ...(config.docs ? { docs: config.docs.map(cloneRedemptionDocSource) } : {}),
     ...(config.notes ? { notes: [...config.notes] } : {}),

@@ -27,8 +27,11 @@ import {
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "./constants";
 import {
   buildUniV3ExecutionCandidateKey,
+  buildUniswapV4ExecutionCandidateKey,
+  buildUniswapV4MeasuredExecutionTarget,
   buildUniV3MeasuredExecutionTarget,
   parseUniV3FeePips,
+  type UniswapV4ExecutionCandidate,
   type UniV3ExecutionCandidate,
 } from "../measured-execution/inventory";
 import {
@@ -43,7 +46,12 @@ import {
   CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
   CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
 } from "../measured-execution/curve-stableswap-ng";
-import { buildEvmV2ExecutionCandidate } from "./constant-product-v2";
+import { buildCurveCompositeMeasuredExecutionTarget } from "../measured-execution/curve-composite";
+import {
+  buildEvmV2ExecutionCandidate,
+  buildUniqueEvmV2ExecutionCandidateFingerprintIndex,
+  resolveEvmV2ExecutionCandidate,
+} from "./constant-product-v2";
 
 /**
  * The Curve pools endpoint does not publish per-pool fees. Standard
@@ -537,8 +545,14 @@ export function processPoolMetrics(
   validationReferences?: PriceValidationReferences,
   aerodromeV2ExecutionCandidates: Map<string, EvmV2ExecutionCandidate> = new Map(),
   curvePoolCandidatesByFingerprint: ReadonlyMap<string, readonly CurvePoolEntry[]> = new Map(),
+  uniswapV4ExecutionCandidates: ReadonlyMap<
+    string,
+    readonly UniswapV4ExecutionCandidate[]
+  > = new Map(),
 ): Map<string, LiquidityMetrics> {
   const metrics = new Map<string, LiquidityMetrics>();
+  const uniqueAerodromeV2ExecutionCandidates =
+    buildUniqueEvmV2ExecutionCandidateFingerprintIndex(aerodromeV2ExecutionCandidates);
   const enforceDexProjectFilter = dexProjects.size > 0;
   if (!enforceDexProjectFilter) {
     console.warn("[dex-liquidity] DEX project index is empty — project whitelist filter disabled for this run");
@@ -607,11 +621,32 @@ export function processPoolMetrics(
           ? buildUniV3ExecutionCandidateKey(chainNorm, pool.underlyingTokens, uniV3FeePips)
           : null;
       const uniV3Candidates = uniV3ExecutionKey ? (uniV3ExecutionCandidates.get(uniV3ExecutionKey) ?? []) : [];
-      const aerodromeExecutionKey =
-        protocol === "aerodrome" ? canonicalExitRouteAssetKey(chainNorm, pool.pool) : null;
-      const aerodromeV2ExecutionCandidate = aerodromeExecutionKey
-        ? aerodromeV2ExecutionCandidates.get(aerodromeExecutionKey)
-        : undefined;
+      const uniswapV4FeePips =
+        protocol === "uniswap-v4" ? parseUniV3FeePips(pool.poolMeta) : null;
+      const uniswapV4ExecutionKey =
+        protocol === "uniswap-v4"
+          ? buildUniswapV4ExecutionCandidateKey(
+              chainNorm,
+              pool.underlyingTokens,
+              uniswapV4FeePips,
+            )
+          : null;
+      // Candidate cardinality includes hooked pools. A lone hook-free row is
+      // not enough when another PoolKey shares the same retained pair/fee.
+      const uniswapV4Candidates = uniswapV4ExecutionKey
+        ? (uniswapV4ExecutionCandidates.get(uniswapV4ExecutionKey) ?? [])
+        : [];
+      const aerodromeV2ExecutionCandidate =
+        protocol === "aerodrome"
+          ? resolveEvmV2ExecutionCandidate({
+              chain: chainNorm,
+              protocol: pool.project,
+              poolAddressOrId: pool.pool,
+              tokenAddresses: pool.underlyingTokens ?? [],
+              exactCandidates: aerodromeV2ExecutionCandidates,
+              uniqueFingerprintCandidates: uniqueAerodromeV2ExecutionCandidates,
+            })
+          : undefined;
 
       // --- v2: Enhanced quality resolution ---
       let qualMult: number;
@@ -811,6 +846,18 @@ export function processPoolMetrics(
                 capturedAt: measuredTargetCapturedAt,
               })
             : null;
+        const curveCompositeMeasuredTarget =
+          protocol === "curve" && curveAddressMatch
+            ? buildCurveCompositeMeasuredExecutionTarget({
+                curveData,
+                chain: chainNorm,
+                stablecoinId: id,
+                chainAddressToId,
+                stablecoinPriceById,
+                retainedTvlUsd: rawContribTvl,
+                capturedAt: measuredTargetCapturedAt,
+              })
+            : null;
         const curveStableSwapPhysicalPoolId =
           protocol === "curve" && curveAddressMatch
             ? resolveReviewedCurveStableSwapPhysicalPoolId({
@@ -831,12 +878,28 @@ export function processPoolMetrics(
                 capturedAt: measuredTargetCapturedAt,
               })
             : null;
+        const uniswapV4MeasuredTarget =
+          protocol === "uniswap-v4" && uniswapV4Candidates.length === 1
+            ? buildUniswapV4MeasuredExecutionTarget({
+                stablecoinId: id,
+                candidate: uniswapV4Candidates[0]!,
+                stablecoinPriceById,
+                chainAddressToId,
+                symbolToChainScopedIds,
+                validationReferences,
+                retainedTvlUsd: rawContribTvl,
+                capturedAt: measuredTargetCapturedAt,
+              })
+            : null;
         const measuredExecutionTarget =
           curveCryptoSwapMeasuredTarget ??
           curveStableSwapNgMeasuredTarget ??
-          uniV3MeasuredTarget;
+          curveCompositeMeasuredTarget ??
+          uniV3MeasuredTarget ??
+          uniswapV4MeasuredTarget;
         const measuredExecutionGate: DexExecutionCapabilityGate | null =
-          protocol === "uniswap-v3" && !uniV3MeasuredTarget
+          (protocol === "uniswap-v3" && !uniV3MeasuredTarget) ||
+          (protocol === "uniswap-v4" && !uniswapV4MeasuredTarget)
             ? { family: "measured-execution", reason: "target-unresolved" }
             : null;
         const evmV2ExecutionCandidate =
@@ -881,7 +944,8 @@ export function processPoolMetrics(
             ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
             ...(curveExecutionCapability.gate &&
             !curveCryptoSwapMeasuredTarget &&
-            !curveStableSwapNgMeasuredTarget
+            !curveStableSwapNgMeasuredTarget &&
+            !curveCompositeMeasuredTarget
               ? { executionCapabilityGate: curveExecutionCapability.gate }
               : measuredExecutionGate
                 ? { executionCapabilityGate: measuredExecutionGate }

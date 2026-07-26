@@ -34,6 +34,13 @@ describe("sqrtRatioToSpotPrice", () => {
     expect(price).toBeCloseTo(1e-12, 15);
   });
 
+  it("retains precision when a tiny raw ratio becomes a normal human price after decimal adjustment", () => {
+    const liveCadcUsdcSqrtRatio = 66_808_070_069_819_834_061_550n;
+    const price = sqrtRatioToSpotPrice(liveCadcUsdcSqrtRatio, 18, 6);
+
+    expect(price).toBeCloseTo(0.7110476163373841, 12);
+  });
+
   it("handles large sqrt ratios without overflow", () => {
     // Uniswap V3 sqrtPriceX96 can reach ~2^160. Pick 2^140 as a well-above-safe-int test.
     const price = sqrtRatioToSpotPrice(1n << 140n, 18, 18);
@@ -161,12 +168,14 @@ describe("fetchSlipstreamPools", () => {
           liquidity: 1n,
           type: 1,
           tick: 0,
-          sqrt_ratio: 0n,
+          // A human 1:1 price for token0(18 decimals) / token1(6 decimals)
+          // has a tiny raw ratio that used to truncate to zero.
+          sqrt_ratio: (1n << 96n) / 1_000_000n,
           token0: "0x00000000000000000000000000000000000000bb",
-          reserve0: 50_000_000n,
+          reserve0: 50_000000000000000000n,
           staked0: 0n,
           token1: "0x00000000000000000000000000000000000000cc",
-          reserve1: 50_000000000000000000n,
+          reserve1: 50_000_000n,
           staked1: 0n,
           gauge: "0x0000000000000000000000000000000000000000",
           gauge_liquidity: 0n,
@@ -195,16 +204,16 @@ describe("fetchSlipstreamPools", () => {
         result: [
           {
             token_address: "0x00000000000000000000000000000000000000bb",
-            symbol: "USDC",
-            decimals: 6,
+            symbol: "CADC",
+            decimals: 18,
             account_balance: 0n,
             listed: true,
             emerging: false,
           },
           {
             token_address: "0x00000000000000000000000000000000000000cc",
-            symbol: "DAI",
-            decimals: 18,
+            symbol: "USDC",
+            decimals: 6,
             account_balance: 0n,
             listed: true,
             emerging: false,
@@ -215,14 +224,11 @@ describe("fetchSlipstreamPools", () => {
     const result = await fetchSlipstreamPools(
       "aerodrome-slipstream",
       new Map([
-        ["base:0x00000000000000000000000000000000000000bb", "usdc-circle"],
-        ["base:0x00000000000000000000000000000000000000cc", "dai-makerdao"],
+        ["base:0x00000000000000000000000000000000000000bb", "cadc-cad-coin"],
+        ["base:0x00000000000000000000000000000000000000cc", "usdc-circle"],
       ]),
       new Map(),
-      new Map([
-        ["usdc-circle", 1],
-        ["dai-makerdao", 1],
-      ]),
+      new Map([["usdc-circle", 1]]),
     );
 
     expect(result.ok).toBe(true);
@@ -235,20 +241,20 @@ describe("fetchSlipstreamPools", () => {
       feeRate: 0.0001,
       tickSpacing: 1,
       tvlUsd: 100,
-      price: null,
+      price: 1,
       volume24hUsd: 0,
       balances: [50, 50],
       tokens: [
         {
           address: "0x00000000000000000000000000000000000000bb",
-          symbol: "USDC",
-          decimals: 6,
+          symbol: "CADC",
+          decimals: 18,
           priceUsd: 1,
         },
         {
           address: "0x00000000000000000000000000000000000000cc",
-          symbol: "DAI",
-          decimals: 18,
+          symbol: "USDC",
+          decimals: 6,
           priceUsd: 1,
         },
       ],

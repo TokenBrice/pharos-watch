@@ -598,5 +598,28 @@ describe("validateRedemptionBackstopRegistry", () => {
         "stable outputAssets must be tracked stablecoin ids",
       );
     }
+
+    const unresolved = RedemptionBackstopConfigSchema.safeParse({
+      ...baseConfig,
+      outputAssetType: "stable-basket",
+      unresolvedOutputAssetKeys: ["usdc-circle", "asset:vbusdc"],
+    });
+    expect(unresolved.success).toBe(true);
+
+    const conflicting = RedemptionBackstopConfigSchema.safeParse({
+      ...baseConfig,
+      outputAssetType: "stable-basket",
+      outputAssets: ["usdc-circle"],
+      unresolvedOutputAssetKeys: ["asset:vbusdc"],
+    });
+    expect(conflicting.success).toBe(false);
+    if (!conflicting.success) {
+      expect(conflicting.error.issues).toContainEqual(
+        expect.objectContaining({
+          path: ["unresolvedOutputAssetKeys"],
+          message: expect.stringContaining("cannot be combined"),
+        }),
+      );
+    }
   });
 });

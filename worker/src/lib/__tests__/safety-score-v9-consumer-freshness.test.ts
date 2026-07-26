@@ -3,7 +3,7 @@ import {
   isSafetyScoreV9SnapshotFresh,
   SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
 } from "../safety-score-v9-consumer-freshness";
-import { SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC } from "../safety-score-v9-shadow-runner";
+import { SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 
 describe("Safety Score V9 consumer freshness", () => {
   it("allows exactly one missed producer refresh", () => {

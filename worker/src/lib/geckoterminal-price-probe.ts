@@ -9,17 +9,32 @@ import {
   GT_PROBE_TIMEOUT_MS,
   GT_PROBE_MAX_RETRIES,
   GT_PROBE_RUN_BUDGET_MS,
+  GT_PROBE_RESPONSE_MAX_BYTES,
   CIRCUIT_SOURCE,
 } from "./constants";
 import { shouldAttemptFetch, recordOutcome } from "./circuit-breaker";
 import { sleepWithSignal, throwIfAborted } from "./abort";
-import { cancelResponseBodyQuietly, readResponseTextWithSignal } from "./response-body";
+import {
+  cancelResponseBodyQuietly,
+  readResponseTextWithinLimitWithSignal,
+} from "./response-body";
 import { CG_CHAIN_MAP, GT_CHAIN_MAP } from "@shared/lib/chains";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { GtPool } from "../cron/dex-liquidity/types";
 import type { SourcePrice } from "./price-consensus";
 import { aggregateProtocolPrices, computeWeightedMedianPrice } from "./dex-price-estimators";
 import { midDivergenceBps } from "./price-divergence";
+import {
+  createEmptyGtProbeStats,
+  type GtProbeStats,
+  type GtProbeTransportStats,
+} from "./geckoterminal-price-probe-stats";
+
+export {
+  createEmptyGtProbeStats,
+  type GtProbeStats,
+  type GtProbeTransportStats,
+} from "./geckoterminal-price-probe-stats";
 
 export interface GtProbeResult {
   price: number;
@@ -31,13 +46,6 @@ export interface GtProbeResult {
 }
 
 type ProbeTransport = "coingecko-onchain" | "geckoterminal-public";
-
-interface GtProbeTransportStats {
-  attempted: number;
-  priced: number;
-  lookupMisses: number;
-  upstreamErrors: number;
-}
 
 /**
  * Extract a robust protocol-aware price from a GeckoTerminal pools response for a
@@ -111,50 +119,6 @@ export function extractPoolPrice(
   };
 }
 
-export interface GtProbeStats {
-  probed: number;
-  pricesObtained: number;
-  divergences500bps: number;
-  skippedLowTvl: number;
-  lookupMisses: number;
-  upstreamErrors: number;
-  publicFallbacks: number;
-  budgetExhausted: boolean;
-  budgetSkipped: number;
-  transports: {
-    coingeckoOnchain: GtProbeTransportStats;
-    geckoTerminalPublic: GtProbeTransportStats;
-  };
-}
-
-export function createEmptyGtProbeStats(): GtProbeStats {
-  return {
-    probed: 0,
-    pricesObtained: 0,
-    divergences500bps: 0,
-    skippedLowTvl: 0,
-    lookupMisses: 0,
-    upstreamErrors: 0,
-    publicFallbacks: 0,
-    budgetExhausted: false,
-    budgetSkipped: 0,
-    transports: {
-      coingeckoOnchain: {
-        attempted: 0,
-        priced: 0,
-        lookupMisses: 0,
-        upstreamErrors: 0,
-      },
-      geckoTerminalPublic: {
-        attempted: 0,
-        priced: 0,
-        lookupMisses: 0,
-        upstreamErrors: 0,
-      },
-    },
-  };
-}
-
 function isGtLookupMissStatus(status: number | undefined): boolean {
   return status === 404 || status === 422;
 }
@@ -172,7 +136,12 @@ async function readGtProbeJsonBody<T>(response: Response, signal?: AbortSignal):
     parentSignal: signal,
   });
   try {
-    return JSON.parse(await readResponseTextWithSignal(response, timeout.signal)) as T;
+    const text = await readResponseTextWithinLimitWithSignal(
+      response,
+      GT_PROBE_RESPONSE_MAX_BYTES,
+      timeout.signal,
+    );
+    return JSON.parse(text) as T;
   } finally {
     timeout.dispose();
   }

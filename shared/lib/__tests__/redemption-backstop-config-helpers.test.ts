@@ -45,6 +45,7 @@ describe("redemption backstop config helpers", () => {
       costModel: documentedVariableFee("Variable fee schedule"),
       v9RouteCostTerms: { minFeeUsd: 1_000 },
       v9RouteReviewTerms: { minRedeemUsd: 100_000, settlementModel: "days" },
+      unresolvedOutputAssetKeys: ["asset:untracked"],
     });
 
     const alpha = expanded["alpha"]!;
@@ -54,6 +55,7 @@ describe("redemption backstop config helpers", () => {
     alpha.costModel.feeDescription = "mutated fee";
     alpha.v9RouteCostTerms!.minFeeUsd = 2_000;
     alpha.v9RouteReviewTerms!.minRedeemUsd = 200_000;
+    alpha.unresolvedOutputAssetKeys!.push("asset:mutated");
     if (alpha.capacityModel.kind === "supply-ratio") {
       alpha.capacityModel.ratio = 0.2;
     }
@@ -63,6 +65,7 @@ describe("redemption backstop config helpers", () => {
     expect(beta.costModel.feeDescription).toBe("Variable fee schedule");
     expect(beta.v9RouteCostTerms).toEqual({ minFeeUsd: 1_000 });
     expect(beta.v9RouteReviewTerms).toEqual({ minRedeemUsd: 100_000, settlementModel: "days" });
+    expect(beta.unresolvedOutputAssetKeys).toEqual(["asset:untracked"]);
     expect(beta.capacityModel).toMatchObject({ kind: "supply-ratio", ratio: 0.1 });
     expect(baseConfig.docs![0]!.supports).toEqual(["route", "fees"]);
   });

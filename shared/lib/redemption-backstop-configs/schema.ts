@@ -150,6 +150,11 @@ export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig>
     routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),
     totalScoreCap: z.number().gt(0).lte(100).optional(),
     outputAssets: z.array(z.string().min(1)).min(1).max(MAX_REDEMPTION_OUTPUT_ASSETS).optional(),
+    unresolvedOutputAssetKeys: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(MAX_REDEMPTION_OUTPUT_ASSETS)
+      .optional(),
     docs: z.array(RedemptionDocSourceSchema).optional(),
     reviewedAt: ReviewedAtSchema.optional(),
     notes: z.array(z.string()).optional(),
@@ -188,6 +193,25 @@ export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig>
           code: "custom",
           path: ["outputAssets"],
           message: "stable-single outputAssets must name exactly one tracked stablecoin",
+        });
+      }
+    }
+    if (config.unresolvedOutputAssetKeys) {
+      if (
+        new Set(config.unresolvedOutputAssetKeys).size !==
+        config.unresolvedOutputAssetKeys.length
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["unresolvedOutputAssetKeys"],
+          message: "unresolvedOutputAssetKeys cannot contain duplicates",
+        });
+      }
+      if (config.outputAssets) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["unresolvedOutputAssetKeys"],
+          message: "unresolvedOutputAssetKeys cannot be combined with resolved outputAssets",
         });
       }
     }

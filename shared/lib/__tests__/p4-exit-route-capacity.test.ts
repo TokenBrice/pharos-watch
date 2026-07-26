@@ -739,7 +739,44 @@ describe("P4 DEX exit route observations", () => {
     });
   });
 
-  it("accepts the active Base Aerodrome Slipstream adapter as exact measured evidence", () => {
+  it.each(["aerodrome", "aerodrome-slipstream"])(
+    "accepts the active Base Aerodrome Slipstream adapter on retained %s rows",
+    (project) => {
+      const observedAt = 1_752_560_000;
+      const profile = aerodromeMeasuredProfile(observedAt - 60);
+      const result = buildP4DexExitRouteObservations({
+        stablecoinId: "usdc-circle",
+        observedAt,
+        retainedPools: [{
+          poolId: "defillama-yields-uuid",
+          project,
+          chain: "base",
+          tvlUsd: 2_000_000,
+          symbol: "USDC-USDT",
+          poolType: "aerodrome-slipstream",
+          source: "dl",
+          extra: {
+            measuredExecution: profile,
+            measuredExecutionPhysicalPoolId: profile.poolId,
+          },
+        }],
+      });
+
+      expect(result.observations[0]).toMatchObject({
+        adapterProfileId: "aerodrome-slipstream-quoter-v2",
+        evidenceKind: "measured-executable-depth",
+        scoreEligible: true,
+      });
+      expect(result.coverage).toMatchObject({
+        scoreEligibleCapabilityPoolCount: 1,
+        scoreEligiblePoolCount: 1,
+        unsupportedPoolCount: 0,
+      });
+      expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(true);
+    },
+  );
+
+  it("does not broaden the Slipstream alias to an unrelated retained protocol", () => {
     const observedAt = 1_752_560_000;
     const profile = aerodromeMeasuredProfile(observedAt - 60);
     const result = buildP4DexExitRouteObservations({
@@ -747,7 +784,7 @@ describe("P4 DEX exit route observations", () => {
       observedAt,
       retainedPools: [{
         poolId: "defillama-yields-uuid",
-        project: "aerodrome-slipstream",
+        project: "velodrome",
         chain: "base",
         tvlUsd: 2_000_000,
         symbol: "USDC-USDT",
@@ -760,17 +797,10 @@ describe("P4 DEX exit route observations", () => {
       }],
     });
 
-    expect(result.observations[0]).toMatchObject({
-      adapterProfileId: "aerodrome-slipstream-quoter-v2",
-      evidenceKind: "measured-executable-depth",
-      scoreEligible: true,
+    expect(result.observations).toEqual([]);
+    expect(result.coverage.unsupportedReasons).toEqual({
+      "invalidMeasuredExecution:pool-identity-mismatch": 1,
     });
-    expect(result.coverage).toMatchObject({
-      scoreEligibleCapabilityPoolCount: 1,
-      scoreEligiblePoolCount: 1,
-      unsupportedPoolCount: 0,
-    });
-    expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(true);
   });
 
   it("keeps the 3pool reserve model score-facing until the atomic packet matures", () => {

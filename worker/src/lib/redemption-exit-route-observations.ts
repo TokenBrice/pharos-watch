@@ -98,7 +98,10 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
 
 function resolveOutput(
   stablecoinId: string,
-  config: Pick<RedemptionBackstopConfig, "routeFamily" | "outputAssetType" | "outputAssets">,
+  config: Pick<
+    RedemptionBackstopConfig,
+    "routeFamily" | "outputAssetType" | "outputAssets" | "unresolvedOutputAssetKeys"
+  >,
   outputValuation?: LiveReserveRedemptionOutputValuation | null,
 ): ExitRouteOutput {
   const meta = TRACKED_META_BY_ID.get(stablecoinId);
@@ -107,10 +110,24 @@ function resolveOutput(
   }
   if (config.outputAssetType === "stable-single") {
     const outputId = config.outputAssets?.[0] ?? meta?.variantOf;
-    return outputId ? { kind: "tracked-stablecoin", trackedAssetIds: [outputId] } : { kind: "unresolved-asset" };
+    return outputId
+      ? { kind: "tracked-stablecoin", trackedAssetIds: [outputId] }
+      : {
+          kind: "unresolved-asset",
+          ...(config.unresolvedOutputAssetKeys?.length
+            ? { assetKeys: [...config.unresolvedOutputAssetKeys] }
+            : {}),
+        };
   }
   if (config.outputAssetType === "stable-basket") {
-    if (!config.outputAssets?.length) return { kind: "unresolved-basket" };
+    if (!config.outputAssets?.length) {
+      return {
+        kind: "unresolved-basket",
+        ...(config.unresolvedOutputAssetKeys?.length
+          ? { assetKeys: [...config.unresolvedOutputAssetKeys] }
+          : {}),
+      };
+    }
     const configuredAssetIds = [...config.outputAssets].sort();
     const valuationAssetIds = outputValuation?.basketWeights.map((weight) => weight.assetId).sort() ?? [];
     const valuationMatches =
@@ -134,7 +151,12 @@ function resolveOutput(
       ? { kind: "collateral", assetKeys: [...config.outputAssets] }
       : { kind: "collateral" };
   }
-  return { kind: "unresolved-asset" };
+  return {
+    kind: "unresolved-asset",
+    ...(config.unresolvedOutputAssetKeys?.length
+      ? { assetKeys: [...config.unresolvedOutputAssetKeys] }
+      : {}),
+  };
 }
 
 function resolveScopeAndCommonModes(
@@ -407,6 +429,8 @@ export function deriveSupplyModelExitRouteObservation(
       routeFamily: entry.routeFamily,
       outputAssetType: entry.outputAssetType,
       outputAssets: getRedemptionBackstopConfig(entry.stablecoinId)?.outputAssets,
+      unresolvedOutputAssetKeys:
+        getRedemptionBackstopConfig(entry.stablecoinId)?.unresolvedOutputAssetKeys,
     }),
     evidenceKind: "documented-terms",
     ...(boundedUnknownFee ? { feeEvidence: "undisclosed-reviewed" as const } : {}),

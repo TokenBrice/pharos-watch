@@ -26,3 +26,24 @@ export interface SlipstreamExecutionCandidate {
     { address: string; symbol: string; decimals: number },
   ];
 }
+
+/**
+ * Exact PoolKey material indexed from the reviewed Uniswap V4 subgraph
+ * schema. Hooked rows stay in the candidate set so target generation can
+ * reject an ambiguous token/fee join instead of silently selecting the lone
+ * hook-free row.
+ */
+export interface UniswapV4ExecutionCandidate {
+  chain: string;
+  poolId: `0x${string}`;
+  feePips: number;
+  tickSpacing: number;
+  hookAddress: `0x${string}`;
+  tvlUsd: number;
+  token0Price: number;
+  token1Price: number;
+  tokens: readonly [
+    { address: string; symbol: string; decimals: number },
+    { address: string; symbol: string; decimals: number },
+  ];
+}

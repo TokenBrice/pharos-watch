@@ -156,11 +156,16 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     });
     const fixedInput = xautFixedInput();
     const before = structuredClone(fixedInput);
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(
+      (OBSERVED_AT_SEC + 60) * 1_000,
+    );
 
     const capture = await captureSafetyScoreV9SupplyAttribution(
       fixedInput,
       chainRpcs(),
-    );
+      undefined,
+      { clockMode: "wall" },
+    ).finally(() => nowSpy.mockRestore());
     const captured = capture.attributionById;
 
     expect(fixedInput).toEqual(before);
@@ -182,14 +187,16 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
       expect.objectContaining({
         aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
         registryFingerprint: "a".repeat(64),
-        scoringClockSec: OBSERVED_AT_SEC,
+        scoringClockSec: OBSERVED_AT_SEC + 60,
       }),
     );
+    expect(capture.captureClockSec).toBe(OBSERVED_AT_SEC + 60);
     expect(capture.journalRecords).toHaveLength(1);
     expect(capture.journalRecords[0]).toMatchObject({
       assetId: "xaut-tether",
       sourceId: "xaut.canonical-lock-mint-group-partition.v2",
       sourceOriginClass: "issuer-disclosure-plus-onchain",
+      scoringClockSec: OBSERVED_AT_SEC + 60,
       admissionCode: "supply-attribution.admission.accepted",
       fallbackCode: "supply-attribution.fallback.not-used",
     });
@@ -237,6 +244,7 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockResolvedValue({
       status: "rejected",
       rejectionCode: "deployment-identity-mismatch",
+      rejectedSourceObservedAtSec: null,
       failedRouteId:
         "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
     });
@@ -260,6 +268,8 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     expect(capture.journalRecords[0]).toMatchObject({
       admissionCode: "supply-attribution.admission.rejected-identity-drift",
       fallbackCode: "supply-attribution.fallback.aggregate-only",
+      rejectionCode: "deployment-identity-mismatch",
+      sourceObservedAtSec: null,
     });
   });
 
@@ -341,10 +351,17 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
   ] as const)(
     "maps %s to %s without a generic deployment error",
     async (rejectionCode, admissionCode) => {
+      const rejectedSourceObservedAtSec =
+        rejectionCode === "transparency-clock-skew"
+          ? OBSERVED_AT_SEC + 1
+          : rejectionCode === "transparency-stale"
+            ? OBSERVED_AT_SEC - 10
+            : null;
       rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt
         .mockResolvedValue({
           status: "rejected",
           rejectionCode,
+          rejectedSourceObservedAtSec,
           failedRouteId: null,
         });
       const capture = await captureSafetyScoreV9SupplyAttribution(
@@ -355,6 +372,8 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
         sourceOriginClass: "issuer-disclosure-plus-onchain",
         admissionCode,
         fallbackCode: "supply-attribution.fallback.aggregate-only",
+        rejectionCode,
+        sourceObservedAtSec: rejectedSourceObservedAtSec,
       });
     },
   );
@@ -403,6 +422,7 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
         assetId: "wm-m0",
         admissionCode,
         fallbackCode: "supply-attribution.fallback.aggregate-only",
+        rejectionCode,
         failedRouteId:
           "base:0x437cc33344a0b27a429f795ff6b469c72698b291",
         contentSha256: null,
@@ -527,6 +547,7 @@ describe("Safety Score V9 Centrifuge burn/mint supply attribution", () => {
       sourceId: "centrifuge.reviewed-deployment-unit-partition.v1",
       admissionCode: "supply-attribution.admission.rejected-identity-drift",
       fallbackCode: "supply-attribution.fallback.aggregate-only",
+      rejectionCode: "deployment-identity-mismatch",
       failedRouteId:
         "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
       contentSha256: null,

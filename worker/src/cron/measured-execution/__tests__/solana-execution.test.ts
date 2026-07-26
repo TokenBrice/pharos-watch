@@ -16,7 +16,11 @@ import {
   parseRaydiumExactRouteProof,
   quoteSolanaMeasuredTarget,
 } from "../solana-quotes";
-import { SOLANA_MEASURED_EXECUTION_ADAPTERS } from "../solana-registry";
+import {
+  getSolanaMeasuredExecutionPriorityTarget,
+  SOLANA_MEASURED_EXECUTION_ADAPTERS,
+  SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS,
+} from "../solana-registry";
 
 const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const USDT = "Es9vMFrzaCERmJfrF4H2FYDgK5KJY8PYdG7yM7pTz1C";
@@ -84,6 +88,54 @@ describe("Solana measured execution inventory and registry", () => {
         scoreEligible: false,
       }),
     ]);
+  });
+
+  it("pins the priority collector to the exact reviewed HYUSD/USDC direction without activating it", () => {
+    const priority = SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS[0]!;
+    expect(priority.targetId).toBe(
+      buildSolanaMeasuredExecutionTargetId({
+        stablecoinId: priority.stablecoinId,
+        adapterProfileId: priority.adapterProfileId,
+        protocol: priority.protocol,
+        poolId: priority.poolId,
+        tokenInAddress: priority.tokenInAddress,
+        tokenOutAddress: priority.tokenOutAddress,
+      }),
+    );
+    const candidate = {
+      ...target(),
+      targetId: priority.targetId,
+      stablecoinId: priority.stablecoinId,
+      adapterProfileId: priority.adapterProfileId,
+      protocol: priority.protocol,
+      poolType: priority.poolType,
+      poolId: priority.poolId,
+      tokenIn: {
+        ...target().tokenIn,
+        address: priority.tokenInAddress,
+        decimals: priority.tokenInDecimals,
+        trackedAssetId: priority.stablecoinId,
+      },
+      tokenOut: {
+        ...target().tokenOut,
+        address: priority.tokenOutAddress,
+        decimals: priority.tokenOutDecimals,
+        trackedAssetId: priority.tokenOutTrackedAssetId,
+      },
+    };
+
+    expect(getSolanaMeasuredExecutionPriorityTarget(candidate)).toEqual(priority);
+    expect(
+      getSolanaMeasuredExecutionPriorityTarget({
+        ...candidate,
+        tokenOut: { ...candidate.tokenOut, address: SOL },
+      }),
+    ).toBeNull();
+    expect(
+      SOLANA_MEASURED_EXECUTION_ADAPTERS.find(
+        (adapter) => adapter.adapterProfileId === priority.adapterProfileId,
+      ),
+    ).toMatchObject({ activation: "shadow", scoreEligible: false });
   });
 
   it("builds a case-sensitive Orca target with a pool-implied counter-token reference", () => {
@@ -157,6 +209,17 @@ describe("Solana exact quote parsing", () => {
       amountInRaw: "1000000000",
       route: { label: "Whirlpool", poolId: ORCA_POOL },
     });
+  });
+
+  it("rejects an oversized provider body before buffering it", async () => {
+    const fetchImpl = async () =>
+      new Response("{}", { headers: { "Content-Length": "200001" } });
+
+    await expect(quoteSolanaMeasuredTarget({
+      target: target(),
+      inputUsd: 1_000,
+      fetchImpl: fetchImpl as typeof fetch,
+    })).rejects.toThrow("quote-response-too-large");
   });
 
   it("accepts an ordinary Orca Jupiter quote without an updateContextSlot extension", () => {

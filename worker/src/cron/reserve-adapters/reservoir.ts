@@ -35,10 +35,9 @@ const RESERVOIR_BROWSER_HEADERS = buildBrowserHeaders(
   "https://app.reservoir.xyz/reserves",
 );
 
-// Stable buckets redeemable for rUSD on short notice. Reservoir holds a mix of
-// stablecoin-wrapped positions, any of which can be routed to the redemption
-// queue, so the immediate redeemable estimate should aggregate across all of
-// them rather than favouring USDC alone.
+// Stable buckets that provide broader balance-sheet liquidity context. This
+// aggregate is diagnostic only: the modeled rUSD PSM exit terminates in USDC,
+// so route capacity must be bound to the separately classified USDC bucket.
 const RESERVOIR_STABLE_BUCKET_KEYS: readonly ReservoirBucketKey[] = [
   "usd1",
   "pyusd",
@@ -139,6 +138,7 @@ export interface AdaptReservoirResult {
   unknownAssets: string[];
   unknownExposurePct: number;
   sourceTotalGapPct: number;
+  stableBucketLiquidityUsd: number;
   immediateRedeemableUsd: number;
   supplyUsd: number | null;
 }
@@ -151,6 +151,7 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
       unknownAssets: [],
       unknownExposurePct: 0,
       sourceTotalGapPct: 0,
+      stableBucketLiquidityUsd: 0,
       immediateRedeemableUsd: 0,
       supplyUsd: null,
     };
@@ -188,13 +189,19 @@ export function adaptReservoirReserves(payload: ReservoirReservesResponse): Adap
     (sum, key) => sum + (classified.bucketTotals.get(key) ?? 0),
     0,
   );
-  const immediateRedeemableUsd = supplyUsd != null ? Math.min(stableBucketUsd, supplyUsd) : stableBucketUsd;
+  const usdcBucketUsd = classified.bucketTotals.get("usdc") ?? 0;
+  const stableBucketLiquidityUsd = supplyUsd != null ? Math.min(stableBucketUsd, supplyUsd) : stableBucketUsd;
+  // Fail closed to the asset actually returned by the modeled terminal route.
+  // Other stable buckets may support Reservoir generally, but converting them
+  // to USDC requires an additional route that this adapter does not observe.
+  const immediateRedeemableUsd = supplyUsd != null ? Math.min(usdcBucketUsd, supplyUsd) : usdcBucketUsd;
 
   return {
     slices: classified.slices,
     unknownAssets: classified.unknownItems,
     unknownExposurePct: classified.unknownExposurePct,
     sourceTotalGapPct,
+    stableBucketLiquidityUsd,
     immediateRedeemableUsd,
     supplyUsd,
   };
@@ -300,6 +307,7 @@ export async function fetchReservoirReserves(
       ...(adapted.supplyUsd != null
         ? {
             supplyUsd: adapted.supplyUsd,
+            stableBucketLiquidityUsd: adapted.stableBucketLiquidityUsd,
             immediateRedeemableUsd: adapted.immediateRedeemableUsd,
             ...(adapted.supplyUsd > 0
               ? { immediateRedeemableRatio: adapted.immediateRedeemableUsd / adapted.supplyUsd }

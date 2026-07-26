@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { getCronSlotStartedAtForSchedule } from "../cron-jobs";
+import {
+  CRON_JOB_DEFINITIONS,
+  CRON_SCHEDULES,
+  getCronSlotStartedAtForSchedule,
+} from "../cron-jobs";
 
 describe("cron job schedule metadata", () => {
   it("derives 26/56 minute slots for the DEWS/PSI offset schedule", () => {
@@ -12,5 +16,39 @@ describe("cron job schedule metadata", () => {
     expect(getCronSlotStartedAtForSchedule("dewsPsiOffset", secondSlot)).toBe(
       Math.floor(Date.parse("2026-04-19T16:56:00Z") / 1000),
     );
+  });
+
+  it("keeps private V9 work on dedicated post-publication triggers", () => {
+    expect(CRON_SCHEDULES.v9SupplyAttributionOffset).toBe(
+      "8,23,38,53 * * * *",
+    );
+    expect(CRON_SCHEDULES.v9ShadowOffset).toBe(
+      "14,29,44,59 * * * *",
+    );
+    expect(
+      CRON_JOB_DEFINITIONS.find(
+        (definition) =>
+          definition.job === "sync-v9-supply-attribution",
+      ),
+    ).toMatchObject({
+      scheduleKey: "v9SupplyAttributionOffset",
+      triggerMode: "isolated",
+      connectionGroup: "v9-supply-attribution-chain",
+    });
+    expect(
+      CRON_JOB_DEFINITIONS.find(
+        (definition) =>
+          definition.job === "compute-safety-score-v9-shadow",
+      ),
+    ).toMatchObject({
+      scheduleKey: "v9ShadowOffset",
+      triggerMode: "isolated",
+      connectionGroup: "v9-shadow-chain",
+    });
+    expect(
+      CRON_JOB_DEFINITIONS.filter(
+        (definition) => definition.scheduleKey === "quarterHourly",
+      ).map((definition) => definition.job),
+    ).not.toContain("sync-v9-supply-attribution");
   });
 });

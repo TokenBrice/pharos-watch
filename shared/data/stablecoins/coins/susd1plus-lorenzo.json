@@ -90,58 +90,84 @@
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "unknown",
-    "confidence": "unknown",
-    "summary": "sUSD1+ is a Lorenzo strategy-vault receipt whose base USD1 authority is inherited from the reviewed parent — confirmed on-chain by underlying() resolving to BSC USD1 — while the local BSC UUPS upgrade authority narrows to two AccessControl registries whose role holders cannot be enumerated from keyless public reads.",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "sUSD1+ is a Lorenzo strategy-vault receipt whose base USD1 authority is inherited from the reviewed parent, but local share issuance and mint logic are controlled by Lorenzo's CeDeFiManager. Its terminal BOSS_ROLE holder is a 2-of-3 Safe that also holds the manager's ADMIN_ROLE and OPERATOR_ROLE, so it can immediately authorize local minters/signers or replace the UUPS logic.",
     "inheritedFrom": "usd1-world-liberty-financial",
     "controls": [
       {
         "chain": "bsc",
         "address": "0x4f2760b32720f013e900dc92f65480137391199b",
-        "label": "sUSD1+ wrapper token",
+        "label": "sUSD1+ BSC wrapper share-mint path",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "Wrapper/share accounting over Lorenzo USD1+ strategy exposure; does not mint base USD1.",
-        "observedAt": "2026-07-20",
-        "observedBlock": 111074113,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Users can receive shares against USD1 deposits, but the manager can separately configure KYT signers and direct minter bits; the wrapper never mints base USD1.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 112282205,
         "sources": [
           {
-            "label": "Lorenzo Protocol",
-            "url": "https://www.lorenzo-protocol.xyz/"
-          },
-          {
-            "label": "Lorenzo GitHub",
-            "url": "https://github.com/Lorenzo-Protocol/"
-          },
-          {
-            "label": "sUSD1+ BSC proxy",
-            "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b"
+            "label": "sUSD1+ BSC proxy and verified implementation",
+            "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b#code"
           }
         ],
-        "evidence": "At BSC block 111074113, the proxy's EIP-1967 implementation slot resolved to 0xaafe784a51f119d38e57717fd8a00f844bd86f13 while the standard admin and beacon slots were zero. UPGRADE_INTERFACE_VERSION() returned 5.0.0, but asset(), owner(), getOwner(), and admin() did not identify a local controller. Extending the probe set on 2026-07-20 by enumerating the implementation's dispatch selectors and calling each no-argument getter through the proxy: underlying() (0x6f307dc3) returns 0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d, the BSC USD1 token, giving the first on-chain confirmation of the inherited-parent relation that had been asserted only from local metadata; decimals() is 18 and totalSupply() is 143,617,058.81 shares read at chain head block 111123412. authority(), pendingOwner(), DEFAULT_ADMIN_ROLE(), getRoleAdmin(), and isTrustedForwarder() also revert, so the wrapper carries neither Ownable, AccessControl, nor AccessManaged."
+        "evidence": "At BSC block 112282205, the proxy resolves to verified UUPS implementation 0xaafe784a51f119d38e57717fd8a00f844bd86f13. The implementation's onlyManager modifier requires msg.sender == cedefiManager; its setRole() writes the direct MINTER/BURNER/DEPOSIT bitmask and setSigner() writes the KYT signer set. underlying() remains BSC USD1 0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d, confirming the inherited parent relationship."
       },
       {
-        "label": "sUSD1+ unresolved UUPS upgrade authority",
+        "chain": "bsc",
+        "address": "0x60707dfd714c3ac2f086d284145cd8cc6915262f",
+        "label": "sUSD1+ CeDeFiManager BOSS_ROLE Safe",
         "role": "proxy-admin",
-        "authorityType": "unknown",
-        "directMintAbility": "upgrade-only",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "A UUPS implementation replacement may change local share-mint logic, but public reads do not identify the account or contract authorized by _authorizeUpgrade.",
-        "observedAt": "2026-07-20",
-        "observedBlock": 111074113,
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "The Safe holds the terminal BOSS_ROLE, MANAGER_ROLE, and CREATE_VAULT_ROLE on CeDeFiManager. It can upgrade the manager itself, or execute the currently allowlisted wrapper upgradeToAndCall(), setRole(), and setSigner() calls. setRole() can assign a direct local minter, whose mint(address,uint256) has no amount cap.",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x604e486a415c4516c225f26023b425459673e643",
+            "0x21886b5b606ab3c714d9538b45186bb842d7c77b",
+            "0x85583012c0a6b3926841ca9e6802b6a585af4f13"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 112282205,
+          "observedAt": "2026-07-26",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-26",
+        "observedBlock": 112282205,
+        "bypassSurfaces": [
+          "BOSS_ROLE can immediately UUPS-upgrade CeDeFiManager.",
+          "The same Safe's CREATE_VAULT_ROLE can execute allowlisted wrapper upgradeToAndCall(), setRole(), and setSigner() calls through CeDeFiManager."
+        ],
         "sources": [
           {
-            "label": "sUSD1+ BSC proxy",
-            "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b"
+            "label": "sUSD1+ CeDeFiManager BSC proxy",
+            "url": "https://bscscan.com/address/0x507ec48ef26919a205a9f3b8aaf69532e20c0987#code"
+          },
+          {
+            "label": "sUSD1+ CeDeFiManager verified implementation",
+            "url": "https://bscscan.com/address/0x6e0f4dc0d748e4917b418357d989b2023b8b7a20#code"
+          },
+          {
+            "label": "sUSD1+ CeDeFiManager BOSS_ROLE Safe",
+            "url": "https://bscscan.com/address/0x60707dfd714c3ac2f086d284145cd8cc6915262f#code"
           }
         ],
-        "evidence": "The proxy reports UPGRADE_INTERFACE_VERSION 5.0.0 and resolves to implementation 0xaafe784a51f119d38e57717fd8a00f844bd86f13, but all tested owner/admin getters revert. Selector enumeration of that implementation on 2026-07-20 shows it exposes mint(address,uint256), pause(), unpause(), upgradeToAndCall and proxiableUUID, but no Ownable, AccessControl, or AccessManaged entry point, so _authorizeUpgrade must consult an external registry. Two such registries are reachable from the proxy: getter 0x99b2d1d4 returns 0xaefc9cece593b28faead5c096856d68082254867 and getter 0xe9c7970a returns 0x507ec48ef26919a205a9f3b8aaf69532e20c0987. Both are 342-byte ERC-1967 proxies reporting UPGRADE_INTERFACE_VERSION 5.0.0; their implementations 0xc536323e3a4d543cecece0aedd973e0e0ea25c47 and 0x6e0f4dc0d748e4917b418357d989b2023b8b7a20 both expose the full OpenZeppelin AccessControl set (hasRole, grantRole, revokeRole, getRoleAdmin, DEFAULT_ADMIN_ROLE) plus upgradeToAndCall, and 0xaefc9cec additionally exposes mint. The role holders cannot be enumerated because AccessControl publishes membership only through RoleGranted logs and every keyless BSC endpoint reachable here caps eth_getLogs at a 50,000-block range with no archive access, so no signer, threshold, or admin account is attributed. This narrows the upgrade surface to two named AccessControl registries but still confirms an unresolved controller identity."
+        "evidence": "Verified sUSD1+ source makes cedefiManager(), not usd1PlusVault(), the only _authorizeUpgrade gate: _authorizeUpgrade(address) is onlyManager, and cedefiManager() resolves to 0x507ec48ef26919a205a9f3b8aaf69532e20c0987. That manager's verified source gives BOSS_ROLE self-administration and sole manager-upgrade power; BOSS_ROLE administers MANAGER_ROLE, which administers CREATE_VAULT_ROLE. BscScan's complete 42-transaction manager history and receipt logs show the former 0x89583e7e7ded6659bbf05c3ce179cc88f5a59a42 role holder was revoked and 0x60707dfd714c3ac2f086d284145cd8cc6915262f granted all three custom roles. At block 112282205, hasRole confirms the Safe holds BOSS_ROLE, MANAGER_ROLE, and CREATE_VAULT_ROLE while the former holder and DEFAULT_ADMIN_ROLE do not. getVault(0) returns this sUSD1+ proxy and allowedVaultsFuncs returns true for upgradeToAndCall, setRole, and setSigner. The Safe is v1.4.1, 2-of-3 EOA owners, with empty modules and zero guard/module-guard; no timelock was found."
       }
     ],
-    "economicCapSemantics": "unknown",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "unknown",
     "upgradeability": {
@@ -152,37 +178,49 @@
       "implementationAddresses": [
         "0xaafe784a51f119d38e57717fd8a00f844bd86f13"
       ],
-      "canChangeMintLogic": "unknown",
-      "controlRef": "sUSD1+ unresolved UUPS upgrade authority",
-      "observedAt": "2026-07-20",
-      "observedBlock": 111074113,
+      "adminAddresses": [
+        "0x507ec48ef26919a205a9f3b8aaf69532e20c0987",
+        "0x60707dfd714c3ac2f086d284145cd8cc6915262f"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "sUSD1+ CeDeFiManager BOSS_ROLE Safe",
+      "observedAt": "2026-07-26",
+      "observedBlock": 112282205,
       "sources": [
         {
-          "label": "sUSD1+ BSC proxy",
-          "url": "https://bscscan.com/address/0x4f2760b32720f013e900dc92f65480137391199b"
+          "label": "sUSD1+ BSC verified implementation",
+          "url": "https://bscscan.com/address/0xaafe784a51f119d38e57717fd8a00f844bd86f13#code"
+        },
+        {
+          "label": "sUSD1+ CeDeFiManager BSC proxy",
+          "url": "https://bscscan.com/address/0x507ec48ef26919a205a9f3b8aaf69532e20c0987#code"
+        },
+        {
+          "label": "sUSD1+ CeDeFiManager BOSS_ROLE Safe",
+          "url": "https://bscscan.com/address/0x60707dfd714c3ac2f086d284145cd8cc6915262f#code"
         }
       ]
     },
     "review": {
       "sources": [
         {
-          "label": "USD1 website",
-          "url": "https://worldlibertyfinancial.com/usd1"
+          "label": "sUSD1+ BSC verified implementation",
+          "url": "https://bscscan.com/address/0xaafe784a51f119d38e57717fd8a00f844bd86f13#code"
         },
         {
-          "label": "Lorenzo Protocol",
-          "url": "https://www.lorenzo-protocol.xyz/"
+          "label": "sUSD1+ CeDeFiManager BSC proxy and role history",
+          "url": "https://bscscan.com/address/0x507ec48ef26919a205a9f3b8aaf69532e20c0987#code"
+        },
+        {
+          "label": "sUSD1+ CeDeFiManager BOSS_ROLE Safe",
+          "url": "https://bscscan.com/address/0x60707dfd714c3ac2f086d284145cd8cc6915262f#code"
         }
       ],
-      "evidence": "Re-reviewed 2026-07-20. Local metadata establishes sUSD1+ as a USD1 strategy-vault variant, so base USD1 supply authority remains inherited rather than copied into the child controls. At BSC block 111074113, the local proxy is an OZ 5 UUPS surface with implementation 0xaafe784a51f119d38e57717fd8a00f844bd86f13 and zero standard EIP-1967 admin/beacon slots. owner(), getOwner(), admin(), DEFAULT_ADMIN_ROLE(), and asset() did not identify a controller; slot 0's nested UUPS proxy also has no readable owner. A second pass the same day enumerated the implementation's dispatch selectors and called every no-argument getter through the proxy: underlying() returns BSC USD1 0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d, confirming the inherited-parent relation on-chain, and two AccessControl+UUPS registries (0xaefc9cece593b28faead5c096856d68082254867 and 0x507ec48ef26919a205a9f3b8aaf69532e20c0987) are reachable from the wrapper. Their role holders remain unenumerable without archive log access, so the controller identity is narrowed but not resolved. No independent reconciliation or named prudential supervisor is established for this local strategy wrapper.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Enumerate DEFAULT_ADMIN_ROLE and any upgrade role on AccessControl registries 0xaefc9cece593b28faead5c096856d68082254867 and 0x507ec48ef26919a205a9f3b8aaf69532e20c0987, which the sUSD1+ proxy exposes through getters 0x99b2d1d4 and 0xe9c7970a. Both implement the full OpenZeppelin AccessControl set, so membership is recoverable from RoleGranted logs, but that needs an archive-capable BSC endpoint or a BscScan API key; every keyless endpoint reachable here caps eth_getLogs at 50,000 blocks. This is now the shortest path to a controller identity for this asset.",
-        "Determine whether 0xaefc9cec…4867 is the vault/minter for sUSD1+ shares: its implementation 0xc536323e3a4d543cecece0aedd973e0e0ea25c47 exposes mint alongside AccessControl, while 0x507ec48e…0987's implementation 0x6e0f4dc0d748e4917b418357d989b2023b8b7a20 does not.",
-        "Obtain verified source for implementation 0xaafe784a51f119d38e57717fd8a00f844bd86f13 (or Lorenzo disclosure) to confirm which registry _authorizeUpgrade consults and whether any timelock or threshold applies before attributing a controller."
-      ]
+      "evidence": "Re-reviewed 2026-07-26 at BSC block 112282205. The verified current sUSD1+ UUPS implementation resolves the prior ambiguity: its _authorizeUpgrade uses onlyManager, and onlyManager is exactly cedefiManager() = 0x507ec48ef26919a205a9f3b8aaf69532e20c0987. The separate usd1PlusVault() field = 0xaefc9cece593b28faead5c096856d68082254867 is declared but unused by the current implementation, so it is not attributed to the current wrapper upgrade path. CeDeFiManager's verified source defines BOSS_ROLE as the sole manager-upgrade role, BOSS_ROLE as its own admin, MANAGER_ROLE as the CREATE_VAULT_ROLE admin, and executeCommand as the operator route into allowlisted registered vault calls. BscScan's full manager transaction history contains 42 transactions; replaying every RoleGranted/RoleRevoked receipt and confirming hasRole at the observation block leaves one terminal holder of BOSS_ROLE, MANAGER_ROLE, and CREATE_VAULT_ROLE: Safe 0x60707dfd714c3ac2f086d284145cd8cc6915262f. DEFAULT_ADMIN_ROLE has no grant in that complete history and no current holder. The Safe is 2-of-3 EOA-controlled, v1.4.1, with no enabled modules, guard, or module guard and no timelock. It can immediately upgrade CeDeFiManager, or through its current operator role execute sUSD1+'s allowlisted upgradeToAndCall, setRole, and setSigner functions; direct minter and signer membership is therefore not needed to identify the terminal controlling authority. The wrapper's complete RoleSetted/signers history is not attributed because public keyless BSC RPC log access remains range-limited, but no unknown operational key is presented as a terminal controller. Base USD1 issuance remains inherited from usd1-world-liberty-financial; no independent reconciliation or named prudential supervisor is established for the local strategy wrapper.",
+      "reviewer": "CTRL-susd1plus-lorenzo",
+      "reviewedAt": "2026-07-26",
+      "disposition": "scoreable"
     }
   },
   "chainTier": "established-alt-l1",

@@ -344,9 +344,31 @@
   },
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "On Base (primary chain confirmed), IDRX MINTER_ROLE is held by three issuer-controlled Safes (2-of-3, 2-of-8, 2-of-4) plus an ElevatedMinterBurner contract whose owner is an issuer EOA. DEFAULT_ADMIN_ROLE is an issuer EOA. The UUPS proxy has no external proxy admin; upgrade authority is DEFAULT_ADMIN. Other chains share the same contract address pattern and were not individually re-verified.",
+    "authorityPosture": "unknown",
+    "confidence": "unknown",
+    "summary": "IDRX uses direct issuer-controlled minting. All seven EVM deployments are EIP-1967 UUPS proxies; verified Polygon, BSC, Base, Gnosis, and Etherlink implementation sources gate upgrades through UPGRADER_ROLE, whose DEFAULT_ADMIN_ROLE can reconfigure it. Base, Gnosis, Etherlink, and Kaia role histories are independently verified, but Polygon, BSC, and Worldchain lack an admissible complete role history. The Solana mint has a direct system-account mint authority and uses the immutable SPL Token program. The cross-chain terminal upgrade-authority inventory is therefore unresolved.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
+        "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+      ],
+      "implementationAddresses": [
+        "0xfef07b30e5b453bc372f8a088cfca9276ef8dd79",
+        "0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0",
+        "0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "IDRX DEFAULT_ADMIN EOA (role admin; can reconfigure upgrade authority)",
+      "observedAt": "2026-07-26",
+      "observedBlock": 49148559,
+      "sources": [
+        {
+          "label": "Base IDRX proxy and implementation",
+          "url": "https://base.blockscout.com/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "base",
@@ -480,12 +502,12 @@
       {
         "chain": "base",
         "address": "0x5515be1db2a513888f5cf375bf5c7956ee93c779",
-        "label": "IDRX DEFAULT_ADMIN EOA (role admin + upgrade authority)",
+        "label": "IDRX DEFAULT_ADMIN EOA (role admin; can reconfigure upgrade authority)",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "evidence": "Re-verified at Base block 48887752: hasRole(DEFAULT_ADMIN_ROLE, 0x5515be1db2a513888f5cf375bf5c7956ee93c779) = true, hasRole(MINTER_ROLE) = false; eth_getCode = 0x (EOA). DEFAULT_ADMIN can grant/revoke MINTER_ROLE and authorize UUPS upgrades (no separate proxy admin). Safe A above independently also holds DEFAULT_ADMIN_ROLE.",
+        "evidence": "Re-verified at Base block 48887752: hasRole(DEFAULT_ADMIN_ROLE, 0x5515be1db2a513888f5cf375bf5c7956ee93c779) = true, hasRole(MINTER_ROLE) = false; eth_getCode = 0x (EOA). DEFAULT_ADMIN can grant/revoke MINTER_ROLE and UPGRADER_ROLE; verified UUPS source gates direct upgrades through UPGRADER_ROLE, with no separate proxy admin. Safe A above independently also holds DEFAULT_ADMIN_ROLE.",
         "sources": [
           {
             "label": "IDRX Base token",
@@ -499,29 +521,51 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Base block 47200691: IDRX (ERC1967 UUPS proxy, no external proxy admin) → implementation at 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693. MINTER_ROLE held by 3 Safes (2-of-3, 2-of-8, 2-of-4; all without modules) and 1 ElevatedMinterBurner (owned by EOA 0x46d58b...). DEFAULT_ADMIN = EOA 0x5515be... The CertiK-described MPC pattern manifests here as multiple Safe-multisig minters plus an ElevatedMinterBurner. Verified on Base only; other chains use same address pattern. Mint-tier review (2026-07-15): No credible independent reserve reconciliation was located: IDRX documentation makes generic audit claims but publishes no named reserve attestor, stable cadence, or dated reserve-to-liability report; the downloadable CertiK document is a smart-contract security assessment. No exact prudential stablecoin-issuer match for the issuer was established in OJK's public regulatory materials.",
-      "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-15",
+      "evidence": "Control review refreshed 2026-07-26. At pinned heads Polygon 90920978, Base 49148559, BSC 112281459, Kaia 222886753, Gnosis 47403818, Etherlink 49381661, and Worldchain 32875419, every declared EVM address returned IDRX name/symbol/decimals and an EIP-1967 implementation slot: Polygon 0xfef07b30e5b453bc372f8a088cfca9276ef8dd79; BSC 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0; Base, Kaia, Gnosis, Etherlink, and Worldchain 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693. The EIP-1967 admin slot is zero on each. Verified Polygon, BSC, Base, Gnosis, and Etherlink implementation sources are UUPS and _authorizeUpgrade is onlyRole(UPGRADER_ROLE), so DEFAULT_ADMIN_ROLE is terminal through role administration, not the direct UUPS guard. Complete RoleGranted/RoleRevoked coverage establishes the current direct upgrader and admins on Base, Gnosis, Etherlink, and Kaia; incomplete historical role coverage on Polygon, BSC, and Worldchain prevents a truthful aggregate terminal inventory. At finalized Solana slot 435375666, the declared mint had mint authority Bpqui7hhcjfHoxwbkK4dw1GBB86Rt1DHEjQu8Mr7g8Tn (a system account) and no freeze authority; Tokenkeg ProgramData 3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2 reported no program upgrade authority.",
+      "reviewer": "Codex CTRL-idrx-idrx",
+      "reviewedAt": "2026-07-26",
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "Polygon 0x649a2da7b28e0d54c13d5eff95d3a660652742cc → implementation 0xfef07b30e5b453bc372f8a088cfca9276ef8dd79: the token, proxy slot, and UUPS guard are verified, but AccessControl has no on-chain member enumeration and available public endpoints do not provide a complete historical RoleGranted/RoleRevoked scan; the complete current UPGRADER_ROLE and DEFAULT_ADMIN_ROLE inventory is unknown.",
+        "BSC 0x649a2da7b28e0d54c13d5eff95d3a660652742cc → implementation 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0: the token, proxy slot, and verified UUPS source are confirmed, but public RPC lacks archival state and no unauthenticated explorer/API provides complete role-event history; the complete current UPGRADER_ROLE and DEFAULT_ADMIN_ROLE inventory is unknown.",
+        "Worldchain 0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22 → implementation 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693: the token and proxy slot are verified, but the public RPC limits historical log queries to 100 blocks and no public explorer role-event API was available; the complete current UPGRADER_ROLE and DEFAULT_ADMIN_ROLE inventory is unknown."
+      ],
       "sources": [
         {
-          "label": "IDRX docs",
-          "url": "https://docs.idrx.co/"
+          "label": "IDRX supported chains and contract addresses",
+          "url": "https://docs.idrx.co/introduction/supported-chain-and-contract-address"
         },
         {
-          "label": "IDRX CertiK assessment",
-          "url": "https://home.idrx.co/docs/security-assesment-idrx.pdf"
+          "label": "Polygon IDRX proxy and implementation",
+          "url": "https://polygonscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
         },
         {
-          "label": "IDRX Base token (Basescan)",
-          "url": "https://basescan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+          "label": "BSC IDRX proxy and implementation",
+          "url": "https://bscscan.com/address/0x649a2da7b28e0d54c13d5eff95d3a660652742cc"
         },
         {
-          "label": "IDRX document center",
-          "url": "https://home.idrx.co/en/docs/"
+          "label": "Base IDRX proxy and implementation",
+          "url": "https://base.blockscout.com/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
         },
         {
-          "label": "OJK digital financial innovation directory",
-          "url": "https://inovasi.ojk.go.id/id/ikd/penyelenggara-ikd-tercatat"
+          "label": "Kaia mainnet RPC",
+          "url": "https://public-en.node.kaia.io"
+        },
+        {
+          "label": "Gnosis IDRX proxy and implementation",
+          "url": "https://gnosis.blockscout.com/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        },
+        {
+          "label": "Etherlink IDRX proxy and implementation",
+          "url": "https://explorer.etherlink.com/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        },
+        {
+          "label": "Worldchain IDRX proxy and implementation",
+          "url": "https://worldscan.org/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        },
+        {
+          "label": "Solana mainnet JSON-RPC",
+          "url": "https://api.mainnet-beta.solana.com"
         }
       ]
     }

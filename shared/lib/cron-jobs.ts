@@ -1,5 +1,8 @@
 import { DAY_SECONDS } from "./time-constants";
 
+export const SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC =
+  30 * 60;
+
 export type CronGroupKey =
   | "quarter-hourly"
   | "five-minute"
@@ -11,6 +14,8 @@ export type CronGroupKey =
 
 const CRON_SCHEDULE_DEFINITIONS = {
   quarterHourly: { schedule: "*/15 * * * *", intervalSec: 900, offsetSec: 0 },
+  v9SupplyAttributionOffset: { schedule: "8,23,38,53 * * * *", intervalSec: 900, offsetSec: 8 * 60 },
+  v9ShadowOffset: { schedule: "14,29,44,59 * * * *", intervalSec: 900, offsetSec: 14 * 60 },
   statusSelfCheckOffset: { schedule: "9,24,39,54 * * * *", intervalSec: 900, offsetSec: 9 * 60 },
   sixHourlyBlacklist: { schedule: "3 */6 * * *", intervalSec: 6 * 3600, offsetSec: 3 * 60 },
   halfHourlyMintBurnCritical: { schedule: "4,34 * * * *", intervalSec: 1800, offsetSec: 4 * 60 },
@@ -410,12 +415,30 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "quarter-hourly-chain",
   },
   {
+    job: "sync-v9-supply-attribution",
+    label: "V9 supply attribution",
+    group: "quarter-hourly",
+    scheduleKey: "v9SupplyAttributionOffset",
+    triggerMode: "isolated",
+    maxConnections: 3,
+    connectionGroup: "v9-supply-attribution-chain",
+  },
+  {
+    job: "compute-safety-score-v9-shadow",
+    label: "V9 shadow compiler",
+    group: "quarter-hourly",
+    scheduleKey: "v9ShadowOffset",
+    triggerMode: "isolated",
+    maxConnections: 0,
+    connectionGroup: "v9-shadow-chain",
+  },
+  {
     job: "publish-report-card-cache",
     label: "Report-card cache",
     group: "quarter-hourly",
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
-    maxConnections: 1, // Due-only V9 shadow enrichment uses one Ethereum multicall after V8 commits.
+    maxConnections: 0, // Exact V8 publication is D1-only after its source snapshot is built.
     connectionGroup: "quarter-hourly-chain",
   },
   {

@@ -123,9 +123,11 @@ export function getSlipstreamPoolFeeBps(poolFee: bigint): number | null {
  *   ratio_raw   = (sqrtRatio / 2^96)^2                         (reserve1_wei / reserve0_wei)
  *   spotPrice   = ratio_raw * 10^(token0Decimals - token1Decimals)
  *
- * Uses BigInt for the squared intermediate to avoid precision loss on
- * sqrtRatio values above 2^53. Number(whole) only loses precision if the
- * raw ratio exceeds 2^53 (~9e15) — stablecoin-scale pairs never approach that.
+ * Convert the bounded uint160 ratio to a floating-point significand before
+ * squaring, then apply token decimals. Squaring the BigInt first and retaining
+ * only 32 raw-ratio fractional bits loses legitimate pools whenever the raw
+ * ratio is tiny but the decimal adjustment brings the human price back near
+ * one (for example an 18-decimal token paired with 6-decimal USDC).
  */
 export function sqrtRatioToSpotPrice(
   sqrtRatio: bigint,
@@ -133,13 +135,8 @@ export function sqrtRatioToSpotPrice(
   token1Decimals: number,
 ): number {
   if (sqrtRatio <= 0n) return 0;
-  const squared = sqrtRatio * sqrtRatio;
-  const Q192 = 1n << 192n;
-  const whole = squared / Q192;
-  const remainder = squared % Q192;
-  const frac = (remainder << 32n) / Q192;
-  const priceRaw = Number(whole) + Number(frac) / Math.pow(2, 32);
-  return priceRaw * Math.pow(10, token0Decimals - token1Decimals);
+  const normalizedSqrtRatio = Number(sqrtRatio) / Math.pow(2, 96);
+  return normalizedSqrtRatio * normalizedSqrtRatio * Math.pow(10, token0Decimals - token1Decimals);
 }
 
 function normalizeAddress(address: string): string {

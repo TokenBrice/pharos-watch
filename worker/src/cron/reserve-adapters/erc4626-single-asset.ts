@@ -32,6 +32,10 @@ import { parseBoundedDecimals, ratioFromRaw } from "./slice-math";
 import { throwIfAborted } from "../../lib/abort";
 import { observeSfrxusdCrosschainRedemptionRoute } from "./sfrxusd-crosschain-redemption";
 import type { SfrxusdCrosschainV9RouteAttempt } from "../../lib/sfrxusd-crosschain-redemption-route";
+import {
+  observeExecutableRedemptionRoute,
+  type ExecutableRedemptionObservation,
+} from "./executable-redemption-observers";
 
 interface SingleAssetSliceConfig {
   name: ReserveSlice["name"];
@@ -96,7 +100,8 @@ interface RedemptionCapacityTelemetry {
     | MorphoVaultLiquiditySource
     | YearnV3WithdrawableLiquiditySource
     | SboldSpWithdrawableLiquiditySource
-    | SfrxusdCrosschainWithdrawableLiquiditySource;
+    | SfrxusdCrosschainWithdrawableLiquiditySource
+    | ExecutableRedemptionObservation["capacitySource"];
   freshnessKind: "same-run-onchain" | "same-run-api";
   routeStatusSource: "onchain" | "protocol-api";
   idleUnderlyingBalanceRaw?: string;
@@ -105,9 +110,13 @@ interface RedemptionCapacityTelemetry {
   settlementDelaySec?: number;
   blockNumber?: number;
   sourceUrls?: string[];
+  sourceTimestamp?: number;
   capacityKind?: "live-direct" | "live-direct-bounded";
   holderEligibility?: "any-holder";
-  routeStatus?: "open";
+  routeStatus?: "open" | "paused" | "degraded";
+  routeStatusReason?: string;
+  feeBps?: number;
+  observerDiagnostics?: Record<string, unknown>;
   yearnV3WithdrawableRaw?: string;
   sboldSpWithdrawableRaw?: string;
   sfrxusdCrosschainWithdrawableRaw?: string;
@@ -117,6 +126,40 @@ interface RedemptionCapacityTelemetry {
   morphoVaultV2LiquidityUsd?: number;
   morphoVaultV2ForceDeallocatableLiquidityRaw?: string;
   morphoVaultV2ForceDeallocatableLiquidityUsd?: number;
+}
+
+function buildExecutableRedemptionCapacityTelemetry(
+  observation: ExecutableRedemptionObservation,
+  supplyAssetsRaw: bigint,
+): RedemptionCapacityTelemetry | null {
+  const capacityRaw =
+    observation.capacityRaw > supplyAssetsRaw
+      ? supplyAssetsRaw
+      : observation.capacityRaw;
+  const capacityUsd = decimalNumberFromBigInt(
+    capacityRaw,
+    observation.underlyingDecimals,
+  );
+  if (!Number.isFinite(capacityUsd) || capacityUsd < 0) return null;
+  const capacityRatioOfSupply = ratioFromRaw(capacityRaw, supplyAssetsRaw);
+  return {
+    capacityUsd,
+    capacityRaw: capacityRaw.toString(),
+    capacitySource: observation.capacitySource,
+    freshnessKind: observation.freshnessKind,
+    routeStatusSource: observation.routeStatusSource,
+    underlyingDecimals: observation.underlyingDecimals,
+    ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
+    capacityKind: observation.capacityKind,
+    blockNumber: observation.blockNumber,
+    sourceTimestamp: observation.sourceTimestamp,
+    sourceUrls: observation.sourceUrls,
+    holderEligibility: observation.holderEligibility,
+    routeStatus: observation.routeStatus,
+    routeStatusReason: observation.routeStatusReason,
+    feeBps: observation.feeBps,
+    observerDiagnostics: observation.diagnostics,
+  };
 }
 
 interface MorphoVaultWarning {
@@ -924,115 +967,138 @@ export async function fetchErc4626SingleAssetReserves(
   let redemptionCapacity: RedemptionCapacityTelemetry | null = null;
   let sfrxusdRouteAttempt: SfrxusdCrosschainV9RouteAttempt | null = null;
   if (assetAddress) {
-    const usesSfrxusdCrosschainRoute =
-      sliceConfig.redemptionLiquidity?.source === "fraxtal-hop-withdrawable";
-    let idleUnderlyingBalanceRaw: bigint | null = null;
-    let underlyingDecimalsRaw: bigint | null = usesSfrxusdCrosschainRoute ? 18n : null;
-    if (!usesSfrxusdCrosschainRoute) {
-      const onchain = makeOnchainCallers(primaryInput, {
-        signal,
-        ctx: _ctx,
-        rpcUrl: sliceConfig.rpcUrl,
-        fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
-        timeoutMs: timeout,
-      });
-      [idleUnderlyingBalanceRaw, underlyingDecimalsRaw] = await Promise.all([
-        onchain.uint256(assetAddress, encodeBalanceOfCallData(contractAddress)),
-        onchain.uint256(assetAddress, DECIMALS_SELECTOR),
-      ]);
-    }
-    const atomicFullBacking = sliceConfig.redemptionLiquidity?.source === "atomic-full-backing";
-    let morphoVaultLiquidity: MorphoVaultLiquidityTelemetry | null = null;
-    let yearnV3WithdrawableLiquidity: YearnV3WithdrawableLiquidityTelemetry | null = null;
-    let sboldSpWithdrawableLiquidity: SboldSpWithdrawableLiquidityTelemetry | null = null;
-    let sfrxusdCrosschainWithdrawableLiquidity: SfrxusdCrosschainWithdrawableLiquidityTelemetry | null =
-      null;
-    if (sliceConfig.redemptionLiquidity?.source === "morpho-vault-v2") {
-      const morphoResult = await fetchMorphoVaultV2LiquidityTelemetry({
-        coinId: coin.id,
-        contractAddress,
-        assetAddress,
-        config: sliceConfig.redemptionLiquidity,
-        signal,
-        ctx: _ctx,
-      });
-      warnings.push(...morphoResult.warnings);
-      morphoVaultLiquidity = morphoResult.telemetry;
-    } else if (sliceConfig.redemptionLiquidity?.source === "morpho-vault-v1") {
-      const morphoResult = await fetchMorphoVaultV1LiquidityTelemetry({
-        coinId: coin.id,
-        contractAddress,
-        assetAddress,
-        config: sliceConfig.redemptionLiquidity,
-        signal,
-        ctx: _ctx,
-      });
-      warnings.push(...morphoResult.warnings);
-      morphoVaultLiquidity = morphoResult.telemetry;
-    } else if (sliceConfig.redemptionLiquidity?.source === "yearn-v3-withdrawable") {
-      const yearnResult = await fetchYearnV3WithdrawableLiquidityTelemetry({
-        coinId: coin.id,
-        contractAddress,
-        call,
-        signal,
-        ctx: _ctx,
-        rpcMode: primaryInput.rpcMode,
-        chain: primaryInput.chain,
-        rpcUrl: sliceConfig.rpcUrl,
-        fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
-        timeoutMs: timeout,
-        settlementDelaySec: sliceConfig.redemptionLiquidity.settlementDelaySec,
-      });
-      warnings.push(...yearnResult.warnings);
-      yearnV3WithdrawableLiquidity = yearnResult.telemetry;
-    } else if (sliceConfig.redemptionLiquidity?.source === "sbold-sp-withdrawable") {
-      const sboldResult = await fetchSboldSpWithdrawableLiquidityTelemetry({
-        coinId: coin.id,
-        call,
-      });
-      warnings.push(...sboldResult.warnings);
-      sboldSpWithdrawableLiquidity = sboldResult.telemetry;
-    } else if (sliceConfig.redemptionLiquidity?.source === "fraxtal-hop-withdrawable") {
-      const attempt = await observeSfrxusdCrosschainRedemptionRoute(
-        sliceConfig.redemptionLiquidity,
-        contractAddress,
-        signal,
-        _ctx,
-        {
-          ethereumRpcUrls: [sliceConfig.rpcUrl, sliceConfig.fallbackRpcUrl].filter(
-            (url): url is string => Boolean(url),
-          ),
-        },
+    const executableObservation = await observeExecutableRedemptionRoute(
+      coin.id,
+      contractAddress,
+      signal,
+      _ctx,
+      {
+        extraRpcUrls: [sliceConfig.rpcUrl, sliceConfig.fallbackRpcUrl].filter(
+          (url): url is string => Boolean(url),
+        ),
+      },
+    );
+    if (executableObservation) {
+      redemptionCapacity = buildExecutableRedemptionCapacityTelemetry(
+        executableObservation,
+        convertToAssetsRaw ?? totalAssetsRaw,
       );
-      sfrxusdRouteAttempt = attempt;
-      if (attempt.status === "accepted") {
-        sfrxusdCrosschainWithdrawableLiquidity = {
-          source: "fraxtal-hop-withdrawable",
-          withdrawableRaw: BigInt(
-            attempt.state.capacity.cappedPreviewOutputFrxUsdRaw,
-          ),
-          blockNumber: attempt.state.fraxtalBlock.blockNumber,
-          sourceUrls: attempt.state.sourceUrls,
-        };
-      } else {
-        warnings.push(
-          reserveDegradedWarning(
-            `sfrxusd-crosschain-redemption-${attempt.rejectionCode}`,
-            `sfrxUSD cross-chain redemption route validation failed closed: ${attempt.rejectionCode}`,
-          ),
+      if (!redemptionCapacity) {
+        throw new Error(
+          `${coin.id} executable redemption observer returned invalid capacity telemetry`,
         );
       }
+    } else {
+      const usesSfrxusdCrosschainRoute =
+        sliceConfig.redemptionLiquidity?.source === "fraxtal-hop-withdrawable";
+      let idleUnderlyingBalanceRaw: bigint | null = null;
+      let underlyingDecimalsRaw: bigint | null = usesSfrxusdCrosschainRoute ? 18n : null;
+      if (!usesSfrxusdCrosschainRoute) {
+        const onchain = makeOnchainCallers(primaryInput, {
+          signal,
+          ctx: _ctx,
+          rpcUrl: sliceConfig.rpcUrl,
+          fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+          timeoutMs: timeout,
+        });
+        [idleUnderlyingBalanceRaw, underlyingDecimalsRaw] = await Promise.all([
+          onchain.uint256(assetAddress, encodeBalanceOfCallData(contractAddress)),
+          onchain.uint256(assetAddress, DECIMALS_SELECTOR),
+        ]);
+      }
+      const atomicFullBacking = sliceConfig.redemptionLiquidity?.source === "atomic-full-backing";
+      let morphoVaultLiquidity: MorphoVaultLiquidityTelemetry | null = null;
+      let yearnV3WithdrawableLiquidity: YearnV3WithdrawableLiquidityTelemetry | null = null;
+      let sboldSpWithdrawableLiquidity: SboldSpWithdrawableLiquidityTelemetry | null = null;
+      let sfrxusdCrosschainWithdrawableLiquidity: SfrxusdCrosschainWithdrawableLiquidityTelemetry | null =
+        null;
+      if (sliceConfig.redemptionLiquidity?.source === "morpho-vault-v2") {
+        const morphoResult = await fetchMorphoVaultV2LiquidityTelemetry({
+          coinId: coin.id,
+          contractAddress,
+          assetAddress,
+          config: sliceConfig.redemptionLiquidity,
+          signal,
+          ctx: _ctx,
+        });
+        warnings.push(...morphoResult.warnings);
+        morphoVaultLiquidity = morphoResult.telemetry;
+      } else if (sliceConfig.redemptionLiquidity?.source === "morpho-vault-v1") {
+        const morphoResult = await fetchMorphoVaultV1LiquidityTelemetry({
+          coinId: coin.id,
+          contractAddress,
+          assetAddress,
+          config: sliceConfig.redemptionLiquidity,
+          signal,
+          ctx: _ctx,
+        });
+        warnings.push(...morphoResult.warnings);
+        morphoVaultLiquidity = morphoResult.telemetry;
+      } else if (sliceConfig.redemptionLiquidity?.source === "yearn-v3-withdrawable") {
+        const yearnResult = await fetchYearnV3WithdrawableLiquidityTelemetry({
+          coinId: coin.id,
+          contractAddress,
+          call,
+          signal,
+          ctx: _ctx,
+          rpcMode: primaryInput.rpcMode,
+          chain: primaryInput.chain,
+          rpcUrl: sliceConfig.rpcUrl,
+          fallbackRpcUrl: sliceConfig.fallbackRpcUrl,
+          timeoutMs: timeout,
+          settlementDelaySec: sliceConfig.redemptionLiquidity.settlementDelaySec,
+        });
+        warnings.push(...yearnResult.warnings);
+        yearnV3WithdrawableLiquidity = yearnResult.telemetry;
+      } else if (sliceConfig.redemptionLiquidity?.source === "sbold-sp-withdrawable") {
+        const sboldResult = await fetchSboldSpWithdrawableLiquidityTelemetry({
+          coinId: coin.id,
+          call,
+        });
+        warnings.push(...sboldResult.warnings);
+        sboldSpWithdrawableLiquidity = sboldResult.telemetry;
+      } else if (sliceConfig.redemptionLiquidity?.source === "fraxtal-hop-withdrawable") {
+        const attempt = await observeSfrxusdCrosschainRedemptionRoute(
+          sliceConfig.redemptionLiquidity,
+          contractAddress,
+          signal,
+          _ctx,
+          {
+            ethereumRpcUrls: [sliceConfig.rpcUrl, sliceConfig.fallbackRpcUrl].filter(
+              (url): url is string => Boolean(url),
+            ),
+          },
+        );
+        sfrxusdRouteAttempt = attempt;
+        if (attempt.status === "accepted") {
+          sfrxusdCrosschainWithdrawableLiquidity = {
+            source: "fraxtal-hop-withdrawable",
+            withdrawableRaw: BigInt(
+              attempt.state.capacity.cappedPreviewOutputFrxUsdRaw,
+            ),
+            blockNumber: attempt.state.fraxtalBlock.blockNumber,
+            sourceUrls: attempt.state.sourceUrls,
+          };
+        } else {
+          warnings.push(
+            reserveDegradedWarning(
+              `sfrxusd-crosschain-redemption-${attempt.rejectionCode}`,
+              `sfrxUSD cross-chain redemption route validation failed closed: ${attempt.rejectionCode}`,
+            ),
+          );
+        }
+      }
+      redemptionCapacity = buildRedemptionCapacityTelemetry(
+        idleUnderlyingBalanceRaw,
+        underlyingDecimalsRaw,
+        convertToAssetsRaw ?? totalAssetsRaw,
+        morphoVaultLiquidity,
+        yearnV3WithdrawableLiquidity,
+        sboldSpWithdrawableLiquidity,
+        sfrxusdCrosschainWithdrawableLiquidity,
+        atomicFullBacking,
+      );
     }
-    redemptionCapacity = buildRedemptionCapacityTelemetry(
-      idleUnderlyingBalanceRaw,
-      underlyingDecimalsRaw,
-      convertToAssetsRaw ?? totalAssetsRaw,
-      morphoVaultLiquidity,
-      yearnV3WithdrawableLiquidity,
-      sboldSpWithdrawableLiquidity,
-      sfrxusdCrosschainWithdrawableLiquidity,
-      atomicFullBacking,
-    );
   }
 
   return {
@@ -1101,6 +1167,9 @@ export async function fetchErc4626SingleAssetReserves(
                     redemptionCapacity.morphoVaultV2ForceDeallocatableLiquidityUsd,
                 }
               : {}),
+            ...(redemptionCapacity.feeBps != null
+              ? { redemptionFeeBps: redemptionCapacity.feeBps }
+              : {}),
           }
         : {}),
       ...(totalSupplyRaw != null ? { totalSupplyRaw: totalSupplyRaw.toString() } : {}),
@@ -1122,11 +1191,23 @@ export async function fetchErc4626SingleAssetReserves(
               ...(redemptionCapacity.blockNumber != null
                 ? { blockNumber: redemptionCapacity.blockNumber }
                 : {}),
+              ...(redemptionCapacity.sourceTimestamp != null
+                ? { sourceTimestamp: redemptionCapacity.sourceTimestamp }
+                : {}),
               ...(redemptionCapacity.sourceUrls
                 ? { sourceUrls: redemptionCapacity.sourceUrls }
                 : {}),
               ...(redemptionCapacity.holderEligibility
                 ? { holderEligibility: redemptionCapacity.holderEligibility }
+                : {}),
+              ...(redemptionCapacity.feeBps != null
+                ? { feeBps: redemptionCapacity.feeBps }
+                : {}),
+              ...(redemptionCapacity.routeStatusReason
+                ? { routeStatusReason: redemptionCapacity.routeStatusReason }
+                : {}),
+              ...(redemptionCapacity.observerDiagnostics
+                ? { observerDiagnostics: redemptionCapacity.observerDiagnostics }
                 : {}),
             }
           : {

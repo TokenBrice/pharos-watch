@@ -3,7 +3,7 @@ import { buildSyncMetadata, type CronResult, type PriceSourceHealth, type Tracke
 import type { CacheValidationResult } from "./cache-publication";
 import type { CanonicalDeduplicationResult } from "./phase-helpers";
 import type { SupplyGapReconciliationResult } from "./supply-gap-reconciliation";
-import type { GtProbeStats } from "../../lib/geckoterminal-price-probe";
+import type { GtProbeStats } from "../../lib/geckoterminal-price-probe-stats";
 import {
   createEmptyPriceSourceHealthDistribution,
   isPriceSourceHealthBucketKey,

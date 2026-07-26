@@ -83,6 +83,12 @@
 3e5efced13d6b59a79d4694f002bf968594cde44:worker/src/cron/dex-liquidity/__tests__/staging-merge.test.ts:generic-api-key:340
 46b937d767b61b7dc39d11dcb272c4b80cccfbf6:worker/src/lib/__tests__/api-keys.test.ts:generic-api-key:765
 4fd14411b571a949c4720c02bb7fb3c509916fdf:worker/src/cron/__tests__/yield-config-registry.test.ts:generic-api-key:100
+4fe97caea285e44f10d0d12c22d982f5ca5db296:shared/lib/cron-jobs.ts:generic-api-key:421
+4fe97caea285e44f10d0d12c22d982f5ca5db296:shared/lib/cron-jobs.ts:generic-api-key:430
+4fe97caea285e44f10d0d12c22d982f5ca5db296:shared/lib/__tests__/cron-jobs.test.ts:generic-api-key:34
+4fe97caea285e44f10d0d12c22d982f5ca5db296:shared/lib/__tests__/cron-jobs.test.ts:generic-api-key:44
+4fe97caea285e44f10d0d12c22d982f5ca5db296:worker/src/lib/__tests__/v9-slot-window.test.ts:generic-api-key:58
+4fe97caea285e44f10d0d12c22d982f5ca5db296:worker/src/lib/__tests__/v9-slot-window.test.ts:generic-api-key:199
 54d2afd8f0b3f26cf916c54fb05d28415c763501:agents/tasks/2026-04-22-yield-history-cleanup-local-artifact.json:generic-api-key:60
 54d2afd8f0b3f26cf916c54fb05d28415c763501:agents/tasks/2026-04-22-yield-history-cleanup-local-artifact.json:generic-api-key:75
 55ec97df6476744cd72d6557b3e811ee31603a42:agents/audits/2026-04-16-liquidity-dedup-audit.md:generic-api-key:4
@@ -233,6 +239,9 @@ af54646449278a67f151c798373fa06c466cebd4:shared/data/safety-score-v9/transfer-re
 3ac98ddd56c91b9930c5440d8dab770e105a3b5e:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:4199
 3ac98ddd56c91b9930c5440d8dab770e105a3b5e:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:4231
 3ac98ddd56c91b9930c5440d8dab770e105a3b5e:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:4267
+# Public Solana pool and token identifiers used by the measured-execution registry.
+f22fff401e2d5dfeb1efd4e6d988685826e41313:worker/src/cron/measured-execution/solana-registry.ts:generic-api-key:66
+f22fff401e2d5dfeb1efd4e6d988685826e41313:worker/src/cron/measured-execution/solana-registry.ts:generic-api-key:68
 # Midas Final-Terms PDFs (SOL-FEES wave-5 sources): GitBook CDN file URLs embed
 # public access tokens; these are public-document links, not credentials.
 6dbbaea96aa22a5126f59482c95c46372a9e9617:shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts:generic-api-key:54

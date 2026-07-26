@@ -7,6 +7,7 @@ import type {
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { tryParseJson } from "../../lib/json-parse";
+import { readResponseTextWithinLimitWithSignal } from "../../lib/response-body";
 
 const RAYDIUM_TRADE_API = "https://transaction-v1.raydium.io/compute/swap-base-in";
 const JUPITER_QUOTE_API = "https://api.jup.ag/swap/v1/quote";
@@ -17,7 +18,7 @@ const SOLANA_RPC_URLS = [
 ] as const;
 const REQUEST_TIMEOUT_MS = 15_000;
 const SLOT_REQUEST_TIMEOUT_MS = 5_000;
-const MAX_RESPONSE_CHARS = 200_000;
+const MAX_RESPONSE_BYTES = 200_000;
 
 type FetchLike = typeof fetch;
 
@@ -48,14 +49,22 @@ async function fetchBoundedJson(
   signal: AbortSignal | undefined,
   fetchImpl: FetchLike,
 ): Promise<unknown> {
+  const requestSignal = combineSignal(signal, REQUEST_TIMEOUT_MS);
   const response = await fetchImpl(url, {
     ...init,
     headers: { Accept: "application/json", "User-Agent": USER_AGENT, ...(init.headers ?? {}) },
-    signal: combineSignal(signal, REQUEST_TIMEOUT_MS),
+    signal: requestSignal,
   });
-  const text = await response.text();
+  let text: string;
+  try {
+    text = await readResponseTextWithinLimitWithSignal(response, MAX_RESPONSE_BYTES, requestSignal);
+  } catch (error) {
+    if (error instanceof Error && error.name === "ResponseBodyTooLargeError") {
+      throw new Error("quote-response-too-large");
+    }
+    throw error;
+  }
   if (!response.ok) throw new Error(`quote-http-${response.status}`);
-  if (text.length > MAX_RESPONSE_CHARS) throw new Error("quote-response-too-large");
   const parsed = tryParseJson(text, { onFailure: () => undefined });
   if (parsed === null) throw new Error("quote-invalid-json");
   return parsed;
@@ -244,6 +253,7 @@ export async function fetchSolanaCurrentSlot(
   for (const rpcUrl of SOLANA_RPC_URLS) {
     throwIfAborted(signal);
     try {
+      const requestSignal = combineSignal(signal, SLOT_REQUEST_TIMEOUT_MS);
       const response = await fetchImpl(rpcUrl, {
         method: "POST",
         headers: {
@@ -252,10 +262,10 @@ export async function fetchSolanaCurrentSlot(
           "User-Agent": USER_AGENT,
         },
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getSlot" }),
-        signal: combineSignal(signal, SLOT_REQUEST_TIMEOUT_MS),
+        signal: requestSignal,
       });
-      const text = await response.text();
-      if (!response.ok || text.length > MAX_RESPONSE_CHARS) continue;
+      const text = await readResponseTextWithinLimitWithSignal(response, MAX_RESPONSE_BYTES, requestSignal);
+      if (!response.ok) continue;
       const body = tryParseJson(text, { onFailure: () => undefined });
       if (isRecord(body) && integer(body.result)) return body.result;
     } catch (error) {

@@ -1,5 +1,8 @@
 import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import {
+  CRON_INTERVALS,
+  SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC,
+} from "@shared/lib/cron-jobs";
 import {
   V9_CONSUMER_SCORE_THRESHOLD_REGISTRY,
   V9_SHADOW_DAILY_START_OFFSET_SEC,
@@ -51,7 +54,7 @@ export const SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX = "safety-score-v9-shadow";
  * daily summary remains one row per day and each successful refresh replaces
  * its selected observation.
  */
-export const SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC = 30 * 60;
+export { SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 export const SAFETY_SCORE_V9_SHADOW_DAILY_START_OFFSET_SEC = V9_SHADOW_DAILY_START_OFFSET_SEC;
 export const SAFETY_SCORE_V9_SHADOW_TIMEOUT_MS = 2 * 60_000;
 const SAFETY_SCORE_V9_SHADOW_CALLER_INTERVAL_SEC = CRON_INTERVALS["publish-report-card-cache"];

@@ -13,12 +13,17 @@ export const DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC = 2 * 60 * 60;
 export const DEX_MEASURED_MATURE_SUCCESSFUL_CYCLE_COUNT = 2;
 
 const CanonicalEvmAddressSchema = z.string().regex(/^0x[a-f0-9]{40}$/);
+const CanonicalBytes32Schema = z.string().regex(/^0x[a-f0-9]{64}$/);
 const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = "curve-stableswap-main-registry-get-dy-v1";
 const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = "curve-stableswap-ng-factory-get-dy-v2";
+const CURVE_RATE_BEARING_ADAPTER_PROFILE_ID = "curve-stableswap-ng-rate-bearing-get-dy-v1";
+const CURVE_METAPOOL_ADAPTER_PROFILE_ID = "curve-stableswap-ng-metapool-underlying-v1";
 
 export function getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId: string): number {
   return adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID ||
-    adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
+    adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID ||
+    adapterProfileId === CURVE_RATE_BEARING_ADAPTER_PROFILE_ID ||
+    adapterProfileId === CURVE_METAPOOL_ADAPTER_PROFILE_ID
     ? DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC
     : DEX_MEASURED_FRESHNESS_MAX_SEC;
 }
@@ -69,6 +74,7 @@ export const DexMeasuredExecutionTargetSchema = z.object({
   tokenOut: DexMeasuredExecutionTokenSchema,
   feePips: z.number().int().min(0).max(1_000_000).optional(),
   tickSpacing: z.number().int().min(1).max(8_388_607).optional(),
+  hookAddress: CanonicalEvmAddressSchema.optional(),
   retainedTvlUsd: z.number().finite().positive(),
   retainedPoolPriceUsd: z.number().finite().positive(),
   capturedAt: z.number().int().nonnegative(),
@@ -153,6 +159,69 @@ export type DexMeasuredExecutionStableSwapNgFactoryBindingProof = z.infer<
   typeof DexMeasuredExecutionStableSwapNgFactoryBindingProofSchema
 >;
 
+const DexMeasuredExecutionCurveCompositeProofSchema = z.object({
+  blockNumber: z.number().int().nonnegative(),
+  blockHash: CanonicalBytes32Schema,
+  blockCommitment: z.literal("finalized"),
+  factoryAddress: CanonicalEvmAddressSchema,
+  factoryCodeHash: CanonicalBytes32Schema,
+  poolIndex: z.number().int().nonnegative(),
+  registeredPoolAddress: CanonicalEvmAddressSchema,
+  poolCodeHash: CanonicalBytes32Schema,
+  implementationAddress: CanonicalEvmAddressSchema,
+  implementationCodeHash: CanonicalBytes32Schema,
+  quoteFunction: z.enum(["get_dy", "get_dy_underlying"]),
+  poolTokenAddresses: z.array(CanonicalEvmAddressSchema).length(2),
+  executionTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8),
+  calls: z.array(z.object({
+    role: z.string().regex(/^[a-z0-9-]{1,64}$/),
+    target: CanonicalEvmAddressSchema,
+    callData: z.string().regex(/^0x[0-9a-f]+$/),
+    returnData: z.string().regex(/^0x[0-9a-f]+$/),
+  })).min(5).max(32),
+  rateProvider: z.object({
+    kind: z.literal("erc4626"),
+    tokenAddress: CanonicalEvmAddressSchema,
+    providerAddress: CanonicalEvmAddressSchema,
+    providerCodeHash: CanonicalBytes32Schema,
+    underlyingAddress: CanonicalEvmAddressSchema,
+    observedRate: z.string().regex(/^[1-9][0-9]*$/),
+  }).optional(),
+  metapool: z.object({
+    basePoolAddress: CanonicalEvmAddressSchema,
+    basePoolCodeHash: CanonicalBytes32Schema,
+    basePoolTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8),
+  }).optional(),
+});
+export type DexMeasuredExecutionCurveCompositeProof = z.infer<
+  typeof DexMeasuredExecutionCurveCompositeProofSchema
+>;
+
+const DexMeasuredExecutionUniswapV4PoolProofSchema = z.object({
+  blockNumber: z.number().int().nonnegative(),
+  poolId: CanonicalBytes32Schema,
+  poolManagerAddress: CanonicalEvmAddressSchema,
+  poolManagerCodeHash: CanonicalBytes32Schema,
+  stateViewAddress: CanonicalEvmAddressSchema,
+  stateViewCodeHash: CanonicalBytes32Schema,
+  quoterPoolManagerCallData: z.string().regex(/^0x[0-9a-f]+$/),
+  quoterPoolManagerReturnData: z.string().regex(/^0x[0-9a-f]+$/),
+  stateViewPoolManagerCallData: z.string().regex(/^0x[0-9a-f]+$/),
+  stateViewPoolManagerReturnData: z.string().regex(/^0x[0-9a-f]+$/),
+  slot0CallData: z.string().regex(/^0x[0-9a-f]+$/),
+  slot0ReturnData: z.string().regex(/^0x[0-9a-f]+$/),
+  liquidityCallData: z.string().regex(/^0x[0-9a-f]+$/),
+  liquidityReturnData: z.string().regex(/^0x[0-9a-f]+$/),
+  sqrtPriceX96: z.string().regex(/^[1-9][0-9]*$/),
+  tick: z.number().int().min(-8_388_608).max(8_388_607),
+  protocolFee: z.number().int().min(0).max(0xffffff),
+  lpFee: z.number().int().min(0).max(0xffffff),
+  liquidity: z.string().regex(/^[1-9][0-9]*$/),
+});
+export type DexMeasuredExecutionUniswapV4PoolProof = z.infer<
+  typeof DexMeasuredExecutionUniswapV4PoolProofSchema
+>;
+
 export const DexMeasuredExecutionProfileSchema = z.object({
   schemaVersion: z.literal(DEX_MEASURED_EXECUTION_SCHEMA_VERSION),
   kind: z.literal("measured-executable-depth"),
@@ -168,6 +237,7 @@ export const DexMeasuredExecutionProfileSchema = z.object({
   tokenOut: DexMeasuredExecutionTokenSchema,
   feePips: z.number().int().min(0).max(1_000_000).optional(),
   tickSpacing: z.number().int().min(1).max(8_388_607).optional(),
+  hookAddress: CanonicalEvmAddressSchema.optional(),
   retainedTvlUsdAtQuote: z.number().finite().positive(),
   retainedPoolPriceUsdAtQuote: z.number().finite().positive(),
   quotedAt: z.number().int().nonnegative(),
@@ -179,6 +249,8 @@ export const DexMeasuredExecutionProfileSchema = z.object({
   poolBindingProof: DexMeasuredExecutionPoolBindingProofSchema.optional(),
   registryBindingProof: DexMeasuredExecutionRegistryBindingProofSchema.optional(),
   stableSwapNgFactoryBindingProof: DexMeasuredExecutionStableSwapNgFactoryBindingProofSchema.optional(),
+  curveCompositeProof: DexMeasuredExecutionCurveCompositeProofSchema.optional(),
+  uniswapV4PoolProof: DexMeasuredExecutionUniswapV4PoolProofSchema.optional(),
   maxCostBps: z.literal(DEX_MEASURED_MAX_COST_BPS),
   marginalOutputRatio: z.number().finite().nonnegative(),
   capacityCurve: z.array(ExitRouteCapacityPointSchema).length(DEX_MEASURED_CAPACITY_NOTIONALS_USD.length),
@@ -192,6 +264,8 @@ export const DexMeasuredExecutionPublicProfileSchema = DexMeasuredExecutionProfi
   poolBindingProof: true,
   registryBindingProof: true,
   stableSwapNgFactoryBindingProof: true,
+  curveCompositeProof: true,
+  uniswapV4PoolProof: true,
 }).extend({
   observationHistory: DexMeasuredExecutionObservationHistorySchema.optional(),
   poolProvenance: z.object({
@@ -216,6 +290,33 @@ export const DexMeasuredExecutionPublicProfileSchema = DexMeasuredExecutionProfi
     registeredPoolAddress: CanonicalEvmAddressSchema,
     poolTokenAddresses: z.array(CanonicalEvmAddressSchema).length(2),
   }).optional(),
+  curveCompositeProvenance: z.object({
+    blockNumber: z.number().int().nonnegative(),
+    blockHash: CanonicalBytes32Schema,
+    factoryAddress: CanonicalEvmAddressSchema,
+    factoryCodeHash: CanonicalBytes32Schema,
+    registeredPoolAddress: CanonicalEvmAddressSchema,
+    implementationAddress: CanonicalEvmAddressSchema,
+    implementationCodeHash: CanonicalBytes32Schema,
+    quoteFunction: z.enum(["get_dy", "get_dy_underlying"]),
+    poolTokenAddresses: z.array(CanonicalEvmAddressSchema).length(2),
+    executionTokenAddresses: z.array(CanonicalEvmAddressSchema).min(2).max(8),
+    rateProviderAddress: CanonicalEvmAddressSchema.optional(),
+    basePoolAddress: CanonicalEvmAddressSchema.optional(),
+  }).optional(),
+  uniswapV4PoolProvenance: z.object({
+    blockNumber: z.number().int().nonnegative(),
+    poolId: CanonicalBytes32Schema,
+    poolManagerAddress: CanonicalEvmAddressSchema,
+    poolManagerCodeHash: CanonicalBytes32Schema,
+    stateViewAddress: CanonicalEvmAddressSchema,
+    stateViewCodeHash: CanonicalBytes32Schema,
+    sqrtPriceX96: z.string().regex(/^[1-9][0-9]*$/),
+    tick: z.number().int().min(-8_388_608).max(8_388_607),
+    protocolFee: z.number().int().min(0).max(0xffffff),
+    lpFee: z.number().int().min(0).max(0xffffff),
+    liquidity: z.string().regex(/^[1-9][0-9]*$/),
+  }).optional(),
 });
 export type DexMeasuredExecutionPublicProfile = z.infer<typeof DexMeasuredExecutionPublicProfileSchema>;
 
@@ -229,6 +330,8 @@ export function toDexMeasuredExecutionPublicProfile(
     poolBindingProof,
     registryBindingProof,
     stableSwapNgFactoryBindingProof,
+    curveCompositeProof,
+    uniswapV4PoolProof,
     ...profile
   } = parsed;
   return DexMeasuredExecutionPublicProfileSchema.parse({
@@ -268,6 +371,45 @@ export function toDexMeasuredExecutionPublicProfile(
           },
         }
       : {}),
+    ...(curveCompositeProof
+      ? {
+          curveCompositeProvenance: {
+            blockNumber: curveCompositeProof.blockNumber,
+            blockHash: curveCompositeProof.blockHash,
+            factoryAddress: curveCompositeProof.factoryAddress,
+            factoryCodeHash: curveCompositeProof.factoryCodeHash,
+            registeredPoolAddress: curveCompositeProof.registeredPoolAddress,
+            implementationAddress: curveCompositeProof.implementationAddress,
+            implementationCodeHash: curveCompositeProof.implementationCodeHash,
+            quoteFunction: curveCompositeProof.quoteFunction,
+            poolTokenAddresses: curveCompositeProof.poolTokenAddresses,
+            executionTokenAddresses: curveCompositeProof.executionTokenAddresses,
+            ...(curveCompositeProof.rateProvider
+              ? { rateProviderAddress: curveCompositeProof.rateProvider.providerAddress }
+              : {}),
+            ...(curveCompositeProof.metapool
+              ? { basePoolAddress: curveCompositeProof.metapool.basePoolAddress }
+              : {}),
+          },
+        }
+      : {}),
+    ...(uniswapV4PoolProof
+      ? {
+          uniswapV4PoolProvenance: {
+            blockNumber: uniswapV4PoolProof.blockNumber,
+            poolId: uniswapV4PoolProof.poolId,
+            poolManagerAddress: uniswapV4PoolProof.poolManagerAddress,
+            poolManagerCodeHash: uniswapV4PoolProof.poolManagerCodeHash,
+            stateViewAddress: uniswapV4PoolProof.stateViewAddress,
+            stateViewCodeHash: uniswapV4PoolProof.stateViewCodeHash,
+            sqrtPriceX96: uniswapV4PoolProof.sqrtPriceX96,
+            tick: uniswapV4PoolProof.tick,
+            protocolFee: uniswapV4PoolProof.protocolFee,
+            lpFee: uniswapV4PoolProof.lpFee,
+            liquidity: uniswapV4PoolProof.liquidity,
+          },
+        }
+      : {}),
   });
 }
 
@@ -304,6 +446,7 @@ export function buildDexMeasuredExecutionTargetId(input: {
   poolTokenAddresses?: readonly string[];
   feePips?: number;
   tickSpacing?: number;
+  hookAddress?: string;
 }): string {
   return [
     DEX_MEASURED_TARGET_SCHEMA_VERSION,
@@ -317,6 +460,7 @@ export function buildDexMeasuredExecutionTargetId(input: {
     ...(input.poolTokenAddresses ?? []),
     input.feePips ?? "na",
     ...(input.tickSpacing != null ? [input.tickSpacing] : []),
+    ...(input.hookAddress != null ? [input.hookAddress] : []),
   ]
     .map((part) => canonicalPart(String(part)))
     .join("|");
@@ -489,6 +633,7 @@ export function validateDexMeasuredExecutionProfile(input: {
     profile.tokenOut.trackedAssetId === quotedTarget.tokenOut.trackedAssetId &&
     profile.feePips === quotedTarget.feePips &&
     profile.tickSpacing === quotedTarget.tickSpacing &&
+    profile.hookAddress === quotedTarget.hookAddress &&
     Math.abs(profile.retainedTvlUsdAtQuote - quotedTarget.retainedTvlUsd) <= 0.01 &&
     Math.abs(profile.retainedPoolPriceUsdAtQuote - quotedTarget.retainedPoolPriceUsd) <= 0.00000001 &&
     Math.abs(profile.tokenIn.referencePriceUsd - quotedTarget.tokenIn.referencePriceUsd) <= 0.00000001 &&
@@ -505,7 +650,8 @@ export function validateDexMeasuredExecutionProfile(input: {
     profile.tokenIn.trackedAssetId === currentTarget.tokenIn.trackedAssetId &&
     profile.tokenOut.trackedAssetId === currentTarget.tokenOut.trackedAssetId &&
     profile.feePips === currentTarget.feePips &&
-    profile.tickSpacing === currentTarget.tickSpacing;
+    profile.tickSpacing === currentTarget.tickSpacing &&
+    profile.hookAddress === currentTarget.hookAddress;
   const currentPoolOrderMatches =
     JSON.stringify(profile.poolTokenAddresses ?? null) === JSON.stringify(currentTarget.poolTokenAddresses ?? null);
   if (!currentIdentityMatches || !currentPoolOrderMatches) issues.add("identity-mismatch");
@@ -621,6 +767,7 @@ export function validateDexMeasuredExecutionProfile(input: {
     ...(profile.poolTokenAddresses ? { poolTokenAddresses: profile.poolTokenAddresses } : {}),
     ...(profile.feePips != null ? { feePips: profile.feePips } : {}),
     ...(profile.tickSpacing != null ? { tickSpacing: profile.tickSpacing } : {}),
+    ...(profile.hookAddress != null ? { hookAddress: profile.hookAddress } : {}),
   });
   if (profile.targetId !== expectedTargetId) {
     issues.add("identity-mismatch");

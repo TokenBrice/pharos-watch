@@ -1,10 +1,13 @@
 /**
  * Quarter-hourly trigger (every 15 min):
- *   sync-fx-rates (3) -> sync-stablecoins (4) -> snapshots/cache refreshes (0)
+ *   sync-fx-rates (3) -> sync-stablecoins (4) -> snapshots (0)
+ *   -> report-card publication (0) -> depeg resolver (0)
  *
  * All jobs run sequentially in-slot to avoid cross-job connection spikes.
  * Run FX first so Chainlink gets a clean RPC window before the heavier
  * stablecoin pricing pipeline consumes the slot's shared fetch budget.
+ * Private V9 attribution and compilation use their own fenced +8 and +14
+ * triggers. They never execute inside this public lane.
  */
 import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";
@@ -86,7 +89,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
   await runIfCacheSafe("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
   await runIfCacheSafe(
     "publish-report-card-cache",
-    (signal) => publishReportCardCache(runtime.db, signal, runtime.chainRpcs),
+    (signal) => publishReportCardCache(runtime.db, signal),
   );
 
   outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "compute-depeg-resolver", (signal) =>

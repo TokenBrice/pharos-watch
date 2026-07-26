@@ -6,7 +6,9 @@ import {
   EVM_V2_EXECUTION_DEPLOYMENTS,
   attachEvmV2CandidateToRetainedPool,
   buildEvmV2ExecutionCandidate,
+  buildUniqueEvmV2ExecutionCandidateFingerprintIndex,
   enrichEvmV2ExecutionModels,
+  resolveEvmV2ExecutionCandidate,
 } from "../constant-product-v2";
 
 const U = "0xce24439f2d9c6a2289f741120fe202248b666666" as const;
@@ -150,6 +152,57 @@ describe("constant-product V2 execution", () => {
       }),
     ).toBe(true);
     expect(metric.topPools[0]!.extra?.evmV2ExecutionCandidate).toEqual(candidate);
+  });
+
+  it("resolves exact candidates before a unique fingerprint and fails ambiguous fingerprints closed", () => {
+    const candidate = makeAerodromeCandidate();
+    const exactCandidates = new Map([
+      [canonicalExitRouteAssetKey("base", candidate.poolAddress), candidate],
+    ]);
+    const uniqueCandidates = buildUniqueEvmV2ExecutionCandidateFingerprintIndex(exactCandidates);
+    const resolve = (poolAddressOrId: string) =>
+      resolveEvmV2ExecutionCandidate({
+        chain: "base",
+        protocol: "aerodrome",
+        poolAddressOrId,
+        tokenAddresses: [USDC_BASE, WETH_BASE],
+        exactCandidates,
+        uniqueFingerprintCandidates: uniqueCandidates,
+      });
+
+    expect(resolve("defillama-pool-uuid")).toEqual(candidate);
+
+    const sibling = {
+      ...candidate,
+      poolAddress: "0x1111111111111111111111111111111111111111" as const,
+    };
+    const ambiguousExactCandidates = new Map([
+      [canonicalExitRouteAssetKey("base", candidate.poolAddress), candidate],
+      [canonicalExitRouteAssetKey("base", sibling.poolAddress), sibling],
+    ]);
+    const ambiguousCandidates =
+      buildUniqueEvmV2ExecutionCandidateFingerprintIndex(ambiguousExactCandidates);
+
+    expect(
+      resolveEvmV2ExecutionCandidate({
+        chain: "base",
+        protocol: "aerodrome",
+        poolAddressOrId: "defillama-pool-uuid",
+        tokenAddresses: [USDC_BASE, WETH_BASE],
+        exactCandidates: ambiguousExactCandidates,
+        uniqueFingerprintCandidates: ambiguousCandidates,
+      }),
+    ).toBeUndefined();
+    expect(
+      resolveEvmV2ExecutionCandidate({
+        chain: "base",
+        protocol: "aerodrome",
+        poolAddressOrId: candidate.poolAddress,
+        tokenAddresses: [USDC_BASE, WETH_BASE],
+        exactCandidates: ambiguousExactCandidates,
+        uniqueFingerprintCandidates: ambiguousCandidates,
+      }),
+    ).toEqual(candidate);
   });
 
   it("builds a same-block Pancake V2 model after factory and pair verification", async () => {

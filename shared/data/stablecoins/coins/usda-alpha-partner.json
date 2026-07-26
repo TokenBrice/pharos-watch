@@ -117,28 +117,85 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "unknown",
-    "summary": "Alpha Partners' USDA is a BSC ERC-20 whose verified token source restricts mint() to a MINT role with no on-chain supply cap, but public RPC reads cannot enumerate the current MINT or DEFAULT_ADMIN_ROLE holders.",
+    "confidence": "manual-review",
+    "summary": "USDA's BSC token has an uncapped MINT role. At BSC block 112274230, the MINT role is held by a minter contract and an EOA; the EOA is the sole DEFAULT_ADMIN_ROLE holder and can appoint more minters. The minter contract's owner is a separate EOA that can authorize callers through that contract. Address ownership, custody, and any non-standard replacement or migration authority are undisclosed.",
     "controls": [
       {
-        "label": "USDA MINT role-gated token contract",
+        "label": "USDA MINT role holder — BSC minter contract",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
         "chain": "bsc",
-        "address": "0x17eafd08994305d8ace37efb82f1523177ec70ee",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Contract has no maximum supply cap; addresses granted the MINT role can issue USDA without an on-chain limit.",
-        "observedAt": "2026-07-20",
-        "observedBlock": 111074103,
+        "address": "0x56f237297306220ebc062b7c0348418c9cdccbdb",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "USDA has no maximum-supply check; this MINT-role contract can call the token's mint path without an on-chain amount cap.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 112274230,
         "sources": [
           {
-            "label": "USDA token source and contract",
-            "url": "https://bscscan.com/token/0x17eafd08994305d8ace37efb82f1523177ec70ee"
+            "label": "USDA verified BSC token source",
+            "url": "https://bscscan.com/address/0x17eafd08994305d8ace37efb82f1523177ec70ee#code"
+          },
+          {
+            "label": "USDA MINT-role minter contract (BscScan)",
+            "url": "https://bscscan.com/address/0x56f237297306220ebc062b7c0348418c9cdccbdb"
+          },
+          {
+            "label": "USDA MINT grant to minter contract",
+            "url": "https://bscscan.com/tx/0xc8a6f731f413f81443321428adae8d083218a0d94bebd8aa75c685c6c95ee429"
           }
         ],
-        "evidence": "BscScan-verified source exposes mint() restricted to keccak256('MINT') and role-admin controls, with no maximum-supply check. At BSC block 111074103 the token had 17,338 bytes of code and zero EIP-1967 implementation, admin, and beacon slots; owner(), getOwner(), and role-member enumeration calls reverted, so the active MINT and DEFAULT_ADMIN_ROLE holders are not established."
+        "evidence": "The verified USDA source defines MINT as keccak256('MINT') and restricts mint(address,uint256) to that role with no maximum-supply condition. The BSC receipt at block 56765548 records RoleGranted(MINT, 0x56f237297306220ebc062b7c0348418c9cdccbdb, 0xc2eff14db94094486a07c791362a6c4176d3c5f7); hasRole(MINT, 0x56f237297306220ebc062b7c0348418c9cdccbdb) returned true at block 112274230. This 4,314-byte contract is source-unverified, so its modules and downstream policy are not asserted."
+      },
+      {
+        "label": "USDA MINT and DEFAULT_ADMIN_ROLE holder — BSC",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0x14170c3332ccd96859c8fb5754a753e476d09751",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "USDA has no maximum-supply check; this EOA can mint directly and, as DEFAULT_ADMIN_ROLE, can grant or revoke MINT.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 112274230,
+        "sources": [
+          {
+            "label": "USDA verified BSC token source",
+            "url": "https://bscscan.com/address/0x17eafd08994305d8ace37efb82f1523177ec70ee#code"
+          },
+          {
+            "label": "USDA DEFAULT_ADMIN_ROLE grant",
+            "url": "https://bscscan.com/tx/0xc369e94331b787d0837e6f1dce15fd1e53ca486bf66c0b47ba7db8fa38233520"
+          },
+          {
+            "label": "USDA MINT self-grant by current administrator",
+            "url": "https://bscscan.com/tx/0x3fff5ba4101cd945dbb2679c84c948fba3033481bfa89b6432f883a66db1606c"
+          }
+        ],
+        "evidence": "At block 88662302 the former administrator granted DEFAULT_ADMIN_ROLE to this address; at block 88662792 this address granted itself MINT. At block 112274230, hasRole(MINT, address) and hasRole(DEFAULT_ADMIN_ROLE, address) both returned true, getRoleAdmin(MINT) returned DEFAULT_ADMIN_ROLE, and eth_getCode returned empty bytecode. No public source identifies the key owner, custody arrangement, or threshold."
+      },
+      {
+        "label": "USDA MINT-role minter-contract owner — BSC",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "bsc",
+        "address": "0xc2eff14db94094486a07c791362a6c4176d3c5f7",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "USDA has no maximum-supply check; this EOA owns the MINT-role minter contract and can authorize callers through its expand-minter path, but does not itself hold USDA MINT or DEFAULT_ADMIN_ROLE at the observed block.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 112274230,
+        "sources": [
+          {
+            "label": "USDA MINT-role minter contract (BscScan)",
+            "url": "https://bscscan.com/address/0x56f237297306220ebc062b7c0348418c9cdccbdb"
+          },
+          {
+            "label": "USDA minter-contract expand-minter update",
+            "url": "https://bscscan.com/tx/0x36d8622e39ccf14e080b8ba9961f00ae3bff975eed46ab81a2398ed3ed70c5b1"
+          }
+        ],
+        "evidence": "At block 112274230, owner() on the source-unverified MINT-role minter contract returned this empty-code address. Its pinned bytecode restricts the expand-minter update path to owner and its current mapping authorizes a caller that can successfully simulate dynamicRewardsMint through the MINT-role contract. USDA hasRole(MINT, address) and hasRole(DEFAULT_ADMIN_ROLE, address) both returned false at the same block. No custody or threshold is disclosed."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -147,30 +204,41 @@
     "upgradeability": {
       "model": "unknown",
       "canChangeMintLogic": "unknown",
-      "controlRef": "USDA MINT role-gated token contract",
-      "observedAt": "2026-07-20",
-      "observedBlock": 111074103,
+      "observedAt": "2026-07-26",
+      "observedBlock": 112274230,
       "sources": [
         {
-          "label": "USDA token source and contract",
-          "url": "https://bscscan.com/token/0x17eafd08994305d8ace37efb82f1523177ec70ee"
+          "label": "USDA verified BSC token source",
+          "url": "https://bscscan.com/address/0x17eafd08994305d8ace37efb82f1523177ec70ee#code"
         }
       ]
     },
     "review": {
-      "evidence": "Re-reviewed 2026-07-20. BSC RPC at block 111074103 confirms the deployed USDA code and zero standard EIP-1967 slots. BscScan source identifies a role-gated MINT mint() path with no supply ceiling and MINT role hash 0xfdf81848136595c31bb5f76217767372bc4bf906663038eb38381131ea27ecba. getRoleMemberCount reverts, and an all-history RoleGranted log request is rejected by the public RPC as limit exceeded; these results do not identify the active minters or default admins. No reserve reconciliation or named prudential supervisor is evidenced by the reviewed materials.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
-      "disposition": "unresolved",
+      "evidence": "Re-reviewed 2026-07-26 at BSC block 112274230 (block hash 0x7917d6ae1a888a95eefc8bb2153f2a46eb9f80356e62887dc115f83ecc44eddb) via a fixed-block BSC RPC read. The verified USDA source defines MINT as 0xfdf81848136595c31bb5f76217767372bc4bf906663038eb38381131ea27ecba, gates mint(address,uint256) on it, and makes DEFAULT_ADMIN_ROLE its admin with no supply ceiling. Receipt logs establish initial DEFAULT_ADMIN_ROLE for 0xc2eff14db94094486a07c791362a6c4176d3c5f7, MINT for 0x56f237297306220ebc062b7c0348418c9cdccbdb, later DEFAULT_ADMIN_ROLE and MINT for 0x14170c3332ccd96859c8fb5754a753e476d09751, and the former administrator's DEFAULT_ADMIN_ROLE renunciation. BscScan's complete indexed standard-role-method history shows eight grantRole calls, no revokeRole calls, and one renounceRole call; source review found no custom MINT or DEFAULT_ADMIN_ROLE grant/revoke path. Fixed-block hasRole reads confirm MINT for 0x56f237297306220ebc062b7c0348418c9cdccbdb and 0x14170c3332ccd96859c8fb5754a753e476d09751, DEFAULT_ADMIN_ROLE only for 0x14170c3332ccd96859c8fb5754a753e476d09751, and neither role for 0xc2eff14db94094486a07c791362a6c4176d3c5f7. USDA code is 17,338 bytes and standard EIP-1967 implementation, admin, and beacon slots are zero, but those observations do not prove immutable mint logic or rule out a non-standard replacement or migration route. No reserve reconciliation or named prudential supervisor is evidenced by the reviewed materials.",
+      "reviewer": "Codex BSC role-history review",
+      "reviewedAt": "2026-07-26",
+      "disposition": "scoreable",
       "sources": [
         {
-          "label": "USDA contract (BscScan)",
-          "url": "https://bscscan.com/token/0x17eafd08994305d8ace37efb82f1523177ec70ee"
+          "label": "USDA verified BSC token source",
+          "url": "https://bscscan.com/address/0x17eafd08994305d8ace37efb82f1523177ec70ee#code"
+        },
+        {
+          "label": "USDA indexed grantRole history",
+          "url": "https://bscscan.com/txs?method=0x2f2ff15d&toaddress=0x17eafd08994305d8ace37efb82f1523177ec70ee"
+        },
+        {
+          "label": "USDA indexed revokeRole history",
+          "url": "https://bscscan.com/txs?method=0xd547741f&toaddress=0x17eafd08994305d8ace37efb82f1523177ec70ee"
+        },
+        {
+          "label": "USDA indexed renounceRole history",
+          "url": "https://bscscan.com/txs?method=0x36568abe&toaddress=0x17eafd08994305d8ace37efb82f1523177ec70ee"
+        },
+        {
+          "label": "BSC fixed-block RPC used for role reads",
+          "url": "https://bsc-mainnet.public.blastapi.io/"
         }
-      ],
-      "unresolvedQuestions": [
-        "Enumerate the active MINT and DEFAULT_ADMIN_ROLE holders for 0x17eafd08994305d8ace37efb82f1523177ec70ee. getRoleMemberCount is unavailable and the public-RPC all-history RoleGranted scan is range-limited; use an indexed BSC log provider or issuer disclosure before assigning any controller addresses or threshold.",
-        "Establish whether the non-proxy token has any non-standard upgrade or migration route. Zero EIP-1967 slots alone do not prove immutable mint logic."
       ]
     }
   },

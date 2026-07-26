@@ -208,8 +208,11 @@ export const ENV_BINDINGS = [
   {
     key: "ADDRESS_PRICE_PROVIDERS_ENABLED",
     valueType: "string",
-    description: "Optional comma-separated allowlist for exact-address price providers; production pins this to `none` while quarter-hour stablecoin sync runs under Worker heap pressure. Unset auto-enables DexPaprika plus configured key-backed providers, and `dexscreener-address` remains explicit opt-in for the Cloudflare/WAF-protected public lane.",
-    example: { section: "workerOptional", value: "none" },
+    description: "Optional comma-separated allowlist for exact-address price providers. Production enables only the authenticated CoinGecko Onchain exact-address lane; the public GeckoTerminal corroboration pass remains excluded from the inline quarter-hour invocation for Worker heap safety. Unset auto-enables DexPaprika plus configured key-backed providers, and `dexscreener-address` remains explicit opt-in for the Cloudflare/WAF-protected public lane.",
+    example: {
+      section: "workerOptional",
+      value: "coingecko-onchain-address",
+    },
     runtimes: {
       worker: { order: 15, status: "optional" },
     },

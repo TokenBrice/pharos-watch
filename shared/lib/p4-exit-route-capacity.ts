@@ -690,9 +690,14 @@ function validateMeasuredExecutionProfile(
     }
   }
   const projectKey = normalizedKey(context.pool.project);
-  const protocolMatches = profile.adapterProfileId === "sunswap-v2-router-v1"
-    ? projectKey === "sunswap" || projectKey === "sunswap-v2"
-    : normalizedKey(profile.protocol) === projectKey;
+  const profileProtocolKey = normalizedKey(profile.protocol);
+  const protocolMatches =
+    profile.adapterProfileId === "sunswap-v2-router-v1"
+      ? projectKey === "sunswap" || projectKey === "sunswap-v2"
+      : profile.adapterProfileId === "aerodrome-slipstream-quoter-v2"
+        ? profileProtocolKey === "aerodrome-slipstream" &&
+          (projectKey === "aerodrome" || projectKey === "aerodrome-slipstream")
+        : profileProtocolKey === projectKey;
   if (
     canonicalExitRouteChain(profile.chain) !== canonicalExitRouteChain(context.pool.chain) ||
     !protocolMatches

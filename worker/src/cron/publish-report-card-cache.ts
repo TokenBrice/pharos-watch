@@ -8,24 +8,16 @@ import { throwIfAborted } from "../lib/abort";
 import { buildReportCardPublicationPlan } from "../lib/report-card-publication";
 import {
   buildReportCardsFixedInputCacheEntry,
-  buildSafetyScoreV9FixedInputCacheEntry,
 } from "../lib/report-cards-fixed-input";
-import { recordCronFailure } from "../lib/cron-logger";
-import { runSafetyScoreV9ShadowAfterV8Publication } from "../lib/safety-score-v9-shadow-runner";
 import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
-import type { ChainRpcConfig } from "../lib/chain-registry";
-import { enrichSafetyScoreV9FixedInputSupplyWithEvidence } from "../lib/safety-score-v9-supply-attribution";
-import { loadReportCardEvidenceJournalByIdV1 } from "../lib/report-card-evidence-journal-store";
 import {
-  appendSupplyAttributionJournalV1,
-  loadSupplyAttributionJournalByIdV1,
-} from "../lib/safety-score-v9-supply-attribution-journal-store";
-import { captureSafetyScoreV9PegProvenanceById } from "../lib/safety-score-v9-peg-provenance";
+  buildSafetyScoreV9PegProvenanceSeedCacheEntry,
+  captureSafetyScoreV9PegProvenanceById,
+} from "../lib/safety-score-v9-peg-provenance";
 
 export async function publishReportCardCache(
   db: D1Database,
   signal?: AbortSignal,
-  chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<CronResult> {
   throwIfAborted(signal);
 
@@ -81,92 +73,52 @@ export async function publishReportCardCache(
     ),
   };
   const snapshotEntry = await buildPublishedReportCardsSnapshotCacheEntry(publishedSnapshot);
-  await setCacheMany(db, [snapshotEntry, compactEntry, alertEntry, fixedInputEntry], signal);
-
-  let v9Shadow: Record<string, unknown>;
-  let v9FixedInputCacheBytes: number | null = null;
-  let v9FixedInputUncompressedBytes: number | null = null;
+  let v9SeedEntry:
+    ReturnType<typeof buildSafetyScoreV9PegProvenanceSeedCacheEntry> | null =
+    null;
+  let v9ExactSeed: Record<string, unknown>;
   try {
-    v9Shadow = await runSafetyScoreV9ShadowAfterV8Publication({
-      db,
-      fixedInput,
-      prepareFixedInput: async (baseFixedInput, shadowSignal) => {
-        const supplyCapture = await enrichSafetyScoreV9FixedInputSupplyWithEvidence(
-          baseFixedInput,
-          chainRpcs,
-          shadowSignal,
-        );
-        const supplyFixedInput = supplyCapture.fixedInput;
-        const [evidenceJournalById, supplyAttributionJournalById] =
-          await Promise.all([
-            loadReportCardEvidenceJournalByIdV1(
-              db,
-              supplyFixedInput.activeAssetIds,
-              supplyFixedInput.clockSec,
-              shadowSignal,
-            ),
-            loadSupplyAttributionJournalByIdV1(
-              db,
-              ["wm-m0", "xaut-tether"].filter((assetId) =>
-                supplyFixedInput.activeAssetIds.includes(assetId),
-              ),
-              supplyFixedInput.clockSec,
-              shadowSignal,
-            ),
-          ]);
-        if (supplyCapture.journalRecords.length > 0) {
-          const journalNowSec = Math.max(
-            Math.floor(Date.now() / 1_000),
-            ...supplyCapture.journalRecords.map((record) => record.completedAtSec),
-          );
-          await appendSupplyAttributionJournalV1(
-            db,
-            supplyCapture.journalRecords,
-            journalNowSec,
-            shadowSignal,
-          );
-        }
-        if (!v9PegProvenanceSource) {
-          throw new Error("Report-card publication did not retain its ephemeral V9 peg evidence source");
-        }
-        const pegProvenanceById = captureSafetyScoreV9PegProvenanceById(
-          supplyFixedInput,
-          v9PegProvenanceSource,
-        );
-        const v9FixedInput = {
-          ...supplyFixedInput,
-          evidenceJournalById,
-          supplyAttributionJournalById,
-          pegProvenanceById,
-        };
-        const v9FixedInputEntry = await buildSafetyScoreV9FixedInputCacheEntry(
-          v9FixedInput,
-          safetyScoreIdentity,
-        );
-        await setCacheMany(db, [v9FixedInputEntry], shadowSignal);
-        v9FixedInputCacheBytes = v9FixedInputEntry.storedBytes;
-        v9FixedInputUncompressedBytes = v9FixedInputEntry.uncompressedBytes;
-        return v9FixedInput;
-      },
-      v8Cards: publication.activeCards,
-      v8Publication: publication.completeness,
-      v8MethodologyVersion: snapshot.methodology.version,
-      signal,
+    if (!v9PegProvenanceSource) {
+      throw new Error(
+        "Report-card publication did not retain its ephemeral V9 peg evidence source",
+      );
+    }
+    const pegProvenanceById =
+      captureSafetyScoreV9PegProvenanceById(
+        fixedInput,
+        v9PegProvenanceSource,
+      );
+    v9SeedEntry = buildSafetyScoreV9PegProvenanceSeedCacheEntry({
+      sourceGeneration: fixedInput.sourceGeneration,
+      clockSec: fixedInput.clockSec,
+      safetyScoreIdentity,
+      pegProvenanceById,
     });
+    v9ExactSeed = {
+      status: "published",
+      pegProvenanceCount: Object.keys(pegProvenanceById).length,
+      storedBytes: v9SeedEntry.storedBytes,
+    };
   } catch (error) {
-    const failure = recordCronFailure("publish-report-card-cache:v9-shadow", error, {
-      metadata: {
-        v8PublicationGenerationId: publication.completeness.generationId,
-        baseInputGenerationId: fixedInput.baseInputGenerationId,
-      },
-    });
-    v9Shadow = {
-      status: "failed",
-      stage: "scheduler",
-      code: failure.errorName,
-      message: failure.errorMessage,
+    v9ExactSeed = {
+      status: "unavailable",
+      code:
+        error instanceof Error && error.name
+          ? error.name.slice(0, 160)
+          : "Error",
     };
   }
+  await setCacheMany(
+    db,
+    [
+      snapshotEntry,
+      compactEntry,
+      alertEntry,
+      fixedInputEntry,
+      ...(v9SeedEntry ? [v9SeedEntry] : []),
+    ],
+    signal,
+  );
 
   return {
     itemCount: publication.completeness.expectedCount,
@@ -204,10 +156,8 @@ export async function publishReportCardCache(
       snapshotCacheUncompressedBytes: snapshotEntry.uncompressedBytes,
       fixedInputCacheBytes: fixedInputEntry.storedBytes,
       fixedInputUncompressedBytes: fixedInputEntry.uncompressedBytes,
-      v9FixedInputCacheBytes,
-      v9FixedInputUncompressedBytes,
       safetyScoreIdentity,
-      v9Shadow,
+      v9ExactSeed,
     }),
   };
 }

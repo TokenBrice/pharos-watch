@@ -19,30 +19,934 @@
   "geckoId": "nectar",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "Beraborrow publishes collateral oracle provider mappings such as RedStone, Chronicle, and eOracle, but reviewed docs do not show stronger failover handling.",
+    "summary": "At Berachain block 24033076, 13 positive-debt Beraborrow collateral branches route through a central PriceFeed. Direct branches use configured RedStone adapters with validation and no live failover; Kodiak Island LP branches compose those values; the sunsetting ylstETH branch uses an owner-set conversion rate and is separately rated single-source-or-laggy.",
+    "branchModel": "multi-branch",
     "branchApplicability": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex Safety Score V9 small-1-free oracle review",
-      "rationale": "Beraborrow documents provider mappings and its collateral-ratio liquidation model, but the reviewed primary sources do not establish the full current set of debt-bearing collateral branches, deployed feed addresses and fallback behavior, or branch-specific liquidation and shutdown configuration.",
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-26",
+      "reviewer": "Codex Safety Score V9 ORCL curation",
+      "rationale": "The deployed-address inventory identifies 13 current Collateral Vault/DenManager branches. At pinned Berachain block 24033076 each DenManager had positive system debt, including six sunsetting branches with zero maxSystemDebt, so each remains liquidation-active and needs a branch-specific oracle and liquidation row.",
       "sources": [
         {
-          "label": "Beraborrow pricing assets documentation",
-          "url": "https://beraborrow.gitbook.io/docs/pricing-assets"
+          "label": "Beraborrow deployed contract addresses",
+          "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
         },
         {
-          "label": "Beraborrow collateral ratio and liquidation documentation",
-          "url": "https://beraborrow.gitbook.io/docs/borrowing/collateral-ratio-and-liquidation"
+          "label": "Berachain RPC pinned read at block 24033076",
+          "url": "https://rpc.berachain.com"
         }
       ]
     },
-    "reviewedAt": "2026-06-12",
-    "reviewer": "Codex data review",
+    "reviewedAt": "2026-07-26",
+    "reviewer": "Codex Safety Score V9 ORCL curation",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Beraborrow pricing assets docs",
-        "url": "https://beraborrow.gitbook.io/docs/pricing-assets"
+        "label": "Beraborrow deployed contract addresses",
+        "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+      },
+      {
+        "label": "Beraborrow collateral ratios and liquidation documentation",
+        "url": "https://beraborrow.gitbook.io/docs/borrowing/collateral-ratio-and-liquidation"
+      },
+      {
+        "label": "Beraborrow Recovery Mode documentation",
+        "url": "https://beraborrow.gitbook.io/docs/borrowing/recovery-mode"
+      },
+      {
+        "label": "Berachain verified Beraborrow PriceFeed",
+        "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+      },
+      {
+        "label": "Berachain verified Beraborrow LiquidationManager",
+        "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+      },
+      {
+        "label": "Berachain RPC pinned read at block 24033076",
+        "url": "https://rpc.berachain.com"
+      }
+    ],
+    "branches": [
+      {
+        "id": "wbera",
+        "label": "WBERA collateral branch",
+        "tier": "standard-external",
+        "summary": "WBERA collateral branch uses the central Beraborrow PriceFeed and a configured RedStone BERA/USD adapter external price source for collateral health and liquidation.",
+        "collateralAssets": [
+          "WBERA"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone BERA/USD adapter",
+            "path": "RedStone BERA/USD adapter answer -> Beraborrow PriceFeed -> Collateral Vault/DebtManager ICR",
+            "address": "0x3fcfa6fd31fad7e1681b19b7bdc43b9bc31a0788",
+            "chain": "berachain",
+            "heartbeatSec": 21600,
+            "stalenessBoundSec": 22500,
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:wbera:external-feed",
+              "beraborrow:central-price-feed",
+              "redstone:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeed requires valid current and previous oracle rounds, rejects stale answers and over-50% consecutive-round moves, and reverts rather than invoking an alternate live provider.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "WBERA",
+            "minimumCollateralRatioPct": 150,
+            "note": "Active with positive system debt at pinned block 24033076; MCR is enforced by this DenManager branch."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:wbera:external-feed",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
+      },
+      {
+        "id": "pumpbtc",
+        "label": "pumpBTC collateral branch",
+        "tier": "standard-external",
+        "summary": "pumpBTC collateral branch uses the central Beraborrow PriceFeed and a configured RedStone BTC/USD adapter external price source for collateral health and liquidation.",
+        "collateralAssets": [
+          "pumpBTC"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone BTC/USD adapter",
+            "path": "RedStone BTC/USD adapter answer -> Beraborrow PriceFeed -> Collateral Vault/DebtManager ICR",
+            "address": "0x4af6b78d92432d32e3a635e824d3a541866f7a78",
+            "chain": "berachain",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:pumpbtc:external-feed",
+              "beraborrow:central-price-feed",
+              "redstone:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeed requires valid current and previous oracle rounds, rejects stale answers and over-50% consecutive-round moves, and reverts rather than invoking an alternate live provider.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "pumpBTC",
+            "minimumCollateralRatioPct": 125,
+            "note": "Sunsetting with positive system debt; maxSystemDebt is zero at pinned block 24033076; MCR is enforced by this DenManager branch."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:pumpbtc:external-feed",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
+      },
+      {
+        "id": "solvbtc",
+        "label": "solvBTC collateral branch",
+        "tier": "standard-external",
+        "summary": "solvBTC collateral branch uses the central Beraborrow PriceFeed and a configured RedStone BTC/USD adapter external price source for collateral health and liquidation.",
+        "collateralAssets": [
+          "solvBTC"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone BTC/USD adapter",
+            "path": "RedStone BTC/USD adapter answer -> Beraborrow PriceFeed -> Collateral Vault/DebtManager ICR",
+            "address": "0x4af6b78d92432d32e3a635e824d3a541866f7a78",
+            "chain": "berachain",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:solvbtc:external-feed",
+              "beraborrow:central-price-feed",
+              "redstone:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeed requires valid current and previous oracle rounds, rejects stale answers and over-50% consecutive-round moves, and reverts rather than invoking an alternate live provider.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "solvBTC",
+            "minimumCollateralRatioPct": 110,
+            "note": "Sunsetting with positive system debt; maxSystemDebt is zero at pinned block 24033076; MCR is enforced by this DenManager branch."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:solvbtc:external-feed",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
+      },
+      {
+        "id": "solvbtc-bbn",
+        "label": "solvBTC.bbn collateral branch",
+        "tier": "standard-external",
+        "summary": "solvBTC.bbn collateral branch uses the central Beraborrow PriceFeed and a configured RedStone BTC/USD adapter external price source for collateral health and liquidation.",
+        "collateralAssets": [
+          "solvBTC.bbn"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone BTC/USD adapter",
+            "path": "RedStone BTC/USD adapter answer -> Beraborrow PriceFeed -> Collateral Vault/DebtManager ICR",
+            "address": "0x4af6b78d92432d32e3a635e824d3a541866f7a78",
+            "chain": "berachain",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:solvbtc-bbn:external-feed",
+              "beraborrow:central-price-feed",
+              "redstone:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeed requires valid current and previous oracle rounds, rejects stale answers and over-50% consecutive-round moves, and reverts rather than invoking an alternate live provider.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "solvBTC.bbn",
+            "minimumCollateralRatioPct": 110,
+            "note": "Sunsetting with positive system debt; maxSystemDebt is zero at pinned block 24033076; MCR is enforced by this DenManager branch."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:solvbtc-bbn:external-feed",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
+      },
+      {
+        "id": "unibtc",
+        "label": "uniBTC collateral branch",
+        "tier": "standard-external",
+        "summary": "uniBTC collateral branch uses the central Beraborrow PriceFeed and a configured RedStone BTC/USD adapter external price source for collateral health and liquidation.",
+        "collateralAssets": [
+          "uniBTC"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone BTC/USD adapter",
+            "path": "RedStone BTC/USD adapter answer -> Beraborrow PriceFeed -> Collateral Vault/DebtManager ICR",
+            "address": "0x4af6b78d92432d32e3a635e824d3a541866f7a78",
+            "chain": "berachain",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:unibtc:external-feed",
+              "beraborrow:central-price-feed",
+              "redstone:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeed requires valid current and previous oracle rounds, rejects stale answers and over-50% consecutive-round moves, and reverts rather than invoking an alternate live provider.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "uniBTC",
+            "minimumCollateralRatioPct": 110,
+            "note": "Active with positive system debt at pinned block 24033076; MCR is enforced by this DenManager branch."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:unibtc:external-feed",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
+      },
+      {
+        "id": "beraeth",
+        "label": "beraETH collateral branch",
+        "tier": "standard-external",
+        "summary": "beraETH collateral branch uses the central Beraborrow PriceFeed and a configured RedStone ETH/USD adapter external price source for collateral health and liquidation.",
+        "collateralAssets": [
+          "beraETH"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone ETH/USD adapter",
+            "path": "RedStone ETH/USD adapter answer -> Beraborrow PriceFeed -> Collateral Vault/DebtManager ICR",
+            "address": "0xd15862fc3d5407a03b696548b6902d6464a69b8c",
+            "chain": "berachain",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:beraeth:external-feed",
+              "beraborrow:central-price-feed",
+              "redstone:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeed requires valid current and previous oracle rounds, rejects stale answers and over-50% consecutive-round moves, and reverts rather than invoking an alternate live provider.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "beraETH",
+            "minimumCollateralRatioPct": 125,
+            "note": "Active with positive system debt at pinned block 24033076; MCR is enforced by this DenManager branch."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:beraeth:external-feed",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
+      },
+      {
+        "id": "stakestone-eth",
+        "label": "StakeStone ETH collateral branch",
+        "tier": "standard-external",
+        "summary": "StakeStone ETH collateral branch uses the central Beraborrow PriceFeed and a configured RedStone ETH/USD adapter external price source for collateral health and liquidation.",
+        "collateralAssets": [
+          "StakeStone ETH"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone ETH/USD adapter",
+            "path": "RedStone ETH/USD adapter answer -> Beraborrow PriceFeed -> Collateral Vault/DebtManager ICR",
+            "address": "0xd15862fc3d5407a03b696548b6902d6464a69b8c",
+            "chain": "berachain",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:stakestone-eth:external-feed",
+              "beraborrow:central-price-feed",
+              "redstone:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeed requires valid current and previous oracle rounds, rejects stale answers and over-50% consecutive-round moves, and reverts rather than invoking an alternate live provider.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "StakeStone ETH",
+            "minimumCollateralRatioPct": 125,
+            "note": "Sunsetting with positive system debt; maxSystemDebt is zero at pinned block 24033076; MCR is enforced by this DenManager branch."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:stakestone-eth:external-feed",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
+      },
+      {
+        "id": "weth",
+        "label": "WETH collateral branch",
+        "tier": "standard-external",
+        "summary": "WETH collateral branch uses the central Beraborrow PriceFeed and a configured RedStone ETH/USD adapter external price source for collateral health and liquidation.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone ETH/USD adapter",
+            "path": "RedStone ETH/USD adapter answer -> Beraborrow PriceFeed -> Collateral Vault/DebtManager ICR",
+            "address": "0xd15862fc3d5407a03b696548b6902d6464a69b8c",
+            "chain": "berachain",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:weth:external-feed",
+              "beraborrow:central-price-feed",
+              "redstone:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeed requires valid current and previous oracle rounds, rejects stale answers and over-50% consecutive-round moves, and reverts rather than invoking an alternate live provider.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "minimumCollateralRatioPct": 125,
+            "note": "Active with positive system debt at pinned block 24033076; MCR is enforced by this DenManager branch."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:weth:external-feed",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
+      },
+      {
+        "id": "ylsteth",
+        "label": "ylstETH collateral branch",
+        "tier": "single-source-or-laggy",
+        "summary": "ylstETH uses a single Beraborrow derivative feed that multiplies central WETH/USD by an owner-set ylstETH exchange rate, so it has no independent external conversion-rate source.",
+        "collateralAssets": [
+          "ylstETH"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "Beraborrow ylstETH derivative feed",
+            "path": "RedStone ETH/USD -> central PriceFeed WETH value x owner-set ylstETH exchange rate -> Collateral Vault/DebtManager ICR",
+            "address": "0x7cfab014be04d69556950cbdfafa9b5ff8e0e4ef",
+            "chain": "berachain",
+            "heartbeatSec": 1800,
+            "stalenessBoundSec": 2400,
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:ylsteth:owner-set-exchange-rate",
+              "beraborrow:central-price-feed",
+              "redstone:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The derivative feed has no independent rate oracle or alternate live source: the owner can set the exchange rate and the price path reverts when its configured source fails validation.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "ylstETH",
+            "minimumCollateralRatioPct": 125,
+            "note": "Sunsetting with positive system debt at pinned block 24033076; maxSystemDebt is zero."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:ylsteth:owner-set-exchange-rate",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
+      },
+      {
+        "id": "rseth",
+        "label": "rsETH collateral branch",
+        "tier": "standard-external",
+        "summary": "rsETH collateral branch uses the central Beraborrow PriceFeed and a configured RedStone ETH/USD adapter external price source for collateral health and liquidation.",
+        "collateralAssets": [
+          "rsETH"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone ETH/USD adapter",
+            "path": "RedStone ETH/USD adapter answer -> Beraborrow PriceFeed -> Collateral Vault/DebtManager ICR",
+            "address": "0xd15862fc3d5407a03b696548b6902d6464a69b8c",
+            "chain": "berachain",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 90000,
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:rseth:external-feed",
+              "beraborrow:central-price-feed",
+              "redstone:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "PriceFeed requires valid current and previous oracle rounds, rejects stale answers and over-50% consecutive-round moves, and reverts rather than invoking an alternate live provider.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "rsETH",
+            "minimumCollateralRatioPct": 125,
+            "note": "Sunsetting with positive system debt; maxSystemDebt is zero at pinned block 24033076; MCR is enforced by this DenManager branch."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:rseth:external-feed",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
+      },
+      {
+        "id": "wbtc-honey",
+        "label": "WBTC-HONEY Kodiak Island collateral branch",
+        "tier": "standard-external",
+        "summary": "WBTC-HONEY Kodiak Island collateral branch is valued by a Kodiak Island LP oracle that composes the central PriceFeed values of its underlying assets with Island balances and price ratio.",
+        "collateralAssets": [
+          "WBTC-HONEY Kodiak Island LP"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "Beraborrow Kodiak Island spot oracle",
+            "path": "RedStone BTC/USD and RedStone HONEY/USD -> Kodiak Island valuation -> Beraborrow PriceFeed -> Collateral Vault/DebtManager ICR",
+            "address": "0xb87879ba5100341e6ac19f1e9aa761c3eca8877d",
+            "chain": "berachain",
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:wbtc-honey:kodiak-island-oracle",
+              "beraborrow:central-price-feed",
+              "kodiak:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The Island feed derives LP value from the configured underlying PriceFeed values and Island balances; a failed component reverts the price path and the reviewed code provides no alternate live oracle.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "WBTC-HONEY Kodiak Island LP",
+            "minimumCollateralRatioPct": 125,
+            "note": "Active at pinned block 24033076; this branch enforces a 125% MCR."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:wbtc-honey:kodiak-island-oracle",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "kodiak:berachain",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
+      },
+      {
+        "id": "weth-honey",
+        "label": "WETH-HONEY Kodiak Island collateral branch",
+        "tier": "standard-external",
+        "summary": "WETH-HONEY Kodiak Island collateral branch is valued by a Kodiak Island LP oracle that composes the central PriceFeed values of its underlying assets with Island balances and price ratio.",
+        "collateralAssets": [
+          "WETH-HONEY Kodiak Island LP"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "Beraborrow Kodiak Island spot oracle",
+            "path": "RedStone ETH/USD and RedStone HONEY/USD -> Kodiak Island valuation -> Beraborrow PriceFeed -> Collateral Vault/DebtManager ICR",
+            "address": "0x5025b7445d73473bf5373253309fa550f02ad8d1",
+            "chain": "berachain",
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:weth-honey:kodiak-island-oracle",
+              "beraborrow:central-price-feed",
+              "kodiak:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The Island feed derives LP value from the configured underlying PriceFeed values and Island balances; a failed component reverts the price path and the reviewed code provides no alternate live oracle.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "WETH-HONEY Kodiak Island LP",
+            "minimumCollateralRatioPct": 125,
+            "note": "Active at pinned block 24033076; this branch enforces a 125% MCR."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:weth-honey:kodiak-island-oracle",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "kodiak:berachain",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
+      },
+      {
+        "id": "weth-wbtc",
+        "label": "WETH-WBTC Kodiak Island collateral branch",
+        "tier": "standard-external",
+        "summary": "WETH-WBTC Kodiak Island collateral branch is valued by a Kodiak Island LP oracle that composes the central PriceFeed values of its underlying assets with Island balances and price ratio.",
+        "collateralAssets": [
+          "WETH-WBTC Kodiak Island LP"
+        ],
+        "chains": [
+          "berachain"
+        ],
+        "feeds": [
+          {
+            "provider": "Beraborrow Kodiak Island spot oracle",
+            "path": "RedStone ETH/USD and RedStone BTC/USD -> Kodiak Island valuation -> Beraborrow PriceFeed -> Collateral Vault/DebtManager ICR",
+            "address": "0xc67628c6ff76191ba4068b726dcb8024022e0203",
+            "chain": "berachain",
+            "observedAt": "2026-07-26",
+            "observedBlock": 24033076,
+            "failureDomainKeys": [
+              "beraborrow:weth-wbtc:kodiak-island-oracle",
+              "beraborrow:central-price-feed",
+              "kodiak:berachain"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The Island feed derives LP value from the configured underlying PriceFeed values and Island balances; a failed component reverts the price path and the reviewed code provides no alternate live oracle.",
+        "observedAt": "2026-07-26",
+        "observedBlock": 24033076,
+        "collateralParameters": [
+          {
+            "asset": "WETH-WBTC Kodiak Island LP",
+            "minimumCollateralRatioPct": 125,
+            "note": "Active at pinned block 24033076; this branch enforces a 125% MCR."
+          }
+        ],
+        "liquidationMechanism": "LiquidationManager permits public liquidation below branch MCR. The Liquid Stability Pool first offsets NECT debt against seized collateral; any uncovered debt and collateral are redistributed to active positions in the branch.",
+        "liquidationDelaySec": 0,
+        "backstop": "The global Liquid Stability Pool is the first-loss backstop. When deposits do not cover a liquidation, the DenManager redistributes the residual debt and collateral across active positions.",
+        "shutdownOrBadDebtBehavior": "Oracle reads revert when the configured source is stale, invalid, or exceeds the PriceFeed consecutive-round deviation check; the reviewed contracts expose no alternate live feed. A sunsetting branch disables new borrowing and collateral handoff to the Stability Pool while existing positions and redistributed debt remain.",
+        "failureDomainKeys": [
+          "beraborrow:weth-wbtc:kodiak-island-oracle",
+          "beraborrow:central-price-feed",
+          "beraborrow:liquid-stability-pool",
+          "beraborrow:debt-redistribution",
+          "kodiak:berachain",
+          "berachain"
+        ],
+        "sources": [
+          {
+            "label": "Beraborrow deployed contract addresses",
+            "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+          },
+          {
+            "label": "Berachain verified Beraborrow PriceFeed",
+            "url": "https://routescan.io/address/0xa686dc84330b1b3787816de2daca485d305c8589"
+          },
+          {
+            "label": "Berachain verified Beraborrow LiquidationManager",
+            "url": "https://routescan.io/address/0x965da3f96dcbfccf3c1d0603e76356775b5afd2e"
+          },
+          {
+            "label": "Berachain RPC pinned read at block 24033076",
+            "url": "https://rpc.berachain.com"
+          }
+        ]
       }
     ]
   },
@@ -71,6 +975,7 @@
     }
   ],
   "deploymentModel": "single-chain",
+  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [
@@ -79,9 +984,9 @@
         "url": "https://routescan.io/address/0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3"
       }
     ],
-    "evidence": "The verified NECT debt-token contract leaves ordinary transfer and transferFrom unguarded by a blacklist or pause check. However, its MetaBeraborrowCore owner can whitelist DenManager, borrower-operations, and PSM contracts; those whitelisted modules can call burn(account, amount) against an arbitrary account. This is a material owner-mediated holder intervention surface, so Possible is retained rather than asserting no freeze exposure.",
-    "reviewer": "SONG Safety Score V9 access review",
-    "reviewedAt": "2026-07-14"
+    "evidence": "The verified NECT DebtToken leaves ordinary transfer and transferFrom unguarded by a direct blacklist or pause check. However, the MetaBeraborrowCore owner can whitelist a PSM bond, and a whitelisted PSM bond can call burn(account, amount) against an arbitrary account. This owner-mediated arbitrary-holder burn path is a material intervention surface, so Possible is retained rather than asserting no freeze exposure.",
+    "reviewer": "Codex Safety Score V9 ACCESS curation",
+    "reviewedAt": "2026-07-26"
   },
   "chainTier": "unproven",
   "collateralQuality": "exotic",

@@ -393,6 +393,39 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]!.output?.valuation).toBeNull();
   });
 
+  it.each(["srusd-reservoir", "wsrusd-reservoir"] as const)(
+    "values the composed %s redemption route through its final USDC output",
+    (stablecoinId) => {
+      const row = supplyFullRow({
+        stablecoinId,
+        routeFamily: "stablecoin-redeem",
+        accessModel: "permissionless-onchain",
+        holderEligibility: "any-holder",
+      });
+      const fixedInput = fixedInputStub(row);
+      const observation = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput, stablecoinId)[0]!.observation;
+      row.capacityProfile = {
+        ...row.capacityProfile!,
+        exitRouteObservations: [observation],
+      };
+      (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+        "usdc-circle": { currentDeviationBps: -3, priceObservedAt: NOW },
+      };
+
+      expect(buildSafetyScoreV9RouteReviews(fixedInput, stablecoinId)[0]?.output).toMatchObject({
+        kind: "tracked-stablecoin",
+        assetKeys: ["usdc-circle"],
+        valuation: {
+          basis: "price",
+          referenceAssetKey: "usdc-circle",
+          unitValueUsd: 0.9997,
+          expectedUnitValueUsd: 1,
+          sourceId: "report-cards-peg-summary",
+        },
+      });
+    },
+  );
+
   it("uses a complete source-bound producer valuation for CUSD when WTGXX has no peg row", () => {
     const reviewedRow = supplyFullRow({
       stablecoinId: "cusd-cap",

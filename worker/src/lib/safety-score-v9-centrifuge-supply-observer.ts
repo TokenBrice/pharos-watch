@@ -206,6 +206,7 @@ async function observeCentrifugeEvmDeployment(
     rewind <= MAX_SCORING_CLOCK_REWIND_BLOCKS && blockNumber >= 0;
     rewind += 1
   ) {
+    throwIfAborted(signal);
     blockHeader = await dependencies.fetchEvmBlockHeader(
       chainId,
       blockNumber,

@@ -33,6 +33,10 @@ import {
   publishSolanaMeasuredTargetInventory,
   publishTronMeasuredTargetInventory,
 } from "../measured-execution/persistence";
+import {
+  buildDexMeasuredTargetFingerprintIndex,
+  resolveDexMeasuredTargetForRetainedPool,
+} from "../measured-execution/retained-target-resolution";
 import { buildSolanaMeasuredPoolDirectionKey } from "../measured-execution/solana-inventory";
 import {
   joinSolanaMeasuredExecutionEvidence,
@@ -587,6 +591,8 @@ export async function computeStablecoinScores(
   const results = new Map<string, FullScoreResult>();
   const retainedPoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>();
   const routeObservedAt = Math.max(0, Math.floor(routeObservedAtSec));
+  const slipstreamMeasuredTargetsByFingerprint =
+    buildDexMeasuredTargetFingerprintIndex(slipstreamMeasuredTargets.values());
 
   // Global dedup accumulators — accumulated per-coin BEFORE top-10 truncation
   const seenPoolTvl = new Map<string, { tvl: number; vol24h: number; vol7d: number; proto: string; chain: string }>();
@@ -639,19 +645,28 @@ export async function computeStablecoinScores(
         continue;
       }
       const existingTarget = pool.extra?.measuredExecutionTarget;
+      const isPancakeV3 =
+        pool.project === "pancakeswap" && pool.poolType.startsWith("pancakeswap-v3");
       const isAerodromeSlipstream =
         (pool.project === "aerodrome" || pool.project === "aerodrome-slipstream") &&
         pool.poolType.startsWith("aerodrome-slipstream");
       const candidate =
-        pool.project === "pancakeswap" && pool.poolType.startsWith("pancakeswap-v3")
+        isPancakeV3
           ? pancakeMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
           : pool.project === "fluid" && pool.poolType.includes("fluid")
             ? fluidMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
             : isAerodromeSlipstream
-              ? slipstreamMeasuredTargets.get(buildMeasuredPoolDirectionKey(id, pool.poolId))
+              ? resolveDexMeasuredTargetForRetainedPool({
+                  stablecoinId: id,
+                  retainedPoolId: pool.poolId,
+                  retainedTvlUsd: pool.tvlUsd,
+                  adapterProfileId: "aerodrome-slipstream-quoter-v2",
+                  exactTargets: slipstreamMeasuredTargets,
+                  fingerprintTargets: slipstreamMeasuredTargetsByFingerprint,
+                })
             : existingTarget;
       const adapterProfileId =
-        pool.project === "pancakeswap"
+        isPancakeV3
           ? "pancakeswap-v3-quoter-v2"
           : pool.project === "fluid"
             ? "fluid-resolver-measured"
@@ -661,7 +676,11 @@ export async function computeStablecoinScores(
       if (!adapterProfileId) continue;
 
       pool.extra = { ...(pool.extra ?? {}) };
-      if (!candidate || candidate.poolTokenAddresses?.length !== 2) {
+      if (
+        !candidate ||
+        candidate.adapterProfileId !== adapterProfileId ||
+        candidate.poolTokenAddresses?.length !== 2
+      ) {
         delete pool.extra.measuredExecutionTarget;
         delete pool.extra.measuredExecution;
         delete pool.extra.measuredExecutionProfile;
@@ -719,15 +738,27 @@ export async function computeStablecoinScores(
     }
     for (const pool of retainedPools) {
       if (!pool.project.includes("sunswap")) continue;
+      const adapterProfileId = "sunswap-v2-router-v1";
       const candidate = tronMeasuredTargets.get(buildTronMeasuredPoolDirectionKey(id, pool.poolId));
-      if (!candidate) continue;
       pool.extra = { ...(pool.extra ?? {}) };
+      if (!candidate || candidate.adapterProfileId !== adapterProfileId) {
+        delete pool.extra.tronMeasuredExecutionTarget;
+        delete pool.extra.tronMeasuredExecution;
+        delete pool.extra.tronMeasuredExecutionProfile;
+        delete pool.extra.tronMeasuredExecutionPhysicalPoolId;
+        pool.extra.executionCapabilityGate = { family: "measured-execution", reason: "target-unresolved" };
+        pool.extra.tronMeasuredExecutionDiagnostic = { adapterProfileId };
+        continue;
+      }
       pool.extra.tronMeasuredExecutionTarget = {
         ...candidate,
         retainedTvlUsd: pool.tvlUsd,
         capturedAt: routeObservedAt,
       };
       pool.extra.tronMeasuredExecutionPhysicalPoolId = candidate.poolId;
+      if (pool.extra.executionCapabilityGate?.family === "measured-execution") {
+        delete pool.extra.executionCapabilityGate;
+      }
       pool.extra.tronMeasuredExecutionDiagnostic = {
         adapterProfileId: candidate.adapterProfileId,
         targetId: candidate.targetId,
@@ -760,6 +791,7 @@ export async function computeStablecoinScores(
   fluidMeasuredTargets.clear();
   solanaMeasuredTargets.clear();
   slipstreamMeasuredTargets.clear();
+  slipstreamMeasuredTargetsByFingerprint.clear();
   tronMeasuredTargets.clear();
 
   const inventoryTargetCount = targetInventoryById.size;

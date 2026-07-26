@@ -635,11 +635,11 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     message: "Fetching subgraph liquidity enrichment",
     providerFamily: "subgraph",
     itemsDone: 0,
-    itemsTotal: 2,
+    itemsTotal: 3,
     metadata: {
-      providerFamilies: ["uniswap-v3", "aerodrome"],
+      providerFamilies: ["uniswap-v3", "uniswap-v4", "aerodrome"],
       countTotals: {
-        subgraphFamilies: 2,
+        subgraphFamilies: 3,
       },
     },
   });
@@ -655,13 +655,15 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     stage: "subgraph-enrichment-complete",
     message: "Completed subgraph enrichment",
     providerFamily: "subgraph",
-    itemsDone: 2 - subgraphEnrichment.failedSources.length,
-    itemsTotal: 2,
+    itemsDone: 3 - subgraphEnrichment.failedSources.length,
+    itemsTotal: 3,
     metadata: {
-      providerFamilies: ["uniswap-v3", "aerodrome"],
+      providerFamilies: ["uniswap-v3", "uniswap-v4", "aerodrome"],
       failedSources: subgraphEnrichment.failedSources,
       countTotals: {
         uniV3PriceObservations: subgraphEnrichment.uniV3PriceObs.size,
+        uniswapV4ExecutionCandidateKeys:
+          subgraphEnrichment.uniswapV4ExecutionCandidates.size,
         aerodromePriceObservations: subgraphEnrichment.aerodromePriceObs.size,
       },
     },
@@ -769,6 +771,7 @@ async function buildDexLiquidityPoolState(
     sourceState.validationReferences,
     sourceState.subgraphEnrichment.aerodromeV2ExecutionCandidates,
     sourceState.curvePoolCandidatesByFingerprint,
+    sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates,
   );
 
   // Primary pools and enrichment maps have been projected into metrics and the
@@ -784,6 +787,7 @@ async function buildDexLiquidityPoolState(
   sourceState.subgraphEnrichment.uniV3SymbolFees = new Map();
   sourceState.subgraphEnrichment.uniV3PriceObs = new Map();
   sourceState.subgraphEnrichment.uniV3ExecutionCandidates = new Map();
+  sourceState.subgraphEnrichment.uniswapV4ExecutionCandidates = new Map();
   sourceState.subgraphEnrichment.aerodromePriceObs = new Map();
   sourceState.subgraphEnrichment.aerodromeIsStable = new Map();
   sourceState.subgraphEnrichment.aerodromeV2ExecutionCandidates = new Map();

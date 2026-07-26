@@ -322,7 +322,59 @@ describe("loadCronHealth — watch-tier bootstrap guard", () => {
     expect(snapshot.crons["sync-stablecoins"]?.bootstrap).toBeUndefined();
   });
 
-  it("does not set bootstrap for a watch-tier cron that has some history", async () => {
+  it("keeps a watch-tier cron in bootstrap through neutral-only admission history", async () => {
+    const rows = seedWithClearedJobs(NOW, [
+      "compute-safety-score-v9-shadow",
+    ]);
+    rows.push(
+      makeCronRow(
+        "compute-safety-score-v9-shadow",
+        "skipped_neutral",
+        30,
+        NOW,
+      ),
+    );
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+
+    expect(snapshot.crons["compute-safety-score-v9-shadow"]?.bootstrap).toBe(
+      true,
+    );
+    expect(snapshot.crons["compute-safety-score-v9-shadow"]?.healthy).toBe(
+      true,
+    );
+    expect(snapshot.watchUnhealthyCrons).toBe(0);
+  });
+
+  it("ends watch-tier bootstrap after repeated neutral-only admissions", async () => {
+    const rows = seedWithClearedJobs(NOW, [
+      "compute-safety-score-v9-shadow",
+    ]);
+    rows.push(
+      makeCronRow(
+        "compute-safety-score-v9-shadow",
+        "skipped_neutral",
+        30,
+        NOW,
+      ),
+      makeCronRow(
+        "compute-safety-score-v9-shadow",
+        "skipped_neutral",
+        900,
+        NOW,
+      ),
+    );
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+
+    expect(
+      snapshot.crons["compute-safety-score-v9-shadow"]?.bootstrap,
+    ).toBeUndefined();
+    expect(snapshot.crons["compute-safety-score-v9-shadow"]?.healthy).toBe(
+      false,
+    );
+    expect(snapshot.watchUnhealthyCrons).toBe(1);
+  });
+
+  it("does not set bootstrap for a watch-tier cron that has required history", async () => {
     // If a watch-tier cron has at least one historical run (even very old or
     // failed), it is NOT in bootstrap — regular health rules apply.
     const rows = seedWithClearedJobs(NOW, ["sync-dex-liquidity"]);

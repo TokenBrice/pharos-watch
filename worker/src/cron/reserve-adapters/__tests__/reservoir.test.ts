@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop-live-metadata";
+import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop-sources";
 import { adaptReservoirReserves, fetchReservoirReserves, type ReservoirReservesResponse } from "../reservoir";
 import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "../request";
 
@@ -30,7 +33,13 @@ describe("adaptReservoirReserves", () => {
   });
 
   it("groups live balance-sheet assets into reserve slices", () => {
-    const { slices, immediateRedeemableUsd, supplyUsd, unknownExposurePct } = adaptReservoirReserves(SAMPLE_RESPONSE);
+    const {
+      slices,
+      stableBucketLiquidityUsd,
+      immediateRedeemableUsd,
+      supplyUsd,
+      unknownExposurePct,
+    } = adaptReservoirReserves(SAMPLE_RESPONSE);
 
     expect(slices).toEqual([
       {
@@ -46,14 +55,16 @@ describe("adaptReservoirReserves", () => {
       { name: "USDT / USDT0 positions", pct: 10, risk: "medium", coinId: "usdt-tether", depType: "collateral" },
       { name: "USDC positions", pct: 5, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
     ]);
-    // All stable buckets count toward immediate redemption capacity, not just USDC.
-    expect(immediateRedeemableUsd).toBe(95);
+    // The broader stable bucket remains diagnostic, while the modeled terminal
+    // USDC route is limited to the actual USDC slice.
+    expect(stableBucketLiquidityUsd).toBe(95);
+    expect(immediateRedeemableUsd).toBe(5);
     expect(supplyUsd).toBe(95);
     expect(unknownExposurePct).toBe(0);
   });
 
   it("classifies current Reservoir AUSD and Steakhouse Prime strategy rows", () => {
-    const { slices, unknownExposurePct, immediateRedeemableUsd } = adaptReservoirReserves({
+    const { slices, unknownExposurePct, stableBucketLiquidityUsd, immediateRedeemableUsd } = adaptReservoirReserves({
       assets: [
         {
           label: "Morpho - Grove x Steakhouse High Yield AUSD",
@@ -78,7 +89,8 @@ describe("adaptReservoirReserves", () => {
       { name: "AUSD lending markets", pct: 60, risk: "medium", coinId: "ausd-agora", depType: "collateral" },
       { name: "USDC positions", pct: 40, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
     ]);
-    expect(immediateRedeemableUsd).toBe(95);
+    expect(stableBucketLiquidityUsd).toBe(95);
+    expect(immediateRedeemableUsd).toBe(40);
     expect(unknownExposurePct).toBe(0);
   });
 
@@ -234,13 +246,77 @@ describe("adaptReservoirReserves", () => {
       totalLiabilitiesUsd: 95,
       shareholderEquityUsd: 5,
       collateralizationRatio: 100 / 95,
-      redemption: { routeStatus: "unknown", routeStatusSource: "protocol-api" },
+      stableBucketLiquidityUsd: 95,
+      immediateRedeemableUsd: 5,
+      immediateRedeemableRatio: 5 / 95,
+      redemption: {
+        capacityUsd: 5,
+        capacityRatioOfSupply: 5 / 95,
+        routeStatus: "unknown",
+        routeStatusSource: "protocol-api",
+      },
     });
     // No timestamped disclosure exists; the adapter must not invent score-grade freshness.
     expect(result.metadata?.sourceTimestamp).toBeUndefined();
     expect(result.metadata?.redemption).toMatchObject({
       freshnessKind: "unverified",
     });
+  });
+
+  it("binds the emitted USDC route capacity to the adapter fixture's USDC slice", async () => {
+    const now = 1_800_000_000;
+    const result = await fetchReservoirReserves(
+      { id: "wsrusd-reservoir" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
+      },
+      new AbortController().signal,
+      {
+        requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]),
+      } as never,
+    );
+    if (!result.metadata) throw new Error("Reservoir fixture did not emit metadata");
+
+    const reserveSnapshot = {
+      stablecoinId: "wsrusd-reservoir",
+      fetchedAt: now,
+      source: "reservoir",
+      metadata: result.metadata,
+      warningCount: 0,
+      warnings: [],
+      sourceModel: "dynamic-mix" as const,
+      evidenceClass: "independent" as const,
+      syncStatus: "ok" as const,
+    };
+    const liveMetadata = readRedemptionBackstopLiveMetadata("wsrusd-reservoir", reserveSnapshot, now);
+
+    expect(liveMetadata.canUseCapacity).toBe(true);
+    expect(liveMetadata.immediateRedeemableUsd).toBe(5);
+    expect(liveMetadata.immediateRedeemableRatio).toBe(5 / 95);
+
+    const config = getRedemptionBackstopConfig("wsrusd-reservoir");
+    expect(config).toBeDefined();
+    const entry = await buildRedemptionBackstopEntry(
+      {} as D1Database,
+      "wsrusd-reservoir",
+      config!,
+      95,
+      null,
+      now,
+      { reserveSnapshotMetadata: reserveSnapshot },
+    );
+
+    expect(entry.immediateCapacityUsd).toBe(5);
+    expect(entry.capacityProfile?.scoringUsd).toBe(5);
+    const observation = entry.capacityProfile?.exitRouteObservations?.[0];
+    expect(observation?.output).toEqual({
+      kind: "tracked-stablecoin",
+      trackedAssetIds: ["usdc-circle"],
+    });
+    expect(observation?.capacityCurve?.every((point) => point.executableUsd <= 5)).toBe(true);
   });
 
   it("falls back to neutral API headers when browser-style headers fail", async () => {

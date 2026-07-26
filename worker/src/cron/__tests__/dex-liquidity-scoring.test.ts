@@ -48,7 +48,7 @@ import { getCache } from "../../lib/db-cache";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
-import { initMetrics } from "../dex-liquidity/pool-helpers";
+import { buildPoolFingerprint, initMetrics } from "../dex-liquidity/pool-helpers";
 import {
   computeDepthStability,
   computeDexPrices,
@@ -805,6 +805,48 @@ describe("dex-liquidity scoring", () => {
     });
   });
 
+  it("fails a retained SunSwap pool closed when its exact native target is missing", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const metrics = initMetrics("usdt-tether", "USDT");
+    metrics.topPools = [{
+      poolId: "TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ",
+      project: "sunswap-v2",
+      chain: "Tron",
+      tvlUsd: 92_000_000,
+      symbol: "USDT-WTRX",
+      volumeUsd1d: 700_000,
+      volumeUsd7d: 4_900_000,
+      poolType: "sunswap-v2",
+      source: "dl",
+    }];
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["usdt-tether", metrics]]),
+      new Map(),
+      undefined,
+      1_752_560_000,
+      new Map(),
+      new Map(),
+      undefined,
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+    const retainedPool = result.retainedPoolsByStablecoin.get("usdt-tether")?.[0];
+    const routeResult = result.scores.get("usdt-tether") as {
+      exitRouteObservationCoverage?: { unsupportedReasons: Record<string, number> };
+    } | undefined;
+
+    expect(retainedPool?.extra?.executionCapabilityGate).toEqual({
+      family: "measured-execution",
+      reason: "target-unresolved",
+    });
+    expect(routeResult?.exitRouteObservationCoverage?.unsupportedReasons).toMatchObject({
+      "executionCapabilityGate:measured-execution:target-unresolved": 1,
+    });
+  });
+
   it("fails coverage closed when reviewed route capabilities overflow the bounded payload", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
     const metrics = initMetrics("usdc-circle", "USDC");
@@ -1203,6 +1245,116 @@ describe("dex-liquidity scoring", () => {
 
     expect(result.diagnostics.measuredExecution.inventoryTargetCount).toBe(1);
     expect(slipstreamTargets).toHaveLength(0);
+  });
+
+  it("joins a DeFiLlama Slipstream fingerprint to the unique exact target inside the TVL window", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const cadc = "0x043eb4b75d0805c43d7c834902e335621983cf03";
+    const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+    const metrics = initMetrics("cadc-cad-coin", "CADC");
+    metrics.topPools = [
+      {
+        poolId: buildPoolFingerprint("base", "aerodrome", [cadc, usdc])!,
+        project: "aerodrome",
+        chain: "Base",
+        tvlUsd: 157_000,
+        symbol: "CADC-USDC",
+        volumeUsd1d: 31_000,
+        volumeUsd7d: 217_000,
+        poolType: "aerodrome-slipstream-5bp",
+        source: "dl",
+      },
+    ];
+    const makeTarget = (
+      poolId: string,
+      retainedTvlUsd: number,
+      tickSpacing: number,
+    ): DexMeasuredExecutionTarget => ({
+      schemaVersion: "dex-measured-target-v1",
+      targetId: `target:${poolId}`,
+      stablecoinId: "cadc-cad-coin",
+      adapterProfileId: "aerodrome-slipstream-quoter-v2",
+      protocol: "aerodrome-slipstream",
+      chain: "base",
+      poolId,
+      poolTokenAddresses: [cadc, usdc],
+      tokenIn: {
+        address: cadc,
+        symbol: "CADC",
+        decimals: 18,
+        referencePriceUsd: 0.711,
+        trackedAssetId: "cadc-cad-coin",
+      },
+      tokenOut: {
+        address: usdc,
+        symbol: "USDC",
+        decimals: 6,
+        referencePriceUsd: 1,
+        trackedAssetId: "usdc-circle",
+      },
+      tickSpacing,
+      retainedTvlUsd,
+      retainedPoolPriceUsd: 0.711,
+      capturedAt: 1_785_084_000,
+    });
+    const primary = makeTarget(
+      "base:0x09da4832d34bebbb55783340d5bede7a70f5c48e",
+      156_900,
+      10,
+    );
+    const dustSibling = makeTarget(
+      "base:0xd12f263309f05d70d88d264ad0210d7c4d1cb54a",
+      1.13,
+      1,
+    );
+    const slipstreamTargets = new Map([
+      [`cadc-cad-coin|${primary.poolId}`, primary],
+      [`cadc-cad-coin|${dustSibling.poolId}`, dustSibling],
+    ]);
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["cadc-cad-coin", metrics]]),
+      new Map(),
+      undefined,
+      1_785_084_100,
+      new Map(),
+      new Map(),
+      undefined,
+      new Map(),
+      slipstreamTargets,
+    );
+
+    expect(result.diagnostics.measuredExecution.inventoryTargetCount).toBe(1);
+    expect(slipstreamTargets).toHaveLength(0);
+  });
+
+  it("does not misattribute an unsupported Pancake pool family to the V3 adapter", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const metrics = initMetrics("cadc-cad-coin", "CADC");
+    metrics.topPools = [
+      {
+        poolId: "base:0x31a98819f70438b162c6f9a6d342e9e84f84c825c0348dac23b9fbcb9d282139",
+        project: "pancakeswap",
+        chain: "Base",
+        tvlUsd: 10_327,
+        symbol: "CADC / USDC",
+        volumeUsd1d: 8,
+        volumeUsd7d: 56,
+        poolType: "cg-amm",
+        source: "cg_onchain",
+      },
+    ];
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map([["cadc-cad-coin", metrics]]),
+      new Map(),
+    );
+    const retained = result.retainedPoolsByStablecoin.get("cadc-cad-coin")?.[0];
+
+    expect(retained?.extra?.executionCapabilityGate).toBeUndefined();
+    expect(result.diagnostics.measuredExecution.inventoryTargetCount).toBe(0);
   });
 
   it("applies DefiLlama protocol caps to Carbon DeFi chain-suffixed secondary rows", async () => {

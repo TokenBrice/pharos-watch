@@ -161,6 +161,58 @@ export function buildEvmV2ExecutionCandidate(input: {
   };
 }
 
+export type UniqueEvmV2ExecutionCandidateFingerprintIndex = Map<
+  string,
+  EvmV2ExecutionCandidate | null
+>;
+
+/**
+ * Index reviewed exact candidates by their canonical token fingerprint.
+ *
+ * A null value is an explicit ambiguity marker. The exact-address map remains
+ * authoritative; this index exists only for retained providers such as
+ * DeFiLlama that identify the same pool with a UUID instead of its address.
+ */
+export function buildUniqueEvmV2ExecutionCandidateFingerprintIndex(
+  candidates: ReadonlyMap<string, EvmV2ExecutionCandidate>,
+): UniqueEvmV2ExecutionCandidateFingerprintIndex {
+  const index: UniqueEvmV2ExecutionCandidateFingerprintIndex = new Map();
+  for (const [exactPoolKey, candidate] of candidates) {
+    const separator = exactPoolKey.indexOf(":");
+    if (separator <= 0) continue;
+    const chain = canonicalExitRouteChain(exactPoolKey.slice(0, separator));
+    if (canonicalExitRouteAssetKey(chain, candidate.poolAddress) !== exactPoolKey.trim().toLowerCase()) {
+      continue;
+    }
+    const fingerprint = buildPoolFingerprint(chain, candidate.source, [...candidate.tokenAddresses]);
+    if (!fingerprint) continue;
+    if (index.has(fingerprint)) {
+      index.set(fingerprint, null);
+    } else {
+      index.set(fingerprint, candidate);
+    }
+  }
+  return index;
+}
+
+/** Resolve exact address first, then a unique same-family token fingerprint. */
+export function resolveEvmV2ExecutionCandidate(input: {
+  chain: string;
+  protocol: string;
+  poolAddressOrId: string;
+  tokenAddresses: readonly string[];
+  exactCandidates: ReadonlyMap<string, EvmV2ExecutionCandidate>;
+  uniqueFingerprintCandidates: ReadonlyMap<string, EvmV2ExecutionCandidate | null>;
+}): EvmV2ExecutionCandidate | undefined {
+  const chain = canonicalExitRouteChain(input.chain);
+  const exact = input.exactCandidates.get(canonicalExitRouteAssetKey(chain, input.poolAddressOrId));
+  if (exact) return exact;
+  if (input.tokenAddresses.length !== 2) return undefined;
+  const fingerprint = buildPoolFingerprint(chain, input.protocol, [...input.tokenAddresses]);
+  if (!fingerprint) return undefined;
+  return input.uniqueFingerprintCandidates.get(fingerprint) ?? undefined;
+}
+
 /** Attach an exact staged candidate to a retained primary row deduped by its token fingerprint. */
 export function attachEvmV2CandidateToRetainedPool(input: {
   metrics: Map<string, LiquidityMetrics>;

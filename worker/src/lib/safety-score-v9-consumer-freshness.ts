@@ -1,5 +1,5 @@
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
-import { SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC } from "./safety-score-v9-shadow-runner";
+import { SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 
 /**
  * Active consumers tolerate one missed shadow refresh before failing closed.

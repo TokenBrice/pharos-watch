@@ -58,6 +58,19 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "dusd-dtrinity": defineStablecoinRedeemConfig({
     executionModel: "deterministic-basket",
     outputAssetType: "stable-basket",
+    unresolvedOutputAssetKeys: [
+      "usdc-circle",
+      "usdt-tether",
+      "usds-sky",
+      "susds-sky",
+      "frxusd-frax",
+      "sfrxusd-frax",
+      "dai-makerdao",
+      "sdai-sky",
+      "asset:vbusdc",
+      "asset:vbusdt",
+      "ausd-agora",
+    ],
     capacityModel: { kind: "supply-ratio", ratio: 0.4, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: fixedFee(50, "Protocol docs describe redemption fees of up to 50 bps"),
     reviewedAt: "2026-07-15",
@@ -71,7 +84,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "The 40% ratio is a reviewed heuristic reflecting tracked stable-bucket share rather than a published instant-liquidity floor.",
       "dTRINITY currently marks 11 symbols redeem-eligible across Ethereum, Fraxtal, and Katana: USDC, USDT, USDS, sUSDS, frxUSD, sfrxUSD, DAI, sDAI, vbUSDC, vbUSDT, and AUSD.",
-      "outputAssets remains unset so the route resolves as an unresolved basket: vbUSDC and vbUSDT have no tracked Pharos ids, and publishing only the nine tracked economic assets would misstate the documented holder-selectable output set.",
+      "outputAssets remains unset so the route resolves as an unresolved basket: vbUSDC and vbUSDT have no tracked Pharos ids. unresolvedOutputAssetKeys preserves the complete 11-member identity set diagnostically without making the basket scoreable.",
     ],
   }),
   "ousd-origin-protocol": defineStablecoinRedeemConfig({
@@ -189,7 +202,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "wsrusd-reservoir": defineStablecoinRedeemConfig({
-    outputAssets: ["rusd-reservoir"],
+    outputAssets: ["usdc-circle"],
     executionModel: "rules-based-nav",
     capacityModel: {
       kind: "reserve-sync-metadata",
@@ -212,6 +225,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
     ],
     notes: [
+      "The modeled route composes the ERC-4626 unwrap into rUSD with the downstream Reservoir PSM exit, so its final output is USDC",
       "Fresh live reserve telemetry uses the current USDC position as the immediate redeemable lower bound",
       "When the timestamp-less Reservoir balance-sheet feed cannot meet scoring-grade freshness requirements, the route falls back to the reviewed 25 bps minimum USDC PSM balance documented by Reservoir",
     ],
@@ -275,6 +289,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "sdusd-dtrinity": defineStablecoinRedeemConfig({
     ...documentedBoundSupplyFull("2026-06-10"),
+    outputAssets: ["dusd-dtrinity"],
     capacityModel: { kind: "reserve-sync-metadata" },
     executionModel: "rules-based-nav",
     totalScoreCap: 70,
@@ -292,9 +307,9 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       ]),
     ],
     notes: [
-      "Modeled route is the permissionless sdUSD wrapper exit into dUSD; staked dUSD is supplied into dLEND, so immediate exits depend on idle vault liquidity rather than full deployed supply.",
+      "Modeled route is the permissionless atomic sdUSD wrapper exit into dUSD; the output is pinned explicitly to the tracked dUSD asset.",
       "Config-level cap reflects that unwrapping to dUSD does not by itself guarantee a full stablecoin exit; dUSD's own redemption capacity remains separately bounded.",
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle dUSD balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using a full-supply model.",
+      "Fresh ERC-4626 reserve telemetry pins the Ethereum token/router/strategy identities, reads the exact active withdrawal set, and bounds direct capacity by dLEND maxWithdraw plus dUSD available liquidity. It fails closed instead of treating the token's idle dUSD balance or full supply as executable.",
     ],
   }),
   "sfrxusd-frax": defineStablecoinRedeemConfig({
@@ -854,7 +869,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "srusd-reservoir": defineStablecoinRedeemConfig({
-    outputAssets: ["rusd-reservoir"],
+    outputAssets: ["usdc-circle"],
     capacityModel: {
       kind: "reserve-sync-metadata",
       fallbackRatio: 0.0025,
@@ -882,6 +897,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
     ],
     notes: [
+      "The modeled route composes the srUSD exit into rUSD with the downstream Reservoir PSM exit, so its final output is USDC",
       "Fresh reserve telemetry uses Reservoir's balance-sheet feed; when it is unavailable, the route falls back to Reservoir's documented 25 bps minimum USDC PSM balance",
     ],
   }),
@@ -1270,7 +1286,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "zys-zephyr-protocol": defineStablecoinRedeemConfig({
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     executionModel: "rules-based-nav",
-    outputAssetType: "nav",
+    outputAssetType: "stable-single",
+    outputAssets: ["zsd-zephyr-protocol"],
     costModel: documentedVariableFee(
       "Zephyr conversion fees are absorbed by reserves and depend on protocol conversion-rate mechanics rather than a single published fixed bps fee",
     ),
@@ -1288,7 +1305,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("Zephyr emission and yield reserve", "https://zephyrprotocol.com/network/emission", ["capacity"]),
     ],
     notes: [
-      "ZYS is a Zephyr yield-share asset rather than a flat $1 token; the route is modeled as protocol conversion / redemption of the yield share's ZSD reserve value.",
+      "ZYS is a Zephyr yield-share asset rather than a flat $1 token; its protocol conversion pays ZSD at the current ZYS/ZSD share value, so the exact tracked output is zsd-zephyr-protocol.",
       "Final dollar exit inherits the underlying ZSD protocol collateral redemption route.",
     ],
   }),
@@ -1416,8 +1433,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "eearn-ember": defineStablecoinRedeemConfig({
-    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.05, basis: "strategy-buffer" },
+    outputAssets: ["usdc-circle"],
+    capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
     executionModel: "rules-based-nav",
+    v9RouteReviewTerms: { settlementModel: "queued" },
     costModel: fixedFee(
       0,
       "On-chain ERC-4626 check on the eEARN contract (Ethereum 0x9be9...cafa2) shows previewRedeem equals convertToAssets, so no exit/withdrawal fee is currently skimmed; the fee is admin-configurable and presently zero",
@@ -1439,8 +1458,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("Royco Dawn eEARN market", "https://dawn.royco.org/", ["route", "capacity"]),
     ],
     notes: [
-      "Fresh ERC-4626 reserve telemetry reads the vault's idle USDC balance as current direct redemption capacity; the reviewed 5% strategy-buffer ratio is retained only as fallback when live metadata is unavailable.",
-      "The eEARN withdrawal/exit fee is admin-configurable on the proxy; it was verified zero on-chain at review time. Future work should add live fee telemetry so the cost model tracks the on-chain fee instead of relying on a point-in-time reading.",
+      "The holder path submits a request to an operator-processed queue. The V9 route overlay therefore uses queued settlement; no positive capacity is eligible for the shared 300-second horizon without a bounded completion path.",
+      "Fresh specialized telemetry pins the vault, validator, protocol-config proxies and implementations, reads pause/queue state and the current admin-configurable fee, and keeps idle USDC diagnostic-only. Identity or state-read drift fails closed with no static capacity fallback.",
     ],
   }),
 };

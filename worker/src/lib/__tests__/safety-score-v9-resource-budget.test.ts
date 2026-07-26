@@ -27,10 +27,17 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
           import { buildSafetyScoreV9ShadowCandidateFromNormalizedInput } from "../safety-score-v9-candidate.ts";
           import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input.ts";
           import {
+            buildReportCardsFixedInputCacheEntry,
             buildReportCardsSnapshotFromFixedInput,
             buildSafetyScoreV9FixedInputCacheEntry,
             normalizeFixedInput,
+            parseReportCardsFixedInputCacheArtifact,
           } from "../report-cards-fixed-input.ts";
+          import {
+            buildSafetyScoreV9PegProvenanceSeedCacheEntry,
+            captureSafetyScoreV9PegProvenanceById,
+            parseSafetyScoreV9PegProvenanceSeed,
+          } from "../safety-score-v9-peg-provenance.ts";
           import {
             buildSafetyScoreV9DiffReport,
             buildSafetyScoreV9ShadowEnvelope,
@@ -41,7 +48,43 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
             serializeSafetyScoreV9ShadowEnvelopeCacheValue,
           } from "../safety-score-v9-cache-codec.ts";
 
-          const fixedInput = normalizeFixedInput(createSafetyScoreV9FullRegistryInput());
+          const sourceInput = normalizeFixedInput(createSafetyScoreV9FullRegistryInput());
+          const safetyScoreIdentity = buildSafetyScoreV8PublicationIdentity({
+            methodologyVersion: sourceInput.methodologyVersion,
+            baseInputGenerationId: sourceInput.baseInputGenerationId,
+            publicationGenerationId: sourceInput.sourceGeneration,
+          });
+          const pegProvenanceById = captureSafetyScoreV9PegProvenanceById(
+            sourceInput,
+            {
+              clockSec: sourceInput.clockSec,
+              eventsByCoin: new Map(),
+            },
+          );
+          const v8Cache = await buildReportCardsFixedInputCacheEntry(
+            sourceInput,
+            safetyScoreIdentity,
+          );
+          const seedCache = buildSafetyScoreV9PegProvenanceSeedCacheEntry({
+            sourceGeneration: sourceInput.sourceGeneration,
+            clockSec: sourceInput.clockSec,
+            safetyScoreIdentity,
+            pegProvenanceById,
+          });
+          const cacheRows = new Map([
+            [v8Cache.key, v8Cache.value],
+            [seedCache.key, seedCache.value],
+          ]);
+          const exactSeed = parseSafetyScoreV9PegProvenanceSeed(
+            cacheRows.get(seedCache.key),
+          );
+          cacheRows.delete(seedCache.key);
+          const fixedInput = (
+            await parseReportCardsFixedInputCacheArtifact(
+              cacheRows.get(v8Cache.key),
+            )
+          ).input;
+          cacheRows.delete(v8Cache.key);
           const activeIds = new Set(fixedInput.activeAssetIds);
           const v8Cards = buildReportCardsSnapshotFromFixedInput(fixedInput).cards
             .filter((card) => activeIds.has(card.id));
@@ -49,13 +92,8 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
             ...fixedInput,
             evidenceJournalById: {},
             supplyAttributionJournalById: {},
-            pegProvenanceById: {},
+            pegProvenanceById: exactSeed.pegProvenanceById,
           };
-          const safetyScoreIdentity = buildSafetyScoreV8PublicationIdentity({
-            methodologyVersion: fixedInput.methodologyVersion,
-            baseInputGenerationId: fixedInput.baseInputGenerationId,
-            publicationGenerationId: fixedInput.sourceGeneration,
-          });
           const fixedInputCache = await buildSafetyScoreV9FixedInputCacheEntry(
             preparedInput,
             safetyScoreIdentity,
@@ -152,6 +190,8 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
             envelopeDigest: computeSafetyScoreV9ShadowEnvelopeDigest(envelope),
             diffDigest: diff.reportDigest,
             reviewKeys: reviewKeys.length,
+            v8FixedInputCacheBytes: v8Cache.storedBytes,
+            pegProvenanceSeedBytes: seedCache.storedBytes,
             fixedInputCacheBytes: fixedInputCache.storedBytes,
             storedEnvelopeBytes: storedEnvelope.length,
             storedDiffBytes: storedDiff.length,
@@ -216,6 +256,8 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
       envelopeDigest: string;
       diffDigest: string;
       reviewKeys: number;
+      v8FixedInputCacheBytes: number;
+      pegProvenanceSeedBytes: number;
       fixedInputCacheBytes: number;
       storedEnvelopeBytes: number;
       storedDiffBytes: number;
@@ -229,6 +271,8 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
     expect(output.envelopeDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(output.diffDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(output.reviewKeys).toBeGreaterThan(0);
+    expect(output.v8FixedInputCacheBytes).toBeGreaterThan(0);
+    expect(output.pegProvenanceSeedBytes).toBeGreaterThan(0);
     expect(output.fixedInputCacheBytes).toBeGreaterThan(0);
     expect(output.storedEnvelopeBytes).toBeGreaterThan(0);
     expect(output.storedDiffBytes).toBeGreaterThan(0);

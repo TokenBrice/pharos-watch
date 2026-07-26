@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   SupplyAttributionJournalByIdV1Schema,
+  SupplyAttributionJournalV1Schema,
+  computeSupplyAttributionJournalIdV1,
   createSupplyAttributionJournalV1,
   type SupplyAttributionJournalV1Payload,
 } from "../safety-score-v9-supply-attribution-journal";
@@ -43,6 +45,7 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
           "supply-attribution:00000000-0000-4000-8000-000000000002",
         admissionCode: "supply-attribution.admission.rejected-identity-drift",
         fallbackCode: "supply-attribution.fallback.aggregate-only",
+        rejectionCode: "deployment-identity-mismatch",
         sourceObservedAtSec: null,
         failedRouteId:
           "base:0x437cc33344a0b27a429f795ff6b469c72698b291",
@@ -59,6 +62,93 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
         "wm-m0": [rejected, accepted],
       })["wm-m0"],
     ).toEqual([accepted, rejected]);
+  });
+
+  it("parses immutable pre-diagnostic V1 rows without changing their IDs", () => {
+    const currentPayload = payload({
+      admissionCode: "supply-attribution.admission.rejected-stale",
+      fallbackCode: "supply-attribution.fallback.aggregate-only",
+      rejectionCode: "safe-block-unavailable",
+      sourceObservedAtSec: null,
+      contentSha256: null,
+    });
+    const {
+      rejectionCode: _rejectionCode,
+      ...legacyPayload
+    } = currentPayload;
+    const legacyRecord = {
+      ...legacyPayload,
+      journalId: computeSupplyAttributionJournalIdV1(legacyPayload),
+    };
+
+    expect(SupplyAttributionJournalV1Schema.parse(legacyRecord)).toEqual(
+      legacyRecord,
+    );
+    expect(() =>
+      createSupplyAttributionJournalV1(
+        legacyPayload as SupplyAttributionJournalV1Payload,
+      ),
+    ).toThrow(/exact leaf code/);
+  });
+
+  it("retains exact bounded XAUT rejection diagnostics", () => {
+    const stale = createSupplyAttributionJournalV1(
+      payload({
+        assetId: "xaut-tether",
+        sourceId: "xaut.canonical-lock-mint-group-partition.v2",
+        sourceOriginClass: "issuer-disclosure-plus-onchain",
+        admissionCode: "supply-attribution.admission.rejected-stale",
+        fallbackCode: "supply-attribution.fallback.aggregate-only",
+        rejectionCode: "transparency-stale",
+        sourceObservedAtSec: 90,
+        contentSha256: null,
+      }),
+    );
+
+    expect(stale).toMatchObject({
+      rejectionCode: "transparency-stale",
+      sourceObservedAtSec: 90,
+    });
+    expect(() =>
+      createSupplyAttributionJournalV1(
+        payload({
+          assetId: "xaut-tether",
+          sourceId: "xaut.canonical-lock-mint-group-partition.v2",
+          sourceOriginClass: "issuer-disclosure-plus-onchain",
+          admissionCode: "supply-attribution.admission.rejected-stale",
+          fallbackCode: "supply-attribution.fallback.aggregate-only",
+          rejectionCode: "transparency-stale",
+          sourceObservedAtSec: null,
+          contentSha256: null,
+        }),
+      ),
+    ).toThrow(/requires its rejected source timestamp/);
+    expect(() =>
+      createSupplyAttributionJournalV1(
+        payload({
+          rejectionCode: "transparency-stale",
+        }),
+      ),
+    ).toThrow(/cannot emit transparency-stale/);
+  });
+
+  it("binds each exact rejection leaf to its aggregate admission class", () => {
+    expect(() =>
+      createSupplyAttributionJournalV1(
+        payload({
+          assetId: "xaut-tether",
+          sourceId: "xaut.canonical-lock-mint-group-partition.v2",
+          sourceOriginClass: "issuer-disclosure-plus-onchain",
+          admissionCode: "supply-attribution.admission.rejected-upstream",
+          fallbackCode: "supply-attribution.fallback.aggregate-only",
+          rejectionCode: "transparency-stale",
+          sourceObservedAtSec: 90,
+          contentSha256: null,
+        }),
+      ),
+    ).toThrow(
+      /transparency-stale requires supply-attribution\.admission\.rejected-stale/,
+    );
   });
 
   it("records XAUT issuer disclosure plus onchain evidence distinctly", () => {
@@ -153,6 +243,7 @@ describe("Safety Score V9 supply attribution journal runtime", () => {
         payload({
           admissionCode: "supply-attribution.admission.rejected-upstream",
           fallbackCode: "supply-attribution.fallback.not-used",
+          rejectionCode: "chain-rpc-unavailable",
           sourceObservedAtSec: null,
           contentSha256: null,
         }),

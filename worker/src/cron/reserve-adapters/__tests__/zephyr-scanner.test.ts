@@ -133,4 +133,96 @@ describe("adaptZephyrScanner", () => {
     const report = validateAdapterOutput(result, { adapter });
     expect(report.valid).toBe(true);
   });
+
+  it("maps the ZYS yield reserve to the exact tracked ZSD dependency", () => {
+    const result = adaptZephyrScanner(
+      {
+        results: [
+          {
+            captured_at: "2026-07-19T23:46:28.729Z",
+            reserve_height: 822991,
+            on_chain: {
+              zsd_yield_reserve_atoms: "355777179070495244",
+              zys_circ_atoms: "183232761929264165",
+            },
+            pricing_record: {
+              timestamp: 1784504312,
+              yield_price: 1941667180000,
+            },
+            raw: {
+              num_zyield: "183232761929264165",
+              zyield_reserve: "355777179070495244",
+            },
+          },
+        ],
+      },
+      "zys-zephyr-protocol",
+    );
+
+    expect(result.slices).toEqual([
+      expect.objectContaining({
+        name: "ZSD yield reserve backing ZYS shares",
+        pct: 100,
+        coinId: "zsd-zephyr-protocol",
+        depType: "wrapper",
+        assetClass: "stablecoin",
+      }),
+    ]);
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: 1784504788,
+      reserveAmountZsd: 355_777.17907049524,
+      liabilityAmountZsd: 355_777.04013880575,
+      zysCirculating: 183_232.76192926418,
+      sharePriceZsd: 1.94166718,
+      collateralizationRatio: expect.closeTo(1, 6),
+      details: {
+        reserveAssetId: "zsd-zephyr-protocol",
+        zysCirculating: 183_232.76192926418,
+        sharePriceZsd: 1.94166718,
+        adapterStatus: {
+          asset: "zys-zephyr-protocol",
+          sliceSumPct: 100,
+          unresolvedBucketCount: 0,
+          classificationResult: "complete",
+        },
+      },
+    });
+    expect(result.metadata).not.toHaveProperty("totalReserveUsd");
+    expect(result.metadata).not.toHaveProperty("supplyUsd");
+
+    const adapter = getReserveAdapter("zephyr-scanner") ?? undefined;
+    const report = validateAdapterOutput(result, {
+      adapter,
+      subjectId: "zys-zephyr-protocol",
+      knownStablecoinIds: new Set([
+        "zsd-zephyr-protocol",
+        "zys-zephyr-protocol",
+      ]),
+      now: 1784505000,
+    });
+    expect(report.valid).toBe(true);
+  });
+
+  it("rejects a ZYS snapshot whose published share rate does not reconcile", () => {
+    expect(() =>
+      adaptZephyrScanner(
+        {
+          results: [
+            {
+              captured_at: "2026-07-19T23:46:28.729Z",
+              on_chain: {
+                zsd_yield_reserve: 200,
+                zys_circ: 100,
+              },
+              pricing_record: {
+                yield_price: 1_000_000_000_000,
+              },
+            },
+          ],
+        },
+        "zys-zephyr-protocol",
+      ),
+    ).toThrow(/share-rate divergence/);
+  });
 });

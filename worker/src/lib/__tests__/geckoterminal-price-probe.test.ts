@@ -66,7 +66,11 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
   ],
 }));
 
-import { CIRCUIT_SOURCE, GT_PROBE_RUN_BUDGET_MS } from "../constants";
+import {
+  CIRCUIT_SOURCE,
+  GT_PROBE_RESPONSE_MAX_BYTES,
+  GT_PROBE_RUN_BUDGET_MS,
+} from "../constants";
 import { extractPoolPrice, probeGeckoTerminalPrices } from "../geckoterminal-price-probe";
 import type { GtPool } from "../../cron/dex-liquidity/types";
 
@@ -298,6 +302,56 @@ describe("probeGeckoTerminalPrices", () => {
       CIRCUIT_SOURCE.GECKO_TERMINAL_PROBE,
       false,
     );
+  });
+
+  it("rejects a declared oversized response before parsing it", async () => {
+    fetchWithRetryMock.mockResolvedValue(
+      new Response("{}", {
+        status: 200,
+        headers: {
+          "content-length": String(GT_PROBE_RESPONSE_MAX_BYTES + 1),
+        },
+      }),
+    );
+
+    const result = await probeGeckoTerminalPrices(
+      [{ id: "asset-404", price: 1 }],
+      {} as D1Database,
+    );
+
+    expect(result.prices.size).toBe(0);
+    expect(result.stats.upstreamErrors).toBe(1);
+    expect(
+      result.stats.transports.geckoTerminalPublic.upstreamErrors,
+    ).toBe(1);
+  });
+
+  it("bounds an oversized streamed response without a content-length header", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          new Uint8Array(GT_PROBE_RESPONSE_MAX_BYTES / 2 + 1),
+        );
+        controller.enqueue(
+          new Uint8Array(GT_PROBE_RESPONSE_MAX_BYTES / 2 + 1),
+        );
+        controller.close();
+      },
+    });
+    fetchWithRetryMock.mockResolvedValue(
+      new Response(body, { status: 200 }),
+    );
+
+    const result = await probeGeckoTerminalPrices(
+      [{ id: "asset-404", price: 1 }],
+      {} as D1Database,
+    );
+
+    expect(result.prices.size).toBe(0);
+    expect(result.stats.upstreamErrors).toBe(1);
+    expect(
+      result.stats.transports.geckoTerminalPublic.upstreamErrors,
+    ).toBe(1);
   });
 
   it("keeps the breaker closed when at least one probe reaches the source", async () => {

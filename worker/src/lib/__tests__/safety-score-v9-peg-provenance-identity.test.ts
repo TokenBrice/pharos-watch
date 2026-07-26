@@ -14,7 +14,9 @@ import {
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
 import {
+  buildSafetyScoreV9PegProvenanceSeedCacheEntry,
   buildSafetyScoreV9PegProvenanceSummary,
+  parseSafetyScoreV9PegProvenanceSeed,
   projectSafetyScoreV9PegScoreResult,
 } from "../safety-score-v9-peg-provenance";
 import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
@@ -179,6 +181,49 @@ function withOneVerifiedReplay(
 }
 
 describe("diagnostic V9 peg provenance identity boundary", () => {
+  it("round-trips a compact publication-exact provenance seed and rejects tampering", () => {
+    const events = legacyEvents();
+    const fixedInput = singleAssetFixedInput(events);
+    const pegProvenanceById = {
+      [ASSET_ID]: summary(events, fixedInput),
+    };
+    const safetyScoreIdentity = {
+      model: "v8" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion: fixedInput.methodologyVersion,
+      evaluationBuildDigest: DIGEST,
+      baseInputGenerationId: fixedInput.baseInputGenerationId,
+      publicationGenerationId: fixedInput.sourceGeneration,
+    };
+    const entry =
+      buildSafetyScoreV9PegProvenanceSeedCacheEntry({
+        sourceGeneration: fixedInput.sourceGeneration,
+        clockSec: fixedInput.clockSec,
+        safetyScoreIdentity,
+        pegProvenanceById,
+      });
+
+    expect(entry.key).toBe(
+      "report-cards:v9-peg-provenance-seed:exact",
+    );
+    expect(
+      parseSafetyScoreV9PegProvenanceSeed(entry.value),
+    ).toMatchObject({
+      sourceGeneration: fixedInput.sourceGeneration,
+      clockSec: fixedInput.clockSec,
+      safetyScoreIdentity,
+      pegProvenanceById,
+    });
+
+    const tampered = JSON.parse(entry.value);
+    tampered.clockSec += 1;
+    expect(() =>
+      parseSafetyScoreV9PegProvenanceSeed(
+        JSON.stringify(tampered),
+      ),
+    ).toThrow(/seed digest|summary clock/);
+  });
+
   it("changes USDG diagnostics without changing score or candidate bytes", async () => {
     const events = legacyEvents();
     const base = singleAssetFixedInput(events);

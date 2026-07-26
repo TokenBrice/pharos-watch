@@ -11,12 +11,13 @@ import { keccak256 } from "viem/utils";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { tryParseJson } from "../../lib/json-parse";
+import { readResponseTextWithinLimitWithSignal } from "../../lib/response-body";
 import { tronBase58ToHex, tronHexAddressToBase58 } from "../../lib/tron-address";
 import { SUNSWAP_V2_ROUTER_QUOTE_URL } from "./tron-registry";
 
 const TRONGRID_JSON_RPC = "https://api.trongrid.io/jsonrpc";
 const REQUEST_TIMEOUT_MS = 15_000;
-const MAX_RESPONSE_CHARS = 2_000_000;
+const MAX_RESPONSE_BYTES = 2_000_000;
 const SUN_ROUTER_REQUEST_SPACING_MS = 1_000;
 const GET_PAIR_SELECTOR = "0xe6a43905";
 const TOKEN0_SELECTOR = "0x0dfe1681";
@@ -40,14 +41,22 @@ async function fetchBoundedJson(
   signal: AbortSignal | undefined,
   fetchImpl: FetchLike,
 ): Promise<unknown> {
+  const requestSignal = combineSignal(signal);
   const response = await fetchImpl(url, {
     ...init,
     headers: { Accept: "application/json", "User-Agent": USER_AGENT, ...(init.headers ?? {}) },
-    signal: combineSignal(signal),
+    signal: requestSignal,
   });
-  const text = await response.text();
+  let text: string;
+  try {
+    text = await readResponseTextWithinLimitWithSignal(response, MAX_RESPONSE_BYTES, requestSignal);
+  } catch (error) {
+    if (error instanceof Error && error.name === "ResponseBodyTooLargeError") {
+      throw new Error("response-too-large");
+    }
+    throw error;
+  }
   if (!response.ok) throw new Error(`http-${response.status}`);
-  if (text.length > MAX_RESPONSE_CHARS) throw new Error("response-too-large");
   const parsed = tryParseJson(text, { onFailure: () => undefined });
   if (parsed === null) throw new Error("invalid-json");
   return parsed;
