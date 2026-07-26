@@ -443,7 +443,41 @@ describe("derived supply-model route observations", () => {
     });
 
     const dusd = buildConfigured("dusd-dtrinity", { capacityConfidence: "heuristic" });
-    expect(dusd).toMatchObject({ output: { kind: "unresolved-basket" }, scoreEligible: false });
+    expect(dusd).toMatchObject({
+      output: {
+        kind: "unresolved-basket",
+        assetKeys: [
+          "usdc-circle",
+          "usdt-tether",
+          "usds-sky",
+          "susds-sky",
+          "frxusd-frax",
+          "sfrxusd-frax",
+          "dai-makerdao",
+          "sdai-sky",
+          "asset:vbusdc",
+          "asset:vbusdt",
+          "ausd-agora",
+        ],
+      },
+      scoreEligible: false,
+    });
+
+    expect(buildConfigured("dllr-sovryn")?.output).toEqual({
+      kind: "unresolved-basket",
+      assetKeys: ["asset:zusd", "doc-money-on-chain"],
+    });
+    expect(buildConfigured("witry-brix")?.output).toEqual({
+      kind: "unresolved-asset",
+      assetKeys: ["asset:itry"],
+    });
+    expect(buildConfigured("aznd-mu-digital")?.output).toEqual({
+      kind: "unresolved-asset",
+    });
+    expect(buildConfigured("zys-zephyr-protocol")?.output).toEqual({
+      kind: "tracked-stablecoin",
+      trackedAssetIds: ["zsd-zephyr-protocol"],
+    });
 
     const hyusd = buildConfigured("hyusd-hylo");
     expect(hyusd).toMatchObject({ output: { kind: "collateral" }, scoreEligible: false });

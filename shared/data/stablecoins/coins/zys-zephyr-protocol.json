@@ -274,6 +274,22 @@
     "yieldSource": "Zephyr Scanner ZYS returns",
     "yieldType": "nav-appreciation"
   },
+  "liveReservesConfig": {
+    "adapter": "zephyr-scanner",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "breakerScope": "zephyr-scanner-zys",
+    "display": {
+      "url": "https://zephyrprotocol.com/yield",
+      "label": "Zephyr Scanner"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+      }
+    }
+  },
   "notices": [
     {
       "type": "info",

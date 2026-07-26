@@ -976,10 +976,23 @@ describe("getRedemptionBackstopConfig", () => {
     const dusd = getRedemptionBackstopConfig("dusd-dtrinity");
     expect(dusd).toMatchObject({ outputAssetType: "stable-basket", reviewedAt: "2026-07-15" });
     expect(dusd?.outputAssets).toBeUndefined();
+    expect(dusd?.unresolvedOutputAssetKeys).toEqual([
+      "usdc-circle",
+      "usdt-tether",
+      "usds-sky",
+      "susds-sky",
+      "frxusd-frax",
+      "sfrxusd-frax",
+      "dai-makerdao",
+      "sdai-sky",
+      "asset:vbusdc",
+      "asset:vbusdt",
+      "ausd-agora",
+    ]);
     expect(dusd?.notes).toEqual(
       expect.arrayContaining([
         expect.stringContaining("11 symbols"),
-        expect.stringContaining("vbUSDC and vbUSDT have no tracked Pharos ids"),
+        expect.stringContaining("unresolvedOutputAssetKeys"),
       ]),
     );
   });
@@ -1077,9 +1090,34 @@ describe("getRedemptionBackstopConfig", () => {
       "deuro-deuro",
       "nect-beraborrow",
       "scusd-rings",
-      "zys-zephyr-protocol",
     ] as const) {
       expect(getRedemptionBackstopConfig(id)?.outputAssets).toBeUndefined();
     }
+
+    expect(getRedemptionBackstopConfig("zys-zephyr-protocol")).toMatchObject({
+      outputAssetType: "stable-single",
+      outputAssets: ["zsd-zephyr-protocol"],
+    });
+    expect(getRedemptionBackstopConfig("dllr-sovryn")?.unresolvedOutputAssetKeys).toEqual([
+      "asset:zusd",
+      "doc-money-on-chain",
+    ]);
+    expect(getRedemptionBackstopConfig("witry-brix")?.unresolvedOutputAssetKeys).toEqual([
+      "asset:itry",
+    ]);
+    expect(getRedemptionBackstopConfig("aznd-mu-digital")?.unresolvedOutputAssetKeys).toBeUndefined();
+
+    expect(getRedemptionBackstopConfig("eearn-ember")).toMatchObject({
+      outputAssets: ["usdc-circle"],
+      capacityModel: {
+        kind: "reserve-sync-metadata",
+        basis: "live-direct-telemetry",
+      },
+      v9RouteReviewTerms: { settlementModel: "queued" },
+    });
+    expect(getRedemptionBackstopConfig("sdusd-dtrinity")).toMatchObject({
+      outputAssets: ["dusd-dtrinity"],
+      capacityModel: { kind: "reserve-sync-metadata" },
+    });
   });
 });

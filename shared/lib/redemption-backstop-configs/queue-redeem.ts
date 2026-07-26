@@ -397,6 +397,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "witry-brix": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_CONFIG_ONLY_GAPS_AT),
+    unresolvedOutputAssetKeys: ["asset:itry"],
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     executionModel: "rules-based-nav",
@@ -421,6 +422,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     notes: [
       "wiTRY is the staked ERC-4626-style wrapper over iTRY; unstaking returns iTRY after the documented cooldown unless the holder uses the fee-bearing fast-withdraw path.",
       "iTRY redemption is whitelist-gated and serviced first by the FastAccessVault DLF liquidity buffer, with custodian-managed redemption when immediate DLF liquidity is insufficient.",
+      "The exact wrapper output remains unresolved for scoring because iTRY has no tracked Pharos stablecoin id; asset:itry is retained as a diagnostic identity.",
     ],
   },
   "stkgho-umbrella-aave": erc4626ReserveTelemetryQueueConfig({
@@ -531,6 +533,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ],
     notes: [
       "Tracked metadata describes KYC-gated weekly AZND redemptions against the full reserve book rather than an always-live stablecoin hot-wallet buffer",
+      "Mu Digital documents accepted mint funding assets but does not identify the asset used to settle an approved AZND redemption. The output therefore remains an unresolved asset with no guessed identity.",
     ],
   },
   "avusd-avant": {
