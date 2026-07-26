@@ -24,7 +24,22 @@
     "url": "https://app.falcon.finance/transparency",
     "provider": "ht.digital",
     "attestorTier": "niche",
-    "cadence": "weekly"
+    "cadence": "weekly",
+    "latestReport": {
+      "periodEnd": "2026-04-30",
+      "publishedAt": "2026-06-19",
+      "assuranceMethod": "attestation",
+      "scope": "assets-and-liabilities",
+      "liabilityReconciliation": "full",
+      "reviewer": "Codex Safety Score V9 reserve review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "HT Digital independent assurance report on Falcon USDf reserves - April 30, 2026",
+          "url": "https://falcon.finance/api/media/file/Final%20Falcon%20assurance%20report%20and%20opinion%20-%20signed%20final%2030%20April%202026.pdf?prefix=media"
+        }
+      ]
+    }
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",

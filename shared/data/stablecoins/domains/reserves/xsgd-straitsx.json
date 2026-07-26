@@ -17,8 +17,7 @@
       "assetClass": "other",
       "issuerOrObligor": "Monetary Authority of Singapore or an eligible highly rated overnight reverse-repo counterparty",
       "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
-      "liquidityHorizon": "seven-days",
-      "maturityDaysMax": 90
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
