@@ -3227,7 +3227,7 @@ Returns per-chain breakdown and hourly timeseries for a single coin. Returns `40
 
 ### `GET /api/mint-burn-events`
 
-Paginated list of recent individual mint/burn events for a specific stablecoin. Events are sourced from on-chain logs via Alchemy JSON-RPC. Safely valued, aggregated, and Tape-projected event rows are retained for at least 8 days; protected repair or projection debt can remain longer. The 90-day aggregate flow history is served separately by `GET /api/mint-burn-flows`.
+Paginated list of recent individual mint/burn events for a specific stablecoin. Events are sourced from on-chain logs via Alchemy JSON-RPC. Safely valued, aggregated, and Tape-projected event rows are retained for at least 8 days; protected repair or projection debt can remain longer. Missing aggregation evidence is rebuilt in bounded batches only for terminal hours without unresolved price debt, and an hourly bucket remains protected while any raw event depends on it. The 90-day aggregate flow history is served separately by `GET /api/mint-burn-flows`.
 
 **Cache:** producer-backed
 

@@ -295,12 +295,16 @@ describe("historical mint/burn price repair", () => {
     const db = makeSqliteD1();
     try {
       const timestamp = 1_800_000_000;
+      const repairedHour = Math.floor(timestamp / 3600) * 3600;
+      const preservedHour = repairedHour - 30 * DAY;
       insertEvent(db, { id: "event-1", stablecoinId: "usdt-tether", timestamp });
       db.sqlite.exec(`
         INSERT INTO mint_burn_hourly
           (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
            mint_volume_usd, burn_volume_usd, net_flow_usd)
-        VALUES ('usdt-tether', 'ethereum', ${Math.floor(timestamp / 3600) * 3600}, 1, 0, 0, 0, 0);
+        VALUES
+          ('usdt-tether', 'ethereum', ${repairedHour}, 1, 0, 0, 0, 0),
+          ('usdt-tether', 'ethereum', ${preservedHour}, 7, 3, 700, 300, 400);
       `);
 
       const first = await repairHistoricalMintBurnPrices(db, {
@@ -335,10 +339,26 @@ describe("historical mint/burn price repair", () => {
         db.sqlite
           .prepare(
             `SELECT mint_count, mint_volume_usd, net_flow_usd
-             FROM mint_burn_hourly WHERE stablecoin_id = 'usdt-tether'`,
+             FROM mint_burn_hourly
+             WHERE stablecoin_id = 'usdt-tether' AND hour_ts = ${repairedHour}`,
           )
           .get(),
       ).toEqual({ mint_count: 1, mint_volume_usd: 99.7, net_flow_usd: 99.7 });
+      expect(
+        db.sqlite
+          .prepare(
+            `SELECT mint_count, burn_count, mint_volume_usd, burn_volume_usd, net_flow_usd
+             FROM mint_burn_hourly
+             WHERE stablecoin_id = 'usdt-tether' AND hour_ts = ${preservedHour}`,
+          )
+          .get(),
+      ).toEqual({
+        mint_count: 7,
+        burn_count: 3,
+        mint_volume_usd: 700,
+        burn_volume_usd: 300,
+        net_flow_usd: 400,
+      });
 
       const second = await repairHistoricalMintBurnPrices(db, {
         dryRun: false,
