@@ -35,6 +35,7 @@ import { resolveTrackedStablecoinId } from "./token-resolution";
 import { toErrorMessage } from "../../lib/error-utils";
 import { resolveLlamaPoolStablecoinMatches } from "./pool-match-resolution";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { shouldRetainCurveCompositePoolIdentity } from "../measured-execution/curve-composite-identities";
 
 const PRIMARY_SOURCE_JSON_TIMEOUT_MS = 30_000;
 const CURVE_API_FETCH_CONCURRENCY = 4;
@@ -365,15 +366,13 @@ export async function buildCurveLookups(
             tokenPrices[normalizeDexSymbol(c.symbol)] = c.usdPrice;
           }
         }
-        // Exact execution inputs: plain pools only, every coin complete.
-        const executionCoins = coinBalances.map(({ coin }) => {
-          const balance = parseFloat(coin.poolBalance);
+        // Exact physical coin identity is retained for reviewed direct-quote
+        // adapters, including the base LP leg of a metapool. Reserve
+        // simulation remains limited to complete non-meta, non-LP rows.
+        const poolCoins = coinBalances.map(({ coin }) => {
           const decimals = parseInt(coin.decimals, 10);
           if (
             !coin.address?.trim() ||
-            coin.isBasePoolLpToken === true ||
-            !Number.isFinite(balance) ||
-            balance <= 0 ||
             !Number.isInteger(decimals) ||
             decimals < 0 ||
             decimals > 255 ||
@@ -385,10 +384,32 @@ export async function buildCurveLookups(
             address: coin.address,
             symbol: coin.symbol,
             decimals,
-            balance: balance / 10 ** decimals,
             usdPrice: coin.usdPrice,
+            isBasePoolLpToken: coin.isBasePoolLpToken === true,
           };
         });
+        const executionCoins = coinBalances.map(({ coin }, index) => {
+          const identity = poolCoins[index];
+          const balance = parseFloat(coin.poolBalance);
+          if (
+            identity == null ||
+            identity.isBasePoolLpToken ||
+            !Number.isFinite(balance) ||
+            balance <= 0
+          ) return null;
+          return {
+            address: identity.address,
+            symbol: identity.symbol,
+            decimals: identity.decimals,
+            balance: balance / 10 ** identity.decimals,
+            usdPrice: identity.usdPrice,
+          };
+        });
+        const poolIdentityComplete = poolCoins.every((coin) => coin !== null);
+        const retainCompositePoolIdentity = shouldRetainCurveCompositePoolIdentity(
+          chain,
+          pool.address,
+        );
         const executionComplete =
           pool.isMetaPool !== true &&
           pool.coins.length >= 2 &&
@@ -403,10 +424,16 @@ export async function buildCurveLookups(
           tvl: pool.usdTotal,
           registryId: pool.registryId ?? "",
           isMetaPool: pool.isMetaPool ?? false,
+          ...(pool.basePoolAddress && retainCompositePoolIdentity
+            ? { basePoolAddress: pool.basePoolAddress }
+            : {}),
           metapoolAdjustedTvl,
           creationTs: pool.creationTs ?? 0,
           balanceDetails,
           tokenPrices,
+          ...(poolIdentityComplete && retainCompositePoolIdentity
+            ? { poolCoins: poolCoins as NonNullable<CurvePoolEntry["poolCoins"]> }
+            : {}),
           ...(executionComplete
             ? { executionCoins: executionCoins as NonNullable<CurvePoolEntry["executionCoins"]> }
             : {}),

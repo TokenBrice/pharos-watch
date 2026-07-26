@@ -9,13 +9,25 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexApiPool } from "../../lib/dex-api-types";
 import { getTokenReferenceUsdPrice } from "../../lib/dex-api-token-pricing";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { getFluidResolverDeployment } from "./fluid-resolver";
 // Alias the canonical key builder locally instead of importing token-resolution's
 // wrapper: that import closed a module cycle (dex-liquidity/types -> inventory ->
 // token-resolution -> types) flagged by check:shared-cycles.
 const buildChainAddressKey = canonicalExitRouteAssetKey;
 
 export type { SlipstreamExecutionCandidate, UniV3ExecutionCandidate } from "./candidate-types";
-import type { SlipstreamExecutionCandidate, UniV3ExecutionCandidate } from "./candidate-types";
+export type { UniswapV4ExecutionCandidate } from "./candidate-types";
+import type {
+  SlipstreamExecutionCandidate,
+  UniswapV4ExecutionCandidate,
+  UniV3ExecutionCandidate,
+} from "./candidate-types";
+import {
+  UNISWAP_V4_ADAPTER_PROFILE_ID,
+  UNISWAP_V4_HOOK_FREE_ADDRESS,
+  computeUniswapV4PoolId,
+  getUniswapV4Deployment,
+} from "./uniswap-v4";
 
 function canonicalEvmAddress(value: string): `0x${string}` | null {
   const normalized = value.trim().toLowerCase();
@@ -54,6 +66,18 @@ export function buildUniV3ExecutionCandidateKey(
   if (feePips == null || !tokenAddresses || tokenAddresses.length !== 2) return null;
   const addresses = tokenAddresses.map(canonicalEvmAddress);
   if (addresses.some((address) => address == null)) return null;
+  return `${canonicalExitRouteChain(chain)}|${(addresses as string[]).sort().join("|")}|${feePips}`;
+}
+
+export function buildUniswapV4ExecutionCandidateKey(
+  chain: string,
+  tokenAddresses: readonly string[] | null | undefined,
+  feePips: number | null,
+): string | null {
+  if (feePips == null || !Number.isInteger(feePips) || feePips < 0 || feePips > 1_000_000) return null;
+  if (!tokenAddresses || tokenAddresses.length !== 2) return null;
+  const addresses = tokenAddresses.map(canonicalEvmAddress);
+  if (addresses.some((address) => address == null) || addresses[0] === addresses[1]) return null;
   return `${canonicalExitRouteChain(chain)}|${(addresses as string[]).sort().join("|")}|${feePips}`;
 }
 
@@ -195,6 +219,7 @@ export function buildFluidMeasuredExecutionTargets(input: {
     const canonicalTokens = tokenAddresses as [`0x${string}`, `0x${string}`];
     if (canonicalTokens[0] === canonicalTokens[1]) continue;
     const chain = canonicalExitRouteChain(pool.chain);
+    if (getFluidResolverDeployment(chain) == null) continue;
     const poolId = canonicalExitRouteAssetKey(chain, poolAddress);
 
     for (let inputIndex = 0; inputIndex < 2; inputIndex += 1) {
@@ -208,8 +233,10 @@ export function buildFluidMeasuredExecutionTargets(input: {
         !tokenOut.symbol.trim() ||
         !Number.isInteger(tokenIn.decimals) ||
         tokenIn.decimals < 0 ||
+        tokenIn.decimals > 255 ||
         !Number.isInteger(tokenOut.decimals) ||
-        tokenOut.decimals < 0
+        tokenOut.decimals < 0 ||
+        tokenOut.decimals > 255
       )
         continue;
       const inputPrice = getTokenReferenceUsdPrice(
@@ -411,6 +438,154 @@ function buildClMeasuredExecutionTarget(
     },
     ...(adapter.feePips != null ? { feePips: adapter.feePips } : {}),
     ...(adapter.tickSpacing != null ? { tickSpacing: adapter.tickSpacing } : {}),
+    retainedTvlUsd: input.retainedTvlUsd,
+    retainedPoolPriceUsd: inputPrice,
+    capturedAt: input.capturedAt,
+  };
+}
+
+const UNISWAP_V4_TARGET_MAX_TVL_RELATIVE_DRIFT = 0.02;
+
+export function buildUniswapV4MeasuredExecutionTarget(input: {
+  stablecoinId: string;
+  candidate: UniswapV4ExecutionCandidate;
+  stablecoinPriceById: Map<string, number> | undefined;
+  chainAddressToId: Map<string, string>;
+  symbolToChainScopedIds?: Map<string, Map<string, string[]>>;
+  validationReferences?: PriceValidationReferences;
+  retainedTvlUsd: number;
+  capturedAt: number;
+}): DexMeasuredExecutionTarget | null {
+  const chain = canonicalExitRouteChain(input.candidate.chain);
+  if (getUniswapV4Deployment(chain) == null) return null;
+  const poolId = input.candidate.poolId.trim().toLowerCase();
+  const hookAddress = input.candidate.hookAddress.trim().toLowerCase();
+  const tokenAddresses = input.candidate.tokens.map((token) => canonicalEvmAddress(token.address));
+  if (
+    !/^0x[a-f0-9]{64}$/.test(poolId) ||
+    hookAddress !== UNISWAP_V4_HOOK_FREE_ADDRESS ||
+    tokenAddresses.some((address) => address == null) ||
+    tokenAddresses[0] === tokenAddresses[1] ||
+    !Number.isInteger(input.candidate.feePips) ||
+    input.candidate.feePips < 0 ||
+    input.candidate.feePips > 1_000_000 ||
+    !Number.isInteger(input.candidate.tickSpacing) ||
+    input.candidate.tickSpacing <= 0 ||
+    input.candidate.tickSpacing > 32_767 ||
+    !Number.isFinite(input.candidate.tvlUsd) ||
+    input.candidate.tvlUsd <= 0 ||
+    !Number.isFinite(input.retainedTvlUsd) ||
+    input.retainedTvlUsd <= 0 ||
+    Math.abs(input.candidate.tvlUsd / input.retainedTvlUsd - 1) >
+      UNISWAP_V4_TARGET_MAX_TVL_RELATIVE_DRIFT
+  ) {
+    return null;
+  }
+  const canonicalTokens = tokenAddresses as [`0x${string}`, `0x${string}`];
+  if (
+    canonicalTokens[0] > canonicalTokens[1] ||
+    input.candidate.tokens.some(
+      (token) =>
+        !token.symbol.trim() ||
+        !Number.isInteger(token.decimals) ||
+        token.decimals < 0 ||
+        token.decimals > 255,
+    ) ||
+    computeUniswapV4PoolId({
+      currency0: canonicalTokens[0],
+      currency1: canonicalTokens[1],
+      feePips: input.candidate.feePips,
+      tickSpacing: input.candidate.tickSpacing,
+      hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+    }) !== poolId
+  ) {
+    return null;
+  }
+
+  const inputIndices = input.candidate.tokens.flatMap((token, index) =>
+    input.chainAddressToId.get(buildChainAddressKey(chain, token.address)) === input.stablecoinId
+      ? [index]
+      : [],
+  );
+  if (inputIndices.length !== 1) return null;
+  const inputIndex = inputIndices[0]!;
+  const outputIndex = inputIndex === 0 ? 1 : 0;
+  const tokenIn = input.candidate.tokens[inputIndex]!;
+  const tokenOut = input.candidate.tokens[outputIndex]!;
+  const symbolToChainScopedIds = input.symbolToChainScopedIds ?? new Map();
+  const inputPrice = getTokenReferenceUsdPrice(
+    tokenIn,
+    chain,
+    input.chainAddressToId,
+    symbolToChainScopedIds,
+    input.validationReferences,
+    input.stablecoinPriceById,
+  );
+  if (inputPrice == null || !Number.isFinite(inputPrice) || inputPrice <= 0) return null;
+  const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(chain, tokenOut.address));
+  if (outputStablecoinId === input.stablecoinId) return null;
+  let outputPrice = getTokenReferenceUsdPrice(
+    tokenOut,
+    chain,
+    input.chainAddressToId,
+    symbolToChainScopedIds,
+    input.validationReferences,
+    input.stablecoinPriceById,
+  );
+  if (outputPrice == null) {
+    const spotInputPerOutput =
+      inputIndex === 0 ? input.candidate.token0Price : input.candidate.token1Price;
+    const impliedOutputPrice = inputPrice * spotInputPerOutput;
+    if (
+      Number.isFinite(impliedOutputPrice) &&
+      impliedOutputPrice > 0 &&
+      Math.round(impliedOutputPrice * 100_000_000) > 0
+    ) {
+      outputPrice = impliedOutputPrice;
+    }
+  }
+  if (outputPrice == null || !Number.isFinite(outputPrice) || outputPrice <= 0) return null;
+
+  const canonicalPoolId = canonicalExitRouteAssetKey(chain, poolId);
+  const targetId = buildDexMeasuredExecutionTargetId({
+    adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
+    stablecoinId: input.stablecoinId,
+    chain,
+    protocol: "uniswap-v4",
+    poolId: canonicalPoolId,
+    tokenInAddress: canonicalTokens[inputIndex]!,
+    tokenOutAddress: canonicalTokens[outputIndex]!,
+    poolTokenAddresses: canonicalTokens,
+    feePips: input.candidate.feePips,
+    tickSpacing: input.candidate.tickSpacing,
+    hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+  });
+  return {
+    schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
+    targetId,
+    stablecoinId: input.stablecoinId,
+    adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
+    protocol: "uniswap-v4",
+    chain,
+    poolId: canonicalPoolId,
+    poolTokenAddresses: canonicalTokens,
+    tokenIn: {
+      address: canonicalTokens[inputIndex]!,
+      symbol: tokenIn.symbol.trim(),
+      decimals: tokenIn.decimals,
+      referencePriceUsd: inputPrice,
+      trackedAssetId: input.stablecoinId,
+    },
+    tokenOut: {
+      address: canonicalTokens[outputIndex]!,
+      symbol: tokenOut.symbol.trim(),
+      decimals: tokenOut.decimals,
+      referencePriceUsd: outputPrice,
+      ...(outputStablecoinId ? { trackedAssetId: outputStablecoinId } : {}),
+    },
+    feePips: input.candidate.feePips,
+    tickSpacing: input.candidate.tickSpacing,
+    hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
     retainedTvlUsd: input.retainedTvlUsd,
     retainedPoolPriceUsd: inputPrice,
     capturedAt: input.capturedAt,

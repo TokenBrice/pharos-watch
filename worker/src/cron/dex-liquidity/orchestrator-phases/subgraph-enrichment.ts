@@ -1,13 +1,24 @@
 import { rethrowIfAborted } from "../../../lib/abort";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
-import { fetchUniV3Data, fetchAerodromeData } from "../subgraph-source-families";
-import type { AerodromeLookups, DexPriceObs, SymbolLookups, UniV3Lookups } from "../types";
+import {
+  fetchAerodromeData,
+  fetchUniswapV4Data,
+  fetchUniV3Data,
+} from "../subgraph-source-families";
+import type {
+  AerodromeLookups,
+  DexPriceObs,
+  SymbolLookups,
+  UniswapV4Lookups,
+  UniV3Lookups,
+} from "../types";
 
 export interface SubgraphEnrichmentPhaseResult {
   uniV3PoolFees: Map<string, number>;
   uniV3SymbolFees: Map<string, number>;
   uniV3PriceObs: Map<string, DexPriceObs[]>;
   uniV3ExecutionCandidates: UniV3Lookups["uniV3ExecutionCandidates"];
+  uniswapV4ExecutionCandidates: UniswapV4Lookups["uniswapV4ExecutionCandidates"];
   aerodromePriceObs: Map<string, DexPriceObs[]>;
   aerodromeIsStable: Map<string, boolean>;
   aerodromeV2ExecutionCandidates: AerodromeLookups["aerodromeV2ExecutionCandidates"];
@@ -44,6 +55,21 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     failedSources.push("univ3-subgraph");
   }
 
+  let uniswapV4ExecutionCandidates:
+    UniswapV4Lookups["uniswapV4ExecutionCandidates"] = new Map();
+  try {
+    const uniswapV4Data = await fetchUniswapV4Data(
+      params.graphApiKey,
+      params.signal,
+    );
+    uniswapV4ExecutionCandidates =
+      uniswapV4Data.uniswapV4ExecutionCandidates;
+  } catch (err) {
+    rethrowIfAborted(err, params.signal);
+    console.warn("[dex-liquidity] Uniswap V4 fetch failed (non-fatal):", err);
+    failedSources.push("uniswap-v4-subgraph");
+  }
+
   let aerodromePriceObs = new Map<string, DexPriceObs[]>();
   let aerodromeIsStable = new Map<string, boolean>();
   let aerodromeV2ExecutionCandidates: AerodromeLookups["aerodromeV2ExecutionCandidates"] = new Map();
@@ -69,6 +95,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     uniV3SymbolFees,
     uniV3PriceObs,
     uniV3ExecutionCandidates,
+    uniswapV4ExecutionCandidates,
     aerodromePriceObs,
     aerodromeIsStable,
     aerodromeV2ExecutionCandidates,

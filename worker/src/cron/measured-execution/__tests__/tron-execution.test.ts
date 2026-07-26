@@ -158,6 +158,18 @@ describe("Tron SunSwap measured execution", () => {
     expect(parseSunRouterDirectV2Quote(referred, target(), "1000000000")).toBeNull();
   });
 
+  it("rejects an oversized provider body before buffering it", async () => {
+    const fetchImpl = vi.fn(async () =>
+      new Response("{}", { headers: { "Content-Length": "2000001" } })) as typeof fetch;
+
+    await expect(quoteTronMeasuredTarget({
+      target: target(),
+      inputUsd: 1_000,
+      routerRequestSpacingMs: 0,
+      fetchImpl,
+    })).rejects.toThrow("response-too-large");
+  });
+
   it("matches router output to canonical factory-bound pair reserves and validates replay", async () => {
     const [factoryHex, poolHex, wtrxHex, usdtHex] = await Promise.all([
       tronBase58ToHex(FACTORY),

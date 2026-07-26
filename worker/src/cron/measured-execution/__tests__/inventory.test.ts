@@ -345,6 +345,18 @@ describe("measured execution target inventory", () => {
         ...common,
       }).size,
     ).toBe(0);
+    const unsupportedFluidPool = directPool("fluid");
+    unsupportedFluidPool.chain = "bsc";
+    expect(
+      buildFluidMeasuredExecutionTargets({
+        pools: [unsupportedFluidPool],
+        ...common,
+        chainAddressToId: addressMap([
+          [USDC, "usdc-circle"],
+          [USDT, "usdt-tether"],
+        ], "bsc"),
+      }).size,
+    ).toBe(0);
   });
 
   it("excludes a Pancake direction whose retained spot price is implausibly favorable", () => {

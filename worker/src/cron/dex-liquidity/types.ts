@@ -284,6 +284,8 @@ export interface CurvePoolEntry {
   tvl: number;
   registryId: string;
   isMetaPool: boolean;
+  /** Source base-pool identity retained only for reviewed composite target candidates. */
+  basePoolAddress?: string;
   metapoolAdjustedTvl: number;
   creationTs: number;
   balanceDetails: { symbol: string; balancePct: number; isTracked: boolean }[];
@@ -296,6 +298,18 @@ export interface CurvePoolEntry {
    * metapool, so downstream simulation fails closed instead of guessing.
    */
   executionCoins?: { address: string; symbol: string; decimals: number; balance: number; usdPrice: number }[];
+  /**
+   * Exact physical pool coin order, including a metapool base LP token.
+   * Retained only for reviewed composite targets. This is identity input only;
+   * it is never used as executable depth.
+   */
+  poolCoins?: {
+    address: string;
+    symbol: string;
+    decimals: number;
+    usdPrice: number;
+    isBasePoolLpToken: boolean;
+  }[];
 }
 
 export interface SymbolLookups {
@@ -343,6 +357,13 @@ export interface UniV3Lookups {
   uniV3SymbolFees: Map<string, number>;
   uniV3PriceObs: Map<string, DexPriceObs[]>;
   uniV3ExecutionCandidates: Map<string, import("../measured-execution/candidate-types").UniV3ExecutionCandidate[]>;
+}
+
+export interface UniswapV4Lookups {
+  uniswapV4ExecutionCandidates: Map<
+    string,
+    import("../measured-execution/candidate-types").UniswapV4ExecutionCandidate[]
+  >;
 }
 
 export interface ScoreResult {

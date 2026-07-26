@@ -136,13 +136,18 @@ const OPERATIONAL_DEX_MEASURED_FAILURE_REASONS = new Set([
   "block-header-unavailable",
   "block-timestamp-unavailable",
   "factory-code-unavailable",
+  "pool-manager-code-unavailable",
+  "pool-state-rpc-unavailable",
   "quote-call-budget-exhausted",
   "quoter-rpc-unavailable",
+  "quoter-code-unavailable",
   "registry-code-unavailable",
   "request-budget-exhausted",
   "rpc-failure",
   "runtime-code-unavailable",
+  "runtime-binding-unavailable",
   "runtime-deadline-exceeded",
+  "state-view-code-unavailable",
 ]);
 
 export function isOperationalDexMeasuredFailure(reason: string | null | undefined): boolean {

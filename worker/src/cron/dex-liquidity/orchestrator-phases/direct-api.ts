@@ -110,7 +110,10 @@ function hasTrackedDirectApiToken(
 
 export function compactDirectApiFetchPhasePools(
   phase: DirectApiFetchPhaseResult,
-  lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
+  lookups: Pick<
+    SymbolLookups,
+    "chainAddressToId" | "symbolToChainScopedIds" | "contractMetaByChainAddress"
+  >,
 ): CompactedDirectApiFetchPhase {
   const pools: DexApiPool[] = [];
   const measuredExecutionPools: DexApiPool[] = [];
@@ -131,6 +134,11 @@ export function compactDirectApiFetchPhasePools(
     pools.push(...entry.result.pools);
     measuredExecutionPools.push(...compaction.measuredExecutionPools);
   }
+  // Fluid's official ticker API identifies tokens by address but leaves
+  // symbol/decimals empty. Its exact-execution copy is intentionally split
+  // from the normalized scoring copy during provider compaction, so hydrate
+  // this bounded target-only list before target construction as well.
+  hydrateDirectApiPoolMetadata(measuredExecutionPools, lookups.contractMetaByChainAddress);
 
   return {
     phase: { ...phase, results },

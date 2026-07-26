@@ -4,7 +4,9 @@ import {
   type DexMeasuredExecutionPoolBindingProof,
   type DexMeasuredExecutionRegistryBindingProof,
   type DexMeasuredExecutionStableSwapNgFactoryBindingProof,
+  type DexMeasuredExecutionCurveCompositeProof,
   type DexMeasuredExecutionTarget,
+  type DexMeasuredExecutionUniswapV4PoolProof,
 } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
@@ -67,6 +69,25 @@ import {
   type CurveStableSwapNgPoolPolicy,
   type CurveStableSwapNgRuntimeEvidence,
 } from "./curve-stableswap-ng";
+import {
+  getCurveCompositePolicy,
+  isCurveCompositeAdapterProfileId,
+  quoteCurveCompositeRequests,
+  validateCurveCompositeProfileProof,
+  verifyCurveCompositeDeployment,
+  type CurveCompositePoolPolicy,
+  type CurveCompositeRuntimeEvidence,
+} from "./curve-composite";
+import {
+  UNISWAP_V4_ADAPTER_PROFILE_ID,
+  getUniswapV4Deployment,
+  quoteUniswapV4Requests,
+  resolveUniswapV4PoolBindings,
+  validateUniswapV4ProfileProof,
+  verifyUniswapV4Deployment,
+  type UniswapV4Deployment,
+  type UniswapV4RuntimeEvidence,
+} from "./uniswap-v4";
 
 const MAX_QUOTE_CALLS = 6_400;
 const MAX_RPC_REQUESTS = 800;
@@ -81,6 +102,7 @@ const MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:quote-admiss
 type TargetDeployment =
   | { kind: "quoter-v2"; config: DexMeasuredExecutionDeployment }
   | { kind: "fluid-resolver"; config: FluidResolverDeployment }
+  | { kind: "uniswap-v4"; config: UniswapV4Deployment }
   | {
       kind: "curve-cryptoswap";
       config: CurveCryptoSwapPoolPolicy & { endpointAddress: `0x${string}` };
@@ -92,6 +114,10 @@ type TargetDeployment =
   | {
       kind: "curve-stableswap-ng";
       config: CurveStableSwapNgPoolPolicy & { endpointAddress: `0x${string}` };
+    }
+  | {
+      kind: "curve-composite";
+      config: CurveCompositePoolPolicy & { endpointAddress: `0x${string}` };
     };
 
 interface TargetQuoteState {
@@ -103,9 +129,13 @@ interface TargetQuoteState {
   curveRuntimeEvidence: CurveCryptoSwapRuntimeEvidence | null;
   curveStableSwapRuntimeEvidence: CurveStableSwapRuntimeEvidence | null;
   curveStableSwapNgRuntimeEvidence: CurveStableSwapNgRuntimeEvidence | null;
+  curveCompositeRuntimeEvidence: CurveCompositeRuntimeEvidence | null;
+  uniswapV4RuntimeEvidence: UniswapV4RuntimeEvidence | null;
   poolBindingProof: DexMeasuredExecutionPoolBindingProof | null;
   registryBindingProof: DexMeasuredExecutionRegistryBindingProof | null;
   stableSwapNgFactoryBindingProof: DexMeasuredExecutionStableSwapNgFactoryBindingProof | null;
+  curveCompositeProof: DexMeasuredExecutionCurveCompositeProof | null;
+  uniswapV4PoolProof: DexMeasuredExecutionUniswapV4PoolProof | null;
   points: DexMeasuredRawQuotePoint[];
   failedReason: string | null;
   stopped: boolean;
@@ -129,6 +159,10 @@ async function runWithConcurrency<T>(
 }
 
 function deploymentForTarget(target: DexMeasuredExecutionTarget): TargetDeployment | null {
+  if (target.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID) {
+    const deployment = getUniswapV4Deployment(target.chain);
+    return deployment ? { kind: "uniswap-v4", config: deployment } : null;
+  }
   if (target.adapterProfileId === FLUID_RESOLVER_ADAPTER_PROFILE_ID) {
     const deployment = getFluidResolverDeployment(target.chain);
     return deployment ? { kind: "fluid-resolver", config: deployment } : null;
@@ -160,6 +194,15 @@ function deploymentForTarget(target: DexMeasuredExecutionTarget): TargetDeployme
       ? { kind: "curve-stableswap-ng", config: { ...policy, endpointAddress: policy.poolAddress } }
       : null;
   }
+  if (isCurveCompositeAdapterProfileId(target.adapterProfileId)) {
+    const prefix = `${target.chain.trim().toLowerCase()}:`;
+    if (!target.poolId.toLowerCase().startsWith(prefix)) return null;
+    const endpointAddress = target.poolId.slice(prefix.length).toLowerCase();
+    const policy = getCurveCompositePolicy(target.chain, endpointAddress);
+    return policy
+      ? { kind: "curve-composite", config: { ...policy, endpointAddress: policy.poolAddress } }
+      : null;
+  }
   const deployment = getDexMeasuredExecutionDeployment(target.adapterProfileId, target.chain);
   return deployment ? { kind: "quoter-v2", config: deployment } : null;
 }
@@ -185,12 +228,16 @@ function estimateDeploymentSetupRpcRequests(deployment: TargetDeployment): numbe
       return 2; // Quoter and factory bytecode.
     case "fluid-resolver":
       return 1; // Resolver bytecode.
+    case "uniswap-v4":
+      return 4; // PoolManager, StateView, Quoter bytecode, then immutable bindings.
     case "curve-cryptoswap":
       return 10; // Pool/dependency code, dependency addresses, coins, and kill-state probe.
     case "curve-stableswap":
       return 5 + deployment.config.poolTokens.length * 2;
     case "curve-stableswap-ng":
       return 6 + deployment.config.poolTokens.length * 2;
+    case "curve-composite":
+      return deployment.config.quoteFunction === "get_dy_underlying" ? 18 : 17;
   }
 }
 
@@ -225,6 +272,9 @@ export function estimateAdmissionCohortRpcRequestBreakdown(
     0,
   );
   const quoterRows = executable.filter((row) => row.deployment.kind === "quoter-v2");
+  const uniswapV4Rows = executable.filter(
+    (row) => row.deployment.kind === "uniswap-v4",
+  );
   const quoteGroupKey = (row: typeof executable[number]) =>
     `${row.target.chain}:${row.deployment.kind}`;
   let quoteRpcRequests = countAdmissionBatches(
@@ -235,6 +285,10 @@ export function estimateAdmissionCohortRpcRequestBreakdown(
         ? `${row.target.chain}:${deployment.config.adapterProfileId}:${deployment.config.factoryAddress}`
         : `${row.target.chain}:unsupported`;
     },
+  );
+  quoteRpcRequests += countAdmissionBatches(
+    uniswapV4Rows,
+    (row) => `${row.target.chain}:uniswap-v4-pool-state`,
   );
 
   const probeNotionals = [...new Set(
@@ -482,9 +536,13 @@ export async function syncDexMeasuredExecution(
     curveRuntimeEvidence: null,
     curveStableSwapRuntimeEvidence: null,
     curveStableSwapNgRuntimeEvidence: null,
+    curveCompositeRuntimeEvidence: null,
+    uniswapV4RuntimeEvidence: null,
     poolBindingProof: null,
     registryBindingProof: null,
     stableSwapNgFactoryBindingProof: null,
+    curveCompositeProof: null,
+    uniswapV4PoolProof: null,
     points: [],
     failedReason: oversized.has(target.targetId)
       ? "admission-coin-group-oversized"
@@ -574,6 +632,23 @@ export async function syncDexMeasuredExecution(
           continue;
         }
         for (const state of deploymentRows) state.endpointCodeHash = verified.codeHash;
+      } else if (deployment.kind === "uniswap-v4") {
+        const verified = await verifyUniswapV4Deployment({
+          deployment: deployment.config,
+          blockNumber,
+          chainRpcs,
+          signal,
+          rpcBudget,
+        });
+        if (!verified.ok) {
+          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
+          else for (const state of deploymentRows) state.failedReason = verified.reason;
+          continue;
+        }
+        for (const state of deploymentRows) {
+          state.endpointCodeHash = verified.codeHash;
+          state.uniswapV4RuntimeEvidence = verified.runtimeEvidence;
+        }
       } else if (deployment.kind === "curve-cryptoswap") {
         const verified = await verifyCurveCryptoSwapDeployment({
           policy: deployment.config,
@@ -611,7 +686,7 @@ export async function syncDexMeasuredExecution(
           state.curveStableSwapRuntimeEvidence = verified.runtimeEvidence;
           state.registryBindingProof = verified.registryBindingProof;
         }
-      } else {
+      } else if (deployment.kind === "curve-stableswap-ng") {
         const verified = await verifyCurveStableSwapNgDeployment({
           policy: deployment.config,
           nowSec: startedAt,
@@ -631,12 +706,68 @@ export async function syncDexMeasuredExecution(
           state.curveStableSwapNgRuntimeEvidence = verified.runtimeEvidence;
           state.stableSwapNgFactoryBindingProof = verified.factoryBindingProof;
         }
+      } else {
+        const verified = await verifyCurveCompositeDeployment({
+          policy: deployment.config,
+          nowSec: startedAt,
+          chainRpcs,
+          signal,
+          rpcBudget,
+        });
+        if (!verified.ok) {
+          if (rpcBudget.stopReason) markBudgetStop(deploymentRows, rpcBudget.stopReason);
+          else for (const state of deploymentRows) state.failedReason = verified.reason;
+          continue;
+        }
+        for (const state of deploymentRows) {
+          state.blockNumber = verified.blockNumber;
+          state.endpointCodeHash = verified.codeHash;
+          state.blockObservedAt = verified.blockTimestamp;
+          state.curveCompositeRuntimeEvidence = verified.runtimeEvidence;
+          state.curveCompositeProof = verified.proof;
+        }
       }
       if (rpcBudget.stopReason) {
         markBudgetStop(deploymentRows, rpcBudget.stopReason);
         break;
       }
     }
+  });
+  markBudgetStop(states, rpcBudget.stopReason);
+
+  const uniswapV4StatesByChain = new Map<string, TargetQuoteState[]>();
+  for (const state of states) {
+    if (
+      state.failedReason ||
+      state.deployment?.kind !== "uniswap-v4" ||
+      state.blockNumber == null ||
+      !state.endpointCodeHash ||
+      !state.uniswapV4RuntimeEvidence
+    ) {
+      continue;
+    }
+    const rows = uniswapV4StatesByChain.get(state.target.chain) ?? [];
+    rows.push(state);
+    uniswapV4StatesByChain.set(state.target.chain, rows);
+  }
+  await runWithConcurrency([...uniswapV4StatesByChain.values()], 3, async (rows) => {
+    const outcomes = await resolveUniswapV4PoolBindings({
+      requests: rows.map((state) => ({
+        target: state.target,
+        deployment: state.deployment!.config as UniswapV4Deployment,
+        runtimeEvidence: state.uniswapV4RuntimeEvidence!,
+      })),
+      blockNumber: rows[0]!.blockNumber!,
+      chainRpcs,
+      signal,
+      rpcBudget,
+    });
+    outcomes.forEach((outcome, index) => {
+      const state = rows[index]!;
+      if (outcome.proof) state.uniswapV4PoolProof = outcome.proof;
+      else if (rpcBudget.stopReason) markBudgetStop([state], rpcBudget.stopReason);
+      else state.failedReason = outcome.failureReason ?? "v4-pool-binding-failed";
+    });
   });
   markBudgetStop(states, rpcBudget.stopReason);
 
@@ -702,10 +833,15 @@ export async function syncDexMeasuredExecution(
         state.blockNumber != null &&
         state.endpointCodeHash != null &&
         (state.deployment.kind !== "quoter-v2" || state.poolBindingProof != null) &&
+        (state.deployment.kind !== "uniswap-v4" || state.uniswapV4PoolProof != null) &&
         (state.deployment.kind !== "curve-stableswap" || state.registryBindingProof != null) &&
         (
           state.deployment.kind !== "curve-stableswap-ng" ||
           state.stableSwapNgFactoryBindingProof != null
+        ) &&
+        (
+          state.deployment.kind !== "curve-composite" ||
+          state.curveCompositeProof != null
         ),
     );
     if (runnable.length === 0) return;
@@ -762,6 +898,21 @@ export async function syncDexMeasuredExecution(
           outcomes.forEach((outcome, index) =>
             applyQuoteOutcome(adapterRequests[index]!.state, outcome),
           );
+        } else if (kind === "uniswap-v4") {
+          const outcomes = await quoteUniswapV4Requests({
+            requests: adapterRequests.map(({ state, inputUsd }) => ({
+              target: state.target,
+              inputUsd,
+              endpointAddress: state.deployment!.config.endpointAddress,
+            })),
+            blockNumber: adapterRequests[0]!.state.blockNumber!,
+            chainRpcs,
+            signal,
+            rpcBudget,
+          });
+          outcomes.forEach((outcome, index) =>
+            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
+          );
         } else if (kind === "curve-cryptoswap") {
           const outcomes = await quoteCurveCryptoSwapRequests({
             requests: adapterRequests.map(({ state, inputUsd }) => ({
@@ -795,7 +946,7 @@ export async function syncDexMeasuredExecution(
           outcomes.forEach((outcome, index) =>
             applyQuoteOutcome(adapterRequests[index]!.state, outcome),
           );
-        } else {
+        } else if (kind === "curve-stableswap-ng") {
           const outcomes = await quoteCurveStableSwapNgRequests({
             requests: adapterRequests.map(({ state, inputUsd }) => ({
               target: state.target,
@@ -804,6 +955,23 @@ export async function syncDexMeasuredExecution(
               blockObservedAt: state.blockObservedAt!,
               endpointAddress: state.deployment!.config.endpointAddress,
               runtimeEvidence: state.curveStableSwapNgRuntimeEvidence ?? undefined,
+            })),
+            chainRpcs,
+            signal,
+            rpcBudget,
+          });
+          outcomes.forEach((outcome, index) =>
+            applyQuoteOutcome(adapterRequests[index]!.state, outcome),
+          );
+        } else {
+          const outcomes = await quoteCurveCompositeRequests({
+            requests: adapterRequests.map(({ state, inputUsd }) => ({
+              target: state.target,
+              inputUsd,
+              blockNumber: state.blockNumber!,
+              blockObservedAt: state.blockObservedAt!,
+              endpointAddress: state.deployment!.config.endpointAddress,
+              runtimeEvidence: state.curveCompositeRuntimeEvidence ?? undefined,
             })),
             chainRpcs,
             signal,
@@ -889,6 +1057,12 @@ export async function syncDexMeasuredExecution(
         ...(state.stableSwapNgFactoryBindingProof
           ? { stableSwapNgFactoryBindingProof: state.stableSwapNgFactoryBindingProof }
           : {}),
+        ...(state.curveCompositeProof
+          ? { curveCompositeProof: state.curveCompositeProof }
+          : {}),
+        ...(state.uniswapV4PoolProof
+          ? { uniswapV4PoolProof: state.uniswapV4PoolProof }
+          : {}),
         points: state.points,
       });
       const genericIssues = validateDexMeasuredExecutionProfile({
@@ -904,11 +1078,15 @@ export async function syncDexMeasuredExecution(
           ? validateQuoterV2ProfileProof(profile)
           : state.deployment.kind === "fluid-resolver"
             ? validateFluidResolverProfileProof(profile)
+            : state.deployment.kind === "uniswap-v4"
+              ? validateUniswapV4ProfileProof(profile)
             : state.deployment.kind === "curve-cryptoswap"
               ? validateCurveCryptoSwapProfileProof(profile)
               : state.deployment.kind === "curve-stableswap"
                 ? validateCurveStableSwapProfileProof(profile)
-                : validateCurveStableSwapNgProfileProof(profile);
+                : state.deployment.kind === "curve-stableswap-ng"
+                  ? validateCurveStableSwapNgProfileProof(profile)
+                  : validateCurveCompositeProfileProof(profile);
       if (genericIssues.length > 0 || adapterIssues.length > 0) {
         throw new Error([...genericIssues, ...adapterIssues].join(","));
       }

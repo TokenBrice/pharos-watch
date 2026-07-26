@@ -33,6 +33,11 @@ import {
   validateCurveStableSwapNgProfileProof,
 } from "./curve-stableswap-ng";
 import {
+  getCurveCompositePolicy,
+  isCurveCompositeAdapterProfileId,
+  validateCurveCompositeProfileProof,
+} from "./curve-composite";
+import {
   loadLatestPublishedDexMeasuredQuoteEvidence,
   materializeDexMeasuredQuoteProfile,
   type LoadedDexMeasuredQuoteEvidence,
@@ -40,6 +45,11 @@ import {
 import { validateQuoterV2ProfileProof } from "./quoter-v2";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "./registry";
 import { logWorkerEvent } from "../../lib/structured-log";
+import {
+  UNISWAP_V4_ADAPTER_PROFILE_ID,
+  getUniswapV4Deployment,
+  validateUniswapV4ProfileProof,
+} from "./uniswap-v4";
 
 export interface DexMeasuredExecutionJoinDiagnostics {
   targetCount: number;
@@ -120,6 +130,19 @@ function deploymentIssues(profile: DexMeasuredExecutionProfile): string[] {
     issues.push(...validateFluidResolverProfileProof(profile));
     return issues;
   }
+  if (profile.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID) {
+    const deployment = getUniswapV4Deployment(profile.chain);
+    if (!deployment) return ["deployment-missing"];
+    const issues: string[] = [];
+    if (profile.executionEndpoint.address !== deployment.endpointAddress) {
+      issues.push("endpoint-address-mismatch");
+    }
+    if (profile.executionEndpoint.codeHash !== deployment.expectedCodeHash) {
+      issues.push("endpoint-code-hash-mismatch");
+    }
+    issues.push(...validateUniswapV4ProfileProof(profile));
+    return issues;
+  }
   if (profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID) {
     const policy = getCurveCryptoSwapShadowPolicy(profile.chain, profile.executionEndpoint.address);
     if (!policy) return ["deployment-missing"];
@@ -149,6 +172,19 @@ function deploymentIssues(profile: DexMeasuredExecutionProfile): string[] {
       issues.push("endpoint-code-hash-mismatch");
     }
     issues.push(...validateCurveStableSwapNgProfileProof(profile));
+    return issues;
+  }
+  if (isCurveCompositeAdapterProfileId(profile.adapterProfileId)) {
+    const policy = getCurveCompositePolicy(profile.chain, profile.executionEndpoint.address);
+    if (!policy) return ["deployment-missing"];
+    const issues: string[] = [];
+    if (profile.executionEndpoint.address !== policy.poolAddress) {
+      issues.push("endpoint-address-mismatch");
+    }
+    if (profile.executionEndpoint.codeHash !== policy.expectedPoolCodeHash) {
+      issues.push("endpoint-code-hash-mismatch");
+    }
+    issues.push(...validateCurveCompositeProfileProof(profile));
     return issues;
   }
   return ["adapter-profile-unsupported"];
@@ -621,14 +657,20 @@ export function joinDexMeasuredExecutionEvidence(input: {
         profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID
           ? getCurveCryptoSwapShadowPolicy(profile.chain, profile.executionEndpoint.address)
           : null;
+      const curveCompositePolicy = isCurveCompositeAdapterProfileId(profile.adapterProfileId)
+        ? getCurveCompositePolicy(profile.chain, profile.executionEndpoint.address)
+        : null;
       const activationPending =
         profile.adapterProfileId === FLUID_RESOLVER_ADAPTER_PROFILE_ID ||
+        profile.adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID ||
         (profile.adapterProfileId === CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID
           ? !curvePolicy?.scoreEligible
           : profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID
             ? false
             : profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
               ? false
+              : isCurveCompositeAdapterProfileId(profile.adapterProfileId)
+                ? !curveCompositePolicy?.scoreEligible
           : !isDexMeasuredExecutionDeploymentScoreEligible(profile.adapterProfileId, profile.chain));
       if (activationPending) {
         pool.extra.executionCapabilityGate = gate("activation-pending");

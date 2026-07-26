@@ -155,6 +155,7 @@ describe("runDirectApiFetchPhase", () => {
         [buildChainAddressKey("ethereum", trackedAddress), "tracked-stablecoin"],
       ]),
       symbolToChainScopedIds: new Map<string, Map<string, string[]>>(),
+      contractMetaByChainAddress: new Map(),
     };
     const fetchers = [
       makeFetcher("first", async () => firstResult),

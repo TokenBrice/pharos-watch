@@ -7,7 +7,9 @@ import {
   type DexMeasuredExecutionQuotePointProof,
   type DexMeasuredExecutionRegistryBindingProof,
   type DexMeasuredExecutionStableSwapNgFactoryBindingProof,
+  type DexMeasuredExecutionCurveCompositeProof,
   type DexMeasuredExecutionTarget,
+  type DexMeasuredExecutionUniswapV4PoolProof,
 } from "@shared/types/measured-execution";
 
 export const DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS = 15_000;
@@ -114,6 +116,8 @@ export function buildDexMeasuredExecutionProfile(input: {
   poolBindingProof?: DexMeasuredExecutionPoolBindingProof;
   registryBindingProof?: DexMeasuredExecutionRegistryBindingProof;
   stableSwapNgFactoryBindingProof?: DexMeasuredExecutionStableSwapNgFactoryBindingProof;
+  curveCompositeProof?: DexMeasuredExecutionCurveCompositeProof;
+  uniswapV4PoolProof?: DexMeasuredExecutionUniswapV4PoolProof;
   points: readonly DexMeasuredRawQuotePoint[];
 }): DexMeasuredExecutionProfile {
   const sortedPoints = [...input.points].sort((left, right) => left.inputUsd - right.inputUsd);
@@ -148,6 +152,7 @@ export function buildDexMeasuredExecutionProfile(input: {
     tokenOut: input.target.tokenOut,
     ...(input.target.feePips != null ? { feePips: input.target.feePips } : {}),
     ...(input.target.tickSpacing != null ? { tickSpacing: input.target.tickSpacing } : {}),
+    ...(input.target.hookAddress != null ? { hookAddress: input.target.hookAddress } : {}),
     retainedTvlUsdAtQuote: input.target.retainedTvlUsd,
     retainedPoolPriceUsdAtQuote: input.target.retainedPoolPriceUsd,
     quotedAt: input.quotedAt,
@@ -161,6 +166,8 @@ export function buildDexMeasuredExecutionProfile(input: {
     ...(input.stableSwapNgFactoryBindingProof
       ? { stableSwapNgFactoryBindingProof: input.stableSwapNgFactoryBindingProof }
       : {}),
+    ...(input.curveCompositeProof ? { curveCompositeProof: input.curveCompositeProof } : {}),
+    ...(input.uniswapV4PoolProof ? { uniswapV4PoolProof: input.uniswapV4PoolProof } : {}),
     maxCostBps: DEX_MEASURED_MAX_COST_BPS,
     marginalOutputRatio: marginal.outputUsd / marginal.inputUsd,
     capacityCurve: buildDexMeasuredCapacityCurve(quoteProof, input.target.retainedTvlUsd),

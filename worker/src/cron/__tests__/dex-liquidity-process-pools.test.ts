@@ -5,6 +5,14 @@ import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { buildPoolFingerprint } from "../dex-liquidity/pool-helpers";
 import { buildEvmV2ExecutionCandidate } from "../dex-liquidity/constant-product-v2";
 import { buildChainAddressToId, buildSymbolToChainScopedIds } from "./dex-liquidity-fixtures";
+import {
+  buildUniswapV4ExecutionCandidateKey,
+  type UniswapV4ExecutionCandidate,
+} from "../measured-execution/inventory";
+import {
+  UNISWAP_V4_HOOK_FREE_ADDRESS,
+  computeUniswapV4PoolId,
+} from "../measured-execution/uniswap-v4";
 
 function makePool(overrides: Partial<LlamaPool>): LlamaPool {
   return {
@@ -205,6 +213,53 @@ describe("processPoolMetrics", () => {
     );
     expect(pools.find((pool) => pool.poolId === `base:${stablePool}`)?.poolType).toBe("aerodrome-stable");
     expect(pools.find((pool) => pool.poolId === `base:${stablePool}`)?.extra?.evmV2ExecutionCandidate).toBeUndefined();
+  });
+
+  it("attaches a unique classic Aerodrome candidate to a DeFiLlama UUID row", () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const usdz = "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938";
+    const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+    const exactPool = "0x6d0b9c9e92a3de30081563c3657b5258b3ffa38b";
+    const candidate = buildEvmV2ExecutionCandidate({
+      chain: "base",
+      protocol: "aerodrome",
+      poolType: "aerodrome-volatile",
+      poolAddress: exactPool,
+      tokenAddresses: [usdz, usdc],
+      tokenSymbols: ["USDz", "USDC"],
+      confirmedStable: false,
+    })!;
+    const symbolToIds = new Map<string, string[]>([["USDZ", ["usdz-anzen"]]]);
+
+    const metrics = processPoolMetrics(
+      [
+        makePool({
+          pool: "b31a754f-7e3e-4c1a-838f-9a5071f2d622",
+          chain: "Base",
+          project: "aerodrome",
+          symbol: "USDz-USDC",
+          underlyingTokens: [usdz, usdc],
+        }),
+      ],
+      new Set(["aerodrome"]),
+      symbolToIds,
+      buildSymbolToChainScopedIds(symbolToIds, ["base"]),
+      new Map(),
+      new Map([[`base:${usdz}`, "usdz-anzen"]]),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map(),
+      new Map([["usdz-anzen", 1]]),
+      1_752_560_000,
+      undefined,
+      new Map([[`base:${exactPool}`, candidate]]),
+    );
+
+    const retained = metrics.get("usdz-anzen")?.topPools[0];
+    expect(retained?.poolId).toBe(buildPoolFingerprint("base", "aerodrome", [usdz, usdc]));
+    expect(retained?.extra?.evmV2ExecutionCandidate).toEqual(candidate);
   });
 
   it("matches pools without mutating canonical addresses, protects symbol collisions, and enriches pool extras", () => {
@@ -1045,5 +1100,104 @@ describe("processPoolMetrics", () => {
         },
       });
     }
+  });
+
+  it("attaches V4 shadow targets only for one exact hook-free candidate", () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+    const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";
+    const poolId = computeUniswapV4PoolId({
+      currency0: USDC,
+      currency1: USDT,
+      feePips: 100,
+      tickSpacing: 1,
+      hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+    });
+    const candidate: UniswapV4ExecutionCandidate = {
+      chain: "ethereum",
+      poolId,
+      feePips: 100,
+      tickSpacing: 1,
+      hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+      tvlUsd: 2_000_000,
+      token0Price: 1,
+      token1Price: 1,
+      tokens: [
+        { address: USDC, symbol: "USDC", decimals: 6 },
+        { address: USDT, symbol: "USDT", decimals: 6 },
+      ],
+    };
+    const addressToId = new Map([
+      [USDC, "usdc-circle"],
+      [USDT, "usdt-tether"],
+    ]);
+    const chainAddressToId = buildChainAddressToId(addressToId, ["ethereum"]);
+    const symbolToIds = new Map<string, string[]>([
+      ["USDC", ["usdc-circle"]],
+      ["USDT", ["usdt-tether"]],
+    ]);
+    const symbolToChainScopedIds = buildSymbolToChainScopedIds(
+      symbolToIds,
+      ["ethereum"],
+    );
+    const key = buildUniswapV4ExecutionCandidateKey(
+      "ethereum",
+      [USDC, USDT],
+      100,
+    )!;
+    const run = (candidates: UniswapV4ExecutionCandidate[]) =>
+      processPoolMetrics(
+        [
+          makePool({
+            pool: "4dbfda50-1111-2222-3333-444455556666",
+            project: "uniswap-v4-ethereum",
+            poolMeta: "Uniswap V4 0.01%",
+            symbol: "USDC-USDT",
+            tvlUsd: 2_000_000,
+            underlyingTokens: [USDC, USDT],
+          }),
+        ],
+        new Set(["uniswap-v4-ethereum"]),
+        symbolToIds,
+        symbolToChainScopedIds,
+        addressToId,
+        chainAddressToId,
+        new Map(),
+        new Map(),
+        new Map(),
+        new Map(),
+        new Map(),
+        new Map([
+          ["usdc-circle", 1],
+          ["usdt-tether", 1],
+        ]),
+        1_785_000_000,
+        undefined,
+        new Map(),
+        new Map(),
+        new Map([[key, candidates]]),
+      ).get("usdc-circle")?.topPools[0];
+
+    expect(run([candidate])?.extra?.measuredExecutionTarget).toMatchObject({
+      adapterProfileId: "uniswap-v4-hook-free-quoter-v1",
+      poolId: `ethereum:${poolId}`,
+      hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+    });
+    expect(run([candidate])?.extra?.executionCapabilityGate).toBeUndefined();
+
+    const hookedCollision: UniswapV4ExecutionCandidate = {
+      ...candidate,
+      poolId: `0x${"1".repeat(64)}`,
+      hookAddress: "0x0000000000000000000000000000000000000001",
+    };
+    expect(run([candidate, hookedCollision])?.extra).toMatchObject({
+      executionCapabilityGate: {
+        family: "measured-execution",
+        reason: "target-unresolved",
+      },
+    });
+    expect(
+      run([candidate, hookedCollision])?.extra?.measuredExecutionTarget,
+    ).toBeUndefined();
   });
 });

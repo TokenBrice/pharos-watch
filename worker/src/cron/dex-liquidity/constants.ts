@@ -69,6 +69,40 @@ export const buildUniV3PoolQuery = (skip: number): string => `{
   }
 }`;
 
+/**
+ * Official Uniswap V4 Ethereum subgraph deployment:
+ * https://developers.uniswap.org/api/subgraph/subgraphs-devs/deployments
+ *
+ * Only Ethereum is reviewed here. Other chains remain unsupported until an
+ * official endpoint and deployment identities are pinned independently.
+ */
+export const UNISWAP_V4_SUBGRAPHS: Record<string, string> = {
+  ethereum: "DiYPVdygkfjDWhbxGSqAQxwBKmfKnkWQojqeM2rkLb3G",
+};
+
+export const UNISWAP_V4_POOL_PAGE_SIZE = 1000;
+export const UNISWAP_V4_POOL_MAX_PAGES = 5;
+
+export const buildUniswapV4PoolQuery = (skip: number): string => `{
+  pools(
+    first: ${UNISWAP_V4_POOL_PAGE_SIZE},
+    skip: ${skip},
+    orderBy: totalValueLockedUSD,
+    orderDirection: desc,
+    where: { totalValueLockedUSD_gt: "10000" }
+  ) {
+    id
+    token0 { id symbol decimals }
+    token1 { id symbol decimals }
+    feeTier
+    tickSpacing
+    hooks
+    totalValueLockedUSD
+    token0Price
+    token1Price
+  }
+}`;
+
 export const AERODROME_SUBGRAPHS: Record<string, string> = {
   base: "GENunSHWLBXm59mBSgPzQ8metBEp9YDfdqwFr91Av1UM",
 };

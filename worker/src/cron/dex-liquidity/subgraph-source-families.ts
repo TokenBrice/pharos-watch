@@ -5,7 +5,12 @@ import { isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-cron-con
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { mergeDexPriceObservationMap } from "./orchestrator-phases/price-obs";
 import type { SubgraphPriceObservation } from "./subgraph-helpers";
-import type { AerodromeLookups, DexPriceObs, UniV3Lookups } from "./types";
+import type {
+  AerodromeLookups,
+  DexPriceObs,
+  UniswapV4Lookups,
+  UniV3Lookups,
+} from "./types";
 import {
   AERODROME_PAIR_MAX_PAGES,
   AERODROME_PAIR_PAGE_SIZE,
@@ -13,13 +18,20 @@ import {
   UNIV3_POOL_MAX_PAGES,
   UNIV3_POOL_PAGE_SIZE,
   UNIV3_SUBGRAPHS,
+  UNISWAP_V4_POOL_MAX_PAGES,
+  UNISWAP_V4_POOL_PAGE_SIZE,
+  UNISWAP_V4_SUBGRAPHS,
   buildAerodromePairQuery,
+  buildUniswapV4PoolQuery,
   buildUniV3PoolQuery,
 } from "./constants";
 import { buildPoolIdentity } from "./pool-identity";
 import { resolveTrackedStablecoinId } from "./token-resolution";
 import { runSubgraphFamily } from "./subgraph-family-runner";
-import { buildUniV3ExecutionCandidateKey } from "../measured-execution/inventory";
+import {
+  buildUniswapV4ExecutionCandidateKey,
+  buildUniV3ExecutionCandidateKey,
+} from "../measured-execution/inventory";
 import { buildEvmV2ExecutionCandidate } from "./constant-product-v2";
 
 type UniV3SubgraphPool = {
@@ -46,6 +58,25 @@ type AerodromeSubgraphPair = {
   token1Price: string;
   isStable: boolean;
 };
+
+type UniswapV4SubgraphPool = {
+  id: string;
+  token0: { id: string; symbol: string; decimals: string };
+  token1: { id: string; symbol: string; decimals: string };
+  feeTier: string;
+  tickSpacing: string;
+  hooks: string;
+  totalValueLockedUSD: string;
+  token0Price: string;
+  token1Price: string;
+};
+
+function parseSubgraphInteger(value: string): number {
+  const normalized = value.trim();
+  if (!/^-?[0-9]+$/.test(normalized)) return Number.NaN;
+  const parsed = Number(normalized);
+  return Number.isSafeInteger(parsed) ? parsed : Number.NaN;
+}
 
 function mapTrackedSubgraphPriceObservations(config: {
   chain: string;
@@ -314,5 +345,103 @@ export async function fetchAerodromeData(
       `[dex-liquidity] Collected ${lookups.aerodromePriceObs.size} coins with Aerodrome price observations, ` +
       `${lookups.aerodromeIsStable.size} pool stability flags, and ` +
       `${lookups.aerodromeV2ExecutionCandidates.size} classic volatile execution candidates`,
+  });
+}
+
+export async function fetchUniswapV4Data(
+  graphApiKey: string | null,
+  signal?: AbortSignal,
+): Promise<UniswapV4Lookups> {
+  return runSubgraphFamily<UniswapV4SubgraphPool, UniswapV4Lookups>({
+    graphApiKey,
+    signal,
+    subgraphs: UNISWAP_V4_SUBGRAPHS,
+    missingApiKeyMessage:
+      "[dex-liquidity] No GRAPH_API_KEY, skipping Uniswap V4 execution enrichment",
+    familyLabel: "Uniswap V4 subgraph",
+    createLookups: () => ({
+      uniswapV4ExecutionCandidates: new Map(),
+    }),
+    buildConfig: (chain, subgraphUrl, combinedSignal, lookups) => ({
+      subgraphUrl,
+      sourceLabel: "Uniswap V4 subgraph",
+      chain,
+      buildQuery: (skip) => buildUniswapV4PoolQuery(skip),
+      pageSize: UNISWAP_V4_POOL_PAGE_SIZE,
+      maxPages: UNISWAP_V4_POOL_MAX_PAGES,
+      signal: combinedSignal,
+      extractEntities: (data) =>
+        (data as { pools?: UniswapV4SubgraphPool[] } | undefined)?.pools,
+      mapEntity: (pool) => {
+        const poolId = pool.id.trim().toLowerCase();
+        const hookAddress = pool.hooks.trim().toLowerCase();
+        const feePips = parseSubgraphInteger(pool.feeTier);
+        const tickSpacing = parseSubgraphInteger(pool.tickSpacing);
+        const tvlUsd = Number.parseFloat(pool.totalValueLockedUSD);
+        const token0Decimals = parseSubgraphInteger(pool.token0.decimals);
+        const token1Decimals = parseSubgraphInteger(pool.token1.decimals);
+        const token0Price = Number.parseFloat(pool.token0Price);
+        const token1Price = Number.parseFloat(pool.token1Price);
+        const executionKey = buildUniswapV4ExecutionCandidateKey(
+          chain,
+          [pool.token0.id, pool.token1.id],
+          feePips,
+        );
+        if (
+          executionKey &&
+          /^0x[a-f0-9]{64}$/.test(poolId) &&
+          /^0x[a-f0-9]{40}$/.test(hookAddress) &&
+          Number.isInteger(tickSpacing) &&
+          tickSpacing > 0 &&
+          tickSpacing <= 32_767 &&
+          Number.isFinite(tvlUsd) &&
+          tvlUsd > 0 &&
+          Number.isInteger(token0Decimals) &&
+          token0Decimals >= 0 &&
+          token0Decimals <= 255 &&
+          Number.isInteger(token1Decimals) &&
+          token1Decimals >= 0 &&
+          token1Decimals <= 255 &&
+          Number.isFinite(token0Price) &&
+          token0Price > 0 &&
+          Number.isFinite(token1Price) &&
+          token1Price > 0
+        ) {
+          const candidates =
+            lookups.uniswapV4ExecutionCandidates.get(executionKey) ?? [];
+          candidates.push({
+            chain,
+            poolId: poolId as `0x${string}`,
+            feePips,
+            tickSpacing,
+            hookAddress: hookAddress as `0x${string}`,
+            tvlUsd,
+            token0Price,
+            token1Price,
+            tokens: [
+              {
+                address: pool.token0.id,
+                symbol: pool.token0.symbol,
+                decimals: token0Decimals,
+              },
+              {
+                address: pool.token1.id,
+                symbol: pool.token1.symbol,
+                decimals: token1Decimals,
+              },
+            ],
+          });
+          lookups.uniswapV4ExecutionCandidates.set(executionKey, candidates);
+        }
+        // V4 contributes execution identity only; retained-pool pricing remains
+        // sourced from the established DEX-liquidity price surface.
+        return [];
+      },
+    }),
+    handleResult: () => {},
+    buildChainSummary: (chain, result) =>
+      `[dex-liquidity] Indexed ${result.entityCount} Uniswap V4 pools from ${chain} subgraph`,
+    buildFinalSummary: (lookups) =>
+      `[dex-liquidity] Collected ${lookups.uniswapV4ExecutionCandidates.size} Uniswap V4 execution candidate keys`,
   });
 }

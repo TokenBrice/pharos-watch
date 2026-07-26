@@ -211,6 +211,17 @@ describe("Solana exact quote parsing", () => {
     });
   });
 
+  it("rejects an oversized provider body before buffering it", async () => {
+    const fetchImpl = async () =>
+      new Response("{}", { headers: { "Content-Length": "200001" } });
+
+    await expect(quoteSolanaMeasuredTarget({
+      target: target(),
+      inputUsd: 1_000,
+      fetchImpl: fetchImpl as typeof fetch,
+    })).rejects.toThrow("quote-response-too-large");
+  });
+
   it("accepts an ordinary Orca Jupiter quote without an updateContextSlot extension", () => {
     const current = target();
     const body = {
