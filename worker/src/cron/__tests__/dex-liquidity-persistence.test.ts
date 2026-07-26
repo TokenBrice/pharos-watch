@@ -253,6 +253,15 @@ describe("dex-liquidity persistence", () => {
       currentGenerationRows: ACTIVE_STABLECOINS.length + 1,
       inactiveMetricRowsSkipped: 0,
       inactiveMetricIdsSkipped: [],
+      retention: {
+        cutoff: 1_700_000_000 - 3 * 60 * 60,
+        deletedRows: 2,
+        deletedRunRows: 1,
+        deletedGenerationRows: 1,
+        oldestRemainingAt: null,
+        durationMs: expect.any(Number),
+        error: null,
+      },
     });
 
     const prepared = getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows");
@@ -793,32 +802,52 @@ describe("dex-liquidity persistence", () => {
 });
 
 describe("dex liquidity generation prune", () => {
-  it("deletes only unreferenced generations past the 3-day horizon in bounded oldest-first batches", async () => {
+  it("deletes only terminal generations past the 3-hour horizon in bounded oldest-first batches", async () => {
+    const executed: Array<{ kind: "run" | "first"; sql: string; binds: unknown[] }> = [];
+    const statement = (sql: string, binds: unknown[] = []) => ({
+      bind: (...nextBinds: unknown[]) => statement(sql, nextBinds),
+      run: async () => {
+        executed.push({ kind: "run", sql, binds });
+        return { meta: { changes: 2 } };
+      },
+      first: async () => {
+        executed.push({ kind: "first", sql, binds });
+        return { oldest_remaining_at: 1_699_990_000 };
+      },
+    });
     const db = {
-      prepare: (sql: string) => ({
-        bind: (...binds: unknown[]) => ({ sql, binds }),
-      }),
+      prepare: (sql: string) => statement(sql, []),
     } as unknown as D1Database;
 
     const nowSec = 1_700_000_000;
-    await pruneOldDexLiquidityGenerations(db, nowSec);
+    const retention = await pruneOldDexLiquidityGenerations(db, nowSec);
 
-    const lastCall = vi.mocked(batchExecute).mock.lastCall;
-    expect(lastCall).toBeDefined();
-    const stmts = lastCall?.[1] as unknown as Array<{ sql: string; binds: unknown[] }>;
-    expect(stmts).toHaveLength(2);
-    const cutoff = nowSec - 3 * 86_400;
-    const [runRows, ledger] = stmts;
+    expect(executed).toHaveLength(3);
+    const cutoff = nowSec - 3 * 60 * 60;
+    const [runRows, ledger, oldest] = executed;
 
     expect(runRows.sql).toContain("DELETE FROM dex_liquidity_run_rows");
+    expect(runRows.sql).toContain("state IN ('published', 'failed')");
     expect(runRows.sql).toContain("SELECT publication_generation_id");
+    expect(runRows.sql).toContain("stablecoin_id = '__global__'");
     expect(runRows.sql).toContain("ORDER BY started_at ASC LIMIT ?");
     expect(runRows.binds).toEqual([cutoff, 16]);
 
     expect(ledger.sql).toContain("DELETE FROM dex_liquidity_publication_generations");
+    expect(ledger.sql).toContain("state IN ('published', 'failed')");
     expect(ledger.sql).toContain("SELECT publication_generation_id");
     expect(ledger.sql).toContain("NOT EXISTS");
     expect(ledger.sql).toContain("SELECT 1 FROM dex_liquidity_run_rows r");
-    expect(ledger.binds).toEqual([cutoff]);
+    expect(ledger.sql).toContain("ORDER BY candidate.started_at ASC");
+    expect(ledger.binds).toEqual([cutoff, 16]);
+    expect(oldest.kind).toBe("first");
+    expect(retention).toMatchObject({
+      cutoff,
+      deletedRunRows: 2,
+      deletedGenerationRows: 2,
+      deletedRows: 4,
+      oldestRemainingAt: 1_699_990_000,
+      error: null,
+    });
   });
 });

@@ -1489,6 +1489,13 @@ describe("dex-liquidity scoring", () => {
         truncated: 0,
       }],
       truncatedStablecoins: 0,
+      retention: {
+        cutoff: 1_700_000_001 - 3 * 60 * 60,
+        deletedRows: 0,
+        oldestRemainingAt: null,
+        durationMs: expect.any(Number),
+        error: null,
+      },
     });
   });
 
