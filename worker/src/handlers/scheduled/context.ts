@@ -56,6 +56,7 @@ const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec
   "sync-mint-burn-extended": LONG_RUNNING_LEASE_OPTIONS,
   "dispatch-telegram-alerts": LONG_RUNNING_LEASE_OPTIONS,
   "snapshot-public-dataset": LONG_RUNNING_LEASE_OPTIONS,
+  "sync-v9-supply-attribution": LONG_RUNNING_LEASE_OPTIONS,
   "daily-digest": LONG_RUNNING_LEASE_OPTIONS,
   "weekly-recap": LONG_RUNNING_LEASE_OPTIONS,
 };
@@ -191,7 +192,7 @@ export function createScheduledRuntimeContext(
   const workerJobLedgerAllowlist = parseCsvEnv(env.WORKER_JOB_LEDGER_ALLOWLIST);
   const slotBudgetStartedAtMs = scheduled.slotBudgetStartedAtMs ?? Date.now();
   const invocationId = createLeaseOwner(`scheduled:${scheduled.scheduleKey}`);
-  const workerVersion = env.CF_VERSION_METADATA?.tag || env.CF_VERSION_METADATA?.id || null;
+  const workerVersion = env.CF_VERSION_METADATA?.id || null;
   const jobAttemptNo = scheduled.jobAttemptNo ?? 1;
   const producerKind = scheduled.producerKind ?? "scheduled-job";
   const fetchBudget = new ScheduledFetchBudget();

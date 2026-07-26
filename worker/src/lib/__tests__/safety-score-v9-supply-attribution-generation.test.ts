@@ -35,7 +35,7 @@ import {
 } from "../safety-score-v9-supply-attribution-generation";
 import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 
-const SOURCE_CLOCK_SEC = 1_784_894_400;
+const SOURCE_CLOCK_SEC = 1_785_067_200;
 const SOURCE_AGGREGATE_USD = 2_480_000_000;
 const TARGET_AGGREGATE_USD = 3_000_000_000;
 
@@ -155,10 +155,10 @@ function acceptedGenerationFixture() {
   return { fixedInput, attribution, completedAtSec, journalPayload };
 }
 
-function createAcceptedGeneration(
+function createAcceptedGenerationFromFixture(
+  fixture: ReturnType<typeof acceptedGenerationFixture>,
   journalOverrides: Partial<SupplyAttributionJournalV1Payload> = {},
 ) {
-  const fixture = acceptedGenerationFixture();
   const journal = createSupplyAttributionJournalV1({
     ...fixture.journalPayload,
     ...journalOverrides,
@@ -173,6 +173,15 @@ function createAcceptedGeneration(
       journalRecords: [journal],
     },
   });
+}
+
+function createAcceptedGeneration(
+  journalOverrides: Partial<SupplyAttributionJournalV1Payload> = {},
+) {
+  return createAcceptedGenerationFromFixture(
+    acceptedGenerationFixture(),
+    journalOverrides,
+  );
 }
 
 describe("isolated Safety Score V9 supply attribution generation", () => {
@@ -303,6 +312,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
   });
 
   it("rejects journal provenance that is not bound to the accepted capture", () => {
+    const fixture = acceptedGenerationFixture();
     const mismatches: Array<{
       label: string;
       overrides: Partial<SupplyAttributionJournalV1Payload>;
@@ -344,7 +354,11 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
 
     for (const mismatch of mismatches) {
       expect(
-        () => createAcceptedGeneration(mismatch.overrides),
+        () =>
+          createAcceptedGenerationFromFixture(
+            fixture,
+            mismatch.overrides,
+          ),
         mismatch.label,
       ).toThrow(mismatch.error);
     }

@@ -119,6 +119,31 @@ describe("scheduled runtime job-ledger modes", () => {
     });
   });
 
+  it("uses the immutable Worker version ID for scheduled provenance fences", () => {
+    const runtime = createScheduledRuntimeContext(
+      {
+        DB: {} as D1Database,
+        CF_VERSION_METADATA: {
+          id: "immutable-version-id",
+          tag: "reusable-release-tag",
+          timestamp: "2026-07-26T12:00:00Z",
+        },
+      } as Parameters<typeof createScheduledRuntimeContext>[0],
+      {
+        waitUntil: vi.fn(),
+        passThroughOnException: vi.fn(),
+      } as unknown as ExecutionContext,
+      {
+        cron: "*/15 * * * *",
+        scheduleKey: "quarterHourly",
+        scheduledTimeMs: 1_000_000,
+        slotStartedAt: 1_000,
+      },
+    );
+
+    expect(runtime.workerVersion).toBe("immutable-version-id");
+  });
+
   it("makes bootstrap persistence part of write mode before job execution", async () => {
     const bootstrapError = new Error("attempt create failed");
     mocks.createWorkerJobAttempt.mockRejectedValue(bootstrapError);

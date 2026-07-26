@@ -1,17 +1,18 @@
 /**
  * Quarter-hourly trigger (every 15 min):
  *   sync-fx-rates (3) -> sync-stablecoins (4) -> snapshots (0)
- *   -> isolated V9 attribution (3) -> D1-only cache refreshes (0)
+ *   -> report-card publication (0) -> depeg resolver (0)
  *
  * All jobs run sequentially in-slot to avoid cross-job connection spikes.
  * Run FX first so Chainlink gets a clean RPC window before the heavier
  * stablecoin pricing pipeline consumes the slot's shared fetch budget.
+ * Private V9 attribution and compilation use their own fenced +8 and +14
+ * triggers. They never execute inside this public lane.
  */
 import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
-import { syncSafetyScoreV9SupplyAttribution } from "../../cron/sync-v9-supply-attribution";
 import { publishReportCardCache } from "../../cron/publish-report-card-cache";
 import { computeDepegResolver } from "../../cron/compute-depeg-resolver";
 import { parseStablecoinsCapabilities, type ScheduledRuntimeContext } from "./context";
@@ -86,15 +87,6 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
 
   await runIfCacheSafe("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
   await runIfCacheSafe("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
-  await runIfCacheSafe(
-    "sync-v9-supply-attribution",
-    (signal) =>
-      syncSafetyScoreV9SupplyAttribution(
-        runtime.db,
-        runtime.chainRpcs,
-        signal,
-      ),
-  );
   await runIfCacheSafe(
     "publish-report-card-cache",
     (signal) => publishReportCardCache(runtime.db, signal),

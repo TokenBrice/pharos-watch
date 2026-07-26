@@ -20,11 +20,14 @@
     "quarterHourly",
     "sixHourlyBlacklist",
     "statusSelfCheckOffset",
-    "twoHourlyDexDiscovery"
+    "twoHourlyDexDiscovery",
+    "v9ShadowOffset",
+    "v9SupplyAttributionOffset"
   ],
   "jobIds": [
     "compute-depeg-resolver",
     "compute-dews",
+    "compute-safety-score-v9-shadow",
     "cron-duration-watchdog",
     "cron-slot-sweeper",
     "cron-staleness-watchdog",

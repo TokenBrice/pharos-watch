@@ -288,22 +288,6 @@ vi.mock("../sync-stablecoins/enrich-prices", () => ({
     stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 },
     cgPrices: new Map(),
   })),
-  runGtProbePass: vi.fn(async () => ({
-    updatedCount: 0,
-    stats: {
-      probed: 0,
-      pricesObtained: 0,
-      divergences500bps: 0,
-      skippedLowTvl: 0,
-      lookupMisses: 0,
-      upstreamErrors: 0,
-      publicFallbacks: 0,
-      transports: {
-        coingeckoOnchain: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
-        geckoTerminalPublic: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
-      },
-    },
-  })),
 }));
 
 // Stub detect-depegs and confirm-pending-depegs
@@ -394,7 +378,7 @@ vi.mock("../../lib/stablecoin-publication-coverage", async (importOriginal) => {
 
 import { syncStablecoins } from "../sync-stablecoins";
 import { stampPriceMetadata } from "../sync-stablecoins/shared";
-import { enrichMissingPrices, fetchPrimaryPrices, runGtProbePass, type PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
+import { enrichMissingPrices, fetchPrimaryPrices } from "../sync-stablecoins/enrich-prices";
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
@@ -589,7 +573,7 @@ describe("syncStablecoins", () => {
     expect(confirmPendingDepegs).not.toHaveBeenCalled();
   });
 
-  it("runs missing-price enrichment before the GT probe", async () => {
+  it("keeps the optional live GT probe out of the critical publication path", async () => {
     const db = makeDb();
     const dlData = makeDlResponse(60);
     const order: string[] = [];
@@ -600,28 +584,6 @@ describe("syncStablecoins", () => {
         totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0, finalMissing: 0, failedPasses: [],
       };
     });
-    vi.mocked(runGtProbePass).mockImplementationOnce(async () => {
-      order.push("gt");
-      return {
-        updatedCount: 0,
-        stats: {
-          probed: 0,
-          pricesObtained: 0,
-          divergences500bps: 0,
-          skippedLowTvl: 0,
-          lookupMisses: 0,
-          upstreamErrors: 0,
-          publicFallbacks: 0,
-          budgetExhausted: false,
-          budgetSkipped: 0,
-          transports: {
-            coingeckoOnchain: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
-            geckoTerminalPublic: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
-          },
-        },
-      };
-    });
-
     mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
       { match: "stablecoins.llama.fi", body: dlData },
@@ -630,31 +592,12 @@ describe("syncStablecoins", () => {
 
     await syncStablecoins(db);
 
-    expect(order).toEqual(["enrich", "gt"]);
+    expect(order).toEqual(["enrich"]);
   });
 
-  it("persists GT probe stats into sync metadata", async () => {
+  it("persists the inline GT isolation decision into sync metadata", async () => {
     const db = makeDb();
     const dlData = makeDlResponse(60);
-
-    vi.mocked(runGtProbePass).mockResolvedValueOnce({
-      updatedCount: 1,
-      stats: {
-        probed: 2,
-        pricesObtained: 1,
-        divergences500bps: 1,
-        skippedLowTvl: 0,
-        lookupMisses: 0,
-        upstreamErrors: 0,
-        publicFallbacks: 1,
-        budgetExhausted: false,
-        budgetSkipped: 0,
-        transports: {
-          coingeckoOnchain: { attempted: 1, priced: 0, lookupMisses: 1, upstreamErrors: 0 },
-          geckoTerminalPublic: { attempted: 1, priced: 1, lookupMisses: 0, upstreamErrors: 0 },
-        },
-      },
-    });
 
     mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },
@@ -667,37 +610,11 @@ describe("syncStablecoins", () => {
     const gtProbe = metadata.gtProbe as Record<string, unknown>;
     const transports = gtProbe.transports as Record<string, unknown>;
 
-    expect(gtProbe.updatedCount).toBe(1);
-    expect(gtProbe.publicFallbacks).toBe(1);
-    expect((transports.coingeckoOnchain as Record<string, unknown>).lookupMisses).toBe(1);
-    expect((transports.geckoTerminalPublic as Record<string, unknown>).priced).toBe(1);
-  });
-
-  it("keeps default GT probe metadata when the non-fatal GT pass throws", async () => {
-    const db = makeDb();
-    const dlData = makeDlResponse(60);
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    vi.mocked(runGtProbePass).mockRejectedValueOnce(new Error("gt transient failure"));
-
-    mockFetchWithRetry([
-      { match: "api.coingecko.com", body: {} },
-      { match: "stablecoins.llama.fi", body: dlData },
-      { match: "coins.llama.fi/prices", body: { coins: {} } },
-    ]);
-
-    const result = await syncStablecoins(db);
-    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
-    const gtProbe = metadata.gtProbe as Record<string, unknown>;
-
-    expect(result.status).toBe("ok");
     expect(gtProbe.updatedCount).toBe(0);
-    expect(gtProbe.upstreamErrors).toBe(0);
-    expect(gtProbe.publicFallbacks).toBe(0);
-    expect(warnSpy).toHaveBeenCalledWith(
-      "[sync-stablecoins] GT probe failed (non-fatal):",
-      expect.any(Error),
-    );
+    expect(gtProbe.inlineDisabled).toBe(true);
+    expect(gtProbe.isolationReason).toBe("worker-memory-boundary");
+    expect((transports.coingeckoOnchain as Record<string, unknown>).attempted).toBe(0);
+    expect((transports.geckoTerminalPublic as Record<string, unknown>).attempted).toBe(0);
   });
 
   it("applies protocol-backed price overrides before caching", async () => {
@@ -806,7 +723,7 @@ describe("syncStablecoins", () => {
     expect(result.status).toBe("ok");
   });
 
-  it("keeps protocol-backed overrides as the final price even when the GT probe finds a later market quote", async () => {
+  it("keeps protocol-backed overrides final without entering the optional GT pass", async () => {
     const db = makeDb();
     const writes = trackCacheWrites(db);
     const dlData = makeDlResponse(60);
@@ -827,39 +744,6 @@ describe("syncStablecoins", () => {
         { price: 0.99999266, source: "protocol-redeem", confidence: "high" },
       ],
     ]));
-
-    vi.mocked(runGtProbePass).mockImplementationOnce(async (
-      _assets,
-      primaryPriceResults: Map<string, PrimaryPriceResult>,
-    ) => {
-      primaryPriceResults.set("cusd-cap", {
-        price: 0.991,
-        source: "geckoterminal",
-        confidence: "high",
-        dlPrice: null,
-        cgPrice: null,
-        candidateSources: ["geckoterminal"],
-        agreeSources: ["geckoterminal"],
-      });
-      return {
-        updatedCount: 1,
-        stats: {
-          probed: 1,
-          pricesObtained: 1,
-          divergences500bps: 0,
-          skippedLowTvl: 0,
-          lookupMisses: 0,
-          upstreamErrors: 0,
-          publicFallbacks: 0,
-          budgetExhausted: false,
-          budgetSkipped: 0,
-          transports: {
-            coingeckoOnchain: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
-            geckoTerminalPublic: { attempted: 1, priced: 1, lookupMisses: 0, upstreamErrors: 0 },
-          },
-        },
-      };
-    });
 
     mockFetchWithRetry([
       { match: "api.coingecko.com", body: {} },

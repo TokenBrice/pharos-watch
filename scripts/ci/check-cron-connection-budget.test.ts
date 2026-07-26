@@ -18,7 +18,6 @@ describe("check-cron-connection-budget", () => {
           "sync-stablecoins",
           "snapshot-supply",
           "snapshot-chain-supply",
-          "sync-v9-supply-attribution",
           "publish-report-card-cache",
           "compute-depeg-resolver",
         ],

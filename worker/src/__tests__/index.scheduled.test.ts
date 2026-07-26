@@ -43,6 +43,7 @@ const cronMocks = vi.hoisted(() => ({
   snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotChainSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncSafetyScoreV9SupplyAttribution: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  computeSafetyScoreV9Shadow: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   publishReportCardCache: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   computeDepegResolver: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSafetyGradeHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -252,6 +253,18 @@ vi.mock("../cron/snapshot-chain-supply", () => ({ snapshotChainSupply: cronMocks
 vi.mock("../cron/sync-v9-supply-attribution", () => ({
   syncSafetyScoreV9SupplyAttribution: cronMocks.syncSafetyScoreV9SupplyAttribution,
 }));
+vi.mock("../cron/compute-safety-score-v9-shadow", () => ({
+  computeSafetyScoreV9Shadow: cronMocks.computeSafetyScoreV9Shadow,
+}));
+vi.mock("../lib/v9-slot-window", () => ({
+  waitForV9MemoryLaneRelease: vi.fn(async () => undefined),
+  runV9AfterCoreWithinWindow: vi.fn(
+    (
+      _options: unknown,
+      run: (signal: AbortSignal) => Promise<unknown>,
+    ) => run(new AbortController().signal),
+  ),
+}));
 vi.mock("../cron/publish-report-card-cache", () => ({ publishReportCardCache: cronMocks.publishReportCardCache }));
 vi.mock("../cron/compute-depeg-resolver", () => ({ computeDepegResolver: cronMocks.computeDepegResolver }));
 vi.mock("../cron/snapshot-safety-grade-history", () => ({
@@ -452,12 +465,12 @@ describe("worker.scheduled", () => {
     );
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
-    expect(cronMocks.syncSafetyScoreV9SupplyAttribution).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncSafetyScoreV9SupplyAttribution).not.toHaveBeenCalled();
     expect(cronMocks.publishReportCardCache).toHaveBeenCalledTimes(1);
     expect(
-      cronMocks.syncSafetyScoreV9SupplyAttribution.mock.invocationCallOrder[0],
-    ).toBeLessThan(
       cronMocks.publishReportCardCache.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      cronMocks.computeDepegResolver.mock.invocationCallOrder[0],
     );
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
     // stability-index and compute-dews run on the decoupled DEWS/PSI trigger
@@ -468,6 +481,47 @@ describe("worker.scheduled", () => {
     expect(cronMocks.dispatchTelegramAlerts).not.toHaveBeenCalled();
     // Charts now on the half-hourly offset trigger
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
+  });
+
+  it("runs V9 attribution and compilation only on their dedicated triggers", async () => {
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+    } as const;
+    const supply = makeCtx();
+
+    await worker.scheduled(
+      {
+        cron: "8,23,38,53 * * * *",
+        scheduledTime: Date.parse("2026-07-26T12:08:00Z"),
+      } as ScheduledEvent,
+      env as never,
+      supply.ctx,
+    );
+    await Promise.all(supply.waits);
+
+    expect(
+      cronMocks.syncSafetyScoreV9SupplyAttribution,
+    ).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeSafetyScoreV9Shadow).not.toHaveBeenCalled();
+
+    const shadow = makeCtx();
+    await worker.scheduled(
+      {
+        cron: "14,29,44,59 * * * *",
+        scheduledTime: Date.parse("2026-07-26T12:14:00Z"),
+      } as ScheduledEvent,
+      env as never,
+      shadow.ctx,
+    );
+    await Promise.all(shadow.waits);
+
+    expect(cronMocks.computeSafetyScoreV9Shadow).toHaveBeenCalledTimes(1);
+    expect(
+      cronMocks.syncSafetyScoreV9SupplyAttribution,
+    ).toHaveBeenCalledTimes(1);
+    expect(cronMocks.publishReportCardCache).not.toHaveBeenCalled();
+    expect(cronMocks.computeDepegResolver).not.toHaveBeenCalled();
   });
 
   it("runs status-self-check on the isolated offset trigger", async () => {
@@ -701,7 +755,7 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
-    expect(cronMocks.syncSafetyScoreV9SupplyAttribution).toHaveBeenCalledTimes(1);
+    expect(cronMocks.syncSafetyScoreV9SupplyAttribution).not.toHaveBeenCalled();
     expect(cronMocks.publishReportCardCache).toHaveBeenCalledTimes(1);
   });
 

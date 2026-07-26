@@ -3,7 +3,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createReportCardsFixedInput } from "../../report-cards-fixed-input";
 
 // Keep reviewed registry evidence current at this deterministic V9 calibration snapshot.
-const CLOCK_SEC = 1_784_894_400;
+const CLOCK_SEC = 1_785_067_200;
 const DEX_UPDATED_AT_SEC = CLOCK_SEC - 100;
 
 function resourceRoute(assetId: string) {
@@ -71,17 +71,22 @@ export function createSafetyScoreV9FullRegistryInput() {
           pegCurrency: "USD",
           governance: coin.flags.governance,
           currentDeviationBps: 1,
-          pegScore: 99,
+          pegScore: 100,
           priceSource: "resource-fixture",
           priceObservedAt: DEX_UPDATED_AT_SEC,
-          pegPct: 99,
-          severityScore: 0,
+          pegPct: 100,
+          severityScore: 100,
           spreadPenalty: 0,
           eventCount: 0,
-          worstDeviationBps: 1,
+          worstDeviationBps: null,
           activeDepeg: false,
           lastEventAt: null,
           trackingSpanDays: 365,
+          historyCoverage: {
+            startedAt: CLOCK_SEC - 365 * 24 * 60 * 60,
+            source: "asset-age",
+            status: "assumed",
+          },
           methodologyVersion: "resource-fixture",
         },
       ]),

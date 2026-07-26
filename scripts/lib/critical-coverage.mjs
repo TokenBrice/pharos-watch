@@ -80,6 +80,7 @@ export const CRITICAL_FILES = [
   "worker/src/lib/primary-price-collector.ts",
   "worker/src/lib/dex-price-estimators.ts",
   "worker/src/lib/geckoterminal-price-probe.ts",
+  "worker/src/lib/geckoterminal-price-probe-stats.ts",
   "worker/src/lib/address-price-providers/dexpaprika.ts",
   "worker/src/lib/address-price-providers/dexscreener.ts",
   "worker/src/lib/address-price-providers/index.ts",

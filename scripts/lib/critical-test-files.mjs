@@ -113,6 +113,7 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/lib/__tests__/safety-score-v9-store.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-centrifuge-supply-observer.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-supply-attribution-contract.test.ts",
+  "worker/src/lib/__tests__/safety-score-v9-supply-attribution-generation.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-supply-attribution-journal-store.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-supply-attribution.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-wm-supply-observer.test.ts",

@@ -5,7 +5,6 @@ const pricingStageMocks = vi.hoisted(() => ({
   fetchAuthoritativeLivePriceOverrides: vi.fn(),
   fetchPrimaryPrices: vi.fn(),
   enrichMissingPrices: vi.fn(),
-  runGtProbePass: vi.fn(),
 }));
 
 vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
@@ -45,7 +44,6 @@ vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
 vi.mock("../sync-stablecoins/enrich-prices", () => ({
   fetchPrimaryPrices: pricingStageMocks.fetchPrimaryPrices,
   enrichMissingPrices: pricingStageMocks.enrichMissingPrices,
-  runGtProbePass: pricingStageMocks.runGtProbePass,
   hasMissingPrice: (asset: { price?: number | null }) =>
     asset.price == null || typeof asset.price !== "number" || asset.price === 0,
 }));
@@ -83,24 +81,6 @@ import {
 import { runStablecoinsPricingStage } from "../sync-stablecoins/stages";
 import type { PeggedAsset, PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 
-function emptyGtProbeStats() {
-  return {
-    probed: 0,
-    pricesObtained: 0,
-    divergences500bps: 0,
-    skippedLowTvl: 0,
-    lookupMisses: 0,
-    upstreamErrors: 0,
-    publicFallbacks: 0,
-    budgetExhausted: false,
-    budgetSkipped: false,
-    transports: {
-      coingeckoOnchain: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
-      geckoTerminalPublic: { attempted: 0, priced: 0, lookupMisses: 0, upstreamErrors: 0 },
-    },
-  };
-}
-
 function makePricedAsset(): PeggedAsset {
   return {
     id: "usdt-tether",
@@ -135,7 +115,6 @@ describe("sync-stablecoins stage helpers", () => {
   beforeEach(() => {
     pricingStageMocks.fetchPrimaryPrices.mockReset();
     pricingStageMocks.enrichMissingPrices.mockReset();
-    pricingStageMocks.runGtProbePass.mockReset();
     pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mockReset();
 
     pricingStageMocks.fetchPrimaryPrices.mockResolvedValue({
@@ -154,10 +133,6 @@ describe("sync-stablecoins stage helpers", () => {
       finalMissing: 0,
       failedPasses: [],
       providerDiagnostics: [],
-    });
-    pricingStageMocks.runGtProbePass.mockResolvedValue({
-      updatedCount: 0,
-      stats: emptyGtProbeStats(),
     });
     pricingStageMocks.fetchAuthoritativeLivePriceOverrides.mockResolvedValue(new Map());
   });

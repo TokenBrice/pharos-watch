@@ -592,13 +592,16 @@ export async function loadCronHealth(
       && lastRun != null
       && isFresh
       && hasBlacklistMaintenanceDegradation(lastRun.metadata);
-    // Bootstrap = never ran at all. For watch-tier crons (especially monthly
-    // ones), a fresh install or a just-registered trigger legitimately has no
-    // history yet; treating it as unhealthy produces a permanent false
-    // positive. Critical-tier crons with no runs still count as unhealthy
-    // because the system cannot credibly claim healthy operation without
-    // them. Mirrors the reserveComposition.bootstrap pattern.
-    const watchBootstrap = runs.length === 0 && statusImpact === "watch";
+    // Bootstrap = no required attempt yet. Watch-tier crons can legitimately
+    // have no rows or one neutral admission skip while a just-deployed
+    // prerequisite generation/version is not ready. A second neutral-only run
+    // proves the prerequisite remained unavailable for a full interval and
+    // must not stay healthy forever. Critical-tier crons always require real
+    // availability evidence.
+    const watchBootstrap =
+      requiredRuns.length === 0 &&
+      runs.length <= 1 &&
+      statusImpact === "watch";
     // An expired lease or heartbeat on the latest active attempt is a direct
     // producer-integrity failure. A prior successful cron_runs row (or a
     // separately fresh progress row) must not mask abandoned current

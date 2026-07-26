@@ -6,6 +6,7 @@ import {
   runScheduledSlotWithFence,
   type ScheduledSlotExecutionOptions,
 } from "../lib/cron-lease";
+import { waitForV9MemoryLaneRelease } from "../lib/v9-slot-window";
 import { createScheduledRuntimeContext, type ScheduledRuntimeContext } from "./scheduled/context";
 import type { ScheduledSlotSummary } from "./scheduled/slot-summary";
 
@@ -14,6 +15,10 @@ type SlotRunnerLoader = () => Promise<SlotRunner>;
 
 export const SLOT_RUNNER_LOADER_BY_KEY = {
   quarterHourly: () => import("./scheduled/quarter-hourly").then((mod) => mod.runQuarterHourlySlot),
+  v9SupplyAttributionOffset: () =>
+    import("./scheduled/v9-supply-attribution").then((mod) => mod.runV9SupplyAttributionSlot),
+  v9ShadowOffset: () =>
+    import("./scheduled/v9-shadow").then((mod) => mod.runV9ShadowSlot),
   statusSelfCheckOffset: () => import("./scheduled/status-self-check").then((mod) => mod.runStatusSelfCheckSlot),
   sixHourlyBlacklist: () => import("./scheduled/hourly-blacklist").then((mod) => mod.runSixHourlyBlacklistSlot),
   halfHourlyMintBurnCritical: () =>
@@ -81,6 +86,8 @@ const SLOT_FENCE_POLICY_BY_RUNNER_KEY: Partial<Record<ScheduledRunnerKey, SlotFe
   fiveMinuteTelegramAlerts: MEDIUM_SLOT_FENCE_POLICY,
   fiveMinuteReserveRecovery: LONG_SLOT_FENCE_POLICY,
   quarterHourly: MEDIUM_SLOT_FENCE_POLICY,
+  v9SupplyAttributionOffset: MEDIUM_SLOT_FENCE_POLICY,
+  v9ShadowOffset: SHORT_SLOT_FENCE_POLICY,
   halfHourlyMeasuredExecution: MEDIUM_SLOT_FENCE_POLICY,
   halfHourlyOffset: MEDIUM_SLOT_FENCE_POLICY,
   halfHourlyChartsOffset: MEDIUM_SLOT_FENCE_POLICY,
@@ -150,6 +157,12 @@ export async function handleScheduledEvent(
       scheduleKey,
       async (slotSignal) => {
         runtime.slotSignal = slotSignal;
+        if (
+          slotPlan.runnerKey !== "v9SupplyAttributionOffset" &&
+          slotPlan.runnerKey !== "v9ShadowOffset"
+        ) {
+          await waitForV9MemoryLaneRelease(env.DB, slotSignal);
+        }
         const summary = await runner(runtime);
         if (!summary) return;
         return {

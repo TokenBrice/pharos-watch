@@ -29,6 +29,9 @@ vi.mock("../dex-liquidity/subgraph-source-families", () => ({
     aerodromeIsStable: new Map(),
     aerodromeV2ExecutionCandidates: new Map(),
   })),
+  fetchUniswapV4Data: vi.fn(async () => ({
+    uniswapV4ExecutionCandidates: new Map(),
+  })),
 }));
 
 vi.mock("../dex-liquidity/fetch-primary", () => ({

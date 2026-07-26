@@ -12,7 +12,6 @@ export { isReasonablePrice, PRICE_BOUNDS } from "../../lib/price-validation";
 export {
   applyPoolChallenge,
   fetchPrimaryPrices,
-  runGtProbePass,
   type PriceValidationStats,
   type PrimaryPriceResult,
 } from "./enrich-prices-primary";

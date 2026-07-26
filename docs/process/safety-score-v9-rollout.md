@@ -74,12 +74,19 @@ binding or deterministic replay.
 
 ## Shadow Architecture
 
-After a valid V8 publication commits, the Worker runs the V9 candidate in a
-separate caught failure domain. A V9 load, compile, evaluation, serialization,
-or persistence failure cannot suppress or replace V8 publication.
+The V8 publisher atomically commits its public projections, exact replay input,
+and compact publication-exact V9 peg-provenance seed before DDR runs. Dedicated
+`+8` supply-attribution and `+14` shadow triggers then run V9 in separate caught
+failure domains. Each requires the matching completed core slot and immutable
+Worker version ID, acquires the shared V9 memory lane, and has an absolute
+pre-quarter deadline, so a V9 load, compile,
+evaluation, serialization, persistence failure, or delayed trigger cannot
+suppress or replace V8 publication or strand DDR.
 
 The private latest entries are:
 
+- `report-cards:v9-peg-provenance-seed:exact`: the compact
+  publication-exact peg event provenance bound to the atomic V8 generation;
 - `report-cards:v9-fixed-input:exact`: the normalized V8 base generation plus
   any bounded V9-only evidence used by the latest attempted shadow refresh;
 - `report-cards:v9-shadow`: the latest strict candidate envelope; and

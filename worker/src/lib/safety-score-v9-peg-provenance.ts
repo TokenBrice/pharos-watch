@@ -6,10 +6,21 @@ import {
   type DepegEvent,
   type PegSummaryCoin,
 } from "@shared/types/market";
+import {
+  SafetyScoreV8PublicationIdentitySchema,
+  type SafetyScoreV8PublicationIdentity,
+} from "@shared/types/safety-score-publication";
 import { z } from "zod";
+import { parseJson } from "./json-parse";
 
 const EVENT_SET_DIGEST_DOMAIN = "safety-score-v9.peg-provenance.event-set.v1";
 const SUMMARY_DIGEST_DOMAIN = "safety-score-v9.peg-provenance.summary.v1";
+const EXACT_SEED_DIGEST_DOMAIN =
+  "safety-score-v9.peg-provenance.exact-seed.v1";
+const EXACT_SEED_MAX_BYTES = 1_900_000;
+
+export const SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY =
+  "report-cards:v9-peg-provenance-seed:exact";
 
 export const SAFETY_SCORE_V9_PEG_EVIDENCE_CLASSES = [
   "provenance-high",
@@ -346,6 +357,71 @@ export type SafetyScoreV9PegProvenanceSummary = z.infer<
 export type SafetyScoreV9PegProvenanceById = Record<
   string,
   SafetyScoreV9PegProvenanceSummary
+>;
+
+const SafetyScoreV9PegProvenanceByIdSchema = z.record(
+  z.string().min(1),
+  SafetyScoreV9PegProvenanceSummarySchema,
+);
+
+const SafetyScoreV9PegProvenanceSeedSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    kind: z.literal("safety-score-v9-peg-provenance-exact-seed"),
+    sourceGeneration: z.string().min(1),
+    clockSec: SafeTimestampSchema,
+    safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema,
+    pegProvenanceById: SafetyScoreV9PegProvenanceByIdSchema,
+    contentSha256: Sha256Schema,
+  })
+  .strict()
+  .superRefine((seed, ctx) => {
+    const { contentSha256, ...payload } = seed;
+    if (
+      contentSha256 !== digest(EXACT_SEED_DIGEST_DOMAIN, payload)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["contentSha256"],
+        message:
+          "Exact peg-provenance seed digest does not match its canonical payload",
+      });
+    }
+    if (
+      seed.sourceGeneration !==
+      seed.safetyScoreIdentity.publicationGenerationId
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sourceGeneration"],
+        message:
+          "Exact peg-provenance seed generation does not match its V8 identity",
+      });
+    }
+    for (const [assetId, summary] of Object.entries(
+      seed.pegProvenanceById,
+    )) {
+      if (summary.assetId !== assetId) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["pegProvenanceById", assetId, "assetId"],
+          message:
+            "Exact peg-provenance seed key does not match its summary asset",
+        });
+      }
+      if (summary.clockSec !== seed.clockSec) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["pegProvenanceById", assetId, "clockSec"],
+          message:
+            "Exact peg-provenance seed summary clock does not match the seed clock",
+        });
+      }
+    }
+  });
+
+export type SafetyScoreV9PegProvenanceSeed = z.infer<
+  typeof SafetyScoreV9PegProvenanceSeedSchema
 >;
 
 export interface SafetyScoreV9PegProvenanceSource {
@@ -769,4 +845,67 @@ export function captureSafetyScoreV9PegProvenanceById(
     });
   }
   return provenanceById;
+}
+
+export function buildSafetyScoreV9PegProvenanceSeedCacheEntry(input: {
+  sourceGeneration: string;
+  clockSec: number;
+  safetyScoreIdentity: SafetyScoreV8PublicationIdentity;
+  pegProvenanceById: SafetyScoreV9PegProvenanceById;
+}): {
+  key: string;
+  value: string;
+  storedBytes: number;
+} {
+  const safetyScoreIdentity =
+    SafetyScoreV8PublicationIdentitySchema.parse(
+      input.safetyScoreIdentity,
+    );
+  const pegProvenanceById =
+    SafetyScoreV9PegProvenanceByIdSchema.parse(
+      Object.fromEntries(
+        Object.entries(input.pegProvenanceById).sort(
+          ([left], [right]) => compareText(left, right),
+        ),
+      ),
+    );
+  const payload = {
+    schemaVersion: 1 as const,
+    kind: "safety-score-v9-peg-provenance-exact-seed" as const,
+    sourceGeneration: input.sourceGeneration,
+    clockSec: input.clockSec,
+    safetyScoreIdentity,
+    pegProvenanceById,
+  };
+  const seed = SafetyScoreV9PegProvenanceSeedSchema.parse({
+    ...payload,
+    contentSha256: digest(EXACT_SEED_DIGEST_DOMAIN, payload),
+  });
+  const value = stableJsonStringifyV1(seed);
+  const storedBytes = new TextEncoder().encode(value).byteLength;
+  if (storedBytes > EXACT_SEED_MAX_BYTES) {
+    throw new Error(
+      `Exact V9 peg-provenance seed is ${storedBytes} bytes; maximum is ${EXACT_SEED_MAX_BYTES}`,
+    );
+  }
+  return {
+    key: SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY,
+    value,
+    storedBytes,
+  };
+}
+
+export function parseSafetyScoreV9PegProvenanceSeed(
+  value: unknown,
+): SafetyScoreV9PegProvenanceSeed {
+  const parsed =
+    typeof value === "string" ? parseJson(value) : null;
+  if (parsed && !parsed.ok) {
+    throw new Error(
+      `Malformed exact V9 peg-provenance seed: ${parsed.message}`,
+    );
+  }
+  return SafetyScoreV9PegProvenanceSeedSchema.parse(
+    parsed?.ok ? parsed.value : value,
+  );
 }

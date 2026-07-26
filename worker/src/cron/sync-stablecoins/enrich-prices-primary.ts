@@ -15,10 +15,9 @@ import {
   applyPoolChallenge,
   applyPrimaryPostConsensusHardening,
 } from "./enrich-prices-primary-hardening";
-import { runGtProbePass } from "./enrich-prices-primary-gt-probe";
 
 export type { PrimaryPriceResult, PriceValidationStats };
-export { applyListAggregatorDowngrade, applyPoolChallenge, runGtProbePass };
+export { applyListAggregatorDowngrade, applyPoolChallenge };
 
 /**
  * Fetch prices from CG, Pyth, CEX tickers, Curve on-chain, and DEX sources in parallel,
