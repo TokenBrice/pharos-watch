@@ -146,25 +146,58 @@ describe("discovery persistence D1 retry coverage", () => {
     expect(attempts).toBe(1);
   });
 
-  it("retries staging cleanup batches on transient D1 overload", async () => {
+  it("uses bounded oldest-first 30h/4h staging cleanup and retries transient D1 overload", async () => {
     let attempts = 0;
+    const prepared: Array<{ sql: string; binds: unknown[] }> = [];
     const db = {
-      prepare: () => ({
-        bind: () => ({}),
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => ({
+          run: async () => {
+            prepared.push({ sql, binds });
+            attempts++;
+            if (attempts === 1) throw new Error("Requests queued for too long");
+            return { meta: { changes: sql.includes("DELETE FROM") ? 12 : 7 } };
+          },
+        }),
+        first: async () => ({
+          oldest_remaining_at: 1_709_900_000,
+          oldest_raw_json_remaining_at: 1_709_990_000,
+        }),
       }),
-      batch: async () => {
-        attempts++;
-        if (attempts === 1) throw new Error("Requests queued for too long");
-        return [
-          { success: true, meta: { changes: 1 } },
-          { success: true, meta: { changes: 1 } },
-        ];
-      },
     } as unknown as D1Database;
 
-    await cleanupStaging(db, 1_710_000_000);
+    const cleanup = await cleanupStaging(db, 1_710_000_000);
 
-    expect(attempts).toBe(2);
+    expect(attempts).toBe(3);
+    expect(prepared[0]?.sql).toContain("ORDER BY refreshed_at ASC, rowid ASC");
+    expect(prepared[0]?.binds).toEqual([1_710_000_000 - 30 * 60 * 60, 1_000]);
+    expect(prepared[2]?.sql).toContain("SET raw_json = NULL");
+    expect(prepared[2]?.binds).toEqual([1_710_000_000 - 4 * 60 * 60, 1_000]);
+    expect(cleanup).toMatchObject({
+      deletedRows: 12,
+      rawJsonClearedRows: 7,
+      oldestRemainingAt: 1_709_900_000,
+      oldestRawJsonRemainingAt: 1_709_990_000,
+      error: null,
+    });
+  });
+
+  it("reports staging cleanup errors without throwing", async () => {
+    const db = {
+      prepare: () => ({
+        bind: () => ({
+          run: async () => {
+            throw new Error("staging retention unavailable");
+          },
+        }),
+      }),
+    } as unknown as D1Database;
+
+    const cleanup = await cleanupStaging(db, 1_710_000_000);
+
+    expect(cleanup.deletedRows).toBe(0);
+    expect(cleanup.rawJsonClearedRows).toBe(0);
+    expect(cleanup.error).toBe("staging retention unavailable");
   });
 
   it("retries discovery meta reads and maps rows", async () => {

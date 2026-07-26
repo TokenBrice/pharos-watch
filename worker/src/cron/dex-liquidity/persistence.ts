@@ -11,8 +11,8 @@ import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import { toErrorMessage } from "../../lib/error-utils";
 
 const DEX_AGGREGATE_PRESERVE_IDS = new Set(["__global__"]);
-/** Completed run generations are operator forensics only once no public row references them. */
-const DEX_LIQUIDITY_GENERATION_RETENTION_SEC = 3 * DAY_SECONDS;
+/** Retain one complete scoring window plus one missed half-hour producer cycle. */
+const DEX_LIQUIDITY_GENERATION_RETENTION_SEC = 3 * 60 * 60;
 /** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
 const DEX_LIQUIDITY_PRUNE_MAX_GENERATIONS_PER_RUN = 16;
 const DEX_LIQUIDITY_HISTORY_RETENTION_SEC = 365 * DAY_SECONDS;
@@ -123,8 +123,19 @@ export interface PersistScoresResult {
   inactiveMetricIdsSkipped?: string[];
   orphanRowsDeleted: number;
   orphanCleanupFailed: boolean;
+  retention?: DexLiquidityGenerationRetentionResult;
   skipped?: boolean;
   skippedReason?: string | null;
+}
+
+export interface DexLiquidityGenerationRetentionResult {
+  cutoff: number;
+  deletedRows: number;
+  deletedRunRows: number;
+  deletedGenerationRows: number;
+  oldestRemainingAt: number | null;
+  durationMs: number;
+  error: string | null;
 }
 
 export interface HistoricalSnapshotWriteResult {
@@ -428,45 +439,100 @@ async function publishDexLiquidityGeneration(
   return currentRows;
 }
 
-export async function pruneOldDexLiquidityGenerations(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<void> {
+export async function pruneOldDexLiquidityGenerations(
+  db: D1Database,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<DexLiquidityGenerationRetentionResult> {
+  const startedAtMs = Date.now();
   const cutoff = nowSec - DEX_LIQUIDITY_GENERATION_RETENTION_SEC;
-  await batchExecute(
-    db,
-    [
-      db
+  const result: DexLiquidityGenerationRetentionResult = {
+    cutoff,
+    deletedRows: 0,
+    deletedRunRows: 0,
+    deletedGenerationRows: 0,
+    oldestRemainingAt: null,
+    durationMs: 0,
+    error: null,
+  };
+  try {
+    const runRows = await runWithOverloadRetry(
+      () => db
         .prepare(
           `DELETE FROM dex_liquidity_run_rows
          WHERE generation_id IN (
            SELECT generation_id
            FROM dex_liquidity_publication_generations
            WHERE started_at < ?
+             AND state IN ('published', 'failed')
              AND generation_id NOT IN (
                SELECT publication_generation_id
                FROM dex_liquidity
-               WHERE publication_generation_id IS NOT NULL
+               WHERE stablecoin_id = '__global__'
+                 AND publication_state = 'published'
+                 AND publication_generation_id IS NOT NULL
              )
            ORDER BY started_at ASC LIMIT ?
          )`,
         )
-        .bind(cutoff, DEX_LIQUIDITY_PRUNE_MAX_GENERATIONS_PER_RUN),
-      db
+        .bind(cutoff, DEX_LIQUIDITY_PRUNE_MAX_GENERATIONS_PER_RUN)
+        .run(),
+      3,
+      signal,
+    );
+    result.deletedRunRows = Number(runRows.meta?.changes ?? 0);
+
+    const generations = await runWithOverloadRetry(
+      () => db
         .prepare(
           `DELETE FROM dex_liquidity_publication_generations
-         WHERE started_at < ?
-           AND generation_id NOT IN (
-             SELECT publication_generation_id
-             FROM dex_liquidity
-             WHERE publication_generation_id IS NOT NULL
-           )
-           AND NOT EXISTS (
-             SELECT 1 FROM dex_liquidity_run_rows r
-             WHERE r.generation_id = dex_liquidity_publication_generations.generation_id
-           )`,
+         WHERE rowid IN (
+           SELECT candidate.rowid
+             FROM dex_liquidity_publication_generations candidate
+            WHERE candidate.started_at < ?
+              AND candidate.state IN ('published', 'failed')
+              AND candidate.generation_id NOT IN (
+                SELECT publication_generation_id
+                  FROM dex_liquidity
+                 WHERE publication_generation_id IS NOT NULL
+              )
+              AND NOT EXISTS (
+                SELECT 1 FROM dex_liquidity_run_rows r
+                 WHERE r.generation_id = candidate.generation_id
+              )
+            ORDER BY candidate.started_at ASC, candidate.generation_id ASC
+            LIMIT ?
+         )`,
         )
-        .bind(cutoff),
-    ],
-    { signal },
-  );
+        .bind(cutoff, DEX_LIQUIDITY_PRUNE_MAX_GENERATIONS_PER_RUN)
+        .run(),
+      3,
+      signal,
+    );
+    result.deletedGenerationRows = Number(generations.meta?.changes ?? 0);
+
+    const oldest = await runWithOverloadRetry(
+      () => db
+        .prepare(
+          `SELECT MIN(generation.started_at) AS oldest_remaining_at
+             FROM dex_liquidity_publication_generations generation
+            WHERE EXISTS (
+              SELECT 1 FROM dex_liquidity_run_rows row
+               WHERE row.generation_id = generation.generation_id
+            )`,
+        )
+        .first<{ oldest_remaining_at: number | null }>(),
+      3,
+      signal,
+    );
+    result.oldestRemainingAt = oldest?.oldest_remaining_at ?? null;
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    result.error = toErrorMessage(error).slice(0, 500);
+  }
+  result.deletedRows = result.deletedRunRows + result.deletedGenerationRows;
+  result.durationMs = Math.max(0, Date.now() - startedAtMs);
+  return result;
 }
 
 async function pruneOldDexLiquidityHistory(db: D1Database, nowSec: number, signal?: AbortSignal): Promise<number> {
@@ -714,7 +780,6 @@ export async function persistScores(
     });
     throwIfAborted(signal);
     await writeFreshnessSentinel(db, "dex-liquidity", nowSec, signal);
-    await pruneOldDexLiquidityGenerations(db, nowSec, signal);
   } catch (err) {
     if (!signal?.aborted) {
       try {
@@ -726,6 +791,7 @@ export async function persistScores(
     rethrowIfAborted(err, signal);
     throw err;
   }
+  const retention = await pruneOldDexLiquidityGenerations(db, nowSec, signal);
 
   console.log(
     `[dex-liquidity] Published ${currentGenerationRows} current rows from ${generationId} (${activeMetricsCount} active with data, ${placeholderCount} zero, ${inactiveMetricIdsSkipped.length} inactive skipped, 1 global)`,
@@ -740,6 +806,7 @@ export async function persistScores(
     inactiveMetricIdsSkipped,
     orphanRowsDeleted,
     orphanCleanupFailed,
+    retention,
   };
 }
 

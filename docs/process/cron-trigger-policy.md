@@ -15,7 +15,7 @@ Cloudflare Workers enforce a limit of **6 simultaneous outbound requests waiting
 
 **Do not add a new cron trigger expression unless every existing 6-budget slot has been audited for headroom and rebalanced.**
 
-The soft cap is **32 trigger expressions** before re-architecting batched dispatch. ADR-10 raised the prior cap of 20 after the 2026-07 DEX archive audit: each expression is still statically mapped, fenced, connection-budgeted, and status-tracked, while the archive's failure-isolation requirement rules out coupling recovery work to a producer invocation. Crossing 32 requires a follow-up ADR plus a trigger consolidation or rebalance plan. Failure-isolated recovery work must remain independent of the invocation it is intended to recover.
+The soft cap is **32 trigger expressions** before re-architecting batched dispatch. ADR-10 raised the prior cap of 20 after the schedule became fully source-owned, fenced, connection-budgeted, and status-tracked. Crossing 32 requires a follow-up ADR plus a trigger consolidation or rebalance plan. Failure-isolated recovery work must remain independent of the invocation it is intended to recover.
 
 ## Process for new scheduled work
 

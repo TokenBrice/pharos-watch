@@ -646,8 +646,6 @@ Renders in the Admin Pipeline `Storage` tab beside pipeline freshness. It shows:
 
 Data is sourced from the admin-only `GET /api/status` payload. The worker supplement uses the same Cloudflare D1 info + analytics calls that `wrangler d1 info` uses: a D1 control-plane fetch for database metadata plus a GraphQL `d1AnalyticsAdaptiveGroups` query over the trailing 24 hours. The scheduled status self-check records at most one capacity sample per UTC hour. The field stays `null` until `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_D1_STATUS_API_TOKEN`, and `CLOUDFLARE_D1_DATABASE_ID` are configured on the worker. Loader/config failures are surfaced through `sectionErrors.d1Usage`.
 
-The additive `archive` block is the compact private-R2 DEX evidence control plane. It reports the rollout stage, configured/effective family modes, invalid-mode errors, eligible and verified-delete backlog, object and source-deletion counters, compression bytes, last upload/verify/delete/error timestamps, orphan/missing-object counts, and lifecycle drift. `normalReadDependsOnR2` is permanently `false`: status reads manifests and compact family state from D1 and does not list or download R2 objects.
-
 ## Mint/Burn Reconciliation Card
 
 **Component:** `MintBurnReconciliationCard` (`src/components/status/mint-burn-reconciliation.tsx`)

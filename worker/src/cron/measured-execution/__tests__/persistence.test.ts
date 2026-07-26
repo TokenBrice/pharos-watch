@@ -844,27 +844,37 @@ describe("measured execution last-known-good selection", () => {
 });
 
 describe("measured execution generation prune", () => {
-  it("deletes only terminal generations past the 3-day horizon in bounded oldest-first batches", async () => {
-    const batched: Array<{ sql: string; binds: unknown[] }> = [];
+  it("deletes only terminal generations before the 3-hour cutoff in bounded oldest-first batches", async () => {
+    const executed: Array<{ kind: "run" | "first"; sql: string; binds: unknown[] }> = [];
     const db = {
       prepare: (sql: string) => ({
-        bind: (...binds: unknown[]) => ({ sql, binds }),
+        bind: (...binds: unknown[]) => ({
+          run: async () => {
+            executed.push({ kind: "run", sql, binds });
+            return {
+              meta: {
+                changes: sql.includes("DELETE FROM dex_measured_execution_quotes") ? 12 : 2,
+              },
+            };
+          },
+          first: async () => {
+            executed.push({ kind: "first", sql, binds });
+            return { oldest_remaining_at: 1_699_990_000 };
+          },
+        }),
       }),
-      batch: async (stmts: Array<{ sql: string; binds: unknown[] }>) => {
-        batched.push(...stmts);
-        return stmts.map(() => ({ meta: { changes: 0 } }));
-      },
     } as unknown as D1Database;
 
     const nowSec = 1_700_000_000;
-    await pruneDexMeasuredExecutionGenerations(db, nowSec);
+    const retention = await pruneDexMeasuredExecutionGenerations(db, nowSec);
 
-    expect(batched).toHaveLength(6);
-    const cutoff = nowSec - 3 * 24 * 60 * 60;
-    const [quotes, targets, dependencies, quoteManifest, targetManifest, ledger] = batched;
+    expect(executed).toHaveLength(4);
+    const cutoff = nowSec - 3 * 60 * 60;
+    const [quotes, targets, ledger, oldest] = executed;
 
     expect(quotes.sql).toContain("DELETE FROM dex_measured_execution_quotes");
     expect(quotes.sql).toContain("state IN ('failed', 'rejected', 'superseded')");
+    expect(quotes.sql).toContain("started_at < ?");
     expect(quotes.sql).toContain("ORDER BY started_at ASC LIMIT ?");
     expect(quotes.binds).toEqual([
       "dex-measured-execution-quotes",
@@ -883,19 +893,13 @@ describe("measured execution generation prune", () => {
       cutoff,
       16,
     ]);
-    expect(dependencies.sql).toContain("UPDATE dex_archive_manifest_dependencies");
-    expect(dependencies.binds).toEqual([nowSec]);
-    expect(quoteManifest.sql).toContain("UPDATE dex_archive_manifests");
-    expect(quoteManifest.sql).toContain("family = 'measured-quote-generation'");
-    expect(quoteManifest.sql).toContain("JOIN dex_measured_execution_targets");
-    expect(quoteManifest.binds).toEqual([nowSec, cutoff]);
-    expect(targetManifest.sql).toContain("family = 'measured-target-generation'");
-    expect(targetManifest.binds).toEqual([nowSec, cutoff]);
 
     expect(ledger.sql).toContain("DELETE FROM surface_publication_generations");
     expect(ledger.sql).toContain("state IN ('failed', 'rejected', 'superseded')");
-    expect(ledger.sql).toContain("q.target_generation_id = surface_publication_generations.generation_id");
+    expect(ledger.sql).toContain("q.target_generation_id = candidate.generation_id");
     expect(ledger.sql).toContain("FROM dex_measured_execution_targets t");
+    expect(ledger.sql).toContain("ORDER BY candidate.started_at ASC");
+    expect(ledger.sql).toContain("LIMIT ?");
     expect(ledger.binds).toEqual([
       "dex-measured-execution-targets",
       "dex-measured-execution-quotes",
@@ -904,32 +908,34 @@ describe("measured execution generation prune", () => {
       "dex-tron-measured-execution-targets",
       "dex-tron-measured-execution-quotes",
       cutoff,
+      16,
     ]);
+    expect(oldest.kind).toBe("first");
+    expect(retention).toMatchObject({
+      cutoff,
+      deletedQuoteRows: 12,
+      deletedTargetRows: 2,
+      deletedGenerationRows: 2,
+      deletedRows: 16,
+      oldestRemainingAt: 1_699_990_000,
+      error: null,
+    });
   });
 
-  it("requires verified quote or target coverage while shadow mode is active", async () => {
-    const batched: Array<{ sql: string; binds: unknown[] }> = [];
+  it("reports cleanup errors without throwing after publication", async () => {
     const db = {
-      prepare: (sql: string) => ({
-        bind: (...binds: unknown[]) => ({ sql, binds }),
+      prepare: () => ({
+        bind: () => ({
+          run: async () => {
+            throw new Error("retention unavailable");
+          },
+        }),
       }),
-      batch: async (stmts: Array<{ sql: string; binds: unknown[] }>) => {
-        batched.push(...stmts);
-        return stmts.map(() => ({ meta: { changes: 0 } }));
-      },
     } as unknown as D1Database;
 
-    await pruneDexMeasuredExecutionGenerations(
-      db,
-      1_700_000_000,
-      undefined,
-      "shadow",
-    );
+    const retention = await pruneDexMeasuredExecutionGenerations(db, 1_700_000_000);
 
-    expect(batched[0]!.sql).toContain("m.family = 'measured-quote-generation'");
-    expect(batched[0]!.sql).toContain("m.verified_at IS NOT NULL");
-    expect(batched[1]!.sql).toContain("m.family = 'measured-target-generation'");
-    expect(batched[1]!.sql).toContain("dex_archive_manifest_dependencies");
-    expect(batched[1]!.sql).toContain("m.verified_at IS NOT NULL");
+    expect(retention.deletedRows).toBe(0);
+    expect(retention.error).toBe("retention unavailable");
   });
 });

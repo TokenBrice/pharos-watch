@@ -9,7 +9,9 @@ import {
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
 import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
+import { toErrorMessage } from "../../lib/error-utils";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
@@ -67,7 +69,7 @@ import {
 export const DEX_LIQUIDITY_SCORING_BATCH_SIZE = 25;
 
 const DEX_LIQUIDITY_EXPECTED_GENERATION_ROWS = ACTIVE_STABLECOINS.length + 1;
-const DEX_PRICE_STAGE_RETENTION_SEC = 7 * 24 * 60 * 60;
+const DEX_PRICE_STAGE_RETENTION_SEC = 3 * 60 * 60;
 export const DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN = 8;
 
 function hasOperationallyInterruptedMeasuredEvidence(
@@ -309,42 +311,83 @@ async function assertCurrentDexScoringGeneration(
 }
 
 /** @internal Exported for focused retention tests. */
+export interface DexPriceStageRetentionResult {
+  cutoff: number;
+  deletedRows: number;
+  oldestRemainingAt: number | null;
+  durationMs: number;
+  error: string | null;
+}
+
 export async function pruneExpiredDexPriceStages(
   db: D1Database,
   protectedGenerationId: string,
   nowSec: number,
   signal?: AbortSignal,
-): Promise<number> {
-  throwIfAborted(signal);
-  const result = await db
-    .prepare(
-      `/* pharos:dex-scoring:price-stage-retention */
-       DELETE FROM dex_price_run_rows
-       WHERE generation_id IN (
-         SELECT candidate.generation_id
-         FROM dex_price_run_rows candidate
-         WHERE candidate.generation_id != ?
-           AND NOT EXISTS (
-             SELECT 1
-             FROM dex_liquidity current_global
-             WHERE current_global.stablecoin_id = '__global__'
-               AND current_global.publication_state = 'published'
-               AND current_global.publication_generation_id = candidate.generation_id
-           )
-         GROUP BY candidate.generation_id
-         HAVING MAX(candidate.updated_at) < ?
-         ORDER BY MIN(candidate.updated_at), candidate.generation_id
-         LIMIT ?
-       )`,
-    )
-    .bind(
-      protectedGenerationId,
-      Math.max(0, Math.floor(nowSec) - DEX_PRICE_STAGE_RETENTION_SEC),
-      DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN,
-    )
-    .run();
-  throwIfAborted(signal);
-  return Number(result.meta?.changes ?? 0);
+): Promise<DexPriceStageRetentionResult> {
+  const startedAtMs = Date.now();
+  const cutoff = Math.max(0, Math.floor(nowSec) - DEX_PRICE_STAGE_RETENTION_SEC);
+  const result: DexPriceStageRetentionResult = {
+    cutoff,
+    deletedRows: 0,
+    oldestRemainingAt: null,
+    durationMs: 0,
+    error: null,
+  };
+  try {
+    throwIfAborted(signal);
+    const deleted = await runWithOverloadRetry(
+      () => db
+        .prepare(
+          `/* pharos:dex-scoring:price-stage-retention */
+           DELETE FROM dex_price_run_rows
+           WHERE generation_id IN (
+             SELECT candidate.generation_id
+             FROM dex_price_run_rows candidate
+             WHERE candidate.generation_id != ?
+               AND NOT EXISTS (
+                 SELECT 1
+                 FROM dex_liquidity current_global
+                 WHERE current_global.stablecoin_id = '__global__'
+                   AND current_global.publication_state = 'published'
+                   AND current_global.publication_generation_id = candidate.generation_id
+               )
+               AND NOT EXISTS (
+                 SELECT 1
+                   FROM dex_liquidity_publication_generations active
+                  WHERE active.generation_id = candidate.generation_id
+                    AND active.state = 'staged'
+               )
+             GROUP BY candidate.generation_id
+             HAVING MAX(candidate.updated_at) < ?
+             ORDER BY MIN(candidate.updated_at), candidate.generation_id
+             LIMIT ?
+           )`,
+        )
+        .bind(
+          protectedGenerationId,
+          cutoff,
+          DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN,
+        )
+        .run(),
+      3,
+      signal,
+    );
+    result.deletedRows = Number(deleted.meta?.changes ?? 0);
+    const oldest = await runWithOverloadRetry(
+      () => db
+        .prepare("SELECT MIN(updated_at) AS oldest_remaining_at FROM dex_price_run_rows")
+        .first<{ oldest_remaining_at: number | null }>(),
+      3,
+      signal,
+    );
+    result.oldestRemainingAt = oldest?.oldest_remaining_at ?? null;
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    result.error = toErrorMessage(error).slice(0, 500);
+  }
+  result.durationMs = Math.max(0, Date.now() - startedAtMs);
+  return result;
 }
 
 async function flushScoringStatements(
@@ -1083,6 +1126,7 @@ export interface DexPricePersistenceDiagnostics {
     truncated: number;
   }>;
   truncatedStablecoins: number;
+  retention?: DexPriceStageRetentionResult;
 }
 
 const MAX_DEX_PRICE_REJECTION_ASSETS = 20;
@@ -1100,17 +1144,15 @@ export async function computeDexPrices(
   if (!generationId.trim()) throw new Error("DEX price publication requires a generation id");
   throwIfAborted(signal);
   await assertCurrentDexScoringGeneration(db, generationId, signal);
-  try {
-    await pruneExpiredDexPriceStages(db, generationId, nowSec, signal);
-  } catch (error) {
-    rethrowIfAborted(error, signal);
+  const retention = await pruneExpiredDexPriceStages(db, generationId, nowSec, signal);
+  if (retention.error) {
     logWorkerEvent({
       scope: "lib",
       level: "warn",
       event: "expired_price_stage_prune_failed",
       job: "sync-dex-liquidity",
       message: "Failed to prune expired DEX price stages",
-      error,
+      error: retention.error,
     });
   }
   const existingRows = await db.prepare("SELECT stablecoin_id FROM dex_prices").all<{ stablecoin_id: string }>();
@@ -1408,5 +1450,6 @@ export async function computeDexPrices(
     rejectedObservationCount,
     rejectedByStablecoin,
     truncatedStablecoins: Math.max(0, rejectedStablecoinCount - rejectedByStablecoin.length),
+    retention,
   };
 }

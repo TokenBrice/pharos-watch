@@ -129,17 +129,6 @@ export function D1UsageCard({
         </div>
 
         <div className="space-y-1 text-xs text-muted-foreground">
-          {summary.archive ? (
-            <div>
-              DEX archive: {summary.archive.releaseStage} · {summary.archive.manifestCount.toLocaleString()} manifests · normal reads R2-independent
-            </div>
-          ) : null}
-          {summary.archive?.familyStates.map((family) => (
-            <div key={family.family}>
-              {family.family}: {family.effectiveMode} · {family.verifiedObjectCount.toLocaleString()} verified · {family.verifiedPendingDeleteCount.toLocaleString()} pending delete
-              {family.configError ? ` · ${family.configError}` : ""}
-            </div>
-          ))}
           <div>
             Database: {summary.databaseName ?? "unknown"} · {summary.databaseId}
           </div>

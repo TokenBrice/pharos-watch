@@ -43,14 +43,6 @@ export const ENV_BINDINGS = [
     },
   },
   {
-    key: "EVIDENCE_ARCHIVE",
-    valueType: "R2Bucket",
-    description: "Private Standard R2 binding for immutable DEX generation evidence; normal product reads never depend on it.",
-    runtimes: {
-      worker: { order: 50.1, status: "required" },
-    },
-  },
-  {
     key: "CF_VERSION_METADATA",
     valueType: "WorkerVersionMetadata",
     description: "Cloudflare version metadata binding attached to scheduled attempt and checkpoint telemetry for deployment correlation.",
@@ -671,24 +663,6 @@ export const ENV_BINDINGS = [
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { order: 48, status: "optional" },
-    },
-  },
-  {
-    key: "DEX_MEASURED_ARCHIVE_MODE",
-    valueType: "string",
-    description: "Measured-execution archive rollout mode: `off`, `shadow`, or `delete`; invalid values fail closed to `off`.",
-    example: { section: "workerOptional", value: "off" },
-    runtimes: {
-      worker: { order: 49.2, status: "optional" },
-    },
-  },
-  {
-    key: "DEX_LIQUIDITY_ARCHIVE_MODE",
-    valueType: "string",
-    description: "DEX-liquidity archive rollout mode: `off`, `shadow`, or `delete`; invalid values fail closed to `off`.",
-    example: { section: "workerOptional", value: "off" },
-    runtimes: {
-      worker: { order: 49.3, status: "optional" },
     },
   },
   {

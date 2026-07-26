@@ -10,6 +10,7 @@ export function isDexLiquidityDegraded(params: {
   criticalSourceFailures: string[];
   analysis: DexLiquidityPostScoreAnalysis;
   persistence: PersistScoresResult;
+  dexPriceDiagnostics?: DexPricePersistenceDiagnostics;
   historicalSnapshot: HistoricalSnapshotWriteResult;
 }): boolean {
   return (
@@ -19,6 +20,8 @@ export function isDexLiquidityDegraded(params: {
     params.analysis.nearValueGuard ||
     params.analysis.nearMajorCoverageGuard ||
     params.persistence.orphanCleanupFailed ||
+    params.persistence.retention?.error != null ||
+    params.dexPriceDiagnostics?.retention?.error != null ||
     params.historicalSnapshot.writeFailed ||
     params.historicalSnapshot.retentionPruneFailed
   );
@@ -99,6 +102,7 @@ export function buildDexLiquidityCronMetadata(params: {
       inactiveMetricIdsSkipped: params.persistence.inactiveMetricIdsSkipped?.slice(0, 25) ?? [],
       orphanRowsDeleted: params.persistence.orphanRowsDeleted,
       orphanCleanupFailed: params.persistence.orphanCleanupFailed,
+      retention: params.persistence.retention ?? null,
       skipped: params.persistence.skipped ?? false,
       skippedReason: params.persistence.skippedReason ?? null,
       historicalSnapshotRowsWritten: params.historicalSnapshot.snapshotRowsWritten,
