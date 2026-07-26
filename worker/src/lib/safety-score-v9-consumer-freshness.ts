@@ -10,8 +10,9 @@ export const SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC =
   2 * SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC;
 
 export function isSafetyScoreV9SnapshotFresh(
-  snapshot: Pick<ReportCardsV9Response, "updatedAt">,
+  snapshot: Pick<ReportCardsV9Response, "updatedAt" | "publicationHealth">,
   nowSec = Math.floor(Date.now() / 1000),
 ): boolean {
+  if (snapshot.publicationHealth.status === "held") return false;
   return nowSec - snapshot.updatedAt <= SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC;
 }

@@ -10,6 +10,7 @@ import {
   type SafetyScoreV9CausalCard,
   type SafetyScoreV9CurrentCard,
 } from "./safety-score-v9-public";
+import { V9ReasonCodeSchema } from "./safety-score-v9";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
@@ -20,6 +21,122 @@ function compareText(left: string, right: string): number {
 export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 3;
 export const REPORT_CARDS_V9_PREVIOUS_RESPONSE_SCHEMA_VERSION = 2;
 export const REPORT_CARDS_V9_LEGACY_RESPONSE_SCHEMA_VERSION = 1;
+
+export const V9_PUBLICATION_HOLD_REASON_CODES = [
+  "dex-stale",
+  "dex-unavailable",
+  "redemption-stale",
+  "redemption-unavailable",
+  "live-reserves-unavailable",
+  "coverage-floor-failed",
+  "producer-failed-downgrade",
+  "producer-failed-nr",
+  "assessment-failed",
+] as const;
+
+const V9PublicationSimpleHoldReasonSchema = z
+  .object({
+    code: z.enum([
+      "dex-stale",
+      "dex-unavailable",
+      "redemption-stale",
+      "redemption-unavailable",
+      "live-reserves-unavailable",
+    ]),
+  })
+  .strict();
+
+const V9PublicationCoverageHoldReasonSchema = z
+  .object({
+    code: z.literal("coverage-floor-failed"),
+    floorIds: z.array(z.string().min(1)).min(1).max(8),
+  })
+  .strict();
+
+const V9PublicationProducerHoldReasonSchema = z
+  .object({
+    code: z.enum(["producer-failed-downgrade", "producer-failed-nr"]),
+    assetId: z.string().min(1),
+    source: z.enum(["parent-score", "reason", "wrapper-local"]),
+    reasonCode: V9ReasonCodeSchema,
+    path: z.string().min(1).max(240),
+    effect: z.enum(["score-or-grade-downgrade", "not-rated"]),
+  })
+  .strict();
+
+const V9PublicationAssessmentHoldReasonSchema = z
+  .object({
+    code: z.literal("assessment-failed"),
+    detail: z.string().min(1).max(240),
+  })
+  .strict();
+
+export const V9PublicationHoldReasonSchema = z.discriminatedUnion("code", [
+  V9PublicationSimpleHoldReasonSchema,
+  V9PublicationCoverageHoldReasonSchema,
+  V9PublicationProducerHoldReasonSchema,
+  V9PublicationAssessmentHoldReasonSchema,
+]);
+export type V9PublicationHoldReason = z.infer<typeof V9PublicationHoldReasonSchema>;
+
+export const V9PublicationHealthSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    status: z.enum(["current", "held"]),
+    acceptedPublicationGenerationId: z.string().min(1).nullable(),
+    acceptedAtSec: z.number().int().nonnegative().nullable(),
+    attemptedAtSec: z.number().int().nonnegative(),
+    heldSinceSec: z.number().int().nonnegative().nullable(),
+    reasons: z.array(V9PublicationHoldReasonSchema).max(24),
+  })
+  .strict()
+  .superRefine((health, ctx) => {
+    const acceptedFieldsMatch =
+      (health.acceptedPublicationGenerationId === null) ===
+      (health.acceptedAtSec === null);
+    if (!acceptedFieldsMatch) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["acceptedPublicationGenerationId"],
+        message: "V9 publication health accepted identity and time must be present together",
+      });
+    }
+    if (health.acceptedAtSec !== null && health.acceptedAtSec > health.attemptedAtSec) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["acceptedAtSec"],
+        message: "V9 accepted publication cannot postdate the latest attempt",
+      });
+    }
+    if (
+      health.status === "current" &&
+      (
+        health.acceptedPublicationGenerationId === null ||
+        health.acceptedAtSec === null ||
+        health.heldSinceSec !== null ||
+        health.reasons.length !== 0
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Current V9 publication health requires an accepted publication and no hold fields",
+      });
+    }
+    if (
+      health.status === "held" &&
+      (
+        health.heldSinceSec === null ||
+        health.heldSinceSec > health.attemptedAtSec ||
+        health.reasons.length === 0
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Held V9 publication health requires a bounded reason set and hold start",
+      });
+    }
+  });
+export type V9PublicationHealth = z.infer<typeof V9PublicationHealthSchema>;
 
 export const ReportCardsV9DependencyEdgeSchema = z
   .object({
@@ -218,11 +335,12 @@ export type ReportCardsV9PreviousResponse = z.infer<
   typeof ReportCardsV9PreviousResponseSchema
 >;
 
-/** Current public report contract. Report-v3 always carries score-adjustment trace-v3 cards. */
+/** Current public report contract. Report-v3 includes publication hold health. */
 export const ReportCardsV9CurrentResponseSchema = z
   .object({
     ...ReportCardsV9ResponseShape,
     schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
+    publicationHealth: V9PublicationHealthSchema,
     cards: z.array(SafetyScoreV9CurrentCardSchema),
   })
   .strict()

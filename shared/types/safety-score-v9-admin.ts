@@ -1,4 +1,5 @@
 import { SafetyScoreV9ResponseSchema } from "./safety-score-v9-public";
+import { V9PublicationHealthSchema } from "./report-cards-v9";
 import { SafetyScoreV9MovementReviewRecordSchema } from "./safety-score-v9-review";
 import { z } from "zod";
 
@@ -162,6 +163,7 @@ export const SafetyScoreV9AdminShadowDaySchema = z
           "compile",
           "score",
           "serialize",
+          "publication-gate",
           "artifact-retention",
           "shadow-write",
           "aborted",
@@ -302,6 +304,7 @@ export const SafetyScoreV9AdminResponseSchema = z.discriminatedUnion("status", [
     .object({
       schemaVersion: z.literal(SAFETY_SCORE_V9_ADMIN_RESPONSE_SCHEMA_VERSION),
       status: z.literal("available"),
+      publicationHealth: V9PublicationHealthSchema,
       envelope: SafetyScoreV9AdminShadowEnvelopeSchema,
       diff: SafetyScoreV9AdminDiffReportSchema,
       movementReviews: z.array(SafetyScoreV9MovementReviewRecordSchema),

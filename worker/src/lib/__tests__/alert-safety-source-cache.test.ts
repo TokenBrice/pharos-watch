@@ -133,6 +133,23 @@ describe("alert safety source cache", () => {
     )).toBeNull();
   });
 
+  it("does not build an organic alert source from a held V9 snapshot", () => {
+    const response = makeWorkerReportCardsV9Response();
+    response.publicationHealth = {
+      ...response.publicationHealth,
+      status: "held",
+      attemptedAtSec: response.updatedAt + 1_800,
+      heldSinceSec: response.updatedAt + 1_800,
+      reasons: [{ code: "dex-stale" }],
+    };
+
+    expect(
+      buildAlertSafetyV9SourceEnvelope(response, {
+        allowShadowLifecycle: true,
+      }),
+    ).toBeNull();
+  });
+
   it("selects a healthy marker-authorized V9 snapshot without projecting V8 dimensions", () => {
     const response = makeWorkerReportCardsV9Response({
       updatedAt: 1_700_000_000,

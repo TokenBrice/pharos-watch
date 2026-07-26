@@ -107,6 +107,7 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/lib/__tests__/safety-score-v9-peg-provenance-identity.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-peg-provenance.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-production-verifier.test.ts",
+  "worker/src/lib/__tests__/safety-score-v9-publication-assessment.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-shadow-runner.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-shadow.test.ts",

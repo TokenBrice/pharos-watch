@@ -138,7 +138,26 @@ async function persistAvailableState(
     envelope,
     diff,
   });
-  await persistSafetyScoreV9ShadowState(db, { envelope, diff, daily });
+  await persistSafetyScoreV9ShadowState(db, {
+    envelope,
+    diff,
+    daily,
+    exactInput: {
+      key: "report-cards:v9-fixed-input:exact",
+      value: '{"fixture":"admin-v9-exact-input"}',
+    },
+    publicationHealth: {
+      schemaVersion: 1,
+      status: "current",
+      acceptedPublicationGenerationId:
+        envelope.candidate.publicationGenerationId,
+      acceptedAtSec: envelope.candidate.publishedAtSec,
+      attemptedAtSec: envelope.candidate.publishedAtSec,
+      heldSinceSec: null,
+      reasons: [],
+    },
+    publicationClockSec: envelope.candidate.publishedAtSec,
+  });
   return { envelope, v8, diff };
 }
 

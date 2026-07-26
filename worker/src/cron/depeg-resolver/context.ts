@@ -27,6 +27,7 @@ import {
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../../lib/report-card-cache";
 import { isCurrentSafetyScoreV8Identity } from "../../lib/safety-score-current-identity";
+import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
 import {
   CURRENT_PRICE_MAX_AGE_SEC,
@@ -312,30 +313,48 @@ export async function loadDdrContext(
     identity: null,
   };
   try {
-    const safetyCache = await loadReportCardCache(db, {
-      maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-      requireCompleteness: true,
-    });
-    if (safetyCache.kind !== "ok") {
-      safetyContext = { status: "cache-unavailable", reason: safetyCache.reason, identity: null };
+    const activeSafetySource = await loadActiveSafetyScoreSource(db);
+    if (activeSafetySource.kind === "v9") {
+      safetyContext = {
+        status: "unsupported-model",
+        reason:
+          activeSafetySource.snapshot.publicationHealth.status === "held"
+            ? "v9-publication-held"
+            : "safety-model-v9",
+        identity: activeSafetySource.snapshot.safetyScoreIdentity,
+      };
+    } else if (activeSafetySource.kind === "error") {
+      safetyContext = {
+        status: "cache-unavailable",
+        reason: activeSafetySource.reason,
+        identity: activeSafetySource.snapshot?.safetyScoreIdentity ?? null,
+      };
     } else {
-      const identity = safetyCache.payload.safetyScoreIdentity ?? null;
-      if (!identity) {
-        safetyContext = { status: "identity-missing", reason: "report-card-cache-identity-missing", identity: null };
-      } else if (identity.model !== "v8") {
-        safetyContext = { status: "unsupported-model", reason: `safety-model-${identity.model}`, identity };
-      } else if (!isCurrentSafetyScoreV8Identity(identity)) {
-        safetyContext = { status: "identity-mismatch", reason: "v8-identity-not-current", identity };
+      const safetyCache = await loadReportCardCache(db, {
+        maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+        requireCompleteness: true,
+      });
+      if (safetyCache.kind !== "ok") {
+        safetyContext = { status: "cache-unavailable", reason: safetyCache.reason, identity: null };
       } else {
-        safetyContext = { status: "v8-identified", reason: null, identity };
-        safetyByCoin = new Map(
-          activeCoinIds.flatMap((stablecoinId) => {
-            const score = safetyCache.payload.scores[stablecoinId];
-            return score
-              ? [[stablecoinId, { stablecoin_id: stablecoinId, grade: score.grade, score: score.score, recorded_at: safetyCache.payload.updatedAt }] as const]
-              : [];
-          }),
-        );
+        const identity = safetyCache.payload.safetyScoreIdentity ?? null;
+        if (!identity) {
+          safetyContext = { status: "identity-missing", reason: "report-card-cache-identity-missing", identity: null };
+        } else if (identity.model !== "v8") {
+          safetyContext = { status: "unsupported-model", reason: `safety-model-${identity.model}`, identity };
+        } else if (!isCurrentSafetyScoreV8Identity(identity)) {
+          safetyContext = { status: "identity-mismatch", reason: "v8-identity-not-current", identity };
+        } else {
+          safetyContext = { status: "v8-identified", reason: null, identity };
+          safetyByCoin = new Map(
+            activeCoinIds.flatMap((stablecoinId) => {
+              const score = safetyCache.payload.scores[stablecoinId];
+              return score
+                ? [[stablecoinId, { stablecoin_id: stablecoinId, grade: score.grade, score: score.score, recorded_at: safetyCache.payload.updatedAt }] as const]
+                : [];
+            }),
+          );
+        }
       }
     }
   } catch {

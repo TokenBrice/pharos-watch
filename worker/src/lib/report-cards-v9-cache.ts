@@ -3,12 +3,16 @@ import {
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9Response,
+  type V9PublicationHealth,
 } from "@shared/types/report-cards-v9";
 import {
   SafetyScoreV9CurrentResponseSchema,
   type SafetyScoreV9Response,
 } from "@shared/types/safety-score-v9-public";
-import { loadLatestSafetyScoreV9ShadowEnvelope } from "./safety-score-v9-store";
+import {
+  loadLatestSafetyScoreV9ShadowEnvelope,
+  loadSafetyScoreV9PublicationHealth,
+} from "./safety-score-v9-store";
 
 export class ReportCardsV9SnapshotUnavailableError extends Error {
   constructor(message: string) {
@@ -24,8 +28,18 @@ export class ReportCardsV9SnapshotUnavailableError extends Error {
  */
 export function projectSafetyScoreV9CandidateToPublicSnapshot(
   candidate: SafetyScoreV9Response,
+  publicationHealth: V9PublicationHealth,
 ): ReportCardsV9Response {
   const currentCandidate = SafetyScoreV9CurrentResponseSchema.parse(candidate);
+  if (
+    publicationHealth.acceptedPublicationGenerationId !==
+      currentCandidate.publicationGenerationId ||
+    publicationHealth.acceptedAtSec !== currentCandidate.publishedAtSec
+  ) {
+    throw new Error(
+      "Safety Score V9 publication health does not match the accepted candidate",
+    );
+  }
   return ReportCardsV9CurrentResponseSchema.parse({
     model: "v9",
     schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
@@ -46,6 +60,7 @@ export function projectSafetyScoreV9CandidateToPublicSnapshot(
     },
     asOfSec: currentCandidate.asOfSec,
     updatedAt: currentCandidate.publishedAtSec,
+    publicationHealth,
     completeness: currentCandidate.completeness,
     source: {
       candidateId: currentCandidate.candidateId,
@@ -67,8 +82,12 @@ export async function loadPublishedReportCardsV9Snapshot(
   signal?: AbortSignal,
 ): Promise<ReportCardsV9Response> {
   let envelope;
+  let publicationHealth;
   try {
-    envelope = await loadLatestSafetyScoreV9ShadowEnvelope(db, signal);
+    [envelope, publicationHealth] = await Promise.all([
+      loadLatestSafetyScoreV9ShadowEnvelope(db, signal),
+      loadSafetyScoreV9PublicationHealth(db, signal),
+    ]);
   } catch (error) {
     throw new ReportCardsV9SnapshotUnavailableError(
       `Canonical Safety Score V9 shadow cache is unavailable: ${error instanceof Error ? error.message : String(error)}`,
@@ -77,8 +96,16 @@ export async function loadPublishedReportCardsV9Snapshot(
   if (envelope === null) {
     throw new ReportCardsV9SnapshotUnavailableError("Canonical Safety Score V9 shadow cache is unavailable");
   }
+  if (publicationHealth === null) {
+    throw new ReportCardsV9SnapshotUnavailableError(
+      "Safety Score V9 publication health is unavailable",
+    );
+  }
   try {
-    return projectSafetyScoreV9CandidateToPublicSnapshot(envelope.candidate);
+    return projectSafetyScoreV9CandidateToPublicSnapshot(
+      envelope.candidate,
+      publicationHealth,
+    );
   } catch (error) {
     throw new ReportCardsV9SnapshotUnavailableError(
       `Canonical Safety Score V9 shadow cache is incompatible: ${error instanceof Error ? error.message : String(error)}`,

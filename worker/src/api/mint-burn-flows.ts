@@ -15,17 +15,21 @@ import { sumMcapForTrackedChains } from "../lib/mint-burn-mcap-weighting";
 import { loadReportCardCache } from "../lib/report-card-cache";
 import {
   buildFlightToQualityClassificationFromV8Cache,
+  buildFlightToQualityClassificationFromV9Snapshot,
   type FlightToQualityClassification,
 } from "../lib/flight-to-quality-classification";
 import { buildInClause } from "../lib/db";
 import { isRecord } from "@shared/lib/type-guards";
 import { safetyScoreV8PublicationIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
+import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { tryParseJson } from "../lib/json-parse";
 import { logWorkerEvent } from "../lib/structured-log";
 import {
-  SafetyScoreV8PublicationIdentitySchema,
+  SafetyScorePublicationIdentitySchema,
+  type SafetyScorePublicationIdentity,
   type SafetyScoreV8PublicationIdentity,
 } from "@shared/types/safety-score-publication";
+import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 import {
   aggregateFlowCacheKey,
   aggregateHourlyRowsByChain,
@@ -89,14 +93,33 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   let classification:
     { kind: "ok"; classification: FlightToQualityClassification } | { kind: "unavailable"; reason: string };
   try {
-    const reportCardCache = await loadReportCardCache(db, {
-      maxAgeMs: REPORT_CARD_MAX_AGE_MS,
-      requireCompleteness: true,
-    });
-    classification =
-      reportCardCache.kind === "ok"
-        ? buildFlightToQualityClassificationFromV8Cache(reportCardCache.payload)
-        : { kind: "unavailable", reason: reportCardCache.reason };
+    const active = await loadActiveSafetyScoreSource(db);
+    if (active.kind === "v9") {
+      classification =
+        buildFlightToQualityClassificationFromV9Snapshot(
+          active.snapshot,
+          {
+            allowShadowLifecycle: true,
+            expectedIdentity: active.snapshot.safetyScoreIdentity,
+          },
+        );
+    } else if (active.kind === "error") {
+      classification = {
+        kind: "unavailable",
+        reason: active.reason,
+      };
+    } else {
+      const reportCardCache = await loadReportCardCache(db, {
+        maxAgeMs: REPORT_CARD_MAX_AGE_MS,
+        requireCompleteness: true,
+      });
+      classification =
+        reportCardCache.kind === "ok"
+          ? buildFlightToQualityClassificationFromV8Cache(
+              reportCardCache.payload,
+            )
+          : { kind: "unavailable", reason: reportCardCache.reason };
+    }
   } catch (error) {
     logWorkerEvent({
       scope: "api",
@@ -189,10 +212,12 @@ function cachedAggregateNeedsSafetyValidation(payload: unknown): boolean {
   );
 }
 
-function cachedAggregateSafetyIdentity(payload: Record<string, unknown>): SafetyScoreV8PublicationIdentity | null {
+function cachedAggregateSafetyIdentity(payload: Record<string, unknown>): SafetyScorePublicationIdentity | null {
   const gauge = payload.gauge;
   if (!isRecord(gauge)) return null;
-  const parsed = SafetyScoreV8PublicationIdentitySchema.safeParse(gauge.safetyScoreIdentity);
+  const parsed = SafetyScorePublicationIdentitySchema.safeParse(
+    gauge.safetyScoreIdentity,
+  );
   return parsed.success ? parsed.data : null;
 }
 
@@ -231,11 +256,48 @@ async function reconcileCachedAggregateSafetyResponse(
   let reason: string | null = cachedIdentity ? null : "identity-missing";
   if (cachedIdentity) {
     try {
-      const reportCardCache = await loadReportCardCache(db, {
-        maxAgeMs: REPORT_CARD_MAX_AGE_MS,
-        requireCompleteness: true,
-      });
-      reason = cachedAggregateSafetyReason(cachedIdentity, reportCardCache);
+      const active = await loadActiveSafetyScoreSource(db);
+      if (cachedIdentity.model === "v9") {
+        if (active.kind !== "v9") {
+          reason =
+            active.kind === "error"
+              ? active.reason
+              : "identity-mismatch";
+        } else {
+          const current =
+            buildFlightToQualityClassificationFromV9Snapshot(
+              active.snapshot,
+              {
+                allowShadowLifecycle: true,
+                expectedIdentity:
+                  active.snapshot.safetyScoreIdentity,
+              },
+            );
+          reason =
+            current.kind !== "ok"
+              ? current.reason
+              : safetyScorePublicationIdentitiesMatch(
+                    cachedIdentity,
+                    current.classification.safetyScoreIdentity,
+                  )
+                ? null
+                : "identity-mismatch";
+        }
+      } else if (active.kind !== "v8") {
+        reason =
+          active.kind === "error"
+            ? active.reason
+            : "identity-mismatch";
+      } else {
+        const reportCardCache = await loadReportCardCache(db, {
+          maxAgeMs: REPORT_CARD_MAX_AGE_MS,
+          requireCompleteness: true,
+        });
+        reason = cachedAggregateSafetyReason(
+          cachedIdentity,
+          reportCardCache,
+        );
+      }
     } catch (error) {
       logWorkerEvent({
         scope: "api",

@@ -1,4 +1,8 @@
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import {
+  V9PublicationHealthSchema,
+  type V9PublicationHealth,
+} from "@shared/types/report-cards-v9";
 import { z } from "zod";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./cron-lease";
@@ -10,6 +14,7 @@ import {
   serializeSafetyScoreV9DiffReportCacheValue,
   serializeSafetyScoreV9ShadowEnvelopeCacheValue,
 } from "./safety-score-v9-cache-codec";
+import { SAFETY_SCORE_V9_FIXED_INPUT_CACHE_KEY } from "./report-cards-fixed-input";
 import {
   SafetyScoreV9DiffReportSchema,
   SafetyScoreV9ShadowDailySchema,
@@ -23,6 +28,7 @@ import {
 export const SAFETY_SCORE_V9_SHADOW_CACHE_KEYS = {
   envelope: "report-cards:v9-shadow",
   diff: "report-cards:v9-shadow:diff",
+  publicationHealth: "report-cards:v9-shadow:publication-health",
 } as const;
 
 const SAFETY_SCORE_V9_SHADOW_HISTORY_DEFAULT_LIMIT = 45;
@@ -221,6 +227,9 @@ export interface PersistSafetyScoreV9ShadowStateInput {
   daily: SafetyScoreV9ShadowDaily;
   envelope?: SafetyScoreV9ShadowEnvelope;
   diff?: SafetyScoreV9DiffReport;
+  exactInput?: { key: string; value: string };
+  publicationHealth?: V9PublicationHealth;
+  publicationClockSec?: number;
   signal?: AbortSignal;
 }
 
@@ -231,24 +240,86 @@ export async function persistSafetyScoreV9ShadowState(
   throwIfAborted(input.signal);
   const daily = SafetyScoreV9ShadowDailySchema.parse(input.daily);
   const hasCanonicalState = input.envelope !== undefined || input.diff !== undefined;
+  const hasAcceptedState =
+    hasCanonicalState ||
+    input.exactInput !== undefined ||
+    input.publicationHealth?.status === "current";
   let envelopeJson: string | null = null;
   let diffJson: string | null = null;
-  if (hasCanonicalState) {
-    if (input.envelope === undefined || input.diff === undefined) {
-      throw new Error("Safety Score v9 canonical envelope and diff must be persisted together");
+  if (hasAcceptedState) {
+    if (
+      input.envelope === undefined ||
+      input.diff === undefined ||
+      input.exactInput === undefined ||
+      input.publicationHealth?.status !== "current" ||
+      input.publicationClockSec === undefined
+    ) {
+      throw new Error(
+        "Accepted Safety Score v9 envelope, diff, exact input, publication health, and clock must persist together",
+      );
     }
     const envelope = SafetyScoreV9ShadowEnvelopeSchema.parse(input.envelope);
     const diff = SafetyScoreV9DiffReportSchema.parse(input.diff);
+    const health = V9PublicationHealthSchema.parse(input.publicationHealth);
     validateSuccessfulState({ daily, envelope, diff });
+    if (
+      input.exactInput.key !== SAFETY_SCORE_V9_FIXED_INPUT_CACHE_KEY ||
+      health.acceptedPublicationGenerationId !==
+        envelope.candidate.publicationGenerationId ||
+      health.acceptedAtSec !== input.publicationClockSec ||
+      health.attemptedAtSec !== input.publicationClockSec
+    ) {
+      throw new Error(
+        "Accepted Safety Score v9 canonical state does not match its exact input and publication health",
+      );
+    }
     envelopeJson = await serializeSafetyScoreV9ShadowEnvelopeCacheValue(envelope, input.signal);
     diffJson = await serializeSafetyScoreV9DiffReportCacheValue(diff, input.signal);
-  } else if (daily.selectedRun !== null) {
+  } else if (input.publicationHealth !== undefined) {
+    const health = V9PublicationHealthSchema.parse(input.publicationHealth);
+    if (
+      health.status !== "held" ||
+      input.publicationClockSec === undefined ||
+      health.attemptedAtSec !== input.publicationClockSec
+    ) {
+      throw new Error(
+        "Held Safety Score v9 state requires held publication health and its attempt clock",
+      );
+    }
+  }
+  if (!hasAcceptedState && daily.selectedRun !== null) {
     const existing = await loadSafetyScoreV9ShadowDaily(db, daily.utcDay, input.signal);
     if (existing?.selectedRun === null || existing === null) {
       throw new Error("A newly selected Safety Score v9 daily run must persist its canonical envelope and diff");
     }
     if (stableJsonStringifyV1(existing.selectedRun) !== stableJsonStringifyV1(daily.selectedRun)) {
       throw new Error("A re-selected Safety Score v9 daily run must persist its canonical envelope and diff");
+    }
+  }
+  const publicationHealth =
+    input.publicationHealth === undefined
+      ? null
+      : V9PublicationHealthSchema.parse(input.publicationHealth);
+  const publicationHealthJson =
+    publicationHealth === null
+      ? null
+      : stableJsonStringifyV1(publicationHealth);
+  if (publicationHealth !== null) {
+    const existingHealth = await loadSafetyScoreV9PublicationHealth(
+      db,
+      input.signal,
+    );
+    if (
+      existingHealth !== null &&
+      stableJsonStringifyV1(existingHealth) !== publicationHealthJson &&
+      (
+        publicationHealth.attemptedAtSec < existingHealth.attemptedAtSec ||
+        publicationHealth.attemptedAtSec === existingHealth.attemptedAtSec
+      )
+    ) {
+      throw new SafetyScoreV9StoreConflictError(
+        "Stale or conflicting Safety Score v9 publication health update",
+      );
     }
   }
   const dailyJson = stableJsonStringifyV1(daily);
@@ -410,20 +481,84 @@ export async function persistSafetyScoreV9ShadowState(
         dailyJson,
       ),
   ];
-  if (envelopeJson !== null && diffJson !== null) {
+  if (
+    input.publicationClockSec !== undefined &&
+    publicationHealthJson !== null
+  ) {
     const cacheStatement = db.prepare(
       `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
        ON CONFLICT(key) DO UPDATE SET
-         value = CASE WHEN cache.updated_at <= excluded.updated_at THEN excluded.value ELSE NULL END,
-         updated_at = excluded.updated_at`,
+         value = CASE
+           WHEN cache.updated_at < excluded.updated_at
+             OR (cache.updated_at = excluded.updated_at AND cache.value = excluded.value)
+           THEN excluded.value
+           ELSE NULL
+         END,
+         updated_at = CASE
+           WHEN cache.updated_at < excluded.updated_at
+             OR (cache.updated_at = excluded.updated_at AND cache.value = excluded.value)
+           THEN excluded.updated_at
+           ELSE -1
+         END`,
     );
+    if (envelopeJson !== null && diffJson !== null && input.exactInput) {
+      statements.push(
+        cacheStatement.bind(
+          SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope,
+          envelopeJson,
+          input.publicationClockSec,
+        ),
+        cacheStatement.bind(
+          SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.diff,
+          diffJson,
+          input.publicationClockSec,
+        ),
+        cacheStatement.bind(
+          input.exactInput.key,
+          input.exactInput.value,
+          input.publicationClockSec,
+        ),
+      );
+    }
     statements.push(
-      cacheStatement.bind(SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope, envelopeJson, daily.updatedAtSec),
-      cacheStatement.bind(SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.diff, diffJson, daily.updatedAtSec),
+      cacheStatement.bind(
+        SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.publicationHealth,
+        publicationHealthJson,
+        input.publicationClockSec,
+      ),
     );
   }
   await executeAtomicBatch(db, statements, { signal: input.signal });
   throwIfAborted(input.signal);
+}
+
+export async function loadSafetyScoreV9PublicationHealth(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<V9PublicationHealth | null> {
+  throwIfAborted(signal);
+  const row = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+        .bind(SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.publicationHealth)
+        .first<{ value: string; updated_at: number }>(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  if (!row) return null;
+  const health = parseCanonicalJson(
+    row.value,
+    V9PublicationHealthSchema,
+    "Safety Score v9 publication health",
+  );
+  if (row.updated_at !== health.attemptedAtSec) {
+    throw new Error(
+      "Safety Score v9 publication health cache timestamp mismatch",
+    );
+  }
+  return health;
 }
 
 async function loadCanonicalCacheValue<T>(

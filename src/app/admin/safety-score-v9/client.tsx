@@ -634,6 +634,7 @@ function CandidateWorkspace({
     () => new Map(response.movementReviews.map((review) => [review.reviewKey, review] as const)),
     [response.movementReviews],
   );
+  const publicationHealth = response.publicationHealth;
 
   return (
     <div className="space-y-8">
@@ -657,6 +658,37 @@ function CandidateWorkspace({
             <StatusChip tone="neutral">V8 remains active</StatusChip>
           </div>
         </div>
+
+        {publicationHealth.status === "held" ? (
+          <div
+            className="mt-4 flex items-start gap-3 border-y border-red-500/35 bg-red-500/5 px-4 py-3 text-red-950 dark:text-red-200"
+            role="status"
+          >
+            <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-semibold">
+                Ratings are held at the last verified snapshot.
+              </p>
+              <p className="mt-0.5 text-xs leading-relaxed opacity-90">
+                Held since{" "}
+                {formatSafetyScoreV9Timestamp(
+                  publicationHealth.heldSinceSec!,
+                )}
+                ; latest attempt{" "}
+                {formatSafetyScoreV9Timestamp(
+                  publicationHealth.attemptedAtSec,
+                )}
+                . Reasons:{" "}
+                {publicationHealth.reasons
+                  .map((reason) =>
+                    titleCaseSafetyScoreV9Token(reason.code),
+                  )
+                  .join(" · ")}
+                .
+              </p>
+            </div>
+          </div>
+        ) : null}
 
         <div
           className="mt-4 flex items-start gap-3 border-y border-amber-500/35 bg-amber-500/5 px-4 py-3 text-amber-950 dark:text-amber-200"

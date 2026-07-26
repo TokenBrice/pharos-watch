@@ -198,7 +198,7 @@ describe("computeSafetyScoreV9Shadow", () => {
     });
   });
 
-  it("compiles from the publication-exact seed and persists the prepared V9 input", async () => {
+  it("compiles from the publication-exact seed without persisting before acceptance", async () => {
     const result = await computeSafetyScoreV9Shadow(
       {} as D1Database,
     );
@@ -223,15 +223,38 @@ describe("computeSafetyScoreV9Shadow", () => {
         v8MethodologyVersion: "v8.11",
       }),
     );
-    expect(mockSetCacheMany).toHaveBeenCalledWith(
-      expect.anything(),
-      [
-        expect.objectContaining({
-          key: "report-cards:v9-fixed-input:exact",
-        }),
-      ],
-      expect.any(AbortSignal),
-    );
+    expect(mockBuildV9FixedInputCacheEntry).not.toHaveBeenCalled();
+    expect(mockSetCacheMany).not.toHaveBeenCalled();
+  });
+
+  it("reports a held V9 sidecar without changing the completed V8 publication", async () => {
+    mockRunShadow.mockResolvedValueOnce({
+      status: "held",
+      attemptId: "safety-score-v9-shadow:2026-07-25:1",
+      utcDay: "2026-07-25",
+      attemptedPublicationGenerationId:
+        "report-cards:v9:candidate:held",
+      reasons: [{ code: "dex-stale" }],
+    });
+
+    const result = await computeSafetyScoreV9Shadow({} as D1Database);
+
+    expect(result).toMatchObject({
+      status: "degraded",
+      itemCount: 0,
+      productivity: {
+        productive: false,
+        reason: "v9-shadow-held",
+      },
+    });
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      sourceGenerationId: SOURCE_GENERATION,
+      shadow: {
+        status: "held",
+        reasons: [{ code: "dex-stale" }],
+      },
+    });
+    expect(mockSetCacheMany).not.toHaveBeenCalled();
   });
 
   it("rejects a seed whose full V8 identity has a different evaluation build", async () => {

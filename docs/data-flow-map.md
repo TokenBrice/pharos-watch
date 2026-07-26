@@ -104,6 +104,14 @@ compact publication-exact peg-provenance seed atomically with V8; the compiler
 requires the seed's exact peg-input key set and full identity before applying the
 bounded supply generation and diagnostic journals. The public producer then
 runs DDR without waiting for either V9 lane.
+The V9 compiler captures DEX, redemption, and live-reserve load health before
+fallback filtering. Immediately before canonical persistence, an acceptance
+fence combines those global source states, the existing active-result and
+rated-count floors, and newly binding producer-failed deterioration against
+the last accepted V9 envelope. Accepted envelope, diff, exact input, daily row,
+and current health commit atomically. A held attempt updates only the daily
+failure and `report-cards:v9-shadow:publication-health`, leaving accepted
+ratings, timestamps, and replay input unchanged.
 The V9-only supply-attribution enrichment may also bind an aggregate asset supply
 to a reviewed route-ID inventory. The wM observer requires the complete
 Ethereum, Arbitrum, Base, Plume, and Solana deployment packet, verifies pinned
@@ -145,6 +153,10 @@ Telegram, chain analytics, or V8-compatible public history; those remain V8 unti
 owner activates V9. Daily rows, movement reviews, and the preview are advisory
 inputs to that decision, not activation gates. See
 [Safety Score V9 Rollout](./process/safety-score-v9-rollout.md).
+After activation, held V9 remains available only as the last accepted API/UI
+snapshot with explicit held metadata. Current-data consumers, organic safety
+alerts, and organic history writes fail closed without falling back to V8;
+independent depeg and incident pipelines continue.
 
 ## Scheduling Backbone
 

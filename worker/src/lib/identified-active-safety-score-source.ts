@@ -70,7 +70,18 @@ export async function loadIdentifiedActiveSafetyScoreSource(
   signal?: AbortSignal,
 ): Promise<IdentifiedActiveSafetyScoreSource> {
   const active = await loadActiveSafetyScoreSource(db, signal);
-  if (active.kind === "v9") return fromActiveV9(active);
+  if (active.kind === "v9") {
+    if (active.snapshot.publicationHealth.status === "held") {
+      return {
+        kind: "error",
+        expectedModel: "v9",
+        reason: "v9-publication-held",
+        detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
+        activationUpdatedAt: active.activationUpdatedAt,
+      };
+    }
+    return fromActiveV9(active);
+  }
   if (active.kind === "error") return fromActiveError(active);
 
   try {
@@ -87,7 +98,18 @@ export async function loadIdentifiedActiveSafetyScoreSource(
     // Re-resolve once so an activation that raced the V8 artifact reads is
     // represented as V9, never mislabeled as a V8 cache failure.
     const rechecked = await loadActiveSafetyScoreSource(db, signal);
-    if (rechecked.kind === "v9") return fromActiveV9(rechecked);
+    if (rechecked.kind === "v9") {
+      if (rechecked.snapshot.publicationHealth.status === "held") {
+        return {
+          kind: "error",
+          expectedModel: "v9",
+          reason: "v9-publication-held",
+          detail: "Canonical Safety Score V9 ratings are held at the last verified snapshot",
+          activationUpdatedAt: rechecked.activationUpdatedAt,
+        };
+      }
+      return fromActiveV9(rechecked);
+    }
     if (rechecked.kind === "error") return fromActiveError(rechecked);
     return {
       kind: "error",

@@ -88,9 +88,24 @@ The private latest entries are:
 - `report-cards:v9-peg-provenance-seed:exact`: the compact
   publication-exact peg event provenance bound to the atomic V8 generation;
 - `report-cards:v9-fixed-input:exact`: the normalized V8 base generation plus
-  any bounded V9-only evidence used by the latest attempted shadow refresh;
+  any bounded V9-only evidence used by the latest accepted shadow refresh;
 - `report-cards:v9-shadow`: the latest strict candidate envelope; and
-- `report-cards:v9-shadow:diff`: the latest V8/V9 movement report.
+- `report-cards:v9-shadow:diff`: the latest V8/V9 movement report; and
+- `report-cards:v9-shadow:publication-health`: the bounded current/held state,
+  accepted identity and time, latest attempt time, and hold reasons.
+
+Immediately before canonical persistence, the runner evaluates publication
+input health and compares newly binding producer-failed deterioration with the
+last accepted V9 snapshot. Stale or unavailable applicable DEX, redemption, or
+live-reserve inputs, failed coverage floors, newly binding producer-failed
+downgrades or NR transitions, and assessment failures hold the candidate.
+Healthy measured-adverse movements still publish.
+
+A held attempt records the publication-gate failure in the daily row and
+updates only publication health. It does not replace the canonical envelope or
+diff, advance the accepted score timestamp, or replace the accepted exact
+input. An accepted attempt writes the envelope, diff, exact input, daily row,
+and current health in one D1 batch ordered by the candidate clock.
 
 Evidence capture must export the V9 exact-input key, not the atomic V8
 `report-cards:fixed-input:exact` key, and verify that its base and source
@@ -176,10 +191,19 @@ non-comparable history baseline and must not emit an organic upgrade/downgrade
 fan-out. Incoherent consumers remain fail-closed or explicitly degraded until
 their normal producer refreshes.
 
+When active V9 is held, the versioned API serves the last accepted ratings with
+`X-Safety-Score-Status: held`, accepted-timestamp freshness headers, and
+`Cache-Control: no-store`. Current-data consumers treat the safety source as
+unavailable and never fall back to V8. Safety alerts and the daily history
+writer emit no organic score movement from a held attempt; independent depeg
+and incident families continue on their own sources.
+
 `executeSafetyScoreHistoryBoundaryOperation()` remains the prepared cutover
 path for V2 history. It is not routed or scheduled, requires the exact approved
 publication identity and timestamps, writes null-previous non-comparable
-baselines, and fails conflicting replays.
+baselines, and fails conflicting replays. After that baseline exists, the daily
+history writer records identified V9 organic rows only from current accepted
+publications; the legacy compatibility table remains V8-only.
 
 ## Activation
 

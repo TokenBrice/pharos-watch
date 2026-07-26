@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public";
+import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import {
   ReportCardsV9CompatibleResponseSchema,
   ReportCardsV9CurrentResponseSchema,
@@ -136,6 +138,27 @@ function candidate(): SafetyScoreV9Response {
   };
 }
 
+function publicationHealth(
+  value: SafetyScoreV9Response = candidate(),
+): V9PublicationHealth {
+  return {
+    schemaVersion: 1,
+    status: "current",
+    acceptedPublicationGenerationId: value.publicationGenerationId,
+    acceptedAtSec: value.publishedAtSec,
+    attemptedAtSec: value.publishedAtSec,
+    heldSinceSec: null,
+    reasons: [],
+  };
+}
+
+function project(value: SafetyScoreV9Response = candidate()) {
+  return projectSafetyScoreV9CandidateToPublicSnapshot(
+    value,
+    publicationHealth(value),
+  );
+}
+
 describe("published V9 report-card cache", () => {
   it("round-trips the canonical shadow cache into the owned V9 identity contract", async () => {
     const candidateValue = candidate();
@@ -150,7 +173,14 @@ describe("published V9 report-card cache", () => {
     const db = mockD1([
       {
         match: "cache",
-        rows: [{ key: SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope, value }],
+        rows: [
+          { key: SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope, value },
+          {
+            key: SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.publicationHealth,
+            value: stableJsonStringifyV1(publicationHealth(candidateValue)),
+            updated_at: candidateValue.publishedAtSec,
+          },
+        ],
       },
     ]);
 
@@ -210,8 +240,56 @@ describe("published V9 report-card cache", () => {
     );
   });
 
+  it("fails closed when publication health is missing or malformed", async () => {
+    const candidateValue = candidate();
+    const envelope = buildSafetyScoreV9ShadowEnvelope({
+      candidate: candidateValue,
+      expectedActiveIds: ["alpha"],
+      compilerFactSchemaDigest: digest("f"),
+      producerCapabilityDigest: digest("1"),
+      coverageFloors: [],
+    });
+    const value = await serializeSafetyScoreV9ShadowEnvelopeCacheValue(envelope);
+    const missingHealth = mockD1([
+      {
+        match: "cache",
+        rows: [
+          {
+            key: SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope,
+            value,
+            updated_at: candidateValue.publishedAtSec,
+          },
+        ],
+      },
+    ]);
+    const malformedHealth = mockD1([
+      {
+        match: "cache",
+        rows: [
+          {
+            key: SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope,
+            value,
+            updated_at: candidateValue.publishedAtSec,
+          },
+          {
+            key: SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.publicationHealth,
+            value: "not-json",
+            updated_at: candidateValue.publishedAtSec,
+          },
+        ],
+      },
+    ]);
+
+    await expect(
+      loadPublishedReportCardsV9Snapshot(missingHealth),
+    ).rejects.toBeInstanceOf(ReportCardsV9SnapshotUnavailableError);
+    await expect(
+      loadPublishedReportCardsV9Snapshot(malformedHealth),
+    ).rejects.toBeInstanceOf(ReportCardsV9SnapshotUnavailableError);
+  });
+
   it("rejects an identity or dependency graph projection mismatch", () => {
-    const snapshot = projectSafetyScoreV9CandidateToPublicSnapshot(candidate());
+    const snapshot = project();
 
     expect(() =>
       ReportCardsV9ResponseSchema.parse({
@@ -232,12 +310,12 @@ describe("published V9 report-card cache", () => {
     traceLess.schemaVersion = 1;
     delete (traceLess.cards[0] as { scoreTrace?: unknown }).scoreTrace;
 
-    expect(() => projectSafetyScoreV9CandidateToPublicSnapshot(traceLess)).toThrow(/scoreTrace/);
+    expect(() => project(traceLess)).toThrow(/scoreTrace/);
   });
 
   it("cannot downgrade a report-v3 envelope by relabeling only its traces", () => {
     const downgraded = structuredClone(
-      projectSafetyScoreV9CandidateToPublicSnapshot(candidate()),
+      project(),
     );
     const trace = (
       downgraded.cards[0] as { scoreTrace: Record<string, unknown> }
@@ -252,11 +330,12 @@ describe("published V9 report-card cache", () => {
 
   it("retains an explicit report-v1 reader for persisted trace-v1 snapshots", () => {
     const previous = structuredClone(
-      projectSafetyScoreV9CandidateToPublicSnapshot(candidate()),
+      project(),
     ) as unknown as Record<string, unknown> & {
       cards: Array<{ scoreTrace: Record<string, unknown> }>;
     };
     previous.schemaVersion = 1;
+    delete previous.publicationHealth;
     const trace = previous.cards[0]!.scoreTrace;
     trace.schemaVersion = 1;
     delete trace.boundedUncertaintyAttribution;
@@ -271,11 +350,12 @@ describe("published V9 report-card cache", () => {
 
   it("retains an explicit report-v2 reader for causal trace-v2 snapshots", () => {
     const previous = structuredClone(
-      projectSafetyScoreV9CandidateToPublicSnapshot(candidate()),
+      project(),
     ) as unknown as Record<string, unknown> & {
       cards: Array<{ scoreTrace: Record<string, unknown> }>;
     };
     previous.schemaVersion = 2;
+    delete previous.publicationHealth;
     const trace = previous.cards[0]!.scoreTrace;
     trace.schemaVersion = 2;
     delete trace.scoreAdjustments;
@@ -314,7 +394,7 @@ describe("published V9 report-card cache", () => {
 
   it("rejects report-v1 restamping and stale candidate projection", () => {
     const restamped = structuredClone(
-      projectSafetyScoreV9CandidateToPublicSnapshot(candidate()),
+      project(),
     ) as unknown as Record<string, unknown>;
     restamped.schemaVersion = 1;
     expect(() => ReportCardsV9CompatibleResponseSchema.parse(restamped)).toThrow();
@@ -329,6 +409,6 @@ describe("published V9 report-card cache", () => {
     trace.schemaVersion = 1;
     delete trace.boundedUncertaintyAttribution;
     delete trace.scoreAdjustments;
-    expect(() => projectSafetyScoreV9CandidateToPublicSnapshot(previousCandidate)).toThrow();
+    expect(() => project(previousCandidate)).toThrow();
   });
 });

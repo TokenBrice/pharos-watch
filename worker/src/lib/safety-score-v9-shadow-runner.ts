@@ -1,4 +1,5 @@
 import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
+import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
 import {
   CRON_INTERVALS,
   SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC,
@@ -15,8 +16,16 @@ import {
 } from "@shared/lib/stable-json";
 import type { ReportCard } from "@shared/types/report-cards";
 import type { V9Grade } from "@shared/types/safety-score-v9";
+import type {
+  V9PublicationHealth,
+  V9PublicationHoldReason,
+} from "@shared/types/report-cards-v9";
 import { V9_RELEASE_COVERAGE_FLOORS } from "@shared/types/safety-score-v9-coverage";
-import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
+import {
+  buildSafetyScoreV9FixedInputCacheEntry,
+  normalizeFixedInput,
+  type ReportCardsFixedInput,
+} from "./report-cards-fixed-input";
 import type { ReportCardPublicationCompleteness } from "./report-card-publication";
 import {
   buildSafetyScoreV9ShadowCandidateFromNormalizedInput,
@@ -41,9 +50,12 @@ import {
   type SafetyScoreV9ShadowFailureStage,
 } from "./safety-score-v9-shadow";
 import {
+  loadLatestSafetyScoreV9ShadowEnvelope,
+  loadSafetyScoreV9PublicationHealth,
   loadSafetyScoreV9ShadowDaily,
   persistSafetyScoreV9ShadowState,
 } from "./safety-score-v9-store";
+import { assessV9Publication } from "./safety-score-v9-publication-assessment";
 
 export const SAFETY_SCORE_V9_SHADOW_ATTEMPT_PREFIX = "safety-score-v9-shadow";
 
@@ -81,6 +93,13 @@ export type SafetyScoreV9ShadowRunResult =
       publicationGenerationId: string;
       candidateId: string;
       pendingReviewCount: number;
+    }
+  | {
+      status: "held";
+      attemptId: string;
+      utcDay: string;
+      attemptedPublicationGenerationId: string;
+      reasons: V9PublicationHoldReason[];
     }
   | {
       status: "skipped";
@@ -306,6 +325,73 @@ async function persistFailure(args: {
   await persistSafetyScoreV9ShadowState(args.db, { daily, signal: args.signal });
 }
 
+function buildHeldPublicationHealth(args: {
+  attemptedAtSec: number;
+  reasons: V9PublicationHoldReason[];
+  acceptedEnvelope: Awaited<
+    ReturnType<typeof loadLatestSafetyScoreV9ShadowEnvelope>
+  >;
+  previousHealth: V9PublicationHealth | null;
+}): V9PublicationHealth {
+  const acceptedPublicationGenerationId =
+    args.acceptedEnvelope?.candidate.publicationGenerationId ??
+    args.previousHealth?.acceptedPublicationGenerationId ??
+    null;
+  const acceptedAtSec =
+    args.acceptedEnvelope?.candidate.publishedAtSec ??
+    args.previousHealth?.acceptedAtSec ??
+    null;
+  return {
+    schemaVersion: 1,
+    status: "held",
+    acceptedPublicationGenerationId,
+    acceptedAtSec,
+    attemptedAtSec: args.attemptedAtSec,
+    heldSinceSec:
+      args.previousHealth?.status === "held"
+        ? args.previousHealth.heldSinceSec
+        : args.attemptedAtSec,
+    reasons: args.reasons,
+  };
+}
+
+async function persistHeldAttempt(args: {
+  db: D1Database;
+  utcDay: string;
+  attemptedAtSec: number;
+  completedAtSec: number;
+  previous: SafetyScoreV9ShadowDaily | null;
+  attemptedPublicationGenerationId: string;
+  reasons: V9PublicationHoldReason[];
+  acceptedEnvelope: Awaited<
+    ReturnType<typeof loadLatestSafetyScoreV9ShadowEnvelope>
+  >;
+  previousHealth: V9PublicationHealth | null;
+  signal?: AbortSignal;
+}): Promise<void> {
+  const reasonCodes = args.reasons.map((reason) => reason.code);
+  const daily = buildSafetyScoreV9ShadowDailyFailure({
+    utcDay: args.utcDay,
+    updatedAtSec: args.completedAtSec,
+    previous: args.previous,
+    failure: {
+      atSec: args.completedAtSec,
+      stage: "publication-gate",
+      code: "safety-score-v9-publication-held",
+      message: `Safety Score v9 publication held: ${reasonCodes.join(", ")}`.slice(
+        0,
+        500,
+      ),
+    },
+  });
+  await persistSafetyScoreV9ShadowState(args.db, {
+    daily,
+    publicationHealth: buildHeldPublicationHealth(args),
+    publicationClockSec: args.attemptedAtSec,
+    signal: args.signal,
+  });
+}
+
 /**
  * Runs V9 only after the authoritative V8 commit. The boundary always returns
  * a shadow result: calculation, timeout, and persistence failures never unwind
@@ -373,6 +459,14 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       }
       fixedInput = preparedFixedInput;
     }
+    const exactInput = await buildSafetyScoreV9FixedInputCacheEntry(
+      fixedInput,
+      buildSafetyScoreV8PublicationIdentity({
+        methodologyVersion: input.v8MethodologyVersion,
+        baseInputGenerationId: fixedInput.baseInputGenerationId,
+        publicationGenerationId: input.v8Publication.generationId,
+      }),
+    );
     stage = "compile";
     const pipeline = buildSafetyScoreV9ShadowCandidateFromNormalizedInput({
       fixedInput,
@@ -389,6 +483,66 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       expectedActiveIds.length,
       pipeline.candidate.completeness.ratedCount,
     );
+    stage = "publication-gate";
+    let acceptedEnvelope: Awaited<
+      ReturnType<typeof loadLatestSafetyScoreV9ShadowEnvelope>
+    > = null;
+    let previousHealth: V9PublicationHealth | null = null;
+    let assessment;
+    try {
+      [acceptedEnvelope, previousHealth] = await Promise.all([
+        loadLatestSafetyScoreV9ShadowEnvelope(input.db, shadowSignal),
+        loadSafetyScoreV9PublicationHealth(input.db, shadowSignal),
+      ]);
+      assessment = assessV9Publication({
+        inputHealth: fixedInput.v9PublicationInputHealth,
+        candidate: pipeline.candidate,
+        acceptedEnvelope,
+        coverageFloors: floors,
+      });
+    } catch (error) {
+      assessment = {
+        decision: "hold" as const,
+        reasons: [
+          {
+            code: "assessment-failed" as const,
+            detail: safeFailure(error, "publication-gate").message.slice(
+              0,
+              240,
+            ),
+          },
+        ],
+      };
+    }
+    if (assessment.decision === "hold") {
+      await persistHeldAttempt({
+        db: input.db,
+        utcDay,
+        attemptedAtSec: fixedInput.clockSec,
+        completedAtSec,
+        previous,
+        attemptedPublicationGenerationId: publicationGenerationId,
+        reasons: assessment.reasons,
+        acceptedEnvelope,
+        previousHealth,
+        signal: shadowSignal,
+      });
+      return {
+        status: "held",
+        attemptId: currentAttemptId,
+        utcDay,
+        attemptedPublicationGenerationId: publicationGenerationId,
+        reasons: assessment.reasons,
+      };
+    }
+    if (
+      fixedInput.baseInputGenerationId !==
+      pipeline.candidate.baseInputGenerationId
+    ) {
+      throw new Error(
+        "Accepted Safety Score v9 exact input does not match the candidate base generation",
+      );
+    }
     const baseEnvelope = buildSafetyScoreV9ShadowEnvelope({
       candidate: pipeline.candidate,
       expectedActiveIds,
@@ -476,6 +630,17 @@ export async function runSafetyScoreV9ShadowAfterV8Publication(
       daily,
       envelope,
       diff,
+      exactInput,
+      publicationHealth: {
+        schemaVersion: 1,
+        status: "current",
+        acceptedPublicationGenerationId: publicationGenerationId,
+        acceptedAtSec: fixedInput.clockSec,
+        attemptedAtSec: fixedInput.clockSec,
+        heldSinceSec: null,
+        reasons: [],
+      },
+      publicationClockSec: fixedInput.clockSec,
       signal: shadowSignal,
     });
     return {

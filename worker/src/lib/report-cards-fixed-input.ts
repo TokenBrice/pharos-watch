@@ -54,6 +54,9 @@ import {
   sortReportCards,
 } from "./report-cards-snapshot-finalize";
 import { parseJson } from "./json-parse";
+import {
+  V9PublicationInputHealthSchema,
+} from "./safety-score-v9-publication-assessment";
 
 const FreshnessEntrySchema = z.object({
   updatedAt: z.number().finite().nonnegative().nullable(),
@@ -151,6 +154,19 @@ const FixedInputPayloadFields = {
   inputFreshness: z.object({
     dexLiquidity: FreshnessEntrySchema,
     redemptionBackstops: FreshnessEntrySchema,
+  }),
+  v9PublicationInputHealth: V9PublicationInputHealthSchema.default({
+    dex: {
+      state: "unavailable",
+      generationId: null,
+      updatedAtSec: null,
+    },
+    redemption: {
+      state: "unavailable",
+      generationId: null,
+      updatedAtSec: null,
+    },
+    liveReserves: { state: "unavailable" },
   }),
   pegDataById: z.record(z.string(), PegSummaryCoinSchema),
   // NAV observations support route-output valuation only. They remain separate
@@ -578,6 +594,7 @@ export type ReportCardsFixedInputDraft = Omit<
   | "evidenceJournalById"
   | "supplyAttributionJournalById"
   | "pegProvenanceById"
+  | "v9PublicationInputHealth"
 > & {
   captureKind: ReportCardsFixedInput["captureKind"];
   activeAssetIds?: string[];
@@ -588,6 +605,7 @@ export type ReportCardsFixedInputDraft = Omit<
   evidenceJournalById?: ReportCardsFixedInput["evidenceJournalById"];
   supplyAttributionJournalById?: ReportCardsFixedInput["supplyAttributionJournalById"];
   pegProvenanceById?: ReportCardsFixedInput["pegProvenanceById"];
+  v9PublicationInputHealth?: ReportCardsFixedInput["v9PublicationInputHealth"];
 };
 
 export function createReportCardsFixedInput(draft: ReportCardsFixedInputDraft): ReportCardsFixedInput {

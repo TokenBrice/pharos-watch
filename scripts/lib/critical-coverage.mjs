@@ -132,6 +132,7 @@ export const CRITICAL_FILES = [
   "worker/src/lib/safety-score-v9-movement-reviews.ts",
   "worker/src/lib/safety-score-v9-peg-provenance.ts",
   "worker/src/lib/safety-score-v9-production-verifier.ts",
+  "worker/src/lib/safety-score-v9-publication-assessment.ts",
   "worker/src/lib/safety-score-v9-shadow-runner.ts",
   "worker/src/lib/safety-score-v9-shadow.ts",
   "worker/src/lib/safety-score-v9-store.ts",
