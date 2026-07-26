@@ -18,6 +18,7 @@ import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
 import { loadMintBurnChainContexts } from "./mint-burn/chain-context";
 import { recalcMintBurnAffectedHours } from "./mint-burn/recalc";
+import { pruneMintBurnRetention } from "./mint-burn/retention";
 import { completeMintBurnRun } from "./mint-burn/run-completion";
 import { configKey, configTier, runMintBurnConfigPhase, type MintBurnRunConfigPhaseResult } from "./mint-burn/run-configs";
 import {
@@ -75,6 +76,7 @@ export async function syncMintBurn(
   const lane = options.lane ?? "all";
   const jobName = resolveMintBurnJobName(lane, options.jobName);
   const reportProgress = options.onProgress;
+  const runTimestamp = Math.floor(Date.now() / 1000);
 
   throwIfAborted(signal);
   const budget = createBudget(GLOBAL_BUDGET_LIMIT);
@@ -113,6 +115,9 @@ export async function syncMintBurn(
   const contractsTotal = allTrackableConfigs.length;
 
   if (enabledConfigs.length === 0) {
+    const retention = lane === "critical"
+      ? await pruneMintBurnRetention(db, runTimestamp, signal)
+      : null;
     const metadata = JSON.stringify({
       lane,
       jobName,
@@ -148,12 +153,13 @@ export async function syncMintBurn(
       degradedStreak: 0,
       coverageRatio: 1,
       nullPricesHealed: 0,
+      ...(retention ? { retention } : {}),
     });
 
     return {
       itemCount: 0,
       metadata,
-      status: "ok",
+      status: retention?.error ? "degraded" : "ok",
     };
   }
 
@@ -191,7 +197,6 @@ export async function syncMintBurn(
   );
 
   const stablecoinIds = [...new Set(configs.map((config) => config.stablecoinId))];
-  const runTimestamp = Math.floor(Date.now() / 1000);
   const { prices, priceHistory } = await loadMintBurnPriceContextBatch(
     db,
     stablecoinIds,
@@ -328,6 +333,13 @@ export async function syncMintBurn(
   completion.metadata.recalcFailed = recalcFailed;
   completion.metadata.bridgeValidationErrors = MINT_BURN_BRIDGE_VALIDATION_ERROR_COUNT;
   if (recalcError) completion.metadata.recalcError = recalcError;
+  if (lane === "critical") {
+    const retention = await pruneMintBurnRetention(db, runTimestamp, signal);
+    completion.metadata.retention = retention;
+    if (retention.error && status === "ok") {
+      status = "degraded";
+    }
+  }
   const metadata = JSON.stringify(completion.metadata);
 
   await reportCronProgress(reportProgress, {
