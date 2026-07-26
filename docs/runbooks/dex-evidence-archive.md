@@ -13,7 +13,7 @@ The production binding is `EVIDENCE_ARCHIVE`; preview/local work uses the config
 
 Invalid values fail closed to effective `off` and surface a configuration error. `off` retains the existing D1 cleanup behavior. `shadow` permits create-only upload and full download verification; cleanup may delete only generations with verified manifests. `delete` lets the isolated archive job own early deletion after the three-hour hot window while producer retention remains a fallback.
 
-Release A is hard-gated to effective `off` even if either variable is changed. It records only family state and `cron_runs` evidence; source selection and R2 I/O do not exist on that release path.
+Release A was hard-gated to effective `off` and proved the additive control plane with zero source changes and zero R2 writes. Release B permits measured execution only in `shadow`: liquidity and measured early deletion remain code-gated `off`, while the existing three-day measured cleanup can remove only bundles already covered by a verified manifest.
 
 ## Schedule and budgets
 
@@ -27,6 +27,8 @@ Each immutable object is one canonical JSON generation compressed with gzip. SHA
 - Create-only writes never overwrite an existing deterministic key. An existing mismatch is corrupt evidence, degrades the job, and leaves D1 untouched.
 - Archive failure can delay cleanup but cannot delete the sole verified copy.
 - Measured quotes and their exact target dependency closure archive first. Current, incomplete, candidate/writing, younger-than-three-hour, referenced, or count-mismatched generations remain in D1.
+- Measured shadow covers the EVM, Solana, and Tron publication surfaces. It pages rows in `target_id` order, includes the exact publication-ledger rows, and writes a target-only object only when no retained quote references that complete target generation.
+- A duplicate deterministic-key retry downloads and verifies the existing immutable object; a metadata, count, byte, or checksum mismatch degrades the job and leaves D1 unchanged.
 - Liquidity eligibility additionally requires a successful `sync-dex-liquidity` run whose `metadata.persistence.generationId` matches, proving challenger, price, history, and depth completion.
 - D1 deletion and `source_deleted_at` advancement occur in one D1 batch after a final reference/eligibility recheck.
 
@@ -38,7 +40,7 @@ If the 24-hour physical growth slope remains above 200 MB/day for six hours or c
 
 ## Required release evidence
 
-- Foundation: migration active, exactly 22 triggers, archive lane `1/6`, repeated no-op runs with zero source changes and zero R2 objects.
+- Foundation: migration active, exactly 22 triggers, archive lane `1/6`, repeated no-op runs with zero source changes and zero R2 objects. Completed on the Release A production foundation.
 - Measured shadow: at least 48 hours of exact round trips, idempotent retry evidence, protected-generation tests, backlog under two hours, and healthy memory/duration.
 - Measured delete: inspect the first exact deletion, product/scoring health, then observe 72 hours before changing liquidity.
 - Liquidity shadow: at least 48 hours with downstream completion and public-reference fences proven.

@@ -1461,8 +1461,38 @@ export async function pruneDexMeasuredExecutionGenerations(
   db: D1Database,
   nowSec: number,
   signal?: AbortSignal,
+  archiveMode?: string,
 ): Promise<void> {
   const cutoff = nowSec - GENERATION_RETENTION_SEC;
+  const normalizedArchiveMode = archiveMode?.trim().toLowerCase();
+  const requireVerifiedArchive =
+    normalizedArchiveMode === "shadow" || normalizedArchiveMode === "delete";
+  const quoteArchiveGate = requireVerifiedArchive
+    ? ` AND EXISTS (
+         SELECT 1 FROM dex_archive_manifests m
+          WHERE m.family = 'measured-quote-generation'
+            AND m.generation_id = surface_publication_generations.generation_id
+            AND m.verified_at IS NOT NULL
+       )`
+    : "";
+  const targetArchiveGate = requireVerifiedArchive
+    ? ` AND (
+         EXISTS (
+           SELECT 1 FROM dex_archive_manifests m
+            WHERE m.family = 'measured-target-generation'
+              AND m.generation_id = surface_publication_generations.generation_id
+              AND m.verified_at IS NOT NULL
+         )
+         OR EXISTS (
+           SELECT 1
+             FROM dex_archive_manifest_dependencies d
+             JOIN dex_archive_manifests m
+               ON m.family = d.family AND m.generation_id = d.generation_id
+            WHERE d.dependency_generation_id = surface_publication_generations.generation_id
+              AND m.verified_at IS NOT NULL
+         )
+       )`
+    : "";
   await batchExecute(
     db,
     [
@@ -1472,6 +1502,7 @@ export async function pruneDexMeasuredExecutionGenerations(
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
          WHERE surface IN (?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+         ${quoteArchiveGate}
          ORDER BY started_at ASC LIMIT ?
        )`,
         )
@@ -1488,6 +1519,7 @@ export async function pruneDexMeasuredExecutionGenerations(
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
          WHERE surface IN (?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+         ${targetArchiveGate}
          ORDER BY started_at ASC LIMIT ?
        )
        AND generation_id NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)`,
@@ -1499,6 +1531,53 @@ export async function pruneDexMeasuredExecutionGenerations(
           cutoff,
           GENERATION_PRUNE_MAX_PER_RUN,
         ),
+      db
+        .prepare(
+          `UPDATE dex_archive_manifest_dependencies
+              SET source_deleted_at = COALESCE(source_deleted_at, ?)
+            WHERE source_deleted_at IS NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM dex_measured_execution_targets t
+                 WHERE t.generation_id = dex_archive_manifest_dependencies.dependency_generation_id
+              )`,
+        )
+        .bind(nowSec),
+      db
+        .prepare(
+          `UPDATE dex_archive_manifests
+              SET source_deleted_at = COALESCE(source_deleted_at, ?)
+            WHERE family = 'measured-quote-generation'
+              AND verified_at IS NOT NULL
+              AND source_deleted_at IS NULL
+              AND source_slot_started_at < ?
+              AND NOT EXISTS (
+                SELECT 1 FROM dex_measured_execution_quotes q
+                 WHERE q.generation_id = dex_archive_manifests.generation_id
+              )
+              AND NOT EXISTS (
+                SELECT 1
+                  FROM dex_archive_manifest_dependencies d
+                  JOIN dex_measured_execution_targets t
+                    ON t.generation_id = d.dependency_generation_id
+                 WHERE d.family = dex_archive_manifests.family
+                   AND d.generation_id = dex_archive_manifests.generation_id
+              )`,
+        )
+        .bind(nowSec, cutoff),
+      db
+        .prepare(
+          `UPDATE dex_archive_manifests
+              SET source_deleted_at = COALESCE(source_deleted_at, ?)
+            WHERE family = 'measured-target-generation'
+              AND verified_at IS NOT NULL
+              AND source_deleted_at IS NULL
+              AND source_slot_started_at < ?
+              AND NOT EXISTS (
+                SELECT 1 FROM dex_measured_execution_targets t
+                 WHERE t.generation_id = dex_archive_manifests.generation_id
+              )`,
+        )
+        .bind(nowSec, cutoff),
       db
         .prepare(
           `DELETE FROM surface_publication_generations
