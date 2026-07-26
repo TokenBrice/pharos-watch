@@ -163,6 +163,7 @@ describe("handleReportCardsV9Preview", () => {
     const endpoint = getRouteMatch("/api/report-cards/v9-preview")?.endpoint;
     expect(endpoint?.key).toBe("report-cards-v9-preview");
     expect(endpoint?.cacheBypass).toBe(true);
+    expect(endpoint?.publicApiAccess).toBe("exempt");
     expect(endpoint?.siteDataAccess).toBe("denied");
   });
 
@@ -170,6 +171,7 @@ describe("handleReportCardsV9Preview", () => {
     const endpoint = getRouteMatch("/api/report-cards/v9-preview-412d818c031b7bc5")?.endpoint;
     expect(endpoint?.key).toBe("report-cards-v9-preview-legacy");
     expect(endpoint?.cacheBypass).toBe(true);
+    expect(endpoint?.publicApiAccess).toBe("exempt");
     expect(endpoint?.siteDataAccess).toBe("denied");
   });
 

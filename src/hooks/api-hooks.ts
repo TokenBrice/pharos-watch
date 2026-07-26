@@ -27,7 +27,6 @@ import {
   type YieldRankingsResponse,
 } from "@shared/types";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
-import { PUBLIC_API_KEY_HEADER } from "@shared/lib/public-api-contract";
 import {
   createApiQueryFn,
   createApiPollingQueryOptions,
@@ -198,19 +197,10 @@ export function useReportCardsV9(overrides?: V9QueryControlOverrides) {
   });
 }
 
-/** API-key-gated V9 shadow query using the registered producer polling window. */
-export function useReportCardsV9Preview(apiKey: string | null, overrides?: V9QueryControlOverrides) {
-  const headers = new Headers(overrides?.fetchInit?.headers);
-  if (apiKey) headers.set(PUBLIC_API_KEY_HEADER, apiKey);
+/** Unlisted V9 shadow query using the registered producer polling window. */
+export function useReportCardsV9Preview(overrides?: V9QueryControlOverrides) {
   return useRegisteredApiQuery<ReportCardsV9Response>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Preview, {
     ...overrides,
-    enabled: Boolean(apiKey) && overrides?.enabled !== false,
-    fetchInit: apiKey
-      ? {
-          ...overrides?.fetchInit,
-          headers,
-        }
-      : undefined,
     keepPreviousData: false,
   });
 }
