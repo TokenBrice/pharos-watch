@@ -338,9 +338,9 @@ const OVERLAY_ARCHETYPE_COMPONENTS: Record<MechanismReviewOverlay["archetype"], 
     "recovery",
   ],
   // Fiat-cash and tbill components are compiler-bounded by design; a curated
-  // overlay may claim them only under the owner-approved evidence standard
-  // (see the FORGE owner decision packet). Until such overlays exist this
-  // path is inert and the built bounded review stands.
+  // overlay may claim them only under the owner-approved evidence standard,
+  // ratified 2026-07-27: docs/process/mechanism-overlay-evidence-standard.md.
+  // Claims that do not meet its evidence classes stay uncurated (bounded).
   "fiat-cash": ["claimAndSegregation", "custodyContinuity", "assuranceAndReconciliation"],
   tbill: ["fundClaimAndSeniority", "navValuation", "durationAndLiquidity", "lossRecoveryDesign"],
 };
