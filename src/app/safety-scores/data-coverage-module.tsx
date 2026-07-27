@@ -56,9 +56,9 @@ function GapOwnerBar({ model }: { model: DataCoverageModel }) {
       >
         {model.gapOwners.map((owner, index) => (
           <span
-            key={owner.key}
+            key={owner.responsibility}
             className={cn(
-              OWNER_SWATCHES[owner.key] ?? "bg-muted-foreground",
+              OWNER_SWATCHES[owner.responsibility] ?? "bg-muted-foreground",
               index === 0 && "rounded-l-md",
               index === model.gapOwners.length - 1 && "rounded-r-md",
             )}
@@ -70,12 +70,12 @@ function GapOwnerBar({ model }: { model: DataCoverageModel }) {
       </div>
       <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
         {model.gapOwners.map((owner) => (
-          <li key={owner.key} className="flex min-w-0 items-baseline gap-2">
+          <li key={owner.responsibility} className="flex min-w-0 items-baseline gap-2">
             <span
               aria-hidden="true"
               className={cn(
                 "mt-1 h-2 w-2 shrink-0 rounded-sm",
-                OWNER_SWATCHES[owner.key] ?? "bg-muted-foreground",
+                OWNER_SWATCHES[owner.responsibility] ?? "bg-muted-foreground",
               )}
             />
             <span className="min-w-0 flex-1">

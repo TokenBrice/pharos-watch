@@ -75,33 +75,33 @@ const REASON_CODE_LABELS: Record<V9ReasonCode, string> = {
  */
 const GAP_OWNERS = [
   {
-    key: "issuer-undisclosed",
+    responsibility: "issuer-undisclosed",
     label: "Issuer has not disclosed it",
     detail: "The data exists but is not published by the issuer.",
   },
   {
-    key: "integration-missing",
+    responsibility: "integration-missing",
     label: "Pharos has not integrated it yet",
     detail: "A source exists; wiring it into the pipeline is our work.",
   },
   {
-    key: "producer-failed",
+    responsibility: "producer-failed",
     label: "A data feed failed",
     detail: "An upstream source we rely on did not deliver.",
   },
   {
-    key: "method-unsupported",
+    responsibility: "method-unsupported",
     label: "No supported method",
     detail: "No method can measure this input for this asset yet.",
   },
 ] as const satisfies ReadonlyArray<{
-  key: V9EvidenceResponsibility;
+  responsibility: V9EvidenceResponsibility;
   label: string;
   detail: string;
 }>;
 
 export interface DataCoverageGapOwner {
-  key: V9EvidenceResponsibility;
+  responsibility: V9EvidenceResponsibility;
   label: string;
   detail: string;
   count: number;
@@ -229,7 +229,8 @@ export function buildDataCoverageModel(
   }
 
   const ownerTotal = GAP_OWNERS.reduce(
-    (sum, owner) => sum + (gapCountByOwner.get(owner.key) ?? 0),
+    (sum, owner) =>
+      sum + (gapCountByOwner.get(owner.responsibility) ?? 0),
     0,
   );
 
@@ -244,7 +245,7 @@ export function buildDataCoverageModel(
     openGapCount,
     criticalGapCount,
     gapOwners: GAP_OWNERS.map((owner) => {
-      const count = gapCountByOwner.get(owner.key) ?? 0;
+      const count = gapCountByOwner.get(owner.responsibility) ?? 0;
       return { ...owner, count, share: ownerTotal === 0 ? 0 : count / ownerTotal };
     })
       .filter((owner) => owner.count > 0)

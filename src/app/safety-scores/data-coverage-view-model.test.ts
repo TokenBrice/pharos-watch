@@ -96,7 +96,7 @@ describe("buildDataCoverageModel", () => {
 
     const model = buildDataCoverageModel(response)!;
 
-    expect(model.gapOwners.map((owner) => owner.key)).toEqual([
+    expect(model.gapOwners.map((owner) => owner.responsibility)).toEqual([
       "producer-failed",
       "issuer-undisclosed",
     ]);
