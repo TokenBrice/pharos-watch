@@ -124,14 +124,18 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ...documentedBoundSupplyFull(REVIEWED_YIELD_COVERAGE_WAVE_AT),
     unresolvedOutputAssetKeys: ["asset:zusd", "doc-money-on-chain"],
     costModel: fixedFee(0, "Mynt materials state redemption fees are currently disabled"),
-    reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
+    reviewedAt: "2026-07-27",
     docs: [
       sourceRef("Sovryn Dollar", "https://sovryn.com/sovryn-dollar", ["route", "capacity", "access"]),
+      sourceRef("Launching the Sovryn Dollar", "https://sovryn.com/all-things-sovryn/launching-the-sovryn-dollar", [
+        "route",
+        "settlement",
+      ]),
       sourceRef("Mynt app", "https://app.mynt.xyz/", ["route", "capacity", "fees", "settlement"]),
     ],
     notes: [
       "Fresh reserve sync reads the Mynt holder's ZUSD and DOC balances on Rootstock, but redemption capacity remains documented-bound because the adapter does not emit a dedicated route-capacity field",
-      "The exact holder output basket is ZUSD plus DOC. ZUSD has no tracked Pharos stablecoin id, so the complete pair is preserved as unresolved diagnostic identities rather than publishing DOC alone.",
+      "2026-07-27 recheck (Kimi data review): Mynt redeems DLLR 1:1 into a user-selected bAsset, currently DOC or ZUSD. ZUSD has no tracked Pharos stablecoin id, so the complete pair is preserved as unresolved diagnostic identities rather than publishing DOC alone.",
     ],
   },
   "xusd-babelfish": {
