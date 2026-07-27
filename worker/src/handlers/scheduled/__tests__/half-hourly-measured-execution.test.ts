@@ -7,22 +7,22 @@ function result(
   status: NonNullable<CronResult["status"]>,
   lane: string,
   attemptedFailureCount = 0,
-  cursor?: { deferredCount: number; cursorWriteStatus: string; rateLimitDeferredCount?: number },
+  metadata?: Record<string, unknown>,
 ): CronResult {
   return {
     status,
     itemCount: 1,
-    metadata: JSON.stringify({ lane, attemptedFailureCount, ...cursor }),
+    metadata: JSON.stringify({ lane, attemptedFailureCount, ...metadata }),
     productivity: { productive: true, reason: `${lane}-published` },
   };
 }
 
 describe("half-hourly measured execution result aggregation", () => {
-  it("retains shadow degradation as diagnostics without degrading active EVM health", () => {
+  it("retains shadow Solana degradation as diagnostics without degrading active lanes", () => {
     const merged = mergeMeasuredExecutionResults(
       result("ok", "evm"),
-      result("degraded", "solana", 3),
-      result("degraded", "tron", 2),
+      result("degraded", "solana", 3, { activation: "target-ratified" }),
+      result("ok", "tron", 0, { activation: "active" }),
     );
     const metadata = JSON.parse(merged.metadata!);
 
@@ -30,10 +30,19 @@ describe("half-hourly measured execution result aggregation", () => {
     expect(metadata.laneStatuses).toEqual({
       evm: "ok",
       solana: "degraded",
-      tron: "degraded",
+      tron: "ok",
     });
     expect(metadata.solana.attemptedFailureCount).toBe(3);
-    expect(metadata.tron.attemptedFailureCount).toBe(2);
+  });
+
+  it("degrades when an active native lane has attempted failures", () => {
+    const merged = mergeMeasuredExecutionResults(
+      result("ok", "evm"),
+      result("ok", "solana", 0, { activation: "target-ratified" }),
+      result("degraded", "tron", 2, { activation: "active" }),
+    );
+
+    expect(merged.status).toBe("degraded");
   });
 
   it("preserves active EVM degradation", () => {

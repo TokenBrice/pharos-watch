@@ -81,6 +81,11 @@ export interface DexLiquidityScoringStageInput {
   syncStartSec: number;
   sourceState: DexLiquidityScoringSourceState;
   poolState: DexLiquidityPoolState;
+  onChunkBatchPersisted?: (progress: {
+    chunkCount: number;
+    recordCount: number;
+    payloadBytes: number;
+  }) => Promise<void>;
 }
 
 export interface DexLiquidityScoringStageChunk {
@@ -811,6 +816,7 @@ export async function persistDexLiquidityScoringStage(
           signal,
         });
         pendingStatements = [];
+        await input.onChunkBatchPersisted?.({ chunkCount, recordCount, payloadBytes });
       }
     }
     if (pendingStatements.length > 0) {
@@ -818,6 +824,8 @@ export async function persistDexLiquidityScoringStage(
         chunkSize: DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE,
         signal,
       });
+      pendingStatements = [];
+      await input.onChunkBatchPersisted?.({ chunkCount, recordCount, payloadBytes });
     }
     if (chunkCount === 0 || recordCount === 0) {
       throw new Error("DEX liquidity scoring stage produced no records");

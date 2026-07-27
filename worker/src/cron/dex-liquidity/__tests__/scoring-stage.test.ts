@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 import type {
   DexLiquidityPoolState,
@@ -298,14 +298,21 @@ describe("DEX liquidity scoring stage", () => {
     const pool = poolState(40);
     const expectedMajorPoolIds = pool.metrics.get("major")?.topPools.map((entry) => entry.poolId);
     const sourceSlotStartedAt = 10_000;
+    const onChunkBatchPersisted = vi.fn(async () => {});
 
     const stored = await persistDexLiquidityScoringStage(harness.db, {
       sourceSlotStartedAt,
       syncStartSec: sourceSlotStartedAt + 10,
       sourceState: source,
       poolState: pool,
+      onChunkBatchPersisted,
     });
     expect(stored.chunkCount).toBeGreaterThan(0);
+    expect(onChunkBatchPersisted).toHaveBeenLastCalledWith({
+      chunkCount: stored.chunkCount,
+      recordCount: stored.recordCount,
+      payloadBytes: stored.payloadBytes,
+    });
 
     const loaded = await loadDexLiquidityScoringStage(harness.db, {
       nowSec: sourceSlotStartedAt + 6 * 60,

@@ -210,6 +210,21 @@ export async function stageDexLiquidityScoring(
       syncStartSec,
       sourceState: scoringSourceState,
       poolState,
+      onChunkBatchPersisted: async ({ chunkCount, recordCount, payloadBytes }) => {
+        await reportDexLiquidityProgress(ctx, {
+          stage: "scoring-stage-persistence",
+          message: "Persisting bounded DEX scoring-stage chunks",
+          providerFamily: "d1",
+          itemsDone: recordCount,
+          metadata: {
+            countTotals: {
+              chunkCount,
+              recordCount,
+              payloadBytes,
+            },
+          },
+        });
+      },
     },
     signal,
   );
