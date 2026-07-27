@@ -69,7 +69,7 @@ describe("ReportCardV9Detail", () => {
 
     render(<ReportCardV9Detail response={response} expectedIdentity={response.safetyScoreIdentity} cardId="usdc-circle" />);
 
-    expect(screen.getByText("v9.0")).toBeTruthy();
+    expect(screen.getByText("V9")).toBeTruthy();
     expect(screen.queryByText(/candidate-v2/)).toBeNull();
     expect(screen.queryByText(/safety-score-v9-candidate-v2/)).toBeNull();
   });

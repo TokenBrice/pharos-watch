@@ -33,10 +33,8 @@ function isUnknownDisplayValue(value: string | null | undefined): boolean {
   return value?.trim().toLowerCase() === "unknown";
 }
 
-function formatV9MethodologyLabel(methodologyVersion: string): string {
-  // eslint-disable-next-line security/detect-unsafe-regex -- methodology identities are short, validated API strings
-  const match = methodologyVersion.trim().match(/\bv?(9(?:\.\d+)*)\b/i);
-  return match ? `v${match[1]}` : "v9.0";
+function formatV9MethodologyLabel(): string {
+  return "V9";
 }
 
 function formatEvidenceSummary(
@@ -199,11 +197,8 @@ export interface ReportCardV9DetailProps {
 export function ReportCardV9Detail({ response, expectedIdentity, cardId }: ReportCardV9DetailProps) {
   const resolved = resolveV9ConsumerResponse(response, expectedIdentity);
   if (resolved.status === "unavailable") return <V9Unavailable reason={resolved.reason} />;
-  const selected = selectV9Card(response, expectedIdentity, cardId);
-  if (selected.status === "unavailable") return <V9Unavailable reason={selected.reason} />;
-
-  const card = selected.value;
-  const identity = selected.identity;
+  const card = resolved.value.cards.find((candidate) => candidate.id === cardId);
+  if (!card) return <V9Unavailable reason="card-unavailable" />;
   const bindingCap = card.bindingCap;
 
   return (
@@ -213,7 +208,7 @@ export function ReportCardV9Detail({ response, expectedIdentity, cardId }: Repor
           Safety Score
         </DetailSectionTitle>
         <span className="font-mono text-[11px] text-muted-foreground">
-          {formatV9MethodologyLabel(identity.methodologyVersion)}
+          {formatV9MethodologyLabel()}
         </span>
       </CardHeader>
       <CardContent className="space-y-6 px-4 py-5 sm:px-5">

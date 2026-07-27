@@ -120,11 +120,10 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   safetyScore: {
     title: "Safety Score",
     summary:
-      "Composite grade from exit liquidity, resilience, decentralization, and dependency risk, then adjusted by peg stability.",
+      "Three-pillar assessment of backing, exit quality, and economic control, with peg, deployment, dependency, and policy-limit effects applied explicitly.",
     detail:
-      "Missing exit data applies a 10% penalty instead of redistributing weight. Overall grade is NR when too few base dimensions are rated.",
+      "The published score follows the bounded-headroom pillar aggregate through peg and deployment adjustments, then applies any binding caps. Insufficient required evidence produces NR.",
     methodologyPath: "/methodology/#safety-scores-methodology",
-    versionLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   },
   resilience: {

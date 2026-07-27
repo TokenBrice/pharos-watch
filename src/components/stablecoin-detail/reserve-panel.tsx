@@ -2,6 +2,7 @@
 
 import { RefreshCw } from "lucide-react";
 import { ReserveTreemap } from "@/components/reserve-treemap";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { StablecoinMeta } from "@shared/types";
 import {
@@ -19,6 +20,7 @@ export interface ReservePanelProps {
   reserveFetchError: unknown | null;
   onRetry?: () => Promise<unknown> | void;
   isFetching?: boolean;
+  isLoading?: boolean;
 }
 
 function ReserveStatusNotice({
@@ -64,6 +66,7 @@ export function ReservePanel({
   reserveFetchError,
   onRetry,
   isFetching = false,
+  isLoading = false,
 }: ReservePanelProps) {
   const isLiveEnabled = !!coin.liveReservesConfig;
   const reserveFetchNotice = reserveFetchError
@@ -76,17 +79,35 @@ export function ReservePanel({
     ? buildReserveFootnoteModel(reserves, isLiveEnabled, coin.flags.backing.replace("-", " "))
     : null;
 
+  if (!reserves && !reserveFetchError && isLoading) {
+    return (
+      <section
+        id="reserves"
+        aria-label="Reserve composition"
+        aria-busy="true"
+        className="flex min-h-[320px] min-w-0 flex-1 flex-col"
+      >
+        <div className="mb-4 flex items-center gap-2">
+          <Skeleton className="h-4 w-36 rounded-sm" />
+          <Skeleton className="h-5 w-10 rounded-full" />
+        </div>
+        <Skeleton className="min-h-[250px] flex-1 rounded-md" />
+        <span className="sr-only">Loading reserve composition</span>
+      </section>
+    );
+  }
+
   if (!reserves && !reserveFetchError) {
     return null;
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col gap-6">
+    <div className="flex h-full min-h-0 w-full max-w-full flex-1 flex-col gap-6 overflow-hidden">
       {reserveFetchNotice ? (
         <ReserveStatusNotice notice={reserveFetchNotice} onRetry={onRetry} isFetching={isFetching} />
       ) : null}
       {reserves ? (
-        <section id="reserves" aria-label="Reserve composition" className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <section id="reserves" aria-label="Reserve composition" className="flex min-h-0 w-full max-w-full min-w-0 flex-1 flex-col">
           <ReserveTreemap
             reserves={reserves.reserves}
             badge={reserves.displayBadge}

@@ -19,7 +19,7 @@
 export { McapChart } from "@/components/mcap-chart";
 export { MarketDataSection } from "@/components/stablecoin-detail/market-data-section";
 export { DEWSDetail } from "@/components/dews-detail";
-export { ReportCardV9Detail } from "@/components/report-card-v9";
+export { StablecoinSafetyScoreV9Card } from "@/components/stablecoin-detail/stablecoin-safety-score-v9-card";
 export { ReservePanel } from "@/components/stablecoin-detail/reserve-panel";
 export { DepegHistory } from "@/components/depeg-history";
 export { FlowsSection, FlowHistorySection } from "@/components/stablecoin-detail/flows-section";

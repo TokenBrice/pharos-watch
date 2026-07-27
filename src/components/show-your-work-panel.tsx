@@ -14,9 +14,10 @@ import {
   formatPsi,
   formatRedemption,
   formatReportCard,
+  formatReportCardV9,
   type ShowYourWorkTable,
 } from "@/lib/show-your-work-formatters";
-import type { RawDimensionInputs } from "@shared/types";
+import type { RawDimensionInputs, SafetyScoreV9CurrentCard } from "@shared/types";
 import type { DexLiquidityData, StressSignalEntry } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { StabilityIndexCurrent } from "@shared/types/stability";
@@ -26,6 +27,13 @@ export type ShowYourWorkPanelProps =
   | {
       kind: "report-card";
       rawInputs: RawDimensionInputs;
+      stablecoinId?: string;
+      stablecoinName?: string;
+    }
+  | {
+      kind: "report-card-v9";
+      card: SafetyScoreV9CurrentCard;
+      methodologyVersion: string;
       stablecoinId?: string;
       stablecoinName?: string;
     }
@@ -62,6 +70,8 @@ function buildTable(props: ShowYourWorkPanelProps): ShowYourWorkTable {
   switch (props.kind) {
     case "report-card":
       return formatReportCard(props.rawInputs);
+    case "report-card-v9":
+      return formatReportCardV9(props.card, props.methodologyVersion);
     case "dews":
       return formatDews(props.current);
     case "liquidity":
@@ -115,8 +125,10 @@ export function ShowYourWorkPanel(props: ShowYourWorkPanelProps) {
       >
         <span className="flex items-center gap-2">
           <span className="pharos-kicker text-sky-700 dark:text-sky-400">Inputs · {item.title}</span>
-          {item.versionLabel ? (
-            <span className="font-mono text-[10px] text-muted-foreground">{item.versionLabel}</span>
+          {table.versionLabel ?? item.versionLabel ? (
+            <span className="font-mono text-[10px] text-muted-foreground">
+              {table.versionLabel ?? item.versionLabel}
+            </span>
           ) : null}
         </span>
         <ChevronDown

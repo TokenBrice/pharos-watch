@@ -7,8 +7,10 @@ import {
   formatPsi,
   formatRedemption,
   formatReportCard,
+  formatReportCardV9,
 } from "@/lib/show-your-work-formatters";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
+import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 
 describe("show-your-work formatters", () => {
   it("formats report card raw inputs into rows", () => {
@@ -40,6 +42,28 @@ describe("show-your-work formatters", () => {
     expect(table.formula).toContain("(Peg Score/100)^0.40");
     expect(table.formula).toContain("×0.9");
     expect(table.formula).toContain("active-depeg");
+  });
+
+  it("formats V9 score stages without routing through V8 raw inputs", () => {
+    const card = makeV9Card({
+      bindingCap: {
+        kind: "track-record:<24m",
+        limit: 84,
+        source: "structural",
+        reason: "Less than two years of implementation history.",
+        binding: true,
+      },
+    });
+    card.scoreTrace.stages.preCapScore = 86.9;
+
+    const table = formatReportCardV9(card, "candidate-v2");
+
+    expect(table.versionLabel).toBe("candidate-v2");
+    expect(table.rows.find((row) => row.label === "Backing pillar")?.value).toBe("88.0");
+    expect(table.rows.find((row) => row.label === "Pre-cap score")?.value).toBe("86.9");
+    expect(table.rows.find((row) => row.label === "Binding cap")?.value).toBe("84 (track-record:<24m)");
+    expect(table.formula).toContain("bounded-headroom aggregation");
+    expect(table.formula).not.toContain("resilience");
   });
 
   it("formats DEWS signals", () => {

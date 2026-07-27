@@ -222,13 +222,15 @@ export function DetailContent({
   ) : viewModel.childVariants.length > 0 ? (
     <ParentVariantsCard variants={viewModel.childVariants} />
   ) : null;
-  const reservesPanel = viewModel.reserves != null || viewModel.reserveFetchError != null ? (
+  const reservesLoading = viewModel.featureStates.reserves.status === "loading";
+  const reservesPanel = viewModel.reserves != null || viewModel.reserveFetchError != null || reservesLoading ? (
     <ReservePanel
       coin={viewModel.coin}
       reserves={viewModel.reserves}
       reserveFetchError={viewModel.reserveFetchError}
       onRetry={viewModel.refetchReserves ?? undefined}
       isFetching={viewModel.isFetchingReserves}
+      isLoading={reservesLoading}
     />
   ) : null;
 

@@ -165,7 +165,10 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
           )}
         </DetailSectionTitle>
       </div>
-      <div className="mt-3 min-h-[200px] min-w-0 flex-1 overflow-hidden">
+      <div
+        className="mt-3 min-h-[200px] w-full min-w-0 shrink-0 overflow-hidden lg:max-h-[520px]"
+        style={{ aspectRatio: "6 / 5" }}
+      >
         <div
           ref={chartContainerRef}
           className="h-full min-w-0 overflow-hidden"
