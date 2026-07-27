@@ -76,7 +76,10 @@ export const AUTHORING_CONTRACT_MINT_AUTHORITY_EXAMPLE: MintAuthorityProfile = {
   },
 };
 
-function fixedInput(activeAssetIds: readonly string[] = [ASSET_ID]) {
+function fixedInput(
+  activeAssetIds: readonly string[] = [ASSET_ID],
+  supplyUsdById: Readonly<Record<string, number>> = {},
+) {
   return createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
     activeAssetIds: [...activeAssetIds],
@@ -173,10 +176,10 @@ function fixedInput(activeAssetIds: readonly string[] = [ASSET_ID]) {
         assetId,
         {
           ethereum: {
-            current: 10_000_000,
-            circulatingPrevDay: 10_000_000,
-            circulatingPrevWeek: 10_000_000,
-            circulatingPrevMonth: 10_000_000,
+            current: supplyUsdById[assetId] ?? 10_000_000,
+            circulatingPrevDay: supplyUsdById[assetId] ?? 10_000_000,
+            circulatingPrevWeek: supplyUsdById[assetId] ?? 10_000_000,
+            circulatingPrevMonth: supplyUsdById[assetId] ?? 10_000_000,
           },
         },
       ]),
@@ -360,6 +363,65 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
         "missing-mint-authority",
       );
     }
+  });
+
+  it("keeps syzUSD supply local while attributing one serial claim to yzUSD", () => {
+    const { assetId, parentId } = UNRESOLVED_INHERITED_WRAPPER;
+    const activeAssetIds = [assetId, parentId];
+    const metaById = new Map(
+      activeAssetIds.map((id) => {
+        const meta = ACTIVE_META_BY_ID.get(id);
+        if (!meta) throw new Error(`expected registry metadata for ${id}`);
+        return [id, meta] as const;
+      }),
+    );
+    const localSupplyUsd = 48_488_933;
+    const parentSupplyUsd = 45_340_688.25;
+    const input = fixedInput(activeAssetIds, {
+      [assetId]: localSupplyUsd,
+      [parentId]: parentSupplyUsd,
+    });
+    const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
+    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(
+      normalizeFixedInput(input),
+      extension,
+    );
+    const compiledById = new Map(
+      compiled.assets.map((asset) => [asset.assetId, asset]),
+    );
+    const evaluatedById = new Map(
+      evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets.map(
+        (asset) => [asset.assetId, asset],
+      ),
+    );
+    const childFacts = compiledById.get(assetId)!;
+    const parentFacts = compiledById.get(parentId)!;
+    const child = evaluatedById.get(assetId)!;
+
+    expect(childFacts.supply.circulatingUsd).toBe(localSupplyUsd);
+    expect(parentFacts.supply.circulatingUsd).toBe(parentSupplyUsd);
+    expect(childFacts.supply.circulatingUsd).not.toBe(
+      localSupplyUsd + parentSupplyUsd,
+    );
+    expect(
+      childFacts.dependencies.edges.filter(
+        (edge) => edge.economicRole === "serial-claim",
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        dependencyType: "wrapper",
+        upstreamAssetId: parentId,
+        weight: 1,
+      }),
+    ]);
+    expect(child.dependencyInputs.basket).toEqual([]);
+    expect(child.dependencyInputs.roleInputs).toContainEqual(
+      expect.objectContaining({
+        role: "serial-claim",
+        upstreamAssetId: parentId,
+        weight: 1,
+      }),
+    );
   });
 
   it("does not substitute share accounting for an explicit unresolved inherited mint path", () => {
