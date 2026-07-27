@@ -13,12 +13,13 @@ describe("buildMechanismCollateralizationView", () => {
     expect(view?.sourceLabel.length).toBeGreaterThan(0);
   });
 
-  it("carries the reviewed not-applicable ruling instead of a number", () => {
-    // jpym-mento: CR ruled structurally not applicable (Mento conversion token).
+  it("carries the reviewed JPYm CDP ratio and provenance", () => {
+    // JPYm is backed by the resolved Mento CDP deployment, not a conversion token.
     const view = buildMechanismCollateralizationView("jpym-mento");
     expect(view).not.toBeNull();
-    expect(view?.ratio).toBeNull();
-    expect(view?.notApplicableRationale).toMatch(/vault|conversion/i);
+    expect(view?.ratio).toBeCloseTo(1.679490127255, 6);
+    expect(view?.notApplicableRationale).toBeNull();
+    expect(view?.sourceLabel).toMatch(/Mento deployments/i);
   });
 
   it("returns null for non-CDP archetypes and unknown assets", () => {
