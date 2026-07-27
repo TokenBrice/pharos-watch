@@ -1,8 +1,11 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../test-helpers/report-cards-v9";
+import * as activeSafetyScoreSource from "../safety-score-active-source";
 import {
   loadCanaryStatus,
   normalizeWorkerCanaryMode,
@@ -10,14 +13,43 @@ import {
   runAndPersistCanaryChecks,
   runCanaryChecks,
 } from "../canary-checks";
-import { REPORT_CARD_CACHE_GENERATION } from "../report-card-cache";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 
 const NOW = 1_775_900_000;
-const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
+
+function activeV9(options: { held?: boolean; updatedAt?: number } = {}) {
+  const updatedAt = options.updatedAt ?? NOW - 60;
+  const snapshot = makeWorkerReportCardsV9Response({
+    asOfSec: updatedAt - 60,
+    updatedAt,
+    cards: [...ACTIVE_IDS]
+      .sort()
+      .map((id) => makeWorkerV9Card({ id, score: 92, grade: "A" })),
+  });
+  if (options.held) {
+    snapshot.publicationHealth = {
+      ...snapshot.publicationHealth,
+      status: "held",
+      heldSinceSec: updatedAt,
+      attemptedAtSec: updatedAt + 60,
+      reasons: [{ code: "assessment-failed", detail: "test hold" }],
+    };
+  }
+  return {
+    kind: "v9" as const,
+    expectedModel: "v9" as const,
+    snapshot,
+  };
+}
+
+beforeEach(() => {
+  vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+    .mockResolvedValue(activeV9());
+});
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 function stablecoinsPayload(activeCount = ACTIVE_IDS.size) {
@@ -29,70 +61,6 @@ function stablecoinsPayload(activeCount = ACTIVE_IDS.size) {
     circulating: { peggedUSD: 1_000_000 },
   }));
   return JSON.stringify({ peggedAssets: assets });
-}
-
-function reportCardPayload(updatedAt = NOW - 60, evaluationBuildDigest?: string) {
-  const scoreIds = [...ACTIVE_IDS].sort();
-  const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
-  const safetyScoreIdentity = buildSafetyScoreV8PublicationIdentity({
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    baseInputGenerationId: BASE_INPUT_GENERATION_ID,
-    publicationGenerationId,
-  });
-  return JSON.stringify({
-    generation: REPORT_CARD_CACHE_GENERATION,
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    payload: {
-      updatedAt,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      safetyScoreIdentity: evaluationBuildDigest
-        ? { ...safetyScoreIdentity, evaluationBuildDigest }
-        : safetyScoreIdentity,
-      publicationGenerationId,
-      completeness: {
-        generationId: publicationGenerationId,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-        expectedCount: scoreIds.length,
-        scoredCount: scoreIds.length,
-        notRatedCount: 0,
-        notRatedIds: [],
-      },
-      scores: Object.fromEntries(scoreIds.map((id) => [id, { score: 92, grade: "A" }])),
-    },
-  });
-}
-
-function v9ReportCardPayload(updatedAt = NOW - 60) {
-  const scoreIds = [...ACTIVE_IDS].sort();
-  const publicationGenerationId = `safety-score-v9:9.0:${updatedAt}`;
-  return JSON.stringify({
-    generation: REPORT_CARD_CACHE_GENERATION,
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    payload: {
-      updatedAt,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      safetyScoreIdentity: {
-        model: "v9",
-        schemaVersion: 1,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-        policyId: "v9-policy-2026-05",
-        policyDigest: "b".repeat(64),
-        evaluationBuildDigest: "c".repeat(64),
-        baseInputGenerationId: `report-cards-input:v1:${"d".repeat(64)}`,
-        publicationGenerationId,
-      },
-      publicationGenerationId,
-      completeness: {
-        generationId: publicationGenerationId,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-        expectedCount: scoreIds.length,
-        scoredCount: scoreIds.length,
-        notRatedCount: 0,
-        notRatedIds: [],
-      },
-      scores: Object.fromEntries(scoreIds.map((id) => [id, { score: 92, grade: "A" }])),
-    },
-  });
 }
 
 function gbpCanaryCacheRows(options: { freshRuns?: number; fallback?: boolean } = {}) {
@@ -174,8 +142,6 @@ function healthyD1(
     stablecoinsActiveCount?: number;
     gbpFreshRuns?: number;
     gbpFallback?: boolean;
-    reportCardEvaluationBuildDigest?: string;
-    reportCardCacheValue?: string;
   } = {},
 ) {
   const rowCount = dex.rowCount ?? 408;
@@ -231,12 +197,6 @@ function healthyD1(
           updatedAt: NOW - 60,
           updated_at: NOW - 60,
         },
-        {
-          key: "report_card_cache",
-          value: dex.reportCardCacheValue ?? reportCardPayload(NOW - 60, dex.reportCardEvaluationBuildDigest),
-          updatedAt: NOW - 60,
-          updated_at: NOW - 60,
-        },
         dewsPointerRow(publishedDewsRows),
         ...gbpCanaryCacheRows({ freshRuns: dex.gbpFreshRuns, fallback: dex.gbpFallback }),
       ],
@@ -283,48 +243,53 @@ describe("worker data invariant canaries", () => {
       worstSeverity: "info",
     });
     expect(
-      summary.results.find((result) => result.checkId === "report-card-cache-methodology")?.metadata,
-    ).toMatchObject({ safetyScoreIdentity: { model: "v8" } });
+      summary.results.find((result) => result.checkId === "safety-score-v9-publication")?.metadata,
+    ).toMatchObject({ safetyScoreIdentity: { model: "v9" } });
   });
 
-  it("rejects a complete compact cache from a different deployed evaluation build", async () => {
+  it("degrades while the canonical V9 publication is held", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
-
-    const summary = await runCanaryChecks(healthyD1({ reportCardEvaluationBuildDigest: "b".repeat(64) }), {
+    vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreSource)
+      .mockResolvedValueOnce(activeV9({ held: true }));
+    const summary = await runCanaryChecks(healthyD1(), {
       observedAt: NOW,
       mode: "status",
     });
-    const reportCards = summary.results.find((result) => result.checkId === "report-card-cache-methodology");
-
-    expect(reportCards).toMatchObject({
-      status: "error",
-      severity: "error",
-      error: "report-card cache identity-mismatch",
-      metadata: {
-        reason: "identity-mismatch",
-        safetyScoreIdentity: { evaluationBuildDigest: "b".repeat(64) },
-      },
-    });
-  });
-
-  it("degrades when the V8 canary encounters a complete V9 compact publication", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
-
-    const summary = await runCanaryChecks(healthyD1({ reportCardCacheValue: v9ReportCardPayload() }), {
-      observedAt: NOW,
-      mode: "status",
-    });
-    const reportCards = summary.results.find((result) => result.checkId === "report-card-cache-methodology");
+    const reportCards = summary.results.find((result) => result.checkId === "safety-score-v9-publication");
 
     expect(reportCards).toMatchObject({
       status: "degraded",
       severity: "warning",
-      error: "report-card cache invalid-envelope",
+      error: "Safety Score V9 publication is held",
+      metadata: { safetyScoreIdentity: { model: "v9" } },
+    });
+  });
+
+  it("fails closed when the canonical V9 publication is unavailable", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    vi.mocked(activeSafetyScoreSource.loadActiveSafetyScoreSource)
+      .mockResolvedValueOnce({
+        kind: "error",
+        expectedModel: "v9",
+        reason: "v9-snapshot-unavailable",
+        snapshot: null,
+        detail: "missing",
+      });
+    const summary = await runCanaryChecks(healthyD1(), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    const reportCards = summary.results.find((result) => result.checkId === "safety-score-v9-publication");
+
+    expect(reportCards).toMatchObject({
+      status: "error",
+      severity: "error",
+      error: "active Safety Score source v9-snapshot-unavailable",
       metadata: {
-        reason: "invalid-envelope",
-        updatedAt: NOW - 60,
+        reason: "v9-snapshot-unavailable",
+        expectedModel: "v9",
       },
     });
   });
@@ -501,7 +466,6 @@ describe("worker data invariant canaries", () => {
         match: "FROM cache WHERE key = ?",
         rows: [
           { key: "stablecoins", value: stablecoinsPayload(1), updatedAt: NOW - 60, updated_at: NOW - 60 },
-          { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
           dewsPointerRow(unhealthyDewsRows),
           ...gbpCanaryCacheRows(),
         ],
@@ -705,7 +669,6 @@ describe("worker data invariant canaries", () => {
         match: "FROM cache WHERE key = ?",
         rows: [
           { key: "stablecoins", value: stablecoinsPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
-          { key: "report_card_cache", value: reportCardPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
           ...gbpCanaryCacheRows(),
         ],
       },

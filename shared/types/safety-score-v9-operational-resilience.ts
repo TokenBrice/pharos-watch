@@ -36,7 +36,7 @@ const EvidenceRefIdsSchema = canonicalArrayBy(CanonicalTextSchema, (value) => va
   "Operational-resilience claims require evidence",
 );
 
-export const V9OperationalResilienceClaimConfidenceSchema = z.enum([
+const V9OperationalResilienceClaimConfidenceSchema = z.enum([
   "issuer-reported",
   "independent-assurance",
   "audited",

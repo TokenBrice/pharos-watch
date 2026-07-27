@@ -348,7 +348,7 @@ describe("generate-reserve-coverage-audit", () => {
     }
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://pharos.watch/_site-data/report-cards",
+      "https://pharos.watch/_site-data/report-cards/v9",
       expect.objectContaining({
         headers: expect.objectContaining({
           Origin: "https://pharos.watch",

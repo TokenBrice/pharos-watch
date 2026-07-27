@@ -176,7 +176,7 @@ vi.mock("@/components/stablecoin-detail/recent-blacklist-banner", () => ({
 vi.mock("@/components/stablecoin-detail/contagion-snapshot", () => ({
   // Render the `variantRelationshipCard` child so tests can still assert it
   // exists outside the overview section; suppress the inner contagion graph
-  // which would otherwise pull in the live useReportCards query.
+  // which would otherwise pull in the live V9 report-cards query.
   ContagionSnapshot: ({ variantRelationshipCard }: { variantRelationshipCard?: import("react").ReactNode }) => (
     <div data-testid="contagion-snapshot-mock">{variantRelationshipCard}</div>
   ),

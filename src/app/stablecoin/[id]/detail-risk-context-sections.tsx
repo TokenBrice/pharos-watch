@@ -124,10 +124,7 @@ export function DetailRiskContextSections({
           hasCollateralUsage={hasCollateralUsage}
           collateralUsageEntries={collateralUsageEntries}
         />
-        <MintAuthoritySection
-          profile={viewModel.mintAuthority}
-          decentralizationDrag={viewModel.mintAuthorityDecentralizationDrag}
-        />
+        <MintAuthoritySection profile={viewModel.mintAuthority} />
         {showPegChart ? (
           <MarketDataSection
             stablecoinId={viewModel.id}

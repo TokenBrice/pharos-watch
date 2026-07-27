@@ -1,6 +1,6 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { CanaryStatus, CanaryRunSeverity, CanaryRunStatus } from "@shared/types/status";
-import { REPORT_CARD_CACHE_GENERATION, REPORT_CARD_CACHE_MAX_AGE_MS, loadReportCardCache } from "./report-card-cache";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9-consumer-freshness";
 import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
 import { evaluateStablecoinPublicationCoverage } from "./stablecoin-publication-coverage";
 import { runWithOverloadRetry } from "./d1-overload-retry";
@@ -11,7 +11,6 @@ import { boundedJson, parseObjectMetadata } from "./json-metadata";
 import { getCache } from "./db-cache";
 import { parseRiskFreeRatesCache } from "../cron/yield-sync/cache";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
-import { isCurrentSafetyScoreV8Identity } from "./safety-score-current-identity";
 import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
 
@@ -469,100 +468,44 @@ export async function checkReportCardCacheMethodology(db: D1Database) {
       metadata: {
         reason: active.reason,
         expectedModel: active.expectedModel,
-        activationUpdatedAt: active.activationUpdatedAt,
-        activationMarker: active.marker,
-        safetyScoreIdentity: active.snapshot?.safetyScoreIdentity ?? null,
-        maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
+        maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
       },
     };
   }
-  if (active.kind === "v9") {
-    const ageMs = Math.max(0, Date.now() - active.snapshot.updatedAt * 1_000);
-    const metadata = {
-      expectedModel: active.expectedModel,
-      activationUpdatedAt: active.activationUpdatedAt,
-      activationMarker: active.marker,
-      updatedAt: active.snapshot.updatedAt,
-      scoreCount: active.snapshot.cards.length,
-      methodologyVersion: active.snapshot.methodology.version,
-      safetyScoreIdentity: active.snapshot.safetyScoreIdentity,
-      maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-    };
-    if (ageMs > REPORT_CARD_CACHE_MAX_AGE_MS) {
-      return {
-        status: "degraded" as const,
-        severity: "warning" as const,
-        error: "active Safety Score V9 snapshot stale-cache",
-        metadata: { ...metadata, reason: "stale-cache", ageMs },
-      };
-    }
-    if (active.snapshot.cards.length === 0) {
-      return {
-        status: "degraded" as const,
-        severity: "warning" as const,
-        error: "active Safety Score V9 snapshot has no score entries",
-        metadata,
-      };
-    }
-    return { status: "ok" as const, severity: "info" as const, metadata };
-  }
-
-  const cache = await loadReportCardCache(db, {
-    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-    requireCompleteness: true,
-  });
-  if (cache.kind === "error") {
-    const severity: CanaryRunSeverity = cache.reason === "generation-mismatch"
-      || cache.reason === "methodology-mismatch"
-      || cache.reason === "identity-missing"
-      || cache.reason === "identity-mismatch"
-      || cache.reason === "completeness-missing"
-      || cache.reason === "completeness-mismatch"
-      ? "error"
-      : "warning";
-    return {
-      status: severity === "error" ? "error" as const : "degraded" as const,
-      severity,
-      error: `report-card cache ${cache.reason}`,
-      metadata: {
-        reason: cache.reason,
-        updatedAt: cache.updatedAt,
-        expectedGeneration: REPORT_CARD_CACHE_GENERATION,
-        maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-      },
-    };
-  }
-  if (!isCurrentSafetyScoreV8Identity(cache.payload.safetyScoreIdentity)) {
-    return {
-      status: "error" as const,
-      severity: "error" as const,
-      error: "report-card cache identity-mismatch",
-      metadata: {
-        reason: "identity-mismatch",
-        updatedAt: cache.updatedAt,
-        safetyScoreIdentity: cache.payload.safetyScoreIdentity ?? null,
-        expectedGeneration: REPORT_CARD_CACHE_GENERATION,
-        maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-      },
-    };
-  }
-  const scoreCount = Object.keys(cache.payload.scores).length;
+  const ageSec = Math.max(
+    0,
+    Math.floor(Date.now() / 1_000) - active.snapshot.updatedAt,
+  );
   const metadata = {
     expectedModel: active.expectedModel,
-    activationExpectation: active.reason,
-    updatedAt: cache.updatedAt,
-    scoreCount,
-    methodologyVersion: cache.payload.methodologyVersion,
-    safetyScoreIdentity: cache.payload.safetyScoreIdentity,
-    expectedGeneration: REPORT_CARD_CACHE_GENERATION,
-    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-    degradedInputs: cache.payload.degradedInputs ?? null,
+    updatedAt: active.snapshot.updatedAt,
+    scoreCount: active.snapshot.cards.length,
+    methodologyVersion: active.snapshot.methodology.version,
+    safetyScoreIdentity: active.snapshot.safetyScoreIdentity,
+    publicationHealth: active.snapshot.publicationHealth,
+    maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
   };
-  if (scoreCount === 0) {
+  if (active.snapshot.publicationHealth.status === "held") {
     return {
       status: "degraded" as const,
       severity: "warning" as const,
-      error: "report-card cache has no score entries",
+      error: "Safety Score V9 publication is held",
+      metadata,
+    };
+  }
+  if (ageSec > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC) {
+    return {
+      status: "degraded" as const,
+      severity: "warning" as const,
+      error: "Safety Score V9 publication is stale",
+      metadata: { ...metadata, ageSec },
+    };
+  }
+  if (active.snapshot.cards.length === 0) {
+    return {
+      status: "degraded" as const,
+      severity: "warning" as const,
+      error: "Safety Score V9 publication has no score entries",
       metadata,
     };
   }
@@ -664,8 +607,8 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     run: checkDewsLatestSignal,
   },
   {
-    checkId: "report-card-cache-methodology",
-    label: "Report-card cache methodology",
+    checkId: "safety-score-v9-publication",
+    label: "Safety Score V9 publication",
     description: "The expected active Safety Score source is fresh and matches its identity-bound publication contract.",
     run: checkReportCardCacheMethodology,
   },

@@ -40,9 +40,9 @@ export interface DdrSupplyContext {
   mintSurge: boolean | null;
 }
 
-/** Safety provenance controls whether V8-only numeric anchors are available. */
+/** Safety provenance controls whether canonical V9 numeric anchors are available. */
 export type DdrSafetyContextStatus =
-  | "v8-identified"
+  | "v9-identified"
   | "identity-missing"
   | "identity-mismatch"
   | "unsupported-model"

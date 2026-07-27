@@ -66,7 +66,11 @@ export async function fetchSubgraphEnrichmentPhase(params: {
       uniswapV4Data.uniswapV4ExecutionCandidates;
   } catch (err) {
     rethrowIfAborted(err, params.signal);
-    console.warn("[dex-liquidity] Uniswap V4 fetch failed (non-fatal):", err);
+    console.warn(JSON.stringify({
+      scope: "dex-liquidity",
+      message: "Uniswap V4 fetch failed (non-fatal)",
+      error: err instanceof Error ? err.message : String(err),
+    }));
     failedSources.push("uniswap-v4-subgraph");
   }
 

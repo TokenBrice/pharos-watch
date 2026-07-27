@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeAsset, makeReportCardsDb } from "../../test-helpers/__shared/fixtures";
-import { handleReportCards } from "../../api/report-cards";
 import {
   buildNavPriceById,
   buildReportCardsSnapshot,
@@ -506,17 +505,6 @@ describe("buildReportCardsSnapshot", () => {
     expect(liveSnapshot.dependencyGraph.edges).not.toContainEqual(
       expect.objectContaining({ to: "dai-makerdao", from: expect.not.stringMatching("usdt-tether") }),
     );
-  });
-
-  it("matches /api/report-cards response payload", async () => {
-    const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
-    const snapshot = await buildReportCardsSnapshot(db);
-
-    const response = await handleReportCards(db);
-    expect(response.status).toBe(200);
-
-    const body = await response.json();
-    expect(body).toEqual(JSON.parse(JSON.stringify(snapshot)));
   });
 
   it("orders rated live cards before defunct cards and defunct cards before unrated live cards", async () => {
@@ -1210,8 +1198,6 @@ describe("buildReportCardsSnapshot", () => {
     });
     expect(card?.rawInputs.redemptionUsedForLiquidity).toBe(false);
 
-    const response = await handleReportCards(db);
-    expect(response.status).toBe(200);
   });
 
   it("degrades gracefully when dex liquidity is unavailable", async () => {
@@ -1223,8 +1209,6 @@ describe("buildReportCardsSnapshot", () => {
     const snapshot = await buildReportCardsSnapshot(db);
     expect(snapshot.liquidityStale).toBe(true);
 
-    const response = await handleReportCards(db);
-    expect(response.status).toBe(200);
   });
 
   it("degrades gracefully when live reserves are unavailable", async () => {
@@ -1236,8 +1220,6 @@ describe("buildReportCardsSnapshot", () => {
     const snapshot = await buildReportCardsSnapshot(db);
     expect(Array.isArray(snapshot.cards)).toBe(true);
 
-    const response = await handleReportCards(db);
-    expect(response.status).toBe(200);
   });
 
   it("publishes the peg-analytics cache only when the producer requests it", async () => {

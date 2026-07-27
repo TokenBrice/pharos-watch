@@ -7,7 +7,7 @@ const EvmAddressSchema = z.string().regex(/^0x[0-9a-f]{40}$/);
 const Bytes32Schema = z.string().regex(/^0x[0-9a-f]{64}$/);
 const PINNED_SOURCE_FUTURE_SKEW_SEC = 60;
 
-export const FPI_CONTROLLER_ROUTE_REJECTION_CODES = [
+const FPI_CONTROLLER_ROUTE_REJECTION_CODES = [
   "rpc-unavailable",
   "block-unavailable",
   "block-time-out-of-range",
@@ -35,7 +35,7 @@ export const FPI_CONTROLLER_ROUTE_REJECTION_CODES = [
   "capacity-mismatch",
 ] as const;
 
-export const FpiControllerV9RouteStateSchema = z
+const FpiControllerV9RouteStateSchema = z
   .object({
     kind: z.literal("fpi-controller-v1"),
     chain: z.literal("ethereum"),

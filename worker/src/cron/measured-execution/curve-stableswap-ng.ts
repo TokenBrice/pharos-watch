@@ -28,7 +28,6 @@ import {
 } from "../../lib/evm-rpc";
 import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-  type DexMeasuredExecutionAdapter,
   type DexMeasuredExecutionBudgetStopReason,
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
@@ -720,7 +719,7 @@ function prepareRequest(
   };
 }
 
-export function decodeCurveStableSwapNgQuotePoint(
+function decodeCurveStableSwapNgQuotePoint(
   request: Pick<
     EncodedCurveStableSwapNgRequest,
     "amountInRaw" | "callData" | "inputIndex" | "outputIndex" | "blockNumber" | "endpointAddress" | "target"
@@ -1022,16 +1021,3 @@ export function validateCurveStableSwapNgProfileProof(
   }
   return [...issues];
 }
-
-export const CURVE_STABLESWAP_NG_ADAPTER: DexMeasuredExecutionAdapter = {
-  profileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
-  async quotePoints(input) {
-    return {
-      points: [],
-      failures: input.inputNotionalsUsd.map((inputUsd) => ({
-        inputUsd,
-        reason: "runtime-evidence-missing",
-      })),
-    };
-  },
-};

@@ -84,7 +84,7 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
     label: "Mint Score",
     sortKey: "mintAuthorityScore",
     className: "text-center",
-    title: "Mint Authority Score (0-100). Standalone score that can drag Safety Score v8 Decentralization.",
+    title: "Mint Authority Score (0-100). V9 evaluates the underlying reviewed control facts directly.",
   },
   { id: "mechanism", label: "Mechanism", className: "text-left" },
   { id: "peg", label: "Peg", className: "text-left" },

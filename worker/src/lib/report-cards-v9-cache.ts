@@ -1,21 +1,18 @@
 import {
   buildReportCardsV9DependencyGraph,
-  REPORT_CARDS_V9_PRE_BREAKDOWN_RESPONSE_SCHEMA_VERSION,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
   ReportCardsV9CurrentResponseSchema,
-  ReportCardsV9PreBreakdownResponseSchema,
-  type ReportCardsV9TransitionResponse,
+  type ReportCardsV9CurrentResponse,
   type V9PublicationHealth,
 } from "@shared/types/report-cards-v9";
 import {
   SafetyScoreV9CurrentResponseSchema,
-  SafetyScoreV9PreBreakdownResponseSchema,
-  type SafetyScoreV9Response,
+  type SafetyScoreV9CurrentResponse,
 } from "@shared/types/safety-score-v9-public";
 import {
-  loadLatestSafetyScoreV9ShadowEnvelope,
+  loadSafetyScoreV9Publication,
   loadSafetyScoreV9PublicationHealth,
-} from "./safety-score-v9-store";
+} from "./safety-score-v9-publication-store";
 
 export class ReportCardsV9SnapshotUnavailableError extends Error {
   constructor(message: string) {
@@ -24,98 +21,77 @@ export class ReportCardsV9SnapshotUnavailableError extends Error {
   }
 }
 
-/**
- * Converts the canonical V9 envelope into the separately owned public
- * V9 contract. This is intentionally a projection, never a V8 fallback or
- * a score recomputation.
- */
-export function projectSafetyScoreV9CandidateToPublicSnapshot(
-  candidate: SafetyScoreV9Response,
+export function projectSafetyScoreV9PublicationToPublicSnapshot(
+  input: SafetyScoreV9CurrentResponse,
   publicationHealth: V9PublicationHealth,
-): ReportCardsV9TransitionResponse {
-  const currentCandidateResult = SafetyScoreV9CurrentResponseSchema.safeParse(candidate);
-  const preBreakdownCandidateResult = currentCandidateResult.success
-    ? null
-    : SafetyScoreV9PreBreakdownResponseSchema.safeParse(candidate);
-  const currentCandidate = currentCandidateResult.success
-    ? currentCandidateResult.data
-    : preBreakdownCandidateResult?.success
-      ? preBreakdownCandidateResult.data
-      : SafetyScoreV9CurrentResponseSchema.parse(candidate);
-  const responseSchema = currentCandidateResult.success
-    ? ReportCardsV9CurrentResponseSchema
-    : ReportCardsV9PreBreakdownResponseSchema;
-  const responseSchemaVersion = currentCandidateResult.success
-    ? REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION
-    : REPORT_CARDS_V9_PRE_BREAKDOWN_RESPONSE_SCHEMA_VERSION;
-  const acceptedPublicationMatchesCandidate =
-    publicationHealth.acceptedPublicationGenerationId ===
-      currentCandidate.publicationGenerationId &&
-    publicationHealth.acceptedAtSec === currentCandidate.publishedAtSec;
-  const heldWithoutAcceptedPublication =
-    publicationHealth.status === "held" &&
-    publicationHealth.acceptedPublicationGenerationId === null &&
-    publicationHealth.acceptedAtSec === null;
-  if (!acceptedPublicationMatchesCandidate && !heldWithoutAcceptedPublication) {
+): ReportCardsV9CurrentResponse {
+  const publication = SafetyScoreV9CurrentResponseSchema.parse(input);
+  if (
+    publicationHealth.acceptedPublicationGenerationId !==
+      publication.publicationGenerationId ||
+    publicationHealth.acceptedAtSec !== publication.publishedAtSec
+  ) {
     throw new Error(
-      "Safety Score V9 publication health does not match the accepted candidate",
+      "Safety Score V9 publication health does not match the accepted publication",
     );
   }
-  return responseSchema.parse({
+  return ReportCardsV9CurrentResponseSchema.parse({
     model: "v9",
-    schemaVersion: responseSchemaVersion,
-    lifecycle: "shadow",
+    schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+    lifecycle: "active",
     safetyScoreIdentity: {
       model: "v9",
       schemaVersion: 1,
-      methodologyVersion: currentCandidate.policyVersion,
-      policyId: currentCandidate.policy.id,
-      policyDigest: currentCandidate.policy.semanticDigest,
-      evaluationBuildDigest: currentCandidate.evaluationBuildDigest,
-      baseInputGenerationId: currentCandidate.baseInputGenerationId,
-      publicationGenerationId: currentCandidate.publicationGenerationId,
+      methodologyVersion: publication.policyVersion,
+      policyId: publication.policy.id,
+      policyDigest: publication.policy.semanticDigest,
+      evaluationBuildDigest: publication.evaluationBuildDigest,
+      baseInputGenerationId: publication.baseInputGenerationId,
+      publicationGenerationId: publication.publicationGenerationId,
     },
     methodology: {
-      version: currentCandidate.policyVersion,
-      policy: currentCandidate.policy,
+      version: publication.policyVersion,
+      policy: publication.policy,
     },
-    asOfSec: currentCandidate.asOfSec,
-    updatedAt: currentCandidate.publishedAtSec,
+    asOfSec: publication.asOfSec,
+    updatedAt: publication.publishedAtSec,
     publicationHealth,
-    completeness: currentCandidate.completeness,
+    completeness: publication.completeness,
     source: {
-      candidateId: currentCandidate.candidateId,
-      factSetDigest: currentCandidate.factSetDigest,
-      resultDigest: currentCandidate.resultDigest,
-      sourceGenerations: currentCandidate.sourceGenerations,
+      candidateId: publication.candidateId,
+      factSetDigest: publication.factSetDigest,
+      resultDigest: publication.resultDigest,
+      sourceGenerations: publication.sourceGenerations,
     },
-    cards: currentCandidate.cards,
-    dependencyGraph: buildReportCardsV9DependencyGraph(currentCandidate.cards),
+    cards: publication.cards,
+    dependencyGraph: buildReportCardsV9DependencyGraph(
+      publication.cards,
+    ),
   });
 }
 
-/**
- * The current canonical V9 source is the persisted shadow envelope. It is
- * read strictly and never falls back to V8 or an on-read evaluator.
- */
 export async function loadPublishedReportCardsV9Snapshot(
   db: D1Database,
   signal?: AbortSignal,
-): Promise<ReportCardsV9TransitionResponse> {
-  let envelope;
+): Promise<ReportCardsV9CurrentResponse> {
+  let publication;
   let publicationHealth;
   try {
-    [envelope, publicationHealth] = await Promise.all([
-      loadLatestSafetyScoreV9ShadowEnvelope(db, signal),
+    [publication, publicationHealth] = await Promise.all([
+      loadSafetyScoreV9Publication(db, signal),
       loadSafetyScoreV9PublicationHealth(db, signal),
     ]);
   } catch (error) {
     throw new ReportCardsV9SnapshotUnavailableError(
-      `Canonical Safety Score V9 shadow cache is unavailable: ${error instanceof Error ? error.message : String(error)}`,
+      `Canonical Safety Score V9 publication is unavailable: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     );
   }
-  if (envelope === null) {
-    throw new ReportCardsV9SnapshotUnavailableError("Canonical Safety Score V9 shadow cache is unavailable");
+  if (publication === null) {
+    throw new ReportCardsV9SnapshotUnavailableError(
+      "Canonical Safety Score V9 publication is unavailable",
+    );
   }
   if (publicationHealth === null) {
     throw new ReportCardsV9SnapshotUnavailableError(
@@ -123,13 +99,15 @@ export async function loadPublishedReportCardsV9Snapshot(
     );
   }
   try {
-    return projectSafetyScoreV9CandidateToPublicSnapshot(
-      envelope.candidate,
+    return projectSafetyScoreV9PublicationToPublicSnapshot(
+      publication,
       publicationHealth,
     );
   } catch (error) {
     throw new ReportCardsV9SnapshotUnavailableError(
-      `Canonical Safety Score V9 shadow cache is incompatible: ${error instanceof Error ? error.message : String(error)}`,
+      `Canonical Safety Score V9 publication is incompatible: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     );
   }
 }

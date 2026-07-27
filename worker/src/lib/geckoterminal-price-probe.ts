@@ -30,12 +30,6 @@ import {
   type GtProbeTransportStats,
 } from "./geckoterminal-price-probe-stats";
 
-export {
-  createEmptyGtProbeStats,
-  type GtProbeStats,
-  type GtProbeTransportStats,
-} from "./geckoterminal-price-probe-stats";
-
 export interface GtProbeResult {
   price: number;
   tvlUsd: number;

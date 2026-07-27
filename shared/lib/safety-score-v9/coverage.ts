@@ -425,11 +425,7 @@ export function evaluateV9ReleaseCoverage(args: {
   const manifestById = new Map(manifest.assets.map((asset) => [asset.assetId, asset]));
   const rateableIds = factIds.filter((assetId) => evaluationById.get(assetId)?.finalScore !== null);
   const rateableSet = new Set(rateableIds);
-  // The former Math.max(floor, continuingActiveV8RateableCount) v8-parity term
-  // is superseded (owner rulings 2026-07-21/22): the Lever-1 withhold makes
-  // NR-insufficient a legitimate outcome for V8-rated assets, so "every
-  // v8-graded asset must be v9-rateable" no longer holds. The count remains on
-  // the manifest as an informational field.
+  // Coverage is evaluated against the active V9 set directly.
   const requiredRateableCount = Math.min(factIds.length, V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets);
   const rateabilityPassed = rateableIds.length >= requiredRateableCount;
   addBlocker(
@@ -872,7 +868,6 @@ export function evaluateV9ReleaseCoverage(args: {
       activeCount: factIds.length,
       rateableCount: rateableIds.length,
       notRatedCount: factIds.length - rateableIds.length,
-      continuingActiveV8RateableCount: manifest.continuingActiveV8RateableCount,
       requiredRateableCount,
       passed: rateabilityPassed,
     },

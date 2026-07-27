@@ -1,6 +1,5 @@
 import { BlacklistTrackerMethodologySection } from "./monitoring/blacklist-tracker-section";
 import { ChainHealthMethodologySection } from "./monitoring/chain-health-section";
-import { ContagionStressTestMethodologySection } from "./monitoring/contagion-stress-test-section";
 import { DepegResolverMethodologySection } from "./monitoring/depeg-resolver-section";
 import { PegScoreDewsMethodologySection } from "./monitoring/pegscore-dews-section";
 import { YieldIntelligenceMethodologySection } from "./monitoring/yield-intelligence-section";
@@ -11,7 +10,6 @@ export function MonitoringMethodologySections() {
       <YieldIntelligenceMethodologySection />
       <PegScoreDewsMethodologySection />
       <DepegResolverMethodologySection />
-      <ContagionStressTestMethodologySection />
       <BlacklistTrackerMethodologySection />
       <ChainHealthMethodologySection />
     </>

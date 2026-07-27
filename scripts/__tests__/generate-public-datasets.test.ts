@@ -167,14 +167,13 @@ describe("generate-public-datasets", () => {
       if (href.endsWith("/api/stablecoins")) {
         return jsonResponse({ peggedAssets: makeEnvelope("2026-05-16").stablecoins });
       }
-      if (href.endsWith("/api/report-cards")) {
+      if (href.endsWith("/api/report-cards/v9")) {
         return jsonResponse({
           cards: [
             {
               id: "usdc-circle",
-              overallGrade: "A",
-              overallScore: 98,
-              rawInputs: { pegScore: 99 },
+              grade: "A",
+              score: 98,
             },
           ],
           updatedAt: 1_779_000_001,
@@ -204,7 +203,7 @@ describe("generate-public-datasets", () => {
     expect(specs.find((spec) => spec.topic === "top-stablecoins")?.rows).toHaveLength(1);
     const scoreRows = specs.find((spec) => spec.topic === "scores-latest")?.rows as Array<Record<string, unknown>>;
     expect(scoreRows).toHaveLength(1);
-    expect(scoreRows[0]?.pegScore).toBe(99);
+    expect(scoreRows[0]?.pegScore).toBeNull();
     expect(scoreRows[0]?.safetyScore).toBe(98);
     expect(specs.find((spec) => spec.topic === "depeg-history")?.rows).toHaveLength(1);
   });

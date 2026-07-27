@@ -13,6 +13,7 @@ import {
 
 const V9_PILLARS = ["backing", "exit", "control"] as const;
 type V9Pillar = (typeof V9_PILLARS)[number];
+export type CompareRadarCohort = "peg" | "mechanism" | "all";
 
 const V9_PILLAR_LABELS: Record<V9Pillar, string> = {
   backing: "Backing",

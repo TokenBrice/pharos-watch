@@ -11,7 +11,7 @@ export function SafetyScoresMethodologySection() {
       title={SAFETY_SCORES_SECTION_CONTENT.title}
       versionBadge={{ label: "V9.0" }}
       changelogPath={SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH}
-      versionNote="Active V9 policy identity; the compatibility endpoint retains the numeric V8.17 methodology."
+      versionNote="V9 is the sole active publication and consumer contract. V8.17 remains available only in version history."
       changelogClassName="hover:text-amber-700 dark:hover:text-amber-400"
     >
       <SafetyScoresOverview />

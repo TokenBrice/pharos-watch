@@ -4,18 +4,9 @@ import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SelectorInput } from "@shared/lib/selector";
 
-const { buildSelectorRowsMock, runSelectorMock, useStablecoinsMock } = vi.hoisted(() => ({
-  buildSelectorRowsMock: vi.fn(),
-  runSelectorMock: vi.fn(),
+const { useStablecoinsMock } = vi.hoisted(() => ({
   useStablecoinsMock: vi.fn(),
 }));
-
-vi.mock("@shared/lib/selector", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@shared/lib/selector")>()),
-  runSelector: runSelectorMock,
-}));
-
-vi.mock("./selector-data-adapter", () => ({ buildSelectorRows: buildSelectorRowsMock }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: useStablecoinsMock }));
 
@@ -52,11 +43,9 @@ describe("useSelector", () => {
     const { result } = renderHook(() => useSelector(INPUT, null));
 
     expect(result.current).toEqual({ status: "error", reason: "selector-data-unavailable" });
-    expect(buildSelectorRowsMock).not.toHaveBeenCalled();
-    expect(runSelectorMock).not.toHaveBeenCalled();
   });
 
-  it("fails closed without V8 recomputation while V9 recommendation thresholds are unreviewed", () => {
+  it("fails closed while the V9 recommendation policy is unavailable", () => {
     useStablecoinsMock.mockReturnValue({
       data: { peggedAssets: [] },
       dataUpdatedAt: 1,
@@ -67,7 +56,5 @@ describe("useSelector", () => {
     const { result } = renderHook(() => useSelector(INPUT, null));
 
     expect(result.current).toEqual({ status: "error", reason: "v9-selector-thresholds-unreviewed" });
-    expect(buildSelectorRowsMock).not.toHaveBeenCalled();
-    expect(runSelectorMock).not.toHaveBeenCalled();
   });
 });

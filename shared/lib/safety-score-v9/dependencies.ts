@@ -12,7 +12,7 @@ import { isV9MaterialShare } from "./backing";
 
 const V9_DEPENDENCY_PLAN_DIGEST_DOMAIN = "safety-score-v9.dependency-plan.v2";
 
-export const V9_DEPENDENCY_ECONOMIC_ROLES = V9_DEPENDENCY_ECONOMIC_ROLE_VALUES;
+const V9_DEPENDENCY_ECONOMIC_ROLES = V9_DEPENDENCY_ECONOMIC_ROLE_VALUES;
 export type { V9DependencyEconomicRole } from "../../types/dependency-types";
 export type V9DependencyScoreDimension = "final" | "backing" | "exit" | "access" | "control" | "oracle-nav";
 

@@ -21,7 +21,6 @@ import type {
   MintAuthorityDetailViewModel,
   MintAuthorityPostureTone,
 } from "@/lib/stablecoin-detail-mint-authority-view-model";
-import type { MintAuthorityDecentralizationDragViewModel } from "@/lib/stablecoin-detail-view-model";
 import { cn } from "@/lib/utils";
 
 const POSTURE_DOT_CLASS: Record<MintAuthorityPostureTone, string> = {
@@ -173,10 +172,8 @@ function MintAuthorityScoreBreakdown({ score }: { score: MintAuthorityDetailScor
 
 export function MintAuthoritySection({
   profile,
-  decentralizationDrag,
 }: {
   profile?: MintAuthorityDetailViewModel | null;
-  decentralizationDrag?: MintAuthorityDecentralizationDragViewModel | null;
 }) {
   if (!profile) return null;
   const isReviewed = profile.status === "reviewed";
@@ -230,18 +227,8 @@ export function MintAuthoritySection({
             {score ? (
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
                 <span className={cn("text-sm font-medium", score.textClassName)}>{score.bandLabel}</span>
-                {decentralizationDrag ? (
-                  <a
-                    href="#report-card"
-                    title={decentralizationDrag.detail ?? undefined}
-                    className="pharos-focus-ring inline-flex items-center rounded-full border border-blue-500/25 bg-blue-500/10 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 transition-colors hover:border-blue-500/45 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
-                  >
-                    Decentralization drag {decentralizationDrag.value}
-                  </a>
-                ) : (
-                  <DetailBadge>Feeds Decentralization</DetailBadge>
-                )}
-                <span className="text-xs text-muted-foreground">MAS v1.2; Safety Score v8 penalty-only input</span>
+                <DetailBadge>Standalone score</DetailBadge>
+                <span className="text-xs text-muted-foreground">MAS v1.2; V9 evaluates the reviewed control facts</span>
                 {score.capsApplied.map((cap) => (
                   <DetailBadge key={cap}>{cap}</DetailBadge>
                 ))}

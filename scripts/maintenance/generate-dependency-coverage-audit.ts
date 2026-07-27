@@ -703,7 +703,7 @@ function findManualDependencyReviewRows(activeCoins: readonly StablecoinMeta[]):
     }
     for (const relationship of coin.dependencyReview?.relationships ?? []) {
       const key = dependencyKey(relationship);
-      if (manualKeys.has(key)) continue;
+      if (manualKeys.has(key) || reserveDependencyKeys.has(key)) continue;
       gaps.push({
         coinId: coin.id,
         symbol: coin.symbol,

@@ -1,6 +1,6 @@
 import { DAY_SECONDS } from "./time-constants";
 
-export const SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC =
+export const SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC =
   30 * 60;
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC =
   30 * 60;
@@ -17,7 +17,7 @@ export type CronGroupKey =
 const CRON_SCHEDULE_DEFINITIONS = {
   quarterHourly: { schedule: "*/15 * * * *", intervalSec: 900, offsetSec: 0 },
   v9SupplyAttributionOffset: { schedule: "8,23,38,53 * * * *", intervalSec: 900, offsetSec: 8 * 60 },
-  v9ShadowOffset: { schedule: "14,29,44,59 * * * *", intervalSec: 900, offsetSec: 14 * 60 },
+  v9PublicationOffset: { schedule: "14,44 * * * *", intervalSec: 1800, offsetSec: 14 * 60 },
   statusSelfCheckOffset: { schedule: "9,24,39,54 * * * *", intervalSec: 900, offsetSec: 9 * 60 },
   sixHourlyBlacklist: { schedule: "3 */6 * * *", intervalSec: 6 * 3600, offsetSec: 3 * 60 },
   halfHourlyMintBurnCritical: { schedule: "4,34 * * * *", intervalSec: 1800, offsetSec: 4 * 60 },
@@ -427,22 +427,22 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     connectionGroup: "v9-supply-attribution-chain",
   },
   {
-    job: "compute-safety-score-v9-shadow",
-    label: "V9 shadow compiler",
+    job: "compute-safety-score-v9",
+    label: "V9 publication compiler",
     group: "quarter-hourly",
-    intervalSec: SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC,
-    scheduleKey: "v9ShadowOffset",
+    intervalSec: SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
+    scheduleKey: "v9PublicationOffset",
     triggerMode: "isolated",
     maxConnections: 0,
-    connectionGroup: "v9-shadow-chain",
+    connectionGroup: "v9-publication-chain",
   },
   {
-    job: "publish-report-card-cache",
-    label: "Report-card cache",
+    job: "prepare-safety-score-v9-input",
+    label: "V9 compiler input",
     group: "quarter-hourly",
     scheduleKey: "quarterHourly",
     triggerMode: "shared",
-    maxConnections: 0, // Exact V8 publication is D1-only after its source snapshot is built.
+    maxConnections: 0, // Exact V9 compiler input is D1-only after its source snapshot is built.
     connectionGroup: "quarter-hourly-chain",
   },
   {

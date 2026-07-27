@@ -25,8 +25,6 @@ import {
   RedemptionBackstopSnapshotUnavailableError,
 } from "../../lib/redemption-backstops-store";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../../lib/report-card-cache";
-import { isCurrentSafetyScoreV8Identity } from "../../lib/safety-score-current-identity";
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
 import {
@@ -309,56 +307,47 @@ export async function loadDdrContext(
   let safetyByCoin = new Map<string, { stablecoin_id: string; grade: string; score: number | null; recorded_at: number }>();
   let safetyContext: DdrSafetyContextProvenance = {
     status: "cache-unavailable",
-    reason: "report-card-cache-unavailable",
+    reason: "safety-score-v9-unavailable",
     identity: null,
   };
   try {
     const activeSafetySource = await loadActiveSafetyScoreSource(db);
     if (activeSafetySource.kind === "v9") {
-      safetyContext = {
-        status: "unsupported-model",
-        reason:
-          activeSafetySource.snapshot.publicationHealth.status === "held"
-            ? "v9-publication-held"
-            : "safety-model-v9",
-        identity: activeSafetySource.snapshot.safetyScoreIdentity,
-      };
-    } else if (activeSafetySource.kind === "error") {
+      if (activeSafetySource.snapshot.publicationHealth.status === "held") {
+        safetyContext = {
+          status: "cache-unavailable",
+          reason: "v9-publication-held",
+          identity: activeSafetySource.snapshot.safetyScoreIdentity,
+        };
+      } else {
+        safetyContext = {
+          status: "v9-identified",
+          reason: null,
+          identity: activeSafetySource.snapshot.safetyScoreIdentity,
+        };
+        safetyByCoin = new Map(
+          activeSafetySource.snapshot.cards
+            .filter((card) => activeCoinIds.includes(card.id))
+            .map((card) => [
+              card.id,
+              {
+                stablecoin_id: card.id,
+                grade: card.grade,
+                score: card.score,
+                recorded_at: activeSafetySource.snapshot.updatedAt,
+              },
+            ]),
+        );
+      }
+    } else {
       safetyContext = {
         status: "cache-unavailable",
         reason: activeSafetySource.reason,
-        identity: activeSafetySource.snapshot?.safetyScoreIdentity ?? null,
+        identity: null,
       };
-    } else {
-      const safetyCache = await loadReportCardCache(db, {
-        maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-        requireCompleteness: true,
-      });
-      if (safetyCache.kind !== "ok") {
-        safetyContext = { status: "cache-unavailable", reason: safetyCache.reason, identity: null };
-      } else {
-        const identity = safetyCache.payload.safetyScoreIdentity ?? null;
-        if (!identity) {
-          safetyContext = { status: "identity-missing", reason: "report-card-cache-identity-missing", identity: null };
-        } else if (identity.model !== "v8") {
-          safetyContext = { status: "unsupported-model", reason: `safety-model-${identity.model}`, identity };
-        } else if (!isCurrentSafetyScoreV8Identity(identity)) {
-          safetyContext = { status: "identity-mismatch", reason: "v8-identity-not-current", identity };
-        } else {
-          safetyContext = { status: "v8-identified", reason: null, identity };
-          safetyByCoin = new Map(
-            activeCoinIds.flatMap((stablecoinId) => {
-              const score = safetyCache.payload.scores[stablecoinId];
-              return score
-                ? [[stablecoinId, { stablecoin_id: stablecoinId, grade: score.grade, score: score.score, recorded_at: safetyCache.payload.updatedAt }] as const]
-                : [];
-            }),
-          );
-        }
-      }
     }
   } catch {
-    safetyContext = { status: "cache-unavailable", reason: "report-card-cache-read-failed", identity: null };
+    safetyContext = { status: "cache-unavailable", reason: "safety-score-v9-read-failed", identity: null };
   }
 
   const resolverHealthFailures = [

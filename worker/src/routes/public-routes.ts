@@ -127,32 +127,11 @@ export const PUBLIC_STATIC_ROUTES = [
           handleStabilityIndex(db, url),
     ),
   ),
-  defineLazyStaticRoute("report-cards", () =>
-    import("../api/report-cards").then(
-      ({ handleReportCards }) =>
-        ({ db }) =>
-          handleReportCards(db),
-    ),
-  ),
   defineLazyStaticRoute("report-cards-v9", () =>
     import("../api/report-cards-v9").then(
       ({ handleReportCardsV9 }) =>
         ({ db }) =>
           handleReportCardsV9(db),
-    ),
-  ),
-  defineLazyStaticRoute("report-cards-v9-preview", () =>
-    import("../api/report-cards-v9").then(
-      ({ handleReportCardsV9Preview }) =>
-        ({ db }) =>
-          handleReportCardsV9Preview(db),
-    ),
-  ),
-  defineLazyStaticRoute("report-cards-v9-preview-legacy", () =>
-    import("../api/report-cards-v9").then(
-      ({ handleReportCardsV9Preview }) =>
-        ({ db }) =>
-          handleReportCardsV9Preview(db),
     ),
   ),
   defineLazyStaticRoute("depeg-resolver", () =>

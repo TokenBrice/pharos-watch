@@ -16,6 +16,16 @@ import { ScoringChangelogSummaryTables } from "./content-summary";
 export { scoringAnchorId };
 
 export const scoringChangelogDetails: Record<string, ReactNode> = {
+  "9.0": (
+    <>
+      <p>{SAFETY_SCORE_V9_ACTIVATION.summary}</p>
+      <ul className="list-disc list-inside space-y-1">
+        {SAFETY_SCORE_V9_ACTIVATION.impact.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </>
+  ),
   ...scoringChangelogV8Details,
   ...scoringChangelogV729Details,
   ...scoringChangelogV728Details,
@@ -36,14 +46,6 @@ function getScoringChangelogDetail(version: string): ReactNode {
 export function ScoringChangelogContent() {
   return (
     <>
-      <VersionCard entry={SAFETY_SCORE_V9_ACTIVATION} versionLabel="V9.0">
-        <p>{SAFETY_SCORE_V9_ACTIVATION.summary}</p>
-        <ul className="list-disc list-inside space-y-1">
-          {SAFETY_SCORE_V9_ACTIVATION.impact.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      </VersionCard>
       {SAFETY_SCORE_METHODOLOGY_CHANGELOG.map((entry) => (
         <VersionCard key={entry.version} entry={entry}>
           {getScoringChangelogDetail(entry.version)}

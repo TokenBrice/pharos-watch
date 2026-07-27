@@ -20,7 +20,7 @@ const V9UnavailableProfileFactSchema = z
   })
   .strict();
 
-export const V9MechanismProfileFactSchema = z.union([
+const V9MechanismProfileFactSchema = z.union([
   V9SupportedProfileFactSchema,
   V9UnavailableProfileFactSchema,
 ]);

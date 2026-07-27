@@ -2,8 +2,8 @@ import { z } from "zod";
 import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";
 
-export const SUPPLY_ATTRIBUTION_JOURNAL_ENTRY_MAX_BYTES = 1_152;
-export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES = 32 * 1_024;
+const SUPPLY_ATTRIBUTION_JOURNAL_ENTRY_MAX_BYTES = 1_152;
+const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_BYTES = 32 * 1_024;
 export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET = 2;
 export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS = 32;
 const WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC = 120;
@@ -28,7 +28,7 @@ const SECRET_BEARING_TEXT_PATTERNS = [
   /[?&](?:api[_-]?key|access[_-]?token|auth[_-]?token|token|secret)=/i,
 ] as const;
 
-export const SupplyAttributionAdmissionCodeSchema = z.enum([
+const SupplyAttributionAdmissionCodeSchema = z.enum([
   "supply-attribution.admission.accepted",
   "supply-attribution.admission.rejected-upstream",
   "supply-attribution.admission.rejected-invalid-payload",
@@ -153,7 +153,7 @@ const TIMESTAMPED_REJECTION_CODES =
     "observation-stale",
   ]);
 
-export const SupplyAttributionFallbackCodeSchema = z.enum([
+const SupplyAttributionFallbackCodeSchema = z.enum([
   "supply-attribution.fallback.not-used",
   "supply-attribution.fallback.aggregate-only",
 ]);

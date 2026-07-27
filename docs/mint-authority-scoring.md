@@ -1,6 +1,6 @@
 # Mint Authority Score
 
-0-100 methodology for reviewed stablecoin mint-authority risk. Since Safety Score v8.0 it also feeds the Decentralization dimension through a penalty-only blend.
+0-100 standalone methodology for reviewed stablecoin mint-authority risk. Safety Score V9 evaluates the underlying reviewed control evidence directly instead of blending this display score.
 
 ## Methodology Versioning
 
@@ -14,7 +14,7 @@
 
 Mint Authority Score measures how much durable stablecoin supply can be created, authorized, expanded, or routed by privileged actors. It focuses on the mint path itself: issuer minters, allowlisted minters, cap admins, proxy admins, facilitators, bridges, off-chain attestation systems, backend signers, governance, Safes/multisigs, custodians, and wrapper inheritance.
 
-Since Safety Score `v8.0`, the score feeds the **Decentralization** report-card dimension through a penalty-only blend (`decentralization = min(current, 0.65 x current + 0.35 x MAS)`, applied as the final Decentralization stage after wrapper inheritance, chain infrastructure, any reviewed CDP oracle setup, and reviewed bridge-route risk; see `docs/report-cards.md`). A rated score can drag Decentralization down but never lifts it, and `NR` never penalizes. The score still does not create selector exclusions, change the homepage default ranking, or feed any other dimension; further expansion requires a new Safety Score methodology/version change.
+Mint Authority Score remains a display and review-coverage methodology. It does not create selector exclusions, change the homepage default ranking, or feed the canonical Safety Score as a numeric subscore. Safety Score V9 separately compiles the reviewed mint path, control capabilities, incidents, upgradeability, and evidence status into Economic Control facts, gaps, and caps.
 
 ## Inputs
 

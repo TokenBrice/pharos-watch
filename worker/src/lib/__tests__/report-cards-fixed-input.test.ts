@@ -16,7 +16,6 @@ import {
 import {
   buildReportCardsSnapshotFromFixedInput,
   buildReportCardsFixedInputCacheEntry,
-  buildSafetyScoreV9FixedInputCacheEntry,
   computeDexLiquidityPayloadFingerprint,
   computeRedemptionPayloadFingerprint,
   computeReportCardsReplayPayloadFingerprint,
@@ -385,18 +384,6 @@ describe("fixed report-card input replay", () => {
     const v8Entry = await buildReportCardsFixedInputCacheEntry(attributedInput);
     const v8RoundTrip = await parseReportCardsFixedInputCacheValue(v8Entry.value);
     expect(v8RoundTrip.safetyScoreV9SupplyAttributionById).toEqual({});
-    const v9Entry = await buildSafetyScoreV9FixedInputCacheEntry(attributedInput, {
-      model: "v8",
-      schemaVersion: 1,
-      methodologyVersion: attributedInput.methodologyVersion,
-      evaluationBuildDigest: "a".repeat(64),
-      baseInputGenerationId: attributedInput.baseInputGenerationId,
-      publicationGenerationId: attributedInput.sourceGeneration,
-    });
-    const v9RoundTrip = await parseReportCardsFixedInputCacheValue(v9Entry.value);
-    expect(v9RoundTrip.safetyScoreV9SupplyAttributionById).toEqual(
-      attributedInput.safetyScoreV9SupplyAttributionById,
-    );
 
     expect(() =>
       normalizeFixedInput({
@@ -517,23 +504,6 @@ describe("fixed report-card input replay", () => {
         "xaut-tether"
       ],
     ).toEqual(attribution);
-    const v9Entry = await buildSafetyScoreV9FixedInputCacheEntry(
-      attributedInput,
-      {
-        model: "v8",
-        schemaVersion: 1,
-        methodologyVersion: attributedInput.methodologyVersion,
-        evaluationBuildDigest: "a".repeat(64),
-        baseInputGenerationId: attributedInput.baseInputGenerationId,
-        publicationGenerationId: attributedInput.sourceGeneration,
-      },
-    );
-    const roundTrip = await parseReportCardsFixedInputCacheValue(
-      v9Entry.value,
-    );
-    expect(
-      roundTrip.safetyScoreV9SupplyAttributionById["xaut-tether"],
-    ).toEqual(attribution);
 
     expect(() =>
       normalizeFixedInput({
@@ -617,16 +587,6 @@ describe("fixed report-card input replay", () => {
     const v8Entry = await buildReportCardsFixedInputCacheEntry(attributedInput);
     const v8RoundTrip = await parseReportCardsFixedInputCacheValue(v8Entry.value);
     expect(v8RoundTrip.safetyScoreV9SupplyAttributionById).toEqual({});
-    const v9Entry = await buildSafetyScoreV9FixedInputCacheEntry(attributedInput, {
-      model: "v8",
-      schemaVersion: 1,
-      methodologyVersion: attributedInput.methodologyVersion,
-      evaluationBuildDigest: "a".repeat(64),
-      baseInputGenerationId: attributedInput.baseInputGenerationId,
-      publicationGenerationId: attributedInput.sourceGeneration,
-    });
-    const v9RoundTrip = await parseReportCardsFixedInputCacheValue(v9Entry.value);
-    expect(v9RoundTrip.safetyScoreV9SupplyAttributionById["wm-m0"]).toEqual(direct);
 
     expect(() =>
       normalizeFixedInput({
@@ -817,7 +777,7 @@ describe("fixed report-card input replay", () => {
     await expect(parseReportCardsFixedInputCacheValue(JSON.stringify(tampered))).rejects.toThrow("checksum mismatch");
   });
 
-  it("binds the canonical fixed-input envelope to the common V8 publication identity", async () => {
+  it("binds the fixed-input envelope to its upstream publication identity", async () => {
     const input = exactFixedInput();
     const identity = {
       model: "v8" as const,
@@ -828,15 +788,8 @@ describe("fixed report-card input replay", () => {
       publicationGenerationId: input.sourceGeneration,
     };
     const entry = await buildReportCardsFixedInputCacheEntry(input, identity);
-    const v9Entry = await buildSafetyScoreV9FixedInputCacheEntry(input, identity);
 
     await expect(parseReportCardsFixedInputCacheArtifact(entry.value)).resolves.toEqual({
-      input,
-      safetyScoreIdentity: identity,
-    });
-    expect(v9Entry.key).toBe("report-cards:v9-fixed-input:exact");
-    expect(v9Entry.uncompressedBytes).toBeGreaterThan(entry.uncompressedBytes);
-    await expect(parseReportCardsFixedInputCacheArtifact(v9Entry.value)).resolves.toEqual({
       input,
       safetyScoreIdentity: identity,
     });

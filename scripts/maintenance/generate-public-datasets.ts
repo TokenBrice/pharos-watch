@@ -90,17 +90,21 @@ interface SnapshotEnvelope {
     circulating: Record<string, number>;
     chains: string[];
   }>;
-  reportCards: { scores?: Record<string, ReportCardScore> } | null;
+  reportCards: {
+    scores?: Record<string, ReportCardScore>;
+    cards?: Array<{
+      id: string;
+      score: number | null;
+      grade: string;
+    }>;
+  } | null;
   dews: Array<{ stablecoinId: string; score: number; band: string }>;
   liquidity: Array<{ stablecoinId: string; liquidityScore: number | null; coverageClass: string | null }>;
 }
 
 /**
- * Normalized view of a report-card entry shared between the snapshot and
- * live-endpoint-fallback paths. `score`/`grade` are the snapshot-shape fields;
- * `safetyScore`/`safetyGrade`/`overall` are live-endpoint aliases for the same
- * values. The `?? fallback` chains at the consumer site handle whichever shape
- * is present — do NOT consolidate to a single field.
+ * Normalized view of a safety-score entry. The aliases remain only so dated
+ * pre-V9 public snapshots can still be projected.
  */
 interface ReportCardScore {
   pegScore?: number;
@@ -118,11 +122,8 @@ interface StablecoinsResponse {
 interface ReportCardsResponse {
   cards?: Array<{
     id: string;
-    overallGrade?: string | null;
-    overallScore?: number | null;
-    rawInputs?: {
-      pegScore?: number | null;
-    };
+    grade: string;
+    score: number | null;
   }>;
   methodology?: unknown;
   updatedAt?: number;
@@ -201,7 +202,7 @@ async function fetchDepegEvents(apiBase: string): Promise<DepegEvent[] | null> {
 async function fetchLiveEndpointEnvelope(apiBase: string, snapshotDate: string): Promise<SnapshotEnvelope | null> {
   const [stablecoins, reportCards, stressSignals, dexLiquidity] = await Promise.all([
     safeFetchJson<StablecoinsResponse>(resolveApiPathUrl(apiBase, "/api/stablecoins")),
-    safeFetchJson<ReportCardsResponse>(resolveApiPathUrl(apiBase, "/api/report-cards")),
+    safeFetchJson<ReportCardsResponse>(resolveApiPathUrl(apiBase, "/api/report-cards/v9")),
     safeFetchJson<StressSignalsResponse>(resolveApiPathUrl(apiBase, "/api/stress-signals")),
     safeFetchJson<DexLiquidityResponse>(resolveApiPathUrl(apiBase, "/api/dex-liquidity")),
   ]);
@@ -213,12 +214,11 @@ async function fetchLiveEndpointEnvelope(apiBase: string, snapshotDate: string):
   const scores: Record<string, ReportCardScore> = {};
   for (const card of reportCards.cards) {
     scores[card.id] = {
-      pegScore: card.rawInputs?.pegScore ?? undefined,
-      safetyScore: card.overallScore ?? undefined,
-      score: card.overallScore ?? undefined,
-      safetyGrade: card.overallGrade ?? undefined,
-      overall: card.overallScore ?? undefined,
-      grade: card.overallGrade ?? undefined,
+      safetyScore: card.score ?? undefined,
+      score: card.score ?? undefined,
+      safetyGrade: card.grade,
+      overall: card.score ?? undefined,
+      grade: card.grade,
     };
   }
 
@@ -441,7 +441,19 @@ const SCORES_LATEST_COLUMNS: CsvColumn<ScoreLatestRow>[] = [
 
 function projectScoresLatest(envelope: SnapshotEnvelope | null): ScoreLatestRow[] {
   if (!envelope) return [];
-  const reportCardScores = envelope.reportCards?.scores ?? {};
+  const reportCardScores: Record<string, ReportCardScore> =
+    envelope.reportCards?.scores ??
+    Object.fromEntries(
+      (envelope.reportCards?.cards ?? []).map((card) => [
+        card.id,
+        {
+          safetyScore: card.score ?? undefined,
+          score: card.score ?? undefined,
+          safetyGrade: card.grade,
+          grade: card.grade,
+        },
+      ]),
+    );
   const dewsByCoin = new Map(envelope.dews.map((row) => [row.stablecoinId, row]));
   const liquidityByCoin = new Map(envelope.liquidity.map((row) => [row.stablecoinId, row]));
 
@@ -462,7 +474,7 @@ function projectScoresLatest(envelope: SnapshotEnvelope | null): ScoreLatestRow[
         coverageClass: liquidity?.coverageClass ?? null,
       };
     })
-    .sort((a, b) => (b.pegScore ?? -1) - (a.pegScore ?? -1));
+    .sort((a, b) => (b.safetyScore ?? -1) - (a.safetyScore ?? -1));
 }
 
 interface PegMechanismDistributionRow {

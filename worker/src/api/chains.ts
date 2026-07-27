@@ -1,10 +1,4 @@
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import {
-  loadReportCardCache,
-  REPORT_CARD_CACHE_MAX_AGE_MS,
-  type ReportCardCacheInputStatus,
-  type ReportCardCacheLoadResult,
-} from "../lib/report-card-cache";
 import { aggregateChains } from "@shared/lib/chain-aggregator";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -13,12 +7,12 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
 import { errorResponse, jsonResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
-import { isCurrentSafetyScoreV8Identity } from "../lib/safety-score-current-identity";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import {
   loadActiveSafetyScoreSource,
   type ActiveSafetyScoreSource,
 } from "../lib/safety-score-active-source";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9-consumer-freshness";
 
 const CHAINS_FRESHNESS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.chains;
 const CHAINS_STALE_THRESHOLD_SEC = CHAINS_FRESHNESS_MAX_AGE_SEC * 2;
@@ -30,7 +24,7 @@ interface ChainsDependencyMeta {
   ageSeconds?: number | null;
   status: ChainsDependencyStatus;
   reason?: string | null;
-  expectedModel: "v8" | "v9";
+  expectedModel: "v9";
   inputsStale?: boolean;
   staleInputs?: string[];
 }
@@ -43,7 +37,7 @@ interface ChainsFreshnessMeta {
   dependencies?: {
     reportCards: ChainsDependencyMeta;
   };
-  safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
+  safetyScoreIdentity: SafetyScorePublicationIdentity | null;
 }
 
 function getDependencyAgeSeconds(updatedAt: number | null | undefined, nowSec: number): number | null {
@@ -51,60 +45,47 @@ function getDependencyAgeSeconds(updatedAt: number | null | undefined, nowSec: n
   return Math.max(0, nowSec - updatedAt);
 }
 
-function reportCardInputsAreStale(inputStatus: ReportCardCacheInputStatus | undefined): boolean {
-  return inputStatus?.inputsStale === true;
-}
-
-function buildReportCardDependencyMeta(
-  reportCardResult: ReportCardCacheLoadResult,
+function buildV9ExpectedDependencyMeta(
+  activeSource: ActiveSafetyScoreSource,
   nowSec: number,
 ): ChainsDependencyMeta {
-  if (reportCardResult.kind === "ok") {
-    if (reportCardInputsAreStale(reportCardResult.payload.degradedInputs)) {
-      return {
-        updatedAt: reportCardResult.updatedAt,
-        ageSeconds: getDependencyAgeSeconds(reportCardResult.updatedAt, nowSec),
-        status: "degraded",
-        reason: "inputs stale",
-        expectedModel: "v8",
-        inputsStale: true,
-        staleInputs: reportCardResult.payload.degradedInputs?.staleInputs ?? [],
-      };
-    }
-
+  if (activeSource.kind === "error") {
     return {
-      updatedAt: reportCardResult.updatedAt,
-      ageSeconds: getDependencyAgeSeconds(reportCardResult.updatedAt, nowSec),
-      status: "fresh",
-      expectedModel: "v8",
+      updatedAt: null,
+      ageSeconds: null,
+      status: "unavailable",
+      reason: activeSource.reason,
+      expectedModel: "v9",
     };
   }
-
-  const ageSeconds = getDependencyAgeSeconds(reportCardResult.updatedAt, nowSec);
-  const status: ChainsDependencyStatus = reportCardResult.reason === "stale-cache" ? "stale" : "unavailable";
-
-  return {
-    updatedAt: reportCardResult.updatedAt,
-    ageSeconds,
-    status,
-    reason: reportCardResult.reason.replace(/-/g, " "),
-    expectedModel: "v8",
-  };
-}
-
-function buildV9ExpectedDependencyMeta(
-  activeSource: Exclude<ActiveSafetyScoreSource, { kind: "v8" }>,
-  nowSec: number,
-): ChainsDependencyMeta {
-  const updatedAt = activeSource.kind === "v9"
-    ? activeSource.snapshot.updatedAt
-    : activeSource.activationUpdatedAt;
+  const updatedAt = activeSource.snapshot.updatedAt;
+  const ageSeconds = getDependencyAgeSeconds(updatedAt, nowSec);
+  if (activeSource.snapshot.publicationHealth.status === "held") {
+    return {
+      updatedAt,
+      ageSeconds,
+      status: "degraded",
+      reason: "publication-held",
+      expectedModel: "v9",
+    };
+  }
+  if (
+    ageSeconds !== null &&
+    ageSeconds > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC
+  ) {
+    return {
+      updatedAt,
+      ageSeconds,
+      status: "stale",
+      reason: "stale-cache",
+      expectedModel: "v9",
+    };
+  }
   return {
     updatedAt,
-    ageSeconds: getDependencyAgeSeconds(updatedAt, nowSec),
-    status: "unavailable",
-    reason: activeSource.kind === "v9" ? "active-model-v9" : activeSource.reason,
-    expectedModel: activeSource.expectedModel,
+    ageSeconds,
+    status: "fresh",
+    expectedModel: "v9",
   };
 }
 
@@ -125,7 +106,7 @@ export function isActiveChainAggregateAsset(asset: {
 function buildChainsFreshnessMeta(
   updatedAt: number,
   reportCards: ChainsDependencyMeta,
-  safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null,
+  safetyScoreIdentity: SafetyScorePublicationIdentity | null,
 ): { headers: Record<string, string>; meta: ChainsFreshnessMeta } {
   const nowSec = Math.floor(Date.now() / 1000);
   const ageSeconds = Math.max(0, nowSec - updatedAt);
@@ -150,8 +131,7 @@ function buildChainsFreshnessMeta(
     }
     const reportCardAgeSuffix = reportCards.ageSeconds != null ? ` (${reportCards.ageSeconds}s old)` : "";
     const reportCardReason = (reportCards.reason ?? reportCards.status).replace(/-/g, " ");
-    const dependencyLabel = reportCards.expectedModel === "v9" ? "safety-score dependency" : "report-card cache";
-    warnings.push(`${dependencyLabel} ${reportCardReason}${reportCardAgeSuffix}`);
+    warnings.push(`safety-score dependency ${reportCardReason}${reportCardAgeSuffix}`);
   }
 
   const warning = warnings.length > 0 ? warnings.join("; ") : null;
@@ -193,27 +173,13 @@ export const handleChains = withErrorHandler("chains", async (db: D1Database): P
 
   const activeSource = await loadActiveSafetyScoreSource(db);
   const safetyScores: Record<string, number> = {};
-  let reportCards: ChainsDependencyMeta;
-  let safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null = null;
-  if (activeSource.kind === "v8") {
-    const loadedReportCardResult = await loadReportCardCache(db, {
-      maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-      requireCompleteness: true,
-    });
-    const reportCardResult: ReportCardCacheLoadResult =
-      loadedReportCardResult.kind === "ok" &&
-      !isCurrentSafetyScoreV8Identity(loadedReportCardResult.payload.safetyScoreIdentity)
-        ? { kind: "error", reason: "identity-mismatch", updatedAt: loadedReportCardResult.updatedAt }
-        : loadedReportCardResult;
-    reportCards = buildReportCardDependencyMeta(reportCardResult, Math.floor(Date.now() / 1000));
-    if (reportCardResult.kind === "ok") {
-      safetyScoreIdentity = reportCardResult.payload.safetyScoreIdentity ?? null;
-      for (const [id, entry] of Object.entries(reportCardResult.payload.scores)) {
-        safetyScores[id] = entry.score;
-      }
+  const reportCards = buildV9ExpectedDependencyMeta(activeSource, Math.floor(Date.now() / 1000));
+  const safetyScoreIdentity =
+    activeSource.kind === "v9" ? activeSource.snapshot.safetyScoreIdentity : null;
+  if (activeSource.kind === "v9" && reportCards.status === "fresh") {
+    for (const card of activeSource.snapshot.cards) {
+      if (card.score !== null) safetyScores[card.id] = card.score;
     }
-  } else {
-    reportCards = buildV9ExpectedDependencyMeta(activeSource, Math.floor(Date.now() / 1000));
   }
 
   const response = aggregateChains({

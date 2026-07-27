@@ -5,11 +5,11 @@ import {
   dispatchTelegramAlerts,
   formatConsolidatedMessageSpy,
   makeSafetySnapshotCache,
-  makeSafetySourceCache,
   mockSendToChat,
   parseLogRecords,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
+  seedActiveSafetySource,
   scriptTelegramDeliveries,
   scriptTelegramDeliveriesForChat,
   telegramDeliveryTranscript,
@@ -36,7 +36,7 @@ function sources(
     now,
   );
   if (options.safetySource)
-    harness.cache("alert:safety-source-cache", makeSafetySourceCache(options.safetySource, now).value, now);
+    seedActiveSafetySource(harness, options.safetySource, now);
 }
 
 function dewsSubscribers(count: number, prefix = "chat") {
@@ -538,49 +538,6 @@ describe("dispatchTelegramAlerts", () => {
     expect(telegramDeliveryTranscript).toEqual([
       expect.objectContaining({ chatId: "global-123", html: expect.stringContaining("worsening") }),
     ]);
-  });
-
-  it("suppresses safety alerts when only the methodology version changed", async () => {
-    const harness = createDispatchHarness();
-    sources(harness, {
-      safety: { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "v1" } },
-      safetySource: { "usdc-circle": { grade: "C", score: 61, methodologyVersion: "v2" } },
-    });
-    harness.seed({
-      safety: [
-        { stablecoinId: "usdc-circle", grade: "C", score: 61, prevGrade: "B", prevScore: 78, methodologyVersion: "v2" },
-      ],
-    });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-
-    expect(metadata).toMatchObject({ eventsDetected: { safety: 0, suppressedMethodologyChanges: 1 }, messagesSent: 0 });
-  });
-
-  it("reports suppressedSafetyChangesAtSeed when reseeding hides real safety changes", async () => {
-    const harness = createDispatchHarness();
-    const safety = {
-      "usdc-circle": { grade: "C", score: 61, methodologyVersion: "7.10" },
-      "dai-makerdao": { grade: "C+", score: 65, methodologyVersion: "7.10" },
-    };
-    sources(harness, {
-      safety: makeSafetySnapshotCache(
-        {
-          "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.10" },
-          "dai-makerdao": { grade: "B+", score: 80, methodologyVersion: "7.10" },
-        },
-        "legacy-generation",
-      ).value,
-      safetySource: safety,
-    });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-
-    expect(metadata).toMatchObject({
-      eventsDetected: { safety: 0 },
-      messagesSent: 0,
-      safetyAlertsSuppressed: true,
-      suppressedSafetyChangesAtSeed: 2,
-    });
-    expect(telegramDeliveryTranscript).toEqual([]);
   });
 
   it("clears launch alert flags when deactivating a blocked subscriber", async () => {

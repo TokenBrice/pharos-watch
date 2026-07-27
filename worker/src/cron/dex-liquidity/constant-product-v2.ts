@@ -6,7 +6,7 @@ import {
 import type { DexAmmExecutionModel, DexExecutionCapabilityGate } from "@shared/types/market";
 import { decodeAbiParameters, keccak256 } from "viem/utils";
 
-import { rethrowIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmBlockNumber,
@@ -537,6 +537,7 @@ async function enrichDeployment(input: {
   }
 
   for (let startIndex = 0; startIndex < input.probes.length; startIndex += MAX_PROBES_PER_MULTICALL) {
+    throwIfAborted(input.signal);
     const probes = input.probes.slice(startIndex, startIndex + MAX_PROBES_PER_MULTICALL);
     const poolCalls = probes.flatMap((probe, batchIndex) => {
       const index = startIndex + batchIndex;

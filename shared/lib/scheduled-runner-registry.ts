@@ -27,15 +27,15 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
       "sync-stablecoins",
       "snapshot-supply",
       "snapshot-chain-supply",
-      "publish-report-card-cache",
+      "prepare-safety-score-v9-input",
       "compute-depeg-resolver",
     ]],
   },
   v9SupplyAttributionOffset: {
     jobChains: [["sync-v9-supply-attribution"]],
   },
-  v9ShadowOffset: {
-    jobChains: [["compute-safety-score-v9-shadow"]],
+  v9PublicationOffset: {
+    jobChains: [["compute-safety-score-v9"]],
   },
   statusSelfCheckOffset: {
     jobChains: [["cron-slot-sweeper", "status-self-check", "data-invariant-canary", "cron-staleness-watchdog"]],

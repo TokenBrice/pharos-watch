@@ -26,22 +26,6 @@ export const WEIGHTED_DIMENSION_KEYS: DimensionKey[] = [
 export const PEG_MULTIPLIER_EXPONENT = 0.4;
 export const NO_LIQUIDITY_PENALTY = 0.9;
 
-export const DIMENSION_LABELS: Record<DimensionKey, string> = {
-  pegStability: "Peg Stability",
-  liquidity: "Exit Liquidity",
-  resilience: "Resilience",
-  decentralization: "Decentralization",
-  dependencyRisk: "Dependency Risk",
-};
-
-export const DIMENSION_SHORT_LABELS: Record<DimensionKey, string> = {
-  pegStability: "Peg",
-  liquidity: "Exit",
-  resilience: "Resil.",
-  decentralization: "Decent.",
-  dependencyRisk: "Dep.",
-};
-
 export const GRADE_THRESHOLDS: { grade: ReportCardGrade; min: number }[] = [
   { grade: "A+", min: 87 },
   { grade: "A", min: 83 },
@@ -95,36 +79,6 @@ export const REPORT_CARD_GRADE_COLORS: Record<ReportCardGrade, string> = {
   F: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
   NR: "bg-muted text-muted-foreground border-muted",
 };
-
-export const DIMENSION_ORDER: DimensionKey[] = [
-  "pegStability",
-  "liquidity",
-  "resilience",
-  "decentralization",
-  "dependencyRisk",
-];
-
-/**
- * Dimensions whose report-card row expands into a details panel. Single source
- * of truth for the UI's drill-down affordance so new dimensions don't have to
- * be wired into multiple inline union checks. [audit S-106]
- */
-export const DRILLDOWN_DIMENSIONS: ReadonlySet<DimensionKey> = new Set([
-  "resilience",
-  "decentralization",
-  "dependencyRisk",
-  "liquidity",
-]);
-
-/**
- * Dimensions whose details panel renders a parsed factor breakdown
- * (label/desc/score rows) from `dim.detail`.
- */
-export const BREAKDOWN_DIMENSIONS: ReadonlySet<DimensionKey> = new Set([
-  "resilience",
-  "decentralization",
-  "dependencyRisk",
-]);
 
 export const GRADE_RADAR_COLORS: Record<ReportCardGradeRange, string> = {
   A: "#10b981",

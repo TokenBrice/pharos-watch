@@ -5,8 +5,8 @@ import { stableJsonStringifyV1 } from "./stable-json";
 
 export type { ReserveEvidenceSourceOriginClass } from "../types/report-card-evidence-journal";
 
-export const REPORT_CARD_EVIDENCE_JOURNAL_ENTRY_MAX_BYTES = 1_024;
-export const REPORT_CARD_EVIDENCE_JOURNAL_FIXED_INPUT_MAX_BYTES = 384 * 1_024;
+const REPORT_CARD_EVIDENCE_JOURNAL_ENTRY_MAX_BYTES = 1_024;
+const REPORT_CARD_EVIDENCE_JOURNAL_FIXED_INPUT_MAX_BYTES = 384 * 1_024;
 export const REPORT_CARD_EVIDENCE_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET = 2;
 export const REPORT_CARD_EVIDENCE_JOURNAL_FIXED_INPUT_MAX_ASSETS = 512;
 
@@ -173,7 +173,7 @@ export type ReportCardEvidenceJournalV1Payload = z.infer<
   typeof ReportCardEvidenceJournalV1PayloadSchema
 >;
 
-export function computeReportCardEvidenceJournalIdV1(
+function computeReportCardEvidenceJournalIdV1(
   payload: ReportCardEvidenceJournalV1Payload,
 ): string {
   return `report-card-evidence:v1:${sha256Hex(

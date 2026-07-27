@@ -28,7 +28,7 @@ export const API_KEY_REQUEST_ENDPOINT_OPTIONS = [
   { path: "/api/depeg-events", label: "Depeg events" },
   { path: "/api/dex-liquidity", label: "DEX liquidity" },
   { path: "/api/yield-rankings", label: "Yield rankings" },
-  { path: "/api/report-cards", label: "Report cards" },
+  { path: "/api/report-cards/v9", label: "Safety Scores" },
   { path: "/api/chains", label: "Chains" },
   { path: "unknown", label: "Not sure yet" },
 ] as const;

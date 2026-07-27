@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CommandPalette } from "@/components/command-palette";
-import { makeStablecoin } from "@/test/fixtures/safety-scores";
+import { makeStablecoin } from "@/test/fixtures/stablecoins";
 import { STABLECOINS_QUERY_KEY } from "@shared/lib/query-keys";
 import type { StablecoinListResponse } from "@shared/types";
 

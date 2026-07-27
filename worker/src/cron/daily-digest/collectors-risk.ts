@@ -3,7 +3,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { DEWS_SIGNAL_LABELS, type DewsSignalKey } from "@shared/lib/dews-config";
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
-import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import {
   safetyScoreHistoryIdentityFromV2Row,
   type SafetyScoreHistoryV2Row,
@@ -76,53 +76,25 @@ export async function collectSafetyScores(
       };
     }
 
-    const allGrades: CanonicalSafetyGradeRow[] = source.kind === "v8"
-      ? source.snapshot.cards
-        .filter((card) => ctx.trackedStablecoinIds.has(card.id) && !card.isDefunct && !card.rawInputs.navToken)
-        .map((card) => ({
-          id: card.id,
-          symbol: card.symbol,
-          model: "v8" as const,
-          grade: card.overallGrade,
-          score: card.overallScore,
-          pegScore: card.rawInputs.pegScore,
-          liqScore: card.dimensions.liquidity.score,
-        }))
-      : source.snapshot.cards
-        .filter((card) => ctx.trackedStablecoinIds.has(card.id))
-        .map((card) => ({
-          id: card.id,
-          symbol: ctx.stablecoinAssetById.get(card.id)?.symbol ?? card.id,
-          model: "v9" as const,
-          grade: card.grade,
-          score: card.score,
-          pegScore: null,
-          liqScore: null,
-          v9Pillars: {
-            backing: projectV9Pillar(card.pillars.backing),
-            exit: projectV9Pillar(card.pillars.exit),
-            control: projectV9Pillar(card.pillars.control),
-          },
-          v9ReasonCodes: [...card.reasonCodes],
-          v9Caps: card.caps.map(projectV9Cap),
-          v9BindingCap: card.bindingCap ? projectV9Cap(card.bindingCap) : null,
-        }));
+    const allGrades: CanonicalSafetyGradeRow[] = source.snapshot.cards
+      .filter((card) => ctx.trackedStablecoinIds.has(card.id))
+      .map((card) => ({
+        id: card.id,
+        symbol: ctx.stablecoinAssetById.get(card.id)?.symbol ?? card.id,
+        grade: card.grade,
+        score: card.score,
+        pillars: {
+          backing: projectV9Pillar(card.pillars.backing),
+          exit: projectV9Pillar(card.pillars.exit),
+          control: projectV9Pillar(card.pillars.control),
+        },
+        reasonCodes: [...card.reasonCodes],
+        caps: card.caps.map(projectV9Cap),
+        bindingCap: card.bindingCap ? projectV9Cap(card.bindingCap) : null,
+      }));
 
     const mentionedCoinGrades = allGrades.filter((grade) => mentionedSymbols.has(grade.symbol));
-    const tensionCoins = source.kind === "v8"
-      ? allGrades
-        .filter(
-          (grade) =>
-            !mentionedSymbols.has(grade.symbol) &&
-            grade.pegScore !== null &&
-            grade.pegScore > 90 &&
-            grade.score !== null &&
-            grade.score < 50,
-        )
-        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-        .slice(0, 2)
-      : [];
-    const reportCoins = [...mentionedCoinGrades, ...tensionCoins];
+    const reportCoins = [...mentionedCoinGrades];
     const reportIds = new Set(reportCoins.map((grade) => grade.id));
     const worstGraded = allGrades
       .filter((grade) => !reportIds.has(grade.id) && (ctx.mcapById.get(grade.id) ?? 0) > 10_000_000)
@@ -143,56 +115,23 @@ export async function collectSafetyScores(
       reportIds.add(grade.id);
     }
 
-    if (source.kind === "v9") {
-      const gradeDistribution: Record<string, number> = {};
-      for (const grade of allGrades) {
-        gradeDistribution[grade.grade] = (gradeDistribution[grade.grade] ?? 0) + 1;
-      }
-      return {
-        safetyScores: {
-          model: "v9",
-          mentionedCoins: reportCoins.map((grade) => ({
-            symbol: grade.symbol,
-            grade: grade.grade,
-            score: grade.score,
-            pillars: grade.v9Pillars!,
-            reasonCodes: grade.v9ReasonCodes ?? [],
-            caps: grade.v9Caps ?? [],
-            bindingCap: grade.v9BindingCap ?? null,
-          })),
-          gradeDistribution,
-          provenance: { ...source.identity, publishedAt: source.publishedAtSec },
-        },
-        safetyGrades: allGrades,
-        safetyIdentity: source.identity,
-        safetyContext,
-      };
+    const gradeDistribution: Record<string, number> = {};
+    for (const grade of allGrades) {
+      gradeDistribution[grade.grade] = (gradeDistribution[grade.grade] ?? 0) + 1;
     }
-
-    const rankedGrades = [...allGrades].sort((a, b) => (a.score ?? 0) - (b.score ?? 0));
-    const medianGrade = rankedGrades[Math.floor(rankedGrades.length / 2)]?.grade ?? "NR";
-    const aboveBCount = allGrades.filter(
-      (grade) =>
-        grade.grade === "A+" ||
-        grade.grade === "A" ||
-        grade.grade === "A-" ||
-        grade.grade === "B+" ||
-        grade.grade === "B",
-    ).length;
-    const fCount = allGrades.filter((grade) => grade.grade === "F").length;
     return {
       safetyScores: {
-        model: "v8",
+        model: "v9",
         mentionedCoins: reportCoins.map((grade) => ({
           symbol: grade.symbol,
           grade: grade.grade,
-          score: grade.score ?? 0,
-          peg: grade.pegScore,
-          liq: grade.liqScore,
+          score: grade.score,
+          pillars: grade.pillars,
+          reasonCodes: grade.reasonCodes,
+          caps: grade.caps,
+          bindingCap: grade.bindingCap,
         })),
-        medianGrade,
-        aboveBCount,
-        fCount,
+        gradeDistribution,
         provenance: { ...source.identity, publishedAt: source.publishedAtSec },
       },
       safetyGrades: allGrades,
@@ -356,21 +295,20 @@ export async function collectDewsStress(
 export async function collectGradeTransitions(
   ctx: CollectorContext,
   safetyGrades: CanonicalSafetyGradeRow[] | undefined,
-  safetyIdentity: SafetyScorePublicationIdentity | undefined,
+  safetyIdentity: SafetyScoreV9PublicationIdentity | undefined,
   degradedReasons?: string[],
 ): Promise<DigestInputData["gradeTransitions"]> {
   if (!safetyGrades || !safetyIdentity) return undefined;
   try {
     const cutoff48h = ctx.nowSec - 2 * 24 * 60 * 60;
-    const policyClause = safetyIdentity.model === "v9"
-      ? "AND policy_id = ? AND policy_digest = ?"
-      : "AND policy_id IS NULL AND policy_digest IS NULL";
+    const policyClause = "AND policy_id = ? AND policy_digest = ?";
     const identityBinds = [
       safetyIdentity.model,
       safetyIdentity.schemaVersion,
       safetyIdentity.methodologyVersion,
       safetyIdentity.evaluationBuildDigest,
-      ...(safetyIdentity.model === "v9" ? [safetyIdentity.policyId, safetyIdentity.policyDigest] : []),
+      safetyIdentity.policyId,
+      safetyIdentity.policyDigest,
     ];
     const bumpRows = await ctx.db
       .prepare(
@@ -443,6 +381,9 @@ export async function collectGradeTransitions(
         const coin = ctx.trackedStablecoinAssets.find((candidate) => candidate.id === row.stablecoin_id)!;
         const currentGrade = gradeMap.get(row.stablecoin_id);
         const rowIdentity = safetyScoreHistoryIdentityFromV2Row(row);
+        if (rowIdentity.model !== "v9") {
+          throw new Error("Canonical V9 transition query returned a non-V9 history row");
+        }
         const base = {
           historyId: row.history_id,
           recordedAt: row.recorded_at,
@@ -453,31 +394,18 @@ export async function collectGradeTransitions(
           toScore: row.score,
           mcapUsd: getCirculatingRaw(coin),
         };
-        if (rowIdentity.model === "v9") {
-          return {
-            ...base,
-            model: "v9" as const,
-            safetyScoreIdentity: rowIdentity,
-            currentPillars: currentGrade?.v9Pillars ?? {
-              backing: { score: null, evidenceLevel: "unknown", freshness: "unknown", reasons: [] },
-              exit: { score: null, evidenceLevel: "unknown", freshness: "unknown", reasons: [] },
-              control: { score: null, evidenceLevel: "unknown", freshness: "unknown", reasons: [] },
-            },
-            reasonCodes: currentGrade?.v9ReasonCodes ?? [],
-            caps: currentGrade?.v9Caps ?? [],
-            bindingCap: currentGrade?.v9BindingCap ?? null,
-          };
-        }
         return {
           ...base,
-          model: "v8" as const,
+          model: "v9" as const,
           safetyScoreIdentity: rowIdentity,
-          currentDimensions: {
-            peg: currentGrade?.pegScore ?? null,
-            liq: currentGrade?.liqScore ?? null,
-            resilience: null,
-            decentralization: null,
+          currentPillars: currentGrade?.pillars ?? {
+            backing: { score: null, evidenceLevel: "unknown", freshness: "unknown", reasons: [] },
+            exit: { score: null, evidenceLevel: "unknown", freshness: "unknown", reasons: [] },
+            control: { score: null, evidenceLevel: "unknown", freshness: "unknown", reasons: [] },
           },
+          reasonCodes: currentGrade?.reasonCodes ?? [],
+          caps: currentGrade?.caps ?? [],
+          bindingCap: currentGrade?.bindingCap ?? null,
         };
       });
     }

@@ -129,7 +129,7 @@ export const DdrRelatedContextSchema = z.object({
   safetyGrade: z.string().nullable().optional().default(null),
   safetyScore: z.number().nullable().optional().default(null),
   safetyContext: z.object({
-    status: z.enum(["v8-identified", "identity-missing", "identity-mismatch", "unsupported-model", "cache-unavailable"]),
+    status: z.enum(["v9-identified", "identity-missing", "identity-mismatch", "unsupported-model", "cache-unavailable"]),
     reason: z.string().nullable(),
     identity: SafetyScorePublicationIdentitySchema.nullable(),
   }).optional(),

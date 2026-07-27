@@ -182,11 +182,11 @@ describe("data surface descriptors", () => {
       producerJob: DATA_SURFACE_DESCRIPTORS.reportCards.producerJob,
       criticality: DATA_SURFACE_DESCRIPTORS.reportCards.dependencyCriticality,
     }).toEqual({
-      path: "/api/report-cards",
-      queryKey: ["report-cards"],
-      producerIntervalSec: 900,
+      path: "/api/report-cards/v9",
+      queryKey: ["report-cards", "v9"],
+      producerIntervalSec: 1800,
       endpointMaxAgeSec: 900,
-      producerJob: "publish-report-card-cache",
+      producerJob: "compute-safety-score-v9",
       criticality: "critical",
     });
 
@@ -390,11 +390,11 @@ describe("data surface descriptors", () => {
       },
       {
         surface: DATA_SURFACE_DESCRIPTORS.reportCards,
-        id: "report-card-cache",
+        id: "safety-score-v9",
         explicit: {
-          label: "Report-card cache",
-          sourceOfTruth: "cron_runs:publish-report-card-cache",
-          publicationSurface: "report-card-cache",
+          label: "Safety Score V9 publication",
+          sourceOfTruth: "cache:report-cards:v9",
+          publicationSurface: "safety-score-v9",
           impactLayer: "availability",
           dependsOn: ["stablecoins", "dex-liquidity", "yield-rankings", "dews"],
           consumers: ["report-cards", "stablecoin-detail"],

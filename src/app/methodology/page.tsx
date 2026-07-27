@@ -12,12 +12,11 @@ import { buildFaqJsonLd } from "@/lib/faq";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { METHODOLOGY_READING_STEPS, METHODOLOGY_SECTIONS, READER_GUIDE_COPY } from "./methodology-shared";
-import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Methodology: How Pharos Grades Stablecoins",
   description:
-    "Full methodology behind Pharos safety grades, mint authority scores, peg scores, liquidity scores, and contagion stress tests. Transparent scoring for every stablecoin.",
+    "Full methodology behind Pharos V9 safety grades, mint authority scores, peg scores, liquidity scores, and dependency analysis.",
   canonical: "/methodology/",
   ogImage: `${SITE_URL}/og-editorial-methodology.png`,
 });
@@ -38,7 +37,8 @@ export default function MethodologyPage() {
             buildFaqJsonLd([
               {
                 question: "How does Pharos grade stablecoins?",
-                answer: `Pharos computes a weighted average of four base dimensions — Liquidity / Exit (30%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%) — then applies (pegScore / 100)^0.40 as a peg stability power-curve multiplier. Decentralization starts from governance quality, then can apply chain-infrastructure, reviewed CDP oracle setup, reviewed bridge-route, and Mint Authority penalties; branch-aware oracle profiles use the weakest verified branch when present. Redemption backstops can improve Liquidity only when the route is currently usable, the redemption snapshot is fresh, and v4 current executable capacity supports the modeled exit size; eventual-only issuer exits remain visible but do not replace missing DEX liquidity. Severe active depegs use the open event peak for final caps and disable static or non-live-direct redemption uplift unless live-open redemption evidence exists. When liquidity data is absent, a 10% penalty is applied to the final score after the peg multiplier (weights are redistributed across available dimensions). Grades range from A+ (87+) to F (0–39), with NR for insufficient data. The methodology is currently at ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}.`,
+                answer:
+                  "Safety Score V9 evaluates Backing (40%), Exit (35%), and Economic Control (25%). Bounded aggregation limits how far strong pillars can lift a weak material path, then peg behavior, structural caps, dependencies, wrappers, evidence quality, and track record can constrain the result. Missing required evidence returns NR unless a reviewed bounded policy explicitly keeps the asset rateable. Grades range from A+ (87+) to F (0–39), with NR for insufficient data.",
               },
               {
                 question: "How is the Pharos peg score calculated?",
@@ -58,17 +58,12 @@ export default function MethodologyPage() {
               {
                 question: "What is the Mint Authority Score?",
                 answer:
-                  "Mint Authority Score is a standalone 0-100 score for reviewed stablecoin mint-authority risk. It combines mint route family (30%), weakest mint-capable controller (40%), quantitative bounds (15%), and reviewed authority posture (15%), then applies caps for unbounded or compromised authority, privileged-mint incidents, weak EOA controls, and evidence confidence. Missing or unresolved review data is NR and never penalizes. Since Safety Score v8.0 the score feeds the Decentralization report-card dimension through a penalty-only blend.",
+                  "Mint Authority Score is a standalone 0-100 score for reviewed stablecoin mint-authority risk. It combines mint route family, the weakest mint-capable controller, quantitative bounds, and reviewed authority posture, then applies caps for unbounded or compromised authority, privileged-mint incidents, weak EOA controls, and evidence confidence. V9 consumes reviewed mint-control evidence in the Economic Control pillar; unresolved required evidence stays explicit rather than receiving a guessed score.",
               },
               {
                 question: "How does Pharos confirm depegs and maintain DEWS history?",
                 answer:
                   "Every depeg onset must remain beyond the full trigger threshold for at least 15 minutes before promotion, even when multiple sources agree. Live events resolve only after 15 minutes inside a tighter half-threshold recovery band. Pharos treats opposite-side evidence as contradiction, does not count DefiLlama's CoinGecko mirror as independent, and only trusts aggregate DEX confirmation when the row is fresh and backed by at least $1M of source TVL. Historical DEWS snapshots do not retain that DEX trust metadata, so the repair path refreshes current rows and prunes unrecomputable daily history back to the March 9, 2026 trust-floor boundary when needed.",
-              },
-              {
-                question: "What does the contagion stress test measure?",
-                answer:
-                  "The contagion stress test selects one target coin, overrides its overall score to grade D, then recomputes the Dependency Risk dimension for downstream coins that depend on that target. It models the direct dependency channel only, not second-order peg, liquidity, or market-confidence effects. The result is a projected grade under stress, shown as a before/after comparison on each coin's detail page.",
               },
               {
                 question: "What is the Bank Run Gauge?",
@@ -88,7 +83,7 @@ export default function MethodologyPage() {
             additionalType: "https://schema.org/TechArticle",
             headline: "Methodology: How Pharos Grades Stablecoins",
             description:
-              "Full methodology behind Pharos safety grades, mint authority scores, peg scores, liquidity scores, and contagion stress tests.",
+              "Full methodology behind Pharos V9 safety grades, mint authority scores, peg scores, liquidity scores, and dependency analysis.",
             author: { "@id": `${SITE_URL}#person-tokenbrice` },
             publisher: { "@id": `${SITE_URL}#organization` },
             image: `${SITE_URL}/og-editorial-methodology.png`,
@@ -114,7 +109,7 @@ export default function MethodologyPage() {
               <h1 className="pharos-page-title">Methodology</h1>
               <p className="pharos-page-lead max-w-3xl">
                 How Pharos grades stablecoins: transparent scoring across safety, peg stability, mint authority,
-                liquidity, yield, and contagion risk.
+                liquidity, yield, and dependency risk.
               </p>
               <p className="pharos-lead max-w-3xl">
                 Treat this page like a reference manual, not a marketing explainer. All scoring methodologies operate
@@ -203,34 +198,22 @@ export default function MethodologyPage() {
         <div className="mt-6 space-y-5 text-[0.97rem] leading-7 text-foreground/88 sm:text-base sm:leading-8">
           <p>
             Every safety grade Pharos publishes is the answer to one question: if this stablecoin started bleeding
-            tomorrow, how much of the loss would the holder eat before the system stopped it? Four base dimensions
-            answer different parts of that question. Liquidity / Exit (30%) measures whether you can leave at all.
-            Dependency Risk (25%) measures whether something else has to hold for this one to hold. Resilience (20%)
-            measures the quality of what backs the coin and who is allowed to touch it. Decentralization (15%) measures
-            whether anyone can switch the lights off. We weight them in that order because, in every real depeg we have
-            studied, the exit was already gone before the press release went out.
+            tomorrow, how much of the loss would the holder eat before the system stopped it? V9 answers through three
+            material pillars. Backing (40%) measures the assets and loss-absorption structure behind the claim. Exit
+            (35%) measures whether holders can leave through executable market or redemption routes. Economic Control
+            (25%) measures who can change, freeze, mint, or otherwise impair that claim.
           </p>
           <p>
-            The peg score does not sit alongside the four base dimensions. It multiplies them. After the weighted base
-            score is computed, we apply{" "}
-            <span className="not-italic">
-              (pegScore / 100)<sup>0.40</sup>
-            </span>{" "}
-            as a power curve. The exponent is deliberate. At 1.0, a ten-point drop in peg score would erase ten points
-            of safety, which punishes mid-quality pegs more than the data supports. At 0.0, the peg would not constrain
-            the grade at all, which would let a structurally fine asset with a chronically wobbly peg coast on
-            collateral quality. Forty splits the difference: a peg score of 90 takes about four percent off; a peg score
-            of 10 takes sixty percent off. Strong pegs are nearly untouched, broken pegs are sharply demoted, and the
-            curve does the work without a cliff.
+            V9 does not let a strong unrelated pillar average away a weak material path. Its bounded aggregation grants
+            limited headroom above the weakest pillar, then peg behavior, evidence sufficiency, track record, structural
+            caps, dependencies, and wrapper-local risks can only constrain the published result. A missing required fact
+            returns NR unless a reviewed bounded policy states exactly why the remaining uncertainty is rateable.
           </p>
           <p>
-            Dependency Risk is the dimension that most often surprises issuers. A wrapper that lives entirely inside a
-            parent stablecoin cannot, by construction, be safer than its parent. We enforce that with a variant overall
-            cap, not by averaging the parent in. Averaging would let a well-built wrapper around a weak base settle at
-            some middle grade that no one should rely on; capping says the downstream cannot escape the upstream, which
-            is how the dependency actually behaves under stress. The same logic produces family-specific wrapper
-            ceilings for risk-absorption, strategy vaults, and bond-maturity variants. The cap is honest about what the
-            asset is: a claim on something else.
+            Dependencies are causal inputs rather than a standalone score. A serial wrapper cannot escape its parent;
+            basket exposure is weighted and bounded according to reviewed materiality. Wrapper-local custody, control,
+            transfer, and redemption facts remain visible alongside the inherited limit, so the downstream claim can
+            be worse than its parent but cannot become safer by averaging in unrelated strengths.
           </p>
           <p>
             Yield tokens get flagged, not folded. Pharos tracks yield-bearing and NAV tokens through a separate
@@ -244,7 +227,7 @@ export default function MethodologyPage() {
           </p>
         </div>
         <p className="mt-8 text-sm italic text-muted-foreground">
-          &mdash; Pharos, May 2026
+          &mdash; Pharos, July 2026
         </p>
       </section>
 

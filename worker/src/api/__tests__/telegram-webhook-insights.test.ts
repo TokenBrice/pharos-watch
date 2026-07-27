@@ -1,7 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
@@ -12,21 +9,37 @@ import {
 } from "../telegram-webhook-insights";
 import type { StatusForCoin } from "../telegram-webhook-status";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../test-helpers/report-cards-v9";
 
 const mocks = vi.hoisted(() => ({
   loadActiveSafetyScoreSource: vi.fn(),
-  loadActiveV8SafetyScoreHistorySource: vi.fn(),
 }));
 
 vi.mock("../../lib/safety-score-active-source", () => ({
   loadActiveSafetyScoreSource: mocks.loadActiveSafetyScoreSource,
 }));
 
-vi.mock("../../lib/safety-score-history-v2", () => ({
-  loadActiveV8SafetyScoreHistorySource: mocks.loadActiveV8SafetyScoreHistorySource,
-}));
+function activeV9() {
+  const snapshot = makeWorkerReportCardsV9Response({
+    cards: [
+      makeWorkerV9Card({
+        id: "usdc-circle",
+        grade: "A",
+        score: 90,
+      }),
+    ],
+  });
+  return {
+    kind: "v9" as const,
+    expectedModel: "v9" as const,
+    snapshot,
+  };
+}
 
-function makeTopChainsDb(reportCardCache: unknown, updatedAt: number) {
+function makeTopChainsDb(updatedAt: number) {
   return mockD1(
     [
       {
@@ -50,42 +63,9 @@ function makeTopChainsDb(reportCardCache: unknown, updatedAt: number) {
           updated_at: updatedAt,
         },
       },
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["report_card_cache"],
-        rows: [],
-        first: {
-          key: "report_card_cache",
-          value: JSON.stringify(reportCardCache),
-          updated_at: updatedAt,
-        },
-      },
     ],
     { requireMatch: true },
   );
-}
-
-function makeCompleteReportCardCache(updatedAt: number) {
-  const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
-  return {
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    updatedAt,
-    scores: Object.fromEntries([...ACTIVE_IDS].map((id) => [id, { score: 99, grade: "A+" }])),
-    safetyScoreIdentity: buildSafetyScoreV8PublicationIdentity({
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
-      publicationGenerationId,
-    }),
-    publicationGenerationId,
-    completeness: {
-      generationId: publicationGenerationId,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      expectedCount: ACTIVE_IDS.size,
-      scoredCount: ACTIVE_IDS.size,
-      notRatedCount: 0,
-      notRatedIds: [],
-    },
-  };
 }
 
 describe("buildBriefMessage", () => {
@@ -122,13 +102,7 @@ describe("buildBriefMessage", () => {
 
 describe("buildTopMessage", () => {
   beforeEach(() => {
-    mocks.loadActiveSafetyScoreSource.mockReset().mockResolvedValue({
-      kind: "v8",
-      expectedModel: "v8",
-      reason: "activation-marker-missing",
-      activationUpdatedAt: null,
-    });
-    mocks.loadActiveV8SafetyScoreHistorySource.mockReset();
+    mocks.loadActiveSafetyScoreSource.mockReset().mockResolvedValue(activeV9());
   });
 
   afterEach(() => {
@@ -242,7 +216,7 @@ describe("buildTopMessage", () => {
 
     const message = await buildTopMessage(db, "yield");
 
-    expect(message).toContain("Top risk-adjusted yields");
+    expect(message).toContain("Top yields (PYS unavailable; expected model V9)");
     expect(message).toContain("USDC");
     const yieldSql = db.getHistory().find((entry) => entry.sql.includes("FROM yield_data"))?.sql;
     expect(yieldSql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
@@ -299,62 +273,25 @@ describe("buildTopMessage", () => {
     }
   });
 
-  it("fails closed to NR chain health when compact report-card safety data is incomplete or identity-invalid", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-07-15T00:00:00Z"));
+  it("derives chain health from the canonical V9 publication", async () => {
     const updatedAt = Math.floor(Date.now() / 1000);
-    const trustedCache = makeCompleteReportCardCache(updatedAt);
-    const invalidIdentityCache = {
-      ...trustedCache,
-      safetyScoreIdentity: {
-        ...trustedCache.safetyScoreIdentity,
-        evaluationBuildDigest:
-          trustedCache.safetyScoreIdentity.evaluationBuildDigest === "0".repeat(64) ? "1".repeat(64) : "0".repeat(64),
-      },
-    };
-    const incompleteCache = {
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      updatedAt,
-      scores: { "usdc-circle": { score: 99, grade: "A+" } },
-    };
+    const message = await buildTopMessage(makeTopChainsDb(updatedAt), "chains");
 
-    const trustedMessage = await buildTopMessage(makeTopChainsDb(trustedCache, updatedAt), "chains");
-    expect(trustedMessage).toMatch(/health \d/);
-
-    for (const reportCardCache of [incompleteCache, invalidIdentityCache]) {
-      const message = await buildTopMessage(makeTopChainsDb(reportCardCache, updatedAt), "chains");
-
-      expect(message).toContain("Top chains by stablecoin supply");
-      expect(message).toContain("Ethereum");
-      expect(message).toContain("health NR (null)");
-      expect(message).not.toMatch(/health \d/);
-    }
+    expect(message).toContain("Top chains by stablecoin supply");
+    expect(message).toContain("Ethereum");
+    expect(message).toMatch(/health \d/);
   });
 
-  it.each([
-    [
-      "an active V9 marker",
-      { kind: "v9", expectedModel: "v9" },
-      "expected model V9",
-    ],
-    [
-      "a malformed V9 marker",
-      { kind: "error", expectedModel: "v9", reason: "activation-marker-invalid" },
-      "expected model V9, activation marker invalid",
-    ],
-    [
-      "a mismatched V9 identity",
-      { kind: "error", expectedModel: "v9", reason: "v9-identity-mismatch" },
-      "expected model V9, v9 identity mismatch",
-    ],
-  ] as const)("withholds direct chain health and PYS for %s", async (
-    _label,
-    activeSource,
-    expectedReason,
-  ) => {
-    mocks.loadActiveSafetyScoreSource.mockResolvedValue(activeSource);
+  it("fails closed when the canonical V9 publication is unavailable", async () => {
+    mocks.loadActiveSafetyScoreSource.mockResolvedValue({
+      kind: "error",
+      expectedModel: "v9",
+      reason: "v9-snapshot-unavailable",
+      snapshot: null,
+      detail: "missing",
+    });
     const updatedAt = Math.floor(Date.now() / 1000);
-    const chainsDb = makeTopChainsDb(makeCompleteReportCardCache(updatedAt), updatedAt);
+    const chainsDb = makeTopChainsDb(updatedAt);
     const yieldDb = mockD1([
       {
         match: "FROM yield_data",
@@ -380,12 +317,13 @@ describe("buildTopMessage", () => {
     expect(chainsMessage).toContain("Top chains by stablecoin supply");
     expect(chainsMessage).toContain("Ethereum");
     expect(chainsMessage).toContain("health NR (null)");
-    expect(chainsMessage).toContain(`Chain health unavailable; ${expectedReason}.`);
-    expect(
-      chainsDb.getHistory().some((entry) => entry.binds.includes("report_card_cache")),
-    ).toBe(false);
+    expect(chainsMessage).toContain(
+      "Chain health unavailable; expected model V9, v9 snapshot unavailable.",
+    );
 
-    expect(yieldMessage).toContain(`Top yields (PYS unavailable; ${expectedReason})`);
+    expect(yieldMessage).toContain(
+      "Top yields (PYS unavailable; expected model V9, v9 snapshot unavailable)",
+    );
     expect(yieldMessage).toContain("USDC");
     expect(yieldMessage).toContain("4.20% 30d");
     expect(yieldMessage).toContain("PYS unavailable");
@@ -407,75 +345,39 @@ describe("buildTopMessage", () => {
     expect(db.getHistory()).toEqual([]);
   });
 
-  it("reads /top safety only from the canonical identified V8 source", async () => {
-    mocks.loadActiveV8SafetyScoreHistorySource.mockResolvedValueOnce({
-      identity: {
-        model: "v8",
-        schemaVersion: 1,
-        methodologyVersion: "v8.17",
-        evaluationBuildDigest: "a".repeat(64),
-        baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
-        publicationGenerationId: "report-cards:v8.17:123",
-      },
-      publishedAtSec: 123,
-      snapshot: {
-        cards: [{ id: "usdc-circle", symbol: "USDC", isDefunct: false, overallGrade: "A", overallScore: 90 }],
-      },
-    });
+  it("reads /top safety only from the canonical V9 source", async () => {
     const db = mockD1([], { requireMatch: true });
 
     const message = await buildTopMessage(db, "safety");
 
-    expect(message).toContain("Top Safety Scores (V8)");
+    expect(message).toContain("Top Safety Scores (V9)");
     expect(message).toContain("USDC");
-    expect(mocks.loadActiveV8SafetyScoreHistorySource).toHaveBeenCalledWith(db);
+    expect(mocks.loadActiveSafetyScoreSource).toHaveBeenCalledWith(db);
     expect(db.getHistory()).toEqual([]);
   });
 
   it("returns explicit unavailable safety text when the canonical identity cannot be read", async () => {
-    mocks.loadActiveV8SafetyScoreHistorySource.mockRejectedValueOnce(new Error("identity mismatch"));
+    mocks.loadActiveSafetyScoreSource.mockResolvedValue({
+      kind: "error",
+      expectedModel: "v9",
+      reason: "v9-snapshot-unavailable",
+      snapshot: null,
+      detail: "missing",
+    });
     const db = mockD1([], { requireMatch: true });
 
     await expect(buildTopMessage(db, "safety")).resolves.toBe("Safety scores are temporarily unavailable.");
-    mocks.loadActiveV8SafetyScoreHistorySource.mockRejectedValueOnce(new Error("identity mismatch"));
     await expect(buildWhyMessage(db, "usdc-circle")).resolves.toBe("Safety Score is temporarily unavailable.");
     expect(db.getHistory()).toEqual([]);
   });
 
-  it("includes canonical V8 provenance in /why without on-demand recomputation", async () => {
-    mocks.loadActiveV8SafetyScoreHistorySource.mockResolvedValueOnce({
-      identity: {
-        model: "v8",
-        schemaVersion: 1,
-        methodologyVersion: "v8.17",
-        evaluationBuildDigest: "a".repeat(64),
-        baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
-        publicationGenerationId: "report-cards:v8.17:123",
-      },
-      publishedAtSec: 123,
-      snapshot: {
-        cards: [
-          {
-            id: "usdc-circle",
-            symbol: "USDC",
-            isDefunct: false,
-            overallGrade: "A",
-            overallScore: 90,
-            dimensions: {
-              pegStability: { grade: "A", score: 90, detail: "Stable" },
-              liquidity: { grade: "A", score: 88, detail: "Deep" },
-            },
-            rawInputs: { activeDepeg: false, canBeBlacklisted: false, dependencies: [], collateralFromLive: false },
-          },
-        ],
-      },
-    });
+  it("includes canonical V9 provenance in /why without on-demand recomputation", async () => {
     const db = mockD1([], { requireMatch: true });
 
     const message = await buildWhyMessage(db, "usdc-circle");
 
-    expect(message).toContain("Model: V8 · v8.17 · report-cards:v8.17:123");
-    expect(message).toContain("Weakest dimensions");
+    expect(message).toContain("Model: V9 · 9.0 · report-cards:v9:1");
+    expect(message).toContain("Weakest pillars");
     expect(db.getHistory()).toEqual([]);
   });
 });

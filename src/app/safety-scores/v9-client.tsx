@@ -22,13 +22,11 @@ import {
 import {
   GRADE_RANGES,
   buildSafetyMcapMap,
-  type GradeFilter,
-} from "./view-model";
-import {
   buildV9GradeCounts,
   buildV9HeadlineStats,
   filterAndSortV9Cards,
   groupV9CardsByGrade,
+  type GradeFilter,
   type V9SortKey,
 } from "./v9-view-model";
 

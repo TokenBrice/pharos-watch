@@ -1,0 +1,325 @@
+import { V9_RELEASE_COVERAGE_FLOORS } from "@shared/types/safety-score-v9-coverage";
+import type {
+  V9PublicationHealth,
+  V9PublicationHoldReason,
+} from "@shared/types/report-cards-v9";
+import {
+  normalizeFixedInput,
+  type ReportCardsFixedInput,
+} from "./report-cards-fixed-input";
+import {
+  buildSafetyScoreV9PublicationFromNormalizedInput,
+} from "./safety-score-v9-candidate";
+import {
+  assessV9Publication,
+  type V9PublicationCoverageFloor,
+} from "./safety-score-v9-publication-assessment";
+import {
+  loadSafetyScoreV9Publication,
+  loadSafetyScoreV9PublicationHealth,
+  persistSafetyScoreV9Publication,
+} from "./safety-score-v9-publication-store";
+
+export const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
+export const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
+  "safety-score-v9-publication";
+
+type SafetyScoreV9PublicationFailureStage =
+  | "base-input"
+  | "v9-enrichment"
+  | "compile"
+  | "publication-gate"
+  | "publication-write"
+  | "aborted";
+
+export interface RunSafetyScoreV9PublicationInput {
+  db: D1Database;
+  fixedInput: unknown;
+  prepareFixedInput?: (
+    fixedInput: Readonly<ReportCardsFixedInput>,
+    signal: AbortSignal,
+  ) => Promise<unknown>;
+  signal?: AbortSignal;
+  nowSec?: number;
+}
+
+export type SafetyScoreV9PublicationRunResult =
+  | {
+      status: "published";
+      attemptId: string;
+      publicationGenerationId: string;
+      candidateId: string;
+    }
+  | {
+      status: "held";
+      attemptId: string;
+      attemptedPublicationGenerationId: string;
+      reasons: V9PublicationHoldReason[];
+    }
+  | {
+      status: "failed";
+      attemptId: string;
+      stage: SafetyScoreV9PublicationFailureStage;
+      code: string;
+      message: string;
+    };
+
+function fixedInputWithoutV9Enrichment(
+  input: Readonly<ReportCardsFixedInput>,
+) {
+  const {
+    safetyScoreV9SupplyAttributionById: _v9SupplyAttribution,
+    evidenceJournalById: _evidenceJournal,
+    supplyAttributionJournalById: _supplyAttributionJournal,
+    pegProvenanceById: _pegProvenance,
+    ...baseInput
+  } = input;
+  return baseInput;
+}
+
+function sameBaseInput(
+  left: Readonly<ReportCardsFixedInput>,
+  right: Readonly<ReportCardsFixedInput>,
+): boolean {
+  return (
+    left.baseInputGenerationId === right.baseInputGenerationId &&
+    left.sourceGeneration === right.sourceGeneration &&
+    JSON.stringify(fixedInputWithoutV9Enrichment(left)) ===
+      JSON.stringify(fixedInputWithoutV9Enrichment(right))
+  );
+}
+
+function fallbackNowSec(): number {
+  return Math.max(0, Math.floor(Date.now() / 1_000));
+}
+
+function nowSecAtLeast(minimum: number, override?: number): number {
+  const value = override ?? fallbackNowSec();
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(
+      "Safety Score v9 publication clock must be epoch seconds",
+    );
+  }
+  return Math.max(minimum, value);
+}
+
+function observationCoverageFloors(
+  observedCount: number,
+  expectedCount: number,
+  rateableCount: number,
+): V9PublicationCoverageFloor[] {
+  const exactCount = observedCount === expectedCount;
+  return [
+    {
+      id: "active-result-count",
+      status: exactCount ? "pass" : "fail",
+      observed: observedCount,
+      required: `= ${expectedCount}`,
+      detail: exactCount
+        ? "The V9 publication contains one result for every active asset"
+        : "The V9 publication result count does not match the active registry",
+    },
+    {
+      id: "minimum-rateable-assets",
+      status:
+        rateableCount >= V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets
+          ? "pass"
+          : "fail",
+      observed: rateableCount,
+      required: `>= ${V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets}`,
+      detail:
+        rateableCount >= V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets
+          ? "The V9 publication meets the active-asset rateability floor"
+          : "The V9 publication is below the active-asset rateability floor",
+    },
+  ];
+}
+
+function safeFailure(
+  error: unknown,
+  stage: SafetyScoreV9PublicationFailureStage,
+): { code: string; message: string } {
+  const name = error instanceof Error && error.name ? error.name : "Error";
+  const rawMessage = error instanceof Error ? error.message : String(error);
+  return {
+    code: `safety-score-v9-publication-${stage}-${name}`.slice(0, 160),
+    message: (
+      rawMessage.trim() || "Safety Score v9 publication attempt failed"
+    ).slice(0, 500),
+  };
+}
+
+function combinedPublicationSignal(signal?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(
+    SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS,
+  );
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
+
+function heldPublicationHealth(args: {
+  attemptedAtSec: number;
+  reasons: V9PublicationHoldReason[];
+  acceptedPublication: Awaited<
+    ReturnType<typeof loadSafetyScoreV9Publication>
+  >;
+  previousHealth: V9PublicationHealth | null;
+}): V9PublicationHealth {
+  return {
+    schemaVersion: 1,
+    status: "held",
+    acceptedPublicationGenerationId:
+      args.acceptedPublication?.publicationGenerationId ??
+      args.previousHealth?.acceptedPublicationGenerationId ??
+      null,
+    acceptedAtSec:
+      args.acceptedPublication?.publishedAtSec ??
+      args.previousHealth?.acceptedAtSec ??
+      null,
+    attemptedAtSec: args.attemptedAtSec,
+    heldSinceSec:
+      args.previousHealth?.status === "held"
+        ? args.previousHealth.heldSinceSec
+        : args.attemptedAtSec,
+    reasons: args.reasons,
+  };
+}
+
+export async function runSafetyScoreV9Publication(
+  input: RunSafetyScoreV9PublicationInput,
+): Promise<SafetyScoreV9PublicationRunResult> {
+  let stage: SafetyScoreV9PublicationFailureStage = "base-input";
+  let attemptedAtSec = fallbackNowSec();
+  let attemptId = `${SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX}:${attemptedAtSec}`;
+  const publicationSignal = combinedPublicationSignal(input.signal);
+
+  try {
+    if (
+      input.nowSec !== undefined &&
+      (!Number.isInteger(input.nowSec) || input.nowSec < 0)
+    ) {
+      throw new Error(
+        "Safety Score v9 publication clock must be epoch seconds",
+      );
+    }
+    let fixedInput = normalizeFixedInput(input.fixedInput);
+    attemptedAtSec = nowSecAtLeast(fixedInput.clockSec, input.nowSec);
+    attemptId = `${SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX}:${attemptedAtSec}`;
+
+    stage = "v9-enrichment";
+    if (input.prepareFixedInput) {
+      const preparedFixedInput = normalizeFixedInput(
+        await input.prepareFixedInput(fixedInput, publicationSignal),
+      );
+      if (!sameBaseInput(preparedFixedInput, fixedInput)) {
+        throw new Error(
+          "Safety Score v9 preparation changed the authoritative fixed input",
+        );
+      }
+      fixedInput = preparedFixedInput;
+    }
+
+    stage = "compile";
+    const pipeline = buildSafetyScoreV9PublicationFromNormalizedInput({
+      fixedInput,
+      publishedAtSec: fixedInput.clockSec,
+    });
+    const publication = pipeline.candidate;
+    const coverageFloors = observationCoverageFloors(
+      publication.cards.length,
+      fixedInput.activeAssetIds.length,
+      publication.completeness.ratedCount,
+    );
+
+    stage = "publication-gate";
+    let acceptedPublication: Awaited<
+      ReturnType<typeof loadSafetyScoreV9Publication>
+    > = null;
+    let previousHealth: V9PublicationHealth | null = null;
+    let assessment;
+    try {
+      [acceptedPublication, previousHealth] = await Promise.all([
+        loadSafetyScoreV9Publication(input.db, publicationSignal),
+        loadSafetyScoreV9PublicationHealth(input.db, publicationSignal),
+      ]);
+      assessment = assessV9Publication({
+        inputHealth: fixedInput.v9PublicationInputHealth,
+        candidate: publication,
+        acceptedPublication,
+        coverageFloors,
+      });
+    } catch (error) {
+      assessment = {
+        decision: "hold" as const,
+        reasons: [
+          {
+            code: "assessment-failed" as const,
+            detail: safeFailure(error, "publication-gate").message.slice(
+              0,
+              240,
+            ),
+          },
+        ],
+      };
+    }
+
+    if (assessment.decision === "hold") {
+      await persistSafetyScoreV9Publication(input.db, {
+        publicationHealth: heldPublicationHealth({
+          attemptedAtSec: fixedInput.clockSec,
+          reasons: assessment.reasons,
+          acceptedPublication,
+          previousHealth,
+        }),
+        publicationClockSec: fixedInput.clockSec,
+        signal: publicationSignal,
+      });
+      return {
+        status: "held",
+        attemptId,
+        attemptedPublicationGenerationId:
+          publication.publicationGenerationId,
+        reasons: assessment.reasons,
+      };
+    }
+
+    if (
+      fixedInput.baseInputGenerationId !==
+      publication.baseInputGenerationId
+    ) {
+      throw new Error(
+        "Accepted Safety Score v9 input does not match the publication base generation",
+      );
+    }
+    stage = "publication-write";
+    await persistSafetyScoreV9Publication(input.db, {
+      publication,
+      publicationHealth: {
+        schemaVersion: 1,
+        status: "current",
+        acceptedPublicationGenerationId:
+          publication.publicationGenerationId,
+        acceptedAtSec: fixedInput.clockSec,
+        attemptedAtSec: fixedInput.clockSec,
+        heldSinceSec: null,
+        reasons: [],
+      },
+      publicationClockSec: fixedInput.clockSec,
+      signal: publicationSignal,
+    });
+    return {
+      status: "published",
+      attemptId,
+      publicationGenerationId: publication.publicationGenerationId,
+      candidateId: publication.candidateId,
+    };
+  } catch (error) {
+    const failureStage: SafetyScoreV9PublicationFailureStage =
+      publicationSignal.aborted ? "aborted" : stage;
+    return {
+      status: "failed",
+      attemptId,
+      stage: failureStage,
+      ...safeFailure(error, failureStage),
+    };
+  }
+}

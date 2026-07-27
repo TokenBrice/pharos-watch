@@ -3,7 +3,7 @@ import type { DexMeasuredExecutionTarget } from "@shared/types/measured-executio
 import { buildPoolFingerprint } from "../dex-liquidity/pool-helpers";
 import { buildMeasuredPoolDirectionKey } from "./inventory";
 
-export const RETAINED_TARGET_FINGERPRINT_MAX_TVL_RELATIVE_DRIFT = 0.005;
+const RETAINED_TARGET_FINGERPRINT_MAX_TVL_RELATIVE_DRIFT = 0.005;
 
 export type DexMeasuredTargetFingerprintIndex = Map<string, DexMeasuredExecutionTarget[]>;
 

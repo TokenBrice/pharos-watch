@@ -61,7 +61,7 @@ function queryForCase(client: D1ReadClient, benchmarkCase: BenchmarkCase, asOf: 
         .prepare(
           `SELECT key, LENGTH(value) AS payload_bytes, updated_at
              FROM cache
-            WHERE key IN ('stablecoins', 'report-cards:snapshot', 'yield-rankings')
+            WHERE key IN ('stablecoins', 'report-cards:v9', 'yield-rankings')
             ORDER BY key ASC`,
         );
     case "status-cron-window":

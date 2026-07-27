@@ -199,7 +199,7 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
     summary:
       "Standalone 0-100 score for the risk that privileged routes can create durable, unbacked stablecoin supply.",
     detail:
-      "Higher is better. The model scores route type, weakest mint-capable controller, quantitative bounds, and reviewer posture, then applies incident, unbounded, EOA, and confidence caps. Since Safety Score v8.0 it feeds the Decentralization dimension through a penalty-only blend.",
+      "Higher is better. The standalone model scores route type, weakest mint-capable controller, quantitative bounds, and reviewer posture, then applies incident, unbounded, EOA, and confidence caps. Safety Score V9 separately evaluates the underlying reviewed control facts in Economic Control.",
     methodologyPath: MINT_AUTHORITY_METHODOLOGY_PATH,
     versionLabel: MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL,
   },

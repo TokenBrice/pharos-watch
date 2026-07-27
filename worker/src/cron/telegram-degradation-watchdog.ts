@@ -1,6 +1,5 @@
 import {
-  ALERT_SAFETY_SOURCE_CACHE_KEY,
-  assessAlertSafetySourceCache,
+  loadActiveAlertSafetySourceAssessment,
   type AlertSafetySourceAssessment,
 } from "../lib/alert-safety-source-cache";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
@@ -236,11 +235,11 @@ async function evaluateSafetySource(
   nowSec: number,
   preloadedAssessment?: AlertSafetySourceAssessment | null,
 ): Promise<WatchdogResult["safetySource"]> {
-  const producerIntervalSec = CRON_INTERVALS["publish-report-card-cache"];
+  const producerIntervalSec = CRON_INTERVALS["compute-safety-score-v9"];
   const sustainedSec = producerIntervalSec * 2;
   const assessment =
     preloadedAssessment ??
-    assessAlertSafetySourceCache(await getCache(db, ALERT_SAFETY_SOURCE_CACHE_KEY), { nowSec, producerIntervalSec });
+    await loadActiveAlertSafetySourceAssessment(db, nowSec);
   const flagSince = await readCachedTimestamp(db, WATCHDOG_KEYS.safetySourceSince);
   const outcome: WatchdogResult["safetySource"] = { ...emptyOutcome(), state: assessment.state };
 

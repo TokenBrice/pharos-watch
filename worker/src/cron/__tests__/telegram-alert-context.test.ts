@@ -1,17 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildAlertContextLines } from "../telegram-alert-context";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../test-helpers/report-cards-v9";
 
 const mocks = vi.hoisted(() => ({
-  loadActiveV8SafetyScoreHistorySource: vi.fn(),
+  loadIdentifiedActiveSafetyScoreSource: vi.fn(),
   loadStablecoinsCache: vi.fn(),
   logTelegramEvent: vi.fn(),
   getCache: vi.fn(),
   getMintBurnConfigsForStablecoin: vi.fn(),
 }));
 
-vi.mock("../../lib/safety-score-history-v2", () => ({
-  loadActiveV8SafetyScoreHistorySource: mocks.loadActiveV8SafetyScoreHistorySource,
+vi.mock("../../lib/identified-active-safety-score-source", () => ({
+  loadIdentifiedActiveSafetyScoreSource: mocks.loadIdentifiedActiveSafetyScoreSource,
 }));
 
 vi.mock("../../lib/stablecoins-cache", () => ({
@@ -33,17 +37,13 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
 
 describe("buildAlertContextLines", () => {
   beforeEach(() => {
-    mocks.loadActiveV8SafetyScoreHistorySource.mockReset().mockResolvedValue({
-      identity: {
-        model: "v8",
-        schemaVersion: 1,
-        methodologyVersion: "v8.17",
-        evaluationBuildDigest: "a".repeat(64),
-        baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
-        publicationGenerationId: "report-cards:v8.17:123",
-      },
-      publishedAtSec: 123,
-      snapshot: { cards: [] },
+    const snapshot = makeWorkerReportCardsV9Response({ cards: [] });
+    mocks.loadIdentifiedActiveSafetyScoreSource.mockReset().mockResolvedValue({
+      kind: "v9",
+      expectedModel: "v9",
+      identity: snapshot.safetyScoreIdentity,
+      publishedAtSec: snapshot.updatedAt,
+      snapshot,
     });
     mocks.loadStablecoinsCache.mockResolvedValue({ kind: "ok", payload: { peggedAssets: [] } });
     mocks.logTelegramEvent.mockReset();
@@ -74,7 +74,7 @@ describe("buildAlertContextLines", () => {
   });
 
   it("omits safety context when the canonical identity is unavailable", async () => {
-    mocks.loadActiveV8SafetyScoreHistorySource.mockRejectedValueOnce(new Error("identity mismatch"));
+    mocks.loadIdentifiedActiveSafetyScoreSource.mockRejectedValueOnce(new Error("identity mismatch"));
     const db = {
       prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
     } as unknown as D1Database;
@@ -84,18 +84,16 @@ describe("buildAlertContextLines", () => {
     expect(context.get("usdc-circle") ?? "").not.toContain("Safety");
   });
 
-  it("includes V8 model provenance in canonical safety context", async () => {
-    mocks.loadActiveV8SafetyScoreHistorySource.mockResolvedValueOnce({
-      identity: {
-        model: "v8",
-        schemaVersion: 1,
-        methodologyVersion: "v8.17",
-        evaluationBuildDigest: "a".repeat(64),
-        baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
-        publicationGenerationId: "report-cards:v8.17:123",
-      },
-      publishedAtSec: 123,
-      snapshot: { cards: [{ id: "usdc-circle", isDefunct: false, overallGrade: "A", overallScore: 90 }] },
+  it("includes V9 model provenance in canonical safety context", async () => {
+    const snapshot = makeWorkerReportCardsV9Response({
+      cards: [makeWorkerV9Card({ id: "usdc-circle", grade: "A", score: 85 })],
+    });
+    mocks.loadIdentifiedActiveSafetyScoreSource.mockResolvedValueOnce({
+      kind: "v9",
+      expectedModel: "v9",
+      identity: snapshot.safetyScoreIdentity,
+      publishedAtSec: snapshot.updatedAt,
+      snapshot,
     });
     const db = {
       prepare: vi.fn(() => ({ bind: () => ({ all: async () => ({ results: [] }) }) })),
@@ -103,7 +101,7 @@ describe("buildAlertContextLines", () => {
 
     const context = await buildAlertContextLines(db, ["usdc-circle"]);
 
-    expect(context.get("usdc-circle")).toContain("Safety A 90 (V8 v8.17)");
+    expect(context.get("usdc-circle")).toContain("Safety A 85 (V9 9.0)");
   });
 
   it("chunks liquidity context reads to stay under the D1 bind limit", async () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { deriveComparisonCoins, deriveSupplySeries, deriveFlowSeries, deriveFlowCardData } from "@/lib/compare-derive";
 import { COMPARE_COLORS } from "@/lib/compare-config";
-import { makeStablecoin } from "@/test/fixtures/safety-scores";
+import { makeStablecoin } from "@/test/fixtures/stablecoins";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { StablecoinData } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types/core";

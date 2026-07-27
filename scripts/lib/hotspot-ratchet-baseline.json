@@ -1,6 +1,6 @@
 {
   "shared/lib/report-cards.ts": {
-    "fileLines": 53,
+    "fileLines": 51,
     "maxFunctionLines": 0,
     "branchCount": 0
   },
@@ -15,42 +15,52 @@
     "branchCount": 113
   },
   "shared/lib/safety-score-v9-compiler.ts": {
-    "fileLines": 1512,
-    "maxFunctionLines": 337,
-    "branchCount": 147
+    "fileLines": 1529,
+    "maxFunctionLines": 341,
+    "branchCount": 149
   },
   "shared/lib/safety-score-v9/control.ts": {
-    "fileLines": 1170,
-    "maxFunctionLines": 640,
-    "branchCount": 166
+    "fileLines": 1195,
+    "maxFunctionLines": 665,
+    "branchCount": 172
   },
   "shared/lib/safety-score-v9/coverage.ts": {
     "fileLines": 934,
-    "maxFunctionLines": 653,
-    "branchCount": 48
+    "maxFunctionLines": 654,
+    "branchCount": 49
+  },
+  "shared/lib/safety-score-v9/formula.ts": {
+    "fileLines": 1376,
+    "maxFunctionLines": 509,
+    "branchCount": 128
   },
   "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
-    "fileLines": 898,
+    "fileLines": 901,
     "maxFunctionLines": 44,
     "branchCount": 5
   },
   "shared/types/market.ts": {
-    "fileLines": 1037,
+    "fileLines": 1038,
     "maxFunctionLines": 42,
     "branchCount": 17
   },
   "shared/types/safety-score-v9.ts": {
-    "fileLines": 1590,
-    "maxFunctionLines": 377,
-    "branchCount": 70
+    "fileLines": 1830,
+    "maxFunctionLines": 434,
+    "branchCount": 82
   },
   "shared/types/safety-score-v9-facts.ts": {
-    "fileLines": 1625,
-    "maxFunctionLines": 153,
-    "branchCount": 168
+    "fileLines": 1962,
+    "maxFunctionLines": 224,
+    "branchCount": 201
+  },
+  "shared/types/safety-score-v9-public.ts": {
+    "fileLines": 2232,
+    "maxFunctionLines": 407,
+    "branchCount": 155
   },
   "shared/types/stablecoin-meta-schemas.ts": {
-    "fileLines": 1302,
+    "fileLines": 1305,
     "maxFunctionLines": 179,
     "branchCount": 72
   },
@@ -69,13 +79,8 @@
     "maxFunctionLines": 108,
     "branchCount": 10
   },
-  "src/components/contagion-graph.tsx": {
-    "fileLines": 69,
-    "maxFunctionLines": 49,
-    "branchCount": 2
-  },
   "src/components/stablecoin-table.tsx": {
-    "fileLines": 237,
+    "fileLines": 238,
     "maxFunctionLines": 185,
     "branchCount": 4
   },
@@ -105,13 +110,13 @@
     "branchCount": 0
   },
   "src/app/methodology/sections/core/safety-scores-section.tsx": {
-    "fileLines": 25,
+    "fileLines": 22,
     "maxFunctionLines": 15,
     "branchCount": 0
   },
   "src/app/methodology/sections/core/liquidity-section.tsx": {
-    "fileLines": 172,
-    "maxFunctionLines": 164,
+    "fileLines": 190,
+    "maxFunctionLines": 182,
     "branchCount": 0
   },
   "src/app/methodology/sections/core/mint-burn-flow-section.tsx": {
@@ -155,8 +160,8 @@
     "branchCount": 0
   },
   "src/app/coverage/client.tsx": {
-    "fileLines": 54,
-    "maxFunctionLines": 39,
+    "fileLines": 56,
+    "maxFunctionLines": 40,
     "branchCount": 2
   },
   "src/components/api-key-request-form.tsx": {
@@ -170,9 +175,9 @@
     "branchCount": 12
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 163,
-    "maxFunctionLines": 93,
-    "branchCount": 8
+    "fileLines": 151,
+    "maxFunctionLines": 94,
+    "branchCount": 6
   },
   "worker/src/api/api-key-requests.ts": {
     "fileLines": 9,
@@ -200,24 +205,24 @@
     "branchCount": 0
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 464,
-    "maxFunctionLines": 410,
-    "branchCount": 29
+    "fileLines": 512,
+    "maxFunctionLines": 453,
+    "branchCount": 34
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
-    "fileLines": 419,
-    "maxFunctionLines": 303,
-    "branchCount": 10
+    "fileLines": 423,
+    "maxFunctionLines": 307,
+    "branchCount": 11
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
-    "fileLines": 1147,
-    "maxFunctionLines": 391,
-    "branchCount": 86
+    "fileLines": 1488,
+    "maxFunctionLines": 487,
+    "branchCount": 117
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 1117,
-    "maxFunctionLines": 240,
-    "branchCount": 24
+    "fileLines": 1252,
+    "maxFunctionLines": 251,
+    "branchCount": 28
   },
   "worker/src/cron/dex-liquidity/orchestrator-analysis.ts": {
     "fileLines": 675,
@@ -229,10 +234,20 @@
     "maxFunctionLines": 366,
     "branchCount": 83
   },
+  "worker/src/cron/measured-execution/curve-composite.ts": {
+    "fileLines": 1528,
+    "maxFunctionLines": 352,
+    "branchCount": 122
+  },
+  "worker/src/cron/reserve-adapters/sfrxusd-crosschain-redemption.ts": {
+    "fileLines": 1831,
+    "maxFunctionLines": 771,
+    "branchCount": 60
+  },
   "worker/src/cron/sync-mint-burn.ts": {
-    "fileLines": 364,
-    "maxFunctionLines": 295,
-    "branchCount": 16
+    "fileLines": 376,
+    "maxFunctionLines": 306,
+    "branchCount": 21
   },
   "worker/src/lib/mint-burn-pipeline/roundtrip-detection.ts": {
     "fileLines": 63,
@@ -260,7 +275,7 @@
     "branchCount": 54
   },
   "worker/src/cron/sync-stablecoins/enrich-prices.ts": {
-    "fileLines": 103,
+    "fileLines": 102,
     "maxFunctionLines": 61,
     "branchCount": 1
   },
@@ -283,6 +298,11 @@
     "fileLines": 47,
     "maxFunctionLines": 39,
     "branchCount": 2
+  },
+  "worker/src/cron/weekly-recap.ts": {
+    "fileLines": 657,
+    "maxFunctionLines": 472,
+    "branchCount": 28
   },
   "worker/src/cron/yield-config.ts": {
     "fileLines": 65,
@@ -320,19 +340,14 @@
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 1858,
-    "maxFunctionLines": 209,
-    "branchCount": 231
+    "fileLines": 2342,
+    "maxFunctionLines": 249,
+    "branchCount": 272
   },
   "worker/src/lib/safety-score-v9-fact-set.ts": {
-    "fileLines": 2679,
-    "maxFunctionLines": 228,
-    "branchCount": 195
-  },
-  "worker/src/lib/safety-score-v9-shadow.ts": {
-    "fileLines": 1294,
-    "maxFunctionLines": 198,
-    "branchCount": 85
+    "fileLines": 3755,
+    "maxFunctionLines": 493,
+    "branchCount": 298
   },
   "worker/src/lib/telegram-usage-analytics.ts": {
     "fileLines": 604,

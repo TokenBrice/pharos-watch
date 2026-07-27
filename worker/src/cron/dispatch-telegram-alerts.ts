@@ -181,7 +181,9 @@ async function dispatchTelegramAlertsImpl(
         countTotals: {
           dewsRows: sourceData.dewsRows.length,
           activeDepegRows: sourceData.activeDepegRows.length,
-          safetyRows: sourceData.safetyRows.length,
+          safetyRows: snapshotState.currentSafetySnapshot
+            ? Object.keys(snapshotState.currentSafetySnapshot).length
+            : 0,
           reserveDriftIds: snapshotState.currentReserveDriftIds.length,
           chatsWithActiveSnooze,
           overflowBacklogChats: overflowBacklog.length,

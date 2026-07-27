@@ -133,13 +133,3 @@ export function getSafetyGradeMetadata(grade: ReportCardGrade | SafetyGradeRange
 export function getSafetyGradeBadgeClassName(grade: ReportCardGrade): string {
   return REPORT_CARD_GRADE_COLORS[grade];
 }
-
-export function gradeBandLabel(score: number, metric?: string): string {
-  let band: string;
-  if (score >= 90) band = "Excellent — top of the grading scale";
-  else if (score >= 75) band = "Strong — production-ready";
-  else if (score >= 60) band = "Adequate — meaningful weaknesses present";
-  else if (score >= 40) band = "Weak — significant risks";
-  else band = "Poor — major risks";
-  return metric ? `${metric}: ${score} — ${band}` : `${score} — ${band}`;
-}

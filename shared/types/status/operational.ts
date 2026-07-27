@@ -33,7 +33,7 @@ export interface ProducerHeadStatus {
 }
 
 export type PublicationSurfaceId =
-  "dex-liquidity" | "yield-rankings" | "stablecoins" | "dews" | "psi" | "report-card-cache";
+  "dex-liquidity" | "yield-rankings" | "stablecoins" | "dews" | "psi" | "safety-score-v9";
 export type PublicationGenerationState = "candidate" | "validated" | "published" | "rejected" | "superseded" | "failed";
 
 export interface PublicationGenerationHealth {

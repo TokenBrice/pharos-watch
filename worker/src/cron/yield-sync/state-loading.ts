@@ -3,7 +3,6 @@ import { getCache, getCaches, setCacheIfNewer } from "../../lib/db-cache";
 import {
   computeSafetyScoresSnapshot,
   type PublishedSafetyScoresResultMap,
-  type SafetyScoresResultMap,
 } from "../../lib/safety-scores";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronStageContext } from "../shared/stage-contracts";
@@ -60,7 +59,7 @@ export interface YieldSyncLoadedState {
   riskFreeRateMeta: YieldBenchmarkMeta;
   stablecoinSupplyById: Map<string, number>;
   safetySnapshot: PublishedSafetyScoresResultMap;
-  safetyScores: SafetyScoresResultMap["scores"];
+  safetyScores: PublishedSafetyScoresResultMap["scores"];
   safetyCoverageRatio: number;
   safetySnapshotAvailable: boolean;
   safetySnapshotDegraded: boolean;

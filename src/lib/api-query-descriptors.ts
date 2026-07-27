@@ -20,8 +20,8 @@ import type {
 } from "@shared/types/market";
 import type { MintBurnEventsResponse, MintBurnFlowsResponse, MintBurnPerCoinResponse } from "@shared/types/mint-burn";
 import type { RedemptionBackstopsResponse } from "@shared/types/redemption";
-import type { ReportCardsResponse, SafetyScoreHistoryResponse } from "@shared/types/report-cards";
-import type { ReportCardsV9TransitionResponse } from "@shared/types/report-cards-v9";
+import type { SafetyScoreHistoryResponse } from "@shared/types/report-cards";
+import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import type { HealthResponse } from "@shared/types/status/public-health";
 import type { TelegramPulse } from "@shared/types/status/telegram";
 import type { UsdsStatusResponse } from "@shared/types/stability";
@@ -260,7 +260,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     "meta",
     createLazySchema<PegSummaryResponse>(async () => (await import("@shared/types/market")).PegSummaryResponseSchema),
   ),
-  reportCards: defineApiQuery(
+  reportCardsV9: defineApiQuery(
     {
       queryKey: DATA_SURFACE_DESCRIPTORS.reportCards.queryKey,
       path: DATA_SURFACE_DESCRIPTORS.reportCards.apiPath,
@@ -268,32 +268,8 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
       metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
     },
     "meta",
-    createLazySchema<ReportCardsResponse>(
-      async () => (await import("@shared/types/report-cards")).ReportCardsResponseSchema,
-    ),
-  ),
-  reportCardsV9: defineApiQuery(
-    {
-      queryKey: ["report-cards", "v9"] as const,
-      path: API_PATHS.reportCardsV9(),
-      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
-      metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
-    },
-    "meta",
-    createLazySchema<ReportCardsV9TransitionResponse>(
-      async () => (await import("@shared/types/report-cards-v9")).ReportCardsV9TransitionResponseSchema,
-    ),
-  ),
-  reportCardsV9Preview: defineApiQuery(
-    {
-      queryKey: ["report-cards", "v9", "preview"] as const,
-      path: API_PATHS.reportCardsV9Preview(),
-      producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.reportCards,
-      metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
-    },
-    "meta",
-    createLazySchema<ReportCardsV9TransitionResponse>(
-      async () => (await import("@shared/types/report-cards-v9")).ReportCardsV9TransitionResponseSchema,
+    createLazySchema<ReportCardsV9CurrentResponse>(
+      async () => (await import("@shared/types/report-cards-v9")).ReportCardsV9CurrentResponseSchema,
     ),
   ),
   depegResolver: defineApiQuery(

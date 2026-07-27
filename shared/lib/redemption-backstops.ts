@@ -4,9 +4,7 @@ import type { RedemptionBackstopConfig } from "./redemption-backstop-configs/sha
 
 export { REDEMPTION_BACKSTOP_CONFIGS };
 export {
-  isRedemptionSettlementAtLeastAsConservative,
   resolveMoreConservativeRedemptionSettlement,
-  resolveRedemptionCostBpsAtNotional,
   resolveV9RedemptionRouteCostBpsAtNotional,
 } from "./redemption-backstop-configs/shared";
 export type {

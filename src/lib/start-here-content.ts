@@ -229,7 +229,7 @@ export const START_HERE_GLOSSARY: readonly StartHereGlossaryItem[] = [
   {
     term: "Safety Score",
     meaning:
-      "Composite risk grade rendered A+ to F. Weighted average of four base dimensions — Liquidity / Exit (30%), Resilience (20%), Decentralization (15%), Dependency Risk (25%) — multiplied by a peg-stability factor. Weights, thresholds, and grade bands documented in /methodology/. Surfaces on every detail page and the Safety Scores leaderboard.",
+      "Composite V9 risk grade rendered A+ to F across Backing, Exit, and Economic Control, with bounded aggregation and explicit peg, evidence, dependency, wrapper, track-record, and structural constraints. Required unbounded evidence gaps return NR. Surfaces on every detail page and the Safety Scores leaderboard.",
   },
   {
     term: "Report Card",
@@ -347,7 +347,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       {
         title: "Dependency Map",
         description:
-          "Live transitive dependency graph showing which stablecoins inherit risk from others and from shared backing. Pair with the contagion stress test to project grades if a single coin fails.",
+          "Live V9 dependency graph showing which stablecoins inherit serial or basket exposure from other assets and shared backing.",
         href: "/dependency-map/",
         icon: Network,
       },

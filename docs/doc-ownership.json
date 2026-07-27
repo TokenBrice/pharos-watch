@@ -209,13 +209,13 @@
       "name": "mint-authority-score",
       "sources": ["shared/lib/mint-authority-scoring.ts", "src/lib/mint-authority-display.ts", "src/components/stablecoin-detail/mint-authority-section.tsx", "shared/data/stablecoins/coins/*.json"],
       "docs": ["docs/mint-authority-scoring.md", "docs/stablecoin-data.md", "docs/stablecoin-detail-page.md", "docs/homepage.md", "docs/coverage-page.md", "docs/report-cards.md", "docs/methodology-page.md", "docs/classification.md"],
-      "notes": ["Mint Authority Score; feeds the Decentralization dimension via a penalty-only blend as of Safety Score v8.0."]
+      "notes": ["Standalone Mint Authority Score; Safety Score V9 evaluates the underlying reviewed control facts directly."]
     },
     {
-      "name": "safety-score-v9-rollout",
-      "sources": ["shared/lib/safety-score-v9/**", "shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9-*.ts", "worker/src/cron/publish-report-card-cache.ts", "worker/src/cron/snapshot-safety-grade-history.ts", "worker/migrations/0200_safety_score_v9_shadow_history.sql", "worker/migrations/0201_safety_score_history_v2.sql", "worker/migrations/0202_safety_score_v9_movement_reviews.sql"],
-      "docs": ["docs/process/safety-score-v9-rollout.md", "docs/process/safety-score-v9-consumer-ledger.md", "docs/process/safety-score-v9-readiness.md", "docs/report-cards.md", "docs/worker-infrastructure.md", "docs/data-flow-map.md", "docs/api-reference.md", "docs/telegram-alerts.md", "docs/tape-page.md"],
-      "notes": ["Treat V9 shadow history, readiness, movement review, and consumer-ledger state as advisory observations. Only the owner-written identity-bound activation key makes V9 public."]
+      "name": "safety-score-v9",
+      "sources": ["shared/lib/safety-score-v9/**", "shared/types/safety-score-v9*.ts", "worker/src/lib/safety-score-v9-*.ts", "worker/src/cron/prepare-safety-score-v9-input.ts", "worker/src/cron/compute-safety-score-v9.ts", "worker/src/cron/snapshot-safety-grade-history.ts", "worker/migrations/0201_safety_score_history_v2.sql", "worker/migrations/0226_safety_score_v9_canonical_cache.sql"],
+      "docs": ["docs/report-cards.md", "docs/worker-infrastructure.md", "docs/data-flow-map.md", "docs/api-reference.md", "docs/telegram-alerts.md", "docs/tape-page.md"],
+      "notes": ["V9 is the canonical Safety Score publication. Current consumers fail closed when the accepted publication is unavailable or held."]
     },
     {
       "name": "pages-functions-hosting",

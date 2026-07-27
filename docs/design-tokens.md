@@ -123,7 +123,7 @@ These maps use the same hex values as the `--*-hex` CSS custom properties in `se
 
 ### Don't
 
-- Reference primitives (`--p-blue-500`) directly in components, except for documented local visualizations that intentionally need a primitive ramp before a semantic token exists. Current exceptions include the contagion-graph edge stroke in `src/components/contagion-graph/contagion-graph-svg.tsx` (`--p-frost-blue`).
+- Reference primitives (`--p-blue-500`) directly in components only when a documented local visualization intentionally needs a primitive ramp before a semantic token exists.
 - Hardcode hex values in chart components — use the JS token maps
 - Edit shadcn/ui primitives in `src/components/ui/` to use tokens
 - Define one-off color variables in individual component files

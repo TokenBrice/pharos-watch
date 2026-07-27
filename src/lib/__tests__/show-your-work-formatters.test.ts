@@ -1,49 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
 import {
   formatChainHealth,
   formatDews,
   formatLiquidity,
   formatPsi,
   formatRedemption,
-  formatReportCard,
   formatReportCardV9,
 } from "@/lib/show-your-work-formatters";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 
 describe("show-your-work formatters", () => {
-  it("formats report card raw inputs into rows", () => {
-    const rawInputs = createReportCardRawInputs({
-      pegScore: 95,
-      liquidityScore: 72,
-      effectiveExitScore: 70,
-      collateralQuality: "rwa",
-      mintAuthorityScore: 64,
-      oracleRiskTier: "medianized-with-delay",
-      oracleRiskScore: 85,
-      bridgeRouteRiskTier: "external-lock-mint",
-      bridgeRouteRiskScore: 40,
-    });
-    const table = formatReportCard(rawInputs);
-    expect(table.topic).toBe("safetyScore");
-    expect(table.rows.find((r) => r.label === "Mint authority score")?.value).toBe("64");
-    const pegRow = table.rows.find((r) => r.label === "Peg score");
-    expect(pegRow?.value).toBe("95");
-    const liqRow = table.rows.find((r) => r.label === "Liquidity score");
-    expect(liqRow?.value).toBe("72");
-    expect(table.rows.find((r) => r.label === "Oracle risk tier")?.value).toBe("medianized-with-delay");
-    expect(table.rows.find((r) => r.label === "Oracle risk score")?.value).toBe("85");
-    expect(table.rows.find((r) => r.label === "Bridge route tier")?.value).toBe("external-lock-mint");
-    expect(table.rows.find((r) => r.label === "Bridge route score")?.value).toBe("40");
-    expect(table.formula).toContain("weighted(liquidity/exit, resilience, decentralization, dependency risk)");
-    expect(table.formula).toContain("CDP oracle");
-    expect(table.formula).toContain("bridge-route");
-    expect(table.formula).toContain("(Peg Score/100)^0.40");
-    expect(table.formula).toContain("×0.9");
-    expect(table.formula).toContain("active-depeg");
-  });
-
   it("formats V9 score stages without routing through V8 raw inputs", () => {
     const card = makeV9Card({
       bindingCap: {

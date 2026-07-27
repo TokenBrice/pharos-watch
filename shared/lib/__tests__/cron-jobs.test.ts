@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CRON_JOB_DEFINITIONS,
   CRON_SCHEDULES,
-  SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC,
+  SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
   getCronSlotStartedAtForSchedule,
 } from "../cron-jobs";
@@ -24,8 +24,8 @@ describe("cron job schedule metadata", () => {
     expect(CRON_SCHEDULES.v9SupplyAttributionOffset).toBe(
       "8,23,38,53 * * * *",
     );
-    expect(CRON_SCHEDULES.v9ShadowOffset).toBe(
-      "14,29,44,59 * * * *",
+    expect(CRON_SCHEDULES.v9PublicationOffset).toBe(
+      "14,44 * * * *",
     );
     expect(
       CRON_JOB_DEFINITIONS.find(
@@ -41,13 +41,13 @@ describe("cron job schedule metadata", () => {
     expect(
       CRON_JOB_DEFINITIONS.find(
         (definition) =>
-          definition.job === "compute-safety-score-v9-shadow",
+          definition.job === "compute-safety-score-v9",
       ),
     ).toMatchObject({
-      scheduleKey: "v9ShadowOffset",
-      intervalSec: SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC,
+      scheduleKey: "v9PublicationOffset",
+      intervalSec: SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
       triggerMode: "isolated",
-      connectionGroup: "v9-shadow-chain",
+      connectionGroup: "v9-publication-chain",
     });
     expect(
       CRON_JOB_DEFINITIONS.filter(

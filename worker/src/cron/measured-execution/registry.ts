@@ -114,7 +114,7 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
  * by the fork-equivalence, cross-check, drift, and shadow evidence packet at
  * agents/safety-score-v9/results/cl-activation-evidence-2026-07-17/packet.md
  * (120/120 exact provider reproductions; failures confined to producer
- * startup generations). Base Aerodrome Slipstream was admitted to shadow V9
+ * startup generations). Base Aerodrome Slipstream was admitted to V9
  * route scoring on 2026-07-24 after full target rotation, consumer replay,
  * binding checks, and independent historical-block quote reproduction. Keys
  * not listed here remain shadow-only fail-closed. The initial cohort was

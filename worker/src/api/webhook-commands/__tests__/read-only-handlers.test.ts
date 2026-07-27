@@ -57,9 +57,9 @@ const statusFixture: StatusForCoin = {
   safety: {
     grade: "A",
     score: 82,
-    model: "v8",
-    methodologyVersion: "v8.17",
-    publicationGenerationId: "report-cards:v8.17:1700000000",
+    model: "v9",
+    methodologyVersion: "9.0",
+    publicationGenerationId: "report-cards:v9:1700000000",
     publishedAt: 1_700_000_000,
     recordedAt: 1_700_000_000,
   },

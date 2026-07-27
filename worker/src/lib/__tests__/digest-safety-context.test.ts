@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IdentifiedActiveSafetyScoreSource } from "../identified-active-safety-score-source";
+import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 
 const mockLoadIdentifiedActiveSafetyScoreSource = vi.fn();
 
@@ -40,12 +41,11 @@ function activeV9(
     expectedModel: "v9",
     identity: activeIdentity,
     publishedAtSec: 110,
-    activationUpdatedAt: 105,
-    snapshot: {
+    snapshot: makeWorkerReportCardsV9Response({
       safetyScoreIdentity: activeIdentity,
       updatedAt: 110,
-    },
-  } as Extract<IdentifiedActiveSafetyScoreSource, { kind: "v9" }>;
+    }),
+  };
 }
 
 describe("digest Safety Score delivery context", () => {
@@ -72,7 +72,6 @@ describe("digest Safety Score delivery context", () => {
       expectedModel: "v9",
       reason: "v9-identity-mismatch",
       detail: "marker and snapshot disagree",
-      activationUpdatedAt: 105,
     } satisfies IdentifiedActiveSafetyScoreSource);
 
     await expect(

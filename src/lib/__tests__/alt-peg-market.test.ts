@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeStablecoin } from "@/test/fixtures/safety-scores";
+import { makeStablecoin } from "@/test/fixtures/stablecoins";
 import { buildAltPegLinkHubGroups, buildAltPegSnapshot, buildAltPegTrendStats } from "@/lib/alt-peg-market";
 
 function makeCoin(id: string, marketCap: number) {

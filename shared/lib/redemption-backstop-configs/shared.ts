@@ -43,7 +43,7 @@ export interface RedemptionV9ComposedDexExit {
   docs: RedemptionDocSource[];
 }
 
-export const REDEMPTION_SETTLEMENT_CONSERVATISM: readonly RedemptionSettlementModel[] = [
+const REDEMPTION_SETTLEMENT_CONSERVATISM: readonly RedemptionSettlementModel[] = [
   "atomic",
   "immediate",
   "same-day",

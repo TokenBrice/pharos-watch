@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
+import * as flightToQualityClassification from "../../lib/flight-to-quality-classification";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../test-helpers/report-cards-v9";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
 
@@ -81,6 +85,7 @@ describe("mint-burn-flows regression: per-coin vs aggregate shape", () => {
 describe("handleMintBurnFlows contract tests", () => {
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   const nowSec = Math.floor(Date.now() / 1000);
@@ -399,31 +404,35 @@ describe("handleMintBurnFlows contract tests", () => {
         { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 120_000_000_000 } },
       ],
     });
-    const publicationGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${now}`;
-    const scores = Object.fromEntries([...ACTIVE_IDS].map((id) => [id, { score: 60, grade: "B-" }]));
-    scores["usdc-circle"] = { score: 80, grade: "A" };
-    scores["usdt-tether"] = { score: 40, grade: "D" };
-    const reportCardCache = JSON.stringify({
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      scores,
-      safetyScoreIdentity: {
-        model: "v8",
-        schemaVersion: 1,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-        evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
-        baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
-        publicationGenerationId,
-      },
-      publicationGenerationId,
-      completeness: {
-        generationId: publicationGenerationId,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-        expectedCount: ACTIVE_IDS.size,
-        scoredCount: ACTIVE_IDS.size,
-        notRatedCount: 0,
-        notRatedIds: [],
-      },
+    const snapshot = makeWorkerReportCardsV9Response({
+      asOfSec: now - 60,
       updatedAt: now,
+      cards: [...ACTIVE_IDS].sort().map((id) =>
+        makeWorkerV9Card(
+          id === "usdc-circle"
+            ? { id, score: 80, grade: "A" }
+            : id === "usdt-tether"
+              ? { id, score: 40, grade: "D" }
+              : { id, score: 60, grade: "B-" },
+        ),
+      ),
+    });
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockResolvedValueOnce({
+        kind: "v9",
+        expectedModel: "v9",
+        snapshot,
+      });
+    vi.spyOn(
+      flightToQualityClassification,
+      "buildFlightToQualityClassificationFromV9Snapshot",
+    ).mockReturnValueOnce({
+      kind: "ok",
+      classification: {
+        safeIds: new Set(["usdc-circle"]),
+        riskyIds: new Set(["usdt-tether"]),
+        safetyScoreIdentity: snapshot.safetyScoreIdentity,
+      },
     });
 
     const db = mockD1([
@@ -488,12 +497,6 @@ describe("handleMintBurnFlows contract tests", () => {
       { match: "FROM mint_burn_events", rows: [] },
       {
         match: "cache",
-        matchBinds: ["report_card_cache"],
-        rows: [{ key: "report_card_cache", value: reportCardCache, updated_at: now }],
-        first: { key: "report_card_cache", value: reportCardCache, updated_at: now },
-      },
-      {
-        match: "cache",
         matchBinds: ["stablecoins"],
         rows: [{ key: "stablecoins", value: stablecoinsCache, updated_at: now }],
         first: { key: "stablecoins", value: stablecoinsCache, updated_at: now },
@@ -504,12 +507,12 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.status).toBe(200);
 
     const body = MintBurnFlowsResponseSchema.parse(await res.json());
-    expect(body.gauge.classificationSource).toBe("report-card-cache");
+    expect(body.gauge.classificationSource).toBe("safety-score-v9-publication");
     expect(body.gauge.flightToQuality).toBe(true);
     expect(body.gauge.flightIntensity).toBe(20);
     expect(body.gauge.safetyScoreIdentity).toMatchObject({
-      model: "v8",
-      evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
+      model: "v9",
+      publicationGenerationId: snapshot.safetyScoreIdentity.publicationGenerationId,
     });
     expect(body.sync?.classificationWarning).toBeNull();
   });
@@ -1190,15 +1193,11 @@ describe("handleMintBurnFlows contract tests", () => {
 
   it("serves a fresh aggregate with FTQ unavailable when the report-card cache read fails", async () => {
     const now = Math.floor(Date.now() / 1000);
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockRejectedValueOnce(new Error("canonical V9 read failed"));
     const db = mockD1([
       { match: "mint_burn_hourly", rows: [hourlyRow] },
       { match: "mint_burn_events", rows: [] },
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["report_card_cache"],
-        rows: [],
-        throwError: new Error("report-card cache read failed"),
-      },
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["stablecoins"],
@@ -1268,21 +1267,46 @@ describe("handleMintBurnFlows contract tests", () => {
 
   it("removes cached FTQ output when its report-card identity is no longer active", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const cachedGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${now - 900}`;
-    const activeGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${now}`;
+    const cachedGenerationId = `report-cards:v9:${now - 900}`;
+    const activeGenerationId = `report-cards:v9:${now}`;
     const cachedIdentity = {
-      model: "v8" as const,
+      model: "v9" as const,
       schemaVersion: 1 as const,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
+      methodologyVersion: "9.0",
+      policyId: "safety-score-v9",
+      policyDigest: "c".repeat(64),
+      evaluationBuildDigest: "d".repeat(64),
       baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
       publicationGenerationId: cachedGenerationId,
     };
-    const activeIdentity = {
-      ...cachedIdentity,
-      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
-      publicationGenerationId: activeGenerationId,
-    };
+    const activeSnapshot = makeWorkerReportCardsV9Response({
+      updatedAt: now,
+      safetyScoreIdentity: {
+        ...cachedIdentity,
+        baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+        publicationGenerationId: activeGenerationId,
+      },
+      cards: [...ACTIVE_IDS]
+        .sort()
+        .map((id) => makeWorkerV9Card({ id, score: 80, grade: "A" })),
+    });
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockResolvedValueOnce({
+        kind: "v9",
+        expectedModel: "v9",
+        snapshot: activeSnapshot,
+      });
+    vi.spyOn(
+      flightToQualityClassification,
+      "buildFlightToQualityClassificationFromV9Snapshot",
+    ).mockReturnValueOnce({
+      kind: "ok",
+      classification: {
+        safeIds: new Set(["usdc-circle"]),
+        riskyIds: new Set(),
+        safetyScoreIdentity: activeSnapshot.safetyScoreIdentity,
+      },
+    });
     const cachedBody = {
       gauge: {
         score: 10,
@@ -1290,7 +1314,7 @@ describe("handleMintBurnFlows contract tests", () => {
         intensitySemantics: "signed-v2" as const,
         flightToQuality: true,
         flightIntensity: 20,
-        classificationSource: "report-card-cache" as const,
+        classificationSource: "safety-score-v9-publication" as const,
         safetyScoreIdentity: cachedIdentity,
         trackedCoins: 1,
         trackedMcapUsd: 1,
@@ -1306,7 +1330,6 @@ describe("handleMintBurnFlows contract tests", () => {
         criticalLaneHealthy: true,
       },
     };
-    const activeScores = Object.fromEntries([...ACTIVE_IDS].map((id) => [id, { score: 80, grade: "A" }]));
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?",
@@ -1315,31 +1338,6 @@ describe("handleMintBurnFlows contract tests", () => {
           {
             key: "mint-burn-flows:v3:aggregate:24",
             value: JSON.stringify(cachedBody),
-            updated_at: now,
-          },
-        ],
-      },
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["report_card_cache"],
-        rows: [
-          {
-            key: "report_card_cache",
-            value: JSON.stringify({
-              scores: activeScores,
-              safetyScoreIdentity: activeIdentity,
-              publicationGenerationId: activeGenerationId,
-              completeness: {
-                generationId: activeGenerationId,
-                methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-                expectedCount: ACTIVE_IDS.size,
-                scoredCount: ACTIVE_IDS.size,
-                notRatedCount: 0,
-                notRatedIds: [],
-              },
-              updatedAt: now,
-              methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-            }),
             updated_at: now,
           },
         ],
@@ -1367,13 +1365,17 @@ describe("handleMintBurnFlows contract tests", () => {
   it("keeps cached aggregate flow data while disabling FTQ when report-card validation throws", async () => {
     const now = Math.floor(Date.now() / 1000);
     const identity = {
-      model: "v8" as const,
+      model: "v9" as const,
       schemaVersion: 1 as const,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
+      methodologyVersion: "9.0",
+      policyId: "safety-score-v9",
+      policyDigest: "c".repeat(64),
+      evaluationBuildDigest: "d".repeat(64),
       baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
-      publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${now}`,
+      publicationGenerationId: `report-cards:v9:${now}`,
     };
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockRejectedValueOnce(new Error("canonical V9 read failed"));
     const cachedBody = {
       gauge: {
         score: 10,
@@ -1381,7 +1383,7 @@ describe("handleMintBurnFlows contract tests", () => {
         intensitySemantics: "signed-v2" as const,
         flightToQuality: true,
         flightIntensity: 20,
-        classificationSource: "report-card-cache" as const,
+        classificationSource: "safety-score-v9-publication" as const,
         safetyScoreIdentity: identity,
         trackedCoins: 1,
         trackedMcapUsd: 1,
@@ -1408,12 +1410,6 @@ describe("handleMintBurnFlows contract tests", () => {
             updated_at: now,
           },
         ],
-      },
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["report_card_cache"],
-        rows: [],
-        throwError: new Error("report-card cache read failed"),
       },
     ]);
 
@@ -1542,19 +1538,13 @@ describe("handleMintBurnFlows contract tests", () => {
     });
   });
 
-  it("disables FTQ when the report-card cache lacks an identity-complete publication", async () => {
+  it("disables FTQ when the canonical V9 publication is unavailable", async () => {
     const now = Math.floor(Date.now() / 1000);
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
-    const identitylessReportCardCache = JSON.stringify({
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      scores: { "usdt-tether": { score: 80, grade: "A" } },
-      updatedAt: now,
-    });
-
     const db = mockD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
@@ -1594,12 +1584,6 @@ describe("handleMintBurnFlows contract tests", () => {
       { match: "FROM mint_burn_events", rows: [] },
       {
         match: "cache",
-        matchBinds: ["report_card_cache"],
-        rows: [{ key: "report_card_cache", value: identitylessReportCardCache, updated_at: now }],
-        first: { key: "report_card_cache", value: identitylessReportCardCache, updated_at: now },
-      },
-      {
-        match: "cache",
         matchBinds: ["stablecoins"],
         rows: [{ key: "stablecoins", value: stablecoinsCache, updated_at: now }],
         first: { key: "stablecoins", value: stablecoinsCache, updated_at: now },
@@ -1612,7 +1596,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const body = MintBurnFlowsResponseSchema.parse(await res.json());
     expect(body.gauge.classificationSource).toBe("unavailable");
     expect(body.gauge.safetyScoreIdentity).toBeNull();
-    expect(body.sync?.classificationWarning).toContain("identity-missing");
+    expect(body.sync?.classificationWarning).toContain("v9-snapshot-unavailable");
     expect(body.gauge.flightToQuality).toBe(false);
     expect(body.gauge.flightIntensity).toBe(0);
   });

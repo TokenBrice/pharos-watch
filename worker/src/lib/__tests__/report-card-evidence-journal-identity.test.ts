@@ -7,7 +7,6 @@ import {
 import {
   buildReportCardsFixedInputCacheEntry,
   buildReportCardsSnapshotFromFixedInput,
-  buildSafetyScoreV9FixedInputCacheEntry,
   createReportCardsFixedInput,
   normalizeFixedInput,
   parseReportCardsFixedInputCacheValue,
@@ -143,26 +142,16 @@ describe("diagnostic reserve evidence journal identity boundary", () => {
       baseInputGenerationId: base.baseInputGenerationId,
       publicationGenerationId: base.sourceGeneration,
     };
-    const [baseV8, journaledV8, baseV9, journaledV9] = await Promise.all([
+    const [baseV8, journaledV8] = await Promise.all([
       buildReportCardsFixedInputCacheEntry(base, identity),
       buildReportCardsFixedInputCacheEntry(journaled, identity),
-      buildSafetyScoreV9FixedInputCacheEntry(base, identity),
-      buildSafetyScoreV9FixedInputCacheEntry(journaled, identity),
     ]);
     const baseV8Envelope = JSON.parse(baseV8.value) as { payloadSha256: string };
     const journaledV8Envelope = JSON.parse(journaledV8.value) as { payloadSha256: string };
-    const baseV9Envelope = JSON.parse(baseV9.value) as { payloadSha256: string };
-    const journaledV9Envelope = JSON.parse(journaledV9.value) as { payloadSha256: string };
     expect(journaledV8Envelope.payloadSha256).toBe(baseV8Envelope.payloadSha256);
     expect(journaledV8.value).toBe(baseV8.value);
-    expect(journaledV9Envelope.payloadSha256).not.toBe(baseV9Envelope.payloadSha256);
     await expect(parseReportCardsFixedInputCacheValue(journaledV8.value)).resolves.toMatchObject({
       evidenceJournalById: {},
-    });
-    await expect(parseReportCardsFixedInputCacheValue(journaledV9.value)).resolves.toMatchObject({
-      evidenceJournalById: {
-        [ASSET_ID]: [expect.objectContaining({ attemptId: "reserve-fixture:accepted" })],
-      },
     });
   });
 

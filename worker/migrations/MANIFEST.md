@@ -169,6 +169,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0223     | `0223_safety_score_v9_supply_attribution_journal.sql`         | Add immutable bounded V9-only supply-attribution attempt, rejection, and aggregate-fallback provenance                                                   |
 | 0224     | `0224_dex_liquidity_scoring_stage.sql`                        | Add generation-fenced bounded DEX pool-state chunks for the split source-build and scoring invocations                                                    |
 | 0225     | `0225_dex_archive_manifest.sql`                               | Add private-R2 DEX archive manifests, exact generation dependencies, and compact family rollout/status state                                                |
+| 0226     | `0226_safety_score_v9_canonical_cache.sql`                    | Seed canonical V9 publication and health cache keys from the accepted shadow-era values without deleting rollback state                                      |
 
 ## Retired Individual Migrations
 
@@ -279,6 +280,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0223_safety_score_v9_supply_attribution_journal.sql`: roll back supply-attribution journal capture by restoring the prior Worker. Keep the additive table and indexes; older Workers ignore them, and no row participates in V8 publication, V9 fact compilation, scoring, activation, or public responses.
 - `0224_dex_liquidity_scoring_stage.sql`: roll back the split scoring lane by restoring the prior Worker. Keep the additive generation/chunk tables; older Workers ignore them. Incomplete generations are never public data and can be pruned after rollback.
 - `0225_dex_archive_manifest.sql`: roll back archive behavior by restoring the prior Worker and setting both archive modes to `off`. Keep the additive manifests, dependency rows, and family state for forensic inspection; do not delete verified R2 objects or restore source rows unless the bounded restore command has independently verified schema, counts, bytes, and hash.
+- `0226_safety_score_v9_canonical_cache.sql`: roll back by restoring the prior Worker, which continues reading the retained shadow-era cache keys. Keep the additive canonical cache rows; they are inert to the prior Worker and must not be deleted during a normal rollback.
 
 ## Rollback Procedure
 

@@ -1,9 +1,21 @@
 import { formatCurrency } from "@shared/lib/format";
-import { gradeRange, scoreToGrade } from "@shared/lib/report-cards";
+import {
+  scoreToV9Grade,
+  v9GradeRange,
+} from "@shared/types/safety-score-v9-grade";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
-import type { GradeFilter } from "./view-model";
 
 export type V9SortKey = "overall" | "backing" | "exit" | "control" | "mcap";
+export type GradeFilter = "all" | "A" | "B" | "C" | "D" | "F" | "NR";
+export const GRADE_RANGES: Exclude<GradeFilter, "all">[] = [
+  "A",
+  "B",
+  "C",
+  "D",
+  "F",
+  "NR",
+];
 
 const GRADE_ORDER: Exclude<GradeFilter, "all">[] = ["A", "B", "C", "D", "F", "NR"];
 const PILLAR_LABELS = {
@@ -24,7 +36,7 @@ export function buildV9GradeCounts(
     NR: 0,
   };
   for (const card of cards ?? []) {
-    counts[gradeRange(card.grade) as Exclude<GradeFilter, "all">] += 1;
+    counts[v9GradeRange(card.grade)] += 1;
   }
   return counts;
 }
@@ -53,7 +65,7 @@ export function filterAndSortV9Cards(
 ): V9ConsumerCard[] {
   const filtered = gradeFilter === "all"
     ? cards
-    : cards.filter((card) => gradeRange(card.grade) === gradeFilter);
+    : cards.filter((card) => v9GradeRange(card.grade) === gradeFilter);
 
   return [...filtered].sort((left, right) => {
     const leftScore = getSortScore(left, sortKey, mcapMap);
@@ -69,7 +81,7 @@ export function groupV9CardsByGrade(
 ): Array<{ grade: string; cards: V9ConsumerCard[] }> {
   const groups = new Map<string, V9ConsumerCard[]>();
   for (const card of cards) {
-    const grade = gradeRange(card.grade);
+    const grade = v9GradeRange(card.grade);
     groups.set(grade, [...(groups.get(grade) ?? []), card]);
   }
   return GRADE_ORDER.flatMap((grade) => {
@@ -91,7 +103,7 @@ export function buildV9HeadlineStats(
   const totalSupply = ratedCards.reduce((sum, card) => sum + (mcapMap.get(card.id) ?? 0), 0);
   const abSupply = ratedCards
     .filter((card) => {
-      const grade = gradeRange(card.grade);
+      const grade = v9GradeRange(card.grade);
       return grade === "A" || grade === "B";
     })
     .reduce((sum, card) => sum + (mcapMap.get(card.id) ?? 0), 0);
@@ -117,7 +129,7 @@ export function buildV9HeadlineStats(
     {
       label: "Ecosystem avg.",
       value: String(averageScore),
-      detail: scoreToGrade(averageScore),
+      detail: scoreToV9Grade(averageScore),
     },
     {
       label: "Supply in A/B",
@@ -130,4 +142,16 @@ export function buildV9HeadlineStats(
       detail: weakestPillar ? `avg ${Math.round(weakestPillar.average)}` : "no rated pillars",
     },
   ];
+}
+
+export function buildSafetyMcapMap(
+  peggedAssets?: Array<{
+    id: string;
+    circulating?: Record<string, number> | null;
+  }>,
+): Map<string, number> {
+  if (!peggedAssets) return new Map();
+  return new Map(
+    peggedAssets.map((asset) => [asset.id, getCirculatingRaw(asset)]),
+  );
 }

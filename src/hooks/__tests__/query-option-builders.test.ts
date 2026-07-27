@@ -26,10 +26,10 @@ function queryContext<TQueryKey extends readonly unknown[]>(
 
 describe("query option builders", () => {
   it("keeps low-risk API hook descriptors in the frontend registry", () => {
-    expect(FRONTEND_API_QUERY_DESCRIPTORS.reportCards).toMatchObject({
-      queryKey: ["report-cards"],
-      path: "/api/report-cards",
-      producerIntervalMs: 15 * 60 * 1000,
+    expect(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9).toMatchObject({
+      queryKey: ["report-cards", "v9"],
+      path: "/api/report-cards/v9",
+      producerIntervalMs: 30 * 60 * 1000,
       metaMaxAgeSec: 900,
     });
     expect(FRONTEND_API_QUERY_DESCRIPTORS.safetyScoreHistory("usdc-circle", 3650)).toMatchObject({

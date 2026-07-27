@@ -38,11 +38,11 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
-      "sha256": "f1d7a71e58893c66138371d59b1cc737c2b15a565fe964949bc9d11ead013f43"
+      "sha256": "9a1f88f1b7a78e5e322d79f86c6631434627ff304e8334b358d4c7a24bba40f6"
     },
     {
       "path": "shared/lib/methodology-versions/safety-score.ts",
-      "sha256": "c4ea17cf56d96db202c38772ab85e78de38b4da9f568e6459584c26a061b172a"
+      "sha256": "73bc25fc665bcb897408fcb894ce60330f0f9068c850da428689cbe8f4158535"
     },
     {
       "path": "shared/lib/mint-authority-scoring.ts",
@@ -66,7 +66,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/report-card-core.ts",
-      "sha256": "079bfd03f8feab1aa51435ed3055c381d5dc64f9b2e6b35e9f64401929fc3ee1"
+      "sha256": "3d4b48851291f38807e24c2f33cd5224cb1ecd0034190fbba5d7593f44eb8f74"
     },
     {
       "path": "shared/lib/report-card-dependency.ts",
@@ -102,7 +102,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/report-cards.ts",
-      "sha256": "467c153f92b909a2d38a2a53ba9916961fa548692170c5612d6edc9c9fb679da"
+      "sha256": "5a8c92fccdcfcb233b235c546b7f9f4ace971f82bcbd507b6548ca85bea01776"
     },
     {
       "path": "shared/lib/reserve-symbol-matchers.ts",
@@ -149,7 +149,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
       "sha256": "e70bfddf6d253f0d37ed74449dff45e9af02858d80c0ca0931579796c080b85e"
     }
   ],
-  "digest": "11480ddd159bf2dc0d230452a7fa59b65f6443a9335de02a81a1972318b3fd6e"
+  "digest": "fb5fded9dd2ec807b57be066c6813edd650d6ee25f223a3775509ffcc942f6b1"
 } as const;
 
 export const SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST =

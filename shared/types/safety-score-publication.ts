@@ -3,7 +3,10 @@ import { z } from "zod";
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const BaseInputGenerationIdSchema = z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/);
 
-/** Exact identity shared by every canonical Safety Score V8 projection. */
+/**
+ * Persisted identity for the retired V8 projection and the compatible private
+ * fixed-input format still consumed by the V9 compiler.
+ */
 export const SafetyScoreV8PublicationIdentitySchema = z
   .object({
     model: z.literal("v8"),
@@ -34,8 +37,8 @@ export const SafetyScoreV9PublicationIdentitySchema = z
 export type SafetyScoreV9PublicationIdentity = z.infer<typeof SafetyScoreV9PublicationIdentitySchema>;
 
 /**
- * Model-neutral identity for persisted consumers. Public V8 report-card
- * contracts deliberately keep their V8-only identity schema.
+ * Model-neutral identity for persisted consumers. Historical V8 artifacts
+ * retain their original discriminator.
  */
 export const SafetyScorePublicationIdentitySchema = z.discriminatedUnion("model", [
   SafetyScoreV8PublicationIdentitySchema,

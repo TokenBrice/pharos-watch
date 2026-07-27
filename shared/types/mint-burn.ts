@@ -19,7 +19,10 @@ const MintBurnGaugeSchema = z.object({
   intensitySemantics: z.enum(["midpoint-v1", "signed-v2"]).optional(),
   flightToQuality: z.boolean(),
   flightIntensity: z.number().finite(),
-  classificationSource: z.enum(["report-card-cache", "unavailable"]).optional(),
+  // The retired cache label is accepted for rolling/historical payload reads.
+  classificationSource: z
+    .enum(["safety-score-v9-publication", "report-card-cache", "unavailable"])
+    .optional(),
   safetyScoreIdentity: SafetyScorePublicationIdentitySchema.nullable().optional(),
   trackedCoins: z.number().int().nonnegative(),
   trackedMcapUsd: z.number().finite().nonnegative(),

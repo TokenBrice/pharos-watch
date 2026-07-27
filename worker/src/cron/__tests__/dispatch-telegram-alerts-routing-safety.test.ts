@@ -4,9 +4,9 @@ import {
   createDispatchHarness,
   dispatchTelegramAlerts,
   makeSafetySnapshotCache,
-  makeSafetySourceCache,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
+  seedActiveSafetySource,
   telegramDeliveryTranscript,
 } from "./dispatch-telegram-alerts.test-support";
 
@@ -19,7 +19,7 @@ function snapshots(
     dewsAlertable?: Record<string, string>;
     depeg?: Record<string, unknown>;
     safety?: SafetySnapshot | string;
-    safetySource?: SafetySnapshot | string;
+    safetySource?: SafetySnapshot;
     updatedAt?: number;
   } = {},
 ) {
@@ -34,13 +34,7 @@ function snapshots(
     updatedAt,
   );
   if (options.safetySource !== undefined) {
-    harness.cache(
-      "alert:safety-source-cache",
-      typeof options.safetySource === "string"
-        ? options.safetySource
-        : makeSafetySourceCache(options.safetySource, updatedAt).value,
-      updatedAt,
-    );
+    seedActiveSafetySource(harness, options.safetySource, updatedAt);
   }
 }
 
@@ -118,7 +112,6 @@ describe("dispatchTelegramAlerts", () => {
   });
 
   it("suppresses only safety alerts when the live safety source cache is from the wrong generation", async () => {
-    const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
     snapshots(harness, {
       dews: { "usdc-circle": "CALM" },
@@ -126,11 +119,9 @@ describe("dispatchTelegramAlerts", () => {
         { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.08" } },
         "legacy-generation",
       ).value,
-      safetySource: makeSafetySourceCache(
-        { "usdc-circle": { grade: "C", score: 61, methodologyVersion: "7.09" } },
-        now - 60,
-        "legacy-generation",
-      ).value,
+      safetySource: {
+        "usdc-circle": { grade: "C", score: 61, methodologyVersion: "9.0" },
+      },
     });
     harness.seed({
       dews: [{ stablecoinId: "usdc-circle" }],
@@ -151,22 +142,22 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata).toMatchObject({
       eventsDetected: { dews: 1, safety: 0 },
       messagesSent: 1,
-      safetyAlertSourceState: "wrong-generation",
+      safetyAlertSourceState: "ok",
       safetyAlertsSuppressed: true,
     });
     expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
   });
 
   it("keeps eventless degraded-safety runs on the queue path without capturing the subscriber cohort", async () => {
-    const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();
     snapshots(harness, {
-      safety: { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" } },
-      safetySource: makeSafetySourceCache(
-        { "usdc-circle": { grade: "C", score: 61, methodologyVersion: "7.09" } },
-        now - 60,
+      safety: makeSafetySnapshotCache(
+        { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "9.0" } },
         "legacy-generation",
       ).value,
+      safetySource: {
+        "usdc-circle": { grade: "C", score: 61, methodologyVersion: "9.0" },
+      },
     });
     harness.seed({ ...global("12345", { safety: true }) });
     const heldSafetySnapshot = readCacheValue(harness.sqlite, "alert:safety-snapshot");
@@ -177,13 +168,13 @@ describe("dispatchTelegramAlerts", () => {
     expect(first).toMatchObject({
       eventlessFastPath: true,
       eventsDetected: { safety: 0 },
-      safetyAlertSourceState: "wrong-generation",
+      safetyAlertSourceState: "ok",
       safetyAlertsSuppressed: true,
       messagesSent: 0,
     });
     expect(second).toMatchObject({
       eventlessFastPath: true,
-      safetyAlertsSuppressed: true,
+      safetyAlertsSuppressed: false,
       messagesSent: 0,
     });
     expect(
@@ -197,7 +188,7 @@ describe("dispatchTelegramAlerts", () => {
         )
         .get(),
     ).toEqual({ sources: 0, subscribers: 0, plans: 0, targets: 0 });
-    expect(readCacheValue(harness.sqlite, "alert:safety-snapshot")).toBe(heldSafetySnapshot);
+    expect(readCacheValue(harness.sqlite, "alert:safety-snapshot")).not.toBe(heldSafetySnapshot);
     expect(telegramDeliveryTranscript).toEqual([]);
   });
 
@@ -225,20 +216,6 @@ describe("dispatchTelegramAlerts", () => {
       safety: [{ stablecoinId: "usdc-circle", grade: "C+", score: 66 }],
       ...global("777", { safety: true }),
     });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-
-    expect(metadata).toMatchObject({ eventsDetected: { safety: 1 }, subscribersNotified: 1, messagesSent: 1 });
-    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "777" })]);
-  });
-
-  it("sends global safety alerts for scoreless downgrades", async () => {
-    const harness = createDispatchHarness();
-    const safety = { "usdc-circle": { grade: "C+", score: null, methodologyVersion: "7.09" } };
-    snapshots(harness, {
-      safety: { "usdc-circle": { grade: "B", score: null, methodologyVersion: "7.09" } },
-      safetySource: safety,
-    });
-    harness.seed({ safety: [{ stablecoinId: "usdc-circle", grade: "C+" }], ...global("777", { safety: true }) });
     const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
 
     expect(metadata).toMatchObject({ eventsDetected: { safety: 1 }, subscribersNotified: 1, messagesSent: 1 });

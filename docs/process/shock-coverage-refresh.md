@@ -66,5 +66,4 @@ npx tsx scripts/maintenance/measure-cdp-shock-coverage.ts --replay <journal-path
 
 ## Related
 
-- [Safety Score V9 readiness](./safety-score-v9-readiness.md)
-- [Safety Score V9 rollout](./safety-score-v9-rollout.md)
+- [Report cards](../report-cards.md)

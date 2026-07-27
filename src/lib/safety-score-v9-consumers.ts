@@ -1,16 +1,15 @@
-import type { ReportCardsV9TransitionResponse } from "@shared/types/report-cards-v9";
-import { ReportCardsV9TransitionResponseSchema } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
 import type {
   SafetyScorePublicationIdentity,
   SafetyScoreV9Card,
   SafetyScoreV9CurrentCard,
-  SafetyScoreV9PreBreakdownCard,
   V9Grade,
 } from "@shared/types";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
 
-export type V9ConsumerResponse = ReportCardsV9TransitionResponse;
-export type V9ConsumerCard = SafetyScoreV9CurrentCard | SafetyScoreV9PreBreakdownCard;
+export type V9ConsumerResponse = ReportCardsV9CurrentResponse;
+export type V9ConsumerCard = SafetyScoreV9CurrentCard;
 export type V9ConsumerIdentity = V9ConsumerResponse["safetyScoreIdentity"];
 
 export type V9ConsumerUnavailableReason =
@@ -68,7 +67,7 @@ export function resolveV9ConsumerResponse(
   input: unknown,
   expectedIdentity: V9ConsumerIdentity,
 ): V9ConsumerResult<V9ConsumerResponse> {
-  const parsed = ReportCardsV9TransitionResponseSchema.safeParse(input);
+  const parsed = ReportCardsV9CurrentResponseSchema.safeParse(input);
   if (!parsed.success) return { status: "unavailable", reason: "invalid-v9-response" };
   if (!safetyScoreV9IdentitiesMatch(parsed.data.safetyScoreIdentity, expectedIdentity)) {
     return { status: "unavailable", reason: "identity-mismatch" };
@@ -76,7 +75,7 @@ export function resolveV9ConsumerResponse(
   return { status: "available", identity: parsed.data.safetyScoreIdentity, value: parsed.data };
 }
 
-export function selectV9Card(
+function selectV9Card(
   input: unknown,
   expectedIdentity: V9ConsumerIdentity,
   cardId: string,

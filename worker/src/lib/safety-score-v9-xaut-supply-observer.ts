@@ -618,21 +618,3 @@ export async function observeXautRepresentationGroupSupplyAttributionAttempt(
     ? { status: "accepted", attribution }
     : reject("packet-reconciliation-failed", null);
 }
-
-export async function observeXautRepresentationGroupSupplyAttribution(
-  input: {
-    aggregateSupplyUsd: number;
-    registryFingerprint: string;
-    scoringClockSec: number;
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-  },
-  dependencyOverrides: Partial<XautObserverDependencies> = {},
-): Promise<XautRepresentationGroupSupplyAttributionV2 | null> {
-  const attempt =
-    await observeXautRepresentationGroupSupplyAttributionAttempt(
-      input,
-      dependencyOverrides,
-    );
-  return attempt.status === "accepted" ? attempt.attribution : null;
-}

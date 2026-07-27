@@ -4,16 +4,6 @@ import type { YieldRankingsResponse } from "@shared/types/yield";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@shared/lib/__tests__/yield-ranking-fixtures";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
-const loadPublishedReportCardsSnapshotMock = vi.hoisted(() => vi.fn());
-
-vi.mock("../../lib/report-cards-snapshot-cache", () => ({
-  loadPublishedReportCardsSnapshot: loadPublishedReportCardsSnapshotMock,
-}));
-
-vi.mock("../../lib/report-cards-snapshot", () => ({
-  buildReportCardsSnapshot: vi.fn(),
-}));
-
 import { handleYieldRankings } from "../cache-handlers";
 
 const UPDATED_AT = 1_783_632_600;
@@ -96,26 +86,6 @@ describe("handleYieldRankings summary projection", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date((UPDATED_AT + 60) * 1_000));
-    loadPublishedReportCardsSnapshotMock.mockReset();
-    loadPublishedReportCardsSnapshotMock.mockResolvedValue({
-      kind: "ok",
-      payload: {
-        cards: [
-          {
-            id: "usdc-circle",
-            symbol: "USDC",
-            overallGrade: "A",
-            overallScore: 80,
-            isDefunct: false,
-          },
-        ],
-        updatedAt: UPDATED_AT,
-        publication: {
-          generationId: "report-cards-current",
-          methodologyVersion: "current",
-        },
-      },
-    });
   });
 
   afterEach(() => {

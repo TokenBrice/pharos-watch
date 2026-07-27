@@ -11,7 +11,7 @@ import {
   StablecoinListResponseSchema,
   StressSignalsAllResponseSchema,
 } from "../../types/market";
-import { ReportCardsResponseSchema } from "../../types/report-cards";
+import { ReportCardsV9CurrentResponseSchema } from "../../types/report-cards-v9";
 import { StabilityIndexResponseSchema } from "../../types/stability";
 
 describe("PHAROSVILLE_API_CONTRACT", () => {
@@ -33,7 +33,7 @@ describe("PHAROSVILLE_API_CONTRACT", () => {
       stability: "/api/stability-index?detail=true",
       pegSummary: "/api/peg-summary",
       stress: "/api/stress-signals",
-      reportCards: "/api/report-cards",
+      reportCards: "/api/report-cards/v9",
     });
   });
 
@@ -43,7 +43,7 @@ describe("PHAROSVILLE_API_CONTRACT", () => {
     expect(PHAROSVILLE_API_CONTRACT.stability.schema).toBe(StabilityIndexResponseSchema);
     expect(PHAROSVILLE_API_CONTRACT.pegSummary.schema).toBe(PegSummaryResponseSchema);
     expect(PHAROSVILLE_API_CONTRACT.stress.schema).toBe(StressSignalsAllResponseSchema);
-    expect(PHAROSVILLE_API_CONTRACT.reportCards.schema).toBe(ReportCardsResponseSchema);
+    expect(PHAROSVILLE_API_CONTRACT.reportCards.schema).toBe(ReportCardsV9CurrentResponseSchema);
   });
 
   it("pins freshness and producer cadence budgets for the standalone proxy client", () => {
@@ -59,6 +59,6 @@ describe("PHAROSVILLE_API_CONTRACT", () => {
     expect(PHAROSVILLE_API_CONTRACT.stability.producerIntervalSec).toBe(CRON_INTERVALS["stability-index"]);
     expect(PHAROSVILLE_API_CONTRACT.pegSummary.producerIntervalSec).toBe(CRON_INTERVALS["sync-stablecoins"]);
     expect(PHAROSVILLE_API_CONTRACT.stress.producerIntervalSec).toBe(CRON_INTERVALS["compute-dews"]);
-    expect(PHAROSVILLE_API_CONTRACT.reportCards.producerIntervalSec).toBe(CRON_INTERVALS["publish-report-card-cache"]);
+    expect(PHAROSVILLE_API_CONTRACT.reportCards.producerIntervalSec).toBe(CRON_INTERVALS["compute-safety-score-v9"]);
   });
 });

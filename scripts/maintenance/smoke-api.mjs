@@ -24,10 +24,7 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
   "/api/peg-summary",
   "/api/dex-liquidity",
   "/api/stability-index",
-  "/api/report-cards",
   "/api/report-cards/v9",
-  "/api/report-cards/v9-preview",
-  "/api/report-cards/v9-preview-412d818c031b7bc5",
   "/api/depeg-resolver",
   "/api/depeg-resolver-review",
   "/api/redemption-backstops",
@@ -42,7 +39,7 @@ export const STRICT_CONTRACT_SMOKE_PATHS = [
 export const CANARY_CONTRACT_SMOKE_PATHS = [
   "/api/stablecoins",
   "/api/peg-summary",
-  "/api/report-cards",
+  "/api/report-cards/v9",
   "/api/depeg-resolver-review",
   "/api/mint-burn-flows",
   "/api/stress-signals",
@@ -283,23 +280,7 @@ export const ENDPOINT_ASSERTIONS = {
     assert(body.coins.length > 0, "/api/peg-summary returned empty coins[]");
     return `${body.coins.length} coins`;
   },
-  "/api/report-cards": (result) => {
-    assert(result.status === 200, `/api/report-cards returned ${result.status}`);
-    const body = stripMeta(result.body);
-    assert(body && Array.isArray(body.cards), "/api/report-cards missing cards[]");
-    assert(body.cards.length > 0, "/api/report-cards returned empty cards[]");
-    assert(
-      body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
-      "/api/report-cards missing methodology.version",
-    );
-    return `${body.cards.length} cards`;
-  },
   "/api/report-cards/v9": (result) => {
-    // Dark until the owner-gated activation marker is written; a 404 is the
-    // expected pre-activation contract (see worker handleReportCardsV9).
-    if (result.status === 404) {
-      return "dark (not activated)";
-    }
     assert(result.status === 200, `/api/report-cards/v9 returned ${result.status}`);
     const body = stripMeta(result.body);
     assert(body && Array.isArray(body.cards), "/api/report-cards/v9 missing cards[]");
@@ -309,34 +290,6 @@ export const ENDPOINT_ASSERTIONS = {
       "/api/report-cards/v9 missing methodology.version",
     );
     return `${body.cards.length} cards`;
-  },
-  "/api/report-cards/v9-preview": (result) => {
-    assert(result.status === 200, `/api/report-cards/v9-preview returned ${result.status}`);
-    const body = stripMeta(result.body);
-    assert(
-      body && body.lifecycle === "shadow",
-      "/api/report-cards/v9-preview must preserve lifecycle=shadow",
-    );
-    assert(
-      Array.isArray(body.cards) && body.cards.length > 0,
-      "/api/report-cards/v9-preview returned no cards",
-    );
-    assert(
-      body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
-      "/api/report-cards/v9-preview missing methodology.version",
-    );
-    return `${body.cards.length} shadow cards`;
-  },
-  "/api/report-cards/v9-preview-412d818c031b7bc5": (result) => {
-    assert(result.status === 200, `Legacy V9 preview alias returned ${result.status}`);
-    const body = stripMeta(result.body);
-    assert(body && body.lifecycle === "shadow", "Legacy V9 preview alias must preserve lifecycle=shadow");
-    assert(Array.isArray(body.cards) && body.cards.length > 0, "Legacy V9 preview alias returned no cards");
-    assert(
-      body.methodology && typeof body.methodology.version === "string" && body.methodology.version.length > 0,
-      "Legacy V9 preview alias missing methodology.version",
-    );
-    return `${body.cards.length} shadow cards`;
   },
   "/api/depeg-resolver": (result) => {
     assert(result.status === 200, `/api/depeg-resolver returned ${result.status}`);

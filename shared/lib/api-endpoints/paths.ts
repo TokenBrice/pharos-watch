@@ -80,10 +80,7 @@ export const API_PATHS = {
   safetyScoreHistoryV2: (stablecoinId: string, days = 3650) =>
     buildQueryPath("/api/safety-score-history-v2", { stablecoin: stablecoinId, days }),
   stabilityIndex: (detail = false) => buildQueryPath("/api/stability-index", detail ? { detail: true } : undefined),
-  reportCards: () => "/api/report-cards",
   reportCardsV9: () => "/api/report-cards/v9",
-  reportCardsV9Preview: () => "/api/report-cards/v9-preview",
-  reportCardsV9PreviewLegacy: () => "/api/report-cards/v9-preview-412d818c031b7bc5",
   depegResolver: () => "/api/depeg-resolver",
   depegResolverReview: () => "/api/depeg-resolver-review",
   redemptionBackstops: () => "/api/redemption-backstops",

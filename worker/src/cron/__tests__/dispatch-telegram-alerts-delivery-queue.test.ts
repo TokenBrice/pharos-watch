@@ -10,7 +10,6 @@ import {
   formatConsolidatedMessageSpy,
   makeDewsOverflowPlan,
   makeSafetySnapshotCache,
-  makeSafetySourceCache,
   mockInspectLegacyOverflowBacklog,
   mockRecordOutcome,
   mockSendBatch,
@@ -19,6 +18,7 @@ import {
   readCacheValue,
   recordPendingEnqueueAttempts,
   resetDispatchTelegramAlertsTest,
+  seedActiveSafetySource,
   scriptTelegramDeliveries,
   telegramDeliveryTranscript,
   TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
@@ -64,7 +64,7 @@ function healthySources(
   harness.cache("alert:dews-snapshot", { "usdc-circle": "CALM" }, now - 60);
   harness.cache("alert:depeg-snapshot", {}, now - 60);
   harness.cache("alert:safety-snapshot", makeSafetySnapshotCache(safety).value, now - 60);
-  harness.cache("alert:safety-source-cache", makeSafetySourceCache(safety, now - 60).value, now - 60);
+  seedActiveSafetySource(harness, safety, now - 60);
 }
 
 describe("dispatchTelegramAlerts", () => {

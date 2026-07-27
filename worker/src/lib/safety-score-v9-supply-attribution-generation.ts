@@ -29,11 +29,11 @@ import { parseJson } from "./json-parse";
 
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY =
   "safety-score-v9:supply-attribution-generation:v1";
-export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES =
+const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_MAX_BYTES =
   128 * 1_024;
-export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_HEALTHY_INTERVAL_SEC =
+const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_HEALTHY_INTERVAL_SEC =
   30 * 60;
-export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_INTERVAL_SEC =
+const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_INTERVAL_SEC =
   15 * 60;
 
 const AssetIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,127}$/);
@@ -197,7 +197,7 @@ export type SafetyScoreV9SupplyAttributionGenerationPayload = z.infer<
   typeof SupplyAttributionGenerationPayloadSchema
 >;
 
-export const SafetyScoreV9SupplyAttributionGenerationSchema =
+const SafetyScoreV9SupplyAttributionGenerationSchema =
   SupplyAttributionGenerationPayloadSchema.extend({
     generationId: GenerationIdSchema,
   })

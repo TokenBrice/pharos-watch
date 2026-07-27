@@ -6,6 +6,7 @@ import {
   type PublicApiArtifactEndpoint,
 } from "../lib/public-api-artifact-catalog";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
+import { REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION } from "../../shared/types/report-cards-v9";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = join(__dirname, "../../public/openapi.json");
@@ -231,6 +232,7 @@ function render() {
             "dependencies",
             "stressStateDigest",
             "scoreTrace",
+            "breakdowns",
           ],
           properties: {
             id: { type: "string", minLength: 1 },
@@ -372,6 +374,21 @@ function render() {
             },
             stressStateDigest: stringOrNull,
             scoreTrace: schemaRef("ReportCardsV9ScoreTrace"),
+            breakdowns: {
+              oneOf: [
+                {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["backing", "exit", "control"],
+                  properties: {
+                    backing: { type: "object", additionalProperties: true },
+                    exit: { type: "object", additionalProperties: true },
+                    control: { type: "object", additionalProperties: true },
+                  },
+                },
+                { type: "null" },
+              ],
+            },
           },
         },
         ReportCardsV9ScoreAdjustment: {
@@ -471,13 +488,14 @@ function render() {
             "updatedAt",
             "completeness",
             "source",
+            "publicationHealth",
             "cards",
             "dependencyGraph",
           ],
           properties: {
             model: { const: "v9" },
-            schemaVersion: { const: 3 },
-            lifecycle: { enum: ["shadow", "active"] },
+            schemaVersion: { const: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION },
+            lifecycle: { const: "active" },
             safetyScoreIdentity: schemaRef("SafetyScoreV9PublicationIdentity"),
             methodology: {
               type: "object",
@@ -518,6 +536,28 @@ function render() {
                 factSetDigest: { type: "string", pattern: "^[a-f0-9]{64}$" },
                 resultDigest: { type: "string", pattern: "^[a-f0-9]{64}$" },
                 sourceGenerations: { type: "object", additionalProperties: { type: "string" } },
+              },
+            },
+            publicationHealth: {
+              type: "object",
+              additionalProperties: false,
+              required: [
+                "schemaVersion",
+                "status",
+                "acceptedPublicationGenerationId",
+                "acceptedAtSec",
+                "attemptedAtSec",
+                "heldSinceSec",
+                "reasons",
+              ],
+              properties: {
+                schemaVersion: { const: 1 },
+                status: { enum: ["current", "held"] },
+                acceptedPublicationGenerationId: stringOrNull,
+                acceptedAtSec: { type: ["integer", "null"], minimum: 0 },
+                attemptedAtSec: { type: "integer", minimum: 0 },
+                heldSinceSec: { type: ["integer", "null"], minimum: 0 },
+                reasons: { type: "array", maxItems: 24, items: { type: "object" } },
               },
             },
             cards: { type: "array", items: schemaRef("ReportCardsV9Card") },

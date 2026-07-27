@@ -82,7 +82,7 @@ export function MintAuthorityScoreMethodologySection() {
         facts={[
           { label: "Score range", value: "0-100, with NR for missing or unresolved review data" },
           { label: "Main risk", value: "Privileged durable supply creation or mint-route expansion" },
-          { label: "Safety Score role", value: "Feeds Decentralization via a penalty-only blend (v8.0); NR never penalizes" },
+          { label: "Safety Score role", value: "V9 evaluates the underlying reviewed control facts directly" },
         ]}
       />
       <ContentTable

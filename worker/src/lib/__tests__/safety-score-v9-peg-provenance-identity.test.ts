@@ -5,10 +5,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildReportCardsFixedInputCacheEntry,
   buildReportCardsSnapshotFromFixedInput,
-  buildSafetyScoreV9FixedInputCacheEntry,
   createReportCardsFixedInput,
   normalizeFixedInput,
-  parseReportCardsFixedInputCacheValue,
   serializeNormalizedReportCardsReplay,
 } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
@@ -306,33 +304,14 @@ describe("diagnostic V9 peg provenance identity boundary", () => {
       baseInputGenerationId: base.baseInputGenerationId,
       publicationGenerationId: base.sourceGeneration,
     };
-    const [baseV8, legacyV8, verifiedV8, baseV9, legacyV9, verifiedV9] =
+    const [baseV8, legacyV8, verifiedV8] =
       await Promise.all([
         buildReportCardsFixedInputCacheEntry(base, identity),
         buildReportCardsFixedInputCacheEntry(legacyDiagnostic, identity),
         buildReportCardsFixedInputCacheEntry(verifiedDiagnostic, identity),
-        buildSafetyScoreV9FixedInputCacheEntry(base, identity),
-        buildSafetyScoreV9FixedInputCacheEntry(legacyDiagnostic, identity),
-        buildSafetyScoreV9FixedInputCacheEntry(verifiedDiagnostic, identity),
       ]);
     expect(legacyV8.value).toBe(baseV8.value);
     expect(verifiedV8.value).toBe(baseV8.value);
-    expect(JSON.parse(legacyV9.value).payloadSha256).not.toBe(
-      JSON.parse(baseV9.value).payloadSha256,
-    );
-    expect(JSON.parse(verifiedV9.value).payloadSha256).not.toBe(
-      JSON.parse(legacyV9.value).payloadSha256,
-    );
-    await expect(parseReportCardsFixedInputCacheValue(verifiedV9.value)).resolves.toMatchObject({
-      pegProvenanceById: {
-        [ASSET_ID]: {
-          classes: {
-            "provenance-high": { eventCount: 1 },
-            "legacy-backfill-unprovenanced": { eventCount: 12 },
-          },
-        },
-      },
-    });
   });
 
   it("rejects raw events and tampered summaries at normalization", () => {

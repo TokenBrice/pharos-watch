@@ -6,8 +6,7 @@
 //
 // Usage:
 //   node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs \
-//     --replay <replay-v9.json> [--v8-cards <v8-cards.json>] \
-//     [--output <worklist.md>]
+//     --replay <replay-v9.json> [--output <worklist.md>]
 import { readFileSync, writeFileSync } from "node:fs";
 
 const STREAMS = [
@@ -122,18 +121,12 @@ function arg(name) {
 
 const replayPath = arg("--replay");
 if (!replayPath) {
-  console.error("Usage: generate-safety-score-v9-curation-worklist.mjs --replay <replay.json> [--v8-cards <json>] [--output <md>]");
+  console.error("Usage: generate-safety-score-v9-curation-worklist.mjs --replay <replay.json> [--output <md>]");
   process.exit(2);
 }
 const replay = JSON.parse(readFileSync(replayPath, "utf8"));
 const cards = replay.pipeline.candidate.cards;
 const assets = new Map(replay.pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
-const v8Path = arg("--v8-cards");
-const v8ById = new Map(
-  v8Path
-    ? JSON.parse(readFileSync(v8Path, "utf8")).map((card) => [card.id, { grade: card.grade ?? card.overallGrade, score: card.score ?? card.overallScore }])
-    : [],
-);
 
 const codeToStream = new Map();
 for (const stream of STREAMS) for (const code of stream.codes) codeToStream.set(code, stream.key);
@@ -195,8 +188,8 @@ lines.push(`Generated from \`${replayPath.split("/").pop()}\` (${cards.length} c
 lines.push("");
 lines.push("```bash");
 lines.push("# 0. node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs  # generated registry is gitignored and goes stale against coin edits");
-lines.push("# 1. fresh exact capture + drift bridge + replay (recipes: agents/safety-score-v9/results/rating-parity-implementation-2026-07-14.md)");
-lines.push("# 2. node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs --replay <replay.json> --v8-cards <v8.json> --output <this file>");
+lines.push("# 1. fresh exact capture + replay");
+lines.push("# 2. node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs --replay <replay.json> --output <this file>");
 lines.push("```");
 lines.push("");
 lines.push("## Protocol for agents");
@@ -237,12 +230,11 @@ for (const stream of STREAMS) {
     lines.push("");
     continue;
   }
-  lines.push("| ☐ | ID | Pri | Supply | v9 | v8 | Codes (paths) |");
-  lines.push("|---|---|---|---|---|---|---|");
+  lines.push("| ☐ | ID | Pri | Supply | V9 | Codes (paths) |");
+  lines.push("|---|---|---|---|---|---|");
   for (const item of streamItems) {
     const supply = supplyOf(item.assetId);
     const card = cards.find((entry) => entry.id === item.assetId);
-    const v8 = v8ById.get(item.assetId);
     const codes = [...item.codes.entries()]
       .map(([code, paths]) => {
         const list = [...paths].slice(0, 4).join(", ");
@@ -252,7 +244,7 @@ for (const stream of STREAMS) {
       .join("; ");
     lines.push(
       `| ☐ | ${stream.key}-${item.assetId} | ${priority(supply)} | ${money(supply)} | ` +
-        `${card.grade}/${card.score ?? "—"} | ${v8 ? `${v8.grade}/${v8.score}` : "—"} | ${codes} |`,
+        `${card.grade}/${card.score ?? "—"} | ${codes} |`,
     );
   }
   lines.push("");

@@ -1,17 +1,6 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { scoreToGrade, DIMENSION_ORDER } from "@shared/lib/report-cards";
-import type {
-  ReportCard,
-  DimensionKey,
-  ReportCardGrade,
-} from "@shared/types";
-import {
-  computeGroupedExposure,
-  computeUpstreamExposure,
-  type UpstreamExposure,
-} from "@/lib/portfolio-analysis";
 import {
   encodePortfolioHoldings,
   isPortfolioHolding,
@@ -27,17 +16,10 @@ import {
   writeJsonStorageValue,
 } from "@/lib/url-storage-codecs";
 
-export { categorizeCollateral, computeGroupedExposure, type UpstreamExposure } from "@/lib/portfolio-analysis";
-
 interface PortfolioState {
   initialized: boolean;
   holdings: PortfolioHolding[];
   totalUsd: number;
-  portfolioGrade: ReportCardGrade;
-  portfolioScore: number | null;
-  dimensionScores: Record<DimensionKey, number | null>;
-  upstreamExposure: UpstreamExposure[];
-  upstreamExposureGrouped: UpstreamExposure[];
   isFromUrl: boolean;
   addCoin: (coinId: string, amount: number) => void;
   removeCoin: (coinId: string) => void;
@@ -102,7 +84,6 @@ function getInitialPortfolioState(initialUrlParam?: string): {
 }
 
 export function usePortfolio(
-  cards: ReportCard[] | undefined,
   initialUrlParam?: string,
 ): PortfolioState {
   const [bootState] = useState(() => getInitialPortfolioState(initialUrlParam));
@@ -166,85 +147,10 @@ export function usePortfolio(
     [holdings],
   );
 
-  // Build a card lookup for fast access
-  const cardMap = useMemo(() => {
-    if (!cards) return new Map<string, ReportCard>();
-    const m = new Map<string, ReportCard>();
-    for (const c of cards) m.set(c.id, c);
-    return m;
-  }, [cards]);
-
-  // Portfolio-level overall grade: weighted average of held coins' overall scores
-  const { portfolioGrade, portfolioScore } = useMemo(() => {
-    if (!cards || holdings.length === 0 || totalUsd === 0) {
-      return { portfolioGrade: "NR" as ReportCardGrade, portfolioScore: null };
-    }
-
-    let weightedSum = 0;
-    let scoredUsd = 0;
-
-    for (const h of holdings) {
-      const card = cardMap.get(h.coinId);
-      if (!card || card.overallScore === null) continue; // Exclude NR coins
-      weightedSum += card.overallScore * h.amount;
-      scoredUsd += h.amount;
-    }
-
-    if (scoredUsd === 0) {
-      return { portfolioGrade: "NR" as ReportCardGrade, portfolioScore: null };
-    }
-
-    const score = Math.round(weightedSum / scoredUsd);
-    return { portfolioGrade: scoreToGrade(score), portfolioScore: score };
-  }, [cards, holdings, totalUsd, cardMap]);
-
-  // Per-dimension weighted average scores
-  const dimensionScores = useMemo((): Record<DimensionKey, number | null> => {
-    const result = {} as Record<DimensionKey, number | null>;
-
-    for (const dim of DIMENSION_ORDER) {
-      if (!cards || holdings.length === 0 || totalUsd === 0) {
-        result[dim] = null;
-        continue;
-      }
-
-      let weightedSum = 0;
-      let scoredUsd = 0;
-
-      for (const h of holdings) {
-        const card = cardMap.get(h.coinId);
-        const dimScore = card?.dimensions[dim]?.score;
-        if (dimScore === null || dimScore === undefined) continue;
-        weightedSum += dimScore * h.amount;
-        scoredUsd += h.amount;
-      }
-
-      result[dim] = scoredUsd > 0 ? Math.round(weightedSum / scoredUsd) : null;
-    }
-
-    return result;
-  }, [cards, holdings, totalUsd, cardMap]);
-
-  // Upstream exposure
-  const upstreamExposure = useMemo(
-    () => (cards ? computeUpstreamExposure(holdings, cards) : []),
-    [holdings, cards],
-  );
-
-  const upstreamExposureGrouped = useMemo(
-    () => computeGroupedExposure(upstreamExposure, totalUsd),
-    [upstreamExposure, totalUsd],
-  );
-
   return {
     initialized,
     holdings,
     totalUsd,
-    portfolioGrade,
-    portfolioScore,
-    dimensionScores,
-    upstreamExposure,
-    upstreamExposureGrouped,
     isFromUrl,
     addCoin,
     removeCoin,

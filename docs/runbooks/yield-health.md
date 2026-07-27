@@ -107,7 +107,7 @@ LIMIT 10;
 ## Remediation
 
 - **Missing/stale rankings:** check `sync-yield-data` cron errors first. Clear a stuck `sync-yield-data` lease only when the admin cron card shows repeated `skipped_locked` or stale in-flight progress, then let the next hourly publisher rebuild `yield-rankings`.
-- **Sparse safety coverage:** inspect report-card cache health and `/api/report-cards`; yield rankings can still publish with default safety fallback, but PYS quality is lower.
+- **Sparse safety coverage:** inspect `safety-score-v9` publication health and `/api/report-cards/v9`; yield rankings can still publish with the explicit unrated safety fallback, but PYS quality is lower.
 - **Stale supplemental cache:** inspect `sync-yield-supplemental`. Because supplemental sources are optional, do not block the public yield page solely on this signal.
 - **Benchmark fallback/staleness:** inspect `yieldHealth.benchmarkRegistry`, then `risk_free_rates` and the latest `sync-yield-data` metadata for the named key. A retained fallback within 48h can remain score-bearing but degraded; after 48h the affected row must be NR. Do not let a healthy USD lane close an incident for a stale non-USD key that still has published rows.
 - **Low source-risk coverage:** inspect whether missing fields are absent from current rankings, retained alternates, or both. Missing or `unknown` venue tiers are evidence gaps; do not backfill guessed tiers.

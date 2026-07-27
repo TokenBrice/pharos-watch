@@ -19,7 +19,7 @@ export const XAUT_TREASURY_ADDRESS =
   "0x5754284f345afc66a98fbb0a0afe71e0f007b949";
 export const XAUT_TRANSPARENCY_SOURCE_ID =
   "tether-transparency:xaut:ethereum";
-export const XAUT_TRANSPARENCY_URL =
+const XAUT_TRANSPARENCY_URL =
   "https://app.tether.to/transparency.json";
 export const XAUT_CANONICAL_ROUTE_ID =
   `${XAUT_CANONICAL_CHAIN_ID}:${XAUT_CANONICAL_TOKEN_ADDRESS}`;

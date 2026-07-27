@@ -1023,7 +1023,9 @@ export async function runYieldCoverageAudit(
     safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
   });
   if (safetySnapshot.kind !== "ok" || safetySnapshot.safetyScoreIdentity == null) {
-    const reason = safetySnapshot.reason ?? "report-card-cache:identity-missing";
+    const reason =
+      safetySnapshot.reason ??
+      "safety-score-v9-publication:identity-missing";
     await reportAuditProgress("complete", "Yield coverage audit deferred pending an identified safety snapshot", 6, {
       reason,
       safetySnapshotSource: safetySnapshot.source,

@@ -153,7 +153,7 @@ describe("buildDependencyHealth", () => {
           lastRun: { startedAt: NOW - 3_600, durationMs: 300, status: "error" },
           healthy: false,
         }),
-        "publish-report-card-cache": cron({
+        "compute-safety-score-v9": cron({
           lastRun: { startedAt: NOW - 3_000, durationMs: 300, status: "error" },
           healthy: false,
         }),
@@ -169,7 +169,7 @@ describe("buildDependencyHealth", () => {
       reason: "dex-liquidity freshness exceeded availability budget",
     });
     expect(dependencyHealth.dependencies.dews.status).toBe("stale");
-    expect(dependencyHealth.dependencies["report-card-cache"].status).toBe("degraded");
+    expect(dependencyHealth.dependencies["safety-score-v9"].status).toBe("degraded");
 
     const dexGroup = dependencyHealth.rootCauseGroups.find((group) => group.rootDependencyId === "dex-liquidity");
     expect(dexGroup).toMatchObject({
@@ -179,14 +179,14 @@ describe("buildDependencyHealth", () => {
     expect(dexGroup?.symptomDependencyIds).toEqual([
       "dews",
       "redemption-backstops",
-      "report-card-cache",
+      "safety-score-v9",
     ]);
     expect(dexGroup?.impactedDependencyIds).toEqual([
       "dews",
       "project-tape",
       "psi",
       "redemption-backstops",
-      "report-card-cache",
+      "safety-score-v9",
       "yield-rankings",
     ]);
   });

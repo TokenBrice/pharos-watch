@@ -1,7 +1,7 @@
 import type {
   FilterTag,
   PegSummaryResponse,
-  ReportCardsV9TransitionResponse,
+  ReportCardsV9CurrentResponse,
   StablecoinListResponse,
   StressSignalsAllResponse,
 } from "@shared/types";
@@ -42,7 +42,7 @@ export function buildHomepageCriticalViewModel(args: {
 }
 
 export function buildHomepageOptionalViewModel(args: {
-  reportCardsData?: ReportCardsV9TransitionResponse;
+  reportCardsData?: ReportCardsV9CurrentResponse;
   stressData?: StressSignalsAllResponse;
 }) {
   const projected = args.reportCardsData

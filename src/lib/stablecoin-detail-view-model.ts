@@ -41,7 +41,6 @@ export type {
   DetailReservesInput,
   DetailStablecoinListInput,
   DetailSupplyHistoryInput,
-  MintAuthorityDecentralizationDragViewModel,
   StablecoinDetailFeatureState,
   StablecoinDetailFeatureStates,
   StablecoinDetailFeatureStatus,
@@ -145,6 +144,5 @@ export function buildStablecoinDetailViewModel({
     featureStates,
     verdict,
     mintAuthority,
-    mintAuthorityDecentralizationDrag: null,
   };
 }

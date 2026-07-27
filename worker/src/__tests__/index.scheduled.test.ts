@@ -43,8 +43,8 @@ const cronMocks = vi.hoisted(() => ({
   snapshotSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotChainSupply: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncSafetyScoreV9SupplyAttribution: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  computeSafetyScoreV9Shadow: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  publishReportCardCache: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  computeSafetyScoreV9: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  prepareSafetyScoreV9Input: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   computeDepegResolver: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   snapshotSafetyGradeHistory: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   fetchTbillRate: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -253,8 +253,8 @@ vi.mock("../cron/snapshot-chain-supply", () => ({ snapshotChainSupply: cronMocks
 vi.mock("../cron/sync-v9-supply-attribution", () => ({
   syncSafetyScoreV9SupplyAttribution: cronMocks.syncSafetyScoreV9SupplyAttribution,
 }));
-vi.mock("../cron/compute-safety-score-v9-shadow", () => ({
-  computeSafetyScoreV9Shadow: cronMocks.computeSafetyScoreV9Shadow,
+vi.mock("../cron/compute-safety-score-v9", () => ({
+  computeSafetyScoreV9: cronMocks.computeSafetyScoreV9,
 }));
 vi.mock("../lib/v9-slot-window", () => ({
   waitForV9MemoryLaneRelease: vi.fn(async () => undefined),
@@ -265,7 +265,9 @@ vi.mock("../lib/v9-slot-window", () => ({
     ) => run(new AbortController().signal),
   ),
 }));
-vi.mock("../cron/publish-report-card-cache", () => ({ publishReportCardCache: cronMocks.publishReportCardCache }));
+vi.mock("../cron/prepare-safety-score-v9-input", () => ({
+  prepareSafetyScoreV9Input: cronMocks.prepareSafetyScoreV9Input,
+}));
 vi.mock("../cron/compute-depeg-resolver", () => ({ computeDepegResolver: cronMocks.computeDepegResolver }));
 vi.mock("../cron/snapshot-safety-grade-history", () => ({
   snapshotSafetyGradeHistory: cronMocks.snapshotSafetyGradeHistory,
@@ -466,9 +468,9 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncSafetyScoreV9SupplyAttribution).not.toHaveBeenCalled();
-    expect(cronMocks.publishReportCardCache).toHaveBeenCalledTimes(1);
+    expect(cronMocks.prepareSafetyScoreV9Input).toHaveBeenCalledTimes(1);
     expect(
-      cronMocks.publishReportCardCache.mock.invocationCallOrder[0],
+      cronMocks.prepareSafetyScoreV9Input.mock.invocationCallOrder[0],
     ).toBeLessThan(
       cronMocks.computeDepegResolver.mock.invocationCallOrder[0],
     );
@@ -503,24 +505,24 @@ describe("worker.scheduled", () => {
     expect(
       cronMocks.syncSafetyScoreV9SupplyAttribution,
     ).toHaveBeenCalledTimes(1);
-    expect(cronMocks.computeSafetyScoreV9Shadow).not.toHaveBeenCalled();
+    expect(cronMocks.computeSafetyScoreV9).not.toHaveBeenCalled();
 
-    const shadow = makeCtx();
+    const publication = makeCtx();
     await worker.scheduled(
       {
-        cron: "14,29,44,59 * * * *",
+        cron: "14,44 * * * *",
         scheduledTime: Date.parse("2026-07-26T12:14:00Z"),
       } as ScheduledEvent,
       env as never,
-      shadow.ctx,
+      publication.ctx,
     );
-    await Promise.all(shadow.waits);
+    await Promise.all(publication.waits);
 
-    expect(cronMocks.computeSafetyScoreV9Shadow).toHaveBeenCalledTimes(1);
+    expect(cronMocks.computeSafetyScoreV9).toHaveBeenCalledTimes(1);
     expect(
       cronMocks.syncSafetyScoreV9SupplyAttribution,
     ).toHaveBeenCalledTimes(1);
-    expect(cronMocks.publishReportCardCache).not.toHaveBeenCalled();
+    expect(cronMocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
     expect(cronMocks.computeDepegResolver).not.toHaveBeenCalled();
   });
 
@@ -720,7 +722,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).not.toHaveBeenCalled();
     expect(cronMocks.syncSafetyScoreV9SupplyAttribution).not.toHaveBeenCalled();
-    expect(cronMocks.publishReportCardCache).not.toHaveBeenCalled();
+    expect(cronMocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
     expect(cronMocks.runStatusSelfCheck).not.toHaveBeenCalled();
   });
@@ -756,7 +758,7 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncSafetyScoreV9SupplyAttribution).not.toHaveBeenCalled();
-    expect(cronMocks.publishReportCardCache).toHaveBeenCalledTimes(1);
+    expect(cronMocks.prepareSafetyScoreV9Input).toHaveBeenCalledTimes(1);
   });
 
   it("runs only DEX source staging on the 10,40 trigger", async () => {
