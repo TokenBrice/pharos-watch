@@ -6,6 +6,13 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-07-27 to 2026-07-27
+
+Safety Score V9 becomes the active model with fail-closed publication and held-rating continuity.
+
+- **Safety Score V9 activation**: The three-pillar V9 model becomes active under the candidate-v2 policy identity, with Backing, Exit, and Economic Control bounded by evidence and structural failure paths.
+- **Graceful degradation**: Stale or failed score-bearing inputs and new infrastructure-attributed downgrades hold the last accepted V9 snapshot instead of replacing it or recomputing V8.
+
 ## 2026-07-20 to 2026-07-26
 
 Pharos gets a blog, the V9 safety model opens to outside reviewers, and DEX scoring splits to fit its memory budget.

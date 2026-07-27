@@ -7,13 +7,16 @@ Report-card snapshots score active tracked and cemetery assets. Frozen archives 
 ## Methodology Versioning
 
 - **Active model identity:** Safety Score V9, methodology `candidate-v2`
-- **Compatibility methodology version:** `v8.17`
+- **Current methodology version:** `v8.17` (V8 compatibility contract)
 - **V9 policy source:** `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
 - **V8 compatibility version source:** `shared/lib/methodology-versions/safety-score.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/safety-score/`
 
-## Legacy Compatibility Grade (v8.17)
+## Overall Grade (v8.17)
+
+This section documents the V8 compatibility contract retained during the V9
+activation observation window.
 
 Four-step computation:
 
