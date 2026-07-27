@@ -29,7 +29,6 @@ export const ACTIVE_PEG_CURRENCY_COUNTS = {
   GOLD: 12,
   SILVER: 2,
   PHP: 1,
-  OTHER: 6,
   CAD: 4,
   ZAR: 2,
   MXN: 4,
@@ -38,6 +37,11 @@ export const ACTIVE_PEG_CURRENCY_COUNTS = {
   MYR: 1,
   KRW: 1,
   XOF: 1,
+  COP: 2,
+  CLP: 1,
+  GHS: 1,
+  KES: 1,
+  PEN: 1,
 } as const satisfies Partial<Record<PegCurrency, number>>;
 
 export const ACTIVE_PEG_CURRENCIES = [
@@ -62,11 +66,15 @@ export const ACTIVE_PEG_CURRENCIES = [
   "KGS",
   "NGN",
   "XOF",
+  "COP",
+  "CLP",
+  "GHS",
+  "KES",
+  "PEN",
   "IDR",
   "GOLD",
   "SILVER",
   "VAR",
-  "OTHER",
 ] as const satisfies readonly PegCurrency[];
 
 export const ACTIVE_PEG_CURRENCY_COUNT = ACTIVE_PEG_CURRENCIES.length;

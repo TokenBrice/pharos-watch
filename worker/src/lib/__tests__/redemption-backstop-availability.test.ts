@@ -149,7 +149,7 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     const cusd = result.get("cusd-celo");
     expect(cusd?.routeStatus).toBe("degraded");
     expect(cusd?.outputImpairedDependencyId).toBe("ausd-agora");
-    expect(cusd?.outputImpairedShare).toBeCloseTo(0.267201077302, 6);
+    expect(cusd?.outputImpairedShare).toBeCloseTo(0.263979768726, 6);
     expect(cusd?.routeStatusReason).toContain("Output asset impairment");
   });
 
@@ -180,9 +180,9 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     // worst impaired dependency wins attribution (USDC's -3000 bps beats USDT's -2600 bps)
     expect(cusd?.outputImpairedDependencyId).toBe("usdc-circle");
     expect(cusd?.activeDepegBps).toBe(3000);
-    // cUSD's reviewed USDC (3.052055248%) and USDT (11.6128170806%)
+    // cUSD's reviewed USDC (3.0837494912%) and USDT (12.8710435291%)
     // Mento reserve shares accumulate.
-    expect(cusd?.outputImpairedShare).toBeCloseTo(0.146648723286, 6);
+    expect(cusd?.outputImpairedShare).toBeCloseTo(0.159547930203, 6);
     // composition weights sum below 1.0, so no over-leverage marker is emitted
     expect(cusd?.routeStatusReason).not.toContain("over-leveraged");
   });
