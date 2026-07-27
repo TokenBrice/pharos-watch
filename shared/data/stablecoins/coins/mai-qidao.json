@@ -170,9 +170,9 @@
   "deploymentModel": "third-party-bridge",
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "MAI historically expanded across many chains through third-party bridge allocations (Multichain era), and public governance and post-incident reporting tied MAI's cross-chain supply to Multichain-era bridge exposure. 2026-07-20 on-chain re-verification found QiDao per-chain Safe owners for the live deployments; the dormant Fraxtal EditableERC20 has a zero owner and zero supply, so its prior route remains unresolved. Because legacy supply integrity depended on external lock/mint infrastructure, the profile keeps external-lock-mint tiering history while current deployments are issuer-native.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "summary": "MAI historically expanded across many chains through third-party bridge allocations (Multichain era), and public governance and post-incident reporting tied MAI's cross-chain supply to Multichain-era bridge exposure. Current tracked deployments are QiDao-administered native MAI contracts with per-chain Safe owners; Fraxtal's native MAI was permanently sunset under QIP250 (ownership renounced, zero supply). Because legacy supply integrity depended on external lock/mint infrastructure, the profile keeps external-lock-mint tiering history while current deployments are issuer-native.",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 controls research (Fraxtal route resolution)",
     "confidence": "probable",
     "protocols": [
       {
@@ -194,6 +194,14 @@
       {
         "label": "DL News MAI / Multichain incident coverage",
         "url": "https://www.dlnews.com/articles/defi/qidao-settles-bad-debt-on-polygon-to-save-stablecoin/"
+      },
+      {
+        "label": "QIP250 Snapshot (Deprecate QiDao on Fraxtal)",
+        "url": "https://snapshot.box/#/s:qidao.eth/proposal/0x76868a1b00f4792f47016b3afef53be0b4ed981e6cfbbbade098c8f4d6ad0078"
+      },
+      {
+        "label": "QiDao Fraxtal sunset announcement",
+        "url": "https://x.com/QiDaoProtocol/status/2062182316852547989"
       }
     ],
     "routes": [
@@ -537,25 +545,35 @@
         "id": "fraxtal:0xb84df10966a5d7e1ab46d9276f55d57bd336afc7",
         "destinationChain": "fraxtal",
         "contractAddress": "0xb84df10966a5d7e1ab46d9276f55d57bd336afc7",
-        "protocol": "unresolved route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Verified via Fraxtal RPC at block 38867433: contract 0xb84df10966a5d7e1ab46d9276f55d57bd336afc7 reports name 'Mai Stablecoin', symbol 'MAI', decimals 18, totalSupply() = 0, and owner() = the zero address. Its verified EditableERC20 source gates mint() with onlyOwner, so no live direct mint controller is observable. Public evidence does not establish whether this dormant deployment was issuer-issued or a bridge representation, so it remains unresolved.",
+        "protocol": "QiDao native multichain MAI (sunset)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Re-verified on Fraxtal at block 39190926 via rpc.frax.com and fraxtal-rpc.publicnode.com: MAI token 0xb84df10966a5d7e1ab46d9276f55d57bd336afc7 reports name 'Mai Stablecoin', symbol 'MAI', decimals 18, totalSupply() = 0, and owner() = the zero address. Fraxscan verifies EditableERC20 source with onlyOwner mint and renounceOwnership. QiDao Snapshot QIP250 (passed For; closed) specifies this exact Fraxtal MAI address as the protocol's native token, mandates renounceOwnership to permanently remove native minting, and states zero circulating MAI and no outstanding vault debt; QiDao's 2026-06-03 announcement confirms the Fraxtal deployment was fully sunset after QIP250. This is therefore issuer-native MAI that has been permanently decommissioned, not a third-party bridge representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
-        "observedBlock": 38867433,
+        "observedAt": "2026-07-28",
+        "sourceChain": "polygon",
+        "canonicalChain": "polygon",
+        "observedBlock": 39190926,
         "sources": [
           {
-            "label": "MAI on Fraxscan",
+            "label": "Fraxtal MAI token (rpc.frax.com owner/supply at block 39190926)",
             "url": "https://fraxscan.com/address/0xb84df10966a5d7e1ab46d9276f55d57bd336afc7#code"
           },
           {
-            "label": "Fraxtal RPC",
-            "url": "https://rpc.frax.com"
+            "label": "QIP250 Snapshot — Deprecate QiDao deployment on Fraxtal",
+            "url": "https://snapshot.box/#/s:qidao.eth/proposal/0x76868a1b00f4792f47016b3afef53be0b4ed981e6cfbbbade098c8f4d6ad0078"
+          },
+          {
+            "label": "QiDao Protocol Fraxtal sunset post (QIP250 executed)",
+            "url": "https://x.com/QiDaoProtocol/status/2062182316852547989"
+          },
+          {
+            "label": "Fraxtal public RPC (publicnode corroboration)",
+            "url": "https://fraxtal-rpc.publicnode.com"
           }
         ]
       },

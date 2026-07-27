@@ -31,23 +31,43 @@
   "protocolSlug": "xt-com",
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "XT.com documents XTUSD as an XTDao vault system with collateral auctions, but its first-party announcement does not identify the price oracle, feed source, or failover path used for vault collateral on XSC; current oracle wiring remains unverified.",
+    "summary": "Live XTUSD is minted on XSC Vat 0xf9d4810f… against ilk XT-A (WXT GemJoin) with a non-zero Vat.spot, but no Spotter (or other pip) is a current Vat ward among the live system contracts and the issuer announcement never names a feed, OSM, or failover. A parallel Maker-style Median→OSM→Spotter stack on XSC is wired only to the legacy TAI Vat/dai (token 0x775c4bc7…, symbol TAI on xscscan), not to the XTUSD token 0x1a6131ea… / live Vat path, so the live collateral-price path remains opaque.",
     "branchApplicability": {
       "disposition": "unresolved",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "small-2-free oracle review",
-      "rationale": "XT.COM's public material establishes the XTUSD vault context but does not enumerate the live collateral, oracle, liquidation, or failover branches on XSC. No branch inventory is inferred from the missing disclosure.",
+      "reviewedAt": "2026-07-28",
+      "reviewer": "GROK-RESEARCH wave8 controls",
+      "rationale": "On-chain reads show a single live ilk XT-A on the XTUSD Vat with debt and spot set, but the pip/Spotter that should update that spot is not among current Vat wards (only Jug and XT-A GemJoin are wards of the tested system set). Liquidation/failover modules for the live path are therefore also unpinned. A fully wired Median/OSM/Spotter graph exists for the legacy TAI DSS only and is not treated as the XTUSD branch inventory.",
       "sources": [
+        {
+          "label": "XSC public RPC (datarpc1.xsc.pub, live Vat ilks/wards and legacy Spotter/OSM/Median reads, 2026-07-28)",
+          "url": "https://datarpc1.xsc.pub"
+        },
+        {
+          "label": "XSC public RPC (datarpc2.xsc.pub, corroborating live Vat ilks/wards, 2026-07-28)",
+          "url": "https://datarpc2.xsc.pub"
+        },
         {
           "label": "XT.COM TAI to XTUSD announcement",
           "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-1 oracle evidence review",
-    "confidence": "unknown",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "GROK-RESEARCH wave8 controls",
+    "confidence": "limited",
     "sources": [
+      {
+        "label": "XSC public RPC (datarpc1.xsc.pub, live Vat 0xf9d4810f… ilks/wards, DaiJoin→XTUSD, legacy Spotter/OSM/Median, block 47844475, 2026-07-28)",
+        "url": "https://datarpc1.xsc.pub"
+      },
+      {
+        "label": "XSC public RPC (datarpc2.xsc.pub, corroborating live Vat spot and Spotter ward=0, 2026-07-28)",
+        "url": "https://datarpc2.xsc.pub"
+      },
+      {
+        "label": "xscscan token API (XTUSD 0x1a6131ea… vs legacy TAI 0x775c4bc7…)",
+        "url": "https://api.xscscan.pub/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
+      },
       {
         "label": "XT.COM TAI to XTUSD announcement",
         "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
