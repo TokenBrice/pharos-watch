@@ -108,7 +108,6 @@
     "worker/src/lib/report-card-publication.ts": 96,
     "shared/lib/safety-score-publication.ts": 100,
     "shared/lib/safety-score-v8-publication.ts": 100,
-    "worker/src/api/admin-safety-score-v9.ts": 82,
     "worker/src/lib/identified-active-safety-score-source.ts": 94.4,
     "worker/src/lib/safety-score-active-source.ts": 100,
     "worker/src/lib/safety-score-history-v2.ts": 84.7,

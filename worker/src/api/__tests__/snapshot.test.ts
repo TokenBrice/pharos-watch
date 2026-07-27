@@ -242,10 +242,11 @@ describe("handleSnapshotsIndex", () => {
     ) as unknown as {
       schemaVersion: number;
       publicationHealth?: unknown;
-      cards: Array<{ scoreTrace: Record<string, unknown> }>;
+      cards: Array<{ breakdowns?: unknown; scoreTrace: Record<string, unknown> }>;
     };
     retainedReport.schemaVersion = 2;
     delete retainedReport.publicationHealth;
+    delete retainedReport.cards[0]!.breakdowns;
     retainedReport.cards[0]!.scoreTrace.schemaVersion = 2;
     delete retainedReport.cards[0]!.scoreTrace.scoreAdjustments;
     const row = await buildSnapshotRow({

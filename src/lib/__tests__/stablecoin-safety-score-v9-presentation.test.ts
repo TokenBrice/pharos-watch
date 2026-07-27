@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SafetyScoreV9CurrentCardSchema } from "@shared/types";
+import { SafetyScoreV9CurrentCardSchema } from "@shared/types/safety-score-v9-public";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import {
   buildStablecoinSafetyScoreV9Presentation,

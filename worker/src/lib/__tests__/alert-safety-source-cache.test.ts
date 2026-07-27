@@ -202,14 +202,14 @@ describe("alert safety source cache", () => {
     expect(assessment).toMatchObject({
       state: "ok",
       expectedModel: "v9",
-      generation: getAlertSafetyV9SourceGeneration("candidate-v9.0"),
+      generation: getAlertSafetyV9SourceGeneration(response.safetyScoreIdentity.methodologyVersion),
       envelope: {
         safetyScoreIdentity: response.safetyScoreIdentity,
         snapshot: {
           "usdc-circle": {
             grade: "A+",
             score: 91,
-            methodologyVersion: "candidate-v9.0",
+            methodologyVersion: response.safetyScoreIdentity.methodologyVersion,
             v9Explain: {
               pillars: {
                 backing: { score: 94, evidenceLevel: "strong" },

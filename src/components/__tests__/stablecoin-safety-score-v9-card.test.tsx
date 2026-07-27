@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9PreBreakdownCardSchema,
-} from "@shared/types";
+} from "@shared/types/safety-score-v9-public";
 import { StablecoinSafetyScoreV9Card } from "@/components/stablecoin-detail/stablecoin-safety-score-v9-card";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 
