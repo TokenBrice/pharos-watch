@@ -10,6 +10,7 @@ import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
   selectV9Card,
+  resolveV9ConsumerResponse,
   type V9ConsumerIdentity,
   type V9ConsumerUnavailableReason,
 } from "@/lib/safety-score-v9-consumers";
@@ -27,6 +28,24 @@ const ACCESS_FIELDS = [
   ["primaryExit", "Primary exit"],
   ["governance", "Governance"],
 ] as const;
+
+function isUnknownDisplayValue(value: string | null | undefined): boolean {
+  return value?.trim().toLowerCase() === "unknown";
+}
+
+function formatV9MethodologyLabel(methodologyVersion: string): string {
+  const match = methodologyVersion.trim().match(/\bv?(9(?:\.\d+)*)\b/i);
+  return match ? `v${match[1]}` : "v9.0";
+}
+
+function formatEvidenceSummary(
+  level: string,
+  freshness: string,
+  noun: "coverage" | "evidence",
+): string {
+  const summary = `${level} ${noun}`;
+  return isUnknownDisplayValue(freshness) ? summary : `${summary} · ${freshness}`;
+}
 
 function unavailableMessage(reason: V9ConsumerUnavailableReason): string {
   switch (reason) {
@@ -60,7 +79,7 @@ function PillarRows({ card }: { card: SafetyScoreV9CurrentCard }) {
             <div className="min-w-0">
               <p className="text-sm font-medium text-foreground">{label}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {pillar.evidenceLevel} evidence · {pillar.freshness}
+                {formatEvidenceSummary(pillar.evidenceLevel, pillar.freshness, "evidence")}
               </p>
               {pillar.reasons.length > 0 ? (
                 <ul className="mt-2 space-y-1 text-xs leading-relaxed text-muted-foreground">
@@ -77,6 +96,32 @@ function PillarRows({ card }: { card: SafetyScoreV9CurrentCard }) {
         );
       })}
     </div>
+  );
+}
+
+function AccessPosture({ card }: { card: SafetyScoreV9CurrentCard }) {
+  const rows = ACCESS_FIELDS.flatMap(([key, label]) => {
+    const value = card.accessPosture[key];
+    return isUnknownDisplayValue(value) ? [] : [{ key, label, value }];
+  });
+
+  if (rows.length === 0) return null;
+
+  return (
+    <section aria-labelledby={`${card.id}-v9-access`}>
+      <div className="mb-2 flex items-center gap-2">
+        <LockKeyhole className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        <h3 id={`${card.id}-v9-access`} className="text-sm font-semibold">Access posture</h3>
+      </div>
+      <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+        {rows.map((row) => (
+          <div key={row.key} className="flex items-baseline justify-between gap-3 border-b border-border/40 pb-2">
+            <dt className="text-xs text-muted-foreground">{row.label}</dt>
+            <dd className="text-right font-mono text-xs text-foreground">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 
@@ -151,6 +196,8 @@ export interface ReportCardV9DetailProps {
 }
 
 export function ReportCardV9Detail({ response, expectedIdentity, cardId }: ReportCardV9DetailProps) {
+  const resolved = resolveV9ConsumerResponse(response, expectedIdentity);
+  if (resolved.status === "unavailable") return <V9Unavailable reason={resolved.reason} />;
   const selected = selectV9Card(response, expectedIdentity, cardId);
   if (selected.status === "unavailable") return <V9Unavailable reason={selected.reason} />;
 
@@ -165,10 +212,19 @@ export function ReportCardV9Detail({ response, expectedIdentity, cardId }: Repor
           Safety Score
         </DetailSectionTitle>
         <span className="font-mono text-[11px] text-muted-foreground">
-          {identity.methodologyVersion} · {identity.policyId}
+          {formatV9MethodologyLabel(identity.methodologyVersion)}
         </span>
       </CardHeader>
       <CardContent className="space-y-6 px-4 py-5 sm:px-5">
+        {resolved.value.publicationHealth.status === "held" ? (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300" role="status">
+            Ratings held at the last verified snapshot
+            {resolved.value.publicationHealth.heldSinceSec
+              ? ` since ${new Date(resolved.value.publicationHealth.heldSinceSec * 1000).toLocaleString()}`
+              : ""}
+            .
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-3">
           <SafetyGradeBadge grade={card.grade} score={card.score} showScore size="lg" />
           <div className="min-w-0">
@@ -215,7 +271,7 @@ export function ReportCardV9Detail({ response, expectedIdentity, cardId }: Repor
             <h3 id={`${card.id}-v9-evidence`} className="text-sm font-semibold">Evidence</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            {card.evidence.level} coverage · {card.evidence.freshness}
+            {formatEvidenceSummary(card.evidence.level, card.evidence.freshness, "coverage")}
           </p>
           {card.evidence.reasons.map((reason) => (
             <p key={`${reason.code}-${reason.path ?? "root"}`} className="mt-1 text-xs text-muted-foreground">
@@ -224,20 +280,7 @@ export function ReportCardV9Detail({ response, expectedIdentity, cardId }: Repor
           ))}
         </section>
 
-        <section aria-labelledby={`${card.id}-v9-access`}>
-          <div className="mb-2 flex items-center gap-2">
-            <LockKeyhole className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <h3 id={`${card.id}-v9-access`} className="text-sm font-semibold">Access posture</h3>
-          </div>
-          <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
-            {ACCESS_FIELDS.map(([key, label]) => (
-              <div key={key} className="flex items-baseline justify-between gap-3 border-b border-border/40 pb-2">
-                <dt className="text-xs text-muted-foreground">{label}</dt>
-                <dd className="text-right font-mono text-xs text-foreground">{card.accessPosture[key]}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
+        <AccessPosture card={card} />
 
         <section aria-labelledby={`${card.id}-v9-dependencies`}>
           <div className="mb-2 flex items-center gap-2">
