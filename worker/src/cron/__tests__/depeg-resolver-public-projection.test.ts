@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/depeg-resolver-version";
-import type { DdrPredictionErratum, DdrRow } from "@shared/types/depeg-resolver";
+import {
+  DdrResponseSchema,
+  type DdrPredictionErratum,
+  type DdrRow,
+} from "@shared/types/depeg-resolver";
+import {
+  attachDdrPublicRowHash,
+  computeDdrPublicRowHash,
+  validateDdrPublicCacheContract,
+} from "@shared/lib/depeg-resolver/public-contract";
 import type {
   DdrCanonicalIncident,
   DdrFirstPublicationMembership,
@@ -365,7 +374,7 @@ describe("depeg-resolver public projection", () => {
     });
   });
 
-  it("normalizes retired safety contexts in immutable sealed predictions", () => {
+  it("preserves hash-addressed retired safety contexts in immutable sealed predictions", () => {
     const row = resolverRow({ eventId: 6 });
     const incident = canonicalIncident(row);
     const sealed = sealedPrediction(row, incident, 6);
@@ -387,7 +396,7 @@ describe("depeg-resolver public projection", () => {
     const retiredContext = {
       status: "retired-identified",
       reason: null,
-      identity: { model: "retired" },
+      identity: null,
     };
     const frozen = {
       ...fallback.frozen,
@@ -403,12 +412,18 @@ describe("depeg-resolver public projection", () => {
         },
       },
     };
+    const { live: _live, ...sealedPayloadWithoutHash } = {
+      ...fallback,
+      frozen,
+    };
+    const rowHash = computeDdrPublicRowHash(sealedPayloadWithoutHash);
     const sealedWithRetiredContext = {
       ...sealed,
-      sealedPayload: {
-        ...sealed.sealedPayload,
-        frozen,
-      },
+      rowHash,
+      sealedPayload: attachDdrPublicRowHash(
+        sealedPayloadWithoutHash,
+        rowHash,
+      ),
     };
 
     const response = buildDdrResponse({
@@ -427,17 +442,15 @@ describe("depeg-resolver public projection", () => {
       throw new Error("Expected projected prediction");
     }
 
-    expect(projected.frozen.relatedContext.safetyContext).toEqual({
-      status: "unsupported-model",
-      reason: "retired-safety-model",
-      identity: null,
-    });
+    expect(projected.frozen.relatedContext.safetyContext).toEqual(
+      retiredContext,
+    );
     expect(
       projected.frozen.sourceRow.relatedContext.safetyContext,
-    ).toEqual({
-      status: "unsupported-model",
-      reason: "retired-safety-model",
-      identity: null,
+    ).toEqual(retiredContext);
+    expect(DdrResponseSchema.safeParse(response).success).toBe(true);
+    expect(validateDdrPublicCacheContract(response)).toMatchObject({
+      ok: true,
     });
   });
 

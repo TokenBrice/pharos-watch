@@ -102,11 +102,12 @@ Selector creation currently fails closed with `503` because its recommendation p
 
 ## Frontend
 
-- `src/app/safety-scores/v9-client.tsx` owns the active ratings grid, filters, sorting, and held-state presentation.
+- `src/app/safety-scores/v9-client.tsx` owns the active ratings grid, filters, and sorting.
+- `src/app/safety-scores/data-coverage-view-model.ts` and `data-coverage-module.tsx` render the data-coverage panel: completeness, evaluated component counts per pillar, open data points split by evidence responsibility, the most common reason codes by affected assets, and held-state presentation. The panel replaces the status notice on `/safety-scores`.
 - `src/components/report-card-mini-v9.tsx` renders the V9 card treatment.
 - `src/components/stablecoin-detail/stablecoin-safety-score-v9-card.tsx` renders detail-page score, pillars, evidence, and breakdowns.
 - `src/components/radar-chart-v9.tsx` renders Backing, Exit, and Economic Control comparisons.
-- `src/components/safety-score-v9-status-notice.tsx` renders held and unavailable publication state.
+- `src/components/safety-score-v9-status-notice.tsx` renders held publication state on every other surface. Reason codes and assessment detail are evaluator identifiers and are never rendered raw; both surfaces route hold reasons through `describeDataCoverageHoldCauses`.
 - `src/hooks/api-hooks.ts` exposes `useReportCardsV9` and `useSafetyScoreHistory`.
 
 The retired V8 report-card components, V8 portfolio synthesis, and contagion stress simulator have been removed. A future stress feature must define native V9 semantics rather than recomputing retired V8 dimensions.

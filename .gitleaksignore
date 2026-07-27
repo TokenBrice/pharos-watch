@@ -1,3 +1,5 @@
+01d8c5f7b6b975500597dfb2042ace25e9aa5371:src/app/safety-scores/data-coverage-view-model.ts:generic-api-key:98
+01d8c5f7b6b975500597dfb2042ace25e9aa5371:src/app/safety-scores/data-coverage-view-model.ts:generic-api-key:104
 036023b2f9a5c0b8f61a55da6ffd6f5a2074fb18:worker/src/cron/reserve-adapters/__tests__/fixtures/frax-balance-sheet.json:generic-api-key:1
 0597d16755012314734e215605cf7bc4c31727fa:src/components/status/__tests__/api-keys-panel.test.tsx:generic-api-key:289
 0fc00a62cb77444203bea7f3c2422827ee5cf1c9:shared/lib/yield-auto-lending.ts:generic-api-key:18

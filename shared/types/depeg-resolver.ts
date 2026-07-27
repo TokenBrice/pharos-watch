@@ -140,6 +140,17 @@ export const DdrRelatedContextSchema = z.object({
 });
 export type DdrRelatedContext = z.infer<typeof DdrRelatedContextSchema>;
 
+const DdrSealedRelatedContextSchema = DdrRelatedContextSchema.extend({
+  safetyContext: z.object({
+    status: z.union([
+      DdrRelatedContextSchema.shape.safetyContext.unwrap().shape.status,
+      z.string().regex(/^[a-z0-9]+-identified$/),
+    ]),
+    reason: z.string().nullable(),
+    identity: SafetyScorePublicationIdentitySchema.nullable(),
+  }).optional(),
+});
+
 export const DdrRowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
@@ -342,8 +353,10 @@ export type DdrV2LiveOverlay = z.infer<typeof DdrV2LiveOverlaySchema>;
 export const DdrV2FrozenPayloadSchema = z.object({
   resolution: DdrResolutionSchema,
   duration: DdrFrozenDurationSchema,
-  relatedContext: DdrRelatedContextSchema,
-  sourceRow: DdrRowSchema,
+  relatedContext: DdrSealedRelatedContextSchema,
+  sourceRow: DdrRowSchema.extend({
+    relatedContext: DdrSealedRelatedContextSchema,
+  }),
 });
 export type DdrV2FrozenPayload = z.infer<typeof DdrV2FrozenPayloadSchema>;
 
@@ -351,7 +364,7 @@ export const DdrV2NoCallPayloadSchema = z.object({
   lockedAt: z.number().int().nonnegative(),
   eventAgeAtLockSec: z.number().int().nonnegative(),
   missingReasons: z.array(z.string()),
-  relatedContext: DdrRelatedContextSchema,
+  relatedContext: DdrSealedRelatedContextSchema,
 });
 export type DdrV2NoCallPayload = z.infer<typeof DdrV2NoCallPayloadSchema>;
 
