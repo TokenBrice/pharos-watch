@@ -37,12 +37,12 @@ Among independent write verifications with REPRODUCED or REFUTED verdicts:
 - REFUTED: **7**
 - Refutation rate: **4.3%**
 
-REFUTED assets received **full file reverts** (never partial repair): cusd-cap packet deleted; mxne-real-mxn, iusd-indigo-protocol, usdv-solomon, sdusd-dtrinity control schema failure, and disposition/ku mismatches.
+REFUTED assets received **full file reverts** (never partial repair): cusd-cap packet deleted; usdv-solomon packet deleted after quarantine; mxne-real-mxn, iusd-indigo-protocol, usdv-solomon coin, sdusd-dtrinity control+reserve restored to pre-run.
 
 ## Least-confident items (flagging is credit)
 
 - **usdt-tether** 28× bridge-supply unmatched controls — no dual-sourceable on-chain controller for DefiLlama unmatched keys
-- **cusd-cap** mech packet REFUTED for empty required rwa metrics
+- **cusd-cap** / **usdv-solomon** mech packets REFUTED and not shipped
 - **Quarantines after verification/gate**: mxne-real-mxn, iusd-indigo-protocol, usdv-solomon, sdusd-dtrinity
 - **Single-source ledger-only reserves** (13), including opaque issuers (gbpe-monerium, eurot-token-teknoloji, etc.)
 - **Live-price algorithmic metrics** (fpi-frax, fusd-freedom-dollar) — method pinned; absolute floats drift with price
@@ -51,7 +51,7 @@ REFUTED assets received **full file reverts** (never partial repair): cusd-cap p
 
 - `npm run check:stablecoin-data`: only stale `coins.generated.json` (MAP forbids overnight regeneration)
 - Focused `loadPerCoinStablecoinEntries()` after quarantine reverts: **FOCUSED_GATE_OK**
-- Mechanism packets: **39**, all `verification.verdict: REPRODUCED`
+- Mechanism packets shipped: **38**, all `verification.verdict: REPRODUCED`
 
 ## Surfaces / hard boundaries
 

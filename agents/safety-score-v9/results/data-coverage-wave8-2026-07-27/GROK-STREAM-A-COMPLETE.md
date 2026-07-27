@@ -13,7 +13,7 @@ Status: **complete**
 - QUARANTINED(REFUTED): **4**
 
 ## Notes
-Dual-source re-verification of reserve compositions; phase-2 REPRODUCED required for WRITTEN. REFUTED fully reverted. Single-source left ledger-only.
+Dual-source re-verification of reserve compositions; phase-2 REPRODUCED required for WRITTEN. REFUTED fully reverted to pre-run (including sdusd-dtrinity sidecar). Single-source left ledger-only.
 
 Ledger: `ledger-grok-research.md` (deterministic from phase-1/2 structured returns).
 No pushes. No score/counter claims. Generated artifacts not regenerated overnight.

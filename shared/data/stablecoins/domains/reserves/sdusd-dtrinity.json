@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
       {
@@ -34,12 +34,11 @@
         "url": "https://www.dtrinity.org/"
       }
     ],
-    "rationale": "dTRINITY documents sdUSD as an ERC-4626 receipt token backed by dUSD deposits supplied into dLEND. Staking and unstaking are permissionless and depend on unutilized dLEND liquidity; the structured envelope therefore retains one 100% dUSD dependency without inventing lending-market weights. Write-time re-open 2026-07-28: dTRINITY sdUSD docs still state dSTAKE ERC-4626 vault stakes dUSD, supplies into dLEND, and that sdUSD is a yieldcoin backed by dLEND dUSD deposits; dtrinity.org still describes the protocol stack.",
+    "rationale": "dTRINITY documents sdUSD as an ERC-4626 receipt token backed by dUSD deposits supplied into dLEND. Staking and unstaking are permissionless and depend on unutilized dLEND liquidity; the structured envelope therefore retains one 100% dUSD dependency without inventing lending-market weights.",
     "compositionBasis": "dTRINITY sdUSD and dLEND documentation",
     "scope": "full-composition",
     "knownUnknownExposure": "The dUSD dependency is identified at 100%, but dLEND market allocation, utilization, and available unstaking liquidity are dynamic.",
-    "knownUnknownExposurePct": 0,
-    "compositionAsOf": "2026-07-28"
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
