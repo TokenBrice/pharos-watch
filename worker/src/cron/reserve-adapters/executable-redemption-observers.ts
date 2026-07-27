@@ -27,6 +27,7 @@ const CHAIN = "ethereum";
 const RPC_DEADLINE_MS = 10_000;
 const BLOCK_MAX_AGE_SEC = 10 * 60;
 const BLOCK_FUTURE_SKEW_SEC = 60;
+const OBSERVATION_BLOCK_LAG = 2;
 const EIP1967_IMPLEMENTATION_SLOT =
   "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 
@@ -202,8 +203,22 @@ interface ObserverOptions {
   extraRpcUrls?: string[];
 }
 
+export function getStableObservationBlockNumber(
+  latestBlockNumber: number | null,
+): number | null {
+  if (
+    latestBlockNumber == null ||
+    !Number.isSafeInteger(latestBlockNumber) ||
+    latestBlockNumber <= OBSERVATION_BLOCK_LAG
+  ) {
+    return null;
+  }
+  return latestBlockNumber - OBSERVATION_BLOCK_LAG;
+}
+
 const DEFAULT_CLIENT: ExecutableRedemptionReadClient = {
-  blockNumber: (options) => fetchEvmBlockNumber(CHAIN, options),
+  blockNumber: async (options) =>
+    getStableObservationBlockNumber(await fetchEvmBlockNumber(CHAIN, options)),
   blockTimestamp: (blockNumber, options) =>
     fetchEvmBlockTimestamp(CHAIN, blockNumber, options),
   codeHash: async (address, blockNumber, options) => {

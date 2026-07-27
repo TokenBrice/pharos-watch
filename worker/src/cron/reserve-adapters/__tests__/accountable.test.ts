@@ -83,6 +83,50 @@ describe("adaptAccountableDashboard", () => {
     ]);
   });
 
+  it("reconciles reviewed signed reserves_split buckets without emitting negative reserve slices", () => {
+    const result = adaptAccountableDashboard(
+      {
+        res: "ok",
+        data: {
+          collateralization: 1,
+          ts: "1785150653410",
+          reserves: {
+            total_reserves: 900,
+            reserves_split: [
+              { name: "Base", value: 600 },
+              { name: "Avalanche", value: 400 },
+              { name: "Ethereum", value: -100 },
+            ],
+          },
+        },
+      },
+      {
+        bucket: "reserves_split",
+        riskMap: {
+          Base: "medium",
+          Avalanche: "high",
+          Ethereum: "medium",
+        },
+        allowNegativeBuckets: ["Ethereum"],
+      },
+    );
+
+    expect(result.slices).toEqual([
+      { name: "Base", pct: 60, risk: "medium" },
+      { name: "Avalanche", pct: 40, risk: "high" },
+    ]);
+    expect(result.warnings?.map((warning) => warning.code)).toEqual([
+      "signed-negative-bucket",
+    ]);
+    expect(result.metadata).toMatchObject({
+      breakdownCount: 3,
+      mappedBucketCount: 2,
+      signedBucketNames: ["Ethereum"],
+      signedBucketValue: -100,
+      totalReserves: 900,
+    });
+  });
+
   it("maps deployment object buckets into reserve slices", () => {
     const slices = adaptAccountableDashboard(
       {

@@ -103,6 +103,7 @@ function extractRecordBucketEntries(
 
 function extractReservesSplitEntries(
   value: unknown,
+  options?: { allowNegativeBuckets?: ReadonlySet<string> },
 ): Array<{ name: string; value: number }> {
   if (value == null) return [];
   if (!Array.isArray(value)) {
@@ -119,7 +120,9 @@ function extractReservesSplitEntries(
     }
     return {
       name: record.name,
-      value: requireAccountableBucketValue(record.name, record.value, "reserves_split"),
+      value: requireAccountableBucketValue(record.name, record.value, "reserves_split", {
+        allowNegative: options?.allowNegativeBuckets?.has(record.name),
+      }),
     };
   });
 }
@@ -133,7 +136,7 @@ function extractBucketEntries(
     case "type":
       return extractRecordBucketEntries(reserves.type, bucket, options);
     case "reserves_split":
-      return extractReservesSplitEntries(reserves.reserves_split);
+      return extractReservesSplitEntries(reserves.reserves_split, options);
     case "deployment":
       return extractRecordBucketEntries(reserves.deployment, bucket, options);
     case "type_split":
