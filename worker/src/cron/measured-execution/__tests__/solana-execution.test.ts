@@ -12,6 +12,7 @@ import { buildSolanaMeasuredExecutionTargets, buildSolanaMeasuredPoolDirectionKe
 import { buildSolanaMeasuredExecutionProfile } from "../solana-profiles";
 import {
   buildSolanaMeasuredQuotePoint,
+  normalizeSolanaMeasuredExecutionFailure,
   parseOrcaExactRouteProof,
   parseRaydiumExactRouteProof,
   quoteSolanaMeasuredTarget,
@@ -21,12 +22,15 @@ import {
   SOLANA_MEASURED_EXECUTION_ADAPTERS,
   SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS,
 } from "../solana-registry";
+import raydiumWmFixture from "./fixtures/raydium-wm-usdc-single-segment-2026-07-27.json";
 
 const USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const USDT = "Es9vMFrzaCERmJfrF4H2FYDgK5KJY8PYdG7yM7pTz1C";
 const SOL = "So11111111111111111111111111111111111111112";
 const ORCA_POOL = "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE";
 const RAYDIUM_POOL = "6rgD7Zyyw5hkQ7J1GZ3aHhQzM9wXZXJoKqjAr4VhJf9Q";
+const RATIFIED_RAYDIUM_POOL = "CsMzKUUJNoAoU7N4zh3hAS6qcByU81TcQMPJqCdmmcEF";
+const WM = "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp";
 
 function target(
   adapterProfileId: SolanaMeasuredExecutionTarget["adapterProfileId"] = "orca-whirlpool-jupiter-v1",
@@ -72,6 +76,41 @@ function target(
   };
 }
 
+function ratifiedRaydiumTarget(): SolanaMeasuredExecutionTarget {
+  const priority = SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS.find(
+    (entry) => entry.policyId === "wm-usdc-raydium-csmz-v1",
+  )!;
+  return {
+    schemaVersion: SOLANA_MEASURED_TARGET_SCHEMA_VERSION,
+    targetId: priority.targetId,
+    stablecoinId: priority.stablecoinId,
+    adapterProfileId: priority.adapterProfileId,
+    protocol: priority.protocol,
+    chain: "solana",
+    poolId: priority.poolId,
+    poolType: priority.poolType,
+    tokenIn: {
+      address: priority.tokenInAddress,
+      symbol: "wM",
+      decimals: priority.tokenInDecimals,
+      referencePriceUsd: 1,
+      referencePriceSource: "tracked",
+      trackedAssetId: priority.stablecoinId,
+    },
+    tokenOut: {
+      address: priority.tokenOutAddress,
+      symbol: "USDC",
+      decimals: priority.tokenOutDecimals,
+      referencePriceUsd: 1,
+      referencePriceSource: "tracked",
+      trackedAssetId: priority.tokenOutTrackedAssetId,
+    },
+    retainedTvlUsd: 1_000_000,
+    retainedPoolPriceUsd: 1,
+    capturedAt: raydiumWmFixture.pool.slot - 10,
+  };
+}
+
 describe("Solana measured execution inventory and registry", () => {
   it("registers Raydium CLMM and Orca Whirlpool as shadow-only", () => {
     expect(SOLANA_MEASURED_EXECUTION_ADAPTERS).toEqual([
@@ -90,8 +129,13 @@ describe("Solana measured execution inventory and registry", () => {
     ]);
   });
 
-  it("pins the priority collector to the exact reviewed HYUSD/USDC direction without activating it", () => {
-    const priority = SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS[0]!;
+  it("pins exact reviewed directions while only the state-replayed Raydium policy is active", () => {
+    const priority = SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS.find(
+      (entry) => entry.policyId === "hyusd-usdc-orca-4tjw-v1",
+    )!;
+    const activeRaydium = SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS.find(
+      (entry) => entry.policyId === "wm-usdc-raydium-csmz-v1",
+    )!;
     expect(priority.targetId).toBe(
       buildSolanaMeasuredExecutionTargetId({
         stablecoinId: priority.stablecoinId,
@@ -136,6 +180,39 @@ describe("Solana measured execution inventory and registry", () => {
         (adapter) => adapter.adapterProfileId === priority.adapterProfileId,
       ),
     ).toMatchObject({ activation: "shadow", scoreEligible: false });
+    expect(activeRaydium).toMatchObject({
+      activation: "active",
+      scoreEligible: true,
+      proofRequirement: "raydium-single-segment-onstate-v1",
+      poolId: RATIFIED_RAYDIUM_POOL,
+      tokenInAddress: WM,
+      tokenOutAddress: USDC,
+    });
+    const activeCandidate = {
+      ...target("raydium-clmm-trade-api-v1"),
+      targetId: activeRaydium.targetId,
+      stablecoinId: activeRaydium.stablecoinId,
+      poolId: activeRaydium.poolId,
+      tokenIn: {
+        ...target("raydium-clmm-trade-api-v1").tokenIn,
+        address: activeRaydium.tokenInAddress,
+        decimals: activeRaydium.tokenInDecimals,
+        trackedAssetId: activeRaydium.stablecoinId,
+      },
+      tokenOut: {
+        ...target("raydium-clmm-trade-api-v1").tokenOut,
+        address: activeRaydium.tokenOutAddress,
+        decimals: activeRaydium.tokenOutDecimals,
+        trackedAssetId: activeRaydium.tokenOutTrackedAssetId,
+      },
+    };
+    expect(getSolanaMeasuredExecutionPriorityTarget(activeCandidate)).toEqual(activeRaydium);
+    expect(
+      getSolanaMeasuredExecutionPriorityTarget({
+        ...activeCandidate,
+        poolId: RAYDIUM_POOL,
+      }),
+    ).toBeNull();
   });
 
   it("builds a case-sensitive Orca target with a pool-implied counter-token reference", () => {
@@ -285,6 +362,72 @@ describe("Solana exact quote parsing", () => {
     );
     delete (body.data.routePlan[0] as { lastPoolPriceX64?: string }).lastPoolPriceX64;
     expect(parseRaydiumExactRouteProof(body, current, "1000000000")).toBeNull();
+  });
+
+  it("captures and replays the ratified Raydium segment before accepting its direct quote", async () => {
+    const current = ratifiedRaydiumTarget();
+    const fetchImpl = async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      if (url.hostname.includes("solana")) {
+        return new Response(JSON.stringify({
+          jsonrpc: "2.0",
+          result: {
+            context: { slot: raydiumWmFixture.pool.slot },
+            value: {
+              owner: raydiumWmFixture.pool.programId,
+              data: [raydiumWmFixture.pool.accountDataBase64, "base64"],
+            },
+          },
+        }));
+      }
+      expect(url.hostname).toBe("transaction-v1.raydium.io");
+      expect(url.searchParams.get("inputMint")).toBe(WM);
+      return new Response(JSON.stringify({
+        id: "fixture-quote",
+        success: true,
+        data: {
+          swapType: "BaseIn",
+          inputMint: WM,
+          inputAmount: raydiumWmFixture.directQuote.amountIn,
+          outputMint: USDC,
+          outputAmount: raydiumWmFixture.directQuote.amountOut,
+          otherAmountThreshold: raydiumWmFixture.directQuote.amountOut,
+          slippageBps: 0,
+          routePlan: [{
+            poolId: RATIFIED_RAYDIUM_POOL,
+            inputMint: WM,
+            outputMint: USDC,
+            feeAmount: raydiumWmFixture.directQuote.feeAmount,
+            lastPoolPriceX64: raydiumWmFixture.directQuote.lastPoolPriceX64,
+          }],
+        },
+      }));
+    };
+
+    await expect(quoteSolanaMeasuredTarget({
+      target: current,
+      inputUsd: 1_000,
+      fetchImpl: fetchImpl as typeof fetch,
+    })).resolves.toMatchObject({
+      amountInRaw: raydiumWmFixture.directQuote.amountIn,
+      amountOutRaw: raydiumWmFixture.directQuote.amountOut,
+      route: {
+        provider: "raydium-trade-api",
+        stateProof: {
+          slot: raydiumWmFixture.pool.slot,
+          liquidity: raydiumWmFixture.pool.liquidity,
+          sqrtPriceX64: raydiumWmFixture.pool.sqrtPriceX64,
+          feeAmount: raydiumWmFixture.directQuote.feeAmount,
+          direction: "zero-for-one",
+        },
+      },
+    });
+  });
+
+  it("normalizes only explicit Solana transport failures as operational", () => {
+    expect(normalizeSolanaMeasuredExecutionFailure(new TypeError("fetch failed"))).toBe("quote-request-unavailable");
+    expect(normalizeSolanaMeasuredExecutionFailure(new Error("quote-http-429"))).toBe("quote-http-429");
+    expect(normalizeSolanaMeasuredExecutionFailure(new Error("exact-route-mismatch"))).toBe("exact-route-mismatch");
   });
 });
 

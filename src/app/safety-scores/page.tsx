@@ -71,7 +71,7 @@ export default createClientFeaturePage({
       />
     ),
     leadParagraphs: [
-      "Active Safety Score V9 ratings across Backing, Exit, and Economic Control, with explicit evidence, caps, dependencies, and held-publication status.",
+      "Every tracked stablecoin assessed across three dimensions: Backing, Exit, and Economic Control, distilled into a single comprehensive safety grade.",
     ],
   },
   afterClient: (

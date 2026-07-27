@@ -180,6 +180,16 @@ const OverlayMetricApplicabilitySchema = z.discriminatedUnion("state", [
       sourceUrl: z.string().url(),
     })
     .strict(),
+  // Owner ruling 2026-07-27 (wave-7 D2): the metric structurally applies but
+  // the issuer publishes no measurable value. Admitted for the sdn/rwa
+  // archetypes only; the linked structural penalty signal keeps firing.
+  z
+    .object({
+      state: z.literal("unavailable"),
+      rationale: z.string().trim().min(1),
+      sourceUrl: z.string().url(),
+    })
+    .strict(),
 ]);
 
 const OverlaySourceSchema = z.object({ label: z.string().min(1), url: z.string().url() }).strict();
@@ -242,7 +252,7 @@ export const MechanismReviewOverlaySchema = z
       }
     }
     for (const [metricKey, applicability] of Object.entries(overlay.metricApplicability ?? {})) {
-      if (applicability.state === "not-applicable" && !sourceUrls.has(applicability.sourceUrl)) {
+      if (applicability.state !== "measured" && !sourceUrls.has(applicability.sourceUrl)) {
         ctx.addIssue({
           code: "custom",
           path: ["metricApplicability", metricKey, "sourceUrl"],
@@ -280,7 +290,7 @@ const MechanismReviewOverlayFileSchema = z
         }
       }
       for (const [metricKey, applicability] of Object.entries(overlay.metricApplicability ?? {})) {
-        if (applicability.state === "not-applicable" && !sourceUrls.has(applicability.sourceUrl)) {
+        if (applicability.state !== "measured" && !sourceUrls.has(applicability.sourceUrl)) {
           ctx.addIssue({
             code: "custom",
             path: ["overlays", overlayIndex, "metricApplicability", metricKey, "sourceUrl"],
@@ -328,9 +338,9 @@ const OVERLAY_ARCHETYPE_COMPONENTS: Record<MechanismReviewOverlay["archetype"], 
     "recovery",
   ],
   // Fiat-cash and tbill components are compiler-bounded by design; a curated
-  // overlay may claim them only under the owner-approved evidence standard
-  // (see the FORGE owner decision packet). Until such overlays exist this
-  // path is inert and the built bounded review stands.
+  // overlay may claim them only under the owner-approved evidence standard,
+  // ratified 2026-07-27: docs/process/mechanism-overlay-evidence-standard.md.
+  // Claims that do not meet its evidence classes stay uncurated (bounded).
   "fiat-cash": ["claimAndSegregation", "custodyContinuity", "assuranceAndReconciliation"],
   tbill: ["fundClaimAndSeniority", "navValuation", "durationAndLiquidity", "lossRecoveryDesign"],
 };
@@ -398,29 +408,36 @@ export function expandOverlayReview(
       ? (fallbackReview as unknown as Record<string, V9MechanismFactV1>)
       : null;
   const review: Record<string, unknown> = { archetype: overlay.archetype, ...metrics };
-  if (overlay.archetype === "cdp") {
+  const partialMetricArchetypes = ["cdp", "synthetic-delta-neutral", "rwa-credit-fund"] as const;
+  if ((partialMetricArchetypes as readonly string[]).includes(overlay.archetype)) {
     const metricApplicability: Record<string, unknown> = {};
     for (const metricKey of metricKeys) {
       const value = metrics[metricKey];
       const applicability = overlay.metricApplicability?.[metricKey] ?? { state: "measured" as const };
+      if (applicability.state === "unavailable" && overlay.archetype === "cdp") {
+        // CDP collateralization banding needs a numeric ratio, so an
+        // unavailable CDP metric has no defined severity; use not-applicable
+        // for structural absence or leave the overlay out.
+        throw new Error(`Overlay ${overlay.assetId} marks ${metricKey} unavailable; CDP admits only measured or not-applicable metrics`);
+      }
       if (applicability.state === "measured" && value == null) {
         throw new Error(`Overlay ${overlay.assetId} has measured ${metricKey} without a numeric value`);
       }
-      if (applicability.state === "not-applicable" && value !== null) {
-        throw new Error(`Overlay ${overlay.assetId} has not-applicable ${metricKey} with a numeric value`);
+      if (applicability.state !== "measured" && value !== null) {
+        throw new Error(`Overlay ${overlay.assetId} has ${applicability.state} ${metricKey} with a numeric value`);
       }
       metricApplicability[metricKey] =
         applicability.state === "measured"
           ? { state: "measured" }
           : {
-              state: "not-applicable",
+              state: applicability.state,
               rationale: applicability.rationale,
               evidenceRefIds: [`extension-evidence:mechanism:${kebabCase(metricKey)}`],
             };
     }
     review.metricApplicability = metricApplicability;
   } else if (Object.values(metrics).some((value) => value === null)) {
-    throw new Error(`Only CDP overlays support structurally not-applicable metrics (${overlay.assetId})`);
+    throw new Error(`Only CDP, synthetic-delta-neutral, and rwa-credit-fund overlays support null metrics (${overlay.assetId})`);
   }
   if (overlay.archetype === "synthetic-delta-neutral") {
     review.venueShares = overlay.venueShares ?? [];

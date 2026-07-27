@@ -142,7 +142,7 @@ The active frontend operator mode is now:
 - Cron telemetry is grouped by trigger slot and rendered as a matrix:
   - 15-minute core ingestion / score recompute
   - 5-minute Telegram dispatch lane for subscriber alerts
-  - 30-minute on-chain intake jobs (`sync-mint-burn` on `4,34`, `sync-mint-burn-extended` on `13,43`) shown together in the half-hourly group but labeled as isolated triggers
+  - 30-minute on-chain intake jobs (`sync-mint-burn` on `4,34`, `sync-mint-burn-extended` on `18,48`) shown together in the half-hourly group but labeled as isolated triggers
   - 30-minute charts / liquidity jobs plus the decoupled DEWS / PSI DB-only trigger
   - hourly core yield publisher (`sync-yield-data`); `sync-blacklist` is on a dedicated 6-hourly trigger, and the reserve + redemption + Kinesis lane is on a dedicated 4-hourly trigger; `sync-dex-discovery` is on a dedicated 2-hourly trigger
   - daily snapshot / digest / recap jobs
@@ -216,7 +216,7 @@ Related extracted loaders:
 
 Operational nuance: a fresh recovery attempt should not keep `/status` degraded purely because the most recent completed run failed. When a leased cron is actively running and its heartbeat is fresh, availability treats that lane as live again while still preserving the previous completed run in card history.
 
-The admin cron workbench resolves a neutral skip against the latest required non-neutral run before building its attention filter. A fresh `skipped_neutral` row therefore remains operationally neutral, but the lane still appears under `Needs attention` when the required run it inherited was degraded or failed. Degraded outcomes retain warning treatment, failed outcomes remain unhealthy, and the header count and filtered table use the same resolved status.
+The admin cron workbench resolves a neutral skip against the latest required non-neutral run before building its attention filter. A fresh `skipped_neutral` row with no inherited warning or failure renders as **Skipped**, not **Unhealthy**. Known V9 admission reasons replace the generic no-work label with the actual condition, such as `competing slot active` or `core slot not ready`. The row remains under `Needs attention` when backend availability still lacks required success evidence, so the neutral attempt outcome does not hide a starved producer. Inherited degraded outcomes retain warning treatment, inherited failures remain unhealthy, and stale neutral skips remain unhealthy.
 
 Scheduled-slot abandonment is surfaced separately from child job runtime failures. When a later trigger reconciles a stale `cron_slot_executions` row, `/api/status` can attach `crons[*].latestEvent` with `eventType = "scheduled-slot-abandoned"` to each child job in that slot; the marker includes the schedule key, slot owner, and abandoned child progress stage. Synthetic child rows with `metadata.reason = "stale-slot-reconciled"` remain in `recentRuns` for audit history, except legacy false `daily-digest` not-started rows from idle `digestTriggerPoll` slots, which are excluded before the per-job history limit. Genuine forced digest outcomes and abandoned started-progress rows remain visible. The duration watchdog excludes synthetic reconciliation rows from runtime averages and reports proven publication, not-started children, publication failures, terminal-accounting unknowns, and real child failures as separate lifecycle counters.
 

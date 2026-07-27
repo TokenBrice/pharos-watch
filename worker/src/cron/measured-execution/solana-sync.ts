@@ -8,7 +8,6 @@ import {
 } from "@shared/types/solana-measured-execution";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
-import { toErrorMessage } from "../../lib/error-utils";
 import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import {
@@ -22,7 +21,11 @@ import {
   SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS,
 } from "./solana-registry";
 import { buildSolanaMeasuredExecutionProfile } from "./solana-profiles";
-import { fetchSolanaCurrentSlot, quoteSolanaMeasuredTarget } from "./solana-quotes";
+import {
+  fetchSolanaCurrentSlot,
+  normalizeSolanaMeasuredExecutionFailure,
+  quoteSolanaMeasuredTarget,
+} from "./solana-quotes";
 
 const SOLANA_ADMISSION_SOURCE_KEY = "measured-execution:solana-admission";
 // Preserve twelve cursor-rotated admissions while reserving one additional
@@ -159,7 +162,7 @@ export async function syncSolanaDexMeasuredExecution(
     return {
       status: "skipped_neutral",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "solana-target-generation-missing", activation: "shadow" }),
+      metadata: JSON.stringify({ reason: "solana-target-generation-missing", activation: "target-ratified" }),
       productivity: { productive: false, reason: "solana-target-generation-missing" },
     };
   }
@@ -196,15 +199,15 @@ export async function syncSolanaDexMeasuredExecution(
       });
     } catch (error) {
       rethrowIfAborted(error, signal);
-      state.failureReason = toErrorMessage(error).slice(0, 300);
+      state.failureReason = normalizeSolanaMeasuredExecutionFailure(error);
     }
     completed++;
     await reportProgress?.({
       stage: "solana-exact-quotes",
-      message: "Capturing shadow Solana exact execution quotes",
+      message: "Capturing Solana exact execution quotes",
       itemsDone: completed,
       itemsTotal: admitted.size,
-      metadata: { activation: "shadow", targetGenerationId: targetGeneration.generationId },
+      metadata: { activation: "target-ratified", targetGenerationId: targetGeneration.generationId },
     });
   }
 
@@ -258,7 +261,7 @@ export async function syncSolanaDexMeasuredExecution(
   ).length;
 
   const metadata = {
-    activation: "shadow",
+    activation: "target-ratified",
     targetGenerationId: targetGeneration.generationId,
     quoteGenerationId: publication.generationId,
     targetCount: targetGeneration.targets.length,

@@ -325,7 +325,7 @@
     {
       "assetId": "cdp-enosys",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-07-22",
       "sources": [
         {
           "label": "Enosys Loans registry and branch state on Flare",
@@ -334,9 +334,13 @@
         {
           "label": "Enosys Loans documentation",
           "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
+        },
+        {
+          "label": "Flare block 65612597 re-measurement anchor",
+          "url": "https://flare-explorer.flare.network/block/65612597"
         }
       ],
-      "notes": "Measured at finalized Flare block 65110774; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/cdp-enosys/2026-07-15-block-65110774.json. The token-derived registry enumerated all four configured branches, with unique controllers and collateral tokens. Debt and supply diverged 0.0014%. Protocol-priced collateral over debt gives 1.741687; Stability Pool deposits over supply give 0.851917, or 0.850663 after capping each pool to its own branch debt. Every branch was live and redeemable at the pinned block.",
+      "notes": "Measured at finalized Flare block 65110774; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/cdp-enosys/2026-07-15-block-65110774.json. The token-derived registry enumerated all four configured branches, with unique controllers and collateral tokens. Debt and supply diverged 0.0014%. Protocol-priced collateral over debt gives 1.741687; Stability Pool deposits over supply give 0.851917, or 0.850663 after capping each pool to its own branch debt. Every branch was live and redeemable at the pinned block. The 2026-07-22 re-read at block 65612597 confirmed the same branch set and ratios. Stability Pool coverage above 0.85 of supply grades backstop adequate; documented SCR shutdown plus redistribution without a further bad-debt waterfall grades shutdown/bad-debt limited; live permissionless redemption on every branch grades structural redemption adequate. The upgraded stXRP oracle remains a separate, unresolved blocker outside this review.",
       "metrics": {
         "collateralizationRatio": 1.741687,
         "liquidationCapacityRatio": 0.851917
@@ -359,6 +363,18 @@
           "quality": "adequate"
         },
         "branchIsolation": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "applicability": "measured",
+          "quality": "limited"
+        },
+        "structuralRedemption": {
           "applicability": "measured",
           "quality": "adequate"
         }
@@ -4371,11 +4387,15 @@
     {
       "assetId": "satusd-river",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-07-22",
       "sources": [
         {
-          "label": "River protocol-info API snapshot timestamped 2026-07-15T19:00:00Z",
+          "label": "River protocol-info API snapshot timestamped 2026-07-22T18:00:00Z",
           "url": "https://api-airdrop.river.inc/protocol-info"
+        },
+        {
+          "label": "River Redemption documentation",
+          "url": "https://docs.river.inc/products/editor/redemption"
         },
         {
           "label": "River Stability Pool documentation",
@@ -4434,9 +4454,9 @@
           "url": "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/core/StabilityPool.sol"
         }
       ],
-      "notes": "River's API snapshot at 2026-07-15T19:00:00Z reports $254,319,149.00350454 of protocol TVL against 159,365,925.99223334 satUSD supply, giving collateralizationRatio 1.5958188516151108. The official Stability Pool and Recovery Mode documentation establishes that chain-local Stability Pools commit satUSD to clear liquidated debt. Selector 0x0d9a6b35 (getTotalDebtTokenDeposits()) was read from every official SatoshiXApp deployment and cross-checked exactly against that app's satUSD balance at the same block: Ethereum 0xb8374e4DfF99202292da2FE34425e1dE665b67E6 at block 25540114 = 8,837.800177189052; BNB Chain 0x07BbC5A83B83a5C440D1CAedBF1081426d0AA4Ec at 110186594 = 12,751.16370658105; X Layer 0xB4d4793a1CD57b6EceBADf6FcbE5aEd03e8e93eC at 65374297 = 44,877.05520062706; Base 0x9a3c724ee9603A7550499bE73DC743B371811dd3 at 48676993 = 7,205.437601073615; Arbitrum 0x07BbC5A83B83a5C440D1CAedBF1081426d0AA4Ec at 484210121 = 4,977.343604015958; Sonic 0x07BbC5A83B83a5C440D1CAedBF1081426d0AA4Ec at 75997451 = 5,265.127187231309; BOB 0xEC272aF6e65C4D7857091225fa8ED300Df787CCF at 35640673 = 26,841.654465700816; B2 0x2863E3D0f29E2EEC6adEFC0dF0d3171DaD542c02 at 35489772 = 4,612.832444260231; Hemi 0x07BbC5A83B83a5C440D1CAedBF1081426d0AA4Ec at 4856385 = 10,139.238245634355; BEVM 0xd4b0eEcF327c0F1B43d487FEcFD2eA56E746A72b at 12329185 = 6,896.967405032389; Bitlayer 0x95E5b977c8c33DE5b3B5D2216F1097C2017Bdf71 at 23955321 = 35,941.88055. The exact aggregate 168,346.500587345834817192 satUSD divided by current supply gives liquidationCapacityRatio 0.0010563519117351985. The low ratio is retained without qualitative adjustment; unreviewed backstop, branch-isolation, shutdown/bad-debt, and structural-redemption components remain bounded rather than inferred.",
+      "notes": "River's API snapshot at 2026-07-15T19:00:00Z reports $254,319,149.00350454 of protocol TVL against 159,365,925.99223334 satUSD supply, giving collateralizationRatio 1.5958188516151108. The official Stability Pool and Recovery Mode documentation establishes that chain-local Stability Pools commit satUSD to clear liquidated debt. Selector 0x0d9a6b35 (getTotalDebtTokenDeposits()) was read from every official SatoshiXApp deployment and cross-checked exactly against that app's satUSD balance at the same block: Ethereum 0xb8374e4DfF99202292da2FE34425e1dE665b67E6 at block 25540114 = 8,837.800177189052; BNB Chain 0x07BbC5A83B83a5C440D1CAedBF1081426d0AA4Ec at 110186594 = 12,751.16370658105; X Layer 0xB4d4793a1CD57b6EceBADf6FcbE5aEd03e8e93eC at 65374297 = 44,877.05520062706; Base 0x9a3c724ee9603A7550499bE73DC743B371811dd3 at 48676993 = 7,205.437601073615; Arbitrum 0x07BbC5A83B83a5C440D1CAedBF1081426d0AA4Ec at 484210121 = 4,977.343604015958; Sonic 0x07BbC5A83B83a5C440D1CAedBF1081426d0AA4Ec at 75997451 = 5,265.127187231309; BOB 0xEC272aF6e65C4D7857091225fa8ED300Df787CCF at 35640673 = 26,841.654465700816; B2 0x2863E3D0f29E2EEC6adEFC0dF0d3171DaD542c02 at 35489772 = 4,612.832444260231; Hemi 0x07BbC5A83B83a5C440D1CAedBF1081426d0AA4Ec at 4856385 = 10,139.238245634355; BEVM 0xd4b0eEcF327c0F1B43d487FEcFD2eA56E746A72b at 12329185 = 6,896.967405032389; Bitlayer 0x95E5b977c8c33DE5b3B5D2216F1097C2017Bdf71 at 23955321 = 35,941.88055. The exact aggregate 168,346.500587345834817192 satUSD divided by current supply gives liquidationCapacityRatio 0.0010563519117351985 (Stability Pool commitments pinned 2026-07-15). The 2026-07-22T18:00:00Z protocol-info snapshot updates collateralizationRatio to 1.604538471769779. The near-zero committed Stability Pool share grades backstop weak; per-chain pools clear only their own chain's liquidations, so branch isolation is limited by fragmentation; Recovery Mode and redistribution are documented but no bad-debt waterfall beyond redistribution is established, grading shutdown/bad-debt limited; permissionless collateral redemption when TCR exceeds 110% at baseRate plus 0.5% fee grades structural redemption adequate.",
       "metrics": {
-        "collateralizationRatio": 1.5958188516151108,
+        "collateralizationRatio": 1.604538471769779,
         "liquidationCapacityRatio": 0.0010563519117351985
       },
       "components": {
@@ -4444,6 +4464,18 @@
           "quality": "adequate"
         },
         "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "weak"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
           "quality": "adequate"
         }
       }

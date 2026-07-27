@@ -1,23 +1,61 @@
 import {
   toSolanaMeasuredExecutionPublicProfile,
   validateSolanaMeasuredExecutionProfile,
+  type SolanaMeasuredExecutionProfile,
 } from "@shared/types/solana-measured-execution";
 import type { DexExecutionCapabilityGate } from "@shared/types/market";
 import type { PoolEntry } from "../dex-liquidity/types";
 import { loadLatestPublishedSolanaMeasuredQuoteEvidence, type LoadedSolanaMeasuredQuoteEvidence } from "./persistence";
 import {
   getSolanaMeasuredExecutionAdapterByProfile,
-  isSolanaMeasuredExecutionAdapterScoreEligible,
+  getSolanaMeasuredExecutionPriorityTarget,
+  isSolanaMeasuredExecutionPriorityTargetScoreEligible,
   type SolanaMeasuredExecutionAdapterRegistration,
 } from "./solana-registry";
+import { quoteRaydiumClmmSingleSegment } from "./solana-clmm-math";
+import { RAYDIUM_CLMM_PROGRAM_ID } from "./solana-quotes";
 
 export interface SolanaMeasuredExecutionJoinDiagnostics {
   targetCount: number;
   measuredCount: number;
   gatedCount: number;
   failuresByReason: Record<string, number>;
+  lastKnownGoodCount: number;
   quoteGenerationId: string | null;
   targetGenerationId: string | null;
+}
+
+function hasRequiredRaydiumOnStateProof(
+  profile: SolanaMeasuredExecutionProfile,
+): boolean {
+  if (profile.adapterProfileId !== "raydium-clmm-trade-api-v1") return false;
+  return profile.quoteProof.every((point) => {
+    const route = point.route;
+    if (
+      route.provider !== "raydium-trade-api" ||
+      !route.stateProof ||
+      !route.feeAmount ||
+      route.stateProof.programId !== RAYDIUM_CLMM_PROGRAM_ID
+    ) {
+      return false;
+    }
+    try {
+      const replay = quoteRaydiumClmmSingleSegment({
+        liquidity: route.stateProof.liquidity,
+        sqrtPriceX64: route.stateProof.sqrtPriceX64,
+        amountIn: route.inputAmount,
+        feeAmount: route.stateProof.feeAmount,
+        direction: route.stateProof.direction,
+      });
+      return (
+        route.feeAmount === route.stateProof.feeAmount &&
+        replay.amountOut === route.outputAmount &&
+        replay.postSwapSqrtPriceX64 === route.lastPoolPriceX64
+      );
+    } catch {
+      return false;
+    }
+  });
 }
 
 function gate(reason: DexExecutionCapabilityGate["reason"]): DexExecutionCapabilityGate {
@@ -56,6 +94,7 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
     measuredCount: 0,
     gatedCount: 0,
     failuresByReason: {},
+    lastKnownGoodCount: 0,
     quoteGenerationId: input.evidence?.quoteGenerationId ?? null,
     targetGenerationId: input.evidence?.targetGenerationId ?? null,
   };
@@ -104,8 +143,8 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
         profile: quote.profile,
         quotedTarget: quote.quotedTarget,
         currentTarget: target,
-        expectedTargetGenerationId: input.evidence.targetGenerationId,
-        expectedQuoteGenerationId: input.evidence.quoteGenerationId,
+        expectedTargetGenerationId: quote.targetGenerationId,
+        expectedQuoteGenerationId: quote.quoteGenerationId,
         nowSec: input.nowSec,
       });
       if (issues.length > 0) {
@@ -114,9 +153,14 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
       }
       const publicProfile = toSolanaMeasuredExecutionPublicProfile(quote.profile);
       pool.extra.solanaMeasuredExecution = publicProfile;
-      if (!isSolanaMeasuredExecutionAdapterScoreEligible(adapter)) {
-        fail("activation-pending", "shadow-score-ineligible");
+      const policy = getSolanaMeasuredExecutionPriorityTarget(target);
+      if (!isSolanaMeasuredExecutionPriorityTargetScoreEligible(target)) {
+        fail("activation-pending", policy ? "shadow-score-ineligible" : "unratified-target");
         diagnostics.measuredCount++;
+        continue;
+      }
+      if (policy?.proofRequirement === "raydium-single-segment-onstate-v1" && !hasRequiredRaydiumOnStateProof(quote.profile)) {
+        fail("invalid-observation", "raydium-onstate-proof-invalid");
         continue;
       }
       pool.extra.nativeMeasuredExecution = publicProfile;
@@ -127,7 +171,11 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
       pool.extra.solanaMeasuredExecutionDiagnostic = {
         adapterProfileId: target.adapterProfileId,
         targetId: target.targetId,
+        ...(quote.resolution === "last-known-good"
+          ? { detail: `last-known-good-after:${quote.latestFailureReason ?? "quote-missing"}` }
+          : {}),
       };
+      if (quote.resolution === "last-known-good") diagnostics.lastKnownGoodCount++;
       diagnostics.measuredCount++;
     }
   }

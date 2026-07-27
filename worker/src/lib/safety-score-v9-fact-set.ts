@@ -2,7 +2,7 @@ import { z } from "zod";
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { resolveChainId } from "@shared/lib/chains";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
-import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
+import { isDexExitRouteCoverageWithinRouteBudget } from "@shared/lib/p4-exit-route-capacity";
 import {
   canonicalV9DependencyEdgeKey,
   canonicalV9RouteKey,
@@ -2164,8 +2164,10 @@ function buildRoutes(context: AssetBuildContext): {
   const evidenceRefIds = [...new Set(statuses.flatMap((status) => status.evidenceRefIds))];
   // "known" asserts the whole exit surface is observed (it upgrades evidence
   // level and arms the reviewed-complete zero-score path), so it additionally
-  // requires every reviewed score-eligible DEX capability pool to carry an
-  // observation. Structurally non-executable shaped rows remain diagnostics.
+  // requires every budget-admitted score-eligible DEX capability pool to carry
+  // an observation; capability pools omitted solely by the bounded route-
+  // selection budget stay out of the denominator per the 2026-07-27 owner
+  // ruling. Structurally non-executable shaped rows remain diagnostics.
   // A portfolio holding only diagnostic routes over an incompletely observed
   // DEX surface stays bounded-unknown. A missing redemption row does not
   // demote the state: absent redemption evidence can only understate the
@@ -2180,7 +2182,7 @@ function buildRoutes(context: AssetBuildContext): {
   const dexSurfaceComplete =
     coverage != null &&
     coverage.status === "populated" &&
-    (coverage.retainedPoolCount === 0 || isDexExitRouteCoverageComplete(coverage));
+    (coverage.retainedPoolCount === 0 || isDexExitRouteCoverageWithinRouteBudget(coverage));
   const portfolioGapIds = [...gapIds];
   if (!dexSurfaceComplete) {
     portfolioGapIds.push(

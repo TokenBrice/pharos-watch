@@ -164,14 +164,6 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     owner: POLICY_OWNER,
     reviewedAt: "2026-06-10",
   },
-  {
-    kind: "unused-live-redemption-telemetry",
-    stablecoinId: "xofm-mento",
-    reason:
-      "The Mento adapter now emits XOFm Broker/BiPoolManager capacity and fee telemetry, but the newly reviewed reserve-backed legacy Broker route has not yet been added to the redemption registry as a PSM swap; the existing Mento batch config is CDP-scoped and must not be reused for XOFm.",
-    owner: POLICY_OWNER,
-    reviewedAt: "2026-07-22",
-  },
 ];
 
 const UNVERIFIED_FRESHNESS_APPROVALS = new Set<string>(

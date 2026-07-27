@@ -57,7 +57,10 @@ describe("native measured-execution admission", () => {
     expect(SOLANA_MEASURED_ROTATING_TARGETS_PER_RUN).toBe(12);
     expect(admission.admitted.size).toBe(12);
     expect(admission.nextCursor).toBe("solana-11");
-    expect(admission.missingPriorityPolicyIds).toEqual(["hyusd-usdc-orca-4tjw-v1"]);
+    expect(admission.missingPriorityPolicyIds).toEqual([
+      "hyusd-usdc-orca-4tjw-v1",
+      "wm-usdc-raydium-csmz-v1",
+    ]);
   });
 
   it("reserves the exact HYUSD/USDC target every run without consuming the rotating budget", () => {
@@ -67,9 +70,10 @@ describe("native measured-execution admission", () => {
 
     expect(first.admitted.size).toBe(13);
     expect(first.admitted.has(priority.targetId)).toBe(true);
+    expect(first.priorityExpectedCount).toBe(2);
     expect(first.priorityObservedCount).toBe(1);
     expect(first.rotatingAdmittedCount).toBe(12);
-    expect(first.missingPriorityPolicyIds).toEqual([]);
+    expect(first.missingPriorityPolicyIds).toEqual(["wm-usdc-raydium-csmz-v1"]);
     expect(first.nextCursor).toBe("solana-11");
 
     const second = admitSolanaMeasuredTargets(targets, first.nextCursor);
@@ -87,7 +91,10 @@ describe("native measured-execution admission", () => {
     const admission = admitSolanaMeasuredTargets([spoofed], null);
 
     expect(admission.priorityObservedCount).toBe(0);
-    expect(admission.missingPriorityPolicyIds).toEqual(["hyusd-usdc-orca-4tjw-v1"]);
+    expect(admission.missingPriorityPolicyIds).toEqual([
+      "hyusd-usdc-orca-4tjw-v1",
+      "wm-usdc-raydium-csmz-v1",
+    ]);
     expect(admission.admitted).toEqual(new Set(["spoofed-priority"]));
   });
 

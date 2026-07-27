@@ -259,6 +259,83 @@ describe("Safety Score v9 archetype backing adapters", () => {
     ).toThrow();
   });
 
+  it("fires structural signals for unavailable sdn/rwa metrics and skips evidenced N/A ones", () => {
+    const sdnBase = reviews[3] as Extract<V9MechanismRiskReview, { archetype: "synthetic-delta-neutral" }>;
+    const rwaBase = reviews[5] as Extract<V9MechanismRiskReview, { archetype: "rwa-credit-fund" }>;
+
+    const sdnFull = evaluateV9Backing(asset(), sdnBase, V9_CANDIDATE_POLICY_V1);
+    const sdnUnavailable = V9MechanismRiskReviewSchema.parse({
+      ...sdnBase,
+      hedgeCoverageRatio: null,
+      metricApplicability: {
+        hedgeCoverageRatio: {
+          state: "unavailable",
+          rationale: "No hedge-position or venue-notional dataset is published.",
+          evidenceRefIds: ["evidence:hedge-unavailable"],
+        },
+        marginBufferPct: { state: "measured" },
+        lossAbsorptionShare: { state: "measured" },
+      },
+    });
+    if (sdnUnavailable.archetype !== "synthetic-delta-neutral") throw new Error("unexpected archetype");
+    const sdnPenalized = evaluateV9Backing(asset(), sdnUnavailable, V9_CANDIDATE_POLICY_V1);
+    // Unavailable hedge coverage fires the hedge signal the full measured
+    // review (ratio 1) does not.
+    expect(sdnPenalized.structuralReasons.length).toBeGreaterThan(sdnFull.structuralReasons.length);
+
+    const rwaFull = evaluateV9Backing(asset(), rwaBase, V9_CANDIDATE_POLICY_V1);
+    const rwaUnavailable = V9MechanismRiskReviewSchema.parse({
+      ...rwaBase,
+      weightedAverageMaturityDays: null,
+      metricApplicability: {
+        weightedAverageMaturityDays: {
+          state: "unavailable",
+          rationale: "Portfolio tenors are undisclosed and the dominant holding is perpetual.",
+          evidenceRefIds: ["evidence:wam-unavailable"],
+        },
+        valuationCadenceDays: { state: "measured" },
+      },
+    });
+    if (rwaUnavailable.archetype !== "rwa-credit-fund") throw new Error("unexpected archetype");
+    const rwaPenalized = evaluateV9Backing(asset(), rwaUnavailable, V9_CANDIDATE_POLICY_V1);
+    expect(rwaPenalized.structuralReasons.length).toBeGreaterThan(rwaFull.structuralReasons.length);
+
+    // An evidenced N/A maturity metric skips the mismatch signal entirely.
+    const rwaNotApplicable = V9MechanismRiskReviewSchema.parse({
+      ...rwaBase,
+      weightedAverageMaturityDays: null,
+      metricApplicability: {
+        weightedAverageMaturityDays: {
+          state: "not-applicable",
+          rationale: "Demand-deposit style claim with no maturity ladder.",
+          evidenceRefIds: ["evidence:wam-na"],
+        },
+        valuationCadenceDays: { state: "measured" },
+      },
+    });
+    if (rwaNotApplicable.archetype !== "rwa-credit-fund") throw new Error("unexpected archetype");
+    const rwaSkipped = evaluateV9Backing(asset(), rwaNotApplicable, V9_CANDIDATE_POLICY_V1);
+    expect(rwaSkipped.structuralReasons.length).toBe(rwaFull.structuralReasons.length);
+
+    // Consistency refinements: measured needs a number; unavailable must be null.
+    expect(() =>
+      V9MechanismRiskReviewSchema.parse({ ...sdnBase, hedgeCoverageRatio: null }),
+    ).toThrow(/Measured hedgeCoverageRatio/);
+    expect(() =>
+      V9MechanismRiskReviewSchema.parse({
+        ...rwaBase,
+        metricApplicability: {
+          weightedAverageMaturityDays: {
+            state: "unavailable",
+            rationale: "Tenors undisclosed.",
+            evidenceRefIds: ["evidence:wam-unavailable"],
+          },
+          valuationCadenceDays: { state: "measured" },
+        },
+      }),
+    ).toThrow(/unavailable weightedAverageMaturityDays must be null/);
+  });
+
   it("emits the algorithmic reflexivity ceiling independently of strong components", () => {
     const base = reviews[4] as Extract<V9MechanismRiskReview, { archetype: "algorithmic" }>;
     const result = evaluateV9Backing(

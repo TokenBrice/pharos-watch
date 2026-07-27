@@ -1,5 +1,6 @@
 import {
   DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC,
+  DEX_MEASURED_FRESHNESS_MAX_SEC,
   getDexMeasuredExecutionFreshnessMaxSec,
   DexMeasuredExecutionProfileSchema,
   DexMeasuredExecutionTargetSchema,
@@ -28,6 +29,7 @@ import {
   summarizeDexMeasuredExecutionHistory,
   type DexMeasuredExecutionHistoryCycle,
 } from "./history";
+import { isOperationalSolanaMeasuredFailure } from "./solana-quotes";
 
 const DEX_MEASURED_TARGET_SURFACE = "dex-measured-execution-targets";
 const DEX_MEASURED_QUOTE_SURFACE = "dex-measured-execution-quotes";
@@ -994,6 +996,10 @@ export interface LoadedSolanaMeasuredQuoteEvidence {
       status: "measured" | "failed";
       failureReason: string | null;
       profile: SolanaMeasuredExecutionProfile | null;
+      quoteGenerationId: string;
+      targetGenerationId: string;
+      resolution: "latest" | "last-known-good";
+      latestFailureReason: string | null;
     }
   >;
 }
@@ -1057,7 +1063,7 @@ interface NativeMeasuredProfile {
 
 interface NativePersistenceConfig<TTarget extends NativeMeasuredTarget, TProfile extends NativeMeasuredProfile> {
   label: string;
-  activation: "active" | "shadow";
+  activation: "active" | "shadow" | "target-ratified";
   targetSurface: string;
   quoteSurface: string;
   targetGenerationPrefix: string;
@@ -1098,7 +1104,7 @@ interface NativeLoadedQuoteEvidence<TTarget, TProfile> {
 
 const SOLANA_PERSISTENCE: NativePersistenceConfig<SolanaMeasuredExecutionTarget, SolanaMeasuredExecutionProfile> = {
   label: "Solana",
-  activation: "shadow",
+  activation: "target-ratified",
   targetSurface: SOLANA_MEASURED_TARGET_SURFACE,
   quoteSurface: SOLANA_MEASURED_QUOTE_SURFACE,
   targetGenerationPrefix: "dex-solana-measured-targets",
@@ -1399,6 +1405,162 @@ async function loadLatestPublishedNativeMeasuredQuoteEvidence<
   });
 }
 
+/**
+ * Solana rotates most targets through a bounded serialized quote budget. A
+ * current `budget-deferred` row is therefore an operational collection result,
+ * not fresh evidence that the last exact route stopped working. Reuse only a
+ * fresh, fully valid prior measurement for that same target; semantic or
+ * malformed history is an integrity barrier and remains fail-closed.
+ */
+async function loadLatestPublishedSolanaMeasuredQuoteEvidenceWithLkg(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<LoadedSolanaMeasuredQuoteEvidence | null> {
+  const currentEvidence = await loadCurrentMeasuredQuoteEvidence({
+    db,
+    quoteSurface: SOLANA_MEASURED_QUOTE_SURFACE,
+    targetSurface: SOLANA_MEASURED_TARGET_SURFACE,
+    label: "Solana",
+    targetSchema: SolanaMeasuredExecutionTargetSchema,
+    profileSchema: SolanaMeasuredExecutionProfileSchema,
+    signal,
+  });
+  if (!currentEvidence) return null;
+
+  const byTargetId = new Map<
+    string,
+    LoadedSolanaMeasuredQuoteEvidence["byTargetId"] extends Map<string, infer T> ? T : never
+  >();
+  const eligibleLkgTargetIds: string[] = [];
+  for (const [targetId, entry] of currentEvidence.byTargetId) {
+    byTargetId.set(targetId, {
+      ...entry,
+      quoteGenerationId: currentEvidence.quoteGenerationId,
+      targetGenerationId: currentEvidence.targetGenerationId,
+      resolution: "latest",
+      latestFailureReason: entry.failureReason,
+    });
+    if (entry.status === "failed" && isOperationalSolanaMeasuredFailure(entry.failureReason)) {
+      eligibleLkgTargetIds.push(targetId);
+    }
+  }
+  currentEvidence.byTargetId.clear();
+  if (eligibleLkgTargetIds.length === 0) {
+    return { ...currentEvidence, byTargetId };
+  }
+
+  try {
+    const historyGenerationResult = await runWithOverloadRetry(
+      () =>
+        db
+          .prepare(
+            `SELECT history_generation.generation_id
+       FROM surface_publication_generations history_generation
+       WHERE history_generation.surface = ? AND history_generation.state = 'superseded'
+         AND history_generation.published_at IS NOT NULL AND history_generation.published_at >= ?
+         AND history_generation.expected_rows IS NOT NULL
+         AND history_generation.published_rows = history_generation.expected_rows
+         AND history_generation.expected_rows = (
+           SELECT COUNT(*)
+           FROM dex_measured_execution_quotes complete_quotes
+           WHERE complete_quotes.generation_id = history_generation.generation_id
+         )
+       ORDER BY history_generation.published_at DESC, history_generation.generation_id DESC`,
+          )
+          .bind(
+            SOLANA_MEASURED_QUOTE_SURFACE,
+            currentEvidence.publishedAt - DEX_MEASURED_FRESHNESS_MAX_SEC,
+          )
+          .all<{ generation_id: string }>(),
+      3,
+      signal,
+    );
+    const historyGenerationIds = (historyGenerationResult.results ?? []).map((row) => row.generation_id);
+    if (historyGenerationIds.length === 0) return { ...currentEvidence, byTargetId };
+
+    const historyGenerationIdsJson = JSON.stringify(historyGenerationIds);
+    for (let offset = 0; offset < eligibleLkgTargetIds.length; offset += DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE) {
+      const targetIdBatch = eligibleLkgTargetIds.slice(offset, offset + DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE);
+      const rowsResult = await runWithOverloadRetry(
+        () =>
+          db
+            .prepare(
+              `SELECT q.generation_id, q.target_generation_id, q.target_id, q.status, q.failure_reason,
+                q.quote_profile_json, g.published_at AS quote_published_at, t.target_json
+         FROM dex_measured_execution_quotes q
+         JOIN surface_publication_generations g ON g.surface = ? AND g.generation_id = q.generation_id
+         JOIN dex_measured_execution_targets t
+           ON t.generation_id = q.target_generation_id AND t.target_id = q.target_id
+         WHERE q.generation_id IN (SELECT value FROM json_each(?))
+           AND q.target_id IN (SELECT value FROM json_each(?))
+         ORDER BY q.target_id, g.published_at DESC, q.generation_id DESC`,
+            )
+            .bind(SOLANA_MEASURED_QUOTE_SURFACE, historyGenerationIdsJson, JSON.stringify(targetIdBatch))
+            .all<HistoricalQuoteRow>(),
+        3,
+        signal,
+      );
+      const blockedTargetIds = new Set<string>();
+      const resolvedTargetIds = new Set<string>();
+      const rows: Array<HistoricalQuoteRow | undefined> = rowsResult.results ?? [];
+      for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+        const row = rows[rowIndex];
+        rows[rowIndex] = undefined;
+        if (!row || blockedTargetIds.has(row.target_id) || resolvedTargetIds.has(row.target_id)) continue;
+
+        const targetJson = parseJson(row.target_json, { onFailure: () => undefined });
+        const profileJson = row.quote_profile_json
+          ? parseJson(row.quote_profile_json, { onFailure: () => undefined })
+          : null;
+        const targetResult = targetJson.ok ? SolanaMeasuredExecutionTargetSchema.safeParse(targetJson.value) : null;
+        const profileResult = profileJson?.ok
+          ? SolanaMeasuredExecutionProfileSchema.safeParse(profileJson.value)
+          : null;
+        const profile = profileResult?.success ? profileResult.data : null;
+        const rowIsValid =
+          targetResult?.success === true &&
+          targetResult.data.targetId === row.target_id &&
+          ((row.status === "measured" &&
+            profile != null &&
+            row.failure_reason == null &&
+            profile.targetId === row.target_id &&
+            profile.targetGenerationId === row.target_generation_id &&
+            profile.quoteGenerationId === row.generation_id) ||
+            (row.status === "failed" && profile == null && Boolean(row.failure_reason?.trim())));
+        if (!rowIsValid) {
+          blockedTargetIds.add(row.target_id);
+          continue;
+        }
+        if (row.status === "failed") {
+          if (!isOperationalSolanaMeasuredFailure(row.failure_reason)) blockedTargetIds.add(row.target_id);
+          continue;
+        }
+        const latest = byTargetId.get(row.target_id);
+        if (!latest || latest.status !== "failed" || !isOperationalSolanaMeasuredFailure(latest.failureReason)) {
+          blockedTargetIds.add(row.target_id);
+          continue;
+        }
+        byTargetId.set(row.target_id, {
+          quotedTarget: targetResult.data,
+          status: "measured",
+          failureReason: null,
+          profile,
+          quoteGenerationId: row.generation_id,
+          targetGenerationId: row.target_generation_id,
+          resolution: "last-known-good",
+          latestFailureReason: latest.failureReason,
+        });
+        resolvedTargetIds.add(row.target_id);
+      }
+      rows.length = 0;
+    }
+  } catch {
+    // A transient optional-history read must not discard the valid latest generation.
+  }
+
+  return { ...currentEvidence, byTargetId };
+}
+
 export async function publishSolanaMeasuredTargetInventory(input: {
   db: D1Database;
   targets: readonly SolanaMeasuredExecutionTarget[];
@@ -1430,7 +1592,7 @@ export async function loadLatestPublishedSolanaMeasuredQuoteEvidence(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<LoadedSolanaMeasuredQuoteEvidence | null> {
-  return loadLatestPublishedNativeMeasuredQuoteEvidence(SOLANA_PERSISTENCE, db, signal);
+  return loadLatestPublishedSolanaMeasuredQuoteEvidenceWithLkg(db, signal);
 }
 
 export async function publishTronMeasuredTargetInventory(input: {

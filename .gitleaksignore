@@ -253,3 +253,8 @@ f22fff401e2d5dfeb1efd4e6d988685826e41313:worker/src/cron/measured-execution/sola
 # Falcon public protocol asset labels captured in a mechanism evidence snapshot,
 # not credentials. One fingerprint covers the five labels on the minified line.
 5eb3338c978d5687018e9c354773b74134541862:shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/2026-07-22T09-33-02.000Z-0d20c67470ca-protocol-api.json:generic-api-key:1
+
+# Public Solana mint identifiers used by the pinned measured-execution profile,
+# not credentials.
+d2961f89365ac611e8a36dcb87313e76fb70a4aa:worker/src/cron/measured-execution/__tests__/fixtures/raydium-wm-usdc-single-segment-2026-07-27.json:generic-api-key:13
+d2961f89365ac611e8a36dcb87313e76fb70a4aa:worker/src/cron/measured-execution/solana-registry.ts:generic-api-key:101

@@ -21,7 +21,18 @@ export function evaluateV9SyntheticDeltaNeutralBacking(
 ): V9BackingResult {
   const backing = policy.policy.semantic.backing;
   const structuralReasons: V9BackingStructuralReason[] = [];
-  if (review.hedgeCoverageRatio < backing.structural.synthetic.minimumHedgeCoverageRatio) {
+  // Owner ruling 2026-07-27 (wave-7 D2): an `unavailable` metric keeps its
+  // structural signal firing — unmeasured is never presumed adequate — while
+  // an evidenced `not-applicable` metric skips it. Absent applicability means
+  // the metric is measured (legacy full-metric reviews).
+  const hedgeState = review.metricApplicability?.hedgeCoverageRatio.state ?? "measured";
+  const lossAbsorptionState = review.metricApplicability?.lossAbsorptionShare.state ?? "measured";
+  if (
+    hedgeState === "unavailable" ||
+    (hedgeState === "measured" &&
+      review.hedgeCoverageRatio !== null &&
+      review.hedgeCoverageRatio < backing.structural.synthetic.minimumHedgeCoverageRatio)
+  ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.synthetic.hedgeSignal, {
         responsibility: v9StructuralResponsibilityForStatus(review.hedgeReconciliation.status),
@@ -32,7 +43,12 @@ export function evaluateV9SyntheticDeltaNeutralBacking(
       }),
     );
   }
-  if (review.lossAbsorptionShare < backing.structural.synthetic.minimumLossAbsorptionShare) {
+  if (
+    lossAbsorptionState === "unavailable" ||
+    (lossAbsorptionState === "measured" &&
+      review.lossAbsorptionShare !== null &&
+      review.lossAbsorptionShare < backing.structural.synthetic.minimumLossAbsorptionShare)
+  ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.synthetic.lossAbsorptionSignal, {
         responsibility: v9StructuralResponsibilityForStatus(review.lossAbsorption.status),

@@ -59,6 +59,24 @@ const SolanaMeasuredRaydiumRouteProofSchema = CommonRouteProofSchema.extend({
   provider: z.literal("raydium-trade-api"),
   responseId: z.string().min(1).max(128),
   lastPoolPriceX64: z.string().regex(/^[1-9][0-9]*$/),
+  feeAmount: z.string().regex(/^[0-9]+$/).optional(),
+  /**
+   * A bounded, pool-pinned replay proof. It is optional for historical shadow
+   * evidence and required by the activation policy for reviewed on-state
+   * Raydium routes.
+   */
+  stateProof: z
+    .object({
+      slot: z.number().int().nonnegative(),
+      programId: SolanaAddressSchema,
+      tokenMint0: SolanaAddressSchema,
+      tokenMint1: SolanaAddressSchema,
+      liquidity: z.string().regex(/^[1-9][0-9]*$/),
+      sqrtPriceX64: z.string().regex(/^[1-9][0-9]*$/),
+      feeAmount: z.string().regex(/^[0-9]+$/),
+      direction: z.enum(["zero-for-one", "one-for-zero"]),
+    })
+    .optional(),
 });
 
 const SolanaMeasuredOrcaRouteProofSchema = CommonRouteProofSchema.extend({
@@ -278,7 +296,21 @@ export function validateSolanaMeasuredExecutionProfile(input: {
       issues.add("invalid-quote-proof");
 
     if (profile.adapterProfileId === "raydium-clmm-trade-api-v1") {
-      if (route.provider !== "raydium-trade-api") issues.add("invalid-quote-proof");
+      if (route.provider !== "raydium-trade-api") {
+        issues.add("invalid-quote-proof");
+      } else if (route.stateProof) {
+        const state = route.stateProof;
+        const directionMatches =
+          (state.direction === "zero-for-one" &&
+            state.tokenMint0 === profile.tokenIn.address &&
+            state.tokenMint1 === profile.tokenOut.address) ||
+          (state.direction === "one-for-zero" &&
+            state.tokenMint1 === profile.tokenIn.address &&
+            state.tokenMint0 === profile.tokenOut.address);
+        if (!directionMatches || state.slot < profile.slotWindow.before || state.slot > profile.slotWindow.after) {
+          issues.add("invalid-quote-proof");
+        }
+      }
     } else if (route.provider !== "jupiter-swap-api") {
       issues.add("invalid-quote-proof");
     } else if (

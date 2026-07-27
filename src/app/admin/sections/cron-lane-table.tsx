@@ -51,6 +51,7 @@ const CRON_STATE_LABELS: Readonly<Record<CronWorkbenchState, string>> = {
   unhealthy: "Unhealthy",
   degraded: "Degraded",
   unknown: "Unknown",
+  skipped: "Skipped",
   running: "Running",
   healthy: "Healthy",
 };
@@ -63,6 +64,7 @@ function getCronStatusColor(status: string | undefined): string {
 function getStateBadgeClass(state: CronWorkbenchState): string {
   if (state === "unhealthy") return "bg-red-500/15 text-red-800 dark:text-red-300";
   if (state === "degraded") return "bg-amber-500/15 text-amber-800 dark:text-amber-300";
+  if (state === "skipped") return "bg-muted text-muted-foreground";
   if (state === "running") return "bg-sky-500/15 text-sky-800 dark:text-sky-300";
   if (state === "unknown") return "bg-slate-500/15 text-slate-800 dark:text-slate-300";
   return "bg-green-500/15 text-green-800 dark:text-green-300";
@@ -71,6 +73,7 @@ function getStateBadgeClass(state: CronWorkbenchState): string {
 function getRowTone(state: CronWorkbenchState): string {
   if (state === "unhealthy") return "border-l-red-500/70";
   if (state === "degraded") return "border-l-amber-500/70";
+  if (state === "skipped") return "border-l-muted-foreground/40";
   if (state === "running") return "border-l-sky-500/70";
   if (state === "unknown") return "border-l-slate-500/60";
   return "border-l-green-500/60";
@@ -706,6 +709,7 @@ function CronWorkbenchControls({
             <option value="unhealthy">Unhealthy</option>
             <option value="degraded">Degraded</option>
             <option value="unknown">Unknown</option>
+            <option value="skipped">Skipped</option>
             <option value="running">Running</option>
             <option value="healthy">Healthy</option>
           </select>
@@ -921,7 +925,10 @@ function BudgetOnlySurfacePanel({ surfaces }: { surfaces: BudgetOnlySurfaceStatu
 export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLaneTableProps) {
   const [filters, setFilters] = useState<CronWorkbenchFilters>({ ...DEFAULT_CRON_WORKBENCH_FILTERS });
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
-  const model = useMemo(() => buildCronWorkbenchModel(groups, filters), [filters, groups]);
+  const model = useMemo(
+    () => buildCronWorkbenchModel(groups, filters, nowSeconds),
+    [filters, groups, nowSeconds],
+  );
   const selectedRow = model.rows.find((row) => row.key === selectedRowKey) ?? model.rows[0] ?? null;
   const isDefaultAttentionView = filters.state === "attention" && !model.hasActiveFilters;
 
@@ -957,7 +964,7 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
         <div className="border-y border-border/60 py-5 text-sm leading-relaxed text-muted-foreground">
           <p>
             {isDefaultAttentionView
-              ? "No cron jobs need attention. Healthy jobs are not mounted in the default view."
+              ? "No cron jobs need attention. Healthy and routine skipped jobs are not mounted in the default view."
               : "No cron jobs match the current filters."}
           </p>
           <Button
@@ -1016,8 +1023,8 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                       </div>
                       <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
                         {group.summary.visible}/{group.summary.total} shown · {group.summary.unhealthy} unhealthy ·{" "}
-                        {group.summary.degraded} degraded · {group.summary.unknown} unknown · {group.summary.running}{" "}
-                        running
+                        {group.summary.degraded} degraded · {group.summary.unknown} unknown · {group.summary.skipped}{" "}
+                        skipped · {group.summary.running} running
                       </span>
                     </div>
                   </th>

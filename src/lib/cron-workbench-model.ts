@@ -10,7 +10,7 @@ import type {
 } from "@shared/types";
 import { getStatusCronDisplay } from "@/lib/status/cron-config";
 
-export type CronWorkbenchState = "unhealthy" | "degraded" | "unknown" | "running" | "healthy";
+export type CronWorkbenchState = "unhealthy" | "degraded" | "unknown" | "skipped" | "running" | "healthy";
 export type CronWorkbenchStateFilter = "all" | "attention" | CronWorkbenchState;
 export type CronImpactClass = "public-critical" | "admin-watch";
 export type CronImpactFilter = "all" | CronImpactClass;
@@ -63,6 +63,7 @@ export interface CronWorkbenchGroupSummary {
   unhealthy: number;
   degraded: number;
   unknown: number;
+  skipped: number;
   running: number;
   healthy: number;
   publicCritical: number;
@@ -140,9 +141,10 @@ const BUDGET_SURFACE_REGISTRY_INDEX = new Map(
 );
 
 const CRON_STATE_SEVERITY: Readonly<Record<CronWorkbenchState, number>> = {
-  unhealthy: 4,
-  degraded: 3,
-  unknown: 2,
+  unhealthy: 5,
+  degraded: 4,
+  unknown: 3,
+  skipped: 2,
   running: 1,
   healthy: 0,
 };
@@ -155,6 +157,13 @@ const RUN_STATUS_LABELS: Readonly<Record<CronRunStatus, string>> = {
   skipped_neutral: "Skipped: no work required",
   skipped_duplicate: "Skipped: duplicate slot",
   skipped_running: "Skipped: already running",
+};
+
+const NEUTRAL_SKIP_REASON_LABELS: Readonly<Record<string, string>> = {
+  "v9-slot-window-too-short": "Skipped: V9 window too short",
+  "v9-core-slot-not-ready": "Skipped: core slot not ready",
+  "v9-competing-slot-active": "Skipped: competing slot active",
+  "v9-memory-lane-active": "Skipped: V9 memory lane active",
 };
 
 const ATTEMPT_STATE_LABELS: Readonly<Record<WorkerJobAttemptState, string>> = {
@@ -220,6 +229,12 @@ function isAttentionState(state: CronWorkbenchState): boolean {
   return state === "unhealthy" || state === "degraded" || state === "unknown";
 }
 
+function isFreshNeutralSkip(cron: CronStatus, nowSeconds?: number): boolean {
+  if (cron.lastRun?.status !== "skipped_neutral") return false;
+  if (nowSeconds == null) return true;
+  return nowSeconds - cron.lastRun.startedAt <= cron.expectedIntervalSec * 2;
+}
+
 function getRunningState(cron: CronStatus): Exclude<CronRunningFilter, "all"> {
   if (!cron.inFlight) return "idle";
   return cron.inFlight.stale ? "stale" : "running";
@@ -267,7 +282,7 @@ function matchesSearch(row: CronWorkbenchRow, normalizedSearch: string): boolean
 function matchesFilters(row: CronWorkbenchRow, filters: CronWorkbenchFilters): boolean {
   if (!matchesSearch(row, normalizeSearch(filters.search))) return false;
   if (filters.state === "attention") {
-    if (!isAttentionState(row.state)) return false;
+    if (!isAttentionState(row.state) && !(row.state === "skipped" && !row.cron.healthy)) return false;
   } else if (filters.state !== "all" && row.state !== filters.state) {
     return false;
   }
@@ -284,6 +299,7 @@ function summarizeGroup(allRows: CronWorkbenchRow[], visibleRows: CronWorkbenchR
     unhealthy: allRows.filter((row) => row.state === "unhealthy").length,
     degraded: allRows.filter((row) => row.state === "degraded").length,
     unknown: allRows.filter((row) => row.state === "unknown").length,
+    skipped: allRows.filter((row) => row.state === "skipped").length,
     running: allRows.filter((row) => row.runningState === "running").length,
     healthy: allRows.filter((row) => row.state === "healthy").length,
     publicCritical: allRows.filter((row) => row.impactClass === "public-critical").length,
@@ -292,11 +308,10 @@ function summarizeGroup(allRows: CronWorkbenchRow[], visibleRows: CronWorkbenchR
   };
 }
 
-export function classifyCronWorkbenchState(cron: CronStatus): CronWorkbenchState {
+export function classifyCronWorkbenchState(cron: CronStatus, nowSeconds?: number): CronWorkbenchState {
   if (cron.telemetryUnknown) return "unknown";
   const inheritedRequiredOutcome = getInheritedRequiredOutcome(cron);
   if (
-    !cron.healthy ||
     cron.lastRun?.status === "error" ||
     inheritedRequiredOutcome === "error" ||
     cron.inFlight?.stale
@@ -305,6 +320,8 @@ export function classifyCronWorkbenchState(cron: CronStatus): CronWorkbenchState
   }
   if (cron.lastRun?.status === "degraded" || inheritedRequiredOutcome === "degraded") return "degraded";
   if (cron.inFlight && !cron.inFlight.stale) return "running";
+  if (isFreshNeutralSkip(cron, nowSeconds)) return "skipped";
+  if (!cron.healthy) return "unhealthy";
   return "healthy";
 }
 
@@ -357,6 +374,10 @@ export function formatCronRunStatus(
   if (notStartedReason === "upstream-failure") return "Not started: prerequisite failed";
   if (notStartedReason === "upstream-blocked") return "Not started: prerequisite blocked";
   if (isCronRunPlatformAbandoned({ metadata })) return "Abandoned";
+  if (status === "skipped_neutral") {
+    const reason = readMetadataString(metadata, "reason");
+    if (reason && NEUTRAL_SKIP_REASON_LABELS[reason]) return NEUTRAL_SKIP_REASON_LABELS[reason];
+  }
   return status ? RUN_STATUS_LABELS[status] : "No runs";
 }
 
@@ -447,6 +468,7 @@ export function formatCronRunTiming(run: CronRun): FormattedCronRunTiming {
 export function buildCronWorkbenchModel(
   groups: readonly CronWorkbenchGroupInput[],
   filters: CronWorkbenchFilters = DEFAULT_CRON_WORKBENCH_FILTERS,
+  nowSeconds?: number,
 ): CronWorkbenchModel {
   let sourceIndex = 0;
   const rowsByGroup = groups.map((group) => {
@@ -457,7 +479,7 @@ export function buildCronWorkbenchModel(
       description: group.description,
     };
     const rows = group.entries.map(([job, cron]) => {
-      const state = classifyCronWorkbenchState(cron);
+      const state = classifyCronWorkbenchState(cron, nowSeconds);
       const inheritedRequiredOutcome = getInheritedRequiredOutcome(cron);
       const impactClass: CronImpactClass = getCronStatusImpact(job) === "critical" ? "public-critical" : "admin-watch";
       const rawStatus = cron.lastRun?.status ?? null;

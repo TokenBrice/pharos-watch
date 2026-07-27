@@ -295,6 +295,19 @@ describe("getRedemptionBackstopConfig", () => {
       reviewedAt: "2026-07-15",
     });
 
+    expect(getRedemptionBackstopConfig("xofm-mento")).toMatchObject({
+      routeFamily: "psm-swap",
+      accessModel: "permissionless-onchain",
+      settlementModel: "atomic",
+      executionModel: "deterministic-onchain",
+      outputAssetType: "stable-single",
+      outputAssets: ["cusd-celo"],
+      capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
+      costModel: { kind: "dynamic-or-unclear", confidence: "formula", feeModelKind: "formula" },
+      reviewedAt: "2026-07-27",
+    });
+    expect(getRedemptionBackstopConfig("xofm-mento")?.notes?.[1]).toContain("BiPoolManager");
+
     expect(getRedemptionBackstopConfig("alusd-alchemix")).toMatchObject({
       routeFamily: "queue-redeem",
       settlementModel: "days",

@@ -231,6 +231,103 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     expect(review.liquidationMechanics.status.applicability.state).toBe("not-applicable");
   });
 
+  it("expands partial sdn/rwa overlays with unavailable metrics and rejects CDP unavailability", () => {
+    const sourceUrl = "https://example.com/transparency";
+    // usdf-falcon-shaped: loss absorption measured, hedge/margin honestly unavailable.
+    const sdnOverlay = MechanismReviewOverlaySchema.parse({
+      assetId: "sdn-partial",
+      archetype: "synthetic-delta-neutral",
+      reviewedAt: "2026-07-27",
+      sources: [{ label: "Issuer transparency API", url: sourceUrl }],
+      notes: "Insurance-fund share is measured; no hedge-position or margin dataset is published.",
+      metrics: { hedgeCoverageRatio: null, marginBufferPct: null, lossAbsorptionShare: 0.0079 },
+      metricApplicability: {
+        hedgeCoverageRatio: {
+          state: "unavailable",
+          rationale: "No hedge-position or venue-notional dataset is published.",
+          sourceUrl,
+        },
+        marginBufferPct: {
+          state: "unavailable",
+          rationale: "No margin dataset is published; reserve excess is an analog only.",
+          sourceUrl,
+        },
+      },
+      components: {
+        venueAndCustody: { quality: "limited" },
+        lossAbsorption: { quality: "limited" },
+      },
+    });
+    const sdnReview = expandOverlayReview(sdnOverlay);
+    if (sdnReview.archetype !== "synthetic-delta-neutral") throw new Error("unexpected archetype");
+    expect(sdnReview.hedgeCoverageRatio).toBeNull();
+    expect(sdnReview.lossAbsorptionShare).toBe(0.0079);
+    expect(sdnReview.metricApplicability?.hedgeCoverageRatio.state).toBe("unavailable");
+    expect(sdnReview.metricApplicability?.lossAbsorptionShare.state).toBe("measured");
+    expect(sdnReview.venueAndCustody.quality).toBe("limited");
+    // Uncurated components stay bounded rather than being neutralized.
+    expect(sdnReview.hedgeReconciliation.status.observationState).toBe("bounded-unknown");
+
+    // apxusd-shaped: valuation cadence measured, WAM honestly unavailable.
+    const rwaOverlay = MechanismReviewOverlaySchema.parse({
+      assetId: "rwa-partial",
+      archetype: "rwa-credit-fund",
+      reviewedAt: "2026-07-27",
+      sources: [{ label: "Collateral dashboard", url: sourceUrl }],
+      notes: "Monthly valuation policy is documented; portfolio tenors are undisclosed.",
+      metrics: { weightedAverageMaturityDays: null, valuationCadenceDays: 30 },
+      metricApplicability: {
+        weightedAverageMaturityDays: {
+          state: "unavailable",
+          rationale: "Tenors are undisclosed and the dominant holding is perpetual.",
+          sourceUrl,
+        },
+      },
+      components: {
+        creditQuality: { quality: "weak" },
+        maturityAndLiquidity: { quality: "weak" },
+      },
+    });
+    const rwaReview = expandOverlayReview(rwaOverlay);
+    if (rwaReview.archetype !== "rwa-credit-fund") throw new Error("unexpected archetype");
+    expect(rwaReview.weightedAverageMaturityDays).toBeNull();
+    expect(rwaReview.valuationCadenceDays).toBe(30);
+    expect(rwaReview.metricApplicability?.weightedAverageMaturityDays.state).toBe("unavailable");
+
+    // CDP has no defined severity for an unavailable ratio.
+    expect(() =>
+      expandOverlayReview(
+        MechanismReviewOverlaySchema.parse({
+          assetId: "cdp-unavailable",
+          archetype: "cdp",
+          reviewedAt: "2026-07-27",
+          sources: [{ label: "Protocol design", url: sourceUrl }],
+          notes: "CDP metrics cannot be marked unavailable.",
+          metrics: { collateralizationRatio: null, liquidationCapacityRatio: 1 },
+          metricApplicability: {
+            collateralizationRatio: { state: "unavailable", rationale: "Unpublished.", sourceUrl },
+          },
+          components: { structuralRedemption: { quality: "adequate" } },
+        }),
+      ),
+    ).toThrow(/CDP admits only measured or not-applicable metrics/);
+
+    // Unavailable metric sourceUrl must match an overlay source.
+    expect(() =>
+      MechanismReviewOverlaySchema.parse({
+        ...sdnOverlay,
+        metricApplicability: {
+          hedgeCoverageRatio: {
+            state: "unavailable",
+            rationale: "No hedge dataset.",
+            sourceUrl: "https://example.com/not-a-source",
+          },
+        },
+        metrics: { hedgeCoverageRatio: null, marginBufferPct: 1, lossAbsorptionShare: 0.0079 },
+      }),
+    ).toThrow(/sourceUrl must match an overlay source/);
+  });
+
   it("publishes complete unhealthy USDQ evidence as failed health rather than missing coverage", () => {
     const review = buildSafetyScoreV9MechanismReview(fixedInputStub(), { id: "usdq-quill" } as MechanismMeta, "cdp");
     if (review?.archetype !== "cdp") throw new Error("expected the curated USDQ CDP overlay");
