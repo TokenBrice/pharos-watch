@@ -1,12 +1,15 @@
 import {
   buildReportCardsV9DependencyGraph,
+  REPORT_CARDS_V9_PRE_BREAKDOWN_RESPONSE_SCHEMA_VERSION,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
   ReportCardsV9CurrentResponseSchema,
-  type ReportCardsV9Response,
+  ReportCardsV9PreBreakdownResponseSchema,
+  type ReportCardsV9TransitionResponse,
   type V9PublicationHealth,
 } from "@shared/types/report-cards-v9";
 import {
   SafetyScoreV9CurrentResponseSchema,
+  SafetyScoreV9PreBreakdownResponseSchema,
   type SafetyScoreV9Response,
 } from "@shared/types/safety-score-v9-public";
 import {
@@ -29,8 +32,22 @@ export class ReportCardsV9SnapshotUnavailableError extends Error {
 export function projectSafetyScoreV9CandidateToPublicSnapshot(
   candidate: SafetyScoreV9Response,
   publicationHealth: V9PublicationHealth,
-): ReportCardsV9Response {
-  const currentCandidate = SafetyScoreV9CurrentResponseSchema.parse(candidate);
+): ReportCardsV9TransitionResponse {
+  const currentCandidateResult = SafetyScoreV9CurrentResponseSchema.safeParse(candidate);
+  const preBreakdownCandidateResult = currentCandidateResult.success
+    ? null
+    : SafetyScoreV9PreBreakdownResponseSchema.safeParse(candidate);
+  const currentCandidate = currentCandidateResult.success
+    ? currentCandidateResult.data
+    : preBreakdownCandidateResult?.success
+      ? preBreakdownCandidateResult.data
+      : SafetyScoreV9CurrentResponseSchema.parse(candidate);
+  const responseSchema = currentCandidateResult.success
+    ? ReportCardsV9CurrentResponseSchema
+    : ReportCardsV9PreBreakdownResponseSchema;
+  const responseSchemaVersion = currentCandidateResult.success
+    ? REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION
+    : REPORT_CARDS_V9_PRE_BREAKDOWN_RESPONSE_SCHEMA_VERSION;
   if (
     publicationHealth.acceptedPublicationGenerationId !==
       currentCandidate.publicationGenerationId ||
@@ -40,9 +57,9 @@ export function projectSafetyScoreV9CandidateToPublicSnapshot(
       "Safety Score V9 publication health does not match the accepted candidate",
     );
   }
-  return ReportCardsV9CurrentResponseSchema.parse({
+  return responseSchema.parse({
     model: "v9",
-    schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+    schemaVersion: responseSchemaVersion,
     lifecycle: "shadow",
     safetyScoreIdentity: {
       model: "v9",
@@ -80,7 +97,7 @@ export function projectSafetyScoreV9CandidateToPublicSnapshot(
 export async function loadPublishedReportCardsV9Snapshot(
   db: D1Database,
   signal?: AbortSignal,
-): Promise<ReportCardsV9Response> {
+): Promise<ReportCardsV9TransitionResponse> {
   let envelope;
   let publicationHealth;
   try {

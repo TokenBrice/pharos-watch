@@ -133,6 +133,22 @@ describe("active Safety Score source", () => {
     });
   });
 
+  it("accepts a retained pre-breakdown transition snapshot when its identity matches", async () => {
+    mockLoadPublishedReportCardsV9Snapshot.mockResolvedValue({
+      ...snapshot(),
+      schemaVersion: 3,
+    });
+
+    await expect(loadActiveSafetyScoreSource(markerDb(markerValue()))).resolves.toMatchObject({
+      kind: "v9",
+      expectedModel: "v9",
+      snapshot: {
+        schemaVersion: 3,
+        safetyScoreIdentity: snapshot().safetyScoreIdentity,
+      },
+    });
+  });
+
   it("reports an identity-bound marker with no canonical V9 snapshot as unavailable", async () => {
     mockLoadPublishedReportCardsV9Snapshot.mockRejectedValue(
       new MockV9UnavailableError("Canonical Safety Score V9 shadow cache is unavailable"),
@@ -156,7 +172,7 @@ describe("active Safety Score source", () => {
       kind: "error",
       expectedModel: "v9",
       reason: "v9-snapshot-unavailable",
-      detail: "Canonical Safety Score V9 snapshot does not satisfy the current report contract",
+      detail: "Canonical Safety Score V9 snapshot does not satisfy the live transition report contract",
     });
   });
 });

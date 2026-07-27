@@ -40,7 +40,7 @@ import { safeJsonParse } from "../lib/api-cache-read";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 import { isCurrentSafetyScoreV8Identity } from "../lib/safety-score-current-identity";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
-import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9TransitionResponse } from "@shared/types/report-cards-v9";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import type { ReportCardCachePayload } from "../lib/report-card-cache";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
@@ -149,7 +149,7 @@ type SnapshotSafetySource =
       kind: "ok";
       model: "v9";
       identity: SafetyScorePublicationIdentity;
-      reportCards: ReportCardsV9Response;
+      reportCards: ReportCardsV9TransitionResponse;
       updatedAt: number;
       activationUpdatedAt: number;
       marker: ReportCardsV9ActivationMarker;

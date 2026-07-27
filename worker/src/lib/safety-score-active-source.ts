@@ -1,6 +1,6 @@
 import {
-  ReportCardsV9CurrentResponseSchema,
-  type ReportCardsV9Response,
+  ReportCardsV9TransitionResponseSchema,
+  type ReportCardsV9TransitionResponse,
 } from "@shared/types/report-cards-v9";
 import { SafetyScoreV9PublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { getCache } from "./db-cache";
@@ -42,7 +42,7 @@ export type ActiveSafetyScoreSource =
       expectedModel: "v9";
       marker: ReportCardsV9ActivationMarker;
       activationUpdatedAt: number;
-      snapshot: ReportCardsV9Response;
+      snapshot: ReportCardsV9TransitionResponse;
     }
   | {
       kind: "error";
@@ -53,7 +53,7 @@ export type ActiveSafetyScoreSource =
         | "v9-identity-mismatch";
       activationUpdatedAt: number;
       marker: ReportCardsV9ActivationMarker | null;
-      snapshot: ReportCardsV9Response | null;
+      snapshot: ReportCardsV9TransitionResponse | null;
       detail: string;
     };
 
@@ -63,7 +63,7 @@ export function parseReportCardsV9ActivationMarker(value: string): ReportCardsV9
 }
 
 export function reportCardsV9IdentityMatchesActivationMarker(
-  snapshot: Pick<ReportCardsV9Response, "safetyScoreIdentity">,
+  snapshot: Pick<ReportCardsV9TransitionResponse, "safetyScoreIdentity">,
   marker: ReportCardsV9ActivationMarker,
 ): boolean {
   const identity = snapshot.safetyScoreIdentity;
@@ -107,7 +107,7 @@ export async function loadActiveSafetyScoreSource(
     };
   }
 
-  let snapshot: ReportCardsV9Response;
+  let snapshot: ReportCardsV9TransitionResponse;
   try {
     snapshot = await loadPublishedReportCardsV9Snapshot(db, signal);
   } catch (error) {
@@ -122,8 +122,8 @@ export async function loadActiveSafetyScoreSource(
       detail: error.message,
     };
   }
-  const currentSnapshot = ReportCardsV9CurrentResponseSchema.safeParse(snapshot);
-  if (!currentSnapshot.success) {
+  const transitionSnapshot = ReportCardsV9TransitionResponseSchema.safeParse(snapshot);
+  if (!transitionSnapshot.success) {
     return {
       kind: "error",
       expectedModel: "v9",
@@ -131,10 +131,10 @@ export async function loadActiveSafetyScoreSource(
       activationUpdatedAt: activation.updatedAt,
       marker,
       snapshot,
-      detail: "Canonical Safety Score V9 snapshot does not satisfy the current report contract",
+      detail: "Canonical Safety Score V9 snapshot does not satisfy the live transition report contract",
     };
   }
-  snapshot = currentSnapshot.data;
+  snapshot = transitionSnapshot.data;
 
   if (!reportCardsV9IdentityMatchesActivationMarker(snapshot, marker)) {
     return {

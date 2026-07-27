@@ -1,5 +1,5 @@
 import type { ReportCardsResponse } from "@shared/types/report-cards";
-import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9TransitionResponse } from "@shared/types/report-cards-v9";
 import type {
   SafetyScoreV8PublicationIdentity,
   SafetyScoreV9PublicationIdentity,
@@ -26,7 +26,7 @@ export type IdentifiedActiveSafetyScoreSource =
       identity: SafetyScoreV9PublicationIdentity;
       publishedAtSec: number;
       activationUpdatedAt: number;
-      snapshot: ReportCardsV9Response;
+      snapshot: ReportCardsV9TransitionResponse;
     }
   | {
       kind: "error";
