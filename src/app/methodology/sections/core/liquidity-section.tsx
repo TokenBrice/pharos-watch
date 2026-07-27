@@ -138,10 +138,10 @@ export function LiquidityMethodologySection() {
           </p>
           <p>
             Address-grade plain Curve StableSwap-NG pools with rate-bearing inputs can publish a route model only after
-            fresh same-block state verifies `get_balances`, amplification, stored rates, and ordered coins. Rate scaling
-            adjusts both balances and references before the existing StableSwap simulation; stale, unpinnable, or
-            identity-mismatched state remains capability-gated. Metapools, CryptoSwap, legacy pools, and all other
-            unreviewed Curve shapes are not widened.
+            fresh same-block state verifies `get_balances`, amplification, stored rates, ordered coins, and static fee
+            state. Rate scaling adjusts both balances and references; Curve deducts its captured static fee after the
+            full-input invariant. Stale, unpinnable, identity-mismatched, or dynamic-fee state remains capability-gated.
+            Metapools, CryptoSwap, legacy pools, and all other unreviewed Curve shapes are not widened.
           </p>
           <p>
             Coverage confidence is measurement-aware. Instead of a fixed score by source family, Pharos now weights how

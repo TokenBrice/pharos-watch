@@ -23,18 +23,21 @@ import type {
 } from "./types";
 
 /**
- * The Curve pools endpoint does not publish per-pool fees. Standard
- * StableSwap pools charge 1-4 bps; this conservative upper bound keeps the
- * modeled output below the live route when the source fee is unavailable.
+ * Fallback fee for legacy source-only Curve models where the pools endpoint
+ * lacks pool-specific fee state. Rate-bearing NG admission captures fee state
+ * instead of treating this as a per-pool bound.
  */
 export const CURVE_STABLESWAP_FEE_BOUND = 0.001;
 /** A source-stage capture must reflect the current head, not a reusable quote profile. */
 export const CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC = 10 * 60;
 
+const CURVE_STABLESWAP_FEE_DENOMINATOR = 10n ** 10n;
 const CURVE_STABLESWAP_NG_ABI = parseAbi([
   "function get_balances() view returns (uint256[])",
   "function stored_rates() view returns (uint256[])",
   "function A() view returns (uint256)",
+  "function fee() view returns (uint256)",
+  "function offpeg_fee_multiplier() view returns (uint256)",
   "function coins(uint256) view returns (address)",
 ]);
 const MAX_PROBES_PER_MULTICALL = 4;
@@ -67,6 +70,7 @@ interface CurveRatePoolState {
   balances: bigint[];
   rates: bigint[];
   amplification: bigint;
+  fee: bigint;
   coinAddresses: `0x${string}`[];
 }
 
@@ -162,12 +166,21 @@ function parsePoolState(input: {
   const balances = decodeUint256Array(input.results.get(`${prefix}-balances`));
   const rates = decodeUint256Array(input.results.get(`${prefix}-rates`));
   const amplification = decodeUint256(input.results.get(`${prefix}-A`));
+  const fee = decodeUint256(input.results.get(`${prefix}-fee`));
+  const offpegFeeMultiplier = decodeUint256(input.results.get(`${prefix}-offpeg-fee-multiplier`));
   const expectedCoins = input.probe.candidate.coins;
   if (
     !balances ||
     !rates ||
     amplification == null ||
     amplification <= 0n ||
+    fee == null ||
+    fee >= CURVE_STABLESWAP_FEE_DENOMINATOR ||
+    offpegFeeMultiplier == null ||
+    // StableSwap-NG only uses the dynamic-fee formula above its 1e10 fee
+    // denominator. The shared closed-form model accepts one fixed fee, so
+    // dynamic-fee pools remain gated rather than approximated at a snapshot.
+    offpegFeeMultiplier > CURVE_STABLESWAP_FEE_DENOMINATOR ||
     balances.length !== expectedCoins.length ||
     rates.length !== expectedCoins.length ||
     balances.some((balance) => balance <= 0n) ||
@@ -182,7 +195,7 @@ function parsePoolState(input: {
     if (!address || address !== expectedCoins[coinIndex]!.address) return null;
     coinAddresses.push(address);
   }
-  return { balances, rates, amplification, coinAddresses };
+  return { balances, rates, amplification, fee, coinAddresses };
 }
 
 function toTokenUnits(value: bigint, decimals: number): number | null {
@@ -212,6 +225,8 @@ function buildRateAwareExecutionModel(input: {
   // The shared simulator uses the plain paper convention (Ann = A * n^n).
   const amplification = Number(state.amplification) / tokenCount ** (tokenCount - 1);
   if (!Number.isFinite(amplification) || amplification <= 0) return null;
+  const feeRate = Number(state.fee) / Number(CURVE_STABLESWAP_FEE_DENOMINATOR);
+  if (!Number.isFinite(feeRate) || feeRate < 0 || feeRate >= 1) return null;
 
   let hasNonBaseRate = false;
   const tokens = candidate.coins.map((coin, index) => {
@@ -264,7 +279,7 @@ function buildRateAwareExecutionModel(input: {
     source: "curve",
     invariant: "stableswap",
     trackedTokenIndex: trackedIndexes[0]!,
-    feeRate: CURVE_STABLESWAP_FEE_BOUND,
+    feeRate,
     amplification,
     tokens: exactTokens,
   };
@@ -297,6 +312,16 @@ function buildPoolCalls(probes: readonly CurveRateProbe[], offset: number) {
         label: `${prefix}-A`,
         target: probe.candidate.poolAddress,
         callData: encodeFunctionData({ abi: CURVE_STABLESWAP_NG_ABI, functionName: "A" }),
+      },
+      {
+        label: `${prefix}-fee`,
+        target: probe.candidate.poolAddress,
+        callData: encodeFunctionData({ abi: CURVE_STABLESWAP_NG_ABI, functionName: "fee" }),
+      },
+      {
+        label: `${prefix}-offpeg-fee-multiplier`,
+        target: probe.candidate.poolAddress,
+        callData: encodeFunctionData({ abi: CURVE_STABLESWAP_NG_ABI, functionName: "offpeg_fee_multiplier" }),
       },
       ...probe.candidate.coins.map((_, coinIndex) => ({
         label: `${prefix}-coin-${coinIndex}`,
@@ -404,8 +429,9 @@ async function enrichChain(input: {
 
 /**
  * Replace eligible Curve StableSwap-NG rate-bearing gates only after reading
- * balances, rate multipliers, amplification, and coin order at one fresh,
- * confirmed block. Every failure keeps the original rate-bearing gate.
+ * balances, rate multipliers, amplification, static fee state, and coin order
+ * at one fresh, confirmed block. Every failure keeps the original rate-bearing
+ * gate.
  */
 export async function enrichCurveStableswapRateInputExecutionModels(input: {
   metrics: Map<string, LiquidityMetrics>;
