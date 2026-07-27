@@ -243,45 +243,49 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     expect(asset.control.structuralFailures).not.toContainEqual(expect.objectContaining({ kind: "centralized-mint" }));
   });
 
-  it("compiles LUSD's reviewed immutable mint logic without an unresolved mint-authority reason", () => {
-    const lusd = ACTIVE_META_BY_ID.get("lusd-liquity");
-    if (!lusd?.mintAuthority) throw new Error("expected the LUSD mint-authority review");
-    expect(lusd.mintAuthority.upgradeability).toMatchObject({
-      model: "immutable",
-      canChangeMintLogic: false,
-    });
+  it.each(["lusd-liquity", "bold-liquity"])(
+    "compiles %s's reviewed immutable mint logic and governance posture",
+    (stablecoinId) => {
+      const meta = ACTIVE_META_BY_ID.get(stablecoinId);
+      if (!meta?.mintAuthority) throw new Error(`expected the ${stablecoinId} mint-authority review`);
+      expect(meta.mintAuthority.upgradeability).toMatchObject({
+        model: "immutable",
+        canChangeMintLogic: false,
+      });
 
-    // Rebind the registry observation dates to the fixture clock so this test
-    // isolates compilation semantics from review freshness.
-    const mintAuthority = structuredClone(lusd.mintAuthority);
-    const fixtureReviewDate = new Date(AS_OF_SEC * 1_000).toISOString().slice(0, 10);
-    mintAuthority.review.reviewedAt = fixtureReviewDate;
-    if (mintAuthority.upgradeability) mintAuthority.upgradeability.observedAt = fixtureReviewDate;
-    const input = fixedInput();
-    const extension = buildSafetyScoreV9BaselineExtension(input, {
-      metaById: new Map([
-        [
-          ASSET_ID,
-          {
-            id: ASSET_ID,
-            mechanismArchetype: "cdp" as const,
-            mintAuthority,
-          },
-        ],
-      ]),
-    });
-    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
-    const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+      // Rebind the registry observation dates to the fixture clock so this test
+      // isolates compilation semantics from review freshness.
+      const mintAuthority = structuredClone(meta.mintAuthority);
+      const fixtureReviewDate = new Date(AS_OF_SEC * 1_000).toISOString().slice(0, 10);
+      mintAuthority.review.reviewedAt = fixtureReviewDate;
+      if (mintAuthority.upgradeability) mintAuthority.upgradeability.observedAt = fixtureReviewDate;
+      const input = fixedInput();
+      const extension = buildSafetyScoreV9BaselineExtension(input, {
+        metaById: new Map([
+          [
+            ASSET_ID,
+            {
+              id: ASSET_ID,
+              mechanismArchetype: "cdp" as const,
+              mintAuthority,
+            },
+          ],
+        ]),
+      });
+      const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+      const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
 
-    expect(extension.assets[0]!.economicControlReview?.mint).toMatchObject({
-      status: { observationState: "known" },
-      controlKey: null,
-      reconciliation: "not-applicable",
-      upgrade: { state: "immutable", controlKey: null },
-    });
-    expect(compiled.assets[0]!.controlStatus.observationState).toBe("known");
-    expect(evaluated.control.reasons.map((reason) => reason.code)).not.toContain("unresolved-mint-authority");
-  });
+      expect(extension.assets[0]!.economicControlReview?.mint).toMatchObject({
+        status: { observationState: "known" },
+        controlKey: null,
+        reconciliation: "not-applicable",
+        upgrade: { state: "immutable", controlKey: null },
+      });
+      expect(compiled.assets[0]!.controlStatus.observationState).toBe("known");
+      expect(evaluated.control.reasons.map((reason) => reason.code)).not.toContain("unresolved-mint-authority");
+      expect(evaluated.access.governance).toBe("immutable");
+    },
+  );
 
   it("binds reviewed inherited wrappers to local share accounting without dropping parent or upgrade controls", () => {
     const relationships = [...REVIEWED_INHERITED_WRAPPERS, UNRESOLVED_INHERITED_WRAPPER];

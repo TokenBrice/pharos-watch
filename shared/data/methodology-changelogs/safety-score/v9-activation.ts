@@ -19,6 +19,7 @@ export const SAFETY_SCORE_V9_ACTIVATION: MethodologyChangelogEntry = {
     "Active model-aware consumers select V9 without recomputing or falling back to V8",
     "Backing, Exit, and Economic Control replace the five V8 dimensions for native V9 output",
     "Transient producer failures hold the last accepted V9 snapshot and expose held status instead of publishing infrastructure-attributed score movement",
+    "Capability-free immutable protocol contracts resolve to immutable governance access posture instead of being mistaken for concentrated administrators",
     "The V8.17 methodology remains documented for the compatibility endpoint and rollback observation window",
   ],
   commits: [],

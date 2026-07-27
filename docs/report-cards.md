@@ -110,6 +110,12 @@ base asset while preserving the actual shared-control exposure.
 Missing categorical access-posture review remains visible but does not make an
 otherwise established score unrateable. New candidate cards use score-trace
 schema v3 inside candidate-response schema v4 and public-report schema v3.
+For governance access posture, a reviewed global mint-domain contract is
+`immutable` when it has no privileged capabilities, no applicable cap, no
+claim-impairment path, and access-only scope. The contract address identifies
+immutable protocol machinery rather than an administrator; deployment-scoped
+bridge controls remain separate and do not relabel the core protocol as
+concentrated governance.
 Trace v3 requires an explicit `scoreAdjustments` list, empty for ordinary cards
 and populated with the ordinary and adjusted stages when the market-anchor
 policy applies. Retained response-v3/trace-v2 and response-v2/trace-v1
@@ -609,7 +615,7 @@ Legacy state remains in the `useStressTest` hook with URL sync
 - **Active ratings page**: `/safety-scores/` selects `useReportCardsV9()` and renders the identified V9 publication through the established grade-grouped card grid, hero, filters, sorting controls, and card treatment. Cards use Backing, Exit, and Economic Control; the page shows accepted/attempted timestamps and the explicit held-publication banner. An unavailable or invalid V9 response renders unavailable and never falls back to V8.
 - **V9 card grid**: `src/app/safety-scores/v9-client.tsx` and `src/components/report-card-mini-v9.tsx` preserve the production grade-grouped card grid, hero, filters, sorting, and visual treatment while using V9 score, grade, and three-pillar radar data.
 - **Retained V8 compatibility UI**: `src/app/safety-scores/client.tsx`, `src/components/stress-test-panel.tsx`, `src/components/report-card.tsx`, and `src/components/report-card-mini.tsx` remain available only to compatibility code. The active ratings route no longer selects them.
-- **V9 detail renderer**: `src/components/report-card-v9.tsx` renders native V9 pillars, caps, evidence, access posture, and dependencies for model-aware consumers.
+- **V9 detail renderers**: `src/components/report-card-v9.tsx` remains the generic/shadow-review renderer. Stablecoin detail pages use `src/components/stablecoin-detail/stablecoin-safety-score-v9-card.tsx`, which consumes the already-selected typed V9 card and restores the production score hero, freshness/actions, expandable pillar score bars, responsive two-column reserve composition, held-publication notice, and V9-native show-work stages. Live-reserve loading keeps the chart column allocated to avoid a hydration layout shift; unavailable score data retains the standalone reserve fallback.
 - **Other active consumers**: home and alt-peg tables, screener, stablecoin detail, compare, portfolio, dependency map, Freezewatch, and coverage use `useReportCardsV9()` projections. Held publications show an explicit notice.
 - **Policy-dependent consumers**: Selector recommendations and the Bluechip roster fail closed while their V9 thresholds remain unreviewed. The V8 stress simulator is not exposed by the active V9 route.
 - **Detail timeline**: `src/components/stablecoin-detail/safety-score-history-section.tsx` — per-coin grade transition timeline (seed row + changes) shown under the Safety Score section on `/stablecoin/[id]`
