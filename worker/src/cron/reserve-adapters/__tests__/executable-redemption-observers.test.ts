@@ -5,6 +5,7 @@ import type {
   EvmMulticall3Result,
 } from "../../../lib/evm-rpc";
 import {
+  getStableObservationBlockNumber,
   observeExecutableRedemptionRoute,
   type ExecutableRedemptionReadClient,
 } from "../executable-redemption-observers";
@@ -330,6 +331,11 @@ function client(
 }
 
 describe("specialized executable redemption observers", () => {
+  it("reads from a stable block behind the latest announced Ethereum head", () => {
+    expect(getStableObservationBlockNumber(BLOCK)).toBe(BLOCK - 2);
+    expect(getStableObservationBlockNumber(null)).toBeNull();
+  });
+
   it("measures eEARN queue state and fee without treating idle USDC as immediate capacity", async () => {
     const observation = await observeExecutableRedemptionRoute(
       "eearn-ember",

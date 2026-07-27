@@ -18,6 +18,23 @@
   "collateral": "Ceffu-custodied strategy assets and off-exchange delta-neutral margin used by Solomon Labs to back USDv",
   "pegMechanism": "USDv targets $1 through Solomon-managed strategy collateral, market liquidity, and approved/whitelisted participant redemption into USDC against a small documented protocol reserve buffer; no permissionless public holder redemption rail is disclosed",
   "mechanismArchetype": "synthetic-delta-neutral",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Codex Safety Score V9 Agent 07",
+    "rationale": "Solomon's official launch history says USDv operated through a year-long live beta before its November 2025 public introduction, and describes the yield engine as a spot-long, perpetual-short basis trade across major cryptoassets. The issuer's current site independently describes USDv as operating live since late 2024 across Treasuries and delta-neutral strategies, supporting the synthetic-delta-neutral classification and a conservative Q4 2024 implementation date.",
+    "sources": [
+      {
+        "label": "Solomon official introduction and year-long beta disclosure",
+        "url": "https://blog.solomonlabs.org/p/introducing-solomon"
+      },
+      {
+        "label": "Solomon USDv product page",
+        "url": "https://solomonlabs.org/"
+      }
+    ]
+  },
+  "implementationLaunchDate": "2024-Q4",
   "oracleRisk": {
     "tier": "oracleless-or-internal",
     "summary": "USDv is issued against Solomon-managed custody assets and delta-neutral hedge positions rather than borrower debt positions with oracle-triggered collateral liquidation.",

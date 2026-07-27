@@ -32,8 +32,8 @@ export function ReportCardMiniV9({
       href={buildStablecoinUrl(card.id)}
       className="pharos-focus-ring block h-full rounded-xl transition-transform active:scale-[0.995]"
     >
-      <Card className="pharos-card-shell pharos-interactive-card h-full cursor-pointer">
-        <CardContent className="relative flex flex-col items-center gap-2.5 pb-3 pt-3">
+      <Card className="pharos-card-shell pharos-interactive-card h-full cursor-pointer gap-0 py-0">
+        <CardContent className="relative flex flex-col items-center gap-2.5 px-2 pb-3 pt-3 sm:px-4">
           <div className="flex min-w-0 max-w-full items-center gap-2">
             <StablecoinLogo src={logo} name={name} size={24} />
             <span className="truncate text-sm font-medium">{name}</span>
@@ -56,7 +56,7 @@ export function ReportCardMiniV9({
             <CompareRadarV9
               series={[{ card, identity, color: "#10b981" }]}
               cohortSeries={[]}
-              size={170}
+              size={140}
             />
           </div>
         </CardContent>

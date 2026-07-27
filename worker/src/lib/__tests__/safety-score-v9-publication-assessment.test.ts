@@ -244,6 +244,22 @@ describe("Safety Score V9 publication assessment", () => {
     });
   });
 
+  it("does not compare producer-failed deterioration across a scoring identity transition", () => {
+    const priorIdentity = acceptedEnvelope();
+    priorIdentity.candidate.evaluationBuildDigest = digest("9");
+
+    expect(
+      assessV9Publication({
+        inputHealth: currentInputHealth(),
+        candidate: candidate(
+          producerFailedCard({ score: 70, grade: "B" }),
+        ),
+        acceptedEnvelope: priorIdentity,
+        coverageFloors: [],
+      }),
+    ).toEqual({ decision: "publish", reasons: [] });
+  });
+
   it("publishes chronic producer failure without a new effect and healthy measured adversity", () => {
     const chronicAccepted = candidate(
       producerFailedCard({ score: 70, grade: "B" }),

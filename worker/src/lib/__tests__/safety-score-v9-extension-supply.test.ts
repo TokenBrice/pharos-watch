@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
+import syzusdMetaSource from "@shared/data/stablecoins/coins/syzusd-yuzu.json";
 import xautMetaSource from "@shared/data/stablecoins/coins/xaut-tether.json";
 import wmMetaSource from "@shared/data/stablecoins/coins/wm-m0.json";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9SupplyReview, safetyScoreV9RouteSupplyShare } from "../safety-score-v9-extension-supply";
-import { deriveLockMintSupplyPartition } from "../safety-score-v9-supply-attribution";
+import { deriveLockMintSupplyPartition, safetyScoreV9ChainRows } from "../safety-score-v9-supply-attribution";
 
 function fixedInputStub(chainCirculating: Record<string, { current: number }>): ReportCardsFixedInput {
   return { chainCirculatingById: { alpha: chainCirculating } } as unknown as ReportCardsFixedInput;
@@ -132,6 +133,35 @@ describe("buildSafetyScoreV9SupplyReview", () => {
         fixedInputStub({ ethereum: { current: 60 }, tron: { current: 40 } }),
         "alpha",
         undefined,
+      ),
+    ).toBeNull();
+  });
+
+  it("does not substitute yzUSD chain rows for aggregate-only syzUSD supply", () => {
+    const fixedInput = {
+      chainCirculatingById: {
+        "syzusd-yuzu": {},
+        "yzusd-yuzu": {
+          Monad: { current: 23.75 },
+          Plasma: { current: 45_340_664.5 },
+        },
+      },
+      aggregateCirculatingById: {
+        "syzusd-yuzu": {
+          circulating: { peggedUSD: 48_488_933 },
+        },
+        "yzusd-yuzu": {
+          circulating: { peggedUSD: 45_340_688.25 },
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+
+    expect(safetyScoreV9ChainRows(fixedInput, "syzusd-yuzu")).toEqual({});
+    expect(
+      buildSafetyScoreV9SupplyReview(
+        fixedInput,
+        "syzusd-yuzu",
+        syzusdMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile,
       ),
     ).toBeNull();
   });

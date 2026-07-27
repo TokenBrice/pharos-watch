@@ -404,7 +404,10 @@
         "Hyperevm": "high",
         "Hyperliquid": "high",
         "Megaeth": "high"
-      }
+      },
+      "allowNegativeBuckets": [
+        "Ethereum"
+      ]
     }
   },
   "mintAuthority": {

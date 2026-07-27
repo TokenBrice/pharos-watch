@@ -4226,39 +4226,6 @@
       }
     },
     {
-      "assetId": "usx-solstice",
-      "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-15",
-      "sources": [
-        {
-          "label": "Solstice binding terms and conditions",
-          "url": "https://docs.solstice.finance/legal-documents/terms-and-conditions.md"
-        },
-        {
-          "label": "Solstice current attestations and proof-of-solvency disclosure",
-          "url": "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md"
-        },
-        {
-          "label": "Solstice risk disclosures",
-          "url": "https://docs.solstice.finance/legal-documents/risk-disclosures.md"
-        },
-        {
-          "label": "Solstice live signed proof-of-solvency API",
-          "url": "https://attestation-api.solstice.finance/dashboard"
-        }
-      ],
-      "notes": "Solstice's current proof disclosure expressly states that USX holders have no direct ownership, claim, or beneficial interest in collateral, while the binding terms state that the Foundation is not a trustee, agent, or fiduciary and disclaims fiduciary duties. This affirmative adverse evidence supports weak claim and segregation rather than treating a missing document as negative evidence. Current documents name Copper Technologies and Ceffu but provide no current reserve-owner mapping or provider allocations, reserve-wide anti-rehypothecation, estate-segregation terms, failure recovery, or succession; historical Equinox Fund I letters do not establish current USX custody continuity. The live July 15 proof payload publishes signed collateral and liability commitments plus a zero-knowledge proof and reconciles $525,095,474.74 of reserves against $522,891,044.14 of supply, a 1.004216 coverage ratio. This current cryptographic assets-and-liabilities reconciliation supports adequate assurance and reconciliation, while the lack of asset-category weights prevents it from establishing reserve composition or custody continuity.",
-      "metrics": {},
-      "components": {
-        "claimAndSegregation": {
-          "quality": "weak"
-        },
-        "assuranceAndReconciliation": {
-          "quality": "adequate"
-        }
-      }
-    },
-    {
       "assetId": "eusd-telcoin",
       "archetype": "fiat-cash",
       "reviewedAt": "2026-07-15",
@@ -13639,6 +13606,48 @@
         },
         "recovery": {
           "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "hbd-hive",
+      "archetype": "algorithmic",
+      "reviewedAt": "2026-07-22",
+      "sources": [
+        {
+          "label": "Hive API, irreversible block 108364554",
+          "url": "https://api.hive.blog"
+        },
+        {
+          "label": "Hive pinned consensus configuration",
+          "url": "https://github.com/openhive-network/hive/blob/dab219074fd146d07305bccd4a9f869c9d94d301/libraries/protocol/include/hive/protocol/config.hpp"
+        },
+        {
+          "label": "Hive pinned HBD conversion and debt-ratio logic",
+          "url": "https://github.com/openhive-network/hive/blob/dab219074fd146d07305bccd4a9f869c9d94d301/libraries/chain/database.cpp"
+        }
+      ],
+      "notes": "At irreversible Hive block 108364554, HBD had no exogenous reserve and depended on reflexive HIVE conversion. The nominal current conversion payout supports a 1.0 contraction-capacity ratio, while the debt-ratio print stop/haircut and reflexive market capacity keep contraction capacity limited. Witness-priced conversion and the consensus debt controls support adequate confidence/oracle/emergency-recovery facts; no holder loss-recovery waterfall beyond the reflexive conversion mechanism was established.",
+      "metrics": {
+        "exogenousBackingShare": 0,
+        "reflexiveBackingShare": 1,
+        "contractionCapacityRatio": 1
+      },
+      "components": {
+        "contractionCapacity": {
+          "quality": "limited"
+        },
+        "confidenceAndIncentives": {
+          "quality": "adequate"
+        },
+        "oracleAndControlAssumptions": {
+          "quality": "adequate"
+        },
+        "emergencyRecovery": {
+          "quality": "adequate"
+        },
+        "lossRecovery": {
+          "quality": "weak"
         }
       }
     }
