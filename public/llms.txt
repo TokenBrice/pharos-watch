@@ -381,11 +381,11 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Mento Japanese Yen (JPYm)](https://pharos.watch/stablecoin/jpym-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Japanese Yen.
 - [Mento Swiss Franc (CHFm)](https://pharos.watch/stablecoin/chfm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Swiss Franc.
 - [Mento Brazilian Real (BRLm)](https://pharos.watch/stablecoin/brlm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Brazilian Real.
-- [Mento Kenyan Shilling (KESm)](https://pharos.watch/stablecoin/kesm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Other.
-- [Mento Colombian Peso (COPm)](https://pharos.watch/stablecoin/copm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Other.
+- [Mento Kenyan Shilling (KESm)](https://pharos.watch/stablecoin/kesm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Kenyan Shilling.
+- [Mento Colombian Peso (COPm)](https://pharos.watch/stablecoin/copm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Colombian Peso.
 - [Mento Canadian Dollar (CADm)](https://pharos.watch/stablecoin/cadm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Canadian Dollar.
 - [Mento Australian Dollar (AUDm)](https://pharos.watch/stablecoin/audm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Australian Dollar.
-- [Mento Ghanaian Cedi (GHSm)](https://pharos.watch/stablecoin/ghsm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Other.
+- [Mento Ghanaian Cedi (GHSm)](https://pharos.watch/stablecoin/ghsm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Ghanaian Cedi.
 - [Mento South African Rand (ZARm)](https://pharos.watch/stablecoin/zarm-mento/): CeFi-dependent stablecoin collateralized by crypto assets pegged to South African Rand.
 - [Schuman EUROP (EUROP)](https://pharos.watch/stablecoin/europ-schuman/): centralized stablecoin backed by real-world assets pegged to Euro.
 - [Quantoz EURQ (EURQ)](https://pharos.watch/stablecoin/eurq-quantoz/): centralized stablecoin backed by real-world assets pegged to Euro.
@@ -462,9 +462,9 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [BRL1 (BRL1)](https://pharos.watch/stablecoin/brl1-brl1/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
 - [Argentine Peso (WARS)](https://pharos.watch/stablecoin/wars-argentine-peso/): centralized stablecoin backed by real-world assets pegged to Argentine Peso.
 - [Ripio wBRL (WBRL)](https://pharos.watch/stablecoin/wbrl-ripio/): centralized stablecoin backed by real-world assets pegged to Brazilian Real.
-- [Ripio wCLP (WCLP)](https://pharos.watch/stablecoin/wclp-ripio/): centralized stablecoin backed by real-world assets pegged to Other.
-- [Ripio wCOP (WCOP)](https://pharos.watch/stablecoin/wcop-ripio/): centralized stablecoin backed by real-world assets pegged to Other.
-- [Ripio wPEN (WPEN)](https://pharos.watch/stablecoin/wpen-ripio/): centralized stablecoin backed by real-world assets pegged to Other.
+- [Ripio wCLP (WCLP)](https://pharos.watch/stablecoin/wclp-ripio/): centralized stablecoin backed by real-world assets pegged to Chilean Peso.
+- [Ripio wCOP (WCOP)](https://pharos.watch/stablecoin/wcop-ripio/): centralized stablecoin backed by real-world assets pegged to Colombian Peso.
+- [Ripio wPEN (WPEN)](https://pharos.watch/stablecoin/wpen-ripio/): centralized stablecoin backed by real-world assets pegged to Peruvian Sol.
 - [Convertible JPY Token (CJPY)](https://pharos.watch/stablecoin/cjpy-yamato/): decentralized stablecoin collateralized by crypto assets pegged to Japanese Yen.
 - [MYRC (MYRC)](https://pharos.watch/stablecoin/myrc-blox/): centralized stablecoin backed by real-world assets pegged to Malaysian Ringgit.
 - [KRWQ (KRWQ)](https://pharos.watch/stablecoin/krwq-iq/): centralized stablecoin backed by real-world assets pegged to Korean Won.
