@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "kind": "onchain-mechanism-measurement",
+  "assetId": "usdh-hubble",
+  "archetype": "cdp",
+  "capturedAt": "2026-07-27T16:49:55Z",
+  "observations": {
+    "solana": {
+      "slots": {
+        "spVault": 435575169,
+        "supply": 435575170,
+        "collateral": 435575228,
+        "psm": 435575552
+      },
+      "rpc": "https://api.mainnet-beta.solana.com"
+    },
+    "supply": {
+      "totalUsdh": 1132311.664656,
+      "psmMintedUsdh": 1069376.821209,
+      "psmPda": "7AvwRQhSKtUUbEcP4eqYZbbKWgYyygehAqEp68nnc747",
+      "cdpDebtUsdh": 62934.843447
+    },
+    "collateralVaults": {
+      "wsol": 2425.376982995,
+      "eth": 0.50523929,
+      "btc": 0.233649,
+      "msol": 1012.17271071,
+      "dustExcluded": [
+        "SRM",
+        "RAY",
+        "FTT"
+      ],
+      "valueUsd": 306918.95,
+      "pricing": "Pyth Hermes market prices 2026-07-27T16:51:53-16:52:54Z (legacy on-chain Pyth stale, Scope layout unpublished)"
+    },
+    "usdhVault": {
+      "account": "GE6PqKhREVLRTGZs7rV5mJ2L3FAcj2fqohWCzTjhCTdQ",
+      "balanceUsdh": 37109.801234
+    },
+    "derived": {
+      "collateralizationRatio": 4.877,
+      "liquidationCapacityRatio": 0.59
+    }
+  }
+}

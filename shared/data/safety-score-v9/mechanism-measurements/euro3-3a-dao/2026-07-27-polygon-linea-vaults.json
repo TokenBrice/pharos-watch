@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "onchain-mechanism-measurement",
+  "assetId": "euro3-3a-dao",
+  "archetype": "cdp",
+  "capturedAt": "2026-07-27T17:36:00Z",
+  "observations": {
+    "polygon": {
+      "blocks": [
+        90977781,
+        90979167
+      ],
+      "vaults": 125,
+      "supplyEuro3": 8470.780084,
+      "vaultDebtEuro3": 0.473929,
+      "collateralEur": 221.79,
+      "stabilityPoolEuro3": 1772.962355
+    },
+    "linea": {
+      "blocks": [
+        31537160,
+        31537469
+      ],
+      "vaults": 585,
+      "supplyEuro3": 14395.441033,
+      "vaultDebtEuro3": 14395.441033,
+      "collateralEur": 1585696.08,
+      "stabilityPoolEuro3": 11458.773905,
+      "dominant": {
+        "meUSDC": 73452050.78,
+        "meUSDCEur": 0.0204438,
+        "meUSDT": 3892327.21,
+        "meUSDTEur": 0.0207579
+      }
+    },
+    "totals": {
+      "supplyEuro3": 22866.22,
+      "collateralEur": 1585917.87,
+      "vaultDebtEuro3": 14395.91,
+      "stabilityPoolEuro3": 13231.74
+    },
+    "derived": {
+      "collateralizationRatio": 69.356,
+      "liquidationCapacityRatio": 0.919
+    }
+  }
+}

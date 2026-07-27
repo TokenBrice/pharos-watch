@@ -13682,6 +13682,552 @@
           "quality": "weak"
         }
       }
+    },
+    {
+      "assetId": "usd3-3jane",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "3Jane backing dashboard live payload (all queries dataUpdatedAt 2026-07-27T16:31:57Z, fetched 2026-07-27T16:42Z)",
+          "url": "https://app.3jane.xyz/info/backing"
+        },
+        {
+          "label": "3Jane suppliers and USD3-senior/sUSD3-first-loss tranche documentation",
+          "url": "https://docs.3jane.xyz/architecture/core-money-market/suppliers"
+        },
+        {
+          "label": "3Jane FCC legal structuring (bankruptcy-remote SPVs, perfected first-priority security interests, true-sale forward flow, DACA collection control)",
+          "url": "https://docs.3jane.xyz/backing/fcc/legal-structuring"
+        },
+        {
+          "label": "3Jane liquidity documentation (Aave cash buffer, bounded on-chain withdrawals)",
+          "url": "https://docs.3jane.xyz/usd3-susd3/liquidity"
+        }
+      ],
+      "notes": "Measured 2026-07-27 from 3Jane's backing dashboard payload (fetched 2026-07-27T16:42Z, all queries dataUpdatedAt 2026-07-27T16:31:57Z; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/usd3-3jane/2026-07-27-backing-dashboard.json). weightedAverageMaturityDays 60.875 converts the issuer-published wtdAvgRemainingTermMonths of 2 for the facilities sleeve ($53,884,974.771 deployed, 39.2% of $137,359,485.15 total backing) at 30.4375 days per month; it excludes revolving crypto credit lines and the liquid buffer and is scoped to the facilities sleeve (cross-check: Slope FF averageRemainingTermDays 45 on 90.5% of deployed principal). valuationCadenceDays 0 reflects continuous on-chain ERC-4626 share-price accrual with a live sub-minute pricePerShare series, labeled as on-chain mechanism state rather than a manager marking cadence. The live issuer tape (96.86% current, 0 charged off, Jane score 786.95, weighted LTV 23.0%, 3.8% credit enhancement) is self-reported with no independent loan-tape audit, so creditQuality is limited. The documented on-chain USD3-senior/sUSD3-first-loss waterfall capped by TRANCHE_RATIO plus originator first-loss equity grades seniority adequate; documented bankruptcy-remote SPVs, perfected security interests, and DACA collection control grade legalEnforceability adequate. Continuous on-chain NAV plus weekly OC/borrowing-base tests grade valuationCadence adequate; the published 2-month remaining term, Aave cash buffer, and bounded on-chain withdrawals grade maturityAndLiquidity adequate. On-chain USDC/Aave is verifiable but off-chain receivables sit in SPVs/servicers without attestation (custody limited), and documented triggers, credit-slasher, and write-off mechanics have no realized default cycle (staticLossToDate 0), so recovery is limited.",
+      "metrics": {
+        "weightedAverageMaturityDays": 60.875,
+        "valuationCadenceDays": 0
+      },
+      "components": {
+        "creditQuality": {
+          "quality": "limited"
+        },
+        "seniority": {
+          "quality": "adequate"
+        },
+        "legalEnforceability": {
+          "quality": "adequate"
+        },
+        "valuationCadence": {
+          "quality": "adequate"
+        },
+        "maturityAndLiquidity": {
+          "quality": "adequate"
+        },
+        "custody": {
+          "quality": "limited"
+        },
+        "recovery": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "money-defi-money",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "defi.money contract deployment registry",
+          "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
+        },
+        {
+          "label": "defi.money LLAMMA liquidation documentation (external arbitrageur/keeper-funded soft and hard liquidation, no dedicated stability pool)",
+          "url": "https://docs.defi.money/welcome/how-does-it-work/liquidation"
+        },
+        {
+          "label": "Pinned defi.money MainController implementation",
+          "url": "https://github.com/defidotmoney/dfm-contracts/blob/5b1ba6987dc170e7c22293e000700a8d1d7d0c9f/contracts/cdp/MainController.vy"
+        },
+        {
+          "label": "DefiLlama MONEY supply series (14,002,106, matching on-chain totalSupply sum)",
+          "url": "https://stablecoins.llama.fi/stablecoin/417"
+        }
+      ],
+      "notes": "Measured 2026-07-27 via eth_call across all three deployment chains (Arbitrum block 488319512, Optimism block 154786317, Base block 49191034, reads at 2026-07-27T16:56:42Z; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/money-defi-money/2026-07-27-multichain-cdp.json): per-market total_debt, COLLATERAL_TOKEN balances of operator plus AMM, and MainController.get_oracle_price across 17 mint markets give collateral $2,805.32 against debt $1,752.68, a collateralizationRatio of 1.6006 scoped to active mint markets per the crvUSD-overlay precedent. MONEY totalSupply (14.00M, matching DefiLlama) exceeds CDP debt by roughly 8,000x because historical mints were never burned back through the controllers, and 13.95M of supply could not be attributed to any tracked facility (peg-keeper active debt measured at $54,682). liquidationCapacityRatio is not-applicable: LLAMMA soft- and hard-liquidation is funded by external arbitrageurs and keepers with no MONEY-dedicated stability pool, the crvUSD design. Per-market loan/liquidation discounts, debt ceilings, and Chainlink EMA oracles (live prices within 0.2% of market at the pinned blocks) grade collateralizationParameters adequate; documented band-by-band soft liquidation with a hard-liquidation path grades liquidationMechanics adequate. The absence of any dedicated backstop pool grades backstop limited; 17 separate MarketOperator+AMM pairs with per-market and global debt ceilings grade branchIsolation adequate. No shutdown or recapitalization facility is documented (shutdownAndBadDebt limited), and there is no redemption — peg support runs through peg-keepers and Curve pools (structuralRedemption limited).",
+      "metrics": {
+        "collateralizationRatio": 1.6006,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "LLAMMA soft-liquidation and hard-liquidation are funded by external arbitrageurs and keepers; no MONEY-dedicated stability pool or committed liquidation capital exists to measure.",
+          "sourceUrl": "https://docs.defi.money/welcome/how-does-it-work/liquidation"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "nect-beraborrow",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "Berachain public RPC used for journaled eth_call reads at block 24078093",
+          "url": "https://rpc.berachain.com"
+        },
+        {
+          "label": "Beraborrow contract address registry",
+          "url": "https://beraborrow.gitbook.io/docs/additional-resources/contract-addresses"
+        },
+        {
+          "label": "Beraborrow collateral ratio and liquidation documentation (LSP-first liquidation, redistribution fallback)",
+          "url": "https://beraborrow.gitbook.io/docs/borrowing/collateral-ratio-and-liquidation"
+        },
+        {
+          "label": "Beraborrow recovery mode documentation",
+          "url": "https://beraborrow.gitbook.io/docs/borrowing/recovery-mode"
+        },
+        {
+          "label": "DefiLlama NECT supply (339,238, matching on-chain supply)",
+          "url": "https://stablecoins.llama.fi/stablecoin/329"
+        },
+        {
+          "label": "CoinGecko BERA price cross-check ($0.1746, within 0.2% of the on-chain feed)",
+          "url": "https://api.coingecko.com/api/v3/simple/price?ids=berachain-bera&vs_currencies=usd"
+        }
+      ],
+      "notes": "Measured 2026-07-27 at Berachain block 24078093 via DenManagerGetters.getAllCollateralsAndDenManagers across 54 registry DenManagers (reads at 2026-07-27T16:48:25Z; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/nect-beraborrow/2026-07-27-block-24078093.json): Den collateral $320,087 at protocol prices against Den debt 84,876 NECT, plus a USDC.e PSM reserve of $923,506 (the USDe PSM is empty), against NECT supply 339,235.37. Raw backing/supply is 3.667 at protocol prices, but the OHM branch feed returns a frozen $100.00 versus a $18.61 market price (CoinGecko), overstating collateral by $111.3k; the published collateralizationRatio 3.338 uses the market-adjusted OHM value. liquidationCapacityRatio 0.276 is Liquid Stability Pool deposits of 23,391.42 NECT over the Den debt of 84,876.11 the LSP actually backstops (0.069 against full supply). Per-branch MCRs of 110-150% and debt ceilings measured on-chain grade collateralizationParameters adequate; the documented LSP-first liquidation with redistribution fallback and recovery mode grades liquidationMechanics adequate; the measured 27.6% shared LSP coverage grades backstop adequate. A single LSP shared by all branches, with three branches reading a zero-price oracle against live debt, grades branchIsolation limited; redistribution-only bad-debt handling with no recapitalization facility and six branches sunsetting (maxSystemDebt 0) grades shutdownAndBadDebt limited; the documented permissionless NECT redemption for collateral at $1 face value grades structuralRedemption adequate.",
+      "metrics": {
+        "collateralizationRatio": 3.338,
+        "liquidationCapacityRatio": 0.276
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "adequate"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "iusd-indigo-protocol",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "Indigo analytics CDP index (197 open iUSD CDPs, debt 1,303,554.235717 iUSD, fetched 2026-07-27T16:42Z)",
+          "url": "https://analytics.indigoprotocol.io/api/cdps"
+        },
+        {
+          "label": "Indigo live asset prices (protocol Pyth inverse oracle, slots 193604111-193604114)",
+          "url": "https://analytics.indigoprotocol.io/api/asset-prices"
+        },
+        {
+          "label": "Indigo stability pool state (iUSD SP datum snapshotD 419,947.538698 iUSD at slot 193599175, 2026-07-27T15:17:46Z)",
+          "url": "https://analytics.indigoprotocol.io/api/stability-pools"
+        },
+        {
+          "label": "Indigo stability pool accounts (684 accounts; SDK getAccountFund sum 419,971.87 iUSD, 0.006% agreement with datum)",
+          "url": "https://analytics.indigoprotocol.io/api/v3/stability-pools/accounts"
+        },
+        {
+          "label": "Indigo V3 mainnet system parameters",
+          "url": "https://config.indigoprotocol.io/mainnet/mainnet-system-params-v3.json"
+        },
+        {
+          "label": "Indigo SDK stability-pool accounting semantics",
+          "url": "https://github.com/IndigoProtocol/indigo-sdk/blob/main/src/helpers/stability-pool-helpers.ts"
+        },
+        {
+          "label": "Indigo liquidation documentation (two-step freeze-then-liquidate, SP burns iUSD against debt)",
+          "url": "https://docs.indigoprotocol.io/readme/liquidations.md"
+        },
+        {
+          "label": "Indigo redemption documentation (live iAsset collateral redemptions)",
+          "url": "https://docs.indigoprotocol.io/readme/redemptions.md"
+        }
+      ],
+      "notes": "Measured 2026-07-27 from Indigo's own indexer (journaled evidence: shared/data/safety-score-v9/mechanism-measurements/iusd-indigo-protocol/2026-07-27-slots-193599175-193604114.json): 197 open iUSD CDPs (189 ADA-branch, 8 NIGHT-branch) carry 1,303,554.235717 iUSD of debt; collateral of 14,529,187.554757 ADA and 649,246.056942 NIGHT valued at the protocol's live Pyth inverse oracle prices (slots 193604111-193604114) totals 2,323,686.06 iUSD, a collateralizationRatio of 1.783 (down from 1.93 on 2026-07-21 via ADA price movement). The iUSD Stability Pool datum at slot 193599175 reports 419,947.538698 iUSD of deposits, independently reproduced to 0.006% by applying the SDK's getAccountFund math over all 684 SP accounts, giving a liquidationCapacityRatio of 0.322 against CDP debt. V3 docs establish pair-specific liquidation/maintenance/redemption ratios but no public endpoint exposes current numeric values, so collateralizationParameters is limited. The documented two-step freeze-then-liquidate flow with the SP burning iUSD against debt and distributing seized collateral grades liquidationMechanics adequate; the measured 32.2% SP coverage with no separate recapitalization layer grades backstop adequate. Per-pair oracles and parameters with one shared iUSD Stability Pool spanning the ADA and NIGHT branches grade branchIsolation limited; no documented SP-exhaustion cure, global shutdown path, or residual-debt handling grades shutdownAndBadDebt limited; documented live iAsset collateral redemptions grade structuralRedemption adequate.",
+      "metrics": {
+        "collateralizationRatio": 1.783,
+        "liquidationCapacityRatio": 0.322
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "adequate"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "usdh-hubble",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "Hubble technical resources (program and account registry)",
+          "url": "https://docs.hubbleprotocol.io/resources/technical-resources"
+        },
+        {
+          "label": "Pinned Hubble mainnet config (collateral vaults, USDH Vault, markets)",
+          "url": "https://github.com/hubbleprotocol/hubble-common/blob/master/packages/hubble-config/src/constants/configs.ts"
+        },
+        {
+          "label": "Hubble documentation (USDH Vault deposits guarantee loan repayment; liquidations priced with ~10% spread)",
+          "url": "https://docs.hubbleprotocol.io/why-use-hubble"
+        },
+        {
+          "label": "Solana mainnet RPC used for journaled reads at finalized slots 435575169-435575552",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Pyth Hermes price API (market prices 2026-07-27T16:51:53-16:52:54Z)",
+          "url": "https://hermes.pyth.network/v2/updates/price/latest"
+        }
+      ],
+      "notes": "Measured 2026-07-27 at finalized Solana slots 435575169-435575552 (reads at 2026-07-27T16:49:55Z; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/usdh-hubble/2026-07-27-slots-435575169-435575552.json). CDP debt is derived as total USDH supply 1,132,311.664656 (slot 435575170) minus PSM-minted USDH 1,069,376.821209 read directly from the PsmReserve PDA 7AvwRQhSKtUUbEcP4eqYZbbKWgYyygehAqEp68nnc747 (slot 435575552), giving 62,934.843447 USDH; the reserve review reconciled this path to within 0.0041%. Collateral is the seven program collateral-vault token balances (WSOL 2,425.376982995, ETH 0.50523929, BTC 0.233649, mSOL 1,012.17271071, plus dust) valued at Pyth Hermes market prices because Hubble's legacy on-chain Pyth accounts are stale (pubslot ~299M versus current 435M) and its Scope oracle layout is not publicly pinned — honestly labeled as market-price valuation — totaling $306,918.95, a collateralizationRatio of 4.877. liquidationCapacityRatio 0.590 is the USDH Vault stablecoinStabilityPoolVault GE6PqKhREVLRTGZs7rV5mJ2L3FAcj2fqohWCzTjhCTdQ balance of 37,109.801234 USDH (slot 435575169) over CDP debt. The program-enforced 150% minimum collateral ratio was verified on-chain 2026-07-13 (slot 432742753) but the current market inventory and full parameter set remain undocumented, so collateralizationParameters is limited. The documented USDH Vault guarantee and ~10% liquidation spread grade liquidationMechanics adequate; the measured 59.0% vault coverage grades backstop adequate. Official docs reviewed 2026-07-20 establish no shutdown or bad-debt cure path (shutdownAndBadDebt limited), and although redemption queue accounts exist in the pinned program config, docs describe no live holder-redemption terms (structuralRedemption limited).",
+      "metrics": {
+        "collateralizationRatio": 4.877,
+        "liquidationCapacityRatio": 0.59
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "mai-qidao",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "QiDao stablecoin economics documentation (130-150% per-asset minimum collateral ratios, partial liquidations by external third-party liquidators, no stability pool)",
+          "url": "https://docs.mai.finance/stablecoin-economics"
+        },
+        {
+          "label": "DefiLlama QiDao protocol TVL (vault collateral $2,527,913, adapter snapshot 2026-07-26T16:46:11Z)",
+          "url": "https://api.llama.fi/protocol/qidao"
+        },
+        {
+          "label": "CoinGecko MAI (mimatic) circulating supply 11,968,044.19 and price $0.995725 at 2026-07-27T16:54:43Z",
+          "url": "https://api.coingecko.com/api/v3/coins/mimatic"
+        },
+        {
+          "label": "DL News reporting on the QiDao Multichain-era bad-debt settlement",
+          "url": "https://www.dlnews.com/articles/defi/qidao-settles-bad-debt-on-polygon-to-save-stablecoin/"
+        }
+      ],
+      "notes": "Measured 2026-07-27 (journaled evidence: shared/data/safety-score-v9/mechanism-measurements/mai-qidao/2026-07-27-tvl-supply.json). QiDao publishes no system collateralization figure, so collateralizationRatio 0.211 uses DefiLlama's dated adapter-measured vault-collateral TVL ($2,527,913 at 2026-07-26T16:46:11Z) over CoinGecko's dated circulating MAI (11,968,044.19 at 2026-07-27T16:54:43Z, price $0.995725). The sub-1 ratio captures that most circulating MAI is legacy supply no longer backed by active vault collateral, consistent with the documented Multichain-era bad debt. liquidationCapacityRatio is not-applicable: the docs describe only partial liquidations executed by external third-party liquidators, with no committed pool to measure. Documented 130-150% per-asset minimum collateral ratios, with per-vault ceilings and minimum-collateral percentages verified on-chain 2026-07-20 (Polygon block 90573828), grade collateralizationParameters adequate; documented partial liquidations where external liquidators repay vault debt for collateral at a bonus grade liquidationMechanics adequate. No stability pool or insurance fund exists and the 2023 Multichain-era bad debt required an ad-hoc treasury settlement, grading backstop weak; no structural bad-debt or shutdown mechanism exists and historical bad debt was settled off-mechanism, grading shutdownAndBadDebt limited; no protocol-value holder redemption exists — peg support relies on borrower repayment at par, interest-rate policy, and a documented PSM of unknown current capacity — grading structuralRedemption limited.",
+      "metrics": {
+        "collateralizationRatio": 0.211,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "No stability pool or committed liquidation reserve exists; QiDao documentation describes partial liquidations executed by external third-party liquidators, so there is no measurable committed-capital pool.",
+          "sourceUrl": "https://docs.mai.finance/stablecoin-economics"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "weak"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "fxd-fathom",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "Fathom XDC deployment registry",
+          "url": "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network"
+        },
+        {
+          "label": "XDC Network public RPC used for journaled eth_call reads at block 105423347",
+          "url": "https://rpc.xinfin.network"
+        },
+        {
+          "label": "Pinned Fathom BookKeeper and CollateralPoolConfig source",
+          "url": "https://github.com/Fathom-Fi/fathom-stablecoin-smart-contracts/tree/f63393d6a57c1f2364f7daa2ec1bb35e24fd55e4/contracts/main/stablecoin-core"
+        },
+        {
+          "label": "Pinned Fathom FixedSpreadLiquidationStrategy source (whitelisted external liquidators; no committed stability pool)",
+          "url": "https://github.com/Fathom-Fi/fathom-stablecoin-smart-contracts/blob/f63393d6a57c1f2364f7daa2ec1bb35e24fd55e4/contracts/main/stablecoin-core/liquidation-strategies/FixedSpreadLiquidationStrategy.sol"
+        },
+        {
+          "label": "Pinned Fathom ShowStopper source (per-pool cage on healthy feed, 1-13-week cooldown, pro-rata FXD collateral claims)",
+          "url": "https://github.com/Fathom-Fi/fathom-stablecoin-smart-contracts/blob/f63393d6a57c1f2364f7daa2ec1bb35e24fd55e4/contracts/main/stablecoin-core/ShowStopper.sol"
+        }
+      ],
+      "notes": "Measured on-chain 2026-07-27 at XDC block 105423347 (reads at 2026-07-27T16:57Z; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/fxd-fathom/2026-07-27-block-105423347.json). Collateral per pool is CollateralTokenAdapter.totalShare (1:1 token accounting per the pinned source): WXDC 8,708,677.226086548 at the delayed feed's $0.0274276, CGO 0.069533 at $130.553, and psXDC 25,407,276.93102121 priced 1:1 as XDC by the protocol, totaling $935,727.82. System debt is the per-pool totalDebtShare times debtAccumulatedRate sum of 891,664.94 FXD (WXDC 255,886.96, CGO 1.01, psXDC 635,776.98), giving a collateralizationRatio of 1.049 against debt (1.184 against the FXD totalSupply of 790,345.25). liquidationCapacityRatio is not-applicable: Fathom has no committed stability pool — fixed-spread liquidations rely on whitelisted external liquidators and the uncommitted SystemDebtEngine surplus. Per-pool MCRs of 133%/117.6%/200% (WXDC/CGO/psXDC) with close factors and incentives verified on-chain at block 104920353 and unchanged in current config reads grade collateralizationParameters adequate; fixed-spread liquidation executable only by whitelisted liquidators on 15-minute-delayed single-node price feeds with a 1-hour staleness bound grades liquidationMechanics limited; no committed pool, with SystemDebtEngine surplus 423,345.83 versus recorded bad debt 322,052.37 FXD at block 104920353 (2026-07-14, point-in-time only), grades backstop limited. Three pools share BookKeeper, SystemDebtEngine, and the FXD claim, so bad debt socializes system-wide (branchIsolation limited). The pinned ShowStopper — per-pool cage on a healthy feed, 1-13-week cooldown, pro-rata FXD collateral claims, surplus settling min(surplus, bad debt) — grades shutdownAndBadDebt adequate; no protocol-value redemption in normal operation, only post-shutdown pro-rata claims plus the StableSwapModule swap path, grades structuralRedemption limited.",
+      "metrics": {
+        "collateralizationRatio": 1.049,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "No committed stability pool exists; fixed-spread liquidations rely on whitelisted external liquidators and the uncommitted SystemDebtEngine surplus, so there is no measurable committed-capital pool.",
+          "sourceUrl": "https://github.com/Fathom-Fi/fathom-stablecoin-smart-contracts/blob/f63393d6a57c1f2364f7daa2ec1bb35e24fd55e4/contracts/main/stablecoin-core/liquidation-strategies/FixedSpreadLiquidationStrategy.sol"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "limited"
+        },
+        "backstop": {
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "adequate"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "euro3-3a-dao",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "3A Polygon contracts registry",
+          "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/polygon-mainnet-contracts.md"
+        },
+        {
+          "label": "3A Linea contracts registry",
+          "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/linea-mainnet-contracts.md"
+        },
+        {
+          "label": "3A liquidation documentation (three-stage router: Stability Pool, AuctionManager, LastResortLiquidation)",
+          "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/lending/liquidation.md"
+        },
+        {
+          "label": "3A EURO3 documentation (redemption against redeemable vaults)",
+          "url": "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin"
+        },
+        {
+          "label": "Verified 3A VaultFactory source and ABI",
+          "url": "https://sourcify.dev/server/v2/contract/137/0x4760847023fa0833221ae76E01Db1E483A5D20e0"
+        },
+        {
+          "label": "Polygon public RPC (journaled reads at blocks 90977781-90979167)",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        },
+        {
+          "label": "Linea public RPC (journaled reads at blocks 31537160-31537469)",
+          "url": "https://rpc.linea.build"
+        }
+      ],
+      "notes": "Measured 2026-07-27 by traversing both VaultFactory linked lists — 125 Polygon vaults and 585 Linea vaults, counts matching the 2026-07-14 review — and summing per-vault debt() and collateral(token) over every registered collateral token, valued at the protocol's own TokenToPriceFeed EUR prices (reads 2026-07-27T17:01-17:36Z, Polygon blocks ~90977781-90979167, Linea blocks ~31537160-31537469; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/euro3-3a-dao/2026-07-27-polygon-linea-vaults.json). Total vault collateral is €1,585,917.87 (Polygon €221.79, Linea €1,585,696.08, dominated by meUSDC 73,452,050.78 at €0.0204438 and meUSDT 3,892,327.21 at €0.0207579 protocol-registered feeds) against total EURO3 supply of 22,866.22 (Polygon 8,470.780084 at block 90977781 plus Linea 14,395.441033 at block 31537160), a collateralizationRatio of 69.356; contrary to the 2026-07-14 review, Linea vaults now carry 14,395.44 EURO3 of debt exactly equal to Linea supply, while Polygon is a residue of dust debt and 8,470.3 EURO3 of legacy supply with no vault backing. liquidationCapacityRatio 0.919 is the combined Stability Pool balances (Polygon 1,772.962355 plus Linea 11,458.773905 = 13,231.74 EURO3) over total vault debt of 14,395.91. Per-token MCRs of 110-175% and MLRs registered on-chain grade collateralizationParameters adequate, with all collateral caps currently zero; the documented three-stage liquidation router grades liquidationMechanics adequate; the measured 91.9% stability-pool coverage of residual vault debt grades backstop adequate. All branches share one Chainlink EUR/USD denominator and per-chain shared SP/router (branchIsolation limited); zero caps freeze new deposits and LastResortLiquidation handles residual collateral and bad debt, but Polygon carries 8,470.3 EURO3 of unbacked legacy supply and the issuer API is offline (shutdownAndBadDebt limited); docs describe redemption against redeemable vaults but redeemable residual debt is dust, so practical redemption capacity is negligible (structuralRedemption limited).",
+      "metrics": {
+        "collateralizationRatio": 69.356,
+        "liquidationCapacityRatio": 0.919
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "adequate"
+        },
+        "branchIsolation": {
+          "quality": "limited"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usdrif-rif",
+      "archetype": "cdp",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "RIF On Chain system-states documentation (protected threshold, liquidation threshold, irreversible settlement, free redemption above the protected threshold)",
+          "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/system-states"
+        },
+        {
+          "label": "Rootstock explorer, MocCore RIF bucket 0xA27024Ed70035E46dba712609fc2Afa1c97aA36A",
+          "url": "https://rootstock.blockscout.com/address/0xA27024Ed70035E46dba712609fc2Afa1c97aA36A"
+        },
+        {
+          "label": "Rootstock public RPC used for journaled eth_call reads at block 9098119",
+          "url": "https://public-node.rsk.co"
+        }
+      ],
+      "notes": "Measured on-chain 2026-07-27T16:44:08Z at Rootstock block 9098119 via eth_call against the verified DeployableMocCARC20 implementation (journaled evidence: shared/data/safety-score-v9/mechanism-measurements/usdrif-rif/2026-07-27-block-9098119.json). collateralizationRatio 10.6703 is the protocol's own global coverage getCglb() for the RIF bucket — the exact value driving the documented system states; the cross-check (USDRIF totalSupply 2,383,869.5 against nACcb 308.67M RIF at the same block) implies ~$0.082/RIF, self-consistent. The trivial DOC bucket (coverage 1.283 backing ~53 USDRIF, ~0.002% of supply) is disclosed separately. liquidationCapacityRatio is not-applicable: no stability-pool-style committed capital exists; the MoC design absorbs losses via the RIFPro (TC) first-loss tranche and discounted TC sales, with final irreversible system-wide settlement. On-chain protThrld 2.0 and liqThrld 1.04 at the pinned block, with the documented Cobj 4, grade collateralizationParameters adequate; the documented irreversible settlement below 1.04, with liquidated=false on-chain, grades liquidationMechanics adequate; the RIFPro TC tranche (nTCcb 425.1M at the pinned block) absorbing losses before TP, with discount sales below uTPDU, grades backstop adequate; per-collateral buckets with their own coverage grade branchIsolation adequate. The settlement path exists in code but liqEnabled=false at the pinned block, leaving terminal liquidation disarmed (shutdownAndBadDebt limited); the documented free USDRIF redemption above the protected threshold, with paused=false on-chain, grades structuralRedemption adequate.",
+      "metrics": {
+        "collateralizationRatio": 10.6703,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "No stability pool or committed liquidation capital exists; the MoC design absorbs losses via the RIFPro (TC) first-loss tranche and discounted TC sales, with final irreversible system-wide settlement.",
+          "sourceUrl": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/system-states"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "adequate"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "adequate"
+        },
+        "branchIsolation": {
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "adequate"
+        }
+      }
+    },
+    {
+      "assetId": "usx-solstice",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "Solstice Accountable Proof-of-Solvency dashboard API (ZKP-verified collateral $525,039,528.63 vs liabilities $522,988,257.04, delta_neutral=true, snapshot ts 1785169904367 = 2026-07-27T16:31:44Z, fetched 2026-07-27T16:41:33Z)",
+          "url": "https://attestation-api.solstice.finance/dashboard"
+        },
+        {
+          "label": "Solstice USX product and custody documentation (Copper and Ceffu off-exchange settlement)",
+          "url": "https://docs.solstice.finance/solstice-for-users/usx.md"
+        },
+        {
+          "label": "Solstice attestations and Proof-of-Solvency documentation (weekly third-party TEE/ZKP verification across wallets, custodians, banks)",
+          "url": "https://docs.solstice.finance/legal-documents/attestations-and-proof-of-solvency.md"
+        },
+        {
+          "label": "Solstice risk disclosures (funding-rate volatility, strategy reallocation response, no reserve or insurance fund)",
+          "url": "https://docs.solstice.finance/legal-documents/risk-disclosures.md"
+        }
+      ],
+      "notes": "Measured 2026-07-27 from Solstice's Accountable Proof-of-Solvency API (snapshot ts 1785169904367 = 2026-07-27T16:31:44Z, fetched 2026-07-27T16:41:33Z; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/usx-solstice/2026-07-27-accountable-pos.json). hedgeCoverageRatio 1 is an attested policy-state value: the weekly Accountable PoS reports delta_neutral=true with verifiability 100 at this snapshot and at every weekly timeline point since 2026-01-06; position-level hedge notionals are not published. marginBufferPct 0.392222 (percent) is the ZKP-verified excess of collateral $525,039,528.63 over supply $522,988,257.04 at the same snapshot (the API's collateralization 1.003922 corroborates), a protocol-wide excess-backing buffer, not per-venue margin headroom. lossAbsorptionShare 0 because no reserve or insurance fund is documented in any current Solstice source. Documented Copper and Ceffu off-exchange settlement custody plus weekly third-party TEE/ZKP verification across wallets, custodians, and banks grade venueAndCustody adequate; the weekly ZKP assets-vs-liabilities verification with the delta_neutral flag, from a single verifier without published position-level notionals, grades hedgeReconciliation adequate. Risk disclosures acknowledge funding-rate volatility with only strategy reallocation as the response and nothing quantified (fundingBasisStress limited); a documented above-100% collateralization target with VaR management but no published margin or liquidation thresholds (marginAndLiquidation limited); no-spread KYC institutional mint/redeem with retail exit DEX-only and a December 2025 $0.10 depeg precedent (unwindCapacity limited); and no reserve or insurance fund, leaving only the ~0.39% aggregate excess collateral between supply and undercollateralization (lossAbsorption weak).",
+      "metrics": {
+        "hedgeCoverageRatio": 1,
+        "marginBufferPct": 0.392222,
+        "lossAbsorptionShare": 0
+      },
+      "components": {
+        "venueAndCustody": {
+          "quality": "adequate"
+        },
+        "hedgeReconciliation": {
+          "quality": "adequate"
+        },
+        "fundingBasisStress": {
+          "quality": "limited"
+        },
+        "marginAndLiquidation": {
+          "quality": "limited"
+        },
+        "unwindCapacity": {
+          "quality": "limited"
+        },
+        "lossAbsorption": {
+          "quality": "weak"
+        }
+      }
     }
   ]
 }
