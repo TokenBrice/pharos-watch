@@ -162,6 +162,18 @@ function publicationHealth(
   };
 }
 
+function heldPublicationHealth(): V9PublicationHealth {
+  return {
+    schemaVersion: 1,
+    status: "held",
+    acceptedPublicationGenerationId: null,
+    acceptedAtSec: null,
+    attemptedAtSec: 1_700_000_900,
+    heldSinceSec: 1_700_000_900,
+    reasons: [{ code: "assessment-failed", detail: "retained candidate requires compatibility projection" }],
+  };
+}
+
 function project(value: SafetyScoreV9Response = candidate()) {
   return projectSafetyScoreV9CandidateToPublicSnapshot(
     value,
@@ -263,6 +275,32 @@ describe("published V9 report-card cache", () => {
       },
     });
     expect(snapshot.cards[0]).not.toHaveProperty("breakdowns");
+  });
+
+  it("projects a retained held candidate when no accepted publication health exists yet", () => {
+    const previousCandidate = structuredClone(candidate()) as SafetyScoreV9Response;
+    previousCandidate.schemaVersion = 4;
+    previousCandidate.lifecycle = "candidate";
+    previousCandidate.policyVersion = "candidate-v2";
+    previousCandidate.policy = {
+      id: "safety-score-v9-candidate-v2",
+      semanticDigest: previousCandidate.policy.semanticDigest,
+    };
+    delete (previousCandidate.cards[0] as unknown as { breakdowns?: unknown }).breakdowns;
+
+    const snapshot = projectSafetyScoreV9CandidateToPublicSnapshot(
+      previousCandidate,
+      heldPublicationHealth(),
+    );
+
+    expect(snapshot).toEqual(ReportCardsV9PreBreakdownResponseSchema.parse(snapshot));
+    expect(snapshot).toEqual(ReportCardsV9TransitionResponseSchema.parse(snapshot));
+    expect(snapshot.publicationHealth).toMatchObject({
+      status: "held",
+      acceptedPublicationGenerationId: null,
+      acceptedAtSec: null,
+    });
+    expect(snapshot.updatedAt).toBe(previousCandidate.publishedAtSec);
   });
 
   it("fails closed for malformed or missing canonical V9 cache rows", async () => {

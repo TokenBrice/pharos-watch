@@ -48,11 +48,15 @@ export function projectSafetyScoreV9CandidateToPublicSnapshot(
   const responseSchemaVersion = currentCandidateResult.success
     ? REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION
     : REPORT_CARDS_V9_PRE_BREAKDOWN_RESPONSE_SCHEMA_VERSION;
-  if (
-    publicationHealth.acceptedPublicationGenerationId !==
-      currentCandidate.publicationGenerationId ||
-    publicationHealth.acceptedAtSec !== currentCandidate.publishedAtSec
-  ) {
+  const acceptedPublicationMatchesCandidate =
+    publicationHealth.acceptedPublicationGenerationId ===
+      currentCandidate.publicationGenerationId &&
+    publicationHealth.acceptedAtSec === currentCandidate.publishedAtSec;
+  const heldWithoutAcceptedPublication =
+    publicationHealth.status === "held" &&
+    publicationHealth.acceptedPublicationGenerationId === null &&
+    publicationHealth.acceptedAtSec === null;
+  if (!acceptedPublicationMatchesCandidate && !heldWithoutAcceptedPublication) {
     throw new Error(
       "Safety Score V9 publication health does not match the accepted candidate",
     );
