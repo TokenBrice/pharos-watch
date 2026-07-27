@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "assetId": "apxusd-apyx",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "2026-07-27T18:06:33.899Z",
+  "source": {
+    "url": "https://api.accountable.apyx.fi/dashboard",
+    "label": "APYX Accountable proof-of-solvency dashboard",
+    "access": "Fetched with browser origin and referer headers; endpoint returned JSON."
+  },
+  "observations": {
+    "dashboardTimestampMs": "1785175593899",
+    "collateralization": 0.906627,
+    "netUsd": -22290999.72,
+    "totalReservesUsd": 304782515.11,
+    "totalSupplyUsd": 327073514.82,
+    "reservesSplitUsd": [
+      {
+        "name": "STRC",
+        "value": 189158666.83
+      },
+      {
+        "name": "Protocol Owned Liquidity",
+        "value": 48345997.8
+      },
+      {
+        "name": "Inventory",
+        "value": 39996735.7
+      },
+      {
+        "name": "Cash & Equivalents",
+        "value": 27272290.22
+      },
+      {
+        "name": "Other",
+        "value": 8824.56
+      }
+    ]
+  },
+  "metricDisposition": {
+    "weightedAverageMaturityDays": {
+      "state": "unavailable",
+      "rationale": "The dashboard reports reserve buckets but no weighted-average maturity or remaining-tenor dataset; the documented STRC holding is perpetual."
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "value": 30,
+      "rationale": "The rechecked Wolf & Company archive publishes March, April, May, and June 2026 monthly attestation reports."
+    }
+  },
+  "sources": [
+    "https://docs.apyx.fi/collateral-and-custody/third-party-attestation",
+    "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc",
+    "https://docs.apyx.fi/collateral-and-custody/transparency"
+  ]
+}

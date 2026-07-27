@@ -3622,10 +3622,10 @@
     {
       "assetId": "eutbl-spiko",
       "archetype": "tbill",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-27",
       "sources": [
         {
-          "label": "Spiko SICAV prospectus (EUTBL fund share, CACEIS depositary/administrator, and PwC auditor)",
+          "label": "Spiko SICAV UCITS prospectus dated 4 May 2026 (EUTBL fund share, binding WAM/WAL/liquidity limits, daily NAV/dealing, and redemption-cap terms)",
           "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
         },
         {
@@ -3637,7 +3637,7 @@
           "url": "https://www.spiko.io/spiko-treasury-bills-euro"
         }
       ],
-      "notes": "EUTBL is a share of Spiko's AMF-authorized UCITS SICAV. The current prospectus names CACEIS as depositary and administrator and PwC as auditor, and CACEIS calculates the official daily NAV. These issuer and prospectus disclosures support limited fund claim and seniority and limited NAV valuation, but no current itemized independent fund-reserve attestation was established. Duration and liquidity is omitted because the measured reserve path already supplies maturityDaysMax of 180 days and a one-day liquidity horizon. 2026-07-20 follow-up: Added lossRecoveryDesign at adequate. Spiko's current EUTBL product page states that PwC, acting as statutory auditor, conducts four audits annually of the fund's accounts to ensure their accuracy and compliance, and that CACEIS (a Credit Agricole subsidiary) acts as depositary bank handling the fund's accounting with the portfolio marked to market every business day. The audit reports themselves were not reviewed, so the issuer-stated quarterly audit cadence is credited at the attestation-with-assets-and-liabilities-scope tier rather than the audit tier. durationAndLiquidity remains deliberately omitted as before; no change to previously curated components.",
+      "notes": "EUTBL is a share of Spiko's AMF-authorized UCITS SICAV. The current prospectus names CACEIS as depositary and administrator and PwC as auditor, and CACEIS calculates the official daily NAV. These issuer and prospectus disclosures support limited fund claim and seniority and limited NAV valuation, but no current itemized independent fund-reserve attestation was established. 2026-07-20 follow-up: Added lossRecoveryDesign at adequate. Spiko's current EUTBL product page states that PwC, acting as statutory auditor, conducts four audits annually of the fund's accounts to ensure their accuracy and compliance, and that CACEIS (a Credit Agricole subsidiary) acts as depositary bank handling the fund's accounting with the portfolio marked to market every business day. The audit reports themselves were not reviewed, so the issuer-stated quarterly audit cadence is credited at the attestation-with-assets-and-liabilities-scope tier rather than the audit tier. Re-reviewed under D3 on 2026-07-27: the dated 4 May 2026 formal UCITS prospectus (section 3.2.2, pp. 27 and 35–37) sets WAM at no more than 60 days, WAL at no more than 120 days, daily liquidity at least 7.5% of net assets, weekly liquidity at least 15%, and residual life at no more than six months; it also specifies daily NAV/dealing and a 10%-of-NAV redemption-cap mechanism limited to 20 NAVs in three months and one month maximum. This primary, current prospectus covers the exact duration-and-liquidity component and meets D3 adequate evidence. The figures are binding fund limits, not current measured WAM/WAL values, so no numeric metric is invented. Strong is not claimed because no current independent monthly reserve/NAV reconciliation is pinned.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -3645,6 +3645,9 @@
         },
         "navValuation": {
           "quality": "limited"
+        },
+        "durationAndLiquidity": {
+          "quality": "adequate"
         },
         "lossRecoveryDesign": {
           "quality": "adequate"
@@ -4022,22 +4025,18 @@
     {
       "assetId": "ustbl-spiko",
       "archetype": "tbill",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-27",
       "sources": [
         {
-          "label": "Spiko SICAV prospectus",
+          "label": "Spiko SICAV UCITS prospectus dated 4 May 2026 (USTBL fund share, binding WAM/WAL/liquidity limits, daily NAV/dealing, and redemption-cap terms)",
           "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
-        },
-        {
-          "label": "Spiko USTBL key information document",
-          "url": "https://cdn.spiko.finance/legal_docs/EN/KID_USTBL_EN.pdf"
         },
         {
           "label": "Spiko US T-Bills product page (CACEIS depositary overseeing accounting, BNY Mellon sub-custodian; PwC statutory auditor carrying out four audits annually)",
           "url": "https://www.spiko.io/spiko-treasury-bills-dollar"
         }
       ],
-      "notes": "USTBL is a direct tokenized UCITS fund share. The prospectus names CACEIS as depositary and administrator, PwC as statutory auditor, and documents daily NAV calculation. These direct prospectus disclosures support limited fund claim and seniority and limited NAV valuation, but no current itemized independent fund-reserve attestation was established. Duration and liquidity is omitted because the measured reserve path already supplies a 180-day maximum maturity and one-day liquidity horizon. 2026-07-20 follow-up: Added lossRecoveryDesign at adequate. Spiko's current USTBL product page states that PwC, acting as statutory auditor, carries out four audits annually of the fund's accounts, and names CACEIS as depositary overseeing the fund's accounting with BNY Mellon as sub-custodian for the U.S. Treasury bills. The audit reports themselves were not reviewed, so the issuer-stated quarterly audit cadence is credited at the attestation-with-assets-and-liabilities-scope tier rather than the audit tier. durationAndLiquidity remains deliberately omitted as before; no change to previously curated components.",
+      "notes": "USTBL is a direct tokenized UCITS fund share. The prospectus names CACEIS as depositary and administrator, PwC as statutory auditor, and documents daily NAV calculation. These direct prospectus disclosures support limited fund claim and seniority and limited NAV valuation, but no current itemized independent fund-reserve attestation was established. 2026-07-20 follow-up: Added lossRecoveryDesign at adequate. Spiko's current USTBL product page states that PwC, acting as statutory auditor, carries out four audits annually of the fund's accounts, and names CACEIS as depositary overseeing the fund's accounting with BNY Mellon as sub-custodian for the U.S. Treasury bills. The audit reports themselves were not reviewed, so the issuer-stated quarterly audit cadence is credited at the attestation-with-assets-and-liabilities-scope tier rather than the audit tier. Re-reviewed under D3 on 2026-07-27: the dated 4 May 2026 formal UCITS prospectus (section 3.2.1, pp. 13 and 21–23) sets WAM at no more than 60 days, WAL at no more than 120 days, daily liquidity at least 7.5% of net assets, weekly liquidity at least 15%, and residual life at no more than six months; it also specifies daily NAV/dealing and a 10%-of-NAV redemption-cap mechanism limited to 20 NAVs in three months and one month maximum. This primary, current prospectus covers the exact duration-and-liquidity component and meets D3 adequate evidence. The figures are binding fund limits, not current measured WAM/WAL values, so no numeric metric is invented. The 14 October 2025 USTBL KID was removed from this source set because its ungated-redemption statement is superseded by the later prospectus. Strong is not claimed because no current independent monthly reserve/NAV reconciliation is pinned.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -4045,6 +4044,9 @@
         },
         "navValuation": {
           "quality": "limited"
+        },
+        "durationAndLiquidity": {
+          "quality": "adequate"
         },
         "lossRecoveryDesign": {
           "quality": "adequate"
@@ -6370,7 +6372,7 @@
     {
       "assetId": "onyc-onre",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-27",
       "sources": [
         {
           "label": "OnRe FAQ (Bermuda segregated-account ring-fencing, BMA Class F and Class IIGB licences, four-layer loss framework, USDC/USDG collateral, redemption conditions)",
@@ -6401,10 +6403,17 @@
           "url": "https://www.bma.bm/regulated-entities"
         }
       ],
-      "notes": "Reviewed 2026-07-20. ONyc represents a proportional interest in the ONyc Pool, a Bermuda segregated account of On Re SAC Ltd (BMA Class IIGB insurer and Class F digital-asset business, registration 55347, registry-matched per the Pharos 2026-07-15 pass), whose assets and liabilities are statutorily ring-fenced from OnRe's other books. weightedAverageMaturityDays is recorded as 81.7, a documented-input conservative upper bound rather than an observed WAM: the 2026-07-20 Pharos reserve review of the Transparency Hub recorded 22.17% of the USD 36.09M pool deployed into five reinsurance deals and 77.83% unallocated in USDC/USDG, and OnRe's portfolio documentation states deployed contracts run typically six to twelve months, so 0.2217 x 365 + 0.7783 x 1 = 81.7 days; per-deal maturities and the true weighted tenor are unpublished. valuationCadenceDays is 30, the documented monthly Apex Group attestation cadence (the May 2026 attestation covers NAV, treasury balances, and reserve allocations as of 2026-05-31); NAV also updates onchain but that cadence is unpublished. custody is adequate: a statutory segregated account plus named on-chain custody (Squads v4 multisig 45YnzauhsBM8..., Ethereum Safe 0x5c13F4cc...) with monthly third-party attestation, but the off-chain banks, brokers, and reinsurance trust accounts holding posted collateral are unnamed and the attestation PDFs are view-restricted, keeping it below strong. valuationCadence is adequate on the documented monthly independent attestations. creditQuality is limited: portfolio rules are documented (roughly 50/50 specialty and ILW, high-attachment binary triggers, conservative upfront claim reserves) but deal terms and cedent identities are unpublished and no independent credit review has been published yet - Allez Labs was appointed independent risk partner only in June 2026. maturityAndLiquidity is limited: the redemption design is documented (queue, up to 15% of underwriting capital reserved for liquidity, monthly capacity targeted at 2.5% of NAV, 0.25% fee) but these are operational targets rather than commitments and deployed capital is locked in 6-12-month contracts. recovery is limited: the four-layer framework (claim reserves, APY absorption, cross-contract support, and a yielding-asset reserve currently around 78% of the pool) is documented but reserve adequacy is not independently verified. legalEnforceability is limited: the statutory segregated-account framework and BMA licences are established, but the holder participation agreement was not reviewed. Not established and left bounded: seniority (no published waterfall of holder claims versus other segregated-account liabilities), per-deal maturity weights, and cedent/counterparty identities.",
+      "notes": "Re-reviewed 2026-07-27 under D2. ONyc represents a proportional interest in the ONyc Pool, a Bermuda segregated account of On Re SAC Ltd (BMA Class IIGB insurer and Class F digital-asset business, registration 55347, registry-matched per the Pharos 2026-07-15 pass), whose assets and liabilities are statutorily ring-fenced from OnRe's other books. weightedAverageMaturityDays is unavailable, not 81.7: the former value inferred an average from the 2026-07-20 Transparency Hub deployment percentage, generic six-to-twelve-month contract language, and idle cash. The current sources publish neither per-deal maturity weights nor a true WAM, and D3 prohibits deriving an unreported metric to fill the schema; the disposition is journaled at shared/data/safety-score-v9/mechanism-measurements/onyc-onre/2026-07-27-wam-disposition.json. valuationCadenceDays is 30, the documented monthly Apex Group attestation cadence (the May 2026 attestation covers NAV, treasury balances, and reserve allocations as of 2026-05-31); NAV also updates onchain but that cadence is unpublished. custody is adequate: a statutory segregated account plus named on-chain custody (Squads v4 multisig 45YnzauhsBM8..., Ethereum Safe 0x5c13F4cc...) with monthly third-party attestation, but the off-chain banks, brokers, and reinsurance trust accounts holding posted collateral are unnamed and the attestation PDFs are view-restricted, keeping it below strong. valuationCadence is adequate on the documented monthly independent attestations. creditQuality is limited: portfolio rules are documented (roughly 50/50 specialty and ILW, high-attachment binary triggers, conservative upfront claim reserves) but deal terms and cedent identities are unpublished and no independent credit review has been published yet - Allez Labs was appointed independent risk partner only in June 2026. maturityAndLiquidity is limited: the redemption design is documented (queue, up to 15% of underwriting capital reserved for liquidity, monthly capacity targeted at 2.5% of NAV, 0.25% fee) but these are operational targets rather than commitments and deployed capital is locked in 6-12-month contracts. recovery is limited: the four-layer framework (claim reserves, APY absorption, cross-contract support, and a yielding-asset reserve currently around 78% of the pool) is documented but reserve adequacy is not independently verified. legalEnforceability is limited: the statutory segregated-account framework and BMA licences are established, but the holder participation agreement was not reviewed. Not established and left bounded: seniority (no published waterfall of holder claims versus other segregated-account liabilities), per-deal maturity weights, and cedent/counterparty identities.",
       "metrics": {
-        "weightedAverageMaturityDays": 81.7,
+        "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 30
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "OnRe publishes typical six-to-twelve-month deal duration and high-level pool composition, but no per-deal maturity weights or issuer-published WAM; the former 81.7 value was a non-permitted inference.",
+          "sourceUrl": "https://docs.onre.finance/reinsurance-framework/portfolio-makeup"
+        }
       },
       "components": {
         "creditQuality": {
@@ -14226,6 +14235,193 @@
         },
         "lossAbsorption": {
           "quality": "weak"
+        }
+      }
+    },
+    {
+      "assetId": "rwausdi-multipli",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "AFI proof endpoint for rwaUSDi (fresh aggregate reserve and liability proof; does not publish constituent maturity or valuation cadence)",
+          "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
+        },
+        {
+          "label": "AFI periodic-report endpoint for rwaUSDi (weekly solvency confirmations without itemized current portfolio facts)",
+          "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20"
+        },
+        {
+          "label": "Multipli rwaUSDi liquidity-class documentation (periodic pricing and scheduled redemptions; no current WAM or valuation-cadence dataset)",
+          "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
+        }
+      ],
+      "notes": "Re-reviewed 2026-07-27; current AFI proof output is journaled at shared/data/safety-score-v9/mechanism-measurements/rwausdi-multipli/2026-07-27-afi-proof.json. It establishes only an aggregate reserve/liability snapshot, which is contextual solvency evidence and does not map to weightedAverageMaturityDays or valuationCadenceDays. Neither the proof, weekly reports, nor Multipli documentation publishes constituent maturities, portfolio weights, a true WAM, or an actual valuation-mark schedule. Under D3, those applicable metrics are unavailable rather than inferred from aggregate collateralization or descriptive periodic-pricing language. No component quality is asserted: the evidence does not establish a component-specific fact at the required class.",
+      "metrics": {
+        "weightedAverageMaturityDays": null,
+        "valuationCadenceDays": null
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "The fresh aggregate proof and weekly reports contain no constituent maturity dates, weights, or issuer-published weighted-average maturity.",
+          "sourceUrl": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
+        },
+        "valuationCadenceDays": {
+          "state": "unavailable",
+          "rationale": "Multipli describes periodic pricing but publishes no actual valuation-mark schedule or cadence for the current portfolio.",
+          "sourceUrl": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
+        }
+      },
+      "components": {}
+    },
+    {
+      "assetId": "apxusd-apyx",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "APYX Accountable proof-of-solvency dashboard (live collateral and supply snapshot, rechecked 2026-07-27)",
+          "url": "https://api.accountable.apyx.fi/dashboard"
+        },
+        {
+          "label": "Apyx STRC collateral documentation (perpetual preferred equity, ranking, redemption and liquidity terms)",
+          "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc"
+        },
+        {
+          "label": "Apyx terms of service (no holder claim on a legal entity or reserve estate)",
+          "url": "https://docs.apyx.fi/resources/terms-of-service"
+        },
+        {
+          "label": "Apyx capitalization framework (redemption-value and wind-down/pro-rata reserve mechanics)",
+          "url": "https://docs.apyx.fi/solution-overview/capitalization-framework"
+        },
+        {
+          "label": "Apyx third-party attestation archive (Wolf & Company monthly reports through June 2026)",
+          "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation"
+        },
+        {
+          "label": "Apyx custody overview (third-party prime-broker custody and monthly PCAOB-firm attestation policy)",
+          "url": "https://docs.apyx.fi/collateral-and-custody/custody-overview"
+        },
+        {
+          "label": "Apyx transparency disclosure (no published current WAM or remaining-tenor dataset)",
+          "url": "https://docs.apyx.fi/collateral-and-custody/transparency"
+        }
+      ],
+      "notes": "Re-verified 2026-07-27; journaled current Accountable evidence: shared/data/safety-score-v9/mechanism-measurements/apxusd-apyx/2026-07-27-accountable-dashboard.json. `valuationCadenceDays` is 30 from the public monthly Wolf & Company attestation archive, while `weightedAverageMaturityDays` is unavailable: the current disclosures publish no WAM/remaining-tenor dataset, the principal disclosed STRC holding is perpetual, and the remaining collateral tenors are not disclosed. Evidence-class adjudication under the D3 standard: creditQuality, seniority, legalEnforceability, and maturityAndLiquidity are weak only because the primary sources document the deficiency itself (BTC-linked perpetual preferred equity, no holder reserve claim/seniority, no legal reserve estate, and no current tenor table), rather than because evidence is absent. valuationCadence, custody, and recovery are limited: issuer-published Accountable/terms data is corroborated by third-party prime-broker disclosure and named Wolf & Company attestation reports, but the reports do not reconcile current apxUSD liabilities to the whole current reserve and do not establish a holder-priority waterfall, a full custodian-continuity arrangement, or realized recovery performance. This does not meet the adequate class. The live dashboard's collateralization figure is context only and is deliberately not mapped to either RWA metric.",
+      "metrics": {
+        "weightedAverageMaturityDays": null,
+        "valuationCadenceDays": 30
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "Apyx publishes no weighted-average-maturity or remaining-tenor dataset; the disclosed STRC position is perpetual and the other collateral tenors are not disclosed on the transparency surface.",
+          "sourceUrl": "https://docs.apyx.fi/collateral-and-custody/transparency"
+        }
+      },
+      "components": {
+        "creditQuality": {
+          "quality": "weak"
+        },
+        "seniority": {
+          "quality": "weak"
+        },
+        "legalEnforceability": {
+          "quality": "weak"
+        },
+        "valuationCadence": {
+          "quality": "limited"
+        },
+        "maturityAndLiquidity": {
+          "quality": "weak"
+        },
+        "custody": {
+          "quality": "limited"
+        },
+        "recovery": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "usdf-falcon",
+      "archetype": "synthetic-delta-neutral",
+      "reviewedAt": "2026-07-27",
+      "sources": [
+        {
+          "label": "Falcon transparency API (snapshot 2026-07-27T12:03:01Z; insurance fund, supply, asset-location rows, and absent hedge/margin fields)",
+          "url": "https://api.falcon.finance/api/v1/transparency"
+        },
+        {
+          "label": "Falcon USDf peg-stability documentation",
+          "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar/usdf-peg-stability"
+        },
+        {
+          "label": "Falcon insurance-fund documentation",
+          "url": "https://docs.falcon.finance/resources/insurance-fund"
+        },
+        {
+          "label": "Falcon transparency and security disclosure",
+          "url": "https://falcon.finance/news/a-guide-to-transparency-and-security-in-falcon-finance"
+        },
+        {
+          "label": "HT Digital independent USDf reserve report dated 13 July 2026",
+          "url": "https://falcon.finance/api/media/file/Falcon%20Letter%20-%2013%20July%202026.pdf?prefix=media"
+        }
+      ],
+      "notes": "Re-verified from Falcon's current structured API at snapshot 2026-07-27T12:03:01Z; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/2026-07-27-transparency-api.json. The $10,000,000 disclosed insurance fund divided by 1,261,606,488 USDf supply yields lossAbsorptionShare 0.007926401849639188; it supersedes the 2026-07-22 packet's stale 0.007929781851. The API exposes neither reconciled hedge notionals/net delta nor exchange margin balances and maintenance requirements, so hedgeCoverageRatio and marginBufferPct are honestly unavailable; reserve excess is only an analogue and is not used as margin headroom. Evidence-class adjudication under D3: venueAndCustody and lossAbsorption are limited because issuer-published itemized location/insurance data is corroborated by the named HT Digital third-party reserve report, but it does not establish hedge-venue notional coverage, exchange-margin terms, or independent current position reconciliation. The location shares are reserve-custody shares, not hedge-venue shares; the opaque multisig location has no asserted failure-domain identity.",
+      "metrics": {
+        "hedgeCoverageRatio": null,
+        "marginBufferPct": null,
+        "lossAbsorptionShare": 0.007926401849639188
+      },
+      "metricApplicability": {
+        "hedgeCoverageRatio": {
+          "state": "unavailable",
+          "rationale": "The issuer transparency API publishes no reconciled hedge notionals or net delta.",
+          "sourceUrl": "https://api.falcon.finance/api/v1/transparency"
+        },
+        "marginBufferPct": {
+          "state": "unavailable",
+          "rationale": "The issuer transparency API publishes no exchange margin balances or maintenance requirements; reserve excess is an analogue only.",
+          "sourceUrl": "https://api.falcon.finance/api/v1/transparency"
+        }
+      },
+      "venueShares": [
+        {
+          "venueKey": "falcon-opaque-multisig",
+          "share": 0.9643538735959237,
+          "failureDomains": []
+        },
+        {
+          "venueKey": "ceffu-custody",
+          "share": 0.015676114911623382,
+          "failureDomains": [
+            {
+              "kind": "reserve-custodian",
+              "key": "ceffu"
+            }
+          ]
+        },
+        {
+          "venueKey": "fireblocks-custody",
+          "share": 0.01997001149245288,
+          "failureDomains": [
+            {
+              "kind": "reserve-custodian",
+              "key": "fireblocks"
+            }
+          ]
+        }
+      ],
+      "components": {
+        "venueAndCustody": {
+          "quality": "limited"
+        },
+        "lossAbsorption": {
+          "quality": "limited"
         }
       }
     }
