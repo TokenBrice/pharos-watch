@@ -76,20 +76,35 @@ const SLIPSTREAM_CONFIG: Record<SlipstreamProtocol, {
   sugarAddress: string;
   v2FactoryAddress: string;
   clFactoryAddress: string;
+  sugarSkippedV2PoolCount: number;
 }> = {
   "aerodrome-slipstream": {
     chain: "base",
     sugarAddress: "0x69dD9db6d8f8E7d83887A704f447b1a584b599A1",
     v2FactoryAddress: "0x420DD381b31aEf6683db6B902084cB0FFECe40Da",
     clFactoryAddress: "0x5e7BB104d84c7CB9B682AaC2F3d509f5F406809A",
+    sugarSkippedV2PoolCount: 0,
   },
   "velodrome-slipstream": {
     chain: "optimism",
     sugarAddress: "0x347512180804A8B40AA7525AE932a31198F074aA",
     v2FactoryAddress: "0xF1046053aa5682b4F9a81b5481394DA16BE5FF5a",
     clFactoryAddress: "0xCc0bDDB707055e04e497aB22a59c2aF4391cd12F",
+    // This Sugar deployment omits the V2 convertor at allPools(0).
+    sugarSkippedV2PoolCount: 1,
   },
 };
+
+export function getSugarClStartOffset(
+  protocol: SlipstreamProtocol,
+  v2PoolCount: number,
+): number {
+  const offset = v2PoolCount - SLIPSTREAM_CONFIG[protocol].sugarSkippedV2PoolCount;
+  if (!Number.isSafeInteger(offset) || offset < 0) {
+    throw new Error(`cl-offset-invalid:${protocol}:${v2PoolCount}`);
+  }
+  return offset;
+}
 
 function bigintToDecimal(value: bigint, decimals: number): number {
   if (decimals <= 0) return Number(value);
@@ -144,6 +159,7 @@ function normalizeAddress(address: string): string {
 }
 
 async function fetchSugarPools(
+  protocol: SlipstreamProtocol,
   config: (typeof SLIPSTREAM_CONFIG)[SlipstreamProtocol],
   chainAddressToId: Map<string, string>,
   chainRpcs: Map<string, ChainRpcConfig> | undefined,
@@ -174,7 +190,8 @@ async function fetchSugarPools(
 
   // Sugar orders factories as registered. These reviewed deployments each
   // have one V2 factory before the activation-candidate CL factory.
-  const firstClOffset = await fetchPoolCount(config.v2FactoryAddress);
+  const v2PoolCount = await fetchPoolCount(config.v2FactoryAddress);
+  const firstClOffset = getSugarClStartOffset(protocol, v2PoolCount);
   const clPoolCount = await fetchPoolCount(config.clFactoryAddress);
   if (Math.ceil(clPoolCount / PAGE_SIZE) > MAX_CL_PAGES) {
     throw new Error(`cl-pagination-cap:${clPoolCount}`);
@@ -267,7 +284,7 @@ export async function fetchSlipstreamPools(
   const config = SLIPSTREAM_CONFIG[protocol];
   const errors: string[] = [];
   try {
-    const clPools = await fetchSugarPools(config, chainAddressToId, chainRpcs, signal);
+    const clPools = await fetchSugarPools(protocol, config, chainAddressToId, chainRpcs, signal);
     const tokenAddresses = Array.from(new Set(
       clPools.flatMap((pool) => [normalizeAddress(pool.token0), normalizeAddress(pool.token1)]),
     ));

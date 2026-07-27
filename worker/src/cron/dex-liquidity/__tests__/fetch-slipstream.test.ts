@@ -9,6 +9,7 @@ import { fetchEvmCallHexAtBlock } from "../../../lib/evm-rpc";
 import {
   fetchSlipstreamPools,
   getSlipstreamPoolFeeBps,
+  getSugarClStartOffset,
   projectSugarPoolPage,
   projectSugarTokens,
   sqrtRatioToSpotPrice,
@@ -68,6 +69,13 @@ describe("getSlipstreamPoolFeeBps", () => {
     expect(getSlipstreamPoolFeeBps(-1n)).toBe(null);
     expect(getSlipstreamPoolFeeBps(10_001n)).toBe(null);
     expect(getSlipstreamPoolFeeBps(20_000n)).toBe(null);
+  });
+});
+
+describe("getSugarClStartOffset", () => {
+  it("accounts for Velodrome Sugar omitting the first V2 convertor pool", () => {
+    expect(getSugarClStartOffset("aerodrome-slipstream", 10)).toBe(10);
+    expect(getSugarClStartOffset("velodrome-slipstream", 10)).toBe(9);
   });
 });
 
