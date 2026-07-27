@@ -25,19 +25,19 @@ const USAGE = `Usage: npm run safety-score-v9:replay -- --input <path> --output 
 
 Options:
   --input <path>                  Exact fixed-input JSON or compressed cache envelope (required)
-  --output <path>                 Canonical candidate replay JSON (required)
+  --output <path>                 Canonical V9 replay JSON (required)
   --published-at <time>           Fixed ISO timestamp or Unix seconds (required)
   --extension <path>              Optional reviewed V9 fact-extension JSON
-  --release-candidate-id <id>     Optional v9-rc-N candidate identity override
+  --release-candidate-id <id>     Optional v9-rc-N publication identity override
   -h, --help                      Show this help`;
 
 export interface SafetyScoreV9ReplayArtifact {
   schemaVersion: 1;
   kind: "safety-score-v9-candidate-replay";
-  lifecycle: "candidate";
+  lifecycle: "active";
   releaseAuthorization: {
     authorized: false;
-    reason: "candidate-replay-only";
+    reason: "v9-replay-only";
   };
   pipeline: Readonly<SafetyScoreV9CandidatePipelineResult>;
 }
@@ -127,10 +127,10 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
   return {
     schemaVersion: 1,
     kind: "safety-score-v9-candidate-replay",
-    lifecycle: "candidate",
+    lifecycle: "active",
     releaseAuthorization: {
       authorized: false,
-      reason: "candidate-replay-only",
+      reason: "v9-replay-only",
     },
     pipeline: buildSafetyScoreV9Candidate(input),
   };

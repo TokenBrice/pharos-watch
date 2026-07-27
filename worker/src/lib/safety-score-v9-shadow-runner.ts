@@ -228,8 +228,8 @@ function observationCoverageFloors(
       observed: observedCount,
       required: `= ${expectedCount}`,
       detail: exactCount
-        ? "The V9 candidate contains one result for every active v8 publication asset"
-        : "The V9 candidate result count does not match the active v8 publication",
+        ? "The V9 response contains one result for every active v8 publication asset"
+        : "The V9 response result count does not match the active v8 publication",
     },
     {
       id: "minimum-rateable-assets",
@@ -238,8 +238,8 @@ function observationCoverageFloors(
       required: `>= ${V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets}`,
       detail:
         rateableCount >= V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets
-          ? "The V9 candidate meets the configured active-asset rateability check"
-          : "The V9 candidate is below the configured active-asset rateability check",
+          ? "The V9 response meets the configured active-asset rateability check"
+          : "The V9 response is below the configured active-asset rateability check",
     },
     {
       id: "ratified-release-coverage",

@@ -343,7 +343,7 @@ function reviewedExtension(fixedInput = exactFixedInput("alpha")): SafetyScoreV9
 
 const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
 
-describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   it("is deterministic for the same exact generation and explicit publication inputs", () => {
     const fixedInput = exactFixedInput("alpha");
     const input = {
@@ -471,7 +471,7 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
       publishedAtSec: PUBLISHED_AT_SEC,
     });
     const changedPolicy = structuredClone(V9_CANDIDATE_POLICY_V1.policy);
-    changedPolicy.policyId = "safety-score-v9-candidate-v2";
+    changedPolicy.policyId = "safety-score-v9";
     changedPolicy.semantic.formula.pillarWeights.backing = 0.39;
     changedPolicy.semantic.formula.pillarWeights.exit = 0.36;
     const policyResult = buildSafetyScoreV9Candidate({
@@ -686,8 +686,8 @@ describe("Safety Score v9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIM
 
     expect(result.candidate).toMatchObject({
       model: "v9-critical-path",
-      lifecycle: "candidate",
-      policyVersion: "candidate-v2",
+      lifecycle: "active",
+      policyVersion: "9.0",
       completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
     });
     expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 77, grade: "B+" });

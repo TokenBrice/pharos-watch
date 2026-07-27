@@ -17,21 +17,6 @@ export type SafetyScoreV9MovementReviewDisposition = z.infer<
   typeof SafetyScoreV9MovementReviewDispositionSchema
 >;
 
-export const SafetyScoreV9MovementReviewRequestSchema = z
-  .object({
-    schemaVersion: z.literal(SAFETY_SCORE_V9_MOVEMENT_REVIEW_SCHEMA_VERSION),
-    reviewKey: Sha256Schema,
-    assetId: NonEmptyTextSchema,
-    sourceDiffReportDigest: Sha256Schema,
-    disposition: SafetyScoreV9MovementReviewDispositionSchema,
-    reviewerId: NonEmptyTextSchema.max(160),
-    rationale: NonEmptyTextSchema.max(2_000),
-  })
-  .strict();
-export type SafetyScoreV9MovementReviewRequest = z.infer<
-  typeof SafetyScoreV9MovementReviewRequestSchema
->;
-
 export const SafetyScoreV9MovementReviewRecordSchema = z
   .object({
     schemaVersion: z.literal(SAFETY_SCORE_V9_MOVEMENT_REVIEW_SCHEMA_VERSION),
@@ -61,15 +46,4 @@ export const SafetyScoreV9MovementReviewRecordSchema = z
   .strict();
 export type SafetyScoreV9MovementReviewRecord = z.infer<
   typeof SafetyScoreV9MovementReviewRecordSchema
->;
-
-export const SafetyScoreV9MovementReviewResponseSchema = z
-  .object({
-    schemaVersion: z.literal(SAFETY_SCORE_V9_MOVEMENT_REVIEW_SCHEMA_VERSION),
-    status: z.enum(["recorded", "unchanged"]),
-    review: SafetyScoreV9MovementReviewRecordSchema,
-  })
-  .strict();
-export type SafetyScoreV9MovementReviewResponse = z.infer<
-  typeof SafetyScoreV9MovementReviewResponseSchema
 >;

@@ -14,7 +14,7 @@ import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfReq
 
 const USAGE = `Usage: npx tsx scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts [options]
 
-Candidate-only research tool. Each case changes one numeric semantic policy
+V9 policy research tool. Each case changes one numeric semantic policy
 parameter, validates the resulting policy, and scores the phase-zero golden corpus.
 
 Options:
@@ -113,10 +113,10 @@ export interface V9PolicySensitivityCase {
 export interface V9PolicySensitivityReport {
   schemaVersion: 1;
   reportKind: "safety-score-v9-policy-sensitivity-research";
-  candidateOnly: true;
+  researchOnly: true;
   baseline: {
     policyId: string;
-    lifecycle: "candidate";
+    lifecycle: "active";
     semanticDigest: string;
     scenarioCount: number;
     scenarioIds: string[];
@@ -557,8 +557,8 @@ function buildSensitivityCase(args: {
 
 export function generateV9PolicySensitivityReport(options: GenerateSensitivityOptions = {}): V9PolicySensitivityReport {
   const baselinePolicy = V9_CANDIDATE_POLICY_V1;
-  if (baselinePolicy.policy.lifecycle !== "candidate" || baselinePolicy.policy.releaseVersion !== null) {
-    throw new Error("Safety Score v9 sensitivity tooling only accepts an unreleased candidate policy");
+  if (baselinePolicy.policy.lifecycle !== "active" || baselinePolicy.policy.releaseVersion !== "9.0") {
+    throw new Error("Safety Score v9 sensitivity tooling only accepts the active V9 policy");
   }
 
   const numericPaths = new Set(numericPolicyPaths(baselinePolicy));
@@ -611,10 +611,10 @@ export function generateV9PolicySensitivityReport(options: GenerateSensitivityOp
   return {
     schemaVersion: 1,
     reportKind: "safety-score-v9-policy-sensitivity-research",
-    candidateOnly: true,
+    researchOnly: true,
     baseline: {
       policyId: baselinePolicy.policy.policyId,
-      lifecycle: "candidate",
+      lifecycle: "active",
       semanticDigest: baselinePolicy.semanticDigest,
       scenarioCount: scenarioIds.length,
       scenarioIds,

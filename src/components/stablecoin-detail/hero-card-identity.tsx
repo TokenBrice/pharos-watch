@@ -19,9 +19,9 @@ import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import type {
   Infrastructure,
-  SafetyScoreV9CurrentCard,
   StablecoinMeta,
 } from "@shared/types";
+import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
@@ -229,7 +229,7 @@ export function SafetyGradeHero({
   reportCard,
   mobile = false,
 }: {
-  reportCard: SafetyScoreV9CurrentCard | null;
+  reportCard: V9ConsumerCard | null;
   mobile?: boolean;
 }) {
   if (!reportCard) {

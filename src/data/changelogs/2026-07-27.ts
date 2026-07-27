@@ -11,7 +11,7 @@ export const entry: ChangelogEntry = {
       tag: "feature",
       href: "/methodology/",
       description:
-        "The three-pillar V9 model becomes active under the candidate-v2 policy identity, with Backing, Exit, and Economic Control bounded by evidence and structural failure paths.",
+        "The three-pillar V9 model becomes active under the 9.0 policy identity, with Backing, Exit, and Economic Control bounded by evidence and structural failure paths.",
     },
     {
       label: "Graceful degradation",

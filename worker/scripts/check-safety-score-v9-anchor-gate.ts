@@ -17,7 +17,7 @@ import {
 const USAGE = `Usage: npm run safety-score-v9:anchor-gate -- --replay <path> [options]
 
 Options:
-  --replay <path>        Candidate replay artifact JSON (required)
+  --replay <path>        V9 replay artifact JSON (required)
   --apply-ruling <id>    Apply a pending owner ruling (e.g. D-F, D-G); repeatable
   -h, --help             Show this help`;
 
@@ -39,7 +39,7 @@ const ReplayArtifactInputSchema = z
   })
   .passthrough();
 
-/** Projects a replay artifact's candidate cards joined with compiled-fact archetypes. */
+/** Projects a replay artifact's V9 cards joined with compiled-fact archetypes. */
 export function parseSafetyScoreV9AnchorGateCards(input: unknown): V9AnchorGateCard[] {
   const artifact = ReplayArtifactInputSchema.parse(input);
   const candidate = SafetyScoreV9ResponseSchema.parse(artifact.pipeline.candidate);

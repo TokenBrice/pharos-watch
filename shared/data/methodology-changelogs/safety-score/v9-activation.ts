@@ -1,15 +1,14 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
 /**
- * V9 is activated under its existing policy identity, `candidate-v2`.
+ * V9 is activated under methodology `9.0`.
  *
- * This entry is rendered separately from the numeric V8 history because the
- * active runtime identity deliberately has no numeric release version. It must
- * not be registered through `createMethodologyVersion()` or replace the V8
- * version constant while the compatibility publisher remains scheduled.
+ * This entry is rendered separately from the numeric V8 history and does not
+ * replace the retained V8 compatibility version constant while that publisher
+ * remains scheduled.
  */
 export const SAFETY_SCORE_V9_ACTIVATION: MethodologyChangelogEntry = {
-  version: "candidate-v2",
+  version: "9.0",
   title: "Safety Score V9 becomes the active model",
   date: "2026-07-27",
   effectiveAt: 1785129044,

@@ -91,7 +91,6 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/api/__tests__/report-cards.test.ts",
   "worker/src/lib/__tests__/report-card-publication.test.ts",
   "shared/lib/__tests__/safety-score-publication.test.ts",
-  "worker/src/api/__tests__/admin-safety-score-v9.test.ts",
   "worker/src/lib/__tests__/identified-active-safety-score-source.test.ts",
   "worker/src/lib/__tests__/safety-score-active-source.test.ts",
   "worker/src/api/__tests__/safety-score-history-v2.test.ts",

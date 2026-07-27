@@ -33,7 +33,7 @@ const v9Identity = {
   model: "v9" as const,
   schemaVersion: 1 as const,
   methodologyVersion: "9.0",
-  policyId: "safety-score-v9-candidate-v2",
+  policyId: "safety-score-v9",
   policyDigest: digest("c"),
   evaluationBuildDigest: digest("d"),
   baseInputGenerationId: `report-cards-input:v1:${digest("e")}`,

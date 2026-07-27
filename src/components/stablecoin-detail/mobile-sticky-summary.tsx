@@ -5,14 +5,15 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { formatNativePrice } from "@shared/lib/format";
 import { isMobileStickySummaryEnabled } from "@/lib/feature-flags";
-import type { SafetyScoreV9CurrentCard, StablecoinData, StablecoinMeta } from "@shared/types";
+import type { StablecoinData, StablecoinMeta } from "@shared/types";
+import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 interface MobileStickySummaryProps {
   coin: StablecoinMeta;
   coinData: StablecoinData;
   pegRef: number;
   logoSrc?: string;
-  reportCard: SafetyScoreV9CurrentCard | null;
+  reportCard: V9ConsumerCard | null;
   observeTarget: RefObject<HTMLElement | null>;
 }
 

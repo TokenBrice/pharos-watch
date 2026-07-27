@@ -171,19 +171,6 @@ export const ADMIN_STATIC_ROUTES = [
       ({ handleAdminTelegramAdoptionReport }) => handleAdminTelegramAdoptionReport,
     ),
   ),
-  defineLazyStaticRoute("admin-safety-score-v9", () =>
-    import("../api/admin-safety-score-v9").then(({ handleAdminSafetyScoreV9 }) => handleAdminSafetyScoreV9),
-  ),
-  defineLazyStaticRoute("admin-safety-score-v9-review", () =>
-    import("../api/admin-safety-score-v9").then(
-      ({ handleAdminSafetyScoreV9MovementReview }) => handleAdminSafetyScoreV9MovementReview,
-    ),
-  ),
-  defineLazyStaticRoute("admin-safety-score-v9-history-boundary", () =>
-    import("../api/admin-safety-score-v9").then(
-      ({ handleAdminSafetyScoreV9HistoryBoundary }) => handleAdminSafetyScoreV9HistoryBoundary,
-    ),
-  ),
   defineLazyStaticRoute("status-probe-history", () =>
     import("../api/status-probe-history").then(({ handleStatusProbeHistory }) => handleStatusProbeHistory),
   ),

@@ -1,7 +1,7 @@
 # Safety Score V9 Readiness
 
 This document records the evidence status of the Safety Score V9
-`candidate-v2` policy and the boundary that governed its production shadow
+`9.0` policy and the boundary that governed its production shadow
 observation. On 2026-07-27, the owner explicitly authorized activation despite
 the retained no-go evidence described below. That authorization changes the
 runtime model selection; it does not retroactively turn missing evidence into a
@@ -14,8 +14,8 @@ implementation and review status. Neither document authorizes activation.
 
 ## Current State
 
-- V9 is active under its existing `candidate-v2` identity; the policy still has
-  no numeric release version.
+- V9 is active under methodology `9.0`, policy ID `safety-score-v9`, and an
+  active release lifecycle.
 - `safety-score-v9:public-activation` remains the sole runtime activation
   switch. A missing, malformed, or identity-mismatched key keeps the versioned
   endpoint dark.
@@ -28,7 +28,7 @@ implementation and review status. Neither document authorizes activation.
   key matches; a held publication exposes held status and never falls back to
   V8.
 - The public methodology and structured activation entry identify the active
-  policy as `candidate-v2`.
+  methodology as `9.0`.
 
 The latest calibration changes do not yet have post-change production shadow
 evidence in the verified documentation corpus. Earlier local captures,
@@ -49,7 +49,7 @@ rotate when policy, evaluation code, fact schema, or producer capability
 changes. Use these sources:
 
 - `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` owns the
-  candidate policy and grade thresholds.
+  V9 policy and grade thresholds.
 - `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` owns the
   generated evaluation-build identity.
 - `shared/lib/safety-score-v9/` owns the runtime-neutral evaluator, trace,
@@ -59,7 +59,7 @@ changes. Use these sources:
 - `worker/src/lib/safety-score-v9-extension.ts` and its focused modules own
   reviewed evidence adaptation.
 - `worker/src/lib/safety-score-v9-candidate.ts` computes the exact policy,
-  evaluation-build, compiler-schema, producer-capability, and candidate
+  evaluation-build, compiler-schema, producer-capability, and V9 publication
   identity.
 - `worker/src/lib/safety-score-v9-shadow-runner.ts` owns the caught shadow
   execution and 30-minute refresh bound.
@@ -311,15 +311,15 @@ designed:
   future EVM state, an all-future packet, stale state, or a wider envelope
   fails closed with explicit skew provenance.
 
-Candidate-only attribution remains outside the public V8 fixed input. Shared
+V9-only attribution remains outside the public V8 fixed input. Shared
 producer and evidence corrections may improve inputs consumed by both models;
 they do not change which model is public, and they do not activate V9.
 
-Current candidate cards use score-trace schema v3 and response schema v4 for
+Current V9 cards use score-trace schema v3 and response schema v5 for
 bounded-D attribution plus explicit policy score adjustments. Strict readers
 retain exact response-v3/trace-v2 and response-v2/trace-v1 compatibility for
 already persisted shadow artifacts; parsing those artifacts does not inject
-the trace-v3 adjustment field. New output must satisfy the v4 response and v3
+the trace-v3 adjustment field. New output must satisfy the v5 response and v3
 trace reconciliation rules. The separate public report projection uses
 report-response schema v3 with the same trace-v3 cards. Its live producer and
 consumers are current-only; report-v2/trace-v2 and report-v1/trace-v1 are
@@ -423,7 +423,7 @@ unchecked holdout outcomes remain explicit no-go evidence.
 
 ## Owner Boundary
 
-Production shadow deployment, green tests, valid candidate publication, and
+Production shadow deployment, green tests, valid V9 publication, and
 stable fresh generations did not activate V9. The owner made that decision on
 2026-07-27 and authorized the identity-bound activation-key write described in
 the rollout contract despite the explicit no-go evidence.

@@ -110,7 +110,6 @@ export const CRITICAL_FILES = [
   "worker/src/lib/report-card-publication.ts",
   "shared/lib/safety-score-publication.ts",
   "shared/lib/safety-score-v8-publication.ts",
-  "worker/src/api/admin-safety-score-v9.ts",
   "worker/src/lib/identified-active-safety-score-source.ts",
   "worker/src/lib/safety-score-active-source.ts",
   "worker/src/lib/safety-score-history-v2.ts",

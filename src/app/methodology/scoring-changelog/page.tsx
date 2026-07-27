@@ -11,7 +11,7 @@ const route = createMethodologyChangelogRoute({
   path: changelog.publicPath,
   metadataTitle: "Safety Scores Changelog — Version History",
   metadataDescription:
-    "Safety Score methodology history from V1 through the active V9 candidate-v2 identity, including the retained V8 compatibility methodology.",
+    "Safety Score methodology history from V1 through active V9.0, including the retained V8 compatibility methodology.",
   breadcrumbName: "Scoring Changelog",
   title: "Safety Scores Changelog",
   lead: (
@@ -22,14 +22,14 @@ const route = createMethodologyChangelogRoute({
   ),
   entries: changelog.entries,
   sections: [
-    { id: scoringAnchorId("V9 · candidate-v2"), label: "V9 · candidate-v2" },
+    { id: scoringAnchorId("V9.0"), label: "V9.0" },
     ...SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS.map((version) => ({
       id: scoringAnchorId(version),
       label: version,
     })),
   ],
   renderContent: () => <ScoringChangelogContent />,
-  citation: { id: changelog.citationId, versionLabel: "v9-candidate-v2" },
+  citation: { id: changelog.citationId, versionLabel: "v9.0" },
 });
 
 export const metadata = route.metadata;

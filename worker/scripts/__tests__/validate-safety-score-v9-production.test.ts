@@ -31,7 +31,7 @@ interface CardSpec {
 
 const IDENTITY = {
   schemaVersion: 1 as const,
-  policyId: "safety-score-v9-candidate-v2",
+  policyId: "safety-score-v9",
   policyDigest: "a".repeat(64),
   evaluationBuildDigest: "b".repeat(64),
   compilerFactSchemaDigest: "c".repeat(64),
@@ -153,6 +153,82 @@ function scoreTrace(spec: CardSpec) {
   };
 }
 
+function breakdowns(spec: CardSpec) {
+  if (spec.grade === "NR") return null;
+  const score = spec.score!;
+  return {
+    backing: {
+      evaluatedScore: score,
+      publishedScore: score,
+      aggregationWeight: 0.4,
+      groups: [{ key: "reserves", label: "Reserves", score, effectiveWeight: 1 }],
+      components: [{
+        key: "reserve:fixture",
+        label: "Fixture reserves",
+        source: "reserve-exposure" as const,
+        score,
+        effectiveWeight: 1,
+        weightedContribution: score,
+        observationState: "known" as const,
+      }],
+      adjustments: [],
+    },
+    exit: {
+      evaluatedScore: score,
+      publishedScore: score,
+      aggregationWeight: 0.35,
+      stressRequest: null,
+      primaryRoute: {
+        key: "redemption:fixture",
+        label: "Fixture redemption",
+        routeFamily: "protocol-redemption" as const,
+        score,
+        components: [
+          { key: "access", label: "Access", score, weight: 0.2, weightedContribution: score * 0.2 },
+          { key: "settlement", label: "Settlement", score, weight: 0.15, weightedContribution: score * 0.15 },
+          {
+            key: "executionCertainty",
+            label: "Execution certainty",
+            score,
+            weight: 0.15,
+            weightedContribution: score * 0.15,
+          },
+          { key: "capacity", label: "Capacity", score, weight: 0.25, weightedContribution: score * 0.25 },
+          {
+            key: "outputAssetQuality",
+            label: "Output asset quality",
+            score,
+            weight: 0.15,
+            weightedContribution: score * 0.15,
+          },
+          { key: "cost", label: "Cost", score, weight: 0.1, weightedContribution: score * 0.1 },
+        ],
+        confidenceFactor: 1,
+        eligibilityMultiplier: 1,
+        capsApplied: [],
+      },
+      diversification: null,
+      alternatives: [],
+      adjustments: [],
+    },
+    control: {
+      evaluatedScore: score,
+      publishedScore: score,
+      aggregationWeight: 0.25,
+      method: "minimum-binding-component" as const,
+      components: [{
+        key: "control:fixture",
+        label: "Fixture control",
+        kind: "mint" as const,
+        score,
+        binding: true,
+        posture: "distributed",
+      }],
+      adjustments: [],
+    },
+  };
+}
+
 function card(spec: CardSpec) {
   const evidenceFloor = spec.syntheticEvidenceFloor
     ? {
@@ -230,6 +306,7 @@ function card(spec: CardSpec) {
     },
     stressStateDigest: "e".repeat(64),
     scoreTrace: scoreTrace(spec),
+    breakdowns: breakdowns(spec),
   };
 }
 
@@ -404,10 +481,10 @@ function generation(index: number, specs: readonly CardSpec[] = PASSING_SPECS) {
       },
       candidate: {
         model: "v9-critical-path",
-        schemaVersion: 4,
-        lifecycle: "candidate",
-        candidateId: "safety-score-v9-candidate:fixture",
-        policyVersion: "candidate-v2",
+        schemaVersion: 5,
+        lifecycle: "active",
+        candidateId: "safety-score-v9:fixture",
+        policyVersion: "9.0",
         publicationGenerationId: `publication:g${index}`,
         baseInputGenerationId,
         factSetDigest,
@@ -446,7 +523,7 @@ function validationEvidence(
     kind: "safety-score-v9-production-validation-evidence",
     candidateIdentity: IDENTITY,
     candidateResult: {
-      candidateId: "safety-score-v9-candidate:fixture",
+      candidateId: "safety-score-v9:fixture",
       baseInputGenerationId:
         `report-cards-input:v1:${String(candidateGenerationIndex).repeat(64)}`,
       factSetDigest: (candidateGenerationIndex + 3).toString(16).repeat(64),

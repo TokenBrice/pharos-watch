@@ -1,6 +1,6 @@
 import { filterDependencyGraphEdgesToLive, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
 import type { DependencyWeight, ReportCard, ReportCardsResponse, StablecoinMeta } from "@shared/types";
-import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9TransitionResponse } from "@shared/types/report-cards-v9";
 
 export type DependencyCoverageKind = "both" | "dependent" | "upstream" | "resolved-none" | "unmapped-gap";
 
@@ -90,7 +90,7 @@ export function buildDependencyCoverageFacts(
 
 export function buildV9DependencyCoverageFacts(
   coins: readonly DependencyCoverageCoin[],
-  reportCards: Pick<ReportCardsV9Response, "cards" | "dependencyGraph">,
+  reportCards: Pick<ReportCardsV9TransitionResponse, "cards" | "dependencyGraph">,
 ): Map<string, DependencyCoverageFact> {
   const cardById = new Map(reportCards.cards.map((card) => [card.id, card]));
   const liveIds = new Set(cardById.keys());

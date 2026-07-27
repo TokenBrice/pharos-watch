@@ -10,7 +10,7 @@ description: "Weekly release notes for Pharos."
 
 Safety Score V9 becomes the active model with fail-closed publication and held-rating continuity.
 
-- **Safety Score V9 activation**: The three-pillar V9 model becomes active under the candidate-v2 policy identity, with Backing, Exit, and Economic Control bounded by evidence and structural failure paths.
+- **Safety Score V9 activation**: The three-pillar V9 model becomes active under the 9.0 policy identity, with Backing, Exit, and Economic Control bounded by evidence and structural failure paths.
 - **Graceful degradation**: Stale or failed score-bearing inputs and new infrastructure-attributed downgrades hold the last accepted V9 snapshot instead of replacing it or recomputing V8.
 
 ## 2026-07-20 to 2026-07-26

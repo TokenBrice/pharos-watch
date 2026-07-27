@@ -27,7 +27,7 @@ const AERODROME_STABLE_SELECTOR = "0x22be3de1";
 const TOKEN_0_SELECTOR = "0x0dfe1681";
 const TOKEN_1_SELECTOR = "0xd21220a7";
 const GET_RESERVES_SELECTOR = "0x0902f1ac";
-const MULTICALL_BATCH_SIZE = 120;
+const MAX_PROBES_PER_MULTICALL = 4;
 const AERODROME_MAX_FEE_BPS = 300n;
 
 type EvmV2Source = EvmV2ExecutionCandidate["source"];
@@ -497,71 +497,38 @@ async function enrichDeployment(input: {
     }
   }
 
-  const deploymentCalls =
-    input.deployment.binding === "aerodrome-volatile"
-      ? [
-          {
-            label: "v2-factory-implementation",
-            target: input.deployment.factoryAddress,
-            callData: AERODROME_IMPLEMENTATION_SELECTOR,
-          },
-          {
-            label: "v2-factory-paused",
-            target: input.deployment.factoryAddress,
-            callData: AERODROME_IS_PAUSED_SELECTOR,
-          },
-        ]
-      : [];
-  const poolCalls = input.probes.flatMap((probe, index) => {
-    const prefix = `v2-${index}`;
-    const [token0, token1] = probe.candidate.tokenAddresses;
-    const pairCallData =
-      input.deployment.binding === "aerodrome-volatile"
-        ? `${AERODROME_GET_POOL_SELECTOR}${encodeAddress(token0)}${encodeAddress(token1)}${encodeUint256(0)}`
-        : `${GET_PAIR_SELECTOR}${encodeAddress(token0)}${encodeAddress(token1)}`;
-    return [
-      {
-        label: `${prefix}-pair`,
-        target: input.deployment.factoryAddress,
-        callData: pairCallData,
-      },
-      { label: `${prefix}-token0`, target: probe.candidate.poolAddress, callData: TOKEN_0_SELECTOR },
-      { label: `${prefix}-token1`, target: probe.candidate.poolAddress, callData: TOKEN_1_SELECTOR },
-      { label: `${prefix}-reserves`, target: probe.candidate.poolAddress, callData: GET_RESERVES_SELECTOR },
-      { label: `${prefix}-decimals0`, target: token0, callData: DECIMALS_SELECTOR },
-      { label: `${prefix}-decimals1`, target: token1, callData: DECIMALS_SELECTOR },
-      ...(input.deployment.binding === "aerodrome-volatile"
-        ? [
-            {
-              label: `${prefix}-fee`,
-              target: input.deployment.factoryAddress,
-              callData: `${AERODROME_GET_FEE_SELECTOR}${encodeAddress(probe.candidate.poolAddress)}${encodeUint256(0)}`,
-            },
-            { label: `${prefix}-stable`, target: probe.candidate.poolAddress, callData: AERODROME_STABLE_SELECTOR },
-          ]
-        : []),
-    ];
-  });
-  const calls = [...deploymentCalls, ...poolCalls];
-  const rawResults = await input.dependencies.fetchMulticall(input.deployment.chain, calls, blockNumber, {
-    ...rpcOptions,
-    multicallBatchSize: MULTICALL_BATCH_SIZE,
-  });
-  if (!rawResults) {
-    for (const probe of input.probes)
-      for (const reference of probe.references) gateReference(reference, "incomplete-exact-capture");
-    return;
-  }
-  const results = resultMap(rawResults);
-
   if (input.deployment.binding === "aerodrome-volatile") {
-    const implementation = decodeAddressResult(results.get("v2-factory-implementation"));
+    const deploymentCalls = [
+      {
+        label: "v2-factory-implementation",
+        target: input.deployment.factoryAddress,
+        callData: AERODROME_IMPLEMENTATION_SELECTOR,
+      },
+      {
+        label: "v2-factory-paused",
+        target: input.deployment.factoryAddress,
+        callData: AERODROME_IS_PAUSED_SELECTOR,
+      },
+    ];
+    const rawDeploymentResults = await input.dependencies.fetchMulticall(
+      input.deployment.chain,
+      deploymentCalls,
+      blockNumber,
+      rpcOptions,
+    );
+    if (!rawDeploymentResults) {
+      for (const probe of input.probes)
+        for (const reference of probe.references) gateReference(reference, "incomplete-exact-capture");
+      return;
+    }
+    const deploymentResults = resultMap(rawDeploymentResults);
+    const implementation = decodeAddressResult(deploymentResults.get("v2-factory-implementation"));
     if (implementation !== input.deployment.expectedImplementationAddress) {
       for (const probe of input.probes)
         for (const reference of probe.references) gateReference(reference, "deployment-code-mismatch");
       return;
     }
-    const paused = decodeBoolResult(results.get("v2-factory-paused"));
+    const paused = decodeBoolResult(deploymentResults.get("v2-factory-paused"));
     if (paused == null || paused) {
       const reason: V2GateReason = paused ? "paused-or-swap-disabled" : "incomplete-exact-capture";
       for (const probe of input.probes) for (const reference of probe.references) gateReference(reference, reason);
@@ -569,51 +536,99 @@ async function enrichDeployment(input: {
     }
   }
 
-  for (let index = 0; index < input.probes.length; index++) {
-    const probe = input.probes[index]!;
-    let feeRate: number;
-    if (input.deployment.binding === "aerodrome-volatile") {
-      const stable = decodeBoolResult(results.get(`v2-${index}-stable`));
-      if (stable == null || stable) {
-        const reason: V2GateReason = stable ? "unsupported-invariant" : "incomplete-exact-capture";
-        for (const reference of probe.references) gateReference(reference, reason);
-        continue;
-      }
-      const feeBps = decodeUint256Result(results.get(`v2-${index}-fee`));
-      if (feeBps == null || feeBps > AERODROME_MAX_FEE_BPS) {
+  for (let startIndex = 0; startIndex < input.probes.length; startIndex += MAX_PROBES_PER_MULTICALL) {
+    const probes = input.probes.slice(startIndex, startIndex + MAX_PROBES_PER_MULTICALL);
+    const poolCalls = probes.flatMap((probe, batchIndex) => {
+      const index = startIndex + batchIndex;
+      const prefix = `v2-${index}`;
+      const [token0, token1] = probe.candidate.tokenAddresses;
+      const pairCallData =
+        input.deployment.binding === "aerodrome-volatile"
+          ? `${AERODROME_GET_POOL_SELECTOR}${encodeAddress(token0)}${encodeAddress(token1)}${encodeUint256(0)}`
+          : `${GET_PAIR_SELECTOR}${encodeAddress(token0)}${encodeAddress(token1)}`;
+      return [
+        {
+          label: `${prefix}-pair`,
+          target: input.deployment.factoryAddress,
+          callData: pairCallData,
+        },
+        { label: `${prefix}-token0`, target: probe.candidate.poolAddress, callData: TOKEN_0_SELECTOR },
+        { label: `${prefix}-token1`, target: probe.candidate.poolAddress, callData: TOKEN_1_SELECTOR },
+        { label: `${prefix}-reserves`, target: probe.candidate.poolAddress, callData: GET_RESERVES_SELECTOR },
+        { label: `${prefix}-decimals0`, target: token0, callData: DECIMALS_SELECTOR },
+        { label: `${prefix}-decimals1`, target: token1, callData: DECIMALS_SELECTOR },
+        ...(input.deployment.binding === "aerodrome-volatile"
+          ? [
+            {
+              label: `${prefix}-fee`,
+              target: input.deployment.factoryAddress,
+              callData: `${AERODROME_GET_FEE_SELECTOR}${encodeAddress(probe.candidate.poolAddress)}${encodeUint256(0)}`,
+            },
+            { label: `${prefix}-stable`, target: probe.candidate.poolAddress, callData: AERODROME_STABLE_SELECTOR },
+          ]
+          : []),
+      ];
+    });
+    const rawResults = await input.dependencies.fetchMulticall(
+      input.deployment.chain,
+      poolCalls,
+      blockNumber,
+      rpcOptions,
+    );
+    if (!rawResults) {
+      for (const probe of probes)
         for (const reference of probe.references) gateReference(reference, "incomplete-exact-capture");
-        continue;
-      }
-      feeRate = Number(feeBps) / 10_000;
-    } else {
-      feeRate = input.deployment.feeRate;
-    }
-    const verified = parseVerifiedPairState(probe, index, results);
-    if (!verified.state) {
-      for (const reference of probe.references) gateReference(reference, verified.reason);
       continue;
     }
-    for (const reference of probe.references) {
-      reference.pool.poolId = canonicalExitRouteAssetKey(input.deployment.chain, probe.candidate.poolAddress);
-      const built = buildExecutionModel({
-        reference,
-        deployment: input.deployment,
-        feeRate,
-        state: verified.state,
-        chainAddressToId: input.chainAddressToId,
-        contractMetaByChainAddress: input.contractMetaByChainAddress,
-        stablecoinPriceById: input.stablecoinPriceById,
-      });
-      if (!built.model) {
-        gateReference(reference, built.reason);
+    const results = resultMap(rawResults);
+
+    for (let batchIndex = 0; batchIndex < probes.length; batchIndex++) {
+      const index = startIndex + batchIndex;
+      const probe = probes[batchIndex]!;
+      let feeRate: number;
+      if (input.deployment.binding === "aerodrome-volatile") {
+        const stable = decodeBoolResult(results.get(`v2-${index}-stable`));
+        if (stable == null || stable) {
+          const reason: V2GateReason = stable ? "unsupported-invariant" : "incomplete-exact-capture";
+          for (const reference of probe.references) gateReference(reference, reason);
+          continue;
+        }
+        const feeBps = decodeUint256Result(results.get(`v2-${index}-fee`));
+        if (feeBps == null || feeBps > AERODROME_MAX_FEE_BPS) {
+          for (const reference of probe.references) gateReference(reference, "incomplete-exact-capture");
+          continue;
+        }
+        feeRate = Number(feeBps) / 10_000;
+      } else {
+        feeRate = input.deployment.feeRate;
+      }
+      const verified = parseVerifiedPairState(probe, index, results);
+      if (!verified.state) {
+        for (const reference of probe.references) gateReference(reference, verified.reason);
         continue;
       }
-      const extra = { ...(reference.pool.extra ?? {}) };
-      delete extra.executionCapabilityGate;
-      delete extra.evmV2ExecutionCandidate;
-      extra.ammExecutionModel = built.model;
-      extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: true };
-      reference.pool.extra = extra;
+      for (const reference of probe.references) {
+        reference.pool.poolId = canonicalExitRouteAssetKey(input.deployment.chain, probe.candidate.poolAddress);
+        const built = buildExecutionModel({
+          reference,
+          deployment: input.deployment,
+          feeRate,
+          state: verified.state,
+          chainAddressToId: input.chainAddressToId,
+          contractMetaByChainAddress: input.contractMetaByChainAddress,
+          stablecoinPriceById: input.stablecoinPriceById,
+        });
+        if (!built.model) {
+          gateReference(reference, built.reason);
+          continue;
+        }
+        const extra = { ...(reference.pool.extra ?? {}) };
+        delete extra.executionCapabilityGate;
+        delete extra.evmV2ExecutionCandidate;
+        extra.ammExecutionModel = built.model;
+        extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: true };
+        reference.pool.extra = extra;
+      }
     }
   }
 }

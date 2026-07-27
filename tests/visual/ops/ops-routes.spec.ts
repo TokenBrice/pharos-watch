@@ -16,7 +16,6 @@ const WORKSPACE_HEADINGS: Record<AdminWorkspaceId, string> = {
   actions: "Actions",
   comms: "Comms",
   history: "Incident History",
-  "safety-score-v9": "Safety Score V9 candidate",
   "api-management": "API Management",
 };
 

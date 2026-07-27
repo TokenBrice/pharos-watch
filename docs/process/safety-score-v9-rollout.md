@@ -1,7 +1,7 @@
 # Safety Score V9 Rollout
 
-> **Current state:** The owner authorized V9 activation on 2026-07-27 under the
-> existing `candidate-v2` identity. The identity-bound activation key remains
+> **Current state:** The owner authorized V9 activation on 2026-07-27 under
+> methodology `9.0`. The identity-bound activation key remains
 > the sole runtime switch: a missing, malformed, or mismatched key keeps the
 > versioned endpoint dark. V8 compatibility publication remains scheduled only
 > through the 24-hour activation observation window.
@@ -26,9 +26,12 @@ The former formal release machinery is retired:
 - no consumer-ledger completion gate; and
 - no offline shadow-gate script whose pass authorizes release.
 
-Daily qualification and streak fields may remain visible in the admin surface
-as historical diagnostics. They do not accrue release credit, restart after an
-identity rotation, or constrain the owner decision.
+Daily qualification and streak fields remain historical diagnostics in retained
+shadow rows. They do not accrue release credit, restart after an identity
+rotation, or constrain the owner decision. The former access-protected Safety
+V9 admin workspace and its admin diff/review API were retired after activation;
+live V9 still uses the identity-bound public endpoint and the canonical
+shadow-named publication caches described below.
 
 The rationale is an agile middle ground: the owner is the accountability
 holder. The retired apparatus served a multi-party trust model this product
@@ -45,11 +48,11 @@ The following remain load-bearing:
 - the rated-count regression alarm;
 - one compact daily shadow row;
 - the unlisted, read-only V9 preview; and
-- the movement-review queue.
+- existing movement-review records retained for diff annotation.
 
-The daily row, preview, movement queue, coverage reports, and consumer ledger
-are observation surfaces. They inform calibration and the owner decision but do
-not authorize or veto activation.
+The daily row, preview, retained movement-review evidence, coverage reports,
+and consumer ledger are observation surfaces. They inform calibration and the
+owner decision but do not authorize or veto activation.
 
 ## Calibration Loop
 
@@ -105,7 +108,7 @@ A held attempt records the publication-gate failure in the daily row and
 updates only publication health. It does not replace the canonical envelope or
 diff, advance the accepted score timestamp, or replace the accepted exact
 input. An accepted attempt writes the envelope, diff, exact input, daily row,
-and current health in one D1 batch ordered by the candidate clock.
+and current health in one D1 batch ordered by the V9 publication clock.
 
 Evidence capture must export the V9 exact-input key, not the atomic V8
 `report-cards:fixed-input:exact` key, and verify that its base and source

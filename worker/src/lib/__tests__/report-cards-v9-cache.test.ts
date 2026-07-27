@@ -1,17 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public";
+import {
+  SafetyScoreV9CausalResponseSchema,
+  type SafetyScoreV9Response,
+} from "@shared/types/safety-score-v9-public";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import {
   ReportCardsV9CompatibleResponseSchema,
   ReportCardsV9CurrentResponseSchema,
   ReportCardsV9LegacyResponseSchema,
+  ReportCardsV9PreBreakdownResponseSchema,
   ReportCardsV9PreviousResponseSchema,
   ReportCardsV9ResponseSchema,
 } from "@shared/types/report-cards-v9";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
-  parseSafetyScoreV9ShadowEnvelopeCacheValue,
   serializeSafetyScoreV9ShadowEnvelopeCacheValue,
 } from "../safety-score-v9-cache-codec";
 import { buildSafetyScoreV9ShadowEnvelope } from "../safety-score-v9-shadow";
@@ -21,6 +24,7 @@ import {
   ReportCardsV9SnapshotUnavailableError,
 } from "../report-cards-v9-cache";
 import { SAFETY_SCORE_V9_SHADOW_CACHE_KEYS } from "../safety-score-v9-store";
+import { makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 
 const digest = (character: string) => character.repeat(64);
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${digest("a")}`;
@@ -35,15 +39,15 @@ function candidate(): SafetyScoreV9Response {
   };
   return {
     model: "v9-critical-path",
-    schemaVersion: 4,
-    lifecycle: "candidate",
-    candidateId: "candidate-v9-public-wire",
-    policyVersion: "candidate-v9-public-wire",
-    publicationGenerationId: "report-cards:v9:candidate:public-wire",
+    schemaVersion: 5,
+    lifecycle: "active",
+    candidateId: "safety-score-v9:v1:public-wire",
+    policyVersion: "9.0",
+    publicationGenerationId: "report-cards:v9:v1:public-wire",
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
     factSetDigest: digest("b"),
     resultDigest: digest("c"),
-    policy: { id: "safety-score-v9-public-wire", semanticDigest: digest("d") },
+    policy: { id: "safety-score-v9", semanticDigest: digest("d") },
     evaluationBuildDigest: digest("e"),
     sourceGenerations: { registry: "registry:public-wire" },
     asOfSec: 1_700_000_000,
@@ -133,6 +137,11 @@ function candidate(): SafetyScoreV9Response {
           scoreAdjustments: [],
           wrapperParentLimit: null,
         },
+        breakdowns: makeWorkerV9Card({
+          score: 90,
+          qualityScore: 90,
+          pillars: { backing: pillar, exit: pillar, control: pillar },
+        }).breakdowns,
       },
     ],
   };
@@ -190,7 +199,7 @@ describe("published V9 report-card cache", () => {
     expect(snapshot).toEqual(ReportCardsV9CurrentResponseSchema.parse(snapshot));
     expect(snapshot).toMatchObject({
       model: "v9",
-      schemaVersion: 3,
+      schemaVersion: 4,
       lifecycle: "shadow",
       safetyScoreIdentity: {
         model: "v9",
@@ -328,14 +337,28 @@ describe("published V9 report-card cache", () => {
     expect(() => ReportCardsV9ResponseSchema.parse(downgraded)).toThrow();
   });
 
+  it("retains an explicit report-v3 reader for pre-breakdown snapshots", () => {
+    const previous = structuredClone(project()) as unknown as {
+      schemaVersion: number;
+      cards: Array<Record<string, unknown>>;
+    };
+    previous.schemaVersion = 3;
+    delete previous.cards[0]!.breakdowns;
+
+    expect(() => ReportCardsV9PreBreakdownResponseSchema.parse(previous)).not.toThrow();
+    expect(() => ReportCardsV9CompatibleResponseSchema.parse(previous)).not.toThrow();
+    expect(() => ReportCardsV9CurrentResponseSchema.parse(previous)).toThrow();
+  });
+
   it("retains an explicit report-v1 reader for persisted trace-v1 snapshots", () => {
     const previous = structuredClone(
       project(),
     ) as unknown as Record<string, unknown> & {
-      cards: Array<{ scoreTrace: Record<string, unknown> }>;
+      cards: Array<{ scoreTrace: Record<string, unknown>; breakdowns?: unknown }>;
     };
     previous.schemaVersion = 1;
     delete previous.publicationHealth;
+    delete previous.cards[0]!.breakdowns;
     const trace = previous.cards[0]!.scoreTrace;
     trace.schemaVersion = 1;
     delete trace.boundedUncertaintyAttribution;
@@ -352,10 +375,11 @@ describe("published V9 report-card cache", () => {
     const previous = structuredClone(
       project(),
     ) as unknown as Record<string, unknown> & {
-      cards: Array<{ scoreTrace: Record<string, unknown> }>;
+      cards: Array<{ scoreTrace: Record<string, unknown>; breakdowns?: unknown }>;
     };
     previous.schemaVersion = 2;
     delete previous.publicationHealth;
+    delete previous.cards[0]!.breakdowns;
     const trace = previous.cards[0]!.scoreTrace;
     trace.schemaVersion = 2;
     delete trace.scoreAdjustments;
@@ -365,27 +389,23 @@ describe("published V9 report-card cache", () => {
     expect(() => ReportCardsV9CurrentResponseSchema.parse(previous)).toThrow();
   });
 
-  it("round-trips retained candidate-v3 and trace-v2 cache bytes without injecting fields", async () => {
+  it("retains exact candidate-v3 and trace-v2 bytes in the historical reader", () => {
     const causalCandidate = structuredClone(candidate()) as unknown as {
       schemaVersion: number;
       cards: Array<{ scoreTrace: Record<string, unknown> }>;
     } & SafetyScoreV9Response;
     causalCandidate.schemaVersion = 3;
+    causalCandidate.lifecycle = "candidate";
+    causalCandidate.policyVersion = "candidate-v9-public-wire";
+    causalCandidate.policy = {
+      id: "safety-score-v9-candidate-v9-public-wire",
+      semanticDigest: causalCandidate.policy.semanticDigest,
+    };
+    delete (causalCandidate.cards[0] as unknown as { breakdowns?: unknown }).breakdowns;
     causalCandidate.cards[0]!.scoreTrace.schemaVersion = 2;
     delete causalCandidate.cards[0]!.scoreTrace.scoreAdjustments;
-    const envelope = buildSafetyScoreV9ShadowEnvelope({
-      candidate: causalCandidate,
-      expectedActiveIds: ["alpha"],
-      compilerFactSchemaDigest: digest("f"),
-      producerCapabilityDigest: digest("1"),
-      coverageFloors: [],
-    });
-
-    const stored = await serializeSafetyScoreV9ShadowEnvelopeCacheValue(envelope);
-    const parsed = await parseSafetyScoreV9ShadowEnvelopeCacheValue(stored);
-
-    expect(parsed).toEqual(envelope);
-    const parsedCard = parsed.candidate.cards[0]!;
+    const parsed = SafetyScoreV9CausalResponseSchema.parse(causalCandidate);
+    const parsedCard = parsed.cards[0]!;
     expect(
       "scoreTrace" in parsedCard &&
       "scoreAdjustments" in parsedCard.scoreTrace,

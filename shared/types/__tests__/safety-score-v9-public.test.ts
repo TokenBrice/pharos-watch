@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9CurrentResponseSchema,
+  SafetyScoreV9BreakdownsSchema,
   SafetyScoreV9LegacyResponseSchema,
+  SafetyScoreV9PreBreakdownResponseSchema,
   SafetyScoreV9ResponseSchema,
 } from "../safety-score-v9-public";
 
@@ -16,6 +18,79 @@ function pillar(score: number) {
     components: [],
     reasons: [],
   } as const;
+}
+
+function breakdowns(backingScore = 90, exitScore = 92, controlScore = 94) {
+  const exitComponents = [
+    ["access", "Access", 0.2],
+    ["settlement", "Settlement", 0.15],
+    ["executionCertainty", "Execution certainty", 0.15],
+    ["capacity", "Capacity", 0.25],
+    ["outputAssetQuality", "Output asset quality", 0.15],
+    ["cost", "Cost", 0.1],
+  ] as const;
+  return SafetyScoreV9BreakdownsSchema.parse({
+    backing: {
+      evaluatedScore: backingScore,
+      publishedScore: backingScore,
+      aggregationWeight: 0.4,
+      groups: [{ key: "reserves", label: "Reserves", score: backingScore, effectiveWeight: 1 }],
+      components: [{
+        key: "reserve:cash",
+        label: "Cash",
+        source: "reserve-exposure",
+        score: backingScore,
+        effectiveWeight: 1,
+        weightedContribution: backingScore,
+        observationState: "known",
+      }],
+      adjustments: [],
+    },
+    exit: {
+      evaluatedScore: exitScore,
+      publishedScore: exitScore,
+      aggregationWeight: 0.35,
+      stressRequest: {
+        requestedNotionalUsd: 1_000_000,
+        maxCostBps: 200,
+        comparisonWindowSec: 86_400,
+      },
+      primaryRoute: {
+        key: "redemption:main",
+        label: "Protocol redemption",
+        routeFamily: "protocol-redemption",
+        score: exitScore,
+        components: exitComponents.map(([key, label, weight]) => ({
+          key,
+          label,
+          score: exitScore,
+          weight,
+          weightedContribution: exitScore * weight,
+        })),
+        confidenceFactor: 1,
+        eligibilityMultiplier: 1,
+        capsApplied: [],
+      },
+      diversification: null,
+      alternatives: [],
+      adjustments: [],
+    },
+    control: {
+      evaluatedScore: controlScore,
+      publishedScore: controlScore,
+      aggregationWeight: 0.25,
+      method: "minimum-binding-component",
+      components: [{
+        key: "control:mint",
+        label: "Mint control",
+        kind: "mint",
+        score: controlScore,
+        binding: true,
+        posture: "distributed",
+      }],
+      adjustments: [],
+    },
+  });
 }
 
 function response() {
@@ -89,9 +164,15 @@ function response() {
 function currentResponse() {
   const current = structuredClone(response()) as unknown as {
     schemaVersion: number;
-    cards: Array<{ scoreTrace?: unknown }>;
+    lifecycle: string;
+    policyVersion: string;
+    policy: { id: string; semanticDigest: string };
+    cards: Array<{ scoreTrace?: unknown; breakdowns?: unknown }>;
   };
-  current.schemaVersion = 4;
+  current.schemaVersion = 5;
+  current.lifecycle = "active";
+  current.policyVersion = "9.0";
+  current.policy = { id: "safety-score-v9", semanticDigest: "d".repeat(64) };
   current.cards[0]!.scoreTrace = {
     schemaVersion: 3,
     legacyAliases: {
@@ -145,6 +226,7 @@ function currentResponse() {
     scoreAdjustments: [],
     wrapperParentLimit: null,
   };
+  current.cards[0]!.breakdowns = breakdowns();
   return current;
 }
 
@@ -243,14 +325,14 @@ describe("SafetyScoreV9ResponseSchema", () => {
     expect(SafetyScoreV9ResponseSchema.parse(parsed).schemaVersion).toBe(1);
   });
 
-  it("requires the self-describing score trace on every current candidate card", () => {
+  it("requires the self-describing score trace on every current V9 card", () => {
     const parsed = SafetyScoreV9CurrentResponseSchema.parse(currentResponse());
-    expect(parsed.schemaVersion).toBe(4);
+    expect(parsed.schemaVersion).toBe(5);
     expect(parsed.cards[0]?.scoreTrace.aggregation?.method).toBe("smooth-bounded-headroom");
     expect(parsed.cards[0]?.scoreTrace.legacyAliases.pegAdjustedScore).toBe(
       "post-deployment-pre-cap-score",
     );
-    expect(SafetyScoreV9ResponseSchema.parse(parsed).schemaVersion).toBe(4);
+    expect(SafetyScoreV9ResponseSchema.parse(parsed).schemaVersion).toBe(5);
 
     const missingTrace = currentResponse();
     delete missingTrace.cards[0]!.scoreTrace;
@@ -269,6 +351,10 @@ describe("SafetyScoreV9ResponseSchema", () => {
   it("reads pre-attribution schema-v2 artifacts with an empty bounded trace", () => {
     const previous = currentResponse();
     previous.schemaVersion = 2;
+    previous.lifecycle = "candidate";
+    previous.policyVersion = "candidate-v1";
+    previous.policy = { id: "safety-score-v9-candidate-v1", semanticDigest: "d".repeat(64) };
+    delete previous.cards[0]!.breakdowns;
     const trace = previous.cards[0]!.scoreTrace as Record<string, unknown>;
     trace.schemaVersion = 1;
     delete trace.boundedUncertaintyAttribution;
@@ -286,6 +372,10 @@ describe("SafetyScoreV9ResponseSchema", () => {
   it("retains exact schema-v3 and trace-v2 causal artifacts", () => {
     const causal = currentResponse();
     causal.schemaVersion = 3;
+    causal.lifecycle = "candidate";
+    causal.policyVersion = "candidate-v1";
+    causal.policy = { id: "safety-score-v9-candidate-v1", semanticDigest: "d".repeat(64) };
+    delete causal.cards[0]!.breakdowns;
     const trace = causal.cards[0]!.scoreTrace as Record<string, unknown>;
     trace.schemaVersion = 2;
     delete trace.scoreAdjustments;
@@ -299,6 +389,22 @@ describe("SafetyScoreV9ResponseSchema", () => {
     expect(() => SafetyScoreV9CurrentResponseSchema.parse(causal)).toThrow();
   });
 
+  it("retains exact candidate-v4 cards without component breakdowns", () => {
+    const previous = currentResponse();
+    previous.schemaVersion = 4;
+    previous.lifecycle = "candidate";
+    previous.policyVersion = "candidate-v1";
+    previous.policy = {
+      id: "safety-score-v9-candidate-v1",
+      semanticDigest: "d".repeat(64),
+    };
+    delete previous.cards[0]!.breakdowns;
+
+    expect(SafetyScoreV9PreBreakdownResponseSchema.parse(previous).schemaVersion).toBe(4);
+    expect(SafetyScoreV9ResponseSchema.parse(previous).schemaVersion).toBe(4);
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(previous)).toThrow();
+  });
+
   it("cannot downgrade a response-v4 candidate by relabeling only its traces", () => {
     const downgraded = currentResponse();
     const trace = downgraded.cards[0]!.scoreTrace as Record<string, unknown>;
@@ -307,6 +413,32 @@ describe("SafetyScoreV9ResponseSchema", () => {
     delete trace.scoreAdjustments;
 
     expect(() => SafetyScoreV9ResponseSchema.parse(downgraded)).toThrow();
+  });
+
+  it("rejects component breakdowns that do not reconcile their public scores", () => {
+    const invalidBacking = structuredClone(
+      SafetyScoreV9CurrentResponseSchema.parse(currentResponse()),
+    );
+    invalidBacking.cards[0]!.breakdowns!.backing.components[0]!.weightedContribution = 89;
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(invalidBacking)).toThrow(
+      /backing weighted contribution|backing components must reconcile/,
+    );
+
+    const invalidExit = structuredClone(
+      SafetyScoreV9CurrentResponseSchema.parse(currentResponse()),
+    );
+    invalidExit.cards[0]!.breakdowns!.exit.primaryRoute!.components[0]!.weightedContribution = 1;
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(invalidExit)).toThrow(
+      /exit weighted contribution|primary-route score must reconcile/,
+    );
+
+    const invalidControl = structuredClone(
+      SafetyScoreV9CurrentResponseSchema.parse(currentResponse()),
+    );
+    invalidControl.cards[0]!.breakdowns!.control.components[0]!.binding = false;
+    expect(() => SafetyScoreV9CurrentResponseSchema.parse(invalidControl)).toThrow(
+      /binding controls must reconcile/,
+    );
   });
 
   it("requires explicit bounded causality for D and measured causality for F", () => {
@@ -332,6 +464,7 @@ describe("SafetyScoreV9ResponseSchema", () => {
       exit: { ...pillar(45), components: [], reasons: [] },
       control: { ...pillar(45), components: [], reasons: [] },
     };
+    bounded.cards[0]!.breakdowns = breakdowns(45, 45, 45);
     bounded.cards[0]!.weakestPillar = { pillar: "backing", score: 45 };
     bounded.cards[0]!.caps = bounded.cards[0]!.caps.map((cap) => ({ ...cap, binding: false }));
     bounded.cards[0]!.bindingCap = null;
@@ -546,10 +679,10 @@ describe("SafetyScoreV9ResponseSchema", () => {
     );
   });
 
-  it("does not permit an active lifecycle or a final 9.0 policy label", () => {
-    const invalid = structuredClone(response()) as Record<string, unknown>;
-    invalid.lifecycle = "active";
-    invalid.policyVersion = "9.0";
+  it("does not permit the legacy candidate lifecycle on current V9", () => {
+    const invalid = currentResponse() as Record<string, unknown>;
+    invalid.lifecycle = "candidate";
+    invalid.policyVersion = "candidate-v1";
     expect(() => SafetyScoreV9ResponseSchema.parse(invalid)).toThrow();
   });
 

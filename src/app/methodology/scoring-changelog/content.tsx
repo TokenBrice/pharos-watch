@@ -36,7 +36,7 @@ function getScoringChangelogDetail(version: string): ReactNode {
 export function ScoringChangelogContent() {
   return (
     <>
-      <VersionCard entry={SAFETY_SCORE_V9_ACTIVATION} versionLabel="V9 · candidate-v2">
+      <VersionCard entry={SAFETY_SCORE_V9_ACTIVATION} versionLabel="V9.0">
         <p>{SAFETY_SCORE_V9_ACTIVATION.summary}</p>
         <ul className="list-disc list-inside space-y-1">
           {SAFETY_SCORE_V9_ACTIVATION.impact.map((item) => (

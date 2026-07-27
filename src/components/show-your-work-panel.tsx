@@ -15,9 +15,10 @@ import {
   formatRedemption,
   formatReportCard,
   formatReportCardV9,
+  type SafetyScoreV9ShowWorkCard,
   type ShowYourWorkTable,
 } from "@/lib/show-your-work-formatters";
-import type { RawDimensionInputs, SafetyScoreV9CurrentCard } from "@shared/types";
+import type { RawDimensionInputs } from "@shared/types";
 import type { DexLiquidityData, StressSignalEntry } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { StabilityIndexCurrent } from "@shared/types/stability";
@@ -32,7 +33,7 @@ export type ShowYourWorkPanelProps =
     }
   | {
       kind: "report-card-v9";
-      card: SafetyScoreV9CurrentCard;
+      card: SafetyScoreV9ShowWorkCard;
       methodologyVersion: string;
       stablecoinId?: string;
       stablecoinName?: string;

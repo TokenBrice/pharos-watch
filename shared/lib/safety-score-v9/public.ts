@@ -6,15 +6,21 @@ import {
   type SafetyScoreV9PublicReason,
   type SafetyScoreV9CurrentResponse,
   type SafetyScoreV9CurrentCard,
+  type SafetyScoreV9PillarAdjustment,
 } from "../../types/safety-score-v9-public";
-import type { V9EvidenceLevel, V9QualityPillar, V9ReasonCode } from "../../types/safety-score-v9";
+import type {
+  V9EvidenceLevel,
+  V9QualityPillar,
+  V9ReasonCode,
+  V9ValidatedPolicyEnvelope,
+} from "../../types/safety-score-v9";
 import type { V9EvidenceResponsibility } from "../../types/safety-score-v9-facts";
 import type { V9DependencyEconomicRole } from "../../types/dependency-types";
 import type { V9AccessPostureResult } from "./access-posture";
 import type { V9BackingResult } from "./backing";
 import type { V9EconomicControlResult } from "./control";
 import type { V9ResolvedDependencyInputs } from "./dependencies";
-import type { V9ExitEvaluationResult } from "./exit";
+import type { V9ExitEvaluationResult, V9ExitHolderEligibility } from "./exit";
 import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } from "./score";
 import type { V9PublicStressState } from "./stress";
 import { computeV9ResultDigest } from "./trace";
@@ -29,9 +35,22 @@ export interface V9PublicCardProjectionInput {
   access: V9PublicAccessProjectionInput;
   dependencyInputs: V9ResolvedDependencyInputs;
   stressState: Pick<V9PublicStressState, "stateDigest"> | null;
-  backing?: Pick<V9BackingResult, "contributions">;
-  exit?: Pick<V9ExitEvaluationResult, "routes">;
-  control?: Pick<V9EconomicControlResult, "components">;
+  policy: V9ValidatedPolicyEnvelope;
+  backing?: Pick<V9BackingResult, "archetype" | "score" | "contributions">;
+  exit?: Pick<
+    V9ExitEvaluationResult,
+    | "score"
+    | "stressRequest"
+    | "primaryRouteKey"
+    | "diversificationRouteKey"
+    | "diversificationBonus"
+    | "routes"
+  >;
+  control?: Pick<V9EconomicControlResult, "score" | "components">;
+  display?: {
+    labels?: Readonly<Record<string, string>>;
+    exitHolderEligibility?: Readonly<Record<string, V9ExitHolderEligibility>>;
+  };
   freshness?: Partial<Record<V9QualityPillar, SafetyScoreV9EvidenceFreshness>>;
   evidenceReasons?: readonly V9PillarReason[];
   reasonCodes?: readonly V9ReasonCode[];
@@ -39,7 +58,7 @@ export interface V9PublicCardProjectionInput {
 
 export interface BuildSafetyScoreV9ResponseArgs {
   candidateId: string;
-  policyVersion: `candidate-${string}`;
+  policyVersion: string;
   publicationGenerationId: string;
   publishedAtSec: number;
   results: readonly V9PublicCardProjectionInput[];
@@ -59,6 +78,21 @@ const RESPONSIBILITIES = [
   "method-unsupported",
   "producer-failed",
 ] as const satisfies readonly V9EvidenceResponsibility[];
+const EXIT_COMPONENTS = [
+  ["access", "Access"],
+  ["settlement", "Settlement"],
+  ["executionCertainty", "Execution certainty"],
+  ["capacity", "Capacity"],
+  ["outputAssetQuality", "Output asset quality"],
+  ["cost", "Cost"],
+] as const;
+const ROUTE_FAMILY_LABELS: Readonly<Record<string, string>> = {
+  "dex-amm": "DEX AMM",
+  "dex-orderbook": "DEX order book",
+  "issuer-redemption": "Issuer redemption",
+  "protocol-redemption": "Protocol redemption",
+  "eventual-redemption": "Eventual redemption",
+};
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -66,6 +100,279 @@ function compareText(left: string, right: string): number {
 
 function uniqueSorted<T extends string>(values: readonly T[]): T[] {
   return [...new Set(values)].sort(compareText);
+}
+
+function humanizeLabel(value: string): string {
+  const tail = value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;
+  const text = tail.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (text.length === 0) return value;
+  return text.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function publicLabel(input: V9PublicCardProjectionInput, key: string): string {
+  return input.display?.labels?.[key] ?? humanizeLabel(key);
+}
+
+function routeLabel(
+  input: V9PublicCardProjectionInput,
+  route: NonNullable<V9PublicCardProjectionInput["exit"]>["routes"][number],
+): string {
+  return input.display?.labels?.[route.routeKey] ?? ROUTE_FAMILY_LABELS[route.routeFamily] ?? humanizeLabel(route.routeFamily);
+}
+
+function aggregationWeight(input: V9PublicCardProjectionInput, pillar: V9QualityPillar): number {
+  const contribution = input.trace.pillarContributions.find((item) => item.pillar === pillar);
+  if (contribution === undefined) {
+    throw new Error(`Safety Score v9 ${input.trace.assetId} lacks a ${pillar} aggregation weight`);
+  }
+  return contribution.weight;
+}
+
+function projectPillarAdjustments(
+  input: V9PublicCardProjectionInput,
+  pillar: V9QualityPillar,
+  evaluatedScore: number,
+): SafetyScoreV9PillarAdjustment[] {
+  const adjustments: SafetyScoreV9PillarAdjustment[] = [];
+  let score = evaluatedScore;
+  const configuredCredit = input.trace.operationalResilience?.pillarCredits[pillar] ?? 0;
+  const creditedScore = Math.min(100, score + configuredCredit);
+  if (creditedScore > score) {
+    adjustments.push({
+      kind: "operational-resilience-credit",
+      scoreBefore: score,
+      scoreAfter: creditedScore,
+      delta: creditedScore - score,
+    });
+    score = creditedScore;
+  }
+  const publishedScore = input.scoreInput.pillars[pillar].score;
+  if (publishedScore === null) {
+    throw new Error(`Safety Score v9 ${input.trace.assetId} rated breakdown has a missing ${pillar} pillar`);
+  }
+  if (publishedScore < score) {
+    adjustments.push({
+      kind: "dependency-limit",
+      scoreBefore: score,
+      scoreAfter: publishedScore,
+      delta: publishedScore - score,
+    });
+  } else if (publishedScore > score) {
+    throw new Error(
+      `Safety Score v9 ${input.trace.assetId} ${pillar} pillar has an unexplained positive adjustment`,
+    );
+  }
+  return adjustments;
+}
+
+function projectBackingBreakdown(
+  input: V9PublicCardProjectionInput,
+): NonNullable<SafetyScoreV9CurrentCard["breakdowns"]>["backing"] {
+  const backing = input.backing;
+  if (backing?.score === null || backing?.score === undefined) {
+    throw new Error(`Safety Score v9 ${input.trace.assetId} rated card lacks a backing evaluation`);
+  }
+  const policy = input.policy.policy.semantic.backing;
+  const archetype =
+    policy.archetypes[backing.archetype as keyof typeof policy.archetypes];
+  if (archetype === undefined) {
+    throw new Error(`Safety Score v9 ${input.trace.assetId} lacks backing policy for ${backing.archetype}`);
+  }
+  const reserveContributions = backing.contributions.filter((item) => item.source !== "mechanism");
+  const mechanismContributions = backing.contributions.filter((item) => item.source === "mechanism");
+  const reserveAvailable = reserveContributions.length > 0;
+  const mechanismAvailable = mechanismContributions.length > 0;
+  const activeReserveWeight = reserveAvailable ? archetype.reserveWeight : 0;
+  const activeMechanismWeight = mechanismAvailable ? 1 - activeReserveWeight : 0;
+  const combinedWeight = activeReserveWeight + activeMechanismWeight;
+  if (combinedWeight <= 0) {
+    throw new Error(`Safety Score v9 ${input.trace.assetId} backing breakdown has no active component weight`);
+  }
+  const reserveGroupWeight = activeReserveWeight / combinedWeight;
+  const mechanismGroupWeight = activeMechanismWeight / combinedWeight;
+  const concentrationWeight = policy.reserve.concentrationWeight;
+  const hasConcentrationComponent = reserveContributions.some(
+    (contribution) => contribution.source === "reserve-concentration",
+  );
+  const effectiveWeight = (contribution: V9BackingResult["contributions"][number]): number => {
+    if (contribution.source === "mechanism") {
+      return contribution.normalizedWeight * mechanismGroupWeight;
+    }
+    const reserveLocalWeight =
+      contribution.source === "reserve-concentration"
+        ? contribution.normalizedWeight
+        : contribution.normalizedWeight *
+          (hasConcentrationComponent ? 1 - concentrationWeight : 1);
+    return reserveLocalWeight * reserveGroupWeight;
+  };
+  const components = [...backing.contributions]
+    .sort((left, right) => compareText(left.componentKey, right.componentKey))
+    .map((contribution) => {
+      const weight = effectiveWeight(contribution);
+      return {
+        key: contribution.componentKey,
+        label: publicLabel(input, contribution.componentKey),
+        source: contribution.source,
+        score: contribution.score,
+        effectiveWeight: weight,
+        weightedContribution: contribution.score * weight,
+        observationState: contribution.observationState,
+      };
+    });
+  const group = (
+    key: "reserves" | "mechanism",
+    label: string,
+    sourceComponents: typeof components,
+    weight: number,
+  ) => ({
+    key,
+    label,
+    score: sourceComponents.reduce((sum, component) => sum + component.weightedContribution, 0) / weight,
+    effectiveWeight: weight,
+  });
+  const groups = [
+    ...(reserveGroupWeight > 0
+      ? [group("reserves", "Reserves", components.filter((item) => item.source !== "mechanism"), reserveGroupWeight)]
+      : []),
+    ...(mechanismGroupWeight > 0
+      ? [group("mechanism", "Mechanism", components.filter((item) => item.source === "mechanism"), mechanismGroupWeight)]
+      : []),
+  ];
+  const publishedScore = input.scoreInput.pillars.backing.score!;
+  return {
+    evaluatedScore: backing.score,
+    publishedScore,
+    aggregationWeight: aggregationWeight(input, "backing"),
+    groups,
+    components,
+    adjustments: projectPillarAdjustments(input, "backing", backing.score),
+  };
+}
+
+function projectExitBreakdown(
+  input: V9PublicCardProjectionInput,
+): NonNullable<SafetyScoreV9CurrentCard["breakdowns"]>["exit"] {
+  const exit = input.exit;
+  if (exit?.score === null || exit?.score === undefined) {
+    throw new Error(`Safety Score v9 ${input.trace.assetId} rated card lacks an exit evaluation`);
+  }
+  const policy = input.policy.policy.semantic.exit;
+  const primary = exit.routes.find((route) => route.routeKey === exit.primaryRouteKey) ?? null;
+  const completePrimary =
+    primary !== null &&
+    primary.score !== null &&
+    primary.components !== null &&
+    primary.confidenceFactor !== null
+      ? primary
+      : null;
+  const holderEligibility =
+    completePrimary === null
+      ? undefined
+      : input.display?.exitHolderEligibility?.[completePrimary.routeKey];
+  if (completePrimary !== null && holderEligibility === undefined) {
+    throw new Error(`Safety Score v9 ${input.trace.assetId} primary exit route lacks holder eligibility metadata`);
+  }
+  const components =
+    completePrimary === null
+      ? []
+      : EXIT_COMPONENTS.map(([key, label]) => {
+          const score = completePrimary.components![key];
+          if (score === null) {
+            throw new Error(`Safety Score v9 ${input.trace.assetId} primary exit route lacks ${key}`);
+          }
+          const weight = policy.componentWeights[key];
+          return { key, label, score, weight, weightedContribution: score * weight };
+        });
+  const diversificationRoute =
+    exit.diversificationRouteKey === null
+      ? null
+      : exit.routes.find((route) => route.routeKey === exit.diversificationRouteKey) ?? null;
+  const alternatives = exit.routes
+    .filter((route) => route.routeKey !== completePrimary?.routeKey)
+    .sort((left, right) => compareText(left.routeKey, right.routeKey))
+    .map((route) => ({
+      key: route.routeKey,
+      label: routeLabel(input, route),
+      routeFamily: route.routeFamily,
+      score: route.score,
+      included: route.included,
+      exclusionReason: route.exclusionReason,
+    }));
+  const publishedScore = input.scoreInput.pillars.exit.score!;
+  return {
+    evaluatedScore: exit.score,
+    publishedScore,
+    aggregationWeight: aggregationWeight(input, "exit"),
+    stressRequest:
+      exit.stressRequest === null
+        ? null
+        : {
+            requestedNotionalUsd: exit.stressRequest.requestedNotionalUsd,
+            maxCostBps: exit.stressRequest.maxCostBps,
+            comparisonWindowSec: exit.stressRequest.comparisonWindowSec,
+          },
+    primaryRoute:
+      completePrimary === null
+        ? null
+        : {
+            key: completePrimary.routeKey,
+            label: routeLabel(input, completePrimary),
+            routeFamily: completePrimary.routeFamily,
+            score: completePrimary.score!,
+            components,
+            confidenceFactor: completePrimary.confidenceFactor!,
+            eligibilityMultiplier: policy.holderEligibilityMultipliers[holderEligibility!],
+            capsApplied: uniqueSorted(completePrimary.capsApplied),
+          },
+    diversification:
+      diversificationRoute === null || exit.diversificationBonus <= 0
+        ? null
+        : {
+            routeKey: diversificationRoute.routeKey,
+            routeLabel: routeLabel(input, diversificationRoute),
+            bonus: exit.diversificationBonus,
+          },
+    alternatives,
+    adjustments: projectPillarAdjustments(input, "exit", exit.score),
+  };
+}
+
+function projectControlBreakdown(
+  input: V9PublicCardProjectionInput,
+): NonNullable<SafetyScoreV9CurrentCard["breakdowns"]>["control"] {
+  const control = input.control;
+  if (control?.score === null || control?.score === undefined) {
+    throw new Error(`Safety Score v9 ${input.trace.assetId} rated card lacks a control evaluation`);
+  }
+  const publishedScore = input.scoreInput.pillars.control.score!;
+  return {
+    evaluatedScore: control.score,
+    publishedScore,
+    aggregationWeight: aggregationWeight(input, "control"),
+    method: "minimum-binding-component",
+    components: [...control.components]
+      .sort((left, right) => compareText(left.componentKey, right.componentKey))
+      .map((component) => ({
+        key: component.componentKey,
+        label: publicLabel(input, component.componentKey),
+        kind: component.kind,
+        score: component.score,
+        binding: component.binding,
+        posture: component.posture,
+      })),
+    adjustments: projectPillarAdjustments(input, "control", control.score),
+  };
+}
+
+function projectBreakdowns(
+  input: V9PublicCardProjectionInput,
+): SafetyScoreV9CurrentCard["breakdowns"] {
+  if (input.trace.finalGrade === "NR") return null;
+  return {
+    backing: projectBackingBreakdown(input),
+    exit: projectExitBreakdown(input),
+    control: projectControlBreakdown(input),
+  };
 }
 
 function publicReason(reason: V9PillarReason): SafetyScoreV9PublicReason {
@@ -442,6 +749,7 @@ export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): Sa
     dependencies: projectDependencies(input),
     stressStateDigest: input.stressState?.stateDigest ?? null,
     scoreTrace: projectScoreTrace(input),
+    breakdowns: projectBreakdowns(input),
   });
 }
 
@@ -486,8 +794,8 @@ export function buildSafetyScoreV9Response(args: BuildSafetyScoreV9ResponseArgs)
   const notRatedIds = cards.filter((card) => card.grade === "NR").map((card) => card.id);
   return SafetyScoreV9CurrentResponseSchema.parse({
     model: "v9-critical-path",
-    schemaVersion: 4,
-    lifecycle: "candidate",
+    schemaVersion: 5,
+    lifecycle: "active",
     candidateId: args.candidateId,
     policyVersion: args.policyVersion,
     publicationGenerationId: args.publicationGenerationId,

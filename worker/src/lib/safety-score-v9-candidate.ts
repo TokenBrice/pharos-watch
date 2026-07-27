@@ -1,6 +1,7 @@
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { evaluateValidatedV9FactSet, type V9EvaluatedSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import type { V9ExitHolderEligibility } from "@shared/lib/safety-score-v9/exit";
 import { DEX_ROUTE_SOURCE_CAPABILITIES } from "@shared/lib/p4-exit-route-capacity";
 import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9Response } from "@shared/lib/safety-score-v9/public";
@@ -20,7 +21,7 @@ import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-
 
 const SAFETY_SCORE_V9_COMPILER_FACT_SCHEMA_DIGEST_DOMAIN = "safety-score-v9.compiler-fact-schema.v1";
 const SAFETY_SCORE_V9_PRODUCER_CAPABILITY_DIGEST_DOMAIN = "safety-score-v9.producer-capability-build.v1";
-const SAFETY_SCORE_V9_CANDIDATE_ID_DIGEST_DOMAIN = "safety-score-v9.candidate-id.v1";
+const SAFETY_SCORE_V9_CANDIDATE_ID_DIGEST_DOMAIN = "safety-score-v9.publication-id.v1";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const ReleaseCandidateIdSchema = z.string().regex(/^v9-rc-[1-9][0-9]*$/);
@@ -155,6 +156,90 @@ function sortedUnique(values: Iterable<string>): string[] {
   return [...new Set(values)].sort(compareText);
 }
 
+function publicExitHolderEligibility(
+  holderAccess: CompiledV9FactSetV3["assets"][number]["exitRoutes"][number]["holderAccess"],
+): V9ExitHolderEligibility {
+  switch (holderAccess) {
+    case "permissionless":
+    case "retail-open":
+      return "any-holder";
+    case "institutional-eligible":
+      return "verified-customer";
+    case "allowlisted":
+      return "whitelisted-primary";
+    case "issuer-only":
+      return "issuer-discretionary";
+    case "unknown":
+      return "unknown";
+  }
+}
+
+function publicDisplayMetadata(
+  asset: CompiledV9FactSetV3["assets"][number],
+): {
+  labels: Record<string, string>;
+  exitHolderEligibility: Record<string, V9ExitHolderEligibility>;
+} {
+  const labels: Record<string, string> = {
+    mint: "Mint authority",
+    oracle: "Oracle design",
+    "bridge:native": "Native deployment",
+    "bridge:unverified": "Unverified bridge controls",
+    "reserve:concentration": "Reserve concentration",
+    "reserve:unclassified-residual": "Unclassified reserve exposure",
+  };
+  for (const exposure of asset.reserveExposures) {
+    labels[`reserve:${exposure.exposureKey}`] = exposure.name;
+  }
+  for (const control of asset.controls) {
+    const deployment = control.deploymentKey.split(":")[0]!
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (character) => character.toUpperCase());
+    labels[`bridge:${control.deploymentKey}:${control.controlKey}`] =
+      `${deployment || "Deployment"} bridge`;
+  }
+  const routeBaseLabel = (
+    route: CompiledV9FactSetV3["assets"][number]["exitRoutes"][number],
+  ): string => {
+    if (route.lane === "dex") {
+      const encodedChain = /(?:^|:)([a-z0-9-]+)%3a/i.exec(route.routeId)?.[1];
+      if (encodedChain === undefined) return route.routeFamily === "dex-orderbook" ? "DEX order book" : "DEX AMM";
+      const chain = encodedChain.replace(/-/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
+      return `${chain} ${route.routeFamily === "dex-orderbook" ? "order book" : "AMM"}`;
+    }
+    const semanticKinds = [
+      ["collateral-redeem", "Collateral redemption"],
+      ["psm-swap", "PSM swap"],
+      ["basket-redeem", "Basket redemption"],
+      ["stablecoin-redeem", "Stablecoin redemption"],
+      ["offchain-issuer", "Issuer redemption"],
+      ["mint-redeem", "Mint and redemption"],
+    ] as const;
+    return semanticKinds.find(([token]) => route.routeId.includes(token))?.[1] ??
+      (route.routeFamily === "protocol-redemption" ? "Protocol redemption" : "Issuer redemption");
+  };
+  const routeLabels = asset.exitRoutes
+    .map((route) => ({ route, base: routeBaseLabel(route) }))
+    .sort((left, right) => compareText(left.route.routeKey, right.route.routeKey));
+  const labelTotals = new Map<string, number>();
+  for (const { base } of routeLabels) labelTotals.set(base, (labelTotals.get(base) ?? 0) + 1);
+  const labelIndexes = new Map<string, number>();
+  for (const { route, base } of routeLabels) {
+    const index = (labelIndexes.get(base) ?? 0) + 1;
+    labelIndexes.set(base, index);
+    labels[route.routeKey] = (labelTotals.get(base) ?? 0) > 1 ? `${base} ${index}` : base;
+  }
+  return {
+    labels,
+    exitHolderEligibility: Object.fromEntries(
+      asset.exitRoutes.map((route) => [
+        route.routeKey,
+        publicExitHolderEligibility(route.holderAccess),
+      ]),
+    ),
+  };
+}
+
 function deepFreeze<T>(value: T): Readonly<T> {
   if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
     for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
@@ -183,7 +268,7 @@ export function computeSafetyScoreV9ProducerCapabilityDigest(
 
 export function computeSafetyScoreV9CandidateId(identityValue: SafetyScoreV9CandidateIdentityV1): string {
   const identity = SafetyScoreV9CandidateIdentityV1Schema.parse(identityValue);
-  return `safety-score-v9-candidate:v1:${digest(SAFETY_SCORE_V9_CANDIDATE_ID_DIGEST_DOMAIN, identity)}`;
+  return `safety-score-v9:v1:${digest(SAFETY_SCORE_V9_CANDIDATE_ID_DIGEST_DOMAIN, identity)}`;
 }
 
 function compilerFactSchemaIdentity(
@@ -257,19 +342,18 @@ function producerCapabilityIdentity(
   });
 }
 
-function candidatePolicyVersion(policy: V9ValidatedPolicyEnvelope): `candidate-${string}` {
-  if (policy.policy.lifecycle !== "candidate" || policy.policy.releaseVersion !== null) {
-    throw new Error("Safety Score v9 candidate publication requires a candidate policy");
+function v9PolicyVersion(policy: V9ValidatedPolicyEnvelope): string {
+  if (policy.policy.lifecycle !== "active" || policy.policy.releaseVersion === null) {
+    throw new Error("Safety Score v9 publication requires an active release policy");
   }
-  const match = /^safety-score-v9-(candidate-[a-z0-9][a-z0-9._-]*)$/.exec(policy.policy.policyId);
-  if (!match) {
-    throw new Error(`Safety Score v9 candidate policy ID is not publication-compatible: ${policy.policy.policyId}`);
+  if (policy.policy.policyId !== "safety-score-v9") {
+    throw new Error(`Safety Score v9 policy ID is not publication-compatible: ${policy.policy.policyId}`);
   }
-  return match[1] as `candidate-${string}`;
+  return policy.policy.releaseVersion;
 }
 
 /**
- * Compile, evaluate, and project one exact V9 candidate without storage,
+ * Compile, evaluate, and project one exact V9 publication without storage,
  * network access, wall-clock access, or any mutation of the active V8 model.
  */
 export function buildSafetyScoreV9Candidate(
@@ -297,20 +381,23 @@ function buildSafetyScoreV9CandidatePipeline(
 
   const fixedInput = input.fixedInput;
   if (fixedInput.captureKind !== "exact-publication-inputs") {
-    throw new Error("Safety Score v9 candidate evaluation requires exact publication inputs");
+    throw new Error("Safety Score v9 publication evaluation requires exact publication inputs");
   }
   if (input.publishedAtSec < fixedInput.clockSec) {
-    throw new Error("Safety Score v9 candidate publication cannot predate its evidence clock");
+    throw new Error("Safety Score v9 publication cannot predate its evidence clock");
   }
 
   const policy = input.policy ?? V9_CANDIDATE_POLICY_V1;
   assertV9ValidatedPolicyEnvelope(policy);
-  const policyVersion = candidatePolicyVersion(policy);
+  const policyVersion = v9PolicyVersion(policy);
   const extension = materializeSafetyScoreV9FactSetExtension(
     fixedInput,
     input.extension ?? buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput),
   );
   const compiledFacts = compileSafetyScoreV9FactSetFromValidatedExtension(fixedInput, extension);
+  const displayByAssetId = new Map(
+    compiledFacts.assets.map((asset) => [asset.assetId, publicDisplayMetadata(asset)]),
+  );
   const evaluatedSet = evaluateValidatedV9FactSet(compiledFacts, policy);
   const compilerIdentity = compilerFactSchemaIdentity(fixedInput, extension, compiledFacts);
   const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
@@ -328,7 +415,7 @@ function buildSafetyScoreV9CandidatePipeline(
     input.releaseCandidateId === undefined
       ? computeSafetyScoreV9CandidateId(candidateIdentity)
       : ReleaseCandidateIdSchema.parse(input.releaseCandidateId);
-  const publicationGenerationId = `report-cards:v9:candidate:v1:${digest("safety-score-v9.candidate-publication.v1", {
+  const publicationGenerationId = `report-cards:v9:v1:${digest("safety-score-v9.publication.v1", {
     candidateId,
     baseInputGenerationId: evaluatedSet.baseInputGenerationId,
     factSetDigest: evaluatedSet.factSetDigest,
@@ -347,9 +434,11 @@ function buildSafetyScoreV9CandidatePipeline(
       access: asset.access,
       dependencyInputs: asset.dependencyInputs,
       stressState: asset.stressState,
+      policy,
       backing: asset.backing,
       exit: asset.exit,
       control: asset.control,
+      display: displayByAssetId.get(asset.assetId),
     })),
   });
 
@@ -379,15 +468,15 @@ export function buildSafetyScoreV9ShadowCandidateFromNormalizedInput(
   }
   const fixedInput = input.fixedInput;
   if (fixedInput.captureKind !== "exact-publication-inputs") {
-    throw new Error("Safety Score v9 candidate evaluation requires exact publication inputs");
+    throw new Error("Safety Score v9 publication evaluation requires exact publication inputs");
   }
   if (input.publishedAtSec < fixedInput.clockSec) {
-    throw new Error("Safety Score v9 candidate publication cannot predate its evidence clock");
+    throw new Error("Safety Score v9 publication cannot predate its evidence clock");
   }
 
   const policy = input.policy ?? V9_CANDIDATE_POLICY_V1;
   assertV9ValidatedPolicyEnvelope(policy);
-  const policyVersion = candidatePolicyVersion(policy);
+  const policyVersion = v9PolicyVersion(policy);
   let extension: SafetyScoreV9FactSetExtensionV2 | null = materializeSafetyScoreV9FactSetExtension(
     fixedInput,
     input.extension ?? buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput),
@@ -402,6 +491,9 @@ export function buildSafetyScoreV9ShadowCandidateFromNormalizedInput(
   const producerCapabilityDigest = computeSafetyScoreV9ProducerCapabilityDigest(capabilityIdentity);
   const supplyUsdById = Object.fromEntries(
     compiledFacts.assets.map((asset) => [asset.assetId, asset.supply.circulatingUsd ?? 0]),
+  );
+  const displayByAssetId = new Map(
+    compiledFacts.assets.map((asset) => [asset.assetId, publicDisplayMetadata(asset)]),
   );
 
   // The shadow response does not expose replay intermediates. Release each
@@ -421,7 +513,7 @@ export function buildSafetyScoreV9ShadowCandidateFromNormalizedInput(
     input.releaseCandidateId === undefined
       ? computeSafetyScoreV9CandidateId(candidateIdentity)
       : ReleaseCandidateIdSchema.parse(input.releaseCandidateId);
-  const publicationGenerationId = `report-cards:v9:candidate:v1:${digest("safety-score-v9.candidate-publication.v1", {
+  const publicationGenerationId = `report-cards:v9:v1:${digest("safety-score-v9.publication.v1", {
     candidateId,
     baseInputGenerationId: evaluatedSet.baseInputGenerationId,
     factSetDigest: evaluatedSet.factSetDigest,
@@ -440,9 +532,11 @@ export function buildSafetyScoreV9ShadowCandidateFromNormalizedInput(
       access: asset.access,
       dependencyInputs: asset.dependencyInputs,
       stressState: asset.stressState,
+      policy,
       backing: asset.backing,
       exit: asset.exit,
       control: asset.control,
+      display: displayByAssetId.get(asset.assetId),
     })),
   });
 

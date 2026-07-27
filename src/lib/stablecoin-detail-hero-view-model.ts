@@ -32,13 +32,13 @@ import type {
   MechanismArchetype,
   PegSummaryCoin,
   RedemptionBackstopEntry,
-  SafetyScoreV9CurrentCard,
   StablecoinData,
   StablecoinMeta,
   StressSignalEntry,
   VariantKind,
   YieldRanking,
 } from "@shared/types";
+import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 export interface HeroTertiaryMetricViewModel {
   key: "dews" | "peg-score" | "liquidity" | "excess-yield" | "performance-vs-usd";
@@ -69,7 +69,7 @@ export interface HeroCardViewModel {
   coin: StablecoinMeta;
   coinData: StablecoinData;
   logoSrc?: string;
-  reportCard: SafetyScoreV9CurrentCard | null;
+  reportCard: V9ConsumerCard | null;
   verdict: StablecoinVerdict;
   variantParent?: StablecoinClientMeta | null;
   variantKind?: VariantKind | null;
@@ -122,7 +122,7 @@ export interface BuildHeroCardViewModelParams {
   liquidityData: DexLiquidityData | undefined;
   yieldRanking: YieldRanking | null;
   stressSignal: StressSignalEntry | null;
-  reportCard: SafetyScoreV9CurrentCard | null;
+  reportCard: V9ConsumerCard | null;
   verdict: StablecoinVerdict;
   variantParent?: StablecoinClientMeta | null;
   variantKind?: VariantKind | null;
@@ -198,7 +198,7 @@ function buildTertiaryMetrics(
 }
 
 function buildSignalRailItems(
-  reportCard: SafetyScoreV9CurrentCard | null,
+  reportCard: V9ConsumerCard | null,
   isNavToken: boolean,
   effectivePegScore: number | null,
   liquidityData: DexLiquidityData | undefined,

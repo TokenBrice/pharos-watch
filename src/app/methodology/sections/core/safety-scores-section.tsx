@@ -9,7 +9,7 @@ export function SafetyScoresMethodologySection() {
     <MethodologySectionShell
       id={SAFETY_SCORES_SECTION_CONTENT.id}
       title={SAFETY_SCORES_SECTION_CONTENT.title}
-      versionBadge={{ label: "V9 · candidate-v2" }}
+      versionBadge={{ label: "V9.0" }}
       changelogPath={SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Active V9 policy identity; the compatibility endpoint retains the numeric V8.17 methodology."
       changelogClassName="hover:text-amber-700 dark:hover:text-amber-400"

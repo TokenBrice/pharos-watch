@@ -1,6 +1,6 @@
 import { formatCurrency } from "@shared/lib/format";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-cards";
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import type { GradeFilter } from "./view-model";
 
 export type V9SortKey = "overall" | "backing" | "exit" | "control" | "mcap";
@@ -13,7 +13,7 @@ const PILLAR_LABELS = {
 } as const;
 
 export function buildV9GradeCounts(
-  cards: readonly SafetyScoreV9CurrentCard[] | undefined,
+  cards: readonly V9ConsumerCard[] | undefined,
 ): Record<Exclude<GradeFilter, "all">, number> {
   const counts: Record<Exclude<GradeFilter, "all">, number> = {
     A: 0,
@@ -30,7 +30,7 @@ export function buildV9GradeCounts(
 }
 
 function getSortScore(
-  card: SafetyScoreV9CurrentCard,
+  card: V9ConsumerCard,
   key: V9SortKey,
   mcapMap: ReadonlyMap<string, number>,
 ): number | null {
@@ -40,7 +40,7 @@ function getSortScore(
 }
 
 export function filterAndSortV9Cards(
-  cards: readonly SafetyScoreV9CurrentCard[],
+  cards: readonly V9ConsumerCard[],
   {
     gradeFilter,
     sortKey,
@@ -50,7 +50,7 @@ export function filterAndSortV9Cards(
     sortKey: V9SortKey;
     mcapMap: ReadonlyMap<string, number>;
   },
-): SafetyScoreV9CurrentCard[] {
+): V9ConsumerCard[] {
   const filtered = gradeFilter === "all"
     ? cards
     : cards.filter((card) => gradeRange(card.grade) === gradeFilter);
@@ -65,9 +65,9 @@ export function filterAndSortV9Cards(
 }
 
 export function groupV9CardsByGrade(
-  cards: readonly SafetyScoreV9CurrentCard[],
-): Array<{ grade: string; cards: SafetyScoreV9CurrentCard[] }> {
-  const groups = new Map<string, SafetyScoreV9CurrentCard[]>();
+  cards: readonly V9ConsumerCard[],
+): Array<{ grade: string; cards: V9ConsumerCard[] }> {
+  const groups = new Map<string, V9ConsumerCard[]>();
   for (const card of cards) {
     const grade = gradeRange(card.grade);
     groups.set(grade, [...(groups.get(grade) ?? []), card]);
@@ -79,7 +79,7 @@ export function groupV9CardsByGrade(
 }
 
 export function buildV9HeadlineStats(
-  cards: readonly SafetyScoreV9CurrentCard[],
+  cards: readonly V9ConsumerCard[],
   mcapMap: ReadonlyMap<string, number>,
 ): Array<{ label: string; value: string; detail: string }> {
   const ratedCards = cards.filter((card) => card.score !== null);

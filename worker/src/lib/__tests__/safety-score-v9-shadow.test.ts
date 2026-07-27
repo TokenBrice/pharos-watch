@@ -20,7 +20,10 @@ import {
   type SafetyScoreV9ShadowEnvelope,
 } from "../safety-score-v9-shadow";
 import { scoreToGrade } from "@shared/lib/report-cards";
-import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public";
+import type {
+  SafetyScoreV9CurrentCard,
+  SafetyScoreV9Response,
+} from "@shared/types/safety-score-v9-public";
 
 const digest = (character: string) => character.repeat(64);
 const BASE_GENERATION = `report-cards-input:v1:${digest("a")}`;
@@ -50,6 +53,131 @@ function v9Card(
     ? { ...options.bindingCap, reason: "Candidate structural ceiling", binding: true }
     : null;
   const reasonCodes = options.reasonCodes ?? (score === null ? ["insufficient-evidence"] : []);
+  const backingScore = score === null ? null : score + 1 > 100 ? 100 : score + 1;
+  const exitScore = score;
+  const controlScore = score === null ? null : score + 0.5;
+  const trace = {
+    schemaVersion: 3 as const,
+    legacyAliases: {
+      qualityScore: "weighted-pillar-mean" as const,
+      pegAdjustedScore: "post-deployment-pre-cap-score" as const,
+      score: "post-cap-public-score" as const,
+    },
+    aggregation: score === null
+      ? null
+      : {
+          method: "smooth-bounded-headroom" as const,
+          score,
+          weightedPillarMean: score,
+          weakestPillar: "exit" as const,
+          weakestScore: score,
+          headroom: 45,
+        },
+    stages: {
+      weightedPillarMean: score,
+      aggregatedQualityScore: score,
+      pegMultiplier: score === null ? null : 1,
+      baseAssetScore: score,
+      deploymentAdjustedScore: score,
+      deploymentAdjustmentPoints: score === null ? null : 0,
+      preCapScore: score,
+      publishedScore: score,
+    },
+    deploymentRisk: {
+      method: "holder-slice-exposure-weighted-v2" as const,
+      totalAdjustmentPoints: score === null ? null : 0,
+      adjustments: [],
+      unresolvedExposures: [],
+    },
+    adverseAttribution: {
+      semantics: "causal-measured-adverse-v1" as const,
+      items: [],
+    },
+    boundedUncertaintyAttribution: {
+      semantics: "causal-bounded-uncertainty-v1" as const,
+      items: [],
+    },
+    evidenceResponsibility: {
+      semantics: "limiting-fact-owner-v1" as const,
+      totalFactCount: 0,
+      summaries: [
+        { responsibility: "integration-missing" as const, factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        { responsibility: "issuer-undisclosed" as const, factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        { responsibility: "measured-adverse" as const, factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        { responsibility: "method-unsupported" as const, factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        { responsibility: "producer-failed" as const, factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+      ],
+    },
+    scoreAdjustments: [],
+    wrapperParentLimit: null,
+  };
+  const breakdowns: SafetyScoreV9CurrentCard["breakdowns"] = score === null
+    ? null
+    : {
+        backing: {
+          evaluatedScore: backingScore!,
+          publishedScore: backingScore!,
+          aggregationWeight: 0.4,
+          groups: [{ key: "reserves" as const, label: "Reserves", score: backingScore!, effectiveWeight: 1 }],
+          components: [{
+            key: "reserve:fixture",
+            label: "Fixture reserves",
+            source: "reserve-exposure" as const,
+            score: backingScore!,
+            effectiveWeight: 1,
+            weightedContribution: backingScore!,
+            observationState: "known" as const,
+          }],
+          adjustments: [],
+        },
+        exit: {
+          evaluatedScore: exitScore!,
+          publishedScore: exitScore!,
+          aggregationWeight: 0.35,
+          stressRequest: null,
+          primaryRoute: {
+            key: "redemption:fixture",
+            label: "Fixture redemption",
+            routeFamily: "protocol-redemption" as const,
+            score: exitScore!,
+            components: ([
+              ["access", "Access", 0.2],
+              ["settlement", "Settlement", 0.15],
+              ["executionCertainty", "Execution certainty", 0.15],
+              ["capacity", "Capacity", 0.25],
+              ["outputAssetQuality", "Output asset quality", 0.15],
+              ["cost", "Cost", 0.1],
+            ] as const).map(([key, label, weight]) => ({
+              key,
+              label,
+              score: exitScore!,
+              weight,
+              weightedContribution: exitScore! * weight,
+            })),
+            confidenceFactor: 1,
+            eligibilityMultiplier: 1,
+            capsApplied: [],
+          },
+          diversification: null,
+          alternatives: [],
+          adjustments: [],
+        },
+        control: {
+          evaluatedScore: controlScore!,
+          publishedScore: controlScore!,
+          aggregationWeight: 0.25,
+          method: "minimum-binding-component" as const,
+          components: [{
+            key: "control:fixture",
+            label: "Fixture control",
+            kind: "mint" as const,
+            score: controlScore!,
+            binding: true,
+            posture: "distributed",
+          }],
+          adjustments: [],
+        },
+      };
   return {
     id,
     score,
@@ -61,9 +189,9 @@ function v9Card(
       score === null
         ? { backing: pillar(null), exit: pillar(null), control: pillar(null) }
         : {
-            backing: pillar(score + 1 > 100 ? 100 : score + 1),
-            exit: pillar(score),
-            control: pillar(score + 0.5),
+            backing: pillar(backingScore),
+            exit: pillar(exitScore),
+            control: pillar(controlScore),
           },
     weakestPillar: score === null ? null : { pillar: "exit", score },
     caps: bindingCap ? [bindingCap] : [],
@@ -85,6 +213,8 @@ function v9Card(
     },
     dependencies: { serial: [], basket: [], cycleBlocked: false, reasonCodes: [] },
     stressStateDigest: digest("7"),
+    scoreTrace: trace,
+    breakdowns,
   };
 }
 
@@ -98,15 +228,15 @@ function candidate(
     .sort();
   return {
     model: "v9-critical-path",
-    schemaVersion: 1,
-    lifecycle: "candidate",
-    candidateId: "candidate-v1",
-    policyVersion: "candidate-v1",
-    publicationGenerationId: "v9-shadow-generation-1",
+    schemaVersion: 5,
+    lifecycle: "active",
+    candidateId: "safety-score-v9:v1:shadow-test",
+    policyVersion: "9.0",
+    publicationGenerationId: "report-cards:v9:v1:shadow-test",
     baseInputGenerationId: BASE_GENERATION,
     factSetDigest: FACT_DIGEST,
     resultDigest: RESULT_DIGEST,
-    policy: { id: "candidate-v1", semanticDigest: POLICY_DIGEST },
+    policy: { id: "safety-score-v9", semanticDigest: POLICY_DIGEST },
     evaluationBuildDigest: BUILD_DIGEST,
     sourceGenerations: { dex: "dex:g1", registry: "registry:g1" },
     asOfSec: 1_700_000_000,
@@ -217,7 +347,7 @@ function envelope(
 }
 
 describe("Safety Score V9 shadow envelope", () => {
-  it("binds exact candidate identities and compact current observations", () => {
+  it("binds exact V9 identities and compact current observations", () => {
     const result = envelope([
       v9Card("zeta", null, { reasonCodes: ["insufficient-evidence"] }),
       v9Card("alpha", 90),
@@ -227,7 +357,7 @@ describe("Safety Score V9 shadow envelope", () => {
     expect(result).toMatchObject({
       schemaVersion: 1,
       candidate: {
-        lifecycle: "candidate",
+        lifecycle: "active",
         baseInputGenerationId: BASE_GENERATION,
         factSetDigest: FACT_DIGEST,
         resultDigest: RESULT_DIGEST,
@@ -246,12 +376,12 @@ describe("Safety Score V9 shadow envelope", () => {
     expect(result.replayArtifacts).toEqual([]);
   });
 
-  it("refuses active lifecycle and replay artifacts bound to another identity", () => {
+  it("refuses legacy candidate lifecycle and replay artifacts bound to another identity", () => {
     expect(() =>
       envelope(undefined, {
-        candidateOverrides: { lifecycle: "active" as never },
+        candidateOverrides: { lifecycle: "candidate" as never },
       }),
-    ).toThrow(/candidate/);
+    ).toThrow(/expected.*active/);
 
     const candidateInput = candidate([v9Card("alpha", 90)]);
     const artifacts = replayArtifacts(candidateInput);
@@ -373,7 +503,7 @@ describe("Safety Score V9 compact daily history", () => {
       attemptCounts: { successful: 1, failed: 0 },
       selectedRun: {
         identity: {
-          publicationGenerationId: "v9-shadow-generation-1",
+          publicationGenerationId: "report-cards:v9:v1:shadow-test",
           baseInputGenerationId: BASE_GENERATION,
           factSetDigest: FACT_DIGEST,
           policyDigest: POLICY_DIGEST,
@@ -691,7 +821,7 @@ describe("Safety Score V8/V9 shadow diff", () => {
     const first = envelope([v9Card("asset", 84)]);
     const nextPublication = envelope([v9Card("asset", 84)], {
       candidateOverrides: {
-        publicationGenerationId: "v9-shadow-generation-2",
+        publicationGenerationId: "report-cards:v9:v1:shadow-test-2",
         factSetDigest: digest("8"),
         resultDigest: digest("9"),
       },
@@ -705,7 +835,7 @@ describe("Safety Score V8/V9 shadow diff", () => {
     expect(build(first, 1_700_000_300, 1_000, new Set(["asset"]))).not.toBe(build(first, 1_700_000_180));
 
     const changedPolicy = envelope([v9Card("asset", 84)], {
-      candidateOverrides: { policy: { id: "candidate-v1", semanticDigest: digest("8") } },
+      candidateOverrides: { policy: { id: "safety-score-v9-test", semanticDigest: digest("8") } },
     });
     expect(build(changedPolicy, 1_700_000_360)).not.toBe(build(first, 1_700_000_180));
   });
