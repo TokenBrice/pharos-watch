@@ -99,10 +99,13 @@ The private latest entries are:
 
 Immediately before canonical persistence, the runner evaluates publication
 input health and compares newly binding producer-failed deterioration with the
-last accepted V9 snapshot. Stale or unavailable applicable DEX, redemption, or
-live-reserve inputs, failed coverage floors, newly binding producer-failed
-downgrades or NR transitions, and assessment failures hold the candidate.
-Healthy measured-adverse movements still publish.
+last accepted V9 snapshot only when both snapshots carry the same policy,
+methodology, and evaluation-build identity. An intentional scoring-identity
+transition establishes a new comparison baseline instead of comparing failure
+attribution across unlike evaluators. Stale or unavailable applicable DEX,
+redemption, or live-reserve inputs, failed coverage floors, newly binding
+same-identity producer-failed downgrades or NR transitions, and assessment
+failures hold the candidate. Healthy measured-adverse movements still publish.
 
 A held attempt records the publication-gate failure in the daily row and
 updates only publication health. It does not replace the canonical envelope or

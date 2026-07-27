@@ -97,6 +97,18 @@ function cardDeteriorated(
   return GRADE_RANK[candidate.grade] < GRADE_RANK[accepted.grade];
 }
 
+function scoringIdentityMatches(
+  candidate: SafetyScoreV9Response,
+  accepted: SafetyScoreV9Response,
+): boolean {
+  return (
+    candidate.policyVersion === accepted.policyVersion &&
+    candidate.policy.id === accepted.policy.id &&
+    candidate.policy.semanticDigest === accepted.policy.semanticDigest &&
+    candidate.evaluationBuildDigest === accepted.evaluationBuildDigest
+  );
+}
+
 function inputHealthReasons(
   health: V9PublicationInputHealth,
 ): V9PublicationHoldReason[] {
@@ -137,7 +149,13 @@ export function assessV9Publication(input: {
     });
   }
 
-  if (input.acceptedEnvelope !== null) {
+  if (
+    input.acceptedEnvelope !== null &&
+    scoringIdentityMatches(
+      input.candidate,
+      input.acceptedEnvelope.candidate,
+    )
+  ) {
     const acceptedById = new Map(
       input.acceptedEnvelope.candidate.cards.map((card) => [card.id, card]),
     );

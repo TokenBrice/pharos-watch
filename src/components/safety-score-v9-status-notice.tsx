@@ -7,7 +7,9 @@ function describeHoldReason(reason: V9PublicationHoldReason): string {
   if (reason.code === "coverage-floor-failed") {
     return `Coverage floor failed for ${reason.floorIds.join(", ")}.`;
   }
-  if (reason.code === "assessment-failed") return reason.detail;
+  if (reason.code === "assessment-failed") {
+    return "The latest ratings update could not be verified.";
+  }
   if (reason.code === "producer-failed-downgrade" || reason.code === "producer-failed-nr") {
     return `${reason.assetId}: ${reason.reasonCode}.`;
   }
