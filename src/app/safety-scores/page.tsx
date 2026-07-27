@@ -15,7 +15,7 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 
 const reportCardsDescription =
-  "Compare active Safety Score V9 stablecoin ratings across backing, exit, and economic-control risk.";
+  "Compare active Safety Score V9 stablecoin ratings across backing, exit, economic control, evidence quality, dependencies, and structural caps.";
 
 export const metadata = buildPageMetadata({
   title: "Safety Scores: Stablecoin Safety Grades",
