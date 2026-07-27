@@ -1,5 +1,5 @@
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9TransitionResponse } from "@shared/types/report-cards-v9";
 import { errorResponse, jsonFreshResponse, withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
@@ -20,8 +20,8 @@ export {
 };
 
 function snapshotResponse(
-  snapshot: ReportCardsV9Response,
-  lifecycle: ReportCardsV9Response["lifecycle"],
+  snapshot: ReportCardsV9TransitionResponse,
+  lifecycle: ReportCardsV9TransitionResponse["lifecycle"],
   cacheControl: string = CACHE_PROFILES.standard,
 ): Response {
   const held = snapshot.publicationHealth.status === "held";

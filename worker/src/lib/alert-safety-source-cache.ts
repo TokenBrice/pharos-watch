@@ -11,7 +11,10 @@ import {
 import { activeDepegCapScore } from "@shared/lib/report-card-active-depeg";
 import { round1, roundScore } from "@shared/lib/math";
 import type { DimensionKey, ReportCard, ReportCardGrade, SafetyAlertSourceState } from "@shared/types";
-import { ReportCardsV9ResponseSchema, type ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import {
+  ReportCardsV9TransitionResponseSchema,
+  type ReportCardsV9TransitionResponse,
+} from "@shared/types/report-cards-v9";
 import type { ReportCardPublicationCompleteness } from "./report-card-publication";
 import {
   SafetyScoreV8PublicationIdentitySchema,
@@ -719,11 +722,11 @@ export function buildAlertSafetySourceEnvelope(
  * The dispatcher does not call this while V8 remains the active alert model.
  */
 export function buildAlertSafetyV9SourceEnvelope(
-  snapshot: ReportCardsV9Response,
+  snapshot: ReportCardsV9TransitionResponse,
   options: { allowShadowLifecycle: boolean },
 ): AlertSafetyV9SourceEnvelope | null {
   if (!options.allowShadowLifecycle) return null;
-  const parsed = ReportCardsV9ResponseSchema.safeParse(snapshot);
+  const parsed = ReportCardsV9TransitionResponseSchema.safeParse(snapshot);
   if (!parsed.success) return null;
   const source = parsed.data;
   if (source.publicationHealth.status === "held") return null;
@@ -760,7 +763,7 @@ export function buildAlertSafetyV9SourceEnvelope(
  * label, is the authority that permits alert use.
  */
 export function buildActiveAlertSafetyV9SourceEnvelope(
-  snapshot: ReportCardsV9Response,
+  snapshot: ReportCardsV9TransitionResponse,
 ): AlertSafetySourceEnvelope | null {
   const shadow = buildAlertSafetyV9SourceEnvelope(snapshot, { allowShadowLifecycle: true });
   if (!shadow) return null;

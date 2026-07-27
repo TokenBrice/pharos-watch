@@ -25,6 +25,7 @@ import {
   SAFETY_SCORE_V9_SHADOW_CACHE_MAX_COMPRESSED_BYTES,
   SAFETY_SCORE_V9_SHADOW_CACHE_MAX_STORED_BYTES,
 } from "../safety-score-v9-cache-codec";
+import { sha256Hex } from "../hash";
 
 const SHADOW_MIGRATION_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -491,6 +492,46 @@ describe("Safety Score v9 shadow state persistence", () => {
       .run(stableJsonStringifyV1(legacyCurrentEnvelope), SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope);
 
     await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(state.envelope);
+  });
+
+  it("continues to read retained compressed candidate-lifecycle cache values", async () => {
+    const { sqlite, db } = createTestDatabase();
+    const state = await successfulState();
+    await persistSafetyScoreV9ShadowState(db, state);
+
+    const retainedEnvelope = structuredClone(state.envelope) as typeof state.envelope & {
+      candidate: { schemaVersion: 4 | 5; lifecycle: "candidate" | "active" };
+    };
+    retainedEnvelope.candidate.schemaVersion = 4;
+    retainedEnvelope.candidate.lifecycle = "candidate";
+    retainedEnvelope.candidate.policyVersion = "candidate-v2";
+    retainedEnvelope.candidate.policy = {
+      id: "safety-score-v9-candidate-v2",
+      semanticDigest: retainedEnvelope.candidate.policy.semanticDigest,
+    };
+    const canonicalPayload = stableJsonStringifyV1(retainedEnvelope);
+    const compressed = await gzipBase64Utf8(canonicalPayload);
+    const storage = JSON.parse(
+      (
+        sqlite
+          .prepare("SELECT value FROM cache WHERE key = ?")
+          .get(SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope) as { value: string }
+      ).value,
+    ) as Record<string, unknown>;
+    storage.payload = compressed.payload;
+    storage.payloadSha256 = await sha256Hex(canonicalPayload);
+    storage.compressedBytes = compressed.compressedBytes;
+    storage.uncompressedBytes = compressed.uncompressedBytes;
+    storage.identity = {
+      ...(storage.identity as Record<string, unknown>),
+      policyVersion: retainedEnvelope.candidate.policyVersion,
+      policyId: retainedEnvelope.candidate.policy.id,
+    };
+    sqlite
+      .prepare("UPDATE cache SET value = ? WHERE key = ?")
+      .run(stableJsonStringifyV1(storage), SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope);
+
+    await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(retainedEnvelope);
   });
 
   it("rejects corrupt, unbounded, noncanonical, and identity-mismatched cache envelopes", async () => {

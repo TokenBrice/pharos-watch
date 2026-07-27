@@ -1,6 +1,9 @@
 import { MINT_BURN_CONFIGS } from "./mint-burn-contracts";
 import type { ReportCardCachePayload } from "./report-card-cache";
-import { ReportCardsV9ResponseSchema, type ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import {
+  ReportCardsV9TransitionResponseSchema,
+  type ReportCardsV9TransitionResponse,
+} from "@shared/types/report-cards-v9";
 import {
   SafetyScorePublicationIdentitySchema,
   type SafetyScorePublicationIdentity,
@@ -101,7 +104,7 @@ export function buildFlightToQualityClassificationFromV8Cache(
  * an active V9 publication is accepted directly.
  */
 export function buildFlightToQualityClassificationFromV9Snapshot(
-  snapshot: ReportCardsV9Response,
+  snapshot: ReportCardsV9TransitionResponse,
   options: { allowShadowLifecycle: boolean; expectedIdentity?: SafetyScorePublicationIdentity | null },
 ): FlightToQualityClassificationResult {
   if (
@@ -110,7 +113,7 @@ export function buildFlightToQualityClassificationFromV9Snapshot(
   ) {
     return { kind: "unavailable", reason: "lifecycle-not-approved" };
   }
-  const parsed = ReportCardsV9ResponseSchema.safeParse(snapshot);
+  const parsed = ReportCardsV9TransitionResponseSchema.safeParse(snapshot);
   if (!parsed.success) return { kind: "unavailable", reason: "source-contract-invalid" };
   const source = parsed.data;
   if (source.publicationHealth.status === "held") {

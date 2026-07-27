@@ -12,6 +12,7 @@ import {
   ReportCardsV9PreBreakdownResponseSchema,
   ReportCardsV9PreviousResponseSchema,
   ReportCardsV9ResponseSchema,
+  ReportCardsV9TransitionResponseSchema,
 } from "@shared/types/report-cards-v9";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
@@ -231,6 +232,37 @@ describe("published V9 report-card cache", () => {
         upstreamScore: 75,
       },
     ]);
+  });
+
+  it("projects retained pre-breakdown V9 candidates into the live transition contract", async () => {
+    const previousCandidate = structuredClone(candidate()) as SafetyScoreV9Response;
+    previousCandidate.schemaVersion = 4;
+    previousCandidate.lifecycle = "candidate";
+    previousCandidate.policyVersion = "candidate-v2";
+    previousCandidate.policy = {
+      id: "safety-score-v9-candidate-v2",
+      semanticDigest: previousCandidate.policy.semanticDigest,
+    };
+    delete (previousCandidate.cards[0] as unknown as { breakdowns?: unknown }).breakdowns;
+
+    const snapshot = projectSafetyScoreV9CandidateToPublicSnapshot(
+      previousCandidate,
+      publicationHealth(previousCandidate),
+    );
+
+    expect(snapshot).toEqual(ReportCardsV9PreBreakdownResponseSchema.parse(snapshot));
+    expect(snapshot).toEqual(ReportCardsV9TransitionResponseSchema.parse(snapshot));
+    expect(() => ReportCardsV9CurrentResponseSchema.parse(snapshot)).toThrow();
+    expect(snapshot).toMatchObject({
+      model: "v9",
+      schemaVersion: 3,
+      lifecycle: "shadow",
+      safetyScoreIdentity: {
+        methodologyVersion: "candidate-v2",
+        policyId: "safety-score-v9-candidate-v2",
+      },
+    });
+    expect(snapshot.cards[0]).not.toHaveProperty("breakdowns");
   });
 
   it("fails closed for malformed or missing canonical V9 cache rows", async () => {

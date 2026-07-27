@@ -161,6 +161,10 @@ function parseSafetyScoreV9ShadowEnvelopeCanonicalPayload(
 
   const current = SafetyScoreV9ShadowEnvelopeSchema.safeParse(parsed.value);
   if (current.success) return current.data;
+  const onlyRetainedLifecycleIssue =
+    current.error.issues.length === 1 &&
+    current.error.issues[0]?.code === "custom" &&
+    current.error.issues[0]?.path.join(".") === "candidate.lifecycle";
 
   const value = parsed.value;
   if (value && typeof value === "object" && !Array.isArray(value) && "candidate" in value) {
@@ -169,16 +173,17 @@ function parseSafetyScoreV9ShadowEnvelopeCanonicalPayload(
       candidate &&
       typeof candidate === "object" &&
       !Array.isArray(candidate) &&
-      (candidate as Record<string, unknown>).schemaVersion === 5 &&
       (candidate as Record<string, unknown>).lifecycle === "candidate"
     ) {
-      return SafetyScoreV9ShadowEnvelopeSchema.parse({
+      const normalized = SafetyScoreV9ShadowEnvelopeSchema.safeParse({
         ...value,
         candidate: {
           ...candidate,
           lifecycle: "active",
         },
       });
+      if (normalized.success) return normalized.data;
+      if (onlyRetainedLifecycleIssue) return parsed.value as SafetyScoreV9ShadowEnvelope;
     }
   }
 
