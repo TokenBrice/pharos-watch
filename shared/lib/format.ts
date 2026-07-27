@@ -61,7 +61,7 @@ const PEG_CURRENCY_SYMBOLS: Record<PegCurrency, string> & Record<string, string>
   USD: "$", EUR: "€", GBP: "£", CHF: "₣", BRL: "R$", RUB: "₽", JPY: "¥",
   KRW: "₩", IDR: "Rp", INR: "₹", MYR: "RM", SGD: "S$", HKD: "HK$", TRY: "₺", AUD: "A$", ZAR: "R",
   CAD: "C$", CNY: "¥", CNH: "¥", PHP: "₱", MXN: "MX$", VND: "₫", UAH: "₴", ARS: "AR$",
-  KGS: "som", NGN: "₦", XOF: "CFA ", GOLD: "$", SILVER: "$", VAR: "$", OTHER: "$",
+  KGS: "som", NGN: "₦", XOF: "CFA ", COP: "COL$", CLP: "CL$", GHS: "₵", KES: "KSh", PEN: "S/", GOLD: "$", SILVER: "$", VAR: "$", OTHER: "$",
 };
 const USD_PRICED_PEG_CURRENCIES = new Set(["USD", "GOLD", "SILVER", "VAR", "OTHER"]);
 

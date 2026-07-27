@@ -29,6 +29,15 @@ export const HARDCODED_PRICE_BOUNDS: Record<string, [min: number, max: number]> 
   NGN: [0.0002, 0.005],
   XOF: [0.001, 0.005],
   VND: [0.00002, 0.00006],
+  // 2026-07 spots (fawazahmed0 currency-api / open.er-api.com): KES ~129,
+  // GHS ~11.6, COP ~3210, CLP ~948, PEN ~3.40 per USD. Bounds cover the
+  // published multi-year ranges (CBK ~100-165; BoG ~6-16; BanRep ~2500-5000;
+  // BCCh ~600-1100; BCRP ~3.0-4.1 per USD) with headroom on both sides.
+  KES: [0.005, 0.012],
+  GHS: [0.02, 0.25],
+  COP: [0.00015, 0.0006],
+  CLP: [0.0007, 0.002],
+  PEN: [0.2, 0.4],
   GOLD: [100, 100_000],
   SILVER: [5, 500],
 };
@@ -60,6 +69,13 @@ export const FX_RATE_BOUNDS: Record<string, [min: number, max: number]> = {
   peggedNGN: [0.0002, 0.005],
   peggedXOF: [0.001, 0.005],
   peggedVND: [0.00002, 0.00006],
+  // Same reference ranges as the HARDCODED_PRICE_BOUNDS entries above
+  // (2026-07 secondary/tertiary FX spots vs multi-year central-bank ranges).
+  peggedKES: [0.005, 0.012],
+  peggedGHS: [0.02, 0.25],
+  peggedCOP: [0.00015, 0.0006],
+  peggedCLP: [0.0007, 0.002],
+  peggedPEN: [0.2, 0.4],
   peggedSILVER: [5, 500],
   peggedGOLD: [500, 10000],
 };
@@ -112,7 +128,12 @@ export function classifyPegClass(pegCurrency: string | undefined, pegType: strin
     pegType.includes("XOF") ||
     pegType.includes("UAH") ||
     pegType.includes("ARS") ||
-    pegType.includes("VND")
+    pegType.includes("VND") ||
+    pegType.includes("KES") ||
+    pegType.includes("GHS") ||
+    pegType.includes("COP") ||
+    pegType.includes("CLP") ||
+    pegType.includes("PEN")
   ) {
     return "fiat_fx";
   }

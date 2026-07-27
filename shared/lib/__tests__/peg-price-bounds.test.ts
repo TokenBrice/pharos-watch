@@ -148,7 +148,7 @@ describe("peg price bounds", () => {
     }
 
     expect(unsupported).toEqual([]);
-    expect(covered).toBe(28);
+    expect(covered).toBe(33);
   });
 
   it("keeps non-USD hardcoded maxima within 0.1x-10x of FX maxima", () => {
