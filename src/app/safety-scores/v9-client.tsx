@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { LazySection } from "@/components/lazy-section";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { ReportCardMiniV9 } from "@/components/report-card-mini-v9";
-import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { useReportCardsV9 } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -13,6 +12,8 @@ import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import { SafetyScoreDataCoverage } from "./data-coverage-module";
+import { buildDataCoverageModel } from "./data-coverage-view-model";
 import {
   SafetyEmptyState,
   SafetyResultsSummary,
@@ -223,6 +224,10 @@ export function ReportCardsV9Client() {
     [cards, gradeFilter, mcapMap, sortKey],
   );
   const groupedCards = useMemo(() => groupV9CardsByGrade(filteredCards), [filteredCards]);
+  const dataCoverage = useMemo(
+    () => buildDataCoverageModel(reportCardsQuery.data),
+    [reportCardsQuery.data],
+  );
   const showGroupedCards = gradeFilter === "all" && sortKey === "overall";
   const handleRetry = useCallback(
     () => refetchQueryGroup([reportCardsQuery.refetch, stablecoinsQuery.refetch]),
@@ -267,9 +272,9 @@ export function ReportCardsV9Client() {
           },
         ]}
       />
-      <SafetyScoreV9StatusNotice response={reportCardsQuery.data} />
-
       <SafetyScoresHero stats={headlineStats} gradeCounts={gradeCounts} totalCards={totalCards} />
+
+      <SafetyScoreDataCoverage model={dataCoverage} />
 
       <V9Controls
         gradeFilter={gradeFilter}
