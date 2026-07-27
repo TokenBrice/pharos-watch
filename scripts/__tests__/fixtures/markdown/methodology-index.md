@@ -34,6 +34,8 @@ Safety Score V9 is the active identity-aware model. It evaluates Backing (40%), 
 
 V9 distinguishes measured adverse evidence from issuer non-disclosure, unsupported methodology, missing integration, and transient producer failure. Bounded gaps can remain rateable under explicit ceilings; an unbounded required fact remains NR, and F is reserved for causally attributed measured danger.
 
+Governance access posture treats reviewed global mint-domain contracts as immutable when they have no privileged capabilities, no applicable cap, no claim-impairment path, and access-only scope. A contract address alone is protocol machinery, not evidence of a concentrated administrator; deployment-scoped bridge controls remain separate.
+
 Publication is fail-closed. Stale or unavailable score-bearing producers and new infrastructure-attributed downgrades or NR transitions hold the last accepted V9 ratings. Active consumers expose held status and never recompute or fall back to V8. The numeric V8.17 methodology remains documented for the compatibility endpoint and rollback observation window.
 
 

@@ -17,6 +17,7 @@ export type V9ConsumerUnavailableReason =
   | "portfolio-card-unavailable"
   | "portfolio-card-not-rated"
   | "portfolio-empty"
+  | "v9-publication-held"
   | "v9-stress-mapping-unapproved"
   | "v9-bluechip-floor-unreviewed";
 
@@ -100,6 +101,8 @@ export interface V9SafetyTableRow {
   grade: V9Grade;
   riskBucket: V9GradeRiskBucket;
   pillars: SafetyScoreV9Card["pillars"];
+  accessPosture: SafetyScoreV9Card["accessPosture"];
+  freezeStatus: V9FreezeStatus;
 }
 
 export function buildV9SafetyTableRows(
@@ -116,6 +119,8 @@ export function buildV9SafetyTableRows(
       grade: card.grade,
       riskBucket: getV9GradeRiskBucket(card.grade),
       pillars: card.pillars,
+      accessPosture: card.accessPosture,
+      freezeStatus: mapV9FreezeStatus(card),
     }))
     .filter((row) => riskFilter === "all" || row.riskBucket === riskFilter)
     .sort((left, right) => {
@@ -124,6 +129,20 @@ export function buildV9SafetyTableRows(
       return right.score - left.score || left.id.localeCompare(right.id);
     });
   return { status: "available", identity: response.identity, value: rows };
+}
+
+export function buildV9SafetyTableMap(
+  input: unknown,
+  expectedIdentity: V9ConsumerIdentity,
+): V9ConsumerResult<Record<string, V9SafetyTableRow>> {
+  const rows = buildV9SafetyTableRows(input, expectedIdentity);
+  return rows.status === "available"
+    ? {
+        status: "available",
+        identity: rows.identity,
+        value: Object.fromEntries(rows.value.map((row) => [row.id, row])),
+      }
+    : rows;
 }
 
 export interface V9DependencyProjection {
@@ -148,6 +167,7 @@ export function buildV9DependencyProjection(
 }
 
 export type V9FreezeStatus = "not-observed" | "possible" | "upstream" | "direct" | "unknown";
+export type V9ResolvedBlacklistStatus = boolean | "possible" | "inherited" | null;
 
 export interface V9AccessCoverageProjection {
   cardId: string;
@@ -170,6 +190,24 @@ function mapV9FreezeStatus(card: SafetyScoreV9Card): V9FreezeStatus {
       return card.accessPosture.freezeExposure;
     case "unknown":
       return "unknown";
+  }
+}
+
+export function getV9ResolvedBlacklistStatus(
+  card: Pick<SafetyScoreV9Card, "accessPosture"> | null | undefined,
+): V9ResolvedBlacklistStatus {
+  switch (card?.accessPosture?.freezeExposure) {
+    case "direct":
+      return true;
+    case "upstream":
+      return "inherited";
+    case "possible":
+      return "possible";
+    case "none-known":
+      return false;
+    case "unknown":
+    case undefined:
+      return null;
   }
 }
 
@@ -230,6 +268,9 @@ export function buildV9PortfolioProjection(
 ): V9ConsumerResult<V9PortfolioProjection> {
   const response = resolveV9ConsumerResponse(input, expectedIdentity);
   if (response.status === "unavailable") return response;
+  if (response.value.publicationHealth.status === "held") {
+    return { status: "unavailable", reason: "v9-publication-held" };
+  }
   const positiveHoldings = holdings.filter((holding) => holding.amount > 0);
   if (positiveHoldings.length === 0) return { status: "unavailable", reason: "portfolio-empty" };
 

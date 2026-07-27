@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import StablecoinDetailClient from "./client";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
+import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 
 const {
   lazyViewportValues,
@@ -29,14 +30,16 @@ vi.mock("next/dynamic", () => ({
         reserves,
         onRetry,
         isFetching,
+        isLoading,
       }: {
         reserves?: { mode?: string } | null;
         onRetry?: () => Promise<unknown> | void;
         isFetching?: boolean;
+        isLoading?: boolean;
       }) {
         return (
           <section id="reserves" data-testid="reserve-panel">
-            <span>{reserves?.mode ?? "no-reserves"}</span>
+            <span>{isLoading ? "loading-reserves" : reserves?.mode ?? "no-reserves"}</span>
             <button
               type="button"
               disabled={isFetching}
@@ -50,7 +53,7 @@ vi.mock("next/dynamic", () => ({
         );
       };
     }
-    if (source.includes("ReportCardDetail")) {
+    if (source.includes("StablecoinSafetyScoreV9Card")) {
       return function ReportCardDetailStub({ rightColumn }: { rightColumn?: ReactNode }) {
         return <div data-testid="report-card">{rightColumn}</div>;
       };
@@ -188,6 +191,7 @@ function makeReadyViewModel(overrides: Record<string, unknown> = {}) {
     summary: null,
     logoSrc: undefined,
     reportCard: null,
+    reportCardsResponse: undefined,
     reportCardUpdatedAt: null,
     variantParent: null,
     variantSiblings: [],
@@ -236,6 +240,14 @@ function makeReadyViewModel(overrides: Record<string, unknown> = {}) {
     isFetchingReserves: false,
     supplyError: null,
     staleQueries: [],
+    featureStates: {
+      liquidity: { status: "empty", dataUpdatedAt: 0, error: null },
+      yield: { status: "unsupported", dataUpdatedAt: 0, error: null },
+      stress: { status: "empty", dataUpdatedAt: 0, error: null },
+      flows: { status: "unsupported", dataUpdatedAt: 0, error: null },
+      blacklist: { status: "unsupported", dataUpdatedAt: 0, error: null },
+      reserves: { status: "empty", dataUpdatedAt: 0, error: null },
+    },
     verdict: {
       archetype: "uncategorized",
       label: "Uncategorized",
@@ -454,6 +466,62 @@ describe("StablecoinDetailClient", () => {
     expect(reservePanel.textContent).toContain("curated-fallback");
     expect(reportCardAnchor?.contains(reservePanel)).toBe(false);
     expect(screen.getByRole("button", { name: "Retry reserves" }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("renders reserve composition inside a rated V9 Safety Score card", async () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const reportCard = makeV9Card({ id: coin.id });
+    const reportCardsResponse = makeReportCardsV9Response({ cards: [reportCard] });
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({
+        reportCard,
+        reportCardsResponse,
+        reportCardUpdatedAt: reportCardsResponse.updatedAt * 1000,
+        reserves: {
+          reserves: [{ name: "Curated reserve", pct: 100, risk: "low" }],
+          estimated: false,
+          mode: "curated-fallback",
+        },
+        featureStates: {
+          ...makeReadyViewModel().featureStates,
+          reserves: { status: "ready", dataUpdatedAt: 1, error: null },
+        },
+      }),
+    );
+
+    render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    const reportCardElement = await screen.findByTestId("report-card");
+    const reservePanel = await screen.findByTestId("reserve-panel");
+    expect(reportCardElement.contains(reservePanel)).toBe(true);
+    expect(reservePanel.textContent).toContain("curated-fallback");
+  });
+
+  it("holds the reserve column open while live composition is loading", async () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const reportCard = makeV9Card({ id: coin.id });
+    const reportCardsResponse = makeReportCardsV9Response({ cards: [reportCard] });
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({
+        reportCard,
+        reportCardsResponse,
+        featureStates: {
+          ...makeReadyViewModel().featureStates,
+          reserves: { status: "loading", dataUpdatedAt: 0, error: null },
+        },
+      }),
+    );
+
+    render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    const reportCardElement = await screen.findByTestId("report-card");
+    const reservePanel = await screen.findByTestId("reserve-panel");
+    expect(reportCardElement.contains(reservePanel)).toBe(true);
+    expect(reservePanel.textContent).toContain("loading-reserves");
   });
 
   it("renders the underlying asset card outside the overview section for variants", () => {

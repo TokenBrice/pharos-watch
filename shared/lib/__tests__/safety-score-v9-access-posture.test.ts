@@ -172,6 +172,33 @@ describe("Safety Score v9 access posture", () => {
     expect(unknown.freezeExposure).toBe("unknown");
   });
 
+  it("treats reviewed immutable protocol machinery as immutable alongside peripheral bridges", () => {
+    const immutableProtocol = control("liquity-core", "mint", [], {
+      deploymentKey: "asset:liquity",
+      capSemantics: { kind: "not-applicable", bound: null },
+      claimImpairment: "none",
+      economicLossScope: "access-only",
+      authority: { authorityKey: "ethereum:liquity-core", model: "contract", threshold: null },
+    });
+    const peripheralBridge = control("liquity-bridge", "bridge", ["bridge-mint"], {
+      scope: "deployment",
+      capSemantics: { kind: "unbounded", bound: null },
+      claimImpairment: "unbounded",
+      economicLossScope: "deployment",
+      authority: { authorityKey: "ethereum:liquity-bridge", model: "contract", threshold: null },
+      materialSupplyShare: 0.01,
+      failureDomains: [{ kind: "bridge-route", key: "liquity-bridge" }],
+    });
+
+    const result = evaluateV9AccessPosture(
+      args({ facts: facts([peripheralBridge, immutableProtocol]) }),
+    );
+
+    expect(result.governance).toBe("immutable");
+    expect(result.signals).toContain("authority:issuance:immutable");
+    expect(result.signals).not.toContain("authority:issuance:concentrated");
+  });
+
   it("uses issuance, governance, pause, and upgrade controls deterministically", () => {
     const issuance = control("issuer", "mint", ["mint"], {
       authority: {

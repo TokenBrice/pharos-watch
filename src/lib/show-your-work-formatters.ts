@@ -18,7 +18,7 @@ import {
   QUALITY_WEIGHT,
 } from "@shared/lib/chain-health";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
-import type { RawDimensionInputs } from "@shared/types";
+import type { RawDimensionInputs, SafetyScoreV9CurrentCard } from "@shared/types";
 import type { DexLiquidityData, StressSignalEntry } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { StabilityIndexCurrent } from "@shared/types/stability";
@@ -35,6 +35,7 @@ export interface ShowYourWorkTable {
   rows: ShowYourWorkRow[];
   formula: string;
   topic: MethodologyContextKey;
+  versionLabel?: string;
 }
 
 function fmtNum(v: number | null | undefined, digits = 0): string {
@@ -119,6 +120,55 @@ export function formatReportCard(rawInputs: RawDimensionInputs): ShowYourWorkTab
     formula:
       "overall = weighted(liquidity/exit, resilience, decentralization, dependency risk) with NR weights redistributed; decentralization may include chain, CDP oracle, bridge-route, and mint-authority penalties; then × (Peg Score/100)^0.40, ×0.9 when no liquidity/exit input exists, and capped by severe active-depeg peaks",
     topic: "safetyScore",
+  };
+}
+
+export function formatReportCardV9(
+  card: SafetyScoreV9CurrentCard,
+  methodologyVersion: string,
+): ShowYourWorkTable {
+  const stages = card.scoreTrace.stages;
+  const rows: ShowYourWorkRow[] = [
+    { label: "Backing pillar", value: fmtNum(card.pillars.backing.score, 1) },
+    { label: "Exit pillar", value: fmtNum(card.pillars.exit.score, 1) },
+    { label: "Economic Control pillar", value: fmtNum(card.pillars.control.score, 1) },
+    { label: "Weighted pillar mean", value: fmtNum(stages.weightedPillarMean, 1) },
+    { label: "Bounded-headroom aggregate", value: fmtNum(stages.aggregatedQualityScore, 1) },
+    {
+      label: "Peg multiplier",
+      value: stages.pegMultiplier == null ? "—" : `${stages.pegMultiplier.toFixed(3)}x`,
+    },
+    { label: "Base asset score", value: fmtNum(stages.baseAssetScore, 1) },
+    { label: "Deployment adjustment", value: fmtNum(stages.deploymentAdjustmentPoints, 1) },
+    { label: "Pre-cap score", value: fmtNum(stages.preCapScore, 1) },
+  ];
+
+  if (card.bindingCap) {
+    rows.push({
+      label: "Binding cap",
+      value: `${card.bindingCap.limit.toFixed(0)} (${card.bindingCap.kind})`,
+    });
+  }
+  if (card.scoreTrace.wrapperParentLimit) {
+    rows.push({
+      label: "Wrapper parent limit",
+      value: fmtNum(card.scoreTrace.wrapperParentLimit.limit, 1),
+    });
+  }
+  for (const adjustment of card.scoreTrace.scoreAdjustments) {
+    rows.push({
+      label: adjustment.label,
+      value: `+${adjustment.appliedPoints.toFixed(1)}`,
+    });
+  }
+  rows.push({ label: "Published score", value: fmtNum(stages.publishedScore, 1) });
+
+  return {
+    rows,
+    formula:
+      "three pillars → bounded-headroom aggregation → peg multiplier → deployment adjustment → policy score adjustment → caps → published score",
+    topic: "safetyScore",
+    versionLabel: methodologyVersion,
   };
 }
 

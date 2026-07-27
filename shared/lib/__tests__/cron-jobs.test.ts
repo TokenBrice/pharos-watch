@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   CRON_JOB_DEFINITIONS,
   CRON_SCHEDULES,
+  SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC,
+  SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
   getCronSlotStartedAtForSchedule,
 } from "../cron-jobs";
 
@@ -32,6 +34,7 @@ describe("cron job schedule metadata", () => {
       ),
     ).toMatchObject({
       scheduleKey: "v9SupplyAttributionOffset",
+      intervalSec: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
       triggerMode: "isolated",
       connectionGroup: "v9-supply-attribution-chain",
     });
@@ -42,6 +45,7 @@ describe("cron job schedule metadata", () => {
       ),
     ).toMatchObject({
       scheduleKey: "v9ShadowOffset",
+      intervalSec: SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC,
       triggerMode: "isolated",
       connectionGroup: "v9-shadow-chain",
     });

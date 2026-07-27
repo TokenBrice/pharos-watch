@@ -6,7 +6,7 @@ import {
   useBluechipRatings,
   useDexLiquidity,
   usePegSummary,
-  useReportCards,
+  useReportCardsV9,
 } from "@/hooks/api-hooks";
 import { supplyHistoryQueryOptions, useStablecoins } from "@/hooks/use-stablecoins";
 import { mintBurnFlowsCoinQueryOptions, useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
@@ -21,10 +21,7 @@ import {
   deriveFlowSeries,
   deriveFlowCardData,
 } from "@/lib/compare-derive";
-import {
-  type ReportCard,
-  type StablecoinData,
-} from "@shared/types";
+import type { SafetyScoreV9CurrentCard, StablecoinData } from "@shared/types";
 
 interface UseCompareDataModelOptions {
   selectedIds: string[];
@@ -57,13 +54,13 @@ export function useCompareDataModel({
     error: reportCardsError,
     refetch: refetchReportCards,
     meta: reportCardsMeta,
-  } = useReportCards();
+  } = useReportCardsV9();
   const { data: flowData, refetch: refetchFlows } = useMintBurnFlows();
 
   const globalError = listError ?? pegError ?? bluechipError ?? dexError ?? reportCardsError;
 
   const cardMap = useMemo(() => {
-    if (!reportCardsData?.cards) return new Map<string, ReportCard>();
+    if (!reportCardsData?.cards) return new Map<string, SafetyScoreV9CurrentCard>();
     return new Map(reportCardsData.cards.map((card) => [card.id, card]));
   }, [reportCardsData]);
 
@@ -72,10 +69,14 @@ export function useCompareDataModel({
       .map((id, index) => {
         const card = cardMap.get(id);
         if (!card) return null;
-        return { card, color: COMPARE_COLORS[index % COMPARE_COLORS.length] };
+        return {
+          card,
+          identity: reportCardsData!.safetyScoreIdentity,
+          color: COMPARE_COLORS[index % COMPARE_COLORS.length],
+        };
       })
       .filter((entry): entry is NonNullable<typeof entry> => entry != null);
-  }, [cardMap, selectedIds]);
+  }, [cardMap, reportCardsData, selectedIds]);
 
   // pegRates and assetMap share the same dependency (listData), so they are
   // combined into one memoised block to avoid redundant re-computation.

@@ -456,13 +456,13 @@ describe("sortStablecoins — liquidity (dexLiquidity)", () => {
 });
 
 describe("sortStablecoins — grade (reportCards)", () => {
-  it("sorts by overall score descending", () => {
+  it("sorts by V9 score descending", () => {
     const coins = [makeCoin("b", "B"), makeCoin("a", "A")];
     const reportCards = {
-      a: { overallScore: 85 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<string, infer V>
+      a: { score: 85 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<string, infer V>
         ? V
         : never,
-      b: { overallScore: 60 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<string, infer V>
+      b: { score: 60 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<string, infer V>
         ? V
         : never,
     };
@@ -476,10 +476,10 @@ describe("sortStablecoins — grade (reportCards)", () => {
     expect(result[0].id).toBe("a");
   });
 
-  it("places coins with null overallScore after coins with scores", () => {
+  it("places coins with a null V9 score after coins with scores", () => {
     const coins = [makeCoin("noGrade", "No Grade"), makeCoin("hasGrade", "Has Grade")];
     const reportCards = {
-      hasGrade: { overallScore: 70 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<
+      hasGrade: { score: 70 } as Parameters<typeof sortStablecoins>[0]["reportCards"] extends Record<
         string,
         infer V
       >

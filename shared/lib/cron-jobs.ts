@@ -2,6 +2,8 @@ import { DAY_SECONDS } from "./time-constants";
 
 export const SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC =
   30 * 60;
+export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC =
+  30 * 60;
 
 export type CronGroupKey =
   | "quarter-hourly"
@@ -418,6 +420,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     job: "sync-v9-supply-attribution",
     label: "V9 supply attribution",
     group: "quarter-hourly",
+    intervalSec: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
     scheduleKey: "v9SupplyAttributionOffset",
     triggerMode: "isolated",
     maxConnections: 3,
@@ -427,6 +430,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     job: "compute-safety-score-v9-shadow",
     label: "V9 shadow compiler",
     group: "quarter-hourly",
+    intervalSec: SAFETY_SCORE_V9_SHADOW_REFRESH_INTERVAL_SEC,
     scheduleKey: "v9ShadowOffset",
     triggerMode: "isolated",
     maxConnections: 0,

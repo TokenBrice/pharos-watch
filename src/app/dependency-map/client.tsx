@@ -1,20 +1,22 @@
 "use client";
 
 import { useMemo } from "react";
-import { useReportCards } from "@/hooks/api-hooks";
+import { useReportCardsV9 } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { DependencyMapMobileSummary } from "@/components/dependency-map-mobile-summary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { DependencyHero } from "./dependency-hero";
 import { DependencyHubsBoard } from "./dependency-hubs-board";
 import { buildDependencyHubsModel } from "./dependency-hubs-model";
 
 export function DependencyMapClient() {
-  const reportCardsQuery = useReportCards();
+  const reportCardsQuery = useReportCardsV9();
   const stablecoinsQuery = useStablecoins();
   const {
     data: reportData,
@@ -37,8 +39,16 @@ export function DependencyMapClient() {
   }, [stablecoinsData]);
 
   const dependencyHubsModel = useMemo(() => {
+    const cards = (reportData?.cards ?? []).map((card) => {
+      const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
+      return {
+        id: card.id,
+        name: meta?.name ?? card.id,
+        symbol: meta?.symbol ?? card.id,
+      };
+    });
     return buildDependencyHubsModel({
-      cards: reportData?.cards ?? [],
+      cards,
       edges: reportData?.dependencyGraph?.edges ?? [],
       mcapMap,
     });
@@ -81,12 +91,9 @@ export function DependencyMapClient() {
 
   return (
     <div className="space-y-4">
+      <SafetyScoreV9StatusNotice response={reportData} />
       <DependencyHero
         model={dependencyHubsModel}
-        cards={reportData.cards}
-        dependencyEdges={reportData.dependencyGraph?.edges}
-        mcapMap={mcapMap}
-        logos={logos}
       />
       <DependencyHubsBoard model={dependencyHubsModel} logos={logos} />
       <DependencyMapMobileSummary model={dependencyHubsModel} logos={logos} />

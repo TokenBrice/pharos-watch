@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { deriveComparisonCoins, deriveSupplySeries, deriveFlowSeries, deriveFlowCardData } from "@/lib/compare-derive";
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import { makeStablecoin } from "@/test/fixtures/safety-scores";
-import type { StablecoinData, ReportCard } from "@shared/types";
+import { makeV9Card } from "@/test/fixtures/safety-score-v9";
+import type { StablecoinData } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
 
@@ -32,19 +33,8 @@ function makeMeta(id: string, symbol = id.toUpperCase()): StablecoinMeta {
   } as StablecoinMeta;
 }
 
-function makeCard(id: string, grade: ReportCard["overallGrade"]): ReportCard {
-  return {
-    id,
-    name: `${id} Name`,
-    symbol: id.toUpperCase(),
-    overallGrade: grade,
-    overallScore: 75,
-    baseScore: 75,
-    ratedDimensions: 5,
-    isDefunct: false,
-    dimensions: {} as ReportCard["dimensions"],
-    rawInputs: {} as ReportCard["rawInputs"],
-  };
+function makeCard(id: string, grade: ReturnType<typeof makeV9Card>["grade"]) {
+  return makeV9Card({ id, grade, score: 75 });
 }
 
 function makeFlowCoin(

@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  runSelector,
   validateSelectorSnapshotResponse,
   type SelectorInput,
   type SelectorOutput,
@@ -10,12 +9,11 @@ import {
   useDexLiquidity,
   usePegSummary,
   useRedemptionBackstops,
-  useReportCards,
+  useReportCardsV9,
   useStressSignals,
   useYieldRankings,
 } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { buildSelectorRows } from "./selector-data-adapter";
 import { isValidSelectorSnapshotId } from "./selector-state";
 import { RequestFailure, RequestSequence, isRequestCancellation, requestJson } from "@/lib/request";
 
@@ -35,8 +33,6 @@ export type UseSelectorResult =
 
 type SnapshotFetchResult =
   { kind: "found"; output: SelectorOutput } | { kind: "missing" } | { kind: "error"; reason: string };
-
-type SelectorEngineResult = { status: "ready"; output: SelectorOutput } | { status: "error"; reason: "engine-failed" };
 
 async function defaultFetchSnapshot(sid: string, signal: AbortSignal): Promise<SnapshotFetchResult> {
   if (!isValidSelectorSnapshotId(sid)) {
@@ -79,7 +75,7 @@ async function defaultFetchSnapshot(sid: string, signal: AbortSignal): Promise<S
 export function useSelector(input: SelectorInput | null, sid: string | null): UseSelectorResult {
   const stablecoins = useStablecoins();
   const pegSummary = usePegSummary();
-  const reportCards = useReportCards();
+  const reportCards = useReportCardsV9();
   const stressSignals = useStressSignals();
   const dexLiquidity = useDexLiquidity();
   const yieldRankings = useYieldRankings();
@@ -99,6 +95,7 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
     const requests = snapshotRequests.current;
     if (!sid) {
       requests.cancel();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- snapshot state follows the URL snapshot identity
       setSnapshotState({ kind: "idle" });
       return;
     }
@@ -139,56 +136,6 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
     queryDataOrErrorSettled(redemptionBackstops) &&
     (liveInput?.profile !== "yield" || queryDataOrErrorSettled(yieldRankings));
 
-  const rowsByKey = useMemo(() => {
-    if (!datasetReady || !liveInput) return null;
-    return buildSelectorRows({
-      stablecoinsData: stablecoins.data ?? null,
-      pegCurrency: liveInput.pegCurrency,
-      pegData: pegSummary.data ?? null,
-      reportData: reportCards.data ?? null,
-      stressData: stressSignals.data ?? null,
-      dexData: dexLiquidity.data ?? null,
-      yieldData: yieldRankings.data ?? null,
-      bluechipData: bluechipRatings.data ?? null,
-      redemptionData: redemptionBackstops.data ?? null,
-      now: Date.now(),
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    datasetReady,
-    liveInput?.profile,
-    liveInput?.pegCurrency,
-    stablecoins.dataUpdatedAt,
-    pegSummary.dataUpdatedAt,
-    reportCards.dataUpdatedAt,
-    stressSignals.dataUpdatedAt,
-    dexLiquidity.dataUpdatedAt,
-    yieldRankings.dataUpdatedAt,
-    bluechipRatings.dataUpdatedAt,
-    redemptionBackstops.dataUpdatedAt,
-  ]);
-
-  const engineResult = useMemo<SelectorEngineResult | null>(() => {
-    if (!liveInput || !rowsByKey) return null;
-    try {
-      return {
-        status: "ready",
-        output: runSelector(
-          liveInput,
-          { rows: rowsByKey.rows },
-          {
-            timestamp: rowsByKey.timestamp,
-            datasetHash: rowsByKey.datasetHash,
-            methodologyVersions: rowsByKey.methodologyVersions,
-          },
-        ),
-      };
-    } catch (error) {
-      console.error("[selector] Selector engine failed", error);
-      return { status: "error", reason: "engine-failed" };
-    }
-  }, [liveInput, rowsByKey]);
-
   if (sid) {
     if (snapshotState.kind === "loading") return { status: "snapshot-loading" };
     if (snapshotState.kind === "found") {
@@ -196,14 +143,8 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
         status: "snapshot-found",
         output: snapshotState.output,
         isFrozen: true,
-        liveOutput: engineResult?.status === "ready" ? engineResult.output : null,
-        liveStatus: criticalQueryFailed
-          ? "error"
-          : !datasetReady
-            ? "loading"
-            : engineResult?.status === "ready"
-              ? "ready"
-              : "error",
+        liveOutput: null,
+        liveStatus: criticalQueryFailed ? "error" : !datasetReady ? "loading" : "error",
       };
     }
     if (snapshotState.kind === "error") {
@@ -212,19 +153,15 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
     if (snapshotState.kind === "miss") {
       if (!input) return { status: "error", reason: "snapshot-not-found" };
       if (criticalQueryFailed) return { status: "error", reason: "selector-data-unavailable" };
-      if (!engineResult) return { status: "snapshot-loading" };
-      if (engineResult.status === "error") return engineResult;
-      return { status: "snapshot-miss", output: engineResult.output, bannerKey: "snapshot-miss" };
+      if (!datasetReady) return { status: "snapshot-loading" };
+      return { status: "error", reason: "v9-selector-thresholds-unreviewed" };
     }
   }
 
   if (!input) return { status: "loading" };
   if (criticalQueryFailed) return { status: "error", reason: "selector-data-unavailable" };
   if (!datasetReady) return { status: "loading" };
-  if (!engineResult) return { status: "error", reason: "engine-failed" };
-  if (engineResult.status === "error") return engineResult;
-
-  return { status: "ready", output: engineResult.output };
+  return { status: "error", reason: "v9-selector-thresholds-unreviewed" };
 }
 
 function queryDataOrErrorSettled(query: { data?: unknown; error?: unknown }): boolean {

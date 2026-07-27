@@ -223,4 +223,95 @@ describe("hook-free Uniswap V4 measured execution", () => {
       "v4-runtime-or-pool-identity-mismatch",
     );
   });
+
+  it("accepts V4 quote-shaped revert payloads as zero-execution proof points", async () => {
+    const measuredTarget = target();
+    const deployment = getUniswapV4Deployment("ethereum");
+    if (!deployment) throw new Error("missing V4 deployment");
+    const poolManagerAbi = parseAbi([
+      "function poolManager() view returns (address)",
+    ]);
+    const poolManagerCallData = encodeFunctionData({
+      abi: poolManagerAbi,
+      functionName: "poolManager",
+    });
+    const poolManagerReturnData = encodeAbiParameters(
+      parseAbiParameters("address"),
+      [deployment.poolManagerAddress],
+    );
+    const slot0ReturnData = encodeAbiParameters(
+      parseAbiParameters(
+        "uint160 sqrtPriceX96,int24 tick,uint24 protocolFee,uint24 lpFee",
+      ),
+      [2n ** 96n, 0, 0, 100],
+    );
+    const liquidityReturnData = encodeAbiParameters(
+      parseAbiParameters("uint128 liquidity"),
+      [9_000_000_000_000n],
+    );
+    const quoteReturnData = encodeAbiParameters(
+      parseAbiParameters("uint256 amountOut,uint256 gasEstimate"),
+      [999_500_000n, 130_000n],
+    );
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+      async (_chain: string, calls: Array<{ label: string }>) =>
+        calls.map((call) => ({
+          label: call.label,
+          success: !call.label.includes(measuredTarget.targetId),
+          returnData: call.label.endsWith(":slot0")
+            ? slot0ReturnData
+            : call.label.endsWith(":liquidity")
+              ? liquidityReturnData
+              : quoteReturnData,
+        })),
+    );
+
+    const runtimeEvidence = {
+      poolManagerCodeHash: deployment.expectedPoolManagerCodeHash,
+      stateViewCodeHash: deployment.expectedStateViewCodeHash,
+      quoterCodeHash: deployment.expectedCodeHash,
+      quoterPoolManagerCallData: poolManagerCallData,
+      quoterPoolManagerReturnData: poolManagerReturnData,
+      stateViewPoolManagerCallData: poolManagerCallData,
+      stateViewPoolManagerReturnData: poolManagerReturnData,
+    };
+    const bindings = await resolveUniswapV4PoolBindings({
+      requests: [{ target: measuredTarget, deployment, runtimeEvidence }],
+      blockNumber: BLOCK,
+      chainRpcs: new Map(),
+    });
+    const quotes = await quoteUniswapV4Requests({
+      requests: [
+        {
+          target: measuredTarget,
+          inputUsd: 1_000,
+          endpointAddress: deployment.endpointAddress,
+        },
+      ],
+      blockNumber: BLOCK,
+      chainRpcs: new Map(),
+    });
+    if (!bindings[0]?.proof || !quotes[0]?.point) {
+      throw new Error("missing V4 proof fixture");
+    }
+    const profile = buildDexMeasuredExecutionProfile({
+      target: measuredTarget,
+      targetGenerationId: "targets",
+      quoteGenerationId: "quotes",
+      quotedAt: measuredTarget.capturedAt + 60,
+      blockNumber: BLOCK,
+      endpointAddress: deployment.endpointAddress,
+      endpointCodeHash: deployment.expectedCodeHash,
+      uniswapV4PoolProof: bindings[0].proof,
+      points: [quotes[0].point],
+    });
+
+    expect(quotes[0].point).toMatchObject({
+      amountOutRaw: "0",
+      outputUsd: 0,
+      passesCostBound: false,
+      reverted: true,
+    });
+    expect(validateUniswapV4ProfileProof(profile)).toEqual([]);
+  });
 });

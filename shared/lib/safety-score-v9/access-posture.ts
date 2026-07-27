@@ -145,6 +145,19 @@ function authorityRoles(control: V9DeploymentControlFactV2): V9AuthorityRole[] {
   return uniqueSorted(roles) as V9AuthorityRole[];
 }
 
+function isReviewedImmutableProtocolControl(control: V9DeploymentControlFactV2): boolean {
+  return (
+    control.scope === "global" &&
+    control.controlKind === "mint" &&
+    isKnown(control.status) &&
+    control.capabilities.length === 0 &&
+    control.capSemantics.kind === "not-applicable" &&
+    control.claimImpairment === "none" &&
+    control.economicLossScope === "access-only" &&
+    (control.authority?.model === "contract" || control.authority?.model === "none")
+  );
+}
+
 function deriveGovernance(
   controlStatus: V9FactStatusV2,
   controls: readonly V9DeploymentControlFactV2[],
@@ -156,6 +169,15 @@ function deriveGovernance(
   if (controlStatus.applicability.state === "not-applicable") known.push("immutable");
 
   for (const control of controls) {
+    // Immutable CDP machinery such as Liquity's BorrowerOperations is retained
+    // as a reviewed mint-domain fact even though it has no privileged mint,
+    // upgrade, pause, or parameter capability. Its contract address identifies
+    // protocol machinery, not a concentrated administrator.
+    if (isReviewedImmutableProtocolControl(control)) {
+      known.push("immutable");
+      signals.push("authority:issuance:immutable");
+      continue;
+    }
     const roles = authorityRoles(control);
     if (roles.length === 0 || control.status.applicability.state === "not-applicable") continue;
     if (!isKnown(control.status) || control.authority === null || control.authority.model === "unknown") {

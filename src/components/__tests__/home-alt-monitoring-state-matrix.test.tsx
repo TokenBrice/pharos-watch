@@ -24,7 +24,7 @@ const {
   useMintBurnFlowsMock,
   usePegSummaryMock,
   usePinnedStablecoinsMock,
-  useReportCardsMock,
+  useReportCardsV9Mock,
   useStabilityIndexMock,
   useStablecoinsMock,
   useStressSignalsMock,
@@ -38,7 +38,7 @@ const {
   useMintBurnFlowsMock: vi.fn(),
   usePegSummaryMock: vi.fn(),
   usePinnedStablecoinsMock: vi.fn(),
-  useReportCardsMock: vi.fn(),
+  useReportCardsV9Mock: vi.fn(),
   useStabilityIndexMock: vi.fn(),
   useStablecoinsMock: vi.fn(),
   useStressSignalsMock: vi.fn(),
@@ -61,7 +61,7 @@ vi.mock("next/image", () => ({
 vi.mock("@/hooks/api-hooks", () => ({
   useDexLiquidity: useDexLiquidityMock,
   usePegSummary: usePegSummaryMock,
-  useReportCards: useReportCardsMock,
+  useReportCardsV9: useReportCardsV9Mock,
   useStabilityIndex: useStabilityIndexMock,
   useStressSignals: useStressSignalsMock,
 }));
@@ -224,7 +224,7 @@ const SURFACES: SurfaceCase[] = [
       useStablecoinsMock.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
       usePegSummaryMock.mockReturnValue(queryFor(state, pegReady, pegEmpty));
       useDexLiquidityMock.mockReturnValue(queryFor(state, {}, {}));
-      useReportCardsMock.mockReturnValue(queryFor(state, { cards: [] }, { cards: [] }));
+      useReportCardsV9Mock.mockReturnValue(queryFor(state, { cards: [] }, { cards: [] }));
       useStressSignalsMock.mockReturnValue(queryFor(state, { signals: {} }, { signals: {} }));
     },
     emptyText: "table ready",

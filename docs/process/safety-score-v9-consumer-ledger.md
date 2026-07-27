@@ -2,8 +2,8 @@
 
 > **Status:** advisory migration inventory. An `OPEN` row records unfinished
 > consumer work or review; it does not block the owner's V9 activation
-> decision. Safety Score v8.17 remains the only active public model; the
-> read-only unlisted V9 feedback preview remains a shadow consumer.
+> decision. Safety Score V9 is active under the identity-bound production
+> marker; `/api/report-cards` remains the V8.17 compatibility contract.
 
 This ledger tracks the consumer contract in
 [`safety-score-v9-rollout.md`](./safety-score-v9-rollout.md#consumer-contract).
@@ -28,12 +28,13 @@ is tested, and its material V8/V9 diff has a reviewed artifact.
 - `Diff: pending` means no reviewed consumer-specific V8/V9 evidence is yet
   recorded and therefore the row remains `OPEN`.
 
-The temporary `/v9-preview/` reviewer page and its stable read endpoint are
-deliberately outside the migration dispositions below. They
-render only the strict `lifecycle: "shadow"` projection, retain a V9-specific
-query identity, and expose no V8 fallback or admin data. Their existence does
-not close C01 or C02: external compatibility, active-route behavior, full
-frontend cutover, and reviewed consumer diffs remain open.
+The production `/safety-scores/` route selects the active V9 endpoint and
+renders an unavailable state rather than falling back to V8. The temporary
+`/v9-preview/` frontend route was removed after activation.
+
+The inline C02-C10 status text below records the pre-cutover inventory. The
+2026-07-27 frontend activation update at the end of this document is the
+current implementation record for those rows.
 
 ## Direct And Frontend Consumers
 
@@ -107,3 +108,22 @@ status is advisory to the owner's activation decision.
 | C19 | Complete identified active snapshot source, pre-insert identity recheck, atomic activation-marker fence, strict stored publication validation, bounded transition-row compatibility, and identity-preserving projections. | Full/index/per-coin dataset contract review using a newly written V8 fixture plus a synthetic active-V9 fixture. |
 | C20 | Resolver safety context resolves the active model before reading V8 and suppresses V8 numeric anchors for active/held V9, stale, missing, or mismatched context. | Outcome/incident diff and replacement-anchor decision. |
 | C21 | Active API/digest selection resolves V8 or V9 explicitly. V9 uses strict identity/completeness and reviewed grade classes: B- or better safe, C+/C/C- neutral, D/F risky; held V9 is unavailable without V8 fallback. | Flow-event/class membership diff and digest output review. |
+
+## Frontend Activation Update (2026-07-27)
+
+The active frontend now selects V9 directly. Retained V8 components and hooks
+are compatibility or offline code and are not selected by active frontend
+routes. Held V9 responses keep the last verified ratings visible with an
+explicit notice; consumers that require current safety data fail closed.
+
+| Rows | Active frontend disposition | Remaining review evidence |
+| --- | --- | --- |
+| C02 | `/safety-scores/` and stablecoin detail render V9 score, grade, three pillars, caps, evidence, access posture, and native dependencies. Invalid V9 is unavailable; held V9 is labeled; there is no V8 fallback. Stablecoin detail now uses the production split-card composition with typed V9 data, pillar score bars, scored-input coverage and human-readable component disclosures, responsive live reserves, reserve-loading isolation, exact held timestamps, and V9 score-stage show-work. Its dark/light visual pass covered 390/768/1024/1218/1440 widths, breakpoint cycling, keyboard disclosures, and a nonblank treemap capture. | Complete the broader `/safety-scores/` visual and content review. |
+| C03 | Home, alt-peg, stablecoin tables, and screener use one V9 grade/score map. Screener filters and exports Backing, Exit, and Economic Control rather than V8 dimensions. | Membership, rank, and row-risk review. |
+| C04 | Dependency map and detail contagion snapshot use V9 serial/basket edges and materiality. The incompatible V8 graph presentation is not selected. | Graph-edge presentation review. |
+| C05 | Freezewatch and coverage use V9 access posture and dependencies. Registry blacklist data is not presented as V9 evidence, and the V8 live-reserve boolean has no V9 alias. | Freeze bucket and coverage review. |
+| C06 | Live Selector recommendations fail closed with `v9-selector-thresholds-unreviewed`; saved versioned snapshots remain renderable. No active V8 recomputation is used. | Recommendation/ranking and threshold review. |
+| C07 | Portfolio uses an identity-bound, amount-weighted V9 aggregate and three pillars. It does not manufacture an asset grade, and held V9 is unavailable. | Portfolio cohort review. |
+| C08 | The active V9 UI does not expose the V8 stress simulator. Retained V8 simulator code is compatibility-only until a native V9 stress mapping is approved. | V9 scenario mapping and output review. |
+| C09 | Compare uses V9 grade, three-pillar radar/cohort data, and V9 share-image inputs within one publication identity. | Radar and cohort review. |
+| C10 | Bluechip roster fails closed while the V9 A- floor remains unreviewed; it does not read V8 grades. | Roster floor and membership review. |

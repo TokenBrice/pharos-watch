@@ -53,6 +53,62 @@ describe("ReportCardV9Detail", () => {
     expect(screen.queryByText("Show inputs")).toBeNull();
   });
 
+  it("shows the public V9 methodology label without candidate policy identifiers", () => {
+    const response = makeReportCardsV9Response({
+      safetyScoreIdentity: {
+        model: "v9",
+        schemaVersion: 1,
+        methodologyVersion: "candidate-v2",
+        policyId: "safety-score-v9-candidate-v2",
+        policyDigest: "a".repeat(64),
+        evaluationBuildDigest: "b".repeat(64),
+        baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+        publicationGenerationId: "v9-publication-1",
+      },
+    });
+
+    render(<ReportCardV9Detail response={response} expectedIdentity={response.safetyScoreIdentity} cardId="usdc-circle" />);
+
+    expect(screen.getByText("V9")).toBeTruthy();
+    expect(screen.queryByText(/candidate-v2/)).toBeNull();
+    expect(screen.queryByText(/safety-score-v9-candidate-v2/)).toBeNull();
+  });
+
+  it("omits unknown freshness and access values from the detail card", () => {
+    const card = makeV9Card({
+      pillars: {
+        backing: { score: 82, evidenceLevel: "strong", freshness: "unknown", components: [], reasons: [] },
+        exit: { score: 91, evidenceLevel: "strong", freshness: "unknown", components: [], reasons: [] },
+        control: { score: 90, evidenceLevel: "strong", freshness: "unknown", components: [], reasons: [] },
+      },
+      weakestPillar: { pillar: "backing", score: 82 },
+      evidence: { level: "strong", freshness: "unknown", reasons: [] },
+      accessPosture: {
+        transfer: "unknown",
+        freezeExposure: "none-known",
+        primaryExit: "unknown",
+        governance: "unknown",
+        unknownFields: ["governance", "primaryExit", "transfer"],
+        signals: [],
+        reasons: [],
+      },
+    });
+    const response = makeReportCardsV9Response({ cards: [card] });
+
+    render(<ReportCardV9Detail response={response} expectedIdentity={response.safetyScoreIdentity} cardId={card.id} />);
+
+    expect(screen.getAllByText("strong evidence")).toHaveLength(3);
+    expect(screen.getByText("strong coverage")).toBeTruthy();
+    expect(screen.queryByText(/strong evidence · unknown/)).toBeNull();
+    expect(screen.queryByText(/strong coverage · unknown/)).toBeNull();
+    expect(screen.queryByText("Transfer")).toBeNull();
+    expect(screen.queryByText("Primary exit")).toBeNull();
+    expect(screen.queryByText("Governance")).toBeNull();
+    expect(screen.getByText("Freeze exposure")).toBeTruthy();
+    expect(screen.getByText("none-known")).toBeTruthy();
+    expect(screen.queryByText("unknown")).toBeNull();
+  });
+
   it("renders an explicit NR reason", () => {
     const card = makeV9Card({
       score: null,

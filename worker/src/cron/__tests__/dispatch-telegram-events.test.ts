@@ -40,6 +40,7 @@ describe("buildTelegramDispatchEvents", () => {
           direction: "below",
           peak_deviation_bps: 260,
           start_price: 0.974,
+          peak_price: 0.974,
           peg_reference: 1,
           event_id: 1,
         }],
@@ -191,6 +192,7 @@ describe("buildTelegramDispatchEvents", () => {
           direction: "below",
           peak_deviation_bps: 280,
           start_price: 0.972,
+          peak_price: 0.972,
           peg_reference: 1,
           event_id: 2,
         }],
@@ -235,6 +237,7 @@ describe("buildTelegramDispatchEvents", () => {
             direction: "below",
             peak_deviation_bps: 150,
             start_price: 0.985,
+            peak_price: 0.985,
             peg_reference: 1,
             event_id: 1,
           },
@@ -244,6 +247,7 @@ describe("buildTelegramDispatchEvents", () => {
             direction: "below",
             peak_deviation_bps: 251,
             start_price: 0.9749,
+            peak_price: 0.9749,
             peg_reference: 1,
             event_id: 2,
           },
@@ -286,6 +290,70 @@ describe("buildTelegramDispatchEvents", () => {
         stablecoinId: "coin-step",
         previousDeviationBps: 249,
         currentDeviationBps: 251,
+      }),
+    ]);
+  });
+
+  it("uses peak_price for triggered and worsening depeg alert display prices", async () => {
+    const events = await buildTelegramDispatchEvents(
+      {} as D1Database,
+      {
+        dewsRows: [],
+        activeDepegRows: [
+          {
+            stablecoin_id: "coin-new",
+            symbol: "NEW",
+            direction: "below",
+            peak_deviation_bps: -6000,
+            start_price: 0.9884,
+            peak_price: 0.4,
+            peg_reference: 1,
+            event_id: 1,
+          },
+          {
+            stablecoin_id: "coin-worse",
+            symbol: "WORSE",
+            direction: "below",
+            peak_deviation_bps: -5940,
+            start_price: 0.9884,
+            peak_price: 0.406,
+            peg_reference: 1,
+            event_id: 2,
+          },
+        ],
+      } as never,
+      {
+        currentSafetySnapshot: {},
+        previousSafetySnapshot: null,
+        safeSafetySnapshot: {},
+        safeDewsAlertable: {},
+        safeDewsSnapshot: {},
+        safeDepegSnapshot: {
+          "coin-worse": {
+            symbol: "WORSE",
+            direction: "below",
+            deviationBps: 3800,
+            price: 0.62,
+            pegReference: 1,
+            eventId: 2,
+          },
+        },
+        safetySnapshotNeedsSeed: false,
+        dewsSnapshotNeedsSeed: false,
+        depegSnapshotNeedsSeed: false,
+        launchSnapshotNeedsSeed: false,
+      } as never,
+      (id) => id,
+    );
+
+    expect(events.depegTriggered).toEqual([
+      expect.objectContaining({ stablecoinId: "coin-new", deviationBps: 6000, price: 0.4 }),
+    ]);
+    expect(events.depegWorsening).toEqual([
+      expect.objectContaining({
+        stablecoinId: "coin-worse",
+        currentDeviationBps: 5940,
+        price: 0.406,
       }),
     ]);
   });

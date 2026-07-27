@@ -30,11 +30,9 @@ function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {
     liquidityScore: 85,
     safetyGrade: "A",
     safetyScore: 90,
-    safetyPegStabilityScore: 92,
-    safetyLiquidityScore: 88,
-    safetyResilienceScore: 84,
-    safetyDecentralizationScore: 76,
-    safetyDependencyRiskScore: 82,
+    safetyBackingScore: 92,
+    safetyExitScore: 88,
+    safetyControlScore: 84,
     blacklistable: "yes",
     mintAuthority: "issuer-or-backend-mint",
     mintAuthorityScore: 70,
@@ -126,17 +124,17 @@ describe("applyFilters", () => {
     expect(result.map((r) => r.id)).toEqual(["usdc-circle"]);
   });
 
-  it("filters by safety sub-dimension minimum", () => {
-    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, safetyDependencyRiskMin: 90 };
+  it("filters by V9 safety pillar minimum", () => {
+    const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, safetyControlMin: 90 };
     const result = applyFilters(
       [
-        makeRow({ id: "low-dependency", safetyDependencyRiskScore: 70 }),
-        makeRow({ id: "high-dependency", safetyDependencyRiskScore: 95 }),
-        makeRow({ id: "unrated-dependency", safetyDependencyRiskScore: null }),
+        makeRow({ id: "low-control", safetyControlScore: 70 }),
+        makeRow({ id: "high-control", safetyControlScore: 95 }),
+        makeRow({ id: "unrated-control", safetyControlScore: null }),
       ],
       filters,
     );
-    expect(result.map((r) => r.id)).toEqual(["high-dependency"]);
+    expect(result.map((r) => r.id)).toEqual(["high-control"]);
   });
 
   it("filters by supply min only when min > 0", () => {
@@ -345,7 +343,7 @@ describe("hasLoadingScoreFilterData", () => {
   it("does not block unrelated score filter sources", () => {
     expect(
       hasLoadingScoreFilterData(
-        { ...SCREENER_FILTER_DEFAULTS, safetyResilienceMin: 75 },
+        { ...SCREENER_FILTER_DEFAULTS, safetyExitMin: 75 },
         { ...loaded, dewsLoading: true, dewsHasData: false },
       ),
     ).toBe(false);
@@ -354,7 +352,7 @@ describe("hasLoadingScoreFilterData", () => {
   it("keeps safety score filters in loading state until report cards resolve", () => {
     expect(
       hasLoadingScoreFilterData(
-        { ...SCREENER_FILTER_DEFAULTS, safetyResilienceMin: 75 },
+        { ...SCREENER_FILTER_DEFAULTS, safetyExitMin: 75 },
         { ...loaded, reportLoading: true, reportHasData: false },
       ),
     ).toBe(true);

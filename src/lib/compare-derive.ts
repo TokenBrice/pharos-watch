@@ -6,7 +6,7 @@
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import type {
   MintBurnPerCoinResponse,
-  ReportCard,
+  SafetyScoreV9CurrentCard,
   ReportCardGrade,
   StablecoinData,
   StablecoinMeta,
@@ -90,7 +90,7 @@ export function deriveComparisonCoins({
   metaMap: ReadonlyMap<string, ComparisonMeta>;
   pegCoinMap: Map<string, PegCoinSlice>;
   dexData: DexDataMap | undefined;
-  cardMap: Map<string, ReportCard>;
+  cardMap: Map<string, SafetyScoreV9CurrentCard>;
   flowCoinMap: Map<string, FlowCoinSlice>;
 }): ComparisonCoinEntry[] {
   if (assetMap.size === 0) return [];
@@ -101,7 +101,7 @@ export function deriveComparisonCoins({
       if (!data || !meta) return null;
       const pegCoin = pegCoinMap.get(id);
       const dexCoin = dexData?.[id];
-      const safetyGrade = cardMap.get(id)?.overallGrade ?? null;
+      const safetyGrade = cardMap.get(id)?.grade ?? null;
       const flowCoin = flowCoinMap.get(id);
       return {
         id,

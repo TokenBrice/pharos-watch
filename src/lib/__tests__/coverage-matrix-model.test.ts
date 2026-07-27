@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildCoverageMatrixModel } from "@/lib/coverage-matrix-model";
+import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 
 function resource<T>(
   data: T | undefined,
@@ -51,20 +52,9 @@ describe("buildCoverageMatrixModel", () => {
         hourly: [],
         coins: [{ stablecoinId: "usdc-circle", coverage: { status: "full" } }],
       } as never),
-      reportCards: resource({
-        cards: [
-          {
-            id: "usdc-circle",
-            overallScore: 90,
-            isDefunct: false,
-            rawInputs: {
-              canBeBlacklisted: true,
-              collateralFromLive: true,
-            },
-          },
-        ],
-        dependencyGraph: { nodes: [], edges: [] },
-      } as never),
+      reportCards: resource(makeReportCardsV9Response({
+        cards: [makeV9Card({ id: "usdc-circle", score: 90 })],
+      })),
       activeStablecoins: [coin!],
     });
 
@@ -116,26 +106,31 @@ describe("buildCoverageMatrixModel", () => {
       redemptionBackstops: resource({ coins: {} } as never),
       yieldRankings: resource({ rankings: [] } as never),
       mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
-      reportCards: resource({
+      reportCards: resource(makeReportCardsV9Response({
         cards: [
-          { id: "usdc-circle", overallScore: 90, isDefunct: false, rawInputs: { dependencies: [] } },
-          {
+          makeV9Card({ id: "usdc-circle", score: 90 }),
+          makeV9Card({
             id: "dai-makerdao",
-            overallScore: 80,
-            isDefunct: false,
-            rawInputs: { dependencies: [{ id: "usdc-circle", weight: 0.5, type: "mechanism" }] },
-          },
-          {
+            score: 80,
+            dependencies: {
+              serial: [{ upstreamAssetId: "usdc-circle", score: 90, blocked: false }],
+              basket: [],
+              cycleBlocked: false,
+              reasonCodes: [],
+            },
+          }),
+          makeV9Card({
             id: "usdt-tether",
-            overallScore: 85,
-            isDefunct: false,
-            rawInputs: { dependencies: [{ id: "untracked", weight: 0.2, type: "collateral" }] },
-          },
+            score: 85,
+            dependencies: {
+              serial: [],
+              basket: [{ upstreamAssetId: "untracked", weight: 0.2, score: null, boundedUnknown: true }],
+              cycleBlocked: false,
+              reasonCodes: [],
+            },
+          }),
         ],
-        dependencyGraph: {
-          edges: [{ from: "usdc-circle", to: "dai-makerdao", weight: 0.5, type: "mechanism" }],
-        },
-      } as never),
+      })),
       activeStablecoins: [usdc!, dai!, usdt!],
     });
 
@@ -165,7 +160,7 @@ describe("buildCoverageMatrixModel", () => {
       redemptionBackstops: resource({ coins: {} } as never),
       yieldRankings: resource({ rankings: [] } as never),
       mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
-      reportCards: resource({ cards: [], dependencyGraph: { nodes: [], edges: [] } } as never),
+      reportCards: resource(makeReportCardsV9Response({ cards: [] })),
       activeStablecoins: [
         {
           ...coin!,
@@ -213,10 +208,9 @@ describe("buildCoverageMatrixModel", () => {
         hourly: [],
         coins: [{ stablecoinId: "usdc-circle", coverage: { status: "full" } }],
       } as never),
-      reportCards: resource({
-        cards: [{ id: "usdc-circle", overallScore: 90, isDefunct: false, rawInputs: {} }],
-        dependencyGraph: { nodes: [], edges: [] },
-      } as never),
+      reportCards: resource(makeReportCardsV9Response({
+        cards: [makeV9Card({ id: "usdc-circle", score: 90 })],
+      })),
       activeStablecoins: [usdc!, dai!, usdt!],
     });
 

@@ -939,16 +939,10 @@ export function validateUniswapV4ProfileProof(
         issues.add("v4-call-data-mismatch");
       }
       if (point.reverted) {
-        try {
-          decodeFunctionResult({
-            abi: UNISWAP_V4_QUOTER_ABI,
-            functionName: "quoteExactInputSingle",
-            data: point.returnData as `0x${string}`,
-          });
-          issues.add("revert-data-decodes-as-success");
-        } catch {
-          // Expected: exact execution reverted and the raw revert is retained.
-        }
+        // Uniswap V4 quoter calls can surface quote-shaped payloads through a
+        // reverted Multicall3 leg. The generic proof validator binds these as
+        // zero-execution reverted points, so adapter validation only requires
+        // the calldata identity above and retains the raw revert payload.
       } else {
         const [amountOut] = decodeFunctionResult({
           abi: UNISWAP_V4_QUOTER_ABI,

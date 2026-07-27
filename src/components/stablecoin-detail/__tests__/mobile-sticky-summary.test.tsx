@@ -3,8 +3,9 @@
 import { act, cleanup, render } from "@testing-library/react";
 import { createRef, type ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { makeReportCard, makeStablecoin } from "@/test/fixtures/safety-scores";
-import type { ReportCard, StablecoinData, StablecoinMeta } from "@shared/types";
+import { makeStablecoin } from "@/test/fixtures/safety-scores";
+import { makeV9Card } from "@/test/fixtures/safety-score-v9";
+import type { StablecoinData, StablecoinMeta } from "@shared/types";
 
 const { isMobileStickySummaryEnabledMock } = vi.hoisted(() => ({
   isMobileStickySummaryEnabledMock: vi.fn(),
@@ -47,50 +48,10 @@ const COIN_DATA: StablecoinData = makeStablecoin({
   chains: ["ethereum"],
 });
 
-const REPORT_CARD: ReportCard = makeReportCard({
+const REPORT_CARD = makeV9Card({
   id: "usdc-circle",
-  name: "USD Coin",
-  symbol: "USDC",
-  overallGrade: "B+",
-  overallScore: 79,
-  baseScore: 79,
-  dimensions: {
-    pegStability: { grade: "A", score: 95, detail: "" },
-    liquidity: { grade: "B+", score: 82, detail: "" },
-    resilience: { grade: "B", score: 70, detail: "" },
-    decentralization: { grade: "C", score: 55, detail: "" },
-    dependencyRisk: { grade: "B", score: 73, detail: "" },
-  },
-  ratedDimensions: 5,
-  rawInputs: {
-    pegScore: 95,
-    activeDepeg: false,
-    activeDepegBps: null,
-    depegEventCount: 0,
-    lastEventAt: null,
-    liquidityScore: 82,
-    effectiveExitScore: 82,
-    redemptionBackstopScore: null,
-    redemptionRouteFamily: null,
-    redemptionModelConfidence: null,
-    redemptionUsedForLiquidity: false,
-    redemptionImmediateCapacityUsd: null,
-    redemptionImmediateCapacityRatio: null,
-    concentrationHhi: 0.2,
-    bluechipGrade: null,
-    canBeBlacklisted: true,
-    chainTier: "ethereum",
-    deploymentModel: "native-multichain",
-    collateralQuality: "rwa",
-    custodyModel: "institutional-regulated",
-    governanceTier: "centralized",
-    governanceQuality: "regulated-entity",
-    dependencies: [],
-    navToken: false,
-    collateralFromLive: false,
-    dependencyFromLive: false,
-  },
-  isDefunct: false,
+  grade: "B+",
+  score: 79,
 });
 
 type IOTrigger = (isIntersecting: boolean) => void;

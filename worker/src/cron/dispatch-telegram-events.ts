@@ -90,6 +90,10 @@ function eventPriceCurrency(stablecoinId: string, pegReference: number): string 
   return TRACKED_META_BY_ID.get(stablecoinId)?.flags.pegCurrency ?? "USD";
 }
 
+function activeDepegDisplayPrice(row: { start_price: number; peak_price?: number | null }): number {
+  return Number((row.peak_price ?? row.start_price) ?? 0);
+}
+
 export async function buildTelegramDispatchEvents(
   db: D1Database,
   sourceData: DispatchSourceData,
@@ -141,7 +145,7 @@ export async function buildTelegramDispatchEvents(
         direction: row.direction,
         previousDeviationBps: previous.deviationBps,
         currentDeviationBps,
-        price: Number(row.start_price ?? 0),
+        price: activeDepegDisplayPrice(row),
         pegReference: Number(row.peg_reference ?? 1),
         priceCurrency: eventPriceCurrency(row.stablecoin_id, Number(row.peg_reference ?? 1)),
       }];
@@ -205,7 +209,7 @@ export async function buildTelegramDispatchEvents(
       symbol: row.symbol,
       direction: row.direction,
       deviationBps: Math.abs(Number(row.peak_deviation_bps ?? 0)),
-      price: Number(row.start_price ?? 0),
+      price: activeDepegDisplayPrice(row),
       pegReference: Number(row.peg_reference ?? 1),
       priceCurrency: eventPriceCurrency(row.stablecoin_id, Number(row.peg_reference ?? 1)),
     }));

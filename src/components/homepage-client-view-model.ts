@@ -1,14 +1,14 @@
 import type {
   FilterTag,
   PegSummaryResponse,
-  ReportCardsResponse,
+  ReportCardsV9Response,
   StablecoinListResponse,
   StressSignalsAllResponse,
 } from "@shared/types";
 import { getDewsRiskLevel, isThreatBand } from "@shared/lib/classification";
 import { buildTrackedIdSet, filterStablecoins } from "@/components/stablecoin-table-logic";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
-import { buildReportCardMap } from "@/lib/stablecoin-lookups";
+import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 
 interface HomepageFiltersState {
   activeFilters: readonly FilterTag[];
@@ -19,7 +19,7 @@ export function buildHomepageCriticalViewModel(args: {
   stablecoinsData?: StablecoinListResponse;
   pegSummaryData?: PegSummaryResponse;
   filters: HomepageFiltersState;
-  reportCardMap?: ReturnType<typeof buildReportCardMap>;
+  reportCardMap?: Record<string, import("@/lib/safety-score-v9-consumers").V9SafetyTableRow>;
   eligibleIds?: ReadonlySet<string>;
 }) {
   const tableInputs = buildStablecoinTableInputs({
@@ -42,10 +42,13 @@ export function buildHomepageCriticalViewModel(args: {
 }
 
 export function buildHomepageOptionalViewModel(args: {
-  reportCardsData?: ReportCardsResponse;
+  reportCardsData?: ReportCardsV9Response;
   stressData?: StressSignalsAllResponse;
 }) {
-  const reportCardMap = buildReportCardMap(args.reportCardsData?.cards);
+  const projected = args.reportCardsData
+    ? buildV9SafetyTableMap(args.reportCardsData, args.reportCardsData.safetyScoreIdentity)
+    : null;
+  const reportCardMap = projected?.status === "available" ? projected.value : undefined;
 
   return {
     reportCardMap,

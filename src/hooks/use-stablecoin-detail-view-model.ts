@@ -5,7 +5,7 @@ import {
   useDexLiquidity,
   usePegSummary,
   useRedemptionBackstops,
-  useReportCards,
+  useReportCardsV9,
   useStressSignals,
   useYieldRankings,
 } from "@/hooks/api-hooks";
@@ -89,7 +89,7 @@ export function useStablecoinDetailViewModel({
     error: reportCardsError,
     refetch: refetchReportCards,
     meta: reportCardsMeta,
-  } = useReportCards();
+  } = useReportCardsV9();
   const {
     data: redemptionBackstopsData,
     dataUpdatedAt: rbUpdatedAt,

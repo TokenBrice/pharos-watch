@@ -1,16 +1,10 @@
 "use client";
 
-import { ContagionGraph } from "@/components/contagion-graph";
 import { formatCurrency } from "@shared/lib/format";
-import type { ReportCard, ReportCardsResponse } from "@shared/types";
 import type { DependencyHubsModel } from "./dependency-hubs-model";
 
 interface DependencyHeroProps {
   model: DependencyHubsModel;
-  cards: ReportCard[];
-  dependencyEdges?: ReportCardsResponse["dependencyGraph"]["edges"];
-  mcapMap: Map<string, number>;
-  logos?: Record<string, string>;
 }
 
 /**
@@ -24,7 +18,7 @@ interface DependencyHeroProps {
  * magnitude, so it takes the frost recipe. The graph card renders as a sibling —
  * cards are never nested (DESIGN.md §5).
  */
-export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos }: DependencyHeroProps) {
+export function DependencyHero({ model }: DependencyHeroProps) {
   const routedSupply = formatCurrency(model.uniqueDependentMcapUsd, 1);
 
   return (
@@ -59,8 +53,6 @@ export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos }
           </dl>
         </div>
       </section>
-
-      <ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} logos={logos} />
     </div>
   );
 }

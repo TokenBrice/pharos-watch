@@ -42,7 +42,7 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 }));
 
 vi.mock("@/hooks/api-hooks", () => ({
-  useReportCards: () => ({
+  useReportCardsV9: () => ({
     data: { cards: [] },
     isLoading: false,
   }),

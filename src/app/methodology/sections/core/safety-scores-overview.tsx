@@ -20,6 +20,12 @@ export function SafetyScoresOverview() {
         measured weakness or traceable policy-bounded uncertainty.
       </p>
       <p>
+        Governance access posture treats a reviewed global mint-domain contract as immutable when it has no privileged
+        capabilities, no applicable cap, no claim-impairment path, and access-only scope. A contract address alone
+        identifies protocol machinery rather than a concentrated administrator; deployment-scoped bridge controls
+        remain separate.
+      </p>
+      <p>
         Publication is fail-closed. If a score-bearing producer is stale, unavailable, or would create a new
         infrastructure-attributed downgrade or NR transition, Pharos retains the last accepted V9 ratings and exposes
         the publication as held. Active consumers do not recompute or fall back to V8.

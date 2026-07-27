@@ -87,7 +87,8 @@ describe("VERITAS-II finding a diagnostic redemption route completes unknown DEX
     expect(asset.exitRoutes[0]!.scoreEligible).toBe(false);
     expect(asset.exitStatus.observationState).toBe("bounded-unknown");
     expect(evaluated.exit.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
-    expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
+    expect(evaluated.exit.reasons).toContain("unsupported-same-notional-route");
+    expect(evaluated.exit.reasons).not.toContain("missing-same-notional-route");
     expect(evaluated.exit.reasons).not.toContain("no-viable-exit-path");
   });
 });

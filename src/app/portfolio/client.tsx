@@ -1,24 +1,29 @@
 "use client";
 
 import { useEffect, useMemo, useCallback, useState, useRef } from "react";
-import { useReportCards } from "@/hooks/api-hooks";
+import Link from "next/link";
+import { useReportCardsV9 } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { trackEvent } from "@/lib/analytics";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
+import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { encodePortfolioHoldings } from "@/lib/portfolio-codec";
 import { PortfolioEmptyState } from "@/components/portfolio-empty-state";
 import type { PortfolioPreset } from "@/components/portfolio-empty-state";
 import {
-  PortfolioGradesSection,
   PortfolioHeroStrip,
   PortfolioHoldingsEditor,
   PortfolioLoadingState,
-  PortfolioSummaryCard,
 } from "./components";
-import { buildHeldCardIds, buildHeldCards, buildPortfolioRadarCard } from "./model";
+import { buildHeldCardIds } from "./model";
 import { PORTFOLIO_PRESETS } from "./presets";
+import { buildV9PortfolioProjection } from "@/lib/safety-score-v9-consumers";
+import { Card, CardContent } from "@/components/ui/card";
+import { SafetyGradeBadge } from "@/components/safety-grade-badge";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { buildStablecoinUrl } from "@/lib/urls";
 
 // ---------------------------------------------------------------------------
 // PortfolioClient
@@ -32,19 +37,16 @@ export function PortfolioClient() {
     error: reportCardsError,
     refetch: refetchReportCards,
     meta: reportCardsMeta,
-  } = useReportCards();
+  } = useReportCardsV9();
   const { data: logos } = useLogos();
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
-  const [showUpstreamDetail, setShowUpstreamDetail] = useState(false);
 
   // URL sync: keep query string in sync with portfolio holdings. The router-
   // aware initial `p` param seeds the portfolio so a shared/soft-navigated URL
   // restores state without reading window.location inside the hook.
   const { getParam, setParam } = useUrlFilters();
-  const portfolio = usePortfolio(reportData?.cards, getParam("p"));
-
-  const exposureToShow = showUpstreamDetail ? portfolio.upstreamExposure : portfolio.upstreamExposureGrouped;
+  const portfolio = usePortfolio(undefined, getParam("p"));
 
   // Clean up toast timer on unmount
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
@@ -56,22 +58,17 @@ export function PortfolioClient() {
     setParam("p", encoded);
   }, [portfolio.holdings, portfolio.initialized, setParam]);
 
-  const portfolioRadarCard = useMemo(
-    () =>
-      buildPortfolioRadarCard({
-        holdingCount: portfolio.holdings.length,
-        portfolioGrade: portfolio.portfolioGrade,
-        portfolioScore: portfolio.portfolioScore,
-        dimensionScores: portfolio.dimensionScores,
-      }),
-    [portfolio.holdings.length, portfolio.portfolioGrade, portfolio.portfolioScore, portfolio.dimensionScores],
-  );
-
   const heldCardIds = useMemo(() => buildHeldCardIds(portfolio.holdings), [portfolio.holdings]);
 
   const heldCards = useMemo(
-    () => buildHeldCards(reportData?.cards, heldCardIds),
+    () => (reportData?.cards ?? []).filter((card) => heldCardIds.has(card.id)),
     [reportData?.cards, heldCardIds],
+  );
+  const v9Projection = useMemo(
+    () => reportData
+      ? buildV9PortfolioProjection(reportData, reportData.safetyScoreIdentity, portfolio.holdings)
+      : null,
+    [portfolio.holdings, reportData],
   );
 
   const handleShare = useCallback(async () => {
@@ -126,6 +123,7 @@ export function PortfolioClient() {
           },
         ]}
       />
+      <SafetyScoreV9StatusNotice response={reportData} />
       <PortfolioHeroStrip holdingCount={portfolio.holdings.length} totalUsd={portfolio.totalUsd} />
       <PortfolioHoldingsEditor
         holdings={portfolio.holdings}
@@ -151,19 +149,55 @@ export function PortfolioClient() {
         <PortfolioEmptyState presets={PORTFOLIO_PRESETS} logos={logos} onApplyPreset={handleApplyPreset} />
       )}
 
-      {portfolio.holdings.length > 0 && reportData?.cards && (
-        <PortfolioSummaryCard
-          portfolioGrade={portfolio.portfolioGrade}
-          portfolioScore={portfolio.portfolioScore}
-          radarCard={portfolioRadarCard}
-          exposureToShow={exposureToShow}
-          showUpstreamDetail={showUpstreamDetail}
-          onShowUpstreamDetailChange={setShowUpstreamDetail}
-        />
+      {portfolio.holdings.length > 0 && v9Projection?.status === "available" && (
+        <Card className="pharos-card-shell">
+          <CardContent className="space-y-5 pt-6">
+            <div>
+              <p className="pharos-kicker">Weighted V9 safety aggregate</p>
+              <p className="mt-1 pharos-numeric text-3xl font-semibold text-foreground">
+                {v9Projection.value.score}<span className="text-sm text-muted-foreground">/100</span>
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Portfolio aggregate only; this is not an asset safety grade.
+              </p>
+            </div>
+            <dl className="grid gap-3 sm:grid-cols-3">
+              {Object.entries(v9Projection.value.pillars).map(([pillar, score]) => (
+                <div key={pillar} className="rounded-lg border border-border/60 px-3 py-3">
+                  <dt className="pharos-kicker">{pillar === "control" ? "Economic control" : pillar}</dt>
+                  <dd className="mt-1 pharos-numeric text-lg font-semibold">{score}/100</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="text-xs text-muted-foreground">
+              {v9Projection.value.dependencyExposure.length} modeled upstream exposure{" "}
+              {v9Projection.value.dependencyExposure.length === 1 ? "route" : "routes"} across these holdings.
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {portfolio.holdings.length > 0 && (
-        <PortfolioGradesSection heldCards={heldCards} logos={logos} />
+        <>
+          <h2 className="pharos-kicker">Holdings Safety Grades</h2>
+          {v9Projection?.status === "unavailable" ? (
+            <p className="text-sm text-muted-foreground" role="alert">
+              V9 portfolio safety is unavailable ({v9Projection.reason}).
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {heldCards.map((card) => {
+                const meta = CLIENT_TRACKED_META_BY_ID.get(card.id);
+                return (
+                  <Link key={card.id} href={buildStablecoinUrl(card.id)} className="pharos-card-shell p-3">
+                    <p className="truncate text-sm font-medium">{meta?.symbol ?? card.id}</p>
+                    <SafetyGradeBadge grade={card.grade} score={card.score} showScore size="sm" className="mt-2" />
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

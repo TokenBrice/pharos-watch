@@ -190,7 +190,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     db
       .prepare(
         `SELECT /* pharos:telegram-dispatch:active-depegs */
-           id AS event_id, stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peg_reference
+           id AS event_id, stablecoin_id, symbol, direction, peak_deviation_bps, start_price, peak_price, peg_reference
          FROM depeg_events WHERE ended_at IS NULL`,
       )
       .all<ActiveDepegRowWithEventId>()

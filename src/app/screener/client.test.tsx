@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   useHydrated: vi.fn(),
   useLogos: vi.fn(),
   usePegSummary: vi.fn(),
-  useReportCards: vi.fn(),
+  useReportCardsV9: vi.fn(),
   useSort: vi.fn(),
   useStablecoins: vi.fn(),
   useStressSignals: vi.fn(),
@@ -55,7 +55,7 @@ vi.mock("@/hooks/use-logos", () => ({
 vi.mock("@/hooks/api-hooks", () => ({
   useDexLiquidity: mocks.useDexLiquidity,
   usePegSummary: mocks.usePegSummary,
-  useReportCards: mocks.useReportCards,
+  useReportCardsV9: mocks.useReportCardsV9,
   useStressSignals: mocks.useStressSignals,
 }));
 
@@ -105,7 +105,7 @@ function setDefaultMocks() {
     meta: null,
     refetch,
   });
-  mocks.useReportCards.mockReturnValue({
+  mocks.useReportCardsV9.mockReturnValue({
     data: { cards: [] },
     isLoading: false,
     error: null,

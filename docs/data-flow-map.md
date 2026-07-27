@@ -81,8 +81,9 @@ case-sensitive through route selection. Unreviewed measured deployment cohorts
 remain score-ineligible while their activation evidence is pending. SunSwap V2
 returned to shadow after its first two active DEX-scoring invocations exceeded
 the Worker memory limit. The phase-split D1 handoff now removes source/provider
-graphs from the scoring invocation; valid profiles retain `activation-pending`
-until separate production acceptance supports reactivation. Missing, failed, stale, multi-hop-only, or
+graphs from the scoring invocation, and the reviewed Tron SunSwap profile was
+reactivated only after current complete 21/21 shadow generations plus healthy
+`16,46` consumers. Missing, failed, stale, multi-hop-only, or
 identity-mismatched profiles remain target-level fail-closed. SunSwap census
 rows are excluded from liquidity scoring and price consensus; its latest-only
 TronGrid state reads are accepted only inside a bounded before/after block

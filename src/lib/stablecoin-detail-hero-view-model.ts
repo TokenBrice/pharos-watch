@@ -1,6 +1,6 @@
 import { CASE_STUDY_OUTCOME_CHIPS, CASE_STUDY_OUTCOME_LABELS } from "@/app/learn/case-studies/case-study-outcomes";
 import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/app/learn/case-studies/content/client-index";
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { getV9ResolvedBlacklistStatus } from "@/lib/safety-score-v9-consumers";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
@@ -32,7 +32,7 @@ import type {
   MechanismArchetype,
   PegSummaryCoin,
   RedemptionBackstopEntry,
-  ReportCard,
+  SafetyScoreV9CurrentCard,
   StablecoinData,
   StablecoinMeta,
   StressSignalEntry,
@@ -69,7 +69,7 @@ export interface HeroCardViewModel {
   coin: StablecoinMeta;
   coinData: StablecoinData;
   logoSrc?: string;
-  reportCard: ReportCard | null;
+  reportCard: SafetyScoreV9CurrentCard | null;
   verdict: StablecoinVerdict;
   variantParent?: StablecoinClientMeta | null;
   variantKind?: VariantKind | null;
@@ -122,7 +122,7 @@ export interface BuildHeroCardViewModelParams {
   liquidityData: DexLiquidityData | undefined;
   yieldRanking: YieldRanking | null;
   stressSignal: StressSignalEntry | null;
-  reportCard: ReportCard | null;
+  reportCard: SafetyScoreV9CurrentCard | null;
   verdict: StablecoinVerdict;
   variantParent?: StablecoinClientMeta | null;
   variantKind?: VariantKind | null;
@@ -198,7 +198,7 @@ function buildTertiaryMetrics(
 }
 
 function buildSignalRailItems(
-  reportCard: ReportCard | null,
+  reportCard: SafetyScoreV9CurrentCard | null,
   isNavToken: boolean,
   effectivePegScore: number | null,
   liquidityData: DexLiquidityData | undefined,
@@ -208,10 +208,10 @@ function buildSignalRailItems(
     {
       key: "safety",
       label: "Safety",
-      primary: reportCard?.overallGrade ?? "—",
-      secondary: reportCard?.overallScore != null ? `${reportCard.overallScore}/100` : null,
+      primary: reportCard?.grade ?? "—",
+      secondary: reportCard?.score != null ? `${reportCard.score}/100` : null,
       href: "#report-card",
-      colorClass: reportCard?.overallGrade ? REPORT_CARD_GRADE_COLORS[reportCard.overallGrade] : HERO_MUTED_CLASS,
+      colorClass: reportCard?.grade ? REPORT_CARD_GRADE_COLORS[reportCard.grade] : HERO_MUTED_CLASS,
     },
     {
       key: "peg",
@@ -268,13 +268,13 @@ export function buildStablecoinDetailHeroViewModel({
   redemptionBackstop,
 }: BuildHeroCardViewModelParams): HeroCardViewModel {
   const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
-  const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCard);
+  const blacklistStatus = getV9ResolvedBlacklistStatus(reportCard);
   const primaryComparisonPage = getPrimaryStaticComparisonLinkForCoin(coin.id);
   const effectivePegScore = resolveEffectivePegScore(isNavToken, pegScoreResult);
   const pegScoreDisplay = buildPegScoreDisplay(
     isNavToken,
     pegScoreResult,
-    reportCard?.rawInputs.depegEventCount ?? null,
+    null,
   );
   const liquidityDisplay = buildLiquidityDisplay(liquidityData);
   const dewsDisplay = buildDewsDisplay(stressSignal);

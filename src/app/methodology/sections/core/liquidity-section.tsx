@@ -94,13 +94,14 @@ export function LiquidityMethodologySection() {
             scoring. Optimism Uniswap V3 and Solana CLMM measurements remain shadow-only.
           </p>
           <p>
-            Reviewed SunSwap V2 routes on Tron publish shadow exact-execution profiles after proving the canonical
+            Reviewed SunSwap V2 routes on Tron publish active exact-execution profiles after proving the canonical
             factory and pair runtimes, exact pair binding and reserves, one direct SUN Smart Router path, the reviewed
-            0.3% constant-product output, and a bounded latest-state block bracket. Score eligibility is paused after
-            the first two active DEX-scoring invocations exceeded the Worker memory limit; valid profiles retain the
-            activation-pending gate while the consumer is remediated. Missing, stale, failed, multi-hop-only, or
-            identity-mismatched evidence remains capability-gated per target. The SunSwap census still does not enter
-            aggregate liquidity, price consensus, direct-source precedence, visible pool selection, or V8 scoring.
+            0.3% constant-product output, and a bounded latest-state block bracket. Score eligibility was reactivated
+            only after complete current shadow generations and healthy split scoring consumers; the first active
+            post-deploy consumers remain rollback evidence for memory, stale-heartbeat, completeness, or proof drift.
+            Missing, stale, failed, multi-hop-only, or identity-mismatched evidence remains capability-gated per target.
+            The SunSwap census still does not enter aggregate liquidity, price consensus, direct-source precedence,
+            visible pool selection, or V8 scoring.
           </p>
           <p>
             Repeated sightings of the same physical pool across direct API, staged, and fallback sources are collapsed

@@ -1,3 +1,8 @@
+"use client";
+
+import { PolarAngleAxis, PolarGrid, Radar, RadarChart as RechartsRadarChart } from "recharts";
+import { ChartSkeleton } from "@/components/chart-skeleton";
+import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import type { SafetyScorePublicationIdentity, SafetyScoreV9Card } from "@shared/types";
 import { median } from "@shared/lib/stats";
 import {
@@ -75,4 +80,63 @@ export function buildV9RadarDataset(
       cohortMedians: completeMedians,
     },
   };
+}
+
+export function CompareRadarV9({
+  series,
+  cohortSeries = series,
+  size = 300,
+}: {
+  series: readonly V9RadarSeries[];
+  cohortSeries?: readonly V9RadarSeries[];
+  size?: number;
+}) {
+  const dataset = buildV9RadarDataset(series, cohortSeries);
+  const { ref, ready, width, height } = useChartContainerReady<HTMLDivElement>();
+
+  if (dataset.status === "unavailable") {
+    return (
+      <div className="flex h-full min-h-64 items-center justify-center text-sm text-muted-foreground" role="alert">
+        V9 safety comparison unavailable.
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={ref}
+      className="w-full"
+      style={{ height: size }}
+      role="figure"
+      aria-label="V9 safety score pillar comparison"
+    >
+      {ready ? (
+        <RechartsRadarChart width={width} height={height} data={dataset.value.rows} cx="50%" cy="50%" outerRadius="75%">
+          <PolarGrid stroke="currentColor" className="text-border" />
+          <PolarAngleAxis
+            dataKey="pillar"
+            tick={{ fontSize: 11, fill: "currentColor" }}
+            className="text-muted-foreground"
+          />
+          {dataset.value.cohortMedians ? (
+            <Radar
+              dataKey="__cohortMedian"
+              stroke="currentColor"
+              strokeOpacity={0.45}
+              strokeDasharray="4 3"
+              strokeWidth={1}
+              fill="none"
+              isAnimationActive={false}
+              className="text-muted-foreground"
+            />
+          ) : null}
+          {series.map(({ card, color }) => (
+            <Radar key={card.id} dataKey={card.id} stroke={color} fill={color} fillOpacity={0.15} strokeWidth={2} />
+          ))}
+        </RechartsRadarChart>
+      ) : (
+        <ChartSkeleton className="h-full w-full" />
+      )}
+    </div>
+  );
 }

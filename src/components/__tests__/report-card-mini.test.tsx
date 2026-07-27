@@ -68,12 +68,10 @@ describe("ReportCardMini", () => {
     expect(screen.getByText("Defunct")).toBeTruthy();
   });
 
-  it("hides the inline methodology version label when configured for tooltip-only badges", () => {
-    const versionLabel = METHODOLOGY_CONTEXT.safetyScore.versionLabel as string;
-    expect(versionLabel).toBeTruthy();
-
+  it("omits a numeric version label for the active identity-based Safety Score", () => {
     render(<ReportCardMini card={makeCard()} gradeVersionVariant="tooltip-only" />);
 
-    expect(screen.queryByText(versionLabel)).toBeNull();
+    expect(METHODOLOGY_CONTEXT.safetyScore.versionLabel).toBeUndefined();
+    expect(document.querySelector("[data-score-badge-version]")).toBeNull();
   });
 });

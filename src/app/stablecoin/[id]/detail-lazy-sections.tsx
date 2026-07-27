@@ -27,8 +27,8 @@ export const DEWSDetail = dynamic(
   { loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" /> },
 );
 
-export const ReportCardDetail = dynamic(
-  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.ReportCardDetail),
+export const StablecoinSafetyScoreV9Card = dynamic(
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.StablecoinSafetyScoreV9Card),
   { loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" /> },
 );
 

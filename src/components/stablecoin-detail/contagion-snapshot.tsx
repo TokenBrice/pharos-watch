@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import dynamic from "next/dynamic";
-import { useReportCards } from "@/hooks/api-hooks";
-import { useStablecoins } from "@/hooks/use-stablecoins";
-import { useLogos } from "@/hooks/use-logos";
-import { getCirculatingRaw } from "@shared/lib/supply";
+import Link from "next/link";
+import { useReportCardsV9 } from "@/hooks/api-hooks";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { CollateralUsageSection } from "./collateral-usage-section";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
@@ -15,7 +14,6 @@ import {
   DETAIL_MODULE_TITLE_CLASS,
 } from "@/components/stablecoin-detail/section-title-class";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
-import type { ReportCard, ReportCardsResponse, StablecoinData } from "@shared/types";
 import { QueryStateNotice } from "@/components/query-state-notice";
 
 interface ContagionSnapshotProps {
@@ -25,62 +23,24 @@ interface ContagionSnapshotProps {
   collateralUsageEntries?: readonly CollateralUsageEntry[];
 }
 
-const DETAIL_NODE_LIMIT = 500;
-const EMPTY_CARDS: ReportCard[] = [];
-const EMPTY_DEPENDENCY_EDGES: ReportCardsResponse["dependencyGraph"]["edges"] = [];
-const EMPTY_PEGGED_ASSETS: StablecoinData[] = [];
-const EMPTY_MCAP_MAP = new Map<string, number>();
-
-const ContagionGraph = dynamic(() => import("@/components/contagion-graph").then((mod) => mod.ContagionGraph), {
-  ssr: false,
-  loading: () => (
-    <div className="flex min-h-[22rem] items-center justify-center rounded-xl border border-border/60 bg-card/40 text-sm text-muted-foreground">
-      Loading dependency graph...
-    </div>
-  ),
-});
-
 export function ContagionSnapshot({
   stablecoinId,
   variantRelationshipCard,
   hasCollateralUsage,
   collateralUsageEntries = [],
 }: ContagionSnapshotProps) {
-  const reportCardsQuery = useReportCards();
-  const stablecoinsQuery = useStablecoins();
+  const reportCardsQuery = useReportCardsV9();
   const { data: rc } = reportCardsQuery;
-  const { data: list } = stablecoinsQuery;
-  const { data: logos } = useLogos();
   const hasVariantCard = Boolean(variantRelationshipCard);
   const hasRightColumn = hasVariantCard || Boolean(hasCollateralUsage);
-  const cards = rc?.cards ?? EMPTY_CARDS;
-  const dependencyEdges = rc?.dependencyGraph?.edges ?? EMPTY_DEPENDENCY_EDGES;
-  const peggedAssets = list?.peggedAssets ?? EMPTY_PEGGED_ASSETS;
-  const hasStablecoinsPayload = Boolean(list?.peggedAssets);
-  const focus = useMemo(() => cards.find((c) => c.id === stablecoinId), [cards, stablecoinId]);
-  const edges = focus ? dependencyEdges : EMPTY_DEPENDENCY_EDGES;
-  const liveCardIds = useMemo(() => new Set(cards.filter((c) => !c.isDefunct).map((c) => c.id)), [cards]);
-  const hasContagion = useMemo(
-    () =>
-      Boolean(
-        focus &&
-        hasStablecoinsPayload &&
-        edges.some(
-          (e) => liveCardIds.has(e.from) && liveCardIds.has(e.to) && (e.from === stablecoinId || e.to === stablecoinId),
-        ),
-      ),
-    [edges, focus, hasStablecoinsPayload, liveCardIds, stablecoinId],
+  const edges = useMemo(
+    () => (rc?.dependencyGraph.edges ?? []).filter((edge) => edge.from === stablecoinId || edge.to === stablecoinId),
+    [rc?.dependencyGraph.edges, stablecoinId],
   );
-  const mcapMap = useMemo(() => {
-    if (!hasContagion) return EMPTY_MCAP_MAP;
-    return new Map(peggedAssets.map((coin) => [coin.id, getCirculatingRaw(coin)]));
-  }, [hasContagion, peggedAssets]);
-  const sourceError = reportCardsQuery.error ?? stablecoinsQuery.error;
-  const hasSourceData = rc !== undefined && list !== undefined;
-  const sourceUpdatedTimes = [reportCardsQuery.dataUpdatedAt, stablecoinsQuery.dataUpdatedAt].filter(
-    (value) => value > 0,
-  );
-  const sourceDataUpdatedAt = sourceUpdatedTimes.length > 0 ? Math.min(...sourceUpdatedTimes) : 0;
+  const hasContagion = edges.length > 0;
+  const sourceError = reportCardsQuery.error;
+  const hasSourceData = rc !== undefined;
+  const sourceDataUpdatedAt = reportCardsQuery.dataUpdatedAt;
 
   if (!hasContagion && !hasRightColumn && !sourceError) {
     return null;
@@ -113,21 +73,32 @@ export function ContagionSnapshot({
             dataUpdatedAt={sourceDataUpdatedAt}
             onRetry={() => {
               void reportCardsQuery.refetch();
-              void stablecoinsQuery.refetch();
             }}
           />
         ) : null}
         <div className={layoutClass}>
           {hasContagion ? (
-            <ContagionGraph
-              cards={cards}
-              dependencyEdges={edges}
-              mcapMap={mcapMap}
-              logos={logos}
-              focusCoinId={stablecoinId}
-              minimalChrome
-              maxNodes={DETAIL_NODE_LIMIT}
-            />
+            <ul className="divide-y divide-border/40 border-y border-border/40">
+              {edges.map((edge) => {
+                const otherId = edge.from === stablecoinId ? edge.to : edge.from;
+                const meta = CLIENT_TRACKED_META_BY_ID.get(otherId);
+                return (
+                  <li key={`${edge.from}-${edge.to}-${edge.materiality}`} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <Link
+                      href={buildStablecoinUrl(otherId)}
+                      className="pharos-focus-ring rounded-sm text-sm font-medium text-frost-blue hover:underline"
+                    >
+                      {meta?.symbol ?? otherId}
+                    </Link>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {edge.from === stablecoinId ? "depends on this asset" : "upstream dependency"} ·{" "}
+                      {edge.materiality.replaceAll("-", " ")}
+                      {edge.weight === null ? "" : ` · ${(edge.weight * 100).toFixed(0)}%`}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           ) : null}
           {hasRightColumn ? rightColumn : null}
         </div>

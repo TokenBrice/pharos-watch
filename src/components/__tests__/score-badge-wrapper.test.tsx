@@ -11,17 +11,17 @@ afterEach(cleanup);
 describe("ScoreBadgeWrapper", () => {
   it("renders the wrapped badge with an inline version suffix in suffix mode", () => {
     render(
-      <ScoreBadgeWrapper topic="safetyScore">
+      <ScoreBadgeWrapper topic="liquidityScore">
         <span data-testid="badge-content">B+</span>
       </ScoreBadgeWrapper>,
     );
 
-    const versionLabel = METHODOLOGY_CONTEXT.safetyScore.versionLabel;
+    const versionLabel = METHODOLOGY_CONTEXT.liquidityScore.versionLabel;
     expect(versionLabel).toBeTruthy();
 
     // Badge content reaches the DOM (rendered through Sheet + Tooltip triggers).
     expect(screen.getAllByTestId("badge-content").length).toBeGreaterThan(0);
-    const trigger = screen.getAllByRole("button", { name: /explain safety score/i })[0];
+    const trigger = screen.getAllByRole("button", { name: /explain liquidity score/i })[0];
     expect(trigger).toBeTruthy();
     expect(trigger.className).toContain("min-h-11");
     expect(trigger.className).toContain("min-w-11");

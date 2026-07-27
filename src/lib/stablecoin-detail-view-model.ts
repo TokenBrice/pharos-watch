@@ -16,14 +16,12 @@ import {
 } from "@/lib/stablecoin-detail-query-view-model";
 import type {
   BuildStablecoinDetailViewModelParams,
-  MintAuthorityDecentralizationDragViewModel,
   StablecoinDetailViewModel,
 } from "@/lib/stablecoin-detail-view-model-types";
 import { isThreatBand, resolveMechanismArchetype } from "@shared/lib/classification";
 import { getReserves } from "@shared/lib/reserve-templates";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { deriveStablecoinVerdict } from "@shared/lib/stablecoin-verdict";
-import type { ReportCard } from "@shared/types";
 
 export {
   buildStablecoinDetailHeroViewModel,
@@ -55,17 +53,6 @@ export type {
   StablecoinDetailViewModelQueryInputs,
   StablecoinDetailViewModelSupplementalInputs,
 } from "@/lib/stablecoin-detail-view-model-types";
-
-function resolveMintAuthorityDecentralizationDrag(
-  reportCard: ReportCard | null | undefined,
-): MintAuthorityDecentralizationDragViewModel | null {
-  const item = reportCard?.dimensions?.decentralization?.detailItems?.find(
-    (candidate) => candidate.label === "Mint authority",
-  );
-  if (!item?.detail) return null;
-  const drag = Number.parseInt(item.detail, 10);
-  return Number.isFinite(drag) && drag < 0 ? { value: item.detail, detail: item.value } : null;
-}
 
 export function buildStablecoinDetailViewModel({
   core: { id, coin, summary, logoSrc, handleRetryAll },
@@ -106,7 +93,7 @@ export function buildStablecoinDetailViewModel({
     : null;
   const verdict = deriveStablecoinVerdict({
     status: coin.status,
-    reportCardGrade: reportCard?.overallGrade ?? null,
+    reportCardGrade: reportCard?.grade ?? null,
     pegScore: isNavToken ? null : pegPrice.pegScoreResult?.pegScore ?? null,
     dewsBand: stressBand,
     mechanismArchetype: resolveMechanismArchetype(coin, CLIENT_TRACKED_META_BY_ID) ?? undefined,
@@ -124,6 +111,7 @@ export function buildStablecoinDetailViewModel({
     summary,
     logoSrc,
     reportCard,
+    reportCardsResponse: reportCards.data,
     reportCardUpdatedAt: resolveReportCardSnapshotUpdatedAtMs(reportCards),
     variantParent,
     variantSiblings: variantRelationship?.siblings ?? [],
@@ -157,6 +145,6 @@ export function buildStablecoinDetailViewModel({
     featureStates,
     verdict,
     mintAuthority,
-    mintAuthorityDecentralizationDrag: resolveMintAuthorityDecentralizationDrag(reportCard),
+    mintAuthorityDecentralizationDrag: null,
   };
 }

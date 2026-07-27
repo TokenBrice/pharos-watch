@@ -5,7 +5,7 @@ import {
   useDexLiquidity,
   usePegSummary,
   useRedemptionBackstops,
-  useReportCards,
+  useReportCardsV9,
   useYieldRankings,
 } from "@/hooks/api-hooks";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
@@ -41,7 +41,7 @@ export function useCoverageMatrixModel() {
   const redemptionQuery = useRedemptionBackstops();
   const yieldQuery = useYieldRankings();
   const flowQuery = useMintBurnFlows();
-  const reportCardsQuery = useReportCards();
+  const reportCardsQuery = useReportCardsV9();
 
   return useMemo(() => {
     const resources = {

@@ -78,8 +78,8 @@ describe("useCompareShareActions", () => {
         logos: {},
         pegRates: {},
         radarCards: [],
-        dimensionOrder: [],
-        dimensionLabels: {},
+        axisOrder: [],
+        axisLabels: {},
       }),
     );
 
@@ -107,8 +107,8 @@ describe("useCompareShareActions", () => {
         logos: {},
         pegRates: {},
         radarCards: [],
-        dimensionOrder: [],
-        dimensionLabels: {},
+        axisOrder: [],
+        axisLabels: {},
       }),
     );
 

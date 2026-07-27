@@ -1,19 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useReportCards } from "@/hooks/api-hooks";
+import { useReportCardsV9 } from "@/hooks/api-hooks";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { buildBlacklistStatusBuckets, type BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
-import { buildReportCardMap } from "@/lib/stablecoin-lookups";
+import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import type {
   BlacklistStablecoin,
   BlacklistEventType,
   BlacklistSortDirection,
   BlacklistSortKey,
-  ReportCard,
   StablecoinData,
 } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
@@ -88,12 +87,16 @@ export function useFreezeWatchPageController() {
     meta: summaryMeta,
   } = useBlacklistSummary();
   const { data: stablecoinData, isLoading: supportStablecoinsLoading } = useStablecoins();
-  const { data: reportCardsData, isLoading: supportReportCardsLoading } = useReportCards();
+  const { data: reportCardsData, isLoading: supportReportCardsLoading } = useReportCardsV9();
   const { searchParams, replaceParams } = useUrlFilters();
   const parsedFilters = useMemo(() => parseFreezeWatchPageFilters(searchParams.toString()), [searchParams]);
   const reportCardMap = useMemo(
-    () => buildReportCardMap(reportCardsData?.cards) as Record<string, ReportCard> | undefined,
-    [reportCardsData?.cards],
+    () => {
+      if (!reportCardsData) return undefined;
+      const projected = buildV9SafetyTableMap(reportCardsData, reportCardsData.safetyScoreIdentity);
+      return projected.status === "available" ? projected.value : undefined;
+    },
+    [reportCardsData],
   );
   const blacklistStatusBuckets = useMemo<BlacklistStatusBucket[] | null>(
     () => (stablecoinData ? buildBlacklistStatusBuckets(stablecoinData.peggedAssets, reportCardMap) : null),
@@ -276,6 +279,7 @@ export function useFreezeWatchPageController() {
     stablecoins: stablecoinData?.peggedAssets as StablecoinData[] | undefined,
     stablecoinFxFallbackRates: stablecoinData?.fxFallbackRates,
     reportCardMap,
+    reportCardsResponse: reportCardsData,
     blacklistStatusBuckets,
     supportDataLoading: supportStablecoinsLoading || supportReportCardsLoading,
     refetchSummary,

@@ -25,6 +25,7 @@ const TRON_ADMISSION_SOURCE_KEY = "measured-execution:tron-admission";
 export const TRON_MEASURED_TARGETS_PER_RUN = 21;
 export const TRON_MEASURED_RUNTIME_BUDGET_MS = 7 * 60 * 1_000;
 export const TRON_MEASURED_REQUEST_HEADROOM_MS = 20_000;
+const TRON_MEASURED_EXECUTION_ACTIVATION = "active" as const;
 
 interface TronQuoteState {
   target: TronMeasuredExecutionTarget;
@@ -104,7 +105,10 @@ export async function syncTronDexMeasuredExecution(
     return {
       status: "skipped_neutral",
       itemCount: 0,
-      metadata: JSON.stringify({ reason: "tron-target-generation-missing", activation: "shadow" }),
+      metadata: JSON.stringify({
+        reason: "tron-target-generation-missing",
+        activation: TRON_MEASURED_EXECUTION_ACTIVATION,
+      }),
       productivity: { productive: false, reason: "tron-target-generation-missing" },
     };
   }
@@ -145,10 +149,13 @@ export async function syncTronDexMeasuredExecution(
     completed++;
     await reportProgress?.({
       stage: "tron-exact-quotes",
-      message: "Capturing shadow SunSwap V2 exact execution quotes",
+      message: "Capturing active SunSwap V2 exact execution quotes",
       itemsDone: completed,
       itemsTotal: admitted.size,
-      metadata: { activation: "shadow", targetGenerationId: targetGeneration.generationId },
+      metadata: {
+        activation: TRON_MEASURED_EXECUTION_ACTIVATION,
+        targetGenerationId: targetGeneration.generationId,
+      },
     });
     if (rateLimitStopped) break;
   }
@@ -211,7 +218,7 @@ export async function syncTronDexMeasuredExecution(
       state.failureReason !== "rate-limit-deferred",
   ).length;
   const metadata = {
-    activation: "shadow",
+    activation: TRON_MEASURED_EXECUTION_ACTIVATION,
     targetGenerationId: targetGeneration.generationId,
     quoteGenerationId: publication.generationId,
     targetCount: targetGeneration.targets.length,
