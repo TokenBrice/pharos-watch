@@ -64,7 +64,7 @@ The single lightweight declaration in `shared/types/live-reserve-adapter-declara
 
 `single-asset` now supports optional `reserveProbe`, `supplyProbe`, and `timestampProbe` paths so weak single-bucket feeds can persist honest reserve/supply ratio telemetry when the upstream exposes it. The family remains `weak-live-probe` unless the source is strong enough to justify promotion into a more independent adapter class.
 
-`attestation-pdf-index` is a validated-static adapter for issuer pages that expose dated PDF attestations. It selects the newest dated PDF link, including Webflow-style gated PDF attributes, validates source freshness from the report date, and emits configured static reserve slices until full PDF text extraction is implemented.
+`attestation-pdf-index` is a validated-static adapter for issuer pages that expose dated PDF attestations. It selects the newest dated attestation, audit, or report PDF link, including Webflow-style gated PDF attributes, ignores unrelated dated documents such as whitepapers, validates source freshness from the report date, and emits configured static reserve slices until full PDF text extraction is implemented.
 The adapter normally fetches issuer index pages with browser-style `Origin`, `Referer`, and `Accept-Language` headers because some WordPress/hosting stacks rate-limit generic Worker HTML requests while still serving normal browser navigations. Hostinger/WordPress pages that reject browser-origin hints, currently Schuman's reserve-audit page, use the neutral Pharos fetch identity instead.
 USDv reads this adapter from Solomon Labs' public GitHub attestation directory because the legacy GitBook route now serves the issuer's client-rendered documentation shell instead of the dated report index.
 

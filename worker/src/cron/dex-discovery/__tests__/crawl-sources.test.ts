@@ -48,6 +48,10 @@ vi.mock("../../../lib/circuit-breaker", () => ({
 }));
 
 import { crawlCoin } from "../crawl-sources";
+import {
+  createDexScreenerDiscoveryRunState,
+  finalizeDexScreenerDiscoveryRun,
+} from "../crawl-dexscreener-pools";
 import { knownPoolIdKey } from "../staged-pool";
 import { crawlTokenPools } from "../../dex-liquidity/crawl-helpers";
 import { dsRateLimit, fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
@@ -219,6 +223,71 @@ describe("crawlCoin DexScreener hardening", () => {
 
     expect(events).toEqual(["pace", "fetch", "pace", "fetch"]);
     expect(dsRateLimit).toHaveBeenCalledTimes(2);
+  });
+
+  it("latches a hard refusal across coin crawls and records one run-level failure", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
+      ok: false,
+      pairs: [],
+      status: 429,
+      contentType: "text/plain",
+      error: "HTTP 429; body starts with: error code: 1015",
+      hardRefusal: true,
+    });
+    const db = createMockDb();
+    const runState = createDexScreenerDiscoveryRunState();
+
+    await crawlCoin(
+      db,
+      "first-test-coin",
+      [{ chain: "ethereum", address: "0xabc", decimals: 18 }],
+      null,
+      new Set(),
+      undefined,
+      undefined,
+      undefined,
+      runState,
+    );
+    await crawlCoin(
+      db,
+      "second-test-coin",
+      [{ chain: "bsc", address: "0xdef", decimals: 18 }],
+      null,
+      new Set(),
+      undefined,
+      undefined,
+      undefined,
+      runState,
+    );
+    await finalizeDexScreenerDiscoveryRun(db, runState);
+
+    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(1);
+    expect(shouldAttemptFetch).toHaveBeenCalledTimes(1);
+    expect(recordOutcome).toHaveBeenCalledTimes(1);
+    expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, false);
+    expect(runState).toMatchObject({
+      attemptedRequests: 1,
+      successfulRequests: 0,
+      hardRefusal: {
+        status: 429,
+        contentType: "text/plain",
+        error: expect.stringContaining("1015"),
+      },
+    });
+    const hardRefusalLog = warnSpy.mock.calls.find(
+      ([message]) =>
+        typeof message === "string" &&
+        message.includes('"event":"dex_discovery.dexscreener_hard_refusal"'),
+    )?.[0];
+    expect(JSON.parse(String(hardRefusalLog))).toMatchObject({
+      scope: "lib",
+      level: "warn",
+      event: "dex_discovery.dexscreener_hard_refusal",
+      job: "sync-dex-discovery",
+      provider: "dexscreener",
+      status: 429,
+    });
   });
 
   it("keeps CoinGecko onchain staging output aligned with current discovery rows", async () => {

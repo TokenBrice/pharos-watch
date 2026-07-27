@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.206",
+    title: "DexScreener WAF refusal containment",
+    date: "2026-07-27",
+    effectiveAt: 1785190134,
+    summary:
+      "DexScreener exact-price recovery now batches same-chain targets, while all token-pool lanes stop immediately on provider-side 429 or Cloudflare 1015 refusals.",
+    impact: [
+      "The late exact-price fallback makes one request for up to 30 same-chain addresses per run instead of up to 10 single-address requests, with quarter-hour chain rotation and bounded within-chain rotation preserving coverage",
+      "DexScreener discovery records one source-wide outcome per full run rather than one per coin; a hard refusal is recorded immediately so the overlapping liquidity stage sees the open circuit",
+      "Discovery and liquidity fallback stop sending later token-pool requests after a hard refusal, and a refusal overrides earlier partial success for breaker accounting",
+      "Price validation, exact address matching, source confidence, and successful quote selection remain unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.205",
     title: "Thin Curve quote corroboration guard",
     date: "2026-07-20",

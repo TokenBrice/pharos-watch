@@ -166,6 +166,7 @@ export async function fetchDsFallbackPools(
   let requests = 0;
   let successfulRequests = 0;
   let poolsFound = 0;
+  let hardRefusalSeen = false;
 
   const finalizeCandidates = () => {
     for (const candidate of candidates) {
@@ -195,7 +196,11 @@ export async function fetchDsFallbackPools(
   const recordFallbackOutcome = async () => {
     if (requests > 0) {
       try {
-        await recordOutcome(db, DEXSCREENER_LIQUIDITY_CIRCUIT, successfulRequests > 0);
+        await recordOutcome(
+          db,
+          DEXSCREENER_LIQUIDITY_CIRCUIT,
+          !hardRefusalSeen && successfulRequests > 0,
+        );
       } catch (err) {
         logWorkerEvent({
           scope: "lib",
@@ -268,6 +273,7 @@ export async function fetchDsFallbackPools(
         successfulRequests++;
       }
       if (!result.ok) {
+        hardRefusalSeen ||= result.hardRefusal === true;
         await logCronEvent(db, {
           job: "sync-dex-liquidity",
           eventType: "dexscreener-fallback-unusable-response",
@@ -282,6 +288,11 @@ export async function fetchDsFallbackPools(
             error: result.error ?? null,
           },
         });
+        if (hardRefusalSeen) {
+          finalizeCandidates();
+          await recordFallbackOutcome();
+          return { newPools, priceObs };
+        }
         continue;
       }
       const pairs = result.pairs;

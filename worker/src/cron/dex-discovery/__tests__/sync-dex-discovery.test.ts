@@ -36,6 +36,17 @@ vi.mock("../crawl-sources", () => ({
   })),
 }));
 
+vi.mock("../crawl-dexscreener-pools", () => ({
+  createDexScreenerDiscoveryRunState: vi.fn(() => ({
+    allowed: null,
+    attemptedRequests: 0,
+    successfulRequests: 0,
+    hardRefusal: null,
+    outcomeRecorded: false,
+  })),
+  finalizeDexScreenerDiscoveryRun: vi.fn(async () => undefined),
+}));
+
 vi.mock("../deployment-outcomes", () => ({
   buildStaticInaccessibleDeploymentOutcomes: vi.fn(() => []),
   upsertDexDeploymentOutcomes: vi.fn(async (_db: D1Database, rows: unknown[]) => rows.length),

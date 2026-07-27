@@ -70,6 +70,7 @@ import type { CgTicker, DexPriceObs, LiquidityMetrics } from "../types";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { fetchDsTokenPoolsWithStatus } from "../../../lib/dexscreener";
 import { recordOutcome } from "../../../lib/circuit-breaker";
+import { CIRCUIT_SOURCE } from "../../../lib/constants";
 
 function createMockDb(): D1Database {
   return {
@@ -294,6 +295,38 @@ describe("DexScreener fallback identity", () => {
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('"event":"fallback_circuit_telemetry_failed"'));
     } finally {
       warn.mockRestore();
+    }
+  });
+
+  it("stops after a hard refusal and records failure despite an earlier successful request", async () => {
+    const contracts = activeStablecoins[0]!.contracts!;
+    contracts.push(
+      { chain: "solana", address: "SecondMint", decimals: 6 },
+      { chain: "solana", address: "ThirdMint", decimals: 6 },
+    );
+    vi.mocked(fetchDsTokenPoolsWithStatus)
+      .mockResolvedValueOnce({ ok: true, pairs: [] })
+      .mockResolvedValueOnce({
+        ok: false,
+        pairs: [],
+        status: 429,
+        contentType: "text/plain",
+        error: "HTTP 429; body starts with: error code: 1015",
+        hardRefusal: true,
+      });
+
+    try {
+      await fetchDsFallbackPools(createMockDb(), new Map(), new Map(), createKnownPoolIdentityIndex());
+
+      expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(2);
+      expect(fetchDsTokenPoolsWithStatus).not.toHaveBeenCalledWith("solana", "ThirdMint", undefined);
+      expect(recordOutcome).toHaveBeenCalledWith(
+        expect.anything(),
+        CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY,
+        false,
+      );
+    } finally {
+      contracts.splice(-2);
     }
   });
 });

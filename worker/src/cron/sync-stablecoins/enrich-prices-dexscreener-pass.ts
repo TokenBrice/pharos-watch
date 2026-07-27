@@ -9,7 +9,7 @@ import {
   recoverProviderOnNoCandidates,
   recordProviderOutcomeSafe,
 } from "../../lib/pricing-provider-lifecycle";
-import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd, dsRateLimit } from "../../lib/dexscreener";
+import { fetchDsTokenPoolsWithStatus, getDsTrackedTokenPriceUsd } from "../../lib/dexscreener";
 import { applyResolvedPrice, type PeggedAsset } from "./enrich-prices-shared";
 import {
   collectMissingPriceCandidates,
@@ -24,7 +24,8 @@ import {
   type PricingProviderAttemptDiagnostic,
 } from "../../lib/pricing-provider-diagnostics";
 
-const DEXSCREENER_MAX_REQUESTS = 10;
+const DEXSCREENER_BATCH_SIZE = 30;
+const DEXSCREENER_MAX_REQUESTS = 1;
 const DEXSCREENER_REQUEST_TIMEOUT_MS = 5_000;
 const DEXSCREENER_MAX_RETRIES = 0;
 const DEXSCREENER_PASS_BUDGET_MS = 45_000;
@@ -38,6 +39,18 @@ interface DexScreenerTarget {
   chain: string;
   address: string;
   expectedSymbol?: string;
+}
+
+interface RankedDexScreenerCandidate {
+  asset: PeggedAsset;
+  index: number;
+  exactTargets: DexScreenerTarget[];
+  missingGenerations: number;
+}
+
+interface DexScreenerBatchTarget {
+  entry: RankedDexScreenerCandidate;
+  target: DexScreenerTarget;
 }
 
 function rotateValues<T>(values: readonly T[], offset: number): T[] {
@@ -120,6 +133,43 @@ function buildDexScreenerTargets(asset: PeggedAsset): DexScreenerTarget[] {
   return targets;
 }
 
+function selectDexScreenerBatch(
+  candidates: RankedDexScreenerCandidate[],
+  rotationCycle: number,
+): DexScreenerBatchTarget[] {
+  const targetsByChain = new Map<string, DexScreenerBatchTarget[]>();
+  const maxTargetCount = Math.max(...candidates.map((entry) => entry.exactTargets.length));
+
+  // Preserve the existing deployment-round ordering inside each chain: every
+  // asset's first deployment is considered before any second deployment.
+  for (let targetIndex = 0; targetIndex < maxTargetCount; targetIndex += 1) {
+    for (const entry of candidates) {
+      const target = entry.exactTargets[targetIndex];
+      if (!target) continue;
+      const chainTargets = targetsByChain.get(target.chain) ?? [];
+      chainTargets.push({ entry, target });
+      targetsByChain.set(target.chain, chainTargets);
+    }
+  }
+
+  const chainGroups = [...targetsByChain.entries()]
+    .sort(([leftChain], [rightChain]) => leftChain.localeCompare(rightChain))
+    .map(([, targets]) => targets);
+  if (chainGroups.length === 0) return [];
+
+  // DexScreener batches cannot cross chains. Rotate the selected chain each
+  // quarter-hour, then rotate within that chain on later visits so a persistent
+  // gap on one network cannot starve candidates on another.
+  const chainIndex = ((rotationCycle % chainGroups.length) + chainGroups.length) % chainGroups.length;
+  const chainTargets = chainGroups[chainIndex];
+  const chainVisit = Math.floor(rotationCycle / chainGroups.length);
+  const targetOffset =
+    chainTargets.length > DEXSCREENER_BATCH_SIZE
+      ? (chainVisit * DEXSCREENER_BATCH_SIZE) % chainTargets.length
+      : 0;
+  return rotateValues(chainTargets, targetOffset).slice(0, DEXSCREENER_BATCH_SIZE);
+}
+
 function getDexPairTrackedTokenSymbol(
   pair: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>["pairs"][number],
   trackedAddress: string,
@@ -171,16 +221,16 @@ export async function runDexScreenerPass(
     return { resolved, failures: [] };
   }
 
-  if (stillMissing.length > DEXSCREENER_MAX_REQUESTS) {
+  if (stillMissing.length > DEXSCREENER_BATCH_SIZE) {
     console.warn(
-      `[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to ${DEXSCREENER_MAX_REQUESTS} requests`,
+      `[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to one ${DEXSCREENER_BATCH_SIZE}-address batch`,
     );
   }
 
   // Priority order: assets that have gone unpriced across the most prior
   // generations first (so a persistent gap never starves under the request
   // cap), then the existing circulating-desc + id tiebreak.
-  const rankedDexCandidates = [...stillMissing]
+  const rankedDexCandidates: RankedDexScreenerCandidate[] = [...stillMissing]
     .map((entry) => ({
       ...entry,
       exactTargets: buildDexScreenerTargets(entry.asset),
@@ -200,29 +250,8 @@ export async function runDexScreenerPass(
       return left.asset.id.localeCompare(right.asset.id);
     });
 
-  // Within each equal-streak group, rotate by the 15-minute window so equal
-  // priority candidates share the request cap across cycles instead of the same
-  // deterministic head winning every cycle and starving the tail. An undefined
-  // coverage map collapses every asset into one streak-0 group, restoring the
-  // original pure-rotation behavior.
   const rotationCycle = Math.floor(Date.now() / DEXSCREENER_ROTATION_INTERVAL_MS);
-  const dexCandidates: typeof rankedDexCandidates = [];
-  for (let groupStart = 0; groupStart < rankedDexCandidates.length; ) {
-    let groupEnd = groupStart + 1;
-    while (
-      groupEnd < rankedDexCandidates.length &&
-      rankedDexCandidates[groupEnd].missingGenerations === rankedDexCandidates[groupStart].missingGenerations
-    ) {
-      groupEnd += 1;
-    }
-    const group = rankedDexCandidates.slice(groupStart, groupEnd);
-    const groupRotation =
-      group.length > DEXSCREENER_MAX_REQUESTS
-        ? (rotationCycle * DEXSCREENER_MAX_REQUESTS) % group.length
-        : 0;
-    dexCandidates.push(...rotateValues(group, groupRotation));
-    groupStart = groupEnd;
-  }
+  const dexCandidates = rankedDexCandidates;
 
   const exactCandidateCount = dexCandidates.filter((entry) => entry.exactTargets.length > 0).length;
 
@@ -262,108 +291,101 @@ export async function runDexScreenerPass(
       parentSignal: signal,
     });
     const dexBudgetDeadlineMs = Date.now() + DEXSCREENER_PASS_BUDGET_MS;
-    const resolvedAssetIds = new Set<string>();
-    const maxTargetCount = Math.max(...dexCandidates.map((entry) => entry.exactTargets.length));
+    const batch = selectDexScreenerBatch(dexCandidates, rotationCycle);
 
     try {
-      requestRounds: for (let targetIndex = 0; targetIndex < maxTargetCount; targetIndex += 1) {
-        throwIfAborted(passTimeout.signal);
-        for (const entry of dexCandidates) {
-          throwIfAborted(passTimeout.signal);
-          if (resolvedAssetIds.has(entry.asset.id)) continue;
-          const target = entry.exactTargets[targetIndex];
-          if (!target) continue;
-          if (dexExactAttempts >= DEXSCREENER_MAX_REQUESTS) break requestRounds;
+      throwIfAborted(passTimeout.signal);
+      const exactRemainingBudgetMs = dexBudgetDeadlineMs - Date.now();
+      if (batch.length > 0 && exactRemainingBudgetMs > 0) {
+        const batchChain = batch[0].target.chain;
+        const batchAddressPath = batch.map(({ target }) => target.address).join(",");
+        dexExactAttempts = 1;
+        let lookupFailureRecorded = false;
+        const pushExactFailure = (errorClass: string, errorMessage: string, status: number | null = null) => {
+          lookupFailureRecorded = true;
+          diagnostics.push({
+            source: "dexscreener-exact",
+            stage: "fallback",
+            endpoint: endpointLabel(`https://api.dexscreener.com/tokens/v1/${batchChain}/${batchAddressPath}`),
+            status,
+            ok: false,
+            success: false,
+            candidateCount: batch.length,
+            errorClass,
+            errorMessage,
+          });
+        };
 
-          const exactRemainingBudgetMs = dexBudgetDeadlineMs - Date.now();
-          if (exactRemainingBudgetMs <= 0) {
-            console.warn(
-              `[enrich] DexScreener pass budget exhausted after ${dexExactAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`,
-            );
-            break requestRounds;
-          }
-
-          if (dexExactAttempts > 0) {
-            await dsRateLimit(passTimeout.signal);
-          }
-
-          dexExactAttempts += 1;
-          const pushExactFailure = (errorClass: string, errorMessage: string, status: number | null = null) => {
-            diagnostics.push({
-              source: "dexscreener-exact",
-              stage: "fallback",
-              endpoint: endpointLabel(`https://api.dexscreener.com/tokens/v1/${target.chain}/${target.address}`),
-              status,
-              ok: false,
-              success: false,
-              candidateCount: 1,
-              errorClass,
-              errorMessage,
-            });
-          };
-
-          let lookupResult: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>;
+        let lookupResult: Awaited<ReturnType<typeof fetchDsTokenPoolsWithStatus>>;
+        try {
+          const requestTimeout = createTimeoutSignal({
+            timeoutMs: Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs),
+            timeoutReason: new DOMException(
+              `DexScreener exact lookup timed out after ${Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs)}ms`,
+              "TimeoutError",
+            ),
+            parentSignal: passTimeout.signal,
+          });
           try {
-            const requestTimeout = createTimeoutSignal({
-              timeoutMs: Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs),
-              timeoutReason: new DOMException(
-                `DexScreener exact lookup timed out after ${Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs)}ms`,
-                "TimeoutError",
-              ),
-              parentSignal: passTimeout.signal,
-            });
-            try {
-              lookupResult = await abortable(
-                fetchDsTokenPoolsWithStatus(
-                  target.chain,
-                  target.address,
-                  requestTimeout.signal,
-                  Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs),
-                  DEXSCREENER_MAX_RETRIES,
-                ),
+            lookupResult = await abortable(
+              fetchDsTokenPoolsWithStatus(
+                batchChain,
+                batchAddressPath,
                 requestTimeout.signal,
-              );
-            } finally {
-              requestTimeout.dispose();
-            }
-          } catch (error) {
-            if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-            // A per-request timeout (or transient error) skips only this
-            // request; remaining candidates are still attempted while the
-            // overall pass budget allows. Budget exhaustion is handled at the
-            // top of the loop (throwIfAborted → outer catch) and by the
-            // remaining-budget guard, which stop the pass cleanly.
-            console.warn(
-              `[enrich] DexScreener exact lookup threw for ${entry.asset.symbol} (${target.chain}:${target.address}):`,
-              error,
+                Math.min(DEXSCREENER_REQUEST_TIMEOUT_MS, exactRemainingBudgetMs),
+                DEXSCREENER_MAX_RETRIES,
+              ),
+              requestTimeout.signal,
             );
-            pushExactFailure(errorClassFor(error), errorMessageFor(error));
-            continue;
+          } finally {
+            requestTimeout.dispose();
           }
-
-          const { ok, pairs } = lookupResult;
-          if (ok) {
-            dexExactSuccessfulCalls += 1;
-          } else {
-            console.warn(
-              `[enrich] DexScreener exact lookup failed for ${entry.asset.symbol} (${target.chain}:${target.address})`,
-            );
-            pushExactFailure(
-              "upstream-error",
-              lookupResult.error
-                ? `DexScreener exact lookup returned no usable response: ${lookupResult.error}`
-                : "DexScreener exact lookup returned no usable response",
-              lookupResult.status ?? null,
-            );
-          }
-
-          const exactPrice = resolveDexScreenerAddressPrice(entry.asset, target, pairs, fxRates);
-          if (exactPrice == null) continue;
-
-          applyResolvedPrice(assets[entry.index], exactPrice, "dexscreener-exact", "fallback");
-          resolved += 1;
-          resolvedAssetIds.add(entry.asset.id);
+        } catch (error) {
+          if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
+          console.warn(
+            `[enrich] DexScreener exact batch lookup threw for ${batchChain} (${batch.length} targets):`,
+            error,
+          );
+          pushExactFailure(errorClassFor(error), errorMessageFor(error));
+          lookupResult = {
+            ok: false,
+            pairs: [],
+            error: errorMessageFor(error),
+          };
         }
+
+        const { ok, pairs } = lookupResult;
+        if (ok) {
+          dexExactSuccessfulCalls = 1;
+        } else if (!lookupFailureRecorded) {
+          console.warn(
+            `[enrich] DexScreener exact batch lookup failed for ${batchChain} (${batch.length} targets)`,
+          );
+          pushExactFailure(
+            "upstream-error",
+            lookupResult.error
+              ? `DexScreener exact lookup returned no usable response: ${lookupResult.error}`
+              : "DexScreener exact lookup returned no usable response",
+            lookupResult.status ?? null,
+          );
+        }
+
+        if (ok) {
+          const resolvedAssetIds = new Set<string>();
+          for (const { entry, target } of batch) {
+            if (resolvedAssetIds.has(entry.asset.id)) continue;
+            const exactPrice = resolveDexScreenerAddressPrice(entry.asset, target, pairs, fxRates);
+            if (exactPrice == null) continue;
+
+            applyResolvedPrice(assets[entry.index], exactPrice, "dexscreener-exact", "fallback");
+            resolved += 1;
+            resolvedAssetIds.add(entry.asset.id);
+          }
+        }
+      } else if (batch.length > 0) {
+        console.warn(
+          `[enrich] DexScreener pass budget exhausted after ${dexExactAttempts}/${DEXSCREENER_MAX_REQUESTS} requests`,
+        );
       }
     } catch (error) {
       if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
