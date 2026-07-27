@@ -149,6 +149,34 @@ describe("active Safety Score source", () => {
     });
   });
 
+  it("accepts an activated retained snapshot while publication health is held without an accepted generation", async () => {
+    mockLoadPublishedReportCardsV9Snapshot.mockResolvedValue({
+      ...snapshot(),
+      schemaVersion: 3,
+      publicationHealth: {
+        schemaVersion: 1,
+        status: "held",
+        acceptedPublicationGenerationId: null,
+        acceptedAtSec: null,
+        attemptedAtSec: 1_700_000_900,
+        heldSinceSec: 1_700_000_900,
+        reasons: [{ code: "assessment-failed", detail: "retained candidate requires compatibility projection" }],
+      },
+    });
+
+    await expect(loadActiveSafetyScoreSource(markerDb(markerValue()))).resolves.toMatchObject({
+      kind: "v9",
+      expectedModel: "v9",
+      snapshot: {
+        schemaVersion: 3,
+        publicationHealth: {
+          status: "held",
+          acceptedPublicationGenerationId: null,
+        },
+      },
+    });
+  });
+
   it("reports an identity-bound marker with no canonical V9 snapshot as unavailable", async () => {
     mockLoadPublishedReportCardsV9Snapshot.mockRejectedValue(
       new MockV9UnavailableError("Canonical Safety Score V9 shadow cache is unavailable"),
