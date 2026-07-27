@@ -1,0 +1,62 @@
+{
+  "assetId": "usdv-solomon",
+  "archetype": "synthetic-delta-neutral",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "2026-07-28 re-open docs.solomonlabs.org USDv how-it-works + transparency section titles; DefiLlama 261 ~$1.51M; Solana mint Ex5DaKY…; prior overlay 2026-07-20 had hedgeCoverage 0.68452 — NOT reasserted (attestation pages SPA-only, no dual-source numeric remeasure)",
+  "metrics": {
+    "hedgeCoverageRatio": null,
+    "marginBufferPct": null,
+    "lossAbsorptionShare": null
+  },
+  "metricStates": {
+    "hedgeCoverageRatio": {
+      "state": "unavailable",
+      "rationale": "Package and product materials describe Ceffu-custodied off-exchange delta-neutral margin backing USDv, but no dual-sourced reconciled hedge notional or coverage ratio is obtainable this pass. Solomon docs Mintlify pages are SPA-rendered; asset-attestations URL returned shell HTML without itemized figures. Searched how-it-works, transparency titles, DefiLlama 261, Ceffu product page — no numeric hedgeCoverageRatio remeasure. Do not copy prior overlay 0.68452 without re-open pin.",
+      "sourceUrl": "https://docs.solomonlabs.org/usdv/how-it-works"
+    },
+    "marginBufferPct": {
+      "state": "unavailable",
+      "rationale": "No dual-sourced exchange margin headroom or reserve excess % for USDv at write time. Same search surfaces.",
+      "sourceUrl": "https://docs.solomonlabs.org/"
+    },
+    "lossAbsorptionShare": {
+      "state": "unavailable",
+      "rationale": "Documented small protocol reserve buffer for approved redemptions is qualitative only; no dual-sourced insurance/first-loss share of supply.",
+      "sourceUrl": "https://docs.solomonlabs.org/"
+    }
+  },
+  "components": {
+    "venueAndCustody": {
+      "quality": "limited",
+      "basis": "Package/product narrative names Ceffu off-exchange custody; Ceffu independently documents OES/Mirror-class products. Limited: no dual-sourced live venue balance split pin this pass (SPA attestations)."
+    }
+  },
+  "sources": [
+    {
+      "label": "Solomon USDv how it works",
+      "url": "https://docs.solomonlabs.org/usdv/how-it-works"
+    },
+    {
+      "label": "Solomon docs hub",
+      "url": "https://docs.solomonlabs.org/"
+    },
+    {
+      "label": "Solomon transparency asset attestations path",
+      "url": "https://docs.solomonlabs.org/transparency/asset-attestations"
+    },
+    {
+      "label": "DefiLlama stablecoin 261 Solomon USDv",
+      "url": "https://stablecoins.llama.fi/stablecoin/261"
+    },
+    {
+      "label": "Ceffu MirrorX/OES product",
+      "url": "https://www.ceffu.com/solutions/mirrorx"
+    }
+  ],
+  "notes": "Prior numeric overlay metrics not remeasured (attestation surface not dual-source pinable). Honest unavailable. verification PENDING.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED as honest unavailable SDN packet. Archetype synthetic-delta-neutral vocab OK. docs.solomonlabs.org/usdv/how-it-works HTTP 200 (Mintlify SPA shell with product narrative); no dual-sourced reconciled hedge notionals, margin headroom, or insurance share obtainable this pass. DefiLlama 261 crypto-backed listing without SDN metrics. Prior overlay hedgeCoverage 0.68452 correctly NOT reasserted. venueAndCustody limited only; metrics null+unavailable with named search.",
+    "secondSource": "docs.solomonlabs.org USDv how-it-works re-open + DefiLlama 261 + ceffu MirrorX product (no Aster inventory)"
+  }
+}

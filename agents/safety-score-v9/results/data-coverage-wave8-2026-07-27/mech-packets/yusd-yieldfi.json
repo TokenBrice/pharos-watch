@@ -1,0 +1,76 @@
+{
+  "assetId": "yusd-yieldfi",
+  "archetype": "synthetic-delta-neutral",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "ethereum finalized block 25627228 hash 0xe5c7dd15a7c6c8261957493e6f1dcbb72ec18688afccf6ac981748edb2f824e2 timestamp 2026-07-27T22:46:47Z; yUSD vault 0x19ebd191f7a24ece672ba13a302212b5ef7f35cb totalAssets/totalSupply/convertToAssets; YieldFi yUSD Token Terms re-opened",
+  "metrics": {
+    "hedgeCoverageRatio": 0.99,
+    "marginBufferPct": 0,
+    "lossAbsorptionShare": 0
+  },
+  "metricStates": {
+    "hedgeCoverageRatio": {
+      "state": "measured",
+      "rationale": "Documented-policy lower bound from Token Terms \u00a710.1: directional exposure constraint <1% delta for the Market Neutral series, implying hedge coverage \u22650.99 of notional if the constraint is met. Not an observed position-level hedge inventory. Dual-source: Token Terms risk limits + series objective describing market-neutral/delta-neutral deployments (private LP, hedged carry, basis, funding-rate spreads).",
+      "sourceUrl": "https://docs.yield.fi/legal-documents/token-terms/yusd.md"
+    },
+    "marginBufferPct": {
+      "state": "measured",
+      "rationale": "ERC-4626 vault at block 25627228: totalAssets()=10,696,286.730934 USDC (6 decimals raw 10696286730934); totalSupply()=10,712,859.371583354 shares; convertToAssets(1e18)=0.998453 USDC/share. Share liability at NAV = 10,712,859.371583354 \u00d7 0.998453 = 10,696,286.58 USDC \u2248 totalAssets within +0.0000014% epsilon. Assets equal token claims at NAV by construction \u2014 no excess-capital margin buffer. marginBufferPct=0.",
+      "sourceUrl": "https://ethereum-rpc.publicnode.com"
+    },
+    "lossAbsorptionShare": {
+      "state": "measured",
+      "rationale": "Structural absence documented: Token Terms \u00a71.2 series-limited limited recourse; \u00a713.3 explicit no-top-up clause; \u00a79.3 waterfall is costs \u2192 fees \u2192 tokenholder redemptions with no insurance fund or junior tranche. lossAbsorptionShare=0. Dual-source: Token Terms waterfall/no-top-up + on-chain vault showing no surplus assets above NAV claims.",
+      "sourceUrl": "https://docs.yield.fi/legal-documents/token-terms/yusd.md"
+    }
+  },
+  "analogousMetrics": {
+    "totalAssetsUsdc": 10696286.730934,
+    "totalSupplyShares": 10712859.371583354,
+    "navPerShareUsdc": 0.998453,
+    "navBufferPct": 1.4e-06
+  },
+  "components": {
+    "venueAndCustody": {
+      "quality": "limited",
+      "basis": "Token Terms \u00a75.2 name ForDeFi as MPC/custody; exchanges/prime broker marked N/A. On-chain vault holds USDC-accounting assets. Limited: named custodian without independent account-structure attestation or venue allocation weights (allocations unpublished)."
+    },
+    "hedgeReconciliation": {
+      "quality": "limited",
+      "basis": "Terms require <1% delta and describe market-neutral sleeves, but \u00a712 reporting is holdings/exposure summary at least twice weekly without a dual-sourced live position tape. Limited hedge reconciliation."
+    },
+    "marginAndLiquidation": {
+      "quality": "limited",
+      "basis": "Token Terms \u00a710.2 explicitly lists margin buffers, liquidation policies, and rebalancing frequency as n/a while permitting leverage and borrowing (\u00a710.1). Dual-source: terms risk-limits table + vault NAV equality showing no surplus buffer. Limited by design disclosure of n/a margin policy."
+    },
+    "unwindCapacity": {
+      "quality": "limited",
+      "basis": "Redemptions T+2 SLA at min(request, processing) NAV, funded solely from Series Assets (Terms \u00a78). No committed external unwind facility. Limited."
+    },
+    "lossAbsorption": {
+      "quality": "limited",
+      "basis": "Series-limited recourse, no-top-up, waterfall without insurance/junior tranche (Terms \u00a7\u00a71.2, 9.3, 13.3). Measured lossAbsorptionShare 0. Limited (structural absence evidenced)."
+    }
+  },
+  "sources": [
+    {
+      "label": "YieldFi yUSD Token Terms (Market Neutral, <1% delta, ForDeFi custody, NAV twice weekly, series-limited recourse, no top-up, margin n/a)",
+      "url": "https://docs.yield.fi/legal-documents/token-terms/yusd.md"
+    },
+    {
+      "label": "yUSD Ethereum ERC-4626 vault eth_call totalAssets/totalSupply/convertToAssets at finalized block 25627228",
+      "url": "https://etherscan.io/address/0x19ebd191f7a24ece672ba13a302212b5ef7f35cb#readContract"
+    },
+    {
+      "label": "Ethereum PublicNode RPC",
+      "url": "https://ethereum-rpc.publicnode.com"
+    }
+  ],
+  "notes": "Wave-8 phase-1 remeasure 2026-07-28. Prior overlay 2026-07-20. Vault metrics unchanged at displayed precision vs prior pin (totalAssets 10,696,286.730934 USDC). fundingBasisStress left uncurated: terms describe funding-rate spreads as an activity class but mark quantitative margin/funding stress controls n/a without a second independent stress disclosure. verification PENDING; overlay untouched.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype synthetic-delta-neutral vocab OK. Independent eth_call yUSD vault 0x19eb\u202635cb via publicnode: totalAssets()=10696286730934 (10,696,286.730934 USDC 6dp) exact pin; totalSupply()=10712859371583353918910978 exact; convertToAssets(1e18)=998453 \u2192 0.998453 USDC/share. Share liability at NAV \u2248 totalAssets (buffer ~1.4e-6%) \u2192 marginBufferPct=0. Token Terms HTTP 200: Market Neutral series, directional exposure <1% delta \u2192 hedgeCoverageRatio policy lower bound 0.99; \u00a710.2 margin buffers n/a; \u00a71.2 series-limited recourse; \u00a79.3 waterfall costs\u2192fees\u2192redemptions; \u00a713.3 no top-up \u2192 lossAbsorptionShare=0 structural absence. No inventable insurance fund on-chain or in terms.",
+    "secondSource": "eth_call totalAssets/totalSupply/convertToAssets on publicnode + docs.yield.fi yusd Token Terms markdown re-open"
+  }
+}

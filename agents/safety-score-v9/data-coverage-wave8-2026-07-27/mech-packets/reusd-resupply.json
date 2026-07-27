@@ -1,0 +1,89 @@
+{
+  "assetId": "reusd-resupply",
+  "archetype": "cdp",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "ethereum finalized block 25627260 hash 0xe4256d655597cf47800fdcc665ddb4d92f4daf19572401088d7f5591dc51c161 timestamp 2026-07-27T22:53:11Z; Registry 0x10101010E0C3171D894B71B3400668aF311e7D94 getAllPairAddresses + per-pair getPairAccounting/collateral convertToAssets; InsurancePool reUSD balanceOf",
+  "metrics": {
+    "collateralizationRatio": 1.076367,
+    "liquidationCapacityRatio": 0.079132
+  },
+  "metricStates": {
+    "collateralizationRatio": {
+      "state": "measured",
+      "rationale": "System CR = sum over active (non-zero debt) pairs of collateralVault.convertToAssets(collateralShares) / sum of pair totalBorrow from getPairAccounting() = 34635150.457250 / 32177832.888000 = 1.076367. Registry enumerated 19 pairs; 15 active with debt, 4 zero-debt pairs excluded from the ratio (their residual converted assets not counted as debt-backing). reUSD totalSupply 32171263.13 vs totalDebt 32177832.89 (0.0204% divergence). Collateral is ERC-4626 lending-vault shares on crvUSD/frxUSD markets valued at vault conversion, not a guarantee of instant underlying liquidity.",
+      "sourceUrl": "https://etherscan.io/address/0x10101010E0C3171D894B71B3400668aF311e7D94#readContract"
+    },
+    "liquidationCapacityRatio": {
+      "state": "measured",
+      "rationale": "InsurancePool reUSD balanceOf / total active pair debt = 2546294.855477 / 32177832.888000 = 0.079132. Insurance Pool docs state deposited reUSD is used to insure bad debt and to buy liquidated collateral (burned on use). Dual-source: on-chain balanceOf at InsurancePool 0x00000000efe883b3304aFf71eaCf72Dbc3e1b577 + Insurance Pool documentation.",
+      "sourceUrl": "https://docs.resupply.finance/resupply-protocol/insurance-pool.md"
+    }
+  },
+  "analogousMetrics": {
+    "totalDebtRaw": "32177832888000022589504895",
+    "totalCollateralAssetsRaw": "34635150457249969707890845",
+    "insuranceAssetsRaw": "2546294855477449414006873",
+    "totalSupplyRaw": "32171263126791586352027021",
+    "activePairCount": 15,
+    "pairCount": 19,
+    "supplyDebtDivergencePct": 0.0204
+  },
+  "components": {
+    "collateralizationParameters": {
+      "quality": "limited",
+      "basis": "Per-pair CDP accounting is on-chain (getPairAccounting borrow + collateral shares; convertToAssets for vault claim). System CR only ~1.076 at pin \u2014 thin buffer versus conventional overcollateralized CDPs. Collateral is layered ERC-4626 claims on crvUSD/frxUSD lending markets at accounting par, not direct blue-chip collateral. Limited: parameters exist and are measurable, but effective LTV is high and underlying is already a stablecoin lending claim."
+    },
+    "liquidationMechanics": {
+      "quality": "adequate",
+      "basis": "Insurance Pool documentation: on liquidation the pool buys collateral with reUSD (burned), liquidated collateral routes through LiquidationHandler which withdraws underlying from the lending pool when liquidity allows (can retry). Dual-source: Insurance Pool CDP Liquidations section + on-chain InsurancePool capital committed at pin (7.91% of debt)."
+    },
+    "backstop": {
+      "quality": "limited",
+      "basis": "Insurance Pool is the explicit bad-debt and liquidation backstop (docs + 2.546M reUSD on-chain). If bad debt exceeds the pool, docs state the protocol assumes residual bad debt and leftover collateral is held by the protocol \u2014 no unconditional external recapitalization. Limited depth at 7.91% of debt."
+    },
+    "branchIsolation": {
+      "quality": "limited",
+      "basis": "Pairs are separate contracts with distinct collateral vaults (19 registry addresses observed). Redeemer may choose which pools to redeem against (Stability Mechanics). Cross-pair transmission exists via shared Insurance Pool and communal redemption. Limited isolation: pair-level accounting exists but insurance and redemptions are system-shared."
+    },
+    "shutdownAndBadDebt": {
+      "quality": "limited",
+      "basis": "Defined bad-debt path: Insurance Pool purchases impaired collateral and burns reUSD; residual beyond the pool is assumed by the protocol with collateral held for pool holders to withdraw (Insurance Pool Bad Debt section). No dual-sourced global settlement/emergency shutdown. Limited, not adequate."
+    },
+    "structuralRedemption": {
+      "quality": "limited",
+      "basis": "Communal redemption model with ~1% fee establishing a price floor (Stability Mechanics docs): redeemer burns reUSD against borrower collateral across chosen pairs with weighted discounts. Access is conditional (operator/oracle-price guard on RedemptionHandler per prior pinned implementation family). Limited structural redemption rather than unconditional 1:1 cash redeem."
+    }
+  },
+  "sources": [
+    {
+      "label": "Resupply Stability Mechanics (communal redemption, ~1% fee, price floor)",
+      "url": "https://docs.resupply.finance/resupply-protocol/stability-mechanics.md"
+    },
+    {
+      "label": "Resupply Insurance Pool (liquidation buy, bad-debt absorption, 7-day unstake cooldown)",
+      "url": "https://docs.resupply.finance/resupply-protocol/insurance-pool.md"
+    },
+    {
+      "label": "Resupply Registry on Etherscan (pairs, insurancePool)",
+      "url": "https://etherscan.io/address/0x10101010E0C3171D894B71B3400668aF311e7D94#readContract"
+    },
+    {
+      "label": "reUSD token on Etherscan",
+      "url": "https://etherscan.io/token/0x57ab1e0003f623289cd798b1824be09a793e4bec"
+    },
+    {
+      "label": "Ethereum PublicNode RPC eth_call journal at finalized block 25627228",
+      "url": "https://ethereum-rpc.publicnode.com"
+    },
+    {
+      "label": "Prior measurement journal method reference (2026-07-15 block 25536894)",
+      "url": "shared/data/safety-score-v9/mechanism-measurements/reusd-resupply/2026-07-15-block-25536894.json"
+    }
+  ],
+  "notes": "Wave-8 phase-1 remeasure 2026-07-28. Prior overlay reviewedAt 2026-07-15. Fresh pin block 25627260: CR 1.076367 (was 1.078969), InsurancePool liquidation capacity 0.079132 (was 0.100629). Method matches scripts/lib/mechanism-measurement/families/resupply.ts: active-pair convertToAssets collateral over debt; insurance balance over debt. Write-time re-open of registry, all 19 pairs, insurance balance, and docs returned matching values. verification PENDING; overlay untouched.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype cdp vocab OK. Independent full recompute via ethereum.publicnode.com cast: Registry 0x1010\u20267D94 getAllPairAddresses length=19; 15 active debted pairs; sum getPairAccounting.totalBorrow \u224832,177,839.70 reUSD; sum collateralVault.convertToAssets(shares) \u224834,635,173.77 \u2192 CR=1.076367 exact to 6dp (live debt/coll micro-drift <0.0001% vs pin block 25627260 raws). InsurancePool 0x0000\u2026b577 reUSD balanceOf exact pin 2,546,294.855477\u2026; LCR=ins/debt=0.079132 exact. reUSD totalSupply exact pin 32,171,263.13. Insurance Pool docs HTTP 200: pool buys liquidated collateral with reUSD (burned) and absorbs bad debt \u2014 liquidationCapacityRatio definition holds.",
+    "secondSource": "full pair-by-pair eth_call recompute (publicnode cast) + InsurancePool balanceOf + docs.resupply.finance insurance-pool.md"
+  }
+}

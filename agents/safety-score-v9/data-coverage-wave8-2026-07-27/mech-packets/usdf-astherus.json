@@ -1,0 +1,65 @@
+{
+  "assetId": "usdf-astherus",
+  "archetype": "synthetic-delta-neutral",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "2026-07-27T22:47:18Z",
+  "metrics": {
+    "hedgeCoverageRatio": null,
+    "marginBufferPct": null,
+    "lossAbsorptionShare": null
+  },
+  "metricStates": {
+    "hedgeCoverageRatio": {
+      "state": "unavailable",
+      "rationale": "Metric applies (issuer documents delta-neutral long-spot + short-perp hedges via Ceffu MirrorX on Binance) but no reconciled hedge notional, net delta, or independent PoR/attestation of delta-neutral state is published. Searched Aster USDF docs (how-usdf-works, fund-custody-and-risk-management, faqs, overview, maintaining-the-peg, usdf-and-the-stablecoin-landscape), full docs sitemap (no PoR/transparency page), asterdex.com/en/usdf marketing page (qualitative only), DefiLlama stablecoin id 219 (description + BSC supply only), and Ceffu MirrorX product page (generic OES mechanics; no Aster position inventory).",
+      "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md"
+    },
+    "marginBufferPct": {
+      "state": "unavailable",
+      "rationale": "Metric applies (docs name liquidation risk when perpetual collateral falls below margin requirements and claim the Aster/Ceffu account 'frequently settles profit/loss') but no exchange margin balances, maintenance-margin requirements, excess-margin headroom, or reserve-excess figure usable as margin buffer is published. Same search surfaces as hedgeCoverageRatio; fund-custody page discusses liquidation risk only qualitatively and points Tether transparency for USDT itself, not Aster strategy margin.",
+      "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md"
+    },
+    "lossAbsorptionShare": {
+      "state": "unavailable",
+      "rationale": "Metric applies (synthetic-delta-neutral loss path exists via funding, liquidation, and venue failure) but issuer publishes no insurance fund, reserve fund, first-loss tranche size, or dedicated loss-absorbing surplus relative to USDF supply. Searched the same USDF doc set and sitemap (no insurance/reserve-fund page), marketing site, DefiLlama 219, and Ceffu MirrorX; none disclose a quantified absorption pool. Do not treat silence as measured 0 without an attestation surface that would report the fund if present.",
+      "sourceUrl": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md"
+    }
+  },
+  "components": {},
+  "sources": [
+    {
+      "label": "Aster USDF Fund Custody & Risk Management (re-opened 2026-07-27T22:47:18Z UTC; Ceffu custody + MirrorX to Binance; qualitative funding/liquidation/custody risks; no hedge notionals, margin balances, or insurance fund)",
+      "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management.md"
+    },
+    {
+      "label": "Aster How USDF Works (USDT mint \u2192 Ceffu \u2192 Binance delta-neutral long spot + short perps; weekly yield to asUSDF; no position metrics)",
+      "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works.md"
+    },
+    {
+      "label": "Aster USDF FAQs (1:1 USDT mint; redeem 1\u20132 days / up to 7 large; 0.1% redeem fee; asUSDF yield from funding; no PoR)",
+      "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs.md"
+    },
+    {
+      "label": "Aster docs sitemap (USDF section has overview/how/peg/custody/tutorials/faqs/landscape only \u2014 no proof-of-reserves, transparency API, or insurance-fund page)",
+      "url": "https://docs.asterdex.com/sitemap.md"
+    },
+    {
+      "label": "Ceffu MirrorX product page (independent OES description: 1:1 mirror to exchange sub-account; assets remain in Ceffu custody; periodic off-chain settlement \u2014 no Aster-specific balances)",
+      "url": "https://www.ceffu.com/solutions/mirrorx"
+    },
+    {
+      "label": "DefiLlama stablecoin 219 Astherus USDF (BSC peggedUSD ~111.99M at pin; description 1:1 USDT convertibility; no reserve composition or hedge fields)",
+      "url": "https://stablecoins.llama.fi/stablecoin/219"
+    },
+    {
+      "label": "Aster USDF marketing page (backed by crypto assets and corresponding short futures; stake for yield marketing; no itemized reserves)",
+      "url": "https://www.asterdex.com/en/usdf"
+    }
+  ],
+  "notes": "Synthetic-delta-neutral parent USDF (BSC 0x5A110fC00474038f6c02E89C707D638602EA44B5). Mechanism architecture is dual-sourced at qualitative level: Aster docs state USDT is custodied at Ceffu and deployed via MirrorX into Binance long-spot + short-perp hedges; Ceffu independently documents MirrorX as off-exchange settlement with assets remaining in custody. That is insufficient under docs/process/mechanism-overlay-evidence-standard.md for any component quality grade (no issuer structured reconciliation/API with itemized figures; marketing/docs prose alone never admits adequate/limited custody or hedge grades; Ceffu SOC/ISO certs are licensing-class evidence, not Aster position reconciliation). Components left empty rather than weak-from-missing. All three SDN metrics honestly unavailable with named search. Pin: docs.asterdex.com fund-custody HTTP date 2026-07-27T22:47:18Z; DefiLlama last-modified 2026-07-27T21:22:22Z. verification.verdict PENDING for phase-2.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED as honest unavailable SDN packet. Archetype synthetic-delta-neutral vocab OK. docs.asterdex.com fund-custody-and-risk-management.md and how-usdf-works.md HTTP 200: qualitative Ceffu MirrorX long-spot/short-perp narrative; no reconciled hedge notionals, margin headroom, or insurance fund size. ceffu.com/solutions/mirrorx HTTP 200 (generic OES product). DefiLlama stablecoin/219 pegMechanism=crypto-backed, no hedge metrics. All three metrics null+unavailable with named search \u2014 correct under D2/D3.",
+    "secondSource": "stablecoins.llama.fi/stablecoin/219 + docs.asterdex.com fund-custody page re-open"
+  }
+}

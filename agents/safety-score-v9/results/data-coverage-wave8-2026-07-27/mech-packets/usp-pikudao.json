@@ -1,0 +1,66 @@
+{
+  "assetId": "usp-pikudao",
+  "archetype": "synthetic-delta-neutral",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "2026-07-28 re-open docs.piku.co USP product + mint/redeem + overview (BMMF Turkey FX arb delta-neutral, DeFi allocations, cash buffer; NAV-accreting; FIFO redeem 0.2% fee ≤24h; KYC mint/redeem)",
+  "metrics": {
+    "hedgeCoverageRatio": null,
+    "marginBufferPct": null,
+    "lossAbsorptionShare": null
+  },
+  "metricStates": {
+    "hedgeCoverageRatio": {
+      "state": "unavailable",
+      "rationale": "Overview describes delta-neutral Turkey FX arb and other strategies, but no reconciled hedge notional or coverage ratio for the USP basket is published. Searched USP product, mint/redeem, overview vault list, DefiLlama (no USP stablecoin id match in quick scan).",
+      "sourceUrl": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin.md"
+    },
+    "marginBufferPct": {
+      "state": "unavailable",
+      "rationale": "No dual-sourced exchange margin headroom or system excess-collateral % for USP. Cash USDC/USDT buffer mentioned qualitatively only.",
+      "sourceUrl": "https://docs.piku.co/piku/overview.md"
+    },
+    "lossAbsorptionShare": {
+      "state": "unavailable",
+      "rationale": "No insurance fund or first-loss tranche size relative to USP supply disclosed.",
+      "sourceUrl": "https://docs.piku.co/piku/overview.md"
+    }
+  },
+  "components": {
+    "venueAndCustody": {
+      "quality": "limited",
+      "basis": "Docs name Turkish CEX/bank FX rails for BMMF strategy and DeFi protocol allocations (Ethena/Aave/etc. in package). Dual overview + USP product page. Limited: no dual-sourced live venue share table."
+    },
+    "hedgeReconciliation": {
+      "quality": "limited",
+      "basis": "BMMF strategy described as continuously hedged TRY with returns from spread capture. Dual overview vault description + USP product. Limited: no position inventory pin."
+    },
+    "unwindCapacity": {
+      "quality": "limited",
+      "basis": "FIFO smart-contract redeem queue, 0.2% fee, ≤24h settlement, KYC required (mint/redeem docs). Dual minting-and-redemption docs + USP page. Limited: queue depth unpublished."
+    }
+  },
+  "sources": [
+    {
+      "label": "Piku USP product",
+      "url": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin.md"
+    },
+    {
+      "label": "Piku minting and redemption",
+      "url": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/minting-and-redemption.md"
+    },
+    {
+      "label": "Piku overview (strategy vaults)",
+      "url": "https://docs.piku.co/piku/overview.md"
+    },
+    {
+      "label": "Piku site",
+      "url": "https://piku.co/"
+    }
+  ],
+  "notes": "SDN multi-strategy USP; metrics unavailable; limited components. verification PENDING.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED as honest unavailable SDN packet. Archetype synthetic-delta-neutral vocab OK. docs.piku.co USP product + overview HTTP 200: delta-neutral Turkey FX arb / multi-strategy yield-optimized stable with mint/redeem; no reconciled hedge coverage, margin buffer, or loss-absorption share published. Partial limited components (venueAndCustody/hedgeReconciliation/unwindCapacity) valid SDN keys; metrics stay null.",
+    "secondSource": "docs.piku.co usp-yield-optimized-stablecoin.md + overview.md delta-neutral strategy prose"
+  }
+}
