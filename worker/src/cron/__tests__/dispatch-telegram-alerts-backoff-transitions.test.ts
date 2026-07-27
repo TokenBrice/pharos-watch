@@ -447,6 +447,41 @@ describe("dispatchTelegramAlerts", () => {
     expect(telegramDeliveryTranscript[0]?.html).toContain("worsening");
   });
 
+  it("renders the active depeg peak price when a worsening event moved far past its opening price", async () => {
+    const harness = createDispatchHarness();
+    sources(harness, {
+      depeg: {
+        "usdc-circle": {
+          stablecoinId: "usdc-circle",
+          symbol: "USDC",
+          direction: "below",
+          deviationBps: 3800,
+          price: 0.62,
+          pegReference: 1,
+        },
+      },
+    });
+    harness.seed({
+      depegs: [{
+        stablecoinId: "usdc-circle",
+        peakDeviationBps: -5940,
+        startPrice: 0.9884,
+        peakPrice: 0.406,
+      }],
+      subscribers: [{ chatId: "12345" }],
+      subscriptions: [
+        { chatId: "12345", stablecoinId: "usdc-circle", alerts: { depeg: true }, depegWorseningBpsStep: 100 },
+      ],
+    });
+
+    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+
+    expect(metadata.eventsDetected.depegWorsening).toBe(1);
+    expect(telegramDeliveryTranscript[0]?.html).toContain("Deviation: 38.0% → 59.4% (+21.4%)");
+    expect(telegramDeliveryTranscript[0]?.html).toContain("Price: $0.4060");
+    expect(telegramDeliveryTranscript[0]?.html).not.toContain("$0.9884");
+  });
+
   it("suppresses fresh global depeg alerts below the configured bps step", async () => {
     const harness = createDispatchHarness();
     sources(harness);

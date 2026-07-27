@@ -56,6 +56,7 @@ export interface ActiveDepegRow {
   direction: "above" | "below";
   peak_deviation_bps: number;
   start_price: number;
+  peak_price: number | null;
   peg_reference: number;
 }
 
@@ -137,12 +138,13 @@ export function filterAlertableBands(snapshot: DewsSnapshot | null): DewsSnapsho
 export function buildDepegSnapshot(rows: ActiveDepegRow[]): DepegSnapshot {
   const snapshot: DepegSnapshot = {};
   for (const row of rows) {
+    const displayPrice = row.peak_price ?? row.start_price;
     snapshot[row.stablecoin_id] = {
       stablecoinId: row.stablecoin_id,
       symbol: row.symbol,
       direction: row.direction,
       deviationBps: Math.abs(Number(row.peak_deviation_bps ?? 0)),
-      price: Number(row.start_price ?? 0),
+      price: Number(displayPrice ?? 0),
       pegReference: Number(row.peg_reference ?? 1),
     };
   }

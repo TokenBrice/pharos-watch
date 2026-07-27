@@ -122,6 +122,7 @@ describe("buildDepegSnapshot", () => {
       direction: "below",
       peak_deviation_bps: 150,
       start_price: 0.985,
+      peak_price: 0.985,
       peg_reference: 1,
     }];
     const result = buildDepegSnapshot(rows);
@@ -133,6 +134,25 @@ describe("buildDepegSnapshot", () => {
       price: 0.985,
       pegReference: 1,
     });
+  });
+
+  it("uses peak_price for active depeg display price when the event worsened after opening", () => {
+    const rows: ActiveDepegRow[] = [{
+      stablecoin_id: "pmusd-pm",
+      symbol: "pmUSD",
+      direction: "below",
+      peak_deviation_bps: -5940,
+      start_price: 0.9884,
+      peak_price: 0.406,
+      peg_reference: 1,
+    }];
+
+    expect(buildDepegSnapshot(rows)["pmusd-pm"]).toEqual(
+      expect.objectContaining({
+        deviationBps: 5940,
+        price: 0.406,
+      }),
+    );
   });
 });
 
