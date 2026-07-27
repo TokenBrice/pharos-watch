@@ -298,8 +298,23 @@ describe("evaluateV9Exit", () => {
     expect(reviewed.reasons).toContain("no-viable-exit-path");
     expect(incomplete.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
     expect(incomplete.primaryRouteKey).toBeNull();
-    expect(incomplete.reasons).toContain("missing-same-notional-route");
+    expect(incomplete.reasons).toContain("unsupported-same-notional-route");
+    expect(incomplete.reasons).not.toContain("missing-same-notional-route");
     expect(incomplete.score!).toBeGreaterThan(reviewed.score!);
+  });
+
+  it("still marks a genuinely absent route set as missing evidence", () => {
+    const result = evaluateV9Exit(
+      {
+        circulatingUsd: 20_000_000,
+        portfolioStatus: "incomplete",
+        routes: [],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.exit.boundedUnknownScore);
+    expect(result.reasons).toEqual(["missing-same-notional-route"]);
   });
 
   it("keeps unresolved optional output visible without invalidating a resolved route", () => {

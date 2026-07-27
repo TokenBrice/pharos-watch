@@ -878,6 +878,14 @@ export function evaluateV9Exit(
   ) as Record<V9ExitHorizon, V9ExitHorizonTrace>;
   if (evaluated.length === 0) {
     const portfolioReviewed = args.portfolioStatus === "reviewed-complete";
+    const onlyUnsupportedDiagnostics =
+      diagnosticReasons.length > 0 &&
+      diagnosticReasons.every((reason) => reason === "unsupported-same-notional-route");
+    const defaultReason = portfolioReviewed
+      ? "no-viable-exit-path"
+      : onlyUnsupportedDiagnostics
+        ? null
+        : "missing-same-notional-route";
     return {
       score: portfolioReviewed ? 0 : boundedFloor,
       stressRequest,
@@ -886,7 +894,7 @@ export function evaluateV9Exit(
       diversificationBonus: 0,
       horizons,
       reasons: sortedUnique([
-        portfolioReviewed ? "no-viable-exit-path" : "missing-same-notional-route",
+        ...(defaultReason ? [defaultReason] : []),
         ...diagnosticReasons,
       ]) as V9ReasonCode[],
       routes: traces,
