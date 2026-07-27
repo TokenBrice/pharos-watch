@@ -3408,8 +3408,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ).toMatchObject({ freshness: { state: "stale", maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC } });
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
+    // Wave-7 sweep 2026-07-27: FX peg classification/format ripples rotated
+    // the V8 evaluation build alongside the v5.94 liquidity methodology.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "39d42316a07e9a9229e8bbdbd1fad70ff2d95b982666720922312f36cc8b58ca",
+      "937cdf1cc326a06eb317480f9b276719c616828594acf88e34f6cd6e77b235d4",
     );
   });
 
