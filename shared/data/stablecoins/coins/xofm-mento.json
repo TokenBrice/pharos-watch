@@ -252,7 +252,7 @@
   "reserves": [
     {
       "name": "AUSD (Agora Dollar; Ethereum and Monad)",
-      "pct": 26.7201077302,
+      "pct": 26.1602865329,
       "risk": "low",
       "coinId": "ausd-agora",
       "depType": "collateral",
@@ -267,7 +267,7 @@
     },
     {
       "name": "sUSDS (Sky savings USDS)",
-      "pct": 24.9058785069,
+      "pct": 24.8904771976,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -281,7 +281,7 @@
     },
     {
       "name": "CELO",
-      "pct": 19.173806259,
+      "pct": 16.9720038629,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Celo network native asset held by Mento Reserve governance",
@@ -294,7 +294,7 @@
     },
     {
       "name": "USDT family (Ethereum/Celo USDT and Monad USDT0)",
-      "pct": 11.6128170806,
+      "pct": 12.7551512119,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -310,7 +310,7 @@
     },
     {
       "name": "EURC family (Ethereum EURC and Celo axlEUROC)",
-      "pct": 11.9428885615,
+      "pct": 11.7956378352,
       "risk": "low",
       "coinId": "eurc-circle",
       "depType": "collateral",
@@ -324,8 +324,8 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "USDC family (Ethereum/Celo/Monad USDC and Celo axlUSDC)",
-      "pct": 3.052055248,
+      "name": "USDC family (Ethereum/Celo/Monad/Polygon USDC and Celo axlUSDC)",
+      "pct": 3.9563942631,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -340,7 +340,7 @@
     },
     {
       "name": "stETH (Lido staked ETH)",
-      "pct": 2.5917558555,
+      "pct": 2.5887225251,
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lido (stETH liquid staking issuer)",
@@ -352,25 +352,26 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "WETH residual on Celo",
-      "pct": 0.0006907583,
+      "name": "ETH",
+      "pct": 0.8813265714,
       "risk": "very-low",
       "assetClass": "cryptoasset",
-      "issuerOrObligor": "Wrapped Ether on Celo",
+      "issuerOrObligor": "Ethereum native ether and residual Celo WETH held by Mento Reserve governance",
       "riskFactors": [
         "market",
+        "liquidity",
         "smart-contract"
       ],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-MENTO wave6",
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Kimi data review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Mento Reserve analytics API (live read 2026-07-22)",
+        "label": "Mento Reserve analytics API (live read 2026-07-27)",
         "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       },
       {
@@ -382,9 +383,9 @@
         "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
       }
     ],
-    "rationale": "The issuer-run reserve API was re-read on 2026-07-22 and reported $18,764,230.724245563 of collateral. The backing configuration identifies XOFm as reserve-backed and the Broker source establishes its USDm/XOFm mint/burn exchange path. The reviewed grouping combines the same stablecoin family across chains and retains every positive category: AUSD, sUSDS, CELO, USDT/USDT0, EURC/axlEUROC, USDC/axlUSDC, stETH, and the WETH residual.",
+    "rationale": "The issuer-run reserve API was re-read on 2026-07-27 and reported $18,784,067.026359823 of collateral. The backing configuration identifies XOFm as reserve-backed and the Broker source establishes its USDm/XOFm mint/burn exchange path. The reviewed grouping combines the same stablecoin family across chains and retains every positive category: AUSD, sUSDS, CELO, USDT/USDT0, EURC/axlEUROC, USDC/axlUSDC, stETH, and a combined ETH category (the API's native ETH row on Ethereum plus its residual Celo WETH row, reported as one 'ETH' slice by the Pharos Mento adapter).",
     "compositionBasis": "Issuer-run Mento Reserve API values grouped by stablecoin family; XOFm is reserve-backed under Mento's pinned backing configuration",
-    "compositionAsOf": "2026-07-22",
+    "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
     "knownUnknownExposure": "Every positive reserve API category is either linked to its tracked stablecoin family or explicitly dispositioned as an exogenous cryptoasset.",
     "knownUnknownExposurePct": 0,
@@ -392,23 +393,23 @@
       {
         "reserveIndex": 2,
         "reserveName": "CELO",
-        "pct": 19.173806259,
+        "pct": 16.9720038629,
         "disposition": "untracked-exogenous-asset",
         "rationale": "CELO is the Celo network native asset held as external reserve collateral, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 6,
         "reserveName": "stETH (Lido staked ETH)",
-        "pct": 2.5917558555,
+        "pct": 2.5887225251,
         "disposition": "untracked-exogenous-asset",
         "rationale": "stETH is external liquid-staking collateral, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 7,
-        "reserveName": "WETH residual on Celo",
-        "pct": 0.0006907583,
+        "reserveName": "ETH",
+        "pct": 0.8813265714,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "WETH is an identified wrapped cryptoasset residual, not a tracked stablecoin dependency."
+        "rationale": "ETH is external cryptoasset collateral (the API's native ETH row on Ethereum plus its residual Celo WETH row, combined into one 'ETH' slice by the Pharos Mento adapter), not a tracked stablecoin dependency."
       }
     ]
   },

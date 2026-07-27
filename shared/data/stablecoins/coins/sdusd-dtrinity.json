@@ -232,7 +232,7 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "concentrated-admin",
-    "confidence": "unknown",
+    "confidence": "verified",
     "inheritedFrom": "dusd-dtrinity",
     "summary": "sdUSD (dSTAKE vault) is upgradeable via ProxyAdmin owned by a 24-hour TimelockController, whose proposer/executor/canceller is a single 3-of-5 Safe multisig (0xe83c188...). Shares are minted only by staking dUSD \u2014 no privileged mint surface. Fraxtal's DStakeProxyAdmin is owned by a separate 24-hour TimelockController (0x0bafaDA2...) whose proposer/executor/canceller role is a 3-of-5 Safe (0xFC2f89f9...) holding the identical five-owner set as the Ethereum Safe.",
     "upgradeability": {
@@ -249,7 +249,7 @@
         "0xbe90db309b80357631069b689fc3481aca2c65be",
         "0xde914ec384346fea47339e5086d2d399b7f4733b"
       ],
-      "canChangeMintLogic": "unknown",
+      "canChangeMintLogic": true,
       "controlRef": "dSTAKE Ethereum upgrade Safe (via 24-hour TimelockController)",
       "observedAt": "2026-07-20",
       "observedBlock": 25573508,
@@ -383,7 +383,7 @@
         "evidence": "At Fraxtal block 38906249, owner() on DStakeProxyAdmin 0xde914ec384346fea47339e5086d2d399b7f4733b returned 0x0bafaDA2a5824864720873EE40cd960b36445212, an OpenZeppelin TimelockController (getMinDelay()=86400 seconds), not an EOA. That timelock's only RoleGranted events (from deployment, no RoleRevoked events found) show PROPOSER_ROLE, EXECUTOR_ROLE, and CANCELLER_ROLE all granted to Safe 0xFC2f89f9982Be98A9672CEfc3eA6dbBDd88Bc8e9. The Safe (v1.3.0) returned the five owners recorded here, threshold 3, no enabled modules, and a zero guard — an identical owner set and threshold to the Ethereum-side Safe, deployed as a separate per-chain instance."
       }
     ],
-    "economicCapSemantics": "unknown",
+    "economicCapSemantics": "bounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -401,9 +401,10 @@
           "url": "https://etherscan.io/address/0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b"
         }
       ],
-      "evidence": "Ethereum control review is current: ProxyAdmin 0xbe90db309b80357631069b689fc3481aca2c65be is owned by the 86400-second TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b, which resolves to the reviewed 3-of-5 Safe. The local wrapper share path is dUSD-deposit backed. Follow-up 2026-07-21: Fraxtal's distinct transparent proxy and DStakeProxyAdmin 0xde914ec384346fea47339e5086d2d399b7f4733b is owned by TimelockController 0x0bafaDA2a5824864720873EE40cd960b36445212 (getMinDelay=86400 seconds, not an EOA as previously stated), whose PROPOSER_ROLE/EXECUTOR_ROLE/CANCELLER_ROLE all resolve to Safe 0xFC2f89f9982Be98A9672CEfc3eA6dbBDd88Bc8e9 (3-of-5, same five owners as the Ethereum Safe, no modules, zero guard). Both chains' upgrade authority are now fully resolved.",
-      "reviewer": "P2 mint-free cohort; Claude V9 evidence-gap curation",
-      "reviewedAt": "2026-07-21"
+      "evidence": "Ethereum control review is current: ProxyAdmin 0xbe90db309b80357631069b689fc3481aca2c65be is owned by the 86400-second TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b, which resolves to the reviewed 3-of-5 Safe. The local wrapper share path is dUSD-deposit backed. Follow-up 2026-07-21: Fraxtal's distinct transparent proxy and DStakeProxyAdmin 0xde914ec384346fea47339e5086d2d399b7f4733b is owned by TimelockController 0x0bafaDA2a5824864720873EE40cd960b36445212 (getMinDelay=86400 seconds, not an EOA as previously stated), whose PROPOSER_ROLE/EXECUTOR_ROLE/CANCELLER_ROLE all resolve to Safe 0xFC2f89f9982Be98A9672CEfc3eA6dbBDd88Bc8e9 (3-of-5, same five owners as the Ethereum Safe, no modules, zero guard). Both chains' upgrade authority are now fully resolved. Re-verified 2026-07-27: at Ethereum block 25625502 the sdUSD proxy EIP-1967 admin slot still returns ProxyAdmin 0xbe90db309b80357631069b689fc3481aca2c65be, owner() is the TimelockController with getMinDelay()=86400, hasRole confirms PROPOSER_ROLE, EXECUTOR_ROLE and CANCELLER_ROLE all held by Safe 0xe83c188a7be46b90715c757a06cf917175f30262, and the Safe returns threshold 3 with the same five owners; at Fraxtal block 39180535 DStakeProxyAdmin owner() is TimelockController 0x0bafaDA2a5824864720873EE40cd960b36445212 with getMinDelay()=86400 and Safe 0xFC2f89f9982Be98A9672CEfc3eA6dbBDd88Bc8e9 returns threshold 3 with the identical five owners. sdUSD shares are minted only against deposited local dUSD, so the wrapper mint is economically bounded by the staking vault contract; the timelocked 3-of-5 Safe can change that code after the delay.",
+      "reviewer": "P2 mint-free cohort; Claude V9 evidence-gap curation; Kimi data review (2026-07-27)",
+      "reviewedAt": "2026-07-27",
+      "disposition": "scoreable"
     }
   },
   "launchDate": "2025-10-13"

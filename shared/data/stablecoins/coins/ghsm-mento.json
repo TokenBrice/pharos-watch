@@ -7,7 +7,7 @@
   "oneLiner": "GHSm is Mento's Ghanaian cedi stablecoin on Celo, minted CDP-style against USDm collateral (Mento V3, a Liquity v2 fork).",
   "flags": {
     "backing": "crypto-backed",
-    "pegCurrency": "OTHER",
+    "pegCurrency": "GHS",
     "governance": "centralized-dependent",
     "yieldBearing": false,
     "rwa": false,
@@ -175,7 +175,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Verified on Celo at block 72618310: token 0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313 reports symbol GHSm, name 'Mento Ghanaian Cedi', 18 decimals (Celo blockscout identifies it as 'Celo Ghanian Cedi' / cGHS). owner() = 0x890db8a597940165901372dd7db61c9f246e2147, a TransparentUpgradeableProxy to a TimelockController (0x3eFAD8F997F705675924470Ec84677DB68c5A2d0) \u2014 Mento governance. Native Mento issuance on Celo; no cross-chain route.",
+        "reviewNote": "Verified on Celo at block 72618310: token 0xfaea5f3404bba20d3cc2f8c4b0a888f55a3c7313 reports symbol GHSm, name 'Mento Ghanaian Cedi', 18 decimals (Celo blockscout identifies it as 'Celo Ghanian Cedi' / cGHS). owner() = 0x890db8a597940165901372dd7db61c9f246e2147, a TransparentUpgradeableProxy to a TimelockController (0x3eFAD8F997F705675924470Ec84677DB68c5A2d0) — Mento governance. Native Mento issuance on Celo; no cross-chain route.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "observedBlock": 72618310,
@@ -198,7 +198,7 @@
   "reserves": [
     {
       "name": "AUSD (Agora Dollar)",
-      "pct": 27.2,
+      "pct": 26.2,
       "risk": "low",
       "coinId": "ausd-agora",
       "depType": "collateral",
@@ -213,7 +213,7 @@
     },
     {
       "name": "sUSDS (Sky savings USDS)",
-      "pct": 24.4,
+      "pct": 24.9,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -227,7 +227,7 @@
     },
     {
       "name": "CELO",
-      "pct": 17.8,
+      "pct": 17.0,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Celo network native asset held by Mento Reserve governance",
@@ -240,7 +240,7 @@
     },
     {
       "name": "USDT",
-      "pct": 12.3,
+      "pct": 12.7,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -255,7 +255,7 @@
     },
     {
       "name": "EURC (Circle euro stablecoin)",
-      "pct": 12.0,
+      "pct": 11.8,
       "risk": "low",
       "coinId": "eurc-circle",
       "depType": "collateral",
@@ -283,7 +283,7 @@
     },
     {
       "name": "stETH (Lido staked ETH)",
-      "pct": 2.4,
+      "pct": 2.6,
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lido (stETH liquid staking issuer)",
@@ -293,11 +293,24 @@
         "liquidity"
       ],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "ETH",
+      "pct": 0.9,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum native ether and residual Celo WETH held by Mento Reserve governance",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Kimi data review",
     "confidence": "verified",
     "sources": [
       {
@@ -305,7 +318,7 @@
         "url": "https://reserve.mento.org/"
       },
       {
-        "label": "Mento reserve analytics API",
+        "label": "Mento reserve analytics API (live read 2026-07-27)",
         "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       },
       {
@@ -313,9 +326,9 @@
         "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
       }
     ],
-    "rationale": "The prior aggregate USDm wrapper slice could not classify the live Mento adapter rows, leaving the CELO and stETH reserve exposures unstructured. The envelope is restated on the adapter's exact constituent identities and 2026-07-20 captured weights from the issuer-run reserve analytics API; each stablecoin constituent links to its tracked asset, and CELO and stETH now carry explicit classification and failure-domain identity. The live adapter refreshes weights at runtime.",
-    "compositionBasis": "Mento reserve analytics API constituent identities and weights captured 2026-07-20; GHSm is reserve-backed via the shared Mento Reserve per Mento's backing registry",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "The prior aggregate USDm wrapper slice could not classify the live Mento adapter rows, leaving the CELO and stETH reserve exposures unstructured. The envelope is restated on the adapter's exact constituent identities and 2026-07-27 captured weights from the issuer-run reserve analytics API, which now includes an ETH category (native ETH on Ethereum plus a residual Celo WETH balance, reported as one 'ETH' slice by the adapter); each stablecoin constituent links to its tracked asset, and CELO, stETH, and ETH now carry explicit classification and failure-domain identity. The live adapter refreshes weights at runtime.",
+    "compositionBasis": "Mento reserve analytics API constituent identities and weights captured 2026-07-27; GHSm is reserve-backed via the shared Mento Reserve per Mento's backing registry",
+    "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
     "knownUnknownExposure": "Every constituent of the shared Mento Reserve captured by the live adapter is identified and either linked to a tracked stablecoin or explicitly classified. Constituent weights drift and are refreshed by the live adapter.",
     "knownUnknownExposurePct": 0,
@@ -323,16 +336,23 @@
       {
         "reserveIndex": 2,
         "reserveName": "CELO",
-        "pct": 17.8,
+        "pct": 17.0,
         "disposition": "untracked-exogenous-asset",
         "rationale": "CELO is the Celo network native asset held as external reserve collateral, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 6,
         "reserveName": "stETH (Lido staked ETH)",
-        "pct": 2.4,
+        "pct": 2.6,
         "disposition": "untracked-exogenous-asset",
         "rationale": "stETH is external liquid-staking collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "ETH",
+        "pct": 0.9,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ETH is external cryptoasset collateral held by the Mento Reserve (native ETH on Ethereum plus a residual Celo WETH balance), not a tracked stablecoin dependency."
       }
     ]
   },

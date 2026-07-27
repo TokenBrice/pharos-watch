@@ -105,8 +105,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "unknown",
-    "summary": "UKTBL is issuer-minted through Spiko PermissionManagers on five EVM deployments, with two-step Minters on Ethereum, Polygon, Base, Etherlink, and Arbitrum plus UKTBL-specific Chainlink CCIP pools on Ethereum, Polygon, Base, and Arbitrum. Each EVM ADMIN Safe can mint directly, change role membership and limits, and upgrade mint-critical logic. Starknet has a 3-of-5 Argent owner/admin multisig plus three additional direct single-key MINTER accounts; Stellar has a single-visible-signer owner/admin plus three direct single-visible-signer MINTER accounts. The source code has no aggregate supply cap, so configured EVM daily limits are operational throttles rather than economic issuance bounds. Current Soroban pending owner/admin-transfer state remains unverified.",
+    "confidence": "manual-review",
+    "summary": "UKTBL is issuer-minted through Spiko PermissionManagers on five EVM deployments, with two-step Minters on Ethereum, Polygon, Base, Etherlink, and Arbitrum plus UKTBL-specific Chainlink CCIP pools on Ethereum, Polygon, Base, and Arbitrum. Each EVM ADMIN Safe can mint directly, change role membership and limits, and upgrade mint-critical logic. Starknet has a 3-of-5 Argent owner/admin multisig plus three additional direct single-key MINTER accounts; Stellar has a single-visible-signer owner/admin plus three direct single-visible-signer MINTER accounts, with no pending Soroban owner/admin transfer at ledger 63675179. The source code has no aggregate supply cap, so configured EVM daily limits are operational throttles rather than economic issuance bounds.",
     "controls": [
       {
         "chain": "ethereum",
@@ -810,7 +810,7 @@
         "chain": "ethereum",
         "label": "Spiko Minter group-9 approvers (Ethereum; six EOAs plus Safe)",
         "role": "backend-signer",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "capDescription": "Any group-9 member can approve a pending Minter request, which executes the token mint without a daily-limit check; a group-10 initiator must first create the pending request.",
@@ -858,7 +858,7 @@
         "chain": "polygon",
         "label": "Spiko Minter group-9 approvers (Polygon; six EOAs plus Safe)",
         "role": "backend-signer",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "capDescription": "Any listed group-9 member can execute a pending Minter mint after a separate group-10 initiation.",
@@ -906,7 +906,7 @@
         "chain": "base",
         "label": "Spiko Minter group-9 approvers (Base; six EOAs plus Safe)",
         "role": "backend-signer",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "capDescription": "Any listed group-9 member can execute a pending Minter mint after a separate group-10 initiation.",
@@ -954,7 +954,7 @@
         "chain": "etherlink",
         "label": "Spiko Minter group-9 approvers (Etherlink; six EOAs plus Safe)",
         "role": "backend-signer",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "capDescription": "Any listed group-9 member can execute a pending Minter mint after a separate group-10 initiation.",
@@ -1002,7 +1002,7 @@
         "chain": "arbitrum",
         "label": "Spiko Minter group-9 approvers (Arbitrum; six EOAs plus Safe)",
         "role": "backend-signer",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "capDescription": "Any listed group-9 member can execute a pending Minter mint after a separate group-10 initiation.",
@@ -1155,13 +1155,10 @@
           "url": "https://horizon.stellar.org/accounts/GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H"
         }
       ],
-      "evidence": "Full deployment-to-head GroupAdded/GroupRemoved reconciliation plus live role reads enumerated every EVM UKTBL mint path: group 0 is the recorded 3-of-6 chain-local Safe and group 2 is the chain-local Minter plus the UKTBL CCIP pool on Ethereum, Polygon, Base, and Arbitrum; Etherlink has only its Minter. All non-UKTBL group-2 pools were classified by getToken() and excluded. Minter group-10 initiators and group-9 approvers are explicitly recorded for every EVM chain. EIP-1967 reads at the cited heads resolve all five chain-level Minter proxy paths to their implementations; the recorded group-0 ADMIN Safes authorize their UUPS upgrades. On Starknet, complete RoleGranted/RoleRevoked history and live has_role reads at block 12329657 yield exactly four MINTER_ROLE holders: the 3-of-5 Argent owner/admin multisig and three single-key account contracts. On Stellar at ledger 63659619, enumerable PermissionManager reads yield exactly three MINTER accounts; Horizon shows those accounts and the owner/admin each have one visible ed25519 signer and zero transaction thresholds. EVM Minter daily limits are not hard bounds because group 9 can approve an over-limit pending request and ADMIN can change limits or logic. Public sources do not identify the operating entities or custody arrangements for the terminal EVM signer addresses. The current active Stellar roles are enumerated, but temporary Soroban pending owner/admin-transfer state was not independently decoded and could authorize a future authority transition, so this profile remains unresolved.",
-      "reviewer": "OpenAI Codex CTRL-uktbl-spiko static control inventory",
-      "reviewedAt": "2026-07-26",
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Decode current Soroban temporary storage for pending token-owner and PermissionManager-admin transfers, or obtain issuer confirmation that neither transfer is pending; active owner/admin and current MINTER memberships are otherwise enumerated."
-      ]
+      "evidence": "Full deployment-to-head GroupAdded/GroupRemoved reconciliation plus live role reads enumerated every EVM UKTBL mint path: group 0 is the recorded 3-of-6 chain-local Safe and group 2 is the chain-local Minter plus the UKTBL CCIP pool on Ethereum, Polygon, Base, and Arbitrum; Etherlink has only its Minter. All non-UKTBL group-2 pools were classified by getToken() and excluded. Minter group-10 initiators and group-9 approvers are explicitly recorded for every EVM chain. EIP-1967 reads at the cited heads resolve all five chain-level Minter proxy paths to their implementations; the recorded group-0 ADMIN Safes authorize their UUPS upgrades. On Starknet, complete RoleGranted/RoleRevoked history and live has_role reads at block 12329657 yield exactly four MINTER_ROLE holders: the 3-of-5 Argent owner/admin multisig and three single-key account contracts. On Stellar at ledger 63659619, enumerable PermissionManager reads yield exactly three MINTER accounts; Horizon shows those accounts and the owner/admin each have one visible ed25519 signer and zero transaction thresholds. EVM Minter daily limits are not hard bounds because group 9 can approve an over-limit pending request and ADMIN can change limits or logic. Public sources do not identify the operating entities or custody arrangements for the terminal EVM signer addresses. The current active Stellar roles are enumerated, and on 2026-07-27 Kimi data review independently decoded the Soroban pending-transfer state via mainnet.sorobanrpc.com getLedgerEntries at ledger 63675179: the token CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR instance storage still lists Owner GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H with no PendingOwner key, the PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M instance storage still lists Admin GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H with no PendingAdmin key, and the temporary-storage PendingOwner and PendingAdmin contract-data entries are absent on two independent public RPCs. Because the OpenZeppelin stellar-access 0.4.1 role-transfer helper stores pending transfers only in temporary storage, no pending owner or admin transfer exists at the pinned ledger and no future authority transition is staged.",
+      "reviewer": "OpenAI Codex CTRL-uktbl-spiko static control inventory; Kimi data review",
+      "reviewedAt": "2026-07-27",
+      "disposition": "scoreable"
     }
   },
   "chainTier": "ethereum",

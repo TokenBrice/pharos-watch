@@ -1096,7 +1096,7 @@
   "reserves": [
     {
       "name": "Hastra / Sentora PRIME credit allocations",
-      "pct": 44.8,
+      "pct": 45.5,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "Hastra PRIME (Figure / Democratized Prime HELOC collateral) via the Morpho Sentora PRIME market",
@@ -1111,7 +1111,7 @@
     },
     {
       "name": "Pendle PT USDat tokenized-treasury principal token",
-      "pct": 25.3,
+      "pct": 25.7,
       "risk": "high",
       "coinId": "usdat-saturn",
       "depType": "collateral",
@@ -1125,11 +1125,11 @@
         "counterparty"
       ],
       "liquidityHorizon": "over-seven-days",
-      "maturityDaysMax": 38
+      "maturityDaysMax": 31
     },
     {
       "name": "GHO lending markets",
-      "pct": 15.3,
+      "pct": 15.5,
       "risk": "medium",
       "coinId": "gho-aave",
       "depType": "collateral",
@@ -1145,7 +1145,7 @@
     },
     {
       "name": "USDC positions",
-      "pct": 9.9,
+      "pct": 9.6,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -1161,27 +1161,13 @@
       "liquidityHorizon": "one-day"
     },
     {
-      "name": "USD1 lending markets",
-      "pct": 2.1,
-      "risk": "medium",
-      "coinId": "usd1-world-liberty-financial",
-      "depType": "collateral",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "World Liberty Financial (USD1) via the Morpho Steakhouse High Yield USD1 market on Monad",
-      "riskFactors": [
-        "counterparty",
-        "smart-contract",
-        "liquidity",
-        "legal"
-      ],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "name": "Unmapped reserve positions",
-      "pct": 2.6,
+      "name": "Agua Global Carry Vault (USDC-denominated ERC-4626)",
+      "pct": 3.7,
       "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
       "assetClass": "fund-share",
-      "issuerOrObligor": "Agua Global Carry Vault (multi-strategy ERC-4626 vault manager)",
+      "issuerOrObligor": "Agua Global Carry Vault (multi-strategy ERC-4626 vault manager); USDC-denominated share claim on Circle USDC",
       "riskFactors": [
         "market",
         "liquidity",
@@ -1193,8 +1179,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Kimi data review",
     "confidence": "verified",
     "sources": [
       {
@@ -1210,30 +1196,27 @@
         "url": "https://app.reservoir.xyz/reserves"
       },
       {
+        "label": "Agua Global Carry Vault on Etherscan (ERC-4626 asset() read)",
+        "url": "https://etherscan.io/address/0xa98b4a70e17e55045cde4972b95bc2e8cec22a0f"
+      },
+      {
         "label": "Sentora PRIME vault launch note (curator-primary: PRIME is Figure-originated HELOC credit)",
         "url": "https://sentora.com/research/articles/sentora-launches-prime-vault-on-morpho"
       }
     ],
-    "rationale": "The Reservoir raw reserves API fetched on 2026-07-20 reported $36,081,690.31 of total assets across 11 rows (totalLiabilities $35,792,938.51, equity $288,751.80). Bucketing rows through the reviewed Reservoir adapter mapping yields: Hastra/Sentora PRIME 44.8% ($120,025.13 Hastra PRIME token + $16,049,634.78 Morpho Sentora PRIME), Pendle PT-USDat-27AUG2026 25.3% ($9,124,818.98), Aave GHO on Plasma/Monad 15.3% ($5,520,885.92), USDC 9.9% ($201,441.69 direct/PSM USDC + $3,367,032.94 Morpho Steakhouse Prime Instant V2), USD1 2.1% ($251,532.71 direct + $496,413.08 Morpho Steakhouse High Yield USD1 on Monad), and the unmapped Agua Global Carry Vault 2.6% ($949,905.09); rounded slices sum to 100.0%. Since the 2026-07-14 review the USD1 bucket fell from 8.4% to 2.1% (a 6.3-point move outside the +/-5-point binding band), so curated weights were re-aligned to the 2026-07-20 live rows; the other five buckets moved less than 2 points. Risk-tier judgment calls: PRIME stays high because it is Figure-originated HELOC private credit (per curator Sentora's own description) whose exit path is an unpublished Morpho market redemption; PT USDat stays high despite tokenized-treasury collateral because the position is a fixed-maturity Pendle principal token (matures 2026-08-27, 38 days out) carrying AMM-exit basis risk, so the riskier tier was kept over low tokenized-Treasury treatment; the Agua ERC-4626 multi-strategy vault remains unmapped because Reservoir discloses no constituent breakdown.",
-    "compositionBasis": "Reservoir raw reserves API (app.reservoir.xyz/api/reserves/raw) fetched 2026-07-20; totalBalanceValue rows bucketed through the reviewed Reservoir live-reserve adapter mapping and normalized against totalAssets $36,081,690.31",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "The Reservoir raw reserves API fetched on 2026-07-27 reported $35,590,265.61 of total assets across 10 rows (totalLiabilities $35,293,176.43, equity $297,089.18). Bucketing rows through the reviewed Reservoir adapter mapping yields: Hastra/Sentora PRIME 45.5% ($120,195.67 Hastra PRIME token + $16,073,753.70 Morpho Sentora PRIME), Pendle PT-USDat-27AUG2026 25.7% ($9,143,696.79), Aave GHO on Plasma/Monad 15.5% ($4,039,138.08 Plasma + $1,485,799.99 Monad), USDC 9.6% ($35,442.69 direct/PSM USDC + $3,392,592.23 Morpho Steakhouse Prime Instant V2), and the Agua Global Carry Vault 3.7% ($1,299,646.44); rounded slices sum to 100.0%. Since the 2026-07-20 review the USD1 bucket went to zero (no USD1 rows in the 2026-07-27 payload), so the 2.1% USD1 slice was removed, and the Agua vault slice grew from 2.6% to 3.7%. The Agua slice is no longer unmapped: at Ethereum block 25673162 (0x18703ca) the ERC-4626 at 0xa98b4a70e17e55045cde4972b95bc2e8cec22a0f returned asset() = USDC (0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48), name 'Agua Global Carry Vault', symbol aguaUSDCgc, so the slice maps to its verified USDC underlying claim while the vault's undisclosed multi-strategy internals stay captured in its high risk tier and risk factors. Risk-tier judgment calls retained: PRIME stays high because it is Figure-originated HELOC private credit (per curator Sentora's own description) whose exit path is an unpublished Morpho market redemption; PT USDat stays high despite tokenized-treasury collateral because the position is a fixed-maturity Pendle principal token (matures 2026-08-27, 31 days out) carrying AMM-exit basis risk.",
+    "compositionBasis": "Reservoir raw reserves API (app.reservoir.xyz/api/reserves/raw) fetched 2026-07-27; totalBalanceValue rows bucketed through the reviewed Reservoir live-reserve adapter mapping and normalized against totalAssets $35,590,265.61; Agua vault underlying verified on-chain at Ethereum block 25673162",
+    "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 2.6% Agua Global Carry Vault row (multi-strategy ERC-4626 across lending markets, protocols, and chains) does not expose a constituent-level allocation that supports a tracked-stablecoin mapping.",
-    "knownUnknownExposurePct": 2.6,
+    "knownUnknownExposure": "All reserve buckets are attributed to named exposures. The Agua Global Carry Vault does not publish its internal multi-strategy allocation; the slice is mapped to its on-chain-verified USDC underlying claim and retains high risk for the undisclosed strategy layer.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Hastra / Sentora PRIME credit allocations",
-        "pct": 44.8,
+        "pct": 45.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "PRIME is a Figure-originated HELOC private-credit token issued via Hastra/Democratized Prime and lent through the Morpho Sentora PRIME market, not a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 5,
-        "reserveName": "Unmapped reserve positions",
-        "pct": 2.6,
-        "disposition": "insufficient-evidence",
-        "rationale": "The source identifies the Agua Global Carry Vault but publishes no constituent-level allocation, so no exact tracked dependency link can be drawn."
       }
     ]
   },

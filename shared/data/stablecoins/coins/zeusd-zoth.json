@@ -311,8 +311,8 @@
   "mintAuthority": {
     "mintPath": "permissioned-minter",
     "authorityPosture": "concentrated-admin",
-    "confidence": "unknown",
-    "summary": "ZeUSD token minting is restricted to a router contract, but an EOA holds DEFAULT_ADMIN_ROLE and ADMIN_ROLE on the token. The current router-admin, terminal upgrade, and active multi-deployment control chains are not fully enumerated.",
+    "confidence": "verified",
+    "summary": "ZeUSD token minting is restricted to the V1 router contract; every layer of the control chain (token admin, router admin, router upgrade, AccessController upgrade, and the manta/metis/avalanche OFT representations) resolves to the single Zoth admin EOA 0x3604582f56565d7060d73829ffb9ebd579218dca, verified with no contract bytecode. The router's shared deposit/redemption pause remained active at the reviewed block.",
     "mintIncidents": [
       {
         "date": "2025-03-01",
@@ -361,7 +361,28 @@
             "url": "https://sourcify.dev/server/v2/contract/1/0xea25b537209ec4aefbc7252c6a49b132639ea677?fields=abi,metadata"
           }
         ],
-        "evidence": "ZeUSD.router() returned this proxy. ZeUSD source shows mint(address,uint256) is onlyRouter; router source exposes mintWithCollateral and mintWithStable routes."
+        "evidence": "ZeUSD.router() returned this proxy. ZeUSD source shows mint(address,uint256) is onlyRouter; router source exposes mintWithCollateral and mintWithStable routes. Re-verified 2026-07-27 at Ethereum block 25625512: the router's EIP-1967 implementation slot still resolves to the reviewed V1 implementation 0xea25b537209ec4aefbc7252c6a49b132639ea677, accessController() is 0xe81250ed196e45881b78ae92bc978e1de4d61a22, and depositsPaused() is still true."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe81250ed196e45881b78ae92bc978e1de4d61a22",
+        "label": "ZeUSD AccessController (router admin and upgrade roles)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "ZeUSD AccessController implementation (verified source)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xf5b1084b3f68f347a6099e3eabb279d9e8be122b?fields=sources"
+          },
+          {
+            "label": "ZeUSD router implementation (accessController-gated admin and upgrade)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xea25b537209ec4aefbc7252c6a49b132639ea677?fields=sources"
+          }
+        ],
+        "evidence": "At Ethereum block 25625512 (2026-07-27), this UUPS proxy (implementation 0xf5b1084b3f68f347a6099e3eabb279d9e8be122b) is the router's accessController. getRoleMembers(DEFAULT_ADMIN_ROLE = 0x00) returns exactly one member, the Zoth admin EOA 0x3604582f56565d7060d73829ffb9ebd579218dca; getRoleMembers(UPGRADER_ROLE) likewise returns only that EOA, with roleAdmin = DEFAULT_ADMIN_ROLE. The verified source gates router admin functions on DEFAULT_ADMIN_ROLE and both the router's and the AccessController's own _authorizeUpgrade on UPGRADER_ROLE, so the whole router administration and upgrade chain terminates at the single EOA."
       },
       {
         "chain": "ethereum",
@@ -378,24 +399,28 @@
             "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x7dc9748da8e762e569f9269f48f69a1a9f8ea761&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
           }
         ],
-        "evidence": "ZeUSD.owner() returned this EOA; hasRole(DEFAULT_ADMIN_ROLE) and hasRole(ADMIN_ROLE) both returned true. RoleGranted logs show this address received both roles during initialization."
+        "evidence": "ZeUSD.owner() returned this EOA; hasRole(DEFAULT_ADMIN_ROLE) and hasRole(ADMIN_ROLE) both returned true. RoleGranted logs show this address received both roles during initialization. Re-verified 2026-07-27 at Ethereum block 25625512: eth_getCode returns empty (plain EOA, no multisig or contract wallet). The same address is owner() of the ZeUSD OFT representations on manta (block 9094790), metis (block 22957771), and avalanche (block 91371517), which are the mint/burn authority for each satellite representation, and it is the sole member of both DEFAULT_ADMIN_ROLE and UPGRADER_ROLE on the router's AccessController."
       }
     ],
-    "economicCapSemantics": "unknown",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "unknown",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
-        "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761"
+        "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+        "0x6283F77Db630D6fe69A454ef6cf626e98B117C9b",
+        "0xe81250ed196e45881b78ae92bc978e1de4d61a22"
       ],
       "implementationAddresses": [
-        "0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de"
+        "0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de",
+        "0xea25b537209ec4aefbc7252c6a49b132639ea677",
+        "0xf5b1084b3f68f347a6099e3eabb279d9e8be122b"
       ],
       "canChangeMintLogic": true,
       "controlRef": "ZeUSD token owner/admin EOA",
-      "observedAt": "2026-07-21",
-      "observedBlock": 25579960,
+      "observedAt": "2026-07-27",
+      "observedBlock": 25625512,
       "sources": [
         {
           "label": "ZeUSD implementation (verified source; _authorizeUpgrade is onlyRole(DEFAULT_ADMIN_ROLE))",
@@ -406,8 +431,12 @@
           "url": "https://etherscan.io/address/0x7dc9748da8e762e569f9269f48f69a1a9f8ea761"
         },
         {
-          "label": "ZeUSD router implementation",
-          "url": "https://sourcify.dev/server/v2/contract/1/0xea25b537209ec4aefbc7252c6a49b132639ea677?fields=abi,metadata"
+          "label": "ZeUSD router implementation (UUPS; _authorizeUpgrade gated on AccessController UPGRADER_ROLE)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xea25b537209ec4aefbc7252c6a49b132639ea677?fields=sources"
+        },
+        {
+          "label": "ZeUSD AccessController implementation (UUPS; _authorizeUpgrade requires UPGRADER_ROLE)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xf5b1084b3f68f347a6099e3eabb279d9e8be122b?fields=sources"
         }
       ]
     },
@@ -422,19 +451,22 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de?fields=sources"
         },
         {
+          "label": "ZeUSD router implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xea25b537209ec4aefbc7252c6a49b132639ea677?fields=sources"
+        },
+        {
+          "label": "ZeUSD AccessController implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xf5b1084b3f68f347a6099e3eabb279d9e8be122b?fields=sources"
+        },
+        {
           "label": "ZeUSD token role logs",
           "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0x7dc9748da8e762e569f9269f48f69a1a9f8ea761&fromBlock=0&toBlock=latest&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
         }
       ],
-      "evidence": "Direct reads and Sourcify source identify a router-only token mint path plus an EOA token owner/admin that can set the router. The reviewed primary sources do not enumerate the router's active administration or current control parity across all tracked deployments. Zoth's current reserve review also records no public assets-and-liabilities reconciliation or verified prudential-supervision record for this token. Upgrade-authority check (2026-07-21): at Ethereum block 25579960, the ZeUSD token's EIP-1967 implementation slot resolves to 0xc80a5a2658fd44e76b0940773bd3c2c2cd9454de and its admin slot is zero (no separate ProxyAdmin), confirming a UUPS pattern; the pinned verified implementation source shows _authorizeUpgrade is gated onlyRole(DEFAULT_ADMIN_ROLE), the same role already confirmed held by the token owner/admin EOA 0x3604582f56565d7060D73829FfB9EBD579218Dca. The canonical Ethereum token's upgrade authority is therefore resolved; the router's own access-control administration and upgrade-authority parity across the manta/metis/avalanche OFT deployments remain unresolved.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Router admin role grants include additional addresses in logs; final row should review the router's own access-control implementation and current active admin set.",
-        "No multisig setup was verified for the token owner/admin EOA.",
-        "The Ethereum canonical token's UUPS upgrade authority (DEFAULT_ADMIN_ROLE) is now resolved on-chain (2026-07-21); the router's own access-control administration and upgrade-authority parity across the manta/metis/avalanche OFT deployments remain open."
-      ]
+      "evidence": "Control-chain completion review, 2026-07-27: the previously open router-administration and cross-deployment parity questions are resolved on-chain. At Ethereum block 25625512 the router proxy 0x6283F77Db630D6fe69A454ef6cf626e98B117C9b still resolves to the reviewed V1 implementation 0xea25b537209ec4aefbc7252c6a49b132639ea677, accessController() is 0xe81250ed196e45881b78ae92bc978e1de4d61a22 (UUPS, implementation 0xf5b1084b3f68f347a6099e3eabb279d9e8be122b), and depositsPaused() remains true. The AccessController's getRoleMembers returns exactly one member for both DEFAULT_ADMIN_ROLE (0x00) and UPGRADER_ROLE: the Zoth admin EOA 0x3604582f56565d7060d73829ffb9ebd579218dca, whose eth_getCode is empty (no multisig or contract wallet). Verified sources gate router admin functions on DEFAULT_ADMIN_ROLE and the router's, the AccessController's, and the token's upgrade authorizations on UPGRADER_ROLE or token DEFAULT_ADMIN_ROLE, all terminating at the same EOA. Cross-deployment parity verified 2026-07-27: owner() of the ZeUSD OFT representation is the same EOA on manta (block 9094790), metis (block 22957771), and avalanche (block 91371517), and each satellite token is itself an EIP-1967 proxy whose OFT contract is the mint/burn authority for that representation. Every material issuance path therefore concentrates in one externally owned account with no timelock, multisig, or module layer. No public assets-and-liabilities reconciliation or verified prudential-supervision record is published for this token, and the token source carries no supply cap, so economic cap semantics are unbounded.",
+      "reviewer": "Kimi data review",
+      "reviewedAt": "2026-07-27",
+      "disposition": "scoreable"
     }
   },
   "custodyModel": "institutional-unregulated",

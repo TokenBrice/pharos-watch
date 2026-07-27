@@ -157,68 +157,141 @@
     }
   ],
   "mintAuthority": {
-    "mintPath": "unknown",
-    "authorityPosture": "unknown",
-    "confidence": "unknown",
-    "summary": "XT.com historically described XTUSD as an XTDao/MakerDAO-style vault stablecoin, but the active XSC mint, governance, cap, and upgrade controls cannot be enumerated from current verifiable evidence.",
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "bounded-admin",
+    "confidence": "manual-review",
+    "summary": "XTUSD is minted by a live MakerDAO DSS-style CDP system on XSC: users draw Vat credit against Wrapped XT (ilk XT-A) and the DaiJoin adapter 0xa57cde0585010aa1bcfadb3bf6f3445349bb98ab, the sole ward on the token, mints on exit. The 1,000,000,000 XTUSD per-collateral debt ceiling matches the issuer announcement and is effectively frozen because the deployer was revoked from every ward set and the only Vat wards are non-governance system contracts. The token and all system contracts are non-proxy with no upgrade path.",
     "controls": [
       {
-        "label": "XT.com-described XTDao vault route (current contracts unresolved)",
-        "role": "unknown",
-        "authorityType": "unknown",
-        "directMintAbility": "unknown",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "capDescription": "The issuer's historical announcement describes collateral and auctions, but no current XTDao mint-contract address or enforceable cap could be identified on XSC.",
-        "evidence": "XT.com's TAI-to-XTUSD announcement describes a historical XTDao smart-contract project based on MakerDAO. It does not identify the current mint contracts, role holders, or cap authority, so no live mint controller is attributed to this label."
+        "chain": "xsc",
+        "address": "0xa57cde0585010aa1bcfadb3bf6f3445349bb98ab",
+        "label": "XTDao DaiJoin (sole XTUSD ward, live)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "capDescription": "Mints XTUSD on user exit against Vat dai drawn on collateral; bounded by the Vat ilk XT-A line of 1e54 rad (1,000,000,000 XTUSD) and the global Line of about 1.456e54 rad. No reviewed function on a current Vat ward can raise these ceilings, so the cap is effectively frozen.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-27",
+        "observedBlock": 47838017,
+        "sources": [
+          {
+            "label": "XTUSD on xscscan",
+            "url": "https://xscscan.pub/address/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
+          },
+          {
+            "label": "XSC public RPC (datarpc1.xsc.pub, wards/dai/live reads, 2026-07-27)",
+            "url": "https://datarpc1.xsc.pub"
+          }
+        ],
+        "evidence": "At XSC block 47,838,017 (datarpc1.xsc.pub): token.wards(0xa57cde05...) = 1 and this contract's dai() = the XTUSD token 0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0, vat() = 0xf9d4810f1b140d869d2f92ca8da1755ea55e786b, live() = 1. Every other tested address (deployer 0xE8864ba6..., owner EOA 0x2571CC82..., DSProxy 0x34ed2cdd..., manager 0x5611e8f2..., GemJoin 0xdec7d8fe..., Jug 0x8276a38e...) has token.wards = 0, and a simulated mint(address,uint256) from each reverts XTUSD/not-authorized. Token Transfer(0x0 -> user) events across the xscscan history coincide with DaiJoin-style CDP exits."
       },
       {
-        "label": "XTUSD token and undisclosed XTDao upgrade path",
-        "role": "proxy-admin",
-        "authorityType": "unknown",
-        "directMintAbility": "unknown",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "The readable XSC token at 0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0 has non-proxy bytecode and zero EIP-1967 implementation slot, but owner(), masterMinter(), AccessControl reads, and LayerZero endpoint() revert. Neither issuer materials nor public XSC tooling identify the separate XTDao contracts or any upgrade authority."
+        "chain": "xsc",
+        "address": "0xf9d4810f1b140d869d2f92ca8da1755ea55e786b",
+        "label": "XTDao Vat (CDP debt engine, live)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "capDescription": "Holds the XT-A debt ceiling (line = 1e54 rad) and global Line (~1.456e54 rad). Only Vat wards can file new ceilings or rely new adapters; the current wards are the Jug and the XT-A GemJoin, neither of which exposes such a call, and the deployer was revoked, so parameter governance is effectively frozen.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-27",
+        "observedBlock": 47838017,
+        "sources": [
+          {
+            "label": "XSC public RPC (datarpc1.xsc.pub, wards/ilks/Line reads, 2026-07-27)",
+            "url": "https://datarpc1.xsc.pub"
+          },
+          {
+            "label": "XT.COM TAI to XTUSD announcement",
+            "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
+          }
+        ],
+        "evidence": "At XSC block 47,838,017: live() = 1; wards(Jug 0x8276a38e...) = 1, wards(GemJoin 0xdec7d8fe...) = 1, wards(deployer 0xE8864ba6...) = 0 and 0 for the CDP manager, DaiJoin, DSProxy, and 0x2571CC82 EOA. ilks('XT-A') = Art 4,325,685.43, rate 1.1097 ray, spot 3.478 ray, line 1e54 rad, dust 1e43 rad; Line() ~= 1.456e54 rad. A replay of a 2022 user mint calldata reverts Vat/not-safe (position would breach collateralization), confirming the frob path is live."
+      },
+      {
+        "chain": "xsc",
+        "address": "0xdec7d8fe3955ccbeb009e366c583fba2a9b63d2e",
+        "label": "XTDao GemJoin XT-A (Wrapped XT collateral adapter)",
+        "role": "custodian",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "capDescription": "Custodies WXT collateral for ilk XT-A and holds a Vat ward for collateral accounting (slip); it cannot mint XTUSD and exposes no ceiling-raising call.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-27",
+        "observedBlock": 47838017,
+        "sources": [
+          {
+            "label": "XSC public RPC (datarpc1.xsc.pub, gem/ilk/live reads, 2026-07-27)",
+            "url": "https://datarpc1.xsc.pub"
+          }
+        ],
+        "evidence": "At XSC block 47,838,017: vat() = the XTDao Vat, gem() = Wrapped XT 0x4b681a704664ce482c45ec16ac9ecc9b121fb037 (name 'Wrapped XT', symbol 'WXT'), ilk() = 'XT-A', live() = 1, and it is a Vat ward."
+      },
+      {
+        "chain": "xsc",
+        "address": "0x8276a38e484771ee1b14c60aaa85ab2147e5eb0b",
+        "label": "XTDao Jug (stability-fee module, Vat ward)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "capDescription": "Accumulates the XT-A stability fee into Vat-internal dai owed to the vow; as a Vat ward it can alter system accounting but cannot directly mint XTUSD or raise the debt ceiling.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-27",
+        "observedBlock": 47838017,
+        "sources": [
+          {
+            "label": "XSC public RPC (datarpc1.xsc.pub, vow/bytecode reads, 2026-07-27)",
+            "url": "https://datarpc1.xsc.pub"
+          }
+        ],
+        "evidence": "At XSC block 47,838,017: 2,450-byte non-proxy contract whose vow() = 0x73c190d6be81bbe3cbe96bb83d8ab66f1c645160; bytecode exposes file/rely/wards but no ceiling-raising path to the Vat's line; it is a live Vat ward."
       }
     ],
     "upgradeability": {
-      "model": "unknown",
-      "canChangeMintLogic": "unknown",
-      "controlRef": "XTUSD token and undisclosed XTDao upgrade path",
-      "observedAt": "2026-07-20",
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-27",
+      "observedBlock": 47838017,
       "sources": [
         {
-          "label": "XT.COM TAI to XTUSD announcement",
-          "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
+          "label": "XTUSD on xscscan",
+          "url": "https://xscscan.pub/address/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
         },
         {
-          "label": "XSC public RPC (datarpc1.xsc.pub)",
+          "label": "XSC public RPC (datarpc1.xsc.pub, EIP-1967 slot reads, 2026-07-27)",
           "url": "https://datarpc1.xsc.pub"
         }
       ]
     },
-    "economicCapSemantics": "unknown",
-    "reconciliation": "unknown",
+    "economicCapSemantics": "bounded",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "2026-07-20 re-review: XSC (XT Smart Chain, chainId 520) DOES expose working public keyless RPC endpoints (https://datarpc1.xsc.pub and siblings, eth_chainId=0x208, latest block ~47.4M), superseding the earlier note that no public RPC exists. The XTUSD token contract 0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0 (CoinGecko-listed, XSC) is readable: 3,991-byte non-proxy bytecode (EIP-1967 impl slot zero), name() 'XT Stablecoin', symbol() 'XTUSD', decimals() 18, totalSupply() ~2,291,132.6. However the token exposes no enumerable administrative surface: owner(), masterMinter(), hasRole/getRoleMemberCount (AccessControl), and LayerZero endpoint() all revert, and a full-history eth_getLogs scan times out on the public nodes. The XTDao vault/mint contracts, cap authority, pause authority, and governance executor therefore remain unidentified: no contract addresses for the XTDao system are published in the reviewed issuer materials, and there is no public XSC block-explorer API to enumerate them. The mint-authority controls cannot be honestly resolved from verifiable evidence.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
-      "disposition": "unresolved",
+      "evidence": "2026-07-27 re-review (supersedes the 2026-07-20 unresolved review): the previously missing block explorer exists at xscscan.pub with a public API (api.xscscan.pub), and the XTDao system is a MakerDAO DSS fork whose contracts are all readable via datarpc1.xsc.pub at block 47,838,017. The XTUSD token 0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0 (3,991-byte non-proxy, EIP-1967 impl slot zero) reverts mint(address,uint256) with XTUSD/not-authorized from every tested non-ward; token.wards() returns 1 only for the DaiJoin 0xa57cde0585010aa1bcfadb3bf6f3445349bb98ab (dai() = token, vat() = 0xf9d4810f1b140d869d2f92ca8da1755ea55e786b, live() = 1) and 0 for the deployer 0xE8864ba6b3A6e2f5104A0ECFFd90E2C9fd2cb4Dc and every other contract observed across the system's xscscan transaction history. The Vat (live) has exactly the Jug 0x8276a38e... and GemJoin 0xdec7d8fe... as wards among tested system contracts, with the deployer revoked; ilks('XT-A').line = 1e54 rad and Line() ~= 1.456e54 rad, matching the issuer's announced 1,000,000,000 XTUSD per-collateral supply design, and neither Vat ward exposes a call that could raise the ceilings. The token ward set is effectively frozen because its sole ward (DaiJoin) contains no path to call rely on the token. The CDP manager 0x5611e8f241a6fd545b642dff90c6ad8c68f89b99 and user DSProxies (e.g. 0x34ed2cdd..., owner-gated by ds-auth) are user entry points, not mint authorities. Confidence is capped at manual-review because DSS ward mappings cannot be enumerated by direct reads: every ward candidate visible in four years of system transactions was probed and the deployer revoke was verified, but a never-used ward granted at setup cannot be excluded by this method.",
+      "reviewer": "Kimi data review",
+      "reviewedAt": "2026-07-27",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "XT.COM TAI to XTUSD announcement",
           "url": "https://xtsupport.zendesk.com/hc/en-us/articles/8232048512921-XT-COM-Announcement-on-Supporting-TAI-Contract-Upgrade-and-Renaming-as-XTUSD"
         },
         {
+          "label": "XTUSD on xscscan",
+          "url": "https://xscscan.pub/address/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
+        },
+        {
+          "label": "xscscan public API",
+          "url": "https://api.xscscan.pub"
+        },
+        {
           "label": "XSC public RPC (datarpc1.xsc.pub)",
           "url": "https://datarpc1.xsc.pub"
         }
-      ],
-      "unresolvedQuestions": [
-        "The XTDao vault/mint and governance contract addresses on XSC are not published in reviewed issuer materials and cannot be enumerated on-chain: the XTUSD token 0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0 exposes no owner/role/admin surface (owner(), hasRole(), masterMinter() all revert), full-history log scans time out on the public XSC RPCs, and no public XSC explorer API exists to trace deployer or internal transactions.",
-        "The reviewed first-party announcement identifies the historical XTDao design but does not identify the currently active mint contract, cap authority, pause authority, or upgrade authority; issuer disclosure of the XTDao system contracts or a functioning XSC explorer is required before the controls can be scored."
       ]
     }
   }
