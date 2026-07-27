@@ -282,6 +282,82 @@ describe("constant-product V2 execution", () => {
     expect(fetchMulticall).toHaveBeenCalledOnce();
   });
 
+  it("bounds deployment probes so one oversized request cannot gate every V2 pool", async () => {
+    const metric = initMetrics("u-united-stables", "U");
+    const candidates = Array.from({ length: 5 }, (_, index) => {
+      const poolAddress = `0x${(index + 1).toString(16).padStart(40, "0")}` as `0x${string}`;
+      const candidate = buildEvmV2ExecutionCandidate({
+        chain: "bsc",
+        protocol: "pancakeswap",
+        poolType: "ds-amm",
+        poolAddress,
+        tokenAddresses: [U, WBNB],
+        tokenSymbols: ["U", "WBNB"],
+      })!;
+      metric.topPools.push({
+        poolId: poolAddress,
+        project: "pancakeswap",
+        chain: "BSC",
+        tvlUsd: 2_000_000,
+        symbol: "U-WBNB",
+        volumeUsd1d: 100_000,
+        poolType: "ds-amm",
+        source: "dexscreener",
+        extra: { evmV2ExecutionCandidate: candidate },
+      });
+      return candidate;
+    });
+    const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find((entry) => entry.source === "pancakeswap-v2")!;
+    const fetchMulticall = vi.fn(async (_chain: string, calls: readonly { label: string }[]) => {
+      if (calls.length > 24) return null;
+      return calls.map((call) => {
+        const index = Number(call.label.match(/^v2-(\d+)-/)?.[1]);
+        return {
+          label: call.label,
+          success: true,
+          returnData: call.label.endsWith("-pair")
+            ? addressWord(candidates[index]!.poolAddress)
+            : call.label.endsWith("-token0")
+              ? addressWord(U)
+              : call.label.endsWith("-token1")
+                ? addressWord(WBNB)
+                : call.label.endsWith("-reserves")
+                  ? reservesWord(1_000_000n * 10n ** 18n, 2_000n * 10n ** 18n)
+                  : word(18n),
+        };
+      });
+    });
+
+    await enrichEvmV2ExecutionModels({
+      metrics: new Map([[metric.stablecoinId, metric]]),
+      chainAddressToId: new Map([[canonicalExitRouteAssetKey("bsc", U), metric.stablecoinId]]),
+      contractMetaByChainAddress: new Map(),
+      stablecoinPriceById: new Map([[metric.stablecoinId, 1]]),
+      chainRpcs: new Map([
+        [
+          "bsc",
+          {
+            chainId: "bsc",
+            chainName: "BSC",
+            type: "evm",
+            rpcUrl: "https://rpc.example",
+            explorerUrl: "https://example.com",
+          },
+        ],
+      ]),
+      dependencies: {
+        fetchBlockNumber: vi.fn(async () => 50_000_000),
+        fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
+        fetchMulticall: fetchMulticall as never,
+        hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
+      },
+    });
+
+    expect(fetchMulticall).toHaveBeenCalledTimes(2);
+    expect(fetchMulticall.mock.calls.map((call) => call[1].length)).toEqual([24, 6]);
+    expect(metric.topPools.every((pool) => pool.extra?.ammExecutionModel?.source === "pancakeswap-v2")).toBe(true);
+  });
+
   it("builds a classic Base Aerodrome volatile model with same-block deployment and fee checks", async () => {
     const candidate = makeAerodromeCandidate();
     const metric = initMetrics("usdc-circle", "USDC");
@@ -362,7 +438,7 @@ describe("constant-product V2 execution", () => {
       },
     });
 
-    const calls = fetchMulticall.mock.calls[0]![1];
+    const calls = fetchMulticall.mock.calls.flatMap((call) => call[1]);
     expect(calls.find((call) => call.label === "v2-0-pair")?.callData).toMatch(/^0x79bc57d5/);
     expect(calls.find((call) => call.label === "v2-0-pair")?.callData).toMatch(/0{64}$/);
     expect(calls.find((call) => call.label === "v2-0-fee")?.callData).toMatch(/^0xcc56b2c5/);
