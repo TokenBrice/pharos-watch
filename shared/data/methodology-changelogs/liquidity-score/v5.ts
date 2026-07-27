@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.93",
+    title: "Paused v5.92 exact-route activations",
+    date: "2026-07-27",
+    effectiveAt: 1785110400,
+    summary:
+      "Optimism Uniswap V3 and the reviewed Solana wM/USDC Raydium direction return to shadow-only collection after the first post-activation scoring consumers exceeded the Worker memory limit.",
+    impact: [
+      "Both cohorts are score-ineligible and retain an activation-pending capability gate while production scoring memory is remediated and revalidated",
+      "Optimism deployment verification and quotes, plus the Raydium pool-account capture, direct quote, and exact single-segment replay, remain live as activation evidence",
+      "Previously active Ethereum, Polygon, and Arbitrum Uniswap V3; Base, BSC, and Ethereum PancakeSwap V3; Base Aerodrome Slipstream; and Tron SunSwap V2 cohorts are unchanged",
+      "No stale route, manual capacity, or reserve-derived substitute enters P4 while either reviewed cohort is paused",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.92",
     title: "Pinned Raydium CLMM on-state execution",
     date: "2026-07-27",

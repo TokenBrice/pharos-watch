@@ -117,8 +117,9 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
  * startup generations). Base Aerodrome Slipstream was admitted to V9
  * route scoring on 2026-07-24 after full target rotation, consumer replay,
  * binding checks, and independent historical-block quote reproduction.
- * Optimism Uniswap V3 was additionally ratified in the 2026-07-27 DEX
- * coverage review. Keys not listed here remain shadow-only fail-closed. The
+ * Optimism Uniswap V3 remains evidence-only after the first score-facing
+ * production consumers following its 2026-07-27 review exceeded the Worker
+ * memory limit. Keys not listed here remain shadow-only fail-closed. The
  * initial cohort was restored 2026-07-20 after the #592 security rollup
  * emptied it as an over-broad artifact.
  */
@@ -127,7 +128,6 @@ export const DEX_MEASURED_EXECUTION_SCORE_ELIGIBLE_DEPLOYMENT_KEYS: readonly str
   "uniswap-v3-quoter-v2:ethereum",
   "uniswap-v3-quoter-v2:polygon",
   "uniswap-v3-quoter-v2:arbitrum",
-  "uniswap-v3-quoter-v2:optimism",
   "pancakeswap-v3-quoter-v2:base",
   "pancakeswap-v3-quoter-v2:bsc",
   "pancakeswap-v3-quoter-v2:ethereum",

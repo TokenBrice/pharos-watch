@@ -84,10 +84,12 @@ export const SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS: readonly SolanaMeasured
     // This direction is deliberately pinned instead of activating every
     // Raydium CLMM discovered by the harvester. The quote collector must
     // capture and replay its current single liquidity segment before joining
-    // it into P4 route evidence.
+    // it into P4 route evidence. Collection stays live, but score eligibility
+    // is paused after the first post-activation scoring consumers exceeded
+    // the Worker memory limit.
     policyId: "wm-usdc-raydium-csmz-v1",
-    activation: "active",
-    scoreEligible: true,
+    activation: "shadow",
+    scoreEligible: false,
     proofRequirement: "raydium-single-segment-onstate-v1",
     targetId:
       "solana-measured-target-v1|raydium-clmm-trade-api-v1|wm-m0|solana|raydium|CsMzKUUJNoAoU7N4zh3hAS6qcByU81TcQMPJqCdmmcEF|mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp|EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",

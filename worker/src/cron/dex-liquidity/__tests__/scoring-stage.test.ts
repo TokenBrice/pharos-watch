@@ -136,6 +136,10 @@ function sourceState(): DexLiquidityScoringSourceState {
       updatedAtByPeg: { peggedEUR: 1_000 },
       typeByPeg: { peggedEUR: "fresh" },
     },
+    stablecoinPriceById: new Map([
+      ["major", 1.0001],
+      ["minor", 0.9998],
+    ]),
     stablecoinMcapById: new Map([
       ["major", 100_000_000_000],
       ["minor", 5_000_000],
@@ -242,6 +246,7 @@ describe("DEX liquidity scoring stage", () => {
       .toBe(true);
 
     const decoded = decodeDexLiquidityScoringStageChunks(chunks);
+    expect([...decoded.sourceState.stablecoinPriceById]).toEqual([...source.stablecoinPriceById]);
     expect([...decoded.sourceState.stablecoinMcapById]).toEqual([...source.stablecoinMcapById]);
     expect([...decoded.sourceState.protocolTvlCaps]).toEqual([...source.protocolTvlCaps]);
     expect([...decoded.sourceState.priceObservations]).toEqual([...source.priceObservations]);
@@ -262,11 +267,36 @@ describe("DEX liquidity scoring stage", () => {
     expect(decodedPools.filter((entry) => entry.source === "cg_onchain")).toHaveLength(2_351);
   });
 
+  it("can release the source graph incrementally while producing the same payload", () => {
+    const retainedSource = sourceState();
+    const retainedPool = poolState(40);
+    const consumingSource = sourceState();
+    const consumingPool = poolState(40);
+
+    const retained = [...encodeDexLiquidityScoringStageChunks(retainedSource, retainedPool)];
+    const consumed = [
+      ...encodeDexLiquidityScoringStageChunks(
+        consumingSource,
+        consumingPool,
+        DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,
+        true,
+      ),
+    ];
+
+    expect(consumed).toEqual(retained);
+    expect(consumingSource.stablecoinPriceById.size).toBe(0);
+    expect(consumingSource.stablecoinMcapById.size).toBe(0);
+    expect(consumingSource.protocolTvlCaps.size).toBe(0);
+    expect(consumingSource.priceObservations.size).toBe(0);
+    expect(consumingPool.metrics.size).toBe(0);
+  });
+
   it("persists and keyset-loads only the exact complete fresh generation", async () => {
     const harness = createLatestSchemaSqlite();
     openDatabases.push(harness.sqlite);
     const source = sourceState();
     const pool = poolState(40);
+    const expectedMajorPoolIds = pool.metrics.get("major")?.topPools.map((entry) => entry.poolId);
     const sourceSlotStartedAt = 10_000;
 
     const stored = await persistDexLiquidityScoringStage(harness.db, {
@@ -284,7 +314,7 @@ describe("DEX liquidity scoring stage", () => {
     expect(loaded.generationId).toBe(stored.generationId);
     expect(loaded.syncStartSec).toBe(sourceSlotStartedAt + 10);
     expect(loaded.poolState.metrics.get("major")?.topPools.map((entry) => entry.poolId)).toEqual(
-      pool.metrics.get("major")?.topPools.map((entry) => entry.poolId),
+      expectedMajorPoolIds,
     );
 
     await expect(loadDexLiquidityScoringStage(harness.db, {

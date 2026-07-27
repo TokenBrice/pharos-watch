@@ -1172,6 +1172,7 @@ export async function computeDexPrices(
   signal?: AbortSignal,
   exactPriceEvidenceByStablecoin?: Map<string, DexPriceObs[]>,
   generationId = `dex-liquidity-${nowSec}`,
+  preloadedPrimaryPrices?: Map<string, number>,
 ): Promise<DexPricePersistenceDiagnostics> {
   if (!generationId.trim()) throw new Error("DEX price publication requires a generation id");
   throwIfAborted(signal);
@@ -1193,7 +1194,10 @@ export async function computeDexPrices(
   await db.prepare("DELETE FROM dex_price_run_rows WHERE generation_id = ?").bind(generationId).run();
   throwIfAborted(signal);
 
-  let primaryPrices: Map<string, number> | null = null;
+  let primaryPrices: Map<string, number> | null =
+    preloadedPrimaryPrices && preloadedPrimaryPrices.size > 0
+      ? preloadedPrimaryPrices
+      : null;
   const loadPrimaryPrices = async (): Promise<Map<string, number>> => {
     if (primaryPrices != null) return primaryPrices;
     primaryPrices = new Map<string, number>();

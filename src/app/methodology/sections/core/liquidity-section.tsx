@@ -91,9 +91,10 @@ export function LiquidityMethodologySection() {
             tick-spacing binding, and revalidates identity, prices, freshness, capacity monotonicity, and the retained
             TVL ceiling before scoring. Mature fresh profiles remain route-only if a pool temporarily rotates out of
             the display shortlist; they never re-enter aggregate liquidity, price consensus, target publication, or V8
-            scoring. Optimism Uniswap V3 remains shadow-only. Solana CLMM is target-ratified: only the reviewed
-            wM/USDC Raydium direction can enter P4 after its captured liquidity segment exactly replays the direct
-            quote; generic Raydium, Orca Whirlpool, Meteora, and unlisted native routes remain shadow-only.
+            scoring. Optimism Uniswap V3 remains shadow-only. The reviewed wM/USDC Raydium direction still captures
+            its pool state and exactly replays the direct quote, but its score eligibility is paused alongside
+            Optimism after the first post-activation scoring consumers exceeded the Worker memory limit. Generic
+            Raydium, Orca Whirlpool, Meteora, and unlisted native routes also remain shadow-only.
           </p>
           <p>
             Reviewed SunSwap V2 routes on Tron publish active exact-execution profiles after proving the canonical

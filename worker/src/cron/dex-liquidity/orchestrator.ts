@@ -201,6 +201,7 @@ export async function stageDexLiquidityScoring(
   const sourceState = await loadDexLiquiditySourceState(ctx);
   const poolState = await buildDexLiquidityPoolState(ctx, sourceState);
   const scoringSourceState = buildDexLiquidityScoringSourceState(sourceState);
+  const itemCount = poolState.metrics.size;
   const stored = await persistDexLiquidityScoringStage(
     db,
     {
@@ -216,7 +217,7 @@ export async function stageDexLiquidityScoring(
     status: scoringSourceState.criticalSourceFailures.length > 0 || stored.retention.error
       ? "degraded"
       : "ok",
-    itemCount: poolState.metrics.size,
+    itemCount,
     metadata: JSON.stringify({
       generationId: stored.generationId,
       sourceSlotStartedAt: stored.sourceSlotStartedAt,
@@ -348,6 +349,7 @@ function buildDexLiquidityScoringSourceState(
 ): DexLiquidityScoringSourceState {
   return {
     validationReferences: sourceState.validationReferences,
+    stablecoinPriceById: sourceState.stablecoinPriceById,
     stablecoinMcapById: sourceState.stablecoinMcapById,
     protocolTvlCaps: sourceState.dataSources.protocolTvlCaps,
     priceObservations: sourceState.priceObservations,
@@ -1132,7 +1134,9 @@ async function persistDexLiquidityScoreState(
     ctx.signal,
     sourceState.priceObservations,
     publicationGenerationId,
+    sourceState.stablecoinPriceById,
   );
+  sourceState.stablecoinPriceById.clear();
   scoreState.retainedPoolsByStablecoin.clear();
   sourceState.priceObservations.clear();
   await reportDexLiquidityProgress(ctx, {

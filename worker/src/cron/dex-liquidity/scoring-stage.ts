@@ -32,8 +32,13 @@ const DEX_LIQUIDITY_SCORING_STAGE_RETENTION_GENERATIONS_PER_RUN = 2;
 
 type SourceHeader = Omit<
   DexLiquidityScoringSourceState,
-  "stablecoinMcapById" | "protocolTvlCaps" | "priceObservations"
+  "stablecoinPriceById" | "stablecoinMcapById" | "protocolTvlCaps" | "priceObservations"
 >;
+
+type EncodedSourceHeader = SourceHeader & {
+  /** Additive schema-v1 field; old consumers ignore it and reload the cache. */
+  stablecoinPrices?: Array<[stablecoinId: string, price: number]>;
+};
 
 type PoolHeader = Omit<
   DexLiquidityPoolState,
@@ -56,7 +61,7 @@ type ScoringStageRecord =
   | {
       kind: "header";
       schemaVersion: typeof DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION;
-      source: SourceHeader;
+      source: EncodedSourceHeader;
       pool: PoolHeader;
     }
   | { kind: "source-number"; map: "stablecoinMcapById" | "protocolTvlCaps"; key: string; value: number }
@@ -133,7 +138,7 @@ interface StageChunkRow {
 }
 
 interface ScoringStageDecoder {
-  sourceHeader: SourceHeader | null;
+  sourceHeader: EncodedSourceHeader | null;
   poolHeader: PoolHeader | null;
   stablecoinMcapById: Map<string, number>;
   protocolTvlCaps: Map<string, number>;
@@ -191,8 +196,10 @@ function requireFiniteNumber(value: unknown, label: string): number {
 function* iterateScoringStageRecords(
   sourceState: DexLiquidityScoringSourceState,
   poolState: DexLiquidityPoolState,
+  consumeInput: boolean,
 ): Generator<ScoringStageRecord> {
   const {
+    stablecoinPriceById,
     stablecoinMcapById,
     protocolTvlCaps,
     priceObservations,
@@ -211,19 +218,31 @@ function* iterateScoringStageRecords(
   yield {
     kind: "header",
     schemaVersion: DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION,
-    source,
+    source: {
+      ...source,
+      stablecoinPrices: [...stablecoinPriceById],
+    },
     pool,
   };
+  if (consumeInput) stablecoinPriceById.clear();
   for (const [key, value] of stablecoinMcapById) {
     yield { kind: "source-number", map: "stablecoinMcapById", key, value };
+    if (consumeInput) stablecoinMcapById.delete(key);
   }
   for (const [key, value] of protocolTvlCaps) {
     yield { kind: "source-number", map: "protocolTvlCaps", key, value };
+    if (consumeInput) protocolTvlCaps.delete(key);
   }
   for (const [stablecoinId, observations] of priceObservations) {
     yield { kind: "price-observation-set", stablecoinId };
-    for (const observation of observations) {
+    for (let index = 0; index < observations.length; index++) {
+      const observation = observations[index]!;
       yield { kind: "price-observation", stablecoinId, observation };
+      if (consumeInput) observations[index] = undefined as unknown as DexPriceObs;
+    }
+    if (consumeInput) {
+      observations.length = 0;
+      priceObservations.delete(stablecoinId);
     }
   }
   for (const [stablecoinId, metric] of metrics) {
@@ -237,24 +256,37 @@ function* iterateScoringStageRecords(
         pairs: [...pairs],
       },
     };
-    for (const poolEntry of topPools) {
+    for (let index = 0; index < topPools.length; index++) {
+      const poolEntry = topPools[index]!;
       yield { kind: "pool", stablecoinId, pool: poolEntry };
+      if (consumeInput) topPools[index] = undefined as unknown as PoolEntry;
+    }
+    if (consumeInput) {
+      topPools.length = 0;
+      chains.clear();
+      pairs.clear();
+      metrics.delete(stablecoinId);
     }
   }
   for (const [key, target] of pancakeMeasuredExecutionTargets) {
     yield { kind: "target", lane: "pancake", key, target };
+    if (consumeInput) pancakeMeasuredExecutionTargets.delete(key);
   }
   for (const [key, target] of fluidMeasuredExecutionTargets) {
     yield { kind: "target", lane: "fluid", key, target };
+    if (consumeInput) fluidMeasuredExecutionTargets.delete(key);
   }
   for (const [key, target] of slipstreamMeasuredExecutionTargets) {
     yield { kind: "target", lane: "slipstream", key, target };
+    if (consumeInput) slipstreamMeasuredExecutionTargets.delete(key);
   }
   for (const [key, target] of solanaMeasuredExecutionTargets) {
     yield { kind: "target", lane: "solana", key, target };
+    if (consumeInput) solanaMeasuredExecutionTargets.delete(key);
   }
   for (const [key, target] of tronMeasuredExecutionTargets) {
     yield { kind: "target", lane: "tron", key, target };
+    if (consumeInput) tronMeasuredExecutionTargets.delete(key);
   }
 }
 
@@ -262,6 +294,7 @@ export function* encodeDexLiquidityScoringStageChunks(
   sourceState: DexLiquidityScoringSourceState,
   poolState: DexLiquidityPoolState,
   maxChunkBytes = DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,
+  consumeInput = false,
 ): Generator<DexLiquidityScoringStageChunk> {
   if (!Number.isInteger(maxChunkBytes) || maxChunkBytes <= 0) {
     throw new RangeError("DEX liquidity scoring stage chunk size must be a positive integer");
@@ -269,7 +302,7 @@ export function* encodeDexLiquidityScoringStageChunks(
 
   let lines: string[] = [];
   let payloadBytes = 0;
-  for (const record of iterateScoringStageRecords(sourceState, poolState)) {
+  for (const record of iterateScoringStageRecords(sourceState, poolState, consumeInput)) {
     const line = stringifyScoringStageRecord(record);
     const lineBytes = textEncoder.encode(line).byteLength;
     if (lineBytes > maxChunkBytes) {
@@ -489,9 +522,25 @@ function finishScoringStageDecode(decoder: ScoringStageDecoder): {
   if (!decoder.sourceHeader || !decoder.poolHeader) {
     throw new Error("DEX liquidity scoring stage is missing its header record");
   }
+  const { stablecoinPrices = [], ...sourceHeader } = decoder.sourceHeader;
+  const stablecoinPriceById = new Map<string, number>();
+  for (const entry of stablecoinPrices) {
+    if (
+      !Array.isArray(entry) ||
+      entry.length !== 2 ||
+      typeof entry[0] !== "string" ||
+      entry[0].length === 0
+    ) {
+      throw new Error("DEX liquidity scoring stage contains an invalid stablecoin price entry");
+    }
+    const price = requireFiniteNumber(entry[1], "stablecoin price");
+    assertUniqueMapKey(stablecoinPriceById, entry[0], "stablecoin price");
+    stablecoinPriceById.set(entry[0], price);
+  }
   return {
     sourceState: {
-      ...decoder.sourceHeader,
+      ...sourceHeader,
+      stablecoinPriceById,
       stablecoinMcapById: decoder.stablecoinMcapById,
       protocolTvlCaps: decoder.protocolTvlCaps,
       priceObservations: decoder.priceObservations,
@@ -727,7 +776,12 @@ export async function persistDexLiquidityScoringStage(
   let payloadBytes = 0;
   let pendingStatements: D1PreparedStatement[] = [];
   try {
-    for (const chunk of encodeDexLiquidityScoringStageChunks(input.sourceState, input.poolState)) {
+    for (const chunk of encodeDexLiquidityScoringStageChunks(
+      input.sourceState,
+      input.poolState,
+      DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,
+      true,
+    )) {
       throwIfAborted(signal);
       pendingStatements.push(
         db.prepare(
