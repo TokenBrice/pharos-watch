@@ -288,7 +288,7 @@ describe("measured execution publication", () => {
     expect(prepare).not.toHaveBeenCalled();
   });
 
-  it("rejects empty native shadow generations before touching shared storage", async () => {
+  it("rejects empty native measured generations before touching shared storage", async () => {
     const prepare = vi.fn();
     const db = { prepare } as Pick<D1Database, "prepare"> as D1Database;
 

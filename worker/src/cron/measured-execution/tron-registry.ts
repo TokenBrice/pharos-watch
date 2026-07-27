@@ -23,8 +23,8 @@ const SUNSWAP_V2_ADAPTER: TronMeasuredExecutionAdapter = {
   adapterProfileId: "sunswap-v2-router-v1",
   protocol: "sunswap",
   poolType: "sunswap-v2",
-  activation: "shadow",
-  scoreEligible: false,
+  activation: "active",
+  scoreEligible: true,
 };
 
 export function getTronMeasuredExecutionAdapter(

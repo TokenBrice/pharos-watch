@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.91",
+    title: "Guarded SunSwap V2 reactivation",
+    date: "2026-07-27",
+    effectiveAt: 1785110400,
+    summary:
+      "Reviewed Tron SunSwap V2 execution profiles are score-eligible again after current complete 21/21 shadow generations and healthy split scoring consumers.",
+    impact: [
+      "Activation is limited to the reviewed SunSwap V2 factory, pair runtime, and SUN Smart Router profile on Tron; Solana CLMM, Fluid, Uniswap V4, and unratified native cohorts remain shadow-only",
+      "Every accepted profile must still prove the exact factory pair, token order, reserves, direct route, 0.3% constant-product output, bounded latest-state block bracket, freshness, and current target identity",
+      "The first active scoring consumers remain a guarded production trial: memory termination, stale heartbeat, incomplete generations, or identity/proof drift require returning the registry to shadow while leaving evidence collection enabled",
+      "SunSwap census rows remain excluded from liquidity scoring, price consensus, direct-source precedence, visible pool selection, and V8 liquidity scoring",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.90",
     title: "Paused SunSwap V2 scoring after rollout",
     date: "2026-07-25",

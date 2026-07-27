@@ -1057,6 +1057,7 @@ interface NativeMeasuredProfile {
 
 interface NativePersistenceConfig<TTarget extends NativeMeasuredTarget, TProfile extends NativeMeasuredProfile> {
   label: string;
+  activation: "active" | "shadow";
   targetSurface: string;
   quoteSurface: string;
   targetGenerationPrefix: string;
@@ -1097,6 +1098,7 @@ interface NativeLoadedQuoteEvidence<TTarget, TProfile> {
 
 const SOLANA_PERSISTENCE: NativePersistenceConfig<SolanaMeasuredExecutionTarget, SolanaMeasuredExecutionProfile> = {
   label: "Solana",
+  activation: "shadow",
   targetSurface: SOLANA_MEASURED_TARGET_SURFACE,
   quoteSurface: SOLANA_MEASURED_QUOTE_SURFACE,
   targetGenerationPrefix: "dex-solana-measured-targets",
@@ -1108,6 +1110,7 @@ const SOLANA_PERSISTENCE: NativePersistenceConfig<SolanaMeasuredExecutionTarget,
 
 const TRON_PERSISTENCE: NativePersistenceConfig<TronMeasuredExecutionTarget, TronMeasuredExecutionProfile> = {
   label: "Tron",
+  activation: "active",
   targetSurface: TRON_MEASURED_TARGET_SURFACE,
   quoteSurface: TRON_MEASURED_QUOTE_SURFACE,
   targetGenerationPrefix: "dex-tron-measured-targets",
@@ -1194,7 +1197,7 @@ async function publishNativeMeasuredTargetInventory<
       previousGenerationId: previous?.generation_id ?? null,
       nowSec: input.capturedAt,
       rowCount: targets.length,
-      validationSummary: { exactTargetCount: targets.length, activation: "shadow" },
+      validationSummary: { exactTargetCount: targets.length, activation: config.activation },
       signal: input.signal,
     });
     return { generationId: id, rowCount: targets.length };
@@ -1366,7 +1369,7 @@ async function publishNativeMeasuredQuoteGeneration<
         measuredCount,
         failedCount,
         targetGenerationId: input.targetGeneration.generationId,
-        activation: "shadow",
+        activation: config.activation,
       },
       signal: input.signal,
     });

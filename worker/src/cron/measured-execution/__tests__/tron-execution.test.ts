@@ -131,8 +131,8 @@ describe("Tron SunSwap measured execution", () => {
       feeRate: 0.003,
     })]);
     expect(getTronMeasuredExecutionAdapterByProfile("sunswap-v2-router-v1")).toMatchObject({
-      activation: "shadow",
-      scoreEligible: false,
+      activation: "active",
+      scoreEligible: true,
     });
   });
 
@@ -276,29 +276,31 @@ describe("Tron SunSwap measured execution", () => {
       poolsByStablecoin: new Map([["usdt-tether", [retainedPool]]]),
       evidence,
       nowSec: 1_100,
-    })).toMatchObject({ measuredCount: 1, gatedCount: 1 });
+    })).toMatchObject({ measuredCount: 1, gatedCount: 0 });
     expect(retainedPool.extra).toMatchObject({
-      executionCapabilityGate: { family: "measured-execution", reason: "activation-pending" },
       tronMeasuredExecution: { protocol: "sunswap", poolType: "sunswap-v2" },
+      nativeMeasuredExecution: { adapterProfileId: "sunswap-v2-router-v1", poolId: POOL },
+      nativeMeasuredExecutionPhysicalPoolId: POOL,
     });
-    const activePool = {
+    expect(retainedPool.extra).not.toHaveProperty("executionCapabilityGate");
+    const shadowPool = {
       ...retainedPool,
       extra: { tronMeasuredExecutionTarget: target() },
     };
     expect(joinTronMeasuredExecutionEvidence({
-      poolsByStablecoin: new Map([["usdt-tether", [activePool]]]),
+      poolsByStablecoin: new Map([["usdt-tether", [shadowPool]]]),
       evidence,
       nowSec: 1_100,
       resolveAdapterPolicy: (adapterProfileId) => {
         const adapter = getTronMeasuredExecutionAdapterByProfile(adapterProfileId);
-        return adapter ? { ...adapter, activation: "active", scoreEligible: true } : null;
+        return adapter ? { ...adapter, activation: "shadow", scoreEligible: false } : null;
       },
-    })).toMatchObject({ measuredCount: 1, gatedCount: 0 });
-    expect(activePool.extra).toMatchObject({
-      nativeMeasuredExecution: { adapterProfileId: "sunswap-v2-router-v1", poolId: POOL },
-      nativeMeasuredExecutionPhysicalPoolId: POOL,
+    })).toMatchObject({ measuredCount: 1, gatedCount: 1 });
+    expect(shadowPool.extra).toMatchObject({
+      executionCapabilityGate: { family: "measured-execution", reason: "activation-pending" },
+      tronMeasuredExecution: { protocol: "sunswap", poolType: "sunswap-v2" },
     });
-    expect(activePool.extra).not.toHaveProperty("executionCapabilityGate");
+    expect(shadowPool.extra).not.toHaveProperty("nativeMeasuredExecution");
     const failedPool = {
       ...retainedPool,
       extra: { tronMeasuredExecutionTarget: target() },
