@@ -14,7 +14,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { formatCurrency } from "@shared/lib/format";
-import { DEPENDENCY_TYPE_PRESENTATION, TYPE_COLORS, TYPE_DASH } from "@/components/contagion-graph-model";
 import type { DependencyHub, DependencyHubsModel } from "./dependency-hubs-model";
 
 function DependencyMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
@@ -25,6 +24,11 @@ function DependencyMetric({ label, value, detail }: { label: string; value: stri
       <p className="text-xs text-muted-foreground">{detail}</p>
     </div>
   );
+}
+
+function formatEdgeType(value: string): string {
+  const label = value.replaceAll("-", " ");
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 function DependencyHubRow({
@@ -67,18 +71,7 @@ function DependencyHubRow({
               key={entry.type}
               className="inline-flex items-center gap-1.5 rounded-sm border border-border/60 bg-background/70 px-2 py-1 text-[11px] text-muted-foreground"
             >
-              <svg width="18" height="6" aria-hidden="true" className="shrink-0">
-                <line
-                  x1="0"
-                  y1="3"
-                  x2="18"
-                  y2="3"
-                  stroke={TYPE_COLORS[entry.type]}
-                  strokeWidth={2}
-                  strokeDasharray={TYPE_DASH[entry.type]}
-                />
-              </svg>
-              <span>{DEPENDENCY_TYPE_PRESENTATION[entry.type].label}</span>
+              <span>{formatEdgeType(entry.type)}</span>
               <span className="pharos-numeric text-foreground">
                 {entry.edgeCount} / {entry.summedDirectDependencyWeight.toFixed(2)}
               </span>

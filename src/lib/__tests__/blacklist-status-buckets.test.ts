@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
-import type { ReportCard, StablecoinData } from "@shared/types";
+import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
+import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import type { StablecoinData } from "@shared/types";
 import {
   BLACKLIST_STATUS_BUCKET_ORDER,
   buildBlacklistStatusBuckets,
@@ -32,15 +33,6 @@ vi.mock("@shared/lib/supply", () => ({
   getCirculatingRaw: (coin: StablecoinData) => coin.circulating ?? 0,
 }));
 
-vi.mock("@shared/lib/report-cards", () => ({
-  getBlacklistStatusLabel: (status: boolean | "possible" | "inherited") => {
-    if (status === true) return "Yes";
-    if (status === "possible") return "Possible";
-    if (status === "inherited") return "Upstream";
-    return "No";
-  },
-}));
-
 describe("blacklist status buckets", () => {
   it("maps resolved blacklist statuses into chart bucket keys", () => {
     expect(resolveBlacklistStatusBucket(true)).toBe("yes");
@@ -50,9 +42,14 @@ describe("blacklist status buckets", () => {
   });
 
   it("uses report card overrides when resolving a stablecoin bucket", () => {
-    const reportCard: Pick<ReportCard, "rawInputs"> = {
-      rawInputs: createReportCardRawInputs({ canBeBlacklisted: "possible" }),
-    };
+    const response = makeReportCardsV9Response({
+      cards: [makeV9Card({
+        id: "usdp-parallel",
+        accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" },
+      })],
+    });
+    const projection = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
+    const reportCard = projection.status === "available" ? projection.value["usdp-parallel"] : undefined;
 
     expect(getBlacklistStatusBucketForStablecoin("usdp-parallel", reportCard)).toBe("possible");
   });
@@ -72,11 +69,16 @@ describe("blacklist status buckets", () => {
       { id: "usdp-parallel", name: "USD+", symbol: "USDP" },
       { id: "lusd-liquity", name: "Liquity USD", symbol: "LUSD" },
     ] as StablecoinData[];
-    const reportCards: Record<string, Pick<ReportCard, "rawInputs">> = {
-      "usdt-tether": { rawInputs: createReportCardRawInputs({ canBeBlacklisted: true }) },
-      "usdp-parallel": { rawInputs: createReportCardRawInputs({ canBeBlacklisted: "inherited" }) },
-      "lusd-liquity": { rawInputs: createReportCardRawInputs({ canBeBlacklisted: false }) },
-    };
+    const baseAccess = makeV9Card().accessPosture;
+    const response = makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: "lusd-liquity", accessPosture: { ...baseAccess, freezeExposure: "none-known" } }),
+        makeV9Card({ id: "usdp-parallel", accessPosture: { ...baseAccess, freezeExposure: "upstream" } }),
+        makeV9Card({ id: "usdt-tether", accessPosture: { ...baseAccess, freezeExposure: "direct" } }),
+      ],
+    });
+    const projection = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
+    const reportCards = projection.status === "available" ? projection.value : {};
 
     expect(filterStablecoinsByBlacklistStatus(stablecoins, "yes", reportCards).map((coin) => coin.id)).toEqual([
       "usdt-tether",

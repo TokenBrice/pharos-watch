@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-detail/hero-card";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
+import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type {
   DexLiquidityData,
   PegSummaryCoin,
-  ReportCard,
   StablecoinData,
   StablecoinMeta,
   StressSignalEntry,
@@ -165,51 +165,20 @@ const liquidityData: DexLiquidityData = {
   methodologyVersion: "test",
 };
 
-const reportCardWithInheritedBlacklistRisk: ReportCard = {
+const reportCardWithInheritedBlacklistRisk = makeV9Card({
   id: "usdc-circle",
-  name: "USD Coin",
-  symbol: "USDC",
-  overallGrade: "B+",
-  overallScore: 79,
-  baseScore: 79,
-  dimensions: {
-    pegStability: { grade: "A", score: 95, detail: "ok" },
-    liquidity: { grade: "B+", score: 82, detail: "ok" },
-    resilience: { grade: "B", score: 70, detail: "ok" },
-    decentralization: { grade: "C", score: 55, detail: "ok" },
-    dependencyRisk: { grade: "B", score: 73, detail: "ok" },
+  grade: "B+",
+  score: 79,
+  accessPosture: {
+    ...makeV9Card().accessPosture,
+    freezeExposure: "upstream",
   },
-  ratedDimensions: 5,
-  rawInputs: {
-    pegScore: 95,
-    activeDepeg: true,
-    activeDepegBps: -150,
-    depegEventCount: 2,
-    lastEventAt: null,
-    liquidityScore: 82,
-    effectiveExitScore: 82,
-    redemptionBackstopScore: null,
-    redemptionRouteFamily: null,
-    redemptionModelConfidence: null,
-    redemptionUsedForLiquidity: false,
-    redemptionImmediateCapacityUsd: null,
-    redemptionImmediateCapacityRatio: null,
-    concentrationHhi: 0.2,
-    bluechipGrade: null,
-    canBeBlacklisted: "inherited",
-    chainTier: "ethereum",
-    deploymentModel: "native-multichain",
-    collateralQuality: "alt-lst-bridged-or-mixed",
-    custodyModel: "institutional-regulated",
-    governanceTier: "centralized",
-    governanceQuality: "single-entity",
-    dependencies: [],
-    dependencyFromLive: false,
-    navToken: false,
-    collateralFromLive: false,
-  },
-  isDefunct: false,
-};
+});
+const reportCardWithDirectBlacklistRisk = makeV9Card({
+  id: "usdc-circle",
+  grade: "B+",
+  score: 79,
+});
 
 const yieldRanking: YieldRanking = {
   id: "usdc-circle",
@@ -325,7 +294,7 @@ describe("HeroCard", () => {
         liquidityData={liquidityData}
         yieldRanking={yieldRanking}
         stressSignal={stressSignal}
-        reportCard={null}
+        reportCard={reportCardWithDirectBlacklistRisk}
         verdict={verdict}
         onOpenFeedback={() => {}}
       />,
@@ -443,8 +412,6 @@ describe("HeroCard", () => {
         reportCard={{
           ...reportCardWithInheritedBlacklistRisk,
           id: "mock-inherited",
-          name: "Mock Inherited",
-          symbol: "MCK",
         }}
         onOpenFeedback={() => {}}
       />,

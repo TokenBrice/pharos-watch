@@ -57,11 +57,9 @@ export interface ScreenerFilters {
   supplyMin: number;
   supplyMax: number;
   safetyGrades: readonly ReportCardGrade[];
-  safetyPegStabilityMin: number;
-  safetyLiquidityMin: number;
-  safetyResilienceMin: number;
-  safetyDecentralizationMin: number;
-  safetyDependencyRiskMin: number;
+  safetyBackingMin: number;
+  safetyExitMin: number;
+  safetyControlMin: number;
   types: readonly GovernanceType[];
   mechanisms: readonly MechanismArchetype[];
   pegs: readonly PegCurrency[];
@@ -79,11 +77,9 @@ export const SCREENER_FILTER_DEFAULTS: ScreenerFilters = {
   supplyMin: 0,
   supplyMax: 0,
   safetyGrades: [],
-  safetyPegStabilityMin: 0,
-  safetyLiquidityMin: 0,
-  safetyResilienceMin: 0,
-  safetyDecentralizationMin: 0,
-  safetyDependencyRiskMin: 0,
+  safetyBackingMin: 0,
+  safetyExitMin: 0,
+  safetyControlMin: 0,
   types: [],
   mechanisms: [],
   pegs: [],
@@ -126,33 +122,21 @@ export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
     defaultValue: SCREENER_FILTER_DEFAULTS.safetyGrades,
     allowedValues: SAFETY_GRADE_VALUES,
   },
-  safetyPegStabilityMin: {
+  safetyBackingMin: {
     kind: "boundedNumber",
-    defaultValue: SCREENER_FILTER_DEFAULTS.safetyPegStabilityMin,
+    defaultValue: SCREENER_FILTER_DEFAULTS.safetyBackingMin,
     min: 0,
     max: 100,
   },
-  safetyLiquidityMin: {
+  safetyExitMin: {
     kind: "boundedNumber",
-    defaultValue: SCREENER_FILTER_DEFAULTS.safetyLiquidityMin,
+    defaultValue: SCREENER_FILTER_DEFAULTS.safetyExitMin,
     min: 0,
     max: 100,
   },
-  safetyResilienceMin: {
+  safetyControlMin: {
     kind: "boundedNumber",
-    defaultValue: SCREENER_FILTER_DEFAULTS.safetyResilienceMin,
-    min: 0,
-    max: 100,
-  },
-  safetyDecentralizationMin: {
-    kind: "boundedNumber",
-    defaultValue: SCREENER_FILTER_DEFAULTS.safetyDecentralizationMin,
-    min: 0,
-    max: 100,
-  },
-  safetyDependencyRiskMin: {
-    kind: "boundedNumber",
-    defaultValue: SCREENER_FILTER_DEFAULTS.safetyDependencyRiskMin,
+    defaultValue: SCREENER_FILTER_DEFAULTS.safetyControlMin,
     min: 0,
     max: 100,
   },
@@ -223,11 +207,9 @@ export interface ScreenerRow {
   safetyGrade: ReportCardGrade | null;
   /** Safety overall score (0–100). null = unrated. */
   safetyScore: number | null;
-  safetyPegStabilityScore: number | null;
-  safetyLiquidityScore: number | null;
-  safetyResilienceScore: number | null;
-  safetyDecentralizationScore: number | null;
-  safetyDependencyRiskScore: number | null;
+  safetyBackingScore: number | null;
+  safetyExitScore: number | null;
+  safetyControlScore: number | null;
   /** Blacklistability bucket. null = unspecified (no per-coin override). */
   blacklistable: BlacklistableValue | null;
   /** Curated mint-authority review bucket. "unknown" = no compact review. */
@@ -315,11 +297,9 @@ export function hasLoadingScoreFilterData(
   const dewsActive = isScoreRangeActive(filters.dewsMin, filters.dewsMax);
   const reportActive =
     filters.safetyGrades.length > 0 ||
-    filters.safetyPegStabilityMin > 0 ||
-    filters.safetyLiquidityMin > 0 ||
-    filters.safetyResilienceMin > 0 ||
-    filters.safetyDecentralizationMin > 0 ||
-    filters.safetyDependencyRiskMin > 0;
+    filters.safetyBackingMin > 0 ||
+    filters.safetyExitMin > 0 ||
+    filters.safetyControlMin > 0;
 
   return (
     (dewsActive && state.dewsLoading && !state.dewsHasData) ||
@@ -352,11 +332,9 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
     if (safetyGradeSet) {
       if (!row.safetyGrade || !safetyGradeSet.has(row.safetyGrade)) return false;
     }
-    if (!passesMinimum(row.safetyPegStabilityScore, filters.safetyPegStabilityMin)) return false;
-    if (!passesMinimum(row.safetyLiquidityScore, filters.safetyLiquidityMin)) return false;
-    if (!passesMinimum(row.safetyResilienceScore, filters.safetyResilienceMin)) return false;
-    if (!passesMinimum(row.safetyDecentralizationScore, filters.safetyDecentralizationMin)) return false;
-    if (!passesMinimum(row.safetyDependencyRiskScore, filters.safetyDependencyRiskMin)) return false;
+    if (!passesMinimum(row.safetyBackingScore, filters.safetyBackingMin)) return false;
+    if (!passesMinimum(row.safetyExitScore, filters.safetyExitMin)) return false;
+    if (!passesMinimum(row.safetyControlScore, filters.safetyControlMin)) return false;
     if (mechanismSet) {
       if (!row.mechanism || !mechanismSet.has(row.mechanism)) return false;
     }
@@ -447,19 +425,13 @@ export function countActiveScreenerFilters(filters: ScreenerFilters): number {
     count += 1;
   }
   count += filters.safetyGrades.length;
-  if (filters.safetyPegStabilityMin > 0) {
+  if (filters.safetyBackingMin > 0) {
     count += 1;
   }
-  if (filters.safetyLiquidityMin > 0) {
+  if (filters.safetyExitMin > 0) {
     count += 1;
   }
-  if (filters.safetyResilienceMin > 0) {
-    count += 1;
-  }
-  if (filters.safetyDecentralizationMin > 0) {
-    count += 1;
-  }
-  if (filters.safetyDependencyRiskMin > 0) {
+  if (filters.safetyControlMin > 0) {
     count += 1;
   }
   if (filters.mintAuthorityScoreMin > 0) {

@@ -9,12 +9,12 @@ import type {
   MintBurnFlowsResponse,
   PegSummaryResponse,
   RedemptionBackstopsResponse,
-  ReportCardsResponse,
+  ReportCardsV9Response,
   StablecoinListResponse,
   YieldRankingsResponse,
 } from "@shared/types";
 import type { ApiMeta } from "@/lib/api";
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { getV9ResolvedBlacklistStatus } from "@/lib/safety-score-v9-consumers";
 import {
   buildCoverageFeatureSummary,
   buildCoverageRow,
@@ -22,7 +22,7 @@ import {
   type CoverageFeatureKey,
   type CoverageFeatureSummary,
 } from "@/lib/coverage";
-import { buildDependencyCoverageFacts } from "@/lib/dependency-coverage-facts";
+import { buildV9DependencyCoverageFacts } from "@/lib/dependency-coverage-facts";
 
 const FEATURE_QUERY_AVAILABLE_KEYS = [
   "price",
@@ -60,7 +60,7 @@ export interface CoverageMatrixModelInput {
   redemptionBackstops: CoverageMatrixQueryResource<RedemptionBackstopsResponse>;
   yieldRankings: CoverageMatrixQueryResource<YieldRankingsResponse>;
   mintBurnFlows: CoverageMatrixQueryResource<MintBurnFlowsResponse>;
-  reportCards: CoverageMatrixQueryResource<ReportCardsResponse>;
+  reportCards: CoverageMatrixQueryResource<ReportCardsV9Response>;
   activeStablecoins?: readonly StablecoinClientMeta[];
 }
 
@@ -121,7 +121,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
   const flowById = new Map((input.mintBurnFlows.data?.coins ?? []).map((row) => [row.stablecoinId, row]));
   const reportCardById = new Map((input.reportCards.data?.cards ?? []).map((card) => [card.id, card]));
   const dependencyFacts = input.reportCards.data
-    ? buildDependencyCoverageFacts(activeStablecoins, input.reportCards.data)
+    ? buildV9DependencyCoverageFacts(activeStablecoins, input.reportCards.data)
     : new Map();
 
   const rows = activeStablecoins.map((coin) => {
@@ -135,14 +135,14 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
       hasPegCoverage: pegIds.has(coin.id),
       consensusSources: pegCoin?.consensusSources,
       priceConfidence: pegCoin?.priceConfidence ?? undefined,
-      safetyScore: reportCard?.overallScore ?? null,
+      safetyScore: reportCard?.score ?? null,
       dexCoverageClass: input.dexLiquidity.data?.[coin.id]?.coverageClass ?? null,
       redemptionEntry: input.redemptionBackstops.data?.coins?.[coin.id] ?? null,
       hasYieldCoverage: yieldIds.has(coin.id),
       flowCoverageStatus: flowById.get(coin.id)?.coverage?.status ?? null,
       dependencyCoverage: dependencyFacts.get(coin.id) ?? null,
-      blacklistStatus: getResolvedBlacklistStatus(coin.id, reportCard),
-      liveReserveFresh: queryAvailability.reserves ? (reportCard?.rawInputs.collateralFromLive ?? false) : null,
+      blacklistStatus: getV9ResolvedBlacklistStatus(reportCard),
+      liveReserveFresh: null,
       dataAvailability: queryAvailability,
     });
   });
@@ -228,6 +228,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
 
   return {
     rows,
+    safetyScoreResponse: input.reportCards.data,
     featureSummaries,
     sourceDepthProgress,
     pricingSources,

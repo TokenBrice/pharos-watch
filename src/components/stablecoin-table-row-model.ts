@@ -1,6 +1,6 @@
 import { getStablecoinTableRowRiskLevel } from "@/components/stablecoin-table-logic";
 import type { StablecoinTableRowVariant } from "@/components/stablecoin-table-row-types";
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { getV9ResolvedBlacklistStatus, type V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { formatNativePrice } from "@shared/lib/format";
@@ -8,7 +8,7 @@ import { getPegReference } from "@shared/lib/peg-rates";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
-import type { DexLiquidityMap, PegSummaryCoin, ReportCard, StablecoinData } from "@shared/types";
+import type { DexLiquidityMap, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { TableDensity } from "@/hooks/use-table-density";
 
 export function buildStablecoinTableRowModel({
@@ -24,7 +24,7 @@ export function buildStablecoinTableRowModel({
   pegRates: Record<string, number>;
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
-  reportCards?: Record<string, ReportCard>;
+  reportCards?: Record<string, V9SafetyTableRow>;
   density: TableDensity;
   variant: StablecoinTableRowVariant;
 }) {
@@ -51,7 +51,7 @@ export function buildStablecoinTableRowModel({
     liquidityScore,
     variantDisplay: meta?.variantKind ? getVariantDisplay(meta.variantKind) : null,
     variantContext: meta?.variantKind ? getVariantAccessibleLabel(meta.variantKind) : null,
-    blacklistStatus: getResolvedBlacklistStatus(coin.id, reportCards?.[coin.id]),
+    blacklistStatus: getV9ResolvedBlacklistStatus(reportCards?.[coin.id]),
     mintAuthorityStatus: resolveMintAuthorityStatus(meta?.mintAuthoritySummary),
     mintAuthorityScore: resolveMintAuthorityScoreDisplay(meta?.id, meta?.mintAuthoritySummary),
     change24h: prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0,

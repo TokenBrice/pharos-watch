@@ -7,8 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { NonUsdShareChart } from "@/components/non-usd-share-chart";
-import { useDexLiquidity, useNonUsdShare, usePegSummary, useReportCards } from "@/hooks/api-hooks";
+import { useDexLiquidity, useNonUsdShare, usePegSummary, useReportCardsV9 } from "@/hooks/api-hooks";
 import { TimeRangeOption, isTimeRangeOption } from "@/hooks/use-time-range-filter";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -187,7 +188,7 @@ export function AltPegsClient() {
   const shareQuery = useNonUsdShare();
   const pegSummaryQuery = usePegSummary();
   const dexLiquidityQuery = useDexLiquidity();
-  const reportCardsQuery = useReportCards();
+  const reportCardsQuery = useReportCardsV9();
   const { data: logos } = useLogos();
   const { searchParams, pushSearchParams, replaceParams } = useUrlFilters();
 
@@ -201,13 +202,13 @@ export function AltPegsClient() {
         stablecoins: stablecoinsQuery.data?.peggedAssets,
         fxFallbackRates: stablecoinsQuery.data?.fxFallbackRates,
         pegSummaryCoins: pegSummaryQuery.data?.coins,
-        reportCards: reportCardsQuery.data?.cards,
+        reportCardsV9: reportCardsQuery.data,
       }),
     [
       stablecoinsQuery.data?.peggedAssets,
       stablecoinsQuery.data?.fxFallbackRates,
       pegSummaryQuery.data?.coins,
-      reportCardsQuery.data?.cards,
+      reportCardsQuery.data,
     ],
   );
   const trendStats = useMemo(() => buildAltPegTrendStats(shareQuery.data), [shareQuery.data]);
@@ -300,6 +301,7 @@ export function AltPegsClient() {
           },
         ]}
       />
+      <SafetyScoreV9StatusNotice response={reportCardsQuery.data} />
 
       {/* The celestial atlas is the sole page hero — full-width, its own chrome. */}
       <FiatWorldAtlas />

@@ -12,9 +12,9 @@ import type {
   DexLiquidityMap,
   PegCurrency,
   PegSummaryCoin,
-  ReportCard,
   StablecoinData,
 } from "@shared/types";
+import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 
 const StablecoinTable = dynamic(
   () => import("@/components/stablecoin-table").then((mod) => mod.StablecoinTable),
@@ -42,7 +42,7 @@ interface AltPegStablecoinTableProps {
   pegRates?: Record<string, number>;
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
-  reportCards?: Record<string, ReportCard>;
+  reportCards?: Record<string, V9SafetyTableRow>;
 }
 
 export function AltPegStablecoinTable({

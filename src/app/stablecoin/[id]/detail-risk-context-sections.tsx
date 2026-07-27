@@ -20,7 +20,7 @@ import {
   MarketDataSection,
   McapChart,
   PegStabilityCard,
-  ReportCardDetail,
+  ReportCardV9Detail,
   StablecoinDepegResolverCard,
 } from "./detail-lazy-sections";
 
@@ -89,12 +89,11 @@ export function DetailRiskContextSections({
           </div>
         </section>
         <section id="report-card">
-          {viewModel.reportCard ? (
-            <ReportCardDetail
-              card={viewModel.reportCard}
-              liquidityComponents={viewModel.liquidityData?.scoreComponents ?? null}
-              updatedAtMs={viewModel.reportCardUpdatedAt ?? null}
-              rightColumn={reservesPanel}
+          {viewModel.reportCard && viewModel.reportCardsResponse ? (
+            <ReportCardV9Detail
+              response={viewModel.reportCardsResponse}
+              expectedIdentity={viewModel.reportCardsResponse.safetyScoreIdentity}
+              cardId={viewModel.id}
             />
           ) : null}
         </section>

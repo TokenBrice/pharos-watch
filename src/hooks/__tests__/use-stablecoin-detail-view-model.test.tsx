@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   useStablecoins: vi.fn(),
   usePegSummary: vi.fn(),
   useDexLiquidity: vi.fn(),
-  useReportCards: vi.fn(),
+  useReportCardsV9: vi.fn(),
   useRedemptionBackstops: vi.fn(),
   useYieldRankings: vi.fn(),
   useStressSignals: vi.fn(),
@@ -43,7 +43,7 @@ vi.mock("../api-hooks", () => ({
   useDexLiquidity: mocks.useDexLiquidity,
   usePegSummary: mocks.usePegSummary,
   useRedemptionBackstops: mocks.useRedemptionBackstops,
-  useReportCards: mocks.useReportCards,
+  useReportCardsV9: mocks.useReportCardsV9,
   useStressSignals: mocks.useStressSignals,
   useYieldRankings: mocks.useYieldRankings,
 }));
@@ -111,7 +111,7 @@ function installQueryMocks() {
     refetch: mocks.refetchLiquidity,
     meta: null,
   });
-  mocks.useReportCards.mockReturnValue({
+  mocks.useReportCardsV9.mockReturnValue({
     data: undefined,
     dataUpdatedAt: 0,
     error: null,
@@ -190,7 +190,7 @@ describe("useStablecoinDetailViewModel", () => {
     expect(mocks.useStablecoins).toHaveBeenCalled();
     expect(mocks.usePegSummary).toHaveBeenCalled();
     expect(mocks.useDexLiquidity).toHaveBeenCalled();
-    expect(mocks.useReportCards).toHaveBeenCalled();
+    expect(mocks.useReportCardsV9).toHaveBeenCalled();
     expect(mocks.useRedemptionBackstops).toHaveBeenCalled();
     expect(mocks.useYieldRankings).toHaveBeenCalled();
     expect(mocks.useStressSignals).toHaveBeenCalled();

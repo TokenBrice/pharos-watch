@@ -12,11 +12,10 @@ import type { FaqItem } from "@/lib/faq";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
-  SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
 
 const reportCardsDescription =
-  "Compare stablecoin safety grades by peg stability, liquidity, resilience, decentralization, CDP oracle setup, bridge-route risk, dependency risk, and contagion stress-test impact.";
+  "Compare active Safety Score V9 stablecoin ratings across backing, exit, and economic-control risk.";
 
 export const metadata = buildPageMetadata({
   title: "Safety Scores: Stablecoin Safety Grades",
@@ -29,39 +28,39 @@ const FAQ_ITEMS = [
   {
     question: "How are stablecoin safety grades calculated?",
     answer:
-      "Each stablecoin is scored across four weighted base dimensions: liquidity / exit capacity, resilience, decentralization, and dependency risk. Decentralization can include branch-aware CDP oracle setup, bridge-route, and mint-authority penalties when reviewed metadata exists. Peg stability is then applied as a multiplier on the result. The resulting 0–100 score maps to a letter grade from A+ to F.",
+      "Safety Score V9 combines three pillars: Backing, Exit, and Economic Control. Evidence quality, dependencies, access posture, binding caps, and peg behavior can limit the published score. The resulting 0–100 score maps to a letter grade from A+ to F, while insufficient evidence is shown as NR.",
   },
   {
-    question: "What does the contagion simulation show?",
+    question: "What do the three V9 pillars measure?",
     answer:
-      'The contagion simulator models cascading failures in the stablecoin ecosystem. You select a stablecoin to "fail" and the simulation traces dependency chains: if stablecoin A uses stablecoin B as collateral, and B fails, A\'s grade degrades proportionally to its exposure. This reveals hidden systemic risk: which coins look safe in isolation but are fragile under stress.',
+      "Backing measures the quality and reliability of the assets supporting a stablecoin. Exit measures whether holders can leave at meaningful size through independent routes. Economic Control measures governance, issuance, transfer, and intervention powers that can affect holders.",
   },
   {
     question: "How often do safety grades change?",
     answer:
-      "Visible Safety Scores data is built by /api/report-cards with a 15-minute freshness/cache budget. In practice, most grades are stable day-to-day. Significant shifts happen when peg deviations spike, liquidity pools drain, or governance changes are enacted. A separate report-card cache lane publishes every 15 minutes for downstream read paths, while Telegram safety-change alerts are driven by the daily safety-grade history snapshot.",
+      "Safety Score V9 is evaluated on the report-card producer cadence. If a transient infrastructure failure would create an unsupported downgrade, Pharos holds the last verified V9 ratings and shows the accepted and attempted times separately instead of publishing the failed attempt or falling back to V8.",
   },
   {
     question: "What should I do with this information?",
     answer:
-      "Safety grades are one input into your own risk assessment, not financial advice. Use them to identify which stablecoins carry hidden dependency risk, compare liquidity depth before choosing an exit route, and stress-test your portfolio assumptions with the contagion simulator. The grade breakdown on each coin's detail page explains exactly what drove the score.",
+      "Safety grades are one input into your own risk assessment, not financial advice. Review the three pillars, binding caps, evidence level, and dependency information before relying on an overall grade.",
   },
   {
     question: "Why do most stablecoins receive a C grade?",
     answer:
-      "A C grade (score 50\u201364) is the statistical center of the grading distribution. It means the coin meets baseline requirements but has meaningful weaknesses in at least one area \u2014 typically limited liquidity, moderate dependency risk, or weaker decentralization. Only coins that excel across the weighted base dimensions and maintain strong peg behavior reach A or B territory.",
+      "A C grade means the asset has meaningful weaknesses or evidence gaps in at least one V9 pillar. Strong backing alone cannot offset a weak exit route, concentrated economic control, or a binding structural cap.",
   },
 ] as const satisfies readonly FaqItem[];
 
 export default createClientFeaturePage({
-  loadClient: () => import("./client").then((m) => ({ default: m.ReportCardsClient })),
+  loadClient: () => import("./v9-client").then((m) => ({ default: m.ReportCardsV9Client })),
   loading: <Skeleton className="h-[400px] w-full rounded-xl" />,
   shell: {
     breadcrumbName: "Safety Scores",
     path: "/safety-scores/",
     title: "Safety Scores",
     methodology: {
-      version: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
+      version: "V9 · candidate-v2",
       changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
     },
     headerActions: <ShareButton ogPath="/api/og/safety-scores" />,
@@ -72,7 +71,7 @@ export default createClientFeaturePage({
       />
     ),
     leadParagraphs: [
-      "Independent stablecoin safety ratings: letter grades from A+ to F, built from live reserve feeds, dependency scoring, and redemption backstops.",
+      "Active Safety Score V9 ratings across Backing, Exit, and Economic Control, with explicit evidence, caps, dependencies, and held-publication status.",
     ],
   },
   afterClient: (

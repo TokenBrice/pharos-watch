@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
+import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { SelectorCallout } from "@/components/selector/selector-callout";
 import { TableExportMenu } from "@/components/table-export-menu";
 import { ScreenerToolbar } from "@/components/screener/screener-toolbar";
 import { ScreenerTable } from "@/components/screener/screener-table";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
-import { usePegSummary, useReportCards, useStressSignals, useDexLiquidity } from "@/hooks/api-hooks";
+import { usePegSummary, useReportCardsV9, useStressSignals, useDexLiquidity } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useSort } from "@/hooks/use-sort";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -42,7 +43,6 @@ import {
 import { getCirculatingRaw, getPrevMonthRawOrNull } from "@shared/lib/supply";
 import {
   MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL,
-  SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
 import type { CsvColumn } from "@/lib/exports/csv";
 import { GOVERNANCE_LABELS, PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";
@@ -65,11 +65,9 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "liquidity_score", accessor: (row) => row.liquidityScore ?? "" },
   { header: "safety_grade", accessor: (row) => row.safetyGrade ?? "" },
   { header: "safety_score", accessor: (row) => row.safetyScore ?? "" },
-  { header: "safety_peg_stability", accessor: (row) => row.safetyPegStabilityScore ?? "" },
-  { header: "safety_liquidity", accessor: (row) => row.safetyLiquidityScore ?? "" },
-  { header: "safety_resilience", accessor: (row) => row.safetyResilienceScore ?? "" },
-  { header: "safety_decentralization", accessor: (row) => row.safetyDecentralizationScore ?? "" },
-  { header: "safety_dependency_risk", accessor: (row) => row.safetyDependencyRiskScore ?? "" },
+  { header: "safety_backing", accessor: (row) => row.safetyBackingScore ?? "" },
+  { header: "safety_exit", accessor: (row) => row.safetyExitScore ?? "" },
+  { header: "safety_control", accessor: (row) => row.safetyControlScore ?? "" },
   { header: "blacklistable", accessor: (row) => row.blacklistable ?? "" },
   {
     header: "mint_authority",
@@ -119,7 +117,7 @@ export function ScreenerClient() {
     error: reportError,
     refetch: refetchReport,
     meta: reportMeta,
-  } = useReportCards();
+  } = useReportCardsV9();
   const {
     data: stressData,
     isLoading: isStressLoading,
@@ -204,22 +202,18 @@ export function ScreenerClient() {
       {
         grade: ReportCardGrade;
         score: number | null;
-        pegStability: number | null;
-        liquidity: number | null;
-        resilience: number | null;
-        decentralization: number | null;
-        dependencyRisk: number | null;
+        backing: number | null;
+        exit: number | null;
+        control: number | null;
       }
     >();
     for (const card of reportData?.cards ?? []) {
       reportById.set(card.id, {
-        grade: card.overallGrade,
-        score: card.overallScore,
-        pegStability: card.dimensions.pegStability.score,
-        liquidity: card.dimensions.liquidity.score,
-        resilience: card.dimensions.resilience.score,
-        decentralization: card.dimensions.decentralization.score,
-        dependencyRisk: card.dimensions.dependencyRisk.score,
+        grade: card.grade,
+        score: card.score,
+        backing: card.pillars.backing.score,
+        exit: card.pillars.exit.score,
+        control: card.pillars.control.score,
       });
     }
     const dewsById = new Map<string, number>();
@@ -252,11 +246,9 @@ export function ScreenerClient() {
         liquidityScore: liquidityById.get(meta.id) ?? null,
         safetyGrade: safety?.grade ?? null,
         safetyScore: safety?.score ?? null,
-        safetyPegStabilityScore: safety?.pegStability ?? null,
-        safetyLiquidityScore: safety?.liquidity ?? null,
-        safetyResilienceScore: safety?.resilience ?? null,
-        safetyDecentralizationScore: safety?.decentralization ?? null,
-        safetyDependencyRiskScore: safety?.dependencyRisk ?? null,
+        safetyBackingScore: safety?.backing ?? null,
+        safetyExitScore: safety?.exit ?? null,
+        safetyControlScore: safety?.control ?? null,
         blacklistable: projectBlacklistable(meta.canBeBlacklisted),
         mintAuthority: projectMintAuthority(meta.mintAuthoritySummary),
         mintAuthorityScore: mintAuthorityScore.result.score,
@@ -356,6 +348,7 @@ export function ScreenerClient() {
         onRetry={freshnessGroup.refetchAll}
         queries={freshnessGroup.queries}
       />
+      <SafetyScoreV9StatusNotice response={reportData} />
 
       <SelectorCallout />
 
@@ -372,7 +365,7 @@ export function ScreenerClient() {
             columns={EXPORT_COLUMNS}
             filename="screener"
             endpoint="screener"
-            methodologyLabel={`safety-score ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}; mint-authority-score ${MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL}`}
+            methodologyLabel={`safety-score ${reportData?.safetyScoreIdentity?.methodologyVersion ?? "v9"}; mint-authority-score ${MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL}`}
             triggerLabel={scoreFilterDataLoading ? "Loading" : "Export"}
             disabled={scoreFilterDataLoading}
           />

@@ -15,12 +15,12 @@ import { CoinSelector } from "@/components/coin-selector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { Share2, X, Download, type LucideIcon } from "lucide-react";
-import { DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from "@shared/lib/report-cards";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
+import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { CompareEmptyState } from "@/components/compare-empty-state";
-import { resolveCohortBaseline, type CompareRadarCohort } from "@/components/radar-chart";
+import type { CompareRadarCohort } from "@/components/radar-chart";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
@@ -40,7 +40,7 @@ const ComparisonChart = dynamic(() => import("@/components/comparison-chart").th
   loading: () => <ChartSkeleton className="h-[300px] sm:h-[400px] rounded-xl" />,
 });
 
-const CompareRadar = dynamic(() => import("@/components/radar-chart").then((m) => m.CompareRadar), {
+const CompareRadarV9 = dynamic(() => import("@/components/radar-chart-v9").then((m) => m.CompareRadarV9), {
   loading: () => <ChartSkeleton className="h-[420px] rounded-xl" />,
 });
 
@@ -308,9 +308,12 @@ export function CompareClient() {
     comparisonCoins,
     logos,
     pegRates,
-    radarCards,
-    dimensionOrder: DIMENSION_ORDER,
-    dimensionLabels: DIMENSION_SHORT_LABELS,
+    radarCards: radarCards.map((entry) => ({
+      ...entry,
+      symbol: TRACKED_META_BY_ID.get(entry.card.id)?.symbol ?? entry.card.id,
+    })),
+    axisOrder: ["backing", "exit", "control"],
+    axisLabels: { backing: "Backing", exit: "Exit", control: "Control" },
   });
 
   const [radarCohort, setRadarCohort] = usePreference<CompareRadarCohort>(
@@ -338,7 +341,7 @@ export function CompareClient() {
     if (allCards.length === 0 || radarCards.length === 0) {
       return {
         effectiveCohort: "all" as CompareRadarCohort,
-        medians: null,
+        series: [],
         memberCount: 0,
       };
     }
@@ -358,8 +361,17 @@ export function CompareClient() {
               return meta?.mechanismArchetype === leadMech;
             })
           : allCards;
-    return resolveCohortBaseline(radarCohort, allCards, cohortCards);
-  }, [radarCards, radarCohort, reportCardsData?.cards]);
+    const resolvedCards = radarCohort === "all" || cohortCards.length < 3 ? allCards : cohortCards;
+    return {
+      effectiveCohort: radarCohort === "all" || cohortCards.length < 3 ? "all" as CompareRadarCohort : radarCohort,
+      series: resolvedCards.map((card) => ({
+        card,
+        identity: reportCardsData!.safetyScoreIdentity,
+        color: "#64748b",
+      })),
+      memberCount: resolvedCards.length,
+    };
+  }, [radarCards, radarCohort, reportCardsData]);
 
   const activeSelectionLabel = selectedCoins
     .filter((coin): coin is NonNullable<(typeof selectedCoins)[number]> => coin !== null)
@@ -411,6 +423,7 @@ export function CompareClient() {
           { preset: "bluechip", dataUpdatedAt: bcUpdatedAt, error: bluechipError, hasData: !!bluechipData, meta: bluechipMeta },
         ]}
       />
+      <SafetyScoreV9StatusNotice response={reportCardsData} />
       <CompareScopeHero coinOptions={coinOptions} selectedCount={selectedIds.length} />
       {selectedIds.length >= 2 ? (
         <div className="pharos-card-shell px-4 py-3">
@@ -584,18 +597,18 @@ export function CompareClient() {
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col items-center justify-center">
                   <div className="pharos-chart-stage flex w-full justify-center">
-                    <CompareRadar cards={radarCards} size={300} cohortMedians={cohortBaseline.medians} />
+                    <CompareRadarV9 series={radarCards} cohortSeries={cohortBaseline.series} size={300} />
                   </div>
                   <div className="flex flex-wrap gap-3 justify-center mt-3">
                     {radarCards.map(({ card, color }) => (
                       <div key={card.id} className="flex items-center gap-1.5 text-sm">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
                         <span>
-                          {card.symbol}: {card.overallGrade}
+                          {TRACKED_META_BY_ID.get(card.id)?.symbol ?? card.id}: {card.grade}
                         </span>
                       </div>
                     ))}
-                    {cohortBaseline.medians ? (
+                    {cohortBaseline.series.length >= 3 ? (
                       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                         <span
                           aria-hidden="true"

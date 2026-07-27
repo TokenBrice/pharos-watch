@@ -1,6 +1,5 @@
 import { downloadCsv } from "@/lib/exports/csv";
 import { createTableComparator } from "@/lib/table-comparator";
-import { getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel } from "@/lib/blacklist-status";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter, OTHER_PEG_TAGS } from "@shared/lib/filter-tags";
@@ -11,7 +10,8 @@ import {
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
   CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/client-registry";
-import type { DexLiquidityMap, FilterTag, PegSummaryCoin, ReportCard, StablecoinData } from "@shared/types";
+import type { DexLiquidityMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
+import { getV9ResolvedBlacklistStatus, type V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 
 export type StablecoinTableSortKey =
   | "name"
@@ -73,7 +73,7 @@ export function prioritizePinnedStablecoins(
 
 export function buildTrackedIdSet(
   activeFilters: readonly FilterTag[],
-  reportCards?: Record<string, ReportCard>,
+  reportCards?: Record<string, V9SafetyTableRow>,
   eligibleIds: ReadonlySet<string> = ACTIVE_IDS,
 ): ReadonlySet<string> {
   if (activeFilters.length === 0) {
@@ -96,7 +96,7 @@ export function buildTrackedIdSet(
 
       // Check grade filters (from reportCards)
       if (gradeFilters.length > 0) {
-        const grade = reportCards?.[stablecoin.id]?.overallGrade;
+        const grade = reportCards?.[stablecoin.id]?.grade;
         const gradeMatch = gradeFilters.every((filter) => gradeMatchesFilter(grade, filter));
         if (!gradeMatch) return false;
       }
@@ -132,7 +132,7 @@ export function resolveEffectiveSortKey(
 export function getStablecoinTableRowRiskLevel(
   coin: StablecoinData,
   pegScores?: Map<string, PegSummaryCoin>,
-  reportCards?: Record<string, ReportCard>,
+  reportCards?: Record<string, V9SafetyTableRow>,
 ): StablecoinTableRowRiskLevel {
   const pegCoin = pegScores?.get(coin.id);
   const reportCard = reportCards?.[coin.id];
@@ -140,10 +140,10 @@ export function getStablecoinTableRowRiskLevel(
   if (pegCoin?.pegScore !== null && pegCoin?.pegScore !== undefined && pegCoin.pegScore < 60) {
     return "depeg";
   }
-  if (reportCard?.overallGrade && ["D", "F"].includes(reportCard.overallGrade)) {
+  if (reportCard?.grade && ["D", "F"].includes(reportCard.grade)) {
     return "poor";
   }
-  if (reportCard?.overallGrade === "C") {
+  if (reportCard?.grade === "C") {
     return "warning";
   }
   return "normal";
@@ -156,7 +156,7 @@ interface SortStablecoinsParams {
   pegRates: Record<string, number>;
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
-  reportCards?: Record<string, ReportCard>;
+  reportCards?: Record<string, V9SafetyTableRow>;
 }
 
 type StablecoinSortValue = number | string | null | undefined;
@@ -186,9 +186,9 @@ export function sortStablecoins({
     },
     stability: (r) => pegScores?.get(r.id)?.pegScore ?? null,
     liquidity: (r) => dexLiquidity?.[r.id]?.liquidityScore ?? null,
-    grade: (r) => reportCards?.[r.id]?.overallScore ?? null,
+    grade: (r) => reportCards?.[r.id]?.score ?? null,
     blacklistable: (r) => {
-      const status = getResolvedBlacklistStatus(r.id, reportCards?.[r.id]);
+      const status = getV9ResolvedBlacklistStatus(reportCards?.[r.id]);
       if (status === null) return null;
       if (status === true) return 3;
       if (status === "possible" || status === "inherited") return 1;
@@ -224,7 +224,7 @@ export function exportStablecoinsCsv(
   sorted: StablecoinData[],
   pegScores?: Map<string, PegSummaryCoin>,
   dexLiquidity?: DexLiquidityMap,
-  reportCards?: Record<string, ReportCard>,
+  reportCards?: Record<string, V9SafetyTableRow>,
 ): void {
   downloadCsv(
     sorted,
@@ -256,7 +256,8 @@ export function exportStablecoinsCsv(
         header: "Blacklistable",
         accessor: (row) => {
           if (!TRACKED_META_BY_ID.has(row.id)) return null;
-          return getResolvedBlacklistStatusLabel(row.id, reportCards?.[row.id]);
+          const status = getV9ResolvedBlacklistStatus(reportCards?.[row.id]);
+          return status === true ? "Yes" : status === "inherited" ? "Upstream" : status === "possible" ? "Possible" : status === false ? "No" : "Unknown";
         },
       },
       {
@@ -280,7 +281,7 @@ export function exportStablecoinsCsv(
           return resolveMintAuthorityScoreDisplay(row.id, meta?.mintAuthoritySummary).bandLabel;
         },
       },
-      { header: "Grade", accessor: (row) => reportCards?.[row.id]?.overallGrade ?? null },
+      { header: "Grade", accessor: (row) => reportCards?.[row.id]?.grade ?? null },
     ],
     "pharos-stablecoins",
   );

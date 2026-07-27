@@ -4,7 +4,7 @@ import { render, waitFor } from "@testing-library/react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PortfolioClient } from "./client";
-import type { ReportCard } from "@shared/types";
+import type { ReportCardsV9Response } from "@shared/types";
 
 let portfolioState: {
   holdings: Array<{ coinId: string; amount: number }>;
@@ -23,13 +23,13 @@ let portfolioState: {
 };
 
 const reportCardsState: {
-  data: { cards: ReportCard[] } | undefined;
+  data: ReportCardsV9Response | undefined;
   isLoading: boolean;
   dataUpdatedAt: number;
   error: Error | null;
   meta: Record<string, unknown>;
 } = {
-  data: { cards: [] },
+  data: undefined,
   isLoading: false,
   dataUpdatedAt: 0,
   error: null,
@@ -37,7 +37,7 @@ const reportCardsState: {
 };
 
 vi.mock("@/hooks/api-hooks", () => ({
-  useReportCards: () => ({
+  useReportCardsV9: () => ({
     ...reportCardsState,
     refetch: vi.fn(),
   }),
@@ -80,10 +80,6 @@ vi.mock("@/components/radar-chart", () => ({
 
 vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name }: { name: string }) => <div>{name}</div>,
-}));
-
-vi.mock("@/components/report-card-mini", () => ({
-  ReportCardMini: ({ card }: { card: ReportCard }) => <div>{card.id}</div>,
 }));
 
 vi.mock("@/components/stale-data-banner", () => ({

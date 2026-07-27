@@ -4,7 +4,8 @@ import { useMemo, useCallback, useRef, type ReactNode, type RefObject } from "re
 import { useRouter } from "next/navigation";
 import type { Virtualizer } from "@tanstack/react-virtual";
 import { TableToolbar } from "./table-toolbar";
-import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap, ReportCard } from "@shared/types";
+import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap } from "@shared/types";
+import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
@@ -33,7 +34,7 @@ interface StablecoinTableProps {
   onSearchChange?: (value: string) => void;
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityMap;
-  reportCards?: Record<string, ReportCard>;
+  reportCards?: Record<string, V9SafetyTableRow>;
   initialVisibleColumns?: readonly ColumnId[];
   columnPreferenceNamespace?: string;
   showHeaderMethodologyHints?: boolean;

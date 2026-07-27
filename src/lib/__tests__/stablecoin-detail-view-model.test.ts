@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { PegSummaryCoin } from "@shared/types";
+import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildStablecoinDetailHeroViewModel, buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
 import {
   buildMintAuthorityDetailViewModel,
@@ -569,15 +570,7 @@ describe("stablecoin detail view-model builder", () => {
           reportCards: {
             data: {
               cards: [
-                {
-                  id: "usdt-tether",
-                  overallScore: 90,
-                  dimensions: {
-                    decentralization: {
-                      detailItems: [{ label: "Mint authority", value: "40/100 (Concentrated)", detail: "-8" }],
-                    },
-                  },
-                },
+                makeV9Card({ id: "usdt-tether", score: 90, grade: "A" }),
               ],
               dependencyGraph: { nodes: [], edges: [] },
             } as never,
@@ -607,10 +600,7 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.hasFlows).toBe(true);
     expect(viewModel.pegScoreResult?.pegScore).toBe(99);
     expect(viewModel.hasYieldSection).toBe(false);
-    expect(viewModel.mintAuthorityDecentralizationDrag).toEqual({
-      value: "-8",
-      detail: "40/100 (Concentrated)",
-    });
+    expect(viewModel.mintAuthorityDecentralizationDrag).toBeNull();
   });
 
   it("keeps NAV tokens out of peg-distressed verdicts", () => {
@@ -661,7 +651,7 @@ describe("stablecoin detail view-model builder", () => {
           },
           reportCards: {
             data: {
-              cards: [{ id: "mhyper-midas", overallGrade: "F", overallScore: 35, dimensions: {} }],
+              cards: [makeV9Card({ id: "mhyper-midas", grade: "F", score: 35 })],
               dependencyGraph: { nodes: [], edges: [] },
             } as never,
             dataUpdatedAt: 1,
@@ -720,7 +710,7 @@ describe("stablecoin detail view-model builder", () => {
           },
           reportCards: {
             data: {
-              cards: [{ id: coin.id, overallGrade: "B", overallScore: 80, dimensions: {} }],
+              cards: [makeV9Card({ id: coin.id, grade: "B", score: 80 })],
               dependencyGraph: { nodes: [], edges: [] },
             } as never,
             dataUpdatedAt: 1,
@@ -1366,14 +1356,15 @@ describe("stablecoin detail hero view-model builder", () => {
         score: 31,
         band: "WATCH",
       } as never,
-      reportCard: {
-        overallGrade: "B+",
-        overallScore: 79,
-        rawInputs: {
-          canBeBlacklisted: true,
-          depegEventCount: 3,
+      reportCard: makeV9Card({
+        id: "usdc-circle",
+        grade: "B+",
+        score: 79,
+        accessPosture: {
+          ...makeV9Card().accessPosture,
+          freezeExposure: "direct",
         },
-      } as never,
+      }),
       verdict: {
         archetype: "distressed",
         label: "Distressed",
@@ -1395,7 +1386,7 @@ describe("stablecoin detail hero view-model builder", () => {
     const pegMetric = hero.tertiaryMetrics.find((metric) => metric.key === "peg-score");
     expect(pegMetric?.display).toMatchObject({
       value: "45",
-      sub: "3 recorded · 2 scored incidents",
+      sub: "2 incidents",
     });
     expect(pegMetric?.accentClass).toBe("border-l-2 border-l-red-500");
 
@@ -1489,9 +1480,13 @@ describe("stablecoin detail hero view-model builder", () => {
       liquidityData: undefined,
       yieldRanking: null,
       stressSignal: null,
-      reportCard: {
-        rawInputs: { canBeBlacklisted: "inherited" },
-      } as never,
+      reportCard: makeV9Card({
+        id: "dai-makerdao",
+        accessPosture: {
+          ...makeV9Card().accessPosture,
+          freezeExposure: "upstream",
+        },
+      }),
       verdict: {
         archetype: "uncategorized",
         label: "Uncategorized",

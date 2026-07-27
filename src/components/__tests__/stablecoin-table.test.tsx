@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { ALL_COLUMNS } from "@/lib/column-visibility";
 import { cleanupFrontendTest, installMatchMediaMock, resetBrowserStorage } from "@/test-utils/frontend";
-import type { ReportCard, StablecoinData } from "@shared/types";
+import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
+import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import type { StablecoinData } from "@shared/types";
 
 const push = vi.fn();
 const { scrollToIndexMock, virtualItemsMock, virtualTotalSizeMock } = vi.hoisted(() => ({
@@ -81,51 +83,23 @@ const dai = {
   circulating: { peggedUSD: 90_000_000 },
 } as unknown as StablecoinData;
 
-const reportCard: ReportCard = {
-  id: "usdt-tether",
-  name: "Tether",
-  symbol: "USDT",
-  overallGrade: "B+",
-  overallScore: 80,
-  baseScore: 80,
-  dimensions: {
-    pegStability: { grade: "A", score: 95, detail: "ok" },
-    liquidity: { grade: "B+", score: 82, detail: "ok" },
-    resilience: { grade: "B", score: 72, detail: "ok" },
-    decentralization: { grade: "C", score: 55, detail: "ok" },
-    dependencyRisk: { grade: "B", score: 74, detail: "ok" },
-  },
-  ratedDimensions: 5,
-  rawInputs: {
-    pegScore: 95,
-    activeDepeg: false,
-    activeDepegBps: null,
-    depegEventCount: 0,
-    lastEventAt: null,
-    liquidityScore: 89,
-    effectiveExitScore: 89,
-    redemptionBackstopScore: null,
-    redemptionRouteFamily: null,
-    redemptionModelConfidence: null,
-    redemptionUsedForLiquidity: false,
-    redemptionImmediateCapacityUsd: null,
-    redemptionImmediateCapacityRatio: null,
-    concentrationHhi: 0.1,
-    bluechipGrade: null,
-    canBeBlacklisted: true,
-    chainTier: "ethereum",
-    deploymentModel: "native-multichain",
-    collateralQuality: "rwa",
-    custodyModel: "institutional-regulated",
-    governanceTier: "centralized",
-    governanceQuality: "single-entity",
-    dependencies: [],
-    navToken: false,
-    collateralFromLive: false,
-    dependencyFromLive: false,
-  },
-  isDefunct: false,
-};
+const reportCardsResponse = makeReportCardsV9Response({
+  cards: [
+    makeV9Card({
+      id: "dai-makerdao",
+      accessPosture: {
+        ...makeV9Card().accessPosture,
+        freezeExposure: "upstream",
+      },
+    }),
+    makeV9Card({ id: "usdt-tether" }),
+  ],
+});
+const reportCardsProjection = buildV9SafetyTableMap(
+  reportCardsResponse,
+  reportCardsResponse.safetyScoreIdentity,
+);
+const reportCards = reportCardsProjection.status === "available" ? reportCardsProjection.value : {};
 
 describe("StablecoinTable", () => {
   beforeEach(() => {
@@ -176,7 +150,7 @@ describe("StablecoinTable", () => {
         isLoading={false}
         activeFilters={[]}
         pegRates={{}}
-        reportCards={{ [coin.id]: reportCard }}
+        reportCards={reportCards}
       />,
     );
 
@@ -198,7 +172,7 @@ describe("StablecoinTable", () => {
         isLoading={false}
         activeFilters={[]}
         pegRates={{}}
-        reportCards={{ [coin.id]: reportCard }}
+        reportCards={reportCards}
       />,
     );
 
@@ -284,7 +258,7 @@ describe("StablecoinTable", () => {
         isLoading={false}
         activeFilters={[]}
         pegRates={{}}
-        reportCards={{ [coin.id]: reportCard }}
+        reportCards={reportCards}
       />,
     );
 
@@ -295,7 +269,15 @@ describe("StablecoinTable", () => {
   it("renders upstream FreezeWatch status without source-link affordance", () => {
     localStorage.setItem("pharos-table-columns", JSON.stringify(["name", "blacklistable"]));
 
-    render(<StablecoinTable data={[dai]} isLoading={false} activeFilters={[]} pegRates={{}} />);
+    render(
+      <StablecoinTable
+        data={[dai]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+        reportCards={reportCards}
+      />,
+    );
 
     expect(screen.getByText("Upstream")).toBeTruthy();
     expect(screen.queryByLabelText(/source/i)).toBeNull();

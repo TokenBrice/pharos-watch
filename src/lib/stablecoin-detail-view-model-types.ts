@@ -18,8 +18,8 @@ import type {
   PegSummaryResponse,
   RedemptionBackstopEntry,
   RedemptionBackstopsResponse,
-  ReportCard,
-  ReportCardsResponse,
+  ReportCardsV9Response,
+  SafetyScoreV9CurrentCard,
   StablecoinAiSummary,
   StablecoinData,
   StablecoinListResponse,
@@ -54,7 +54,7 @@ export interface StablecoinDetailViewModelQueryInputs {
   stablecoinList: DetailStablecoinListInput;
   pegSummary: DetailQueryResource<PegSummaryResponse>;
   dexLiquidity: DetailQueryResource<DexLiquidityMap>;
-  reportCards: DetailQueryResource<ReportCardsResponse>;
+  reportCards: DetailQueryResource<ReportCardsV9Response>;
   redemptionBackstops: DetailQueryResource<RedemptionBackstopsResponse>;
 }
 
@@ -147,7 +147,8 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   coin: StablecoinDetailCoinMeta;
   summary: StablecoinDetailSummary | null;
   logoSrc?: string;
-  reportCard: ReportCard | undefined;
+  reportCard: SafetyScoreV9CurrentCard | undefined;
+  reportCardsResponse: ReportCardsV9Response | undefined;
   reportCardUpdatedAt: number | null;
   variantParent: StablecoinClientMeta | null;
   variantSiblings: StablecoinClientMeta[];

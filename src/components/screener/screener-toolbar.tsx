@@ -201,51 +201,33 @@ export function ScreenerToolbar({
         />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-3">
         <ThresholdField
-          label="Peg Stability"
+          label="Backing"
           min={0}
           max={100}
           step={1}
-          minValue={filters.safetyPegStabilityMin}
-          onMinChange={(v) => update("safetyPegStabilityMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.safetyPegStabilityMin}
+          minValue={filters.safetyBackingMin}
+          onMinChange={(v) => update("safetyBackingMin", v)}
+          defaultMin={SCREENER_FILTER_DEFAULTS.safetyBackingMin}
         />
         <ThresholdField
-          label="Exit Liquidity"
+          label="Exit"
           min={0}
           max={100}
           step={1}
-          minValue={filters.safetyLiquidityMin}
-          onMinChange={(v) => update("safetyLiquidityMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.safetyLiquidityMin}
+          minValue={filters.safetyExitMin}
+          onMinChange={(v) => update("safetyExitMin", v)}
+          defaultMin={SCREENER_FILTER_DEFAULTS.safetyExitMin}
         />
         <ThresholdField
-          label="Resilience"
+          label="Economic Control"
           min={0}
           max={100}
           step={1}
-          minValue={filters.safetyResilienceMin}
-          onMinChange={(v) => update("safetyResilienceMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.safetyResilienceMin}
-        />
-        <ThresholdField
-          label="Decentralization"
-          min={0}
-          max={100}
-          step={1}
-          minValue={filters.safetyDecentralizationMin}
-          onMinChange={(v) => update("safetyDecentralizationMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.safetyDecentralizationMin}
-        />
-        <ThresholdField
-          label="Dependency Risk"
-          min={0}
-          max={100}
-          step={1}
-          minValue={filters.safetyDependencyRiskMin}
-          onMinChange={(v) => update("safetyDependencyRiskMin", v)}
-          defaultMin={SCREENER_FILTER_DEFAULTS.safetyDependencyRiskMin}
+          minValue={filters.safetyControlMin}
+          onMinChange={(v) => update("safetyControlMin", v)}
+          defaultMin={SCREENER_FILTER_DEFAULTS.safetyControlMin}
         />
       </div>
 

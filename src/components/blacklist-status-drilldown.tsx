@@ -13,13 +13,14 @@ import {
   filterStablecoinsByBlacklistStatus,
   type BlacklistStatusBucketKey,
 } from "@/lib/blacklist-status-buckets";
-import type { ReportCard, StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types";
+import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 
 interface BlacklistStatusDrilldownProps {
   status: BlacklistStatusBucketKey;
   stablecoins: StablecoinData[] | undefined;
   fxFallbackRates?: Record<string, number>;
-  reportCards: Record<string, ReportCard> | undefined;
+  reportCards: Record<string, V9SafetyTableRow> | undefined;
   onClear: () => void;
 }
 

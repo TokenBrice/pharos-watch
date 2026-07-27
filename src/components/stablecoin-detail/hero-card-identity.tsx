@@ -19,7 +19,7 @@ import { getInfrastructureLabel } from "@shared/lib/infrastructure";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import type {
   Infrastructure,
-  ReportCard,
+  SafetyScoreV9CurrentCard,
   StablecoinMeta,
 } from "@shared/types";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
@@ -229,10 +229,10 @@ export function SafetyGradeHero({
   reportCard,
   mobile = false,
 }: {
-  reportCard: ReportCard | null;
+  reportCard: SafetyScoreV9CurrentCard | null;
   mobile?: boolean;
 }) {
-  if (!reportCard || reportCard.isDefunct) {
+  if (!reportCard) {
     return (
       <div
         className={`flex flex-col items-center justify-center rounded-xl border border-border/60 bg-background/50 ${
@@ -263,18 +263,18 @@ export function SafetyGradeHero({
       <ScoreBadgeWrapper topic="safetyScore" variant="tooltip-only">
         <Badge
           variant="outline"
-          className={`${sizeClasses} font-extrabold tracking-tight ${REPORT_CARD_GRADE_COLORS[reportCard.overallGrade]}`}
+          className={`${sizeClasses} font-extrabold tracking-tight ${REPORT_CARD_GRADE_COLORS[reportCard.grade]}`}
         >
-          {reportCard.overallGrade}
+          {reportCard.grade}
         </Badge>
       </ScoreBadgeWrapper>
-      {reportCard.overallScore !== null && (
+      {reportCard.score !== null && (
         <span
           className={`pharos-numeric tracking-tight text-foreground ${
             mobile ? "text-base leading-none" : "text-lg"
           }`}
         >
-          {reportCard.overallScore}
+          {reportCard.score}
           <span className="text-xs text-muted-foreground">/100</span>
         </span>
       )}

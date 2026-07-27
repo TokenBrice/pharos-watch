@@ -1,10 +1,10 @@
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { getV9ResolvedBlacklistStatus, type V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
   CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/client-registry";
-import type { ReportCard, StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types";
 
 export type BlacklistStatusBucketKey = "yes" | "upstream" | "possible" | "no";
 
@@ -44,7 +44,7 @@ export const BLACKLIST_STATUS_BUCKET_DESCRIPTIONS: Record<BlacklistStatusBucketK
   no: "No direct, upstream, or possible freeze exposure is resolved in the current model.",
 };
 
-type ReportCardMap = Record<string, Pick<ReportCard, "rawInputs">>;
+type ReportCardMap = Record<string, V9SafetyTableRow>;
 
 export function resolveBlacklistStatusBucket(
   value: boolean | "possible" | "inherited",
@@ -56,10 +56,10 @@ export function resolveBlacklistStatusBucket(
 }
 
 export function getBlacklistStatusBucketForStablecoin(
-  stablecoinId: string,
-  reportCard?: Pick<ReportCard, "rawInputs"> | null,
+  _stablecoinId: string,
+  reportCard?: V9SafetyTableRow | null,
 ): BlacklistStatusBucketKey | null {
-  const resolved = getResolvedBlacklistStatus(stablecoinId, reportCard);
+  const resolved = getV9ResolvedBlacklistStatus(reportCard);
   return resolved === null ? null : resolveBlacklistStatusBucket(resolved);
 }
 

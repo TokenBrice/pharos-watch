@@ -578,16 +578,17 @@ Key types:
 
 Two separate features:
 
-- **Portfolio Analyzer** — standalone `/portfolio` page (`src/app/portfolio/client.tsx`, `usePortfolio`). Holdings editor, portfolio grade/radar, and upstream exposure.
-- **Interactive Stress Test / Contagion Map** — collapsible panel on `/safety-scores` between the headline stats and the controls/card grid (`src/components/stress-test-panel.tsx`, `useStressTest`).
+- **Portfolio Analyzer** — standalone `/portfolio` page (`src/app/portfolio/client.tsx`, `usePortfolio`). Holdings state remains in `usePortfolio`; active safety calculations use the identified V9 response.
+- **Interactive Stress Test / Contagion Map** — retained V8 compatibility code (`src/components/stress-test-panel.tsx`, `useStressTest`). It is not selected by the active V9 Safety Scores route because no approved V9 stress mapping exists.
 
 ### Portfolio Analyzer
 
 Users enter stablecoin holdings (coin + USD amount). Derived computations (all client-side):
 
-- **Portfolio grade**: `sum(coinScore × coinAmount) / sum(coinAmount)` for rated coins. NR coins excluded.
-- **Portfolio radar**: Same weighted average per dimension. Displays via `ReportCardRadar` with a synthetic `ReportCard`.
-- **Upstream exposure**: Walks `dependencies` using collateral weights. Direct CeFi holdings attribute 100% to themselves. Aggregates by upstream coin ID. Shows concentration warning when any single upstream exceeds 80%.
+- **Portfolio safety aggregate**: amount-weighted V9 `score` for rated holdings. It is labeled as a portfolio aggregate and is not converted into a synthetic asset grade.
+- **Portfolio pillars**: amount-weighted Backing, Exit, and Economic Control scores.
+- **Dependency exposure**: native V9 serial and basket dependency summaries, retaining their V9 semantics.
+- **Held or mismatched publication**: the safety aggregate is unavailable and never falls back to V8.
 
 State: `usePortfolio` hook. Sources (priority): URL `?p=usdc-circle:50000,dai-makerdao:5000` → `localStorage` → empty. Shared links don't overwrite saved portfolio.
 
@@ -595,21 +596,21 @@ Portfolio holdings now accept canonical IDs only. On read, `src/lib/portfolio-co
 
 ### Interactive Stress Test
 
-Users simulate a grade downgrade for any upstream coin and watch cascading grade changes:
+The V8 simulator remains versioned compatibility code. The active V9 route
+does not expose it because applying V8 dimension recomputation to V9 cards
+would mix models. It remains unavailable until a native V9 stress-state
+mapping is approved.
 
-- **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
-- **Grade selector**: Only downgrades from the coin's current grade to F.
-- **Recomputation**: `computeStressedGrades()` injects a synthetic score, walks all transitive downstream dependencies, and recomputes only the Dependency Risk dimension for affected downstream coins in dependency order. Its input size follows the source-owned report-card snapshot rather than a separately maintained UI inventory.
-- **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
-
-State: `useStressTest` hook. URL sync: `?stress=usdc-circle&grade=D`.
+Legacy state remains in the `useStressTest` hook with URL sync
+`?stress=usdc-circle&grade=D`, but no active V9 consumer invokes it.
 
 ## Frontend
 
-- **Grid page**: `src/app/safety-scores/client.tsx` — filterable/sortable grid of non-defunct grade cards with core settlement rail strip/sort affordance, portfolio/stress panel integration, simulation mode, and headline safety stats. Core settlement rail membership is a frontend view-model classification and specifically requires a reviewed offchain issuer exit route.
-- **Stress panel**: `src/components/stress-test-panel.tsx` — collapsible Contagion Map panel with systemic-risk scoreboard, stress test controls + impact table
-- **Detail card**: `src/components/report-card.tsx` — full radar chart + dimension breakdown; the mobile grade strip wraps and keeps the score-breakdown disclosure on its own row so the chart keeps usable width. The title and key opaque dimensions (`Resilience`, `Dependency Risk`) now expose contextual methodology hints, and the card footer links directly back to the Safety Score methodology / changelog.
+- **Active ratings page**: `/safety-scores/` selects `useReportCardsV9()` and renders the identified V9 publication through the established grade-grouped card grid, hero, filters, sorting controls, and card treatment. Cards use Backing, Exit, and Economic Control; the page shows accepted/attempted timestamps and the explicit held-publication banner. An unavailable or invalid V9 response renders unavailable and never falls back to V8.
+- **V9 card grid**: `src/app/safety-scores/v9-client.tsx` and `src/components/report-card-mini-v9.tsx` preserve the production grade-grouped card grid, hero, filters, sorting, and visual treatment while using V9 score, grade, and three-pillar radar data.
+- **Retained V8 compatibility UI**: `src/app/safety-scores/client.tsx`, `src/components/stress-test-panel.tsx`, `src/components/report-card.tsx`, and `src/components/report-card-mini.tsx` remain available only to compatibility code. The active ratings route no longer selects them.
+- **V9 detail renderer**: `src/components/report-card-v9.tsx` renders native V9 pillars, caps, evidence, access posture, and dependencies for model-aware consumers.
+- **Other active consumers**: home and alt-peg tables, screener, stablecoin detail, compare, portfolio, dependency map, Freezewatch, and coverage use `useReportCardsV9()` projections. Held publications show an explicit notice.
+- **Policy-dependent consumers**: Selector recommendations and the Bluechip roster fail closed while their V9 thresholds remain unreviewed. The V8 stress simulator is not exposed by the active V9 route.
 - **Detail timeline**: `src/components/stablecoin-detail/safety-score-history-section.tsx` — per-coin grade transition timeline (seed row + changes) shown under the Safety Score section on `/stablecoin/[id]`
-- **Mini card**: `src/components/report-card-mini.tsx` — compact grid tile with simulation support (dashed border, before→after grade, "Simulated" badge) and a "Core rail" marker for objectively qualified settlement rails; the radar stage now uses a width-driven aspect ratio so the grid cards do not carry excess vertical dead space
-- **Radar chart**: `src/components/radar-chart.tsx` — hexagonal Recharts radar with `ReportCardRadar` (single) and `CompareRadar` (multi-coin overlay); `ReportCardRadar` automatically switches to short axis labels on very narrow containers
-- **Hooks**: `src/hooks/api-hooks.ts` (`useReportCards`, `useSafetyScoreHistory`), `src/hooks/use-portfolio.ts` (portfolio state + browser persistence), `src/hooks/use-stress-test.ts` (stress test state + recomputation)
+- **Hooks**: `src/hooks/api-hooks.ts` (`useReportCardsV9`, retained `useReportCards` compatibility hook, and `useSafetyScoreHistory`)

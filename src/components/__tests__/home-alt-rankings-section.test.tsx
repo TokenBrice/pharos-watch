@@ -12,7 +12,7 @@ const {
   useLogosMock,
   usePegSummaryMock,
   useDexLiquidityMock,
-  useReportCardsMock,
+  useReportCardsV9Mock,
   useStressSignalsMock,
   useHomeAltFiltersMock,
   usePinnedStablecoinsMock,
@@ -24,7 +24,7 @@ const {
   useLogosMock: vi.fn(),
   usePegSummaryMock: vi.fn(),
   useDexLiquidityMock: vi.fn(),
-  useReportCardsMock: vi.fn(),
+  useReportCardsV9Mock: vi.fn(),
   useStressSignalsMock: vi.fn(),
   useHomeAltFiltersMock: vi.fn(),
   usePinnedStablecoinsMock: vi.fn(),
@@ -58,7 +58,7 @@ vi.mock("@/hooks/use-logos", () => ({
 vi.mock("@/hooks/api-hooks", () => ({
   usePegSummary: usePegSummaryMock,
   useDexLiquidity: useDexLiquidityMock,
-  useReportCards: useReportCardsMock,
+  useReportCardsV9: useReportCardsV9Mock,
   useStressSignals: useStressSignalsMock,
 }));
 
@@ -98,7 +98,7 @@ describe("HomeAltRankingsSection", () => {
     useLogosMock.mockReturnValue({ data: {} });
     usePegSummaryMock.mockReturnValue({ data: { coins: [], summary: {} } });
     useDexLiquidityMock.mockReturnValue({ data: {} });
-    useReportCardsMock.mockReturnValue({ data: { cards: [], dependencyGraph: { edges: [] } } });
+    useReportCardsV9Mock.mockReturnValue({ data: { cards: [], dependencyGraph: { edges: [] } } });
     useStressSignalsMock.mockReturnValue({ data: { signals: {} } });
     useHomeAltFiltersMock.mockReturnValue({
       activeFilters: [],

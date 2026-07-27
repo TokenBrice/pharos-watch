@@ -23,10 +23,10 @@ interface CompareCoinForShare {
 }
 
 interface CompareRadarCard {
+  symbol: string;
   card: {
-    symbol: string;
-    overallGrade: string;
-    dimensions: Record<string, { score: number | null }>;
+    grade: string;
+    pillars: Record<string, { score: number | null }>;
   };
   color: string;
 }
@@ -36,8 +36,8 @@ interface UseCompareShareActionsOptions {
   logos: Record<string, string> | undefined;
   pegRates: Record<string, number>;
   radarCards: CompareRadarCard[];
-  dimensionOrder: readonly string[];
-  dimensionLabels: Record<string, string>;
+  axisOrder: readonly string[];
+  axisLabels: Record<string, string>;
 }
 
 export function useCompareShareActions({
@@ -45,8 +45,8 @@ export function useCompareShareActions({
   logos,
   pegRates,
   radarCards,
-  dimensionOrder,
-  dimensionLabels,
+  axisOrder,
+  axisLabels,
 }: UseCompareShareActionsOptions) {
   const [shareLoading, setShareLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -108,18 +108,18 @@ export function useCompareShareActions({
     let radarData: ShareRadarData | undefined;
     if (radarCards.length >= 2) {
       radarData = {
-        dimensionLabels: dimensionOrder.map((key) => dimensionLabels[key] ?? key),
-        coins: radarCards.map(({ card, color }) => ({
-          symbol: card.symbol,
-          overallGrade: card.overallGrade,
+        dimensionLabels: axisOrder.map((key) => axisLabels[key] ?? key),
+        coins: radarCards.map(({ card, color, symbol }) => ({
+          symbol,
+          overallGrade: card.grade,
           color,
-          scores: dimensionOrder.map((key) => card.dimensions[key]?.score ?? 0),
+          scores: axisOrder.map((key) => card.pillars[key]?.score ?? 0),
         })),
       };
     }
 
     return { coins: shareCoins, pharosLogo, radarData };
-  }, [comparisonCoins, dimensionLabels, dimensionOrder, logos, pegRates, radarCards]);
+  }, [axisLabels, axisOrder, comparisonCoins, logos, pegRates, radarCards]);
 
   const handleTwitterShare = useCallback(async () => {
     setShareLoading(true);

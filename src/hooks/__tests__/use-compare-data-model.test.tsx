@@ -8,7 +8,7 @@ const {
   useBluechipRatingsMock,
   useDexLiquidityMock,
   usePegSummaryMock,
-  useReportCardsMock,
+  useReportCardsV9Mock,
   useStablecoinsMock,
   useMintBurnFlowsMock,
   supplyHistoryQueryOptionsMock,
@@ -18,7 +18,7 @@ const {
   useBluechipRatingsMock: vi.fn(),
   useDexLiquidityMock: vi.fn(),
   usePegSummaryMock: vi.fn(),
-  useReportCardsMock: vi.fn(),
+  useReportCardsV9Mock: vi.fn(),
   useStablecoinsMock: vi.fn(),
   useMintBurnFlowsMock: vi.fn(),
   supplyHistoryQueryOptionsMock: vi.fn(),
@@ -37,7 +37,7 @@ vi.mock("../api-hooks", () => ({
   useBluechipRatings: useBluechipRatingsMock,
   useDexLiquidity: useDexLiquidityMock,
   usePegSummary: usePegSummaryMock,
-  useReportCards: useReportCardsMock,
+  useReportCardsV9: useReportCardsV9Mock,
 }));
 
 vi.mock("../use-stablecoins", () => ({
@@ -69,7 +69,7 @@ describe("useCompareDataModel", () => {
     useBluechipRatingsMock.mockReset();
     useDexLiquidityMock.mockReset();
     usePegSummaryMock.mockReset();
-    useReportCardsMock.mockReset();
+    useReportCardsV9Mock.mockReset();
     useStablecoinsMock.mockReset();
     useMintBurnFlowsMock.mockReset();
     supplyHistoryQueryOptionsMock.mockReset();
@@ -86,7 +86,7 @@ describe("useCompareDataModel", () => {
     useDexLiquidityMock.mockReturnValue(makeQueryResult({
       data: {},
     }));
-    useReportCardsMock.mockReturnValue(makeQueryResult({
+    useReportCardsV9Mock.mockReturnValue(makeQueryResult({
       data: { cards: [] },
     }));
     supplyHistoryQueryOptionsMock.mockReturnValue({});

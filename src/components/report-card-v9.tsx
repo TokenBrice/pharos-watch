@@ -34,6 +34,7 @@ function isUnknownDisplayValue(value: string | null | undefined): boolean {
 }
 
 function formatV9MethodologyLabel(methodologyVersion: string): string {
+  // eslint-disable-next-line security/detect-unsafe-regex -- methodology identities are short, validated API strings
   const match = methodologyVersion.trim().match(/\bv?(9(?:\.\d+)*)\b/i);
   return match ? `v${match[1]}` : "v9.0";
 }

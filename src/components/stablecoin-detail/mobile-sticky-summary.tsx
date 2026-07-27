@@ -5,14 +5,14 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { formatNativePrice } from "@shared/lib/format";
 import { isMobileStickySummaryEnabled } from "@/lib/feature-flags";
-import type { ReportCard, StablecoinData, StablecoinMeta } from "@shared/types";
+import type { SafetyScoreV9CurrentCard, StablecoinData, StablecoinMeta } from "@shared/types";
 
 interface MobileStickySummaryProps {
   coin: StablecoinMeta;
   coinData: StablecoinData;
   pegRef: number;
   logoSrc?: string;
-  reportCard: ReportCard | null;
+  reportCard: SafetyScoreV9CurrentCard | null;
   observeTarget: RefObject<HTMLElement | null>;
 }
 
@@ -87,7 +87,7 @@ export function MobileStickySummary({
       </span>
       {reportCard ? (
         <SafetyGradeBadge
-          grade={reportCard.overallGrade}
+          grade={reportCard.grade}
           size="xs"
           versionTopic="safetyScore"
           versionVariant="tooltip-only"

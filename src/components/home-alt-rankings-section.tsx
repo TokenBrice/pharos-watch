@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
-import { useDexLiquidity, usePegSummary, useReportCards, useStressSignals } from "@/hooks/api-hooks";
+import { useDexLiquidity, usePegSummary, useReportCardsV9, useStressSignals } from "@/hooks/api-hooks";
 import { usePinnedStablecoins } from "@/hooks/use-pinned-stablecoins";
 import { useHomeAltFilters } from "@/hooks/use-home-alt-filters";
 import {
@@ -15,6 +15,7 @@ import {
 } from "@/components/homepage-client-view-model";
 import { PegBrowseStrip } from "@/components/peg-distribution-grid";
 import { QueryStateNotice } from "@/components/query-state-notice";
+import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ACTIVE_PEGS, pegCoinCount } from "@/lib/peg-landing";
@@ -66,7 +67,7 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
   const stablecoinsQuery = useStablecoins();
   const pegSummaryQuery = usePegSummary();
   const dexLiquidityQuery = useDexLiquidity();
-  const reportCardsQuery = useReportCards();
+  const reportCardsQuery = useReportCardsV9();
   const stressSignalsQuery = useStressSignals();
   const { data: stablecoinsData, isLoading } = stablecoinsQuery;
   const { data: logos } = useLogos();
@@ -172,6 +173,7 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
           onRetry={retryFailedQueries}
         />
       ) : null}
+      <SafetyScoreV9StatusNotice response={reportCardsData} />
       {stablecoinsState !== "unavailable" ? (
         <StablecoinTable
           data={stablecoinsData?.peggedAssets}

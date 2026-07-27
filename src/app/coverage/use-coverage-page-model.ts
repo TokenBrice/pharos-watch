@@ -8,6 +8,7 @@ export function useCoveragePageModel() {
   const { data: logos } = useLogos();
   const {
     rows,
+    safetyScoreResponse,
     featureSummaries,
     sourceDepthProgress,
     pricingSources,
@@ -32,6 +33,7 @@ export function useCoveragePageModel() {
   return {
     logos,
     rows,
+    safetyScoreResponse,
     featureSummaries,
     sourceDepthProgress,
     pricingSources,

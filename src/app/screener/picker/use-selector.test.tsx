@@ -21,7 +21,7 @@ vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: useStablecoinsMock }
 
 vi.mock("@/hooks/api-hooks", () => ({
   usePegSummary: () => ({ data: { coins: [] }, dataUpdatedAt: 1, error: null }),
-  useReportCards: () => ({ data: { cards: [] }, dataUpdatedAt: 1, error: null }),
+  useReportCardsV9: () => ({ data: { cards: [] }, dataUpdatedAt: 1, error: null }),
   useStressSignals: () => ({ data: { signals: {} }, dataUpdatedAt: 1, error: null }),
   useDexLiquidity: () => ({ data: {}, dataUpdatedAt: 1, error: null }),
   useYieldRankings: () => ({ data: { rankings: [] }, dataUpdatedAt: 1, error: null }),
@@ -52,6 +52,21 @@ describe("useSelector", () => {
     const { result } = renderHook(() => useSelector(INPUT, null));
 
     expect(result.current).toEqual({ status: "error", reason: "selector-data-unavailable" });
+    expect(buildSelectorRowsMock).not.toHaveBeenCalled();
+    expect(runSelectorMock).not.toHaveBeenCalled();
+  });
+
+  it("fails closed without V8 recomputation while V9 recommendation thresholds are unreviewed", () => {
+    useStablecoinsMock.mockReturnValue({
+      data: { peggedAssets: [] },
+      dataUpdatedAt: 1,
+      isLoading: false,
+      error: null,
+    });
+
+    const { result } = renderHook(() => useSelector(INPUT, null));
+
+    expect(result.current).toEqual({ status: "error", reason: "v9-selector-thresholds-unreviewed" });
     expect(buildSelectorRowsMock).not.toHaveBeenCalled();
     expect(runSelectorMock).not.toHaveBeenCalled();
   });

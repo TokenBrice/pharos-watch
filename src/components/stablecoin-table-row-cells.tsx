@@ -92,10 +92,10 @@ function MobileRiskSummary({ model }: { model: StablecoinTableRowModel }) {
     >
       {model.reportCard ? (
         <span
-          className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 pharos-numeric text-[10px] font-semibold leading-none ${REPORT_CARD_GRADE_COLORS[model.reportCard.overallGrade]}`}
-          title={`Safety grade ${model.reportCard.overallGrade}`}
+          className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 pharos-numeric text-[10px] font-semibold leading-none ${REPORT_CARD_GRADE_COLORS[model.reportCard.grade]}`}
+          title={`Safety grade ${model.reportCard.grade}`}
         >
-          {model.reportCard.overallGrade}
+          {model.reportCard.grade}
         </span>
       ) : (
         <span className="inline-flex h-5 items-center rounded border border-border/60 px-1 text-[10px] text-muted-foreground">
@@ -247,10 +247,10 @@ function RiskCells({ row, model }: RowCellsProps) {
           {model.reportCard ? (
             <Badge
               variant="outline"
-              className={`rounded-full px-2 py-0.5 pharos-numeric text-xs font-semibold transition-all duration-200 ${REPORT_CARD_GRADE_COLORS[model.reportCard.overallGrade]} ${["D", "F"].includes(model.reportCard.overallGrade) ? "animate-risk-pulse border-red-500/60 bg-red-500/5" : ""}`}
-              title={`Pharos grade: ${model.reportCard.overallGrade}${model.reportCard.overallScore ? ` (${model.reportCard.overallScore}/100)` : ""}`}
+              className={`rounded-full px-2 py-0.5 pharos-numeric text-xs font-semibold transition-all duration-200 ${REPORT_CARD_GRADE_COLORS[model.reportCard.grade]} ${["D", "F"].includes(model.reportCard.grade) ? "animate-risk-pulse border-red-500/60 bg-red-500/5" : ""}`}
+              title={`Pharos grade: ${model.reportCard.grade}${model.reportCard.score ? ` (${model.reportCard.score}/100)` : ""}`}
             >
-              {model.reportCard.overallGrade}
+              {model.reportCard.grade}
             </Badge>
           ) : null}
         </TableCell>

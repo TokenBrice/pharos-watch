@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeftRight, BadgeCheck, Flag, Rocket } from "lucide-react";
 import { ShareButton } from "@/components/share-button";
-import type { Infrastructure, ReportCard, StablecoinData, StablecoinMeta } from "@shared/types";
+import type { Infrastructure, SafetyScoreV9CurrentCard, StablecoinData, StablecoinMeta } from "@shared/types";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
@@ -127,7 +127,7 @@ export interface HeroSectionBaseProps {
   coin: StablecoinMeta;
   coinData: StablecoinData;
   logoSrc?: string;
-  reportCard: ReportCard | null;
+  reportCard: SafetyScoreV9CurrentCard | null;
   verdict: StablecoinVerdict;
   variantParent?: StablecoinClientMeta | null;
   variantChipClass?: string | null;

@@ -1,12 +1,11 @@
-import { compareDependencyTypes } from "@/components/contagion-graph-model";
-import { filterDependencyGraphEdgesToLive, type DependencyGraphEdge } from "@shared/lib/dependency-graph";
-import type { DependencyType, ReportCard } from "@shared/types";
+import type { DependencyGraphEdge } from "@shared/lib/dependency-graph";
+import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 
 export interface DependencyHubCard {
-  id: ReportCard["id"];
-  name: ReportCard["name"];
-  symbol: ReportCard["symbol"];
-  isDefunct: ReportCard["isDefunct"];
+  id: string;
+  name: string;
+  symbol: string;
+  isDefunct?: boolean;
 }
 
 export interface DependencyHubExample {
@@ -17,7 +16,7 @@ export interface DependencyHubExample {
 }
 
 export interface DependencyHubEdgeTypeBreakdown {
-  type: DependencyType;
+  type: DependencyMateriality;
   edgeCount: number;
   summedDirectDependencyWeight: number;
 }
@@ -45,14 +44,27 @@ export interface DependencyHubsModel {
 
 interface BuildDependencyHubsModelArgs {
   cards: readonly DependencyHubCard[];
-  edges: readonly DependencyGraphEdge[];
+  edges: readonly DependencyHubEdge[];
   mcapMap: ReadonlyMap<string, number>;
 }
 
 interface HubAccumulator {
   dependentIds: Set<string>;
   summedDirectDependencyWeight: number;
-  typeBreakdown: Map<DependencyType, DependencyHubEdgeTypeBreakdown>;
+  typeBreakdown: Map<DependencyMateriality, DependencyHubEdgeTypeBreakdown>;
+}
+
+type V9DependencyEdge = ReportCardsV9Response["dependencyGraph"]["edges"][number];
+type DependencyHubEdge = DependencyGraphEdge | V9DependencyEdge;
+type DependencyMateriality = DependencyGraphEdge["type"] | V9DependencyEdge["materiality"];
+
+function edgeWeight(edge: DependencyHubEdge): number {
+  if ("kind" in edge) return edge.kind === "serial" ? 1 : edge.weight ?? 0;
+  return edge.weight;
+}
+
+function edgeMateriality(edge: DependencyHubEdge): DependencyMateriality {
+  return "materiality" in edge ? edge.materiality : edge.type;
 }
 
 function compareDependencyExamples(a: DependencyHubExample, b: DependencyHubExample): number {
@@ -86,7 +98,7 @@ export function buildDependencyHubsModel({
   const liveCards = cards.filter((card) => !card.isDefunct);
   const liveIds = new Set(liveCards.map((card) => card.id));
   const cardById = new Map(liveCards.map((card) => [card.id, card]));
-  const liveEdges = filterDependencyGraphEdgesToLive(edges, liveIds);
+  const liveEdges = edges.filter((edge) => liveIds.has(edge.from) && liveIds.has(edge.to));
   const hubMap = new Map<string, HubAccumulator>();
   const allDependentIds = new Set<string>();
 
@@ -94,9 +106,10 @@ export function buildDependencyHubsModel({
     const hub = hubMap.get(edge.from) ?? {
       dependentIds: new Set<string>(),
       summedDirectDependencyWeight: 0,
-      typeBreakdown: new Map<DependencyType, DependencyHubEdgeTypeBreakdown>(),
+      typeBreakdown: new Map<DependencyMateriality, DependencyHubEdgeTypeBreakdown>(),
     };
-    const edgeType = edge.type ?? "collateral";
+    const edgeType = edgeMateriality(edge);
+    const weight = edgeWeight(edge);
     const breakdown = hub.typeBreakdown.get(edgeType) ?? {
       type: edgeType,
       edgeCount: 0,
@@ -104,9 +117,9 @@ export function buildDependencyHubsModel({
     };
 
     hub.dependentIds.add(edge.to);
-    hub.summedDirectDependencyWeight += edge.weight;
+    hub.summedDirectDependencyWeight += weight;
     breakdown.edgeCount += 1;
-    breakdown.summedDirectDependencyWeight += edge.weight;
+    breakdown.summedDirectDependencyWeight += weight;
     hub.typeBreakdown.set(edgeType, breakdown);
     hubMap.set(edge.from, hub);
     allDependentIds.add(edge.to);
@@ -134,7 +147,7 @@ export function buildDependencyHubsModel({
         (sum, dependentId) => sum + getFiniteMcap(mcapMap, dependentId),
         0,
       );
-      const edgeTypeBreakdown = [...hub.typeBreakdown.values()].sort((a, b) => compareDependencyTypes(a.type, b.type));
+      const edgeTypeBreakdown = [...hub.typeBreakdown.values()].sort((a, b) => a.type.localeCompare(b.type));
 
       return {
         id,
@@ -160,7 +173,7 @@ export function buildDependencyHubsModel({
     upstreamHubCount: hubs.length,
     directEdgeCount: liveEdges.length,
     uniqueDirectDependentCount: allDependentIds.size,
-    summedDirectDependencyWeight: liveEdges.reduce((sum, edge) => sum + edge.weight, 0),
+    summedDirectDependencyWeight: liveEdges.reduce((sum, edge) => sum + edgeWeight(edge), 0),
     uniqueDependentMcapUsd,
   };
 }

@@ -12,14 +12,14 @@ const {
   useNonUsdShareMock,
   usePegSummaryMock,
   useDexLiquidityMock,
-  useReportCardsMock,
+  useReportCardsV9Mock,
   useLogosMock,
 } = vi.hoisted(() => ({
   useStablecoinsMock: vi.fn(),
   useNonUsdShareMock: vi.fn(),
   usePegSummaryMock: vi.fn(),
   useDexLiquidityMock: vi.fn(),
-  useReportCardsMock: vi.fn(),
+  useReportCardsV9Mock: vi.fn(),
   useLogosMock: vi.fn(),
 }));
 
@@ -35,7 +35,7 @@ vi.mock("@/hooks/api-hooks", () => ({
   useNonUsdShare: useNonUsdShareMock,
   usePegSummary: usePegSummaryMock,
   useDexLiquidity: useDexLiquidityMock,
-  useReportCards: useReportCardsMock,
+  useReportCardsV9: useReportCardsV9Mock,
 }));
 
 vi.mock("@/app/alt-pegs/alt-peg-stablecoin-table", () => ({
@@ -162,7 +162,7 @@ describe("AltPegsClient", () => {
       error: null,
       dataUpdatedAt: 0,
     });
-    useReportCardsMock.mockReturnValue({
+    useReportCardsV9Mock.mockReturnValue({
       data: { cards: [] },
       isLoading: false,
       isError: false,

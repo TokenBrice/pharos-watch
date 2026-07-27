@@ -2,14 +2,14 @@
 
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReportCard } from "@shared/types";
-import { useReportCards } from "@/hooks/api-hooks";
+import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { useReportCardsV9 } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { logosById } from "@/lib/logos";
 
 vi.mock("@/hooks/api-hooks", () => ({
-  useReportCards: vi.fn(),
+  useReportCardsV9: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({
@@ -18,10 +18,6 @@ vi.mock("@/hooks/use-stablecoins", () => ({
 
 vi.mock("@/hooks/use-logos", () => ({
   useLogos: vi.fn(),
-}));
-
-vi.mock("@/components/contagion-graph", () => ({
-  ContagionGraph: () => <div data-testid="dependency-graph">graph</div>,
 }));
 
 vi.mock("@/components/dependency-map-mobile-summary", () => ({
@@ -38,7 +34,7 @@ vi.mock("./dependency-hubs-board", () => ({
 
 const { DependencyMapClient } = await import("@/app/dependency-map/client");
 
-const mockUseReportCards = vi.mocked(useReportCards);
+const mockUseReportCardsV9 = vi.mocked(useReportCardsV9);
 const mockUseStablecoins = vi.mocked(useStablecoins);
 const mockUseLogos = vi.mocked(useLogos);
 
@@ -51,20 +47,20 @@ function makeQueryResult(data: unknown) {
   };
 }
 
-const REPORT_CARDS = [
-  { id: "usdc-circle", symbol: "USDC", isDefunct: false },
-  { id: "usdt-tether", symbol: "USDT", isDefunct: false },
-  { id: "dai-maker", symbol: "DAI", isDefunct: false },
-] as unknown as ReportCard[];
-
 describe("DependencyMapClient", () => {
   beforeEach(() => {
-    mockUseReportCards.mockReset();
+    mockUseReportCardsV9.mockReset();
     mockUseStablecoins.mockReset();
     mockUseLogos.mockReset();
 
-    mockUseReportCards.mockReturnValue(
-      makeQueryResult({ cards: REPORT_CARDS }) as unknown as ReturnType<typeof useReportCards>,
+    mockUseReportCardsV9.mockReturnValue(
+      makeQueryResult(makeReportCardsV9Response({
+        cards: [
+          makeV9Card({ id: "usdc-circle" }),
+          makeV9Card({ id: "usdt-tether" }),
+          makeV9Card({ id: "dai-makerdao" }),
+        ],
+      })) as unknown as ReturnType<typeof useReportCardsV9>,
     );
     mockUseStablecoins.mockReturnValue(
       makeQueryResult({
@@ -78,10 +74,10 @@ describe("DependencyMapClient", () => {
     mockUseLogos.mockReturnValue({ data: logosById });
   });
 
-  it("does not wrap the graph in a mobile-hidden container", () => {
+  it("renders the V9 dependency summaries without the legacy V8 graph", () => {
     const { container } = render(<DependencyMapClient />);
 
-    expect(screen.getByTestId("dependency-graph")).toBeTruthy();
+    expect(screen.queryByTestId("dependency-graph")).toBeNull();
     expect(screen.getByTestId("dependency-hubs-board")).toBeTruthy();
     expect(screen.getByTestId("mobile-summary")).toBeTruthy();
     expect(container.querySelector(".hidden.md\\:block")).toBeNull();
