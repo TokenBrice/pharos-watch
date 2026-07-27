@@ -146,6 +146,7 @@ export const V9_LEGACY_RESPONSIBILITY_BY_REASON = {
   "incomparable-route-requests": "method-unsupported",
   "incomplete-dex-route-coverage": "producer-failed",
   "incomplete-oracle-liquidation-branch": "integration-missing",
+  "inherited-access-exposure": "measured-adverse",
   "insufficient-evidence": "integration-missing",
   "material-bridge-supply-unmatched": "producer-failed",
   "material-dependency-unavailable": "integration-missing",

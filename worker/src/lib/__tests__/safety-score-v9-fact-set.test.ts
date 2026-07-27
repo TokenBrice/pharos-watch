@@ -2032,6 +2032,55 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     });
   });
 
+  it("suppresses missing-access-review gaps for evidenced structural freeze dispositions only", () => {
+    const boundedFreezeStatus = {
+      applicability: {
+        state: "required" as const,
+        policyRuleId: "v9.access.freeze-review",
+        rationale: null,
+        gapId: null,
+      },
+      observationState: "bounded-unknown" as const,
+      evidenceRefIds: ["placeholder:evidence"],
+      gapIds: ["placeholder:gap"],
+    };
+    const withDisposition = structuredClone(extension());
+    const freezeReview = withDisposition.assets[0]!.accessReview!.freeze;
+    freezeReview.status = structuredClone(boundedFreezeStatus);
+    freezeReview.reviews = [
+      {
+        reviewKey: "blacklist:alpha",
+        source: "upstream",
+        status: structuredClone(boundedFreezeStatus),
+        reach: "possible",
+        controlKey: null,
+        upstreamAssetId: "alpha",
+        failureDomains: [{ kind: "mint-control", key: "asset:alpha" }],
+      },
+    ];
+    freezeReview.structuralDisposition = "inherited-upstream";
+    const structural = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), withDisposition).assets[0]!;
+    const accessFreezeGaps = (asset: typeof structural) =>
+      asset.gaps.filter((gap) => gap.gapId.includes(":gap:access:freeze"));
+    // Scoring-visible state and the gap invariant are untouched; the gap is
+    // reclassified from missing data to a measured structural fact.
+    expect(accessFreezeGaps(structural).length).toBeGreaterThan(0);
+    expect(
+      accessFreezeGaps(structural).every(
+        (gap) => gap.reasonCode === "inherited-access-exposure" && gap.responsibility === "measured-adverse",
+      ),
+    ).toBe(true);
+    expect(structural.accessReview.freeze.status.observationState).toBe("bounded-unknown");
+    expect(structural.accessReview.freeze.reviews[0]!.status.observationState).toBe("bounded-unknown");
+    expect(structural.accessReview.freeze.structuralDisposition).toBe("inherited-upstream");
+
+    const withoutDisposition = structuredClone(withDisposition);
+    delete withoutDisposition.assets[0]!.accessReview!.freeze.structuralDisposition;
+    const gapped = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), withoutDisposition).assets[0]!;
+    expect(accessFreezeGaps(gapped).length).toBeGreaterThan(0);
+    expect(accessFreezeGaps(gapped).every((gap) => gap.reasonCode === "missing-access-review")).toBe(true);
+  });
+
   it("compiles exact base facts and explicit reviews without consulting v8 score outputs", () => {
     const fixed = exactFixedInput();
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension());

@@ -30,8 +30,11 @@ describe("Safety Score v9 methodology policy", () => {
     // undisclosedFeeRouteScoreCeiling 52, commodity-allocated reserve class and
     // non-counterparty reserve-issuer concentration exemption, plus the
     // fail-closed native-USDT market-anchor and longevity premium.
+    // 2026-07-27 owner ruling: inherited-access-exposure reason code (same
+    // diagnostic treatment as missing-access-review; measured-structural
+    // audit classification) for evidenced structural freeze dispositions.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "1698715f9af37bab6f41e2f086e2da4c7cf958e7e2dfcb3e5e841cf9aa278679",
+      "24046b05c2c84e1d7288c4f38d6b305f157822940919558e4375a82b3c4f2f83",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);

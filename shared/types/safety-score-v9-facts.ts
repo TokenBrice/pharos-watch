@@ -985,6 +985,17 @@ export const V9AccessReviewV2Schema = z
       .object({
         status: V9FactStatusV2Schema,
         reviews: canonicalArrayBy(V9FreezeAccessReviewV2Schema, (review) => review.reviewKey),
+        /**
+         * Owner ruling 2026-07-27: a current, evidenced review whose honest
+         * verdict is structural rather than boolean. `inherited-upstream` =
+         * no direct freeze surface; exposure inherited from a named tracked
+         * upstream asset. `none-upgradeable` (reserved; no producer emits it
+         * yet) = verified absence in the current implementation behind a
+         * named upgrade authority. The freeze facts stay bounded-unknown for
+         * scoring; the disposition only stops them from being reported as
+         * missing data.
+         */
+        structuralDisposition: z.enum(["inherited-upstream", "none-upgradeable"]).optional(),
       })
       .strict(),
   })

@@ -1345,6 +1345,13 @@ function adaptAccessReview(
         review ? blacklistEvidenceKeys : [],
       ),
       reviews: freezeReview,
+      // Owner ruling 2026-07-27: a current review whose honest verdict is
+      // "inherited from a named tracked upstream" is a measured structural
+      // fact, not missing data. The freeze facts stay bounded-unknown for
+      // scoring; the disposition only suppresses the missing-data gap.
+      ...(status === "inherited" && inheritedResolvable && freezeState === "bounded-unknown"
+        ? { structuralDisposition: "inherited-upstream" as const }
+        : {}),
     },
   };
 }
