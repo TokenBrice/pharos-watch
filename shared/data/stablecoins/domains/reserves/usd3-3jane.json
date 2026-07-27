@@ -2,8 +2,17 @@
   "id": "usd3-3jane",
   "reserves": [
     {
+      "name": "Fintech and crypto credit receivables",
+      "pct": 84.9,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "3Jane credit facility borrowers",
+      "riskFactors": ["credit", "liquidity", "counterparty", "legal", "concentration"],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
       "name": "Aave USDC liquidity buffer",
-      "pct": 20.1,
+      "pct": 15.1,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -12,20 +21,11 @@
       "issuerOrObligor": "Aave V3 and Circle USDC",
       "riskFactors": ["smart-contract", "counterparty", "liquidity"],
       "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "Fintech and crypto credit receivables",
-      "pct": 79.9,
-      "risk": "high",
-      "assetClass": "private-credit",
-      "issuerOrObligor": "3Jane credit facility borrowers",
-      "riskFactors": ["credit", "liquidity", "counterparty", "legal", "concentration"],
-      "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Safety Score V9 Agent 09",
     "confidence": "verified",
     "sources": [
       {
@@ -45,17 +45,17 @@
         "url": "https://github.com/3jane-protocol/moneymarket-contracts"
       }
     ],
-    "rationale": "The current USD3 adapter capture exposes the strategy's waUSDC position, the MorphoCredit market liquidity available to that position, and the remaining deployed credit exposure. The exact fixed snapshot allocates 20.1% to the Aave USDC liquidity buffer and 79.9% to deployed credit rather than treating the full NAV as liquid USDC.",
+    "rationale": "The 2026-07-27 onchain adapter capture exposes the strategy's waUSDC position, the MorphoCredit market liquidity available to that position, and the remaining deployed credit exposure. The adapter allocates 15.1% to the Aave USDC liquidity buffer and 84.9% to deployed credit rather than treating the full NAV as liquid USDC.",
     "compositionBasis": "Current 3Jane onchain-accounting capture: the strategy's waUSDC position was split pro rata by MorphoCredit market liquidity, converted through waUSDC.convertToAssets(), and combined with direct idle USDC",
-    "compositionAsOf": "2026-07-15",
+    "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The full NAV is allocated between classified liquid USDC and private-credit exposures; facility-level borrower identities, maturities, and concentration remain attributes of the classified aggregate credit sleeve rather than an unallocated reserve share.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 1,
+        "reserveIndex": 0,
         "reserveName": "Fintech and crypto credit receivables",
-        "pct": 79.9,
+        "pct": 84.9,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The bucket represents loans and receivables owed by credit-facility borrowers, not a tracked stablecoin or wrapper that can carry a canonical coinId."
       }

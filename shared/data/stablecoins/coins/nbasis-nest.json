@@ -197,7 +197,7 @@
   "reserves": [
     {
       "name": "Superstate USCC cash-and-carry fund",
-      "pct": 73.6263,
+      "pct": 87.3,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Superstate USCC fund and CME futures counterparties",
@@ -213,22 +213,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Pending Superstate USCC subscription",
-      "pct": 4.761,
-      "risk": "medium",
-      "assetClass": "other",
-      "issuerOrObligor": "Nest Basis Vault and Superstate USCC subscription process",
-      "riskFactors": [
-        "liquidity",
-        "custody",
-        "counterparty",
-        "legal"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
       "name": "Superstate USTB Treasury Fund",
-      "pct": 18.5388,
+      "pct": 12.6,
       "risk": "low",
       "coinId": "ustb-superstate",
       "depType": "collateral",
@@ -246,24 +232,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Liquid USDC balances",
-      "pct": 2.8162,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle and Nest Basis Vault",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "liquidity",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
       "name": "pUSD liquid balance",
-      "pct": 0.2576,
+      "pct": 0.1,
       "risk": "high",
       "coinId": "pusd-plume",
       "depType": "collateral",
@@ -277,27 +247,11 @@
         "concentration"
       ],
       "liquidityHorizon": "unknown"
-    },
-    {
-      "name": "Liquid USDT balances",
-      "pct": 0.0001,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Tether and Nest Basis Vault",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "liquidity",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex reserve curation",
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Safety Score V9 Agent 09",
     "confidence": "verified",
     "sources": [
       {
@@ -309,26 +263,19 @@
         "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/last-price-update"
       }
     ],
-    "rationale": "At the 2026-07-21T05:01:59Z price update, the official positions API reported $27,836,112.60 of active USCC, a $1,800,000.00 pending USCC subscription, $7,009,022.69 of USTB, $1,064,732.01 of USDC-family balances, $97,382.80 of pUSD, and $21.35 of USDT-family balances. The resulting $37,807,271.46 total is within $11.88 of the official $37,807,259.58 NAV. The pending subscription is itemized separately because the live adapter intentionally excludes pending transactions.",
-    "compositionBasis": "All active Nest Basis Vault API position values plus the separately disclosed pending USCC subscription, reconciled to the official NAV",
-    "compositionAsOf": "2026-07-21",
+    "rationale": "At the source timestamp 2026-07-25T01:12:19Z, the official positions API reported $24,903,681.70 of USCC, $3,612,091.67 of USTB, $29,936.29 of pUSD, and $12,518.32 of other positive liquid stablecoin balances. The production adapter rounds the resulting $28,558,227.98 active portfolio to USCC 87.3%, USTB 12.6%, and pUSD 0.1%; the values reconcile to the official $28,558,228.41 NAV at 99.9999985%. No pending transaction is present in the current API payload.",
+    "compositionBasis": "Active Nest Basis Vault API position values emitted by the production nest-vault-positions adapter and reconciled to official NAV",
+    "compositionAsOf": "2026-07-25",
     "scope": "full-composition",
-    "knownUnknownExposure": "Every active API position and the pending USCC subscription are identified. USCC remains an identified exogenous fund share rather than a tracked stablecoin dependency.",
+    "knownUnknownExposure": "Every material active API position is identified. USCC remains an identified exogenous fund share rather than a tracked stablecoin dependency; positive liquid balances below the adapter's one-decimal display threshold round out of the published slice list.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Superstate USCC cash-and-carry fund",
-        "pct": 73.6263,
+        "pct": 87.3,
         "disposition": "untracked-exogenous-asset",
         "rationale": "USCC is an identified Superstate cash-and-carry fund share with no active tracked stablecoin record."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Pending Superstate USCC subscription",
-        "pct": 4.761,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The Nest API identifies a pending USCC subscription but does not expose a tracked stablecoin dependency for the in-transit position."
       }
     ]
   },

@@ -398,7 +398,7 @@
   "reserves": [
     {
       "name": "Fasanara mGLOBAL (GDADF)",
-      "pct": 49.6,
+      "pct": 50.7,
       "risk": "high",
       "blacklistable": true,
       "assetClass": "private-credit",
@@ -408,7 +408,7 @@
     },
     {
       "name": "Hedged STRCx",
-      "pct": 16.4,
+      "pct": 16.8,
       "risk": "high",
       "blacklistable": true,
       "assetClass": "tokenized-security",
@@ -417,8 +417,29 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
+      "name": "New Silver",
+      "pct": 8.3,
+      "risk": "high",
+      "blacklistable": true,
+      "assetClass": "private-credit",
+      "issuerOrObligor": "New Silver",
+      "riskFactors": ["credit", "liquidity", "counterparty"],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Liquid Cap stcUSD",
+      "pct": 5.1,
+      "risk": "medium",
+      "coinId": "stcusd-cap",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Cap Credit Engine and institutional operators",
+      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract"],
+      "liquidityHorizon": "seven-days"
+    },
+    {
       "name": "Spark sUSDC",
-      "pct": 10.8,
+      "pct": 5.1,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -428,18 +449,18 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "New Silver",
-      "pct": 8.1,
+      "name": "Fasanara Genesis Fund",
+      "pct": 4.2,
       "risk": "high",
       "blacklistable": true,
-      "assetClass": "private-credit",
-      "issuerOrObligor": "New Silver",
-      "riskFactors": ["credit", "liquidity", "counterparty"],
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Fasanara Capital",
+      "riskFactors": ["liquidity", "counterparty", "market"],
       "liquidityHorizon": "over-seven-days"
     },
     {
       "name": "Aave USDG",
-      "pct": 4.8,
+      "pct": 3.7,
       "risk": "low",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Paxos / Aave",
@@ -447,25 +468,14 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "Sentora PRIME Main",
-      "pct": 4.4,
-      "risk": "high",
-      "coinId": "pyusd-paypal",
-      "depType": "collateral",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Figure",
-      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract"],
-      "liquidityHorizon": "seven-days"
-    },
-    {
-      "name": "Fasanara Genesis Fund",
-      "pct": 4.1,
+      "name": "FalconX Institutional",
+      "pct": 3.3,
       "risk": "high",
       "blacklistable": true,
-      "assetClass": "fund-share",
-      "issuerOrObligor": "Fasanara Capital",
-      "riskFactors": ["liquidity", "counterparty", "market"],
-      "liquidityHorizon": "over-seven-days"
+      "assetClass": "private-credit",
+      "issuerOrObligor": "FalconX institutional lending program",
+      "riskFactors": ["credit", "liquidity", "counterparty", "custody", "concentration"],
+      "liquidityHorizon": "seven-days"
     },
     {
       "name": "Morpho infiniFi Ecosystem Vault",
@@ -477,18 +487,30 @@
       "issuerOrObligor": "Steakhouse Financial / Morpho",
       "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract"],
       "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Sentora PRIME Main",
+      "pct": 1,
+      "risk": "high",
+      "coinId": "pyusd-paypal",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Figure",
+      "riskFactors": ["credit", "liquidity", "counterparty", "smart-contract"],
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 reserve review",
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Safety Score V9 Agent 09",
     "confidence": "verified",
     "sources": [
       { "label": "infiniFi real-time protocol data", "url": "https://eth-api.infinifi.xyz/api/protocol/data" },
       { "label": "infiniFi vault documentation", "url": "https://docs.infinifi.xyz/vaults" }
     ],
-    "rationale": "The real-time farm snapshot names and quantifies every material farm position. The source descriptions establish each position's published strategy and redemption terms; no material basket requires an assumed constituent allocation.",
+    "rationale": "The infiniFi protocol API was re-read on 2026-07-27. Its active-farm allocation explicitly identifies every material position, including Liquid Cap stcUSD at 5.1% and FalconX Institutional at 3.3%; the production adapter reports no unknown farm and only a negligible source-total reconciliation gap.",
     "compositionBasis": "infiniFi protocol data API active-farm allocation",
+    "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
     "knownUnknownExposure": "No unresolved material composition group remains: the only non-farm protocol position is RedeemController, whose source-total reconciliation gap is below the adapter's 0.5% threshold.",
     "knownUnknownExposurePct": 0
