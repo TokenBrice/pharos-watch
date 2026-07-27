@@ -118,7 +118,7 @@ explicit notice; consumers that require current safety data fail closed.
 
 | Rows | Active frontend disposition | Remaining review evidence |
 | --- | --- | --- |
-| C02 | `/safety-scores/` and stablecoin detail render V9 score, grade, three pillars, caps, evidence, access posture, and native dependencies. Invalid V9 is unavailable; held V9 is labeled; there is no V8 fallback. | Visual and content review. |
+| C02 | `/safety-scores/` and stablecoin detail render V9 score, grade, three pillars, caps, evidence, access posture, and native dependencies. Invalid V9 is unavailable; held V9 is labeled; there is no V8 fallback. Stablecoin detail now uses the production split-card composition with typed V9 data, pillar score bars, scored-input coverage and human-readable component disclosures, responsive live reserves, reserve-loading isolation, exact held timestamps, and V9 score-stage show-work. Its dark/light visual pass covered 390/768/1024/1218/1440 widths, breakpoint cycling, keyboard disclosures, and a nonblank treemap capture. | Complete the broader `/safety-scores/` visual and content review. |
 | C03 | Home, alt-peg, stablecoin tables, and screener use one V9 grade/score map. Screener filters and exports Backing, Exit, and Economic Control rather than V8 dimensions. | Membership, rank, and row-risk review. |
 | C04 | Dependency map and detail contagion snapshot use V9 serial/basket edges and materiality. The incompatible V8 graph presentation is not selected. | Graph-edge presentation review. |
 | C05 | Freezewatch and coverage use V9 access posture and dependencies. Registry blacklist data is not presented as V9 evidence, and the V8 live-reserve boolean has no V9 alias. | Freeze bucket and coverage review. |
