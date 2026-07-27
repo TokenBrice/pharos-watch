@@ -751,9 +751,7 @@ describe("measured execution join activation", () => {
     expect(currentPhysicalPool.get("usdt-tether")).toBeUndefined();
   });
 
-  it("keeps a valid QuoterV2 profile score-ineligible while its cohort is in shadow", () => {
-    // Optimism is a pinned deployment outside the 2026-07-17 ratified cohort,
-    // so it exercises the activation-pending gate.
+  it("admits a valid Optimism Uniswap V3 profile after ratification", () => {
     const measuredTarget = target("optimism");
     const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
     if (deployment == null) throw new Error("missing Optimism QuoterV2 deployment");
@@ -768,13 +766,23 @@ describe("measured execution join activation", () => {
       points: [
         {
           amountInRaw: "1000000000",
-          amountOutRaw: "970000000",
+          amountOutRaw: "999000000",
           callData: "0x01",
           returnData: "0x01",
           inputUsd: 1_000,
-          outputUsd: 970,
-          costBps: 300,
-          passesCostBound: false,
+          outputUsd: 999,
+          costBps: 10,
+          passesCostBound: true,
+        },
+        {
+          amountInRaw: "100000000000",
+          amountOutRaw: "99900000000",
+          callData: "0x02",
+          returnData: "0x02",
+          inputUsd: 100_000,
+          outputUsd: 99_900,
+          costBps: 10,
+          passesCostBound: true,
         },
       ],
     });
@@ -817,11 +825,8 @@ describe("measured execution join activation", () => {
 
     expect(pool.extra?.measuredExecution).toBeDefined();
     expect(pool.extra?.measuredExecution).not.toHaveProperty("quoteProof");
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "measured-execution",
-      reason: "activation-pending",
-    });
-    expect(diagnostics).toMatchObject({ measuredCount: 1, gatedCount: 1 });
+    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    expect(diagnostics).toMatchObject({ measuredCount: 1, gatedCount: 0 });
   });
 
   it("admits a valid Base Aerodrome Slipstream profile after activation", () => {

@@ -77,8 +77,13 @@ Tron joins apply explicit reviewed active/shadow registry policy after full
 proof and current-target validation. Only active native profiles enter the P4
 capacity compiler and physical-pool completeness denominator; shadow profiles
 retain `activation-pending`, and case-sensitive native pool identities remain
-case-sensitive through route selection. Unreviewed measured deployment cohorts
-remain score-ineligible while their activation evidence is pending. SunSwap V2
+case-sensitive through route selection. The only active Solana policy is the
+pinned wM/USDC Raydium CLMM direction, which also requires a captured pool
+segment to replay the direct quote's fee, output, and post-swap sqrt price.
+Generic Raydium, Orca, Meteora, and unreviewed measured cohorts remain
+score-ineligible while their activation evidence is pending. Fresh Solana LKG
+evidence is permitted only after explicit operational collection failure;
+semantic or malformed rows remain barriers. SunSwap V2
 returned to shadow after its first two active DEX-scoring invocations exceeded
 the Worker memory limit. The phase-split D1 handoff now removes source/provider
 graphs from the scoring invocation, and the reviewed Tron SunSwap profile was

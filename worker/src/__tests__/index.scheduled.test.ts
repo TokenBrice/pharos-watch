@@ -1212,7 +1212,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "13,43 * * * *" } as ScheduledEvent,
+      { cron: "18,48 * * * *" } as ScheduledEvent,
       env as never,
       ctx,
     );

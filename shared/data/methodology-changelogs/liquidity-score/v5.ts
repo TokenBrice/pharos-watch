@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.92",
+    title: "Pinned Raydium CLMM on-state execution",
+    date: "2026-07-27",
+    effectiveAt: 1785110400,
+    summary:
+      "The reviewed Solana wM/USDC Raydium CLMM direction can contribute exact route evidence only after its captured current liquidity segment reproduces the strict direct quote.",
+    impact: [
+      "Activation is limited to the case-sensitive wM-to-USDC direction in the reviewed Raydium CLMM pool; generic Raydium CLMM, Orca Whirlpool including the adaptive-fee HYUSD pool, Meteora, and all unlisted native targets remain shadow-only",
+      "Each accepted wM profile binds the direct route, raw amounts, provider fee, pool owner and mint order, captured liquidity and sqrt price, post-swap sqrt price, bounded slot window, and exact single-segment integer replay; any mismatch, tick crossing, malformed state, route drift, or identity failure is capability-gated",
+      "Only explicit operational collection failures may retain the newest still-fresh exact profile for the same target across bounded Solana rotation; semantic failures and malformed history are integrity barriers",
+      "The route-only profile does not alter aggregate liquidity, price consensus, direct-source precedence, visible pool selection, target publication, or V8 liquidity scoring",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.91",
     title: "Guarded SunSwap V2 reactivation",
     date: "2026-07-27",

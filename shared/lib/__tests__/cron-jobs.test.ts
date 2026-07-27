@@ -27,6 +27,9 @@ describe("cron job schedule metadata", () => {
     expect(CRON_SCHEDULES.v9PublicationOffset).toBe(
       "14,44 * * * *",
     );
+    expect(CRON_SCHEDULES.halfHourlyMintBurnExtended).toBe(
+      "18,48 * * * *",
+    );
     expect(
       CRON_JOB_DEFINITIONS.find(
         (definition) =>

@@ -8,6 +8,8 @@ import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { tryParseJson } from "../../lib/json-parse";
 import { readResponseTextWithinLimitWithSignal } from "../../lib/response-body";
+import { quoteRaydiumClmmSingleSegment } from "./solana-clmm-math";
+import { requiresRaydiumSingleSegmentStateProof } from "./solana-registry";
 
 const RAYDIUM_TRADE_API = "https://transaction-v1.raydium.io/compute/swap-base-in";
 const JUPITER_QUOTE_API = "https://api.jup.ag/swap/v1/quote";
@@ -19,11 +21,88 @@ const SOLANA_RPC_URLS = [
 const REQUEST_TIMEOUT_MS = 15_000;
 const SLOT_REQUEST_TIMEOUT_MS = 5_000;
 const MAX_RESPONSE_BYTES = 200_000;
+export const RAYDIUM_CLMM_PROGRAM_ID = "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK";
+const RAYDIUM_POOL_DISCRIMINATOR = [0xf7, 0xed, 0xe3, 0xf5, 0xd7, 0xc3, 0xde, 0x46] as const;
+const RAYDIUM_POOL_MIN_BYTES = 273;
+const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 type FetchLike = typeof fetch;
 
+interface RaydiumClmmPoolState {
+  slot: number;
+  programId: string;
+  tokenMint0: string;
+  tokenMint1: string;
+  liquidity: string;
+  sqrtPriceX64: string;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toBase58(bytes: Uint8Array): string {
+  let zeroCount = 0;
+  while (zeroCount < bytes.length && bytes[zeroCount] === 0) zeroCount++;
+  if (zeroCount === bytes.length) return "1".repeat(zeroCount);
+  const digits = [0];
+  for (let index = zeroCount; index < bytes.length; index++) {
+    let carry = bytes[index]!;
+    for (let digitIndex = 0; digitIndex < digits.length; digitIndex++) {
+      const value = digits[digitIndex]! * 256 + carry;
+      digits[digitIndex] = value % 58;
+      carry = Math.floor(value / 58);
+    }
+    while (carry > 0) {
+      digits.push(carry % 58);
+      carry = Math.floor(carry / 58);
+    }
+  }
+  return `${"1".repeat(zeroCount)}${digits
+    .reverse()
+    .map((digit) => BASE58_ALPHABET[digit]!)
+    .join("")}`;
+}
+
+function decodeBase64(value: string): Uint8Array | null {
+  try {
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+    return bytes;
+  } catch {
+    return null;
+  }
+}
+
+function readUnsignedLittleEndian(bytes: Uint8Array, offset: number, width: number): bigint | null {
+  if (offset < 0 || width < 1 || offset + width > bytes.length) return null;
+  let value = 0n;
+  for (let index = width - 1; index >= 0; index--) value = (value << 8n) | BigInt(bytes[offset + index]!);
+  return value;
+}
+
+/** Decode only the fixed Raydium pool fields needed by the pinned replay. */
+export function parseRaydiumClmmPoolState(input: {
+  accountDataBase64: string;
+  owner: string;
+  slot: number;
+}): RaydiumClmmPoolState | null {
+  if (input.owner !== RAYDIUM_CLMM_PROGRAM_ID || !Number.isInteger(input.slot) || input.slot < 0) return null;
+  const bytes = decodeBase64(input.accountDataBase64);
+  if (!bytes || bytes.length < RAYDIUM_POOL_MIN_BYTES) return null;
+  if (RAYDIUM_POOL_DISCRIMINATOR.some((value, index) => bytes[index] !== value)) return null;
+  const liquidity = readUnsignedLittleEndian(bytes, 237, 16);
+  const sqrtPriceX64 = readUnsignedLittleEndian(bytes, 253, 16);
+  if (liquidity == null || liquidity <= 0n || sqrtPriceX64 == null || sqrtPriceX64 <= 0n) return null;
+  return {
+    slot: input.slot,
+    programId: input.owner,
+    tokenMint0: toBase58(bytes.slice(73, 105)),
+    tokenMint1: toBase58(bytes.slice(105, 137)),
+    liquidity: liquidity.toString(),
+    sqrtPriceX64: sqrtPriceX64.toString(),
+  };
 }
 
 function positiveIntegerString(value: unknown): value is string {
@@ -70,6 +149,72 @@ async function fetchBoundedJson(
   return parsed;
 }
 
+async function fetchRaydiumClmmPoolState(
+  target: SolanaMeasuredExecutionTarget,
+  signal: AbortSignal | undefined,
+  fetchImpl: FetchLike,
+): Promise<RaydiumClmmPoolState> {
+  for (const rpcUrl of SOLANA_RPC_URLS) {
+    throwIfAborted(signal);
+    let response: Response;
+    try {
+      const requestSignal = combineSignal(signal, SLOT_REQUEST_TIMEOUT_MS);
+      response = await fetchImpl(rpcUrl, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "User-Agent": USER_AGENT,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "getAccountInfo",
+          params: [target.poolId, { encoding: "base64", commitment: "confirmed" }],
+        }),
+        signal: requestSignal,
+      });
+      const text = await readResponseTextWithinLimitWithSignal(response, MAX_RESPONSE_BYTES, requestSignal);
+      if (!response.ok) continue;
+      const body = tryParseJson(text, { onFailure: () => undefined });
+      if (!isRecord(body) || !isRecord(body.result) || !isRecord(body.result.context) || !isRecord(body.result.value)) {
+        throw new Error("raydium-state-rpc-invalid");
+      }
+      const context = body.result.context;
+      const value = body.result.value;
+      const data = value.data;
+      if (
+        !integer(context.slot) ||
+        typeof value.owner !== "string" ||
+        !Array.isArray(data) ||
+        typeof data[0] !== "string" ||
+        data[1] !== "base64"
+      ) {
+        throw new Error("raydium-state-rpc-invalid");
+      }
+      const state = parseRaydiumClmmPoolState({
+        accountDataBase64: data[0],
+        owner: value.owner,
+        slot: context.slot,
+      });
+      if (!state) throw new Error("raydium-state-decode-invalid");
+      if (
+        !(
+          (state.tokenMint0 === target.tokenIn.address && state.tokenMint1 === target.tokenOut.address) ||
+          (state.tokenMint1 === target.tokenIn.address && state.tokenMint0 === target.tokenOut.address)
+        )
+      ) {
+        throw new Error("raydium-state-mint-mismatch");
+      }
+      return state;
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      if (error instanceof Error && error.message.startsWith("raydium-state-")) throw error;
+    }
+  }
+  throw new Error("raydium-state-rpc-unavailable");
+}
+
 export function parseRaydiumExactRouteProof(
   body: unknown,
   target: SolanaMeasuredExecutionTarget,
@@ -107,6 +252,45 @@ export function parseRaydiumExactRouteProof(
     inputAmount: amountInRaw,
     outputAmount: data.outputAmount,
     lastPoolPriceX64: route.lastPoolPriceX64,
+    ...(nonNegativeIntegerString(route.feeAmount) ? { feeAmount: route.feeAmount } : {}),
+  };
+}
+
+function bindRaydiumSingleSegmentStateProof(
+  target: SolanaMeasuredExecutionTarget,
+  route: Extract<SolanaMeasuredRouteProof, { provider: "raydium-trade-api" }>,
+  state: RaydiumClmmPoolState,
+): Extract<SolanaMeasuredRouteProof, { provider: "raydium-trade-api" }> {
+  if (!route.feeAmount) throw new Error("raydium-onstate-fee-missing");
+  const direction =
+    state.tokenMint0 === target.tokenIn.address && state.tokenMint1 === target.tokenOut.address
+      ? "zero-for-one"
+      : state.tokenMint1 === target.tokenIn.address && state.tokenMint0 === target.tokenOut.address
+        ? "one-for-zero"
+        : null;
+  if (!direction) throw new Error("raydium-state-mint-mismatch");
+  const replay = quoteRaydiumClmmSingleSegment({
+    liquidity: state.liquidity,
+    sqrtPriceX64: state.sqrtPriceX64,
+    amountIn: route.inputAmount,
+    feeAmount: route.feeAmount,
+    direction,
+  });
+  if (replay.amountOut !== route.outputAmount || replay.postSwapSqrtPriceX64 !== route.lastPoolPriceX64) {
+    throw new Error("raydium-onstate-replay-mismatch");
+  }
+  return {
+    ...route,
+    stateProof: {
+      slot: state.slot,
+      programId: state.programId,
+      tokenMint0: state.tokenMint0,
+      tokenMint1: state.tokenMint1,
+      liquidity: state.liquidity,
+      sqrtPriceX64: state.sqrtPriceX64,
+      feeAmount: route.feeAmount,
+      direction,
+    },
   };
 }
 
@@ -218,6 +402,9 @@ export async function quoteSolanaMeasuredTarget(input: {
   let route: SolanaMeasuredRouteProof | null;
 
   if (input.target.adapterProfileId === "raydium-clmm-trade-api-v1") {
+    const state = requiresRaydiumSingleSegmentStateProof(input.target)
+      ? await fetchRaydiumClmmPoolState(input.target, input.signal, fetchImpl)
+      : null;
     const url = new URL(RAYDIUM_TRADE_API);
     url.searchParams.set("inputMint", input.target.tokenIn.address);
     url.searchParams.set("outputMint", input.target.tokenOut.address);
@@ -226,6 +413,9 @@ export async function quoteSolanaMeasuredTarget(input: {
     url.searchParams.set("txVersion", "V0");
     const body = await fetchBoundedJson(url.toString(), {}, input.signal, fetchImpl);
     route = parseRaydiumExactRouteProof(body, input.target, amountInRaw);
+    if (state && route?.provider === "raydium-trade-api") {
+      route = bindRaydiumSingleSegmentStateProof(input.target, route, state);
+    }
   } else {
     const url = new URL(JUPITER_QUOTE_API);
     url.searchParams.set("inputMint", input.target.tokenIn.address);
@@ -273,4 +463,35 @@ export async function fetchSolanaCurrentSlot(
     }
   }
   return null;
+}
+
+const OPERATIONAL_SOLANA_MEASURED_FAILURES = new Set([
+  "budget-deferred",
+  "quote-request-unavailable",
+  "raydium-state-rpc-unavailable",
+  "runtime-deadline-exceeded",
+  "slot-after-unavailable",
+  "slot-before-unavailable",
+  "slot-window-invalid",
+]);
+
+export function isOperationalSolanaMeasuredFailure(reason: string | null | undefined): boolean {
+  if (!reason) return false;
+  return (
+    OPERATIONAL_SOLANA_MEASURED_FAILURES.has(reason) ||
+    /^quote-http-(408|429|5[0-9]{2})$/.test(reason)
+  );
+}
+
+/**
+ * Only explicit transport and producer-budget failures may reuse last-known-
+ * good evidence. Unknown, malformed, and deterministic quote failures stay
+ * semantic so they cannot be masked by old output.
+ */
+export function normalizeSolanaMeasuredExecutionFailure(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (isOperationalSolanaMeasuredFailure(message)) return message;
+  if (error instanceof DOMException && error.name === "TimeoutError") return "runtime-deadline-exceeded";
+  if (error instanceof TypeError || /fetch failed|networkerror/i.test(message)) return "quote-request-unavailable";
+  return message.slice(0, 300) || "quote-failed";
 }

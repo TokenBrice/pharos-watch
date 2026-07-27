@@ -22,7 +22,8 @@ const CRON_SCHEDULE_DEFINITIONS = {
   sixHourlyBlacklist: { schedule: "3 */6 * * *", intervalSec: 6 * 3600, offsetSec: 3 * 60 },
   halfHourlyMintBurnCritical: { schedule: "4,34 * * * *", intervalSec: 1800, offsetSec: 4 * 60 },
   twoHourlyDexDiscovery: { schedule: "6 */2 * * *", intervalSec: 2 * 3600, offsetSec: 6 * 60 },
-  halfHourlyMintBurnExtended: { schedule: "13,43 * * * *", intervalSec: 1800, offsetSec: 13 * 60 },
+  // Keep the minute-long extended scan behind the fenced :14/:44 V9 publication slot.
+  halfHourlyMintBurnExtended: { schedule: "18,48 * * * *", intervalSec: 1800, offsetSec: 18 * 60 },
   halfHourlyMeasuredExecution: { schedule: "0,30 * * * *", intervalSec: 1800, offsetSec: 0 },
   halfHourlyOffset: { schedule: "10,40 * * * *", intervalSec: 1800, offsetSec: 10 * 60 },
   halfHourlyChartsOffset: { schedule: "16,46 * * * *", intervalSec: 1800, offsetSec: 16 * 60 },

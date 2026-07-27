@@ -15,16 +15,18 @@ describe("measured execution deployment registry", () => {
       "pancakeswap-v3-quoter-v2:ethereum",
       "uniswap-v3-quoter-v2:arbitrum",
       "uniswap-v3-quoter-v2:ethereum",
+      "uniswap-v3-quoter-v2:optimism",
       "uniswap-v3-quoter-v2:polygon",
     ]);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "ethereum")).toBe(true);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "Ethereum")).toBe(true);
+    expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "optimism")).toBe(true);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("pancakeswap-v3-quoter-v2", "bsc")).toBe(true);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("aerodrome-slipstream-quoter-v2", "base")).toBe(true);
   });
 
   it("keeps unratified deployments shadow-only fail-closed", () => {
-    expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "optimism")).toBe(false);
+    expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "linea")).toBe(false);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("raydium", "solana")).toBe(false);
     expect(isDexMeasuredExecutionDeploymentScoreEligible("", "")).toBe(false);
   });

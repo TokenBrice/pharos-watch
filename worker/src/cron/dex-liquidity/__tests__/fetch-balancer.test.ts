@@ -135,6 +135,54 @@ describe("fetchBalancerPools stable-math amp join", () => {
     });
   });
 
+  it("fails closed when stable-math numeric inputs contain malformed suffixes", async () => {
+    const malformedAmp = stablePool();
+    malformedAmp.id = "0x66bbccddeeff00112233445566778899aabbccdd000200000000000000000006";
+    malformedAmp.address = "0x66bbccddeeff00112233445566778899aabbccdd";
+    const malformedRate = stablePool();
+    malformedRate.id = "0x77bbccddeeff00112233445566778899aabbccdd000200000000000000000007";
+    malformedRate.address = "0x77bbccddeeff00112233445566778899aabbccdd";
+    malformedRate.poolTokens = malformedRate.poolTokens.map((token, index) =>
+      index === 1 ? { ...token, priceRate: "1.02junk" } : token,
+    );
+    const malformedFee = stablePool();
+    malformedFee.id = "0x88bbccddeeff00112233445566778899aabbccdd000200000000000000000008";
+    malformedFee.address = "0x88bbccddeeff00112233445566778899aabbccdd";
+    malformedFee.dynamicData.swapFee = "0.0001junk";
+
+    dispatchByQuery(
+      [malformedAmp, malformedRate, malformedFee],
+      [{ id: malformedAmp.id, chain: malformedAmp.chain, amp: "250junk" }],
+    );
+
+    const result = await fetchBalancerPools();
+
+    expect(result.pools).toHaveLength(3);
+    for (const pool of result.pools) {
+      expect(pool.amp).toBeUndefined();
+      expect(pool.executionCapabilityGate).toEqual({
+        family: "balancer-amm",
+        reason: "invalid-invariant-parameters",
+      });
+    }
+  });
+
+  it("fails closed when a weighted invariant input contains a malformed suffix", async () => {
+    const weighted = weightedPool();
+    weighted.poolTokens = weighted.poolTokens.map((token, index) =>
+      index === 1 ? { ...token, weight: "0.5junk" } : token,
+    );
+    dispatchByQuery([weighted], []);
+
+    const result = await fetchBalancerPools();
+
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0]?.executionCapabilityGate).toEqual({
+      family: "balancer-amm",
+      reason: "invalid-invariant-parameters",
+    });
+  });
+
   it("retains paused, swap-disabled, and unknown-state pools behind explicit gates", async () => {
     const paused = {
       ...stablePool(),

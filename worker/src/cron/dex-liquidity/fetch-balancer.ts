@@ -153,6 +153,19 @@ function isOptionalBoolean(value: unknown): value is boolean | null | undefined 
   return value == null || typeof value === "boolean";
 }
 
+/**
+ * GraphQL scalar fields arrive as strings. Exact-execution inputs must reject
+ * permissive numeric prefixes (for example `250junk`) rather than silently
+ * turning them into invariant parameters.
+ */
+function parseStrictFiniteDecimal(value: string): number | null {
+  const normalized = value.trim();
+  const unsigned = normalized[0] === "+" || normalized[0] === "-" ? normalized.slice(1) : normalized;
+  if (!unsigned || ["0x", "0o", "0b"].includes(unsigned.slice(0, 2).toLowerCase())) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function isBalancerDynamicData(value: unknown): value is BalancerPool["dynamicData"] {
   return isDexApiRecord(value) &&
     typeof value.totalLiquidity === "string" &&
@@ -277,7 +290,7 @@ async function fetchBalancerCapabilities(
 
     for (const row of rows) {
       if (!isBalancerAmpRow(row)) continue;
-      const amp = row.amp == null ? null : parseFloat(row.amp);
+      const amp = row.amp == null ? null : parseStrictFiniteDecimal(row.amp);
       rowsByPoolId.set(
         ampJoinKey(row.chain, row.id),
         amp != null && Number.isFinite(amp) && amp > 0 ? amp : null,
@@ -347,8 +360,8 @@ function captureGateForPool(
     const rates = modeledTokens.map((token) => token.priceRate);
     if (rates.some((rate) => rate == null)) return balancerGate("incomplete-exact-capture");
     if (rates.some((rate) => {
-      const parsed = parseFloat(rate!);
-      return !Number.isFinite(parsed) || parsed <= 0;
+      const parsed = parseStrictFiniteDecimal(rate!);
+      return parsed == null || parsed <= 0;
     })) {
       return balancerGate("invalid-invariant-parameters");
     }
@@ -357,10 +370,10 @@ function captureGateForPool(
   if (pool.type === "WEIGHTED") {
     const weights = modeledTokens.map((token) => token.weight);
     if (weights.some((weight) => weight == null)) return balancerGate("incomplete-exact-capture");
-    const parsedWeights = weights.map((weight) => parseFloat(weight!));
+    const parsedWeights = weights.map((weight) => parseStrictFiniteDecimal(weight!));
     if (
-      parsedWeights.some((weight) => !Number.isFinite(weight) || weight <= 0) ||
-      Math.abs(parsedWeights.reduce((sum, weight) => sum + weight, 0) - 1) > 0.0001
+      parsedWeights.some((weight) => weight == null || weight <= 0) ||
+      Math.abs(parsedWeights.reduce<number>((sum, weight) => sum + (weight ?? 0), 0) - 1) > 0.0001
     ) {
       return balancerGate("invalid-invariant-parameters");
     }
@@ -379,10 +392,10 @@ function shapeBalancerPool(
   > = new Map(),
   gateOverride?: BalancerExecutionCapabilityGate,
 ): DexApiPool {
-  const tvlUsd = parseFloat(pool.dynamicData.totalLiquidity);
-  const volume24h = parseFloat(pool.dynamicData.volume24h);
-  const swapFee = parseFloat(pool.dynamicData.swapFee);
-  const balances = pool.poolTokens.map((token) => parseFloat(token.balance));
+  const tvlUsd = parseStrictFiniteDecimal(pool.dynamicData.totalLiquidity) ?? Number.NaN;
+  const volume24h = parseStrictFiniteDecimal(pool.dynamicData.volume24h) ?? Number.NaN;
+  const swapFee = parseStrictFiniteDecimal(pool.dynamicData.swapFee) ?? Number.NaN;
+  const balances = pool.poolTokens.map((token) => parseStrictFiniteDecimal(token.balance) ?? Number.NaN);
   const poolAddress = extractBalancerPoolAddress(pool);
   const executionCapabilityGate = gateOverride ?? captureGateForPool(pool, poolAddress, balances, swapFee);
   const poolType = STABLE_DISPLAY_POOL_TYPES.has(pool.type)
@@ -397,10 +410,10 @@ function shapeBalancerPool(
     poolAddress,
     poolType,
     tokens: pool.poolTokens.map((token) => {
-      const balance = parseFloat(token.balance);
-      const balanceUsd = parseFloat(token.balanceUSD);
-      const weight = token.weight == null ? null : parseFloat(token.weight);
-      const priceRate = token.priceRate == null ? null : parseFloat(token.priceRate);
+      const balance = parseStrictFiniteDecimal(token.balance) ?? Number.NaN;
+      const balanceUsd = parseStrictFiniteDecimal(token.balanceUSD) ?? Number.NaN;
+      const weight = token.weight == null ? null : parseStrictFiniteDecimal(token.weight);
+      const priceRate = token.priceRate == null ? null : parseStrictFiniteDecimal(token.priceRate);
       const tokenAddress = normalizedAddress(token.address);
       const sourcePriceUsd = Number.isFinite(balance) && balance > 0 && Number.isFinite(balanceUsd) && balanceUsd > 0
         ? balanceUsd / balance
@@ -508,8 +521,8 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         continue;
       }
 
-      const tvlUsd = parseFloat(pool.dynamicData.totalLiquidity);
-      if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) continue;
+      const tvlUsd = parseStrictFiniteDecimal(pool.dynamicData.totalLiquidity);
+      if (tvlUsd == null || tvlUsd <= 0) continue;
       if (tvlUsd > BALANCER_MAX_POOL_TVL_USD) {
         malformedRows++;
         continue;

@@ -142,7 +142,7 @@ The active frontend operator mode is now:
 - Cron telemetry is grouped by trigger slot and rendered as a matrix:
   - 15-minute core ingestion / score recompute
   - 5-minute Telegram dispatch lane for subscriber alerts
-  - 30-minute on-chain intake jobs (`sync-mint-burn` on `4,34`, `sync-mint-burn-extended` on `13,43`) shown together in the half-hourly group but labeled as isolated triggers
+  - 30-minute on-chain intake jobs (`sync-mint-burn` on `4,34`, `sync-mint-burn-extended` on `18,48`) shown together in the half-hourly group but labeled as isolated triggers
   - 30-minute charts / liquidity jobs plus the decoupled DEWS / PSI DB-only trigger
   - hourly core yield publisher (`sync-yield-data`); `sync-blacklist` is on a dedicated 6-hourly trigger, and the reserve + redemption + Kinesis lane is on a dedicated 4-hourly trigger; `sync-dex-discovery` is on a dedicated 2-hourly trigger
   - daily snapshot / digest / recap jobs
