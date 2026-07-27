@@ -129,11 +129,11 @@ describe("Solana measured execution inventory and registry", () => {
     ]);
   });
 
-  it("pins exact reviewed directions while only the state-replayed Raydium policy is active", () => {
+  it("pins exact reviewed directions while keeping the state-replayed Raydium policy shadow-only", () => {
     const priority = SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS.find(
       (entry) => entry.policyId === "hyusd-usdc-orca-4tjw-v1",
     )!;
-    const activeRaydium = SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS.find(
+    const reviewedRaydium = SOLANA_MEASURED_EXECUTION_PRIORITY_TARGETS.find(
       (entry) => entry.policyId === "wm-usdc-raydium-csmz-v1",
     )!;
     expect(priority.targetId).toBe(
@@ -180,36 +180,36 @@ describe("Solana measured execution inventory and registry", () => {
         (adapter) => adapter.adapterProfileId === priority.adapterProfileId,
       ),
     ).toMatchObject({ activation: "shadow", scoreEligible: false });
-    expect(activeRaydium).toMatchObject({
-      activation: "active",
-      scoreEligible: true,
+    expect(reviewedRaydium).toMatchObject({
+      activation: "shadow",
+      scoreEligible: false,
       proofRequirement: "raydium-single-segment-onstate-v1",
       poolId: RATIFIED_RAYDIUM_POOL,
       tokenInAddress: WM,
       tokenOutAddress: USDC,
     });
-    const activeCandidate = {
+    const reviewedCandidate = {
       ...target("raydium-clmm-trade-api-v1"),
-      targetId: activeRaydium.targetId,
-      stablecoinId: activeRaydium.stablecoinId,
-      poolId: activeRaydium.poolId,
+      targetId: reviewedRaydium.targetId,
+      stablecoinId: reviewedRaydium.stablecoinId,
+      poolId: reviewedRaydium.poolId,
       tokenIn: {
         ...target("raydium-clmm-trade-api-v1").tokenIn,
-        address: activeRaydium.tokenInAddress,
-        decimals: activeRaydium.tokenInDecimals,
-        trackedAssetId: activeRaydium.stablecoinId,
+        address: reviewedRaydium.tokenInAddress,
+        decimals: reviewedRaydium.tokenInDecimals,
+        trackedAssetId: reviewedRaydium.stablecoinId,
       },
       tokenOut: {
         ...target("raydium-clmm-trade-api-v1").tokenOut,
-        address: activeRaydium.tokenOutAddress,
-        decimals: activeRaydium.tokenOutDecimals,
-        trackedAssetId: activeRaydium.tokenOutTrackedAssetId,
+        address: reviewedRaydium.tokenOutAddress,
+        decimals: reviewedRaydium.tokenOutDecimals,
+        trackedAssetId: reviewedRaydium.tokenOutTrackedAssetId,
       },
     };
-    expect(getSolanaMeasuredExecutionPriorityTarget(activeCandidate)).toEqual(activeRaydium);
+    expect(getSolanaMeasuredExecutionPriorityTarget(reviewedCandidate)).toEqual(reviewedRaydium);
     expect(
       getSolanaMeasuredExecutionPriorityTarget({
-        ...activeCandidate,
+        ...reviewedCandidate,
         poolId: RAYDIUM_POOL,
       }),
     ).toBeNull();

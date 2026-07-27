@@ -122,10 +122,10 @@
     "reviewedAt": "2026-07-15"
   },
   "mintAuthority": {
-    "mintPath": "unknown",
-    "authorityPosture": "unknown",
-    "confidence": "unknown",
-    "summary": "BtcUSD on Base is an ERC20_Bridged (Vyper) contract whose canonical issuance lives on Bifrost. Base bridge-token owners are enumerable direct minters; on Bifrost, the native token's DEFAULT_ADMIN_ROLE EOA can grant the mint role but current MINTER_ROLE membership/CDP controller has not been enumerated.",
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "BtcUSD's canonical Bifrost issuance runs through the BTCFi BtcUSD CDP handler 0x682143652b6e305730dd12b0dc7c38d5048fb647, a non-proxy contract that holds the token's keccak(\"Minter\") role and mints against deposited BTC-variant collateral; the token's DEFAULT_ADMIN_ROLE EOA can grant or revoke that role but cannot mint directly. On Base, the ERC20_Bridged proxy's two owners mint the bridged representation, and its proxy admin resolves to an EOA. The Bifrost AccessControl is non-enumerable and public Bifrost RPCs cannot serve full-history role-grant logs, so membership exclusivity and the unverified Base owner contract cap this review at manual-review.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -177,6 +177,28 @@
         "evidence": "2026-07-20 via the Bifrost public EVM RPC: the native BtcUSD token 0x6906ccda405926fc3f04240187dd4fad5df6d555 is a 13.9KB non-proxy contract whose owner() returns this EOA (no contract code). eth_call to mint(address,uint256) from this owner reverted AccessControlUnauthorizedAccount, so it is not a direct minter. However, hasRole(DEFAULT_ADMIN_ROLE, owner) returned true, getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE, and eth_call to grantRole(MINTER_ROLE, owner) from this owner succeeded. It can therefore authorize minters, while current MINTER_ROLE membership remains unenumerable because getRoleMemberCount reverts and the token source/CDP controller is unverified."
       },
       {
+        "chain": "bifrost",
+        "address": "0x682143652b6e305730dd12b0dc7c38d5048fb647",
+        "label": "BTCFi BtcUSD CDP handler (native minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The handler mints BtcUSD only through the BTCFi CDP borrow path against deposited BTC-variant collateral, bounded by collateral balances, the 50% maximum LTV, and oracle pricing; it holds no role-admin capability.",
+        "observedAt": "2026-07-27",
+        "observedBlock": 37087890,
+        "failureDomainKeys": [
+          "protocol:btcfi",
+          "contract:bifrost:0x682143652b6e305730dd12b0dc7c38d5048fb647"
+        ],
+        "sources": [
+          {"label": "BTCFi supported-handler API", "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"},
+          {"label": "Bifrost public EVM RPC", "url": "https://public-01.mainnet.bifrostnetwork.com/bifrost"}
+        ],
+        "evidence": "BTCFi's own getAvailableBtcfiHandlers API identifies this contract (chainId 3068) as the BtcUSD token handler. At Bifrost block 37087890 (2026-07-27): hasRole(keccak256(\"Minter\") = 0x6e58ad548d72b425ea94c15f453bf26caddb061d82b2551db7fdd3cefe0e9940, this contract) returned true on the native BtcUSD token, and an eth_call simulation of mint(address,uint256) from this address succeeded while identical simulations from the token owner EOA and the four collateral handler contracts reverted with AccessControlUnauthorizedAccount(account, Minter). The handler is a 5,266-byte non-proxy contract (EIP-1967 implementation slot zero, no owner())."
+      },
+      {
         "chain": "base",
         "address": "0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe",
         "label": "BtcUSD Base bridge owner contract",
@@ -224,16 +246,13 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At Base block 48621895, BtcUSD is a TransparentUpgradeableProxy with enumerable direct bridge-token mint owners 0x26fce52a and 0xf98e8601. The Base proxy admin and its slot-0 EOA owner are also identified. On Bifrost, native BtcUSD owner() returns 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5; it is the DEFAULT_ADMIN_ROLE holder and can grant MINTER_ROLE, but cannot mint directly. Current MINTER_ROLE membership cannot be enumerated because getRoleMemberCount reverts, and the unverified token/undocumented CDP system leaves the native mint controller unresolved.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Reconcile native Bifrost BtcUSD MINTER_ROLE grant/revoke history or enumerate its CDP vault controller and terminal authority; the DEFAULT_ADMIN owner can authorize minters but cannot mint directly."
-      ],
+      "evidence": "At Base block 48621895, BtcUSD is a TransparentUpgradeableProxy with enumerable direct bridge-token mint owners 0x26fce52a and 0xf98e8601. The Base proxy admin and its slot-0 EOA owner are also identified. On Bifrost, native BtcUSD owner() returns 0xa4247099c1462f9d9121a1809d001c1a6cc70dd5; it is the DEFAULT_ADMIN_ROLE holder and can grant the mint role, but cannot mint directly. Follow-up at Bifrost block 37087890 (2026-07-27): the token's mint gate is keccak256(\"Minter\") (not OZ's MINTER_ROLE — getRoleMemberCount reverts because the token uses plain, non-enumerable AccessControl). BTCFi's own handler API names 0x682143652b6e305730dd12b0dc7c38d5048fb647 as the BtcUSD token handler; hasRole(Minter, handler) returned true and a mint simulation from the handler succeeded, while simulations from the owner EOA and all four collateral handlers reverted AccessControlUnauthorizedAccount. The handler is a non-proxy 5,266-byte contract, so the canonical CDP mint path is resolved. Two limits cap confidence at manual-review: (1) plain AccessControl membership cannot be enumerated without grant-event history, and both public Bifrost RPC families (public-01/02.mainnet.bifrostnetwork.com, public-01/02.mainnet.thebifrost.io) time out on getLogs beyond single-block ranges, so a second Minter member cannot be excluded on-chain; (2) the Base bridge owner contract 0x26fce52a077b4f1dbd7c920b6f23a1d9d18dddbe is source-unverified on Blockscout/Basescan/Sourcify and exposes no Safe or owner() interface (getOwners/getThreshold/owner all return empty), so its internal signer policy is unknown.",
+      "reviewer": "P2 mint-free cohort; Kimi data review",
+      "reviewedAt": "2026-07-27",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "BTCfi docs",

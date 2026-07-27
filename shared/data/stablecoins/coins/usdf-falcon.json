@@ -740,7 +740,7 @@
   "reserves": [
     {
       "name": "BTC collateral",
-      "pct": 93.5,
+      "pct": 93.49098,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Bitcoin network, BTC wrapper issuers, and Falcon custodians",
@@ -755,13 +755,44 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Other crypto / tokenized assets",
-      "pct": 2.1,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Multiple token networks, issuers, and Falcon custodians",
+      "name": "USDC cash-equivalent assets",
+      "pct": 1.74755,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (USDC issuer) held at Falcon custodians",
       "riskFactors": [
-        "credit",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDT cash-equivalent assets",
+      "pct": 1.62753,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT issuer) held at Falcon custodians",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "FET collateral",
+      "pct": 0.88455,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Fetch.ai (FET token) and Falcon custodians",
+      "riskFactors": [
         "market",
         "counterparty",
         "custody",
@@ -772,39 +803,69 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "USDT cash-equivalent assets",
-      "pct": 1.8,
-      "risk": "low",
-      "coinId": "usdt-tether",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Tether (USDT issuer) held at Falcon custodians",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "concentration"],
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "USDC cash-equivalent assets",
-      "pct": 1.7,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle (USDC issuer) held at Falcon custodians",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "concentration"],
-      "liquidityHorizon": "immediate"
-    },
-    {
       "name": "Insurance fund",
-      "pct": 0.7,
+      "pct": 0.70573,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Falcon Finance insurance fund custody accounts",
-      "riskFactors": ["counterparty", "custody", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Other long-tail cryptoassets",
+      "pct": 0.29194,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Multiple token networks and issuers (issuer-reported long-tail altcoins, each below 0.05% of reserves) and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "TRX collateral",
+      "pct": 0.24258,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Tron network and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "FLOKI collateral",
+      "pct": 0.19204,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "FLOKI token issuer and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
       "name": "ETH / liquid staking collateral",
-      "pct": 0.2,
+      "pct": 0.16215,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum network, liquid-staking issuers, and Falcon custodians",
@@ -817,11 +878,176 @@
         "concentration"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "XDC collateral",
+      "pct": 0.1517,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "XDC network and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "RON collateral",
+      "pct": 0.11445,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ronin network and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "JST collateral",
+      "pct": 0.09682,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "JUST protocol (JST token) and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "KAVA collateral",
+      "pct": 0.08762,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Kava network and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "WFLR collateral",
+      "pct": 0.06905,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Flare network (wrapped FLR) and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "LUMIA collateral",
+      "pct": 0.05107,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lumia (LUMIA token) and Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "JAAA CLO assets",
+      "pct": 0.03652,
+      "risk": "medium",
+      "coinId": "jaaa-janus-henderson-anemoy",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Janus Henderson Anemoy AAA CLO Fund held at Falcon custodians",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "JTRSY tokenized Treasury assets",
+      "pct": 0.03631,
+      "risk": "medium",
+      "coinId": "jtrsy-anemoy",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Janus Henderson Anemoy Treasury Fund held at Falcon custodians",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USTB tokenized Treasury assets",
+      "pct": 0.00734,
+      "risk": "low",
+      "coinId": "ustb-superstate",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Invesco Short Duration U.S. Government Securities Fund (Superstate USTB) held at Falcon custodians",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "XAUt gold token assets",
+      "pct": 0.00407,
+      "risk": "medium",
+      "coinId": "xaut-tether",
+      "depType": "collateral",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Tether Gold (XAUT) held at Falcon custodians",
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-CORP-A wave6",
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Kimi data review",
     "confidence": "verified",
     "sources": [
       {
@@ -841,40 +1067,103 @@
         "url": "https://docs.falcon.finance/supported-assets"
       }
     ],
-    "rationale": "The exact Falcon adapter output from the issuer API snapshot at 2026-07-22T09:33:02Z is dominated by the aggregate BTC bucket, separately links the reported USDT and USDC rows, retains the insurance fund as protocol protection capital, and preserves the Other crypto / tokenized assets residual without inventing constituent links. HT Digital's July 13 reserve report independently corroborates the reserve categories and the large BTC and wrapped-BTC concentration.",
-    "compositionBasis": "Exact Falcon live-reserve adapter identities and rounded weights from the timestamped issuer API, corroborated by the latest HT Digital weekly reserve report",
-    "compositionAsOf": "2026-07-22",
+    "rationale": "Rebuilt from the issuer transparency API's per-asset USD breakdown at snapshot 2026-07-27T12:03:01Z ($1,416,967,169.92 total including the $10,000,000 insurance fund). The earlier aggregate Other crypto / tokenized assets bucket is now split into its material constituents (FET, TRX, FLOKI, XDC, RON, JST, KAVA, WFLR, and LUMIA, each at or above 0.05% of reserves) plus a residual row aggregating the remaining 93 issuer-reported long-tail altcoins and sub-0.001% stablecoin dust (USD1, DAI, FDUSD, USDS, FRAX). Tracked tokenized RWA positions (JAAA, JTRSY, USTB, XAUT) are linked to their Pharos asset IDs, and the reported USDT and USDC rows remain separately linked. HT Digital's July 13 reserve report independently corroborates the reserve categories and the large BTC and wrapped-BTC concentration.",
+    "compositionBasis": "Falcon transparency API per-asset USD breakdown at snapshot 2026-07-27T12:03:01Z, corroborated by the latest HT Digital weekly reserve report",
+    "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 2.1% Other crypto / tokenized assets adapter row aggregates multiple token networks, issuers, and custody failure domains without a source-native constituent split that can be linked as one reviewed exposure.",
-    "knownUnknownExposurePct": 2.1,
+    "knownUnknownExposure": "Every reserve asset reported by the issuer API is identified by name and value; the residual row aggregates only issuer-reported long-tail altcoins below 0.05% of reserves each plus negligible stablecoin dust, all enumerated in the source.",
+    "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "BTC collateral",
-        "pct": 93.5,
+        "pct": 93.49098,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The adapter's BTC, wrapped-BTC, mBTC, and enzoBTC bucket is external crypto backing rather than a tracked stablecoin dependency."
+        "rationale": "The BTC, wrapped-BTC, mBTC, and enzoBTC bucket is external crypto backing rather than a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 1,
-        "reserveName": "Other crypto / tokenized assets",
-        "pct": 2.1,
-        "disposition": "basket-needs-split",
-        "rationale": "The adapter intentionally aggregates multiple altcoins and tokenized assets; the reviewed envelope preserves that residual rather than claiming one issuer or tracked-asset link."
+        "reserveIndex": 3,
+        "reserveName": "FET collateral",
+        "pct": 0.88455,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "FET is an external cryptoasset rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 4,
         "reserveName": "Insurance fund",
-        "pct": 0.7,
+        "pct": 0.70573,
         "disposition": "not-applicable",
         "rationale": "The issuer-reported insurance fund is protocol protection capital, not a tracked stablecoin reserve dependency."
       },
       {
         "reserveIndex": 5,
+        "reserveName": "Other long-tail cryptoassets",
+        "pct": 0.29194,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The residual aggregates 93 issuer-reported long-tail altcoins (each below 0.05% of reserves) and sub-0.001% stablecoin dust; all constituents are external cryptoassets enumerated in the source, not tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "TRX collateral",
+        "pct": 0.24258,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "TRX is an external cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "FLOKI collateral",
+        "pct": 0.19204,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "FLOKI is an external cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 8,
         "reserveName": "ETH / liquid staking collateral",
-        "pct": 0.2,
+        "pct": 0.16215,
         "disposition": "untracked-exogenous-asset",
         "rationale": "ETH and liquid-staking collateral are external crypto backing rather than tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 9,
+        "reserveName": "XDC collateral",
+        "pct": 0.1517,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "XDC is an external cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 10,
+        "reserveName": "RON collateral",
+        "pct": 0.11445,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "RON is an external cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 11,
+        "reserveName": "JST collateral",
+        "pct": 0.09682,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "JST is an external cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 12,
+        "reserveName": "KAVA collateral",
+        "pct": 0.08762,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "KAVA is an external cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 13,
+        "reserveName": "WFLR collateral",
+        "pct": 0.06905,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WFLR is an external cryptoasset rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 14,
+        "reserveName": "LUMIA collateral",
+        "pct": 0.05107,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "LUMIA is an external cryptoasset rather than a tracked stablecoin dependency."
       }
     ]
   },

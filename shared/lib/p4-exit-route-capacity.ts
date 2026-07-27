@@ -987,14 +987,20 @@ function simulateAmmOutput(model: DexAmmExecutionModel, outputTokenIndex: number
 
   if (model.invariant === "stableswap") {
     const balances = model.tokens.map((token) => token.balance);
+    // Curve StableSwap/NG evaluates its invariant on the full input, then
+    // deducts the (static) fee from output. Other modeled StableSwap sources
+    // charge against input. Treating Curve as input-fee is optimistic because
+    // its concave curve produces more than (1 - fee) of the full-input output.
+    const invariantInput = model.source === "curve" ? inputAmount : effectiveInput;
     const newOutputBalance = stableswapOutputBalance(
       balances,
       model.trackedTokenIndex,
       outputTokenIndex,
-      input.balance + effectiveInput,
+      input.balance + invariantInput,
       model.amplification!,
     );
-    return Math.max(0, output.balance - newOutputBalance);
+    const grossOutput = output.balance - newOutputBalance;
+    return Math.max(0, model.source === "curve" ? grossOutput * (1 - model.feeRate) : grossOutput);
   }
 
   const inputWeight = input.weight!;

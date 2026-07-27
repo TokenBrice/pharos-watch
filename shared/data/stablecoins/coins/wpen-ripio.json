@@ -7,7 +7,7 @@
   "oneLiner": "WPEN is Ripio's Peruvian-sol wrapped fiat stablecoin, issued and redeemed through Ripio's wFIAT on/off-ramp infrastructure against local-currency reserves.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "OTHER",
+    "pegCurrency": "PEN",
     "governance": "centralized",
     "yieldBearing": false,
     "rwa": false,

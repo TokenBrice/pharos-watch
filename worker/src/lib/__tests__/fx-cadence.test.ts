@@ -36,6 +36,11 @@ const CALENDAR_DAILY_PEGS = [
   "peggedNGN",
   "peggedXOF",
   "peggedVND",
+  "peggedKES",
+  "peggedGHS",
+  "peggedCOP",
+  "peggedCLP",
+  "peggedPEN",
 ];
 
 describe("fx cadence classification", () => {

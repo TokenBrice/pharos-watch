@@ -7,7 +7,7 @@
   "oneLiner": "WCOP is Ripio's Colombian-peso wrapped fiat stablecoin, issued and redeemed through Ripio's wFIAT on/off-ramp infrastructure against local-currency reserves.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "OTHER",
+    "pegCurrency": "COP",
     "governance": "centralized",
     "yieldBearing": false,
     "rwa": false,

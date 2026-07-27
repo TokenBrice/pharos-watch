@@ -105,6 +105,22 @@ export interface EvmV2ExecutionCandidate {
   tokenSymbols: [string, string];
 }
 
+/**
+ * Internal Curve StableSwap-NG state-capture descriptor. The Curve API only
+ * supplies the identity/order and USD references; balances, amplification,
+ * and stored rates are read together at a pinned block before this can become
+ * an executable model.
+ */
+export interface CurveStableswapRateInputExecutionCandidate {
+  poolAddress: `0x${string}`;
+  coins: {
+    address: `0x${string}`;
+    symbol: string;
+    decimals: number;
+    referencePriceUsd: number;
+  }[];
+}
+
 export interface PoolEntry {
   poolId: string;
   project: string;
@@ -147,6 +163,8 @@ export interface PoolEntry {
     ammExecutionModel?: DexAmmExecutionModel;
     /** Internal V2 candidate; consumed before scoring and never published. */
     evmV2ExecutionCandidate?: EvmV2ExecutionCandidate;
+    /** Internal Curve NG rate-input candidate; consumed before scoring and never published. */
+    curveStableswapRateInputExecutionCandidate?: CurveStableswapRateInputExecutionCandidate;
     /** Internal all-retained target descriptor; stripped before top-pool publication. */
     measuredExecutionTarget?: DexMeasuredExecutionTarget;
     /** Internal multi-direction packet for reviewed pools; stripped before publication. */

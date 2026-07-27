@@ -11,6 +11,38 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.94",
+    title: "Pinned Curve StableSwap-NG rate state",
+    date: "2026-07-27",
+    effectiveAt: 1785110400,
+    summary:
+      "Address-grade plain Curve StableSwap-NG pools with rate-bearing inputs can contribute a reserve model only after a fresh, same-block state capture proves the balances, amplification, stored rates, static fee state, and ordered coin layout.",
+    impact: [
+      "Only `factory-stable-ng` candidates with an exact EVM address, unique token identities, and one tracked input are eligible; legacy, metapool, CryptoSwap, unknown, stale, or unpinnable shapes remain capability-gated",
+      "The capture rereads the pinned block header hash after bounded multicalls for `get_balances`, `stored_rates`, `A`, `fee`, `offpeg_fee_multiplier`, and `coins`; rate factors scale balances and inversely scale USD references, while Curve applies the captured static fee after the full-input invariant",
+      "Missing, base-only, malformed, dynamic-fee, mismatched-order, or hash-drifted state clears the internal candidate and retains `curve-stableswap:rate-bearing-inputs` rather than using API balances, an unpinned amplification value, a guessed fee, or nominal parity",
+      "This is route-only Safety Score V9 evidence: aggregate liquidity, price consensus, visible pools, target publication, and V8 liquidity scoring are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
+    version: "5.93",
+    title: "Paused v5.92 exact-route activations",
+    date: "2026-07-27",
+    effectiveAt: 1785110400,
+    summary:
+      "Optimism Uniswap V3 and the reviewed Solana wM/USDC Raydium direction return to shadow-only collection after the first post-activation scoring consumers exceeded the Worker memory limit.",
+    impact: [
+      "Both cohorts are score-ineligible and retain an activation-pending capability gate while production scoring memory is remediated and revalidated",
+      "Optimism deployment verification and quotes, plus the Raydium pool-account capture, direct quote, and exact single-segment replay, remain live as activation evidence",
+      "Previously active Ethereum, Polygon, and Arbitrum Uniswap V3; Base, BSC, and Ethereum PancakeSwap V3; Base Aerodrome Slipstream; and Tron SunSwap V2 cohorts are unchanged",
+      "No stale route, manual capacity, or reserve-derived substitute enters P4 while either reviewed cohort is paused",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.92",
     title: "Pinned Raydium CLMM on-state execution",
     date: "2026-07-27",

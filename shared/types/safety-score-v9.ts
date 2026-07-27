@@ -23,6 +23,7 @@ export const V9_REASON_CODES = [
   "incomparable-route-requests",
   "incomplete-dex-route-coverage",
   "incomplete-oracle-liquidation-branch",
+  "inherited-access-exposure",
   "insufficient-evidence",
   "material-bridge-supply-unmatched",
   "material-dependency-unavailable",
@@ -40,6 +41,7 @@ export const V9_REASON_CODES = [
   "missing-oracle-profile",
   "missing-parent-score",
   "missing-peg-input",
+  "peg-supply-floor-withheld",
   "missing-pillar",
   "missing-access-review",
   "missing-pillar-evidence",
@@ -547,6 +549,10 @@ export type V9ReasonReleaseSeverity = z.infer<typeof V9ReasonReleaseSeveritySche
 
 export const V9ManualInputClassificationSchema = z.enum([
   "missing-data",
+  // A current, evidenced structural verdict (owner ruling 2026-07-27): the
+  // fact is measured, not absent; no danger or missing-data predicate keys on
+  // this class.
+  "measured-structural",
   "unresolved-methodology",
   "unsupported-design",
 ]);

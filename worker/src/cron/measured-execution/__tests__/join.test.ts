@@ -751,7 +751,7 @@ describe("measured execution join activation", () => {
     expect(currentPhysicalPool.get("usdt-tether")).toBeUndefined();
   });
 
-  it("admits a valid Optimism Uniswap V3 profile after ratification", () => {
+  it("retains a valid Optimism Uniswap V3 profile behind the shadow gate", () => {
     const measuredTarget = target("optimism");
     const deployment = getDexMeasuredExecutionDeployment(measuredTarget.adapterProfileId, measuredTarget.chain);
     if (deployment == null) throw new Error("missing Optimism QuoterV2 deployment");
@@ -825,8 +825,11 @@ describe("measured execution join activation", () => {
 
     expect(pool.extra?.measuredExecution).toBeDefined();
     expect(pool.extra?.measuredExecution).not.toHaveProperty("quoteProof");
-    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
-    expect(diagnostics).toMatchObject({ measuredCount: 1, gatedCount: 0 });
+    expect(pool.extra?.executionCapabilityGate).toEqual({
+      family: "measured-execution",
+      reason: "activation-pending",
+    });
+    expect(diagnostics).toMatchObject({ measuredCount: 1, gatedCount: 1 });
   });
 
   it("admits a valid Base Aerodrome Slipstream profile after activation", () => {

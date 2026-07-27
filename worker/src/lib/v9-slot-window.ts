@@ -12,7 +12,7 @@ interface CoreSlotRow {
   worker_version: string | null;
 }
 
-interface CompetingSlotRow {
+interface ActiveV9SlotRow {
   slot_key: string;
   slot_started_at: number;
   state: string;
@@ -102,11 +102,12 @@ export async function waitForV9MemoryLaneRelease(
 }
 
 /**
- * Admits private V9 work only after the matching public quarter-hour slot has
- * completed on the active Worker version, no other scheduled slot is active,
- * and while an absolute pre-quarter execution window remains. The V9 lane
- * lease is acquired before the competing-slot query, so later triggers wait
- * before loading their job graphs and earlier triggers make V9 skip.
+ * Admits canonical V9 work only after the matching public quarter-hour slot
+ * has completed on the active Worker version and while an absolute pre-quarter
+ * execution window remains. The shared V9 lane lease serializes V9 work and
+ * keeps later triggers from loading their job graphs. A prior active invocation
+ * of the same V9 schedule lane still fails closed, while unrelated scheduled
+ * slots cannot suppress canonical publication.
  */
 export async function runV9AfterCoreWithinWindow(
   options: V9SlotWindowOptions,
@@ -173,15 +174,13 @@ export async function runV9AfterCoreWithinWindow(
           });
         }
 
-        const competingSlot = await options.db
+        const activeV9Slot = await options.db
           .prepare(
             `SELECT slot_key, slot_started_at, state, updated_at
                FROM cron_slot_executions
-              WHERE state IN ('running', 'reconciling')
-                AND NOT (
-                  slot_key = ?
-                  AND slot_started_at = ?
-                )
+              WHERE slot_key = ?
+                AND slot_started_at != ?
+                AND state IN ('running', 'reconciling')
                 AND updated_at >= ?
               ORDER BY updated_at DESC
               LIMIT 1`,
@@ -191,15 +190,15 @@ export async function runV9AfterCoreWithinWindow(
             options.slotStartedAt,
             coreSlotStartedAt - 35 * 60,
           )
-          .first<CompetingSlotRow>();
-        if (competingSlot) {
+          .first<ActiveV9SlotRow>();
+        if (activeV9Slot) {
           return neutralSkip("v9-competing-slot-active", {
             lane: options.lane,
             coreSlotStartedAt,
-            competingSlotKey: competingSlot.slot_key,
-            competingSlotStartedAt: competingSlot.slot_started_at,
-            competingSlotState: competingSlot.state,
-            competingSlotUpdatedAt: competingSlot.updated_at,
+            competingSlotKey: activeV9Slot.slot_key,
+            competingSlotStartedAt: activeV9Slot.slot_started_at,
+            competingSlotState: activeV9Slot.state,
+            competingSlotUpdatedAt: activeV9Slot.updated_at,
           });
         }
 

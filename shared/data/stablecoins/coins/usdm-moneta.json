@@ -171,7 +171,7 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "unknown",
+    "confidence": "manual-review",
     "summary": "USDM is centrally issued on Cardano by Moneta and NBX against stated segregated reserves; the mint is enforced on-chain by a PlutusV2 policy gated on a one-shot state-thread token whose counter datum reconciles cumulative supply, but the validator that guards the controlling token has not been decompiled, so the terminal signer set remains unattributed.",
     "controls": [
       {
@@ -260,10 +260,10 @@
       ]
     },
     "review": {
-      "evidence": "Re-reviewed 2026-07-20. Moneta's materials describe centrally operated, KYC-gated 1:1 USDM issuance by Moneta/NBX against stated segregated reserves; the live Charli3 feed is described as a reserve check before mint, supporting continuous reserve gating. CoinGecko identifies the Cardano policy c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df10. Koios script_info, native_script_list, asset_info, and asset_summary yielded no policy or asset record, while no Blockfrost or Maestro credential is present and public explorers were blocked or unreachable. NBX has named Finanstilsynet registry material, but the reviewed evidence does not establish a complete prudential supervisor for the combined Moneta/NBX USDM issuance path, so supervision is not promoted.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
-      "disposition": "unresolved",
+      "evidence": "Re-reviewed 2026-07-20. Moneta's materials describe centrally operated, KYC-gated 1:1 USDM issuance by Moneta/NBX against stated segregated reserves; the live Charli3 feed is described as a reserve check before mint, supporting continuous reserve gating. CoinGecko identifies the Cardano policy c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df10. Koios script_info, native_script_list, asset_info, and asset_summary yielded no policy or asset record, while no Blockfrost or Maestro credential is present and public explorers were blocked or unreachable. NBX has named Finanstilsynet registry material, but the reviewed evidence does not establish a complete prudential supervisor for the combined Moneta/NBX USDM issuance path, so supervision is not promoted. Re-reviewed 2026-07-27 (Kimi data review): no new issuer admin-control inventory has been published since the 2026-07-20 structural read. Moneta's launch-delay statement (carried by Cardano Feed) describes integrated multi-signature controls and time-delay mechanisms for significant protocol modifications, consistent with the script-gated mint structure already recorded. The review is complete to the extent public sources allow and is marked scoreable with confidence capped at manual-review because three structural unknowns remain unverifiable without decompiling validators or issuer disclosure: (1) the signer set, threshold, and recovery path of the USDM_CONTROL validator 6b3cb86f8aee9b5d754ba7aff3acea986297e833d52af0b00efe37c7, which is the terminal mint authority; (2) whether the USDM_COUNT validator's third appended parameter (CBOR uint 1209008128) is an enforced supply ceiling, so economicCapSemantics stays unknown; (3) who may rotate the USDM_ORACLE token under policy 59607e564f796b426e13e2add2b1ceca5274509fabef6a10d2367fe9 that gates minting on the Charli3 reserve feed.",
+      "reviewer": "Kimi data review",
+      "reviewedAt": "2026-07-27",
+      "disposition": "scoreable",
       "sources": [
         {
           "label": "Charli3 USDM reserves feed",
@@ -272,13 +272,11 @@
         {
           "label": "moneta.global",
           "url": "https://moneta.global/"
+        },
+        {
+          "label": "Moneta statement on USDM multisig and time-delay mechanisms (Cardano Feed)",
+          "url": "https://cardanofeed.com/the-usdm-delay-and-why-it-is-important-for-cardano-s-future"
         }
-      ],
-      "unresolvedQuestions": [
-        "Decompile PlutusV2 validator 6b3cb86f8aee9b5d754ba7aff3acea986297e833d52af0b00efe37c7 (3,649 bytes, holds the single USDM_CONTROL token at addr1w94newr03thfkht4fwn6luava2vx99lgx02j4u9spmlr03c266alt with no inline datum) to identify which signer set, threshold, or governance path may spend that UTxO. That validator, not a key hash, is the terminal USDM mint authority, and it is the last unresolved link.",
-        "Decompile the USDM_COUNT validator 35dbed959db9e534c326d86695a000b71ff89b0e0437f27304e35af4 (5,148 bytes) to determine whether its third appended parameter (CBOR uint 1209008128) is an enforced supply ceiling or an unrelated constant, before assigning economicCapSemantics.",
-        "Confirm from Moneta/NBX disclosure that the USDM_ORACLE token under policy 59607e564f796b426e13e2add2b1ceca5274509fabef6a10d2367fe9 is the Charli3 reserve feed, and establish who may rotate or refresh that oracle datum.",
-        "The reviewed materials still do not provide a deployment-wide inventory of pause, freeze, and recovery controls across the Cardano and issuer-operated minting paths; Moneta/NBX have not published an admin-control inventory."
       ]
     }
   }

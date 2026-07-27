@@ -195,6 +195,36 @@ describe("mergeHealthStates", () => {
 
     expect(merged.state).toBe("stale");
     expect(merged.affectedLabels).toEqual(["Liquidity", "Report Cards"]);
-    expect(merged.latestUpdatedAt).toBe(10);
+    expect(merged.latestUpdatedAt).toBe(9);
+  });
+
+  it("does not label a stale dataset with a fresher healthy dataset timestamp", () => {
+    const reportCardsUpdatedAt = new Date("2026-07-27T14:46:53+02:00").getTime();
+    const pricesUpdatedAt = new Date("2026-07-27T19:45:13+02:00").getTime();
+
+    const merged = mergeHealthStates([
+      {
+        label: "Report Cards",
+        state: "stale",
+        message: "",
+        dataUpdatedAt: reportCardsUpdatedAt,
+        ageMs: 5 * 60 * 60_000,
+        staleTime: 15 * 60_000,
+        meta: null,
+      },
+      {
+        label: "Prices",
+        state: "fresh",
+        message: "",
+        dataUpdatedAt: pricesUpdatedAt,
+        ageMs: 13 * 60_000,
+        staleTime: 15 * 60_000,
+        meta: null,
+      },
+    ]);
+
+    expect(merged.state).toBe("stale");
+    expect(merged.affectedLabels).toEqual(["Report Cards"]);
+    expect(merged.latestUpdatedAt).toBe(reportCardsUpdatedAt);
   });
 });

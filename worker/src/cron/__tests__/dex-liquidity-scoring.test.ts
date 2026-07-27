@@ -212,6 +212,36 @@ function curveExecutionModel(): NonNullable<NonNullable<PoolEntry["extra"]>["amm
   };
 }
 
+function daiCurveExecutionModel(): NonNullable<NonNullable<PoolEntry["extra"]>["ammExecutionModel"]> {
+  return {
+    source: "curve",
+    invariant: "stableswap",
+    trackedTokenIndex: 0,
+    feeRate: 0.0004,
+    amplification: 200,
+    tokens: [
+      {
+        address: "0x0000000000000000000000000000000000000011",
+        symbol: "DAI",
+        decimals: 18,
+        balance: 50_000,
+        referencePriceUsd: 1,
+        referencePriceSource: "tracked-market",
+        trackedAssetId: "dai-makerdao",
+      },
+      {
+        address: "0x0000000000000000000000000000000000000012",
+        symbol: "USDC",
+        decimals: 6,
+        balance: 50_000,
+        referencePriceUsd: 1,
+        referencePriceSource: "tracked-market",
+        trackedAssetId: "usdc-circle",
+      },
+    ],
+  };
+}
+
 describe("dex-liquidity scoring", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -901,83 +931,85 @@ describe("dex-liquidity scoring", () => {
     });
   });
 
-  it("bounds multi-output exact routes and fails coverage closed when observations overflow", async () => {
+  it("packs DAI-shaped multi-output routes so every selected physical pool is emitted", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
-    const metrics = initMetrics("usdc-circle", "USDC");
-    const balancerPool: PoolEntry = {
-      poolId: "ethereum:balancer-three-token",
-      project: "balancer",
-      chain: "Ethereum",
-      tvlUsd: 300_000,
-      symbol: "USDC-USDT-DAI",
-      volumeUsd1d: 30_000,
-      volumeUsd7d: 210_000,
-      poolType: "balancer-weighted",
-      source: "direct_api",
-      extra: {
-        ammExecutionModel: {
-          source: "balancer",
-          invariant: "weighted-constant-mean",
-          trackedTokenIndex: 0,
-          feeRate: 0.001,
-          tokens: [
-            {
-              address: "0x0000000000000000000000000000000000000011",
-              symbol: "USDC",
-              decimals: 6,
-              balance: 100_000,
-              referencePriceUsd: 1,
-              referencePriceSource: "tracked-market",
-              trackedAssetId: "usdc-circle",
-              weight: 0.34,
-            },
-            {
-              address: "0x0000000000000000000000000000000000000012",
-              symbol: "USDT",
-              decimals: 6,
-              balance: 100_000,
-              referencePriceUsd: 1,
-              referencePriceSource: "tracked-market",
-              trackedAssetId: "usdt-tether",
-              weight: 0.33,
-            },
-            {
-              address: "0x0000000000000000000000000000000000000013",
-              symbol: "DAI",
-              decimals: 18,
-              balance: 100_000,
-              referencePriceUsd: 1,
-              referencePriceSource: "tracked-market",
-              trackedAssetId: "dai-makerdao",
-              weight: 0.33,
-            },
-          ],
-        },
-      },
-    };
+    const metrics = initMetrics("dai-makerdao", "DAI");
     metrics.topPools = [
-      balancerPool,
-      ...Array.from({ length: 9 }, (_, index): PoolEntry => ({
-        poolId: `ethereum:curve-pool-${index}`,
+      ...Array.from({ length: 3 }, (_, index): PoolEntry => ({
+        poolId: `ethereum:dai-balancer-three-token-${index}`,
+        project: "balancer",
+        chain: "Ethereum",
+        tvlUsd: 300_000 - index,
+        symbol: "DAI-USDC-USDT",
+        volumeUsd1d: 30_000 - index,
+        volumeUsd7d: 210_000 - index,
+        poolType: "balancer-weighted",
+        source: "direct_api",
+        extra: {
+          ammExecutionModel: {
+            source: "balancer",
+            invariant: "weighted-constant-mean",
+            trackedTokenIndex: 0,
+            feeRate: 0.001,
+            tokens: [
+              {
+                address: "0x0000000000000000000000000000000000000011",
+                symbol: "DAI",
+                decimals: 18,
+                balance: 100_000,
+                referencePriceUsd: 1,
+                referencePriceSource: "tracked-market",
+                trackedAssetId: "dai-makerdao",
+                weight: 0.34,
+              },
+              {
+                address: "0x0000000000000000000000000000000000000012",
+                symbol: "USDC",
+                decimals: 6,
+                balance: 100_000,
+                referencePriceUsd: 1,
+                referencePriceSource: "tracked-market",
+                trackedAssetId: "usdc-circle",
+                weight: 0.33,
+              },
+              {
+                address: "0x0000000000000000000000000000000000000013",
+                symbol: "USDT",
+                decimals: 6,
+                balance: 100_000,
+                referencePriceUsd: 1,
+                referencePriceSource: "tracked-market",
+                trackedAssetId: "usdt-tether",
+                weight: 0.33,
+              },
+            ],
+          },
+        },
+      })),
+      ...Array.from({ length: 7 }, (_, index): PoolEntry => ({
+        poolId: `ethereum:dai-curve-pool-${index}`,
         project: "curve",
         chain: "Ethereum",
         tvlUsd: 100_000 - index,
-        symbol: "USDC-USDT",
+        symbol: "DAI-USDC",
         volumeUsd1d: 20_000 - index,
         volumeUsd7d: 140_000 - index,
         poolType: "curve-stableswap",
         source: "dl",
-        extra: { ammExecutionModel: curveExecutionModel() },
+        extra: { ammExecutionModel: daiCurveExecutionModel() },
       })),
     ];
 
     const result = await computeStablecoinScores(
       db,
-      new Map([["usdc-circle", metrics]]),
+      new Map([["dai-makerdao", metrics]]),
       new Map(),
     );
-    const routeResult = result.scores.get("usdc-circle") as {
-      exitRouteObservations?: unknown[];
+    const routeResult = result.scores.get("dai-makerdao") as {
+      exitRouteObservations?: Array<{
+        scope: { contractOrPoolId?: string };
+        output: { trackedAssetIds?: string[] };
+      }>;
       exitRouteObservationCoverage?: {
         retainedPoolCount: number;
         observationCount: number;
@@ -990,15 +1022,24 @@ describe("dex-liquidity scoring", () => {
     } | undefined;
 
     expect(routeResult?.exitRouteObservations).toHaveLength(10);
+    expect(routeResult?.exitRouteObservations?.map((observation) => observation.scope.contractOrPoolId)).toEqual([
+      ...Array.from({ length: 3 }, (_, index) => `ethereum:dai-balancer-three-token-${index}`),
+      ...Array.from({ length: 7 }, (_, index) => `ethereum:dai-curve-pool-${index}`),
+    ]);
+    expect(routeResult?.exitRouteObservations?.slice(0, 3).map((observation) => observation.output.trackedAssetIds)).toEqual(
+      [["usdc-circle"], ["usdc-circle"], ["usdc-circle"]],
+    );
     expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
       retainedPoolCount: 10,
       observationCount: 10,
       scoreEligibleObservationCount: 10,
-      scoreEligiblePoolCount: 9,
+      scoreEligiblePoolCount: 10,
       scoreEligibleCapabilityPoolCount: 10,
-      unsupportedPoolCount: 1,
-      unsupportedReasons: { routeObservationPayloadOverflow: 1 },
+      unsupportedPoolCount: 0,
     });
+    expect(routeResult?.exitRouteObservationCoverage?.unsupportedReasons).not.toHaveProperty(
+      "routeObservationPayloadOverflow",
+    );
   });
 
   it("keeps pool coverage complete when clipping only extra outputs from represented pools", async () => {

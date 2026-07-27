@@ -23,6 +23,7 @@ const REASON_CODE_LABELS: Record<V9ReasonCode, string> = {
   "incomparable-route-requests": "Exit routes cannot be compared like for like",
   "incomplete-dex-route-coverage": "DEX exit routes only partly covered",
   "incomplete-oracle-liquidation-branch": "Oracle liquidation path only partly reviewed",
+  "inherited-access-exposure": "Freeze exposure inherited from a reviewed upstream asset",
   "insufficient-evidence": "Not enough evidence to rate this input",
   "material-bridge-supply-unmatched": "Bridged supply does not reconcile",
   "material-dependency-unavailable": "A material dependency could not be scored",
@@ -40,6 +41,7 @@ const REASON_CODE_LABELS: Record<V9ReasonCode, string> = {
   "missing-oracle-profile": "Oracle setup not documented",
   "missing-parent-score": "Parent asset has no score",
   "missing-peg-input": "Peg reference data missing",
+  "peg-supply-floor-withheld": "Peg deviation withheld below the $1M supply floor",
   "missing-pillar": "A scoring pillar has no inputs",
   "missing-access-review": "Transfer and freeze powers not reviewed",
   "missing-pillar-evidence": "A scoring pillar has no evidence",
@@ -204,10 +206,17 @@ export function buildDataCoverageModel(
   const gapCountByOwner = new Map<V9EvidenceResponsibility, number>();
   const assetCountByCode = new Map<V9ReasonCode, number>();
 
+  // The headline counts MISSING data: only the four gap-owner classes shown
+  // in the module's own attribution bar. Measured classifications (adverse or
+  // structural findings) are facts we hold, not absences, and stay out of the
+  // count just as they stay out of the bar.
+  const missingResponsibilities = new Set<V9EvidenceResponsibility>(
+    GAP_OWNERS.map((owner) => owner.responsibility),
+  );
   for (const card of response.cards) {
     const responsibility = card.scoreTrace.evidenceResponsibility;
-    openGapCount += responsibility.totalFactCount;
     for (const summary of responsibility.summaries) {
+      if (missingResponsibilities.has(summary.responsibility)) openGapCount += summary.factCount;
       criticalGapCount += summary.criticalFactCount;
       gapCountByOwner.set(
         summary.responsibility,

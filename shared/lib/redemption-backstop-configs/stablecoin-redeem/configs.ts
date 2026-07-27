@@ -73,18 +73,19 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     capacityModel: { kind: "supply-ratio", ratio: 0.4, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: fixedFee(50, "Protocol docs describe redemption fees of up to 50 bps"),
-    reviewedAt: "2026-07-15",
+    reviewedAt: "2026-07-27",
     docs: [
       sourceRef("dTRINITY dUSD reserve assets", "https://docs.dtrinity.org/protocol-components/dusd", [
         "route",
         "capacity",
         "fees",
+        "settlement",
       ]),
     ],
     notes: [
       "The 40% ratio is a reviewed heuristic reflecting tracked stable-bucket share rather than a published instant-liquidity floor.",
-      "dTRINITY currently marks 11 symbols redeem-eligible across Ethereum, Fraxtal, and Katana: USDC, USDT, USDS, sUSDS, frxUSD, sfrxUSD, DAI, sDAI, vbUSDC, vbUSDT, and AUSD.",
-      "outputAssets remains unset so the route resolves as an unresolved basket: vbUSDC and vbUSDT have no tracked Pharos ids. unresolvedOutputAssetKeys preserves the complete 11-member identity set diagnostically without making the basket scoreable.",
+      "2026-07-27 recheck (Kimi data review): the dTRINITY reserve table marks 11 symbols redeem-eligible across Ethereum (USDC, USDT, USDS, sUSDS, frxUSD, sfrxUSD), Fraxtal (adds DAI, sDAI), and Katana (adds vbUSDC, vbUSDT, AUSD); the two Curve LP receipts are mint-only and correctly excluded from the redeem set.",
+      "outputAssets remains unset so the route resolves as an unresolved basket: vbUSDC and vbUSDT (Katana Vault Bridge) have no tracked Pharos ids. unresolvedOutputAssetKeys preserves the complete 11-member identity set diagnostically without making the basket scoreable.",
     ],
   }),
   "ousd-origin-protocol": defineStablecoinRedeemConfig({
@@ -1307,6 +1308,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "ZYS is a Zephyr yield-share asset rather than a flat $1 token; its protocol conversion pays ZSD at the current ZYS/ZSD share value, so the exact tracked output is zsd-zephyr-protocol.",
       "Final dollar exit inherits the underlying ZSD protocol collateral redemption route.",
+      "2026-07-27 primary-source confirmation (Kimi data review): REDEEM_YIELD burns ZYS and pays ZSD at the consensus share price with a 0.1% conversion fee enforced in RingCT verification (pinned v2.3.0 source). Output valuation stays blocked downstream until the zsd-zephyr-protocol peg producer emits peg data.",
     ],
   }),
   "aa-falconx-mev-capital": defineStablecoinRedeemConfig({

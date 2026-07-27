@@ -1623,6 +1623,30 @@
       }
     },
     {
+      "code": "peg-supply-floor-withheld",
+      "ownerDomain": "peg",
+      "archetypes": [
+        "*"
+      ],
+      "pathKinds": [
+        "peg",
+        "local-component"
+      ],
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": [
+        "ceiling"
+      ],
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
+      "publicLabel": "Peg deviation is withheld below the $1M supply floor",
+      "auditClassification": "measured-structural",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "peg-unverified"
+      }
+    },
+    {
       "code": "missing-pillar",
       "ownerDomain": "methodology",
       "archetypes": [
@@ -1678,6 +1702,25 @@
       "releaseSeverity": "review-required",
       "publicLabel": "Categorical access posture review lacks dated evidence",
       "auditClassification": "missing-data"
+    },
+    {
+      "code": "inherited-access-exposure",
+      "ownerDomain": "control",
+      "archetypes": [
+        "*"
+      ],
+      "pathKinds": [
+        "local-component"
+      ],
+      "defaultFactClass": "optional-unsupported",
+      "boundedness": "not-applicable",
+      "permittedTreatments": [
+        "diagnostic"
+      ],
+      "defaultTreatment": "diagnostic",
+      "releaseSeverity": "review-required",
+      "publicLabel": "Freeze exposure inherited from a reviewed upstream asset",
+      "auditClassification": "measured-structural"
     },
     {
       "code": "missing-required-oracle-branches",

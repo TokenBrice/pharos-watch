@@ -2457,6 +2457,7 @@ function normalizeAccessStatus(
   context: AssetBuildContext,
   original: V9FactStatusV2,
   componentKey: string,
+  structurallyReviewed = false,
 ): V9FactStatusV2 {
   const bindingKey = `access:${componentKey}`;
   const evidenceIds =
@@ -2481,17 +2482,26 @@ function normalizeAccessStatus(
     throw new Error(`Access review ${context.asset.assetId}:${componentKey} is stale but its source is current`);
   }
   const evidenceRefIds = keepEvidence ? evidenceIds : [];
+  // Owner ruling 2026-07-27: a current, evidenced structural verdict
+  // (inherited-upstream) is a measured fact, not missing data. The status
+  // stays bounded-unknown for scoring and the gap invariant is preserved, but
+  // the gap carries the measured classification (same diagnostic treatment)
+  // instead of missing-access-review. Stale and missing states still report
+  // missing data regardless of the disposition.
+  const structural = structurallyReviewed && original.observationState === "bounded-unknown";
   const gapId = addGap(
     context,
     createV9FactGapV3({
       gapId: `${context.asset.assetId}:gap:access:${componentKey}`,
-      reasonCode: "missing-access-review",
+      reasonCode: structural ? "inherited-access-exposure" : "missing-access-review",
       ownerDomain: "control",
       policyRuleId: original.applicability.policyRuleId,
       observationState: original.observationState,
-      responsibility: reviewedGapResponsibility(original.observationState),
+      responsibility: structural ? "measured-adverse" : reviewedGapResponsibility(original.observationState),
       path: { kind: "local-component", componentKey: `access:${componentKey}` },
-      message: `The ${componentKey} access/censorship review is not a current known fact.`,
+      message: structural
+        ? `The ${componentKey} access posture is a reviewed structural fact: exposure is inherited from a named upstream asset.`
+        : `The ${componentKey} access/censorship review is not a current known fact.`,
       evidenceRefIds,
     }),
   );
@@ -2533,11 +2543,17 @@ function buildAccessReview(context: AssetBuildContext): V9AccessReviewV2 {
     };
   }
   const normalized = structuredClone(review);
+  const structurallyReviewed = normalized.freeze.structuralDisposition != null;
   normalized.transfer.status = normalizeAccessStatus(context, normalized.transfer.status, "transfer");
-  normalized.freeze.status = normalizeAccessStatus(context, normalized.freeze.status, "freeze");
+  normalized.freeze.status = normalizeAccessStatus(context, normalized.freeze.status, "freeze", structurallyReviewed);
   normalized.freeze.reviews = normalized.freeze.reviews.map((freezeReview) => ({
     ...freezeReview,
-    status: normalizeAccessStatus(context, freezeReview.status, `freeze:${freezeReview.reviewKey}`),
+    status: normalizeAccessStatus(
+      context,
+      freezeReview.status,
+      `freeze:${freezeReview.reviewKey}`,
+      structurallyReviewed,
+    ),
   }));
   return normalized;
 }
@@ -2638,15 +2654,34 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     (!peg.activeDepeg || activeDepegBps !== null);
   const hasPartialActiveDepegEvidence =
     reference !== null && pegScore !== null && peg.activeDepeg === true && activeDepegBps !== null;
+  // Owner ruling 2026-07-27: a deviation withheld solely by the $1M supply
+  // floor is deliberate methodology (deviation fails closed on thin supply),
+  // not a failed feed. The ceiling treatment is byte-identical to
+  // missing-peg-input (same peg-unverified named cap), so only the public
+  // classification changes: measured-structural instead of missing data.
+  const supplyFloorWithheld =
+    reference !== null &&
+    pegScore !== null &&
+    peg.currentDeviationBps === null &&
+    peg.depegEventCoverageLimited === true &&
+    !peg.activeDepeg;
   let status: V9FactStatusV2;
   if (!complete) {
     status = missingLocalFact(context, {
       componentKey: "peg",
-      reasonCode: reference === null ? "missing-applicable-peg" : "missing-peg-input",
+      reasonCode:
+        reference === null
+          ? "missing-applicable-peg"
+          : supplyFloorWithheld
+            ? "peg-supply-floor-withheld"
+            : "missing-peg-input",
       ownerDomain: "peg",
-      responsibility: reference === null ? "integration-missing" : "producer-failed",
+      responsibility:
+        reference === null ? "integration-missing" : supplyFloorWithheld ? "measured-adverse" : "producer-failed",
       policyRuleId: "v9.peg.current",
-      message: "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
+      message: supplyFloorWithheld
+        ? "Peg deviation is withheld by the $1M supply floor: below it, deviation fails closed by methodology design."
+        : "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
       observationState: "bounded-unknown",
       evidenceRefIds: [evidenceId],
     }).status;

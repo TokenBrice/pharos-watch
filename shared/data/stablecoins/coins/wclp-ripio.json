@@ -7,7 +7,7 @@
   "oneLiner": "WCLP is Ripio's wrapped Chilean peso stablecoin targeting 1 WCLP = 1 CLP, backed by CLP cash and local-currency instruments under Ripio's wFIAT issuance.",
   "flags": {
     "backing": "rwa-backed",
-    "pegCurrency": "OTHER",
+    "pegCurrency": "CLP",
     "governance": "centralized",
     "yieldBearing": false,
     "rwa": false,

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "kind": "protocol-api-mechanism-measurement",
+  "assetId": "usx-solstice",
+  "archetype": "synthetic-delta-neutral",
+  "capturedAt": "2026-07-27T16:41:33Z",
+  "observations": {
+    "accountablePos": {
+      "url": "https://attestation-api.solstice.finance/dashboard",
+      "snapshotTs": 1785169904367,
+      "snapshotAt": "2026-07-27T16:31:44Z",
+      "collateralUsd": 525039528.63,
+      "liabilitiesUsd": 522988257.04,
+      "collateralization": 1.003922,
+      "deltaNeutral": true,
+      "verifiability": 100,
+      "weeklyDeltaNeutralSince": "2026-01-06"
+    },
+    "derived": {
+      "hedgeCoverageRatio": 1,
+      "hedgeBasis": "attested policy-state: weekly Accountable PoS delta_neutral=true; position-level notionals unpublished",
+      "marginBufferPct": 0.392222,
+      "marginBasis": "percent excess of ZKP-verified collateral over supply, protocol-wide",
+      "lossAbsorptionShare": 0,
+      "lossBasis": "no reserve or insurance fund documented"
+    }
+  }
+}

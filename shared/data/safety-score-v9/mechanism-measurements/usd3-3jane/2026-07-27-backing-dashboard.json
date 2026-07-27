@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "kind": "protocol-api-mechanism-measurement",
+  "assetId": "usd3-3jane",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "2026-07-27T16:42:00Z",
+  "observations": {
+    "backingDashboard": {
+      "url": "https://app.3jane.xyz/info/backing",
+      "observedAt": "2026-07-27T16:31:57Z",
+      "payload": {
+        "dataUpdatedAt": "2026-07-27T16:31:57Z",
+        "totalBackingUsd": 137359485.15,
+        "facilitiesDeployedUsd": 53884974.771,
+        "wtdAvgRemainingTermMonths": 2,
+        "tape": {
+          "pctCurrent": 96.86,
+          "chargedOff": 0,
+          "janeScore": 786.95,
+          "wtdLtv": 23.0,
+          "creditEnhancementPct": 3.8
+        },
+        "slopeFfAverageRemainingTermDays": 45,
+        "slopeFfDeployedShare": 0.905
+      }
+    },
+    "derived": {
+      "weightedAverageMaturityDays": 60.875,
+      "derivation": "2 months x 30.4375, facilities-sleeve scope",
+      "valuationCadenceDays": 0,
+      "cadenceBasis": "continuous on-chain ERC-4626 share-price accrual, sub-minute pricePerShare series"
+    }
+  }
+}

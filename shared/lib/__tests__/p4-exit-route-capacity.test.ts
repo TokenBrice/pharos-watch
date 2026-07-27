@@ -1496,6 +1496,64 @@ describe("P4 DEX exit route observations", () => {
     expect(totalOf(drained)).toBeLessThan(totalOf(balanced));
   });
 
+  it("matches a pinned static-fee rate-bearing Curve StableSwap-NG quote", () => {
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "frxusd-frax",
+      observedAt: 1_785_178_691,
+      retainedPools: [
+        {
+          poolId: "ethereum:0xf292eb6c5dcb693eaaf392d0562a01c3710e5978",
+          project: "curve",
+          chain: "ethereum",
+          tvlUsd: 11_842_920,
+          symbol: "sfrxUSD / frxUSD",
+          poolType: "curve-stableswap",
+          source: "dl",
+          extra: {
+            ammExecutionModel: {
+              source: "curve",
+              invariant: "stableswap",
+              trackedTokenIndex: 1,
+              amplification: 5_000,
+              feeRate: 0.0001,
+              tokens: [
+                {
+                  address: "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+                  symbol: "sfrxUSD",
+                  decimals: 18,
+                  balance: 7_494_946.662615514,
+                  referencePriceUsd: 1.0001571973088703,
+                  referencePriceSource: "source-token-usd",
+                },
+                {
+                  address: "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+                  symbol: "frxUSD",
+                  decimals: 18,
+                  balance: 4_346_120.891108167,
+                  referencePriceUsd: 1.000155068994295,
+                  referencePriceSource: "source-token-usd",
+                  trackedAssetId: "frxusd-frax",
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+
+    const route = result.observations[0];
+    const point = route?.capacityCurve?.find((entry) => entry.requestedNotionalUsd === 100_000);
+    expect(point).toMatchObject({
+      requestedNotionalUsd: 100_000,
+      executableUsd: 100_000,
+      completionRatio: 1,
+    });
+    // At pinned Ethereum block 25,626,087, this $100K input maps to
+    // 99,984.49550483696 frxUSD. get_dy(1, 0, dx) returned
+    // 83,063.84319335324 sfrxUSD ($99,996.11950303978), or 0.388049696 bps.
+    expect(point?.executionCostBps).toBeCloseTo(0.38805, 5);
+  });
+
   it("retains realized cost for a full 25m Curve 3pool-style USDT exit", () => {
     const result = buildP4DexExitRouteObservations({
       stablecoinId: "usdt-tether",
@@ -1514,8 +1572,8 @@ describe("P4 DEX exit route observations", () => {
               source: "curve",
               invariant: "stableswap",
               trackedTokenIndex: 2,
-              // The pools endpoint omits the fee, so production retains the
-              // reviewed conservative 10 bps reserve-simulation bound.
+              // The pools endpoint omits the fee, so production uses its
+              // documented 10 bps source-API fallback for this legacy model.
               feeRate: 0.001,
               amplification: 4000 / 9,
               tokens: [
@@ -1562,7 +1620,9 @@ describe("P4 DEX exit route observations", () => {
       completionRatio: 1,
       maxCostBps: 200,
     });
-    expect(point?.executionCostBps).toBeCloseTo(54.39051, 5);
+    // Curve computes the invariant against full input, then deducts its fee
+    // from the output. Applying the fee to input would understate this cost.
+    expect(point?.executionCostBps).toBeCloseTo(54.737382, 5);
     expect(point?.executionCostBps).toBeLessThan(200);
   });
 

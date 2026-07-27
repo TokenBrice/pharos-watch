@@ -142,6 +142,7 @@ export function mergeHealthStates(entries: DataHealthInfo[]): MergedDataHealth {
 
   let state: DataHealthState = "fresh";
   let latestUpdatedAt: number | null = null;
+  let latestAffectedUpdatedAt: number | null = null;
   const affectedLabels: string[] = [];
 
   for (const entry of entries) {
@@ -150,13 +151,23 @@ export function mergeHealthStates(entries: DataHealthInfo[]): MergedDataHealth {
     }
     if (entry.state !== "fresh") {
       affectedLabels.push(entry.label);
+      if (
+        entry.dataUpdatedAt > 0
+        && (latestAffectedUpdatedAt === null || entry.dataUpdatedAt > latestAffectedUpdatedAt)
+      ) {
+        latestAffectedUpdatedAt = entry.dataUpdatedAt;
+      }
     }
     if (entry.dataUpdatedAt > 0 && (latestUpdatedAt === null || entry.dataUpdatedAt > latestUpdatedAt)) {
       latestUpdatedAt = entry.dataUpdatedAt;
     }
   }
 
-  return { state, affectedLabels, latestUpdatedAt };
+  return {
+    state,
+    affectedLabels,
+    latestUpdatedAt: state === "fresh" ? latestUpdatedAt : latestAffectedUpdatedAt,
+  };
 }
 
 export function formatDataHealthTimestamp(

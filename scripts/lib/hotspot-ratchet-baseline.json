@@ -115,8 +115,8 @@
     "branchCount": 0
   },
   "src/app/methodology/sections/core/liquidity-section.tsx": {
-    "fileLines": 190,
-    "maxFunctionLines": 182,
+    "fileLines": 200,
+    "maxFunctionLines": 192,
     "branchCount": 0
   },
   "src/app/methodology/sections/core/mint-burn-flow-section.tsx": {
@@ -175,8 +175,8 @@
     "branchCount": 12
   },
   "src/lib/stablecoin-detail-view-model.ts": {
-    "fileLines": 151,
-    "maxFunctionLines": 94,
+    "fileLines": 149,
+    "maxFunctionLines": 93,
     "branchCount": 6
   },
   "worker/src/api/api-key-requests.ts": {
@@ -215,12 +215,12 @@
     "branchCount": 11
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
-    "fileLines": 1488,
+    "fileLines": 1523,
     "maxFunctionLines": 487,
-    "branchCount": 117
+    "branchCount": 119
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 1252,
+    "fileLines": 1263,
     "maxFunctionLines": 251,
     "branchCount": 28
   },
@@ -345,7 +345,7 @@
     "branchCount": 272
   },
   "worker/src/lib/safety-score-v9-fact-set.ts": {
-    "fileLines": 3755,
+    "fileLines": 3757,
     "maxFunctionLines": 493,
     "branchCount": 298
   },

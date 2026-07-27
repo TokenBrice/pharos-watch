@@ -153,28 +153,59 @@ export function selectDexRouteObservationPools(
   return selectDexRouteObservationPoolSet(currentPools, retainedMeasuredPools).pools;
 }
 
-function scoreEligibleRoutePhysicalPoolKey(observation: ExitRouteObservation): string | null {
-  if (!observation.scoreEligible) return null;
-  switch (observation.scope.kind) {
-    case "chain-contract":
-      return `chain-contract:${observation.scope.chain}:${observation.scope.contractOrPoolId}`;
-    case "venue":
-      return `venue:${observation.scope.venue}:${observation.scope.protocol}`;
-    case "issuer":
-      return `issuer:${observation.scope.issuerId}`;
-    case "protocol":
-      return `protocol:${observation.scope.chain ?? ""}:${observation.scope.protocol}`;
+function routeObservationPhysicalPoolKey(observation: ExitRouteObservation): string {
+  // P4 DEX observations carry the canonical physical-pool identity as a
+  // common-mode key. Keep the first output candidate in the builder's stable
+  // order so a multi-output pool cannot displace a later selected pool.
+  const commonModePoolKey = observation.commonModeKeys.find((key) => key.startsWith("pool:"));
+  if (commonModePoolKey) return commonModePoolKey;
+  if (observation.scope.kind === "chain-contract") {
+    return `pool:${canonicalExitRouteScopedKey(
+      observation.scope.chain,
+      observation.scope.contractOrPoolId,
+    )}`;
   }
+  return `route:${observation.routeId}`;
+}
+
+function scoreEligibleRoutePhysicalPoolKey(observation: ExitRouteObservation): string | null {
+  return observation.scoreEligible ? routeObservationPhysicalPoolKey(observation) : null;
+}
+
+function packDexRouteObservationOutputs(
+  observations: readonly ExitRouteObservation[],
+): ExitRouteObservation[] {
+  const primaryObservations: ExitRouteObservation[] = [];
+  const additionalObservations: ExitRouteObservation[] = [];
+  const emittedPhysicalPoolKeys = new Set<string>();
+
+  for (const observation of observations) {
+    const physicalPoolKey = routeObservationPhysicalPoolKey(observation);
+    if (emittedPhysicalPoolKeys.has(physicalPoolKey)) {
+      additionalObservations.push(observation);
+      continue;
+    }
+    emittedPhysicalPoolKeys.add(physicalPoolKey);
+    primaryObservations.push(observation);
+  }
+
+  const packed = primaryObservations.slice(0, MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+  for (const observation of additionalObservations) {
+    if (packed.length === MAX_DEX_EXIT_ROUTE_OBSERVATIONS) break;
+    packed.push(observation);
+  }
+
+  return packed;
 }
 
 function applyDexRouteObservationBounds(
   result: P4DexRouteObservationResult,
   omittedScoreEligibleCapabilityPoolCount: number,
 ): P4DexRouteObservationResult {
-  const droppedObservationCount = Math.max(0, result.observations.length - MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+  const observations = packDexRouteObservationOutputs(result.observations);
+  const droppedObservationCount = Math.max(0, result.observations.length - observations.length);
   if (omittedScoreEligibleCapabilityPoolCount === 0 && droppedObservationCount === 0) return result;
 
-  const observations = result.observations.slice(0, MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
   const fullScoreEligiblePoolKeys = new Set(
     result.observations.map(scoreEligibleRoutePhysicalPoolKey).filter((key): key is string => key != null),
   );
@@ -1172,6 +1203,7 @@ export async function computeDexPrices(
   signal?: AbortSignal,
   exactPriceEvidenceByStablecoin?: Map<string, DexPriceObs[]>,
   generationId = `dex-liquidity-${nowSec}`,
+  preloadedPrimaryPrices?: Map<string, number>,
 ): Promise<DexPricePersistenceDiagnostics> {
   if (!generationId.trim()) throw new Error("DEX price publication requires a generation id");
   throwIfAborted(signal);
@@ -1193,7 +1225,10 @@ export async function computeDexPrices(
   await db.prepare("DELETE FROM dex_price_run_rows WHERE generation_id = ?").bind(generationId).run();
   throwIfAborted(signal);
 
-  let primaryPrices: Map<string, number> | null = null;
+  let primaryPrices: Map<string, number> | null =
+    preloadedPrimaryPrices && preloadedPrimaryPrices.size > 0
+      ? preloadedPrimaryPrices
+      : null;
   const loadPrimaryPrices = async (): Promise<Map<string, number>> => {
     if (primaryPrices != null) return primaryPrices;
     primaryPrices = new Map<string, number>();

@@ -299,7 +299,7 @@ describe("Solana measured execution join", () => {
     expect(pool.extra?.solanaMeasuredExecution).toBeDefined();
   });
 
-  it("promotes only the ratified Raydium direction with its on-state proof", () => {
+  it("keeps the reviewed Raydium direction gated while its on-state proof remains available", () => {
     const { pool, evidence } = ratifiedRaydiumJoin();
     const diagnostics = joinSolanaMeasuredExecutionEvidence({
       poolsByStablecoin: new Map([["wm-m0", [pool]]]),
@@ -307,12 +307,13 @@ describe("Solana measured execution join", () => {
       nowSec: 1_010,
     });
 
-    expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 0 });
-    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
-    expect(pool.extra?.nativeMeasuredExecution).toMatchObject({
-      adapterProfileId: "raydium-clmm-trade-api-v1",
-      poolId: RAYDIUM_POOL,
+    expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 1 });
+    expect(pool.extra?.executionCapabilityGate).toEqual({
+      family: "measured-execution",
+      reason: "activation-pending",
     });
+    expect(pool.extra?.nativeMeasuredExecution).toBeUndefined();
+    expect(pool.extra?.solanaMeasuredExecution).toBeDefined();
   });
 
   it("validates original generations when operational LKG evidence replaces a deferred latest row", () => {
@@ -325,12 +326,12 @@ describe("Solana measured execution join", () => {
 
     expect(diagnostics).toMatchObject({
       measuredCount: 1,
-      gatedCount: 0,
-      lastKnownGoodCount: 1,
+      gatedCount: 1,
+      lastKnownGoodCount: 0,
     });
-    expect(pool.extra?.nativeMeasuredExecution).toBeDefined();
+    expect(pool.extra?.nativeMeasuredExecution).toBeUndefined();
     expect(pool.extra?.solanaMeasuredExecutionDiagnostic).toMatchObject({
-      detail: "last-known-good-after:budget-deferred",
+      detail: "shadow-score-ineligible",
     });
   });
 });

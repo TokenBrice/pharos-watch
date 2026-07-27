@@ -29,7 +29,7 @@ function dbWithCoreSlot(row: CoreSlotFixture | null) {
     .mockResolvedValueOnce(row)
     .mockResolvedValue(null);
   const bind = vi.fn(() => ({ first }));
-  const prepare = vi.fn(() => ({ bind }));
+  const prepare = vi.fn((_sql?: string) => ({ bind }));
   return {
     db: { prepare } as unknown as D1Database,
     prepare,
@@ -139,7 +139,11 @@ describe("runV9AfterCoreWithinWindow", () => {
     );
   });
 
-  it("skips while another scheduled slot is still active in the Worker", async () => {
+  it.each([
+    "twoHourlyDexDiscovery",
+    "halfHourlyChartsOffset",
+    "halfHourlyMintBurnExtended",
+  ])("does not query the unrelated %s lane as a V9 blocker", async (unrelatedSlotKey) => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:14:00Z");
     vi.useFakeTimers();
     vi.setSystemTime(scheduledTimeMs + 1_000);
@@ -148,38 +152,36 @@ describe("runV9AfterCoreWithinWindow", () => {
       result_status: "ok",
       worker_version: "worker-v2",
     });
-    fixture.first
-      .mockReset()
-      .mockResolvedValueOnce({
-        state: "finished",
-        result_status: "ok",
-        worker_version: "worker-v2",
-      })
-      .mockResolvedValueOnce({
-        slot_key: "halfHourlyMintBurnExtended",
-        slot_started_at: Math.floor(
-          Date.parse("2026-07-26T12:13:00Z") / 1_000,
-        ),
-        state: "running",
-        updated_at: Math.floor(
-          Date.parse("2026-07-26T12:13:30Z") / 1_000,
-        ),
-      });
-    const run = vi.fn();
+    const run = vi.fn(async () => ({
+      status: "ok" as const,
+      itemCount: 1,
+    }));
 
     const result = await runV9AfterCoreWithinWindow(
       options(fixture.db, scheduledTimeMs),
       run,
     );
 
-    expect(result.status).toBe("skipped_neutral");
-    expect(result.productivity?.reason).toBe(
-      "v9-competing-slot-active",
+    expect(result.status).toBe("ok");
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(fixture.prepare).toHaveBeenCalledTimes(2);
+    expect(fixture.prepare.mock.calls[1]?.[0]).toContain(
+      "WHERE slot_key = ?",
     );
-    expect(run).not.toHaveBeenCalled();
+    expect(fixture.bind).toHaveBeenLastCalledWith(
+      "v9PublicationOffset",
+      Math.floor(scheduledTimeMs / 1_000),
+      Math.floor(Date.parse("2026-07-26T12:00:00Z") / 1_000) -
+        35 * 60,
+    );
+    expect(fixture.bind).not.toHaveBeenCalledWith(
+      unrelatedSlotKey,
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
-  it("does not hide a prior active slot with the same schedule key", async () => {
+  it("blocks a prior active invocation of the same V9 schedule lane", async () => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:14:00Z");
     vi.useFakeTimers();
     vi.setSystemTime(scheduledTimeMs + 1_000);

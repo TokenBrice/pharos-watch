@@ -792,6 +792,8 @@ describe("syncDexLiquidity", () => {
   });
 
   it("threads tracked stablecoin cache prices into direct API conversion and observations", async () => {
+    let convertedStablecoinPrices: Map<string, number> | undefined;
+    let observedStablecoinPrices: Map<string, number> | undefined;
     const fluidPool: DexApiPool = {
       source: "fluid",
       chain: "Ethereum",
@@ -824,25 +826,25 @@ describe("syncDexLiquidity", () => {
       degraded: false,
       errors: [] as string[],
     });
-    vi.mocked(convertToGtNewPools).mockReturnValueOnce(new Map([["usdc-circle", []]]));
-    vi.mocked(extractPriceObservations).mockReturnValueOnce(new Map([["usdc-circle", []]]));
+    vi.mocked(convertToGtNewPools).mockImplementationOnce((...args) => {
+      convertedStablecoinPrices = new Map(args[4]);
+      return new Map([["usdc-circle", []]]);
+    });
+    vi.mocked(extractPriceObservations).mockImplementationOnce((...args) => {
+      observedStablecoinPrices = new Map(args[4]);
+      return new Map([["usdc-circle", []]]);
+    });
 
     await syncDexLiquidity(db, "graph-key");
 
-    const convertCall = vi.mocked(convertToGtNewPools).mock.calls[0];
-    expect(convertCall).toBeDefined();
-    const convertStablecoinPrices = convertCall?.[4];
-    expect(convertStablecoinPrices).toBeInstanceOf(Map);
-    expect(Array.from(convertStablecoinPrices?.entries() ?? [])).toEqual([
+    expect(convertedStablecoinPrices).toBeInstanceOf(Map);
+    expect(Array.from(convertedStablecoinPrices?.entries() ?? [])).toEqual([
       ["usdc-circle", 0.97],
       ["usdt-tether", 1.01],
     ]);
 
-    const observationCall = vi.mocked(extractPriceObservations).mock.calls[0];
-    expect(observationCall).toBeDefined();
-    const observationStablecoinPrices = observationCall?.[4];
-    expect(observationStablecoinPrices).toBeInstanceOf(Map);
-    expect(Array.from(observationStablecoinPrices?.entries() ?? [])).toEqual([
+    expect(observedStablecoinPrices).toBeInstanceOf(Map);
+    expect(Array.from(observedStablecoinPrices?.entries() ?? [])).toEqual([
       ["usdc-circle", 0.97],
       ["usdt-tether", 1.01],
     ]);

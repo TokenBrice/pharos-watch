@@ -213,50 +213,106 @@
   },
   "mintAuthority": {
     "mintPath": "user-collateralized-governed",
-    "authorityPosture": "unknown",
-    "confidence": "unknown",
-    "summary": "SILK is minted as an overcollateralized CDP via ShadeLend on Secret Network; ShadeDAO assemblies (multisig branches) tune risk parameters and govern a permissioned SILK minter that bond and arbitrage (AMO) modules can also access.",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "SILK is minted as an overcollateralized CDP via ShadeLend on Secret Network: vault contracts registered in the Shade Single Vault Registry mint SILK against DAO-whitelisted collateral, with risk parameters set by the ShadeLend Overseer. The SILK SNIP-25 token, ShadeLend Overseer, Vault Registry, Redemption Model, and Stability Pool all carry the ShadeDAO Multisig (secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf) as their CosmWasm contract admin, which can register minters and migrate contract logic. Secret Network privacy prevents live verification of the current minter registry and multisig composition.",
     "controls": [
       {
-        "label": "ShadeLend CDP / SILK minter contract",
+        "chain": "secret",
+        "address": "secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny",
+        "label": "Shade Single Vault Registry (ShadeLend CDP minter)",
         "role": "direct-minter",
         "authorityType": "contract",
         "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "ShadeLend issues SILK against overcollateralized user deposits (ATOM, SCRT, stables, SHD); the SILK minter is also permissioned to Shade bonds and Shade Arbitrage, so minting is mechanism-gated rather than fully permissionless.",
+        "capDescription": "SILK mints only against overcollateralized, DAO-whitelisted vault deposits; per-vault debt and collateral parameters are governance-tunable through the Overseer and Admin Auth stack, so the effective mint ceiling is raiseable by governance.",
         "sources": [
           {
-            "label": "SILK docs",
-            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk"
+            "label": "SCRT Labs v1.10 hardcoded-admins proposal",
+            "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+          },
+          {
+            "label": "SILK overcollateralized minting (ShadeLend)",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
           }
-        ]
+        ],
+        "evidence": "The SCRT Labs governance proposal for the Secret Network v1.10 upgrade (executed September 2023) lists the Shade Single Vault Registry at this address with the ShadeDAO Multisig as contract admin. Shade documents SILK issuance from vault contracts registered in this registry against overcollateralized user deposits. The current vault inventory and per-vault ceilings are private Secret Network state and cannot be enumerated from public reads.",
+        "observedAt": "2026-07-27"
       },
       {
-        "label": "ShadeDAO governance assemblies (multisig branches)",
-        "role": "governor",
-        "authorityType": "multisig",
-        "directMintAbility": "parameter-only",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "unknown",
-        "evidence": "ShadeDAO governs via SHD tokenholders, representatives, and assembly multisigs with sanity-check votes; assemblies set collateral/peg parameters and historically held centralized control over bond/mint permissioning (Certik flagged) pending full governance rollout.",
+        "chain": "secret",
+        "address": "secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd",
+        "label": "SILK SNIP-25 token contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "SNIP-25 token enforcing an admin-managed minter registry; the contract admin (ShadeDAO Multisig) can register or remove minters and migrate the token logic, so mint authority is raiseable by governance.",
         "sources": [
+          {
+            "label": "SCRT Labs v1.10 hardcoded-admins proposal",
+            "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+          }
+        ],
+        "evidence": "The v1.10 hardcoded-admins proposal lists the SILK SNIP-25 token at this address (code id 877) with the ShadeDAO Multisig (secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf) as its contract admin. As a SNIP-20/25 token, minting is restricted to registered minter contracts; the current minter set is private state and unverifiable from public reads.",
+        "observedAt": "2026-07-27"
+      },
+      {
+        "chain": "secret",
+        "address": "secret167wxv45r2m3r5krlwyjskrk4g5tvmksktvqe6t",
+        "label": "ShadeLend Overseer (vault risk parameters)",
+        "role": "cap-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "SCRT Labs v1.10 hardcoded-admins proposal",
+            "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+          },
+          {
+            "label": "SILK minting and redemption",
+            "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption"
+          }
+        ],
+        "evidence": "The v1.10 proposal lists the ShadeLend Overseer at this address with the ShadeDAO Multisig as contract admin. The Overseer manages ShadeLend vault risk parameters (collateral whitelisting, collateralization and fee parameters) that bound CDP minting; its current parameter values are private state.",
+        "observedAt": "2026-07-27"
+      },
+      {
+        "chain": "secret",
+        "address": "secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf",
+        "label": "ShadeDAO Multisig (Secret Network contract admin)",
+        "role": "governor",
+        "authorityType": "unknown",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "SCRT Labs v1.10 hardcoded-admins proposal",
+            "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+          },
           {
             "label": "ShadeDAO docs",
             "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/shadedao"
           }
-        ]
+        ],
+        "evidence": "The v1.10 hardcoded-admins proposal names this account \"ShadeDAO Multisig\" and assigns it as the CosmWasm contract admin of the SILK token, ShadeLend Overseer, Single Vault Registry, Redemption Model (secret1mk2yt0gywtz704439mkqzjmntj09r837vc73s3), Stability Pool (secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w), Admin Auth, and the Shade oracle stack, explicitly to enable logic upgrades without state migration. ShadeDAO governance operates through SHD tokenholder-directed assembly multisigs. The multisig's signer set, threshold, and any subsequent admin changes are not publicly verifiable on Secret Network, so the authority model is recorded without a threshold and confidence is capped at manual-review.",
+        "observedAt": "2026-07-27"
       }
     ],
     "upgradeability": {
-      "model": "unknown",
-      "canChangeMintLogic": "unknown",
-      "controlRef": "ShadeDAO governance assemblies (multisig branches)",
-      "observedAt": "2026-07-20",
+      "model": "custom",
+      "canChangeMintLogic": true,
+      "controlRef": "ShadeDAO Multisig (Secret Network contract admin)",
+      "observedAt": "2026-07-27",
       "sources": [
         {
-          "label": "ShadeDAO docs",
-          "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/shadedao"
+          "label": "SCRT Labs v1.10 hardcoded-admins proposal",
+          "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
         },
         {
           "label": "SILK docs",
@@ -264,14 +320,30 @@
         }
       ]
     },
-    "economicCapSemantics": "unknown",
+    "economicCapSemantics": "raiseable",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "SILK is a basket-pegged overcollateralized CDP minted through ShadeLend, with the SILK minter additionally permissioned to bonds and arbitrage AMOs and risk parameters set by ShadeDAO assembly multisigs. Secret Network's privacy model prevents live on-chain admin reads, but the mint mechanism and governance structure are documented.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "SILK is a basket-pegged overcollateralized CDP minted through ShadeLend vault contracts registered in the Shade Single Vault Registry, with risk parameters managed by the ShadeLend Overseer and every mint-critical contract (SILK SNIP-25 token, Overseer, Vault Registry, Redemption Model, Stability Pool, Admin Auth, oracle stack) administered by the ShadeDAO Multisig secret1y277c499f44nxe7geeaqw8t6gpge68rcpla9lf per the SCRT Labs Secret Network v1.10 hardcoded-admins governance proposal executed in September 2023. CosmWasm admin migration lets that multisig replace mint-critical contract logic without state migration, so mint logic is governance-changeable. Shade documentation also describes bounded conversion minting and bond/arbitrage (AMO) mint access; the contract identities and current status of those additional mint paths are not publicly enumerable and are recorded as a residual uncertainty. Secret Network's privacy model prevents live reads of the minter registry, multisig composition, and vault parameters, so confidence is capped at manual-review. Mechanism boundary dating: the Secret Network ecosystem history dates the Shade/SILK mainnet launch to April 2023 and the Shade team's April 2023 hackathon documentation states ShadeLend was live on mainnet; implementationLaunchDate uses the conservative 2023-04 month-end.",
+      "reviewer": "Kimi wave-7 CTRL shard-a5",
+      "reviewedAt": "2026-07-27",
       "sources": [
+        {
+          "label": "SILK minting and redemption",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption"
+        },
+        {
+          "label": "SCRT Labs v1.10 hardcoded-admins proposal",
+          "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+        },
+        {
+          "label": "Secret Network ecosystem history",
+          "url": "https://docs.scrt.network/secret-network-documentation/overview-ecosystem-and-technology/secret-network-overview/history"
+        },
+        {
+          "label": "Shade Secret Network hackathon documentation (ShadeLend live on mainnet, April 2023)",
+          "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+        },
         {
           "label": "Governance docs",
           "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/governance"
@@ -281,11 +353,9 @@
           "url": "https://github.com/securesecrets/shade"
         }
       ],
-      "sourceFreeRationale": "Mechanism established from Shade docs/audit coverage; Secret Network privacy precludes live verification of current minter admin keys and assembly multisig thresholds.",
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Secret Network enforces transaction-level privacy; SILK minter admin key and ShadeDAO assembly multisig thresholds/signers cannot be read from chain state. Resolution requires Secret Network node access with a viewing key or direct issuer disclosure. Bond/arbitrage minting centralization status also unconfirmable remotely."
-      ]
+      "sourceFreeRationale": "Mechanism and admin structure established from Shade docs and the SCRT Labs v1.10 governance proposal; Secret Network privacy precludes live verification of the current minter registry, assembly multisig thresholds, and bond/arbitrage mint-path status.",
+      "disposition": "scoreable"
     }
-  }
+  },
+  "implementationLaunchDate": "2023-04"
 }

@@ -1399,7 +1399,15 @@
     {
       "name": "WETH / wstETH / rETH mint-market collateral",
       "pct": 5.9,
-      "risk": "medium"
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum native asset and liquid staking tokens (WETH, Lido wstETH, Rocket Pool rETH) posted as collateral in Alto DUSD mint markets",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
     },
     {
       "name": "sUSDe mint-market collateral",

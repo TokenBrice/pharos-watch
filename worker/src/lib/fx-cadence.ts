@@ -32,6 +32,11 @@ export const CALENDAR_DAILY_FX_PEGS: ReadonlySet<string> = new Set([
   "peggedNGN",
   "peggedXOF",
   "peggedVND",
+  "peggedKES",
+  "peggedGHS",
+  "peggedCOP",
+  "peggedCLP",
+  "peggedPEN",
 ]);
 
 export function getNaturalFxCadence(pegKey: string): NaturalFxSourceCadence | null {

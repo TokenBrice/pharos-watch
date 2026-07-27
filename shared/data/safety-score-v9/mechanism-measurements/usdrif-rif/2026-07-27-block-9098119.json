@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "kind": "onchain-mechanism-measurement",
+  "assetId": "usdrif-rif",
+  "archetype": "cdp",
+  "capturedAt": "2026-07-27T16:44:08Z",
+  "observations": {
+    "rootstock": {
+      "block": 9098119,
+      "rpc": "https://public-node.rsk.co",
+      "mocCore": "0xA27024Ed70035E46dba712609fc2Afa1c97aA36A"
+    },
+    "rifBucket": {
+      "getCglb": 10.6703,
+      "nACcbRif": 308670000,
+      "nTCcbRif": 425100000,
+      "protThrld": 2.0,
+      "liqThrld": 1.04,
+      "liquidated": false,
+      "liqEnabled": false,
+      "paused": false
+    },
+    "docBucket": {
+      "coverage": 1.283,
+      "backedUsdrifApprox": 53
+    },
+    "supply": {
+      "usdrifTotalSupply": 2383869.5,
+      "impliedRifUsd": 0.082
+    },
+    "derived": {
+      "collateralizationRatio": 10.6703,
+      "liquidationCapacityRatio": null,
+      "lcrApplicability": "not-applicable: no stability pool; RIFPro TC first-loss tranche plus discounted TC sales"
+    }
+  }
+}

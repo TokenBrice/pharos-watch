@@ -343,6 +343,61 @@ export const PEG_METADATA = {
     },
     chart: { label: "XOF", textColor: "text-teal-700 dark:text-teal-400", bgColor: "bg-teal-600", hex: "#0d9488" },
   },
+  COP: {
+    label: "the Colombian Peso",
+    shortLabel: "Colombian Peso",
+    filterTag: "cop-peg",
+    filterLabel: "COP",
+    badge: {
+      label: "COP Peg",
+      cls: "bg-gray-600/10 text-gray-700 dark:text-gray-400 border-gray-600/20",
+    },
+    chart: { label: "COP", textColor: "text-gray-700 dark:text-gray-400", bgColor: "bg-gray-600", hex: "#4b5563" },
+  },
+  CLP: {
+    label: "the Chilean Peso",
+    shortLabel: "Chilean Peso",
+    filterTag: "clp-peg",
+    filterLabel: "CLP",
+    badge: {
+      label: "CLP Peg",
+      cls: "bg-zinc-600/10 text-zinc-700 dark:text-zinc-400 border-zinc-600/20",
+    },
+    chart: { label: "CLP", textColor: "text-zinc-700 dark:text-zinc-400", bgColor: "bg-zinc-600", hex: "#52525b" },
+  },
+  GHS: {
+    label: "the Ghanaian Cedi",
+    shortLabel: "Ghanaian Cedi",
+    filterTag: "ghs-peg",
+    filterLabel: "GHS",
+    badge: {
+      label: "GHS Peg",
+      cls: "bg-lime-600/10 text-lime-700 dark:text-lime-400 border-lime-600/20",
+    },
+    chart: { label: "GHS", textColor: "text-lime-700 dark:text-lime-400", bgColor: "bg-lime-600", hex: "#65a30d" },
+  },
+  KES: {
+    label: "the Kenyan Shilling",
+    shortLabel: "Kenyan Shilling",
+    filterTag: "kes-peg",
+    filterLabel: "KES",
+    badge: {
+      label: "KES Peg",
+      cls: "bg-emerald-600/10 text-emerald-700 dark:text-emerald-400 border-emerald-600/20",
+    },
+    chart: { label: "KES", textColor: "text-emerald-700 dark:text-emerald-400", bgColor: "bg-emerald-600", hex: "#059669" },
+  },
+  PEN: {
+    label: "the Peruvian Sol",
+    shortLabel: "Peruvian Sol",
+    filterTag: "pen-peg",
+    filterLabel: "PEN",
+    badge: {
+      label: "PEN Peg",
+      cls: "bg-rose-600/10 text-rose-700 dark:text-rose-400 border-rose-600/20",
+    },
+    chart: { label: "PEN", textColor: "text-rose-700 dark:text-rose-400", bgColor: "bg-rose-600", hex: "#e11d48" },
+  },
   GOLD: {
     label: "Gold",
     shortLabel: "Gold",

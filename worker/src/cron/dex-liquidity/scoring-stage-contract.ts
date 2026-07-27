@@ -22,6 +22,7 @@ export interface DexLiquidityDirectApiSourceSummary {
 
 export interface DexLiquidityScoringSourceState {
   validationReferences: PriceValidationReferences;
+  stablecoinPriceById: Map<string, number>;
   stablecoinMcapById: Map<string, number>;
   protocolTvlCaps: DataSources["protocolTvlCaps"];
   priceObservations: Map<string, DexPriceObs[]>;

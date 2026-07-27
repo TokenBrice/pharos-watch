@@ -54,6 +54,11 @@ export const SECONDARY_FX_CURRENCY_TO_PEG: Record<string, string> = {
   ngn: "peggedNGN",
   xof: "peggedXOF",
   vnd: "peggedVND",
+  kes: "peggedKES",
+  ghs: "peggedGHS",
+  cop: "peggedCOP",
+  clp: "peggedCLP",
+  pen: "peggedPEN",
 };
 
 // Keys are uppercase ISO codes (the realtime source's response format). The
@@ -69,6 +74,11 @@ export const REALTIME_FX_CURRENCY_TO_PEG: Record<string, string> = {
   NGN: "peggedNGN",
   XOF: "peggedXOF",
   VND: "peggedVND",
+  KES: "peggedKES",
+  GHS: "peggedGHS",
+  COP: "peggedCOP",
+  CLP: "peggedCLP",
+  PEN: "peggedPEN",
 };
 
 export const EXPECTED_FX_PEG_KEYS = [

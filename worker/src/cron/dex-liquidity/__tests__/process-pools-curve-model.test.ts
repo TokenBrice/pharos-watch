@@ -126,6 +126,48 @@ describe("buildCurveStableswapExecutionModel", () => {
     ).toBeNull();
   });
 
+  it("retains only a plain StableSwap-NG rate-input candidate for a later pinned capture", () => {
+    const rateBearing = entry({
+      poolAddress: "0x744793b5110f6ca9cc7cdfe1ce16677c3eb192ef",
+      executionCoins: [
+        { address: USDC, symbol: "USDC", decimals: 6, balance: 5_000_000, usdPrice: 1 },
+        { address: USDT, symbol: "sUSDe", decimals: 18, balance: 5_000_000, usdPrice: 1.24 },
+      ],
+    });
+    const capability = buildCurveStableswapExecutionCapability(
+      rateBearing,
+      "ethereum",
+      "usdc-circle",
+      chainAddressToId,
+    );
+
+    expect(capability.executionModel).toBeNull();
+    expect(capability.gate).toEqual({ family: "curve-stableswap", reason: "rate-bearing-inputs" });
+    expect(capability.rateInputCandidate).toEqual({
+      poolAddress: "0x744793b5110f6ca9cc7cdfe1ce16677c3eb192ef",
+      coins: [
+        { address: USDC, symbol: "USDC", decimals: 6, referencePriceUsd: 1 },
+        { address: USDT, symbol: "sUSDe", decimals: 18, referencePriceUsd: 1.24 },
+      ],
+    });
+    expect(
+      buildCurveStableswapExecutionCapability(
+        { ...rateBearing, registryId: "main" },
+        "ethereum",
+        "usdc-circle",
+        chainAddressToId,
+      ).rateInputCandidate,
+    ).toBeUndefined();
+    expect(
+      buildCurveStableswapExecutionCapability(
+        { ...rateBearing, isMetaPool: true },
+        "ethereum",
+        "usdc-circle",
+        chainAddressToId,
+      ).rateInputCandidate,
+    ).toBeUndefined();
+  });
+
   it("builds an exact measured target for an activated crvUSD TwoCrypto pool", () => {
     const poolAddress = "0x313698667d7fdd6789a9bc70821309ff891e729a";
     const target = buildCurveCryptoSwapMeasuredExecutionTarget({

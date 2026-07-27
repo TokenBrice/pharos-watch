@@ -420,7 +420,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       sourceRef("Brix website", "https://www.brix.money/", ["route", "access"]),
     ],
     notes: [
-      "wiTRY is the staked ERC-4626-style wrapper over iTRY; unstaking returns iTRY after the documented cooldown unless the holder uses the fee-bearing fast-withdraw path.",
+      "wiTRY is the staked ERC-4626-style wrapper over iTRY; unstaking returns iTRY after the documented 3-day cooldown unless the holder uses the fee-bearing fast-withdraw path (re-confirmed 2026-07-27 against the issuer-published audit scope overview, Kimi data review).",
       "iTRY redemption is whitelist-gated and serviced first by the FastAccessVault DLF liquidity buffer, with custodian-managed redemption when immediate DLF liquidity is insufficient.",
       "The exact wrapper output remains unresolved for scoring because iTRY has no tracked Pharos stablecoin id; asset:itry is retained as a diagnostic identity.",
     ],
@@ -529,11 +529,17 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     costModel: fixedFee(0, "Mu Digital docs describe minting and redemption as fee-free"),
     docs: [
       sourceRef("Mu Digital docs", "https://docs.mudigital.net", ["route", "capacity", "access", "fees", "settlement"]),
+      sourceRef("Mu Digital AZND mint/redeem", "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd/mint-redeem", [
+        "route",
+        "access",
+        "fees",
+        "settlement",
+      ]),
       sourceRef("Mu Accountable dashboard", "https://mu.accountable.capital/", ["capacity"]),
     ],
     notes: [
       "Tracked metadata describes KYC-gated weekly AZND redemptions against the full reserve book rather than an always-live stablecoin hot-wallet buffer",
-      "Mu Digital documents accepted mint funding assets but does not identify the asset used to settle an approved AZND redemption. The output therefore remains an unresolved asset with no guessed identity.",
+      "2026-07-27 recheck (Kimi data review): Mu Digital documents accepted mint funding assets (USDC, USDT, or AUSD) but still does not identify the asset used to settle an approved AZND redemption ('receipt of funds' after the weekly queue). The output therefore remains an unresolved asset with no guessed identity.",
     ],
   },
   "avusd-avant": {
@@ -799,8 +805,11 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   "scusd-rings": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_YIELD_EXPANSION_AT),
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether", "dai-makerdao"],
     settlementModel: "days",
     costModel: documentedVariableFee("Rings docs describe scAsset redemption after a three-day cooldown"),
+    reviewedAt: "2026-07-27",
     docs: [
       sourceRef("Rings backing", "https://docs.rings.money/backing", [
         "route",
@@ -810,6 +819,14 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
         "settlement",
       ]),
       sourceRef("Rings docs", "https://docs.rings.money/", ["route", "settlement"]),
+      sourceRef("Rings minting tutorial (archived)", "https://web.archive.org/web/20250206125740/https://docs.rings.money/tutorials/minting", [
+        "route",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "Rings documents 1:1 scAsset redemption into a user-selected underlying stablecoin after a multi-day cooldown; the conservative redeemable set is USDC, USDT, and DAI per the archived issuer tutorial (2026-07-27 review, Kimi data review applied by coordinator).",
+      "Secondary sources also list GHO and USDS as collateral; both are excluded pending primary confirmation because docs.rings.money renders as an unreadable GitBook shell to non-browser clients (re-verified 2026-07-27).",
     ],
   },
   "hbusdt-hyperbeat": {

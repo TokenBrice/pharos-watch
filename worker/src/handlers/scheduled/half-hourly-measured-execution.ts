@@ -20,7 +20,7 @@ function parseMetadata(value: string | undefined): unknown {
   return tryParseJson(value, { onFailure: () => undefined }) ?? value;
 }
 
-function hasNonDurableShadowDeferral(metadata: unknown): boolean {
+function hasNonDurableNativeDeferral(metadata: unknown): boolean {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false;
   const row = metadata as Record<string, unknown>;
   const cursorWriteStatus = row.cursorWriteStatus;
@@ -30,6 +30,16 @@ function hasNonDurableShadowDeferral(metadata: unknown): boolean {
   return (
     cursorWriteStatus === "write-failed" ||
     (hasDeferredWork && cursorWriteStatus !== "written")
+  );
+}
+
+function hasActiveNativeFailure(metadata: unknown): boolean {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return false;
+  const row = metadata as Record<string, unknown>;
+  return (
+    row.activation === "active" &&
+    typeof row.attemptedFailureCount === "number" &&
+    row.attemptedFailureCount > 0
   );
 }
 
@@ -53,16 +63,18 @@ export function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResul
   const evmMetadata = parseMetadata(evm.metadata);
   const solanaMetadata = parseMetadata(solana.metadata);
   const tronMetadata = parseMetadata(tron.metadata);
-  const shadowCursorFailure =
-    hasNonDurableShadowDeferral(solanaMetadata) ||
-    hasNonDurableShadowDeferral(tronMetadata);
-  // Native lanes are activation-gated shadows: retain their degraded diagnostics
-  // without changing active EVM health. Invocation errors remain terminal, and
-  // non-durable deferrals remain degraded because they can starve the shadow tail.
+  const nativeCursorFailure =
+    hasNonDurableNativeDeferral(solanaMetadata) ||
+    hasNonDurableNativeDeferral(tronMetadata);
+  const activeNativeFailure =
+    hasActiveNativeFailure(solanaMetadata) ||
+    hasActiveNativeFailure(tronMetadata);
+  // Shadow-only native failures remain diagnostic. Score-facing native failures,
+  // invocation errors, and non-durable deferrals must affect the merged job.
   const status =
     evmStatus === "error" || solanaStatus === "error" || tronStatus === "error"
       ? "error"
-      : evmStatus === "degraded" || shadowCursorFailure
+      : evmStatus === "degraded" || activeNativeFailure || nativeCursorFailure
         ? "degraded"
         : evmStatus === "skipped_neutral" && solanaStatus === "skipped_neutral" && tronStatus === "skipped_neutral"
           ? "skipped_neutral"

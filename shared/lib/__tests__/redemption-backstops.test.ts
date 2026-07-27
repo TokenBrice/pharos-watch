@@ -987,7 +987,7 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("hyusd-hylo")?.outputAssets).toBeUndefined();
 
     const dusd = getRedemptionBackstopConfig("dusd-dtrinity");
-    expect(dusd).toMatchObject({ outputAssetType: "stable-basket", reviewedAt: "2026-07-15" });
+    expect(dusd).toMatchObject({ outputAssetType: "stable-basket", reviewedAt: "2026-07-27" });
     expect(dusd?.outputAssets).toBeUndefined();
     expect(dusd?.unresolvedOutputAssetKeys).toEqual([
       "usdc-circle",
@@ -1102,10 +1102,17 @@ describe("getRedemptionBackstopConfig", () => {
       "dllr-sovryn",
       "deuro-deuro",
       "nect-beraborrow",
-      "scusd-rings",
     ] as const) {
       expect(getRedemptionBackstopConfig(id)?.outputAssets).toBeUndefined();
     }
+    // scusd-rings graduated on the 2026-07-27 wave-7 review: the archived
+    // issuer tutorial establishes the conservative USDC/USDT/DAI redeem set
+    // (GHO/USDS stay excluded pending primary confirmation).
+    expect(getRedemptionBackstopConfig("scusd-rings")).toMatchObject({
+      outputAssetType: "stable-basket",
+      outputAssets: ["usdc-circle", "usdt-tether", "dai-makerdao"],
+      reviewedAt: "2026-07-27",
+    });
 
     expect(getRedemptionBackstopConfig("zys-zephyr-protocol")).toMatchObject({
       outputAssetType: "stable-single",

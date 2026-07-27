@@ -905,6 +905,10 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         const workType = reason.workType;
         const context = currentWorkTypeContext(workType, asset);
         const resolutionMode = scoreProjectionResolutionMode(workType, asset.archetype);
+        // A card-aggregate reason exposes no component identity (wave-7
+        // anomaly class: krwq/eur0): curation lanes cannot act on it without
+        // inventing a component, so it routes to the coordinator instead.
+        const componentIdentityUnavailable = reason.source === "card-aggregate" && reason.path === null;
         const claimGroupId = `${workType}:${assetId}`;
         const digest = scoreProjectionTaskDigest(assetId, reason);
         const evidenceRefIds = [...collectEvidenceRefIds(context)].sort((left, right) => left.localeCompare(right));
@@ -954,8 +958,10 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
           policyBinding: {
             queueAction: null,
             issues: [],
-            coordinatorReviewRequired: false,
-            note: "The score exposes this bounded reason without a corresponding compiled fact-gap row.",
+            coordinatorReviewRequired: componentIdentityUnavailable,
+            note: componentIdentityUnavailable
+              ? "Card-aggregate bounded reason without a component identity: the coordinator resolves it against the compiled facts; curation lanes must not invent a component."
+              : "The score exposes this bounded reason without a corresponding compiled fact-gap row.",
           },
           doneWhenGapIdAbsent: null,
           doneWhenScoreReasonAbsent: { reasonCode: reason.reasonCode, path: reason.path },

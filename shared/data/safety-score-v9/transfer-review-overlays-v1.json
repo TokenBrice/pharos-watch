@@ -4395,6 +4395,90 @@
           ]
         }
       ]
+    },
+    {
+      "assetId": "fusd-freedom-dollar",
+      "reviewedAt": "2026-07-27",
+      "reviewer": "Kimi data review",
+      "deployments": [
+        {
+          "chainId": "zano",
+          "contractOrTokenId": "86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "FUSD is a Zano Confidential Asset (asset id 86143388…4f8f), not a smart contract: Zano has no contract VM, so same-asset transfers are consensus-level sends validated by ring signatures alone. The 2026-07-14 access review and Zano deploy_asset/update_asset RPC documentation expose no holder-selective blacklist, freeze, pause, seize, or transfer-hook surface; the asset-owner key can EMIT/UPDATE supply but cannot block holder transfers. Asset descriptor read at Zano height 3770932 (2026-07-14), corroborated by two independent daemons.",
+          "sources": [
+            {
+              "label": "Zano docs — deploy_asset (Confidential Asset descriptor)",
+              "url": "https://docs.zano.org/docs/build/rpc-api/wallet-rpc-api/deploy_asset/"
+            },
+            {
+              "label": "Zano public daemon RPC (get_asset_info)",
+              "url": "https://node.zano.org/json_rpc"
+            },
+            {
+              "label": "Zano explorer — fUSD asset 8614…4f8f",
+              "url": "https://explorer.zano.org/assets?asset_id=86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "zsd-zephyr-protocol",
+      "reviewedAt": "2026-07-27",
+      "reviewer": "Kimi data review",
+      "deployments": [
+        {
+          "chainId": "zephyr",
+          "contractOrTokenId": "ZSD",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "ZSD is a native Zephyr consensus asset (asset_type ZSD post-HF11), not an issuer-deployed token contract. Reviewed against official v2.3.0 source commit 67c5f53: same-asset ZSD sends map to STABLE_TRANSFER and the consensus paths expose no address blacklist, holder freeze, seize, privileged burn, or issuer transfer-pause; wallet-RPC freeze marks only a locally held transfer in that wallet, and daemon set_bans concerns P2P hosts. Verified at network height 819289 (block 386f59b9…50cc19, HF11). The 2025 audit hardfork was a consensus-wide migration, not a holder-targeted control.",
+          "sources": [
+            {
+              "label": "Zephyr v2.3.0 transaction-type source",
+              "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_protocol/enums.h#L46-L62"
+            },
+            {
+              "label": "Zephyr v2.3.0 native transfer routing",
+              "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L478-L535"
+            },
+            {
+              "label": "Zephyr Explorer block 819289",
+              "url": "https://explorer.zephyrprotocol.com/api/block/819289"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "zys-zephyr-protocol",
+      "reviewedAt": "2026-07-27",
+      "reviewer": "Kimi data review",
+      "deployments": [
+        {
+          "chainId": "zephyr",
+          "contractOrTokenId": "ZYS",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "ZYS is the native Zephyr yield asset (asset_type ZYS post-HF11). Reviewed against official v2.3.0 source commit 67c5f53: same-asset ZYS sends map to YIELD_TRANSFER with no separate address-level blacklist, holder freeze, seize, privileged burn, or issuer transfer-control path; mint/redeem is the user-facing MINT_YIELD/REDEEM_YIELD consensus conversion against ZSD with RingCT amount-conservation checks. Verified at network height 819289 (HF11).",
+          "sources": [
+            {
+              "label": "Zephyr v2.3.0 transaction-type source",
+              "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_protocol/enums.h#L46-L62"
+            },
+            {
+              "label": "Zephyr v2.3.0 native transfer routing",
+              "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L478-L535"
+            },
+            {
+              "label": "Zephyr Explorer block 819289",
+              "url": "https://explorer.zephyrprotocol.com/api/block/819289"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

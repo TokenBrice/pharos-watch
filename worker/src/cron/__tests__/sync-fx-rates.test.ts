@@ -76,7 +76,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "currency-api",
-        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560, vnd: 25000 } },
+        body: { date: "2025-06-15", usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560, vnd: 25000, kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -498,7 +498,7 @@ describe("syncFxRates", () => {
           usd: {
             eur: 0.93, gbp: 0.8, chf: 0.88, brl: 5.01, jpy: 149.8, idr: 15810, sgd: 1.35, try: 36.1,
             aud: 1.56, zar: 18.4, cad: 1.38, cny: 7.26, php: 56.1, mxn: 17.3, cnh: 7.31, rub: 90.5, uah: 41.2, ars: 1401, kgs: 87.1, ngn: 1371, xof: 561,
-            myr: 4.51, krw: 1382, hkd: 7.82, inr: 85.6, vnd: 25000,
+            myr: 4.51, krw: 1382, hkd: 7.82, inr: 85.6, vnd: 25000, kes: 129.1, ghs: 11.7, cop: 3201, clp: 951, pen: 3.41,
           },
         },
       },
@@ -509,7 +509,7 @@ describe("syncFxRates", () => {
           usd: {
             eur: 0.925, gbp: 0.79, chf: 0.88, brl: 5.0, jpy: 149.5, idr: 15800, sgd: 1.35, try: 36,
             aud: 1.55, zar: 18.3, cad: 1.37, cny: 7.25, php: 56, mxn: 17.2, cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560,
-            myr: 4.5, krw: 1380, hkd: 7.81, inr: 85.5, vnd: 25000,
+            myr: 4.5, krw: 1380, hkd: 7.81, inr: 85.5, vnd: 25000, kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4,
           },
         },
       },
@@ -593,7 +593,7 @@ describe("syncFxRates", () => {
           rates: {
             EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
             AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2, CNH: 7.28, RUB: 90, UAH: 41, ARS: 1400, KGS: 87, NGN: 1370, XOF: 560,
-            MYR: 4.5, KRW: 1380, HKD: 7.81, INR: 85.5, VND: 25000,
+            MYR: 4.5, KRW: 1380, HKD: 7.81, INR: 85.5, VND: 25000, KES: 129, GHS: 11.6, COP: 3200, CLP: 950, PEN: 3.4,
           },
         },
       },
@@ -705,8 +705,13 @@ describe("syncFxRates", () => {
       peggedHKD: 1 / 7.81,
       peggedINR: 1 / 85.5,
       peggedVND: 1 / 25000,
+      peggedKES: 1 / 129,
+      peggedGHS: 1 / 11.6,
+      peggedCOP: 1 / 3200,
+      peggedCLP: 1 / 950,
+      peggedPEN: 1 / 3.4,
     };
-    const calendarDailyPegs = new Set(["peggedCNH", "peggedRUB", "peggedUAH", "peggedARS", "peggedKGS", "peggedNGN", "peggedXOF", "peggedVND"]);
+    const calendarDailyPegs = new Set(["peggedCNH", "peggedRUB", "peggedUAH", "peggedARS", "peggedKGS", "peggedNGN", "peggedXOF", "peggedVND", "peggedKES", "peggedGHS", "peggedCOP", "peggedCLP", "peggedPEN"]);
     const sourceUpdatedAtByPeg = Object.fromEntries(
       Object.keys(fullPrevRates).map((pegKey) => [
         pegKey,
@@ -780,7 +785,7 @@ describe("syncFxRates", () => {
     expect(cachedMeta.consecutiveFallbackRuns).toBe(0);
   });
 
-  it("uses secondary API for CNH/RUB/UAH/ARS/KGS/NGN/XOF rates", async () => {
+  it("uses secondary API for CNH/RUB/UAH/ARS/KGS/NGN/XOF/KES/GHS/COP/CLP/PEN rates", async () => {
     mockFetch([
       {
         match: "frankfurter.dev",
@@ -792,7 +797,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "currency-api",
-        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } },
+        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560, kes: 129, ghs: 11.6, cop: 3200, clp: 950, pen: 3.4 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -823,7 +828,7 @@ describe("syncFxRates", () => {
     const metadata = JSON.parse(result.metadata ?? "{}");
     // Should include gold and silver prices
     expect(metadata.rateCount).toBeGreaterThanOrEqual(20);
-    expect(metadata.secondaryCoverage).toBe(7);
+    expect(metadata.secondaryCoverage).toBe(12);
   });
 
   it("prefers the fresher secondary FX mirror when the CDN payload lags a day behind", async () => {
@@ -1174,6 +1179,11 @@ describe("syncFxRates", () => {
       peggedHKD: 1 / 7.81,
       peggedINR: 1 / 85.5,
       peggedVND: 1 / 25000,
+      peggedKES: 1 / 129,
+      peggedGHS: 1 / 11.6,
+      peggedCOP: 1 / 3200,
+      peggedCLP: 1 / 950,
+      peggedPEN: 1 / 3.4,
     };
     const sameDayUpdatedAt = Math.floor(Date.parse("2025-06-15T05:02:23Z") / 1000);
     const sourceUpdatedAtByPeg = Object.fromEntries(
@@ -1270,6 +1280,11 @@ describe("syncFxRates", () => {
       peggedHKD: 1 / 7.81,
       peggedINR: 1 / 85.5,
       peggedVND: 1 / 25000,
+      peggedKES: 1 / 129,
+      peggedGHS: 1 / 11.6,
+      peggedCOP: 1 / 3200,
+      peggedCLP: 1 / 950,
+      peggedPEN: 1 / 3.4,
     };
     const staleUpdatedAt = Math.floor(Date.parse("2025-06-12T12:00:00Z") / 1000);
     const sourceUpdatedAtByPeg = Object.fromEntries(
@@ -1296,7 +1311,7 @@ describe("syncFxRates", () => {
           rates: {
             EUR: 0.925, GBP: 0.79, CHF: 0.88, BRL: 5.0, JPY: 149.5, IDR: 15800, SGD: 1.35, TRY: 36,
             AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, CNH: 7.28, PHP: 56, MXN: 17.2, RUB: 90, UAH: 41, ARS: 1400, KGS: 87, NGN: 1370, XOF: 560,
-            MYR: 4.5, KRW: 1380, HKD: 7.81, INR: 85.5, VND: 25000,
+            MYR: 4.5, KRW: 1380, HKD: 7.81, INR: 85.5, VND: 25000, KES: 129, GHS: 11.6, COP: 3200, CLP: 950, PEN: 3.4,
           },
         },
       },

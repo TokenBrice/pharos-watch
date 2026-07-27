@@ -56,6 +56,7 @@ import {
 import { buildSolanaMeasuredExecutionTargets } from "../measured-execution/solana-inventory";
 import { buildTronMeasuredExecutionTargets } from "../measured-execution/tron-inventory";
 import { enrichEvmV2ExecutionModels } from "./constant-product-v2";
+import { enrichCurveStableswapRateInputExecutionModels } from "./curve-stableswap-rates";
 import {
   loadDexLiquidityScoringStage,
   markDexLiquidityScoringStageConsumed,
@@ -201,6 +202,7 @@ export async function stageDexLiquidityScoring(
   const sourceState = await loadDexLiquiditySourceState(ctx);
   const poolState = await buildDexLiquidityPoolState(ctx, sourceState);
   const scoringSourceState = buildDexLiquidityScoringSourceState(sourceState);
+  const itemCount = poolState.metrics.size;
   const stored = await persistDexLiquidityScoringStage(
     db,
     {
@@ -208,6 +210,21 @@ export async function stageDexLiquidityScoring(
       syncStartSec,
       sourceState: scoringSourceState,
       poolState,
+      onChunkBatchPersisted: async ({ chunkCount, recordCount, payloadBytes }) => {
+        await reportDexLiquidityProgress(ctx, {
+          stage: "scoring-stage-persistence",
+          message: "Persisting bounded DEX scoring-stage chunks",
+          providerFamily: "d1",
+          itemsDone: recordCount,
+          metadata: {
+            countTotals: {
+              chunkCount,
+              recordCount,
+              payloadBytes,
+            },
+          },
+        });
+      },
     },
     signal,
   );
@@ -216,7 +233,7 @@ export async function stageDexLiquidityScoring(
     status: scoringSourceState.criticalSourceFailures.length > 0 || stored.retention.error
       ? "degraded"
       : "ok",
-    itemCount: poolState.metrics.size,
+    itemCount,
     metadata: JSON.stringify({
       generationId: stored.generationId,
       sourceSlotStartedAt: stored.sourceSlotStartedAt,
@@ -348,6 +365,7 @@ function buildDexLiquidityScoringSourceState(
 ): DexLiquidityScoringSourceState {
   return {
     validationReferences: sourceState.validationReferences,
+    stablecoinPriceById: sourceState.stablecoinPriceById,
     stablecoinMcapById: sourceState.stablecoinMcapById,
     protocolTvlCaps: sourceState.dataSources.protocolTvlCaps,
     priceObservations: sourceState.priceObservations,
@@ -817,6 +835,12 @@ async function buildDexLiquidityPoolState(
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
   });
+  await enrichCurveStableswapRateInputExecutionModels({
+    metrics,
+    chainAddressToId: sourceState.lookups.chainAddressToId,
+    chainRpcs: ctx.chainRpcs,
+    signal: ctx.signal,
+  });
   sourceState.lookups.chainAddressToId = new Map();
   sourceState.lookups.contractMetaByChainAddress = new Map();
   // Staged dedup is the final identity consumer. Release its multi-map index
@@ -1132,7 +1156,9 @@ async function persistDexLiquidityScoreState(
     ctx.signal,
     sourceState.priceObservations,
     publicationGenerationId,
+    sourceState.stablecoinPriceById,
   );
+  sourceState.stablecoinPriceById.clear();
   scoreState.retainedPoolsByStablecoin.clear();
   sourceState.priceObservations.clear();
   await reportDexLiquidityProgress(ctx, {

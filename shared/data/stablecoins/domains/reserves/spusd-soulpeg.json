@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Kimi data review",
     "confidence": "verified",
     "sources": [
       {
@@ -34,8 +34,9 @@
         "url": "https://docs.soulpeg.io/docs/whitepaper/security-model"
       }
     ],
-    "rationale": "SoulPeg documents SPUSD as a tradeable ERC-20 wrapper for 1:1 sUSDC, with deposited USDC routed into Venus lending markets. The protocol describes single-sided USDC lending and on-chain verifiability; current Venus liquidity and strategy balances remain dynamic.",
+    "rationale": "SoulPeg documents SPUSD as a tradeable ERC-20 wrapper for 1:1 sUSDC, with deposited USDC routed into Venus lending markets. The protocol describes single-sided USDC lending and on-chain verifiability; current Venus liquidity and strategy balances remain dynamic. Re-verified against the issuer documentation on 2026-07-27: the mint flow, 1:1 sUSDC backing, and Venus routing are unchanged.",
     "compositionBasis": "SoulPeg SPUSD and security-model documentation",
+    "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The sole tracked USDC dependency is identified, but current Venus market allocation and available redemption liquidity change over time.",
     "knownUnknownExposurePct": 0

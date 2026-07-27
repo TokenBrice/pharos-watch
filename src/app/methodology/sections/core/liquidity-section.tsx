@@ -91,9 +91,10 @@ export function LiquidityMethodologySection() {
             tick-spacing binding, and revalidates identity, prices, freshness, capacity monotonicity, and the retained
             TVL ceiling before scoring. Mature fresh profiles remain route-only if a pool temporarily rotates out of
             the display shortlist; they never re-enter aggregate liquidity, price consensus, target publication, or V8
-            scoring. Optimism Uniswap V3 remains shadow-only. Solana CLMM is target-ratified: only the reviewed
-            wM/USDC Raydium direction can enter P4 after its captured liquidity segment exactly replays the direct
-            quote; generic Raydium, Orca Whirlpool, Meteora, and unlisted native routes remain shadow-only.
+            scoring. Optimism Uniswap V3 remains shadow-only. The reviewed wM/USDC Raydium direction still captures
+            its pool state and exactly replays the direct quote, but its score eligibility is paused alongside
+            Optimism after the first post-activation scoring consumers exceeded the Worker memory limit. Generic
+            Raydium, Orca Whirlpool, Meteora, and unlisted native routes also remain shadow-only.
           </p>
           <p>
             Reviewed SunSwap V2 routes on Tron publish active exact-execution profiles after proving the canonical
@@ -134,6 +135,13 @@ export function LiquidityMethodologySection() {
           <p>
             Curve balance, registry, token-price, and metapool TVL enrichment is applied only to Curve DeFiLlama rows.
             Non-Curve rows that share the same token symbols as a Curve pool keep their own mechanism type and TVL.
+          </p>
+          <p>
+            Address-grade plain Curve StableSwap-NG pools with rate-bearing inputs can publish a route model only after
+            fresh same-block state verifies `get_balances`, amplification, stored rates, ordered coins, and static fee
+            state. Rate scaling adjusts both balances and references; Curve deducts its captured static fee after the
+            full-input invariant. Stale, unpinnable, identity-mismatched, or dynamic-fee state remains capability-gated.
+            Metapools, CryptoSwap, legacy pools, and all other unreviewed Curve shapes are not widened.
           </p>
           <p>
             Coverage confidence is measurement-aware. Instead of a fixed score by source family, Pharos now weights how
