@@ -481,6 +481,16 @@ describe("Safety Score v9 shadow state persistence", () => {
 
     await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(state.envelope);
     await expect(loadLatestSafetyScoreV9DiffReport(db)).resolves.toEqual(state.diff);
+
+    const legacyCurrentEnvelope = structuredClone(state.envelope) as typeof state.envelope & {
+      candidate: { lifecycle: "candidate" | "active" };
+    };
+    legacyCurrentEnvelope.candidate.lifecycle = "candidate";
+    sqlite
+      .prepare("UPDATE cache SET value = ? WHERE key = ?")
+      .run(stableJsonStringifyV1(legacyCurrentEnvelope), SAFETY_SCORE_V9_SHADOW_CACHE_KEYS.envelope);
+
+    await expect(loadLatestSafetyScoreV9ShadowEnvelope(db)).resolves.toEqual(state.envelope);
   });
 
   it("rejects corrupt, unbounded, noncanonical, and identity-mismatched cache envelopes", async () => {

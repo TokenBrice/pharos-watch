@@ -57,6 +57,7 @@ interface CacheCodec<T> {
   storageKind: StorageKind;
   schema: z.ZodType<T>;
   identity: (value: T) => CacheIdentity;
+  parseCanonicalPayload?: (raw: string, label: string) => T;
 }
 
 function envelopeIdentity(value: SafetyScoreV9ShadowEnvelope): CacheIdentity {
@@ -78,6 +79,7 @@ const ENVELOPE_CODEC: CacheCodec<SafetyScoreV9ShadowEnvelope> = {
   storageKind: STORAGE_KINDS.envelope,
   schema: SafetyScoreV9ShadowEnvelopeSchema,
   identity: envelopeIdentity,
+  parseCanonicalPayload: parseSafetyScoreV9ShadowEnvelopeCanonicalPayload,
 };
 
 const DIFF_CODEC: CacheCodec<SafetyScoreV9DiffReport> = {
@@ -149,6 +151,40 @@ function parseCanonicalJson<T>(raw: string, schema: z.ZodType<T>, label: string)
   return value;
 }
 
+function parseSafetyScoreV9ShadowEnvelopeCanonicalPayload(
+  raw: string,
+  label: string,
+): SafetyScoreV9ShadowEnvelope {
+  const parsed = parseJson(raw);
+  if (!parsed.ok) throw new Error(`Malformed ${label} JSON: ${parsed.message}`);
+  if (stableJsonStringifyV1(parsed.value) !== raw) throw new Error(`${label} JSON is not canonical`);
+
+  const current = SafetyScoreV9ShadowEnvelopeSchema.safeParse(parsed.value);
+  if (current.success) return current.data;
+
+  const value = parsed.value;
+  if (value && typeof value === "object" && !Array.isArray(value) && "candidate" in value) {
+    const candidate = (value as { candidate?: unknown }).candidate;
+    if (
+      candidate &&
+      typeof candidate === "object" &&
+      !Array.isArray(candidate) &&
+      (candidate as Record<string, unknown>).schemaVersion === 5 &&
+      (candidate as Record<string, unknown>).lifecycle === "candidate"
+    ) {
+      return SafetyScoreV9ShadowEnvelopeSchema.parse({
+        ...value,
+        candidate: {
+          ...candidate,
+          lifecycle: "active",
+        },
+      });
+    }
+  }
+
+  return SafetyScoreV9ShadowEnvelopeSchema.parse(parsed.value);
+}
+
 function compressedStorageCandidate(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Record<string, unknown>;
@@ -213,7 +249,8 @@ async function parseCacheValue<T>(
   }
   const raw = parseJson(storedValue);
   if (!raw.ok) throw new Error(`Malformed ${label} JSON: ${raw.message}`);
-  if (!compressedStorageCandidate(raw.value)) return parseCanonicalJson(storedValue, codec.schema, label);
+  const parsePayload = codec.parseCanonicalPayload ?? ((value: string) => parseCanonicalJson(value, codec.schema, label));
+  if (!compressedStorageCandidate(raw.value)) return parsePayload(storedValue, label);
 
   const storage = StorageEnvelopeSchema.parse(raw.value);
   if (stableJsonStringifyV1(storage) !== storedValue) {
@@ -246,7 +283,7 @@ async function parseCacheValue<T>(
     throw new Error(`${label} cache payload is not valid UTF-8`);
   }
   if ((await sha256Hex(uncompressed)) !== storage.payloadSha256) throw new Error(`${label} cache checksum mismatch`);
-  const value = parseCanonicalJson(canonical, codec.schema, label);
+  const value = parsePayload(canonical, label);
   if (stableJsonStringifyV1(codec.identity(value)) !== stableJsonStringifyV1(storage.identity)) {
     throw new Error(`${label} cache identity mismatch`);
   }
