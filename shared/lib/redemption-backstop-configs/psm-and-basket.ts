@@ -22,6 +22,7 @@ const REVIEWED_BASKET_REDEMPTION_AT = REVIEWED_FIRST_WAVE_AT;
 const REVIEWED_ROUTE_TUNING_AT = "2026-04-04";
 const REVIEWED_RESERVE_PROTOCOL_DTF_AT = REVIEWED_MAY_BATCH_AT;
 const REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT = "2026-07-19";
+const REVIEWED_MENTO_XOFM_PSM_AT = "2026-07-27";
 const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_BASKET_REDEMPTION_AT);
 
 export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
@@ -85,6 +86,37 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "Fresh Sky reserve telemetry uses current PSM USDC balance as immediate capacity; fallback retains the reviewed 33% heuristic when live metadata is unavailable",
       "USDS <-> USDC routes through LitePSMWrapper-USDS-USDC and the fee-free DAI <-> USDS converter, so it shares the same LitePSM liquidity path as DAI",
+    ],
+  },
+  "xofm-mento": {
+    ...psmSwapBase,
+    outputAssets: ["cusd-celo"],
+    capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
+    costModel: documentedVariableFee(
+      "The Mento Broker/BiPoolManager records the XOFm/USDm pool spread on-chain; live telemetry supplies the current per-pool spread.",
+      "formula",
+    ),
+    reviewedAt: REVIEWED_MENTO_XOFM_PSM_AT,
+    docs: [
+      sourceRef(
+        "Mento Broker contract (pinned)",
+        "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol",
+        ["route", "access", "settlement"],
+      ),
+      sourceRef(
+        "Mento BiPoolManager contract (pinned)",
+        "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol",
+        ["route", "capacity", "fees"],
+      ),
+      sourceRef("Mento stable assets on Celo", "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo", [
+        "route",
+        "access",
+      ]),
+    ],
+    notes: [
+      "XOFm's legacy Mento Broker route is a permissionless atomic XOFm -> USDm swap, rather than the CDP collateral-redemption route used by Mento's CDP-backed FX assets.",
+      "Fresh Mento telemetry enumerates the XOFm/USDm BiPoolManager exchange on Celo each run and uses its USDm counter bucket as the live direct capacity bound; the adapter fails closed if the exchange identity, counter bucket, or spread cannot be read.",
+      "USDm is tracked as cusd-celo, so the direct Broker output is a scoreable stablecoin output without asserting a fiat or reserve-basket redemption.",
     ],
   },
   "dllr-sovryn": {
