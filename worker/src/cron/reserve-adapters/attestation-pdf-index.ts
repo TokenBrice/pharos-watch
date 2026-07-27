@@ -155,6 +155,17 @@ function isPdfHref(href: string): boolean {
   return /\.pdf(?:[?#]|$)/i.test(href);
 }
 
+function isAttestationReportLink(href: string, text: string): boolean {
+  const normalized = decodeUrlish(`${href} ${text}`)
+    .toLowerCase()
+    .replace(/[^a-z]+/g, " ")
+    .trim();
+  if (/(?:^| )whitepapers?(?: |$)/.test(normalized)) {
+    return false;
+  }
+  return /(?:^| )(?:attestations?|audits?|reports?)(?: |$)/.test(normalized);
+}
+
 function readConfiguredSlices(rawSlices: unknown): ReserveSlice[] {
   if (!Array.isArray(rawSlices) || rawSlices.length === 0) {
     throw new Error(`${ADAPTER_NAME} adapter params invalid.slices: expected a non-empty array`);
@@ -406,6 +417,9 @@ function collectPdfLinkCandidates(html: string): PdfLinkCandidate[] {
     }
 
     const text = stripTags(match[4] ?? "");
+    if (!isAttestationReportLink(href, text)) {
+      continue;
+    }
     const date = parseBestReportDate(href, "href") ?? parseBestReportDate(text, "text");
     if (!date) {
       continue;
@@ -422,6 +436,9 @@ function collectPdfLinkCandidates(html: string): PdfLinkCandidate[] {
     }
 
     const text = readHtmlAttribute(tag, "data-gated-asset") ?? "";
+    if (!isAttestationReportLink(href, text)) {
+      continue;
+    }
     const date = parseBestReportDate(href, "href") ?? parseBestReportDate(text, "text");
     if (!date) {
       continue;

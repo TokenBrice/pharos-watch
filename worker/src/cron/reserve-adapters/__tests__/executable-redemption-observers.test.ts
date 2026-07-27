@@ -336,6 +336,29 @@ describe("specialized executable redemption observers", () => {
     expect(getStableObservationBlockNumber(null)).toBeNull();
   });
 
+  it.each([
+    ["eearn-ember", EARN_VAULT, "earn"],
+    ["sdusd-dtrinity", DSTAKE_TOKEN, "dstake"],
+  ] as const)(
+    "validates %s current-block freshness against wall time instead of the reserve-run start",
+    async (coinId, contractAddress, clientKind) => {
+      const nowSpy = vi.spyOn(Date, "now").mockReturnValue(NOW * 1_000);
+      try {
+        const observation = await observeExecutableRedemptionRoute(
+          coinId,
+          contractAddress,
+          new AbortController().signal,
+          { nowSec: NOW - 180 },
+          { client: client(clientKind) },
+        );
+
+        expect(observation?.sourceTimestamp).toBe(NOW - 30);
+      } finally {
+        nowSpy.mockRestore();
+      }
+    },
+  );
+
   it("measures eEARN queue state and fee without treating idle USDC as immediate capacity", async () => {
     const observation = await observeExecutableRedemptionRoute(
       "eearn-ember",

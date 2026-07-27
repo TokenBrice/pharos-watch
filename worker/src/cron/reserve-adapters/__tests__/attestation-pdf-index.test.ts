@@ -216,6 +216,39 @@ describe("adaptAttestationPdfIndex", () => {
     });
   });
 
+  it("ignores a newer gated whitepaper and keeps the latest dated reserve report", () => {
+    const html = `
+      <button
+        data-gated-asset="XSGD Attestation Report May 2026"
+        data-gated-url="https://cdn.example/XSGD_Reserve_Account_Report_(31_May_2026).pdf"
+      ></button>
+      <button
+        data-gated-asset="XSGD Whitepaper"
+        data-gated-url="https://cdn.example/reports/XSGD_Whitepaper_Last_Update_July_2026.docx.pdf"
+      ></button>
+    `;
+
+    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
+
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.UTC(2026, 4, 31) / 1000,
+      reportDate: "2026-05-31",
+      reportPdfUrl: "https://cdn.example/XSGD_Reserve_Account_Report_(31_May_2026).pdf",
+      reportLinkText: "XSGD Attestation Report May 2026",
+    });
+  });
+
+  it("fails closed when a dated whitepaper is the only PDF", () => {
+    const html = `
+      <button
+        data-gated-asset="XUSD Whitepaper"
+        data-gated-url="https://cdn.example/reports/XUSD_Whitepaper_Last_Update_July_2026.docx.pdf"
+      ></button>
+    `;
+
+    expect(() => adaptAttestationPdfIndex(html, CONFIGURED_PARAMS)).toThrow("layout-changed");
+  });
+
   it("throws layout-changed when no dated PDF report link is present", () => {
     const html = `
       <a href="/reports/latest-attestation.pdf">Latest attestation</a>

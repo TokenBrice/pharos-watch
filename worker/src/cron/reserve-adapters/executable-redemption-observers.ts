@@ -1097,7 +1097,10 @@ export async function observeExecutableRedemptionRoute(
   }
 
   const client = options.client ?? DEFAULT_CLIENT;
-  const nowSec = options.nowSec ?? ctx?.nowSec ?? Math.floor(Date.now() / 1_000);
+  // This observer reads a current chain head late in a long sequential reserve
+  // run. The run-scoped context clock can be several minutes old by then, so
+  // compare the block against the wall clock unless a test explicitly pins it.
+  const nowSec = options.nowSec ?? Math.floor(Date.now() / 1_000);
   const rpcOptions: EvmRpcOptions = {
     chainRpcs: ctx?.chainRpcs,
     extraRpcUrls: options.extraRpcUrls,
