@@ -33,58 +33,6 @@ import type { DdrDiagnosticResponse, DdrLineage } from "./types";
 import { eligibleAt, nullableNumberValue, nullableStringValue, numberValue, recordValue, stringValue } from "./utils";
 import { firstPublicationByPredictionId, publicPredictionIdOf, sealedByIncident } from "./storage-adapters";
 
-const CURRENT_SAFETY_CONTEXT_STATUSES = new Set([
-  "v9-identified",
-  "identity-missing",
-  "identity-mismatch",
-  "unsupported-model",
-  "cache-unavailable",
-]);
-
-function normalizeSealedSafetyContext(
-  outcome: Record<string, unknown>,
-): Record<string, unknown> {
-  const normalizeRelatedContext = (
-    relatedContext: Record<string, unknown>,
-  ): Record<string, unknown> => {
-    const safetyContext = recordValue(relatedContext.safetyContext);
-    if (
-      !safetyContext ||
-      (typeof safetyContext.status === "string" &&
-        CURRENT_SAFETY_CONTEXT_STATUSES.has(safetyContext.status))
-    ) {
-      return relatedContext;
-    }
-    return {
-      ...relatedContext,
-      safetyContext: {
-        status: "unsupported-model",
-        reason: "retired-safety-model",
-        identity: null,
-      },
-    };
-  };
-  const relatedContext = recordValue(outcome.relatedContext);
-  const sourceRow = recordValue(outcome.sourceRow);
-  const sourceRelatedContext = recordValue(sourceRow?.relatedContext);
-  return {
-    ...outcome,
-    ...(relatedContext
-      ? {
-          relatedContext: normalizeRelatedContext(relatedContext),
-        }
-      : {}),
-    ...(sourceRow && sourceRelatedContext
-      ? {
-          sourceRow: {
-            ...sourceRow,
-            relatedContext: normalizeRelatedContext(sourceRelatedContext),
-          },
-        }
-      : {}),
-  };
-}
-
 function buildFrozenDuration(row: DdrRow, lockedAt: number): Record<string, unknown> {
   const medianSec = row.duration.medianSec ?? null;
   const iqrSec = row.duration.iqrSec ?? null;
@@ -590,14 +538,12 @@ function buildPublicRows(input: {
 
     if (sealed.outcomeKind === "no_call") {
       const sealedNoCall = recordValue(sealed.sealedPayload.noCall);
-      const noCall = sealedNoCall
-        ? normalizeSealedSafetyContext(sealedNoCall)
-        : {
-            lockedAt: sealed.lockedAt,
-            eventAgeAtLockSec: sealed.eventAgeAtLockSec,
-            missingReasons: row.resolution.insufficientReasons ?? [],
-            relatedContext: row.relatedContext,
-          };
+      const noCall = sealedNoCall ?? {
+        lockedAt: sealed.lockedAt,
+        eventAgeAtLockSec: sealed.eventAgeAtLockSec,
+        missingReasons: row.resolution.insufficientReasons ?? [],
+        relatedContext: row.relatedContext,
+      };
       if (errataHistory.length > 0) {
         return {
           ...buildBasePublicRowFromSealed(sealed, base),
@@ -638,14 +584,12 @@ function buildPublicRows(input: {
     }
 
     const sealedFrozen = recordValue(sealed.sealedPayload.frozen);
-    const frozen = sealedFrozen
-      ? normalizeSealedSafetyContext(sealedFrozen)
-      : {
-          resolution: row.resolution,
-          duration: buildFrozenDuration(row, sealed.lockedAt),
-          relatedContext: row.relatedContext,
-          sourceRow: row,
-        };
+    const frozen = sealedFrozen ?? {
+      resolution: row.resolution,
+      duration: buildFrozenDuration(row, sealed.lockedAt),
+      relatedContext: row.relatedContext,
+      sourceRow: row,
+    };
     if (errataHistory.length > 0) {
       return {
         ...buildBasePublicRowFromSealed(sealed, base),
