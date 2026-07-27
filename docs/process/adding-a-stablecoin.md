@@ -725,11 +725,11 @@ Base coin files also feed commit-derived sitemap timestamps. Commit the coin sou
 npx tsx scripts/maintenance/generate-sitemap-dates.ts
 npm run check:commit-derived-artifacts
 npm run check:generated-artifacts
-npm run validate:prebuild
+npm run check:pr -- --base=origin/main
 npm run build
 ```
 
-Commit the sitemap output separately or amend it into the source commit without changing the source author date. `validate:prebuild` is the aggregated gate: it runs lint, typecheck, and the checks registered in `scripts/lib/validation-lanes.mjs`, including stablecoin data, redemption coverage, verified links, and doc sync. Running `check:stablecoin-data` separately first gives faster feedback on the most common failure mode for this kind of diff. The heavy `npm run test:merge-gate` remains an optional explicit rehearsal; GitHub's protected `PR gate` is authoritative.
+Commit the sitemap output separately or amend it into the source commit without changing the source author date. Run `check:stablecoin-data` first for fast feedback, then run the focused generated-artifact checks selected by the change. `npm run check:pr -- --base=<ref>` mirrors the adaptive protected PR contract after commit; GitHub's protected `PR gate` remains authoritative.
 
 You can also run the individual checks directly when iterating:
 

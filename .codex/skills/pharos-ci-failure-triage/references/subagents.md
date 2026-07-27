@@ -54,7 +54,7 @@ Read:
 - docs/deployment-process.md
 - docs/scripts.md
 - package.json scripts
-- scripts/lib/validation-lanes.mjs if validate/prebuild failed
+- scripts/maintenance/run-pr-static-checks.mjs and scripts/lib/deploy-impact.mjs if adaptive PR selection failed
 - scripts/lib/automation-registry.mjs if generated artifacts failed
 
 Return:

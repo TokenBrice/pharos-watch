@@ -1,10 +1,10 @@
 # Deployment Process
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Purpose · Core Rules · Release Snapshot State Machine · Optional Worktree Flow · Repo Pre-Push Hook · What `test:merge-gate` Does · Yield History Cleanup Windows · CI Deploy Sequence · Operational Acceptance · GitHub Deploy Inputs · Dependency Refresh Cadence · Runtime Measurement Notes · Runtime Origins · Self-Serve API Key Rollback · Failure Policy.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Purpose · Core Rules · Release Snapshot State Machine · Optional Worktree Flow · Repo Pre-Push Hook · Local Validation Commands · Yield History Cleanup Windows · CI Deploy Sequence · Operational Acceptance · GitHub Deploy Inputs · Dependency Refresh Cadence · Runtime Measurement Notes · Runtime Origins · Self-Serve API Key Rollback · Failure Policy.
 
 ## Purpose
 
-This document defines the production deploy flow, the GitHub Actions release gate, and the optional local rehearsal gate for production-impacting work.
+This document defines the production deploy flow, the GitHub Actions release gate, and optional local validation for production-impacting work.
 
 ## Core Rules
 
@@ -20,7 +20,7 @@ Treat release preparation as ordered state transitions. Passing a check against 
 2. **Commit source** — create logical source commits first. Use the exact `.nvmrc` Node runtime directly in the shell so nested workspace and `npx --no-install` commands inherit it.
 3. **Settle commit-derived artifacts** — `docs-metadata` and `sitemap-dates` use source Git history. If their relevant sources changed, commit those sources before generation, run the owning generators, inspect the output, then commit the generated files separately or amend them into the source commit. Output generated while those source paths are uncommitted is provisional.
 4. **Converge the artifact graph** — after the final source history is stable, run `npm run check:generated-artifacts`. Fixing only the first stale projection is not convergence; rerun the full check after focused fixes. If a later remediation changes a commit-derived source, return to step 3.
-5. **Validate the intended contract** — use focused checks for small changes. For a large production snapshot, use `MERGE_GATE_PRODUCTION_ENV=1 npm run test:merge-gate:discover -- --target=release` from an exact-runtime, clean committed checkout with the intended Pages environment scoped to that rehearsal. Discovery is diagnostic and never a receipt.
+5. **Validate the intended contract** — use focused checks for small changes, `npm run check:pr -- --base=<ref>` for the adaptive PR contract, and `npm run check:release` only when a local production-build rehearsal is useful.
 6. **Publish** — push a release branch, wait for the authoritative protected `PR gate`, merge through GitHub, and map the PR head SHA to the resulting `main` SHA and deployment run. Do not attempt direct `main` first.
 7. **Prove deployment and operation separately** — verify Worker activation and/or the immutable Pages marker. Then complete any risk-based runtime observation required by [Operational Acceptance](#operational-acceptance).
 
@@ -57,74 +57,15 @@ Hook behavior:
 
 1. The hook runs `npm run check:commit-derived-artifacts` by default when the pushed commit is the checked-out `HEAD`. Unrelated dirty work is allowed, while dirty relevant sources or generated outputs fail the artifact check. It blocks stale committed sitemap/docs timestamps before CI has to discover the lifecycle error.
 2. When a pushed ref is not the checked-out `HEAD`, the lightweight proof is skipped with an explicit unverified warning. GitHub Actions remains authoritative.
-3. The heavy local merge gate is advisory and disabled by default. GitHub branch protection rejects direct `main` pushes; GitHub Actions is the authoritative PR gate.
-4. Set `PHAROS_PRE_PUSH_GATE=main` to run `npm run test:merge-gate` against the exact `remote_sha...local_sha` range Git sends to the hook, matching the `github.event.before...github.sha` range used by `.github/workflows/deploy-cloudflare.yml`. Pages smoke is on by default; override with `MERGE_GATE_PAGES_SMOKE=0`.
-5. A new remote `main` push, where Git has no previous remote SHA, forces the full local deploy validate path only when `PHAROS_PRE_PUSH_GATE=main` or `PHAROS_PRE_PUSH_GATE=all` is set. Other branches require `PHAROS_PRE_PUSH_GATE=all` for the heavy gate.
-6. When the heavy gate runs, the hook requires the checked-out `HEAD` to equal the pushed local SHA and the worktree to remain clean before and after validation, so the proof cannot drift from the commit Git is sending.
-7. A successful manual gate writes a 24-hour receipt only for a clean committed state. The hook reuses it when the base/head commits, gate implementation, lockfile, Node major, origin, worktree, and validation environment profile still match.
-8. When the heavy gate is opted in, push is blocked on failure. Receipt mismatches fail closed and run the gate normally.
+3. The hook does not run a local test/build gate. GitHub branch protection and the aggregate PR gate are authoritative.
 
-## What `test:merge-gate` Does
+## Local Validation Commands
 
-`scripts/maintenance/test-merge-gate.mjs` compares `MERGE_GATE_BASE_REF...MERGE_GATE_HEAD_REF` (default `origin/main...HEAD`) and mirrors the deploy-path validate policy locally. When the pre-push hook is opted in with `PHAROS_PRE_PUSH_GATE=main` or `PHAROS_PRE_PUSH_GATE=all`, it sets those refs from Git's pushed ref update so the local changed-file set matches the deploy workflow's push classifier.
+`npm run check:pr -- --base=<ref>` is the local counterpart to a normal code PR. It reads the committed `base...HEAD` diff, runs changed-file lint and source typing, adds Pages/Worker/Telegram guardrails only when relevant, checks affected generated artifacts, and runs the critical plus dependency-selected Vitest files.
 
-Default policy:
+`npm run check:release` is the optional deeper rehearsal. It performs the Pages build, static feature/SEO checks, and a credential-free Worker bundle proof. It does not mutate Cloudflare, D1, or production state and does not replace the protected GitHub gate.
 
-1. If the diff does not touch Pages or worker deploy surfaces, print the changed-file set and skip the gate.
-2. For deploy-impacting diffs, run the shared validate pre-build command set from `scripts/lib/validation-lanes.mjs`. The default blocking set is intentionally small: lint, typed lint, root/test typecheck, env/import boundaries, surface-scoped Worker migration/cron/SQL/config checks, Pages CSP/client-registry/generated-artifact checks, and stablecoin data validation. Advisory maintenance checks are skipped by default and can be restored with `VALIDATE_PREBUILD_INCLUDE_ADVISORY=1`.
-3. If Pages-impacting files changed, additionally run:
-   - `npm run build` with the same static-export env contract as the production Pages job (`NEXT_PUBLIC_FORCE_SITE_DATA_PROXY=true` and public-dataset/API source env cleared so the prebuild hook preserves already-synced mirrors)
-   - `npm run check:feature-flag-inlining`
-   - `npm run seo:check`
-   - `npm run check:phishing-signatures`
-   - `npm run check:classifier-sensitive-copy`
-   - CI invokes this ordered group through `npm run validate:pages`; the local gate consumes the same lane-owned leaf list so it can apply per-command environment and timing.
-4. Always run the shared validate post-build checks:
-   - `npm run test:noncritical`
-5. If worker-impacting files changed, additionally run:
-   - `npm run typecheck:worker`
-   - CI invokes this ordered group through `npm run validate:worker`; the local gate consumes the same lane-owned leaf list.
-
-After `npm run validate:prebuild` succeeds, the local merge gate runs independent build/Vitest/worker-validation groups **serially by default** because the build and each Vitest shard manage their own worker pools; logical CPU count alone cannot safely budget that nested concurrency. `MERGE_GATE_PARALLEL=1` opts into the parallel matrix, while `MERGE_GATE_PARALLEL=0` explicitly preserves serial execution. The Vitest lane is emitted as two `npm run test:noncritical -- --shard=N/2` shards to match the CI fan-out (each shard runs on its own CI runner). Despite the legacy script name, those shards now include critical test files; `coverage:critical` is owned by the weekly/manual ratchet workflow and direct local rehearsals. This keeps the validation surface aligned with deploy CI while keeping the local default reliable. Before executing a non-dry-run validation plan, the gate runs `scripts/ci/check-node-modules-fresh.mjs --strict`; it fails when `node_modules/` is missing, when the install snapshot is missing, or when `package-lock.json` is newer than `node_modules/`. `MERGE_GATE_DRY_RUN=1` still prints the command plan without requiring `node_modules/`.
-
-Gate builds skip the prebuild artifact regeneration (`GENERATED_ARTIFACTS_SKIP` covering every registry id): the same run's `check:generated-artifacts` already byte-verified the committed artifacts, so regenerating them inside `npm run build` is guaranteed no-op work. The gate also records wall-clock per command and prints a slowest-first timing summary at the end (on failures too); when the total exceeds the soft runtime budget (default 8 minutes, `MERGE_GATE_BUDGET_MINUTES` overrides, `0` disables) it emits a non-fatal warning so runtime regressions surface immediately instead of accreting silently. Advisory coverage, docs, agent-infra, dependency/provider, stale-flag, unused-code, and ratchet checks now live outside the default blocking prebuild path unless a caller explicitly enables advisory prebuild mode. Pages validate lanes cover build, feature-flag inlining, SEO, phishing signatures, and classifier-sensitive copy after the static export exists; broader a11y, build-size, and build-attribution checks remain production/scheduled/manual concerns.
-
-For post-swarm or very large local batches, select the diagnostic target explicitly:
-
-```bash
-npm run test:merge-gate:discover -- --target=pr
-npm run test:merge-gate:discover -- --target=local-gate
-MERGE_GATE_PRODUCTION_ENV=1 npm run test:merge-gate:discover -- --target=release
-npm run test:merge-gate:discover -- --target=maintenance
-```
-
-`pr` is the default and predicts the protected PR contract: classifier-selected standard or internal-docs-only validation plus the pinned range-scoped Gitleaks scan. Pages-changing `pr` parity requires `MERGE_GATE_PRODUCTION_ENV=1` with the intended public configuration; otherwise the report is explicitly incomplete. `local-gate` mirrors the optional local gate, including path-selected advisory prebuild checks and default Pages smoke. `release` adds production-config Pages build-size/attribution checks and a credential-free pinned Wrangler dry-run bundle; it also requires the exact `.nvmrc` Node version, a content-consistent install snapshot, required Playwright browsers, and a clean committed snapshot. `maintenance` adds broad advisories without turning them into release blockers. Cloudflare upload/activation, D1 mutation, release-marker propagation, and live external state remain explicit omissions.
-
-Discovery classifies the union of `base...HEAD`, staged, tracked worktree, and untracked non-ignored files unless `--staged` requests the narrower staged view. It records start/end snapshot and redacted environment evidence. A moving worktree makes the report provisional; environment mismatches are `INCOMPLETE`, not silent success. Pages build is an explicit producer: its independent output checks all run after a successful build, or all become `BLOCKED_BY=pages:build` without reading stale `out/`. Generated-artifact phases continue diagnostically and label downstream checks tainted by failed declared inputs. The stable final summary and ignored JSON report under `.cache/merge-gate/discovery/` account for every selected or omitted node.
-
-After the full run, fix every blocking root failure and use each finding's focused rerun command while editing. If the report contains blocked or tainted nodes, run `npm run test:merge-gate:discover -- --target=<same-target> --resume`; resume reruns those nodes and their prerequisites while marking other nodes omitted, so it is convergence evidence rather than a reusable proof. Do not rerun the full discovery after every individual fix. Discovery never writes a merge-gate receipt and never replaces the protected GitHub PR gate.
-
-Pages-impacting files use the same broad matcher as CI deploy classification: any `src/`, `shared/`, `functions/`, `public/`, or `data/` path, selected build/config scripts, shared validate/guardrail infrastructure, and the Pages release workflow files all require local export validation when `test:merge-gate` is run. Worker-impacting files use the same worker/shared/deploy-infra matcher as CI, but `shared/` is classified by subpath so known Pages-only helpers do not request Worker validation or deployment. `test:merge-gate` runs Pages browser smoke by default as an intentionally deeper local rehearsal than the deterministic production publish job; Worker smoke remains explicit via `MERGE_GATE_WORKER_SMOKE=1`.
-
-Useful merge-gate controls:
-
-- `npm run test:merge-gate -- --staged` to diff staged files instead of the default ref range
-- `MERGE_GATE_BASE_REF=<ref>` to override the default compare base (`origin/main`)
-- `MERGE_GATE_HEAD_REF=<ref>` to override the default compare head (`HEAD`)
-- `MERGE_GATE_FULL_DEPLOY=1` to force the full local deploy validate path when there is no usable base ref
-- `MERGE_GATE_DRY_RUN=1` to print the command plan without executing it
-- `MERGE_GATE_PARALLEL=1`/`=0` to opt into parallel or explicitly preserve serial post-validate execution. Local execution defaults to serial; CI runs the matrix via separate runners
-- `npm run test:merge-gate:discover -- --target=pr --dry-run` to print and persist the default protected-PR diagnostic plan without executing commands
-- `npm run test:merge-gate:discover -- --target=pr|local-gate|release|maintenance` to select the contract being predicted; `pr` is the default
-- `npm run test:merge-gate:discover -- --target=<same-target> --resume` to rerun failed, blocked, and tainted nodes plus dependencies from the latest compatible report; use `--resume=<path>` for a specific report
-- `npm run test:merge-gate:discover -- --report=<path>` to override the ignored latest-report path
-- `MERGE_GATE_DISCOVERY_MAX_PARALLEL=<n>` to set discovery-mode postbuild fan-out (default: `1`); `MERGE_GATE_PARALLEL=0` is also accepted as a compatibility alias for serial discovery postbuild work. Prebuild and generated-artifact phases retain their independent bounded fan-out. The JSON report records available CPUs, the postbuild setting, and per-phase caps
-- `MERGE_GATE_DISCOVERY_SMOKE=1` or `--smoke` to add Pages smoke outside targets that select it; `local-gate` selects Pages smoke by default
-- Production Pages environment rehearsal is opt-in: set `MERGE_GATE_PRODUCTION_ENV=1` and provide the production `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_PHAROS_*`, `STATIC_EXPORT_API_BASE`, `STATIC_EXPORT_SITE_API_BASE`, `PHAROS_API_KEY` or `STATIC_EXPORT_API_KEY`, and `SITE_API_SHARED_SECRET` values in a clean subshell or command-scoped environment for the Pages rehearsal. Do not globally export Pages-only flags across Vitest or Worker lanes; GitHub scopes them to the Pages build job. With `NEXT_PUBLIC_GA_ID` present, local browser smoke verifies that measurement ID. Without the opt-in, the gate clears production feature-flag env locally while applying the same static-export build contract as CI.
-- `MERGE_GATE_PAGES_SMOKE=0` to skip default `npm run validate:pages-smoke` after build for Pages-impacting diffs. By default this serves the static export and runs desktop/local `smoke-ui` on the canary routes with 6 workers. The production Pages release does not run a browser.
-- `MERGE_GATE_WORKER_SMOKE=1` to opt in to `npm run validate:worker-smoke` after worker validation for worker-impacting diffs (slow, ~1-2 min). Local worker smoke defaults to `SMOKE_API_SCOPE=canary` unless `SMOKE_API_SCOPE` is explicitly set
-- `MERGE_GATE_NO_FETCH=1` to skip the best-effort `git fetch origin main` that keeps the diff base honest (use when offline)
-- `MERGE_GATE_NATIVE_ENV=1` to skip the `TZ=UTC` / `LANG=C.UTF-8` / `CI=true` env injection (use when debugging TZ-specific bugs)
+Use focused checks while iterating. Run `test:all`, full lint, typed lint, or `typecheck:tests` directly when a change affects those broad contracts; they also run in nightly/manual validation.
 
 ## Yield History Cleanup Windows
 
@@ -142,7 +83,7 @@ The tracked savings-wrapper ownership cleanup uses `worker/scripts/yield-history
 
 Production responsibility is split deliberately:
 
-- `.github/workflows/pull-request-checks.yml` and `.github/workflows/validate-ci.yml` own source validation before merge.
+- `.github/workflows/pull-request-checks.yml` owns adaptive source validation before merge; `.github/workflows/nightly-validation.yml` retains broad regression coverage.
 - `.github/workflows/deploy-cloudflare.yml` selects and deploys the changed production surfaces after a protected `main` merge.
 - `.github/workflows/pages-release.yml` builds and publishes one exact Pages artifact.
 - `.github/workflows/rebuild-pages.yml` performs the one daily API-backed Pages data refresh.
@@ -400,7 +341,7 @@ Production smoke for this surface should request a smoke key, receive the email,
 
 ## Failure Policy
 
-If an explicit local `test:merge-gate` rehearsal fails:
+If an explicit local `check:release` rehearsal fails:
 
 1. Do not treat the local rehearsal as green.
 2. Confirm the exact `.nvmrc` runtime, target, snapshot cleanliness, environment profile, and local concurrency before changing code. A release-only failure is not disproved by a `pr` target, and a globally exported Pages flag does not reproduce job-scoped CI.
@@ -408,7 +349,7 @@ If an explicit local `test:merge-gate` rehearsal fails:
 4. Fix all blocking root failures and rerun their focused commands while editing. If local parallel load is suspect, run the focused shard alone or set `MERGE_GATE_DISCOVERY_MAX_PARALLEL=1`; do not loosen timeouts solely from a contended run.
 5. If producers left blocked or tainted nodes, use discovery `--resume` with the same target. Run another full discovery only when the changed snapshot broadly invalidates the original plan.
 6. After the final source state, run the full generated-artifact freshness check. Commit-derived failures follow the post-commit generation sequence, not an immediate dirty-worktree rewrite.
-7. Run `npm run test:merge-gate` only when an explicit local rehearsal is desired, then push to the protected PR gate. GitHub Actions remains authoritative.
+7. Run `npm run check:release` only when an explicit local rehearsal is desired, then push to the protected PR gate. GitHub Actions remains authoritative.
 
 If a production deployment fails after mutation:
 

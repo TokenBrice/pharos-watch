@@ -74,7 +74,7 @@ What must be true before turning each flag on in production:
 ## Production Rollout
 
 `NEXT_PUBLIC_PHAROS_*` values are non-sensitive GitHub repository Variables.
-`.github/workflows/validate-ci.yml` and `.github/workflows/pages-release.yml`
+`.github/workflows/pages-release.yml`
 pass them to the Next.js build; changing a Cloudflare Pages runtime variable
 does not change the static bundle.
 
@@ -100,4 +100,4 @@ inlining/stale-flag checks as applicable.
 
 ## Spec source
 
-The flag table above is the durable reference. Runtime defaults live in `src/lib/feature-flags.ts`; build-workflow propagation lives in `.github/workflows/validate-ci.yml` and `.github/workflows/pages-release.yml` (the production deploy workflow calls `pages-release.yml` for Pages builds).
+The flag table above is the durable reference. Runtime defaults live in `src/lib/feature-flags.ts`; build-workflow propagation lives in `.github/workflows/pages-release.yml` (the production deploy workflow calls it for Pages builds).

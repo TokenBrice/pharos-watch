@@ -9,7 +9,7 @@ user_invocable: true
 Use this skill from the Pharos repository root when the user asks to:
 
 - commit pending work in logical or thematic batches
-- run an explicit local merge-gate rehearsal
+- run an explicit local PR or release rehearsal
 - publish through the protected `main` pull-request gate
 - watch GitHub Actions or Cloudflare deployment until it clears
 - take the local state to production
@@ -20,7 +20,7 @@ Do not use this for a pure review with no requested commit/push, or while anothe
 
 - Default to `main` for inspection. Direct pushes are protected. A request to push, publish, release, or take work to production authorizes the necessary release branch and protected-main PR; do not attempt a direct `main` push or ask again solely because branch protection requires a PR.
 - Preserve unrelated dirty files. Never stash, reset, checkout, or delete work you did not create unless instructed.
-- Commit before publishing. The required `PR gate` check owns the authoritative release gate; the pre-push hook verifies commit-derived artifacts when the pushed commit is checked out, allowing unrelated dirty work but rejecting dirty relevant inputs/outputs. Its heavy merge-gate rehearsal remains opt-in.
+- Commit before publishing. The required `PR gate` check owns the authoritative release gate; the pre-push hook verifies only commit-derived artifacts when the pushed commit is checked out, allowing unrelated dirty work but rejecting dirty relevant inputs/outputs.
 - The pushed state must match the validated state. Re-run `git status --short --branch` after long builds or generators.
 - Use the exact `.nvmrc` runtime directly in the shell. Do not use a temporary `npx node@...` wrapper: nested `npx --no-install` and workspace commands must inherit the same runtime.
 - Distinguish deployment proof from operational acceptance. Worker activation and a Pages release marker prove that the intended artifact is live; cron, memory, scheduler, migration, and ingestion changes require the first relevant production execution before an operational-success claim.
@@ -92,29 +92,15 @@ The generators warn when write mode sees uncommitted history inputs and check mo
 
 ### 3. Validate
 
-Run focused checks selected from the touched files. Use the local merge gate only for an explicit rehearsal or failure investigation; GitHub Actions remains the release authority after push.
+Run focused checks selected from the touched files. GitHub Actions remains the release authority after push.
 
 Useful controls:
 
-- `MERGE_GATE_DRY_RUN=1 npm run test:merge-gate` to inspect the planned commands.
-- An intentional manual `npm run test:merge-gate` writes a reusable receipt only when it validates a clean committed state. An explicitly gated matching branch push can reuse that receipt.
-- `PHAROS_PRE_PUSH_GATE=all git push -u origin <release-branch>` opts into the exact-range local gate for a release-branch push. Normal pushes still run the lightweight commit-derived artifact guard when the pushed commit is the checked-out `HEAD`; unrelated dirty paths do not suppress it.
-- `MERGE_GATE_PAGES_SMOKE=0 npm run test:merge-gate` only when the user explicitly asked to skip Pages smoke.
-- `MERGE_GATE_WORKER_SMOKE=1 npm run test:merge-gate` when worker smoke is needed before a risky worker release.
-- For a large production-bound batch, use the exact `.nvmrc` Node version, load the intended public configuration in a clean subshell or command-scoped environment, commit to a clean snapshot, then run `MERGE_GATE_PRODUCTION_ENV=1 npm run test:merge-gate:discover -- --target=release`. Do not globally export Pages job variables into Vitest or Worker lanes. The release target adds deterministic build-size/build-attribution checks and a credential-free Worker bundle proof to the protected-PR contract.
-- Read the final discovery summary and `.cache/merge-gate/discovery/latest.json`. Fix every blocking root failure with its focused rerun command. When a producer failure left nodes blocked or tainted, run `npm run test:merge-gate:discover -- --target=release --resume`; do not repeatedly run the full target after each individual fix.
-- `--target=pr` predicts the protected PR path, `--target=local-gate` predicts the optional local gate including Pages smoke, and `--target=maintenance` adds nonblocking cleanup advisories. Every target is diagnostic only: it writes no receipt and cannot prove D1 mutation, Cloudflare activation, propagation, or live external state.
+- `npm run check:pr -- --base=<ref>` runs the adaptive committed-diff PR contract.
+- `npm run check:release` runs the optional Pages build/static checks and credential-free Worker bundle proof.
+- Normal pushes run only the lightweight commit-derived artifact guard when the pushed commit is checked-out `HEAD`.
 
-Fix failures locally and rerun the failing focused command. Because release discovery requires a clean committed snapshot for parity, commit remediation before a targeted resume or another full release discovery. Use the local merge gate manually only for deliberate rehearsal or failure investigation.
-
-Target selection is contractual:
-
-| Target        | Use                                                                                                                                          |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pr`          | Predict the protected PR classifier and blocking validation path.                                                                            |
-| `local-gate`  | Rehearse the optional local gate, including its selected smokes.                                                                             |
-| `release`     | Validate a clean production-bound snapshot with exact Node, production Pages configuration, build attribution/size, and Worker bundle proof. |
-| `maintenance` | Collect broad nonblocking advisory debt.                                                                                                     |
+Fix failures locally and rerun the failing focused command. Use the full nightly commands directly only when the changed surface warrants them.
 
 ### 4. Publish Through The Protected Gate
 

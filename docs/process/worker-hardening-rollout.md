@@ -56,7 +56,7 @@ For a rollout slice that touches this path, run:
 - `npm run check:migrations`
 - `npm run check:env-contract`
 - focused Worker tests for the changed cron/status modules
-- Optional local release rehearsal: `npm run test:merge-gate`
+- Optional local release rehearsal: `npm run check:release`
 
 After deployment, inspect `/api/status` for `summary.activeJobAttempts`,
 `summary.staleJobAttempts`, and per-cron `latestAttempt` fields. A

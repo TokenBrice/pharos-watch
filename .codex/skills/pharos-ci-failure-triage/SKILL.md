@@ -1,6 +1,6 @@
 ---
 name: pharos-ci-failure-triage
-description: Diagnose and fix failed Pharos GitHub Actions, merge-gate, deploy-cloudflare, pages-release, or rebuild-pages runs. Use when a workflow failed, a push/merge gate fails, or the user asks to retrigger and iterate until CI/deploy clears.
+description: Diagnose and fix failed Pharos GitHub Actions, adaptive PR checks, deploy-cloudflare, pages-release, or rebuild-pages runs. Use when a workflow failed, a push/merge gate fails, or the user asks to retrigger and iterate until CI/deploy clears.
 user_invocable: true
 ---
 
@@ -8,8 +8,7 @@ user_invocable: true
 
 Use this skill from the Pharos repository root for:
 
-- failed `npm run test:merge-gate`
-- large local `npm run test:merge-gate` cleanup loops after post-swarm or post-merge batches
+- failed `npm run check:pr` or `npm run check:release`
 - failed GitHub Actions runs
 - failed `Deploy to Cloudflare`
 - failed `Rebuild Pages`
@@ -22,8 +21,7 @@ Use this skill from the Pharos repository root for:
 - Classify the failing lane before editing: commit-derived artifact, other generated artifact, docs, tests, Pages build/marker, Worker migration/deploy/activation, deploy infra, post-deploy runtime, or external transient.
 - Read the outer and reusable workflow graph together. A skipped child job can be expected classifier behavior; the aggregate gate, selected surface, head SHA, and exact failed step determine the result.
 - Reproduce locally with the narrowest equivalent command before broad gates when possible.
-- For large local batches, use diagnostic discovery to collect failures across independent lanes; it is not a final gate and does not create release proof.
-- Do not change test timeouts or retry policy merely because a locally parallel run was resource-starved. Reproduce the focused lane serially or cap discovery fan-out first.
+- Do not change test timeouts or retry policy merely because a local run was resource-starved. Reproduce the focused lane alone first.
 - Do not add retries, credentials, or alternate origins until an external response is attributed to the edge, Worker route, application auth, or upstream provider from its URL, status, headers, and consumed body.
 - Preserve unrelated dirty work. If other agents are editing, patch only the failing lane and do not push unless explicitly requested.
 - If production deploy is requested, keep iterating until the workflow clears or a real external blocker is proven.
@@ -35,7 +33,7 @@ Use this skill from the Pharos repository root for:
 3. `docs/deployment-process.md`
 4. `docs/scripts.md`
 
-For workflow edits, also inspect `.github/workflows/*` and `scripts/lib/validation-lanes.mjs` or `scripts/lib/automation-registry.mjs` as needed.
+For workflow edits, also inspect `.github/workflows/*` and `scripts/lib/automation-registry.mjs` as needed.
 
 ## Workflow
 
@@ -64,7 +62,7 @@ Record:
 Common local repro commands:
 
 ```bash
-npm run test:merge-gate:discover -- --target=pr
+npm run check:pr -- --base=origin/main
 npm run check:commit-derived-artifacts
 npm run check:generated-artifacts
 npm run check:doc-source-paths
@@ -74,20 +72,14 @@ npm run build
 npm run seo:check
 npm run typecheck
 npm run typecheck:worker
-npm run test:noncritical -- --shard=1/2
+npm run test:all -- --shard=1/2
 npm run coverage:critical
 npm run test:a11y
 npm run validate:pages-smoke
 npm run validate:worker-smoke
 ```
 
-Use one full `npm run test:merge-gate:discover -- --target=pr` when a large local batch is failing one lane at a time. The runner expands prebuild and generated-artifact checks into atomic nodes, runs all dependency-ready work, blocks `out/` consumers after a failed Pages build, and writes a stable failed/blocked/tainted/incomplete/omitted summary to `.cache/merge-gate/discovery/latest.json`. For Pages-changing PR parity, load the intended public values and set `MERGE_GATE_PRODUCTION_ENV=1`; otherwise treat the explicit environment result as incomplete. Use `local-gate` for optional local-gate parity, `release` for a clean production-bound snapshot, and `maintenance` for broad nonblocking advisories. CPU-heavy postbuild work is serial by default; set `MERGE_GATE_DISCOVERY_MAX_PARALLEL` above `1` only for an intentional performance experiment. `MERGE_GATE_PARALLEL=0` is accepted as a serial compatibility alias.
-
-Use the exact `.nvmrc` runtime in the current shell. Scope production Pages variables to the Pages rehearsal command or a clean subshell; do not export Pages-only flags globally across Vitest and Worker commands. If an explicitly parallel local run looks load-dependent, rerun the exact shard or build alone and return to `MERGE_GATE_DISCOVERY_MAX_PARALLEL=1` before changing code or test budgets.
-
-Fix every blocking root failure from the report and use the listed focused rerun commands while editing. If failed producers left blocked or tainted nodes, run the same target with `--resume`; this reruns those nodes and their dependencies without claiming that prior passing nodes are release proof. Run another full discovery only when the changed snapshot broadly invalidates the original plan. A provisional or incomplete report is not green, and no discovery report is a reusable receipt.
-
-`coverage:critical` failures belong to the weekly/manual Critical Coverage Ratchet workflow or direct local rehearsals, not the blocking reusable validate workflow. The normal `test:noncritical` lane includes critical tests despite the legacy script name.
+Use the exact `.nvmrc` runtime in the current shell. `check:pr` runs the committed-diff adaptive contract; use its failing leaf command for fast iteration. `check:release` is the optional Pages build plus Worker bundle rehearsal. `coverage:critical` is a report-only weekly/manual lane, while `test:all`, full lint, and test typechecking belong to nightly/manual validation.
 
 Use `scripts/ci/classify-deploy-changes.mjs` and `scripts/ci/pharos-change-contract.mjs` when deploy-surface classification is unclear.
 
@@ -114,14 +106,13 @@ Avoid broad rewrites while fixing CI. Make the smallest root-cause patch.
 Rerun the failing local command first. If the user asked for release/push:
 
 ```bash
-npm run test:merge-gate:discover -- --target=pr # one full large-batch diagnostic
-npm run test:merge-gate:discover -- --target=pr --resume # blocked/tainted convergence only
+npm run check:pr -- --base=origin/main
 git push -u origin <fix-branch>
 gh pr create --base main --head <fix-branch>
 gh pr checks <pr-number> --watch
 ```
 
-Run `npm run test:merge-gate` before publishing only when the user wants an explicit local rehearsal or when you are debugging a local gate failure. The required GitHub `PR gate` is authoritative. Merge through the protected PR path, then find and watch the resulting `main` deployment; do not push directly to `main`.
+Run `npm run check:release` only when the user wants an explicit local production-build rehearsal. The required GitHub `PR gate` is authoritative. Merge through the protected PR path, then find and watch the resulting `main` deployment; do not push directly to `main`.
 
 If a pushed workflow fails again, repeat from Step 1 with the new run id. Do not layer speculative fixes across retries: one causal change, one new SHA, then reassess the exact failing lane.
 

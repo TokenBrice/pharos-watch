@@ -92,7 +92,7 @@ npm run lint
 npm run typecheck
 npm run test
 npm run check:commit-derived-artifacts
-MERGE_GATE_DRY_RUN=1 npm run test:merge-gate
+npm run check:pr -- --base=origin/main
 ```
 
 Use `npm install` instead of `npm ci` only when intentionally changing dependencies.
