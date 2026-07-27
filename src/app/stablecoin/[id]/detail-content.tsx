@@ -17,6 +17,8 @@ import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-stick
 import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
+import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
+import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
@@ -52,6 +54,7 @@ interface DetailContentProps {
   feedbackOpen: boolean;
   heroRef: RefObject<HTMLDivElement | null>;
   historyGateRef: Ref<HTMLDivElement>;
+  mechanismCollateralization: MechanismCollateralizationView | null;
   onActiveBannerChange: (id: string) => void;
   onFeedbackOpenChange: (open: boolean) => void;
   overviewGateRef: Ref<HTMLDivElement>;
@@ -139,16 +142,24 @@ function DetailNavigation({
 
 function DetailSummaryRail({
   heroModel,
+  mechanismCollateralization,
   viewModel,
 }: {
   heroModel: ReturnType<typeof buildStablecoinDetailHeroViewModel>;
+  mechanismCollateralization: MechanismCollateralizationView | null;
   viewModel: ReadyDetailViewModel;
 }) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.dexPriceCheck);
+  const liveCollateralizationRatio = viewModel.reserves?.metadata?.collateralizationRatio ?? null;
   return (
     <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
       <div className="space-y-4 pb-4">
         <RailSafetySummary items={heroModel.signalRailItems} />
+        <CollateralizationCard
+          reviewed={mechanismCollateralization}
+          liveRatio={liveCollateralizationRatio}
+          liveAtSec={viewModel.reserves?.liveAt ?? null}
+        />
         <TapeForCoinTeaser coinId={viewModel.id} />
         {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
           <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />
@@ -176,6 +187,7 @@ export function DetailContent({
   feedbackOpen,
   heroRef,
   historyGateRef,
+  mechanismCollateralization,
   onActiveBannerChange,
   onFeedbackOpenChange,
   overviewGateRef,
@@ -288,7 +300,11 @@ export function DetailContent({
             />
           </div>
         </div>
-        <DetailSummaryRail heroModel={heroModel} viewModel={viewModel} />
+        <DetailSummaryRail
+          heroModel={heroModel}
+          mechanismCollateralization={mechanismCollateralization}
+          viewModel={viewModel}
+        />
       </div>
       <FeedbackModal
         open={feedbackOpen}
