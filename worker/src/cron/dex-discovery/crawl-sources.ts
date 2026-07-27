@@ -3,7 +3,13 @@ import type { ContractDeployment } from "@shared/types/core";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { crawlCoinGeckoPoolsStage } from "./crawl-coingecko-pools";
 import { crawlGeckoTerminalPoolsStage } from "./crawl-geckoterminal-pools";
-import { crawlDexScreenerPoolsStage, selectDexScreenerTargets } from "./crawl-dexscreener-pools";
+import {
+  createDexScreenerDiscoveryRunState,
+  crawlDexScreenerPoolsStage,
+  finalizeDexScreenerDiscoveryRun,
+  selectDexScreenerTargets,
+  type DexScreenerDiscoveryRunState,
+} from "./crawl-dexscreener-pools";
 import { crawlCoinGeckoTickersStage } from "./crawl-coingecko-tickers";
 import { crawlCurvePoolsStage } from "./crawl-curve-pools";
 import { createCrawlStageContext, type StagedPriceObservation } from "./staged-pool";
@@ -25,7 +31,15 @@ export async function crawlCoin(
   signal?: AbortSignal,
   deadlineMs?: number,
   references?: PriceValidationReferences,
+  sharedDexScreenerRunState?: DexScreenerDiscoveryRunState,
 ): Promise<CrawlResult> {
+  const dexScreenerRunState = sharedDexScreenerRunState ?? createDexScreenerDiscoveryRunState();
+  const finalizeOwnRun = async (result: CrawlResult): Promise<CrawlResult> => {
+    if (!sharedDexScreenerRunState) {
+      await finalizeDexScreenerDiscoveryRun(db, dexScreenerRunState);
+    }
+    return result;
+  };
   const pools: StagedPool[] = [];
   const priceObs: StagedPriceObservation[] = [];
   const providerChecks: DexDeploymentProviderCheck[] = [];
@@ -50,7 +64,7 @@ export async function crawlCoin(
   });
   providerChecks.push(...coinGeckoStage.providerChecks);
   if (coinGeckoStage.stoppedEarly) {
-    return {
+    return await finalizeOwnRun({
       pools,
       unresolvedChains: coinGeckoStage.unresolvedChains,
       deploymentOutcomes: classifyDexDeploymentOutcomes({
@@ -60,7 +74,7 @@ export async function crawlCoin(
         providerChecks,
         nowSec,
       }),
-    };
+    });
   }
 
   const geckoTerminalStage = await crawlGeckoTerminalPoolsStage({
@@ -77,10 +91,11 @@ export async function crawlCoin(
       discoveredPoolCount: pools.length,
     }),
     context,
+    runState: dexScreenerRunState,
   });
   providerChecks.push(...dexScreenerStage.providerChecks);
   if (dexScreenerStage.stoppedEarly) {
-    return {
+    return await finalizeOwnRun({
       pools,
       unresolvedChains: coinGeckoStage.unresolvedChains,
       deploymentOutcomes: classifyDexDeploymentOutcomes({
@@ -90,7 +105,7 @@ export async function crawlCoin(
         providerChecks,
         nowSec,
       }),
-    };
+    });
   }
 
   await crawlCoinGeckoTickersStage({
@@ -104,7 +119,7 @@ export async function crawlCoin(
   const curveStage = await crawlCurvePoolsStage({ coinTargets, context });
   providerChecks.push(...curveStage.providerChecks);
 
-  return {
+  return await finalizeOwnRun({
     pools,
     unresolvedChains: coinGeckoStage.unresolvedChains,
     deploymentOutcomes: classifyDexDeploymentOutcomes({
@@ -114,5 +129,5 @@ export async function crawlCoin(
       providerChecks,
       nowSec,
     }),
-  };
+  });
 }

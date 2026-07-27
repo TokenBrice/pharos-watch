@@ -46,6 +46,7 @@ export interface DsFetchPoolsResult {
   status?: number;
   contentType?: string;
   error?: string;
+  hardRefusal?: boolean;
 }
 
 function isDsPair(value: unknown): value is DsPair {
@@ -78,6 +79,10 @@ function parseDexScreenerTokenPoolsResponse(data: unknown): DsPair[] | null {
 
 function summarizeBody(raw: string, limit = 160): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, limit);
+}
+
+function isHardRefusal(status: number, bodySnippet: string): boolean {
+  return status === 429 || /\berror code:\s*1015\b/i.test(bodySnippet);
 }
 
 async function readBodyText(res: Response, timeoutMs: number, signal?: AbortSignal): Promise<string> {
@@ -130,6 +135,7 @@ async function describeNonOkResponse(
     status: res.status,
     contentType,
     error: `HTTP ${res.status} for ${url}${snippet ? `; body starts with: ${snippet}` : ""}`,
+    hardRefusal: isHardRefusal(res.status, snippet),
   };
 }
 

@@ -56,6 +56,23 @@ describe("dexscreener", () => {
       status: 429,
       contentType: "text/html",
       error: "HTTP 429 for https://api.dexscreener.com/tokens/v1/base/0xabc; body starts with: rate limited",
+      hardRefusal: true,
+    });
+  });
+
+  it("classifies provider WAF code 1015 as a hard refusal even on a non-429 response", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response("error code: 1015", {
+        status: 403,
+        headers: { "content-type": "text/plain" },
+      }),
+    );
+
+    await expect(fetchDsTokenPoolsWithStatus("base", "0xabc")).resolves.toMatchObject({
+      ok: false,
+      status: 403,
+      hardRefusal: true,
+      error: expect.stringContaining("error code: 1015"),
     });
   });
 

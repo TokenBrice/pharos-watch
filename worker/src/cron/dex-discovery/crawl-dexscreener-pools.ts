@@ -6,6 +6,7 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { dsRateLimit, fetchDsTokenPoolsWithStatus } from "../../lib/dexscreener";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { getGtDexQuality, normalizeProtocol } from "../dex-liquidity/pool-helpers";
 import { getChainAwareDsTrackedTokenPriceUsd } from "../dex-liquidity/crawl-helpers";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
@@ -18,6 +19,18 @@ const DEXSCREENER_LIQUIDITY_CIRCUIT = CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY;
 export interface DexScreenerPoolsStageResult {
   stoppedEarly: boolean;
   providerChecks: DexDeploymentProviderCheck[];
+}
+
+export interface DexScreenerDiscoveryRunState {
+  allowed: boolean | null;
+  attemptedRequests: number;
+  successfulRequests: number;
+  hardRefusal: {
+    status: number | null;
+    contentType: string | null;
+    error: string | null;
+  } | null;
+  outcomeRecorded: boolean;
 }
 
 export interface DexScreenerPoolsStageDependencies {
@@ -43,7 +56,32 @@ interface CrawlDexScreenerPoolsStageOptions {
   db: D1Database;
   targets: DexScreenerTarget[];
   context: CrawlStageContext;
+  runState: DexScreenerDiscoveryRunState;
   dependencies?: DexScreenerPoolsStageDependencies;
+}
+
+export function createDexScreenerDiscoveryRunState(): DexScreenerDiscoveryRunState {
+  return {
+    allowed: null,
+    attemptedRequests: 0,
+    successfulRequests: 0,
+    hardRefusal: null,
+    outcomeRecorded: false,
+  };
+}
+
+export async function finalizeDexScreenerDiscoveryRun(
+  db: D1Database,
+  runState: DexScreenerDiscoveryRunState,
+  dependencies = defaultDexScreenerPoolsStageDependencies,
+): Promise<void> {
+  if (runState.outcomeRecorded || runState.attemptedRequests === 0) return;
+  await dependencies.recordOutcome(
+    db,
+    DEXSCREENER_LIQUIDITY_CIRCUIT,
+    runState.hardRefusal == null && runState.successfulRequests > 0,
+  );
+  runState.outcomeRecorded = true;
 }
 
 export function selectDexScreenerTargets({
@@ -70,37 +108,35 @@ export async function crawlDexScreenerPoolsStage({
   db,
   targets,
   context,
+  runState,
   dependencies = defaultDexScreenerPoolsStageDependencies,
 }: CrawlDexScreenerPoolsStageOptions): Promise<DexScreenerPoolsStageResult> {
-  if (targets.length === 0 || context.timeExceeded()) {
+  if (targets.length === 0 || context.timeExceeded() || runState.hardRefusal != null) {
     return { stoppedEarly: false, providerChecks: [] };
   }
 
-  const dsAllowed = await dependencies.shouldAttemptFetch(db, DEXSCREENER_LIQUIDITY_CIRCUIT);
-  if (!dsAllowed) {
+  if (runState.allowed == null) {
+    runState.allowed = await dependencies.shouldAttemptFetch(db, DEXSCREENER_LIQUIDITY_CIRCUIT);
+  }
+  if (!runState.allowed) {
     return { stoppedEarly: false, providerChecks: [] };
   }
 
-  let dsRequests = 0;
-  let successfulRequests = 0;
   const providerChecks: DexDeploymentProviderCheck[] = [];
 
   for (const [chain, address] of targets) {
     throwIfAborted(context.signal);
     if (context.timeExceeded()) {
-      if (dsRequests > 0) {
-        await dependencies.recordOutcome(db, DEXSCREENER_LIQUIDITY_CIRCUIT, successfulRequests > 0);
-      }
       return { stoppedEarly: true, providerChecks };
     }
 
     const dsChain = DS_CHAIN_MAP[chain];
     if (!dsChain) continue;
 
-    // Each stage invocation is scoped to one coin, so a local request counter
-    // cannot pace the boundary between consecutive one-target coin crawls.
+    // Pace the first request too so consecutive one-target coin crawls retain a
+    // delay at their shared run boundary.
     await dependencies.dsRateLimit(context.signal);
-    dsRequests++;
+    runState.attemptedRequests++;
 
     try {
       const result = await dependencies.fetchDsTokenPoolsWithStatus(
@@ -116,8 +152,47 @@ export async function crawlDexScreenerPoolsStage({
         provider: "dexscreener",
         status: result.ok ? "success" : "failure",
       });
-      if (!result.ok) continue;
-      successfulRequests++;
+      if (!result.ok) {
+        if (result.hardRefusal) {
+          runState.hardRefusal = {
+            status: result.status ?? null,
+            contentType: result.contentType ?? null,
+            error: result.error ?? null,
+          };
+          logWorkerEvent({
+            scope: "lib",
+            level: "warn",
+            event: "dex_discovery.dexscreener_hard_refusal",
+            job: "sync-dex-discovery",
+            provider: "dexscreener",
+            status: result.status ?? null,
+            message: "DexScreener hard refusal; suppressing requests for the rest of the run",
+            metadata: {
+              contentType: result.contentType ?? null,
+              error: result.error ?? null,
+            },
+          });
+          try {
+            // Persist the shared circuit immediately: discovery overlaps the
+            // scoring fallback, so waiting until the run ends would leave that
+            // lane free to repeat the same provider refusal.
+            await finalizeDexScreenerDiscoveryRun(db, runState, dependencies);
+          } catch (err) {
+            logWorkerEvent({
+              scope: "lib",
+              level: "warn",
+              event: "dex_discovery.dexscreener_hard_refusal_outcome_failed",
+              job: "sync-dex-discovery",
+              provider: "dexscreener",
+              message: "Failed to record DexScreener hard-refusal outcome",
+              error: err,
+            });
+          }
+          break;
+        }
+        continue;
+      }
+      runState.successfulRequests++;
 
       for (const pair of result.pairs) {
         const tvl = pair.liquidity?.usd ?? 0;
@@ -195,10 +270,6 @@ export async function crawlDexScreenerPoolsStage({
       console.warn(`[dex-discovery] dexscreener error for ${chain}:${address}`, err);
       providerChecks.push({ chain, address, provider: "dexscreener", status: "failure" });
     }
-  }
-
-  if (dsRequests > 0) {
-    await dependencies.recordOutcome(db, DEXSCREENER_LIQUIDITY_CIRCUIT, successfulRequests > 0);
   }
 
   return { stoppedEarly: false, providerChecks };

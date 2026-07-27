@@ -126,6 +126,7 @@ describe("runDexScreenerPass", () => {
       status: 429,
       contentType: "text/html",
       error: "HTTP 429 for https://api.dexscreener.com/tokens/v1/base/0xabc; body starts with: rate limited",
+      hardRefusal: true,
     });
     const db = mockD1([
       {
@@ -252,17 +253,42 @@ describe("runDexScreenerPass", () => {
     expect(asset.priceConfidence).toBe("fallback");
   });
 
-  it("attempts one deployment per asset before spending requests on second deployments", async () => {
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({
+  it("resolves multiple same-chain assets through one address batch", async () => {
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
       ok: true,
-      pairs: [],
+      pairs: [
+        {
+          chainId: "base",
+          dexId: "aerodrome",
+          pairAddress: "0xpair-a",
+          baseToken: { address: "0xaaa", name: "Multi USD", symbol: "MULTI" },
+          quoteToken: { address: "0xusdc", name: "USD Coin", symbol: "USDC" },
+          priceUsd: "1.00",
+          priceNative: null,
+          volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
+          liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
+          pairCreatedAt: null,
+        },
+        {
+          chainId: "base",
+          dexId: "aerodrome",
+          pairAddress: "0xpair-b",
+          baseToken: { address: "0xbbb", name: "Single USD", symbol: "SINGLE" },
+          quoteToken: { address: "0xusdc", name: "USD Coin", symbol: "USDC" },
+          priceUsd: "1.00",
+          priceNative: null,
+          volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
+          liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
+          pairCreatedAt: null,
+        },
+      ],
     });
 
     const multiChain = makeMissingAsset({
       id: "multi-chain",
       symbol: "MULTI",
       address: "0xaaa",
-      chains: ["Ethereum", "Base", "Arbitrum"],
+      chains: ["Base"],
       circulating: { peggedUSD: 2_000_000 },
     });
     const singleChain = makeMissingAsset({
@@ -273,22 +299,26 @@ describe("runDexScreenerPass", () => {
       circulating: { peggedUSD: 1_000_000 },
     });
 
-    await runDexScreenerPass([multiChain, singleChain], undefined, undefined);
+    const result = await runDexScreenerPass([multiChain, singleChain], undefined, undefined);
 
-    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(4);
-    const firstTwoAddresses = vi
-      .mocked(fetchDsTokenPoolsWithStatus)
-      .mock.calls.slice(0, 2)
-      .map((call) => call[1]);
-    expect(firstTwoAddresses).toEqual(["0xaaa", "0xbbb"]);
+    expect(result.resolved).toBe(2);
+    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(1);
+    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith(
+      "base",
+      "0xaaa,0xbbb",
+      expect.any(AbortSignal),
+      expect.any(Number),
+      0,
+    );
   });
 
-  it("prioritizes a longer-streak asset over higher-circulating fresh ones under the request cap", async () => {
+  it("prioritizes a longer-streak asset under the 30-address batch cap", async () => {
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
     const db = circuitClosedDb();
+    vi.spyOn(Date, "now").mockReturnValue(0);
 
-    // One low-circulating asset with a long miss streak plus ten fresh,
-    // higher-circulating assets. The cap is ten, so a circulating-only tiebreak
+    // One low-circulating asset with a long miss streak plus 30 fresh,
+    // higher-circulating assets. The cap is 30, so a circulating-only tiebreak
     // would drop the streaked asset; streak priority must attempt it and drop
     // the lowest-circulating fresh asset instead.
     const streaked = makeMissingAsset({
@@ -298,7 +328,7 @@ describe("runDexScreenerPass", () => {
       chains: ["Base"],
       circulating: { peggedUSD: 1 },
     });
-    const fresh = Array.from({ length: 10 }, (_, index) =>
+    const fresh = Array.from({ length: 30 }, (_, index) =>
       makeMissingAsset({
         id: `fresh-${index}`,
         symbol: `FRESH${index}`,
@@ -316,69 +346,48 @@ describe("runDexScreenerPass", () => {
       new Map([["streaked", 5]]),
     );
 
-    const fetchedAddresses = vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls.map((call) => call[1]);
-    expect(fetchedAddresses).toHaveLength(10);
+    const fetchedAddresses = String(vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls[0]?.[1]).split(",");
+    expect(fetchedAddresses).toHaveLength(30);
     expect(fetchedAddresses).toContain("0xstreaked");
-    expect(fetchedAddresses).not.toContain("0xfresh9");
+    expect(fetchedAddresses).not.toContain("0xfresh29");
   });
 
-  it("rotates equal-streak candidates across cycles so the tail is not starved", async () => {
+  it("rotates the single batch across candidate chains", async () => {
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
     const db = circuitClosedDb();
-
-    // Fifteen equal-priority candidates (undefined streak map ⇒ all streak 0),
-    // equal circulating, ids sorting deterministically. The cap is ten, so the
-    // rotation window must advance across 15-minute cycles for the tail to be
-    // attempted at all.
-    const assets = Array.from({ length: 15 }, (_, index) =>
+    const baseAssets = Array.from({ length: 31 }, (_, index) =>
       makeMissingAsset({
-        id: `asset-${String(index).padStart(2, "0")}`,
-        symbol: `A${index}`,
-        address: `0xasset${String(index).padStart(2, "0")}`,
+        id: `base-${String(index).padStart(2, "0")}`,
+        symbol: `BASE${index}`,
+        address: `0xbase${index}`,
         chains: ["Base"],
-        circulating: { peggedUSD: 1_000_000 },
       }),
     );
+    const assets = [
+      ...baseAssets,
+      makeMissingAsset({
+        id: "ethereum-asset",
+        symbol: "ETH",
+        address: "0xethereum",
+        chains: ["Ethereum"],
+      }),
+    ];
 
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(0);
     await runDexScreenerPass(assets, undefined, db);
-    const cycle0 = vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls.map((call) => call[1]);
+    const cycle0Chain = vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls[0]?.[0];
 
     vi.mocked(fetchDsTokenPoolsWithStatus).mockClear();
     nowSpy.mockReturnValue(15 * 60 * 1_000);
     await runDexScreenerPass(assets, undefined, db);
-    const cycle1 = vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls.map((call) => call[1]);
+    const cycle1Chain = vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls[0]?.[0];
 
-    expect(cycle0).toHaveLength(10);
-    expect(cycle1).toHaveLength(10);
-    // Window advanced: a candidate dropped in cycle 0 is attempted in cycle 1
-    // and vice versa.
-    expect(cycle0).not.toContain("0xasset10");
-    expect(cycle1).toContain("0xasset10");
-    expect(cycle0.some((address) => !cycle1.includes(address))).toBe(true);
+    expect([cycle0Chain, cycle1Chain]).toEqual(["base", "ethereum"]);
   });
 
-  it("continues to the next candidate after a per-request timeout instead of dropping it", async () => {
+  it("bounds a stalled batch without issuing another request", async () => {
     vi.useFakeTimers();
-    vi.mocked(fetchDsTokenPoolsWithStatus)
-      .mockReturnValueOnce(new Promise(() => {}))
-      .mockResolvedValueOnce({
-        ok: true,
-        pairs: [
-          {
-            chainId: "base",
-            dexId: "uniswap",
-            pairAddress: "0xpair",
-            baseToken: { address: "0xbbb", name: "Second USD", symbol: "SECOND" },
-            quoteToken: { address: "0xusdc", name: "USD Coin", symbol: "USDC" },
-            priceUsd: "1.00",
-            priceNative: null,
-            volume: { h24: 10_000, h6: 0, h1: 0, m5: 0 },
-            liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
-            pairCreatedAt: null,
-          },
-        ],
-      });
+    vi.mocked(fetchDsTokenPoolsWithStatus).mockReturnValueOnce(new Promise(() => {}));
     const db = circuitClosedDb();
 
     const stalled = makeMissingAsset({
@@ -400,13 +409,9 @@ describe("runDexScreenerPass", () => {
     await vi.advanceTimersByTimeAsync(5_001);
     const result = await resultPromise;
 
-    // The first candidate's timeout must not abort the pass: the second
-    // candidate is still attempted and priced.
-    expect(result.resolved).toBe(1);
-    expect(second.price).toBe(1);
-    expect(vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls.map((call) => call[1])).toEqual([
-      "0xaaa",
-      "0xbbb",
-    ]);
+    expect(result.resolved).toBe(0);
+    expect(second.price).toBeNull();
+    expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(fetchDsTokenPoolsWithStatus).mock.calls[0]?.[1]).toBe("0xaaa,0xbbb");
   });
 });

@@ -9,6 +9,10 @@ import type { DiscoveryMeta } from "./types";
 import { DISCOVERY_TIERS } from "./types";
 import { crawlCoin } from "./crawl-sources";
 import {
+  createDexScreenerDiscoveryRunState,
+  finalizeDexScreenerDiscoveryRun,
+} from "./crawl-dexscreener-pools";
+import {
   cleanupStaging,
   incrementRunSeq,
   readDiscoveryMeta,
@@ -20,6 +24,7 @@ import {
   upsertDexDeploymentOutcomes,
 } from "./deployment-outcomes";
 import { toErrorMessage } from "../../lib/error-utils";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 export type EffectiveTier = "t1" | "t2" | "t3" | "dormant" | "skip";
 
@@ -186,6 +191,22 @@ export async function syncDexDiscovery(
   const tierBreakdown = { t1: 0, t2: 0, t3: 0, dormant: 0, skipped: 0 };
   const allUnresolvedChains = new Set<string>();
   const poolsBySource: Record<string, number> = {};
+  const dexScreenerRunState = createDexScreenerDiscoveryRunState();
+  const finalizeDexScreenerOutcome = async () => {
+    try {
+      await finalizeDexScreenerDiscoveryRun(db, dexScreenerRunState);
+    } catch (err) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "dex_discovery.dexscreener_outcome_failed",
+        job: "sync-dex-discovery",
+        provider: "dexscreener",
+        message: "Failed to record DexScreener run outcome",
+        error: err,
+      });
+    }
+  };
 
   try {
     throwIfAborted(signal);
@@ -274,6 +295,7 @@ export async function syncDexDiscovery(
           signal,
           coinDeadline,
           validationReferences,
+          dexScreenerRunState,
         );
 
         try {
@@ -326,6 +348,8 @@ export async function syncDexDiscovery(
       }
     }
 
+    await finalizeDexScreenerOutcome();
+
     if (hasDiscoveryFinalizationWindow(deadlineMs)) {
       cleanup = await cleanupStaging(db, nowSec, signal);
     } else {
@@ -347,6 +371,11 @@ export async function syncDexDiscovery(
         cleanup,
         runSeq,
         deploymentOutcomesWritten,
+        dexscreener: {
+          attemptedRequests: dexScreenerRunState.attemptedRequests,
+          successfulRequests: dexScreenerRunState.successfulRequests,
+          hardRefusal: dexScreenerRunState.hardRefusal,
+        },
       },
     });
 
@@ -364,6 +393,11 @@ export async function syncDexDiscovery(
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         runSeq,
         deploymentOutcomesWritten,
+        dexscreener: {
+          attemptedRequests: dexScreenerRunState.attemptedRequests,
+          successfulRequests: dexScreenerRunState.successfulRequests,
+          hardRefusal: dexScreenerRunState.hardRefusal,
+        },
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
         unresolvedChains: allUnresolvedChains.size > 0 ? [...allUnresolvedChains] : undefined,
@@ -371,6 +405,7 @@ export async function syncDexDiscovery(
       }),
     };
   } catch (err) {
+    await finalizeDexScreenerOutcome();
     const error = toErrorMessage(err);
     recordCronFailure("dex-discovery", err, { metadata: { stage: "orchestrator", fatal: true, runSeq } });
     return {
@@ -387,6 +422,11 @@ export async function syncDexDiscovery(
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         runSeq,
         deploymentOutcomesWritten,
+        dexscreener: {
+          attemptedRequests: dexScreenerRunState.attemptedRequests,
+          successfulRequests: dexScreenerRunState.successfulRequests,
+          hardRefusal: dexScreenerRunState.hardRefusal,
+        },
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
         unresolvedChains: allUnresolvedChains.size > 0 ? [...allUnresolvedChains] : undefined,
