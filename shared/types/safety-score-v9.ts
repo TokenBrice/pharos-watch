@@ -41,6 +41,7 @@ export const V9_REASON_CODES = [
   "missing-oracle-profile",
   "missing-parent-score",
   "missing-peg-input",
+  "peg-supply-floor-withheld",
   "missing-pillar",
   "missing-access-review",
   "missing-pillar-evidence",

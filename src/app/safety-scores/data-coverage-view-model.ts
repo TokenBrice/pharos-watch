@@ -41,6 +41,7 @@ const REASON_CODE_LABELS: Record<V9ReasonCode, string> = {
   "missing-oracle-profile": "Oracle setup not documented",
   "missing-parent-score": "Parent asset has no score",
   "missing-peg-input": "Peg reference data missing",
+  "peg-supply-floor-withheld": "Peg deviation withheld below the $1M supply floor",
   "missing-pillar": "A scoring pillar has no inputs",
   "missing-access-review": "Transfer and freeze powers not reviewed",
   "missing-pillar-evidence": "A scoring pillar has no evidence",

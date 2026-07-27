@@ -1623,6 +1623,30 @@
       }
     },
     {
+      "code": "peg-supply-floor-withheld",
+      "ownerDomain": "peg",
+      "archetypes": [
+        "*"
+      ],
+      "pathKinds": [
+        "peg",
+        "local-component"
+      ],
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": [
+        "ceiling"
+      ],
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
+      "publicLabel": "Peg deviation is withheld below the $1M supply floor",
+      "auditClassification": "measured-structural",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "peg-unverified"
+      }
+    },
+    {
       "code": "missing-pillar",
       "ownerDomain": "methodology",
       "archetypes": [

@@ -138,6 +138,7 @@ function exactFixedInput(
     omitPegRow?: boolean;
     pegScore?: number | null;
     currentDeviationBps?: number | null;
+    depegEventCoverageLimited?: boolean;
     activeDepeg?: boolean;
     activeDepegPeakBps?: number;
     routeChain?: string;
@@ -201,6 +202,9 @@ function exactFixedInput(
             pegCurrency: "USD",
             governance: "centralized",
             currentDeviationBps: args.currentDeviationBps === undefined ? 1 : args.currentDeviationBps,
+            ...(args.depegEventCoverageLimited === undefined
+              ? {}
+              : { depegEventCoverageLimited: args.depegEventCoverageLimited }),
             pegScore: args.pegScore === undefined ? 99 : args.pegScore,
             priceSource: "fixture-price",
             priceObservedAt: observedAtSec,
@@ -2079,6 +2083,26 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const gapped = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), withoutDisposition).assets[0]!;
     expect(accessFreezeGaps(gapped).length).toBeGreaterThan(0);
     expect(accessFreezeGaps(gapped).every((gap) => gap.reasonCode === "missing-access-review")).toBe(true);
+  });
+
+  it("classifies a supply-floor-withheld peg deviation as measured, not missing", () => {
+    const pegGaps = (fixed: ReturnType<typeof exactFixedInput>) =>
+      compileSafetyScoreV9FactSetFromFixedInput(fixed, extension())
+        .assets[0]!.gaps.filter((gap) =>
+          gap.reasonCode === "peg-supply-floor-withheld" || gap.reasonCode === "missing-peg-input",
+        );
+
+    // Deviation withheld by the $1M supply floor: deliberate methodology,
+    // classified measured-structural with the same peg-unverified ceiling.
+    const floorWithheld = exactFixedInput({ currentDeviationBps: null, depegEventCoverageLimited: true });
+    expect(pegGaps(floorWithheld)).toMatchObject([
+      { reasonCode: "peg-supply-floor-withheld", responsibility: "measured-adverse" },
+    ]);
+
+    // The same null deviation without the floor flag stays a producer gap.
+    expect(pegGaps(exactFixedInput({ currentDeviationBps: null }))).toMatchObject([
+      { reasonCode: "missing-peg-input", responsibility: "producer-failed" },
+    ]);
   });
 
   it("compiles exact base facts and explicit reviews without consulting v8 score outputs", () => {
