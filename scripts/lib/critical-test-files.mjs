@@ -221,7 +221,3 @@ export function buildCriticalCoverageArgs(extraArgs = []) {
     ...extraArgs,
   ];
 }
-
-export function buildNoncriticalTestArgs(extraArgs = []) {
-  return ["run", ...extraArgs];
-}

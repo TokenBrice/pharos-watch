@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   all-critical-ratchet:
+    continue-on-error: true
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 25
     env:

@@ -1,34 +1,6 @@
 name: Telegram Load Guard
 
 on:
-  pull_request:
-    paths:
-      - ".github/workflows/telegram-load.yml"
-      - "scripts/ci/check-telegram-load.ts"
-      - "scripts/lib/telegram-load-scenarios.ts"
-      - "scripts/lib/telegram-load-guard.mjs"
-      - "scripts/maintenance/test-merge-gate.mjs"
-      - "scripts/__tests__/check-telegram-load.test.ts"
-      - "scripts/__tests__/telegram-load-guard.test.ts"
-      - "shared/lib/telegram-delivery-policy.ts"
-      - "worker/src/lib/telegram-constants.ts"
-      - "worker/src/lib/cron-timeouts.ts"
-      - "worker/wrangler.toml"
-      - "worker/src/cron/dispatch-telegram-*.ts"
-      - "worker/src/cron/telegram-pending/**"
-      - "worker/src/cron/telegram-alert-*.ts"
-      - "worker/migrations/**"
-      - "worker/src/lib/telegram.ts"
-      - "shared/lib/telegram-presets.ts"
-      - "worker/src/lib/telegram-presets.ts"
-      - "worker/src/api/telegram-store/presets.ts"
-      - "worker/src/api/telegram-format.ts"
-      - "worker/src/lib/telegram-alerts.ts"
-      - "worker/src/lib/telegram-alerts-formatting.ts"
-      - "shared/lib/cron-jobs.ts"
-      - "shared/lib/scheduled-runner-registry.ts"
-      - "worker/src/handlers/scheduled/five-minute-telegram.ts"
-      - "worker/src/api/admin-telegram-broadcast.ts"
   schedule:
     - cron: "45 6 * * 1"
   workflow_dispatch:
@@ -37,8 +9,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: telegram-load-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: telegram-load
+  cancel-in-progress: true
 
 jobs:
   telegram-load:

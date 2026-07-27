@@ -17,10 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       docs_only: ${{ steps.classify.outputs.docs_only }}
-      node_compat_changed: ${{ steps.node_compat.outputs.changed }}
-      pages_changed: ${{ steps.classify.outputs.pages_changed }}
-      pages_deploy_required: ${{ steps.classify.outputs.pages_deploy_required }}
-      worker_changed: ${{ steps.classify.outputs.worker_changed }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -32,39 +28,55 @@ jobs:
           DEPLOY_EVENT_NAME: push
           DEPLOY_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/ci/classify-deploy-changes.mjs >> "$GITHUB_OUTPUT"
-      - id: node_compat
-        name: Detect Node compatibility changes
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          if git diff --quiet "${BASE_SHA}...${HEAD_SHA}" -- \
-            '*.cjs' '*.cts' '*.js' '*.jsx' '*.mjs' '*.mts' '*.ts' '*.tsx' \
-            '.nvmrc' 'package.json' 'package-lock.json' 'tsconfig*.json' \
-            '**/package.json' '**/tsconfig*.json' \
-            '.github/actions/setup-workspace/action.yml' \
-            '.github/workflows/pull-request-checks.yml'; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
 
-  validate:
+  static:
+    name: Adaptive static checks
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.docs_only != 'true' }}
-    uses: ./.github/workflows/validate-ci.yml
-    with:
-      pages_changed: ${{ needs.detect-changes.outputs.pages_changed == 'true' }}
-      run_pages_build_and_seo: ${{ needs.detect-changes.outputs.pages_deploy_required == 'true' }}
-      worker_changed: ${{ needs.detect-changes.outputs.worker_changed == 'true' }}
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+        with:
+          tooling-cache: "true"
+          tooling-cache-save: "true"
+      - name: Run surface-aware static checks
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: npm run check:pr:static
 
-  validate-docs:
+  tests:
+    name: Critical and changed tests (${{ matrix.shard }}/2)
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.docs_only != 'true' }}
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+      - name: Run critical contracts and tests affected by the PR
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: npm run test:pr -- --shard=${{ matrix.shard }}/2
+
+  docs:
+    name: Documentation checks
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.docs_only == 'true' }}
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -76,38 +88,15 @@ jobs:
       - run: npm run check:doc-sync
       - run: npm run check:agent-doc-sync
 
-  node26-proof:
-    name: Node 26 proof
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.node_compat_changed == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    continue-on-error: true
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-workspace
-        with:
-          node-version: "26"
-          tooling-cache: "true"
-      - run: npm run typecheck
-      - run: npm run typecheck:worker
-
   gitleaks:
     name: Gitleaks PR scan
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           fetch-depth: 0
-
       - name: Install pinned gitleaks
         env:
           GITLEAKS_VERSION: 8.30.0
@@ -117,7 +106,6 @@ jobs:
           echo "${GITLEAKS_TARBALL_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c -
           tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
           chmod +x /tmp/gitleaks
-
       - name: Scan PR commit range for secrets
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -127,18 +115,15 @@ jobs:
   pr-gate:
     name: PR gate
     if: ${{ always() }}
-    needs:
-      - detect-changes
-      - validate
-      - validate-docs
-      - gitleaks
+    needs: [detect-changes, static, tests, docs, gitleaks]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
       DETECT_RESULT: ${{ needs.detect-changes.result }}
-      DOCS_RESULT: ${{ needs.validate-docs.result }}
+      DOCS_RESULT: ${{ needs.docs.result }}
       GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
-      VALIDATE_RESULT: ${{ needs.validate.result }}
+      STATIC_RESULT: ${{ needs.static.result }}
+      TEST_RESULT: ${{ needs.tests.result }}
     steps:
       - name: Require the selected validation path and secret scan
         run: |
@@ -147,10 +132,10 @@ jobs:
             exit 1
           fi
 
-          if { [ "${VALIDATE_RESULT}" = "success" ] && [ "${DOCS_RESULT}" = "skipped" ]; } \
-            || { [ "${VALIDATE_RESULT}" = "skipped" ] && [ "${DOCS_RESULT}" = "success" ]; }; then
+          if { [ "${STATIC_RESULT}" = "success" ] && [ "${TEST_RESULT}" = "success" ] && [ "${DOCS_RESULT}" = "skipped" ]; } \
+            || { [ "${STATIC_RESULT}" = "skipped" ] && [ "${TEST_RESULT}" = "skipped" ] && [ "${DOCS_RESULT}" = "success" ]; }; then
             exit 0
           fi
 
-          echo "Exactly one validation path must succeed: validate=${VALIDATE_RESULT}, docs=${DOCS_RESULT}."
+          echo "Selected PR validation failed: static=${STATIC_RESULT}, tests=${TEST_RESULT}, docs=${DOCS_RESULT}."
           exit 1

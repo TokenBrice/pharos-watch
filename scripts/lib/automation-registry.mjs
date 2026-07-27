@@ -1,33 +1,13 @@
-import { VALIDATION_IMPACT_PATHS } from "./validation-lanes.mjs";
 import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./commit-derived-artifacts.mjs";
-
-function getValidationCommandDeployImpactPaths(...impacts) {
-  return [...new Set(impacts.flatMap((impact) => VALIDATION_IMPACT_PATHS[impact] ?? []))].sort();
-}
 
 function uniqueSorted(values) {
   return [...new Set(values)].sort();
 }
 
-const FULL_DEPLOY_GUARDRAIL_EXTRA_PATHS = [
-  "scripts/ci/check-critical-coverage.mjs",
-  "scripts/ci/check-seo-static.mjs",
-  "scripts/ci/check-verified-doc-links.mjs",
-  "scripts/maintenance/generate-cemetery-dataset.ts",
-  "scripts/maintenance/generate-public-datasets.ts",
-  "scripts/maintenance/run-generated-artifacts.mjs",
-  "scripts/maintenance/run-merge-gate-discovery.mjs",
-  "scripts/maintenance/smoke-api.mjs",
-  "scripts/maintenance/smoke-ops.mjs",
-  "scripts/maintenance/smoke-transport.mjs",
-  "scripts/maintenance/smoke-ui.mjs",
-  "scripts/maintenance/test-merge-gate.mjs",
-];
-
 const PAGES_EXTRA_EXACT_PATHS = [
   "next.config.ts",
   "postcss.config.mjs",
-  "scripts/maintenance/explain-build-chunks.mjs",
+  "scripts/maintenance/build-world-map-svg.ts",
   "scripts/maintenance/generate-docs-metadata.ts",
   "scripts/maintenance/generate-homepage-bootstrap.ts",
   "scripts/maintenance/generate-llms-txt.ts",
@@ -37,7 +17,6 @@ const PAGES_EXTRA_EXACT_PATHS = [
   "scripts/maintenance/serve-static-export.mjs",
   "scripts/maintenance/sync-depeg-events.ts",
   "scripts/maintenance/sync-digests.ts",
-  "scripts/maintenance/update-build-attribution-baseline.mjs",
   "scripts/maintenance/wait-pages-release-marker.mjs",
   "tsconfig.json",
 ];
@@ -68,41 +47,28 @@ const PUBLIC_DOC_SOURCE_PATHS = [
   "docs/yield-intelligence.md",
 ];
 
-const WORKER_EXTRA_EXACT_PATHS = [
-  "scripts/ci/check-cron-schedule-sync.ts",
-  "scripts/ci/check-worker-import-boundary.mjs",
-  "scripts/ci/check-worker-migrations.mjs",
-  "scripts/maintenance/smoke-api.mjs",
-];
-
 export const DEPLOY_IMPACT_REGISTRY = {
   fullDeployInfra: {
     exactPaths: [
       ".github/workflows/deploy-cloudflare.yml",
-      ".github/workflows/validate-ci.yml",
       "package-lock.json",
       "package.json",
       "scripts/ci/classify-deploy-changes.mjs",
+      "scripts/lib/automation-registry.mjs",
+      "scripts/lib/deploy-impact.mjs",
     ],
-    prefixes: [".github/actions/", ".github/scripts/", "scripts/lib/"],
+    prefixes: [],
   },
   fullDeployGuardrails: {
-    exactPaths: uniqueSorted([
-      ...getValidationCommandDeployImpactPaths("full", "validation-only", "worker"),
-      ...FULL_DEPLOY_GUARDRAIL_EXTRA_PATHS,
-    ]),
+    exactPaths: [],
   },
   pages: {
-    exactPaths: uniqueSorted([
-      ...getValidationCommandDeployImpactPaths("pages"),
-      ...PAGES_EXTRA_EXACT_PATHS,
-      ...PUBLIC_DOC_SOURCE_PATHS,
-    ]),
+    exactPaths: uniqueSorted([...PAGES_EXTRA_EXACT_PATHS, ...PUBLIC_DOC_SOURCE_PATHS]),
     prefixes: ["data/", "functions/", "public/", "shared/", "src/"],
     workflowOnlyExactPaths: [".github/workflows/pages-release.yml", ".github/workflows/rebuild-pages.yml"],
   },
   worker: {
-    exactPaths: uniqueSorted([...getValidationCommandDeployImpactPaths("worker"), ...WORKER_EXTRA_EXACT_PATHS]),
+    exactPaths: [],
     prefixes: ["worker/"],
     sharedExcludedPaths: [
       "shared/lib/pharosville-api-contract.ts",

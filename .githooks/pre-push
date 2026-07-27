@@ -2,139 +2,22 @@
 set -euo pipefail
 
 zero_sha_re='^0+$'
-main_update_seen=0
-pages_smoke_flag="${MERGE_GATE_PAGES_SMOKE:-1}"
-pre_push_gate_mode="${PHAROS_PRE_PUSH_GATE:-off}"
-branch_updates=()
+head_sha="$(git rev-parse --verify 'HEAD^{commit}')"
+verified_head=0
 
-case "$pre_push_gate_mode" in
-  off|main|all|1)
-    ;;
-  *)
-    echo "[pre-push] Invalid PHAROS_PRE_PUSH_GATE=${pre_push_gate_mode}. Use off, main, or all." >&2
-    exit 1
-    ;;
-esac
-
-gate_main_updates() {
-  [[ "$pre_push_gate_mode" == "main" || "$pre_push_gate_mode" == "all" || "$pre_push_gate_mode" == "1" ]]
-}
-
-gate_branch_updates() {
-  [[ "$pre_push_gate_mode" == "all" || "$pre_push_gate_mode" == "1" ]]
-}
-
-verify_push_snapshot() {
-  local expected_sha="$1"
-  local checkpoint="$2"
-  local head_sha
-  local worktree_status
-
-  head_sha="$(git rev-parse --verify 'HEAD^{commit}')"
-  if [[ "$head_sha" != "$expected_sha" ]]; then
-    echo "[pre-push] Refusing push: checked-out HEAD ${head_sha} does not match pushed commit ${expected_sha} (${checkpoint})." >&2
-    return 1
-  fi
-
-  worktree_status="$(git status --porcelain=v1 --untracked-files=all)"
-  if [[ -n "$worktree_status" ]]; then
-    echo "[pre-push] Refusing push: worktree must stay clean so validation matches ${expected_sha} (${checkpoint})." >&2
-    printf '%s\n' "$worktree_status" >&2
-    return 1
-  fi
-}
-
-verify_commit_derived_artifacts() {
-  local expected_sha="$1"
-  local head_sha
-
-  head_sha="$(git rev-parse --verify 'HEAD^{commit}')"
-
-  if [[ "$head_sha" != "$expected_sha" ]]; then
-    echo "[pre-push] Commit-derived artifacts were not verified: the pushed commit is not the checked-out HEAD." >&2
-    echo "[pre-push] GitHub Actions remains authoritative; run npm run check:commit-derived-artifacts from a clean checkout of ${expected_sha}." >&2
-    return 0
-  fi
-
-  echo "[pre-push] Verifying commit-derived artifacts for ${expected_sha}..."
-  npm run check:commit-derived-artifacts
-}
-
-run_gate() {
-  local expected_sha="$1"
-
-  verify_push_snapshot "$expected_sha" "before merge gate"
-
-  if [[ "${PHAROS_PRE_PUSH_SKIP_RECEIPT:-0}" != "1" ]] &&
-    node scripts/maintenance/check-merge-gate-receipt.mjs; then
-    echo "[pre-push] Reusing the matching clean-state merge-gate receipt."
-  else
-    npm run test:merge-gate
-  fi
-
-  verify_push_snapshot "$expected_sha" "after merge gate"
-}
-
-while read -r local_ref local_sha remote_ref remote_sha; do
-  if [[ -z "${local_ref:-}" ]]; then
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  if [[ -z "${local_sha:-}" || "$local_sha" =~ $zero_sha_re ]]; then
     continue
   fi
 
-  if [[ "$remote_ref" != "refs/heads/main" ]]; then
-    branch_updates+=("$local_ref" "$local_sha" "$remote_ref" "$remote_sha")
+  if [[ "$local_sha" != "$head_sha" ]]; then
+    echo "[pre-push] ${remote_ref} does not point at checked-out HEAD; GitHub Actions will validate it." >&2
     continue
   fi
 
-  main_update_seen=1
-
-  if [[ "$local_sha" =~ $zero_sha_re ]]; then
-    echo "[pre-push] Skipping merge gate for main deletion."
-    continue
-  fi
-
-  if ! gate_main_updates; then
-    verify_commit_derived_artifacts "$local_sha"
-    echo "[pre-push] Main ref update detected; local merge gate skipped by default."
-    echo "[pre-push] GitHub Actions is the authoritative release gate. Set PHAROS_PRE_PUSH_GATE=main to run the exact-range local gate before pushing main."
-    continue
-  fi
-
-  echo "[pre-push] Running merge gate for main push range ${remote_sha}...${local_sha}..."
-  if [[ "$remote_sha" =~ $zero_sha_re ]]; then
-    MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha" run_gate "$local_sha"
-  else
-    MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=0 MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha" run_gate "$local_sha"
+  if [[ "$verified_head" -eq 0 ]]; then
+    echo "[pre-push] Verifying commit-derived artifacts for ${head_sha}..."
+    npm run check:commit-derived-artifacts
+    verified_head=1
   fi
 done
-
-if [[ "$main_update_seen" -eq 0 ]]; then
-  if ! gate_branch_updates; then
-    for ((index = 0; index < ${#branch_updates[@]}; index += 4)); do
-      local_sha="${branch_updates[index + 1]}"
-      if [[ ! "$local_sha" =~ $zero_sha_re ]]; then
-        verify_commit_derived_artifacts "$local_sha"
-      fi
-    done
-    echo "[pre-push] No gated ref update detected; local merge gate skipped. Set PHAROS_PRE_PUSH_GATE=all to gate branch pushes."
-    exit 0
-  fi
-
-  for ((index = 0; index < ${#branch_updates[@]}; index += 4)); do
-    local_ref="${branch_updates[index]}"
-    local_sha="${branch_updates[index + 1]}"
-    remote_ref="${branch_updates[index + 2]}"
-    remote_sha="${branch_updates[index + 3]}"
-
-    if [[ "$local_sha" =~ $zero_sha_re ]]; then
-      echo "[pre-push] Skipping merge gate for deletion of ${remote_ref}."
-      continue
-    fi
-
-    echo "[pre-push] Opt-in branch gate for ${remote_ref}."
-    if [[ "$remote_sha" =~ $zero_sha_re ]]; then
-      MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=1 MERGE_GATE_HEAD_REF="$local_sha" run_gate "$local_sha"
-    else
-      MERGE_GATE_PAGES_SMOKE="$pages_smoke_flag" MERGE_GATE_FULL_DEPLOY=0 MERGE_GATE_BASE_REF="$remote_sha" MERGE_GATE_HEAD_REF="$local_sha" run_gate "$local_sha"
-    fi
-  done
-fi

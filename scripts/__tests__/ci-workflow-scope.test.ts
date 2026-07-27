@@ -6,74 +6,41 @@ function readRepoFile(path: string): string {
   return readFileSync(resolve(process.cwd(), path), "utf8");
 }
 
-function extractJob(workflow: string, jobName: string, nextJobName?: string): string {
-  const start = workflow.indexOf(`  ${jobName}:`);
-  if (start === -1) throw new Error(`Missing workflow job: ${jobName}`);
-  if (!nextJobName) return workflow.slice(start);
-
-  const end = workflow.indexOf(`  ${nextJobName}:`, start);
-  return end === -1 ? workflow.slice(start) : workflow.slice(start, end);
-}
-
 describe("CI workflow scope", () => {
-  it("keeps browser and mixed tooling setup on jobs that consume it", () => {
-    const validate = readRepoFile(".github/workflows/validate-ci.yml");
-    const prebuild = extractJob(validate, "validate-prebuild", "pages-build");
-    const pages = extractJob(validate, "pages-build", "test-noncritical");
-    const noncritical = extractJob(validate, "test-noncritical", "typecheck-worker");
-    const typecheckWorker = extractJob(validate, "typecheck-worker", "validate");
-
-    expect(prebuild).toContain('install-playwright-firefox: "true"');
-    expect(pages).toContain("GENERATED_ARTIFACTS_SKIP: og-editorial");
-    expect(pages).toContain('install-playwright-chromium: "true"');
-    expect(pages).not.toContain("install-playwright-firefox");
-    expect(noncritical).toContain("fetch-depth: 1");
-    expect(noncritical).not.toContain("tooling-cache:");
-    expect(typecheckWorker).toContain("tooling-cache:");
-    expect(validate).not.toContain("coverage-critical:");
-
-    expect(readRepoFile(".github/workflows/telegram-load.yml")).not.toContain("tooling-cache:");
-    expect(readRepoFile(".github/workflows/safe-browsing-monitor.yml")).not.toContain("tooling-cache:");
-  });
-
-  it("routes internal-docs PRs through the focused documentation checks", () => {
+  it("keeps PR validation adaptive and leaves the Pages build to release", () => {
     const workflow = readRepoFile(".github/workflows/pull-request-checks.yml");
-    const validate = extractJob(workflow, "validate", "validate-docs");
-    const validateDocs = extractJob(workflow, "validate-docs", "node26-proof");
-    const nodeProof = extractJob(workflow, "node26-proof", "gitleaks");
 
-    expect(workflow).toContain("docs_only: ${{ steps.classify.outputs.docs_only }}");
-    expect(workflow).toContain("pages_deploy_required: ${{ steps.classify.outputs.pages_deploy_required }}");
-    expect(validate).toContain("if: ${{ needs.detect-changes.outputs.docs_only != 'true' }}");
-    expect(validate).toContain(
-      "run_pages_build_and_seo: ${{ needs.detect-changes.outputs.pages_deploy_required == 'true' }}",
-    );
-    expect(validateDocs).toContain("if: ${{ needs.detect-changes.outputs.docs_only == 'true' }}");
-    expect(validateDocs).not.toContain("tooling-cache:");
-    expect(validateDocs).toContain("npm run check:verified-doc-links");
-    expect(validateDocs).toContain("npm run check:doc-source-paths");
-    expect(validateDocs).toContain("npm run check:doc-sync");
-    expect(validateDocs).toContain("npm run check:agent-doc-sync");
-    expect(nodeProof).toContain("if: ${{ needs.detect-changes.outputs.node_compat_changed == 'true' }}");
+    expect(workflow).toContain("npm run check:pr:static");
+    expect(workflow).toContain("npm run test:pr -- --shard=");
+    expect(workflow).toContain("npm run check:verified-doc-links");
+    expect(workflow).not.toContain("npm run build");
+    expect(workflow).not.toContain("node-version: \"26\"");
   });
 
-  it("keeps path-scoped advisory scans backed by full scheduled scans", () => {
-    const codeql = readRepoFile(".github/workflows/codeql.yml");
-    const zizmor = readRepoFile(".github/workflows/zizmor.yml");
+  it("retains the full suite and compatibility proof as scheduled/manual coverage", () => {
+    const nightly = readRepoFile(".github/workflows/nightly-validation.yml");
 
-    expect(codeql.match(/- "\*\*\/\*\.tsx"/g)).toHaveLength(2);
-    expect(codeql).toContain('- ".github/codeql/**"');
-    expect(codeql).toContain('- cron: "0 6 * * 1"');
-    expect(zizmor.match(/- "\.github\/workflows\/\*\*"/g)).toHaveLength(2);
-    expect(zizmor).toContain('- cron: "15 6 * * 1"');
+    expect(nightly).toContain("npm run lint:typed");
+    expect(nightly).toContain("npm run typecheck:tests");
+    expect(nightly).toContain("npm run test:all -- --shard=");
+    expect(nightly).toContain("node-version: \"26\"");
   });
 
-  it("cancels stale Telegram PR work and bounds the Safe Browsing monitor", () => {
+  it("runs CodeQL and Zizmor after merge and weekly, not per PR", () => {
+    for (const path of [".github/workflows/codeql.yml", ".github/workflows/zizmor.yml"]) {
+      const workflow = readRepoFile(path);
+      expect(workflow).toContain("push:");
+      expect(workflow).toContain("schedule:");
+      expect(workflow).not.toContain("pull_request:");
+    }
+  });
+
+  it("keeps Telegram load on the adaptive PR gate plus a weekly backstop", () => {
     const telegram = readRepoFile(".github/workflows/telegram-load.yml");
-    const safeBrowsing = readRepoFile(".github/workflows/safe-browsing-monitor.yml");
+    const pr = readRepoFile(".github/workflows/pull-request-checks.yml");
 
-    expect(telegram).toContain("group: telegram-load-${{ github.event.pull_request.number || github.ref }}");
-    expect(telegram).toContain("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
-    expect(safeBrowsing).toContain("timeout-minutes: 10");
+    expect(telegram).toContain('- cron: "45 6 * * 1"');
+    expect(telegram).not.toContain("pull_request:");
+    expect(pr).toContain("npm run check:pr:static");
   });
 });

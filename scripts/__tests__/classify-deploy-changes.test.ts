@@ -111,7 +111,7 @@ describe("hasPagesUiImpact", () => {
       hasPagesUiImpact([
         ".github/workflows/pages-release.yml",
         "scripts/maintenance/generate-markdown-exports.ts",
-        "scripts/lib/validation-lanes.mjs",
+        "scripts/ci/run-changed-eslint.mjs",
       ]),
     ).toBe(false);
   });
@@ -136,7 +136,7 @@ describe("hasWorkerReleaseImpact", () => {
   });
 
   it("returns false for validation, tests, and known Pages-only shared changes", () => {
-    expect(hasWorkerReleaseImpact(["scripts/lib/validation-lanes.mjs"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["scripts/maintenance/run-pr-static-checks.mjs"])).toBe(false);
     expect(hasWorkerReleaseImpact(["scripts/maintenance/smoke-ui.mjs"])).toBe(false);
     expect(hasWorkerReleaseImpact(["worker/migrations/MANIFEST.md"])).toBe(false);
     expect(hasWorkerReleaseImpact(["worker/src/api/__tests__/health.test.ts"])).toBe(false);
@@ -159,22 +159,12 @@ describe("hasDeployImpact", () => {
     expect(hasDeployImpact(["worker/src/api/health.ts"])).toBe(true);
   });
 
-  it("treats deploy support infrastructure as deploy-impacting", () => {
+  it("deploys for deploy-classifier infrastructure but not validation-only tooling", () => {
     const deploySupportFiles = [
       "scripts/lib/deploy-impact.mjs",
-      "scripts/lib/validation-lanes.mjs",
-      ".github/actions/setup-workspace/action.yml",
-      "scripts/ci/check-cron-abort-contract.mjs",
-      "scripts/ci/check-cron-connection-budget.ts",
-      "scripts/ci/check-doc-source-paths.mjs",
-      "scripts/ci/check-env-contract.mjs",
-      "scripts/ci/check-sql-interpolation-safety.mjs",
-      "scripts/maintenance/generate-cemetery-dataset.ts",
-      "scripts/maintenance/run-generated-artifacts.mjs",
-      "scripts/maintenance/run-noncritical-tests.mjs",
-      "scripts/maintenance/run-validate-prebuild.mjs",
-      "scripts/maintenance/run-validation-phase.mjs",
-      "scripts/maintenance/test-merge-gate.mjs",
+      "scripts/lib/automation-registry.mjs",
+      "scripts/ci/classify-deploy-changes.mjs",
+      ".github/workflows/deploy-cloudflare.yml",
     ];
 
     for (const file of deploySupportFiles) {
@@ -182,6 +172,15 @@ describe("hasDeployImpact", () => {
       expect(hasWorkerDeployImpact([file]), file).toBe(true);
       expect(hasWorkerReleaseImpact([file]), file).toBe(false);
       expect(hasPagesDeployImpact([file]), file).toBe(true);
+    }
+
+    for (const file of [
+      ".github/actions/setup-workspace/action.yml",
+      "scripts/ci/check-env-contract.mjs",
+      "scripts/maintenance/run-all-tests.mjs",
+      "scripts/maintenance/run-pr-static-checks.mjs",
+    ]) {
+      expect(hasDeployImpact([file]), file).toBe(false);
     }
   });
 
@@ -194,20 +193,16 @@ describe("hasDeployImpact", () => {
     expect(hasPagesDeployImpact(files)).toBe(false);
   });
 
-  it("treats static export build guardrails as Pages-only deploy infrastructure", () => {
-    const files = [
+  it("deploys for static export inputs but not validation-only build reports", () => {
+    expect(hasPagesDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(true);
+    expect(hasWorkerDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(false);
+
+    for (const file of [
       "scripts/ci/check-build-attribution.mjs",
-      "scripts/maintenance/build-world-map-svg.ts",
-      "scripts/maintenance/explain-build-chunks.mjs",
       "scripts/maintenance/report-build-size.mjs",
       "scripts/maintenance/update-build-attribution-baseline.mjs",
-    ];
-
-    for (const file of files) {
-      expect(hasDeployImpact([file]), file).toBe(true);
-      expect(hasPagesDeployImpact([file]), file).toBe(true);
-      expect(hasWorkerDeployImpact([file]), file).toBe(false);
-      expect(hasWorkerReleaseImpact([file]), file).toBe(false);
+    ]) {
+      expect(hasDeployImpact([file]), file).toBe(false);
     }
   });
 
@@ -305,7 +300,7 @@ describe("classifyDeployChanges", () => {
         "package.json",
         "package-lock.json",
         "public/_redirects",
-        "scripts/lib/validation-lanes.mjs",
+        "scripts/maintenance/run-pr-static-checks.mjs",
         "scripts/maintenance/smoke-ui.mjs",
         "shared/lib/public-docs.ts",
         "src/app/pharosville/page.tsx",

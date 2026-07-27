@@ -1,0 +1,63 @@
+name: Nightly Validation
+
+on:
+  schedule:
+    - cron: "20 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-validation
+  cancel-in-progress: true
+
+jobs:
+  full-static:
+    name: Full lint and typecheck
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          tooling-cache: "true"
+          tooling-cache-save: "true"
+      - run: npm run lint
+      - run: npm run lint:typed
+      - run: npm run typecheck
+      - run: npm run typecheck:tests
+      - run: npm run typecheck:worker
+
+  full-tests:
+    name: Full test suite (${{ matrix.shard }}/2)
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+      - run: npm run test:all -- --shard=${{ matrix.shard }}/2
+
+  node26-proof:
+    name: Node 26 compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          node-version: "26"
+          tooling-cache: "true"
+      - run: npm run typecheck
+      - run: npm run typecheck:worker
