@@ -84,7 +84,7 @@ describe("CronsSection", () => {
 
     expect(screen.getByText("Cron Lanes")).toBeTruthy();
     expect(
-      screen.getByText("No cron jobs need attention. Healthy jobs are not mounted in the default view."),
+      screen.getByText("No cron jobs need attention. Healthy and routine skipped jobs are not mounted in the default view."),
     ).toBeTruthy();
     expect(screen.queryByTestId("cron-row-sync-stablecoins")).toBeNull();
 
@@ -184,6 +184,29 @@ describe("CronsSection", () => {
     const row = screen.getByTestId("cron-row-weekly-recap");
     expect(within(row).getByText("Unhealthy")).toBeTruthy();
     expect(within(row).getByText("Failed (latest required run)")).toBeTruthy();
+  });
+
+  it("labels a fresh neutral-only no-op as skipped while keeping it in the attention view", () => {
+    const neutralRun = { startedAt: 1_699_999_940, durationMs: 200, status: "skipped_neutral" as const };
+    renderCrons({
+      groups: [
+        makeGroup([
+          [
+            "compute-safety-score-v9",
+            makeCronStatus({
+              lastRun: neutralRun,
+              recentRuns: [neutralRun],
+              healthy: false,
+            }),
+          ],
+        ]),
+      ],
+    });
+
+    const row = screen.getByTestId("cron-row-compute-safety-score-v9");
+    expect(within(row).getByText("Skipped")).toBeTruthy();
+    expect(within(row).queryByText("Unhealthy")).toBeNull();
+    expect(screen.getByText(/1\/1 shown · 0 unhealthy · 0 degraded · 0 unknown · 1 skipped/)).toBeTruthy();
   });
 
   it("combines state, impact, trigger-group, running, and search filters", () => {

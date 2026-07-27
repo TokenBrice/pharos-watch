@@ -86,6 +86,7 @@ describe("cron workbench model", () => {
       visible: 3,
       unhealthy: 1,
       degraded: 1,
+      skipped: 0,
       healthy: 1,
     });
     expect(model.triggerGroups).toEqual([
@@ -151,6 +152,54 @@ describe("cron workbench model", () => {
     expect(classifyCronWorkbenchState(makeCron({ inFlight: { startedAt: 1, updatedAt: 2, stale: false } }))).toBe(
       "running",
     );
+  });
+
+  it("shows a fresh expected no-op as skipped without hiding missing availability evidence", () => {
+    const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
+    const cron = makeCron({
+      lastRun: neutralRun,
+      recentRuns: [neutralRun],
+      healthy: false,
+    });
+
+    expect(classifyCronWorkbenchState(cron, 1_700_000_600)).toBe("skipped");
+
+    const model = buildCronWorkbenchModel(
+      [
+        {
+          key: "quarter-hourly",
+          title: "15-minute slot",
+          badge: "*/15",
+          description: "Shared core ingestion.",
+          entries: [["compute-safety-score-v9", cron]],
+        },
+      ],
+      { ...DEFAULT_CRON_WORKBENCH_FILTERS },
+      1_700_000_600,
+    );
+
+    expect(model.rows).toHaveLength(1);
+    expect(model.rows[0]).toMatchObject({
+      job: "compute-safety-score-v9",
+      state: "skipped",
+      rawStatus: "skipped_neutral",
+      statusLabel: "Skipped: no work required",
+    });
+    expect(model.groups[0]?.summary).toMatchObject({
+      unhealthy: 0,
+      skipped: 1,
+    });
+  });
+
+  it("keeps a stale neutral skip unhealthy", () => {
+    const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
+    const cron = makeCron({
+      lastRun: neutralRun,
+      recentRuns: [neutralRun],
+      healthy: false,
+    });
+
+    expect(classifyCronWorkbenchState(cron, 1_700_002_000)).toBe("unhealthy");
   });
 
   it("keeps a degraded required outcome in attention after a neutral skip", () => {
@@ -219,6 +268,9 @@ describe("cron workbench model", () => {
 
   it("formats raw run and attempt values into readable labels", () => {
     expect(formatCronRunStatus("skipped_neutral")).toBe("Skipped: no work required");
+    expect(
+      formatCronRunStatus("skipped_neutral", { reason: "v9-competing-slot-active" }),
+    ).toBe("Skipped: competing slot active");
     expect(formatCronRunStatus("skipped_locked")).toBe("Skipped: lease held");
     expect(formatCronRunStatus(null)).toBe("No runs");
     expect(formatCronAttemptState("skipped_locked")).toBe("Skipped: lease held");
