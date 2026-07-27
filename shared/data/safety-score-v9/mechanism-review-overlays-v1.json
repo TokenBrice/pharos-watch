@@ -902,47 +902,50 @@
     {
       "assetId": "jpym-mento",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-07-27",
       "sources": [
         {
-          "label": "Mento BiPoolManager and FPMM conversion state on Celo",
-          "url": "https://celoscan.io/address/0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901"
+          "label": "Mento deployments-v2 JPYm CDP contract set, pinned commit e2022291",
+          "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
         },
         {
-          "label": "Mento V3 reserve conversion documentation",
+          "label": "JPYm token minter and owner roles on Celo",
+          "url": "https://celoscan.io/address/0xc45ecf20f3cd864b32d9794d6f76814ae8892e20"
+        },
+        {
+          "label": "Celo public RPC (trove and role reads)",
+          "url": "https://forno.celo.org"
+        },
+        {
+          "label": "Mento V3 documentation",
           "url": "https://docs.mento.org/mento-v3"
         }
       ],
-      "notes": "Pinned Celo block 72202985; journaled evidence: shared/data/safety-score-v9/mechanism-measurements/jpym-mento/2026-07-15-block-72202985.json. The producer measured the configured FPMM pool USDm balance as 27446.7576191; no verified global fee getter exists, so fee remains unresolved. Conversion capacity is an analogous exit metric only and is not relabeled as collateralization or liquidation capital.",
+      "notes": "Mechanism-classification conflict resolved by on-chain verification 2026-07-27 (owner ruling: evidence decides): JPYm is backed by the Mento Liquity-v2 CDP deployment, superseding the 2026-07-15 FPMM conversion-token reading. Active minter roles resolve to BorrowerOperationsv300JPYm with TroveManagerv300JPYm, StabilityPoolv300JPYm, and FXPriceFeedProxyJPYm live in the pinned deployments-v2 contract set; the BiPoolManager retains a minter role but backs no current supply (legacy, operationally inert). Wave-6 block-pinned measurement at finalized Celo block 72133274: collateralization 1.679490127255 with Stability Pool deposits 0, re-verified 2026-07-27 at roughly 1.695 (171,960 USDm collateral against 16,596,009 JPYm debt in the sole active trove). The empty Stability Pool grades backstop weak; standard Liquity-v2 fork parameters and liquidation mechanics grade adequate from the pinned deployment; the existing limited structural-redemption grade stands. Residual uncertainty: the legacy BorrowerOperations address also holds a minter role; on-chain state shows only v300 active in troves, and bootstrap-era mint history has not been ruled out.",
       "metrics": {
-        "collateralizationRatio": null,
-        "liquidationCapacityRatio": null
+        "collateralizationRatio": 1.679490127255,
+        "liquidationCapacityRatio": 0
       },
       "metricApplicability": {
         "collateralizationRatio": {
-          "state": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
+          "state": "measured"
         },
         "liquidationCapacityRatio": {
-          "state": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
+          "state": "measured"
         }
-      },
-      "analogousMetrics": {
-        "conversionCapacityCounterUnits": 27446.7576191
       },
       "components": {
         "collateralizationParameters": {
-          "applicability": "not-applicable",
-          "rationale": "This reserve/conversion token has no independently collateralized per-token vault system.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
+          "applicability": "measured",
+          "quality": "adequate"
         },
         "liquidationMechanics": {
-          "applicability": "not-applicable",
-          "rationale": "The measured counter-asset conversion inventory is redemption liquidity, not capital committed to debt-offset liquidation.",
-          "sourceUrl": "https://docs.mento.org/mento-v3"
+          "applicability": "measured",
+          "quality": "adequate"
+        },
+        "backstop": {
+          "applicability": "measured",
+          "quality": "weak"
         },
         "structuralRedemption": {
           "applicability": "measured",
