@@ -56,6 +56,7 @@ import {
 import { buildSolanaMeasuredExecutionTargets } from "../measured-execution/solana-inventory";
 import { buildTronMeasuredExecutionTargets } from "../measured-execution/tron-inventory";
 import { enrichEvmV2ExecutionModels } from "./constant-product-v2";
+import { enrichCurveStableswapRateInputExecutionModels } from "./curve-stableswap-rates";
 import {
   loadDexLiquidityScoringStage,
   markDexLiquidityScoringStageConsumed,
@@ -816,6 +817,12 @@ async function buildDexLiquidityPoolState(
     chainAddressToId: sourceState.lookups.chainAddressToId,
     contractMetaByChainAddress: sourceState.lookups.contractMetaByChainAddress,
     stablecoinPriceById: sourceState.stablecoinPriceById,
+    chainRpcs: ctx.chainRpcs,
+    signal: ctx.signal,
+  });
+  await enrichCurveStableswapRateInputExecutionModels({
+    metrics,
+    chainAddressToId: sourceState.lookups.chainAddressToId,
     chainRpcs: ctx.chainRpcs,
     signal: ctx.signal,
   });

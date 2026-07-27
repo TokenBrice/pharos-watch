@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.94",
+    title: "Pinned Curve StableSwap-NG rate state",
+    date: "2026-07-27",
+    effectiveAt: 1785110400,
+    summary:
+      "Address-grade plain Curve StableSwap-NG pools with rate-bearing inputs can contribute a reserve model only after a fresh, same-block state capture proves the balances, amplification, stored rates, and ordered coin layout.",
+    impact: [
+      "Only `factory-stable-ng` candidates with an exact EVM address, unique token identities, and one tracked input are eligible; legacy, metapool, CryptoSwap, unknown, stale, or unpinnable shapes remain capability-gated",
+      "The capture rereads the pinned block header hash after bounded multicalls for `get_balances`, `stored_rates`, `A`, and `coins`; rate factors scale balances and inversely scale USD references before the existing StableSwap simulator runs",
+      "Missing, base-only, malformed, mismatched-order, or hash-drifted state clears the internal candidate and retains `curve-stableswap:rate-bearing-inputs` rather than using API balances, an unpinned amplification value, or nominal parity",
+      "This is route-only Safety Score V9 evidence: aggregate liquidity, price consensus, visible pools, target publication, and V8 liquidity scoring are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.93",
     title: "Paused v5.92 exact-route activations",
     date: "2026-07-27",

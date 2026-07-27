@@ -2,7 +2,7 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v5.93`
+- **Current methodology version:** `v5.94`
 - **Runtime/version source:** `shared/lib/liquidity-score-version.ts`
 - **Public changelog route:** `/methodology/liquidity-score-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/liquidity-score/`
@@ -331,6 +331,20 @@ runtime-code response is semantic code absence and is never eligible for
 last-known-good retention; an unavailable RPC response remains an operational
 failure subject to the bounded freshness policy.
 
+Address-grade plain `factory-stable-ng` pools that initially gate as
+rate-bearing may instead contribute an exact reserve model only when the source
+stage pins a fresh block, reads `get_balances()`, `stored_rates()`, `A()`, and
+ordered `coins(i)` at that block, and confirms the same header hash afterward.
+The Curve API supplies the candidate identity/order and token USD references,
+not executable balances or amplification. Each stored rate is normalized as
+`rate / 10^(36 - decimals)`: capture scales that token's balance by the factor
+and divides its reference price by the same factor before applying the existing
+paper-convention StableSwap invariant. The candidate must have distinct tokens
+and exactly one tracked input. A missing, base-only, stale, malformed,
+mismatched-order, or hash-drifted read retains the original
+`curve-stableswap:rate-bearing-inputs` gate. Legacy, metapool, CryptoSwap, and
+other unreviewed Curve shapes are not widened.
+
 USDG uses the separate `curve-stableswap-ng-factory-get-dy-v2` profile for the
 single reviewed Ethereum USDG/USDC pool
 `0xc061caa073f3d95f80f8e5428d32d2d76f5e1622`. At one explicitly finalized
@@ -378,6 +392,8 @@ Base Aerodrome Slipstream targets come from the current Sugar RPC reader, which 
 Optimism Uniswap V3 remains shadow-only. Its reviewed runtime and quote collection stay configured, but score eligibility was paused with the wM/USDC Raydium direction after the first post-activation scoring consumers exceeded the Worker memory limit. A fresh production packet must now demonstrate healthy stage and scoring-consumer memory, current replay and drift evidence, and an eligible retained source cohort before either policy can be reactivated. Avalanche and Linea have candidate Uniswap deployments but no admitted retained-pool/source cohort and no equivalent evidence packet; Sonic has no reviewed official deployment. None are score-eligible.
 
 Curve CryptoSwap is kept outside the plain StableSwap reserve model and uses direct on-chain `get_dy` measurements. Eight Ethereum TwoCrypto crvUSD pools paired with WETH, WBTC, cbBTC, or tBTC are score-eligible: the producer pins and verifies each pool's runtime code, factory, factory-selected views implementation, immutable math dependency, and exact token order before quoting. DeFiLlama rows that share an otherwise ambiguous token-set fingerprint become measured targets only when the Curve address candidates contain exactly one pool within 0.5% of the retained row's TVL; no match, multiple matches, a shadow-only address, or wider source drift remains gated. The resolver does not replace the retained DeFiLlama row's legacy TVL or Curve metadata join. Any code drift, dependency mismatch, broken-pool flag, unsupported token pair, or missing independent price fails closed. The remaining reviewed CryptoSwap census stays shadow-only until its generation and transfer semantics receive equivalent validation.
+
+Within the unchanged static ten-observation payload limit, P4 packs the first deterministic output from every selected physical pool before it emits any additional output from an already represented pool. `routeObservationPayloadOverflow` therefore remains fail-closed only when no representative observation for a selected reviewed capability pool can fit; omitting extra counter-asset outputs does not make that represented physical pool incomplete.
 
 The two exact reviewed Curve StableSwap adapters deliberately require more
 maturity than the existing two-cycle measured-adapter floor. Their selected

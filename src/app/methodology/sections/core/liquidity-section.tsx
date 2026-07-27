@@ -137,6 +137,13 @@ export function LiquidityMethodologySection() {
             Non-Curve rows that share the same token symbols as a Curve pool keep their own mechanism type and TVL.
           </p>
           <p>
+            Address-grade plain Curve StableSwap-NG pools with rate-bearing inputs can publish a route model only after
+            fresh same-block state verifies `get_balances`, amplification, stored rates, and ordered coins. Rate scaling
+            adjusts both balances and references before the existing StableSwap simulation; stale, unpinnable, or
+            identity-mismatched state remains capability-gated. Metapools, CryptoSwap, legacy pools, and all other
+            unreviewed Curve shapes are not widened.
+          </p>
+          <p>
             Coverage confidence is measurement-aware. Instead of a fixed score by source family, Pharos now weights how
             much retained TVL has measured balances and prices, how broad the protocol mix is, and how much of the row
             depends on synthetic or freshness-decayed fallback liquidity.

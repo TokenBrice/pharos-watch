@@ -3,7 +3,13 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
 import { QUALITY_MULTIPLIERS, isBlockedDexId } from "../../lib/dex-cron-constants";
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import type { EvmV2ExecutionCandidate, LlamaPool, CurvePoolEntry, LiquidityMetrics } from "./types";
+import type {
+  CurvePoolEntry,
+  CurveStableswapRateInputExecutionCandidate,
+  EvmV2ExecutionCandidate,
+  LlamaPool,
+  LiquidityMetrics,
+} from "./types";
 import {
   classifyPoolType,
   buildPoolFingerprint,
@@ -52,14 +58,7 @@ import {
   buildUniqueEvmV2ExecutionCandidateFingerprintIndex,
   resolveEvmV2ExecutionCandidate,
 } from "./constant-product-v2";
-
-/**
- * The Curve pools endpoint does not publish per-pool fees. Standard
- * stableswap pools charge 1-4 bps; the model carries this conservative
- * upper bound so simulated output understates rather than overstates
- * execution, keeping the capacity result an exact lower bound.
- */
-const CURVE_STABLESWAP_FEE_BOUND = 0.001;
+import { CURVE_STABLESWAP_FEE_BOUND } from "./curve-stableswap-rates";
 
 /**
  * Builds the exact StableSwap execution model for an address-matched plain
@@ -80,6 +79,42 @@ const ACTIVE_CURVE_CRYPTOSWAP_MAX_TVL_RELATIVE_DRIFT = 0.005;
 export interface CurveStableswapExecutionCapability {
   executionModel: DexAmmExecutionModel | null;
   gate: DexExecutionCapabilityGate | null;
+  rateInputCandidate?: CurveStableswapRateInputExecutionCandidate;
+}
+
+function buildCurveStableswapRateInputExecutionCandidate(
+  curveData: CurvePoolEntry,
+): CurveStableswapRateInputExecutionCandidate | null {
+  if (curveData.registryId.trim().toLowerCase() !== "factory-stable-ng") return null;
+  const poolAddress = curveData.poolAddress?.trim().toLowerCase();
+  const coins = curveData.executionCoins;
+  if (!poolAddress || !/^0x[a-f0-9]{40}$/.test(poolAddress) || !coins || coins.length < 2 || coins.length > 8) {
+    return null;
+  }
+  const candidateCoins = coins.map((coin) => {
+    const address = coin.address.trim().toLowerCase();
+    if (
+      !/^0x[a-f0-9]{40}$/.test(address) ||
+      !coin.symbol.trim() ||
+      !Number.isInteger(coin.decimals) ||
+      coin.decimals < 0 ||
+      coin.decimals > 36 ||
+      !Number.isFinite(coin.usdPrice) ||
+      coin.usdPrice <= 0
+    ) {
+      return null;
+    }
+    return {
+      address: address as `0x${string}`,
+      symbol: coin.symbol,
+      decimals: coin.decimals,
+      referencePriceUsd: coin.usdPrice,
+    };
+  });
+  if (candidateCoins.some((coin) => coin == null)) return null;
+  const exactCoins = candidateCoins as NonNullable<typeof candidateCoins[number]>[];
+  if (new Set(exactCoins.map((coin) => coin.address)).size !== exactCoins.length) return null;
+  return { poolAddress: poolAddress as `0x${string}`, coins: exactCoins };
 }
 
 export function buildCurveStableswapExecutionCapability(
@@ -129,9 +164,11 @@ export function buildCurveStableswapExecutionCapability(
     };
   }
   if (maxPrice / minPrice > CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD) {
+    const rateInputCandidate = buildCurveStableswapRateInputExecutionCandidate(curveData);
     return {
       executionModel: null,
       gate: { family: "curve-stableswap", reason: "rate-bearing-inputs" },
+      ...(rateInputCandidate ? { rateInputCandidate } : {}),
     };
   }
   const tokens = coins.map((coin) => {
@@ -897,6 +934,13 @@ export function processPoolMetrics(
           curveCompositeMeasuredTarget ??
           uniV3MeasuredTarget ??
           uniswapV4MeasuredTarget;
+        const hasScoreFacingCurveMeasuredTarget =
+          measuredExecutionTarget != null || curveStableSwapMeasuredTargets.length > 0;
+        const curveStableswapRateInputExecutionCandidate =
+          curveExecutionCapability.rateInputCandidate &&
+          !hasScoreFacingCurveMeasuredTarget
+            ? curveExecutionCapability.rateInputCandidate
+            : undefined;
         const measuredExecutionGate: DexExecutionCapabilityGate | null =
           (protocol === "uniswap-v3" && !uniV3MeasuredTarget) ||
           (protocol === "uniswap-v4" && !uniswapV4MeasuredTarget)
@@ -942,6 +986,9 @@ export function processPoolMetrics(
                 : {}),
             ...(ammExecutionModel ? { ammExecutionModel } : {}),
             ...(evmV2ExecutionCandidate ? { evmV2ExecutionCandidate } : {}),
+            ...(curveStableswapRateInputExecutionCandidate
+              ? { curveStableswapRateInputExecutionCandidate }
+              : {}),
             ...(curveExecutionCapability.gate &&
             !curveCryptoSwapMeasuredTarget &&
             !curveStableSwapNgMeasuredTarget &&
