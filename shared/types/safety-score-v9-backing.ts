@@ -83,6 +83,55 @@ const V9CdpMetricApplicabilitySchema = z.discriminatedUnion("state", [
 ]);
 export type V9CdpMetricApplicability = z.infer<typeof V9CdpMetricApplicabilitySchema>;
 
+/**
+ * Metric applicability for the sdn/rwa archetypes (owner ruling 2026-07-27,
+ * wave-7 D2). Distinct from the CDP schema because these archetypes admit a
+ * third state: `unavailable` — the metric structurally applies but the issuer
+ * publishes no measurable value. An unavailable metric keeps its structural
+ * penalty signal firing (unmeasured is never presumed adequate), while
+ * `not-applicable` skips the signal with cited evidence. CDP keeps its
+ * two-state schema: its collateralization banding needs a numeric ratio, so
+ * an unavailable CR has no defined severity there.
+ */
+const V9MechanismMetricApplicabilitySchema = z.discriminatedUnion("state", [
+  z.object({ state: z.literal("measured") }).strict(),
+  z
+    .object({
+      state: z.literal("not-applicable"),
+      rationale: z.string().trim().min(1),
+      evidenceRefIds: z.array(z.string().trim().min(1)).min(1),
+    })
+    .strict(),
+  z
+    .object({
+      state: z.literal("unavailable"),
+      rationale: z.string().trim().min(1),
+      evidenceRefIds: z.array(z.string().trim().min(1)).min(1),
+    })
+    .strict(),
+]);
+export type V9MechanismMetricApplicability = z.infer<typeof V9MechanismMetricApplicabilitySchema>;
+
+function refineMechanismMetricApplicability(
+  review: Record<string, unknown>,
+  metrics: readonly string[],
+  ctx: z.RefinementCtx,
+): void {
+  const applicability = review.metricApplicability as
+    | Record<string, V9MechanismMetricApplicability>
+    | undefined;
+  for (const metric of metrics) {
+    const state = applicability?.[metric]?.state ?? "measured";
+    const value = review[metric];
+    if (state === "measured" && value === null) {
+      ctx.addIssue({ code: "custom", path: [metric], message: `Measured ${metric} needs a numeric value` });
+    }
+    if (state !== "measured" && value !== null) {
+      ctx.addIssue({ code: "custom", path: [metric], message: `${state} ${metric} must be null` });
+    }
+  }
+}
+
 const V9CdpStressBranchContributionSchema = z
   .object({
     branchIndex: z.number().int().nonnegative(),
@@ -280,9 +329,18 @@ export type V9SyntheticVenueShare = z.infer<typeof V9SyntheticVenueShareSchema>;
 const V9SyntheticDeltaNeutralMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("synthetic-delta-neutral"),
-    hedgeCoverageRatio: z.number().finite().nonnegative(),
-    marginBufferPct: z.number().finite().nonnegative(),
-    lossAbsorptionShare: z.number().finite().min(0).max(1),
+    hedgeCoverageRatio: z.number().finite().nonnegative().nullable(),
+    marginBufferPct: z.number().finite().nonnegative().nullable(),
+    lossAbsorptionShare: z.number().finite().min(0).max(1).nullable(),
+    /** Absent = every metric is measured (legacy full-metric reviews). */
+    metricApplicability: z
+      .object({
+        hedgeCoverageRatio: V9MechanismMetricApplicabilitySchema,
+        marginBufferPct: V9MechanismMetricApplicabilitySchema,
+        lossAbsorptionShare: V9MechanismMetricApplicabilitySchema,
+      })
+      .strict()
+      .optional(),
     venueShares: z
       .array(V9SyntheticVenueShareSchema)
       .superRefine((venues, ctx) => {
@@ -300,7 +358,14 @@ const V9SyntheticDeltaNeutralMechanismRiskReviewSchema = z
     unwindCapacity: V9MechanismFactV1Schema,
     lossAbsorption: V9MechanismFactV1Schema,
   })
-  .strict();
+  .strict()
+  .superRefine((review, ctx) => {
+    refineMechanismMetricApplicability(
+      review,
+      ["hedgeCoverageRatio", "marginBufferPct", "lossAbsorptionShare"],
+      ctx,
+    );
+  });
 export type V9SyntheticDeltaNeutralMechanismRiskReview = z.infer<
   typeof V9SyntheticDeltaNeutralMechanismRiskReviewSchema
 >;
@@ -328,8 +393,16 @@ export type V9AlgorithmicMechanismRiskReview = z.infer<typeof V9AlgorithmicMecha
 const V9RwaCreditFundMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("rwa-credit-fund"),
-    weightedAverageMaturityDays: z.number().finite().nonnegative(),
-    valuationCadenceDays: z.number().finite().nonnegative(),
+    weightedAverageMaturityDays: z.number().finite().nonnegative().nullable(),
+    valuationCadenceDays: z.number().finite().nonnegative().nullable(),
+    /** Absent = every metric is measured (legacy full-metric reviews). */
+    metricApplicability: z
+      .object({
+        weightedAverageMaturityDays: V9MechanismMetricApplicabilitySchema,
+        valuationCadenceDays: V9MechanismMetricApplicabilitySchema,
+      })
+      .strict()
+      .optional(),
     creditQuality: V9MechanismFactV1Schema,
     seniority: V9MechanismFactV1Schema,
     legalEnforceability: V9MechanismFactV1Schema,
@@ -338,7 +411,10 @@ const V9RwaCreditFundMechanismRiskReviewSchema = z
     custody: V9MechanismFactV1Schema,
     recovery: V9MechanismFactV1Schema,
   })
-  .strict();
+  .strict()
+  .superRefine((review, ctx) => {
+    refineMechanismMetricApplicability(review, ["weightedAverageMaturityDays", "valuationCadenceDays"], ctx);
+  });
 export type V9RwaCreditFundMechanismRiskReview = z.infer<typeof V9RwaCreditFundMechanismRiskReviewSchema>;
 
 export const V9MechanismRiskReviewSchema = z.discriminatedUnion("archetype", [

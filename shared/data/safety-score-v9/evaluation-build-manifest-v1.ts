@@ -190,11 +190,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/archetypes/rwa-credit-fund.ts",
-      "sha256": "4c1a1bf174530f41f462165f812128117ad79fd4da2522fa3ba05152e3fba8a2"
+      "sha256": "c229cfd0e3be4785c5bf155b3d590249d5e0ea92d674d97185df5c0751670d28"
     },
     {
       "path": "shared/lib/safety-score-v9/archetypes/synthetic-delta-neutral.ts",
-      "sha256": "470eb5a34eaf586ae00b25888ffa6d00b047b4a47f53042e8af8e771d696e26b"
+      "sha256": "bf91bad02d35f457800a04b149ed2eca77315c7da1a5e48dbe58168a421e11c2"
     },
     {
       "path": "shared/lib/safety-score-v9/archetypes/tbill.ts",
@@ -326,7 +326,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-backing.ts",
-      "sha256": "c462544f7e387106a428f78b20aaa52a22d8c04e717079b59742d8db7261eef4"
+      "sha256": "2754c41bfce242bf13b5a45d73e48b823db161ed7d9de22607370e874316726f"
     },
     {
       "path": "shared/types/safety-score-v9-fact-primitives.ts",
@@ -378,7 +378,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-mechanism.ts",
-      "sha256": "72bb93d0bd22e5a1ee0a71633f2fe13b8705f9b955939baf1098179f076ba73c"
+      "sha256": "08daf0111ff9f5bce8dc9a3560cf0a71d650dfb1fc6789df09bb586dedb1fafe"
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-operational-resilience.ts",
@@ -437,7 +437,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "a7177e8ede754619d98f56fe18b9d65dbfd29f4ac27701a6bbeb1f60fcb92949"
     }
   ],
-  "digest": "f9a3a5654a9106711c4e4b090697123b554aac4bb8c70f98a4e3d05f4e1be238"
+  "digest": "f0a61f6c7002846be35d0006cc9bdceb535fda7d9b634bb599fb7e94e6688570"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
