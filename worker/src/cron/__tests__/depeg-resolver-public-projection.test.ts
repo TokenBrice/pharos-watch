@@ -365,9 +365,85 @@ describe("depeg-resolver public projection", () => {
     });
   });
 
+  it("normalizes retired safety contexts in immutable sealed predictions", () => {
+    const row = resolverRow({ eventId: 6 });
+    const incident = canonicalIncident(row);
+    const sealed = sealedPrediction(row, incident, 6);
+    const publication = firstPublication(sealed);
+    const fallback = buildDdrResponse({
+      candidateRows: [row],
+      incidentsByEventId: new Map([[row.eventId, incident]]),
+      sealed: [sealed],
+      firstPublication: [publication],
+      manifest: null,
+      errata: [],
+      lineage: LINEAGE,
+      nowSec: NOW_SEC,
+      storageAvailable: true,
+    }).rows[0];
+    if (fallback?.kind !== "prediction") {
+      throw new Error("Expected sealed prediction fixture");
+    }
+    const retiredContext = {
+      status: "retired-identified",
+      reason: null,
+      identity: { model: "retired" },
+    };
+    const frozen = {
+      ...fallback.frozen,
+      relatedContext: {
+        ...fallback.frozen.relatedContext,
+        safetyContext: retiredContext,
+      },
+      sourceRow: {
+        ...fallback.frozen.sourceRow,
+        relatedContext: {
+          ...fallback.frozen.sourceRow.relatedContext,
+          safetyContext: retiredContext,
+        },
+      },
+    };
+    const sealedWithRetiredContext = {
+      ...sealed,
+      sealedPayload: {
+        ...sealed.sealedPayload,
+        frozen,
+      },
+    };
+
+    const response = buildDdrResponse({
+      candidateRows: [row],
+      incidentsByEventId: new Map([[row.eventId, incident]]),
+      sealed: [sealedWithRetiredContext],
+      firstPublication: [publication],
+      manifest: null,
+      errata: [],
+      lineage: LINEAGE,
+      nowSec: NOW_SEC,
+      storageAvailable: true,
+    });
+    const projected = response.rows[0];
+    if (projected?.kind !== "prediction") {
+      throw new Error("Expected projected prediction");
+    }
+
+    expect(projected.frozen.relatedContext.safetyContext).toEqual({
+      status: "unsupported-model",
+      reason: "retired-safety-model",
+      identity: null,
+    });
+    expect(
+      projected.frozen.sourceRow.relatedContext.safetyContext,
+    ).toEqual({
+      status: "unsupported-model",
+      reason: "retired-safety-model",
+      identity: null,
+    });
+  });
+
   it("sorts public prediction ids in v2 publication base payloads", () => {
-    const firstRow = resolverRow({ eventId: 6 });
-    const secondRow = resolverRow({ eventId: 7 });
+    const firstRow = resolverRow({ eventId: 7 });
+    const secondRow = resolverRow({ eventId: 8 });
     const firstIncident = canonicalIncident(firstRow);
     const secondIncident = canonicalIncident(secondRow);
     const secondSealed = sealedPrediction(secondRow, secondIncident, 3, { rowHash: hashFor("e") });
@@ -377,8 +453,8 @@ describe("depeg-resolver public projection", () => {
     const basePayload = buildV2PublicationBasePayload({
       snapshot,
       incidentsByEventId: new Map([
-        [6, firstIncident],
-        [7, secondIncident],
+        [7, firstIncident],
+        [8, secondIncident],
       ]),
       sealed: [secondSealed, firstSealed],
       firstPublication: [firstPublication(secondSealed), firstPublication(firstSealed)],
