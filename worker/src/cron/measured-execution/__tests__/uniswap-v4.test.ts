@@ -22,7 +22,10 @@ import {
   buildUniswapV4MeasuredExecutionTarget,
   type UniswapV4ExecutionCandidate,
 } from "../inventory";
-import { buildDexMeasuredExecutionProfile } from "../profiles";
+import {
+  buildDexMeasuredExecutionProfile,
+  createDexMeasuredExecutionRpcBudget,
+} from "../profiles";
 import {
   UNISWAP_V4_ADAPTER_PROFILE_ID,
   UNISWAP_V4_HOOK_FREE_ADDRESS,
@@ -313,5 +316,105 @@ describe("hook-free Uniswap V4 measured execution", () => {
       reverted: true,
     });
     expect(validateUniswapV4ProfileProof(profile)).toEqual([]);
+  });
+
+  it("fragments a failed V4 transport batch and recovers successful quotes", async () => {
+    const measuredTarget = target();
+    const deployment = getUniswapV4Deployment("ethereum");
+    if (!deployment) throw new Error("missing V4 deployment");
+    const quoteReturnData = encodeAbiParameters(
+      parseAbiParameters("uint256 amountOut,uint256 gasEstimate"),
+      [999_500_000n, 130_000n],
+    );
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+      async (_chain: string, calls: Array<{ label: string }>) =>
+        calls.length === 8
+          ? null
+          : calls.map((call) => ({
+              label: call.label,
+              success: true,
+              returnData: quoteReturnData,
+            })),
+    );
+
+    const outcomes = await quoteUniswapV4Requests({
+      requests: Array.from({ length: 8 }, () => ({
+        target: measuredTarget,
+        inputUsd: 1_000,
+        endpointAddress: deployment.endpointAddress,
+      })),
+      blockNumber: BLOCK,
+      chainRpcs: new Map(),
+    });
+
+    expect(outcomes.every((outcome) => outcome.point != null)).toBe(true);
+    expect(
+      rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.map(
+        (call) => call[1].length,
+      ),
+    ).toEqual([8, 4, 4]);
+  });
+
+  it("keeps a terminal V4 transport failure operationally degraded", async () => {
+    const measuredTarget = target();
+    const deployment = getUniswapV4Deployment("ethereum");
+    if (!deployment) throw new Error("missing V4 deployment");
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
+
+    const [outcome] = await quoteUniswapV4Requests({
+      requests: [{
+        target: measuredTarget,
+        inputUsd: 1_000,
+        endpointAddress: deployment.endpointAddress,
+      }],
+      blockNumber: BLOCK,
+      chainRpcs: new Map(),
+    });
+
+    expect(outcome).toEqual({
+      targetId: measuredTarget.targetId,
+      inputUsd: 1_000,
+      failureReason: "quoter-rpc-unavailable",
+    });
+    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fragment a V4 batch after request-budget exhaustion", async () => {
+    const measuredTarget = target();
+    const deployment = getUniswapV4Deployment("ethereum");
+    if (!deployment) throw new Error("missing V4 deployment");
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockImplementation(
+      async (
+        _chain: string,
+        _calls: unknown,
+        _blockNumber: number,
+        options: { beforeRequest?: () => boolean },
+      ) => {
+        options.beforeRequest?.();
+        return null;
+      },
+    );
+    const rpcBudget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 0,
+      deadlineMs: Date.now() + 60_000,
+    });
+
+    const outcomes = await quoteUniswapV4Requests({
+      requests: Array.from({ length: 8 }, () => ({
+        target: measuredTarget,
+        inputUsd: 1_000,
+        endpointAddress: deployment.endpointAddress,
+      })),
+      blockNumber: BLOCK,
+      chainRpcs: new Map(),
+      rpcBudget,
+    });
+
+    expect(
+      outcomes.every(
+        (outcome) => outcome.failureReason === "request-budget-exhausted",
+      ),
+    ).toBe(true);
+    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock).toHaveBeenCalledTimes(1);
   });
 });

@@ -24,6 +24,7 @@ import {
 } from "../../lib/evm-rpc";
 import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+  type DexMeasuredExecutionBudgetStopReason,
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
@@ -542,6 +543,12 @@ export interface UniswapV4QuoteOutcome {
   failureReason?: string;
 }
 
+interface AdaptiveUniswapV4ChunkResult {
+  results: EvmMulticall3Result[];
+  transportFailureLabels: string[];
+  budgetStopReasonsByLabel: Map<string, DexMeasuredExecutionBudgetStopReason>;
+}
+
 function usdToRawAmount(
   inputUsd: number,
   decimals: number,
@@ -701,6 +708,113 @@ function buildRevertedPoint(
   };
 }
 
+async function executeAdaptiveUniswapV4Chunk(input: {
+  chain: string;
+  calls: readonly EvmMulticall3Call[];
+  blockNumber: number;
+  chainRpcs: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
+  rpcBudget?: DexMeasuredExecutionRpcBudget;
+}): Promise<AdaptiveUniswapV4ChunkResult> {
+  if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.chain)) {
+    return {
+      results: input.calls.map((call) => ({
+        label: call.label,
+        success: false,
+        returnData: "0x",
+      })),
+      transportFailureLabels: input.calls.map((call) => call.label),
+      budgetStopReasonsByLabel: new Map(),
+    };
+  }
+
+  let budgetStopReason: DexMeasuredExecutionBudgetStopReason | null = null;
+  const results = await fetchEvmMulticall3Aggregate3AtBlock(
+    input.chain,
+    input.calls,
+    input.blockNumber,
+    {
+      chainRpcs: input.chainRpcs,
+      signal: input.signal,
+      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
+      ...(input.rpcBudget
+        ? {
+            beforeRequest: () => {
+              const consumed = input.rpcBudget!.tryConsume();
+              if (!consumed) budgetStopReason = input.rpcBudget!.stopReason;
+              return consumed;
+            },
+          }
+        : {}),
+      maxRetries: 0,
+      gas: UNISWAP_V4_MULTICALL_GAS,
+      multicallBatchSize: input.calls.length,
+    },
+  );
+  if (results != null) {
+    input.rpcBudget?.recordChainResult(input.chain, true);
+    return {
+      results,
+      transportFailureLabels: [],
+      budgetStopReasonsByLabel: new Map(),
+    };
+  }
+  if (
+    budgetStopReason == null &&
+    input.rpcBudget &&
+    Date.now() >= input.rpcBudget.deadlineMs
+  ) {
+    budgetStopReason = "runtime-deadline-exceeded";
+  }
+  if (budgetStopReason != null) {
+    return {
+      results: input.calls.map((call) => ({
+        label: call.label,
+        success: false,
+        returnData: "0x",
+      })),
+      transportFailureLabels: input.calls.map((call) => call.label),
+      budgetStopReasonsByLabel: new Map(
+        input.calls.map((call) => [call.label, budgetStopReason!]),
+      ),
+    };
+  }
+  if (input.calls.length === 1) {
+    input.rpcBudget?.recordChainResult(input.chain, false);
+    return {
+      results: [{
+        label: input.calls[0]!.label,
+        success: false,
+        returnData: "0x",
+      }],
+      transportFailureLabels: [input.calls[0]!.label],
+      budgetStopReasonsByLabel: new Map(),
+    };
+  }
+
+  const midpoint = Math.ceil(input.calls.length / 2);
+  const left = await executeAdaptiveUniswapV4Chunk({
+    ...input,
+    calls: input.calls.slice(0, midpoint),
+  });
+  const right = await executeAdaptiveUniswapV4Chunk({
+    ...input,
+    calls: input.calls.slice(midpoint),
+  });
+  return {
+    results: [...left.results, ...right.results],
+    transportFailureLabels: [
+      ...left.transportFailureLabels,
+      ...right.transportFailureLabels,
+    ],
+    budgetStopReasonsByLabel: new Map([
+      ...left.budgetStopReasonsByLabel,
+      ...right.budgetStopReasonsByLabel,
+    ]),
+  };
+}
+
 export async function quoteUniswapV4Requests(input: {
   requests: readonly UniswapV4QuoteRequest[];
   blockNumber: number;
@@ -729,55 +843,35 @@ export async function quoteUniswapV4Requests(input: {
     for (let offset = 0; offset < requests.length; offset += UNISWAP_V4_MULTICALL_BATCH_SIZE) {
       throwIfAborted(input.signal);
       const chunk = requests.slice(offset, offset + UNISWAP_V4_MULTICALL_BATCH_SIZE);
-      if (input.rpcBudget && !input.rpcBudget.canRequestChain(chain)) {
-        for (const request of chunk) {
-          outcomes[request.index] = {
-            targetId: request.target.targetId,
-            inputUsd: request.inputUsd,
-            failureReason: "quoter-rpc-unavailable",
-          };
-        }
-        continue;
-      }
-      const results = await fetchEvmMulticall3Aggregate3AtBlock(
+      const adaptive = await executeAdaptiveUniswapV4Chunk({
         chain,
-        chunk.map((request) => ({
+        calls: chunk.map((request) => ({
           label: request.label,
           target: request.endpointAddress,
           callData: request.callData,
           allowFailure: true,
         })),
-        input.blockNumber,
-        {
-          chainRpcs: input.chainRpcs,
-          signal: input.signal,
-          timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-          ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-          ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
-          maxRetries: 0,
-          gas: UNISWAP_V4_MULTICALL_GAS,
-          multicallBatchSize: chunk.length,
-        },
-      );
-      input.rpcBudget?.recordChainResult(chain, results != null);
-      if (results == null) {
-        for (const request of chunk) {
-          outcomes[request.index] = {
-            targetId: request.target.targetId,
-            inputUsd: request.inputUsd,
-            failureReason: input.rpcBudget?.stopReason ?? "quoter-rpc-unavailable",
-          };
-        }
-        continue;
-      }
-      const byLabel = new Map(results.map((result) => [result.label, result]));
+        blockNumber: input.blockNumber,
+        chainRpcs: input.chainRpcs,
+        signal: input.signal,
+        rpcBudget: input.rpcBudget,
+      });
+      const byLabel = new Map(adaptive.results.map((result) => [result.label, result]));
+      const transportFailureLabels = new Set(adaptive.transportFailureLabels);
       for (const request of chunk) {
         const result = byLabel.get(request.label);
-        if (!result) {
+        const budgetStopReason = adaptive.budgetStopReasonsByLabel.get(request.label);
+        if (budgetStopReason) {
           outcomes[request.index] = {
             targetId: request.target.targetId,
             inputUsd: request.inputUsd,
-            failureReason: "quoter-invalid-result",
+            failureReason: budgetStopReason,
+          };
+        } else if (!result || transportFailureLabels.has(request.label)) {
+          outcomes[request.index] = {
+            targetId: request.target.targetId,
+            inputUsd: request.inputUsd,
+            failureReason: "quoter-rpc-unavailable",
           };
         } else if (!result.success) {
           outcomes[request.index] =
