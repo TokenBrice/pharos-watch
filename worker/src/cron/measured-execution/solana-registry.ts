@@ -143,12 +143,6 @@ export function getSolanaMeasuredExecutionAdapterByProfile(
   return SOLANA_MEASURED_EXECUTION_ADAPTERS.find((entry) => entry.adapterProfileId === adapterProfileId) ?? null;
 }
 
-export function isSolanaMeasuredExecutionAdapterScoreEligible(
-  adapter: SolanaMeasuredExecutionAdapterRegistration,
-): boolean {
-  return adapter.activation === "active" && adapter.scoreEligible;
-}
-
 export function isSolanaMeasuredExecutionPriorityTargetScoreEligible(
   target: SolanaMeasuredExecutionTarget,
 ): boolean {
