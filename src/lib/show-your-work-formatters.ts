@@ -18,7 +18,11 @@ import {
   QUALITY_WEIGHT,
 } from "@shared/lib/chain-health";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
-import type { RawDimensionInputs, SafetyScoreV9CurrentCard } from "@shared/types";
+import type {
+  RawDimensionInputs,
+  SafetyScoreV9CurrentCard,
+  SafetyScoreV9PreBreakdownCard,
+} from "@shared/types";
 import type { DexLiquidityData, StressSignalEntry } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { StabilityIndexCurrent } from "@shared/types/stability";
@@ -38,6 +42,10 @@ export interface ShowYourWorkTable {
   versionLabel?: string;
 }
 
+export type SafetyScoreV9ShowWorkCard =
+  | SafetyScoreV9CurrentCard
+  | SafetyScoreV9PreBreakdownCard;
+
 function fmtNum(v: number | null | undefined, digits = 0): string {
   if (v == null || !Number.isFinite(v)) return "—";
   return v.toFixed(digits);
@@ -46,6 +54,20 @@ function fmtNum(v: number | null | undefined, digits = 0): string {
 function fmtPct(v: number | null | undefined, digits = 0): string {
   if (v == null || !Number.isFinite(v)) return "—";
   return `${v.toFixed(digits)}%`;
+}
+
+function fmtFractionPct(v: number | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return "—";
+  const percent = v * 100;
+  return `${percent.toFixed(Number.isInteger(percent) ? 0 : 1)}%`;
+}
+
+function fmtSigned(v: number): string {
+  return `${v >= 0 ? "+" : ""}${v.toFixed(1)}`;
+}
+
+function fmtUsd(v: number): string {
+  return `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
 function fmtBool(v: boolean | null | undefined): string {
@@ -124,14 +146,156 @@ export function formatReportCard(rawInputs: RawDimensionInputs): ShowYourWorkTab
 }
 
 export function formatReportCardV9(
-  card: SafetyScoreV9CurrentCard,
+  card: SafetyScoreV9ShowWorkCard,
   methodologyVersion: string,
 ): ShowYourWorkTable {
   const stages = card.scoreTrace.stages;
+  const breakdowns = "breakdowns" in card ? card.breakdowns : null;
   const rows: ShowYourWorkRow[] = [
-    { label: "Backing pillar", value: fmtNum(card.pillars.backing.score, 1) },
-    { label: "Exit pillar", value: fmtNum(card.pillars.exit.score, 1) },
-    { label: "Economic Control pillar", value: fmtNum(card.pillars.control.score, 1) },
+    {
+      label: "Backing pillar",
+      value: fmtNum(card.pillars.backing.score, 1),
+      weight: breakdowns === null ? undefined : fmtFractionPct(breakdowns.backing.aggregationWeight),
+    },
+    {
+      label: "Exit pillar",
+      value: fmtNum(card.pillars.exit.score, 1),
+      weight: breakdowns === null ? undefined : fmtFractionPct(breakdowns.exit.aggregationWeight),
+    },
+    {
+      label: "Economic Control pillar",
+      value: fmtNum(card.pillars.control.score, 1),
+      weight: breakdowns === null ? undefined : fmtFractionPct(breakdowns.control.aggregationWeight),
+    },
+  ];
+
+  if (breakdowns !== null) {
+    rows.push({
+      label: "Backing evaluated score",
+      value: fmtNum(breakdowns.backing.evaluatedScore, 1),
+    });
+    for (const group of breakdowns.backing.groups) {
+      rows.push({
+        label: `Backing group · ${group.label} [${group.key}]`,
+        value: fmtNum(group.score, 1),
+        weight: fmtFractionPct(group.effectiveWeight),
+      });
+    }
+    for (const component of breakdowns.backing.components) {
+      rows.push({
+        label: `Backing component · ${component.label} [${component.key}]`,
+        value: `${fmtNum(component.score, 1)} · ${component.source} · ${component.observationState}`,
+        weight: fmtFractionPct(component.effectiveWeight),
+        contribution: fmtNum(component.weightedContribution, 1),
+      });
+    }
+    for (const adjustment of breakdowns.backing.adjustments) {
+      rows.push({
+        label: `Backing adjustment · ${adjustment.kind}`,
+        value: `${fmtNum(adjustment.scoreBefore, 1)} → ${fmtNum(adjustment.scoreAfter, 1)}`,
+        contribution: fmtSigned(adjustment.delta),
+      });
+    }
+
+    rows.push({
+      label: "Exit evaluated score",
+      value: fmtNum(breakdowns.exit.evaluatedScore, 1),
+    });
+    if (breakdowns.exit.stressRequest !== null) {
+      rows.push(
+        {
+          label: "Exit stress request · requested notional",
+          value: fmtUsd(breakdowns.exit.stressRequest.requestedNotionalUsd),
+        },
+        {
+          label: "Exit stress request · maximum cost",
+          value: `${fmtNum(breakdowns.exit.stressRequest.maxCostBps, 0)} bps`,
+        },
+        {
+          label: "Exit stress request · comparison window",
+          value: `${fmtNum(breakdowns.exit.stressRequest.comparisonWindowSec, 0)} seconds`,
+        },
+      );
+    }
+    const primaryRoute = breakdowns.exit.primaryRoute;
+    if (primaryRoute !== null) {
+      rows.push({
+        label: `Exit primary route · ${primaryRoute.label} [${primaryRoute.key}]`,
+        value: `${fmtNum(primaryRoute.score, 1)} · ${primaryRoute.routeFamily}`,
+      });
+      for (const component of primaryRoute.components) {
+        rows.push({
+          label: `Exit component · ${component.label} [${component.key}]`,
+          value: fmtNum(component.score, 1),
+          weight: fmtFractionPct(component.weight),
+          contribution: fmtNum(component.weightedContribution, 1),
+        });
+      }
+      rows.push(
+        {
+          label: "Exit route · confidence factor",
+          value: `${primaryRoute.confidenceFactor.toFixed(3)}x`,
+        },
+        {
+          label: "Exit route · eligibility multiplier",
+          value: `${primaryRoute.eligibilityMultiplier.toFixed(3)}x`,
+        },
+      );
+      for (const cap of primaryRoute.capsApplied) {
+        rows.push({ label: `Exit route cap · ${cap}`, value: "applied" });
+      }
+    }
+    if (breakdowns.exit.diversification !== null) {
+      rows.push({
+        label:
+          `Exit diversification · ${breakdowns.exit.diversification.routeLabel}` +
+          ` [${breakdowns.exit.diversification.routeKey}]`,
+        value: fmtSigned(breakdowns.exit.diversification.bonus),
+      });
+    }
+    for (const route of breakdowns.exit.alternatives) {
+      rows.push({
+        label: `Exit alternative · ${route.label} [${route.key}]`,
+        value: [
+          route.score === null ? "NR" : fmtNum(route.score, 1),
+          route.routeFamily,
+          route.included ? "included" : route.exclusionReason ?? "excluded",
+        ].join(" · "),
+      });
+    }
+    for (const adjustment of breakdowns.exit.adjustments) {
+      rows.push({
+        label: `Exit adjustment · ${adjustment.kind}`,
+        value: `${fmtNum(adjustment.scoreBefore, 1)} → ${fmtNum(adjustment.scoreAfter, 1)}`,
+        contribution: fmtSigned(adjustment.delta),
+      });
+    }
+
+    rows.push({
+      label: "Economic Control evaluated score",
+      value: fmtNum(breakdowns.control.evaluatedScore, 1),
+    });
+    for (const component of breakdowns.control.components) {
+      rows.push({
+        label: `Economic Control component · ${component.label} [${component.key}]`,
+        value: [
+          fmtNum(component.score, 1),
+          component.binding ? "binding" : "diagnostic",
+          component.kind,
+          component.posture,
+        ].join(" · "),
+      });
+    }
+    for (const adjustment of breakdowns.control.adjustments) {
+      rows.push({
+        label: `Economic Control adjustment · ${adjustment.kind}`,
+        value: `${fmtNum(adjustment.scoreBefore, 1)} → ${fmtNum(adjustment.scoreAfter, 1)}`,
+        contribution: fmtSigned(adjustment.delta),
+      });
+    }
+  }
+
+  rows.push(
     { label: "Weighted pillar mean", value: fmtNum(stages.weightedPillarMean, 1) },
     { label: "Bounded-headroom aggregate", value: fmtNum(stages.aggregatedQualityScore, 1) },
     {
@@ -141,7 +305,7 @@ export function formatReportCardV9(
     { label: "Base asset score", value: fmtNum(stages.baseAssetScore, 1) },
     { label: "Deployment adjustment", value: fmtNum(stages.deploymentAdjustmentPoints, 1) },
     { label: "Pre-cap score", value: fmtNum(stages.preCapScore, 1) },
-  ];
+  );
 
   if (card.bindingCap) {
     rows.push({
@@ -166,7 +330,9 @@ export function formatReportCardV9(
   return {
     rows,
     formula:
-      "three pillars → bounded-headroom aggregation → peg multiplier → deployment adjustment → policy score adjustment → caps → published score",
+      breakdowns === null
+        ? "three pillars → bounded-headroom aggregation → peg multiplier → deployment adjustment → policy score adjustment → caps → published score"
+        : "Backing = weighted effective components; Exit = selected weighted route × confidence × eligibility, then caps and diversification; Economic Control = minimum binding component; published pillars → bounded-headroom aggregation → peg multiplier → deployment adjustment → policy score adjustment → caps → published score",
     topic: "safetyScore",
     versionLabel: methodologyVersion,
   };

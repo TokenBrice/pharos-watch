@@ -5,10 +5,10 @@ import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { cn } from "@/lib/utils";
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 interface MobileRiskSnapshotProps {
-  reportCard: SafetyScoreV9CurrentCard | null;
+  reportCard: V9ConsumerCard | null;
 }
 
 export function MobileRiskSnapshot({ reportCard }: MobileRiskSnapshotProps) {

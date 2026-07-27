@@ -14,11 +14,11 @@ function candidate(
 ): SafetyScoreV9Response {
   return {
     model: "v9-critical-path",
-    schemaVersion: 4,
-    lifecycle: "candidate",
+    schemaVersion: 5,
+    lifecycle: "active",
     candidateId: `v9-rc-1`,
-    policyVersion: "candidate-v9.0",
-    publicationGenerationId: "report-cards:v9:candidate:test",
+    policyVersion: "9.0",
+    publicationGenerationId: "report-cards:v9:v1:test",
     baseInputGenerationId: `report-cards-input:v1:${digest("a")}`,
     factSetDigest: digest("b"),
     resultDigest: digest("c"),

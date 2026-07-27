@@ -155,7 +155,7 @@ All rows below are members of the centralized `API_CACHE_PROFILES` map (`shared/
 | reserve-live       | `public, s-maxage=3600, max-age=300`                           | stablecoin-reserves live mode                                                                                                                                                                                                                                                                                                                                                                       |
 | reserve-live-stale | `public, s-maxage=1800, max-age=120`                           | stablecoin-reserves live-stale mode                                                                                                                                                                                                                                                                                                                                                                 |
 | reserve-fallback   | `public, s-maxage=300, max-age=60`                             | stablecoin-reserves curated/template/unavailable fallback modes                                                                                                                                                                                                                                                                                                                                     |
-| no-store           | `no-store`                                                     | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, `yield-source-decisions`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `admin-telegram-chat/:chatId`, `admin-telegram-adoption-report`, `admin-safety-score-v9`, `status-probe-history`) |
+| no-store           | `no-store`                                                     | admin GET routes via the router override or admin route wrapper (`status`, `status-history`, `request-source-stats`, `yield-source-decisions`, API key inventory/audit routes, `admin-action-log`, `debug-sync-state`, `backfill-dews`, `backfill-dews?repair=...&dry-run=true`, `audit-depeg-history?dry-run=true`, `admin-telegram-chat/:chatId`, `admin-telegram-adoption-report`, `status-probe-history`) |
 
 `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, `POST /api/telegram-mini-app/mutate`, and admin POST endpoints bypass edge caching because they are non-GET request paths. The self-serve API-key endpoints and Telegram Mini App endpoints explicitly return no-store responses so verification tokens, plaintext API keys, and per-chat alert state are never cacheable.
 
@@ -2412,7 +2412,15 @@ For bridge-route handling, `rawInputs.bridgeRouteRiskTier` and `rawInputs.bridge
 
 `GET /api/report-cards` normally serves the full report-card payload from the private `report-cards:snapshot` cache envelope published by `publish-report-card-cache`. D1 stores that full snapshot inside a checksum-verified gzip/base64 envelope with bounded decompression and top-level V8 identity metadata; this keeps the private row below D1's 2,000,000-byte limit without changing the decoded public V8 JSON. The loader also accepts the legacy plain storage envelope during rolling deploys. The decoded envelope pins the expected cache generation and Safety Score methodology version; compute-on-read is used when the published snapshot is missing, malformed, oversized, generation-mismatched, methodology-mismatched, or missing the current V8 evaluation identity. Published and computed responses expose `safetyScoreIdentity`, which binds model `v8`, response schema, methodology, evaluation-build digest, exact base-input generation, and publication generation. They also expose `publication`, which proves the exact active-set identity as scored plus NR rows. The full snapshot, exact fixed input, smaller `report_card_cache` score map used by lightweight Chain Health/OG consumers, and Telegram safety source carry the same identity and are committed in one D1 batch.
 
-The unversioned `/api/report-cards` route remains a V8 contract and must never silently serve a V9 payload. The additive `GET /api/report-cards/v9` route exposes the owned V9 public wire contract and is DARK by default: it returns `404` until the owner-gated activation marker (`safety-score-v9:public-activation`) exists. The marker is identity-bound — its value must be JSON carrying the approved scoring identity (`policyId`, `policyDigest`, `evaluationBuildDigest`, `methodologyVersion`), and the route serves only while the canonical snapshot matches all four fields; a missing, malformed, or mismatched marker keeps it dark (`404`, fail-closed). Rotating per-publication fields (base-input and publication generation IDs) are deliberately not bound, so routine refreshes of the approved identity keep serving. Behind a matched gate the route reads only the canonical accepted `report-cards:v9-shadow` envelope plus matching `report-cards:v9-shadow:publication-health`, returns `503` when either is absent, malformed, or identity-inconsistent, and never falls back to V8 or recomputes a score. Its strict response includes `model: "v9"`, `schemaVersion: 3`, `lifecycle: "active"` (the stored shadow projection carries `"shadow"`; the schema admits both), the full V9 publication identity, methodology and policy identity, completeness, source digests, `publicationHealth`, native three-pillar cards with mandatory score-trace v3 attribution, and a serial/basket dependency graph. `publicationHealth` distinguishes accepted and attempted times and contains a bounded list of stable hold reasons. Trace v3 explicitly carries policy score adjustments. Live producers and consumers accept only report-v3/trace-v3; a separately named compatibility reader retains exact report-v2/trace-v2 and report-v1/trace-v1 snapshots. The candidate-only `SafetyScoreV9ResponseSchema` is currently response v4 and is not this public contract. No live page selects this endpoint before the separate activation release and reviewed consumer diffs.
+The unversioned `/api/report-cards` route remains a V8 compatibility contract and must never silently serve a V9 payload. The active `GET /api/report-cards/v9` route exposes the owned V9 public wire contract through the owner-gated activation marker (`safety-score-v9:public-activation`). The marker is identity-bound — its value must be JSON carrying the approved scoring identity (`policyId`, `policyDigest`, `evaluationBuildDigest`, `methodologyVersion`), and the route serves only while the canonical snapshot matches all four fields; a missing, malformed, or mismatched marker keeps it dark (`404`, fail-closed). Rotating per-publication fields (base-input and publication generation IDs) are deliberately not bound, so routine refreshes of the approved identity keep serving. Behind a matched gate the route reads only the canonical accepted `report-cards:v9-shadow` envelope plus matching `report-cards:v9-shadow:publication-health`, returns `503` when either is absent, malformed, or identity-inconsistent, and never falls back to V8 or recomputes a score. Its strict response includes `model: "v9"`, `schemaVersion: 4`, `lifecycle: "active"`, the full V9 publication identity, methodology and policy identity, completeness, source digests, `publicationHealth`, native three-pillar cards with mandatory score-trace v3 attribution and compact component breakdowns, and a serial/basket dependency graph. `publicationHealth` distinguishes accepted and attempted times and contains a bounded list of stable hold reasons. Trace v3 explicitly carries policy score adjustments. Live producers and consumers accept only report-v4/trace-v3; a separately named compatibility reader retains exact pre-breakdown report-v3/trace-v3, report-v2/trace-v2, and report-v1/trace-v1 snapshots. The evaluator envelope remains a distinct contract and is candidate schema v5.
+
+For each rateable card, `breakdowns` contains:
+
+- `backing`: `evaluatedScore`, `publishedScore`, the pillar `aggregationWeight`, ordered `adjustments`, reserve/mechanism `groups`, and `components` with a safe label, source, score, effective pillar weight, weighted contribution, and observation state.
+- `exit`: the same common pillar fields plus the optional stress request, optional selected `primaryRoute`, diversification bonus, and compact alternatives. A selected route exposes its family, score, six ordered weighted components, confidence and eligibility multipliers, and technical `capsApplied` identifiers.
+- `control`: the common pillar fields, `method: "minimum-binding-component"`, and mint/oracle/bridge components with score, posture, and explicit `binding` status. Economic Control components intentionally have no weight field.
+
+`adjustments` reconcile each evaluator result to the published pillar through `operational-resilience-credit` and `dependency-limit` stages. The 0.40/0.35/0.25 pillar values are bounded-headroom aggregation weights, not a simple final weighted-average formula. `breakdowns` is `null` exactly when the card is `NR`; rateable report-v4 cards must include all three breakdowns.
 
 `GET /api/report-cards/v9-preview` is a temporary, owner-approved read-only compatibility endpoint. It reads the latest canonical shadow envelope and strict public projection, always returns `lifecycle: "shadow"`, and does not consult or alter the activation marker. The endpoint bypasses the Worker edge cache, returns `Cache-Control: no-store`, and returns `503` when the canonical shadow envelope is unavailable or invalid. Both the stable path and its legacy alias are explicitly exempt from the public API-key gate but denied on the `/_site-data/*` lane. They expose no admin diff, history, movement-review, or mutation data and have no V8 fallback. The former unlisted `/v9-preview/` frontend page was retired after V9 activation; the API paths remain compatibility aliases for ordered deployments.
 
@@ -5547,72 +5555,6 @@ Before enqueue, live execution requires the admin-delivery pause to be inactive 
 Returns the Access-authenticated weekly PharosWatchBot adoption report. The response covers the last seven complete UTC days, identifies the preceding comparison range, groups CTA/start/setup stages by allowlisted placement, reports first-mutation latency buckets, and includes the latest D7/D30 `any`/`direct`/`preset`/`global` active-follow retention snapshots.
 
 Counts from one through four and rates derived from low-count cells are `null`. `quality.ctaClicks` is `best_effort_no_identifier`; CTA and Telegram stages are independent aggregates rather than joined users, so `startPerClickPct` is directional and may exceed 100%. Retention uses durable aggregate first-follow counts as cohort denominators and current surviving active-follow rows as numerators, so `/forget` cannot shrink a historical denominator. Rows identify `on_time_snapshot`, `catchup_current_state`, or `pre_rollout_unavailable` (cohorts before 2026-07-11); an empty instrumented cohort has zero counts and a `null` rate. `freshness` reports the newest funnel and retention timestamps. The route is read-only, `no-store`, unavailable on the public API host, and requires the normal Cloudflare Access operator context.
-
-### `GET /api/admin-safety-score-v9`
-
-Returns the latest retained Safety Score v9 candidate shadow envelope, its exact
-v8/v9 diff report, and compact daily shadow summaries. Each daily row contains
-retry counts, a selected candidate identity/coverage/movement/qualification
-summary, selected replay-artifact keys, and bounded latest-error context. The handler
-only reads the generation-bound values written by the shadow publisher; it
-never computes or reconstructs v9 from current v8 report-card rows.
-
-Before the first complete shadow publication, or when one required stored value
-is absent or generation-inconsistent, the response is a strict unavailable
-state such as:
-
-```json
-{
-  "schemaVersion": 1,
-  "status": "unavailable",
-  "reason": "shadow-envelope-unavailable"
-}
-```
-
-Available responses use `status: "available"` and contain `envelope`, `diff`,
-`movementReviews`, and `history`. `movementReviews` contains the immutable
-human classifications whose semantic movement keys still occur in the latest
-diff. The retained diff itself is not rewritten when a review is recorded.
-The endpoint returns no partial candidate payload when unavailable. Stored-value
-validation failures, including a corrupt retained review, return the same shape
-with `reason: "stored-shadow-invalid"`.
-
-**Authentication:** admin only through `ops-api.pharos.watch` /
-`ops.pharos.watch/api/admin/*`. **Cache:** `no-store`. This endpoint is
-intentionally excluded from the public OpenAPI and Postman artifacts and does
-not change `GET /api/report-cards`, which remains the authoritative v8 API
-during shadow evaluation.
-
-### `POST /api/admin-safety-score-v9/reviews`
-
-Records one append-only classification for a material V8-to-V9 movement in the
-latest retained diff. The movement key binds the V8 methodology/evaluator, V9
-candidate policy/evaluator, asset, scores, grades, caps, reasons, thresholds,
-and materiality/cohort flags. Raw point-in-time supply and supply-weighted
-impact are excluded, so ordinary supply changes do not invalidate an otherwise
-identical classification. A later publication may reuse the classification
-only when that semantic movement is unchanged; publication timestamps and
-generation IDs alone do not invalidate it.
-
-```json
-{
-  "schemaVersion": 1,
-  "reviewKey": "<64-character SHA-256>",
-  "assetId": "usdc-circle",
-  "sourceDiffReportDigest": "<64-character SHA-256>",
-  "disposition": "intended-methodology-change",
-  "reviewerId": "operator@example.com",
-  "rationale": "The movement is the expected result of the preregistered weakest-path methodology."
-}
-```
-
-`disposition` is one of `intended-methodology-change`, `evidence-correction`,
-`producer-data-gap`, or `defect`. The response is `201` with `status:
-"recorded"`, or `200` with `status: "unchanged"` when the same reviewer repeats
-the same disposition and rationale for that semantic movement. A stale diff/key or attempted reclassification returns `409`; malformed
-or non-reviewable targets return `400`. The request requires admin access,
-`X-Pharos-Admin: 1`, and a valid 8-128 character `Idempotency-Key`. Recording a
-review does not activate or publish V9.
 
 ### `GET|POST /api/admin-telegram-delivery-control`
 

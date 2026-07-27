@@ -9,8 +9,13 @@ import {
   getV9GradeRiskBucket,
   getV9StressAvailability,
   resolveV9ConsumerResponse,
+  selectV9Card,
 } from "@/lib/safety-score-v9-consumers";
-import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import {
+  makeReportCardsV9PreBreakdownResponse,
+  makeReportCardsV9Response,
+  makeV9Card,
+} from "@/test/fixtures/safety-score-v9";
 
 describe("V9 safety consumer projections", () => {
   it("requires a complete exact identity and rejects stale previous publications", () => {
@@ -26,6 +31,31 @@ describe("V9 safety consumer projections", () => {
       reason: "identity-mismatch",
     });
     expect(resolveV9ConsumerResponse({ ...response, safetyScoreIdentity: undefined }, expectedIdentity)).toEqual({
+      status: "unavailable",
+      reason: "invalid-v9-response",
+    });
+  });
+
+  it("accepts report-v3 during the reader-first transition without inventing breakdowns", () => {
+    const response = makeReportCardsV9PreBreakdownResponse();
+    const resolved = resolveV9ConsumerResponse(response, response.safetyScoreIdentity);
+    expect(resolved.status).toBe("available");
+    if (resolved.status !== "available") return;
+    expect(resolved.value.schemaVersion).toBe(3);
+    expect(resolved.value.cards[0]).not.toHaveProperty("breakdowns");
+
+    const selected = selectV9Card(response, response.safetyScoreIdentity, response.cards[0]!.id);
+    expect(selected.status).toBe("available");
+    if (selected.status !== "available") return;
+    expect(selected.value).not.toHaveProperty("breakdowns");
+  });
+
+  it("rejects historical report versions at the live transition boundary", () => {
+    const response = makeReportCardsV9PreBreakdownResponse();
+    expect(resolveV9ConsumerResponse(
+      { ...response, schemaVersion: 2 },
+      response.safetyScoreIdentity,
+    )).toEqual({
       status: "unavailable",
       reason: "invalid-v9-response",
     });

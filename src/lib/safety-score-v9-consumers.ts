@@ -1,14 +1,17 @@
-import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
-import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9TransitionResponse } from "@shared/types/report-cards-v9";
+import { ReportCardsV9TransitionResponseSchema } from "@shared/types/report-cards-v9";
 import type {
   SafetyScorePublicationIdentity,
   SafetyScoreV9Card,
   SafetyScoreV9CurrentCard,
+  SafetyScoreV9PreBreakdownCard,
   V9Grade,
 } from "@shared/types";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
 
-export type V9ConsumerIdentity = ReportCardsV9Response["safetyScoreIdentity"];
+export type V9ConsumerResponse = ReportCardsV9TransitionResponse;
+export type V9ConsumerCard = SafetyScoreV9CurrentCard | SafetyScoreV9PreBreakdownCard;
+export type V9ConsumerIdentity = V9ConsumerResponse["safetyScoreIdentity"];
 
 export type V9ConsumerUnavailableReason =
   | "invalid-v9-response"
@@ -64,8 +67,8 @@ export function safetyScoreV9IdentitiesMatch(
 export function resolveV9ConsumerResponse(
   input: unknown,
   expectedIdentity: V9ConsumerIdentity,
-): V9ConsumerResult<ReportCardsV9Response> {
-  const parsed = ReportCardsV9ResponseSchema.safeParse(input);
+): V9ConsumerResult<V9ConsumerResponse> {
+  const parsed = ReportCardsV9TransitionResponseSchema.safeParse(input);
   if (!parsed.success) return { status: "unavailable", reason: "invalid-v9-response" };
   if (!safetyScoreV9IdentitiesMatch(parsed.data.safetyScoreIdentity, expectedIdentity)) {
     return { status: "unavailable", reason: "identity-mismatch" };
@@ -77,7 +80,7 @@ export function selectV9Card(
   input: unknown,
   expectedIdentity: V9ConsumerIdentity,
   cardId: string,
-): V9ConsumerResult<SafetyScoreV9CurrentCard> {
+): V9ConsumerResult<V9ConsumerCard> {
   const response = resolveV9ConsumerResponse(input, expectedIdentity);
   if (response.status === "unavailable") return response;
   const card = response.value.cards.find((candidate) => candidate.id === cardId);
@@ -146,7 +149,7 @@ export function buildV9SafetyTableMap(
 }
 
 export interface V9DependencyProjection {
-  edges: ReportCardsV9Response["dependencyGraph"]["edges"];
+  edges: V9ConsumerResponse["dependencyGraph"]["edges"];
   nodeGrades: Record<string, V9Grade>;
 }
 
@@ -256,7 +259,7 @@ export interface V9PortfolioProjection {
     upstreamAssetId: string;
     dependentAssetId: string;
     kind: "serial" | "basket";
-    materiality: ReportCardsV9Response["dependencyGraph"]["edges"][number]["materiality"];
+    materiality: V9ConsumerResponse["dependencyGraph"]["edges"][number]["materiality"];
     exposureUsd: number;
   }>;
 }

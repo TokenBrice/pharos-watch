@@ -174,14 +174,14 @@ export const V9ReleaseCohortManifestV1Schema = z
         ctx.addIssue({
           code: "custom",
           path: ["assets", index, "nrReview", "reviewedAtSec"],
-          message: "NR review cannot be later than the candidate clock",
+          message: "NR review cannot be later than the V9 publication clock",
         });
       }
       if (asset.weight.observedAtSec !== null && asset.weight.observedAtSec > manifest.capturedAtSec) {
         ctx.addIssue({
           code: "custom",
           path: ["assets", index, "weight", "observedAtSec"],
-          message: "Weight observation cannot be later than the candidate clock",
+          message: "Weight observation cannot be later than the V9 publication clock",
         });
       }
     }

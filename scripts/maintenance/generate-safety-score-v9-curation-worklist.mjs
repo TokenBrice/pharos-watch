@@ -1,4 +1,4 @@
-// Generates the V9 evidence-curation worklist from a candidate replay:
+// Generates the V9 evidence-curation worklist from a V9 replay:
 // one checkbox item per (asset, workstream), ordered by supply weight, with
 // the exact reason codes and paths that currently bound the asset. Agents
 // walk the generated document to completion and regenerate it after each
@@ -6,7 +6,7 @@
 //
 // Usage:
 //   node scripts/maintenance/generate-safety-score-v9-curation-worklist.mjs \
-//     --replay <replay-v9-candidate.json> [--v8-cards <v8-cards.json>] \
+//     --replay <replay-v9.json> [--v8-cards <v8-cards.json>] \
 //     [--output <worklist.md>]
 import { readFileSync, writeFileSync } from "node:fs";
 

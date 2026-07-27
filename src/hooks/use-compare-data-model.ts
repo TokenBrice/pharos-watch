@@ -21,7 +21,8 @@ import {
   deriveFlowSeries,
   deriveFlowCardData,
 } from "@/lib/compare-derive";
-import type { SafetyScoreV9CurrentCard, StablecoinData } from "@shared/types";
+import type { StablecoinData } from "@shared/types";
+import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 interface UseCompareDataModelOptions {
   selectedIds: string[];
@@ -60,7 +61,7 @@ export function useCompareDataModel({
   const globalError = listError ?? pegError ?? bluechipError ?? dexError ?? reportCardsError;
 
   const cardMap = useMemo(() => {
-    if (!reportCardsData?.cards) return new Map<string, SafetyScoreV9CurrentCard>();
+    if (!reportCardsData?.cards) return new Map<string, V9ConsumerCard>();
     return new Map(reportCardsData.cards.map((card) => [card.id, card]));
   }, [reportCardsData]);
 

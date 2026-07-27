@@ -98,7 +98,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     await expect(parseSafetyScoreV9ReplayFixedInput(cacheEntry.value)).resolves.toEqual(fixedInput);
   });
 
-  it("serializes a byte-identical candidate-only artifact from explicit clocks", () => {
+  it("serializes a byte-identical V9 replay artifact from explicit clocks", () => {
     const args = {
       fixedInput: exactFixedInput(),
       publishedAtSec: PUBLISHED_AT_SEC,
@@ -119,11 +119,11 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     expect(parsed).toMatchObject({
       schemaVersion: 1,
       kind: "safety-score-v9-candidate-replay",
-      lifecycle: "candidate",
-      releaseAuthorization: { authorized: false, reason: "candidate-replay-only" },
+      lifecycle: "active",
+      releaseAuthorization: { authorized: false, reason: "v9-replay-only" },
       pipeline: {
         candidate: {
-          lifecycle: "candidate",
+          lifecycle: "active",
           publishedAtSec: PUBLISHED_AT_SEC,
         },
       },

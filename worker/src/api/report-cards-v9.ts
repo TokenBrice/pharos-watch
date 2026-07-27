@@ -65,7 +65,7 @@ export const handleReportCardsV9 = withErrorHandler("report-cards-v9", async (db
 });
 
 /**
- * Owner-approved, read-only feedback surface for the current shadow candidate.
+ * Owner-approved, read-only feedback surface for the current V9 shadow snapshot.
  * It deliberately bypasses activation while preserving the shadow lifecycle
  * and strict public projection. The opaque route is discoverability control,
  * not authentication.

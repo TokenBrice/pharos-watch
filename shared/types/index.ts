@@ -16,7 +16,6 @@ export * from "./safety-score-v9-public";
 export * from "./safety-score-v9-review";
 export * from "./safety-score-v9-coverage";
 export * from "./safety-score-v9-evidence-queue";
-export * from "./safety-score-v9-admin";
 export * from "./stability";
 export * from "./status";
 export * from "./yield";

@@ -43,6 +43,65 @@ function card(): SafetyScoreV9CurrentCard {
       reasonCodes: [],
     },
     stressStateDigest: null,
+    breakdowns: {
+      backing: {
+        evaluatedScore: 80,
+        publishedScore: 80,
+        aggregationWeight: 0.4,
+        groups: [{ key: "reserves", label: "Reserves", score: 80, effectiveWeight: 1 }],
+        components: [{
+          key: "reviewed",
+          label: "Reviewed reserves",
+          source: "reserve-exposure",
+          score: 80,
+          effectiveWeight: 1,
+          weightedContribution: 80,
+          observationState: "known",
+        }],
+        adjustments: [],
+      },
+      exit: {
+        evaluatedScore: 80,
+        publishedScore: 80,
+        aggregationWeight: 0.35,
+        stressRequest: null,
+        primaryRoute: {
+          key: "reviewed-route",
+          label: "Reviewed route",
+          routeFamily: "issuer-redemption",
+          score: 80,
+          components: [
+            { key: "access", label: "Access", score: 80, weight: 0.2, weightedContribution: 16 },
+            { key: "settlement", label: "Settlement", score: 80, weight: 0.15, weightedContribution: 12 },
+            { key: "executionCertainty", label: "Execution certainty", score: 80, weight: 0.15, weightedContribution: 12 },
+            { key: "capacity", label: "Capacity", score: 80, weight: 0.25, weightedContribution: 20 },
+            { key: "outputAssetQuality", label: "Output asset quality", score: 80, weight: 0.15, weightedContribution: 12 },
+            { key: "cost", label: "Cost", score: 80, weight: 0.1, weightedContribution: 8 },
+          ],
+          confidenceFactor: 1,
+          eligibilityMultiplier: 1,
+          capsApplied: [],
+        },
+        diversification: null,
+        alternatives: [],
+        adjustments: [],
+      },
+      control: {
+        evaluatedScore: 80,
+        publishedScore: 80,
+        aggregationWeight: 0.25,
+        method: "minimum-binding-component",
+        components: [{
+          key: "reviewed",
+          label: "Reviewed control",
+          kind: "mint",
+          score: 80,
+          binding: true,
+          posture: "reviewed",
+        }],
+        adjustments: [],
+      },
+    },
     scoreTrace: {
       schemaVersion: 3,
       legacyAliases: {
@@ -111,7 +170,7 @@ function response(overrides: Partial<ReportCardsV9Response> = {}): ReportCardsV9
   const updatedAt = overrides.updatedAt ?? 110;
   return {
     model: "v9",
-    schemaVersion: 3,
+    schemaVersion: 4,
     lifecycle: "shadow",
     safetyScoreIdentity: identity,
     methodology: {

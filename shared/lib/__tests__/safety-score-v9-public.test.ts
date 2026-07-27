@@ -4,6 +4,7 @@ import {
   type V9ResolvedDependencyInputs,
 } from "../safety-score-v9/dependencies";
 import type { V9CapTrace, V9NRReason } from "../safety-score-v9/formula";
+import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type { V9PublicCardProjectionInput } from "../safety-score-v9/public";
 import { buildSafetyScoreV9Response, projectSafetyScoreV9Card } from "../safety-score-v9/public";
 import type { V9ProductionScoreTrace } from "../safety-score-v9/score";
@@ -60,9 +61,9 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
   });
   const trace: V9ProductionScoreTrace = {
     assetId,
-    policyId: "safety-score-v9-candidate-v1",
+    policyId: "safety-score-v9",
     policyDigest: DIGESTS.policy,
-    configName: "safety-score-v9-candidate-v1",
+    configName: "safety-score-v9",
     pillarContributions,
     weightedQuality: qualityScore,
     weakestPillar: Object.values(pillars).some((score) => score === null)
@@ -119,6 +120,7 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
 
   return {
     trace,
+    policy: V9_CANDIDATE_POLICY_V1,
     scoreInput: {
       pillars: {
         backing: {
@@ -145,6 +147,99 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
     access,
     dependencyInputs,
     stressState: { stateDigest: DIGESTS.stress },
+    backing: {
+      archetype: "fiat-cash",
+      score: pillars.backing,
+      contributions:
+        pillars.backing === null
+          ? []
+          : [{
+              componentKey: "reserve:cash",
+              source: "reserve-exposure",
+              score: pillars.backing,
+              normalizedWeight: 1,
+              weightedScore: pillars.backing,
+              observationState: "known",
+              provenance: "curated",
+              evidenceRefIds: [],
+              failureDomains: [],
+              upstreamAssetId: null,
+            }],
+    },
+    exit: {
+      score: pillars.exit,
+      stressRequest:
+        pillars.exit === null
+          ? null
+          : {
+              requestedNotionalUsd: 1_000_000,
+              maxCostBps: 200,
+              comparisonWindowSec: 86_400,
+              rawSupplyRequestUsd: 1_000_000,
+            },
+      primaryRouteKey: pillars.exit === null ? null : "redemption:fixture",
+      diversificationRouteKey: null,
+      diversificationBonus: 0,
+      routes:
+        pillars.exit === null
+          ? []
+          : [{
+              routeKey: "redemption:fixture",
+              routeFamily: "protocol-redemption",
+              observationConfidence: "high",
+              modelConfidence: "high",
+              observationHistory: null,
+              horizon: "immediate",
+              capacityScoringHorizon: "immediate",
+              settlementDelaySec: 0,
+              queueDepthUsd: null,
+              dailyLimitUsd: null,
+              minRedeemUsd: null,
+              score: pillars.exit,
+              included: true,
+              exclusionReason: null,
+              capacityPoint: {
+                requestedNotionalUsd: 1_000_000,
+                maxCostBps: 200,
+                executableUsd: 1_000_000,
+                completionRatio: 1,
+                executionCostBps: 0,
+              },
+              components: {
+                access: pillars.exit,
+                settlement: pillars.exit,
+                executionCertainty: pillars.exit,
+                capacity: pillars.exit,
+                outputAssetQuality: pillars.exit,
+                cost: pillars.exit,
+              },
+              confidenceFactor: 1,
+              capsApplied: [],
+            }],
+    },
+    control: {
+      score: pillars.control,
+      components:
+        pillars.control === null
+          ? []
+          : [{
+              componentKey: "control:mint",
+              kind: "mint",
+              posture: "bounded-admin",
+              score: pillars.control,
+              binding: true,
+              controlKeys: [],
+              failureDomains: [],
+            }],
+    },
+    display: {
+      labels: {
+        "reserve:cash": "Cash",
+        "redemption:fixture": "Protocol redemption",
+        "control:mint": "Mint control",
+      },
+      exitHolderEligibility: { "redemption:fixture": "any-holder" },
+    },
     freshness,
   };
 }
@@ -154,7 +249,7 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 }
 
 describe("Safety Score v9 public projection", () => {
-  it("publishes complete, capped, dependency-bound, and NR candidate fixtures", () => {
+  it("publishes complete, capped, dependency-bound, and NR V9 fixtures", () => {
     const complete = fixture("complete", { score: 91.8, grade: "A+" });
     const capped = fixture("capped", {
       score: 64,
@@ -195,16 +290,16 @@ describe("Safety Score v9 public projection", () => {
     });
 
     const response = buildSafetyScoreV9Response({
-      candidateId: "candidate-v1",
-      policyVersion: "candidate-v1",
-      publicationGenerationId: "report-cards:v9:candidate:1000",
+      candidateId: "safety-score-v9:v1:public-test",
+      policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:public-test",
       publishedAtSec: 1_001,
       results: [notRated, dependency, complete, capped],
     });
 
     expect(response.model).toBe("v9-critical-path");
-    expect(response.schemaVersion).toBe(4);
-    expect(response.lifecycle).toBe("candidate");
+    expect(response.schemaVersion).toBe(5);
+    expect(response.lifecycle).toBe("active");
     expect(response.cards.map((card) => card.id)).toEqual(["capped", "complete", "dependency", "not-rated"]);
     expect(response.completeness).toEqual({
       expectedCount: 4,
@@ -213,6 +308,34 @@ describe("Safety Score v9 public projection", () => {
       notRatedIds: ["not-rated"],
     });
     expect(response.cards[0]?.caps).toHaveLength(2);
+    expect(response.cards[1]?.breakdowns).toMatchObject({
+      backing: {
+        evaluatedScore: 92,
+        publishedScore: 92,
+        aggregationWeight: 0.4,
+        groups: [{ key: "reserves", effectiveWeight: 1 }],
+        components: [{
+          key: "reserve:cash",
+          label: "Cash",
+          score: 92,
+          effectiveWeight: 1,
+          weightedContribution: 92,
+        }],
+      },
+      exit: {
+        evaluatedScore: 90,
+        primaryRoute: {
+          key: "redemption:fixture",
+          label: "Protocol redemption",
+          confidenceFactor: 1,
+          eligibilityMultiplier: 1,
+        },
+      },
+      control: {
+        evaluatedScore: 94,
+        method: "minimum-binding-component",
+      },
+    });
     expect(response.cards[0]?.bindingCap?.kind).toBe("signal:material-bridge:high");
     expect(response.cards[2]?.dependencies.serial[0]?.upstreamAssetId).toBe("upstream");
     expect(response.cards[2]?.bindingCap?.source).toBe("parent");
@@ -257,14 +380,29 @@ describe("Safety Score v9 public projection", () => {
     };
 
     const card = projectSafetyScoreV9Card(
-      fixture("role-dependent", {
+      (() => {
+        const input = fixture("role-dependent", {
         score: 91,
         grade: "A+",
         pillars: { backing: 92, exit: 90, control: 88 },
         qualityScore: 91,
         pegAdjustedScore: 91,
         dependency,
-      }),
+        });
+        input.control = {
+          score: 94,
+          components: [{
+            componentKey: "control:mint",
+            kind: "mint",
+            posture: "bounded-admin",
+            score: 94,
+            binding: true,
+            controlKeys: [],
+            failureDomains: [],
+          }],
+        };
+        return input;
+      })(),
     );
 
     expect(card.dependencies.roles).toEqual([
@@ -289,6 +427,12 @@ describe("Safety Score v9 public projection", () => {
       knownLossPoints: 12,
       unresolvedExposureShare: 0,
     });
+    expect(card.breakdowns?.control.adjustments).toEqual([{
+      kind: "dependency-limit",
+      scoreBefore: 94,
+      scoreAfter: 88,
+      delta: -6,
+    }]);
   });
 
   it("keeps access unknowns, evidence owners, aggregation, and all score stages explicit", () => {
@@ -532,9 +676,9 @@ describe("Safety Score v9 public projection", () => {
     const base = fixture("alpha", { score: 91.8, grade: "A+" });
     expect(() =>
       buildSafetyScoreV9Response({
-        candidateId: "candidate-v1",
-        policyVersion: "candidate-v1",
-        publicationGenerationId: "candidate:1",
+        candidateId: "safety-score-v9:v1:public-test",
+        policyVersion: "9.0",
+        publicationGenerationId: "report-cards:v9:v1:public-test",
         publishedAtSec: 1_001,
         results: [base, base],
       }),
@@ -544,9 +688,9 @@ describe("Safety Score v9 public projection", () => {
     mixed.trace.evaluationBuildDigest = "f".repeat(64);
     expect(() =>
       buildSafetyScoreV9Response({
-        candidateId: "candidate-v1",
-        policyVersion: "candidate-v1",
-        publicationGenerationId: "candidate:1",
+        candidateId: "safety-score-v9:v1:public-test",
+        policyVersion: "9.0",
+        publicationGenerationId: "report-cards:v9:v1:public-test",
         publishedAtSec: 1_001,
         results: [base, mixed],
       }),

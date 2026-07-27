@@ -10,7 +10,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "9a4a2eee8097326eedf7c003bdd7f674b2e116764917df29508dddcc825bbf71"
+      "sha256": "ee86da97dea5f76b8384f79414d4951326a698c00150a997d3745e263e12cb59"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -346,7 +346,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9.ts",
-      "sha256": "7e14119ddb7d00a20df41eff2fd35f4880fa5562cd12bb92323e4084d975b96d"
+      "sha256": "a90c5f3e47cb078fb4535b1a806d437af30d94076e8ec76a43c35d870adfea0e"
     },
     {
       "path": "shared/types/stablecoin-taxonomy.ts",
@@ -437,7 +437,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "c0b4960431cc7319ddf88b3f37b6374aa5b344eac67c345bda2f13e7d989a618"
     }
   ],
-  "digest": "65ac6346a091b79445e1369904fae0e535e4f71b6f5803c993296f0a2e3b9d83"
+  "digest": "25804212d0d98d60577f13bbf29e8c2b706a8c82fb7902ef8d8a888dac520cd9"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

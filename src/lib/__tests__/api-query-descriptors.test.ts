@@ -8,6 +8,10 @@ import {
   StabilityIndexLightResponseSchema,
   STABILITY_INDEX_QUERY_DESCRIPTOR,
 } from "../api-query-domains/stability-light";
+import {
+  makeReportCardsV9PreBreakdownResponse,
+  makeReportCardsV9Response,
+} from "@/test/fixtures/safety-score-v9";
 
 const EXPECTED_RESPONSE_MODES: {
   [TKey in keyof FrontendApiQueryDescriptorRegistry]: "plain" | "meta" | "static";
@@ -130,6 +134,17 @@ describe("frontend API query descriptors", () => {
       );
     }
   }, 30_000);
+
+  it("accepts report-v3 and report-v4 only at the live V9 reader boundary", async () => {
+    const schema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9.schema);
+    if (schema === undefined) throw new Error("Expected a V9 report-card response schema");
+    const reportV3 = makeReportCardsV9PreBreakdownResponse();
+    const reportV4 = makeReportCardsV9Response();
+
+    expect(schema.safeParse(reportV3).success).toBe(true);
+    expect(schema.safeParse(reportV4).success).toBe(true);
+    expect(schema.safeParse({ ...reportV3, schemaVersion: 2 }).success).toBe(false);
+  });
 
   it("validates only global PSI display fields and preserves the full payload", () => {
     const payload = {

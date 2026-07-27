@@ -189,9 +189,6 @@ export const API_PATHS = {
   adminTelegramBroadcast: () => "/api/admin-telegram-broadcast",
   adminTelegramDeliveryControl: () => "/api/admin-telegram-delivery-control",
   adminTelegramAdoptionReport: () => "/api/admin-telegram-adoption-report",
-  adminSafetyScoreV9: () => "/api/admin-safety-score-v9",
-  adminSafetyScoreV9Review: () => "/api/admin-safety-score-v9/reviews",
-  adminSafetyScoreV9HistoryBoundary: () => "/api/admin-safety-score-v9/history-boundary",
   statusProbeHistory: (params?: { path?: string; days?: number }) =>
     buildQueryPath("/api/status-probe-history", { path: params?.path, days: params?.days }),
   adminTelegramChat: (chatId: string) => `/api/admin-telegram-chat/${encodeURIComponent(chatId)}`,

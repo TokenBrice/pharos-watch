@@ -18,8 +18,7 @@ import type {
   PegSummaryResponse,
   RedemptionBackstopEntry,
   RedemptionBackstopsResponse,
-  ReportCardsV9Response,
-  SafetyScoreV9CurrentCard,
+  ReportCardsV9TransitionResponse,
   StablecoinAiSummary,
   StablecoinData,
   StablecoinListResponse,
@@ -28,6 +27,7 @@ import type {
   YieldRanking,
   YieldRankingsResponse,
 } from "@shared/types";
+import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 export interface DetailQueryResource<TData> {
   data?: TData;
@@ -54,7 +54,7 @@ export interface StablecoinDetailViewModelQueryInputs {
   stablecoinList: DetailStablecoinListInput;
   pegSummary: DetailQueryResource<PegSummaryResponse>;
   dexLiquidity: DetailQueryResource<DexLiquidityMap>;
-  reportCards: DetailQueryResource<ReportCardsV9Response>;
+  reportCards: DetailQueryResource<ReportCardsV9TransitionResponse>;
   redemptionBackstops: DetailQueryResource<RedemptionBackstopsResponse>;
 }
 
@@ -147,8 +147,8 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   coin: StablecoinDetailCoinMeta;
   summary: StablecoinDetailSummary | null;
   logoSrc?: string;
-  reportCard: SafetyScoreV9CurrentCard | undefined;
-  reportCardsResponse: ReportCardsV9Response | undefined;
+  reportCard: V9ConsumerCard | undefined;
+  reportCardsResponse: ReportCardsV9TransitionResponse | undefined;
   reportCardUpdatedAt: number | null;
   variantParent: StablecoinClientMeta | null;
   variantSiblings: StablecoinClientMeta[];

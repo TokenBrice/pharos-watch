@@ -18,7 +18,6 @@ describe("admin workspace registry", () => {
       { id: "actions", label: "Actions", path: "/admin/actions/" },
       { id: "comms", label: "Comms", path: "/admin/comms/" },
       { id: "history", label: "History", path: "/admin/history/" },
-      { id: "safety-score-v9", label: "Safety V9", path: "/admin/safety-score-v9/" },
       { id: "api-management", label: "API Management", path: "/admin-api/" },
     ]);
     expect(getAdminWorkspace("pipeline").legacySectionId).toBe("pipeline");
@@ -87,7 +86,6 @@ describe("admin workspace registry", () => {
           "actions",
           "comms",
           "history",
-          "safety-score-v9",
           "credentials",
         ].map(
           (sectionId) => [sectionId, getAdminWorkspacePathForLegacyHash(`#${sectionId}`)],
@@ -101,7 +99,6 @@ describe("admin workspace registry", () => {
       actions: "/admin/actions/",
       comms: "/admin/comms/",
       history: "/admin/history/",
-      "safety-score-v9": "/admin/safety-score-v9/",
       credentials: "/admin-api/",
     });
     expect(getAdminWorkspacePathForLegacyHash("pipeline")).toBe("/admin/pipeline/");

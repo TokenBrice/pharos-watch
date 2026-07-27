@@ -80,15 +80,15 @@ function createTestDatabase(): { sqlite: DatabaseSync; db: D1Database } {
 function candidate(): SafetyScoreV9Response {
   return {
     model: "v9-critical-path",
-    schemaVersion: 1,
-    lifecycle: "candidate",
-    candidateId: "candidate-v9-store-test",
-    policyVersion: "candidate-v9-store-test",
-    publicationGenerationId: "v9-shadow:test-generation",
+    schemaVersion: 5,
+    lifecycle: "active",
+    candidateId: "safety-score-v9:v1:store-test",
+    policyVersion: "9.0",
+    publicationGenerationId: "report-cards:v9:v1:store-test",
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
     factSetDigest: FACT_SET_DIGEST,
     resultDigest: RESULT_DIGEST,
-    policy: { id: "candidate-v9-store-test", semanticDigest: POLICY_DIGEST },
+    policy: { id: "safety-score-v9", semanticDigest: POLICY_DIGEST },
     evaluationBuildDigest: EVALUATION_BUILD_DIGEST,
     sourceGenerations: { registry: "registry:test" },
     asOfSec: SCHEDULED_FOR_SEC,
@@ -131,6 +131,130 @@ function productionScaleCard(id: string, detail: string): SafetyScoreV9Response[
     },
     dependencies: { serial: [], basket: [], cycleBlocked: false, reasonCodes: [] },
     stressStateDigest: null,
+    scoreTrace: {
+      schemaVersion: 3,
+      legacyAliases: {
+        qualityScore: "weighted-pillar-mean",
+        pegAdjustedScore: "post-deployment-pre-cap-score",
+        score: "post-cap-public-score",
+      },
+      aggregation: {
+        method: "smooth-bounded-headroom",
+        score: 90,
+        weightedPillarMean: 90,
+        weakestPillar: "backing",
+        weakestScore: 90,
+        headroom: 45,
+      },
+      stages: {
+        weightedPillarMean: 90,
+        aggregatedQualityScore: 90,
+        pegMultiplier: 1,
+        baseAssetScore: 90,
+        deploymentAdjustedScore: 90,
+        deploymentAdjustmentPoints: 0,
+        preCapScore: 90,
+        publishedScore: 90,
+      },
+      deploymentRisk: {
+        method: "holder-slice-exposure-weighted-v2",
+        totalAdjustmentPoints: 0,
+        adjustments: [],
+        unresolvedExposures: [],
+      },
+      adverseAttribution: {
+        semantics: "causal-measured-adverse-v1",
+        items: [],
+      },
+      boundedUncertaintyAttribution: {
+        semantics: "causal-bounded-uncertainty-v1",
+        items: [],
+      },
+      evidenceResponsibility: {
+        semantics: "limiting-fact-owner-v1",
+        totalFactCount: 0,
+        summaries: [
+          { responsibility: "integration-missing", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "issuer-undisclosed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "measured-adverse", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "method-unsupported", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "producer-failed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        ],
+      },
+      scoreAdjustments: [],
+      wrapperParentLimit: null,
+    },
+    breakdowns: {
+      backing: {
+        evaluatedScore: 90,
+        publishedScore: 90,
+        aggregationWeight: 0.4,
+        groups: [{ key: "reserves", label: "Reserves", score: 90, effectiveWeight: 1 }],
+        components: [{
+          key: "reserve:fixture",
+          label: "Fixture reserves",
+          source: "reserve-exposure",
+          score: 90,
+          effectiveWeight: 1,
+          weightedContribution: 90,
+          observationState: "known",
+        }],
+        adjustments: [],
+      },
+      exit: {
+        evaluatedScore: 90,
+        publishedScore: 90,
+        aggregationWeight: 0.35,
+        stressRequest: null,
+        primaryRoute: {
+          key: "redemption:fixture",
+          label: "Fixture redemption",
+          routeFamily: "protocol-redemption",
+          score: 90,
+          components: [
+            { key: "access", label: "Access", score: 90, weight: 0.2, weightedContribution: 18 },
+            { key: "settlement", label: "Settlement", score: 90, weight: 0.15, weightedContribution: 13.5 },
+            {
+              key: "executionCertainty",
+              label: "Execution certainty",
+              score: 90,
+              weight: 0.15,
+              weightedContribution: 13.5,
+            },
+            { key: "capacity", label: "Capacity", score: 90, weight: 0.25, weightedContribution: 22.5 },
+            {
+              key: "outputAssetQuality",
+              label: "Output asset quality",
+              score: 90,
+              weight: 0.15,
+              weightedContribution: 13.5,
+            },
+            { key: "cost", label: "Cost", score: 90, weight: 0.1, weightedContribution: 9 },
+          ],
+          confidenceFactor: 1,
+          eligibilityMultiplier: 1,
+          capsApplied: [],
+        },
+        diversification: null,
+        alternatives: [],
+        adjustments: [],
+      },
+      control: {
+        evaluatedScore: 90,
+        publishedScore: 90,
+        aggregationWeight: 0.25,
+        method: "minimum-binding-component",
+        components: [{
+          key: "control:fixture",
+          label: "Fixture control",
+          kind: "mint",
+          score: 90,
+          binding: true,
+          posture: "distributed",
+        }],
+        adjustments: [],
+      },
+    },
   };
 }
 
@@ -462,9 +586,9 @@ describe("Safety Score v9 shadow state persistence", () => {
 
     const refreshedCandidate = {
       ...candidate(),
-      candidateId: "candidate-v9-store-refreshed",
-      policyVersion: "candidate-v9-store-refreshed",
-      publicationGenerationId: "v9-shadow:refreshed-generation",
+      candidateId: "safety-score-v9:v1:store-refreshed",
+      policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:store-refreshed",
       resultDigest: digest("8"),
       publishedAtSec: SCHEDULED_FOR_SEC + 3 * 60 * 60,
     };
@@ -536,9 +660,9 @@ describe("Safety Score v9 shadow state persistence", () => {
     const loser = await successfulState();
     const winnerCandidate = {
       ...candidate(),
-      candidateId: "candidate-v9-race-winner",
-      policyVersion: "candidate-v9-race-winner",
-      publicationGenerationId: "v9-shadow:race-winner",
+      candidateId: "safety-score-v9:v1:store-race-winner",
+      policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:store-race-winner",
       resultDigest: digest("8"),
     };
     const winner = await successfulState(winnerCandidate);
@@ -564,9 +688,9 @@ describe("Safety Score v9 shadow state persistence", () => {
     const buildRefresh = async (label: string, selectedAtSec: number) => {
       const refreshed = await successfulState({
         ...candidate(),
-        candidateId: `candidate-v9-race-${label}`,
-        policyVersion: `candidate-v9-race-${label}`,
-        publicationGenerationId: `v9-shadow:race-${label}`,
+        candidateId: `safety-score-v9:v1:store-race-${label}`,
+        policyVersion: "9.0",
+        publicationGenerationId: `report-cards:v9:v1:store-race-${label}`,
         resultDigest: digest(label === "winner" ? "8" : "9"),
         publishedAtSec: selectedAtSec,
       });

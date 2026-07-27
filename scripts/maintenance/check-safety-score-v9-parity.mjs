@@ -1,4 +1,4 @@
-// Rating-parity gate for the Safety Score V9 candidate
+// Rating-parity gate for the Safety Score V9
 // (agents/safety-score-v9/rating-parity-plan.md §6): every asset graded by
 // V8 must be V9-rateable, unless every one of its V9 NR reasons is in the
 // frozen stays-NR set (integrity/classification failures). Exit 1 on any
@@ -6,7 +6,7 @@
 //
 // Usage:
 //   node scripts/maintenance/check-safety-score-v9-parity.mjs \
-//     --replay <replay-v9-candidate.json> --v8-cards <v8-cards.json>
+//     --replay <replay-v9.json> --v8-cards <v8-cards.json>
 //
 // --v8-cards accepts either a plain array of { id, grade } or the decoded
 // production snapshot payload ({ payload: { cards: [...] } } or { cards }).
@@ -40,7 +40,7 @@ if (!replayPath || !v8Path) {
 const replay = JSON.parse(readFileSync(replayPath, "utf8"));
 const v9Cards = replay?.pipeline?.candidate?.cards ?? replay?.candidate?.cards ?? replay?.cards;
 if (!Array.isArray(v9Cards)) {
-  console.error("Could not find V9 candidate cards in the replay JSON");
+  console.error("Could not find V9 cards in the replay JSON");
   process.exit(2);
 }
 

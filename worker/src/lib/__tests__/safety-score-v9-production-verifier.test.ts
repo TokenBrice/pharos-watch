@@ -37,7 +37,7 @@ import {
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"1".repeat(64)}`;
 const CANDIDATE_IDENTITY = {
   schemaVersion: 1 as const,
-  policyId: "safety-score-v9-candidate-v2",
+  policyId: "safety-score-v9",
   policyDigest: "a".repeat(64),
   evaluationBuildDigest: "b".repeat(64),
   compilerFactSchemaDigest: "c".repeat(64),
@@ -494,10 +494,10 @@ function replay(pipeline: SafetyScoreV9CandidatePipelineResult): unknown {
   return {
     schemaVersion: 1,
     kind: "safety-score-v9-candidate-replay",
-    lifecycle: "candidate",
+    lifecycle: "active",
     releaseAuthorization: {
       authorized: false,
-      reason: "candidate-replay-only",
+      reason: "v9-replay-only",
     },
     pipeline,
   };

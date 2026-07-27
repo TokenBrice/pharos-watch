@@ -261,7 +261,7 @@ function fixture(withShockCoverage = false) {
     schemaVersion: 1 as const,
     factSetDigest: factSet.v9FactSetDigest,
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
-    policyId: "safety-score-v9-candidate-v1",
+    policyId: "safety-score-v9",
     policyDigest: "8".repeat(64),
     evaluationBuildDigest: SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST,
     producerCapabilityDigest: "c".repeat(64),

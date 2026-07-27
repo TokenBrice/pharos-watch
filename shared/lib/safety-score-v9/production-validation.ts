@@ -985,8 +985,8 @@ function identityIssues(replay: ParsedReplayArtifact): string[] {
   check(evaluatedSet.factSetDigest === compiledFacts.v9FactSetDigest, "evaluated fact-set digest");
   check(candidate.resultDigest === evaluatedSet.scoreResultDigest, "candidate result digest");
   check(candidate.policy.id === candidateIdentity.policyId, "candidate policy ID");
-  check(candidate.policy.semanticDigest === candidateIdentity.policyDigest, "candidate policy digest");
-  check(candidate.evaluationBuildDigest === candidateIdentity.evaluationBuildDigest, "candidate evaluation build");
+  check(candidate.policy.semanticDigest === candidateIdentity.policyDigest, "V9 policy digest");
+  check(candidate.evaluationBuildDigest === candidateIdentity.evaluationBuildDigest, "V9 evaluation build");
   check(evaluatedSet.policyId === candidateIdentity.policyId, "evaluated policy ID");
   check(evaluatedSet.policyDigest === candidateIdentity.policyDigest, "evaluated policy digest");
   check(evaluatedSet.evaluationBuildDigest === candidateIdentity.evaluationBuildDigest, "evaluated build digest");
@@ -998,7 +998,7 @@ function identityIssues(replay: ParsedReplayArtifact): string[] {
     pipeline.producerCapabilityDigest === candidateIdentity.producerCapabilityDigest,
     "producer capability digest",
   );
-  check(candidate.asOfSec === fixedInput.clockSec, "candidate evidence clock");
+  check(candidate.asOfSec === fixedInput.clockSec, "V9 evidence clock");
   check(compiledFacts.asOfSec === fixedInput.clockSec, "compiled evidence clock");
   check(evaluatedSet.asOfSec === fixedInput.clockSec, "evaluated evidence clock");
   const compiledSources = Object.fromEntries(
@@ -1006,7 +1006,7 @@ function identityIssues(replay: ParsedReplayArtifact): string[] {
       .sort(([left], [right]) => compareText(left, right))
       .map(([key, source]) => [key, source.generationId]),
   );
-  check(sameValue(candidate.sourceGenerations, evaluatedSet.sourceGenerations), "candidate source generations");
+  check(sameValue(candidate.sourceGenerations, evaluatedSet.sourceGenerations), "V9 source generations");
   check(sameValue(candidate.sourceGenerations, compiledSources), "compiled source generations");
   return issues.sort(compareText);
 }
@@ -1018,7 +1018,7 @@ function assetSetIssues(replay: ParsedReplayArtifact): { issues: string[]; candi
     ["compiled active set", pipeline.compiledFacts.activeAssetIds],
     ["compiled rows", pipeline.compiledFacts.assets.map((asset) => asset.assetId)],
     ["evaluated rows", pipeline.evaluatedSet.assets.map((asset) => asset.assetId)],
-    ["candidate cards", pipeline.candidate.cards.map((card) => card.id)],
+    ["V9 cards", pipeline.candidate.cards.map((card) => card.id)],
   ] as const;
   const canonical = sources.map(([label, values]) => [label, canonicalIds(values)] as const);
   const expected = canonical[0]![1].ids;
@@ -1116,22 +1116,22 @@ function completenessIssues(
   const ratedIds = cards.filter((card) => card.grade !== "NR").map((card) => card.id);
   const notRatedIds = cards.filter((card) => card.grade === "NR").map((card) => card.id).sort(compareText);
   if (candidate.completeness.expectedCount !== fixedInput.activeAssetIds.length) {
-    issues.push("candidate expected count does not match the production active set");
+    issues.push("V9 expected count does not match the production active set");
   }
-  if (candidate.schemaVersion !== 4) {
-    issues.push("candidate uses the legacy public schema instead of the production trace contract");
+  if (candidate.schemaVersion !== 5) {
+    issues.push("V9 uses the legacy public schema instead of the production trace contract");
   }
   if (candidate.cards.some((card) => !("scoreTrace" in card) || card.scoreTrace === undefined)) {
-    issues.push("candidate cards do not all carry the mandatory production score trace");
+    issues.push("V9 cards do not all carry the mandatory production score trace");
   }
   if (candidate.completeness.ratedCount !== ratedIds.length) {
-    issues.push("candidate rated count does not match candidate cards");
+    issues.push("V9 rated count does not match V9 cards");
   }
   if (candidate.completeness.notRatedCount !== notRatedIds.length) {
-    issues.push("candidate not-rated count does not match candidate cards");
+    issues.push("V9 not-rated count does not match V9 cards");
   }
   if (!sameValue(candidate.completeness.notRatedIds, notRatedIds)) {
-    issues.push("candidate not-rated IDs do not match candidate cards");
+    issues.push("V9 not-rated IDs do not match V9 cards");
   }
   if (identity.length > 0) issues.push("generation has internal identity issues");
   if (assetSets.length > 0) issues.push("generation has internal asset-set issues");

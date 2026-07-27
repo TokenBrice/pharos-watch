@@ -24,7 +24,7 @@ const digest = (character: string) => character.repeat(64);
 function snapshot(): ReportCardsV9Response {
   return {
     model: "v9",
-    schemaVersion: 3,
+    schemaVersion: 4,
     lifecycle: "shadow",
     safetyScoreIdentity: {
       model: "v9",
@@ -128,7 +128,7 @@ describe("handleReportCardsV9", () => {
     expect(response.status).toBe(200);
     expect(body).toMatchObject({
       model: "v9",
-      schemaVersion: 3,
+      schemaVersion: 4,
       lifecycle: "active",
       safetyScoreIdentity: snapshot().safetyScoreIdentity,
     });
@@ -191,7 +191,7 @@ describe("handleReportCardsV9Preview", () => {
     expect(response.status).toBe(200);
     expect(body).toMatchObject({
       model: "v9",
-      schemaVersion: 3,
+      schemaVersion: 4,
       lifecycle: "shadow",
       safetyScoreIdentity: snapshot().safetyScoreIdentity,
     });

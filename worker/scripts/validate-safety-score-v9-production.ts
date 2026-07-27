@@ -21,7 +21,7 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const USAGE = `Usage: npm run safety-score-v9:production-validation -- [options]
 
 Options:
-  --generation <path>       Candidate replay JSON; repeat in chronological capture order (required)
+  --generation <path>       V9 replay JSON; repeat in chronological capture order (required)
   --exact-cache <path>      Raw production exact-cache D1 export paired by position with --generation
   --capture-ledger <path>   Complete/failed capture ledger for continuity proof
   --holdout-input <path>    Sealed blind holdout evaluation input

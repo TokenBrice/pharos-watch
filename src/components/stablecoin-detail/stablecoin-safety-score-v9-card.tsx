@@ -12,7 +12,10 @@ import {
   ShieldCheck,
   Table2,
 } from "lucide-react";
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import type {
+  SafetyScoreV9CurrentCard,
+  SafetyScoreV9PreBreakdownCard,
+} from "@shared/types";
 import type { ReportCardsV9Response, V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { scoreToGrade } from "@shared/lib/report-cards";
@@ -35,6 +38,10 @@ import { cn } from "@/lib/utils";
 
 const HEADER_ICON_BUTTON_CLASS =
   "pharos-focus-ring inline-flex !h-11 !min-h-11 !w-11 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground md:!h-5 md:!min-h-0 md:!w-5";
+
+type StablecoinSafetyScoreV9DisplayCard =
+  | SafetyScoreV9CurrentCard
+  | SafetyScoreV9PreBreakdownCard;
 
 function HeaderActions({ updatedAtMs }: { updatedAtMs: number | null }) {
   const methodology = METHODOLOGY_CONTEXT.safetyScore;
@@ -103,6 +110,165 @@ function HeldPublicationNotice({ health }: { health: V9PublicationHealth }) {
   );
 }
 
+function ComponentScoreBar({
+  row,
+}: {
+  row: NonNullable<
+    StablecoinSafetyScoreV9Presentation["pillars"][number]["breakdown"]
+  >["rows"][number];
+}) {
+  const boundedScore = Math.max(0, Math.min(100, row.score));
+  const weightLabel = row.weight === null
+    ? null
+    : `${(row.weight * 100).toFixed(row.weight * 100 < 10 ? 1 : 0)}%`;
+  return (
+    <div className="grid grid-cols-[minmax(5.25rem,6.75rem)_minmax(2.5rem,1fr)_1.75rem_5.25rem] items-center gap-1.5">
+      <span className="break-words font-mono text-[10px] uppercase leading-[1.35] tracking-[0.08em] text-muted-foreground">
+        {row.label}
+      </span>
+      <span
+        className="h-2.5 overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]"
+        role="img"
+        aria-label={`${row.label}: ${row.score.toFixed(0)} out of 100${weightLabel === null ? "" : `, ${weightLabel} weight`}`}
+      >
+        <span
+          className="block h-full rounded-[2px] bg-neutral-500 dark:bg-[#858585]"
+          style={{ width: `${boundedScore}%` }}
+        />
+      </span>
+      <span className="text-right font-mono text-[10px] font-medium tabular-nums text-foreground">
+        {row.score.toFixed(0)}
+      </span>
+      <span className="text-right font-mono uppercase leading-tight tracking-[0.04em] text-muted-foreground">
+        {weightLabel !== null ? <span className="block text-[9px]">· {weightLabel}</span> : null}
+        {row.status !== null ? <span className="mt-0.5 block break-words text-[8px]">{row.status}</span> : null}
+      </span>
+    </div>
+  );
+}
+
+function PillarBreakdownDetails({
+  breakdown,
+}: {
+  breakdown: NonNullable<
+    StablecoinSafetyScoreV9Presentation["pillars"][number]["breakdown"]
+  >;
+}) {
+  const scoreChanged =
+    breakdown.evaluatedScore !== null &&
+    breakdown.publishedScore !== null &&
+    Math.abs(breakdown.evaluatedScore - breakdown.publishedScore) >= 0.05;
+  return (
+    <div>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+          {breakdown.sectionLabel}
+        </span>
+        {breakdown.aggregationWeight !== null ? (
+          <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground">
+            {(breakdown.aggregationWeight * 100).toFixed(0)}% aggregation weight
+          </span>
+        ) : null}
+      </div>
+
+      {breakdown.context.length > 0 || scoreChanged ? (
+        <dl className="mt-2 grid gap-x-4 gap-y-1 border-y border-border/30 py-2 sm:grid-cols-2">
+          {breakdown.context.map((item) => (
+            <div key={item.key} className="flex min-w-0 items-baseline justify-between gap-3">
+              <dt className="truncate text-[10px] text-muted-foreground">{item.label}</dt>
+              <dd className="min-w-0 break-words text-right font-mono text-[10px] text-foreground">{item.value}</dd>
+            </div>
+          ))}
+          {scoreChanged ? (
+            <div className="flex min-w-0 items-baseline justify-between gap-3">
+              <dt className="truncate text-[10px] text-muted-foreground">Evaluator to published</dt>
+              <dd className="shrink-0 text-right font-mono text-[10px] text-foreground">
+                {breakdown.evaluatedScore!.toFixed(1)} to {breakdown.publishedScore!.toFixed(1)}
+              </dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
+
+      <div className="mt-2.5 space-y-2.5">
+        {breakdown.rows.map((row) => <ComponentScoreBar key={row.key} row={row} />)}
+      </div>
+
+      {breakdown.alternatives.length > 0 ? (
+        <details className="group mt-3 border-t border-border/30 pt-2">
+          <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[10px] font-medium text-muted-foreground marker:content-none">
+            <span>
+              Alternative {breakdown.alternatives.length === 1 ? "route" : "routes"}
+              {" "}({breakdown.alternatives.length})
+            </span>
+            <ChevronDown
+              className="h-3.5 w-3.5 transition-transform group-open:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
+          <ul className="divide-y divide-border/30">
+            {breakdown.alternatives.map((route) => (
+              <li key={route.key} className="flex min-w-0 items-baseline justify-between gap-3 py-1.5">
+                <span className="min-w-0 break-words text-[10px] leading-[1.35] text-foreground/85">
+                  {route.label}
+                </span>
+                <span className="shrink-0 text-right font-mono text-[9px] text-muted-foreground">
+                  {route.score === null ? "Not scored" : `${route.score.toFixed(0)} / 100`}
+                  {route.included ? " · included" : route.detail === null ? "" : ` · ${route.detail}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+function PillarInputFallback({
+  pillar,
+}: {
+  pillar: StablecoinSafetyScoreV9Presentation["pillars"][number];
+}) {
+  if (pillar.componentCount === 0) return null;
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.1em]">
+        <span>Reviewed inputs</span>
+        <span className="tabular-nums text-foreground">{pillar.componentCount}</span>
+      </div>
+      <div
+        className="mt-2 flex h-1.5 gap-1"
+        role="img"
+        aria-label={`${pillar.componentCount} reviewed ${pillar.componentCount === 1 ? "input" : "inputs"}`}
+      >
+        {pillar.components.map((component) => (
+          <span
+            key={component.key}
+            className="min-w-1 flex-1 rounded-[2px] bg-neutral-500 dark:bg-[#858585]"
+          />
+        ))}
+      </div>
+      <ul className="mt-2 grid gap-x-4 sm:grid-cols-2">
+        {pillar.components.map((component) => (
+          <li
+            key={component.key}
+            className="flex min-w-0 items-center justify-between gap-2 border-b border-border/30 py-1.5 last:border-b-0"
+          >
+            <span className="flex min-w-0 items-center gap-2 text-foreground/85">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-[2px] bg-emerald-500" aria-hidden="true" />
+              <span className="truncate">{component.label}</span>
+            </span>
+            <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground">
+              {component.category}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
 function PillarRow({
   cardId,
   pillar,
@@ -112,7 +278,7 @@ function PillarRow({
 }) {
   const [open, setOpen] = useState(pillar.isWeakest);
   const detailsId = useId();
-  const hasDetails = pillar.componentCount > 0 || pillar.reasons.length > 0;
+  const hasDetails = pillar.breakdown !== null || pillar.componentCount > 0 || pillar.reasons.length > 0;
   const scoreGrade = pillar.score === null ? "NR" : scoreToGrade(pillar.score);
   const gradeMetadata = getSafetyGradeMetadata(scoreGrade);
   return (
@@ -174,44 +340,11 @@ function PillarRow({
           className="pb-2 pl-3 pr-1 pt-1 text-xs leading-relaxed text-muted-foreground"
           data-pillar={cardId}
         >
-          {pillar.componentCount > 0 ? (
-            <>
-              <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.1em]">
-                <span>Scored inputs</span>
-                <span className="tabular-nums text-foreground">
-                  {pillar.componentCount} / {pillar.componentCount}
-                </span>
-              </div>
-              <div
-                className="mt-2 flex h-1.5 gap-1"
-                role="img"
-                aria-label={`${pillar.componentCount} scored ${pillar.componentCount === 1 ? "input" : "inputs"}`}
-              >
-                {pillar.components.map((component) => (
-                  <span
-                    key={component.key}
-                    className="min-w-1 flex-1 rounded-[2px] bg-neutral-500 dark:bg-[#858585]"
-                  />
-                ))}
-              </div>
-              <ul className="mt-2 grid gap-x-4 sm:grid-cols-2">
-                {pillar.components.map((component) => (
-                  <li
-                    key={component.key}
-                    className="flex min-w-0 items-center justify-between gap-2 border-b border-border/30 py-1.5 last:border-b-0"
-                  >
-                    <span className="flex min-w-0 items-center gap-2 text-foreground/85">
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-[2px] bg-emerald-500" aria-hidden="true" />
-                      <span className="truncate">{component.label}</span>
-                    </span>
-                    <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground">
-                      {component.category}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
+          {pillar.breakdown !== null ? (
+            <PillarBreakdownDetails breakdown={pillar.breakdown} />
+          ) : (
+            <PillarInputFallback pillar={pillar} />
+          )}
           {pillar.reasons.length > 0 ? (
             <ul className="mt-2 space-y-1">
               {pillar.reasons.map((reason) => <li key={reason}>{reason}</li>)}
@@ -223,7 +356,7 @@ function PillarRow({
   );
 }
 
-function ScoreAdjustment({ card }: { card: SafetyScoreV9CurrentCard }) {
+function ScoreAdjustment({ card }: { card: StablecoinSafetyScoreV9DisplayCard }) {
   const adjustment = card.scoreTrace.scoreAdjustments[0];
   if (!adjustment) return null;
   return (
@@ -243,7 +376,7 @@ function ScoreAdjustment({ card }: { card: SafetyScoreV9CurrentCard }) {
   );
 }
 
-function CapSection({ card }: { card: SafetyScoreV9CurrentCard }) {
+function CapSection({ card }: { card: StablecoinSafetyScoreV9DisplayCard }) {
   const cap = card.bindingCap;
   const wrapperLimit = card.scoreTrace.wrapperParentLimit;
   if (!cap && !wrapperLimit) return null;
@@ -274,7 +407,7 @@ function EvidenceAndAccess({
   card,
   presentation,
 }: {
-  card: SafetyScoreV9CurrentCard;
+  card: StablecoinSafetyScoreV9DisplayCard;
   presentation: StablecoinSafetyScoreV9Presentation;
 }) {
   return (
@@ -309,7 +442,7 @@ function EvidenceAndAccess({
   );
 }
 
-function Dependencies({ card }: { card: SafetyScoreV9CurrentCard }) {
+function Dependencies({ card }: { card: StablecoinSafetyScoreV9DisplayCard }) {
   const dependencies = [
     ...card.dependencies.serial.map((dependency) => ({
       id: dependency.upstreamAssetId,
@@ -353,7 +486,7 @@ function Dependencies({ card }: { card: SafetyScoreV9CurrentCard }) {
 }
 
 export interface StablecoinSafetyScoreV9CardProps {
-  card: SafetyScoreV9CurrentCard;
+  card: StablecoinSafetyScoreV9DisplayCard;
   identity: ReportCardsV9Response["safetyScoreIdentity"];
   publicationHealth: V9PublicationHealth;
   updatedAtMs: number | null;

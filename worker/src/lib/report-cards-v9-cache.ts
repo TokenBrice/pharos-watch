@@ -22,7 +22,7 @@ export class ReportCardsV9SnapshotUnavailableError extends Error {
 }
 
 /**
- * Converts the canonical candidate envelope into the separately owned public
+ * Converts the canonical V9 envelope into the separately owned public
  * V9 contract. This is intentionally a projection, never a V8 fallback or
  * a score recomputation.
  */

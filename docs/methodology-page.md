@@ -141,7 +141,7 @@ The cadence field is rendered alongside the tier badge as supporting text (e.g. 
 
 ## Show Your Work
 
-Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, Chain Health) expose a `<ShowYourWorkPanel>` reading the visible inputs already on the payload (`rawInputs`, `signals`, `scoreComponents`, `components`+`contributors`, sub-scores, `healthFactors`). Toggle via `?show-work=1` URL flag or the inline "Show inputs" link; once a user hides or shows the panel, that explicit `localStorage` preference under `pharos.show-work` wins over the URL flag until changed again. PegScore SYW is deferred to v2 — its decomposition is not yet on the worker payload.
+Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, Chain Health) expose a `<ShowYourWorkPanel>` reading the visible inputs already on the payload (`rawInputs`, `signals`, `scoreComponents`, `components`+`contributors`, sub-scores, `healthFactors`). V9 Safety Score cards use their native report-v4 breakdown rather than the V8 `rawInputs` contract: Backing rows show effective weights and contributions, Exit shows the selected route's six weighted components plus route modifiers/caps and alternatives, and Economic Control shows component scores with binding or diagnostic status but no invented weights. Stable technical keys remain visible in this audit view, and pillar adjustments reconcile evaluator and published scores. Toggle via `?show-work=1` URL flag or the inline "Show inputs" link; once a user hides or shows the panel, that explicit `localStorage` preference under `pharos.show-work` wins over the URL flag until changed again. PegScore SYW is deferred to v2 — its decomposition is not yet on the worker payload.
 
 ## Verification Shortcuts
 

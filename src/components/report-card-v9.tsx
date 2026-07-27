@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { Award, FileCheck2, Link2, LockKeyhole, ShieldCheck } from "lucide-react";
-import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import type { ReportCardsV9TransitionResponse } from "@shared/types/report-cards-v9";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
@@ -12,6 +11,7 @@ import {
   selectV9Card,
   resolveV9ConsumerResponse,
   type V9ConsumerIdentity,
+  type V9ConsumerCard,
   type V9ConsumerUnavailableReason,
 } from "@/lib/safety-score-v9-consumers";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -68,7 +68,7 @@ function V9Unavailable({ reason }: { reason: V9ConsumerUnavailableReason }) {
   );
 }
 
-function PillarRows({ card }: { card: SafetyScoreV9CurrentCard }) {
+function PillarRows({ card }: { card: V9ConsumerCard }) {
   return (
     <div className="divide-y divide-border/40 border-y border-border/40">
       {PILLARS.map(([key, label]) => {
@@ -98,7 +98,7 @@ function PillarRows({ card }: { card: SafetyScoreV9CurrentCard }) {
   );
 }
 
-function AccessPosture({ card }: { card: SafetyScoreV9CurrentCard }) {
+function AccessPosture({ card }: { card: V9ConsumerCard }) {
   const rows = ACCESS_FIELDS.flatMap(([key, label]) => {
     const value = card.accessPosture[key];
     return isUnknownDisplayValue(value) ? [] : [{ key, label, value }];
@@ -124,7 +124,7 @@ function AccessPosture({ card }: { card: SafetyScoreV9CurrentCard }) {
   );
 }
 
-function DependencyRows({ card }: { card: SafetyScoreV9CurrentCard }) {
+function DependencyRows({ card }: { card: V9ConsumerCard }) {
   const dependencies = [
     ...card.dependencies.serial.map((dependency) => ({
       id: dependency.upstreamAssetId,
@@ -164,7 +164,7 @@ function DependencyRows({ card }: { card: SafetyScoreV9CurrentCard }) {
   );
 }
 
-function ScoreAdjustment({ card }: { card: SafetyScoreV9CurrentCard }) {
+function ScoreAdjustment({ card }: { card: V9ConsumerCard }) {
   const adjustment = card.scoreTrace.scoreAdjustments[0];
   if (adjustment === undefined) return null;
   return (
@@ -294,7 +294,7 @@ export function ReportCardsV9ShadowRenderer({
   response,
   expectedIdentity,
 }: {
-  response: ReportCardsV9Response;
+  response: ReportCardsV9TransitionResponse;
   expectedIdentity: V9ConsumerIdentity;
 }) {
   const resolved = selectV9Card(response, expectedIdentity, response.cards[0]?.id ?? "");

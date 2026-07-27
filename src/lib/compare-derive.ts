@@ -6,12 +6,12 @@
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import type {
   MintBurnPerCoinResponse,
-  SafetyScoreV9CurrentCard,
   ReportCardGrade,
   StablecoinData,
   StablecoinMeta,
   SupplyHistoryPoint,
 } from "@shared/types";
+import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
 
 export type ComparisonMeta = Pick<
@@ -90,7 +90,7 @@ export function deriveComparisonCoins({
   metaMap: ReadonlyMap<string, ComparisonMeta>;
   pegCoinMap: Map<string, PegCoinSlice>;
   dexData: DexDataMap | undefined;
-  cardMap: Map<string, SafetyScoreV9CurrentCard>;
+  cardMap: Map<string, V9ConsumerCard>;
   flowCoinMap: Map<string, FlowCoinSlice>;
 }): ComparisonCoinEntry[] {
   if (assetMap.size === 0) return [];

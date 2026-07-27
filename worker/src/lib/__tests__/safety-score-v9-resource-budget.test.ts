@@ -180,6 +180,19 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
             serializeSafetyScoreV9ShadowEnvelopeCacheValue(envelope),
             serializeSafetyScoreV9DiffReportCacheValue(diff),
           ]);
+          const storedEnvelopeMetadata = JSON.parse(storedEnvelope);
+          const publicBreakdownLabels = shadow.candidate.cards.flatMap((card) =>
+            card.breakdowns === null
+              ? []
+              : [
+                  ...card.breakdowns.backing.components.map((component) => component.label),
+                  ...(card.breakdowns.exit.primaryRoute === null
+                    ? []
+                    : [card.breakdowns.exit.primaryRoute.label]),
+                  ...card.breakdowns.exit.alternatives.map((route) => route.label),
+                  ...card.breakdowns.control.components.map((component) => component.label),
+                ],
+          );
           process.stdout.write(JSON.stringify({
             expected: runnerInput.activeAssetIds.length,
             cards: shadow.candidate.cards.length,
@@ -193,8 +206,13 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
             v8FixedInputCacheBytes: v8Cache.storedBytes,
             pegProvenanceSeedBytes: seedCache.storedBytes,
             fixedInputCacheBytes: fixedInputCache.storedBytes,
+            candidateBytes: new TextEncoder().encode(JSON.stringify(shadow.candidate)).byteLength,
+            envelopeCompressedBytes: storedEnvelopeMetadata.compressedBytes,
             storedEnvelopeBytes: storedEnvelope.length,
             storedDiffBytes: storedDiff.length,
+            unsafeBreakdownLabels: publicBreakdownLabels.filter(
+              (label) => /0x[a-f0-9]{8}|[a-f0-9]{16,}/i.test(label),
+            ).length,
           }));
         `,
         loader: "ts",
@@ -259,8 +277,11 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
       v8FixedInputCacheBytes: number;
       pegProvenanceSeedBytes: number;
       fixedInputCacheBytes: number;
+      candidateBytes: number;
+      envelopeCompressedBytes: number;
       storedEnvelopeBytes: number;
       storedDiffBytes: number;
+      unsafeBreakdownLabels: number;
     };
     expect(output.expected).toBeGreaterThan(300);
     expect(output.cards).toBe(output.expected);
@@ -274,7 +295,10 @@ describe("Safety Score V9 resource budget", { timeout: 60_000 }, () => {
     expect(output.v8FixedInputCacheBytes).toBeGreaterThan(0);
     expect(output.pegProvenanceSeedBytes).toBeGreaterThan(0);
     expect(output.fixedInputCacheBytes).toBeGreaterThan(0);
+    expect(output.candidateBytes).toBeLessThan(8_000_000);
+    expect(output.envelopeCompressedBytes).toBeLessThan(675_000);
     expect(output.storedEnvelopeBytes).toBeGreaterThan(0);
     expect(output.storedDiffBytes).toBeGreaterThan(0);
+    expect(output.unsafeBreakdownLabels).toBe(0);
   });
 });

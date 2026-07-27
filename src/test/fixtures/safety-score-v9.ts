@@ -1,6 +1,13 @@
-import { buildReportCardsV9DependencyGraph, type ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import {
+  buildReportCardsV9DependencyGraph,
+  type ReportCardsV9PreBreakdownResponse,
+  type ReportCardsV9Response,
+} from "@shared/types/report-cards-v9";
 import { scoreToGrade } from "@shared/lib/report-cards";
-import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import type {
+  SafetyScoreV9CurrentCard,
+  SafetyScoreV9PreBreakdownCard,
+} from "@shared/types/safety-score-v9-public";
 
 const A64 = "a".repeat(64);
 const B64 = "b".repeat(64);
@@ -43,6 +50,81 @@ export function makeV9Card(
             pillar: "exit" as const,
             score: pillars.exit.score!,
           };
+  const breakdowns =
+    overrides.breakdowns !== undefined
+      ? overrides.breakdowns
+      : score === null
+        ? null
+        : {
+            backing: {
+              evaluatedScore: pillars.backing.score!,
+              publishedScore: pillars.backing.score!,
+              aggregationWeight: 0.4,
+              adjustments: [],
+              groups: [{
+                key: "reserves" as const,
+                label: "Reserves",
+                score: pillars.backing.score!,
+                effectiveWeight: 1,
+              }],
+              components: [{
+                key: "reviewed-component",
+                label: "Reviewed component",
+                source: "reserve-exposure" as const,
+                score: pillars.backing.score!,
+                effectiveWeight: 1,
+                weightedContribution: pillars.backing.score!,
+                observationState: "known" as const,
+              }],
+            },
+            exit: {
+              evaluatedScore: pillars.exit.score!,
+              publishedScore: pillars.exit.score!,
+              aggregationWeight: 0.35,
+              adjustments: [],
+              stressRequest: null,
+              primaryRoute: {
+                key: "reviewed-route",
+                label: "Reviewed route",
+                routeFamily: "issuer-redemption" as const,
+                score: pillars.exit.score!,
+                components: [
+                  ["access", "Access", 0.2],
+                  ["settlement", "Settlement", 0.15],
+                  ["executionCertainty", "Execution certainty", 0.15],
+                  ["capacity", "Capacity", 0.25],
+                  ["outputAssetQuality", "Output asset quality", 0.15],
+                  ["cost", "Cost", 0.1],
+                ].map(([key, label, weight]) => ({
+                  key: key as "access" | "settlement" | "executionCertainty" | "capacity" | "outputAssetQuality" | "cost",
+                  label: label as string,
+                  score: pillars.exit.score!,
+                  weight: weight as number,
+                  weightedContribution: pillars.exit.score! * (weight as number),
+                })),
+                confidenceFactor: 1,
+                eligibilityMultiplier: 1,
+                capsApplied: [],
+              },
+              diversification: null,
+              alternatives: [],
+            },
+            control: {
+              evaluatedScore: pillars.control.score!,
+              publishedScore: pillars.control.score!,
+              aggregationWeight: 0.25,
+              adjustments: [],
+              method: "minimum-binding-component" as const,
+              components: [{
+                key: "oracle",
+                label: "Oracle design",
+                kind: "oracle" as const,
+                score: pillars.control.score!,
+                binding: true,
+                posture: "reviewed",
+              }],
+            },
+          };
   const card = {
     id: "usdc-circle",
     pegMultiplier: 0.98,
@@ -69,6 +151,7 @@ export function makeV9Card(
     qualityScore,
     pillars,
     weakestPillar,
+    breakdowns,
   } satisfies Omit<SafetyScoreV9CurrentCard, "scoreTrace">;
   const hasScoreStages =
     card.qualityScore !== null &&
@@ -144,8 +227,8 @@ export function makeReportCardsV9Response(
   const safetyScoreIdentity = overrides.safetyScoreIdentity ?? {
     model: "v9" as const,
     schemaVersion: 1 as const,
-    methodologyVersion: "candidate-v9.0",
-    policyId: "policy-v9",
+    methodologyVersion: "9.0",
+    policyId: "safety-score-v9",
     policyDigest: A64,
     evaluationBuildDigest: B64,
     baseInputGenerationId: `report-cards-input:v1:${C64}`,
@@ -154,7 +237,7 @@ export function makeReportCardsV9Response(
   const updatedAt = overrides.updatedAt ?? 1_752_534_060;
   return {
     model: "v9",
-    schemaVersion: 3,
+    schemaVersion: 4,
     lifecycle: "shadow",
     safetyScoreIdentity,
     methodology: {
@@ -180,12 +263,42 @@ export function makeReportCardsV9Response(
       notRatedIds: cards.filter((card) => card.grade === "NR").map((card) => card.id).sort(),
     },
     source: {
-      candidateId: "candidate-v9.0-2026-07-15",
+      candidateId: "safety-score-v9:v1:2026-07-15",
       factSetDigest: C64,
       resultDigest: D64,
       sourceGenerations: { reportCards: "source-1" },
     },
     cards,
+    dependencyGraph: buildReportCardsV9DependencyGraph(cards),
+    ...overrides,
+  };
+}
+
+export function makeV9PreBreakdownCard(
+  overrides: Partial<SafetyScoreV9PreBreakdownCard> = {},
+): SafetyScoreV9PreBreakdownCard {
+  const { breakdowns: _breakdowns, ...card } = makeV9Card();
+  return { ...card, ...overrides };
+}
+
+export function makeReportCardsV9PreBreakdownResponse(
+  overrides: Partial<ReportCardsV9PreBreakdownResponse> = {},
+): ReportCardsV9PreBreakdownResponse {
+  const current = makeReportCardsV9Response();
+  const cards = overrides.cards ?? current.cards.map((card) => {
+    const { breakdowns: _breakdowns, ...preBreakdownCard } = card;
+    return preBreakdownCard;
+  });
+  return {
+    ...current,
+    schemaVersion: 3,
+    cards,
+    completeness: {
+      expectedCount: cards.length,
+      ratedCount: cards.filter((card) => card.grade !== "NR").length,
+      notRatedCount: cards.filter((card) => card.grade === "NR").length,
+      notRatedIds: cards.filter((card) => card.grade === "NR").map((card) => card.id).sort(),
+    },
     dependencyGraph: buildReportCardsV9DependencyGraph(cards),
     ...overrides,
   };

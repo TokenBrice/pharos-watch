@@ -93,7 +93,7 @@ The private `report-cards:snapshot` row is checksum-verified gzip/base64 with
 bounded decompression; its decoded public V8 JSON is unchanged, and the new
 reader also accepts legacy plain envelopes during rolling deploys.
 
-Candidate-only Safety Score V9 enrichment and compilation run on dedicated
+Safety Score V9 enrichment and compilation run on dedicated
 `+8` and `+14` minute triggers. They remain outside the public report-card
 chain, and a D1 fence admits them only after the matching core slot completed
 `ok` on the same immutable Worker version ID. V9 acquires a D1-backed memory
@@ -135,24 +135,24 @@ and common failure domains, without claiming destination-chain shares. Any
 missing, duplicate, stale, skewed, issuer/on-chain-mismatched,
 identity-mismatched, inventory-mismatched, materially unresolved, or
 non-conserving packet fails closed; V8 and public payloads remain unchanged.
-Reserve sync may carry a nested candidate-only exact route attempt into the
+Reserve sync may carry a nested V9-only exact route attempt into the
 redemption-backstop preload and then the V9 extension. The first such path is
 FPI's Controller Pool observation, which is bound to the same successful issuer
 collateral adapter result and one pinned Ethereum block. Accepted and rejected
 attempts remain outside public V8 reserve, redemption, and report-card payload
 semantics.
-`GET /api/admin-safety-score-v9` and its review mutation remain the operator
-surface. The additive `GET /api/report-cards/v9` route now exposes a strict,
+The additive `GET /api/report-cards/v9` route now exposes a strict,
 fully identified contract only after its owner activation key matches. A
 separate cache-bypassed, API-key-exempt read endpoint and unlisted
 `noindex` page expose the latest canonical strict projection with
 `lifecycle: "shadow"` for external feedback; the page loads that projection
 directly, and neither surface exposes admin diffs, history,
-movement reviews, or mutations. Shadow state still does
-not feed `GET /api/report-cards`, the active frontend, yield,
-Telegram, chain analytics, or V8-compatible public history; those remain V8 until the
-owner activates V9. Daily rows, movement reviews, and the preview are advisory
-inputs to that decision, not activation gates. See
+movement reviews, or mutations. The retained V8 compatibility endpoint
+continues to read V8, while the active frontend, yield, Telegram, chain
+analytics, and V9-compatible history consume only activation-matched V9
+publications. The former Safety V9 admin workspace and its admin diff/review
+API are retired; retained daily rows, existing movement review records, and
+the preview remain advisory diagnostics, not activation gates. See
 [Safety Score V9 Rollout](./process/safety-score-v9-rollout.md).
 After activation, held V9 remains available only as the last accepted API/UI
 snapshot with explicit held metadata. Current-data consumers, organic safety

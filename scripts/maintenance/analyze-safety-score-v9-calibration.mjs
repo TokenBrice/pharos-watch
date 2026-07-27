@@ -57,13 +57,13 @@ const EXPECTED_ADVERSE_BASELINE = new Map([
 const EXPECTED_BASELINE_BINDINGS = {
   candidateIdentity: {
     schemaVersion: 1,
-    policyId: "safety-score-v9-candidate-v2",
+    policyId: "safety-score-v9",
     policyDigest: "84c0e4180eea111591a5a48dc1d9149d4f950b912cb239913a2cc6fa932f607d",
     evaluationBuildDigest: "b2c0b298bea563d8b548c3f9d594e43cb46b762b62bfd7be3053a72430d320d1",
     compilerFactSchemaDigest: "9d7b637e0f808df4f19699f7ad10f09413fb46cc66ed0befb707db59a44ca511",
     producerCapabilityDigest: "19f1ab3ce18de294d33482cff07891f987a2715071cf48ba7cd75ff72562f198",
   },
-  candidateId: "safety-score-v9-candidate:v1:f3c9335b1fa87559f79421e392d876f7518a46a6575aa23b8cce2c7fcb2e876c",
+  candidateId: "safety-score-v9:v1:2e833a90ec9847afe24ce18d4f1a74cc17b150d1f337c4e461d612a05e87fecb",
   baseInputGenerationId: "report-cards-input:v1:79bcc863f04ce1e55040589185f4a996cc8765e063d7a53e9fb89c0e8c2642a4",
   sourceGeneration: "report-cards:8.17:1784214085",
   registryFingerprint: "2a821e9b50c4a82177c1589e0375a1a673ecee7be1a642329163486af5a47a39",
@@ -654,8 +654,8 @@ export function computeCalibrationIdentityDigest(domain, identity) {
 }
 
 export function computeCalibrationCandidateId(identity) {
-  return `safety-score-v9-candidate:v1:${computeCalibrationIdentityDigest(
-    "safety-score-v9.candidate-id.v1",
+  return `safety-score-v9:v1:${computeCalibrationIdentityDigest(
+    "safety-score-v9.publication-id.v1",
     identity,
   )}`;
 }

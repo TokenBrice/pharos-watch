@@ -885,7 +885,7 @@ Options:
   --require-ready                  Exit nonzero after writing when preparation is blocked
   -h, --help                       Show this help
 
-Omitting candidate artifacts produces a fail-closed status packet; it never substitutes
+Omitting V9 artifacts produces a fail-closed status packet; it never substitutes
 the retrospective fixtures or synthetic tests for release evidence.`;
 
 interface CliIo {

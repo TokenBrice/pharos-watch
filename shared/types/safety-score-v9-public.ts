@@ -26,6 +26,7 @@ const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const BaseInputGenerationIdSchema = z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/);
 const ScoreSchema = z.number().finite().min(0).max(100);
 const CandidatePolicyVersionSchema = z.string().regex(/^candidate-[a-z0-9][a-z0-9._-]*$/);
+const V9PolicyVersionSchema = z.string().regex(/^\d+\.\d+$/);
 const AccessPostureFieldSchema = z.enum(["transfer", "freezeExposure", "primaryExit", "governance"]);
 const RESPONSIBILITIES = [
   "integration-missing",
@@ -35,6 +36,7 @@ const RESPONSIBILITIES = [
   "producer-failed",
 ] as const;
 const SCORE_TOLERANCE = 0.0002;
+const EXIT_SCORE_TOLERANCE = 0.03;
 const PUBLIC_SCORE_ROUNDING_HEADROOM = 0.5;
 const C_MINUS_MIN_SCORE = 50;
 const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
@@ -1037,6 +1039,400 @@ export const SafetyScoreV9ScoreTraceSchema =
     });
 export type SafetyScoreV9ScoreTrace = z.infer<typeof SafetyScoreV9ScoreTraceSchema>;
 
+export const SafetyScoreV9PillarAdjustmentSchema = z
+  .object({
+    kind: z.enum(["operational-resilience-credit", "dependency-limit"]),
+    scoreBefore: ScoreSchema,
+    scoreAfter: ScoreSchema,
+    delta: z.number().finite().min(-100).max(100),
+  })
+  .strict()
+  .superRefine((adjustment, ctx) => {
+    if (!numbersAgree(adjustment.scoreAfter - adjustment.scoreBefore, adjustment.delta)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["delta"],
+        message: "V9 pillar adjustment delta must reconcile its score stages",
+      });
+    }
+    if (
+      adjustment.kind === "operational-resilience-credit" &&
+      adjustment.delta <= 0
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["delta"],
+        message: "V9 operational-resilience credit must increase the pillar score",
+      });
+    }
+    if (adjustment.kind === "dependency-limit" && adjustment.delta >= 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["delta"],
+        message: "V9 dependency limit must reduce the pillar score",
+      });
+    }
+  });
+export type SafetyScoreV9PillarAdjustment = z.infer<
+  typeof SafetyScoreV9PillarAdjustmentSchema
+>;
+
+const SafetyScoreV9BreakdownPillarBaseShape = {
+  evaluatedScore: ScoreSchema,
+  publishedScore: ScoreSchema,
+  aggregationWeight: z.number().finite().min(0).max(1),
+  adjustments: z.array(SafetyScoreV9PillarAdjustmentSchema).max(2),
+} as const;
+
+function refineBreakdownAdjustments(
+  breakdown: {
+    evaluatedScore: number;
+    publishedScore: number;
+    adjustments: readonly {
+      kind: "operational-resilience-credit" | "dependency-limit";
+      scoreBefore: number;
+      scoreAfter: number;
+      delta: number;
+    }[];
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const kinds = breakdown.adjustments.map((adjustment) => adjustment.kind);
+  const canonicalKinds = [
+    "operational-resilience-credit",
+    "dependency-limit",
+  ].filter((kind) => kinds.includes(kind as (typeof kinds)[number]));
+  if (
+    new Set(kinds).size !== kinds.length ||
+    JSON.stringify(kinds) !== JSON.stringify(canonicalKinds)
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["adjustments"],
+      message: "V9 pillar adjustments must be unique and in score-stage order",
+    });
+  }
+  let expectedScore = breakdown.evaluatedScore;
+  for (const [index, adjustment] of breakdown.adjustments.entries()) {
+    if (!numbersAgree(expectedScore, adjustment.scoreBefore)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["adjustments", index, "scoreBefore"],
+        message: "V9 pillar adjustment must begin at the preceding score stage",
+      });
+    }
+    expectedScore = adjustment.scoreAfter;
+  }
+  if (!numbersAgree(expectedScore, breakdown.publishedScore)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["publishedScore"],
+      message: "V9 pillar adjustments must reconcile evaluated and published scores",
+    });
+  }
+}
+
+export const SafetyScoreV9BackingBreakdownSchema = z
+  .object({
+    ...SafetyScoreV9BreakdownPillarBaseShape,
+    groups: z.array(
+      z
+        .object({
+          key: z.enum(["reserves", "mechanism"]),
+          label: z.string().min(1).max(120),
+          score: ScoreSchema,
+          effectiveWeight: z.number().finite().min(0).max(1),
+        })
+        .strict(),
+    ),
+    components: z.array(
+      z
+        .object({
+          key: z.string().min(1),
+          label: z.string().min(1).max(160),
+          source: z.enum(["reserve-exposure", "reserve-concentration", "mechanism"]),
+          score: ScoreSchema,
+          effectiveWeight: z.number().finite().min(0).max(1),
+          weightedContribution: ScoreSchema,
+          observationState: z.enum(["known", "missing", "stale", "unsupported", "bounded-unknown"]),
+        })
+        .strict(),
+    ),
+  })
+  .strict()
+  .superRefine((breakdown, ctx) => {
+    refineBreakdownAdjustments(breakdown, ctx);
+    const groupKeys = breakdown.groups.map((group) => group.key);
+    const expectedGroupKeys = ["reserves", "mechanism"].filter((key) =>
+      groupKeys.includes(key as (typeof groupKeys)[number]),
+    );
+    if (
+      new Set(groupKeys).size !== groupKeys.length ||
+      JSON.stringify(groupKeys) !== JSON.stringify(expectedGroupKeys)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["groups"],
+        message: "V9 backing groups must be unique and in canonical order",
+      });
+    }
+    const componentKeys = breakdown.components.map((component) => component.key);
+    if (!isUniqueSorted(componentKeys)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["components"],
+        message: "V9 backing components must be unique and sorted",
+      });
+    }
+    const totalWeight = breakdown.components.reduce(
+      (sum, component) => sum + component.effectiveWeight,
+      0,
+    );
+    const totalContribution = breakdown.components.reduce(
+      (sum, component) => sum + component.weightedContribution,
+      0,
+    );
+    if (
+      !numbersAgree(totalWeight, 1) ||
+      !numbersAgree(totalContribution, breakdown.evaluatedScore)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["components"],
+        message: "V9 backing components must reconcile effective weights and evaluated score",
+      });
+    }
+    breakdown.components.forEach((component, index) => {
+      if (
+        !numbersAgree(
+          component.weightedContribution,
+          component.score * component.effectiveWeight,
+        )
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["components", index, "weightedContribution"],
+          message: "V9 backing weighted contribution must equal score times effective weight",
+        });
+      }
+    });
+  });
+export type SafetyScoreV9BackingBreakdown = z.infer<
+  typeof SafetyScoreV9BackingBreakdownSchema
+>;
+
+const EXIT_COMPONENT_KEYS = [
+  "access",
+  "settlement",
+  "executionCertainty",
+  "capacity",
+  "outputAssetQuality",
+  "cost",
+] as const;
+
+export const SafetyScoreV9ExitBreakdownSchema = z
+  .object({
+    ...SafetyScoreV9BreakdownPillarBaseShape,
+    stressRequest: z
+      .object({
+        requestedNotionalUsd: z.number().finite().positive(),
+        maxCostBps: z.number().finite().nonnegative(),
+        comparisonWindowSec: z.number().finite().positive(),
+      })
+      .strict()
+      .nullable(),
+    primaryRoute: z
+      .object({
+        key: z.string().min(1),
+        label: z.string().min(1).max(160),
+        routeFamily: z.enum([
+          "dex-amm",
+          "dex-orderbook",
+          "issuer-redemption",
+          "protocol-redemption",
+          "eventual-redemption",
+        ]),
+        score: ScoreSchema,
+        components: z.array(
+          z
+            .object({
+              key: z.enum(EXIT_COMPONENT_KEYS),
+              label: z.string().min(1).max(120),
+              score: ScoreSchema,
+              weight: z.number().finite().min(0).max(1),
+              weightedContribution: ScoreSchema,
+            })
+            .strict(),
+        ).length(EXIT_COMPONENT_KEYS.length),
+        confidenceFactor: z.number().finite().min(0).max(1),
+        eligibilityMultiplier: z.number().finite().min(0).max(1),
+        capsApplied: z.array(z.string().min(1)),
+      })
+      .strict()
+      .nullable(),
+    diversification: z
+      .object({
+        routeKey: z.string().min(1),
+        routeLabel: z.string().min(1).max(160),
+        bonus: ScoreSchema,
+      })
+      .strict()
+      .nullable(),
+    alternatives: z.array(
+      z
+        .object({
+          key: z.string().min(1),
+          label: z.string().min(1).max(160),
+          routeFamily: z.enum([
+            "dex-amm",
+            "dex-orderbook",
+            "issuer-redemption",
+            "protocol-redemption",
+            "eventual-redemption",
+          ]),
+          score: ScoreSchema.nullable(),
+          included: z.boolean(),
+          exclusionReason: V9ReasonCodeSchema.nullable(),
+        })
+        .strict(),
+    ),
+  })
+  .strict()
+  .superRefine((breakdown, ctx) => {
+    refineBreakdownAdjustments(breakdown, ctx);
+    if (breakdown.primaryRoute === null) return;
+    const keys = breakdown.primaryRoute.components.map((component) => component.key);
+    if (JSON.stringify(keys) !== JSON.stringify(EXIT_COMPONENT_KEYS)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["primaryRoute", "components"],
+        message: "V9 exit components must use canonical policy order",
+      });
+    }
+    const totalWeight = breakdown.primaryRoute.components.reduce(
+      (sum, component) => sum + component.weight,
+      0,
+    );
+    if (!numbersAgree(totalWeight, 1)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["primaryRoute", "components"],
+        message: "V9 exit component weights must sum to one",
+      });
+    }
+    breakdown.primaryRoute.components.forEach((component, index) => {
+      if (!numbersAgree(component.weightedContribution, component.score * component.weight)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["primaryRoute", "components", index, "weightedContribution"],
+          message: "V9 exit weighted contribution must equal score times weight",
+        });
+      }
+    });
+    if (!isUniqueSorted(breakdown.primaryRoute.capsApplied)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["primaryRoute", "capsApplied"],
+        message: "V9 primary-route caps must be unique and sorted",
+      });
+    }
+    const weightedComponentScore = breakdown.primaryRoute.components.reduce(
+      (sum, component) => sum + component.weightedContribution,
+      0,
+    );
+    const preCapRouteScore =
+      weightedComponentScore *
+      breakdown.primaryRoute.confidenceFactor *
+      breakdown.primaryRoute.eligibilityMultiplier;
+    const routeScoreReconciles =
+      breakdown.primaryRoute.capsApplied.length === 0
+        ? Math.abs(breakdown.primaryRoute.score - preCapRouteScore) <= EXIT_SCORE_TOLERANCE
+        : breakdown.primaryRoute.score <= preCapRouteScore + EXIT_SCORE_TOLERANCE;
+    if (!routeScoreReconciles) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["primaryRoute", "score"],
+        message: "V9 primary-route score must reconcile its components, multipliers, and caps",
+      });
+    }
+    const expectedEvaluatedScore =
+      breakdown.primaryRoute.score + (breakdown.diversification?.bonus ?? 0);
+    if (Math.abs(breakdown.evaluatedScore - expectedEvaluatedScore) > EXIT_SCORE_TOLERANCE) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["evaluatedScore"],
+        message: "V9 exit score must reconcile its primary route and diversification bonus",
+      });
+    }
+    const alternativeKeys = breakdown.alternatives.map((route) => route.key);
+    if (!isUniqueSorted(alternativeKeys) || alternativeKeys.includes(breakdown.primaryRoute.key)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["alternatives"],
+        message: "V9 alternative exit routes must be unique, sorted, and exclude the primary route",
+      });
+    }
+  });
+export type SafetyScoreV9ExitBreakdown = z.infer<
+  typeof SafetyScoreV9ExitBreakdownSchema
+>;
+
+export const SafetyScoreV9ControlBreakdownSchema = z
+  .object({
+    ...SafetyScoreV9BreakdownPillarBaseShape,
+    method: z.literal("minimum-binding-component"),
+    components: z.array(
+      z
+        .object({
+          key: z.string().min(1),
+          label: z.string().min(1).max(160),
+          kind: z.enum(["mint", "oracle", "bridge"]),
+          score: ScoreSchema,
+          binding: z.boolean(),
+          posture: z.string().min(1).max(120),
+        })
+        .strict(),
+    ),
+  })
+  .strict()
+  .superRefine((breakdown, ctx) => {
+    refineBreakdownAdjustments(breakdown, ctx);
+    const keys = breakdown.components.map((component) => component.key);
+    if (!isUniqueSorted(keys)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["components"],
+        message: "V9 control components must be unique and sorted",
+      });
+    }
+    const binding = breakdown.components.filter((component) => component.binding);
+    if (
+      binding.length === 0 ||
+      !numbersAgree(
+        Math.min(...binding.map((component) => component.score)),
+        breakdown.evaluatedScore,
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["components"],
+        message: "V9 binding controls must reconcile the minimum-component evaluated score",
+      });
+    }
+  });
+export type SafetyScoreV9ControlBreakdown = z.infer<
+  typeof SafetyScoreV9ControlBreakdownSchema
+>;
+
+export const SafetyScoreV9BreakdownsSchema = z
+  .object({
+    backing: SafetyScoreV9BackingBreakdownSchema,
+    exit: SafetyScoreV9ExitBreakdownSchema,
+    control: SafetyScoreV9ControlBreakdownSchema,
+  })
+  .strict();
+export type SafetyScoreV9Breakdowns = z.infer<typeof SafetyScoreV9BreakdownsSchema>;
+
 const SafetyScoreV9CardShape = {
   id: z.string().min(1),
   score: ScoreSchema.nullable(),
@@ -1573,7 +1969,8 @@ export type SafetyScoreV9CausalCard = z.infer<
   typeof SafetyScoreV9CausalCardSchema
 >;
 
-export const SafetyScoreV9CurrentCardSchema = z
+/** Retained reader for candidate-v4/report-v3 cards emitted before component breakdowns. */
+export const SafetyScoreV9PreBreakdownCardSchema = z
   .object({
     ...SafetyScoreV9CardShape,
     scoreTrace: SafetyScoreV9ScoreTraceSchema,
@@ -1583,10 +1980,46 @@ export const SafetyScoreV9CurrentCardSchema = z
     refineLegacyCard(card, ctx);
     refineCard(card, ctx);
   });
+export type SafetyScoreV9PreBreakdownCard = z.infer<
+  typeof SafetyScoreV9PreBreakdownCardSchema
+>;
+
+export const SafetyScoreV9CurrentCardSchema = z
+  .object({
+    ...SafetyScoreV9CardShape,
+    scoreTrace: SafetyScoreV9ScoreTraceSchema,
+    breakdowns: SafetyScoreV9BreakdownsSchema.nullable(),
+  })
+  .strict()
+  .superRefine((card, ctx) => {
+    refineLegacyCard(card, ctx);
+    refineCard(card, ctx);
+    if ((card.breakdowns === null) !== (card.grade === "NR")) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["breakdowns"],
+        message: "V9 component breakdowns are required exactly when a card is rateable",
+      });
+    }
+    if (card.breakdowns !== null) {
+      for (const pillar of ["backing", "exit", "control"] as const) {
+        if (
+          !numbersAgree(card.breakdowns[pillar].publishedScore, card.pillars[pillar].score)
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["breakdowns", pillar, "publishedScore"],
+            message: "V9 breakdown published score must match the public pillar",
+          });
+        }
+      }
+    }
+  });
 export type SafetyScoreV9CurrentCard = z.infer<typeof SafetyScoreV9CurrentCardSchema>;
 
 export const SafetyScoreV9CardSchema = z.union([
   SafetyScoreV9CurrentCardSchema,
+  SafetyScoreV9PreBreakdownCardSchema,
   SafetyScoreV9CausalCardSchema,
   SafetyScoreV9PreviousCardSchema,
   SafetyScoreV9LegacyCardSchema,
@@ -1667,9 +2100,9 @@ export const SafetyScoreV9CompletenessSchema = z
 
 const SafetyScoreV9ResponseShape = {
   model: z.literal("v9-critical-path"),
-  lifecycle: z.literal("candidate"),
+  lifecycle: z.literal("active"),
   candidateId: z.string().min(1),
-  policyVersion: CandidatePolicyVersionSchema,
+  policyVersion: V9PolicyVersionSchema,
   publicationGenerationId: z.string().min(1),
   baseInputGenerationId: BaseInputGenerationIdSchema,
   factSetDigest: Sha256Schema,
@@ -1680,6 +2113,11 @@ const SafetyScoreV9ResponseShape = {
   asOfSec: z.number().int().nonnegative(),
   publishedAtSec: z.number().int().nonnegative(),
   completeness: SafetyScoreV9CompletenessSchema,
+} as const;
+const SafetyScoreV9HistoricalResponseShape = {
+  ...SafetyScoreV9ResponseShape,
+  lifecycle: z.literal("candidate"),
+  policyVersion: CandidatePolicyVersionSchema,
 } as const;
 
 function refineResponse(
@@ -1729,7 +2167,7 @@ function refineResponse(
 /** Retained reader for persisted candidate/shadow artifacts emitted before the trace contract. */
 export const SafetyScoreV9LegacyResponseSchema = z
   .object({
-    ...SafetyScoreV9ResponseShape,
+    ...SafetyScoreV9HistoricalResponseShape,
     schemaVersion: z.literal(1),
     cards: z.array(SafetyScoreV9LegacyCardSchema),
   })
@@ -1740,7 +2178,7 @@ export type SafetyScoreV9LegacyResponse = z.infer<typeof SafetyScoreV9LegacyResp
 /** Compatibility reader for schema-v2 envelopes carrying schema-v1 traces. */
 export const SafetyScoreV9PreviousResponseSchema = z
   .object({
-    ...SafetyScoreV9ResponseShape,
+    ...SafetyScoreV9HistoricalResponseShape,
     schemaVersion: z.literal(2),
     cards: z.array(SafetyScoreV9PreviousCardSchema),
   })
@@ -1753,7 +2191,7 @@ export type SafetyScoreV9PreviousResponse = z.infer<
 /** Compatibility reader for schema-v3 envelopes carrying causal trace-v2 cards. */
 export const SafetyScoreV9CausalResponseSchema = z
   .object({
-    ...SafetyScoreV9ResponseShape,
+    ...SafetyScoreV9HistoricalResponseShape,
     schemaVersion: z.literal(3),
     cards: z.array(SafetyScoreV9CausalCardSchema),
   })
@@ -1763,11 +2201,24 @@ export type SafetyScoreV9CausalResponse = z.infer<
   typeof SafetyScoreV9CausalResponseSchema
 >;
 
-/** Current pre-release envelope. Active V9 is deliberately not part of this contract. */
+/** Retained reader for schema-v4 candidates emitted before component breakdowns. */
+export const SafetyScoreV9PreBreakdownResponseSchema = z
+  .object({
+    ...SafetyScoreV9HistoricalResponseShape,
+    schemaVersion: z.literal(4),
+    cards: z.array(SafetyScoreV9PreBreakdownCardSchema),
+  })
+  .strict()
+  .superRefine((response, ctx) => refineResponse(response, ctx));
+export type SafetyScoreV9PreBreakdownResponse = z.infer<
+  typeof SafetyScoreV9PreBreakdownResponseSchema
+>;
+
+/** Current V9 envelope. Schema v5 adds compact component breakdowns. */
 export const SafetyScoreV9CurrentResponseSchema = z
   .object({
     ...SafetyScoreV9ResponseShape,
-    schemaVersion: z.literal(4),
+    schemaVersion: z.literal(5),
     cards: z.array(SafetyScoreV9CurrentCardSchema),
   })
   .strict()
@@ -1775,19 +2226,22 @@ export const SafetyScoreV9CurrentResponseSchema = z
 export type SafetyScoreV9CurrentResponse = z.infer<typeof SafetyScoreV9CurrentResponseSchema>;
 
 /**
- * Compatibility reader for stored shadow artifacts. New candidate production
- * must use SafetyScoreV9CurrentResponseSchema and always emits schema version 4.
+ * Compatibility reader for stored shadow artifacts. New V9 production
+ * must use SafetyScoreV9CurrentResponseSchema and always emits schema version 5.
  */
 export const SafetyScoreV9ResponseSchema = z.union([
   SafetyScoreV9CurrentResponseSchema,
+  SafetyScoreV9PreBreakdownResponseSchema,
   SafetyScoreV9CausalResponseSchema,
   SafetyScoreV9PreviousResponseSchema,
   SafetyScoreV9LegacyResponseSchema,
 ]);
 export type SafetyScoreV9Response = Omit<
   SafetyScoreV9LegacyResponse,
-  "schemaVersion" | "cards"
+  "schemaVersion" | "cards" | "lifecycle" | "policyVersion"
 > & {
-  schemaVersion: 1 | 2 | 3 | 4;
+  schemaVersion: 1 | 2 | 3 | 4 | 5;
+  lifecycle: "candidate" | "active";
+  policyVersion: string;
   cards: SafetyScoreV9Card[];
 };

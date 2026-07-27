@@ -1345,7 +1345,10 @@ const V9_RATED_GRADES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D",
 const V9MethodologyPolicyBaseSchema = z
   .object({
     schemaVersion: z.literal(1),
-    policyId: z.string().regex(/^safety-score-v9-[a-z0-9-]+$/),
+    policyId: z.union([
+      z.literal("safety-score-v9"),
+      z.string().regex(/^safety-score-v9-[a-z0-9-]+$/),
+    ]),
     lifecycle: z.enum(["candidate", "active", "retired"]),
     releaseVersion: z
       .string()

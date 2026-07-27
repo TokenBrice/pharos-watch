@@ -35,6 +35,88 @@ export function makeWorkerV9Card(
     exit: pillar(qualityScore),
     control: pillar(qualityScore === null ? null : Math.min(100, qualityScore + 2)),
   };
+  const breakdowns =
+    overrides.breakdowns !== undefined
+      ? overrides.breakdowns
+      : score === null ||
+          pillars.backing.score === null ||
+          pillars.exit.score === null ||
+          pillars.control.score === null
+        ? null
+        : {
+            backing: {
+              evaluatedScore: pillars.backing.score,
+              publishedScore: pillars.backing.score,
+              aggregationWeight: 0.4,
+              groups: [{
+                key: "reserves" as const,
+                label: "Reserves",
+                score: pillars.backing.score,
+                effectiveWeight: 1,
+              }],
+              components: [{
+                key: "reserve:reviewed",
+                label: "Reviewed reserves",
+                source: "reserve-exposure" as const,
+                score: pillars.backing.score,
+                effectiveWeight: 1,
+                weightedContribution: pillars.backing.score,
+                observationState: "known" as const,
+              }],
+              adjustments: [],
+            },
+            exit: {
+              evaluatedScore: pillars.exit.score,
+              publishedScore: pillars.exit.score,
+              aggregationWeight: 0.35,
+              stressRequest: {
+                requestedNotionalUsd: 1_000_000,
+                maxCostBps: 200,
+                comparisonWindowSec: 86_400,
+              },
+              primaryRoute: {
+                key: "redemption:reviewed",
+                label: "Protocol redemption",
+                routeFamily: "protocol-redemption" as const,
+                score: pillars.exit.score,
+                components: [
+                  ["access", "Access", 0.2],
+                  ["settlement", "Settlement", 0.15],
+                  ["executionCertainty", "Execution certainty", 0.15],
+                  ["capacity", "Capacity", 0.25],
+                  ["outputAssetQuality", "Output asset quality", 0.15],
+                  ["cost", "Cost", 0.1],
+                ].map(([key, label, weight]) => ({
+                  key: key as "access" | "settlement" | "executionCertainty" | "capacity" | "outputAssetQuality" | "cost",
+                  label: label as string,
+                  score: pillars.exit.score!,
+                  weight: weight as number,
+                  weightedContribution: pillars.exit.score! * (weight as number),
+                })),
+                confidenceFactor: 1,
+                eligibilityMultiplier: 1,
+                capsApplied: [],
+              },
+              diversification: null,
+              alternatives: [],
+              adjustments: [],
+            },
+            control: {
+              evaluatedScore: pillars.control.score,
+              publishedScore: pillars.control.score,
+              aggregationWeight: 0.25,
+              method: "minimum-binding-component" as const,
+              components: [{
+                key: "control:reviewed",
+                label: "Reviewed control",
+                kind: "mint" as const,
+                score: pillars.control.score,
+                binding: true,
+                posture: "distributed",
+              }],
+              adjustments: [],
+            },
+          };
   const defaultWeakestPillar = (
     Object.entries(pillars) as Array<
       ["backing" | "exit" | "control", (typeof pillars)["backing"]]
@@ -75,6 +157,7 @@ export function makeWorkerV9Card(
     },
     dependencies: { serial: [], basket: [], cycleBlocked: false, reasonCodes: [] },
     stressStateDigest: null,
+    breakdowns,
     ...overrides,
   } satisfies Omit<SafetyScoreV9CurrentCard, "scoreTrace">;
   const hasScoreStages =
@@ -151,7 +234,7 @@ export function makeWorkerReportCardsV9Response(
   const identity = overrides.safetyScoreIdentity ?? {
     model: "v9" as const,
     schemaVersion: 1 as const,
-    methodologyVersion: "candidate-v9.0",
+    methodologyVersion: "9.0",
     policyId: "safety-score-v9",
     policyDigest: digest("a"),
     evaluationBuildDigest: digest("b"),
@@ -161,7 +244,7 @@ export function makeWorkerReportCardsV9Response(
   const updatedAt = overrides.updatedAt ?? 110;
   return {
     model: "v9",
-    schemaVersion: 3,
+    schemaVersion: 4,
     lifecycle: "shadow",
     safetyScoreIdentity: identity,
     methodology: {

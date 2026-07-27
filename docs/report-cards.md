@@ -6,7 +6,7 @@ Report-card snapshots score active tracked and cemetery assets. Frozen archives 
 
 ## Methodology Versioning
 
-- **Active model identity:** Safety Score V9, methodology `candidate-v2`
+- **Active model identity:** Safety Score V9, methodology `9.0`
 - **Current methodology version:** `v8.17` (V8 compatibility contract)
 - **V9 policy source:** `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
 - **V8 compatibility version source:** `shared/lib/methodology-versions/safety-score.ts`
@@ -30,10 +30,10 @@ Cemetery coins get a permanent F.
 Current-version note: v8.17 keeps balance-measured aggregate pool TVL in the generic-proxy class unless the retained evidence includes the exact invariant, fee, output identity, and capacity curve needed for a reserve-based AMM simulation. The public Liquidity Score remains unchanged, but Safety Score caps generic TVL proxies at 60, synthetic/fallback evidence at 55, and provider-inaccessible-only coverage at 45. The 85-point reserve-based simulation class is reserved for exact modeled routes, and same-notional route scoring remains inactive until the P4b rollout gate passes. Old snapshot rows without the new evidence fields and rows explicitly marked `legacy` remain neutral. v8.15 deterministic dependency scoring and v8.14 self-link-free serial variant derivation carry forward unchanged.
 
 Safety Score V9 is the active model for identity-aware consumers under the
-existing `candidate-v2` policy identity. It replaces unrestricted weighted compensation
+`9.0` policy identity. It replaces unrestricted weighted compensation
 with archetype-specific Backing, Exit, and Economic Control pillars bounded by
 the weakest material failure path, structural ceilings, evidence sufficiency,
-dependencies, peg behavior, and stress propagation. The current candidate also
+dependencies, peg behavior, and stress propagation. V9 also
 distinguishes missing integration evidence from measured adverse evidence,
 models exit capacity across stress horizons, scopes loss to exposed holder
 slices, preserves dependency roles and live weights, and evaluates wrapper-local
@@ -44,8 +44,8 @@ exposure weight, but an upstream evidence ceiling does not become a whole-child
 ceiling after that uncertainty has already been priced in the weighted slice.
 Serial parent claims remain globally binding because the child cannot shed that
 claim by diversification.
-a naturally computed D can reflect multiple bounded weaknesses, while F remains
-reserved for causally attributed measured danger. Candidate D cards require
+A naturally computed D can reflect multiple bounded weaknesses, while F remains
+reserved for causally attributed measured danger. V9 D cards require
 causal measured weakness or policy-bounded uncertainty. Bounded attribution can
 come from a low score-bearing pillar, a binding evidence ceiling, a genuinely
 low serial parent, or the wrapper's own local layer; a D with neither trace is
@@ -61,7 +61,7 @@ Persistent measured market depth is eligible for the same bounded operational-
 resilience credit across the mature cohort. Canonical implementation history
 provides only the age gate; the credit still requires repeated score-eligible
 execution observations and does not require a bespoke asset overlay.
-The candidate policy has one explicit native-asset adjustment for
+The V9 policy has one explicit native-asset adjustment for
 `usdt-tether`: the `#1 & Longevity Premium` adds 12 pre-cap points and relaxes
 only the low centralized-mint limit from 83 to the A+ floor of 87. It applies
 only when the ordinary, premium-free result is already at least B+ (75), USDT is
@@ -94,7 +94,7 @@ model. They cannot improve the captured settlement model, reduce a captured
 minimum, or shorten the route's observation horizon, and they do not mutate the
 V8 redemption producer. A reviewed slower model without a contractual SLA uses
 the model's conservative comparison horizon rather than inventing a numeric SLA.
-The candidate can also compose a reviewed fee-free, permissionless atomic wrap
+V9 can also compose a reviewed fee-free, permissionless atomic wrap
 with the intermediate asset's captured DEX observations. The composed path
 preserves the measured capacity curve, execution cost, output valuation,
 freshness, and observation history, adds the wrapper contract as a physical
@@ -108,8 +108,10 @@ controller asset and exact serial children already priced by the parent cap.
 This prevents downstream adoption from creating a reverse dependency on the
 base asset while preserving the actual shared-control exposure.
 Missing categorical access-posture review remains visible but does not make an
-otherwise established score unrateable. New candidate cards use score-trace
-schema v3 inside candidate-response schema v4 and public-report schema v3.
+otherwise established score unrateable. Current cards use score-trace schema v3
+inside V9 response schema v5 and public-report schema v4. V9 response v5
+and report v4 add compact component breakdowns; exact response-v4/report-v3
+readers remain available only for pre-breakdown history and ordered rollout.
 For governance access posture, a reviewed global mint-domain contract is
 `immutable` when it has no privileged capabilities, no applicable cap, no
 claim-impairment path, and access-only scope. The contract address identifies
@@ -119,10 +121,24 @@ concentrated governance.
 Trace v3 requires an explicit `scoreAdjustments` list, empty for ordinary cards
 and populated with the ordinary and adjusted stages when the market-anchor
 policy applies. Retained response-v3/trace-v2 and response-v2/trace-v1
-candidate artifacts remain exact and do not gain that field during parsing.
+historical artifacts remain exact and do not gain that field during parsing.
 The explicitly named historical report reader likewise retains both
-report-v2/trace-v2 and report-v1/trace-v1 snapshots. Live report producers and
-consumers accept only report-v3/trace-v3.
+report-v3/trace-v3 pre-breakdown cards, report-v2/trace-v2 cards, and
+report-v1/trace-v1 cards. Live report producers and consumers accept only
+report-v4/trace-v3.
+
+Every rateable report-v4 card exposes `breakdowns` for Backing, Exit, and
+Economic Control; an `NR` card exposes `breakdowns: null`. Backing publishes
+group scores plus each component's effective pillar weight and weighted
+contribution. Exit publishes the stress request, selected route's six weighted
+components, confidence and eligibility multipliers, applied route-cap
+identifiers, diversification, and compact alternative-route outcomes. Economic
+Control publishes component scores and binding or diagnostic status under its
+minimum-binding-component rule; it does not invent component weights. Each
+pillar also carries its 40/35/25 percent aggregation weight and an exact
+evaluated-to-published adjustment path for operational-resilience credits and
+dependency limits. These fields explain existing V9 results and do not change
+the scoring policy or evaluation-build identity.
 
 V9 publication is fail-closed. Stale or unavailable score-bearing inputs and
 new infrastructure-attributed downgrades or NR transitions hold the last
@@ -186,7 +202,7 @@ As of Safety Score v8.0 the Mint Authority Score feeds the **Decentralization** 
   - the 10% diversification bonus applies only when the redemption route is plausibly independent from the DEX path (`independent-issuer-rail`)
 - P4 same-notional scoring is currently shadow-only. DEX and redemption producers can publish optional capacity curves under the same 200 bps / 300 second request, with typed output identities and failure-domain keys. Production snapshot construction defaults to `legacy`; ordinary fixed replay does the same, while the calibration command explicitly computes separate legacy and active results. No production methodology or score changes while the activation gate remains closed.
 - V9 DEX route reviews use a measured capacity point's retained realized execution cost when present. Repeated-cycle curves take the maximum exact cost observed at the emitted pointwise-minimum capacity; a legacy point or a cycle without that exact supporting quote keeps the conservative request-bound cost. The bounded producer route set keeps uninterrupted measured profiles first but ranks current exact AMM evidence ahead of last-known-good profiles whose newest complete measured cycle failed operationally, so aging outage evidence cannot evict the current exact fallback. A target rotation or failed measured quote cannot gate an independently complete exact AMM model; genuine measured/exact conflicts remain rejected. This changes neither the V8 liquidity input nor the public report-card path.
-- FPI's candidate extension may consume an accepted same-block Controller Pool observation as a `protocol-redemption` route. It values capacity from the input FPI amount at the CPI peg, carries the FRAX output identity explicitly, and combines the live execution fee with pinned FRAX output valuation before comparing the route with the request's cost ceiling. Bounded but older CPI tracker state lowers model confidence; rejected or missing observations contribute no route.
+- FPI's V9 extension may consume an accepted same-block Controller Pool observation as a `protocol-redemption` route. It values capacity from the input FPI amount at the CPI peg, carries the FRAX output identity explicitly, and combines the live execution fee with pinned FRAX output valuation before comparing the route with the request's cost ceiling. Bounded but older CPI tracker state lowers model confidence; rejected or missing observations contribute no route.
 - A live proportional stable-basket route may use a producer-pinned aggregate output value only when the captured observation also carries complete normalized asset weights, a source identity and source timestamp, high-confidence onchain/live-reserve evidence, and an all-in cost bound. Known component downside remains a conservative floor. Cap cUSD is the first such route: its producer carries current USDC + WTGXX weights and a WTGXX Chainlink-NAV-bound output unit; incomplete static baskets such as DLLR do not qualify.
 - Explicit `active` replay is fail-closed: it never restores legacy DEX or redemption values when the modeled request, fixed scoring clock, or eligible modeled-request observations are absent. DEX observations accept only `dex-amm` / `dex-orderbook` families; live redemption observations accept only `issuer-redemption` / `protocol-redemption`, while `eventual-redemption` remains diagnostic-only. Future-dated observations are rejected. Exact DEX observations may replace the aggregate path only when the score-eligible pool count equals the explicit count of retained pools with a reviewed executable capability. Generic shaped TVL stays diagnostic and outside that denominator, while failed or gated exact-capability pools stay inside and fail coverage closed. Aggregate observation count is not a completeness proxy. Partial producer coverage remains shadow evidence and can preserve the aggregate DEX floor while other eligible modeled routes are compared.
 - Freshness is lane-specific in active replay. Generic live DEX evidence uses twice the 30-minute DEX producer interval (1 hour), while measured adapters retain their own validated window when longer (currently 2 hours for exact Curve StableSwap observations). Live redemption evidence uses twice the 4-hour redemption producer interval (8 hours), and reviewed `documented-terms` evidence retains a separate one-year review window. An active caller must supply the fixed observation clock and the applicable live-lane maximum age: a missing DEX maximum age makes live DEX observations ineligible, and a missing live-redemption maximum age does the same for live redemption observations. A curated non-independent or `unknown` route correlation vetoes the diversification bonus; `independent-issuer-rail` only permits the structural output/failure-domain checks and cannot override them.
@@ -615,7 +631,7 @@ Legacy state remains in the `useStressTest` hook with URL sync
 - **Active ratings page**: `/safety-scores/` selects `useReportCardsV9()` and renders the identified V9 publication through the established grade-grouped card grid, hero, filters, sorting controls, and card treatment. Cards use Backing, Exit, and Economic Control; the page shows accepted/attempted timestamps and the explicit held-publication banner. An unavailable or invalid V9 response renders unavailable and never falls back to V8.
 - **V9 card grid**: `src/app/safety-scores/v9-client.tsx` and `src/components/report-card-mini-v9.tsx` preserve the production grade-grouped card grid, hero, filters, sorting, and visual treatment while using V9 score, grade, and three-pillar radar data.
 - **Retained V8 compatibility UI**: `src/app/safety-scores/client.tsx`, `src/components/stress-test-panel.tsx`, `src/components/report-card.tsx`, and `src/components/report-card-mini.tsx` remain available only to compatibility code. The active ratings route no longer selects them.
-- **V9 detail renderers**: `src/components/report-card-v9.tsx` remains the generic/shadow-review renderer. Stablecoin detail pages use `src/components/stablecoin-detail/stablecoin-safety-score-v9-card.tsx`, which consumes the already-selected typed V9 card and restores the production score hero, freshness/actions, expandable pillar score bars, responsive two-column reserve composition, held-publication notice, and V9-native show-work stages. Expanded pillars show scored-input coverage and human-readable component or route disclosures from the public V9 contract; they do not manufacture component subscores or weights that the public contract does not expose. Live-reserve loading keeps the chart column allocated to avoid a hydration layout shift; unavailable score data retains the standalone reserve fallback.
+- **V9 detail renderers**: `src/components/report-card-v9.tsx` remains the generic/shadow-review renderer. Stablecoin detail pages use `src/components/stablecoin-detail/stablecoin-safety-score-v9-card.tsx`, which consumes the already-selected typed V9 card and restores the production score hero, freshness/actions, expandable pillar score bars, responsive two-column reserve composition, held-publication notice, and V9-native show-work. Expanded pillars render the report-v4 numeric breakdown: effective Backing weights and contributions, the selected Exit route's weighted components and modifiers, and Economic Control scores labeled as binding or diagnostic. Pre-breakdown report-v3 cards retain the reviewed-input fallback during reader-first rollout. Live-reserve loading keeps the chart column allocated to avoid a hydration layout shift; unavailable score data retains the standalone reserve fallback.
 - **Other active consumers**: home and alt-peg tables, screener, stablecoin detail, compare, portfolio, dependency map, Freezewatch, and coverage use `useReportCardsV9()` projections. Held publications show an explicit notice.
 - **Policy-dependent consumers**: Selector recommendations and the Bluechip roster fail closed while their V9 thresholds remain unreviewed. The V8 stress simulator is not exposed by the active V9 route.
 - **Detail timeline**: `src/components/stablecoin-detail/safety-score-history-section.tsx` — per-coin grade transition timeline (seed row + changes) shown under the Safety Score section on `/stablecoin/[id]`

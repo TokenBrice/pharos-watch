@@ -28,7 +28,7 @@ import type {
   BlacklistStablecoin,
   PegSummaryCoin,
   PegSummaryResponse,
-  ReportCardsV9Response,
+  ReportCardsV9TransitionResponse,
   StablecoinData,
   StablecoinListResponse,
   StablecoinMeta,
@@ -71,7 +71,7 @@ export interface DetailFeatureAvailabilitySnapshot {
 }
 
 export function resolveReportCardSnapshotUpdatedAtMs(
-  reportCards: DetailQueryResource<ReportCardsV9Response>,
+  reportCards: DetailQueryResource<ReportCardsV9TransitionResponse>,
 ): number | null {
   const updatedAtSeconds = reportCards.meta?.updatedAt ?? reportCards.data?.updatedAt ?? null;
   return updatedAtSeconds != null && updatedAtSeconds > 0 ? updatedAtSeconds * 1000 : null;

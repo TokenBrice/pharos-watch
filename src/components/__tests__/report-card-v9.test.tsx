@@ -58,8 +58,8 @@ describe("ReportCardV9Detail", () => {
       safetyScoreIdentity: {
         model: "v9",
         schemaVersion: 1,
-        methodologyVersion: "candidate-v2",
-        policyId: "safety-score-v9-candidate-v2",
+        methodologyVersion: "9.0",
+        policyId: "safety-score-v9",
         policyDigest: "a".repeat(64),
         evaluationBuildDigest: "b".repeat(64),
         baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
@@ -70,8 +70,8 @@ describe("ReportCardV9Detail", () => {
     render(<ReportCardV9Detail response={response} expectedIdentity={response.safetyScoreIdentity} cardId="usdc-circle" />);
 
     expect(screen.getByText("V9")).toBeTruthy();
-    expect(screen.queryByText(/candidate-v2/)).toBeNull();
-    expect(screen.queryByText(/safety-score-v9-candidate-v2/)).toBeNull();
+    expect(screen.queryByText(/9.0/)).toBeNull();
+    expect(screen.queryByText(/safety-score-v9/)).toBeNull();
   });
 
   it("omits unknown freshness and access values from the detail card", () => {

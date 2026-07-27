@@ -4,6 +4,7 @@ import {
   SafetyScoreV9CompletenessSchema,
   SafetyScoreV9CausalCardSchema,
   SafetyScoreV9CurrentCardSchema,
+  SafetyScoreV9PreBreakdownCardSchema,
   SafetyScoreV9PreviousCardSchema,
   findSafetyScoreV9ParentAttributionIssues,
   type SafetyScoreV9Card,
@@ -18,7 +19,8 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 3;
+export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 4;
+export const REPORT_CARDS_V9_PRE_BREAKDOWN_RESPONSE_SCHEMA_VERSION = 3;
 export const REPORT_CARDS_V9_PREVIOUS_RESPONSE_SCHEMA_VERSION = 2;
 export const REPORT_CARDS_V9_LEGACY_RESPONSE_SCHEMA_VERSION = 1;
 
@@ -210,8 +212,8 @@ function isUniqueSorted(values: readonly string[]): boolean {
 
 /**
  * Shared public V9 report-card envelope fields. The report contract remains
- * distinct from the candidate evaluator envelope even while shadow data is its
- * pre-activation source.
+ * distinct from the retained evaluator envelope even while shadow history is
+ * its storage source.
  */
 const ReportCardsV9ResponseShape = {
   model: z.literal("v9"),
@@ -335,7 +337,21 @@ export type ReportCardsV9PreviousResponse = z.infer<
   typeof ReportCardsV9PreviousResponseSchema
 >;
 
-/** Current public report contract. Report-v3 includes publication hold health. */
+/** Retained report-v3 reader for current-trace cards emitted before component breakdowns. */
+export const ReportCardsV9PreBreakdownResponseSchema = z
+  .object({
+    ...ReportCardsV9ResponseShape,
+    schemaVersion: z.literal(REPORT_CARDS_V9_PRE_BREAKDOWN_RESPONSE_SCHEMA_VERSION),
+    publicationHealth: V9PublicationHealthSchema,
+    cards: z.array(SafetyScoreV9PreBreakdownCardSchema),
+  })
+  .strict()
+  .superRefine(refineReportCardsV9Response);
+export type ReportCardsV9PreBreakdownResponse = z.infer<
+  typeof ReportCardsV9PreBreakdownResponseSchema
+>;
+
+/** Current public report contract. Report-v4 adds compact component breakdowns. */
 export const ReportCardsV9CurrentResponseSchema = z
   .object({
     ...ReportCardsV9ResponseShape,
@@ -353,9 +369,19 @@ export type ReportCardsV9CurrentResponse = z.infer<typeof ReportCardsV9CurrentRe
 export const ReportCardsV9ResponseSchema = ReportCardsV9CurrentResponseSchema;
 export type ReportCardsV9Response = ReportCardsV9CurrentResponse;
 
+/** Temporary live reader for the reader-first report-v3 to report-v4 transition. */
+export const ReportCardsV9TransitionResponseSchema = z.union([
+  ReportCardsV9CurrentResponseSchema,
+  ReportCardsV9PreBreakdownResponseSchema,
+]);
+export type ReportCardsV9TransitionResponse = z.infer<
+  typeof ReportCardsV9TransitionResponseSchema
+>;
+
 /** Explicit historical reader. Never use this union at a live publication boundary. */
 export const ReportCardsV9CompatibleResponseSchema = z.union([
   ReportCardsV9CurrentResponseSchema,
+  ReportCardsV9PreBreakdownResponseSchema,
   ReportCardsV9PreviousResponseSchema,
   ReportCardsV9LegacyResponseSchema,
 ]);

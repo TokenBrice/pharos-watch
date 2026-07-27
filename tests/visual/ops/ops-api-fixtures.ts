@@ -6,7 +6,6 @@ import type {
   StatusHistoryResponse,
 } from "../../../shared/types";
 import { makeLargeApiKeyInventory } from "../../../src/test-utils/api-key-fixtures";
-import { makeSafetyScoreV9AdminAvailableResponse } from "../../../src/test-utils/safety-score-v9-admin-fixture";
 import {
   STATUS_FIXTURE_NOW_MS,
   STATUS_FIXTURE_NOW_SECONDS,
@@ -166,8 +165,6 @@ function payloadForApiPath(pathname: string): unknown {
       return apiKeyRequestsResponse;
     case "/api/api-keys/audit-log":
       return apiKeyAuditLogResponse;
-    case "/api/admin-safety-score-v9":
-      return makeSafetyScoreV9AdminAvailableResponse();
     default:
       return genericProbeResponse;
   }

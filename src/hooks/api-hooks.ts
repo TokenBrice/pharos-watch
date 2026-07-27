@@ -12,7 +12,7 @@ import {
   type DigestSnapshotResponse,
   type HealthResponse,
   type PegSummaryResponse,
-  type ReportCardsV9Response,
+  type ReportCardsV9TransitionResponse,
   type ReportCardsResponse,
   type RedemptionBackstopsResponse,
   type SafetyScoreHistoryResponse,
@@ -191,7 +191,7 @@ export function useReportCards(overrides?: QueryControlOverrides) {
 /** Shadow-only V9 query. Its model-specific key and disabled previous-data
  * retention prevent a V8 or earlier-policy payload from surviving a refetch. */
 export function useReportCardsV9(overrides?: V9QueryControlOverrides) {
-  return useRegisteredApiQuery<ReportCardsV9Response>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9, {
+  return useRegisteredApiQuery<ReportCardsV9TransitionResponse>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9, {
     ...overrides,
     keepPreviousData: false,
   });
@@ -199,7 +199,7 @@ export function useReportCardsV9(overrides?: V9QueryControlOverrides) {
 
 /** Unlisted V9 shadow query using the registered producer polling window. */
 export function useReportCardsV9Preview(overrides?: V9QueryControlOverrides) {
-  return useRegisteredApiQuery<ReportCardsV9Response>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Preview, {
+  return useRegisteredApiQuery<ReportCardsV9TransitionResponse>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Preview, {
     ...overrides,
     keepPreviousData: false,
   });

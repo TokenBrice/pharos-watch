@@ -9,8 +9,8 @@ import { buildStablecoinUrl } from "@/lib/urls";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type {
   SafetyScorePublicationIdentity,
-  SafetyScoreV9CurrentCard,
 } from "@shared/types";
+import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 export function ReportCardMiniV9({
   card,
@@ -18,7 +18,7 @@ export function ReportCardMiniV9({
   logo,
   animIndex = 0,
 }: {
-  card: SafetyScoreV9CurrentCard;
+  card: V9ConsumerCard;
   identity: SafetyScorePublicationIdentity;
   logo?: string;
   animIndex?: number;

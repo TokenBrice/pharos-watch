@@ -204,11 +204,11 @@ export const SafetyScoreV9ShadowEnvelopeSchema = z
   })
   .strict()
   .superRefine((envelope, ctx) => {
-    if (envelope.candidate.lifecycle !== "candidate") {
+    if (envelope.candidate.lifecycle !== "active") {
       ctx.addIssue({
         code: "custom",
         path: ["candidate", "lifecycle"],
-        message: "A V9 shadow envelope must remain candidate-only",
+        message: "A V9 shadow envelope must carry the active V9 publication lifecycle",
       });
     }
     if (envelope.coverage.observedResultCount !== envelope.candidate.cards.length) {
@@ -289,8 +289,8 @@ export function buildSafetyScoreV9ShadowEnvelope(
       notRatedIds: sortedUnique(input.candidate.completeness.notRatedIds),
     },
   });
-  if (candidate.lifecycle !== "candidate") {
-    throw new Error("Safety Score v9 shadow publication requires candidate lifecycle");
+  if (candidate.lifecycle !== "active") {
+    throw new Error("Safety Score v9 shadow publication requires active lifecycle");
   }
   const expectedActiveIds = sortedUnique(input.expectedActiveIds);
   if (expectedActiveIds.length !== input.expectedActiveIds.length || expectedActiveIds.some((id) => id.length === 0)) {

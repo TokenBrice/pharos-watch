@@ -24,7 +24,7 @@ function replay() {
   return {
     pipeline: {
       evaluatedSet: {
-        policyId: "safety-score-v9-candidate-v2",
+        policyId: "safety-score-v9",
         policyDigest: DIGEST,
         evaluationBuildDigest: DIGEST,
         factSetDigest: DIGEST,

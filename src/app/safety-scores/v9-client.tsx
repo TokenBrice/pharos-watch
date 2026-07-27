@@ -12,7 +12,7 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import {
   SafetyEmptyState,
   SafetyResultsSummary,
@@ -182,7 +182,7 @@ function V9Controls({
 }
 
 function GradeSectionHeader({ grade, count }: { grade: string; count: number }) {
-  const metadata = getSafetyGradeMetadata(grade as SafetyScoreV9CurrentCard["grade"]);
+  const metadata = getSafetyGradeMetadata(grade as V9ConsumerCard["grade"]);
   return (
     <div className="pharos-section-enter col-span-full flex items-center gap-3 pt-4 first:pt-0">
       <span
@@ -233,7 +233,7 @@ export function ReportCardsV9Client() {
 
   if (reportCardsQuery.isLoading) return <SafetyScoresLoadingState />;
 
-  const renderCard = (card: SafetyScoreV9CurrentCard, index: number) => (
+  const renderCard = (card: V9ConsumerCard, index: number) => (
     <LazySection key={card.id} rootMargin="100px" placeholder={lazyCardSkeleton}>
       <div className="pharos-card-enter">
         <ReportCardMiniV9

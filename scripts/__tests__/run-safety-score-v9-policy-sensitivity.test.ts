@@ -9,8 +9,8 @@ import {
 
 const V9_EVALUATION_TEST_TIMEOUT_MS = 30_000;
 
-describe("Safety Score v9 candidate policy sensitivity", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
-  it("produces deterministic one-parameter candidate cases with distinct semantic digests", () => {
+describe("Safety Score v9 V9 policy sensitivity", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  it("produces deterministic one-parameter V9 cases with distinct semantic digests", () => {
     const options = {
       parameterPaths: ["semantic.formula.compensabilityHeadroom"],
       deltas: [-1, 1],
@@ -23,10 +23,10 @@ describe("Safety Score v9 candidate policy sensitivity", { timeout: V9_EVALUATIO
     expect(first).toMatchObject({
       schemaVersion: 1,
       reportKind: "safety-score-v9-policy-sensitivity-research",
-      candidateOnly: true,
+      researchOnly: true,
       baseline: {
         policyId: V9_CANDIDATE_POLICY_V1.policy.policyId,
-        lifecycle: "candidate",
+        lifecycle: "active",
         semanticDigest: V9_CANDIDATE_POLICY_V1.semanticDigest,
         scenarioCount: 34,
         pairwiseConstraintCount: 31,
@@ -177,6 +177,6 @@ describe("Safety Score v9 candidate policy sensitivity", { timeout: V9_EVALUATIO
     );
     expect(stdout).not.toHaveBeenCalled();
     expect(writeOutput).toHaveBeenCalledOnce();
-    expect(writeOutput).toHaveBeenCalledWith("sensitivity.json", expect.stringContaining('"candidateOnly": true'));
+    expect(writeOutput).toHaveBeenCalledWith("sensitivity.json", expect.stringContaining('"researchOnly": true'));
   });
 });

@@ -60,7 +60,7 @@ export default createClientFeaturePage({
     path: "/safety-scores/",
     title: "Safety Scores",
     methodology: {
-      version: "V9 · candidate-v2",
+      version: "V9.0",
       changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
     },
     headerActions: <ShareButton ogPath="/api/og/safety-scores" />,

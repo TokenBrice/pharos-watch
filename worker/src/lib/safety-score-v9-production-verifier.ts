@@ -45,11 +45,11 @@ const ReplayShellSchema = z
   .object({
     schemaVersion: z.literal(1),
     kind: z.literal("safety-score-v9-candidate-replay"),
-    lifecycle: z.literal("candidate"),
+    lifecycle: z.literal("active"),
     releaseAuthorization: z
       .object({
         authorized: z.literal(false),
-        reason: z.literal("candidate-replay-only"),
+        reason: z.literal("v9-replay-only"),
       })
       .strict(),
     pipeline: z
@@ -494,10 +494,10 @@ export async function verifyV9ProductionGeneration(
     const canonicalReplay = {
       schemaVersion: 1 as const,
       kind: "safety-score-v9-candidate-replay" as const,
-      lifecycle: "candidate" as const,
+      lifecycle: "active" as const,
       releaseAuthorization: {
         authorized: false as const,
-        reason: "candidate-replay-only" as const,
+        reason: "v9-replay-only" as const,
       },
       pipeline: rebuilt,
     };

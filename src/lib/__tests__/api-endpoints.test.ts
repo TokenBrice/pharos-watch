@@ -42,9 +42,6 @@ describe("api endpoint registry", () => {
   it("keeps every endpoint path, probe path, and status action path explicitly covered", () => {
     const expectedPaths = [
       "/api/admin-action-log",
-      "/api/admin-safety-score-v9",
-      "/api/admin-safety-score-v9/history-boundary",
-      "/api/admin-safety-score-v9/reviews",
       "/api/admin-telegram-adoption-report",
       "/api/admin-telegram-broadcast",
       "/api/admin-telegram-delivery-control",
@@ -230,8 +227,6 @@ describe("api endpoint registry", () => {
       "/api/admin-telegram-resend",
       "/api/admin-telegram-broadcast",
       "/api/admin-telegram-delivery-control",
-      "/api/admin-safety-score-v9/reviews",
-      "/api/admin-safety-score-v9/history-boundary",
     ]);
   });
 
