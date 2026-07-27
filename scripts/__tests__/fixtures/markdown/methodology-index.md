@@ -30,11 +30,11 @@ PSI is deliberately conservative: one small depeg should not move the entire mar
 
 ## Safety Scores Grading Methodology
 
-Pharos synthesizes stablecoin risk into a single transparent grade. The score starts with weighted base dimensions for Liquidity / Exit, Resilience, Decentralization, and Dependency Risk, then applies a peg-stability multiplier.
+Safety Score V9 is the active identity-aware model. It evaluates Backing (40%), Exit (35%), and Economic Control (25%) through bounded aggregation, then applies peg behavior, structural ceilings, evidence sufficiency, track record, dependencies, and wrapper-local risk.
 
-Liquidity / Exit measures how much usable exit capacity exists across DEX depth and eligible redemption backstops. Resilience measures collateral quality and custody model. Chain tier, deployment model, reviewed CDP oracle setup, reviewed bridge-route risk, and Mint Authority affect the Decentralization penalties; branch-aware oracle reviews use the weakest verified branch when present, and resolvable wrappers inherit Decentralization from their wrapped asset with a wrapper-kind haircut. Dependency Risk penalizes wrapper, collateral, and mechanism exposure to other assets, with tracked parent-linked variants applying family-specific wrapper ceilings.
+V9 distinguishes measured adverse evidence from issuer non-disclosure, unsupported methodology, missing integration, and transient producer failure. Bounded gaps can remain rateable under explicit ceilings; an unbounded required fact remains NR, and F is reserved for causally attributed measured danger.
 
-The peg multiplier prevents a structurally strong asset with a bad peg from receiving an inflated grade. Severe active depegs, missing liquidity, stale redemption evidence, and high dependency concentration all cap or penalize the final result.
+Publication is fail-closed. Stale or unavailable score-bearing producers and new infrastructure-attributed downgrades or NR transitions hold the last accepted V9 ratings. Active consumers expose held status and never recompute or fall back to V8. The numeric V8.17 methodology remains documented for the compatibility endpoint and rollback observation window.
 
 
 ## Mint Authority Score

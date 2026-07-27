@@ -1,31 +1,33 @@
 import {
   METHODOLOGY_LINK_CLASS,
-  MethodologyDetails,
   MethodologyFacts,
-  WorkedExample,
 } from "../../methodology-shared";
-import { SafetyScoreCalculator } from "@/components/methodology/safety-score-calculator";
-import { ReserveRelatedSignalsMethodologyCopy } from "../core-sections-fragments";
 
 export function SafetyScoresOverview() {
   return (
     <>
       <p>
-        Pharos synthesizes multiple data signals into a single transparent grade per stablecoin. The overall score
-        is computed in two steps: first, a weighted average of four base dimensions (exit liquidity, resilience,
-        decentralization, dependency risk), then a peg stability multiplier that penalizes coins with poor pegs
-        while barely affecting well-pegged ones. The exit-liquidity dimension blends raw DEX liquidity with
-        redemption-backstop quality only when the route has usable current evidence. Reviewer-gated wrapper capacity
-        can come from same-run withdrawable strategy or Stability Pool balances, or an exact cross-chain route whose
-        endpoints and executable inventory are validated together, rather than idle underlying alone;
-        reviewed opaque fees can preserve capacity evidence for bounded downstream analysis but do not make the
-        current redemption route score-eligible without a numeric cost bound. Reserve data is a separate
-        resilience input: live reserve sync can improve collateral quality only when the latest snapshot is fresh,
-        independent, clean, and score-grade. When some base dimensions lack data (NR), their weight is redistributed proportionally among rated ones. Active depeg caps use the open event&apos;s peak deviation, while the peg
-        dimension itself remains a direct pegScore passthrough.
+        Safety Score V9 is the active model for identity-aware consumers. It evaluates three material risk pillars:
+        Backing (40%), Exit (35%), and Economic Control (25%). The aggregation allows bounded headroom above the
+        weakest material path, then applies peg behavior, structural ceilings, evidence sufficiency, track record,
+        dependencies, and wrapper-local risk. A strong unrelated pillar therefore cannot erase a weak material
+        failure path.
+      </p>
+      <p>
+        V9 distinguishes measured adverse evidence from issuer non-disclosure, unsupported methodology, missing
+        integration, and transient producer failure. Bounded gaps can remain rateable under explicit ceilings; an
+        unbounded required fact remains NR. F is reserved for causally attributed measured danger, while a D requires
+        measured weakness or traceable policy-bounded uncertainty.
+      </p>
+      <p>
+        Publication is fail-closed. If a score-bearing producer is stale, unavailable, or would create a new
+        infrastructure-attributed downgrade or NR transition, Pharos retains the last accepted V9 ratings and exposes
+        the publication as held. Active consumers do not recompute or fall back to V8.
       </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}
+        <a href="/methodology/scoring-changelog/" className={METHODOLOGY_LINK_CLASS}>Safety Score changelog</a>
+        {" · "}
         <a href="#pegscore-dews-methodology" className={METHODOLOGY_LINK_CLASS}>PegScore + DEWS</a>
         {" · "}
         <a href="#liquidity-methodology" className={METHODOLOGY_LINK_CLASS}>Liquidity Score</a>
@@ -34,37 +36,24 @@ export function SafetyScoresOverview() {
       </p>
       <MethodologyFacts
         facts={[
-          { label: "Model shape", value: "4 dimensions + peg multiplier" },
+          { label: "Model shape", value: "3 pillars + bounded aggregation" },
           { label: "Grade output", value: "A+ to F, with NR" },
-          { label: "Key caveat", value: "No exit signal = 10% penalty" },
+          { label: "Publication state", value: "Current or held; never V8 fallback" },
         ]}
       />
       <div className="space-y-2">
         <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
         <MethodologyFacts
           facts={[
-            { label: "Minimum data", value: "At least 2 rated non-peg dimensions" },
-            { label: "Required sources", value: "Peg summary, DEX liquidity/redemption data, and dependency/metadata inputs" },
+            { label: "Minimum data", value: "Mechanism-appropriate required facts for all material pillars" },
+            { label: "Required sources", value: "Backing, exit, control, peg, dependency, and evidence-provenance inputs" },
             {
               label: "Failure behavior",
-              value: "NR if peg is missing on non-NAV coins; no-liquidity penalty when both DEX and redemption evidence are unavailable; live reserve adapters stay detail-visible when they are stale, degraded, or proof-only",
+              value: "Unbounded evidence gaps return NR; transient producer failures hold the last accepted publication",
             },
           ]}
         />
       </div>
-      <ReserveRelatedSignalsMethodologyCopy />
-      <WorkedExample summary="Worked example (verified against computeOverallGrade)">
-        <p className="pharos-numeric">Inputs: DEX 30, Redemption 88, Exit 91, Res 70, Decen 60, Dep 75, Peg 92</p>
-        <p className="pharos-numeric">base=(91*0.30+70*0.20+60*0.15+75*0.25)/0.90=76.72</p>
-        <p className="pharos-numeric">final=round(base*(92/100)^0.40)=round(76.72*0.9672)=74</p>
-        <p>
-          Result: <span className="text-foreground">Score 74 (grade B)</span>.
-        </p>
-      </WorkedExample>
-
-      <MethodologyDetails summary="Interactive calculator: explore how weights and thresholds shape the grade">
-        <SafetyScoreCalculator />
-      </MethodologyDetails>
     </>
   );
 }

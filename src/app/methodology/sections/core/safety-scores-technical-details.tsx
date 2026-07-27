@@ -4,7 +4,7 @@ import { SafetyScoresScoringDetails } from "./safety-scores-scoring-details";
 
 export function SafetyScoresTechnicalDetails() {
   return (
-    <MethodologyDetails summary="Technical details: full pipeline, dimension formulas, thresholds, and caveats">
+    <MethodologyDetails summary="Legacy V8.17 compatibility details: dimensions, formulas, thresholds, and caveats">
       <SafetyScoresScoringDetails />
       <SafetyScoresDimensionDetails />
     </MethodologyDetails>

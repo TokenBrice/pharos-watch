@@ -1,9 +1,11 @@
 # Safety Score V9 Readiness
 
-This document describes the current Safety Score V9 candidate, the evidence
-needed to evaluate it, and the boundary between production shadow observation
-and public activation. It does not define an active methodology. Safety Score
-V8.17 remains active and public.
+This document records the evidence status of the Safety Score V9
+`candidate-v2` policy and the boundary that governed its production shadow
+observation. On 2026-07-27, the owner explicitly authorized activation despite
+the retained no-go evidence described below. That authorization changes the
+runtime model selection; it does not retroactively turn missing evidence into a
+readiness pass.
 
 Release and activation mechanics are governed by the
 [V9 rollout contract](./safety-score-v9-rollout.md). The
@@ -12,19 +14,21 @@ implementation and review status. Neither document authorizes activation.
 
 ## Current State
 
-The current release scope is limited to production shadow observation, subject
-to the normal release checks. That scope does not establish scoring readiness:
-
-- V9 remains a candidate with no public release version.
-- A valid V8 publication is still the prerequisite for each V9 shadow attempt.
-- A V9 compile, evaluation, or persistence failure cannot suppress or replace
-  V8 publication.
-- `safety-score-v9:public-activation` remains the only runtime activation
-  switch and must not be written as part of a shadow release.
-- `/api/report-cards` remains the V8 contract.
-- `/api/report-cards/v9` remains dark while the activation key is absent.
-- No V9 public methodology section or structured activation changelog entry is
-  part of the shadow release.
+- V9 is active under its existing `candidate-v2` identity; the policy still has
+  no numeric release version.
+- `safety-score-v9:public-activation` remains the sole runtime activation
+  switch. A missing, malformed, or identity-mismatched key keeps the versioned
+  endpoint dark.
+- A valid V8 publication remains the prerequisite for V9 compilation during
+  the 24-hour activation observation window.
+- A V9 compile, evaluation, or persistence failure cannot suppress V8
+  compatibility publication and cannot replace the accepted V9 snapshot.
+- `/api/report-cards` remains the V8 compatibility contract during that window.
+- `/api/report-cards/v9` serves the accepted V9 snapshot when the activation
+  key matches; a held publication exposes held status and never falls back to
+  V8.
+- The public methodology and structured activation entry identify the active
+  policy as `candidate-v2`.
 
 The latest calibration changes do not yet have post-change production shadow
 evidence in the verified documentation corpus. Earlier local captures,
@@ -35,8 +39,8 @@ required before assessing the effective distribution or individual ratings.
 There is also no tracked, real holdout package containing a candidate seal,
 content-addressed point-in-time source archive, and two-reviewer blind review.
 The holdout protocol is implemented, but holdout success has not been
-established. No current readiness or activation claim follows from the
-implementation or its synthetic tests.
+established. The owner-authorized activation bypasses that evidence gate; it
+does not establish a holdout success claim.
 
 ## Sources Of Truth
 
@@ -420,14 +424,15 @@ unchecked holdout outcomes remain explicit no-go evidence.
 ## Owner Boundary
 
 Production shadow deployment, green tests, valid candidate publication, and
-stable fresh generations still do not activate V9. The owner alone decides
-whether the candidate is ready and performs the identity-bound activation-key
-write described in the rollout contract.
+stable fresh generations did not activate V9. The owner made that decision on
+2026-07-27 and authorized the identity-bound activation-key write described in
+the rollout contract despite the explicit no-go evidence.
 
-Until that decision:
+The retained evidence statement remains:
 
-- V8.17 remains the public methodology;
-- the V9 public endpoint remains dark;
-- public methodology and changelog content remain unchanged; and
-- readiness, holdout, consumer review, and named-asset findings are reported
-  honestly without being converted into an activation claim.
+- no real release-candidate seal, immutable point-in-time source archive, or
+  two-reviewer blind-review manifest was supplied;
+- the retained accepted canonical snapshot uses an older evaluation-build
+  digest than a replay at the deployed fence build; and
+- activation is an owner override, not a readiness, holdout, or identity-replay
+  pass.

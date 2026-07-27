@@ -1,10 +1,10 @@
 # Safety Score V9 Rollout
 
-> **Current state:** Safety Score v8.17 remains the public model. V9 retains one
-> compact shadow row per UTC day and may refresh its private latest candidate
-> every 30 minutes after a valid V8 publication. The owner-approved, unlisted
-> read-only preview remains a shadow consumer. The versioned public V9 endpoint
-> remains dark until the owner writes the identity-bound activation key.
+> **Current state:** The owner authorized V9 activation on 2026-07-27 under the
+> existing `candidate-v2` identity. The identity-bound activation key remains
+> the sole runtime switch: a missing, malformed, or mismatched key keeps the
+> versioned endpoint dark. V8 compatibility publication remains scheduled only
+> through the 24-hour activation observation window.
 
 This document is the durable rollout contract for Safety Score V9. Candidate
 correctness, calibration results, and identity records live in
