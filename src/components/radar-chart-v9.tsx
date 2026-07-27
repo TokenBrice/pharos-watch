@@ -20,6 +20,9 @@ const V9_PILLAR_LABELS: Record<V9Pillar, string> = {
   control: "Control",
 };
 
+const COMPACT_RADAR_BREAKPOINT = 280;
+const NARROW_RADAR_BREAKPOINT = 160;
+
 export interface V9RadarSeries {
   card: SafetyScoreV9Card;
   identity: SafetyScorePublicationIdentity;
@@ -96,11 +99,19 @@ export function CompareRadarV9({
 
   if (dataset.status === "unavailable") {
     return (
-      <div className="flex h-full min-h-64 items-center justify-center text-sm text-muted-foreground" role="alert">
+      <div
+        className="flex w-full items-center justify-center text-sm text-muted-foreground"
+        style={{ height: size }}
+        role="alert"
+      >
         V9 safety comparison unavailable.
       </div>
     );
   }
+
+  const compact = width > 0 && width < COMPACT_RADAR_BREAKPOINT;
+  const narrow = width > 0 && width < NARROW_RADAR_BREAKPOINT;
+  const compactOuterRadius = Math.min(width * (narrow ? 0.3 : 0.32), height * 0.39);
 
   return (
     <div
@@ -111,10 +122,18 @@ export function CompareRadarV9({
       aria-label="V9 safety score pillar comparison"
     >
       {ready ? (
-        <RechartsRadarChart width={width} height={height} data={dataset.value.rows} cx="50%" cy="50%" outerRadius="75%">
+        <RechartsRadarChart
+          width={width}
+          height={height}
+          data={dataset.value.rows}
+          cx={narrow ? "57%" : compact ? "56%" : "50%"}
+          cy={compact ? "52%" : "50%"}
+          outerRadius={compact ? compactOuterRadius : "75%"}
+        >
           <PolarGrid stroke="currentColor" className="text-border" />
           <PolarAngleAxis
             dataKey="pillar"
+            tickSize={narrow ? 4 : compact ? 5 : 8}
             tick={{ fontSize: 11, fill: "currentColor" }}
             className="text-muted-foreground"
           />

@@ -42,7 +42,7 @@ const SORT_OPTIONS: ReadonlyArray<{ key: V9SortKey; label: string }> = [
 
 const lazyCardSkeleton = (
   <div
-    className="flex h-[340px] flex-col items-center justify-center gap-2 rounded-xl border bg-muted/20 animate-pulse"
+    className="flex h-[250px] flex-col items-center justify-center gap-2 rounded-xl border bg-muted/20 animate-pulse"
     role="status"
     aria-busy="true"
     aria-label="Loading score card"
@@ -292,7 +292,7 @@ export function ReportCardsV9Client() {
         ) : filteredCards.length === 0 ? (
           <SafetyEmptyState gradeFilter={gradeFilter} onClearFilter={() => setGradeFilter("all")} />
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {showGroupedCards
               ? groupedCards.map((group) => (
                   <Fragment key={group.grade}>
