@@ -20,7 +20,7 @@ import type { DexLiquidityData } from "../types/market";
 import type { ReportCard } from "../types/report-cards";
 import type { StablecoinLink, StablecoinMeta } from "../types/core";
 import type { ExitRouteObservation } from "../types/exit-route";
-import { isDexExitRouteCoverageComplete } from "./p4-exit-route-capacity";
+import { isDexExitRouteCoverageWithinRouteBudget } from "./p4-exit-route-capacity";
 import { isExitRouteObservationScoreEligible } from "./redemption-backstop-scoring";
 import { collectCriticalControlIdentities, type CriticalControlIdentityOccurrence } from "./control-identities";
 import { mergeExitRouteObservations } from "./safety-score-v9/exit-observation-set";
@@ -540,7 +540,7 @@ function compileExitPillar(meta: StablecoinMeta, options: CompileV9AssetOptions)
   );
   const exitObservationAsOfSec = Date.parse(options.asOf) / 1_000;
   const dexObservations = observations.filter(isDexRouteObservation);
-  if (dexObservations.length > 0 && !isDexExitRouteCoverageComplete(row?.exitRouteObservationCoverage)) {
+  if (dexObservations.length > 0 && !isDexExitRouteCoverageWithinRouteBudget(row?.exitRouteObservationCoverage)) {
     gaps.push(
       unresolved(
         "incomplete-dex-route-coverage",

@@ -507,6 +507,36 @@ export function isDexExitRouteCoverageComplete(coverage: ExitRouteObservationCov
   );
 }
 
+/**
+ * Completeness for GAP ACCOUNTING only (owner ruling 2026-07-27): capability
+ * pools omitted solely by the bounded route-selection budget are excluded from
+ * the completeness denominator — a surface whose every budget-admitted
+ * capability pool carries a score-eligible observation is fully covered by
+ * design, and the overflow count remains visible as diagnostics in
+ * `unsupportedReasons.routeSelectionCapabilityOverflow`. Exact-route SCORING
+ * eligibility keeps the strict predicate above: route-budget completeness must
+ * never widen which portfolios may replace the aggregate DEX path.
+ */
+export function isDexExitRouteCoverageWithinRouteBudget(
+  coverage: ExitRouteObservationCoverage | null | undefined,
+): boolean {
+  if (
+    coverage?.status !== "populated" ||
+    coverage.capabilityMatrixVersion !== DEX_ROUTE_CAPABILITY_MATRIX_VERSION ||
+    coverage.scoreEligiblePoolCount == null ||
+    coverage.scoreEligibleCapabilityPoolCount == null
+  )
+    return false;
+
+  const selectionOverflowCount = coverage.unsupportedReasons["routeSelectionCapabilityOverflow"] ?? 0;
+  const budgetCapabilityPoolCount = coverage.scoreEligibleCapabilityPoolCount - selectionOverflowCount;
+  return (
+    budgetCapabilityPoolCount > 0 &&
+    budgetCapabilityPoolCount <= coverage.retainedPoolCount &&
+    coverage.scoreEligiblePoolCount === budgetCapabilityPoolCount
+  );
+}
+
 function roundUsd(value: number): number {
   return Math.round(Math.max(0, value) * 100) / 100;
 }

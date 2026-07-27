@@ -20,6 +20,7 @@ import {
   P4_AMM_MODELED_TVL_MIN_RATIO,
   buildP4DexExitRouteObservations,
   isDexExitRouteCoverageComplete,
+  isDexExitRouteCoverageWithinRouteBudget,
   validateExitRouteCapacityCurve,
 } from "../p4-exit-route-capacity";
 
@@ -1178,6 +1179,70 @@ describe("P4 DEX exit route observations", () => {
           "invalidExecutionModel:invalid-amplification": 1,
         },
       }),
+    ).toBe(false);
+  });
+
+  it("excludes route-selection overflow from the budget-accounting denominator only", () => {
+    // USD1-shaped surface: 283 capability pools, 10 selected and observed,
+    // 273 omitted solely by the bounded route-selection budget.
+    const overflowOnlyCoverage = {
+      status: "populated" as const,
+      capabilityMatrixVersion: "p4a.8",
+      retainedPoolCount: 283,
+      observationCount: 10,
+      scoreEligibleObservationCount: 10,
+      scoreEligiblePoolCount: 10,
+      scoreEligibleCapabilityPoolCount: 283,
+      unsupportedPoolCount: 273,
+      evidenceCounts: { "measured-executable-depth": 10 },
+      unsupportedReasons: { routeSelectionCapabilityOverflow: 273 },
+    };
+    expect(isDexExitRouteCoverageComplete(overflowOnlyCoverage)).toBe(false);
+    expect(isDexExitRouteCoverageWithinRouteBudget(overflowOnlyCoverage)).toBe(true);
+
+    // A genuine capability gate alongside overflow keeps both predicates false:
+    // 12 capability pools, 2 overflow, only 4 observed of the 10 in budget.
+    const gatedCoverage = {
+      ...overflowOnlyCoverage,
+      retainedPoolCount: 12,
+      observationCount: 4,
+      scoreEligibleObservationCount: 4,
+      scoreEligiblePoolCount: 4,
+      scoreEligibleCapabilityPoolCount: 12,
+      unsupportedPoolCount: 8,
+      unsupportedReasons: {
+        routeSelectionCapabilityOverflow: 2,
+        "executionCapabilityGate:measured-execution:quote-failed": 6,
+      },
+    };
+    expect(isDexExitRouteCoverageComplete(gatedCoverage)).toBe(false);
+    expect(isDexExitRouteCoverageWithinRouteBudget(gatedCoverage)).toBe(false);
+
+    // Without overflow the budget predicate matches the strict one.
+    const strictComplete = {
+      ...overflowOnlyCoverage,
+      retainedPoolCount: 10,
+      scoreEligibleCapabilityPoolCount: 10,
+      unsupportedPoolCount: 0,
+      unsupportedReasons: {},
+    };
+    expect(isDexExitRouteCoverageComplete(strictComplete)).toBe(true);
+    expect(isDexExitRouteCoverageWithinRouteBudget(strictComplete)).toBe(true);
+
+    // Degenerate all-overflow surface never certifies coverage.
+    const allOverflow = {
+      ...overflowOnlyCoverage,
+      observationCount: 0,
+      scoreEligibleObservationCount: 0,
+      scoreEligiblePoolCount: 0,
+      scoreEligibleCapabilityPoolCount: 273,
+      unsupportedPoolCount: 283,
+    };
+    expect(isDexExitRouteCoverageWithinRouteBudget(allOverflow)).toBe(false);
+
+    // Stale capability-matrix versions stay rejected.
+    expect(
+      isDexExitRouteCoverageWithinRouteBudget({ ...overflowOnlyCoverage, capabilityMatrixVersion: "p4a.3" }),
     ).toBe(false);
   });
 
