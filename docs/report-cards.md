@@ -6,12 +6,14 @@ Report-card snapshots score active tracked and cemetery assets. Frozen archives 
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v8.17`
-- **Runtime/version source:** `shared/lib/methodology-versions/safety-score.ts`
+- **Active model identity:** Safety Score V9, methodology `candidate-v2`
+- **Compatibility methodology version:** `v8.17`
+- **V9 policy source:** `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
+- **V8 compatibility version source:** `shared/lib/methodology-versions/safety-score.ts`
 - **Public changelog route:** `/methodology/scoring-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/safety-score/`
 
-## Overall Grade (v8.17)
+## Legacy Compatibility Grade (v8.17)
 
 Four-step computation:
 
@@ -24,8 +26,8 @@ Cemetery coins get a permanent F.
 
 Current-version note: v8.17 keeps balance-measured aggregate pool TVL in the generic-proxy class unless the retained evidence includes the exact invariant, fee, output identity, and capacity curve needed for a reserve-based AMM simulation. The public Liquidity Score remains unchanged, but Safety Score caps generic TVL proxies at 60, synthetic/fallback evidence at 55, and provider-inaccessible-only coverage at 45. The 85-point reserve-based simulation class is reserved for exact modeled routes, and same-notional route scoring remains inactive until the P4b rollout gate passes. Old snapshot rows without the new evidence fields and rows explicitly marked `legacy` remain neutral. v8.15 deterministic dependency scoring and v8.14 self-link-free serial variant derivation carry forward unchanged.
 
-Safety Score V9 is implemented as an internal candidate and shadow pipeline,
-not as the active methodology. It replaces unrestricted weighted compensation
+Safety Score V9 is the active model for identity-aware consumers under the
+existing `candidate-v2` policy identity. It replaces unrestricted weighted compensation
 with archetype-specific Backing, Exit, and Economic Control pillars bounded by
 the weakest material failure path, structural ceilings, evidence sufficiency,
 dependencies, peg behavior, and stress propagation. The current candidate also
@@ -113,16 +115,14 @@ The explicitly named historical report reader likewise retains both
 report-v2/trace-v2 and report-v1/trace-v1 snapshots. Live report producers and
 consumers accept only report-v3/trace-v3.
 
-Candidate failures cannot affect V8 publication. A production deployment of V9
-scorer or producer code only changes the private shadow output; it does not
-change the active version, public methodology, or public API. The candidate
-identity is computed from the current policy, evaluation build, compiler schema,
-and producer capability rather than copied into this document. Earlier
-calibration histograms and named-asset scores predate the current implementation
-and are not evidence for it. Fresh exact production shadow generations and a
-real holdout package have not yet established readiness. V8.17 remains public,
-and `/api/report-cards/v9` remains dark until the owner writes a matching
-identity-bound activation key. See
+V9 publication is fail-closed. Stale or unavailable score-bearing inputs and
+new infrastructure-attributed downgrades or NR transitions hold the last
+accepted canonical V9 snapshot. The versioned endpoint exposes `held` status,
+retains accepted-timestamp freshness, and never recomputes or falls back to V8.
+The current policy, evaluation build, compiler schema, and producer capability
+remain bound into the exact publication identity. V8.17 remains available
+through the compatibility contract and during the activation observation
+window. See
 [Safety Score V9 readiness](./process/safety-score-v9-readiness.md), the
 [single-publisher rollout contract](./process/safety-score-v9-rollout.md), and
 the [consumer ledger](./process/safety-score-v9-consumer-ledger.md).
@@ -562,7 +562,7 @@ Implementation notes:
 - `publish-report-card-cache` validates the exact active registry set before writing. Missing, duplicate, defunct-active, or unexpected live IDs reject the whole publication; expected coverage must equal scored plus NR rows.
 - Exact fixed-input schema v3 records `captureKind`, the sorted active IDs, source/DEX/redemption generation IDs, registry revision and fingerprint, DEX/redemption payload fingerprints, producer methodology versions, the fixed clock, lane freshness, and optional-default V9 diagnostic fields. The cache envelope stores the normalized JSON as `gzip-base64` with its source generation, SHA-256, and uncompressed byte length; export decoding rechecks the length, checksum, capture kind, and generation. Replay recomputes both payload fingerprints, rejects methodology or current-registry drift unless the invoking tool exposes and receives the corresponding explicit override, and requires exact captures to retain full active DEX and blacklist identity sets. Diagnostic journal rows are canonicalized but never projected into report-card or V9 scoring facts.
 - The full snapshot, exact fixed input, compact `report_card_cache` score map used by lightweight and yield-safety consumers, and Telegram `alert:safety-source-cache` are written in one D1 batch. Each carries the same strict V8 identity, publication generation, methodology, and completeness manifest. Strict compact-cache consumers, including hourly yield publication, publication-health fallback, and the data-invariant canary, require scored IDs plus explicit NR IDs to equal the exact active registry set; count-preserving identity swaps are rejected. The compact cache also carries `degradedInputs` metadata (`inputsStale`, `liquidityStale`, `redemptionStale`, and `staleInputs`).
-- `snapshot-safety-grade-history` owns only append-only grade history. For each healthy current-V8 seed or organic grade change it writes the legacy row and an immutable V2 twin; the V2 row records model, methodology, nullable policy identity, evaluation-build digest, base-input generation, model-publication generation, and transition kind. It still suppresses both writes when the selected report-card inputs are degraded. V9 activation and rollback require explicit non-comparable baseline writers before cutover; this pre-activation release does not expose either transition.
+- `snapshot-safety-grade-history` owns only append-only grade history. For each healthy current-V8 seed or organic grade change it writes the legacy row and an immutable V2 twin; the V2 row records model, methodology, nullable policy identity, evaluation-build digest, base-input generation, model-publication generation, and transition kind. Current V9 writes only identified V2 organic rows and suppresses them while publication is held. The V9 activation baseline is a non-comparable V2 boundary with null previous values, so activation cannot appear as an organic grade movement.
 
 Key types:
 

@@ -53,8 +53,15 @@ export function ChangelogTable({
   );
 }
 
-export function VersionCard({ entry, children }: { entry: MethodologyChangelogEntry; children: ReactNode }) {
-  const versionLabel = toMethodologyVersionLabel(entry.version);
+export function VersionCard({
+  entry,
+  children,
+  versionLabel = toMethodologyVersionLabel(entry.version),
+}: {
+  entry: MethodologyChangelogEntry;
+  children: ReactNode;
+  versionLabel?: string;
+}) {
   const anchorId = scoringAnchorId(versionLabel);
 
   return (
