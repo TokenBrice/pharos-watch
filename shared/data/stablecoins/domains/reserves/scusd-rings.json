@@ -7,13 +7,19 @@
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Trevee Veda BoringVault and its underlying lending protocols",
-      "riskFactors": ["smart-contract", "counterparty", "liquidity", "custody", "concentration"],
+      "riskFactors": [
+        "smart-contract",
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "verified",
     "sources": [
       {
@@ -25,7 +31,7 @@
         "url": "https://docs.trevee.xyz/"
       }
     ],
-    "rationale": "Trevee identifies the Veda BoringVault backing addresses, accepted stablecoins, and strategy deployment across external protocols, but does not publish a current asset-versus-strategy allocation. The prior 70/30 split is therefore replaced by one explicit 100% mixed basket rather than preserving unsupported weights.",
+    "rationale": "Trevee identifies the Veda BoringVault backing addresses, accepted stablecoins, and strategy deployment across external protocols, but does not publish a current asset-versus-strategy allocation. The prior 70/30 split is therefore replaced by one explicit 100% mixed basket rather than preserving unsupported weights. Write-time re-open 2026-07-28: Trevee treasury-backing-address docs still list multi-stablecoin Veda BoringVault accepts (USDC/USDT/DAI/GHO/USDC.e) with DeBank bundle links but no live weight split; second Trevee docs surface corroborates scAsset treasury model. knownUnknownExposurePct remains 100.",
     "compositionBasis": "Trevee disclosed Veda BoringVault backing architecture",
     "scope": "full-composition",
     "knownUnknownExposure": "Current balances by accepted stablecoin, lending protocol, and strategy are not published in a source suitable for a defensible static split.",
@@ -37,9 +43,15 @@
         "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "The backing addresses accept multiple tracked stablecoins and deploy into multiple protocols without publishing current constituent weights.",
-        "candidateCoinIds": ["usdc-circle", "usdt-tether", "dai-makerdao", "gho-aave"]
+        "candidateCoinIds": [
+          "usdc-circle",
+          "usdt-tether",
+          "dai-makerdao",
+          "gho-aave"
+        ]
       }
-    ]
+    ],
+    "compositionAsOf": "2026-07-28"
   },
   "custodyProfile": {
     "providers": [

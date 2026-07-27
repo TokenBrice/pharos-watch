@@ -11,8 +11,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "probable",
     "sources": [
       {
@@ -24,10 +24,11 @@
         "url": "https://monerium.com/fee-schedule/"
       }
     ],
-    "rationale": "Monerium identifies safeguarded deposits at Arion Bank and LHV Bank and states that the bulk of EURe funds is held in the AAA-rated State Street EUR Liquidity LVNAV Fund. It does not disclose current allocation weights, so the reserve remains one aggregate bank-deposit/fund basket.",
+    "rationale": "Write-time re-open 2026-07-28: financial-information still names safeguarded institutions Arion Bank (Iceland), LHV Bank (Estonia), and State Street Global Advisors (Europe), states policy is to hold only as much in bank deposits as needed for anticipated redemptions, and states that for EURe the bulk of users' funds is safeguarded in the AAA-rated State Street EUR Liquidity LVNAV Fund. Fee-schedule still states e-money tokens are overcollateralized 102% and safeguarded in short, high-quality, and liquid assets (sovereign or corporate bonds) or with banks. No current provider or asset-class weights and no independent assets-and-liabilities composition schedule. Modeled as one full-envelope bank-deposit/LVNAV basket with basket-needs-split.",
     "compositionBasis": "Current Monerium safeguarding policy; provider and asset-class weights undisclosed",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "All reserves fall within the disclosed bank-deposit and liquidity-fund basket, but the current allocation by provider and asset class is not public. Monerium's reviewed materials do not provide a current independent assets-and-liabilities assurance report or reconciliation schedule, so assurance and custody-continuity conclusions remain bounded.",
+    "knownUnknownExposure": "All reserves fall within the disclosed bank-deposit and State Street EUR Liquidity LVNAV Fund basket, but the current allocation by provider and asset class is not public. Monerium states public attestations are being prepared and does not provide a current independent assets-and-liabilities reconciliation.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -35,7 +36,7 @@
         "reserveName": "EUR bank deposits and the State Street EUR Liquidity LVNAV Fund",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Monerium describes the providers and says the fund holds the bulk of reserves, but does not publish exact weights."
+        "rationale": "Monerium names providers and says the LVNAV fund holds the bulk of EURe reserves, but does not publish exact deposit vs fund weights."
       }
     ]
   },

@@ -35,39 +35,47 @@
   "geckoId": "silk-bcec1136-561c-4706-a42c-8b67d0d7f7d2",
   "oracleRisk": {
     "tier": "standard-external",
-    "summary": "Shade documents Band Protocol data feeds for SILK basket pricing and Shade apps, with SupraOracles noted separately but no stronger failover tier verified.",
+    "summary": "SILK basket NAV is documented as priced from Band Protocol reference feeds; Shade's tech stack lists Band as the live oracle with SupraOracles still under research (no verified production failover). Independent SCRT Labs Secret Network v1.10 admin-hardcode proposal enumerates Silk Index Oracle secret1552yh3rplmyrjwhcxrq0egg35uy6zwjtszecf0, Shade Oracle Router Primary, Mock Band, and collateral-specific oracles (Stride, Lido, Quicksilver, Persistence) under ShadeDAO Multisig admin; the securesecrets/shade BandQuery interface implements Band GetReferenceData/GetReferenceDataBulk.",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "unresolved",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "OpenAI Codex Safety Score V9 oracle review",
-      "rationale": "Shade documents Band Protocol basket pricing and several SILK stabilization routes, but the reviewed public sources do not establish a complete current production oracle and liquidation branch for the vault, redemption-pool, and governance-controlled paths.",
+      "reviewedAt": "2026-07-28",
+      "reviewer": "Grok wave-8 GROK-RESEARCH controls",
+      "rationale": "ShadeLend is documented as isolated-risk overcollateralized vault markets with stability-pool liquidations, and the SCRT Labs v1.10 proposal lists multiple Shade oracle contracts (Silk Index Oracle plus LST/collateral routers). That architecture implies market-specific oracle and liquidation branches, but Secret Network privacy and the reviewed public sources do not publish a complete current production map of vault collateral identities to feed paths, heartbeats, fallbacks, and per-vault LTV/liquidation parameters, so branch inventory remains unresolved rather than invented.",
       "sources": [
         {
-          "label": "Shade tech stack",
+          "label": "SILK overcollateralized minting (ShadeLend)",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+        },
+        {
+          "label": "SCRT Labs v1.10 hardcoded-admins proposal (Silk Index Oracle and oracle stack)",
+          "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+        },
+        {
+          "label": "Shade tech stack (Band Protocol / Supra research)",
           "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/tech-stack.md"
-        },
-        {
-          "label": "SILK basket composition",
-          "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/basket-composition.md"
-        },
-        {
-          "label": "SILK minting and redemption",
-          "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex Safety Score V9 oracle review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 GROK-RESEARCH controls",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Shade tech stack",
+        "label": "Shade tech stack (Band Protocol live; Supra under research)",
         "url": "https://docs.shadeprotocol.io/shade-protocol/shade-protocol/tech-stack.md"
       },
       {
-        "label": "SILK basket composition",
+        "label": "SILK basket composition (Band Protocol datasets)",
         "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/basket-composition.md"
+      },
+      {
+        "label": "SCRT Labs v1.10 hardcoded-admins proposal (Silk Index Oracle / Mock Band / oracle router)",
+        "url": "https://github.com/scrtlabs/SecretNetwork/blob/master/docs/proposals/hardcode-admins-on-v1.10.md"
+      },
+      {
+        "label": "securesecrets/shade BandQuery interface (GetReferenceData)",
+        "url": "https://github.com/securesecrets/shade/blob/main/packages/shade_protocol/src/contract_interfaces/oracles/band.rs"
       }
     ]
   },
@@ -129,13 +137,19 @@
       "blacklistable": true,
       "assetClass": "other",
       "issuerOrObligor": "ShadeLend vault depositors and issuers of DAO-whitelisted collateral assets",
-      "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 reserve batch 7",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "manual-review",
     "sources": [
       {
@@ -159,9 +173,9 @@
         "url": "https://app.shadeprotocol.io"
       }
     ],
-    "rationale": "Shade documents SILK issuance against overcollateralized, DAO-whitelisted ShadeLend vault collateral, but Secret Network privacy prevents a current constituent reconciliation. The Stability Pool is a pool of SILK deposits used to repay liquidated debt, not a separate reserve asset, and collateral redemptions return collateral from at-risk vaults. The reviewed primary sources do not support the former 70/20/10 allocation or a fixed 10% SHD backing slice, so those false-precision rows are replaced by one complete unsplit vault-collateral basket.",
+    "rationale": "Write-time re-open 2026-07-28 of Shade SILK overcollateralized minting docs: SILK minted by locking 120–150%+ accepted volatile collateral in ShadeLend isolated markets with stability-pool liquidations. Secret Network privacy still prevents a public constituent reconciliation; envelope remains 100% DAO-whitelisted vault collateral basket with ku=100.",
     "compositionBasis": "Shade documentation of overcollateralized vault backing, Stability Pool liquidations, and collateral redemptions; current private collateral mix undisclosed",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "Current collateral identities, balances, and weights cannot be reconciled from the reviewed public sources or private Secret Network state.",
     "knownUnknownExposurePct": 100,
@@ -172,7 +186,9 @@
         "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "The protocol documents whitelisted vault collateral but does not publish the current constituent inventory or weights.",
-        "candidateCoinIds": ["usdc-circle"]
+        "candidateCoinIds": [
+          "usdc-circle"
+        ]
       }
     ]
   },

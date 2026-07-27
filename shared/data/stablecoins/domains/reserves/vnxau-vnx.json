@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -31,7 +31,7 @@
         "url": "https://vnx.li/gold/"
       }
     ],
-    "rationale": "AREVA reconciled 13,100 generated VNXAU across Ethereum, Q, Polygon, Solana, and Base to 13,100 gross grams reported on Philoro's custody statement as of December 31, 2025. The AUP documented a 1.13-token Solana difference caused by holder burns and still found generated supply did not exceed the reported gold balance. AREVA did not physically observe the gold or validate its quality, value, legal property rights, or the token-holder register.",
+    "rationale": "Write-time re-open 2026-07-28: the AREVA AUP still reconciles generated VNXAU across Ethereum, Q, Polygon, Solana, and Base to 13,100.00 brutto grams on Philoro Edelmetallhandel AG's custody statement as of December 31, 2025, finds the Philoro statement is in VNX Commodities AG's name, documents a 1.13-token Solana difference from holder burns, and finds generated supply did not exceed the reported gold balance. The live VNX Gold page still states every token is backed by allocated physical LBMA-certified gold with segregated storage in Liechtenstein and a serial-number allocation lookup. AREVA did not physically observe the gold or validate quality, value, or legal property rights.",
     "compositionBasis": "AREVA AUP reconciliation of VNXAU supply to gross grams on Philoro's custody statement",
     "compositionAsOf": "2025-12-31",
     "scope": "full-composition",

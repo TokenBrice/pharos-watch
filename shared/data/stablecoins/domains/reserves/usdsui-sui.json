@@ -12,20 +12,20 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-EVD-A wave6",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve re-verification",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Bridge reserve management (accessed 2026-07-22)",
+        "label": "Bridge reserve management (re-opened 2026-07-28)",
         "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
       },
       {
-        "label": "Bridge stablecoins FAQ (accessed 2026-07-22)",
+        "label": "Bridge stablecoins FAQ (re-opened 2026-07-28)",
         "url": "https://apidocs.bridge.xyz/platform/issuance/faq"
       },
       {
-        "label": "Bridge reporting and transparency (accessed 2026-07-22)",
+        "label": "Bridge reporting and transparency",
         "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
       },
       {
@@ -33,9 +33,9 @@
         "url": "https://blog.sui.io/sui-dollar-launch-bridge/"
       }
     ],
-    "rationale": "Rechecked 2026-07-22: Bridge states that issued stablecoins are at least 1:1 collateralized. Its reserve-management documentation allows allocation across USD, on-chain stablecoins, and Treasuries, while its FAQ identifies cash, short-dated U.S. Treasuries, overnight Treasury repos, and government money-market funds. No public USDsui-specific reserve report, independent assurance artifact, or authenticated reserve-API output identifies current weights, providers, or holdings, so the complete basket is retained as one aggregate slice.",
+    "rationale": "Re-opened 2026-07-28: Bridge reserve-management docs still state issued stablecoins are at least 100% collateralized with equivalent fiat value and allocate across on-demand liquid assets (fiat/stablecoins) and Treasuries, naming Lead Bank, BlackRock, Fidelity, Superstate USTB, and BUIDL as partners. Bridge FAQ independently states 1:1 USD backing via short-dated US Treasuries, overnight Treasury repos, money market funds, and cash held in segregated accounts for token holders and custodied by BlackRock and Fidelity. No public USDsui-specific reserve report, independent assurance artifact, or authenticated reserve-API output identifies current weights or holdings, so the complete basket remains one aggregate slice with knownUnknownExposurePct=100.",
     "compositionBasis": "Bridge Open Issuance reserve categories; USDsui-specific component weights are undisclosed",
-    "compositionAsOf": "2026-07-22",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve categories are identified, but USDsui-specific weights, stablecoin identities, and individual bank, repo, and money-market-fund counterparties are not published.",
     "knownUnknownExposurePct": 100,

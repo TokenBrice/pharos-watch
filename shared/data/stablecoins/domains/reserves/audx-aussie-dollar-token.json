@@ -7,13 +7,18 @@
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed Australian financial institutions",
-      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 NR-recovery review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "verified",
     "sources": [
       {
@@ -25,7 +30,7 @@
         "url": "https://www.audxtoken.com/transparency"
       }
     ],
-    "rationale": "The May 31, 2026 report records AUD 4,018,780.50 in designated reserve bank accounts against AUDX 4,008,056 of reported supply. Aura Partners independently confirmed the reserve balances directly with the relevant financial institutions and reconciled them to the issued supply; the institutions and account-level allocation are not disclosed.",
+    "rationale": "The May 31, 2026 report records AUD 4,018,780.50 in designated reserve bank accounts against AUDX 4,008,056 of reported supply. Aura Partners independently confirmed the reserve balances directly with the relevant financial institutions and reconciled them to the issued supply; the institutions and account-level allocation are not disclosed. Write-time re-open 2026-07-28: Aura Partners limited-assurance PDF still states AUD reserves in designated bank accounts $4,018,780.50 >= supply 4,008,056 as of 31 May 2026; transparency page still hosts the report.",
     "compositionBasis": "AUDX reserve verification subject to Aura Partners limited assurance as of May 31, 2026",
     "compositionAsOf": "2026-05-31",
     "scope": "full-composition",

@@ -214,8 +214,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex reserve curation",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "manual-review",
     "sources": [
       {
@@ -233,13 +233,21 @@
       {
         "label": "StandX DUSD redemption",
         "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
+      },
+      {
+        "label": "StandX product FAQ",
+        "url": "https://docs.standx.com/docs/dusd-overview/product-faq"
+      },
+      {
+        "label": "DefiLlama StandX DUSD stablecoin profile",
+        "url": "https://stablecoins.llama.fi/stablecoin/252"
       }
     ],
-    "rationale": "The official StandX sources document USDT/USDC mint inputs, conversion into spot assets, matching perpetual short positions, and a stability reserve, but do not publish a dated balance sheet, current asset or venue inventory, or weights for those components. The prior 50/45/5 allocation was therefore removed and replaced by the narrowest source-supported aggregate envelope.",
-    "compositionBasis": "StandX architecture, hedging, and redemption documentation reviewed on 2026-07-21; component weights are undisclosed",
-    "compositionAsOf": "2026-07-21",
+    "rationale": "Write-time re-open 2026-07-28: StandX architecture, minting, risks/hedging, redemption, and product-FAQ pages still describe DUSD as market-neutral / delta-neutral — USDT/USDC mint inputs converted into spot crypto (examples include ETH, SOL, BTC) with matching short perpetual hedges plus a stability/RSV reserve fund for negative funding — without any dated balance sheet, component weights, venue inventory, or Stability Reserve Fund size. Product FAQ points users to the website for a 'reserve ratio' but the public dashboard and overview pages return no itemized composition, PoR, or attestation. Independently, DefiLlama classifies StandX DUSD as pegMechanism crypto-backed with mint/redeem via USDT/USDC and publishes circulating supply only (no reserve breakdown). No public API on api.standx.com, perps.standx.com, or ice.standx.com exposes reserve composition. Therefore the prior fabricated 50/45/5 split remains rejected; the narrowest source-supported row is the 100% aggregate market-neutral envelope with knownUnknownExposurePct 100.",
+    "compositionBasis": "StandX architecture, minting, hedging, redemption, and product-FAQ documentation re-opened 2026-07-28; component weights remain undisclosed; DefiLlama corroborates crypto-backed peg without a reserve breakdown",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current reserve weights, exact spot constituents, exchange counterparties, and the Stability Reserve Fund composition are not disclosed in the reviewed primary sources.",
+    "knownUnknownExposure": "Current reserve weights, exact spot constituents, exchange counterparties, custodian shares, and the Stability Reserve Fund composition are not disclosed in the reviewed primary sources or independent catalogs.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -247,7 +255,7 @@
         "reserveName": "Market-neutral spot collateral, perpetual hedges, and stability reserve",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The reviewed primary sources document the reserve mechanism but do not publish current component weights or venue allocations, so the aggregate cannot be split or linked without fabrication."
+        "rationale": "Primary docs and independent DefiLlama catalog document the delta-neutral reserve mechanism but do not publish current component weights or venue allocations, so the aggregate cannot be split or linked without fabrication."
       }
     ]
   },

@@ -111,9 +111,15 @@
     "summary": "Users mint USDM 1:1 by depositing USDC into MonetrixVault. The token only accepts mint calls from that vault, while a reviewed 48-hour timelock holds the ACL upgrader role and can replace UUPS mint-critical implementations.",
     "upgradeability": {
       "model": "uups",
-      "proxyAddresses": ["0xe2d2959f89b6389deb624bf076fe7d9e5401f377"],
-      "implementationAddresses": ["0x05faf9cfa7143804e7fb0db423fde8330cd586df"],
-      "adminAddresses": ["0xDe54E1F99752062ef448Dcc6C7636f90214C789e"],
+      "proxyAddresses": [
+        "0xe2d2959f89b6389deb624bf076fe7d9e5401f377"
+      ],
+      "implementationAddresses": [
+        "0x05faf9cfa7143804e7fb0db423fde8330cd586df"
+      ],
+      "adminAddresses": [
+        "0xDe54E1F99752062ef448Dcc6C7636f90214C789e"
+      ],
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "Monetrix 48-hour upgrade timelock",
@@ -146,7 +152,9 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedBlock": 40308120,
-        "failureDomainKeys": ["operator:monetrix-protocol"],
+        "failureDomainKeys": [
+          "operator:monetrix-protocol"
+        ],
         "sources": [
           {
             "label": "Monetrix mint guide",
@@ -170,7 +178,9 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedBlock": 40308120,
-        "failureDomainKeys": ["operator:monetrix-governance"],
+        "failureDomainKeys": [
+          "operator:monetrix-governance"
+        ],
         "sources": [
           {
             "label": "Monetrix contracts",
@@ -194,7 +204,9 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "observedBlock": 40308120,
-        "failureDomainKeys": ["operator:monetrix-governance"],
+        "failureDomainKeys": [
+          "operator:monetrix-governance"
+        ],
         "sources": [
           {
             "label": "Monetrix contracts",
@@ -238,13 +250,18 @@
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle and MonetrixVault",
-      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-6 V9 reserve review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -260,9 +277,9 @@
         "url": "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts"
       }
     ],
-    "rationale": "Monetrix documents USDM minting against USDC through MonetrixVault and separately describes deployment into a delta-neutral Hyperliquid strategy. The static envelope identifies the documented USDC input, but the public sources do not expose a dated, independently reconciled breakdown of strategy custody, margin, or redeemable balances; those exposures remain explicitly unknown rather than being split into invented slices.",
+    "rationale": "Write-time re-open 2026-07-28 of Monetrix mint guide (USDC→USDM 1:1 via MonetrixVault.deposit) and architecture page (USDC deployed into delta-neutral Hyperliquid spot+short portfolio). Static envelope still identifies the documented USDC mint input as the sole tracked reserve category (100% USDC); strategy-level spot/perp constituents remain dynamic and are not a second static reserve slice. knownUnknownExposurePct stays 0 at category level.",
     "compositionBasis": "Monetrix documented USDC mint input and strategy architecture",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-28",
     "scope": "selected-slices",
     "knownUnknownExposure": "Current strategy positions, exchange custody, margin balances, and redemption liquidity are not independently published as a reconciled reserve snapshot.",
     "knownUnknownExposurePct": 0

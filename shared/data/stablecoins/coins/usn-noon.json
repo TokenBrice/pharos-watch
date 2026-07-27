@@ -364,7 +364,7 @@
   "reserves": [
     {
       "name": "Private Credit (Fasanara FTAC)",
-      "pct": 74.5,
+      "pct": 71.18,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "Fasanara Capital and FTAC borrowers",
@@ -380,7 +380,7 @@
     },
     {
       "name": "DeFi Lending",
-      "pct": 10.73,
+      "pct": 10.24,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Undisclosed DeFi protocols and borrowers",
@@ -395,10 +395,10 @@
     },
     {
       "name": "Other / unmapped Accountable buckets",
-      "pct": 0.92,
+      "pct": 5.36,
       "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "Undisclosed Noon reserve counterparties",
+      "issuerOrObligor": "Undisclosed Noon reserve counterparties (includes residual Funding Rate (BTC) dust)",
       "riskFactors": [
         "credit",
         "duration",
@@ -415,7 +415,7 @@
     },
     {
       "name": "CLOs (JAAA)",
-      "pct": 5.48,
+      "pct": 5.23,
       "risk": "high",
       "coinId": "jaaa-janus-henderson-anemoy",
       "depType": "collateral",
@@ -433,7 +433,7 @@
     },
     {
       "name": "US Treasury Bills",
-      "pct": 8.37,
+      "pct": 7.99,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -479,8 +479,8 @@
     }
   },
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex reserve composition audit",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -488,41 +488,41 @@
         "url": "https://cache.accountable.capital/dashboard/noon"
       },
       {
-        "label": "Noon transparency documentation",
-        "url": "https://docs.noon.capital/security/transparency"
+        "label": "Noon radical transparency of reserves & returns",
+        "url": "https://docs.noon.capital/built-for-safety/3.-radical-transparency-of-reserves-and-returns"
       },
       {
         "label": "Noon liquidity documentation",
         "url": "https://docs.noon.capital/noon-the-basics/liquidity"
       }
     ],
-    "rationale": "The live Accountable deployment capture (API timestamp 2026-07-21T08:41:48.655Z) reports Fasanara FTAC private credit at 74.50%, DeFi lending at 10.73%, JAAA CLOs at 5.48%, US Treasury bills at 8.37%, Other at 0.92%, and a sub-$1 Funding Rate (BTC) balance below 0.000005%. The negligible funding-rate balance is included in the rounded Other slice so the curated composition remains five material buckets summing to 100%. The dashboard establishes current category allocation but does not disclose the FTAC borrower book, DeFi positions, or Other constituents.",
-    "compositionBasis": "Accountable deployment-category snapshot captured at 2026-07-21T08:41:48.655Z",
-    "compositionAsOf": "2026-07-21",
+    "rationale": "Write-time re-open 2026-07-28 of Accountable noon API (ts 2026-07-27T23:22:49.655Z): total_reserves $34,400,179.52 with deployment Private Credit (Fasanara FTAC) $24,486,151.98 (71.18%), DeFi Lending $3,521,782.05 (10.24%), CLOs (JAAA) $1,798,755.12 (5.23%), US Treasury Bills $2,748,703.09 (7.99%), Other $1,844,786.32 + Funding Rate (BTC) $0.96 merged into Other at 5.36%. Slices sum to 100%. Prior transparency URL /security/transparency 404s; replacement built-for-safety radical-transparency page still documents Accountable live PoS. Borrower-level FTAC/DeFi/Other detail remains undisclosed.",
+    "compositionBasis": "Accountable deployment-category snapshot captured at 2026-07-27T23:22:49.655Z (API ts 1785194569655)",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "FTAC borrower-level exposure, DeFi protocol positions, and the unmapped Other bucket remain unresolved.",
-    "knownUnknownExposurePct": 86.15,
+    "knownUnknownExposurePct": 86.78,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Private Credit (Fasanara FTAC)",
-        "pct": 74.5,
+        "pct": 71.18,
         "disposition": "insufficient-evidence",
-        "rationale": "The current category and weight are known, but borrower identities, loan terms, seniority, and custody are not published."
+        "rationale": "Category weight known; borrower identities/terms/seniority/custody not published."
       },
       {
         "reserveIndex": 1,
         "reserveName": "DeFi Lending",
-        "pct": 10.73,
+        "pct": 10.24,
         "disposition": "basket-needs-split",
-        "rationale": "The current category and weight are known, but protocol, market, borrower, and position weights are not published."
+        "rationale": "Category weight known; protocol/market/position weights not published."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Other / unmapped Accountable buckets",
-        "pct": 0.92,
+        "pct": 5.36,
         "disposition": "insufficient-evidence",
-        "rationale": "Accountable reports this residual without constituent identity or instrument detail."
+        "rationale": "Residual Accountable Other without constituent identity."
       }
     ]
   },

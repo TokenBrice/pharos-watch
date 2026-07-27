@@ -326,8 +326,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "manual-review",
     "sources": [
       {
@@ -339,9 +339,9 @@
         "url": "https://www.kava.io/"
       }
     ],
-    "rationale": "USDX survives as a legacy Kava Mint CDP debt token that trades persistently below its one-dollar target. Kava's current public surfaces no longer publish a collateral inventory for the legacy Mint module, and the legacy CDP REST parameters endpoint returns Not Implemented, so no current constituent weights can be authored. The single aggregate envelope is retained with explicit v9 classification rather than invented constituent weights.",
+    "rationale": "Write-time re-open 2026-07-28 of Kava Mint help article (last updated 2023-04-03): USDX is CDP-borrowed against BUSD, BNB, BTCB, XRPB, KAVA. Kava marketing site still live but does not publish a current legacy Mint collateral inventory. Envelope remains 100% other with ku=100 for the legacy CDP system.",
     "compositionBasis": "Kava Mint CDP design documentation; no current collateral inventory published (legacy CDP parameter API decommissioned)",
-    "compositionAsOf": "2026-07-20",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The current collateral composition, vault-level balances, and protocol liquidity backing the legacy USDX debt token are not disclosed by a current primary source.",
     "knownUnknownExposurePct": 100,

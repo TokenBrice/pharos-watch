@@ -12,33 +12,46 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-EVD-A wave6",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "A7A5 reserve transparency documentation (accessed 2026-07-22)",
-        "url": "https://docs.a7a5.io/legal/transparency.md"
+        "label": "A7A5 introduction (What is A7A5?) — re-opened 2026-07-28",
+        "url": "https://docs.a7a5.io/introduction-to-a7a5/readme.md"
       },
       {
-        "label": "A7A5 terms of use (accessed 2026-07-22)",
+        "label": "A7A5 terms of use §4.2–4.3 — re-opened 2026-07-28",
         "url": "https://docs.a7a5.io/legal/terms-of-use.md"
       },
       {
-        "label": "U.S. Treasury designation of Old Vector LLC (2025-08-14)",
+        "label": "A7A5 how-to-earn (overnight deposits) — re-opened 2026-07-28",
+        "url": "https://docs.a7a5.io/introduction-to-a7a5/how-to-earn-using-a7a5.md"
+      },
+      {
+        "label": "A7A5 transparency page (no reserve schedule) — re-opened 2026-07-28",
+        "url": "https://docs.a7a5.io/legal/transparency.md"
+      },
+      {
+        "label": "U.S. Treasury designation of Old Vector LLC and A7A5 as ruble-backed (2025-08-14) — re-opened 2026-07-28",
         "url": "https://home.treasury.gov/news/press-releases/sb0225"
       },
       {
-        "label": "UK designation of Old Vector LLC and A7A5 network (2025-08-20)",
+        "label": "UK designation of Old Vector LLC and A7A5 network (2025-08-20) — re-opened 2026-07-28",
         "url": "https://www.gov.uk/government/news/uk-targets-sanctions-circumvention-and-crypto-networks-exploited-by-russia"
       },
       {
-        "label": "EU 19th sanctions package prohibiting A7A5 transactions (2025-10-23)",
-        "url": "https://www.consilium.europa.eu/en/press/press-releases/2025/10/23/19th-package-of-sanctions-against-russia-eu-targets-russian-energy-third-country-banks-and-crypto-providers/pdf"
+        "label": "EU 19th sanctions package press release (A7A5 transaction ban) — content confirmed 2026-07-28 via independent legal summaries; Consilium edge CF-challenged for direct fetch",
+        "url": "https://www.consilium.europa.eu/en/press/press-releases/2025/10/23/19th-package-of-sanctions-against-russia-eu-targets-russian-energy-third-country-banks-and-crypto-providers/"
+      },
+      {
+        "label": "Skadden summary of EU Regulation 833 A7A5 transaction prohibition (corroboration of Consilium package)",
+        "url": "https://www.skadden.com/insights/publications/2025/11/eu-adopts-19th-sanctions-package"
       }
     ],
-    "rationale": "Rechecked 2026-07-22: A7A5's transparency page describes one-for-one backing by Russian-ruble deposits, while section 4.3 of its terms describes a diversified basket of fiat deposits and short-term assets. The issuer does not reconcile those descriptions or publish current constituent weights, institutions, account terms, or a retrievable assurance artifact, so the complete reserve is represented as one unresolved aggregate. Old Vector LLC is designated by the United States and United Kingdom, and the European Union prohibits A7A5 transactions; these restrictions create material legal and access risk but do not establish that any specific reserve account is frozen. Kyrgyz virtual-asset registration is not prudential reserve verification.",
-    "compositionBasis": "Conflicting current issuer descriptions of the eligible Russian-ruble reserve envelope",
+    "rationale": "Write-time re-open 2026-07-28. Issuer introduction still states a 1:1 Russian-rouble peg with 'Fiat deposits in Roubles… held in top-tier banks with a correspondent network connected to Kyrgyz Republic and high overnight interest rates,' and overnight interest paid from bank deposits. How-to-earn still describes income from overnight bank deposits using CBR key rate minus 1 pp, without naming banks or weights. Terms §4.3 still describes a diversified RWA basket of 'fiat deposits held in leading banks… as well as high interest rates on short-term assets,' without constituent weights, institutions, or a reserve schedule. The transparency page no longer states one-for-one ruble-deposit backing; as of this re-open it only asserts distribution through licensed brokers/exchanges and contains no reserve composition, attestation, or bank identities — so the prior 2026-07-22 transparency-backed wording is superseded. Because the live issuer descriptions still conflict (deposit/overnight emphasis vs deposits-plus-short-term-asset basket) and no instrument-level schedule or independent assurance artifact is published, the complete reserve remains one unresolved aggregate at 100% known-unknown. U.S. Treasury (re-opened) still designates Old Vector and describes A7A5 as a ruble-backed digital asset; UK FCDO (re-opened) still designates OLD VECTOR LLC and describes A7A5 as a rouble-backed token. EU 19th-package A7A5 transaction ban is corroborated by independent legal summaries (Consilium HTML was CF-challenged for direct fetch). Sanctions create material legal and access risk but do not establish that any specific reserve account is frozen. Third-party investigative claims naming Promsvyazbank as the deposit bank are not adopted into composition because the issuer does not currently name reserve banks and no dual primary pin for a present-day PSB allocation was re-verified. Kyrgyz VASP registration is not prudential reserve verification.",
+    "compositionBasis": "Conflicting current issuer descriptions of the eligible Russian-ruble reserve envelope (deposits/overnight vs deposits plus short-term assets); no published weights",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "Reserve-bank identities, deposit and short-term-asset weights, instrument identities, account terms, custody, liquidity, and current assurance evidence are undisclosed.",
     "knownUnknownExposurePct": 100,
@@ -48,7 +61,7 @@
         "reserveName": "Russian-ruble reserve basket (deposits and short-term assets; allocation undisclosed)",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Issuer sources identify deposits and short-term assets but do not publish a current constituent split or instrument-level reserve schedule."
+        "rationale": "Issuer sources identify deposits and short-term assets (and, on other pages, overnight deposits alone) but do not publish a current constituent split, bank identities, or instrument-level reserve schedule."
       }
     ]
   },
@@ -62,16 +75,24 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-EVD-A wave6",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "A7A5 terms of use (accessed 2026-07-22)",
+        "label": "A7A5 introduction (What is A7A5?) — re-opened 2026-07-28",
+        "url": "https://docs.a7a5.io/introduction-to-a7a5/readme.md"
+      },
+      {
+        "label": "A7A5 terms of use §4.3 — re-opened 2026-07-28",
         "url": "https://docs.a7a5.io/legal/terms-of-use.md"
+      },
+      {
+        "label": "A7A5 information on the risks (custodial risks) — re-opened 2026-07-28",
+        "url": "https://docs.a7a5.io/additional/information-on-the-risks.md"
       }
     ],
-    "uncertainty": "A7A5 refers to deposits and short-term assets but does not identify the institutions, asset custodians, jurisdictions, provider shares, segregation, bankruptcy remoteness, rehypothecation terms, or account restrictions.",
+    "uncertainty": "A7A5 refers to fiat/overnight deposits and short-term assets at unnamed banks with a Kyrgyz-linked correspondent network but does not identify the institutions, asset custodians, jurisdictions, provider shares, segregation, bankruptcy remoteness, rehypothecation terms, or account restrictions. Risk page acknowledges custodial risk generically without provider detail.",
     "knownUnknownExposurePct": 100
   }
 }

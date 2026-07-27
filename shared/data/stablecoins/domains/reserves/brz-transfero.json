@@ -12,24 +12,24 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Transfero BRZ transparency report",
-        "url": "https://transfero.com/wp-content/uploads/2024/12/daily-report.pdf"
+        "label": "Transfero BRZ transparency report (hosted PDF; as-of March 31, 2024)",
+        "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf"
       },
       {
         "label": "Transfero BRZ product disclosure",
         "url": "https://transfero.com/brz"
       }
     ],
-    "rationale": "The live single-asset adapter publishes one aggregate BRL fiat reserves row, so the reviewed classification is keyed to that exact 100% identity. Transfero's issuer report describes BRZ as redeemable one-for-one for reais and states that the reserve is held at a financial institution authorized by the Central Bank of Brazil. The accessible report is dated March 31, 2024 and does not name the institution or disclose additional reserve instruments.",
-    "compositionBasis": "Transfero BRZ transparency report dated March 31, 2024",
+    "rationale": "Write-time re-open 2026-07-28: the prior transfero.com/wp-content/.../daily-report.pdf URL returns 404. The live BRZ product page now links a Reserve report PDF at framerusercontent.com that still presents BRZ as redeemable 1:1 for reais, reports R$15,243,944.24 collateral against R$12,398,003.00 circulating, and states the reserve is held in custody at a financial institution authorized by the Central Bank of Brazil, dated March 31, 2024 18:00 BRT. The product page independently states each BRZ is backed 1:1 with BRL with redemption via regulated partners. No institution name, account terms, or newer composition report was found. Modeled as one 100% BRL bank-deposit slice.",
+    "compositionBasis": "Transfero BRZ transparency report dated March 31, 2024 (re-hosted URL from live product page)",
     "compositionAsOf": "2024-03-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer discloses a single authorized-institution reserve category but not the institution name, account terms, liquidity terms, segregation, or a current report.",
+    "knownUnknownExposure": "The issuer discloses a single authorized-institution BRL reserve category but not the institution name, account terms, liquidity terms, segregation, or a report more recent than March 31, 2024.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -58,8 +58,8 @@
     "confidence": "probable",
     "sources": [
       {
-        "label": "Transfero BRZ transparency report",
-        "url": "https://transfero.com/wp-content/uploads/2024/12/daily-report.pdf"
+        "label": "Transfero BRZ transparency report (hosted PDF; as-of March 31, 2024)",
+        "url": "https://framerusercontent.com/assets/C3GwAo6yZKzxjtKD1yDo43k0rAg.pdf"
       }
     ],
     "uncertainty": "The issuer report says the reserve is held at an authorized Brazilian financial institution, but does not name it or disclose segregation, bankruptcy-remoteness, rehypothecation, or account-level terms."

@@ -20,9 +20,18 @@
     "reviewer": "SONG-5 Safety Score V9 mechanism review",
     "rationale": "BLOX describes MYRC as a 1:1 Malaysian Ringgit stablecoin minted and redeemed through domestic banking rails and backed by ringgit-denominated reserve assets held at Malaysian financial institutions. The reviewed product, transparency, and whitepaper materials do not identify the current asset classes or institutions and do not support the prior Maybank and UTMB attribution.",
     "sources": [
-      {"label": "BLOX MYRC transparency", "url": "https://www.blox.my/myrc/transparency"},
-      {"label": "MYRC whitepaper", "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf"},
-      {"label": "BLOX MYRC product page", "url": "https://www.blox.my"}
+      {
+        "label": "BLOX MYRC transparency",
+        "url": "https://www.blox.my/myrc/transparency"
+      },
+      {
+        "label": "MYRC whitepaper",
+        "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf"
+      },
+      {
+        "label": "BLOX MYRC product page",
+        "url": "https://www.blox.my"
+      }
     ]
   },
   "detailProvider": "coingecko",
@@ -231,13 +240,19 @@
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Blox Blockchain Sdn Bhd and undisclosed Malaysian financial institutions",
-      "riskFactors": ["counterparty", "liquidity", "custody", "concentration", "legal"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration",
+        "legal"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 reserve batch 7",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "manual-review",
     "sources": [
       {
@@ -253,9 +268,9 @@
         "url": "https://www.blox.my"
       }
     ],
-    "rationale": "BLOX's current transparency disclosure says MYRC is backed by an equivalent value of ringgit-denominated reserve assets and that cash is held at Malaysian financial institutions. The whitepaper describes a MYR reserve managed by BLOX. Neither source identifies Maybank or Universal Trustee, publishes a current asset-class split, or supports treating the reserve as 100% bank deposits, so the unsupported provider attribution is removed and the reserve remains one unsplit known-unknown envelope.",
+    "rationale": "Write-time re-open 2026-07-28 of MYRC whitepaper PDF: every MYRC fully backed 1:1 by MYR in a BLOX-managed reserve fund; audits claimed but instrument-level bank holdings not itemized. Transparency page re-opened (marketing shell) still asserts 1:1 MYR redeemability. Envelope remains 100% MYR-denominated reserves with ku=100.",
     "compositionBasis": "BLOX transparency and whitepaper disclosure of MYR-denominated reserve assets",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "Current reserve asset classes, financial institutions, provider shares, balances, and legal segregation terms are not disclosed in the reviewed primary sources.",
     "knownUnknownExposurePct": 100,
@@ -312,7 +327,27 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
     "confidence": "verified",
-    "summary": "MYRC uses OZ AccessControl on EVM chains. On Ethereum, MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a 2-of-3 Gnosis Safe 0xcca0793222422e8ac1dd48db1aa691f9d360a1c2 (Safe v1.3.0 L2, no modules/guard). All role grants confirmed via RoleGranted event scan.",
+    "summary": "MYRC uses OZ AccessControl on EVM chains. On Ethereum, MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a 2-of-3 Gnosis Safe 0xcca0793222422e8ac1dd48db1aa691f9d360a1c2 (Safe v1.3.0 L2, no modules/guard). All role grants confirmed via RoleGranted event scan. The Ethereum MYRC token is a non-proxy immutable ERC-20 (EIP-1967 implementation and admin slots are zero; verified source has no upgrade surface).",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-28",
+      "observedBlock": 25627290,
+      "sources": [
+        {
+          "label": "Ethereum PublicNode RPC (MYRC EIP-1967 slots zero at block 25627290)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Blockscout verified MYRC source (AccessControl ERC-20, no upgrade API)",
+          "url": "https://eth.blockscout.com/address/0xbed7d999f1d71ac70c263f64c7c7e009d691be2e"
+        },
+        {
+          "label": "Blox docs Environments & Supported Chains (MYRC ERC-20 addresses)",
+          "url": "https://docs.blox.my/api/environments"
+        }
+      ]
+    },
     "controls": [
       {
         "chain": "ethereum",

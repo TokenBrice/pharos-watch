@@ -224,8 +224,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -237,9 +237,9 @@
         "url": "https://www.anzens.com/landing/terms-and-conditions"
       }
     ],
-    "rationale": "Anzens states that USDA is 100% backed by dollars and dollar equivalents, including U.S. government Treasuries. Its terms enumerate cash, cash equivalents, U.S. Treasury Bills of different durations, and Treasury-focused money-market funds as eligible reserves, but neither source publishes a current allocation among those categories. The prior 60/40 split is therefore replaced by one explicit mixed reserve envelope.",
+    "rationale": "Write-time re-open 2026-07-28 of Anzens homepage FAQ (USDA 100% reserves backed by dollars and dollar equivalents / U.S. government treasuries) and Terms §9 (Reserves = cash, cash equivalents, U.S. Treasury Bills of different durations, and U.S. Treasury-focused money market funds). No current weights or attestation table; envelope 100% aggregate other with ku=100.",
     "compositionBasis": "Anzens issuer homepage and terms; reserve categories disclosed without current weights",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The issuer identifies the eligible reserve envelope but does not publish current category weights, holdings, counterparties, or custody-provider shares.",
     "knownUnknownExposurePct": 100,

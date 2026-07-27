@@ -402,44 +402,36 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-EVD-A wave6",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 GROK-RESEARCH phase-1 reserve",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Ondo Stocks available assets, including USDon (accessed 2026-07-22)",
+        "label": "Ondo Stocks available assets — What is USDon? (re-opened 2026-07-28)",
         "url": "https://docs.ondo.finance/ondo-stocks/available-assets"
       },
       {
-        "label": "Ondo Stocks investing and redeeming (accessed 2026-07-22)",
+        "label": "Ondo Stocks investing and redeeming — cash or equivalents backing (re-opened 2026-07-28)",
         "url": "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming"
       },
       {
-        "label": "Ondo Stocks trust and transparency (accessed 2026-07-22)",
+        "label": "Ondo Stocks trust and transparency — Ankura scope and broker-dealers (re-opened 2026-07-28)",
         "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency"
       },
       {
-        "label": "Ondo smart-contract audit index (accessed 2026-07-22)",
-        "url": "https://docs.ondo.finance/audits"
+        "label": "DefiLlama stablecoin module 408 mint/redeem description (re-opened 2026-07-28)",
+        "url": "https://stablecoins.llama.fi/stablecoin/408"
       },
       {
-        "label": "Ondo Cyfrin smart-contract audit (2025-07-14)",
-        "url": "https://docs-v2-git-prod-ondo-docs.vercel.app/pdf/2025-07-14-cyfrin-ondo-global-markets-v2.0.pdf"
-      },
-      {
-        "label": "Ondo Global Markets addresses (accessed 2026-07-22)",
-        "url": "https://docs.ondo.finance/addresses"
-      },
-      {
-        "label": "USDon Ethereum implementation source (observed 2026-07-20)",
-        "url": "https://sourcify.dev/server/v2/contract/1/0x267e11bb559f5d392e498cdd0e2342057031a2cf"
+        "label": "Ondo Global Markets available assets (alias path, re-opened 2026-07-28)",
+        "url": "https://docs.ondo.finance/ondo-global-markets/available-assets"
       }
     ],
-    "rationale": "Reverified 2026-07-22: Ondo states that each USDon is backed by one U.S. dollar of cash or equivalents in a Global Markets brokerage account and documents instant USDon settlement in the investing flow. Because the issuer does not disclose the cash-equivalent instruments or their weights, the aggregate is classified as other rather than assuming that the whole account is cash. Ondo's Ankura verification covers tokenized-stock securities and collateral, not USDon brokerage cash; the Cyfrin document is a smart-contract audit. No USDon-specific balance, broker identity, account reconciliation, or reserve assurance was found.",
-    "compositionBasis": "Ondo issuer product documentation for USDon cash-or-equivalent brokerage-account backing, accessed 2026-07-22",
-    "compositionAsOf": "2026-07-22",
+    "rationale": "Re-verified 2026-07-28 by re-opening primary issuer docs and an independent aggregator. Ondo available-assets still states USDon is 'backed 1:1 by a US dollar in one of Ondo Stocks' brokerage accounts'; investing-and-redeeming still states each USDon is 'backed by a dollar of cash or equivalents at an Ondo Stocks brokerage account' with instant USDon settlement in the invest/redeem flow. DefiLlama module 408 independently restates 'backed 1:1 by US dollars held in Ondo Global Markets' brokerage accounts' with 1:1 USDC mint/redeem. Because the issuer does not disclose cash-versus-cash-equivalent instruments or weights, the aggregate remains assetClass other at 100% rather than assuming pure cash. Trust-and-transparency still scopes Ankura daily attestations and first-priority security interest to tokenized-stock securities/collateral and 'Ondo Stocks holdings' at US-registered custodial broker-dealers, not to a USDon-specific cash-balance report. No public USDon reserve balance, named broker for USDon cash, account reconciliation, or independent USDon cash attestation was found on re-open.",
+    "compositionBasis": "Ondo issuer product documentation for USDon cash-or-equivalent brokerage-account backing, re-opened 2026-07-28; DefiLlama module 408 mint/redeem description as independent corroboration",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current cash balances, brokerage identity, account reconciliation, provider allocation, custody terms, and USDon-specific reserve assurance are not disclosed in the reviewed sources.",
+    "knownUnknownExposure": "Current cash balances, brokerage identity for USDon settlement cash, cash-versus-cash-equivalent instrument weights, account reconciliation, provider allocation, custody terms for the USDon cash sleeve, and any USDon-specific reserve assurance remain undisclosed in the re-opened sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -447,7 +439,7 @@
         "reserveName": "USDon settlement cash and cash equivalents held at Ondo Global Markets brokerage accounts",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The cash backing category is documented by the issuer, but the current amount, account composition, and reserve reconciliation cannot be reproduced from public evidence."
+        "rationale": "Issuer and DefiLlama document the cash-or-equivalent brokerage backing category, but the current amount, instrument mix, broker identity, and reserve reconciliation cannot be reproduced from public evidence."
       }
     ]
   },

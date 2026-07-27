@@ -6,13 +6,19 @@
       "pct": 100,
       "risk": "very-low",
       "assetClass": "other",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 curation",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -28,9 +34,9 @@
         "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD"
       }
     ],
-    "rationale": "Tempo identifies pathUSD as issued by Bridge and backed one-for-one by USD-denominated reserves. Bridge states that its custom stablecoins use configurable portfolios of short-dated U.S. Treasuries, overnight Treasury repos, money market funds, and cash. Neither source publishes pathUSD's current allocation, so the reserve remains one aggregate basket without invented weights.",
+    "rationale": "Tempo identifies pathUSD as issued by Bridge and backed one-for-one by USD-denominated reserves. Bridge states that its custom stablecoins use configurable portfolios of short-dated U.S. Treasuries, overnight Treasury repos, money market funds, and cash. Neither source publishes pathUSD's current allocation, so the reserve remains one aggregate basket without invented weights. Write-time re-open 2026-07-28: Bridge issuance reserves + FAQ docs still describe configurable reserve management for issued stablecoins; Tempo pathUSD docs corroborate product. No public dated instrument weights for pathUSD \u2192 ku=100.",
     "compositionBasis": "Bridge custom-stablecoin reserve policy; pathUSD allocation undisclosed",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The eligible Bridge reserve portfolio is known, but pathUSD's current asset-class allocation is not publicly disclosed.",
     "knownUnknownExposurePct": 100,

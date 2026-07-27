@@ -465,8 +465,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -486,7 +486,7 @@
         "url": "https://graphql.mainnet.iota.cafe"
       }
     ],
-    "rationale": "Virtue's reviewed IOTA checkpoint enumerates four debt-bearing collateral branches and their vault debt, but does not publish a current total collateral allocation or custody split that verifies the static 100% IOTA/stIOTA/iBTC fallback. The branch categories are retained without invented percentages or additional dependency edges. The live deployment is the Move-VM CDP on IOTA Rebased; the Dedaub-audited 'Virtue V2' Liquity fork for IOTA EVM shows no evidence of deployment, and current Virtue documentation names IOTA and stIOTA without confirming an IBTC branch, so the IBTC component remains unverified.",
+    "rationale": "Virtue's reviewed IOTA checkpoint enumerates four debt-bearing collateral branches and their vault debt, but does not publish a current total collateral allocation or custody split that verifies the static 100% IOTA/stIOTA/iBTC fallback. The branch categories are retained without invented percentages or additional dependency edges. The live deployment is the Move-VM CDP on IOTA Rebased; the Dedaub-audited 'Virtue V2' Liquity fork for IOTA EVM shows no evidence of deployment, and current Virtue documentation names IOTA and stIOTA without confirming an IBTC branch, so the IBTC component remains unverified. Write-time re-open 2026-07-28: dual sources still describe over-collateralized crypto CDP minting without a public live collateral weight table; knownUnknownExposurePct remains 100. (VUSD CDP docs + technical resources)",
     "compositionBasis": "Current branch inventory and collateral categories from Virtue documentation and IOTA package reads",
     "scope": "full-composition",
     "knownUnknownExposure": "Current collateral balances, collateral weights, and branch-level custody allocation are not published as a reconciled reserve composition; the existence of an IBTC branch is not confirmed by current Virtue documentation.",
@@ -499,7 +499,8 @@
         "disposition": "basket-needs-split",
         "rationale": "The reviewed primary sources do not publish this slice's current composition or weights, so it cannot be split or linked to tracked assets."
       }
-    ]
+    ],
+    "compositionAsOf": "2026-07-28"
   },
   "custodyProfile": {
     "providers": [

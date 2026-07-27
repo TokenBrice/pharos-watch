@@ -145,22 +145,26 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave8 re-verify",
     "confidence": "probable",
     "sources": [
       {
-        "label": "CFX digital dollar infrastructure",
+        "label": "CFX digital dollar infrastructure (re-opened 2026-07-28)",
         "url": "https://cfx.to/"
       },
       {
-        "label": "CFX platform overview",
-        "url": "https://docs.cfx.to/docs/key-features"
+        "label": "CFX launches MoveUSD PR Newswire (2025-04-01; re-opened 2026-07-28)",
+        "url": "https://www.prnewswire.com/news-releases/cfx-launches-moveusd-enhancing-us-dollar-competitiveness-with-the-first-instant-transfer-bank-integrated-global-settlement-network-302416929.html"
+      },
+      {
+        "label": "CoinMarketCap MoveUSD about (re-opened 2026-07-28)",
+        "url": "https://coinmarketcap.com/currencies/movemoney-usd/"
       }
     ],
-    "rationale": "Re-verified 2026-07-20: the CFX homepage still states that CFX-issued digital assets, including MoveUSD, are fully backed and redeemable 1:1 for U.S. dollars, with USD custody by FDIC member banks, and that the USD deposits collateralizing MoveUSD are held in a beneficiary account by an FDIC member bank. No change since the 2026-07-14 review: the bank, account terms, liquidity terms, and independent assurance report remain undisclosed, and the former docs.moveusd.com disclosures page still redirects to docs.cfx.to with no dedicated reserve disclosure page (docs.cfx.to disclosures path returns 404). The 100% bank-deposit slice is retained with counterparty/custody/concentration risk factors and unknown liquidity horizon.",
-    "compositionBasis": "CFX issuer disclosure of MoveUSD's beneficiary-account USD backing",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Write-time re-open 2026-07-28 (HTTP 200): cfx.to still states CFX-issued digital assets are redeemable 1:1 for U.S. dollars with USD custody by FDIC Member Banks, and the site footer disclaimer states that U.S. dollar deposits collateralizing CFX Labs's USD-based digital dollar MoveUSD are held in a beneficiary account by an FDIC Member Bank. Independently hosted PR Newswire launch copy (2025-04-01) still states every MoveUSD dollar is backed 1:1 and held in beneficiary accounts at participating FDIC-insured banks. CoinMarketCap's MoveUSD about independently describes a U.S. dollar bank-deposit token backed 1:1 by U.S. dollar deposits held with regulated partner banks, with reserves maintained in demand deposit accounts. The former docs.moveusd.com disclosures path still redirects to docs.cfx.to; docs.cfx.to/docs/key-features does not state reserve composition, and disclosures/reserves paths return 404. No named bank, account-level terms, liquidity terms, or dated independent reserve-to-liability report were found. The 100% bank-deposit slice is retained with counterparty/custody/concentration risk factors and unknown liquidity horizon.",
+    "compositionBasis": "CFX issuer site + independently hosted launch PR + CMC bank-deposit description of MoveUSD USD deposit backing",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The single disclosed reserve category is known, but CFX does not identify the FDIC member bank, publish account-level terms, or provide a dated independent reserve report.",
     "knownUnknownExposurePct": 0,

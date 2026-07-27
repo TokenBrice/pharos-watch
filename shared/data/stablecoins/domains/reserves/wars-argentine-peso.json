@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "probable",
     "sources": [
       {
@@ -25,7 +25,7 @@
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     ],
-    "rationale": "The March 31, 2026 certification reconciles 973,000,960.19 outstanding wARS across six chains and ARS 1,036,276,284 of collateral to Argentine bank and financial-institution statements, then certifies that all outstanding tokens are backed by Argentine-peso deposits. The engagement is expressly a certification rather than an audit or review, and the institutions and account terms are not disclosed.",
+    "rationale": "Write-time re-open 2026-07-28: the March 31, 2026 independent public accountant certification (Pablo Eduardo Soto, CPA) still reconciles 973,000,960.19 outstanding wARS across Ethereum, World Chain, Base, Polygon, Gnosis, and BNB Smart Chain to ARS 1,036,276,284 of collateral in Argentine bank accounts and financial institutions and certifies that outstanding tokens are fully backed by Argentine-peso deposits. The live Ripio local-stablecoins page restates the same March 31, 2026 figures and links the same certification PDF. The engagement is expressly a certification rather than an audit or review, and institutions and account terms remain undisclosed.",
     "compositionBasis": "Independent public accountant certification of wARS collateral as of March 31, 2026",
     "compositionAsOf": "2026-03-31",
     "scope": "full-composition",

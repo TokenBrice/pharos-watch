@@ -73,13 +73,18 @@
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Freedom Dollar DAO reserve contract stakers (ZANO)",
-      "riskFactors": ["market", "liquidity", "smart-contract", "concentration"],
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
       "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -91,7 +96,7 @@
         "url": "https://freedomdollar.com/"
       }
     ],
-    "rationale": "FUSD is minted against ZANO deposited into the Freedom Dollar DAO reserve contract, with reserves staked on Zano and publicly visible on-chain. The reserve is a single ZANO-collateral category; the issuer does not publish a constituent breakdown beyond the Zano-native reserve and staking positions.",
+    "rationale": "Write-time re-open 2026-07-28 of Freedom Dollar English white paper PDF: fUSD is overcollateralized with ZANO; every fUSD is backed by a reserve of ZANO staked in a publicly auditable reserve wallet; new minting only when additional ZANO is locked. Website still positions fUSD as a Zano-native privacy stablecoin. Single 100% Zano cryptoasset envelope unchanged; knownUnknownExposurePct remains 0 for category-level identity (constituent wallet balances are dynamic on-chain).",
     "compositionBasis": "Freedom Dollar white paper reserve design; single Zano-native collateral category",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve resolves to one exogenous ZANO collateral category; staking reward positions inside the DAO reserve are not separately itemized.",
@@ -104,7 +109,8 @@
         "disposition": "untracked-exogenous-asset",
         "rationale": "ZANO is an external cryptoasset that is not a tracked stablecoin dependency."
       }
-    ]
+    ],
+    "compositionAsOf": "2026-07-28"
   },
   "notices": [
     {

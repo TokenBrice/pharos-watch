@@ -34,43 +34,968 @@
   "detailProvider": "defillama",
   "geckoId": "balanced-dollars",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Balanced's current bnUSD overview describes collateralized loans, liquidations, and a Stability Fund, but it does not identify the production collateral-price oracle, fallback, or oracle-failure behavior. The official transition guide says v1 is no longer supported, so historical v1 sources cannot establish the current v2 branch.",
+    "tier": "standard-external",
+    "summary": "bnUSD loan collateral is priced on ICON through Balanced Oracle v1.3.0 (cx133c...), which Loans calls via getLastPriceInUSD. At ICON block 116171048 the debt-bearing inventory is dominated by sICX (~96.3%), which uses Band ICX/USD times the staking sICX rate under a 30-minute global staleness gate; other Band-priced collaterals match Band feeds directly, while SOL/XLM/JITOSOL use long-threshold manual external prices.",
+    "branchModel": "multi-branch",
     "branchApplicability": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-07-20",
-      "reviewer": "Codex Prompt 6b oracle review",
-      "rationale": "Current Balanced documentation establishes borrower collateral and a liquidation path, but not the active collateral-market inventory, feed addresses or providers, fallback behavior, liquidation configuration, backstop operation, or shutdown and bad-debt handling. Because v1 is unsupported after the v2 transition, an old v1 oracle integration cannot be used as evidence for the current branch.",
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-28",
+      "reviewer": "Grok Safety Score V9 wave-8 controls research",
+      "rationale": "ICON Balanced Loans (cx66d4..., v1.3.0) exposes per-collateral debt, liquidation ratio, locking ratio, and price lookups. At block 116171048 getTotalCollateralDebt showed twelve debt-bearing collateral markets with different oracle paths (Band vs manual external) and two liquidation-ratio settings (117.65% vs 125%). Market-specific oracle and liquidation rows are therefore required. Registered zero-debt collaterals AFSUI/HASUI/VSUI/weETH/wstETH/tBTC appear in getCollateralTokens but are omitted as inactive markets at the pinned observation.",
       "sources": [
         {
-          "label": "Balanced bnUSD overview",
-          "url": "https://balanced.network/stablecoin/"
+          "label": "ICON public RPC",
+          "url": "https://ctz.solidwallet.io/api/v3"
         },
         {
-          "label": "Balanced v2 transition guide",
-          "url": "https://docs.balanced.network/"
+          "label": "Balanced Loans SCORE",
+          "url": "https://tracker.icon.community/contract/cx66d4d90f5f113eba575bf793570135f9b10cece1"
         },
         {
-          "label": "bnUSD canonical ICON deployment transaction",
-          "url": "https://tracker.icon.community/transaction/0x807cd811b5add6bc32044f500c0833843f8c0cf2bd2433814cfe80fddf387db3"
+          "label": "Balanced Oracle SCORE",
+          "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+        },
+        {
+          "label": "LoansImpl liquidate/bad-debt source",
+          "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+        },
+        {
+          "label": "BalancedOracleImpl getPriceData source",
+          "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/BalancedOracleImpl.java"
         }
       ]
     },
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex Prompt 6b oracle review",
-    "confidence": "unknown",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok Safety Score V9 wave-8 controls research",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Balanced bnUSD overview",
+        "label": "ICON public RPC",
+        "url": "https://ctz.solidwallet.io/api/v3"
+      },
+      {
+        "label": "Balanced Oracle SCORE",
+        "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+      },
+      {
+        "label": "Band Oracle SCORE on ICON",
+        "url": "https://tracker.icon.community/contract/cxe647e0af68a4661566f5e9861ad4ac854de808a2"
+      },
+      {
+        "label": "Balanced Loans SCORE",
+        "url": "https://tracker.icon.community/contract/cx66d4d90f5f113eba575bf793570135f9b10cece1"
+      },
+      {
+        "label": "BalancedOracleImpl source",
+        "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/BalancedOracleImpl.java"
+      },
+      {
+        "label": "BandOracle source",
+        "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/BandOracle.java"
+      },
+      {
+        "label": "ExternalOracle source",
+        "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/ExternalOracle.java"
+      },
+      {
+        "label": "Loans TokenUtils + LoansImpl source",
+        "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/utils/TokenUtils.java"
+      },
+      {
+        "label": "Balanced bnUSD product page (collateral inventory corroboration)",
         "url": "https://balanced.network/stablecoin/"
+      }
+    ],
+    "branches": [
+      {
+        "id": "balanced-loans-sicx",
+        "label": "Balanced Loans sICX (Band ICX + staking rate)",
+        "tier": "standard-external",
+        "summary": "ICON Balanced Loans collateral market for sICX priced through Balanced Oracle (Band Protocol path) with per-symbol liquidation ratio 117.65% and permissionless liquidate(); residual bad debt is cancellable by burning bnUSD.",
+        "collateralAssets": [
+          "sICX"
+        ],
+        "chains": [
+          "icon"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol ICX/USD via Balanced Oracle + Balanced Staking sICX/ICX rate",
+            "path": "ICON Band Oracle get_reference_data(ICX,USD) * Staked ICX Manager getTodayRate -> Balanced Oracle getLastPriceInUSD(sICX) -> Loans TokenUtils.getPriceInUSD",
+            "address": "cx133c6015bb29f692b12e71c1792fddf8f7014652",
+            "chain": "icon",
+            "stalenessBoundSec": 1800,
+            "observedAt": "2026-07-28",
+            "observedBlock": 116171048,
+            "failureDomainKeys": [
+              "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+              "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+              "balanced-staking:icon:cx43e2eec79eb76293c298f2b17aec06097be606e0",
+              "icon"
+            ]
+          }
+        ],
+        "fallbackBehavior": "sICX has no secondary oracle failover. BalancedOracleImpl prices sICX as Staking.getTodayRate * Band ICX/USD. getPrice rejects updates older than the global last-update threshold (1,800 seconds / 30 minutes at the pinned block). Loans liquidations call getLastPriceInUSD and inherit that staleness gate.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 116171048,
+        "collateralParameters": [
+          {
+            "asset": "sICX",
+            "maximumLtvPct": 66.6667,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "On-chain getLiquidationRatio=117.65% and getLockingRatio=150% (implies max LTV 66.6667%) at ICON block 116171048."
+          }
+        ],
+        "liquidationMechanism": "Balanced Loans liquidate(owner, amount, collateralSymbol) is permissionless when position standing is LIQUIDATE. The liquidator burns bnUSD and receives discounted collateral after liquidator and DAOfund fee slices configured per symbol.",
+        "liquidationDelaySec": 0,
+        "backstop": "First-line backstop is open-market liquidators who burn bnUSD for discounted collateral. There is no Stability-Pool-style dedicated bnUSD backstop pool on the Loans SCORE. Residual debt after collateral is exhausted is recorded as per-collateral bad debt (DebtDB) and can later be cancelled by burning bnUSD via cancelBadDebt.",
+        "shutdownOrBadDebtBehavior": "Loans operations including liquidate and borrow are gated by checkStatus()/loansOn(). Undercollateralized remainder after full collateral liquidation is written to bad debt rather than socialized across other positions; cancelBadDebt burns bnUSD to reduce that balance. No separate global shutdown cascade was observed in the Loans v1.3.0 interface beyond status gating and bad-debt accounting.",
+        "debtSharePct": 96.3013,
+        "failureDomainKeys": [
+          "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+          "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+          "balanced-staking:icon:cx43e2eec79eb76293c298f2b17aec06097be606e0",
+          "icon",
+          "balanced-loans:icon:cx66d4d90f5f113eba575bf793570135f9b10cece1"
+        ],
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "Balanced Loans SCORE",
+            "url": "https://tracker.icon.community/contract/cx66d4d90f5f113eba575bf793570135f9b10cece1"
+          },
+          {
+            "label": "Balanced Oracle SCORE",
+            "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+          },
+          {
+            "label": "BalancedOracleImpl source (getPriceData Band path)",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/BalancedOracleImpl.java"
+          },
+          {
+            "label": "Loans TokenUtils.getPriceInUSD",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/utils/TokenUtils.java"
+          },
+          {
+            "label": "Loans liquidate / bad-debt source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+          }
+        ]
       },
       {
-        "label": "Balanced v2 transition guide",
-        "url": "https://docs.balanced.network/"
+        "id": "balanced-loans-btc",
+        "label": "Balanced Loans BTC (Band)",
+        "tier": "standard-external",
+        "summary": "ICON Balanced Loans collateral market for BTC priced through Balanced Oracle (Band Protocol path) with per-symbol liquidation ratio 117.65% and permissionless liquidate(); residual bad debt is cancellable by burning bnUSD.",
+        "collateralAssets": [
+          "BTC"
+        ],
+        "chains": [
+          "icon"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol BTC/USD via Balanced Oracle",
+            "path": "ICON Band Oracle get_reference_data(BTC,USD) -> Balanced Oracle getLastPriceInUSD(BTC) -> Loans TokenUtils.getPriceInUSD",
+            "address": "cx133c6015bb29f692b12e71c1792fddf8f7014652",
+            "chain": "icon",
+            "stalenessBoundSec": 1800,
+            "observedAt": "2026-07-28",
+            "observedBlock": 116171048,
+            "failureDomainKeys": [
+              "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+              "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+              "icon"
+            ]
+          }
+        ],
+        "fallbackBehavior": "BTC prices match Band get_reference_data(BTC,USD) at the pinned block (rate and timestamp). BalancedOracleImpl uses Band when no Pyth mapping is present for the peg symbol. The global last-update threshold is 1,800 seconds; no secondary failover path is configured for this Band-only branch.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 116171048,
+        "collateralParameters": [
+          {
+            "asset": "BTC",
+            "maximumLtvPct": 66.6667,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "On-chain getLiquidationRatio=117.65% and getLockingRatio=150% (implies max LTV 66.6667%) at ICON block 116171048."
+          }
+        ],
+        "liquidationMechanism": "Balanced Loans liquidate(owner, amount, collateralSymbol) is permissionless when position standing is LIQUIDATE. The liquidator burns bnUSD and receives discounted collateral after liquidator and DAOfund fee slices configured per symbol.",
+        "liquidationDelaySec": 0,
+        "backstop": "First-line backstop is open-market liquidators who burn bnUSD for discounted collateral. There is no Stability-Pool-style dedicated bnUSD backstop pool on the Loans SCORE. Residual debt after collateral is exhausted is recorded as per-collateral bad debt (DebtDB) and can later be cancelled by burning bnUSD via cancelBadDebt.",
+        "shutdownOrBadDebtBehavior": "Loans operations including liquidate and borrow are gated by checkStatus()/loansOn(). Undercollateralized remainder after full collateral liquidation is written to bad debt rather than socialized across other positions; cancelBadDebt burns bnUSD to reduce that balance. No separate global shutdown cascade was observed in the Loans v1.3.0 interface beyond status gating and bad-debt accounting.",
+        "debtSharePct": 2.8325,
+        "failureDomainKeys": [
+          "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+          "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+          "icon",
+          "balanced-loans:icon:cx66d4d90f5f113eba575bf793570135f9b10cece1"
+        ],
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "Balanced Loans SCORE",
+            "url": "https://tracker.icon.community/contract/cx66d4d90f5f113eba575bf793570135f9b10cece1"
+          },
+          {
+            "label": "Balanced Oracle SCORE",
+            "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+          },
+          {
+            "label": "BalancedOracleImpl source (getPriceData Band path)",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/BalancedOracleImpl.java"
+          },
+          {
+            "label": "Loans TokenUtils.getPriceInUSD",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/utils/TokenUtils.java"
+          },
+          {
+            "label": "Loans liquidate / bad-debt source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+          }
+        ]
       },
       {
-        "label": "bnUSD canonical ICON deployment transaction",
-        "url": "https://tracker.icon.community/transaction/0x807cd811b5add6bc32044f500c0833843f8c0cf2bd2433814cfe80fddf387db3"
+        "id": "balanced-loans-eth",
+        "label": "Balanced Loans ETH (Band)",
+        "tier": "standard-external",
+        "summary": "ICON Balanced Loans collateral market for ETH priced through Balanced Oracle (Band Protocol path) with per-symbol liquidation ratio 117.65% and permissionless liquidate(); residual bad debt is cancellable by burning bnUSD.",
+        "collateralAssets": [
+          "ETH"
+        ],
+        "chains": [
+          "icon"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol ETH/USD via Balanced Oracle",
+            "path": "ICON Band Oracle get_reference_data(ETH,USD) -> Balanced Oracle getLastPriceInUSD(ETH) -> Loans TokenUtils.getPriceInUSD",
+            "address": "cx133c6015bb29f692b12e71c1792fddf8f7014652",
+            "chain": "icon",
+            "stalenessBoundSec": 1800,
+            "observedAt": "2026-07-28",
+            "observedBlock": 116171048,
+            "failureDomainKeys": [
+              "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+              "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+              "icon"
+            ]
+          }
+        ],
+        "fallbackBehavior": "ETH prices match Band get_reference_data(ETH,USD) at the pinned block (rate and timestamp). BalancedOracleImpl uses Band when no Pyth mapping is present for the peg symbol. The global last-update threshold is 1,800 seconds; no secondary failover path is configured for this Band-only branch.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 116171048,
+        "collateralParameters": [
+          {
+            "asset": "ETH",
+            "maximumLtvPct": 66.6667,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "On-chain getLiquidationRatio=117.65% and getLockingRatio=150% (implies max LTV 66.6667%) at ICON block 116171048."
+          }
+        ],
+        "liquidationMechanism": "Balanced Loans liquidate(owner, amount, collateralSymbol) is permissionless when position standing is LIQUIDATE. The liquidator burns bnUSD and receives discounted collateral after liquidator and DAOfund fee slices configured per symbol.",
+        "liquidationDelaySec": 0,
+        "backstop": "First-line backstop is open-market liquidators who burn bnUSD for discounted collateral. There is no Stability-Pool-style dedicated bnUSD backstop pool on the Loans SCORE. Residual debt after collateral is exhausted is recorded as per-collateral bad debt (DebtDB) and can later be cancelled by burning bnUSD via cancelBadDebt.",
+        "shutdownOrBadDebtBehavior": "Loans operations including liquidate and borrow are gated by checkStatus()/loansOn(). Undercollateralized remainder after full collateral liquidation is written to bad debt rather than socialized across other positions; cancelBadDebt burns bnUSD to reduce that balance. No separate global shutdown cascade was observed in the Loans v1.3.0 interface beyond status gating and bad-debt accounting.",
+        "debtSharePct": 0.3916,
+        "failureDomainKeys": [
+          "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+          "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+          "icon",
+          "balanced-loans:icon:cx66d4d90f5f113eba575bf793570135f9b10cece1"
+        ],
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "Balanced Loans SCORE",
+            "url": "https://tracker.icon.community/contract/cx66d4d90f5f113eba575bf793570135f9b10cece1"
+          },
+          {
+            "label": "Balanced Oracle SCORE",
+            "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+          },
+          {
+            "label": "BalancedOracleImpl source (getPriceData Band path)",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/BalancedOracleImpl.java"
+          },
+          {
+            "label": "Loans TokenUtils.getPriceInUSD",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/utils/TokenUtils.java"
+          },
+          {
+            "label": "Loans liquidate / bad-debt source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+          }
+        ]
+      },
+      {
+        "id": "balanced-loans-btcb",
+        "label": "Balanced Loans BTCB (Band)",
+        "tier": "standard-external",
+        "summary": "ICON Balanced Loans collateral market for BTCB priced through Balanced Oracle (Band Protocol path) with per-symbol liquidation ratio 117.65% and permissionless liquidate(); residual bad debt is cancellable by burning bnUSD.",
+        "collateralAssets": [
+          "BTCB"
+        ],
+        "chains": [
+          "icon"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol BTC/USD via Balanced Oracle (BTCB pegged to BTC)",
+            "path": "assetPeg(BTCB)=BTC -> ICON Band Oracle get_reference_data(BTC,USD) -> Balanced Oracle getLastPriceInUSD(BTCB) -> Loans",
+            "address": "cx133c6015bb29f692b12e71c1792fddf8f7014652",
+            "chain": "icon",
+            "stalenessBoundSec": 1800,
+            "observedAt": "2026-07-28",
+            "observedBlock": 116171048,
+            "failureDomainKeys": [
+              "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+              "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+              "icon"
+            ]
+          }
+        ],
+        "fallbackBehavior": "BTCB is pegged to BTC in BalancedOracle assetPeg and therefore reuses Band BTC/USD. No independent secondary failover path is configured. Staleness is enforced by the global 1,800-second last-update threshold.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 116171048,
+        "collateralParameters": [
+          {
+            "asset": "BTCB",
+            "maximumLtvPct": 66.6667,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "On-chain getLiquidationRatio=117.65% and getLockingRatio=150% (implies max LTV 66.6667%) at ICON block 116171048."
+          }
+        ],
+        "liquidationMechanism": "Balanced Loans liquidate(owner, amount, collateralSymbol) is permissionless when position standing is LIQUIDATE. The liquidator burns bnUSD and receives discounted collateral after liquidator and DAOfund fee slices configured per symbol.",
+        "liquidationDelaySec": 0,
+        "backstop": "First-line backstop is open-market liquidators who burn bnUSD for discounted collateral. There is no Stability-Pool-style dedicated bnUSD backstop pool on the Loans SCORE. Residual debt after collateral is exhausted is recorded as per-collateral bad debt (DebtDB) and can later be cancelled by burning bnUSD via cancelBadDebt.",
+        "shutdownOrBadDebtBehavior": "Loans operations including liquidate and borrow are gated by checkStatus()/loansOn(). Undercollateralized remainder after full collateral liquidation is written to bad debt rather than socialized across other positions; cancelBadDebt burns bnUSD to reduce that balance. No separate global shutdown cascade was observed in the Loans v1.3.0 interface beyond status gating and bad-debt accounting.",
+        "debtSharePct": 0.2177,
+        "failureDomainKeys": [
+          "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+          "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+          "icon",
+          "balanced-loans:icon:cx66d4d90f5f113eba575bf793570135f9b10cece1"
+        ],
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "Balanced Loans SCORE",
+            "url": "https://tracker.icon.community/contract/cx66d4d90f5f113eba575bf793570135f9b10cece1"
+          },
+          {
+            "label": "Balanced Oracle SCORE",
+            "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+          },
+          {
+            "label": "BalancedOracleImpl source (getPriceData Band path)",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/BalancedOracleImpl.java"
+          },
+          {
+            "label": "Loans TokenUtils.getPriceInUSD",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/utils/TokenUtils.java"
+          },
+          {
+            "label": "Loans liquidate / bad-debt source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+          }
+        ]
+      },
+      {
+        "id": "balanced-loans-bnb",
+        "label": "Balanced Loans BNB (Band)",
+        "tier": "standard-external",
+        "summary": "ICON Balanced Loans collateral market for BNB priced through Balanced Oracle (Band Protocol path) with per-symbol liquidation ratio 117.65% and permissionless liquidate(); residual bad debt is cancellable by burning bnUSD.",
+        "collateralAssets": [
+          "BNB"
+        ],
+        "chains": [
+          "icon"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol BNB/USD via Balanced Oracle",
+            "path": "ICON Band Oracle get_reference_data(BNB,USD) -> Balanced Oracle getLastPriceInUSD(BNB) -> Loans TokenUtils.getPriceInUSD",
+            "address": "cx133c6015bb29f692b12e71c1792fddf8f7014652",
+            "chain": "icon",
+            "stalenessBoundSec": 1800,
+            "observedAt": "2026-07-28",
+            "observedBlock": 116171048,
+            "failureDomainKeys": [
+              "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+              "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+              "icon"
+            ]
+          }
+        ],
+        "fallbackBehavior": "BNB prices match Band get_reference_data(BNB,USD) at the pinned block (rate and timestamp). BalancedOracleImpl uses Band when no Pyth mapping is present for the peg symbol. The global last-update threshold is 1,800 seconds; no secondary failover path is configured for this Band-only branch.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 116171048,
+        "collateralParameters": [
+          {
+            "asset": "BNB",
+            "maximumLtvPct": 66.6667,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "On-chain getLiquidationRatio=117.65% and getLockingRatio=150% (implies max LTV 66.6667%) at ICON block 116171048."
+          }
+        ],
+        "liquidationMechanism": "Balanced Loans liquidate(owner, amount, collateralSymbol) is permissionless when position standing is LIQUIDATE. The liquidator burns bnUSD and receives discounted collateral after liquidator and DAOfund fee slices configured per symbol.",
+        "liquidationDelaySec": 0,
+        "backstop": "First-line backstop is open-market liquidators who burn bnUSD for discounted collateral. There is no Stability-Pool-style dedicated bnUSD backstop pool on the Loans SCORE. Residual debt after collateral is exhausted is recorded as per-collateral bad debt (DebtDB) and can later be cancelled by burning bnUSD via cancelBadDebt.",
+        "shutdownOrBadDebtBehavior": "Loans operations including liquidate and borrow are gated by checkStatus()/loansOn(). Undercollateralized remainder after full collateral liquidation is written to bad debt rather than socialized across other positions; cancelBadDebt burns bnUSD to reduce that balance. No separate global shutdown cascade was observed in the Loans v1.3.0 interface beyond status gating and bad-debt accounting.",
+        "debtSharePct": 0.016,
+        "failureDomainKeys": [
+          "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+          "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+          "icon",
+          "balanced-loans:icon:cx66d4d90f5f113eba575bf793570135f9b10cece1"
+        ],
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "Balanced Loans SCORE",
+            "url": "https://tracker.icon.community/contract/cx66d4d90f5f113eba575bf793570135f9b10cece1"
+          },
+          {
+            "label": "Balanced Oracle SCORE",
+            "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+          },
+          {
+            "label": "BalancedOracleImpl source (getPriceData Band path)",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/BalancedOracleImpl.java"
+          },
+          {
+            "label": "Loans TokenUtils.getPriceInUSD",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/utils/TokenUtils.java"
+          },
+          {
+            "label": "Loans liquidate / bad-debt source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+          }
+        ]
+      },
+      {
+        "id": "balanced-loans-inj",
+        "label": "Balanced Loans INJ (Band)",
+        "tier": "standard-external",
+        "summary": "ICON Balanced Loans collateral market for INJ priced through Balanced Oracle (Band Protocol path) with per-symbol liquidation ratio 117.65% and permissionless liquidate(); residual bad debt is cancellable by burning bnUSD.",
+        "collateralAssets": [
+          "INJ"
+        ],
+        "chains": [
+          "icon"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol INJ/USD via Balanced Oracle",
+            "path": "ICON Band Oracle get_reference_data(INJ,USD) -> Balanced Oracle getLastPriceInUSD(INJ) -> Loans TokenUtils.getPriceInUSD",
+            "address": "cx133c6015bb29f692b12e71c1792fddf8f7014652",
+            "chain": "icon",
+            "stalenessBoundSec": 1800,
+            "observedAt": "2026-07-28",
+            "observedBlock": 116171048,
+            "failureDomainKeys": [
+              "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+              "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+              "icon"
+            ]
+          }
+        ],
+        "fallbackBehavior": "INJ prices match Band get_reference_data(INJ,USD) at the pinned block (rate and timestamp). BalancedOracleImpl uses Band when no Pyth mapping is present for the peg symbol. The global last-update threshold is 1,800 seconds; no secondary failover path is configured for this Band-only branch.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 116171048,
+        "collateralParameters": [
+          {
+            "asset": "INJ",
+            "maximumLtvPct": 66.6667,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "On-chain getLiquidationRatio=117.65% and getLockingRatio=150% (implies max LTV 66.6667%) at ICON block 116171048."
+          }
+        ],
+        "liquidationMechanism": "Balanced Loans liquidate(owner, amount, collateralSymbol) is permissionless when position standing is LIQUIDATE. The liquidator burns bnUSD and receives discounted collateral after liquidator and DAOfund fee slices configured per symbol.",
+        "liquidationDelaySec": 0,
+        "backstop": "First-line backstop is open-market liquidators who burn bnUSD for discounted collateral. There is no Stability-Pool-style dedicated bnUSD backstop pool on the Loans SCORE. Residual debt after collateral is exhausted is recorded as per-collateral bad debt (DebtDB) and can later be cancelled by burning bnUSD via cancelBadDebt.",
+        "shutdownOrBadDebtBehavior": "Loans operations including liquidate and borrow are gated by checkStatus()/loansOn(). Undercollateralized remainder after full collateral liquidation is written to bad debt rather than socialized across other positions; cancelBadDebt burns bnUSD to reduce that balance. No separate global shutdown cascade was observed in the Loans v1.3.0 interface beyond status gating and bad-debt accounting.",
+        "debtSharePct": 0.0145,
+        "failureDomainKeys": [
+          "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+          "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+          "icon",
+          "balanced-loans:icon:cx66d4d90f5f113eba575bf793570135f9b10cece1"
+        ],
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "Balanced Loans SCORE",
+            "url": "https://tracker.icon.community/contract/cx66d4d90f5f113eba575bf793570135f9b10cece1"
+          },
+          {
+            "label": "Balanced Oracle SCORE",
+            "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+          },
+          {
+            "label": "BalancedOracleImpl source (getPriceData Band path)",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/BalancedOracleImpl.java"
+          },
+          {
+            "label": "Loans TokenUtils.getPriceInUSD",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/utils/TokenUtils.java"
+          },
+          {
+            "label": "Loans liquidate / bad-debt source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+          }
+        ]
+      },
+      {
+        "id": "balanced-loans-sui",
+        "label": "Balanced Loans SUI (Band)",
+        "tier": "standard-external",
+        "summary": "ICON Balanced Loans collateral market for SUI priced through Balanced Oracle (Band Protocol path) with per-symbol liquidation ratio 117.65% and permissionless liquidate(); residual bad debt is cancellable by burning bnUSD.",
+        "collateralAssets": [
+          "SUI"
+        ],
+        "chains": [
+          "icon"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol SUI/USD via Balanced Oracle",
+            "path": "ICON Band Oracle get_reference_data(SUI,USD) -> Balanced Oracle getLastPriceInUSD(SUI) -> Loans TokenUtils.getPriceInUSD",
+            "address": "cx133c6015bb29f692b12e71c1792fddf8f7014652",
+            "chain": "icon",
+            "stalenessBoundSec": 1800,
+            "observedAt": "2026-07-28",
+            "observedBlock": 116171048,
+            "failureDomainKeys": [
+              "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+              "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+              "icon"
+            ]
+          }
+        ],
+        "fallbackBehavior": "SUI prices match Band get_reference_data(SUI,USD) at the pinned block (rate and timestamp). BalancedOracleImpl uses Band when no Pyth mapping is present for the peg symbol. The global last-update threshold is 1,800 seconds; no secondary failover path is configured for this Band-only branch.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 116171048,
+        "collateralParameters": [
+          {
+            "asset": "SUI",
+            "maximumLtvPct": 66.6667,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "On-chain getLiquidationRatio=117.65% and getLockingRatio=150% (implies max LTV 66.6667%) at ICON block 116171048."
+          }
+        ],
+        "liquidationMechanism": "Balanced Loans liquidate(owner, amount, collateralSymbol) is permissionless when position standing is LIQUIDATE. The liquidator burns bnUSD and receives discounted collateral after liquidator and DAOfund fee slices configured per symbol.",
+        "liquidationDelaySec": 0,
+        "backstop": "First-line backstop is open-market liquidators who burn bnUSD for discounted collateral. There is no Stability-Pool-style dedicated bnUSD backstop pool on the Loans SCORE. Residual debt after collateral is exhausted is recorded as per-collateral bad debt (DebtDB) and can later be cancelled by burning bnUSD via cancelBadDebt.",
+        "shutdownOrBadDebtBehavior": "Loans operations including liquidate and borrow are gated by checkStatus()/loansOn(). Undercollateralized remainder after full collateral liquidation is written to bad debt rather than socialized across other positions; cancelBadDebt burns bnUSD to reduce that balance. No separate global shutdown cascade was observed in the Loans v1.3.0 interface beyond status gating and bad-debt accounting.",
+        "debtSharePct": 0.0051,
+        "failureDomainKeys": [
+          "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+          "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+          "icon",
+          "balanced-loans:icon:cx66d4d90f5f113eba575bf793570135f9b10cece1"
+        ],
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "Balanced Loans SCORE",
+            "url": "https://tracker.icon.community/contract/cx66d4d90f5f113eba575bf793570135f9b10cece1"
+          },
+          {
+            "label": "Balanced Oracle SCORE",
+            "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+          },
+          {
+            "label": "BalancedOracleImpl source (getPriceData Band path)",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/BalancedOracleImpl.java"
+          },
+          {
+            "label": "Loans TokenUtils.getPriceInUSD",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/utils/TokenUtils.java"
+          },
+          {
+            "label": "Loans liquidate / bad-debt source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+          }
+        ]
+      },
+      {
+        "id": "balanced-loans-avax",
+        "label": "Balanced Loans AVAX (Band)",
+        "tier": "standard-external",
+        "summary": "ICON Balanced Loans collateral market for AVAX priced through Balanced Oracle (Band Protocol path) with per-symbol liquidation ratio 117.65% and permissionless liquidate(); residual bad debt is cancellable by burning bnUSD.",
+        "collateralAssets": [
+          "AVAX"
+        ],
+        "chains": [
+          "icon"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol AVAX/USD via Balanced Oracle",
+            "path": "ICON Band Oracle get_reference_data(AVAX,USD) -> Balanced Oracle getLastPriceInUSD(AVAX) -> Loans TokenUtils.getPriceInUSD",
+            "address": "cx133c6015bb29f692b12e71c1792fddf8f7014652",
+            "chain": "icon",
+            "stalenessBoundSec": 1800,
+            "observedAt": "2026-07-28",
+            "observedBlock": 116171048,
+            "failureDomainKeys": [
+              "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+              "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+              "icon"
+            ]
+          }
+        ],
+        "fallbackBehavior": "AVAX prices match Band get_reference_data(AVAX,USD) at the pinned block (rate and timestamp). BalancedOracleImpl uses Band when no Pyth mapping is present for the peg symbol. The global last-update threshold is 1,800 seconds; no secondary failover path is configured for this Band-only branch.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 116171048,
+        "collateralParameters": [
+          {
+            "asset": "AVAX",
+            "maximumLtvPct": 66.6667,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "On-chain getLiquidationRatio=117.65% and getLockingRatio=150% (implies max LTV 66.6667%) at ICON block 116171048."
+          }
+        ],
+        "liquidationMechanism": "Balanced Loans liquidate(owner, amount, collateralSymbol) is permissionless when position standing is LIQUIDATE. The liquidator burns bnUSD and receives discounted collateral after liquidator and DAOfund fee slices configured per symbol.",
+        "liquidationDelaySec": 0,
+        "backstop": "First-line backstop is open-market liquidators who burn bnUSD for discounted collateral. There is no Stability-Pool-style dedicated bnUSD backstop pool on the Loans SCORE. Residual debt after collateral is exhausted is recorded as per-collateral bad debt (DebtDB) and can later be cancelled by burning bnUSD via cancelBadDebt.",
+        "shutdownOrBadDebtBehavior": "Loans operations including liquidate and borrow are gated by checkStatus()/loansOn(). Undercollateralized remainder after full collateral liquidation is written to bad debt rather than socialized across other positions; cancelBadDebt burns bnUSD to reduce that balance. No separate global shutdown cascade was observed in the Loans v1.3.0 interface beyond status gating and bad-debt accounting.",
+        "debtSharePct": 0.0,
+        "failureDomainKeys": [
+          "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+          "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+          "icon",
+          "balanced-loans:icon:cx66d4d90f5f113eba575bf793570135f9b10cece1"
+        ],
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "Balanced Loans SCORE",
+            "url": "https://tracker.icon.community/contract/cx66d4d90f5f113eba575bf793570135f9b10cece1"
+          },
+          {
+            "label": "Balanced Oracle SCORE",
+            "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+          },
+          {
+            "label": "BalancedOracleImpl source (getPriceData Band path)",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/BalancedOracleImpl.java"
+          },
+          {
+            "label": "Loans TokenUtils.getPriceInUSD",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/utils/TokenUtils.java"
+          },
+          {
+            "label": "Loans liquidate / bad-debt source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+          }
+        ]
+      },
+      {
+        "id": "balanced-loans-msui",
+        "label": "Balanced Loans mSUI (Band SUI peg)",
+        "tier": "standard-external",
+        "summary": "ICON Balanced Loans collateral market for mSUI priced through Balanced Oracle (Band Protocol path) with per-symbol liquidation ratio 125.0% and permissionless liquidate(); residual bad debt is cancellable by burning bnUSD.",
+        "collateralAssets": [
+          "mSUI"
+        ],
+        "chains": [
+          "icon"
+        ],
+        "feeds": [
+          {
+            "provider": "Band Protocol SUI/USD via Balanced Oracle (mSUI pegged to SUI)",
+            "path": "assetPeg(mSUI)=SUI -> ICON Band Oracle get_reference_data(SUI,USD) -> Balanced Oracle getLastPriceInUSD(mSUI) -> Loans",
+            "address": "cx133c6015bb29f692b12e71c1792fddf8f7014652",
+            "chain": "icon",
+            "stalenessBoundSec": 1800,
+            "observedAt": "2026-07-28",
+            "observedBlock": 116171048,
+            "failureDomainKeys": [
+              "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+              "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+              "icon"
+            ]
+          }
+        ],
+        "fallbackBehavior": "mSUI uses assetPeg SUI and therefore the Band SUI/USD path inside BalancedOracleImpl. No independent secondary failover is configured for this peg. Staleness is enforced by the global 1,800-second last-update threshold observed on Balanced Oracle at the pinned block.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 116171048,
+        "collateralParameters": [
+          {
+            "asset": "mSUI",
+            "maximumLtvPct": 66.6667,
+            "minimumCollateralRatioPct": 125.0,
+            "note": "On-chain getLiquidationRatio=125.0% and getLockingRatio=150% (implies max LTV 66.6667%) at ICON block 116171048."
+          }
+        ],
+        "liquidationMechanism": "Balanced Loans liquidate(owner, amount, collateralSymbol) is permissionless when position standing is LIQUIDATE. The liquidator burns bnUSD and receives discounted collateral after liquidator and DAOfund fee slices configured per symbol.",
+        "liquidationDelaySec": 0,
+        "backstop": "First-line backstop is open-market liquidators who burn bnUSD for discounted collateral. There is no Stability-Pool-style dedicated bnUSD backstop pool on the Loans SCORE. Residual debt after collateral is exhausted is recorded as per-collateral bad debt (DebtDB) and can later be cancelled by burning bnUSD via cancelBadDebt.",
+        "shutdownOrBadDebtBehavior": "Loans operations including liquidate and borrow are gated by checkStatus()/loansOn(). Undercollateralized remainder after full collateral liquidation is written to bad debt rather than socialized across other positions; cancelBadDebt burns bnUSD to reduce that balance. No separate global shutdown cascade was observed in the Loans v1.3.0 interface beyond status gating and bad-debt accounting.",
+        "debtSharePct": 0.0192,
+        "failureDomainKeys": [
+          "band-oracle:icon:cxe647e0af68a4661566f5e9861ad4ac854de808a2",
+          "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+          "icon",
+          "balanced-loans:icon:cx66d4d90f5f113eba575bf793570135f9b10cece1"
+        ],
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "Balanced Loans SCORE",
+            "url": "https://tracker.icon.community/contract/cx66d4d90f5f113eba575bf793570135f9b10cece1"
+          },
+          {
+            "label": "Balanced Oracle SCORE",
+            "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+          },
+          {
+            "label": "BalancedOracleImpl source (getPriceData Band path)",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/BalancedOracleImpl.java"
+          },
+          {
+            "label": "Loans TokenUtils.getPriceInUSD",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/utils/TokenUtils.java"
+          },
+          {
+            "label": "Loans liquidate / bad-debt source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+          }
+        ]
+      },
+      {
+        "id": "balanced-loans-xlm-manual",
+        "label": "Balanced Loans XLM (manual external price)",
+        "tier": "single-source-or-laggy",
+        "summary": "XLM collateral on ICON Balanced Loans uses Balanced Oracle external/manual price updates (getExternalPriceProvider=XLM -> 'manual') with a 2,592,000-second (30-day) per-symbol last-update threshold, then the shared permissionless liquidate path.",
+        "collateralAssets": [
+          "XLM"
+        ],
+        "chains": [
+          "icon"
+        ],
+        "feeds": [
+          {
+            "provider": "Balanced Oracle external/manual price provider",
+            "path": "External/manual updatePriceData authorized for provider string 'manual' -> Balanced Oracle externalPriceData(XLM) -> Loans getLastPriceInUSD(XLM)",
+            "address": "cx133c6015bb29f692b12e71c1792fddf8f7014652",
+            "chain": "icon",
+            "stalenessBoundSec": 2592000,
+            "observedAt": "2026-07-28",
+            "observedBlock": 116171048,
+            "failureDomainKeys": [
+              "balanced-oracle-manual-price",
+              "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+              "icon"
+            ]
+          }
+        ],
+        "fallbackBehavior": "At the pinned block getExternalPriceProvider(XLM) returned 'manual' and getSymbolLastUpdateThreshold(XLM) returned 2,592,000,000,000 microseconds (30 days). ExternalOracle stores the last pushed rate without a Band/Pyth failover. This is a single privileged/manual update path with a very long staleness bound.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 116171048,
+        "collateralParameters": [
+          {
+            "asset": "XLM",
+            "maximumLtvPct": 66.6667,
+            "minimumCollateralRatioPct": 125.0,
+            "note": "On-chain getLiquidationRatio=125.0% and getLockingRatio=150% (implies max LTV 66.6667%) at ICON block 116171048."
+          }
+        ],
+        "liquidationMechanism": "Same permissionless Loans liquidate(owner, amount, collateralSymbol) path as Band-priced collaterals; liquidator burns bnUSD for discounted collateral when standing is LIQUIDATE.",
+        "liquidationDelaySec": 0,
+        "backstop": "Open-market liquidators burning bnUSD are the first-line backstop; residual bad debt after collateral exhaustion is tracked per collateral and reducible via cancelBadDebt bnUSD burns. No dedicated Stability Pool backstop is present on Loans.",
+        "shutdownOrBadDebtBehavior": "Status-gated Loans operations plus per-collateral bad-debt accounting; no additional global multi-collateral socialization path was observed in Loans v1.3.0 beyond cancelBadDebt.",
+        "debtSharePct": 0.2019,
+        "failureDomainKeys": [
+          "balanced-oracle-manual-price",
+          "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+          "balanced-loans:icon:cx66d4d90f5f113eba575bf793570135f9b10cece1",
+          "icon"
+        ],
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "Balanced Oracle SCORE",
+            "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+          },
+          {
+            "label": "ExternalOracle source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/ExternalOracle.java"
+          },
+          {
+            "label": "Loans liquidate source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+          }
+        ]
+      },
+      {
+        "id": "balanced-loans-sol-manual",
+        "label": "Balanced Loans SOL (manual external price)",
+        "tier": "single-source-or-laggy",
+        "summary": "SOL collateral on ICON Balanced Loans uses Balanced Oracle external/manual price updates (getExternalPriceProvider=SOL -> 'manual') with a 2,592,000-second (30-day) per-symbol last-update threshold, then the shared permissionless liquidate path.",
+        "collateralAssets": [
+          "SOL"
+        ],
+        "chains": [
+          "icon"
+        ],
+        "feeds": [
+          {
+            "provider": "Balanced Oracle external/manual price provider",
+            "path": "External/manual updatePriceData authorized for provider string 'manual' -> Balanced Oracle externalPriceData(SOL) -> Loans getLastPriceInUSD(SOL)",
+            "address": "cx133c6015bb29f692b12e71c1792fddf8f7014652",
+            "chain": "icon",
+            "stalenessBoundSec": 2592000,
+            "observedAt": "2026-07-28",
+            "observedBlock": 116171048,
+            "failureDomainKeys": [
+              "balanced-oracle-manual-price",
+              "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+              "icon"
+            ]
+          }
+        ],
+        "fallbackBehavior": "At the pinned block getExternalPriceProvider(SOL) returned 'manual' and getSymbolLastUpdateThreshold(SOL) returned 2,592,000,000,000 microseconds (30 days). ExternalOracle stores the last pushed rate without a Band/Pyth failover. This is a single privileged/manual update path with a very long staleness bound.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 116171048,
+        "collateralParameters": [
+          {
+            "asset": "SOL",
+            "maximumLtvPct": 66.6667,
+            "minimumCollateralRatioPct": 125.0,
+            "note": "On-chain getLiquidationRatio=125.0% and getLockingRatio=150% (implies max LTV 66.6667%) at ICON block 116171048."
+          }
+        ],
+        "liquidationMechanism": "Same permissionless Loans liquidate(owner, amount, collateralSymbol) path as Band-priced collaterals; liquidator burns bnUSD for discounted collateral when standing is LIQUIDATE.",
+        "liquidationDelaySec": 0,
+        "backstop": "Open-market liquidators burning bnUSD are the first-line backstop; residual bad debt after collateral exhaustion is tracked per collateral and reducible via cancelBadDebt bnUSD burns. No dedicated Stability Pool backstop is present on Loans.",
+        "shutdownOrBadDebtBehavior": "Status-gated Loans operations plus per-collateral bad-debt accounting; no additional global multi-collateral socialization path was observed in Loans v1.3.0 beyond cancelBadDebt.",
+        "debtSharePct": 0.0002,
+        "failureDomainKeys": [
+          "balanced-oracle-manual-price",
+          "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+          "balanced-loans:icon:cx66d4d90f5f113eba575bf793570135f9b10cece1",
+          "icon"
+        ],
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "Balanced Oracle SCORE",
+            "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+          },
+          {
+            "label": "ExternalOracle source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/ExternalOracle.java"
+          },
+          {
+            "label": "Loans liquidate source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+          }
+        ]
+      },
+      {
+        "id": "balanced-loans-jitosol-manual",
+        "label": "Balanced Loans JITOSOL (manual external price)",
+        "tier": "single-source-or-laggy",
+        "summary": "JITOSOL collateral on ICON Balanced Loans uses Balanced Oracle external/manual price updates (getExternalPriceProvider=JITOSOL -> 'manual') with a 2,592,000-second (30-day) per-symbol last-update threshold, then the shared permissionless liquidate path.",
+        "collateralAssets": [
+          "JITOSOL"
+        ],
+        "chains": [
+          "icon"
+        ],
+        "feeds": [
+          {
+            "provider": "Balanced Oracle external/manual price provider",
+            "path": "External/manual updatePriceData authorized for provider string 'manual' -> Balanced Oracle externalPriceData(JITOSOL) -> Loans getLastPriceInUSD(JITOSOL)",
+            "address": "cx133c6015bb29f692b12e71c1792fddf8f7014652",
+            "chain": "icon",
+            "stalenessBoundSec": 2592000,
+            "observedAt": "2026-07-28",
+            "observedBlock": 116171048,
+            "failureDomainKeys": [
+              "balanced-oracle-manual-price",
+              "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+              "icon"
+            ]
+          }
+        ],
+        "fallbackBehavior": "At the pinned block getExternalPriceProvider(JITOSOL) returned 'manual' and getSymbolLastUpdateThreshold(JITOSOL) returned 2,592,000,000,000 microseconds (30 days). ExternalOracle stores the last pushed rate without a Band/Pyth failover. This is a single privileged/manual update path with a very long staleness bound.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 116171048,
+        "collateralParameters": [
+          {
+            "asset": "JITOSOL",
+            "maximumLtvPct": 66.6667,
+            "minimumCollateralRatioPct": 125.0,
+            "note": "On-chain getLiquidationRatio=125.0% and getLockingRatio=150% (implies max LTV 66.6667%) at ICON block 116171048."
+          }
+        ],
+        "liquidationMechanism": "Same permissionless Loans liquidate(owner, amount, collateralSymbol) path as Band-priced collaterals; liquidator burns bnUSD for discounted collateral when standing is LIQUIDATE.",
+        "liquidationDelaySec": 0,
+        "backstop": "Open-market liquidators burning bnUSD are the first-line backstop; residual bad debt after collateral exhaustion is tracked per collateral and reducible via cancelBadDebt bnUSD burns. No dedicated Stability Pool backstop is present on Loans.",
+        "shutdownOrBadDebtBehavior": "Status-gated Loans operations plus per-collateral bad-debt accounting; no additional global multi-collateral socialization path was observed in Loans v1.3.0 beyond cancelBadDebt.",
+        "debtSharePct": 0.0,
+        "failureDomainKeys": [
+          "balanced-oracle-manual-price",
+          "balanced-oracle:icon:cx133c6015bb29f692b12e71c1792fddf8f7014652",
+          "balanced-loans:icon:cx66d4d90f5f113eba575bf793570135f9b10cece1",
+          "icon"
+        ],
+        "sources": [
+          {
+            "label": "ICON public RPC",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          },
+          {
+            "label": "Balanced Oracle SCORE",
+            "url": "https://tracker.icon.community/contract/cx133c6015bb29f692b12e71c1792fddf8f7014652"
+          },
+          {
+            "label": "ExternalOracle source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/BalancedOracle/src/main/java/network/balanced/score/core/balancedoracle/ExternalOracle.java"
+          },
+          {
+            "label": "Loans liquidate source",
+            "url": "https://github.com/balancednetwork/balanced-java-contracts/blob/main/core-contracts/Loans/src/main/java/network/balanced/score/core/loans/LoansImpl.java"
+          }
+        ]
       }
     ]
   },
@@ -556,8 +1481,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 reserve batch 7",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "manual-review",
     "sources": [
       {
@@ -569,9 +1494,9 @@
         "url": "https://balanced.network/stablecoin/"
       }
     ],
-    "rationale": "Balanced's current v2 stablecoin page lists the supported crypto collateral types and states that its Stability Fund holds deposited USDC and USDT while minting bnUSD. It does not publish current debt or reserve weights by constituent. The former 90/10 rows described the unsupported v1 system and are replaced by one current v2 backing envelope rather than retained as a false allocation.",
+    "rationale": "Balanced's current v2 stablecoin page lists the supported crypto collateral types and states that its Stability Fund holds deposited USDC and USDT while minting bnUSD. It does not publish current debt or reserve weights by constituent. The former 90/10 rows described the unsupported v1 system and are replaced by one current v2 backing envelope rather than retained as a false allocation. Write-time re-open 2026-07-28: dual sources still describe over-collateralized crypto CDP minting without a public live collateral weight table; knownUnknownExposurePct remains 100. (bnUSD crypto-backed stablecoin page + docs)",
     "compositionBasis": "Balanced v2 supported-collateral inventory and USDC/USDT Stability Fund design",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "Current constituent weights across v2 loan collateral and the USDC/USDT Stability Fund are not published.",
     "knownUnknownExposurePct": 100,
@@ -582,7 +1507,10 @@
         "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "The complete current backing categories are identified, but Balanced does not publish current constituent balances or weights.",
-        "candidateCoinIds": ["usdc-circle", "usdt-tether"]
+        "candidateCoinIds": [
+          "usdc-circle",
+          "usdt-tether"
+        ]
       }
     ]
   },

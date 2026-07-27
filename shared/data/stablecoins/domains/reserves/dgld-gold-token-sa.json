@@ -17,8 +17,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -26,14 +26,15 @@
         "url": "https://s3.eu-central-1.amazonaws.com/gtsa.s8/dgld/DGLD-LitePaper_2025.docx.pdf"
       },
       {
-        "label": "DGLD public gold bar mapper",
-        "url": "https://explorer.dgld.ch/"
+        "label": "DGLD official website (physical ownership and bar mapper)",
+        "url": "https://dgld.ch/"
       }
     ],
-    "rationale": "Gold Token SA states that each DGLD represents one fine troy ounce of allocated LBMA-certified PAMP gold in MKS PAMP Swiss vaults. Each token or fraction is linked to numbered bars through the public mapper, supporting a single 100% allocated-gold reserve slice.",
-    "compositionBasis": "Issuer litepaper and public bar-mapping architecture",
+    "rationale": "Write-time re-open 2026-07-28: the 2025 litepaper still states each DGLD is one-for-one allocated LBMA-certified PAMP gold in MKS PAMP Swiss vaults, that each token or fraction is uniquely linked to numbered bars via the bar mapper, and that each token represents one fine troy ounce of fully allocated audited gold. The live dgld.ch site independently restates direct ownership of investment-grade PAMP gold stored in MKS PAMP Swiss vaults and points to the public gold bar mapping tool. Modeled as a single 100% allocated-gold reserve slice. explorer.dgld.ch remains a JS mapper surface without static bar inventory export.",
+    "compositionBasis": "Issuer litepaper and official site bar-mapping / allocated-gold architecture",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The mapper provides bar-level verification, but the static record does not reproduce changing individual bar weights or identifiers.",
+    "knownUnknownExposure": "The mapper provides bar-level verification architecture, but the static record does not reproduce changing individual bar weights or identifiers.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -66,8 +67,8 @@
         "url": "https://s3.eu-central-1.amazonaws.com/gtsa.s8/dgld/DGLD-LitePaper_2025.docx.pdf"
       },
       {
-        "label": "DGLD public gold bar mapper",
-        "url": "https://explorer.dgld.ch/"
+        "label": "DGLD official website (physical ownership and bar mapper)",
+        "url": "https://dgld.ch/"
       }
     ],
     "uncertainty": "The issuer states that allocated gold ownership remains off balance sheet of Gold Token SA and MKS PAMP and is preserved in insolvency. The public litepaper does not explicitly state a rehypothecation prohibition."

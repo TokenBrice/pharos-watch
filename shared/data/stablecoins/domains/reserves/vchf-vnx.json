@@ -17,8 +17,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "verified",
     "sources": [
       {
@@ -34,7 +34,7 @@
         "url": "https://vnx.li/transparency/"
       }
     ],
-    "rationale": "AREVA reconciled the December 31, 2024 circulating VCHF liability to at least the same aggregate CHF value held in bank accounts or securities custody accounts. The report does not disclose constituents or weights, while VNX's non-binding policy permits a broader mix of debt securities, ETFs, derivatives, deposits, repos, money-market instruments, and currency hedges. The current VNX transparency page publishes no later VCHF reserve report.",
+    "rationale": "AREVA reconciled the December 31, 2024 circulating VCHF liability to at least the same aggregate CHF value held in bank accounts or securities custody accounts. The report does not disclose constituents or weights, while VNX's non-binding policy permits a broader mix of debt securities, ETFs, derivatives, deposits, repos, money-market instruments, and currency hedges. The current VNX transparency page publishes no later VCHF reserve report. Write-time re-open 2026-07-28: AREVA year-end 2024 reserve report PDF URL and VNX reserves management policy still load; transparency page shows asset figures as of 24.03.2026 for VNX suite but no VCHF instrument-weight table dual-corroborated \u2192 ku=100 retained for VCHF composition split.",
     "compositionBasis": "AREVA aggregate reserve-value reconciliation and VNX non-binding reserve policy",
     "compositionAsOf": "2024-12-31",
     "scope": "full-composition",

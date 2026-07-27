@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -36,7 +36,7 @@
         "url": "https://docs.idrx.co/integration/processing-mint-idrx-requests"
       }
     ],
-    "rationale": "IDRX's current issuer materials state that each IDRX is backed 1:1 by Indonesian rupiah reserves and government bonds and describe regular independent audits. The public sources do not expose current weights between fiat and government bonds, named reserve institutions, or a current assurance artifact, so the envelope remains one aggregate basket.",
+    "rationale": "IDRX's current issuer materials state that each IDRX is backed 1:1 by Indonesian rupiah reserves and government bonds and describe regular independent audits. The public sources do not expose current weights between fiat and government bonds, named reserve institutions, or a current assurance artifact, so the envelope remains one aggregate basket. Write-time re-open 2026-07-28: IDRX transparency docs page still claims 1:1 IDR peg with third-party audits (document list JS-loaded); mint-request docs corroborate issuance flow. No extractable dated composition table in re-open \u2192 ku=100.",
     "compositionBasis": "IDRX issuer reserve and minting disclosures; current asset-class weights undisclosed",
     "scope": "full-composition",
     "knownUnknownExposure": "The issuer identifies the broad reserve categories but does not publish current fiat-versus-government-bond weights, security holdings, bank providers, maturities, or custody safeguards.",
@@ -49,7 +49,8 @@
         "disposition": "basket-needs-split",
         "rationale": "IDRX identifies fiat and government-bond backing but does not publish a defensible current split or constituent list."
       }
-    ]
+    ],
+    "compositionAsOf": "2026-07-28"
   },
   "custodyProfile": {
     "providers": [

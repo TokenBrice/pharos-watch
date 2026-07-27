@@ -7,13 +7,19 @@
       "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "United States Treasury and undisclosed financial institutions holding USDX cash and cash-equivalent balances",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 curation",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -25,9 +31,9 @@
         "url": "https://www.hextrust.com/resources-collection/hex-trusts-usdx-launches-with-clearpool-on-flare-network"
       }
     ],
-    "rationale": "HT Digital Assets states that USDX is fully backed by U.S. Treasuries, cash, and cash equivalents, while Hex Trust describes the reserves as primarily one-to-three-month Treasury bills. On 2026-07-21 the issuer page's reserve panel remained an 'Updating Reserves in USD' placeholder and linked no current attestation or category weights, so the prior 80/20 allocation remains replaced by one aggregate basket.",
+    "rationale": "HT Digital Assets states that USDX is fully backed by U.S. Treasuries, cash, and cash equivalents, while Hex Trust describes the reserves as primarily one-to-three-month Treasury bills. On 2026-07-21 the issuer page's reserve panel remained an 'Updating Reserves in USD' placeholder and linked no current attestation or category weights, so the prior 80/20 allocation remains replaced by one aggregate basket. Write-time re-open 2026-07-28: HT Digital Assets site and Hex Trust USDX launch post still describe USDX reserves at a high level without a dated public composition table \u2192 ku=100.",
     "compositionBasis": "Current issuer reserve disclosure; asset-class weights undisclosed",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The full Treasury/cash-equivalent reserve envelope is disclosed, but its current asset-class allocation is not public.",
     "knownUnknownExposurePct": 100,

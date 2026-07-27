@@ -102,27 +102,32 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "GROK-RESEARCH wave-8 phase1 reserve",
     "confidence": "probable",
     "sources": [
-      {
-        "label": "Midas mGLOBAL disclosure",
-        "url": "https://midas.app/mGLOBAL"
-      },
       {
         "label": "Midas mGLOBAL Aave Horizon launch post (strategy and structure)",
         "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/"
       },
       {
+        "label": "rwa.xyz Midas Fasanara Global | mGLOBAL",
+        "url": "https://app.rwa.xyz/assets/mGLOBAL"
+      },
+      {
         "label": "Midas Attestation Engine",
         "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
+      },
+      {
+        "label": "Midas mGLOBAL product page",
+        "url": "https://midas.app/mGLOBAL"
       }
     ],
-    "rationale": "Re-checked the Midas issuer materials on 2026-07-20 (the mGLOBAL product page remains Cloudflare-gated to fetchers; the issuer's Aave Horizon launch post was fetched in full). Midas identifies mGLOBAL as a security token linked to Fasanara Capital's flagship receivables strategy: primarily short-duration trade receivables, digital invoices and asset-based finance across 60+ countries, 140+ originators and 700,000+ open positions, with zero fund-level leverage. No constituent-level loan tape, obligor weights, or sector/geography splits are published, so the reserve remains a single 100% private-credit strategy envelope; the high credit tier and the basket-needs-split disposition are retained. Liquidity maps to over-seven-days: the instant-redemption sleeve is capped at 10% of TVL (Midas Staked Liquidity credit facility behind it) and standard redemption settles monthly at NAV.",
-    "compositionBasis": "Midas issuer disclosure of the Fasanara Global Diversified Alternative Debt strategy envelope; no published constituent weights",
+    "rationale": "Write-time re-open 2026-07-28: Midas Aave Horizon post still states mGLOBAL is a security token linked to Fasanara Capital's flagship receivables strategy (primarily short-duration trade receivables, digital invoices and asset-based finance; 60+ countries, 140+ originators, 700,000+ open positions; zero fund-level leverage; NAV-linked, not a fixed-par stablecoin). Independent rwa.xyz asset page classifies mGLOBAL as Asset-Backed Credit providing exposure to Fasanara's Global Fund / GDADF strategy with the same primary asset types and leaves Underlying Assets without a published weight table. Neither source publishes a current loan tape, obligor weights, or sector/geography split, so the reserve stays a single 100% private-credit strategy envelope with basket-needs-split. The issuer's 10% TVL Aave liquidity sleeve and monthly standard redemption are redemption-architecture disclosures, not dual-sourced live reserve-line percentages, and are not invented as a separate cash/stablecoin slice. Product page midas.app/mGLOBAL remains Cloudflare-gated to automated fetchers.",
+    "compositionBasis": "Midas issuer strategy disclosure plus independent rwa.xyz Asset-Backed Credit / Fasanara Global Fund envelope; no published constituent weights",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer does not publish a current loan tape, receivable-level weights, obligor or originator concentrations, warehouse facilities, valuation inputs, or a liquidity schedule beyond the 10% instant-redemption sleeve and monthly NAV redemption. The full portfolio remains one disclosed private-credit strategy envelope.",
+    "knownUnknownExposure": "No public current loan tape, receivable-level weights, obligor/originator concentrations, warehouse facilities, or live sleeve-vs-GDADF NAV percentages. The 10% TVL instant-redemption sleeve is disclosed as liquidity design only; without dual-source measured allocation it remains inside the unresolved strategy envelope.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -130,7 +135,7 @@
         "reserveName": "Fasanara global private-credit / strategy portfolio",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The issuer identifies the strategy envelope but does not publish a current underlying portfolio allocation or individual obligor and counterparty exposures."
+        "rationale": "Issuer and independent RWA registry identify the Fasanara receivables / GDADF strategy envelope but do not publish current underlying portfolio allocation or individual obligor and counterparty exposures."
       }
     ]
   },
@@ -154,8 +159,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "GROK-RESEARCH wave-8 phase1 reserve",
     "confidence": "probable",
     "sources": [
       {
@@ -163,15 +168,15 @@
         "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/"
       },
       {
-        "label": "Midas mGLOBAL disclosure",
-        "url": "https://midas.app/mGLOBAL"
+        "label": "rwa.xyz Midas Fasanara Global | mGLOBAL",
+        "url": "https://app.rwa.xyz/assets/mGLOBAL"
       },
       {
         "label": "Midas Attestation Engine",
         "url": "https://blog.midas.app/introducing-the-midas-attestation-engine/"
       }
     ],
-    "uncertainty": "Midas's issuer post (fetched 2026-07-20) documents issuance through a dedicated compartment of a bankruptcy-remote Luxembourg Securitisation Vehicle and monthly independent valuation by JTC Luxembourg, which supports segregated assets and a structured bankruptcy-remoteness claim. It does not name the custodian(s) safekeeping the underlying receivables portfolio or the cash accounts, does not publish provider shares, and discloses no rehypothecation or collateral-reuse terms; zero fund-level leverage is stated but that is not a reuse prohibition. Fordefi's role as Midas's on-chain custody technology comes from transparency listings rather than a current mGLOBAL-specific issuer custody document, and the wallet-level arrangement (MPC shares, policy control) for the mGLOBAL compartment is unpublished. The compartment is an exempt Luxembourg securitisation undertaking, not a prudentially supervised fund."
+    "uncertainty": "Write-time re-open 2026-07-28 of the Midas Aave Horizon post reconfirms issuance through a dedicated compartment of a bankruptcy-remote Luxembourg Securitisation Vehicle and monthly independent valuation by JTC Luxembourg (supports segregated assets and structured bankruptcy-remoteness). It still does not name the custodian(s) safekeeping underlying receivables or cash accounts, does not publish provider shares, and discloses no rehypothecation terms; zero fund-level leverage is not a reuse prohibition. Fordefi remains a platform-level on-chain custody technology claim from Midas transparency listings rather than a mGLOBAL-specific custody document. The compartment is an exempt Luxembourg securitisation undertaking, not a prudentially supervised fund."
   },
   "yieldConfig": {
     "yieldSource": "Midas Fasanara Global NAV",

@@ -344,50 +344,61 @@
   },
   "reserves": [
     {
-      "name": "tULTRA — Standard Chartered Libeara tokenized U.S. T-bills (Wellington Mgmt)",
+      "name": "tULTRA/ULTRA (Wellington/Libeara) and FILQ (Fidelity International via Sygnum) — unpublished allocation split",
       "pct": 100,
       "risk": "low",
       "assetClass": "fund-share",
-      "issuerOrObligor": "FundBridge Capital / Wellington Management / Standard Chartered Bank",
+      "issuerOrObligor": "FundBridge Capital / Wellington Management / Standard Chartered Bank (ULTRA); Fidelity International / Sygnum (FILQ)",
       "riskFactors": [
         "duration",
         "liquidity",
         "custody",
         "counterparty",
-        "smart-contract"
+        "smart-contract",
+        "concentration"
       ],
-      "liquidityHorizon": "seven-days"
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex reserve curation",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Theo thBILL documentation",
-        "url": "https://docs.theo.xyz/thbill"
+        "label": "Theo thBILL product page (two institutional underlyings)",
+        "url": "https://theo.xyz/thbill"
       },
       {
-        "label": "Theo tULTRA documentation",
-        "url": "https://docs.theo.xyz/thbill/tultra"
+        "label": "Theo FILQ addition announcement (2026-06-30)",
+        "url": "https://theo.xyz/articles/theo-fidelity-international-filq-thbill-chainlink-integration"
+      },
+      {
+        "label": "Theo thBILL documentation (composition / launch tULTRA)",
+        "url": "https://docs.theo.xyz/platform/thbill"
+      },
+      {
+        "label": "Theo tULTRA documentation (ULTRA fact sheet)",
+        "url": "https://docs.theo.xyz/platform/thbill/tultra"
+      },
+      {
+        "label": "Our Crypto Talk — FILQ allocation; exact basket weight undisclosed",
+        "url": "https://ourcryptotalk.com/news/theo-thbill-filq-allocation"
       }
     ],
-    "rationale": "Theo documents thBILL as a basket that currently comprises tULTRA, a wrapper for Libeara's ULTRA fund. The tULTRA documentation identifies short-duration Treasury securities, repos, and cash, with FundBridge management, Wellington investment management, and Standard Chartered custody. No separate percentage split is published for those underlying ULTRA assets.",
-    "compositionBasis": "Theo thBILL and tULTRA product documentation",
+    "rationale": "Re-opened 2026-07-28: theo.xyz/thbill states thBILL holds two institutional underlyings — ULTRA (Wellington Management via Libeara/Standard Chartered) and FILQ (Fidelity International via Sygnum/Chainlink NAV). Theo's 2026-06-30 announcement states a $20M FILQ investment 'now sits inside thBILL' as the second underlying alongside Wellington's fund. Independent coverage (Our Crypto Talk) corroborates the dual-underlying structure and states Theo has not disclosed FILQ's exact basket weight. Docs at docs.theo.xyz/platform/thbill still describe launch composition as solely tULTRA and note further regulated T-bill tokens may be added; they do not publish a current percentage split. tULTRA docs identify ULTRA's asset families (ultra-short U.S. Treasuries, repos, cash) without category weights. No dual-sourced numeric allocation is published, so the full reserve is held as one aggregate basket with basket-needs-split rather than inventing weights (including third-party ~83/17 or ~84/16 estimates).",
+    "compositionBasis": "Theo product page + FILQ announcement re-opened 2026-07-28; independent Our Crypto Talk corroboration of dual underlyings and undisclosed weight; Theo tULTRA fact sheet for ULTRA asset families",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The tracked 100% tULTRA wrapper is identified, but the current percentage split of ULTRA's Treasury, repo, and cash holdings is not published in the reviewed Theo sources.",
+    "knownUnknownExposure": "Both institutional fund legs (tULTRA/ULTRA and FILQ) are identified by issuer product and announcement sources, but the current percentage allocation between them, ULTRA's internal Treasury/repo/cash split, and any cash/USDC buffer are not published with dual-source dated figures.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "tULTRA — Standard Chartered Libeara tokenized U.S. T-bills (Wellington Mgmt)",
+        "reserveName": "tULTRA/ULTRA (Wellington/Libeara) and FILQ (Fidelity International via Sygnum) — unpublished allocation split",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Theo identifies the tULTRA wrapper and its underlying asset families but does not publish a current category allocation within ULTRA.",
-        "candidateCoinIds": [
-          "ustb-superstate"
-        ]
+        "rationale": "Issuer and independent coverage identify two fund underlyings (ULTRA via tULTRA and FILQ) but do not publish a current defensible allocation split or ULTRA sub-category weights; percentage estimates from secondary reports were not dual-sourced and are not stored."
       }
     ]
   },
@@ -396,27 +407,36 @@
       {
         "name": "Standard Chartered Bank",
         "role": "custodian",
-        "sharePct": 100,
         "jurisdiction": "Singapore"
+      },
+      {
+        "name": "Sygnum",
+        "role": "custodian",
+        "jurisdiction": "Switzerland"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex reserve curation",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Theo tULTRA documentation",
-        "url": "https://docs.theo.xyz/thbill/tultra"
+        "label": "Theo tULTRA documentation (Standard Chartered custodian)",
+        "url": "https://docs.theo.xyz/platform/thbill/tultra"
       },
       {
-        "label": "Theo thBILL documentation",
-        "url": "https://docs.theo.xyz/thbill"
+        "label": "Theo FILQ addition announcement (Sygnum rails)",
+        "url": "https://theo.xyz/articles/theo-fidelity-international-filq-thbill-chainlink-integration"
+      },
+      {
+        "label": "Theo thBILL product page",
+        "url": "https://theo.xyz/thbill"
       }
     ],
-    "uncertainty": "Theo identifies Standard Chartered as custodian for the ULTRA fund, but the reviewed pages do not specify custody segregation, rehypothecation, or the legal claims of thBILL holders against the underlying assets."
+    "uncertainty": "ULTRA is custodied by Standard Chartered per tULTRA docs; FILQ is accessed through Sygnum per Theo's FILQ announcement. Provider share percentages, segregation, rehypothecation, and thBILL holders' direct legal claim against underlying fund assets are not published in the reviewed sources. Prior 100% Standard Chartered share is removed because the dual-underlying structure makes a single-provider share unsupported.",
+    "knownUnknownExposurePct": 100
   },
   "yieldConfig": {
     "yieldSource": "tULTRA (Standard Chartered Libeara tokenized T-bills)",

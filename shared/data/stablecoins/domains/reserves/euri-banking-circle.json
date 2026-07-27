@@ -2,41 +2,46 @@
   "id": "euri-banking-circle",
   "reserves": [
     {
-      "name": "Euro cash in the EURI fiduciary reserve account",
+      "name": "EUR cash and low-risk cash equivalents in the EURI fiduciary estate",
       "pct": 100,
       "risk": "very-low",
-      "assetClass": "bank-deposit",
+      "assetClass": "other",
       "issuerOrObligor": "Banking Circle S.A. acting as fiduciary",
-      "riskFactors": ["counterparty", "liquidity", "custody", "legal", "concentration"],
-      "liquidityHorizon": "immediate"
+      "riskFactors": ["credit", "counterparty", "liquidity", "custody", "legal", "concentration", "duration"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Eurite issuer reserve and safeguarding disclosures",
-        "url": "https://www.eurite.com/"
+        "label": "EURI MiCA white paper (HTML)",
+        "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html"
       },
       {
-        "label": "EURI MiCA white paper",
-        "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html"
+        "label": "Banking Circle EURI launch press release",
+        "url": "https://www.bankingcircle.com/banking-circle-launches-the-first-bank-backed-mica-compliant-stablecoin-euri/"
+      },
+      {
+        "label": "Eurite issuer homepage safeguarding and FAQ disclosures",
+        "url": "https://www.eurite.com/"
       }
     ],
-    "rationale": "Banking Circle states that every EURI is issued against euro cash held one-for-one in a dedicated fiduciary reserve account. The current issuer FAQ supports a single cash reserve rather than the prior unsupported 70/30 cash/securities estimate.",
-    "compositionBasis": "Banking Circle EURI fiduciary cash-backing policy",
+    "rationale": "Write-time re-open 2026-07-28: the MiCA white paper (Parts B.3 and D.9) states that all EURI holder funds in the Luxembourg 2003 Act fiduciary estate are held in cash and/or low-risk cash equivalents on a one-for-one basis. Banking Circle's official launch release independently states the same cash-or-cash-equivalents, segregated, bankruptcy-remote posture. Eurite marketing pages and FAQ still say pure 'cash' in a fiduciary reserve account and 1:1 euro cash minting, which is a narrower marketing framing than the legal white-paper investment set; no public dated EY composition schedule splits cash versus cash-equivalent weights. Replaces the prior unsupported 100% pure bank-deposit cash slice with the disclosed cash/cash-equivalent fiduciary basket.",
+    "compositionBasis": "Banking Circle EURI MiCA white-paper fiduciary reserve policy; cash vs cash-equivalent weights undisclosed",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "No material unclassified reserve category is disclosed; the exact account-level placement is not public.",
-    "knownUnknownExposurePct": 0,
+    "knownUnknownExposure": "The full reserve envelope is identified as EUR cash and/or low-risk cash equivalents in the EURI fiduciary estate, but cash versus cash-equivalent weights, instrument identities, maturities, account-level placement, and provider shares are not published. About-page EY attestation claims are not accompanied by a dated public composition examination.",
+    "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Euro cash in the EURI fiduciary reserve account",
+        "reserveName": "EUR cash and low-risk cash equivalents in the EURI fiduciary estate",
         "pct": 100,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The reserve is euro cash rather than another tracked stablecoin."
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer policy permits cash and/or low-risk cash equivalents without publishing current weights or instruments."
       }
     ]
   },
@@ -51,19 +56,23 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Eurite issuer safeguarding disclosures",
-        "url": "https://www.eurite.com/"
+        "label": "EURI MiCA white paper (HTML)",
+        "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html"
       },
       {
-        "label": "EURI MiCA white paper",
-        "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html"
+        "label": "Banking Circle EURI launch press release",
+        "url": "https://www.bankingcircle.com/banking-circle-launches-the-first-bank-backed-mica-compliant-stablecoin-euri/"
+      },
+      {
+        "label": "Eurite issuer homepage safeguarding disclosures",
+        "url": "https://www.eurite.com/"
       }
     ],
-    "uncertainty": "The Luxembourg fiduciary estate, segregation, and bankruptcy remoteness are explicit. Banking Circle does not publish account-level placement, provider shares, or rehypothecation terms for the safeguarded cash."
+    "uncertainty": "White paper and product site describe a Luxembourg 2003 Act fiduciary estate, segregation from Banking Circle own assets, and bankruptcy remoteness for Safeguarded Customer Funds; holders' rights are against the fiduciary estate rather than Banking Circle as a whole. Account-level placement, any third-party sub-custodians, provider shares, and rehypothecation terms are not published."
   }
 }

@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "verified",
     "sources": [
       {
@@ -33,7 +33,7 @@
         "url": "https://docs.dtrinity.org/key-concepts/network-support"
       }
     ],
-    "rationale": "dTRINITY documents chain-isolated reserves that may contain eligible stablecoins, yieldcoins, and Curve AMO positions, with governance able to change allocations over time. The documentation identifies accepted assets and reserve-vault architecture but does not publish a reconciled current balance sheet across deployments, so the prior static component percentages are replaced by one complete aggregate basket.",
+    "rationale": "dTRINITY documents chain-isolated reserves that may contain eligible stablecoins, yieldcoins, and Curve AMO positions, with governance able to change allocations over time. The documentation identifies accepted assets and reserve-vault architecture but does not publish a reconciled current balance sheet across deployments, so the prior static component percentages are replaced by one complete aggregate basket. Write-time re-open 2026-07-28: dTRINITY dUSD docs still state soft-pegged dollar with >=$1 collateral in chain-isolated reserves and 1:1 mint/redeem against eligible reserve assets; site corroborates. Eligible-asset weights not published \u2192 ku=100.",
     "compositionBasis": "dTRINITY documented eligible-asset and chain-isolated reserve envelope; current balances are undisclosed",
     "scope": "full-composition",
     "knownUnknownExposure": "Current deployment weights, reserve-asset balances, AMO allocations, and aggregate coverage reconciliation are not published in the reviewed documentation.",
@@ -46,7 +46,8 @@
         "disposition": "basket-needs-split",
         "rationale": "The protocol publishes eligible assets and vault addresses but not current per-asset or per-network reserve balances."
       }
-    ]
+    ],
+    "compositionAsOf": "2026-07-28"
   },
   "custodyProfile": {
     "providers": [

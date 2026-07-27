@@ -6,13 +6,14 @@
       "pct": 100,
       "risk": "very-low",
       "assetClass": "other",
+      "issuerOrObligor": "JPYC Inc. (Type II Funds Transfer Service Provider)",
       "riskFactors": ["counterparty", "duration", "liquidity", "custody", "concentration"],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "probable",
     "sources": [
       {
@@ -20,14 +21,19 @@
         "url": "https://corporate.jpyc.co.jp/news/posts/jpyc-ex-launch"
       },
       {
-        "label": "JPYC corporate product disclosure",
-        "url": "https://corporate.jpyc.co.jp/"
+        "label": "CoinMarketCap Academy JPYC launch article (corroborates 100% yen deposits and JGBs)",
+        "url": "https://coinmarketcap.com/academy/article/jpyc-launches-japans-first-regulated-yen-stablecoin"
+      },
+      {
+        "label": "CoinPost report of Reuters CEO interview (planned ~80% JGB / ~20% trust deposits — not measured allocation)",
+        "url": "https://coinpost.jp/?p=665842"
       }
     ],
-    "rationale": "JPYC Inc. states that at least 100% of issued JPYC is backed by Japanese yen deposits and Japanese government bonds. It does not disclose current category weights, so the full reserve is represented as one aggregate basket.",
-    "compositionBasis": "Current JPYC issuer reserve disclosure; deposit/bond weights undisclosed",
+    "rationale": "Write-time re-open 2026-07-28: the issuer launch post still states that issuance is conserved at 100%+ by Japanese yen (bank deposits and Japanese government bonds). CoinMarketCap Academy independently restates 100% reserves in yen deposits and government bonds and points to the same issuer launch disclosure. CoinPost (reporting a Reuters interview with CEO Okabe) describes a *future planned* ~80% JGB / ~20% trust-deposit target with short-term securities emphasized initially — not a dated, measured current split. No public independent attestation or absolute composition schedule with deposit vs JGB weights was found. Modeled as one full-envelope basket with basket-needs-split; 80/20 is recorded only as planned target language and is not written as current pct weights.",
+    "compositionBasis": "Current JPYC issuer reserve disclosure (deposits + JGBs ≥100% of issuance); deposit/JGB weights undisclosed",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer identifies the complete deposit and Japanese-government-bond reserve basket but does not publish its current allocation.",
+    "knownUnknownExposure": "The issuer identifies the complete deposit and Japanese-government-bond reserve basket at ≥100% of issuance but does not publish current category weights, instrument identities, maturities, bank/trust providers, or a dated independent composition attestation. CEO-interview 80/20 language is a forward-looking target, not a measured as-of allocation.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -35,7 +41,7 @@
         "reserveName": "Japanese yen deposits and Japanese government bonds",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The current deposit/JGB allocation is not publicly disclosed."
+        "rationale": "Issuer and independent media identify the deposit/JGB envelope but do not publish a dated current allocation; CEO 80/20 remarks are planned targets only."
       }
     ]
   },
