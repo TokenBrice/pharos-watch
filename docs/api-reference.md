@@ -314,7 +314,7 @@ Unless an endpoint section explicitly says `Authentication: exempt`, routes in t
 
 Generated from `public/openapi.json` (`Pharos API` v1.0.0). The OpenAPI artifact intentionally excludes Cloudflare-Access-gated admin routes, self-serve key issuance POST endpoints, feedback submission, Telegram webhook ingestion, Telegram Mini App endpoints, and dynamic OG image routes. Those endpoints are documented in the hand-written sections below.
 
-Total documented public operations: **40**.
+Total documented public operations: **39**.
 
 | Method | Path | Summary | Tags | Auth | Parameters | Status codes |
 | ------ | ---- | ------- | ---- | ---- | ---------- | ------------ |
@@ -338,8 +338,7 @@ Total documented public operations: **40**.
 | GET | `/api/peg-summary` | Peg summary | Peg Monitoring | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/public-status-history` | Public status history | Status | X-API-Key | `limit?`, `window?` | 200, 400, 401, 429, 503 |
 | GET | `/api/redemption-backstops` | Redemption backstops | Risk, Reserves | X-API-Key | — | 200, 400, 401, 429, 503 |
-| GET | `/api/report-cards` | Report cards | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
-| GET | `/api/report-cards/v9` | Safety Score V9 report cards (shadow) | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
+| GET | `/api/report-cards/v9` | Safety Score V9 report cards | Risk | X-API-Key | — | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history` | Safety score history | Risk, History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history-v2` | Safety score history (identity-aware) | Risk, History | X-API-Key | `stablecoin`, `days?` | 200, 400, 401, 429, 503 |
 | GET | `/api/snapshot/{date}/stablecoin/{stablecoinId}` | Public snapshot projection for a single coin | Digest, Stablecoins, History | X-API-Key | `date`, `stablecoinId` | 200, 400, 401, 429, 503 |
@@ -417,7 +416,7 @@ The canonical `stablecoins` cache is written only after `StablecoinListResponseS
 | `circulatingPrevMonth`         | `Record<string, number>`                           | Supply ~30 days ago                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `chainCirculating`             | `Record<string, ChainCirculating>`                 | Per-chain breakdown. For `"coingecko-gap-fill"` and `"defillama-history-gap-fill"` assets this remains DefiLlama-led unless the missing total can be allocated safely to one tracked chain, so the per-chain sum may be a lower bound on total supply.                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `chains`                       | `string[]`                                         | List of chain names where the token is deployed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `contracts`                    | `ContractDeployment[] \| undefined`                | Curated on-chain deployments for tracked stablecoins (active and frozen). Omitted when curated metadata has no contracts on file. Use this to map a Pharos `id` to its on-chain token contracts when joining with `/api/report-cards` or other endpoints keyed by `id`.                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `contracts`                    | `ContractDeployment[] \| undefined`                | Curated on-chain deployments for tracked stablecoins (active and frozen). Omitted when curated metadata has no contracts on file. Use this to map a Pharos `id` to its on-chain token contracts when joining with `/api/report-cards/v9` or other endpoints keyed by `id`.                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `consensusSources`             | `string[]`                                         | Source names that returned a valid price for this coin during the sync cycle. Defaults to `[]` when absent.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `priceSourceConfidenceProfile` | `PriceSourceConfidenceProfile \| undefined`        | Present for DEX-inclusive primary prices. Summarizes active protocol DEX lanes, the freshest DEX lane age, and whether the price relies only on the aggregate `dex-promoted` lane.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `agreeSources`                 | `string[] \| undefined`                            | Compatibility alias for agreeing/current price sources when present                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
@@ -1813,9 +1812,9 @@ Lists immutable public daily dataset snapshots written by the `snapshot-public-d
 
 Returns the full immutable public dataset snapshot for a UTC date. The worker reads the gzipped payload from D1, decompresses it, and returns the original JSON envelope.
 
-The writer fails closed for required cache/table reads and marks the cron run `degraded` without inserting a snapshot when the active Safety Score, DEWS, or DEX liquidity section is unavailable. It accepts only the complete identified active Safety Score publication: V8 uses the strict compact cache and V9 must be no older than two 30-minute producer cadences. The identity is embedded in the row metadata, envelope, and report-card payload. Immediately before insert, the writer reloads the active source and uses an activation-marker predicate in the insert itself, so activation, rollback, or a publication change cannot seal a mixed-model immutable row.
+The writer fails closed for required cache/table reads and marks the cron run `degraded` without inserting a snapshot when the canonical V9 Safety Score, DEWS, or DEX liquidity section is unavailable. V9 must be complete, current, and no older than two 30-minute producer cadences. Its identity is embedded in the row metadata, envelope, and report-card payload. Immediately before insert, the writer reloads and fences the exact canonical publication identity so a publication change cannot seal a mixed-generation immutable row.
 
-DEWS rows must match the exact timestamp, row count, and stablecoin-ID digest in `cache["dews:published-generation"]`; a missing pointer, failed partial generation, or coverage mismatch cannot be sealed into an immutable snapshot. A successful empty DEX read may still publish an empty `liquidity` section, while failed reads are never silently omitted from an `ok` snapshot. Reads validate identified V8/V9 identities, card membership, and completeness before serving. Legacy rows remain readable, and known partial-identity rows from July 13-15, 2026 are served without asserting a verified identity.
+DEWS rows must match the exact timestamp, row count, and stablecoin-ID digest in `cache["dews:published-generation"]`; a missing pointer, failed partial generation, or coverage mismatch cannot be sealed into an immutable snapshot. A successful empty DEX read may still publish an empty `liquidity` section, while failed reads are never silently omitted from an `ok` snapshot. New rows validate canonical V9 identity, card membership, and completeness before serving. Historical V8 rows remain readable, and known partial-identity rows from July 13-15, 2026 are served without asserting a verified identity.
 
 **Cache:** immutable-snapshot
 
@@ -2343,175 +2342,58 @@ Dynamic Open Graph PNG images used by share buttons and page metadata.
 
 `/api/og/stablecoin/:id` accepts tracked public stablecoin IDs only. The renderer assembles each card from cached stablecoin, DEWS, PSI, report-card, depeg, liquidity, and mint/burn data on the worker. `/api/og/chain/:id` accepts `CHAIN_META` chain IDs and renders supply, 7d trend, dominance, chain-health, and top-stablecoin data from the same cached stablecoins payload that backs `/api/chains`.
 
-Safety-dependent OG routes resolve the identified active V8/V9 source, require complete current data, and return `X-Safety-Score-Model` plus `X-Safety-Score-Status: current|degraded`. V9 is stale after two missed 30-minute producer cadences. Degraded cards label Safety Score data unavailable and do not render a numeric zero as an aggregate score. The safety-summary average is descriptive only and is never converted back into an asset grade.
+Safety-dependent OG routes resolve the identified canonical V9 source, require complete current data, and return `X-Safety-Score-Model` plus `X-Safety-Score-Status: current|degraded`. V9 is stale after two missed 30-minute producer cadences. Degraded cards label Safety Score data unavailable and do not render a numeric zero as an aggregate score. The safety-summary average is descriptive only and is never converted back into an asset grade.
 
 ---
 
-### `GET /api/report-cards`
+### `GET /api/report-cards/v9`
 
-Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimensions; overall score is the weighted base (exit-liquidity/resilience/decentralization/dependency) plus peg-multiplier adjustment.
+Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pillars, publication identity, evidence completeness, component breakdowns, and the serial/basket dependency graph.
 
-**Cache:** standard
+**Cache:** handler-generated responses bypass the edge cache
 
 **Response**
 
 ```text
 {
+  "model": "v9",
+  "schemaVersion": 4,
+  "lifecycle": "active",
   "safetyScoreIdentity": {
-    "model": "v8",
-    "schemaVersion": 1,
-    "methodologyVersion": "8.17",
-    "evaluationBuildDigest": "<64-character SHA-256>",
-    "baseInputGenerationId": "report-cards-input:v1:<64-character SHA-256>",
-    "publicationGenerationId": "report-cards:8.17:1771977600"
-  },
-  "cards": [ReportCard, ...],
-  "dependencyGraph": {
-    "edges": [{ "from": "usdc-circle", "to": "usde-ethena", "weight": 0.9, "type": "collateral" }, ...]
+    "model": "v9",
+    "methodologyVersion": "9.0",
+    "publicationGenerationId": "report-cards:v9:v1:<sha256>",
+    ...
   },
   "methodology": {
-    "version": "8.17",
-    "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
-    "pegMultiplierExponent": 0.4,
-    "activeDepegSeveritySource": "open-event-peak",
-    "activeDepegCaps": {
-      "d": { "thresholdBps": 1000, "score": 49 },
-      "f": { "thresholdBps": 2500, "score": 39 }
-    },
-    "thresholds": [{ "grade": "A+", "min": 87 }, { "grade": "A", "min": 83 }, ...]
+    "version": "9.0",
+    "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
-  "liquidityStale": false,
-  "redemptionStale": false,
-  "inputFreshness": {
-    "dexLiquidity": { "updatedAt": 1771977600, "ageSeconds": 120, "stale": false },
-    "redemptionBackstops": { "updatedAt": 1771977600, "ageSeconds": 300, "stale": false }
+  "completeness": { ... },
+  "publicationHealth": {
+    "status": "current | held",
+    "acceptedAtSec": 1771977600,
+    "attemptedAtSec": 1771977600,
+    "holdReasons": []
   },
-  "collateralDriftCoins": [{ "id": "jupusd-jupiter", "liveScore": 80, "curatedScore": 65, "delta": 15 }],
-  "liveToFallbackCoins": ["usdaf-asymmetry"],
-  "publication": {
-    "generationId": "report-cards:8.17:1771977600",
-    "methodologyVersion": "8.17",
-    "expectedCount": 361,
-    "scoredCount": 305,
-    "notRatedCount": 56,
-    "notRatedIds": ["example-not-rated-id"]
+  "cards": [SafetyScoreV9Card, ...],
+  "dependencyGraph": {
+    "nodes": [...],
+    "edges": [{ "from": "usdc-circle", "to": "usde-ethena", "weight": 0.9, "type": "collateral", ... }]
   },
   "updatedAt": 1771977600
 }
 ```
 
-The Liquidity dimension now represents `effectiveExitScore`: the public DEX liquidity score remains the floor, while redeemable assets can receive uplift from `redemptionBackstopScore` when a meaningful direct exit path exists. Documented offchain issuer exits with eventual-only capacity can add only a DEX-gated primary-market bonus; they do not replace missing DEX liquidity. Last-known DEX liquidity remains usable even after its freshness runway, with staleness surfaced through `liquidityStale` and `inputFreshness.dexLiquidity.stale`. Low-confidence redemption routes stay visible but do not uplift the score, and materially stale redemption inputs are not blended. Report-card redemption inputs are treated as materially stale after more than twice the 4-hourly redemption sync cadence, so normal cron lag does not globally remove medium- or high-confidence redemption uplift.
+The endpoint reads only the accepted `report-cards:v9` publication and its matching `report-cards:v9:publication-health` row. Missing, malformed, incomplete, or identity-inconsistent state returns `503`; the handler never recomputes a score and never falls back to V8. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
 
-When present, `collateralDriftCoins` lists live-reserve scoring deltas that exceed the reserve-drift threshold, and `liveToFallbackCoins` lists live-reserve-enabled assets whose report card used curated fallback reserves because no scoring-eligible live snapshot was available.
+Rateable cards contain mandatory report-v4/trace-v3 `backing`, `exit`, and `control` breakdowns. Each breakdown reconciles evaluator and published pillar values through ordered adjustments. Economic Control uses the minimum binding component; Backing and Exit expose bounded aggregation inputs and weights. `breakdowns` is `null` exactly when the card is `NR`.
 
-For peg handling, `rawInputs.pegScore` is the effective peg input used by report-card scoring. Most coins use their direct peg-summary value. Configured NAV wrappers can inherit peg stability from a referenced base stablecoin when the wrapper share price is not the right peg-tracking surface; pure NAV tokens without a configured reference remain `null` and keep neutral handling. `rawInputs.activeDepegBps` is the open active depeg event's absolute peak deviation used for final Safety Score caps; it is not the latest spot deviation.
+`publicationHealth.status` is `current` or `held`. A held response serves the last accepted ratings, uses the accepted timestamp for freshness headers and `updatedAt`, adds `X-Safety-Score-Status: held`, and forces `Cache-Control: no-store`. The latest unsuccessful attempt is exposed separately through `attemptedAtSec` and bounded hold reasons. Isolated producer failures may still publish when at least 90% of active assets are unaffected; broader or identity-level failures hold the prior accepted publication.
 
-For CDP oracle handling, `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskScore` are populated only when a direct non-variant crypto-backed CDP has a reviewed `oracleRisk` profile. Missing reviews, non-CDP assets, and resolvable tracked variants return `null` and do not receive a duplicate direct oracle penalty. Since Safety Score v8.11, cards can also carry an optional display-only `oracleRisk` object with the reviewed summary, source links, selected branch, branch rows, review provenance, and inherited parent context for wrappers/variants.
+Automated consumers validate the complete V9 response and treat held or unavailable data according to their own freshness policy. Public, yield, digest, mint/burn, history, Telegram, OG, portfolio, comparison, and dependency-map consumers use this canonical identity.
 
-For bridge-route handling, `rawInputs.bridgeRouteRiskTier` and `rawInputs.bridgeRouteRiskScore` are populated only when a coin has a reviewed `bridgeRouteRisk` profile. Missing route reviews return `null` and stay neutral. Since Safety Score v8.12, cards can also carry an optional display-only `bridgeRouteRisk` object with the reviewed summary, source links, protocol evidence, review provenance, and confidence. L2BEAT Interop is used only as static review evidence and candidate-queue material; the report-card API does not fetch L2BEAT live.
-
-`GET /api/report-cards` normally serves the full report-card payload from the private `report-cards:snapshot` cache envelope published by `publish-report-card-cache`. D1 stores that full snapshot inside a checksum-verified gzip/base64 envelope with bounded decompression and top-level V8 identity metadata; this keeps the private row below D1's 2,000,000-byte limit without changing the decoded public V8 JSON. The loader also accepts the legacy plain storage envelope during rolling deploys. The decoded envelope pins the expected cache generation and Safety Score methodology version; compute-on-read is used when the published snapshot is missing, malformed, oversized, generation-mismatched, methodology-mismatched, or missing the current V8 evaluation identity. Published and computed responses expose `safetyScoreIdentity`, which binds model `v8`, response schema, methodology, evaluation-build digest, exact base-input generation, and publication generation. They also expose `publication`, which proves the exact active-set identity as scored plus NR rows. The full snapshot, exact fixed input, smaller `report_card_cache` score map used by lightweight Chain Health/OG consumers, and Telegram safety source carry the same identity and are committed in one D1 batch.
-
-The unversioned `/api/report-cards` route remains a V8 compatibility contract and must never silently serve a V9 payload. The active `GET /api/report-cards/v9` route exposes the owned V9 public wire contract through the owner-gated activation marker (`safety-score-v9:public-activation`). The marker is identity-bound — its value must be JSON carrying the approved scoring identity (`policyId`, `policyDigest`, `evaluationBuildDigest`, `methodologyVersion`), and the route serves only while the canonical snapshot matches all four fields; a missing, malformed, or mismatched marker keeps it dark (`404`, fail-closed). Rotating per-publication fields (base-input and publication generation IDs) are deliberately not bound, so routine refreshes of the approved identity keep serving. Behind a matched gate the route reads only the canonical accepted `report-cards:v9-shadow` envelope plus matching `report-cards:v9-shadow:publication-health`, returns `503` when either is absent, malformed, or identity-inconsistent, and never falls back to V8 or recomputes a score. Its strict response includes `model: "v9"`, `schemaVersion: 4`, `lifecycle: "active"`, the full V9 publication identity, methodology and policy identity, completeness, source digests, `publicationHealth`, native three-pillar cards with mandatory score-trace v3 attribution and compact component breakdowns, and a serial/basket dependency graph. `publicationHealth` distinguishes accepted and attempted times and contains a bounded list of stable hold reasons. Trace v3 explicitly carries policy score adjustments. Live producers and consumers accept only report-v4/trace-v3; a separately named compatibility reader retains exact pre-breakdown report-v3/trace-v3, report-v2/trace-v2, and report-v1/trace-v1 snapshots. The evaluator envelope remains a distinct contract and is candidate schema v5.
-
-For each rateable card, `breakdowns` contains:
-
-- `backing`: `evaluatedScore`, `publishedScore`, the pillar `aggregationWeight`, ordered `adjustments`, reserve/mechanism `groups`, and `components` with a safe label, source, score, effective pillar weight, weighted contribution, and observation state.
-- `exit`: the same common pillar fields plus the optional stress request, optional selected `primaryRoute`, diversification bonus, and compact alternatives. A selected route exposes its family, score, six ordered weighted components, confidence and eligibility multipliers, and technical `capsApplied` identifiers.
-- `control`: the common pillar fields, `method: "minimum-binding-component"`, and mint/oracle/bridge components with score, posture, and explicit `binding` status. Economic Control components intentionally have no weight field.
-
-`adjustments` reconcile each evaluator result to the published pillar through `operational-resilience-credit` and `dependency-limit` stages. The 0.40/0.35/0.25 pillar values are bounded-headroom aggregation weights, not a simple final weighted-average formula. `breakdowns` is `null` exactly when the card is `NR`; rateable report-v4 cards must include all three breakdowns.
-
-`GET /api/report-cards/v9-preview` is a temporary, owner-approved read-only compatibility endpoint. It reads the latest canonical shadow envelope and strict public projection, always returns `lifecycle: "shadow"`, and does not consult or alter the activation marker. The endpoint bypasses the Worker edge cache, returns `Cache-Control: no-store`, and returns `503` when the canonical shadow envelope is unavailable or invalid. Both the stable path and its legacy alias are explicitly exempt from the public API-key gate but denied on the `/_site-data/*` lane. They expose no admin diff, history, movement-review, or mutation data and have no V8 fallback. The former unlisted `/v9-preview/` frontend page was retired after V9 activation; the API paths remain compatibility aliases for ordered deployments.
-
-`GET /api/report-cards/v9` uses the standard report-card freshness headers on handler-generated `200` responses but is marked `cacheBypass: true`, so the Worker edge cache never serves a stale active payload without rechecking the activation marker and canonical snapshot identity. It emits `X-Safety-Score-Status: current|held`. A held response serves the last accepted ratings, keeps freshness headers and `updatedAt` based on the accepted time, and forces `Cache-Control: no-store`; `publicationHealth.attemptedAtSec` records the distinct failed attempt time. Consumers must keep its query/cache identity separate from `/api/report-cards`, validate the complete response, treat `404` as "not activated" rather than an error state, and render an explicit unavailable state on identity mismatch. Automated consumers that require current safety data treat held V9 as unavailable and never fall back to V8. The V9 response does not expose V8 base score, five dimensions, raw inputs, or V8 dependency weights.
-
-Report-card generation treats the stablecoins cache and readable redemption-backstop table as hard dependencies. The stablecoins cache is read in published-contract mode, so malformed cached objects that fail `StablecoinListResponseSchema` validation fail closed instead of being partially filtered for scoring. DEX liquidity, bluechip ratings, live-reserve inputs, and materially stale redemption rows are soft dependencies: if one of those loaders is temporarily unavailable or stale beyond its scoring freshness runway, generation continues with a degraded snapshot instead of failing closed, with stale inputs suppressed from scoring.
-
-**`dependencyGraph.edges`**: Pre-computed forward edges. `from` = upstream stablecoin ID, `to` = dependent stablecoin ID. `weight` and `type` carry the worker's canonical dependency metadata, so frontend graph consumers can use the snapshot directly instead of re-deriving edge semantics from static stablecoin metadata.
-
-**`ReportCard`**
-
-| Field                  | Type                                   | Description                                                                          |
-| ---------------------- | -------------------------------------- | --------------------------------------------------------------------------------------- |
-| `id`                   | `string`                               | Canonical Pharos stablecoin ID for live cards; stable cemetery ID for defunct cards  |
-| `name`                 | `string`                               | Full name                                                                            |
-| `symbol`               | `string`                               | Ticker                                                                               |
-| `overallGrade`         | `string`                               | Letter grade: `"A+"` through `"F"`, or `"NR"`                                        |
-| `overallScore`         | `number \| null`                       | Weighted score 0–100. `null` for unrated coins                                       |
-| `baseScore`            | `number \| null`                       | Pre-peg-multiplier/no-liquidity/active-depeg-cap score after base dimension blending |
-| `overallCapped`        | `boolean`                              | `true` when the card is capped at a tracked parent stablecoin's overall score        |
-| `uncappedOverallScore` | `number \| null`                       | Post-dimension/post-peg score before the tracked-parent overall cap, when applicable |
-| `dimensions`           | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, detail text, and optional structured dependency diagnostics |
-| `ratedDimensions`      | `number`                               | Number of dimensions with data (max 5)                                               |
-| `rawInputs`            | `RawDimensionInputs`                   | Raw scoring inputs for client-side grade recomputation (stress testing)              |
-| `oracleRisk`           | `ReportCardOracleRisk \| null`         | Optional reviewed or inherited CDP oracle setup display payload                      |
-| `bridgeRouteRisk`      | `ReportCardBridgeRouteRisk \| null`    | Optional reviewed bridge-route risk display payload                                  |
-| `isDefunct`            | `boolean`                              | `true` for cemetery coins (permanent F grade)                                        |
-
-**`ReportCardOracleRisk`**: `{ tier, score, label, summary, reviewedAt?, reviewer?, confidence?, sources?, inheritedFrom?, selectedBranch?, branches? }`. `selectedBranch` and `branches[]` include `{ id, label, tier, score, summary, collateralAssets?, chains?, sources? }`. This object is for display and audit context; scoring inputs remain `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskScore`.
-
-**`ReportCardBridgeRouteRisk`**: `{ tier, score, label, summary, reviewedAt?, reviewer?, confidence?, protocols?, sources? }`. `protocols[]` include `{ name, slug?, source?, bridgeTypes? }`. This object is for display and audit context; scoring inputs remain `rawInputs.bridgeRouteRiskTier` and `rawInputs.bridgeRouteRiskScore`.
-
-**`DependencyWeight`**: `{ id: string, weight: number, type?: DependencyType }` — upstream stablecoin ID + fraction of collateral from that source (0–1), with optional dependency category. When total dependency weight is ≤ 1.0, the remainder represents non-stablecoin collateral; when declared dependency weight exceeds 1.0, dependency scoring normalizes by raw total and uses no self-backed remainder.
-
-**`DimensionScore.dependencyDiagnostics`** (Dependency Risk only, optional for rolling compatibility): `{ rawTotalWeight, normalizedTotalWeight, selfBackedFraction, availableWeight, unavailableWeight, availableIds, unavailableIds, contributions, weakPenalty, bindingCeiling }`. Each contribution contains `{ id, type, rawWeight, normalizedWeight, score, available }`; `bindingCeiling` is `null` or `{ id, type: "wrapper" | "mechanism", score }`. Stress-test recomputation regenerates this derived object.
-
-**`RawDimensionInputs`**
-
-| Field                              | Type                                                                                        |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `pegScore`                         | `number \| null`                                                                            |
-| `activeDepeg`                      | `boolean`                                                                                   |
-| `activeDepegBps`                   | `number \| null`                                                                            |
-| `depegEventCount`                  | `number`                                                                                    |
-| `lastEventAt`                      | `number \| null`                                                                            |
-| `liquidityScore`                   | `number \| null`                                                                            |
-| `effectiveExitScore`               | `number \| null`                                                                            |
-| `redemptionBackstopScore`          | `number \| null`                                                                            |
-| `redemptionRouteFamily`            | `RedemptionRouteFamily \| null`                                                             |
-| `redemptionModelConfidence`        | `"high" \| "medium" \| "low" \| null`                                                       |
-| `redemptionUsedForLiquidity`       | `boolean`                                                                                   |
-| `redemptionImmediateCapacityUsd`   | `number \| null`                                                                            |
-| `redemptionImmediateCapacityRatio` | `number \| null`                                                                            |
-| `concentrationHhi`                 | `number \| null`                                                                            |
-| `bluechipGrade`                    | `BluechipGrade \| null`                                                                     |
-| `canBeBlacklisted`                 | `boolean \| "possible" \| "inherited"`                                                      |
-| `chainTier`                        | `ChainTier`                                                                                 |
-| `deploymentModel`                  | `DeploymentModel`                                                                           |
-| `collateralQuality`                | `CollateralQuality`                                                                         |
-| `custodyModel`                     | `CustodyModel`                                                                              |
-| `governanceTier`                   | `GovernanceType`                                                                            |
-| `governanceQuality`                | `GovernanceQuality`                                                                         |
-| `mintAuthorityScore`               | `number \| null`                                                                            |
-| `oracleRiskTier`                   | `OracleRiskTier \| null`                                                                    |
-| `oracleRiskScore`                  | `number \| null`                                                                            |
-| `bridgeRouteRiskTier`              | `BridgeRouteRiskTier \| null`                                                               |
-| `bridgeRouteRiskScore`             | `number \| null`                                                                            |
-| `dependencies`                     | `DependencyWeight[]`                                                                        |
-| `variantParentId`                  | `string \| null`                                                                            |
-| `variantKind`                      | `"savings-passthrough" \| "strategy-vault" \| "risk-absorption" \| "bond-maturity" \| null` |
-| `navToken`                         | `boolean`                                                                                   |
-| `collateralFromLive`               | `boolean`                                                                                   |
-| `dependencyFromLive`               | `boolean`                                                                                   |
-| `dependencySource`                 | `"live-reserve" \| "live-unmapped" \| "curated-reserve" \| "manual" \| "none" \| "variant" \| undefined` |
-| `dependencyBaseSource`             | `"live-reserve" \| "live-unmapped" \| "curated-reserve" \| "manual" \| "none" \| undefined` |
-| `mappedLiveReserveWeight`          | `number \| null \| undefined`                                                             |
-| `dependencyFallbackReason`         | `"live-unmapped-to-curated-reserve" \| "live-unmapped-to-manual" \| "live-cycle-to-curated" \| null \| undefined` |
-| `dependencySnapshotSource`         | `string \| null \| undefined`                                                             |
-| `dependencySnapshotUpdatedAt`      | `number \| null \| undefined`                                                             |
-
-`rawInputs.canBeBlacklisted` is the canonical resolved blacklist status used by report-card-backed product surfaces. It can therefore differ from the raw `StablecoinMeta.canBeBlacklisted` override field, which only carries manual metadata and never stores computed `"inherited"` values. Product labels map the wire values to the four-status model: `true` -> `Yes`, `"inherited"` -> `Upstream`, `"possible"` -> `Possible`, and `false` -> `No`. Admin mint authority is reviewed separately in Mint Authority and is not a FreezeWatch status. `"inherited"` / Upstream can be produced by any reserve, backing, custody, parent-asset, or CEX/custody-rail exposure; it does not require a majority reserve weight.
-
-`rawInputs.oracleRiskTier` is one of `"oracleless-or-internal"`, `"redundant-with-failover"`, `"medianized-with-delay"`, `"standard-external"`, `"single-source-or-laggy"`, `"opaque-or-unknown"`, or `null`.
-
-`rawInputs.bridgeRouteRiskTier` is one of `"single-chain-or-native"`, `"issuer-native-burn-mint"`, `"canonical-rollup-bridge"`, `"issuer-native-lock-mint"`, `"external-validated-network"`, `"liquidity-or-intent-route"`, `"external-lock-mint"`, `"opaque-or-unknown"`, or `null`.
-
-`rawInputs.collateralFromLive` is true when score-grade live reserve data drove collateral scoring for the card.
-
-`rawInputs.dependencySource` and `dependencyBaseSource` identify the effective resolver path; `mappedLiveReserveWeight` records the mapped share before any fallback; `dependencyFallbackReason` explains a typed fallback, including `live-cycle-to-curated`; and `dependencySnapshotSource` / `dependencySnapshotUpdatedAt` identify the score-grade live snapshot considered by the resolver. These fields are optional so older cached payloads remain parseable.
-
-**Dimensions:** `pegStability`, `liquidity`, `resilience`, `decentralization`, `dependencyRisk`
+**`dependencyGraph.edges`**: Pre-computed forward edges. `from` is the upstream stablecoin ID and `to` is the dependent stablecoin ID. Weight, relationship type, materiality, and basket/serial semantics come from the canonical V9 evaluator.
 
 ---
 
@@ -2747,7 +2629,7 @@ Per-coin Safety Score grade transition history (seed row + grade changes only). 
 
 ### `GET /api/yield-rankings`
 
-Cache-backed yield rankings written by the `sync-yield-data` cron. The endpoint rehydrates `safetyScore`, `safetyGrade`, `yieldToRisk`, and `pharosYieldScore` from the cron-published report-card snapshot so Yield Intelligence stays aligned with `/api/report-cards` without rebuilding the full Safety Score envelope on every read. Compute-on-read is used only when the published snapshot is unavailable. Royco Dawn structured-tranche rows use the attached underlying asset's report-card snapshot as input, then expose an opportunity-level tranche Safety Score in the yield row. PYS v8 is benchmark-aware and source-risk-aware: it starts from cached APY inputs, adds a weighted slice of the row's benchmark spread, divides by the nested `sourceRisk.sourceRiskPenalty` populated from measured source evidence, then applies the current Safety Score and volatility multiplier. Missing source-risk evidence is neutral for holder-yield rows; external opportunity rows publish `sourceRisk.opportunityRisk`, and missing venue/market evidence keeps the PYS explicitly `estimated` with `warningSignals: ["opportunity-evidence-missing"]` rather than mislabeling the underlying stablecoin as unrated. Source-family and benchmark freshness are eligibility rules applied before arbitration. Expired rows remain available as last-known context or retained alternatives, but publish `pharosYieldScore: null` with `pysNullReason: "source-stale"` or `"benchmark-stale"`; provenance exposes `sourceFreshness`, `benchmarkFreshness`, and `scoreQualified`. The response also includes source-selection provenance, the default USD benchmark (`riskFreeRate`), and the structured benchmark registry used for row-level excess-yield selection. If a ranking row has no matching live report-card snapshot, the API retains the row, falls back to `DEFAULT_SAFETY_SCORE` (`40`) and grade `NR`, and publishes an estimated PYS plus `safety-unrated`. Row-level and provenance `safetyReason` fields make default/NR inputs explicit.
+Cache-backed yield rankings written by `sync-yield-data`. The hourly publisher and API-time hydrator read the canonical current `report-cards:v9` publication through the shared safety loader, so Yield Intelligence stays aligned with `/api/report-cards/v9` without recomputing Safety Scores. A missing, held, stale, or incompatible V9 publication makes the safety snapshot explicitly unavailable; ranking rows remain available with the documented NR/default treatment and `safety-unrated` provenance. Royco Dawn structured-tranche rows use the attached underlying asset's V9 score before applying opportunity-level source risk. PYS remains benchmark-aware and source-risk-aware, and expired source or benchmark evidence returns a null PYS with the corresponding reason.
 
 Set `projection=summary` for the compact workbench contract. It preserves leaderboard, filter, scatter, comparison, benchmark, warning, publication, and evidence-qualification fields while omitting retained alternatives and deep decision/source-risk evidence. The detailed response remains the default. Repeated or unknown `projection` values return a non-cacheable `400`.
 
@@ -2784,9 +2666,9 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "coveredCount": 308,
       "trackedCount": 361,
       "reason": null,
-      "source": "report-card-cache",
-      "publicationGenerationId": "report-cards:8.17:1771999800",
-      "methodologyVersion": "8.17",
+      "source": "safety-score-v9-publication",
+      "publicationGenerationId": "report-cards:v9:v1:<sha256>",
+      "methodologyVersion": "9.0",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2795,9 +2677,9 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "coveredCount": 64,
       "trackedCount": 65,
       "reason": null,
-      "source": "report-cards:snapshot",
-      "publicationGenerationId": "report-cards:8.17:1772000700",
-      "methodologyVersion": "8.17",
+      "source": "safety-score-v9-publication",
+      "publicationGenerationId": "report-cards:v9:v1:<sha256>",
+      "methodologyVersion": "9.0",
       "publishedAt": 1772000700
     }
   },
@@ -2845,7 +2727,7 @@ Optional v8 fields are nullable and omittable. Publication-generation fields are
 | `provenance.sourceFreshness`             | ranking rows                | `"fresh" \| "stale" \| "unknown" \| undefined`                                                                                                                                                              | Source-family eligibility state used before confidence arbitration                                                                                                                |
 | `provenance.benchmarkFreshness`          | ranking rows                | `"healthy" \| "degraded" \| "stale" \| undefined`                                                                                                                                                            | Row benchmark state; fallback within TTL is degraded, while stale cannot support exact PYS                                                                                        |
 | `provenance.scoreQualified`              | ranking rows                | `boolean \| undefined`                                                                                                                                                                                            | Whether current source and benchmark freshness permit a numeric PYS; use `scoreQualification` to distinguish rated, partial, and estimated rows                                  |
-| `provenance.safetySnapshot.source`       | rankings root               | `"report-card-cache" \| undefined`                                                                                                                                                                               | Safety input source used by the hourly publisher; current generation-aware payloads use the exact compact report-card projection                                                  |
+| `provenance.safetySnapshot.source`       | rankings root               | `"safety-score-v9-publication" \| undefined` | Canonical V9 safety publication used by the hourly publisher |
 | `provenance.safetySnapshot.publicationGenerationId` | rankings root      | `string \| null \| undefined`                                                                                                                                                                                     | Report-card publication generation consumed for PYS; `null` when no exact projection was accepted                                                                                 |
 | `provenance.safetySnapshot.methodologyVersion` | rankings root           | `string \| null \| undefined`                                                                                                                                                                                     | Safety Score methodology pinned by the consumed report-card projection                                                                                                            |
 | `provenance.safetySnapshot.publishedAt`  | rankings root               | `number \| null \| undefined`                                                                                                                                                                                     | Unix seconds for the compact report-card projection consumed by the hourly publisher                                                                                              |
@@ -2855,10 +2737,10 @@ Optional v8 fields are nullable and omittable. Publication-generation fields are
 | `provenance.liveSafetyHydration.coveredCount` | rankings root          | `number`                                                                                                                                                                                                          | Ranking rows hydrated from a report card or explicit opportunity safety rather than the default safety fallback                                                                    |
 | `provenance.liveSafetyHydration.trackedCount` | rankings root          | `number`                                                                                                                                                                                                          | Total ranking rows evaluated during read-time hydration                                                                                                                            |
 | `provenance.liveSafetyHydration.reason`  | rankings root               | `string \| null`                                                                                                                                                                                                  | Comma-separated degradation reasons, including stale report-card inputs/snapshot age or low row coverage                                                                           |
-| `provenance.liveSafetyHydration.source`  | rankings root               | `"report-cards:snapshot" \| "computed-report-cards"`                                                                                                                                                           | Full published report-card snapshot when valid, otherwise the on-read computed fallback                                                                                            |
-| `provenance.liveSafetyHydration.publicationGenerationId` | rankings root | `string \| null`                                                                                                                                                                                     | Full report-card publication generation used for hydration; `null` for computed fallback                                                                                           |
-| `provenance.liveSafetyHydration.methodologyVersion` | rankings root     | `string \| null`                                                                                                                                                                                                  | Full report-card publication methodology; `null` for computed fallback                                                                                                             |
-| `provenance.liveSafetyHydration.publishedAt` | rankings root           | `number \| null`                                                                                                                                                                                                  | Full report-card snapshot timestamp; `null` for computed fallback                                                                                                                  |
+| `provenance.liveSafetyHydration.source`  | rankings root               | `"safety-score-v9-publication"` | Canonical current V9 publication used for response hydration |
+| `provenance.liveSafetyHydration.publicationGenerationId` | rankings root | `string \| null`                                                                                                                                                                                     | Full report-card publication generation used for hydration; `null` when no compatible V9 publication was accepted                                                                 |
+| `provenance.liveSafetyHydration.methodologyVersion` | rankings root     | `string \| null`                                                                                                                                                                                                  | Full report-card publication methodology; `null` when V9 safety hydration is unavailable                                                                                           |
+| `provenance.liveSafetyHydration.publishedAt` | rankings root           | `number \| null`                                                                                                                                                                                                  | Full report-card snapshot timestamp; `null` when V9 safety hydration is unavailable                                                                                                |
 | `publicationGenerationId`                | ranking/history rows        | `string \| null \| undefined`                                                                                                                                                                                     | Row-to-generation join identifier; `null` on legacy rows                                                                                                                          |
 | `publishedRank`                          | ranking rows                | `integer >= 1 \| null \| undefined`                                                                                                                                                                               | Stable rank from the published cache order before live Safety Score hydration                                                                                                     |
 | `liveRank`                               | ranking rows                | `integer >= 1 \| null \| undefined`                                                                                                                                                                               | Post-hydration rank assigned after live Safety Score recomputation                                                                                                                |
@@ -2925,7 +2807,7 @@ Holder-yield rows still treat missing source-risk evidence as neutral: omitted o
 | `dataSource`              | `string`                                                                                                                      | Data source identifier (e.g. `"defillama"`)                                                                                                                                                                           |
 | `sourceTvlUsd`            | `number \| null`                                                                                                              | TVL of the yield source pool (USD)                                                                                                                                                                                    |
 | `pharosYieldScore`        | `number \| null`                                                                                                              | Composite Pharos Yield Score (0–100), recomputed at read time from cached APY + benchmark inputs plus the current Safety Score                                                                                        |
-| `safetyScore`             | `number \| null`                                                                                                              | Current Safety Score input used by Yield Intelligence. Rated coins match `/api/report-cards`; Royco structured-tranche rows expose the row-level tranche score; unrated coins use the default NR penalty input (`40`) |
+| `safetyScore`             | `number \| null`                                                                                                              | Current Safety Score input used by Yield Intelligence. Rated coins match `/api/report-cards/v9`; Royco structured-tranche rows expose the row-level tranche score; unrated coins use the default NR penalty input (`40`) |
 | `safetyGrade`             | `string \| null`                                                                                                              | Current Safety Score letter grade (`"A+"` through `"F"`, or `"NR"`); Royco structured-tranche rows derive the grade from the opportunity-level tranche score                                                          |
 | `safetyReason`            | `"report-card-score-missing" \| "report-card-grade-not-rated" \| "underlying-report-card-score-missing" \| null \| undefined` | Stable reason for a default or explicit-NR safety input; `null` for normally rated rows                                                                                                                               |
 | `yieldToRisk`             | `number \| null`                                                                                                              | Yield-to-risk ratio recomputed at read time from cached APY inputs plus the current Safety Score                                                                                                                      |
@@ -3143,7 +3025,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
     "trackedCoins": 8,
     "trackedMcapUsd": 215000000000,
     "intensitySemantics": "signed-v2",
-    "classificationSource": "report-card-cache"
+    "classificationSource": "safety-score-v9-publication"
   },
   "coins": [CoinFlow, ...],
   "hourly": [HourlyFlow, ...],
@@ -3165,7 +3047,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | `trackedCoins`         | `number`         | Number of stablecoins tracked for mint/burn flows                                                    |
 | `trackedMcapUsd`       | `number`         | Combined market cap of tracked coins (USD)                                                           |
 | `intensitySemantics`   | `string`         | Scoring semantics version identifier (currently `"signed-v2"`)                                       |
-| `classificationSource` | `string`         | Source of flight-to-quality classification (`"report-card-cache"` or `"unavailable"`)                |
+| `classificationSource` | `string` | Source of flight-to-quality classification (`"safety-score-v9-publication"` or `"unavailable"`) |
 
 **Top-level metadata**
 
@@ -3778,7 +3660,7 @@ Returns a previously stored Stablecoin Picker output JSON identified by content-
 }
 ```
 
-The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. For new writes, the Pages Function receives only allowlisted selector input, loads eight canonical sources through the authenticated site-data lane, validates every source with its shared response schema, builds the dataset with `shared/lib/selector/data-adapter.ts`, and runs the shared selector engine. Caller-authored scores, ranks, identities, prose, engine versions, and dataset hashes are not inputs to the persisted output. The eight requests run as two batches of four, and each bounded response body is fully consumed before the next batch starts.
+The full `SelectorOutput` shape is owned by `shared/lib/selector/types.ts`. New selector creation currently returns `503` because the recommendation policy has not been reviewed for canonical V9 inputs. Existing signed selector snapshots remain readable through their historical contract; the service does not silently run the retired V8 adapter.
 
 New values carry both `provenance: "pharos-verified"` / `snapshotSchemaVersion: 3` in the body and `pharos-server-recomputed-v1` trust metadata in KV. GET trusts only the KV metadata, validates the exact body binding, recomputes the canonical sid, and returns `502` on mismatch or tampering. A body that merely self-claims verified provenance without trusted KV metadata is normalized to the historical `client-unverified` schema-v2 projection and must use the unverified UI banner. The first read returns `200` only after the five-year retention extension succeeds; extension failure returns `503`.
 
@@ -4331,7 +4213,7 @@ The same cron metadata also exposes the live safety-alert source contract:
 - `safetyAlertsSuppressed`
 - `safetyAlertSourceGeneration`
 
-When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue, but safety-grade alerts remain paused until `publish-report-card-cache` writes a fresh generation-valid source snapshot and the Telegram lane reseeds its own prior-snapshot cache.
+When `safetyAlertsSuppressed=true`, DEWS/depeg/launch alerts can still continue, but safety-grade alerts remain paused until `compute-safety-score-v9` accepts a fresh canonical publication and the Telegram lane reseeds its prior snapshot.
 
 `crons["status-self-check"].lastRun.metadata` now also includes `freshnessDiagnostics` when raw status had to fall back from a freshness sentinel to table or cron evidence during the self-check run, plus `d1CapacityMonitoring` when the dedicated Cloudflare D1 status bindings are configured.
 

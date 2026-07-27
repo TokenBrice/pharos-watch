@@ -10,6 +10,7 @@ import {
 import { SECONDS } from "../lib/time-constants";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
+import { parseJson } from "../lib/json-parse";
 import {
   didDigestChannelDeliver,
   insertDigestRecord,
@@ -52,23 +53,28 @@ interface WeeklyDigestMeta {
 
 function parseWeeklyDigestMeta(rawMeta: string | null, updatedAt: number | null): WeeklyDigestMeta {
   if (!rawMeta) return {};
-  try {
-    const parsed = JSON.parse(rawMeta) as unknown;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return { ...(parsed as WeeklyDigestMeta) };
-    }
-  } catch (error) {
-    logMalformedJsonPath(
-      {
-        scope: "cron",
-        owner: "weekly-recap",
-        context: "daily_digest.digest_meta",
-        reason: "json-parse-failed",
-        source: "daily_digest",
-        ...(updatedAt != null ? { updatedAt } : {}),
-      },
-      error,
-    );
+  const parsed = parseJson(rawMeta, {
+    context: "daily_digest.digest_meta",
+    onFailure: ({ message }) =>
+      logMalformedJsonPath(
+        {
+          scope: "cron",
+          owner: "weekly-recap",
+          context: "daily_digest.digest_meta",
+          reason: "json-parse-failed",
+          source: "daily_digest",
+          ...(updatedAt != null ? { updatedAt } : {}),
+        },
+        new Error(message),
+      ),
+  });
+  if (
+    parsed.ok &&
+    parsed.value &&
+    typeof parsed.value === "object" &&
+    !Array.isArray(parsed.value)
+  ) {
+    return { ...(parsed.value as WeeklyDigestMeta) };
   }
   return {};
 }
@@ -272,22 +278,24 @@ export async function generateWeeklyRecap(
         existingGeneratedAt: existing.generated_at,
       },
     });
-    let existingInput: unknown = null;
-    try {
-      existingInput = existing.input_data ? JSON.parse(existing.input_data) : null;
-    } catch (error) {
-      logMalformedJsonPath(
-        {
-          scope: "cron",
-          owner: "weekly-recap",
-          context: "daily_digest.input_data",
-          reason: "json-parse-failed",
-          source: "daily_digest",
-          updatedAt: existing.generated_at,
-        },
-        error,
-      );
-    }
+    const parsedExistingInput = parseJson(existing.input_data, {
+      context: "daily_digest.input_data",
+      onFailure: ({ message }) =>
+        logMalformedJsonPath(
+          {
+            scope: "cron",
+            owner: "weekly-recap",
+            context: "daily_digest.input_data",
+            reason: "json-parse-failed",
+            source: "daily_digest",
+            updatedAt: existing.generated_at,
+          },
+          new Error(message),
+        ),
+    });
+    const existingInput = parsedExistingInput.ok
+      ? parsedExistingInput.value
+      : null;
     const retryStatus = await deliverWeeklyDigestToTelegram({
       db,
       telegramCreds,
@@ -419,7 +427,11 @@ export async function generateWeeklyRecap(
   try {
     safetyContext = await loadDigestSafetyContext(db, signal);
   } catch (error) {
-    console.error("[weekly-recap] Failed to resolve active Safety Score source:", error);
+    console.error(JSON.stringify({
+      scope: "weekly-recap",
+      message: "Failed to resolve active Safety Score source",
+      error: error instanceof Error ? error.message : String(error),
+    }));
     safetyContext = {
       status: "unavailable",
       expectedModel: "v9",

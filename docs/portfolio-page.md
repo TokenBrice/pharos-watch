@@ -12,7 +12,7 @@ Route contract for `/portfolio/`, the noindex personal stablecoin risk workspace
 - **Page model/helpers:** `src/app/portfolio/model.ts`
 - **Preset registry:** `src/app/portfolio/presets.ts`
 - **Portfolio state hook:** `src/hooks/use-portfolio.ts`
-- **Persistence helpers:** `src/lib/portfolio-codec.ts`, `src/lib/portfolio-analysis.ts`
+- **Persistence helpers:** `src/lib/portfolio-codec.ts`
 - **Shared scoring source:** `docs/report-cards.md`
 
 `src/app/portfolio/page.tsx` uses `createClientFeaturePage(...)` to keep the route shell static while lazy-loading the interactive client. The shell is intentionally `noindex,follow` and uses canonical `/portfolio/`.
@@ -23,9 +23,11 @@ Route contract for `/portfolio/`, the noindex personal stablecoin risk workspace
 
 The interactive page depends on three local/runtime sources:
 
-1. `useReportCards()` for live stablecoin grades and per-dimension scores.
+1. `useReportCardsV9()` for canonical stablecoin grades, pillar scores, and dependency routes.
 2. `useLogos()` for static logo assets from `data/logos.json`.
-3. `usePortfolio(reportData?.cards)` for holdings state, browser persistence, portfolio grade math, and upstream exposure derivation.
+3. `usePortfolio()` for holdings state and browser persistence.
+
+The client derives the amount-weighted V9 aggregate and modeled dependency-route count with `buildV9PortfolioProjection(...)`. That projection is informational and is not an asset Safety Score.
 
 There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-side.
 
@@ -45,10 +47,12 @@ There is no dedicated `/api/portfolio` endpoint. Portfolio holdings stay client-
 
 `src/app/portfolio/client.tsx` coordinates hooks, URL state, persistence actions, and the page-level workflow. The route-local modules split the remaining ownership:
 
-- `components.tsx` renders the holdings editor, summary, exposure, and supporting sections.
+- `components.tsx` renders the holdings editor, summary, and loading state.
 - `model.ts` owns route-local projections and presentation helpers.
 - `presets.ts` owns the curated preset definitions.
 - `src/components/portfolio-empty-state.tsx` owns preset-first empty-state onboarding.
+
+`client.tsx` owns the canonical V9 aggregate and per-holding grade presentation.
 
 The page uses `CLIENT_ACTIVE_STABLECOINS` for `PORTFOLIO_COIN_OPTIONS`, excluding every non-active lifecycle state. It does not filter against `DEAD_STABLECOINS`.
 
@@ -60,5 +64,5 @@ When changing portfolio behavior, update this doc alongside the relevant runtime
 
 1. Route-shell metadata or noindex behavior -> `src/app/portfolio/page.tsx`
 2. Holdings persistence / share encoding -> `src/hooks/use-portfolio.ts`, `src/lib/portfolio-codec.ts`
-3. Exposure math or grouping -> `src/lib/portfolio-analysis.ts`
-4. Portfolio-grade semantics -> `docs/report-cards.md` and any affected methodology copy
+3. V9 aggregate or dependency-route projection -> `src/lib/safety-score-v9-consumers.ts`
+4. Portfolio safety semantics -> `docs/report-cards.md` and any affected methodology copy

@@ -376,7 +376,7 @@ function resolvesOnlyPremiumCap(
  * intentionally separate from formula application so the premium cannot make
  * itself eligible.
  */
-export function resolveV9AssetPremium(
+function resolveV9AssetPremium(
   input: V9ProductionScoreInput,
   ordinaryTrace: V9ScoreTrace,
   envelope: V9ValidatedPolicyEnvelope,

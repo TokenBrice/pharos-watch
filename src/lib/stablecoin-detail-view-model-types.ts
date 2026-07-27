@@ -18,7 +18,7 @@ import type {
   PegSummaryResponse,
   RedemptionBackstopEntry,
   RedemptionBackstopsResponse,
-  ReportCardsV9TransitionResponse,
+  ReportCardsV9CurrentResponse,
   StablecoinAiSummary,
   StablecoinData,
   StablecoinListResponse,
@@ -54,7 +54,7 @@ export interface StablecoinDetailViewModelQueryInputs {
   stablecoinList: DetailStablecoinListInput;
   pegSummary: DetailQueryResource<PegSummaryResponse>;
   dexLiquidity: DetailQueryResource<DexLiquidityMap>;
-  reportCards: DetailQueryResource<ReportCardsV9TransitionResponse>;
+  reportCards: DetailQueryResource<ReportCardsV9CurrentResponse>;
   redemptionBackstops: DetailQueryResource<RedemptionBackstopsResponse>;
 }
 
@@ -136,11 +136,6 @@ interface LoadingViewModel extends BaseViewModel { status: "loading" }
 interface ListErrorViewModel extends BaseViewModel { status: "list-error"; listError: unknown }
 interface NotFoundViewModel extends BaseViewModel { status: "not-found" }
 
-export interface MintAuthorityDecentralizationDragViewModel {
-  value: string;
-  detail: string | null;
-}
-
 export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   status: "ready";
   id: string;
@@ -148,7 +143,7 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   summary: StablecoinDetailSummary | null;
   logoSrc?: string;
   reportCard: V9ConsumerCard | undefined;
-  reportCardsResponse: ReportCardsV9TransitionResponse | undefined;
+  reportCardsResponse: ReportCardsV9CurrentResponse | undefined;
   reportCardUpdatedAt: number | null;
   variantParent: StablecoinClientMeta | null;
   variantSiblings: StablecoinClientMeta[];
@@ -188,7 +183,6 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   featureStates: StablecoinDetailFeatureStates;
   verdict: StablecoinVerdict;
   mintAuthority: MintAuthorityDetailViewModel;
-  mintAuthorityDecentralizationDrag: MintAuthorityDecentralizationDragViewModel | null;
 }
 
 export type StablecoinDetailViewModel =

@@ -437,18 +437,9 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     },
   },
   {
-    key: "report-cards",
-    summary: "Report cards",
-    description: "Safety report-card snapshot across liquidity, resilience, decentralization, dependency, and peg stability.",
-    tags: ["Risk"],
-    postman: {
-      folder: "Risk and market structure",
-    },
-  },
-  {
     key: "report-cards-v9",
-    summary: "Safety Score V9 report cards (shadow)",
-    description: "Versioned, strict V9 Safety Score report-card contract sourced from the canonical V9 shadow publication. It does not change the V8 compatibility product at /api/report-cards.",
+    summary: "Safety Score V9 report cards",
+    description: "Canonical V9 Safety Score report-card contract sourced from the accepted V9 publication.",
     tags: ["Risk"],
     responseSchema: "ReportCardsV9Response",
     postman: {

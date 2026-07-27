@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
 import { createReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   buildSafetyScoreV9Candidate,
-  buildSafetyScoreV9ShadowCandidateFromNormalizedInput,
+  buildSafetyScoreV9PublicationFromNormalizedInput,
   computeSafetyScoreV9CandidateId,
   computeSafetyScoreV9ProducerCapabilityDigest,
 } from "../safety-score-v9-candidate";
@@ -406,7 +406,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       full.fixedInput,
       full.extension,
     );
-    const compact = buildSafetyScoreV9ShadowCandidateFromNormalizedInput({
+    const compact = buildSafetyScoreV9PublicationFromNormalizedInput({
       fixedInput: full.fixedInput,
       extension: full.extension,
       publishedAtSec: PUBLISHED_AT_SEC,
@@ -419,7 +419,6 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       candidate: full.candidate,
       compilerFactSchemaDigest: full.compilerFactSchemaDigest,
       producerCapabilityDigest: full.producerCapabilityDigest,
-      supplyUsdById: { alpha: 10_000_000 },
     });
     expect(() =>
       evaluateValidatedV9FactSet(structuredClone(full.compiledFacts), V9_CANDIDATE_POLICY_V1),

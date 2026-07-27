@@ -123,9 +123,13 @@ vi.mock("../../lib/identified-active-safety-score-source", () => ({
 }));
 
 vi.mock("../../lib/flight-to-quality-classification", () => ({
-  buildFlightToQualityClassification: vi.fn(() => ({
-    safeIds: new Set(["usdt-tether", "usdc-circle"]),
-    riskyIds: new Set(["paxg-paxos", "xaut-tether"]),
+  buildFlightToQualityClassificationFromV9Snapshot: vi.fn(() => ({
+    kind: "ok",
+    classification: {
+      safeIds: new Set(["usdt-tether", "usdc-circle"]),
+      riskyIds: new Set(["paxg-paxos", "xaut-tether"]),
+      safetyScoreIdentity: null,
+    },
   })),
 }));
 
@@ -189,22 +193,30 @@ const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
 
 function canonicalSafetySource(
   cards: unknown[],
-): Extract<IdentifiedActiveSafetyScoreSource, { kind: "v8" }> {
+): Extract<IdentifiedActiveSafetyScoreSource, { kind: "v9" }> {
+  const snapshot = makeWorkerReportCardsV9Response({
+    cards: cards
+      .map((value) => value as {
+        id: string;
+        overallGrade: ReturnType<typeof makeWorkerV9Card>["grade"];
+        overallScore: number | null;
+      })
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .map((card) =>
+        makeWorkerV9Card({
+          id: card.id,
+          grade: card.overallGrade,
+          score: card.overallScore,
+        }),
+      ),
+  });
   return {
-    kind: "v8",
-    expectedModel: "v8",
-    activationUpdatedAt: null,
-    identity: {
-      model: "v8" as const,
-      schemaVersion: 1 as const,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      evaluationBuildDigest: "a".repeat(64),
-      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
-      publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:123`,
-    },
-    publishedAtSec: 123,
-    snapshot: { cards },
-  } as unknown as Extract<IdentifiedActiveSafetyScoreSource, { kind: "v8" }>;
+    kind: "v9",
+    expectedModel: "v9",
+    identity: snapshot.safetyScoreIdentity,
+    publishedAtSec: snapshot.updatedAt,
+    snapshot,
+  };
 }
 
 function makeParsedFixture(
@@ -839,7 +851,6 @@ describe("generateDailyDigest", () => {
       expectedModel: "v9",
       reason: "v9-identity-mismatch",
       detail: "identity mismatch",
-      activationUpdatedAt: Math.floor(Date.now() / 1000),
     });
 
     const db = mockD1(makeBaseTables());
@@ -905,7 +916,6 @@ describe("generateDailyDigest", () => {
       expectedModel: "v9",
       identity: snapshot.safetyScoreIdentity,
       publishedAtSec: snapshot.updatedAt,
-      activationUpdatedAt: snapshot.updatedAt - 10,
       snapshot,
     });
 
@@ -1024,9 +1034,9 @@ describe("generateDailyDigest", () => {
     expect(typeof storedInput.mintBurnFlows.gaugeScore).toBe("number");
     expect(storedInput.mintBurnFlows.flightToQuality).toBeDefined();
     expect(storedInput.mintBurnFlows.classificationSource).toBe("unavailable");
-    expect(storedInput.mintBurnFlows.classificationReason).toBe("identity-missing");
+    expect(storedInput.mintBurnFlows.classificationReason).toBe("v9-snapshot-unavailable");
     expect(storedInput.mintBurnFlows.safetyScoreIdentity).toBeNull();
-    expect(storedInput.degradedSources).toContain("mint-burn-ftq:identity-missing");
+    expect(storedInput.degradedSources).toContain("mint-burn-ftq:v9-snapshot-unavailable");
     expect(storedInput.mintBurnFlows.topChains).toBeDefined();
     expect(Array.isArray(storedInput.mintBurnFlows.topChains)).toBe(true);
     expect(storedInput.mintBurnFlows.topChains.length).toBeLessThanOrEqual(3);
@@ -1214,14 +1224,14 @@ describe("generateDailyDigest", () => {
             history_id: "safety-score-history:v2:test",
             stablecoin_id: "usdt-tether",
             recorded_at: todayTs,
-            model: "v8",
+            model: "v9",
             identity_schema_version: 1,
-            methodology_version: SAFETY_SCORE_METHODOLOGY_VERSION,
-            policy_id: null,
-            policy_digest: null,
-            evaluation_build_digest: "a".repeat(64),
+            methodology_version: "9.0",
+            policy_id: "safety-score-v9",
+            policy_digest: "a".repeat(64),
+            evaluation_build_digest: "b".repeat(64),
             base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`,
-            model_publication_generation_id: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:123`,
+            model_publication_generation_id: "report-cards:v9:1",
             transition_kind: "organic-grade-change",
             grade: "A-",
             score: 80,
@@ -1243,9 +1253,9 @@ describe("generateDailyDigest", () => {
     expect(storedInput.gradeTransitions[0].fromGrade).toBe("A");
     expect(storedInput.gradeTransitions[0].toGrade).toBe("A-");
     expect(storedInput.safetyScores.provenance).toMatchObject({
-      model: "v8",
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:123`,
+      model: "v9",
+      methodologyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:1",
     });
     expect((db as MockD1Database).getHistory().some((entry) => entry.sql.includes("safety_grade_history"))).toBe(false);
   });

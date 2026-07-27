@@ -15,7 +15,7 @@ import type {
   YieldSourceRisk,
   YieldSourceInputMeta,
 } from "@shared/types/yield";
-import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DEFAULT_SAFETY_SCORE, PYS_SCALING_FACTOR } from "../../lib/constants";
 import { isOnChainBootstrapYieldSeed } from "../../lib/yield-utils";
@@ -91,7 +91,7 @@ export interface EvaluateYieldSourcesInput {
   safetyScores: Map<string, { score: number; grade: string }>;
   /** False only when the exact published compact safety snapshot is unavailable. */
   safetySnapshotAvailable?: boolean;
-  safetyScoreIdentity?: SafetyScoreV8PublicationIdentity | null;
+  safetyScoreIdentity?: SafetyScorePublicationIdentity | null;
   riskFreeRates: ParsedYieldBenchmarkRegistry;
   tier1PrevRates: Map<string, number | null>;
   sourceHistory: Map<string, YieldHistorySnapshotRow[]>;

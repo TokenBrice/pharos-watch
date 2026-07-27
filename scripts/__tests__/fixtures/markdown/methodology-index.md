@@ -36,7 +36,7 @@ V9 distinguishes measured adverse evidence from issuer non-disclosure, unsupport
 
 Governance access posture treats reviewed global mint-domain contracts as immutable when they have no privileged capabilities, no applicable cap, no claim-impairment path, and access-only scope. A contract address alone is protocol machinery, not evidence of a concentrated administrator; deployment-scoped bridge controls remain separate.
 
-Publication is fail-closed. Stale or unavailable score-bearing producers and new infrastructure-attributed downgrades or NR transitions hold the last accepted V9 ratings. Active consumers expose held status and never recompute or fall back to V8. The numeric V8.17 methodology remains documented for the compatibility endpoint and rollback observation window.
+Publication is fail-closed. Stale or unavailable score-bearing producers and material infrastructure-attributed deterioration hold the last accepted V9 ratings. Isolated producer failures do not freeze the publication while at least 90% of active assets remain unaffected. Active consumers expose held status and never recompute or fall back to V8. V8.17 remains documented as historical methodology.
 
 
 ## Mint Authority Score
@@ -45,7 +45,7 @@ Mint Authority Score is a standalone 0-100 methodology for reviewed stablecoin m
 
 The score blends route family, weakest mint-capable controller, quantitative bounds, and reviewed authority posture, then applies caps for unbounded or compromised authority, privileged-mint incidents, weak EOA controls, and evidence confidence.
 
-Missing or unresolved review data returns NR and never penalizes. The score is visible on detail pages, the homepage table, the screener, and coverage breakdowns, and since Safety Score v8.0 it feeds the Decentralization dimension through a penalty-only blend; it still does not create selector exclusions or default-ranking changes beyond what Decentralization propagates.
+Missing or unresolved review data returns NR and never implies safety. The standalone score is visible on detail pages, the homepage table, the screener, and coverage breakdowns. Safety Score V9 does not blend that display score; it compiles the underlying reviewed mint-control evidence into Economic Control facts, gaps, and caps.
 
 
 ## Infrastructure Tagging
@@ -106,15 +106,6 @@ Stage 2 runs only when Stage 1 is not terminal-leaning. It is an empirical landm
 The Depeg Duration Resolver Reviewer (DDRR) scores frozen first-published predictions against later canonical depeg-event outcomes and reports coverage accountability for no-calls, pre-lock recoveries, terminal-before-lock outcomes, missed locks, publication retries/failures, data-quality gaps, invalidated rows, and legacy sticky 24h outcomes. Rollout-active incidents that predate the DDRv2 public contract use that boundary for fair coverage classification. Recovery-likelihood accuracy and duration error use only scoreable public predictions.
 
 DDR consumes the same confirmed depeg events as the detection pipeline; it does not run its own detection. Forecast readiness is a publication trigger, not a probability or confidence level, and DDR is not investment advice or a credit rating.
-
-
-## Contagion Stress Test
-
-The contagion stress test models how failure in one stablecoin can propagate through collateral, wrapper, and mechanism dependencies. It asks which assets would inherit stress if a major stablecoin, reserve asset, or shared mechanism became impaired.
-
-Dependency weights are curated from explicit metadata, reserve slices, wrapper relationships, and known mechanism links. The model distinguishes direct collateral exposure from looser operational dependency so a small wrapper link does not receive the same treatment as a majority reserve dependency.
-
-The result is used in report cards, comparison context, and systemic-risk views to identify hidden concentration that is not visible from market capitalization alone.
 
 
 ## Blacklist Tracker Methodology

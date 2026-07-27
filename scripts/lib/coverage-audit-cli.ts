@@ -7,7 +7,7 @@ import { isDirectRun } from "./smoke-runtime.mjs";
 export { isRecord, numberValue, stringValue };
 
 export const PROD_ORIGIN = "https://pharos.watch";
-export const PROD_REPORT_CARDS_URL = `${PROD_ORIGIN}/_site-data/report-cards`;
+export const PROD_REPORT_CARDS_URL = `${PROD_ORIGIN}/_site-data/report-cards/v9`;
 export const PROD_STABLECOINS_URL = `${PROD_ORIGIN}/_site-data/stablecoins`;
 
 export interface UnknownRecord {
@@ -274,7 +274,7 @@ export async function loadCoverageAuditSiteDataInputs(
   if (options.apiBase) {
     const apiKey = process.env[options.apiKeyEnv] ?? process.env.PHAROS_API_KEY ?? process.env.SMOKE_API_KEY;
     const [reportCards, stablecoins] = await Promise.all([
-      fetchJson(joinUrl(options.apiBase, "/api/report-cards"), fetchImpl, apiKey),
+      fetchJson(joinUrl(options.apiBase, "/api/report-cards/v9"), fetchImpl, apiKey),
       fetchJson(joinUrl(options.apiBase, "/api/stablecoins"), fetchImpl, apiKey),
     ]);
     return { reportCards, stablecoins, mode: "api" };

@@ -21,12 +21,4 @@ describe("blacklist status helpers", () => {
     expect(getResolvedBlacklistStatus("usdp-parallel")).toBe("inherited");
     expect(getResolvedBlacklistStatusLabel("usdp-parallel")).toBe("Upstream");
   });
-
-  it("prefers report-card status when present", () => {
-    expect(
-      getResolvedBlacklistStatus("usdp-parallel", {
-        rawInputs: { canBeBlacklisted: "possible" },
-      } as never),
-    ).toBe("possible");
-  });
 });

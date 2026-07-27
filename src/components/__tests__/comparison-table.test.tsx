@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ComparisonTable } from "@/components/comparison-table";
 import type { StablecoinData, StablecoinMeta, ReportCardGrade } from "@shared/types";
-import { makeStablecoin } from "@/test/fixtures/safety-scores";
+import { makeStablecoin } from "@/test/fixtures/stablecoins";
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (

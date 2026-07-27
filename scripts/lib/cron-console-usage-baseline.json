@@ -18,7 +18,6 @@
   "worker/src/api/mint-burn-flows.ts": 2,
   "worker/src/api/og.tsx": 1,
   "worker/src/api/peg-summary.ts": 1,
-  "worker/src/api/report-cards.ts": 1,
   "worker/src/api/snapshot.ts": 2,
   "worker/src/api/stablecoin-detail.ts": 2,
   "worker/src/api/stablecoin-detail/defillama.ts": 1,

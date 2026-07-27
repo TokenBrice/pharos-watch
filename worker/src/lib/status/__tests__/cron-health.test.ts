@@ -324,11 +324,11 @@ describe("loadCronHealth — watch-tier bootstrap guard", () => {
 
   it("keeps a watch-tier cron in bootstrap through neutral-only admission history", async () => {
     const rows = seedWithClearedJobs(NOW, [
-      "compute-safety-score-v9-shadow",
+      "compute-safety-score-v9",
     ]);
     rows.push(
       makeCronRow(
-        "compute-safety-score-v9-shadow",
+        "compute-safety-score-v9",
         "skipped_neutral",
         30,
         NOW,
@@ -336,10 +336,10 @@ describe("loadCronHealth — watch-tier bootstrap guard", () => {
     );
     const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
 
-    expect(snapshot.crons["compute-safety-score-v9-shadow"]?.bootstrap).toBe(
+    expect(snapshot.crons["compute-safety-score-v9"]?.bootstrap).toBe(
       true,
     );
-    expect(snapshot.crons["compute-safety-score-v9-shadow"]?.healthy).toBe(
+    expect(snapshot.crons["compute-safety-score-v9"]?.healthy).toBe(
       true,
     );
     expect(snapshot.watchUnhealthyCrons).toBe(0);
@@ -347,17 +347,17 @@ describe("loadCronHealth — watch-tier bootstrap guard", () => {
 
   it("ends watch-tier bootstrap after repeated neutral-only admissions", async () => {
     const rows = seedWithClearedJobs(NOW, [
-      "compute-safety-score-v9-shadow",
+      "compute-safety-score-v9",
     ]);
     rows.push(
       makeCronRow(
-        "compute-safety-score-v9-shadow",
+        "compute-safety-score-v9",
         "skipped_neutral",
         30,
         NOW,
       ),
       makeCronRow(
-        "compute-safety-score-v9-shadow",
+        "compute-safety-score-v9",
         "skipped_neutral",
         900,
         NOW,
@@ -366,9 +366,9 @@ describe("loadCronHealth — watch-tier bootstrap guard", () => {
     const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
 
     expect(
-      snapshot.crons["compute-safety-score-v9-shadow"]?.bootstrap,
+      snapshot.crons["compute-safety-score-v9"]?.bootstrap,
     ).toBeUndefined();
-    expect(snapshot.crons["compute-safety-score-v9-shadow"]?.healthy).toBe(
+    expect(snapshot.crons["compute-safety-score-v9"]?.healthy).toBe(
       false,
     );
     expect(snapshot.watchUnhealthyCrons).toBe(1);

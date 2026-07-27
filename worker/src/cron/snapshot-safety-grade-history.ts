@@ -4,15 +4,11 @@ import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import type { ReportCardGrade } from "@shared/types/report-cards";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
-import type { ReportCardsResponse } from "@shared/types/report-cards";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import {
-  ActiveV8SafetyScoreHistorySourceInactiveError,
   fetchLatestSafetyScoreHistoryV2Rows,
-  loadActiveV8SafetyScoreHistorySource,
   prepareSafetyScoreHistoryBoundaryWrite,
   prepareSafetyScoreHistoryV2Write,
-  prepareV8OrganicSafetyScoreHistoryWrites,
   safetyScoreHistoryIdentitiesAreComparable,
   safetyScoreHistoryIdentityFromV2Row,
 } from "../lib/safety-score-history-v2";
@@ -23,16 +19,6 @@ interface LatestSafetyGradeRow {
   grade: ReportCardGrade;
   score: number | null;
   recorded_at: number;
-}
-
-function hasDegradedReportCardInputs(snapshot: ReportCardsResponse): boolean {
-  if (!snapshot.inputFreshness) return true;
-  return Boolean(
-    snapshot.liquidityStale ||
-    snapshot.redemptionStale ||
-    snapshot.inputFreshness?.dexLiquidity.stale ||
-    snapshot.inputFreshness?.redemptionBackstops.stale,
-  );
 }
 
 interface HistoryCard {
@@ -56,57 +42,29 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         `Canonical Safety Score V9 source unavailable (${active.reason}): ${active.detail}`,
       );
     }
-    if (active.kind === "v9") {
-      if (active.snapshot.publicationHealth.status === "held") {
-        return {
-          status: "degraded" as const,
-          itemCount: 0,
-          metadata: JSON.stringify({
-            reason: "v9-publication-held",
-            expectedModel: "v9",
-            historyWritesSkipped: true,
-          }),
-        };
-      }
-      identity = active.snapshot.safetyScoreIdentity;
-      liveCards = active.snapshot.cards
-        .filter((card) => !FROZEN_IDS.has(card.id))
-        .map((card) => ({
-          id: card.id,
-          grade: card.grade,
-          score: card.score,
-        }));
-      degradedReportCardInputs = false;
-    } else {
-      const source = await loadActiveV8SafetyScoreHistorySource(db, signal);
-      identity = source.identity;
-      liveCards = source.snapshot.cards
-        .filter(
-          (card) =>
-            card.isDefunct !== true && !FROZEN_IDS.has(card.id),
-        )
-        .map((card) => ({
-          id: card.id,
-          grade: card.overallGrade,
-          score: card.overallScore,
-        }));
-      degradedReportCardInputs =
-        hasDegradedReportCardInputs(source.snapshot);
-    }
-  } catch (err) {
-    if (err instanceof ActiveV8SafetyScoreHistorySourceInactiveError) {
+    if (active.snapshot.publicationHealth.status === "held") {
       return {
         status: "degraded" as const,
         itemCount: 0,
         metadata: JSON.stringify({
-          reason: err.reason,
-          expectedModel: err.expectedModel,
+          reason: "v9-publication-held",
+          expectedModel: "v9",
           historyWritesSkipped: true,
         }),
       };
     }
+    identity = active.snapshot.safetyScoreIdentity;
+    liveCards = active.snapshot.cards
+      .filter((card) => !FROZEN_IDS.has(card.id))
+      .map((card) => ({
+        id: card.id,
+        grade: card.grade,
+        score: card.score,
+      }));
+    degradedReportCardInputs = false;
+  } catch (err) {
     recordCronFailure("snapshot-safety-grade-history", err, {
-      metadata: { stage: "loadActiveV8SafetyScoreHistorySource" },
+      metadata: { stage: "loadActiveSafetyScoreSource" },
     });
     return {
       status: "error" as const,
@@ -159,10 +117,6 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
       try {
         const latestIdentity = safetyScoreHistoryIdentityFromV2Row(latestV2);
         if (!safetyScoreHistoryIdentitiesAreComparable(identity, latestIdentity)) {
-          if (latestIdentity.model !== identity.model) {
-            suppressedIdentityTransitions++;
-            continue;
-          }
           requiresIdentityBoundary = true;
         } else {
           latest = {
@@ -178,8 +132,8 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         continue;
       }
     } else if (latest) {
-      // Legacy rows have no complete publication identity, so they can never
-      // establish an organic predecessor for the current V8 snapshot.
+      // Legacy rows have no complete publication identity, so they cannot
+      // establish an organic predecessor for the current V9 snapshot.
       requiresIdentityBoundary = true;
     }
 
@@ -210,33 +164,17 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         continue;
       }
       seeded++;
-      if (identity.model === "v8") {
-        stmts.push(
-          ...prepareV8OrganicSafetyScoreHistoryWrites(db, {
-            stablecoinId: card.id,
-            recordedAt: snapshotDay,
-            grade: card.grade,
-            score: card.score,
-            prevGrade: null,
-            prevScore: null,
-            transitionKind: "initial-baseline",
-            identity,
-            createdAt: nowSec,
-          }),
-        );
-      } else {
-        stmts.push(prepareSafetyScoreHistoryV2Write(db, {
-          stablecoinId: card.id,
-          recordedAt: snapshotDay,
-          grade: card.grade,
-          score: card.score,
-          prevGrade: null,
-          prevScore: null,
-          transitionKind: "initial-baseline",
-          identity,
-          createdAt: nowSec,
-        }));
-      }
+      stmts.push(prepareSafetyScoreHistoryV2Write(db, {
+        stablecoinId: card.id,
+        recordedAt: snapshotDay,
+        grade: card.grade,
+        score: card.score,
+        prevGrade: null,
+        prevScore: null,
+        transitionKind: "initial-baseline",
+        identity,
+        createdAt: nowSec,
+      }));
       continue;
     }
 
@@ -246,40 +184,24 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         continue;
       }
       changed++;
-      if (identity.model === "v8") {
-        stmts.push(
-          ...prepareV8OrganicSafetyScoreHistoryWrites(db, {
-            stablecoinId: card.id,
-            recordedAt: snapshotDay,
-            grade: card.grade,
-            score: card.score,
-            prevGrade: latest.grade,
-            prevScore: latest.score,
-            transitionKind: "organic-grade-change",
-            identity,
-            createdAt: nowSec,
-          }),
-        );
-      } else {
-        if (previousIdentity === null) {
-          suppressedIdentityTransitions++;
-          suppressedTransitions++;
-          changed--;
-          continue;
-        }
-        stmts.push(prepareSafetyScoreHistoryV2Write(db, {
-          stablecoinId: card.id,
-          recordedAt: snapshotDay,
-          grade: card.grade,
-          score: card.score,
-          prevGrade: latest.grade,
-          prevScore: latest.score,
-          transitionKind: "organic-grade-change",
-          identity,
-          previousIdentity,
-          createdAt: nowSec,
-        }));
+      if (previousIdentity === null) {
+        suppressedIdentityTransitions++;
+        suppressedTransitions++;
+        changed--;
+        continue;
       }
+      stmts.push(prepareSafetyScoreHistoryV2Write(db, {
+        stablecoinId: card.id,
+        recordedAt: snapshotDay,
+        grade: card.grade,
+        score: card.score,
+        prevGrade: latest.grade,
+        prevScore: latest.score,
+        transitionKind: "organic-grade-change",
+        identity,
+        previousIdentity,
+        createdAt: nowSec,
+      }));
       continue;
     }
 
@@ -310,7 +232,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
       identityHistorySuppressed: suppressedIdentityTransitions > 0,
       suppressedIdentityTransitions,
       identityBoundaryBaselines,
-      reportCardCacheOwner: "publish-report-card-cache",
+      publicationOwner: "compute-safety-score-v9",
     }),
   };
 }

@@ -5,7 +5,7 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import { getReferencePriceForContext } from "../../lib/price-validation";
 import { computePriceConsensus, type SourcePrice } from "../../lib/price-consensus";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
-import { createValidationContextResolver, type ValidationContextResolver } from "./pricing";
+import type { ValidationContextResolver } from "./pricing";
 import type { PeggedAsset, PrimaryPriceResult } from "./enrich-prices-shared";
 import { getSourceDefaultWeight } from "./enrich-prices-primary-shared";
 
@@ -88,60 +88,4 @@ export function applyGtProbeMutation(params: {
   primary.observedAtBySource = consensus.observedAtBySource;
   primary.observedAtModeBySource = consensus.observedAtModeBySource;
   return true;
-}
-
-/**
- * For assets that are single-source eligible soft-source results after primary consensus,
- * probe GeckoTerminal for an independent pool-level price and re-run
- * consensus with the additional source.
- */
-export async function runGtProbePass(
-  assets: PeggedAsset[],
-  primaryResults: Map<string, PrimaryPriceResult>,
-  db: D1Database,
-  signal?: AbortSignal,
-  references?: PriceValidationReferences,
-  coingeckoApiKey?: string | null,
-  validationContexts?: ValidationContextResolver,
-  options?: { budgetMs?: number },
-): Promise<{ updatedCount: number; stats: import("../../lib/geckoterminal-price-probe").GtProbeStats }> {
-  const { createEmptyGtProbeStats, probeGeckoTerminalPrices } = await import("../../lib/geckoterminal-price-probe");
-  const contexts = validationContexts ?? createValidationContextResolver();
-  const gtProbeTargets = buildGtProbeTargets(assets, primaryResults);
-
-  if (gtProbeTargets.length === 0) {
-    return {
-      updatedCount: 0,
-      stats: createEmptyGtProbeStats(),
-    };
-  }
-
-  const { prices: gtPrices, stats } = await probeGeckoTerminalPrices(
-    gtProbeTargets,
-    db,
-    signal,
-    coingeckoApiKey,
-    options,
-  );
-
-  let updatedCount = 0;
-  for (const asset of assets) {
-    const gtSource = gtPrices.get(asset.id);
-    if (!gtSource) continue;
-
-    const primary = primaryResults.get(asset.id);
-    if (!primary) continue;
-
-    if (applyGtProbeMutation({
-      asset,
-      primary,
-      gtSource,
-      validationContexts: contexts,
-      references,
-    })) {
-      updatedCount++;
-    }
-  }
-
-  return { updatedCount, stats };
 }

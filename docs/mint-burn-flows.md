@@ -169,7 +169,7 @@ The table below is representative, not exhaustive. The complete active registry 
 | apxUSD | apxusd-apyx | 18 | Extended | Transfer |
 | reUSD | reusd-re-protocol | 18 | Extended | Transfer (zero-address) |
 
-Public `/api/mint-burn-flows` and the daily digest collector use the same **report-card-cache driven** FTQ classification. `B-` or better is `safe`; `C+`, `C`, and `C-` are neutral; grades below `C-` are `risky`. Classification requires a complete current Safety Score identity and is unavailable when the cache is missing, stale, malformed, or identity-mismatched instead of silently falling back to a hardcoded safe-haven list. The V9 classifier uses these grade classes only through an explicit model-aware source opt-in; the current public/digest path remains V8.
+Public `/api/mint-burn-flows` and the daily digest collector use the same canonical V9 flight-to-quality classification. `B-` or better is `safe`; `C+`, `C`, and `C-` are neutral; grades below `C-` are `risky`. Classification requires a complete current `safety-score-v9-publication` identity and becomes unavailable when the accepted publication is missing, held, stale, malformed, or identity-mismatched instead of falling back to a hardcoded safe-haven list.
 
 Per-config adapter provenance is now surfaced through coin `coverage` metadata:
 - `adapterKinds` — active decoding families for the coin (`transfer-zero-address`, `custom-events`, `mixed`)

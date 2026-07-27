@@ -119,15 +119,11 @@ const EXPORT_ALLOWLIST = new Set([
   // their inputs coupled to the production policy, timing, and envelope schemas.
   "shared/lib/safety-score-v9-research.ts::loadV9MethodologyPolicy",
   "shared/lib/safety-score-v9/scenario-evaluator.ts::V9_SCENARIO_QUALITY_PILLARS",
+  // Consumed by the deterministic aggregation replay CLI outside the runtime graph.
+  "shared/lib/safety-score-v9/scoped-risk.ts::applyV9AllocatedScopedRiskAdjustments",
   // Retained inside published digests for historical identity compatibility
   // after their activation-gate roles were retired.
   "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts::SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST",
-  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MINIMUM_QUALIFYING_DAYS",
-  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MINIMUM_PRODUCER_CYCLES",
-  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MAX_START_DELAY_SEC",
-  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_MOVEMENT_ADJUDICATION_SCOPE",
-  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_SCORE_BEARING_PRODUCER_INTERVALS_SEC",
-  "shared/lib/safety-score-v9/operational-gate.ts::V9_SHADOW_SLOWEST_SCORE_BEARING_SOURCE_KEYS",
   // Evidence queue entrypoints are consumed by its maintenance CLI and CLI
   // contract tests, both outside the runtime graph scanned here.
   "shared/lib/safety-score-v9/evidence-gap-queue.ts::buildV9EvidenceGapQueue",
@@ -135,6 +131,8 @@ const EXPORT_ALLOWLIST = new Set([
   // Consumed by scripts/lib/redemption-backstop-validation.ts (out-of-scan-scope).
   "shared/lib/redemption-backstop-configs/factory.ts::getBackstopRegistrySourceFilePaths",
   "shared/lib/redemption-backstop-configs/policies.ts::REDEMPTION_BACKSTOP_POLICY_ENTRIES",
+  // Exercised directly by the config-helper contract suite; production route composition uses the V9 wrapper.
+  "shared/lib/redemption-backstop-configs/shared.ts::resolveRedemptionCostBpsAtNotional",
   "shared/lib/redemption-backstop-version.ts::getRedemptionBackstopVersionAt",
   // Safety Score methodology constants are imported by calibration/advisory
   // scripts outside this runtime-only scan and are kept public for review work.
@@ -184,6 +182,8 @@ const EXPORT_ALLOWLIST = new Set([
   "src/components/ui/command.tsx::CommandInput",
   "src/components/ui/command.tsx::CommandShortcut",
   "src/components/ui/command.tsx::CommandSeparator",
+  // Enforced by the table-primitives source audit, which inspects the exported component name.
+  "src/components/chart-primitives/data-table.tsx::ChartDataTable",
   "src/components/ui/dialog.tsx::DialogClose",
   "src/components/ui/dialog.tsx::DialogOverlay",
   "src/components/ui/dialog.tsx::DialogPortal",

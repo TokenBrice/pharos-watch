@@ -2,8 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { computePYS, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
 import {
   SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID,
@@ -20,13 +19,16 @@ vi.mock("../../lib/safety-scores", () => ({
 import { handleYieldRankings } from "../cache-handlers";
 
 const V748_RANKINGS_UPDATED_AT = 1_778_679_602;
-let currentSafetyIdentity: SafetyScoreV8PublicationIdentity | null = null;
+const V9_METHODOLOGY_VERSION = "9.0";
+let currentSafetyIdentity: SafetyScoreV9PublicationIdentity | null = null;
 
-function v8Identity(publicationGenerationId: string): SafetyScoreV8PublicationIdentity {
+function v9Identity(publicationGenerationId: string): SafetyScoreV9PublicationIdentity {
   return {
-    model: "v8" as const,
+    model: "v9" as const,
     schemaVersion: 1 as const,
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+    methodologyVersion: V9_METHODOLOGY_VERSION,
+    policyId: "safety-score-v9",
+    policyDigest: "c".repeat(64),
     evaluationBuildDigest: "a".repeat(64),
     baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
     publicationGenerationId,
@@ -188,8 +190,8 @@ function makeCacheDb(value: unknown, updatedAt: number) {
   if (payload && typeof payload === "object" && "rankings" in payload) {
     const response = payload as YieldRankingsResponse;
     const generationId = response.provenance?.safetySnapshot.publicationGenerationId
-      ?? `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
-    currentSafetyIdentity = v8Identity(generationId);
+      ?? `report-cards:v9:${updatedAt}`;
+    currentSafetyIdentity = v9Identity(generationId);
     if (response.provenance) {
       response.provenance = {
         ...response.provenance,
@@ -222,11 +224,11 @@ describe("handleYieldRankings", () => {
       trackedCount: 1,
       coverageRatio: 1,
       scores: new Map([["rated-coin", { score: 66, grade: "B-" }]]),
-      source: "report-card-cache",
-      expectedModel: "v8",
+      source: "safety-score-v9-publication",
+      expectedModel: "v9",
       safetyScoreIdentity: currentSafetyIdentity,
       publicationGenerationId: currentSafetyIdentity?.publicationGenerationId ?? null,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      methodologyVersion: V9_METHODOLOGY_VERSION,
       publishedAt: Math.floor(Date.now() / 1000),
     }));
   });
@@ -376,9 +378,9 @@ describe("handleYieldRankings", () => {
           coveredCount: 1,
           trackedCount: 2,
           reason: null,
-          source: "report-card-cache",
-          publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`,
-          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          source: "safety-score-v9-publication",
+          publicationGenerationId: `report-cards:v9:${updatedAt}`,
+          methodologyVersion: V9_METHODOLOGY_VERSION,
           publishedAt: updatedAt,
         },
       },
@@ -479,9 +481,9 @@ describe("handleYieldRankings", () => {
       coveredCount: 1,
       trackedCount: 2,
       reason: null,
-      source: "report-card-cache",
-      publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      source: "safety-score-v9-publication",
+      publicationGenerationId: `report-cards:v9:${updatedAt}`,
+      methodologyVersion: V9_METHODOLOGY_VERSION,
       publishedAt: updatedAt,
     });
     expect(body.provenance.liveSafetyHydration).toMatchObject({
@@ -490,10 +492,10 @@ describe("handleYieldRankings", () => {
       coveredCount: 1,
       trackedCount: 3,
       reason: "low-row-safety-coverage",
-      source: "report-card-cache",
-      expectedModel: "v8",
-      publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      source: "safety-score-v9-publication",
+      expectedModel: "v9",
+      publicationGenerationId: `report-cards:v9:${updatedAt}`,
+      methodologyVersion: V9_METHODOLOGY_VERSION,
       publishedAt: expect.any(Number),
     });
     expect(body.warnings?.[0]).toMatchObject({
@@ -506,7 +508,7 @@ describe("handleYieldRankings", () => {
 
   it("hydrates across compatible compact publication and base-input generations", async () => {
     const hourlyPublishedAt = Math.floor(Date.now() / 1000) - 3_600;
-    const hourlyGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${hourlyPublishedAt}`;
+    const hourlyGenerationId = `report-cards:v9:${hourlyPublishedAt}`;
     const payload = {
       ...v748RankingsPayload,
       rankings: [{
@@ -526,17 +528,17 @@ describe("handleYieldRankings", () => {
           coveredCount: 308,
           trackedCount: 364,
           reason: null,
-          source: "report-card-cache" as const,
+          source: "safety-score-v9-publication" as const,
           publicationGenerationId: hourlyGenerationId,
-          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+          methodologyVersion: V9_METHODOLOGY_VERSION,
           publishedAt: hourlyPublishedAt,
         },
       },
     } satisfies YieldRankingsResponse;
     const db = makeCacheDb(payload, hourlyPublishedAt);
-    const liveGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${hourlyPublishedAt + 900}`;
+    const liveGenerationId = `report-cards:v9:${hourlyPublishedAt + 900}`;
     currentSafetyIdentity = {
-      ...v8Identity(liveGenerationId),
+      ...v9Identity(liveGenerationId),
       baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
     };
 
@@ -555,10 +557,10 @@ describe("handleYieldRankings", () => {
       coveredCount: 1,
       trackedCount: 1,
       reason: null,
-      source: "report-card-cache",
-      expectedModel: "v8",
+      source: "safety-score-v9-publication",
+      expectedModel: "v9",
       publicationGenerationId: liveGenerationId,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      methodologyVersion: V9_METHODOLOGY_VERSION,
       publishedAt: expect.any(Number),
     });
     expect(body.provenance?.liveSafetyHydration?.publicationGenerationId).toBe(liveGenerationId);
@@ -575,14 +577,14 @@ describe("handleYieldRankings", () => {
       trackedCount: 1,
       coverageRatio: 1,
       scores: new Map([["usdc-circle", { score: 88, grade: "A" }]]),
-      source: "report-card-cache",
-      expectedModel: "v8",
+      source: "safety-score-v9-publication",
+      expectedModel: "v9",
       safetyScoreIdentity: {
-        ...v8Identity(`report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:other`),
+        ...v9Identity("report-cards:v9:other"),
         evaluationBuildDigest: "c".repeat(64),
       },
-      publicationGenerationId: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:other`,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
+      publicationGenerationId: "report-cards:v9:other",
+      methodologyVersion: V9_METHODOLOGY_VERSION,
       publishedAt: updatedAt,
     });
 
@@ -600,7 +602,7 @@ describe("handleYieldRankings", () => {
     expect(body.provenance?.liveSafetyHydration).toMatchObject({
       kind: "degraded",
       reason: "safety-identity-mismatch",
-      source: "report-card-cache",
+      source: "safety-score-v9-publication",
     });
   });
 
@@ -1170,7 +1172,7 @@ describe("handleYieldRankings", () => {
       coverageRatio: 0,
       reason: snapshotReason,
       scores: new Map(),
-      source: "report-card-cache",
+      source: "safety-score-v9-publication",
       expectedModel: "v9",
       safetyScoreIdentity: null,
       publicationGenerationId: null,

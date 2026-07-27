@@ -355,6 +355,7 @@ export type ReportCardsV9PreBreakdownResponse = z.infer<
 export const ReportCardsV9CurrentResponseSchema = z
   .object({
     ...ReportCardsV9ResponseShape,
+    lifecycle: z.literal("active"),
     schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
     publicationHealth: V9PublicationHealthSchema,
     cards: z.array(SafetyScoreV9CurrentCardSchema),
@@ -368,15 +369,6 @@ export type ReportCardsV9CurrentResponse = z.infer<typeof ReportCardsV9CurrentRe
  */
 export const ReportCardsV9ResponseSchema = ReportCardsV9CurrentResponseSchema;
 export type ReportCardsV9Response = ReportCardsV9CurrentResponse;
-
-/** Temporary live reader for the reader-first report-v3 to report-v4 transition. */
-export const ReportCardsV9TransitionResponseSchema = z.union([
-  ReportCardsV9CurrentResponseSchema,
-  ReportCardsV9PreBreakdownResponseSchema,
-]);
-export type ReportCardsV9TransitionResponse = z.infer<
-  typeof ReportCardsV9TransitionResponseSchema
->;
 
 /** Explicit historical reader. Never use this union at a live publication boundary. */
 export const ReportCardsV9CompatibleResponseSchema = z.union([

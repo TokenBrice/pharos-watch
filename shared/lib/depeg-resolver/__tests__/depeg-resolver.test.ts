@@ -97,7 +97,7 @@ describe("resolveOutlook — acceptance cases", () => {
       baseSupply({ mintSurge: false, change7dPct: 1 }),
       baseLive({
         safetyScore: 92,
-        safetyContext: { status: "v8-identified", reason: null, identity: null },
+        safetyContext: { status: "v9-identified", reason: null, identity: null },
         liquidityScore: 80,
         redemptionCapacityRatio: 0.2,
         redemptionRouteFamily: "collateral-redeem",
@@ -121,7 +121,7 @@ describe("resolveOutlook — acceptance cases", () => {
       baseSupply({ mintSurge: false, change7dPct: -2 }),
       baseLive({
         safetyScore: 80,
-        safetyContext: { status: "v8-identified", reason: null, identity: null },
+        safetyContext: { status: "v9-identified", reason: null, identity: null },
         liquidityScore: 70,
         blacklistSurge: false,
       }),
@@ -129,7 +129,7 @@ describe("resolveOutlook — acceptance cases", () => {
     expect(r.tier).not.toBe("recovery_unlikely");
   });
 
-  it("does not project V8 numeric recovery anchors onto a V9 or mismatched safety context", () => {
+  it("does not project numeric recovery anchors from an unidentified safety context", () => {
     for (const status of ["unsupported-model", "identity-mismatch"] as const) {
       const r = resolveOutlook(
         event(),

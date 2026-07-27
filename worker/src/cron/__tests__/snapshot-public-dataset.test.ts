@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
+import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import {
@@ -46,7 +46,7 @@ const REPORT_CARD_CACHE_PAYLOAD = {
     "usdt-tether": { score: 78.1, grade: "B" },
   },
   updatedAt: NOW_SEC,
-  safetyScoreIdentity: buildSafetyScoreV8PublicationIdentity({
+  safetyScoreIdentity: buildSafetyScoreV9InputIdentity({
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
     baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
     publicationGenerationId: REPORT_CARD_PUBLICATION_GENERATION_ID,
@@ -160,13 +160,6 @@ function activeV9(updatedAt = NOW_SEC) {
   return {
     kind: "v9" as const,
     expectedModel: "v9" as const,
-    marker: {
-      policyId: snapshot.safetyScoreIdentity.policyId,
-      policyDigest: snapshot.safetyScoreIdentity.policyDigest,
-      evaluationBuildDigest: snapshot.safetyScoreIdentity.evaluationBuildDigest,
-      methodologyVersion: snapshot.safetyScoreIdentity.methodologyVersion,
-    },
-    activationUpdatedAt: NOW_SEC - 30,
     snapshot,
   };
 }
@@ -175,6 +168,10 @@ describe("snapshotPublicDataset", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW_MS));
+    vi.spyOn(
+      activeSafetyScoreSource,
+      "loadActiveSafetyScoreSource",
+    ).mockResolvedValue(activeV9());
   });
 
   afterEach(() => {
@@ -284,6 +281,9 @@ describe("snapshotPublicDataset", () => {
   });
 
   it("inserts a row keyed on today's UTC date with the expected envelope", async () => {
+    const source = activeV9();
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockResolvedValue(source);
     const db = buildDb();
     const result = await snapshotPublicDataset(db);
 
@@ -306,11 +306,14 @@ describe("snapshotPublicDataset", () => {
     const insert = db.getHistory().find((entry) =>
       entry.sql.includes("INSERT OR IGNORE INTO public_snapshots")
     );
-    expect(insert?.sql).toContain("json_extract(value, '$.publicationGenerationId')");
-    expect(insert?.binds.slice(-3)).toEqual([
-      "safety-score-v9:public-activation",
-      "report_card_cache",
-      REPORT_CARD_PUBLICATION_GENERATION_ID,
+    expect(insert?.sql).toContain(
+      "json_extract(value, '$.identity.publicationGenerationId')",
+    );
+    expect(insert?.binds.slice(-4)).toEqual([
+      "report-cards:v9",
+      source.snapshot.safetyScoreIdentity.publicationGenerationId,
+      "report-cards:v9:publication-health",
+      source.snapshot.safetyScoreIdentity.publicationGenerationId,
     ]);
   });
 
@@ -328,7 +331,7 @@ describe("snapshotPublicDataset", () => {
       generatedAt: number;
       methodologyVersions: Record<string, string>;
       stablecoins: { id: string }[];
-      reportCards: { scores: Record<string, unknown> } | null;
+      reportCards: { cards: Array<{ id: string }> } | null;
       psi: { score: number; band: string } | null;
       dews: { stablecoinId: string }[];
       liquidity: { stablecoinId: string }[];
@@ -338,7 +341,10 @@ describe("snapshotPublicDataset", () => {
     expect(envelope.generatedAt).toBe(NOW_SEC);
     expect(envelope.stablecoins).toHaveLength(2);
     expect(envelope.stablecoins.map((c) => c.id).sort()).toEqual(["usdc-circle", "usdt-tether"]);
-    expect(envelope.reportCards?.scores).toHaveProperty("usdc-circle");
+    expect(envelope.reportCards?.cards.map((card) => card.id)).toEqual([
+      "usdc-circle",
+      "usdt-tether",
+    ]);
     expect(envelope.psi?.score).toBe(87.4);
     expect(envelope.psi?.band).toBe("STEADY");
     expect(envelope.dews).toHaveLength(2);
@@ -358,117 +364,6 @@ describe("snapshotPublicDataset", () => {
     const binds1 = getInsertBinds(db1);
     const binds2 = getInsertBinds(db2);
     expect(binds1?.[3]).toBe(binds2?.[3]);
-  });
-
-  it("degrades instead of writing when the report-card cache is missing", async () => {
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key",
-        rows: [{ key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC }],
-      },
-    ]);
-
-    const result = await snapshotPublicDataset(db);
-    expect(result.status).toBe("degraded");
-    expect(result.metadata).toContain("active_safety_score_unavailable");
-    expect(getInsertBinds(db)).toBeUndefined();
-  });
-
-  it("does not publish an immutable snapshot from an identity-less compact cache", async () => {
-    const legacyReportCardCache = {
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      scores: REPORT_CARD_CACHE_PAYLOAD.scores,
-      updatedAt: NOW_SEC,
-    };
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key",
-        rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
-          { key: "report_card_cache", value: JSON.stringify(legacyReportCardCache), updated_at: NOW_SEC },
-        ],
-      },
-    ]);
-
-    const result = await snapshotPublicDataset(db);
-
-    expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      reason: "active_safety_score_unavailable",
-      expectedModel: "v8",
-      sourceReason: "identity-missing",
-    });
-    expect(getInsertBinds(db)).toBeUndefined();
-  });
-
-  it("does not publish an immutable snapshot from a different evaluation build", async () => {
-    const mismatchedReportCardCache = {
-      ...REPORT_CARD_CACHE_PAYLOAD,
-      safetyScoreIdentity: {
-        ...REPORT_CARD_CACHE_PAYLOAD.safetyScoreIdentity,
-        evaluationBuildDigest: "b".repeat(64),
-      },
-    };
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key",
-        rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
-          { key: "report_card_cache", value: JSON.stringify(mismatchedReportCardCache), updated_at: NOW_SEC },
-        ],
-      },
-    ]);
-
-    const result = await snapshotPublicDataset(db);
-
-    expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      reason: "active_safety_score_unavailable",
-      expectedModel: "v8",
-      sourceReason: "identity-mismatch",
-    });
-    expect(getInsertBinds(db)).toBeUndefined();
-  });
-
-  it("does not publish an immutable snapshot from a complete V9 compact publication on the V8 release", async () => {
-    const v9GenerationId = `safety-score-v9:9.0:${NOW_SEC}`;
-    const v9ReportCardCache = {
-      ...REPORT_CARD_CACHE_PAYLOAD,
-      safetyScoreIdentity: {
-        model: "v9",
-        schemaVersion: 1,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-        policyId: "v9-policy-2026-05",
-        policyDigest: "b".repeat(64),
-        evaluationBuildDigest: "c".repeat(64),
-        baseInputGenerationId: `report-cards-input:v1:${"d".repeat(64)}`,
-        publicationGenerationId: v9GenerationId,
-      },
-      publicationGenerationId: v9GenerationId,
-      completeness: {
-        ...REPORT_CARD_CACHE_PAYLOAD.completeness,
-        generationId: v9GenerationId,
-      },
-    };
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key",
-        rows: [
-          { key: "stablecoins", value: JSON.stringify(STABLECOINS_CACHE_PAYLOAD), updated_at: NOW_SEC },
-          { key: "report_card_cache", value: JSON.stringify(v9ReportCardCache), updated_at: NOW_SEC },
-        ],
-      },
-    ]);
-
-    const result = await snapshotPublicDataset(db);
-
-    expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      reason: "active_safety_score_unavailable",
-      expectedModel: "v8",
-      sourceReason: "invalid-payload",
-    });
-    expect(getInsertBinds(db)).toBeUndefined();
   });
 
   it("writes the complete active V9 publication with model-aware methodology metadata", async () => {
@@ -499,16 +394,11 @@ describe("snapshotPublicDataset", () => {
     const insert = db.getHistory().find((entry) =>
       entry.sql.includes("INSERT OR IGNORE INTO public_snapshots")
     );
-    expect(insert?.sql).toContain("json_extract(value, '$.policyId')");
     expect(insert?.sql).toContain("json_extract(value, '$.identity.publicationGenerationId')");
-    expect(insert?.binds.slice(-8)).toEqual([
-      "safety-score-v9:public-activation",
-      source.activationUpdatedAt,
-      source.marker.policyId,
-      source.marker.policyDigest,
-      source.marker.evaluationBuildDigest,
-      source.marker.methodologyVersion,
-      "report-cards:v9-shadow",
+    expect(insert?.binds.slice(-4)).toEqual([
+      "report-cards:v9",
+      source.snapshot.safetyScoreIdentity.publicationGenerationId,
+      "report-cards:v9:publication-health",
       source.snapshot.safetyScoreIdentity.publicationGenerationId,
     ]);
   });
@@ -529,14 +419,15 @@ describe("snapshotPublicDataset", () => {
     expect(getInsertBinds(db)).toBeUndefined();
   });
 
-  it("does not seal a V9 envelope when rollback races the immutable insert", async () => {
+  it("does not seal a V9 envelope when publication availability changes before insert", async () => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
       .mockResolvedValueOnce(activeV9())
       .mockResolvedValueOnce({
-        kind: "v8",
-        expectedModel: "v8",
-        reason: "activation-marker-missing",
-        activationUpdatedAt: null,
+        kind: "error",
+        expectedModel: "v9",
+        reason: "v9-snapshot-unavailable",
+        snapshot: null,
+        detail: "publication disappeared",
       });
     const db = buildDb();
 
@@ -546,29 +437,6 @@ describe("snapshotPublicDataset", () => {
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       reason: "active_safety_score_changed_before_insert",
       expectedModel: "v9",
-      observedModel: "v8",
-    });
-    expect(getInsertBinds(db)).toBeUndefined();
-  });
-
-  it("does not seal a V8 envelope when activation races the immutable insert", async () => {
-    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
-      .mockResolvedValueOnce({
-        kind: "v8",
-        expectedModel: "v8",
-        reason: "activation-marker-missing",
-        activationUpdatedAt: null,
-      })
-      .mockResolvedValueOnce(activeV9());
-    const db = buildDb();
-
-    const result = await snapshotPublicDataset(db);
-
-    expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      reason: "active_safety_score_changed_before_insert",
-      expectedModel: "v8",
-      observedModel: "v9",
     });
     expect(getInsertBinds(db)).toBeUndefined();
   });

@@ -27,7 +27,6 @@ import {
 } from "../../lib/evm-rpc";
 import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-  type DexMeasuredExecutionAdapter,
   type DexMeasuredExecutionBudgetStopReason,
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
@@ -657,7 +656,7 @@ function prepareRequest(
   };
 }
 
-export function decodeCurveStableSwapQuotePoint(
+function decodeCurveStableSwapQuotePoint(
   request: Pick<
     EncodedCurveStableSwapRequest,
     "amountInRaw" | "callData" | "inputIndex" | "outputIndex" | "blockNumber" | "endpointAddress" | "target"
@@ -945,16 +944,3 @@ export function validateCurveStableSwapProfileProof(profile: DexMeasuredExecutio
   }
   return [...issues];
 }
-
-export const CURVE_STABLESWAP_ADAPTER: DexMeasuredExecutionAdapter = {
-  profileId: CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
-  async quotePoints(input) {
-    return {
-      points: [],
-      failures: input.inputNotionalsUsd.map((inputUsd) => ({
-        inputUsd,
-        reason: "runtime-evidence-missing",
-      })),
-    };
-  },
-};

@@ -3,7 +3,7 @@
 // Asserts that a stablecoin assembled from the BEST real, currently-measured
 // pillar sub-scores can reach A+ under the live formula. If a methodology
 // change silently makes A+ unreachable, this check fails. Part of the
-// pre-release acceptance checklist (docs/process/safety-score-v9-readiness.md);
+// canonical V9 composite-ceiling audit;
 // it needs a replay artifact, so it runs operator-side, not in CI.
 //
 // Usage: node scripts/maintenance/check-safety-score-v9-composite-ceiling.mjs --replay <replay.json>

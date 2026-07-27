@@ -13,8 +13,6 @@ import { emptyReserveCompositionOverview } from "../live-reserves-store";
 import { logWorkerEvent } from "../structured-log";
 import { loadMintBurnFirstHourRows } from "../mint-burn-hourly-queries";
 import { readDewsPublishedGenerationResult } from "../dews-publication-pointer";
-import { loadReportCardCache } from "../report-card-cache";
-import { isCurrentSafetyScoreV8Identity } from "../safety-score-current-identity";
 import { loadActiveSafetyScoreSource } from "../safety-score-active-source";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
@@ -179,50 +177,17 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now
       return null;
     }
     if (active.kind === "v9") return active.snapshot.updatedAt;
-    if (active.kind === "error") {
-      logWorkerEvent({
-        scope: "status",
-        level: "warn",
-        event: "report_card_publication_freshness_unavailable",
-        route: "status",
-        source: "safety_score_active_source",
-        message: "Failed to validate the expected active V9 report-card publication for dataset freshness",
-        metadata: {
-          reason: active.reason,
-          expectedModel: active.expectedModel,
-          activationUpdatedAt: active.activationUpdatedAt,
-        },
-      });
-      return null;
-    }
-
-    let published: Awaited<ReturnType<typeof loadReportCardCache>>;
-    try {
-      published = await loadReportCardCache(db, { requireCompleteness: true });
-    } catch (err) {
-      logWorkerEvent({
-        scope: "status",
-        level: "error",
-        event: "report_card_publication_freshness_read_failed",
-        route: "status",
-        source: "report_card_cache",
-        message: "Failed to read report-card cache for dataset freshness",
-        error: err,
-      });
-      return null;
-    }
-    if (published.kind === "ok" && isCurrentSafetyScoreV8Identity(published.payload.safetyScoreIdentity)) {
-      return published.updatedAt;
-    }
-    const reason = published.kind === "ok" ? "identity-mismatch" : published.reason;
     logWorkerEvent({
       scope: "status",
       level: "warn",
       event: "report_card_publication_freshness_unavailable",
       route: "status",
-      source: "report_card_cache",
-      message: "Failed to validate the complete identified report-card publication for dataset freshness",
-      metadata: { reason, updatedAt: published.updatedAt },
+      source: "safety_score_active_source",
+      message: "Failed to validate the canonical V9 publication for dataset freshness",
+      metadata: {
+        reason: active.reason,
+        expectedModel: active.expectedModel,
+      },
     });
     return null;
   }

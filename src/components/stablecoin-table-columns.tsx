@@ -165,7 +165,7 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     headerAdornment: <MethodologyHint topic="mintAuthorityScore" />,
     sortKey: "mintAuthority",
     className: "w-[160px] text-center",
-    title: "Mint Authority Score (0-100): privileged-mint risk score that can drag Safety Score v8 Decentralization.",
+    title: "Mint Authority Score (0-100): reviewed privileged-mint evidence used by V9 Economic Control.",
   },
   { id: "backing", label: "Backing", className: "w-[92px] text-center", title: "Collateral backing type" },
   { id: "type", label: "Type", className: "w-[92px] text-center", title: "Stablecoin mechanism type" },

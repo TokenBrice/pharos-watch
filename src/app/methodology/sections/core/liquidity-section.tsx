@@ -101,7 +101,7 @@ export function LiquidityMethodologySection() {
             post-deploy consumers remain rollback evidence for memory, stale-heartbeat, completeness, or proof drift.
             Missing, stale, failed, multi-hop-only, or identity-mismatched evidence remains capability-gated per target.
             The SunSwap census still does not enter aggregate liquidity, price consensus, direct-source precedence,
-            visible pool selection, or V8 scoring.
+            visible pool selection, or aggregate liquidity inputs.
           </p>
           <p>
             Repeated sightings of the same physical pool across direct API, staged, and fallback sources are collapsed

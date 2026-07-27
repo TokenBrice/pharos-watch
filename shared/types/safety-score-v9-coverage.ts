@@ -164,7 +164,6 @@ export const V9ReleaseCohortManifestV1Schema = z
     cohortId: CanonicalTextSchema,
     capturedAtSec: UnixSecondsSchema,
     bindings: V9CoverageIdentityBindingV1Schema,
-    continuingActiveV8RateableCount: z.number().int().nonnegative(),
     assets: canonicalArrayBy(V9ReleaseCohortAssetV1Schema, (asset) => asset.assetId).min(1),
   })
   .strict()
@@ -441,7 +440,6 @@ export const V9ReleaseCoverageReportV1Schema = z
         activeCount: z.number().int().nonnegative(),
         rateableCount: z.number().int().nonnegative(),
         notRatedCount: z.number().int().nonnegative(),
-        continuingActiveV8RateableCount: z.number().int().nonnegative(),
         requiredRateableCount: z.number().int().nonnegative(),
         passed: z.boolean(),
       })

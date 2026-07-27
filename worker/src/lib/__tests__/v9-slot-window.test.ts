@@ -54,8 +54,8 @@ function options(
     workerVersion: "worker-v2",
     deadlineOffsetMs: 30_000,
     minimumRemainingMs: 10_000,
-    lane: "compute-safety-score-v9-shadow",
-    currentSlotKey: "v9ShadowOffset",
+    lane: "compute-safety-score-v9",
+    currentSlotKey: "v9PublicationOffset",
     ...overrides,
   };
 }
@@ -196,7 +196,7 @@ describe("runV9AfterCoreWithinWindow", () => {
         worker_version: "worker-v2",
       })
       .mockResolvedValueOnce({
-        slot_key: "v9ShadowOffset",
+        slot_key: "v9PublicationOffset",
         slot_started_at: Math.floor(
           Date.parse("2026-07-26T11:59:00Z") / 1_000,
         ),
@@ -217,7 +217,7 @@ describe("runV9AfterCoreWithinWindow", () => {
       "v9-competing-slot-active",
     );
     expect(fixture.bind).toHaveBeenLastCalledWith(
-      "v9ShadowOffset",
+      "v9PublicationOffset",
       Math.floor(scheduledTimeMs / 1_000),
       Math.floor(Date.parse("2026-07-26T12:00:00Z") / 1_000) -
         35 * 60,

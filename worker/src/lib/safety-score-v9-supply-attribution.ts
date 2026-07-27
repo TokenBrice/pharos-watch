@@ -7,7 +7,7 @@ import {
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { rethrowIfAborted } from "./abort";
 import type { ChainRpcConfig } from "./chain-registry";
-import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
+import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
 import {
   CENTRIFUGE_BURN_MINT_ASSET_IDS,
   buildReviewedDeploymentRouteInventory,
@@ -311,7 +311,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
       options.notBeforeSec < fixedInput.clockSec)
   ) {
     throw new Error(
-      "Supply attribution capture floor must be a safe integer at or after its exact V8 source clock",
+      "Supply attribution capture floor must be a safe integer at or after its exact base-input clock",
     );
   }
   let captureClockSec = fixedInput.clockSec;
@@ -488,51 +488,6 @@ export async function captureSafetyScoreV9SupplyAttribution(
     expectedAssetIds,
     journalRecords,
   };
-}
-
-export async function captureSafetyScoreV9SupplyAttributionById(
-  fixedInput: Readonly<ReportCardsFixedInput>,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-  signal?: AbortSignal,
-): Promise<V9SupplyAttributionById> {
-  return (
-    await captureSafetyScoreV9SupplyAttribution(fixedInput, chainRpcs, signal)
-  ).attributionById;
-}
-
-export async function enrichSafetyScoreV9FixedInputSupplyWithEvidence(
-  fixedInput: Readonly<ReportCardsFixedInput>,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-  signal?: AbortSignal,
-): Promise<{
-  fixedInput: ReportCardsFixedInput;
-  journalRecords: SupplyAttributionJournalV1[];
-}> {
-  const capture = await captureSafetyScoreV9SupplyAttribution(
-    fixedInput,
-    chainRpcs,
-    signal,
-  );
-  return {
-    fixedInput: normalizeFixedInput({
-      ...fixedInput,
-      safetyScoreV9SupplyAttributionById: capture.attributionById,
-    }),
-    journalRecords: capture.journalRecords,
-  };
-}
-
-export async function enrichSafetyScoreV9FixedInputSupply(
-  fixedInput: Readonly<ReportCardsFixedInput>,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-  signal?: AbortSignal,
-): Promise<ReportCardsFixedInput> {
-  const capture = await enrichSafetyScoreV9FixedInputSupplyWithEvidence(
-    fixedInput,
-    chainRpcs,
-    signal,
-  );
-  return capture.fixedInput;
 }
 
 export function safetyScoreV9ChainRows(

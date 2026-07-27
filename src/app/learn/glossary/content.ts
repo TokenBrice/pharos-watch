@@ -184,7 +184,7 @@ export const GLOSSARY_ENTRIES: readonly GlossaryEntry[] = [
     term: "Safety Score",
     letter: "S",
     definition:
-      "Pharos's overall grade for a stablecoin. The score weights four base dimensions — Liquidity / Exit (30%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%) — then applies the PegScore power-curve multiplier. Grades run A+ (87+) through F (0–39), with NR for insufficient data. Eleven grades, no half-steps outside that alphabet.",
+      "Pharos's V9 risk grade for a stablecoin. It evaluates Backing (40%), Exit (35%), and Economic Control (25%) with bounded aggregation, then applies peg, evidence, dependency, wrapper, track-record, and structural constraints. Grades run A+ (87+) through F (0–39), with NR for insufficient required evidence.",
     methodologyAnchor: "/methodology/#safety-scores-methodology",
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     seeAlso: ["bluechip", "pegscore", "liquidity-score"],

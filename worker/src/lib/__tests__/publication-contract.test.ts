@@ -1,13 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
+import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../test-helpers/report-cards-v9";
+import * as activeSafetyScoreSource from "../safety-score-active-source";
 import { loadPublicationHealth } from "../publication-contract";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 const NOW = 1_775_890_000;
-const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
 
 function generationRow(overrides: Record<string, unknown>): Record<string, unknown> {
   return {
@@ -47,35 +48,6 @@ function stablecoinPayload(count = 2): string {
       },
       chains: ["Ethereum"],
     })),
-  });
-}
-
-function v9ReportCardCachePayload(updatedAt = NOW - 180): string {
-  const scoreIds = [...ACTIVE_IDS].sort();
-  const publicationGenerationId = `safety-score-v9:9.0:${updatedAt}`;
-  return JSON.stringify({
-    scores: Object.fromEntries(scoreIds.map((id) => [id, { score: 92, grade: "A" }])),
-    safetyScoreIdentity: {
-      model: "v9",
-      schemaVersion: 1,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      policyId: "v9-policy-2026-05",
-      policyDigest: "b".repeat(64),
-      evaluationBuildDigest: "c".repeat(64),
-      baseInputGenerationId: `report-cards-input:v1:${"d".repeat(64)}`,
-      publicationGenerationId,
-    },
-    publicationGenerationId,
-    completeness: {
-      generationId: publicationGenerationId,
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      expectedCount: scoreIds.length,
-      scoredCount: scoreIds.length,
-      notRatedCount: 0,
-      notRatedIds: [],
-    },
-    updatedAt,
-    methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
   });
 }
 
@@ -426,17 +398,24 @@ describe("loadPublicationHealth", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM surface_publication_generations"))).toBe(true);
   });
 
-  it("derives DEWS, PSI, and report-card publication health from current fallback sources", async () => {
+  it("derives DEWS, PSI, and canonical V9 publication health from current sources", async () => {
     const dewsAt = NOW - 300;
     const psiAt = NOW - 240;
     const reportCardsAt = NOW - 180;
-    const reportCardIds = [...ACTIVE_IDS].sort();
-    const reportCardGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${reportCardsAt}`;
-    const safetyScoreIdentity = buildSafetyScoreV8PublicationIdentity({
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      baseInputGenerationId: BASE_INPUT_GENERATION_ID,
-      publicationGenerationId: reportCardGenerationId,
+    const snapshot = makeWorkerReportCardsV9Response({
+      asOfSec: reportCardsAt - 60,
+      updatedAt: reportCardsAt,
+      cards: [
+        makeWorkerV9Card({ id: "usdc-circle", score: 92, grade: "A" }),
+        makeWorkerV9Card({ id: "usdt-tether", score: 90, grade: "A" }),
+      ],
     });
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockResolvedValueOnce({
+        kind: "v9",
+        expectedModel: "v9",
+        snapshot,
+      });
     const dewsRows = [
       { stablecoin_id: "usdc-circle", score: 10, band: "CALM", signals_json: "{}", computed_at: dewsAt },
       { stablecoin_id: "usdt-tether", score: 20, band: "WATCH", signals_json: "{}", computed_at: dewsAt },
@@ -472,25 +451,6 @@ describe("loadPublicationHealth", () => {
             }),
             updated_at: dewsAt,
           },
-          {
-            key: "report_card_cache",
-            value: JSON.stringify({
-              scores: Object.fromEntries(reportCardIds.map((id) => [id, { score: 92, grade: "A" }])),
-              safetyScoreIdentity,
-              publicationGenerationId: reportCardGenerationId,
-              completeness: {
-                generationId: reportCardGenerationId,
-                methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-                expectedCount: reportCardIds.length,
-                scoredCount: reportCardIds.length,
-                notRatedCount: 0,
-                notRatedIds: [],
-              },
-              updatedAt: reportCardsAt,
-              methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-            }),
-            updated_at: reportCardsAt,
-          },
         ],
       },
     ]);
@@ -513,106 +473,15 @@ describe("loadPublicationHealth", () => {
         publishedRows: 1,
       },
     });
-    expect(health.surfaces["report-card-cache"]).toMatchObject({
-      sourceOfTruth: "cache[report_card_cache]",
+    expect(health.surfaces["safety-score-v9"]).toMatchObject({
+      sourceOfTruth: "cache[report-cards:v9]+cache[report-cards:v9:publication-health]",
       lastPublishedGeneration: {
-        generationId: `report-card-cache:${reportCardsAt}`,
+        generationId: snapshot.safetyScoreIdentity.publicationGenerationId,
         state: "published",
-        publishedRows: ACTIVE_IDS.size,
+        publishedRows: 2,
       },
       dependencyWatermarks: {
         reportCardCache: reportCardsAt,
-      },
-    });
-  });
-
-  it("does not let a generic report-card publication row hide an incompatible active cache", async () => {
-    const reportCardsAt = NOW - 180;
-    const reportCardIds = [...ACTIVE_IDS].sort();
-    const reportCardGenerationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${reportCardsAt}`;
-    const currentIdentity = buildSafetyScoreV8PublicationIdentity({
-      methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-      baseInputGenerationId: BASE_INPUT_GENERATION_ID,
-      publicationGenerationId: reportCardGenerationId,
-    });
-    const incompatibleIdentity = {
-      ...currentIdentity,
-      evaluationBuildDigest: "b".repeat(64),
-    };
-    const genericRow = generationRow({
-      generation_id: reportCardGenerationId,
-      metadata_json: JSON.stringify({
-        validationSummary: { safetyScoreIdentity: currentIdentity },
-      }),
-    });
-    const db = mockD1([
-      {
-        match: "FROM surface_publication_generations",
-        matchBinds: ["report-card-cache"],
-        rows: [],
-        first: genericRow,
-      },
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["report_card_cache"],
-        rows: [
-          {
-            key: "report_card_cache",
-            value: JSON.stringify({
-              scores: Object.fromEntries(reportCardIds.map((id) => [id, { score: 92, grade: "A" }])),
-              safetyScoreIdentity: incompatibleIdentity,
-              publicationGenerationId: reportCardGenerationId,
-              completeness: {
-                generationId: reportCardGenerationId,
-                methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-                expectedCount: reportCardIds.length,
-                scoredCount: reportCardIds.length,
-                notRatedCount: 0,
-                notRatedIds: [],
-              },
-              updatedAt: reportCardsAt,
-              methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-            }),
-            updated_at: reportCardsAt,
-          },
-        ],
-      },
-    ]);
-
-    const health = await loadPublicationHealth(db, NOW);
-
-    expect(health.surfaces["report-card-cache"]).toMatchObject({
-      sourceOfTruth: "cache[report_card_cache]",
-      lastPublishedGeneration: null,
-      lastFailureReason: "identity-mismatch",
-    });
-  });
-
-  it("reports a complete V9 compact publication as degraded on the V8 release", async () => {
-    const reportCardsAt = NOW - 180;
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["report_card_cache"],
-        rows: [
-          {
-            key: "report_card_cache",
-            value: v9ReportCardCachePayload(reportCardsAt),
-            updated_at: reportCardsAt,
-          },
-        ],
-      },
-    ]);
-
-    const health = await loadPublicationHealth(db, NOW);
-
-    expect(health.surfaces["report-card-cache"]).toMatchObject({
-      sourceOfTruth: "cache[report_card_cache]",
-      lastPublishedGeneration: null,
-      lastFailureReason: "invalid-payload",
-      lastAttemptedGeneration: {
-        state: "failed",
-        failureReason: "invalid-payload",
       },
     });
   });

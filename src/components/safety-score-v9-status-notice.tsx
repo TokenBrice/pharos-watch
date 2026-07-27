@@ -1,5 +1,5 @@
 import type {
-  ReportCardsV9TransitionResponse,
+  ReportCardsV9CurrentResponse,
   V9PublicationHoldReason,
 } from "@shared/types/report-cards-v9";
 
@@ -19,7 +19,7 @@ function describeHoldReason(reason: V9PublicationHoldReason): string {
 export function SafetyScoreV9StatusNotice({
   response,
 }: {
-  response: ReportCardsV9TransitionResponse | null | undefined;
+  response: ReportCardsV9CurrentResponse | null | undefined;
 }) {
   if (response?.publicationHealth?.status !== "held") return null;
 

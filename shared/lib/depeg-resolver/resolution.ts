@@ -279,16 +279,15 @@ function recoveryAnchors(coin: DdrCoinStructural, supply: DdrSupplyContext, live
   }
 
   // R5 — proven mean-reversion
-  // These numeric thresholds are V8-only. Non-V8 or unverified score context
-  // is retained as provenance, but cannot unlock a recovery anchor.
-  if (live.safetyContext?.status === "v8-identified" && live.safetyScore != null && live.safetyScore >= 85) {
+  // Only an identified canonical V9 publication may unlock this anchor.
+  if (live.safetyContext?.status === "v9-identified" && live.safetyScore != null && live.safetyScore >= 85) {
     out.push({
       code: "R5_proven_meanreversion",
       kind: "anchor",
       severity: "strong",
       label: "Strong safety/peg track record",
     });
-  } else if (live.safetyContext?.status === "v8-identified" && live.safetyScore != null && live.safetyScore >= 70) {
+  } else if (live.safetyContext?.status === "v9-identified" && live.safetyScore != null && live.safetyScore >= 70) {
     out.push({
       code: "R5_proven_meanreversion",
       kind: "anchor",

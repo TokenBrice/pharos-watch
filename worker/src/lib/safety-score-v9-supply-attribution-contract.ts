@@ -3,8 +3,8 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
-export const REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC = 1_800;
-export const REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC = 120;
+const REVIEWED_DEPLOYMENT_SUPPLY_MAX_AGE_SEC = 1_800;
+const REVIEWED_DEPLOYMENT_SUPPLY_MAX_SKEW_SEC = 120;
 
 const EVM_ADDRESS_RE = /^0x[0-9a-f]{40}$/;
 const EVM_BLOCK_HASH_RE = /^0x[0-9a-f]{64}$/;
@@ -114,7 +114,7 @@ const WM_IMPLEMENTATION = "0x813b926b1d096e117721bd1eb017fba122302da0";
 const WM_UNDERLYING_M = "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b";
 const M0_PORTAL = "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd";
 
-export const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdentity>> = {
+const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdentity>> = {
   "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291": {
     runtime: "evm",
     runtimeCodeSha256: "ef515e6adf8e4349bd060bbfe7472b8cb69b4ca89db7f94af138a0c82cfaa63a",
@@ -160,7 +160,7 @@ export const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdent
   },
 };
 
-export const CENTRIFUGE_V3_SPOKE_ADDRESS =
+const CENTRIFUGE_V3_SPOKE_ADDRESS =
   "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab";
 const CENTRIFUGE_SOLANA_MINT_AUTHORITY =
   "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb";
@@ -168,7 +168,7 @@ const SOLANA_TOKEN_2022_PROGRAM =
   "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 const SOLANA_SYSTEM_PROGRAM = "11111111111111111111111111111111";
 
-export const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
+const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
   Record<string, Readonly<Record<string, CentrifugeDeploymentIdentity>>>
 > = {
   "jtrsy-anemoy": {
@@ -307,10 +307,6 @@ function routeChain(routeId: string): string | null {
 
 function normalizeAddress(chainId: string, address: string): string {
   return CHAIN_META[chainId]?.type === "evm" ? address.toLowerCase() : address;
-}
-
-function normalizeOptionalAddress(chainId: string, address: string | undefined): string | undefined {
-  return address === undefined ? undefined : normalizeAddress(chainId, address);
 }
 
 function routeAddress(routeId: string): string | null {
@@ -790,11 +786,4 @@ export function expectedCentrifugeDeploymentIdentity(
   routeId: string,
 ): CentrifugeDeploymentIdentity | undefined {
   return CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId];
-}
-
-export function normalizedReviewedDeploymentController(
-  chainId: string,
-  controllerAddress: string | undefined,
-): string | undefined {
-  return normalizeOptionalAddress(chainId, controllerAddress);
 }

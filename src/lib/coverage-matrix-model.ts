@@ -9,7 +9,7 @@ import type {
   MintBurnFlowsResponse,
   PegSummaryResponse,
   RedemptionBackstopsResponse,
-  ReportCardsV9TransitionResponse,
+  ReportCardsV9CurrentResponse,
   StablecoinListResponse,
   YieldRankingsResponse,
 } from "@shared/types";
@@ -60,7 +60,7 @@ export interface CoverageMatrixModelInput {
   redemptionBackstops: CoverageMatrixQueryResource<RedemptionBackstopsResponse>;
   yieldRankings: CoverageMatrixQueryResource<YieldRankingsResponse>;
   mintBurnFlows: CoverageMatrixQueryResource<MintBurnFlowsResponse>;
-  reportCards: CoverageMatrixQueryResource<ReportCardsV9TransitionResponse>;
+  reportCards: CoverageMatrixQueryResource<ReportCardsV9CurrentResponse>;
   activeStablecoins?: readonly StablecoinClientMeta[];
 }
 

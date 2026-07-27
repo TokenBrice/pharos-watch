@@ -1,20 +1,13 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { AlertTriangle, Share2, Trash2, Wallet, X } from "lucide-react";
-import { DIMENSION_ORDER, REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { Share2, Trash2, Wallet, X } from "lucide-react";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type { ReportCard, ReportCardGrade } from "@shared/types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CoinSelector } from "@/components/coin-selector";
-import { ReportCardMini } from "@/components/report-card-mini";
-import { ReportCardRadar } from "@/components/radar-chart";
-import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import type { UpstreamExposure } from "@/lib/portfolio-analysis";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
 import { formatUsd, parseUsdInput, PORTFOLIO_COIN_OPTIONS } from "./model";
 
@@ -45,14 +38,10 @@ export function PortfolioHeroStrip({ holdingCount, totalUsd }: { holdingCount: n
               : "Active stablecoins you can model as holdings"}
           </p>
         </div>
-        <dl className="grid grid-cols-2 gap-x-8 gap-y-3 sm:flex sm:items-end sm:gap-8">
+        <dl>
           <div className="space-y-1">
             <dt className="pharos-kicker">Holdings</dt>
             <dd className="pharos-numeric text-lg font-semibold text-foreground">{holdingCount}</dd>
-          </div>
-          <div className="space-y-1">
-            <dt className="pharos-kicker">Risk axes analyzed</dt>
-            <dd className="pharos-numeric text-lg font-semibold text-foreground">{DIMENSION_ORDER.length}</dd>
           </div>
         </dl>
       </div>
@@ -228,178 +217,5 @@ export function PortfolioHoldingsEditor({
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function ExposureBar({
-  name,
-  symbol,
-  usd,
-  pct,
-  isWarning,
-  isCollateral,
-}: {
-  name: string;
-  symbol: string;
-  usd: number;
-  pct: number;
-  isWarning: boolean;
-  isCollateral: boolean;
-}) {
-  const widthPct = Math.min(100, Math.round(pct));
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs">
-        <span className="truncate font-medium">
-          {name}
-          {!isCollateral && <span className="text-muted-foreground"> ({symbol})</span>}
-          {isWarning && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-700 dark:text-amber-400" />}
-        </span>
-        <span className="pharos-numeric text-muted-foreground ml-2 shrink-0">
-          {formatUsd(usd)} ({pct.toFixed(1)}%)
-        </span>
-      </div>
-      <div className="h-2 w-full rounded-full bg-muted/40 overflow-hidden">
-        <div
-          className={
-            isCollateral
-              ? "h-full rounded-full bg-[var(--chart-tertiary)]/50"
-              : isWarning
-                ? "h-full rounded-full bg-[var(--severity-mild)]/70"
-                : "h-full rounded-full bg-[var(--chart-primary)]/50"
-          }
-          style={{ width: `${widthPct}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-export function PortfolioSummaryCard({
-  portfolioGrade,
-  portfolioScore,
-  radarCard,
-  exposureToShow,
-  showUpstreamDetail,
-  onShowUpstreamDetailChange,
-}: {
-  portfolioGrade: ReportCardGrade;
-  portfolioScore: number | null;
-  radarCard: ReportCard | null;
-  exposureToShow: UpstreamExposure[];
-  showUpstreamDetail: boolean;
-  onShowUpstreamDetailChange: (show: boolean) => void;
-}) {
-  const hasConcentrationWarning = exposureToShow.some((exposure) => !exposure.isCollateral && exposure.pct > 80);
-
-  return (
-    <Card className="pharos-card-shell">
-      <CardContent className="pt-6 space-y-6">
-        <div className="flex items-center gap-4">
-          <ScoreBadgeWrapper topic="safetyScore">
-            <Badge
-              variant="outline"
-              className={`text-2xl px-4 py-2 font-bold ${REPORT_CARD_GRADE_COLORS[portfolioGrade]}`}
-              aria-label={`Safety grade ${portfolioGrade}${portfolioScore !== null ? `, score ${portfolioScore}` : ""}`}
-            >
-              {portfolioGrade}
-              {portfolioScore !== null && (
-                <span className="pharos-numeric ml-1 opacity-70" aria-hidden="true">
-                  ({portfolioScore})
-                </span>
-              )}
-            </Badge>
-          </ScoreBadgeWrapper>
-          <div>
-            <div className="pharos-kicker">Weighted Safety Grade</div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Combines the same report-card inputs used across the site, weighted by position size.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {radarCard && (
-            <div>
-              <h3 className="pharos-kicker mb-2">Portfolio Radar</h3>
-              <div className="pharos-chart-stage">
-                <ReportCardRadar card={radarCard} size={260} labels="short" />
-              </div>
-            </div>
-          )}
-
-          {exposureToShow.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="pharos-kicker">Upstream Exposure</h3>
-                <div role="group" aria-label="Exposure view" className="flex flex-wrap gap-1">
-                  <button
-                    type="button"
-                    aria-pressed={!showUpstreamDetail}
-                    onClick={() => onShowUpstreamDetailChange(false)}
-                    className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 text-xs ${!showUpstreamDetail ? "pharos-control-pill-active" : ""}`}
-                  >
-                    Summary
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={showUpstreamDetail}
-                    onClick={() => onShowUpstreamDetailChange(true)}
-                    className={`pharos-focus-ring pharos-control-pill px-2.5 py-1 text-xs ${showUpstreamDetail ? "pharos-control-pill-active" : ""}`}
-                  >
-                    Detail
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {exposureToShow.map((exposure) => (
-                  <ExposureBar
-                    key={exposure.coinId}
-                    name={exposure.name}
-                    symbol={exposure.symbol}
-                    usd={exposure.usd}
-                    pct={exposure.pct}
-                    isWarning={!exposure.isCollateral && exposure.pct > 80}
-                    isCollateral={exposure.isCollateral}
-                  />
-                ))}
-              </div>
-              {hasConcentrationWarning && (
-                <div role="alert" className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 dark:border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400">
-                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                  <span>
-                    High concentration: a single upstream stablecoin accounts for over 80% of your portfolio exposure.
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-export function PortfolioGradesSection({
-  heldCards,
-  logos,
-}: {
-  heldCards: ReportCard[];
-  logos?: Record<string, string>;
-}) {
-  return (
-    <>
-      <h2 className="pharos-kicker">Holdings Safety Grades</h2>
-
-      {heldCards.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Grade data not yet available for your holdings.</p>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {heldCards.map((card) => (
-            <ReportCardMini key={card.id} card={card} logo={logos?.[card.id]} />
-          ))}
-        </div>
-      )}
-    </>
   );
 }

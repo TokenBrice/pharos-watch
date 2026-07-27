@@ -93,10 +93,7 @@ describe("api endpoint registry", () => {
       "/api/reclassify-atomic-roundtrips",
       "/api/redemption-backstops",
       "/api/remediate-blacklist-amount-gaps",
-      "/api/report-cards",
       "/api/report-cards/v9",
-      "/api/report-cards/v9-preview",
-      "/api/report-cards/v9-preview-412d818c031b7bc5",
       "/api/request-source-stats",
       "/api/reset-blacklist-sync",
       "/api/reset-circuit-breaker",
@@ -180,7 +177,7 @@ describe("api endpoint registry", () => {
       "/api/safety-score-history?stablecoin=usdt-tether",
       "/api/safety-score-history-v2?stablecoin=usdt-tether&days=3650",
       "/api/stability-index",
-      "/api/report-cards",
+      "/api/report-cards/v9",
       "/api/depeg-resolver",
       "/api/depeg-resolver-review",
       "/api/redemption-backstops",
@@ -201,9 +198,6 @@ describe("api endpoint registry", () => {
     ]);
 
     expect(getProbePaths("manual")).toEqual([
-      "/api/report-cards/v9",
-      "/api/report-cards/v9-preview",
-      "/api/report-cards/v9-preview-412d818c031b7bc5",
       "/api/trigger-digest",
       "/api/reset-blacklist-sync",
       "/api/remediate-blacklist-amount-gaps",
@@ -643,14 +637,13 @@ describe("api endpoint registry", () => {
     expect(getPublicApiAccess("/api/public-status-history")).toBe("protected");
     expect(getPublicApiAccess("/api/events")).toBe("protected");
     expect(getPublicApiAccess("/api/telegram-pulse")).toBe("protected");
-    expect(getPublicApiAccess("/api/report-cards/v9-preview")).toBe("exempt");
-    expect(getPublicApiAccess("/api/report-cards/v9-preview-412d818c031b7bc5")).toBe("exempt");
+    expect(getPublicApiAccess("/api/report-cards/v9-preview")).toBeNull();
+    expect(getPublicApiAccess("/api/report-cards/v9-preview-412d818c031b7bc5")).toBeNull();
     expect(getPublicApiAccess("/api/og/stablecoin/usdt-tether")).toBe("exempt");
     expect(isProtectedPublicApiPath("/api/stablecoins")).toBe(true);
     expect(isProtectedPublicApiPath("/api/health")).toBe(false);
     expect(isProtectedPublicApiPath("/api/public-status-history")).toBe(true);
     expect(isProtectedPublicApiPath("/api/telegram-pulse")).toBe(true);
-    expect(isProtectedPublicApiPath("/api/report-cards/v9-preview")).toBe(false);
     expect(getSiteDataAccess("/api/stablecoins")).toBe("allowed");
     expect(getSiteDataAccess("/api/public-status-history")).toBe("allowed");
     expect(getSiteDataAccess("/api/events")).toBe("allowed");

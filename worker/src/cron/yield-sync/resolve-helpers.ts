@@ -635,7 +635,7 @@ export function appendPoolFamilyYieldSources(params: {
   supplementalCandidates: ResolvedYieldCandidate[];
   safetyScores: Map<string, SafetyScoreSnapshot>;
   safetySnapshotAvailable: boolean;
-  expectedModel: "v8" | "v9";
+  expectedModel: "v9";
   stablecoinSupplyById: Map<string, number>;
 }): void {
   appendResolvedYieldCandidates(params.resolved, params.supplementalCandidates, params.stablecoinSupplyById);
@@ -648,9 +648,10 @@ export function appendPoolFamilyYieldSources(params: {
   const autoDiscoveredIds = new Set<string>();
   if (!params.safetySnapshotAvailable) {
     const expectedModel = params.expectedModel ?? "unknown";
-    console.warn(
-      `[sync-yield-data] ${expectedModel.toUpperCase()} safety snapshot unavailable; retaining eligible auto-lending candidates as unrated`,
-    );
+    console.warn(JSON.stringify({
+      scope: "sync-yield-data",
+      message: `${expectedModel.toUpperCase()} safety snapshot unavailable; retaining eligible auto-lending candidates as unrated`,
+    }));
   }
 
   const deterministicCount = appendDeterministicAutoLending({

@@ -138,7 +138,7 @@ Compare combines multiple query sources:
 - `/api/peg-summary` (`usePegSummary`)
 - `/api/bluechip-ratings` (`useBluechipRatings`)
 - `/api/dex-liquidity` (`useDexLiquidity`)
-- `/api/report-cards` (`useReportCards`)
+- `/api/report-cards/v9` (`useReportCardsV9`)
 - `/api/mint-burn-flows` (`useMintBurnFlows`) for the shared flow dataset
 - per-coin `/api/supply-history?stablecoin=<id>&days=1825` (via `useQueries`) for long-range supply charts
 - per-coin `/api/mint-burn-flows?stablecoin=<id>&hours=<window>` (via `useQueries`) for comparison-specific flow panels

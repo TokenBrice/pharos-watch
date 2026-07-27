@@ -69,16 +69,6 @@ export interface ClosedDepegRow {
   recovery_price: number | null;
 }
 
-export interface SafetyRow {
-  stablecoin_id: string;
-  grade: string;
-  score: number | null;
-  prev_grade: string | null;
-  prev_score: number | null;
-  recorded_at: number;
-  methodology_version: string | null;
-}
-
 // ---------- Snapshot Parsing ----------
 
 export function parseSnapshotMap<T extends Record<string, unknown>>(
@@ -146,18 +136,6 @@ export function buildDepegSnapshot(rows: ActiveDepegRow[]): DepegSnapshot {
       deviationBps: Math.abs(Number(row.peak_deviation_bps ?? 0)),
       price: Number(displayPrice ?? 0),
       pegReference: Number(row.peg_reference ?? 1),
-    };
-  }
-  return snapshot;
-}
-
-export function buildSafetySnapshot(rows: SafetyRow[]): SafetySnapshot {
-  const snapshot: SafetySnapshot = {};
-  for (const row of rows) {
-    snapshot[row.stablecoin_id] = {
-      grade: row.grade,
-      score: row.score ?? null,
-      methodologyVersion: row.methodology_version ?? null,
     };
   }
   return snapshot;

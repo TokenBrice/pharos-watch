@@ -1230,7 +1230,7 @@ const V9MechanismRiskReviewFactV2Schema = z
   });
 export type V9MechanismRiskReviewFactV2 = z.infer<typeof V9MechanismRiskReviewFactV2Schema>;
 
-export const V9MechanismExitFactV1Schema = z
+const V9MechanismExitFactV1Schema = z
   .object({
     factKey: z.enum(["physical-redemption", "protocol-redemption"]),
     disposition: z.enum(["supported", "issuer-undisclosed", "integration-missing", "method-unsupported"]),

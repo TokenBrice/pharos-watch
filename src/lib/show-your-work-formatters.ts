@@ -19,7 +19,6 @@ import {
 } from "@shared/lib/chain-health";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
 import type {
-  RawDimensionInputs,
   SafetyScoreV9CurrentCard,
   SafetyScoreV9PreBreakdownCard,
 } from "@shared/types";
@@ -68,81 +67,6 @@ function fmtSigned(v: number): string {
 
 function fmtUsd(v: number): string {
   return `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-}
-
-function fmtBool(v: boolean | null | undefined): string {
-  if (v == null) return "—";
-  return v ? "yes" : "no";
-}
-
-// ---------------------------------------------------------------------------
-// Report Card
-// ---------------------------------------------------------------------------
-
-export function formatReportCard(rawInputs: RawDimensionInputs): ShowYourWorkTable {
-  const rows: ShowYourWorkRow[] = [
-    { label: "Peg score", value: fmtNum(rawInputs.pegScore) },
-    {
-      label: "Active depeg",
-      value: rawInputs.activeDepeg
-        ? rawInputs.activeDepegBps != null
-          ? `yes (${rawInputs.activeDepegBps} bps)`
-          : "yes"
-        : "no",
-    },
-    { label: "Depeg event count", value: fmtNum(rawInputs.depegEventCount) },
-    { label: "Liquidity score", value: fmtNum(rawInputs.liquidityScore) },
-    { label: "Observed DEX score", value: fmtNum(rawInputs.liquidityObservedScore) },
-    { label: "DEX exit evidence", value: rawInputs.liquidityExitEvidenceKind ?? "legacy / unavailable" },
-    { label: "DEX evidence ceiling", value: fmtNum(rawInputs.liquidityEvidenceCeiling) },
-    { label: "DEX coverage class", value: rawInputs.liquidityCoverageClass ?? "—" },
-    { label: "DEX coverage confidence", value: fmtNum(rawInputs.liquidityCoverageConfidence) },
-    { label: "DEX effective TVL", value: fmtNum(rawInputs.liquidityEffectiveTvlUsd) },
-    { label: "DEX balance-measured TVL", value: fmtNum(rawInputs.liquidityBalanceMeasuredTvlUsd) },
-    { label: "Redemption backstop score", value: fmtNum(rawInputs.redemptionBackstopScore) },
-    { label: "Effective exit score", value: fmtNum(rawInputs.effectiveExitScore) },
-    {
-      label: "Redemption used for liquidity",
-      value: fmtBool(rawInputs.redemptionUsedForLiquidity),
-    },
-    { label: "Chain tier", value: String(rawInputs.chainTier) },
-    { label: "Deployment model", value: rawInputs.deploymentModel },
-    { label: "Collateral quality", value: rawInputs.collateralQuality },
-    { label: "Custody model", value: rawInputs.custodyModel },
-    { label: "Governance tier", value: rawInputs.governanceTier },
-    { label: "Governance quality", value: rawInputs.governanceQuality },
-    { label: "Mint authority score", value: fmtNum(rawInputs.mintAuthorityScore) },
-    { label: "Oracle risk tier", value: rawInputs.oracleRiskTier ?? "—" },
-    { label: "Oracle risk score", value: fmtNum(rawInputs.oracleRiskScore) },
-    { label: "Bridge route tier", value: rawInputs.bridgeRouteRiskTier ?? "—" },
-    { label: "Bridge route score", value: fmtNum(rawInputs.bridgeRouteRiskScore) },
-    {
-      label: "Blacklist exposure",
-      value:
-        typeof rawInputs.canBeBlacklisted === "boolean"
-          ? rawInputs.canBeBlacklisted
-            ? "yes"
-            : "no"
-          : rawInputs.canBeBlacklisted,
-    },
-    {
-      label: "Bluechip grade",
-      value: rawInputs.bluechipGrade ?? "—",
-    },
-    {
-      label: "Dependencies",
-      value: rawInputs.dependencies.length
-        ? rawInputs.dependencies.map((d) => `${d.id} (${d.type})`).join(", ")
-        : "none",
-    },
-  ];
-
-  return {
-    rows,
-    formula:
-      "overall = weighted(liquidity/exit, resilience, decentralization, dependency risk) with NR weights redistributed; decentralization may include chain, CDP oracle, bridge-route, and mint-authority penalties; then × (Peg Score/100)^0.40, ×0.9 when no liquidity/exit input exists, and capped by severe active-depeg peaks",
-    topic: "safetyScore",
-  };
 }
 
 export function formatReportCardV9(

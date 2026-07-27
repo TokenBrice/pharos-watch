@@ -1,12 +1,10 @@
 import {
   buildReportCardsV9DependencyGraph,
-  type ReportCardsV9PreBreakdownResponse,
   type ReportCardsV9Response,
 } from "@shared/types/report-cards-v9";
-import { scoreToGrade } from "@shared/lib/report-cards";
+import { scoreToV9Grade } from "@shared/types/safety-score-v9-grade";
 import type {
   SafetyScoreV9CurrentCard,
-  SafetyScoreV9PreBreakdownCard,
 } from "@shared/types/safety-score-v9-public";
 
 const A64 = "a".repeat(64);
@@ -25,7 +23,7 @@ export function makeV9Card(
     reasons: [],
   });
   const score = overrides.score === undefined ? 84 : overrides.score;
-  const grade = overrides.grade ?? scoreToGrade(score);
+  const grade = overrides.grade ?? scoreToV9Grade(score);
   const qualityScore =
     overrides.qualityScore === undefined ? 86 : overrides.qualityScore;
   const defaultPillars =
@@ -238,7 +236,7 @@ export function makeReportCardsV9Response(
   return {
     model: "v9",
     schemaVersion: 4,
-    lifecycle: "shadow",
+    lifecycle: "active",
     safetyScoreIdentity,
     methodology: {
       version: safetyScoreIdentity.methodologyVersion,
@@ -269,36 +267,6 @@ export function makeReportCardsV9Response(
       sourceGenerations: { reportCards: "source-1" },
     },
     cards,
-    dependencyGraph: buildReportCardsV9DependencyGraph(cards),
-    ...overrides,
-  };
-}
-
-export function makeV9PreBreakdownCard(
-  overrides: Partial<SafetyScoreV9PreBreakdownCard> = {},
-): SafetyScoreV9PreBreakdownCard {
-  const { breakdowns: _breakdowns, ...card } = makeV9Card();
-  return { ...card, ...overrides };
-}
-
-export function makeReportCardsV9PreBreakdownResponse(
-  overrides: Partial<ReportCardsV9PreBreakdownResponse> = {},
-): ReportCardsV9PreBreakdownResponse {
-  const current = makeReportCardsV9Response();
-  const cards = overrides.cards ?? current.cards.map((card) => {
-    const { breakdowns: _breakdowns, ...preBreakdownCard } = card;
-    return preBreakdownCard;
-  });
-  return {
-    ...current,
-    schemaVersion: 3,
-    cards,
-    completeness: {
-      expectedCount: cards.length,
-      ratedCount: cards.filter((card) => card.grade !== "NR").length,
-      notRatedCount: cards.filter((card) => card.grade === "NR").length,
-      notRatedIds: cards.filter((card) => card.grade === "NR").map((card) => card.id).sort(),
-    },
     dependencyGraph: buildReportCardsV9DependencyGraph(cards),
     ...overrides,
   };

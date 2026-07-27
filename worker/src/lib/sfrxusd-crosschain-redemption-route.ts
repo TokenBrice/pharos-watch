@@ -10,7 +10,7 @@ const COST_TOLERANCE = 0.000001;
 const VALUE_TOLERANCE_RATIO = 1e-9;
 const E18 = 10n ** 18n;
 
-export const SFRXUSD_ROUTE_CONTRACT_ROLES = [
+const SFRXUSD_ROUTE_CONTRACT_ROLES = [
   "ethereum-sfrxusd",
   "ethereum-remote-hop",
   "ethereum-frxusd-oft",
@@ -33,7 +33,7 @@ const PROXY_CONTRACT_ROLES = new Set<(typeof SFRXUSD_ROUTE_CONTRACT_ROLES)[numbe
   "fraxtal-sfrxusd-lockbox",
 ]);
 
-export const SfrxusdRouteBlockSchema = z
+const SfrxusdRouteBlockSchema = z
   .object({
     chain: z.enum(["ethereum", "fraxtal"]),
     finalityTag: z.literal("finalized"),
@@ -435,7 +435,7 @@ export type SfrxusdCrosschainV9RouteState = z.infer<
   typeof SfrxusdCrosschainV9RouteStateSchema
 >;
 
-export const SFRXUSD_CROSSCHAIN_ROUTE_REJECTION_CODES = [
+const SFRXUSD_CROSSCHAIN_ROUTE_REJECTION_CODES = [
   "rpc-unavailable",
   "block-unavailable",
   "block-time-out-of-range",
@@ -460,7 +460,7 @@ export const SFRXUSD_CROSSCHAIN_ROUTE_REJECTION_CODES = [
 export type SfrxusdCrosschainRouteRejectionCode =
   (typeof SFRXUSD_CROSSCHAIN_ROUTE_REJECTION_CODES)[number];
 
-export const SfrxusdCrosschainV9RouteAttemptSchema = z.discriminatedUnion(
+const SfrxusdCrosschainV9RouteAttemptSchema = z.discriminatedUnion(
   "status",
   [
     z

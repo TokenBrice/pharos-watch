@@ -1,25 +1,9 @@
-import {
-  ReportCardsResponseSchema,
-  type ReportCardGrade,
-  type ReportCardsResponse,
-} from "@shared/types/report-cards";
-import { throwIfAborted } from "./abort";
-import { getCaches } from "./db-cache";
-import {
-  REPORT_CARDS_SNAPSHOT_CACHE_KEY,
-  parsePublishedReportCardsSnapshotCacheValue,
-} from "./report-cards-snapshot-cache";
-import {
-  REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
-  parseReportCardsFixedInputCacheArtifact,
-} from "./report-cards-fixed-input";
-import { safetyScoreV8PublicationIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
+import type { ReportCardGrade } from "@shared/types/report-cards";
 import {
   SafetyScorePublicationIdentitySchema,
   type SafetyScorePublicationIdentity,
   type SafetyScoreV8PublicationIdentity,
 } from "@shared/types/safety-score-publication";
-import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
 
 export type SafetyScoreHistoryV2TransitionKind =
   | "initial-baseline"
@@ -30,22 +14,6 @@ export type SafetyScoreHistoryV2TransitionKind =
 
 export type SafetyScoreHistoryV8Identity = SafetyScoreV8PublicationIdentity;
 export type SafetyScoreHistoryIdentity = SafetyScorePublicationIdentity;
-
-export interface ActiveV8SafetyScoreHistorySource {
-  snapshot: ReportCardsResponse;
-  identity: SafetyScoreHistoryV8Identity;
-  publishedAtSec: number;
-}
-
-export class ActiveV8SafetyScoreHistorySourceInactiveError extends Error {
-  readonly expectedModel = "v9" as const;
-  readonly reason = "active-model-v9" as const;
-
-  constructor() {
-    super("Canonical Safety Score V8 history source is inactive because Safety Score V9 is active");
-    this.name = "ActiveV8SafetyScoreHistorySourceInactiveError";
-  }
-}
 
 export interface SafetyScoreHistoryCompatibilityRow {
   recorded_at: number;
@@ -112,61 +80,6 @@ export function safetyScoreHistoryIdentitiesAreComparable(
   }
   if (left.model === "v8" || right.model === "v8") return left.model === right.model;
   return left.policyId === right.policyId && left.policyDigest === right.policyDigest;
-}
-
-/**
- * Loads the canonical V8 snapshot only while V8 is explicitly active and its
- * identity exactly matches the fixed-input artifact from the same batch.
- */
-export async function loadActiveV8SafetyScoreHistorySource(
-  db: D1Database,
-  signal?: AbortSignal,
-): Promise<ActiveV8SafetyScoreHistorySource> {
-  throwIfAborted(signal);
-  const activeSource = await loadActiveSafetyScoreSource(db, signal);
-  throwIfAborted(signal);
-  if (activeSource.kind === "v9") {
-    throw new ActiveV8SafetyScoreHistorySourceInactiveError();
-  }
-  if (activeSource.kind === "error") {
-    throw new Error(
-      `Canonical Safety Score V8 history source rejected by expected V9 state (${activeSource.reason}): ${activeSource.detail}`,
-    );
-  }
-  const caches = await getCaches(db, [REPORT_CARDS_SNAPSHOT_CACHE_KEY, REPORT_CARDS_FIXED_INPUT_CACHE_KEY]);
-  throwIfAborted(signal);
-  const parsedSnapshot = await parsePublishedReportCardsSnapshotCacheValue(
-    caches.get(REPORT_CARDS_SNAPSHOT_CACHE_KEY) ?? null,
-  );
-  if (parsedSnapshot.kind !== "ok") {
-    throw new Error(`Canonical Safety Score V8 snapshot is unavailable: ${parsedSnapshot.reason}`);
-  }
-  const fixedInputCached = caches.get(REPORT_CARDS_FIXED_INPUT_CACHE_KEY);
-  if (!fixedInputCached) {
-    throw new Error("Canonical Safety Score V8 exact fixed-input artifact is missing");
-  }
-  const fixedInputArtifact = await parseReportCardsFixedInputCacheArtifact(fixedInputCached.value);
-  throwIfAborted(signal);
-  const identity = parsedSnapshot.payload.safetyScoreIdentity;
-  if (!identity || !fixedInputArtifact.safetyScoreIdentity) {
-    throw new Error("Canonical Safety Score V8 artifacts have no publication identity");
-  }
-  if (!safetyScoreV8PublicationIdentitiesMatch(identity, fixedInputArtifact.safetyScoreIdentity)) {
-    throw new Error("Canonical Safety Score V8 snapshot and exact fixed-input identities disagree");
-  }
-  if (
-    fixedInputArtifact.input.baseInputGenerationId !== identity.baseInputGenerationId ||
-    fixedInputArtifact.input.sourceGeneration !== identity.publicationGenerationId ||
-    fixedInputArtifact.input.methodologyVersion !== identity.methodologyVersion
-  ) {
-    throw new Error("Canonical Safety Score V8 exact fixed input does not match the active identity");
-  }
-
-  return {
-    snapshot: ReportCardsResponseSchema.parse(parsedSnapshot.payload),
-    identity,
-    publishedAtSec: parsedSnapshot.payload.updatedAt,
-  };
 }
 
 export function safetyScoreLegacyHistoryV2Id(stablecoinId: string, recordedAt: number): string {

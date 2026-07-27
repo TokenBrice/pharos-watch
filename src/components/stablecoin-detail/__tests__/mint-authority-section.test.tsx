@@ -129,17 +129,14 @@ describe("MintAuthoritySection", () => {
 
   it("renders reviewed mint authority summary, controls, and sources", () => {
     const html = renderToStaticMarkup(
-      <MintAuthoritySection
-        profile={REVIEWED_PROFILE}
-        decentralizationDrag={{ value: "-4", detail: "70/100 (Governed)" }}
-      />,
+      <MintAuthoritySection profile={REVIEWED_PROFILE} />,
     );
 
     expect(html).toContain("Facilitator bucket mint");
     expect(html).toContain("70/100");
     expect(html).toContain("Governed");
-    expect(html).toContain("Decentralization drag -4");
-    expect(html).toContain("MAS v1.2; Safety Score v8 penalty-only input");
+    expect(html).toContain("Standalone score");
+    expect(html).toContain("MAS v1.2; V9 evaluates the reviewed control facts");
     expect(html).toContain("Scoring breakdown");
     expect(html).toContain("Controller");
     expect(html).toContain("40%");

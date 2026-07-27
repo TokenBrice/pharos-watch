@@ -590,7 +590,7 @@ function rawAmountToUsd(
   return Number(usdScaled) / Number(usdScale);
 }
 
-export function encodeUniswapV4Quote(
+function encodeUniswapV4Quote(
   target: DexMeasuredExecutionTarget,
   amountInRaw: bigint,
 ): `0x${string}` {

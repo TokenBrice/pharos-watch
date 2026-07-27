@@ -1,7 +1,4 @@
-import { DIMENSION_ORDER, scoreToGrade } from "@shared/lib/report-cards";
-import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
 import { CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import type { DimensionKey, ReportCard, ReportCardGrade } from "@shared/types";
 import type { PortfolioHolding } from "@/lib/portfolio-codec";
 
 export const PORTFOLIO_COIN_OPTIONS = ACTIVE_STABLECOINS.map((stablecoin) => ({
@@ -77,46 +74,6 @@ export function parseUsdInput(raw: string): number {
   return Number.isFinite(num) && num >= 0 ? num : 0;
 }
 
-export function buildPortfolioRadarCard({
-  holdingCount,
-  portfolioGrade,
-  portfolioScore,
-  dimensionScores,
-}: {
-  holdingCount: number;
-  portfolioGrade: ReportCardGrade;
-  portfolioScore: number | null;
-  dimensionScores: Record<DimensionKey, number | null>;
-}): ReportCard | null {
-  if (holdingCount === 0 || portfolioScore === null) return null;
-
-  return {
-    id: "__portfolio__",
-    name: "Portfolio",
-    symbol: "PORT",
-    overallGrade: portfolioGrade,
-    overallScore: portfolioScore,
-    baseScore: null,
-    dimensions: Object.fromEntries(
-      DIMENSION_ORDER.map((key) => [
-        key,
-        {
-          grade: scoreToGrade(dimensionScores[key]),
-          score: dimensionScores[key],
-          detail: "",
-        },
-      ]),
-    ) as ReportCard["dimensions"],
-    ratedDimensions: DIMENSION_ORDER.filter((key) => dimensionScores[key] !== null).length,
-    isDefunct: false,
-    rawInputs: createReportCardRawInputs(),
-  };
-}
-
 export function buildHeldCardIds(holdings: readonly PortfolioHolding[]): Set<string> {
   return new Set(holdings.map((holding) => holding.coinId));
-}
-
-export function buildHeldCards(cards: readonly ReportCard[] | undefined, heldCardIds: ReadonlySet<string>): ReportCard[] {
-  return (cards ?? []).filter((card) => heldCardIds.has(card.id));
 }

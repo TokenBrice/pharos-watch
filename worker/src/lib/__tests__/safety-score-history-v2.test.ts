@@ -2,23 +2,13 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import * as activeSafetyScoreSource from "../safety-score-active-source";
-import { buildReportCardsFixedInputCacheEntry, createReportCardsFixedInput } from "../report-cards-fixed-input";
-import { buildPublishedReportCardsSnapshotCacheEntry } from "../report-cards-snapshot-cache";
-import { buildSafetyScoreV8PublicationIdentity } from "@shared/lib/safety-score-v8-publication";
-import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { createReportCardRawInputs } from "@shared/lib/report-card-raw-inputs";
-import type { ReportCard } from "@shared/types/report-cards";
 import {
-  ActiveV8SafetyScoreHistorySourceInactiveError,
   SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL,
   fetchSafetyScoreHistoryCompatibilityRows,
   fetchSafetyScoreHistoryV2Rows,
-  loadActiveV8SafetyScoreHistorySource,
   prepareSafetyScoreHistoryBoundaryWrite,
   prepareSafetyScoreHistoryBoundaryWrites,
   prepareSafetyScoreHistoryV2Write,
@@ -92,103 +82,6 @@ function v9Identity() {
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
     publicationGenerationId: "safety-score-v9:300",
   };
-}
-
-function historyCard(id: string): ReportCard {
-  const dimension = { grade: "A" as const, score: 90, detail: "fixture" };
-  return {
-    id,
-    name: id,
-    symbol: id,
-    overallGrade: "A",
-    overallScore: 90,
-    baseScore: 90,
-    dimensions: {
-      pegStability: dimension,
-      liquidity: dimension,
-      resilience: dimension,
-      decentralization: dimension,
-      dependencyRisk: dimension,
-    },
-    ratedDimensions: 5,
-    rawInputs: createReportCardRawInputs(),
-    isDefunct: false,
-  };
-}
-
-async function canonicalCacheValues() {
-  const activeAssetIds = [...ACTIVE_IDS].sort();
-  const dexUpdatedAt = 100;
-  const fixedInput = createReportCardsFixedInput({
-    captureKind: "exact-publication-inputs",
-    activeAssetIds,
-    capturedAt: "1970-01-01T00:03:20.000Z",
-    sourceGeneration: MODEL_GENERATION_ID,
-    dexGenerationId: `dex-liquidity-${dexUpdatedAt}`,
-    redemptionGenerationId: "redemption-backstops-unavailable",
-    registryRevision: "history-test",
-    methodologyVersion: METHODOLOGY,
-    clockSec: 200,
-    updatedAt: 200,
-    liquidityStale: false,
-    redemptionStale: true,
-    inputFreshness: {
-      dexLiquidity: { updatedAt: dexUpdatedAt, ageSeconds: 100, stale: false },
-      redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
-    },
-    pegDataById: {},
-    activeDepegPeakBpsById: {},
-    dexLiqMap: Object.fromEntries(
-      activeAssetIds.map((id) => [
-        id,
-        {
-          liquidityScore: 90,
-          concentrationHhi: 0.5,
-          poolCount: 1,
-          chainCount: 1,
-          methodologyVersion: "history-test",
-          updatedAt: dexUpdatedAt,
-        },
-      ]),
-    ),
-    redemptionBackstopMap: {},
-    bluechipMap: {},
-    resolvedBlacklistStatuses: Object.fromEntries(activeAssetIds.map((id) => [id, false])),
-    liveReserveMap: {},
-    liveReserveProvenanceMap: {},
-    chainCirculatingById: {},
-    dexDeploymentSupplyCoverageById: {},
-    collateralDriftCoins: [],
-    liveToFallbackCoins: [],
-  });
-  const identity = buildSafetyScoreV8PublicationIdentity({
-    methodologyVersion: METHODOLOGY,
-    baseInputGenerationId: fixedInput.baseInputGenerationId,
-    publicationGenerationId: MODEL_GENERATION_ID,
-  });
-  const publication = {
-    generationId: MODEL_GENERATION_ID,
-    methodologyVersion: METHODOLOGY,
-    expectedCount: activeAssetIds.length,
-    scoredCount: activeAssetIds.length,
-    notRatedCount: 0,
-    notRatedIds: [],
-  };
-  const full = await buildPublishedReportCardsSnapshotCacheEntry({
-    safetyScoreIdentity: identity,
-    cards: activeAssetIds.map(historyCard),
-    methodology: {
-      version: METHODOLOGY,
-      weights: { pegStability: 0, liquidity: 0.3, resilience: 0.2, decentralization: 0.15, dependencyRisk: 0.25 },
-      pegMultiplierExponent: 0.4,
-      thresholds: [],
-    },
-    dependencyGraph: { edges: [] },
-    updatedAt: 200,
-    publication,
-  });
-  const fixed = await buildReportCardsFixedInputCacheEntry(fixedInput, identity);
-  return { full, fixed, identity };
 }
 
 describe("Safety Score history V2", () => {
@@ -642,60 +535,4 @@ describe("Safety Score history V2", () => {
     `)).toThrow();
   });
 
-  it("loads the canonical V8 snapshot with no activation marker only when its exact fixed-input identity agrees", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    createLegacySchema(sqlite);
-    sqlite.exec(HISTORY_V2_MIGRATION);
-    sqlite.exec(HISTORY_V2_IDENTITY_SCHEMA_MIGRATION);
-    const db = createSqliteD1(sqlite);
-    const artifacts = await canonicalCacheValues();
-    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, 200)");
-    insert.run(artifacts.full.key, artifacts.full.value);
-    insert.run(artifacts.fixed.key, artifacts.fixed.value);
-
-    const source = await loadActiveV8SafetyScoreHistorySource(db);
-
-    expect(source.snapshot.cards).toHaveLength(ACTIVE_IDS.size);
-    expect(source.identity).toEqual(artifacts.identity);
-    expect(source.identity.evaluationBuildDigest).toBe(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST);
-    expect(source.publishedAtSec).toBe(200);
-
-    const mismatchedFixed = JSON.parse(artifacts.fixed.value) as {
-      safetyScoreIdentity: { publicationGenerationId: string };
-    };
-    mismatchedFixed.safetyScoreIdentity.publicationGenerationId = "report-cards:8.17:201";
-    sqlite
-      .prepare("UPDATE cache SET value = ? WHERE key = ?")
-      .run(JSON.stringify(mismatchedFixed), artifacts.fixed.key);
-    await expect(loadActiveV8SafetyScoreHistorySource(db)).rejects.toThrow(/identities disagree|identity mismatch/);
-  });
-
-  it("rejects the V8 history source when a valid activation selects V9", async () => {
-    const activeSourceSpy = vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValueOnce({
-      kind: "v9",
-      expectedModel: "v9",
-    } as never);
-
-    await expect(
-      loadActiveV8SafetyScoreHistorySource({} as D1Database),
-    ).rejects.toBeInstanceOf(ActiveV8SafetyScoreHistorySourceInactiveError);
-    activeSourceSpy.mockRestore();
-  });
-
-  it.each([
-    ["a malformed marker", "activation-marker-invalid"],
-    ["a mismatched activation identity", "v9-identity-mismatch"],
-  ] as const)("rejects the V8 history source for %s", async (_label, reason) => {
-    const activeSourceSpy = vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource").mockResolvedValueOnce({
-      kind: "error",
-      expectedModel: "v9",
-      reason,
-      detail: `test ${reason}`,
-    } as never);
-
-    await expect(
-      loadActiveV8SafetyScoreHistorySource({} as D1Database),
-    ).rejects.toThrow(reason);
-    activeSourceSpy.mockRestore();
-  });
 });

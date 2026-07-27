@@ -151,7 +151,7 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
 
 **Must NOT.**
 - Talk to the Telegram HTTP API directly. Send through `replyToChat` / `replyToChatWithMarkup` from `WebhookCommandContext`, or call `sendAuditedTelegramReply` for delayed/audited paths.
-- Read from `cron_runs`, alert snapshots, or anything in the Dispatch lane. Use the same primary sources of truth the website uses (caches, `report_card_cache`, `stress_signals`, etc.).
+- Read from `cron_runs`, alert snapshots, or anything in the Dispatch lane. Use the same primary sources of truth the website uses (caches, the canonical V9 publication, `stress_signals`, etc.).
 - Introduce a per-handler "shared base class" or "command pipeline" abstraction. The dispatch table is the only shared shape; resist generalizing it.
 
 ---
@@ -282,7 +282,7 @@ The provenance correction required no D1 migration because these two tables and 
   - `telegram_chat_delivery_diagnostics` — per-chat diagnostics (Outbound + Dispatch)
   - `telegram_recap_preferences` — private recap opt-in, local hour, next due time, and consumed window (State / Dispatch)
   - `telegram_recap_targets` — one bounded recap plan/outcome per chat and local date (Dispatch / Queue)
-- KV: none currently. Cache keys live in D1 (`cache` table) — notably `alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`, `alert:launch-snapshot`, `alert:reserve-snapshot` (producer-written versioned reserve source envelope), `alert:reserve-dispatched-snapshot` (dispatch baseline), `alert:freeze-tape-cursor` (owned only by the dedicated freeze outbox), `alert:safety-source-cache`, `telegram:global-send-backoff-until`, chat-scoped `telegram:command-cooldown:<chat_id>:*`, `telegram:command-flood:<chat_id>*`, `telegram:chat-member:<chat_id>:<user_id>`, `telegram:chat-admins:<chat_id>`, `telegram:group-welcome:<chat_id>`, the 30-minute consumed-on-first-mutation `telegram:adoption-mini-app-session:<chat_id>` key, legacy `telegram:re-engagement-warned:<chat_id>` markers awaiting retention cleanup, `telegram:commands-reconciled`, `telegram:profile-reconciled`, `telegram:menu-reconciled`, `telegram:preset-query-failure-count`, `telegram:degradation:*`.
+- KV: none currently. Cache keys live in D1 (`cache` table) — notably `alert:dews-snapshot`, `alert:dews-alertable-snapshot`, `alert:depeg-snapshot`, `alert:safety-snapshot`, `alert:launch-snapshot`, `alert:reserve-snapshot` (producer-written versioned reserve source envelope), `alert:reserve-dispatched-snapshot` (dispatch baseline), `alert:freeze-tape-cursor` (owned only by the dedicated freeze outbox), canonical `report-cards:v9` and `report-cards:v9:publication-health`, `telegram:global-send-backoff-until`, chat-scoped `telegram:command-cooldown:<chat_id>:*`, `telegram:command-flood:<chat_id>*`, `telegram:chat-member:<chat_id>:<user_id>`, `telegram:chat-admins:<chat_id>`, `telegram:group-welcome:<chat_id>`, the 30-minute consumed-on-first-mutation `telegram:adoption-mini-app-session:<chat_id>` key, legacy `telegram:re-engagement-warned:<chat_id>` markers awaiting retention cleanup, `telegram:commands-reconciled`, `telegram:profile-reconciled`, `telegram:menu-reconciled`, `telegram:preset-query-failure-count`, `telegram:degradation:*`.
 
 **Allowed inbound dependencies.** Every other seam may read/write through these helpers.
 

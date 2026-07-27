@@ -301,19 +301,21 @@ function setupDefaultMocks() {
     coveredCount: 4,
     trackedCount: 4,
     coverageRatio: 1,
-    source: "report-card-cache",
-    expectedModel: "v8",
+    source: "safety-score-v9-publication",
+    expectedModel: "v9",
     // The producer now requires a publication identity before rating rows.
     safetyScoreIdentity: {
-      model: "v8",
+      model: "v9",
       schemaVersion: 1,
-      methodologyVersion: "vTEST",
-      evaluationBuildDigest: "a".repeat(64),
-      baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
-      publicationGenerationId: "report-cards-test",
+      methodologyVersion: "9.0",
+      policyId: "safety-score-v9",
+      policyDigest: "a".repeat(64),
+      evaluationBuildDigest: "b".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+      publicationGenerationId: "report-cards:v9:test",
     },
-    publicationGenerationId: "report-cards-test",
-    methodologyVersion: "vTEST",
+    publicationGenerationId: "report-cards:v9:test",
+    methodologyVersion: "9.0",
     publishedAt: Math.floor(Date.now() / 1000),
     scores: new Map([
       ["sdai-maker", { score: 85, grade: "A-" }],
@@ -1746,7 +1748,7 @@ describe("auto-lending safety availability", () => {
     warnSpy.mockRestore();
   });
 
-  it("preserves the safety threshold for an available V8 snapshot", () => {
+  it("preserves the safety threshold for an available V9 snapshot", () => {
     const resolved: ResolvedYieldEntry[] = [];
 
     appendPoolFamilyYieldSources({
@@ -1755,7 +1757,7 @@ describe("auto-lending safety availability", () => {
       supplementalCandidates: [],
       safetyScores: new Map([["usdc-circle", { score: 49, grade: "D" }]]),
       safetySnapshotAvailable: true,
-      expectedModel: "v8",
+      expectedModel: "v9",
       stablecoinSupplyById: new Map(),
     });
 

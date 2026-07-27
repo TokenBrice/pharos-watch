@@ -14,7 +14,7 @@ const HOMEPAGE_BOOTSTRAP_QUERY_IDS = [
   "stablecoins",
   "pegSummary",
   "dexLiquidity",
-  "reportCards",
+  "reportCardsV9",
   "stressSignals",
   "stabilityIndex",
 ] as const;

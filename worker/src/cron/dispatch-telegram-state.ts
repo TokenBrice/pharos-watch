@@ -1,7 +1,6 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
-  ALERT_SAFETY_SOURCE_CACHE_KEY,
   assessActiveAlertSafetySource,
   alertSafetyIdentitiesAreComparable,
   buildAlertSafetySnapshotEnvelope,
@@ -35,7 +34,6 @@ import {
   type DepegSnapshot,
   type DewsRow,
   type DewsSnapshot,
-  type SafetyRow,
   type SafetySnapshot,
 } from "./telegram-alert-snapshots";
 
@@ -111,12 +109,10 @@ export interface DispatchSourceData {
   chatsWithActiveSnooze: number;
   dewsRows: DewsRow[];
   activeDepegRows: ActiveDepegRowWithEventId[];
-  safetyRows: SafetyRow[];
   dewsCache: CachedValue;
   dewsAlertableCache: CachedValue;
   depegCache: CachedValue;
   safetyCache: CachedValue;
-  safetySourceCache: CachedValue;
   activeSafetySource?: ActiveSafetyScoreSource;
   launchCache: CachedValue;
   /** Producer-written current drift id-set (four-hourly reserve slot). */
@@ -175,12 +171,10 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
   const [
     dewsRows,
     activeDepegRows,
-    safetyRows,
     dewsCache,
     dewsAlertableCache,
     depegCache,
     safetyCache,
-    safetySourceCache,
     activeSafetySource,
     launchCache,
     reserveCache,
@@ -195,32 +189,10 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
       )
       .all<ActiveDepegRowWithEventId>()
       .then((result) => result.results ?? []),
-    db
-      .prepare(
-        `SELECT /* pharos:telegram-dispatch:safety-latest */
-                h.stablecoin_id,
-                h.grade,
-                h.score,
-                h.prev_grade,
-                h.prev_score,
-                h.recorded_at,
-                h.methodology_version
-           FROM safety_grade_history h
-           INNER JOIN (
-             SELECT stablecoin_id, MAX(recorded_at) AS max_recorded_at
-               FROM safety_grade_history
-              GROUP BY stablecoin_id
-           ) latest
-             ON latest.stablecoin_id = h.stablecoin_id
-            AND latest.max_recorded_at = h.recorded_at`,
-      )
-      .all<SafetyRow>()
-      .then((result) => result.results ?? []),
     getCache(db, SNAPSHOT_KEYS.dews),
     getCache(db, SNAPSHOT_KEYS.dewsAlertable),
     getCache(db, SNAPSHOT_KEYS.depeg),
     getCache(db, SNAPSHOT_KEYS.safety),
-    getCache(db, ALERT_SAFETY_SOURCE_CACHE_KEY),
     loadActiveSafetyScoreSource(db),
     getCache(db, SNAPSHOT_KEYS.launch),
     getCache(db, SNAPSHOT_KEYS.reserve),
@@ -231,12 +203,10 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     chatsWithActiveSnooze: (snoozedRows.results ?? []).length,
     dewsRows,
     activeDepegRows,
-    safetyRows,
     dewsCache,
     dewsAlertableCache,
     depegCache,
     safetyCache,
-    safetySourceCache,
     activeSafetySource,
     launchCache,
     reserveCache,
@@ -251,15 +221,14 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
   const previousDepegSnapshot = parseSnapshotMap<DepegSnapshot>(sourceData.depegCache);
   const safetySourceAssessment = assessActiveAlertSafetySource(
     sourceData.activeSafetySource ?? {
-      kind: "v8",
-      expectedModel: "v8",
-      reason: "activation-marker-missing",
-      activationUpdatedAt: null,
+      kind: "error",
+      expectedModel: "v9",
+      reason: "v9-snapshot-unavailable",
+      snapshot: null,
+      detail: "Canonical Safety Score V9 source was not loaded",
     },
-    sourceData.safetySourceCache,
     {
       nowSec,
-      producerIntervalSec: CRON_INTERVALS["publish-report-card-cache"],
     },
   );
   const currentSafetySnapshot =

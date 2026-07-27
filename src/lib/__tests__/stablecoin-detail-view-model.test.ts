@@ -600,7 +600,6 @@ describe("stablecoin detail view-model builder", () => {
     expect(viewModel.hasFlows).toBe(true);
     expect(viewModel.pegScoreResult?.pegScore).toBe(99);
     expect(viewModel.hasYieldSection).toBe(false);
-    expect(viewModel.mintAuthorityDecentralizationDrag).toBeNull();
   });
 
   it("keeps NAV tokens out of peg-distressed verdicts", () => {

@@ -60,7 +60,7 @@ export const SAFETY_SCORES_SECTION_CONTENT = defineMethodologySectionContent({
     "Safety Score V9 is the active identity-aware model. It evaluates Backing (40%), Exit (35%), and Economic Control (25%) through bounded aggregation, then applies peg behavior, structural ceilings, evidence sufficiency, track record, dependencies, and wrapper-local risk.",
     "V9 distinguishes measured adverse evidence from issuer non-disclosure, unsupported methodology, missing integration, and transient producer failure. Bounded gaps can remain rateable under explicit ceilings; an unbounded required fact remains NR, and F is reserved for causally attributed measured danger.",
     "Governance access posture treats reviewed global mint-domain contracts as immutable when they have no privileged capabilities, no applicable cap, no claim-impairment path, and access-only scope. A contract address alone is protocol machinery, not evidence of a concentrated administrator; deployment-scoped bridge controls remain separate.",
-    "Publication is fail-closed. Stale or unavailable score-bearing producers and new infrastructure-attributed downgrades or NR transitions hold the last accepted V9 ratings. Active consumers expose held status and never recompute or fall back to V8. The numeric V8.17 methodology remains documented for the compatibility endpoint and rollback observation window.",
+    "Publication is fail-closed. Stale or unavailable score-bearing producers and material infrastructure-attributed deterioration hold the last accepted V9 ratings. Isolated producer failures do not freeze the publication while at least 90% of active assets remain unaffected. Active consumers expose held status and never recompute or fall back to V8. V8.17 remains documented as historical methodology.",
   ],
 });
 
@@ -70,7 +70,7 @@ export const MINT_AUTHORITY_SCORE_SECTION_CONTENT = defineMethodologySectionCont
   markdownParagraphs: [
     "Mint Authority Score is a standalone 0-100 methodology for reviewed stablecoin mint-authority risk. It measures how durable supply can be created, authorized, expanded, or routed by privileged mint paths.",
     "The score blends route family, weakest mint-capable controller, quantitative bounds, and reviewed authority posture, then applies caps for unbounded or compromised authority, privileged-mint incidents, weak EOA controls, and evidence confidence.",
-    "Missing or unresolved review data returns NR and never penalizes. The score is visible on detail pages, the homepage table, the screener, and coverage breakdowns, and since Safety Score v8.0 it feeds the Decentralization dimension through a penalty-only blend; it still does not create selector exclusions or default-ranking changes beyond what Decentralization propagates.",
+    "Missing or unresolved review data returns NR and never implies safety. The standalone score is visible on detail pages, the homepage table, the screener, and coverage breakdowns. Safety Score V9 does not blend that display score; it compiles the underlying reviewed mint-control evidence into Economic Control facts, gaps, and caps.",
   ],
 });
 
@@ -125,16 +125,6 @@ export const PEGSCORE_DEWS_SECTION_CONTENT = defineMethodologySectionContent({
   ],
 });
 
-export const CONTAGION_SECTION_CONTENT = defineMethodologySectionContent({
-  id: "contagion-stress-test-methodology",
-  title: "Contagion Stress Test",
-  markdownParagraphs: [
-    "The contagion stress test models how failure in one stablecoin can propagate through collateral, wrapper, and mechanism dependencies. It asks which assets would inherit stress if a major stablecoin, reserve asset, or shared mechanism became impaired.",
-    "Dependency weights are curated from explicit metadata, reserve slices, wrapper relationships, and known mechanism links. The model distinguishes direct collateral exposure from looser operational dependency so a small wrapper link does not receive the same treatment as a majority reserve dependency.",
-    "The result is used in report cards, comparison context, and systemic-risk views to identify hidden concentration that is not visible from market capitalization alone.",
-  ],
-});
-
 export const BLACKLIST_SECTION_CONTENT = defineMethodologySectionContent({
   id: "blacklist-tracker-methodology",
   title: "Blacklist Tracker Methodology",
@@ -179,7 +169,6 @@ export const METHODOLOGY_INDEX_SECTION_CONTENT = [
   YIELD_SECTION_CONTENT,
   PEGSCORE_DEWS_SECTION_CONTENT,
   DEPEG_RESOLVER_SECTION_CONTENT,
-  CONTAGION_SECTION_CONTENT,
   BLACKLIST_SECTION_CONTENT,
   CHAIN_HEALTH_SECTION_CONTENT,
 ] as const;

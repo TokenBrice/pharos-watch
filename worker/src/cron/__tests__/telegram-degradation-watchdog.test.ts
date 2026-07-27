@@ -1,14 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getAlertSafetySourceGeneration } from "../../lib/alert-safety-source-cache";
+import { getAlertSafetyV9SourceGeneration } from "../../lib/alert-safety-source-cache";
 
 const {
   mockGetCache,
   mockSetCache,
   mockDeleteCache,
+  mockLoadActiveAlertSafetySourceAssessment,
 } = vi.hoisted(() => ({
   mockGetCache: vi.fn(),
   mockSetCache: vi.fn(),
   mockDeleteCache: vi.fn(),
+  mockLoadActiveAlertSafetySourceAssessment: vi.fn(),
 }));
 
 vi.mock("../../lib/db-cache", () => ({
@@ -16,6 +18,17 @@ vi.mock("../../lib/db-cache", () => ({
   setCache: mockSetCache,
   deleteCache: mockDeleteCache,
 }));
+
+vi.mock("../../lib/alert-safety-source-cache", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("../../lib/alert-safety-source-cache")
+  >();
+  return {
+    ...actual,
+    loadActiveAlertSafetySourceAssessment:
+      mockLoadActiveAlertSafetySourceAssessment,
+  };
+});
 
 const {
   runTelegramDegradationWatchdog,
@@ -111,42 +124,20 @@ function makeDb(config: FakeDbConfig = {}): D1Database {
   return { prepare } as unknown as D1Database;
 }
 
-function makeSafetySourceCacheValue(publishedAt: number) {
-  const publicationGenerationId = `report-cards:7.10:${publishedAt}`;
-  return {
-    value: JSON.stringify({
-      generation: getAlertSafetySourceGeneration(),
-      safetyScoreIdentity: {
-        model: "v8",
-        schemaVersion: 1,
-        methodologyVersion: "7.10",
-        evaluationBuildDigest: "a".repeat(64),
-        baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
-        publicationGenerationId,
-      },
-      publicationGenerationId,
-      methodologyVersion: "7.10",
-      publishedAt,
-      completeness: {
-        generationId: publicationGenerationId,
-        methodologyVersion: "7.10",
-        expectedCount: 1,
-        scoredCount: 1,
-        notRatedCount: 0,
-        notRatedIds: [],
-      },
-      snapshot: { "usd-coin": { grade: "A", score: 90, methodologyVersion: "7.10" } },
-    }),
-    updatedAt: publishedAt,
-  };
-}
-
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-05-11T12:00:00Z"));
   mockGetCache.mockReset();
   mockSetCache.mockReset();
   mockDeleteCache.mockReset();
+  mockLoadActiveAlertSafetySourceAssessment.mockReset();
+  mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue({
+    state: "ok",
+    ageSeconds: 60,
+    generation: getAlertSafetyV9SourceGeneration(),
+    envelope: null,
+    expectedModel: "v9",
+  });
 });
 
 afterEach(() => {
@@ -157,7 +148,6 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
   it("preserves an active incident when capacity is unavailable", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.pendingSince, { value: String(nowSec - 3600), updatedAt: nowSec - 3600 });
 
     const result = await runTelegramDegradationWatchdog(makeDb({ capacityError: true }));
@@ -172,7 +162,6 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
   it("treats aged execution-unknown work as delivery risk", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.pendingSince, {
       value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
       updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
@@ -233,8 +222,9 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
       safetySourceAssessment: {
         state: "ok",
         ageSeconds: 60,
-        generation: getAlertSafetySourceGeneration(),
+        generation: getAlertSafetyV9SourceGeneration(),
         envelope: null,
+        expectedModel: "v9",
       },
     });
     const meta = JSON.parse(result.metadata ?? "{}");
@@ -246,8 +236,6 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
 
   it("does not trigger on first observation above threshold", async () => {
     const store = installCacheStore();
-    const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     const db = makeDb({ pendingCount: PENDING_BACKLOG_THRESHOLD + 5 });
 
     const result = await runTelegramDegradationWatchdog(db);
@@ -260,7 +248,6 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
   it("triggers once threshold has been sustained beyond window", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.pendingSince, {
       value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
       updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
@@ -278,7 +265,6 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
   it("clears the episode when backlog drains", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.pendingSince, {
       value: String(nowSec - 3600),
       updatedAt: nowSec - 3600,
@@ -295,7 +281,6 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
   it("triggers on old pending age even when queue size is below the count threshold", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.pendingSince, {
       value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
       updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
@@ -313,7 +298,6 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
   it("triggers on estimated drain time over the threshold", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.pendingSince, {
       value: String(nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30),
       updatedAt: nowSec - PENDING_BACKLOG_SUSTAINED_SEC - 30,
@@ -332,7 +316,6 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
   it("triggers immediately when pending rows are near TTL expiry", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.pendingSince, {
       value: String(nowSec - 60),
       updatedAt: nowSec - 60,
@@ -352,7 +335,14 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
   it("triggers when safety-source cache is missing for sustained window", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    // safety-source-cache absent => state = missing
+    mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue({
+      state: "missing",
+      ageSeconds: null,
+      generation: null,
+      envelope: null,
+      expectedModel: "v9",
+      failureReason: "v9-snapshot-unavailable",
+    });
     store.values.set(WATCHDOG_KEYS.safetySourceSince, {
       value: String(nowSec - 4000), // > 2 * 900 = 1800
       updatedAt: nowSec - 4000,
@@ -370,7 +360,14 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     const store = installCacheStore();
     installCacheStore(); // reset
     const nowSec = Math.floor(Date.now() / 1000);
-    // missing safety source, flag just tripped 60s ago
+    mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue({
+      state: "missing",
+      ageSeconds: null,
+      generation: null,
+      envelope: null,
+      expectedModel: "v9",
+      failureReason: "v9-snapshot-unavailable",
+    });
     store.values.set(WATCHDOG_KEYS.safetySourceSince, {
       value: String(nowSec - 60),
       updatedAt: nowSec - 60,
@@ -386,7 +383,6 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
   it("recovers when state returns to ok after sustained breach", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.safetySourceSince, {
       value: String(nowSec - 4000),
       updatedAt: nowSec - 4000,
@@ -404,8 +400,6 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
 describe("runTelegramDegradationWatchdog · zero-send streak", () => {
   it("does not increment the same dispatch cron run twice", async () => {
     const store = installCacheStore();
-    const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     const db = makeDb({
       dispatchRunId: 77,
       dispatchMetadata: {
@@ -427,9 +421,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
   });
 
   it("does not trigger before reaching streak threshold", async () => {
-    const store = installCacheStore();
-    const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    installCacheStore();
     const db = makeDb({
       pendingCount: 0,
       dispatchMetadata: {
@@ -447,9 +439,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
   });
 
   it("increments the streak for a reserve-only zero-send run", async () => {
-    const store = installCacheStore();
-    const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    installCacheStore();
     const db = makeDb({
       pendingCount: 0,
       dispatchMetadata: {
@@ -469,7 +459,6 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
   it("triggers after threshold consecutive zero-send runs", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.zeroSendStreak, {
       value: String(ZERO_SEND_STREAK_THRESHOLD - 1),
       updatedAt: nowSec - 60,
@@ -494,7 +483,6 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
   it("recovers and resets streak when dispatch sends again", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.zeroSendStreak, {
       value: String(ZERO_SEND_STREAK_THRESHOLD),
       updatedAt: nowSec - 60,
@@ -519,7 +507,6 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
   it("stays triggered while the zero-send streak continues", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.zeroSendStreak, {
       value: String(ZERO_SEND_STREAK_THRESHOLD),
       updatedAt: nowSec - 60,
@@ -541,9 +528,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
   });
 
   it("ignores runs with no events even if messagesSent is zero", async () => {
-    const store = installCacheStore();
-    const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    installCacheStore();
     const db = makeDb({
       pendingCount: 0,
       dispatchMetadata: {
@@ -561,9 +546,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
   });
 
   it("ignores runs with events but no candidate chats", async () => {
-    const store = installCacheStore();
-    const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
+    installCacheStore();
     const db = makeDb({
       pendingCount: 0,
       dispatchMetadata: {
@@ -628,7 +611,6 @@ describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
   it("skips aborted run and reads the prior succeeded run's metadata", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.zeroSendStreak, { value: "2", updatedAt: nowSec - 60 });
     const db = makeDbWithCronRows([
       { status: "error", metadata: null },
@@ -655,7 +637,6 @@ describe("runTelegramDegradationWatchdog · aborted-run filter", () => {
   it("preserves the streak when every recent run aborted (no metadata)", async () => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    store.values.set("alert:safety-source-cache", makeSafetySourceCacheValue(nowSec - 60));
     store.values.set(WATCHDOG_KEYS.zeroSendStreak, { value: "2", updatedAt: nowSec - 60 });
     const db = makeDbWithCronRows([
       { status: "error", metadata: null },

@@ -473,7 +473,10 @@ export async function collectMintBurnFlows(
       return {
         gaugeScore,
         gaugeBand: getGaugeBand(gaugeScore),
-        classificationSource: ftqFlows.kind === "ok" ? "report-card-cache" : "unavailable",
+        classificationSource:
+          ftqFlows.kind === "ok"
+            ? "safety-score-v9-publication"
+            : "unavailable",
         classificationReason: ftqFlows.kind === "ok" ? null : ftqFlows.reason,
         safetyScoreIdentity: ftqFlows.safetyScoreIdentity,
         flightToQuality: { active: ftq.active, safeNetUsd: safeNet24h, riskyNetUsd: riskyNet24h },

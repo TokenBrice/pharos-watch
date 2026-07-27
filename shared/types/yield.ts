@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MethodologyEnvelopeSchema, YieldTypeSchema } from "./core";
 import { ReportCardGradeSchema } from "./report-cards";
-import { SafetyScoreV8PublicationIdentitySchema } from "./safety-score-publication";
+import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
 
 export const YIELD_ADAPTER_LIFECYCLE_VALUES = ["active", "quarantined", "intentional-gap", "experimental"] as const;
 export type YieldAdapterLifecycle = (typeof YIELD_ADAPTER_LIFECYCLE_VALUES)[number];
@@ -416,9 +416,10 @@ const YieldSafetySnapshotMetaSchema = z.object({
   coveredCount: z.number(),
   trackedCount: z.number(),
   reason: z.string().nullable(),
-  source: z.literal("report-card-cache").optional(),
-  expectedModel: z.enum(["v8", "v9"]).optional(),
-  safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.nullable().optional(),
+  // The retired cache label remains accepted only for persisted pre-V9 payloads.
+  source: z.enum(["safety-score-v9-publication", "report-card-cache"]).optional(),
+  expectedModel: z.literal("v9").optional(),
+  safetyScoreIdentity: SafetyScorePublicationIdentitySchema.nullable().optional(),
   publicationGenerationId: z.string().nullable().optional(),
   methodologyVersion: z.string().nullable().optional(),
   publishedAt: z.number().nullable().optional(),
@@ -430,9 +431,10 @@ const YieldLiveSafetyHydrationMetaSchema = z.object({
   coveredCount: z.number(),
   trackedCount: z.number(),
   reason: z.string().nullable(),
-  source: z.enum(["report-card-cache", "report-cards:snapshot", "computed-report-cards"]),
-  expectedModel: z.enum(["v8", "v9"]).optional(),
-  safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.nullable().optional(),
+  // Non-V9 labels are historical readers, not live source choices.
+  source: z.enum(["safety-score-v9-publication", "report-card-cache", "report-cards:snapshot", "computed-report-cards"]),
+  expectedModel: z.literal("v9").optional(),
+  safetyScoreIdentity: SafetyScorePublicationIdentitySchema.nullable().optional(),
   publicationGenerationId: z.string().nullable(),
   methodologyVersion: z.string().nullable(),
   publishedAt: z.number().nullable(),
@@ -463,7 +465,7 @@ const YieldRankingProvenanceSchema = z.object({
     "safety-snapshot-unavailable",
   ]).optional(),
   safetyReason: z.enum(YIELD_SAFETY_REASON_VALUES).nullable().optional(),
-  safetyScoreIdentity: SafetyScoreV8PublicationIdentitySchema.nullable().optional(),
+  safetyScoreIdentity: SafetyScorePublicationIdentitySchema.nullable().optional(),
   benchmarkKey: z.enum(YIELD_BENCHMARK_KEY_VALUES).optional(),
   benchmarkLabel: z.string().optional(),
   benchmarkCurrency: z.string().optional(),

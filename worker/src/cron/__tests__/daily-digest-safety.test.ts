@@ -134,15 +134,12 @@ describe("daily digest Safety Score transitions", () => {
     const grades: CanonicalSafetyGradeRow[] = [{
       id: asset.id,
       symbol: asset.symbol,
-      model: "v9",
       grade: "A",
       score: 88,
-      pegScore: null,
-      liqScore: null,
-      v9Pillars: { backing: pillar, exit: pillar, control: pillar },
-      v9ReasonCodes: ["bounded-mechanism-review"],
-      v9Caps: [],
-      v9BindingCap: null,
+      pillars: { backing: pillar, exit: pillar, control: pillar },
+      reasonCodes: ["bounded-mechanism-review"],
+      caps: [],
+      bindingCap: null,
     }];
 
     const transitions = await collectGradeTransitions(ctx, grades, identity);

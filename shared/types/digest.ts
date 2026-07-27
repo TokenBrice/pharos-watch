@@ -330,7 +330,8 @@ export interface DigestInputData {
   mintBurnFlows?: {
     gaugeScore: number;
     gaugeBand: string;
-    classificationSource?: "report-card-cache" | "unavailable";
+    // `report-card-cache` is retained only for archived digest snapshots.
+    classificationSource?: "safety-score-v9-publication" | "report-card-cache" | "unavailable";
     classificationReason?: string | null;
     safetyScoreIdentity?: SafetyScorePublicationIdentity | null;
     flightToQuality: {

@@ -128,7 +128,7 @@ describe("buildYieldSyncMetadata", () => {
           coveredCount: 1,
           trackedCount: 1,
           reason: null,
-          source: "report-card-cache",
+          source: "safety-score-v9-publication",
           publicationGenerationId: "report-cards:v8.299:1800000000",
           methodologyVersion: "v8.299",
           publishedAt: START_SEC,
@@ -206,7 +206,7 @@ describe("buildYieldSyncMetadata", () => {
     expect(metadata.sourceCoverage.comparisonAnchorFreshness).toEqual(comparisonAnchorFreshness);
     expect(metadata.sourceCoverage.previousTvlRowsTruncated).toBe(true);
     expect(metadata.sourceCoverage.safetySnapshot).toMatchObject({
-      source: "report-card-cache",
+      source: "safety-score-v9-publication",
       publicationGenerationId: "report-cards:v8.299:1800000000",
       methodologyVersion: "v8.299",
       publishedAt: START_SEC,

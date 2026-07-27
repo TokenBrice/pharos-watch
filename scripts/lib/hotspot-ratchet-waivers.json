@@ -1,28 +1,4 @@
 {
-  "src/app/about/page.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Homepage About route was consolidated and now includes the legacy editorial/style/principles content paths and copy updates in a single shell. Keep this explicitly waived until the next About-route decomposition wave.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-09",
-    "reviewAfter": "2026-09-09",
-    "nextAction": "Split About page concerns (hero, horizon, metadata, and section composition) after this refactor is stabilized."
-  },
-  "src/app/pharoswatchbot/app/client.tsx": {
-    "disposition": "queued-p4",
-    "notes": "Telegram Mini App client combines boot/auth state, preset writes, coin selection, and dashboard rendering. This release is only clearing the gate; split state orchestration from presentation in a dedicated Mini App cleanup pass.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-16",
-    "reviewAfter": "2026-09-16",
-    "nextAction": "Separate Mini App state/auth orchestration and preset mutation handling from the route presentation shell."
-  },
-  "worker/src/api/backfill-supply-history.ts": {
-    "disposition": "queued-p4",
-    "notes": "Backfill supply history combines request validation, historical source selection, D1 repair planning, and mutation orchestration in one admin handler. Keep explicitly waived until a focused supply-history admin cleanup can split validation/source planning from write execution.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-05-22",
-    "reviewAfter": "2026-08-22",
-    "nextAction": "Revisit in the next focused decomposition pass for this surface."
-  },
   "worker/src/api/telegram-mini-app-mutations.ts": {
     "disposition": "queued-p4",
     "notes": "Phase 3 added request-local portability and bounded bulk preview/confirm/undo alongside the existing Mini App settings dispatcher. The resulting branch hotspot should be split only after the new generation and fingerprint fences have stabilized under one contract.",
@@ -39,14 +15,6 @@
     "reviewAfter": "2026-09-23",
     "nextAction": "Extract Morpho V1/V2 liquidity telemetry helpers from the ERC-4626 reserve adapter while preserving the existing adapter contract and tests."
   },
-  "worker/src/cron/yield-coverage-audit.ts": {
-    "disposition": "queued-p4",
-    "notes": "Coverage-audit module crossed the file-lines hotspot floor when the v8.291 stale-auto-lending-override queue lane landed. The growth is additive queue/recommendation assembly, not deeper branching; keep it queued for a dedicated split of queue-item builders from audit orchestration.",
-    "owner": "repo-maintenance",
-    "createdAt": "2026-06-11",
-    "reviewAfter": "2026-09-11",
-    "nextAction": "Extract operator-queue item builders (gap/protocol/quarantine/stale-override) into a yield-coverage-audit-queue module behind the existing buildCoverageAuditOperatorQueue API."
-  },
   "worker/src/cron/telegram-pending/drain.ts": {
     "disposition": "queued-p4",
     "notes": "Pending Telegram delivery currently combines stale-send reconciliation, claim lifecycle handling, retry policy, and queue draining. The module is operationally sensitive, so its newly surfaced file, function, and branch hotspots should be reduced in a dedicated behavior-preserving pass.",
@@ -55,22 +23,6 @@
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract stale-send reconciliation and claim/retry state transitions from the queue-drain coordinator behind the existing pending-delivery contracts."
   },
-  "src/lib/status-dashboard-model.ts": {
-    "disposition": "queued-p4",
-    "notes": "The status dashboard model centralizes probe summaries, cron grouping, issue classification, evidence projection, and operator decisions. Its file and branch counts warrant separating independent projection families without changing the dashboard contract.",
-    "owner": "worker-infrastructure",
-    "createdAt": "2026-07-11",
-    "reviewAfter": "2026-10-11",
-    "nextAction": "Split probe, cron, issue, and operator-decision projections into focused model helpers while preserving the exported dashboard types."
-  },
-  "worker/src/cron/yield-sync/evaluation.ts": {
-    "disposition": "queued-p4",
-    "notes": "Yield evaluation still coordinates source qualification, benchmark policy, arbitration, history, and cooperative progress reporting. The long evaluation function needs a dedicated split that preserves deterministic ranking behavior.",
-    "owner": "yield-intelligence",
-    "createdAt": "2026-07-11",
-    "reviewAfter": "2026-10-11",
-    "nextAction": "Extract per-source qualification and result assembly from evaluateYieldSources, retaining a thin synchronous and cooperative orchestration layer."
-  },
   "src/components/status/api-keys-panel.tsx": {
     "disposition": "queued-p4",
     "notes": "The API-key panel component coordinates inventory queries, filters, pagination, creation, reveal/replay flows, edits, revocation, and audit presentation. Its long component should be decomposed after the current admin workflow stabilizes.",
@@ -78,14 +30,6 @@
     "createdAt": "2026-07-11",
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract API-key query/mutation state and dialog orchestration into focused hooks, leaving ApiKeysPanel responsible for composition."
-  },
-  "src/app/admin/status-dashboard/triage-summary.tsx": {
-    "disposition": "queued-p4",
-    "notes": "The status triage summary renders the complete operator decision surface, including issue grouping, evidence context, next steps, and supporting diagnostics. Its long render function should be split by triage section without changing prioritization behavior.",
-    "owner": "worker-infrastructure",
-    "createdAt": "2026-07-11",
-    "reviewAfter": "2026-10-11",
-    "nextAction": "Extract issue, evidence, and next-step presentation sections into focused components while keeping TriageSummary as the ordered composition boundary."
   },
   "shared/lib/safety-score-v9/evaluate-set.ts": {
     "disposition": "queued-p4",

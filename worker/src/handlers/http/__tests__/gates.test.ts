@@ -192,21 +192,6 @@ describe("evaluateAccessGate", () => {
     expect(apiKeyMocks.recordApiKeyUsage).toHaveBeenCalledWith(db, validKey, "/api/stablecoins");
   });
 
-  it("serves both V9 preview aliases without API-key authentication", async () => {
-    for (const path of [
-      "/api/report-cards/v9-preview",
-      "/api/report-cards/v9-preview-412d818c031b7bc5",
-    ]) {
-      const request = new Request(`https://api.pharos.watch${path}`);
-      const result = await evaluateAccessGate(request, new URL(request.url), makeEnv() as never);
-
-      expect(result.response).toBeNull();
-      expect(result.apiKey).toBeNull();
-      expect(result.requestLane).toBe("public-api");
-    }
-    expect(apiKeyMocks.authenticateApiKey).not.toHaveBeenCalled();
-  });
-
   it("uses the isolate-local limiter when public GET rate-limit storage fails", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     apiKeyMocks.authenticateApiKey.mockResolvedValueOnce({ kind: "valid", key: validKey });

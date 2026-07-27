@@ -27,7 +27,7 @@ Eligible users configure the feature with `/recap`, `/recap on`, `/recap off`, a
 
 The delivery system is worker-owned. The frontend exposes a static `/pharoswatchbot/` landing page plus a lightweight public telemetry strip sourced from `/_site-data/telegram-pulse`, which proxies `GET /api/telegram-pulse` through the website-internal lane; it does not call any mutating bot APIs directly. Direct `https://api.pharos.watch/api/telegram-pulse` requests remain API-key protected like other non-exempt public reads. `/pharoswatchbot/` is the canonical public route, and the legacy `/telegram` and `/telegram/*` aliases redirect there. The landing page's alert examples render `shared/lib/telegram-alert-samples.ts` verbatim; `worker/src/lib/__tests__/telegram-alert-samples.test.ts` regenerates each sample (including reserve) through the production formatter so the public examples cannot drift from runtime output, and the page's visible delivery-contract TTLs and dispatch cadence derive from `shared/lib/telegram-delivery-policy.ts`.
 
-The safety-alert path now has an additional hard dependency: `publish-report-card-cache` writes a generation-aware live safety source snapshot into `cache["alert:safety-source-cache"]`, and the 5-minute Telegram lane will suppress only safety-grade alerts when that source is missing, corrupt, stale, or from the wrong generation. Each live safety source row may also carry an `explain` payload with scoring-stage, dimension, and raw-input snapshots so safety alerts can say why a grade changed.
+The safety-alert path reads the canonical V9 publication directly. The five-minute Telegram lane suppresses only safety-grade alerts when that publication is missing, incompatible, held, stale, or from a different identity than its dispatch baseline. Alert explanations are projected from the V9 card evidence, cap, weakest-pillar, and pillar snapshots; no Telegram-specific live score cache is maintained.
 
 ## Mini App Launch Entrypoints
 
@@ -464,7 +464,7 @@ Command, callback, setup, and settings replies use the shared audited reply help
 (`2,7,12,17,22,27,32,37,42,47,52,57 * * * *`), isolated from the quarter-hourly pipeline.
 
 It no longer runs inside the quarter-hourly or daily slots. Safety-grade changes are detected
-within 5 minutes of `publish-report-card-cache` refreshing the live safety source cache.
+within 5 minutes of `compute-safety-score-v9` accepting a canonical publication.
 
 Immediately after risk dispatch, the same serial chain runs the rollout-aware `telegram-personalized-recap-planner` (D1-only, `maxConnections = 0`). This planner claims due private preferences in bounded pages, shares one fresh Tape window across each page, resolves direct and dynamic preset membership, applies the explicit global-family mapping, and enqueues at most one exact recap payload per chat/local date only in `canary`/`public`. In `dark` it returns aggregate projections without recap target, pending, or schedule writes; in `off` it only runs the recap-only queued cleanup. It never calls the Bot API or any data provider. The pending delivery drain remains responsible for external effects and retains risk-first ordering; recap rows are priority `100` and expire after six hours. A tokened recap run is deferred when risk dispatch was locked, incomplete, or failed. Otherwise its soft deadline is capped to the smaller of its normal three-minute budget and the remainder of a five-minute shared slot after the measured dispatch duration plus a 30-second reserve; a non-positive remainder defers recap without advancing due schedules.
 
@@ -477,7 +477,7 @@ Each dispatch run loads:
 - Latest DEWS rows from `stress_signals`
 - Active depegs from `depeg_events WHERE ended_at IS NULL`
 - The latest `safety_grade_history` row for each stablecoin (not just the latest change day)
-- The live safety source cache from `cache["alert:safety-source-cache"]`, including optional `explain` snapshots produced with the same report-card methodology constants as the public card
+- The canonical V9 publication and publication-health rows, projected through the same active-source loader as the public report-card API
 - Prior dispatch snapshots from cache keys:
   - `alert:dews-snapshot`
   - `alert:dews-alertable-snapshot`
@@ -492,7 +492,7 @@ DEWS and depeg dispatch snapshots older than `24 hours` are treated as stale and
 
 Reserve-drift transitions diff the producer's current drift set (`alert:reserve-snapshot`) against the dispatch baseline (`alert:reserve-dispatched-snapshot`). The producer (four-hourly reserve slot) is the only writer of the current set, so the dispatch trigger never opens reserve-adapter connections. Dispatch requires the expected source generation and a `publishedAt` age no greater than two producer intervals (8 hours). Missing, malformed, future-dated, stale, or wrong-generation envelopes suppress reserve transitions and preserve the prior baseline. The first fresh publish after a missing/legacy/wrong-generation/stale predecessor is marked `continuous: false`; dispatch reports the source as `recovering`, cold-seeds the current drift set, and sends no reserve transition. Only the next continuous fresh generation becomes alertable. A general DEWS/depeg seed run still preserves an existing reserve baseline, while a first healthy run with no baseline treats the current producer set as the baseline.
 
-The live safety source cache is evaluated separately from those historical snapshots. It is hard-required for safety-grade fan-out and is considered stale after two `publish-report-card-cache` producer intervals. The source carries the same strict Safety Score identity as the canonical full, compact, and exact-input projections. The prior alert snapshot persists that identity; a missing or different model/schema/methodology/evaluation-build identity forces a baseline seed instead of an organic grade-change fan-out. Legacy rows without `explain` remain valid inside an otherwise current identified source; malformed or future-version `explain` payloads are dropped at parse time without dropping the row.
+The live safety source is the canonical V9 publication projected through the shared active-source loader. Safety-grade fan-out requires a current, identity-valid publication and treats held or stale data as unavailable. The prior alert snapshot persists the V9 model, schema, methodology, policy, evaluation-build, base-input, and publication identity; any mismatch forces a baseline seed instead of an organic grade-change fan-out.
 
 ### First-Run / Stale-Snapshot Behavior
 
@@ -524,7 +524,7 @@ If the `telegram_preset_subscriptions` query throws (transient D1 failure) or `r
 - New active depeg events by comparing current active-depeg snapshot to the prior snapshot
 - Depeg worsening milestones by comparing current active event severity to the prior snapshot
 - Depeg resolutions by checking which prior active depegs disappeared and then loading the corresponding closed event rows; only rows with recovery close reasons (`recovered-primary`, `recovered-dex`, `recovered-native`) emit "Depeg Resolved"
-- Safety-grade changes by comparing the previous `alert:safety-snapshot` against the live safety source cache written by `publish-report-card-cache`
+- Safety-grade changes by comparing the previous `alert:safety-snapshot` against the current canonical V9 publication
 - Safety-grade changes are emitted only when the live safety source cache is generation-valid; fallback-to-history no longer rewrites the alert snapshot as if it were a valid live source
 - Launch promotions by comparing the current launch snapshot to `alert:launch-snapshot`
 - Reserve-drift transitions by comparing the producer's current drift id-set (`alert:reserve-snapshot`) to the dispatch baseline (`alert:reserve-dispatched-snapshot`); only coins newly entering drift fire (entering-drift only)
@@ -811,7 +811,7 @@ Additional Telegram bot status metrics now include:
 `worker/src/cron/telegram-degradation-watchdog.ts` runs on the 5-minute Telegram lane immediately after `dispatch-telegram-alerts`. It reuses the same-slot pending-capacity snapshot and safety-source assessment when dispatch produced them, falls back to live reads when they are unavailable, and reads fresh dispatch metadata. Capacity reads return an explicit `available` or `unknown` result. An unknown D1 read degrades watchdog telemetry and preserves the existing onset keys unchanged; it never fabricates an empty queue or recovery:
 
 - Pending delivery risk: active pending rows exceed 500, oldest pending age is at least 15 minutes, estimated drain time is at least 30 minutes, any row is inside the 15-minute near-TTL window, or execution-unknown work is at least 15 minutes old. Count/age/drain/execution-unknown breaches use the sustained window (`telegram:degradation:pending-since`); near-TTL alerts immediately.
-- `alert:safety-source-cache` reports `state != "ok"` for more than two `publish-report-card-cache` intervals (cache key `telegram:degradation:safety-source-since`).
+- The canonical V9 safety assessment reports `state != "ok"` for more than two `compute-safety-score-v9` intervals (cache key `telegram:degradation:safety-source-since`).
 - The most recent `dispatch-telegram-alerts` cron run reported `eventsDetected > 0`, `freshCandidateChats > 0`, and `messagesSent == 0` for three consecutive distinct runs (cache key `telegram:degradation:zero-send-streak`). The cached JSON stores both the streak and the last evaluated `cron_runs.id`, so repeated watchdog evaluation of one row cannot advance the streak; legacy integer values remain readable during rollout.
 
 `GET /api/health.telegramSummary` uses the same lifecycle vocabulary and returns `pendingDeliveries: null` with `pendingDeliveryLifecycleStatus: "unknown"` if the capacity query fails. `/api/status.telegramBot.pendingDeliveries` counts only active claimable plus deferred rows rather than expired or in-flight cleanup states.

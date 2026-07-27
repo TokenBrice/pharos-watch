@@ -1,5 +1,5 @@
-import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
-import { safetyScoreV8MethodologyIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
+import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   YieldRankingsResponseSchema,
@@ -362,9 +362,9 @@ function hydrateAltSourcesWithLiveSafety(row: YieldRanking, underlyingSafetyScor
 }
 
 interface LiveSafetyHydrationSource {
-  source: "report-card-cache";
-  expectedModel?: "v8" | "v9";
-  safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
+  source: "safety-score-v9-publication";
+  expectedModel?: "v9";
+  safetyScoreIdentity: SafetyScorePublicationIdentity | null;
   publicationGenerationId: string | null;
   methodologyVersion: string | null;
   publishedAt: number | null;
@@ -547,10 +547,13 @@ function hydrateYieldRankingsWithLiveSafety(
 
 function hasCompatibleSafetyIdentity(
   payload: YieldRankingsResponse,
-  identity: SafetyScoreV8PublicationIdentity,
+  identity: SafetyScorePublicationIdentity,
 ): boolean {
   const published = payload.provenance?.safetySnapshot.safetyScoreIdentity;
-  return published != null && safetyScoreV8MethodologyIdentitiesMatch(published, identity);
+  return (
+    published != null &&
+    safetyScorePublicationIdentitiesAreComparable(published, identity)
+  );
 }
 
 function removeSafetyDerivedSourceRisk(sourceRisk: YieldRanking["sourceRisk"]): YieldRanking["sourceRisk"] {
@@ -697,7 +700,7 @@ function createYieldRankingsCacheHandler(
           sourceMode: "published-cache",
         });
         const hydrationSource: LiveSafetyHydrationSource = {
-          source: "report-card-cache",
+          source: "safety-score-v9-publication",
           expectedModel: snapshot.expectedModel,
           safetyScoreIdentity: snapshot.safetyScoreIdentity,
           publicationGenerationId: snapshot.publicationGenerationId,
@@ -732,7 +735,7 @@ function createYieldRankingsCacheHandler(
       } catch (err) {
         console.warn("[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
         const hydrationSource: LiveSafetyHydrationSource = {
-          source: "report-card-cache",
+          source: "safety-score-v9-publication",
           expectedModel: validatedPayload.provenance?.safetySnapshot.expectedModel,
           safetyScoreIdentity: null,
           publicationGenerationId: null,

@@ -3,7 +3,7 @@
 import { act, cleanup, render } from "@testing-library/react";
 import { createRef, type ImgHTMLAttributes } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { makeStablecoin } from "@/test/fixtures/safety-scores";
+import { makeStablecoin } from "@/test/fixtures/stablecoins";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { StablecoinData, StablecoinMeta } from "@shared/types";
 

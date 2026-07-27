@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ReportCardsV9TransitionResponse } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import { describe, expect, it } from "vitest";
 import { SafetyScoreV9StatusNotice } from "../safety-score-v9-status-notice";
 
@@ -16,7 +16,7 @@ describe("SafetyScoreV9StatusNotice", () => {
           },
         ],
       },
-    } as unknown as ReportCardsV9TransitionResponse;
+    } as unknown as ReportCardsV9CurrentResponse;
 
     const markup = renderToStaticMarkup(
       <SafetyScoreV9StatusNotice response={response} />,

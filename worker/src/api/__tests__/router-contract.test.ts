@@ -32,7 +32,6 @@ function makeRouteCtx(overrides: Partial<FullRouteContext> & { url: URL }): Full
 // Cache-backed public snapshots have dedicated handler tests; this broad route
 // sweep only needs to prove they stay registered.
 const REGISTRATION_ONLY_PATHS = new Set([
-  "/api/report-cards",
   "/api/report-cards/v9",
   "/api/depeg-resolver",
   "/api/depeg-resolver-review",

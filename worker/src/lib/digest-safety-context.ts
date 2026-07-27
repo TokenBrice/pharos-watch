@@ -110,7 +110,7 @@ export function digestSafetyContextFromPersistedInput(input: unknown): DigestSaf
   }
   return {
     status: "unavailable",
-    expectedModel: "v8",
+    expectedModel: "v9",
     identity: null,
     publishedAt: null,
     reason: LEGACY_UNBOUND_DIGEST_SAFETY_REASON,

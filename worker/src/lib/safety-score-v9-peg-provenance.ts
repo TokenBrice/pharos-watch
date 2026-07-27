@@ -22,7 +22,7 @@ const EXACT_SEED_MAX_BYTES = 1_900_000;
 export const SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY =
   "report-cards:v9-peg-provenance-seed:exact";
 
-export const SAFETY_SCORE_V9_PEG_EVIDENCE_CLASSES = [
+const SAFETY_SCORE_V9_PEG_EVIDENCE_CLASSES = [
   "provenance-high",
   "provenance-medium",
   "provenance-low",
@@ -130,7 +130,7 @@ const PegProvenanceEventSchema = z
         message: "A closed event must end after it starts",
       });
     }
-    // V8 scoring uses the signed peak and ignores direction. Historical rows
+    // The prepared peg summary uses the signed peak and ignores direction. Historical rows
     // contain known direction/sign disagreements, so bind that metadata in the
     // event digest without rejecting or silently rewriting the scored event.
   });
@@ -395,7 +395,7 @@ const SafetyScoreV9PegProvenanceSeedSchema = z
         code: "custom",
         path: ["sourceGeneration"],
         message:
-          "Exact peg-provenance seed generation does not match its V8 identity",
+          "Exact peg-provenance seed generation does not match its base-input identity",
       });
     }
     for (const [assetId, summary] of Object.entries(

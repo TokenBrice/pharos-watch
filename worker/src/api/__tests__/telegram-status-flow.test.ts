@@ -57,14 +57,14 @@ describe("buildStatusMessage canonical safety provenance", () => {
       safety: {
         grade: "A",
         score: 90,
-        model: "v8",
-        methodologyVersion: "v8.17",
-        publicationGenerationId: "report-cards:v8.17:123",
+        model: "v9",
+        methodologyVersion: "9.0",
+        publicationGenerationId: "report-cards:v9:123",
         publishedAt: Math.floor(Date.now() / 1000),
         recordedAt: Math.floor(Date.now() / 1000),
       },
     });
-    expect(buildStatusMessage("USDC", source)).toContain("Safety: A (90) [V8 v8.17]");
+    expect(buildStatusMessage("USDC", source)).toContain("Safety: A (90) [V9 9.0]");
     expect(
       buildStatusMessage("USDC", baseStatus({ safetyUnavailableReason: "canonical-snapshot-unavailable" })),
     ).toContain("Safety: temporarily unavailable");

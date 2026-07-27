@@ -60,7 +60,7 @@ export async function loadVersionedSnapshotCache<TPayload, TReason extends strin
   return parseVersionedSnapshotCache(await getCache(db, options.cacheKey), options);
 }
 
-export function parseVersionedSnapshotCache<TPayload, TReason extends string>(
+function parseVersionedSnapshotCache<TPayload, TReason extends string>(
   cached: { value: string; updatedAt: number } | null,
   options: VersionedSnapshotCacheOptions<TPayload, TReason>,
 ): VersionedSnapshotCacheLoadResult<TPayload, TReason> {
@@ -110,7 +110,7 @@ export async function writeVersionedSnapshotCache<TPayload, TReason extends stri
   await setCache(db, options.cacheKey, buildVersionedSnapshotCacheValue(snapshot, options));
 }
 
-export function buildVersionedSnapshotCacheValue<TPayload, TReason extends string>(
+function buildVersionedSnapshotCacheValue<TPayload, TReason extends string>(
   snapshot: TPayload,
   options: VersionedSnapshotCacheOptions<TPayload, TReason>,
 ): string {

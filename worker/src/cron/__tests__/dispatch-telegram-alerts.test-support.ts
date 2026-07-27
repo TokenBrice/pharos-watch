@@ -2,7 +2,10 @@ import { DatabaseSync } from "node:sqlite";
 import { vi } from "vitest";
 import { mockCircuitBreaker } from "../../test-helpers/cron";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { getAlertSafetySourceGeneration } from "../../lib/alert-safety-source-cache";
+import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { scoreToGrade } from "@shared/lib/report-cards";
+import { getAlertSafetyV9SourceGeneration } from "../../lib/alert-safety-source-cache";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 
 const STABLECOINS_CACHE_WITH_USDC = JSON.stringify({
@@ -25,11 +28,13 @@ const fixtureSqliteDatabases: DatabaseSync[] = [];
 
 function safetyScoreIdentity(publicationGenerationId: string) {
   return {
-    model: "v8" as const,
+    model: "v9" as const,
     schemaVersion: 1 as const,
-    methodologyVersion: "7.10",
-    evaluationBuildDigest: "a".repeat(64),
-    baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+    methodologyVersion: "9.0",
+    policyId: "safety-score-v9",
+    policyDigest: "a".repeat(64),
+    evaluationBuildDigest: "b".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
     publicationGenerationId,
   };
 }
@@ -137,43 +142,123 @@ const { buildDedupeKey, emptyDrainResult } = await import("../telegram-pending")
 const { TELEGRAM_MAX_MESSAGES_PER_RUN, TELEGRAM_FORMAT_BUDGET_ALLOWANCE, TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } =
   await import("../../lib/telegram-constants");
 
-function makeSafetySourceCache(
+function makeCanonicalSafetySourceCaches(
   snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,
   publishedAt: number,
-  generation = getAlertSafetySourceGeneration(),
 ) {
-  const publicationGenerationId = `report-cards:7.10:${publishedAt}`;
-  const notRatedIds = Object.entries(snapshot).flatMap(([id, row]) => (row.score === null ? [id] : []));
-  return {
-    value: JSON.stringify({
-      generation,
-      safetyScoreIdentity: safetyScoreIdentity(publicationGenerationId),
-      publicationGenerationId,
-      methodologyVersion: "7.10",
-      publishedAt,
-      completeness: {
-        generationId: publicationGenerationId,
-        methodologyVersion: "7.10",
-        expectedCount: Object.keys(snapshot).length,
-        scoredCount: Object.keys(snapshot).length - notRatedIds.length,
-        notRatedCount: notRatedIds.length,
-        notRatedIds,
-      },
-      snapshot,
-    }),
-    updatedAt: publishedAt,
+  const representativeScoreByGrade: Record<string, number | null> = {
+    "A+": 90,
+    A: 85,
+    "A-": 81,
+    "B+": 77,
+    B: 72,
+    "B-": 66,
+    "C+": 62,
+    C: 57,
+    "C-": 52,
+    D: 45,
+    F: 20,
+    NR: null,
   };
+  const publicationGenerationId = `report-cards:v9:${publishedAt}`;
+  const publication = makeWorkerSafetyScoreV9Publication({
+    publicationGenerationId,
+    publishedAtSec: publishedAt,
+    asOfSec: publishedAt,
+    cards: Object.entries(snapshot)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([id, row]) =>
+        makeWorkerV9Card({
+          id,
+          grade: row.grade as ReturnType<typeof makeWorkerV9Card>["grade"],
+          score:
+            row.score !== null && scoreToGrade(row.score) === row.grade
+              ? row.score
+              : representativeScoreByGrade[row.grade] ?? row.score,
+        }),
+      ),
+  });
+  const publicationHealth = {
+    schemaVersion: 1 as const,
+    status: "current" as const,
+    acceptedPublicationGenerationId: publicationGenerationId,
+    acceptedAtSec: publishedAt,
+    attemptedAtSec: publishedAt,
+    heldSinceSec: null,
+    reasons: [],
+  };
+  return {
+    publication: {
+      value: stableJsonStringifyV1(publication),
+      updatedAt: publishedAt,
+    },
+    publicationHealth: {
+      value: stableJsonStringifyV1(publicationHealth),
+      updatedAt: publishedAt,
+    },
+  };
+}
+
+function seedActiveSafetySource(
+  harness: Pick<DispatchHarness, "cache">,
+  snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,
+  publishedAt: number,
+): void {
+  const caches = makeCanonicalSafetySourceCaches(snapshot, publishedAt);
+  harness.cache(
+    "report-cards:v9",
+    caches.publication.value,
+    caches.publication.updatedAt,
+  );
+  harness.cache(
+    "report-cards:v9:publication-health",
+    caches.publicationHealth.value,
+    caches.publicationHealth.updatedAt,
+  );
 }
 
 function makeSafetySnapshotCache(
   snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,
-  generation = getAlertSafetySourceGeneration(),
+  generation = getAlertSafetyV9SourceGeneration(),
 ) {
   return {
     value: JSON.stringify({
       generation,
-      safetyScoreIdentity: safetyScoreIdentity("report-cards:7.10:baseline"),
-      snapshot,
+      safetyScoreIdentity: safetyScoreIdentity("report-cards:v9:baseline"),
+      snapshot: Object.fromEntries(
+        Object.entries(snapshot).map(([id, row]) => [
+          id,
+          {
+            ...row,
+            methodologyVersion: "9.0",
+            v9Explain: {
+              reasons: [],
+              bindingCap: null,
+              weakestPillar:
+                row.score === null
+                  ? null
+                  : { pillar: "backing", score: row.score },
+              pillars: {
+                backing: {
+                  score: row.score,
+                  evidenceLevel: "adequate",
+                  freshness: "current",
+                },
+                exit: {
+                  score: row.score,
+                  evidenceLevel: "adequate",
+                  freshness: "current",
+                },
+                control: {
+                  score: row.score,
+                  evidenceLevel: "adequate",
+                  freshness: "current",
+                },
+              },
+            },
+          },
+        ]),
+      ),
     }),
     updatedAt: Math.floor(Date.now() / 1000) - 60,
   };
@@ -809,11 +894,13 @@ function recordPendingEnqueueAttempts(sqlite: DatabaseSync): void {
 
 function defaultDispatchCaches(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const now = nowSec();
+  const safety = makeCanonicalSafetySourceCaches({}, now - 60);
   return {
     "alert:dews-snapshot": {},
     "alert:depeg-snapshot": {},
-    "alert:safety-snapshot": makeSafetySnapshotCache({}, getAlertSafetySourceGeneration()).value,
-    "alert:safety-source-cache": makeSafetySourceCache({}, now - 60).value,
+    "alert:safety-snapshot": makeSafetySnapshotCache({}, getAlertSafetyV9SourceGeneration()).value,
+    "report-cards:v9": safety.publication.value,
+    "report-cards:v9:publication-health": safety.publicationHealth.value,
     ...overrides,
   };
 }
@@ -837,7 +924,7 @@ export {
   TELEGRAM_MAX_MESSAGES_PER_RUN,
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
   TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
-  makeSafetySourceCache,
+  seedActiveSafetySource,
   makeSafetySnapshotCache,
   makeDewsOverflowPlan,
   parseLogRecords,

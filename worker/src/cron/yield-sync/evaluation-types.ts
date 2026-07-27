@@ -14,7 +14,7 @@ import type { YieldSourceRisk } from "@shared/types/yield";
 import type { ParsedYieldBenchmarkMeta } from "./benchmarks";
 import type { YieldBenchmarkFreshness } from "./benchmarks";
 import type { YieldSourceFreshness } from "../yield-helpers";
-import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
+import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 
 export type ConfidenceTier = "deterministic" | "curated" | "discovered" | "fallback";
 
@@ -51,7 +51,7 @@ export interface EvaluatedYieldSource {
   safetyGrade: string;
   safetyProvenance: YieldSafetyProvenance;
   safetyReason: YieldSafetyReason | null;
-  safetyScoreIdentity?: SafetyScoreV8PublicationIdentity | null;
+  safetyScoreIdentity?: SafetyScorePublicationIdentity | null;
   yieldToRisk: number | null;
   excessYield: number;
   benchmarkKey: YieldBenchmarkKey;

@@ -4,7 +4,6 @@ import {
   buildDewsSnapshot,
   buildDewsAlertableSnapshot,
   buildDepegSnapshot,
-  buildSafetySnapshot,
   filterAlertableBands,
   parseSnapshotMap,
   isSnapshotMissingOrStale,
@@ -15,7 +14,6 @@ import {
   SNAPSHOT_MAX_AGE_SEC,
   type DewsRow,
   type ActiveDepegRow,
-  type SafetyRow,
 } from "../telegram-alert-snapshots";
 
 afterEach(() => {
@@ -153,38 +151,6 @@ describe("buildDepegSnapshot", () => {
         price: 0.406,
       }),
     );
-  });
-});
-
-describe("buildSafetySnapshot", () => {
-  it("maps safety rows to grade/score/version", () => {
-    const rows: SafetyRow[] = [{
-      stablecoin_id: "usdc-circle",
-      grade: "A",
-      score: 92,
-      prev_grade: "B+",
-      prev_score: 85,
-      recorded_at: 1000,
-      methodology_version: "v2",
-    }];
-    expect(buildSafetySnapshot(rows)).toEqual({
-      "usdc-circle": { grade: "A", score: 92, methodologyVersion: "v2" },
-    });
-  });
-
-  it("handles null score and methodology_version", () => {
-    const rows: SafetyRow[] = [{
-      stablecoin_id: "x",
-      grade: "NR",
-      score: null,
-      prev_grade: null,
-      prev_score: null,
-      recorded_at: 1000,
-      methodology_version: null,
-    }];
-    expect(buildSafetySnapshot(rows)).toEqual({
-      x: { grade: "NR", score: null, methodologyVersion: null },
-    });
   });
 });
 

@@ -12,22 +12,18 @@ import { computeGaugeScore, detectFlightToQuality, getGaugeBand } from "../lib/m
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import type { StablecoinData } from "@shared/types/market";
 import { sumMcapForTrackedChains } from "../lib/mint-burn-mcap-weighting";
-import { loadReportCardCache } from "../lib/report-card-cache";
 import {
-  buildFlightToQualityClassificationFromV8Cache,
   buildFlightToQualityClassificationFromV9Snapshot,
   type FlightToQualityClassification,
 } from "../lib/flight-to-quality-classification";
 import { buildInClause } from "../lib/db";
 import { isRecord } from "@shared/lib/type-guards";
-import { safetyScoreV8PublicationIdentitiesMatch } from "@shared/lib/safety-score-v8-publication";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { tryParseJson } from "../lib/json-parse";
 import { logWorkerEvent } from "../lib/structured-log";
 import {
   SafetyScorePublicationIdentitySchema,
   type SafetyScorePublicationIdentity,
-  type SafetyScoreV8PublicationIdentity,
 } from "@shared/types/safety-score-publication";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 import {
@@ -49,7 +45,6 @@ import {
   buildAggregateScope,
   buildCoinSummaries,
   fetchAggregateData,
-  REPORT_CARD_MAX_AGE_MS,
   TRACKED_IDS,
 } from "./mint-burn-flows/aggregate";
 
@@ -99,26 +94,14 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
         buildFlightToQualityClassificationFromV9Snapshot(
           active.snapshot,
           {
-            allowShadowLifecycle: true,
             expectedIdentity: active.snapshot.safetyScoreIdentity,
           },
         );
-    } else if (active.kind === "error") {
+    } else {
       classification = {
         kind: "unavailable",
         reason: active.reason,
       };
-    } else {
-      const reportCardCache = await loadReportCardCache(db, {
-        maxAgeMs: REPORT_CARD_MAX_AGE_MS,
-        requireCompleteness: true,
-      });
-      classification =
-        reportCardCache.kind === "ok"
-          ? buildFlightToQualityClassificationFromV8Cache(
-              reportCardCache.payload,
-            )
-          : { kind: "unavailable", reason: reportCardCache.reason };
     }
   } catch (error) {
     logWorkerEvent({
@@ -134,7 +117,10 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const gradeClassification = classification.kind === "ok" ? classification.classification : null;
   const classificationWarning =
     classification.kind === "ok" ? null : `Report-card FTQ classification unavailable (${classification.reason})`;
-  const classificationSource = classification.kind === "ok" ? "report-card-cache" : "unavailable";
+  const classificationSource =
+    classification.kind === "ok"
+      ? "safety-score-v9-publication"
+      : "unavailable";
   const safetyScoreIdentity = classification.kind === "ok" ? classification.classification.safetyScoreIdentity : null;
   if (classificationWarning) console.warn(`[mint-burn-flows] ${classificationWarning}`);
 
@@ -221,21 +207,6 @@ function cachedAggregateSafetyIdentity(payload: Record<string, unknown>): Safety
   return parsed.success ? parsed.data : null;
 }
 
-function cachedAggregateSafetyReason(
-  cachedIdentity: SafetyScoreV8PublicationIdentity,
-  reportCardCache: Awaited<ReturnType<typeof loadReportCardCache>>,
-): string | null {
-  if (reportCardCache.kind !== "ok") return reportCardCache.reason;
-
-  const classification = buildFlightToQualityClassificationFromV8Cache(reportCardCache.payload);
-  if (classification.kind !== "ok") return classification.reason;
-  if (classification.classification.safetyScoreIdentity.model !== "v8") return "identity-mismatch";
-
-  return safetyScoreV8PublicationIdentitiesMatch(cachedIdentity, classification.classification.safetyScoreIdentity)
-    ? null
-    : "identity-mismatch";
-}
-
 /**
  * Aggregate flow cache rows retain their FTQ cohort identity. A cache may be
  * served for flow freshness, but never with an FTQ decision from another
@@ -257,18 +228,11 @@ async function reconcileCachedAggregateSafetyResponse(
   if (cachedIdentity) {
     try {
       const active = await loadActiveSafetyScoreSource(db);
-      if (cachedIdentity.model === "v9") {
-        if (active.kind !== "v9") {
-          reason =
-            active.kind === "error"
-              ? active.reason
-              : "identity-mismatch";
-        } else {
+      if (active.kind === "v9") {
           const current =
             buildFlightToQualityClassificationFromV9Snapshot(
               active.snapshot,
               {
-                allowShadowLifecycle: true,
                 expectedIdentity:
                   active.snapshot.safetyScoreIdentity,
               },
@@ -282,21 +246,8 @@ async function reconcileCachedAggregateSafetyResponse(
                   )
                 ? null
                 : "identity-mismatch";
-        }
-      } else if (active.kind !== "v8") {
-        reason =
-          active.kind === "error"
-            ? active.reason
-            : "identity-mismatch";
       } else {
-        const reportCardCache = await loadReportCardCache(db, {
-          maxAgeMs: REPORT_CARD_MAX_AGE_MS,
-          requireCompleteness: true,
-        });
-        reason = cachedAggregateSafetyReason(
-          cachedIdentity,
-          reportCardCache,
-        );
+        reason = active.kind === "error" ? active.reason : "identity-mismatch";
       }
     } catch (error) {
       logWorkerEvent({

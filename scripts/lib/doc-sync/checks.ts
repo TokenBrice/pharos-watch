@@ -50,25 +50,12 @@ import {
   SAFETY_SCORE_METHODOLOGY_VERSION,
   YIELD_METHODOLOGY_VERSION,
 } from "../../../shared/lib/methodology-versions/constants";
-import {
-  DIMENSION_WEIGHTS,
-  GRADE_THRESHOLDS,
-  NO_LIQUIDITY_PENALTY,
-  PEG_MULTIPLIER_EXPONENT,
-} from "../../../shared/lib/report-cards";
-import {
-  ACTIVE_DEPEG_CAP_D_BPS,
-  ACTIVE_DEPEG_CAP_D_SCORE,
-  ACTIVE_DEPEG_CAP_F_BPS,
-  ACTIVE_DEPEG_CAP_F_SCORE,
-  REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
-} from "../../../shared/lib/report-card-active-depeg";
+import { V9_CANDIDATE_POLICY_V1 } from "../../../shared/lib/safety-score-v9/policy";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "../../../shared/lib/redemption-backstops";
 import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   METHODOLOGY_DOC_VERSION_CHECKS,
   METHODOLOGY_PROVENANCE_FILES,
-  SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
 } from "./methodology-manifest";
 
 function checkMethodologyVersions(failures: Failure[]): void {
@@ -97,87 +84,47 @@ function checkMethodologyCommitProvenance(failures: Failure[]): void {
 function checkReportCardsDoc(failures: Failure[]): void {
   const file = "docs/report-cards.md";
   const doc = read(file);
-  const expectedVersion = SAFETY_SCORE_METHODOLOGY_VERSION_LABEL;
+  const policy = V9_CANDIDATE_POLICY_V1.policy;
 
   expectEqual(
     failures,
     file,
-    "overall grade version heading",
-    findLineValue(doc, /## Overall Grade \((v[\d.]+)\)/),
-    expectedVersion,
-  );
-  expectEqual(
-    failures,
-    file,
-    "current-version note",
-    findLineValue(doc, /Current-version note: (v[\d.]+)/),
-    expectedVersion,
+    "active safety model",
+    findLineValue(doc, /Active model: `([^`]+)`/),
+    "v9",
   );
 
-  const dimensionRowLabels = {
-    liquidity: "**Liquidity / Exit**",
-    resilience: "**Resilience**",
-    decentralization: "**Decentralization**",
-    dependencyRisk: "**Dependency Risk**",
-  } satisfies Record<"liquidity" | "resilience" | "decentralization" | "dependencyRisk", string>;
+  const pillarRowLabels = {
+    backing: "Backing",
+    exit: "Exit",
+    control: "Economic Control",
+  } satisfies Record<keyof typeof policy.semantic.formula.pillarWeights, string>;
 
-  for (const [key, rowLabel] of Object.entries(dimensionRowLabels) as Array<[keyof typeof dimensionRowLabels, string]>) {
+  for (const [key, rowLabel] of Object.entries(pillarRowLabels) as Array<[keyof typeof pillarRowLabels, string]>) {
     const row = requireTableRow(doc, file, rowLabel);
     expectNumber(
       failures,
       file,
-      `dimension weight ${key}`,
+      `pillar weight ${key}`,
       getFirstNumberFromText(row[0]),
-      DIMENSION_WEIGHTS[key] * 100,
+      policy.semantic.formula.pillarWeights[key] * 100,
     );
   }
 
-  expectEqual(
-    failures,
-    file,
-    "peg multiplier exponent",
-    findLineValue(doc, /\(pegScore \/ 100\) \^ ([0-9.]+)/),
-    PEG_MULTIPLIER_EXPONENT.toFixed(2),
-  );
-  expectEqual(
-    failures,
-    file,
-    "no-liquidity penalty",
-    findLineValue(doc, /final × ([0-9.]+)/),
-    String(NO_LIQUIDITY_PENALTY),
-  );
-
-  const activeCapNumbers = getAllNumbersFromText(
-    findLineValue(doc, /Active depeg cap\*\*: ([^\n]+)/) ?? "",
-  );
-  expectNumber(failures, file, "active depeg F threshold", activeCapNumbers[0] ?? null, ACTIVE_DEPEG_CAP_F_BPS);
-  expectNumber(failures, file, "active depeg F cap score", activeCapNumbers[2] ?? null, ACTIVE_DEPEG_CAP_F_SCORE);
-  expectNumber(failures, file, "active depeg D threshold", activeCapNumbers[3] ?? null, ACTIVE_DEPEG_CAP_D_BPS);
-  expectNumber(failures, file, "active depeg D cap score", activeCapNumbers[5] ?? null, ACTIVE_DEPEG_CAP_D_SCORE);
-
-  const severeRedemptionThreshold = getFirstNumberFromText(
-    findLineValue(doc, /During severe active depegs \(`activeDepegBps >= ([^)]+)`\)/) ?? "",
-  );
-  expectNumber(
-    failures,
-    file,
-    "redemption severe active depeg threshold",
-    severeRedemptionThreshold,
-    REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS,
-  );
-
-  if (!doc.includes("When the current redemption-backstop snapshot is stale or missing")) {
-    failures.push({
-      file,
-      label: "stale redemption suppression",
-      expected: "docs mention stale redemption snapshot suppression",
-      found: null,
-    });
-  }
-
-  for (const { grade, min } of GRADE_THRESHOLDS) {
-    const row = requireTableRow(doc, file, grade);
-    expectNumber(failures, file, `grade threshold ${grade}`, getFirstNumberFromText(row[0]), min);
+  for (const requiredText of [
+    "`GET /api/report-cards/v9`",
+    "`report-cards:v9`",
+    "`report-cards:v9:publication-health`",
+    "at least 90% of active assets remain unaffected",
+  ]) {
+    if (!doc.includes(requiredText)) {
+      failures.push({
+        file,
+        label: "canonical V9 publication contract",
+        expected: requiredText,
+        found: null,
+      });
+    }
   }
 }
 
@@ -379,7 +326,7 @@ function checkApiMethodologyExamples(failures: Failure[], doc: string): void {
       markers: [`"currentVersion": "${PSI_METHODOLOGY_VERSION}"`, `"methodologyVersion": "${PSI_METHODOLOGY_VERSION}"`],
     },
     {
-      route: "GET /api/report-cards",
+      route: "GET /api/report-cards/v9",
       markers: [
         `"version": "${SAFETY_SCORE_METHODOLOGY_VERSION}"`,
         `"methodologyVersion": "${SAFETY_SCORE_METHODOLOGY_VERSION}"`,

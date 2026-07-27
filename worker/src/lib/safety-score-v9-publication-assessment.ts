@@ -3,14 +3,18 @@ import type {
 } from "@shared/types/report-cards-v9";
 import type {
   SafetyScoreV9Card,
-  SafetyScoreV9Response,
+  SafetyScoreV9CurrentResponse,
 } from "@shared/types/safety-score-v9-public";
 import type { V9Grade } from "@shared/types/safety-score-v9";
 import { z } from "zod";
-import type {
-  SafetyScoreV9CoverageFloor,
-  SafetyScoreV9ShadowEnvelope,
-} from "./safety-score-v9-shadow";
+
+export interface V9PublicationCoverageFloor {
+  id: string;
+  status: "pass" | "fail";
+  observed: number | null;
+  required: string;
+  detail: string;
+}
 
 export const V9PublicationInputHealthSchema = z
   .object({
@@ -43,6 +47,9 @@ export type V9PublicationInputHealth = z.infer<
 export type V9PublicationAssessment =
   | { decision: "publish"; reasons: [] }
   | { decision: "hold"; reasons: V9PublicationHoldReason[] };
+
+/** Minimum share of candidate assets without newly binding producer-failed deterioration. */
+const V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_SHARE = 0.9;
 
 const GRADE_RANK: Record<V9Grade, number> = {
   "A+": 11,
@@ -98,8 +105,8 @@ function cardDeteriorated(
 }
 
 function scoringIdentityMatches(
-  candidate: SafetyScoreV9Response,
-  accepted: SafetyScoreV9Response,
+  candidate: SafetyScoreV9CurrentResponse,
+  accepted: SafetyScoreV9CurrentResponse,
 ): boolean {
   return (
     candidate.policyVersion === accepted.policyVersion &&
@@ -129,15 +136,39 @@ function inputHealthReasons(
   return reasons;
 }
 
+function producerFailuresRequireGlobalHold(
+  reasons: readonly Extract<
+    V9PublicationHoldReason,
+    { code: "producer-failed-downgrade" | "producer-failed-nr" }
+  >[],
+  totalAssetCount: number,
+): boolean {
+  const affectedAssetIds = [...new Set(reasons.map((reason) => reason.assetId))];
+  if (affectedAssetIds.length === 0) return false;
+  if (totalAssetCount <= 0 || affectedAssetIds.length > totalAssetCount) {
+    return true;
+  }
+  const healthyAssetShare =
+    (totalAssetCount - affectedAssetIds.length) / totalAssetCount;
+  return (
+    healthyAssetShare <
+    V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_SHARE
+  );
+}
+
 export function assessV9Publication(input: {
   inputHealth: V9PublicationInputHealth;
-  candidate: SafetyScoreV9Response;
-  acceptedEnvelope: SafetyScoreV9ShadowEnvelope | null;
-  coverageFloors: readonly SafetyScoreV9CoverageFloor[];
+  candidate: SafetyScoreV9CurrentResponse;
+  acceptedPublication: SafetyScoreV9CurrentResponse | null;
+  coverageFloors: readonly V9PublicationCoverageFloor[];
 }): V9PublicationAssessment {
   const reasons = inputHealthReasons(
     V9PublicationInputHealthSchema.parse(input.inputHealth),
   );
+  const producerFailureReasons: Extract<
+    V9PublicationHoldReason,
+    { code: "producer-failed-downgrade" | "producer-failed-nr" }
+  >[] = [];
   const failedFloorIds = input.coverageFloors
     .filter((floor) => floor.status === "fail")
     .map((floor) => floor.id)
@@ -150,14 +181,14 @@ export function assessV9Publication(input: {
   }
 
   if (
-    input.acceptedEnvelope !== null &&
+    input.acceptedPublication !== null &&
     scoringIdentityMatches(
       input.candidate,
-      input.acceptedEnvelope.candidate,
+      input.acceptedPublication,
     )
   ) {
     const acceptedById = new Map(
-      input.acceptedEnvelope.candidate.cards.map((card) => [card.id, card]),
+      input.acceptedPublication.cards.map((card) => [card.id, card]),
     );
     for (const candidate of input.candidate.cards) {
       const accepted = acceptedById.get(candidate.id);
@@ -177,7 +208,7 @@ export function assessV9Publication(input: {
           : "score-or-grade-downgrade";
       for (const binding of producerFailedBindings(candidate)) {
         if (acceptedBindings.has(bindingKey(binding, effect))) continue;
-        reasons.push({
+        producerFailureReasons.push({
           code:
             effect === "not-rated"
               ? "producer-failed-nr"
@@ -190,6 +221,14 @@ export function assessV9Publication(input: {
         });
       }
     }
+  }
+  if (
+    producerFailuresRequireGlobalHold(
+      producerFailureReasons,
+      input.candidate.cards.length,
+    )
+  ) {
+    reasons.push(...producerFailureReasons);
   }
 
   const boundedReasons = reasons

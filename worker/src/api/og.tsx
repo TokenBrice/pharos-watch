@@ -18,14 +18,12 @@ import { getConditionBand } from "../lib/stability-index";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import type { BackingType } from "@shared/types";
-import { isCurrentSafetyScoreV8Identity } from "../lib/safety-score-current-identity";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9-consumer-freshness";
 
@@ -109,14 +107,14 @@ interface OgSafetyScoreEntry {
 type OgSafetyScoreSource =
   | {
       kind: "ok";
-      model: "v8" | "v9";
+      model: "v9";
       methodologyVersion: string;
       expectedCount: number;
       scores: Record<string, OgSafetyScoreEntry>;
     }
   | {
       kind: "error";
-      expectedModel: "v8" | "v9";
+      expectedModel: "v9";
       reason: string;
     };
 
@@ -130,53 +128,24 @@ async function loadOgSafetyScoreSource(db: D1Database): Promise<OgSafetyScoreSou
     };
   }
 
-  if (active.kind === "v9") {
-    if (!isSafetyScoreV9SnapshotFresh(active.snapshot)) {
-      return {
-        kind: "error",
-        expectedModel: "v9",
-        reason: "stale-cache",
-      };
-    }
+  if (!isSafetyScoreV9SnapshotFresh(active.snapshot)) {
     return {
-      kind: "ok",
-      model: "v9",
-      methodologyVersion: active.snapshot.safetyScoreIdentity.methodologyVersion,
-      expectedCount: active.snapshot.completeness.expectedCount,
-      scores: Object.fromEntries(
-        active.snapshot.cards.map((card) => [
-          card.id,
-          { score: card.score, grade: card.grade },
-        ]),
-      ),
+      kind: "error",
+      expectedModel: "v9",
+      reason: "stale-cache",
     };
   }
-
-  const reportCardCache = await loadReportCardCache(db, {
-    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-    requireCompleteness: true,
-  });
-  if (reportCardCache.kind === "ok" && isCurrentSafetyScoreV8Identity(reportCardCache.payload.safetyScoreIdentity)) {
-    const identity = reportCardCache.payload.safetyScoreIdentity;
-    const scores: Record<string, OgSafetyScoreEntry> = {
-      ...reportCardCache.payload.scores,
-    };
-    for (const id of reportCardCache.payload.completeness?.notRatedIds ?? []) {
-      scores[id] = { score: null, grade: "NR" };
-    }
-    return {
-      kind: "ok",
-      model: "v8",
-      methodologyVersion: identity.methodologyVersion,
-      expectedCount: reportCardCache.payload.completeness?.expectedCount ?? ACTIVE_IDS.size,
-      scores,
-    };
-  }
-
   return {
-    kind: "error",
-    expectedModel: "v8",
-    reason: reportCardCache.kind === "error" ? reportCardCache.reason : "identity-mismatch",
+    kind: "ok",
+    model: "v9",
+    methodologyVersion: active.snapshot.safetyScoreIdentity.methodologyVersion,
+    expectedCount: active.snapshot.completeness.expectedCount,
+    scores: Object.fromEntries(
+      active.snapshot.cards.map((card) => [
+        card.id,
+        { score: card.score, grade: card.grade },
+      ]),
+    ),
   };
 }
 

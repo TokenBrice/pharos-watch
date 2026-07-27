@@ -46,7 +46,7 @@ export function PortfolioClient() {
   // aware initial `p` param seeds the portfolio so a shared/soft-navigated URL
   // restores state without reading window.location inside the hook.
   const { getParam, setParam } = useUrlFilters();
-  const portfolio = usePortfolio(undefined, getParam("p"));
+  const portfolio = usePortfolio(getParam("p"));
 
   // Clean up toast timer on unmount
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);

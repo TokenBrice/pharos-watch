@@ -12,8 +12,7 @@ import {
   type DigestSnapshotResponse,
   type HealthResponse,
   type PegSummaryResponse,
-  type ReportCardsV9TransitionResponse,
-  type ReportCardsResponse,
+  type ReportCardsV9CurrentResponse,
   type RedemptionBackstopsResponse,
   type SafetyScoreHistoryResponse,
   type StabilityContributor,
@@ -178,28 +177,10 @@ export function usePegSummary() {
   return useRegisteredApiQuery<PegSummaryResponse>(FRONTEND_API_QUERY_DESCRIPTORS.pegSummary);
 }
 
-export function useReportCards(overrides?: QueryControlOverrides) {
-  return useRegisteredApiQuery<ReportCardsResponse>(
-    FRONTEND_API_QUERY_DESCRIPTORS.reportCards,
-    // M1: report cards back the safety-grade filters on home + screener.
-    // Keep the prior cards visible across background refetches so toggling a
-    // grade filter doesn't blank the table. Callers can still override.
-    { keepPreviousData: true, ...overrides },
-  );
-}
-
-/** Shadow-only V9 query. Its model-specific key and disabled previous-data
- * retention prevent a V8 or earlier-policy payload from surviving a refetch. */
+/** Canonical V9 query. Its model-specific key and disabled previous-data
+ * retention prevent an earlier-policy payload from surviving a refetch. */
 export function useReportCardsV9(overrides?: V9QueryControlOverrides) {
-  return useRegisteredApiQuery<ReportCardsV9TransitionResponse>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9, {
-    ...overrides,
-    keepPreviousData: false,
-  });
-}
-
-/** Unlisted V9 shadow query using the registered producer polling window. */
-export function useReportCardsV9Preview(overrides?: V9QueryControlOverrides) {
-  return useRegisteredApiQuery<ReportCardsV9TransitionResponse>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Preview, {
+  return useRegisteredApiQuery<ReportCardsV9CurrentResponse>(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9, {
     ...overrides,
     keepPreviousData: false,
   });

@@ -1,55 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { DdrActiveEventInput } from "@shared/lib/depeg-resolver";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
-import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import * as activeSafetyScoreSource from "../../../lib/safety-score-active-source";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../../test-helpers/report-cards-v9";
 import type { DdrEventDbRow } from "../types";
 import { loadDdrContext, type DdrLoadedContext } from "../context";
 import { resolveDdrIncidents } from "../incident-resolution";
 
 const NOW_SEC = 1_780_358_400;
 const DAY = 86_400;
-
-function currentV8ReportCardCacheConfig(overrides: Record<string, { score: number; grade: string }> = {}) {
-  const updatedAt = Math.floor(Date.now() / 1000);
-  const generationId = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${updatedAt}`;
-  const scores = Object.fromEntries(
-    [...ACTIVE_IDS].map((id) => [id, overrides[id] ?? { score: 80, grade: "B+" }]),
-  );
-  return {
-    match: "FROM cache WHERE key = ?",
-    matchBinds: ["report_card_cache"],
-    rows: [],
-    first: {
-      key: "report_card_cache",
-      value: JSON.stringify({
-        scores,
-        updatedAt,
-        methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-        safetyScoreIdentity: {
-          model: "v8",
-          schemaVersion: 1,
-          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-          evaluationBuildDigest: SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST,
-          baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
-          publicationGenerationId: generationId,
-        },
-        publicationGenerationId: generationId,
-        completeness: {
-          generationId,
-          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-          expectedCount: ACTIVE_IDS.size,
-          scoredCount: ACTIVE_IDS.size,
-          notRatedCount: 0,
-          notRatedIds: [],
-        },
-      }),
-      updated_at: updatedAt,
-    },
-  };
-}
 
 function publishedDewsConfigs(signalsJson = "{}") {
   const computedAt = NOW_SEC - 60;
@@ -185,6 +148,23 @@ describe("loadDdrContext", () => {
 
   it("hydrates live DDR inputs from DEWS signals, DEX TVL history, and Safety Score history", async () => {
     const row = activeRow();
+    const snapshot = makeWorkerReportCardsV9Response({
+      asOfSec: NOW_SEC - 120,
+      updatedAt: NOW_SEC - 60,
+      cards: [
+        makeWorkerV9Card({
+          id: "usdc-circle",
+          score: 90,
+          grade: "A",
+        }),
+      ],
+    });
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
+      .mockResolvedValue({
+        kind: "v9",
+        expectedModel: "v9",
+        snapshot,
+      });
     const signalsJson = JSON.stringify({
       signals: {
         black: { value: 80, available: true },
@@ -273,9 +253,6 @@ describe("loadDdrContext", () => {
           },
         ],
       },
-      {
-        ...currentV8ReportCardCacheConfig({ "usdc-circle": { score: 90, grade: "A" } }),
-      },
     ]);
 
     const result = await loadDdrContext(db, [row], NOW_SEC);
@@ -291,7 +268,7 @@ describe("loadDdrContext", () => {
       updated_at: NOW_SEC - 60,
     });
     expect(result.context.safetyByCoin.get("usdc-circle")).toMatchObject({ grade: "A", score: 90 });
-    expect(result.context.safetyContext).toMatchObject({ status: "v8-identified", reason: null });
+    expect(result.context.safetyContext).toMatchObject({ status: "v9-identified", reason: null });
   });
 
   it("degrades rather than resolving from a partially staged DEWS generation", async () => {
@@ -480,7 +457,7 @@ describe("resolveDdrIncidents", () => {
       safetyByCoin: new Map([
         [active.stablecoinId, { stablecoin_id: active.stablecoinId, grade: "A", score: 90, recorded_at: NOW_SEC - DAY }],
       ]),
-      safetyContext: { status: "v8-identified", reason: null, identity: null },
+      safetyContext: { status: "v9-identified", reason: null, identity: null },
     });
 
     const [row] = resolveDdrIncidents(context, NOW_SEC);

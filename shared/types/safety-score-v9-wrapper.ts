@@ -52,7 +52,7 @@ export const V9_WRAPPER_LOCAL_FACT_KEYS = [
 export const V9WrapperLocalFactKeySchema = z.enum(V9_WRAPPER_LOCAL_FACT_KEYS);
 export type V9WrapperLocalFactKey = z.infer<typeof V9WrapperLocalFactKeySchema>;
 
-export const V9WrapperLocalDimensionFactSchema = z
+const V9WrapperLocalDimensionFactSchema = z
   .object({
     disposition: V9WrapperFactDispositionSchema,
     assessment: V9WrapperRiskAssessmentSchema.nullable(),
@@ -105,7 +105,7 @@ export const V9WrapperRiskTransferMechanismSchema = z.enum([
 ]);
 export type V9WrapperRiskTransferMechanism = z.infer<typeof V9WrapperRiskTransferMechanismSchema>;
 
-export const V9WrapperRiskTransferFactSchema = z
+const V9WrapperRiskTransferFactSchema = z
   .object({
     disposition: V9WrapperFactDispositionSchema,
     mechanism: V9WrapperRiskTransferMechanismSchema,

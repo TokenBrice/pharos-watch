@@ -1,17 +1,26 @@
 import { describe, expect, it } from "vitest";
-import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import {
   assessV9Publication,
   type V9PublicationInputHealth,
 } from "../safety-score-v9-publication-assessment";
-import { buildSafetyScoreV9ShadowEnvelope } from "../safety-score-v9-shadow";
 
 const digest = (character: string) => character.repeat(64);
 
 function candidate(
-  card = makeWorkerV9Card({ id: "alpha", score: 80, grade: "A-" }),
-): SafetyScoreV9Response {
+  cards:
+    | SafetyScoreV9CurrentResponse["cards"][number]
+    | SafetyScoreV9CurrentResponse["cards"] = makeWorkerV9Card({
+      id: "alpha",
+      score: 80,
+      grade: "A-",
+    }),
+): SafetyScoreV9CurrentResponse {
+  const cardList = Array.isArray(cards) ? cards : [cards];
+  const notRatedIds = cardList
+    .filter((card) => card.grade === "NR")
+    .map((card) => card.id);
   return {
     model: "v9-critical-path",
     schemaVersion: 5,
@@ -28,23 +37,17 @@ function candidate(
     asOfSec: 1_700_000_000,
     publishedAtSec: 1_700_000_030,
     completeness: {
-      expectedCount: 1,
-      ratedCount: card.grade === "NR" ? 0 : 1,
-      notRatedCount: card.grade === "NR" ? 1 : 0,
-      notRatedIds: card.grade === "NR" ? [card.id] : [],
+      expectedCount: cardList.length,
+      ratedCount: cardList.length - notRatedIds.length,
+      notRatedCount: notRatedIds.length,
+      notRatedIds,
     },
-    cards: [card],
+    cards: cardList,
   };
 }
 
-function acceptedEnvelope(value = candidate()) {
-  return buildSafetyScoreV9ShadowEnvelope({
-    candidate: value,
-    expectedActiveIds: ["alpha"],
-    compilerFactSchemaDigest: digest("f"),
-    producerCapabilityDigest: digest("1"),
-    coverageFloors: [],
-  });
+function acceptedPublication(value = candidate()) {
+  return value;
 }
 
 function currentInputHealth(): V9PublicationInputHealth {
@@ -64,11 +67,12 @@ function currentInputHealth(): V9PublicationInputHealth {
 }
 
 function producerFailedCard(args: {
+  id?: string;
   score: number | null;
-  grade: SafetyScoreV9Response["cards"][number]["grade"];
+  grade: SafetyScoreV9CurrentResponse["cards"][number]["grade"];
 }) {
   const base = makeWorkerV9Card({
-    id: "alpha",
+    id: args.id ?? "alpha",
     score: args.score,
     grade: args.grade,
   });
@@ -135,7 +139,7 @@ describe("Safety Score V9 publication assessment", () => {
       assessV9Publication({
         inputHealth,
         candidate: candidate(),
-        acceptedEnvelope: acceptedEnvelope(),
+        acceptedPublication: acceptedPublication(),
         coverageFloors: [],
       }),
     ).toMatchObject({
@@ -156,7 +160,7 @@ describe("Safety Score V9 publication assessment", () => {
           },
         },
         candidate: candidate(),
-        acceptedEnvelope: acceptedEnvelope(),
+        acceptedPublication: acceptedPublication(),
         coverageFloors: [],
       }),
     ).toEqual({ decision: "publish", reasons: [] });
@@ -166,7 +170,7 @@ describe("Safety Score V9 publication assessment", () => {
     const result = assessV9Publication({
       inputHealth: currentInputHealth(),
       candidate: candidate(),
-      acceptedEnvelope: acceptedEnvelope(),
+      acceptedPublication: acceptedPublication(),
       coverageFloors: [
         {
           id: "active-result-count",
@@ -204,7 +208,7 @@ describe("Safety Score V9 publication assessment", () => {
       candidate: candidate(
         producerFailedCard({ score: 70, grade: "B" }),
       ),
-      acceptedEnvelope: acceptedEnvelope(),
+      acceptedPublication: acceptedPublication(),
       coverageFloors: [],
     });
     expect(downgrade).toMatchObject({
@@ -217,7 +221,7 @@ describe("Safety Score V9 publication assessment", () => {
       candidate: candidate(
         producerFailedCard({ score: null, grade: "NR" }),
       ),
-      acceptedEnvelope: acceptedEnvelope(),
+      acceptedPublication: acceptedPublication(),
       coverageFloors: [],
     });
     expect(nr).toMatchObject({
@@ -230,12 +234,9 @@ describe("Safety Score V9 publication assessment", () => {
       candidate: candidate(
         producerFailedCard({ score: null, grade: "NR" }),
       ),
-      acceptedEnvelope: {
-        ...acceptedEnvelope(),
-        candidate: candidate(
-          producerFailedCard({ score: 70, grade: "B" }),
-        ) as ReturnType<typeof acceptedEnvelope>["candidate"],
-      },
+      acceptedPublication: acceptedPublication(
+        candidate(producerFailedCard({ score: 70, grade: "B" })),
+      ),
       coverageFloors: [],
     });
     expect(newlyBindingNr).toMatchObject({
@@ -244,9 +245,59 @@ describe("Safety Score V9 publication assessment", () => {
     });
   });
 
+  it("publishes while at least 90% of assets remain free of new producer failures", () => {
+    const acceptedCards = Array.from({ length: 10 }, (_, index) =>
+      makeWorkerV9Card({
+        id: `asset-${index}`,
+        score: 80,
+        grade: "A-",
+      }),
+    );
+    const accepted = candidate(acceptedCards);
+    const assessmentInput = {
+      inputHealth: currentInputHealth(),
+      acceptedPublication: accepted,
+      coverageFloors: [],
+    };
+
+    expect(
+      assessV9Publication({
+        ...assessmentInput,
+        candidate: candidate(
+          acceptedCards.map((card, index) =>
+            index === 0
+              ? producerFailedCard({
+                  id: card.id,
+                  score: 70,
+                  grade: "B",
+                })
+              : card,
+          ),
+        ),
+      }),
+    ).toEqual({ decision: "publish", reasons: [] });
+
+    expect(
+      assessV9Publication({
+        ...assessmentInput,
+        candidate: candidate(
+          acceptedCards.map((card, index) =>
+            index < 2
+              ? producerFailedCard({
+                  id: card.id,
+                  score: 70,
+                  grade: "B",
+                })
+              : card,
+          ),
+        ),
+      }),
+    ).toMatchObject({ decision: "hold" });
+  });
+
   it("does not compare producer-failed deterioration across a scoring identity transition", () => {
-    const priorIdentity = acceptedEnvelope();
-    priorIdentity.candidate.evaluationBuildDigest = digest("9");
+    const priorIdentity = acceptedPublication();
+    priorIdentity.evaluationBuildDigest = digest("9");
 
     expect(
       assessV9Publication({
@@ -254,7 +305,7 @@ describe("Safety Score V9 publication assessment", () => {
         candidate: candidate(
           producerFailedCard({ score: 70, grade: "B" }),
         ),
-        acceptedEnvelope: priorIdentity,
+        acceptedPublication: priorIdentity,
         coverageFloors: [],
       }),
     ).toEqual({ decision: "publish", reasons: [] });
@@ -271,13 +322,7 @@ describe("Safety Score V9 publication assessment", () => {
       assessV9Publication({
         inputHealth: currentInputHealth(),
         candidate: chronicCandidate,
-        acceptedEnvelope: {
-          ...acceptedEnvelope(),
-          candidate:
-            chronicAccepted as ReturnType<
-              typeof acceptedEnvelope
-            >["candidate"],
-        },
+        acceptedPublication: chronicAccepted,
         coverageFloors: [],
       }),
     ).toEqual({ decision: "publish", reasons: [] });
@@ -292,7 +337,7 @@ describe("Safety Score V9 publication assessment", () => {
             grade: "B",
           }),
         ),
-        acceptedEnvelope: acceptedEnvelope(),
+        acceptedPublication: acceptedPublication(),
         coverageFloors: [],
       }),
     ).toEqual({ decision: "publish", reasons: [] });

@@ -111,9 +111,9 @@ describe("runYieldCoverageAudit", () => {
       coveredCount: 0,
       trackedCount: 1,
       coverageRatio: 0,
-      reason: "report-card-cache:completeness-mismatch",
+      reason: "safety-score-v9-publication:completeness-mismatch",
       scores: new Map(),
-      source: "report-card-cache",
+      source: "safety-score-v9-publication",
       expectedModel: "v8",
       safetyScoreIdentity: null,
       publicationGenerationId: null,
@@ -126,7 +126,7 @@ describe("runYieldCoverageAudit", () => {
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-      reason: "safety-snapshot-unavailable:report-card-cache:completeness-mismatch",
+      reason: "safety-snapshot-unavailable:safety-score-v9-publication:completeness-mismatch",
       expectedModel: "v8",
     });
     expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledOnce();
@@ -157,7 +157,7 @@ describe("runYieldCoverageAudit", () => {
       coverageRatio: 0,
       reason,
       scores: new Map(),
-      source: "report-card-cache",
+      source: "safety-score-v9-publication",
       expectedModel: "v9",
       safetyScoreIdentity: null,
       publicationGenerationId: null,
@@ -233,7 +233,7 @@ describe("runYieldCoverageAudit", () => {
       trackedCount: 1,
       coverageRatio: 1,
       scores: new Map(),
-      source: "report-card-cache",
+      source: "safety-score-v9-publication",
       expectedModel: "v8",
       safetyScoreIdentity: v8Identity(),
       publicationGenerationId: v8Identity().publicationGenerationId,
@@ -341,7 +341,7 @@ describe("runYieldCoverageAudit", () => {
             safetyScoresComputed: 1,
             safetyScoresExpected: 1,
           },
-          safetySnapshotSource: "report-card-cache",
+          safetySnapshotSource: "safety-score-v9-publication",
         },
       });
     expect(mockComputeSafetyScoresSnapshot).toHaveBeenCalledWith(db, {
@@ -404,7 +404,7 @@ describe("runYieldCoverageAudit", () => {
       trackedCount: 1,
       coverageRatio: 1,
       scores: new Map(),
-      source: "report-card-cache",
+      source: "safety-score-v9-publication",
       expectedModel: "v8",
       safetyScoreIdentity: v8Identity(),
       publicationGenerationId: v8Identity().publicationGenerationId,

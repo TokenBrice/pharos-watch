@@ -1,6 +1,9 @@
 import { buildReportCardsV9DependencyGraph, type ReportCardsV9Response } from "@shared/types/report-cards-v9";
-import { scoreToGrade } from "@shared/lib/report-cards";
-import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import type {
+  SafetyScoreV9CurrentCard,
+  SafetyScoreV9CurrentResponse,
+} from "@shared/types/safety-score-v9-public";
+import { scoreToV9Grade } from "@shared/types/safety-score-v9-grade";
 
 const digest = (character: string) => character.repeat(64);
 
@@ -8,7 +11,7 @@ export function makeWorkerV9Card(
   overrides: Partial<SafetyScoreV9CurrentCard> = {},
 ): SafetyScoreV9CurrentCard {
   const score = overrides.score === undefined ? 80 : overrides.score;
-  const grade = overrides.grade ?? scoreToGrade(score);
+  const grade = overrides.grade ?? scoreToV9Grade(score);
   const reviewedPillarScores = overrides.pillars === undefined
     ? []
     : Object.values(overrides.pillars)
@@ -245,7 +248,7 @@ export function makeWorkerReportCardsV9Response(
   return {
     model: "v9",
     schemaVersion: 4,
-    lifecycle: "shadow",
+    lifecycle: "active",
     safetyScoreIdentity: identity,
     methodology: {
       version: identity.methodologyVersion,
@@ -276,6 +279,38 @@ export function makeWorkerReportCardsV9Response(
     },
     cards,
     dependencyGraph: buildReportCardsV9DependencyGraph(cards),
+    ...overrides,
+  };
+}
+
+export const makeReportCardsV9Response = makeWorkerReportCardsV9Response;
+
+export function makeWorkerSafetyScoreV9Publication(
+  overrides: Partial<SafetyScoreV9CurrentResponse> = {},
+): SafetyScoreV9CurrentResponse {
+  const projected = makeWorkerReportCardsV9Response(
+    overrides.cards === undefined ? {} : { cards: overrides.cards },
+  );
+  return {
+    model: "v9-critical-path",
+    schemaVersion: 5,
+    lifecycle: "active",
+    candidateId: projected.source.candidateId,
+    policyVersion: projected.methodology.version,
+    publicationGenerationId:
+      projected.safetyScoreIdentity.publicationGenerationId,
+    baseInputGenerationId:
+      projected.safetyScoreIdentity.baseInputGenerationId,
+    factSetDigest: projected.source.factSetDigest,
+    resultDigest: projected.source.resultDigest,
+    policy: projected.methodology.policy,
+    evaluationBuildDigest:
+      projected.safetyScoreIdentity.evaluationBuildDigest,
+    sourceGenerations: projected.source.sourceGenerations,
+    asOfSec: projected.asOfSec,
+    publishedAtSec: projected.updatedAt,
+    completeness: projected.completeness,
+    cards: projected.cards,
     ...overrides,
   };
 }

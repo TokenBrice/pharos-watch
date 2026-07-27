@@ -211,7 +211,7 @@ const FixedInputPayloadFields = {
     )
     .default({}),
   // V9-only supply attribution remains separate from chainCirculatingById:
-  // the latter is an exact V8 replay input and must match the public snapshot.
+  // the latter belongs to the exact prepared base input and must stay immutable.
   safetyScoreV9SupplyAttributionById: z
     .record(z.string(), SafetyScoreV9SupplyAttributionSchema)
     .default({}),
@@ -293,7 +293,6 @@ function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
 }
 
 export const REPORT_CARDS_FIXED_INPUT_CACHE_KEY = "report-cards:fixed-input:exact";
-export const SAFETY_SCORE_V9_FIXED_INPUT_CACHE_KEY = "report-cards:v9-fixed-input:exact";
 const REPORT_CARDS_FIXED_INPUT_CACHE_MAX_BYTES = 1_900_000;
 
 const FixedInputCacheEnvelopeSchema = z.object({
@@ -333,9 +332,7 @@ async function gunzipText(bytes: Uint8Array): Promise<string> {
 }
 
 async function buildFixedInputCacheEntry(
-  key: string,
   value: unknown,
-  includeV9OnlyFields: boolean,
   safetyScoreIdentity?: SafetyScoreV8PublicationIdentity,
 ): Promise<{ key: string; value: string; storedBytes: number; uncompressedBytes: number }> {
   const input = normalizeFixedInput(value);
@@ -357,9 +354,9 @@ async function buildFixedInputCacheEntry(
     evidenceJournalById: _evidenceJournal,
     supplyAttributionJournalById: _supplyAttributionJournal,
     pegProvenanceById: _pegProvenance,
-    ...v8Input
+    ...baseInput
   } = input;
-  const payload = JSON.stringify(includeV9OnlyFields ? input : v8Input);
+  const payload = JSON.stringify(baseInput);
   const uncompressedBytes = new TextEncoder().encode(payload);
   const compressed = await gzipBytes(uncompressedBytes);
   const envelope = JSON.stringify({
@@ -379,7 +376,7 @@ async function buildFixedInputCacheEntry(
     );
   }
   return {
-    key,
+    key: REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
     value: envelope,
     storedBytes,
     uncompressedBytes: uncompressedBytes.byteLength,
@@ -391,21 +388,7 @@ export function buildReportCardsFixedInputCacheEntry(
   safetyScoreIdentity?: SafetyScoreV8PublicationIdentity,
 ): Promise<{ key: string; value: string; storedBytes: number; uncompressedBytes: number }> {
   return buildFixedInputCacheEntry(
-    REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
     value,
-    false,
-    safetyScoreIdentity,
-  );
-}
-
-export function buildSafetyScoreV9FixedInputCacheEntry(
-  value: unknown,
-  safetyScoreIdentity: SafetyScoreV8PublicationIdentity,
-): Promise<{ key: string; value: string; storedBytes: number; uncompressedBytes: number }> {
-  return buildFixedInputCacheEntry(
-    SAFETY_SCORE_V9_FIXED_INPUT_CACHE_KEY,
-    value,
-    true,
     safetyScoreIdentity,
   );
 }

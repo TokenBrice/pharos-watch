@@ -8,7 +8,7 @@ import { buildSafetyScoreV9Response } from "@shared/lib/safety-score-v9/public";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { CompiledV9FactSetV3 } from "@shared/types/safety-score-v9-facts";
-import type { SafetyScoreV9Response } from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { z } from "zod";
 import {
@@ -133,7 +133,7 @@ export interface SafetyScoreV9CandidatePipelineResult {
   extension: Readonly<SafetyScoreV9FactSetExtensionV2>;
   compiledFacts: Readonly<CompiledV9FactSetV3>;
   evaluatedSet: Readonly<V9EvaluatedSet>;
-  candidate: Readonly<SafetyScoreV9Response>;
+  candidate: Readonly<SafetyScoreV9CurrentResponse>;
   compilerFactSchemaIdentity: Readonly<SafetyScoreV9CompilerFactSchemaIdentityV1>;
   compilerFactSchemaDigest: string;
   producerCapabilityIdentity: Readonly<SafetyScoreV9ProducerCapabilityIdentityV1>;
@@ -141,11 +141,10 @@ export interface SafetyScoreV9CandidatePipelineResult {
   candidateIdentity: Readonly<SafetyScoreV9CandidateIdentityV1>;
 }
 
-export interface SafetyScoreV9ShadowCandidateResult {
-  candidate: Readonly<SafetyScoreV9Response>;
+export interface SafetyScoreV9PublicationResult {
+  candidate: Readonly<SafetyScoreV9CurrentResponse>;
   compilerFactSchemaDigest: string;
   producerCapabilityDigest: string;
-  supplyUsdById: Readonly<Record<string, number>>;
 }
 
 function compareText(left: string, right: string): number {
@@ -354,7 +353,7 @@ function v9PolicyVersion(policy: V9ValidatedPolicyEnvelope): string {
 
 /**
  * Compile, evaluate, and project one exact V9 publication without storage,
- * network access, wall-clock access, or any mutation of the active V8 model.
+ * network access, wall-clock access, or mutation of another publication.
  */
 export function buildSafetyScoreV9Candidate(
   input: BuildSafetyScoreV9CandidateInput,
@@ -366,7 +365,7 @@ export function buildSafetyScoreV9Candidate(
 }
 
 /** Trusted runtime entrypoint for an already normalized exact input. */
-export function buildSafetyScoreV9CandidateFromNormalizedInput(
+function buildSafetyScoreV9CandidateFromNormalizedInput(
   input: BuildSafetyScoreV9CandidateFromNormalizedInput,
 ): Readonly<SafetyScoreV9CandidatePipelineResult> {
   return deepFreeze(buildSafetyScoreV9CandidatePipeline(input));
@@ -457,12 +456,12 @@ function buildSafetyScoreV9CandidatePipeline(
 }
 
 /**
- * Compact runtime projection for the shadow publisher. Full pipeline state is
+ * Compact runtime projection for the canonical publisher. Full pipeline state is
  * retained only by replay and verification callers.
  */
-export function buildSafetyScoreV9ShadowCandidateFromNormalizedInput(
+export function buildSafetyScoreV9PublicationFromNormalizedInput(
   input: BuildSafetyScoreV9CandidateFromNormalizedInput,
-): Readonly<SafetyScoreV9ShadowCandidateResult> {
+): Readonly<SafetyScoreV9PublicationResult> {
   if (!Number.isInteger(input.publishedAtSec) || input.publishedAtSec < 0) {
     throw new Error("Safety Score v9 publication time must be a non-negative integer");
   }
@@ -489,14 +488,11 @@ export function buildSafetyScoreV9ShadowCandidateFromNormalizedInput(
   const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
   const capabilityIdentity = producerCapabilityIdentity(fixedInput, extension);
   const producerCapabilityDigest = computeSafetyScoreV9ProducerCapabilityDigest(capabilityIdentity);
-  const supplyUsdById = Object.fromEntries(
-    compiledFacts.assets.map((asset) => [asset.assetId, asset.supply.circulatingUsd ?? 0]),
-  );
   const displayByAssetId = new Map(
     compiledFacts.assets.map((asset) => [asset.assetId, publicDisplayMetadata(asset)]),
   );
 
-  // The shadow response does not expose replay intermediates. Release each
+  // The published response does not expose replay intermediates. Release each
   // large graph as soon as its compact projection has been captured.
   extension = null;
   const evaluatedSet = evaluateValidatedV9FactSet(compiledFacts, policy);
@@ -544,6 +540,5 @@ export function buildSafetyScoreV9ShadowCandidateFromNormalizedInput(
     candidate,
     compilerFactSchemaDigest,
     producerCapabilityDigest,
-    supplyUsdById,
   });
 }

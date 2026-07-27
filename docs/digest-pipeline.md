@@ -47,9 +47,9 @@ All ecosystem monetary aggregates use the `core-stablecoins-v1` universe: active
 | Stability Index | `stability_index_samples` + `stability_index` | Current PSI from latest 30-minute sample, yesterday's from daily table |
 | Blacklist activity | `blacklist_events` (rolling last 24h) | Event count, total USD affected; threshold: ≥2 events OR >$10M single; zero-value bursts are artifact-risk candidates |
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" with material daily/weekly thresholds |
-| Safety scores | identified active canonical publication | V8 grades and dimensions while the activation marker is absent; native V9 grades, three pillars, reviewed reasons, and caps after an exact V9 activation identity is satisfied |
+| Safety scores | canonical V9 publication | Native V9 grades, three pillars, reviewed reasons, caps, and publication health |
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >100 bps AND mcap >$20M; top 5 by impact score |
-| Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (safe-haven vs risky net flows via `buildFlightToQualityClassification()`), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net flow |
+| Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (safe-haven vs risky net flows from the canonical V9 publication), top pressure coins (\|FIS\| > 20), top 3 chains by absolute 24h net flow |
 | Total mcap ATH | derived from core-marked `daily_digest` rows (`json_extract` on stored `totalMcapUsd`) | Anchors current core total mcap against its post-cutover Digest-window ATH value and date |
 | DEWS stress | `stress_signals` + `stress_signal_history` | Band distribution (CALM/WATCH/ALERT/WARNING/DANGER), all band changes (any rank-changing band move), elevated coins (ALERT+ with mcap >$10M) |
 | Historical context | `stability_index` + `supply_history` | PSI precedent (last time score was at/below current), band streak, supply mover ATH and largest historical weekly change |
@@ -79,9 +79,9 @@ The digest intelligence pass runs after editorial candidates are built and befor
 - `calmNarrativeFrame`: a fallback editorial frame for calm regimes so quiet days can explain what changed, what did not happen, and what would make the next day less calm.
 - `editorialAudit`: added after the LLM response is parsed; stores top/usable/suppressed/momentum candidate ids, required lead ids, declared `leadSignalId`, used candidate ids, and quality issue codes.
 
-Digest safety reads resolve through `worker/src/lib/identified-active-safety-score-source.ts`. A missing V9 activation marker selects the exact canonical V8 publication; a present marker selects only the identity-matched canonical V9 publication. Invalid or unavailable V9 never triggers V8 computation or fallback.
+Digest safety reads resolve through `worker/src/lib/identified-active-safety-score-source.ts`. The loader accepts only the complete current canonical V9 publication. Held, invalid, stale, or unavailable V9 is explicit and never triggers V8 computation or fallback.
 
-The digest's Flight-to-Quality collector now uses `buildFlightToQualityClassification()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, aligned with the public `/api/mint-burn-flows` classification path.
+The digest's Flight-to-Quality collector uses `buildFlightToQualityClassificationFromV9Snapshot()` from `worker/src/lib/flight-to-quality-classification.ts` via `worker/src/cron/daily-digest/mint-burn-ftq.ts`, aligned with the public `/api/mint-burn-flows` classification path.
 
 ### LLM call
 

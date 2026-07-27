@@ -3,7 +3,7 @@ import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sq
 import type {
   DexLiquidityPoolState,
   DexLiquidityScoringSourceState,
-} from "../orchestrator";
+} from "../scoring-stage-contract";
 import { initMetrics } from "../pool-helpers";
 import {
   DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { scoreToV9Grade } from "./safety-score-v9-grade";
 import { V9DependencyEconomicRoleSchema } from "./dependency-types";
 import {
   V9AssetPremiumKindSchema,
@@ -40,19 +41,6 @@ const EXIT_SCORE_TOLERANCE = 0.03;
 const PUBLIC_SCORE_ROUNDING_HEADROOM = 0.5;
 const C_MINUS_MIN_SCORE = 50;
 const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
-const V9_CURRENT_GRADE_THRESHOLDS = [
-  ["A+", 87],
-  ["A", 83],
-  ["A-", 80],
-  ["B+", 75],
-  ["B", 70],
-  ["B-", 65],
-  ["C+", 60],
-  ["C", 55],
-  ["C-", C_MINUS_MIN_SCORE],
-  ["D", 40],
-  ["F", 0],
-] as const;
 export const V9_BOUNDED_ATTRIBUTION_REASON_CODES = [
   "bounded-mechanism-review",
   "bounded-unknown-reserve-exposure",
@@ -1460,10 +1448,6 @@ const SafetyScoreV9CardShape = {
 const SafetyScoreV9CardObjectSchema = z.object(SafetyScoreV9CardShape).strict();
 type SafetyScoreV9CardBase = z.infer<typeof SafetyScoreV9CardObjectSchema>;
 
-function expectedV9Grade(score: number): Exclude<z.infer<typeof V9GradeSchema>, "NR"> {
-  return V9_CURRENT_GRADE_THRESHOLDS.find(([, minimum]) => score >= minimum)?.[0] ?? "F";
-}
-
 function attributedSerialParent(
   card: SafetyScoreV9CardBase,
   path: string,
@@ -1894,7 +1878,7 @@ function refineLegacyCard(
   if ((card.score === null) !== (card.grade === "NR")) {
     ctx.addIssue({ code: "custom", path: ["grade"], message: "NR grade and null score must agree" });
   }
-  if (card.score !== null && card.grade !== expectedV9Grade(card.score)) {
+  if (card.score !== null && card.grade !== scoreToV9Grade(card.score)) {
     ctx.addIssue({
       code: "custom",
       path: ["grade"],

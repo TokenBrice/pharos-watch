@@ -61,6 +61,10 @@ import {
   markDexLiquidityScoringStageConsumed,
   persistDexLiquidityScoringStage,
 } from "./scoring-stage";
+import type {
+  DexLiquidityPoolState,
+  DexLiquidityScoringSourceState,
+} from "./scoring-stage-contract";
 
 const DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES = new Set(["defillama-yields", "defillama-protocols"]);
 
@@ -267,7 +271,11 @@ export async function consumeDexLiquidityScoringStage(
   try {
     await markDexLiquidityScoringStageConsumed(db, staged.generationId, Math.floor(Date.now() / 1000), signal);
   } catch (error) {
-    console.warn("[dex-liquidity] Failed to mark scoring stage consumed after publication", error);
+    console.warn(JSON.stringify({
+      scope: "dex-liquidity",
+      message: "Failed to mark scoring stage consumed after publication",
+      error: error instanceof Error ? error.message : String(error),
+    }));
   }
   return result;
 }
@@ -319,46 +327,6 @@ interface DexLiquiditySourceState {
   directCexOrderbookDepth: DexLiquidityFallbackPhase["directCexOrderbookDepth"];
 }
 
-export interface DexLiquidityDirectApiSourceSummary {
-  circuitEvents: DexLiquidityDirectApiPhase["circuitEvents"];
-  sourceWarnings: DexLiquidityDirectApiPhase["sourceWarnings"];
-  pagination: Array<
-    { source: string } & NonNullable<DexLiquidityDirectApiPhase["results"][number]["result"]["pagination"]>
-  >;
-}
-
-export interface DexLiquidityScoringSourceState {
-  validationReferences: Awaited<ReturnType<typeof loadPriceValidationReferences>>;
-  stablecoinMcapById: Awaited<ReturnType<typeof loadTrackedStablecoinMaps>>["stablecoinMcapById"];
-  protocolTvlCaps: DexLiquidityDataSources["protocolTvlCaps"];
-  priceObservations: Awaited<ReturnType<typeof buildCurveLookups>>["priceObservations"];
-  dlYieldsAvailable: boolean;
-  dlProtocolsAvailable: boolean;
-  primaryRawPoolCount: number;
-  failedSources: string[];
-  criticalSourceFailures: string[];
-  fallbackSignals: string[];
-  directApiSourceSummary: DexLiquidityDirectApiSourceSummary;
-}
-
-export interface DexLiquidityPoolState {
-  fallback: DexLiquidityFallbackPhase;
-  metrics: Map<string, LiquidityMetrics>;
-  pancakeMeasuredExecutionTargets: ReturnType<typeof buildPancakeMeasuredExecutionTargets>;
-  fluidMeasuredExecutionTargets: ReturnType<typeof buildFluidMeasuredExecutionTargets>;
-  slipstreamMeasuredExecutionTargets: ReturnType<typeof buildSlipstreamMeasuredExecutionTargets>;
-  solanaMeasuredExecutionTargets: ReturnType<typeof buildSolanaMeasuredExecutionTargets>;
-  tronMeasuredExecutionTargets: ReturnType<typeof buildTronMeasuredExecutionTargets>;
-  stagedMergedCount: number;
-  stagedSkippedCount: number;
-  stagedSkippedByExactIdentityCount: number;
-  stagedSkippedByUniqueDerivedIdentityCount: number;
-  stagedSkippedByOptionalWildcardIdentityCount: number;
-  stagedSkippedByAuthoritativeProtocolCount: number;
-  stagedSkipDimensions: Awaited<ReturnType<typeof mergeStagedPools>>["skipDimensions"];
-  directApiIntegration: DirectApiIntegrationResult;
-}
-
 interface DexLiquidityScoreState {
   scoreResults: Awaited<ReturnType<typeof computeStablecoinScores>>["scores"];
   globalAgg: Awaited<ReturnType<typeof computeStablecoinScores>>["globalAgg"];
@@ -375,7 +343,7 @@ interface DexLiquidityPersistenceState {
   historicalSnapshot: DexLiquidityHistoricalSnapshot;
 }
 
-export function buildDexLiquidityScoringSourceState(
+function buildDexLiquidityScoringSourceState(
   sourceState: DexLiquiditySourceState,
 ): DexLiquidityScoringSourceState {
   return {

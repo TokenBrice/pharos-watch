@@ -21,15 +21,14 @@ vi.mock("@shared/lib/api-endpoints", async (importOriginal) => {
 });
 
 import { createPollingQueryOptions, createStaticQueryOptions } from "../use-api-query";
-import { CRON_1MIN, CRON_15MIN, CRON_30MIN, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
+import { CRON_1MIN, CRON_30MIN, CRON_TELEGRAM_PULSE } from "@/lib/cron-intervals";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
-import { useHealth, useReportCardsV9Preview } from "../api-hooks";
+import { useHealth } from "../api-hooks";
 import { useRequestSourceStats } from "../use-request-source-stats";
 import { useStatus } from "../use-status";
 import { useEndpointProbes } from "../use-endpoint-probes";
 import { useStabilityIndexLight } from "../use-stability-index-light";
 import { useTelegramPulse } from "../use-telegram-pulse";
-import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 
 function mockQueryReturn() {
   useQueryMock.mockReturnValue({
@@ -219,32 +218,6 @@ describe("query polling policy", () => {
     expect(options.staleTime).toBe(CRON_1MIN);
     expect(options.refetchInterval).toBe(2 * CRON_1MIN);
     expect(options.retry).toBe(1);
-  });
-
-  it("loads the contributor preview without an API key", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify(makeReportCardsV9Response()), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-
-    useReportCardsV9Preview();
-    const options = useQueryMock.mock.calls[0][0] as {
-      queryKey: unknown[];
-      staleTime: number;
-      enabled?: boolean;
-      placeholderData?: unknown;
-      queryFn: (context: ReturnType<typeof queryContext>) => Promise<unknown>;
-    };
-
-    expect(options.queryKey).toEqual(["report-cards", "v9", "preview"]);
-    expect(options.staleTime).toBe(CRON_15MIN);
-    expect(options.enabled).not.toBe(false);
-    expect(options.placeholderData).toBeUndefined();
-    await options.queryFn(queryContext(options.queryKey));
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(new Headers(init.headers).has("X-API-Key")).toBe(false);
   });
 
   it("useStabilityIndexLight reuses registered meta polling", () => {

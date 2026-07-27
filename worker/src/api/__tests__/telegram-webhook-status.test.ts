@@ -2,20 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { loadStatusForCoin } from "../telegram-webhook-status";
-import { buildStatusMessage } from "../telegram-webhook-messages";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
+import {
+  makeWorkerReportCardsV9Response,
+  makeWorkerV9Card,
+} from "../../test-helpers/report-cards-v9";
 
 const mocks = vi.hoisted(() => ({
-  loadActiveSafetyScoreSource: vi.fn(),
-  loadActiveV8SafetyScoreHistorySource: vi.fn(),
+  loadIdentifiedActiveSafetyScoreSource: vi.fn(),
 }));
 
-vi.mock("../../lib/safety-score-active-source", () => ({
-  loadActiveSafetyScoreSource: mocks.loadActiveSafetyScoreSource,
-}));
-
-vi.mock("../../lib/safety-score-history-v2", () => ({
-  loadActiveV8SafetyScoreHistorySource: mocks.loadActiveV8SafetyScoreHistorySource,
+vi.mock("../../lib/identified-active-safety-score-source", () => ({
+  loadIdentifiedActiveSafetyScoreSource: mocks.loadIdentifiedActiveSafetyScoreSource,
 }));
 
 afterEach(() => {
@@ -24,23 +22,23 @@ afterEach(() => {
 
 describe("loadStatusForCoin", () => {
   beforeEach(() => {
-    mocks.loadActiveSafetyScoreSource.mockReset().mockResolvedValue({
-      kind: "v8",
-      expectedModel: "v8",
-      reason: "activation-marker-missing",
-      activationUpdatedAt: null,
+    const snapshot = makeWorkerReportCardsV9Response({
+      asOfSec: 122,
+      updatedAt: 123,
+      cards: [
+        makeWorkerV9Card({
+          id: "usdc-circle",
+          grade: "B+",
+          score: 66,
+        }),
+      ],
     });
-    mocks.loadActiveV8SafetyScoreHistorySource.mockReset().mockResolvedValue({
-      identity: {
-        model: "v8",
-        schemaVersion: 1,
-        methodologyVersion: "v8.17",
-        evaluationBuildDigest: "a".repeat(64),
-        baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
-        publicationGenerationId: "report-cards:v8.17:123",
-      },
+    mocks.loadIdentifiedActiveSafetyScoreSource.mockReset().mockResolvedValue({
+      kind: "v9",
+      expectedModel: "v9",
+      identity: snapshot.safetyScoreIdentity,
       publishedAtSec: 123,
-      snapshot: { cards: [{ id: "usdc-circle", isDefunct: false, overallGrade: "B+", overallScore: 66 }] },
+      snapshot,
     });
   });
 
@@ -54,8 +52,8 @@ describe("loadStatusForCoin", () => {
     const status = await loadStatusForCoin(db, "usdc-circle");
     expect(status.dews?.band).toBe("ALERT");
     expect(status.safety?.grade).toBe("B+");
-    expect(status.safety?.model).toBe("v8");
-    expect(status.safety?.publicationGenerationId).toBe("report-cards:v8.17:123");
+    expect(status.safety?.model).toBe("v9");
+    expect(status.safety?.publicationGenerationId).toBe("report-cards:v9:1");
     expect(status.depeg.status).toBe("stable");
     expect(status.priceUsd).toBeCloseTo(0.9997);
   });
@@ -165,7 +163,12 @@ describe("loadStatusForCoin", () => {
   });
 
   it("fails closed when canonical safety identity is unavailable", async () => {
-    mocks.loadActiveV8SafetyScoreHistorySource.mockRejectedValueOnce(new Error("identity mismatch"));
+    mocks.loadIdentifiedActiveSafetyScoreSource.mockResolvedValueOnce({
+      kind: "error",
+      expectedModel: "v9",
+      reason: "v9-snapshot-unavailable",
+      detail: "missing",
+    });
     const db = mockD1([
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
@@ -175,68 +178,8 @@ describe("loadStatusForCoin", () => {
     const status = await loadStatusForCoin(db, "usdc-circle");
 
     expect(status.safety).toBeNull();
-    expect(status.safetyUnavailableReason).toBe("canonical-snapshot-unavailable");
+    expect(status.safetyUnavailableReason).toBe("v9-snapshot-unavailable");
     expect(db.getHistory().some((entry) => entry.sql.includes("safety_grade_history"))).toBe(false);
-  });
-
-  it.each([
-    [
-      "an active V9 marker",
-      { kind: "v9", expectedModel: "v9" },
-      "active-model-v9",
-    ],
-    [
-      "a malformed V9 marker",
-      { kind: "error", expectedModel: "v9", reason: "activation-marker-invalid" },
-      "activation-marker-invalid",
-    ],
-    [
-      "a mismatched V9 identity",
-      { kind: "error", expectedModel: "v9", reason: "v9-identity-mismatch" },
-      "v9-identity-mismatch",
-    ],
-  ] as const)("keeps /status market data but withholds Safety and PYS for %s", async (
-    _label,
-    activeSource,
-    expectedReason,
-  ) => {
-    mocks.loadActiveSafetyScoreSource.mockResolvedValue(activeSource);
-    const db = mockD1([
-      {
-        match: "FROM yield_data",
-        rows: [
-          {
-            current_apy: 4.4,
-            apy_30d: 4.2,
-            yield_source: "Aave V3",
-            pharos_yield_score: 99,
-            updated_at: 1_800_000_000,
-          },
-        ],
-      },
-      {
-        match: "FROM price_cache WHERE asset_id = ?",
-        rows: [{ price: 0.9998, updated_at: 1_800_000_000 }],
-      },
-    ]);
-
-    const status = await loadStatusForCoin(db, "usdc-circle");
-    const message = buildStatusMessage("USDC", status);
-
-    expect(status.priceUsd).toBeCloseTo(0.9998);
-    expect(status.safety).toBeNull();
-    expect(status.safetyUnavailableReason).toBe(expectedReason);
-    expect(status.expectedSafetyScoreModel).toBe("v9");
-    expect(status.yield).toMatchObject({
-      apy30d: 4.2,
-      source: "Aave V3",
-      pharosYieldScore: null,
-      pysUnavailableReason: expectedReason,
-    });
-    expect(message).toContain("Safety: temporarily unavailable");
-    expect(message).toContain("Yield: 4.20% 30d at Aave V3, PYS unavailable");
-    expect(message).not.toContain("PYS 99");
-    expect(mocks.loadActiveV8SafetyScoreHistorySource).not.toHaveBeenCalled();
   });
 
   it("returns yield status from published or legacy rows only", async () => {
@@ -306,7 +249,10 @@ describe("loadStatusForCoin", () => {
       const status = await loadStatusForCoin(createSqliteD1(sqlite), "usdc-circle");
 
       expect(status.yield?.source).toBe("Published source");
-      expect(status.yield?.pharosYieldScore).toBe(31);
+      expect(status.yield).toMatchObject({
+        pharosYieldScore: null,
+        pysUnavailableReason: "pys-v8-retired",
+      });
     } finally {
       sqlite.close();
     }

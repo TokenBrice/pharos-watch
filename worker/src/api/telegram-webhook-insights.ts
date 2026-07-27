@@ -6,9 +6,6 @@ import type { DigestInputData } from "@shared/types/digest";
 import { escapeHtml } from "../lib/telegram";
 import { safeJsonParse } from "../lib/api-utils";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
-import { loadActiveV8SafetyScoreHistorySource } from "../lib/safety-score-history-v2";
-import { isCurrentSafetyScoreV8Identity } from "../lib/safety-score-current-identity";
 import { suggestClosestToken } from "../lib/telegram-alerts";
 import { TOP_VIEW_NAMES } from "../lib/telegram-constants";
 import { formatTelegramCompactUsd } from "./telegram-format";
@@ -34,7 +31,7 @@ function truncate(text: string, max = 220): string {
 }
 
 function expectedV9UnavailableText(
-  activeSource: Exclude<ActiveSafetyScoreSource, { kind: "v8" }>,
+  activeSource: ActiveSafetyScoreSource,
 ): string {
   return activeSource.kind === "v9"
     ? "expected model V9"
@@ -169,7 +166,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
     case "yield":
     case "yields": {
       const activeSource = await loadActiveSafetyScoreSource(db);
-      const pysAvailable = activeSource.kind === "v8";
+      const pysAvailable = false;
       const orderBy = pysAvailable
         ? "pharos_yield_score DESC, apy_30d DESC"
         : "apy_30d DESC";
@@ -236,18 +233,9 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
       const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
       if (stablecoinsResult.kind !== "ok") return "Chain rankings are temporarily unavailable.";
       const safetyScores: Record<string, number> = {};
-      if (activeSource.kind === "v8") {
-        const reportCardResult = await loadReportCardCache(db, {
-          maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-          requireCompleteness: true,
-        });
-        if (
-          reportCardResult.kind === "ok" &&
-          isCurrentSafetyScoreV8Identity(reportCardResult.payload.safetyScoreIdentity)
-        ) {
-          for (const [id, entry] of Object.entries(reportCardResult.payload.scores)) {
-            safetyScores[id] = entry.score;
-          }
+      if (activeSource.kind === "v9") {
+        for (const card of activeSource.snapshot.cards) {
+          if (card.score !== null) safetyScores[card.id] = card.score;
         }
       }
       const { rates: pegRates } = derivePegRates(
@@ -266,25 +254,24 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
         (row, i) =>
           `${i}. ${row.name} — ${formatTelegramCompactUsd(row.totalUsd) ?? "n/a"}, health ${row.healthScore ?? "NR"} (${row.healthBand})`,
       );
-      return activeSource.kind === "v8"
+      return activeSource.kind === "v9"
         ? message
         : `${message}\n${escapeHtml(`Chain health unavailable; ${expectedV9UnavailableText(activeSource)}.`)}`;
     }
     case "safety": {
-      let source;
-      try {
-        source = await loadActiveV8SafetyScoreHistorySource(db);
-      } catch {
+      const source = await loadActiveSafetyScoreSource(db);
+      if (source.kind !== "v9") {
         return "Safety scores are temporarily unavailable.";
       }
       const cards = source.snapshot.cards
-        .filter((card) => !card.isDefunct && card.overallScore != null)
-        .sort((a, b) => (b.overallScore ?? 0) - (a.overallScore ?? 0))
+        .filter((card) => card.score != null)
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
         .slice(0, TOP_LIMIT);
       return formatTopRows(
-        `Top Safety Scores (${source.identity.model.toUpperCase()})`,
+        "Top Safety Scores (V9)",
         cards,
-        (card, i) => `${i}. ${card.symbol} — ${card.overallGrade} (${card.overallScore ?? "NR"})`,
+        (card, i) =>
+          `${i}. ${TRACKED_META_BY_ID.get(card.id)?.symbol ?? card.id} — ${card.grade} (${card.score ?? "NR"})`,
       );
     }
     default: {
@@ -302,42 +289,45 @@ function formatTopRows<T>(title: string, rows: readonly T[], render: (row: T, in
 }
 
 export async function buildWhyMessage(db: D1Database, stablecoinId: string): Promise<string> {
-  let source;
-  try {
-    source = await loadActiveV8SafetyScoreHistorySource(db);
-  } catch {
+  const source = await loadActiveSafetyScoreSource(db);
+  if (source.kind !== "v9") {
     return "Safety Score is temporarily unavailable.";
   }
   const card = source.snapshot.cards.find((candidate) => candidate.id === stablecoinId);
   if (!card) return "No Safety Score is available for that coin yet.";
+  const symbol = TRACKED_META_BY_ID.get(card.id)?.symbol ?? card.id;
 
   const lines = [
-    `<b>${escapeHtml(card.symbol)} Safety Score</b>`,
-    `Overall: ${card.overallGrade}${card.overallScore != null ? ` (${card.overallScore})` : ""}`,
-    `Model: ${escapeHtml(source.identity.model.toUpperCase())} · ${escapeHtml(source.identity.methodologyVersion)} · ${escapeHtml(source.identity.publicationGenerationId)}`,
+    `<b>${escapeHtml(symbol)} Safety Score</b>`,
+    `Overall: ${card.grade}${card.score != null ? ` (${card.score})` : ""}`,
+    `Model: V9 · ${escapeHtml(source.snapshot.safetyScoreIdentity.methodologyVersion)} · ${escapeHtml(source.snapshot.safetyScoreIdentity.publicationGenerationId)}`,
   ];
-  const weaknesses = (
-    Object.entries(card.dimensions) as Array<[string, { grade: string; score: number | null; detail: string }]>
-  )
-    .sort(([, a], [, b]) => (a.score ?? Number.POSITIVE_INFINITY) - (b.score ?? Number.POSITIVE_INFINITY))
+  const weaknesses = Object.entries(card.pillars)
+    .sort(([, a], [, b]) =>
+      (a.score ?? Number.POSITIVE_INFINITY) -
+      (b.score ?? Number.POSITIVE_INFINITY),
+    )
     .slice(0, 2);
   if (weaknesses.length > 0) {
     lines.push("");
-    lines.push("<b>Weakest dimensions</b>");
-    for (const [dimension, detail] of weaknesses) {
+    lines.push("<b>Weakest pillars</b>");
+    for (const [pillar, detail] of weaknesses) {
       lines.push(
-        `- ${escapeHtml(formatDimensionName(dimension))}: ${detail.grade}${detail.score != null ? ` (${detail.score})` : ""} — ${escapeHtml(truncate(detail.detail, 140))}`,
+        `- ${escapeHtml(formatPillarName(pillar))}: ${detail.score ?? "NR"}`,
       );
     }
   }
 
-  const inputs = card.rawInputs;
   const riskNotes: string[] = [];
-  if (inputs.activeDepeg)
-    riskNotes.push(`active depeg cap${inputs.activeDepegBps != null ? ` (${inputs.activeDepegBps} bps)` : ""}`);
-  if (inputs.canBeBlacklisted) riskNotes.push("blacklistable/freeze risk");
-  if (inputs.dependencies.length > 0) riskNotes.push(`${inputs.dependencies.length} modeled dependencies`);
-  if (inputs.collateralFromLive) riskNotes.push("live reserve data contributes to collateral scoring");
+  if (card.caps.length > 0) riskNotes.push(`${card.caps.length} active score cap${card.caps.length === 1 ? "" : "s"}`);
+  if (card.accessPosture.freezeExposure !== "none-known") {
+    riskNotes.push(`freeze exposure: ${card.accessPosture.freezeExposure}`);
+  }
+  const dependencyCount =
+    card.dependencies.serial.length + card.dependencies.basket.length;
+  if (dependencyCount > 0) {
+    riskNotes.push(`${dependencyCount} modeled dependencies`);
+  }
   if (riskNotes.length > 0) {
     lines.push("");
     lines.push(`Watch: ${escapeHtml(riskNotes.join(", "))}.`);
@@ -348,21 +338,8 @@ export async function buildWhyMessage(db: D1Database, stablecoinId: string): Pro
   return lines.join("\n");
 }
 
-function formatDimensionName(key: string): string {
-  switch (key) {
-    case "pegStability":
-      return "Peg stability";
-    case "liquidity":
-      return "Liquidity";
-    case "resilience":
-      return "Resilience";
-    case "decentralization":
-      return "Decentralization";
-    case "dependencyRisk":
-      return "Dependency risk";
-    default:
-      return key;
-  }
+function formatPillarName(key: string): string {
+  return key.length === 0 ? key : `${key[0]!.toUpperCase()}${key.slice(1)}`;
 }
 
 export function buildCoverageMessage(symbol: string, status: StatusForCoin): string {

@@ -302,7 +302,6 @@ function fixture(withShockCoverage = false) {
       registryPayloadDigest: SOURCES.registry.payloadSha256,
       weightPayloadDigest: SOURCES.chainSupply.payloadSha256,
     },
-    continuingActiveV8RateableCount: 305,
     assets: factSet.assets.map((entry, index) => ({
       assetId: entry.assetId,
       archetype: "algorithmic" as const,
@@ -351,11 +350,7 @@ describe("Safety Score v9 release coverage", () => {
     expect(evaluateV9ReleaseCoverage(input).reportDigest).toBe(report.reportDigest);
   });
 
-  it("preserves legacy source sets and requires the current shock source generation exactly", () => {
-    const legacy = fixture();
-    expect(evaluateV9ReleaseCoverage(legacy).identityChecks.sourceGenerations).toBe(true);
-    expect(legacy.evaluation.sourceGenerations).not.toHaveProperty("shockCoverage");
-
+  it("requires the current shock source generation exactly", () => {
     const current = fixture(true);
     expect(evaluateV9ReleaseCoverage(current).identityChecks.sourceGenerations).toBe(true);
     expect(current.evaluation.sourceGenerations.shockCoverage).toBe("shock:g1");

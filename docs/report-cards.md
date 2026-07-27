@@ -1,638 +1,112 @@
 # Safety Scores
 
-Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. The API normally serves the cron-published report-card snapshot and computes the same response shape on read only when that snapshot is missing, invalid, or pinned to an older Safety Score methodology generation.
+Safety Score V9 is the sole active stablecoin safety model. It publishes evidence-backed grades from A+ through F, with NR reserved for assets whose required facts cannot be bounded honestly.
 
-Report-card snapshots score active tracked and cemetery assets. Frozen archives are emitted as stub `F` cards, while pre-launch entries remain outside the snapshot until they launch. The stablecoin and cemetery registries own the current populations.
+## Methodology Identity
 
-## Methodology Versioning
+- Active model: `v9`
+- **Current methodology version:** `v9.0`
+- Public response schema: report v4 with score trace v3
+- Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
+- Implementation: `shared/lib/safety-score-v9/`
+- Structured changelog: `shared/data/methodology-changelogs/safety-score/`
+- Public methodology: `/methodology/#safety-scores-methodology`
+- Scoring history: `/methodology/scoring-changelog/`
 
-- **Active model identity:** Safety Score V9, methodology `9.0`
-- **Current methodology version:** `v8.17` (V8 compatibility contract)
-- **V9 policy source:** `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
-- **V8 compatibility version source:** `shared/lib/methodology-versions/safety-score.ts`
-- **Public changelog route:** `/methodology/scoring-changelog/`
-- **Structured changelog:** `shared/data/methodology-changelogs/safety-score/`
+Historical V8 methodology is documented in the scoring changelog. It is not a production API, fallback, selector input, or frontend model.
 
-## Overall Grade (v8.17)
+## V9 Model
 
-This section documents the V8 compatibility contract retained during the V9
-activation observation window.
+V9 evaluates three pillars:
 
-Four-step computation:
+| Pillar | Aggregation weight | Scope |
+| --- | ---: | --- |
+| Backing | 40% | Reserve quality, mechanism solvency, custody, assurance, and loss-bearing structure |
+| Exit | 35% | Same-notional executable capacity, cost, settlement, confidence, diversification, and stress horizon |
+| Economic Control | 25% | Mint, upgrade, oracle, bridge, and other binding control paths |
 
-1. **Base score**: weighted average of 4 base dimensions (each 0-100). NR dimensions have their weight redistributed proportionally among rated ones. Requires at least 2 rated base dimensions; otherwise overall = NR.
-2. **Peg multiplier**: `final = base × (pegScore / 100) ^ 0.40`. Coins with good pegs (90+) barely affected (~4% penalty). Coins with broken pegs get sharply penalized (pegScore 10 -> 60% penalty). pegScore = NR (pure NAV tokens with no configured peg reference) -> multiplier 1.0 (no penalty). pegScore = 0 -> multiplier 0.
-3. **No-liquidity penalty**: `final × 0.9` when the Liquidity / Exit dimension is NR (no DEX or redemption-backstop signal at all). No free pass — as coverage matures, absence of any exit signal is increasingly suspicious. Implemented via `NO_LIQUIDITY_PENALTY = 0.9` in `shared/lib/report-card-core.ts`.
-4. **Active depeg cap**: coins with a severe ongoing depeg are hard-capped after the no-liquidity penalty. `activeDepegBps` is the open event's absolute peak deviation, not the latest spot deviation. Active depegs >= 2500 bps (25%+) cap at F (39), >= 1000 bps (10%+) cap at D (49).
+The weights allocate bounded headroom; they are not an unrestricted weighted average. The evaluator applies evidence ceilings, peg behavior, track record, dependencies, wrapper-local risk, structural caps, and causally attributed danger after pillar evaluation.
 
-Cemetery coins get a permanent F.
+Missing evidence is classified by reason and ownership. A bounded documentation or integration gap can remain rateable under an explicit ceiling. An unbounded required fact returns NR. F is reserved for causally attributed measured danger rather than ordinary uncertainty.
 
-Current-version note: v8.17 keeps balance-measured aggregate pool TVL in the generic-proxy class unless the retained evidence includes the exact invariant, fee, output identity, and capacity curve needed for a reserve-based AMM simulation. The public Liquidity Score remains unchanged, but Safety Score caps generic TVL proxies at 60, synthetic/fallback evidence at 55, and provider-inaccessible-only coverage at 45. The 85-point reserve-based simulation class is reserved for exact modeled routes, and same-notional route scoring remains inactive until the P4b rollout gate passes. Old snapshot rows without the new evidence fields and rows explicitly marked `legacy` remain neutral. v8.15 deterministic dependency scoring and v8.14 self-link-free serial variant derivation carry forward unchanged.
+Serial dependencies remain binding because the child cannot diversify away the parent claim. Basket dependencies contribute at their live exposure weights. Wrapper-local risks are evaluated separately from the parent asset so a wrapper cannot inherit safety it does not possess.
 
-Safety Score V9 is the active model for identity-aware consumers under the
-`9.0` policy identity. It replaces unrestricted weighted compensation
-with archetype-specific Backing, Exit, and Economic Control pillars bounded by
-the weakest material failure path, structural ceilings, evidence sufficiency,
-dependencies, peg behavior, and stress propagation. V9 also
-distinguishes missing integration evidence from measured adverse evidence,
-models exit capacity across stress horizons, scopes loss to exposed holder
-slices, preserves dependency roles and live weights, and evaluates wrapper-local
-and mechanism-specific risk explicitly. Bounded producer and methodology gaps
-remain rateable under the reason registry's ceilings instead of becoming `NR`;
-a rateable basket dependency contributes its upstream backing score at the live
-exposure weight, but an upstream evidence ceiling does not become a whole-child
-ceiling after that uncertainty has already been priced in the weighted slice.
-Serial parent claims remain globally binding because the child cannot shed that
-claim by diversification.
-A naturally computed D can reflect multiple bounded weaknesses, while F remains
-reserved for causally attributed measured danger. V9 D cards require
-causal measured weakness or policy-bounded uncertainty. Bounded attribution can
-come from a low score-bearing pillar, a binding evidence ceiling, a genuinely
-low serial parent, or the wrapper's own local layer; a D with neither trace is
-withheld.
-For an incomplete wrapper, fallback uncertainty is causal only when its
-discount exceeds the reviewed local-risk discount.
-Wrapper unwind facts use the same documented-redemption admission decision as
-the Exit pillar instead of requiring the raw route `scoreEligible` flag. This
-does not mutate that flag or broaden generic route eligibility; routes with
-undisclosed reviewed fees remain excluded from this fact path because the later
-pre-exit danger gate is not available during fact compilation.
-Persistent measured market depth is eligible for the same bounded operational-
-resilience credit across the mature cohort. Canonical implementation history
-provides only the age gate; the credit still requires repeated score-eligible
-execution observations and does not require a bespoke asset overlay.
-The V9 policy has one explicit native-asset adjustment for
-`usdt-tether`: the `#1 & Longevity Premium` adds 12 pre-cap points and relaxes
-only the low centralized-mint limit from 83 to the A+ floor of 87. It applies
-only when the ordinary, premium-free result is already at least B+ (75), USDT is
-ranked first by fixed-clock circulating USD, has at least 120 months of
-implementation history, all three pillars have strong evidence, Exit is at
-least 70, the peg is observed with no unresolved peg reason, active depeg, or
-measured historical-peg danger attribution, and operational resilience is
-unblocked with both stress-redemption and reserve-reconciliation contributions.
-Native status is mandatory, and any other binding cap blocks the adjustment; a
-nonbinding cap below 87 also blocks it rather than becoming newly binding after
-relief. The trace retains the ordinary score as the dependency score, so
-wrappers and other downstream claims cannot inherit the 12 points or the cap
-relief. A degraded route generation therefore remains degraded rather than
-receiving a reputation override.
-When the exact input records that a configured live-reserve asset fell back to
-its registry composition, V9 can use that fallback only if its review is
-verified, sourced, complete, composition-dated, no more than 31 days old, and
-records zero known-unknown exposure without an unresolved basket or
-insufficient-evidence disposition.
-Those exposures remain labeled `curated-fallback` and receive the same 0.80
-confidence multiplier as other admitted non-independent reserve evidence.
-A non-wrapper asset with no configured live-reserve producer may use the same
-resolved bounded reviewed composition directly. That standalone path retains
-`curated` provenance, `static-validated` evidence strength, and the 0.80
-multiplier; a configured producer still requires the exact fallback signal,
-while wrappers continue to inherit their parent's backing.
-V9-only reviewed redemption terms may add a documented minimum redemption or
-replace a frozen settlement assumption with an equally or more conservative
-model. They cannot improve the captured settlement model, reduce a captured
-minimum, or shorten the route's observation horizon, and they do not mutate the
-V8 redemption producer. A reviewed slower model without a contractual SLA uses
-the model's conservative comparison horizon rather than inventing a numeric SLA.
-V9 can also compose a reviewed fee-free, permissionless atomic wrap
-with the intermediate asset's captured DEX observations. The composed path
-preserves the measured capacity curve, execution cost, output valuation,
-freshness, and observation history, adds the wrapper contract as a physical
-resource and failure domain, and remains exact-lower-bound coverage. This is a
-V9-only route projection; it neither invents liquidity nor changes the V8 DEX or
-redemption producers.
-Reviewed mint controls may identify the tracked native asset whose issuance
-system owns a controller reused by other products. A shared-controller group
-remains high severity for foreign products, but it is diagnostic for the native
-controller asset and exact serial children already priced by the parent cap.
-This prevents downstream adoption from creating a reverse dependency on the
-base asset while preserving the actual shared-control exposure.
-Missing categorical access-posture review remains visible but does not make an
-otherwise established score unrateable. Current cards use score-trace schema v3
-inside V9 response schema v5 and public-report schema v4. V9 response v5
-and report v4 add compact component breakdowns; exact response-v4/report-v3
-readers remain available only for pre-breakdown history and ordered rollout.
-For governance access posture, a reviewed global mint-domain contract is
-`immutable` when it has no privileged capabilities, no applicable cap, no
-claim-impairment path, and access-only scope. The contract address identifies
-immutable protocol machinery rather than an administrator; deployment-scoped
-bridge controls remain separate and do not relabel the core protocol as
-concentrated governance.
-Trace v3 requires an explicit `scoreAdjustments` list, empty for ordinary cards
-and populated with the ordinary and adjusted stages when the market-anchor
-policy applies. Retained response-v3/trace-v2 and response-v2/trace-v1
-historical artifacts remain exact and do not gain that field during parsing.
-The explicitly named historical report reader likewise retains both
-report-v3/trace-v3 pre-breakdown cards, report-v2/trace-v2 cards, and
-report-v1/trace-v1 cards. Live report producers and consumers accept only
-report-v4/trace-v3.
+Rateable report-v4 cards include complete Backing, Exit, and Economic Control breakdowns. Each breakdown reconciles evaluator and published values through ordered adjustments. NR cards carry explicit reason rows and have `breakdowns: null`.
 
-Every rateable report-v4 card exposes `breakdowns` for Backing, Exit, and
-Economic Control; an `NR` card exposes `breakdowns: null`. Backing publishes
-group scores plus each component's effective pillar weight and weighted
-contribution. Exit publishes the stress request, selected route's six weighted
-components, confidence and eligibility multipliers, applied route-cap
-identifiers, diversification, and compact alternative-route outcomes. Economic
-Control publishes component scores and binding or diagnostic status under its
-minimum-binding-component rule; it does not invent component weights. Each
-pillar also carries its 40/35/25 percent aggregation weight and an exact
-evaluated-to-published adjustment path for operational-resilience credits and
-dependency limits. These fields explain existing V9 results and do not change
-the scoring policy or evaluation-build identity.
+## Canonical Publication
 
-V9 publication is fail-closed. Stale or unavailable score-bearing inputs and
-new infrastructure-attributed downgrades or NR transitions hold the last
-accepted canonical V9 snapshot. The versioned endpoint exposes `held` status,
-retains accepted-timestamp freshness, and never recomputes or falls back to V8.
-The current policy, evaluation build, compiler schema, and producer capability
-remain bound into the exact publication identity. V8.17 remains available
-through the compatibility contract and during the activation observation
-window. See
-[Safety Score V9 readiness](./process/safety-score-v9-readiness.md), the
-[single-publisher rollout contract](./process/safety-score-v9-rollout.md), and
-the [consumer ledger](./process/safety-score-v9-consumer-ledger.md).
+The publication pipeline has two active stages:
 
-## Yield Source-Risk Boundary
+1. `prepare-safety-score-v9-input` runs every 15 minutes. It captures the publication-exact base input and peg-provenance seed used by the V9 compiler.
+2. `compute-safety-score-v9` runs at minutes 14 and 44. It waits for the matching core slot, compiles the V9 fact set, evaluates the policy, and publishes the accepted result.
 
-Yield Intelligence source-risk evidence is not a report-card input in the current methodology. `sourceRisk.*` fields can affect the Pharos Yield Score (PYS), opportunity-level tranche Safety Scores, and same-confidence yield source arbitration, but they do not change the underlying stablecoin's Safety Score, Resilience, or Dependency Risk dimensions here. External lending opportunities and structured-tranche rows belong to opportunity scoring, not the base stablecoin report card.
+The private upstream input remains encoded in the exact V8-shaped fixed-input schema because the V9 compiler and deterministic replay contract consume that structure. This is a narrow internal bridge, not an active V8 rating publication. The bridge owns:
 
-Any future use of yield source-risk that affects Safety Score, Resilience, Dependency Risk, or the overall grade must ship as a report-card methodology change with corresponding updates to this document and `shared/data/methodology-changelogs/safety-score/`. Until then there are no hidden yield source-risk penalties, caps, or score modifiers in report-card scoring.
+- `report-cards:fixed-input:exact`
+- `report-cards:v9-peg-provenance-seed:exact`
+- the V8 evaluation-build identity required to verify that exact input
 
-## Mint Authority Boundary
+V9-only enrichment is loaded directly by the canonical compiler. Supply attribution runs on its dedicated fenced schedule and is admitted only when its identity matches the fixed scoring generation.
 
-Mint Authority review produces the Mint Authority Score (MAS methodology `v1.2`) from reviewed mint path, weakest mint-capable controller, quantitative bounds, authority posture, evidence confidence, inheritance, and time-decayed incident caps. Detail pages always show the Mint Authority section: reviewed assets expose the score, band, component breakdown, controls, sources, and incident callouts, while missing reviews render an explicit `NR` state. The homepage table and `/screener/` may sort, display, export, or filter the same standalone score and review buckets so users can inspect who can create or route durable supply.
+Canonical accepted state is stored in:
 
-As of Safety Score v8.0 the Mint Authority Score feeds the **Decentralization** dimension through a penalty-only blend (see Decentralization Details) and is exposed in report-card raw inputs as `mintAuthorityScore`. The remaining boundary is still strict: the score does not create selector exclusions, does not feed Resilience, Liquidity, Peg Stability, or Dependency Risk, and does not change any default ranking outside what the Decentralization dimension propagates. A missing or unresolved review (`NR`) never penalizes any Safety Score surface. Any further expansion of mint-authority data into other dimensions requires a new Safety Score methodology/version change and structured changelog entry.
+- `report-cards:v9`
+- `report-cards:v9:publication-health`
 
-## Dimensions
+Both rows carry matching model, schema, methodology, policy, evaluation-build, base-input, and publication identities. The canonical writer accepts only newer publications and commits an accepted publication with its current health atomically.
 
-### Base dimensions (weighted sum)
+Publication is fail-closed at the identity and system level. Missing, malformed, stale, or incompatible score-bearing inputs hold the last accepted ratings. Asset-local producer failures do not freeze unrelated ratings while at least 90% of active assets remain unaffected. A held attempt updates publication health only; it does not rewrite the accepted ratings or their timestamp.
 
-| Dimension            | Weight | Source                                                                                            | Scoring                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| -------------------- | ------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Liquidity / Exit** | 30%    | `liquidityScore` + `redemptionBackstopScore`                                                      | Uses `effectiveExitScore`, which preserves DEX liquidity as the floor and lets direct redemption quality help when present                                                                                                                                                                                                                                                                                                                                                   |
-| **Resilience**       | 20%    | Token metadata (2 sub-factors)                                                                    | Average of collateral quality and custody model; blacklist capability is reported descriptively but does not affect the score                                                                                                                                                                                                                                                                                                                                                |
-| **Decentralization** | 15%    | Governance quality + chain infrastructure + CDP oracle setup + bridge-route risk + mint authority | `GovernanceQuality` tiers: `immutable-code` → 100, `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20. Resolvable wrappers inherit the wrapped asset score with a wrapper-kind haircut; unresolved wrappers fall back to 10. Threshold-based chain infrastructure penalty, then the branch-aware penalty-only CDP oracle blend (v8.11), the reviewed bridge-route blend (v8.12), and finally the penalty-only Mint Authority blend (v8.0) |
-| **Dependency Risk**  | 25%    | Upstream stablecoin scores                                                                        | No deps → varies by governance (decentralized: 90, centralized-dependent: 75, centralized: 95). With deps → blended score (upstream × weight + self-backed), −10 if any < 75, plus wrapper/mechanism ceilings                                                                                                                                                                                                                                                                |
-
-### Peg Stability (multiplier)
-
-| Source                      | Scoring                                                                                                                                                                                                                                             |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pegScore` from peg summary | Applied as `(pegScore/100)^0.40` multiplier to base score. Pure NAV tokens stay neutral; configured NAV wrappers can inherit peg risk from a referenced base stablecoin. Active open-event peaks >= 2500 bps cap overall at F; >= 1000 bps cap at D |
-
-### Peg Stability Details
-
-- Direct passthrough of `computePegScore()` output (see [Depeg Detection Pipeline](./depeg-detection.md) for the composite formula)
-- The tracking window is capped to reviewed detector coverage when a curated `pegScoreCoverage` anchor exists; otherwise `coinTrackingStart()` uses coin age, then the earliest durable supply/price observation or event. Unverified pre-observation time is not assumed incident-free.
-- PegScore can use a durable first valid-price observation as its fallback age anchor when a priced asset lacks both a curated launch date and `supply_history`, so report cards no longer stay NR solely because a priced non-NAV asset has not written a supply snapshot. The 7-day minimum tracking requirement still applies.
-- Per-event magnitude floors prevent brief severe depegs from being under-penalized, and active-depeg penalties are steeper. The API's coverage-aware `recent90d` companion is descriptive and does not replace the full PegScore used by report cards.
-- The report-card peg dimension does not apply a second active-depeg cap before the multiplier; final D/F active-depeg caps are applied after the peg multiplier from the open event's peak deviation.
-- Pure NAV fund-share tokens (yield-accruing, price-appreciating) receive NR — multiplier 1.0, no penalty
-- Configured NAV wrappers over a stablecoin inherit peg stability from a referenced base asset; their own appreciating share price is ignored for peg scoring and active-depeg caps
-- Yield-bearing annotation added to detail text
-
-### Liquidity / Exit Details
-
-- The public DEX liquidity dataset stays unchanged and fully market-based (see [DEX Liquidity Score](./dex-liquidity.md))
-- Report cards use `effectiveExitScore`, not raw `liquidityScore`. The DEX input is first evidence-adjusted: reserve-based AMM simulation is capped at 85, generic TVL proxy evidence at 60, synthetic/fallback evidence at 55, and inaccessible-only deployment coverage at 45. Measured executable depth and direct order-book depth are reserved evidence classes and receive no evidence ceiling only after their producer cohort and consumer validation are activated; current QuoterV2 and Fluid measurements remain shadow evidence.
-- Coverage class/confidence, effective TVL, measured-balance and organic TVL, evidence class, and deployment outcomes remain visible in raw inputs. Missing fields from an older producer generation and explicit `legacy` coverage rows are neutral rather than inferred as weak.
-- `effectiveExitScore` uses the Redemption Backstop v4 capacity-aware best-path model:
-  - redemption contribution is scaled by current executable capacity versus modeled exit size (`min(max(supply × 5%, $100k), $25M)`) and by model confidence
-  - the 10% diversification bonus applies only when the redemption route is plausibly independent from the DEX path (`independent-issuer-rail`)
-- P4 same-notional scoring is currently shadow-only. DEX and redemption producers can publish optional capacity curves under the same 200 bps / 300 second request, with typed output identities and failure-domain keys. Production snapshot construction defaults to `legacy`; ordinary fixed replay does the same, while the calibration command explicitly computes separate legacy and active results. No production methodology or score changes while the activation gate remains closed.
-- V9 DEX route reviews use a measured capacity point's retained realized execution cost when present. Repeated-cycle curves take the maximum exact cost observed at the emitted pointwise-minimum capacity; a legacy point or a cycle without that exact supporting quote keeps the conservative request-bound cost. The bounded producer route set keeps uninterrupted measured profiles first but ranks current exact AMM evidence ahead of last-known-good profiles whose newest complete measured cycle failed operationally, so aging outage evidence cannot evict the current exact fallback. A target rotation or failed measured quote cannot gate an independently complete exact AMM model; genuine measured/exact conflicts remain rejected. This changes neither the V8 liquidity input nor the public report-card path.
-- FPI's V9 extension may consume an accepted same-block Controller Pool observation as a `protocol-redemption` route. It values capacity from the input FPI amount at the CPI peg, carries the FRAX output identity explicitly, and combines the live execution fee with pinned FRAX output valuation before comparing the route with the request's cost ceiling. Bounded but older CPI tracker state lowers model confidence; rejected or missing observations contribute no route.
-- A live proportional stable-basket route may use a producer-pinned aggregate output value only when the captured observation also carries complete normalized asset weights, a source identity and source timestamp, high-confidence onchain/live-reserve evidence, and an all-in cost bound. Known component downside remains a conservative floor. Cap cUSD is the first such route: its producer carries current USDC + WTGXX weights and a WTGXX Chainlink-NAV-bound output unit; incomplete static baskets such as DLLR do not qualify.
-- Explicit `active` replay is fail-closed: it never restores legacy DEX or redemption values when the modeled request, fixed scoring clock, or eligible modeled-request observations are absent. DEX observations accept only `dex-amm` / `dex-orderbook` families; live redemption observations accept only `issuer-redemption` / `protocol-redemption`, while `eventual-redemption` remains diagnostic-only. Future-dated observations are rejected. Exact DEX observations may replace the aggregate path only when the score-eligible pool count equals the explicit count of retained pools with a reviewed executable capability. Generic shaped TVL stays diagnostic and outside that denominator, while failed or gated exact-capability pools stay inside and fail coverage closed. Aggregate observation count is not a completeness proxy. Partial producer coverage remains shadow evidence and can preserve the aggregate DEX floor while other eligible modeled routes are compared.
-- Freshness is lane-specific in active replay. Generic live DEX evidence uses twice the 30-minute DEX producer interval (1 hour), while measured adapters retain their own validated window when longer (currently 2 hours for exact Curve StableSwap observations). Live redemption evidence uses twice the 4-hour redemption producer interval (8 hours), and reviewed `documented-terms` evidence retains a separate one-year review window. An active caller must supply the fixed observation clock and the applicable live-lane maximum age: a missing DEX maximum age makes live DEX observations ineligible, and a missing live-redemption maximum age does the same for live redemption observations. A curated non-independent or `unknown` route correlation vetoes the diversification bonus; `independent-issuer-rail` only permits the structural output/failure-domain checks and cannot override them.
-- The historical complete producer generation contains 21 exact DEX observations across 7 populated assets and 31 eligible redemption assets, but it predates the per-pool completeness counter. Current calibration therefore treats all DEX coverage as incomplete, makes 244 active-mode exit scores `NR`, and changes 140 overall grades. The recorded gate requires at least 45 DEX-eligible and 27 redemption-eligible assets and returns `hold`; no Safety Score version change is made while it is closed.
-- If only DEX liquidity exists, `effectiveExitScore` equals the evidence-adjusted DEX input
-- If only eligible current-capacity redemption exists, `effectiveExitScore` uses the capacity/confidence-adjusted redemption score
-- Documented offchain-issuer eventual exits remain visible but do not replace missing DEX liquidity without current executable capacity.
-- Redemption uplift is only used when the redemption route is resolved, above the low-confidence / heuristic tier, and not currently impaired by route-availability evidence
-- Eventual-only redemption routes remain visible in the dimension detail. They do not replace missing DEX liquidity, but documented-bound offchain issuer routes can add a capped primary-market exit bonus when DEX liquidity is already available
-- Queue-like redemption routes can improve Liquidity / Exit when resolved and current, but their redemption contribution is capped before the best-path blend so delayed exits cannot behave like instant liquidity
-- During severe active depegs (`activeDepegBps >= 2500`), redemption uplift requires live-direct dynamic permissionless redemption capacity with atomic or immediate settlement; static, documented-bound, live-proxy, issuer/API, queue, and estimated routes stay visible but do not uplift Liquidity / Exit until live-open evidence returns
-- Live reserve redemption telemetry can further constrain scoring: nested `freshnessKind: "unverified"` fails closed unless route-specific lower-bound approval exists, proxy/queue capacity kinds cannot qualify as severe-depeg live-direct evidence, and adapter-emitted daily limits, queue depth, settlement delay, minimum size, and holder eligibility can lower the usable capacity score
-- Low-confidence redemption routes stay visible in the dimension detail, but they do not improve the Safety Score liquidity score
-- Formula-based routes with live on-chain fee telemetry can use the current redemption fee bps for cost scoring while remaining labeled as formula models
-- When DEX liquidity is stale (age beyond `CRON_INTERVALS["sync-dex-liquidity"] * 2`), the last-known score still feeds effective-exit scoring; staleness is surfaced via `liquidityStale` and `inputFreshness.dexLiquidity.stale` so consumers can warn on age without losing the dimension. Scoring only falls back to redemption-only or `NR` when no DEX snapshot exists at all
-- When the current redemption-backstop snapshot is stale or missing (defined here as missing or older than twice the 4-hourly redemption sync cadence), report cards suppress redemption inputs for Safety Score liquidity; the dimension falls back to the last-known DEX liquidity snapshot when one exists, with DEX staleness surfaced via `liquidityStale` and `inputFreshness.dexLiquidity.stale`, or `NR` when no DEX snapshot exists
-- If the DEX liquidity snapshot loader fails outright at read time, `/api/report-cards` degrades in place: the (empty) map is used, so coins with no DEX coverage still `NR` as before
-- If a redemption route is configured but currently unrated, the dimension stays `NR` without pretending the route is absent; the detail string calls out the configured-but-unrated state explicitly
-- High concentration (HHI > 0.5) remains descriptive context, not an extra penalty
-- See [Redemption Backstops](./redemption-backstops.md) for redemption component scoring and route-family caps
-
-### Core Settlement Rail Strip
-
-The Safety Scores grid has a product-facing "Core settlement rails" strip for very large, broadly deployed assets. It is not a methodology dimension and does not change grades. The gate requires all of the following from the current report-card/list payload: market cap at least `$25B`, at least `10` chains, Peg Stability at least `90`, Liquidity / Exit at least `60`, Dependency Risk at least `90`, no dependencies, and a high- or medium-confidence `offchain-issuer` redemption route. Other route families can still support Liquidity / Exit, but they do not satisfy the issuer-exit rail label.
-
-### Resilience Details
-
-2-factor solvency measure (each sub-factor 1/2 of the resilience score). Chain infrastructure is scored exclusively in the Decentralization dimension to avoid double-counting. Blacklist capability is reported descriptively but does not affect the Resilience score.
-
-| Sub-factor             | Scoring                                    | Tiers                                                                                                                                                         |
-| ---------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Collateral Quality** | Reserve-derived weighted score (see below) | 0–100 from curated reserve compositions, or enum fallback                                                                                                     |
-| **Custody Model**      | Who controls the economic backing?         | Fully on-chain (100), Top-tier custodian (80), Regulated custodian (55), Unregulated custodian (30), Sanctioned custodian (5), CEX / off-exchange custody (0) |
-
-**Formula:** `resilience = (collateral + custody) / 2`
-
-For tokenized RWA collateral, the custody model follows the ultimate reserve/legal custody layer rather than only the smart-contract location of the wrapper token.
-
-#### Blacklist Capability Tiers
-
-Blacklist capability is reported descriptively only and does not affect the Resilience score.
-
-| Value    | Condition                                                                                                            |
-| -------- | -------------------------------------------------------------------------------------------------------------------- |
-| Yes      | `canBeBlacklisted: true` (explicit), reviewed direct-freeze evidence, or unsuppressed `governance === "centralized"` |
-| Possible | Explicit `canBeBlacklisted: "possible"` override for a direct token/vault freeze, blacklist, or pause surface        |
-| Upstream | Any reserve, backing, custody, parent-asset path, or curated upstream review that can freeze or block value upstream |
-| No       | None of the above                                                                                                    |
-
-`"inherited"` is the internal value displayed as `Upstream`. It is not accepted by the `canBeBlacklisted` direct-override field, which remains `boolean | "possible"`, but curated `blacklistabilityReview.reviewedStatus: "inherited"` can pin an upstream-only review when no direct holder-token freeze surface is identified. Admin mint authority is reviewed separately in the Mint Authority module and no longer creates a FreezeWatch tier by itself. The inherited tier covers reserve-side stablecoins, custodied wrappers, issuer-seizable tokenized collateral, custody/CEX rails, tracked parent-asset exposures, and backing/redemption rails regardless of weight. This is an any-reserve policy: once a reserve/backing/custody/parent path resolves to a freezeable upstream asset, it is classified as Upstream rather than Possible even if the matched slice is small. `"possible"` is reserved for curated direct token/vault controls whose freeze surface exists at the holder-facing asset rather than only in upstream collateral.
-
-#### Collateral Quality: Reserve-Derived Scoring (v3.3)
-
-For coins with curated reserve compositions, collateral quality is computed as a weighted average of per-slice risk scores:
-
-#### Live Reserve Passthrough (v5.8, tightened in v6.2, v6.5, and v6.6)
-
-Three reserve-related labels mean different things:
-
-| Label                    | Meaning                                                                                                                                                | Score impact                                                                                                        |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| Reserve view             | The stablecoin detail page can show a reserve composition from live sync, curated validation, proof/liveness, curated metadata, or estimated templates | Informational unless the feed also satisfies the score-grade live reserve rules                                     |
-| Score-grade live reserve | The current report-card snapshot used a fresh, clean, independent live reserve snapshot for collateral quality                                         | Can replace curated collateral slices in the Resilience dimension and, when slices carry `coinId`, dependency links |
-| Redemption telemetry     | A live reserve adapter emitted current redemption capacity, fee, freshness, or route status                                                            | Can feed Redemption Backstop capacity or fee scoring; does not automatically change collateral quality              |
-
-For coins with live reserve sync (`liveReservesConfig`), the collateral quality score
-can use the 4-hourly live snapshot from `reserve_composition` instead of curated
-`StablecoinMeta.reserves`, but only when the snapshot is both authoritative and
-independent:
-
-- authoritative = fresh (< 48h), non-empty, and matched to `reserve_sync_state.last_success_at`
-- clean = `reserve_sync_state.last_status === "ok"`; warning-bearing `degraded` snapshots stay visible on reserve detail/status surfaces but do not drive scoring
-- independent = adapter `evidenceClass` is `independent`
-- scoring-eligible freshness = a verified timestamp-backed snapshot or `freshnessMode === "not-applicable"`; `freshnessMode === "unverified"` stays detail-visible but does not drive scoring, even if older metadata includes a legacy freshness-approval flag
-- timestamp-backed dashboard/disclosure feeds can qualify only when the adapter preserves a trustworthy upstream `sourceTimestamp` and the adapter's source-age policy still marks it fresh
-- direct one-bucket on-chain reserve proofs can qualify when they are registered as independent (for example LUSD's dedicated `liquity-v1` adapter); generic liveness probes do not qualify just because they are on-chain
-- `validated-static` feeds (for example `curated-validated` and `attestation-pdf-index`) and `weak-live-probe` feeds (for example `single-asset`, `solstice-attestation`, and `river-protocol-info`) remain authoritative for reserve detail/status surfaces, but they do not override curated collateral scoring
-- the live reserve registry now enforces an explicit per-adapter freshness contract, so latest-state on-chain proofs, timestamp-backed disclosures, and explicitly unverified dashboard feeds cannot silently drift into undocumented freshness semantics
-
-This keeps reserve displays broad while keeping collateral scoring strict.
-
-The `collateralFromLive` flag in `RawDimensionInputs` indicates which collateral source was used.
-The `dependencyFromLive` flag indicates that the Dependency Risk input came from
-the same score-grade live reserve snapshot. Live slices with `coinId` links are
-converted to dependency weights; live slices without `coinId` stay as implicit
-self-backed / non-stablecoin reserve share instead of reviving older curated
-stablecoin-link percentages. If a score-grade live snapshot contains no mapped
-`coinId` links at all, Dependency Risk falls back to curated reserve links or
-manual dependencies before preserving an empty `live-unmapped` dependency set.
-
-Since v8.14, `dependencySource`, `dependencyBaseSource`,
-`mappedLiveReserveWeight`, `dependencyFallbackReason`,
-`dependencySnapshotSource`, and `dependencySnapshotUpdatedAt` make that resolver
-choice auditable. The fields are optional on read for rolling compatibility with
-older cached cards. Self-referential reserve links are excluded defensively, and
-tracked variants use one serial weight-1 `wrapper` edge to their parent even when
-their reserve view mirrors the parent's backing book.
-
-A delta alert fires when the independent live-derived score diverges from curated by >15 points,
-signaling that curated metadata (and potentially the governance classification) may
-need human review.
-
-Delta alerts are fired from the 4-hourly reserve sync cron via `checkCollateralDrift()`.
-Drift data is also included in the report-cards snapshot as `collateralDriftCoins` for
-`/status` visibility. Coins using curated fallback (no fresh independent live data) are tracked as
-`liveToFallbackCoins` in the snapshot metadata.
-
-If the live reserve snapshot loader is temporarily unavailable at read time, report cards
-continue serving from curated reserve metadata and mark the affected coins in
-`liveToFallbackCoins` for operator visibility instead of failing the endpoint.
-
-**Blacklist Reserve Enrichment**
-
-When live reserve data is available, `isBlacklistable()` uses enriched live
-slices instead of curated reserves. The enrichment scans live slice names for
-known blacklistable coin symbols (e.g., "sUSDe" matches USDe, "stataUSDC"
-matches USDC) plus direct stablecoin/custody clues such as named USDC baskets
-or explicit CEX/custodian descriptors. This ensures that composition shifts
-detected by live adapters are reflected in blacklist status without waiting for
-curated data updates. Any matched live or curated reserve exposure maps to
-Upstream; reserve-driven freeze risk is not routed through Possible and no
-majority-weight threshold is applied.
-
-The resolver now converges to a fixed point across the tracked coin set rather
-than relying on a single order-sensitive pass, so cyclic reserve graphs do not
-produce traversal-dependent blacklist statuses. When no live reserves exist,
-curated `StablecoinMeta.reserves` are used as fallback, and the same reserve-name
-heuristics are applied there as well. The collateral drift alert (>15pt
-divergence) helps operators detect when curated metadata needs updating for
-other scoring dimensions.
-
-| Reserve Risk Tier | Score | Description                         | Examples                                                                                                                  |
-| ----------------- | ----- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `very-low`        | 100   | No/minimal counterparty risk        | Government securities, cash, repos, physical gold/silver, ETH, canonical WETH                                             |
-| `low`             | 75    | Stablecoin/tokenized layer          | USDC, BUIDL, USYC, ETH LSTs, other stablecoins                                                                            |
-| `medium`          | 50    | Wrapped/structured market exposure  | wBTC, tokenized gold, transparent spot/wrapped market exposure, tokenized ETFs                                            |
-| `high`            | 25    | Active strategy / volatile exposure | SOL, BNB, TRX, alt-chain tokens, externally managed market-neutral or basis books, LP/private-deal/perp strategy reserves |
-| `very-high`       | 5     | Governance/exotic/opaque            | Governance tokens, algorithmic mechanisms, sanctioned assets                                                              |
-
-**Formula:** `score = round(Σ(slice_pct × tier_score) / Σ(slice_pct))`
-
-**Display thresholds:** ≥88 → "Very low risk", ≥62 → "Low risk", ≥37 → "Medium risk", ≥15 → "High risk", <15 → "Very high risk"
-
-Reserve compositions are maintained in `StablecoinMeta.reserves` as arrays of `{ name, pct, risk }` slices.
-
-Direct ETH reserve slices and canonical wrapped ETH (`WETH`) use the same `very-low` tier. ETH liquid staking tokens (`stETH`, `wstETH`, `rETH`, etc.) remain `low`, while strategy buckets or bridged ETH exposures can still be modeled separately when the reserve slice represents more than spot ETH custody. Delta-neutral labels are evaluated by structure: transparent spot/wrapped exposure can remain medium, but capital delegated to external managers, off-exchange or perp books, LPs, private liquidity deals, or complex DeFi strategy baskets is high unless a stronger source proves the slice is only a liquid stablecoin/cash-equivalent buffer.
-
-#### Collateral Quality: Enum Fallback
-
-For coins without curated reserves, the legacy enum-based scoring is used:
-
-| Enum Value                 | Score |
-| -------------------------- | ----- |
-| `native`                   | 100   |
-| `eth-lst`                  | 66    |
-| `rwa`                      | 50    |
-| `alt-lst-bridged-or-mixed` | 20    |
-| `exotic`                   | 0     |
-
-**Default inference:** When sub-factor fields aren't explicitly set on `StablecoinMeta`, defaults are inferred from `backing` + `governance`:
-
-| Backing + Governance                      | Chain Tier | Deployment Model | Collateral Quality | Custody Model           |
-| ----------------------------------------- | ---------- | ---------------- | ------------------ | ----------------------- |
-| `rwa-backed` + `centralized`              | ethereum   | single-chain     | rwa                | institutional-regulated |
-| `rwa-backed` + `centralized-dependent`    | ethereum   | single-chain     | rwa                | institutional-regulated |
-| `rwa-backed` + `decentralized`            | ethereum   | single-chain     | native             | onchain                 |
-| `crypto-backed` + `decentralized`         | ethereum   | single-chain     | native             | onchain                 |
-| `crypto-backed` + `centralized-dependent` | ethereum   | single-chain     | eth-lst            | onchain                 |
-| `crypto-backed` + `centralized`           | ethereum   | single-chain     | native             | onchain                 |
-| `algorithmic` + any                       | ethereum   | single-chain     | native             | onchain                 |
-
-Explicit overrides exist for coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody, BOLD with third-party bridge).
-
-Data sources: `collateralQuality`, `custodyModel` optional fields on `StablecoinMeta`. `canBeBlacklisted` field (falls back to governance type). Reserve compositions on `StablecoinMeta.reserves`.
-
-### Decentralization Details
-
-Score from `GovernanceQuality` tier (v5.1), with chain infrastructure penalty for protocols on less decentralized chains, a branch-aware CDP-only oracle setup blend (v8.11, introduced in v8.1), a reviewed bridge-route risk blend (v8.12), and a penalty-only Mint Authority blend (v8.0). The coarse 3-level `GovernanceType` is replaced by a 6-tier quality classification that can be explicitly overridden per coin.
-
-**Governance Quality Tiers:**
-
-| Tier               | Score                       | Default for GovernanceType | Examples                                                                   |
-| ------------------ | --------------------------- | -------------------------- | -------------------------------------------------------------------------- |
-| `immutable-code`   | 100                         | — (must be explicit)       | LUSD, BOLD                                                                 |
-| `dao-governance`   | 85                          | `decentralized`            | overrides: crvUSD, USDS, DAI, GHO, FRAX, DOLA                              |
-| `multisig`         | 55                          | `centralized-dependent`    | Most CeFi-dep coins without explicit override                              |
-| `regulated-entity` | 40                          | — (auto-promoted)          | Centralized issuers with verified regulatory oversight                     |
-| `single-entity`    | 20                          | `centralized`              | USDT, USDC, PYUSD                                                          |
-| `wrapper`          | parent-derived, fallback 10 | — (must be explicit)       | yBOLD, sBOLD, sfrxUSD; unresolved wrappers fall back to syrupUSDC-style 10 |
-
-Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governance)`. Override via `governanceQuality` field on `StablecoinMeta`.
-
-**Auto-promotion to `regulated-entity`:** A `single-entity` coin is automatically promoted to `regulated-entity` (40) when all three conditions are met: `jurisdiction.regulator` is set, `jurisdiction.license` is set, and `proofOfReserves.type === "independent-audit"`. This recognizes that regulated, audited centralized issuers carry less governance risk than unregulated single entities.
-
-**Wrapper inheritance:** When a `wrapper` asset has a single resolvable tracked wrapped asset, Decentralization inherits the wrapped asset's **pre-blend** Decentralization score and applies the wrapper-kind haircut used by Dependency Risk ceilings: legacy and savings wrappers `−3`, strategy-vault and risk-absorption variants `−5`, and bond-maturity variants `−8`. Parent-linked examples: yBOLD and sBOLD inherit from BOLD; sfrxUSD inherits from frxUSD. Wrappers without a resolvable tracked parent keep the conservative fallback score of 10.
-
-**Chain infrastructure penalty** (threshold-based on combined `chainInfraScore`, applied to DAO and multisig governance — immutable-code, wrapper, and centralized issuers are exempt):
-
-| Combined Score Range | Penalty |
-| -------------------- | ------- |
-| 80–100               | 0       |
-| 60–79                | −10     |
-| 40–59                | −25     |
-| 20–39                | −40     |
-| 0–19                 | −60     |
-
-`immutable-code` is exempt because there is no governance to undermine — chain centralization cannot compromise non-existent governance keys. `wrapper` is exempt because resolvable wrappers inherit the wrapped asset's chain-adjusted Decentralization score, while unresolved wrappers keep a conservative fallback. Centralized issuers (`single-entity`, `regulated-entity`) are exempt because their governance score already reflects the centralization.
-
-**CDP oracle setup blend (v8.1/v8.11):** crypto-backed CDP assets can carry reviewed `oracleRisk` metadata. When present on a direct non-variant CDP, Decentralization applies a penalty-only blend after governance and chain infrastructure but before bridge-route and Mint Authority scoring: `score = min(score, round(score x 0.75 + oracleScore x 0.25))` (`ORACLE_RISK_BLEND_WEIGHT = 0.25` in `shared/lib/report-card-governance.ts`). This applies even to immutable-code CDPs because liquidation and redemption safety still depend on the collateral price-feed path. Missing oracle reviews are neutral rather than punitive. The current oracle tiers are:
-
-| Tier                      | Score | Meaning                                                                                                     |
-| ------------------------- | ----- | ----------------------------------------------------------------------------------------------------------- |
-| `oracleless-or-internal`  | 100   | The CDP design does not depend on an external liquidation oracle, or uses internal deterministic accounting |
-| `redundant-with-failover` | 95    | Multiple reviewed feeds, validation/failover, and a documented failure mode                                 |
-| `medianized-with-delay`   | 85    | Medianized feeds with an explicit delay or security module                                                  |
-| `standard-external`       | 75    | Standard external price feeds without a stronger reviewed failover profile                                  |
-| `single-source-or-laggy`  | 45    | Single-source, lag-prone, or weakly-fresh feeds                                                             |
-| `opaque-or-unknown`       | 20    | Oracle setup is opaque, unresolved, or not source-verified                                                  |
-
-Since v8.11, `oracleRisk` profiles can include `reviewedAt`, `reviewer`, `confidence`, source links, and optional `branches[]` rows keyed by collateral branch or chain. A reviewed `branchApplicability` disposition makes the market scope explicit: `branches-required` requires `branchModel: "multi-branch"` plus complete branch evidence, `not-applicable` records why distinct market paths are absent, and `unresolved` records the sourced gap for the v9 queue. If branches are present, scoring uses the lowest-scoring branch/profile tier as the oracle score; equal-tier branches resolve by branch ID so input order cannot change the selected explanation. Branch rows can now carry feed paths and addresses, heartbeat/staleness bounds, fallback behavior, observed block/date, collateral parameters, liquidation behavior, backstops, and shutdown/bad-debt handling. The applicability disposition and richer branch fields do not change the v8 score. Report-card payloads expose the same evidence for presentation and v9 compilation; raw v8 scoring fields stay limited to `rawInputs.oracleRiskTier` and `rawInputs.oracleRiskScore`. `npm run check:oracle-risk-coverage:enforce` fails on missing profiles and required branch rows with incomplete structural evidence; review, branch-observation staleness, unreviewed legacy applicability, and explicit unresolved branch applicability remain advisory while blocking branch-complete v9 evaluation.
-
-Initial reviewed metadata covers USDS (`medianized-with-delay`) and BOLD (`redundant-with-failover`), with BOLD split into WETH, wstETH, and rETH branches. Other CDPs stay unchanged until a reviewed profile is curated.
-
-**Bridge-route risk blend (v8.12):** any asset can carry reviewed `bridgeRouteRisk` metadata when durable supply depends on cross-chain mint, lockbox, attestation, issuer-burn/mint, or liquidity/intent routes. When present, Decentralization applies a penalty-only blend after the CDP oracle step and before Mint Authority: `score = min(score, round(score x 0.80 + bridgeRouteScore x 0.20))` (`BRIDGE_ROUTE_RISK_BLEND_WEIGHT = 0.20` in `shared/lib/report-card-governance.ts`). Missing bridge-route reviews are neutral. Strong issuer-native and canonical routes cannot lift the dimension, but weak external lock/mint, liquidity, intent, or opaque routes can drag it down. The current tiers are:
-
-| Tier                         | Score | Meaning                                                                                      |
-| ---------------------------- | ----- | -------------------------------------------------------------------------------------------- |
-| `single-chain-or-native`     | 100   | No material bridge route, or issuance is native to the relevant chain                        |
-| `issuer-native-burn-mint`    | 90    | Issuer-operated burn/mint route with explicit settlement or attestation controls             |
-| `canonical-rollup-bridge`    | 85    | Canonical rollup bridge or equivalent base-layer route                                       |
-| `issuer-native-lock-mint`    | 80    | Issuer-operated lock/mint route with reviewed controls                                       |
-| `external-validated-network` | 65    | External validator or messaging network with reviewed validation assumptions                 |
-| `liquidity-or-intent-route`  | 55    | Liquidity-network, solver, or intent route where market/route execution is material          |
-| `external-lock-mint`         | 40    | External lock/mint bridge, lockbox, OFT, or synthetic route with third-party control surface |
-| `opaque-or-unknown`          | 20    | Route is unresolved, opaque, or lacks source-verified controls                               |
-
-L2BEAT Interop protocol data is an evidence source and queue generator for this review. The live report-card engine does not fetch L2BEAT; it consumes only curated `bridgeRouteRisk` metadata with reviewer, confidence, source, and optional protocol evidence.
-
-Reviewed profiles can also carry one exact route row per authored chain/address deployment. Report-card compilation joins those rows to DefiLlama chain-level circulating supply, treats global and canonical rows as material, and applies a 10% threshold to peripheral or unresolved rows. The resulting `complete`, `partial`, `unavailable`, or `not-applicable` materiality status, matched/unknown supply ratios, selected route, and derived effective tier are diagnostic under v8: the active blend above continues to use the profile-level tier. Activating the supply-derived effective tier requires a new methodology version and structured changelog entry.
-
-**Mint Authority blend (v8.0):** as the final stage, a rated Mint Authority Score applies a penalty-only blend: `score = min(score, round(score x 0.65 + MAS x 0.35))` (`MAS_BLEND_WEIGHT = 0.35` in `shared/lib/report-card-governance.ts`). The blend can only drag the dimension down — privileged-mint risk undermines a decentralization claim, but a clean mint topology never makes a centralized issuer decentralized. Coins without a rated MAS (`NR`) are unchanged, and there is no separate confidence gate because the MAS confidence caps (verified 100 / probable 90 / manual-review 85) already encode evidence quality. Wrappers inherit the parent's pre-Mint Authority score so the drag applies exactly once per coin (the wrapper's own MAS already folds the parent's mint risk), and a wrapper is additionally capped at its parent's final blended score. When the drag binds, the report card shows a `Mint authority` detail row with the MAS, band, and delta.
-
-#### Chain Infrastructure: Two-Axis Scoring
-
-The chain infrastructure score combines **primary chain maturity** with **deployment model risk** via multiplicative scoring:
-
-`chainInfraScore = CHAIN_TIER_SCORE[chainTier] × DEPLOYMENT_MULT[deploymentModel]`
-
-**Chain tier** (where core minting/logic lives):
-
-| Tier                 | Score |
-| -------------------- | ----- |
-| `ethereum`           | 100   |
-| `stage1-l2`          | 66    |
-| `mature-alt-l1`      | 45    |
-| `established-alt-l1` | 20    |
-| `unproven`           | 0     |
-
-**Deployment model** (how the token extends to other chains):
-
-| Model                | Multiplier | Description                                                        |
-| -------------------- | ---------- | ------------------------------------------------------------------ |
-| `single-chain`       | 1.00       | No multichain presence, or irrelevant bridged copies               |
-| `canonical-bridge`   | 0.90       | Bridges via L2 canonical rollup bridges (inherits rollup security) |
-| `native-multichain`  | 0.75       | Independent minting/redeeming on multiple chains                   |
-| `third-party-bridge` | 0.60       | Bridges via CCIP, LayerZero, Wormhole, etc.                        |
-
-**Combined score matrix:**
-
-| Deployment Model   | ETH (100) | L2 (66) | Mature Alt-L1 (45) | Alt-L1 (20) | Unproven (0) |
-| ------------------ | --------- | ------- | ------------------ | ----------- | ------------ |
-| single-chain       | 100       | 66      | 45                 | 20          | 0            |
-| canonical-bridge   | 90        | 59      | 41                 | 18          | 0            |
-| native-multichain  | 75        | 50      | 34                 | 15          | 0            |
-| third-party-bridge | 60        | 40      | 27                 | 12          | 0            |
-
-Coins without overrides default to Ethereum + single-chain (score 100, penalty 0).
-
-Examples: BOLD (immutable-code) = **100** (exempt from chain penalty). yBOLD (strategy-vault wrapper over BOLD) = 100 − 5 = **95**. sfrxUSD (savings wrapper over frxUSD) inherits frxUSD Decentralization − 3. LUSD (immutable-code) = **100**. hyUSD (dao-governance, Solana → infra 45) = 85 − 25 = **60**. USDB (multisig, Blast L2) = 55 − 10 = **45**.
-
-Chain penalty applies to `dao-governance` and `multisig` tiers. Exempt tiers: `immutable-code`, `wrapper`, `single-entity`, `regulated-entity`.
-
-### Dependency Risk Details
-
-**Universal scoring (v5.1):** All coins with upstream stablecoin dependencies get blended scores, regardless of governance type. Topological sort ensures every coin is scored after all its upstreams.
-
-**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveEffectiveDependencies()` in `shared/lib/dependency-derivation.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). Self-links are discarded at this canonical boundary. A tracked variant is represented by one serial weight-1 `wrapper` edge to its parent; a reserve view that mirrors the parent's backing does not create additional parallel edges. For non-variants, score-grade live reserve slices with mapped tracked links are the dependency source for that snapshot; otherwise the resolver falls back to curated `StablecoinMeta.reserves`, then to the manual `dependencies` array when curated reserves have no tracked links. If a score-grade live snapshot exists but contains no mapped tracked links, that curated/manual fallback is used before the resolver keeps an empty `live-unmapped` dependency set. Weights come directly from reserve percentages when total dependency weight is <= 1, so non-stablecoin or unmapped live reserve slices inside a partially mapped live snapshot contribute to the "self-backed" component of the score. If declared dependency weight exceeds 1, dependency weights are normalized by raw total and the self-backed fraction is zero.
-
-**Scoring:**
-
-- **No dependencies**: `SELF_BACKED_SCORE_BY_GOVERNANCE[governance]` — varies by tier: `decentralized` = 90, `centralized-dependent` = 75, `centralized` = 95
-- **With dependencies**: `score = sum((weight_i / normalizer) × upstream_score_i) + (1 − min(1, rawTotalWeight)) × SELF_BACKED_SCORE`, where `normalizer = rawTotalWeight` only when raw dependency weight exceeds 1 and is otherwise 1
-- −10 penalty if any dependency scores below 75 (B-)
-- Every unavailable upstream weight is scored at 70 inside the same blend used for available weights, including when all upstreams are unavailable; unavailable weights count as weak dependencies for the below-75 penalty and remain subject to wrapper/mechanism ceilings
-
-**Self-backed score by governance type:**
-
-| Governance Type         | Self-Backed Score | Rationale                                                |
-| ----------------------- | ----------------- | -------------------------------------------------------- |
-| `decentralized`         | 90                | Own peg mechanisms (CDPs, LLAMMA) function independently |
-| `centralized-dependent` | 75                | PSMs/arbitrage loops coupled to upstream infrastructure  |
-| `centralized`           | 95                | Standalone RWA-backed, minimal coupling                  |
-
-#### Dependency Type Ceilings
-
-Each dependency relationship can be classified as `wrapper`, `mechanism`, or `collateral` (default). After the blended score is computed, a ceiling is applied based on the most critical upstream dependency.
-
-**Graph policy:** The Worker builds every effective dependency set before scoring and diagnoses self-edges, duplicate `(from,to,type)` edges, and strongly connected components. Invalid static graphs and unreviewed static SCCs reject report-card generation. When a score-grade live reserve snapshot creates an SCC, each live-derived cycle member falls back to its current curated/manual dependency set and the graph is diagnosed again. A remaining invalid edge or SCC rejects the snapshot, so neither the cache generation nor its grade-history rows are published. This preserves evidenced relationships without allowing traversal order to choose a score.
-
-Each Dependency Risk dimension also carries optional structured `dependencyDiagnostics`: raw and normalized contributions, self-backed fraction, available/unavailable weight and IDs, weak penalty, and binding wrapper/mechanism ceiling. Older cached payloads remain readable. Contagion stress recomputation produces fresh diagnostics for the stressed scores rather than retaining snapshot-time derived values.
-
-| Type         | Meaning                                              | Ceiling                                                                                                                                                                               |
-| ------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `wrapper`    | Thin layer around upstream (e.g., syrupUSDC -> USDC) | legacy wrapper: `upstream_score - 3`; tracked savings variant: `-3`; tracked strategy-vault variant: `-5`; tracked risk-absorption variant: `-5`; tracked bond-maturity variant: `-8` |
-| `mechanism`  | Critical to peg mechanism (e.g., DAI -> USDC PSM)    | upstream_score                                                                                                                                                                        |
-| `collateral` | Standard collateral (default)                        | no ceiling                                                                                                                                                                            |
-
-Formula: `final_score = min(blended_score, min_ceiling_from_wrapper_and_mechanism_deps)`
-
-The ceiling ensures that a coin which fundamentally depends on an upstream stablecoin cannot score higher than that upstream, regardless of how well it performs on other factors.
-
-**Examples:**
-
-- **USDC at 95, DAI (mechanism dep):** blended = 82, ceiling = 95, final = **82** (no change -- blended already below ceiling)
-- **USDC at 60, DAI (mechanism dep):** blended = 69.75, ceiling = 60, final = **60** (ceiling kicks in)
-- **syrupUSDC (legacy wrapper dep on USDC at 95):** ceiling = 95 - 3 = **92**
-- **sUSDai (strategy-vault dep on USDai at 80):** ceiling = 80 - 5 = **75**
-- **bUSD0 (bond-maturity dep on USD0 at 95):** ceiling = 95 - 8 = **87**
-
-## Grade Thresholds
-
-Lowered 5 points in v4.0 to compensate for structural deflation from removing peg from the base. Lowered another 5 points in v5.1 to fix C-range overcrowding after blacklist/decentralization scoring adjustments.
-
-| Grade | Min Score  |
-| ----- | ---------- |
-| A+    | 87         |
-| A     | 83         |
-| A-    | 80         |
-| B+    | 75         |
-| B     | 70         |
-| B-    | 65         |
-| C+    | 60         |
-| C     | 55         |
-| C-    | 50         |
-| D     | 40         |
-| F     | 0          |
-| NR    | null score |
-
-## Grade Colors
-
-| Range         | Badge (Tailwind) | Radar (hex) |
-| ------------- | ---------------- | ----------- |
-| A (A+, A, A-) | emerald-500      | `#10b981`   |
-| B (B+, B, B-) | blue-500         | `#3b82f6`   |
-| C (C+, C, C-) | amber-500        | `#f59e0b`   |
-| D             | orange-500       | `#f97316`   |
-| F             | red-500          | `#ef4444`   |
-| NR            | muted            | `#71717a`   |
+The legacy shadow cache keys are read only by migration `0226_safety_score_v9_canonical_cache.sql`, which copies existing accepted state into the canonical keys during rollout. Runtime code does not publish or consume shadow keys. Deleting the old D1 keys requires a later coordinated cleanup migration because migrations run before the new Worker is active.
 
 ## API
 
-`GET /api/report-cards` — all coins graded with per-dimension breakdown and methodology metadata. Cache: standard (5-min edge).
+`GET /api/report-cards/v9` is the only live Safety Score API.
 
-The common read path uses the cron-published `report-cards:snapshot` cache row. That D1 value wraps the generation/methodology-pinned private storage envelope in checksum-verified gzip/base64. The outer envelope retains the V8 identity for operator inspection, while bounded decompression protects the row-size budget and the new reader remains compatible with legacy plain envelopes. The decoded public V8 response payload is unchanged. The loader recomputes its publication manifest from the card identities and rejects a missing identity, active-set mismatch, cache-generation mismatch, evaluation-build mismatch, oversized payload, or Safety Score methodology mismatch; the API then computes an identified V8 response on read until the cron republishes. The accepted `safetyScoreIdentity` names model `v8`, schema version, methodology, evaluation build, exact base input, and the shared publication generation.
+The handler reads the canonical publication and matching health row, validates the complete current response, and never recomputes or falls back to V8. Missing or incompatible state returns `503`. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
 
-The same publication cron also persists a private exact fixed-input artifact at `report-cards:fixed-input:exact`; it is an operator/replay contract, not a public API response. The artifact captures the in-memory V8 inputs used for that publication and omits additive V9-only fields for strict rollback compatibility. While the exact in-memory peg event graph is still available, the producer derives compact per-asset V9 peg-provenance summaries and writes the small `report-cards:v9-peg-provenance-seed:exact` artifact in the same D1 batch as the full snapshot, compact score map, Telegram safety source, and V8 replay artifact. Every row carries the same full V8 identity. If compact provenance capture fails, V8 still publishes without a new V9 seed; the dedicated compiler then rejects the stale seed by identity. Publication fails before the batch if active DEX rows do not belong to one complete published generation/timestamp, redemption rows cannot bind to one completed producer run, the fixed-input generation differs from the report-card publication generation, or a required artifact exceeds its bounded cache size. The later compiler writes the fully prepared diagnostic attempt to the separate `report-cards:v9-fixed-input:exact` key.
+A current response emits `X-Safety-Score-Status: current`. A held response serves the last accepted ratings, emits `X-Safety-Score-Status: held`, uses the accepted timestamp for freshness, and forces `Cache-Control: no-store`.
 
-The public quarter-hour chain ends the report-card producer immediately after its atomic batch and then runs DDR. Private V9 attribution has its own `8,23,38,53` trigger and shadow compilation has its own `14,29,44,59` trigger. Because distinct expressions can still overlap within one Worker service, each V9 invocation first acquires a D1-backed memory-lane lease, then queries `cron_slot_executions` and proceeds only when the matching core slot is terminal `ok` on the same immutable Worker version ID and no earlier scheduled slot remains active. Later scheduled invocations wait at the lightweight dispatcher boundary before loading their runner graphs. Attribution has a three-minute window; compilation has a 30-second pre-quarter window and requires at least ten seconds remaining. Late delivery, an unfinished/degraded core slot, a version mismatch, or a competing active slot skips neutrally; unavailable Worker-version metadata reports degraded. The compiler sequentially decodes one full V8 artifact plus the compact seed, releases their stored strings, requires the seed's exact peg-input key set (active NAV tokens intentionally have no peg row) and full V8 identity including evaluation-build digest, applies only a compatible bounded attribution generation, loads bounded diagnostic journals, and then compiles V9. No V9 work can strand the V8 or DDR job row.
+The response includes:
 
-The reserve `evidenceJournalById` projection records only strict content-addressed attempt/admission/fallback metadata, hashes, timestamps or blocks, adapter-registry source origin, and sidecar identity; it accepts no raw response, URL, credential, or free-form diagnostic. The separate `supplyAttributionJournalById` projection records the allowlisted exact observer leaf rejection code and reuses `sourceObservedAtSec` for the rejected source timestamp when a freshness or clock-skew predicate has a known source time. The rejection field is optional on read so immutable V1 rows written before leaf diagnostics retain their original content-addressed IDs; all newly created rejected rows require it. Journal content remains absent from base-input identity, fact compilation, result identity, the V8 cache, and every public response. This production scheduling boundary ensures attribution, journal, provenance, artifact, compile, and shadow-state work cannot prevent either the V8 producer or DDR from returning and recording a terminal result.
+- complete V9 identity and source digests
+- methodology and policy identity
+- active-set completeness
+- current or held publication health
+- native three-pillar cards and numeric breakdowns
+- the canonical serial/basket dependency graph
+- accepted `updatedAt`
 
-`GET /api/redemption-backstops` — current redemption backstop and effective-exit dataset used by redeemable-asset detail views and report-card liquidity inputs. Cache: standard (`public, s-maxage=300, max-age=60`).
+See [API Reference](./api-reference.md) for the wire contract.
 
-Response includes `safetyScoreIdentity`, `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal, including canonical `weight` and `type` metadata), `methodology` (version, weights, `pegMultiplierExponent`, thresholds), `inputFreshness` (DEX and redemption freshness used for score gating), `liquidityStale`, `redemptionStale`, and `updatedAt`. See [API Reference](./api-reference.md) for the full response shape.
+## Consumers
 
-`GET /api/safety-score-history` — per-coin Safety Score grade history timeline (`stablecoin` required, `days` optional). The compatibility response keeps its existing shape while reading identity-rich `safety_score_history_v2` rows plus legacy `safety_grade_history` gaps. V2 methodology-boundary, rollback, and restoration baselines are intentionally excluded because the legacy response cannot represent a non-comparable boundary without implying a continuous series. Cache: slow (1-hour edge).
+All active safety consumers resolve the canonical V9 publication:
 
-Implementation notes:
+- Safety Scores, homepage, stablecoin detail, comparison, portfolio, and dependency map
+- Yield Intelligence safety hydration
+- daily digest and mint/burn flight-to-quality classification
+- Telegram grade-change alerts
+- OG cards, public datasets, and coverage/status surfaces
+- append-only safety-grade history
 
-- Report cards and peg summary share peg-event derivation through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), so peg score/current deviation windows are computed with identical logic in both endpoints. The quarter-hourly `publish-report-card-cache` pass is the only writer of the producer-published `peg-analytics` D1 cache row; `/api/peg-summary` accepts it for up to 30 minutes (2x producer cadence) and falls back to direct compute on a miss or stale row.
-- Report-card API responses use the canonical published report-card snapshot. The grade-history cron loads the canonical full and exact fixed-input cache rows together and requires their V8 identities to match, so persisted history carries the exact publication generation, base-input generation, methodology, and evaluation-build identity instead of independently recomputing the score.
-- `publish-report-card-cache` validates the exact active registry set before writing. Missing, duplicate, defunct-active, or unexpected live IDs reject the whole publication; expected coverage must equal scored plus NR rows.
-- Exact fixed-input schema v3 records `captureKind`, the sorted active IDs, source/DEX/redemption generation IDs, registry revision and fingerprint, DEX/redemption payload fingerprints, producer methodology versions, the fixed clock, lane freshness, and optional-default V9 diagnostic fields. The cache envelope stores the normalized JSON as `gzip-base64` with its source generation, SHA-256, and uncompressed byte length; export decoding rechecks the length, checksum, capture kind, and generation. Replay recomputes both payload fingerprints, rejects methodology or current-registry drift unless the invoking tool exposes and receives the corresponding explicit override, and requires exact captures to retain full active DEX and blacklist identity sets. Diagnostic journal rows are canonicalized but never projected into report-card or V9 scoring facts.
-- The full snapshot, exact fixed input, compact `report_card_cache` score map used by lightweight and yield-safety consumers, and Telegram `alert:safety-source-cache` are written in one D1 batch. Each carries the same strict V8 identity, publication generation, methodology, and completeness manifest. Strict compact-cache consumers, including hourly yield publication, publication-health fallback, and the data-invariant canary, require scored IDs plus explicit NR IDs to equal the exact active registry set; count-preserving identity swaps are rejected. The compact cache also carries `degradedInputs` metadata (`inputsStale`, `liquidityStale`, `redemptionStale`, and `staleInputs`).
-- `snapshot-safety-grade-history` owns only append-only grade history. For each healthy current-V8 seed or organic grade change it writes the legacy row and an immutable V2 twin; the V2 row records model, methodology, nullable policy identity, evaluation-build digest, base-input generation, model-publication generation, and transition kind. Current V9 writes only identified V2 organic rows and suppresses them while publication is held. The V9 activation baseline is a non-comparable V2 boundary with null previous values, so activation cannot appear as an organic grade movement.
+Consumers that require current ratings reject held publications. Display surfaces may show the held accepted snapshot with an explicit notice. No active consumer uses the V8 compact score cache or computes V8 cards on request.
 
-Key types:
+Selector creation currently fails closed with `503` because its recommendation policy has not been approved for V9. Existing signed selector snapshots remain readable through their historical contract.
 
-- **`DependencyWeight`**: `{ id: string; weight: number; type?: "wrapper" | "mechanism" | "collateral" }` — upstream stablecoin ID, collateral fraction (0–1), and optional dependency ceiling semantics. Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card, including peg state; the evidence-adjusted and observed DEX scores; DEX coverage, evidence, measured-TVL, and deployment fields; redemption score/capacity/route fields; resilience and governance tiers; oracle, bridge, bridge-materiality diagnostics, and Mint Authority inputs; typed dependencies and their provenance; variant identity; and live-collateral provenance. This enables client-side stress recomputation without discarding why a DEX input was capped.
-- **`ReportCard.oracleRisk`**: Optional display payload for reviewed or inherited oracle setup context (`tier`, `score`, `label`, `summary`, provenance, sources, selected branch, branch rows, and `inheritedFrom`). It is presentation evidence; scoring uses the raw oracle fields inside Decentralization.
-- **`ReportCard.bridgeRouteRisk`**: Optional display payload for reviewed bridge-route context (`tier`, `score`, `label`, `summary`, provenance, protocol evidence, sources, and materiality diagnostics). It is presentation evidence; v8 scoring uses the profile-level raw bridge-route fields inside Decentralization.
+## History
 
-## Portfolio Analyzer & Stress Test
+`snapshot-safety-grade-history` appends identified V9 organic transitions and suppresses writes while publication is held. Each V2 row records model, methodology, policy, evaluation-build, base-input, publication generation, and transition kind.
 
-Two separate features:
-
-- **Portfolio Analyzer** — standalone `/portfolio` page (`src/app/portfolio/client.tsx`, `usePortfolio`). Holdings state remains in `usePortfolio`; active safety calculations use the identified V9 response.
-- **Interactive Stress Test / Contagion Map** — retained V8 compatibility code (`src/components/stress-test-panel.tsx`, `useStressTest`). It is not selected by the active V9 Safety Scores route because no approved V9 stress mapping exists.
-
-### Portfolio Analyzer
-
-Users enter stablecoin holdings (coin + USD amount). Derived computations (all client-side):
-
-- **Portfolio safety aggregate**: amount-weighted V9 `score` for rated holdings. It is labeled as a portfolio aggregate and is not converted into a synthetic asset grade.
-- **Portfolio pillars**: amount-weighted Backing, Exit, and Economic Control scores.
-- **Dependency exposure**: native V9 serial and basket dependency summaries, retaining their V9 semantics.
-- **Held or mismatched publication**: the safety aggregate is unavailable and never falls back to V8.
-
-State: `usePortfolio` hook. Sources (priority): URL `?p=usdc-circle:50000,dai-makerdao:5000` → `localStorage` → empty. Shared links don't overwrite saved portfolio.
-
-Portfolio holdings now accept canonical IDs only. On read, `src/lib/portfolio-codec.ts` validates holdings, drops unknown or non-canonical IDs, merges duplicate canonical IDs by amount, and writes the cleaned state back once after a successful read.
-
-### Interactive Stress Test
-
-The V8 simulator remains versioned compatibility code. The active V9 route
-does not expose it because applying V8 dimension recomputation to V9 cards
-would mix models. It remains unavailable until a native V9 stress-state
-mapping is approved.
-
-Legacy state remains in the `useStressTest` hook with URL sync
-`?stress=usdc-circle&grade=D`, but no active V9 consumer invokes it.
+`GET /api/safety-score-history` remains the public per-asset timeline. Historical V8 and activation-boundary rows remain readable as archive data; they are never live publication inputs.
 
 ## Frontend
 
-- **Active ratings page**: `/safety-scores/` selects `useReportCardsV9()` and renders the identified V9 publication through the established grade-grouped card grid, hero, filters, sorting controls, and card treatment. Cards use Backing, Exit, and Economic Control; the page shows accepted/attempted timestamps and the explicit held-publication banner. An unavailable or invalid V9 response renders unavailable and never falls back to V8.
-- **V9 card grid**: `src/app/safety-scores/v9-client.tsx` and `src/components/report-card-mini-v9.tsx` preserve the production grade-grouped card grid, hero, filters, sorting, and visual treatment while using V9 score, grade, and three-pillar radar data.
-- **Retained V8 compatibility UI**: `src/app/safety-scores/client.tsx`, `src/components/stress-test-panel.tsx`, `src/components/report-card.tsx`, and `src/components/report-card-mini.tsx` remain available only to compatibility code. The active ratings route no longer selects them.
-- **V9 detail renderers**: `src/components/report-card-v9.tsx` remains the generic/shadow-review renderer. Stablecoin detail pages use `src/components/stablecoin-detail/stablecoin-safety-score-v9-card.tsx`, which consumes the already-selected typed V9 card and restores the production score hero, freshness/actions, expandable pillar score bars, responsive two-column reserve composition, held-publication notice, and V9-native show-work. Expanded pillars render the report-v4 numeric breakdown: effective Backing weights and contributions, the selected Exit route's weighted components and modifiers, and Economic Control scores labeled as binding or diagnostic. Pre-breakdown report-v3 cards retain the reviewed-input fallback during reader-first rollout. Live-reserve loading keeps the chart column allocated to avoid a hydration layout shift; unavailable score data retains the standalone reserve fallback.
-- **Other active consumers**: home and alt-peg tables, screener, stablecoin detail, compare, portfolio, dependency map, Freezewatch, and coverage use `useReportCardsV9()` projections. Held publications show an explicit notice.
-- **Policy-dependent consumers**: Selector recommendations and the Bluechip roster fail closed while their V9 thresholds remain unreviewed. The V8 stress simulator is not exposed by the active V9 route.
-- **Detail timeline**: `src/components/stablecoin-detail/safety-score-history-section.tsx` — per-coin grade transition timeline (seed row + changes) shown under the Safety Score section on `/stablecoin/[id]`
-- **Hooks**: `src/hooks/api-hooks.ts` (`useReportCardsV9`, retained `useReportCards` compatibility hook, and `useSafetyScoreHistory`)
+- `src/app/safety-scores/v9-client.tsx` owns the active ratings grid, filters, sorting, and held-state presentation.
+- `src/components/report-card-mini-v9.tsx` renders the V9 card treatment.
+- `src/components/stablecoin-detail/stablecoin-safety-score-v9-card.tsx` renders detail-page score, pillars, evidence, and breakdowns.
+- `src/components/radar-chart-v9.tsx` renders Backing, Exit, and Economic Control comparisons.
+- `src/components/safety-score-v9-status-notice.tsx` renders held and unavailable publication state.
+- `src/hooks/api-hooks.ts` exposes `useReportCardsV9` and `useSafetyScoreHistory`.
+
+The retired V8 report-card components, V8 portfolio synthesis, and contagion stress simulator have been removed. A future stress feature must define native V9 semantics rather than recomputing retired V8 dimensions.

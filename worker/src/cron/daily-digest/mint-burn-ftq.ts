@@ -1,8 +1,6 @@
-import { buildFlightToQualityClassificationFromV8Cache } from "../../lib/flight-to-quality-classification";
-import { loadReportCardCache } from "../../lib/report-card-cache";
+import { buildFlightToQualityClassificationFromV9Snapshot } from "../../lib/flight-to-quality-classification";
+import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
-
-const REPORT_CARD_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 
 export interface DigestMintBurnCoinIntensity {
   id: string;
@@ -28,12 +26,9 @@ export async function computeDigestMintBurnFtqFlows(
   db: D1Database,
   coinIntensities: DigestMintBurnCoinIntensity[],
 ): Promise<DigestMintBurnFtqFlows> {
-  let reportCardCache: Awaited<ReturnType<typeof loadReportCardCache>>;
+  let source: Awaited<ReturnType<typeof loadActiveSafetyScoreSource>>;
   try {
-    reportCardCache = await loadReportCardCache(db, {
-      maxAgeMs: REPORT_CARD_MAX_AGE_MS,
-      requireCompleteness: true,
-    });
+    source = await loadActiveSafetyScoreSource(db);
   } catch {
     return {
       kind: "unavailable",
@@ -43,24 +38,27 @@ export async function computeDigestMintBurnFtqFlows(
       safetyScoreIdentity: null,
     };
   }
-  if (reportCardCache.kind !== "ok") {
+  if (source.kind === "error") {
     return {
       kind: "unavailable",
       safeNet24h: 0,
       riskyNet24h: 0,
-      reason: reportCardCache.reason,
+      reason: source.reason,
       safetyScoreIdentity: null,
     };
   }
 
-  const classification = buildFlightToQualityClassificationFromV8Cache(reportCardCache.payload);
+  const classification = buildFlightToQualityClassificationFromV9Snapshot(
+    source.snapshot,
+    { expectedIdentity: source.snapshot.safetyScoreIdentity },
+  );
   if (classification.kind !== "ok") {
     return {
       kind: "unavailable",
       safeNet24h: 0,
       riskyNet24h: 0,
       reason: classification.reason,
-      safetyScoreIdentity: reportCardCache.payload.safetyScoreIdentity ?? null,
+      safetyScoreIdentity: source.snapshot.safetyScoreIdentity,
     };
   }
   const gradeClassification = classification.classification;

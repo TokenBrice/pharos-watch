@@ -541,7 +541,7 @@ function decodeAddress(
   }
 }
 
-export function createCurveCompositeDeploymentVerifier(dependencies: VerificationDependencies) {
+function createCurveCompositeDeploymentVerifier(dependencies: VerificationDependencies) {
   return async function verifyCurveCompositeDeployment(input: {
     policy: CurveCompositePoolPolicy;
     nowSec: number;
@@ -970,7 +970,7 @@ function rawAmountToUsd(amount: bigint, decimals: number, referencePriceUsd: num
   return Number.isFinite(usd) && usd >= 0 ? usd : null;
 }
 
-export function resolveCurveCompositeTokenIndices(
+function resolveCurveCompositeTokenIndices(
   target: DexMeasuredExecutionTarget | DexMeasuredExecutionProfile,
 ): { ok: true; inputIndex: number; outputIndex: number } | { ok: false; reason: QuoteFailure } {
   const endpointAddress =

@@ -6,7 +6,7 @@ import {
   StressSignalsAllResponseSchema,
 } from "../market";
 import { PHAROSVILLE_API_CONTRACT_VERSION, PHAROSVILLE_API_ENDPOINT_KEYS, PharosVilleApiPayloadsSchema } from "../pharosville";
-import { ReportCardsResponseSchema } from "../report-cards";
+import { ReportCardsV9CurrentResponseSchema } from "../report-cards-v9";
 import { StabilityIndexResponseSchema } from "../stability";
 
 describe("PharosVille shared payload contract", () => {
@@ -28,6 +28,6 @@ describe("PharosVille shared payload contract", () => {
     expect(PharosVilleApiPayloadsSchema.shape.stability).toBe(StabilityIndexResponseSchema);
     expect(PharosVilleApiPayloadsSchema.shape.pegSummary).toBe(PegSummaryResponseSchema);
     expect(PharosVilleApiPayloadsSchema.shape.stress).toBe(StressSignalsAllResponseSchema);
-    expect(PharosVilleApiPayloadsSchema.shape.reportCards).toBe(ReportCardsResponseSchema);
+    expect(PharosVilleApiPayloadsSchema.shape.reportCards).toBe(ReportCardsV9CurrentResponseSchema);
   });
 });

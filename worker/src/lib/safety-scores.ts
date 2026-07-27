@@ -1,55 +1,12 @@
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import {
-  buildReportCardsSnapshot,
-  ReportCardsSnapshotUnavailableError,
-} from "./report-cards-snapshot";
-import type { StablecoinsCacheLoadResult } from "./stablecoins-cache";
-import {
-  loadReportCardCache,
-  REPORT_CARD_CACHE_MAX_AGE_MS,
-} from "./report-card-cache";
-import type { SafetyScoreV8PublicationIdentity } from "@shared/types/safety-score-publication";
-import { isCurrentSafetyScoreV8Identity } from "./safety-score-current-identity";
-import {
-  loadActiveSafetyScoreSource,
-  type ActiveSafetyScoreSource,
-} from "./safety-score-active-source";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import { loadActiveSafetyScoreSource } from "./safety-score-active-source";
 
 interface SafetyResult {
   score: number;
   grade: string;
 }
 
-export interface SafetyGradeRow {
-  id: string;
-  symbol: string;
-  grade: string;
-  score: number;
-  pegScore: number | null;
-  liqScore: number | null;
-}
-
-export interface ComputeSafetyScoresOptions {
-  includeNavTokens?: boolean;
-  outputMode?: "map" | "full-grades";
-  preloadedStablecoinsCache?: StablecoinsCacheLoadResult;
-  sourceMode?: "computed" | "published-cache";
-}
-
-type ComputeSafetyScoresMapOptions = Omit<ComputeSafetyScoresOptions, "outputMode" | "sourceMode"> & {
-  outputMode: "map";
-  sourceMode?: "computed";
-};
-type ComputeSafetyScoresFullOptions = Omit<ComputeSafetyScoresOptions, "outputMode" | "sourceMode"> & {
-  outputMode: "full-grades";
-  sourceMode?: "computed";
-};
-type ComputePublishedSafetyScoresMapOptions = {
-  outputMode: "map";
-  sourceMode: "published-cache";
-};
-
-export type SafetyScoresResultMap = {
+export type PublishedSafetyScoresResultMap = {
   kind: "ok" | "degraded";
   mode: "map";
   reason?: string;
@@ -57,238 +14,85 @@ export type SafetyScoresResultMap = {
   trackedCount: number;
   coverageRatio: number;
   scores: Map<string, SafetyResult>;
-};
-
-export type SafetyScoresResultFull = {
-  kind: "ok" | "degraded";
-  mode: "full-grades";
-  reason?: string;
-  coveredCount: number;
-  trackedCount: number;
-  coverageRatio: number;
-  scores: Map<string, SafetyResult>;
-  grades: SafetyGradeRow[];
-};
-
-export type SafetyScoresSnapshotResult = SafetyScoresResultMap | SafetyScoresResultFull;
-
-export type PublishedSafetyScoresResultMap = SafetyScoresResultMap & {
-  source: "report-card-cache";
-  expectedModel: "v8" | "v9";
-  safetyScoreIdentity: SafetyScoreV8PublicationIdentity | null;
+  source: "safety-score-v9-publication";
+  expectedModel: "v9";
+  safetyScoreIdentity: SafetyScoreV9PublicationIdentity | null;
   publicationGenerationId: string | null;
   methodologyVersion: string | null;
   publishedAt: number | null;
 };
 
-function buildResultBase(
-  kind: "ok" | "degraded",
-  scores: Map<string, SafetyResult>,
-  trackedCount: number,
-  reason?: string,
-): Omit<SafetyScoresResultMap, "mode"> {
-  const coveredCount = scores.size;
-  return {
-    kind,
-    ...(reason ? { reason } : {}),
-    coveredCount,
-    trackedCount,
-    coverageRatio: trackedCount > 0 ? coveredCount / trackedCount : 1,
-    scores,
-  };
-}
-
-function toMapResult(
-  kind: "ok" | "degraded",
-  scores: Map<string, SafetyResult>,
-  trackedCount: number,
-  reason?: string,
-): SafetyScoresResultMap {
-  return {
-    ...buildResultBase(kind, scores, trackedCount, reason),
-    mode: "map",
-  };
-}
-
-function toFullResult(
-  kind: "ok" | "degraded",
-  scores: Map<string, SafetyResult>,
-  grades: SafetyGradeRow[],
-  trackedCount: number,
-  reason?: string,
-): SafetyScoresResultFull {
-  return {
-    ...buildResultBase(kind, scores, trackedCount, reason),
-    mode: "full-grades",
-    grades,
-  };
-}
-
-async function loadPublishedSafetyScoresSnapshot(db: D1Database): Promise<PublishedSafetyScoresResultMap> {
-  const cached = await loadReportCardCache(db, {
-    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-    requireCompleteness: true,
-  });
-  if (cached.kind !== "ok") {
-    return {
-      ...toMapResult("degraded", new Map(), ACTIVE_STABLECOINS.length, `report-card-cache:${cached.reason}`),
-      source: "report-card-cache",
-      expectedModel: "v8",
-      safetyScoreIdentity: null,
-      publicationGenerationId: null,
-      methodologyVersion: null,
-      publishedAt: cached.updatedAt,
-    };
-  }
-
-  if (!isCurrentSafetyScoreV8Identity(cached.payload.safetyScoreIdentity)) {
-    return {
-      ...toMapResult(
-        "degraded",
-        new Map(),
-        cached.payload.completeness!.expectedCount,
-        "report-card-cache:identity-mismatch",
-      ),
-      source: "report-card-cache",
-      expectedModel: "v8",
-      safetyScoreIdentity: cached.payload.safetyScoreIdentity ?? null,
-      publicationGenerationId: cached.payload.publicationGenerationId ?? null,
-      methodologyVersion: cached.payload.methodologyVersion,
-      publishedAt: cached.updatedAt,
-    };
-  }
-
-  const scores = new Map(
-    Object.entries(cached.payload.scores).map(([id, score]) => [id, { ...score }]),
-  );
-  const degradedInputs = cached.payload.degradedInputs?.inputsStale === true;
-  return {
-    ...toMapResult(
-      degradedInputs ? "degraded" : "ok",
-      scores,
-      cached.payload.completeness!.expectedCount,
-      degradedInputs ? "report-card-cache:degraded-inputs" : undefined,
-    ),
-    source: "report-card-cache",
-    expectedModel: "v8",
-    safetyScoreIdentity: cached.payload.safetyScoreIdentity!,
-    publicationGenerationId: cached.payload.publicationGenerationId!,
-    methodologyVersion: cached.payload.methodologyVersion,
-    publishedAt: cached.payload.updatedAt,
-  };
-}
-
-function v9ExpectedPublishedSafetyScoresResult(
-  activeSource: Exclude<ActiveSafetyScoreSource, { kind: "v8" }>,
+function result(
+  input: Omit<
+    PublishedSafetyScoresResultMap,
+    "mode" | "source" | "expectedModel" | "coveredCount" | "coverageRatio"
+  > & { scores: Map<string, SafetyResult> },
 ): PublishedSafetyScoresResultMap {
-  const reason = activeSource.kind === "v9"
-    ? "active-safety-score:v9"
-    : `active-safety-score:${activeSource.reason}`;
-  const trackedCount = activeSource.snapshot?.completeness.expectedCount ?? ACTIVE_STABLECOINS.length;
+  const coveredCount = input.scores.size;
   return {
-    ...toMapResult("degraded", new Map(), trackedCount, reason),
-    source: "report-card-cache",
-    expectedModel: activeSource.expectedModel,
-    safetyScoreIdentity: null,
-    publicationGenerationId: null,
-    methodologyVersion: null,
-    publishedAt: null,
+    ...input,
+    mode: "map",
+    source: "safety-score-v9-publication",
+    expectedModel: "v9",
+    coveredCount,
+    coverageRatio:
+      input.trackedCount > 0 ? coveredCount / input.trackedCount : 1,
   };
 }
 
 /**
- * Loads safety grades from either report-card inputs or the exact published
- * compact report-card generation in D1.
- *
- * Reads all non-defunct report cards, maps each to an overall grade and score
- * derived from peg stability, liquidity depth, and governance dimensions, then
- * returns coverage statistics alongside the scored results.
- *
- * Computed mode preserves partial scores on failure. Published-cache mode
- * reads V8 only while the activation marker is absent, then fails closed with
- * an empty map unless completeness, freshness, and generation identity validate.
- *
- * @param db - D1 database handle.
- * @param options.outputMode - "map" returns an id→{grade,score} lookup suitable
- *   for fast per-coin lookups; "full-grades" returns ordered grade rows with
- *   symbol, pegScore, and liqScore for the public API and safety-scores page.
- * @param options.includeNavTokens - Whether to include NAV tokens (appreciating
- *   assets not pegged to a fixed price). Defaults to `true`.
- * @returns `SafetyScoresResultMap` when outputMode is "map", or
- *   `SafetyScoresResultFull` when outputMode is "full-grades". Both include a
- *   `kind` field ("ok" | "degraded") and coverage ratio.
+ * Loads the canonical published V9 score map. Held or unavailable publications
+ * fail closed so downstream yield and audit jobs cannot mix scoring identities.
  */
 export async function computeSafetyScoresSnapshot(
   db: D1Database,
-  options: ComputePublishedSafetyScoresMapOptions,
-): Promise<PublishedSafetyScoresResultMap>;
-export async function computeSafetyScoresSnapshot(
-  db: D1Database,
-  options: ComputeSafetyScoresMapOptions,
-): Promise<SafetyScoresResultMap>;
-export async function computeSafetyScoresSnapshot(
-  db: D1Database,
-  options: ComputeSafetyScoresFullOptions,
-): Promise<SafetyScoresResultFull>;
-export async function computeSafetyScoresSnapshot(
-  db: D1Database,
-  options: ComputeSafetyScoresOptions = {},
-): Promise<SafetyScoresSnapshotResult> {
-  const outputMode = options.outputMode ?? "map";
-  if (options.sourceMode === "published-cache") {
-    if (outputMode !== "map") {
-      throw new Error("published-cache safety scores support map output only");
-    }
-    const activeSource = await loadActiveSafetyScoreSource(db);
-    if (activeSource.kind !== "v8") {
-      return v9ExpectedPublishedSafetyScoresResult(activeSource);
-    }
-    return loadPublishedSafetyScoresSnapshot(db);
+  options: { outputMode: "map"; sourceMode: "published-cache" },
+): Promise<PublishedSafetyScoresResultMap> {
+  if (
+    options.outputMode !== "map" ||
+    options.sourceMode !== "published-cache"
+  ) {
+    throw new Error("Safety scores support only the canonical published V9 map");
   }
-  const includeNavTokens = options.includeNavTokens ?? true;
-  const trackedCount = ACTIVE_STABLECOINS.filter((meta) => includeNavTokens || !meta.flags.navToken).length;
-
+  const active = await loadActiveSafetyScoreSource(db);
+  if (active.kind === "error") {
+    return result({
+      kind: "degraded",
+      reason: active.reason,
+      scores: new Map(),
+      trackedCount: 0,
+      safetyScoreIdentity: null,
+      publicationGenerationId: null,
+      methodologyVersion: null,
+      publishedAt: null,
+    });
+  }
+  const identity = active.snapshot.safetyScoreIdentity;
+  if (active.snapshot.publicationHealth.status === "held") {
+    return result({
+      kind: "degraded",
+      reason: "v9-publication-held",
+      scores: new Map(),
+      trackedCount: active.snapshot.completeness.expectedCount,
+      safetyScoreIdentity: identity,
+      publicationGenerationId: identity.publicationGenerationId,
+      methodologyVersion: identity.methodologyVersion,
+      publishedAt: active.snapshot.updatedAt,
+    });
+  }
   const scores = new Map<string, SafetyResult>();
-  const allGrades: SafetyGradeRow[] = [];
-
-  try {
-    const snapshot = options.preloadedStablecoinsCache
-      ? await buildReportCardsSnapshot(db, { preloadedStablecoinsCache: options.preloadedStablecoinsCache })
-      : await buildReportCardsSnapshot(db);
-    for (const card of snapshot.cards) {
-      if (card.isDefunct) continue;
-      if (!includeNavTokens && card.rawInputs.navToken) continue;
-
-      if (card.overallScore !== null) {
-        scores.set(card.id, { score: card.overallScore, grade: card.overallGrade });
-      }
-
-      if (outputMode === "full-grades") {
-        allGrades.push({
-          id: card.id,
-          symbol: card.symbol,
-          grade: card.overallGrade,
-          score: card.overallScore ?? 0,
-          pegScore: card.rawInputs.pegScore,
-          liqScore: card.dimensions.liquidity.score,
-        });
-      }
+  for (const card of active.snapshot.cards) {
+    if (card.score !== null) {
+      scores.set(card.id, { score: card.score, grade: card.grade });
     }
-  } catch (err) {
-    const reason = err instanceof ReportCardsSnapshotUnavailableError
-      ? err.message
-      : err instanceof Error
-        ? err.message
-        : String(err);
-    console.warn("[safety-scores] computation failed, returning degraded snapshot:", err);
-    if (outputMode === "full-grades") {
-      return toFullResult("degraded", scores, allGrades, trackedCount, reason);
-    }
-    return toMapResult("degraded", scores, trackedCount, reason);
   }
-
-  if (outputMode === "full-grades") {
-    return toFullResult("ok", scores, allGrades, trackedCount);
-  }
-  return toMapResult("ok", scores, trackedCount);
+  return result({
+    kind: "ok",
+    scores,
+    trackedCount: active.snapshot.completeness.expectedCount,
+    safetyScoreIdentity: identity,
+    publicationGenerationId: identity.publicationGenerationId,
+    methodologyVersion: identity.methodologyVersion,
+    publishedAt: active.snapshot.updatedAt,
+  });
 }

@@ -13,7 +13,7 @@ import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
-import { publishReportCardCache } from "../../cron/publish-report-card-cache";
+import { prepareSafetyScoreV9Input } from "../../cron/prepare-safety-score-v9-input";
 import { computeDepegResolver } from "../../cron/compute-depeg-resolver";
 import { parseStablecoinsCapabilities, type ScheduledRuntimeContext } from "./context";
 import { runBestEffortScheduledJobWithOutcome } from "./run-best-effort-job";
@@ -88,8 +88,8 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
   await runIfCacheSafe("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
   await runIfCacheSafe("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
   await runIfCacheSafe(
-    "publish-report-card-cache",
-    (signal) => publishReportCardCache(runtime.db, signal),
+    "prepare-safety-score-v9-input",
+    (signal) => prepareSafetyScoreV9Input(runtime.db, signal),
   );
 
   outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "compute-depeg-resolver", (signal) =>

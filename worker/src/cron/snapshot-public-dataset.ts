@@ -22,7 +22,6 @@ import {
   PUBLIC_DATASET_STABLECOINS_CACHE_RETRY_DELAY_MS,
 } from "../lib/public-dataset-snapshot-budget";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { loadReportCardCache, REPORT_CARD_CACHE_MAX_AGE_MS } from "../lib/report-card-cache";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { sha256Hex } from "../lib/hash";
@@ -38,17 +37,12 @@ import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/yield-methodology-version
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
-import { isCurrentSafetyScoreV8Identity } from "../lib/safety-score-current-identity";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
-import type { ReportCardsV9TransitionResponse } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
-import type { ReportCardCachePayload } from "../lib/report-card-cache";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9-consumer-freshness";
-import {
-  REPORT_CARDS_V9_ACTIVATION_CACHE_KEY,
-  type ReportCardsV9ActivationMarker,
-} from "../lib/safety-score-active-source";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../lib/safety-score-v9-publication-store";
 
 type StableMethodologyVersions = {
   pegScore: string;
@@ -139,24 +133,14 @@ function buildMethodologyVersions(reportCardVersion: string): StableMethodologyV
 type SnapshotSafetySource =
   | {
       kind: "ok";
-      model: "v8";
-      identity: SafetyScorePublicationIdentity;
-      reportCards: ReportCardCachePayload;
-      updatedAt: number;
-      activationUpdatedAt: null;
-    }
-  | {
-      kind: "ok";
       model: "v9";
       identity: SafetyScorePublicationIdentity;
-      reportCards: ReportCardsV9TransitionResponse;
+      reportCards: ReportCardsV9CurrentResponse;
       updatedAt: number;
-      activationUpdatedAt: number;
-      marker: ReportCardsV9ActivationMarker;
     }
   | {
       kind: "error";
-      expectedModel: "v8" | "v9";
+      expectedModel: "v9";
       reason: string;
       updatedAt: number | null;
     };
@@ -173,54 +157,24 @@ async function loadSnapshotSafetySource(
       kind: "error",
       expectedModel: active.expectedModel,
       reason: active.reason,
-      updatedAt: active.activationUpdatedAt,
+      updatedAt: null,
     };
   }
 
-  if (active.kind === "v9") {
-    if (!isSafetyScoreV9SnapshotFresh(active.snapshot)) {
-      return {
-        kind: "error",
-        expectedModel: "v9",
-        reason: "stale-cache",
-        updatedAt: active.snapshot.updatedAt,
-      };
-    }
-    return {
-      kind: "ok",
-      model: "v9",
-      identity: active.snapshot.safetyScoreIdentity,
-      reportCards: {
-        ...active.snapshot,
-        lifecycle: "active",
-      },
-      updatedAt: active.snapshot.updatedAt,
-      activationUpdatedAt: active.activationUpdatedAt,
-      marker: active.marker,
-    };
-  }
-
-  const reportCardCache = await loadReportCardCache(db, {
-    maxAgeMs: REPORT_CARD_CACHE_MAX_AGE_MS,
-    requireCompleteness: true,
-  });
-  throwIfAborted(signal);
-  if (reportCardCache.kind !== "ok" || !isCurrentSafetyScoreV8Identity(reportCardCache.payload.safetyScoreIdentity)) {
+  if (!isSafetyScoreV9SnapshotFresh(active.snapshot)) {
     return {
       kind: "error",
-      expectedModel: "v8",
-      reason: reportCardCache.kind === "ok" ? "identity-mismatch" : reportCardCache.reason,
-      updatedAt: reportCardCache.updatedAt,
+      expectedModel: "v9",
+      reason: "stale-cache",
+      updatedAt: active.snapshot.updatedAt,
     };
   }
-
   return {
     kind: "ok",
-    model: "v8",
-    identity: reportCardCache.payload.safetyScoreIdentity,
-    reportCards: reportCardCache.payload,
-    updatedAt: reportCardCache.updatedAt,
-    activationUpdatedAt: null,
+    model: "v9",
+    identity: active.snapshot.safetyScoreIdentity,
+    reportCards: active.snapshot,
+    updatedAt: active.snapshot.updatedAt,
   };
 }
 
@@ -232,7 +186,6 @@ function safetySourcesMatch(
     second.kind === "ok"
     && first.model === second.model
     && first.updatedAt === second.updatedAt
-    && first.activationUpdatedAt === second.activationUpdatedAt
     && safetyScorePublicationIdentitiesMatch(first.identity, second.identity)
   );
 }
@@ -545,54 +498,24 @@ export async function snapshotPublicDataset(
       };
     }
 
-    const publicationFenceSql = safetySource.model === "v8"
-      ? `NOT EXISTS (
-           SELECT 1 FROM cache WHERE key = ?
+    const publicationFenceSql = `EXISTS (
+           SELECT 1
+           FROM cache
+           WHERE key = ?
+             AND json_extract(value, '$.identity.publicationGenerationId') = ?
          )
          AND EXISTS (
            SELECT 1
            FROM cache
            WHERE key = ?
-             AND COALESCE(
-               json_extract(value, '$.publicationGenerationId'),
-               json_extract(value, '$.payload.publicationGenerationId')
-             ) = ?
-         )`
-      : `EXISTS (
-           SELECT 1
-           FROM cache
-           WHERE key = ?
-             AND updated_at = ?
-             AND json_extract(value, '$.policyId') = ?
-             AND json_extract(value, '$.policyDigest') = ?
-             AND json_extract(value, '$.evaluationBuildDigest') = ?
-             AND json_extract(value, '$.methodologyVersion') = ?
-         )
-         AND EXISTS (
-           SELECT 1
-           FROM cache
-           WHERE key = ?
-             AND COALESCE(
-               json_extract(value, '$.identity.publicationGenerationId'),
-               json_extract(value, '$.candidate.publicationGenerationId')
-             ) = ?
+             AND json_extract(value, '$.acceptedPublicationGenerationId') = ?
          )`;
-    const publicationFenceBinds = safetySource.model === "v8"
-      ? [
-          REPORT_CARDS_V9_ACTIVATION_CACHE_KEY,
-          "report_card_cache",
-          safetyScoreIdentity.publicationGenerationId,
-        ]
-      : [
-          REPORT_CARDS_V9_ACTIVATION_CACHE_KEY,
-          safetySource.activationUpdatedAt,
-          safetySource.marker.policyId,
-          safetySource.marker.policyDigest,
-          safetySource.marker.evaluationBuildDigest,
-          safetySource.marker.methodologyVersion,
-          "report-cards:v9-shadow",
-          safetyScoreIdentity.publicationGenerationId,
-        ];
+    const publicationFenceBinds = [
+      SAFETY_SCORE_V9_CACHE_KEYS.publication,
+      safetyScoreIdentity.publicationGenerationId,
+      SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+      safetyScoreIdentity.publicationGenerationId,
+    ];
 
     const result = await db
       .prepare(

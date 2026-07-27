@@ -57,7 +57,7 @@ export interface ReportCardsSnapshot {
   liveToFallbackCoins?: string[];
   /** Exact in-memory scoring inputs, present only for the publication cron. */
   fixedInput?: ReportCardsFixedInput;
-  /** Ephemeral raw source for post-V8 V9 enrichment; never serialized. */
+  /** Ephemeral raw source for canonical V9 enrichment; never serialized. */
   v9PegProvenanceSource?: SafetyScoreV9PegProvenanceSource;
 }
 

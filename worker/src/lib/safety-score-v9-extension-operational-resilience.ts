@@ -28,7 +28,7 @@ const SourceIdsSchema = z
   .refine((ids) => new Set(ids).size === ids.length, "Evidence source IDs must be unique");
 const NonNegativeFiniteSchema = z.number().finite().nonnegative();
 
-export const SafetyScoreV9OperationalResilienceSourceConfidenceSchema = z.enum([
+const SafetyScoreV9OperationalResilienceSourceConfidenceSchema = z.enum([
   "issuer-reported",
   "independent-assurance",
   "audited",
@@ -523,7 +523,7 @@ export const SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST = sha256Hex(
   }),
 );
 
-export const SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS: ReadonlyMap<
+const SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS: ReadonlyMap<
   string,
   SafetyScoreV9OperationalResilienceOverlay
 > = new Map(OPERATIONAL_RESILIENCE_OVERLAY_FILE.overlays.map((overlay) => [overlay.assetId, overlay]));

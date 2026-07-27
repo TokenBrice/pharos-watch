@@ -14,13 +14,14 @@ import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { toErrorMessage } from "../../lib/error-utils";
+import { parseJson } from "../../lib/json-parse";
 import type {
   DexLiquidityPoolState,
   DexLiquidityScoringSourceState,
-} from "./orchestrator";
+} from "./scoring-stage-contract";
 import type { DexPriceObs, LiquidityMetrics, PoolEntry } from "./types";
 
-export const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
+const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
 const DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE = 4;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;
@@ -463,7 +464,16 @@ function decodeScoringStagePayload(decoder: ScoringStageDecoder, payload: string
     if (line.length === 0) {
       throw new Error("DEX liquidity scoring stage contains an empty record");
     }
-    const parsed = JSON.parse(line) as ScoringStageRecord;
+    const result = parseJson(line, {
+      context: "dex-liquidity scoring stage record",
+      onFailure: () => {},
+    });
+    if (!result.ok) {
+      throw new Error(
+        `DEX liquidity scoring stage contains malformed JSON: ${result.message}`,
+      );
+    }
+    const parsed = result.value as ScoringStageRecord;
     if (!parsed || typeof parsed !== "object" || typeof parsed.kind !== "string") {
       throw new Error("DEX liquidity scoring stage contains an invalid record");
     }

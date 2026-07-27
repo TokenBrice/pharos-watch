@@ -1,125 +1,11 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
-import { X } from "lucide-react";
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
-import { cn } from "@/lib/utils";
-import type { ReportCard } from "@shared/types";
 import { SafetyGradeDistributionBar } from "./grade-distribution-bar";
-import {
-  GRADE_RANGES,
-  type GradeFilter,
-  type SortKey,
-} from "./view-model";
-
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "overall", label: "Overall" },
-  { key: "coreSettlement", label: "Core" },
-  { key: "pegStability", label: "Peg" },
-  { key: "liquidity", label: "Liquidity" },
-  { key: "resilience", label: "Resilience" },
-  { key: "decentralization", label: "Decen." },
-  { key: "dependencyRisk", label: "Dep. Risk" },
-  { key: "mcap", label: "MCap" },
-];
-
-function GradeFilterButtons({
-  gradeFilter,
-  totalCards,
-  gradeCounts,
-  onChange,
-}: {
-  gradeFilter: GradeFilter;
-  totalCards: number;
-  gradeCounts: Record<string, number>;
-  onChange: (value: GradeFilter) => void;
-}) {
-  return (
-    <>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => onChange("all")}
-        className={cn("pharos-focus-ring pharos-control-pill text-xs min-h-[44px] md:min-h-0", gradeFilter === "all" && "pharos-control-pill-active")}
-      >
-        All ({totalCards})
-      </Button>
-      {GRADE_RANGES.map((range) => {
-        const count = gradeCounts[range] ?? 0;
-        if (count === 0) return null;
-        const isActive = gradeFilter === range;
-        return (
-          <Button
-            key={range}
-            variant="ghost"
-            size="sm"
-            onClick={() => onChange(isActive ? "all" : range)}
-            className={cn(
-              "pharos-focus-ring pharos-control-pill text-xs min-h-[44px] md:min-h-0",
-              isActive && "pharos-control-pill-active",
-            )}
-          >
-            {range} ({count})
-          </Button>
-        );
-      })}
-    </>
-  );
-}
-
-function SortButtons({
-  sortKey,
-  onChange,
-}: {
-  sortKey: SortKey;
-  onChange: (value: SortKey) => void;
-}) {
-  return (
-    <>
-      {SORT_OPTIONS.map((option) => (
-        <Button
-          key={option.key}
-          variant="ghost"
-          size="sm"
-          onClick={() => onChange(option.key)}
-          className={cn("pharos-focus-ring pharos-control-pill text-xs min-h-[44px] md:min-h-0", sortKey === option.key && "pharos-control-pill-active")}
-        >
-          {option.label}
-        </Button>
-      ))}
-    </>
-  );
-}
-
-function GradeSectionHeader({ grade, count }: { grade: string; count: number }) {
-  const metadata = getSafetyGradeMetadata(grade as ReportCard["overallGrade"]);
-
-  return (
-    <div className="col-span-full flex items-center gap-3 pt-4 first:pt-0 pharos-section-enter">
-      <span
-        className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold font-mono text-white",
-          metadata.sectionSwatchClassName,
-        )}
-      >
-        {grade}
-      </span>
-      <div className="min-w-0">
-        <span className="text-sm font-medium">
-          {count} {count === 1 ? "coin" : "coins"}
-        </span>
-        <span className="text-xs text-muted-foreground ml-2">
-          {metadata.sectionDescription}
-        </span>
-      </div>
-      <div className="flex-1 border-t border-border/40" />
-    </div>
-  );
-}
+import type { GradeFilter } from "./v9-view-model";
 
 export function SafetyScoresLoadingState() {
   return (
@@ -216,90 +102,6 @@ export function SafetyScoresHero({
   );
 }
 
-export function SafetyControlsPanel({
-  gradeFilter,
-  totalCards,
-  gradeCounts,
-  sortKey,
-  onGradeFilterChange,
-  onSortChange,
-}: {
-  gradeFilter: GradeFilter;
-  totalCards: number;
-  gradeCounts: Record<string, number>;
-  sortKey: SortKey;
-  onGradeFilterChange: (value: GradeFilter) => void;
-  onSortChange: (value: SortKey) => void;
-}) {
-  return (
-    <div className="space-y-3 border-t border-border/30 pt-6">
-      <details className="pharos-card-shell px-4 py-3 md:hidden">
-        <summary className="pharos-focus-ring cursor-pointer rounded-lg text-sm font-medium text-foreground">
-          Sort and filter score cards
-        </summary>
-        <div className="pt-4 space-y-4">
-          <div className="space-y-2">
-            <span className="pharos-kicker">Filter by Grade</span>
-            <div className="flex flex-wrap gap-1">
-              <GradeFilterButtons
-                gradeFilter={gradeFilter}
-                totalCards={totalCards}
-                gradeCounts={gradeCounts}
-                onChange={onGradeFilterChange}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <span className="pharos-kicker">Sort by</span>
-            <div className="flex flex-wrap gap-1">
-              <SortButtons sortKey={sortKey} onChange={onSortChange} />
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <div className="hidden md:flex md:flex-wrap md:items-center md:gap-4">
-        <div className="flex items-center gap-1">
-          <span className="pharos-kicker mr-2">Filter:</span>
-          <GradeFilterButtons
-            gradeFilter={gradeFilter}
-            totalCards={totalCards}
-            gradeCounts={gradeCounts}
-            onChange={onGradeFilterChange}
-          />
-        </div>
-
-        <div className="h-5 w-px bg-border" />
-
-        <div className="flex items-center gap-1">
-          <span className="pharos-kicker mr-2">Sort:</span>
-          <SortButtons sortKey={sortKey} onChange={onSortChange} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function SafetySimulationBanner({ onClear }: { onClear: () => void }) {
-  return (
-    <div className="sticky top-14 z-30 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-center justify-between">
-      <span className="text-sm text-amber-700 dark:text-amber-400 font-medium">
-        Viewing simulated contagion results
-      </span>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onClear}
-        className="text-amber-700 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 hover:bg-amber-500/20"
-      >
-        <X className="h-4 w-4 mr-1" />
-        Clear simulation
-      </Button>
-    </div>
-  );
-}
-
 export function SafetyResultsSummary({
   count,
   gradeFilter,
@@ -338,37 +140,6 @@ export function SafetyEmptyState({
           Clear filter
         </Button>
       )}
-    </div>
-  );
-}
-
-export function SafetyCardsGrid({
-  cards,
-  groupedCards,
-  renderCard,
-}: {
-  cards?: ReportCard[];
-  groupedCards?: Array<{ grade: string; cards: ReportCard[] }>;
-  renderCard: (card: ReportCard, index: number) => ReactNode;
-}) {
-  const gridClassName = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3";
-
-  if (groupedCards) {
-    return (
-      <div className={gridClassName}>
-        {groupedCards.map((group) => (
-          <Fragment key={group.grade}>
-            <GradeSectionHeader grade={group.grade} count={group.cards.length} />
-            {group.cards.map(renderCard)}
-          </Fragment>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className={gridClassName}>
-      {(cards ?? []).map(renderCard)}
     </div>
   );
 }

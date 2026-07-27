@@ -5,11 +5,11 @@ import {
   createDispatchHarness,
   dispatchTelegramAlerts,
   makeSafetySnapshotCache,
-  makeSafetySourceCache,
   mockRecordOutcome,
   parseLogRecords,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
+  seedActiveSafetySource,
   scriptTelegramDeliveries,
   scriptTelegramDeliveriesForChat,
   STABLECOINS_CACHE_WITH_USDC,
@@ -34,7 +34,7 @@ function sources(
   if (options.dewsAlertable !== undefined) harness.cache("alert:dews-alertable-snapshot", options.dewsAlertable, now);
   harness.cache("alert:depeg-snapshot", options.depeg ?? {}, now);
   harness.cache("alert:safety-snapshot", makeSafetySnapshotCache(options.safety ?? {}).value, now);
-  if (options.safety) harness.cache("alert:safety-source-cache", makeSafetySourceCache(options.safety, now).value, now);
+  if (options.safety) seedActiveSafetySource(harness, options.safety, now);
   if (options.launch !== undefined) harness.cache("alert:launch-snapshot", options.launch, now);
   if (options.reserve !== undefined) harness.cache("alert:reserve-snapshot", options.reserve, now);
   if (options.reserveDispatched !== undefined)

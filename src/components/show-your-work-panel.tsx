@@ -13,24 +13,16 @@ import {
   formatLiquidity,
   formatPsi,
   formatRedemption,
-  formatReportCard,
   formatReportCardV9,
   type SafetyScoreV9ShowWorkCard,
   type ShowYourWorkTable,
 } from "@/lib/show-your-work-formatters";
-import type { RawDimensionInputs } from "@shared/types";
 import type { DexLiquidityData, StressSignalEntry } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { StabilityIndexCurrent } from "@shared/types/stability";
 import type { ChainEnvironmentEvidence, ChainHealthFactors } from "@shared/types/chains";
 
 export type ShowYourWorkPanelProps =
-  | {
-      kind: "report-card";
-      rawInputs: RawDimensionInputs;
-      stablecoinId?: string;
-      stablecoinName?: string;
-    }
   | {
       kind: "report-card-v9";
       card: SafetyScoreV9ShowWorkCard;
@@ -69,8 +61,6 @@ export type ShowYourWorkPanelProps =
 
 function buildTable(props: ShowYourWorkPanelProps): ShowYourWorkTable {
   switch (props.kind) {
-    case "report-card":
-      return formatReportCard(props.rawInputs);
     case "report-card-v9":
       return formatReportCardV9(props.card, props.methodologyVersion);
     case "dews":
