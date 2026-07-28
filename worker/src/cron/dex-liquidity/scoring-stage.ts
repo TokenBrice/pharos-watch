@@ -10,7 +10,7 @@ import {
   TronMeasuredExecutionTargetSchema,
   type TronMeasuredExecutionTarget,
 } from "@shared/types/tron-measured-execution";
-import { batchExecute, executeAtomicBatch } from "../../lib/db";
+import { executeAtomicBatch } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { toErrorMessage } from "../../lib/error-utils";
@@ -23,9 +23,8 @@ import type { DexPriceObs, LiquidityMetrics, PoolEntry } from "./types";
 
 const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
-export const DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT = 2;
-export const DEX_LIQUIDITY_SCORING_STAGE_STATEMENTS_PER_BATCH = 4;
-export const DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL = 8;
+export const DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT = 1;
+export const DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL = 24;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;
 const DEX_LIQUIDITY_SCORING_STAGE_MAX_AGE_SEC = 55 * 60;
 const DEX_LIQUIDITY_SCORING_STAGE_FUTURE_TOLERANCE_SEC = 2 * 60;
@@ -125,27 +124,18 @@ export interface DexLiquidityScoringStageRetentionResult {
 
 function prepareScoringStageChunkUpsert(
   db: D1Database,
-  rows: readonly ScoringStageChunkInsertRow[],
+  row: ScoringStageChunkInsertRow,
 ): D1PreparedStatement {
-  if (
-    rows.length === 0
-    || rows.length > DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT
-  ) {
-    throw new RangeError(
-      `DEX liquidity scoring-stage upsert requires 1-${DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT} rows`,
-    );
-  }
-  const placeholders = rows.map(() => "(?, ?, ?, ?, ?, ?)").join(", ");
   return db.prepare(
     `INSERT INTO dex_liquidity_scoring_stage_chunks (
        generation_id, chunk_index, payload_json, payload_bytes, record_count, created_at
-     ) VALUES ${placeholders}
+     ) VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(generation_id, chunk_index) DO UPDATE SET
        payload_json = excluded.payload_json,
        payload_bytes = excluded.payload_bytes,
        record_count = excluded.record_count,
        created_at = excluded.created_at`,
-  ).bind(...rows.flat());
+  ).bind(...row);
 }
 
 export interface LoadedDexLiquidityScoringStage {
@@ -193,6 +183,7 @@ interface ScoringStageDecoder {
 }
 
 const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false });
 
 function stringifyScoringStageRecord(record: ScoringStageRecord): string {
   return JSON.stringify(record, (_key, value: unknown) => {
@@ -233,27 +224,50 @@ function requireFiniteNumber(value: unknown, label: string): number {
   return value;
 }
 
+function buildPoolHeader(poolState: DexLiquidityPoolState): PoolHeader {
+  const {
+    metrics: _metrics,
+    pancakeMeasuredExecutionTargets: _pancakeMeasuredExecutionTargets,
+    fluidMeasuredExecutionTargets: _fluidMeasuredExecutionTargets,
+    slipstreamMeasuredExecutionTargets: _slipstreamMeasuredExecutionTargets,
+    solanaMeasuredExecutionTargets: _solanaMeasuredExecutionTargets,
+    tronMeasuredExecutionTargets: _tronMeasuredExecutionTargets,
+    ...pool
+  } = poolState;
+  return pool;
+}
+
 function* iterateScoringStageRecords(
   sourceState: DexLiquidityScoringSourceState,
   poolState: DexLiquidityPoolState,
   consumeInput: boolean,
 ): Generator<ScoringStageRecord> {
-  const {
-    stablecoinPriceById,
-    stablecoinMcapById,
-    protocolTvlCaps,
-    priceObservations,
-    ...source
-  } = sourceState;
-  const {
-    metrics,
-    pancakeMeasuredExecutionTargets,
-    fluidMeasuredExecutionTargets,
-    slipstreamMeasuredExecutionTargets,
-    solanaMeasuredExecutionTargets,
-    tronMeasuredExecutionTargets,
-    ...pool
-  } = poolState;
+  let stablecoinPriceById: Map<string, number> | null = sourceState.stablecoinPriceById;
+  let stablecoinMcapById: Map<string, number> | null = sourceState.stablecoinMcapById;
+  let protocolTvlCaps: Map<string, number> | null = sourceState.protocolTvlCaps;
+  let priceObservations: Map<string, DexPriceObs[]> | null = sourceState.priceObservations;
+  const source: SourceHeader = {
+    validationReferences: sourceState.validationReferences,
+    dlYieldsAvailable: sourceState.dlYieldsAvailable,
+    dlProtocolsAvailable: sourceState.dlProtocolsAvailable,
+    primaryRawPoolCount: sourceState.primaryRawPoolCount,
+    failedSources: sourceState.failedSources,
+    criticalSourceFailures: sourceState.criticalSourceFailures,
+    fallbackSignals: sourceState.fallbackSignals,
+    directApiSourceSummary: sourceState.directApiSourceSummary,
+  };
+  let metrics: Map<string, LiquidityMetrics> | null = poolState.metrics;
+  let pancakeMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget> | null =
+    poolState.pancakeMeasuredExecutionTargets;
+  let fluidMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget> | null =
+    poolState.fluidMeasuredExecutionTargets;
+  let slipstreamMeasuredExecutionTargets: Map<string, DexMeasuredExecutionTarget> | null =
+    poolState.slipstreamMeasuredExecutionTargets;
+  let solanaMeasuredExecutionTargets: Map<string, SolanaMeasuredExecutionTarget> | null =
+    poolState.solanaMeasuredExecutionTargets;
+  let tronMeasuredExecutionTargets: Map<string, TronMeasuredExecutionTarget> | null =
+    poolState.tronMeasuredExecutionTargets;
+  const pool = buildPoolHeader(poolState);
 
   yield {
     kind: "header",
@@ -264,14 +278,28 @@ function* iterateScoringStageRecords(
     },
     pool,
   };
-  if (consumeInput) stablecoinPriceById.clear();
+  if (consumeInput) {
+    stablecoinPriceById.clear();
+    sourceState.stablecoinPriceById = new Map();
+    stablecoinPriceById = null;
+  }
   for (const [key, value] of stablecoinMcapById) {
     yield { kind: "source-number", map: "stablecoinMcapById", key, value };
     if (consumeInput) stablecoinMcapById.delete(key);
   }
+  if (consumeInput) {
+    stablecoinMcapById.clear();
+    sourceState.stablecoinMcapById = new Map();
+    stablecoinMcapById = null;
+  }
   for (const [key, value] of protocolTvlCaps) {
     yield { kind: "source-number", map: "protocolTvlCaps", key, value };
     if (consumeInput) protocolTvlCaps.delete(key);
+  }
+  if (consumeInput) {
+    protocolTvlCaps.clear();
+    sourceState.protocolTvlCaps = new Map();
+    protocolTvlCaps = null;
   }
   for (const [stablecoinId, observations] of priceObservations) {
     yield { kind: "price-observation-set", stablecoinId };
@@ -285,6 +313,60 @@ function* iterateScoringStageRecords(
       priceObservations.delete(stablecoinId);
     }
   }
+  if (consumeInput) {
+    priceObservations.clear();
+    sourceState.priceObservations = new Map();
+    priceObservations = null;
+  }
+
+  // Targets are independent of metric/pool decoding. Consume their proof-heavy
+  // producer maps before the much larger retained-pool graph.
+  for (const [key, target] of pancakeMeasuredExecutionTargets) {
+    yield { kind: "target", lane: "pancake", key, target };
+    if (consumeInput) pancakeMeasuredExecutionTargets.delete(key);
+  }
+  if (consumeInput) {
+    pancakeMeasuredExecutionTargets.clear();
+    poolState.pancakeMeasuredExecutionTargets = new Map();
+    pancakeMeasuredExecutionTargets = null;
+  }
+  for (const [key, target] of fluidMeasuredExecutionTargets) {
+    yield { kind: "target", lane: "fluid", key, target };
+    if (consumeInput) fluidMeasuredExecutionTargets.delete(key);
+  }
+  if (consumeInput) {
+    fluidMeasuredExecutionTargets.clear();
+    poolState.fluidMeasuredExecutionTargets = new Map();
+    fluidMeasuredExecutionTargets = null;
+  }
+  for (const [key, target] of slipstreamMeasuredExecutionTargets) {
+    yield { kind: "target", lane: "slipstream", key, target };
+    if (consumeInput) slipstreamMeasuredExecutionTargets.delete(key);
+  }
+  if (consumeInput) {
+    slipstreamMeasuredExecutionTargets.clear();
+    poolState.slipstreamMeasuredExecutionTargets = new Map();
+    slipstreamMeasuredExecutionTargets = null;
+  }
+  for (const [key, target] of solanaMeasuredExecutionTargets) {
+    yield { kind: "target", lane: "solana", key, target };
+    if (consumeInput) solanaMeasuredExecutionTargets.delete(key);
+  }
+  if (consumeInput) {
+    solanaMeasuredExecutionTargets.clear();
+    poolState.solanaMeasuredExecutionTargets = new Map();
+    solanaMeasuredExecutionTargets = null;
+  }
+  for (const [key, target] of tronMeasuredExecutionTargets) {
+    yield { kind: "target", lane: "tron", key, target };
+    if (consumeInput) tronMeasuredExecutionTargets.delete(key);
+  }
+  if (consumeInput) {
+    tronMeasuredExecutionTargets.clear();
+    poolState.tronMeasuredExecutionTargets = new Map();
+    tronMeasuredExecutionTargets = null;
+  }
+
   for (const [stablecoinId, metric] of metrics) {
     const { chains, pairs, topPools, ...scalarMetric } = metric;
     yield {
@@ -308,25 +390,10 @@ function* iterateScoringStageRecords(
       metrics.delete(stablecoinId);
     }
   }
-  for (const [key, target] of pancakeMeasuredExecutionTargets) {
-    yield { kind: "target", lane: "pancake", key, target };
-    if (consumeInput) pancakeMeasuredExecutionTargets.delete(key);
-  }
-  for (const [key, target] of fluidMeasuredExecutionTargets) {
-    yield { kind: "target", lane: "fluid", key, target };
-    if (consumeInput) fluidMeasuredExecutionTargets.delete(key);
-  }
-  for (const [key, target] of slipstreamMeasuredExecutionTargets) {
-    yield { kind: "target", lane: "slipstream", key, target };
-    if (consumeInput) slipstreamMeasuredExecutionTargets.delete(key);
-  }
-  for (const [key, target] of solanaMeasuredExecutionTargets) {
-    yield { kind: "target", lane: "solana", key, target };
-    if (consumeInput) solanaMeasuredExecutionTargets.delete(key);
-  }
-  for (const [key, target] of tronMeasuredExecutionTargets) {
-    yield { kind: "target", lane: "tron", key, target };
-    if (consumeInput) tronMeasuredExecutionTargets.delete(key);
+  if (consumeInput) {
+    metrics.clear();
+    poolState.metrics = new Map();
+    metrics = null;
   }
 }
 
@@ -340,36 +407,57 @@ export function* encodeDexLiquidityScoringStageChunks(
     throw new RangeError("DEX liquidity scoring stage chunk size must be a positive integer");
   }
 
-  let lines: string[] = [];
+  const buffer = new Uint8Array(maxChunkBytes);
   let payloadBytes = 0;
+  let recordCount = 0;
   for (const record of iterateScoringStageRecords(sourceState, poolState, consumeInput)) {
     const line = stringifyScoringStageRecord(record);
-    const lineBytes = textEncoder.encode(line).byteLength;
-    if (lineBytes > maxChunkBytes) {
-      throw new Error(
-        `DEX liquidity scoring stage record exceeds ${maxChunkBytes} bytes (${lineBytes} bytes, kind=${record.kind})`,
-      );
-    }
-    const separatorBytes = lines.length === 0 ? 0 : 1;
-    if (lines.length > 0 && payloadBytes + separatorBytes + lineBytes > maxChunkBytes) {
-      yield {
-        payload: lines.join("\n"),
-        payloadBytes,
-        recordCount: lines.length,
-      };
-      lines = [];
+    const separatorBytes = recordCount === 0 ? 0 : 1;
+    const encoded = textEncoder.encodeInto(
+      line,
+      buffer.subarray(payloadBytes + separatorBytes),
+    );
+    if (encoded.read !== line.length) {
+      if (recordCount === 0) {
+        const lineBytes = textEncoder.encode(line).byteLength;
+        throw new Error(
+          `DEX liquidity scoring stage record exceeds ${maxChunkBytes} bytes (${lineBytes} bytes, kind=${record.kind})`,
+        );
+      }
+      const completedPayloadBytes = payloadBytes;
+      const completedRecordCount = recordCount;
       payloadBytes = 0;
+      recordCount = 0;
+      yield {
+        payload: textDecoder.decode(buffer.subarray(0, completedPayloadBytes)),
+        payloadBytes: completedPayloadBytes,
+        recordCount: completedRecordCount,
+      };
+      const retried = textEncoder.encodeInto(line, buffer);
+      if (retried.read !== line.length) {
+        const lineBytes = textEncoder.encode(line).byteLength;
+        throw new Error(
+          `DEX liquidity scoring stage record exceeds ${maxChunkBytes} bytes (${lineBytes} bytes, kind=${record.kind})`,
+        );
+      }
+      payloadBytes = retried.written;
+      recordCount = 1;
+      continue;
     }
-    if (lines.length > 0) payloadBytes += 1;
-    lines.push(line);
-    payloadBytes += lineBytes;
+    if (separatorBytes === 1) buffer[payloadBytes] = 0x0a;
+    payloadBytes += separatorBytes + encoded.written;
+    recordCount++;
   }
 
-  if (lines.length > 0) {
+  if (recordCount > 0) {
+    const completedPayloadBytes = payloadBytes;
+    const completedRecordCount = recordCount;
+    payloadBytes = 0;
+    recordCount = 0;
     yield {
-      payload: lines.join("\n"),
-      payloadBytes,
-      recordCount: lines.length,
+      payload: textDecoder.decode(buffer.subarray(0, completedPayloadBytes)),
+      payloadBytes: completedPayloadBytes,
+      recordCount: completedRecordCount,
     };
   }
 }
@@ -533,7 +621,14 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
 }
 
 function decodeScoringStagePayload(decoder: ScoringStageDecoder, payload: string): void {
-  for (const line of payload.split("\n")) {
+  if (payload.length === 0 || payload.endsWith("\n")) {
+    throw new Error("DEX liquidity scoring stage contains an empty record");
+  }
+  let start = 0;
+  while (start < payload.length) {
+    const separator = payload.indexOf("\n", start);
+    const end = separator === -1 ? payload.length : separator;
+    const line = payload.slice(start, end);
     if (line.length === 0) {
       throw new Error("DEX liquidity scoring stage contains an empty record");
     }
@@ -551,7 +646,17 @@ function decodeScoringStagePayload(decoder: ScoringStageDecoder, payload: string
       throw new Error("DEX liquidity scoring stage contains an invalid record");
     }
     decodeScoringStageRecord(decoder, parsed);
+    if (separator === -1) break;
+    start = end + 1;
   }
+}
+
+function getBoundedUtf8ByteLength(
+  value: string,
+  buffer: Uint8Array,
+): number | null {
+  const encoded = textEncoder.encodeInto(value, buffer);
+  return encoded.read === value.length ? encoded.written : null;
 }
 
 function finishScoringStageDecode(decoder: ScoringStageDecoder): {
@@ -606,9 +711,10 @@ export function decodeDexLiquidityScoringStageChunks(
   recordCount: number;
 } {
   const decoder = createScoringStageDecoder();
+  const byteBuffer = new Uint8Array(DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES);
   for (const chunk of chunks) {
-    const actualBytes = textEncoder.encode(chunk.payload).byteLength;
-    if (actualBytes !== chunk.payloadBytes || actualBytes > DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES) {
+    const actualBytes = getBoundedUtf8ByteLength(chunk.payload, byteBuffer);
+    if (actualBytes == null || actualBytes !== chunk.payloadBytes) {
       throw new Error("DEX liquidity scoring stage chunk byte count mismatch");
     }
     const before = decoder.recordCount;
@@ -815,7 +921,6 @@ export async function persistDexLiquidityScoringStage(
   let recordCount = 0;
   let payloadBytes = 0;
   let lastReportedChunkCount = 0;
-  let pendingRows: ScoringStageChunkInsertRow[] = [];
   const reportPersistedProgress = async (force = false): Promise<void> => {
     if (
       input.onChunkBatchPersisted == null
@@ -831,28 +936,6 @@ export async function persistDexLiquidityScoringStage(
     await input.onChunkBatchPersisted({ chunkCount, recordCount, payloadBytes });
     lastReportedChunkCount = chunkCount;
   };
-  const flushPendingRows = async (): Promise<void> => {
-    if (pendingRows.length === 0) return;
-    let rows: ScoringStageChunkInsertRow[] | null = pendingRows;
-    let statements: D1PreparedStatement[] | null = [];
-    pendingRows = [];
-    try {
-      for (let index = 0; index < rows.length; index += DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT) {
-        statements.push(prepareScoringStageChunkUpsert(
-          db,
-          rows.slice(index, index + DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT),
-        ));
-      }
-      await batchExecute(db, statements, {
-        chunkSize: DEX_LIQUIDITY_SCORING_STAGE_STATEMENTS_PER_BATCH,
-        signal,
-      });
-    } finally {
-      rows = null;
-      statements = null;
-    }
-    await reportPersistedProgress();
-  };
   try {
     for (const chunk of encodeDexLiquidityScoringStageChunks(
       input.sourceState,
@@ -861,7 +944,7 @@ export async function persistDexLiquidityScoringStage(
       true,
     )) {
       throwIfAborted(signal);
-      pendingRows.push([
+      let statement: D1PreparedStatement | null = prepareScoringStageChunkUpsert(db, [
         generationId,
         chunkCount,
         chunk.payload,
@@ -869,18 +952,17 @@ export async function persistDexLiquidityScoringStage(
         chunk.recordCount,
         createdAt,
       ]);
+      try {
+        await runWithOverloadRetry(() => statement!.run(), 3, signal);
+      } finally {
+        statement = null;
+      }
       chunkCount++;
       recordCount += chunk.recordCount;
       payloadBytes += chunk.payloadBytes;
-      if (
-        pendingRows.length
-          >= DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT
-            * DEX_LIQUIDITY_SCORING_STAGE_STATEMENTS_PER_BATCH
-      ) {
-        await flushPendingRows();
-      }
+      chunk.payload = "";
+      await reportPersistedProgress();
     }
-    await flushPendingRows();
     await reportPersistedProgress(true);
     if (chunkCount === 0 || recordCount === 0) {
       throw new Error("DEX liquidity scoring stage produced no records");
@@ -1029,6 +1111,7 @@ export async function loadDexLiquidityScoringStage(
   throwIfAborted(signal);
   const manifest = await loadStageManifest(db, options, signal);
   const decoder = createScoringStageDecoder();
+  const byteBuffer = new Uint8Array(DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES);
   let nextChunkIndex = 0;
   let payloadBytes = 0;
 
@@ -1060,11 +1143,8 @@ export async function loadDexLiquidityScoringStage(
           `DEX liquidity scoring stage chunk sequence mismatch (expected ${nextChunkIndex}, got ${chunk.chunk_index})`,
         );
       }
-      const actualBytes = textEncoder.encode(chunk.payload_json).byteLength;
-      if (
-        actualBytes !== chunk.payload_bytes ||
-        actualBytes > DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES
-      ) {
+      const actualBytes = getBoundedUtf8ByteLength(chunk.payload_json, byteBuffer);
+      if (actualBytes == null || actualBytes !== chunk.payload_bytes) {
         throw new Error(`DEX liquidity scoring stage chunk ${chunk.chunk_index} byte count mismatch`);
       }
       const before = decoder.recordCount;

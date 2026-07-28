@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../lib/abort";
+import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { batchExecute } from "../../lib/db";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { requireFiniteNumber } from "../../lib/number-utils";
@@ -60,7 +61,6 @@ const CHALLENGER_HARD_CAP = 50;
 export const DEX_PRICE_CHALLENGER_BATCH_SIZE = 25;
 const CHALLENGER_D1_MAX_BOUND_PARAMETERS = 100;
 const CHALLENGER_PAYLOAD_COLUMN_COUNT = 8;
-const CHALLENGER_SNAPSHOT_COLUMN_COUNT = 5;
 const CHALLENGER_CLEANUP_ID_BATCH_SIZE = CHALLENGER_D1_MAX_BOUND_PARAMETERS - 1;
 
 function chunkRows<T>(rows: readonly T[], chunkSize: number): T[][] {
@@ -261,6 +261,7 @@ export async function publishDexPriceChallengerSnapshots(
     retainedPoolsByStablecoin: Map<string, PoolEntry[]>;
     sourceCoverageCompleteByStablecoin: Map<string, boolean>;
     minPoolTvlUsd: number;
+    consumeRetainedPools?: boolean;
   },
   signal?: AbortSignal,
 ): Promise<{
@@ -271,6 +272,10 @@ export async function publishDexPriceChallengerSnapshots(
   const snapshotAt = Math.floor(requireFiniteNumber(input.snapshotAt, "dex-price-challengers: snapshotAt"));
   const state = await detectDexPriceChallengerTableState(db);
   if (!state.challengersTable || !state.snapshotsTable) {
+    if (input.consumeRetainedPools) {
+      for (const pools of input.retainedPoolsByStablecoin.values()) pools.length = 0;
+      input.retainedPoolsByStablecoin.clear();
+    }
     return {
       publishedStablecoins: 0,
       skippedStablecoins: ACTIVE_STABLECOINS.length,
@@ -300,19 +305,23 @@ export async function publishDexPriceChallengerSnapshots(
       await flushPendingPayloadStatements();
     }
   };
-  const snapshotRows: unknown[][] = [];
-  const cleanupStablecoinIds: string[] = [];
+  const publishedStablecoinIds: string[] = [];
   let publishedStablecoins = 0;
   let skippedStablecoins = 0;
 
   for (const meta of ACTIVE_STABLECOINS) {
     throwIfAborted(signal);
     const stablecoinId = meta.id;
+    const retainedPools = input.retainedPoolsByStablecoin.get(stablecoinId) ?? [];
     const rows = selectDexPriceChallengerRowsFromPools(
       stablecoinId,
-      input.retainedPoolsByStablecoin.get(stablecoinId) ?? [],
+      retainedPools,
       input.minPoolTvlUsd,
     );
+    if (input.consumeRetainedPools) {
+      input.retainedPoolsByStablecoin.delete(stablecoinId);
+      retainedPools.length = 0;
+    }
     const plan = buildDexPriceChallengerPublicationPlan({
       stablecoinId,
       snapshotAt,
@@ -343,38 +352,55 @@ export async function publishDexPriceChallengerSnapshots(
       await queuePayloadStatement(statement);
     }
     if (plan.snapshotStatement != null) {
-      snapshotRows.push(plan.snapshotStatement.binds);
-      cleanupStablecoinIds.push(plan.stablecoinId);
+      publishedStablecoinIds.push(plan.stablecoinId);
     }
   }
 
+  if (input.consumeRetainedPools) input.retainedPoolsByStablecoin.clear();
   await flushPendingPayloadStatements();
 
   // Snapshot pointers are the public visibility boundary. Publish every
-  // complete asset together only after all payload rows have landed.
-  const snapshotStatements = prepareMultiRowStatements(
-    db,
-    `INSERT INTO dex_price_challenger_snapshots
-      (stablecoin_id, snapshot_at, published_at, has_rows, source_coverage_complete)`,
-    `ON CONFLICT(stablecoin_id) DO UPDATE SET
-       snapshot_at = excluded.snapshot_at,
-       published_at = excluded.published_at,
-       has_rows = excluded.has_rows,
-       source_coverage_complete = excluded.source_coverage_complete`,
-    snapshotRows,
-    CHALLENGER_SNAPSHOT_COLUMN_COUNT,
-  );
-  if (snapshotStatements.length > DEX_PRICE_CHALLENGER_BATCH_SIZE) {
-    throw new Error(
-      `DEX challenger snapshot publication exceeds one atomic batch (${snapshotStatements.length} statements)`,
+  // complete asset together only after all payload rows have landed. One
+  // set-based statement avoids retaining hundreds of binds and prepared
+  // statements at this all-or-none boundary.
+  if (publishedStablecoinIds.length > 0) {
+    const publishedIdsJson = JSON.stringify(publishedStablecoinIds);
+    const snapshotResult = await runWithOverloadRetry(
+      () =>
+        db.prepare(
+          `INSERT INTO dex_price_challenger_snapshots (
+             stablecoin_id, snapshot_at, published_at, has_rows, source_coverage_complete
+           )
+           SELECT CAST(stablecoin_ids.value AS TEXT),
+                  ?,
+                  ?,
+                  CASE WHEN EXISTS (
+                    SELECT 1
+                      FROM dex_price_challengers payload
+                     WHERE payload.stablecoin_id = CAST(stablecoin_ids.value AS TEXT)
+                       AND payload.snapshot_at = ?
+                  ) THEN 1 ELSE 0 END,
+                  1
+             FROM json_each(?) stablecoin_ids
+            WHERE stablecoin_ids.type = 'text'
+           ON CONFLICT(stablecoin_id) DO UPDATE SET
+             snapshot_at = excluded.snapshot_at,
+             published_at = excluded.published_at,
+             has_rows = excluded.has_rows,
+             source_coverage_complete = excluded.source_coverage_complete`,
+        ).bind(snapshotAt, snapshotAt, snapshotAt, publishedIdsJson).run(),
+      3,
+      signal,
     );
+    const snapshotChanges = Number(snapshotResult.meta?.changes ?? 0);
+    if (snapshotChanges !== publishedStablecoinIds.length) {
+      throw new Error(
+        `DEX challenger snapshot publication wrote ${snapshotChanges}/${publishedStablecoinIds.length} pointers`,
+      );
+    }
   }
-  await batchExecute(db, snapshotStatements, {
-    chunkSize: DEX_PRICE_CHALLENGER_BATCH_SIZE,
-    signal,
-  });
 
-  const cleanupStatements = chunkRows(cleanupStablecoinIds, CHALLENGER_CLEANUP_ID_BATCH_SIZE).map((idChunk) =>
+  const cleanupStatements = chunkRows(publishedStablecoinIds, CHALLENGER_CLEANUP_ID_BATCH_SIZE).map((idChunk) =>
     db
       .prepare(
         `DELETE FROM dex_price_challengers
