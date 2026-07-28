@@ -189,12 +189,23 @@ Asset-level: 138 REPRODUCED, 7 REFUTED, 1 MIXED (unverifiable-only).
 
 ## Cross-check failures (KIMI-MECH-2 applied a refuted packet)
 
-None. Overlay `shared/data/safety-score-v9/mechanism-review-overlays-v1.json` is
-unmodified (last commit `deadfa904`, pre-wave; working tree clean at audit time), so
-KIMI-MECH-2 had applied nothing when the REJECTED markers landed. NOTE: its
+None.
+Post-terminal cross-check (2026-07-28, KIMI-MECH-2 terminal `6bf1260c4`): **CLEAN —
+no refuted packet applied.** Its ledger independently converged on all five defects:
+ftusd-flying-tulip REJECTED(packet-unverified) (unavailable-rationale false vs its
+live 07-20 entry); cdxusd-cod3x superseded by lane draft ("blog-only basis" — same
+defect); fpi-frax superseded ("contraction silently redefines the field"); iauon-ondo
+packet redundant vs its own draft, which landed WITH the FMA-filed Final Terms and
+Base Prospectus pinned (the regulatory-filing evidence class the audit refutation
+demanded); nwisdom-nest landed with maturityAndLiquidity corrected T+1→4-day (the
+exact numeric defect flagged in the REJECTED marker). Advisory for the coordinator:
+iauon-ondo's entry grades 7 components adequate on the pinned FMA filings — spot-check
+those clauses at first post-deploy capture; outside this lane's packet remit.
+
+(Pre-terminal state: overlay `shared/data/safety-score-v9/mechanism-review-overlays-v1.json` was
+unmodified (last commit `deadfa904`, pre-wave) when the REJECTED markers landed. Its
 `mech2-drafts/` already contained drafts for `cdxusd-cod3x`, `fpi-frax`, `iauon-ondo`
-— the markers are in place to stop application; the morning coordinator should
-confirm no entry for the five refuted assets appears in KIMI-MECH-2's terminal commit.
+— the markers were in place before its application pass.)
 
 ## Auditor false positives (overturned on coordinator re-check)
 
