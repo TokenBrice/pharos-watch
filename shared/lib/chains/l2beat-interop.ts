@@ -114,10 +114,6 @@ export const L2BEAT_INTEROP_PROTOCOLS = [
 
 export type L2BeatInteropProtocolId = (typeof L2BEAT_INTEROP_PROTOCOLS)[number]["id"];
 
-const PROTOCOLS_BY_ID = new Map<string, L2BeatInteropProtocolSnapshot>(
-  L2BEAT_INTEROP_PROTOCOLS.map((protocol) => [protocol.id, protocol]),
-);
-
 const EXTRA_PROTOCOL_SEARCH_TERMS: Partial<Record<L2BeatInteropProtocolId, readonly string[]>> = {
   avalanche: ["avalanche bridge"],
   "hyperlane-hwr": ["hyperlane warp routes", "hyperlane"],
@@ -158,10 +154,6 @@ function searchTermsForProtocol(protocol: (typeof L2BEAT_INTEROP_PROTOCOLS)[numb
 
 function containsSearchTerm(normalizedText: string, normalizedTerm: string): boolean {
   return ` ${normalizedText.trim()} `.includes(` ${normalizedTerm} `);
-}
-
-export function getL2BeatInteropProtocol(id: string): L2BeatInteropProtocolSnapshot | null {
-  return PROTOCOLS_BY_ID.get(id) ?? null;
 }
 
 export function suggestBridgeRouteRiskTierFromL2BeatProtocol(

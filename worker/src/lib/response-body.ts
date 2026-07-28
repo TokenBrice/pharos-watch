@@ -203,13 +203,6 @@ async function readResponseBodyWithSignal<TResult>(
   }
 }
 
-export async function readResponseJsonWithSignal<TResult = unknown>(
-  response: Response,
-  signal?: AbortSignal,
-): Promise<TResult> {
-  return await readResponseBodyWithSignal(response, signal, async () => await response.json() as TResult);
-}
-
 export async function readResponseTextWithSignal(
   response: Response,
   signal?: AbortSignal,

@@ -328,7 +328,7 @@
     "usdglo-glo": "core-stablecoin",
     "djed-coti": "core-stablecoin",
     "pathusd-bridge": "core-stablecoin",
-    "xai-silo-finance": "core-stablecoin",
+    "xai-silo-finance": "excluded",
     "fxd-fathom": "core-stablecoin",
     "usdv-solomon": "core-stablecoin",
     "ussd-sonic-labs": "cash-equivalent",

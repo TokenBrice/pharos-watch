@@ -20,13 +20,18 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
+import { forEachWithConcurrency } from "./concurrency";
+import {
+  MAX_UINT256,
+  rawAmountToUsdOrNull as rawAmountToUsd,
+  usdToRawAmount,
+} from "./fixed-point";
 
 const FLUID_RESOLVER_ABI = parseAbi([
   "function estimateSwapIn(address dex_,bool swap0To1_,uint256 amountIn_,uint256 minAmountOut_) view returns (uint256 amountOut_)",
 ]);
 const FLUID_MULTICALL_BATCH_SIZE = 8;
 const FLUID_MULTICALL_GAS = "0x1c9c380";
-const MAX_UINT256 = (1n << 256n) - 1n;
 const EVM_ADDRESS_PATTERN = /^0x[0-9a-f]{40}$/;
 
 export const FLUID_RESOLVER_ADAPTER_PROFILE_ID = "fluid-resolver-measured" as const;
@@ -223,37 +228,6 @@ export function resolveFluidSwapDirection(
   return { ok: false, reason: "token-order-mismatch" };
 }
 
-function usdToRawAmount(inputUsd: number, decimals: number, referencePriceUsd: number): bigint | null {
-  if (
-    !Number.isFinite(inputUsd) ||
-    inputUsd <= 0 ||
-    !Number.isInteger(decimals) ||
-    decimals < 0 ||
-    decimals > 255 ||
-    !Number.isFinite(referencePriceUsd) ||
-    referencePriceUsd <= 0
-  )
-    return null;
-  const usdScale = 1_000_000n;
-  const priceScale = 100_000_000n;
-  const usdScaled = BigInt(Math.floor(inputUsd * Number(usdScale)));
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  if (priceScaled <= 0n) return null;
-  const amount = (usdScaled * 10n ** BigInt(decimals) * priceScale) / (usdScale * priceScaled);
-  return amount > 0n && amount <= MAX_UINT256 ? amount : null;
-}
-
-function rawAmountToUsd(amount: bigint, decimals: number, referencePriceUsd: number): number | null {
-  if (amount < 0n || !Number.isInteger(decimals) || decimals < 0 || decimals > 255) return null;
-  const priceScale = 100_000_000n;
-  const usdScale = 1_000_000n;
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  if (priceScaled <= 0n) return null;
-  const usdScaled = (amount * priceScaled * usdScale) / (10n ** BigInt(decimals) * priceScale);
-  const usd = Number(usdScaled) / Number(usdScale);
-  return Number.isFinite(usd) && usd >= 0 ? usd : null;
-}
-
 export function encodeFluidEstimateSwapIn(input: {
   poolAddress: `0x${string}`;
   swap0To1: boolean;
@@ -308,6 +282,7 @@ function encodeRequest(
     request.inputUsd,
     request.target.tokenIn.decimals,
     request.target.tokenIn.referencePriceUsd,
+    { maxRawAmount: MAX_UINT256 },
   );
   if (amountInRaw == null) return { failureReason: "invalid-quote-input" };
   const poolAddress = resolveFluidPoolAddress(request.target);
@@ -378,23 +353,6 @@ export function decodeFluidResolverQuotePoint(
       },
     },
   };
-}
-
-async function runWithConcurrency<T>(
-  values: readonly T[],
-  concurrency: number,
-  run: (value: T) => Promise<void>,
-): Promise<void> {
-  let cursor = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, values.length) }, async () => {
-      while (cursor < values.length) {
-        const index = cursor;
-        cursor += 1;
-        await run(values[index]!);
-      }
-    }),
-  );
 }
 
 function createFluidResolverQuoteExecutor(dependencies: FluidResolverQuoteDependencies) {
@@ -478,7 +436,7 @@ function createFluidResolverQuoteExecutor(dependencies: FluidResolverQuoteDepend
       groupsByChain.set(request.deployment.chain, group);
     }
 
-    await runWithConcurrency([...groupsByChain.values()], 3, async (chainRequests) => {
+    await forEachWithConcurrency([...groupsByChain.values()], 3, async (chainRequests) => {
       const requestsByBlock = new Map<number, EncodedFluidResolverRequest[]>();
       for (const request of chainRequests) {
         const blockRequests = requestsByBlock.get(request.blockNumber) ?? [];

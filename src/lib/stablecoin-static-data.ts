@@ -2,17 +2,17 @@ import type { PegCurrency } from "@shared/types";
 
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
-export const TRACKED_STABLECOIN_COUNT = 404;
-export const ACTIVE_STABLECOIN_COUNT = 336;
-export const CORE_AGGREGATE_STABLECOIN_COUNT = 258;
+export const TRACKED_STABLECOIN_COUNT = 403;
+export const ACTIVE_STABLECOIN_COUNT = 335;
+export const CORE_AGGREGATE_STABLECOIN_COUNT = 257;
 export const ACTIVE_VARIANT_STABLECOIN_COUNT = 49;
 export const ACTIVE_STABLE_VALUE_INVESTMENT_COUNT = 29;
 export const PRE_LAUNCH_STABLECOIN_COUNT = 31;
 export const FROZEN_STABLECOIN_COUNT = 19;
-export const DEAD_STABLECOIN_COUNT = 88;
+export const DEAD_STABLECOIN_COUNT = 89;
 
 export const ACTIVE_PEG_CURRENCY_COUNTS = {
-  USD: 247,
+  USD: 246,
   RUB: 1,
   EUR: 17,
   BRL: 6,
@@ -406,7 +406,6 @@ export const TRACKED_STABLECOIN_IDS = [
   "usdglo-glo",
   "djed-coti",
   "pathusd-bridge",
-  "xai-silo-finance",
   "fxd-fathom",
   "usdv-solomon",
   "ussd-sonic-labs",

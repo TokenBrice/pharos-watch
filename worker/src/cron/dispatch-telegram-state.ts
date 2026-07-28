@@ -14,6 +14,10 @@ import {
   loadActiveSafetyScoreSource,
   type ActiveSafetyScoreSource,
 } from "../lib/safety-score-active-source";
+import {
+  loadSafetyScoreV9PublicationAttempt,
+  type V9PublicationAttempt,
+} from "../lib/safety-score-v9-publication-store";
 import { logTelegramEvent } from "../lib/telegram-log";
 import { loadTelegramDewsCurrentRows } from "../lib/stress-signals-current-rows";
 import type { PendingCapacitySnapshot } from "./telegram-pending";
@@ -114,6 +118,7 @@ export interface DispatchSourceData {
   depegCache: CachedValue;
   safetyCache: CachedValue;
   activeSafetySource?: ActiveSafetyScoreSource;
+  publicationAttempt?: V9PublicationAttempt | null;
   launchCache: CachedValue;
   /** Producer-written current drift id-set (four-hourly reserve slot). */
   reserveCache: CachedValue;
@@ -176,6 +181,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     depegCache,
     safetyCache,
     activeSafetySource,
+    publicationAttempt,
     launchCache,
     reserveCache,
     reserveDispatchedCache,
@@ -194,6 +200,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     getCache(db, SNAPSHOT_KEYS.depeg),
     getCache(db, SNAPSHOT_KEYS.safety),
     loadActiveSafetyScoreSource(db),
+    loadSafetyScoreV9PublicationAttempt(db),
     getCache(db, SNAPSHOT_KEYS.launch),
     getCache(db, SNAPSHOT_KEYS.reserve),
     getCache(db, SNAPSHOT_KEYS.reserveDispatched),
@@ -208,6 +215,7 @@ export async function loadDispatchSourceData(db: D1Database): Promise<DispatchSo
     depegCache,
     safetyCache,
     activeSafetySource,
+    publicationAttempt,
     launchCache,
     reserveCache,
     reserveDispatchedCache,
@@ -231,9 +239,29 @@ export function buildDispatchSnapshotState(sourceData: DispatchSourceData, nowSe
       nowSec,
     },
   );
+  const affectedAssetIds = new Set(
+    sourceData.publicationAttempt?.outcome ===
+        "published-partial" &&
+      sourceData.publicationAttempt.publicationGenerationId ===
+        safetySourceAssessment.envelope?.publicationGenerationId
+      ? sourceData.publicationAttempt.affectedAssetIds
+      : [],
+  );
   const currentSafetySnapshot =
-    safetySourceAssessment.state === "ok"
-      ? (safetySourceAssessment.envelope?.snapshot ?? null)
+    safetySourceAssessment.state === "ok" &&
+    safetySourceAssessment.envelope
+      ? Object.fromEntries(
+          Object.entries(
+            safetySourceAssessment.envelope.snapshot,
+          ).map(([assetId, row]) => [
+            assetId,
+            {
+              ...row,
+              operationallyAffected:
+                affectedAssetIds.has(assetId),
+            },
+          ]),
+        )
       : null;
   const previousSafetyEnvelope = parseAlertSafetySnapshotEnvelope(sourceData.safetyCache);
   const previousSafetySnapshot = previousSafetyEnvelope?.snapshot ?? null;

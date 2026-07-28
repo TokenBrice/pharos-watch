@@ -86,10 +86,7 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/api-endpoints/index.ts::EndpointSiteDataAccess",
   "shared/lib/chains/health-version.ts::getChainHealthMethodologyVersionAt",
   "shared/lib/chains/index.ts::CHAIN_RESILIENCE_TIER",
-  // L2BEAT snapshot/audit helpers are consumed by advisory scripts and kept as
-  // an explicit methodology surface even when not imported by runtime pages.
   "shared/lib/chains/l2beat-audit.ts::findL2BeatAliasIntegrityIssues",
-  "shared/lib/chains/l2beat-interop.ts::getL2BeatInteropProtocol",
   "shared/lib/chains/l2beat-risk.ts::L2BEAT_STAGE_SCORES",
   "shared/lib/chains/l2beat-risk.ts::L2BEAT_RISK_SENTIMENT_SCORES",
   "shared/lib/chains/l2beat-risk.ts::L2BEAT_STAGE_WEIGHT",
@@ -108,17 +105,13 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/mint-burn-signals.ts::PRESSURE_SHIFT_STABLE_BAND_MAX",
   "shared/lib/pricing-pipeline-version.ts::PRICING_PIPELINE_VERSION",
   "shared/lib/pricing-pipeline-version.ts::getPricingPipelineVersionAt",
-  "shared/lib/redemption-backstop-scoring.ts::REDEMPTION_EXECUTION_LABELS",
   // Consumed by the report-card calibration CLI outside this runtime-only scan.
   "shared/lib/redemption-backstop-scoring.ts::isExitRouteObservationScoreEligible",
-  // Consumed by the P4 activation calibration CLI outside this runtime-only scan.
-  "shared/lib/p4-exit-route-capacity.ts::P4_GENERAL_ACTIVATION_POLICY_V1",
   // Consumed by the v9 readiness CLI outside this runtime-only scan.
   "shared/lib/safety-score-v9-compiler.ts::assertExactReportCardIds",
   // Safety Score v9 operational CLIs run outside this runtime-only graph. Keep
   // their inputs coupled to the production policy, timing, and envelope schemas.
   "shared/lib/safety-score-v9-research.ts::loadV9MethodologyPolicy",
-  "shared/lib/safety-score-v9/scenario-evaluator.ts::V9_SCENARIO_QUALITY_PILLARS",
   // Consumed by the deterministic aggregation replay CLI outside the runtime graph.
   "shared/lib/safety-score-v9/scoped-risk.ts::applyV9AllocatedScopedRiskAdjustments",
   // Retained inside published digests for historical identity compatibility
@@ -264,11 +257,6 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/lib/live-reserves-store.ts::upsertReserveComposition",
   "worker/src/lib/mint-burn-health-config.ts::computeMintBurnSyncFreshnessStatus",
   "worker/src/lib/mint-burn-scoring.ts::MIN_ACTIVITY_USD",
-  // Provider execution wrappers are the staged transport facade for later
-  // provider migrations; DEX direct APIs currently consume providerJson while
-  // the fetch/text variants remain available for the next fetch-heavy surfaces.
-  "worker/src/lib/provider-execution.ts::providerFetch",
-  "worker/src/lib/provider-execution.ts::providerTextBounded",
   "worker/src/lib/schemas.ts::CronMetadataSchema",
   "worker/src/lib/stability-index.ts::BAND_COLORS",
   "worker/src/__mocks__/resvg-stub.ts::Resvg",

@@ -9,6 +9,7 @@ import { orderDependencyGraphNodes, type DependencyGraphEdge } from "../dependen
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { isV9MaterialShare } from "./backing";
+import { deepFreeze } from "./primitives";
 
 const V9_DEPENDENCY_PLAN_DIGEST_DOMAIN = "safety-score-v9.dependency-plan.v2";
 
@@ -434,14 +435,6 @@ function serialCycleMembers(
 
 function projectPlanDigest(plan: Omit<V9DependencyEvaluationPlan, "planDigest">): string {
   return sha256Hex(stableJsonStringifyV1({ domain: V9_DEPENDENCY_PLAN_DIGEST_DOMAIN, plan }));
-}
-
-function deepFreeze<T>(value: T): Readonly<T> {
-  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
-    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
 }
 
 function assertValidPlanningEdge(assetId: string, edge: V9DependencyPlanningEdge): void {

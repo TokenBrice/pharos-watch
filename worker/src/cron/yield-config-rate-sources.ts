@@ -285,7 +285,7 @@ export const DIRECT_PROTOCOL_API_STRATEGIES: Record<string, string> = {
   "usyc-hashnote": "Hashnote NAV feed",
   "mmev-midas": "Midas mMEV NAV oracle",
   "usdy-ondo-finance": "Ondo USDY oracle",
-  "reusd-re-protocol": "Re Protocol Insurance Alpha (reUSDe)",
+  "reusd-re-protocol": "Re Protocol Basis-Plus (reUSD)",
   "zys-zephyr-protocol": "Zephyr Scanner ZYS returns",
 };
 
@@ -297,7 +297,7 @@ export const DIRECT_PROTOCOL_API_SOURCE_KEYS: Record<string, string> = {
   "usyc-hashnote": "protocol-api:hashnote-usyc",
   "mmev-midas": "protocol-api:midas-mmev-nav-oracle",
   "usdy-ondo-finance": "protocol-api:ondo-usdy-oracle",
-  "reusd-re-protocol": "protocol-api:re-protocol-reusde",
+  "reusd-re-protocol": "protocol-api:re-protocol-reusd",
   "zys-zephyr-protocol": "protocol-api:zys-zephyr-protocol",
 };
 

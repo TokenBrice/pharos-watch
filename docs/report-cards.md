@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.0`
+- **Current methodology version:** `v9.01`
 - Public response schema: report v4 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -29,6 +29,8 @@ The weights allocate bounded headroom; they are not an unrestricted weighted ave
 
 Missing evidence is classified by reason and ownership. A bounded documentation or integration gap can remain rateable under an explicit ceiling. An unbounded required fact returns NR. F is reserved for causally attributed measured danger rather than ordinary uncertainty.
 
+Exit capacity is route-specific. A route below both the first positive 1% completion and $100K absolute-capacity breakpoints receives a zero route score; reaching $100K while still completing less than 1% caps the route at 50. Exchange-wide volume, aggregate DEX TVL, and issuer reserves do not substitute for executable capacity on the selected route.
+
 Serial dependencies remain binding because the child cannot diversify away the parent claim. Basket dependencies contribute at their live exposure weights. Wrapper-local risks are evaluated separately from the parent asset so a wrapper cannot inherit safety it does not possess.
 
 Rateable report-v4 cards include complete Backing, Exit, and Economic Control breakdowns. Each breakdown reconciles evaluator and published values through ordered adjustments. NR cards carry explicit reason rows and have `breakdowns: null`.
@@ -37,8 +39,8 @@ Rateable report-v4 cards include complete Backing, Exit, and Economic Control br
 
 The publication pipeline has two active stages:
 
-1. `prepare-safety-score-v9-input` runs every 15 minutes. It captures the publication-exact base input and peg-provenance seed used by the V9 compiler.
-2. `compute-safety-score-v9` runs at minutes 14 and 44. It waits for the matching core slot, compiles the V9 fact set, evaluates the policy, and publishes the accepted result.
+1. `prepare-safety-score-v9-input` runs immediately after each successful half-hourly DEX publication. It captures the publication-exact base input and peg-provenance seed and binds them to that exact DEX generation.
+2. `compute-safety-score-v9` runs at minutes 22 and 52. It rejects an input whose DEX dependency no longer matches the latest accepted generation, compiles the V9 fact set, evaluates the policy, and publishes the accepted result.
 
 The private upstream input remains encoded in the exact V8-shaped fixed-input schema because the V9 compiler and deterministic replay contract consume that structure. This is a narrow internal bridge, not an active V8 rating publication. The bridge owns:
 
@@ -96,7 +98,9 @@ Selector creation currently fails closed with `503` because its recommendation p
 
 ## History
 
-`snapshot-safety-grade-history` appends identified V9 organic transitions and suppresses writes while publication is held. Each V2 row records model, methodology, policy, evaluation-build, base-input, publication generation, and transition kind.
+The compiler validates each asset's facts independently. An attributable asset-local build or schema failure publishes that asset as a producer-failed NR result while unaffected assets continue, provided at least 90% of active assets remain unaffected. Dependency, aggregate, evaluator, identity, and other global failures still hold the whole publication.
+
+`snapshot-safety-grade-history` appends identified V9 organic transitions and suppresses writes while publication is held. During a partial publication it also suppresses transitions for quarantined assets and their affected dependents, so operational NR and recovery edges are not recorded as organic rating changes. Each V2 row records model, methodology, policy, evaluation-build, base-input, publication generation, and transition kind.
 
 `GET /api/safety-score-history` remains the public per-asset timeline. Historical V8 and activation-boundary rows remain readable as archive data; they are never live publication inputs.
 
@@ -106,6 +110,14 @@ Selector creation currently fails closed with `503` because its recommendation p
 - `src/app/safety-scores/data-coverage-view-model.ts` and `data-coverage-module.tsx` render the data-coverage panel: completeness, evaluated component counts per pillar, open data points split by evidence responsibility, the most common reason codes by affected assets, and held-state presentation. The panel replaces the status notice on `/safety-scores`.
 - `src/components/report-card-mini-v9.tsx` renders the V9 card treatment.
 - `src/components/stablecoin-detail/stablecoin-safety-score-v9-card.tsx` renders detail-page score, pillars, evidence, and breakdowns.
+  - Pillar breakdowns render as `groups`, not a flat row list. Backing nests its components under the Reserves and Mechanism groups the producer already computes — component `effectiveWeight` sums exactly to each group's weight — with `mechanism`-sourced components under Mechanism and both `reserve-exposure` and `reserve-concentration` under Reserves. Rows sort by weight descending, and components under `2%` of the pillar fold into a `Smaller holdings (N) · X% combined` tail once at least three qualify. Exit and Control render a single unlabelled group; Exit keeps producer order because its route components are few and already meaningfully ordered.
+  - The Economic Control breakdown leads with its binding components, cheapest first, so the row that sets the pillar score is read first. Non-binding bridges roll into one `Bridge deployments` composite carrying the cohort's **worst** score — the pillar rule is a minimum, so an average would flatter it — expandable to the full list. Any *binding* bridge stays a top-level row: a bridge is the lowest binding control on 37 assets and must never be folded away. The composite needs at least two members, otherwise the bridge renders as an ordinary row. This takes `usdc-circle` from 50 rows to 3.
+  - Component bars are tinted only when the input is the problem: neutral below the warn threshold, amber under 65, rose under 40. Those boundaries are the published grade-band floors for B and D, so a tinted bar always reads as "C or worse" and a strong asset's breakdown stays monochrome.
+  - `Why not higher` renders the two causal buckets from `scoreTrace`: `adverseAttribution` (measured and adverse) as a flat list, and `boundedUncertaintyAttribution` (unresolved) grouped by `responsibility`. Pharos's own gaps — `producer-failed`, `integration-missing` — are named as ours rather than folded into a neutral "not measured".
+  - Attribution `path` values are machine keys and are never rendered; producer messages quoting four or more decimal places round to three for display.
+- The card footer carries neither an Evidence block nor a Dependencies block. Evidence collapsed to a chip beside the score trace, because no card in the corpus publishes evidence reason lines and each pillar row already states its own evidence level. Dependencies was removed outright: `ContagionSnapshot` ("Dependency Context") owns that surface with the full dependency graph, and the card's version rendered an empty-state line on 207 of 336 cards.
+- `AccessPosturePanel` renders the four scored access enums in the summary rail at `xl+` and inside the card below `xl` (`xl:hidden`), the same split `#price` uses. `buildSafetyScoreV9AccessRows` exposes the rows without building the whole card presentation.
+- `src/lib/safety-score-v9-labels.ts` is the single shared machine-key to display-copy map for public V9 surfaces. Cap kinds, failure domains, and attribution paths draw on overlapping producer keys, so new modules extend this map rather than adding their own.
 - `src/components/radar-chart-v9.tsx` renders Backing, Exit, and Economic Control comparisons.
 - `src/components/safety-score-v9-status-notice.tsx` renders held publication state on every other surface. Reason codes and assessment detail are evaluator identifiers and are never rendered raw; both surfaces route hold reasons through `describeDataCoverageHoldCauses`.
 - `src/hooks/api-hooks.ts` exposes `useReportCardsV9` and `useSafetyScoreHistory`.

@@ -20,6 +20,8 @@ import {
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
 import { getDexMeasuredExecutionDeployment } from "./registry";
+import { forEachWithConcurrency } from "./concurrency";
+import { MAX_UINT256, rawAmountToUsd, usdToRawAmount } from "./fixed-point";
 
 const QUOTER_V2_ABI = parseAbi([
   "function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96) params) returns (uint256 amountOut,uint160 sqrtPriceX96After,uint32 initializedTicksCrossed,uint256 gasEstimate)",
@@ -36,7 +38,6 @@ const SLIPSTREAM_FACTORY_ABI = parseAbi([
 const AERODROME_SLIPSTREAM_ADAPTER_PROFILE_ID = "aerodrome-slipstream-quoter-v2";
 const QUOTER_MULTICALL_BATCH_SIZE = 8;
 const QUOTER_MULTICALL_GAS = "0x1c9c380";
-const MAX_UINT256 = (1n << 256n) - 1n;
 
 interface QuoterV2Request {
   target: DexMeasuredExecutionTarget;
@@ -61,51 +62,6 @@ interface AdaptiveChunkResult {
   results: EvmMulticall3Result[];
   transportFailureLabels: string[];
   budgetStopReasonsByLabel: Map<string, DexMeasuredExecutionBudgetStopReason>;
-}
-
-async function runWithConcurrency<T>(
-  values: readonly T[],
-  concurrency: number,
-  run: (value: T) => Promise<void>,
-): Promise<void> {
-  let cursor = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, values.length) }, async () => {
-      while (cursor < values.length) {
-        const index = cursor;
-        cursor += 1;
-        await run(values[index]!);
-      }
-    }),
-  );
-}
-
-function usdToRawAmount(inputUsd: number, decimals: number, referencePriceUsd: number): bigint | null {
-  if (
-    !Number.isFinite(inputUsd) ||
-    inputUsd <= 0 ||
-    !Number.isInteger(decimals) ||
-    decimals < 0 ||
-    decimals > 255 ||
-    !Number.isFinite(referencePriceUsd) ||
-    referencePriceUsd <= 0
-  )
-    return null;
-  const usdScale = 1_000_000n;
-  const priceScale = 100_000_000n;
-  const usdScaled = BigInt(Math.floor(inputUsd * Number(usdScale)));
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  if (priceScaled <= 0n) return null;
-  const amount = (usdScaled * 10n ** BigInt(decimals) * priceScale) / (usdScale * priceScaled);
-  return amount > 0n && amount <= MAX_UINT256 ? amount : null;
-}
-
-function rawAmountToUsd(amount: bigint, decimals: number, referencePriceUsd: number): number {
-  const priceScale = 100_000_000n;
-  const usdScale = 1_000_000n;
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  const usdScaled = (amount * priceScaled * usdScale) / (10n ** BigInt(decimals) * priceScale);
-  return Number(usdScaled) / Number(usdScale);
 }
 
 function isSlipstreamTarget(target: Pick<DexMeasuredExecutionTarget, "adapterProfileId">): boolean {
@@ -154,6 +110,7 @@ function encodeRequest(request: QuoterV2Request, index: number): EncodedQuoterV2
     request.inputUsd,
     request.target.tokenIn.decimals,
     request.target.tokenIn.referencePriceUsd,
+    { maxRawAmount: MAX_UINT256 },
   );
   if (amountInRaw == null || !hasAdapterParameter(request.target)) return null;
   try {
@@ -324,7 +281,7 @@ export async function quoteQuoterV2Requests(input: {
   const resultsByLabel = new Map<string, EvmMulticall3Result>();
   const transportFailureLabels = new Set<string>();
   const budgetStopReasonsByLabel = new Map<string, DexMeasuredExecutionBudgetStopReason>();
-  await runWithConcurrency([...byChain], 3, async ([chain, requests]) => {
+  await forEachWithConcurrency([...byChain], 3, async ([chain, requests]) => {
     for (let offset = 0; offset < requests.length; offset += QUOTER_MULTICALL_BATCH_SIZE) {
       throwIfAborted(input.signal);
       const chunk = requests.slice(offset, offset + QUOTER_MULTICALL_BATCH_SIZE);
@@ -486,7 +443,7 @@ export async function resolveQuoterV2PoolBindings(input: {
     byChain.set(request.target.chain, rows);
   }
 
-  await runWithConcurrency([...byChain], 3, async ([chain, requests]) => {
+  await forEachWithConcurrency([...byChain], 3, async ([chain, requests]) => {
     for (let offset = 0; offset < requests.length; offset += QUOTER_MULTICALL_BATCH_SIZE) {
       throwIfAborted(input.signal);
       const chunk = requests.slice(offset, offset + QUOTER_MULTICALL_BATCH_SIZE);

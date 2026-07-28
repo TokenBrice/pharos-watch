@@ -47,7 +47,7 @@
   },
   "activationDecision": {
     "decision": "hold",
-    "reason": "No retained-pool asset has score-eligible complete DEX coverage under the per-pool gate, below the 45-asset activation floor; strict active replay makes 244 exit scores NR and changes 140 overall grades, so v8 scoring remains legacy until publication-exact complete-pool coverage improves",
+    "reason": "No retained-pool asset has score-eligible complete DEX coverage under the per-pool gate, below the 45-asset activation floor; strict active replay makes 243 exit scores NR and changes 140 overall grades, so v8 scoring remains legacy until publication-exact complete-pool coverage improves",
     "producerGenerationStatus": "complete",
     "activationReady": false,
     "decisionConsistentWithGate": true,
@@ -64,18 +64,18 @@
     "rollingDeploymentPolicy": "Activate only from a fixed input containing the audited producer generation; do not defer score activation to a later cron republish."
   },
   "coverage": {
-    "activeAssets": 360,
-    "assetsWithModeledRequest": 323,
+    "activeAssets": 359,
+    "assetsWithModeledRequest": 322,
     "dex": {
       "eligibleAssets": 0,
       "observedIneligibleAssets": 7,
-      "absentAssets": 353,
+      "absentAssets": 352,
       "observations": 21,
       "eligibleObservations": 0,
       "producerCoverageStatuses": {
         "populated": 7,
         "unsupported": 173,
-        "unknown": 180
+        "unknown": 179
       },
       "retainedPools": 4641,
       "unsupportedPools": 4624
@@ -83,7 +83,7 @@
     "redemption": {
       "eligibleAssets": 31,
       "observedIneligibleAssets": 77,
-      "absentAssets": 252,
+      "absentAssets": 251,
       "observations": 108,
       "eligibleObservations": 31
     }
@@ -94,7 +94,7 @@
       "decreased": 8,
       "unchanged": 108,
       "becameRated": 0,
-      "becameNr": 244,
+      "becameNr": 243,
       "gradeChanged": 0,
       "maxAbsoluteScoreDelta": 56
     },
@@ -103,14 +103,14 @@
       "decreased": 8,
       "unchanged": 108,
       "becameRated": 0,
-      "becameNr": 244,
+      "becameNr": 243,
       "gradeChanged": 250,
       "maxAbsoluteScoreDelta": 56
     },
     "overall": {
       "increased": 67,
       "decreased": 149,
-      "unchanged": 144,
+      "unchanged": 143,
       "becameRated": 0,
       "becameNr": 0,
       "gradeChanged": 140,
@@ -14348,48 +14348,6 @@
       "overallScoreDelta": 8,
       "oldOverallGrade": "C",
       "newOverallGrade": "C+"
-    },
-    {
-      "id": "xai-silo-finance",
-      "name": "XAI Silo Finance",
-      "symbol": "XAI",
-      "circulatingSupplyUsd": 4856893.701854142,
-      "modeledRequest": {
-        "requestedNotionalUsd": 242844.68509270714,
-        "maxCostBps": 200,
-        "settlementHorizonSec": 300
-      },
-      "dex": {
-        "status": "absent",
-        "observationCount": 0,
-        "eligibleObservationCount": 0,
-        "best": null
-      },
-      "dexProducerCoverage": {
-        "status": "unknown",
-        "retainedPoolCount": 0,
-        "scoreEligiblePoolCount": 0,
-        "unsupportedPoolCount": 0,
-        "complete": false
-      },
-      "redemption": {
-        "status": "absent",
-        "observationCount": 0,
-        "eligibleObservationCount": 0,
-        "best": null
-      },
-      "oldExitScore": null,
-      "newExitScore": null,
-      "exitScoreDelta": null,
-      "oldLiquidityScore": null,
-      "newLiquidityScore": null,
-      "oldLiquidityGrade": "NR",
-      "newLiquidityGrade": "NR",
-      "oldOverallScore": 67,
-      "newOverallScore": 67,
-      "overallScoreDelta": 0,
-      "oldOverallGrade": "B-",
-      "newOverallGrade": "B-"
     },
     {
       "id": "xaum-matrixdock",

@@ -1,13 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import CemeteryPage from "./page";
-
-function extractJsonLd(html: string) {
-  return [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
-    .map((match) => match[1])
-    .filter((json): json is string => Boolean(json))
-    .map((json) => JSON.parse(json));
-}
+import { extractJsonLd } from "@/test/json-ld";
 
 vi.mock("@/components/cemetery-client", () => ({
   CemeteryClient: () => <section>cemetery tombstones</section>,
@@ -27,7 +21,7 @@ describe("CemeteryPage", () => {
 
   it("emits cemetery Dataset downloads without site-data URLs", () => {
     const html = renderToStaticMarkup(<CemeteryPage />);
-    const jsonLd = extractJsonLd(html).flat();
+    const jsonLd = extractJsonLd(html);
     const dataset = jsonLd.find((node) => node["@type"] === "Dataset");
 
     expect(dataset).toMatchObject({

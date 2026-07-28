@@ -15,6 +15,7 @@ import {
 export async function prepareSafetyScoreV9Input(
   db: D1Database,
   signal?: AbortSignal,
+  expectedDexGenerationId?: string,
 ): Promise<CronResult> {
   throwIfAborted(signal);
 
@@ -32,6 +33,14 @@ export async function prepareSafetyScoreV9Input(
   } = snapshot;
   if (!fixedInput) {
     throw new Error("Report-card publication did not produce its exact fixed-input artifact");
+  }
+  if (
+    expectedDexGenerationId !== undefined &&
+    fixedInput.dexGenerationId !== expectedDexGenerationId
+  ) {
+    throw new Error(
+      `V9 input captured DEX generation ${fixedInput.dexGenerationId}; expected ${expectedDexGenerationId}`,
+    );
   }
   if (fixedInput.sourceGeneration !== publication.completeness.generationId) {
     throw new Error(
@@ -101,6 +110,12 @@ export async function prepareSafetyScoreV9Input(
       scoredCards: publication.completeness.scoredCount,
       notRatedCards: publication.completeness.notRatedCount,
       publicationGenerationId: publication.completeness.generationId,
+      dexGenerationId: fixedInput.dexGenerationId,
+      dexGenerationLagSec: Math.max(
+        0,
+        fixedInput.clockSec -
+          (fixedInput.inputFreshness?.dexLiquidity.updatedAt ?? fixedInput.clockSec),
+      ),
       liquidityStale: snapshot.liquidityStale,
       redemptionStale: snapshot.redemptionStale,
       fixedInputCacheBytes: fixedInputEntry.storedBytes,

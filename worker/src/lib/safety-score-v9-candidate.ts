@@ -12,9 +12,10 @@ import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { z } from "zod";
 import {
-  compileSafetyScoreV9FactSetFromValidatedExtension,
+  compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
   materializeSafetyScoreV9FactSetExtension,
   type SafetyScoreV9FactSetExtensionV2,
+  type V9AssetQuarantine,
 } from "./safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./safety-score-v9-extension";
 import { normalizeFixedInput, type ReportCardsFixedInput } from "./report-cards-fixed-input";
@@ -139,12 +140,16 @@ export interface SafetyScoreV9CandidatePipelineResult {
   producerCapabilityIdentity: Readonly<SafetyScoreV9ProducerCapabilityIdentityV1>;
   producerCapabilityDigest: string;
   candidateIdentity: Readonly<SafetyScoreV9CandidateIdentityV1>;
+  quarantines: readonly V9AssetQuarantine[];
+  quarantineAffectedAssetIds: readonly string[];
 }
 
 export interface SafetyScoreV9PublicationResult {
   candidate: Readonly<SafetyScoreV9CurrentResponse>;
   compilerFactSchemaDigest: string;
   producerCapabilityDigest: string;
+  quarantines: readonly V9AssetQuarantine[];
+  quarantineAffectedAssetIds: readonly string[];
 }
 
 function compareText(left: string, right: string): number {
@@ -153,6 +158,32 @@ function compareText(left: string, right: string): number {
 
 function sortedUnique(values: Iterable<string>): string[] {
   return [...new Set(values)].sort(compareText);
+}
+
+function quarantineAffectedAssetIds(
+  factSet: CompiledV9FactSetV3,
+  quarantines: readonly V9AssetQuarantine[],
+): string[] {
+  const affected = new Set(
+    quarantines.map((quarantine) => quarantine.assetId),
+  );
+  let added = true;
+  while (added) {
+    added = false;
+    for (const asset of factSet.assets) {
+      if (
+        affected.has(asset.assetId) ||
+        !asset.dependencies.edges.some((edge) =>
+          affected.has(edge.upstreamAssetId),
+        )
+      ) {
+        continue;
+      }
+      affected.add(asset.assetId);
+      added = true;
+    }
+  }
+  return [...affected].sort(compareText);
 }
 
 function publicExitHolderEligibility(
@@ -178,6 +209,13 @@ function publicDisplayMetadata(
 ): {
   labels: Record<string, string>;
   exitHolderEligibility: Record<string, V9ExitHolderEligibility>;
+  exitRouteDetails: Record<string, {
+    chain: string | null;
+    protocol: string | null;
+    poolId: string | null;
+    evidenceKind: string;
+    observedAtSec: number | null;
+  }>;
 } {
   const labels: Record<string, string> = {
     mint: "Mint authority",
@@ -228,6 +266,48 @@ function publicDisplayMetadata(
     labelIndexes.set(base, index);
     labels[route.routeKey] = (labelTotals.get(base) ?? 0) > 1 ? `${base} ${index}` : base;
   }
+  const evidenceById = new Map(
+    asset.evidence.map((evidence) => [evidence.evidenceId, evidence]),
+  );
+  const exitRouteDetails = Object.fromEntries(
+    asset.exitRoutes.map((route) => {
+      const chain = route.failureDomains.find((domain) => domain.kind === "chain")?.key ?? null;
+      const protocol = route.failureDomains.find(
+        (domain) => domain.kind === "dex-protocol" || domain.kind === "redemption-rail",
+      )?.key ?? null;
+      const scopedPool = route.routeId
+        .split(":")
+        .map((part) => {
+          try {
+            return decodeURIComponent(part);
+          } catch {
+            return part;
+          }
+        })
+        .find((part) => chain !== null && part.startsWith(`${chain.toLowerCase()}:`));
+      const routeEvidence = route.status.evidenceRefIds
+        .map((evidenceId) => evidenceById.get(evidenceId))
+        .find(
+          (item) =>
+            item?.sourceId === "report-cards-dex-route-observation" ||
+            item?.sourceId === "report-cards-redemption-route-observation" ||
+            item?.sourceId === "safety-score-v9-retained-route-overlay",
+        );
+      const evidence = routeEvidence ?? route.status.evidenceRefIds
+        .map((evidenceId) => evidenceById.get(evidenceId))
+        .find((item) => item !== undefined);
+      return [
+        route.routeKey,
+        {
+          chain,
+          protocol,
+          poolId: scopedPool?.slice(scopedPool.indexOf(":") + 1) ?? null,
+          evidenceKind: route.evidenceKind,
+          observedAtSec: evidence?.observedAtSec ?? null,
+        },
+      ];
+    }),
+  );
   return {
     labels,
     exitHolderEligibility: Object.fromEntries(
@@ -236,6 +316,7 @@ function publicDisplayMetadata(
         publicExitHolderEligibility(route.holderAccess),
       ]),
     ),
+    exitRouteDetails,
   };
 }
 
@@ -393,7 +474,16 @@ function buildSafetyScoreV9CandidatePipeline(
     fixedInput,
     input.extension ?? buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput),
   );
-  const compiledFacts = compileSafetyScoreV9FactSetFromValidatedExtension(fixedInput, extension);
+  const compilation =
+    compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+      fixedInput,
+      extension,
+    );
+  const compiledFacts = compilation.factSet;
+  const affectedAssetIds = quarantineAffectedAssetIds(
+    compiledFacts,
+    compilation.quarantines,
+  );
   const displayByAssetId = new Map(
     compiledFacts.assets.map((asset) => [asset.assetId, publicDisplayMetadata(asset)]),
   );
@@ -452,6 +542,8 @@ function buildSafetyScoreV9CandidatePipeline(
     producerCapabilityIdentity: capabilityIdentity,
     producerCapabilityDigest,
     candidateIdentity,
+    quarantines: compilation.quarantines,
+    quarantineAffectedAssetIds: affectedAssetIds,
   };
 }
 
@@ -480,9 +572,15 @@ export function buildSafetyScoreV9PublicationFromNormalizedInput(
     fixedInput,
     input.extension ?? buildSafetyScoreV9BaselineExtensionFromNormalizedInput(fixedInput),
   );
-  let compiledFacts: CompiledV9FactSetV3 | null = compileSafetyScoreV9FactSetFromValidatedExtension(
-    fixedInput,
-    extension,
+  const compilation =
+    compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+      fixedInput,
+      extension,
+    );
+  let compiledFacts: CompiledV9FactSetV3 | null = compilation.factSet;
+  const affectedAssetIds = quarantineAffectedAssetIds(
+    compiledFacts,
+    compilation.quarantines,
   );
   const compilerIdentity = compilerFactSchemaIdentity(fixedInput, extension, compiledFacts);
   const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
@@ -540,5 +638,7 @@ export function buildSafetyScoreV9PublicationFromNormalizedInput(
     candidate,
     compilerFactSchemaDigest,
     producerCapabilityDigest,
+    quarantines: compilation.quarantines,
+    quarantineAffectedAssetIds: affectedAssetIds,
   });
 }

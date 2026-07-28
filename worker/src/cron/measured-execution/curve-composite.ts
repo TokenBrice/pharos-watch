@@ -35,6 +35,10 @@ import {
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
 import {
+  rawAmountToUsdOrNull as rawAmountToUsd,
+  usdToRawAmount,
+} from "./fixed-point";
+import {
   CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
   CURVE_USD1_COMPOSITE_POOL_ADDRESS,
 } from "./curve-composite-identities";
@@ -938,36 +942,6 @@ export interface CurveCompositeBatchOutcome {
   eligibility: CurveCompositeEligibility;
   point?: DexMeasuredRawQuotePoint;
   failureReason?: QuoteFailure;
-}
-
-function usdToRawAmount(inputUsd: number, decimals: number, referencePriceUsd: number): bigint | null {
-  if (
-    !Number.isFinite(inputUsd) ||
-    inputUsd <= 0 ||
-    !Number.isInteger(decimals) ||
-    decimals < 0 ||
-    decimals > 255 ||
-    !Number.isFinite(referencePriceUsd) ||
-    referencePriceUsd <= 0
-  ) return null;
-  const usdScale = 1_000_000n;
-  const priceScale = 100_000_000n;
-  const usdScaled = BigInt(Math.floor(inputUsd * Number(usdScale)));
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  if (priceScaled <= 0n) return null;
-  const amount = (usdScaled * 10n ** BigInt(decimals) * priceScale) / (usdScale * priceScaled);
-  return amount > 0n ? amount : null;
-}
-
-function rawAmountToUsd(amount: bigint, decimals: number, referencePriceUsd: number): number | null {
-  if (amount < 0n || !Number.isInteger(decimals) || decimals < 0 || decimals > 255) return null;
-  const priceScale = 100_000_000n;
-  const usdScale = 1_000_000n;
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  if (priceScaled <= 0n) return null;
-  const usdScaled = amount * priceScaled * usdScale / (10n ** BigInt(decimals) * priceScale);
-  const usd = Number(usdScaled) / Number(usdScale);
-  return Number.isFinite(usd) && usd >= 0 ? usd : null;
 }
 
 function resolveCurveCompositeTokenIndices(

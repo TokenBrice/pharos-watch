@@ -1,6 +1,0 @@
-REJECTED by KIMI-AUDIT (cross-vendor wave-8 audit, 2026-07-28).
-Defect: maturityAndLiquidity basis claims "T+1 Nest estimate" for nWISDOM. The
-cited source (docs.nest.credit/about/available-vaults/, data snapshot
-2026-07-27 17:20 UTC, re-fetched twice by the auditor) states nWISDOM
-"Redemption estimate: 4 days"; T+1 applies to nTBILL/nALPHA/nBASIS/nOPAL/nCLOA
-only. Numeric pins (price/supply/xCRDYX) reproduced — the liquidity claim fails.

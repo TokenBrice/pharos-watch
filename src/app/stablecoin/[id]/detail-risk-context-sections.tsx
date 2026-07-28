@@ -4,12 +4,14 @@ import type { ReactNode, Ref } from "react";
 import { ChartPie } from "lucide-react";
 import { CoinNotices } from "@/components/coin-notice";
 import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snapshot";
+import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import { MintAuthoritySection } from "@/components/stablecoin-detail/mint-authority-section";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { LazySection } from "@/components/lazy-section";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
+import type { MechanismReviewView } from "@/lib/mechanism-review";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import {
@@ -31,6 +33,7 @@ interface DetailRiskContextSectionsProps {
   collateralUsageEntries: readonly CollateralUsageEntry[];
   frozenNote: ReactNode;
   hasCollateralUsage: boolean;
+  mechanismReview: MechanismReviewView | null;
   overviewGateRef: Ref<HTMLDivElement>;
   reservesPanel: ReactNode;
   variantRelationshipCard: ReactNode;
@@ -42,6 +45,7 @@ export function DetailRiskContextSections({
   collateralUsageEntries,
   frozenNote,
   hasCollateralUsage,
+  mechanismReview,
   overviewGateRef,
   reservesPanel,
   variantRelationshipCard,
@@ -124,6 +128,7 @@ export function DetailRiskContextSections({
           hasCollateralUsage={hasCollateralUsage}
           collateralUsageEntries={collateralUsageEntries}
         />
+        <MechanismReviewPanel review={mechanismReview} />
         <MintAuthoritySection profile={viewModel.mintAuthority} />
         {showPegChart ? (
           <MarketDataSection

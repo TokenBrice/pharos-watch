@@ -49,7 +49,7 @@ function exactExecutionModel(): NonNullable<NonNullable<PoolEntry["extra"]>["amm
 }
 
 describe("DEX route observation selection", () => {
-  it("keeps measured route evidence inside the bounded route set without changing the current pool list", () => {
+  it("keeps measured route evidence in the private candidate set without changing the current pool list", () => {
     const current = Array.from({ length: MAX_DEX_EXIT_ROUTE_OBSERVATIONS }, (_, index) => pool(index));
     const retained = pool(99);
     retained.extra = {
@@ -61,13 +61,13 @@ describe("DEX route observation selection", () => {
 
     const selected = selectDexRouteObservationPools(current, [retained]);
 
-    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS + 1);
     expect(selected[0]?.poolId).toBe(retained.poolId);
     expect(current).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
     expect(current).not.toContain(retained);
   });
 
-  it("does not let generic retained pools crowd score-capable exact evidence out of the bound", () => {
+  it("carries generic and exact pools into stress-capacity evaluation before the public bound", () => {
     const generic = Array.from({ length: MAX_DEX_EXIT_ROUTE_OBSERVATIONS + 5 }, (_, index) => {
       const candidate = pool(index);
       candidate.tvlUsd = 100_000_000 - index;
@@ -81,12 +81,12 @@ describe("DEX route observation selection", () => {
 
     const selected = selectDexRouteObservationPools([...generic, exact], []);
 
-    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+    expect(selected).toHaveLength(generic.length + 1);
     expect(selected[0]).toBe(exact);
-    expect(selected).not.toContain(generic[MAX_DEX_EXIT_ROUTE_OBSERVATIONS + 4]);
+    expect(selected).toContain(generic[MAX_DEX_EXIT_ROUTE_OBSERVATIONS + 4]);
   });
 
-  it("does not let operationally interrupted measured evidence crowd current exact evidence out of the bound", () => {
+  it("ranks current exact evidence ahead of interrupted evidence without pre-capping candidates", () => {
     const interrupted = Array.from({ length: MAX_DEX_EXIT_ROUTE_OBSERVATIONS }, (_, index) => {
       const candidate = pool(index);
       candidate.extra = {
@@ -121,9 +121,9 @@ describe("DEX route observation selection", () => {
 
     const selected = selectDexRouteObservationPools([...interrupted, exact], []);
 
-    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS + 1);
     expect(selected[0]).toBe(exact);
-    expect(selected).not.toContain(interrupted[0]);
+    expect(selected).toEqual(expect.arrayContaining(interrupted));
   });
 
   it("deduplicates by physical pool and keeps measured evidence ahead of current exact evidence", () => {
@@ -147,7 +147,7 @@ describe("DEX route observation selection", () => {
     expect(selected[0]).toBe(retained);
   });
 
-  it("ranks an atomic multi-direction measured packet as one physical pool", () => {
+  it("ranks an atomic multi-direction measured packet as one physical pool before observation packing", () => {
     const current = Array.from({ length: MAX_DEX_EXIT_ROUTE_OBSERVATIONS }, (_, index) => pool(index));
     const measured = pool(99);
     measured.extra = {
@@ -160,7 +160,7 @@ describe("DEX route observation selection", () => {
 
     const selected = selectDexRouteObservationPools(current, [measured]);
 
-    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS + 1);
     expect(selected[0]).toBe(measured);
     expect(selected.filter((candidate) => candidate.poolId === measured.poolId)).toHaveLength(1);
   });
@@ -179,7 +179,7 @@ describe("DEX route observation selection", () => {
     expect(selected).toEqual(expect.arrayContaining([upper, lower]));
   });
 
-  it("prioritizes an active native measured profile in the bounded route set", () => {
+  it("prioritizes an active native measured profile in the private candidate set", () => {
     const current = Array.from({ length: MAX_DEX_EXIT_ROUTE_OBSERVATIONS }, (_, index) => pool(index));
     const native = pool(99);
     native.chain = "Solana";
@@ -193,7 +193,7 @@ describe("DEX route observation selection", () => {
 
     const selected = selectDexRouteObservationPools(current, [native]);
 
-    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
+    expect(selected).toHaveLength(MAX_DEX_EXIT_ROUTE_OBSERVATIONS + 1);
     expect(selected[0]).toBe(native);
   });
 });

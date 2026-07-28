@@ -6,8 +6,12 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { describe, expect, it } from "vitest";
-import { createReportCardsFixedInput } from "../report-cards-fixed-input";
-import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9-fact-set";
+import { createReportCardsFixedInput, normalizeFixedInput } from "../report-cards-fixed-input";
+import {
+  compileSafetyScoreV9FactSetFromFixedInput,
+  compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
+  materializeSafetyScoreV9FactSetExtension,
+} from "../safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
 
 const AS_OF_SEC = 10_000;
@@ -91,6 +95,9 @@ function exactFixedInput(reserves: readonly ReserveSlice[] = DEFAULT_RESERVES) {
       },
     },
     activeDepegPeakBpsById: {},
+    aggregateCirculatingById: {
+      alpha: { circulating: { peggedUSD: 10_000_000 }, observedAtSec: OBSERVED_AT_SEC },
+    },
     dexLiqMap: {
       alpha: {
         liquidityScore: 0,
@@ -194,9 +201,11 @@ describe("VERITAS finding VER-007: nonconserving supply review is accepted as kn
       failureDomains: [],
     };
 
-    expect(() => compileSafetyScoreV9FactSetFromFixedInput(fixedInput, extension)).toThrow(
-      /bridge.*supply.*share|supply.*reconcil/i,
-    );
+    const normalized = normalizeFixedInput(fixedInput);
+    const materialized = materializeSafetyScoreV9FactSetExtension(normalized, extension);
+    const result = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(normalized, materialized);
+
+    expect(result.quarantines).toEqual([{ assetId: "alpha", code: "fact-build-failed" }]);
   });
 });
 

@@ -1741,5 +1741,18 @@
     "obituary": "Hubble Protocol launched USDH in 2022 as one of the earliest Solana CDP stablecoins, peaking near $14M. By May 2026 CoinGecko reports a $0 market cap, on-DEX volume has collapsed, and the redemption pool no longer offers a credible exit. The asset is treated as wound down; future coverage scans should skip it. Symbol collides with Native Markets USDH (tracked) and Hermetica USDH (tracked).",
     "sourceUrl": "https://www.coingecko.com/en/coins/usdh",
     "sourceLabel": "CoinGecko"
+  },
+  {
+    "id": "xai-silo-finance",
+    "name": "XAI Silo Finance",
+    "symbol": "XAI",
+    "logo": "xai-silo-finance.svg",
+    "pegCurrency": "USD",
+    "causeOfDeath": "abandoned",
+    "deathDate": "2024-04-22",
+    "epitaph": "Deprecated after its liquidity never scaled",
+    "obituary": "SiloDAO deprecated XAI after the stablecoin failed to scale DEX liquidity and repeatedly traded below its peg. Governance raised borrowing rates to force repayment, burned XAI credit lines across 17 silos, and retired the mint module so no new XAI could be created. The token nevertheless retains 5,358,653.23 XAI of residual supply, verified on Ethereum at block 25,627,256, representing legacy borrows and stranded wind-down liquidity rather than a live stablecoin system.",
+    "sourceUrl": "https://gov.silo.finance/t/a-plan-to-deprecate-xai-stablecoin/443",
+    "sourceLabel": "SiloDAO governance"
   }
 ]

@@ -305,21 +305,14 @@ describe("yield config registry", () => {
     });
   });
 
-  it("wires Re Protocol yield to reUSDe and the official price API", () => {
+  it("wires Re Protocol yield to reUSD itself and the official price API", () => {
     expect(YIELD_POOL_MAP["reusd-re-protocol"]).toBeUndefined();
-    expect(YIELD_VARIANT_MAP["reusd-re-protocol"]).toMatchObject({
-      variantSymbol: "reUSDe",
-      variantAddress: "0xdDC0f880ff6e4e22E4B74632fBb43Ce4DF6cCC5a",
-      variantChain: "ethereum",
-      variantProject: "re-protocol",
-      yieldSource: "Re Protocol Insurance Alpha (reUSDe)",
-      yieldType: "nav-appreciation",
-    });
+    expect(YIELD_VARIANT_MAP["reusd-re-protocol"]).toBeUndefined();
     expect(
       YIELD_SOURCE_REGISTRY.find((entry) => entry.stablecoinId === "reusd-re-protocol"),
     ).toMatchObject({
-      directProtocolApiLabel: "Re Protocol Insurance Alpha (reUSDe)",
-      directProtocolApiSourceKey: "protocol-api:re-protocol-reusde",
+      directProtocolApiLabel: "Re Protocol Basis-Plus (reUSD)",
+      directProtocolApiSourceKey: "protocol-api:re-protocol-reusd",
     });
   });
 

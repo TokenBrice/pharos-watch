@@ -1,6 +1,0 @@
-REJECTED by KIMI-AUDIT (cross-vendor wave-8 audit, 2026-07-28).
-Defect: all seven components graded "adequate", but D3 adequate requires a pinned
-dated independent attestation, regulatory filing, or independent oracle feed; the
-packet pins only issuer-published Ondo docs and admits "no live Ankura PDF pin in
-this pass". The attestation is described, not pinned — evidence class supports at
-most limited. Factual statements match docs; the grade basis fails.

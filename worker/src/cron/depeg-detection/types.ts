@@ -1,14 +1,13 @@
 import type { PegRateSource } from "@shared/lib/peg-rates";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types/core";
 import type { DepegEventCloseReason } from "@shared/types/market";
-import type { DepegDirection } from "../../lib/depeg-signals";
 import type {
   DepegRow,
   DexPoolSource,
   DexPriceRow,
-  PendingDepegReason,
 } from "../../lib/depeg-helpers";
 import type { NativePegQuote } from "../../lib/native-peg-quotes";
+import type { PendingDepegUpsertParams } from "../../lib/depeg-pending";
 
 export interface DexPoolChallenger {
   price: number;
@@ -51,17 +50,7 @@ export interface DepegDiagnostic {
   message: string;
 }
 
-export interface PendingDepegCommandPayload {
-  stablecoinId: string;
-  symbol: string;
-  pegType: string;
-  direction: DepegDirection;
-  bps: number;
-  seenAt: number;
-  price: number;
-  pegReference: number;
-  reason: PendingDepegReason;
-}
+export type PendingDepegCommandPayload = PendingDepegUpsertParams;
 
 export type DepegPersistenceCommand =
   | { type: "upsert-pending"; payload: PendingDepegCommandPayload }

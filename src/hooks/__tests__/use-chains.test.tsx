@@ -2,13 +2,13 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { useApiQueryWithMetaMock, useStablecoinsMock } = vi.hoisted(() => ({
-  useApiQueryWithMetaMock: vi.fn(),
+const { useRegisteredApiQueryMock, useStablecoinsMock } = vi.hoisted(() => ({
+  useRegisteredApiQueryMock: vi.fn(),
   useStablecoinsMock: vi.fn(),
 }));
 
-vi.mock("../use-api-query", () => ({
-  useApiQueryWithMeta: useApiQueryWithMetaMock,
+vi.mock("../api-hooks", () => ({
+  useRegisteredApiQuery: useRegisteredApiQueryMock,
 }));
 
 vi.mock("../use-stablecoins", () => ({
@@ -19,20 +19,20 @@ import { useChainStablecoins, useChains } from "../use-chains";
 
 describe("useChains", () => {
   beforeEach(() => {
-    useApiQueryWithMetaMock.mockReset();
+    useRegisteredApiQueryMock.mockReset();
     useStablecoinsMock.mockReset();
   });
 
   it("uses the shared chains endpoint polling contract", () => {
-    useApiQueryWithMetaMock.mockReturnValue({ data: undefined, meta: null });
+    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, meta: null });
 
     renderHook(() => useChains());
 
-    expect(useApiQueryWithMetaMock).toHaveBeenCalledWith(
-      ["chains"],
-      "/api/chains",
-      15 * 60 * 1000,
+    expect(useRegisteredApiQueryMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        queryKey: ["chains"],
+        path: "/api/chains",
+        producerIntervalMs: 15 * 60 * 1000,
         schema: expect.any(Function),
         metaMaxAgeSec: 1800,
       }),

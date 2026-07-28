@@ -29,6 +29,7 @@ import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
 } from "../lib/safety-score-v9-supply-attribution-generation";
 import { loadSupplyAttributionJournalByIdV1 } from "../lib/safety-score-v9-supply-attribution-journal-store";
+import { loadExactDexPublicationGeneration } from "../lib/report-cards-snapshot";
 
 function unavailable(
   reason: string,
@@ -96,6 +97,22 @@ export async function computeSafetyScoreV9(
   }
 
   const fixedInput = baseArtifact.input;
+  let latestDexGenerationId: string;
+  try {
+    latestDexGenerationId = (
+      await loadExactDexPublicationGeneration(db)
+    ).generationId;
+  } catch (error) {
+    return unavailable("latest-dex-generation-unavailable", {
+      code: error instanceof Error ? error.name : "Error",
+    });
+  }
+  if (fixedInput.dexGenerationId !== latestDexGenerationId) {
+    return unavailable("dex-generation-advanced", {
+      fixedInputDexGenerationId: fixedInput.dexGenerationId,
+      latestDexGenerationId,
+    });
+  }
   const v9SeedInput = {
     ...fixedInput,
     pegProvenanceById: v9Seed.pegProvenanceById,
@@ -220,6 +237,12 @@ export async function computeSafetyScoreV9(
         evidenceJournalById,
         supplyAttributionJournalById,
       };
+      const currentDexGeneration = await loadExactDexPublicationGeneration(db);
+      if (currentDexGeneration.generationId !== v9FixedInput.dexGenerationId) {
+        throw new Error(
+          `V9 candidate DEX dependency ${v9FixedInput.dexGenerationId} is older than current ${currentDexGeneration.generationId}`,
+        );
+      }
       await reportProgress?.({
         stage: "fixed-input-prepared",
         message: "Prepared exact V9 input for publication assessment",
@@ -236,7 +259,8 @@ export async function computeSafetyScoreV9(
 
   return {
     status:
-      publication.status === "published"
+      publication.status === "published" &&
+      publication.outcome === "clean"
         ? "ok"
         : "degraded",
     itemCount:
@@ -259,10 +283,35 @@ export async function computeSafetyScoreV9(
       productive: publication.status === "published",
       reason:
         publication.status === "published"
-          ? "v9-publication-published"
+          ? publication.outcome === "partial"
+            ? "v9-publication-published-partial"
+            : "v9-publication-published"
           : publication.status === "held"
             ? "v9-publication-held"
             : "v9-publication-failed",
+      ...(publication.status === "published"
+        ? {
+            publications: [
+              {
+                surface: "safety-score-v9" as const,
+                generationId:
+                  publication.publicationGenerationId,
+                publishedAt: fixedInput.clockSec,
+                candidateRows: fixedInput.activeAssetIds.length,
+                publishedRows: fixedInput.activeAssetIds.length,
+                expectedRows: fixedInput.activeAssetIds.length,
+                artifactCacheKey: "report-cards:v9",
+                validationSummary: {
+                  outcome: publication.outcome,
+                  quarantinedAssetCount:
+                    publication.quarantines.length,
+                  affectedAssetCount:
+                    publication.affectedAssetIds.length,
+                },
+              },
+            ],
+          }
+        : {}),
     },
   };
 }

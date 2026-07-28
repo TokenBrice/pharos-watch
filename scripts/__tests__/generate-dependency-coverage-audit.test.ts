@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "../../shared/types";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "../../shared/types/live-reserves";
+import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 import {
   buildDependencyCoverageAudit,
   evaluateDependencyCoverageBaseline,
@@ -18,33 +19,6 @@ function liveConfig(adapter: LiveReserveAdapterKey): LiveReservesConfig {
     version: 1,
     semantics: "collateral-mix",
     inputs: { primary: { kind: "http-json", url: `https://example.test/${adapter}.json` } },
-  };
-}
-
-function coin(input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">): StablecoinMeta {
-  return {
-    id: input.id,
-    name: input.name ?? input.id,
-    symbol: input.symbol ?? input.id.toUpperCase(),
-    flags: input.flags ?? {
-      backing: "rwa-backed",
-      pegCurrency: "USD",
-      governance: "centralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
-    },
-    collateral: input.collateral ?? "Fixture collateral",
-    pegMechanism: input.pegMechanism ?? "Fixture mechanism",
-    ...(input.contracts ? { contracts: input.contracts } : {}),
-    ...(input.tradedContracts ? { tradedContracts: input.tradedContracts } : {}),
-    ...(input.reserves ? { reserves: input.reserves } : {}),
-    ...(input.dependencies ? { dependencies: input.dependencies } : {}),
-    ...(input.dependencyReview ? { dependencyReview: input.dependencyReview } : {}),
-    ...(input.reserveReview ? { reserveReview: input.reserveReview } : {}),
-    ...(input.liveReservesConfig ? { liveReservesConfig: input.liveReservesConfig } : {}),
-    ...(input.status ? { status: input.status } : {}),
-    ...(input.variantOf ? { variantOf: input.variantOf } : {}),
   };
 }
 

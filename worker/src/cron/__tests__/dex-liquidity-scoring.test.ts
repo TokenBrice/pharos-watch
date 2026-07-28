@@ -48,6 +48,7 @@ import { getCache } from "../../lib/db-cache";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import type { ExitRouteObservation } from "@shared/types/market";
 import { buildPoolFingerprint, initMetrics } from "../dex-liquidity/pool-helpers";
 import {
   computeDepthStability,
@@ -55,6 +56,7 @@ import {
   computeStablecoinScores,
   DEX_LIQUIDITY_SCORING_BATCH_SIZE,
   loadConfidentHistoryStability,
+  selectDexRouteObservations,
 } from "../dex-liquidity/scoring";
 import type { PoolEntry } from "../dex-liquidity/types";
 
@@ -681,6 +683,85 @@ describe("dex-liquidity scoring", () => {
     });
   });
 
+  it("does not let shallow measured routes evict the highest-capacity exact fallback", () => {
+    const route = (args: {
+      id: string;
+      protocol: string;
+      chain: string;
+      capacity: number;
+      evidenceKind: ExitRouteObservation["evidenceKind"];
+      adapterProfileId?: string;
+    }): ExitRouteObservation => ({
+      routeId: args.id,
+      routeFamily: "dex-amm",
+      scope: {
+        kind: "chain-contract",
+        chain: args.chain,
+        contractOrPoolId: args.id,
+        protocol: args.protocol,
+      },
+      requestedNotionalUsd: 1_000_000,
+      settlementHorizonSec: 300,
+      maxCostBps: 200,
+      executableUsd: args.capacity,
+      completionRatio: Math.min(1, args.capacity / 1_000_000),
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
+      evidenceKind: args.evidenceKind,
+      ...(args.adapterProfileId ? { adapterProfileId: args.adapterProfileId } : {}),
+      confidence: "high",
+      scoreEligible: true,
+      observedAt: 1_800_000_000,
+      freshnessSeconds: 0,
+      commonModeKeys: [
+        `pool:${args.chain}:${args.id}`,
+        `chain:${args.chain.toLowerCase()}`,
+        `protocol:${args.protocol}`,
+      ],
+      capacityCurve: [{
+        requestedNotionalUsd: 25_000_000,
+        maxCostBps: 200,
+        executableUsd: args.capacity,
+        completionRatio: args.capacity / 25_000_000,
+      }],
+    });
+    const observations = [
+      ...Array.from({ length: 10 }, (_, index) => route({
+        id: `sunswap-${index}`,
+        protocol: "sunswap",
+        chain: "Tron",
+        capacity: 1_000,
+        evidenceKind: "measured-executable-depth",
+        adapterProfileId: "sunswap-v2-router-v1",
+      })),
+      route({
+        id: "curve-deep",
+        protocol: "curve",
+        chain: "Ethereum",
+        capacity: 24_600_000,
+        evidenceKind: "reserve-based-amm-simulation",
+      }),
+      route({
+        id: "pancake-independent",
+        protocol: "pancakeswap",
+        chain: "BSC",
+        capacity: 7_750_000,
+        evidenceKind: "measured-executable-depth",
+        adapterProfileId: "pancake-v3-quoter-v2",
+      }),
+    ];
+
+    const selected = selectDexRouteObservations(observations);
+    expect(selected.observations[0]?.routeId).toBe("curve-deep");
+    expect(selected.observations.map((observation) => observation.routeId)).toContain(
+      "pancake-independent",
+    );
+    expect(selected.bestIncludedCapacityUsd).toBe(24_600_000);
+    expect(selected.bestOmittedCapacityUsd).toBe(1_000);
+    expect(selected.observations.filter(
+      (observation) => observation.adapterProfileId === "sunswap-v2-router-v1",
+    )).toHaveLength(3);
+  });
+
   it("selects exact route evidence below the display top ten without changing the visible pool list", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
     const metrics = initMetrics("usdc-circle", "USDC");
@@ -743,7 +824,7 @@ describe("dex-liquidity scoring", () => {
       }),
     );
     expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
-      retainedPoolCount: 10,
+      retainedPoolCount: 12,
       scoreEligiblePoolCount: 1,
       scoreEligibleCapabilityPoolCount: 1,
     });
@@ -914,20 +995,22 @@ describe("dex-liquidity scoring", () => {
     expect(metrics.topPools.map((pool) => pool.poolId)).toEqual(
       Array.from({ length: 10 }, (_, index) => `ethereum:exact-pool-${index}`),
     );
-    expect(routeResult?.exitRouteObservations).toHaveLength(10);
-    expect(routeResult?.exitRouteObservations).not.toContainEqual(
-      expect.objectContaining({
-        scope: expect.objectContaining({ contractOrPoolId: "ethereum:exact-pool-10" }),
-      }),
-    );
+    expect(routeResult?.exitRouteObservations).toHaveLength(3);
+    expect(routeResult?.exitRouteObservations?.map(
+      (observation) => observation.scope.contractOrPoolId,
+    )).toEqual([
+      "ethereum:exact-pool-0",
+      "ethereum:exact-pool-1",
+      "ethereum:exact-pool-10",
+    ]);
     expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
       retainedPoolCount: 11,
-      observationCount: 10,
-      scoreEligibleObservationCount: 10,
-      scoreEligiblePoolCount: 10,
+      observationCount: 3,
+      scoreEligibleObservationCount: 3,
+      scoreEligiblePoolCount: 3,
       scoreEligibleCapabilityPoolCount: 11,
-      unsupportedPoolCount: 1,
-      unsupportedReasons: { routeSelectionCapabilityOverflow: 1 },
+      unsupportedPoolCount: 8,
+      unsupportedReasons: { routeObservationPayloadOverflow: 8 },
     });
   });
 
@@ -1021,25 +1104,25 @@ describe("dex-liquidity scoring", () => {
       };
     } | undefined;
 
-    expect(routeResult?.exitRouteObservations).toHaveLength(10);
+    expect(routeResult?.exitRouteObservations).toHaveLength(6);
     expect(routeResult?.exitRouteObservations?.map((observation) => observation.scope.contractOrPoolId)).toEqual([
+      ...Array.from({ length: 3 }, (_, index) => `ethereum:dai-curve-pool-${index}`),
       ...Array.from({ length: 3 }, (_, index) => `ethereum:dai-balancer-three-token-${index}`),
-      ...Array.from({ length: 7 }, (_, index) => `ethereum:dai-curve-pool-${index}`),
     ]);
     expect(routeResult?.exitRouteObservations?.slice(0, 3).map((observation) => observation.output.trackedAssetIds)).toEqual(
       [["usdc-circle"], ["usdc-circle"], ["usdc-circle"]],
     );
     expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
       retainedPoolCount: 10,
-      observationCount: 10,
-      scoreEligibleObservationCount: 10,
-      scoreEligiblePoolCount: 10,
+      observationCount: 6,
+      scoreEligibleObservationCount: 6,
+      scoreEligiblePoolCount: 6,
       scoreEligibleCapabilityPoolCount: 10,
-      unsupportedPoolCount: 0,
+      unsupportedPoolCount: 4,
     });
-    expect(routeResult?.exitRouteObservationCoverage?.unsupportedReasons).not.toHaveProperty(
-      "routeObservationPayloadOverflow",
-    );
+    expect(routeResult?.exitRouteObservationCoverage?.unsupportedReasons).toMatchObject({
+      routeObservationPayloadOverflow: 4,
+    });
   });
 
   it("keeps pool coverage complete when clipping only extra outputs from represented pools", async () => {
@@ -1093,11 +1176,11 @@ describe("dex-liquidity scoring", () => {
       };
     } | undefined;
 
-    expect(routeResult?.exitRouteObservations).toHaveLength(10);
+    expect(routeResult?.exitRouteObservations).toHaveLength(3);
     expect(routeResult?.exitRouteObservationCoverage).toMatchObject({
       retainedPoolCount: 2,
-      observationCount: 10,
-      scoreEligibleObservationCount: 10,
+      observationCount: 3,
+      scoreEligibleObservationCount: 3,
       scoreEligiblePoolCount: 2,
       scoreEligibleCapabilityPoolCount: 2,
       unsupportedPoolCount: 0,

@@ -10,8 +10,8 @@
     "reportCardsAsOf": "2026-07-13T01:00:16.000Z",
     "compilerEvidenceAsOf": "2026-07-13T01:02:53.000Z",
     "currentMethodologyVersion": "8.16",
-    "activeRegistryCount": 360,
-    "activeReportCardCount": 360,
+    "activeRegistryCount": 359,
+    "activeReportCardCount": 359,
     "fixedInput": {
       "schemaVersion": 1,
       "captureKind": "legacy-unverified",
@@ -1198,11 +1198,11 @@
     ]
   },
   "compiler": {
-    "compiledCount": 360,
+    "compiledCount": 359,
     "exceptionCount": 0,
     "silentOmissionCount": 0,
     "rateableCount": 0,
-    "nrCount": 360,
+    "nrCount": 359,
     "evaluatedOrder": [
       "a7a5-old-vector",
       "usdc-circle",
@@ -1540,7 +1540,6 @@
       "wtgxx-wisdomtree",
       "wusd-worldwide",
       "xagm-matrixdock",
-      "xai-silo-finance",
       "xaum-matrixdock",
       "xaut-tether",
       "xdai-gnosis",
@@ -1568,7 +1567,7 @@
     "archetypeDistribution": {
       "fiat-cash": 147,
       "rwa-credit-fund": 41,
-      "cdp": 88,
+      "cdp": 87,
       "synthetic-delta-neutral": 28,
       "tbill": 47,
       "algorithmic": 6,
@@ -1576,34 +1575,34 @@
     },
     "evidenceLevels": {
       "backing": {
-        "insufficient": 348,
+        "insufficient": 347,
         "adequate": 2,
         "strong": 10
       },
       "exit": {
-        "insufficient": 351,
+        "insufficient": 350,
         "strong": 9
       },
       "control": {
-        "insufficient": 356,
+        "insufficient": 355,
         "strong": 4
       }
     },
     "unresolvedByCode": {
-      "unreviewed-reserve-envelope": 340,
-      "material-reserve-slice-unstructured": 544,
+      "unreviewed-reserve-envelope": 339,
+      "material-reserve-slice-unstructured": 542,
       "unsupported-same-notional-route": 167,
-      "unknown-control-cap-authority": 373,
+      "unknown-control-cap-authority": 372,
       "unresolved-control-identity": 209,
-      "missing-upgradeability-review": 329,
+      "missing-upgradeability-review": 328,
       "runtime-bridge-materiality-unavailable": 145,
       "missing-custody-profile": 125,
       "missing-latest-assurance-report": 127,
-      "missing-same-notional-route": 184,
+      "missing-same-notional-route": 183,
       "mint-control-question": 76,
       "partial-reserve-review": 12,
       "material-unknown-reserve-exposure": 16,
-      "unresolved-oracle-branch-applicability": 81,
+      "unresolved-oracle-branch-applicability": 80,
       "selected-bridge-route-unresolved": 95,
       "missing-peg-input": 55,
       "unresolved-exit-output": 22,
@@ -1621,16 +1620,16 @@
       "missing-reserve-composition": 1
     },
     "criticalUnresolvedByCode": {
-      "unreviewed-reserve-envelope": 340,
+      "unreviewed-reserve-envelope": 339,
       "unsupported-same-notional-route": 167,
-      "unknown-control-cap-authority": 373,
+      "unknown-control-cap-authority": 372,
       "unresolved-control-identity": 209,
-      "missing-upgradeability-review": 329,
+      "missing-upgradeability-review": 328,
       "runtime-bridge-materiality-unavailable": 145,
       "missing-custody-profile": 125,
-      "missing-same-notional-route": 184,
+      "missing-same-notional-route": 183,
       "mint-control-question": 76,
-      "unresolved-oracle-branch-applicability": 81,
+      "unresolved-oracle-branch-applicability": 80,
       "selected-bridge-route-unresolved": 95,
       "missing-peg-input": 55,
       "material-bridge-supply-unmatched": 3,
@@ -1717,15 +1716,15 @@
     "largestMovements": []
   },
   "remainingManualInputs": {
-    "total": 2987,
+    "total": 2980,
     "byClass": {
-      "missing-data": 2820,
+      "missing-data": 2813,
       "unresolved-methodology": 0,
       "unsupported-design": 167
     },
     "byCriticality": {
-      "critical": 2228,
-      "noncritical": 759
+      "critical": 2223,
+      "noncritical": 757
     },
     "items": [
       {
@@ -26630,69 +26629,6 @@
         "critical": true,
         "path": "exitRouteObservations",
         "reason": "Retained exit venues are outside the exact route-capacity capability matrix."
-      },
-      {
-        "assetId": "xai-silo-finance",
-        "pillar": "backing",
-        "code": "material-reserve-slice-unstructured",
-        "classification": "missing-data",
-        "critical": false,
-        "path": "reserves.1",
-        "reason": "ETH Silo credit-line collateral (10.55%) lacks assetClass, riskFactors, liquidityHorizon, issuerOrObligor."
-      },
-      {
-        "assetId": "xai-silo-finance",
-        "pillar": "backing",
-        "code": "material-reserve-slice-unstructured",
-        "classification": "missing-data",
-        "critical": false,
-        "path": "reserves.0",
-        "reason": "USDC Silo credit-line collateral (89.45%) lacks assetClass, riskFactors, liquidityHorizon, issuerOrObligor."
-      },
-      {
-        "assetId": "xai-silo-finance",
-        "pillar": "backing",
-        "code": "unreviewed-reserve-envelope",
-        "classification": "missing-data",
-        "critical": true,
-        "path": "reserveReview",
-        "reason": "Reserve composition lacks a dated review envelope and known-unknown exposure."
-      },
-      {
-        "assetId": "xai-silo-finance",
-        "pillar": "control",
-        "code": "missing-upgradeability-review",
-        "classification": "missing-data",
-        "critical": true,
-        "path": "mintAuthority.upgradeability",
-        "reason": "A privileged mint path has no structured upgradeability record."
-      },
-      {
-        "assetId": "xai-silo-finance",
-        "pillar": "control",
-        "code": "unknown-control-cap-authority",
-        "classification": "missing-data",
-        "critical": true,
-        "path": "mintAuthority.controls.0.canRaiseCap",
-        "reason": "XAI token owner Safe has unresolved authority to raise its mint cap."
-      },
-      {
-        "assetId": "xai-silo-finance",
-        "pillar": "control",
-        "code": "unresolved-oracle-branch-applicability",
-        "classification": "missing-data",
-        "critical": true,
-        "path": "oracleRisk.branchApplicability",
-        "reason": "CDP oracle review does not establish whether market-specific oracle and liquidation branches are required."
-      },
-      {
-        "assetId": "xai-silo-finance",
-        "pillar": "exit",
-        "code": "missing-same-notional-route",
-        "classification": "missing-data",
-        "critical": true,
-        "path": "exitRouteObservations",
-        "reason": "No fresh score-eligible same-notional route observation is available."
       },
       {
         "assetId": "xaum-matrixdock",

@@ -4,6 +4,7 @@ import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import {
   loadSafetyScoreV9Publication,
+  loadSafetyScoreV9PublicationAttempt,
   loadSafetyScoreV9PublicationHealth,
   persistSafetyScoreV9Publication,
   SAFETY_SCORE_V9_CACHE_KEYS,
@@ -51,6 +52,15 @@ describe("Safety Score V9 publication store", () => {
     await persistSafetyScoreV9Publication(db, {
       publication,
       publicationHealth: currentHealth,
+      publicationAttempt: {
+        schemaVersion: 1,
+        attemptedAtSec: publication.publishedAtSec,
+        outcome: "published-clean",
+        publicationGenerationId:
+          publication.publicationGenerationId,
+        quarantines: [],
+        affectedAssetIds: [],
+      },
       publicationClockSec: publication.publishedAtSec,
     });
     await expect(loadSafetyScoreV9Publication(db)).resolves.toEqual(
@@ -58,6 +68,13 @@ describe("Safety Score V9 publication store", () => {
     );
     await expect(loadSafetyScoreV9PublicationHealth(db)).resolves.toEqual(
       currentHealth,
+    );
+    await expect(loadSafetyScoreV9PublicationAttempt(db)).resolves.toMatchObject(
+      {
+        outcome: "published-clean",
+        publicationGenerationId:
+          publication.publicationGenerationId,
+      },
     );
 
     await persistSafetyScoreV9Publication(db, {
@@ -67,6 +84,14 @@ describe("Safety Score V9 publication store", () => {
         attemptedAtSec: 120,
         heldSinceSec: 120,
         reasons: [{ code: "dex-stale" }],
+      },
+      publicationAttempt: {
+        schemaVersion: 1,
+        attemptedAtSec: 120,
+        outcome: "held",
+        publicationGenerationId: null,
+        quarantines: [],
+        affectedAssetIds: [],
       },
       publicationClockSec: 120,
     });
@@ -86,6 +111,7 @@ describe("Safety Score V9 publication store", () => {
       sqlite.prepare("SELECT key FROM cache ORDER BY key").all(),
     ).toEqual([
       { key: SAFETY_SCORE_V9_CACHE_KEYS.publication },
+      { key: SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt },
       { key: SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth },
     ]);
   });

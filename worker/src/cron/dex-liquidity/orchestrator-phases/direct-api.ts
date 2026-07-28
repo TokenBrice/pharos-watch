@@ -1,15 +1,15 @@
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
-import { type CircuitOutcomeRecord, type CircuitState } from "../../../lib/circuit-breaker";
 import {
-  ProviderCircuitOpenError,
-  ProviderExecutionError,
-  createProviderExecutionContextForJob,
-  withProviderExecution,
-  type ProviderExecutionPolicy,
-} from "../../../lib/provider-execution";
+  recordOutcomeSafe,
+  shouldAttemptFetch,
+  type CircuitOutcomeRecord,
+  type CircuitState,
+} from "../../../lib/circuit-breaker";
+import { abortError, throwIfAborted } from "../../../lib/abort";
 import {
   DIRECT_API_POOL_MIN_TVL_USD,
   convertToGtNewPools,
@@ -95,6 +95,54 @@ export interface DirectApiCircuitEvent {
   from: CircuitState;
   to: CircuitState;
   at: number | null;
+}
+
+class DirectApiCircuitOpenError extends Error {}
+
+class DirectApiExecutionError extends Error {
+  constructor(
+    providerId: string,
+    error: unknown,
+    readonly circuitOutcome: CircuitOutcomeRecord | null,
+  ) {
+    super(`Provider ${providerId} failed: ${toErrorMessage(error)}`);
+    this.name = "DirectApiExecutionError";
+  }
+}
+
+async function executeDirectApiProvider(
+  db: D1Database,
+  fetcher: Pick<DirectApiFetcher, "name" | "circuitKey" | "fn">,
+  parentSignal?: AbortSignal,
+): Promise<{ value: DexApiFetchResult; circuitOutcome: CircuitOutcomeRecord | null }> {
+  const { name, circuitKey, fn } = fetcher;
+  const providerId = `dex-direct-api:${name.toLowerCase().replaceAll(/\s+/g, "-")}`;
+  if (!(await shouldAttemptFetch(db, circuitKey))) {
+    throw new DirectApiCircuitOpenError();
+  }
+  throwIfAborted(parentSignal);
+
+  const timeout = createTimeoutSignal({
+    timeoutMs: DIRECT_API_PROVIDER_TIMEOUT_MS,
+    timeoutReason: new DOMException(
+      `provider ${providerId} timed out after ${DIRECT_API_PROVIDER_TIMEOUT_MS}ms`,
+      "TimeoutError",
+    ),
+    parentSignal,
+  });
+
+  try {
+    const value = await fn(timeout.signal);
+    const circuitOutcome = await recordOutcomeSafe(db, circuitKey, value.ok && !timeout.isTimedOut());
+    return { value, circuitOutcome };
+  } catch (error) {
+    const parentAborted = Boolean(parentSignal?.aborted && !timeout.isTimedOut());
+    if (parentAborted) throw abortError(parentSignal);
+    const circuitOutcome = await recordOutcomeSafe(db, circuitKey, false);
+    throw new DirectApiExecutionError(providerId, error, circuitOutcome);
+  } finally {
+    timeout.dispose();
+  }
 }
 
 function hasTrackedDirectApiToken(
@@ -338,13 +386,6 @@ export async function runDirectApiFetchPhase(
   signal?: AbortSignal,
   lookups?: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
 ): Promise<DirectApiFetchPhaseResult> {
-  const providerContext = createProviderExecutionContextForJob({
-    job: "sync-dex-liquidity-stage",
-    laneId: "sync-dex-liquidity-stage:direct-api",
-    laneMaxConcurrent: DIRECT_API_FETCH_PHASE_CONCURRENCY,
-    db,
-    signal,
-  });
   const entries = await mapWithConcurrency(
     fetchers,
     DIRECT_API_FETCH_PHASE_CONCURRENCY,
@@ -355,11 +396,7 @@ export async function runDirectApiFetchPhase(
       const circuitEvents: DirectApiCircuitEvent[] = [];
 
       try {
-        const execution = await withProviderExecution(
-          providerContext,
-          buildDirectApiProviderPolicy(name, circuitKey),
-          ({ signal: providerSignal }) => fn(providerSignal),
-        );
+        const execution = await executeDirectApiProvider(db, { name, circuitKey, fn }, signal);
         const result = execution.value;
         const event = directApiCircuitEventFromOutcome(circuitKey, execution.circuitOutcome);
         if (event) circuitEvents.push(event);
@@ -390,7 +427,7 @@ export async function runDirectApiFetchPhase(
           entry: lookups ? compactDirectApiProviderEntry(entry, lookups) : entry,
         };
       } catch (err) {
-        if (err instanceof ProviderCircuitOpenError) {
+        if (err instanceof DirectApiCircuitOpenError) {
           console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
           failedSources.push(circuitKey);
           fallbackSignals.push(`${circuitKey}-circuit-open`);
@@ -414,7 +451,7 @@ export async function runDirectApiFetchPhase(
         }
         if (signal?.aborted) throw err;
         console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
-        const executionError = err instanceof ProviderExecutionError ? err : null;
+        const executionError = err instanceof DirectApiExecutionError ? err : null;
         const event = directApiCircuitEventFromOutcome(circuitKey, executionError?.circuitOutcome ?? null);
         if (event) circuitEvents.push(event);
         failedSources.push(circuitKey);
@@ -446,18 +483,6 @@ export async function runDirectApiFetchPhase(
     fallbackSignals: entries.flatMap((entry) => entry.fallbackSignals),
     sourceWarnings: entries.flatMap((entry) => entry.sourceWarnings),
     circuitEvents: entries.flatMap((entry) => entry.circuitEvents),
-  };
-}
-
-function buildDirectApiProviderPolicy(name: string, circuitKey: string): ProviderExecutionPolicy<DexApiFetchResult> {
-  return {
-    providerId: `dex-direct-api:${name.toLowerCase().replaceAll(/\s+/g, "-")}`,
-    maxConcurrent: 1,
-    timeoutMs: DIRECT_API_PROVIDER_TIMEOUT_MS,
-    breakerPolicy: { circuitKey },
-    countsAgainstLaneBudget: true,
-    responseBodyPolicy: "stream",
-    classifyOutcome: (result) => (result.ok ? "success" : "failure"),
   };
 }
 

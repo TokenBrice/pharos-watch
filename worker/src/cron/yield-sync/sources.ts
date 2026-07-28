@@ -7,7 +7,7 @@ export {
   fetchHashnoteUsycSource,
   fetchMorphoVaultSources,
   fetchOndoUsdyOracleSource,
-  fetchReProtocolReusdeSource,
+  fetchReProtocolReusdSource,
   fetchPendleMarketSources,
   fetchRoycoDawnSources,
   fetchVaultsFyiSources,

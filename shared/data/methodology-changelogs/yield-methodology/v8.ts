@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
   {
+    version: "8.37",
+    title: "Re Protocol Product Identity Correction",
+    date: "2026-07-28",
+    effectiveAt: 1785196800,
+    summary:
+      "Re Protocol yield now follows reUSD's own Basis-Plus APY and NAV series instead of attaching the separate junior reUSDe Insurance Alpha product to the reUSD page.",
+    impact: [
+      "`reusd-re-protocol` now reads the official `reUSD` series and publishes it as `protocol-api:re-protocol-reusd` with the Ethereum reUSD contract",
+      "reUSDe is removed from the reUSD yield-variant map because the two tokens are distinct products with separate contracts, return profiles, and loss positions",
+      "Misattributed `protocol-api:re-protocol-reusde` history is suppressed immediately and included in the guarded ownership-handoff purge path",
+      "The three-day protocol-observation freshness window, PYS weights, source-risk penalties, benchmark rules, and source arbitration order are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "8.36",
     title: "Re Protocol Insurance Alpha Source",
     date: "2026-07-16",

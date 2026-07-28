@@ -419,6 +419,9 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       candidate: full.candidate,
       compilerFactSchemaDigest: full.compilerFactSchemaDigest,
       producerCapabilityDigest: full.producerCapabilityDigest,
+      quarantines: full.quarantines,
+      quarantineAffectedAssetIds:
+        full.quarantineAffectedAssetIds,
     });
     expect(() =>
       evaluateValidatedV9FactSet(structuredClone(full.compiledFacts), V9_CANDIDATE_POLICY_V1),
@@ -686,7 +689,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     expect(result.candidate).toMatchObject({
       model: "v9-critical-path",
       lifecycle: "active",
-      policyVersion: "9.0",
+      policyVersion: "9.01",
       completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
     });
     expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 77, grade: "B+" });

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { handleBackfillDEWS } from "../backfill-dews";
 import { handleStressSignals } from "../stress-signals";
 
@@ -8,32 +9,6 @@ stubCryptoForAuth();
 afterEach(() => {
   vi.useRealTimers();
 });
-
-function createSqliteD1(sqlite: import("node:sqlite").DatabaseSync): D1Database {
-  const makeStatement = (sql: string, boundValues: unknown[] = []): D1PreparedStatement => ({
-    bind: (...args: unknown[]) => makeStatement(sql, args),
-    all: async <T>() => ({
-      results: sqlite.prepare(sql).all(...(boundValues as never[])) as T[],
-      success: true,
-      meta: {},
-    }),
-    first: async <T>() => {
-      const row = sqlite.prepare(sql).get(...(boundValues as never[])) as T | undefined;
-      return row ?? null;
-    },
-    run: async () => {
-      const result = sqlite.prepare(sql).run(...(boundValues as never[]));
-      return {
-        success: true,
-        meta: { changes: Number(result.changes ?? 0) },
-      };
-    },
-  }) as unknown as D1PreparedStatement;
-
-  return {
-    prepare: (sql: string) => makeStatement(sql),
-  } as unknown as D1Database;
-}
 
 describe("DEWS history repair", () => {
   it("prunes the requested history window and the public stress-signals read path stops returning it", async () => {

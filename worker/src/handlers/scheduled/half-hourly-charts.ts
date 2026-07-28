@@ -1,17 +1,20 @@
 /**
  * Half-hourly charts trigger (16,46 * * * *):
- *   sync-dex-liquidity (0) → sync-stablecoin-charts (1)
+ *   sync-dex-liquidity (0) → prepare-safety-score-v9-input (0)
+ *   → sync-stablecoin-charts (1)
  *
  * DEX scoring consumes the complete generation written six minutes earlier,
  * then the charts writer uses the same lightweight trigger.
  * Scheduled deliveries share one retryable publication bucket per hour.
  */
 import { consumeDexLiquidityScoringStage } from "../../cron/dex-liquidity/orchestrator";
+import { prepareSafetyScoreV9Input } from "../../cron/prepare-safety-score-v9-input";
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups } from "./slot-groups";
 
 export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) {
+  let publishedDexGenerationId: string | null = null;
   return runScheduledSlotGroups(runtime, "half-hour scoring and charts slot", [
     {
       mode: "serial",
@@ -19,13 +22,32 @@ export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) 
       tasks: [
         {
           job: "sync-dex-liquidity",
-          run: (signal, reportProgress) =>
-            consumeDexLiquidityScoringStage(
+          run: async (signal, reportProgress) => {
+            const result = await consumeDexLiquidityScoringStage(
               runtime.db,
               signal,
               reportProgress,
               runtime.slotStartedAt,
-            ),
+            );
+            const metadata = JSON.parse(result.metadata ?? "{}") as {
+              persistence?: { generationId?: string };
+            };
+            publishedDexGenerationId = metadata.persistence?.generationId ?? null;
+            return result;
+          },
+        },
+        {
+          job: "prepare-safety-score-v9-input",
+          run: (signal) => {
+            if (publishedDexGenerationId === null) {
+              throw new Error("DEX publication completed without an exact generation id");
+            }
+            return prepareSafetyScoreV9Input(
+              runtime.db,
+              signal,
+              publishedDexGenerationId,
+            );
+          },
         },
         {
           job: "sync-stablecoin-charts",

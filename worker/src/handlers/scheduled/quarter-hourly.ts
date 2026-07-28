@@ -6,14 +6,13 @@
  * All jobs run sequentially in-slot to avoid cross-job connection spikes.
  * Run FX first so Chainlink gets a clean RPC window before the heavier
  * stablecoin pricing pipeline consumes the slot's shared fetch budget.
- * Private V9 attribution and compilation use their own fenced +8 and +14
- * triggers. They never execute inside this public lane.
+ * Private V9 attribution and compilation use their own fenced +8 and +22/+52
+ * triggers. V9 input preparation follows DEX publication in the half-hour lane.
  */
 import { syncStablecoins } from "../../cron/sync-stablecoins";
 import { syncFxRates } from "../../cron/sync-fx-rates";
 import { snapshotSupply } from "../../cron/snapshot-supply";
 import { snapshotChainSupply } from "../../cron/snapshot-chain-supply";
-import { prepareSafetyScoreV9Input } from "../../cron/prepare-safety-score-v9-input";
 import { computeDepegResolver } from "../../cron/compute-depeg-resolver";
 import { parseStablecoinsCapabilities, type ScheduledRuntimeContext } from "./context";
 import { runBestEffortScheduledJobWithOutcome } from "./run-best-effort-job";
@@ -87,11 +86,6 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
 
   await runIfCacheSafe("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
   await runIfCacheSafe("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
-  await runIfCacheSafe(
-    "prepare-safety-score-v9-input",
-    (signal) => prepareSafetyScoreV9Input(runtime.db, signal),
-  );
-
   outcomes.push((await runBestEffortScheduledJobWithOutcome(runtime, "quarter-hour slot", "compute-depeg-resolver", (signal) =>
     computeDepegResolver({
       db: runtime.db,

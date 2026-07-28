@@ -34,6 +34,7 @@ export interface AlertSafetySourceRow {
   grade: string;
   score: number | null;
   methodologyVersion: string | null;
+  operationallyAffected?: boolean;
   v9Explain?: AlertSafetyV9ExplainSnapshot;
 }
 
@@ -164,6 +165,10 @@ function parseSnapshot(value: unknown): AlertSafetySourceSnapshot | null {
       !(
         candidate.methodologyVersion === null ||
         typeof candidate.methodologyVersion === "string"
+      ) ||
+      !(
+        candidate.operationallyAffected === undefined ||
+        typeof candidate.operationallyAffected === "boolean"
       )
     ) {
       return null;
@@ -174,6 +179,12 @@ function parseSnapshot(value: unknown): AlertSafetySourceSnapshot | null {
       grade: candidate.grade,
       score: candidate.score,
       methodologyVersion: candidate.methodologyVersion,
+      ...(candidate.operationallyAffected === undefined
+        ? {}
+        : {
+            operationallyAffected:
+              candidate.operationallyAffected,
+          }),
       v9Explain,
     };
   }

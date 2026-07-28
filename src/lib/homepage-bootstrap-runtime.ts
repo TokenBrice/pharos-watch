@@ -5,9 +5,10 @@ import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 // module deliberately stays Zod-free (no descriptor.schema validation) to keep
 // Zod out of the inline-hydration bundle.
 import {
-  HOMEPAGE_BOOTSTRAP_VERSION,
   buildHomepageBootstrapDescriptors,
   makeBootstrapCodec,
+  type BootstrapPayload,
+  type BootstrapQuery,
   type HomepageBootstrapQueryId,
 } from "@/lib/homepage-bootstrap-shared";
 
@@ -17,20 +18,8 @@ const HOMEPAGE_BOOTSTRAP_DESCRIPTORS = buildHomepageBootstrapDescriptors(FRONTEN
 
 export type { HomepageBootstrapQueryId };
 
-export interface HomepageBootstrapQuery {
-  id: HomepageBootstrapQueryId;
-  path: string;
-  fetchedAt: number;
-  data: unknown;
-  meta: ApiMeta | null;
-}
-
-export interface HomepageBootstrapPayload {
-  version: typeof HOMEPAGE_BOOTSTRAP_VERSION;
-  generatedAt: number;
-  source: string | null;
-  queries: Partial<Record<HomepageBootstrapQueryId, HomepageBootstrapQuery>>;
-}
+export type HomepageBootstrapQuery = BootstrapQuery<HomepageBootstrapQueryId, ApiMeta>;
+export type HomepageBootstrapPayload = BootstrapPayload<HomepageBootstrapQueryId, ApiMeta>;
 
 const homepageBootstrapCodec = makeBootstrapCodec<HomepageBootstrapQueryId, ApiMeta>({
   descriptors: HOMEPAGE_BOOTSTRAP_DESCRIPTORS,

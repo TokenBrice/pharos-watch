@@ -1,5 +1,6 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
+import type { ActivePriceCoverageGap } from "@shared/types/status";
 import { parseJsonObject } from "./json-parse";
 
 export const ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS = 2;
@@ -39,21 +40,7 @@ export interface StablecoinPriceCoverageAsset {
   circulating?: Record<string, number> | null;
 }
 
-export interface MissingActivePriceDetail {
-  stablecoinId: string;
-  symbol: string;
-  marketCapUsd: number | null;
-  currentPrice: number | null;
-  currentSource: string | null;
-  currentObservedAt: number | null;
-  currentConfidence: string | null;
-  consecutiveMissingGenerations: number;
-  lastAcceptedPrice: number | null;
-  lastAcceptedSource: string | null;
-  lastAcceptedObservedAt: number | null;
-  rejectionReason: string;
-  alertEligible: boolean;
-}
+export type MissingActivePriceDetail = ActivePriceCoverageGap;
 
 export interface StablecoinActivePriceCoverage {
   complete: boolean;

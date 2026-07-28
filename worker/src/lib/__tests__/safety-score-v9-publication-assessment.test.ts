@@ -163,7 +163,11 @@ describe("Safety Score V9 publication assessment", () => {
         acceptedPublication: acceptedPublication(),
         coverageFloors: [],
       }),
-    ).toEqual({ decision: "publish", reasons: [] });
+    ).toEqual({
+      decision: "publish",
+      reasons: [],
+      affectedAssetIds: [],
+    });
   });
 
   it("holds the existing active-result and rateability coverage floors", () => {
@@ -275,7 +279,11 @@ describe("Safety Score V9 publication assessment", () => {
           ),
         ),
       }),
-    ).toEqual({ decision: "publish", reasons: [] });
+    ).toEqual({
+      decision: "publish",
+      reasons: [],
+      affectedAssetIds: ["asset-0"],
+    });
 
     expect(
       assessV9Publication({
@@ -295,6 +303,73 @@ describe("Safety Score V9 publication assessment", () => {
     ).toMatchObject({ decision: "hold" });
   });
 
+  it("counts direct quarantines without relying on a previous scoring identity", () => {
+    const cards = Array.from({ length: 10 }, (_, index) =>
+      index === 0
+        ? producerFailedCard({
+            id: `asset-${index}`,
+            score: null,
+            grade: "NR",
+          })
+        : makeWorkerV9Card({
+            id: `asset-${index}`,
+            score: 80,
+            grade: "A-",
+          }),
+    );
+    const accepted = candidate(
+      cards.map((card) =>
+        makeWorkerV9Card({
+          id: card.id,
+          score: 80,
+          grade: "A-",
+        }),
+      ),
+    );
+    accepted.evaluationBuildDigest = digest("9");
+
+    expect(
+      assessV9Publication({
+        inputHealth: currentInputHealth(),
+        candidate: candidate(cards),
+        acceptedPublication: null,
+        coverageFloors: [],
+        quarantinedAssetIds: ["asset-0"],
+      }),
+    ).toEqual({
+      decision: "publish",
+      reasons: [],
+      affectedAssetIds: ["asset-0"],
+    });
+
+    expect(
+      assessV9Publication({
+        inputHealth: currentInputHealth(),
+        candidate: candidate(
+          cards.map((card, index) =>
+            index === 1
+              ? producerFailedCard({
+                  id: card.id,
+                  score: null,
+                  grade: "NR",
+                })
+              : card,
+          ),
+        ),
+        acceptedPublication: accepted,
+        coverageFloors: [],
+        quarantinedAssetIds: ["asset-0"],
+        quarantineAffectedAssetIds: [
+          "asset-0",
+          "asset-1",
+        ],
+      }),
+    ).toMatchObject({
+      decision: "hold",
+      affectedAssetIds: ["asset-0", "asset-1"],
+    });
+  });
+
   it("does not compare producer-failed deterioration across a scoring identity transition", () => {
     const priorIdentity = acceptedPublication();
     priorIdentity.evaluationBuildDigest = digest("9");
@@ -308,7 +383,11 @@ describe("Safety Score V9 publication assessment", () => {
         acceptedPublication: priorIdentity,
         coverageFloors: [],
       }),
-    ).toEqual({ decision: "publish", reasons: [] });
+    ).toEqual({
+      decision: "publish",
+      reasons: [],
+      affectedAssetIds: [],
+    });
   });
 
   it("publishes chronic producer failure without a new effect and healthy measured adversity", () => {
@@ -325,7 +404,11 @@ describe("Safety Score V9 publication assessment", () => {
         acceptedPublication: chronicAccepted,
         coverageFloors: [],
       }),
-    ).toEqual({ decision: "publish", reasons: [] });
+    ).toEqual({
+      decision: "publish",
+      reasons: [],
+      affectedAssetIds: [],
+    });
 
     expect(
       assessV9Publication({
@@ -340,6 +423,10 @@ describe("Safety Score V9 publication assessment", () => {
         acceptedPublication: acceptedPublication(),
         coverageFloors: [],
       }),
-    ).toEqual({ decision: "publish", reasons: [] });
+    ).toEqual({
+      decision: "publish",
+      reasons: [],
+      affectedAssetIds: [],
+    });
   });
 });

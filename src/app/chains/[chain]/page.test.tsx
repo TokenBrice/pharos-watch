@@ -1,13 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import ChainProfilePage from "./page";
-
-function extractJsonLd(html: string) {
-  return [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
-    .map((match) => match[1])
-    .filter((json): json is string => Boolean(json))
-    .map((json) => JSON.parse(json));
-}
+import { extractJsonLd } from "@/test/json-ld";
 
 vi.mock("./client", () => ({
   ChainProfileClient: ({ chainId }: { chainId: string }) => (
@@ -40,7 +34,7 @@ describe("ChainProfilePage", () => {
     const html = renderToStaticMarkup(
       await ChainProfilePage({ params: Promise.resolve({ chain: "ethereum" }) }),
     );
-    const jsonLd = extractJsonLd(html).flat();
+    const jsonLd = extractJsonLd(html);
     const collection = jsonLd.find((node) => node["@type"] === "CollectionPage");
     const itemList = jsonLd.find((node) => node["@type"] === "ItemList");
 

@@ -142,7 +142,7 @@ export function resolveExactDexPublicationGeneration(
   return { generationId, updatedAt };
 }
 
-async function loadExactDexPublicationGeneration(db: D1Database): Promise<{
+export async function loadExactDexPublicationGeneration(db: D1Database): Promise<{
   generationId: string;
   updatedAt: number;
 }> {

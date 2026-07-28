@@ -96,26 +96,26 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Codex post-wave-8 residual review",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Gold DAO key canisters",
-        "url": "https://docs.gold-dao.org/other/key-canisters"
+        "label": "Gold DAO physical-gold redemption guide",
+        "url": "https://docs.gold-dao.org/how-to/redeem-physical-gold"
       },
       {
-        "label": "Gold DAO GLDT",
-        "url": "https://gldt.org/"
+        "label": "DefiLlama RWA profile for GLDT",
+        "url": "https://defillama.com/rwa/asset/GLDT"
       },
       {
-        "label": "Gold DAO",
-        "url": "https://www.gold-dao.org/"
+        "label": "Gold DAO whitepaper",
+        "url": "https://gldt.org/Gold_DAO.pdf"
       }
     ],
-    "rationale": "Gold DAO describes GLDT as the gold-backed token issued through the GLD NFT swap route at 100 GLDT per gram of locked GLD NFT, with the underlying gold bars produced and stored in Switzerland and the vault audited on a recurring cycle. The reviewed composition therefore retains one aggregate 100% locked-gold-NFT category; bar-level weights, serial numbers, and current custody allocation are not publicly reconciled.",
-    "compositionBasis": "Gold DAO GLDT documentation and current swap/ledger control review",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Re-derived 2026-07-28 from the current Gold DAO redemption guide: 100 GLDT represents one gram of gold and must be reverse-swapped through the GLDT Swap platform to reclaim a GLD NFT; the guide describes the NFT as the deed for a specific audited gold bar held in a Swiss vault. DefiLlama's independent RWA profile corroborates the 100:1 conversion, locked-GLD-NFT backing route, Swiss-vault custody, and physical-redemption sequence. The Gold DAO whitepaper describes the same mint-and-reverse-swap mechanism. The reviewed composition therefore retains one aggregate 100% locked-gold-NFT category; this reserve classification does not establish that a GLDT holder has a direct legal claim on gold before completing the NFT swap and redemption process.",
+    "compositionBasis": "Current Gold DAO redemption documentation, independently corroborated by DefiLlama's GLDT RWA profile",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The backing class is identified as locked GLD NFTs representing physical gold, but current bar inventory, serial-level allocation, and custody-provider shares are not disclosed in the reviewed sources.",
     "knownUnknownExposurePct": 0,

@@ -22,15 +22,12 @@ import type { MechanismArchetype } from "../../types/stablecoin-taxonomy";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { readCompiledV9FactSetForEvaluation } from "./facts";
+import { compareText, deepFreeze } from "./primitives";
 
 const V9_RELEASE_COVERAGE_REPORT_DIGEST_DOMAIN = "safety-score-v9.release-coverage-report.v1";
 const V9_COVERAGE_EVALUATION_PROJECTION_DIGEST_DOMAIN = "safety-score-v9.coverage-evaluation-projection.v1";
 
 const REVIEW_DOMAINS = ["backing", "control", "access", "peg", "supply", "implementation"] as const;
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function sortedUnique(values: readonly string[]): string[] {
   return [...new Set(values)].sort(compareText);
@@ -52,14 +49,6 @@ function ratioBps(numerator: number, denominator: number, zeroDenominatorPass: b
 function meetsRatio(numerator: number, denominator: number, minimumBps: number, zeroDenominatorPass: boolean): boolean {
   if (denominator === 0) return zeroDenominatorPass;
   return numerator * 10_000 >= denominator * minimumBps;
-}
-
-function deepFreeze<T>(value: T): Readonly<T> {
-  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
-    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
 }
 
 function evidenceCurrent(asset: V9AssetFactsV3, evidenceRefIds: readonly string[]): boolean {

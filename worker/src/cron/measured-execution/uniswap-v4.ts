@@ -28,6 +28,7 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
+import { MAX_UINT128, rawAmountToUsd, usdToRawAmount } from "./fixed-point";
 
 export const UNISWAP_V4_ADAPTER_PROFILE_ID = "uniswap-v4-hook-free-quoter-v1";
 export const UNISWAP_V4_HOOK_FREE_ADDRESS =
@@ -47,7 +48,6 @@ const UNISWAP_V4_POOL_KEY_PARAMETERS = parseAbiParameters(
 );
 const UNISWAP_V4_MULTICALL_BATCH_SIZE = 8;
 const UNISWAP_V4_MULTICALL_GAS = "0x1c9c380";
-const MAX_UINT128 = (1n << 128n) - 1n;
 
 export interface UniswapV4Deployment {
   adapterProfileId: typeof UNISWAP_V4_ADAPTER_PROFILE_ID;
@@ -549,47 +549,6 @@ interface AdaptiveUniswapV4ChunkResult {
   budgetStopReasonsByLabel: Map<string, DexMeasuredExecutionBudgetStopReason>;
 }
 
-function usdToRawAmount(
-  inputUsd: number,
-  decimals: number,
-  referencePriceUsd: number,
-): bigint | null {
-  if (
-    !Number.isFinite(inputUsd) ||
-    inputUsd <= 0 ||
-    !Number.isInteger(decimals) ||
-    decimals < 0 ||
-    decimals > 255 ||
-    !Number.isFinite(referencePriceUsd) ||
-    referencePriceUsd <= 0
-  ) {
-    return null;
-  }
-  const usdScale = 1_000_000n;
-  const priceScale = 100_000_000n;
-  const usdScaled = BigInt(Math.floor(inputUsd * Number(usdScale)));
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  if (priceScaled <= 0n) return null;
-  const amount =
-    (usdScaled * 10n ** BigInt(decimals) * priceScale) /
-    (usdScale * priceScaled);
-  return amount > 0n && amount <= MAX_UINT128 ? amount : null;
-}
-
-function rawAmountToUsd(
-  amount: bigint,
-  decimals: number,
-  referencePriceUsd: number,
-): number {
-  const priceScale = 100_000_000n;
-  const usdScale = 1_000_000n;
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  const usdScaled =
-    (amount * priceScaled * usdScale) /
-    (10n ** BigInt(decimals) * priceScale);
-  return Number(usdScaled) / Number(usdScale);
-}
-
 function encodeUniswapV4Quote(
   target: DexMeasuredExecutionTarget,
   amountInRaw: bigint,
@@ -625,6 +584,7 @@ function encodeQuoteRequest(
     request.inputUsd,
     request.target.tokenIn.decimals,
     request.target.tokenIn.referencePriceUsd,
+    { maxRawAmount: MAX_UINT128 },
   );
   if (amountInRaw == null || validateTargetPoolKey(request.target) == null) return null;
   try {

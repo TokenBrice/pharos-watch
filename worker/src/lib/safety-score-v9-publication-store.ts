@@ -20,7 +20,102 @@ import {
 export const SAFETY_SCORE_V9_CACHE_KEYS = {
   publication: "report-cards:v9",
   publicationHealth: "report-cards:v9:publication-health",
+  publicationAttempt: "report-cards:v9:last-attempt",
 } as const;
+
+const V9AssetQuarantineSchema = z
+  .object({
+    assetId: z.string().min(1),
+    code: z.enum([
+      "fact-build-failed",
+      "fact-validation-failed",
+    ]),
+  })
+  .strict();
+
+export const V9PublicationAttemptSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    attemptedAtSec: z.number().int().nonnegative(),
+    outcome: z.enum([
+      "published-clean",
+      "published-partial",
+      "held",
+      "failed",
+    ]),
+    publicationGenerationId: z.string().min(1).nullable(),
+    quarantines: z.array(V9AssetQuarantineSchema),
+    affectedAssetIds: z.array(z.string().min(1)),
+  })
+  .strict()
+  .superRefine((attempt, ctx) => {
+    for (const [path, ids] of [
+      [
+        "quarantines",
+        attempt.quarantines.map((quarantine) => quarantine.assetId),
+      ],
+      ["affectedAssetIds", attempt.affectedAssetIds],
+    ] as const) {
+      if (
+        new Set(ids).size !== ids.length ||
+        ids.some(
+          (assetId, index) =>
+            index > 0 && ids[index - 1]! >= assetId,
+        )
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: [path],
+          message: `${path} must be unique and sorted`,
+        });
+      }
+    }
+    const affected = new Set(attempt.affectedAssetIds);
+    if (
+      attempt.quarantines.some(
+        (quarantine) => !affected.has(quarantine.assetId),
+      )
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["affectedAssetIds"],
+        message: "Affected assets must include every quarantine",
+      });
+    }
+    const published = attempt.outcome.startsWith("published-");
+    if (published !== (attempt.publicationGenerationId !== null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["publicationGenerationId"],
+        message:
+          "Only published attempts carry a publication generation",
+      });
+    }
+    if (
+      attempt.outcome === "published-clean" &&
+      (attempt.quarantines.length > 0 ||
+        attempt.affectedAssetIds.length > 0)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["outcome"],
+        message: "A clean publication cannot carry affected assets",
+      });
+    }
+    if (
+      attempt.outcome === "published-partial" &&
+      attempt.affectedAssetIds.length === 0
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["affectedAssetIds"],
+        message: "A partial publication requires affected assets",
+      });
+    }
+  });
+export type V9PublicationAttempt = z.infer<
+  typeof V9PublicationAttemptSchema
+>;
 
 class SafetyScoreV9PublicationConflictError extends Error {
   constructor(message: string) {
@@ -72,6 +167,35 @@ export async function loadSafetyScoreV9PublicationHealth(
   return health;
 }
 
+export async function loadSafetyScoreV9PublicationAttempt(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<V9PublicationAttempt | null> {
+  throwIfAborted(signal);
+  const row = await runWithOverloadRetry(
+    () =>
+      db
+        .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+        .bind(SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt)
+        .first<{ value: string; updated_at: number }>(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  if (!row) return null;
+  const attempt = parseCanonicalJson(
+    row.value,
+    V9PublicationAttemptSchema,
+    "Safety Score v9 publication attempt",
+  );
+  if (row.updated_at !== attempt.attemptedAtSec) {
+    throw new Error(
+      "Safety Score v9 publication attempt cache timestamp mismatch",
+    );
+  }
+  return attempt;
+}
+
 export async function loadSafetyScoreV9Publication(
   db: D1Database,
   signal?: AbortSignal,
@@ -94,6 +218,7 @@ export async function loadSafetyScoreV9Publication(
 export interface PersistSafetyScoreV9PublicationInput {
   publication?: SafetyScoreV9CurrentResponse;
   publicationHealth: V9PublicationHealth;
+  publicationAttempt: V9PublicationAttempt;
   publicationClockSec: number;
   signal?: AbortSignal;
 }
@@ -112,9 +237,25 @@ export async function persistSafetyScoreV9Publication(
     );
   }
   const health = V9PublicationHealthSchema.parse(input.publicationHealth);
+  const attempt = V9PublicationAttemptSchema.parse(
+    input.publicationAttempt,
+  );
   if (health.attemptedAtSec !== input.publicationClockSec) {
     throw new Error(
       "Safety Score v9 publication health does not match its attempt clock",
+    );
+  }
+  if (attempt.attemptedAtSec !== input.publicationClockSec) {
+    throw new Error(
+      "Safety Score v9 publication attempt does not match its attempt clock",
+    );
+  }
+  if (
+    (health.status === "current") !==
+    attempt.outcome.startsWith("published-")
+  ) {
+    throw new Error(
+      "Safety Score v9 publication attempt does not match publication health",
     );
   }
 
@@ -130,6 +271,8 @@ export async function persistSafetyScoreV9Publication(
     );
     if (
       health.acceptedPublicationGenerationId !==
+        publication.publicationGenerationId ||
+      attempt.publicationGenerationId !==
         publication.publicationGenerationId ||
       health.acceptedAtSec !== publication.publishedAtSec ||
       publication.publishedAtSec !== input.publicationClockSec
@@ -149,6 +292,7 @@ export async function persistSafetyScoreV9Publication(
   }
 
   const healthValue = stableJsonStringifyV1(health);
+  const attemptValue = stableJsonStringifyV1(attempt);
   const existingHealth = await loadSafetyScoreV9PublicationHealth(
     db,
     input.signal,
@@ -193,6 +337,13 @@ export async function persistSafetyScoreV9Publication(
     cacheStatement.bind(
       SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
       healthValue,
+      input.publicationClockSec,
+    ),
+  );
+  statements.push(
+    cacheStatement.bind(
+      SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
+      attemptValue,
       input.publicationClockSec,
     ),
   );

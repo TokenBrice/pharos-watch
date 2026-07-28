@@ -2361,12 +2361,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.0",
+    "methodologyVersion": "9.01",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.0",
+    "version": "9.01",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2388,6 +2388,8 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
 The endpoint reads only the accepted `report-cards:v9` publication and its matching `report-cards:v9:publication-health` row. Missing, malformed, incomplete, or identity-inconsistent state returns `503`; the handler never recomputes a score and never falls back to V8. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
 
 Rateable cards contain mandatory report-v4/trace-v3 `backing`, `exit`, and `control` breakdowns. Each breakdown reconciles evaluator and published pillar values through ordered adjustments. Economic Control uses the minimum binding component; Backing and Exit expose bounded aggregation inputs and weights. `breakdowns` is `null` exactly when the card is `NR`.
+
+`breakdowns.exit.primaryRoute.capacity` describes the selected route rather than market-wide liquidity. It exposes `executableUsd`, `requestedNotionalUsd`, `completionRatio`, request and observed cost bounds, settlement delay and scoring horizon, chain, protocol, pool, evidence kind, and evidence timestamp. Exit alternatives expose their own horizon, delay, confidence factor, and compact capacity summary so the evidence-confidence tradeoff against a higher-capacity alternative remains visible. Issuer redemption remains a separate daily, queued, or eventual route; exchange volume, aggregate DEX TVL, and issuer reserves are not interchangeable with executable capacity on one selected route.
 
 `publicationHealth.status` is `current` or `held`. A held response serves the last accepted ratings, uses the accepted timestamp for freshness headers and `updatedAt`, adds `X-Safety-Score-Status: held`, and forces `Cache-Control: no-store`. The latest unsuccessful attempt is exposed separately through `attemptedAtSec` and bounded hold reasons. Isolated producer failures may still publish when at least 90% of active assets are unaffected; broader or identity-level failures hold the prior accepted publication.
 
@@ -2668,7 +2670,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.0",
+      "methodologyVersion": "9.01",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2679,7 +2681,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.0",
+      "methodologyVersion": "9.01",
       "publishedAt": 1772000700
     }
   },
@@ -2692,8 +2694,8 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
     "status": "published"
   },
   "methodology": {
-    "version": "8.36",
-    "currentVersion": "8.36",
+    "version": "8.37",
+    "currentVersion": "8.37",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2856,7 +2858,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
 
 ```text
 {
-  "methodologyVersion": "v8.36",
+  "methodologyVersion": "v8.37",
   "updatedAt": 1779210000,
   "entries": [
     {
@@ -2870,7 +2872,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
       "project": null,
       "lifecycle": "active",
       "quarantineReason": null,
-      "methodologyVersion": "v8.36",
+      "methodologyVersion": "v8.37",
       "updatedAt": 1779210000
     }
   ]
@@ -2885,7 +2887,7 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
 
 History written under methodology v8.31 or later includes the versioned PYS formula inputs captured at publication. `pysReproducibility: "exact"` means the point can be recomputed from `pysInputsAtPublish`; older rows are labeled `legacy-partial` and do not invent missing benchmark, source-risk, or scaling facts.
 
-For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, `avUSD`), legacy parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those old child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`. New linked parent rows use `linked-variant:<variantId>:<sourceKey>` source keys when a tracked variant's eligible native/wrapper source is intentionally exposed on the active parent for comparison and coverage context.
+For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, `avUSD`), legacy parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those old child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`. New linked parent rows use `linked-variant:<variantId>:<sourceKey>` source keys when a tracked variant's eligible native/wrapper source is intentionally exposed on the active parent for comparison and coverage context. The same suppression and guarded purge path removes the former `protocol-api:re-protocol-reusde` rows from `reusd-re-protocol`; those rows represented a separate Re Protocol product and are replaced by reUSD's own `protocol-api:re-protocol-reusd` series.
 
 **Cache:** slow — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
@@ -2922,8 +2924,8 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
     "status": "published"
   },
   "methodology": {
-    "version": "8.36",
-    "currentVersion": "8.36",
+    "version": "8.37",
+    "currentVersion": "8.37",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }
@@ -2959,7 +2961,7 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
   "pysAtPublish": 42.7,
   "pysInputsAtPublish": {
     "schemaVersion": 1,
-    "methodologyVersion": "8.36",
+    "methodologyVersion": "8.37",
     "apy30d": 12.1,
     "safetyScore": 81,
     "varianceScore": 0.18,

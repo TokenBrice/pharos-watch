@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.96",
+    title: "Capacity-dominant bounded route selection",
+    date: "2026-07-28",
+    effectiveAt: 1785224355,
+    summary:
+      "The private executable-route candidate set is now evaluated at the $25M/200 bps V9 stress point before ten public observations are selected, with diversity quotas and a still-fresh asset-level churn hold.",
+    impact: [
+      "The bounded payload guarantees the strongest executable-capacity route, the strongest exact reserve-model fallback, and an independent chain/protocol route when one exists",
+      "Measured evidence no longer outranks a materially deeper exact route solely because its evidence tier is nominally stronger; per-chain, protocol, and adapter quotas prevent one common mode from occupying the route set",
+      "If unexplained route-set churn cuts an asset's best stress capacity below half of a still-fresh prior set with at least $100K capacity, only that asset retains the prior route observations until confirmation or expiry",
+      "SunSwap V2 returns to shadow-only collection while its production score impact is revalidated; aggregate liquidity, price consensus, visible pools, and V8 scoring remain unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.95",
     title: "Pinned SunSwap V2 direct-route fallback",
     date: "2026-07-28",

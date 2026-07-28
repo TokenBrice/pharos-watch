@@ -460,18 +460,18 @@ describe("evaluateV9Exit", () => {
     expect(immaterial?.score).toBe(0);
     expect(immaterial?.capsApplied).toContain("immaterial-executable-capacity");
 
-    // The floor is the ratio at which coverage stops moving the published
-    // score: (20 / 0.01) * 0.6 * 0.25 = 300 score per unit ratio, against the
-    // 0.005 rounding quantum, so ~1.667e-5 of the request — $416.67 here.
+    // Materiality starts at the first positive economic policy breakpoint:
+    // either 1% of the request or $100K of absolute executable capacity.
     const exit = V9_CANDIDATE_POLICY_V1.policy.semantic.exit;
-    const anchor = exit.coverageRatioBreakpoints.find((point) => point.value > 0 && point.score > 0)!;
-    const floorRatio = 0.005 / ((anchor.score / anchor.value) * 0.6 * exit.componentWeights.capacity);
-    expect(floorRatio).toBeCloseTo(1.667e-5, 8);
+    const absoluteFloor = exit.absoluteCapacityBreakpoints.find(
+      (point) => point.value > 0 && point.score > 0,
+    )!.value;
+    expect(absoluteFloor).toBe(100_000);
 
-    // Real-but-thin capacity above the floor keeps its credit; the rule removes
-    // vanishing routes, not small ones.
-    const material = evaluate(25_000_000 * floorRatio * 1.5);
+    const material = evaluate(absoluteFloor);
     expect(material?.score).toBeGreaterThan(0);
+    expect(material?.score).toBeLessThanOrEqual(50);
+    expect(material?.capsApplied).toContain("insufficient-completion:50");
     expect(material?.capsApplied).not.toContain("immaterial-executable-capacity");
   });
 

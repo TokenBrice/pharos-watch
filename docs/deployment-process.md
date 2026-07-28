@@ -69,7 +69,7 @@ Use focused checks while iterating. Run `test:all`, full lint, typed lint, or `t
 
 ## Yield History Cleanup Windows
 
-The tracked savings-wrapper ownership cleanup uses `worker/scripts/yield-history-cleanup.ts` as an operator-run maintenance tool. When that cleanup is part of a release:
+Tracked ownership handoffs and source-attribution corrections use `worker/scripts/yield-history-cleanup.ts` as an operator-run maintenance tool. When that cleanup is part of a release:
 
 1. Deploy the read-path and hourly-purge protections first.
 2. Arm the writer pause guard.

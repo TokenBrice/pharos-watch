@@ -2,13 +2,13 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { useApiQueryWithMetaMock, isBlacklistBannerEnabledMock } = vi.hoisted(() => ({
-  useApiQueryWithMetaMock: vi.fn(),
+const { useRegisteredApiQueryMock, isBlacklistBannerEnabledMock } = vi.hoisted(() => ({
+  useRegisteredApiQueryMock: vi.fn(),
   isBlacklistBannerEnabledMock: vi.fn(),
 }));
 
-vi.mock("../use-api-query", () => ({
-  useApiQueryWithMeta: useApiQueryWithMetaMock,
+vi.mock("../api-hooks", () => ({
+  useRegisteredApiQuery: useRegisteredApiQueryMock,
 }));
 
 vi.mock("@/lib/feature-flags", () => ({
@@ -19,13 +19,13 @@ import { useRecentBlacklist7d } from "../use-recent-blacklist-7d";
 
 describe("useRecentBlacklist7d", () => {
   beforeEach(() => {
-    useApiQueryWithMetaMock.mockReset();
+    useRegisteredApiQueryMock.mockReset();
     isBlacklistBannerEnabledMock.mockReset();
   });
 
   it("returns null when the banner flag is disabled", () => {
     isBlacklistBannerEnabledMock.mockReturnValue(false);
-    useApiQueryWithMetaMock.mockReturnValue({ data: undefined, meta: null });
+    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, meta: null });
 
     const { result } = renderHook(() => useRecentBlacklist7d("USDC"));
 
@@ -34,7 +34,7 @@ describe("useRecentBlacklist7d", () => {
 
   it("returns null when the symbol is not in BLACKLIST_STABLECOINS", () => {
     isBlacklistBannerEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({ data: undefined, meta: null });
+    useRegisteredApiQueryMock.mockReturnValue({ data: undefined, meta: null });
 
     const { result } = renderHook(() => useRecentBlacklist7d("DAI"));
 
@@ -43,7 +43,7 @@ describe("useRecentBlacklist7d", () => {
 
   it("returns the per-coin aggregate when both gates pass and summary contains the symbol", () => {
     isBlacklistBannerEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({
+    useRegisteredApiQueryMock.mockReturnValue({
       data: {
         stats: {
           perCoinRecentEventTypes: {
@@ -61,7 +61,7 @@ describe("useRecentBlacklist7d", () => {
 
   it("returns zero-counts when summary is empty for the coin", () => {
     isBlacklistBannerEnabledMock.mockReturnValue(true);
-    useApiQueryWithMetaMock.mockReturnValue({
+    useRegisteredApiQueryMock.mockReturnValue({
       data: { stats: { perCoinRecentEventTypes: {} } },
       meta: { status: "fresh" },
     });

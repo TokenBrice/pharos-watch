@@ -5,10 +5,8 @@ import Link from "next/link";
 import {
   Award,
   ChevronDown,
-  FileCheck2,
   History,
-  Link2,
-  LockKeyhole,
+  ScanSearch,
   ShieldCheck,
   Table2,
 } from "lucide-react";
@@ -19,8 +17,8 @@ import type {
 import type { ReportCardsV9Response, V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { scoreToV9Grade } from "@shared/types/safety-score-v9-grade";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { MethodologyHint } from "@/components/methodology-hint";
@@ -33,7 +31,6 @@ import {
   humanizeSafetyScoreV9Value,
   type StablecoinSafetyScoreV9Presentation,
 } from "@/lib/stablecoin-safety-score-v9-presentation";
-import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
 
 const HEADER_ICON_BUTTON_CLASS =
@@ -110,18 +107,37 @@ function HeldPublicationNotice({ health }: { health: V9PublicationHealth }) {
   );
 }
 
-function ComponentScoreBar({
-  row,
-}: {
-  row: NonNullable<
-    StablecoinSafetyScoreV9Presentation["pillars"][number]["breakdown"]
-  >["rows"][number];
-}) {
+type BreakdownRow = NonNullable<
+  StablecoinSafetyScoreV9Presentation["pillars"][number]["breakdown"]
+>["groups"][number]["rows"][number];
+
+/**
+ * Restrained tinting: a bar leaves neutral only when the input is the problem,
+ * so a long list stays calm and the eye lands on the weak rows.
+ */
+const ROW_TONE_FILL_CLASS: Record<BreakdownRow["tone"], string> = {
+  neutral: "bg-neutral-500 dark:bg-[#858585]",
+  warn: "bg-[var(--severity-moderate)]",
+  critical: "bg-[var(--severity-severe)]",
+};
+
+const ROW_TONE_SCORE_CLASS: Record<BreakdownRow["tone"], string> = {
+  neutral: "text-foreground",
+  warn: "text-amber-700 dark:text-amber-400",
+  critical: "text-rose-700 dark:text-rose-400",
+};
+
+function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?: boolean }) {
+  const [open, setOpen] = useState(false);
   const boundedScore = Math.max(0, Math.min(100, row.score));
   const weightLabel = row.weight === null
     ? null
     : `${(row.weight * 100).toFixed(row.weight * 100 < 10 ? 1 : 0)}%`;
-  return (
+  const hasChildren = row.children.length > 0;
+  const displayedScore =
+    row.score > 0 && row.score < 1 ? "<1" : row.score.toFixed(0);
+
+  const bar = (
     <div className="grid grid-cols-[minmax(5.25rem,6.75rem)_minmax(2.5rem,1fr)_1.75rem_5.25rem] items-center gap-1.5">
       <span className="break-words font-mono text-[10px] uppercase leading-[1.35] tracking-[0.08em] text-muted-foreground">
         {row.label}
@@ -129,20 +145,107 @@ function ComponentScoreBar({
       <span
         className="h-2.5 overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]"
         role="img"
-        aria-label={`${row.label}: ${row.score.toFixed(0)} out of 100${weightLabel === null ? "" : `, ${weightLabel} weight`}`}
+        aria-label={`${row.label}: ${displayedScore} out of 100${weightLabel === null ? "" : `, ${weightLabel} weight`}`}
       >
         <span
-          className="block h-full rounded-[2px] bg-neutral-500 dark:bg-[#858585]"
+          className={cn("block h-full rounded-[2px]", ROW_TONE_FILL_CLASS[row.tone])}
           style={{ width: `${boundedScore}%` }}
         />
       </span>
-      <span className="text-right font-mono text-[10px] font-medium tabular-nums text-foreground">
-        {row.score.toFixed(0)}
+      <span
+        className={cn(
+          "text-right font-mono text-[10px] font-medium tabular-nums",
+          ROW_TONE_SCORE_CLASS[row.tone],
+        )}
+      >
+        {displayedScore}
       </span>
       <span className="text-right font-mono uppercase leading-tight tracking-[0.04em] text-muted-foreground">
         {weightLabel !== null ? <span className="block text-[9px]">· {weightLabel}</span> : null}
         {row.status !== null ? <span className="mt-0.5 block break-words text-[8px]">{row.status}</span> : null}
       </span>
+    </div>
+  );
+
+  if (!hasChildren) {
+    return (
+      <div className={cn(nested && "pl-3")}>
+        {bar}
+        {row.detail !== null ? (
+          <p className="mt-0.5 text-[9px] leading-snug text-muted-foreground">{row.detail}</p>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {bar}
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="pharos-focus-ring mt-0.5 flex min-h-6 w-full items-center gap-1 rounded-sm text-left text-[9px] leading-snug text-muted-foreground"
+      >
+        {row.detail}
+        <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-180")} aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="mt-2 space-y-2.5 border-l border-border/40 pl-1">
+          {row.children.map((child) => <ComponentScoreBar key={child.key} row={child} nested />)}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function BreakdownGroupSection({
+  group,
+}: {
+  group: NonNullable<
+    StablecoinSafetyScoreV9Presentation["pillars"][number]["breakdown"]
+  >["groups"][number];
+}) {
+  const [tailOpen, setTailOpen] = useState(false);
+  return (
+    <div>
+      {group.label !== null ? (
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-border/30 pb-1.5">
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-foreground/85">
+            {group.label}
+          </span>
+          {group.score !== null ? (
+            <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+              {group.score.toFixed(0)} / 100
+              {group.weight !== null ? ` · ${(group.weight * 100).toFixed(0)}% pillar weight` : ""}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      <div className={cn("space-y-2.5", group.label !== null && "mt-2.5")}>
+        {group.rows.map((row) => <ComponentScoreBar key={row.key} row={row} />)}
+      </div>
+      {group.tail !== null ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setTailOpen((value) => !value)}
+            aria-expanded={tailOpen}
+            className="pharos-focus-ring mt-2 flex min-h-7 w-full items-center justify-between gap-2 rounded-sm text-[10px] font-medium text-muted-foreground"
+          >
+            <span>{group.tail.label}</span>
+            <ChevronDown
+              className={cn("h-3.5 w-3.5 shrink-0 transition-transform", tailOpen && "rotate-180")}
+              aria-hidden="true"
+            />
+          </button>
+          {tailOpen ? (
+            <div className="mt-2 space-y-2.5">
+              {group.tail.rows.map((row) => <ComponentScoreBar key={row.key} row={row} nested />)}
+            </div>
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }
@@ -190,8 +293,15 @@ function PillarBreakdownDetails({
         </dl>
       ) : null}
 
-      <div className="mt-2.5 space-y-2.5">
-        {breakdown.rows.map((row) => <ComponentScoreBar key={row.key} row={row} />)}
+      {breakdown.sectionLabel === "Route components" ? (
+        <p className="mt-2 text-[9px] leading-snug text-muted-foreground">
+          Route capacity is specific to the selected executable path. Exchange-wide volume,
+          aggregate DEX TVL, and issuer reserves do not prove the same executable amount.
+        </p>
+      ) : null}
+
+      <div className="mt-2.5 space-y-4">
+        {breakdown.groups.map((group) => <BreakdownGroupSection key={group.key} group={group} />)}
       </div>
 
       {breakdown.alternatives.length > 0 ? (
@@ -403,84 +513,60 @@ function CapSection({ card }: { card: StablecoinSafetyScoreV9DisplayCard }) {
   );
 }
 
-function EvidenceAndAccess({
+/**
+ * The causal split V9 computes but the card never showed: what was measured and
+ * found adverse, versus what stayed unresolved and whose gap that is. The
+ * second list names Pharos's own gaps as ours rather than hiding them behind a
+ * neutral "not measured".
+ */
+function WhyNotHigher({
   card,
   presentation,
 }: {
   card: StablecoinSafetyScoreV9DisplayCard;
   presentation: StablecoinSafetyScoreV9Presentation;
 }) {
+  const { adverseMessages, boundedGroups } = presentation;
+  if (adverseMessages.length === 0 && boundedGroups.length === 0) return null;
   return (
-    <div className="grid gap-4 border-b border-border/40 pb-3 sm:grid-cols-2">
-      <section aria-labelledby={`${card.id}-v9-evidence`}>
-        <div className="flex items-center gap-2">
-          <FileCheck2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          <h3 id={`${card.id}-v9-evidence`} className="text-sm font-semibold">Evidence</h3>
+    <section className="border-b border-border/40 pb-3" aria-labelledby={`${card.id}-v9-why`}>
+      <div className="flex items-center gap-2">
+        <ScanSearch className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        <h3 id={`${card.id}-v9-why`} className="text-sm font-semibold">Why not higher</h3>
+      </div>
+
+      {adverseMessages.length > 0 ? (
+        <div className="mt-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Measured and adverse
+          </p>
+          <ul className="mt-1 space-y-1 text-xs leading-relaxed text-muted-foreground">
+            {adverseMessages.map((message) => <li key={message}>{message}</li>)}
+          </ul>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">{presentation.evidenceSummary}</p>
-        {presentation.evidenceReasons.map((reason) => (
-          <p key={reason} className="mt-1 text-xs leading-relaxed text-muted-foreground">{reason}</p>
-        ))}
-      </section>
-      {presentation.accessRows.length > 0 ? (
-        <section aria-labelledby={`${card.id}-v9-access`}>
-          <div className="flex items-center gap-2">
-            <LockKeyhole className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <h3 id={`${card.id}-v9-access`} className="text-sm font-semibold">Access posture</h3>
-          </div>
-          <dl className="mt-1 space-y-1">
-            {presentation.accessRows.map((row) => (
-              <div key={row.key} className="flex items-baseline justify-between gap-3 text-xs">
-                <dt className="text-muted-foreground">{row.label}</dt>
-                <dd className="text-right font-mono text-foreground">{row.value}</dd>
+      ) : null}
+
+      {boundedGroups.length > 0 ? (
+        <div className="mt-3">
+          <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Unresolved evidence
+          </p>
+          <dl className="mt-1 space-y-2">
+            {boundedGroups.map((group) => (
+              <div key={group.key}>
+                <dt className="text-xs font-medium text-foreground/85">
+                  {group.label} ({group.messages.length})
+                </dt>
+                <dd>
+                  <ul className="mt-0.5 space-y-1 text-xs leading-relaxed text-muted-foreground">
+                    {group.messages.map((message) => <li key={message}>{message}</li>)}
+                  </ul>
+                </dd>
               </div>
             ))}
           </dl>
-        </section>
+        </div>
       ) : null}
-    </div>
-  );
-}
-
-function Dependencies({ card }: { card: StablecoinSafetyScoreV9DisplayCard }) {
-  const dependencies = [
-    ...card.dependencies.serial.map((dependency) => ({
-      id: dependency.upstreamAssetId,
-      detail: dependency.blocked
-        ? "Serial · blocked"
-        : `Serial · ${dependency.score === null ? "score unavailable" : `${dependency.score.toFixed(0)} / 100`}`,
-    })),
-    ...card.dependencies.basket.map((dependency) => ({
-      id: dependency.upstreamAssetId,
-      detail: `${dependency.boundedUnknown ? "Basket · bounded unknown" : "Basket"} · ${(dependency.weight * 100).toFixed(0)}%`,
-    })),
-  ];
-  return (
-    <section aria-labelledby={`${card.id}-v9-dependencies`}>
-      <div className="flex items-center gap-2">
-        <Link2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        <h3 id={`${card.id}-v9-dependencies`} className="text-sm font-semibold">Dependencies</h3>
-      </div>
-      {dependencies.length === 0 ? (
-        <p className="mt-1 text-xs text-muted-foreground">No material stablecoin dependencies.</p>
-      ) : (
-        <ul className="mt-1 space-y-1">
-          {dependencies.map((dependency) => {
-            const meta = CLIENT_TRACKED_META_BY_ID.get(dependency.id);
-            return (
-              <li key={`${dependency.id}-${dependency.detail}`} className="flex items-baseline justify-between gap-3 text-xs">
-                <Link
-                  href={buildStablecoinUrl(dependency.id)}
-                  className="pharos-focus-ring rounded-sm font-medium text-frost-blue hover:underline"
-                >
-                  {meta?.symbol ?? dependency.id}
-                </Link>
-                <span className="text-right font-mono text-muted-foreground">{dependency.detail}</span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
     </section>
   );
 }
@@ -524,16 +610,14 @@ export function StablecoinSafetyScoreV9Card({
             <span className="text-sm font-medium text-muted-foreground">Not rated</span>
           )}
         </div>
-        {presentation.traceParts.length > 0 ? (
-          <p className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
-            {presentation.traceParts.map((part, index) => (
-              <span key={part}>
-                {index > 0 ? <span className="mr-2" aria-hidden="true">·</span> : null}
-                {part}
-              </span>
-            ))}
-          </p>
-        ) : null}
+        <p className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          {[...presentation.traceParts, presentation.evidenceSummary].map((part, index) => (
+            <span key={part}>
+              {index > 0 ? <span className="mr-2" aria-hidden="true">·</span> : null}
+              {part}
+            </span>
+          ))}
+        </p>
       </div>
 
       <div className="divide-y divide-border/40 border-y border-border/40">
@@ -544,6 +628,7 @@ export function StablecoinSafetyScoreV9Card({
 
       <ScoreAdjustment card={card} />
       <CapSection card={card} />
+      <WhyNotHigher card={card} presentation={presentation} />
       {presentation.primaryReasons.length > 0 ? (
         <section className="border-b border-border/40 pb-3" aria-labelledby={`${card.id}-v9-reasons`}>
           <h3 id={`${card.id}-v9-reasons`} className="text-sm font-semibold">Rating notes</h3>
@@ -552,8 +637,7 @@ export function StablecoinSafetyScoreV9Card({
           </ul>
         </section>
       ) : null}
-      <EvidenceAndAccess card={card} presentation={presentation} />
-      <Dependencies card={card} />
+      <AccessPosturePanel rows={presentation.accessRows} />
     </div>
   );
 

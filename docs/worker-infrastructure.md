@@ -78,6 +78,8 @@ Fresh, independently revalidated route identities with at least two successful c
 
 Hook-free Ethereum Uniswap V4 is likewise shadow-only and always retains `activation-pending`; hooked pools and all other V4 chains are unsupported in this reviewed tranche.
 
+Current containment supersedes the SunSwap reactivation history in the preceding paragraph: the SunSwap adapter is shadow-only and cannot enter P4 capacity or completeness, while collection continues.
+
 The reviewed Ethereum legacy Curve 3pool is a separate measured adapter, not a
 generic Curve activation. Every run revalidates the pool and main-registry
 runtime hashes, registry LP binding, registry/pool token order, token decimals,
@@ -503,7 +505,7 @@ Do not maintain a second schedule table in this document:
 
 Fetch-heavy work uses isolated or offset lanes so it does not compete with the quarter-hourly core pipeline. DB-only work may share a slot when ordering is explicit. Budget-only side work is modeled even when it is not a `/api/status` job. Reserve recovery remains independent of the reserve invocation it is intended to reconcile.
 
-Safety Score V9 attribution and canonical publication use dedicated `+8` and `+14` minute triggers and never run inside the public quarter-hour invocation. Since a distinct expression alone cannot prevent overlap in one Worker service, both V9 lanes share a D1-backed memory-lane lease: a prior active invocation of the same V9 schedule lane remains fail-closed, while unrelated scheduled slots cannot suppress canonical publication and later scheduled invocations wait at the lightweight dispatcher boundary before loading their runner graphs. V9 also requires the matching `quarterHourly` slot to have finished `ok` on the immutable current Worker version ID and enforces an absolute deadline before the next quarter. Delayed or competing V9 work skips neutrally; missing Worker-version metadata degrades. The canonical compiler receives publication-exact peg provenance from the fixed-input producer's atomic D1 batch rather than reconstructing it from mutable event rows.
+Safety Score V9 supply attribution uses its dedicated `+8` trigger. Exact V9 input preparation runs after successful `16,46` DEX publication in the same serial D1-only chain and is passed the published DEX generation ID; canonical compilation uses the later `22,52` trigger. The preparation step rejects a generation mismatch, while compilation fences the fixed input against the latest accepted DEX generation both before enrichment and immediately before evaluation. Since a distinct expression alone cannot prevent overlap in one Worker service, V9 lanes retain the D1-backed memory-lane lease: a prior active invocation of the same V9 schedule lane remains fail-closed, while unrelated scheduled slots cannot suppress canonical publication and later scheduled invocations wait at the lightweight dispatcher boundary before loading their runner graphs. Delayed or competing V9 work skips neutrally; missing Worker-version metadata degrades. The canonical compiler receives publication-exact peg provenance from the fixed-input producer's atomic D1 batch rather than reconstructing it from mutable event rows.
 
 ### Cron Slot Capacity and Connection Pool Budget
 
@@ -513,7 +515,7 @@ Cloudflare limits each invocation to six simultaneous outbound requests that are
 
 Use `npm run check:cron-connections` for the live per-slot budget report. It includes the budget-only `telegram-digest-outbox-drain`, `digest-trigger-poll`, and Telegram registration reconciliation entries even though those surfaces do not create separate `/api/status` job rows.
 
-Fetch-heavy provider phases should use `worker/src/lib/provider-execution.ts` for lane permits, provider-local permits, timeout signal composition, circuit gating, and response-body policy. `createProviderExecutionContextForJob()` derives the lane ceiling from `CRON_CONNECTION_BUDGET_ENTRIES` and refuses budgets above the repo's 5/6 headroom-full limit. The first production pilot is the `sync-dex-liquidity-stage` direct API phase: protocol families run serially, each completed result is immediately compacted to tracked pools and bounded source evidence before the next family starts, each provider remains inside its provider-local policy, and circuit outcomes are recorded through the existing `circuit:<source>` breaker keys. Consumed Curve response trees are also released before the scoring-stage generation is written. The static source-stage trigger declaration remains conservatively `5/6` because one provider may still use its nested request width; the `sync-dex-liquidity` consumer is D1-only and shares the `16,46` slot serially with charts at `1/6`.
+The `sync-dex-liquidity-stage` direct API phase owns its circuit and timeout wrapper locally in `worker/src/cron/dex-liquidity/orchestrator-phases/direct-api.ts`. Protocol families run serially through `mapWithConcurrency(..., 1, ...)`, each completed result is immediately compacted to tracked pools and bounded source evidence before the next family starts, and circuit outcomes use the existing `circuit:<source>` breaker keys. Individual adapters retain their protocol-specific request/body policies. Consumed Curve response trees are also released before the scoring-stage generation is written. The static source-stage trigger declaration remains conservatively `5/6` and is enforced by `check:cron-connections` because one provider may still use its nested request width; the `sync-dex-liquidity` consumer is D1-only and shares the `16,46` slot serially with charts at `1/6`.
 
 **Policy for new jobs:**
 
@@ -772,6 +774,8 @@ CREATE TABLE IF NOT EXISTS cache (
 | `report-cards:v9-peg-provenance-seed:exact`                 | `prepareSafetyScoreV9Input`      | Compact publication-exact peg-provenance seed carrying the bridge identity and exact applicable peg-input key set. |
 | `report-cards:v9`                                          | `computeSafetyScoreV9`           | Canonical checksum-verified accepted V9 evaluator publication projected by `/api/report-cards/v9`; strict consumers require full identity and completeness and never fall back to V8. |
 | `report-cards:v9:publication-health`                       | `computeSafetyScoreV9`           | Strict bounded current/held state with accepted generation/time, latest attempt time, first hold time, and stable hold reasons. |
+| `report-cards:v9:last-attempt`                              | `computeSafetyScoreV9`           | Additive internal clean/partial/held attempt result with quarantined and affected asset IDs; written atomically with the accepted publication and health state. |
+| `safety-score-history:v2:operationally-affected`            | `snapshotSafetyGradeHistory`     | Bounded affected-ID marker retained only long enough to suppress the first clean recovery transition from organic history. |
 
 | `peg-analytics`                                            | `prepareSafetyScoreV9Input`      | Producer-published peg-analytics snapshot; `/api/peg-summary` accepts it for up to 30 minutes and falls back to direct compute on miss/stale. |
 | `detail-write-failure:<id>`                                | stablecoin detail API            | Marker written when a `detail:<id>` cache write fails or is oversized; the staleness watchdog alerts on markers fresher than 24h and prunes them after 7-day retention                                                                                                                                                  |
@@ -956,9 +960,9 @@ The `probe` object returned by `/api/status` is the latest `status_probe_runs` a
 | `snapshot-supply`                 | 86,400s (24h)    | `*/15 * * * *` (once per UTC date) / `0 8 * * *` (fallback) |
 | `snapshot-chain-supply`           | 86,400s (24h)    | `*/15 * * * *` (once per UTC date)                          |
 | `sync-v9-supply-attribution`      | 900s (15min)     | `8,23,38,53 * * * *` (30min accepted / 15min rejected cooldown) |
-| `prepare-safety-score-v9-input`   | 900s (15min)     | `*/15 * * * *`                                              |
+| `prepare-safety-score-v9-input`   | 1800s (30min)    | after successful DEX publication in `16,46 * * * *`          |
 | `compute-depeg-resolver`          | 900s (15min)     | `*/15 * * * *`                                              |
-| `compute-safety-score-v9`         | 1800s (30min)    | `14,44 * * * *` (fenced 30-second window)                   |
+| `compute-safety-score-v9`         | 1800s (30min)    | `22,52 * * * *` (fenced 30-second window)                   |
 | `snapshot-safety-grade-history`   | 86,400s (24h)    | `0 8 * * *`                                                 |
 | `fetch-tbill-rate`                | 86,400s (24h)    | `0 8 * * *`                                                 |
 | `snapshot-psi`                    | 86,400s (24h)    | `0 8 * * *`                                                 |

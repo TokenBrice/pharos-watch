@@ -17,8 +17,12 @@ import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-stick
 import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
+import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
 import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
+import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
+import type { MechanismReviewView } from "@/lib/mechanism-review";
+import { buildSafetyScoreV9AccessRows } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
@@ -55,6 +59,7 @@ interface DetailContentProps {
   heroRef: RefObject<HTMLDivElement | null>;
   historyGateRef: Ref<HTMLDivElement>;
   mechanismCollateralization: MechanismCollateralizationView | null;
+  mechanismReview: MechanismReviewView | null;
   onActiveBannerChange: (id: string) => void;
   onFeedbackOpenChange: (open: boolean) => void;
   overviewGateRef: Ref<HTMLDivElement>;
@@ -143,10 +148,12 @@ function DetailNavigation({
 function DetailSummaryRail({
   heroModel,
   mechanismCollateralization,
+  mechanismReview,
   viewModel,
 }: {
   heroModel: ReturnType<typeof buildStablecoinDetailHeroViewModel>;
   mechanismCollateralization: MechanismCollateralizationView | null;
+  mechanismReview: MechanismReviewView | null;
   viewModel: ReadyDetailViewModel;
 }) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.dexPriceCheck);
@@ -155,6 +162,9 @@ function DetailSummaryRail({
     <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
       <div className="space-y-4 pb-4">
         <RailSafetySummary items={heroModel.signalRailItems} />
+        {viewModel.reportCard ? (
+          <AccessPosturePanel rows={buildSafetyScoreV9AccessRows(viewModel.reportCard)} compact />
+        ) : null}
         <CollateralizationCard
           reviewed={mechanismCollateralization}
           liveRatio={liveCollateralizationRatio}
@@ -173,6 +183,7 @@ function DetailSummaryRail({
             compact
           />
         ) : null}
+        <MechanismReviewPanel review={mechanismReview} compact />
       </div>
     </aside>
   );
@@ -188,6 +199,7 @@ export function DetailContent({
   heroRef,
   historyGateRef,
   mechanismCollateralization,
+  mechanismReview,
   onActiveBannerChange,
   onFeedbackOpenChange,
   overviewGateRef,
@@ -279,6 +291,7 @@ export function DetailContent({
               collateralUsageEntries={collateralUsageEntries}
               frozenNote={frozenNote}
               hasCollateralUsage={staticHasCollateralUsage}
+              mechanismReview={mechanismReview}
               overviewGateRef={overviewGateRef}
               reservesPanel={reservesPanel}
               variantRelationshipCard={variantRelationshipCard}
@@ -303,6 +316,7 @@ export function DetailContent({
         <DetailSummaryRail
           heroModel={heroModel}
           mechanismCollateralization={mechanismCollateralization}
+          mechanismReview={mechanismReview}
           viewModel={viewModel}
         />
       </div>

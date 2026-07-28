@@ -17,14 +17,19 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
+import {
+  DEFAULT_MAINTENANCE_SITE_DATA_BASE_URL,
+  buildMaintenanceSiteDataRequest,
+} from "../lib/maintenance-site-data";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import type { StablecoinMeta } from "../../shared/types";
 
 const ROOT = process.cwd();
 const OUTPUT_PATH = resolve(ROOT, "agents/annotation-candidates.md");
-const WORKER_BASE_URL = process.env.PHAROS_WORKER_BASE_URL ?? "http://127.0.0.1:8787";
-const PHAROS_API_KEY = process.env.PHAROS_API_KEY?.trim() || null;
+const SITE_DATA_BASE_URL =
+  process.env.PHAROS_SITE_DATA_BASE_URL?.trim() || DEFAULT_MAINTENANCE_SITE_DATA_BASE_URL;
 const DEFAULT_LOOKBACK_DAYS = 7;
 const LAUNCH_LOOKBACK_DAYS = 30;
 const FETCH_TIMEOUT_MS = 6000;
@@ -57,11 +62,9 @@ function readExistingQueue(): { body: string; lastSweptAt: string | null } {
   return { body: raw, lastSweptAt: match ? match[1]! : null };
 }
 
-async function fetchWithTimeout(url: string): Promise<Response | null> {
+async function fetchWithTimeout(url: string, headers: Record<string, string>): Promise<Response | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  const headers: Record<string, string> = {};
-  if (PHAROS_API_KEY) headers["X-API-Key"] = PHAROS_API_KEY;
   try {
     const response = await fetch(url, { signal: controller.signal, headers });
     return response;
@@ -84,13 +87,14 @@ interface TapeEventLite {
 }
 
 async function fetchTapeEvents(classFilter: string, sinceMs: number): Promise<TapeEventLite[] | null> {
-  const url = new URL("/api/events", WORKER_BASE_URL);
+  const request = buildMaintenanceSiteDataRequest(API_PATHS.events(), SITE_DATA_BASE_URL);
+  const url = new URL(request.url);
   url.searchParams.set("class", classFilter);
   url.searchParams.set("severityFloor", "warning");
   url.searchParams.set("since", String(sinceMs));
   url.searchParams.set("limit", "200");
 
-  const res = await fetchWithTimeout(url.toString());
+  const res = await fetchWithTimeout(url.toString(), request.headers);
   if (!res || !res.ok) return null;
   try {
     const json = (await res.json()) as { events?: TapeEventLite[] };
@@ -334,7 +338,7 @@ async function main(): Promise<void> {
   ]);
 
   if (depegEvents == null) {
-    notes.push(`depeg tape unreachable at ${WORKER_BASE_URL} — skipped`);
+    notes.push(`depeg tape unreachable at ${SITE_DATA_BASE_URL} — skipped`);
   } else {
     for (const e of depegEvents) {
       const c = mapDepegCandidate(e);
@@ -343,7 +347,7 @@ async function main(): Promise<void> {
   }
 
   if (blacklistEvents == null) {
-    notes.push(`freeze tape unreachable at ${WORKER_BASE_URL} — skipped`);
+    notes.push(`freeze tape unreachable at ${SITE_DATA_BASE_URL} — skipped`);
   } else {
     for (const e of blacklistEvents) {
       const c = mapBlacklistCandidate(e, resolveCoinId);

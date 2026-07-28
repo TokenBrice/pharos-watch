@@ -30,7 +30,7 @@ export const SLOW_NAV_SOURCE_STALE_THRESHOLD_MS = 3 * 24 * 60 * 60 * 1000;
 const SLOW_NAV_SOURCE_KEYS = new Set([
   "protocol-api:hashnote-usyc",
   "protocol-api:midas-mmev-nav-oracle",
-  "protocol-api:re-protocol-reusde",
+  "protocol-api:re-protocol-reusd",
 ]);
 // Price-derived rows are backed by daily supply-history snapshots, so allow one missed daily write plus buffer.
 export const PRICE_DERIVED_STALE_THRESHOLD_MS = 36 * 60 * 60 * 1000;

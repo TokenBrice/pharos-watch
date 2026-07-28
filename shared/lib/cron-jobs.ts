@@ -17,12 +17,12 @@ export type CronGroupKey =
 const CRON_SCHEDULE_DEFINITIONS = {
   quarterHourly: { schedule: "*/15 * * * *", intervalSec: 900, offsetSec: 0 },
   v9SupplyAttributionOffset: { schedule: "8,23,38,53 * * * *", intervalSec: 900, offsetSec: 8 * 60 },
-  v9PublicationOffset: { schedule: "14,44 * * * *", intervalSec: 1800, offsetSec: 14 * 60 },
+  v9PublicationOffset: { schedule: "22,52 * * * *", intervalSec: 1800, offsetSec: 22 * 60 },
   statusSelfCheckOffset: { schedule: "9,24,39,54 * * * *", intervalSec: 900, offsetSec: 9 * 60 },
   sixHourlyBlacklist: { schedule: "3 */6 * * *", intervalSec: 6 * 3600, offsetSec: 3 * 60 },
   halfHourlyMintBurnCritical: { schedule: "4,34 * * * *", intervalSec: 1800, offsetSec: 4 * 60 },
   twoHourlyDexDiscovery: { schedule: "6 */2 * * *", intervalSec: 2 * 3600, offsetSec: 6 * 60 },
-  // Keep the minute-long extended scan behind the fenced :14/:44 V9 publication slot.
+  // Keep the minute-long extended scan clear of the DEX/V9 publication chain.
   halfHourlyMintBurnExtended: { schedule: "18,48 * * * *", intervalSec: 1800, offsetSec: 18 * 60 },
   halfHourlyMeasuredExecution: { schedule: "0,30 * * * *", intervalSec: 1800, offsetSec: 0 },
   halfHourlyOffset: { schedule: "10,40 * * * *", intervalSec: 1800, offsetSec: 10 * 60 },
@@ -440,11 +440,12 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   {
     job: "prepare-safety-score-v9-input",
     label: "V9 compiler input",
-    group: "quarter-hourly",
-    scheduleKey: "quarterHourly",
+    group: "half-hourly",
+    intervalSec: 30 * 60,
+    scheduleKey: "halfHourlyChartsOffset",
     triggerMode: "shared",
     maxConnections: 0, // Exact V9 compiler input is D1-only after its source snapshot is built.
-    connectionGroup: "quarter-hourly-chain",
+    connectionGroup: "half-hourly-charts-chain",
   },
   {
     job: "compute-depeg-resolver",

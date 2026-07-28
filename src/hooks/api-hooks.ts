@@ -35,7 +35,6 @@ import {
   type ApiQueryWithMetaResult,
   type PollingQueryControlOptions,
   unwrapApiQueryWithMetaResult,
-  useApiQueryWithMeta,
 } from "./use-api-query";
 import {
   FRONTEND_API_QUERY_DESCRIPTORS,
@@ -71,17 +70,6 @@ export function useRegisteredApiQuery<T>(
     : (query as UseQueryResult<T, Error>);
 }
 
-export function useRegisteredApiQueryWithMeta<T>(
-  descriptor: FrontendApiQueryDescriptor<T, "meta">,
-  overrides?: QueryControlOverrides,
-) {
-  return useApiQueryWithMeta<T>(descriptor.queryKey, descriptor.path, descriptor.producerIntervalMs, {
-    ...overrides,
-    schema: descriptor.schema,
-    metaMaxAgeSec: descriptor.metaMaxAgeSec,
-  });
-}
-
 export function createRegisteredApiPollingQueryOptions<T>(
   descriptor: FrontendApiQueryDescriptor<T, "plain">,
   overrides?: QueryControlOverrides,
@@ -112,13 +100,6 @@ export function createRegisteredApiPollingQueryOptions<T>(
         ...overrides,
         schema: descriptor.schema,
       });
-}
-
-export function createRegisteredApiPollingQueryOptionsWithMeta<T>(
-  descriptor: FrontendApiQueryDescriptor<T, "meta">,
-  overrides?: QueryControlOverrides,
-) {
-  return createRegisteredApiPollingQueryOptions(descriptor, overrides);
 }
 
 function createRegisteredStaticQueryOptions<T>(

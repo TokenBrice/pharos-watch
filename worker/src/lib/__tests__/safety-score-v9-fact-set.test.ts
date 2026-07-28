@@ -26,9 +26,12 @@ import { evaluateV9StressState } from "@shared/lib/safety-score-v9/stress";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { createReportCardsFixedInput, normalizeFixedInput } from "../report-cards-fixed-input";
+import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
 import {
   compileSafetyScoreV9FactSetFromFixedInput,
+  compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
   computeSafetyScoreV9ReserveExposureKey,
+  materializeSafetyScoreV9FactSetExtension,
   type SafetyScoreV9FactSetExtensionV2,
 } from "../safety-score-v9-fact-set";
 import {
@@ -2164,6 +2167,209 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(low.baseInputGenerationId).not.toBe(high.baseInputGenerationId);
   });
 
+  it("quarantines one asset-local fact build failure as current NR", () => {
+    const fixed = exactFixedInput();
+    const reviewed = extension();
+    const reserve = fixed.liveReserveMap.alpha![0]!;
+    reviewed.assets[0]!.reserveClassifications = [
+      {
+        exposureKey: computeSafetyScoreV9ReserveExposureKey(reserve),
+        classificationKey: "fixture:conflicting-reserve",
+        assetClass: "cryptoasset",
+        issuerOrObligorKey: "issuer:alpha",
+        riskFactors: ["counterparty"],
+        liquidityHorizon: "immediate",
+        maturityDaysMax: 0,
+        failureDomains: [
+          { kind: "reserve-issuer", key: "issuer:alpha" },
+        ],
+      },
+    ];
+    const materialized = materializeSafetyScoreV9FactSetExtension(
+      fixed,
+      reviewed,
+    );
+
+    const result =
+      compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+        fixed,
+        materialized,
+      );
+    const asset = result.factSet.assets[0]!;
+    const evaluated = evaluateV9FactSet(
+      result.factSet,
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.quarantines).toEqual([
+      { assetId: "alpha", code: "fact-build-failed" },
+    ]);
+    expect(asset.gaps).toContainEqual(
+      expect.objectContaining({
+        gapId: "alpha:gap:asset-compilation",
+        responsibility: "producer-failed",
+      }),
+    );
+    expect(evaluated.assets[0]!.trace).toMatchObject({
+      finalGrade: "NR",
+      finalScore: null,
+    });
+  });
+
+  it("keeps unaffected assets unchanged when one asset is quarantined", () => {
+    const fixed = exactTwoAssetFixedInput();
+    const metaById = new Map<string, V9ExtensionRegistryMeta>([
+      [
+        "alpha",
+        {
+          id: "alpha",
+          mechanismArchetype: "fiat-cash",
+          launchDate: "1970-01-01",
+        },
+      ],
+      [
+        "beta",
+        {
+          id: "beta",
+          mechanismArchetype: "fiat-cash",
+          launchDate: "1970-01-01",
+        },
+      ],
+    ]);
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById,
+    });
+    const clean = compileSafetyScoreV9FactSetFromFixedInput(
+      fixed,
+      baseline,
+    );
+    const isolated = structuredClone(baseline);
+    const alpha = isolated.assets.find(
+      (asset) => asset.assetId === "alpha",
+    )!;
+    expect(alpha.reserveClassifications[0]).toBeDefined();
+    alpha.reserveClassifications[0]!.assetClass = "cryptoasset";
+    const materialized = materializeSafetyScoreV9FactSetExtension(
+      fixed,
+      isolated,
+    );
+
+    const result =
+      compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+        fixed,
+        materialized,
+      );
+    const evaluated = evaluateV9FactSet(
+      result.factSet,
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.factSet.activeAssetIds).toEqual([
+      "alpha",
+      "beta",
+    ]);
+    expect(result.quarantines).toEqual([
+      { assetId: "alpha", code: "fact-build-failed" },
+    ]);
+    const isolatedBeta = result.factSet.assets.find(
+      (asset) => asset.assetId === "beta",
+    )!;
+    const cleanBeta = clean.assets.find(
+      (asset) => asset.assetId === "beta",
+    )!;
+    expect({ ...isolatedBeta, evidence: [] }).toEqual({
+      ...cleanBeta,
+      evidence: [],
+    });
+    expect(
+      evaluated.assets.find((asset) => asset.assetId === "alpha")
+        ?.trace,
+    ).toMatchObject({ finalGrade: "NR", finalScore: null });
+  });
+
+  it("preserves parent dependencies when an upstream asset is quarantined", () => {
+    const fixed = exactThreeAssetFixedInput();
+    const reviewed = roleExtension(fixed, {
+      beta: [
+        {
+          upstreamAssetId: "alpha",
+          dependencyType: "mechanism",
+          weight: 1,
+          failureDomains: [],
+        },
+      ],
+    });
+    const alpha = reviewed.assets.find(
+      (asset) => asset.assetId === "alpha",
+    )!;
+    alpha.reserveClassifications = [
+      {
+        exposureKey: computeSafetyScoreV9ReserveExposureKey(
+          fixed.liveReserveMap.alpha![0]!,
+        ),
+        classificationKey: "fixture:conflicting-parent-reserve",
+        assetClass: "cryptoasset",
+        issuerOrObligorKey: "issuer:alpha",
+        riskFactors: ["counterparty"],
+        liquidityHorizon: "immediate",
+        maturityDaysMax: 0,
+        failureDomains: [
+          { kind: "reserve-issuer", key: "issuer:alpha" },
+        ],
+      },
+    ];
+    const materialized = materializeSafetyScoreV9FactSetExtension(
+      fixed,
+      reviewed,
+    );
+
+    const result =
+      compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+        fixed,
+        materialized,
+      );
+    const evaluated = evaluateV9FactSet(
+      result.factSet,
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const beta = evaluated.assets.find(
+      (asset) => asset.assetId === "beta",
+    )!;
+
+    expect(beta.trace).toMatchObject({
+      finalGrade: "NR",
+      finalScore: null,
+    });
+    expect(beta.scoreInput.parent).toMatchObject({
+      required: true,
+      score: null,
+    });
+    expect(
+      result.factSet.assets
+        .find((asset) => asset.assetId === "beta")!
+        .dependencies.edges,
+    ).toContainEqual(
+      expect.objectContaining({
+        upstreamAssetId: "alpha",
+      }),
+    );
+    const candidate = buildSafetyScoreV9Candidate({
+      fixedInput: fixed,
+      extension: reviewed,
+      publishedAtSec: fixed.clockSec,
+    });
+    expect(candidate.quarantineAffectedAssetIds).toEqual([
+      "alpha",
+      "beta",
+    ]);
+    expect(candidate.candidate.cards).toHaveLength(
+      fixed.activeAssetIds.length,
+    );
+    expect(
+      candidate.candidate.cards.find((card) => card.id === "alpha"),
+    ).toMatchObject({ grade: "NR", score: null });
+  });
+
   it("preserves live queued terms through the production review and fact boundary", () => {
     const fixed = queuedRedemptionFixedInput();
     const reviewed = structuredClone(extension());
@@ -3276,8 +3482,18 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     const conflictingOutput = extension();
     conflictingOutput.assets[0]!.routeReviews[0]!.output!.assetKeys = ["fiat:EUR"];
-    expect(() => compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), conflictingOutput)).toThrow(
-      /output review conflicts with exact base facts/,
+    const conflictingFixedInput = exactFixedInput();
+    const conflictingMaterialized = materializeSafetyScoreV9FactSetExtension(
+      conflictingFixedInput,
+      conflictingOutput,
+    );
+    expect(
+      compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+        conflictingFixedInput,
+        conflictingMaterialized,
+      ).quarantines,
+    ).toEqual(
+      [{ assetId: "alpha", code: "fact-build-failed" }],
     );
   });
 
@@ -3456,10 +3672,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ).toMatchObject({ freshness: { state: "stale", maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC } });
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
-    // Wave-7 sweep 2026-07-27: FX peg classification/format ripples rotated
-    // the V8 evaluation build alongside the v5.94 liquidity methodology.
+    // Wave-8 residuals 2026-07-28: retiring XAI from the active registry
+    // and the 9.01 methodology activation rotated the V8 evaluation build.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "937cdf1cc326a06eb317480f9b276719c616828594acf88e34f6cd6e77b235d4",
+      "91cefa81f1b38cfd62a15a2aab9a3e78c11d1dfc2f2e5bbc09ed1fc221b060d9",
     );
   });
 
@@ -4528,7 +4744,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     });
   });
 
-  it("rejects registry drift, future reviews, and stale evidence claimed as known", () => {
+  it("rejects registry drift and future reviews, then quarantines stale evidence claimed as known", () => {
     const fixed = exactFixedInput();
     expect(() =>
       buildSafetyScoreV9BaselineExtension(fixed, {
@@ -4571,7 +4787,13 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       },
     ];
     staleKnown.assets[0]!.componentEvidence = [{ componentKey: "control", evidenceKeys: ["stale-control-review"] }];
-    expect(() => compileSafetyScoreV9FactSetFromFixedInput(fixed, staleKnown)).toThrow(/cannot be known with stale/);
+    const staleKnownMaterialized = materializeSafetyScoreV9FactSetExtension(fixed, staleKnown);
+    expect(
+      compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+        fixed,
+        staleKnownMaterialized,
+      ).quarantines,
+    ).toEqual([{ assetId: "alpha", code: "fact-build-failed" }]);
   });
 
   it("exports stable reserve exposure identities for exact overlay joins", () => {

@@ -24,6 +24,40 @@ describe("telegram alert change builders", () => {
 
       expect(result).toEqual({ changes: [], suppressedMethodologyChanges: 1 });
     });
+
+    it.each([
+      ["quarantine", true, false],
+      ["recovery", false, true],
+    ])("suppresses an operational %s grade transition", (
+      _label,
+      currentAffected,
+      previousAffected,
+    ) => {
+      const result = buildSafetyChanges(
+        {
+          alpha: {
+            grade: currentAffected ? "NR" : "A",
+            score: currentAffected ? null : 85,
+            methodologyVersion: "9.0",
+            operationallyAffected: currentAffected,
+          },
+        },
+        {
+          alpha: {
+            grade: previousAffected ? "NR" : "A",
+            score: previousAffected ? null : 85,
+            methodologyVersion: "9.0",
+            operationallyAffected: previousAffected,
+          },
+        },
+        () => "ALPHA",
+      );
+
+      expect(result).toEqual({
+        changes: [],
+        suppressedMethodologyChanges: 0,
+      });
+    });
   });
 
   describe("buildLaunchPromotions", () => {

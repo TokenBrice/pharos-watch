@@ -10,6 +10,7 @@ import { tryParseJson } from "../../lib/json-parse";
 import { readResponseTextWithinLimitWithSignal } from "../../lib/response-body";
 import { quoteRaydiumClmmSingleSegment } from "./solana-clmm-math";
 import { requiresRaydiumSingleSegmentStateProof } from "./solana-registry";
+import { MAX_UINT64, rawAmountToUsd, usdToRawAmount } from "./fixed-point";
 
 const RAYDIUM_TRADE_API = "https://transaction-v1.raydium.io/compute/swap-base-in";
 const JUPITER_QUOTE_API = "https://api.jup.ag/swap/v1/quote";
@@ -337,28 +338,6 @@ export function parseOrcaExactRouteProof(
   };
 }
 
-function usdToRawAmount(inputUsd: number, decimals: number, referencePriceUsd: number): bigint | null {
-  if (!Number.isFinite(inputUsd) || inputUsd <= 0 || !Number.isInteger(decimals) || decimals < 0 || decimals > 255) {
-    return null;
-  }
-  if (!Number.isFinite(referencePriceUsd) || referencePriceUsd <= 0) return null;
-  const usdScale = 1_000_000n;
-  const priceScale = 100_000_000n;
-  const usdScaled = BigInt(Math.floor(inputUsd * Number(usdScale)));
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  if (priceScaled <= 0n) return null;
-  const amount = (usdScaled * 10n ** BigInt(decimals) * priceScale) / (usdScale * priceScaled);
-  return amount > 0n && amount <= 18_446_744_073_709_551_615n ? amount : null;
-}
-
-function rawAmountToUsd(amount: bigint, decimals: number, referencePriceUsd: number): number {
-  const priceScale = 100_000_000n;
-  const usdScale = 1_000_000n;
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  const usdScaled = (amount * priceScaled * usdScale) / (10n ** BigInt(decimals) * priceScale);
-  return Number(usdScaled) / Number(usdScale);
-}
-
 export function buildSolanaMeasuredQuotePoint(
   target: SolanaMeasuredExecutionTarget,
   route: SolanaMeasuredRouteProof,
@@ -396,6 +375,7 @@ export async function quoteSolanaMeasuredTarget(input: {
     input.inputUsd,
     input.target.tokenIn.decimals,
     input.target.tokenIn.referencePriceUsd,
+    { maxRawAmount: MAX_UINT64 },
   );
   if (amountIn == null) throw new Error("invalid-quote-input");
   const amountInRaw = amountIn.toString();

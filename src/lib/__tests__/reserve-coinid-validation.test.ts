@@ -258,7 +258,6 @@ describe("reserve coinId validation", () => {
       "susd1plus-lorenzo",
       "ussd-sonic-labs",
       "wemix-dollar-wemix",
-      "xai-silo-finance",
       "xmd-metal-dollar",
     ]);
     const conflicts: string[] = [];

@@ -5,6 +5,7 @@ import {
   serializePendingAlertScope,
   serializePendingMarkupPolicy,
 } from "../../lib/telegram-pending-provenance";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { applyTelegramTransportControlSchema } from "../../test-helpers/telegram-transport-control-schema";
 
 const mockSendToChat = vi.fn();
@@ -17,45 +18,6 @@ const transportMocks = vi.hoisted(() => ({
 
 function parseLogRecords(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
   return spy.mock.calls.map((call) => JSON.parse(String(call[0])) as Record<string, unknown>);
-}
-
-interface SqliteD1Statement {
-  bind(...values: unknown[]): SqliteD1Statement;
-  first<T>(): Promise<T | null>;
-  all<T>(): Promise<{ results: T[] }>;
-  run(): Promise<{ success: boolean; meta: { changes: number } }>;
-}
-
-function createSqliteD1(
-  sqlite: DatabaseSync,
-  afterAll?: (sql: string) => void,
-): D1Database {
-  function makeStatement(sql: string, values: unknown[] = []): SqliteD1Statement {
-    return {
-      bind: (...nextValues: unknown[]) => makeStatement(sql, nextValues),
-      first: async <T>() => (sqlite.prepare(sql).get(...(values as never[])) ?? null) as T | null,
-      all: async <T>() => {
-        const results = sqlite.prepare(sql).all(...(values as never[])) as T[];
-        afterAll?.(sql);
-        return { results };
-      },
-      run: async () => {
-        const result = sqlite.prepare(sql).run(...(values as never[]));
-        return { success: true, meta: { changes: Number(result.changes) } };
-      },
-    };
-  }
-
-  return {
-    prepare: (sql: string) => makeStatement(sql),
-    batch: async (statements: D1PreparedStatement[]) =>
-      Promise.all(statements.map((statement) => statement.run())),
-    exec: async (sql: string) => {
-      sqlite.exec(sql);
-      return { count: 0, duration: 0 };
-    },
-    dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
 }
 
 function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } {
@@ -736,7 +698,7 @@ describe("drainPendingQueue", () => {
       markupPolicyJson: serializePendingMarkupPolicy({}),
     });
     let bumped = false;
-    const db = createSqliteD1(sqlite, (sql) => {
+    const db = createSqliteD1(sqlite, { onAll: (sql) => {
       if (!bumped && sql.includes("FROM telegram_subscriptions")) {
         bumped = true;
         sqlite.prepare(
@@ -745,7 +707,7 @@ describe("drainPendingQueue", () => {
             WHERE chat_id = 'generation-race'`,
         ).run();
       }
-    });
+    } });
 
     const result = await drainPendingQueue(db, "bot-token", 10);
 

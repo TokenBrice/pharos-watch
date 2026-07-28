@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, memo, useMemo, type ReactNode } from "react";
-import type { StablecoinData, ReportCardGrade } from "@shared/types";
+import type { ReportCardGrade } from "@shared/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { formatCurrency, formatNativePrice, formatScore, formatSignedCurrency, getNetColor } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
@@ -22,22 +22,10 @@ import {
 } from "@/components/table";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { buildStablecoinUrl } from "@/lib/urls";
-import type { ComparisonMeta } from "@/lib/compare-derive";
-
-interface ComparisonCoin {
-  id: string;
-  symbol: string;
-  name: string;
-  data: StablecoinData;
-  meta: ComparisonMeta;
-  pegScore: number | null;
-  liquidityScore: number | null;
-  safetyGrade: ReportCardGrade | null;
-  netFlow30d: number | null;
-}
+import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 
 interface ComparisonTableProps {
-  coins: ComparisonCoin[];
+  coins: ComparisonCoinEntry[];
   pegRates: Record<string, number>;
   logos?: Record<string, string>;
   detailErrors?: Record<string, boolean>;
@@ -47,7 +35,7 @@ interface ComparisonTableProps {
 
 /** Find index of coin closest to its peg reference (smallest absolute deviation). */
 function bestPriceIndex(
-  coins: ComparisonCoin[],
+  coins: ComparisonCoinEntry[],
   pegRates: Record<string, number>,
 ): number | null {
   let bestIdx: number | null = null;
@@ -118,8 +106,8 @@ interface ComparisonMetric {
   key: string;
   mobileLabel: ReactNode;
   desktopLabel: ReactNode;
-  renderValue: (coin: ComparisonCoin, index: number) => ReactNode;
-  valueClassName: (coin: ComparisonCoin, index: number, isDesktop: boolean) => string;
+  renderValue: (coin: ComparisonCoinEntry, index: number) => ReactNode;
+  valueClassName: (coin: ComparisonCoinEntry, index: number, isDesktop: boolean) => string;
 }
 
 export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, logos, detailErrors }: ComparisonTableProps) {

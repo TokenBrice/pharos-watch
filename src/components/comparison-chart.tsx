@@ -13,17 +13,11 @@ import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { ChartLegendChip, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
 import { formatChartDate, formatChartPercent } from "@shared/lib/format";
 import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
-
-interface SeriesData {
-  id: string;
-  label: string;
-  data: { ts: number; value: number }[];
-  color: string;
-}
+import type { SupplySeriesEntry } from "@/lib/compare-derive";
 
 interface ComparisonChartProps {
   title: string;
-  series: SeriesData[];
+  series: SupplySeriesEntry[];
   formatValue?: (v: number) => string;
   range?: TimeRangeOption;
   onRangeChange?: (range: TimeRangeOption) => void;

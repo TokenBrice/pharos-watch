@@ -11051,44 +11051,54 @@
     {
       "assetId": "ybold-yearn",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-28",
       "sources": [
         {
-          "label": "Yearn yBOLD documentation — 1 yBOLD represents 1 BOLD deposited in Liquity V2 Stability Pools, redeemable for BOLD without withdrawal fee or waiting period, Liquity bad-debt/principal risk disclosure",
+          "label": "Yearn yBOLD documentation (ERC-4626 vault over BOLD allocated across Liquity V2 Stability Pools)",
           "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
         },
         {
-          "label": "Liquity V2 protocol stats API (total_coll_value, total_bold_supply, total_sp_deposits, per-branch breakdown)",
-          "url": "https://api.liquity.org/v2/ethereum.json"
+          "label": "Yearn yBOLD repository (Strategy verifies BOLD as the asset and deposits it into Liquity Stability Pools)",
+          "url": "https://github.com/yearn/yBOLD"
         },
         {
-          "label": "Liquity V2 borrowing and liquidations FAQ — per-branch max LTVs (90.91% ETH, 83.33% wstETH/rETH), Stability Pool primary liquidation, JIT and redistribution fallback, gas compensation",
-          "url": "https://docs.liquity.org/v2-faq/borrowing-and-liquidations"
+          "label": "Sherlock yBOLD audit repository (ERC-4626 BOLD allocation across three Stability Pool strategies)",
+          "url": "https://github.com/sherlock-audit/2025-05-yearn-ybold"
         },
         {
-          "label": "Liquity V2 redemptions and delegation FAQ — permissionless BOLD redemption for collateral at face value, outside-debt-proportional branch routing",
-          "url": "https://docs.liquity.org/v2-faq/redemptions-and-delegation"
-        },
-        {
-          "label": "Liquity V2 risk disclosure — per-branch Stability Pools and borrow markets, Critical/Shutdown thresholds with urgent redemptions, immutable core, unbacked-BOLD bad-debt scenario with no unconditional recapitalization",
-          "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+          "label": "Liquity V2 technical documentation (parent Stability Pool and liquidation mechanics)",
+          "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
         }
       ],
-      "notes": "yBOLD is Yearn's ERC-4626 wrapper that routes BOLD 1:1 into Liquity V2 Stability Pools; Yearn's documentation states yBOLD is always redeemable for the underlying BOLD without withdrawal fees or waiting periods and explicitly warns that Liquity V2 bad debt or Stability Pool losses can impact principal. The wrapper opens no borrower positions and adds no collateral branches, so its CDP mechanism review is the inherited Liquity V2 mechanism reviewed from Liquity's own primary documentation, re-fetched this session (consistent with the separately curated bold-liquity overlay). Metrics measured 2026-07-20 from Liquity's own protocol stats API: total collateral value $75,936,029.45 over total BOLD supply 29,840,437.96 gives collateralizationRatio 2.544736; total Stability Pool deposits 19,402,813.18 BOLD over the same supply give liquidationCapacityRatio 0.650219. COLLATERALIZATION PARAMETERS (adequate): the borrowing FAQ documents per-branch maximum LTVs of 90.91% (WETH) and 83.33% (wstETH, rETH) — i.e. 110%/120% minimum collateral ratios — with Chainlink collateral pricing per the risk disclosure; documented and verifiable, but not a regulator-supervised structure. LIQUIDATION MECHANICS (adequate): liquidations are permissionless with gas compensation (0.0375 WETH deposit plus 0.5% of collateral capped), Stability Pools burn debt as the primary path, with Just-In-Time liquidation and same-branch redistribution as documented fallbacks when a pool is empty. BACKSTOP (adequate): per-branch Stability Pools hold a measured 65.0% of BOLD supply, funded continuously by 75% of borrower interest per the risk disclosure; the wrapper's own deposits ride inside these pools. BRANCH ISOLATION (adequate): each collateral asset is an individual borrow market with its own Stability Pool, and liquidation/redistribution losses stay within that branch — the risk disclosure states borrowers and SP depositors are only exposed to their opted asset — but BOLD (and hence yBOLD) holders remain exposed to unrecovered debt from any branch, which prevents a strong rating. SHUTDOWN AND BAD DEBT (limited): the risk disclosure documents the Critical Threshold (debt-creation pause) and Shutdown Threshold (branch shutdown with urgent redemptions at favorable rates), yet also states that a severe collateral collapse can leave unbacked BOLD with no unconditional recapitalization facility, in the worst case reducing unbacked BOLD's value toward zero. STRUCTURAL REDEMPTION (adequate): any BOLD holder can permissionlessly redeem BOLD for a collateral mix at face value (routed pro-rata to outside debt), and Yearn documents 1:1 yBOLD→BOLD convertibility with no fee or wait, so yBOLD inherits a two-step structural redemption to collateral. NOT ESTABLISHED: the yBOLD vault's live per-Stability-Pool allocation (dynamic, re-evaluated every 30 minutes per Yearn docs, not fixed or independently reconciled at a pinned block in this review); the wrapper's privileged-rights lifecycle and strategy-level execution risk, which sit outside the CDP mechanism components and are tracked in the coin file's other risk reviews; and any wrapper-level backstop beyond the underlying Liquity pools (none documented).",
+      "notes": "Reviewed 2026-07-28. Yearn documents yBOLD as an ERC-4626 vault whose asset is already-issued BOLD and whose strategies allocate that BOLD across Liquity V2 Stability Pools. The implementation verifies each Stability Pool's boldToken() equals the vault asset and accounts for the compounded BOLD deposits; the Sherlock audit intake independently describes the same three-strategy ERC-4626 allocation. yBOLD therefore originates no borrower debt, operates no collateral-ratio vaults, and executes no liquidations of its own. Wrapper-level collateralization and liquidation-capacity ratios, plus the corresponding two mechanism components, are structurally not applicable. The parent BOLD system's current ratios and liquidation mechanics remain on variantOf bold-liquity and are reviewed separately rather than copied onto this wrapper. yBOLD deposits do participate in the parent Stability Pools, so the inherited backstop and branch-isolation assessments remain adequate. Parent-system bad debt can reduce wrapper principal with no disclosed wrapper-level recapitalization, keeping shutdown and bad-debt handling limited. Yearn documents redemption to BOLD without a withdrawal fee or waiting period, and the parent system provides BOLD-to-collateral redemption, supporting adequate structural redemption. NOT ESTABLISHED: a pinned-block reconciliation of the live strategy allocation, the complete privileged-rights lifecycle, withdrawal behavior under Stability Pool stress, or any wrapper-level insurance or recapitalization facility.",
       "metrics": {
-        "collateralizationRatio": 2.544736,
-        "liquidationCapacityRatio": 0.650219
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "yBOLD is an ERC-4626 allocator of already-issued BOLD across Liquity V2 Stability Pools; it originates no borrower debt and has no collateralized vault system of its own, so a wrapper-level collateralization ratio is structurally undefined.",
+          "sourceUrl": "https://github.com/yearn/yBOLD"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "yBOLD has no debt of its own to offset; its BOLD deposits are themselves liquidation capital supplied to the parent system, so a wrapper-level liquidation-capacity ratio is structurally not applicable.",
+          "sourceUrl": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+        }
       },
       "components": {
         "collateralizationParameters": {
-          "applicability": "measured",
-          "quality": "adequate"
+          "applicability": "not-applicable",
+          "rationale": "The wrapper accepts BOLD and allocates it to Stability Pools; it has no borrower collateral positions or collateral-ratio thresholds.",
+          "sourceUrl": "https://github.com/yearn/yBOLD"
         },
         "liquidationMechanics": {
-          "quality": "adequate"
+          "applicability": "not-applicable",
+          "rationale": "Liquidation execution belongs to the parent Liquity V2 BOLD system; yBOLD only supplies BOLD to its Stability Pools.",
+          "sourceUrl": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
         },
         "backstop": {
-          "applicability": "measured",
           "quality": "adequate"
         },
         "branchIsolation": {
@@ -12967,10 +12977,10 @@
     {
       "assetId": "ftusd-flying-tulip",
       "archetype": "synthetic-delta-neutral",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-28",
       "sources": [
         {
-          "label": "Flying Tulip live ftUSD status API (per-chain TVL, supply, wrapper capital, delta-neutral strategy legs, circuit-breaker buffers)",
+          "label": "Flying Tulip live ftUSD status API (per-chain TVL, supply, wrapper capital, delta-neutral strategy legs, circuit-breaker buffers; snapshot lastUpdated 2026-07-28T06:27:54Z)",
           "url": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false"
         },
         {
@@ -12978,17 +12988,17 @@
           "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
         }
       ],
-      "notes": "Measured from Flying Tulip's live dashboard API snapshot lastUpdated 2026-07-20T20:16:15Z. Aggregate reserve TVL was $4,275,666.26 against $4,274,474.63 of ftUSD supply across Ethereum ($3,901,393.02 TVL / $3,900,861.15 supply) and Sonic ($374,273.24 TVL / $373,613.48 supply), a reserve excess of $1,191.63 giving marginBufferPct 0.027878 and lossAbsorptionShare 0.000279; the excess is the only first-loss capital because Flying Tulip documents no separately funded insurance pool, junior tranche, or binding treasury top-up. hedgeCoverageRatio is recorded as 1.0 as a structural characterization, not a position-level reconciliation: at this snapshot backing was ~99.98% stablecoin strategy wrappers (USDC/USDT/USSD), the two Ethereum delta-neutral legs were dormant (currentBorrows 0.00 WETH, leverage 1.000x, ~0 wstETH staked), and the only live volatile leg was one Sonic USDC->stS/wS loop (leverage 1.126x, health factor 15.95, $46,062.23 wS short) whose staked long offsets the borrow, so the system carried no material open volatile delta. All curated components are limited because the evidence is issuer-operated telemetry without an independent attestation. NOT established: an independently reproduced pinned-block reconciliation of every wrapper and strategy balance; a position-level stS long balance to reconcile the Sonic hedge exactly; a separately funded insurance/first-loss pool; the maturity or stability of the staged delta-neutral roadmap; and venue-level failure weights (venueShares omitted).",
+      "notes": "Re-measured from Flying Tulip's live dashboard API snapshot lastUpdated 2026-07-28T06:27:54Z. Aggregate reserve TVL was $4,512,957.53 against $4,511,854.15 of ftUSD supply across Ethereum ($4,143,891.52 TVL / $4,143,463.81 supply) and Sonic ($369,066.00 TVL / $368,390.34 supply), a reserve excess of $1,103.38 giving marginBufferPct 0.024455 and lossAbsorptionShare 0.000245. The excess is the only measured first-loss capital because Flying Tulip documents no separately funded insurance pool, junior tranche, or binding treasury top-up. hedgeCoverageRatio remains 1.0 as a structural characterization, not a position-level reconciliation: the Ethereum strategy reported no current WETH borrow and 1.000x leverage, while the live Sonic stS/wS loop reported 1.112x leverage, health factor 17.34, and a $40,624.10 wS short. All curated components remain limited because the measurement comes from issuer-operated telemetry without an independent reserve or position attestation. NOT ESTABLISHED: an independently reproduced pinned-block reconciliation of every wrapper and strategy balance; a position-level stS long balance sufficient to reconcile the Sonic hedge exactly; a separately funded insurance or first-loss pool; the maturity or stability of the staged delta-neutral roadmap; and venue-level failure weights (venueShares omitted).",
       "metrics": {
         "hedgeCoverageRatio": 1.0,
-        "marginBufferPct": 0.027878,
-        "lossAbsorptionShare": 0.000279
+        "marginBufferPct": 0.024455,
+        "lossAbsorptionShare": 0.000245
       },
       "analogousMetrics": {
-        "aggregateReserveTvlUsd": 4275666.2614,
-        "aggregateSupplyUsd": 4274474.6335,
-        "reserveExcessUsd": 1191.6279,
-        "sonicVolatileShortUsd": 46062.23
+        "aggregateReserveTvlUsd": 4512957.5282,
+        "aggregateSupplyUsd": 4511854.1473,
+        "reserveExcessUsd": 1103.3809,
+        "sonicVolatileShortUsd": 40624.1
       },
       "components": {
         "venueAndCustody": {
@@ -13802,25 +13812,36 @@
     {
       "assetId": "wsrusd-reservoir",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-28",
       "sources": [
         {
           "label": "Reservoir Savings (srUSD/wsrUSD) product documentation",
           "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
         },
         {
-          "label": "Reservoir live on-chain reserves balance sheet (raw API)",
+          "label": "Reservoir live on-chain reserves balance sheet (raw API, fetched 2026-07-28T06:29:14Z)",
           "url": "https://app.reservoir.xyz/api/reserves/raw"
+        },
+        {
+          "label": "Reservoir proof-of-reserves (balance sheet) documentation",
+          "url": "https://docs.reservoir.xyz/products/proof-of-reserves"
         },
         {
           "label": "Blockscout verified wsrUSD Savingcoin contract source",
           "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
         }
       ],
-      "notes": "wsrUSD is a non-rebasing ERC-4626 wrapper over rUSD; rUSD's backing basket carries the credit-fund exposure. Measured 2026-07-20 from Reservoir's own live on-chain reserves API (app.reservoir.xyz/api/reserves/raw): totalAssets $35,588,399.04 versus totalLiabilities $35,301,674.85 (wsrUSD $34,375,143, srUSD $725,455, rUSD circulating $201,076) leaves $286,724 equity, a measured system collateralization of 1.008122 (100.81%). Asset composition: 70.18% DeFi lending markets (Aave GHO on Plasma/Monad, Morpho Steakhouse High-Yield USD1), 25.65% Pendle PT-USDat-27AUG2026, 3.38% Agua Global Carry ERC-4626 vault, 0.44% USDC, 0.34% Hastra PRIME RWA. weightedAverageMaturityDays 9.7488 treats the 70.18% redeemable-on-demand lending, 3.38% redeemable vault, and 0.44% USDC sleeves as 0-day and the 25.65% Pendle PT as its documented fixed maturity 2026-08-27 (38 days from the 2026-07-20 read); valuationCadenceDays 0 reflects the continuously readable on-chain balance sheet. NOT ESTABLISHED: no external credit rating or per-obligor credit quality for the underlying DeFi and RWA positions; no legal SPV, trust, or bankruptcy-remote claim wrapper for wsrUSD/rUSD holders (enforcement is smart-contract Credit Enforcer only); no independent fund administrator or auditor strikes the NAV (self-administered on-chain); the documented 105% Credit Enforcer minimum ratios could not be independently confirmed against the measured 100.81% live collateralization; the Hastra PRIME RWA sleeve's own maturity profile is undisclosed; and PSM redemption of rUSD is documented as subject to available protocol liquidity rather than a guaranteed at-par redemption.",
+      "notes": "wsrUSD is a non-rebasing ERC-4626 wrapper over rUSD; rUSD's shared backing basket carries the credit-fund exposure. Re-measured 2026-07-28 from Reservoir's live reserves API at 2026-07-28T06:29:14Z: totalAssets $35,409,805.75 versus totalLiabilities $35,112,914.40 (wsrUSD $34,195,384.57, srUSD $714,584.80, rUSD circulating $202,945.02) leaves $296,891.35 equity, a measured system collateralization of 1.008455 (100.85%). Asset composition: 45.40% Morpho Sentora PRIME, 25.83% Pendle PT-USDat-27AUG2026, 11.41% Aave GHO (Plasma), 8.95% Morpho Steakhouse Prime Instant V2, 4.20% Aave GHO (Monad), 3.67% Agua Global Carry, 0.34% Hastra PRIME, and 0.21% direct USDC. weightedAverageMaturityDays is unavailable: the Pendle sleeve has a documented fixed maturity of 2026-08-27 (30 days from the read), but the material Sentora PRIME and Agua Global Carry sleeves publish no maturity profile, so no portfolio WAM is derivable without the rejected assumption that undated vault and lending sleeves mature at zero days. valuationCadenceDays 0 reflects the continuously readable on-chain balance sheet. NOT ESTABLISHED: an external rating or per-obligor credit-quality reconciliation; a legal SPV, trust, or bankruptcy-remote claim wrapper for wsrUSD/rUSD holders; an independent fund administrator or reserve attestor; maturity profiles for the Sentora and Agua sleeves; independent confirmation that the documented Credit Enforcer minimum ratios reconcile to the live balance sheet; or guaranteed at-par PSM liquidity under stress.",
       "metrics": {
-        "weightedAverageMaturityDays": 9.7488,
+        "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 0
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "The balance sheet mixes money-market positions, Morpho and prime vaults, and a dated Pendle PT without an issuer-published portfolio WAM. The material Sentora PRIME and Agua Global Carry sleeves publish no maturity profile, so undated sleeves cannot honestly be assigned a zero-day maturity.",
+          "sourceUrl": "https://docs.reservoir.xyz/products/proof-of-reserves"
+        }
       },
       "components": {
         "creditQuality": {

@@ -22,6 +22,11 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
+import { forEachWithConcurrency } from "./concurrency";
+import {
+  rawAmountToUsdOrNull as rawAmountToUsd,
+  usdToRawAmount,
+} from "./fixed-point";
 
 const CURVE_CRYPTOSWAP_ABI = parseAbi(["function get_dy(uint256 i,uint256 j,uint256 dx) view returns (uint256)"]);
 const CURVE_CRYPTOSWAP_DEPENDENCY_ABI = parseAbi([
@@ -499,38 +504,6 @@ export function resolveCurveCryptoSwapTokenIndices(
   return { ok: true, inputIndex: inputMatches[0]!, outputIndex: outputMatches[0]! };
 }
 
-function usdToRawAmount(inputUsd: number, decimals: number, referencePriceUsd: number): bigint | null {
-  if (
-    !Number.isFinite(inputUsd) ||
-    inputUsd <= 0 ||
-    inputUsd > Number.MAX_SAFE_INTEGER / 1_000_000 ||
-    !Number.isInteger(decimals) ||
-    decimals < 0 ||
-    decimals > 255 ||
-    !Number.isFinite(referencePriceUsd) ||
-    referencePriceUsd <= 0
-  )
-    return null;
-  const usdScale = 1_000_000n;
-  const priceScale = 100_000_000n;
-  const usdScaled = BigInt(Math.floor(inputUsd * Number(usdScale)));
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  if (priceScaled <= 0n) return null;
-  const amount = (usdScaled * 10n ** BigInt(decimals) * priceScale) / (usdScale * priceScaled);
-  return amount > 0n ? amount : null;
-}
-
-function rawAmountToUsd(amount: bigint, decimals: number, referencePriceUsd: number): number | null {
-  if (amount < 0n || !Number.isInteger(decimals) || decimals < 0 || decimals > 255) return null;
-  const priceScale = 100_000_000n;
-  const usdScale = 1_000_000n;
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  if (priceScaled <= 0n) return null;
-  const usdScaled = (amount * priceScaled * usdScale) / (10n ** BigInt(decimals) * priceScale);
-  const usd = Number(usdScaled) / Number(usdScale);
-  return Number.isFinite(usd) && usd >= 0 ? usd : null;
-}
-
 export function encodeCurveCryptoSwapGetDy(input: {
   inputIndex: number;
   outputIndex: number;
@@ -621,6 +594,7 @@ function prepareRequest(
     request.inputUsd,
     request.target.tokenIn.decimals,
     request.target.tokenIn.referencePriceUsd,
+    { maxInputUsd: Number.MAX_SAFE_INTEGER / 1_000_000 },
   );
   if (amountInRaw == null) return { failureReason: "invalid-quote-input", eligibility };
   const callData = encodeCurveCryptoSwapGetDy({
@@ -689,23 +663,6 @@ export function decodeCurveCryptoSwapQuotePoint(
       },
     },
   };
-}
-
-async function runWithConcurrency<T>(
-  values: readonly T[],
-  concurrency: number,
-  run: (value: T) => Promise<void>,
-): Promise<void> {
-  let cursor = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, values.length) }, async () => {
-      while (cursor < values.length) {
-        const index = cursor;
-        cursor += 1;
-        await run(values[index]!);
-      }
-    }),
-  );
 }
 
 export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwapQuoteDependencies) {
@@ -786,7 +743,7 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
       groupsByChain.set(request.policy.chain, group);
     }
 
-    await runWithConcurrency([...groupsByChain.values()], 3, async (chainRequests) => {
+    await forEachWithConcurrency([...groupsByChain.values()], 3, async (chainRequests) => {
       const requestsByBlock = new Map<number, EncodedCurveCryptoSwapRequest[]>();
       for (const request of chainRequests) {
         const blockRequests = requestsByBlock.get(request.blockNumber) ?? [];

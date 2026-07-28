@@ -13,6 +13,24 @@ import {
   safetyScoreHistoryIdentityFromV2Row,
 } from "../lib/safety-score-history-v2";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
+import { loadSafetyScoreV9PublicationAttempt } from "../lib/safety-score-v9-publication-store";
+import { deleteCache, getCache, setCache } from "../lib/db-cache";
+
+const OPERATIONALLY_AFFECTED_HISTORY_CACHE_KEY =
+  "safety-score-history:v2:operationally-affected";
+
+function parseOperationallyAffectedAssetIds(value: string): string[] {
+  const parsed: unknown = JSON.parse(value);
+  if (
+    !Array.isArray(parsed) ||
+    parsed.some((assetId) => typeof assetId !== "string")
+  ) {
+    throw new Error(
+      "Safety Score history operational state is malformed",
+    );
+  }
+  return [...new Set(parsed)].sort();
+}
 
 interface LatestSafetyGradeRow {
   stablecoin_id: string;
@@ -25,6 +43,7 @@ interface HistoryCard {
   id: string;
   grade: ReportCardGrade;
   score: number | null;
+  operationallyAffected: boolean;
 }
 
 export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
@@ -35,8 +54,17 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   let identity: SafetyScorePublicationIdentity;
   let liveCards: HistoryCard[];
   let degradedReportCardInputs: boolean;
+  let currentAffectedAssetIds: Set<string>;
+  let previousAffectedCache:
+    | { value: string; updatedAt: number }
+    | null;
   try {
-    const active = await loadActiveSafetyScoreSource(db, signal);
+    const [active, attempt, affectedCache] = await Promise.all([
+      loadActiveSafetyScoreSource(db, signal),
+      loadSafetyScoreV9PublicationAttempt(db, signal),
+      getCache(db, OPERATIONALLY_AFFECTED_HISTORY_CACHE_KEY),
+    ]);
+    previousAffectedCache = affectedCache;
     if (active.kind === "error") {
       throw new Error(
         `Canonical Safety Score V9 source unavailable (${active.reason}): ${active.detail}`,
@@ -54,14 +82,38 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
       };
     }
     identity = active.snapshot.safetyScoreIdentity;
+    if (
+      attempt?.outcome.startsWith("published-") &&
+      attempt.publicationGenerationId !==
+        identity.publicationGenerationId
+    ) {
+      throw new Error(
+        "Safety Score v9 attempt metadata does not match the active publication",
+      );
+    }
+    currentAffectedAssetIds = new Set(
+      attempt?.outcome === "published-partial"
+        ? attempt.affectedAssetIds
+        : [],
+    );
+    const previouslyAffectedAssetIds = new Set(
+      affectedCache === null
+        ? []
+        : parseOperationallyAffectedAssetIds(affectedCache.value),
+    );
     liveCards = active.snapshot.cards
       .filter((card) => !FROZEN_IDS.has(card.id))
       .map((card) => ({
         id: card.id,
         grade: card.grade,
         score: card.score,
+        operationallyAffected:
+          currentAffectedAssetIds.has(card.id) ||
+          previouslyAffectedAssetIds.has(card.id),
       }));
-    degradedReportCardInputs = false;
+    degradedReportCardInputs = liveCards.some(
+      (card) => card.operationallyAffected,
+    );
   } catch (err) {
     recordCronFailure("snapshot-safety-grade-history", err, {
       metadata: { stage: "loadActiveSafetyScoreSource" },
@@ -138,7 +190,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     }
 
     if (requiresIdentityBoundary) {
-      if (degradedReportCardInputs) {
+      if (card.operationallyAffected) {
         suppressedIdentityTransitions++;
         suppressedTransitions++;
         continue;
@@ -159,7 +211,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     }
 
     if (!latest) {
-      if (degradedReportCardInputs) {
+      if (card.operationallyAffected) {
         suppressedSeeds++;
         continue;
       }
@@ -179,7 +231,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
     }
 
     if (latest.grade !== card.grade) {
-      if (degradedReportCardInputs) {
+      if (card.operationallyAffected) {
         suppressedTransitions++;
         continue;
       }
@@ -210,6 +262,19 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
 
   if (stmts.length > 0) {
     await batchExecute(db, stmts, { signal });
+  }
+  if (currentAffectedAssetIds.size > 0) {
+    await setCache(
+      db,
+      OPERATIONALLY_AFFECTED_HISTORY_CACHE_KEY,
+      JSON.stringify([...currentAffectedAssetIds].sort()),
+      signal,
+    );
+  } else if (previousAffectedCache !== null) {
+    await deleteCache(
+      db,
+      OPERATIONALLY_AFFECTED_HISTORY_CACHE_KEY,
+    );
   }
   return {
     ...(degradedReportCardInputs || suppressedIdentityTransitions > 0 ? { status: "degraded" as const } : {}),

@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import AboutApiPage from "./page";
+import { extractJsonLd } from "@/test/json-ld";
 
 vi.mock("next/link", () => ({
   default: ({ children, href, className }: { children: ReactNode; href: string; className?: string }) => (
@@ -10,14 +11,6 @@ vi.mock("next/link", () => ({
     </a>
   ),
 }));
-
-function extractJsonLd(html: string) {
-  return [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
-    .map((match) => match[1])
-    .filter((json): json is string => Boolean(json))
-    .map((json) => JSON.parse(json))
-    .flat();
-}
 
 describe("AboutApiPage", () => {
   it("emits API artifact catalog structured data with crawlable public URLs", async () => {

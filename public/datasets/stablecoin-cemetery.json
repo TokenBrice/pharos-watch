@@ -7,21 +7,21 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:8bace4b1b4eaf4b3919102030d60a6a703eba8f93bb29fe3b52464170e0b6aec",
+  "sourceChecksum": "sha256:f80aa6e9ac123292786ed8e7dbec9e39e1021ebf1ab2e18ce86c0c09a17fcb52",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
-      "checksum": "sha256:f9481aaf497daab0ad362c55ff85b9d6780c560ecebf641bc45ccba1af87051c",
+      "checksum": "sha256:f7817aa7a5857ebaaa88cd214647ef009bd94ba5b08e8c09d4b327013c6c08cc",
       "role": "Curated dead-stablecoin metadata."
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "checksum": "sha256:587a96d597e0755391012f42ef3080f4621091f5581de910b46a136878c8d1fa",
+      "checksum": "sha256:333ed18fde0670c740faeb60e31f0436279748f1a688d381dcceb2f82df2ed50",
       "role": "Generated tracked-stablecoin aggregate used for frozen cemetery rows."
     }
   ],
   "recordsOrderedBy": "deathDate descending, then peakMcapUsd descending, then symbol ascending",
-  "rowCount": 107,
+  "rowCount": 108,
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -1954,6 +1954,26 @@
         }
       ],
       "pharosUrl": "https://pharos.watch/cemetery/#bean-bean-2024-05"
+    },
+    {
+      "id": "xai-silo-finance",
+      "name": "XAI Silo Finance",
+      "symbol": "XAI",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cemetery/xai-silo-finance.svg",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2024-04-22",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": null,
+      "epitaph": "Deprecated after its liquidity never scaled",
+      "obituary": "SiloDAO deprecated XAI after the stablecoin failed to scale DEX liquidity and repeatedly traded below its peg. Governance raised borrowing rates to force repayment, burned XAI credit lines across 17 silos, and retired the mint module so no new XAI could be created. The token nevertheless retains 5,358,653.23 XAI of residual supply, verified on Ethereum at block 25,627,256, representing legacy borrows and stranded wind-down liquidity rather than a live stablecoin system.",
+      "sourceUrl": "https://gov.silo.finance/t/a-plan-to-deprecate-xai-stablecoin/443",
+      "sourceLabel": "SiloDAO governance",
+      "archivedDataAvailable": false,
+      "contracts": [],
+      "pharosUrl": "https://pharos.watch/cemetery/#xai-silo-finance"
     },
     {
       "id": "rai-rai-reflex-index-2024-02",

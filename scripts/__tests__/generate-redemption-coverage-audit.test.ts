@@ -13,27 +13,10 @@ import {
   validateReviewedRedemptionDispositions,
 } from "../maintenance/generate-redemption-coverage-audit";
 import type { ReviewedRedemptionCoverageDisposition } from "../lib/redemption-coverage-dispositions";
+import { makeCoverageCoin } from "./helpers/coverage-coin";
 
-function coin(input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">): StablecoinMeta {
-  return {
-    id: input.id,
-    name: input.name ?? input.id,
-    symbol: input.symbol ?? input.id.toUpperCase(),
-    flags: input.flags ?? {
-      backing: "rwa-backed",
-      pegCurrency: "USD",
-      governance: "centralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
-    },
-    collateral: input.collateral ?? "Fixture collateral",
-    pegMechanism: input.pegMechanism ?? "Fixture mechanism",
-    links: input.links ?? [{ label: "Website", url: `https://example.com/${input.id}` }],
-    ...(input.status ? { status: input.status } : {}),
-    ...(input.variantOf ? { variantOf: input.variantOf } : {}),
-  };
-}
+const coin = (input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">) =>
+  makeCoverageCoin(input, { defaultLinks: true });
 
 const configuredRoute: RedemptionBackstopConfig = {
   routeFamily: "offchain-issuer",

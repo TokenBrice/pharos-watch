@@ -38,7 +38,7 @@ export default function MethodologyPage() {
               {
                 question: "How does Pharos grade stablecoins?",
                 answer:
-                  "Safety Score V9 evaluates Backing (40%), Exit (35%), and Economic Control (25%). Bounded aggregation limits how far strong pillars can lift a weak material path, then peg behavior, structural caps, dependencies, wrappers, evidence quality, and track record can constrain the result. Missing required evidence returns NR unless a reviewed bounded policy explicitly keeps the asset rateable. Grades range from A+ (87+) to F (0–39), with NR for insufficient data.",
+                  "Safety Score V9 evaluates Backing (40%), Exit (35%), and Economic Control (25%). Exit capacity is route-specific: a route below both the first positive 1% coverage and $100K absolute-capacity breakpoints receives no route credit, while a route that reaches $100K but still completes less than 1% is capped at 50. Bounded aggregation then limits how far strong pillars can lift a weak material path, while peg behavior, structural caps, dependencies, wrappers, evidence quality, and track record can constrain the result. Missing required evidence returns NR unless a reviewed bounded policy explicitly keeps the asset rateable. Grades range from A+ (87+) to F (0–39), with NR for insufficient data.",
               },
               {
                 question: "How is the Pharos peg score calculated?",
