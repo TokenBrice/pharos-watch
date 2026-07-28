@@ -93,12 +93,103 @@ export interface StablecoinSafetyScoreV9Component {
   category: string;
 }
 
+/**
+ * Restrained colour: rows only leave neutral when they are the problem.
+ * Boundaries follow the published grade bands — 65 is the floor of the B range
+ * and 40 the floor of D — so a tinted bar always means "C or worse".
+ */
+const WARN_BELOW_SCORE = 65;
+const CRITICAL_BELOW_SCORE = 40;
+
+/** Pillar-weight floor under which a component folds into the group tail. */
+const TAIL_WEIGHT_FLOOR = 0.02;
+/** Folding one or two rows saves no height, so a tail needs at least this many. */
+const MIN_TAIL_ROWS = 3;
+/** A composite of one is just the row itself. */
+const MIN_COMPOSITE_ROWS = 2;
+
+export type StablecoinSafetyScoreV9RowTone = "neutral" | "warn" | "critical";
+
+function scoreTone(score: number): StablecoinSafetyScoreV9RowTone {
+  if (score < CRITICAL_BELOW_SCORE) return "critical";
+  if (score < WARN_BELOW_SCORE) return "warn";
+  return "neutral";
+}
+
 export interface StablecoinSafetyScoreV9BreakdownRow {
   key: string;
   label: string;
   score: number;
   weight: number | null;
   status: string | null;
+  tone: StablecoinSafetyScoreV9RowTone;
+  /** Secondary line under the row, e.g. a composite's spread summary. */
+  detail: string | null;
+  /** Members folded into this row; a composite expands to show them. */
+  children: StablecoinSafetyScoreV9BreakdownRow[];
+}
+
+export interface StablecoinSafetyScoreV9BreakdownGroup {
+  key: string;
+  /** Null when the pillar has no meaningful sub-grouping. */
+  label: string | null;
+  score: number | null;
+  weight: number | null;
+  rows: StablecoinSafetyScoreV9BreakdownRow[];
+  /** Low-weight rows folded behind a disclosure, with their combined weight. */
+  tail: { label: string; rows: StablecoinSafetyScoreV9BreakdownRow[] } | null;
+}
+
+function makeRow(row: {
+  key: string;
+  label: string;
+  score: number;
+  weight?: number | null;
+  status?: string | null;
+  detail?: string | null;
+  children?: StablecoinSafetyScoreV9BreakdownRow[];
+}): StablecoinSafetyScoreV9BreakdownRow {
+  return {
+    key: row.key,
+    label: row.label,
+    score: row.score,
+    weight: row.weight ?? null,
+    status: row.status ?? null,
+    tone: scoreTone(row.score),
+    detail: row.detail ?? null,
+    children: row.children ?? [],
+  };
+}
+
+/**
+ * Splits a weighted group so the load-bearing inputs lead and the dust folds
+ * away. Reserve baskets reach 25 slices on the widest asset, most of them
+ * under a percent of the pillar.
+ */
+function groupWithTail(
+  key: string,
+  label: string | null,
+  score: number | null,
+  weight: number | null,
+  rows: StablecoinSafetyScoreV9BreakdownRow[],
+): StablecoinSafetyScoreV9BreakdownGroup {
+  const sorted = [...rows].sort((left, right) => (right.weight ?? 0) - (left.weight ?? 0));
+  const tailRows = sorted.filter((row) => row.weight !== null && row.weight < TAIL_WEIGHT_FLOOR);
+  if (tailRows.length < MIN_TAIL_ROWS) {
+    return { key, label, score, weight, rows: sorted, tail: null };
+  }
+  const combined = tailRows.reduce((total, row) => total + (row.weight ?? 0), 0);
+  return {
+    key,
+    label,
+    score,
+    weight,
+    rows: sorted.filter((row) => !tailRows.includes(row)),
+    tail: {
+      label: `Smaller holdings (${tailRows.length}) · ${percentLabel(combined)} combined`,
+      rows: tailRows,
+    },
+  };
 }
 
 export interface StablecoinSafetyScoreV9BreakdownMeta {
@@ -121,13 +212,8 @@ export interface StablecoinSafetyScoreV9PillarBreakdown {
   publishedScore: number | null;
   sectionLabel: string;
   context: StablecoinSafetyScoreV9BreakdownMeta[];
-  rows: StablecoinSafetyScoreV9BreakdownRow[];
-  /**
-   * Rows that do not drive the pillar score, folded behind a disclosure. Empty
-   * for pillars whose inputs all contribute.
-   */
-  secondaryRows: StablecoinSafetyScoreV9BreakdownRow[];
-  secondaryLabel: string | null;
+  /** One entry when the pillar has no sub-structure; labelled groups otherwise. */
+  groups: StablecoinSafetyScoreV9BreakdownGroup[];
   alternatives: StablecoinSafetyScoreV9Alternative[];
 }
 
@@ -162,25 +248,57 @@ function parseBackingBreakdown(
     evaluatedScore: breakdown.evaluatedScore,
     publishedScore: breakdown.publishedScore,
     sectionLabel: "Backing components",
-    context: [
-      ...breakdown.groups.map((group) => ({
-        key: group.key,
-        label: group.label,
-        value: `${group.score.toFixed(0)} / 100 · ${percentLabel(group.effectiveWeight)} pillar weight`,
-      })),
-      ...adjustmentContext(breakdown.adjustments),
-    ],
-    rows: breakdown.components.map((component) => ({
+    // The group scores and weights now head their own sections, so repeating
+    // them as context rows would say the same thing twice.
+    context: adjustmentContext(breakdown.adjustments),
+    groups: backingGroups(breakdown),
+    alternatives: [],
+  };
+}
+
+/**
+ * Backing already computes a Reserves/Mechanism split whose component weights
+ * sum exactly to the group weights, but it was rendered as two context rows
+ * above a flat list. Nesting the components under their group turns a 13-row
+ * dump into two weighted sections.
+ */
+function backingGroups(
+  breakdown: SafetyScoreV9BackingBreakdown,
+): StablecoinSafetyScoreV9BreakdownGroup[] {
+  const rowsByGroup = new Map<string, StablecoinSafetyScoreV9BreakdownRow[]>();
+  for (const component of breakdown.components) {
+    // Only `mechanism` components belong to the mechanism group; both
+    // reserve-exposure and reserve-concentration roll up to reserves.
+    const groupKey = component.source === "mechanism" ? "mechanism" : "reserves";
+    const row = makeRow({
       key: component.key,
       label: component.label,
       score: component.score,
       weight: component.effectiveWeight,
       status: humanizeSafetyScoreV9Value(component.observationState),
-    })),
-    secondaryRows: [],
-    secondaryLabel: null,
-    alternatives: [],
-  };
+    });
+    const existing = rowsByGroup.get(groupKey);
+    if (existing) existing.push(row);
+    else rowsByGroup.set(groupKey, [row]);
+  }
+
+  const groups = breakdown.groups
+    .filter((group) => (rowsByGroup.get(group.key)?.length ?? 0) > 0)
+    .map((group) => groupWithTail(
+      group.key,
+      group.label,
+      group.score,
+      group.effectiveWeight,
+      rowsByGroup.get(group.key) ?? [],
+    ));
+
+  // A component whose group the producer did not publish still has to render.
+  const claimed = new Set(groups.map((group) => group.key));
+  const orphans = [...rowsByGroup.entries()].filter(([key]) => !claimed.has(key));
+  return [
+    ...groups,
+    ...orphans.map(([key, rows]) => groupWithTail(key, null, null, null, rows)),
+  ];
 }
 
 function compactUsd(value: number): string {
@@ -248,15 +366,21 @@ function parseExitBreakdown(
     publishedScore: breakdown.publishedScore,
     sectionLabel: "Route components",
     context,
-    rows: (primaryRoute?.components ?? []).map((component) => ({
-      key: component.key,
-      label: component.label,
-      score: component.score,
-      weight: component.weight,
-      status: null,
-    })),
-    secondaryRows: [],
-    secondaryLabel: null,
+    // The route's components are few and already ordered meaningfully, so exit
+    // keeps a single unlabelled group and its producer order.
+    groups: [{
+      key: "route",
+      label: null,
+      score: null,
+      weight: null,
+      rows: (primaryRoute?.components ?? []).map((component) => makeRow({
+        key: component.key,
+        label: component.label,
+        score: component.score,
+        weight: component.weight,
+      })),
+      tail: null,
+    }],
     alternatives: breakdown.alternatives.map((alternative) => ({
       key: alternative.key,
       label: alternative.label,
@@ -272,20 +396,50 @@ function parseExitBreakdown(
 function parseControlBreakdown(
   breakdown: SafetyScoreV9ControlBreakdown,
 ): StablecoinSafetyScoreV9PillarBreakdown {
-  const toRow = (
-    component: SafetyScoreV9ControlBreakdown["components"][number],
-  ): StablecoinSafetyScoreV9BreakdownRow => ({
+  const toRow = (component: SafetyScoreV9ControlBreakdown["components"][number]) => makeRow({
     key: component.key,
     label: component.label,
     score: component.score,
-    weight: null,
     status: component.binding ? "Binding" : "Diagnostic",
   });
-  // The pillar scores on the lowest binding control, but the producer emits
-  // components alphabetically. On the widest deployments that buried both
-  // binding rows behind dozens of per-chain bridge diagnostics (usdc-circle
-  // put them at rows 49 and 50 of 50), so the rows that set the score lead and
-  // the diagnostics collapse behind a disclosure.
+
+  // The pillar scores on the lowest binding control, so binding rows lead,
+  // cheapest first: the row that sets the score is always the first one read.
+  const binding = breakdown.components.filter((component) => component.binding);
+  const rows = [...binding]
+    .sort((left, right) => left.score - right.score)
+    .map(toRow);
+
+  // Non-binding bridges are the bulk of the noise — 48 of usdc-circle's 50
+  // rows. They roll into one composite carrying the cohort's worst score,
+  // because the pillar rule is a minimum and an average would flatter it. Any
+  // binding bridge stays above as its own row; on 37 assets a bridge is the
+  // lowest binding control and must never be folded away.
+  const loose = breakdown.components.filter((component) => !component.binding);
+  const looseBridges = loose.filter((component) => component.kind === "bridge");
+  const otherLoose = loose.filter((component) => component.kind !== "bridge");
+  rows.push(...otherLoose.map(toRow));
+
+  if (looseBridges.length >= MIN_COMPOSITE_ROWS) {
+    const scores = looseBridges.map((component) => component.score);
+    const worst = Math.min(...scores);
+    const best = Math.max(...scores);
+    rows.push(makeRow({
+      key: "bridge-composite",
+      label: "Bridge deployments",
+      score: worst,
+      status: `${looseBridges.length} chains`,
+      detail: worst === best
+        ? `All ${looseBridges.length} at ${worst.toFixed(0)} · not binding`
+        : `Worst of ${looseBridges.length} · range ${worst.toFixed(0)}–${best.toFixed(0)} · not binding`,
+      children: [...looseBridges]
+        .sort((left, right) => left.score - right.score)
+        .map(toRow),
+    }));
+  } else {
+    rows.push(...looseBridges.map(toRow));
+  }
+
   return {
     aggregationWeight: breakdown.aggregationWeight,
     evaluatedScore: breakdown.evaluatedScore,
@@ -296,9 +450,7 @@ function parseControlBreakdown(
       label: "Pillar rule",
       value: "Lowest binding control",
     }, ...adjustmentContext(breakdown.adjustments)],
-    rows: breakdown.components.filter((component) => component.binding).map(toRow),
-    secondaryRows: breakdown.components.filter((component) => !component.binding).map(toRow),
-    secondaryLabel: "Diagnostic inputs",
+    groups: [{ key: "control", label: null, score: null, weight: null, rows, tail: null }],
     alternatives: [],
   };
 }

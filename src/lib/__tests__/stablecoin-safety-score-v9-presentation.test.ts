@@ -8,6 +8,56 @@ import {
 } from "@/lib/stablecoin-safety-score-v9-presentation";
 
 describe("stablecoin V9 safety presentation", () => {
+  /**
+   * Full three-pillar breakdown; tests override the pillar they exercise.
+   * Published scores must equal the card's pillar scores (88 / 84 / 86) and
+   * backing weights must sum to 1 with contributions summing to the evaluated
+   * score, or SafetyScoreV9CurrentCardSchema rejects the fixture.
+   */
+  const breakdownsFixture = () => ({
+    backing: {
+      evaluatedScore: 86,
+      publishedScore: 88,
+      aggregationWeight: 0.4,
+      groups: [{ key: "reserves", label: "Reserves", score: 86, effectiveWeight: 1 }],
+      components: [{
+        key: "reserve:reserve:wsteth",
+        label: "wstETH",
+        source: "reserve-exposure" as const,
+        score: 86,
+        effectiveWeight: 1,
+        weightedContribution: 86,
+        observationState: "known" as const,
+      }],
+      adjustments: [{
+        kind: "operational-resilience-credit" as const,
+        scoreBefore: 86,
+        scoreAfter: 88,
+        delta: 2,
+      }],
+    },
+    exit: {
+      evaluatedScore: 84,
+      publishedScore: 84,
+      aggregationWeight: 0.35,
+      stressRequest: null,
+      primaryRoute: null,
+      diversification: null,
+      alternatives: [],
+      adjustments: [],
+    },
+    control: {
+      evaluatedScore: 86,
+      publishedScore: 86,
+      aggregationWeight: 0.25,
+      method: "minimum-binding-component" as const,
+      components: [
+        { key: "mint", label: "Mint authority", kind: "mint" as const, score: 86, binding: true, posture: "concentrated" as const },
+      ],
+      adjustments: [],
+    },
+  });
+
   it("derives honest score trace labels without recreating V8 dimensions", () => {
     const card = makeV9Card({
       score: 84,
@@ -145,6 +195,7 @@ describe("stablecoin V9 safety presentation", () => {
   it("adapts numeric V9 breakdowns without inventing control weights", () => {
     const card = makeV9Card();
     card.breakdowns = {
+      ...breakdownsFixture(),
       backing: {
         evaluatedScore: 86,
         publishedScore: 88,
@@ -224,8 +275,19 @@ describe("stablecoin V9 safety presentation", () => {
     expect(presentation.pillars[0].breakdown).toMatchObject({
       aggregationWeight: 0.4,
       sectionLabel: "Backing components",
-      rows: [{ label: "wstETH", score: 86, weight: 1, status: "Known" }],
     });
+    // Group score and weight head the section, so they are no longer repeated
+    // as context rows; only adjustments remain there.
+    expect(presentation.pillars[0].breakdown?.groups).toMatchObject([
+      {
+        key: "reserves",
+        label: "Reserves",
+        score: 86,
+        weight: 1,
+        rows: [{ label: "wstETH", score: 86, weight: 1, status: "Known" }],
+        tail: null,
+      },
+    ]);
     expect(presentation.pillars[0].breakdown?.context).toContainEqual({
       key: "operational-resilience-credit-0",
       label: "Resilience credit",
@@ -235,7 +297,10 @@ describe("stablecoin V9 safety presentation", () => {
       sectionLabel: "Route components",
       alternatives: [{ label: "Curve liquidity", score: 77, included: true }],
     });
-    expect(presentation.pillars[1].breakdown?.rows).toEqual(expect.arrayContaining([
+    // Exit keeps one unlabelled group in producer order.
+    expect(presentation.pillars[1].breakdown?.groups).toHaveLength(1);
+    expect(presentation.pillars[1].breakdown?.groups[0].label).toBeNull();
+    expect(presentation.pillars[1].breakdown?.groups[0].rows).toEqual(expect.arrayContaining([
       expect.objectContaining({ label: "Access", score: 90, weight: 0.2 }),
       expect.objectContaining({ label: "Capacity", score: 78, weight: 0.25 }),
     ]));
@@ -244,19 +309,92 @@ describe("stablecoin V9 safety presentation", () => {
       { key: "stress-request", label: "Stress request", value: "$10m / 100 bps / 1d" },
     ]));
     // The producer emits control components alphabetically, so the binding row
-    // is listed last here on purpose: the pillar that scores on the lowest
-    // binding control must lead with it regardless of producer order.
-    expect(presentation.pillars[2].breakdown?.rows).toEqual([
-      { key: "mint", label: "Mint authority", score: 86, weight: null, status: "Binding" },
-    ]);
-    expect(presentation.pillars[2].breakdown?.secondaryRows).toEqual([
-      { key: "abstract", label: "Abstract bridge", score: 65, weight: null, status: "Diagnostic" },
-      { key: "oracle", label: "Oracle design", score: 95, weight: null, status: "Diagnostic" },
-    ]);
-    expect(presentation.pillars[2].breakdown?.secondaryLabel).toBe("Diagnostic inputs");
-    // Backing and exit have no binding/diagnostic split, so nothing is hidden.
-    expect(presentation.pillars[0].breakdown?.secondaryRows).toEqual([]);
-    expect(presentation.pillars[0].breakdown?.secondaryLabel).toBeNull();
-    expect(presentation.pillars[1].breakdown?.secondaryRows).toEqual([]);
+    // is listed last in the fixture on purpose: the pillar that scores on the
+    // lowest binding control must lead with it regardless of producer order.
+    // One loose bridge is below the composite threshold, so it stays a row.
+    expect(presentation.pillars[2].breakdown?.groups[0].rows.map((row) => row.key))
+      .toEqual(["mint", "oracle", "abstract"]);
   });
+
+  it("rolls loose bridges into one composite carrying the cohort's worst score", () => {
+    const card = makeV9Card();
+    card.breakdowns = {
+      ...breakdownsFixture(),
+      control: {
+        evaluatedScore: 86,
+        publishedScore: 86,
+        aggregationWeight: 0.25,
+        method: "minimum-binding-component" as const,
+        // Producer order is alphabetical by key, which the schema enforces.
+        components: [
+          { key: "abstract", label: "Abstract bridge", kind: "bridge" as const, score: 65, binding: false, posture: "distributed" as const },
+          { key: "boba", label: "Boba bridge", kind: "bridge" as const, score: 85, binding: false, posture: "distributed" as const },
+          { key: "bsc", label: "Bsc bridge", kind: "bridge" as const, score: 86, binding: true, posture: "distributed" as const },
+          { key: "flow", label: "Flow bridge", kind: "bridge" as const, score: 50, binding: false, posture: "distributed" as const },
+          { key: "mint", label: "Mint authority", kind: "mint" as const, score: 90, binding: true, posture: "concentrated" as const },
+        ],
+        adjustments: [],
+      },
+    };
+
+    const rows = buildStablecoinSafetyScoreV9Presentation(
+      SafetyScoreV9CurrentCardSchema.parse(card),
+    ).pillars[2].breakdown!.groups[0].rows;
+
+    // A bridge is the lowest binding control on 37 assets, so a binding bridge
+    // stays a top-level row instead of disappearing into the composite. Binding
+    // rows lead cheapest-first, so the row that sets the score is read first.
+    expect(rows.map((row) => row.key)).toEqual(["bsc", "mint", "bridge-composite"]);
+    const composite = rows[2];
+    // Worst, not mean: the pillar rule is a minimum and an average would flatter it.
+    expect(composite.score).toBe(50);
+    expect(composite.status).toBe("3 chains");
+    expect(composite.detail).toBe("Worst of 3 · range 50–85 · not binding");
+    expect(composite.children.map((child) => child.key)).toEqual(["flow", "abstract", "boba"]);
+  });
+
+  it("folds low-weight reserve slices into a tail and tints only weak rows", () => {
+    const card = makeV9Card();
+    const slice = (key: string, score: number, weight: number) => ({
+      key,
+      label: key,
+      source: "reserve-exposure" as const,
+      score,
+      effectiveWeight: weight,
+      weightedContribution: score * weight,
+      observationState: "known" as const,
+    });
+    // Weights sum to 1; contributions sum to the evaluated score; keys sorted.
+    card.breakdowns = {
+      ...breakdownsFixture(),
+      backing: {
+        evaluatedScore: 89.08,
+        publishedScore: 89.08,
+        aggregationWeight: 0.4,
+        groups: [{ key: "reserves", label: "Reserves", score: 89.08, effectiveWeight: 1 }],
+        components: [
+          slice("a-dust", 30, 0.01),
+          slice("b-core", 95, 0.85),
+          slice("c-dust", 60, 0.012),
+          slice("d-mid", 55, 0.11),
+          slice("e-dust", 70, 0.018),
+        ],
+        adjustments: [],
+      },
+    };
+    card.pillars.backing.score = 89.08;
+
+    const group = buildStablecoinSafetyScoreV9Presentation(
+      SafetyScoreV9CurrentCardSchema.parse(card),
+    ).pillars[0].breakdown!.groups[0];
+
+    // Heaviest first, and the three sub-2% slices fold away with their combined weight.
+    expect(group.rows.map((row) => row.key)).toEqual(["b-core", "d-mid"]);
+    expect(group.tail?.rows.map((row) => row.key)).toEqual(["e-dust", "c-dust", "a-dust"]);
+    expect(group.tail?.label).toBe("Smaller holdings (3) · 4.0% combined");
+    // Colour only where it means something: 95 neutral, 55 warns, 30 is critical.
+    expect(group.rows.map((row) => row.tone)).toEqual(["neutral", "warn"]);
+    expect(group.tail?.rows.map((row) => row.tone)).toEqual(["neutral", "warn", "critical"]);
+  });
+
 });

@@ -111,18 +111,35 @@ function HeldPublicationNotice({ health }: { health: V9PublicationHealth }) {
   );
 }
 
-function ComponentScoreBar({
-  row,
-}: {
-  row: NonNullable<
-    StablecoinSafetyScoreV9Presentation["pillars"][number]["breakdown"]
-  >["rows"][number];
-}) {
+type BreakdownRow = NonNullable<
+  StablecoinSafetyScoreV9Presentation["pillars"][number]["breakdown"]
+>["groups"][number]["rows"][number];
+
+/**
+ * Restrained tinting: a bar leaves neutral only when the input is the problem,
+ * so a long list stays calm and the eye lands on the weak rows.
+ */
+const ROW_TONE_FILL_CLASS: Record<BreakdownRow["tone"], string> = {
+  neutral: "bg-neutral-500 dark:bg-[#858585]",
+  warn: "bg-amber-500/80 dark:bg-amber-500/70",
+  critical: "bg-rose-500/80 dark:bg-rose-500/70",
+};
+
+const ROW_TONE_SCORE_CLASS: Record<BreakdownRow["tone"], string> = {
+  neutral: "text-foreground",
+  warn: "text-amber-700 dark:text-amber-400",
+  critical: "text-rose-700 dark:text-rose-400",
+};
+
+function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?: boolean }) {
+  const [open, setOpen] = useState(false);
   const boundedScore = Math.max(0, Math.min(100, row.score));
   const weightLabel = row.weight === null
     ? null
     : `${(row.weight * 100).toFixed(row.weight * 100 < 10 ? 1 : 0)}%`;
-  return (
+  const hasChildren = row.children.length > 0;
+
+  const bar = (
     <div className="grid grid-cols-[minmax(5.25rem,6.75rem)_minmax(2.5rem,1fr)_1.75rem_5.25rem] items-center gap-1.5">
       <span className="break-words font-mono text-[10px] uppercase leading-[1.35] tracking-[0.08em] text-muted-foreground">
         {row.label}
@@ -133,17 +150,104 @@ function ComponentScoreBar({
         aria-label={`${row.label}: ${row.score.toFixed(0)} out of 100${weightLabel === null ? "" : `, ${weightLabel} weight`}`}
       >
         <span
-          className="block h-full rounded-[2px] bg-neutral-500 dark:bg-[#858585]"
+          className={cn("block h-full rounded-[2px]", ROW_TONE_FILL_CLASS[row.tone])}
           style={{ width: `${boundedScore}%` }}
         />
       </span>
-      <span className="text-right font-mono text-[10px] font-medium tabular-nums text-foreground">
+      <span
+        className={cn(
+          "text-right font-mono text-[10px] font-medium tabular-nums",
+          ROW_TONE_SCORE_CLASS[row.tone],
+        )}
+      >
         {row.score.toFixed(0)}
       </span>
       <span className="text-right font-mono uppercase leading-tight tracking-[0.04em] text-muted-foreground">
         {weightLabel !== null ? <span className="block text-[9px]">· {weightLabel}</span> : null}
         {row.status !== null ? <span className="mt-0.5 block break-words text-[8px]">{row.status}</span> : null}
       </span>
+    </div>
+  );
+
+  if (!hasChildren) {
+    return (
+      <div className={cn(nested && "pl-3")}>
+        {bar}
+        {row.detail !== null ? (
+          <p className="mt-0.5 text-[9px] leading-snug text-muted-foreground">{row.detail}</p>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {bar}
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="pharos-focus-ring mt-0.5 flex min-h-6 w-full items-center gap-1 rounded-sm text-left text-[9px] leading-snug text-muted-foreground"
+      >
+        {row.detail}
+        <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-180")} aria-hidden="true" />
+      </button>
+      {open ? (
+        <div className="mt-2 space-y-2.5 border-l border-border/40 pl-1">
+          {row.children.map((child) => <ComponentScoreBar key={child.key} row={child} nested />)}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function BreakdownGroupSection({
+  group,
+}: {
+  group: NonNullable<
+    StablecoinSafetyScoreV9Presentation["pillars"][number]["breakdown"]
+  >["groups"][number];
+}) {
+  const [tailOpen, setTailOpen] = useState(false);
+  return (
+    <div>
+      {group.label !== null ? (
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-border/30 pb-1.5">
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-foreground/85">
+            {group.label}
+          </span>
+          {group.score !== null ? (
+            <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+              {group.score.toFixed(0)} / 100
+              {group.weight !== null ? ` · ${(group.weight * 100).toFixed(0)}% pillar weight` : ""}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      <div className={cn("space-y-2.5", group.label !== null && "mt-2.5")}>
+        {group.rows.map((row) => <ComponentScoreBar key={row.key} row={row} />)}
+      </div>
+      {group.tail !== null ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setTailOpen((value) => !value)}
+            aria-expanded={tailOpen}
+            className="pharos-focus-ring mt-2 flex min-h-7 w-full items-center justify-between gap-2 rounded-sm text-[10px] font-medium text-muted-foreground"
+          >
+            <span>{group.tail.label}</span>
+            <ChevronDown
+              className={cn("h-3.5 w-3.5 shrink-0 transition-transform", tailOpen && "rotate-180")}
+              aria-hidden="true"
+            />
+          </button>
+          {tailOpen ? (
+            <div className="mt-2 space-y-2.5">
+              {group.tail.rows.map((row) => <ComponentScoreBar key={row.key} row={row} nested />)}
+            </div>
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }
@@ -191,24 +295,9 @@ function PillarBreakdownDetails({
         </dl>
       ) : null}
 
-      <div className="mt-2.5 space-y-2.5">
-        {breakdown.rows.map((row) => <ComponentScoreBar key={row.key} row={row} />)}
+      <div className="mt-2.5 space-y-4">
+        {breakdown.groups.map((group) => <BreakdownGroupSection key={group.key} group={group} />)}
       </div>
-
-      {breakdown.secondaryRows.length > 0 && breakdown.secondaryLabel !== null ? (
-        <details className="group mt-3 border-t border-border/30 pt-2">
-          <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[10px] font-medium text-muted-foreground marker:content-none">
-            <span>{breakdown.secondaryLabel} ({breakdown.secondaryRows.length})</span>
-            <ChevronDown
-              className="h-3.5 w-3.5 transition-transform group-open:rotate-180"
-              aria-hidden="true"
-            />
-          </summary>
-          <div className="mt-2 space-y-2.5">
-            {breakdown.secondaryRows.map((row) => <ComponentScoreBar key={row.key} row={row} />)}
-          </div>
-        </details>
-      ) : null}
 
       {breakdown.alternatives.length > 0 ? (
         <details className="group mt-3 border-t border-border/30 pt-2">
