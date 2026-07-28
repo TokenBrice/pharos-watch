@@ -26,32 +26,6 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     requiredMarkers: ["createTimeoutSignal", "cancelResponseBodyQuietly", "sleepWithSignal", "passthroughStatuses"],
   },
   {
-    id: "provider-execution-core",
-    family: "provider-transport",
-    description: "Shared provider execution budget, circuit, timeout, and response-body wrapper.",
-    files: ["worker/src/lib/provider-execution.ts"],
-    tests: ["worker/src/lib/__tests__/provider-execution.test.ts"],
-    allowBareFetch: true,
-    directFetchJustification:
-      "Central wrapper that owns raw fetch budget permits, provider timeouts, circuit checks, and response-body policy.",
-    resilience: {
-      transport: "provider-execution-wrapper",
-      timeout: "Uses createTimeoutSignal() to compose the cron/lane AbortSignal with provider timeouts.",
-      body: "Routes responses through explicit consume/cancel/stream policies.",
-      circuitSources: [],
-    },
-    requiredMarkers: [
-      "createProviderExecutionContextForJob",
-      "withProviderExecution",
-      "createTimeoutSignal",
-      "cancelOrDrainResponse",
-      "shouldAttemptFetch",
-      "recordOutcomeSafe",
-      "providerJson",
-      "providerTextBounded",
-    ],
-  },
-  {
     id: "supplemental-defillama-coins",
     family: "supplemental-assets",
     description: "Supplemental DefiLlama /coins price mirror for non-list tracked assets.",
@@ -384,7 +358,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     directFetchJustification:
       "DEX direct APIs use protocol-specific pagination/rate-limit handling before the orchestration phase records circuit outcomes.",
     resilience: {
-      transport: "provider-execution plus direct-fetch adapter helpers",
+      transport: "direct-API-local circuit wrapper plus direct-fetch adapter helpers",
       timeout:
         "Uses DIRECT_API_PROVIDER_TIMEOUT_MS around the provider adapter plus buildDirectApiRequestSignal() for per-request timeouts.",
       body: "Provider phase declares stream policy while adapter helpers cancel non-OK bodies and parse through readDexApiJson().",
@@ -401,8 +375,10 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       ],
     },
     requiredMarkers: [
-      "createProviderExecutionContextForJob",
-      "withProviderExecution",
+      "executeDirectApiProvider",
+      "createTimeoutSignal",
+      "shouldAttemptFetch",
+      "recordOutcomeSafe",
       "DIRECT_API_PROVIDER_TIMEOUT_MS",
       "buildDirectApiRequestSignal",
       "readDexApiJson",
@@ -417,7 +393,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "CIRCUIT_SOURCE.AERODROME_SLIPSTREAM_API",
       "CIRCUIT_SOURCE.VELODROME_SLIPSTREAM_API",
       "CIRCUIT_SOURCE.SUNSWAP_API",
-      "ProviderCircuitOpenError",
+      "DirectApiCircuitOpenError",
     ],
   },
   {

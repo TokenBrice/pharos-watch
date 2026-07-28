@@ -69,13 +69,6 @@ const CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 export const P4_AMM_MODELED_TVL_MIN_RATIO = 0.5;
 export const P4_AMM_MODELED_TVL_MAX_RATIO = 2;
 
-/** Versioned, asset-agnostic coverage floors for the first P4b activation. */
-export const P4_GENERAL_ACTIVATION_POLICY_V1 = {
-  version: "p4b-activation-v1",
-  minimumDexEligibleAssets: 45,
-  minimumRedemptionEligibleAssets: 27,
-} as const;
-
 type CapabilityLevel = "exact" | "partial" | "symbol-only" | "aggregate-only" | "absent";
 type NativeMeasuredExecutionPublicProfile =
   | SolanaMeasuredExecutionPublicProfile

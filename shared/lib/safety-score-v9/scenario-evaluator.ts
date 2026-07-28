@@ -11,8 +11,6 @@ import {
 } from "../safety-score-v9-research";
 import type { V9EvidenceLevel, V9Grade, V9QualityPillar, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 
-export const V9_SCENARIO_QUALITY_PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];
-
 export interface V9ScenarioStructuralCap {
   readonly kind: string;
   readonly limit: number;

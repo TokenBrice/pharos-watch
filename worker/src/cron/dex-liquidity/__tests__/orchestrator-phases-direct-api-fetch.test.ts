@@ -4,13 +4,14 @@ import {
   normalizeDexApiPoolsForMerge,
   type DexApiPool,
 } from "../../../lib/dex-api-common";
-import { getCircuitRecord } from "../../../lib/circuit-breaker";
+import { getCircuitRecord, recordOutcomeSafe } from "../../../lib/circuit-breaker";
 import type { DirectApiFetcher } from "../orchestrator-phases/direct-api";
 import {
   compactDirectApiFetchPhasePools,
   runDirectApiFetchPhase,
 } from "../orchestrator-phases/direct-api";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
+import { DIRECT_API_PROVIDER_TIMEOUT_MS } from "../direct-api-policy";
 import { buildChainAddressKey } from "../token-resolution";
 
 type MockCircuitRecord = {
@@ -209,6 +210,115 @@ describe("runDirectApiFetchPhase", () => {
       },
     ]);
     expect(getCircuitRecord).not.toHaveBeenCalled();
+  });
+
+  it("skips an open provider circuit without invoking its fetcher", async () => {
+    circuitStore.records.set("blocked-circuit", {
+      state: "open",
+      consecutiveFailures: 3,
+      lastFailureAt: 1_799_999_900,
+      lastSuccessAt: null,
+      openedAt: 1_799_999_900,
+    });
+    const fn = vi.fn(async () =>
+      makeDexApiFetchResult([], { ok: true, degraded: false, errors: [] })
+    );
+
+    const result = await runDirectApiFetchPhase(
+      {} as D1Database,
+      [makeFetcher("blocked", fn)],
+    );
+
+    expect(fn).not.toHaveBeenCalled();
+    expect(result.failedSources).toEqual(["blocked-circuit"]);
+    expect(result.fallbackSignals).toEqual(["blocked-circuit-circuit-open"]);
+    expect(result.results[0]?.result.errors).toEqual(["circuit open"]);
+    expect(recordOutcomeSafe).not.toHaveBeenCalled();
+  });
+
+  it("records thrown provider failures and keeps them non-fatal", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const result = await runDirectApiFetchPhase(
+      {} as D1Database,
+      [makeFetcher("broken", async () => {
+        throw new Error("upstream broke");
+      })],
+    );
+
+    expect(result.failedSources).toEqual(["broken-circuit"]);
+    expect(result.fallbackSignals).toEqual(["broken-circuit-exception"]);
+    expect(result.circuitEvents).toEqual([{
+      circuitKey: "broken-circuit",
+      from: "closed",
+      to: "open",
+      at: 1_800_000_000,
+    }]);
+    expect(result.results[0]?.result.errors).toEqual([
+      "Provider dex-direct-api:broken failed: upstream broke",
+    ]);
+    expect(warn).toHaveBeenCalledOnce();
+  });
+
+  it("records the outer provider timeout as a circuit failure", async () => {
+    vi.useFakeTimers();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      let started!: () => void;
+      const operationStarted = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const resultPromise = runDirectApiFetchPhase(
+        {} as D1Database,
+        [makeFetcher("slow", async (signal) => {
+          started();
+          return await new Promise((_resolve, reject) => {
+            signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
+          });
+        })],
+      );
+
+      await operationStarted;
+      await vi.advanceTimersByTimeAsync(DIRECT_API_PROVIDER_TIMEOUT_MS);
+      const result = await resultPromise;
+
+      expect(result.failedSources).toEqual(["slow-circuit"]);
+      expect(result.fallbackSignals).toEqual(["slow-circuit-exception"]);
+      expect(result.circuitEvents[0]).toMatchObject({
+        circuitKey: "slow-circuit",
+        from: "closed",
+        to: "open",
+      });
+      expect(result.results[0]?.result.errors[0]).toContain(
+        `provider dex-direct-api:slow timed out after ${DIRECT_API_PROVIDER_TIMEOUT_MS}ms`,
+      );
+      expect(warn).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("rethrows a parent abort without recording a provider failure", async () => {
+    const controller = new AbortController();
+    let started!: () => void;
+    const operationStarted = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const resultPromise = runDirectApiFetchPhase(
+      {} as D1Database,
+      [makeFetcher("aborted", async (signal) => {
+        started();
+        return await new Promise((_resolve, reject) => {
+          signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
+        });
+      })],
+      controller.signal,
+    );
+
+    await operationStarted;
+    controller.abort(new Error("cron aborted"));
+
+    await expect(resultPromise).rejects.toThrow("cron aborted");
+    expect(recordOutcomeSafe).not.toHaveBeenCalled();
   });
 
   it("does not mark warning-only direct API results as failed", async () => {

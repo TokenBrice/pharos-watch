@@ -15,8 +15,8 @@ import {
 export const TRON_MEASURED_TARGET_SCHEMA_VERSION = "tron-measured-target-v1" as const;
 export const TRON_MEASURED_EXECUTION_SCHEMA_VERSION = "tron-measured-execution-v1" as const;
 export const TRON_MEASURED_MAX_BLOCK_WINDOW = 64;
-export const TRON_SUNSWAP_V2_ROUTER_ADDRESS = "TNJVzGqKBWkJxJB5XYSqGAwUTV15U24pPq" as const;
-export const TRON_SUNSWAP_V2_ROUTER_CODE_HASH =
+const TRON_SUNSWAP_V2_ROUTER_ADDRESS = "TNJVzGqKBWkJxJB5XYSqGAwUTV15U24pPq" as const;
+const TRON_SUNSWAP_V2_ROUTER_CODE_HASH =
   "0x85aca0ac3551e3d4fdebd328f247b2287254c06b583040582cc2d4cd0d969d67" as const;
 
 const TronAddressSchema = z.string().regex(/^T[1-9A-HJ-NP-Za-km-z]{33}$/);

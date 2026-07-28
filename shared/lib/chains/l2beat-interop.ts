@@ -160,10 +160,6 @@ function containsSearchTerm(normalizedText: string, normalizedTerm: string): boo
   return ` ${normalizedText.trim()} `.includes(` ${normalizedTerm} `);
 }
 
-export function getL2BeatInteropProtocol(id: string): L2BeatInteropProtocolSnapshot | null {
-  return PROTOCOLS_BY_ID.get(id) ?? null;
-}
-
 export function suggestBridgeRouteRiskTierFromL2BeatProtocol(
   protocol: L2BeatInteropProtocolSnapshot,
 ): BridgeRouteRiskTier {
