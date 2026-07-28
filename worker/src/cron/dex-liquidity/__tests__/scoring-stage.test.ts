@@ -7,6 +7,8 @@ import type {
 import { initMetrics } from "../pool-helpers";
 import {
   DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,
+  DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL,
+  DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT,
   decodeDexLiquidityScoringStageChunks,
   encodeDexLiquidityScoringStageChunks,
   loadDexLiquidityScoringStage,
@@ -291,7 +293,7 @@ describe("DEX liquidity scoring stage", () => {
     expect(consumingPool.metrics.size).toBe(0);
   });
 
-  it("persists one chunk at a time and loads the newest ready generation at or before the preferred slot", async () => {
+  it("persists bounded multi-row chunks and loads the newest ready generation at or before the preferred slot", async () => {
     const harness = createLatestSchemaSqlite();
     openDatabases.push(harness.sqlite);
     const previousSource = sourceState();
@@ -326,8 +328,16 @@ describe("DEX liquidity scoring stage", () => {
       recordCount: stored.recordCount,
       payloadBytes: stored.payloadBytes,
     });
-    expect(onChunkBatchPersisted).toHaveBeenCalledTimes(stored.chunkCount);
-    expect(onChunkBatchPersisted.mock.calls[0]?.[0]).toMatchObject({ chunkCount: 1 });
+    expect(DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT).toBe(2);
+    expect(onChunkBatchPersisted).toHaveBeenCalledTimes(
+      Math.ceil(stored.chunkCount / DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL),
+    );
+    expect(onChunkBatchPersisted.mock.calls[0]?.[0]).toMatchObject({
+      chunkCount: Math.min(
+        stored.chunkCount,
+        DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL,
+      ),
+    });
 
     const loaded = await loadDexLiquidityScoringStage(harness.db, {
       nowSec: sourceSlotStartedAt + 6 * 60,
