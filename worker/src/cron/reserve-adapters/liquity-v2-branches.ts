@@ -1,20 +1,31 @@
+import { decodeAbiParameters } from "viem/utils";
 import type { StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
+import type {
+  LiveReserveSnapshotMetadata,
+  LiveReservesConfig,
+  LiveReserveWarning,
+} from "@shared/types/live-reserves";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import { rethrowIfAborted } from "../../lib/abort";
+import { toErrorMessage } from "../../lib/error-utils";
 import type { AdapterContext, AdapterResult } from "./types";
 import { ERC4626_ASSET_SELECTOR, ERC4626_TOTAL_ASSETS_SELECTOR } from "./erc4626";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
   fetchErc20Balance,
+  fetchOnchainMulticall3,
   fetchOnchainRateBps,
   makeOnchainCallers,
+  type OnchainMulticall3Call,
   type OnchainCallers,
   probeOptionalRedemptionRateBps,
   requireOnchainInput,
   reserveDegradedWarning,
   reserveInfoWarning,
+  valueUsdFromBigIntPrice,
 } from "./helpers";
+import { redactUrlSecrets } from "./warnings";
 import {
   adaptBranchBalanceReserves,
   fetchBranchPriceMap,
@@ -35,6 +46,8 @@ const DEFAULT_SHUTDOWN_SELECTOR = "0x06ff8dfb"; // hasBeenShutDown()
 const DEFAULT_DEBT_DECIMALS = 18;
 const BRANCH_PRICE_SELECTOR = "0x0fdb11cf"; // fetchPrice()
 const BRANCH_REDEMPTION_RATE_SELECTOR = "0xc52861f2"; // getRedemptionRateWithDecay()
+const DEFAULT_MECHANISM_PRICE_SELECTOR = "0x4ea15f37"; // getUnbackedPortionPriceAndRedeemability()
+const DEFAULT_MAX_SUPPLY_DEBT_DIVERGENCE_PCT = 0.5;
 
 interface LiquityV2BranchDebt {
   entry: BranchBalanceEntry;
@@ -53,6 +66,25 @@ interface LiquityV2BranchParams extends BranchBalanceParams {
   debtSelector?: string;
   debtDecimals?: number;
   shutdownSelector?: string;
+  mechanismMetrics?: {
+    supplyTokenAddress: string;
+    branchPriceSelector?: string;
+    stabilityPoolDepositsSelector: string;
+    maxSupplyDebtDivergencePct?: number;
+    branches: Array<{
+      name: string;
+      troveManagerAddress: string;
+      stabilityPoolAddress: string;
+    }>;
+  };
+}
+
+interface LiquityV2MechanismMetricResult {
+  metadata: Pick<
+    LiveReserveSnapshotMetadata,
+    "totalReserveUsd" | "collateralizationRatio" | "liquidationCapacityRatio" | "details"
+  >;
+  warnings: LiveReserveWarning[];
 }
 
 function readParams(config: LiveReservesConfig): LiquityV2BranchParams {
@@ -203,6 +235,218 @@ function chooseSnapshotRedemptionFeeBps(
   return Math.max(...readableFees);
 }
 
+function decodeMechanismBranchPrice(
+  raw: `0x${string}` | undefined,
+  branchName: string,
+): { priceRaw: bigint; redeemable: boolean } {
+  if (!raw) throw new Error(`missing protocol-price result for ${branchName}`);
+  try {
+    const [, priceRaw, redeemable] = decodeAbiParameters(
+      [{ type: "uint256" }, { type: "uint256" }, { type: "bool" }],
+      raw,
+    ) as readonly [bigint, bigint, boolean];
+    if (priceRaw <= 0n || !redeemable) {
+      throw new Error(`protocol price is ${priceRaw.toString()} with redeemable=${redeemable}`);
+    }
+    return { priceRaw, redeemable };
+  } catch (error) {
+    throw new Error(
+      `invalid protocol-price result for ${branchName}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+function decodeRequiredUint256(
+  raw: `0x${string}` | undefined,
+  label: string,
+): bigint {
+  if (!raw || !/^0x[0-9a-fA-F]{64}$/.test(raw)) {
+    throw new Error(`missing or invalid ${label} result`);
+  }
+  const value = BigInt(raw);
+  if (value < 0n) throw new Error(`${label} result is negative`);
+  return value;
+}
+
+async function fetchLiquityV2MechanismMetrics(
+  input: ReturnType<typeof requireOnchainInput>,
+  params: LiquityV2BranchParams,
+  snapshot: LiquityV2BranchSnapshot,
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+): Promise<LiquityV2MechanismMetricResult | null> {
+  const config = params.mechanismMetrics;
+  if (!config) return null;
+
+  const calls: OnchainMulticall3Call[] = [
+    {
+      label: "mechanism:total-supply",
+      contract: config.supplyTokenAddress,
+      data: TOTAL_SUPPLY_SELECTOR,
+      allowFailure: true,
+    },
+  ];
+  for (const branch of config.branches) {
+    calls.push(
+      {
+        label: `mechanism:price:${branch.name}`,
+        contract: branch.troveManagerAddress,
+        data: config.branchPriceSelector ?? DEFAULT_MECHANISM_PRICE_SELECTOR,
+        allowFailure: true,
+      },
+      {
+        label: `mechanism:stability-pool:${branch.name}`,
+        contract: branch.stabilityPoolAddress,
+        data: config.stabilityPoolDepositsSelector,
+        allowFailure: true,
+      },
+    );
+  }
+
+  try {
+    const results = await fetchOnchainMulticall3({
+      calls,
+      chain: input.chain,
+      signal,
+      ctx,
+      rpcUrl: params.rpcUrl,
+      fallbackRpcUrl: params.fallbackRpcUrl,
+      timeoutMs: 12_000,
+    });
+    if (!results) throw new Error("Multicall3 request failed");
+
+    const byLabel = new Map<string, `0x${string}`>();
+    for (const result of results) {
+      if (!result.success) throw new Error(`Multicall3 entry failed: ${result.label}`);
+      byLabel.set(result.label, result.returnData);
+    }
+
+    const totalSupplyRaw = decodeRequiredUint256(
+      byLabel.get("mechanism:total-supply"),
+      "total supply",
+    );
+    if (totalSupplyRaw <= 0n) throw new Error("total supply is zero");
+
+    const balancesByName = new Map(snapshot.balances.map((entry) => [entry.branch.name, entry]));
+    const debtsByName = new Map(snapshot.debts.map((entry) => [entry.entry.branch.name, entry]));
+    let totalCollateralUsd = 0;
+    let totalDebtRaw = 0n;
+    let totalStabilityPoolDepositsRaw = 0n;
+    let branchCappedDepositsRaw = 0n;
+    const branchDetails: Array<Record<string, unknown>> = [];
+
+    for (const binding of config.branches) {
+      const balance = balancesByName.get(binding.name);
+      const debt = debtsByName.get(binding.name);
+      if (!balance || !debt || debt.debtRaw == null) {
+        throw new Error(`missing reserve/debt state for ${binding.name}`);
+      }
+      const { priceRaw, redeemable } = decodeMechanismBranchPrice(
+        byLabel.get(`mechanism:price:${binding.name}`),
+        binding.name,
+      );
+      const stabilityPoolDepositsRaw = decodeRequiredUint256(
+        byLabel.get(`mechanism:stability-pool:${binding.name}`),
+        `Stability Pool deposits for ${binding.name}`,
+      );
+      const priceUsd = decimalNumberFromBigInt(priceRaw, 18);
+      const collateralUsd = valueUsdFromBigIntPrice(
+        balance.balanceRaw ?? 0n,
+        balance.branch.token.decimals,
+        priceUsd,
+      );
+      if (!Number.isFinite(collateralUsd) || collateralUsd < 0) {
+        throw new Error(`invalid protocol-priced collateral value for ${binding.name}`);
+      }
+
+      totalCollateralUsd += collateralUsd;
+      totalDebtRaw += debt.debtRaw;
+      totalStabilityPoolDepositsRaw += stabilityPoolDepositsRaw;
+      branchCappedDepositsRaw += stabilityPoolDepositsRaw < debt.debtRaw
+        ? stabilityPoolDepositsRaw
+        : debt.debtRaw;
+      branchDetails.push({
+        name: binding.name,
+        troveManagerAddress: binding.troveManagerAddress,
+        stabilityPoolAddress: binding.stabilityPoolAddress,
+        collateralRaw: (balance.balanceRaw ?? 0n).toString(),
+        debtRaw: debt.debtRaw.toString(),
+        stabilityPoolDepositsRaw: stabilityPoolDepositsRaw.toString(),
+        priceRaw: priceRaw.toString(),
+        priceUsd,
+        redeemable,
+      });
+    }
+
+    if (totalDebtRaw <= 0n) throw new Error("aggregate branch debt is zero");
+    const totalDebtUsd = decimalNumberFromBigInt(totalDebtRaw, params.debtDecimals ?? DEFAULT_DEBT_DECIMALS);
+    const totalSupply = decimalNumberFromBigInt(totalSupplyRaw, params.debtDecimals ?? DEFAULT_DEBT_DECIMALS);
+    const totalStabilityPoolDeposits = decimalNumberFromBigInt(
+      totalStabilityPoolDepositsRaw,
+      params.debtDecimals ?? DEFAULT_DEBT_DECIMALS,
+    );
+    const branchCappedDeposits = decimalNumberFromBigInt(
+      branchCappedDepositsRaw,
+      params.debtDecimals ?? DEFAULT_DEBT_DECIMALS,
+    );
+    if (totalDebtUsd <= 0 || totalSupply <= 0) {
+      throw new Error("aggregate branch debt or token supply is not positive");
+    }
+
+    const supplyDebtDivergencePct = Math.abs(totalDebtUsd - totalSupply) / totalSupply * 100;
+    const maxSupplyDebtDivergencePct =
+      config.maxSupplyDebtDivergencePct ?? DEFAULT_MAX_SUPPLY_DEBT_DIVERGENCE_PCT;
+    if (supplyDebtDivergencePct > maxSupplyDebtDivergencePct) {
+      throw new Error(
+        `branch debt diverges ${supplyDebtDivergencePct.toFixed(4)}% from token supply ` +
+          `(max ${maxSupplyDebtDivergencePct}%)`,
+      );
+    }
+
+    const collateralizationRatio = totalCollateralUsd / totalDebtUsd;
+    const liquidationCapacityRatio = totalStabilityPoolDeposits / totalSupply;
+    const branchCappedLiquidationCapacityRatio = branchCappedDeposits / totalDebtUsd;
+    const warnings: LiveReserveWarning[] = [];
+    if (collateralizationRatio < 1) {
+      warnings.push(reserveDegradedWarning(
+        "liquity-v2-undercollateralized",
+        `Liquity V2 protocol-priced collateralization ratio ${collateralizationRatio.toFixed(4)} is below 1.0`,
+      ));
+    }
+
+    return {
+      metadata: {
+        totalReserveUsd: totalCollateralUsd,
+        collateralizationRatio,
+        liquidationCapacityRatio,
+        details: {
+          mechanismMetrics: {
+            proofKind: "liquity-v2-protocol-priced-system-state",
+            totalSupplyRaw: totalSupplyRaw.toString(),
+            totalDebtRaw: totalDebtRaw.toString(),
+            totalStabilityPoolDepositsRaw: totalStabilityPoolDepositsRaw.toString(),
+            supplyDebtDivergencePct,
+            branchCappedLiquidationCapacityRatio,
+            branches: branchDetails,
+          },
+        },
+      },
+      warnings,
+    };
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    return {
+      metadata: {},
+      warnings: [
+        reserveInfoWarning(
+          "liquity-v2-mechanism-metrics-unavailable",
+          redactUrlSecrets(`Live collateralization/backstop metrics omitted: ${toErrorMessage(error)}`),
+        ),
+      ],
+    };
+  }
+}
+
 export function buildLiquityV2RedemptionMetadata(
   snapshot: LiquityV2BranchSnapshot,
   debtDecimals = DEFAULT_DEBT_DECIMALS,
@@ -333,8 +577,16 @@ export async function fetchLiquityV2BranchReserves(
     throw new Error(`${ADAPTER_KEY} could not read active-pool debt for: ${unreadableDebtBranches.join(", ")}`);
   }
 
+  const snapshot = {
+    balances,
+    debts,
+    redemptionFeeBps: chooseSnapshotRedemptionFeeBps(redemptionFeeBps, debts),
+  };
   const priceMapWarnings: LiveReserveWarning[] = [];
-  const priceMap = await fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx);
+  const [priceMap, mechanismMetrics] = await Promise.all([
+    fetchBranchPriceMap(balances, signal, priceMapWarnings, ctx),
+    fetchLiquityV2MechanismMetrics(input, params, snapshot, signal, ctx),
+  ]);
   const protocolPriceMap = await fetchBranchProtocolPriceMap(
     onchain,
     balances,
@@ -346,18 +598,25 @@ export async function fetchLiquityV2BranchReserves(
       priceMap.set(name, price);
     }
   }
-  const snapshot = {
-    balances,
-    debts,
-    redemptionFeeBps: chooseSnapshotRedemptionFeeBps(redemptionFeeBps, debts),
-  };
+  const redemptionMetadata = buildLiquityV2RedemptionMetadata(snapshot, debtDecimals, params.sourceUrls);
   const result = adaptBranchBalanceReserves({
     adapterKey: ADAPTER_KEY,
     balances,
     priceMap,
-    metadata: buildLiquityV2RedemptionMetadata(snapshot, debtDecimals, params.sourceUrls),
+    metadata: {
+      ...redemptionMetadata,
+      ...(mechanismMetrics?.metadata ?? {}),
+      details: {
+        ...(redemptionMetadata.details ?? {}),
+        ...(mechanismMetrics?.metadata.details ?? {}),
+      },
+    },
   });
-  const warnings = [...buildLiquityV2Warnings(snapshot), ...priceMapWarnings];
+  const warnings = [
+    ...buildLiquityV2Warnings(snapshot),
+    ...priceMapWarnings,
+    ...(mechanismMetrics?.warnings ?? []),
+  ];
   return warnings.length > 0
     ? { ...result, warnings: [...(result.warnings ?? []), ...warnings] }
     : result;

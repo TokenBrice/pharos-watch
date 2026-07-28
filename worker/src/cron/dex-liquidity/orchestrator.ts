@@ -180,6 +180,20 @@ export async function syncDexLiquidity(
   return buildDexLiquidityCronResult(scoringSourceState, poolState, scoreState, persistenceState);
 }
 
+async function buildDexLiquidityScoringStageState(
+  ctx: DexLiquidityRunContext,
+): Promise<{
+  scoringSourceState: DexLiquidityScoringSourceState;
+  poolState: DexLiquidityPoolState;
+}> {
+  const sourceState = await loadDexLiquiditySourceState(ctx);
+  const poolState = await buildDexLiquidityPoolState(ctx, sourceState);
+  return {
+    scoringSourceState: buildDexLiquidityScoringSourceState(sourceState),
+    poolState,
+  };
+}
+
 export async function stageDexLiquidityScoring(
   db: D1Database,
   graphApiKey: string | null,
@@ -199,9 +213,7 @@ export async function stageDexLiquidityScoring(
     reportProgress,
     syncStartSec,
   };
-  const sourceState = await loadDexLiquiditySourceState(ctx);
-  const poolState = await buildDexLiquidityPoolState(ctx, sourceState);
-  const scoringSourceState = buildDexLiquidityScoringSourceState(sourceState);
+  const { scoringSourceState, poolState } = await buildDexLiquidityScoringStageState(ctx);
   const itemCount = poolState.metrics.size;
   const stored = await persistDexLiquidityScoringStage(
     db,
@@ -966,6 +978,8 @@ async function scoreDexLiquidityPoolState(
     dlProtocolsAvailable: sourceState.dlProtocolsAvailable,
     criticalSourceFailures: sourceState.criticalSourceFailures,
   });
+  sourceState.protocolTvlCaps.clear();
+  sourceState.stablecoinMcapById.clear();
 
   const hasCriticalSourceFailure = sourceState.criticalSourceFailures.length > 0;
   if (
@@ -1116,6 +1130,26 @@ async function persistDexLiquidityScoreState(
     itemsTotal: persistence.expectedRowCount ?? scoreState.scoreResults.size,
     metadata: { generationId: persistence.generationId },
   });
+  const dexPriceDiagnostics = await computeDexPrices(
+    ctx.db,
+    scoreState.retainedPoolsByStablecoin,
+    ctx.syncStartSec,
+    sourceState.validationReferences,
+    ctx.signal,
+    sourceState.priceObservations,
+    publicationGenerationId,
+    sourceState.stablecoinPriceById,
+  );
+  sourceState.stablecoinPriceById.clear();
+  sourceState.priceObservations.clear();
+  await reportDexLiquidityProgress(ctx, {
+    stage: "persistence-prices-complete",
+    message: "Atomically published the staged DEX price generation",
+    providerFamily: "d1",
+    itemsDone: scoreState.scoreResults.size,
+    itemsTotal: scoreState.scoreResults.size,
+  });
+
   const hasCriticalSourceFailure = sourceState.criticalSourceFailures.length > 0;
   const sourceCoverageCompleteByStablecoin = new Map<string, boolean>(
     ACTIVE_STABLECOINS.map((meta) => {
@@ -1137,36 +1171,18 @@ async function persistDexLiquidityScoreState(
       retainedPoolsByStablecoin: scoreState.retainedPoolsByStablecoin,
       sourceCoverageCompleteByStablecoin,
       minPoolTvlUsd: POOL_CHALLENGE_MIN_TVL,
+      consumeRetainedPools: true,
     },
     ctx.signal,
   );
   sourceCoverageCompleteByStablecoin.clear();
+  scoreState.retainedPoolsByStablecoin.clear();
   await reportDexLiquidityProgress(ctx, {
     stage: "persistence-challengers-complete",
     message: "Published bounded DEX challenger batches",
     providerFamily: "d1",
     itemsDone: challengerPublication.publishedStablecoins,
     itemsTotal: ACTIVE_STABLECOINS.length,
-  });
-  const dexPriceDiagnostics = await computeDexPrices(
-    ctx.db,
-    scoreState.retainedPoolsByStablecoin,
-    ctx.syncStartSec,
-    sourceState.validationReferences,
-    ctx.signal,
-    sourceState.priceObservations,
-    publicationGenerationId,
-    sourceState.stablecoinPriceById,
-  );
-  sourceState.stablecoinPriceById.clear();
-  scoreState.retainedPoolsByStablecoin.clear();
-  sourceState.priceObservations.clear();
-  await reportDexLiquidityProgress(ctx, {
-    stage: "persistence-prices-complete",
-    message: "Atomically published the staged DEX price generation",
-    providerFamily: "d1",
-    itemsDone: scoreState.scoreResults.size,
-    itemsTotal: scoreState.scoreResults.size,
   });
 
   const historicalSnapshot = (await writeHistoricalSnapshots(

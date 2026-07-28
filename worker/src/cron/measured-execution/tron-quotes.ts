@@ -10,6 +10,7 @@ import {
 import { decodeFunctionResult, encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
+import { toErrorMessage } from "../../lib/error-utils";
 import { tryParseJson } from "../../lib/json-parse";
 import { readResponseTextWithinLimitWithSignal } from "../../lib/response-body";
 import { tronBase58ToHex, tronHexAddressToBase58 } from "../../lib/tron-address";
@@ -402,14 +403,18 @@ async function fetchSunSwapV2RouterDirectQuote(input: {
   };
 }
 
-export async function quoteTronMeasuredTarget(input: {
+interface QuoteTronMeasuredTargetInput {
   target: TronMeasuredExecutionTarget;
   inputUsd: number;
   trongridApiKey?: string | null;
   routerRequestSpacingMs?: number;
   signal?: AbortSignal;
   fetchImpl?: FetchLike;
-}): Promise<TronMeasuredExecutionQuotePointProof> {
+}
+
+async function quoteTronMeasuredTargetOnce(
+  input: QuoteTronMeasuredTargetInput,
+): Promise<TronMeasuredExecutionQuotePointProof> {
   throwIfAborted(input.signal);
   const fetchImpl = input.fetchImpl ?? fetch;
   const amountIn = usdToRawAmount(
@@ -508,4 +513,16 @@ export async function quoteTronMeasuredTarget(input: {
       blockAfter,
     },
   };
+}
+
+export async function quoteTronMeasuredTarget(
+  input: QuoteTronMeasuredTargetInput,
+): Promise<TronMeasuredExecutionQuotePointProof> {
+  try {
+    return await quoteTronMeasuredTargetOnce(input);
+  } catch (error) {
+    rethrowIfAborted(error, input.signal);
+    if (toErrorMessage(error) !== "canonical-pair-quote-mismatch") throw error;
+  }
+  return quoteTronMeasuredTargetOnce(input);
 }

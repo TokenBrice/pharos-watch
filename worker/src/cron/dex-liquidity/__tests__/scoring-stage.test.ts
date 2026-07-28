@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DexMeasuredExecutionTargetSchema } from "@shared/types/measured-execution";
+import { SolanaMeasuredExecutionTargetSchema } from "@shared/types/solana-measured-execution";
+import { TronMeasuredExecutionTargetSchema } from "@shared/types/tron-measured-execution";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 import type {
   DexLiquidityPoolState,
@@ -25,19 +28,32 @@ function injectAmbiguousScoringStageCommits(db: D1Database): {
   db: D1Database;
   ambiguousChunkCommits: () => number;
   ambiguousFinalizationCommits: () => number;
+  chunkRunBindings: () => unknown[][];
 } {
   const underlyingByStatement = new WeakMap<object, D1PreparedStatement>();
-  const sqlByStatement = new WeakMap<object, string>();
+  const bindingsByStatement = new WeakMap<object, unknown[]>();
+  const chunkRunBindings: unknown[][] = [];
   let ambiguousChunkCommitCount = 0;
   let ambiguousFinalizationCommitCount = 0;
 
-  const wrapStatement = (statement: D1PreparedStatement, sql: string): D1PreparedStatement => {
+  const wrapStatement = (
+    statement: D1PreparedStatement,
+    sql: string,
+    bindings: unknown[] = [],
+  ): D1PreparedStatement => {
     const wrapped = {
-      bind: (...args: unknown[]) => wrapStatement(statement.bind(...args), sql),
+      bind: (...args: unknown[]) => wrapStatement(statement.bind(...args), sql, args),
       all: <T>() => statement.all<T>(),
       first: <T>() => statement.first<T>(),
       run: async <T>() => {
         const result = await statement.run<T>();
+        if (sql.includes("INSERT INTO dex_liquidity_scoring_stage_chunks")) {
+          chunkRunBindings.push([...(bindingsByStatement.get(wrapped as object) ?? [])]);
+          if (ambiguousChunkCommitCount === 0) {
+            ambiguousChunkCommitCount++;
+            throw new Error("D1 DB is overloaded after committed scoring-stage chunk write");
+          }
+        }
         if (
           ambiguousFinalizationCommitCount === 0
           && sql.includes("UPDATE dex_liquidity_scoring_stages")
@@ -50,7 +66,7 @@ function injectAmbiguousScoringStageCommits(db: D1Database): {
       },
     } as unknown as D1PreparedStatement;
     underlyingByStatement.set(wrapped as object, statement);
-    sqlByStatement.set(wrapped as object, sql);
+    bindingsByStatement.set(wrapped as object, bindings);
     return wrapped;
   };
 
@@ -60,17 +76,6 @@ function injectAmbiguousScoringStageCommits(db: D1Database): {
       const result = await db.batch<T>(
         statements.map((statement) => underlyingByStatement.get(statement as object) ?? statement),
       );
-      if (
-        ambiguousChunkCommitCount === 0
-        && statements.some((statement) =>
-          sqlByStatement.get(statement as object)?.includes(
-            "INSERT INTO dex_liquidity_scoring_stage_chunks",
-          )
-        )
-      ) {
-        ambiguousChunkCommitCount++;
-        throw new Error("D1 DB is overloaded after committed scoring-stage chunk batch");
-      }
       return result;
     },
   } as unknown as D1Database;
@@ -79,6 +84,7 @@ function injectAmbiguousScoringStageCommits(db: D1Database): {
     db: injectedDb,
     ambiguousChunkCommits: () => ambiguousChunkCommitCount,
     ambiguousFinalizationCommits: () => ambiguousFinalizationCommitCount,
+    chunkRunBindings: () => chunkRunBindings,
   };
 }
 
@@ -223,6 +229,105 @@ function poolState(totalPools = 7_402): DexLiquidityPoolState {
   };
 }
 
+function populateMeasuredTargets(state: DexLiquidityPoolState): void {
+  const evmTarget = (lane: "pancake" | "fluid" | "slipstream", index: number) =>
+    DexMeasuredExecutionTargetSchema.parse({
+      schemaVersion: "dex-measured-target-v1",
+      targetId: `fixture-${lane}-target`,
+      stablecoinId: "major",
+      adapterProfileId: `fixture-${lane}-v1`,
+      protocol: lane,
+      chain: "ethereum",
+      poolId: `0x${index.toString(16).padStart(40, "0")}`,
+      tokenIn: {
+        address: "0x0000000000000000000000000000000000000001",
+        symbol: "MAJOR",
+        decimals: 18,
+        referencePriceUsd: 1.0001,
+        trackedAssetId: "major",
+      },
+      tokenOut: {
+        address: "0x0000000000000000000000000000000000000002",
+        symbol: "USDC",
+        decimals: 6,
+        referencePriceUsd: 1,
+      },
+      retainedTvlUsd: 1_000_000 + index,
+      retainedPoolPriceUsd: 1.0001,
+      capturedAt: 1_000,
+    });
+
+  const pancake = evmTarget("pancake", 1);
+  const fluid = evmTarget("fluid", 2);
+  const slipstream = evmTarget("slipstream", 3);
+  const solana = SolanaMeasuredExecutionTargetSchema.parse({
+    schemaVersion: "solana-measured-target-v1",
+    targetId: "fixture-solana-target",
+    stablecoinId: "major",
+    adapterProfileId: "raydium-clmm-trade-api-v1",
+    protocol: "raydium",
+    chain: "solana",
+    poolId: "11111111111111111111111111111111",
+    poolType: "raydium-clmm",
+    tokenIn: {
+      address: "So11111111111111111111111111111111111111112",
+      symbol: "MAJOR",
+      decimals: 9,
+      referencePriceUsd: 1.0001,
+      referencePriceSource: "tracked",
+      trackedAssetId: "major",
+    },
+    tokenOut: {
+      address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      symbol: "USDC",
+      decimals: 6,
+      referencePriceUsd: 1,
+      referencePriceSource: "pool-implied",
+    },
+    retainedTvlUsd: 2_000_000,
+    retainedPoolPriceUsd: 1.0001,
+    capturedAt: 1_000,
+  });
+  const tron = TronMeasuredExecutionTargetSchema.parse({
+    schemaVersion: "tron-measured-target-v1",
+    targetId: "fixture-tron-target",
+    stablecoinId: "major",
+    adapterProfileId: "sunswap-v2-router-v1",
+    protocol: "sunswap",
+    chain: "tron",
+    poolId: "TXhKbyPSdH2PiQXTdT1aceyJ7Yuw63JQzh",
+    poolType: "sunswap-v2",
+    factoryAddress: "TKzxdSv2FZKQrEqkKVgp5DcwEXBEKMg2Ax",
+    expectedFactoryCodeHash: `0x${"1".repeat(64)}`,
+    expectedPairCodeHash: `0x${"2".repeat(64)}`,
+    tokenIn: {
+      address: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+      symbol: "MAJOR",
+      decimals: 6,
+      referencePriceUsd: 1.0001,
+      referencePriceSource: "tracked",
+      trackedAssetId: "major",
+    },
+    tokenOut: {
+      address: "TH5ydFhBnLV4ZHF2bgBVaTBfX8LY17kj9W",
+      symbol: "USDC",
+      decimals: 6,
+      referencePriceUsd: 1,
+      referencePriceSource: "pool-implied",
+    },
+    feeRate: 0.003,
+    retainedTvlUsd: 3_000_000,
+    retainedPoolPriceUsd: 1.0001,
+    capturedAt: 1_000,
+  });
+
+  state.pancakeMeasuredExecutionTargets.set(pancake.targetId, pancake);
+  state.fluidMeasuredExecutionTargets.set(fluid.targetId, fluid);
+  state.slipstreamMeasuredExecutionTargets.set(slipstream.targetId, slipstream);
+  state.solanaMeasuredExecutionTargets.set(solana.targetId, solana);
+  state.tronMeasuredExecutionTargets.set(tron.targetId, tron);
+}
+
 function withPayload(payload: string): DexLiquidityScoringStageChunk {
   return {
     payload,
@@ -269,11 +374,55 @@ describe("DEX liquidity scoring stage", () => {
     expect(decodedPools.filter((entry) => entry.source === "cg_onchain")).toHaveLength(2_351);
   });
 
+  it("preserves multibyte records across a partial encodeInto boundary and enforces exact byte caps", () => {
+    const source = sourceState();
+    source.stablecoinMcapById = new Map([["boundary-😀-asset", 123]]);
+    const pool = poolState(3);
+    const wideChunks = [
+      ...encodeDexLiquidityScoringStageChunks(
+        source,
+        pool,
+        DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,
+      ),
+    ];
+    const lines = wideChunks.flatMap((chunk) => chunk.payload.split("\n"));
+    const header = lines[0]!;
+    const unicodeLine = lines.find((line) => line.includes("😀"))!;
+    const unicodeIndex = unicodeLine.indexOf("😀");
+    const boundaryBytes =
+      textEncoder.encode(header).byteLength
+      + 1
+      + textEncoder.encode(unicodeLine.slice(0, unicodeIndex)).byteLength
+      + 1;
+
+    expect(boundaryBytes).toBeGreaterThan(textEncoder.encode(unicodeLine).byteLength);
+    const boundaryChunks = [
+      ...encodeDexLiquidityScoringStageChunks(source, pool, boundaryBytes),
+    ];
+    expect(boundaryChunks[0]?.payload).toBe(header);
+    expect(boundaryChunks.every((chunk) => chunk.payloadBytes <= boundaryBytes)).toBe(true);
+    expect(
+      decodeDexLiquidityScoringStageChunks(boundaryChunks).sourceState.stablecoinMcapById.get(
+        "boundary-😀-asset",
+      ),
+    ).toBe(123);
+
+    const maxRecordBytes = Math.max(...lines.map((line) => textEncoder.encode(line).byteLength));
+    expect(() => [
+      ...encodeDexLiquidityScoringStageChunks(source, pool, maxRecordBytes),
+    ]).not.toThrow();
+    expect(() => [
+      ...encodeDexLiquidityScoringStageChunks(source, pool, maxRecordBytes - 1),
+    ]).toThrow(`record exceeds ${maxRecordBytes - 1} bytes`);
+  });
+
   it("can release the source graph incrementally while producing the same payload", () => {
     const retainedSource = sourceState();
     const retainedPool = poolState(40);
     const consumingSource = sourceState();
     const consumingPool = poolState(40);
+    populateMeasuredTargets(retainedPool);
+    populateMeasuredTargets(consumingPool);
 
     const retained = [...encodeDexLiquidityScoringStageChunks(retainedSource, retainedPool)];
     const consumed = [
@@ -286,14 +435,42 @@ describe("DEX liquidity scoring stage", () => {
     ];
 
     expect(consumed).toEqual(retained);
+    const decoded = decodeDexLiquidityScoringStageChunks(consumed);
+    expect([...decoded.poolState.pancakeMeasuredExecutionTargets]).toEqual(
+      [...retainedPool.pancakeMeasuredExecutionTargets],
+    );
+    expect([...decoded.poolState.fluidMeasuredExecutionTargets]).toEqual(
+      [...retainedPool.fluidMeasuredExecutionTargets],
+    );
+    expect([...decoded.poolState.slipstreamMeasuredExecutionTargets]).toEqual(
+      [...retainedPool.slipstreamMeasuredExecutionTargets],
+    );
+    expect([...decoded.poolState.solanaMeasuredExecutionTargets]).toEqual(
+      [...retainedPool.solanaMeasuredExecutionTargets],
+    );
+    expect([...decoded.poolState.tronMeasuredExecutionTargets]).toEqual(
+      [...retainedPool.tronMeasuredExecutionTargets],
+    );
+    const records = consumed
+      .flatMap((chunk) => chunk.payload.split("\n"))
+      .map((line) => JSON.parse(line) as { kind: string });
+    expect(records.findIndex((record) => record.kind === "target")).toBeGreaterThan(0);
+    expect(records.findIndex((record) => record.kind === "target")).toBeLessThan(
+      records.findIndex((record) => record.kind === "metric"),
+    );
     expect(consumingSource.stablecoinPriceById.size).toBe(0);
     expect(consumingSource.stablecoinMcapById.size).toBe(0);
     expect(consumingSource.protocolTvlCaps.size).toBe(0);
     expect(consumingSource.priceObservations.size).toBe(0);
     expect(consumingPool.metrics.size).toBe(0);
+    expect(consumingPool.pancakeMeasuredExecutionTargets.size).toBe(0);
+    expect(consumingPool.fluidMeasuredExecutionTargets.size).toBe(0);
+    expect(consumingPool.slipstreamMeasuredExecutionTargets.size).toBe(0);
+    expect(consumingPool.solanaMeasuredExecutionTargets.size).toBe(0);
+    expect(consumingPool.tronMeasuredExecutionTargets.size).toBe(0);
   });
 
-  it("persists bounded multi-row chunks and loads the newest ready generation at or before the preferred slot", async () => {
+  it("persists bounded single-row chunks and loads the newest ready generation at or before the preferred slot", async () => {
     const harness = createLatestSchemaSqlite();
     openDatabases.push(harness.sqlite);
     const previousSource = sourceState();
@@ -328,7 +505,8 @@ describe("DEX liquidity scoring stage", () => {
       recordCount: stored.recordCount,
       payloadBytes: stored.payloadBytes,
     });
-    expect(DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT).toBe(2);
+    expect(DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT).toBe(1);
+    expect(DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL).toBe(24);
     expect(onChunkBatchPersisted).toHaveBeenCalledTimes(
       Math.ceil(stored.chunkCount / DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL),
     );
@@ -386,6 +564,15 @@ describe("DEX liquidity scoring stage", () => {
 
     expect(injected.ambiguousChunkCommits()).toBe(1);
     expect(injected.ambiguousFinalizationCommits()).toBe(1);
+    expect(injected.chunkRunBindings()).toHaveLength(stored.chunkCount + 1);
+    expect(injected.chunkRunBindings().every((bindings) =>
+      bindings.length === 6
+      && typeof bindings[2] === "string"
+      && textEncoder.encode(bindings[2] as string).byteLength <= DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES
+    )).toBe(true);
+    expect(new Set(
+      injected.chunkRunBindings().map((bindings) => `${String(bindings[0])}:${String(bindings[1])}`),
+    ).size).toBe(stored.chunkCount);
     expect(loaded.generationId).toBe(stored.generationId);
     expect(loaded.poolState.metrics.get("major")?.topPools).toHaveLength(40);
     expect(harness.sqlite.prepare(

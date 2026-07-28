@@ -476,6 +476,12 @@ describe("syncDexLiquidity", () => {
 
     const directApiFetch = progressUpdates.find((update) => update.stage === "direct-api-fetch");
     const scoringComplete = progressUpdates.find((update) => update.stage === "scoring-complete");
+    const priceCompleteIndex = progressUpdates.findIndex(
+      (update) => update.stage === "persistence-prices-complete",
+    );
+    const challengerCompleteIndex = progressUpdates.findIndex(
+      (update) => update.stage === "persistence-challengers-complete",
+    );
 
     expect(directApiFetch).toMatchObject({
       stage: "direct-api-fetch",
@@ -496,6 +502,8 @@ describe("syncDexLiquidity", () => {
         },
       },
     });
+    expect(priceCompleteIndex).toBeGreaterThan(-1);
+    expect(challengerCompleteIndex).toBeGreaterThan(priceCompleteIndex);
   });
 
   it("accepts compacted production-scale primary rows while reporting raw counts", async () => {

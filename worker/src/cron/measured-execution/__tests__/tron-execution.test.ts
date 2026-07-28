@@ -177,6 +177,143 @@ describe("Tron SunSwap measured execution", () => {
       routerRequestSpacingMs: 0,
       fetchImpl,
     })).rejects.toThrow("response-too-large");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries one cross-block reserve/router mismatch with a fresh complete proof", async () => {
+    const [factoryHex, poolHex, wtrxHex, usdtHex] = await Promise.all([
+      tronBase58ToHex(FACTORY),
+      tronBase58ToHex(POOL),
+      tronBase58ToHex(WTRX),
+      tronBase58ToHex(USDT),
+    ]);
+    expect(factoryHex && poolHex && wtrxHex && usdtHex).toBeTruthy();
+    const reserveSnapshots = [
+      { reserve0: 141_334_853_510_414n, reserve1: 46_475_941_487_844n },
+      { reserve0: 141_334_853_510_414n, reserve1: 46_474_941_487_844n },
+    ];
+    const secondExpectedOutput = quoteSunSwapV2ConstantProduct({
+      amountIn: 1_000_000_000n,
+      reserveIn: reserveSnapshots[1]!.reserve1,
+      reserveOut: reserveSnapshots[1]!.reserve0,
+    });
+    expect(secondExpectedOutput).not.toBeNull();
+    let blockReads = 0;
+    let reserveReads = 0;
+    let routerReads = 0;
+    const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      if (init?.method !== "POST") {
+        routerReads++;
+        return new Response(JSON.stringify(directQuote("1000000000", secondExpectedOutput!.toString())));
+      }
+      const request = JSON.parse(String(init.body)) as { method: string; params: unknown[] };
+      if (request.method === "eth_blockNumber") {
+        blockReads++;
+        return new Response(JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: `0x${(99 + blockReads).toString(16)}`,
+        }));
+      }
+      if (request.method === "eth_getCode") {
+        const address = request.params[0];
+        return new Response(JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: address === factoryHex ? FACTORY_CODE : PAIR_CODE,
+        }));
+      }
+      const call = request.params[0] as { data: string };
+      let result: string;
+      if (call.data.startsWith("0xe6a43905")) result = wordAddress(poolHex!);
+      else if (call.data === "0x0dfe1681") result = wordAddress(wtrxHex!);
+      else if (call.data === "0xd21220a7") result = wordAddress(usdtHex!);
+      else {
+        const snapshot = reserveSnapshots[Math.min(reserveReads, reserveSnapshots.length - 1)]!;
+        reserveReads++;
+        result = `0x${wordUint(snapshot.reserve0)}${wordUint(snapshot.reserve1)}${wordUint(1n)}`;
+      }
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
+    }) as typeof fetch;
+
+    const point = await quoteTronMeasuredTarget({
+      target: target(),
+      inputUsd: 1_000,
+      routerRequestSpacingMs: 0,
+      fetchImpl,
+    });
+
+    expect(routerReads).toBe(2);
+    expect(reserveReads).toBe(2);
+    expect(point).toMatchObject({
+      amountOutRaw: secondExpectedOutput!.toString(),
+      route: {
+        reserve0Raw: reserveSnapshots[1]!.reserve0.toString(),
+        reserve1Raw: reserveSnapshots[1]!.reserve1.toString(),
+        expectedOutputAmountRaw: secondExpectedOutput!.toString(),
+        blockBefore: 101,
+        blockAfter: 102,
+      },
+    });
+  });
+
+  it("fails closed after two cross-block reserve/router mismatches", async () => {
+    const [factoryHex, poolHex, wtrxHex, usdtHex] = await Promise.all([
+      tronBase58ToHex(FACTORY),
+      tronBase58ToHex(POOL),
+      tronBase58ToHex(WTRX),
+      tronBase58ToHex(USDT),
+    ]);
+    expect(factoryHex && poolHex && wtrxHex && usdtHex).toBeTruthy();
+    let routerReads = 0;
+    const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      if (init?.method !== "POST") {
+        routerReads++;
+        return new Response(JSON.stringify(directQuote("1000000000", "3031844471")));
+      }
+      const request = JSON.parse(String(init.body)) as { method: string; params: unknown[] };
+      if (request.method === "eth_blockNumber") {
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x64" }));
+      }
+      if (request.method === "eth_getCode") {
+        const address = request.params[0];
+        return new Response(JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          result: address === factoryHex ? FACTORY_CODE : PAIR_CODE,
+        }));
+      }
+      const call = request.params[0] as { data: string };
+      let result: string;
+      if (call.data.startsWith("0xe6a43905")) result = wordAddress(poolHex!);
+      else if (call.data === "0x0dfe1681") result = wordAddress(wtrxHex!);
+      else if (call.data === "0xd21220a7") result = wordAddress(usdtHex!);
+      else result = `0x${wordUint(141_334_853_510_414n)}${wordUint(46_475_941_487_844n)}${wordUint(1n)}`;
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
+    }) as typeof fetch;
+
+    await expect(quoteTronMeasuredTarget({
+      target: target(),
+      inputUsd: 1_000,
+      routerRequestSpacingMs: 0,
+      fetchImpl,
+    })).rejects.toThrow("canonical-pair-quote-mismatch");
+    expect(routerReads).toBe(2);
+  });
+
+  it("does not retry an aborted quote", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("test-abort"));
+    const fetchImpl = vi.fn() as typeof fetch;
+
+    await expect(quoteTronMeasuredTarget({
+      target: target(),
+      inputUsd: 1_000,
+      routerRequestSpacingMs: 0,
+      signal: controller.signal,
+      fetchImpl,
+    })).rejects.toThrow("test-abort");
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it("matches router output to canonical factory-bound pair reserves and validates replay", async () => {

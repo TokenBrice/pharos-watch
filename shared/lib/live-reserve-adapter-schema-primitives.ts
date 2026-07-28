@@ -617,11 +617,63 @@ const evmBranchBalancesParamsSchema = z
   })
   .strict();
 
+const liquityV2MechanismMetricsBranchSchema = z
+  .object({
+    name: z.string().min(1),
+    troveManagerAddress: EvmAddressSchema,
+    stabilityPoolAddress: EvmAddressSchema,
+  })
+  .strict();
+
+const liquityV2MechanismMetricsSchema = z
+  .object({
+    supplyTokenAddress: EvmAddressSchema,
+    branchPriceSelector: evmSelectorSchema.optional(),
+    stabilityPoolDepositsSelector: evmSelectorSchema,
+    maxSupplyDebtDivergencePct: z.number().finite().nonnegative().optional(),
+    branches: z.array(liquityV2MechanismMetricsBranchSchema).min(1),
+  })
+  .strict();
+
 const liquityV2BranchesParamsSchema = evmBranchBalancesParamsSchema
   .extend({
     shutdownSelector: evmSelectorSchema.optional(),
+    mechanismMetrics: liquityV2MechanismMetricsSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((params, ctx) => {
+    if (!params.mechanismMetrics) return;
+
+    const reserveNames = new Set(params.branches.map((branch) => branch.name));
+    const metricNames = new Set<string>();
+    for (const [index, branch] of params.mechanismMetrics.branches.entries()) {
+      if (metricNames.has(branch.name)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["mechanismMetrics", "branches", index, "name"],
+          message: `Duplicate mechanism-metrics branch: ${branch.name}`,
+        });
+      }
+      metricNames.add(branch.name);
+      if (!reserveNames.has(branch.name)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["mechanismMetrics", "branches", index, "name"],
+          message: `Unknown reserve branch: ${branch.name}`,
+        });
+      }
+    }
+
+    for (const [index, branch] of params.branches.entries()) {
+      if (!metricNames.has(branch.name)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["branches", index, "name"],
+          message: `Missing mechanism-metrics binding for reserve branch: ${branch.name}`,
+        });
+      }
+    }
+  });
 
 const ghoGsmModuleSchema = z
   .object({
