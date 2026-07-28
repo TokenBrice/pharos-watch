@@ -5,7 +5,6 @@ import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 // module deliberately stays Zod-free (no descriptor.schema validation) to keep
 // Zod out of the inline-hydration bundle.
 import {
-  HOMEPAGE_BOOTSTRAP_VERSION,
   buildHomepageBootstrapDescriptors,
   makeBootstrapCodec,
   type BootstrapPayload,
