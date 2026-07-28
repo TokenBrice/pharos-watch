@@ -2,11 +2,11 @@
   "id": "cgo-comtech",
   "reserves": [
     {
-      "name": "Allocated physical gold (999.9, UAE vaults)",
+      "name": "Allocated physical gold (24K, TransGuard vaults in the UAE)",
       "pct": 100,
       "risk": "very-low",
       "assetClass": "commodity-allocated",
-      "issuerOrObligor": "Allocated physical gold of 999.9 purity stored with an unnamed UAE vaulting partner",
+      "issuerOrObligor": "Allocated PAMP and other LBMA-standard physical gold",
       "riskFactors": [
         "custody",
         "liquidity",
@@ -17,29 +17,28 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve research",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "ComTech Gold product site (cgold.ae) digital-gold backing disclosures",
-        "url": "https://cgold.ae/"
+        "label": "ComTech Gold proof of gold and custody disclosure",
+        "url": "https://comtechgold.com/proof-of-gold-audit"
       },
       {
-        "label": "ComTech Gold legacy domain shell (redirects Digital Gold to cgold.ae)",
-        "url": "https://comtechgold.com/"
+        "label": "ComTech Gold custody and insolvency FAQ",
+        "url": "https://comtechgold.com/faqs"
       }
     ],
-    "rationale": "Write-time re-open 2026-07-28: comtechgold.com/proof-of-gold-audit and /faqs now serve SPA shells that redirect Digital Gold product traffic to cgold.ae; the prior TransGuard-named custody claim is no longer present in the live product bundle. The live cgold.ae content still states Digital Gold units are 100% backed by physical gold (standardized 999.9 purity bars), each unit represents 1 gram of 999.9 gold, bars are stored in UAE internationally accepted vaults with a secured and insured vaulting partner, and DMCC endorses gold stored in the vault. comtechgold.com meta still markets 100% gold-backed digital gold with secure UAE vaulting. No current bar-level composition or named custodian identity (TransGuard no longer stated). Modeled as one 100% allocated physical-gold slice without inventing a custodian name.",
-    "compositionBasis": "Live ComTech Gold product and FAQ disclosures of 1 gram of 999.9 physical gold per unit in UAE vaults",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "ComTech states that one CGO represents one gram of allocated physical gold, held 1:1 in segregated and insured TransGuard vault accounts in the UAE. The disclosure identifies 999.9 and 999.5 fineness and LBMA-standard gold but does not publish a current bar-level composition suitable for a finer static split.",
+    "compositionBasis": "Issuer disclosure of one gram of allocated physical gold per CGO",
     "scope": "full-composition",
-    "knownUnknownExposure": "The vaulting partner is not named on the live site; shares by bar, refiner, fineness grade within the 999.9 envelope, and a dated independent reserve examination report are not published.",
+    "knownUnknownExposure": "The current public page does not disclose the shares by bar, refiner, fineness, or vault account, and its audit link does not expose a dated reserve examination report.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Allocated physical gold (999.9, UAE vaults)",
+        "reserveName": "Allocated physical gold (24K, TransGuard vaults in the UAE)",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Allocated physical gold is external reserve backing rather than a tracked stablecoin dependency."
@@ -49,24 +48,28 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Unnamed UAE vaulting partner (DMCC-endorsed storage per issuer FAQ)",
+        "name": "TransGuard Group",
         "role": "custodian",
         "sharePct": 100,
         "jurisdiction": "United Arab Emirates"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok wave-8 reserve research",
-    "confidence": "probable",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "ComTech Gold product site (cgold.ae) digital-gold backing disclosures",
-        "url": "https://cgold.ae/"
+        "label": "ComTech Gold proof of gold and custody disclosure",
+        "url": "https://comtechgold.com/proof-of-gold-audit"
+      },
+      {
+        "label": "ComTech Gold custody and insolvency FAQ",
+        "url": "https://comtechgold.com/faqs"
       }
     ],
-    "uncertainty": "ComTech identifies a UAE vaulting partner with insurance and DMCC endorsement language but no longer names TransGuard on the live site and does not publish the governing custody agreement or an explicit rehypothecation prohibition."
+    "uncertainty": "ComTech identifies TransGuard and states that the allocated gold is segregated, off balance sheet, and unavailable to general creditors. The public materials do not provide the governing custody agreement or an explicit rehypothecation prohibition."
   }
 }
