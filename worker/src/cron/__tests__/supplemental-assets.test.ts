@@ -11,6 +11,7 @@ import {
 } from "../sync-stablecoins/supplemental-assets";
 import { fetchGoldTokens } from "../sync-stablecoins/supplemental-assets/gold";
 import { fetchSupplementalPriceData } from "../sync-stablecoins/supplemental-assets/shared";
+import { fillMissingSupplyHistory } from "../sync-stablecoins/phase-helpers";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 
@@ -437,6 +438,85 @@ describe("fetchSupplementalPriceData", () => {
 });
 
 describe("fetchGoldTokens", () => {
+  it("ignores protocol TVL history and defers XAUT comparisons to supply_history", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const mcap = 2_460_797_595;
+    const protocolTvl = 2_890_974_295;
+    const d1History = {
+      day: 2_499_088_910,
+      week: 2_496_955_497,
+      month: 2_482_779_944,
+    };
+    const utcMidnight = (daysAgo: number) => {
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() - daysAgo);
+      date.setUTCHours(0, 0, 0, 0);
+      return Math.floor(date.getTime() / 1000);
+    };
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("/prices/current/")) {
+        return new Response(JSON.stringify({
+          coins: {
+            "coingecko:tether-gold": {
+              price: 4_020,
+              timestamp: nowSec,
+            },
+          },
+        }), { status: 200 });
+      }
+      if (url.endsWith("/protocol/tether-gold")) {
+        return new Response(JSON.stringify({
+          mcap,
+          tvl: [
+            { date: nowSec - 30 * 86_400, totalLiquidityUSD: protocolTvl },
+            { date: nowSec - 7 * 86_400, totalLiquidityUSD: protocolTvl },
+            { date: nowSec - 86_400, totalLiquidityUSD: protocolTvl },
+          ],
+        }), { status: 200 });
+      }
+      if (url.includes("/protocol/")) {
+        return new Response("{}", { status: 200 });
+      }
+      throw new Error(`unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const assets = await fetchGoldTokens({
+      "tether-gold": {
+        usd: 4_020,
+        usd_market_cap: mcap,
+        last_updated_at: nowSec,
+      },
+    });
+    const xaut = assets.find((asset) => asset.id === "xaut-tether");
+
+    expect(xaut).toMatchObject({
+      supplySource: "defillama",
+      circulating: { peggedGOLD: mcap },
+      circulatingPrevDay: null,
+      circulatingPrevWeek: null,
+      circulatingPrevMonth: null,
+    });
+
+    const db = mockD1([
+      {
+        match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history",
+        rows: [
+          { stablecoin_id: "xaut-tether", snapshot_date: utcMidnight(1), circulating_usd: d1History.day },
+          { stablecoin_id: "xaut-tether", snapshot_date: utcMidnight(7), circulating_usd: d1History.week },
+          { stablecoin_id: "xaut-tether", snapshot_date: utcMidnight(30), circulating_usd: d1History.month },
+        ],
+      },
+    ]);
+
+    await expect(fillMissingSupplyHistory(db, assets)).resolves.toBe(3);
+    expect(xaut).toMatchObject({
+      circulatingPrevDay: { peggedGOLD: d1History.day },
+      circulatingPrevWeek: { peggedGOLD: d1History.week },
+      circulatingPrevMonth: { peggedGOLD: d1History.month },
+    });
+  });
+
   it("skips DefiLlama protocol fanout while the DL protocols circuit is open", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
