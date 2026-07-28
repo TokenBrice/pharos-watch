@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  buildFailedCrawlDeploymentOutcomes,
   buildStaticInaccessibleDeploymentOutcomes,
   classifyDexDeploymentOutcomes,
   upsertDexDeploymentOutcomes,
@@ -82,6 +83,27 @@ describe("DEX deployment outcomes", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
     expect(outcomes).toHaveLength(328);
     expect(new Set(outcomes.map((row) => row.stablecoinId)).size).toBe(118);
+  });
+
+  it("materializes an inaccessible outcome when a bounded crawl fails", () => {
+    expect(
+      buildFailedCrawlDeploymentOutcomes({
+        stablecoinId: "test",
+        deployments: [DEPLOYMENT],
+        nowSec: 100,
+      }),
+    ).toEqual([
+      {
+        stablecoinId: "test",
+        chain: DEPLOYMENT.chain,
+        address: DEPLOYMENT.address,
+        outcome: "provider_inaccessible",
+        providers: ["coingecko", "geckoterminal", "dexscreener", "curve"],
+        reason: "Bounded discovery crawl failed before a complete deployment census",
+        observedPoolCount: 0,
+        observedAt: 100,
+      },
+    ]);
   });
 
   it("matches non-EVM deployments case-sensitively while retaining EVM normalization", () => {

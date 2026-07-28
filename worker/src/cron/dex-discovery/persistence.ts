@@ -189,6 +189,36 @@ export async function updateDiscoveryMeta(
 }
 
 /**
+ * Persist a discovery-attempt boundary without changing its backoff counters.
+ * Callers write this before network work so an abort, budget discard, or later
+ * persistence failure cannot leave an older verified-empty outcome current.
+ */
+export async function recordDiscoveryAttemptFence(
+  db: D1Database,
+  stablecoinId: string,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  throwIfAborted(signal);
+  await runWithOverloadRetry(
+    () =>
+      db
+        .prepare(
+          `INSERT INTO dex_discovery_meta
+             (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at)
+           VALUES (?, 0, ?, NULL)
+           ON CONFLICT(stablecoin_id) DO UPDATE SET
+             last_crawl_at = excluded.last_crawl_at`,
+        )
+        .bind(stablecoinId, nowSec)
+        .run(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+}
+
+/**
  * Cleanup stale staging data.
  * - Delete rows older than 30 hours, preserving the complete 24-hour scoring window.
  * - NULL raw provider payloads after four hours.

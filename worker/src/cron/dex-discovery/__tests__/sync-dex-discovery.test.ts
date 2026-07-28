@@ -48,6 +48,26 @@ vi.mock("../crawl-dexscreener-pools", () => ({
 }));
 
 vi.mock("../deployment-outcomes", () => ({
+  buildFailedCrawlDeploymentOutcomes: vi.fn(
+    ({
+      stablecoinId,
+      deployments,
+      nowSec,
+    }: {
+      stablecoinId: string;
+      deployments: Array<{ chain: string; address: string }>;
+      nowSec: number;
+    }) =>
+      deployments.map((deployment) => ({
+        stablecoinId,
+        ...deployment,
+        outcome: "provider_inaccessible",
+        providers: ["coingecko"],
+        reason: "bounded crawl failed",
+        observedPoolCount: 0,
+        observedAt: nowSec,
+      })),
+  ),
   buildStaticInaccessibleDeploymentOutcomes: vi.fn(() => []),
   upsertDexDeploymentOutcomes: vi.fn(async (_db: D1Database, rows: unknown[]) => rows.length),
 }));
@@ -56,6 +76,7 @@ vi.mock("../persistence", () => ({
   cleanupStaging: vi.fn(async () => {}),
   incrementRunSeq: vi.fn(async () => 1),
   readDiscoveryMeta: vi.fn(async () => new Map()),
+  recordDiscoveryAttemptFence: vi.fn(async () => {}),
   updateDiscoveryMeta: vi.fn(async () => {}),
   upsertStagedPools: vi.fn(async () => {}),
 }));
@@ -68,9 +89,14 @@ import {
 import { crawlCoin } from "../crawl-sources";
 import { loadPriceValidationReferences } from "../../../lib/price-validation";
 import {
+  buildFailedCrawlDeploymentOutcomes,
+  upsertDexDeploymentOutcomes,
+} from "../deployment-outcomes";
+import {
   cleanupStaging,
   incrementRunSeq,
   readDiscoveryMeta,
+  recordDiscoveryAttemptFence,
   updateDiscoveryMeta,
   upsertStagedPools,
 } from "../persistence";
@@ -127,6 +153,9 @@ describe("syncDexDiscovery", () => {
     vi.mocked(loadPriceValidationReferences).mockResolvedValue(mockValidationReferences);
     vi.mocked(readDiscoveryMeta).mockResolvedValue(new Map());
     vi.mocked(incrementRunSeq).mockResolvedValue(2);
+    vi.mocked(recordDiscoveryAttemptFence).mockResolvedValue();
+    vi.mocked(updateDiscoveryMeta).mockResolvedValue();
+    vi.mocked(upsertStagedPools).mockResolvedValue();
     vi.mocked(crawlCoin).mockResolvedValue({
       pools: [
         makeStagedPool("ethereum:0xpool1"),
@@ -143,6 +172,15 @@ describe("syncDexDiscovery", () => {
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(1);
     expect(vi.mocked(crawlCoin)).toHaveBeenCalledTimes(1);
+    expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
+      db,
+      "coin-a",
+      expect.any(Number),
+      undefined,
+    );
+    expect(
+      vi.mocked(recordDiscoveryAttemptFence).mock.invocationCallOrder[0],
+    ).toBeLessThan(vi.mocked(crawlCoin).mock.invocationCallOrder[0]!);
     expect(vi.mocked(upsertStagedPools)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(updateDiscoveryMeta)).toHaveBeenCalledWith(db, "coin-a", 2, expect.any(Number), undefined);
     expect(vi.mocked(cleanupStaging)).toHaveBeenCalledTimes(1);
@@ -183,6 +221,12 @@ describe("syncDexDiscovery", () => {
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBe(0);
     expect(vi.mocked(crawlCoin)).toHaveBeenCalledTimes(1);
+    expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
+      db,
+      "coin-a",
+      expect.any(Number),
+      undefined,
+    );
     expect(vi.mocked(upsertStagedPools)).not.toHaveBeenCalled();
     expect(vi.mocked(cleanupStaging)).not.toHaveBeenCalled();
 
@@ -205,5 +249,101 @@ describe("syncDexDiscovery", () => {
     });
 
     dateNowSpy.mockRestore();
+  });
+
+  it("fences prior deployment outcomes before recording a failed crawl", async () => {
+    vi.mocked(crawlCoin).mockRejectedValueOnce(new Error("provider unavailable"));
+
+    const result = await syncDexDiscovery(db, null);
+
+    expect(result.status).toBe("degraded");
+    expect(buildFailedCrawlDeploymentOutcomes).toHaveBeenCalledWith({
+      stablecoinId: "coin-a",
+      deployments: [
+        { chain: "ethereum", address: "0xaaa", decimals: 18 },
+      ],
+      nowSec: expect.any(Number),
+    });
+    expect(upsertDexDeploymentOutcomes).toHaveBeenLastCalledWith(
+      db,
+      [
+        expect.objectContaining({
+          stablecoinId: "coin-a",
+          outcome: "provider_inaccessible",
+        }),
+      ],
+      undefined,
+    );
+    expect(updateDiscoveryMeta).toHaveBeenCalledWith(
+      db,
+      "coin-a",
+      0,
+      expect.any(Number),
+      undefined,
+    );
+    expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
+      db,
+      "coin-a",
+      expect.any(Number),
+      undefined,
+    );
+    expect(
+      JSON.parse(result.metadata ?? "{}"),
+    ).toMatchObject({
+      failedCoins: ["coin-a"],
+      deploymentOutcomesWritten: 1,
+    });
+  });
+
+  it("fences prior outcomes when result persistence fails after a successful crawl", async () => {
+    vi.mocked(upsertStagedPools).mockRejectedValueOnce(
+      new Error("staging persistence unavailable"),
+    );
+
+    const result = await syncDexDiscovery(db, null);
+
+    expect(result.status).toBe("degraded");
+    expect(buildFailedCrawlDeploymentOutcomes).not.toHaveBeenCalled();
+    expect(upsertDexDeploymentOutcomes).toHaveBeenCalledTimes(1);
+    expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
+      db,
+      "coin-a",
+      expect.any(Number),
+      undefined,
+    );
+    expect(updateDiscoveryMeta).not.toHaveBeenCalled();
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      failedCoins: ["coin-a"],
+      deploymentOutcomesWritten: 0,
+    });
+  });
+
+  it("persists the attempt fence before an in-flight abort", async () => {
+    const controller = new AbortController();
+    vi.mocked(crawlCoin).mockImplementationOnce(async () => {
+      controller.abort(new Error("stop-discovery"));
+      throw controller.signal.reason;
+    });
+
+    const result = await syncDexDiscovery(
+      db,
+      null,
+      controller.signal,
+    );
+
+    expect(result.status).toBe("error");
+    expect(recordDiscoveryAttemptFence).toHaveBeenCalledWith(
+      db,
+      "coin-a",
+      expect.any(Number),
+      controller.signal,
+    );
+    expect(
+      vi.mocked(recordDiscoveryAttemptFence).mock.invocationCallOrder[0],
+    ).toBeLessThan(vi.mocked(crawlCoin).mock.invocationCallOrder[0]!);
+    expect(upsertStagedPools).not.toHaveBeenCalled();
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      error: "stop-discovery",
+    });
   });
 });
