@@ -969,10 +969,13 @@ async function loadStageManifest(
                 written_chunk_count, expected_record_count, payload_bytes
            FROM dex_liquidity_scoring_stages
           WHERE source_slot_started_at <= ?
-            AND state = 'ready'
+            AND (
+              state = 'ready'
+              OR (source_slot_started_at = ? AND state = 'consumed')
+            )
           ORDER BY source_slot_started_at DESC
           LIMIT 1`,
-      ).bind(options.expectedSourceSlotStartedAt);
+      ).bind(options.expectedSourceSlotStartedAt, options.expectedSourceSlotStartedAt);
   const row = await runWithOverloadRetry(() => query.first<StageManifestRow>(), 3, signal);
   if (!row) {
     const suffix = options.expectedSourceSlotStartedAt == null
