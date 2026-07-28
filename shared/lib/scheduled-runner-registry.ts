@@ -2,6 +2,7 @@ import {
   CRON_CONNECTION_BUDGET_ENTRIES,
   CRON_JOB_DEFINITIONS,
   CRON_SCHEDULES,
+  CRON_TRIGGER_SCHEDULES,
   type CronScheduleExpression,
   type CronScheduleKey,
 } from "./cron-jobs";
@@ -17,6 +18,7 @@ interface ScheduledSlotPlanInput {
 export interface ScheduledSlotPlan extends ScheduledSlotPlanInput {
   scheduleKey: CronScheduleKey;
   schedule: CronScheduleExpression;
+  triggerSchedules: readonly string[];
   runnerKey: ScheduledRunnerKey;
 }
 
@@ -132,6 +134,7 @@ export const SCHEDULED_SLOT_PLANS: Readonly<Record<CronScheduleKey, ScheduledSlo
           scheduleKey: scheduleKey as CronScheduleKey,
           runnerKey: scheduleKey as ScheduledRunnerKey,
           schedule: CRON_SCHEDULES[scheduleKey as CronScheduleKey],
+          triggerSchedules: CRON_TRIGGER_SCHEDULES[scheduleKey as CronScheduleKey],
           jobChains: planInput.jobChains,
           budgetOnlyJobs: planInput.budgetOnlyJobs ?? [],
         },
@@ -142,7 +145,9 @@ export const SCHEDULED_SLOT_PLANS: Readonly<Record<CronScheduleKey, ScheduledSlo
 
 export const SCHEDULED_SLOT_PLANS_BY_SCHEDULE: Readonly<Record<string, ScheduledSlotPlan>> = Object.freeze(
   Object.fromEntries(
-    Object.values(SCHEDULED_SLOT_PLANS).map((plan) => [plan.schedule, plan]),
+    Object.values(SCHEDULED_SLOT_PLANS).flatMap((plan) =>
+      plan.triggerSchedules.map((triggerSchedule) => [triggerSchedule, plan]),
+    ),
   ),
 );
 

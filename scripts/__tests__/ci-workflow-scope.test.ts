@@ -26,13 +26,22 @@ describe("CI workflow scope", () => {
     expect(nightly).toContain("node-version: \"26\"");
   });
 
-  it("runs CodeQL and Zizmor after merge and weekly, not per PR", () => {
-    for (const path of [".github/workflows/codeql.yml", ".github/workflows/zizmor.yml"]) {
-      const workflow = readRepoFile(path);
-      expect(workflow).toContain("push:");
-      expect(workflow).toContain("schedule:");
-      expect(workflow).not.toContain("pull_request:");
-    }
+  it("runs CodeQL after merge and weekly, not per PR", () => {
+    const workflow = readRepoFile(".github/workflows/codeql.yml");
+
+    expect(workflow).toContain("push:");
+    expect(workflow).toContain("schedule:");
+    expect(workflow).not.toContain("pull_request:");
+  });
+
+  it("analyzes workflow and action changes with Zizmor before merge", () => {
+    const workflow = readRepoFile(".github/workflows/zizmor.yml");
+
+    expect(workflow).toContain("push:");
+    expect(workflow).toContain("pull_request:");
+    expect(workflow).toContain("schedule:");
+    expect(workflow.match(/- "\.github\/actions\/\*\*"/g)).toHaveLength(2);
+    expect(workflow.match(/- "\.github\/workflows\/\*\*"/g)).toHaveLength(2);
   });
 
   it("keeps Telegram load on the adaptive PR gate plus a weekly backstop", () => {

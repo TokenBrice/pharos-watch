@@ -2,12 +2,26 @@ import { describe, expect, it } from "vitest";
 import {
   CRON_JOB_DEFINITIONS,
   CRON_SCHEDULES,
+  CRON_TRIGGER_SCHEDULES,
   SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
   getCronSlotStartedAtForSchedule,
 } from "../cron-jobs";
 
 describe("cron job schedule metadata", () => {
+  it("preserves half-hourly DEX slot identity across hourly physical triggers", () => {
+    expect(CRON_SCHEDULES.halfHourlyOffset).toBe("10,40 * * * *");
+    expect(CRON_TRIGGER_SCHEDULES.halfHourlyOffset).toEqual([
+      "10 * * * *",
+      "40 * * * *",
+    ]);
+    expect(CRON_SCHEDULES.halfHourlyChartsOffset).toBe("16,46 * * * *");
+    expect(CRON_TRIGGER_SCHEDULES.halfHourlyChartsOffset).toEqual([
+      "16 * * * *",
+      "46 * * * *",
+    ]);
+  });
+
   it("derives 26/56 minute slots for the DEWS/PSI offset schedule", () => {
     const firstSlot = Date.parse("2026-04-19T16:26:30Z");
     const secondSlot = Date.parse("2026-04-19T16:56:05Z");

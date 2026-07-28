@@ -940,7 +940,11 @@ function maximumObservedAt(values: readonly (number | null | undefined)[], fallb
 function conservativeDateEndSec(value: string | undefined, clockSec: number): number | null {
   if (!value) return null;
   let timestampMs: number;
-  if (/^\d{4}$/.test(value)) {
+  const quarterMatch = /^(\d{4})-Q([1-4])$/.exec(value);
+  if (quarterMatch) {
+    const [, year, quarter] = quarterMatch;
+    timestampMs = Date.UTC(Number(year), Number(quarter) * 3, 0, 23, 59, 59);
+  } else if (/^\d{4}$/.test(value)) {
     timestampMs = Date.UTC(Number(value), 11, 31, 23, 59, 59);
   } else if (/^\d{4}-\d{2}$/.test(value)) {
     const [year, month] = value.split("-").map(Number);

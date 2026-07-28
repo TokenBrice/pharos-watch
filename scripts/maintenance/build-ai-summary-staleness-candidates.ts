@@ -15,11 +15,10 @@
  * scratch folder. It never edits summaries — the rewrite is editorial and is
  * driven by the `write-ai-summaries` skill.
  *
- * Live data comes from three credential-free website-data endpoints
- * (report-cards/v9, stress-signals, peg-summary). Default base is the production
- * Pages project; override with PHAROS_SITE_DATA_BASE_URL. Pass `--fixtures
- * <dir>` to read pre-fetched `<endpoint>.json` files instead of hitting the
- * network.
+ * Live data comes from three authenticated public API endpoints
+ * (report-cards/v9, stress-signals, peg-summary). Override the production API
+ * with PHAROS_API_BASE and authenticate with PHAROS_API_KEY. Pass `--fixtures
+ * <dir>` to read pre-fetched `<endpoint>.json` files instead of hitting the network.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -38,17 +37,17 @@ import {
   type StressSignalsAllResponse,
 } from "@shared/types/market";
 import {
-  DEFAULT_MAINTENANCE_SITE_DATA_BASE_URL,
-  buildMaintenanceSiteDataRequest,
-} from "../lib/maintenance-site-data";
+  DEFAULT_MAINTENANCE_API_BASE_URL,
+  buildMaintenanceApiRequest,
+} from "../lib/maintenance-api";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = process.cwd();
 const SUMMARIES_PATH = resolve(ROOT, "data/ai-summaries.json");
 const OUTPUT_MD = resolve(ROOT, "agents/ai-summary-candidates.md");
 const OUTPUT_JSON = resolve(ROOT, "agents/ai-summary-candidates.json");
-const SITE_DATA_BASE_URL =
-  process.env.PHAROS_SITE_DATA_BASE_URL?.trim() || DEFAULT_MAINTENANCE_SITE_DATA_BASE_URL;
+const API_BASE_URL = process.env.PHAROS_API_BASE?.trim() || DEFAULT_MAINTENANCE_API_BASE_URL;
+const API_KEY = process.env.PHAROS_API_KEY;
 const FETCH_TIMEOUT_MS = 30_000;
 const REPORT_CARDS_ENDPOINT = {
   apiPath: API_PATHS.reportCardsV9(),
@@ -148,7 +147,7 @@ async function fetchJson(endpoint: LiveEndpoint): Promise<unknown> {
   if (FIXTURES_DIR) {
     return JSON.parse(readFileSync(resolve(FIXTURES_DIR, `${endpoint.fixtureName}.json`), "utf8"));
   }
-  const request = buildMaintenanceSiteDataRequest(endpoint.apiPath, SITE_DATA_BASE_URL);
+  const request = buildMaintenanceApiRequest(endpoint.apiPath, API_KEY, API_BASE_URL);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -442,7 +441,7 @@ async function main(): Promise<void> {
     current = await loadCurrent();
   } catch (err) {
     console.error(`Failed to load live data: ${(err as Error).message}`);
-    console.error("Check the credential-free Pages site-data lane, or pass --fixtures <dir>.");
+    console.error("Check PHAROS_API_KEY / PHAROS_API_BASE, or pass --fixtures <dir>.");
     process.exit(1);
     return;
   }
@@ -504,7 +503,7 @@ function writeOutputs(
     "# AI Summary Refresh Candidates",
     "",
     `Generated ${today} by \`npm run candidates:ai-summaries\`.`,
-    `Source: ${FIXTURES_DIR ? `fixtures ${FIXTURES_DIR}` : SITE_DATA_BASE_URL}`,
+    `Source: ${FIXTURES_DIR ? `fixtures ${FIXTURES_DIR}` : API_BASE_URL}`,
     "",
     `Audited ${meta.total} summaries; ${meta.unmatched} have no live report card (non-active lifecycle) and were skipped.`,
     `Stale: ${candidates.length} — high ${meta.counts.high}, medium ${meta.counts.medium}, low ${meta.counts.low}.`,
@@ -526,7 +525,7 @@ function writeOutputs(
 
   writeFileSync(
     OUTPUT_JSON,
-    JSON.stringify({ generatedAt: today, source: FIXTURES_DIR ?? SITE_DATA_BASE_URL, ...meta, candidates }, null, 2),
+    JSON.stringify({ generatedAt: today, source: FIXTURES_DIR ?? API_BASE_URL, ...meta, candidates }, null, 2),
     "utf8",
   );
 }

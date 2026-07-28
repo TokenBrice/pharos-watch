@@ -144,6 +144,7 @@ function exactFixedInput(
     pegScore?: number | null;
     currentDeviationBps?: number | null;
     depegEventCoverageLimited?: boolean;
+    pegObservedAtSec?: number;
     activeDepeg?: boolean;
     activeDepegPeakBps?: number;
     routeChain?: string;
@@ -212,7 +213,7 @@ function exactFixedInput(
               : { depegEventCoverageLimited: args.depegEventCoverageLimited }),
             pegScore: args.pegScore === undefined ? 99 : args.pegScore,
             priceSource: "fixture-price",
-            priceObservedAt: observedAtSec,
+            priceObservedAt: args.pegObservedAtSec ?? observedAtSec,
             pegPct: 99,
             severityScore: 0,
             spreadPenalty: 0,
@@ -1139,6 +1140,25 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       expect.arrayContaining(["missing-access-review"]),
     );
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
+  });
+
+  it("materializes fuzzy quarter implementation dates at the conservative quarter end", () => {
+    const clockSec = Date.parse("2026-07-28T00:00:00Z") / 1_000;
+    const fixed = exactFixedInput({ clockSec });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "alpha",
+          {
+            id: "alpha",
+            mechanismArchetype: "synthetic-delta-neutral",
+            implementationLaunchDate: "2024-Q4",
+          },
+        ],
+      ]),
+    });
+
+    expect(baseline.assets[0]!.launchedAtSec).toBe(Date.parse("2024-12-31T23:59:59Z") / 1_000);
   });
 
   it("attributes a same-day mechanism admission wait to the exact policy", () => {
@@ -2245,6 +2265,19 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const floorWithheld = exactFixedInput({ currentDeviationBps: null, depegEventCoverageLimited: true });
     expect(pegGaps(floorWithheld)).toMatchObject([
       { reasonCode: "peg-supply-floor-withheld", responsibility: "measured-adverse" },
+    ]);
+
+    const staleFloorWithheld = exactFixedInput({
+      currentDeviationBps: null,
+      depegEventCoverageLimited: true,
+      pegObservedAtSec: AS_OF_SEC - 1_000,
+    });
+    expect(pegGaps(staleFloorWithheld)).toMatchObject([
+      {
+        reasonCode: "missing-peg-input",
+        responsibility: "producer-failed",
+        observationState: "stale",
+      },
     ]);
 
     // The same null deviation without the floor flag stays a producer gap.

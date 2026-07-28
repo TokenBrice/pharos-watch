@@ -20,16 +20,16 @@ import { dirname, resolve } from "node:path";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
 import {
-  DEFAULT_MAINTENANCE_SITE_DATA_BASE_URL,
-  buildMaintenanceSiteDataRequest,
-} from "../lib/maintenance-site-data";
+  DEFAULT_MAINTENANCE_API_BASE_URL,
+  buildMaintenanceApiRequest,
+} from "../lib/maintenance-api";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import type { StablecoinMeta } from "../../shared/types";
 
 const ROOT = process.cwd();
 const OUTPUT_PATH = resolve(ROOT, "agents/annotation-candidates.md");
-const SITE_DATA_BASE_URL =
-  process.env.PHAROS_SITE_DATA_BASE_URL?.trim() || DEFAULT_MAINTENANCE_SITE_DATA_BASE_URL;
+const API_BASE_URL = process.env.PHAROS_API_BASE?.trim() || DEFAULT_MAINTENANCE_API_BASE_URL;
+const API_KEY = process.env.PHAROS_API_KEY;
 const DEFAULT_LOOKBACK_DAYS = 7;
 const LAUNCH_LOOKBACK_DAYS = 30;
 const FETCH_TIMEOUT_MS = 6000;
@@ -87,7 +87,7 @@ interface TapeEventLite {
 }
 
 async function fetchTapeEvents(classFilter: string, sinceMs: number): Promise<TapeEventLite[] | null> {
-  const request = buildMaintenanceSiteDataRequest(API_PATHS.events(), SITE_DATA_BASE_URL);
+  const request = buildMaintenanceApiRequest(API_PATHS.events(), API_KEY, API_BASE_URL);
   const url = new URL(request.url);
   url.searchParams.set("class", classFilter);
   url.searchParams.set("severityFloor", "warning");
@@ -338,7 +338,7 @@ async function main(): Promise<void> {
   ]);
 
   if (depegEvents == null) {
-    notes.push(`depeg tape unreachable at ${SITE_DATA_BASE_URL} — skipped`);
+    notes.push(`depeg tape unreachable at ${API_BASE_URL} — skipped`);
   } else {
     for (const e of depegEvents) {
       const c = mapDepegCandidate(e);
@@ -347,7 +347,7 @@ async function main(): Promise<void> {
   }
 
   if (blacklistEvents == null) {
-    notes.push(`freeze tape unreachable at ${SITE_DATA_BASE_URL} — skipped`);
+    notes.push(`freeze tape unreachable at ${API_BASE_URL} — skipped`);
   } else {
     for (const e of blacklistEvents) {
       const c = mapBlacklistCandidate(e, resolveCoinId);

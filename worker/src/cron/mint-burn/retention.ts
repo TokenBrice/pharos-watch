@@ -279,6 +279,7 @@ async function pruneEventRows(
                event.amount_usd IS NOT NULL
                OR event.price_repair_status IN ('recovered', 'irreducible')
              )
+             AND COALESCE(event.price_repair_status, '') <> 'pending_aggregate'
              AND event.timestamp <= COALESCE((
                SELECT CAST(value AS INTEGER)
                  FROM cache
@@ -322,6 +323,7 @@ async function pruneEventRows(
                 event.amount_usd IS NOT NULL
                 OR event.price_repair_status IN ('recovered', 'irreducible')
               )
+              AND COALESCE(event.price_repair_status, '') <> 'pending_aggregate'
               AND event.timestamp <= COALESCE((
                 SELECT CAST(value AS INTEGER)
                   FROM cache

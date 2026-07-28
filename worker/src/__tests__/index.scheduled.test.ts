@@ -1,4 +1,6 @@
-import { CRON_SCHEDULES } from "@shared/lib/cron-jobs";
+import {
+  CRON_TRIGGER_SCHEDULES,
+} from "@shared/lib/cron-jobs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../test-helpers/__shared/mock-d1";
 
@@ -416,7 +418,10 @@ describe("worker.scheduled", () => {
       TWITTER_ACCESS_TOKEN_SECRET: "tw-token-secret",
       COINGECKO_API_KEY: "coingecko",
     } as const;
-    const schedules = Object.entries(CRON_SCHEDULES) as Array<[keyof typeof CRON_SCHEDULES, string]>;
+    const schedules = Object.entries(CRON_TRIGGER_SCHEDULES).flatMap(
+      ([scheduleKey, triggerSchedules]) =>
+        triggerSchedules.map((cron) => [scheduleKey, cron] as const),
+    );
 
     try {
       expect(new Set(schedules.map(([, cron]) => cron)).size).toBe(schedules.length);
@@ -762,7 +767,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
   });
 
-  it("runs only DEX source staging on the 10,40 trigger", async () => {
+  it("runs only DEX source staging on either hourly physical trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -770,7 +775,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "10,40 * * * *" } as ScheduledEvent,
+      { cron: "10 * * * *" } as ScheduledEvent,
       env as never,
       ctx,
     );
@@ -784,7 +789,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
   });
 
-  it("runs staged DEX scoring before charts on the 16,46 trigger", async () => {
+  it("runs staged DEX scoring before charts on either hourly physical trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -792,7 +797,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "16,46 * * * *" } as ScheduledEvent,
+      { cron: "16 * * * *" } as ScheduledEvent,
       env as never,
       ctx,
     );
@@ -833,7 +838,7 @@ describe("worker.scheduled", () => {
     );
   });
 
-  it("contains DEX source-stage failures within the 10,40 cron", async () => {
+  it("contains DEX source-stage failures within its hourly physical cron", async () => {
     cronMocks.stageDexLiquidityScoring.mockRejectedValueOnce(new Error("dex stage failed"));
 
     const { ctx, waits } = makeCtx();
@@ -843,7 +848,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "10,40 * * * *" } as ScheduledEvent,
+      { cron: "40 * * * *" } as ScheduledEvent,
       env as never,
       ctx,
     );

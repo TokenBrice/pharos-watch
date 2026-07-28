@@ -126,7 +126,7 @@ describe("mint/burn retention", () => {
     insertEvent(sqlite, {
       id: "protected-pending-aggregate",
       timestamp: eventCutoff - 4,
-      amountUsd: null,
+      amountUsd: 123.45,
       priceRepairStatus: "pending_aggregate",
     });
     insertEvent(sqlite, {

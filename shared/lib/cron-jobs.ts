@@ -25,8 +25,18 @@ const CRON_SCHEDULE_DEFINITIONS = {
   // Keep the minute-long extended scan clear of the DEX/V9 publication chain.
   halfHourlyMintBurnExtended: { schedule: "18,48 * * * *", intervalSec: 1800, offsetSec: 18 * 60 },
   halfHourlyMeasuredExecution: { schedule: "0,30 * * * *", intervalSec: 1800, offsetSec: 0 },
-  halfHourlyOffset: { schedule: "10,40 * * * *", intervalSec: 1800, offsetSec: 10 * 60 },
-  halfHourlyChartsOffset: { schedule: "16,46 * * * *", intervalSec: 1800, offsetSec: 16 * 60 },
+  halfHourlyOffset: {
+    schedule: "10,40 * * * *",
+    triggerSchedules: ["10 * * * *", "40 * * * *"],
+    intervalSec: 1800,
+    offsetSec: 10 * 60,
+  },
+  halfHourlyChartsOffset: {
+    schedule: "16,46 * * * *",
+    triggerSchedules: ["16 * * * *", "46 * * * *"],
+    intervalSec: 1800,
+    offsetSec: 16 * 60,
+  },
   dewsPsiOffset: { schedule: "26,56 * * * *", intervalSec: 1800, offsetSec: 26 * 60 },
   fourHourlyReserveSync: { schedule: "11 */4 * * *", intervalSec: 4 * 3600, offsetSec: 11 * 60 },
   hourlyYieldSync: { schedule: "20 * * * *", intervalSec: 3600, offsetSec: 20 * 60 },
@@ -61,15 +71,28 @@ export type CronTriggerMode = "shared" | "isolated";
 export type CronStatusImpact = "critical" | "watch";
 
 const _cronSchedules: Record<string, CronScheduleExpression> = {};
+const _cronTriggerSchedules: Record<string, readonly string[]> = {};
 const _cronIntervals: Record<string, number> = {};
 const _cronOffsets: Record<string, number> = {};
 for (const [scheduleKey, definition] of Object.entries(CRON_SCHEDULE_DEFINITIONS)) {
   _cronSchedules[scheduleKey] = definition.schedule;
+  _cronTriggerSchedules[scheduleKey] =
+    "triggerSchedules" in definition
+      ? [...definition.triggerSchedules]
+      : [definition.schedule];
   _cronIntervals[scheduleKey] = definition.intervalSec;
   _cronOffsets[scheduleKey] = definition.offsetSec;
 }
 
 export const CRON_SCHEDULES = Object.freeze(_cronSchedules as Record<CronScheduleKey, CronScheduleExpression>);
+/**
+ * Physical Cloudflare trigger expressions. A logical cadence may use multiple
+ * hourly expressions so each invocation receives the hourly Cron CPU class
+ * while status and slot identity retain the aggregate cadence.
+ */
+export const CRON_TRIGGER_SCHEDULES = Object.freeze(
+  _cronTriggerSchedules as Record<CronScheduleKey, readonly string[]>,
+);
 const CRON_SCHEDULE_INTERVALS = Object.freeze(_cronIntervals as Record<CronScheduleKey, number>);
 const CRON_SCHEDULE_BUCKET_OFFSETS = Object.freeze(_cronOffsets as Record<CronScheduleKey, number>);
 

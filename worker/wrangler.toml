@@ -29,7 +29,7 @@ fallthrough = true
 [limits]
 # cpu_ms = total CPU milliseconds per invocation (not wall-clock time).
 # logCronRun() timeouts are wall-clock and independent from this CPU budget.
-cpu_ms = 30000
+cpu_ms = 300000
 
 [observability]
 enabled = true
@@ -50,8 +50,10 @@ crons = [
   "6 */2 * * *",
   "18,48 * * * *",
   "0,30 * * * *",
-  "10,40 * * * *",
-  "16,46 * * * *",
+  "10 * * * *",
+  "40 * * * *",
+  "16 * * * *",
+  "46 * * * *",
   "26,56 * * * *",
   "11 */4 * * *",
   "20 * * * *",

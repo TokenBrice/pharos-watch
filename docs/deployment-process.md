@@ -84,6 +84,7 @@ Tracked ownership handoffs and source-attribution corrections use `worker/script
 Production responsibility is split deliberately:
 
 - `.github/workflows/pull-request-checks.yml` owns adaptive source validation before merge; `.github/workflows/nightly-validation.yml` retains broad regression coverage.
+- `.github/workflows/zizmor.yml` analyzes workflow and composite-action changes before merge, after merge to `main`, and on its weekly backstop.
 - `.github/workflows/deploy-cloudflare.yml` selects and deploys the changed production surfaces after a protected `main` merge.
 - `.github/workflows/pages-release.yml` builds and publishes one exact Pages artifact.
 - `.github/workflows/rebuild-pages.yml` performs the one daily API-backed Pages data refresh.

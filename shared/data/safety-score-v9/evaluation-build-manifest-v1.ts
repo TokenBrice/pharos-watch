@@ -26,7 +26,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-jobs.ts",
-      "sha256": "4442c08e8af4f06bff0e44795bea5efbcd98e9c04eb11dafda790a28f3be0715"
+      "sha256": "773da8f9b83e012d5ecb454455b346c99ef7481479592ad012acb3640c6eab81"
     },
     {
       "path": "shared/lib/dependency-derivation.ts",
@@ -410,7 +410,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension.ts",
-      "sha256": "e03eef9ac98eb97e9c548678e1fac58b230727ab643d77d4e469075e6ba63a1a"
+      "sha256": "6fcf48ab6d128dcb11a3e6812f64948eff1ddfd1b35a2c927da847aab2a1d4e4"
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set-boundary.ts",
@@ -418,7 +418,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set.ts",
-      "sha256": "ce9dc272c38ef34139822b3df3d098b59caca4e237c50ace933bc978fa416bd3"
+      "sha256": "4134535713af09506921d937f749b7a1ae2a37316e64af403476d666324e46a4"
     },
     {
       "path": "worker/src/lib/safety-score-v9-supply-attribution-contract.ts",
@@ -441,7 +441,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "a7177e8ede754619d98f56fe18b9d65dbfd29f4ac27701a6bbeb1f60fcb92949"
     }
   ],
-  "digest": "45cd774b9bc14f5b1879af8e89c8fbe1013c191ac66ab6a00e6bb3e3040ab22d"
+  "digest": "0b839dff00a25270f6ce3838a1c2585ef6ffd16c2c586b284f7f7134f53083a0"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

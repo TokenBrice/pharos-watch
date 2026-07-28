@@ -644,6 +644,53 @@ describe("telegram authoritative retention", () => {
     sqlite.close();
   });
 
+  it("applies the configured high-growth limit to job and unresolved-source residue", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+    const { sqlite, db } = setupLatestSchema();
+    const insertJob = sqlite.prepare(
+      `INSERT INTO telegram_alert_jobs (
+         job_id, alert_type, source_event_id, severity, created_at, expires_at, status
+       ) VALUES (?, 'dews', ?, 'risk', ?, ?, ?)`,
+    );
+    for (const index of [1, 2, 3]) {
+      insertJob.run(
+        `terminal-${index}`,
+        `missing-terminal-source-${index}`,
+        NOW_SEC - 15 * DAY_SEC,
+        NOW_SEC + DAY_SEC,
+        "sent",
+      );
+      insertJob.run(
+        `unresolved-${index}`,
+        `missing-unresolved-source-${index}`,
+        NOW_SEC - 31 * DAY_SEC,
+        NOW_SEC + DAY_SEC,
+        "queued",
+      );
+      insertUnresolvedSource(sqlite, `unresolved-source-${index}`, 31 * DAY_SEC);
+    }
+
+    const result = await runTelegramRetentionCleanup(db, undefined, { highGrowthDeleteLimit: 2 });
+    const metadata = JSON.parse(result.metadata!) as {
+      legacyTerminalJobsPruned: number;
+      staleUnresolvedJobsPruned: number;
+      staleUnresolvedSourcesPruned: number;
+      highGrowthRetention: { rowLimit: number; cappedAtLimit: boolean };
+    };
+
+    expect(metadata).toMatchObject({
+      legacyTerminalJobsPruned: 2,
+      staleUnresolvedJobsPruned: 2,
+      staleUnresolvedSourcesPruned: 2,
+      highGrowthRetention: { rowLimit: 2, cappedAtLimit: true },
+    });
+    expect(Number(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_jobs").get()?.count)).toBe(2);
+    expect(
+      Number(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_alert_source_events").get()?.count),
+    ).toBe(1);
+    sqlite.close();
+  });
+
   it("degrades only the high-growth family when its cleanup query fails", async () => {
     vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
     const { sqlite, db } = setupLatestSchema();
