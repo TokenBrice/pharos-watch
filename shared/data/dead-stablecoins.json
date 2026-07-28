@@ -1746,7 +1746,7 @@
     "id": "xai-silo-finance",
     "name": "XAI Silo Finance",
     "symbol": "XAI",
-    "logo": "xai-silo-finance.svg",
+    "logo": "/logos/xai-silo-finance.svg",
     "pegCurrency": "USD",
     "causeOfDeath": "abandoned",
     "deathDate": "2024-04-22",
