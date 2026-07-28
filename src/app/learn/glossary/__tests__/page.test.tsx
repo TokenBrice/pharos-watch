@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import GlossaryPage from "../page";
 import { GLOSSARY_ENTRIES } from "../content";
+import { extractJsonLd } from "@/test/json-ld";
 
 vi.mock("next/font/local", () => ({
   default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
@@ -19,14 +20,6 @@ vi.mock("next/link", () => ({
 vi.mock("@/lib/page-metadata", () => ({
   buildPageMetadata: (input: unknown) => input,
 }));
-
-function extractJsonLd(html: string) {
-  return [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
-    .map((match) => match[1])
-    .filter((json): json is string => Boolean(json))
-    .map((json) => JSON.parse(json))
-    .flat();
-}
 
 describe("GlossaryPage", () => {
   it("emits DefinedTermSet JSON-LD for every glossary entry", () => {

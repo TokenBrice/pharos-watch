@@ -1,13 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import CoveragePage from "./page";
-
-function extractJsonLd(html: string) {
-  return [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
-    .map((match) => match[1])
-    .filter((json): json is string => Boolean(json))
-    .map((json) => JSON.parse(json));
-}
+import { extractJsonLd } from "@/test/json-ld";
 
 vi.mock("next/dynamic", () => ({
   default: () => function DynamicCoverageClient() {
@@ -18,7 +12,7 @@ vi.mock("next/dynamic", () => ({
 describe("CoveragePage", () => {
   it("emits static coverage Dataset JSON-LD without site-data URLs", () => {
     const html = renderToStaticMarkup(<CoveragePage />);
-    const jsonLd = extractJsonLd(html).flat();
+    const jsonLd = extractJsonLd(html);
     const dataset = jsonLd.find((node) => node["@type"] === "Dataset");
 
     expect(dataset).toMatchObject({

@@ -12,6 +12,7 @@ import {
 } from "../../types/safety-score-v9";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
+import { deepFreeze } from "./primitives";
 
 const V9_POLICY_DIGEST_DOMAIN = "safety-score-v9.methodology-policy.v1";
 
@@ -96,14 +97,6 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
       }))
       .sort((left, right) => compareCodeUnits(left.code, right.code)),
   } satisfies V9MethodologySemanticPayload;
-}
-
-function deepFreeze<T>(value: T): Readonly<T> {
-  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
-    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
 }
 
 function computeV9PolicySemanticDigest(policy: V9MethodologyPolicy): string {

@@ -3,51 +3,11 @@ import { DatabaseSync } from "node:sqlite";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../forget";
 
-interface SqliteD1Statement {
-  bind(...values: unknown[]): SqliteD1Statement;
-  first<T>(): Promise<T | null>;
-  all<T>(): Promise<{ results: T[] }>;
-  run(): Promise<{ success: boolean; meta: { changes: number } }>;
-}
-
-function createSqliteD1(sqlite: DatabaseSync): D1Database {
-  function makeStatement(sql: string, values: unknown[] = []): SqliteD1Statement {
-    return {
-      bind: (...nextValues: unknown[]) => makeStatement(sql, nextValues),
-      first: async <T>() => (sqlite.prepare(sql).get(...(values as never[])) ?? null) as T | null,
-      all: async <T>() => ({ results: sqlite.prepare(sql).all(...(values as never[])) as T[] }),
-      run: async () => {
-        const result = sqlite.prepare(sql).run(...(values as never[]));
-        return { success: true, meta: { changes: Number(result.changes) } };
-      },
-    };
-  }
-
-  return {
-    prepare: (sql: string) => makeStatement(sql),
-    batch: async (statements: D1PreparedStatement[]) =>
-      Promise.all(statements.map((statement) => statement.run())),
-    exec: async (sql: string) => {
-      sqlite.exec(sql);
-      return { count: 0, duration: 0 };
-    },
-    dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
-}
-
 function setupChatMigrationSqlite(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = new DatabaseSync(":memory:");
-  const migrationDir = join(process.cwd(), "worker/migrations");
-  const migrationFiles = readdirSync(migrationDir)
-    .filter((file) => file.endsWith(".sql"))
-    .sort();
-  for (const file of migrationFiles) {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test replays checked-in Worker migrations only.
-    sqlite.exec(readFileSync(join(migrationDir, file), "utf8"));
-  }
-  return { sqlite, db: createSqliteD1(sqlite) };
+  return createLatestSchemaSqlite();
 }
 
 function discoverTelegramChatIdTablesFromMigrations(): string[] {

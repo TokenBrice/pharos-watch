@@ -8,37 +8,7 @@ import {
 } from "../api-key-requests";
 import { redactProviderBody } from "../api-key-requests/email";
 import type { ApiKeySelfServeEnv } from "../api-key-requests/types";
-
-interface SqliteD1Statement {
-  bind(...values: unknown[]): SqliteD1Statement;
-  first<T>(): Promise<T | null>;
-  all<T>(): Promise<{ results: T[] }>;
-  run(): Promise<{ meta: { changes: number } }>;
-}
-
-function createSqliteD1(sqlite: DatabaseSync, runSqlLog: string[] = []): D1Database {
-  function makeStatement(sql: string, values: unknown[] = []): SqliteD1Statement {
-    return {
-      bind: (...nextValues: unknown[]) => makeStatement(sql, nextValues),
-      first: async <T>() => (sqlite.prepare(sql).get(...(values as never[])) ?? null) as T | null,
-      all: async <T>() => ({ results: sqlite.prepare(sql).all(...(values as never[])) as T[] }),
-      run: async () => {
-        runSqlLog.push(sql);
-        const result = sqlite.prepare(sql).run(...(values as never[]));
-        return { meta: { changes: Number(result.changes) } };
-      },
-    };
-  }
-  return {
-    prepare: (sql: string) => makeStatement(sql),
-    batch: async (statements: D1PreparedStatement[]) => Promise.all(statements.map((statement) => statement.run())),
-    exec: async (sql: string) => {
-      sqlite.exec(sql);
-      return { count: 0, duration: 0 };
-    },
-    dump: async () => new ArrayBuffer(0),
-  } as unknown as D1Database;
-}
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 
 function setupSqlite(): DatabaseSync {
   const sqlite = new DatabaseSync(":memory:");
@@ -425,7 +395,7 @@ describe("api key self-serve request handlers", () => {
 
   it("finalizes the self-serve request before activating the returned key", async () => {
     const runSqlLog: string[] = [];
-    db = createSqliteD1(sqlite, runSqlLog);
+    db = createSqliteD1(sqlite, { onRun: (sql) => runSqlLog.push(sql) });
     await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody()), env());
     const token = extractVerificationToken(sentEmails[0]);
 

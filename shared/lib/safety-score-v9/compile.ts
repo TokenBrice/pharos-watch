@@ -7,16 +7,9 @@ import {
   type V9FactSetCoreV3,
 } from "../../types/safety-score-v9-facts";
 import { computeValidatedV9FactSetDigest } from "./facts";
+import { deepFreeze } from "./primitives";
 
 const validatedCompiledFactSets = new WeakSet<object>();
-
-function deepFreeze<T>(value: T): Readonly<T> {
-  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
-    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
-}
 
 function sealValidatedFactSet<T extends CompiledV9FactSetV2 | CompiledV9FactSetV3>(
   factSet: T,

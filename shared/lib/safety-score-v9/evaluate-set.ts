@@ -68,6 +68,7 @@ import {
   type V9OperationalResilienceResult,
 } from "./operational-resilience";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
+import { compareText, deepFreeze } from "./primitives";
 import {
   resolveV9WrapperParentLimit,
   type V9WrapperForm,
@@ -123,10 +124,6 @@ export function projectV9EffectiveBackingPillarScore(
   result: Pick<V9EvaluatedAsset, "scoreInput">,
 ): number | null {
   return result.scoreInput.pillars.backing.score;
-}
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function marketRankByAsset(
@@ -187,14 +184,6 @@ function deploymentRiskEventKey(kind: string, failureDomainKeys: readonly string
   const keys = uniqueSorted(failureDomainKeys);
   if (keys.length === 0) throw new Error("Safety Score v9 deployment risk event requires a failure domain");
   return `deployment-event:${kind}:${keys.join("+")}`;
-}
-
-function deepFreeze<T>(value: T): Readonly<T> {
-  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
-    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
 }
 
 function sourceGenerations(factSet: CompiledV9FactSetV3): Readonly<Record<string, string>> {

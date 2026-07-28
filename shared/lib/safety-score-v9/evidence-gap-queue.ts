@@ -25,22 +25,11 @@ import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { readCompiledV9FactSetForEvaluation } from "./facts";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
+import { compareText, deepFreeze } from "./primitives";
 
 const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V1 = "safety-score-v9.evidence-gap-queue.v1";
 const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V2 = "safety-score-v9.evidence-gap-queue.v2";
 const V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN_V2 = "safety-score-v9.evidence-gap-key.v2";
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function deepFreeze<T>(value: T): Readonly<T> {
-  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
-    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
-    Object.freeze(value);
-  }
-  return value;
-}
 
 function statusesForAsset(asset: V9AssetFactsV3): V9FactStatusV2[] {
   const mechanismStatuses = asset.mechanismRiskReview.review

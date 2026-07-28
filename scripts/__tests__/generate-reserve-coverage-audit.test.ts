@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "../../shared/types/live-reserves";
 import type { StablecoinMeta } from "../../shared/types";
+import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 import {
   REVIEWED_LIVE_RESERVE_SOURCE_NOTES,
   buildReserveCoverageAudit,
@@ -19,30 +20,6 @@ function liveConfig(adapter: LiveReserveAdapterKey): LiveReservesConfig {
       primary: { kind: "http-json", url: `https://example.com/${adapter}.json` },
     },
     params: {},
-  };
-}
-
-function coin(input: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id">): StablecoinMeta {
-  return {
-    id: input.id,
-    name: input.name ?? input.id,
-    symbol: input.symbol ?? input.id.toUpperCase(),
-    flags: input.flags ?? {
-      backing: "rwa-backed",
-      pegCurrency: "USD",
-      governance: "centralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
-    },
-    collateral: input.collateral ?? "Fixture collateral",
-    pegMechanism: input.pegMechanism ?? "Fixture mechanism",
-    ...(input.reserves ? { reserves: input.reserves } : {}),
-    ...(input.reserveReview ? { reserveReview: input.reserveReview } : {}),
-    ...(input.proofOfReserves ? { proofOfReserves: input.proofOfReserves } : {}),
-    ...(input.custodyModel ? { custodyModel: input.custodyModel } : {}),
-    ...(input.custodyProfile ? { custodyProfile: input.custodyProfile } : {}),
-    ...(input.liveReservesConfig ? { liveReservesConfig: input.liveReservesConfig } : {}),
   };
 }
 
