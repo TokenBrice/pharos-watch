@@ -24,6 +24,7 @@ import type { DexPriceObs, LiquidityMetrics, PoolEntry } from "./types";
 const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
 export const DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT = 2;
+export const DEX_LIQUIDITY_SCORING_STAGE_STATEMENTS_PER_BATCH = 4;
 export const DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL = 8;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;
 const DEX_LIQUIDITY_SCORING_STAGE_MAX_AGE_SEC = 55 * 60;
@@ -833,14 +834,22 @@ export async function persistDexLiquidityScoringStage(
   const flushPendingRows = async (): Promise<void> => {
     if (pendingRows.length === 0) return;
     let rows: ScoringStageChunkInsertRow[] | null = pendingRows;
+    let statements: D1PreparedStatement[] | null = [];
     pendingRows = [];
     try {
-      await batchExecute(db, [prepareScoringStageChunkUpsert(db, rows)], {
-        chunkSize: 1,
+      for (let index = 0; index < rows.length; index += DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT) {
+        statements.push(prepareScoringStageChunkUpsert(
+          db,
+          rows.slice(index, index + DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT),
+        ));
+      }
+      await batchExecute(db, statements, {
+        chunkSize: DEX_LIQUIDITY_SCORING_STAGE_STATEMENTS_PER_BATCH,
         signal,
       });
     } finally {
       rows = null;
+      statements = null;
     }
     await reportPersistedProgress();
   };
@@ -863,7 +872,11 @@ export async function persistDexLiquidityScoringStage(
       chunkCount++;
       recordCount += chunk.recordCount;
       payloadBytes += chunk.payloadBytes;
-      if (pendingRows.length >= DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT) {
+      if (
+        pendingRows.length
+          >= DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT
+            * DEX_LIQUIDITY_SCORING_STAGE_STATEMENTS_PER_BATCH
+      ) {
         await flushPendingRows();
       }
     }

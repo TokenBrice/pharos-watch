@@ -9,6 +9,7 @@ import {
   DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,
   DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL,
   DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT,
+  DEX_LIQUIDITY_SCORING_STAGE_STATEMENTS_PER_BATCH,
   decodeDexLiquidityScoringStageChunks,
   encodeDexLiquidityScoringStageChunks,
   loadDexLiquidityScoringStage,
@@ -329,6 +330,11 @@ describe("DEX liquidity scoring stage", () => {
       payloadBytes: stored.payloadBytes,
     });
     expect(DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT).toBe(2);
+    expect(DEX_LIQUIDITY_SCORING_STAGE_STATEMENTS_PER_BATCH).toBe(4);
+    expect(
+      DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT
+        * DEX_LIQUIDITY_SCORING_STAGE_STATEMENTS_PER_BATCH,
+    ).toBe(DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL);
     expect(onChunkBatchPersisted).toHaveBeenCalledTimes(
       Math.ceil(stored.chunkCount / DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL),
     );
