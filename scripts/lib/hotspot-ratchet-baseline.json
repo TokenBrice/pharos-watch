@@ -10,7 +10,7 @@
     "branchCount": 87
   },
   "shared/lib/redemption-backstop-scoring.ts": {
-    "fileLines": 1109,
+    "fileLines": 1102,
     "maxFunctionLines": 124,
     "branchCount": 113
   },
@@ -25,9 +25,9 @@
     "branchCount": 172
   },
   "shared/lib/safety-score-v9/coverage.ts": {
-    "fileLines": 934,
+    "fileLines": 923,
     "maxFunctionLines": 654,
-    "branchCount": 49
+    "branchCount": 45
   },
   "shared/lib/safety-score-v9/formula.ts": {
     "fileLines": 1376,
@@ -35,7 +35,7 @@
     "branchCount": 128
   },
   "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
-    "fileLines": 901,
+    "fileLines": 918,
     "maxFunctionLines": 44,
     "branchCount": 5
   },
@@ -45,17 +45,17 @@
     "branchCount": 17
   },
   "shared/types/safety-score-v9.ts": {
-    "fileLines": 1830,
+    "fileLines": 1836,
     "maxFunctionLines": 434,
     "branchCount": 82
   },
   "shared/types/safety-score-v9-facts.ts": {
-    "fileLines": 1962,
+    "fileLines": 1973,
     "maxFunctionLines": 224,
     "branchCount": 201
   },
   "shared/types/safety-score-v9-public.ts": {
-    "fileLines": 2232,
+    "fileLines": 2233,
     "maxFunctionLines": 407,
     "branchCount": 155
   },
@@ -220,7 +220,7 @@
     "branchCount": 119
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 1263,
+    "fileLines": 1278,
     "maxFunctionLines": 251,
     "branchCount": 28
   },
@@ -235,9 +235,9 @@
     "branchCount": 83
   },
   "worker/src/cron/measured-execution/curve-composite.ts": {
-    "fileLines": 1528,
+    "fileLines": 1502,
     "maxFunctionLines": 352,
-    "branchCount": 122
+    "branchCount": 116
   },
   "worker/src/cron/reserve-adapters/sfrxusd-crosschain-redemption.ts": {
     "fileLines": 1831,
@@ -285,7 +285,7 @@
     "branchCount": 57
   },
   "worker/src/cron/sync-fx-rates.ts": {
-    "fileLines": 292,
+    "fileLines": 293,
     "maxFunctionLines": 160,
     "branchCount": 25
   },
@@ -340,14 +340,14 @@
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 2342,
+    "fileLines": 2349,
     "maxFunctionLines": 249,
-    "branchCount": 272
+    "branchCount": 273
   },
   "worker/src/lib/safety-score-v9-fact-set.ts": {
-    "fileLines": 3757,
+    "fileLines": 3805,
     "maxFunctionLines": 493,
-    "branchCount": 298
+    "branchCount": 304
   },
   "worker/src/lib/telegram-usage-analytics.ts": {
     "fileLines": 604,
