@@ -105,12 +105,17 @@ import {
 } from "./uniswap-v4";
 
 const MAX_QUOTE_CALLS = 6_400;
-const MAX_RPC_REQUESTS = 800;
+const MAX_RPC_REQUESTS = 1_300;
 const RPC_ADMISSION_FRAGMENTATION_HEADROOM = 80;
 const MAX_ADMISSION_RPC_REQUESTS = MAX_RPC_REQUESTS - RPC_ADMISSION_FRAGMENTATION_HEADROOM;
 const CONSERVATIVE_MULTICALL_BATCH_SIZE = 8;
 const MAX_ADMISSION_ROTATION_CYCLES = 2;
 const MAX_EXPIRING_PRIORITY_RPC_REQUESTS = 20;
+export const MEASURED_EXECUTION_ADMISSION_RUN_METADATA = {
+  admissionRpcRequestLimit: MAX_ADMISSION_RPC_REQUESTS,
+  admissionFragmentationReserveRpcRequests: RPC_ADMISSION_FRAGMENTATION_HEADROOM,
+  admissionRpcHardLimit: MAX_RPC_REQUESTS,
+} as const;
 const MAX_RUNTIME_MS = 8 * 60 * 1_000;
 const REFINEMENT_ROUNDS = 3;
 const MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:quote-admission";
@@ -1471,9 +1476,7 @@ export async function syncDexMeasuredExecution(
     admissionEstimatedRpcRequests: estimatedRpcRequests,
     admissionSetupEstimatedRpcRequests: estimatedSetupRpcRequests,
     admissionQuoteEstimatedRpcRequests: estimatedQuoteRpcRequests,
-    admissionRpcRequestLimit: MAX_ADMISSION_RPC_REQUESTS,
-    admissionFragmentationReserveRpcRequests: RPC_ADMISSION_FRAGMENTATION_HEADROOM,
-    admissionRpcHardLimit: MAX_RPC_REQUESTS,
+    ...MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
     expiringPriorityTargetIds: [...priorityAdmitted].sort(),
     expiringPriorityObservedAtSec: expiringPriority?.observedAtSec ?? null,
     expiringPriorityExpiresAtSec: expiringPriority?.expiresAtSec ?? null,

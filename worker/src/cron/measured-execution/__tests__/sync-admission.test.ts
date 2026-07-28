@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { DexExitRouteObservation } from "@shared/types/market";
 import {
+  MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
   admitTargetsWithinBudget,
   estimateAdmissionCohortRpcRequestBreakdown,
   estimateAdmissionCohortRpcRequests,
@@ -152,6 +153,21 @@ function publishedRoute(
 }
 
 describe("measured execution overflow admission", () => {
+  it("reports the default hard, admission, and reserve limits", () => {
+    expect(MEASURED_EXECUTION_ADMISSION_RUN_METADATA).toEqual({
+      admissionRpcRequestLimit: 1_220,
+      admissionFragmentationReserveRpcRequests: 80,
+      admissionRpcHardLimit: 1_300,
+    });
+    expect(
+      MEASURED_EXECUTION_ADMISSION_RUN_METADATA.admissionRpcRequestLimit +
+        MEASURED_EXECUTION_ADMISSION_RUN_METADATA
+          .admissionFragmentationReserveRpcRequests,
+    ).toBe(
+      MEASURED_EXECUTION_ADMISSION_RUN_METADATA.admissionRpcHardLimit,
+    );
+  });
+
   it("estimates setup, execution phases, and singleton-retry headroom", () => {
     expect(estimateAdmissionCohortRpcRequestBreakdown([target("coin-low", 100_000)]))
       .toEqual({ setupRpcRequests: 3, quoteRpcRequests: 7, totalRpcRequests: 10 });
