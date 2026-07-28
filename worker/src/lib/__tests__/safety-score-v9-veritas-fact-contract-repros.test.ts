@@ -1,6 +1,5 @@
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { evaluateV9EconomicControl, type V9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/control";
-import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { evaluateV9Exit } from "@shared/lib/safety-score-v9/exit";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
@@ -12,6 +11,7 @@ import {
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
   materializeSafetyScoreV9FactSetExtension,
 } from "../safety-score-v9-fact-set";
+import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
 
 const AS_OF_SEC = 10_000;
@@ -167,14 +167,21 @@ function baselineExtension(fixedInput: ReturnType<typeof exactFixedInput>) {
   );
 }
 
-// VER-006: the route compiler currently returns bounded-unknown before consulting the
-// explicit complete coverage row, producing the bounded score instead of zero.
+// VER-006 guards the native compiler/evaluator/publication path for explicit
+// reviewed-complete zero-route coverage.
 describe("VERITAS finding VER-006: zero-route completeness is compiled as missing evidence", () => {
-  it("maps a reviewed-complete empty route surface to the no-viable-exit path", () => {
+  it("keeps native V3 reviewed-complete empty coverage measured-adverse and rateable through publication", () => {
     const fixedInput = exactFixedInput();
-    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixedInput, baselineExtension(fixedInput));
+    const extension = baselineExtension(fixedInput);
+    const pipeline = buildSafetyScoreV9Candidate({
+      fixedInput,
+      extension,
+      publishedAtSec: AS_OF_SEC,
+    });
+    const compiled = pipeline.compiledFacts;
     const asset = compiled.assets[0]!;
-    const actual = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.exit;
+    const evaluated = pipeline.evaluatedSet.assets[0]!;
+    const actual = evaluated.exit;
     const expected = evaluateV9Exit(
       { circulatingUsd: 10_000_000, portfolioStatus: "reviewed-complete", routes: [] },
       V9_CANDIDATE_POLICY_V1,
@@ -184,6 +191,26 @@ describe("VERITAS finding VER-006: zero-route completeness is compiled as missin
     expect(asset.exitRoutes).toEqual([]);
     expect(actual).toEqual(expected);
     expect(actual).toMatchObject({ score: 0, reasons: expect.arrayContaining(["no-viable-exit-path"]) });
+    expect(evaluated.scoreInput.pillars.exit.reasons).toContainEqual(
+      expect.objectContaining({
+        code: "no-viable-exit-path",
+        responsibility: "measured-adverse",
+      }),
+    );
+    expect(evaluated.trace.finalScore).not.toBeNull();
+    expect(evaluated.trace.finalGrade).not.toBe("NR");
+
+    const card = pipeline.candidate.cards[0]!;
+    expect(card.pillars.exit.score).toBe(0);
+    expect(card.grade).not.toBe("NR");
+    expect(card.score).not.toBeNull();
+    expect(card.scoreTrace.adverseAttribution.items).toContainEqual(
+      expect.objectContaining({
+        source: "reason",
+        responsibility: "measured-adverse",
+        path: "exit:no-viable-exit-path",
+      }),
+    );
   });
 });
 

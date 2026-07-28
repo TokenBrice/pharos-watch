@@ -613,6 +613,31 @@ function coreFixture(reversed = false) {
   };
 }
 
+function completeEmptyCoreFixture() {
+  const input = coreFixture();
+  const asset = input.assets.find(
+    (candidate) => candidate.assetId === "alpha",
+  ) as unknown as V9AssetFactsV2;
+  asset.exitRoutes = [];
+  asset.gaps = asset.gaps.filter(
+    (gap) => gap.ownerDomain !== "exit",
+  );
+  asset.evidence = asset.evidence.filter(
+    (evidence) => evidence.evidenceId === "evidence:base",
+  );
+  return input;
+}
+
+function nativeCompleteEmptyCoreFixture() {
+  const upgraded = structuredClone(
+    upgradeCompiledV9FactSetV2(
+      compileV9FactSetV2(completeEmptyCoreFixture()),
+    ),
+  );
+  const { v9FactSetDigest: _digest, ...core } = upgraded;
+  return core;
+}
+
 describe("Safety Score v9 normalized fact protocol", () => {
   it("attributes a missing parent score to the parent's causal NR owner", () => {
     const input = coreFixture();
@@ -1936,6 +1961,159 @@ describe("Safety Score v9 normalized fact protocol", () => {
         responsibility: "measured-adverse",
       }).responsibility,
     ).toBe("measured-adverse");
+  });
+
+  it("keeps equivalent retained V2 complete-empty ambiguity method-unsupported and NR", () => {
+    const retained = compileV9FactSetV2(completeEmptyCoreFixture());
+    const evaluated = evaluateV9FactSet(
+      retained,
+      V9_CANDIDATE_POLICY_V1,
+    ).assets.find((asset) => asset.assetId === "alpha")!;
+    const reason = evaluated.scoreInput.pillars.exit.reasons.find(
+      (candidate) => candidate.code === "no-viable-exit-path",
+    );
+
+    expect(evaluated.exit).toMatchObject({
+      score: 0,
+      primaryRouteKey: null,
+      reasons: expect.arrayContaining(["no-viable-exit-path"]),
+    });
+    expect(reason).toMatchObject({
+      path: "exit:no-viable-exit-path",
+      responsibility: "method-unsupported",
+    });
+    expect(evaluated.trace).toMatchObject({
+      finalScore: null,
+      finalGrade: "NR",
+    });
+  });
+
+  it.each([
+    { observationState: "bounded-unknown", evidenceKind: "current" },
+    { observationState: "stale", evidenceKind: "stale" },
+  ] as const)("keeps $observationState empty coverage non-measured", ({
+    observationState,
+    evidenceKind,
+  }) => {
+    const core = nativeCompleteEmptyCoreFixture();
+    const asset = core.assets.find(
+      (candidate) => candidate.assetId === "alpha",
+    ) as V9AssetFactsV3;
+    const evidence =
+      evidenceKind === "stale"
+        ? createV9EvidenceReference(
+            {
+              evidenceId: "evidence:stale-exit-coverage",
+              sourceId: "route-source",
+              sourceGenerationId: SOURCE_FINGERPRINTS.dex.generationId,
+              disposition: "observed",
+              observedAtSec: 100,
+              maxAgeSec: 100,
+            },
+            AS_OF_SEC,
+          )
+        : asset.evidence.find(
+            (candidate) => candidate.evidenceId === "evidence:base",
+          )!;
+    const gap = createV9FactGapV3({
+      gapId: `alpha:gap:exit-coverage:${observationState}`,
+      reasonCode: "missing-same-notional-route",
+      ownerDomain: "exit",
+      policyRuleId: "exit.route.coverage",
+      observationState,
+      path: {
+        kind: "local-component",
+        componentKey: "exit-route-coverage",
+      },
+      message: "The empty exit surface is not a current complete observation.",
+      evidenceRefIds: [evidence.evidenceId],
+      responsibility: "producer-failed",
+    });
+    if (evidenceKind === "stale") asset.evidence.push(evidence);
+    asset.gaps.push(gap);
+    asset.exitStatus = createV9FactStatus({
+      applicability: requiredV9Applicability("exit.route.coverage"),
+      observationState,
+      evidenceRefIds: [evidence.evidenceId],
+      gapIds: [gap.gapId],
+    });
+
+    const evaluated = evaluateV9FactSet(
+      compileV9FactSetV3(core),
+      V9_CANDIDATE_POLICY_V1,
+    ).assets.find((candidate) => candidate.assetId === "alpha")!;
+    const reasons = evaluated.scoreInput.pillars.exit.reasons.filter(
+      (reason) => reason.code === "missing-same-notional-route",
+    );
+
+    expect(evaluated.exit.reasons).toContain("missing-same-notional-route");
+    expect(reasons).not.toHaveLength(0);
+    expect(
+      reasons.every(
+        (reason) => reason.responsibility === "producer-failed",
+      ),
+    ).toBe(true);
+  });
+
+  it("preserves explicit exit-gap and mechanism-profile ownership over native complete-empty fallback", () => {
+    const upgradedWithGap = structuredClone(
+      upgradeCompiledV9FactSetV2(compileV9FactSetV2(coreFixture())),
+    );
+    const { v9FactSetDigest: _gapDigest, ...gapCore } = upgradedWithGap;
+    const gapAsset = gapCore.assets.find(
+      (candidate) => candidate.assetId === "alpha",
+    ) as V9AssetFactsV3;
+    gapAsset.exitRoutes = gapAsset.exitRoutes.filter(
+      (route) => !route.scoreEligible,
+    );
+    gapAsset.evidence = gapAsset.evidence.filter(
+      (evidence) => evidence.evidenceId !== "evidence:route",
+    );
+    const exitGap = gapAsset.gaps.find(
+      (gap) => gap.ownerDomain === "exit",
+    )!;
+    exitGap.reasonCode = "no-viable-exit-path";
+    exitGap.responsibility = "issuer-undisclosed";
+
+    const gapEvaluated = evaluateV9FactSet(
+      compileV9FactSetV3(gapCore),
+      V9_CANDIDATE_POLICY_V1,
+    ).assets.find((asset) => asset.assetId === "alpha")!;
+    expect(gapEvaluated.scoreInput.pillars.exit.reasons).toContainEqual(
+      expect.objectContaining({
+        code: "no-viable-exit-path",
+        responsibility: "issuer-undisclosed",
+      }),
+    );
+
+    const profileCore = nativeCompleteEmptyCoreFixture();
+    const profileAsset = profileCore.assets.find(
+      (candidate) => candidate.assetId === "alpha",
+    ) as V9AssetFactsV3;
+    profileAsset.mechanismExitFacts = [{
+      factKey: "protocol-redemption",
+      disposition: "supported",
+      quality: "adequate",
+      evidenceRefIds: ["evidence:base"],
+    }];
+    const profileEvaluated = evaluateV9FactSet(
+      compileV9FactSetV3(profileCore),
+      V9_CANDIDATE_POLICY_V1,
+    ).assets.find((asset) => asset.assetId === "alpha")!;
+
+    expect(profileEvaluated.scoreInput.pillars.exit.reasons).toContainEqual(
+      expect.objectContaining({
+        code: "missing-runtime-route-evidence",
+        responsibility: "integration-missing",
+      }),
+    );
+    expect(
+      profileEvaluated.scoreInput.pillars.exit.reasons.some(
+        (reason) =>
+          reason.code === "no-viable-exit-path" &&
+          reason.responsibility === "measured-adverse",
+      ),
+    ).toBe(false);
   });
 
   it("canonicalizes the retained Hyperliquid alias and applies R2 maturity after collisions", () => {

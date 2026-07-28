@@ -570,6 +570,7 @@ function exitPillar(
   asset: V9AssetFactsV3,
   result: V9ExitEvaluationResult,
   envelope: V9ValidatedPolicyEnvelope,
+  sourceSchemaVersion: V9EvaluationFactSetRead["sourceSchemaVersion"],
 ): V9PillarEvaluation {
   const mechanismExitFacts = asset.mechanismExitFacts ?? [];
   const hasKnownRuntimeRoute = asset.exitRoutes.some(
@@ -666,6 +667,15 @@ function exitPillar(
           profileFactKeys.length > 0
             ? `exit:mechanism-profile:${profileFactKeys.join("+")}`
             : `exit:${code}`;
+        const nativeMeasuredCompleteEmpty =
+          sourceSchemaVersion === 3 &&
+          code === "no-viable-exit-path" &&
+          asset.exitStatus.applicability.state === "required" &&
+          asset.exitStatus.observationState === "known" &&
+          result.score === 0 &&
+          result.primaryRouteKey === null &&
+          causalGaps.length === 0 &&
+          profileFactKeys.length === 0;
         return responsibility !== null
           ? [
               pillarReason(
@@ -681,7 +691,9 @@ function exitPillar(
               code,
               path,
               causalGaps,
-              V9_LEGACY_RESPONSIBILITY_BY_REASON[code],
+              nativeMeasuredCompleteEmpty
+                ? "measured-adverse"
+                : V9_LEGACY_RESPONSIBILITY_BY_REASON[code],
             );
       }),
     ),
@@ -2477,7 +2489,12 @@ function evaluateV9FactSetRead(
     const exit = evaluateV9ExitAssetFacts(asset, envelope, preExitDangerHeld);
     const basePillars = {
       backing: backingPillarEvaluation,
-      exit: exitPillar(asset, exit, envelope),
+      exit: exitPillar(
+        asset,
+        exit,
+        envelope,
+        factSetRead.sourceSchemaVersion,
+      ),
       control: controlPillarEvaluation,
     };
     const methodologyReasons =
