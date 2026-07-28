@@ -40,6 +40,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/safety-score-v9/mechanism-profiles.ts",
   "shared/lib/safety-score-v9/operational-resilience.ts",
   "shared/lib/safety-score-v9/policy.ts",
+  "shared/lib/safety-score-v9/primitives.ts",
   "shared/lib/safety-score-v9/reasons.ts",
   "shared/lib/safety-score-v9/scoped-risk.ts",
   "shared/lib/safety-score-v9/score.ts",
