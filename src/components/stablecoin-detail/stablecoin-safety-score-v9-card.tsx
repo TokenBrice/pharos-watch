@@ -9,6 +9,7 @@ import {
   History,
   Link2,
   LockKeyhole,
+  ScanSearch,
   ShieldCheck,
   Table2,
 } from "lucide-react";
@@ -418,6 +419,64 @@ function CapSection({ card }: { card: StablecoinSafetyScoreV9DisplayCard }) {
   );
 }
 
+/**
+ * The causal split V9 computes but the card never showed: what was measured and
+ * found adverse, versus what stayed unresolved and whose gap that is. The
+ * second list names Pharos's own gaps as ours rather than hiding them behind a
+ * neutral "not measured".
+ */
+function WhyNotHigher({
+  card,
+  presentation,
+}: {
+  card: StablecoinSafetyScoreV9DisplayCard;
+  presentation: StablecoinSafetyScoreV9Presentation;
+}) {
+  const { adverseMessages, boundedGroups } = presentation;
+  if (adverseMessages.length === 0 && boundedGroups.length === 0) return null;
+  return (
+    <section className="border-b border-border/40 pb-3" aria-labelledby={`${card.id}-v9-why`}>
+      <div className="flex items-center gap-2">
+        <ScanSearch className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        <h3 id={`${card.id}-v9-why`} className="text-sm font-semibold">Why not higher</h3>
+      </div>
+
+      {adverseMessages.length > 0 ? (
+        <div className="mt-2">
+          <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Measured and adverse
+          </p>
+          <ul className="mt-1 space-y-1 text-xs leading-relaxed text-muted-foreground">
+            {adverseMessages.map((message) => <li key={message}>{message}</li>)}
+          </ul>
+        </div>
+      ) : null}
+
+      {boundedGroups.length > 0 ? (
+        <div className="mt-3">
+          <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            Unresolved evidence
+          </p>
+          <dl className="mt-1 space-y-2">
+            {boundedGroups.map((group) => (
+              <div key={group.key}>
+                <dt className="text-xs font-medium text-foreground/85">
+                  {group.label} ({group.messages.length})
+                </dt>
+                <dd>
+                  <ul className="mt-0.5 space-y-1 text-xs leading-relaxed text-muted-foreground">
+                    {group.messages.map((message) => <li key={message}>{message}</li>)}
+                  </ul>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function EvidenceAndAccess({
   card,
   presentation,
@@ -559,6 +618,7 @@ export function StablecoinSafetyScoreV9Card({
 
       <ScoreAdjustment card={card} />
       <CapSection card={card} />
+      <WhyNotHigher card={card} presentation={presentation} />
       {presentation.primaryReasons.length > 0 ? (
         <section className="border-b border-border/40 pb-3" aria-labelledby={`${card.id}-v9-reasons`}>
           <h3 id={`${card.id}-v9-reasons`} className="text-sm font-semibold">Rating notes</h3>

@@ -7,6 +7,10 @@ import type {
   SafetyScoreV9PillarAdjustment,
   SafetyScoreV9PreBreakdownCard,
 } from "@shared/types";
+import {
+  SAFETY_SCORE_V9_RESPONSIBILITY_LABELS,
+  SAFETY_SCORE_V9_RESPONSIBILITY_ORDER,
+} from "@/lib/safety-score-v9-labels";
 
 type StablecoinSafetyScoreV9Card =
   | SafetyScoreV9CurrentCard
@@ -70,8 +74,17 @@ function traceParts(card: StablecoinSafetyScoreV9Card): string[] {
   return parts;
 }
 
+/**
+ * Producer messages quote measured values at full precision
+ * ("Measured peg multiplier is 0.804213."). Six decimals read as noise in a
+ * sentence, so long fractions round to three for display only.
+ */
+function tidyMeasuredDecimals(message: string): string {
+  return message.replace(/\d+\.\d{4,}/g, (value) => Number(value).toFixed(3));
+}
+
 function uniqueMessages(messages: readonly string[]): string[] {
-  return [...new Set(messages.map((message) => message.trim()).filter(Boolean))];
+  return [...new Set(messages.map((message) => tidyMeasuredDecimals(message.trim())).filter(Boolean))];
 }
 
 export interface StablecoinSafetyScoreV9Component {
@@ -373,8 +386,47 @@ export function describeSafetyScoreV9Components(
   });
 }
 
+export interface StablecoinSafetyScoreV9AttributionGroup {
+  key: string;
+  label: string;
+  messages: string[];
+}
+
+/**
+ * V9 splits every drag into two causally distinct buckets: what was measured
+ * and found adverse, and what stayed unresolved. Only the second carries an
+ * owner, so only the second is grouped by responsibility.
+ */
+function attributionGroups(
+  items: ReadonlyArray<{ message: string; responsibility: string }>,
+): StablecoinSafetyScoreV9AttributionGroup[] {
+  const byResponsibility = new Map<string, string[]>();
+  for (const item of items) {
+    const existing = byResponsibility.get(item.responsibility);
+    if (existing) existing.push(item.message);
+    else byResponsibility.set(item.responsibility, [item.message]);
+  }
+  return [...byResponsibility.entries()]
+    .sort(([left], [right]) => {
+      const leftRank = SAFETY_SCORE_V9_RESPONSIBILITY_ORDER.indexOf(left);
+      const rightRank = SAFETY_SCORE_V9_RESPONSIBILITY_ORDER.indexOf(right);
+      return (leftRank < 0 ? Number.MAX_SAFE_INTEGER : leftRank)
+        - (rightRank < 0 ? Number.MAX_SAFE_INTEGER : rightRank);
+    })
+    .map(([responsibility, messages]) => ({
+      key: responsibility,
+      label: SAFETY_SCORE_V9_RESPONSIBILITY_LABELS[responsibility]
+        ?? humanizeSafetyScoreV9Value(responsibility),
+      messages: uniqueMessages(messages),
+    }));
+}
+
 export interface StablecoinSafetyScoreV9Presentation {
   accessRows: Array<{ key: string; label: string; value: string }>;
+  /** Measured and found adverse. Always self-attributed, so ungrouped. */
+  adverseMessages: string[];
+  /** Unresolved facts, grouped by whose gap they are. */
+  boundedGroups: StablecoinSafetyScoreV9AttributionGroup[];
   evidenceSummary: string;
   evidenceReasons: string[];
   pillars: Array<{
@@ -397,6 +449,10 @@ export function buildStablecoinSafetyScoreV9Presentation(
 ): StablecoinSafetyScoreV9Presentation {
   return {
     traceParts: traceParts(card),
+    adverseMessages: uniqueMessages(
+      card.scoreTrace.adverseAttribution.items.map((item) => item.message),
+    ),
+    boundedGroups: attributionGroups(card.scoreTrace.boundedUncertaintyAttribution.items),
     pillars: PILLARS.map(([key, label]) => {
       const pillar = card.pillars[key];
       const evidenceSummary = isUnknown(pillar.freshness)

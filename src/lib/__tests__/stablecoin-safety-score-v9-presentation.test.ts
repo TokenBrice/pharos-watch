@@ -94,6 +94,54 @@ describe("stablecoin V9 safety presentation", () => {
     ]);
   });
 
+  it("splits causal attribution and names whose gap each unresolved fact is", () => {
+    const card = makeV9Card();
+    card.scoreTrace.adverseAttribution.items = [
+      {
+        source: "peg-performance",
+        path: "peg:historical-performance",
+        message: "Measured peg multiplier is 0.804213.",
+        responsibility: "measured-adverse",
+      },
+    ];
+    card.scoreTrace.boundedUncertaintyAttribution.items = [
+      {
+        source: "reason",
+        code: "missing-same-notional-route",
+        path: "exit:missing-same-notional-route",
+        message: "Comparable exit route is missing",
+        responsibility: "integration-missing",
+      },
+      {
+        source: "reason",
+        code: "missing-reserve-composition",
+        path: "backing:reserve-envelope",
+        message: "No reserve composition is present in the exact fixed input.",
+        responsibility: "issuer-undisclosed",
+      },
+    ];
+
+    const presentation = buildStablecoinSafetyScoreV9Presentation(card);
+
+    // Six-decimal producer precision reads as noise in a sentence.
+    expect(presentation.adverseMessages).toEqual(["Measured peg multiplier is 0.804."]);
+    // The issuer's gaps lead; ours are still named as ours rather than hidden.
+    expect(presentation.boundedGroups).toEqual([
+      {
+        key: "issuer-undisclosed",
+        label: "The issuer has not disclosed this",
+        messages: ["No reserve composition is present in the exact fixed input."],
+      },
+      {
+        key: "integration-missing",
+        label: "We have not built this integration yet",
+        messages: ["Comparable exit route is missing"],
+      },
+    ]);
+    // Machine keys must never reach the DOM.
+    expect(JSON.stringify(presentation.boundedGroups)).not.toContain("exit:missing-same-notional-route");
+  });
+
   it("adapts numeric V9 breakdowns without inventing control weights", () => {
     const card = makeV9Card();
     card.breakdowns = {
