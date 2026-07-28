@@ -18,7 +18,9 @@ export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) 
   return runScheduledSlotGroups(runtime, "half-hour scoring and charts slot", [
     {
       mode: "serial",
-      label: "dex-scoring-charts",
+      label: "dex-scoring-v9-input",
+      stopOnFailure: true,
+      stopOnNonNeutralSkip: true,
       tasks: [
         {
           job: "sync-dex-liquidity",
@@ -40,7 +42,7 @@ export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) 
           job: "prepare-safety-score-v9-input",
           run: (signal) => {
             if (publishedDexGenerationId === null) {
-              throw new Error("DEX publication completed without an exact generation id");
+              throw new Error("DEX publication result omitted its exact generation id");
             }
             return prepareSafetyScoreV9Input(
               runtime.db,
@@ -49,6 +51,12 @@ export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) 
             );
           },
         },
+      ],
+    },
+    {
+      mode: "serial",
+      label: "stablecoin-charts",
+      tasks: [
         {
           job: "sync-stablecoin-charts",
           run: (signal) =>
