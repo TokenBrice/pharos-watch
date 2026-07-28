@@ -18,6 +18,7 @@ import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
+import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
@@ -145,10 +146,12 @@ function DetailNavigation({
 function DetailSummaryRail({
   heroModel,
   mechanismCollateralization,
+  mechanismReview,
   viewModel,
 }: {
   heroModel: ReturnType<typeof buildStablecoinDetailHeroViewModel>;
   mechanismCollateralization: MechanismCollateralizationView | null;
+  mechanismReview: MechanismReviewView | null;
   viewModel: ReadyDetailViewModel;
 }) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.dexPriceCheck);
@@ -175,6 +178,7 @@ function DetailSummaryRail({
             compact
           />
         ) : null}
+        <MechanismReviewPanel review={mechanismReview} compact />
       </div>
     </aside>
   );
@@ -307,6 +311,7 @@ export function DetailContent({
         <DetailSummaryRail
           heroModel={heroModel}
           mechanismCollateralization={mechanismCollateralization}
+          mechanismReview={mechanismReview}
           viewModel={viewModel}
         />
       </div>
