@@ -3,6 +3,8 @@ import {
   cancelResponseBodyQuietly,
   cancelUnsuccessfulResponseBodyQuietly,
   drainResponseBody,
+  readResponseTextBoundedWithSignal,
+  readResponseTextWithinLimitWithSignal,
 } from "../response-body";
 
 describe("drainResponseBody", () => {
@@ -107,5 +109,43 @@ describe("cancelUnsuccessfulResponseBodyQuietly", () => {
 
     await expect(cancelUnsuccessfulResponseBodyQuietly(response)).resolves.toBeUndefined();
     expect(cancel).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("readResponseTextWithinLimitWithSignal", () => {
+  it("throws when the declared content length exceeds the strict limit", async () => {
+    const response = new Response("abcdef", {
+      headers: { "Content-Length": "6" },
+    });
+
+    await expect(readResponseTextWithinLimitWithSignal(response, 5)).rejects.toMatchObject({
+      name: "ResponseBodyTooLargeError",
+      maxBytes: 5,
+      observedBytes: 6,
+    });
+  });
+
+  it("throws when the streamed body exceeds the strict limit", async () => {
+    const response = new Response("abcdef");
+
+    await expect(readResponseTextWithinLimitWithSignal(response, 5)).rejects.toMatchObject({
+      name: "ResponseBodyTooLargeError",
+      maxBytes: 5,
+      observedBytes: 6,
+    });
+  });
+});
+
+describe("readResponseTextBoundedWithSignal", () => {
+  it("returns a truncated diagnostic body instead of throwing", async () => {
+    const response = new Response("abcdef");
+
+    await expect(readResponseTextBoundedWithSignal(response, 3)).resolves.toBe("abc");
+  });
+
+  it("returns an empty diagnostic body for a zero-byte limit", async () => {
+    const response = new Response("abcdef");
+
+    await expect(readResponseTextBoundedWithSignal(response, 0)).resolves.toBe("");
   });
 });
