@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, CRON_SCHEDULES } from "../../shared/lib/cron-jobs";
+import {
+  CRON_CONNECTION_BUDGET_ENTRIES,
+  CRON_JOB_DEFINITIONS,
+  CRON_SCHEDULES,
+  CRON_TRIGGER_SCHEDULES,
+} from "../../shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS } from "../../shared/lib/scheduled-runner-registry";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -9,7 +14,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 const SOURCE_OWNER = {
   wrangler: "worker/wrangler.toml [triggers.crons]",
-  schedules: "shared/lib/cron-jobs.ts [CRON_SCHEDULES]",
+  schedules: "shared/lib/cron-jobs.ts [CRON_SCHEDULES/CRON_TRIGGER_SCHEDULES]",
   jobDefinitions: "shared/lib/cron-jobs.ts [CRON_JOB_DEFINITIONS]",
   budgetDefinitions: "shared/lib/cron-jobs.ts [CRON_CONNECTION_BUDGET_ENTRIES]",
   slotPlans: "shared/lib/scheduled-runner-registry.ts [SCHEDULED_SLOT_PLANS]",
@@ -25,6 +30,7 @@ interface CronConnectionBudgetEntryForCheck {
 
 interface ScheduledSlotPlanForCheck {
   schedule?: string;
+  triggerSchedules?: readonly string[];
   jobChains: readonly (readonly string[])[];
   budgetOnlyJobs?: readonly string[];
 }
@@ -91,19 +97,38 @@ export function evaluateCronScheduleSync(input: {
   cronConnectionBudgetEntries?: readonly CronConnectionBudgetEntryForCheck[];
   cronJobDefinitions?: readonly CronJobDefinitionForCheck[];
   cronSchedules?: Record<string, string>;
+  cronTriggerSchedules?: Readonly<Record<string, readonly string[]>>;
   scheduledSlotPlans?: Readonly<Record<string, ScheduledSlotPlanForCheck>>;
   wranglerCronTriggers: Iterable<string>;
 }): CronScheduleSyncReport {
   const cronSchedules = input.cronSchedules ?? CRON_SCHEDULES;
+  const cronTriggerSchedules: Readonly<Record<string, readonly string[]>> =
+    input.cronTriggerSchedules
+    ?? (
+      input.cronSchedules
+        ? Object.fromEntries(
+            Object.entries(cronSchedules).map(([key, schedule]) => [key, [schedule]]),
+          )
+        : CRON_TRIGGER_SCHEDULES
+    );
   const scheduledSlotPlans = input.scheduledSlotPlans ?? SCHEDULED_SLOT_PLANS;
   const cronJobDefinitions = input.cronJobDefinitions ?? CRON_JOB_DEFINITIONS;
   const cronConnectionBudgetEntries = input.cronConnectionBudgetEntries ?? CRON_CONNECTION_BUDGET_ENTRIES;
 
   const wranglerCrons = new Set(input.wranglerCronTriggers);
-  const sharedCrons = new Set<string>(Object.values(cronSchedules));
-  const scheduleKeyByExpression = keyByExpression(Object.entries(cronSchedules));
+  const sharedScheduleEntries = Object.entries(cronTriggerSchedules).flatMap(
+    ([key, schedules]) => schedules.map((schedule) => [key, schedule] as const),
+  );
+  const sharedCrons = new Set<string>(sharedScheduleEntries.map(([, schedule]) => schedule));
+  const scheduleKeyByExpression = keyByExpression(sharedScheduleEntries);
   const slotPlanScheduleEntries = Object.entries(scheduledSlotPlans)
-    .map(([key, plan]) => [key, plan.schedule ?? getCronScheduleByKey(cronSchedules, key) ?? ""] as const)
+    .flatMap(([key, plan]) => {
+      const schedules =
+        plan.triggerSchedules
+        ?? cronTriggerSchedules[key]
+        ?? [plan.schedule ?? getCronScheduleByKey(cronSchedules, key) ?? ""];
+      return schedules.map((schedule) => [key, schedule] as const);
+    })
     .filter(([, schedule]) => schedule.length > 0);
   const slotPlanKeyByExpression = keyByExpression(slotPlanScheduleEntries);
   const slotPlanCrons = new Set<string>(slotPlanScheduleEntries.map(([, schedule]) => schedule));

@@ -46,6 +46,32 @@ describe("check-cron-schedule-sync", () => {
     expect(report.unknownBudgetJobs).toEqual([]);
   });
 
+  it("maps multiple physical triggers to one logical scheduled slot", () => {
+    const report = evaluateCronScheduleSync({
+      cronSchedules: {
+        dexSlot: "10,40 * * * *",
+      },
+      cronTriggerSchedules: {
+        dexSlot: ["10 * * * *", "40 * * * *"],
+      },
+      scheduledSlotPlans: {
+        dexSlot: {
+          schedule: "10,40 * * * *",
+          triggerSchedules: ["10 * * * *", "40 * * * *"],
+          jobChains: [["sync-dex"]],
+        },
+      },
+      cronJobDefinitions: [{ job: "sync-dex" }],
+      cronConnectionBudgetEntries: [{ job: "sync-dex" }],
+      wranglerCronTriggers: ["10 * * * *", "40 * * * *"],
+    });
+
+    expect(report.failed).toBe(false);
+    expect(report.wranglerTriggerCount).toBe(2);
+    expect(report.slotPlanTriggerCount).toBe(2);
+    expect(report.scheduleKeyByExpression.get("40 * * * *")).toBe("dexSlot");
+  });
+
   it("reports configured trigger drift as missing and extra slots", () => {
     const report = evaluateCronScheduleSync({
       cronSchedules: {
@@ -97,7 +123,9 @@ describe("check-cron-schedule-sync", () => {
     const output = errors.join("\n");
     expect(output).toContain("Cron schedule mismatch detected!");
     expect(output).toContain("worker/wrangler.toml [triggers.crons]");
-    expect(output).toContain("shared/lib/cron-jobs.ts [CRON_SCHEDULES]");
+    expect(output).toContain(
+      "shared/lib/cron-jobs.ts [CRON_SCHEDULES/CRON_TRIGGER_SCHEDULES]",
+    );
     expect(output).toContain("Missing from worker/wrangler.toml [triggers.crons]");
     expect(output).toContain('slotB: "2 * * * *"');
     expect(output).toContain('extraSlot: "3 * * * *"');
