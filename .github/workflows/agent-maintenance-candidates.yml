@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      PHAROS_WORKER_BASE_URL: https://api.pharos.watch
+      PHAROS_SITE_DATA_BASE_URL: https://stablecoin-dashboard.pages.dev
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -24,17 +24,16 @@ jobs:
           tooling-cache: "true"
       - name: Generate review queues
         id: generate
-        env:
-          PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
         shell: bash
         run: |
           set +e
-          npm run candidates:annotations
-          annotation_status=$?
-          npm run candidates:ai-summaries
-          summary_status=$?
-          npm run digest:curation -- --write
-          digest_status=$?
+          mkdir -p agents
+          npm run candidates:annotations 2>&1 | tee agents/annotation-command.log
+          annotation_status=${PIPESTATUS[0]}
+          npm run candidates:ai-summaries 2>&1 | tee agents/ai-summary-command.log
+          summary_status=${PIPESTATUS[0]}
+          npm run digest:curation -- --write 2>&1 | tee agents/curation-digest-command.log
+          digest_status=${PIPESTATUS[0]}
           echo "annotation_status=$annotation_status" >> "$GITHUB_OUTPUT"
           echo "summary_status=$summary_status" >> "$GITHUB_OUTPUT"
           echo "digest_status=$digest_status" >> "$GITHUB_OUTPUT"
@@ -73,6 +72,22 @@ jobs:
             if [ -f agents/ai-summary-candidates.md ]; then sed -n '1,140p' agents/ai-summary-candidates.md; else echo "Queue unavailable."; fi
             echo '```'
             echo
+            if [ "$ANNOTATION_STATUS" != 0 ] || [ "$SUMMARY_STATUS" != 0 ] || [ "$DIGEST_STATUS" != 0 ]; then
+              echo "## Generation failures"
+              for spec in \
+                "annotations:$ANNOTATION_STATUS:agents/annotation-command.log" \
+                "AI summaries:$SUMMARY_STATUS:agents/ai-summary-command.log" \
+                "curation digest:$DIGEST_STATUS:agents/curation-digest-command.log"; do
+                IFS=: read -r label status log_file <<< "$spec"
+                if [ "$status" != 0 ]; then
+                  echo "### $label (status $status)"
+                  echo '```text'
+                  tail -30 "$log_file"
+                  echo '```'
+                fi
+              done
+              echo
+            fi
             echo "Pre-launch and funding research remain manual because they require external-source verification and explicit review."
           } > "$body"
 

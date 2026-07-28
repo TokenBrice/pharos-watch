@@ -374,6 +374,9 @@ describe("handleYieldHistory", () => {
         "c74227a1-e738-4021-bbe1-13363815aecb",
       ]),
     );
+    expect(YIELD_HISTORY_OWNERSHIP_HANDOFFS["reusd-re-protocol"]).toEqual([
+      "protocol-api:re-protocol-reusde",
+    ]);
 
     for (const [stablecoinId, sourceKeys] of Object.entries(YIELD_HISTORY_OWNERSHIP_HANDOFFS)) {
       for (const sourceKey of sourceKeys) {

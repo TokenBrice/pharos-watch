@@ -122,7 +122,7 @@ describe("handleYieldAdapterManifest", () => {
     });
 
     const variantRow = body.entries.find((entry) =>
-      entry.stablecoinId === "reusd-re-protocol" &&
+      entry.stablecoinId === "iusd-infinifi" &&
       entry.family === "defillama" &&
       entry.sourceKeyPattern === "defillama:<runtime-pool-uuid>"
     );
@@ -131,7 +131,7 @@ describe("handleYieldAdapterManifest", () => {
       lifecycle: "active",
     });
 
-    for (const baseAssetId of ["dola-inverse-finance", "gho-aave"]) {
+    for (const baseAssetId of ["dola-inverse-finance", "gho-aave", "reusd-re-protocol"]) {
       expect(
         body.entries.some((entry) =>
           entry.stablecoinId === baseAssetId &&

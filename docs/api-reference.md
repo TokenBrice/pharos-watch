@@ -2692,8 +2692,8 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
     "status": "published"
   },
   "methodology": {
-    "version": "8.36",
-    "currentVersion": "8.36",
+    "version": "8.37",
+    "currentVersion": "8.37",
     "changelogPath": "/methodology/yield-changelog/"
   },
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -2856,7 +2856,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
 
 ```text
 {
-  "methodologyVersion": "v8.36",
+  "methodologyVersion": "v8.37",
   "updatedAt": 1779210000,
   "entries": [
     {
@@ -2870,7 +2870,7 @@ Yield adapter manifest for every yield-bearing asset. The route is public-read, 
       "project": null,
       "lifecycle": "active",
       "quarantineReason": null,
-      "methodologyVersion": "v8.36",
+      "methodologyVersion": "v8.37",
       "updatedAt": 1779210000
     }
   ]
@@ -2885,7 +2885,7 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
 
 History written under methodology v8.31 or later includes the versioned PYS formula inputs captured at publication. `pysReproducibility: "exact"` means the point can be recomputed from `pysInputsAtPublish`; older rows are labeled `legacy-partial` and do not invent missing benchmark, source-risk, or scaling facts.
 
-For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, `avUSD`), legacy parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those old child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`. New linked parent rows use `linked-variant:<variantId>:<sourceKey>` source keys when a tracked variant's eligible native/wrapper source is intentionally exposed on the active parent for comparison and coverage context.
+For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, `avUSD`), legacy parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those old child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`. New linked parent rows use `linked-variant:<variantId>:<sourceKey>` source keys when a tracked variant's eligible native/wrapper source is intentionally exposed on the active parent for comparison and coverage context. The same suppression and guarded purge path removes the former `protocol-api:re-protocol-reusde` rows from `reusd-re-protocol`; those rows represented a separate Re Protocol product and are replaced by reUSD's own `protocol-api:re-protocol-reusd` series.
 
 **Cache:** slow — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
 
@@ -2922,8 +2922,8 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
     "status": "published"
   },
   "methodology": {
-    "version": "8.36",
-    "currentVersion": "8.36",
+    "version": "8.37",
+    "currentVersion": "8.37",
     "changelogPath": "/methodology/yield-changelog/"
   }
 }
@@ -2959,7 +2959,7 @@ For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`,
   "pysAtPublish": 42.7,
   "pysInputsAtPublish": {
     "schemaVersion": 1,
-    "methodologyVersion": "8.36",
+    "methodologyVersion": "8.37",
     "apy30d": 12.1,
     "safetyScore": 81,
     "varianceScore": 0.18,

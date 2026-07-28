@@ -48,7 +48,7 @@ interface RePriceObservation {
 interface RePriceResponse {
   success?: boolean;
   data?: {
-    reUSDe?: RePriceObservation[];
+    reUSD?: RePriceObservation[];
   };
 }
 
@@ -72,14 +72,14 @@ const ONDO_USDY_SOURCE_LABEL = "Ondo USDY Oracle";
 const ONDO_USDY_SOURCE_TYPE = "nav-appreciation";
 const ONDO_USDY_ORACLE = "0xa0219aa5b31e65bc920b5b6dfb8edf0988121de0";
 const ONDO_GET_PRICE_SELECTOR = "0x98d5fdca";
-const RE_REUSDE_SOURCE_KEY = "protocol-api:re-protocol-reusde";
-const RE_REUSDE_SOURCE_LABEL = "Re Protocol Insurance Alpha (reUSDe)";
-const RE_REUSDE_SOURCE_TYPE = "nav-appreciation";
-const RE_REUSDE_PRICE_URL = "https://api.re.xyz/price";
-const RE_REUSDE_CONTRACT = "0xdDC0f880ff6e4e22E4B74632fBb43Ce4DF6cCC5a";
-const RE_REUSDE_MAX_FRESHNESS_SEC = 3 * DAY_SECONDS;
-const RE_REUSDE_MIN_APY_PERCENT = -100;
-const RE_REUSDE_MAX_APY_PERCENT = 500;
+const RE_REUSD_SOURCE_KEY = "protocol-api:re-protocol-reusd";
+const RE_REUSD_SOURCE_LABEL = "Re Protocol Basis-Plus (reUSD)";
+const RE_REUSD_SOURCE_TYPE = "nav-appreciation";
+const RE_REUSD_PRICE_URL = "https://api.re.xyz/price";
+const RE_REUSD_CONTRACT = "0x5086bf358635B81D8C47C66d1C8b9E567Db70c72";
+const RE_REUSD_MAX_FRESHNESS_SEC = 3 * DAY_SECONDS;
+const RE_REUSD_MIN_APY_PERCENT = -100;
+const RE_REUSD_MAX_APY_PERCENT = 500;
 const ZEPHYR_ZYS_SOURCE_KEY = "protocol-api:zys-zephyr-protocol";
 const ZEPHYR_ZYS_SOURCE_LABEL = "Zephyr Scanner ZYS returns";
 const ZEPHYR_ZYS_SOURCE_TYPE = "nav-appreciation";
@@ -290,10 +290,10 @@ export async function fetchOndoUsdyOracleSource(
   }
 }
 
-export async function fetchReProtocolReusdeSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
+export async function fetchReProtocolReusdSource(signal?: AbortSignal): Promise<ResolvedYield | null> {
   try {
     const result = await fetchJsonWithRetry<RePriceResponse>(
-      RE_REUSDE_PRICE_URL,
+      RE_REUSD_PRICE_URL,
       {
         headers: { Accept: "application/json", "User-Agent": USER_AGENT },
         signal,
@@ -303,7 +303,7 @@ export async function fetchReProtocolReusdeSource(signal?: AbortSignal): Promise
     );
     if (!result?.response.ok || result.body.success !== true) return null;
 
-    const observations = result.body.data?.reUSDe;
+    const observations = result.body.data?.reUSD;
     if (!Array.isArray(observations) || observations.length === 0) return null;
 
     const parsed = observations
@@ -319,8 +319,8 @@ export async function fetchReProtocolReusdeSource(signal?: AbortSignal): Promise
       })
       .filter((observation) =>
         observation.apy != null &&
-        observation.apy >= RE_REUSDE_MIN_APY_PERCENT &&
-        observation.apy <= RE_REUSDE_MAX_APY_PERCENT &&
+        observation.apy >= RE_REUSD_MIN_APY_PERCENT &&
+        observation.apy <= RE_REUSD_MAX_APY_PERCENT &&
         Number.isFinite(observation.observedAt) &&
         observation.price != null &&
         observation.price > 0,
@@ -330,7 +330,7 @@ export async function fetchReProtocolReusdeSource(signal?: AbortSignal): Promise
     if (!latest || latest.apy == null || latest.price == null) return null;
 
     const nowSec = Math.floor(Date.now() / 1000);
-    if (latest.observedAt > nowSec || nowSec - latest.observedAt > RE_REUSDE_MAX_FRESHNESS_SEC) {
+    if (latest.observedAt > nowSec || nowSec - latest.observedAt > RE_REUSD_MAX_FRESHNESS_SEC) {
       return null;
     }
 
@@ -338,13 +338,13 @@ export async function fetchReProtocolReusdeSource(signal?: AbortSignal): Promise
       currentApy: latest.apy,
       apyBase: latest.apy,
       apyReward: null,
-      sourcePool: RE_REUSDE_CONTRACT,
+      sourcePool: RE_REUSD_CONTRACT,
       sourceTvlUsd: null,
       dataSource: "protocol-api",
       exchangeRate: latest.price,
-      sourceKey: RE_REUSDE_SOURCE_KEY,
-      yieldSource: RE_REUSDE_SOURCE_LABEL,
-      yieldType: RE_REUSDE_SOURCE_TYPE,
+      sourceKey: RE_REUSD_SOURCE_KEY,
+      yieldSource: RE_REUSD_SOURCE_LABEL,
+      yieldType: RE_REUSD_SOURCE_TYPE,
       sourceObservedAt: latest.observedAt,
       comparisonAnchorObservedAt: null,
     };
@@ -356,7 +356,7 @@ export async function fetchReProtocolReusdeSource(signal?: AbortSignal): Promise
       event: "optional_yield_source_failed",
       job: "sync-yield-data",
       provider: "re-protocol",
-      source: "reUSDe",
+      source: "reUSD",
       message: "Optional yield source failed",
       error,
     });

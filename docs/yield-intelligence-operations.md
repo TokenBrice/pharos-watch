@@ -22,7 +22,7 @@ This note supplements [`docs/yield-intelligence.md`](./yield-intelligence.md) wi
   - `Hashnote USYC`
   - `Midas mMEV NAV oracle`
   - `Ondo USDY oracle`
-  - `Re Protocol reUSDe`
+  - `Re Protocol reUSD`
   - `Zephyr ZYS`
   - `B.Protocol LQTY-only`
   - `Curve scrvUSD current-rate`

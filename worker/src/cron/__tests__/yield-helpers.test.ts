@@ -64,7 +64,7 @@ describe("getRankingStaleThresholdMs", () => {
     expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:midas-mmev-nav-oracle")).toBe(
       SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
     );
-    expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:re-protocol-reusde")).toBe(
+    expect(getRankingStaleThresholdMs("protocol-api", "protocol-api:re-protocol-reusd")).toBe(
       SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
     );
     expect(getRankingStaleThresholdMs("defillama", "protocol-api:hashnote-usyc")).toBe(STALE_THRESHOLD_MS);

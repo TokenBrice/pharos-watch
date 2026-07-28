@@ -7,7 +7,7 @@ import {
   fetchEtherfuseCetesSource,
   fetchHashnoteUsycSource,
   fetchOndoUsdyOracleSource,
-  fetchReProtocolReusdeSource,
+  fetchReProtocolReusdSource,
   fetchZephyrZysSource,
 } from "./sources";
 import { fetchMidasMmevNavOracleSource } from "./midas-mmev-nav-oracle";
@@ -185,12 +185,12 @@ const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
   },
   {
     stablecoinId: RE_REUSD_ID,
-    sourceKey: "protocol-api:re-protocol-reusde",
+    sourceKey: "protocol-api:re-protocol-reusd",
     run: (context) =>
       runTimedOptionalSource(
-        "Re Protocol reUSDe source",
+        "Re Protocol reUSD source",
         context.signal,
-        (budgetSignal) => fetchReProtocolReusdeSource(budgetSignal),
+        (budgetSignal) => fetchReProtocolReusdSource(budgetSignal),
         null,
       ),
   },

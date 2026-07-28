@@ -7,7 +7,7 @@
  * Many summaries in `data/ai-summaries.json` hard-code claims the reader can
  * verify against the hero card and report card on the same page — an overall
  * safety grade ("the A- at 82"), a DEWS band ("in the Calm band"), a peg
- * score, dimension grades ("a D in dependency risk"), or a depeg-event count.
+ * score, V9 pillar grades ("a D in economic control"), or a depeg-event count.
  * Those drift as the live scoring updates, leaving the prose contradicting the
  * dashboard right next to it. This producer extracts each such claim, compares
  * it to the current value, and writes the mismatches to
@@ -15,22 +15,53 @@
  * scratch folder. It never edits summaries — the rewrite is editorial and is
  * driven by the `write-ai-summaries` skill.
  *
- * Live data comes from three public endpoints (report-cards, stress-signals,
- * peg-summary). Default base is production; override with PHAROS_API_BASE and
- * authenticate with PHAROS_API_KEY. Pass `--fixtures <dir>` to read
- * pre-fetched `<endpoint>.json` files instead of hitting the network.
+ * Live data comes from three credential-free website-data endpoints
+ * (report-cards/v9, stress-signals, peg-summary). Default base is the production
+ * Pages project; override with PHAROS_SITE_DATA_BASE_URL. Pass `--fixtures
+ * <dir>` to read pre-fetched `<endpoint>.json` files instead of hitting the
+ * network.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { scoreToGrade } from "@shared/lib/report-card-core";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import {
+  ReportCardsV9CurrentResponseSchema,
+  type ReportCardsV9CurrentResponse,
+} from "@shared/types/report-cards-v9";
+import {
+  PegSummaryResponseSchema,
+  StressSignalsAllResponseSchema,
+  type PegSummaryResponse,
+  type StressSignalsAllResponse,
+} from "@shared/types/market";
+import {
+  DEFAULT_MAINTENANCE_SITE_DATA_BASE_URL,
+  buildMaintenanceSiteDataRequest,
+} from "../lib/maintenance-site-data";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = process.cwd();
 const SUMMARIES_PATH = resolve(ROOT, "data/ai-summaries.json");
 const OUTPUT_MD = resolve(ROOT, "agents/ai-summary-candidates.md");
 const OUTPUT_JSON = resolve(ROOT, "agents/ai-summary-candidates.json");
-const API_BASE = (process.env.PHAROS_API_BASE ?? "https://api.pharos.watch").replace(/\/$/, "");
-const API_KEY = process.env.PHAROS_API_KEY?.trim() || null;
+const SITE_DATA_BASE_URL =
+  process.env.PHAROS_SITE_DATA_BASE_URL?.trim() || DEFAULT_MAINTENANCE_SITE_DATA_BASE_URL;
 const FETCH_TIMEOUT_MS = 30_000;
+const REPORT_CARDS_ENDPOINT = {
+  apiPath: API_PATHS.reportCardsV9(),
+  fixtureName: "report-cards-v9",
+} as const;
+const STRESS_SIGNALS_ENDPOINT = {
+  apiPath: API_PATHS.stressSignalsBase(),
+  fixtureName: "stress-signals",
+} as const;
+const PEG_SUMMARY_ENDPOINT = {
+  apiPath: API_PATHS.pegSummary(),
+  fixtureName: "peg-summary",
+} as const;
 
 const FIXTURES_DIR = (() => {
   const i = process.argv.indexOf("--fixtures");
@@ -39,55 +70,27 @@ const FIXTURES_DIR = (() => {
 
 // --- types ------------------------------------------------------------------
 
-type Severity = "high" | "medium" | "low";
+export type Severity = "high" | "medium" | "low";
 
-interface Current {
+export interface Current {
   name: string;
   symbol: string;
   overallGrade: string | null;
   overallScore: number | null;
   pegGrade: string | null;
   pegScore: number | null;
-  liquidityScore: number | null;
-  resilienceGrade: string | null;
-  decentralizationGrade: string | null;
-  dependencyGrade: string | null;
+  backingGrade: string | null;
+  backingScore: number | null;
+  exitGrade: string | null;
+  exitScore: number | null;
+  controlGrade: string | null;
+  controlScore: number | null;
   dewsBand: string | null;
   dewsScore: number | null;
   depegCount: number | null;
 }
 
-interface ReportCardDimension {
-  grade?: string | null;
-  score?: number | null;
-}
-
-interface ReportCardRow {
-  id: string;
-  name?: string | null;
-  symbol?: string | null;
-  overallGrade?: string | null;
-  overallScore?: number | null;
-  dimensions?: {
-    pegStability?: ReportCardDimension | null;
-    liquidity?: ReportCardDimension | null;
-    resilience?: ReportCardDimension | null;
-    decentralization?: ReportCardDimension | null;
-    dependencyRisk?: ReportCardDimension | null;
-  } | null;
-}
-
-interface StressRow {
-  band?: string | null;
-  score?: number | null;
-}
-
-interface PegRow {
-  id: string;
-  eventCount?: number | null;
-}
-
-interface Finding {
+export interface Finding {
   kind: string;
   claim: string; // verbatim matched phrase
   claimed: string;
@@ -136,19 +139,25 @@ function parseCount(raw: string): number | null {
 
 // --- live data --------------------------------------------------------------
 
-async function fetchJson(endpoint: string): Promise<unknown> {
+interface LiveEndpoint {
+  apiPath: string;
+  fixtureName: string;
+}
+
+async function fetchJson(endpoint: LiveEndpoint): Promise<unknown> {
   if (FIXTURES_DIR) {
-    return JSON.parse(readFileSync(resolve(FIXTURES_DIR, `${endpoint}.json`), "utf8"));
+    return JSON.parse(readFileSync(resolve(FIXTURES_DIR, `${endpoint.fixtureName}.json`), "utf8"));
   }
+  const request = buildMaintenanceSiteDataRequest(endpoint.apiPath, SITE_DATA_BASE_URL);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(`${API_BASE}/api/${endpoint}`, {
-      headers: API_KEY ? { "X-API-Key": API_KEY, accept: "application/json" } : { accept: "application/json" },
+    const res = await fetch(request.url, {
+      headers: request.headers,
       signal: controller.signal,
     });
     if (!res.ok) {
-      throw new Error(`GET /api/${endpoint} -> ${res.status} ${(await res.text()).slice(0, 160)}`);
+      throw new Error(`GET ${endpoint.apiPath} -> ${res.status} ${(await res.text()).slice(0, 160)}`);
     }
     return res.json();
   } finally {
@@ -156,40 +165,70 @@ async function fetchJson(endpoint: string): Promise<unknown> {
   }
 }
 
-async function loadCurrent(): Promise<Map<string, Current>> {
-  const [cardsRaw, stressRaw, pegRaw] = await Promise.all([
-    fetchJson("report-cards"),
-    fetchJson("stress-signals"),
-    fetchJson("peg-summary"),
-  ]);
+function parseLiveContract<T>(
+  label: string,
+  schema: { safeParse: (value: unknown) => { success: true; data: T } | { success: false; error: Error } },
+  value: unknown,
+): T {
+  const parsed = schema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error(`${label} contract validation failed: ${parsed.error.message}`);
+  }
+  return parsed.data;
+}
 
-  const cards = (cardsRaw as { cards?: ReportCardRow[] }).cards ?? [];
-  const stress = (stressRaw as { signals?: Record<string, StressRow> }).signals ?? {};
-  const peg = (pegRaw as { coins?: PegRow[] }).coins ?? [];
-  const pegById = new Map(peg.map((c) => [c.id, c]));
-
+export function buildCurrentMap(
+  cards: ReportCardsV9CurrentResponse["cards"],
+  stress: StressSignalsAllResponse["signals"],
+  peg: PegSummaryResponse["coins"],
+): Map<string, Current> {
+  const pegById = new Map(peg.map((coin) => [coin.id, coin]));
   const map = new Map<string, Current>();
+
   for (const card of cards) {
-    const d = card.dimensions ?? {};
+    const meta = TRACKED_META_BY_ID.get(card.id);
     const dews = stress[card.id];
     const pegRow = pegById.get(card.id);
+    const pegScore = typeof pegRow?.pegScore === "number" ? pegRow.pegScore : null;
+    const backingScore = card.pillars.backing.score;
+    const exitScore = card.pillars.exit.score;
+    const controlScore = card.pillars.control.score;
     map.set(card.id, {
-      name: card.name ?? card.id,
-      symbol: card.symbol ?? "",
-      overallGrade: card.overallGrade ?? null,
-      overallScore: typeof card.overallScore === "number" ? card.overallScore : null,
-      pegGrade: d.pegStability?.grade ?? null,
-      pegScore: typeof d.pegStability?.score === "number" ? d.pegStability.score : null,
-      liquidityScore: typeof d.liquidity?.score === "number" ? d.liquidity.score : null,
-      resilienceGrade: d.resilience?.grade ?? null,
-      decentralizationGrade: d.decentralization?.grade ?? null,
-      dependencyGrade: d.dependencyRisk?.grade ?? null,
+      name: meta?.name ?? pegRow?.name ?? card.id,
+      symbol: meta?.symbol ?? pegRow?.symbol ?? "",
+      overallGrade: card.grade,
+      overallScore: card.score,
+      pegGrade: pegScore == null ? null : scoreToGrade(pegScore),
+      pegScore,
+      backingGrade: scoreToGrade(backingScore),
+      backingScore,
+      exitGrade: scoreToGrade(exitScore),
+      exitScore,
+      controlGrade: scoreToGrade(controlScore),
+      controlScore,
       dewsBand: dews?.band ?? null,
       dewsScore: typeof dews?.score === "number" ? dews.score : null,
       depegCount: typeof pegRow?.eventCount === "number" ? pegRow.eventCount : null,
     });
   }
   return map;
+}
+
+export async function loadCurrent(): Promise<Map<string, Current>> {
+  const [cardsRaw, stressRaw, pegRaw] = await Promise.all([
+    fetchJson(REPORT_CARDS_ENDPOINT),
+    fetchJson(STRESS_SIGNALS_ENDPOINT),
+    fetchJson(PEG_SUMMARY_ENDPOINT),
+  ]);
+
+  const cards = parseLiveContract(
+    "report-cards/v9",
+    ReportCardsV9CurrentResponseSchema,
+    cardsRaw,
+  );
+  const stress = parseLiveContract("stress-signals", StressSignalsAllResponseSchema, stressRaw);
+  const peg = parseLiveContract("peg-summary", PegSummaryResponseSchema, pegRaw);
+  return buildCurrentMap(cards.cards, stress.signals, peg.coins);
 }
 
 // --- claim extraction -------------------------------------------------------
@@ -237,7 +276,22 @@ function scoreFinding(
   return { kind, claim, claimed: String(claimed), current: String(current), severity };
 }
 
-function extractFindings(text: string, cur: Current): Finding[] {
+function retiredDimensionFinding(
+  kind: string,
+  claim: string,
+  claimed: string,
+): Finding | null {
+  if (!isGrade(claimed)) return null;
+  return {
+    kind,
+    claim,
+    claimed,
+    current: "retired in Safety Score v9",
+    severity: "medium",
+  };
+}
+
+export function extractFindings(text: string, cur: Current): Finding[] {
   const t = normalize(text);
   const out: Finding[] = [];
   const seen = new Set<string>();
@@ -283,12 +337,12 @@ function extractFindings(text: string, cur: Current): Finding[] {
     push(gradeFinding("overall-grade", m[0], m[1] ?? m[2], cur.overallGrade));
   }
 
-  // 4. Dimension grades: "D in dependency risk", "an A in decentralization",
-  //    "X decentralization grade", reverse "decentralization grade of X".
+  // 4. Current V9 pillar grades: "D in economic control", "an A in backing",
+  //    "X exit grade", reverse "backing grade of X".
   const dims: Array<[RegExp, string | null, string]> = [
-    [/dependency(?:\s+risk)?/i, cur.dependencyGrade, "dependency"],
-    [/decentrali\w+/i, cur.decentralizationGrade, "decentralization"],
-    [/resilience/i, cur.resilienceGrade, "resilience"],
+    [/backing/i, cur.backingGrade, "backing"],
+    [/exit(?:ability)?/i, cur.exitGrade, "exit"],
+    [/(?:economic\s+)?control/i, cur.controlGrade, "control"],
     [/peg\s+stability/i, cur.pegGrade, "peg-stability"],
   ];
   for (const [dimRe, grade, label] of dims) {
@@ -296,6 +350,21 @@ function extractFindings(text: string, cur: Current): Finding[] {
     const rev = new RegExp(`(?:${dimRe.source})(?:\\s+grade)?\\s+(?:of\\s+)?(?:an?\\s+)?${GRADE_TOKEN}`, "gi");
     for (const m of t.matchAll(fwd)) push(gradeFinding(`${label}-grade`, m[0], m[1], grade, { dimension: true }));
     for (const m of t.matchAll(rev)) push(gradeFinding(`${label}-grade`, m[0], m[1], grade, { dimension: true }));
+  }
+
+  // V8 dimensions have no like-for-like current value. Flag precise legacy
+  // grade claims for editorial removal instead of mapping them onto a V9 pillar.
+  const legacyDims: Array<[RegExp, string]> = [
+    [/dependency(?:\s+risk)?/i, "dependency"],
+    [/decentrali\w+/i, "decentralization"],
+    [/resilience/i, "resilience"],
+    [/liquidity/i, "liquidity"],
+  ];
+  for (const [dimRe, label] of legacyDims) {
+    const fwd = new RegExp(`${GRADE_TOKEN}(?:\\s+grade)?\\s+(?:in\\s+)?(?:${dimRe.source})`, "gi");
+    const rev = new RegExp(`(?:${dimRe.source})(?:\\s+grade)?\\s+(?:of\\s+)?(?:an?\\s+)?${GRADE_TOKEN}`, "gi");
+    for (const m of t.matchAll(fwd)) push(retiredDimensionFinding(`legacy-${label}-grade`, m[0], m[1]));
+    for (const m of t.matchAll(rev)) push(retiredDimensionFinding(`legacy-${label}-grade`, m[0], m[1]));
   }
 
   // 5. DEWS band (+ optional score): "in the Calm band", "DEWS at 10 in the Calm band",
@@ -320,9 +389,27 @@ function extractFindings(text: string, cur: Current): Finding[] {
   const pegScoreRe = /\bpeg\s+score\s+(?:of|at|is|sits?\s+at)\s+(\d{1,3})\b/gi;
   for (const m of t.matchAll(pegScoreRe)) push(scoreFinding("peg-score", m[0], Number(m[1]), cur.pegScore));
 
-  // 7. Liquidity score: "liquidity score of 68".
-  const liqScoreRe = /\bliquidity\s+score\s+(?:of|at|is)\s+(\d{1,3})\b/gi;
-  for (const m of t.matchAll(liqScoreRe)) push(scoreFinding("liquidity-score", m[0], Number(m[1]), cur.liquidityScore));
+  // 7. Current V9 pillar scores.
+  const pillarScores: Array<[RegExp, number | null, string]> = [
+    [/\bbacking\s+score\s+(?:of|at|is)\s+(\d{1,3})\b/gi, cur.backingScore, "backing"],
+    [/\bexit\s+score\s+(?:of|at|is)\s+(\d{1,3})\b/gi, cur.exitScore, "exit"],
+    [/\b(?:economic\s+)?control\s+score\s+(?:of|at|is)\s+(\d{1,3})\b/gi, cur.controlScore, "control"],
+  ];
+  for (const [pattern, current, label] of pillarScores) {
+    for (const m of t.matchAll(pattern)) push(scoreFinding(`${label}-score`, m[0], Number(m[1]), current));
+  }
+
+  const legacyScoreRe =
+    /\b(liquidity|resilience|decentralization|dependency(?:\s+risk)?)\s+score\s+(?:of|at|is)\s+(\d{1,3})\b/gi;
+  for (const m of t.matchAll(legacyScoreRe)) {
+    push({
+      kind: `legacy-${m[1].toLowerCase().replace(/\s+/g, "-")}-score`,
+      claim: m[0],
+      claimed: m[2],
+      current: "retired in Safety Score v9",
+      severity: "medium",
+    });
+  }
 
   // 8. Depeg-event count: "294 lifetime depeg events", "Four depeg events".
   const depegRe = /\b([\d,]+|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(?:lifetime\s+|recorded\s+)?depeg\s+events?\b/gi;
@@ -355,7 +442,7 @@ async function main(): Promise<void> {
     current = await loadCurrent();
   } catch (err) {
     console.error(`Failed to load live data: ${(err as Error).message}`);
-    console.error("Set PHAROS_API_KEY (and optionally PHAROS_API_BASE), or pass --fixtures <dir>.");
+    console.error("Check the credential-free Pages site-data lane, or pass --fixtures <dir>.");
     process.exit(1);
     return;
   }
@@ -417,13 +504,13 @@ function writeOutputs(
     "# AI Summary Refresh Candidates",
     "",
     `Generated ${today} by \`npm run candidates:ai-summaries\`.`,
-    `Source: ${FIXTURES_DIR ? `fixtures ${FIXTURES_DIR}` : API_BASE}`,
+    `Source: ${FIXTURES_DIR ? `fixtures ${FIXTURES_DIR}` : SITE_DATA_BASE_URL}`,
     "",
     `Audited ${meta.total} summaries; ${meta.unmatched} have no live report card (non-active lifecycle) and were skipped.`,
     `Stale: ${candidates.length} — high ${meta.counts.high}, medium ${meta.counts.medium}, low ${meta.counts.low}.`,
     "",
     "Severity: **high** = visible hero contradiction (overall grade or DEWS band changed); ",
-    "**medium** = dimension-grade change or a cited score off by 5+; **low** = minor score/count drift.",
+    "**medium** = pillar-grade change, a retired V8 dimension claim, or a cited score off by 5+; **low** = minor score/count drift.",
     "Refresh `high`/`medium` first. The rewrite is editorial — drive it with the `write-ai-summaries` skill.",
     "",
   ];
@@ -439,12 +526,14 @@ function writeOutputs(
 
   writeFileSync(
     OUTPUT_JSON,
-    JSON.stringify({ generatedAt: today, source: FIXTURES_DIR ?? API_BASE, ...meta, candidates }, null, 2),
+    JSON.stringify({ generatedAt: today, source: FIXTURES_DIR ?? SITE_DATA_BASE_URL, ...meta, candidates }, null, 2),
     "utf8",
   );
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
