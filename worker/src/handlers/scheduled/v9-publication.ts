@@ -2,7 +2,7 @@ import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
 import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
 
-const V9_PUBLICATION_WINDOW_MS = 30_000;
+const V9_PUBLICATION_WINDOW_MS = 60_000;
 const V9_PUBLICATION_MINIMUM_REMAINING_MS = 10_000;
 
 export async function runV9PublicationSlot(

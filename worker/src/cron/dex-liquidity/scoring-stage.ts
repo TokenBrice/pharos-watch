@@ -23,7 +23,8 @@ import type { DexPriceObs, LiquidityMetrics, PoolEntry } from "./types";
 
 const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
-const DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE = 1;
+export const DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT = 2;
+export const DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL = 8;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;
 const DEX_LIQUIDITY_SCORING_STAGE_MAX_AGE_SEC = 55 * 60;
 const DEX_LIQUIDITY_SCORING_STAGE_FUTURE_TOLERANCE_SEC = 2 * 60;
@@ -56,6 +57,14 @@ type MetricHeader = Omit<LiquidityMetrics, "chains" | "pairs" | "topPools"> & {
 };
 
 type TargetLane = "pancake" | "fluid" | "slipstream" | "solana" | "tron";
+type ScoringStageChunkInsertRow = [
+  generationId: string,
+  chunkIndex: number,
+  payload: string,
+  payloadBytes: number,
+  recordCount: number,
+  createdAt: number,
+];
 
 type ScoringStageRecord =
   | {
@@ -111,6 +120,31 @@ export interface DexLiquidityScoringStageRetentionResult {
   oldestRemainingAt: number | null;
   durationMs: number;
   error: string | null;
+}
+
+function prepareScoringStageChunkUpsert(
+  db: D1Database,
+  rows: readonly ScoringStageChunkInsertRow[],
+): D1PreparedStatement {
+  if (
+    rows.length === 0
+    || rows.length > DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT
+  ) {
+    throw new RangeError(
+      `DEX liquidity scoring-stage upsert requires 1-${DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT} rows`,
+    );
+  }
+  const placeholders = rows.map(() => "(?, ?, ?, ?, ?, ?)").join(", ");
+  return db.prepare(
+    `INSERT INTO dex_liquidity_scoring_stage_chunks (
+       generation_id, chunk_index, payload_json, payload_bytes, record_count, created_at
+     ) VALUES ${placeholders}
+     ON CONFLICT(generation_id, chunk_index) DO UPDATE SET
+       payload_json = excluded.payload_json,
+       payload_bytes = excluded.payload_bytes,
+       record_count = excluded.record_count,
+       created_at = excluded.created_at`,
+  ).bind(...rows.flat());
 }
 
 export interface LoadedDexLiquidityScoringStage {
@@ -779,7 +813,37 @@ export async function persistDexLiquidityScoringStage(
   let chunkCount = 0;
   let recordCount = 0;
   let payloadBytes = 0;
-  let pendingStatements: D1PreparedStatement[] = [];
+  let lastReportedChunkCount = 0;
+  let pendingRows: ScoringStageChunkInsertRow[] = [];
+  const reportPersistedProgress = async (force = false): Promise<void> => {
+    if (
+      input.onChunkBatchPersisted == null
+      || chunkCount === lastReportedChunkCount
+      || (
+        !force
+        && chunkCount - lastReportedChunkCount
+          < DEX_LIQUIDITY_SCORING_STAGE_PROGRESS_CHUNK_INTERVAL
+      )
+    ) {
+      return;
+    }
+    await input.onChunkBatchPersisted({ chunkCount, recordCount, payloadBytes });
+    lastReportedChunkCount = chunkCount;
+  };
+  const flushPendingRows = async (): Promise<void> => {
+    if (pendingRows.length === 0) return;
+    let rows: ScoringStageChunkInsertRow[] | null = pendingRows;
+    pendingRows = [];
+    try {
+      await batchExecute(db, [prepareScoringStageChunkUpsert(db, rows)], {
+        chunkSize: 1,
+        signal,
+      });
+    } finally {
+      rows = null;
+    }
+    await reportPersistedProgress();
+  };
   try {
     for (const chunk of encodeDexLiquidityScoringStageChunks(
       input.sourceState,
@@ -788,45 +852,23 @@ export async function persistDexLiquidityScoringStage(
       true,
     )) {
       throwIfAborted(signal);
-      pendingStatements.push(
-        db.prepare(
-          `INSERT INTO dex_liquidity_scoring_stage_chunks (
-             generation_id, chunk_index, payload_json, payload_bytes, record_count, created_at
-           ) VALUES (?, ?, ?, ?, ?, ?)
-           ON CONFLICT(generation_id, chunk_index) DO UPDATE SET
-             payload_json = excluded.payload_json,
-             payload_bytes = excluded.payload_bytes,
-             record_count = excluded.record_count,
-             created_at = excluded.created_at`,
-        ).bind(
-          generationId,
-          chunkCount,
-          chunk.payload,
-          chunk.payloadBytes,
-          chunk.recordCount,
-          createdAt,
-        ),
-      );
+      pendingRows.push([
+        generationId,
+        chunkCount,
+        chunk.payload,
+        chunk.payloadBytes,
+        chunk.recordCount,
+        createdAt,
+      ]);
       chunkCount++;
       recordCount += chunk.recordCount;
       payloadBytes += chunk.payloadBytes;
-      if (pendingStatements.length >= DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE) {
-        await batchExecute(db, pendingStatements, {
-          chunkSize: DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE,
-          signal,
-        });
-        pendingStatements = [];
-        await input.onChunkBatchPersisted?.({ chunkCount, recordCount, payloadBytes });
+      if (pendingRows.length >= DEX_LIQUIDITY_SCORING_STAGE_ROWS_PER_STATEMENT) {
+        await flushPendingRows();
       }
     }
-    if (pendingStatements.length > 0) {
-      await batchExecute(db, pendingStatements, {
-        chunkSize: DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE,
-        signal,
-      });
-      pendingStatements = [];
-      await input.onChunkBatchPersisted?.({ chunkCount, recordCount, payloadBytes });
-    }
+    await flushPendingRows();
+    await reportPersistedProgress(true);
     if (chunkCount === 0 || recordCount === 0) {
       throw new Error("DEX liquidity scoring stage produced no records");
     }
