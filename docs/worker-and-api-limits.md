@@ -197,7 +197,7 @@ JSON/text fetch callers that need per-request timeout coverage across body consu
 ### What this means operationally
 
 - `sync-dex-liquidity-stage` consumes discovery output written by `sync-dex-discovery`, loads all external source families, constructs the ordered pool graph, and stores it as 192-KiB generation-fenced D1 chunks at `10,40`.
-- `sync-dex-liquidity` is a D1-only `16,46` consumer. It requires the exact source slot six minutes earlier and a complete manifest before scoring/publication; charts runs afterward even if that controlled prerequisite fails.
+- `sync-dex-liquidity` is a D1-only `16,46` consumer. It prefers the source slot six minutes earlier, then falls back to the newest complete, unconsumed stage within 55 minutes so a late producer is retried on the next cycle; charts runs afterward even if that controlled prerequisite fails.
 - `sync-cl-exit-depth` consumes the previously published retained-pool target generation and atomically publishes the next measured-quote generation. The `16,46` scoring consumer joins only that fresh published generation and then publishes the next target inventory, so a torn or same-run self-join cannot activate partial evidence.
 - The exact legacy Curve 3pool adapter shares one Ethereum block and one
   deployment/registry verification across its direction packet. Its two output

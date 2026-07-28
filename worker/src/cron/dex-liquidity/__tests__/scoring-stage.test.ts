@@ -262,7 +262,7 @@ describe("DEX liquidity scoring stage", () => {
     expect(decodedPools.filter((entry) => entry.source === "cg_onchain")).toHaveLength(2_351);
   });
 
-  it("persists and keyset-loads only the exact complete fresh generation", async () => {
+  it("loads the newest ready generation at or before the expected source slot", async () => {
     const harness = createLatestSchemaSqlite();
     openDatabases.push(harness.sqlite);
     const source = sourceState();
@@ -288,7 +288,7 @@ describe("DEX liquidity scoring stage", () => {
     );
 
     await expect(loadDexLiquidityScoringStage(harness.db, {
-      nowSec: sourceSlotStartedAt + 26 * 60,
+      nowSec: sourceSlotStartedAt + 56 * 60,
       expectedSourceSlotStartedAt: sourceSlotStartedAt,
     })).rejects.toThrow("stale");
 
@@ -300,7 +300,21 @@ describe("DEX liquidity scoring stage", () => {
     await expect(loadDexLiquidityScoringStage(harness.db, {
       nowSec: sourceSlotStartedAt + 6 * 60,
       expectedSourceSlotStartedAt: sourceSlotStartedAt,
-    })).rejects.toThrow("incomplete");
+    })).rejects.toThrow("missing");
+
+    const previousSlotStartedAt = sourceSlotStartedAt - 30 * 60;
+    const previous = await persistDexLiquidityScoringStage(harness.db, {
+      sourceSlotStartedAt: previousSlotStartedAt,
+      syncStartSec: previousSlotStartedAt + 10,
+      sourceState: source,
+      poolState: pool,
+    });
+    const fallback = await loadDexLiquidityScoringStage(harness.db, {
+      nowSec: sourceSlotStartedAt + 6 * 60,
+      expectedSourceSlotStartedAt: sourceSlotStartedAt,
+    });
+    expect(fallback.generationId).toBe(previous.generationId);
+    expect(fallback.sourceSlotStartedAt).toBe(previousSlotStartedAt);
   });
 
   it("recovers exact chunks and finalization after ambiguous committed D1 responses", async () => {

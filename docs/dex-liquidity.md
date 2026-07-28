@@ -9,7 +9,7 @@
 
 ## DEX Liquidity Score
 
-Production uses two generation-fenced invocations every 30 minutes. `sync-dex-liquidity-stage` runs at `10,40 * * * *`, loads external sources, constructs the ordered pool graph, and writes the exact scoring input to bounded D1 chunks. `sync-dex-liquidity` runs at `16,46 * * * *`, requires the stage from exactly six minutes earlier, computes the composite liquidity score (0-100) per stablecoin, publishes all existing liquidity/price/history surfaces, and then yields to the serial stablecoin-charts job. `syncDexLiquidity()` remains an inline compatibility entrypoint for tests and direct callers; scheduled production uses `stageDexLiquidityScoring()` followed by `consumeDexLiquidityScoringStage()`.
+Production uses two generation-fenced invocations every 30 minutes. `sync-dex-liquidity-stage` runs at `10,40 * * * *`, loads external sources, constructs the ordered pool graph, and writes the exact scoring input to bounded D1 chunks. `sync-dex-liquidity` runs at `16,46 * * * *`, prefers the stage from exactly six minutes earlier and falls back to the newest ready, unconsumed stage within 55 minutes, computes the composite liquidity score (0-100) per stablecoin, publishes all existing liquidity/price/history surfaces, and then yields to the serial stablecoin-charts job. This bounded fallback ensures a producer that finishes after its first consumer attempt is retried in the next cycle. `syncDexLiquidity()` remains an inline compatibility entrypoint for tests and direct callers; scheduled production uses `stageDexLiquidityScoring()` followed by `consumeDexLiquidityScoringStage()`.
 
 Cron result status semantics:
 
@@ -93,7 +93,7 @@ Shared source-specific helpers now own the duplicate discovery/liquidity normali
 - CoinGecko onchain parsing, fee-bucket classification, balance-ratio inference, and locked-liquidity parsing: `worker/src/cron/dex-liquidity/coingecko-onchain-shared.ts`
 - CoinGecko tickers filtering, exchange aggregation, synthetic orderbook TVL, and price-observation gating: `worker/src/cron/dex-liquidity/coingecko-tickers-shared.ts`
 
-Data sources are split across three scheduled phases: discovery sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers) run on `6 */2 * * *` and write `dex_pool_staging`; source loading and pool construction run on `10,40 * * * *` and write the bounded scoring-stage generation; scoring/publication consumes that exact generation on `16,46 * * * *`.
+Data sources are split across three scheduled phases: discovery sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers) run on `6 */2 * * *` and write `dex_pool_staging`; source loading and pool construction run on `10,40 * * * *` and write the bounded scoring-stage generation; scoring/publication on `16,46 * * * *` prefers that generation and can consume the prior cycle's still-ready generation when the preferred producer finishes late.
 
 See the [Discovery Cron](#discovery-cron) section below for the full discovery pipeline architecture.
 
@@ -393,7 +393,7 @@ Discovery and merge staging tables are documented in the [Discovery Cron](#disco
 
 - **Architecture**: three dedicated cron phases feed discovery through publication:
   - Source-stage cron: `sync-dex-liquidity-stage` every 30 minutes (`10,40 * * * *`).
-  - Scoring/publication cron: `sync-dex-liquidity` every 30 minutes (`16,46 * * * *`), consuming the exact source slot six minutes earlier before the serial charts job.
+  - Scoring/publication cron: `sync-dex-liquidity` every 30 minutes (`16,46 * * * *`), preferring the source slot six minutes earlier and falling back to the newest ready stage within 55 minutes before the serial charts job.
   - Discovery cron: `syncDexDiscovery()` every 2 hours (`6 */2 * * *`).
   - Discovery writes normalized candidates to `dex_pool_staging`; the source stage consumes and merges them, then writes `dex_liquidity_scoring_stages` / `dex_liquidity_scoring_stage_chunks`.
 - **Discovery staging schema**: `dex_pool_staging` includes `pool_id`, `stablecoin_id`, `source`, `chain`, `protocol`, `dex_id`, `symbol`, `tvl_usd`, `volume_24h`, `quality_multiplier`, `pool_type`, `fee_tier`, `balance_ratio`, `is_stable`, `base_token`, `quote_token`, `quote_symbol`, `price_usd`, `locked_liq_pct`, `raw_json`, `discovered_at`, `refreshed_at`; PK is `(pool_id, stablecoin_id)`.
