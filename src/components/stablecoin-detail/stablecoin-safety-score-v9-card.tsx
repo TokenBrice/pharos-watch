@@ -121,8 +121,8 @@ type BreakdownRow = NonNullable<
  */
 const ROW_TONE_FILL_CLASS: Record<BreakdownRow["tone"], string> = {
   neutral: "bg-neutral-500 dark:bg-[#858585]",
-  warn: "bg-amber-500/80 dark:bg-amber-500/70",
-  critical: "bg-rose-500/80 dark:bg-rose-500/70",
+  warn: "bg-[var(--severity-moderate)]",
+  critical: "bg-[var(--severity-severe)]",
 };
 
 const ROW_TONE_SCORE_CLASS: Record<BreakdownRow["tone"], string> = {

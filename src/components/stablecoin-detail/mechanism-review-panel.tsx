@@ -69,8 +69,9 @@ function ExplainerLink({ review }: { review: MechanismReviewView }) {
 
 /**
  * Rail treatment. Reviewed notes run to ~1,700 characters on the median asset
- * and past 6,000 on the longest, which does not fit a 22rem column, so the
- * prose clamps and one control opens both the full text and the sources.
+ * and past 6,000 on the longest (usdt-tether), which does not fit a 22rem
+ * column, so the prose clamps to a short lead and one control opens both the
+ * full text and the sources.
  */
 function CompactMechanismReview({ review }: { review: MechanismReviewView }) {
   const [open, setOpen] = useState(false);
@@ -89,7 +90,7 @@ function CompactMechanismReview({ review }: { review: MechanismReviewView }) {
         <p
           className={cn(
             "mt-3 whitespace-pre-line text-xs leading-relaxed text-muted-foreground",
-            !open && "line-clamp-6",
+            !open && "line-clamp-3",
           )}
         >
           {review.notes}
@@ -100,7 +101,7 @@ function CompactMechanismReview({ review }: { review: MechanismReviewView }) {
           aria-expanded={open}
           className="pharos-focus-ring mt-2 inline-flex min-h-7 items-center gap-1 rounded-sm text-[11px] font-medium text-frost-blue"
         >
-          {open ? "Show less" : `Show more · ${review.sources.length} sources`}
+          {open ? "Show less" : `Read more · ${review.sources.length} sources`}
           <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden="true" />
         </button>
       </div>

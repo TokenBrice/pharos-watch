@@ -44,12 +44,12 @@ describe("MechanismReviewPanel", () => {
     // Reviewed notes run past 6,000 characters on the longest assets, which
     // cannot render unclamped in a 22rem rail.
     const notes = screen.getByText(/Segregated Accounts/);
-    expect(notes.className).toContain("line-clamp-6");
+    expect(notes.className).toContain("line-clamp-3");
     expect(screen.queryByText("Sources (2)")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /Show more/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Read more/ }));
 
-    expect(screen.getByText(/Segregated Accounts/).className).not.toContain("line-clamp-6");
+    expect(screen.getByText(/Segregated Accounts/).className).not.toContain("line-clamp-3");
     expect(screen.getByText("Sources (2)")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Show less/ })).toBeTruthy();
   });
