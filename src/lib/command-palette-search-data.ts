@@ -335,7 +335,6 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["usdglo-glo", "Glo Dollar", "USDGLO"],
   ["djed-coti", "Djed Stablecoin", "DJED"],
   ["pathusd-bridge", "PathUSD", "pathUSD"],
-  ["xai-silo-finance", "XAI Silo Finance", "XAI"],
   ["fxd-fathom", "Fathom Dollar", "FXD"],
   ["usdv-solomon", "Solomon USDv", "USDV"],
   ["ussd-sonic-labs", "US Sonic Dollar", "USSD"],

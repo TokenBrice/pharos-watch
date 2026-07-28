@@ -154,11 +154,6 @@ describe("report-card blacklist authority", () => {
     // fpi-frax: TERRA re-review found an owner-controlled ProxyAdmin upgrade path
     // on Fraxtal (upgrade-control, not active freeze), re-graded to "possible".
     expect(resolved.get("fpi-frax")).toBe("possible");
-    // xai-silo-finance: TERRA re-review of the sole verified Ethereum XAI source
-    // found no holder-transfer control and added a reviewed suppression, so USDC
-    // Silo collateral no longer propagates as inheritance.
-    expect(resolved.get("xai-silo-finance")).toBe(false);
-
     for (const meta of TRACKED_STABLECOINS) {
       expect(meta.canBeBlacklisted).not.toBe("dilutable");
       expect("canBeBlacklistedSource" in meta).toBe(false);

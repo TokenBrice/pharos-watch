@@ -8,11 +8,11 @@ Listing governance is checked in and deterministic:
 
 | Concern | Authoritative source |
 | --- | --- |
-| One listing class for every catalog ID | `shared/data/stablecoins/listing-decisions.json` |
+| One listing class for every catalog ID, plus retained excluded decisions for removed cemetery IDs | `shared/data/stablecoins/listing-decisions.json` |
 | Asset identity, lifecycle, and lifecycle review | `shared/data/stablecoins/coins/<id>.json` |
 | Decision and lifecycle validation | `scripts/ci/check-stablecoin-data.ts` |
 
-`listing-decisions.json` is intentionally compact. It contains only `schemaVersion`, `policyVersion`, and an exhaustive `listingClassById` map. Lifecycle is catalog metadata, not duplicated in the class ledger. `priceBasis` and `exitMechanism` are authored only on sourced delisted records to preserve the evidence for their removal; Pharos does not infer or store those fields for active assets.
+`listing-decisions.json` is intentionally compact. It contains only `schemaVersion`, `policyVersion`, and an exhaustive `listingClassById` map. Every catalog ID has one row. When a formerly tracked asset is removed to the cemetery, its row remains as `excluded` so the historical scope decision is not silently erased; the stablecoin-data guard accepts such extra rows only when the ID exists in `shared/data/dead-stablecoins.json`. Lifecycle is otherwise catalog metadata, not duplicated in the class ledger. `priceBasis` and `exitMechanism` are authored only on sourced delisted records to preserve the evidence for their removal; Pharos does not infer or store those fields for active assets.
 
 Provider membership is discovery evidence, not an admission decision. A CoinGecko category, DefiLlama row, symbol, name, or nominal price never proves that an asset belongs in Pharos.
 
@@ -112,5 +112,7 @@ For quarantine or delisting:
 3. Regenerate catalog projections and verify active surfaces no longer include the ID.
 4. Preserve canonical URLs and legacy ID redirects for historical readability.
 5. Run `npm run check:stablecoin-data` and focused lifecycle tests.
+
+For a full cemetery removal authorized by the lifecycle owner, remove the catalog source and its active-universe projections, add the cemetery record, and retain the prior listing ID as `excluded`. This keeps the scope decision auditable even though the asset is no longer part of the tracked catalog.
 
 The complete implementation procedure for new assets is [Adding a Stablecoin](./process/adding-a-stablecoin.md). Catalog structure and generated artifacts are documented in [Stablecoin Data Registry](./stablecoin-data.md).

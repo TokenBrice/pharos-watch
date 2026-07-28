@@ -750,17 +750,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: null,
   }),
   reviewed({
-    id: "xai-silo-finance",
-    disposition: "defer",
-    reasonCode: "borrower-repay-only",
-    blocker:
-      "Silo documents XAI borrowing and repayment, with the peg otherwise depending on arbitrage and DEX liquidity.",
-    rationale: "Debt repayment closes a borrower's position but does not let arbitrary XAI holders redeem collateral.",
-    evidenceNeeded: "New official ordinary-holder redemption docs and audited callable route evidence.",
-    evidenceUrls: ["https://docs.silo.finance/"],
-    allowedRouteFamilyIfProven: "collateral-redeem",
-  }),
-  reviewed({
     id: "xofm-mento",
     disposition: "add",
     reasonCode: "holder-route-confirmed",

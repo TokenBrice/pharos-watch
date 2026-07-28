@@ -298,10 +298,13 @@ function getListingGovernanceIssues(coins: readonly StablecoinMeta[]): string[] 
   }
 
   const coinById = new Map(coins.map((coin) => [coin.id, coin]));
+  const deadCoinIds = new Set(DEAD_STABLECOINS.map((coin) => coin.id));
   const listingClassById = new Map(Object.entries(decisionsResult.data.listingClassById));
-  for (const id of listingClassById.keys()) {
-    if (!coinById.has(id)) {
+  for (const [id, listingClass] of listingClassById) {
+    if (!coinById.has(id) && !deadCoinIds.has(id)) {
       issues.push(`listing-decisions.json references unknown catalog ID "${id}"`);
+    } else if (!coinById.has(id) && listingClass !== "excluded") {
+      issues.push(`listing-decisions.json must classify cemetery ID "${id}" as excluded`);
     }
   }
 

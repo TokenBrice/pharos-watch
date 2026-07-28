@@ -2905,16 +2905,6 @@
     "reviewedAt": "2026-05-15",
     "factsAsOf": "2026-05-15"
   },
-  "xai-silo-finance": {
-    "title": "Silo's Credit-Line Dollar",
-    "text": "A Silo Finance CDP dollar minted against approved isolated-market collateral; risk is governance, liquidation quality, and venue-thin secondary liquidity.\n\nXAI is a Silo Finance credit-line stablecoin: users borrow it against approved Silo collateral and repay it to close debt, while SiloDAO controls the credit-line parameters. Pharos validates Ethereum supply and carries the reserve stack as curated Silo collateral rather than a full live vault decomposition. The risk is classic {{term:cdp}}CDP{{/term}} risk in a narrow venue: governance parameters, {{term:overcollateralization}}overcollateralization{{/term}} buffers, {{term:liquidation}}liquidation{{/term}} quality, and whether secondary liquidity can enforce the peg when borrow demand changes.",
-    "updatedAt": "2026-05-15",
-    "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
-  },
   "fxd-fathom": {
     "title": "XDC's Native CDP Dollar",
     "text": "FXD is Fathom's {{term:cdp}}CDP{{/term}}-minted dollar on XDC, {{term:overcollateralization}}overcollateralized{{/term}} by XDC and stabilized by {{term:liquidation}}liquidations{{/term}} plus a stability module. Fathom Dollar gives the XDC ecosystem a native overcollateralized dollar backed by XDC and Fathom collateral-pool positions. It is tracked for chain coverage and DefiLlama visibility despite modest scale. The design is familiar CDP plumbing — mint against collateral, burn to repay, liquidate weak positions, and use a stability module for peg support — but the collateral base and chain liquidity make it materially riskier than larger Ethereum CDP systems.",

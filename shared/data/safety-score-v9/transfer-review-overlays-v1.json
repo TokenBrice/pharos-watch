@@ -659,34 +659,6 @@
       ]
     },
     {
-      "assetId": "xai-silo-finance",
-      "reviewedAt": "2026-07-17",
-      "reviewer": "Codex TRANSFER-FACT",
-      "deployments": [
-        {
-          "chainId": "ethereum",
-          "contractOrTokenId": "0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac",
-          "scope": "canonical",
-          "posture": "permissionless",
-          "evidence": "Sourcify matches this deployment's creation and runtime bytecode, resolves it as non-proxy, and supplies all thirteen sources. The direct Ownable ERC20Permit token adds only owner-only mint; burn is holder-only. It has no transfer override, pause, freeze, blacklist, seizure, or arbitrary holder-burn path.",
-          "sources": [
-            {
-              "label": "Sourcify matched XAI deployment and non-proxy resolution",
-              "url": "https://sourcify.dev/server/v2/contract/1/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac?fields=all"
-            },
-            {
-              "label": "Blockscout partially verified XAI source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac"
-            },
-            {
-              "label": "Pinned Silo XAI interface",
-              "url": "https://github.com/silo-finance/silo-core-v1/blob/6b66b91bf0edf0d3eac2067e10826fa7f14a7ce4/contracts/xai/IXAI.sol"
-            }
-          ]
-        }
-      ]
-    },
-    {
       "assetId": "yzusd-yuzu",
       "reviewedAt": "2026-07-17",
       "reviewer": "Codex TRANSFER-FACT",
