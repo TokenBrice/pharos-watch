@@ -1,5 +1,5 @@
 import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
-import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { MechanismArchetype } from "@shared/types";
 
 /**
