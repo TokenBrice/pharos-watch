@@ -7,6 +7,7 @@ const MAX_BATCH_RECORDS = 48;
 const MAX_BATCH_BYTES = 64 * 1_024;
 const MAX_RECORD_BYTES = 1_280;
 const D1_BIND_CHUNK_SIZE = 80;
+const BOUNDED_JOURNAL_TABLES = new Set(["report_card_evidence_journal", "safety_score_v9_supply_attribution_journal"]);
 
 export const BOUNDED_JOURNAL_MAX_ROWS_PER_ASSET = 32;
 export const BOUNDED_JOURNAL_RETENTION_SEC = 45 * 24 * 60 * 60;
@@ -59,6 +60,10 @@ export interface BoundedJournalStoreConfig<TRecord extends JournalRecord, TProje
 
 function serializedBytes(value: string): number {
   return new TextEncoder().encode(value).byteLength;
+}
+
+function assertJournalTable(table: string): void {
+  if (!BOUNDED_JOURNAL_TABLES.has(table)) throw new Error(`Unsupported bounded journal table: ${table}`);
 }
 
 function chunks<T>(values: readonly T[], size: number): T[][] {
@@ -114,6 +119,7 @@ export async function appendBoundedJournal<TRecord extends JournalRecord, TProje
   signal?: AbortSignal,
 ): Promise<{ accepted: number; assets: number }> {
   throwIfAborted(signal);
+  assertJournalTable(config.table);
   const canonical = canonicalRecords(config, records, nowSec);
   if (canonical.length === 0) return { accepted: 0, assets: 0 };
 
@@ -122,11 +128,13 @@ export async function appendBoundedJournal<TRecord extends JournalRecord, TProje
     config.insert(db, record, payloadJson, payloadBytes, nowSec)
   );
   statements.push(
+    // SAFETY: config.table is validated against BOUNDED_JOURNAL_TABLES above.
     db.prepare(`DELETE FROM ${config.table} WHERE recorded_at < ?`)
       .bind(Math.max(0, nowSec - BOUNDED_JOURNAL_RETENTION_SEC)),
   );
   for (const assetId of assetIds) {
     statements.push(
+      // SAFETY: config.table is validated against BOUNDED_JOURNAL_TABLES above.
       db.prepare(
         `DELETE FROM ${config.table}
           WHERE journal_id IN (
@@ -153,6 +161,7 @@ export async function loadBoundedJournal<TRecord extends JournalRecord, TProject
 ): Promise<TProjection> {
   const { messages } = config;
   throwIfAborted(signal);
+  assertJournalTable(config.table);
   if (!Number.isInteger(asOfSec) || asOfSec < 0) throw new Error(messages.invalidReadTimestamp);
   const canonicalAssetIds = [...new Set(assetIds)].sort();
   if (canonicalAssetIds.length !== assetIds.length) throw new Error(messages.duplicateReadAssets);
