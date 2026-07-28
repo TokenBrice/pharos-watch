@@ -3673,9 +3673,9 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
     // Wave-8 residuals 2026-07-28: retiring XAI from the active registry
-    // rotated the V8 evaluation build.
+    // and the 9.01 methodology activation rotated the V8 evaluation build.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "97dd6789df8b70b2e22d66dc0cd7f0d66f479cf9dd41e041bc9220722fb0455f",
+      "91cefa81f1b38cfd62a15a2aab9a3e78c11d1dfc2f2e5bbc09ed1fc221b060d9",
     );
   });
 

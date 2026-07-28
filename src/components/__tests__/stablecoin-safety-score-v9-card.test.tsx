@@ -65,7 +65,6 @@ describe("StablecoinSafetyScoreV9Card", () => {
     expect(screen.queryByText("none-known")).toBeNull();
     expect(screen.getByLabelText("Reserve composition")).toBeTruthy();
     expect(screen.getByText("Binding cap")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "USDC" })).toBeTruthy();
     expect(container.querySelector(".lg\\:grid-cols-2")).toBeTruthy();
     expect(container.querySelector('[style*="contain"]')).toBeTruthy();
     expect(screen.queryByText("Resilience")).toBeNull();

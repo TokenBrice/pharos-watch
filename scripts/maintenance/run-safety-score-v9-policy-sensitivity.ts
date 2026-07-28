@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 import { GOLDEN_SCENARIOS, PAIRWISE_CONSTRAINTS } from "@shared/data/safety-score-v9/golden-scenarios-v1";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import {
   scoreV9GoldenScenario,
   type V9GoldenScenario,
@@ -557,7 +558,10 @@ function buildSensitivityCase(args: {
 
 export function generateV9PolicySensitivityReport(options: GenerateSensitivityOptions = {}): V9PolicySensitivityReport {
   const baselinePolicy = V9_CANDIDATE_POLICY_V1;
-  if (baselinePolicy.policy.lifecycle !== "active" || baselinePolicy.policy.releaseVersion !== "9.0") {
+  if (
+    baselinePolicy.policy.lifecycle !== "active" ||
+    baselinePolicy.policy.releaseVersion !== SAFETY_SCORE_METHODOLOGY_VERSION
+  ) {
     throw new Error("Safety Score v9 sensitivity tooling only accepts the active V9 policy");
   }
 

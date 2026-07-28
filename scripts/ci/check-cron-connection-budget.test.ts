@@ -18,7 +18,6 @@ describe("check-cron-connection-budget", () => {
           "sync-stablecoins",
           "snapshot-supply",
           "snapshot-chain-supply",
-          "prepare-safety-score-v9-input",
           "compute-depeg-resolver",
         ],
         peak: 4,
