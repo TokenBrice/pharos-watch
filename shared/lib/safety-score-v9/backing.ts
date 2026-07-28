@@ -804,6 +804,178 @@ function collectPrivateCreditObligorStructuralReasons(
     );
 }
 
+function appendReserveExposureEvaluation(params: {
+  asset: V9BackingAssetInput;
+  exposure: V9ReserveExposureFactV2;
+  upstream: V9ResolvedUpstreamExposure | undefined;
+  seriallyResolvedUpstreamAssetIds: ReadonlySet<string>;
+  materialityWeight: number;
+  threshold: number;
+  policy: V9BackingEvaluationPolicy;
+  backing: V9BackingSemanticPolicy;
+  issuerConcentrationExemptClasses: ReadonlySet<ReserveAssetClass>;
+  issuerConcentrationExemptComponentKeys: Set<string>;
+  measuredFailureDomainsByComponent: Map<string, ReadonlySet<string>>;
+  contributions: V9BackingContribution[];
+  unresolved: V9BackingUnresolvedReason[];
+  structuralReasons: V9BackingStructuralReason[];
+}): void {
+  const {
+    asset,
+    exposure,
+    upstream,
+    seriallyResolvedUpstreamAssetIds,
+    materialityWeight,
+    threshold,
+    policy,
+    backing,
+    issuerConcentrationExemptClasses,
+    issuerConcentrationExemptComponentKeys,
+    measuredFailureDomainsByComponent,
+    contributions,
+    unresolved,
+    structuralReasons,
+  } = params;
+  const pathKey = `reserve:${exposure.exposureKey}`;
+  const state = exposure.status.observationState;
+  const requiredUnknown = exposure.status.applicability.state === "unresolved";
+  const confidenceMultiplier =
+    exposure.provenance === "live" || exposure.evidenceClass === "independent"
+      ? 1
+      : backing.reserve.issuerAttestedConfidenceMultiplier;
+  const classifiedScore = scoreV9ReserveExposureClassification(exposure, policy) * confidenceMultiplier;
+  let score =
+    state === "known" || state === "stale"
+      ? classifiedScore
+      : backing.boundedUnknownQuality;
+
+  if (upstream) {
+    const upstreamProjection = projectResolvedUpstreamReserveExposure({
+      backing,
+      policy,
+      upstream,
+      pathKey,
+      score,
+      materialityWeight,
+      materialityThreshold: threshold,
+    });
+    score = upstreamProjection.score;
+    unresolved.push(...upstreamProjection.unresolved);
+  } else if (exposure.trackedAssetId !== null && !seriallyResolvedUpstreamAssetIds.has(exposure.trackedAssetId)) {
+    score = Math.min(score, backing.boundedUnknownQuality);
+    unresolved.push(
+      ...projectUnresolvedTrackedReserveExposure({
+        asset,
+        policy,
+        trackedAssetId: exposure.trackedAssetId,
+        pathKey,
+        materialityWeight,
+        materialityThreshold: threshold,
+      }),
+    );
+  }
+
+  if (state !== "known" || requiredUnknown) {
+    const material = isV9MaterialShare(exposure.weight, threshold);
+    unresolved.push(
+      ...gapReasons(
+        asset,
+        exposure.status.gapIds,
+        pathKey,
+        material ? "ceiling" : "pillar",
+        material ? "material-unknown-reserve-exposure" : "bounded-unknown-reserve-exposure",
+      ),
+    );
+  }
+
+  const failureDomains = canonicalDomains([...exposure.failureDomains, ...(upstream?.failureDomains ?? [])]);
+  const responsibility = v9StructuralResponsibilityForStatus(exposure.status);
+  measuredFailureDomainsByComponent.set(
+    pathKey,
+    new Set(
+      responsibility === "measured-adverse"
+        ? exposure.failureDomains.map(domainKey)
+        : [],
+    ),
+  );
+  // These classes do not represent a counterparty obligation at the
+  // reserve-issuer layer. Custodian domains remain fully counted.
+  if (exposure.assetClass !== null && issuerConcentrationExemptClasses.has(exposure.assetClass)) {
+    issuerConcentrationExemptComponentKeys.add(pathKey);
+  }
+  contributions.push({
+    componentKey: pathKey,
+    source: "reserve-exposure",
+    score: clampScore(score),
+    normalizedWeight: exposure.weight,
+    weightedScore: exposure.weight * clampScore(score),
+    observationState: state,
+    provenance: exposure.provenance,
+    evidenceRefIds: uniqueSorted(exposure.status.evidenceRefIds),
+    failureDomains,
+    upstreamAssetId: upstream?.upstreamAssetId ?? exposure.trackedAssetId,
+  });
+
+  const material = isV9MaterialShare(materialityWeight, threshold);
+  if (material && exposure.assetClass === "private-credit" && exposure.issuerOrObligorKey === null) {
+    structuralReasons.push(
+      createV9BackingStructuralReason(policy, backing.structural.speculativeCreditSignal, {
+        responsibility,
+        pathKey,
+        materialShare: materialityWeight,
+        evidenceRefIds: uniqueSorted(exposure.status.evidenceRefIds),
+        failureDomains,
+      }),
+    );
+  }
+  if (material && score <= backing.structural.unsafeExposureQuality) {
+    structuralReasons.push(
+      createV9BackingStructuralReason(policy, backing.structural.unsafeExposureSignal, {
+        responsibility:
+          responsibility === "measured-adverse" &&
+          classifiedScore <= backing.structural.unsafeExposureQuality
+            ? "measured-adverse"
+            : "integration-missing",
+        pathKey,
+        materialShare: materialityWeight,
+        evidenceRefIds: uniqueSorted(exposure.status.evidenceRefIds),
+        failureDomains,
+      }),
+    );
+  }
+}
+
+function appendResidualReserveExposure(params: {
+  asset: V9BackingAssetInput;
+  backing: V9BackingSemanticPolicy;
+  residualWeight: number;
+  threshold: number;
+  contributions: V9BackingContribution[];
+  unresolved: V9BackingUnresolvedReason[];
+}): void {
+  const { asset, backing, residualWeight, threshold, contributions, unresolved } = params;
+  if (residualWeight <= SCORE_EPSILON) return;
+  const material = isV9MaterialShare(residualWeight, threshold);
+  contributions.push({
+    componentKey: "reserve:unclassified-residual",
+    source: "reserve-exposure",
+    score: backing.boundedUnknownQuality,
+    normalizedWeight: residualWeight,
+    weightedScore: residualWeight * backing.boundedUnknownQuality,
+    observationState: "bounded-unknown",
+    provenance: null,
+    evidenceRefIds: uniqueSorted(asset.reserveStatus.evidenceRefIds),
+    failureDomains: [],
+    upstreamAssetId: null,
+  });
+  unresolved.push({
+    code: material ? "material-unknown-reserve-exposure" : "bounded-unknown-reserve-exposure",
+    pathKey: "reserve:unclassified-residual",
+    gapIds: uniqueSorted(asset.reserveStatus.gapIds),
+    treatment: material ? "ceiling" : "pillar",
+  });
+}
+
 interface ReserveDomainConcentrationGroup {
   readonly domain: V9FailureDomainRef;
   share: number;
@@ -868,6 +1040,30 @@ function collectReserveCommonModeStructuralReasons(
         failureDomains: [group.domain],
       }),
     );
+}
+
+function appendReserveConcentrationContribution(params: {
+  asset: V9BackingAssetInput;
+  backing: V9BackingSemanticPolicy;
+  domainGroups: readonly ReserveDomainConcentrationGroup[];
+  contributions: V9BackingContribution[];
+}): number {
+  const { asset, backing, domainGroups, contributions } = params;
+  const maximumDomainShare = domainGroups.reduce((maximum, group) => Math.max(maximum, group.share), 0);
+  const concentration = concentrationScore(maximumDomainShare, backing);
+  contributions.push({
+    componentKey: "reserve:concentration",
+    source: "reserve-concentration",
+    score: concentration,
+    normalizedWeight: backing.reserve.concentrationWeight,
+    weightedScore: concentration * backing.reserve.concentrationWeight,
+    observationState: asset.reserveStatus.observationState,
+    provenance: null,
+    evidenceRefIds: uniqueSorted(asset.reserveStatus.evidenceRefIds),
+    failureDomains: canonicalDomains(domainGroups.map((group) => group.domain)),
+    upstreamAssetId: null,
+  });
+  return concentration;
 }
 
 export function evaluateV9ReserveExposures(
@@ -950,119 +1146,23 @@ export function evaluateV9ReserveExposures(
   const threshold = backing.structural.materialExposureShare;
   const materialityWeightFor = buildReserveMaterialityWeightFor(exposures, upstreamByExposure);
   for (const exposure of exposures) {
-    const pathKey = `reserve:${exposure.exposureKey}`;
-    const state = exposure.status.observationState;
     const upstream = upstreamByExposure.get(exposure.exposureKey);
-    const materialityWeight = materialityWeightFor(exposure);
-    const requiredUnknown = exposure.status.applicability.state === "unresolved";
-    const confidenceMultiplier =
-      exposure.provenance === "live" || exposure.evidenceClass === "independent"
-        ? 1
-        : backing.reserve.issuerAttestedConfidenceMultiplier;
-    const classifiedScore = scoreV9ReserveExposureClassification(exposure, policy) * confidenceMultiplier;
-    let score =
-      state === "known" || state === "stale"
-        ? classifiedScore
-        : backing.boundedUnknownQuality;
-    // The availability materiality is decided HERE from the aggregate root
-    // weight and never read from the projected reason codes: a split that reads
-    // nonmaterial per immediate row is still material at its shared root
-    // (VER2-001/VER2-010). Projected availability codes are dropped so the
-    // trace cannot publish contradictory material/nonmaterial reasons.
-    if (upstream) {
-      const upstreamProjection = projectResolvedUpstreamReserveExposure({
-        backing,
-        policy,
-        upstream,
-        pathKey,
-        score,
-        materialityWeight,
-        materialityThreshold: threshold,
-      });
-      score = upstreamProjection.score;
-      unresolved.push(...upstreamProjection.unresolved);
-    } else if (exposure.trackedAssetId !== null && !seriallyResolvedUpstreamAssetIds.has(exposure.trackedAssetId)) {
-      score = Math.min(score, backing.boundedUnknownQuality);
-      unresolved.push(
-        ...projectUnresolvedTrackedReserveExposure({
-          asset,
-          policy,
-          trackedAssetId: exposure.trackedAssetId,
-          pathKey,
-          materialityWeight,
-          materialityThreshold: threshold,
-        }),
-      );
-    }
-    if (state !== "known" || requiredUnknown) {
-      const material = isV9MaterialShare(exposure.weight, threshold);
-      unresolved.push(
-        ...gapReasons(
-          asset,
-          exposure.status.gapIds,
-          pathKey,
-          material ? "ceiling" : "pillar",
-          material ? "material-unknown-reserve-exposure" : "bounded-unknown-reserve-exposure",
-        ),
-      );
-    }
-    const failureDomains = canonicalDomains([...exposure.failureDomains, ...(upstream?.failureDomains ?? [])]);
-    const responsibility = v9StructuralResponsibilityForStatus(exposure.status);
-    measuredFailureDomainsByComponent.set(
-      pathKey,
-      new Set(
-        responsibility === "measured-adverse"
-          ? exposure.failureDomains.map(domainKey)
-          : [],
-      ),
-    );
-    // These classes do not represent a counterparty obligation at the
-    // reserve-issuer layer. Custodian domains remain fully counted.
-    if (exposure.assetClass !== null && issuerConcentrationExemptClasses.has(exposure.assetClass)) {
-      issuerConcentrationExemptComponentKeys.add(pathKey);
-    }
-    contributions.push({
-      componentKey: pathKey,
-      source: "reserve-exposure",
-      score: clampScore(score),
-      normalizedWeight: exposure.weight,
-      weightedScore: exposure.weight * clampScore(score),
-      observationState: state,
-      provenance: exposure.provenance,
-      evidenceRefIds: uniqueSorted(exposure.status.evidenceRefIds),
-      failureDomains,
-      upstreamAssetId: upstream?.upstreamAssetId ?? exposure.trackedAssetId,
+    appendReserveExposureEvaluation({
+      asset,
+      exposure,
+      upstream,
+      seriallyResolvedUpstreamAssetIds,
+      materialityWeight: materialityWeightFor(exposure),
+      threshold,
+      policy,
+      backing,
+      issuerConcentrationExemptClasses,
+      issuerConcentrationExemptComponentKeys,
+      measuredFailureDomainsByComponent,
+      contributions,
+      unresolved,
+      structuralReasons,
     });
-
-    const material = isV9MaterialShare(materialityWeight, threshold);
-    // Named-obligor private-credit rows aggregate below (same-obligor group);
-    // only obligor-less rows keep the per-row speculative-credit treatment.
-    if (material && exposure.assetClass === "private-credit" && exposure.issuerOrObligorKey === null) {
-      structuralReasons.push(
-        createV9BackingStructuralReason(policy, backing.structural.speculativeCreditSignal, {
-          responsibility,
-          pathKey,
-          materialShare: materialityWeight,
-          evidenceRefIds: uniqueSorted(exposure.status.evidenceRefIds),
-          failureDomains,
-        }),
-      );
-    }
-    if (material && score <= backing.structural.unsafeExposureQuality) {
-      structuralReasons.push(
-        createV9BackingStructuralReason(policy, backing.structural.unsafeExposureSignal, {
-          responsibility:
-            responsibility === "measured-adverse" &&
-            classifiedScore <= backing.structural.unsafeExposureQuality
-              ? "measured-adverse"
-              : "integration-missing",
-          pathKey,
-          materialShare: materialityWeight,
-          evidenceRefIds: uniqueSorted(exposure.status.evidenceRefIds),
-          failureDomains,
-        }),
-      );
-    }
   }
 
   structuralReasons.push(
@@ -1070,27 +1170,14 @@ export function evaluateV9ReserveExposures(
   );
 
   const residualWeight = Math.max(0, 1 - totalWeight);
-  if (residualWeight > SCORE_EPSILON) {
-    const material = isV9MaterialShare(residualWeight, threshold);
-    contributions.push({
-      componentKey: "reserve:unclassified-residual",
-      source: "reserve-exposure",
-      score: backing.boundedUnknownQuality,
-      normalizedWeight: residualWeight,
-      weightedScore: residualWeight * backing.boundedUnknownQuality,
-      observationState: "bounded-unknown",
-      provenance: null,
-      evidenceRefIds: uniqueSorted(asset.reserveStatus.evidenceRefIds),
-      failureDomains: [],
-      upstreamAssetId: null,
-    });
-    unresolved.push({
-      code: material ? "material-unknown-reserve-exposure" : "bounded-unknown-reserve-exposure",
-      pathKey: "reserve:unclassified-residual",
-      gapIds: uniqueSorted(asset.reserveStatus.gapIds),
-      treatment: material ? "ceiling" : "pillar",
-    });
-  }
+  appendResidualReserveExposure({
+    asset,
+    backing,
+    residualWeight,
+    threshold,
+    contributions,
+    unresolved,
+  });
 
   const domainGroups = collectReserveDomainConcentrationGroups({
     contributions,
@@ -1098,19 +1185,11 @@ export function evaluateV9ReserveExposures(
     issuerConcentrationExemptComponentKeys,
   });
   structuralReasons.push(...collectReserveCommonModeStructuralReasons(domainGroups, policy, backing));
-  const maximumDomainShare = domainGroups.reduce((maximum, group) => Math.max(maximum, group.share), 0);
-  const concentration = concentrationScore(maximumDomainShare, backing);
-  contributions.push({
-    componentKey: "reserve:concentration",
-    source: "reserve-concentration",
-    score: concentration,
-    normalizedWeight: backing.reserve.concentrationWeight,
-    weightedScore: concentration * backing.reserve.concentrationWeight,
-    observationState: asset.reserveStatus.observationState,
-    provenance: null,
-    evidenceRefIds: uniqueSorted(asset.reserveStatus.evidenceRefIds),
-    failureDomains: canonicalDomains(domainGroups.map((group) => group.domain)),
-    upstreamAssetId: null,
+  const concentration = appendReserveConcentrationContribution({
+    asset,
+    backing,
+    domainGroups,
+    contributions,
   });
 
   const exposureScore = contributions
