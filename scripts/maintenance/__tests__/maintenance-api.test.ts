@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
-import { PAGES_APP_ORIGIN, SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import type {
   PegSummaryResponse,
@@ -11,20 +11,26 @@ import {
   extractFindings,
   type Current,
 } from "../build-ai-summary-staleness-candidates";
-import { buildMaintenanceSiteDataRequest } from "../../lib/maintenance-site-data";
+import { buildMaintenanceApiRequest } from "../../lib/maintenance-api";
 
-describe("maintenance site-data access", () => {
-  it("builds a credential-free request through the production Pages proxy", () => {
-    const request = buildMaintenanceSiteDataRequest(API_PATHS.reportCardsV9());
+describe("maintenance API access", () => {
+  it("builds an authenticated request to the public API", () => {
+    const request = buildMaintenanceApiRequest(API_PATHS.reportCardsV9(), "test-api-key");
 
     expect(request).toEqual({
-      url: `${PAGES_APP_ORIGIN}/_site-data/report-cards/v9`,
+      url: `${API_ORIGIN}/api/report-cards/v9`,
       headers: {
         accept: "application/json",
-        Origin: SITE_ORIGIN,
+        "X-API-Key": "test-api-key",
       },
     });
-    expect(request.headers).not.toHaveProperty("X-API-Key");
+    expect(request.headers).not.toHaveProperty("Origin");
+  });
+
+  it("rejects live requests without an API credential", () => {
+    expect(() => buildMaintenanceApiRequest(API_PATHS.events(), "  ")).toThrow(
+      "PHAROS_API_KEY is required",
+    );
   });
 });
 
