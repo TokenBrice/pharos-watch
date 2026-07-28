@@ -38,11 +38,11 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
-      "sha256": "9a1f88f1b7a78e5e322d79f86c6631434627ff304e8334b358d4c7a24bba40f6"
+      "sha256": "9af09f40a5d481742e9de030d7ff36522e443e51b1bdcd38163b2636607c782c"
     },
     {
       "path": "shared/lib/methodology-versions/safety-score.ts",
-      "sha256": "73bc25fc665bcb897408fcb894ce60330f0f9068c850da428689cbe8f4158535"
+      "sha256": "43baf53165846444c874c2ef0c0a04482cbf4ac1fdcf0e957c13748863b17963"
     },
     {
       "path": "shared/lib/mint-authority-scoring.ts",
@@ -149,7 +149,7 @@ const SAFETY_SCORE_V8_EVALUATION_BUILD_MANIFEST = {
       "sha256": "e70bfddf6d253f0d37ed74449dff45e9af02858d80c0ca0931579796c080b85e"
     }
   ],
-  "digest": "97dd6789df8b70b2e22d66dc0cd7f0d66f479cf9dd41e041bc9220722fb0455f"
+  "digest": "91cefa81f1b38cfd62a15a2aab9a3e78c11d1dfc2f2e5bbc09ed1fc221b060d9"
 } as const;
 
 export const SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST =
