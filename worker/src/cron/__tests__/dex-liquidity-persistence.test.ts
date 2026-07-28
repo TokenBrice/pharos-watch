@@ -141,6 +141,27 @@ function extractHistoryInsertRows(statements: readonly PreparedStatementWithMeta
   return rows;
 }
 
+const DEX_LIQUIDITY_RUN_ROW_BIND_COUNT = 28;
+
+function extractDexLiquidityRunRows(statements: readonly PreparedStatementWithMeta[]): unknown[][] {
+  const rows: unknown[][] = [];
+  for (const statement of statements) {
+    if (statement.boundValues.length % DEX_LIQUIDITY_RUN_ROW_BIND_COUNT !== 0) {
+      throw new Error("DEX liquidity run-row statement has an incomplete bind group");
+    }
+    for (
+      let index = 0;
+      index < statement.boundValues.length;
+      index += DEX_LIQUIDITY_RUN_ROW_BIND_COUNT
+    ) {
+      rows.push(
+        statement.boundValues.slice(index, index + DEX_LIQUIDITY_RUN_ROW_BIND_COUNT),
+      );
+    }
+  }
+  return rows;
+}
+
 function getPreparedBatchStatements(sqlFragment: string): PreparedStatementWithMeta[] {
   return vi.mocked(batchExecute).mock.calls.flatMap(([, statements]) =>
     (statements as PreparedStatementWithMeta[]).filter((statement) => statement.sql.includes(sqlFragment))
@@ -274,8 +295,9 @@ describe("dex-liquidity persistence", () => {
     });
 
     const prepared = getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows");
-    expect(prepared).toHaveLength(ACTIVE_STABLECOINS.length + 1);
-    expect(prepared.map((statement) => statement.boundValues[1])).toEqual([
+    const preparedRows = extractDexLiquidityRunRows(prepared);
+    expect(preparedRows).toHaveLength(ACTIVE_STABLECOINS.length + 1);
+    expect(preparedRows.map((row) => row[1])).toEqual([
       "usdt-tether",
       ...ACTIVE_STABLECOINS.filter((coin) => coin.id !== "usdt-tether").map((coin) => coin.id),
       "__global__",
@@ -285,16 +307,26 @@ describe("dex-liquidity persistence", () => {
         statement.sql.includes("INSERT OR REPLACE INTO dex_liquidity_run_rows")
       )
     );
-    expect(DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE).toBe(5);
-    expect(candidateCalls.length).toBeGreaterThan(1);
-    expect(candidateCalls.every(([, statements]) => statements.length <= DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE))
-      .toBe(true);
+    expect(DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE).toBe(15);
+    expect(prepared).toHaveLength(Math.ceil(preparedRows.length / 3));
+    expect(candidateCalls).toHaveLength(
+      Math.ceil(preparedRows.length / DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE),
+    );
+    expect(candidateCalls.every(([, statements]) => statements.length <= 5)).toBe(true);
+    expect(candidateCalls[candidateCalls.length - 1]?.[1]).toHaveLength(
+      Math.ceil(
+        (preparedRows.length % DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE
+          || DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE) / 3,
+      ),
+    );
+    expect(prepared.length).toBeLessThan(preparedRows.length);
+    expect(prepared.every((statement) => statement.boundValues.length <= 84)).toBe(true);
 
-    const usdtRow = prepared.find((stmt) => stmt.boundValues[1] === "usdt-tether");
-    const usdcPlaceholder = prepared.find((stmt) => stmt.boundValues[1] === "usdc-circle");
-    const globalRow = prepared.find((stmt) => stmt.boundValues[1] === "__global__");
+    const usdtRow = preparedRows.find((row) => row[1] === "usdt-tether");
+    const usdcPlaceholder = preparedRows.find((row) => row[1] === "usdc-circle");
+    const globalRow = preparedRows.find((row) => row[1] === "__global__");
 
-    expect(usdtRow?.boundValues).toEqual([
+    expect(usdtRow).toEqual([
       buildDexLiquidityPublicationGenerationId(1_700_000_000),
       "usdt-tether",
       "USDT",
@@ -333,7 +365,7 @@ describe("dex-liquidity persistence", () => {
       LIQUIDITY_METHODOLOGY_VERSION,
       1_700_000_000,
     ]);
-    expect(usdcPlaceholder?.boundValues).toEqual([
+    expect(usdcPlaceholder).toEqual([
       buildDexLiquidityPublicationGenerationId(1_700_000_000),
       "usdc-circle",
       "USDC",
@@ -363,7 +395,7 @@ describe("dex-liquidity persistence", () => {
       LIQUIDITY_METHODOLOGY_VERSION,
       1_700_000_000,
     ]);
-    expect(JSON.parse(String(usdcPlaceholder?.boundValues[19]))).toMatchObject({
+    expect(JSON.parse(String(usdcPlaceholder?.[19]))).toMatchObject({
       exitRouteObservations: [],
       exitRouteObservationCoverage: {
         status: "unknown",
@@ -376,7 +408,7 @@ describe("dex-liquidity persistence", () => {
         publishedAtSec: 1_700_000_000,
       },
     });
-    expect(globalRow?.boundValues).toEqual([
+    expect(globalRow).toEqual([
       buildDexLiquidityPublicationGenerationId(1_700_000_000),
       "__global__",
       "__global__",
@@ -445,9 +477,10 @@ describe("dex-liquidity persistence", () => {
       nowSec,
     );
 
-    const row = getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows")
-      .find((statement) => statement.boundValues[1] === meta.id);
-    expect(JSON.parse(String(row?.boundValues[19]))).toMatchObject({
+    const row = extractDexLiquidityRunRows(
+      getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
+    ).find((candidate) => candidate[1] === meta.id);
+    expect(JSON.parse(String(row?.[19]))).toMatchObject({
       exitRouteObservations: [],
       exitRouteObservationCoverage: {
         status: "populated",
@@ -509,9 +542,11 @@ describe("dex-liquidity persistence", () => {
       inactiveMetricIdsSkipped: [INACTIVE_TRACKED_STABLECOIN.id],
     });
 
-    const prepared = getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows");
-    expect(prepared.some((stmt) => stmt.boundValues[1] === INACTIVE_TRACKED_STABLECOIN.id)).toBe(false);
-    expect(prepared.some((stmt) => stmt.boundValues[1] === "usdt-tether")).toBe(true);
+    const prepared = extractDexLiquidityRunRows(
+      getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
+    );
+    expect(prepared.some((row) => row[1] === INACTIVE_TRACKED_STABLECOIN.id)).toBe(false);
+    expect(prepared.some((row) => row[1] === "usdt-tether")).toBe(true);
     expect(prepared).toHaveLength(ACTIVE_STABLECOINS.length + 1);
 
     const stageMetadata = db
@@ -655,7 +690,7 @@ describe("dex-liquidity persistence", () => {
 
     expect(batchExecute).toHaveBeenCalledTimes(2);
     expect(vi.mocked(batchExecute).mock.calls.every(([, statements]) =>
-      statements.length <= DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE
+      statements.length <= 5
     )).toBe(true);
     expect(getPreparedBatchStatements("INSERT INTO dex_liquidity")).toHaveLength(0);
     expect(db.getHistory().some((entry) => entry.sql.includes("state = 'failed'"))).toBe(true);
