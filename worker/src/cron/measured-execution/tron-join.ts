@@ -6,27 +6,20 @@ import {
 import type { PoolEntry } from "../dex-liquidity/types";
 import { loadLatestPublishedTronMeasuredQuoteEvidence, type LoadedTronMeasuredQuoteEvidence } from "./persistence";
 import {
+  createNativeMeasuredExecutionJoinDiagnostics,
+  mapNativeMeasuredExecutionValidationGate,
+  promoteNativeMeasuredExecutionProfile,
+  recordNativeMeasuredExecutionFailure,
+  resetNativeMeasuredExecutionJoinFields,
+  type NativeMeasuredExecutionJoinDiagnostics,
+} from "./native-join";
+import {
   getTronMeasuredExecutionAdapterByProfile,
   isTronMeasuredExecutionAdapterScoreEligible,
   type TronMeasuredExecutionAdapter,
 } from "./tron-registry";
 
-export interface TronMeasuredExecutionJoinDiagnostics {
-  targetCount: number;
-  measuredCount: number;
-  gatedCount: number;
-  failuresByReason: Record<string, number>;
-  quoteGenerationId: string | null;
-  targetGenerationId: string | null;
-}
-
-function gate(reason: DexExecutionCapabilityGate["reason"]): DexExecutionCapabilityGate {
-  return { family: "measured-execution", reason };
-}
-
-function increment(record: Record<string, number>, reason: string): void {
-  record[reason] = (record[reason] ?? 0) + 1;
-}
+export interface TronMeasuredExecutionJoinDiagnostics extends NativeMeasuredExecutionJoinDiagnostics {}
 
 export async function loadTronMeasuredExecutionJoinEvidence(
   db: D1Database,
@@ -39,46 +32,28 @@ export async function loadTronMeasuredExecutionJoinEvidence(
   }
 }
 
-function mapValidationGate(issues: readonly string[]): DexExecutionCapabilityGate["reason"] {
-  if (issues.includes("stale-observation")) return "stale-observation";
-  if (issues.some((issue) => issue.includes("generation-mismatch"))) return "generation-mismatch";
-  return "invalid-observation";
-}
-
 export function joinTronMeasuredExecutionEvidence(input: {
   poolsByStablecoin: Map<string, PoolEntry[]>;
   evidence: LoadedTronMeasuredQuoteEvidence | null;
   nowSec: number;
   resolveAdapterPolicy?: (adapterProfileId: string) => TronMeasuredExecutionAdapter | null;
 }): TronMeasuredExecutionJoinDiagnostics {
-  const diagnostics: TronMeasuredExecutionJoinDiagnostics = {
-    targetCount: 0,
-    measuredCount: 0,
-    gatedCount: 0,
-    failuresByReason: {},
-    quoteGenerationId: input.evidence?.quoteGenerationId ?? null,
-    targetGenerationId: input.evidence?.targetGenerationId ?? null,
-  };
+  const diagnostics = createNativeMeasuredExecutionJoinDiagnostics(input.evidence);
   for (const pools of input.poolsByStablecoin.values()) {
     for (const pool of pools) {
       const target = pool.extra?.tronMeasuredExecutionTarget;
       if (!target) continue;
       diagnostics.targetCount++;
-      pool.extra = { ...(pool.extra ?? {}) };
-      delete pool.extra.tronMeasuredExecution;
-      delete pool.extra.tronMeasuredExecutionProfile;
-      pool.extra.tronMeasuredExecutionPhysicalPoolId = target.poolId;
-      delete pool.extra.nativeMeasuredExecution;
-      delete pool.extra.nativeMeasuredExecutionPhysicalPoolId;
+      const extra = resetNativeMeasuredExecutionJoinFields(pool, "tron", target);
       const fail = (reason: DexExecutionCapabilityGate["reason"], detail?: string) => {
-        pool.extra!.executionCapabilityGate = gate(reason);
-        pool.extra!.tronMeasuredExecutionDiagnostic = {
-          adapterProfileId: target.adapterProfileId,
-          targetId: target.targetId,
-          ...(detail ? { detail: detail.slice(0, 300) } : {}),
-        };
-        diagnostics.gatedCount++;
-        increment(diagnostics.failuresByReason, `${target.adapterProfileId}:${reason}`);
+        recordNativeMeasuredExecutionFailure({
+          pool,
+          kind: "tron",
+          target,
+          diagnostics,
+          reason,
+          detail,
+        });
       };
       if (!input.evidence) {
         fail("quote-missing");
@@ -109,25 +84,22 @@ export function joinTronMeasuredExecutionEvidence(input: {
         nowSec: input.nowSec,
       });
       if (issues.length > 0) {
-        fail(mapValidationGate(issues), issues.join(","));
+        fail(mapNativeMeasuredExecutionValidationGate(issues), issues.join(","));
         continue;
       }
       const publicProfile = toTronMeasuredExecutionPublicProfile(quote.profile);
-      pool.extra.tronMeasuredExecution = publicProfile;
+      extra.tronMeasuredExecution = publicProfile;
       if (!isTronMeasuredExecutionAdapterScoreEligible(adapter)) {
         fail("activation-pending", "shadow-score-ineligible");
         diagnostics.measuredCount++;
         continue;
       }
-      pool.extra.nativeMeasuredExecution = publicProfile;
-      pool.extra.nativeMeasuredExecutionPhysicalPoolId = target.poolId;
-      if (pool.extra.executionCapabilityGate?.family === "measured-execution") {
-        delete pool.extra.executionCapabilityGate;
-      }
-      pool.extra.tronMeasuredExecutionDiagnostic = {
-        adapterProfileId: target.adapterProfileId,
-        targetId: target.targetId,
-      };
+      promoteNativeMeasuredExecutionProfile({
+        pool,
+        kind: "tron",
+        target,
+        publicProfile,
+      });
       diagnostics.measuredCount++;
     }
   }

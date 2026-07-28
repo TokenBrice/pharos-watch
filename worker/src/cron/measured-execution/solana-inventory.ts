@@ -1,4 +1,4 @@
-import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
 import {
   SOLANA_MEASURED_TARGET_SCHEMA_VERSION,
   SolanaMeasuredExecutionTargetSchema,
@@ -8,17 +8,20 @@ import {
 } from "@shared/types/solana-measured-execution";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexApiPool, DexApiPoolToken } from "../../lib/dex-api-types";
+import { resolveStablecoinIdForDexApiToken } from "../../lib/dex-api-token-pricing";
 import {
-  deriveTokenUsdPrice,
-  getTokenReferenceUsdPrice,
-  resolveStablecoinIdForDexApiToken,
-} from "../../lib/dex-api-token-pricing";
+  buildNativeMeasuredExecutionToken,
+  buildNativeMeasuredPoolDirectionKey,
+} from "./native-inventory";
 import { getSolanaMeasuredExecutionAdapter } from "./solana-registry";
 
 export function buildSolanaMeasuredPoolDirectionKey(stablecoinId: string, poolId: string): string {
-  const trimmedPoolId = poolId.trim();
-  const physicalPoolId = trimmedPoolId.startsWith("solana:") ? trimmedPoolId.slice("solana:".length) : trimmedPoolId;
-  return `${stablecoinId.trim().toLowerCase()}|${canonicalExitRouteAssetKey("solana", physicalPoolId)}`;
+  return buildNativeMeasuredPoolDirectionKey({
+    stablecoinId,
+    chain: "solana",
+    poolId,
+    stripChainPrefix: true,
+  });
 }
 
 function buildToken(input: {
@@ -30,49 +33,17 @@ function buildToken(input: {
   validationReferences?: PriceValidationReferences;
   stablecoinPriceById?: Map<string, number>;
 }): SolanaMeasuredExecutionToken | null {
-  const directPrice = getTokenReferenceUsdPrice(
-    input.token,
-    "solana",
-    input.chainAddressToId,
-    input.symbolToChainScopedIds,
-    input.validationReferences,
-    input.stablecoinPriceById,
-  );
-  const referencePriceUsd =
-    directPrice ??
-    deriveTokenUsdPrice(
-      input.pool,
-      input.tokenIndex,
-      input.chainAddressToId,
-      input.symbolToChainScopedIds,
-      input.validationReferences,
-      input.stablecoinPriceById,
-    );
-  const symbol = input.token.symbol.trim();
-  if (
-    referencePriceUsd == null ||
-    !Number.isFinite(referencePriceUsd) ||
-    referencePriceUsd <= 0 ||
-    !symbol ||
-    !Number.isInteger(input.token.decimals) ||
-    input.token.decimals < 0 ||
-    input.token.decimals > 255
-  )
-    return null;
-  const trackedAssetId = resolveStablecoinIdForDexApiToken(
-    "solana",
-    input.token,
-    input.chainAddressToId,
-    input.symbolToChainScopedIds,
-  );
-  return {
-    address: input.token.address.trim(),
-    symbol,
-    decimals: input.token.decimals,
-    referencePriceUsd,
-    referencePriceSource: directPrice == null ? "pool-implied" : "tracked",
-    ...(trackedAssetId ? { trackedAssetId } : {}),
-  };
+  const token = buildNativeMeasuredExecutionToken({
+    chain: "solana",
+    pool: input.pool,
+    token: input.token,
+    tokenIndex: input.tokenIndex,
+    chainAddressToId: input.chainAddressToId,
+    symbolToChainScopedIds: input.symbolToChainScopedIds,
+    validationReferences: input.validationReferences,
+    stablecoinPriceById: input.stablecoinPriceById,
+  });
+  return token as SolanaMeasuredExecutionToken | null;
 }
 
 export function buildSolanaMeasuredExecutionTargets(input: {

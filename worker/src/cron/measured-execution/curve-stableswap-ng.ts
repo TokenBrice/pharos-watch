@@ -8,7 +8,6 @@ import {
 
 import {
   DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC,
-  DEX_MEASURED_MAX_COST_BPS,
   buildDexMeasuredExecutionTargetId,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionStableSwapNgFactoryBindingProof,
@@ -32,10 +31,8 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
-import {
-  rawAmountToUsdOrNull as rawAmountToUsd,
-  usdToRawAmount,
-} from "./fixed-point";
+import { usdToRawAmount } from "./fixed-point";
+import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
 
 const CURVE_STABLESWAP_NG_POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
@@ -700,43 +697,23 @@ function decodeCurveStableSwapNgQuotePoint(
   >,
   result: EvmMulticall3Result,
 ): { point?: DexMeasuredRawQuotePoint; failureReason?: CurveStableSwapNgQuoteFailure } {
-  if (!result.success) return { failureReason: "pool-revert" };
-  const amountOutRaw = decodeCurveStableSwapNgGetDy(result.returnData);
-  if (amountOutRaw == null) return { failureReason: "malformed-pool-return" };
-  const inputUsd = rawAmountToUsd(
-    request.amountInRaw,
-    request.target.tokenIn.decimals,
-    request.target.tokenIn.referencePriceUsd,
-  );
-  const outputUsd = rawAmountToUsd(
-    amountOutRaw,
-    request.target.tokenOut.decimals,
-    request.target.tokenOut.referencePriceUsd,
-  );
-  if (inputUsd == null || inputUsd <= 0 || outputUsd == null) {
-    return { failureReason: "malformed-pool-return" };
-  }
-  const costBps = Math.max(0, (1 - outputUsd / inputUsd) * 10_000);
-  return {
-    point: {
-      amountInRaw: request.amountInRaw.toString(),
-      amountOutRaw: amountOutRaw.toString(),
-      callData: request.callData,
-      returnData: result.returnData.toLowerCase() as `0x${string}`,
-      inputUsd,
-      outputUsd,
-      costBps,
-      passesCostBound: costBps <= DEX_MEASURED_MAX_COST_BPS,
-      adapterMetadata: {
-        executionPool: request.endpointAddress,
-        blockNumber: request.blockNumber,
-        inputIndex: request.inputIndex,
-        outputIndex: request.outputIndex,
-        factory: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.factoryAddress,
-        factoryPoolIndex: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.factoryPoolIndex,
-      },
+  return decodeCurveMeasuredRawQuotePoint({
+    request,
+    result,
+    decodeAmountOutRaw: decodeCurveStableSwapNgGetDy,
+    adapterMetadata: {
+      executionPool: request.endpointAddress,
+      blockNumber: request.blockNumber,
+      inputIndex: request.inputIndex,
+      outputIndex: request.outputIndex,
+      factory: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.factoryAddress,
+      factoryPoolIndex: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.factoryPoolIndex,
     },
-  };
+    failureReasons: {
+      poolRevert: "pool-revert",
+      malformedPoolReturn: "malformed-pool-return",
+    },
+  });
 }
 
 interface CurveStableSwapNgQuoteDependencies {
