@@ -220,7 +220,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
-    "@cloudflare/workers-types": "5.20260719.1",
+    "@cloudflare/workers-types": "5.20260728.1",
     "@playwright/test": "1.61.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/react": "^16.3.0",
@@ -246,7 +246,7 @@
     "typescript": "~5.9.0",
     "typescript-eslint": "^8.64.0",
     "vitest": "^4.1.10",
-    "wrangler": "4.112.0",
+    "wrangler": "4.115.0",
     "yaml": "2.9.0"
   },
   "overrides": {
