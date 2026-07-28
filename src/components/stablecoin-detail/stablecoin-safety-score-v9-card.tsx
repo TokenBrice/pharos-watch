@@ -5,10 +5,7 @@ import Link from "next/link";
 import {
   Award,
   ChevronDown,
-  FileCheck2,
   History,
-  Link2,
-  LockKeyhole,
   ScanSearch,
   ShieldCheck,
   Table2,
@@ -20,8 +17,8 @@ import type {
 import type { ReportCardsV9Response, V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { scoreToV9Grade } from "@shared/types/safety-score-v9-grade";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { MethodologyHint } from "@/components/methodology-hint";
@@ -34,7 +31,6 @@ import {
   humanizeSafetyScoreV9Value,
   type StablecoinSafetyScoreV9Presentation,
 } from "@/lib/stablecoin-safety-score-v9-presentation";
-import { buildStablecoinUrl } from "@/lib/urls";
 import { cn } from "@/lib/utils";
 
 const HEADER_ICON_BUTTON_CLASS =
@@ -566,88 +562,6 @@ function WhyNotHigher({
   );
 }
 
-function EvidenceAndAccess({
-  card,
-  presentation,
-}: {
-  card: StablecoinSafetyScoreV9DisplayCard;
-  presentation: StablecoinSafetyScoreV9Presentation;
-}) {
-  return (
-    <div className="grid gap-4 border-b border-border/40 pb-3 sm:grid-cols-2">
-      <section aria-labelledby={`${card.id}-v9-evidence`}>
-        <div className="flex items-center gap-2">
-          <FileCheck2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          <h3 id={`${card.id}-v9-evidence`} className="text-sm font-semibold">Evidence</h3>
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">{presentation.evidenceSummary}</p>
-        {presentation.evidenceReasons.map((reason) => (
-          <p key={reason} className="mt-1 text-xs leading-relaxed text-muted-foreground">{reason}</p>
-        ))}
-      </section>
-      {presentation.accessRows.length > 0 ? (
-        <section aria-labelledby={`${card.id}-v9-access`}>
-          <div className="flex items-center gap-2">
-            <LockKeyhole className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <h3 id={`${card.id}-v9-access`} className="text-sm font-semibold">Access posture</h3>
-          </div>
-          <dl className="mt-1 space-y-1">
-            {presentation.accessRows.map((row) => (
-              <div key={row.key} className="flex items-baseline justify-between gap-3 text-xs">
-                <dt className="text-muted-foreground">{row.label}</dt>
-                <dd className="text-right font-mono text-foreground">{row.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      ) : null}
-    </div>
-  );
-}
-
-function Dependencies({ card }: { card: StablecoinSafetyScoreV9DisplayCard }) {
-  const dependencies = [
-    ...card.dependencies.serial.map((dependency) => ({
-      id: dependency.upstreamAssetId,
-      detail: dependency.blocked
-        ? "Serial · blocked"
-        : `Serial · ${dependency.score === null ? "score unavailable" : `${dependency.score.toFixed(0)} / 100`}`,
-    })),
-    ...card.dependencies.basket.map((dependency) => ({
-      id: dependency.upstreamAssetId,
-      detail: `${dependency.boundedUnknown ? "Basket · bounded unknown" : "Basket"} · ${(dependency.weight * 100).toFixed(0)}%`,
-    })),
-  ];
-  return (
-    <section aria-labelledby={`${card.id}-v9-dependencies`}>
-      <div className="flex items-center gap-2">
-        <Link2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        <h3 id={`${card.id}-v9-dependencies`} className="text-sm font-semibold">Dependencies</h3>
-      </div>
-      {dependencies.length === 0 ? (
-        <p className="mt-1 text-xs text-muted-foreground">No material stablecoin dependencies.</p>
-      ) : (
-        <ul className="mt-1 space-y-1">
-          {dependencies.map((dependency) => {
-            const meta = CLIENT_TRACKED_META_BY_ID.get(dependency.id);
-            return (
-              <li key={`${dependency.id}-${dependency.detail}`} className="flex items-baseline justify-between gap-3 text-xs">
-                <Link
-                  href={buildStablecoinUrl(dependency.id)}
-                  className="pharos-focus-ring rounded-sm font-medium text-frost-blue hover:underline"
-                >
-                  {meta?.symbol ?? dependency.id}
-                </Link>
-                <span className="text-right font-mono text-muted-foreground">{dependency.detail}</span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
-  );
-}
-
 export interface StablecoinSafetyScoreV9CardProps {
   card: StablecoinSafetyScoreV9DisplayCard;
   identity: ReportCardsV9Response["safetyScoreIdentity"];
@@ -687,16 +601,14 @@ export function StablecoinSafetyScoreV9Card({
             <span className="text-sm font-medium text-muted-foreground">Not rated</span>
           )}
         </div>
-        {presentation.traceParts.length > 0 ? (
-          <p className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
-            {presentation.traceParts.map((part, index) => (
-              <span key={part}>
-                {index > 0 ? <span className="mr-2" aria-hidden="true">·</span> : null}
-                {part}
-              </span>
-            ))}
-          </p>
-        ) : null}
+        <p className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          {[...presentation.traceParts, presentation.evidenceSummary].map((part, index) => (
+            <span key={part}>
+              {index > 0 ? <span className="mr-2" aria-hidden="true">·</span> : null}
+              {part}
+            </span>
+          ))}
+        </p>
       </div>
 
       <div className="divide-y divide-border/40 border-y border-border/40">
@@ -716,8 +628,7 @@ export function StablecoinSafetyScoreV9Card({
           </ul>
         </section>
       ) : null}
-      <EvidenceAndAccess card={card} presentation={presentation} />
-      <Dependencies card={card} />
+      <AccessPosturePanel rows={presentation.accessRows} />
     </div>
   );
 

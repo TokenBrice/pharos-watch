@@ -17,10 +17,12 @@ import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-stick
 import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
+import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
 import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
 import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
+import { buildSafetyScoreV9AccessRows } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
@@ -177,6 +179,9 @@ function DetailSummaryRail({
             dexPriceCheck={viewModel.dexPriceCheck}
             compact
           />
+        ) : null}
+        {viewModel.reportCard ? (
+          <AccessPosturePanel rows={buildSafetyScoreV9AccessRows(viewModel.reportCard)} compact />
         ) : null}
         <MechanismReviewPanel review={mechanismReview} compact />
       </div>

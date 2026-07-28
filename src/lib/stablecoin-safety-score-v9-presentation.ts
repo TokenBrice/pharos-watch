@@ -538,6 +538,25 @@ export function describeSafetyScoreV9Components(
   });
 }
 
+export interface StablecoinSafetyScoreV9AccessRow {
+  key: string;
+  label: string;
+  value: string;
+}
+
+/**
+ * Access posture rows, standalone so the summary rail can render them without
+ * building the whole card presentation. Unknown fields drop out entirely.
+ */
+export function buildSafetyScoreV9AccessRows(
+  card: StablecoinSafetyScoreV9Card,
+): StablecoinSafetyScoreV9AccessRow[] {
+  return ACCESS_FIELDS.flatMap(([key, label]) => {
+    const value = card.accessPosture[key];
+    return isUnknown(value) ? [] : [{ key, label, value: humanizeSafetyScoreV9Value(value) }];
+  });
+}
+
 export interface StablecoinSafetyScoreV9AttributionGroup {
   key: string;
   label: string;
@@ -626,10 +645,7 @@ export function buildStablecoinSafetyScoreV9Presentation(
       ? `${humanizeSafetyScoreV9Value(card.evidence.level)} coverage`
       : `${humanizeSafetyScoreV9Value(card.evidence.level)} coverage · ${humanizeSafetyScoreV9Value(card.evidence.freshness)}`,
     evidenceReasons: uniqueMessages(card.evidence.reasons.map((reason) => reason.message)),
-    accessRows: ACCESS_FIELDS.flatMap(([key, label]) => {
-      const value = card.accessPosture[key];
-      return isUnknown(value) ? [] : [{ key, label, value: humanizeSafetyScoreV9Value(value) }];
-    }),
+    accessRows: buildSafetyScoreV9AccessRows(card),
     primaryReasons: uniqueMessages([
       ...card.nrReasons.map((reason) => reason.message),
       ...card.accessPosture.reasons.map((reason) => reason.message),

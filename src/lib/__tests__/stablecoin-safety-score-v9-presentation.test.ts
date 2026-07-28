@@ -19,7 +19,7 @@ describe("stablecoin V9 safety presentation", () => {
       evaluatedScore: 86,
       publishedScore: 88,
       aggregationWeight: 0.4,
-      groups: [{ key: "reserves", label: "Reserves", score: 86, effectiveWeight: 1 }],
+      groups: [{ key: "reserves" as const, label: "Reserves", score: 86, effectiveWeight: 1 }],
       components: [{
         key: "reserve:reserve:wsteth",
         label: "wstETH",
@@ -200,7 +200,7 @@ describe("stablecoin V9 safety presentation", () => {
         evaluatedScore: 86,
         publishedScore: 88,
         aggregationWeight: 0.4,
-        groups: [{ key: "reserves", label: "Reserves", score: 86, effectiveWeight: 1 }],
+        groups: [{ key: "reserves" as const, label: "Reserves", score: 86, effectiveWeight: 1 }],
         components: [{
           key: "reserve:reserve:wsteth",
           label: "wstETH",
@@ -371,7 +371,7 @@ describe("stablecoin V9 safety presentation", () => {
         evaluatedScore: 89.08,
         publishedScore: 89.08,
         aggregationWeight: 0.4,
-        groups: [{ key: "reserves", label: "Reserves", score: 89.08, effectiveWeight: 1 }],
+        groups: [{ key: "reserves" as const, label: "Reserves", score: 89.08, effectiveWeight: 1 }],
         components: [
           slice("a-dust", 30, 0.01),
           slice("b-core", 95, 0.85),
