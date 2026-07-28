@@ -692,6 +692,8 @@ function validateMeasuredExecutionProfile(
   const projectKey = normalizedKey(context.pool.project);
   const protocolMatches = profile.adapterProfileId === "sunswap-v2-router-v1"
     ? projectKey === "sunswap" || projectKey === "sunswap-v2"
+    : profile.adapterProfileId === "aerodrome-slipstream-quoter-v2"
+      ? projectKey === "aerodrome" || projectKey === "aerodrome-slipstream"
     : normalizedKey(profile.protocol) === projectKey;
   if (
     canonicalExitRouteChain(profile.chain) !== canonicalExitRouteChain(context.pool.chain) ||
