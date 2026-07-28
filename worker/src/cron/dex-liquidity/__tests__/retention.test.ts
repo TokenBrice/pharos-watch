@@ -103,4 +103,59 @@ describe("DEX liquidity generation retention", () => {
     expect(retention.deletedRows).toBe(0);
     expect(retention.error).toBe("liquidity retention unavailable");
   });
+
+  it("does not let public references without run rows exhaust the bounded candidate set", async () => {
+    const harness = createLatestSchemaSqlite();
+    openDatabases.push(harness.sqlite);
+    const nowSec = 1_700_000_000;
+    const cutoff = nowSec - 3 * 60 * 60;
+    const insertGeneration = harness.sqlite.prepare(
+      `INSERT INTO dex_liquidity_publication_generations (
+         generation_id, started_at, state, expected_row_count,
+         written_row_count, created_at
+       ) VALUES (?, ?, 'published', 1, 1, ?)`,
+    );
+
+    for (let index = 0; index < 16; index++) {
+      const generationId = `stale-public-${index.toString().padStart(2, "0")}`;
+      const startedAt = cutoff - 1_000 + index;
+      insertGeneration.run(generationId, startedAt, startedAt);
+      harness.sqlite.prepare(
+        `INSERT INTO dex_liquidity (
+           stablecoin_id, symbol, updated_at, publication_generation_id, publication_state
+         ) VALUES (?, 'OLD', ?, ?, 'published')`,
+      ).run(`inactive-${index}`, startedAt, generationId);
+    }
+
+    insertGeneration.run("expired-unreferenced", cutoff - 500, cutoff - 500);
+    harness.sqlite.prepare(
+      `INSERT INTO dex_liquidity_run_rows (
+         generation_id, stablecoin_id, symbol, updated_at
+       ) VALUES ('expired-unreferenced', 'expired-coin', 'TST', ?)`,
+    ).run(cutoff - 500);
+
+    const retention = await pruneOldDexLiquidityGenerations(harness.db, nowSec);
+
+    expect(retention).toMatchObject({
+      deletedRunRows: 1,
+      deletedGenerationRows: 1,
+      deletedRows: 2,
+      error: null,
+    });
+    expect(
+      harness.sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM dex_liquidity_run_rows WHERE generation_id = 'expired-unreferenced'",
+      ).get(),
+    ).toEqual({ count: 0 });
+    expect(
+      harness.sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM dex_liquidity_publication_generations WHERE generation_id = 'expired-unreferenced'",
+      ).get(),
+    ).toEqual({ count: 0 });
+    expect(
+      harness.sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM dex_liquidity_publication_generations WHERE generation_id LIKE 'stale-public-%'",
+      ).get(),
+    ).toEqual({ count: 16 });
+  });
 });

@@ -465,6 +465,10 @@ export async function pruneOldDexLiquidityGenerations(
            FROM dex_liquidity_publication_generations
            WHERE started_at < ?
              AND state IN ('published', 'failed')
+             AND EXISTS (
+               SELECT 1 FROM dex_liquidity_run_rows candidate_row
+               WHERE candidate_row.generation_id = dex_liquidity_publication_generations.generation_id
+             )
              AND generation_id NOT IN (
                SELECT publication_generation_id
                FROM dex_liquidity
