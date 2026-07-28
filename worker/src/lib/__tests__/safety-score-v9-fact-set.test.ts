@@ -1139,6 +1139,25 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
   });
 
+  it("materializes fuzzy quarter implementation dates at the conservative quarter end", () => {
+    const clockSec = Date.parse("2026-07-28T00:00:00Z") / 1_000;
+    const fixed = exactFixedInput({ clockSec });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "alpha",
+          {
+            id: "alpha",
+            mechanismArchetype: "synthetic-delta-neutral",
+            implementationLaunchDate: "2024-Q4",
+          },
+        ],
+      ]),
+    });
+
+    expect(baseline.assets[0]!.launchedAtSec).toBe(Date.parse("2024-12-31T23:59:59Z") / 1_000);
+  });
+
   it("compiles clock-valid operational-resilience claims with one evidence record per cited source", () => {
     const clockSec = Date.parse("2026-07-24T00:00:00Z") / 1_000;
     const fixed = exactFixedInput({ assetId: "usdt-tether", clockSec });
