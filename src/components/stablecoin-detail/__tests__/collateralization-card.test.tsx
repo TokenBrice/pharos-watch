@@ -34,11 +34,34 @@ describe("CollateralizationCard", () => {
     expect(screen.getByText("Undercollateralized")).toBeTruthy();
   });
 
-  it("prefers the live feed ratio over the reviewed one", () => {
-    render(<CollateralizationCard reviewed={reviewed} liveRatio={5.176368} liveAtSec={1785168827} />);
+  it("prefers live collateralization and backstop ratios over the reviewed values", () => {
+    render(
+      <CollateralizationCard
+        reviewed={reviewed}
+        liveRatio={5.176368}
+        liveLiquidationCapacityRatio={0.704}
+        liveAtSec={1785168827}
+      />,
+    );
     expect(screen.getByText("517.6%")).toBeTruthy();
+    expect(screen.getByText("70.4%")).toBeTruthy();
     expect(screen.getByText(/Live/)).toBeTruthy();
     expect(screen.queryByText("245.5%")).toBeNull();
+    expect(screen.queryByText("65.8%")).toBeNull();
+  });
+
+  it("marks the card live when only the backstop ratio is live", () => {
+    render(
+      <CollateralizationCard
+        reviewed={reviewed}
+        liveLiquidationCapacityRatio={0.704}
+        liveAtSec={1785168827}
+      />,
+    );
+    expect(screen.getByText("245.5%")).toBeTruthy();
+    expect(screen.getByText("70.4%")).toBeTruthy();
+    expect(screen.getByText(/Live/)).toBeTruthy();
+    expect(screen.queryByText(/Reviewed 2026-07-15/)).toBeNull();
   });
 
   it("renders a reviewed not-applicable ruling without a number", () => {

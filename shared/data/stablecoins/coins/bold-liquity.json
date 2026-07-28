@@ -821,6 +821,29 @@
         "contract": "0xf949982b91c8c61e952b3ba942cbbfaef5386684",
         "selector": "0xc52861f2"
       },
+      "mechanismMetrics": {
+        "supplyTokenAddress": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+        "branchPriceSelector": "0x4ea15f37",
+        "stabilityPoolDepositsSelector": "0xf71c6940",
+        "maxSupplyDebtDivergencePct": 0.5,
+        "branches": [
+          {
+            "name": "wstETH (Lido)",
+            "troveManagerAddress": "0xa2895d6a3bf110561dfe4b71ca539d84e1928b22",
+            "stabilityPoolAddress": "0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b"
+          },
+          {
+            "name": "WETH",
+            "troveManagerAddress": "0x7bcb64b2c9206a5b699ed43363f6f98d4776cf5a",
+            "stabilityPoolAddress": "0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf"
+          },
+          {
+            "name": "rETH (Rocket Pool)",
+            "troveManagerAddress": "0xb2b2abeb5c357a234363ff5d180912d319e3e19e",
+            "stabilityPoolAddress": "0xd442e41019b7f5c4dd78f50dc03726c446148695"
+          }
+        ]
+      },
       "branches": [
         {
           "name": "wstETH (Lido)",

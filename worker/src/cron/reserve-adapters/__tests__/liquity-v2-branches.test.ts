@@ -1,5 +1,6 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import boldLiquity from "@shared/data/stablecoins/coins/bold-liquity.json";
 import cdpEnosys from "@shared/data/stablecoins/coins/cdp-enosys.json";
 import nectBeraborrow from "@shared/data/stablecoins/coins/nect-beraborrow.json";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -79,6 +80,8 @@ const ERC4626_TOTAL_ASSETS_SELECTOR = "0x01e1d114";
 const ERC20_TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 const ERC20_DECIMALS_SELECTOR = "0x313ce567";
 const BRANCH_PRICE_SELECTOR = "0x0fdb11cf";
+const BOLD_MECHANISM_PRICE_SELECTOR = "0x4ea15f37";
+const BOLD_STABILITY_POOL_DEPOSITS_SELECTOR = "0xf71c6940";
 const BERABORROW_DEBT_SELECTOR = "0x795d26c3";
 const BERABORROW_SHUTDOWN_SELECTOR = "0x9484fb8e";
 
@@ -88,6 +91,10 @@ function encodeAddress(address: string): string {
 
 function encodeUint(value: bigint | number): `0x${string}` {
   return `0x${BigInt(value).toString(16).padStart(64, "0")}` as `0x${string}`;
+}
+
+function encodeMechanismPrice(price: bigint, redeemable = true): `0x${string}` {
+  return `0x${encodeUint(0).slice(2)}${encodeUint(price).slice(2)}${encodeUint(redeemable ? 1 : 0).slice(2)}`;
 }
 
 afterEach(() => {
@@ -193,6 +200,174 @@ describe("buildLiquityV2RedemptionMetadata", () => {
         },
       ],
     })).toThrow("active-pool debt reads returned zero capacity");
+  });
+});
+
+describe("fetchLiquityV2BranchReserves BOLD mechanism metrics", () => {
+  const config = boldLiquity.liveReservesConfig as LiveReservesConfig;
+  const params = config.params as {
+    branches: typeof branch[];
+    mechanismMetrics: {
+      supplyTokenAddress: string;
+      branchPriceSelector: string;
+      stabilityPoolDepositsSelector: string;
+      branches: Array<{
+        name: string;
+        troveManagerAddress: string;
+        stabilityPoolAddress: string;
+      }>;
+    };
+  };
+
+  it("binds every configured reserve branch to a TroveManager and Stability Pool", () => {
+    expect(params.mechanismMetrics).toMatchObject({
+      supplyTokenAddress: "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+      branchPriceSelector: BOLD_MECHANISM_PRICE_SELECTOR,
+      stabilityPoolDepositsSelector: BOLD_STABILITY_POOL_DEPOSITS_SELECTOR,
+    });
+    expect(params.mechanismMetrics.branches.map((entry) => entry.name).sort()).toEqual(
+      params.branches.map((entry) => entry.name).sort(),
+    );
+  });
+
+  it("publishes protocol-priced collateralization and live Stability Pool coverage from one multicall", async () => {
+    const unit = 10n ** 18n;
+    const balances = new Map([
+      ["wstETH (Lido)", 20_000n * unit],
+      ["WETH", 8_000n * unit],
+      ["rETH (Rocket Pool)", 5_000n * unit],
+    ]);
+    const debts = new Map([
+      ["wstETH (Lido)", 17_000_000n * unit],
+      ["WETH", 8_000_000n * unit],
+      ["rETH (Rocket Pool)", 5_000_000n * unit],
+    ]);
+    const protocolPrices = new Map([
+      ["wstETH (Lido)", 2_000n * unit],
+      ["WETH", 1_800n * unit],
+      ["rETH (Rocket Pool)", 1_900n * unit],
+    ]);
+    const stabilityPoolDeposits = new Map([
+      ["wstETH (Lido)", 12_000_000n * unit],
+      ["WETH", 10_000_000n * unit],
+      ["rETH (Rocket Pool)", 3_000_000n * unit],
+    ]);
+
+    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(null);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([
+      ["wstETH (Lido)", 2_000],
+      ["WETH", 1_800],
+      ["rETH (Rocket Pool)", 1_900],
+    ]));
+    vi.mocked(fetchErc20Balance).mockImplementation(async (_input, _contract, holder) => {
+      const entry = params.branches.find((candidate) => candidate.holder === holder);
+      return entry ? (balances.get(entry.name) ?? null) : null;
+    });
+    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => (
+      data === "0x06ff8dfb" ? encodeUint(0) : null
+    ));
+    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
+      if (data !== "0x45507998") return null;
+      const entry = params.branches.find((candidate) => candidate.holder === contract);
+      return entry ? (debts.get(entry.name) ?? null) : null;
+    });
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) =>
+      calls.map((call) => {
+        if (call.label === "mechanism:total-supply") {
+          return { label: call.label, success: true, returnData: encodeUint(30_000_000n * unit) };
+        }
+        const metricBranch = params.mechanismMetrics.branches.find((entry) =>
+          call.label.endsWith(`:${entry.name}`)
+        );
+        if (!metricBranch) {
+          return { label: call.label, success: false, returnData: "0x" as const };
+        }
+        if (call.label.startsWith("mechanism:price:")) {
+          return {
+            label: call.label,
+            success: true,
+            returnData: encodeMechanismPrice(protocolPrices.get(metricBranch.name) ?? 0n),
+          };
+        }
+        return {
+          label: call.label,
+          success: true,
+          returnData: encodeUint(stabilityPoolDeposits.get(metricBranch.name) ?? 0n),
+        };
+      })
+    );
+
+    const result = await fetchLiquityV2BranchReserves(
+      boldLiquity as StablecoinMeta,
+      config,
+      AbortSignal.timeout(5_000),
+    );
+
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(63_900_000, 2);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(2.13, 6);
+    expect(result.metadata?.liquidationCapacityRatio).toBeCloseTo(25 / 30, 6);
+    expect(result.metadata?.details).toMatchObject({
+      proofKind: "liquity-v2-active-pool-debt",
+      mechanismMetrics: {
+        proofKind: "liquity-v2-protocol-priced-system-state",
+        totalSupplyRaw: (30_000_000n * unit).toString(),
+        totalDebtRaw: (30_000_000n * unit).toString(),
+        totalStabilityPoolDepositsRaw: (25_000_000n * unit).toString(),
+        branchCappedLiquidationCapacityRatio: 23 / 30,
+      },
+    });
+    expect(result.warnings).toBeUndefined();
+    expect(fetchOnchainMulticall3).toHaveBeenCalledTimes(1);
+    expect(fetchOnchainMulticall3).toHaveBeenCalledWith(expect.objectContaining({
+      calls: expect.arrayContaining([
+        expect.objectContaining({
+          label: "mechanism:total-supply",
+          contract: params.mechanismMetrics.supplyTokenAddress,
+        }),
+        expect.objectContaining({
+          label: "mechanism:price:WETH",
+          contract: params.mechanismMetrics.branches.find((entry) => entry.name === "WETH")?.troveManagerAddress,
+        }),
+        expect.objectContaining({
+          label: "mechanism:stability-pool:WETH",
+          contract: params.mechanismMetrics.branches.find((entry) => entry.name === "WETH")?.stabilityPoolAddress,
+        }),
+      ]),
+    }));
+  });
+
+  it("keeps the reserve snapshot when optional mechanism metrics are unavailable", async () => {
+    const unit = 10n ** 18n;
+    vi.mocked(probeOptionalRedemptionRateBps).mockResolvedValue(null);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([
+      ["wstETH (Lido)", 2_000],
+      ["WETH", 1_800],
+      ["rETH (Rocket Pool)", 1_900],
+    ]));
+    vi.mocked(fetchErc20Balance).mockResolvedValue(1_000n * unit);
+    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ data }) => (
+      data === "0x06ff8dfb" ? encodeUint(0) : null
+    ));
+    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ data }) => (
+      data === "0x45507998" ? 1_000_000n * unit : null
+    ));
+    vi.mocked(fetchOnchainMulticall3).mockResolvedValue(null);
+
+    const result = await fetchLiquityV2BranchReserves(
+      boldLiquity as StablecoinMeta,
+      config,
+      AbortSignal.timeout(5_000),
+    );
+
+    expect(result.slices).toHaveLength(3);
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata?.liquidationCapacityRatio).toBeUndefined();
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: "liquity-v2-mechanism-metrics-unavailable",
+        severity: "info",
+      }),
+    ]));
   });
 });
 

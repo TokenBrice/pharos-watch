@@ -63,6 +63,7 @@ export interface LiveReserveSnapshotMetadata extends Record<string, unknown> {
   totalLiabilitiesUsd?: number;
   shareholderEquityUsd?: number;
   collateralizationRatio?: number;
+  liquidationCapacityRatio?: number;
   immediateRedeemableUsd?: number;
   immediateRedeemableRatio?: number;
   redemptionFeeBps?: number;
@@ -290,6 +291,7 @@ export const LiveReserveSnapshotMetadataSchema: z.ZodType<LiveReserveSnapshotMet
     totalLiabilitiesUsd: z.number().finite().optional(),
     shareholderEquityUsd: z.number().finite().optional(),
     collateralizationRatio: z.number().finite().optional(),
+    liquidationCapacityRatio: z.number().finite().nonnegative().optional(),
     immediateRedeemableUsd: z.number().finite().optional(),
     immediateRedeemableRatio: z.number().finite().optional(),
     redemptionFeeBps: z.number().finite().optional(),

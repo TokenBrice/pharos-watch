@@ -10,6 +10,8 @@ interface CollateralizationCardProps {
   reviewed: MechanismCollateralizationView | null;
   /** Live feed ratio from the reserve snapshot metadata, when the adapter emits one. */
   liveRatio?: number | null;
+  /** Live committed liquidation capital as a share of supply, when measured. */
+  liveLiquidationCapacityRatio?: number | null;
   liveAtSec?: number | null;
 }
 
@@ -36,18 +38,31 @@ const TONE_BADGE_CLASSES: Record<"over" | "par" | "under", string> = {
  * reviewed ratio from the V9 mechanism review. A reviewed structural
  * not-applicable ruling renders honestly instead of a number.
  */
-export function CollateralizationCard({ reviewed, liveRatio = null, liveAtSec = null }: CollateralizationCardProps) {
+export function CollateralizationCard({
+  reviewed,
+  liveRatio = null,
+  liveLiquidationCapacityRatio = null,
+  liveAtSec = null,
+}: CollateralizationCardProps) {
   const live = typeof liveRatio === "number" && Number.isFinite(liveRatio) && liveRatio > 0 ? liveRatio : null;
-  if (live == null && reviewed == null) return null;
+  const liveBackstop =
+    typeof liveLiquidationCapacityRatio === "number"
+    && Number.isFinite(liveLiquidationCapacityRatio)
+    && liveLiquidationCapacityRatio >= 0
+      ? liveLiquidationCapacityRatio
+      : null;
+  if (live == null && liveBackstop == null && reviewed == null) return null;
 
   const headlineRatio = live ?? reviewed?.ratio ?? null;
+  const liquidationCapacityRatio = liveBackstop ?? reviewed?.liquidationCapacityRatio ?? null;
+  const hasLiveMetrics = live != null || liveBackstop != null;
   const coverage = headlineRatio != null ? coverageLabel(headlineRatio) : null;
 
   return (
     <section className="pharos-card-shell overflow-hidden" aria-label="Collateralization">
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">
         <h2 className="text-sm font-medium text-muted-foreground">Collateralization</h2>
-        {live != null ? (
+        {hasLiveMetrics ? (
           <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
             <RefreshCw className="h-3 w-3" aria-hidden="true" />
             {liveAtSec != null ? `Live · ${timeAgo(liveAtSec * 1000)}` : "Live"}
@@ -84,12 +99,12 @@ export function CollateralizationCard({ reviewed, liveRatio = null, liveAtSec = 
         )}
       </div>
 
-      {reviewed?.liquidationCapacityRatio != null ? (
+      {liquidationCapacityRatio != null ? (
         <div className="border-t border-border/50 px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-medium text-muted-foreground">Liquidation backstop</p>
             <p className="font-mono text-sm font-semibold tabular-nums text-foreground">
-              {formatRatioPct(reviewed.liquidationCapacityRatio)}
+              {formatRatioPct(liquidationCapacityRatio)}
             </p>
           </div>
           <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">

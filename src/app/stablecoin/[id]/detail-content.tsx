@@ -158,6 +158,7 @@ function DetailSummaryRail({
 }) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.dexPriceCheck);
   const liveCollateralizationRatio = viewModel.reserves?.metadata?.collateralizationRatio ?? null;
+  const liveLiquidationCapacityRatio = viewModel.reserves?.metadata?.liquidationCapacityRatio ?? null;
   return (
     <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
       <div className="space-y-4 pb-4">
@@ -168,6 +169,7 @@ function DetailSummaryRail({
         <CollateralizationCard
           reviewed={mechanismCollateralization}
           liveRatio={liveCollateralizationRatio}
+          liveLiquidationCapacityRatio={liveLiquidationCapacityRatio}
           liveAtSec={viewModel.reserves?.liveAt ?? null}
         />
         <TapeForCoinTeaser coinId={viewModel.id} />
