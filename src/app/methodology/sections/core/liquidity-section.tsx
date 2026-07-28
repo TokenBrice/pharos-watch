@@ -98,13 +98,13 @@ export function LiquidityMethodologySection() {
           </p>
           <p>
             Reviewed SunSwap V2 routes on Tron publish active exact-execution profiles after proving the canonical
-            factory and pair runtimes, exact pair binding and reserves, one direct SUN Smart Router path, the reviewed
-            0.3% constant-product output, and a bounded latest-state block bracket. Score eligibility was reactivated
-            only after complete current shadow generations and healthy split scoring consumers; the first active
-            post-deploy consumers remain rollback evidence for memory, stale-heartbeat, completeness, or proof drift.
-            Missing, stale, failed, multi-hop-only, or identity-mismatched evidence remains capability-gated per target.
-            The SunSwap census still does not enter aggregate liquidity, price consensus, direct-source precedence,
-            visible pool selection, or aggregate liquidity inputs.
+            factory and pair runtimes, exact pair binding and reserves, the reviewed 0.3% constant-product output, and
+            a bounded latest-state block bracket. The producer prefers a direct SUN Smart Router path. When that
+            service&apos;s three returned candidates are all clean V2 multi-hop paths, it may use the pinned on-chain
+            V2 Router only after proving its runtime, factory binding, exact two-token path, and identical raw output.
+            An invalid direct Smart Router candidate still fails closed. Missing, stale, failed, or identity-mismatched
+            evidence remains capability-gated per target. The SunSwap census still does not enter aggregate liquidity,
+            price consensus, direct-source precedence, visible pool selection, or aggregate liquidity inputs.
           </p>
           <p>
             Repeated sightings of the same physical pool across direct API, staged, and fallback sources are collapsed

@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.95",
+    title: "Pinned SunSwap V2 direct-route fallback",
+    date: "2026-07-28",
+    effectiveAt: 1785196800,
+    summary:
+      "A canonical SunSwap V2 pool can retain exact direct-execution evidence when SUN's three best Smart Router paths are all multi-hop, but only through the reviewed on-chain V2 Router deployment.",
+    impact: [
+      "The Smart Router calculation service remains the primary quote source; the fallback is eligible only when its successful response consists entirely of clean V2 multi-hop candidates, because the documented service returns only the three highest-output paths",
+      "The fallback pins the documented SunSwap V2 Router address and runtime hash, proves its factory binding, and requires `getAmountsOut` for the exact two-token path to equal the independently read pair reserves under the reviewed 0.3% constant-product formula",
+      "Any malformed, ambiguous, referral-bearing, output-mismatched, or otherwise invalid direct Smart Router candidate remains fail-closed and cannot be masked by the on-chain fallback",
+      "The change closes the persistent USDT/PHONFT target gap without admitting multi-hop capacity or changing aggregate liquidity, price consensus, visible pools, target publication, or V8 liquidity scoring",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.94",
     title: "Pinned Curve StableSwap-NG rate state",
     date: "2026-07-27",

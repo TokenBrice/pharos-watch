@@ -7,7 +7,7 @@ import {
   type TronMeasuredExecutionQuotePointProof,
   type TronMeasuredExecutionTarget,
 } from "@shared/types/tron-measured-execution";
-import { keccak256 } from "viem/utils";
+import { decodeFunctionResult, encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { tryParseJson } from "../../lib/json-parse";
@@ -23,6 +23,10 @@ const GET_PAIR_SELECTOR = "0xe6a43905";
 const TOKEN0_SELECTOR = "0x0dfe1681";
 const TOKEN1_SELECTOR = "0xd21220a7";
 const GET_RESERVES_SELECTOR = "0x0902f1ac";
+const SUNSWAP_V2_ROUTER_ABI = parseAbi([
+  "function factory() view returns (address)",
+  "function getAmountsOut(uint256 amountIn, address[] path) view returns (uint256[] amounts)",
+]);
 
 type FetchLike = typeof fetch;
 
@@ -224,19 +228,9 @@ export function parseSunRouterDirectV2Quote(
   if (!isRecord(body) || body.code !== 0 || !Array.isArray(body.data)) return null;
   const matches = body.data.flatMap((candidate) => {
     if (
-      !isRecord(candidate) ||
+      !isSunRouterDirectV2Path(candidate, target) ||
       candidate.containsUnverifiedHook !== false ||
-      !Array.isArray(candidate.tokens) ||
-      candidate.tokens.length !== 2 ||
-      candidate.tokens[0] !== target.tokenIn.address ||
-      candidate.tokens[1] !== target.tokenOut.address ||
-      !Array.isArray(candidate.poolVersions) ||
-      candidate.poolVersions.length !== 1 ||
-      candidate.poolVersions[0] !== "v2" ||
-      !Array.isArray(candidate.poolKeys) ||
-      candidate.poolKeys.length !== 1 ||
       candidate.poolKeys[0] !== null ||
-      !Array.isArray(candidate.stepAmountsOut) ||
       candidate.stepAmountsOut.length !== 1
     ) return [];
     const parsedInput = typeof candidate.amountInRaw === "string" && /^[1-9][0-9]*$/.test(candidate.amountInRaw)
@@ -261,6 +255,150 @@ export function parseSunRouterDirectV2Quote(
     }];
   });
   return matches.length === 1 ? matches[0]! : null;
+}
+
+function isSunRouterDirectV2Path(
+  candidate: unknown,
+  target: TronMeasuredExecutionTarget,
+): candidate is Record<string, unknown> & {
+  poolKeys: unknown[];
+  stepAmountsOut: unknown[];
+} {
+  return (
+    isRecord(candidate) &&
+    Array.isArray(candidate.tokens) &&
+    candidate.tokens.length === 2 &&
+    candidate.tokens[0] === target.tokenIn.address &&
+    candidate.tokens[1] === target.tokenOut.address &&
+    Array.isArray(candidate.poolVersions) &&
+    candidate.poolVersions.length === 1 &&
+    candidate.poolVersions[0] === "v2" &&
+    Array.isArray(candidate.poolKeys) &&
+    candidate.poolKeys.length === 1 &&
+    Array.isArray(candidate.stepAmountsOut) &&
+    candidate.stepAmountsOut.length === 1
+  );
+}
+
+function isSunRouterMultiHopV2Path(candidate: unknown, target: TronMeasuredExecutionTarget): boolean {
+  if (
+    !isRecord(candidate) ||
+    candidate.containsUnverifiedHook !== false ||
+    !Array.isArray(candidate.tokens) ||
+    candidate.tokens.length <= 2 ||
+    candidate.tokens[0] !== target.tokenIn.address ||
+    candidate.tokens[candidate.tokens.length - 1] !== target.tokenOut.address ||
+    !Array.isArray(candidate.poolVersions) ||
+    candidate.poolVersions.length !== candidate.tokens.length - 1 ||
+    candidate.poolVersions.some((version) => version !== "v2") ||
+    !Array.isArray(candidate.poolKeys) ||
+    candidate.poolKeys.length !== candidate.poolVersions.length ||
+    candidate.poolKeys.some((poolKey) => poolKey !== null) ||
+    !Array.isArray(candidate.stepAmountsOut) ||
+    candidate.stepAmountsOut.length !== candidate.poolVersions.length
+  ) return false;
+  return (
+    candidate.amountInRawReferral === "0" &&
+    candidate.amountInReferralBips === 0 &&
+    candidate.amountOutRawReferral === "0" &&
+    candidate.amountOutReferralBips === 0
+  );
+}
+
+function sunRouterResponseAllowsV2RouterFallback(
+  body: unknown,
+  target: TronMeasuredExecutionTarget,
+): boolean {
+  return (
+    isRecord(body) &&
+    body.code === 0 &&
+    Array.isArray(body.data) &&
+    body.data.length > 0 &&
+    body.data.every((candidate) => isSunRouterMultiHopV2Path(candidate, target))
+  );
+}
+
+async function fetchSunSwapV2RouterDirectQuote(input: {
+  target: TronMeasuredExecutionTarget;
+  amountInRaw: string;
+  signal?: AbortSignal;
+  trongridApiKey?: string | null;
+  fetchImpl: FetchLike;
+}): Promise<{
+  amountOutRaw: string;
+  routeTokens: [string, string];
+  poolVersions: ["v2"];
+  routerAddress: string;
+  routerCodeHash: `0x${string}`;
+  routerFactoryAddress: string;
+}> {
+  const [routerHex, tokenInHex, tokenOutHex] = await Promise.all([
+    tronBase58ToHex(input.target.routerAddress),
+    tronBase58ToHex(input.target.tokenIn.address),
+    tronBase58ToHex(input.target.tokenOut.address),
+  ]);
+  if (!routerHex || !tokenInHex || !tokenOutHex) throw new Error("tron-address-invalid");
+  const rpcInput = {
+    signal: input.signal,
+    trongridApiKey: input.trongridApiKey,
+    fetchImpl: input.fetchImpl,
+  };
+  const routerCode = parseHexResult(await tronRpc("eth_getCode", [routerHex, "latest"], rpcInput));
+  if (!routerCode || routerCode === "0x") throw new Error("router-code-missing");
+  const routerCodeHash = keccak256(routerCode).toLowerCase() as `0x${string}`;
+  if (routerCodeHash !== input.target.expectedRouterCodeHash) throw new Error("router-code-hash-mismatch");
+
+  const factoryResult = await tronRpc(
+    "eth_call",
+    [{
+      to: routerHex,
+      data: encodeFunctionData({ abi: SUNSWAP_V2_ROUTER_ABI, functionName: "factory" }),
+    }, "latest"],
+    rpcInput,
+  );
+  const routerFactoryAddress = await decodeTronAddressWord(factoryResult);
+  if (routerFactoryAddress !== input.target.factoryAddress) throw new Error("router-factory-mismatch");
+
+  const quoteResult = parseHexResult(await tronRpc(
+    "eth_call",
+    [{
+      to: routerHex,
+      data: encodeFunctionData({
+        abi: SUNSWAP_V2_ROUTER_ABI,
+        functionName: "getAmountsOut",
+        args: [
+          BigInt(input.amountInRaw),
+          [tokenInHex as `0x${string}`, tokenOutHex as `0x${string}`],
+        ],
+      }),
+    }, "latest"],
+    rpcInput,
+  ));
+  if (!quoteResult) throw new Error("router-quote-invalid");
+  let amounts: readonly bigint[];
+  try {
+    amounts = decodeFunctionResult({
+      abi: SUNSWAP_V2_ROUTER_ABI,
+      functionName: "getAmountsOut",
+      data: quoteResult,
+    });
+  } catch {
+    throw new Error("router-quote-invalid");
+  }
+  if (
+    amounts.length !== 2 ||
+    amounts[0]?.toString() !== input.amountInRaw ||
+    amounts[1] == null ||
+    amounts[1] <= 0n
+  ) throw new Error("router-quote-invalid");
+  return {
+    amountOutRaw: amounts[1].toString(),
+    routeTokens: [input.target.tokenIn.address, input.target.tokenOut.address],
+    poolVersions: ["v2"],
+    routerAddress: input.target.routerAddress,
+    routerCodeHash,
+    routerFactoryAddress,
+  };
 }
 
 function usdToRawAmount(inputUsd: number, decimals: number, referencePriceUsd: number): bigint | null {
@@ -323,7 +461,19 @@ export async function quoteTronMeasuredTarget(input: {
     rethrowIfAborted(error, input.signal);
     throw error;
   }
-  const directRoute = parseSunRouterDirectV2Quote(body, input.target, amountInRaw);
+  const smartRouterDirectRoute = parseSunRouterDirectV2Quote(body, input.target, amountInRaw);
+  const directRoute = smartRouterDirectRoute
+    ? { ...smartRouterDirectRoute, provider: "sun-smart-router" as const }
+    : sunRouterResponseAllowsV2RouterFallback(body, input.target)
+      ? {
+          ...await fetchSunSwapV2RouterDirectQuote({
+            target: input.target,
+            amountInRaw,
+            ...rpcInput,
+          }),
+          provider: "sunswap-v2-router" as const,
+        }
+      : null;
   if (!directRoute) throw new Error("exact-route-mismatch");
   if (directRoute.amountOutRaw !== expectedOutput.toString()) throw new Error("canonical-pair-quote-mismatch");
   const blockAfter = await fetchBlockNumber(rpcInput);
@@ -343,6 +493,14 @@ export async function quoteTronMeasuredTarget(input: {
   }
   if (Math.abs(inputUsd - input.inputUsd) > 0.02) throw new Error("invalid-quote-input-rounding");
   const costBps = Math.max(0, (1 - outputUsd / inputUsd) * 10_000);
+  const providerProof = directRoute.provider === "sunswap-v2-router"
+    ? {
+        provider: directRoute.provider,
+        routerAddress: directRoute.routerAddress,
+        routerCodeHash: directRoute.routerCodeHash,
+        routerFactoryAddress: directRoute.routerFactoryAddress,
+      }
+    : { provider: directRoute.provider };
   return {
     amountInRaw,
     amountOutRaw: directRoute.amountOutRaw,
@@ -351,7 +509,7 @@ export async function quoteTronMeasuredTarget(input: {
     costBps,
     passesCostBound: costBps <= DEX_MEASURED_MAX_COST_BPS,
     route: {
-      provider: "sun-smart-router",
+      ...providerProof,
       poolId: input.target.poolId,
       factoryAddress: input.target.factoryAddress,
       factoryCodeHash: binding.factoryCodeHash,
