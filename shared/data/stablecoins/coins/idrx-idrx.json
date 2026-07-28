@@ -99,9 +99,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "IDRX documents both direct issuer minting on a selected supported chain and an issuer-operated bridge in which a source burn and its transaction hash are submitted to IDRX before the destination wallet receives IDRX. Its supported-chain page lists the exact current Solana mint. Pharos therefore treats the documented route as issuer-native burn/mint rather than a third-party bridge.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review",
+    "summary": "IDRX documents both direct issuer minting on a selected supported chain and an issuer-operated bridge in which a source burn and its transaction hash are submitted to IDRX before the destination wallet receives IDRX. Its supported-chain page lists the exact current Solana mint and Lisk deployment. Pharos therefore treats the documented route as issuer-native burn/mint rather than a third-party bridge.",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Codex bridge route review; OpenAI Codex V9 integration audit",
     "confidence": "verified",
     "protocols": [
       {
@@ -346,7 +346,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unknown",
     "confidence": "unknown",
-    "summary": "IDRX uses direct issuer-controlled minting. All seven EVM deployments are EIP-1967 UUPS proxies; verified Polygon, BSC, Base, Gnosis, and Etherlink implementation sources gate upgrades through UPGRADER_ROLE, whose DEFAULT_ADMIN_ROLE can reconfigure it. Base, Gnosis, Etherlink, and Kaia role histories are independently verified, but Polygon, BSC, and Worldchain lack an admissible complete role history. The Solana mint has a direct system-account mint authority and uses the immutable SPL Token program. The cross-chain terminal upgrade-authority inventory is therefore unresolved.",
+    "summary": "IDRX uses direct issuer-controlled minting. Across the seven previously control-reviewed EVM deployments, verified Polygon, BSC, Base, Gnosis, and Etherlink implementation sources gate UUPS upgrades through UPGRADER_ROLE, whose DEFAULT_ADMIN_ROLE can reconfigure it. Base, Gnosis, Etherlink, and Kaia role histories are independently verified, but Polygon, BSC, and Worldchain lack an admissible complete role history; the issuer-listed Lisk deployment shares the uniform UUPS proxy and implementation but does not yet have a complete role inventory. On Solana, both the current mint and the officially deprecated predecessor remain initialized under the immutable SPL Token program with distinct live mint authorities, no freeze authority, and nonzero supply. Because IDRX still promises 1:1 redemption of the deprecated supply, the cross-chain terminal authority and aggregate supply/liability coverage are unresolved.",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
@@ -521,14 +521,16 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Control review refreshed 2026-07-26. At pinned heads Polygon 90920978, Base 49148559, BSC 112281459, Kaia 222886753, Gnosis 47403818, Etherlink 49381661, and Worldchain 32875419, every declared EVM address returned IDRX name/symbol/decimals and an EIP-1967 implementation slot: Polygon 0xfef07b30e5b453bc372f8a088cfca9276ef8dd79; BSC 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0; Base, Kaia, Gnosis, Etherlink, and Worldchain 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693. The EIP-1967 admin slot is zero on each. Verified Polygon, BSC, Base, Gnosis, and Etherlink implementation sources are UUPS and _authorizeUpgrade is onlyRole(UPGRADER_ROLE), so DEFAULT_ADMIN_ROLE is terminal through role administration, not the direct UUPS guard. Complete RoleGranted/RoleRevoked coverage establishes the current direct upgrader and admins on Base, Gnosis, Etherlink, and Kaia; incomplete historical role coverage on Polygon, BSC, and Worldchain prevents a truthful aggregate terminal inventory. At finalized Solana slot 435375666, the declared mint had mint authority Bpqui7hhcjfHoxwbkK4dw1GBB86Rt1DHEjQu8Mr7g8Tn (a system account) and no freeze authority; Tokenkeg ProgramData 3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2 reported no program upgrade authority.",
-      "reviewer": "Codex CTRL-idrx-idrx",
-      "reviewedAt": "2026-07-26",
+      "evidence": "Control review refreshed 2026-07-28. At pinned heads Polygon 90920978, Base 49148559, BSC 112281459, Kaia 222886753, Gnosis 47403818, Etherlink 49381661, and Worldchain 32875419, every previously reviewed EVM address returned IDRX name/symbol/decimals and an EIP-1967 implementation slot: Polygon 0xfef07b30e5b453bc372f8a088cfca9276ef8dd79; BSC 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0; Base, Kaia, Gnosis, Etherlink, and Worldchain 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693. The EIP-1967 admin slot is zero on each. The issuer-listed Lisk deployment returned the same 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693 implementation and a zero EIP-1967 admin slot at block 35252672. Verified Polygon, BSC, Base, Gnosis, and Etherlink implementation sources are UUPS and _authorizeUpgrade is onlyRole(UPGRADER_ROLE), so DEFAULT_ADMIN_ROLE is terminal through role administration, not the direct UUPS guard. Complete RoleGranted/RoleRevoked coverage establishes the current direct upgrader and admins on Base, Gnosis, Etherlink, and Kaia; incomplete or absent historical role coverage on Polygon, BSC, Worldchain, and Lisk prevents a truthful aggregate terminal inventory. At finalized Solana slot 435725987 (2026-07-28T10:27:40Z), a batched getMultipleAccounts observation returned the current mint idrxZcP8xiKkYk6XGD4uz1dxEYCWSgKDHqgjsBbwDur with 2 decimals, mint authority Bpqui7hhcjfHoxwbkK4dw1GBB86Rt1DHEjQu8Mr7g8Tn, no freeze authority, and raw supply 37990724512 (379,907,245.12 IDRX); that authority account was owned by the System Program. The officially deprecated mint idrxTdNftk6tYedPv2M7tCFHBVCpk5rkiNRd8yUArhr remained initialized with 2 decimals, mint authority CxFQVMMLzjXgN3eRXUr7mtyBGWxKPeWYJuX6Q97tEy5o, no freeze authority, and raw supply 7785324428 (77,853,244.28 IDRX); that authority account was owned by program SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf. Both mints were owned by the immutable SPL Token program; Tokenkeg ProgramData 3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2 previously reported no program upgrade authority. IDRX's official supported-chain page marks the predecessor deprecated but promises holders 1:1 redemption into current IDRX or rupiah, so its nonzero supply remains a residual issuer liability until reserve attestations and aggregate runtime supply coverage are reconciled.",
+      "reviewer": "Codex CTRL-idrx-idrx; OpenAI Codex V9 integration audit",
+      "reviewedAt": "2026-07-28",
       "disposition": "unresolved",
       "unresolvedQuestions": [
         "Polygon 0x649a2da7b28e0d54c13d5eff95d3a660652742cc → implementation 0xfef07b30e5b453bc372f8a088cfca9276ef8dd79: the token, proxy slot, and UUPS guard are verified, but AccessControl has no on-chain member enumeration and available public endpoints do not provide a complete historical RoleGranted/RoleRevoked scan; the complete current UPGRADER_ROLE and DEFAULT_ADMIN_ROLE inventory is unknown.",
         "BSC 0x649a2da7b28e0d54c13d5eff95d3a660652742cc → implementation 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0: the token, proxy slot, and verified UUPS source are confirmed, but public RPC lacks archival state and no unauthenticated explorer/API provides complete role-event history; the complete current UPGRADER_ROLE and DEFAULT_ADMIN_ROLE inventory is unknown.",
-        "Worldchain 0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22 → implementation 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693: the token and proxy slot are verified, but the public RPC limits historical log queries to 100 blocks and no public explorer role-event API was available; the complete current UPGRADER_ROLE and DEFAULT_ADMIN_ROLE inventory is unknown."
+        "Worldchain 0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22 → implementation 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693: the token and proxy slot are verified, but the public RPC limits historical log queries to 100 blocks and no public explorer role-event API was available; the complete current UPGRADER_ROLE and DEFAULT_ADMIN_ROLE inventory is unknown.",
+        "Lisk 0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22 → implementation 0x36aa37a29378cd3fe12fa67b7e1f0a7558ec8693: the token, implementation slot, and zero EIP-1967 admin slot are verified at block 35252672, but a complete RoleGranted/RoleRevoked history has not been established; the complete current UPGRADER_ROLE and DEFAULT_ADMIN_ROLE inventory is unknown.",
+        "Deprecated Solana mint idrxTdNftk6tYedPv2M7tCFHBVCpk5rkiNRd8yUArhr remained initialized at finalized slot 435725987 with mint authority CxFQVMMLzjXgN3eRXUr7mtyBGWxKPeWYJuX6Q97tEy5o, no freeze authority, and 77,853,244.28 IDRX supply, while IDRX promises holders 1:1 redemption. Confirm the retained authority's controlling program configuration and ability to mint, and reconcile whether issuer reserve attestations and aggregate runtime supply include this residual liability rather than only the current Solana mint."
       ],
       "sources": [
         {
@@ -546,6 +548,10 @@
         {
           "label": "Base IDRX proxy and implementation",
           "url": "https://base.blockscout.com/address/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
+        },
+        {
+          "label": "Lisk mainnet RPC",
+          "url": "https://rpc.api.lisk.com"
         },
         {
           "label": "Kaia mainnet RPC",

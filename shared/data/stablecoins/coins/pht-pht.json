@@ -690,76 +690,6 @@
   },
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
-  "reserves": [
-    {
-      "name": "apcxUSDT custodial wrapper",
-      "pct": 100,
-      "risk": "high",
-      "coinId": "usdt-tether",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "APACX apcxUSDT custodial wrapper over Tether USDT",
-      "riskFactors": [
-        "custody",
-        "counterparty",
-        "smart-contract",
-        "liquidity",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    }
-  ],
-  "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
-    "confidence": "probable",
-    "sources": [
-      {
-        "label": "APACX PHT product page",
-        "url": "https://www.apacx.io/PHT"
-      },
-      {
-        "label": "APACX documentation",
-        "url": "https://docs.apacx.io/"
-      },
-      {
-        "label": "APACX smart contract audits",
-        "url": "https://docs.apacx.io/technical-references/smart-contract-audits"
-      }
-    ],
-    "rationale": "APACX describes PHT as an overcollateralized MakerDAO-style CDP stablecoin whose initial approved collateral is the apcxUSDT custodial wrapper, with apcxUSDC planned in beta. The slice name is aligned to the exact single-asset live adapter row identity so the reviewed classification overlays the captured wrapper exposure. The wrapper maps the full dependency to tracked USDT; vault-level stablecoin mixes beyond apcxUSDT are not yet live in the reviewed sources.",
-    "compositionBasis": "APACX PHT product, documentation, and audit disclosures; live row identity from the single-asset adapter label",
-    "compositionAsOf": "2026-07-20",
-    "scope": "full-composition",
-    "knownUnknownExposure": "The apcxUSDC beta wrapper is announced but not yet an active PHT collateral type in the reviewed sources; individual CDP vault collateralizations float and are not a reserve-level slice.",
-    "knownUnknownExposurePct": 0
-  },
-  "custodyProfile": {
-    "providers": [
-      {
-        "name": "APACX apcxUSDT custodial wrapper reserve wallets",
-        "role": "custodian"
-      }
-    ],
-    "segregation": "unknown",
-    "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
-    "confidence": "manual-review",
-    "sources": [
-      {
-        "label": "APACX PHT product page",
-        "url": "https://www.apacx.io/PHT"
-      },
-      {
-        "label": "APACX documentation",
-        "url": "https://docs.apacx.io/"
-      }
-    ],
-    "uncertainty": "APACX operates the apcxUSDT custodial wrapper that backs PHT CDP vaults, but the reviewed sources do not name the underlying USDT custodian, account segregation, insolvency treatment, or rehypothecation terms.",
-    "knownUnknownExposurePct": 100
-  },
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -777,10 +707,8 @@
       }
     },
     "params": {
-      "label": "apcxUSDT custodial wrapper",
-      "risk": "high",
-      "coinId": "usdt-tether",
-      "depType": "collateral"
+      "label": "Current apcxUSDT-referenced collateral envelope (unreconciled)",
+      "risk": "high"
     }
   },
   "launchDate": "2025-02-13",

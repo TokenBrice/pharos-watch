@@ -3,6 +3,7 @@ import type {
   V9EvidenceResponsibility,
   V9FailureDomainRef,
   V9FactGapV2,
+  V9FactGapV3,
   V9FactStatusV2,
   V9ReserveExposureFactV2,
 } from "../../types/safety-score-v9-facts";
@@ -28,6 +29,18 @@ export interface V9ResolvedUpstreamExposure {
   readonly score: number | null;
   readonly evidenceLevel: V9EvidenceLevel;
   readonly reasonCodes: readonly V9ReasonCode[];
+  /**
+   * Reason-level provenance from the upstream backing pillar. Older retained
+   * fixtures may omit this and continue to use `reasonCodes`; production
+   * evaluation always supplies it so downstream availability facts retain the
+   * causal owner instead of defaulting to Pharos integration.
+   */
+  readonly reasons?: readonly {
+    readonly code: V9ReasonCode;
+    /** Stable upstream score path used to distinguish mixed causal roots. */
+    readonly path?: string;
+    readonly responsibility: V9EvidenceResponsibility;
+  }[];
   readonly failureDomains: readonly V9FailureDomainRef[];
   /**
    * Terminal unavailable-asset roots this exposure ultimately depends on,
@@ -67,9 +80,13 @@ export interface V9BackingAssetInput {
   readonly assetId: string;
   readonly reserveStatus: V9AssetFactsV2["reserveStatus"];
   readonly reserveExposures: readonly V9ReserveExposureFactV2[];
-  readonly gaps: readonly V9FactGapV2[];
+  readonly gaps: readonly (V9FactGapV2 | V9FactGapV3)[];
   readonly resolvedUpstreamExposures: readonly V9ResolvedUpstreamExposure[];
   readonly seriallyResolvedUpstreamAssetIds?: readonly string[];
+  readonly unresolvedUpstreamProjectionAttributions?: readonly {
+    readonly causalKey: string;
+    readonly responsibility: V9EvidenceResponsibility;
+  }[];
   readonly cdpLiquidationCapacitySelection?: V9CdpLiquidationCapacitySelection;
   readonly inheritedStablecoinBacking?: V9InheritedStablecoinBacking;
   /** Conservative measured months since launch; absent → no seasoning credit. */
@@ -130,6 +147,10 @@ export interface V9BackingUnresolvedReason {
   readonly pathKey: string;
   readonly gapIds: readonly string[];
   readonly treatment: "pillar" | "ceiling" | "NR" | "diagnostic";
+  /** Explicit causal owner for synthetic or propagated reasons without a local gap. */
+  readonly responsibility?: V9EvidenceResponsibility;
+  /** Stable source identity when several synthetic reasons share one public base path. */
+  readonly causalKey?: string;
 }
 
 export interface V9BackingResult {
@@ -235,8 +256,14 @@ function gapReasons(
   if (gapIds.length === 0) return [{ code: fallbackCode, pathKey, gapIds: [], treatment }];
   const reasons = gapIds
     .map((gapId) => asset.gaps.find((gap) => gap.gapId === gapId))
-    .filter((gap): gap is V9FactGapV2 => gap !== undefined)
-    .map((gap) => ({ code: gap.reasonCode, pathKey, gapIds: [gap.gapId], treatment }));
+    .filter((gap): gap is V9FactGapV2 | V9FactGapV3 => gap !== undefined)
+    .map((gap) => ({
+      code: gap.reasonCode,
+      pathKey,
+      gapIds: [gap.gapId],
+      treatment,
+      ...("responsibility" in gap ? { responsibility: gap.responsibility } : {}),
+    }));
   return reasons.length > 0 ? reasons : [{ code: fallbackCode, pathKey, gapIds: uniqueSorted(gapIds), treatment }];
 }
 
@@ -254,8 +281,14 @@ function policyGapReasons(
   }
   const reasons = gapIds
     .map((gapId) => asset.gaps.find((gap) => gap.gapId === gapId))
-    .filter((gap): gap is V9FactGapV2 => gap !== undefined)
-    .map((gap) => ({ code: gap.reasonCode, pathKey, gapIds: [gap.gapId], treatment: treatmentFor(gap.reasonCode) }));
+    .filter((gap): gap is V9FactGapV2 | V9FactGapV3 => gap !== undefined)
+    .map((gap) => ({
+      code: gap.reasonCode,
+      pathKey,
+      gapIds: [gap.gapId],
+      treatment: treatmentFor(gap.reasonCode),
+      ...("responsibility" in gap ? { responsibility: gap.responsibility } : {}),
+    }));
   return reasons.length > 0
     ? reasons
     : [{ code: fallbackCode, pathKey, gapIds: uniqueSorted(gapIds), treatment: treatmentFor(fallbackCode) }];
@@ -434,6 +467,26 @@ function inheritedStablecoinReserveEvaluation(
   const componentKey = `reserve:inherited-backing:${inherited.parentAssetId}`;
   const observationState = liveExposure === undefined ? "bounded-unknown" : "known";
   const provenance = liveExposure?.provenance ?? null;
+  const reserveGapAttributions = [
+    ...new Map(
+    asset.reserveStatus.gapIds.flatMap((gapId) => {
+      const gap = asset.gaps.find((candidate) => candidate.gapId === gapId);
+      return gap !== undefined && "responsibility" in gap
+        ? [[
+            `${gap.gapId}\u0000${gap.responsibility}`,
+            {
+              causalKey: gap.gapId,
+              responsibility: gap.responsibility,
+            },
+          ] as const]
+        : [];
+    }),
+    ).values(),
+  ].sort(
+    (left, right) =>
+      compareText(left.causalKey, right.causalKey) ||
+      compareText(left.responsibility, right.responsibility),
+  );
   return {
     score,
     contributions: [
@@ -465,14 +518,21 @@ function inheritedStablecoinReserveEvaluation(
     structuralReasons: [],
     unresolved:
       liveExposure === undefined
-        ? [
-            {
-              code: "partial-reserve-review",
-              pathKey: componentKey,
-              gapIds: [],
-              treatment: resolveV9ReasonPolicy(policy, "partial-reserve-review").reason.defaultTreatment,
-            },
-          ]
+        ? (reserveGapAttributions.length > 0
+            ? reserveGapAttributions
+            : [undefined]
+          ).map((attribution) => ({
+            code: "partial-reserve-review",
+            pathKey: componentKey,
+            gapIds: [],
+            treatment: resolveV9ReasonPolicy(policy, "partial-reserve-review").reason.defaultTreatment,
+            ...(attribution === undefined
+              ? {}
+              : {
+                  responsibility: attribution.responsibility,
+                  causalKey: attribution.causalKey,
+                }),
+          }))
         : [],
     rateability: "rateable",
   };
@@ -605,46 +665,138 @@ export function evaluateV9ReserveExposures(
       // after whole-upstream ceilings are narrowed to this basket exposure.
       // Its score already prices the upstream uncertainty at the slice weight;
       // only serial claims may carry a whole-parent ceiling to the child.
-      const projected =
+      const upstreamReasons = [
+        ...new Map(
+          (upstream.reasons ?? upstream.reasonCodes.map((code) => ({
+            code,
+            path: undefined,
+            responsibility: undefined,
+          }))).map(
+            (reason) => [
+              `${reason.code}\u0000${reason.path ?? ""}\u0000${reason.responsibility ?? ""}`,
+              reason,
+            ],
+          ),
+        ).values(),
+      ].sort(
+        (left, right) =>
+          compareText(left.code, right.code) ||
+          compareText(left.path ?? "", right.path ?? "") ||
+          compareText(left.responsibility ?? "", right.responsibility ?? ""),
+      );
+      const projectedSources =
         upstream.score === null
-          ? uniqueSorted(upstream.reasonCodes).filter((code) => !AVAILABILITY_REASON_CODES.has(code))
-          : uniqueSorted(
-              upstream.reasonCodes.map((code) =>
-                resolveV9ReasonPolicy(policy, code).reason.defaultTreatment === "ceiling"
-                  ? "bounded-unknown-reserve-exposure"
-                  : code,
-              ),
-            );
+          ? upstreamReasons.filter((reason) => !AVAILABILITY_REASON_CODES.has(reason.code))
+          : upstreamReasons;
+      const projected = projectedSources.map((reason) => ({
+        ...reason,
+        sourceCode: reason.code,
+        code:
+          upstream.score !== null &&
+          resolveV9ReasonPolicy(policy, reason.code).reason.defaultTreatment === "ceiling"
+            ? ("bounded-unknown-reserve-exposure" as const)
+            : reason.code,
+      }));
+      const projectedCodeCounts = new Map<V9ReasonCode, number>();
+      for (const reason of projected) {
+        projectedCodeCounts.set(
+          reason.code,
+          (projectedCodeCounts.get(reason.code) ?? 0) + 1,
+        );
+      }
       unresolved.push(
-        ...projected.map((code) => ({
-          code,
+        ...projected.map((reason) => ({
+          code: reason.code,
           pathKey,
           gapIds: [],
-          treatment: resolveV9ReasonPolicy(policy, code).reason.defaultTreatment,
+          treatment: resolveV9ReasonPolicy(policy, reason.code).reason.defaultTreatment,
+          ...(reason.responsibility === undefined ? {} : { responsibility: reason.responsibility }),
+          ...((projectedCodeCounts.get(reason.code) ?? 0) > 1
+            ? {
+                causalKey: `upstream:${upstream.upstreamAssetId}:${reason.sourceCode}:${reason.path ?? "unattributed"}`,
+              }
+            : {}),
         })),
       );
       if (upstream.score === null) {
         const unavailableCode = isV9MaterialShare(materialityWeight, threshold)
           ? ("material-dependency-unavailable" as const)
           : ("nonmaterial-dependency-unavailable" as const);
-        unresolved.push({
-          code: unavailableCode,
-          pathKey,
-          gapIds: [],
-          treatment: resolveV9ReasonPolicy(policy, unavailableCode).reason.defaultTreatment,
-        });
+        const nrCausalReasons = upstreamReasons.filter(
+          (reason) =>
+            resolveV9ReasonPolicy(policy, reason.code).reason.defaultTreatment === "NR" &&
+            reason.responsibility !== undefined,
+        );
+        const causalReasons =
+          nrCausalReasons.length > 0
+            ? nrCausalReasons
+            : upstreamReasons.filter(
+                (reason) => reason.responsibility !== undefined,
+              );
+        const byResponsibility = new Map<
+          V9EvidenceResponsibility,
+          typeof causalReasons
+        >();
+        for (const reason of causalReasons) {
+          if (reason.responsibility === undefined) continue;
+          byResponsibility.set(reason.responsibility, [
+            ...(byResponsibility.get(reason.responsibility) ?? []),
+            reason,
+          ]);
+        }
+        const attributions = [...byResponsibility]
+          .sort(([left], [right]) => compareText(left, right))
+          .map(([responsibility, reasons]) => ({
+            responsibility,
+            causalKey: `upstream:${upstream.upstreamAssetId}:${reasons
+              .map((reason) => `${reason.code}:${reason.path ?? "unattributed"}`)
+              .sort(compareText)
+              .join("+")}`,
+          }));
+        unresolved.push(
+          ...(attributions.length > 0 ? attributions : [undefined]).map((attribution) => ({
+            code: unavailableCode,
+            pathKey,
+            gapIds: [],
+            treatment: resolveV9ReasonPolicy(policy, unavailableCode).reason.defaultTreatment,
+            ...(attribution === undefined ? {} : attribution),
+          })),
+        );
       }
     } else if (exposure.trackedAssetId !== null && !seriallyResolvedUpstreamAssetIds.has(exposure.trackedAssetId)) {
       score = Math.min(score, backing.boundedUnknownQuality);
       const unavailableCode = isV9MaterialShare(materialityWeight, threshold)
         ? ("material-dependency-unavailable" as const)
         : ("nonmaterial-dependency-unavailable" as const);
-      unresolved.push({
-        code: unavailableCode,
-        pathKey,
-        gapIds: [],
-        treatment: resolveV9ReasonPolicy(policy, unavailableCode).reason.defaultTreatment,
-      });
+      const attributions = [
+        ...new Map(
+          (asset.unresolvedUpstreamProjectionAttributions ?? []).map(
+            (attribution) => [
+              `${attribution.causalKey}\u0000${attribution.responsibility}`,
+              attribution,
+            ],
+          ),
+        ).values(),
+      ].sort(
+        (left, right) =>
+          compareText(left.causalKey, right.causalKey) ||
+          compareText(left.responsibility, right.responsibility),
+      );
+      unresolved.push(
+        ...(attributions.length > 0
+          ? attributions
+          : [{
+              causalKey: `dependency-projection:${exposure.trackedAssetId}`,
+              responsibility: "method-unsupported" as const,
+            }]
+        ).map((attribution) => ({
+          code: unavailableCode,
+          pathKey,
+          gapIds: [],
+          treatment: resolveV9ReasonPolicy(policy, unavailableCode).reason.defaultTreatment,
+          ...attribution,
+        })),
+      );
     }
     if (state !== "known" || requiredUnknown) {
       const material = isV9MaterialShare(exposure.weight, threshold);
@@ -874,7 +1026,14 @@ function finalizeBackingResult(result: Omit<V9BackingResult, "traceDigest">): V9
   const unresolved = [
     ...new Map(
       result.unresolved.map((reason) => [
-        `${reason.code}:${reason.pathKey}:${reason.treatment}:${uniqueSorted(reason.gapIds).join(",")}`,
+        [
+          reason.code,
+          reason.pathKey,
+          reason.treatment,
+          uniqueSorted(reason.gapIds).join(","),
+          reason.causalKey ?? "",
+          reason.responsibility ?? "",
+        ].join("\u0000"),
         { ...reason, gapIds: uniqueSorted(reason.gapIds) },
       ]),
     ).values(),
@@ -885,8 +1044,12 @@ function finalizeBackingResult(result: Omit<V9BackingResult, "traceDigest">): V9
     structuralReasons: [...result.structuralReasons].sort((left, right) =>
       compareText(`${left.kind}:${left.severity}:${left.pathKey}`, `${right.kind}:${right.severity}:${right.pathKey}`),
     ),
-    unresolved: unresolved.sort((left, right) =>
-      compareText(`${left.code}:${left.pathKey}`, `${right.code}:${right.pathKey}`),
+    unresolved: unresolved.sort(
+      (left, right) =>
+        compareText(left.code, right.code) ||
+        compareText(left.pathKey, right.pathKey) ||
+        compareText(left.causalKey ?? "", right.causalKey ?? "") ||
+        compareText(left.responsibility ?? "", right.responsibility ?? ""),
     ),
     evidenceRefIds: uniqueSorted(result.evidenceRefIds),
     failureDomains: canonicalDomains(result.failureDomains),

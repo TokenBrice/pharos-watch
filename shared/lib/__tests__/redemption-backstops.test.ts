@@ -989,6 +989,7 @@ describe("getRedemptionBackstopConfig", () => {
     const dusd = getRedemptionBackstopConfig("dusd-dtrinity");
     expect(dusd).toMatchObject({ outputAssetType: "stable-basket", reviewedAt: "2026-07-27" });
     expect(dusd?.outputAssets).toBeUndefined();
+    expect(dusd?.unresolvedOutputDisposition).toBe("reviewed-external");
     expect(dusd?.unresolvedOutputAssetKeys).toEqual([
       "usdc-circle",
       "usdt-tether",
@@ -1122,10 +1123,15 @@ describe("getRedemptionBackstopConfig", () => {
       "asset:zusd",
       "doc-money-on-chain",
     ]);
+    expect(getRedemptionBackstopConfig("dllr-sovryn")?.unresolvedOutputDisposition).toBe("reviewed-external");
     expect(getRedemptionBackstopConfig("witry-brix")?.unresolvedOutputAssetKeys).toEqual([
       "asset:itry",
     ]);
+    expect(getRedemptionBackstopConfig("witry-brix")?.unresolvedOutputDisposition).toBe("reviewed-external");
     expect(getRedemptionBackstopConfig("aznd-mu-digital")?.unresolvedOutputAssetKeys).toBeUndefined();
+    expect(getRedemptionBackstopConfig("aznd-mu-digital")?.unresolvedOutputDisposition).toBe(
+      "issuer-undisclosed",
+    );
 
     expect(getRedemptionBackstopConfig("eearn-ember")).toMatchObject({
       outputAssets: ["usdc-circle"],

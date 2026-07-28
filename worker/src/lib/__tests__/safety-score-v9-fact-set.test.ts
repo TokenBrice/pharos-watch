@@ -8,11 +8,13 @@ import astherusMetaSource from "@shared/data/stablecoins/coins/usdf-astherus.jso
 import megaMetaSource from "@shared/data/stablecoins/coins/usdm-mega.json";
 import wrappedMSource from "@shared/data/stablecoins/coins/wm-m0.json";
 import xautMetaSource from "@shared/data/stablecoins/coins/xaut-tether.json";
+import usdtMetaSource from "@shared/data/stablecoins/coins/usdt-tether.json";
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { buildV9DependencyEvaluationPlan } from "@shared/lib/safety-score-v9/dependencies";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
+import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts";
 import {
   evaluateV9Exit,
   projectV9ExitEvaluationRoute,
@@ -1139,6 +1141,71 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!.trace.finalGrade).not.toBe("NR");
   });
 
+  it("attributes a same-day mechanism admission wait to the exact policy", () => {
+    const fixed = exactFixedInput({
+      assetId: "ybold-yearn",
+      clockSec: Date.parse("2026-07-28T09:17:27.000Z") / 1_000,
+    });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "ybold-yearn",
+          {
+            id: "ybold-yearn",
+            mechanismArchetype: "cdp",
+            launchDate: "2025-01-01",
+          },
+        ],
+      ]),
+    });
+    expect(baseline.assets[0]).toMatchObject({
+      mechanismRiskReview: null,
+      mechanismReviewGapDisposition: {
+        responsibility: "method-unsupported",
+        rationale: expect.stringContaining("UTC day has elapsed"),
+        componentKeys: expect.arrayContaining(["backstop"]),
+      },
+    });
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    expect(compiled.assets[0]!.gaps).toContainEqual(
+      expect.objectContaining({
+        reasonCode: "bounded-mechanism-review",
+        responsibility: "method-unsupported",
+      }),
+    );
+  });
+
+  it("attributes a same-day partial mechanism component to the admission method", () => {
+    const fixed = exactFixedInput({
+      assetId: "uusd-anything-labs",
+      clockSec: Date.parse("2026-07-28T09:17:27.000Z") / 1_000,
+    });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed);
+    expect(baseline.assets[0]).toMatchObject({
+      mechanismRiskReview: {
+        archetype: "fiat-cash",
+        assuranceAndReconciliation: {
+          status: { observationState: "missing" },
+        },
+      },
+      mechanismReviewGapDisposition: {
+        responsibility: "method-unsupported",
+        componentKeys: ["assuranceAndReconciliation"],
+      },
+    });
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    expect(compiled.assets[0]!.gaps).toContainEqual(
+      expect.objectContaining({
+        path: {
+          kind: "local-component",
+          componentKey: "mechanism-review:assuranceAndReconciliation",
+        },
+        responsibility: "method-unsupported",
+      }),
+    );
+  });
+
   it("compiles clock-valid operational-resilience claims with one evidence record per cited source", () => {
     const clockSec = Date.parse("2026-07-24T00:00:00Z") / 1_000;
     const fixed = exactFixedInput({ assetId: "usdt-tether", clockSec });
@@ -1146,11 +1213,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       metaById: new Map([
         [
           "usdt-tether",
-          {
-            id: "usdt-tether",
-            mechanismArchetype: "fiat-cash",
-            launchDate: "2014-10-06",
-          },
+          usdtMetaSource as unknown as V9ExtensionRegistryMeta,
         ],
       ]),
     });
@@ -1207,6 +1270,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       incidentReview: { state: "not-reviewed" },
     });
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.operationalResilience?.blockerCodes).toEqual([]);
     expect(evaluated.operationalResilience).toMatchObject({
       eligible: true,
       rawPillarCredits: { backing: 2.55, exit: 1.5, control: 2.55 },
@@ -1822,6 +1886,79 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       diagnostics: { graphState: "valid", issueCodes: [] },
       edges: [{ upstreamAssetId: "beta", dependencyType: "collateral", weight: 0.5 }],
     });
+    const compiledCurated = compileSafetyScoreV9FactSetFromFixedInput(noLiveSnapshot, curated);
+    expect(compiledCurated.assets.find((asset) => asset.assetId === "alpha")!.gaps).toContainEqual(
+      expect.objectContaining({
+        reasonCode: "unreviewed-dependency-relationships",
+        responsibility: "producer-failed",
+        message: expect.stringContaining("exact fixed input contains no reserve envelope"),
+      }),
+    );
+    const evaluatedCurated = evaluateV9FactSet(compiledCurated, V9_CANDIDATE_POLICY_V1);
+    expect(
+      evaluatedCurated.assets
+        .find((asset) => asset.assetId === "alpha")!
+        .scoreInput.dependencyReasons.find((reason) => reason.path === "dependency:collateral:beta"),
+    ).toMatchObject({ responsibility: "producer-failed" });
+
+    const compiledAlpha = compiledCurated.assets.find((asset) => asset.assetId === "alpha")!;
+    const producerGap = compiledAlpha.gaps.find(
+      (gap) => gap.reasonCode === "unreviewed-dependency-relationships",
+    )!;
+    const issuerGap = {
+      ...producerGap,
+      gapId: "alpha:gap:effective-dependencies:issuer",
+      responsibility: "issuer-undisclosed" as const,
+    };
+    const mixedAssets = compiledCurated.assets.map((asset) =>
+      asset.assetId === "alpha"
+        ? {
+            ...asset,
+            dependencies: {
+              ...asset.dependencies,
+              status: {
+                ...asset.dependencies.status,
+                gapIds: [...asset.dependencies.status.gapIds, issuerGap.gapId].sort(),
+              },
+            },
+            gaps: [...asset.gaps, issuerGap].sort((left, right) =>
+              left.gapId.localeCompare(right.gapId),
+            ),
+          }
+        : asset,
+    );
+    const { v9FactSetDigest: _digest, ...compiledCore } = compiledCurated;
+    const mixedCore = { ...compiledCore, assets: mixedAssets };
+    const evaluatedMixed = evaluateV9FactSet(
+      {
+        ...mixedCore,
+        v9FactSetDigest: computeV9FactSetDigest(mixedCore),
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    expect(
+      evaluatedMixed.assets
+        .find((asset) => asset.assetId === "alpha")!
+        .scoreInput.dependencyReasons
+        .filter((reason) => reason.path.startsWith("dependency:collateral:beta"))
+        .map((reason) => ({
+          path: reason.path,
+          responsibility: reason.responsibility,
+        })),
+    ).toEqual([
+      {
+        path:
+          "dependency:collateral:beta:gap:" +
+          "alpha%3Agap%3Aeffective-dependencies",
+        responsibility: "producer-failed",
+      },
+      {
+        path:
+          "dependency:collateral:beta:gap:" +
+          "alpha%3Agap%3Aeffective-dependencies%3Aissuer",
+        responsibility: "issuer-undisclosed",
+      },
+    ]);
 
     const liveSnapshot = exactTwoAssetFixedInput();
     const liveMismatch = buildSafetyScoreV9BaselineExtension(liveSnapshot, { metaById });
@@ -3004,6 +3141,11 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(
       evaluated.scoreInput.pillars.control.reasons.map((reason) => reason.code),
     ).toContain("runtime-bridge-materiality-unavailable");
+    expect(
+      evaluated.scoreInput.pillars.control.reasons.find(
+        (reason) => reason.code === "runtime-bridge-materiality-unavailable",
+      ),
+    ).toMatchObject({ responsibility: "producer-failed" });
   });
 
   it("keeps supply missing when neither per-chain rows nor a positive aggregate bucket exist", () => {
@@ -3306,7 +3448,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(right.v9FactSetDigest).toBe(left.v9FactSetDigest);
   });
 
-  it("rebinds CDP not-applicable metric evidence refs to the mechanism review evidence", () => {
+  it("rebinds non-measured metric evidence refs to the mechanism review evidence", () => {
     const cdp = extension();
     cdp.assets[0]!.archetype = "cdp";
     cdp.assets[0]!.mechanismRiskReview = {
@@ -3363,6 +3505,48 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(metricEvidenceRefs).toEqual(compiled.mechanismRiskReview.status.evidenceRefIds);
     expect(metricEvidenceRefs).toEqual(["alpha:research-overlay"]);
     expect(compiled.evidence.map((evidence) => evidence.evidenceId)).toContain(metricEvidenceRefs[0]);
+
+    const component = {
+      status: status("known", "v9.backing.mechanism-review"),
+      quality: "limited" as const,
+      failureDomains: [],
+    };
+    const rwa = extension();
+    rwa.assets[0]!.archetype = "rwa-credit-fund";
+    rwa.assets[0]!.mechanismRiskReview = {
+      archetype: "rwa-credit-fund",
+      weightedAverageMaturityDays: null,
+      valuationCadenceDays: 30,
+      metricApplicability: {
+        weightedAverageMaturityDays: {
+          state: "unavailable",
+          rationale: "The reviewed disclosure has no maturity ladder or WAM.",
+          evidenceRefIds: ["extension-evidence:mechanism:weighted-average-maturity-days"],
+        },
+        valuationCadenceDays: { state: "measured" },
+      },
+      creditQuality: component,
+      seniority: component,
+      legalEnforceability: component,
+      valuationCadence: component,
+      maturityAndLiquidity: component,
+      custody: component,
+      recovery: component,
+    };
+
+    const compiledRwa = compileSafetyScoreV9FactSetFromFixedInput(
+      exactFixedInput(),
+      rwa,
+    ).assets[0]!;
+    if (compiledRwa.mechanismRiskReview.review?.archetype !== "rwa-credit-fund") {
+      throw new Error("Fixture archetype changed");
+    }
+    const unavailable =
+      compiledRwa.mechanismRiskReview.review.metricApplicability
+        ?.weightedAverageMaturityDays;
+    expect(unavailable?.state).toBe("unavailable");
+    if (unavailable?.state !== "unavailable") throw new Error("Fixture applicability changed");
+    expect(unavailable.evidenceRefIds).toEqual(["alpha:research-overlay"]);
   });
 
   it("turns unavailable classifications, valuation, dependencies, and controls into typed gaps", () => {
@@ -3409,7 +3593,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         }),
         expect.objectContaining({
           reasonCode: "unresolved-exit-output",
-          responsibility: "integration-missing",
+          responsibility: "producer-failed",
         }),
         expect.objectContaining({
           reasonCode: "missing-upgradeability-review",
@@ -3425,9 +3609,50 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         }),
         expect.objectContaining({
           code: "unresolved-exit-output",
-          responsibility: "integration-missing",
+          responsibility: "producer-failed",
         }),
       ]),
+    );
+  });
+
+  it("keeps unresolved output ownership causal without making the output scoreable", () => {
+    const reviewedExternal = extension();
+    reviewedExternal.assets[0]!.routeReviews[0]!.output = null;
+    reviewedExternal.assets[0]!.routeReviews[0]!.unresolvedOutputResponsibility = "producer-failed";
+    const external = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), reviewedExternal).assets[0]!;
+    expect(external.exitRoutes[0]!.output).toMatchObject({
+      valuation: null,
+      status: { observationState: "missing" },
+    });
+    expect(external.gaps).toContainEqual(
+      expect.objectContaining({
+        reasonCode: "unresolved-exit-output",
+        responsibility: "producer-failed",
+      }),
+    );
+
+    const undisclosed = extension();
+    undisclosed.assets[0]!.routeReviews[0]!.output = null;
+    undisclosed.assets[0]!.routeReviews[0]!.unresolvedOutputResponsibility = "issuer-undisclosed";
+    const issuer = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), undisclosed).assets[0]!;
+    expect(issuer.gaps).toContainEqual(
+      expect.objectContaining({
+        reasonCode: "unresolved-exit-output",
+        responsibility: "issuer-undisclosed",
+      }),
+    );
+
+    const knownIdentityWithoutValuation = extension();
+    knownIdentityWithoutValuation.assets[0]!.routeReviews[0]!.output!.valuation = null;
+    const producer = compileSafetyScoreV9FactSetFromFixedInput(
+      exactFixedInput(),
+      knownIdentityWithoutValuation,
+    ).assets[0]!;
+    expect(producer.gaps).toContainEqual(
+      expect.objectContaining({
+        reasonCode: "unresolved-exit-output",
+        responsibility: "producer-failed",
+      }),
     );
   });
 
@@ -3672,10 +3897,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ).toMatchObject({ freshness: { state: "stale", maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC } });
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
-    // Wave-8 residuals 2026-07-28: retiring XAI from the active registry
-    // and the 9.01 methodology activation rotated the V8 evaluation build.
+    // The 9.02 methodology identity and shared version surface rotate the
+    // historical V8 evaluation build even though V8 scoring behavior is frozen.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "91cefa81f1b38cfd62a15a2aab9a3e78c11d1dfc2f2e5bbc09ed1fc221b060d9",
+      "787f58ad74a9a5f9bb69fa3b8b84d72da8ca045fe6ee0cc03c67dd3e067bf8f7",
     );
   });
 
@@ -3974,7 +4199,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(withoutOracle.assets[0]!.economicControlReview).toBeNull();
   });
 
-  it("retains mint controls while leaving reconciliation, incidents, and upgrades unresolved", () => {
+  it("retains reviewed mint controls when the aggregate inventory remains unresolved", () => {
     const fixed = exactFixedInput();
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
       metaById: new Map([
@@ -3986,7 +4211,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
             mintAuthority: {
               mintPath: "issuer-direct-mint" as const,
               authorityPosture: "concentrated-admin" as const,
-              confidence: "verified" as const,
+              confidence: "unknown" as const,
               summary: "A reviewed issuer backend can mint the fixture token directly.",
               controls: [
                 {
@@ -4004,6 +4229,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
                 evidence: "The issuer minter path is reviewed, but reconciliation and upgrades are not established.",
                 reviewer: "Fixture reviewer",
                 reviewedAt: "1970-01-01",
+                disposition: "unresolved" as const,
                 // Open questions keep the review incomplete, so the control is
                 // retained while reconciliation, incidents, and upgrades stay
                 // unresolved (bounded-unknown).

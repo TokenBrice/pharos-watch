@@ -947,6 +947,33 @@ describe("tracked stablecoin metadata", () => {
     expect(coin?.yieldConfig).toBeUndefined();
   });
 
+  it("keeps PHT's unreconciled collateral unlinked without inventing a custodian", () => {
+    const coin = TRACKED_META_BY_ID.get("pht-pht");
+
+    expect(coin?.reserves).toEqual([
+      expect.objectContaining({
+        name: "Current apcxUSDT-referenced collateral envelope (unreconciled)",
+        pct: 100,
+      }),
+    ]);
+    expect(coin?.reserves?.[0]).not.toHaveProperty("coinId");
+    expect(coin?.reserveReview?.knownUnknownExposurePct).toBe(100);
+    expect(coin?.reserveReview?.nonLinkDispositions).toEqual([
+      expect.objectContaining({
+        reserveIndex: 0,
+        pct: 100,
+        disposition: "insufficient-evidence",
+      }),
+    ]);
+    expect(coin?.custodyProfile?.providers).toEqual([
+      {
+        name: "apcxUSDT reserve wallet TCRjE31cgksHetFLQd6JENAfBfXhHjMEFU (controller undisclosed)",
+        role: "other",
+      },
+    ]);
+    expect(coin?.dependencies ?? []).toEqual([]);
+  });
+
   it("keeps base USDAI on the curated supply path while sUSDai owns the mixed protocol reserve feed", () => {
     const usdai = TRACKED_META_BY_ID.get("usdai-usd-ai");
     const susdai = TRACKED_META_BY_ID.get("susdai-usd-ai");

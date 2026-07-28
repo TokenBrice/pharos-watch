@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
+import mechanismReviewOverlaysAsset from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
+import xdaiMetaSource from "@shared/data/stablecoins/coins/xdai-gnosis.json";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import {
   buildSafetyScoreV9MechanismReview,
   expandOverlayReview,
+  getSafetyScoreV9MechanismReviewGapDisposition,
   getSafetyScoreV9MechanismOverlayEvidence,
   MechanismReviewOverlaySchema,
   SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
@@ -141,6 +144,27 @@ describe("buildSafetyScoreV9MechanismReview", () => {
       ),
     ).toBeNull();
     expect(getSafetyScoreV9MechanismOverlayEvidence("usdd-tron-dao-reserve", "cdp", sameDaySec)).toBeNull();
+    expect(
+      getSafetyScoreV9MechanismReviewGapDisposition("usdd-tron-dao-reserve", "cdp", sameDaySec),
+    ).toMatchObject({
+      responsibility: "method-unsupported",
+      componentKeys: expect.arrayContaining(["collateralizationParameters", "liquidationMechanics"]),
+    });
+    const beforeReviewSec = Date.UTC(2026, 6, 15, 23, 59, 59) / 1_000;
+    expect(
+      getSafetyScoreV9MechanismReviewGapDisposition(
+        "usdd-tron-dao-reserve",
+        "cdp",
+        beforeReviewSec,
+      ),
+    ).toBeNull();
+  });
+
+  it("expands every curated overlay after its date-only admission gate elapses", () => {
+    for (const rawOverlay of mechanismReviewOverlaysAsset.overlays) {
+      const overlay = MechanismReviewOverlaySchema.parse(rawOverlay);
+      expect(() => expandOverlayReview(overlay), overlay.assetId).not.toThrow();
+    }
   });
 
   it("merges a gated fiat-cash overlay over the built review without degrading derived assurance", () => {
@@ -164,6 +188,35 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     // ...and the PoR-derived assurance quality survives instead of degrading to bounded.
     expect(review.assuranceAndReconciliation.status.observationState).toBe("known");
     expect(review.assuranceAndReconciliation.quality).toBe("adequate");
+  });
+
+  it("derives xDAI assurance from its onchain proof instead of a duplicate overlay claim", () => {
+    const overlay = mechanismReviewOverlaysAsset.overlays.find(
+      (candidate) => candidate.assetId === "xdai-gnosis",
+    );
+    expect(overlay).toBeDefined();
+    expect(overlay?.components).not.toHaveProperty(
+      "assuranceAndReconciliation",
+    );
+    const fallback = buildSafetyScoreV9MechanismReview(
+      fixedInputStub(
+        { "xdai-gnosis": [{}] },
+        Date.parse("2026-07-24T00:00:00Z") / 1_000,
+      ),
+      xdaiMetaSource as unknown as MechanismMeta,
+      "fiat-cash",
+    );
+    const review = expandOverlayReview(
+      MechanismReviewOverlaySchema.parse(overlay),
+      fallback,
+    );
+    if (review.archetype !== "fiat-cash") {
+      throw new Error("unexpected archetype");
+    }
+    expect(review.assuranceAndReconciliation).toMatchObject({
+      quality: "adequate",
+      status: { observationState: "known" },
+    });
   });
 
   it("rejects unknown components and metrics on gated fiat-cash and tbill overlays", () => {
@@ -324,6 +377,45 @@ describe("buildSafetyScoreV9MechanismReview", () => {
           },
         },
         metrics: { hedgeCoverageRatio: null, marginBufferPct: 1, lossAbsorptionShare: 0.0079 },
+      }),
+    ).toThrow(/sourceUrl must match an overlay source/);
+  });
+
+  it("keeps an applicable but undisclosed component bounded with overlay evidence", () => {
+    const sourceUrl = "https://example.com/transparency";
+    const overlay = MechanismReviewOverlaySchema.parse({
+      assetId: "fiat-partial",
+      archetype: "fiat-cash",
+      reviewedAt: "2026-07-27",
+      sources: [{ label: "Issuer transparency page", url: sourceUrl }],
+      notes: "The issuer identifies its custodian but publishes no continuity review.",
+      metrics: {},
+      components: {
+        claimAndSegregation: { quality: "adequate" },
+        custodyContinuity: {
+          applicability: "unavailable",
+          rationale: "No custody continuity or fallback arrangement is disclosed.",
+          sourceUrl,
+        },
+      },
+    });
+    const review = expandOverlayReview(overlay);
+    if (review.archetype !== "fiat-cash") throw new Error("unexpected archetype");
+    expect(review.custodyContinuity.status.applicability.state).toBe("required");
+    expect(review.custodyContinuity.status.observationState).toBe("bounded-unknown");
+    expect(review.custodyContinuity.status.evidenceRefIds).toHaveLength(1);
+    expect(review.custodyContinuity.quality).toBeNull();
+
+    expect(() =>
+      MechanismReviewOverlaySchema.parse({
+        ...overlay,
+        components: {
+          custodyContinuity: {
+            applicability: "unavailable",
+            rationale: "No continuity arrangement is disclosed.",
+            sourceUrl: "https://example.com/not-a-source",
+          },
+        },
       }),
     ).toThrow(/sourceUrl must match an overlay source/);
   });

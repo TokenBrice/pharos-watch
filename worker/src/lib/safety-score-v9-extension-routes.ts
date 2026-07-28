@@ -476,6 +476,20 @@ function buildRedemptionRouteReview(
   entry: RedemptionBackstopEntry,
   observation: ExitRouteObservation,
 ): RouteReview {
+  const staticConfig = getRedemptionBackstopConfig(entry.stablecoinId);
+  const unresolvedOutputDispositionReviewedAtSec = staticConfig?.reviewedAt
+    ? Date.parse(`${staticConfig.reviewedAt}T00:00:00.000Z`) / 1_000
+    : Number.NaN;
+  const unresolvedOutputDispositionAdmitted =
+    staticConfig?.unresolvedOutputDisposition !== undefined &&
+    Number.isFinite(unresolvedOutputDispositionReviewedAtSec) &&
+    unresolvedOutputDispositionReviewedAtSec + 86_400 <= fixedInput.clockSec;
+  const unresolvedOutputResponsibility =
+    !unresolvedOutputDispositionAdmitted
+      ? null
+      : staticConfig?.unresolvedOutputDisposition === "issuer-undisclosed"
+        ? ("issuer-undisclosed" as const)
+        : ("producer-failed" as const);
   const scope = observation.scope;
   const modelConfidence = observation.modelConfidence ?? entry.modelConfidence;
   const reviewedTerms = redemptionReviewTerms(entry);
@@ -502,6 +516,7 @@ function buildRedemptionRouteReview(
     physicalResourceKeys,
     executionCosts: redemptionExecutionCosts(entry, observation),
     output: buildOutputReview(fixedInput, observation, fixedInput.redemptionGenerationId),
+    ...(unresolvedOutputResponsibility === null ? {} : { unresolvedOutputResponsibility }),
     failureDomains: [],
   };
 }

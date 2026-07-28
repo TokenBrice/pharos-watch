@@ -341,6 +341,12 @@ const RouteReviewSchema = z
       (point) => `${point.maxCostBps}:${point.requestedNotionalUsd}`,
     ),
     output: RouteOutputReviewSchema.nullable(),
+    // Optional for retained extension-v2 compatibility. Current redemption
+    // reviews distinguish a known-but-unpriceable external output from an
+    // issuer-undisclosed settlement asset without making either scoreable.
+    unresolvedOutputResponsibility: z
+      .enum(["integration-missing", "issuer-undisclosed", "producer-failed"])
+      .optional(),
     failureDomains: FailureDomainsSchema,
   })
   .strict();
@@ -526,6 +532,14 @@ const AssetExtensionSchema = z
     variantKind: V9VariantKindSchema,
     launchedAtSec: UnixSecondsSchema.nullable(),
     mechanismRiskReview: V9MechanismRiskReviewSchema.nullable(),
+    mechanismReviewGapDisposition: z
+      .object({
+        responsibility: z.literal("method-unsupported"),
+        rationale: CanonicalTextSchema,
+        componentKeys: canonicalArrayBy(CanonicalTextSchema, (componentKey) => componentKey),
+      })
+      .strict()
+      .optional(),
     mechanismExitFacts: canonicalArrayBy(
       MechanismExitFactOverlaySchema,
       (fact) => fact.factKey,
@@ -1099,9 +1113,15 @@ function normalizeMechanismReview(
   let hasStale = false;
   let hasIncomplete = false;
 
-  if (normalized.archetype === "cdp") {
-    for (const applicability of Object.values(normalized.metricApplicability)) {
-      if (applicability.state !== "not-applicable") continue;
+  const metricApplicability =
+    "metricApplicability" in normalized
+      ? (normalized.metricApplicability as
+          | Record<string, { state: string; evidenceRefIds?: string[] }>
+          | undefined)
+      : undefined;
+  if (metricApplicability) {
+    for (const applicability of Object.values(metricApplicability)) {
+      if (applicability.state === "measured") continue;
       applicability.evidenceRefIds = evidenceIds;
       for (const evidenceId of evidenceIds) componentEvidenceIds.add(evidenceId);
     }
@@ -1134,9 +1154,15 @@ function normalizeMechanismReview(
         ownerDomain: "backing",
         policyRuleId: original.applicability.policyRuleId,
         observationState: original.observationState,
-        responsibility: reviewedGapResponsibility(original.observationState),
+        responsibility:
+          context.asset.mechanismReviewGapDisposition?.componentKeys.includes(componentKey) === true
+            ? context.asset.mechanismReviewGapDisposition.responsibility
+            : reviewedGapResponsibility(original.observationState),
         path: { kind: "local-component", componentKey: `mechanism-review:${componentKey}` },
-        message: `The ${componentKey} mechanism review is not a current known fact.`,
+        message:
+          context.asset.mechanismReviewGapDisposition?.componentKeys.includes(componentKey) === true
+            ? context.asset.mechanismReviewGapDisposition.rationale
+            : `The ${componentKey} mechanism review is not a current known fact.`,
         evidenceRefIds:
           original.observationState === "stale" || original.observationState === "bounded-unknown" ? evidenceIds : [],
       }),
@@ -1213,9 +1239,12 @@ function buildMechanismReview(context: AssetBuildContext): V9MechanismRiskReview
         // quality instead of reason-coding NR.
         reasonCode: "bounded-mechanism-review",
         ownerDomain: "backing",
-        responsibility: "integration-missing",
+        responsibility:
+          context.asset.mechanismReviewGapDisposition?.responsibility ?? "integration-missing",
         policyRuleId: "v9.backing.mechanism-review",
-        message: "No policy-independent archetype mechanism review is present in the v9 overlay.",
+        message:
+          context.asset.mechanismReviewGapDisposition?.rationale ??
+          "No policy-independent archetype mechanism review is present in the v9 overlay.",
       }).status,
       review: null,
     };
@@ -1632,15 +1661,21 @@ function reconcileCollateralDependencyMappings(
       ...reserveExposures.flatMap((exposure) => exposure.status.evidenceRefIds),
     ]),
   ].sort(compareText);
+  const producerOmittedCuratedEnvelope =
+    reserveExposures.length === 0 &&
+    dependencies.source === "curated-reserve" &&
+    dependencies.edges.some((edge) => edge.economicRole === "basket-exposure");
   const status =
     dependencies.status.observationState === "known"
       ? missingLocalFact(context, {
           componentKey: "effective-dependencies",
           reasonCode: "unreviewed-dependency-relationships",
           ownerDomain: "dependency",
-          responsibility: "integration-missing",
+          responsibility: producerOmittedCuratedEnvelope ? "producer-failed" : "integration-missing",
           policyRuleId: "v9.dependencies.edge-exposure-mapping",
-          message: "A collateral dependency edge lacks an exact mapping to the captured reserve exposures.",
+          message: producerOmittedCuratedEnvelope
+            ? "Reviewed collateral identities exist, but the exact fixed input contains no reserve envelope to reconcile."
+            : "A collateral dependency edge lacks an exact mapping to the captured reserve exposures.",
           observationState: "bounded-unknown",
           evidenceRefIds,
         }).status
@@ -1928,13 +1963,17 @@ function buildRoute(
       valuation: null,
     };
   } else if (!args.review.output?.valuation) {
+    const outputResponsibility =
+      args.review.output !== null
+        ? "producer-failed"
+        : (args.review.unresolvedOutputResponsibility ?? "integration-missing");
     const gapId = routeGap(
       context,
       routeKey,
       "output",
       "missing",
       "unresolved-exit-output",
-      "integration-missing",
+      outputResponsibility,
       "The route output does not have an explicit same-notional USD valuation.",
       [evidenceId],
     );

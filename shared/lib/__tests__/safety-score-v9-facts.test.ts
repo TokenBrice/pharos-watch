@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { compileV9FactSetV2, assertExactV9ActiveAssetSet } from "../safety-score-v9/compile";
+import {
+  compileV9FactSetV2,
+  compileV9FactSetV3,
+  assertExactV9ActiveAssetSet,
+} from "../safety-score-v9/compile";
 import { evaluateV9FactSet } from "../safety-score-v9/evaluate-set";
 import { projectV9ExitEvaluationRoute, resolveV9DistinctExitCapacity } from "../safety-score-v9/exit";
 import {
@@ -22,7 +26,10 @@ import {
 import { createV9FactGap, createV9FactGapV3, optionalExitV9Path } from "../safety-score-v9/reasons";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "../stable-json";
-import type { V9AssetFactsV2 } from "../../types/safety-score-v9-facts";
+import type {
+  V9AssetFactsV2,
+  V9AssetFactsV3,
+} from "../../types/safety-score-v9-facts";
 
 const AS_OF_SEC = 1_000;
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
@@ -607,6 +614,263 @@ function coreFixture(reversed = false) {
 }
 
 describe("Safety Score v9 normalized fact protocol", () => {
+  it("attributes a missing parent score to the parent's causal NR owner", () => {
+    const input = coreFixture();
+    const parent = input.assets.find((asset) => asset.assetId === "gamma")! as unknown as V9AssetFactsV2;
+    const parentGap = createV9FactGap({
+      gapId: "gamma:gap:missing-archetype",
+      reasonCode: "missing-archetype",
+      ownerDomain: "backing",
+      policyRuleId: "backing.archetype.review",
+      observationState: "missing",
+      path: { kind: "local-component", componentKey: "mechanism-archetype" },
+      message: "The mechanism archetype is unresolved.",
+    });
+    parent.archetype = "unresolved";
+    parent.gaps = [parentGap];
+    parent.mechanismRiskReview = {
+      status: createV9FactStatus({
+        applicability: requiredV9Applicability("backing.archetype.review"),
+        observationState: "missing",
+        gapIds: [parentGap.gapId],
+      }),
+      review: null,
+    };
+
+    const evaluated = evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+    expect(
+      evaluated.assets
+        .find((asset) => asset.assetId === "alpha")!
+        .scoreInput.dependencyReasons
+        .filter((reason) => reason.code === "missing-parent-score")
+        .map((reason) => reason.responsibility),
+    ).toContain("method-unsupported");
+  });
+
+  it("attributes a derived oracle reason to the exact reviewed disclosure gap", () => {
+    const upgraded = structuredClone(
+      upgradeCompiledV9FactSetV2(compileV9FactSetV2(coreFixture())),
+    );
+    const { v9FactSetDigest: _digest, ...core } = upgraded;
+    const alpha = core.assets.find(
+      (asset) => asset.assetId === "alpha",
+    ) as V9AssetFactsV3;
+    const gap = createV9FactGapV3({
+      gapId: "alpha:gap:economic-control:oracle",
+      reasonCode: "missing-oracle-profile",
+      ownerDomain: "control",
+      policyRuleId: "control.oracle.review",
+      observationState: "bounded-unknown",
+      path: {
+        kind: "local-component",
+        componentKey: "economic-control:oracle",
+      },
+      message: "The issuer review does not disclose a complete oracle profile.",
+      evidenceRefIds: ["evidence:base"],
+      responsibility: "issuer-undisclosed",
+    });
+    alpha.gaps.push(gap);
+    alpha.economicControlReview.oracle = {
+      status: createV9FactStatus({
+        applicability: requiredV9Applicability("control.oracle.review"),
+        observationState: "bounded-unknown",
+        evidenceRefIds: ["evidence:base"],
+        gapIds: [gap.gapId],
+      }),
+      tier: null,
+      branches: [],
+    };
+
+    const evaluated = evaluateV9FactSet(
+      compileV9FactSetV3(core),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const reasons = evaluated.assets.find(
+      (asset) => asset.assetId === "alpha",
+    )!.scoreInput.pillars.control.reasons;
+
+    expect(reasons).toContainEqual(
+      expect.objectContaining({
+        code: "incomplete-oracle-liquidation-branch",
+        path: "control:oracle",
+        responsibility: "issuer-undisclosed",
+      }),
+    );
+    expect(
+      reasons.some(
+        (reason) =>
+          reason.code === "incomplete-oracle-liquidation-branch" &&
+          reason.responsibility === "integration-missing",
+      ),
+    ).toBe(false);
+  });
+
+  it("scopes a control-specific reason before considering aggregate control gaps", () => {
+    const upgraded = structuredClone(
+      upgradeCompiledV9FactSetV2(compileV9FactSetV2(coreFixture())),
+    );
+    const { v9FactSetDigest: _digest, ...core } = upgraded;
+    const alpha = core.assets.find(
+      (asset) => asset.assetId === "alpha",
+    ) as V9AssetFactsV3;
+    const admin = alpha.controls.find(
+      (control) => control.controlKey === "control:admin",
+    )!;
+    admin.controlKind = "governance";
+    const controlGap = createV9FactGapV3({
+      gapId: "alpha:gap:deployment-control:admin",
+      reasonCode: "unresolved-control-identity",
+      ownerDomain: "control",
+      policyRuleId: "control.deployment.review",
+      observationState: "bounded-unknown",
+      path: {
+        kind: "local-component",
+        componentKey: "control:control:admin",
+      },
+      message: "The issuer has not disclosed the admin control semantics.",
+      evidenceRefIds: ["evidence:base"],
+      responsibility: "issuer-undisclosed",
+    });
+    const aggregateGap = createV9FactGapV3({
+      gapId: "alpha:gap:deployment-controls",
+      reasonCode: "unresolved-control-identity",
+      ownerDomain: "control",
+      policyRuleId: "control.inventory.review",
+      observationState: "bounded-unknown",
+      path: {
+        kind: "local-component",
+        componentKey: "deployment-controls",
+      },
+      message: "The producer cannot reconcile the aggregate control inventory.",
+      evidenceRefIds: ["evidence:base"],
+      responsibility: "producer-failed",
+    });
+    alpha.gaps.push(controlGap, aggregateGap);
+    admin.status = createV9FactStatus({
+      applicability: requiredV9Applicability("control.deployment.review"),
+      observationState: "bounded-unknown",
+      evidenceRefIds: ["evidence:base"],
+      gapIds: [controlGap.gapId],
+    });
+    alpha.controlStatus = createV9FactStatus({
+      applicability: requiredV9Applicability("control.inventory.review"),
+      observationState: "bounded-unknown",
+      evidenceRefIds: ["evidence:base"],
+      gapIds: [aggregateGap.gapId],
+    });
+
+    const evaluated = evaluateV9FactSet(
+      compileV9FactSetV3(core),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const controlSpecific = evaluated.assets
+      .find((asset) => asset.assetId === "alpha")!
+      .scoreInput.pillars.control.reasons.filter(
+        (reason) =>
+          reason.code === "unresolved-control-identity" &&
+          reason.path === "control:control:control:admin",
+      );
+
+    expect(controlSpecific).toHaveLength(1);
+    expect(controlSpecific[0]!.responsibility).toBe("issuer-undisclosed");
+  });
+
+  it("keeps mixed upstream backing owners on distinct causal score paths", () => {
+    const upgraded = structuredClone(
+      upgradeCompiledV9FactSetV2(compileV9FactSetV2(coreFixture())),
+    );
+    const { v9FactSetDigest: _digest, ...core } = upgraded;
+    const beta = core.assets.find(
+      (asset) => asset.assetId === "beta",
+    ) as V9AssetFactsV3;
+    const issuerGap = createV9FactGapV3({
+      gapId: "beta:gap:mechanism-archetype:issuer",
+      reasonCode: "missing-archetype",
+      ownerDomain: "backing",
+      policyRuleId: "backing.archetype.review",
+      observationState: "missing",
+      path: {
+        kind: "local-component",
+        componentKey: "mechanism-archetype:issuer",
+      },
+      message: "The issuer has not disclosed the mechanism archetype.",
+      evidenceRefIds: ["evidence:base"],
+      responsibility: "issuer-undisclosed",
+    });
+    const producerGap = createV9FactGapV3({
+      gapId: "beta:gap:mechanism-archetype:producer",
+      reasonCode: "missing-archetype",
+      ownerDomain: "backing",
+      policyRuleId: "backing.archetype.review",
+      observationState: "missing",
+      path: {
+        kind: "local-component",
+        componentKey: "mechanism-archetype:producer",
+      },
+      message: "The current producer capture cannot resolve the mechanism archetype.",
+      evidenceRefIds: ["evidence:base"],
+      responsibility: "producer-failed",
+    });
+    beta.archetype = "unresolved";
+    beta.gaps = [issuerGap, producerGap];
+    beta.mechanismRiskReview = {
+      status: createV9FactStatus({
+        applicability: requiredV9Applicability("backing.archetype.review"),
+        observationState: "missing",
+        evidenceRefIds: ["evidence:base"],
+        gapIds: [issuerGap.gapId, producerGap.gapId],
+      }),
+      review: null,
+    };
+
+    const singleRootCore = structuredClone(core);
+    const singleRootBeta = singleRootCore.assets.find(
+      (asset) => asset.assetId === "beta",
+    ) as V9AssetFactsV3;
+    singleRootBeta.gaps = [issuerGap];
+    singleRootBeta.mechanismRiskReview.status = createV9FactStatus({
+      applicability: requiredV9Applicability("backing.archetype.review"),
+      observationState: "missing",
+      evidenceRefIds: ["evidence:base"],
+      gapIds: [issuerGap.gapId],
+    });
+    const singleRootReasons = evaluateV9FactSet(
+      compileV9FactSetV3(singleRootCore),
+      V9_CANDIDATE_POLICY_V1,
+    ).assets
+      .find((asset) => asset.assetId === "alpha")!
+      .scoreInput.pillars.backing.reasons.filter(
+        (reason) => reason.code === "material-dependency-unavailable",
+      );
+    const evaluated = evaluateV9FactSet(
+      compileV9FactSetV3(core),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const reasons = evaluated.assets
+      .find((asset) => asset.assetId === "alpha")!
+      .scoreInput.pillars.backing.reasons.filter(
+        (reason) => reason.code === "material-dependency-unavailable",
+      );
+
+    expect(singleRootReasons).toContainEqual(
+      expect.objectContaining({
+        path: "backing:reserve:exposure:beta",
+        responsibility: "issuer-undisclosed",
+      }),
+    );
+    expect(reasons.map((reason) => reason.responsibility)).toEqual([
+      "issuer-undisclosed",
+      "producer-failed",
+    ]);
+    expect(new Set(reasons.map((reason) => reason.path)).size).toBe(2);
+    expect(reasons.map((reason) => reason.path)).toContain(
+      "backing:reserve:exposure:beta",
+    );
+    expect(
+      reasons.some((reason) => reason.path.includes(":cause:upstream%3Abeta%3A")),
+    ).toBe(true);
+  });
+
   it("defaults retained v2 fact routes without modeled confidence to low", () => {
     const retained = structuredClone(coreFixture());
     const route = retained.assets[0]!.exitRoutes.find((candidate) => candidate.routeId === "amm-main")!;

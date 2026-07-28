@@ -71,6 +71,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "asset:vbusdt",
       "ausd-agora",
     ],
+    unresolvedOutputDisposition: "reviewed-external",
     capacityModel: { kind: "supply-ratio", ratio: 0.4, confidence: "heuristic", basis: "strategy-buffer" },
     costModel: fixedFee(50, "Protocol docs describe redemption fees of up to 50 bps"),
     reviewedAt: "2026-07-27",

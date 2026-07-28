@@ -22,19 +22,30 @@ export function evaluateV9RwaCreditFundBacking(
   // keeps the mismatch signal firing — an unmeasured book is never presumed
   // short-dated — while an evidenced `not-applicable` metric skips it. Absent
   // applicability means the metric is measured (legacy full-metric reviews).
-  const maturityState = review.metricApplicability?.weightedAverageMaturityDays.state ?? "measured";
+  const maturityApplicability =
+    review.metricApplicability?.weightedAverageMaturityDays;
+  const maturityState = maturityApplicability?.state ?? "measured";
+  const maturityUnavailable = maturityState === "unavailable";
+  const maturityUnavailableEvidenceRefIds =
+    maturityApplicability?.state === "unavailable"
+      ? maturityApplicability.evidenceRefIds
+      : null;
   if (
-    maturityState === "unavailable" ||
+    maturityUnavailable ||
     (maturityState === "measured" &&
       review.weightedAverageMaturityDays !== null &&
       review.weightedAverageMaturityDays > backing.structural.rwaCreditFund.maturityMismatchDays)
   ) {
     structuralReasons.push(
       createV9BackingStructuralReason(policy, backing.structural.rwaCreditFund.signal, {
-        responsibility: v9StructuralResponsibilityForStatus(review.maturityAndLiquidity.status),
+        responsibility: maturityUnavailable
+          ? "issuer-undisclosed"
+          : v9StructuralResponsibilityForStatus(review.maturityAndLiquidity.status),
         pathKey: "mechanism:maturity-and-liquidity",
         materialShare: null,
-        evidenceRefIds: review.maturityAndLiquidity.status.evidenceRefIds,
+        evidenceRefIds:
+          maturityUnavailableEvidenceRefIds ??
+          review.maturityAndLiquidity.status.evidenceRefIds,
         failureDomains: review.maturityAndLiquidity.failureDomains,
       }),
     );

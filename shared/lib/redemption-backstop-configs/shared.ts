@@ -178,6 +178,15 @@ export interface RedemptionBackstopConfig {
    * instead of collapsing a known untracked basket into an anonymous gap.
    */
   unresolvedOutputAssetKeys?: string[];
+  /**
+   * Causal disposition for an output that remains deliberately unresolved.
+   *
+   * `reviewed-external` means the documented identity is known but the
+   * runtime producer cannot yet value the external/untracked output.
+   * `issuer-undisclosed` means the reviewed issuer materials do not disclose
+   * the settlement asset. Neither disposition makes the output scoreable.
+   */
+  unresolvedOutputDisposition?: "reviewed-external" | "issuer-undisclosed";
   docs?: RedemptionDocSource[];
   reviewedAt?: string;
   notes?: string[];

@@ -398,6 +398,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_CONFIG_ONLY_GAPS_AT),
     unresolvedOutputAssetKeys: ["asset:itry"],
+    unresolvedOutputDisposition: "reviewed-external",
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     executionModel: "rules-based-nav",
@@ -523,6 +524,7 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "aznd-mu-digital": {
     ...queueRedeemBase,
+    unresolvedOutputDisposition: "issuer-undisclosed",
     accessModel: "whitelisted-onchain",
     settlementModel: "days",
     ...reviewedQueueRedemptionSupplyFull,
