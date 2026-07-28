@@ -19,7 +19,7 @@ import {
   type TronMeasuredExecutionAdapter,
 } from "./tron-registry";
 
-export interface TronMeasuredExecutionJoinDiagnostics extends NativeMeasuredExecutionJoinDiagnostics {}
+export type TronMeasuredExecutionJoinDiagnostics = NativeMeasuredExecutionJoinDiagnostics;
 
 export async function loadTronMeasuredExecutionJoinEvidence(
   db: D1Database,
