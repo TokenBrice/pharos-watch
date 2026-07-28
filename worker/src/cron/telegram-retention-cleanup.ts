@@ -266,6 +266,7 @@ async function pruneTelegramHighGrowthRetention(
           )`,
       terminalCutoff,
       signal,
+      highGrowthDeleteLimit,
     );
     result.legacyTerminalJobsPruned = legacyTerminalJobs.pruned;
     result.cappedAtLimit ||= legacyTerminalJobs.cappedAtLimit;
@@ -294,17 +295,18 @@ async function pruneTelegramHighGrowthRetention(
           )`,
       unresolvedCutoff,
       signal,
+      highGrowthDeleteLimit,
     );
     result.staleUnresolvedJobsPruned = staleUnresolvedJobs.pruned;
     result.cappedAtLimit ||= staleUnresolvedJobs.cappedAtLimit;
     throwIfAborted(signal);
 
     let staleUnresolvedSourcesPruned = 0;
-    while (staleUnresolvedSourcesPruned < RETENTION_DELETE_BATCH_LIMIT) {
+    while (staleUnresolvedSourcesPruned < highGrowthDeleteLimit) {
       throwIfAborted(signal);
       const batchLimit = Math.min(
         RETENTION_DELETE_BATCH_LIMIT,
-        RETENTION_DELETE_BATCH_LIMIT - staleUnresolvedSourcesPruned,
+        highGrowthDeleteLimit - staleUnresolvedSourcesPruned,
       );
       const deleted = await runWithOverloadRetry(
         () => db
@@ -347,7 +349,7 @@ async function pruneTelegramHighGrowthRetention(
       if (batchPruned < batchLimit) break;
     }
     result.staleUnresolvedSourcesPruned = staleUnresolvedSourcesPruned;
-    result.cappedAtLimit ||= staleUnresolvedSourcesPruned >= RETENTION_DELETE_BATCH_LIMIT;
+    result.cappedAtLimit ||= staleUnresolvedSourcesPruned >= highGrowthDeleteLimit;
     throwIfAborted(signal);
 
     const oldestLegacyTarget = await runWithOverloadRetry(
