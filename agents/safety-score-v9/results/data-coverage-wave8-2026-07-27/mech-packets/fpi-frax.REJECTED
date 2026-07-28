@@ -1,6 +1,0 @@
-REJECTED by KIMI-AUDIT (cross-vendor wave-8 audit, 2026-07-28).
-Defect: component contractionCapacity graded "adequate" but its evidence (issuer
-API + eth_call anchor + docs) is exactly D3's LIMITED class; the adequate row
-demands an independent attestor, regulatory filing, or independent oracle covering
-contraction capacity — none pinned. Over-graded one tier. All numeric metrics
-reproduced independently (api.frax.finance + eth.drpc.org balanceOf cross-check).

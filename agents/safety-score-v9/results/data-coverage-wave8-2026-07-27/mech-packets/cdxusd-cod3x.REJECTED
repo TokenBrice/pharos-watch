@@ -1,6 +1,0 @@
-REJECTED by KIMI-AUDIT (cross-vendor wave-8 audit, 2026-07-28).
-Defect: component collateralizationParameters graded "limited" on a blog/marketing
-basis only (cod3x.org tech-stack post; packet admits "no dual-sourced on-chain
-LTV/MCR table"). D3's limited row requires issuer-published structured data plus an
-external anchor (on-chain read / registry / named third party); blog narrative is
-not D3-admissible. Metric states themselves reproduce — the grade basis fails.
