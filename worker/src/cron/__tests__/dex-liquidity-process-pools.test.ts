@@ -1119,6 +1119,7 @@ describe("processPoolMetrics", () => {
       feePips: 100,
       tickSpacing: 1,
       hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+      activeLiquidity: "1000000",
       tvlUsd: 2_000_000,
       token0Price: 1,
       token1Price: 1,
@@ -1184,6 +1185,13 @@ describe("processPoolMetrics", () => {
       hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
     });
     expect(run([candidate])?.extra?.executionCapabilityGate).toBeUndefined();
+
+    expect(run([{ ...candidate, activeLiquidity: "0" }])?.extra).toMatchObject({
+      executionCapabilityGate: {
+        family: "measured-execution",
+        reason: "target-unresolved",
+      },
+    });
 
     const hookedCollision: UniswapV4ExecutionCandidate = {
       ...candidate,

@@ -97,6 +97,7 @@ export const buildUniswapV4PoolQuery = (skip: number): string => `{
     feeTier
     tickSpacing
     hooks
+    liquidity
     totalValueLockedUSD
     token0Price
     token1Price

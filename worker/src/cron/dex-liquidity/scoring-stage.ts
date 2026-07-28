@@ -23,9 +23,9 @@ import type { DexPriceObs, LiquidityMetrics, PoolEntry } from "./types";
 
 const DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION = 1;
 export const DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES = 192 * 1024;
-const DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE = 4;
+const DEX_LIQUIDITY_SCORING_STAGE_WRITE_BATCH_SIZE = 1;
 const DEX_LIQUIDITY_SCORING_STAGE_READ_PAGE_SIZE = 4;
-const DEX_LIQUIDITY_SCORING_STAGE_MAX_AGE_SEC = 25 * 60;
+const DEX_LIQUIDITY_SCORING_STAGE_MAX_AGE_SEC = 55 * 60;
 const DEX_LIQUIDITY_SCORING_STAGE_FUTURE_TOLERANCE_SEC = 2 * 60;
 const DEX_LIQUIDITY_SCORING_STAGE_FAILED_RETENTION_SEC = 2 * 3600;
 const DEX_LIQUIDITY_SCORING_STAGE_RETENTION_GENERATIONS_PER_RUN = 2;
@@ -926,7 +926,9 @@ async function loadStageManifest(
                 sync_started_at, created_at, ready_at, expected_chunk_count,
                 written_chunk_count, expected_record_count, payload_bytes
            FROM dex_liquidity_scoring_stages
-          WHERE source_slot_started_at = ?
+          WHERE source_slot_started_at <= ?
+            AND state = 'ready'
+          ORDER BY source_slot_started_at DESC
           LIMIT 1`,
       ).bind(options.expectedSourceSlotStartedAt);
   const row = await runWithOverloadRetry(() => query.first<StageManifestRow>(), 3, signal);

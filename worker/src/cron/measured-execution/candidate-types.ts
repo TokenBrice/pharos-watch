@@ -39,6 +39,7 @@ export interface UniswapV4ExecutionCandidate {
   feePips: number;
   tickSpacing: number;
   hookAddress: `0x${string}`;
+  activeLiquidity: string;
   tvlUsd: number;
   token0Price: number;
   token1Price: number;

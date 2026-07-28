@@ -472,6 +472,8 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
     !Number.isInteger(input.candidate.tickSpacing) ||
     input.candidate.tickSpacing <= 0 ||
     input.candidate.tickSpacing > 32_767 ||
+    !/^[0-9]+$/.test(input.candidate.activeLiquidity) ||
+    BigInt(input.candidate.activeLiquidity) <= 0n ||
     !Number.isFinite(input.candidate.tvlUsd) ||
     input.candidate.tvlUsd <= 0 ||
     !Number.isFinite(input.retainedTvlUsd) ||
@@ -545,6 +547,15 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
     }
   }
   if (outputPrice == null || !Number.isFinite(outputPrice) || outputPrice <= 0) return null;
+  const spotInputPerOutput =
+    inputIndex === 0 ? input.candidate.token0Price : input.candidate.token1Price;
+  const outputValueRatio = outputPrice / (inputPrice * spotInputPerOutput);
+  if (
+    !Number.isFinite(outputValueRatio) ||
+    outputValueRatio > DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO
+  ) {
+    return null;
+  }
 
   const canonicalPoolId = canonicalExitRouteAssetKey(chain, poolId);
   const targetId = buildDexMeasuredExecutionTargetId({
