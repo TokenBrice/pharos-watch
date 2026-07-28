@@ -48,7 +48,7 @@ export const SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY: MethodologyChangelogEntry = 
   impact: [
     "Explicit reason-level responsibility is authoritative; legacy reason defaults are used only when no explicit attribution is available",
     "Inherited reserve gaps, unavailable backing and role-pillar dependencies, and missing parent scores propagate the originating owner instead of defaulting downstream gaps to integration-missing",
-    "Mixed causal roots preserve the aggregate base-path identity while additional roots receive causal-root-qualified paths; mutable ownership never enters public fact identity",
+    "Every attributed root receives a causal-root-qualified path even when it is the only root, so adding another root cannot rename an existing public fact; only unattributed fallbacks retain aggregate base paths, and mutable ownership never enters public fact identity",
     "Applicable but unpublished mechanism metrics retain issuer-undisclosed responsibility and never become measured-adverse merely because a related component was reviewed",
     "A reviewed external exit output with known identity but no same-notional valuation is producer-failed; an issuer-undisclosed settlement asset stays issuer-undisclosed, and neither output becomes scoreable",
     "Date-only mechanism and exit-output dispositions become admissible after the reviewed UTC day and cannot enter earlier replay clocks",

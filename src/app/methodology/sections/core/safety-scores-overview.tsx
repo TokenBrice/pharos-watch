@@ -22,8 +22,9 @@ export function SafetyScoresOverview() {
       <p>
         Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level
         owner is authoritative; inherited reserve gaps, unavailable upstream pillars, and missing parent scores carry
-        every originating owner downstream. The aggregate base path remains stable while additional mixed roots
-        receive causal-root-qualified score paths; ownership never becomes part of fact identity.
+        every originating owner downstream. Every attributed root receives a causal-root-qualified score path even
+        when it is the only root, so adding another root cannot rename an existing public fact; only unattributed
+        fallbacks retain aggregate base paths, and ownership never becomes part of fact identity.
         Applicable but unpublished mechanism metrics remain issuer-undisclosed rather than measured-adverse. A
         reviewed external exit output whose identity is known but cannot be valued is attributed to producer failure,
         while an issuer-undisclosed settlement asset stays issuer-undisclosed; neither becomes scoreable. Date-only

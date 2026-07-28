@@ -274,14 +274,11 @@ function pillarReasonsForGaps(
       ),
     ];
   }
-  const primaryGapId = causalGaps[0]!.gapId;
   return causalGaps.map((gap) =>
     pillarReason(
       envelope,
       code,
-      gap.gapId === primaryGapId
-        ? path
-        : `${path}:cause:${encodeURIComponent(gap.gapId)}`,
+      `${path}:cause:${encodeURIComponent(gap.gapId)}`,
       gap.message,
       gap.responsibility,
     ),
@@ -296,15 +293,27 @@ interface V9ReasonAttribution {
 function nrReasonAttributions(
   trace: Pick<V9ProductionScoreTrace, "nrReasons" | "propagatedParentReasons">,
 ): V9ReasonAttribution[] {
+  const attributions = [
+    ...trace.nrReasons.map((reason) => ({
+      causalKey:
+        reason.causalKey ??
+        `asset:${reason.code}:${reason.field ?? "unattributed"}`,
+      responsibility:
+        reason.responsibility ??
+        V9_LEGACY_RESPONSIBILITY_BY_REASON[reason.code],
+    })),
+    ...trace.propagatedParentReasons.map((reason) => ({
+      causalKey:
+        reason.causalKey ??
+        `upstream:${reason.code}:${reason.field ?? "unattributed"}`,
+      responsibility:
+        reason.responsibility ??
+        V9_LEGACY_RESPONSIBILITY_BY_REASON[reason.code],
+    })),
+  ];
   return [
     ...new Map(
-      [...trace.nrReasons, ...trace.propagatedParentReasons]
-        .map((reason) => ({
-          causalKey: `${reason.code}:${reason.field ?? "unattributed"}`,
-          responsibility:
-            reason.responsibility ??
-            V9_LEGACY_RESPONSIBILITY_BY_REASON[reason.code],
-        }))
+      attributions
         .sort(
           (left, right) =>
             compareText(left.causalKey, right.causalKey) ||
@@ -320,15 +329,9 @@ function nrReasonAttributions(
 
 function attributedReasonPath(
   basePath: string,
-  attributions: readonly V9ReasonAttribution[],
   attribution: V9ReasonAttribution,
 ): string {
-  const primaryCausalKey = uniqueSorted(
-    attributions.map((candidate) => candidate.causalKey),
-  )[0];
-  return attribution.causalKey === primaryCausalKey
-    ? basePath
-    : `${basePath}:cause:${encodeURIComponent(attribution.causalKey)}`;
+  return `${basePath}:cause:${encodeURIComponent(attribution.causalKey)}`;
 }
 
 function structuralSignalFromBacking(reason: V9BackingResult["structuralReasons"][number]): V9StructuralSignal {
@@ -508,13 +511,14 @@ function backingPillar(
         ]),
     ).values(),
   ];
-  const syntheticCounts = new Map<string, number>();
-  const primarySyntheticCausalKey = new Map<string, string | undefined>();
+  const unkeyedSyntheticCounts = new Map<string, number>();
   for (const entry of canonicalSyntheticReasons) {
     const key = `${entry.reason.code}\u0000${entry.path}`;
-    syntheticCounts.set(key, (syntheticCounts.get(key) ?? 0) + 1);
-    if (!primarySyntheticCausalKey.has(key)) {
-      primarySyntheticCausalKey.set(key, entry.reason.causalKey);
+    if (entry.reason.causalKey === undefined) {
+      unkeyedSyntheticCounts.set(
+        key,
+        (unkeyedSyntheticCounts.get(key) ?? 0) + 1,
+      );
     }
   }
   const reasons = canonicalReasons(
@@ -529,9 +533,9 @@ function backingPillar(
         ),
       ),
       ...canonicalSyntheticReasons.map(({ reason, path }) => {
-        const identityCount =
-          syntheticCounts.get(`${reason.code}\u0000${path}`) ?? 0;
-        if (identityCount > 1 && reason.causalKey === undefined) {
+        const unkeyedIdentityCount =
+          unkeyedSyntheticCounts.get(`${reason.code}\u0000${path}`) ?? 0;
+        if (unkeyedIdentityCount > 1 && reason.causalKey === undefined) {
           throw new Error(
             `Safety Score v9 backing reason ${reason.code} at ${path} has multiple causal roots without stable causal keys`,
           );
@@ -539,11 +543,9 @@ function backingPillar(
         return pillarReason(
           envelope,
           reason.code,
-          identityCount > 1 &&
-            reason.causalKey !==
-              primarySyntheticCausalKey.get(`${reason.code}\u0000${path}`)
-            ? `${path}:cause:${encodeURIComponent(reason.causalKey!)}`
-            : path,
+          reason.causalKey === undefined
+            ? path
+            : `${path}:cause:${encodeURIComponent(reason.causalKey)}`,
           undefined,
           reason.responsibility ??
             V9_LEGACY_RESPONSIBILITY_BY_REASON[reason.code],
@@ -1266,7 +1268,6 @@ function applyRoleDependencyProjection(
                 "nonmaterial-dependency-unavailable",
                 attributedReasonPath(
                   `dependency:${projection.targetPillar}`,
-                  attributions,
                   attribution,
                 ),
                 `The ${projection.targetPillar} dependency has unavailable evidence across ${(
@@ -1297,7 +1298,6 @@ function applyRoleDependencyProjection(
           "material-dependency-unavailable",
           attributedReasonPath(
             `dependency:${projection.targetPillar}`,
-            attributions,
             attribution,
           ),
           `The ${projection.targetPillar} dependency exposure has unavailable ${unavailableDimensions.join(
@@ -2202,7 +2202,6 @@ function dependencyReasons(
           "missing-parent-score",
           attributedReasonPath(
             `dependency:serial:${serial.upstreamAssetId}`,
-            attributions,
             attribution,
           ),
           `Required upstream ${serial.upstreamAssetId} is not rateable.`,
@@ -2245,7 +2244,12 @@ function parentInput(
       : Math.min(...availableScores);
   const propagatedReasons = inputs.serial.flatMap((dependency) => {
     const upstream = evaluatedById.get(dependency.upstreamAssetId);
-    return upstream?.trace.nrReasons ?? [];
+    return (upstream?.trace.nrReasons ?? []).map((reason) => ({
+      ...reason,
+      causalKey:
+        reason.causalKey ??
+        `asset:${dependency.upstreamAssetId}:${reason.code}:${reason.field ?? "unattributed"}`,
+    }));
   });
   const propagatedAdverseAttribution = resolveV9SerialParentAdverseAttribution(
     rawScore,

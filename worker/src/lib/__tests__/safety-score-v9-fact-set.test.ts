@@ -1898,7 +1898,12 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(
       evaluatedCurated.assets
         .find((asset) => asset.assetId === "alpha")!
-        .scoreInput.dependencyReasons.find((reason) => reason.path === "dependency:collateral:beta"),
+        .scoreInput.dependencyReasons.find(
+          (reason) =>
+            reason.path ===
+            "dependency:collateral:beta:cause:" +
+              "alpha%3Agap%3Aeffective-dependencies",
+        ),
     ).toMatchObject({ responsibility: "producer-failed" });
 
     const compiledAlpha = compiledCurated.assets.find((asset) => asset.assetId === "alpha")!;
@@ -1948,13 +1953,13 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ).toEqual([
       {
         path:
-          "dependency:collateral:beta:gap:" +
+          "dependency:collateral:beta:cause:" +
           "alpha%3Agap%3Aeffective-dependencies",
         responsibility: "producer-failed",
       },
       {
         path:
-          "dependency:collateral:beta:gap:" +
+          "dependency:collateral:beta:cause:" +
           "alpha%3Agap%3Aeffective-dependencies%3Aissuer",
         responsibility: "issuer-undisclosed",
       },

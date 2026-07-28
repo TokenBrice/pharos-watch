@@ -617,6 +617,8 @@ describe("Safety Score v9 normalized fact protocol", () => {
   it("attributes a missing parent score to the parent's causal NR owner", () => {
     const input = coreFixture();
     const parent = input.assets.find((asset) => asset.assetId === "gamma")! as unknown as V9AssetFactsV2;
+    const grandparent = minimalAsset("delta");
+    const grandparentFacts = grandparent as unknown as V9AssetFactsV2;
     const parentGap = createV9FactGap({
       gapId: "gamma:gap:missing-archetype",
       reasonCode: "missing-archetype",
@@ -625,6 +627,15 @@ describe("Safety Score v9 normalized fact protocol", () => {
       observationState: "missing",
       path: { kind: "local-component", componentKey: "mechanism-archetype" },
       message: "The mechanism archetype is unresolved.",
+    });
+    const grandparentGap = createV9FactGap({
+      gapId: "delta:gap:missing-archetype",
+      reasonCode: "missing-archetype",
+      ownerDomain: "backing",
+      policyRuleId: "backing.archetype.review",
+      observationState: "missing",
+      path: { kind: "local-component", componentKey: "mechanism-archetype" },
+      message: "The upstream mechanism archetype is unresolved.",
     });
     parent.archetype = "unresolved";
     parent.gaps = [parentGap];
@@ -636,15 +647,68 @@ describe("Safety Score v9 normalized fact protocol", () => {
       }),
       review: null,
     };
+    parent.dependencies = {
+      status: knownStatus(),
+      sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+      source: "manual",
+      baseSource: "manual",
+      dependencyFromLive: false,
+      mappedLiveReserveWeight: null,
+      fallbackReason: null,
+      edges: [
+        {
+          edgeKey: canonicalV9DependencyEdgeKey("mechanism", "delta"),
+          upstreamAssetId: "delta",
+          dependencyType: "mechanism",
+          pathKind: "serial-dependency",
+          weight: 1,
+          economicRole: "serial-claim",
+          evidenceRefIds: ["evidence:base"],
+          failureDomains: [
+            { kind: "mint-control", key: "mechanism:delta" },
+          ],
+        },
+      ],
+      diagnostics: {
+        graphState: "valid",
+        issueCodes: [],
+        sccMemberAssetIds: [],
+      },
+    };
+    grandparentFacts.archetype = "unresolved";
+    grandparentFacts.gaps = [grandparentGap];
+    grandparentFacts.mechanismRiskReview = {
+      status: createV9FactStatus({
+        applicability: requiredV9Applicability("backing.archetype.review"),
+        observationState: "missing",
+        gapIds: [grandparentGap.gapId],
+      }),
+      review: null,
+    };
+    input.assets.push(grandparent);
+    input.activeAssetIds.push("delta");
 
     const evaluated = evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+    const missingParentReasons = evaluated.assets
+      .find((asset) => asset.assetId === "alpha")!
+      .scoreInput.dependencyReasons.filter(
+        (reason) => reason.code === "missing-parent-score",
+      );
     expect(
-      evaluated.assets
-        .find((asset) => asset.assetId === "alpha")!
-        .scoreInput.dependencyReasons
-        .filter((reason) => reason.code === "missing-parent-score")
-        .map((reason) => reason.responsibility),
+      missingParentReasons.map((reason) => reason.responsibility),
     ).toContain("method-unsupported");
+    expect(missingParentReasons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path:
+            "dependency:serial:gamma:cause:asset%3Amissing-pillar%3Apillars.backing",
+        }),
+        expect.objectContaining({
+          path:
+            "dependency:serial:gamma:cause:asset%3Adelta%3Amissing-pillar%3Apillars.backing",
+        }),
+      ]),
+    );
   });
 
   it("attributes a derived oracle reason to the exact reviewed disclosure gap", () => {
@@ -692,7 +756,8 @@ describe("Safety Score v9 normalized fact protocol", () => {
     expect(reasons).toContainEqual(
       expect.objectContaining({
         code: "incomplete-oracle-liquidation-branch",
-        path: "control:oracle",
+        path:
+          "control:oracle:cause:alpha%3Agap%3Aeconomic-control%3Aoracle",
         responsibility: "issuer-undisclosed",
       }),
     );
@@ -768,7 +833,8 @@ describe("Safety Score v9 normalized fact protocol", () => {
       .scoreInput.pillars.control.reasons.filter(
         (reason) =>
           reason.code === "unresolved-control-identity" &&
-          reason.path === "control:control:control:admin",
+          reason.path ===
+            "control:control:control:admin:cause:alpha%3Agap%3Adeployment-control%3Aadmin",
       );
 
     expect(controlSpecific).toHaveLength(1);
@@ -784,7 +850,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
       (asset) => asset.assetId === "beta",
     ) as V9AssetFactsV3;
     const issuerGap = createV9FactGapV3({
-      gapId: "beta:gap:mechanism-archetype:issuer",
+      gapId: "beta:gap:mechanism-archetype:z-issuer",
       reasonCode: "missing-archetype",
       ownerDomain: "backing",
       policyRuleId: "backing.archetype.review",
@@ -798,7 +864,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
       responsibility: "issuer-undisclosed",
     });
     const producerGap = createV9FactGapV3({
-      gapId: "beta:gap:mechanism-archetype:producer",
+      gapId: "beta:gap:mechanism-archetype:a-producer",
       reasonCode: "missing-archetype",
       ownerDomain: "backing",
       policyRuleId: "backing.archetype.review",
@@ -834,10 +900,11 @@ describe("Safety Score v9 normalized fact protocol", () => {
       evidenceRefIds: ["evidence:base"],
       gapIds: [issuerGap.gapId],
     });
-    const singleRootReasons = evaluateV9FactSet(
+    const singleRootEvaluation = evaluateV9FactSet(
       compileV9FactSetV3(singleRootCore),
       V9_CANDIDATE_POLICY_V1,
-    ).assets
+    );
+    const singleRootReasons = singleRootEvaluation.assets
       .find((asset) => asset.assetId === "alpha")!
       .scoreInput.pillars.backing.reasons.filter(
         (reason) => reason.code === "material-dependency-unavailable",
@@ -851,21 +918,36 @@ describe("Safety Score v9 normalized fact protocol", () => {
       .scoreInput.pillars.backing.reasons.filter(
         (reason) => reason.code === "material-dependency-unavailable",
       );
+    const singleDirectIssuerReason = singleRootEvaluation.assets
+      .find((asset) => asset.assetId === "beta")!
+      .scoreInput.pillars.backing.reasons.find(
+        (reason) =>
+          reason.code === "missing-archetype" &&
+          reason.responsibility === "issuer-undisclosed",
+      );
+    const mixedDirectIssuerReason = evaluated.assets
+      .find((asset) => asset.assetId === "beta")!
+      .scoreInput.pillars.backing.reasons.find(
+        (reason) =>
+          reason.code === "missing-archetype" &&
+          reason.responsibility === "issuer-undisclosed",
+      );
 
-    expect(singleRootReasons).toContainEqual(
-      expect.objectContaining({
-        path: "backing:reserve:exposure:beta",
-        responsibility: "issuer-undisclosed",
-      }),
+    const singleIssuerReason = singleRootReasons.find(
+      (reason) => reason.responsibility === "issuer-undisclosed",
     );
-    expect(reasons.map((reason) => reason.responsibility)).toEqual([
-      "issuer-undisclosed",
-      "producer-failed",
-    ]);
+    const mixedIssuerReason = reasons.find(
+      (reason) => reason.responsibility === "issuer-undisclosed",
+    );
+    expect(singleIssuerReason?.path).toContain(
+      ":cause:upstream%3Abeta%3Amissing-archetype",
+    );
+    expect(mixedIssuerReason?.path).toBe(singleIssuerReason?.path);
+    expect(mixedDirectIssuerReason?.path).toBe(singleDirectIssuerReason?.path);
+    expect(reasons.map((reason) => reason.responsibility)).toEqual(
+      expect.arrayContaining(["issuer-undisclosed", "producer-failed"]),
+    );
     expect(new Set(reasons.map((reason) => reason.path)).size).toBe(2);
-    expect(reasons.map((reason) => reason.path)).toContain(
-      "backing:reserve:exposure:beta",
-    );
     expect(
       reasons.some((reason) => reason.path.includes(":cause:upstream%3Abeta%3A")),
     ).toBe(true);
