@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { CollateralizationCard } from "../collateralization-card";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
@@ -15,7 +15,10 @@ const reviewed: MechanismCollateralizationView = {
 };
 
 describe("CollateralizationCard", () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
 
   it("renders the reviewed ratio with an overcollateralized badge and provenance", () => {
     render(<CollateralizationCard reviewed={reviewed} />);
@@ -48,6 +51,29 @@ describe("CollateralizationCard", () => {
     expect(screen.getByText(/Live/)).toBeTruthy();
     expect(screen.queryByText("245.5%")).toBeNull();
     expect(screen.queryByText("65.8%")).toBeNull();
+  });
+
+  it("renders the live snapshot age from epoch seconds", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-28T12:00:00Z"));
+
+    render(
+      <CollateralizationCard
+        reviewed={reviewed}
+        liveRatio={5.176368}
+        liveAtSec={Date.parse("2026-07-28T10:00:00Z") / 1000}
+      />,
+    );
+
+    expect(screen.getByText("Live · 2h ago")).toBeTruthy();
+  });
+
+  it("preserves a valid zero live collateralization ratio", () => {
+    render(<CollateralizationCard reviewed={reviewed} liveRatio={0} />);
+
+    expect(screen.getByText("0.0%")).toBeTruthy();
+    expect(screen.getByText("Undercollateralized")).toBeTruthy();
+    expect(screen.queryByText("245.5%")).toBeNull();
   });
 
   it("marks the card live when only the backstop ratio is live", () => {

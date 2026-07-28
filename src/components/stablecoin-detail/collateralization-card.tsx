@@ -44,7 +44,7 @@ export function CollateralizationCard({
   liveLiquidationCapacityRatio = null,
   liveAtSec = null,
 }: CollateralizationCardProps) {
-  const live = typeof liveRatio === "number" && Number.isFinite(liveRatio) && liveRatio > 0 ? liveRatio : null;
+  const live = typeof liveRatio === "number" && Number.isFinite(liveRatio) && liveRatio >= 0 ? liveRatio : null;
   const liveBackstop =
     typeof liveLiquidationCapacityRatio === "number"
     && Number.isFinite(liveLiquidationCapacityRatio)
@@ -65,7 +65,7 @@ export function CollateralizationCard({
         {hasLiveMetrics ? (
           <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
             <RefreshCw className="h-3 w-3" aria-hidden="true" />
-            {liveAtSec != null ? `Live · ${timeAgo(liveAtSec * 1000)}` : "Live"}
+            {liveAtSec != null ? `Live · ${timeAgo(liveAtSec)}` : "Live"}
           </span>
         ) : reviewed != null ? (
           <span className="inline-flex h-6 items-center rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
