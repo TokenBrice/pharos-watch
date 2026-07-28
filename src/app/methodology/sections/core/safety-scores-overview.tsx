@@ -20,6 +20,18 @@ export function SafetyScoresOverview() {
         measured weakness or traceable policy-bounded uncertainty.
       </p>
       <p>
+        Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level
+        owner is authoritative; inherited reserve gaps, unavailable upstream pillars, and missing parent scores carry
+        every originating owner downstream. The aggregate base path remains stable while additional mixed roots
+        receive causal-root-qualified score paths; ownership never becomes part of fact identity.
+        Applicable but unpublished mechanism metrics remain issuer-undisclosed rather than measured-adverse. A
+        reviewed external exit output whose identity is known but cannot be valued is attributed to producer failure,
+        while an issuer-undisclosed settlement asset stays issuer-undisclosed; neither becomes scoreable. Date-only
+        dispositions enter replay only after their reviewed UTC day. Partial control reviews retain the controls that
+        were actually reviewed while unresolved surfaces remain bounded and fail closed. These are provenance and
+        evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.
+      </p>
+      <p>
         Governance access posture treats a reviewed global mint-domain contract as immutable when it has no privileged
         capabilities, no applicable cap, no claim-impairment path, and access-only scope. A contract address alone
         identifies protocol machinery rather than a concentrated administrator; deployment-scoped bridge controls

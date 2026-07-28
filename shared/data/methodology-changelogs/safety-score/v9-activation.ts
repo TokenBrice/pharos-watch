@@ -37,3 +37,24 @@ export const SAFETY_SCORE_V9_ROUTE_CAPACITY: MethodologyChangelogEntry = {
   commits: [],
   reconstructed: false,
 };
+
+export const SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY: MethodologyChangelogEntry = {
+  version: "9.02",
+  title: "Causal responsibility provenance",
+  date: "2026-07-28",
+  effectiveAt: 1785234908,
+  summary:
+    "V9 now preserves causal responsibility through inherited and upstream evidence paths, distinguishes producer-unpriceable exit outputs from issuer non-disclosure, and retains reviewed controls in partial inventories without changing score or grade formulas.",
+  impact: [
+    "Explicit reason-level responsibility is authoritative; legacy reason defaults are used only when no explicit attribution is available",
+    "Inherited reserve gaps, unavailable backing and role-pillar dependencies, and missing parent scores propagate the originating owner instead of defaulting downstream gaps to integration-missing",
+    "Mixed causal roots preserve the aggregate base-path identity while additional roots receive causal-root-qualified paths; mutable ownership never enters public fact identity",
+    "Applicable but unpublished mechanism metrics retain issuer-undisclosed responsibility and never become measured-adverse merely because a related component was reviewed",
+    "A reviewed external exit output with known identity but no same-notional valuation is producer-failed; an issuer-undisclosed settlement asset stays issuer-undisclosed, and neither output becomes scoreable",
+    "Date-only mechanism and exit-output dispositions become admissible after the reviewed UTC day and cannot enter earlier replay clocks",
+    "Reviewed mint controls remain present when the aggregate inventory is unresolved; unreviewed deployment surfaces stay bounded and fail closed",
+    "Backing, Exit, and Economic Control weights, score aggregation, caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};

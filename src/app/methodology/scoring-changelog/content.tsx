@@ -3,6 +3,7 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-
 import { SAFETY_SCORE_METHODOLOGY_CHANGELOG } from "@shared/lib/safety-score-version";
 import {
   SAFETY_SCORE_V9_ACTIVATION,
+  SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY,
   SAFETY_SCORE_V9_ROUTE_CAPACITY,
 } from "@shared/data/methodology-changelogs/safety-score/v9-activation";
 import { scoringAnchorId, VersionCard } from "./content-shared";
@@ -19,6 +20,16 @@ import { ScoringChangelogSummaryTables } from "./content-summary";
 export { scoringAnchorId };
 
 export const scoringChangelogDetails: Record<string, ReactNode> = {
+  "9.02": (
+    <>
+      <p>{SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY.summary}</p>
+      <ul className="list-disc list-inside space-y-1">
+        {SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY.impact.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </>
+  ),
   "9.01": (
     <>
       <p>{SAFETY_SCORE_V9_ROUTE_CAPACITY.summary}</p>
