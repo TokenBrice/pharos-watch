@@ -242,7 +242,12 @@ function estimateDeploymentSetupRpcRequests(deployment: TargetDeployment): numbe
     case "curve-stableswap-ng":
       return 6 + deployment.config.poolTokens.length * 2;
     case "curve-composite":
-      return deployment.config.quoteFunction === "get_dy_underlying" ? 18 : 17;
+      // Two pinned-header reads, three code proofs, three factory bindings,
+      // one five-request branch proof, then every pool coin and execution-token
+      // decimal. Derive the variable portion so wider metapools stay bounded.
+      return 13 +
+        deployment.config.poolTokens.length +
+        deployment.config.executionTokens.length;
   }
 }
 

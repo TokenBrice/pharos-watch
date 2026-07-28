@@ -18,7 +18,10 @@ import {
   UNISWAP_V4_HOOK_FREE_ADDRESS,
   computeUniswapV4PoolId,
 } from "../uniswap-v4";
-import { CURVE_DOLA_SUSDE_RATE_BEARING_POLICY } from "../curve-composite";
+import {
+  CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
+  CURVE_NXUSD_METAPOOL_POLICY,
+} from "../curve-composite";
 
 function target(
   stablecoinId: string,
@@ -109,6 +112,27 @@ function curveStableSwapNgTarget(): DexMeasuredExecutionTarget {
       decimals: 6,
       referencePriceUsd: 1,
       trackedAssetId: "usdc-circle",
+    },
+  });
+}
+
+function curveNxusdTarget(): DexMeasuredExecutionTarget {
+  const policy = CURVE_NXUSD_METAPOOL_POLICY;
+  const tokenIn = policy.executionTokens[policy.inputIndex]!;
+  const tokenOut = policy.executionTokens[policy.outputIndex]!;
+  return target(policy.stablecoinId, 328_267, "curve-nxusd", {
+    adapterProfileId: policy.adapterProfileId,
+    protocol: "curve",
+    chain: policy.chain,
+    poolId: `${policy.chain}:${policy.poolAddress}`,
+    poolTokenAddresses: policy.executionTokens.map((token) => token.address),
+    tokenIn: {
+      ...tokenIn,
+      referencePriceUsd: 0.8094,
+    },
+    tokenOut: {
+      ...tokenOut,
+      referencePriceUsd: 0.99986,
     },
   });
 }
@@ -274,6 +298,26 @@ describe("measured execution overflow admission", () => {
     });
     expect([...admission.admitted]).toEqual(["target-curve-usdg-ng"]);
     expect(admission.deferred.size).toBe(0);
+  });
+
+  it("counts every NXUSD composite identity proof before ordinary cursor admission", () => {
+    const measuredTarget = curveNxusdTarget();
+
+    expect(estimateAdmissionCohortRpcRequestBreakdown([measuredTarget])).toEqual({
+      setupRpcRequests: 20,
+      quoteRpcRequests: 6,
+      totalRpcRequests: 26,
+    });
+    expect(
+      admitTargetsWithinBudget([measuredTarget], {
+        maxEstimatedRpcRequests: 25,
+      }).admitted.size,
+    ).toBe(0);
+    expect(
+      [...admitTargetsWithinBudget([measuredTarget], {
+        maxEstimatedRpcRequests: 26,
+      }).admitted],
+    ).toEqual(["target-curve-nxusd"]);
   });
 
   it("reserves the published score-bearing packet with the earliest expiry", () => {

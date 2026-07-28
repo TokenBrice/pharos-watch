@@ -31,6 +31,12 @@ export interface CurvePool {
     decimals: string;
     isBasePoolLpToken?: boolean;
   }[];
+  underlyingCoins?: {
+    symbol: string;
+    address: string;
+    usdPrice: number;
+    decimals: string;
+  }[];
   usdTotal: number;
   isMetaPool: boolean;
   assetTypeName: string;
@@ -327,6 +333,17 @@ export interface CurvePoolEntry {
     decimals: number;
     usdPrice: number;
     isBasePoolLpToken: boolean;
+  }[];
+  /**
+   * Exact executable metapool coin order and source USD references.
+   * Retained only for reviewed composite targets whose output is not a tracked
+   * stablecoin contract; runtime factory proof remains authoritative.
+   */
+  underlyingCoins?: {
+    address: string;
+    symbol: string;
+    decimals: number;
+    usdPrice: number;
   }[];
 }
 

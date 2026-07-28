@@ -14,6 +14,7 @@ import {
 import {
   CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
   CURVE_METAPOOL_ADAPTER_PROFILE_ID,
+  CURVE_NXUSD_METAPOOL_POLICY,
   CURVE_RATE_BEARING_ADAPTER_PROFILE_ID,
   CURVE_USD1_METAPOOL_POLICY,
   buildCurveCompositeMeasuredExecutionTarget,
@@ -21,6 +22,7 @@ import {
   encodeCurveCompositeQuote,
   evaluateCurveCompositeEligibility,
   validateCurveCompositeProfileProof,
+  type CurveCompositePoolPolicy,
   type CurveCompositeRuntimeEvidence,
 } from "../curve-composite";
 import { buildDexMeasuredExecutionProfile } from "../profiles";
@@ -41,6 +43,11 @@ const FACTORY_ABI = parseAbi([
   "function get_underlying_decimals(address pool) view returns (uint256[])",
   "function is_meta(address pool) view returns (bool)",
 ]);
+const LEGACY_FACTORY_ARRAY_ABI = parseAbi([
+  "function get_coins(address pool) view returns (address[4])",
+  "function get_underlying_coins(address pool) view returns (address[8])",
+  "function get_underlying_decimals(address pool) view returns (uint256[8])",
+]);
 const ERC20_ABI = parseAbi(["function decimals() view returns (uint8)"]);
 const ERC4626_ABI = parseAbi([
   "function asset() view returns (address)",
@@ -56,6 +63,7 @@ function addressMap(): Map<string, string> {
     ["ethereum:0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", "usd1-world-liberty-financial"],
     ["ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc-circle"],
     ["ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt-tether"],
+    ["avalanche:0xf14f4ce569cb3679e99d5059909e23b07bd2f387", "nxusd-nereus"],
   ]);
 }
 
@@ -66,6 +74,7 @@ function priceMap(): Map<string, number> {
     ["usd1-world-liberty-financial", 0.999],
     ["usdc-circle", 1],
     ["usdt-tether", 0.999],
+    ["nxusd-nereus", 0.8094],
   ]);
 }
 
@@ -118,6 +127,39 @@ function metapoolTarget(basePoolAddress = CURVE_USD1_METAPOOL_POLICY.metapool.ba
   });
 }
 
+function nxusdTarget(
+  underlyingCoins = CURVE_NXUSD_METAPOOL_POLICY.executionTokens.map((token, index) => ({
+    address: token.address,
+    symbol: token.symbol,
+    decimals: token.decimals,
+    usdPrice: index === 0 ? 0.8094 : index === 2 ? 0.99986 : 0.999,
+  })),
+) {
+  const policy = CURVE_NXUSD_METAPOOL_POLICY;
+  return buildCurveCompositeMeasuredExecutionTarget({
+    curveData: {
+      poolAddress: policy.poolAddress,
+      registryId: "factory",
+      isMetaPool: true,
+      basePoolAddress: policy.metapool.basePoolAddress,
+      poolCoins: policy.poolTokens.map((token, index) => ({
+        address: token.address,
+        symbol: token.symbol,
+        decimals: token.decimals,
+        usdPrice: index === 0 ? 0.8094 : 1.135,
+        isBasePoolLpToken: index === 1,
+      })),
+      underlyingCoins,
+    },
+    chain: policy.chain,
+    stablecoinId: policy.stablecoinId,
+    chainAddressToId: addressMap(),
+    stablecoinPriceById: priceMap(),
+    retainedTvlUsd: 328_267,
+    capturedAt: BLOCK_TIMESTAMP - 60,
+  });
+}
+
 function bindingCall(
   role: string,
   target: `0x${string}`,
@@ -132,10 +174,52 @@ function bindingCall(
   };
 }
 
+function encodeFactoryAddresses(
+  policy: CurveCompositePoolPolicy,
+  functionName: "get_coins" | "get_underlying_coins",
+  addresses: readonly `0x${string}`[],
+): `0x${string}` {
+  if (policy.factoryArrayEncoding === "dynamic") {
+    return encodeFunctionResult({
+      abi: FACTORY_ABI,
+      functionName,
+      result: addresses,
+    } as never);
+  }
+  const width = functionName === "get_coins" ? 4 : 8;
+  return encodeFunctionResult({
+    abi: LEGACY_FACTORY_ARRAY_ABI,
+    functionName,
+    result: [
+      ...addresses,
+      ...Array.from(
+        { length: width - addresses.length },
+        () => "0x0000000000000000000000000000000000000000" as const,
+      ),
+    ],
+  } as never);
+}
+
+function encodeFactoryDecimals(
+  policy: CurveCompositePoolPolicy,
+  decimals: readonly bigint[],
+): `0x${string}` {
+  if (policy.factoryArrayEncoding === "dynamic") {
+    return encodeFunctionResult({
+      abi: FACTORY_ABI,
+      functionName: "get_underlying_decimals",
+      result: decimals,
+    });
+  }
+  return encodeFunctionResult({
+    abi: LEGACY_FACTORY_ARRAY_ABI,
+    functionName: "get_underlying_decimals",
+    result: [...decimals, ...Array.from({ length: 8 - decimals.length }, () => 0n)],
+  } as never);
+}
+
 function commonBindingCalls(
-  policy:
-    | typeof CURVE_DOLA_SUSDE_RATE_BEARING_POLICY
-    | typeof CURVE_USD1_METAPOOL_POLICY,
+  policy: CurveCompositePoolPolicy,
 ): DexMeasuredExecutionCurveCompositeProof["calls"] {
   return [
     bindingCall(
@@ -160,11 +244,11 @@ function commonBindingCalls(
         functionName: "get_coins",
         args: [policy.poolAddress],
       }),
-      encodeFunctionResult({
-        abi: FACTORY_ABI,
-        functionName: "get_coins",
-        result: policy.poolTokens.map((token) => token.address),
-      }),
+      encodeFactoryAddresses(
+        policy,
+        "get_coins",
+        policy.poolTokens.map((token) => token.address),
+      ),
     ),
     bindingCall(
       "factory-implementation",
@@ -302,8 +386,10 @@ function rateEvidence(): CurveCompositeRuntimeEvidence {
   };
 }
 
-function metapoolEvidence(): CurveCompositeRuntimeEvidence {
-  const policy = CURVE_USD1_METAPOOL_POLICY;
+function metapoolEvidence(
+  policy: typeof CURVE_USD1_METAPOOL_POLICY | typeof CURVE_NXUSD_METAPOOL_POLICY =
+    CURVE_USD1_METAPOOL_POLICY,
+): CurveCompositeRuntimeEvidence {
   return {
     blockTimestamp: BLOCK_TIMESTAMP,
     proof: {
@@ -344,11 +430,11 @@ function metapoolEvidence(): CurveCompositeRuntimeEvidence {
             functionName: "get_underlying_coins",
             args: [policy.poolAddress],
           }),
-          encodeFunctionResult({
-            abi: FACTORY_ABI,
-            functionName: "get_underlying_coins",
-            result: policy.executionTokens.map((token) => token.address),
-          }),
+          encodeFactoryAddresses(
+            policy,
+            "get_underlying_coins",
+            policy.executionTokens.map((token) => token.address),
+          ),
         ),
         bindingCall(
           "factory-underlying-decimals",
@@ -358,11 +444,10 @@ function metapoolEvidence(): CurveCompositeRuntimeEvidence {
             functionName: "get_underlying_decimals",
             args: [policy.poolAddress],
           }),
-          encodeFunctionResult({
-            abi: FACTORY_ABI,
-            functionName: "get_underlying_decimals",
-            result: policy.executionTokens.map((token) => BigInt(token.decimals)),
-          }),
+          encodeFactoryDecimals(
+            policy,
+            policy.executionTokens.map((token) => BigInt(token.decimals)),
+          ),
         ),
         bindingCall(
           "factory-is-meta",
@@ -390,9 +475,7 @@ function metapoolEvidence(): CurveCompositeRuntimeEvidence {
 
 function compositeProfile(
   target: DexMeasuredExecutionTarget,
-  policy:
-    | typeof CURVE_DOLA_SUSDE_RATE_BEARING_POLICY
-    | typeof CURVE_USD1_METAPOOL_POLICY,
+  policy: CurveCompositePoolPolicy,
   evidence: CurveCompositeRuntimeEvidence,
 ) {
   const amountInRaw = 1_000n * 10n ** BigInt(target.tokenIn.decimals);
@@ -431,12 +514,14 @@ function compositeProfile(
 }
 
 describe("reviewed Curve rate-bearing and metapool targets", () => {
-  it("builds exact shadow targets with independently valued tracked outputs", () => {
+  it("builds exact shadow targets with independently valued outputs", () => {
     const rate = rateTarget();
     const meta = metapoolTarget();
+    const nxusd = nxusdTarget();
 
     expect(DexMeasuredExecutionTargetSchema.safeParse(rate).success).toBe(true);
     expect(DexMeasuredExecutionTargetSchema.safeParse(meta).success).toBe(true);
+    expect(DexMeasuredExecutionTargetSchema.safeParse(nxusd).success).toBe(true);
     expect(rate).toMatchObject({
       stablecoinId: "susde-ethena",
       adapterProfileId: CURVE_RATE_BEARING_ADAPTER_PROFILE_ID,
@@ -455,10 +540,53 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
       tokenOut: { symbol: "USDC", trackedAssetId: "usdc-circle", referencePriceUsd: 1 },
       retainedTvlUsd: 6_800_000,
     });
+    expect(nxusd).toMatchObject({
+      stablecoinId: "nxusd-nereus",
+      adapterProfileId: CURVE_METAPOOL_ADAPTER_PROFILE_ID,
+      chain: "avalanche",
+      poolId: `avalanche:${CURVE_NXUSD_METAPOOL_POLICY.poolAddress}`,
+      poolTokenAddresses: CURVE_NXUSD_METAPOOL_POLICY.executionTokens.map(
+        (token) => token.address,
+      ),
+      tokenIn: {
+        address: CURVE_NXUSD_METAPOOL_POLICY.executionTokens[0].address,
+        symbol: "NXUSD",
+        decimals: 18,
+        trackedAssetId: "nxusd-nereus",
+        referencePriceUsd: 0.8094,
+      },
+      tokenOut: {
+        address: CURVE_NXUSD_METAPOOL_POLICY.executionTokens[2].address,
+        symbol: "avUSDC",
+        decimals: 6,
+        referencePriceUsd: 0.99986,
+      },
+      retainedTvlUsd: 328_267,
+    });
+    expect(nxusd?.tokenOut).not.toHaveProperty("trackedAssetId");
+    expect(CURVE_NXUSD_METAPOOL_POLICY).toMatchObject({
+      mode: "shadow",
+      scoreEligible: false,
+      inputIndex: 0,
+      outputIndex: 2,
+      quoteFunction: "get_dy_underlying",
+    });
   });
 
   it("fails target generation closed on base-pool, coin-order, and registry drift", () => {
     expect(metapoolTarget("0x1111111111111111111111111111111111111111")).toBeNull();
+    expect(nxusdTarget([])).toBeNull();
+    expect(nxusdTarget(
+      CURVE_NXUSD_METAPOOL_POLICY.executionTokens.map((token, index) => ({
+        address:
+          index === CURVE_NXUSD_METAPOOL_POLICY.outputIndex
+            ? "0x1111111111111111111111111111111111111111"
+            : token.address,
+        symbol: token.symbol,
+        decimals: token.decimals,
+        usdPrice: 1,
+      })),
+    )).toBeNull();
     const policy = CURVE_DOLA_SUSDE_RATE_BEARING_POLICY;
     expect(buildCurveCompositeMeasuredExecutionTarget({
       curveData: {
@@ -501,10 +629,21 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
         amountInRaw: 1_000_000_000_000_000_000n,
       }),
     });
+    const nxusdUnderlying = decodeFunctionData({
+      abi: POOL_ABI,
+      data: encodeCurveCompositeQuote({
+        policy: CURVE_NXUSD_METAPOOL_POLICY,
+        inputIndex: 0,
+        outputIndex: 2,
+        amountInRaw: 1_000_000_000_000_000_000n,
+      }),
+    });
     expect(direct.functionName).toBe("get_dy");
     expect(direct.args).toEqual([1n, 0n, 1_000_000_000_000_000_000n]);
     expect(underlying.functionName).toBe("get_dy_underlying");
     expect(underlying.args).toEqual([0n, 1n, 1_000_000_000_000_000_000n]);
+    expect(nxusdUnderlying.functionName).toBe("get_dy_underlying");
+    expect(nxusdUnderlying.args).toEqual([0n, 2n, 1_000_000_000_000_000_000n]);
   });
 
   it("requires exact rate-provider and metapool/base-pool proof summaries", () => {
@@ -514,6 +653,13 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
       blockNumber: BLOCK_NUMBER,
       nowSec: BLOCK_TIMESTAMP + 60,
       evidence: rateEvidence(),
+    })).toEqual({ ok: true });
+    expect(evaluateCurveCompositeEligibility({
+      chain: "avalanche",
+      endpointAddress: CURVE_NXUSD_METAPOOL_POLICY.poolAddress,
+      blockNumber: BLOCK_NUMBER,
+      nowSec: BLOCK_TIMESTAMP + 60,
+      evidence: metapoolEvidence(CURVE_NXUSD_METAPOOL_POLICY),
     })).toEqual({ ok: true });
     expect(evaluateCurveCompositeEligibility({
       chain: "ethereum",
@@ -531,6 +677,55 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
         },
       },
     })).toEqual({ ok: false, reason: "base-pool-mismatch" });
+  });
+
+  it("pins the reviewed NXUSD pool, legacy factory, implementation, and base-pool code", () => {
+    expect(CURVE_NXUSD_METAPOOL_POLICY).toMatchObject({
+      chain: "avalanche",
+      poolAddress: "0x6bf6fc7eaf84174bb7e1610efd865f0ebd2aa96d",
+      expectedPoolCodeHash:
+        "0x189567179f11c501b47c595502e59f75c31e36e0a8cf95ba5f73ef6fff5d74a3",
+      factoryAddress: "0xb17b674d9c5cb2e441f8e196a2f048a81355d031",
+      expectedFactoryCodeHash:
+        "0x7b76a635c41c7b2a6bbdd9e3a5d2df9f9c662c9292f97dd9a2a847652f5f4359",
+      factoryPoolIndex: 66,
+      expectedRegistryId: "factory",
+      factoryArrayEncoding: "legacy-fixed",
+      implementationAddress: "0xa237034249290de2b07988ac64b96f22c0e76fe0",
+      expectedImplementationCodeHash:
+        "0xa14fbe91ed30d41ab822e2d3ef28a1ae375f3e60da77348fca77b7dd0a0b8641",
+      metapool: {
+        basePoolAddress: "0x7f90122bf0700f9e7e1f688fe926940e8839f353",
+        expectedBasePoolCodeHash:
+          "0xa3fc544c3d02269e8a5d1fef9bda368f32ed62e6da938e202549aa1b5fc520c8",
+      },
+    });
+    expect(
+      CURVE_NXUSD_METAPOOL_POLICY.executionTokens.map(
+        ({ address, symbol, decimals }) => ({ address, symbol, decimals }),
+      ),
+    ).toEqual([
+      {
+        address: "0xf14f4ce569cb3679e99d5059909e23b07bd2f387",
+        symbol: "NXUSD",
+        decimals: 18,
+      },
+      {
+        address: "0x47afa96cdc9fab46904a55a6ad4bf6660b53c38a",
+        symbol: "avDAI",
+        decimals: 18,
+      },
+      {
+        address: "0x46a51127c3ce23fb7ab1de06226147f446e4a857",
+        symbol: "avUSDC",
+        decimals: 6,
+      },
+      {
+        address: "0x532e6537fea298397212f09a61e03311686f548e",
+        symbol: "avUSDT",
+        decimals: 6,
+      },
+    ]);
   });
 
   it("revalidates every retained rate-bearing binding target and canonical calldata", () => {
@@ -613,10 +808,53 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
     }
   });
 
+  it("revalidates NXUSD legacy fixed-array factory proofs without accepting padded identities", () => {
+    const target = nxusdTarget();
+    expect(target).not.toBeNull();
+    const profile = compositeProfile(
+      target!,
+      CURVE_NXUSD_METAPOOL_POLICY,
+      metapoolEvidence(CURVE_NXUSD_METAPOOL_POLICY),
+    );
+    expect(validateCurveCompositeProfileProof(profile)).toEqual([]);
+
+    const extraFactoryCoin = structuredClone(profile);
+    extraFactoryCoin.curveCompositeProof!.calls.find(
+      (call) => call.role === "factory-coins",
+    )!.returnData = encodeFactoryAddresses(
+      CURVE_NXUSD_METAPOOL_POLICY,
+      "get_coins",
+      [
+        ...CURVE_NXUSD_METAPOOL_POLICY.poolTokens.map((token) => token.address),
+        "0x1111111111111111111111111111111111111111",
+      ],
+    ).toLowerCase() as `0x${string}`;
+    expect(validateCurveCompositeProfileProof(extraFactoryCoin)).toContain(
+      "factory-coins-proof-mismatch",
+    );
+
+    const wrongOutputDecimals = structuredClone(profile);
+    wrongOutputDecimals.curveCompositeProof!.calls.find(
+      (call) => call.role === "factory-underlying-decimals",
+    )!.returnData = encodeFactoryDecimals(
+      CURVE_NXUSD_METAPOOL_POLICY,
+      CURVE_NXUSD_METAPOOL_POLICY.executionTokens.map((token, index) =>
+        BigInt(index === CURVE_NXUSD_METAPOOL_POLICY.outputIndex ? 18 : token.decimals)
+      ),
+    ).toLowerCase() as `0x${string}`;
+    expect(validateCurveCompositeProfileProof(wrongOutputDecimals)).toContain(
+      "metapool-path-proof-mismatch",
+    );
+  });
+
   it("values direct and metapool outputs from the exact raw quote", async () => {
     const directTarget = rateTarget()!;
     const metaTarget = metapoolTarget()!;
-    const executeMulticall = vi.fn(async ({ calls: rows }: { calls: readonly { label: string; callData: string }[] }) =>
+    const nxusd = nxusdTarget()!;
+    const executeMulticall = vi.fn(async ({ calls: rows }: {
+      chain: string;
+      calls: readonly { label: string; callData: string }[];
+    }) =>
       rows.map((row) => {
         const decoded = decodeFunctionData({ abi: POOL_ABI, data: row.callData as `0x${string}` });
         return {
@@ -649,14 +887,27 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
           endpointAddress: CURVE_USD1_METAPOOL_POLICY.poolAddress,
           runtimeEvidence: metapoolEvidence(),
         },
+        {
+          target: nxusd,
+          inputUsd: 1_000,
+          blockNumber: BLOCK_NUMBER,
+          blockObservedAt: BLOCK_TIMESTAMP + 60,
+          endpointAddress: CURVE_NXUSD_METAPOOL_POLICY.poolAddress,
+          runtimeEvidence: metapoolEvidence(CURVE_NXUSD_METAPOOL_POLICY),
+        },
       ],
       chainRpcs: new Map(),
     });
 
-    expect(outcomes).toHaveLength(2);
+    expect(outcomes).toHaveLength(3);
     expect(outcomes.every((outcome) => outcome.point != null)).toBe(true);
     expect(outcomes[0]!.point?.outputUsd).toBeGreaterThan(990);
     expect(outcomes[1]!.point?.outputUsd).toBe(999);
-    expect(executeMulticall).toHaveBeenCalledTimes(1);
+    expect(outcomes[2]!.point?.outputUsd).toBe(998.86014);
+    expect(executeMulticall).toHaveBeenCalledTimes(2);
+    expect(executeMulticall.mock.calls.map(([call]) => call.chain)).toEqual([
+      "ethereum",
+      "avalanche",
+    ]);
   });
 });

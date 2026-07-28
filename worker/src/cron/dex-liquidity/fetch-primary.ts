@@ -410,6 +410,28 @@ export async function buildCurveLookups(
           chain,
           pool.address,
         );
+        const underlyingCoins = pool.underlyingCoins?.map((coin) => {
+          const decimals = parseInt(coin.decimals, 10);
+          if (
+            !coin.address?.trim() ||
+            !coin.symbol?.trim() ||
+            !Number.isInteger(decimals) ||
+            decimals < 0 ||
+            decimals > 255 ||
+            !(coin.usdPrice > 0)
+          ) return null;
+          return {
+            address: coin.address,
+            symbol: coin.symbol,
+            decimals,
+            usdPrice: coin.usdPrice,
+          };
+        });
+        const underlyingIdentityComplete =
+          underlyingCoins != null &&
+          underlyingCoins.length >= 2 &&
+          underlyingCoins.length <= 8 &&
+          underlyingCoins.every((coin) => coin !== null);
         const executionComplete =
           pool.isMetaPool !== true &&
           pool.coins.length >= 2 &&
@@ -433,6 +455,12 @@ export async function buildCurveLookups(
           tokenPrices,
           ...(poolIdentityComplete && retainCompositePoolIdentity
             ? { poolCoins: poolCoins as NonNullable<CurvePoolEntry["poolCoins"]> }
+            : {}),
+          ...(underlyingIdentityComplete && retainCompositePoolIdentity
+            ? {
+                underlyingCoins:
+                  underlyingCoins as NonNullable<CurvePoolEntry["underlyingCoins"]>,
+              }
             : {}),
           ...(executionComplete
             ? { executionCoins: executionCoins as NonNullable<CurvePoolEntry["executionCoins"]> }
