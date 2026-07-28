@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "kind": "mechanism-packet-measurement",
+  "assetId": "susd1plus-lorenzo",
+  "archetype": "synthetic-delta-neutral",
+  "capturedAt": "2026-07-27T22:51:15Z: BSC block 112517158 totalSupply()=83796473.74665007 sUSD1+ on 0x4f2760b32720f013e900dc92f65480137391199b (bsc-dataseed.binance.org); OTF vault detail unit_nav=1.03225675 TVL≈86499611.77; GraphQL aggregatedTVL unitNav=1.032257 readableTotalTVL=86499611.77 @ 2026-07-27T22:51:14.728Z; GraphQL detailedTVL grandTotal≈1344758.94 @ 2026-07-27T22:51:15.740Z (≈1.55% of aggregated TVL; Binance BinQuant_Lorenzo futures=0.00; Bybit BinQuant API key invalid)",
+  "source": "agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech-packets/susd1plus-lorenzo.json (Grok research packet; independently re-verified)",
+  "observations": {
+    "pinnedAt": "2026-07-27T22:51:15Z: BSC block 112517158 totalSupply()=83796473.74665007 sUSD1+ on 0x4f2760b32720f013e900dc92f65480137391199b (bsc-dataseed.binance.org); OTF vault detail unit_nav=1.03225675 TVL≈86499611.77; GraphQL aggregatedTVL unitNav=1.032257 readableTotalTVL=86499611.77 @ 2026-07-27T22:51:14.728Z; GraphQL detailedTVL grandTotal≈1344758.94 @ 2026-07-27T22:51:15.740Z (≈1.55% of aggregated TVL; Binance BinQuant_Lorenzo futures=0.00; Bybit BinQuant API key invalid)",
+    "metrics": {
+      "hedgeCoverageRatio": null,
+      "marginBufferPct": null,
+      "lossAbsorptionShare": null
+    }
+  },
+  "components": {},
+  "metricDisposition": {
+    "hedgeCoverageRatio": {
+      "state": "unavailable",
+      "rationale": "Metric applies: vault key_features list Funding Rate + Basis Trading and FAL docs describe off-chain delta-neutral / CEX strategy execution, so hedge coverage is in-scope for this SDN. Issuer publishes no reconciled hedge notionals, short-perp inventory, or net delta. Write-time search (2026-07-27/28): (1) otf.lorenzo-protocol.xyz/lorenzo/v1/vault/detail/56/<vault> returns unit_nav/tvl/key_features/overview only — no hedge fields; (2) vault/performance same surface — apr/tvl/unit_nav/pnl only; (3) invest/strategy/<vault>/56 portfolioComposition has chain strategyDistribution + riskMetrics (volatility/drawdown/capitalUtilization) but no hedge notionals; (4) GraphQL detailedTVL(tokenName:sUSD1+) itemizes named CEX equities (binance/bybit/okx) across NewBund/BinQuant/BinQuant_Lorenzo plus coboTransit, but futures balances on the only material account (BinQuant_Lorenzo binance ≈$1.345M equity) are 0.00 and grandTotal ≈$1.345M vs aggregated TVL ≈$86.50M (~1.55% coverage) — not a protocol-wide hedge reconciliation; one Bybit key errors 'API key is invalid'; (5) partner PoR path documented at cedefi.lorenzo-dev.xyz only (dev baseURL) and production /partner/v1/vault/por not served on otf/lorenzo-api public hosts; (6) DefiLlama protocol lorenzo-susd1+ TVL adapter + CoinGecko staked-usd1 listing have no hedge fields. Do not invent coverage from marketing 'delta-neutral' language or from the incomplete exchange equity slice.",
+      "sourceUrl": "https://lorenzo-api.lorenzo-protocol.xyz/v1/graphql/otf"
+    },
+    "marginBufferPct": {
+      "state": "unavailable",
+      "rationale": "Metric applies: off-chain CEX futures/spot strategy sleeves imply exchange margin. Issuer publishes no exchange margin balances, maintenance/initial margin, liquidation thresholds, or excess-margin percentage. Write-time search: vault/detail and vault/performance expose no margin fields; invest/strategy riskMetrics.capitalUtilization=100 is a portfolio utilization label, not exchange margin headroom; detailedTVL ExchangeBalance fields are totalEquity/spot/futures/portfolio only (no margin or maintenance); coboTransit totals 0.00; security docs describe custodial wallet / exchange prime wallet multi-sig without quantitative buffers; no insurance or margin-buffer API on otf.lorenzo-protocol.xyz. Unit NAV 1.032257 and implied excess over 1.0 is NAV appreciation of strategy PnL, not measured per-venue margin buffer — do not misuse as marginBufferPct.",
+      "sourceUrl": "https://otf.lorenzo-protocol.xyz/lorenzo/v1/vault/detail/56/0x4F2760B32720F013E900DC92F65480137391199b"
+    },
+    "lossAbsorptionShare": {
+      "state": "unavailable",
+      "rationale": "Metric applies: first-loss / insurance / reserve-fund share would absorb strategy and venue losses before share NAV. Issuer publishes no insurance fund, reserve fund, junior tranche, or funded first-loss balance. Write-time search: vault/detail keys have no insurance/reserve-fund fields; vault/performance expense_ratio=0 and pnl=0 are not a capital buffer; invest/strategy riskMetrics.maximumDrawdown=0 is a historical performance statistic, not a funded absorption share; detailedTVL has no insurance row; FAL security + business-flow docs and USD1+ OTF guide disclaimer state Lorenzo does not manage user funds / is not responsible for strategy performance and do not size a first-loss pool; DefiLlama fees methodology notes a 5% off-chain performance fee on positive yields before NAV update — fee, not loss absorption. Do not set lossAbsorptionShare from max-drawdown 0 or from NAV>1.",
+      "sourceUrl": "https://otf.lorenzo-protocol.xyz/lorenzo/v1/invest/strategy/0x4F2760B32720F013E900DC92F65480137391199b/56"
+    }
+  },
+  "sources": [
+    "https://otf.lorenzo-protocol.xyz/lorenzo/v1/vault/detail/56/0x4F2760B32720F013E900DC92F65480137391199b",
+    "https://otf.lorenzo-protocol.xyz/lorenzo/v1/vault/performance/56/0x4F2760B32720F013E900DC92F65480137391199b",
+    "https://otf.lorenzo-protocol.xyz/lorenzo/v1/invest/strategy/0x4F2760B32720F013E900DC92F65480137391199b/56",
+    "https://lorenzo-api.lorenzo-protocol.xyz/v1/graphql/otf",
+    "https://lorenzo-protocol.gitbook.io/docs/financial-abstraction-layer/technical-design/security.md",
+    "https://lorenzo-protocol.gitbook.io/docs/financial-abstraction-layer.md",
+    "https://lorenzo-protocol.gitbook.io/docs/financial-abstraction-layer/technical-design/integration-workflows/operational-details.md",
+    "https://lorenzo-protocol.gitbook.io/docs/financial-abstraction-layer/technical-design/lp-tokens-and-unit-nav-calculation.md",
+    "https://lorenzo-protocol.ghost.io/your-quick-guide-to-joining-the-lorenzo-usd1-otf-testnet/",
+    "https://bsc-dataseed.binance.org",
+    "https://defillama.com/protocol/lorenzo-susd1+",
+    "https://api.coingecko.com/api/v3/coins/staked-usd1"
+  ],
+  "reVerification": {
+    "by": "KIMI-MECH-2 verifier swarm",
+    "date": "2026-07-27",
+    "verdict": "VERIFIED",
+    "notes": "Pin re-verification: BSC totalSupply at pinned block 112517158 not reproducible from public archive endpoints tonight (bsc-dataseed pruned; drpc rate-limited), but current totalSupply at latest = 83796473.74665007 — exactly the pinned value, supply unchange..."
+  },
+  "packetVerification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED as honest unavailable SDN packet. Archetype synthetic-delta-neutral vocab OK. otf.lorenzo-protocol.xyz vault/detail/56/0x4F2760… HTTP 200: key_features include Funding Rate + Basis Trading; unit_nav/tvl present; no hedge notional, margin, or insurance fields. GraphQL endpoint accepts POST (GET 400 expected). DefiLlama/CoinGecko listings lack hedge fields. Unavailable with named search is correct; components empty under D3 consistent with incomplete detailedTVL (~partial CEX equity).",
+    "secondSource": "otf.lorenzo-protocol.xyz vault detail REST (independent re-open) + api.coingecko.com/coins/staked-usd1"
+  }
+}

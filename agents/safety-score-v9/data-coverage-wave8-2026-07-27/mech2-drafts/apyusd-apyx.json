@@ -1,0 +1,214 @@
+{
+  "assetId": "apyusd-apyx",
+  "archetype": "rwa-credit-fund",
+  "outcome": "READY",
+  "mergeMode": "insert",
+  "overlayEntry": {
+    "assetId": "apyusd-apyx",
+    "archetype": "rwa-credit-fund",
+    "reviewedAt": "2026-07-27",
+    "sources": [
+      {
+        "label": "APYX Accountable proof-of-solvency dashboard (apxUSD-scoped live reserve/supply snapshot, fetched 2026-07-27)",
+        "url": "https://api.accountable.apyx.fi/dashboard"
+      },
+      {
+        "label": "Apyx apyUSD overview (ERC-4626 vault over apxUSD; ERC-7540 asynchronous unlock with ~20-day cooldown, or 3-day claim with 3.5%-to-0.1% declining early-redemption fee)",
+        "url": "https://docs.apyx.fi/product-overview/apyusd-overview"
+      },
+      {
+        "label": "Apyx apyUSD yield distribution (STRC/SATA dividends streamed via LinearVestV0; deposited apxUSD is not rehypothecated or lent)",
+        "url": "https://docs.apyx.fi/solution-overview/apyusd-yield-distribution"
+      },
+      {
+        "label": "Apyx STRC collateral documentation (perpetual preferred equity, ranking, redemption and liquidity terms)",
+        "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc"
+      },
+      {
+        "label": "Apyx terms of service (no holder claim on a legal entity or reserve estate)",
+        "url": "https://docs.apyx.fi/resources/terms-of-service"
+      },
+      {
+        "label": "Apyx capitalization framework (redemption-value and wind-down/pro-rata reserve mechanics)",
+        "url": "https://docs.apyx.fi/solution-overview/capitalization-framework"
+      },
+      {
+        "label": "Apyx third-party attestation archive (Wolf & Company monthly reports through June 2026)",
+        "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation"
+      },
+      {
+        "label": "Apyx custody overview (third-party prime-broker custody and monthly PCAOB-firm attestation policy)",
+        "url": "https://docs.apyx.fi/collateral-and-custody/custody-overview"
+      },
+      {
+        "label": "Apyx transparency disclosure (Accountable dashboard publishes redemption value and total collateral value only; no WAM or remaining-tenor dataset)",
+        "url": "https://docs.apyx.fi/collateral-and-custody/transparency"
+      },
+      {
+        "label": "Ethereum PublicNode RPC used for pinned apyUSD ERC-4626 reads at finalized block 25627196",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "notes": "apyUSD is the ERC-4626 yield wrapper over apxUSD; its ultimate credit exposure is the same Apyx reserve (STRC/SATA variable-rate perpetual preferred equity plus liquidity buffers) measured in the apxusd-apyx entry, so this review measures the wrapper itself and mirrors the underlying dispositions only where they hold for apyUSD specifically. On-chain reads at finalized Ethereum block 25627196 (hash 0x4662fa18d4450995897936a723ea054d4ab8b230e457cfb0b3aed424dfdccaf2, 2026-07-27T22:40:23Z) on wrapper 0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a: asset() returned apxUSD 0x98A878b1Cd98131B271883B390f68D2c90674665; totalSupply 127,985,470.504192 shares; totalAssets 179,498,093.804223 apxUSD; convertToAssets(1e18) = 1.40248806 apxUSD per share, matching totalAssets/totalSupply to 3.4e-8 apxUSD; paused() false. The Accountable dashboard (fetched 2026-07-27T22:49Z, dashboard ts 1785192541861) is apxUSD-scoped: total supply 327,073,514.82 against total reserves $308,600,110.70 (collateralization 0.922477, redemption value 0.9155), split STRC $189.09M / POL $48.81M / Inventory $39.97M / Cash & Equivalents $30.73M; it publishes no apyUSD-specific breakdown and no maturity data. weightedAverageMaturityDays is unavailable: the wrapper holds apxUSD, and Apyx publishes no WAM/remaining-tenor dataset for the underlying reserve anywhere on the transparency surface; the principal disclosed STRC/SATA holdings are perpetual. valuationCadenceDays = 30 from the monthly Wolf & Company attestation archive (March-June 2026 reports pinned), mirroring the apxusd-apyx measurement of the same reserve; the wrapper exchange rate itself updates continuously on-chain via LinearVestV0 streaming but that is wrapper math over apxUSD, not an independent reserve valuation. Component adjudication under the D3 standard: creditQuality weak because the primary STRC/SATA documentation evidences the deficiency itself (crypto-linked perpetual preferred equity as the principal collateral). seniority limited: the documented ERC-4626 pro-rata vault claim is corroborated by the pinned on-chain read (wrapper backing ratio 1.000000), but it is a pass-through to apxUSD reserve risk with no priority over apxUSD holders and an asynchronous exit. legalEnforceability weak: the terms of service themselves document that holders have no claim on a legal entity or reserve estate. valuationCadence limited: issuer-published dashboard/attestation data corroborated by the named Wolf & Company reports and on-chain reads, but the reports do not reconcile current liabilities to the whole current reserve. maturityAndLiquidity weak: the apyUSD overview documents the liquidity constraint itself — redemptions are asynchronous with an approximately 20-day cooldown (or 3-day claim at a 3.5%-to-0.1% declining fee) — and no underlying tenor table exists. custody limited: wrapper assets sit measurably on-chain and the underlying securities are disclosed as third-party prime-broker custody, but no full custodian-continuity arrangement is established. recovery limited: the capitalization framework documents wind-down/pro-rata mechanics but no holder-priority waterfall or realized recovery performance. No strong-grade component: the D3 strong evidence class (named independent attestor + dated full reconciliation + enforceable filings, all pinned) is not met for any component.",
+    "metrics": {
+      "weightedAverageMaturityDays": null,
+      "valuationCadenceDays": 30
+    },
+    "metricApplicability": {
+      "weightedAverageMaturityDays": {
+        "state": "unavailable",
+        "rationale": "apyUSD wraps apxUSD, whose reserve Apyx values only as redemption value and total collateral value; the Accountable dashboard, transparency page, and attestation archive were searched and none publishes a weighted-average-maturity or remaining-tenor dataset, and the principal disclosed STRC/SATA holdings are perpetual. The disclosure should live on the Apyx transparency surface.",
+        "sourceUrl": "https://docs.apyx.fi/collateral-and-custody/transparency"
+      }
+    },
+    "analogousMetrics": {
+      "underlyingApxUsdPerShareExchangeRate": 1.4024880566293934,
+      "wrapperBackingRatio": 1
+    },
+    "components": {
+      "creditQuality": {
+        "quality": "weak"
+      },
+      "seniority": {
+        "quality": "limited"
+      },
+      "legalEnforceability": {
+        "quality": "weak"
+      },
+      "valuationCadence": {
+        "quality": "limited"
+      },
+      "maturityAndLiquidity": {
+        "quality": "weak"
+      },
+      "custody": {
+        "quality": "limited"
+      },
+      "recovery": {
+        "quality": "limited"
+      }
+    }
+  },
+  "journal": {
+    "filename": "2026-07-27-wrapper-and-dashboard.json",
+    "content": {
+      "schemaVersion": 1,
+      "assetId": "apyusd-apyx",
+      "archetype": "rwa-credit-fund",
+      "capturedAt": "2026-07-27T22:52:00Z",
+      "source": {
+        "url": "https://api.accountable.apyx.fi/dashboard",
+        "label": "APYX Accountable proof-of-solvency dashboard (apxUSD-scoped)",
+        "access": "Fetched with browser origin/referer headers (Origin: https://accountable.apyx.fi); endpoint returned JSON. Query-string variants (dashboard?token=apyusd, dashboard?asset=apyusd) and paths /apyusd, /dashboard/apyusd, /tokens all returned HTTP 403 — no apyUSD-specific endpoint exists."
+      },
+      "observations": {
+        "dashboardTimestampMs": "1785192541861",
+        "collateralization": 0.922477,
+        "redemptionValue": 0.9155,
+        "netUsd": -18473404.12,
+        "totalReservesUsd": 308600110.7,
+        "totalSupplyUsd": 327073514.82,
+        "reservesSplitUsd": [
+          { "name": "STRC", "value": 189087988.65 },
+          { "name": "Protocol Owned Liquidity", "value": 48810415.17 },
+          { "name": "Inventory", "value": 39967447.71 },
+          { "name": "Cash & Equivalents", "value": 30725438.26 },
+          { "name": "Other", "value": 8820.91 }
+        ],
+        "supplySplit": [
+          { "name": "Ethereum", "value": 327073514.82 }
+        ]
+      },
+      "onchainReads": {
+        "rpc": "https://ethereum-rpc.publicnode.com",
+        "block": 25627196,
+        "blockHex": "0x1870a3c",
+        "blockHash": "0x4662fa18d4450995897936a723ea054d4ab8b230e457cfb0b3aed424dfdccaf2",
+        "blockTimestamp": "2026-07-27T22:40:23Z",
+        "contract": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+        "calls": [
+          {
+            "method": "asset()",
+            "calldata": "0x38d52e0f",
+            "raw": "0x00000000000000000000000098a878b1cd98131b271883b390f68d2c90674665",
+            "decoded": "apxUSD 0x98A878b1Cd98131B271883B390f68D2c90674665"
+          },
+          {
+            "method": "totalSupply()",
+            "calldata": "0x18160ddd",
+            "raw": "0x00000000000000000000000000000000000000000069ddfa4223f6245021c817",
+            "decoded": "127985470.50419214 shares"
+          },
+          {
+            "method": "totalAssets()",
+            "calldata": "0x01e1d114",
+            "raw": "0x000000000000000000000000000000000000000000947a3329b8e0e614a55f3f",
+            "decoded": "179498093.804223 apxUSD"
+          },
+          {
+            "method": "convertToAssets(1e18)",
+            "calldata": "0x07a2d13a0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+            "raw": "0x0000000000000000000000000000000000000000000000001376a374f11f782c",
+            "decoded": "1.4024880566293934 apxUSD per share"
+          },
+          {
+            "method": "paused()",
+            "calldata": "0x5c975abb",
+            "raw": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "decoded": "false"
+          }
+        ]
+      },
+      "derivations": {
+        "wrapperBackingRatio": {
+          "formula": "convertToAssets(1e18) * totalSupply / totalAssets",
+          "value": 0.9999999999999998,
+          "note": "totalAssets exceeds convertToAssets(totalSupply) by ~3.4e-8 apxUSD (rounding dust); backing is exact."
+        },
+        "vaultShareOfApxUsdSupply": {
+          "formula": "totalAssets / dashboard totalSupplyUsd",
+          "value": 0.5488,
+          "note": "179.50M of 327.07M apxUSD sits inside the apyUSD vault; the dashboard's reserve snapshot therefore already covers the vault's underlying."
+        }
+      },
+      "metricDisposition": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "Neither the Accountable dashboard nor the Apyx transparency surface publishes a WAM or remaining-tenor dataset; the documented principal collateral (STRC, SATA) is perpetual preferred equity, and the wrapper holds apxUSD claims on that same reserve."
+        },
+        "valuationCadenceDays": {
+          "state": "measured",
+          "value": 30,
+          "rationale": "Monthly Wolf & Company attestation archive (March, April, May, June 2026 reports pinned) covers the underlying reserve; the wrapper exchange rate streams continuously on-chain but values apxUSD, not the reserve independently."
+        }
+      },
+      "sources": [
+        "https://docs.apyx.fi/collateral-and-custody/third-party-attestation",
+        "https://docs.apyx.fi/collateral-and-custody/transparency",
+        "https://docs.apyx.fi/product-overview/apyusd-overview",
+        "https://docs.apyx.fi/solution-overview/apyusd-yield-distribution",
+        "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc",
+        "https://ethereum-rpc.publicnode.com"
+      ]
+    }
+  },
+  "evidenceSummary": "Fetched the Accountable dashboard 2026-07-27T22:49Z (dashboard ts 1785192541861): apxUSD-scoped, total supply 327,073,514.82 vs reserves $308,600,110.70 (collateralization 0.922477, redemption value 0.9155; STRC $189.09M / POL $48.81M / Inventory $39.97M / Cash $30.73M); no apyUSD-specific endpoint exists (all variants HTTP 403). On-chain at Ethereum finalized block 25627196 (2026-07-27T22:40:23Z) via PublicNode: apyUSD wrapper asset()=apxUSD, totalSupply 127,985,470.504192 shares, totalAssets 179,498,093.804223 apxUSD, exchange rate 1.40248806, backing ratio 1.000000, not paused. Docs pin the ERC-7540 ~20-day cooldown redemption (or 3-day claim at 3.5%-to-0.1% fee), dividend-funded LinearVest yield with no rehypothecation, monthly Wolf & Company attestations through June 2026, and a transparency surface with no WAM/tenor dataset.",
+  "primarySources": [
+    "https://api.accountable.apyx.fi/dashboard",
+    "https://docs.apyx.fi/product-overview/apyusd-overview",
+    "https://docs.apyx.fi/solution-overview/apyusd-yield-distribution",
+    "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc",
+    "https://docs.apyx.fi/resources/terms-of-service",
+    "https://docs.apyx.fi/solution-overview/capitalization-framework",
+    "https://docs.apyx.fi/collateral-and-custody/third-party-attestation",
+    "https://docs.apyx.fi/collateral-and-custody/custody-overview",
+    "https://docs.apyx.fi/collateral-and-custody/transparency",
+    "https://ethereum-rpc.publicnode.com"
+  ],
+  "blockedReason": null,
+  "missingSources": [
+    "Apyx weighted-average-maturity or remaining-tenor dataset for the reserve (not published anywhere on the transparency surface)",
+    "Wolf & Company attestation reconciling current apxUSD liabilities to the whole current reserve (monthly reports exist through June 2026 but do not perform this reconciliation)",
+    "Enforceable legal filing establishing a holder claim on a reserve estate (terms of service disclaim one)"
+  ]
+}

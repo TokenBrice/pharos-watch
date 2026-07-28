@@ -1,0 +1,20 @@
+{
+  "assetId": "usdf-astherus",
+  "subject": "draft+packet",
+  "verdict": "VERIFIED-WITH-NITS",
+  "metricCheck": {
+    "hedgeCoverageRatio": "confirmed null/unavailable — fund-custody and how-usdf-works pages (both URL variants re-opened) describe the Ceffu/MirrorX long-spot + short-perp strategy only qualitatively; the Aster docs sitemap (llms.txt) contains no PoR, transparency, or attestation page",
+    "marginBufferPct": "confirmed null/unavailable — fund-custody page names liquidation risk and 'frequently settles PnL' qualitatively only, and points to Tether's transparency page for USDT itself, not Aster strategy margin; no margin balances or maintenance requirements published",
+    "lossAbsorptionShare": "confirmed null/unavailable — no insurance fund, reserve fund, or first-loss disclosure anywhere in the USDF doc set (sitemap-verified)",
+    "usdfTotalSupply": "confirmed 111986088.07905471 — eth_call 0x18160ddd on 0x5a110fc0...44b5 at BSC block 0x6b4e368 (112517992) re-run by verifier via bsc-mainnet.public.blastapi.io, raw 0x5ca1f9ffc9d0bc8e34fab2 matches journal byte-exact; block hash 0xc68417...429d and timestamp 2026-07-27T22:57:31Z confirmed",
+    "mintContractUsdtBalance": "confirmed 0 — USDT (0x55d39832...7955) balanceOf(0xc271fc70...c345) at pinned block re-run, raw zero, matches journal byte-exact; both contract addresses match the Aster official smart-contract inventory page exactly"
+  },
+  "componentCheck": {
+    "(none graded by draft or packet)": "not checked (omitted) — omission itself verified correct: the only evidence is qualitative docs prose plus a named third-party custodian (Ceffu MirrorX page re-opened, generic OES product with no Aster-specific balances), which does not reach the D3 limited class (no issuer itemized figures with an external anchor); correctly left bounded-unknown rather than graded weak"
+  },
+  "conflicts": [
+    "no conflicts — packet and draft agree on all three unavailable metric states, null values, and zero graded components; the packet's source set (fund-custody, how-usdf-works, faqs, sitemap, MirrorX, DefiLlama 219, marketing page) was spot-re-opened and every claim in its labels verified true (DefiLlama 219: Astherus USDF, pegMechanism crypto-backed, BSC-only, description 1:1 USDT convertibility, no reserve/hedge fields; FAQ: 0.1% redeem fee, 1-2 day standard / up to 7 day large redemption processing)"
+  ],
+  "mergeGuidance": "land draft as-is; the packet adds nothing the draft lacks (its extra sources are corroboration of the same nondisclosure finding, already embodied in the draft's searched-surface rationales) — no packet content needs to merge, and nothing in the packet contradicts the draft",
+  "notes": "Pins re-verified via bsc-mainnet.public.blastapi.io (bsc-rpc.publicnode.com now rejects archive eth_call without a token; bsc-dataseed.bnbchain.org returns 'missing trie node' exactly as the journal's note records for its first attempt). One journal nit, non-load-bearing: the journal note says the failed first attempt was 'at block 0x6b4e267', but pinned block 112517992 = 0x6b4e368; 0x6b4e267 is a different block — trivial hex typo in the provenance note, the pinned reads themselves are exact. Zero USDT in the mint contract is consistent with the documented sweep to Ceffu (how-usdf-works capital-flow step 2). Measurement and verification ~1h apart; no drift possible at a historical pin."
+}

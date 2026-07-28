@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "assetId": "stcusd-cap",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "2026-07-27T23:02:07Z",
+  "source": {
+    "url": "https://cap.app/vault/reserves/cUSD",
+    "label": "Cap cUSD real-time reserves dashboard",
+    "access": "Rendered in headless Chromium (Playwright) at 2026-07-27T23:02:07Z; the underlying api.cap.app endpoints are Cloudflare-challenged for non-browser clients, so figures were captured from the fully rendered dashboard DOM."
+  },
+  "observations": {
+    "dashboard": {
+      "cusdInCirculationUsd": 73080000,
+      "reservesUsd": 73090000,
+      "cusdPriceUsd": 1.0,
+      "stcusdPriceUsd": 1.07,
+      "underwriterCapitalUsd": 224150000,
+      "borrowsUsd": 45520000,
+      "basketAssets": [
+        {
+          "name": "USDC",
+          "valueUsd": 67980000
+        },
+        {
+          "name": "WTGXX",
+          "valueUsd": 5100000
+        }
+      ],
+      "reserveDeploymentShares": {
+        "borrowDebtUSDC": 0.6218,
+        "steakhousePrimeV2Morpho": 0.2998,
+        "wtgxx": 0.0699,
+        "gauntletUSDCMorpho": 0.0086,
+        "aaveUSDC": "<0.0001",
+        "idleUSDC": "<0.0001"
+      },
+      "crossChecks": "Borrows/reserves = 45.52/73.09 = 62.28% vs deployment slice 62.18%; WTGXX basket share 5.10/73.08 = 6.98% vs deployment slice 6.99%; basket assets sum 67.98+5.10 = 73.08 = circulation figure.",
+      "figuresPrecision": "Dashboard publishes USD figures rounded to $0.01M."
+    },
+    "onchainReads": {
+      "rpc": "https://ethereum-rpc.publicnode.com",
+      "block": 25627260,
+      "blockHex": "0x1870a7c",
+      "blockHash": "0xe4256d655597cf47800fdcc665ddb4d92f4daf19572401088d7f5591dc51c161",
+      "blockTimestamp": "2026-07-27T22:53:11Z",
+      "contract": "0x88887be419578051ff9f4eb6c858a951921d8888",
+      "calls": [
+        {
+          "method": "asset()",
+          "calldata": "0x38d52e0f",
+          "raw": "0x000000000000000000000000cccc62962d17b8914c62d74ffb843d73b2a3cccc",
+          "decoded": "cUSD 0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
+        },
+        {
+          "method": "totalSupply()",
+          "calldata": "0x18160ddd",
+          "raw": "0x000000000000000000000000000000000000000000337f34e1ead436d27fddf9",
+          "decoded": "62255932.8534195 shares"
+        },
+        {
+          "method": "totalAssets()",
+          "calldata": "0x01e1d114",
+          "raw": "0x000000000000000000000000000000000000000000373cfab6cdc3c614b9f7e7",
+          "decoded": "66778886.92619495 cUSD"
+        },
+        {
+          "method": "convertToAssets(1e18)",
+          "calldata": "0x07a2d13a0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+          "raw": "0x0000000000000000000000000000000000000000000000000ee2d2605e9e3cb8",
+          "decoded": "1.0726509726137212 cUSD per share"
+        }
+      ]
+    },
+    "secFiling": {
+      "url": "https://www.sec.gov/Archives/edgar/data/1859001/000119312526296145/primary_doc.xml",
+      "accession": "0001193125-26-296145",
+      "filed": "2026-07-06",
+      "period": "2026-06-30",
+      "averagePortfolioMaturityDays": 43,
+      "averageLifeMaturityDays": 48,
+      "percentageDailyLiquidAssets": "1.0000",
+      "percentageWeeklyLiquidAssets": "1.0000",
+      "edgarRecencyCheck": "CIK 1859001 submissions pulled 2026-07-27; no N-MFP filing newer than the 2026-06-30 period exists."
+    }
+  },
+  "derivations": {
+    "weightedAverageMaturityDays": {
+      "formula": "(WTGXX basket share) x (WTGXX SEC-filed average portfolio maturity) + (remaining share) x 0",
+      "computation": "(5.10 / 73.08) x 43 = 0.0697865 x 43",
+      "value": 3.000821,
+      "note": "Same methodology as the 2026-07-20 measurement (prior value 3.023155); non-WTGXX deployments (Morpho/Aave USDC lending and operator borrow debt) treated as zero-day; operator-loan maturity transformation remains undisclosed."
+    },
+    "underlyingCusdConversionRatio": {
+      "formula": "convertToAssets(1e18) / 1e18",
+      "value": 1.0726509726137212
+    },
+    "wrapperBackingRatio": {
+      "formula": "convertToAssets(totalSupply) / totalAssets",
+      "value": 1,
+      "note": "convertToAssets(1e18) x totalSupply equals totalAssets exactly at block 25627260."
+    },
+    "valuationCadenceDays": {
+      "value": 0,
+      "note": "Continuous oracle-valued accounting per Cap Vault documentation; unchanged from 2026-07-20."
+    }
+  },
+  "metricDisposition": {
+    "weightedAverageMaturityDays": {
+      "state": "measured",
+      "value": 3.000821
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "value": 0
+    }
+  },
+  "sources": [
+    "https://cap.app/vault/reserves/cUSD",
+    "https://www.sec.gov/Archives/edgar/data/1859001/000119312526296145/primary_doc.xml",
+    "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics",
+    "https://docs.cap.app/concepts/vault",
+    "https://docs.cap.app/concepts/lender",
+    "https://docs.cap.app/overview/protocol-overview/financial-guarantees",
+    "https://docs.cap.app/resources/terms-and-conditions/platform-terms-of-use",
+    "https://ethereum-rpc.publicnode.com"
+  ]
+}

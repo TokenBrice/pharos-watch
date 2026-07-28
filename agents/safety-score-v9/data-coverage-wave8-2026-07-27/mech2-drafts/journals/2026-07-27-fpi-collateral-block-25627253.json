@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fpi-frax",
+  "archetype": "algorithmic",
+  "capturedAt": "2026-07-27T22:52:02.000Z",
+  "source": {
+    "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral",
+    "label": "Frax FPI collateral API",
+    "updatedAtBlock": 25627253,
+    "updatedAtTimestampSec": 1785192707,
+    "updatedAtUtc": "2026-07-27T22:51:47Z"
+  },
+  "observations": {
+    "nonFpiCollateralUsd": {
+      "frax": 949391.42,
+      "fraxBreakdown": "332889.088326357 (Ethereum Comptroller MSIG 0x6a7efa964cf6d9ab3bc3c47ebddb853a8853c502) + 616502.3226731226 (second Ethereum FRAX balance) + 0.0099257075 (Fraxtal Comptroller 0x7fc64ffddf99cd64dc2cff86a82f3b749962cf33)",
+      "stakedConvexFpiFraxLp": 124758.08260679216,
+      "stkcvxDescription": "stkcvxFPIFRAX: 95098 FRAX, 26421 FPI",
+      "fraxswapV2FraxFpisFraxPortion": 16370.015547503075,
+      "fraxswapDescription": "Fraxswap V2 FRAX/FPIS: 16493 FRAX, 191183 FPIS (FRAX portion only)",
+      "fxs": 0.005221110367217545,
+      "total": 1090519.52
+    },
+    "comptrollerHeldFpiUsd": 6321779.07,
+    "liabilities": {
+      "fpiTotalSupplyEthereum": 665228.1041716104,
+      "fpiTotalSupplyFraxtal": 5190426.401808904,
+      "fpiTotalSupply": 5855654.51,
+      "fpiPriceUsd": 1.149333475064792
+    },
+    "externalCirculatingFpi": 355267.42,
+    "docsRecheck": "2026-07-27 re-read of docs.frax.com FPI overview and controller_pool pages: no reserve-unwind-depth, emergency-recovery, or holder loss-recovery waterfall disclosure; new since the 2026-07-23 review is the documented FPIS phase-out (convertible to FRAX at 2.5:1 on 2028-03-22 per the Singularity Roadmap Part 1 vote)."
+  },
+  "derivations": {
+    "exogenousBackingShare": {
+      "formula": "frax / nonFpiCollateralTotal = 949391.42 / 1090519.52",
+      "value": 0.870586,
+      "rounded": 0.871
+    },
+    "reflexiveBackingShare": {
+      "formula": "fxs / nonFpiCollateralTotal = 0.005 / 1090519.52",
+      "value": 0.0,
+      "note": "Comptroller FXS balance is dust (8.99e-05 FXS Ethereum, 0.02 FXS Fraxtal); LP positions containing FPI/FPIS are deliberately left outside both claims per the established profile method."
+    },
+    "contractionCapacityRatio": {
+      "formula": "exogenousBackingShare (profile-shape consistency with 2026-07-23 entry)",
+      "value": 0.871
+    },
+    "externalCirculationCoverage": {
+      "formula": "nonFpiCollateralTotal / (externalCirculatingFpi x fpiPriceUsd) = 1090519.52 / (355267.42 x 1.14933)",
+      "value": 2.6707,
+      "note": "context only; not an overlay metric"
+    }
+  },
+  "sources": [
+    "https://docs.frax.com/protocol/assets/fpi/overview",
+    "https://docs.frax.com/protocol/assets/fpi/controller_pool",
+    "https://api.frax.finance/v2/fpifpis/fpi-collateral"
+  ]
+}

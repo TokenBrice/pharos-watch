@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "kind": "mechanism-packet-measurement",
+  "assetId": "yusd-aegis",
+  "archetype": "synthetic-delta-neutral",
+  "capturedAt": "Aegis Accountable dashboard https://aegis.accountable.capital:10443/dashboard/YUSD snapshot ts 1785170794268 (data.ts); ZKP params liabilities USD 35982081.75 collateral USD 36706909.76; homepage aegis.im custody/strategy claims re-opened 2026-07-27T23:01Z",
+  "source": "agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech-packets/yusd-aegis.json (Grok research packet; independently re-verified)",
+  "observations": {
+    "pinnedAt": "Aegis Accountable dashboard https://aegis.accountable.capital:10443/dashboard/YUSD snapshot ts 1785170794268 (data.ts); ZKP params liabilities USD 35982081.75 collateral USD 36706909.76; homepage aegis.im custody/strategy claims re-opened 2026-07-27T23:01Z",
+    "metrics": {
+      "hedgeCoverageRatio": 1,
+      "marginBufferPct": 0.315224,
+      "lossAbsorptionShare": 0.016992
+    },
+    "analogousMetrics": {
+      "operatingReservesUsd": 36095505.74,
+      "yusdSupplyUsd": 35982081.75,
+      "insuranceFundUsd": 611404.02,
+      "zkCollateralUsd": 36706909.76,
+      "accountableCollateralization": 1.003152
+    },
+    "venueShares": [
+      {
+        "venueKey": "copper-custody",
+        "share": 0.721267,
+        "failureDomains": [
+          {
+            "kind": "reserve-custodian",
+            "key": "copper"
+          }
+        ]
+      },
+      {
+        "venueKey": "fireblocks-custody",
+        "share": 0.278591,
+        "failureDomains": [
+          {
+            "kind": "reserve-custodian",
+            "key": "fireblocks"
+          }
+        ]
+      },
+      {
+        "venueKey": "binance-position",
+        "share": 0.000142,
+        "failureDomains": [
+          {
+            "kind": "dex-protocol",
+            "key": "binance"
+          }
+        ]
+      },
+      {
+        "venueKey": "bnb-chain-balance",
+        "share": 2.05e-07,
+        "failureDomains": [
+          {
+            "kind": "chain",
+            "key": "bsc"
+          }
+        ]
+      },
+      {
+        "venueKey": "ethereum-chain-balance",
+        "share": 1.79e-07,
+        "failureDomains": [
+          {
+            "kind": "chain",
+            "key": "ethereum"
+          }
+        ]
+      }
+    ]
+  },
+  "components": {
+    "venueAndCustody": "limited",
+    "hedgeReconciliation": "limited",
+    "fundingBasisStress": "limited",
+    "lossAbsorption": "limited"
+  },
+  "metricDisposition": {
+    "hedgeCoverageRatio": {
+      "state": "measured",
+      "rationale": "Documented-policy figure only: Aegis states YUSD is a BTC-backed digital dollar earning perpetual funding via delta-neutral strategies (BTC spot long + COIN-M futures short per product positioning on aegis.im). Accountable does not publish position-level spot vs futures notionals, so hedgeCoverageRatio 1 is the issuer-stated full-hedge policy, not an observed inventory match. Dual-source: homepage strategy copy + Accountable live reserve feed existence for the product.",
+      "sourceUrl": "https://aegis.im/"
+    },
+    "marginBufferPct": {
+      "state": "measured",
+      "rationale": "Operating reserves excluding Insurance Fund over YUSD supply: total_reserves $36,095,505.74 / total_supply $35,982,081.75 − 1 → 0.315224%. Accountable reserves_split lists Copper+Fireblocks+Binance+chain dust as operating; Insurance Fund is a separate line ($611,404.02) included in ZKP collateral total $36,706,909.76 but excluded from margin buffer (matches prior methodology). Venue-level exchange maintenance-margin utilization is unpublished.",
+      "sourceUrl": "https://aegis.accountable.capital:10443/dashboard/YUSD"
+    },
+    "lossAbsorptionShare": {
+      "state": "measured",
+      "rationale": "Insurance Fund $611,404.02 / YUSD supply $35,982,081.75 = 0.016992. Dual-source: Accountable reserves.insurance_fund field + reserves_split Insurance Fund line item; homepage references an insurance fund accruing for YUSD holders.",
+      "sourceUrl": "https://aegis.accountable.capital:10443/dashboard/YUSD"
+    }
+  },
+  "sources": [
+    "https://aegis.im/",
+    "https://aegis.accountable.capital:10443/dashboard/YUSD",
+    "https://app.aegis.im"
+  ],
+  "reVerification": {
+    "by": "KIMI-MECH-2 verifier swarm",
+    "date": "2026-07-27",
+    "verdict": "VERIFIED",
+    "notes": "Zero-drift re-verification: the Accountable feed still serves the exact pinned snapshot (data.ts 1785170794268), so every number reproduces to the cent. The packet's unavailable/omission choices are honest: venue-level margin utilization and committed unwin..."
+  },
+  "packetVerification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype synthetic-delta-neutral vocab OK. Live aegis.accountable.capital:10443/dashboard/YUSD: collateralization=1.003152 exact; total_reserves=$36,095,505.74; total_supply=$35,982,081.75; insurance_fund=$611,404.02; ZKP liabilities USD 35,982,081.75 / collateral USD 36,706,909.76. marginBufferPct=(tr/ts−1)*100=0.315224 exact; lossAbsorptionShare=611404.02/35982081.75=0.016992 exact. Operating venue split Copper 72.13% / Fireblocks 27.86% of operating reserves (insurance excluded from margin base) matches packet venueShares. hedgeCoverageRatio=1 is documented-policy (aegis.im BTC spot + COIN-M short delta-neutral; Accountable publishes aggregates not notionals) — same measured-with-limitation pattern as nusd-neutrl. Homepage custody names Fireblocks/Copper/CEFFU re-open HTTP 200.",
+    "secondSource": "aegis.accountable.capital:10443/dashboard/YUSD live arithmetic recompute + aegis.im strategy/custody page"
+  }
+}

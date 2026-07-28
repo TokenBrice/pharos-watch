@@ -1,0 +1,129 @@
+{
+  "assetId": "cdxusd-cod3x",
+  "archetype": "cdp",
+  "outcome": "BLOCKED",
+  "mergeMode": "replace",
+  "overlayEntry": {
+    "assetId": "cdxusd-cod3x",
+    "archetype": "cdp",
+    "reviewedAt": "2026-07-27",
+    "sources": [
+      {
+        "label": "Cod3x tech stack: cdxUSD Facilitators (GHO-style lines of credit under protocol limits; no external user collateral required for outgoing supply)",
+        "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      },
+      {
+        "label": "Sourcify verified cdxUSD token source on Base (facilitator mint/burn ABI; no vault or liquidation functions)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi"
+      },
+      {
+        "label": "Cod3x documentation index checked 2026-07-27 (no cdxUSD, facilitator, reserve, backing, or attestation documentation published anywhere in the current GitBook docs)",
+        "url": "https://docs.cod3x.org/llms.txt"
+      },
+      {
+        "label": "Base PublicNode RPC used for the eth_call reads at block 49201813",
+        "url": "https://base-rpc.publicnode.com"
+      }
+    ],
+    "notes": "Reviewed 2026-07-27 (supersedes the 2026-07-20 review with fresh pins; mechanism findings unchanged). Cod3x documents cdxUSD as a GHO-style system in which approved Facilitators receive bounded lines of credit and mint or burn under protocol-set limits, explicitly 'without requiring external user capital to initially collateralize the outgoing supply'. The verified Base token source exposes facilitator mint/burn and bucket accounting only; there is no borrower-owned collateral position, collateral-ratio threshold, health factor, or liquidation engine at the token level, so both CDP metrics and the collateralization/liquidation/branch components are structurally not applicable rather than unmeasured. Live eth_call reads at Base block 49201813 (via base-rpc.publicnode.com): totalSupply() = 6,150,000 cdxUSD (unchanged since the 2026-07-20 read at block 48869577); getFacilitatorsList() still returns the single facilitator 0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b (the previously reviewed 3/9 Safe); getFacilitatorBucket returned capacity 100,000,000 cdxUSD with 6,150,000 drawn. New this review: balanceOf reads on the facilitator Safe at the same block show only dust on Base (0.00099 USDC; 0.0000427 cbBTC; 0 WETH/DAI/USDS/wstETH), confirming that whatever collateral backs cdxUSD is not held in the issuance facilitator's on-chain account and remains in undisclosed strategy venues. Disclosure search 2026-07-27: the current Cod3x GitBook documentation (docs.cod3x.org, full index retrieved via llms.txt and queried directly) contains no cdxUSD, facilitator, collateral, reserve, backing, or attestation pages at all — the docs now cover only the AI trading terminal and the CDX utility token; app.cod3x.org is a JavaScript trading-terminal shell with no transparency or reserve surface. NOT established (issuer-undisclosed): the facilitator-held collateral inventory, strategy positions, obligors, custodians, segregation, and the current coverage ratio behind cdxUSD; no holder redemption path, backstop, or bad-debt procedure is documented in any located source, so backstop, shutdownAndBadDebt, and structuralRedemption remain bounded-unknown.",
+    "metrics": {
+      "collateralizationRatio": null,
+      "liquidationCapacityRatio": null
+    },
+    "metricApplicability": {
+      "collateralizationRatio": {
+        "state": "not-applicable",
+        "rationale": "cdxUSD is issued as governance-limited Facilitator credit buckets, not against independently collateralized per-token vaults; no collateralization engine or coverage ratio exists at the token level and facilitator collateral is undisclosed.",
+        "sourceUrl": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      },
+      "liquidationCapacityRatio": {
+        "state": "not-applicable",
+        "rationale": "The facilitator design has no liquidation engine and no capital pool contractually committed to debt-offset liquidation; facilitator credit risk is managed off-chain under protocol limits.",
+        "sourceUrl": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      }
+    },
+    "components": {
+      "collateralizationParameters": {
+        "applicability": "not-applicable",
+        "rationale": "Issuance is bounded by facilitator bucket caps set under protocol limits; there are no borrower collateral positions or collateral-ratio thresholds to review.",
+        "sourceUrl": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      },
+      "liquidationMechanics": {
+        "applicability": "not-applicable",
+        "rationale": "No liquidation engine exists for cdxUSD: the token layer has no collateral health checks, close factors, or liquidation calls.",
+        "sourceUrl": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      },
+      "branchIsolation": {
+        "applicability": "not-applicable",
+        "rationale": "A single facilitator-bucket issuance path exists (one active facilitator Safe, re-verified at Base block 49201813), so there are no collateral branches whose losses could transmit to one another.",
+        "sourceUrl": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      }
+    }
+  },
+  "journal": {
+    "filename": "2026-07-27-block-49201813.json",
+    "content": {
+      "schemaVersion": 1,
+      "kind": "onchain-mechanism-measurement",
+      "assetId": "cdxusd-cod3x",
+      "archetype": "cdp",
+      "capturedAt": "2026-07-27T22:58:00Z",
+      "observations": {
+        "base": {
+          "block": 49201813,
+          "rpc": "https://base-rpc.publicnode.com",
+          "cdxUsdToken": "0xc0d3700000987C99b3c9009069e4f8413fd22330",
+          "reads": {
+            "totalSupply()": "6150000000000000000000000 (6,150,000 cdxUSD; unchanged vs 2026-07-20 read at block 48869577)",
+            "getFacilitatorsList()": ["0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b"],
+            "getFacilitatorBucket(0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b)": "capacity 100000000000000000000000000 (100,000,000), level 6150000000000000000000000 (6,150,000 drawn)"
+          },
+          "facilitatorSafeBalances": {
+            "note": "balanceOf reads on the sole facilitator Safe at block 49201813; the issuance account holds no meaningful collateral on Base",
+            "USDC(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)": "990 raw = 0.00099 USDC",
+            "cbBTC(0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf)": "4270 raw = 0.00004270 cbBTC",
+            "WETH": 0,
+            "DAI": 0,
+            "USDS": 0,
+            "wstETH": 0
+          }
+        },
+        "disclosureSearch": {
+          "docsCod3xOrg": "Full GitBook index (https://docs.cod3x.org/llms.txt) retrieved 2026-07-27 and queried via the docs ask endpoint: no cdxUSD, facilitator, collateral, reserve, backing, or attestation documentation exists; docs cover only the AI trading terminal and CDX utility token.",
+          "appCod3xOrg": "https://app.cod3x.org fetched 2026-07-27: JavaScript trading-terminal shell, no transparency/reserve/backing surface or cdxUSD references.",
+          "cod3xOrgBlog": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/ still live 2026-07-27 and still the only mechanism description ('every cdxUSD circulating is sufficiently backed' asserted without figures)."
+        }
+      },
+      "derivations": {},
+      "metricDisposition": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "Facilitator credit-bucket issuance with no token-level collateralization engine; facilitator collateral inventory undisclosed, so no coverage ratio can be measured or honestly estimated."
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "No liquidation engine and no capital pool contractually committed to debt-offset liquidation."
+        }
+      },
+      "sources": [
+        "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/",
+        "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi",
+        "https://docs.cod3x.org/llms.txt",
+        "https://base-rpc.publicnode.com"
+      ]
+    }
+  },
+  "evidenceSummary": "Re-read the cdxUSD token on Base at block 49201813 via base-rpc.publicnode.com: totalSupply 6,150,000 (unchanged since 2026-07-20), still exactly one facilitator (Safe 0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b) with bucket capacity 100,000,000 and 6,150,000 drawn. The facilitator Safe holds only dust on Base (0.00099 USDC, 0.0000427 cbBTC), so backing sits in undisclosed strategy venues. Exhaustive disclosure search: the current Cod3x GitBook docs contain zero cdxUSD/facilitator/reserve content (verified via the full llms.txt index and the docs ask endpoint), and app.cod3x.org exposes no transparency surface. No facilitator collateral, bucket composition, coverage ratio, redemption, backstop, or bad-debt disclosure exists anywhere; both CDP metrics remain structurally not-applicable and the entry is a refreshed replace of the 2026-07-20 review.",
+  "primarySources": [
+    "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/",
+    "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi",
+    "https://docs.cod3x.org/llms.txt",
+    "https://base-rpc.publicnode.com"
+  ],
+  "blockedReason": "issuer-undisclosed: facilitator-held collateral inventory, strategy positions, obligors, custodians, segregation, and the coverage ratio behind cdxUSD; additionally no documented holder redemption path, backstop, or bad-debt procedure",
+  "missingSources": [
+    "Facilitator collateral/bucket composition disclosure (itemized strategy assets backing the 6.15M cdxUSD drawn from the 100M bucket)",
+    "Any reserve attestation, coverage-ratio publication, or transparency dashboard for cdxUSD",
+    "Redemption, backstop, and bad-debt terms for cdxUSD holders"
+  ]
+}

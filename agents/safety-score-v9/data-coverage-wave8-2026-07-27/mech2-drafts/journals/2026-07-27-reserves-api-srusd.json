@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "assetId": "srusd-reservoir",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "2026-07-27T22:52:00.000Z",
+  "source": {
+    "url": "https://app.reservoir.xyz/api/reserves/raw",
+    "label": "Reservoir live on-chain reserves balance sheet (raw API)",
+    "fetchedAt": "2026-07-27T22:52:00Z"
+  },
+  "observations": {
+    "totalAssetsUsd": 35590379.251188794769034761,
+    "totalLiabilitiesUsd": 35293416.948310247814829089,
+    "equityUsd": 296962.302878546954205672,
+    "srUsdLiabilityUsd": 714584.80314046403776758,
+    "assetComposition": [
+      {"label": "Morpho - Sentora PRIME", "category": "Lending markets", "chainId": 1, "valueUsd": 16074159.82, "shareOfAssets": 0.45164},
+      {"label": "Pendle - PT USDat (PT-USDat-27AUG2026)", "category": "Pendle", "chainId": 1, "valueUsd": 9144080.81, "shareOfAssets": 0.25693},
+      {"label": "Aave - GHO (Plasma)", "category": "Lending markets", "chainId": 9745, "valueUsd": 4039188.48, "shareOfAssets": 0.11349},
+      {"label": "Morpho - Steakhouse Prime Instant V2 Adapter (USDC)", "category": "Lending markets", "chainId": 1, "valueUsd": 3392680.84, "shareOfAssets": 0.09533},
+      {"label": "Aave - GHO (Monad)", "category": "Lending markets", "chainId": 143, "valueUsd": 1485817.60, "shareOfAssets": 0.04175},
+      {"label": "Agua - Global Carry Vault", "category": "Vaults", "chainId": 1, "valueUsd": 1299724.74, "shareOfAssets": 0.03652},
+      {"label": "Hastra - PRIME", "category": "Real world assets", "chainId": 1, "valueUsd": 120199.94, "shareOfAssets": 0.00338},
+      {"label": "USDC (direct, 3 adapter rows)", "category": "Stables", "chainId": 1, "valueUsd": 34527.01, "shareOfAssets": 0.00097}
+    ],
+    "onChainAnchor": {
+      "rpcEndpoint": "https://ethereum-rpc.publicnode.com",
+      "blockNumberHex": "0x1870a80",
+      "blockNumber": 25627264,
+      "reads": [
+        {"contract": "0x738d1115B90efa71AE468F1287fc864775e23a31", "label": "srUSD", "calldata": "0x18160ddd (totalSupply())", "rawResult": "0x00000000000000000000000000000000000000000000835034d55deb92489f91", "totalSupply": 620109.5558341466}
+      ],
+      "note": "API srUSD liability $714,584.80 over 620,109.56 on-chain shares implies ~1.1523 USD/share, consistent with a yield-accruing savings token (daily interest accrual per Reservoir docs). srUSD is a claim on rUSD, itself a claim on the shared Reservoir balance sheet measured here."
+    },
+    "savingsTerms": "srUSD accrues interest daily, mint/redeem at any time; redemptions fulfilled immediately when the PSM has available liquidity; srUSD carries a micro burn fee of one day's interest on the principal position (docs.reservoir.xyz/products/savings-srusd-and-wsrusd)."
+  },
+  "derivations": {
+    "systemCollateralization": {
+      "formula": "totalAssets / totalLiabilities",
+      "value": 1.0084140989611028
+    },
+    "weightedAverageMaturityDays": {
+      "formula": "sum(positionShare * daysToMaturity); on-demand-redeemable lending/vault/stablecoin sleeves treated as 0-day, Pendle PT-USDat-27AUG2026 at documented fixed maturity 2026-08-27 (31 days from 2026-07-27 read)",
+      "ptShare": 0.25692563571444854,
+      "ptDaysToMaturity": 31,
+      "value": 7.964694707147904
+    },
+    "valuationCadenceDays": {
+      "formula": "balance sheet is continuously readable on-chain via the live reserves API (no discrete attestation interval)",
+      "value": 0
+    }
+  },
+  "metricDisposition": {
+    "weightedAverageMaturityDays": {
+      "state": "measured",
+      "note": "Same shared balance sheet as rUSD; conservative 0-day treatment of the 45.16% Morpho Sentora PRIME sleeve (HELOC private credit, on-demand subject to liquidity) and 3.65% Agua Global Carry vault; underlying maturity profiles issuer-undisclosed."
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "note": "Self-administered on-chain balance sheet; no independent administrator strikes the NAV."
+    }
+  },
+  "sources": [
+    "https://app.reservoir.xyz/api/reserves/raw",
+    "https://docs.reservoir.xyz/products/proof-of-reserves",
+    "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd",
+    "https://docs.reservoir.xyz/protocol-architecture/credit-enforcer",
+    "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
+    "https://ethereum-rpc.publicnode.com"
+  ]
+}

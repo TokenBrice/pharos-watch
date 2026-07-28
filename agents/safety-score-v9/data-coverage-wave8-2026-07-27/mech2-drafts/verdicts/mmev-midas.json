@@ -1,0 +1,18 @@
+{
+  "assetId": "mmev-midas",
+  "subject": "packet",
+  "verdict": "VERIFIED",
+  "metricCheck": {
+    "hedgeCoverageRatio": "confirmed null+unavailable; rationale TRUE — midas.app/mmev re-verified HTTP 403 tonight; docs.midas.app/llms.txt HTTP 200 lists the mMEV legal-product-documentation entry but no hedge notional or net-delta figure; docs.midas.app page bodies 403 (unpinnable)",
+    "marginBufferPct": "confirmed null+unavailable; no product-specific margin/overcollateralization figure on any re-opened surface",
+    "lossAbsorptionShare": "confirmed null+unavailable; no insurance/first-loss pool size on any re-opened surface"
+  },
+  "componentCheck": {
+    "note": "components empty; consistent with D3"
+  },
+  "conflicts": [
+    "packet vs wave-6 ledger note ('wind-down was announced for 2026-05-10'): the evidence contradicts the LEDGER, not the packet. mMEV is live: on-chain totalSupply at latest = 2,196,863.97 (18dp) on 0x030b69280892c888670edcdcd8b69fd8026a0bf3; LlamaCoins price 1.13648467 with timestamp 2026-07-28 (NAV feed updating); rwa.xyz (2026-07-27) shows Midas mMEV TAV $2,216,666, manager RockawayX; CoinGecko midas-mmev listing live. The Feb 2026 news record shows Midas ended its MEV Capital partnership and appointed RockawayX to manage mMEV/mevBTC — a manager transition, not a product wind-down. The wave-6 wind-down note is stale/mistaken; no REJECT or lifecycle ruling is warranted."
+  ],
+  "mergeGuidance": "Land packet as-is. Do NOT reject for wind-down: the asset is live with ~$2.2M TAV and an updating NAV oracle. Separately, the wave-6 ledger's wind-down line should be corrected to record the MEV Capital → RockawayX manager transition (Feb 2026).",
+  "notes": "Special wind-down check resolved AGAINST the wave-6 note: three independent live signals (on-chain supply, live NAV price, rwa.xyz TAV) plus the documented manager change. The packet itself never claimed a wind-down and its unavailable rationales are true at the named locations. No existing overlay entry for this assetId. Entry carries a genuine named-search nondisclosure record; advise LAND, not BLOCKED."
+}

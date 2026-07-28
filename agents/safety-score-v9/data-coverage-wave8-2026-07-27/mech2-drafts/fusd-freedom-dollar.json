@@ -1,0 +1,135 @@
+{
+  "assetId": "fusd-freedom-dollar",
+  "archetype": "algorithmic",
+  "outcome": "READY",
+  "mergeMode": "replace",
+  "overlayEntry": {
+    "assetId": "fusd-freedom-dollar",
+    "archetype": "algorithmic",
+    "reviewedAt": "2026-07-27",
+    "sources": [
+      {
+        "label": "Freedom Dollar white paper (ZANO-only reserve in a publicly auditable staked wallet, overcollateralized minting, decentralized market-maker bots defending the $1 target on the Zano DEX, no oracle or liquidation engine; re-checked 2026-07-27 — still no emergency-recovery, shutdown, or loss-recovery waterfall disclosure)",
+        "url": "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf"
+      },
+      {
+        "label": "Freedom Dollar homepage real-time reserves panel (CIRCULATING TOKENS 7.4M; MINTED TOKENS 11.4M; PUBLIC RESERVES $11,115,334.03 = $8.859 x 1,254,693.99 ZANO plus $4,000,001 fUSD; COVERAGE RATIO 1.50x; panel self-reports Last updated 7/27/2026 10:50:04 PM), fetched 2026-07-27",
+        "url": "https://freedomdollar.com/"
+      },
+      {
+        "label": "Freedom Dollar verify-reserves page (published view-only Zano tracking seed for independent reserve-balance verification)",
+        "url": "https://freedomdollar.com/verify-reserves"
+      },
+      {
+        "label": "Zano public daemon RPC getinfo/get_asset_info (fUSD current_supply read at height 3790223)",
+        "url": "https://node.zano.org/json_rpc"
+      }
+    ],
+    "notes": "Reviewed 2026-07-27 (full re-measurement of the 2026-07-20 entry). The white paper documents fUSD minted against ZANO locked in a single publicly auditable staked reserve wallet, with the peg defended by decentralized market-maker bots placing standing buy/sell orders near $1 on the Zano DEX and no oracle or liquidation engine; a fresh read of the white paper and homepage found still no emergency-recovery, shutdown, or holder loss-recovery waterfall disclosure, so those components remain uncurated (bounded-unknown), not graded. The issuer homepage (fetched 2026-07-27T22:54Z; panel self-reports Last updated 7/27/2026 10:50:04 PM) publishes the reserve panel: 11.4M fUSD minted, 7.4M circulating, reserves of $11,115,334.03 (1,254,693.99 ZANO at $8.859) plus $4,000,001 fUSD held in the reserve itself, and a displayed 1.50x coverage ratio. I independently re-verified fUSD current_supply = 114,000,000,000 base units (11,400,000 fUSD, decimal_point 4) via get_asset_info on node.zano.org at Zano height 3790223 (getinfo bracket 2026-07-27T22:56:51Z), matching the homepage minted figure exactly; the asset owner key 497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1 remains the sole EMIT authority per the prior verified mint-authority review. exogenousBackingShare 0.735368 and reflexiveBackingShare 0.264632 are computed from the issuer-published reserve composition ($11,115,334.03 ZANO versus $4,000,001 reserve-held fUSD out of $15,115,335.03 total): just over one quarter of the stated reserve is the token itself. contractionCapacityRatio 1.502072 is the exogenous ZANO reserve value over externally circulating fUSD (11,400,000 minted minus 4,000,001 reserve-held = 7,399,999), matching the issuer's displayed 1.50x. Since 2026-07-20 the ZANO price input fell ($9.481 to $8.859) while the ZANO reserve count rose slightly (1,253,985.99 to 1,254,693.99), lowering coverage from 1.61x to 1.50x and the exogenous share from 0.748258 to 0.735368. All three metric inputs remain issuer-published figures, not independently measured balances: the ZANO reserve balance is NOT publicly queryable on-chain (Zano hides amounts), and while the project publishes a view-only tracking seed for the reserve wallet, re-measuring it requires running Zano wallet software, which this review did not do. The white paper's overcollateralization framing is an off-chain operating policy: Zano consensus validates only the single asset-owner key (verified), never the reserve, and no on-chain contract enforces collateralization. Grades unchanged: contractionCapacity limited (issuer-published panel corroborated by an independent daemon supply read and a published tracking seed, but the reserve balance itself is not third-party-verifiable), confidenceAndIncentives limited (documented open-source market-maker bot incentive design, issuer-published only), oracleAndControlAssumptions limited (no oracle or liquidation engine by design, single verified owner key). NOT established: any emergency recovery, shutdown, or loss-recovery procedure (no such documentation exists in the reviewed sources).",
+    "metrics": {
+      "exogenousBackingShare": 0.735368,
+      "reflexiveBackingShare": 0.264632,
+      "contractionCapacityRatio": 1.502072
+    },
+    "analogousMetrics": {
+      "zanoReserveUsd": 11115334.03,
+      "reserveHeldFusd": 4000001,
+      "circulatingFusd": 7399999,
+      "mintedFusd": 11400000
+    },
+    "components": {
+      "contractionCapacity": {
+        "quality": "limited"
+      },
+      "confidenceAndIncentives": {
+        "quality": "limited"
+      },
+      "oracleAndControlAssumptions": {
+        "quality": "limited"
+      }
+    }
+  },
+  "journal": {
+    "filename": "2026-07-27-reserve-panel-zano-3790223.json",
+    "content": {
+      "schemaVersion": 1,
+      "assetId": "fusd-freedom-dollar",
+      "archetype": "algorithmic",
+      "capturedAt": "2026-07-27T22:56:51.000Z",
+      "source": {
+        "url": "https://freedomdollar.com/",
+        "label": "Freedom Dollar homepage reserves panel (server-rendered HTML)",
+        "panelSelfReportedUpdate": "7/27/2026, 10:50:04 PM"
+      },
+      "observations": {
+        "homepagePanel": {
+          "mintedTokensDisplayed": "11.4M",
+          "circulatingTokensDisplayed": "7.4M",
+          "publicReservesUsd": 11115334.03,
+          "zanoPriceUsd": 8.859,
+          "zanoReserveCount": 1254693.99,
+          "reserveHeldFusd": 4000001,
+          "coverageRatioDisplayed": "1.50x"
+        },
+        "zanoDaemon": {
+          "endpoint": "https://node.zano.org/json_rpc",
+          "height": 3790223,
+          "getinfoBracketUtc": "2026-07-27T22:56:51Z",
+          "getAssetInfo": {
+            "assetId": "86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f",
+            "currentSupplyBaseUnits": 114000000000,
+            "decimalPoint": 4,
+            "ticker": "fUSD",
+            "owner": "497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1",
+            "hiddenSupply": false
+          }
+        },
+        "whitePaperRecheck": "2026-07-27 fetch of [English]White-paper.pdf (4 pages): no emergency-recovery, shutdown, bad-debt, or holder loss-recovery waterfall text; only 'High collateralization ensures redemptions at $1 are honored even during drawdowns' and market-maker-bot peg mechanics."
+      },
+      "derivations": {
+        "mintedFusd": {
+          "formula": "currentSupplyBaseUnits / 10^decimalPoint",
+          "value": 11400000
+        },
+        "circulatingFusd": {
+          "formula": "mintedFusd - reserveHeldFusd",
+          "value": 7399999
+        },
+        "totalReserveUsd": {
+          "formula": "zanoReserveUsd + reserveHeldFusd",
+          "value": 15115335.03
+        },
+        "exogenousBackingShare": {
+          "formula": "zanoReserveUsd / totalReserveUsd = 11115334.03 / 15115335.03",
+          "value": 0.735368
+        },
+        "reflexiveBackingShare": {
+          "formula": "reserveHeldFusd / totalReserveUsd = 4000001 / 15115335.03",
+          "value": 0.264632
+        },
+        "contractionCapacityRatio": {
+          "formula": "zanoReserveUsd / circulatingFusd = 11115334.03 / 7399999",
+          "value": 1.502072,
+          "crossCheck": "issuer-displayed coverage ratio 1.50x; zanoPrice x zanoReserveCount = 8.859 x 1254693.99 = 11115334.06 (displayed 11115334.03, rounding)"
+        }
+      },
+      "sources": [
+        "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf",
+        "https://freedomdollar.com/",
+        "https://freedomdollar.com/verify-reserves",
+        "https://node.zano.org/json_rpc"
+      ]
+    }
+  },
+  "evidenceSummary": "Re-measured 2026-07-27: issuer homepage reserve panel (fetched ~22:54Z; panel self-reports Last updated 7/27/2026 10:50:04 PM) shows PUBLIC RESERVES $11,115,334.03 = $8.859 x 1,254,693.99 ZANO plus $4,000,001 reserve-held fUSD, MINTED 11.4M, CIRCULATING 7.4M, COVERAGE 1.50x. Independently verified fUSD current_supply = 114,000,000,000 base units (11,400,000 fUSD, dp 4) via Zano daemon get_asset_info at height 3790223 (getinfo bracket 2026-07-27T22:56:51Z), owner key 497d6b...c7c1 unchanged. Derived: exo 0.735368, reflexive 0.264632, contraction 1.502072 (matches displayed 1.50x). White paper re-fetched and re-read: still no emergency-recovery/loss-recovery waterfall disclosure, so those components stay uncurated.",
+  "primarySources": [
+    "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf",
+    "https://freedomdollar.com/",
+    "https://freedomdollar.com/verify-reserves",
+    "https://node.zano.org/json_rpc"
+  ],
+  "blockedReason": null,
+  "missingSources": [
+    "Any emergency-recovery, shutdown, or holder loss-recovery waterfall documentation (searched: white paper 2026-07-27 fetch, homepage, verify-reserves page)"
+  ]
+}

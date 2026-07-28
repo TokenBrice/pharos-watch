@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "mechanism-packet-measurement",
+  "assetId": "inalpha-nest",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "Nest API nest-alpha-vault price NAV $13,666,789.77 price 1.105305 supply 12,364,722.65; eth getRate accountant 0xfbf12… = 1105305 (1.105305); lastPriceUpdate eth chainId=1 updatedAt 1785187259 (2026-07-27T21:20:59Z); positions nOPAL~$7,046,269 nFALCON~$4,070,929 nTBILL~$496,696 nACRDX~$99,938 + liquid ~$213,764",
+  "source": "agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech-packets/inalpha-nest.json (Grok research packet; independently re-verified)",
+  "observations": {
+    "pinnedAt": "Nest API nest-alpha-vault price NAV $13,666,789.77 price 1.105305 supply 12,364,722.65; eth getRate accountant 0xfbf12… = 1105305 (1.105305); lastPriceUpdate eth chainId=1 updatedAt 1785187259 (2026-07-27T21:20:59Z); positions nOPAL~$7,046,269 nFALCON~$4,070,929 nTBILL~$496,696 nACRDX~$99,938 + liquid ~$213,764",
+    "metrics": {
+      "weightedAverageMaturityDays": null,
+      "valuationCadenceDays": 0.041666666666666664
+    }
+  },
+  "components": {
+    "valuationCadence": "limited",
+    "maturityAndLiquidity": "limited",
+    "custody": "limited",
+    "creditQuality": "limited"
+  },
+  "metricDisposition": {
+    "weightedAverageMaturityDays": {
+      "state": "unavailable",
+      "rationale": "inALPHA holds a diversified book of Nest sub-vaults (nOPAL Brazilian receivables, nFALCON CLO, nTBILL, nACRDX, etc.). No issuer-published portfolio WAM/WAL for the blended vault. Searched Nest available-vaults, vaults valuation docs, positions API (composition without tenor fields).",
+      "sourceUrl": "https://docs.nest.credit/about/available-vaults/"
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "rationale": "Nest vaults docs state automated hourly asset-price checks with upper/lower bounds. valuationCadenceDays=3600/86400=1/24. Corroboration: Nest last-price-update API for nest-alpha-vault shows multi-chain updates clustered within minutes on 2026-07-27 with price 1.105305 matching eth getRate() 1105305 on accountant 0xfbf12ad3a117379ec8d9ef449e6b7827337dff1a.",
+      "sourceUrl": "https://docs.nest.credit/about/vaults/"
+    }
+  },
+  "sources": [
+    "https://docs.nest.credit/about/available-vaults/",
+    "https://docs.nest.credit/about/vaults/",
+    "https://docs.nest.credit/about/liquidity-and-redemptions/",
+    "https://docs.nest.credit/security-and-compliance/flow-of-funds/",
+    "https://api.nest.credit/v1/vaults/nest-alpha-vault/price",
+    "https://api.nest.credit/v1/vaults/nest-alpha-vault/positions",
+    "https://api.nest.credit/v1/vaults/nest-alpha-vault/last-price-update"
+  ],
+  "reVerification": {
+    "by": "KIMI-MECH-2 verifier swarm",
+    "date": "2026-07-27",
+    "verdict": "VERIFIED",
+    "notes": "No existing overlay entry (grep clean). Re-opened 2026-07-28: Nest price API returned nav=13666789.76735399, price=1.105305, totalSupply=12364722.64882 — EXACT pin reproduction hours later. NAV API + on-chain getRate + docs hourly-process triple-agree. Limi..."
+  },
+  "packetVerification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype rwa-credit-fund vocab OK. valuationCadenceDays=0.041666…=3600/86400: docs.nest.credit/about/vaults/ HTTP 200 states automated asset-price checks every hour; api.nest.credit nest-alpha-vault/price returns nav=13666789.767… price=1.105305 supply=12364722.64882 exact pin; last-price-update multi-chain updatedAt~1785187291. weightedAverageMaturityDays unavailable: blended sub-vault book (nOPAL/nFALCON/etc.) with no published portfolio WAM on available-vaults or positions API. Component keys valuationCadence/maturityAndLiquidity/custody/creditQuality valid RWA.",
+    "secondSource": "api.nest.credit nest-alpha-vault price+last-price-update + docs.nest.credit/about/vaults/ hourly process"
+  }
+}

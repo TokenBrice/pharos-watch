@@ -1,0 +1,86 @@
+{
+  "assetId": "rusd-reservoir",
+  "archetype": "rwa-credit-fund",
+  "outcome": "READY",
+  "mergeMode": "insert",
+  "overlayEntry": {
+    "assetId": "rusd-reservoir",
+    "archetype": "rwa-credit-fund",
+    "reviewedAt": "2026-07-27",
+    "sources": [
+      {
+        "label": "Reservoir live on-chain reserves balance sheet (raw API, fetched 2026-07-27T22:52Z)",
+        "url": "https://app.reservoir.xyz/api/reserves/raw"
+      },
+      {
+        "label": "Reservoir proof-of-reserves (balance sheet) documentation",
+        "url": "https://docs.reservoir.xyz/products/proof-of-reserves"
+      },
+      {
+        "label": "Reservoir rUSD stablecoin product documentation",
+        "url": "https://docs.reservoir.xyz/products/stablecoin-rusd"
+      },
+      {
+        "label": "Reservoir Credit Enforcer covenant documentation (liquidity/asset/equity ratio invariants)",
+        "url": "https://docs.reservoir.xyz/protocol-architecture/credit-enforcer"
+      },
+      {
+        "label": "Reservoir Peg Stability Module documentation",
+        "url": "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module"
+      },
+      {
+        "label": "Ethereum public RPC anchor reads (rUSD/srUSD/wsrUSD totalSupply at block 25627264)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "notes": "rUSD is Reservoir's mintable stablecoin (1:1 PSM against USDC/USDT/USD1); its backing is the shared protocol balance sheet read live from Reservoir's own on-chain reserves API (app.reservoir.xyz/api/reserves/raw, fetched 2026-07-27T22:52Z): totalAssets $35,590,379.25 versus totalLiabilities $35,293,416.95 (wsrUSD $34,375,887.13, srUSD $714,584.80, rUSD circulating $202,945.02) leaves $296,962.30 equity, a measured system collateralization of 1.008414 (100.84%). Asset composition: 45.16% Morpho Sentora PRIME (Figure-originated HELOC private credit), 25.69% Pendle PT-USDat-27AUG2026, 11.35% Aave GHO (Plasma), 9.53% Morpho Steakhouse Prime Instant V2 (USDC), 4.17% Aave GHO (Monad), 3.65% Agua Global Carry ERC-4626 vault, 0.34% Hastra PRIME RWA, 0.10% direct USDC. On-chain anchor at Ethereum block 25627264 (ethereum-rpc.publicnode.com, eth_call totalSupply 0x18160ddd): rUSD totalSupply 313,265.019 at 0x09D4214C03D01F49544C0448DBE3A27f768F2b34; the API's $202,945.02 rUSD liability is the protocol's USD circulation figure, so magnitudes corroborate without exact equality. weightedAverageMaturityDays 7.9647 treats the on-demand-redeemable lending/vault/stablecoin sleeves (74.31%) as 0-day and the 25.69% Pendle PT sleeve at its documented fixed maturity 2026-08-27 (31 days from the 2026-07-27 read), matching the wsrusd-reservoir precedent methodology; the 45.16% Sentora PRIME sleeve's underlying HELOC maturities are issuer-undisclosed and conservatively treated as 0-day. valuationCadenceDays 0 reflects the continuously readable on-chain balance sheet. All seven components are graded limited: the issuer publishes itemized structured reserve data (API with per-position values) corroborated by verifiable external anchors (on-chain supply reads, Aave/Morpho market links, verified contracts), which is the D3 limited evidence class; adequate would require a dated independent attestation, regulatory filing, or Chronicle-class oracle covering the component, and none exists (Reservoir's five Halborn audits are smart-contract code audits, not reserve attestations; no named attestor, accountant, or fund administrator appears in docs.reservoir.xyz). NOT ESTABLISHED: no external credit rating or per-obligor credit quality for the DeFi/RWA positions (creditQuality limited); seniority rests on the smart-contract Credit Enforcer covenants (documented ~105% minimum liquidity/asset/equity ratios, immutable per docs) and the $296,962 measured equity buffer, not on any legal seniority instrument, and the documented 105% minimums could not be independently confirmed against the measured 100.84% live collateralization (seniority limited); no legal SPV, trust, or bankruptcy-remote claim wrapper for rUSD holders — enforcement is smart-contract only (legalEnforceability limited); NAV is self-administered through asset adapters with no independent administrator or attestor (valuationCadence limited); PSM redemption is documented as subject to available protocol liquidity (USDC PSM auto-maintained at 25-50bps of total assets, hourly refill) rather than a guaranteed at-par redemption (maturityAndLiquidity limited); the balance sheet sits in protocol-controlled Asset Adapter/PSM contracts with no third-party custodian (custody limited); and the only loss-absorption layer is the thin measured protocol equity plus covenant constraints, with no unconditional recapitalization commitment (recovery limited).",
+    "metrics": {
+      "weightedAverageMaturityDays": 7.9647,
+      "valuationCadenceDays": 0
+    },
+    "components": {
+      "creditQuality": {
+        "quality": "limited"
+      },
+      "seniority": {
+        "quality": "limited"
+      },
+      "legalEnforceability": {
+        "quality": "limited"
+      },
+      "valuationCadence": {
+        "quality": "limited"
+      },
+      "maturityAndLiquidity": {
+        "quality": "limited"
+      },
+      "custody": {
+        "quality": "limited"
+      },
+      "recovery": {
+        "quality": "limited"
+      }
+    }
+  },
+  "journal": {
+    "filename": "2026-07-27-reserves-api.json",
+    "content": "see agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech2-drafts/journals/2026-07-27-reserves-api.json"
+  },
+  "evidenceSummary": "Measured 2026-07-27T22:52Z from Reservoir's live reserves API: totalAssets $35,590,379.25 vs totalLiabilities $35,293,416.95, equity $296,962.30, system collateralization 1.008414. Composition led by Morpho Sentora PRIME 45.16% and Pendle PT-USDat-27AUG2026 25.69%. WAM 7.9647 days (PT sleeve at 31 days to documented maturity, rest 0-day); valuationCadenceDays 0 (continuous on-chain balance sheet). On-chain anchor: rUSD totalSupply 313,265.019 at Ethereum block 25627264 via ethereum-rpc.publicnode.com. No independent attestor/accountant/Chronicle oracle exists — Halborn audits are code audits — so all seven rwa-credit-fund components are graded limited (D3 evidence class: issuer itemized data + external anchors).",
+  "primarySources": [
+    "https://app.reservoir.xyz/api/reserves/raw",
+    "https://docs.reservoir.xyz/products/proof-of-reserves",
+    "https://docs.reservoir.xyz/products/stablecoin-rusd",
+    "https://docs.reservoir.xyz/protocol-architecture/credit-enforcer",
+    "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
+    "https://ethereum-rpc.publicnode.com"
+  ],
+  "blockedReason": null,
+  "missingSources": [
+    "Named independent attestor or accountant publishing dated reserve-to-liability reconciliations",
+    "Independent fund administrator striking the NAV of RWA/vault sleeves (Hastra PRIME, Agua Global Carry)",
+    "Per-obligor credit quality or external credit ratings for the Sentora PRIME HELOC and other credit positions",
+    "Legal SPV/trust/bankruptcy-remote holder-claim documentation",
+    "Underlying maturity profile of the Morpho Sentora PRIME and Agua Global Carry sleeves"
+  ]
+}

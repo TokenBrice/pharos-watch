@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "kind": "mechanism-packet-measurement",
+  "assetId": "alusd-alchemix",
+  "archetype": "cdp",
+  "capturedAt": "ethereum finalized block 25627228 hash 0xe5c7dd15a7c6c8261957493e6f1dcbb72ec18688afccf6ac981748edb2f824e2 timestamp 2026-07-27T22:46:47Z; AlchemistV2 0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd minimumCollateralization/transmuter/debtToken eth_call; alUSD totalSupply eth_call",
+  "source": "agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech-packets/alusd-alchemix.json (Grok research packet; independently re-verified)",
+  "observations": {
+    "pinnedAt": "ethereum finalized block 25627228 hash 0xe5c7dd15a7c6c8261957493e6f1dcbb72ec18688afccf6ac981748edb2f824e2 timestamp 2026-07-27T22:46:47Z; AlchemistV2 0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd minimumCollateralization/transmuter/debtToken eth_call; alUSD totalSupply eth_call",
+    "metrics": {
+      "collateralizationRatio": null,
+      "liquidationCapacityRatio": null
+    },
+    "analogousMetrics": {
+      "minimumCollateralizationFloor": 2.0,
+      "alUsdTotalSupplyRaw": "10710494667779671606374346",
+      "alUsdTotalSupply": 10710494.667779673
+    }
+  },
+  "components": {
+    "collateralizationParameters": "adequate",
+    "liquidationMechanics": "limited",
+    "backstop": "limited",
+    "branchIsolation": "limited",
+    "structuralRedemption": "limited"
+  },
+  "metricDisposition": {
+    "collateralizationRatio": {
+      "state": "not-applicable",
+      "rationale": "AlchemistV2 enforces a hard per-position minimum collateralization of 2.0 (minimumCollateralization()=2e18 at block 25627228) so no mint/withdraw can leave a position below 200% collateralization, but the contract exposes no global aggregate debt or system collateralization accessor (totalDebt/getTotalDebt/totalValue-style system getters are absent; totalValue is per-owner). A single live system CR therefore cannot be read on-chain. The meaningful verifiable collateralization fact is the 200% per-position floor, recorded under collateralizationParameters. Dual-source: on-chain minimumCollateralization eth_call + Alchemist docs stating 2:1 minimum / 50% max LTV.",
+      "sourceUrl": "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd"
+    },
+    "liquidationCapacityRatio": {
+      "state": "not-applicable",
+      "rationale": "Alchemix v2 has no stability pool or committed external liquidation capital. Positions are non-forcibly-liquidatable by third parties; borrowers self-liquidate against their own collateral, and the Transmuter provides eventual 1:1 alUSD→underlying conversion from harvested yield, repayments, and self-liquidations. There is no pool-to-supply ratio expressible as committed liquidation capacity. Dual-source: Alchemix overview (no forced liquidations) + Transmuter docs (time-based 1:1 conversion, not a liquidation pool).",
+      "sourceUrl": "https://v2-docs.alchemix.fi/alchemix-ecosystem/transmuter.md"
+    }
+  },
+  "sources": [
+    "https://v2-docs.alchemix.fi/alchemix-ecosystem/alchemist.md",
+    "https://v2-docs.alchemix.fi/alchemix-ecosystem/transmuter.md",
+    "https://v2-docs.alchemix.fi/readme.md",
+    "https://etherscan.io/address/0x5C6374a2ac4EBC38DeA0Fc1F8716e5Ea1AdD94dd",
+    "https://ethereum-rpc.publicnode.com",
+    "https://etherscan.io/token/0xbc6da0fe9ad5f3b0d58160288917aa56653660e9"
+  ],
+  "reVerification": {
+    "by": "KIMI-MECH-2 verifier swarm",
+    "date": "2026-07-27",
+    "verdict": "VERIFIED-WITH-NITS",
+    "notes": "Pinned eth_calls re-run 2026-07-28 via eth.drpc.org archive (PublicNode now token-gates archive requests): minimumCollateralization=2e18, debtToken=0xBC6DA0FE9aD5f3b0d58160288917AA56653660E9, transmuter=0x1EeD2dbeb9Fc23Ab483F447F38f289cA15f79Bac (matches pr..."
+  },
+  "packetVerification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype cdp vocab OK. Independent eth_call via ethereum.publicnode.com: AlchemistV2 0x5C6374…94dd minimumCollateralization()=2e18 exact; debtToken()=alUSD 0xBC6DA0…60E9; alUSD totalSupply()=10710494667779671606374346 exact pin match. Docs re-open HTTP 200: Alchemist.md states 2:1 min / 50% max LTV and self-liquidation only; readme.md 'No Forced Liquidations'; Transmuter.md is flow-rate 1:1 conversion (yield/repayments/self-liquidations), not a stability-pool liquidation capacity. System CR and liquidationCapacityRatio not-applicable are structural (no aggregate CR getter; no committed liquidation pool) — dual-sourced on-chain + docs.",
+    "secondSource": "eth_call minimumCollateralization/debtToken/totalSupply on publicnode + v2-docs.alchemix.fi Alchemist/Transmuter/readme (independent re-open)"
+  }
+}

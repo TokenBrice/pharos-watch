@@ -1,0 +1,19 @@
+{
+  "assetId": "btcusd-btcfi",
+  "subject": "packet",
+  "verdict": "VERIFIED-WITH-NITS",
+  "metricCheck": {
+    "collateralizationRatio": "confirmed 1.308384: pin arithmetic 7974538.63/6094953.39 = 1.3083839 exact; live API re-fetch (2026-07-28) gives deposits 7,947,615.55 / BtcUSD borrow 6,094,972.49 = CR 1.30396 -- ~0.34% drift from BTC price movement and 5.5% interest accrual on the debt, methodology and handler structure (ids 0,1,3,4 BTC wrappers + id 5 BNC vs id 2 BtcUSD borrow) reproduce exactly. Supply-side check holds: DefiLlama stablecoin/183 currentChainBalances total ~$6.08M vs debt ~$6.09M (~0.25%).",
+    "liquidationCapacityRatio": "not-applicable rationale confirmed: full getBtcfiMarket response contains only per-handler deposit/borrow/price/APY fields -- no stability-pool or committed liquidation-capacity field exists in the issuer market state"
+  },
+  "componentCheck": {
+    "collateralizationParameters": "basis confirmed: market API exposes live deposit/borrow notionals enabling the measured CR; docs.bifrostnetwork.com/eng.btcfi.one and btcfi.one both re-open HTTP 200. Limited grade consistent with prior entry.",
+    "liquidationMechanics": "basis confirmed: API shows only deposit/borrow balances with no SP capacity; external-keeper liquidation model per docs. Limited grade consistent."
+  },
+  "conflicts": [
+    "packet vs existing overlay (2026-07-20): the packet curates only 2 components; the existing entry additionally carries branchIsolation (not-applicable, single shared market) and structuralRedemption (limited). The packet neither contradicts nor re-evidences these -- it is a partial update, not a full replacement.",
+    "packet vs existing overlay: the 2026-07-20 notes flag an UNRECONCILED discrepancy (documented 50% max mint / 200% per-position minimum vs observed ~133% system CR). The new CR 1.308384 is still far below 2.0 and the packet does not address the tension. It does not get worse with this packet, but the caveat must survive the merge."
+  ],
+  "mergeGuidance": "Land packet metrics (CR 1.308384 with its pin and rationale) and its two component grades, merged INTO the existing entry: retain branchIsolation not-applicable and structuralRedemption limited from the 2026-07-20 entry, and carry forward (or restate) the unresolved 50%-mint-cap vs measured-CR caveat in the notes. Do not land the packet as a wholesale replacement -- it would silently drop two curated components and the caveat.",
+  "notes": "Live values drifted as expected for a live lending market; the pinned methodology recomputes cleanly from the same endpoint. Handler 5 (BNC, price $0.0061, ~$672k) is ~8.5% of deposit value -- the existing entry's conservative BTC-only variant (1.2367) has no updated analog in the packet; optional to restate. Grades remain limited on both sides, so no unjustified regression or upgrade."
+}

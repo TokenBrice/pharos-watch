@@ -1,0 +1,24 @@
+{
+  "assetId": "cdxusd-cod3x",
+  "subject": "draft+packet",
+  "verdict": "VERIFIED",
+  "metricCheck": {
+    "collateralizationRatio": "confirmed null / not-applicable (token-level ABI verified: facilitator mint/burn + bucket accounting only, no vault/CR engine; facilitator collateral undisclosed and honestly recorded as such in blockedReason/missingSources — draft correctly uses not-applicable for the structural absence, not unavailable)",
+    "liquidationCapacityRatio": "confirmed null / not-applicable (zero liquidation/health-factor/close-factor functions in the verified Sourcify ABI)",
+    "totalSupply": "confirmed exactly 6,150,000 cdxUSD at Base block 0x2eec295 (49201813) via mainnet.base.org (raw 0x0516502b049f8237c00000); DefiLlama 418 corroborates ~$6.12M circulating at price 0.9952",
+    "getFacilitatorsList": "confirmed single facilitator 0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b",
+    "getFacilitatorBucket": "confirmed capacity 100,000,000 / level 6,150,000 drawn (raw 0x52b7d2dcc80cd2e4000000 / 0x0516502b049f8237c00000)",
+    "facilitatorSafeDust": "confirmed byte-identical: USDC 990 raw (0.00099), cbBTC 4270 raw (0.0000427), WETH/DAI/USDS/wstETH all 0 at the pinned block — the issuance Safe holds no meaningful collateral on Base"
+  },
+  "componentCheck": {
+    "collateralizationParameters": "not-applicable rationale TRUE (issuance bounded by governance-set bucket caps — 100M cap verified on-chain; no borrower collateral positions exist; blog itself states 'without requiring external user capital to initially collateralize the outgoing supply', re-read verbatim)",
+    "liquidationMechanics": "not-applicable rationale TRUE (Sourcify-verified ABI function inventory re-pulled: addFacilitator/removeFacilitator/setFacilitatorBucketCapacity/mint/burn present; no liquidation, health-check, or vault functions)",
+    "branchIsolation": "not-applicable rationale TRUE (single facilitator re-verified on-chain at the pinned block)"
+  },
+  "conflicts": [
+    "draft vs packet: packet grades collateralizationParameters 'limited' on the basis of the Cod3x marketing blog alone ('Facilitator credit limits described by Cod3x; no dual-sourced on-chain LTV/MCR table'); the draft's not-applicable is both structurally correct (verified ABI: no collateral positions exist to parameterize) and standard-compliant (a marketing blog is on the explicitly-insufficient list). Evidence supports the draft.",
+    "packet adds DefiLlama stablecoin/418 as corroboration (verified live: id 418, pegMechanism crypto-backed, Base-only, ~6.12M USD circulating — consistent with the 6.15M on-chain supply) but no other substance the draft lacks."
+  ],
+  "mergeGuidance": "Land the draft's refreshed replacement entry as-is despite outcome BLOCKED — the BLOCKED status honestly records issuer nondisclosure (facilitator collateral, redemption, backstop) while the entry itself is a fully verified replace of the 2026-07-20 review with fresh pins; the blockedReason and missingSources fields carry the nondisclosure, exactly the honest-nondisclosure pattern the standard requires. Reject the packet's collateralizationParameters limited grade (blog-only basis, structurally wrong component form); optionally note DefiLlama 418 as corroboration, but the entry is complete without it.",
+  "notes": "Nondisclosure claim independently spot-checked three ways: (1) docs.cod3x.org/llms.txt full index re-fetched — zero cdxUSD/facilitator/reserve/backing pages (docs cover CDX token, trading terminal, plugins only); (2) the GitBook ask endpoint answers 'I cannot find information about cdxUSD collateral/reserves or anything called facilitators'; (3) app.cod3x.org is a JS trading-terminal shell (build-version 20260709). The tech-stack blog remains the only mechanism description and is still live. base-rpc.publicnode.com now token-gates archive eth_call; reads re-verified via mainnet.base.org — same PublicNode-sourcing caveat as the other wave-8 entries. Dust-balance reads all reproduced exactly, so the 'backing sits in undisclosed strategy venues' conclusion stands. Existing 2026-07-20 entry has identical component structure; replace is coherent."
+}

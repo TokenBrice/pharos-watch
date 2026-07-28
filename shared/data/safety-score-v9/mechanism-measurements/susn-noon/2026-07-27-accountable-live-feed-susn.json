@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "assetId": "susn-noon",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "2026-07-27T22:54:31.000Z",
+  "source": {
+    "url": "https://cache.accountable.capital/dashboard/noon",
+    "label": "Accountable Noon real-time proof-of-solvency dashboard API (shared USN/sUSN feed; sUSN NAV published in the same live payload)",
+    "displayUrl": "https://noon.accountable.capital/",
+    "dataTimestampMs": "1785194915915",
+    "dataTimestampIso": "2026-07-27T22:52:49.915Z",
+    "attestationSnapshotTimestampMs": "1785192343200",
+    "attestationSnapshotIso": "2026-07-27T22:45:43.200Z",
+    "sharedRawCaptures": [
+      "noon-accountable-raw.json (fetched 2026-07-27T22:52:08Z; data.ts 2026-07-27T22:45:43.224Z; snapshot.ts 2026-07-27T22:30:40.217Z)",
+      "noon-accountable-raw-2.json (fetched ~2026-07-27T22:54:31Z; data.ts 2026-07-27T22:52:49.915Z; snapshot.ts 2026-07-27T22:45:43.200Z)"
+    ],
+    "wrapperEvidence": {
+      "susnVaultEthereum": "0xe24a3dc889621612422a64e6388927901608b91d",
+      "vaultNote": "ERC-4626 staking vault (verified source on Etherscan); sUSN mints only against deposited USN; transparent proxy behind a verified 172800-second timelock owned by the Noon 3-of-6 admin Safe (reads at Ethereum block 25530817, 2026-07-14, per the existing susn-noon mintAuthority review - not re-measured in this capture)."
+    }
+  },
+  "observations": {
+    "susnNavUsn": 1.2107203362158603,
+    "navContext": "The dashboard timeline's latest point reports susn = 1.2107203362158603 USN per sUSN alongside USN supply 33,932,393.29 and reserves $34,400,188.21; sUSN backing is the shared Noon reserve pool captured in the usn-noon journal.",
+    "yieldAllocation": "Noon docs: sUSN holders receive 80% of Noon's raw returns, minted daily into the USN staking contract as USN; USN holders receive no raw yield.",
+    "exitTerms": "Noon docs: all users can unstake sUSN to receive USN; unstaking is subject to a cooldown period (duration not stated on the reviewed page).",
+    "inheritedReserves": "See the usn-noon journal (same capture): collateralization 1.013786, deployment 71.18% Fasanara FTAC private credit / 10.24% DeFi lending / 7.99% T-bills / 5.23% JAAA CLO / 5.36% Other, insured $1,570,997.42 (4.63% of USN supply)."
+  },
+  "derivations": {
+    "valuationCadenceDays": {
+      "formula": "same signed-snapshot cadence as the parent feed: (1785192343200 - 1785191440217) ms = 902983 ms",
+      "value": 0.0105
+    }
+  },
+  "metricDisposition": {
+    "valuationCadenceDays": {
+      "state": "measured",
+      "value": 0.0105,
+      "rationale": "sUSN NAV is published in the same Accountable live feed; consecutive signed attestation snapshots pin a ~15-minute refresh (0.0105 days)."
+    },
+    "weightedAverageMaturityDays": {
+      "state": "unavailable",
+      "rationale": "sUSN inherits the USN reserve pool. Searched the full Accountable dashboard API payload, Noon transparency docs, liquidity docs, and product docs: no position-level maturity dates, maturity ladder, or portfolio WAM is published for the underlying pool. The disclosure should live in the Accountable dashboard position detail at https://noon.accountable.capital/."
+    }
+  },
+  "sources": [
+    "https://noon.accountable.capital/",
+    "https://cache.accountable.capital/dashboard/noon",
+    "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn",
+    "https://docs.noon.capital/security/transparency",
+    "https://docs.noon.capital/noon-the-basics/liquidity",
+    "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#code"
+  ]
+}

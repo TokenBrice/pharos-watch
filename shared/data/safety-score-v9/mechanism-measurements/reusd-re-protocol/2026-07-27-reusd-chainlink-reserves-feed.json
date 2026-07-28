@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "assetId": "reusd-re-protocol",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "2026-07-27T23:46:27Z",
+  "source": {
+    "label": "Chainlink Re Reserves feed on Avalanche (reader contract), Re app embedded RSC snapshot, and Re docs",
+    "feed": "https://data.chain.link/feeds/avalanche/mainnet/re-reserves",
+    "readerContract": "0xc79a363a3f849d8b3F6A1932f748eA9d4fB2f607",
+    "dashboard": "https://app.re.xyz/transparency"
+  },
+  "observations": {
+    "chainlinkReservesFeedRead": {
+      "rpc": "https://avalanche-c-chain-rpc.publicnode.com",
+      "block": 91393580,
+      "blockHex": "0x5728e2c",
+      "blockTimestamp": "2026-07-27T23:40:42Z",
+      "calldata": "0xfeaf968c (latestRoundData())",
+      "rawResponse": "0x0000000000000000000000000000000000000000000000010000000000000165000000000000000000000000000000000000000000000000003fa556ad569105000000000000000000000000000000000000000000000000000000006a679ef5000000000000000000000000000000000000000000000000000000006a679f010000000000000000000000000000000000000000000000010000000000000165",
+      "decoded": {
+        "roundId": "18446744073709551973",
+        "answerRaw": 17914715226673413,
+        "decimals": 8,
+        "answerUsd": 179147152.26673412,
+        "startedAt": "2026-07-27T18:09:57Z",
+        "updatedAt": "2026-07-27T18:10:09Z"
+      },
+      "note": "Answer matches the dashboard's offchain_capital for 2026-07-27 exactly (179,147,152.26673412); this is the daily Network Firm AUP result published onchain."
+    },
+    "reUsdNavOracleProbe": {
+      "rpc": "https://ethereum-rpc.publicnode.com",
+      "contract": "0x72b5760cfbe437dd01409f44055fdfb8f8121b46",
+      "block": 25627505,
+      "blockTimestamp": "2026-07-27T23:42:59Z",
+      "calldata": "0xfeaf968c (latestRoundData())",
+      "rawResponse": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f2522e5b43c6a00000000000000000000000000000000000000000000000000000000006a669ca30000000000000000000000000000000000000000000000000000000000006a669ca30000000000000000000000000000000000000000000000000000000000000000",
+      "decoded": {
+        "updatedAt": "2026-07-26T23:47:47Z",
+        "answerRaw": 17461069674782826496,
+        "decimalsRaw": 18
+      },
+      "note": "updatedAt corroborates the documented daily 00:00 UTC update cadence. The raw answer (17.46 at 18 decimals) does not correspond to the displayed reUSD NAV scale (~1.0915) and the interface is not a standard Chainlink feed (roundId 0), so the value was not used; only the update timestamp was relied on."
+    },
+    "dashboardSnapshot": {
+      "url": "https://app.re.xyz/transparency",
+      "fetchedAt": "2026-07-27T23:37:00Z",
+      "asOf": "2026-07-27T23:37:31.195Z",
+      "latestDailyTvl": {
+        "date": "2026-07-27T00:00:00.000Z",
+        "onchainCapitalUsd": 75539681.130919,
+        "offchainCapitalUsd": 179147152.26673412,
+        "premiumReceivablesUsd": 318925958.48,
+        "totalTvlUsd": 573612791.8776531
+      },
+      "itemizedOnchainRows": [
+        {
+          "chain": "Ethereum",
+          "token": "sUSDe",
+          "balance": "14,045,324.86",
+          "valueUsd": 17425444.65
+        },
+        {
+          "chain": "Ethereum",
+          "token": "USDe",
+          "balance": "252,892.76",
+          "valueUsd": 252856.06
+        },
+        {
+          "chain": "Ethereum",
+          "token": "USDC",
+          "balance": "11,446,510.63",
+          "valueUsd": 11445355.45
+        },
+        {
+          "chain": "Ethereum",
+          "token": "USDT",
+          "balance": "1,832,551.84",
+          "valueUsd": 1830572.69
+        },
+        {
+          "chain": "Ethereum",
+          "token": "sUSDS",
+          "balance": "1.82",
+          "valueUsd": 2.01
+        },
+        {
+          "chain": "Ethereum",
+          "token": "reUSD/sUSDe LP",
+          "balance": "1,353,440.23",
+          "valueUsd": 1429488.65
+        },
+        {
+          "chain": "Arbitrum",
+          "token": "sUSDe",
+          "balance": "4,321.40",
+          "valueUsd": 5361.44
+        },
+        {
+          "chain": "Arbitrum",
+          "token": "USDC",
+          "balance": "500.00",
+          "valueUsd": 499.94
+        },
+        {
+          "chain": "Avalanche",
+          "token": "USDt",
+          "balance": "4,874.01",
+          "valueUsd": 4868.95
+        }
+      ],
+      "itemizedRowsSumUsd": 32394449.84,
+      "note": "Itemized wallet rows sum to $32.39M of the $75.54M onchain capital; the remainder sits in Fireblocks institutional custody vaults (daily sweep per docs) viewable via the linked DeBank bundles. Premium receivables ($318.93M) are contractual uncollected premiums shown as a separate TVL component, not published as reUSD backing.",
+      "offchainCapitalLabel": "Offchain Capital is the total fiat held in bank and trust accounts, including Reg 114 trusts that support reinsurance contracts. Balances are verified daily by The Network Firm and published to a public oracle."
+    },
+    "reUsdPriceSeries": {
+      "source": "Re app embedded series 'reusd_price' (Token price reflecting daily yield accrual)",
+      "pointCount": 310,
+      "firstPoint": {
+        "date": "2025-09-19T00:00:00.000Z",
+        "value": 1.02752763534245
+      },
+      "lastPoint": {
+        "date": "2026-07-27T00:00:00.000Z",
+        "value": 1.0915035634083883
+      },
+      "cadence": "one dated point per day across the full series"
+    },
+    "aupReport": {
+      "url": "https://storage.googleapis.com/foundation-files/AUP-Report-2025.pdf",
+      "attestor": "The Network Firm LLP",
+      "title": "Independent Accountant's Report on Agreed-Upon Procedures",
+      "asOf": "2025-10-31T17:00:00-04:00",
+      "scope": "In-scope assets held and the Re Protocol as of the snapshot; procedures covered supporting-asset listings, custodial arrangements, bank/brokerage account balances observed with management, Fireblocks MPC wallet observation, and onchain address queries; engagement by Resilience Foundation."
+    },
+    "docsFacts": {
+      "navCadence": "reUSD's onchain price recalculates every day at 00:00 UTC; the NAV oracle is monotonic, daily upward moves capped at 20%/365, updated by a dedicated NAV updater role.",
+      "lossWaterfall": "Underwriting losses are absorbed by (1) the reinsurer's own equity, the junior layer ($77M as of June 2026), then (2) reUSDe, then (3) reUSD last; stress-modeled probability of reUSD impairment at a 135% combined ratio approximately 0.03% (issuer modeling, November 2025 LP Memo).",
+      "redemptionGates": "Instant redemptions while the onchain buffer holds more than 1% of total reUSD supply; no single redemption above 10% of the buffer; total instant redemptions capped at 20% of available redemption capacity per day; 0.06% redemption fee; quarterly queue when the buffer falls below 1%.",
+      "principalAtRiskNote": "$100M program issued 2026-04-02 under Master Terms and Conditions, five-year term maturing 2031-04-02 with rollover by mutual agreement up to five additional years; coupon 30-day average SOFR plus 500 bps (M1) / 950 bps (M2) payable annually in arrears with CIMA-mandated solvency and collateral deferral gates; notes are unsecured, limited-recourse obligations of Cover Reinsurance SPC Ltd.'s SP1 only, no cross-portfolio recourse, no recourse to general assets, no guarantees, subordinated to cedent and policyholder claims, ranking ahead of equity distributions; token holders have no direct legal claim on Regulation 114 trust assets; CIMA approval received; drawdowns/repayments emitted onchain via the Surplus Note Registry.",
+      "custodyStructure": "Onchain idle capital sweeps daily into Fireblocks institutional custody vaults under multisig policy; offchain deployed capital sits in Section 114 trust accounts, segregated bank accounts separate from the reinsurer's general assets; Cover Reinsurance SPC Ltd. is a CIMA-regulated Class B(iii) insurer acting for Segregated Portfolio #1; The Network Firm performs daily AUP attestations on offchain reserve balances and custody ownership, published via Chainlink oracles.",
+      "emergencyPause": "Pause via Access Manager (MPC 5-of-8) and Redemptions Config (MPC 3-of-5); narrow trigger criteria (reserve-asset peg dislocation, oracle failure/manipulation, exploit, custody or counterparty compromise at Fireblocks or the §114 trust custodian, regulatory action, pipeline failure); unpause requires executive and risk approval plus a 48-hour delay."
+    }
+  },
+  "derivations": {
+    "valuationCadenceDays": {
+      "value": 1,
+      "basis": "Documented daily 00:00 UTC NAV recalculation; daily NAV oracle update observed onchain (updatedAt 2026-07-26T23:47:47Z); daily Chainlink reserves feed update observed onchain (updatedAt 2026-07-27T18:10:09Z at Avalanche block 91393580); app price series has exactly one dated point per day through 2026-07-27."
+    }
+  },
+  "metricDisposition": {
+    "weightedAverageMaturityDays": {
+      "state": "unavailable",
+      "rationale": "No per-asset tenor or WAM table is published on the dashboard, in the docs, or in the 2025-10-31 AUP report; the five-year Note term (2031-04-02) is disclosed but drawn vintages/weights and premium-receivable tenors are not, so a portfolio WAM cannot be computed without fabrication."
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "value": 1
+    }
+  },
+  "sources": [
+    "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/oracles.md",
+    "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md",
+    "https://docs.re.xyz/products/about-reusd.md",
+    "https://storage.googleapis.com/foundation-files/AUP-Report-2025.pdf",
+    "https://app.re.xyz/transparency",
+    "https://data.chain.link/feeds/avalanche/mainnet/re-reserves",
+    "https://snowtrace.io/address/0xc79a363a3f849d8b3F6A1932f748eA9d4fB2f607"
+  ]
+}

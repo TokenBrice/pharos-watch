@@ -1,0 +1,30 @@
+{
+  "assetId": "srusd-reservoir",
+  "subject": "draft+packet",
+  "verdict": "DISCREPANCY",
+  "metricCheck": {
+    "weightedAverageMaturityDays": "DISCREPANCY: identical defect to rusd-reservoir (shared balance sheet). Draft's 7.9647 (0.2569256357 PT share x 31 days to live-API-confirmed 2026-08-27 expiry) is arithmetically exact but D3-inadmissible: it assumes 0-day for the 45.16% Morpho Sentora PRIME sleeve whose underlying HELOC maturities are issuer-undisclosed (draft's own journal admits this), a score-flattering estimation, not a measurement. Owner-ratified ONyc re-review of 2026-07-27 (mechanism-review-overlays-v1.json line 6409) controls: 'D3 prohibits deriving an unreported metric to fill the schema.' Packet's unavailable state verified correct; its searched-locations rationale spot-checked TRUE (raw API has no maturity/expiry keys; no doc publishes a portfolio WAM).",
+    "valuationCadenceDays": "confirmed 0 (draft): PoR docs claim a 'real-time balance sheet'; live API demonstrably updates continuously (35,590,379.25 -> 35,590,485.82 -> 35,590,555.55 across ~25h, ratio 1.008414 throughout); landed wsrusd-reservoir precedent uses 0 on the same source. Packet's 1 is an admitted banding hedge ('treated as at least daily cadence for banding') contradicting its own cited evidence.",
+    "srUsdLiabilityUsd (context)": "confirmed $714,584.80 exactly reproduced in live re-fetch; over 620,109.556 on-chain shares implies 1.15235 USD/share, matching the draft's ~1.1523 and consistent with documented daily yield accrual",
+    "systemCollateralization (context)": "confirmed 1.008414 across all snapshots",
+    "onChainAnchor": "srUSD totalSupply at block 0x1870a80 (25627264) reproduced byte-exactly (0x...835034d55deb92489f91 = 620,109.5558341466) via eth.drpc.org and eth.merkle.io",
+    "savingsTerms (context)": "confirmed verbatim against docs.reservoir.xyz/products/savings-srusd-and-wsrusd: daily interest accrual, mint/redeem anytime, immediate redemption subject to PSM liquidity, micro burn fee of one day's interest"
+  },
+  "componentCheck": {
+    "creditQuality": "basis confirmed (limited): issuer itemized API + on-chain anchors; no independent rating - D3 limited class",
+    "seniority": "basis confirmed (limited): srUSD documented as yield claim on protocol surplus, redeemable up to PSM liquidity; Credit Enforcer invariants verified on docs",
+    "legalEnforceability": "basis confirmed as precedent-consistent (limited): landed wsrusd-reservoir entry grades the same component limited for the same protocol; packet's omission is more conservative but not required",
+    "valuationCadence": "basis confirmed (limited): issuer-operated adapter valuations, no third-party NAV administrator",
+    "maturityAndLiquidity": "basis confirmed (limited): Credit Enforcer ~30-day liquidity covenant and PSM on-demand redemption verified on docs",
+    "custody": "basis confirmed (limited): adapter custody at named venues verified via live API adapter addresses/sourceLinks",
+    "recovery": "basis confirmed (limited): protocol equity/reserve section verified in PoR docs; no insurance wrap"
+  },
+  "conflicts": [
+    "draft vs packet: weightedAverageMaturityDays 7.9647 (measured) vs null/unavailable - evidence supports the PACKET (D3-prohibited derivation over 45% undisclosed-maturity private credit; ONyc 2026-07-27 owner ruling controls)",
+    "draft vs packet: valuationCadenceDays 0 vs 1 - evidence supports the DRAFT (real-time docs claim, continuously updating API, landed precedent 0); packet's 1 is an unevidenced banding hedge",
+    "draft vs packet: 7 components (draft, incl. legalEnforceability limited) vs 6 (packet) - wsrusd-reservoir precedent supports the draft's inclusion",
+    "packet adds nothing the draft lacks except the unavailable WAM disposition the draft must adopt"
+  ],
+  "mergeGuidance": "Land the draft's overlay entry (insert mode; no existing srusd-reservoir entry) with exactly two amendments: (1) metrics.weightedAverageMaturityDays -> null plus metricApplicability.weightedAverageMaturityDays = {state: 'unavailable', rationale: <packet's verified rationale>, sourceUrl: 'https://docs.reservoir.xyz/products/proof-of-reserves'} (normalize the packet's .md URL to match the draft's sources array - validator-enforced); rewrite the notes' WAM sentence to an honest unavailable disposition mirroring the ONyc 2026-07-27 language. (2) Keep valuationCadenceDays 0. Keep all seven components at limited as drafted. Do NOT land the packet as-is.",
+  "notes": "Pins re-verified 2026-07-28: raw API re-fetched (srUSD liability $714,584.80 unchanged to the cent; totals drifted <$180, ratio 1.008414); srUSD pinned eth_call reproduced byte-exactly on two independent archive RPCs (publicnode now gates archive reads - applier should note eth.drpc.org/eth.merkle.io as working alternatives). Savings-doc terms match the draft's journal verbatim. Same notes-string caveat as rusd-reservoir: the 7.9647 WAM assertion and the 'matching the wsrusd-reservoir precedent methodology' claim must be rewritten before landing - the 2026-07-20 precedent book contained no Sentora PRIME sleeve, so the 0-day treatment it used covered only genuinely on-demand money markets."
+}

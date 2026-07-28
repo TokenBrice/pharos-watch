@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "assetId": "apyusd-apyx",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "2026-07-27T22:52:00Z",
+  "source": {
+    "url": "https://api.accountable.apyx.fi/dashboard",
+    "label": "APYX Accountable proof-of-solvency dashboard (apxUSD-scoped)",
+    "access": "Fetched with browser origin/referer headers (Origin: https://accountable.apyx.fi); endpoint returned JSON. Query-string variants (dashboard?token=apyusd, dashboard?asset=apyusd) and paths /apyusd, /dashboard/apyusd, /tokens all returned HTTP 403 — no apyUSD-specific endpoint exists."
+  },
+  "observations": {
+    "dashboardTimestampMs": "1785192541861",
+    "collateralization": 0.922477,
+    "redemptionValue": 0.9155,
+    "netUsd": -18473404.12,
+    "totalReservesUsd": 308600110.7,
+    "totalSupplyUsd": 327073514.82,
+    "reservesSplitUsd": [
+      {
+        "name": "STRC",
+        "value": 189087988.65
+      },
+      {
+        "name": "Protocol Owned Liquidity",
+        "value": 48810415.17
+      },
+      {
+        "name": "Inventory",
+        "value": 39967447.71
+      },
+      {
+        "name": "Cash & Equivalents",
+        "value": 30725438.26
+      },
+      {
+        "name": "Other",
+        "value": 8820.91
+      }
+    ],
+    "supplySplit": [
+      {
+        "name": "Ethereum",
+        "value": 327073514.82
+      }
+    ]
+  },
+  "onchainReads": {
+    "rpc": "https://ethereum-rpc.publicnode.com",
+    "block": 25627196,
+    "blockHex": "0x1870a3c",
+    "blockHash": "0x4662fa18d4450995897936a723ea054d4ab8b230e457cfb0b3aed424dfdccaf2",
+    "blockTimestamp": "2026-07-27T22:40:23Z",
+    "contract": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+    "calls": [
+      {
+        "method": "asset()",
+        "calldata": "0x38d52e0f",
+        "raw": "0x00000000000000000000000098a878b1cd98131b271883b390f68d2c90674665",
+        "decoded": "apxUSD 0x98A878b1Cd98131B271883B390f68D2c90674665"
+      },
+      {
+        "method": "totalSupply()",
+        "calldata": "0x18160ddd",
+        "raw": "0x00000000000000000000000000000000000000000069ddfa4223f6245021c817",
+        "decoded": "127985470.50419214 shares"
+      },
+      {
+        "method": "totalAssets()",
+        "calldata": "0x01e1d114",
+        "raw": "0x000000000000000000000000000000000000000000947a3329b8e0e614a55f3f",
+        "decoded": "179498093.804223 apxUSD"
+      },
+      {
+        "method": "convertToAssets(1e18)",
+        "calldata": "0x07a2d13a0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+        "raw": "0x0000000000000000000000000000000000000000000000001376a374f11f782c",
+        "decoded": "1.4024880566293934 apxUSD per share"
+      },
+      {
+        "method": "paused()",
+        "calldata": "0x5c975abb",
+        "raw": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "decoded": "false"
+      }
+    ]
+  },
+  "derivations": {
+    "wrapperBackingRatio": {
+      "formula": "convertToAssets(1e18) * totalSupply / totalAssets",
+      "value": 0.9999999999999998,
+      "note": "totalAssets exceeds convertToAssets(totalSupply) by ~3.4e-8 apxUSD (rounding dust); backing is exact."
+    },
+    "vaultShareOfApxUsdSupply": {
+      "formula": "totalAssets / dashboard totalSupplyUsd",
+      "value": 0.5488,
+      "note": "179.50M of 327.07M apxUSD sits inside the apyUSD vault; the dashboard's reserve snapshot therefore already covers the vault's underlying."
+    }
+  },
+  "metricDisposition": {
+    "weightedAverageMaturityDays": {
+      "state": "unavailable",
+      "rationale": "Neither the Accountable dashboard nor the Apyx transparency surface publishes a WAM or remaining-tenor dataset; the documented principal collateral (STRC, SATA) is perpetual preferred equity, and the wrapper holds apxUSD claims on that same reserve."
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "value": 30,
+      "rationale": "Monthly Wolf & Company attestation archive (March, April, May, June 2026 reports pinned) covers the underlying reserve; the wrapper exchange rate streams continuously on-chain but values apxUSD, not the reserve independently."
+    }
+  },
+  "sources": [
+    "https://docs.apyx.fi/collateral-and-custody/third-party-attestation",
+    "https://docs.apyx.fi/collateral-and-custody/transparency",
+    "https://docs.apyx.fi/product-overview/apyusd-overview",
+    "https://docs.apyx.fi/solution-overview/apyusd-yield-distribution",
+    "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc",
+    "https://ethereum-rpc.publicnode.com"
+  ]
+}

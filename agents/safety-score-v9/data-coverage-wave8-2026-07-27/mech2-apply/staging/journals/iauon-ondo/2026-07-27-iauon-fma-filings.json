@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "assetId": "iauon-ondo",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "2026-07-27T23:46:27Z",
+  "source": {
+    "label": "FMA-approved Ondo Base Prospectus (2025-11-11) and FMA-filed IAUon Final Terms (2025-11-11, ISIN VGG7001AAS39), plus Ondo docs, Ondo app embedded data, and the iShares IAU product page",
+    "fetchedAt": "2026-07-27T23:20:00Z"
+  },
+  "observations": {
+    "finalTerms": {
+      "url": "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+      "isin": "VGG7001AAS39",
+      "baseProspectusDate": "2025-11-11",
+      "productSecurityType": "Debt instrument",
+      "totalIssueVolumeUsd": 500000000,
+      "maturityDate": "The Token is open-ended and therefore does not have a predetermined fixed maturity date. Instead, the Token provides for a redemption right in favor of the Investor (i.e. the Investor Put Option), and termination rights in favor of the Issuer (i.e. the Issuer Call Option) as set out in the Base Prospectus.",
+      "underlying": "iShares Gold Trust (IAU), ISIN US4642852044, sponsor iShares Delaware Trust Sponsor LLC (indirect subsidiary of BlackRock, Inc.), depositary The Bank of New York Mellon",
+      "underlyingMaturity": "The Underlying does not have a maturity date.",
+      "underlyingDescription": "iShares Gold Trust (IAU) aims to track the price of gold by holding physical gold bullion; not actively managed; primarily traded on NYSE Arca with high daily volume.",
+      "collateralLending": "The Issuer is not allowed to lend out Collateral, unless explicitly agreed in advance between the Issuer and the Investor.",
+      "securitiesLedgerContract": "ethereum:0x4f0ca3df1c2e6b943cf82e649d576ffe7b2fabcf"
+    },
+    "baseProspectus": {
+      "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf",
+      "securityAgent": "Ankura Trust Company, LLC, 140 Sherman Street, 4th Floor, Fairfield, Connecticut 06824",
+      "verificationAgent": "Ankura Trust Company, LLC conducts an independent verification of the Collateral",
+      "custodians": "Account Control Agreements dated 2025-07-17: Alpaca Securities LLC (Securities Account, New York law) and BitGo Trust Company, Inc. (Fiat Account, South Dakota law), each with Ankura Trust Company, LLC as Security Agent",
+      "securityInterest": "Issuer grants the Security Agent, for the benefit of the Secured Parties including Security Token holders, a continuing first-priority perfected security interest in the Collateral under a New York-law Collateral Agreement",
+      "dailyReportingCovenant": "No later than 11:59 pm GMT on the third Business Day after each Business Day the Issuer provides the Verification Agent the number and Reference Value of Underlyings, USD/stablecoin balances with account evidence, outstanding Token Redemption Amounts, and the Asset-to-Obligation Ratio including Additional Collateral; obligations commence with Calculation Day 2025-10-01; the Verification Agent reviews with read-only access to the accounts and its confirmed report is posted to https://ondo.finance/global-markets",
+      "monthlyReportingCovenant": "Monthly reporting no later than 15 days after each calendar month end, commencing with September 2025, with the Verification Agent report posted publicly",
+      "tokenType": "Security Tokens are open-ended (i.e. without predetermined fixed maturity) Tracker Certificates tracking the value of the Underlying, issued as Ledger-Based Securities under article 973d of the Swiss Code of Obligations",
+      "additionalCollateral": "Additional Collateral is contractually guaranteed to the Issuer by a guarantor, which must transfer it to a specified Custodian upon a Realisation Event",
+      "satisfactionAndDischarge": "Discharge requires Token repayment/burn plus an Officer's Certificate and an Opinion of Counsel posted publicly"
+    },
+    "ondoDocs": {
+      "trustAndTransparency": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+      "facts": "Bankruptcy-remote SPV (Ondo Global Markets (BVI) Limited) with independent director; tokens fully backed by underlying securities plus cash in transit with overcollateralization; Ankura Trust Company is verification agent (daily existence/amount verification and liability-to-reserve reconciliation, viewable online from 2025-10-01) and security agent (first-priority perfected security interest, authorized to seize collateral and distribute proceeds to tokenholders on issuer default); holdings with one or more US-registered custodial broker-dealers; daily reports, monthly reconciliations public by the 20th, annual audits; contractually obligated insurance fund via Ondo Foundation (Flux Finance, Inc.)",
+      "overview": "https://docs.ondo.finance/ondo-global-markets/overview — minting and burning are instant and atomic; 24/5 trading with off-hours sessions for select assets; total-return-tracker design"
+    },
+    "ondoAppSnapshot": {
+      "url": "https://app.ondo.finance/assets/iauon",
+      "fetchedAt": "2026-07-27T23:20:00Z",
+      "holdings": [
+        {
+          "name": "Physical Gold ()",
+          "weight": 100,
+          "updatedAtUnixMs": 1783080477000,
+          "updatedAtIso": "2026-07-03T12:07:57Z"
+        }
+      ],
+      "legalDocuments": "Final Terms, Key Information Document, Base Prospectus (current valid version), Supplement dated 2026-05-04, Sales Terms linked from the page",
+      "note": "Daily attestation report instances are published in the app's Token Holder Protections section behind onboarding; no dated report PDF could be pinned publicly."
+    },
+    "isharesIau": {
+      "url": "https://www.ishares.com/us/products/239561/ishares-gold-trust-fund",
+      "fetchedAt": "2026-07-27T23:15:00Z",
+      "navUsd": 76.49,
+      "navAsOf": "2026-07-24",
+      "ouncesInTrust": 14861142.44,
+      "tonnesInTrust": 462.23,
+      "sharesOutstanding": 790150000,
+      "thirtyDayAvgVolumeShares": 5098164,
+      "inception": "2005-01-21",
+      "exchange": "NYSE Arca",
+      "note": "IAU is a grantor trust holding physical gold bullion, not an investment company under the 1940 Act; NAV is published each trading day."
+    }
+  },
+  "derivations": {
+    "valuationCadenceDays": {
+      "value": 1,
+      "basis": "Contractual daily verification reporting in the FMA-approved Base Prospectus (Calculation Day cycle commencing 2025-10-01) plus Ondo's documented daily NAV reports and iShares' dated daily NAV publication (as of 2026-07-24); the token Reference Value is the prevailing market price of IAU."
+    }
+  },
+  "metricDisposition": {
+    "weightedAverageMaturityDays": {
+      "state": "not-applicable",
+      "rationale": "Final Terms: the token 'does not have a predetermined fixed maturity date' and 'The Underlying does not have a maturity date'; IAU is a perpetual grantor-trust claim on bullion, so no dated-claim portfolio exists to weight."
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "value": 1
+    }
+  },
+  "sources": [
+    "https://cdn.sanity.io/files/8k2tqa6n/production/f8568100c8d43609c8d83e6d57c7130d590711b0.pdf",
+    "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf",
+    "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+    "https://docs.ondo.finance/ondo-global-markets/overview",
+    "https://app.ondo.finance/assets/iauon",
+    "https://www.ishares.com/us/products/239561/ishares-gold-trust-fund"
+  ]
+}

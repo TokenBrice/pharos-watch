@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "kind": "mechanism-packet-measurement",
+  "assetId": "usdz-anzen",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "2026-07-28 re-open docs.anzen.finance introduction + rwa-partner + faq; DefiLlama 202 ~$7.83M; eth 0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+  "source": "agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech-packets/usdz-anzen.json (Grok research packet; independently re-verified)",
+  "observations": {
+    "pinnedAt": "2026-07-28 re-open docs.anzen.finance introduction + rwa-partner + faq; DefiLlama 202 ~$7.83M; eth 0xa469b7ee9ee773642b3e93e842e5d9b5baa10067",
+    "metrics": {
+      "weightedAverageMaturityDays": null,
+      "valuationCadenceDays": null
+    }
+  },
+  "components": {
+    "creditQuality": "limited",
+    "legalEnforceability": "limited",
+    "custody": "limited"
+  },
+  "metricDisposition": {
+    "weightedAverageMaturityDays": {
+      "state": "unavailable",
+      "rationale": "USDz backed 1:1 by permissioned Secured Private Credit Tokens (SPCT) over diversified U.S. private credit. No public portfolio WAM. Searched Anzen intro, FAQ, RWA partner pages, DefiLlama 202.",
+      "sourceUrl": "https://docs.anzen.finance/welcome-to-anzen/introduction.md"
+    },
+    "valuationCadenceDays": {
+      "state": "unavailable",
+      "rationale": "No dual-sourced numeric NAV/valuation cadence for SPCT marks published on open docs. Searched intro/FAQ/partner pages for daily/weekly/monthly cadence language with a pinable figure — not found.",
+      "sourceUrl": "https://docs.anzen.finance/welcome-to-anzen/faq.md"
+    }
+  },
+  "sources": [
+    "https://docs.anzen.finance/welcome-to-anzen/introduction.md",
+    "https://docs.anzen.finance/welcome-to-anzen/rwa-partner.md",
+    "https://docs.anzen.finance/welcome-to-anzen/faq.md",
+    "https://stablecoins.llama.fi/stablecoin/202",
+    "https://anzen.finance/"
+  ],
+  "reVerification": {
+    "by": "KIMI-MECH-2 verifier swarm",
+    "date": "2026-07-27",
+    "verdict": "VERIFIED",
+    "notes": "No existing overlay entry. All-unavailable packet with true rationales — exactly the honest-nondisclosure case the wave-7 standard protects; penalty signals correctly keep firing. All three component bases verified verbatim in the cited sources (intro/FAQ/r..."
+  },
+  "packetVerification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED as honest unavailable RWA packet. Archetype rwa-credit-fund vocab OK. docs.anzen.finance introduction.md + faq.md HTTP 200: USDz backed by diversified private credit / SPCT with Percent; no public portfolio WAM and no pinable numeric valuation cadence. DefiLlama 202 fiat-backed listing. Both metrics null+unavailable; limited components creditQuality/legalEnforceability/custody use valid RWA keys.",
+    "secondSource": "docs.anzen.finance introduction.md + faq.md re-open + DefiLlama 202"
+  }
+}

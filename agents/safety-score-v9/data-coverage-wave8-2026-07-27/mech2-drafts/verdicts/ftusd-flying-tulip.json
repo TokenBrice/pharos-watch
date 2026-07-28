@@ -1,0 +1,19 @@
+{
+  "assetId": "ftusd-flying-tulip",
+  "subject": "packet",
+  "verdict": "DISCREPANCY",
+  "metricCheck": {
+    "hedgeCoverageRatio": "DISCREPANCY: unavailable rationale is FALSE. The issuer's own live status API (https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false — the exact source pinned in the existing 2026-07-20 overlay) is live tonight, lastUpdated 2026-07-28T00:00:28Z, still publishing per-chain TVL, supply, collaterals, strategies, and circuitBreakerParams. The packet's search surface (docs + DefiLlama 421) simply omitted the issuer's structured telemetry API.",
+    "marginBufferPct": "DISCREPANCY: recomputed from the live API tonight: aggregate TVL $4,512,957.53 vs supply $4,511,854.15, excess $1,103.38 → marginBufferPct ≈ 0.024455 (pinned overlay value 0.027878; same methodology, ordinary drift). A measurable value exists; 'unavailable' is not honest here.",
+    "lossAbsorptionShare": "DISCREPANCY: same recomputation gives lossAbsorptionShare ≈ 0.0002446 (pinned 0.000279). The reserve-excess first-loss figure remains derivable from published issuer data."
+  },
+  "componentCheck": {
+    "venueAndCustody": "basis partially confirmed (docs llms.txt: ftUSD delta-neutral, Aave v3 conservative paths, CircuitBreaker — all present), but the grade already exists in the current overlay at the same level",
+    "unwindCapacity": "basis partially confirmed (MintAndRedeem/CircuitBreaker docs), but already in the current overlay at the same level"
+  },
+  "conflicts": [
+    "packet vs existing overlay (2026-07-20, not dated 2026-07-27 so not skipped): overlay carries measured metrics hedgeCoverageRatio=1.0, marginBufferPct=0.027878, lossAbsorptionShare=0.000279 plus 5 limited components; packet would replace all metrics with unavailable and drop hedgeReconciliation/marginAndLiquidation/lossAbsorption components. The evidence supports the OVERLAY: the measured source is still live and republishing."
+  ],
+  "mergeGuidance": "Do NOT land the packet. Retain the existing 2026-07-20 overlay entry unchanged (or, if a refresh is wanted, re-pin the same three metrics from the live dashboard API — current snapshot: marginBufferPct ≈0.024455, lossAbsorptionShare ≈0.0002446, backing still ~100% stablecoin wrappers supporting hedgeCoverageRatio=1.0 as a structural characterization). The packet adds nothing the overlay lacks and would strip measured values and three components.",
+  "notes": "The packet's core claim ('no reconciled/net delta/margin/absorption data published; honest unavailable') fails because it never re-opened api.flyingtulip.com/status/ftusd/dashboard, the load-bearing source of the existing entry. Evidence standard: unavailable requires that the issuer publishes no measurable value — false here. This is a research-surface miss, not fabrication; the docs-side component bases are real but redundant."
+}

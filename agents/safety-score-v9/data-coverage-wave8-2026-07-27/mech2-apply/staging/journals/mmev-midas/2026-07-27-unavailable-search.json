@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "kind": "mechanism-packet-measurement",
+  "assetId": "mmev-midas",
+  "archetype": "synthetic-delta-neutral",
+  "capturedAt": "2026-07-28 ethereum token 0x030b69280892c888670edcdcd8b69fd8026a0bf3; midas.app product page + docs.midas.app llms index (pricing/attestation/risk pages CF-challenged at research time); strategy manager narrative from package/product marketing",
+  "source": "agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech-packets/mmev-midas.json (Grok research packet; independently re-verified)",
+  "observations": {
+    "pinnedAt": "2026-07-28 ethereum token 0x030b69280892c888670edcdcd8b69fd8026a0bf3; midas.app product page + docs.midas.app llms index (pricing/attestation/risk pages CF-challenged at research time); strategy manager narrative from package/product marketing",
+    "metrics": {
+      "hedgeCoverageRatio": null,
+      "marginBufferPct": null,
+      "lossAbsorptionShare": null
+    }
+  },
+  "components": {},
+  "metricDisposition": {
+    "hedgeCoverageRatio": {
+      "state": "unavailable",
+      "rationale": "mMEV is a Midas NAV liquid-yield token tracking a market-neutral/manager strategy. No reconciled hedge notional or net-delta inventory is public. Searched: midas.app product page, docs.midas.app llms-listed transparency/risk pages (HTTP 403 Cloudflare at write time), CoinGecko listing. Do not invent policy-1 coverage.",
+      "sourceUrl": "https://midas.app/mmev"
+    },
+    "marginBufferPct": {
+      "state": "unavailable",
+      "rationale": "No product-specific published excess-margin or overcollateralization figure (NAV feed is not excess collateral). Same search surfaces; Midas risk-monitoring docs CF-blocked.",
+      "sourceUrl": "https://docs.midas.app/llms.txt"
+    },
+    "lossAbsorptionShare": {
+      "state": "unavailable",
+      "rationale": "No dual-sourced insurance/first-loss pool size relative to token supply. Midas legal/KID materials CF-blocked this pass for this product.",
+      "sourceUrl": "https://docs.midas.app/llms.txt"
+    }
+  },
+  "sources": [
+    "https://midas.app/mmev",
+    "https://docs.midas.app/llms.txt",
+    "https://www.coingecko.com/en/coins/midas-mmev"
+  ],
+  "reVerification": {
+    "by": "KIMI-MECH-2 verifier swarm",
+    "date": "2026-07-27",
+    "verdict": "VERIFIED",
+    "notes": "Special wind-down check resolved AGAINST the wave-6 note: three independent live signals (on-chain supply, live NAV price, rwa.xyz TAV) plus the documented manager change. The packet itself never claimed a wind-down and its unavailable rationales are true a..."
+  },
+  "packetVerification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED as honest unavailable SDN packet. Archetype synthetic-delta-neutral vocab OK; all three metrics null+unavailable. midas.app/mmev HTTP 403; docs.midas.app/llms.txt HTTP 200 without mMEV hedge/margin/insurance quantities. Empty components OK under D3.",
+    "secondSource": "docs.midas.app/llms.txt + midas.app/mmev 403"
+  }
+}
