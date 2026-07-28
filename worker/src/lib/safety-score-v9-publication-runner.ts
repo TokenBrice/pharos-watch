@@ -18,6 +18,7 @@ import {
   loadSafetyScoreV9Publication,
   loadSafetyScoreV9PublicationHealth,
   persistSafetyScoreV9Publication,
+  persistSafetyScoreV9PublicationAttempt,
   type V9PublicationAttempt,
 } from "./safety-score-v9-publication-store";
 import type { V9AssetQuarantine } from "./safety-score-v9-fact-set";
@@ -198,6 +199,7 @@ function publicationAttempt(args: {
   publicationGenerationId: string | null;
   quarantines: readonly V9AssetQuarantine[];
   affectedAssetIds: readonly string[];
+  failure?: V9PublicationAttempt["failure"];
 }): V9PublicationAttempt {
   return {
     schemaVersion: 1,
@@ -206,7 +208,45 @@ function publicationAttempt(args: {
     publicationGenerationId: args.publicationGenerationId,
     quarantines: [...args.quarantines],
     affectedAssetIds: [...args.affectedAssetIds],
+    ...(args.failure ? { failure: args.failure } : {}),
   };
+}
+
+async function persistFailedPublicationAttempt(args: {
+  db: D1Database;
+  attemptedAtSec: number;
+  failure: NonNullable<V9PublicationAttempt["failure"]>;
+  signal: AbortSignal;
+}): Promise<void> {
+  if (args.signal.aborted) return;
+  try {
+    await persistSafetyScoreV9PublicationAttempt(args.db, {
+      publicationAttempt: publicationAttempt({
+        attemptedAtSec: args.attemptedAtSec,
+        outcome: "failed",
+        publicationGenerationId: null,
+        quarantines: [],
+        affectedAssetIds: [],
+        failure: args.failure,
+      }),
+      publicationClockSec: args.attemptedAtSec,
+      signal: args.signal,
+    });
+  } catch (error) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "safety_score_v9_failed_attempt_persist_failed",
+      job: "compute-safety-score-v9",
+      message: "Safety Score V9 failed attempt metadata could not be persisted",
+      metadata: {
+        attemptedAtSec: args.attemptedAtSec,
+        stage: args.failure.stage,
+        code: safeFailure(error, "publication-write").code,
+        message: safeFailure(error, "publication-write").message,
+      },
+    });
+  }
 }
 
 function logPublicationGenerationDeltas(
@@ -470,11 +510,21 @@ export async function runSafetyScoreV9Publication(
   } catch (error) {
     const failureStage: SafetyScoreV9PublicationFailureStage =
       publicationSignal.aborted ? "aborted" : stage;
+    const failure = safeFailure(error, failureStage);
+    await persistFailedPublicationAttempt({
+      db: input.db,
+      attemptedAtSec,
+      failure: {
+        stage: failureStage,
+        ...failure,
+      },
+      signal: publicationSignal,
+    });
     return {
       status: "failed",
       attemptId,
       stage: failureStage,
-      ...safeFailure(error, failureStage),
+      ...failure,
     };
   }
 }
