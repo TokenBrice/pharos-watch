@@ -98,7 +98,9 @@ Selector creation currently fails closed with `503` because its recommendation p
 
 ## History
 
-`snapshot-safety-grade-history` appends identified V9 organic transitions and suppresses writes while publication is held. Each V2 row records model, methodology, policy, evaluation-build, base-input, publication generation, and transition kind.
+The compiler validates each asset's facts independently. An attributable asset-local build or schema failure publishes that asset as a producer-failed NR result while unaffected assets continue, provided at least 90% of active assets remain unaffected. Dependency, aggregate, evaluator, identity, and other global failures still hold the whole publication.
+
+`snapshot-safety-grade-history` appends identified V9 organic transitions and suppresses writes while publication is held. During a partial publication it also suppresses transitions for quarantined assets and their affected dependents, so operational NR and recovery edges are not recorded as organic rating changes. Each V2 row records model, methodology, policy, evaluation-build, base-input, publication generation, and transition kind.
 
 `GET /api/safety-score-history` remains the public per-asset timeline. Historical V8 and activation-boundary rows remain readable as archive data; they are never live publication inputs.
 

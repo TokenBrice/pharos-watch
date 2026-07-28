@@ -259,7 +259,8 @@ export async function computeSafetyScoreV9(
 
   return {
     status:
-      publication.status === "published"
+      publication.status === "published" &&
+      publication.outcome === "clean"
         ? "ok"
         : "degraded",
     itemCount:
@@ -282,10 +283,35 @@ export async function computeSafetyScoreV9(
       productive: publication.status === "published",
       reason:
         publication.status === "published"
-          ? "v9-publication-published"
+          ? publication.outcome === "partial"
+            ? "v9-publication-published-partial"
+            : "v9-publication-published"
           : publication.status === "held"
             ? "v9-publication-held"
             : "v9-publication-failed",
+      ...(publication.status === "published"
+        ? {
+            publications: [
+              {
+                surface: "safety-score-v9" as const,
+                generationId:
+                  publication.publicationGenerationId,
+                publishedAt: fixedInput.clockSec,
+                candidateRows: fixedInput.activeAssetIds.length,
+                publishedRows: fixedInput.activeAssetIds.length,
+                expectedRows: fixedInput.activeAssetIds.length,
+                artifactCacheKey: "report-cards:v9",
+                validationSummary: {
+                  outcome: publication.outcome,
+                  quarantinedAssetCount:
+                    publication.quarantines.length,
+                  affectedAssetCount:
+                    publication.affectedAssetIds.length,
+                },
+              },
+            ],
+          }
+        : {}),
     },
   };
 }

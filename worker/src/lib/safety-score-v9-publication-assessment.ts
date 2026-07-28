@@ -45,11 +45,20 @@ export type V9PublicationInputHealth = z.infer<
 >;
 
 export type V9PublicationAssessment =
-  | { decision: "publish"; reasons: [] }
-  | { decision: "hold"; reasons: V9PublicationHoldReason[] };
+  | {
+      decision: "publish";
+      reasons: [];
+      affectedAssetIds: string[];
+    }
+  | {
+      decision: "hold";
+      reasons: V9PublicationHoldReason[];
+      affectedAssetIds: string[];
+    };
 
 /** Minimum share of candidate assets without newly binding producer-failed deterioration. */
-const V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_SHARE = 0.9;
+const V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_NUMERATOR = 9;
+const V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_DENOMINATOR = 10;
 
 const GRADE_RANK: Record<V9Grade, number> = {
   "A+": 11,
@@ -136,23 +145,19 @@ function inputHealthReasons(
   return reasons;
 }
 
-function producerFailuresRequireGlobalHold(
-  reasons: readonly Extract<
-    V9PublicationHoldReason,
-    { code: "producer-failed-downgrade" | "producer-failed-nr" }
-  >[],
+function affectedAssetsRequireGlobalHold(
+  affectedAssetIds: ReadonlySet<string>,
   totalAssetCount: number,
 ): boolean {
-  const affectedAssetIds = [...new Set(reasons.map((reason) => reason.assetId))];
-  if (affectedAssetIds.length === 0) return false;
-  if (totalAssetCount <= 0 || affectedAssetIds.length > totalAssetCount) {
+  if (affectedAssetIds.size === 0) return false;
+  if (totalAssetCount <= 0 || affectedAssetIds.size > totalAssetCount) {
     return true;
   }
-  const healthyAssetShare =
-    (totalAssetCount - affectedAssetIds.length) / totalAssetCount;
   return (
-    healthyAssetShare <
-    V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_SHARE
+    (totalAssetCount - affectedAssetIds.size) *
+      V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_DENOMINATOR <
+    totalAssetCount *
+      V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_NUMERATOR
   );
 }
 
@@ -161,6 +166,8 @@ export function assessV9Publication(input: {
   candidate: SafetyScoreV9CurrentResponse;
   acceptedPublication: SafetyScoreV9CurrentResponse | null;
   coverageFloors: readonly V9PublicationCoverageFloor[];
+  quarantinedAssetIds?: readonly string[];
+  quarantineAffectedAssetIds?: readonly string[];
 }): V9PublicationAssessment {
   const reasons = inputHealthReasons(
     V9PublicationInputHealthSchema.parse(input.inputHealth),
@@ -178,6 +185,46 @@ export function assessV9Publication(input: {
       code: "coverage-floor-failed",
       floorIds: failedFloorIds,
     });
+  }
+
+  const directQuarantines = new Set(
+    input.quarantinedAssetIds ?? [],
+  );
+  for (const assetId of directQuarantines) {
+    const card = input.candidate.cards.find(
+      (candidate) => candidate.id === assetId,
+    );
+    if (!card) {
+      throw new Error(
+        `Quarantined Safety Score v9 asset ${assetId} is absent from the candidate`,
+      );
+    }
+    if (card.grade !== "NR" || card.score !== null) {
+      throw new Error(
+        `Quarantined Safety Score v9 asset ${assetId} is not current NR`,
+      );
+    }
+  }
+  const quarantineAffectedAssetIds = new Set(
+    input.quarantineAffectedAssetIds ?? directQuarantines,
+  );
+  for (const assetId of quarantineAffectedAssetIds) {
+    if (
+      !input.candidate.cards.some(
+        (candidate) => candidate.id === assetId,
+      )
+    ) {
+      throw new Error(
+        `Quarantine-affected Safety Score v9 asset ${assetId} is absent from the candidate`,
+      );
+    }
+  }
+  for (const assetId of directQuarantines) {
+    if (!quarantineAffectedAssetIds.has(assetId)) {
+      throw new Error(
+        `Quarantine-affected assets omit direct quarantine ${assetId}`,
+      );
+    }
   }
 
   if (
@@ -222,13 +269,47 @@ export function assessV9Publication(input: {
       }
     }
   }
+  const affectedAssetIds = new Set([
+    ...quarantineAffectedAssetIds,
+    ...producerFailureReasons.map((reason) => reason.assetId),
+  ]);
   if (
-    producerFailuresRequireGlobalHold(
-      producerFailureReasons,
+    affectedAssetsRequireGlobalHold(
+      affectedAssetIds,
       input.candidate.cards.length,
     )
   ) {
-    reasons.push(...producerFailureReasons);
+    const reasonByAssetId = new Map(
+      producerFailureReasons.map((reason) => [
+        reason.assetId,
+        reason,
+      ]),
+    );
+    for (const assetId of [...affectedAssetIds].sort()) {
+      const existing = reasonByAssetId.get(assetId);
+      if (existing) {
+        reasons.push(existing);
+        continue;
+      }
+      const parentBinding = producerFailedBindings(
+        input.candidate.cards.find((card) => card.id === assetId)!,
+      ).find(
+        (binding) =>
+          binding.source === "parent-score" &&
+          [...directQuarantines].some((quarantinedId) =>
+            binding.path.includes(`parent:${quarantinedId}:`),
+          ),
+      );
+      reasons.push({
+        code: "producer-failed-nr",
+        assetId,
+        source: parentBinding?.source ?? "reason",
+        reasonCode:
+          parentBinding?.code ?? "missing-pillar-evidence",
+        path: parentBinding?.path ?? "asset-compilation",
+        effect: "not-rated",
+      });
+    }
   }
 
   const boundedReasons = reasons
@@ -237,6 +318,14 @@ export function assessV9Publication(input: {
     )
     .slice(0, 24);
   return boundedReasons.length === 0
-    ? { decision: "publish", reasons: [] }
-    : { decision: "hold", reasons: boundedReasons };
+    ? {
+        decision: "publish",
+        reasons: [],
+        affectedAssetIds: [...affectedAssetIds].sort(),
+      }
+    : {
+        decision: "hold",
+        reasons: boundedReasons,
+        affectedAssetIds: [...affectedAssetIds].sort(),
+      };
 }

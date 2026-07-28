@@ -238,4 +238,43 @@ describe("buildDispatchSnapshotState", () => {
       ).changes,
     ).toHaveLength(1);
   });
+
+  it("marks affected rows from matching partial-publication metadata", () => {
+    const response = makeWorkerReportCardsV9Response({
+      updatedAt: nowSec - 60,
+      asOfSec: nowSec - 120,
+      cards: [makeWorkerV9Card({ grade: "NR", score: null })],
+    });
+    const state = buildDispatchSnapshotState(
+      sourceData({
+        activeSafetySource: {
+          kind: "v9",
+          expectedModel: "v9",
+          snapshot: response,
+        },
+        publicationAttempt: {
+          schemaVersion: 1,
+          attemptedAtSec: response.updatedAt,
+          outcome: "published-partial",
+          publicationGenerationId:
+            response.safetyScoreIdentity.publicationGenerationId,
+          quarantines: [
+            {
+              assetId: "usdc-circle",
+              code: "fact-build-failed",
+            },
+          ],
+          affectedAssetIds: ["usdc-circle"],
+        },
+      }),
+      nowSec,
+    );
+
+    expect(
+      state.currentSafetySnapshot?.["usdc-circle"],
+    ).toMatchObject({
+      grade: "NR",
+      operationallyAffected: true,
+    });
+  });
 });

@@ -419,6 +419,9 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       candidate: full.candidate,
       compilerFactSchemaDigest: full.compilerFactSchemaDigest,
       producerCapabilityDigest: full.producerCapabilityDigest,
+      quarantines: full.quarantines,
+      quarantineAffectedAssetIds:
+        full.quarantineAffectedAssetIds,
     });
     expect(() =>
       evaluateValidatedV9FactSet(structuredClone(full.compiledFacts), V9_CANDIDATE_POLICY_V1),

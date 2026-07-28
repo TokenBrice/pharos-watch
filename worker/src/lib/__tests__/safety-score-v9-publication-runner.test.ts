@@ -39,11 +39,14 @@ describe("Safety Score V9 publication runner", () => {
     mocks.assess.mockReset().mockReturnValue({
       decision: "publish",
       reasons: [],
+      affectedAssetIds: [],
     });
     mocks.build.mockReset().mockReturnValue({
       candidate: publication,
       compilerFactSchemaDigest: "1".repeat(64),
       producerCapabilityDigest: "2".repeat(64),
+      quarantines: [],
+      quarantineAffectedAssetIds: [],
     });
     mocks.loadHealth.mockReset().mockResolvedValue(null);
     mocks.loadPublication.mockReset().mockResolvedValue(null);
@@ -67,6 +70,9 @@ describe("Safety Score V9 publication runner", () => {
         publicationHealth: expect.objectContaining({
           status: "current",
         }),
+        publicationAttempt: expect.objectContaining({
+          outcome: "published-clean",
+        }),
       }),
     );
   });
@@ -75,6 +81,7 @@ describe("Safety Score V9 publication runner", () => {
     mocks.assess.mockReturnValue({
       decision: "hold",
       reasons: [{ code: "dex-stale" }],
+      affectedAssetIds: [],
     });
 
     const result = await runSafetyScoreV9Publication({
@@ -90,6 +97,46 @@ describe("Safety Score V9 publication runner", () => {
     expect(mocks.persist).toHaveBeenCalledWith(
       expect.anything(),
       expect.not.objectContaining({ publication: expect.anything() }),
+    );
+  });
+
+  it("publishes a bounded quarantine as a productive partial attempt", async () => {
+    mocks.build.mockReturnValue({
+      candidate: makeWorkerSafetyScoreV9Publication({
+        baseInputGenerationId: fixedInput.baseInputGenerationId,
+        publishedAtSec: fixedInput.clockSec,
+      }),
+      compilerFactSchemaDigest: "1".repeat(64),
+      producerCapabilityDigest: "2".repeat(64),
+      quarantines: [
+        { assetId: "alpha", code: "fact-build-failed" },
+      ],
+      quarantineAffectedAssetIds: ["alpha"],
+    });
+    mocks.assess.mockReturnValue({
+      decision: "publish",
+      reasons: [],
+      affectedAssetIds: ["alpha"],
+    });
+
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+    });
+
+    expect(result).toMatchObject({
+      status: "published",
+      outcome: "partial",
+      affectedAssetIds: ["alpha"],
+    });
+    expect(mocks.persist).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        publicationAttempt: expect.objectContaining({
+          outcome: "published-partial",
+          affectedAssetIds: ["alpha"],
+        }),
+      }),
     );
   });
 });

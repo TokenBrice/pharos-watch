@@ -373,7 +373,7 @@ const V9EffectiveDependencyEdgeV3Schema = z
   });
 export type V9EffectiveDependencyEdgeV3 = z.infer<typeof V9EffectiveDependencyEdgeV3Schema>;
 
-const V9EffectiveDependenciesV3Schema = z
+export const V9EffectiveDependenciesV3Schema = z
   .object({
     ...V9EffectiveDependenciesBaseFields,
     edges: canonicalArrayBy(V9EffectiveDependencyEdgeV3Schema, (edge) => edge.edgeKey),
@@ -1404,7 +1404,7 @@ const V9AssetFactsV3ObjectSchema = z
     gaps: canonicalArrayBy(V9FactGapV3Schema, (gap) => gap.gapId),
   })
   .strict();
-const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asset, ctx) =>
+export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asset, ctx) =>
   validateAssetFacts(asset, ctx),
 );
 export type V9AssetFactsV3 = z.infer<typeof V9AssetFactsV3Schema>;

@@ -18,7 +18,9 @@ import {
   loadSafetyScoreV9Publication,
   loadSafetyScoreV9PublicationHealth,
   persistSafetyScoreV9Publication,
+  type V9PublicationAttempt,
 } from "./safety-score-v9-publication-store";
+import type { V9AssetQuarantine } from "./safety-score-v9-fact-set";
 import { logWorkerEvent } from "./structured-log";
 
 export const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
@@ -50,12 +52,17 @@ export type SafetyScoreV9PublicationRunResult =
       attemptId: string;
       publicationGenerationId: string;
       candidateId: string;
+      outcome: "clean" | "partial";
+      quarantines: readonly V9AssetQuarantine[];
+      affectedAssetIds: readonly string[];
     }
   | {
       status: "held";
       attemptId: string;
       attemptedPublicationGenerationId: string;
       reasons: V9PublicationHoldReason[];
+      quarantines: readonly V9AssetQuarantine[];
+      affectedAssetIds: readonly string[];
     }
   | {
       status: "failed";
@@ -182,6 +189,23 @@ function heldPublicationHealth(args: {
         ? args.previousHealth.heldSinceSec
         : args.attemptedAtSec,
     reasons: args.reasons,
+  };
+}
+
+function publicationAttempt(args: {
+  attemptedAtSec: number;
+  outcome: V9PublicationAttempt["outcome"];
+  publicationGenerationId: string | null;
+  quarantines: readonly V9AssetQuarantine[];
+  affectedAssetIds: readonly string[];
+}): V9PublicationAttempt {
+  return {
+    schemaVersion: 1,
+    attemptedAtSec: args.attemptedAtSec,
+    outcome: args.outcome,
+    publicationGenerationId: args.publicationGenerationId,
+    quarantines: [...args.quarantines],
+    affectedAssetIds: [...args.affectedAssetIds],
   };
 }
 
@@ -348,6 +372,11 @@ export async function runSafetyScoreV9Publication(
         candidate: publication,
         acceptedPublication,
         coverageFloors,
+        quarantinedAssetIds: pipeline.quarantines.map(
+          (quarantine) => quarantine.assetId,
+        ),
+        quarantineAffectedAssetIds:
+          pipeline.quarantineAffectedAssetIds,
       });
     } catch (error) {
       assessment = {
@@ -361,6 +390,7 @@ export async function runSafetyScoreV9Publication(
             ),
           },
         ],
+        affectedAssetIds: [],
       };
     }
 
@@ -372,6 +402,13 @@ export async function runSafetyScoreV9Publication(
           acceptedPublication,
           previousHealth,
         }),
+        publicationAttempt: publicationAttempt({
+          attemptedAtSec: fixedInput.clockSec,
+          outcome: "held",
+          publicationGenerationId: null,
+          quarantines: pipeline.quarantines,
+          affectedAssetIds: assessment.affectedAssetIds,
+        }),
         publicationClockSec: fixedInput.clockSec,
         signal: publicationSignal,
       });
@@ -381,6 +418,8 @@ export async function runSafetyScoreV9Publication(
         attemptedPublicationGenerationId:
           publication.publicationGenerationId,
         reasons: assessment.reasons,
+        quarantines: pipeline.quarantines,
+        affectedAssetIds: assessment.affectedAssetIds,
       };
     }
 
@@ -393,6 +432,7 @@ export async function runSafetyScoreV9Publication(
       );
     }
     stage = "publication-write";
+    const partial = assessment.affectedAssetIds.length > 0;
     await persistSafetyScoreV9Publication(input.db, {
       publication,
       publicationHealth: {
@@ -405,6 +445,16 @@ export async function runSafetyScoreV9Publication(
         heldSinceSec: null,
         reasons: [],
       },
+      publicationAttempt: publicationAttempt({
+        attemptedAtSec: fixedInput.clockSec,
+        outcome: partial
+          ? "published-partial"
+          : "published-clean",
+        publicationGenerationId:
+          publication.publicationGenerationId,
+        quarantines: pipeline.quarantines,
+        affectedAssetIds: assessment.affectedAssetIds,
+      }),
       publicationClockSec: fixedInput.clockSec,
       signal: publicationSignal,
     });
@@ -413,6 +463,9 @@ export async function runSafetyScoreV9Publication(
       attemptId,
       publicationGenerationId: publication.publicationGenerationId,
       candidateId: publication.candidateId,
+      outcome: partial ? "partial" : "clean",
+      quarantines: pipeline.quarantines,
+      affectedAssetIds: assessment.affectedAssetIds,
     };
   } catch (error) {
     const failureStage: SafetyScoreV9PublicationFailureStage =

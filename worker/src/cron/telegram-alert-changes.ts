@@ -51,6 +51,12 @@ export function buildSafetyChanges(
   for (const [stablecoinId, row] of Object.entries(currentSafetySnapshot)) {
     const previous = safeSafetySnapshot[stablecoinId];
     if (previous?.grade === row.grade) continue;
+    if (
+      row.operationallyAffected === true ||
+      previous?.operationallyAffected === true
+    ) {
+      continue;
+    }
 
     if (
       previous?.methodologyVersion &&
