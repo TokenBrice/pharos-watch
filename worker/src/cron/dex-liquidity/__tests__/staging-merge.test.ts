@@ -5,6 +5,7 @@ import type { AuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-p
 import {
   buildPoolIdentity,
   createKnownPoolIdentityIndex,
+  registerKnownPoolExactStablecoin,
   registerKnownPoolIdentity,
   type KnownPoolIdentityIndex,
 } from "../pool-identity";
@@ -19,7 +20,7 @@ function createMockDb(results: unknown[] | (() => Promise<{ results: unknown[] }
   } as unknown as D1Database;
 }
 
-function makeKnownPoolIndex(entries: string[] = []): KnownPoolIdentityIndex {
+function makeKnownPoolIndex(entries: string[] = [], exactStablecoinId?: string): KnownPoolIdentityIndex {
   const known = createKnownPoolIdentityIndex();
   for (const entry of entries) {
     if (entry.startsWith("derived:")) {
@@ -39,15 +40,16 @@ function makeKnownPoolIndex(entries: string[] = []): KnownPoolIdentityIndex {
     }
 
     const [chain, poolAddressOrId] = entry.split(":");
-    registerKnownPoolIdentity(
-      known,
-      buildPoolIdentity({
-        chain,
-        protocol: "test",
-        poolAddressOrId,
-        tokenAddresses: [],
-      }),
-    );
+    const identity = buildPoolIdentity({
+      chain,
+      protocol: "test",
+      poolAddressOrId,
+      tokenAddresses: [],
+    });
+    registerKnownPoolIdentity(known, identity);
+    if (exactStablecoinId) {
+      registerKnownPoolExactStablecoin(known, identity, exactStablecoinId);
+    }
   }
   return known;
 }
@@ -336,7 +338,7 @@ describe("mergeStagedPools", () => {
       },
     ]);
     const metrics = new Map();
-    const knownPoolIndex = makeKnownPoolIndex([`ethereum:${exactPoolAddress}`]);
+    const knownPoolIndex = makeKnownPoolIndex([`ethereum:${exactPoolAddress}`], "usdt-tether");
     const result = await mergeStagedPools(mockDb, metrics, knownPoolIndex, 1710000000);
 
     expect(result.skippedCount).toBe(1);
@@ -758,6 +760,126 @@ describe("mergeStagedPools", () => {
     expect(metric.topPools[0]?.poolId).toBe("bsc:0xpool1");
   });
 
+  it("retains exact pool attribution for the ten reviewed cross-asset fixtures", async () => {
+    const now = 1710000000;
+    const evmPoolAddress = "0x0000000000000000000000000000000000000456";
+    const solanaPoolAddress = "9j7M8s9d5M5x6o8N9vQm3P4r5T6u7V8w9X1y2Z3a4Bc";
+    const fixtures = [
+      { stablecoinId: "aznd-mu-digital", chain: "ethereum", poolAddress: evmPoolAddress },
+      { stablecoinId: "cgusd-cygnus-finance", chain: "ethereum", poolAddress: evmPoolAddress },
+      { stablecoinId: "eur0-usual", chain: "ethereum", poolAddress: evmPoolAddress },
+      { stablecoinId: "ggbr-goldfish-gold", chain: "ethereum", poolAddress: evmPoolAddress },
+      { stablecoinId: "isc-international-stable-currency", chain: "solana", poolAddress: solanaPoolAddress },
+      { stablecoinId: "qcad-stablecorp", chain: "solana", poolAddress: solanaPoolAddress },
+      { stablecoinId: "susd-solayer", chain: "solana", poolAddress: solanaPoolAddress },
+      { stablecoinId: "usdn-smardex", chain: "ethereum", poolAddress: evmPoolAddress },
+      { stablecoinId: "usdv-solomon", chain: "solana", poolAddress: solanaPoolAddress },
+      { stablecoinId: "xnk-kinka", chain: "ethereum", poolAddress: evmPoolAddress },
+    ] as const;
+    const makeFixtureRow = (fixture: (typeof fixtures)[number]) => {
+      const isSolana = fixture.chain === "solana";
+      return {
+        pool_id: `${fixture.chain}:${fixture.poolAddress}`,
+        stablecoin_id: fixture.stablecoinId,
+        source: "gecko_terminal",
+        chain: fixture.chain,
+        protocol: isSolana ? "orca" : "uniswap-v3",
+        dex_id: isSolana ? "orca" : "uniswap-v3",
+        symbol: isSolana ? "FIXTURE/USDC" : "FIXTURE/USDT",
+        tvl_usd: 180000,
+        volume_24h: 90000,
+        quality_multiplier: 0.85,
+        pool_type: isSolana ? "orca-whirlpool" : "gt-concentrated",
+        fee_tier: isSolana ? 1 : 5,
+        balance_ratio: null,
+        is_stable: 1,
+        base_token: isSolana ? "EPjFWdd5AufqSSqeM2qA5N8Y7W5a4d8nQv1F6P5a6X1" : baseToken,
+        quote_token: isSolana ? "Es9vMFrzaCERmJfrF4H2FY6q2JvE4YJzS83p2wM8wus" : quoteToken,
+        quote_symbol: isSolana ? "USDC" : "USDT",
+        price_usd: null,
+        locked_liq_pct: null,
+        raw_json: null,
+        discovered_at: now - 86400,
+        refreshed_at: now,
+      };
+    };
+    const knownPoolIndex = makeKnownPoolIndex([
+      `ethereum:${evmPoolAddress}`,
+      `solana:${solanaPoolAddress}`,
+    ]);
+    const metrics = new Map([
+      [
+        "fixture-evm-owner",
+        {
+          topPools: [
+            {
+              poolId: `ethereum:${evmPoolAddress}`,
+              chain: "Ethereum",
+              project: "uniswap-v3",
+            },
+          ],
+        },
+      ],
+      [
+        "fixture-solana-owner",
+        {
+          topPools: [
+            {
+              poolId: `solana:${solanaPoolAddress}`,
+              chain: "Solana",
+              project: "orca",
+            },
+          ],
+        },
+      ],
+    ]);
+
+    const result = await mergeStagedPools(
+      createMockDb(fixtures.map(makeFixtureRow)),
+      metrics as never,
+      knownPoolIndex,
+      now,
+    );
+
+    expect(fixtures.map((fixture) => fixture.stablecoinId)).toEqual([
+      "aznd-mu-digital",
+      "cgusd-cygnus-finance",
+      "eur0-usual",
+      "ggbr-goldfish-gold",
+      "isc-international-stable-currency",
+      "qcad-stablecorp",
+      "susd-solayer",
+      "usdn-smardex",
+      "usdv-solomon",
+      "xnk-kinka",
+    ]);
+    expect(result.mergedCount).toBe(fixtures.length);
+    expect(result.skippedByExactIdentityCount).toBe(0);
+    for (const fixture of fixtures) {
+      expect(metrics.get(fixture.stablecoinId)?.topPools).toHaveLength(1);
+    }
+    expect(knownPoolIndex.exactStablecoinIdsByKey.get(`ethereum:${evmPoolAddress}`)).toEqual(
+      new Set([
+        "fixture-evm-owner",
+        "aznd-mu-digital",
+        "cgusd-cygnus-finance",
+        "eur0-usual",
+        "ggbr-goldfish-gold",
+        "usdn-smardex",
+        "xnk-kinka",
+      ]),
+    );
+    expect(knownPoolIndex.exactStablecoinIdsByKey.get(`solana:${solanaPoolAddress}`)).toEqual(
+      new Set([
+        "fixture-solana-owner",
+        "isc-international-stable-currency",
+        "qcad-stablecorp",
+        "susd-solayer",
+        "usdv-solomon",
+      ]),
+    );
+  });
+
   it("credits the same exact staged pool to each tracked stablecoin row", async () => {
     const now = 1710000000;
     const sharedPoolAddress = "0x0000000000000000000000000000000000000123";
@@ -1038,7 +1160,7 @@ describe("mergeStagedPools", () => {
     ]);
     const metrics = new Map();
     // Pool address is already known (from DL yields) — will be deduped for metrics
-    const knownPoolIndex = makeKnownPoolIndex([`ethereum:${secondExactPoolAddress}`]);
+    const knownPoolIndex = makeKnownPoolIndex([`ethereum:${secondExactPoolAddress}`], "usdt-tether");
 
     const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
 
@@ -1135,7 +1257,7 @@ describe("mergeStagedPools", () => {
       },
     ]);
     const metrics = new Map();
-    const knownPoolIndex = makeKnownPoolIndex([`ethereum:${secondExactPoolAddress}`]);
+    const knownPoolIndex = makeKnownPoolIndex([`ethereum:${secondExactPoolAddress}`], "usdt-tether");
 
     const result = await mergeStagedPools(mockDb, metrics as never, knownPoolIndex, now);
 

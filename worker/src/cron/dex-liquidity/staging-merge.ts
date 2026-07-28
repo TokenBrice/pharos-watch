@@ -17,6 +17,7 @@ import {
   buildPoolIdentity,
   createKnownPoolIdentityIndex,
   getIdentityDedupReason,
+  registerKnownPoolExactStablecoin,
   registerKnownPoolIdentity,
   type KnownPoolIdentityIndex,
 } from "./pool-identity";
@@ -179,6 +180,23 @@ function getStablecoinIdentityIndex(
 }
 
 type StagedPoolIdentity = ReturnType<typeof buildPoolIdentity>;
+
+function registerRetainedPoolExactStablecoins(
+  knownPoolIndex: KnownPoolIdentityIndex,
+  metrics: Map<string, LiquidityMetrics>,
+): void {
+  for (const [stablecoinId, metric] of metrics) {
+    for (const pool of metric.topPools ?? []) {
+      const identity = buildPoolIdentity({
+        chain: pool.chain,
+        protocol: pool.project,
+        poolAddressOrId: pool.poolId,
+        tokenAddresses: [],
+      });
+      registerKnownPoolExactStablecoin(knownPoolIndex, identity, stablecoinId);
+    }
+  }
+}
 
 interface StagedPoolEntry {
   dexId: string;
@@ -374,6 +392,7 @@ export async function mergeStagedPools(
   skipDimensions: StagedPoolSkipDimension[];
   priceObservations: Map<string, DexPriceObs[]>;
 }> {
+  registerRetainedPoolExactStablecoins(knownPoolIndex, metrics);
   let rows: Array<StagedPoolRow | undefined>;
   try {
     const result = await db
@@ -442,8 +461,10 @@ export async function mergeStagedPools(
     incrementStagedIdentityCounts(stagedIdentityCountsByStablecoin, stagedPool.stablecoinId, entry.identity);
   }
   const acceptedStagedIndexesByStablecoin = new Map<string, KnownPoolIdentityIndex>();
-  const acceptedStagedIdentities: StagedPoolIdentity[] = [];
-  const acceptedStagedIdentityKeys = new Set<string>();
+  const acceptedStagedIdentities = new Map<
+    string,
+    { identity: StagedPoolIdentity; stablecoinIds: Set<string> }
+  >();
 
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
     const row = rows[rowIndex];
@@ -541,7 +562,7 @@ export async function mergeStagedPools(
           ? (stagedIdentityCounts.wildcard.get(identity.optionalWildcardKey) ?? 0)
           : 0,
       },
-      { allowOptionalWildcard: true },
+      { allowOptionalWildcard: true, stablecoinId: stagedPool.stablecoinId },
     );
     const stagedDedupReason = getIdentityDedupReason(
       identity,
@@ -585,9 +606,14 @@ export async function mergeStagedPools(
       identity,
     );
     const registrationKey = poolIdentityRegistrationKey(identity);
-    if (!acceptedStagedIdentityKeys.has(registrationKey)) {
-      acceptedStagedIdentityKeys.add(registrationKey);
-      acceptedStagedIdentities.push(identity);
+    const acceptedIdentity = acceptedStagedIdentities.get(registrationKey);
+    if (acceptedIdentity) {
+      acceptedIdentity.stablecoinIds.add(stagedPool.stablecoinId);
+    } else {
+      acceptedStagedIdentities.set(registrationKey, {
+        identity,
+        stablecoinIds: new Set([stagedPool.stablecoinId]),
+      });
     }
 
     const adjustedVolume = (stagedPool.volume24h ?? 0) * confidence;
@@ -695,11 +721,13 @@ export async function mergeStagedPools(
   for (const pools of cgPoolMap.values()) mergedCount += pools.length;
   for (const pools of gtPoolMap.values()) mergedCount += pools.length;
 
-  for (const identity of acceptedStagedIdentities) {
+  for (const { identity, stablecoinIds } of acceptedStagedIdentities.values()) {
     registerKnownPoolIdentity(knownPoolIndex, identity);
+    for (const stablecoinId of stablecoinIds) {
+      registerKnownPoolExactStablecoin(knownPoolIndex, identity, stablecoinId);
+    }
   }
-  acceptedStagedIdentities.length = 0;
-  acceptedStagedIdentityKeys.clear();
+  acceptedStagedIdentities.clear();
   acceptedStagedIndexesByStablecoin.clear();
   stagedIdentityCountsByStablecoin.clear();
 

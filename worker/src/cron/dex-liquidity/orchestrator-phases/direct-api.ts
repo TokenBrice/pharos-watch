@@ -36,6 +36,7 @@ import { buildDirectApiPoolIdentity } from "../direct-source-helpers";
 import {
   countPoolIdentityKeys,
   getIdentityDedupReason,
+  registerKnownPoolExactStablecoin,
   registerKnownPoolIdentity,
   type KnownPoolIdentityIndex,
 } from "../pool-identity";
@@ -660,9 +661,20 @@ export async function integrateDirectApiLiquidityPhase(params: {
   // different TVL semantics. Keep every authoritative direct-API exact pool id
   // reserved for later exact-address dedupe, even if the direct row itself is
   // too small to contribute to scoring.
-  for (const { identity } of trackedDirectApiPoolEntries) {
+  for (const { pool, identity } of trackedDirectApiPoolEntries) {
     if (identity.exactPoolKey) {
       params.knownPoolIndex.exactKeys.add(identity.exactPoolKey);
+      for (const token of pool.tokens) {
+        const stablecoinId = resolveStablecoinIdForDexApiToken(
+          pool.chain,
+          token,
+          params.chainAddressToId,
+          params.symbolToChainScopedIds,
+        );
+        if (stablecoinId) {
+          registerKnownPoolExactStablecoin(params.knownPoolIndex, identity, stablecoinId);
+        }
+      }
     }
   }
 
