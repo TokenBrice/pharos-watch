@@ -96,6 +96,25 @@ describe("worker job attempt ledger", () => {
     expect(update?.binds[4]).toBe(20);
   });
 
+  it("classifies neutral dependency skips as completed successful attempts", async () => {
+    const db = mockD1();
+    await finishWorkerJobAttempt(db, {
+      attemptId: "attempt-a",
+      startedAtMs: Date.now(),
+      nowSec: 1_775_890_100,
+      result: {
+        status: "skipped_neutral",
+        itemCount: 0,
+        metadata: JSON.stringify({ reason: "upstream-dex-publication-unavailable" }),
+      },
+    });
+
+    const update = db.getHistory().find((entry) => entry.sql.includes("UPDATE worker_job_attempts"));
+    expect(update?.binds[0]).toBe("completed");
+    expect(update?.binds[1]).toBe("ok");
+    expect(update?.binds[4]).toBe(0);
+  });
+
   it("records lease owner and lease_until from cron lease state", async () => {
     const db = mockD1();
     await recordWorkerJobAttemptLease(db, {

@@ -64,10 +64,141 @@ describe("half-hourly charts scheduling", () => {
     );
     expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
       ["sync-dex-liquidity", "error", undefined],
-      ["prepare-safety-score-v9-input", "skipped", "upstream-failure:sync-dex-liquidity"],
+      ["prepare-safety-score-v9-input", "skipped", "upstream-dex-publication-unavailable"],
       ["sync-stablecoin-charts", "ok", undefined],
     ]);
+    expect(summary.jobs[1]?.neutral).toBe(true);
   });
+
+  it("skips V9 input neutrally when degraded DEX scoring withholds publication", async () => {
+    mocks.consumeDexLiquidityScoringStage.mockResolvedValue({
+      status: "degraded",
+      itemCount: 1,
+      metadata: JSON.stringify({
+        persistence: {
+          generationId: null,
+          skipped: true,
+          skippedReason: "defillama-yields-unavailable",
+        },
+      }),
+    });
+    const scheduledRuntime = runtime();
+
+    const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
+
+    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
+    expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
+      ["sync-dex-liquidity", "degraded", undefined],
+      ["prepare-safety-score-v9-input", "skipped", "upstream-dex-publication-unavailable"],
+      ["sync-stablecoin-charts", "ok", undefined],
+    ]);
+    expect(summary.jobs[1]?.neutral).toBe(true);
+  });
+
+  it.each([
+    { status: "error", skipped: false },
+    { status: "degraded", skipped: true },
+  ] as const)(
+    "does not trust a retained generation on a $status DEX result with skipped=$skipped",
+    async ({ status, skipped }) => {
+      mocks.consumeDexLiquidityScoringStage.mockResolvedValue({
+        status,
+        itemCount: 1,
+        metadata: JSON.stringify({
+          persistence: {
+            generationId: "dex-liquidity-stale",
+            skipped,
+            skippedReason: skipped ? "publication-withheld" : null,
+          },
+        }),
+      });
+      const scheduledRuntime = runtime();
+
+      const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
+
+      expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+      expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
+      expect(summary.jobs[1]).toMatchObject({
+        job: "prepare-safety-score-v9-input",
+        outcome: "skipped",
+        reason: "upstream-dex-publication-unavailable",
+        neutral: true,
+      });
+    },
+  );
+
+  it("skips V9 input neutrally when the DEX consumer lease is locked", async () => {
+    const scheduledRuntime = runtime();
+    vi.mocked(scheduledRuntime.runLeasedCron).mockImplementation(async (job, fn) => {
+      if (job === "sync-dex-liquidity") {
+        return { status: "skipped_locked" };
+      }
+      return fn(new AbortController().signal, vi.fn());
+    });
+
+    const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
+
+    expect(mocks.consumeDexLiquidityScoringStage).not.toHaveBeenCalled();
+    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
+    expect(summary.jobs.map((job) => [job.job, job.outcome, job.reason])).toEqual([
+      ["sync-dex-liquidity", "skipped", "lease-locked"],
+      ["prepare-safety-score-v9-input", "skipped", "upstream-dex-publication-unavailable"],
+      ["sync-stablecoin-charts", "ok", undefined],
+    ]);
+    expect(summary.jobs[1]?.neutral).toBe(true);
+  });
+
+  it("fails closed when a successful DEX result omits its generation", async () => {
+    mocks.consumeDexLiquidityScoringStage.mockResolvedValue({
+      status: "ok",
+      itemCount: 1,
+      metadata: JSON.stringify({
+        persistence: {
+          generationId: null,
+          skipped: false,
+        },
+      }),
+    });
+    const scheduledRuntime = runtime();
+
+    const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
+
+    expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+    expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
+    expect(summary.jobs[1]).toMatchObject({
+      job: "prepare-safety-score-v9-input",
+      outcome: "error",
+      error: "DEX publication result omitted its exact generation id",
+    });
+  });
+
+  it.each(["{malformed", "null", "[]"])(
+    "keeps the DEX outcome intact and fails V9 closed for metadata %s",
+    async (metadata) => {
+      mocks.consumeDexLiquidityScoringStage.mockResolvedValue({
+        status: "ok",
+        itemCount: 1,
+        metadata,
+      });
+      const scheduledRuntime = runtime();
+
+      const summary = await runHalfHourlyChartsSlot(scheduledRuntime);
+
+      expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
+      expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
+      expect(summary.jobs[0]).toMatchObject({
+        job: "sync-dex-liquidity",
+        outcome: "ok",
+      });
+      expect(summary.jobs[1]).toMatchObject({
+        job: "prepare-safety-score-v9-input",
+        outcome: "error",
+        error: "DEX publication result omitted its exact generation id",
+      });
+    },
+  );
 
   it("binds V9 input to the generation returned by a successful DEX publication", async () => {
     mocks.consumeDexLiquidityScoringStage.mockResolvedValue({

@@ -533,6 +533,7 @@ Shared cron behavior is narrower than a single worker-wide tier system:
 - A weighted slot semaphore admits at most five live external fetches, including sidecars and budget-only work; heartbeats and ledger writes are serialized per job.
 - Thrown or explicit error outcomes are recorded after terminal accounting and before rethrow.
 - Degraded returns, no-write fallbacks, and producer-specific retries remain job-owned.
+- Exact V9 input preparation is a neutral not-started child when its preceding DEX consumer throws, is locked, or intentionally withholds publication; an otherwise successful DEX result without an exact generation remains a fail-closed error.
 - Sidecar publication returns a structured terminal outcome; failures cannot be swallowed behind a successful parent result.
 
 
