@@ -142,6 +142,7 @@ function exactFixedInput(
     pegScore?: number | null;
     currentDeviationBps?: number | null;
     depegEventCoverageLimited?: boolean;
+    pegObservedAtSec?: number;
     activeDepeg?: boolean;
     activeDepegPeakBps?: number;
     routeChain?: string;
@@ -210,7 +211,7 @@ function exactFixedInput(
               : { depegEventCoverageLimited: args.depegEventCoverageLimited }),
             pegScore: args.pegScore === undefined ? 99 : args.pegScore,
             priceSource: "fixture-price",
-            priceObservedAt: observedAtSec,
+            priceObservedAt: args.pegObservedAtSec ?? observedAtSec,
             pegPct: 99,
             severityScore: 0,
             spreadPenalty: 0,
@@ -2103,6 +2104,20 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     const floorWithheld = exactFixedInput({ currentDeviationBps: null, depegEventCoverageLimited: true });
     expect(pegGaps(floorWithheld)).toMatchObject([
       { reasonCode: "peg-supply-floor-withheld", responsibility: "measured-adverse" },
+    ]);
+
+    // Staleness remains a producer failure even when the deviation was withheld.
+    const staleFloorWithheld = exactFixedInput({
+      currentDeviationBps: null,
+      depegEventCoverageLimited: true,
+      pegObservedAtSec: AS_OF_SEC - 1_000,
+    });
+    expect(pegGaps(staleFloorWithheld)).toMatchObject([
+      {
+        reasonCode: "missing-peg-input",
+        responsibility: "producer-failed",
+        observationState: "stale",
+      },
     ]);
 
     // The same null deviation without the floor flag stays a producer gap.

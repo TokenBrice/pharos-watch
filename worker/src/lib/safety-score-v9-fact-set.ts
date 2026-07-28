@@ -2695,7 +2695,18 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     peg.depegEventCoverageLimited === true &&
     !peg.activeDepeg;
   let status: V9FactStatusV2;
-  if (!complete) {
+  if (evidence.freshness.state === "stale") {
+    status = missingLocalFact(context, {
+      componentKey: "peg",
+      reasonCode: "missing-peg-input",
+      ownerDomain: "peg",
+      responsibility: "producer-failed",
+      policyRuleId: "v9.peg.current",
+      message: "The last-known peg observation is stale.",
+      observationState: "stale",
+      evidenceRefIds: [evidenceId],
+    }).status;
+  } else if (!complete) {
     status = missingLocalFact(context, {
       componentKey: "peg",
       reasonCode:
@@ -2712,17 +2723,6 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
         ? "Peg deviation is withheld by the $1M supply floor: below it, deviation fails closed by methodology design."
         : "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
       observationState: "bounded-unknown",
-      evidenceRefIds: [evidenceId],
-    }).status;
-  } else if (evidence.freshness.state === "stale") {
-    status = missingLocalFact(context, {
-      componentKey: "peg",
-      reasonCode: "missing-peg-input",
-      ownerDomain: "peg",
-      responsibility: "producer-failed",
-      policyRuleId: "v9.peg.current",
-      message: "The last-known peg observation is stale.",
-      observationState: "stale",
       evidenceRefIds: [evidenceId],
     }).status;
   } else {
