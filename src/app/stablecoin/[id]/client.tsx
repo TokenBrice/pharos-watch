@@ -15,6 +15,7 @@ import {
 } from "@/hooks/use-stablecoin-detail-view-model";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
+import type { MechanismReviewView } from "@/lib/mechanism-review";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { DetailContent } from "./detail-content";
@@ -67,6 +68,7 @@ interface StablecoinDetailClientProps {
   logoSrc?: string;
   collateralUsageEntries?: readonly CollateralUsageEntry[];
   mechanismCollateralization?: MechanismCollateralizationView | null;
+  mechanismReview?: MechanismReviewView | null;
   staticProfileContent?: ReactNode;
   exploreNextContent?: ReactNode;
   faqContent?: ReactNode;
@@ -80,6 +82,7 @@ export default function StablecoinDetailClient({
   logoSrc,
   collateralUsageEntries = [],
   mechanismCollateralization = null,
+  mechanismReview = null,
   staticProfileContent = null,
   exploreNextContent = null,
   faqContent = null,
@@ -139,6 +142,7 @@ export default function StablecoinDetailClient({
       historyGateRef={historyGateRef}
       onActiveBannerChange={setActiveBannerId}
       mechanismCollateralization={mechanismCollateralization}
+      mechanismReview={mechanismReview}
       onFeedbackOpenChange={setFeedbackOpen}
       overviewGateRef={overviewGateRef}
       staticHasCollateralUsage={staticCoin.hasCollateralUsage}

@@ -23,6 +23,7 @@ import { FaqSection } from "@/components/faq-section";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import { buildStablecoinDetailClientCoin } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import { buildMechanismCollateralizationView } from "@/lib/mechanism-collateralization";
+import { buildMechanismReviewView } from "@/lib/mechanism-review";
 
 const typedSummaries = aiSummaries as Record<string, { title: string; text: string; updatedAt: string }>;
 
@@ -253,6 +254,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           logoSrc={logosById[coin.id]}
           collateralUsageEntries={collateralUsageEntries}
           mechanismCollateralization={buildMechanismCollateralizationView(id)}
+          mechanismReview={buildMechanismReviewView(id)}
           exploreNextContent={
             <ExploreNextSection
               coin={coin}

@@ -19,6 +19,7 @@ import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-varian
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
+import type { MechanismReviewView } from "@/lib/mechanism-review";
 import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
 import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
@@ -55,6 +56,7 @@ interface DetailContentProps {
   heroRef: RefObject<HTMLDivElement | null>;
   historyGateRef: Ref<HTMLDivElement>;
   mechanismCollateralization: MechanismCollateralizationView | null;
+  mechanismReview: MechanismReviewView | null;
   onActiveBannerChange: (id: string) => void;
   onFeedbackOpenChange: (open: boolean) => void;
   overviewGateRef: Ref<HTMLDivElement>;
@@ -188,6 +190,7 @@ export function DetailContent({
   heroRef,
   historyGateRef,
   mechanismCollateralization,
+  mechanismReview,
   onActiveBannerChange,
   onFeedbackOpenChange,
   overviewGateRef,
@@ -279,6 +282,7 @@ export function DetailContent({
               collateralUsageEntries={collateralUsageEntries}
               frozenNote={frozenNote}
               hasCollateralUsage={staticHasCollateralUsage}
+              mechanismReview={mechanismReview}
               overviewGateRef={overviewGateRef}
               reservesPanel={reservesPanel}
               variantRelationshipCard={variantRelationshipCard}
