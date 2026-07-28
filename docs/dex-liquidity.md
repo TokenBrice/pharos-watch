@@ -339,6 +339,12 @@ runtime-code response is semantic code absence and is never eligible for
 last-known-good retention; an unavailable RPC response remains an operational
 failure subject to the bounded freshness policy.
 
+Reviewed Curve composite targets also value quote outputs independently of
+Curve pool metadata. In particular, the Avalanche NXUSD metapool values its
+avUSDC output with the tracked USDC reference; the Curve API's underlying-coin
+price is retained only with source metadata and cannot change measured cost or
+cost-bound results.
+
 Address-grade plain `factory-stable-ng` pools that initially gate as
 rate-bearing may instead contribute an exact reserve model only when the source
 stage pins a fresh block, reads `get_balances()`, `stored_rates()`, `A()`,

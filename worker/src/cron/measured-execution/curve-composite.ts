@@ -84,6 +84,7 @@ interface CurveCompositeToken {
   symbol: string;
   decimals: number;
   trackedAssetId?: string;
+  referenceAssetId?: string;
 }
 
 interface CurveCompositePolicyBase {
@@ -318,6 +319,7 @@ export const CURVE_NXUSD_METAPOOL_POLICY: CurveMetapoolPolicy = {
       address: "0x46a51127c3ce23fb7ab1de06226147f446e4a857",
       symbol: "avUSDC",
       decimals: 6,
+      referenceAssetId: "usdc-circle",
     },
     {
       address: "0x532e6537fea298397212f09a61e03311686f548e",
@@ -520,9 +522,10 @@ export function buildCurveCompositeMeasuredExecutionTarget(input: {
   const tokenOut = policy.executionTokens[policy.outputIndex];
   if (!tokenIn || !tokenOut || tokenIn.trackedAssetId !== policy.stablecoinId) return null;
   const inputPrice = input.stablecoinPriceById?.get(policy.stablecoinId);
-  const outputPrice = tokenOut.trackedAssetId
-    ? input.stablecoinPriceById?.get(tokenOut.trackedAssetId)
-    : curveData.underlyingCoins?.[policy.outputIndex]?.usdPrice;
+  const outputReferenceAssetId = tokenOut.trackedAssetId ?? tokenOut.referenceAssetId;
+  const outputPrice = outputReferenceAssetId
+    ? input.stablecoinPriceById?.get(outputReferenceAssetId)
+    : undefined;
   if (
     inputPrice == null ||
     outputPrice == null ||

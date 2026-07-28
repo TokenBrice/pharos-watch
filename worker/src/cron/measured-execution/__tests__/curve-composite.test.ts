@@ -559,7 +559,7 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
         address: CURVE_NXUSD_METAPOOL_POLICY.executionTokens[2].address,
         symbol: "avUSDC",
         decimals: 6,
-        referencePriceUsd: 0.99986,
+        referencePriceUsd: 1,
       },
       retainedTvlUsd: 328_267,
     });
@@ -570,6 +570,23 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
       inputIndex: 0,
       outputIndex: 2,
       quoteFunction: "get_dy_underlying",
+    });
+  });
+
+  it("does not value NXUSD output with the Curve API underlying price", () => {
+    const target = nxusdTarget(
+      CURVE_NXUSD_METAPOOL_POLICY.executionTokens.map((token, index) => ({
+        address: token.address,
+        symbol: token.symbol,
+        decimals: token.decimals,
+        usdPrice: index === CURVE_NXUSD_METAPOOL_POLICY.outputIndex ? 1.05 : 1,
+      })),
+    );
+
+    expect(target).not.toBeNull();
+    expect(target?.tokenOut).toMatchObject({
+      symbol: "avUSDC",
+      referencePriceUsd: 1,
     });
   });
 
@@ -903,7 +920,7 @@ describe("reviewed Curve rate-bearing and metapool targets", () => {
     expect(outcomes.every((outcome) => outcome.point != null)).toBe(true);
     expect(outcomes[0]!.point?.outputUsd).toBeGreaterThan(990);
     expect(outcomes[1]!.point?.outputUsd).toBe(999);
-    expect(outcomes[2]!.point?.outputUsd).toBe(998.86014);
+    expect(outcomes[2]!.point?.outputUsd).toBe(999);
     expect(executeMulticall).toHaveBeenCalledTimes(2);
     expect(executeMulticall.mock.calls.map(([call]) => call.chain)).toEqual([
       "ethereum",
