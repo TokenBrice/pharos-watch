@@ -1980,11 +1980,24 @@ function buildRoute(
     };
   }
 
+  // Producer eligibility is evaluated against the captured route semantics.
+  // V9 reviews may conservatively worsen those semantics (for example, an
+  // atomic producer route can become an unbounded queue), so re-apply the
+  // score-bearing contract after the review has been materialized.
+  const reviewedSemanticsAreScoreable =
+    args.review.holderAccess !== "unknown" &&
+    args.review.executionModel !== "unknown" &&
+    args.review.executionCertainty !== "unknown" &&
+    args.observation.confidence !== "unknown" &&
+    args.review.settlementModel !== "unknown" &&
+    args.review.physicalResourceKeys.length > 0 &&
+    (args.review.settlementModel === "atomic" || args.review.settlementSlaSec !== null);
   const scoreEligible =
     args.observation.scoreEligible &&
     routeState === "known" &&
     output.status.observationState === "known" &&
-    args.review.coverageClass !== "diagnostic";
+    args.review.coverageClass !== "diagnostic" &&
+    reviewedSemanticsAreScoreable;
   return {
     routeKey,
     routeId: args.observation.routeId,

@@ -357,6 +357,34 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     });
   });
 
+  it("projects the eEARN atomic producer route onto its unbounded queued v9 review", () => {
+    const row = liveDirectRow("onchain");
+    const observation = row.capacityProfile!.exitRouteObservations![0]!;
+    row.stablecoinId = "eearn-ember";
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      exitRouteObservations: [
+        {
+          ...observation,
+          routeId: "redemption:eearn-ember:stablecoin-redeem",
+          scope: { kind: "protocol", protocol: "eearn-ember", chain: "ethereum" },
+          output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
+          settlementHorizonSec: 300,
+          scoreEligible: true,
+        },
+      ],
+    };
+
+    expect(row).toMatchObject({ settlementModel: "atomic", queueEnabled: false });
+    expect(buildSafetyScoreV9RouteReviews(fixedInputStub(row), row.stablecoinId)[0]).toMatchObject({
+      lane: "redemption",
+      settlementModel: "queued",
+      settlementSlaSec: null,
+      settlementHorizonSec: 30 * 86_400,
+      coverageClass: "exact-lower-bound",
+    });
+  });
+
   it("values a resolved stable-basket output at the weakest component's price", () => {
     const row = supplyFullRow({ stablecoinId: "dai-makerdao" });
     const derived = buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), "dai-makerdao")[0]!;

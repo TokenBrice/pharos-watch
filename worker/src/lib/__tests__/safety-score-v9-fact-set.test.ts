@@ -525,7 +525,10 @@ function routeReview(routeId = "dex:primary", observedAt = OBSERVED_AT_SEC) {
   };
 }
 
-function queuedRedemptionFixedInput(settlementHorizonSec = 30 * 86_400) {
+function queuedRedemptionFixedInput(
+  settlementHorizonSec = 30 * 86_400,
+  scoreEligible = false,
+) {
   const base = exactFixedInput();
   const observation: ExitRouteObservation = {
     routeId: "redemption:alpha:queue",
@@ -539,7 +542,7 @@ function queuedRedemptionFixedInput(settlementHorizonSec = 30 * 86_400) {
     output: { kind: "fiat", currency: "USD" },
     evidenceKind: "live-reserve-state",
     confidence: "high",
-    scoreEligible: false,
+    scoreEligible,
     observedAt: OBSERVED_AT_SEC,
     freshnessSeconds: AS_OF_SEC - OBSERVED_AT_SEC,
     commonModeKeys: ["issuer:alpha"],
@@ -2194,6 +2197,27 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       horizon: "queued",
       settlementDelaySec: 30 * 86_400,
       capsApplied: expect.arrayContaining(["queue-backlog:0.65", "minimum-redeem:0.75"]),
+    });
+  });
+
+  it("withdraws producer eligibility when the v9 review has an unbounded settlement queue", () => {
+    const fixed = queuedRedemptionFixedInput(300, true);
+    const reviewed = structuredClone(extension());
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha").map((review) => ({
+      ...review,
+      settlementModel: "queued",
+      settlementSlaSec: null,
+      settlementHorizonSec: 30 * 86_400,
+    }));
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+    const redemption = compiled.assets[0]!.exitRoutes.find((route) => route.lane === "redemption")!;
+    expect(redemption).toMatchObject({
+      settlementModel: "queued",
+      settlementSlaSec: null,
+      scoreEligible: false,
+      request: { settlementHorizonSec: 30 * 86_400 },
     });
   });
 
