@@ -3456,10 +3456,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ).toMatchObject({ freshness: { state: "stale", maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC } });
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
-    // Wave-7 sweep 2026-07-27: FX peg classification/format ripples rotated
-    // the V8 evaluation build alongside the v5.94 liquidity methodology.
+    // Wave-8 residuals 2026-07-28: retiring XAI from the active registry
+    // rotated the V8 evaluation build.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "937cdf1cc326a06eb317480f9b276719c616828594acf88e34f6cd6e77b235d4",
+      "97dd6789df8b70b2e22d66dc0cd7f0d66f479cf9dd41e041bc9220722fb0455f",
     );
   });
 
