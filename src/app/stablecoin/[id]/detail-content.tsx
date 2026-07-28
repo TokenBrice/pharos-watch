@@ -18,10 +18,16 @@ import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
 import { PriceTransparencyCard } from "@/components/stablecoin-detail/price-transparency-card";
 import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
+import { BackingMechanicsCard } from "@/components/stablecoin-detail/backing-mechanics-card";
 import { CollateralizationCard } from "@/components/stablecoin-detail/collateralization-card";
+import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
+import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
 import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
+import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
+import type { TransferReviewView } from "@/lib/transfer-review";
+import { buildFailureDomainsView } from "@/lib/failure-domains";
 import { buildSafetyScoreV9AccessRows } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { RailSafetySummary } from "@/components/stablecoin-detail/rail-safety-summary";
 import { UnderlyingAssetCard } from "@/components/stablecoin-detail/underlying-asset-card";
@@ -58,8 +64,10 @@ interface DetailContentProps {
   feedbackOpen: boolean;
   heroRef: RefObject<HTMLDivElement | null>;
   historyGateRef: Ref<HTMLDivElement>;
+  mechanismBacking: MechanismBackingView | null;
   mechanismCollateralization: MechanismCollateralizationView | null;
   mechanismReview: MechanismReviewView | null;
+  transferReview: TransferReviewView | null;
   onActiveBannerChange: (id: string) => void;
   onFeedbackOpenChange: (open: boolean) => void;
   overviewGateRef: Ref<HTMLDivElement>;
@@ -147,13 +155,17 @@ function DetailNavigation({
 
 function DetailSummaryRail({
   heroModel,
+  mechanismBacking,
   mechanismCollateralization,
   mechanismReview,
+  transferReview,
   viewModel,
 }: {
   heroModel: ReturnType<typeof buildStablecoinDetailHeroViewModel>;
+  mechanismBacking: MechanismBackingView | null;
   mechanismCollateralization: MechanismCollateralizationView | null;
   mechanismReview: MechanismReviewView | null;
+  transferReview: TransferReviewView | null;
   viewModel: ReadyDetailViewModel;
 }) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.dexPriceCheck);
@@ -163,8 +175,13 @@ function DetailSummaryRail({
     <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
       <div className="space-y-4 pb-4">
         <RailSafetySummary items={heroModel.signalRailItems} />
+        {viewModel.reportCard ? <ScoreConstructionPanel card={viewModel.reportCard} compact /> : null}
         {viewModel.reportCard ? (
-          <AccessPosturePanel rows={buildSafetyScoreV9AccessRows(viewModel.reportCard)} compact />
+          <AccessPosturePanel
+            rows={buildSafetyScoreV9AccessRows(viewModel.reportCard)}
+            review={transferReview}
+            compact
+          />
         ) : null}
         <CollateralizationCard
           reviewed={mechanismCollateralization}
@@ -172,10 +189,12 @@ function DetailSummaryRail({
           liveLiquidationCapacityRatio={liveLiquidationCapacityRatio}
           liveAtSec={viewModel.reserves?.liveAt ?? null}
         />
+        <BackingMechanicsCard view={mechanismBacking} />
         <TapeForCoinTeaser coinId={viewModel.id} />
         {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
           <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />
         ) : null}
+        <FailureDomainsCard view={buildFailureDomainsView(viewModel.reportCard)} />
         {hasPriceTransparency ? (
           <PriceTransparencyCard
             coinData={viewModel.coinData}
@@ -200,8 +219,10 @@ export function DetailContent({
   feedbackOpen,
   heroRef,
   historyGateRef,
+  mechanismBacking,
   mechanismCollateralization,
   mechanismReview,
+  transferReview,
   onActiveBannerChange,
   onFeedbackOpenChange,
   overviewGateRef,
@@ -294,6 +315,7 @@ export function DetailContent({
               frozenNote={frozenNote}
               hasCollateralUsage={staticHasCollateralUsage}
               mechanismReview={mechanismReview}
+              transferReview={transferReview}
               overviewGateRef={overviewGateRef}
               reservesPanel={reservesPanel}
               variantRelationshipCard={variantRelationshipCard}
@@ -317,8 +339,10 @@ export function DetailContent({
         </div>
         <DetailSummaryRail
           heroModel={heroModel}
+          mechanismBacking={mechanismBacking}
           mechanismCollateralization={mechanismCollateralization}
           mechanismReview={mechanismReview}
+          transferReview={transferReview}
           viewModel={viewModel}
         />
       </div>

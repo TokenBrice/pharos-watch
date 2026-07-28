@@ -12,6 +12,7 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
+import type { TransferReviewView } from "@/lib/transfer-review";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import {
@@ -34,6 +35,7 @@ interface DetailRiskContextSectionsProps {
   frozenNote: ReactNode;
   hasCollateralUsage: boolean;
   mechanismReview: MechanismReviewView | null;
+  transferReview: TransferReviewView | null;
   overviewGateRef: Ref<HTMLDivElement>;
   reservesPanel: ReactNode;
   variantRelationshipCard: ReactNode;
@@ -46,6 +48,7 @@ export function DetailRiskContextSections({
   frozenNote,
   hasCollateralUsage,
   mechanismReview,
+  transferReview,
   overviewGateRef,
   reservesPanel,
   variantRelationshipCard,
@@ -101,6 +104,7 @@ export function DetailRiskContextSections({
               updatedAtMs={viewModel.reportCardUpdatedAt}
               stablecoinName={viewModel.coin.name}
               rightColumn={reservesPanel}
+              transferReview={transferReview}
             />
           ) : null}
         </section>
