@@ -33,6 +33,12 @@ export interface FeatureHeroSplitProps {
   sub?: React.ReactNode;
   /** Right slot: the drawn metaphor (inline SVG) or staged live chart. */
   children: React.ReactNode;
+  /**
+   * Optional full-width rail under both columns, separated by a hairline. For
+   * secondary context that belongs to the hero but must not compete with the
+   * beam (coverage counts, provenance, evaluated inputs).
+   */
+  footer?: React.ReactNode;
   /** Accessible group label for the hero card. */
   ariaLabel?: string;
   /** Put the decision summary before the visual on narrow screens. */
@@ -48,13 +54,16 @@ export function FeatureHeroSplit({
   subKicker,
   sub,
   children,
+  footer,
   ariaLabel,
   mobileSubBeforeVisual = false,
 }: FeatureHeroSplitProps): React.JSX.Element {
   const hasSub = subKicker != null || sub != null;
   return (
+    // The third row is `auto`, so it collapses to zero height when no footer is
+    // passed and the two-row composition is unchanged for existing consumers.
     <div
-      className="pharos-card-shell relative grid grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:grid-rows-[auto_1fr]"
+      className="pharos-card-shell relative grid grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:grid-rows-[auto_1fr_auto]"
       role="group"
       aria-label={ariaLabel}
     >
@@ -82,6 +91,12 @@ export function FeatureHeroSplit({
         >
           {subKicker ? <p className="pharos-kicker">{subKicker}</p> : null}
           {sub}
+        </div>
+      ) : null}
+
+      {footer ? (
+        <div className="order-last border-t border-border/50 p-5 sm:p-6 lg:order-none lg:col-span-2 lg:col-start-1 lg:row-start-3 lg:px-7 lg:py-5">
+          {footer}
         </div>
       ) : null}
     </div>
