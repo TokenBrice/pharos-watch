@@ -668,8 +668,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli); OpenAI Codex NR-recovery review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "verified",
     "sources": [
       {
@@ -685,9 +685,9 @@
         "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
       }
     ],
-    "rationale": "Ondo identifies SLVon as economic exposure to iShares Silver Trust and states that each Ondo tokenized stock is fully backed by the underlying security together with cash in transit. Ankura Trust Company independently verifies the existence and amount of underlying securities and reconciles investor liabilities to reserves daily. The current SLV share inventory and cash-in-transit weight are not published in the reviewed durable sources, so they remain an allocation uncertainty rather than unidentified reserve categories.",
+    "rationale": "Ondo identifies SLVon as economic exposure to iShares Silver Trust and states that each Ondo tokenized stock is fully backed by the underlying security together with cash in transit. Ankura Trust Company independently verifies the existence and amount of underlying securities and reconciles investor liabilities to reserves daily. The current SLV share inventory and cash-in-transit weight are not published in the reviewed durable sources, so they remain an allocation uncertainty rather than unidentified reserve categories. Write-time re-open 2026-07-28: Ondo Global Markets trust-and-transparency docs still describe bankruptcy-remote tokenized stock structure and Ankura trust; overview/important-notes corroborate. SLVon is equity-tracking not a split cash reserve \u2192 modeled as 100% unknown-weight RWA equity exposure (ku=100 for constituent portfolio).",
     "compositionBasis": "Ondo SLVon product disclosure and Ondo Global Markets backing and transparency documentation",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The aggregate basket is known to contain SLV shares and cash in transit, but their current weights are not published. Because the 100% reserve entry cannot be split between those categories, the full basket remains known-unknown for composition scoring; custodial broker-dealer identities and provider allocation are also undisclosed.",
     "knownUnknownExposurePct": 100,

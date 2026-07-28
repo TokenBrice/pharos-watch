@@ -153,7 +153,7 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "IAUon on Solana shares the Ondo program mint authority PDA 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD (no SOL account exists at the address \u2014 a program-derived mint authority, read 2026-07-20 via Solana RPC); freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK is Ondo's. DefiLlama attributes Solana IAUon supply to Ondo's cross-chain deployment.",
+        "reviewNote": "IAUon on Solana shares the Ondo program mint authority PDA 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD (no SOL account exists at the address — a program-derived mint authority, read 2026-07-20 via Solana RPC); freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK is Ondo's. DefiLlama attributes Solana IAUon supply to Ondo's cross-chain deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "controllerChain": "solana",
@@ -237,8 +237,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure); OpenAI Codex NR-recovery review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "verified",
     "sources": [
       {
@@ -258,9 +258,9 @@
         "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
       }
     ],
-    "rationale": "Ondo identifies IAUon as economic exposure to iShares Gold Trust and states that each Ondo tokenized stock is fully backed by the underlying security together with cash in transit. Ankura Trust Company independently verifies the existence and amount of underlying securities and reconciles investor liabilities to reserves daily. The current IAU share inventory and cash-in-transit weight are not published in the reviewed durable sources, so they remain an allocation uncertainty rather than unidentified reserve categories.",
+    "rationale": "Write-time re-open 2026-07-28 of Ondo Stocks overview and trust-and-transparency docs (Global Markets URLs redirect to ondo-stocks paths): each Ondo tokenized stock is fully backed by the underlying security together with cash in transit; Ankura Trust verifies holdings. IAUon product page remains live. Cash vs share weights undisclosed → 100% IAU fund-share envelope with knownUnknownExposurePct=100.",
     "compositionBasis": "Ondo IAUon product disclosure and Ondo Global Markets backing and transparency documentation",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The aggregate basket is known to contain IAU shares and cash in transit, but their current weights are not published. Because the 100% reserve entry cannot be split between those categories, the full basket remains known-unknown for composition scoring; custodial broker-dealer identities and provider allocation are also undisclosed.",
     "knownUnknownExposurePct": 100,
@@ -324,7 +324,7 @@
     "summary": "IAUon uses issuer-controlled minting across Ethereum, BSC, HyperEVM, and Solana. The three EVM tokens are BeaconProxy deployments whose shared Ondo beacons are upgradeable through 2-hour TimelockControllers; on BSC and HyperEVM those timelocks propose via a 4-of-7 Ondo Safe, execute/cancel via a 1-of-9 Ondo Safe plus one EOA, and are administered by a 5-of-9 Ondo Safe. Direct minters are the per-chain GMTokenManager (administered by the chain timelock) and the per-chain OndoOFT (owned by an OndoOwner contract whose DEFAULT_ADMIN_ROLE is the 4-of-7 Safe). On Solana the mint authority is the Ondo GM program PDA and the GM program's upgrade authority is a bare system account whose off-chain key custody is not on-chain verifiable.",
     "controls": [
       {
-        "label": "GMTokenManager (Ethereum) \u2014 primary minter",
+        "label": "GMTokenManager (Ethereum) — primary minter",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",
@@ -342,7 +342,7 @@
         ]
       },
       {
-        "label": "OndoOFT (Ethereum) \u2014 LayerZero cross-chain minter",
+        "label": "OndoOFT (Ethereum) — LayerZero cross-chain minter",
         "role": "direct-minter",
         "authorityType": "issuer-backend",
         "directMintAbility": "direct",

@@ -97,7 +97,7 @@ For the deceptive-content category specifically, build a mental model of what a 
 ### Step 5 — Harden, ship, verify
 
 1. Commit the hardening with a clear `refactor(security):` or `fix(security):` prefix referencing the incident date.
-2. Push to `main`. The pre-push merge-gate runs `validate:prebuild` + the Pages build/validation stage (which now includes `check:phishing-signatures`, run against the built `out/` HTML) + SEO check.
+2. Publish through the protected PR gate. The production Pages workflow builds once, then runs `check:phishing-signatures` against `out/` plus the SEO checks.
 3. Wait for the target-SHA Pages release to succeed and for the deployment-specific release-marker check to confirm that Cloudflare published that commit. A fixed sleep is not release evidence; see [Deployment Process](../deployment-process.md) for the standard release and post-publish gates.
 4. Verify the target-SHA HTML is live:
    ```bash

@@ -175,8 +175,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -192,9 +192,9 @@
         "url": "https://www.iog.io/news/djed-implementing-algorithmic-stablecoins-for-proven-price-stability"
       }
     ],
-    "rationale": "Current COTI and IOG materials identify ADA as DJED's exogenous reserve and SHEN as the reserve coin; the 400%-800% band governs mint and burn. The reviewed public materials do not provide a current reconciled ADA balance or detailed operational custody account information, so the reserve remains one fixed ADA envelope.",
+    "rationale": "Current COTI and IOG materials identify ADA as DJED's exogenous reserve and SHEN as the reserve coin; the 400%-800% band governs mint and burn. The reviewed public materials do not provide a current reconciled ADA balance or detailed operational custody account information, so the reserve remains one fixed ADA envelope. Write-time re-open 2026-07-28: COTI FAQ overcollateralization.md states DJED uses exogenous ADA collateral with 400\u2013800% overcollateralization; minting-and-burning.md confirms mint/burn against ADA reserves at djed.xyz. 100% ADA cryptoasset reserve envelope retained.",
     "compositionBasis": "COTI Djed overcollateralization and minting/burning disclosures",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve asset class and protocol reserve contract are identified, but current ADA balance, reserve account state, and operational custody details are not disclosed in the reviewed public sources.",
     "knownUnknownExposurePct": 0

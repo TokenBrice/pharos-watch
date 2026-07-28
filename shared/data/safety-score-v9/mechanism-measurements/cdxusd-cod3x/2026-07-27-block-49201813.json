@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "kind": "onchain-mechanism-measurement",
+  "assetId": "cdxusd-cod3x",
+  "archetype": "cdp",
+  "capturedAt": "2026-07-27T22:58:00Z",
+  "observations": {
+    "base": {
+      "block": 49201813,
+      "rpc": "https://base-rpc.publicnode.com",
+      "cdxUsdToken": "0xc0d3700000987C99b3c9009069e4f8413fd22330",
+      "reads": {
+        "totalSupply()": "6150000000000000000000000 (6,150,000 cdxUSD; unchanged vs 2026-07-20 read at block 48869577)",
+        "getFacilitatorsList()": [
+          "0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b"
+        ],
+        "getFacilitatorBucket(0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b)": "capacity 100000000000000000000000000 (100,000,000), level 6150000000000000000000000 (6,150,000 drawn)"
+      },
+      "facilitatorSafeBalances": {
+        "note": "balanceOf reads on the sole facilitator Safe at block 49201813; the issuance account holds no meaningful collateral on Base",
+        "USDC(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913)": "990 raw = 0.00099 USDC",
+        "cbBTC(0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf)": "4270 raw = 0.00004270 cbBTC",
+        "WETH": 0,
+        "DAI": 0,
+        "USDS": 0,
+        "wstETH": 0
+      }
+    },
+    "disclosureSearch": {
+      "docsCod3xOrg": "Full GitBook index (https://docs.cod3x.org/llms.txt) retrieved 2026-07-27 and queried via the docs ask endpoint: no cdxUSD, facilitator, collateral, reserve, backing, or attestation documentation exists; docs cover only the AI trading terminal and CDX utility token.",
+      "appCod3xOrg": "https://app.cod3x.org fetched 2026-07-27: JavaScript trading-terminal shell, no transparency/reserve/backing surface or cdxUSD references.",
+      "cod3xOrgBlog": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/ still live 2026-07-27 and still the only mechanism description ('every cdxUSD circulating is sufficiently backed' asserted without figures)."
+    }
+  },
+  "derivations": {},
+  "metricDisposition": {
+    "collateralizationRatio": {
+      "state": "not-applicable",
+      "rationale": "Facilitator credit-bucket issuance with no token-level collateralization engine; facilitator collateral inventory undisclosed, so no coverage ratio can be measured or honestly estimated."
+    },
+    "liquidationCapacityRatio": {
+      "state": "not-applicable",
+      "rationale": "No liquidation engine and no capital pool contractually committed to debt-offset liquidation."
+    }
+  },
+  "sources": [
+    "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/",
+    "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi",
+    "https://docs.cod3x.org/llms.txt",
+    "https://base-rpc.publicnode.com"
+  ]
+}

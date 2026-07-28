@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "assetId": "iusd-infinifi",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "2026-07-27T23:09:49Z",
+  "source": {
+    "url": "https://eth-api.infinifi.xyz/api/protocol/data",
+    "label": "infiniFi real-time protocol API",
+    "access": "Plain GET, returned JSON (26,504 bytes)."
+  },
+  "observations": {
+    "protocolStats": {
+      "totalTVLAssetNormalized": 61073869.302068,
+      "totalLiquidAssetNormalized": 6147904.697551,
+      "totalIlliquidAssetNormalized": 54925964.604517,
+      "pendingRedemptionsAssetNormalized": 0,
+      "iusdTotalSupplyNormalized": 61071287.208908,
+      "iusdTotalStakedNormalized": 40975405.459363915,
+      "iusdTotalLockedNormalized": 19731259.049711127,
+      "iusdTotalUnwindingNormalized": 8872476.682695689,
+      "siUsdExchangeRateNormalized": 1.0806209058399214
+    },
+    "farms": [
+      {
+        "name": "fasanara-gdaf",
+        "assetsUsd": 31006179.42,
+        "bucket": 4,
+        "daysToMaturity": 28,
+        "matures": "2026-08-24T23:07:35Z"
+      },
+      {
+        "name": "strcx",
+        "assetsUsd": 10281475.05,
+        "bucket": 4,
+        "daysToMaturity": 4,
+        "matures": "2026-07-31T23:07:42Z"
+      },
+      {
+        "name": "new-silver-junior",
+        "assetsUsd": 5091234.82,
+        "bucket": 8,
+        "daysToMaturity": 56,
+        "matures": "2026-09-21T23:07:35Z"
+      },
+      {
+        "name": "spark-sUSDC-refcode",
+        "assetsUsd": 3093652.4,
+        "bucket": 0,
+        "daysToMaturity": 0,
+        "matures": null
+      },
+      {
+        "name": "liquid-cap",
+        "assetsUsd": 3054252.3,
+        "bucket": 0,
+        "daysToMaturity": 0,
+        "matures": null
+      },
+      {
+        "name": "fasanara-rwa-farm",
+        "assetsUsd": 2576818.75,
+        "bucket": 4,
+        "daysToMaturity": 28,
+        "matures": "2026-08-24T23:07:35Z"
+      },
+      {
+        "name": "aave-v4-usdg",
+        "assetsUsd": 2251935.67,
+        "bucket": 1,
+        "daysToMaturity": 7,
+        "matures": "2026-08-03T23:07:35Z"
+      },
+      {
+        "name": "falconx-farm",
+        "assetsUsd": 2001760.35,
+        "bucket": 1,
+        "daysToMaturity": 7,
+        "matures": "2026-08-03T23:07:35Z"
+      },
+      {
+        "name": "morpho-steakUSDCinfinifi",
+        "assetsUsd": 1129978.65,
+        "bucket": 1,
+        "daysToMaturity": 7,
+        "matures": "2026-08-03T23:07:35Z"
+      },
+      {
+        "name": "morpho-v2-sentora-prime",
+        "assetsUsd": 586561.61,
+        "bucket": 1,
+        "daysToMaturity": 7,
+        "matures": "2026-08-03T23:07:35Z"
+      },
+      {
+        "name": "morpho-v2-sentora-pyusd",
+        "assetsUsd": 14.61,
+        "bucket": 1,
+        "daysToMaturity": 7,
+        "matures": "2026-08-03T23:07:35Z"
+      }
+    ],
+    "excludedDustFarms": [
+      "SwapFarm ($0.67)",
+      "RedeemController ($0.00)"
+    ]
+  },
+  "derivations": {
+    "weightedAverageMaturityDays": {
+      "formula": "sum(farm assetsUsd x daysToMaturity) / sum(farm assetsUsd), liquid farms at 0 days, anchored at the 2026-07-27T23:09:49Z fetch",
+      "computation": "(31,006,179.42x28 + 10,281,475.05x4 + 5,091,234.82x56 + 2,576,818.75x28 + 2,251,935.67x7 + 2,001,760.35x7 + 1,129,978.65x7 + 586,561.61x7 + 14.61x7) / 61,073,863.63 = 1,308,350,755 / 61,073,863.63",
+      "value": 21.422433,
+      "priorValue": 20.98,
+      "priorAnchor": "2026-07-20"
+    },
+    "valuationCadenceDays": {
+      "value": 1,
+      "note": "Onchain Accounting contract NAV with 8-hour yield epochs; vault page regenerated daily from this API. Unchanged from 2026-07-20."
+    }
+  },
+  "metricDisposition": {
+    "weightedAverageMaturityDays": {
+      "state": "measured",
+      "value": 21.422433
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "value": 1
+    }
+  },
+  "legalEnforceabilitySearch": {
+    "result": "no-new-pinnable-evidence",
+    "searched": [
+      "https://docs.infinifi.xyz/llms.txt (full docs index: no terms/legal page)",
+      "https://infinifi.xyz/ (rendered: no legal/terms links)",
+      "https://app.infinifi.xyz/ (footer links to app.infinifi.xyz/terms, but the page is behind a Cloudflare interactive challenge and could not be pinned)",
+      "https://docs.infinifi.xyz/dev-docs/changelog.md (no disclosure updates since 2025)"
+    ]
+  },
+  "sources": [
+    "https://eth-api.infinifi.xyz/api/protocol/data",
+    "https://docs.infinifi.xyz/vaults",
+    "https://docs.infinifi.xyz/slashing-mechanics",
+    "https://docs.infinifi.xyz/risk-disclosures",
+    "https://docs.infinifi.xyz/dev-docs/funding/redeem-controller",
+    "https://docs.infinifi.xyz/dev-docs/finance/yield-sharing",
+    "https://docs.infinifi.xyz/audits"
+  ]
+}

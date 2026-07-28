@@ -1,0 +1,136 @@
+{
+  "assetId": "fpi-frax",
+  "archetype": "algorithmic",
+  "outcome": "READY",
+  "mergeMode": "replace",
+  "overlayEntry": {
+    "assetId": "fpi-frax",
+    "archetype": "algorithmic",
+    "reviewedAt": "2026-07-27",
+    "sources": [
+      {
+        "label": "Frax FPI overview (CPI target, 100% collateral-ratio design, FPIS backstop with documented phase-out to FRAX conversion on 2028-03-22, and monthly Chainlink oracle updates)",
+        "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+      },
+      {
+        "label": "Frax FPI Controller Pool (FRAX mint and redemption path)",
+        "url": "https://docs.frax.com/protocol/assets/fpi/controller_pool"
+      },
+      {
+        "label": "Frax FPI collateral API (reviewed reserve composition snapshot at Ethereum block 25627253, 2026-07-27T22:51:47Z)",
+        "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
+      }
+    ],
+    "notes": "FPI is an inflation-index hybrid, not an uncollateralized reflexive dollar. Frax documents a CPI-U target updated through a specialized Chainlink oracle on each monthly BLS release, a 100%-collateral-ratio design, FRAX mint and redemption through the Controller Pool (0.30% fee), and FPIS sales via TWAMM when AMO yield trails the target inflation rate; the overview now also documents the community-approved FPIS phase-out, with FPIS convertible to FRAX at 2.5:1 on 2028-03-22. The reviewed 2026-07-27 collateral API snapshot (updatedAtBlock 25627253, updatedAtTimestampSec 1785192707, fetched 2026-07-27T22:52:02Z) identifies, over the non-FPI collateral base of $1,090,519.52: 87.1% FRAX ($949,391.42 across the Ethereum Comptroller, a second Ethereum wallet balance, and Fraxtal), 12.9% LP positions (staked Convex FPI/FRAX at $124,758.08 and Fraxswap V2 FRAX/FPIS FRAX-portion at $16,370.02), and a de minimis FXS remainder (~$0.005). The profile therefore records 0.871 directly identified exogenous stablecoin backing, 0.000 explicitly reflexive FXS/FPIS exposure (down from 0.076 as the Comptroller FXS balance ran down to dust), and leaves the LP remainder outside either claim instead of pretending it is cash, unchanged in method from the 2026-07-23 review. The API separately lists $6.32M of Comptroller-held FPI against 5,855,654.51 FPI total supply, but per the established profile method the backing shares are computed over the non-FPI collateral only. Collateral coverage, the oracle path, the reflexive backstop, and protocol redemption remain supported; a re-check of docs.frax.com FPI pages on 2026-07-27 found reserve unwind depth, emergency recovery, and a holder loss-recovery waterfall still issuer-undisclosed, so those facts keep their prior dispositions. No grade target is encoded: those unavailable facts remain bounded in their own mechanism components, and the 87.1% FRAX reserve dependency remains separately evaluated.",
+    "metrics": {},
+    "profileReview": {
+      "profile": "inflation-index-hybrid",
+      "exogenousBackingShare": 0.871,
+      "reflexiveBackingShare": 0.0,
+      "contractionCapacityRatio": 0.871,
+      "facts": {
+        "collateralCoverage": {
+          "disposition": "supported",
+          "quality": "adequate"
+        },
+        "contractionLiquidity": {
+          "disposition": "issuer-undisclosed"
+        },
+        "indexOracle": {
+          "disposition": "supported",
+          "quality": "adequate"
+        },
+        "reflexiveBackstop": {
+          "disposition": "supported",
+          "quality": "limited"
+        },
+        "emergencyRecovery": {
+          "disposition": "issuer-undisclosed"
+        },
+        "lossRecovery": {
+          "disposition": "issuer-undisclosed"
+        },
+        "protocolRedemption": {
+          "disposition": "supported",
+          "quality": "adequate"
+        }
+      }
+    },
+    "components": {}
+  },
+  "journal": {
+    "filename": "2026-07-27-fpi-collateral-block-25627253.json",
+    "content": {
+      "schemaVersion": 1,
+      "assetId": "fpi-frax",
+      "archetype": "algorithmic",
+      "capturedAt": "2026-07-27T22:52:02.000Z",
+      "source": {
+        "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral",
+        "label": "Frax FPI collateral API",
+        "updatedAtBlock": 25627253,
+        "updatedAtTimestampSec": 1785192707,
+        "updatedAtUtc": "2026-07-27T22:51:47Z"
+      },
+      "observations": {
+        "nonFpiCollateralUsd": {
+          "frax": 949391.42,
+          "fraxBreakdown": "332889.088326357 (Ethereum Comptroller MSIG 0x6a7efa964cf6d9ab3bc3c47ebddb853a8853c502) + 616502.3226731226 (second Ethereum FRAX balance) + 0.0099257075 (Fraxtal Comptroller 0x7fc64ffddf99cd64dc2cff86a82f3b749962cf33)",
+          "stakedConvexFpiFraxLp": 124758.08260679216,
+          "stkcvxDescription": "stkcvxFPIFRAX: 95098 FRAX, 26421 FPI",
+          "fraxswapV2FraxFpisFraxPortion": 16370.015547503075,
+          "fraxswapDescription": "Fraxswap V2 FRAX/FPIS: 16493 FRAX, 191183 FPIS (FRAX portion only)",
+          "fxs": 0.005221110367217545,
+          "total": 1090519.52
+        },
+        "comptrollerHeldFpiUsd": 6321779.07,
+        "liabilities": {
+          "fpiTotalSupplyEthereum": 665228.1041716104,
+          "fpiTotalSupplyFraxtal": 5190426.401808904,
+          "fpiTotalSupply": 5855654.51,
+          "fpiPriceUsd": 1.149333475064792
+        },
+        "externalCirculatingFpi": 355267.42,
+        "docsRecheck": "2026-07-27 re-read of docs.frax.com FPI overview and controller_pool pages: no reserve-unwind-depth, emergency-recovery, or holder loss-recovery waterfall disclosure; new since the 2026-07-23 review is the documented FPIS phase-out (convertible to FRAX at 2.5:1 on 2028-03-22 per the Singularity Roadmap Part 1 vote)."
+      },
+      "derivations": {
+        "exogenousBackingShare": {
+          "formula": "frax / nonFpiCollateralTotal = 949391.42 / 1090519.52",
+          "value": 0.870586,
+          "rounded": 0.871
+        },
+        "reflexiveBackingShare": {
+          "formula": "fxs / nonFpiCollateralTotal = 0.005 / 1090519.52",
+          "value": 0.0,
+          "note": "Comptroller FXS balance is dust (8.99e-05 FXS Ethereum, 0.02 FXS Fraxtal); LP positions containing FPI/FPIS are deliberately left outside both claims per the established profile method."
+        },
+        "contractionCapacityRatio": {
+          "formula": "exogenousBackingShare (profile-shape consistency with 2026-07-23 entry)",
+          "value": 0.871
+        },
+        "externalCirculationCoverage": {
+          "formula": "nonFpiCollateralTotal / (externalCirculatingFpi x fpiPriceUsd) = 1090519.52 / (355267.42 x 1.14933)",
+          "value": 2.6707,
+          "note": "context only; not an overlay metric"
+        }
+      },
+      "sources": [
+        "https://docs.frax.com/protocol/assets/fpi/overview",
+        "https://docs.frax.com/protocol/assets/fpi/controller_pool",
+        "https://api.frax.finance/v2/fpifpis/fpi-collateral"
+      ]
+    }
+  },
+  "evidenceSummary": "Fresh FPI collateral snapshot from the Frax API pinned at Ethereum block 25627253 / 2026-07-27T22:51:47Z (fetched 22:52:02Z): non-FPI collateral $1,090,519.52 = 87.1% FRAX ($949,391.42), 12.9% LP (stkcvxFPIFRAX $124,758.08; Fraxswap FRAX/FPIS FRAX-portion $16,370.02), FXS dust (~$0.005). Composition shifted materially since 2026-07-15 (FRAX 81.7% to 87.1%, FXS 6.2% to ~0), so profileReview shares updated: exo 0.871, reflexive 0.000, contractionCapacity 0.871 (same definitions as prior entry). docs.frax.com re-check found no emergency-recovery, loss-recovery, or unwind-depth disclosures (facts stay issuer-undisclosed); new documented fact is the FPIS phase-out to 2.5:1 FRAX conversion on 2028-03-22, noted in sources/notes while reflexiveBackstop stays limited.",
+  "primarySources": [
+    "https://api.frax.finance/v2/fpifpis/fpi-collateral",
+    "https://docs.frax.com/protocol/assets/fpi/overview",
+    "https://docs.frax.com/protocol/assets/fpi/controller_pool"
+  ],
+  "blockedReason": null,
+  "missingSources": [
+    "Reserve unwind-depth / contraction-liquidity disclosure (searched: docs.frax.com FPI overview and controller_pool, collateral API)",
+    "Emergency-recovery procedure disclosure (searched: docs.frax.com FPI pages)",
+    "Holder loss-recovery waterfall disclosure (searched: docs.frax.com FPI pages)"
+  ]
+}

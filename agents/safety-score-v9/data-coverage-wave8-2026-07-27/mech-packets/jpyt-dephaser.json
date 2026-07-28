@@ -1,0 +1,60 @@
+{
+  "assetId": "jpyt-dephaser",
+  "archetype": "cdp",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "2026-07-28 re-open docs.dephaser.com what-is-jpyt + money-flow (USDT/USDC fully locked to mint JPYT; collateral auto-supplied to Aave; Chainlink USD/JPY; redeem burns JPYT)",
+  "metrics": {
+    "collateralizationRatio": null,
+    "liquidationCapacityRatio": null
+  },
+  "metricStates": {
+    "collateralizationRatio": {
+      "state": "not-applicable",
+      "rationale": "JPYT is a fully-reserved 1:1 FX wrapper: users lock USDT (Optimism) / USDC (Base) to mint JPYT at oracle USD/JPY; there is no over-collateralized debt position and no published CDP CR. FX is borne via recalculated redemption rate. Dual-source: what-is-jpyt.md (USDT/USDC locked backing) + money-flow.md (mint/burn against Aave-held reserves).",
+      "sourceUrl": "https://docs.dephaser.com/concept/what-is-jpyt.md"
+    },
+    "liquidationCapacityRatio": {
+      "state": "not-applicable",
+      "rationale": "No liquidation engine or stability pool — 1:1 reserve wrapper with no undercollateralized borrower positions. Dual-source: money-flow redeem path + reliable-yen-stablecoin docs describing reserve redeem design.",
+      "sourceUrl": "https://docs.dephaser.com/how-it-works/money-flow.md"
+    }
+  },
+  "components": {
+    "collateralizationParameters": {
+      "quality": "limited",
+      "basis": "Dual-source docs: full USDT/USDC lock + Aave safekeeping + Chainlink/Pyth USDJPY. Limited: no dual-sourced live on-chain reserve=supply reconciliation pin this pass."
+    },
+    "structuralRedemption": {
+      "quality": "limited",
+      "basis": "Documented burn-to-redeem USDT/USDC at averaged lock-in FX rate. Dual money-flow + redeem operation pages. Limited: redemption rate formula not independently reimplemented on-chain this pass."
+    },
+    "liquidationMechanics": {
+      "quality": "limited",
+      "basis": "Structurally no borrower liquidations; grade limited as N/A-style mechanics documented rather than a tested liquidation system."
+    }
+  },
+  "sources": [
+    {
+      "label": "DePhaser What is JPYT (USDT/USDC backing, Aave, multi-chain)",
+      "url": "https://docs.dephaser.com/concept/what-is-jpyt.md"
+    },
+    {
+      "label": "DePhaser Money Flow (mint/burn, Chainlink rate, Aave custody)",
+      "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
+    },
+    {
+      "label": "DePhaser Reliable Yen Stablecoin",
+      "url": "https://docs.dephaser.com/how-it-works/reliable-yen-stablecoin.md"
+    },
+    {
+      "label": "DePhaser docs root",
+      "url": "https://docs.dephaser.com/"
+    }
+  ],
+  "notes": "CDP archetype retained per package; metrics honestly N/A for 1:1 FX wrapper. verification PENDING.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED as honest N/A CDP packet (package archetype retained). Archetype cdp vocab OK. docs.dephaser.com what-is-jpyt.md + money-flow.md HTTP 200: USDT/USDC locked and auto-supplied to Aave; Chainlink USD/JPY; mint/burn 1:1 FX wrapper — no over-collateralized vault CR and no liquidation/SP engine. Both metrics null+not-applicable. Component keys collateralizationParameters/structuralRedemption/liquidationMechanics valid CDP.",
+    "secondSource": "docs.dephaser.com what-is-jpyt.md + money-flow.md re-open"
+  }
+}

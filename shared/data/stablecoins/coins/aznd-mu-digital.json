@@ -129,8 +129,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve); OpenAI Codex V9 curation",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "probable",
     "sources": [
       {
@@ -142,21 +142,13 @@
         "url": "https://docs.mudigital.net/mechanics/how-we-generate-yield"
       },
       {
-        "label": "MU Digital AZND mint and redeem terms",
-        "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd/mint-redeem"
-      },
-      {
-        "label": "MU Digital risk management framework",
-        "url": "https://docs.mudigital.net/mechanics/risk-management-framework"
-      },
-      {
         "label": "MU Digital transparency and reporting",
         "url": "https://docs.mudigital.net/mechanics/transparency-and-reporting"
       }
     ],
-    "rationale": "Re-verified the Mu Digital litepaper pages on 2026-07-21: the yield-mechanics page commits the Asset Pool to Asia-Pacific government (minimum BBB), corporate investment-grade (minimum BBB-), bank senior and subordinated, and high-yield (minimum BB) bonds plus private credit; the risk framework caps illiquid private credit at 20%, targets a blended BBB rating, and describes an average duration around five years. Mu Digital's transparency page points to an Accountable proof-of-reserves site, but no current AZND snapshot or dated allocation was retrievable from that site or linked from the issuer documentation. The previous 80.9% cash / 19.1% bonds rows had no replayable source date or URL and were removed rather than treated as current facts.",
+    "rationale": "Write-time re-open 2026-07-28: AZND overview still describes collateral as a portfolio of Asia credit assets including public bonds and private credit managed as the shared Asset Pool. Yield-mechanics still enumerates government bonds (min BBB), corporate IG (min BBB-), bank senior/subordinated (avg min BBB), high-yield (min BB), and private credit under GHAM. Transparency still commits to Pennyworks NAV accounting and segregated on-chain treasury wallets but does not publish a current category or constituent allocation. Modeled as one full-envelope GHAM Asia-credit Asset Pool basket with basket-needs-split; no invented weights.",
     "compositionBasis": "Issuer-documented Asia-credit strategy envelope; current allocation unavailable",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "No current weights are published for cash, public bonds, private credit, or any underlying obligor; fund constituents, ratings mix, custody allocation, valuation reconciliation, and loss-recovery execution terms are also unavailable.",
     "knownUnknownExposurePct": 100,

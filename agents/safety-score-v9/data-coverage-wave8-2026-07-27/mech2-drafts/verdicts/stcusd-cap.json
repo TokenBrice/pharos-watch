@@ -1,0 +1,27 @@
+{
+  "assetId": "stcusd-cap",
+  "subject": "draft+packet",
+  "verdict": "VERIFIED-WITH-NITS",
+  "metricCheck": {
+    "weightedAverageMaturityDays": "DISCREPANCY (rounding only, immaterial): draft 3.000821 derives from the dashboard's $0.01M-rounded figures (5.10/73.08 x 43 = 3.000821, arithmetic re-verified); packet 2.999366 derives from exact same-block on-chain sleeve reads — re-run at block 25627164: totalSupplies(USDC)=67,989,695.834991 and totalSupplies(WTGXX 0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c)=5,098,067.908917472, weight 6.975269% x 43 = 2.999366. Both honest; packet's is the better-pinned value. Land 2.999366.",
+    "valuationCadenceDays": "confirmed 0: continuous oracle-valued accounting per Cap vault docs and per-block ERC-4626 reads; both draft and packet agree; matches established cusd-cap overlay precedent",
+    "underlyingCusdConversionRatio": "confirmed 1.07265097: convertToAssets(1e18) at block 25627260 re-run on eth.drpc.org returned 0xee2d2605e9e3cb8 = 1.0726509726137212, exact match to journal raw; packet's block-25627164 pin (totalAssets 66,778,737.971204) also reproduces exactly",
+    "wrapperBackingRatio": "confirmed 1: totalSupply 0x337f34e1ead436d27fddf9 (62,255,932.8534195) and totalAssets 0x373cfab6cdc3c614b9f7e7 (66,778,886.926195) reproduce exactly at block 25627260; convertToAssets x totalSupply equals totalAssets exactly"
+  },
+  "componentCheck": {
+    "creditQuality": "basis confirmed: SEC N-MFP3 re-fetched from EDGAR (HTTP 200) — reportDate 2026-06-30, averagePortfolioMaturity 43, averageLifeMaturity 48, 100% daily liquid assets; EDGAR submissions for CIK 1859001 re-pulled 2026-07-28 confirm no newer N-MFP filing — recency claim TRUE",
+    "seniority": "not checked (carried forward from 2026-07-20 entry; draft only refreshes measurements and adds legalEnforceability)",
+    "legalEnforceability": "basis confirmed: Cap Platform Terms of Use re-fetched — Covered Agents S.A. (Panama); 6.3 full release of all claims; 11.2 'USER'S SOLE REMEDY ... IS TO CEASE ITS USE OF THE PLATFORM'; 13.7 no third-party beneficiaries; 13.4/13.5 Panama governing law and CeCAP individual arbitration. Packet's additional basis also confirmed verbatim on docs.cap.app/overview/risks: 'Cap operates without reliance on third-party custodians, regulatory frameworks, or manual oversight. cUSD holder protections are enforced exclusively by code-based adherence to Cap's protocol rules.' Documented deficiency — weak is correct per D3, not merely absent evidence.",
+    "valuationCadence": "basis confirmed (see valuationCadenceDays 0)",
+    "maturityAndLiquidity": "basis confirmed: N-MFP3 daily-liquidity figure + proportional-basket redemption docs underpin adequate; operator-book maturity transformation honestly flagged as unestablished in notes",
+    "custody": "basis confirmed: on-chain vault balances measured exactly at both pin blocks",
+    "recovery": "basis confirmed: financial-guarantees docs describe underwriter-borrower recourse only, no holder claim — limited consistent with the ToS evidence"
+  },
+  "conflicts": [
+    "draft vs packet: WAM 3.000821 vs 2.999366 — pure input rounding (dashboard $0.01M-rounded capture vs exact on-chain totalSupplies at the packet's pin block). Difference 0.0015 days (~2 minutes), immaterial; the packet's value is the more precisely pinned measurement.",
+    "draft vs packet: pin blocks differ (draft 25627260, packet 25627164, ~13 min apart). Both reproduce exactly; totalAssets differ by 148.95 cUSD of ordinary accrual, not a contradiction.",
+    "packet scope: the packet carries only the legalEnforceability component plus metrics; the draft carries the full seven-component set. No grade conflicts on overlapping content."
+  ],
+  "mergeGuidance": "Land the draft (replace of the 2026-07-20 entry is coherent) with ONE nit: substitute weightedAverageMaturityDays 2.999366 for 3.000821 and cite the packet's on-chain pin (block 25627164 totalSupplies reads) alongside or instead of the rounded dashboard derivation, since the exact same-block on-chain sleeve weights are the stronger evidence for the same methodology. Optionally append the packet's docs.cap.app/overview/risks source to the legalEnforceability basis (confirmed verbatim) — it strengthens the weak grade with an issuer-affirmative statement. Keep all seven draft component grades as proposed.",
+  "notes": "Re-ran the draft's four pinned calls at block 0x1870a7c on eth.drpc.org — all raw values match the journal byte-for-byte. Re-ran the packet's pin at block 0x1870a1c: stcUSD totalSupply/totalAssets and cUSD totalSupply (73,088,778.52504821) match exactly; the vault's registered WTGXX token is 0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c (NOT the canonical 0x1fecf3d9... address in the coin JSON — the canonical address returns 0; appliers re-running this must use the vault-registered address). totalSupplies(address) returns raw integer in each asset's own decimals (USDC 6-dec). cap.app dashboard figures could not be re-rendered from this environment (JS-rendered SPA; api.cap.app non-browser challenged) but the underlying sleeve weights were verified on-chain instead — a strictly stronger check. Existing overlay entry is dated 2026-07-20, so this batch is not skipped."
+}

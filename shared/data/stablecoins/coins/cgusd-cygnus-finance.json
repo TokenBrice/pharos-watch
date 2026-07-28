@@ -211,8 +211,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-5 Safety Score V9 backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "probable",
     "sources": [
       {
@@ -220,15 +220,23 @@
         "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1"
       },
       {
-        "label": "Cygnus cgUSD mint mechanics",
-        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/mint"
+        "label": "Cygnus cgUSD how-it-works (NAV formula)",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd/how-it-works"
+      },
+      {
+        "label": "Cygnus cgUSD withdrawals FAQ (custodian T-bill sales)",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/faq/withdrawals"
+      },
+      {
+        "label": "DefiLlama cgUSD stablecoin profile",
+        "url": "https://stablecoins.llama.fi/stablecoin/166"
       }
     ],
-    "rationale": "Cygnus states that cgUSD's NAV portfolio includes off-chain short-term U.S. Treasuries, on-chain stablecoins, and asset interest. Its mint documentation identifies USDC and USDT as stablecoin inputs, but the reviewed issuer material does not publish the current Treasury/stablecoin split, stablecoin identities held in the portfolio, reserve balances, custodian allocation, or liability reconciliation.",
-    "compositionBasis": "Cygnus issuer description of the cgUSD NAV portfolio and mint inputs",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Re-opened primary Cygnus docs on 2026-07-28. Overview still states that on each New York banking day cgUSD total supply is synchronized to portfolio NAV including off-chain U.S. Treasuries, on-chain stablecoins, and asset interest, with 1:1 USDC redemption support. How-it-works still defines the rebase NAV as on-chain stablecoins (C, labeled USDC in the US Treasury Asset Pool) plus market value of U.S. Treasury bills (T) and interest. Withdrawals FAQ independently states redemptions are fulfilled by selling U.S. Treasury bills held in a custodian account, converting USD proceeds to USDC for the asset pool (5–7 day settlement under normal conditions). DefiLlama's third-party cgUSD profile restates the same portfolio envelope (on-chain stablecoins, U.S. Treasury bill market value, accrued interest) without itemized weights. No attestation, reserve report, or itemized composition dashboard was found. At Base block 49201799, vault 0xca72827a3d211cfd8f6b00ac98824872b72cab49 totalSupply ≈ 76.17M cgUSD while its USDC balance was only ≈ 698.89 USDC — confirming that almost all backing is not held as USDC on the vault contract, but not establishing the off-chain T-bill vs stablecoin weights. Structural 100% multi-category basket with known-unknown disposition is therefore retained; no weight split was fabricated.",
+    "compositionBasis": "Cygnus issuer NAV portfolio description and redemption mechanics, re-opened 2026-07-28; DefiLlama catalog corroboration",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current Treasury and stablecoin weights, holdings, reserve balances, custodians, and independent assurance are not disclosed in the reviewed issuer documentation.",
+    "knownUnknownExposure": "Current Treasury and stablecoin weights, holdings, reserve balances, named custodians, and independent assurance are not disclosed in the reviewed issuer or third-party sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -236,7 +244,7 @@
         "reserveName": "Short-term U.S. Treasury bills and on-chain stablecoin portfolio",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The issuer identifies the portfolio categories but does not publish a current constituent or weight-level allocation."
+        "rationale": "Issuer materials identify portfolio categories (off-chain short-term U.S. Treasuries and on-chain stablecoins) but publish no current constituent or weight-level allocation, balances, or independent reconciliation."
       }
     ]
   },

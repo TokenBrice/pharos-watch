@@ -1,11 +1,9 @@
 /**
  * Reviewed dependency registry for the Telegram load guard.
  *
- * GitHub requires workflow path filters to remain literal YAML. A parity test
- * keeps that static list byte-for-byte aligned with the flattened registry,
- * while the local merge gate consumes this module directly.
+ * The adaptive PR gate and weekly workflow consume this registry directly.
  */
-export const TELEGRAM_LOAD_ADVISORY_COMMAND = "npx tsx scripts/ci/check-telegram-load.ts";
+export const TELEGRAM_LOAD_ADVISORY_COMMAND = "npm run check:telegram-load";
 
 export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS = [
   {
@@ -16,7 +14,6 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS = [
       "scripts/ci/check-telegram-load.ts",
       "scripts/lib/telegram-load-scenarios.ts",
       "scripts/lib/telegram-load-guard.mjs",
-      "scripts/maintenance/test-merge-gate.mjs",
       "scripts/__tests__/check-telegram-load.test.ts",
       "scripts/__tests__/telegram-load-guard.test.ts",
     ],

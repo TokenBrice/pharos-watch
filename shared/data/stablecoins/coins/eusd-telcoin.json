@@ -403,34 +403,26 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve); OpenAI Codex NR-recovery review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "verified",
     "sources": [
-      {
-        "label": "Telcoin Digital Asset Bank",
-        "url": "https://bank.telco.in/"
-      },
       {
         "label": "Telcoin eUSD bank page",
         "url": "https://bank.telco.in/eUSD"
       },
       {
-        "label": "Telcoin Digital Cash",
-        "url": "https://www.telco.in/en/digital-cash"
+        "label": "Telcoin Digital Asset Bank customer agreement",
+        "url": "https://bank.telco.in/customer-agreement"
       },
       {
         "label": "Telcoin Digital Asset Bank terms",
         "url": "https://bank.telco.in/terms-of-use"
-      },
-      {
-        "label": "Telcoin Digital Asset Bank customer agreement",
-        "url": "https://bank.telco.in/customer-agreement"
       }
     ],
-    "rationale": "Telcoin Digital Asset Bank's customer agreement defines eUSD reserves as U.S. dollars at FDIC-insured institutions, highly liquid U.S. Treasury securities or federal agency obligations, and other assets permitted by the Nebraska Financial Innovation Act. It also requires reserve assets to equal or exceed outstanding eUSD. The agreement does not publish current category weights, institution names, balances, or an independent reserve report, so the aggregate 100% envelope remains unsplit.",
+    "rationale": "Write-time re-open 2026-07-28: the customer agreement \u00a715.1 still defines eUSD Reserves as (i) U.S. dollars at FDIC-insured institutions, (ii) highly liquid U.S. Treasury securities or federal agency obligations, and (iii) other NFIA-permitted assets in an amount equal to or greater than outstanding eUSD, held in segregated accounts. The live eUSD bank page independently states eUSD is fully backed by highly liquid U.S. dollar cash and cash-equivalent reserves under Nebraska Department of Banking and Finance oversight. No current category weights, institution names, balances, or independent composition attestation. Aggregate 100% multi-class envelope retained with insufficient-evidence / knownUnknownExposurePct 100.",
     "compositionBasis": "Telcoin Digital Asset Bank customer agreement and eUSD issuer disclosures",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The legally permitted reserve categories are identified, but the full 100% envelope lacks current category weights, named reserve institutions, balances, and independent assurance evidence.",
     "knownUnknownExposurePct": 100,

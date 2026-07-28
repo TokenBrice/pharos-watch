@@ -209,8 +209,12 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "The reviewed Hyperbeat portfolio is a dynamic strategy envelope without durable asset or position weights; the hbUSDT product name does not establish a fixed USDT reserve slice.",
   ],
   [
-    "yzusd-yuzu::Other disclosed small positions (syrupUSDG, VBILL, PYUSD loops; Aave AUSD/GHO/RLUSD; rest)::GHO",
+    "yzusd-yuzu::Other disclosed small positions (VBILL loop; Aave GHO/RLUSD/USDT dust; Rest_of_Assets)::GHO",
     "Yuzu reports GHO inside an aggregate residual strategy bucket without a separable current weight, so a GHO coinId would overstate the dependency.",
+  ],
+  [
+    "yzusd-yuzu::Other disclosed small positions (VBILL loop; Aave GHO/RLUSD/USDT dust; Rest_of_Assets)::USDT",
+    "The Aave USDT dust position sits inside the same aggregate residual bucket without a separable current weight, so a USDT coinId would overstate the dependency.",
   ],
   [
     "ousg-ondo-finance::OUSG tokenized Treasury fund portfolio::OUSG",

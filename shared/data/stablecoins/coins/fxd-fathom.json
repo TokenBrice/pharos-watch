@@ -389,7 +389,7 @@
         ]
       },
       {
-        "label": "FXD ProxyAdmin EOA owner (0x594d425a — upgrade authority)",
+        "label": "FXD ProxyAdmin EOA owner (0x594d425a \u2014 upgrade authority)",
         "role": "minter-admin",
         "authorityType": "eoa",
         "directMintAbility": "can-authorize",
@@ -420,7 +420,7 @@
       ],
       "canChangeMintLogic": true,
       "delaySec": 0,
-      "controlRef": "FXD ProxyAdmin EOA owner (0x594d425a — upgrade authority)",
+      "controlRef": "FXD ProxyAdmin EOA owner (0x594d425a \u2014 upgrade authority)",
       "observedAt": "2026-07-13",
       "observedBlock": 104894883,
       "sources": [
@@ -474,13 +474,19 @@
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Fathom Protocol collateral pools, XDC Network, Comtech Gold, and PrimeStakedXDC",
-      "riskFactors": ["market", "smart-contract", "liquidity", "counterparty", "concentration"],
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity",
+        "counterparty",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 reserve batch 7",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -496,9 +502,9 @@
         "url": "https://xdcscan.com/block/104920353"
       }
     ],
-    "rationale": "Fathom documents FXD as a CDP-minted dollar backed by protocol collateral pools. An exhaustive LogInitCollateralPoolId scan through finalized XDC block 104920353 found exactly three live debt-bearing pools: WXDC, CGO, and psXDC. Their current debt or collateral weights are not published as an aggregate, so the exact active inventory is retained as one 100% basket rather than assigning an unsupported split.",
+    "rationale": "Fathom documents FXD as a CDP-minted dollar backed by protocol collateral pools. An exhaustive LogInitCollateralPoolId scan through finalized XDC block 104920353 found exactly three live debt-bearing pools: WXDC, CGO, and psXDC. Their current debt or collateral weights are not published as an aggregate, so the exact active inventory is retained as one 100% basket rather than assigning an unsupported split. Write-time re-open 2026-07-28: dual sources still describe over-collateralized crypto CDP minting without a public live collateral weight table; knownUnknownExposurePct remains 100. (FXD overcollateralized stablecoin docs + whitepaper)",
     "compositionBasis": "Fathom documentation plus on-chain active debt-bearing collateral-pool inventory at XDC block 104920353",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The active WXDC, CGO, and psXDC pool identities are established, but current collateral and debt weights plus liquidation-buffer levels are not published as one reconciled snapshot.",
     "knownUnknownExposurePct": 100,

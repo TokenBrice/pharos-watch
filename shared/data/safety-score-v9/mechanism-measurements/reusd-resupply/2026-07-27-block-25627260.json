@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "kind": "mechanism-packet-measurement",
+  "assetId": "reusd-resupply",
+  "archetype": "cdp",
+  "capturedAt": "ethereum finalized block 25627260 hash 0xe4256d655597cf47800fdcc665ddb4d92f4daf19572401088d7f5591dc51c161 timestamp 2026-07-27T22:53:11Z; Registry 0x10101010E0C3171D894B71B3400668aF311e7D94 getAllPairAddresses + per-pair getPairAccounting/collateral convertToAssets; InsurancePool reUSD balanceOf",
+  "source": "agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech-packets/reusd-resupply.json (Grok research packet; independently re-verified)",
+  "observations": {
+    "pinnedAt": "ethereum finalized block 25627260 hash 0xe4256d655597cf47800fdcc665ddb4d92f4daf19572401088d7f5591dc51c161 timestamp 2026-07-27T22:53:11Z; Registry 0x10101010E0C3171D894B71B3400668aF311e7D94 getAllPairAddresses + per-pair getPairAccounting/collateral convertToAssets; InsurancePool reUSD balanceOf",
+    "metrics": {
+      "collateralizationRatio": 1.076367,
+      "liquidationCapacityRatio": 0.079132
+    },
+    "analogousMetrics": {
+      "totalDebtRaw": "32177832888000022589504895",
+      "totalCollateralAssetsRaw": "34635150457249969707890845",
+      "insuranceAssetsRaw": "2546294855477449414006873",
+      "totalSupplyRaw": "32171263126791586352027021",
+      "activePairCount": 15,
+      "pairCount": 19,
+      "supplyDebtDivergencePct": 0.0204
+    }
+  },
+  "components": {
+    "collateralizationParameters": "limited",
+    "liquidationMechanics": "adequate",
+    "backstop": "limited",
+    "branchIsolation": "limited",
+    "shutdownAndBadDebt": "limited",
+    "structuralRedemption": "limited"
+  },
+  "metricDisposition": {
+    "collateralizationRatio": {
+      "state": "measured",
+      "rationale": "System CR = sum over active (non-zero debt) pairs of collateralVault.convertToAssets(collateralShares) / sum of pair totalBorrow from getPairAccounting() = 34635150.457250 / 32177832.888000 = 1.076367. Registry enumerated 19 pairs; 15 active with debt, 4 zero-debt pairs excluded from the ratio (their residual converted assets not counted as debt-backing). reUSD totalSupply 32171263.13 vs totalDebt 32177832.89 (0.0204% divergence). Collateral is ERC-4626 lending-vault shares on crvUSD/frxUSD markets valued at vault conversion, not a guarantee of instant underlying liquidity.",
+      "sourceUrl": "https://etherscan.io/address/0x10101010E0C3171D894B71B3400668aF311e7D94#readContract"
+    },
+    "liquidationCapacityRatio": {
+      "state": "measured",
+      "rationale": "InsurancePool reUSD balanceOf / total active pair debt = 2546294.855477 / 32177832.888000 = 0.079132. Insurance Pool docs state deposited reUSD is used to insure bad debt and to buy liquidated collateral (burned on use). Dual-source: on-chain balanceOf at InsurancePool 0x00000000efe883b3304aFf71eaCf72Dbc3e1b577 + Insurance Pool documentation.",
+      "sourceUrl": "https://docs.resupply.finance/resupply-protocol/insurance-pool.md"
+    }
+  },
+  "sources": [
+    "https://docs.resupply.finance/resupply-protocol/stability-mechanics.md",
+    "https://docs.resupply.finance/resupply-protocol/insurance-pool.md",
+    "https://etherscan.io/address/0x10101010E0C3171D894B71B3400668aF311e7D94#readContract",
+    "https://etherscan.io/token/0x57ab1e0003f623289cd798b1824be09a793e4bec",
+    "https://ethereum-rpc.publicnode.com",
+    "shared/data/safety-score-v9/mechanism-measurements/reusd-resupply/2026-07-15-block-25536894.json"
+  ],
+  "reVerification": {
+    "by": "KIMI-MECH-2 verifier swarm",
+    "date": "2026-07-27",
+    "verdict": "VERIFIED-WITH-NITS",
+    "notes": "Bit-exact reproduction of every analogousMetric raw value at the pinned block (debt, collateral, insurance, supply, 15/19 active pairs, 0.0204% supply/debt divergence). Docs domain note: packet cites docs.resupply.finance (re-opened HTTP 200, correct conten..."
+  },
+  "packetVerification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype cdp vocab OK. Independent full recompute via ethereum.publicnode.com cast: Registry 0x1010…7D94 getAllPairAddresses length=19; 15 active debted pairs; sum getPairAccounting.totalBorrow ≈32,177,839.70 reUSD; sum collateralVault.convertToAssets(shares) ≈34,635,173.77 → CR=1.076367 exact to 6dp (live debt/coll micro-drift <0.0001% vs pin block 25627260 raws). InsurancePool 0x0000…b577 reUSD balanceOf exact pin 2,546,294.855477…; LCR=ins/debt=0.079132 exact. reUSD totalSupply exact pin 32,171,263.13. Insurance Pool docs HTTP 200: pool buys liquidated collateral with reUSD (burned) and absorbs bad debt — liquidationCapacityRatio definition holds.",
+    "secondSource": "full pair-by-pair eth_call recompute (publicnode cast) + InsurancePool balanceOf + docs.resupply.finance insurance-pool.md"
+  }
+}

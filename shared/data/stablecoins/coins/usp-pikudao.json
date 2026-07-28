@@ -299,13 +299,22 @@
       "risk": "very-high",
       "assetClass": "other",
       "issuerOrObligor": "PikuDAO, Balsa Technologies, and third-party DeFi strategy counterparties",
-      "riskFactors": ["market", "basis", "counterparty", "custody", "liquidity", "legal", "concentration", "smart-contract"],
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "legal",
+        "concentration",
+        "smart-contract"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 curation pass",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "unknown",
     "sources": [
       {
@@ -317,9 +326,9 @@
         "url": "https://www.stablewatch.io/research/piku-yield-optimized-stablecoin"
       }
     ],
-    "rationale": "Piku's documentation describes BMMF Turkey FX arbitrage, DeFi yield allocations, RWA, and cash-stablecoin buffers, but publishes no dated allocation, attestation, reserve dashboard, or reproducible holdings inventory. The previous 50/40/5/5 split depended on secondary research and was not issuer-attested, so it has been removed and the complete backing is represented as one source-supported strategy envelope.",
+    "rationale": "Write-time re-open 2026-07-28 of Piku docs (USP backing via arbitrage, carry trades, on-chain yield, RWAs; no dated weights) and Stablewatch secondary analysis. Still no issuer-published allocation table; envelope remains 100% strategy other with ku=100. Confidence remains unknown (secondary source is not an issuer attestation).",
     "compositionBasis": "Issuer strategy-category documentation; no issuer-published weights, holdings snapshot, or attestation",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "Current strategy weights, off-chain positions and venues, DeFi protocol weights, RWA holdings, stablecoin-buffer weights, and custody balances are not published in a dated primary-source snapshot.",
     "knownUnknownExposurePct": 100,
@@ -330,7 +339,11 @@
         "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "Issuer materials describe the strategy categories but publish no current component weights, so the aggregate cannot be split or dependency-linked without fabrication.",
-        "candidateCoinIds": ["usde-ethena", "usdai-usd-ai", "stcusd-cap"]
+        "candidateCoinIds": [
+          "usde-ethena",
+          "usdai-usd-ai",
+          "stcusd-cap"
+        ]
       }
     ]
   },

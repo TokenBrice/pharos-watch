@@ -6,7 +6,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
   "files": [
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "83f0be3c4f14b4e98fed51baf663a3c04bb256af254142f1c0b7882bf7716766"
+      "sha256": "d9ed254607686171633e5a7a171a53f1da043ae8320412eb15d76d919390edf4"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -414,7 +414,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set.ts",
-      "sha256": "3db3a151f0b419445abe31a3e085b87bfb913190a348919a7ac93a2067b5e039"
+      "sha256": "9a0533a20137076a1579854c154511815e26ac3f93416f3887caaa58f35d5ae6"
     },
     {
       "path": "worker/src/lib/safety-score-v9-supply-attribution-contract.ts",
@@ -437,7 +437,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "a7177e8ede754619d98f56fe18b9d65dbfd29f4ac27701a6bbeb1f60fcb92949"
     }
   ],
-  "digest": "c88f68de3b603bf634d1be933c57721ec996628b733aa61ad53e7878aed0c9aa"
+  "digest": "3593918c4bcb27c394ed61c2690856d13dc9b21f954247945123b2c7930a6193"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

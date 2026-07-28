@@ -18,25 +18,30 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-EVD-A wave6",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave8 GROK-RESEARCH",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Gate GUSD product page (accessed 2026-07-22)",
+        "label": "Gate GUSD product page (re-opened 2026-07-28)",
         "url": "https://www.gate.com/gusd"
       },
       {
-        "label": "Gate GUSD minting and redemption guide (accessed 2026-07-22)",
-        "url": "https://www.gate.tv/staking/GUSD"
+        "label": "Gate GUSD minting page (re-opened 2026-07-28)",
+        "url": "https://www.gate.com/staking/GUSD"
       },
       {
-        "label": "Gate GUSD product explanation (updated 2025-10-14; accessed 2026-07-22)",
-        "url": "https://www.gate.com/learn/articles/gusd-the-note-like-evolution-of-stablecoins/12656"
+        "label": "Gate announcement: GUSD minting with USD1 (2026-07-07; re-opened 2026-07-28)",
+        "url": "https://www.gate.com/announcements/article/100531"
+      },
+      {
+        "label": "CoinGecko: What Is Gate's GUSD? (re-opened 2026-07-28)",
+        "url": "https://www.coingecko.com/learn/what-is-gusd-gate-stablecoin"
       }
     ],
-    "rationale": "Rechecked 2026-07-22 for Gate.com's GUSD, not Gemini Dollar: Gate describes GUSD as a yield-bearing certificate supported primarily by U.S. Treasury/RWA products and also refers to stablecoin reserves or yield assets and Gate ecosystem revenue. Gate separately accepts USDT, USDC, or USD1 for subscription; those subscription assets are not evidence of reserve weights or continuing holdings. No token-specific composition, named custodian, or current assurance report is published, so the reserve remains one explicit mixed basket rather than an unsupported split.",
-    "compositionBasis": "Gate GUSD product and minting disclosures",
+    "rationale": "Write-time re-open 2026-07-28 of Gate.com product and minting pages (Gate GUSD, not Gemini Dollar): product page states GUSD is a principal-protected earn product with returns from Gate ecosystem revenue, treasury RWAs, and high-quality stablecoin-backed yield assets, and separately markets U.S. Treasuries / RWA backing plus USDC reserves in dollars and short-term Treasuries; minting page repeats ecosystem revenue + Treasury RWAs + stablecoin yield assets and describes the product as backed by tokenized treasury bills and stablecoins. Gate announcement (2026-07-07) uses the same three-source yield language. CoinGecko independently describes GUSD as a Gate yield-bearing investment certificate backed by U.S. Treasury / RWA (not a payment stablecoin). No page publishes token-specific composition weights, named instrument list, named GUSD-specific custodian, or a current reserve attestation; accepted subscription assets (USDT/USDC/USD1) are minting inputs, not reserve weights. Composition remains one explicit mixed basket with 100% known-unknown allocation.",
+    "compositionBasis": "Gate GUSD product, minting, and announcement disclosures; CoinGecko corroboration of RWA/Treasury investment-certificate design",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "Gate does not publish current weights or instrument identities for Treasury/RWA products, stablecoin reserves or yield assets, ecosystem revenue, or the custody providers supporting the product.",
     "knownUnknownExposurePct": 100,
@@ -60,20 +65,20 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-EVD-A wave6",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave8 GROK-RESEARCH",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Gate GUSD product page (accessed 2026-07-22)",
+        "label": "Gate GUSD product page (re-opened 2026-07-28)",
         "url": "https://www.gate.com/gusd"
       },
       {
-        "label": "Gate GUSD minting page (accessed 2026-07-22)",
-        "url": "https://www.gate.tv/staking/GUSD"
+        "label": "Gate GUSD minting page (re-opened 2026-07-28)",
+        "url": "https://www.gate.com/staking/GUSD"
       }
     ],
-    "uncertainty": "Gate does not identify the legal reserve vehicle, custody providers, provider shares, segregation model, bankruptcy remoteness, or rehypothecation terms for GUSD backing.",
+    "uncertainty": "Gate does not identify the legal reserve vehicle, custody providers, provider shares, segregation model, bankruptcy remoteness, or rehypothecation terms for GUSD backing. Launch-era materials only promised gradual disclosure of reserve proofs and custodian cooperation; no GUSD-specific custody schedule was located on re-open 2026-07-28.",
     "knownUnknownExposurePct": 100
   }
 }

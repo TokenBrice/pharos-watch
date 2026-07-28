@@ -7,13 +7,19 @@
       "risk": "low",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "Qualified Solayer liquidity providers and undisclosed RWA issuers",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "liquidity", "legal"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity",
+        "legal"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "verified",
     "sources": [
       {
@@ -29,7 +35,7 @@
         "url": "https://docs.solayer.org/susd/protocol-info/litepaper"
       }
     ],
-    "rationale": "Solayer documents that qualified liquidity providers exchange deposited USDC for wrapped T-bill assets, which the sUSD program locks before minting sUSD at a one-to-one value. The docs permit a broader low-risk RWA basket but do not identify current products or weights, so the reserve remains one structured aggregate slice.",
+    "rationale": "Solayer documents that qualified liquidity providers exchange deposited USDC for wrapped T-bill assets, which the sUSD program locks before minting sUSD at a one-to-one value. The docs permit a broader low-risk RWA basket but do not identify current products or weights, so the reserve remains one structured aggregate slice. Write-time re-open 2026-07-28: Solayer transparency&security docs still describe market-maker PDAs holding TBILL balances on Solana; litepaper/process docs remain structural. No public weight split of TBILL vs other \u2192 ku=100 retained.",
     "compositionBasis": "Solayer wrapped-T-bill RFQ mint and redemption architecture",
     "scope": "full-composition",
     "knownUnknownExposure": "The current RWA issuers, instruments, maturity profile, and liquidity-provider allocation are not disclosed.",
@@ -42,7 +48,8 @@
         "disposition": "insufficient-evidence",
         "rationale": "The protocol identifies the wrapped T-bill asset class but not the current tokenized products or their weights."
       }
-    ]
+    ],
+    "compositionAsOf": "2026-07-28"
   },
   "custodyProfile": {
     "providers": [

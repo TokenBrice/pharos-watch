@@ -2409,28 +2409,28 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-EVD-A wave6",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave8 reserve research",
     "confidence": "probable",
     "sources": [
       {
-        "label": "River satUSD FAQ (accessed 2026-07-22)",
+        "label": "River satUSD FAQ (re-opened 2026-07-28)",
         "url": "https://docs.river.inc/intro/faq"
       },
       {
-        "label": "River satUSD product overview (accessed 2026-07-22)",
+        "label": "River satUSD product overview (re-opened 2026-07-28)",
         "url": "https://river.inc/"
       },
       {
-        "label": "River protocol-info API (snapshot 2026-07-22T18:00:00Z)",
+        "label": "River protocol-info API (re-opened 2026-07-28)",
         "url": "https://api-airdrop.river.inc/protocol-info"
       }
     ],
-    "rationale": "The River protocol-info API snapshot at 2026-07-22T18:00:00Z reported aggregate collateral TVL of $255,709,758.3648083 and circulating satUSD of 159,366,548.61429694, a 1.604538471769779 aggregate collateralization ratio. The live adapter publishes one Aggregate River protocol collateral TVL row at 100%, so the reviewed classification is keyed to that exact identity; the ratio is a mechanism metric, not a reserve weight. River states that satUSD is minted against BTC, ETH, BNB, and liquid staking tokens, but does not publish current category weights or a complete chain-wide pool inventory.",
-    "compositionBasis": "River current product and FAQ collateral disclosures plus the protocol-info aggregate TVL feed",
-    "compositionAsOf": "2026-07-22",
+    "rationale": "Write-time re-open on 2026-07-28: River FAQ and river.inc both still state satUSD is an over-collateralized stablecoin backed by BTC, ETH, BNB, and other liquid staking tokens (LSTs). The protocol-info API still returns only aggregate fields (tvl, circulatingSupply, per-chain tvlData/circulatingData, userCount) with no asset or category weights; re-opened values were aggregate collateral TVL $254,170,656.19504914 and circulating satUSD 159,366,436.51150104 (aggregate CR ≈ 1.59488). The live adapter remains a single Aggregate River protocol collateral TVL row at 100%; the ratio is a mechanism metric, not a reserve weight. DefiLlama River Omni-CDP token inventory (~$81M) and the legacy api.satoshiprotocol.org protocol-info (~$83M) diverge sharply from River's airdrop protocol-info total and cannot dual-source category weights, so the 100% basket-needs-split disposition is retained.",
+    "compositionBasis": "River FAQ and product collateral disclosures plus the protocol-info aggregate TVL feed (no issuer-published category weights)",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "River does not publish current weights among BTC, ETH, BNB, and liquid staking tokens or a complete cross-chain collateral inventory.",
+    "knownUnknownExposure": "River does not publish current weights among BTC, ETH, BNB, and liquid staking tokens or a complete cross-chain collateral inventory; independent DefiLlama inventory totals disagree with the protocol-info aggregate and are not used as composition weights.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -2438,7 +2438,7 @@
         "reserveName": "Aggregate River protocol collateral TVL",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Official sources name the collateral categories but do not disclose their current weights."
+        "rationale": "Official sources name the collateral categories but do not disclose their current weights; external inventory totals conflict with protocol-info aggregate TVL."
       }
     ]
   },

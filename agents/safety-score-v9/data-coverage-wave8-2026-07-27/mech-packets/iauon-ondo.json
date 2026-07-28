@@ -1,0 +1,76 @@
+{
+  "assetId": "iauon-ondo",
+  "archetype": "rwa-credit-fund",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "Ondo Stocks docs re-opened 2026-07-27T23:01Z (overview, important-notes, trust-and-transparency); product is total-return tracker on iShares Gold Trust (IAU) via Ondo Global Markets (BVI) Limited \u2014 no live NAV API pin required for structural packet",
+  "metrics": {
+    "weightedAverageMaturityDays": null,
+    "valuationCadenceDays": 1
+  },
+  "metricStates": {
+    "weightedAverageMaturityDays": {
+      "state": "not-applicable",
+      "rationale": "IAUon is a total-return tracker on the iShares Gold Trust (IAU) equity/ETF exposure, not a fixed-income credit portfolio with a maturity ladder. Gold bullion / equity-ETF trackers have no portfolio weighted-average maturity in the credit-fund sense. Dual-source: Ondo overview (tokenized stocks/ETFs as total return trackers) + important notes (economic exposure to underlying ETF, not a debt instrument).",
+      "sourceUrl": "https://docs.ondo.finance/ondo-global-markets/overview"
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "rationale": "Trust & Transparency docs: daily attestations of holdings by independent verification/security agent Ankura Trust Company; daily NAV/holdings reports; monthly reconciliations by the 20th of the following month; annual independent audits. valuationCadenceDays=1 from the daily attestation/NAV commitment. Dual-source: trust-and-transparency page + overview investor-protection summary.",
+      "sourceUrl": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency"
+    }
+  },
+  "components": {
+    "creditQuality": {
+      "quality": "adequate",
+      "basis": "Underlying is iShares Gold Trust (IAU), a large, publicly traded gold ETF. Ondo token provides economic exposure to that ETF plus reinvested dividends (net of withholding) as a total-return tracker, fully backed by underlying assets plus cash in transit (overview + important notes). Adequate: public underlying with continuous market pricing; grade is not 'strong' because the token is not the ETF share itself and depends on Ondo GM operational performance."
+    },
+    "seniority": {
+      "quality": "adequate",
+      "basis": "Tokenholders benefit from a first-priority perfected security interest in collateral held by third-party security agent Ankura Trust Company, with authority to take possession, liquidate, and distribute on specified issuer default events (trust-and-transparency). Dual-source: security-interest description + bankruptcy-remote SPV structure. Adequate structural seniority vs issuer creditors; not a direct ETF custody claim."
+    },
+    "legalEnforceability": {
+      "quality": "adequate",
+      "basis": "Issuer Ondo Global Markets (BVI) Limited is a bankruptcy-remote SPV with independent director, segregated assets, and service relationship to Ondo Finance Inc. (important notes + trust-and-transparency). Prospectus/offering docs for qualified purchasers; EEA base prospectus path referenced. Tokens are not registered US securities for US persons. Adequate documented legal architecture for non-US eligible investors."
+    },
+    "valuationCadence": {
+      "quality": "adequate",
+      "basis": "Daily Ankura attestations and daily NAV/holdings reports plus monthly reconciliations and annual audits (trust-and-transparency). Instant mint/burn against platform quotes during market hours (overview). Adequate independent daily cadence."
+    },
+    "maturityAndLiquidity": {
+      "quality": "adequate",
+      "basis": "Underlying IAU is exchange-traded gold exposure with deep secondary markets; Ondo designs instant atomic mint/redeem for KYC institutional participants and 24/5 trading with optional Off-Hours session (overview + important notes Off-Hours risks). No credit maturity. Adequate liquidity design with disclosed off-hours limitations."
+    },
+    "custody": {
+      "quality": "adequate",
+      "basis": "Underlying holdings at one or more US-registered custodial broker-dealers with daily Ankura verification (trust-and-transparency). Dual-source: custody statement + independent verification agent role. Adequate institutional custody path."
+    },
+    "recovery": {
+      "quality": "adequate",
+      "basis": "Security agent enforcement path on issuer default; overcollateralization requirement above full backing; contractual insurance fund from Ondo Foundation/Flux Finance subsidiary guaranteeing additional collateralization (trust-and-transparency). Dual-source within the same primary transparency page plus overview investor-protection summary. Adequate documented recovery tools; not strong without a public measured insurance-fund balance pin."
+    }
+  },
+  "sources": [
+    {
+      "label": "Ondo Stocks overview (total-return tracker design, full backing, instant mint/burn, bankruptcy-remote protections summary)",
+      "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+    },
+    {
+      "label": "Ondo important notes (issuer Ondo Global Markets (BVI) Limited; no direct title to underlying; eligibility)",
+      "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+    },
+    {
+      "label": "Ondo Stocks trust & transparency (Ankura security/verification agent, daily attestations, monthly reconciliation, annual audit, insurance fund)",
+      "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency"
+    },
+    {
+      "label": "Ondo app IAUon product page",
+      "url": "https://app.ondo.finance/assets/iauon"
+    }
+  ],
+  "notes": "Wave-8 phase-1 first packet (no prior overlay). Archetype package label is rwa-credit-fund though IAUon is an equity/ETF total-return tracker on gold (IAU); WAM marked not-applicable for that structural reason. Grades adequate on dual-sourced Ondo legal/ops docs; no live Ankura PDF pin in this pass so not graded strong. verification PENDING.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype rwa-credit-fund package vocab used with honest WAM not-applicable (equity/ETF gold total-return tracker, not credit ladder) \u2014 dual-sourced overview total-return tracker language + important-notes (economic exposure only, not the ETF share). valuationCadenceDays=1: docs.ondo.finance/ondo-stocks/trust-and-transparency.md HTTP 200 states daily Ankura Trust attestations of holdings, daily NAV/holdings reports, monthly reconciliations by 20th, annual audits \u2014 measured cadence 1 day from daily attestation/NAV commitment. Component basis themes (Ankura security interest, US custodial broker-dealers, insurance fund, BVI issuer) re-open on trust-and-transparency + overview + important-notes. No live Ankura PDF pin required for structural packet.",
+    "secondSource": "docs.ondo.finance trust-and-transparency.md + overview.md + important-notes.md (markdown re-open, not RSC-only)"
+  }
+}

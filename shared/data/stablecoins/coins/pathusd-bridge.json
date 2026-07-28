@@ -199,8 +199,8 @@
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "At Tempo block 31007249, the observed pathUSD issuance proxy 0x8354d80eea9978faa04c3b36771c1e8b9c3e9058 remained a UUPS proxy whose authorization controller is not exposed through the public interface. At the earlier issuance review block 30043787, this proxy held ISSUER_ROLE and could mint within the current 100 million pathUSD supply cap; TIP-20 DEFAULT_ADMIN_ROLE can grant or revoke issuer roles and change the cap or transfer policy.",
+    "confidence": "probable",
+    "summary": "At Tempo block 32028752, pathUSD issuance proxy 0x8354d80eea9978faa04c3b36771c1e8b9c3e9058 remains a UUPS proxy (implementation 0x271c4d8616ed81c2cc006446c61f25219b182f8a; EIP-1967 admin slot zero). Its sole DEFAULT_ADMIN_ROLE member 0x79c6631fa15cda38777fb9dd7a6348baee794a4e authorizes upgradeToAndCall, so mint logic is changeable. The same proxy holds ISSUER_ROLE on the pathUSD TIP-20 token and mints within the 100 million supply cap.",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
@@ -209,21 +209,30 @@
       "implementationAddresses": [
         "0x271c4d8616ed81c2cc006446c61f25219b182f8a"
       ],
-      "canChangeMintLogic": "unknown",
-      "observedAt": "2026-07-21",
-      "observedBlock": 31007249,
+      "adminAddresses": [
+        "0x79c6631fa15cda38777fb9dd7a6348baee794a4e"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "pathUSD issuer proxy DEFAULT_ADMIN_ROLE (UUPS upgrader)",
+      "observedAt": "2026-07-27",
+      "observedBlock": 32028752,
       "sources": [
         {
           "label": "Tempo public RPC",
           "url": "https://rpc.tempo.xyz"
         },
         {
+          "label": "Tempo dRPC public endpoint",
+          "url": "https://tempo.drpc.org"
+        },
+        {
           "label": "Tempo pathUSD token",
           "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000000000000000000000"
         },
         {
-          "label": "Tempo source repository",
-          "url": "https://github.com/tempoxyz/tempo"
+          "label": "Tempo issuer proxy address",
+          "url": "https://explore.tempo.xyz/address/0x8354d80eea9978faa04c3b36771c1e8b9c3e9058"
         }
       ]
     },
@@ -255,14 +264,61 @@
           }
         ],
         "evidence": "At Tempo block 30043787, public RPC returned hasRole(proxy, ISSUER_ROLE) = true and hasRole(proxy, DEFAULT_ADMIN_ROLE) = false. An RPC trace of transaction 0xbf824b6afb9ce9379fbea4337c51562560d577dd91237d4a35794daa5528de9a shows this proxy calling pathUSD.mint(). Its EIP-1967 implementation slot resolved to 0x271c4d8616ed81c2cc006446c61f25219b182f8a."
+      },
+      {
+        "chain": "tempo",
+        "address": "0x79c6631fa15cda38777fb9dd7a6348baee794a4e",
+        "label": "pathUSD issuer proxy DEFAULT_ADMIN_ROLE (UUPS upgrader)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-27",
+        "observedBlock": 32028752,
+        "sources": [
+          {
+            "label": "Tempo public RPC",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Tempo dRPC public endpoint",
+            "url": "https://tempo.drpc.org"
+          },
+          {
+            "label": "Tempo issuer proxy address",
+            "url": "https://explore.tempo.xyz/address/0x8354d80eea9978faa04c3b36771c1e8b9c3e9058"
+          },
+          {
+            "label": "Tempo DEFAULT_ADMIN address",
+            "url": "https://explore.tempo.xyz/address/0x79c6631fa15cda38777fb9dd7a6348baee794a4e"
+          }
+        ],
+        "evidence": "At Tempo block 32028752, dual public RPCs (rpc.tempo.xyz and tempo.drpc.org) agreed: issuer proxy EIP-1967 implementation slot = 0x271c4d8616ed81c2cc006446c61f25219b182f8a, admin slot = 0x0, UPGRADE_INTERFACE_VERSION() = 5.0.0, supportsInterface(AccessControlEnumerable)=true, getRoleMemberCount(DEFAULT_ADMIN_ROLE)=1, getRoleMember(DEFAULT_ADMIN_ROLE,0)=0x79c6631fa15cda38777fb9dd7a6348baee794a4e, and hasRole(DEFAULT_ADMIN_ROLE, that address)=true. eth_call upgradeToAndCall(currentImpl, 0x) from a non-admin reverts AccessControlUnauthorizedAccount(caller, DEFAULT_ADMIN_ROLE=0x0); the same call from 0x79c6631f… returns success with no state change. No on-chain upgrade delay was observed (delaySec=0). Account bytecode is EIP-7702 designator 0xef0100||0x0000fb7702036ff9f76044a501ac1aa74cbab16b (not a Safe; getOwners/getThreshold empty), so authorityType remains eoa with a present 7702 delegation module rather than a verified multisig threshold."
       }
     ],
     "review": {
-      "evidence": "Live RPC and a traced pathUSD issuance resolved the prior claim that Tempo had no usable public RPC or explorer: the active issuer proxy and its current ISSUER_ROLE membership are directly observable. At block 30043787, pathUSD was unpaused, had transfer policy 2, and had a 100,000,000 supply cap. Tempo's TIP-20 implementation exposes hasRole(address, bytes32) but no role-member enumeration; the current DEFAULT_ADMIN_ROLE and policy-role holder set therefore remains unavailable without issuer disclosure. At Tempo block 31007249 (2026-07-21 08:44:18 UTC), the issuer proxy's EIP-1967 implementation slot still resolved to 0x271c4d8616ed81c2cc006446c61f25219b182f8a, the admin slot was zero, and both proxy and implementation exposed UPGRADE_INTERFACE_VERSION() = 5.0.0 while the implementation's proxiableUUID() returned the EIP-1967 implementation slot. This verifies the UUPS model, but owner(), admin(), AccessManager, and role-introspection calls do not expose the _authorizeUpgrade controller and no verified issuer-proxy source was located. Whether a reachable authority can change mint logic therefore remains irreducible rather than guessed. 2026-07-20 dc-1 pass: the active TIP-20 issuer proxy mints cap-limited with canRaiseCap=false and no separate cap-raise authority on Tempo, so the reviewed economic mint cap is bounded.",
-      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "2026-07-27/28 upgrade-authority re-read resolves the prior canChangeMintLogic=unknown gap. At Tempo block 32028752, independent RPCs rpc.tempo.xyz and tempo.drpc.org both show issuer proxy 0x8354d80eea9978faa04c3b36771c1e8b9c3e9058 as UUPS (EIP-1967 impl 0x271c4d8616ed81c2cc006446c61f25219b182f8a, admin slot zero, UPGRADE_INTERFACE_VERSION 5.0.0, implementation proxiableUUID = EIP-1967 impl slot). AccessControlEnumerable role introspection on the proxy returns a single DEFAULT_ADMIN_ROLE member 0x79c6631fa15cda38777fb9dd7a6348baee794a4e. Live upgradeToAndCall simulation proves that role is the authorize path: non-members revert with AccessControlUnauthorizedAccount needing role 0x0; the admin member succeeds. No timelock delay is present on that path. The admin account carries EIP-7702 delegated code to 0x0000fb7702036ff9f76044a501ac1aa74cbab16b without Safe getOwners/getThreshold, so threshold/signer composition is not claimed. Prior issuance facts retained: at block 30043787 the proxy held ISSUER_ROLE (not DEFAULT_ADMIN on the token mint path as minter), supply cap 100,000,000 pathUSD, canRaiseCap=false for the direct minter, economicCapSemantics bounded. Verified Solidity source for the issuer implementation remains unpublished (Sourcify no-match); authorization is established from on-chain role + UUPS call behavior rather than source.",
+      "reviewer": "Grok wave-8 GROK-RESEARCH controls pathusd-bridge",
+      "reviewedAt": "2026-07-28",
       "disposition": "scoreable",
       "sources": [
+        {
+          "label": "Tempo public RPC",
+          "url": "https://rpc.tempo.xyz"
+        },
+        {
+          "label": "Tempo dRPC public endpoint",
+          "url": "https://tempo.drpc.org"
+        },
+        {
+          "label": "Tempo pathUSD token",
+          "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000000000000000000000"
+        },
+        {
+          "label": "Tempo issuer proxy address",
+          "url": "https://explore.tempo.xyz/address/0x8354d80eea9978faa04c3b36771c1e8b9c3e9058"
+        },
         {
           "label": "Tempo TIP-20 specification",
           "url": "https://docs.tempo.xyz/protocol/tip20/spec"
@@ -270,14 +326,6 @@
         {
           "label": "Tempo TIP-20 implementation",
           "url": "https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
-        },
-        {
-          "label": "Tempo pathUSD token",
-          "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000000000000000000000"
-        },
-        {
-          "label": "Tempo public RPC",
-          "url": "https://rpc.tempo.xyz"
         }
       ],
       "unresolvedQuestions": []

@@ -15,6 +15,9 @@ import {
 export const TRON_MEASURED_TARGET_SCHEMA_VERSION = "tron-measured-target-v1" as const;
 export const TRON_MEASURED_EXECUTION_SCHEMA_VERSION = "tron-measured-execution-v1" as const;
 export const TRON_MEASURED_MAX_BLOCK_WINDOW = 64;
+export const TRON_SUNSWAP_V2_ROUTER_ADDRESS = "TNJVzGqKBWkJxJB5XYSqGAwUTV15U24pPq" as const;
+export const TRON_SUNSWAP_V2_ROUTER_CODE_HASH =
+  "0x85aca0ac3551e3d4fdebd328f247b2287254c06b583040582cc2d4cd0d969d67" as const;
 
 const TronAddressSchema = z.string().regex(/^T[1-9A-HJ-NP-Za-km-z]{33}$/);
 const CodeHashSchema = z.string().regex(/^0x[0-9a-f]{64}$/);
@@ -42,6 +45,8 @@ export const TronMeasuredExecutionTargetSchema = z.object({
   factoryAddress: TronAddressSchema,
   expectedFactoryCodeHash: CodeHashSchema,
   expectedPairCodeHash: CodeHashSchema,
+  routerAddress: TronAddressSchema.default(TRON_SUNSWAP_V2_ROUTER_ADDRESS),
+  expectedRouterCodeHash: CodeHashSchema.default(TRON_SUNSWAP_V2_ROUTER_CODE_HASH),
   tokenIn: TronMeasuredExecutionTokenSchema,
   tokenOut: TronMeasuredExecutionTokenSchema,
   feeRate: z.literal(0.003),
@@ -51,8 +56,7 @@ export const TronMeasuredExecutionTargetSchema = z.object({
 });
 export type TronMeasuredExecutionTarget = z.infer<typeof TronMeasuredExecutionTargetSchema>;
 
-const TronMeasuredRouteProofSchema = z.object({
-  provider: z.literal("sun-smart-router"),
+const TronMeasuredRouteProofBaseSchema = z.object({
   poolId: TronAddressSchema,
   factoryAddress: TronAddressSchema,
   factoryCodeHash: CodeHashSchema,
@@ -71,6 +75,18 @@ const TronMeasuredRouteProofSchema = z.object({
   blockBefore: z.number().int().nonnegative(),
   blockAfter: z.number().int().nonnegative(),
 });
+
+const TronMeasuredRouteProofSchema = z.discriminatedUnion("provider", [
+  TronMeasuredRouteProofBaseSchema.extend({
+    provider: z.literal("sun-smart-router"),
+  }),
+  TronMeasuredRouteProofBaseSchema.extend({
+    provider: z.literal("sunswap-v2-router"),
+    routerAddress: TronAddressSchema,
+    routerCodeHash: CodeHashSchema,
+    routerFactoryAddress: TronAddressSchema,
+  }),
+]);
 export type TronMeasuredRouteProof = z.infer<typeof TronMeasuredRouteProofSchema>;
 
 const TronMeasuredExecutionQuotePointProofSchema = z.object({
@@ -257,6 +273,13 @@ export function validateTronMeasuredExecutionProfile(input: {
     const recomputed = recomputedProof[index];
     const inputIsToken0 = route.inputToken === route.token0 && route.outputToken === route.token1;
     const inputIsToken1 = route.inputToken === route.token1 && route.outputToken === route.token0;
+    const routerIdentityMatches =
+      route.provider === "sun-smart-router" ||
+      (
+        route.routerAddress === currentTarget.routerAddress &&
+        route.routerCodeHash === currentTarget.expectedRouterCodeHash &&
+        route.routerFactoryAddress === currentTarget.factoryAddress
+      );
     const reserveIn = inputIsToken0 ? route.reserve0Raw : route.reserve1Raw;
     const reserveOut = inputIsToken0 ? route.reserve1Raw : route.reserve0Raw;
     let expectedOutput: bigint | null = null;
@@ -281,6 +304,7 @@ export function validateTronMeasuredExecutionProfile(input: {
       route.factoryAddress !== currentTarget.factoryAddress ||
       route.factoryCodeHash !== currentTarget.expectedFactoryCodeHash ||
       route.pairCodeHash !== currentTarget.expectedPairCodeHash ||
+      !routerIdentityMatches ||
       route.inputToken !== profile.tokenIn.address ||
       route.outputToken !== profile.tokenOut.address ||
       route.routeTokens[0] !== profile.tokenIn.address ||

@@ -577,8 +577,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 curation pass",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "manual-review",
     "sources": [
       {
@@ -590,9 +590,9 @@
         "url": "https://www.hamiltonlane.com/en-us/news/scope-available-via-securitize"
       }
     ],
-    "rationale": "HLSCOPE is a tokenized feeder into Hamilton Lane's SCOPE senior credit opportunities fund, which targets floating-rate senior secured loans to private borrowers. Neither Securitize nor Hamilton Lane publishes a current holdings schedule or funded-versus-cash allocation. The previous 95/5 credit/cash approximation has therefore been removed and the complete fund exposure is represented as one source-supported envelope.",
+    "rationale": "Write-time re-open 2026-07-28 of Hamilton Lane SCOPE via Securitize announcement: SCOPE is a senior private credit vehicle targeting floating-rate senior secured loans; HLSCOPE is the tokenized feeder exposure. Securitize primary-market page for hl-scope still resolves. Neither surface publishes current loan-level holdings or NAV weights, so the envelope remains 100% Hamilton Lane SCOPE fund-share with knownUnknownExposurePct=100.",
     "compositionBasis": "Securitize and Hamilton Lane SCOPE fund strategy disclosures; position-level holdings are undisclosed",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The underlying loan portfolio's obligors, sector weights, maturities, and current funded-versus-cash allocation are not published in the reviewed public sources.",
     "knownUnknownExposurePct": 100,

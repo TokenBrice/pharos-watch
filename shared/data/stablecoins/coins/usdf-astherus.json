@@ -279,22 +279,34 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex dependency review",
-    "confidence": "manual-review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave8 GROK-RESEARCH phase1",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "Aster USDF",
+        "label": "Aster USDF product page",
         "url": "https://www.asterdex.com/en/usdf"
+      },
+      {
+        "label": "Aster USDF fund custody and risk management",
+        "url": "https://docs.asterdex.com/usdf-stablecoin/overview/fund-custody-and-risk-management"
+      },
+      {
+        "label": "Aster how USDF works",
+        "url": "https://docs.asterdex.com/usdf-stablecoin/overview/how-usdf-works"
+      },
+      {
+        "label": "Aster USDF FAQs",
+        "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
       },
       {
         "label": "Ceffu MirrorX",
         "url": "https://www.ceffu.com/solutions/mirrorx"
       }
     ],
-    "rationale": "Aster identifies crypto assets and corresponding short futures positions as the backing, with Ceffu custody, but does not disclose current spot, margin, or retained-USDT weights. The prior 50/25/25 split was unsupported and is replaced by one conservative reviewed basket.",
-    "compositionBasis": "Officially documented delta-neutral backing structure; constituent shares are undisclosed",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Write-time re-open on 2026-07-28 reconfirmed dual independent sources with no composition weights: (1) asterdex.com/en/usdf still states USDF is \"Backed by crypto assets and corresponding short futures positions\" and names Ceffu custody; docs.asterdex.com fund-custody, how-usdf-works, and FAQs still describe USDT mint → Aster Ceffu account → MirrorX 1:1 delegation to a Binance sub-account while assets remain in Ceffu custody, with the strategy buying spot BTC/ETH and shorting matching perpetual notional; (2) ceffu.com/solutions/mirrorx independently describes MirrorX as off-exchange settlement that keeps assets in Ceffu custody while mirroring balances to partner-exchange sub-accounts at 1:1. No public dashboard, attestation, or reserve report publishes retained-USDT, spot, or futures-margin weights, so the prior unsupported 50/25/25 split remains rejected and the full reserve stays one 100% hedged-crypto basket with knownUnknownExposurePct 100.",
+    "compositionBasis": "Issuer-documented delta-neutral backing structure plus independent Ceffu MirrorX custody model; constituent shares are undisclosed",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "Aster does not publish current weights for retained USDT, spot BTC/ETH, or futures-margin exposure.",
     "knownUnknownExposurePct": 100,

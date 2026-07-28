@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "kind": "mechanism-packet-measurement",
+  "assetId": "btcusd-btcfi",
+  "archetype": "cdp",
+  "capturedAt": "btcfi getBtcfiMarket isTestnet=false pin 2026-07-28; total deposit_value USD 7974538.63; BtcUSD borrow_value 6094953.39; CR=1.308384; DefiLlama stablecoin/183 circulating ~6.05M USD",
+  "source": "agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech-packets/btcusd-btcfi.json (Grok research packet; independently re-verified)",
+  "observations": {
+    "pinnedAt": "btcfi getBtcfiMarket isTestnet=false pin 2026-07-28; total deposit_value USD 7974538.63; BtcUSD borrow_value 6094953.39; CR=1.308384; DefiLlama stablecoin/183 circulating ~6.05M USD",
+    "metrics": {
+      "collateralizationRatio": 1.308384,
+      "liquidationCapacityRatio": null
+    }
+  },
+  "components": {
+    "collateralizationParameters": "limited",
+    "liquidationMechanics": "limited"
+  },
+  "metricDisposition": {
+    "collateralizationRatio": {
+      "state": "measured",
+      "rationale": "System CR = sum(deposit_value)/sum(borrow_value) across BtcFi market handlers from issuer market API. Pin: deposits $7,974,538.63 / BtcUSD debt $6,094,953.39 = 1.308384. Handlers include multiple BTC-wrapped deposits (ids 0,1,3,4) plus BNC (id 5) against BtcUSD borrow (id 2). DefiLlama 183 independently shows ~$6.05M circulating BtcUSD near the debt print (supply-side check, not a second CR oracle).",
+      "sourceUrl": "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false"
+    },
+    "liquidationCapacityRatio": {
+      "state": "not-applicable",
+      "rationale": "BtcUSD is issued from a shared over-collateralized lending market; liquidations are executed by external keepers repaying debt for discounted collateral. No dedicated BtcUSD-committed stability/offset pool exists in the market state API (no stability-pool balance field), so a pool-to-supply liquidation-capacity ratio is not applicable.",
+      "sourceUrl": "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false"
+    }
+  },
+  "sources": [
+    "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false",
+    "https://www.btcfi.one/",
+    "https://docs.bifrostnetwork.com/eng.btcfi.one",
+    "https://stablecoins.llama.fi/stablecoin/183"
+  ],
+  "reVerification": {
+    "by": "KIMI-MECH-2 verifier swarm",
+    "date": "2026-07-27",
+    "verdict": "VERIFIED-WITH-NITS",
+    "notes": "Live values drifted as expected for a live lending market; the pinned methodology recomputes cleanly from the same endpoint. Handler 5 (BNC, price $0.0061, ~$672k) is ~8.5% of deposit value -- the existing entry's conservative BTC-only variant (1.2367) has..."
+  },
+  "packetVerification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype cdp vocab OK. Independent recompute from live btcfi.one/api/getBtcfiMarket?isTestnet=false: handlers 0/1/3/4/5 deposit_value sum vs handler-2 BtcUSD borrow_value; live deposits≈$7,951,725.44 / debt $6,094,953.39 → CR≈1.304641 vs pin 1.308384 (~0.29% deposit-price drift; method and debt pin exact). liquidationCapacityRatio not-applicable: market API has no stability-pool field; Bifrost docs describe deposit/mint/repay keepers without dedicated SP. Component keys collateralizationParameters/liquidationMechanics valid CDP.",
+    "secondSource": "live getBtcfiMarket arithmetic recompute + docs.bifrostnetwork.com eng.btcfi.one + DefiLlama 183"
+  }
+}

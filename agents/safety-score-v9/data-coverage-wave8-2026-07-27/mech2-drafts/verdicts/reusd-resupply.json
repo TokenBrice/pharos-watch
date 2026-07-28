@@ -1,0 +1,20 @@
+{
+  "assetId": "reusd-resupply",
+  "subject": "packet",
+  "verdict": "VERIFIED-WITH-NITS",
+  "metricCheck": {
+    "collateralizationRatio": "confirmed 1.076367: full independent recompute at pinned block 25627260 (0x1870a7c) via eth.drpc.org archive -- Registry getAllPairAddresses = 19 pairs, 15 active with debt, 4 zero-debt excluded; sum getPairAccounting().totalBorrow = 32177832888000022589504895 raw (exact pin match); sum collateralVault.convertToAssets(collateralShares) = 34635150457249969707890845 raw (exact pin match); CR = 1.0763668",
+    "liquidationCapacityRatio": "confirmed 0.079132: InsurancePool 0x00000000efe883b3304aFf71eaCf72Dbc3e1b577 reUSD balanceOf at pin block = 2546294855477449414006873 raw (exact pin match) / totalBorrow = 0.0791320; insurance-pool.md confirms deposited reUSD buys liquidated collateral (burned) and insures bad debt"
+  },
+  "componentCheck": {
+    "collateralizationParameters": "basis confirmed: per-pair accounting re-read on-chain; measured CR ~1.076 is genuinely thin; collateral is ERC-4626 lending-vault shares (underlying() resolves to crvUSD/frxUSD vaults, e.g. pair[0] -> 0xf939e0a0...c1b4e)",
+    "liquidationMechanics": "basis confirmed: insurance-pool.md CDP Liquidations section -- pool buys collateral with reUSD (burned), LiquidationHandler withdraws underlying as liquidity allows with retries; dual-sourced with the on-chain 2.546M reUSD committed",
+    "backstop": "basis confirmed: insurance-pool.md Bad Debt section -- pool assumes bad debt first, protocol assumes residual beyond the pool, leftover collateral held by protocol; no unconditional recapitalization",
+    "branchIsolation": "basis confirmed: 19 distinct pair contracts enumerated from the registry, each with its own collateral vault; shared InsurancePool + communal redemption are the cross-pair channels (stability-mechanics.md)",
+    "shutdownAndBadDebt": "basis confirmed: defined bad-debt path per docs above; no global settlement mechanism documented anywhere in the re-opened docs",
+    "structuralRedemption": "basis confirmed: stability-mechanics.md -- communal redemption, 1% fee (0.8% borrower / 0.2% protocol), price-floor design, redeemer chooses pools with weighted discounts"
+  },
+  "conflicts": [],
+  "mergeGuidance": "Land the packet as a replacement of the 2026-07-15 entry: all six component grades are identical to the existing overlay (no regressions, no upgrades), and both metrics are refreshed with exact on-chain pins. The applier should note in the merge notes that liquidationCapacityRatio fell 0.100629 -> 0.079132 because the InsurancePool balance genuinely shrank (~3.24M -> ~2.55M reUSD) -- a real measured decline, not a methodology change.",
+  "notes": "Bit-exact reproduction of every analogousMetric raw value at the pinned block (debt, collateral, insurance, supply, 15/19 active pairs, 0.0204% supply/debt divergence). Docs domain note: packet cites docs.resupply.finance (re-opened HTTP 200, correct content) while the existing overlay cites docs.resupply.fi -- the .finance domain is the live one. Cosmetic nit: the packet's sources list labels the PublicNode journal entry 'finalized block 25627228', but pinnedAt and all values are block 25627260 (25627228 is the alUSD pin); the label should read 25627260 when landing."
+}

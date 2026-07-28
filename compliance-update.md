@@ -269,7 +269,7 @@ Blocked or fragile sources to replace with issuer/regulator/static alternatives 
 
    ```bash
    npm run check:stablecoin-data
-   npm run test:merge-gate
+   npm run check:pr -- --base=origin/main
    ```
 
 ## Documentation Updates Needed After Data Changes

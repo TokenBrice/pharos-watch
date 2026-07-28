@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "assetId": "rusd-reservoir",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "2026-07-27T22:52:00.000Z",
+  "source": {
+    "url": "https://app.reservoir.xyz/api/reserves/raw",
+    "label": "Reservoir live on-chain reserves balance sheet (raw API)",
+    "fetchedAt": "2026-07-27T22:52:00Z"
+  },
+  "observations": {
+    "totalAssetsUsd": 35590379.251188794769034761,
+    "totalLiabilitiesUsd": 35293416.948310247814829089,
+    "equityUsd": 296962.302878546954205672,
+    "liabilityBreakdown": {
+      "wsrUsdUsd": 34375887.125982681636787137,
+      "srUsdUsd": 714584.80314046403776758,
+      "rUsdCirculatingUsd": 202945.019187102140274372
+    },
+    "assetComposition": [
+      {"label": "Morpho - Sentora PRIME", "category": "Lending markets", "chainId": 1, "address": "0xC21b08C16458202593D4D9B26b9984Ee67b38BbD", "valueUsd": 16074159.82, "shareOfAssets": 0.45164},
+      {"label": "Pendle - PT USDat (PT-USDat-27AUG2026)", "category": "Pendle", "chainId": 1, "address": "0x1D69402390657308C91179aa184bF992908c1e08", "valueUsd": 9144080.81, "shareOfAssets": 0.25693},
+      {"label": "Aave - GHO (Plasma)", "category": "Lending markets", "chainId": 9745, "address": "0xAd571979b4245E163A7E2119EB4dFd94AfDaebC5", "valueUsd": 4039188.48, "shareOfAssets": 0.11349},
+      {"label": "Morpho - Steakhouse Prime Instant V2 Adapter (USDC)", "category": "Lending markets", "chainId": 1, "address": "0xbeef088055857739C12CD3765F20b7679Def0f51", "valueUsd": 3392680.84, "shareOfAssets": 0.09533},
+      {"label": "Aave - GHO (Monad)", "category": "Lending markets", "chainId": 143, "address": "0x4586face17B0e3D4d51EcABb4B4EBC2354b61b0D", "valueUsd": 1485817.60, "shareOfAssets": 0.04175},
+      {"label": "Agua - Global Carry Vault", "category": "Vaults", "chainId": 1, "address": "0xa98b4a70e17e55045cde4972b95bc2e8cec22a0f", "valueUsd": 1299724.74, "shareOfAssets": 0.03652},
+      {"label": "Hastra - PRIME", "category": "Real world assets", "chainId": 1, "address": "0x19ebb35279A16207Ec4ba82799CC64715065F7F6", "valueUsd": 120199.94, "shareOfAssets": 0.00338},
+      {"label": "USDC (direct, 3 adapter rows)", "category": "Stables", "chainId": 1, "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "valueUsd": 34527.01, "shareOfAssets": 0.00097}
+    ],
+    "onChainAnchor": {
+      "rpcEndpoint": "https://ethereum-rpc.publicnode.com",
+      "blockNumberHex": "0x1870a80",
+      "blockNumber": 25627264,
+      "reads": [
+        {"contract": "0x09D4214C03D01F49544C0448DBE3A27f768F2b34", "label": "rUSD", "calldata": "0x18160ddd (totalSupply())", "rawResult": "0x0000000000000000000000000000000000000000000042562176c176cf7b16c4", "totalSupply": 313265.01918710215},
+        {"contract": "0x738d1115B90efa71AE468F1287fc864775e23a31", "label": "srUSD", "calldata": "0x18160ddd (totalSupply())", "rawResult": "0x00000000000000000000000000000000000000000000835034d55deb92489f91", "totalSupply": 620109.5558341466},
+        {"contract": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094", "label": "wsrUSD", "calldata": "0x18160ddd (totalSupply())", "rawResult": "0x0000000000000000000000000000000000000000001a13f45369e02678f8c4ac", "totalSupply": 31526303.2892905}
+      ],
+      "note": "API liabilities are USD-denominated claims; srUSD ($714,584.80 / 620,109.56 shares ~ 1.1523 USD/share) and wsrUSD ($34,375,887.13 / 31,526,303.29 shares ~ 1.0904 USD/share) are yield-accruing, so share counts below USD claims are expected. rUSD Ethereum totalSupply 313,265.02 exceeds the API rUSD circulation figure $202,945.02; the API liability reflects the protocol's own circulation accounting (cross-chain netting/protocol-held balances not itemized). Magnitudes corroborate; no contradiction with solvency figures."
+    }
+  },
+  "derivations": {
+    "systemCollateralization": {
+      "formula": "totalAssets / totalLiabilities",
+      "value": 1.0084140989611028
+    },
+    "weightedAverageMaturityDays": {
+      "formula": "sum(positionShare * daysToMaturity); on-demand-redeemable lending/vault/stablecoin sleeves treated as 0-day, Pendle PT-USDat-27AUG2026 at documented fixed maturity 2026-08-27 (31 days from 2026-07-27 read)",
+      "ptShare": 0.25692563571444854,
+      "ptDaysToMaturity": 31,
+      "value": 7.964694707147904
+    },
+    "valuationCadenceDays": {
+      "formula": "balance sheet is continuously readable on-chain via the live reserves API (no discrete attestation interval)",
+      "value": 0
+    }
+  },
+  "metricDisposition": {
+    "weightedAverageMaturityDays": {
+      "state": "measured",
+      "note": "Conservative 0-day treatment of the 45.16% Morpho Sentora PRIME sleeve (Figure-originated HELOC private credit, redeemable on-demand subject to market liquidity) and the 3.65% Agua Global Carry vault; their underlying maturity profiles are issuer-undisclosed, so true economic WAM is understated."
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "note": "Self-administered on-chain balance sheet; no independent administrator strikes the NAV."
+    }
+  },
+  "sources": [
+    "https://app.reservoir.xyz/api/reserves/raw",
+    "https://docs.reservoir.xyz/products/proof-of-reserves",
+    "https://docs.reservoir.xyz/products/stablecoin-rusd",
+    "https://docs.reservoir.xyz/protocol-architecture/credit-enforcer",
+    "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
+    "https://ethereum-rpc.publicnode.com"
+  ]
+}

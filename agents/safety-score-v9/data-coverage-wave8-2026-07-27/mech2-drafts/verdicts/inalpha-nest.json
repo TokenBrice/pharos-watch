@@ -1,0 +1,18 @@
+{
+  "assetId": "inalpha-nest",
+  "subject": "packet",
+  "verdict": "VERIFIED",
+  "metricCheck": {
+    "weightedAverageMaturityDays": "confirmed unavailable — rationale TRUE: no portfolio WAM/WAL/tenor fields anywhere in Nest available-vaults, vaults docs, or positions API (all re-opened 2026-07-27/28); blended sub-vault book makes non-disclosure plausible",
+    "valuationCadenceDays": "confirmed 0.041666666666666664 (=3600/86400): docs.nest.credit/about/vaults/ states verbatim 'An automated process checks the price of vault assets every hour' with upper/lower bounds; corroborated live"
+  },
+  "componentCheck": {
+    "valuationCadence": "basis confirmed — hourly-check language verified verbatim on vaults docs page; live API price 1.105305 == last-price-update chainId=1 price == on-chain getRate() 1105305 (0x10dd99) on accountant 0xfbf12ad3a117379ec8d9ef449e6b7827337dff1a; lastPriceUpdate chainId=1 updatedAt 1785187259 matches pin exactly",
+    "maturityAndLiquidity": "basis confirmed — available-vaults nALPHA redemption estimate T+1 (snapshot 2026-07-27); liquidity-and-redemptions states median ~1 hour and T+2–T+5 max for most strategies; positions API composition exact (nOPAL $7,046,269.12 / nFALCON $4,070,928.52 / nTBILL $496,695.95 / nACRDX $99,938.10 / liquid $213,764.17 — all match pin to the cent)",
+    "custody": "basis confirmed — flow-of-funds states vaults non-custodial and assets/cash held by third-party custodians (BNY Mellon as illustrative example); share token 0x593ccca4c4bf58b7526a4c164ceef4003c6388db matches API vaultAddress",
+    "creditQuality": "basis confirmed — positions API shows private-credit sleeves (nOPAL/nFALCON dominant) + nTBILL buffer exactly as pinned; limited grade appropriate (no independent combined rating)"
+  },
+  "conflicts": [],
+  "mergeGuidance": "land packet as-is",
+  "notes": "No existing overlay entry (grep clean). Re-opened 2026-07-28: Nest price API returned nav=13666789.76735399, price=1.105305, totalSupply=12364722.64882 — EXACT pin reproduction hours later. NAV API + on-chain getRate + docs hourly-process triple-agree. Limited grades sit correctly at issuer-operated evidence class per the wave-7 standard. Packet nav values for sub-positions matched live API exactly; no drift observed."
+}

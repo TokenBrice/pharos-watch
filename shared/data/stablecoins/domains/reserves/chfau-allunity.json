@@ -19,16 +19,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve re-verification",
     "confidence": "verified",
     "sources": [
       {
-        "label": "AllUnity CHFAU product and reserve disclosure",
+        "label": "AllUnity CHFAU product and reserve disclosure (re-opened 2026-07-28)",
         "url": "https://allunity.com/chfau"
       },
       {
-        "label": "AllUnity trust center",
+        "label": "AllUnity trust center (re-opened 2026-07-28)",
         "url": "https://allunity.com/trust-center"
       },
       {
@@ -36,8 +36,9 @@
         "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf"
       }
     ],
-    "rationale": "AllUnity describes CHFAU as fully backed 1:1 through separate CHF reserve accounts at CRR credit institutions. The current whitepaper permits significant cash holdings plus eligible low-risk CHF HQLAs and documents statutory insolvency protections, but neither current category weights nor an independent reserve report are public, so the complete reserve remains one unsplit basket.",
+    "rationale": "Re-opened 2026-07-28: AllUnity CHFAU product page still states fully backed 1:1 by CHF reserves with segregated reserves and MiCAR EMT framing; FAQ text states reserves are held at CRR credit institutions within the EU and segregated from operational funds. Trust Center independently restates full bank-reserve backing at CRR credit institutions and flags CHFAU reserve audit report as coming soon (no independent itemized reconciliation published). Whitepaper remains the structural envelope for cash plus eligible low-risk CHF HQLA without current category weights. Composition retained as one unsplit basket; knownUnknownExposurePct=100 matches the 100% basket-needs-split disposition.",
     "compositionBasis": "AllUnity whitepaper reserve envelope and trust-center disclosure; current cash/HQLA allocation unpublished",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The current split between CHF cash and eligible HQLAs, the reserve institutions and instruments, provider shares, and a dated independent reserve report are not public.",
     "knownUnknownExposurePct": 100,

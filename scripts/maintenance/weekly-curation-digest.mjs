@@ -13,7 +13,7 @@
  * `agents/curation-digest-<date>.md`.
  *
  * Standalone command (`npm run digest:curation`). NOT part of
- * `validate:prebuild` — ordinary noncritical tests enforce the editorial
+ * The scheduled full test suite enforces the editorial
  * floors; the digest is the human rollup read on a calendar cadence.
  */
 

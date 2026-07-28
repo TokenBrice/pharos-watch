@@ -44,7 +44,7 @@ the Ethereum hook-free Uniswap V4 PoolManager/StateView/Quoter shadow adapter,
 the exact Ethereum legacy Curve 3pool StableSwap `get_dy(int128,int128,uint256)`
 deployment, native Solana
 Raydium CLMM/Orca Whirlpool exact quotes, and reviewed Tron SunSwap V2
-factory/reserve plus SUN Smart Router proofs enter
+factory/reserve plus SUN Smart Router or pinned V2 Router proofs enter
 `worker/src/cron/measured-execution/` through the isolated
 `sync-cl-exit-depth` job. Fluid's address-only official ticker rows receive
 canonical tracked-token metadata only in the bounded target copy, and target
@@ -89,8 +89,9 @@ returned to shadow after its first two active DEX-scoring invocations exceeded
 the Worker memory limit. The phase-split D1 handoff now removes source/provider
 graphs from the scoring invocation, and the reviewed Tron SunSwap profile was
 reactivated only after current complete 21/21 shadow generations plus healthy
-`16,46` consumers. Missing, failed, stale, multi-hop-only, or
-identity-mismatched profiles remain target-level fail-closed. SunSwap census
+`16,46` consumers. A Smart Router response containing only multi-hop candidates
+may use the pinned V2 Router's exact direct-path quote; invalid direct candidates
+and missing, failed, stale, or identity-mismatched profiles remain target-level fail-closed. SunSwap census
 rows are excluded from liquidity scoring and price consensus; its latest-only
 TronGrid state reads are accepted only inside a bounded before/after block
 bracket.

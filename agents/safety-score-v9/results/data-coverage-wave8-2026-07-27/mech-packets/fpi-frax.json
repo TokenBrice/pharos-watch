@@ -1,0 +1,79 @@
+{
+  "assetId": "fpi-frax",
+  "archetype": "algorithmic",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "Frax FPI collateral API updatedAtBlock 25627293 updatedAtTimestampSec 1785193211; eth_call FRAX balanceOf Controller 0x2397321b\u2026cF51 and Comptroller 0x6A7efa96\u2026C502 at eth finalized block 25627228; Fraxtal FPI totalSupply eth_call matches API Fraxtal liability qty",
+  "metrics": {
+    "exogenousBackingShare": 0.885594,
+    "reflexiveBackingShare": 4.79e-09,
+    "contractionCapacityRatio": 2.36512
+  },
+  "metricStates": {
+    "exogenousBackingShare": {
+      "state": "measured",
+      "rationale": "Share of non-self (non-FPI) identified treasury assets that are FRAX/stable: (comptroller FRAX $332,889.09 + controller FRAX $616,502.32 + de minimis fraxtal FRAX + Fraxswap V2 FRAX-portion-only $16,336.02) / non-FPI assets $1,090,485.52 = 0.885594. Pure FPI inventory (ferry + dust balances, $6,321,779.01) excluded from the composition base because it is the liability token itself, not exogenous collateral. Dual-source: Frax collateral API line items + eth_call FRAX balanceOf on Controller/Comptroller matching API tokenQuantity at pin.",
+      "sourceUrl": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
+    },
+    "reflexiveBackingShare": {
+      "state": "measured",
+      "rationale": "FXS wallet balances in the API snapshot total ~$0.00522 / $1,090,485.52 non-FPI assets = 4.79e-9. stkcvxFPIFRAX LP ($124,758.08, 11.44% of non-FPI assets) is left outside both exogenous and reflexive claims (mixed FRAX/FPI LP; not pure reflexive share token). Prior 2026-07-15 snapshot had material FXS; current FXS residual is effectively zero.",
+      "sourceUrl": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
+    },
+    "contractionCapacityRatio": {
+      "state": "measured",
+      "rationale": "FRAX-class exogenous treasury USD / circulating FPI liability USD, where circulating liability = API total FPI liabilities ($6,730,099.74) minus protocol-held FPI self inventory ($6,321,779.01) = $408,320.73; FRAX-class = $965,727.44; ratio = 2.36512. Controller Pool docs independently establish FRAX mint/redeem as the primary contraction/expansion rail for FPI. Dual-source: collateral API amounts + Controller Pool documentation of FRAX redeem path.",
+      "sourceUrl": "https://docs.frax.com/protocol/assets/fpi/controller_pool"
+    }
+  },
+  "analogousMetrics": {
+    "fraxClassUsd": 965727.4371383535,
+    "nonFpiAssetsUsd": 1090485.524966256,
+    "lpMixedUsd": 124758.08260679216,
+    "protocolHeldFpiUsd": 6321779.00835122,
+    "totalLiabilityUsd": 6730099.742137393,
+    "circulatingLiabilityUsd": 408320.73378617316,
+    "apiGrossAssetsOverLiabilities": 1.10136
+  },
+  "components": {
+    "contractionCapacity": {
+      "quality": "adequate",
+      "basis": "FPI Controller Pool documents permissionless mint/redeem of FPI against Legacy FRAX for a fee; API shows $616.5k FRAX in Controller and $332.9k in Comptroller at pin, eth_call-matched. Measured contraction coverage of circulating liability ~2.37\u00d7 FRAX. Adequate: live FRAX rail and measured inventory; not strong because large protocol FPI ferry inventory and LP sleeve complicate the balance sheet and unwind depth is not stress-tested."
+    },
+    "confidenceAndIncentives": {
+      "quality": "limited",
+      "basis": "Overview documents FPIS as the reflexive backstop sold via TWAMM when AMO yield trails CPI, but FPIS is scheduled to phase out by 2028 with conversion to FRAX. Current FXS/FPIS wallet residual is negligible; LP is the residual non-FRAX sleeve. Limited reflexive incentive depth at the pin."
+    },
+    "oracleAndControlAssumptions": {
+      "quality": "adequate",
+      "basis": "Overview: redemption price grows per-second at 12-month CPI-U via specialized Chainlink oracle updated monthly from BLS; Controller Pool implements peg helpers (twammToPeg). Dual-source: FPI overview inflation/oracle section + Controller Pool peg functions. Adequate oracle path; governance multisig still operates Comptroller AMOs."
+    }
+  },
+  "sources": [
+    {
+      "label": "Frax FPI overview (CPI-U peg, 100% CR design, FPIS TWAMM backstop, Chainlink CPI oracle)",
+      "url": "https://docs.frax.com/protocol/assets/fpi/overview"
+    },
+    {
+      "label": "Frax FPI Controller Pool (FRAX mint/redeem path, AMO FRAX lending, twammToPeg)",
+      "url": "https://docs.frax.com/protocol/assets/fpi/controller_pool"
+    },
+    {
+      "label": "Frax FPI collateral API (asset/liability composition snapshot)",
+      "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
+    },
+    {
+      "label": "Ethereum PublicNode eth_call FRAX balanceOf Controller/Comptroller and FPI totalSupply",
+      "url": "https://ethereum-rpc.publicnode.com"
+    },
+    {
+      "label": "Fraxtal RPC FPI totalSupply corroboration of API Fraxtal liability quantity",
+      "url": "https://rpc.frax.com"
+    }
+  ],
+  "notes": "Wave-8 phase-1 remeasure 2026-07-28. Prior overlay 2026-07-23 used profileReview with exogenous 0.817 / reflexive 0.076 from a 2026-07-15 composition; current non-FPI book is ~88.6% FRAX, ~11.4% Convex FPI/FRAX LP, ~0 FXS. Protocol ferry FPI (~$6.32M) excluded from exogenous/reflexive shares. contractionCapacityRatio reported as FRAX coverage of circulating (non-protocol-held) FPI liability (2.365), not as a second copy of the exogenous share. emergencyRecovery and lossRecovery left uncurated (issuer-undisclosed; no dual-sourced emergency/loss waterfall). verification PENDING; overlay untouched.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype algorithmic vocab OK. Independent recompute from live api.frax.finance/v2/fpifpis/fpi-collateral (block ~25627350): non-FPI assets FRAX-class $965,669.16 + FXS ~$0.00522 + LP mixed $124,750.55 = $1,090,419.72; exogenousBackingShare=0.885594 exact; reflexiveBackingShare\u22484.79e-9; protocol FPI ferry/inventory $6,321,397.50 excluded from composition base; circulating liability = total liab \u2212 protocol FPI \u2248 $408,296; contractionCapacityRatio=FRAX-class/circ\u22482.36512 exact. eth_call FRAX balanceOf Controller 0x2397\u2026cf51=621,116.7543201557 and Comptroller 0x6A7e\u2026c502=335,380.7155070377 match API tokenQuantity. Controller Pool docs HTTP 200 confirm FRAX mint/redeem contraction rail. Live USD levels drift slightly vs pin block 25627293; ratios and method reproduce.",
+    "secondSource": "live Frax FPI collateral API recompute + eth_call FRAX balanceOf Controller/Comptroller via publicnode + docs.frax.com controller_pool"
+  }
+}

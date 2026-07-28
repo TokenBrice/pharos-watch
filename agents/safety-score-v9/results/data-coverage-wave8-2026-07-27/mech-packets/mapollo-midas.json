@@ -1,0 +1,49 @@
+{
+  "assetId": "mapollo-midas",
+  "archetype": "synthetic-delta-neutral",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "2026-07-28 ethereum token 0x7cf9dec92ca9fd46f8d86e7798b72624bc116c05; midas.app product page + docs.midas.app llms index (pricing/attestation/risk pages CF-challenged at research time); strategy manager narrative from package/product marketing",
+  "metrics": {
+    "hedgeCoverageRatio": null,
+    "marginBufferPct": null,
+    "lossAbsorptionShare": null
+  },
+  "metricStates": {
+    "hedgeCoverageRatio": {
+      "state": "unavailable",
+      "rationale": "mAPOLLO is a Midas NAV liquid-yield token tracking a market-neutral/manager strategy. No reconciled hedge notional or net-delta inventory is public. Searched: midas.app product page, docs.midas.app llms-listed transparency/risk pages (HTTP 403 Cloudflare at write time), CoinGecko listing. Do not invent policy-1 coverage.",
+      "sourceUrl": "https://midas.app/mapollo"
+    },
+    "marginBufferPct": {
+      "state": "unavailable",
+      "rationale": "No product-specific published excess-margin or overcollateralization figure (NAV feed is not excess collateral). Same search surfaces; Midas risk-monitoring docs CF-blocked.",
+      "sourceUrl": "https://docs.midas.app/llms.txt"
+    },
+    "lossAbsorptionShare": {
+      "state": "unavailable",
+      "rationale": "No dual-sourced insurance/first-loss pool size relative to token supply. Midas legal/KID materials CF-blocked this pass for this product.",
+      "sourceUrl": "https://docs.midas.app/llms.txt"
+    }
+  },
+  "components": {},
+  "sources": [
+    {
+      "label": "Midas mAPOLLO product page",
+      "url": "https://midas.app/mapollo"
+    },
+    {
+      "label": "Midas docs llms index (transparency/risk entries listed; body CF-walled)",
+      "url": "https://docs.midas.app/llms.txt"
+    },
+    {
+      "label": "CoinGecko product listing",
+      "url": "https://www.coingecko.com/en/coins/midas-mapollo"
+    }
+  ],
+  "notes": "mAPOLLO: Midas docs CF-walled; wrote honest unavailable SDN metrics without component grades (insufficient dual-source for limited+). verification PENDING.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED as honest unavailable SDN packet. Archetype synthetic-delta-neutral vocab OK; all three metrics null+unavailable. midas.app/mapollo currently HTTP 403 from verifier IP (bot wall); docs.midas.app/llms.txt HTTP 200 lists transparency/risk entries without product-specific hedge notional, margin headroom, or insurance share. No inventable policy-1 coverage. Empty components consistent with insufficient dual-source for limited+ grades.",
+    "secondSource": "docs.midas.app/llms.txt index re-open + midas.app product wall (403) confirming unpublished metrics"
+  }
+}

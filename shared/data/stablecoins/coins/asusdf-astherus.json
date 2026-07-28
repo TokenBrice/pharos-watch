@@ -121,35 +121,37 @@
       "depType": "wrapper",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Aster Earn asUSDFEarn wrapper over USDF (Aster; upstream USDT custodied at Ceffu and deployed into Binance/MirrorX delta-neutral strategies)",
-      "riskFactors": ["counterparty", "custody", "smart-contract", "market", "basis"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "market",
+        "basis"
+      ],
       "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "verified",
     "sources": [
       {
         "label": "Aster: mint asUSDF",
-        "url": "https://docs.asterdex.com/product/aster-earn/mint-asusdf"
+        "url": "https://docs.asterdex.com/earn/overview/mint-asusdf"
       },
       {
         "label": "Aster USDF and asUSDF FAQ",
         "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
       },
       {
-        "label": "Aster USDF and asUSDF tutorials",
-        "url": "https://docs.asterdex.com/product/usdf-stablecoin/tutorials"
-      },
-      {
         "label": "Pinned Astherus asUSDFEarn reference source",
         "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol"
       }
     ],
-    "rationale": "Re-fetched the Aster docs on 2026-07-20: asUSDF is the yield-bearing asToken received by staking USDF on Aster Earn, NAV-accreting from the delta-neutral and funding-fee strategies that back USDF, with withdrawals returning USDF after the documented T+1 hour (two-hour) waiting period and no mint or withdrawal fee. The direct reserve is therefore 100% USDF held in the asUSDFEarn wrapper, a wrapper dependency on the tracked usdf-astherus record; the on-chain wrapper path (deposit USDF, mint calculated shares, no free-mint route) was verified at BSC block 110184782 in the 2026-07-15 mint-authority review. Upstream USDF composition (USDT at Ceffu plus Binance/MirrorX delta-neutral deployment) is inherited from the linked record and not duplicated here.",
+    "rationale": "Re-fetched the Aster docs on 2026-07-20: asUSDF is the yield-bearing asToken received by staking USDF on Aster Earn, NAV-accreting from the delta-neutral and funding-fee strategies that back USDF, with withdrawals returning USDF after the documented T+1 hour (two-hour) waiting period and no mint or withdrawal fee. The direct reserve is therefore 100% USDF held in the asUSDFEarn wrapper, a wrapper dependency on the tracked usdf-astherus record; the on-chain wrapper path (deposit USDF, mint calculated shares, no free-mint route) was verified at BSC block 110184782 in the 2026-07-15 mint-authority review. Upstream USDF composition (USDT at Ceffu plus Binance/MirrorX delta-neutral deployment) is inherited from the linked record and not duplicated here. Write-time re-open 2026-07-28: mint-asusdf.md states asUSDF is the yield-bearing token received by staking USDF; FAQ still describes USDF minted 1:1 with USDT held at Ceffu and delta-neutral strategies. GitHub asUSDFEarn.sol deposit path remains USDF-in/shares-out. Updated source URL to live docs slug earn/overview/mint-asusdf.",
     "compositionBasis": "Aster issuer documentation of the asUSDF wrapper (fetched 2026-07-20) plus verified BSC wrapper contract mechanics",
-    "compositionAsOf": "2026-07-20",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct reserve asset is fully identified as USDF in the wrapper. Asset-level reserve, custody, and strategy risks beneath USDF are inherited from the linked usdf-astherus record rather than repeated here.",
     "knownUnknownExposurePct": 0

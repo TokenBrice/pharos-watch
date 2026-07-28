@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "assetId": "usn-noon",
+  "archetype": "rwa-credit-fund",
+  "capturedAt": "2026-07-27T22:54:31.000Z",
+  "source": {
+    "url": "https://cache.accountable.capital/dashboard/noon",
+    "label": "Accountable Noon real-time proof-of-solvency dashboard API",
+    "displayUrl": "https://noon.accountable.capital/",
+    "dataTimestampMs": "1785194915915",
+    "dataTimestampIso": "2026-07-27T22:52:49.915Z",
+    "attestationSnapshotTimestampMs": "1785192343200",
+    "attestationSnapshotIso": "2026-07-27T22:45:43.200Z",
+    "rawCaptures": [
+      "noon-accountable-raw.json (fetched 2026-07-27T22:52:08Z; data.ts 2026-07-27T22:45:43.224Z; snapshot.ts 2026-07-27T22:30:40.217Z)",
+      "noon-accountable-raw-2.json (fetched ~2026-07-27T22:54:31Z; data.ts 2026-07-27T22:52:49.915Z; snapshot.ts 2026-07-27T22:45:43.200Z)"
+    ]
+  },
+  "observations": {
+    "collateralization": 1.013786,
+    "totalReservesUsd": 34400188.21,
+    "totalSupplyUsn": 33932393.29,
+    "netUsd": 467794.92,
+    "reservesInterval": "live",
+    "reservesVerifiabilityPct": 100,
+    "deploymentUsd": {
+      "Private Credit (Fasanara FTAC)": 24486151.98,
+      "DeFi Lending": 3521782.048151,
+      "US Treasury Bills": 2748703.094363,
+      "Other": 1844795.0026801375,
+      "CLOs (JAAA)": 1798755.11936221,
+      "Funding Rate (BTC)": 0.9612150669
+    },
+    "custodySplitUsd": {
+      "Fasanara": 24486151.98,
+      "Safe": 5248064.45,
+      "Alpaca": 4547458.21,
+      "ForDefi": 118512.6,
+      "Ceffu": 0.96
+    },
+    "supplySplitByChain": {
+      "ethereum": 28281657.77,
+      "Starknet": 4037760.12,
+      "Hyperevm": 950896.06,
+      "Tac": 374435.2,
+      "Zksync": 277052.69,
+      "Sophon": 10591.45
+    },
+    "insuredUsd": 1570997.41507,
+    "insuranceNftIds": [
+      "4969"
+    ],
+    "insuranceCoverAddress": "0xcafeaca76be547f14d0220482667b42d8e7bc3eb",
+    "susnNavUsn": 1.2107203362158603,
+    "attestationStructure": "Signed snapshot attestation (liability and collateral hashes with signatures), zero-knowledge proof bundle, Merkle root signed at 2026-07-27T22:45:43.089Z, one zkTLS attestation, nitro enclave attestation.",
+    "maturityFieldsPresent": false
+  },
+  "derivations": {
+    "valuationCadenceDays": {
+      "formula": "(snapshot.ts of fetch 2 - snapshot.ts of fetch 1) in ms converted to days; consecutive signed attestation snapshots observed 7 wall-clock minutes apart",
+      "gapMs": 902983,
+      "value": 0.0105
+    },
+    "deploymentShares": {
+      "privateCreditFasanaraFtac": 0.7118,
+      "defiLending": 0.10238,
+      "usTreasuryBills": 0.0799,
+      "closJaaa": 0.05229,
+      "other": 0.05363,
+      "fundingRateBtc": 0.0
+    },
+    "custodyShares": {
+      "fasanara": 0.7118,
+      "safe": 0.15256,
+      "alpaca": 0.13219,
+      "fordefi": 0.00345,
+      "ceffu": 0.0
+    },
+    "insuredShareOfSupply": 0.0463,
+    "collateralizationCheck": "totalReservesUsd / totalSupplyUsn = 1.0137861, matching the published collateralization field"
+  },
+  "metricDisposition": {
+    "valuationCadenceDays": {
+      "state": "measured",
+      "value": 0.0105,
+      "rationale": "Self-described 'live' feed with 100% verifiability; two consecutive signed attestation snapshots (22:30:40.217Z and 22:45:43.200Z) pin a ~15-minute refresh, i.e. 0.0105 days."
+    },
+    "weightedAverageMaturityDays": {
+      "state": "unavailable",
+      "rationale": "Searched the full Accountable dashboard API payload (deployment buckets, custody split, 609-point timeline, attestation bundle - no maturity fields), Noon's transparency docs, liquidity docs (per-strategy liquidity windows only: FTAC T+3 months, T-bills/CLOs T+0-T+3, lending/PT T+0), and USN/sUSN product docs. No position-level maturity dates, maturity ladder, or portfolio WAM is published; deriving a WAM from liquidity windows would be prohibited extrapolation. The disclosure should live in the Accountable dashboard position detail at https://noon.accountable.capital/."
+    }
+  },
+  "sources": [
+    "https://noon.accountable.capital/",
+    "https://cache.accountable.capital/dashboard/noon",
+    "https://docs.noon.capital/security/transparency",
+    "https://docs.noon.capital/noon-the-basics/liquidity",
+    "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn",
+    "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption"
+  ]
+}

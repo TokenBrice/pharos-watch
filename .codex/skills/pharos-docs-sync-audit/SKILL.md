@@ -101,7 +101,7 @@ npm run check:openapi
 npm run check:postman
 ```
 
-For broad docs work, prefer the specific failing check first, then `npm run validate:prebuild` if the user asked for production readiness.
+For broad docs work, prefer the specific failing check first, then `npm run check:pr -- --base=<ref>` after commit if the user asked for PR readiness.
 
 ### 5. Broad Audit With Subagents
 

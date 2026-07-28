@@ -1,0 +1,138 @@
+{
+  "assetId": "asusdf-astherus",
+  "archetype": "synthetic-delta-neutral",
+  "outcome": "READY",
+  "mergeMode": "insert",
+  "overlayEntry": {
+    "assetId": "asusdf-astherus",
+    "archetype": "synthetic-delta-neutral",
+    "reviewedAt": "2026-07-27",
+    "sources": [
+      {
+        "label": "Aster 'mint asUSDF' documentation (asUSDF is the staking wrapper of USDF on Aster Earn; T+1 hour withdrawal; no separate strategy layer)",
+        "url": "https://docs.asterdex.com/product/aster-earn/mint-asusdf"
+      },
+      {
+        "label": "Aster official smart-contract inventory (asUSDF token 0x917af46b... and asUSDF minting contract 0xdb57a53c...)",
+        "url": "https://docs.asterdex.com/overview/smart-contracts"
+      },
+      {
+        "label": "Pinned Astherus asUSDFEarn reference source (deposit-USDF-then-mint-shares path; no free-mint route)",
+        "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol"
+      },
+      {
+        "label": "Pinned eth_call reads of the asUSDFEarn wrapper USDF balance, asUSDF totalSupply, and upstream USDF totalSupply at BSC block 112517992 via this public RPC endpoint",
+        "url": "https://bsc-rpc.publicnode.com"
+      }
+    ],
+    "notes": "Measured on BNB Chain at pinned block 112517992 (2026-07-27T22:57:31Z, hash 0xc68417d2a0ff3b2bb6fe650832259fd0e1f3cc1f8fdc6a062f14a3fae31e429d) via bsc-rpc.publicnode.com; journaled in the wave-8 packet draft journal 2026-07-27-asusdf-wrapper-block-112517992.json. The asUSDFEarn wrapper contract (0xdb57a53c..., itemized in Aster's official contract inventory) held 3,480,167.37079955 USDF against asUSDF totalSupply() of 3,268,199.9317093217, an implied wrapper NAV of 1.064858 USDF per asUSDF (>= 1, consistent with the documented NAV-accreting design); ERC-4626 convertToAssets(1e18) and totalAssets() reverted, so the wrapper is not ERC-4626 and the NAV is derived from the pinned balance/supply reads. Upstream USDF totalSupply at the same block was 111,986,088.07905471. The wrapper itself runs no hedge, posts no margin, and maintains no loss-absorption pool: those layers exist only at the upstream USDF mechanism, whose issuer publishes no reconciled hedge notionals, margin figures, or insurance/reserve fund (see the usdf-astherus review), so all three sdn metrics are honestly recorded as unavailable rather than not-applicable, keeping the nondisclosure signal attributed to the Aster evidence gap. venueAndCustody is graded limited under D3 at the wrapper layer: Aster's official contract inventory itemizes the wrapper contract, the issuer-pinned exact-match source shows shares mint only against deposited USDF, and the pinned on-chain reads verify the wrapper holds the full USDF backing of outstanding shares at NAV >= 1; the grade does not go higher because no independent attestation exists and the wrapper's UUPS admin (six-hour timelock behind a 4-of-8 Safe) can change custody logic. All other components are omitted (bounded-unknown) for lack of itemized evidence.",
+    "metrics": {
+      "hedgeCoverageRatio": null,
+      "marginBufferPct": null,
+      "lossAbsorptionShare": null
+    },
+    "metricApplicability": {
+      "hedgeCoverageRatio": {
+        "state": "unavailable",
+        "rationale": "asUSDF is a pure staking wrapper over USDF; the delta-neutral hedge exists only at the upstream USDF layer, whose issuer publishes no reconciled hedge notionals or net delta (searched the Aster USDF/asUSDF documentation set and product surface; no transparency or attestation API exists).",
+        "sourceUrl": "https://docs.asterdex.com/product/aster-earn/mint-asusdf"
+      },
+      "marginBufferPct": {
+        "state": "unavailable",
+        "rationale": "The wrapper posts no margin of its own; margin for the upstream Binance delta-neutral positions is an Aster/Ceffu-layer quantity for which no balances or maintenance requirements are published anywhere in the Aster documentation set.",
+        "sourceUrl": "https://docs.asterdex.com/product/aster-earn/mint-asusdf"
+      },
+      "lossAbsorptionShare": {
+        "state": "unavailable",
+        "rationale": "No insurance fund, reserve fund, or quantified loss-absorption pool exists at the wrapper layer or is disclosed for the upstream USDF mechanism in any Aster documentation.",
+        "sourceUrl": "https://docs.asterdex.com/product/aster-earn/mint-asusdf"
+      }
+    },
+    "components": {
+      "venueAndCustody": {
+        "quality": "limited"
+      }
+    }
+  },
+  "journal": {
+    "filename": "2026-07-27-asusdf-wrapper-block-112517992.json",
+    "content": {
+      "schemaVersion": 1,
+      "kind": "onchain-mechanism-measurement",
+      "assetId": "asusdf-astherus",
+      "archetype": "synthetic-delta-neutral",
+      "capturedAt": "2026-07-27T22:58:00Z",
+      "observations": {
+        "bsc": {
+          "block": 112517992,
+          "blockHash": "0xc68417d2a0ff3b2bb6fe650832259fd0e1f3cc1f8fdc6a062f14a3fae31e429d",
+          "blockTimestamp": "2026-07-27T22:57:31Z",
+          "rpc": "https://bsc-rpc.publicnode.com"
+        },
+        "wrapper": {
+          "asUsdfEarnAddress": "0xdb57a53c428a9fafcbfeffb6dd80d0f427543695",
+          "asUsdfTokenAddress": "0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb",
+          "usdfAddress": "0x5a110fc00474038f6c02e89c707d638602ea44b5",
+          "usdfBalanceOfCalldata": "0x70a08231000000000000000000000000db57a53c428a9fafcbfeffb6dd80d0f427543695",
+          "usdfBalanceRaw": "0x00000000000000000000000000000000000000000002e0f4404ec1365a5228fd",
+          "usdfBalance": 3480167.37079955,
+          "asUsdfTotalSupplyCalldata": "0x18160ddd",
+          "asUsdfTotalSupplyRaw": "0x00000000000000000000000000000000000000000002b411792a704619f7780c",
+          "asUsdfTotalSupply": 3268199.9317093217,
+          "convertToAssets1e18Calldata": "0x07a2d13a0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+          "convertToAssetsResult": "execution reverted",
+          "totalAssetsCalldata": "0x01e1d114",
+          "totalAssetsResult": "execution reverted"
+        },
+        "upstream": {
+          "usdfTotalSupplyRaw": "0x0000000000000000000000000000000000000000005ca1f9ffc9d0bc8e34fab2",
+          "usdfTotalSupply": 111986088.07905471
+        }
+      },
+      "derivations": {
+        "impliedWrapperNav": {
+          "formula": "usdfBalanceOf(asUSDFEarn) / asUSDF.totalSupply()",
+          "value": 1.064857549574504,
+          "interpretation": "USDF per asUSDF share; >= 1 is consistent with the documented NAV-accreting staking design and confirms full on-chain backing of outstanding wrapper shares at the pinned block. Not used as an sdn metric."
+        },
+        "wrapperShareOfUpstreamSupply": {
+          "formula": "asUSDF.totalSupply() / USDF.totalSupply()",
+          "value": 0.029183981579945808
+        }
+      },
+      "metricDisposition": {
+        "hedgeCoverageRatio": {
+          "state": "unavailable",
+          "rationale": "The wrapper runs no hedge; the upstream USDF hedge exists at the Aster/Ceffu/Binance layer with no published reconciled notionals or net delta."
+        },
+        "marginBufferPct": {
+          "state": "unavailable",
+          "rationale": "The wrapper posts no margin; upstream margin balances and maintenance requirements are unpublished."
+        },
+        "lossAbsorptionShare": {
+          "state": "unavailable",
+          "rationale": "No loss-absorption pool exists at the wrapper layer or is disclosed for upstream USDF."
+        }
+      },
+      "sources": [
+        "https://docs.asterdex.com/product/aster-earn/mint-asusdf",
+        "https://docs.asterdex.com/overview/smart-contracts",
+        "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol",
+        "https://bsc-rpc.publicnode.com"
+      ]
+    }
+  },
+  "evidenceSummary": "Pinned BSC block 112517992 (2026-07-27T22:57:31Z) via bsc-rpc.publicnode.com: the issuer-itemized asUSDFEarn wrapper (0xdb57a53c...) held 3,480,167.37079955 USDF against asUSDF totalSupply 3,268,199.9317093217, an implied NAV of 1.064858 USDF/asUSDF (>= 1, full on-chain backing of wrapper shares verified); convertToAssets/totalAssets revert (not ERC-4626). Upstream USDF supply 111,986,088.07905471 at the same block. All three sdn metrics recorded unavailable: the wrapper runs no hedge/margin/loss-absorption layer of its own and the upstream USDF mechanism discloses none of these values. venueAndCustody graded limited (official contract inventory + issuer-pinned exact-match source + pinned on-chain balance verification; no attestation, UUPS admin retains upgrade control). All other components bounded-unknown.",
+  "primarySources": [
+    "https://docs.asterdex.com/product/aster-earn/mint-asusdf",
+    "https://docs.asterdex.com/overview/smart-contracts",
+    "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol",
+    "https://bsc-rpc.publicnode.com"
+  ],
+  "blockedReason": null,
+  "missingSources": [
+    "Upstream USDF reserve/attestation report or transparency API (inherited gap; none exists)",
+    "Wrapper NAV oracle or share-price disclosure (the wrapper exposes no ERC-4626 or public price getter; NAV had to be derived from raw balance/supply reads)",
+    "Any loss-absorption or insurance disclosure applicable to asUSDF holders"
+  ]
+}

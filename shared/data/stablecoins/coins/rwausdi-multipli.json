@@ -233,12 +233,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-A wave6",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve re-verification",
     "confidence": "probable",
     "sources": [
       {
-        "label": "AFI rwaUSDi proof-of-reserves snapshot (2026-07-22)",
+        "label": "AFI rwaUSDi proof-of-reserves snapshot (re-opened 2026-07-28)",
         "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
       },
       {
@@ -246,13 +246,13 @@
         "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/periodic-report?pageNo=1&offset=20"
       },
       {
-        "label": "Multipli rwaUSDi institutional-credit documentation",
+        "label": "Multipli rwaUSDi institutional-credit documentation (re-opened 2026-07-28)",
         "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
       }
     ],
-    "rationale": "AFI's proof payload dated 2026-07-22T18:30:41.260Z reports $1,200,000,000 of aggregate reserves against $390,010,160 of liabilities, a collateralization ratio of 3.076843, but returns no reserve breakdown. Multipli describes the rwaUSDi envelope as permissioned private pools spanning private credit, asset-backed lending, project finance, and structured or market-neutral strategies with scheduled redemptions and periodic pricing. Because no current holdings, weights, borrowers, funds, or strategy counterparties are disclosed, the complete envelope remains one unresolved mixed basket.",
+    "rationale": "Re-opened 2026-07-28: AFI proof payload still reports verifiedTotals totalReserves=1200000000.00 against totalLiabilities=390010160.00 (collateralRatio≈307.6843) with isCollateralized=true and no itemized holdings breakdown in the public proof. Multipli docs independently describe rwaUSDi as a KYB-gated institutional permissioned credit layer for private credit, structured finance, asset-backed lending, project finance, and market-neutral strategies with scheduled redemptions and periodic pricing. Because no current holdings, weights, borrowers, funds, or strategy counterparties are disclosed, the complete envelope remains one unresolved mixed basket; knownUnknownExposurePct=100 matches the 100% basket-needs-split disposition.",
     "compositionBasis": "AFI aggregate solvency proof plus Multipli's documented rwaUSDi eligible-asset envelope; current constituents and weights undisclosed",
-    "compositionAsOf": "2026-07-22",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "Current asset classes, individual borrowers and funds, constituent weights, credit seniority, maturities, valuation marks, custody shares, strategy exposures, and redemption schedules are not exposed by the reviewed proof.",
     "knownUnknownExposurePct": 100,

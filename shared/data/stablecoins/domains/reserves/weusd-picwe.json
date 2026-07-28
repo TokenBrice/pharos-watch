@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -32,9 +32,9 @@
         "url": "https://docs.picwe.org/mint-and-redeem"
       }
     ],
-    "rationale": "PicWe's current documentation states that WEUSD is minted 1:1 against USDC during Phase 1 and describes instant mint/redeem. The existing Pharos record also retains older PicWe-linked basket evidence and a persistent market depeg; no reconciled reserve inventory or assurance artifact resolves that conflict.",
+    "rationale": "PicWe's current documentation states that WEUSD is minted 1:1 against USDC during Phase 1 and describes instant mint/redeem. The existing Pharos record also retains older PicWe-linked basket evidence and a persistent market depeg; no reconciled reserve inventory or assurance artifact resolves that conflict. Write-time re-open 2026-07-28: PicWe What-is-WEUSD and mint-and-redeem docs still describe over-collateralized USDC-foundation phase with planned RWA expansion; no live weight table \u2192 ku=100.",
     "compositionBasis": "Current PicWe WEUSD documentation with the pre-existing conflicting backing evidence retained as unresolved",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The current 100% USDC claim is not reconciled with the older USDT/MOVE basket disclosure or current market evidence, so the actual reserve composition remains unresolved.",
     "knownUnknownExposurePct": 100,

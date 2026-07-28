@@ -1,0 +1,132 @@
+{
+  "assetId": "apyusd-apyx",
+  "archetype": "rwa-credit-fund",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "Accountable API ts 2026-07-27T22:45:43.737Z (collateralization 0.922477, redemption_value 0.9155, total_reserves 308600110.7, total_supply 327073514.82, STRC 189087988.65); Ethereum apyUSD vault 0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a at block 25627235 via ethereum.publicnode.com: asset()=apxUSD 0x98a878b1cd98131b271883b390f68d2c90674665, totalAssets()\u2248179498462.50 apxUSD, totalSupply()\u2248127985470.50 shares, exchange\u22481.40249 apxUSD/share",
+  "metrics": {
+    "weightedAverageMaturityDays": null,
+    "valuationCadenceDays": 30
+  },
+  "metricStates": {
+    "weightedAverageMaturityDays": {
+      "state": "unavailable",
+      "rationale": "Apyx Accountable reserves_split (STRC, POL, Inventory, Cash & Equivalents, Other) publishes no weighted-average maturity or remaining-tenor dataset. The dominant reserve sleeve is Strategy Variable Rate Series A Perpetual Stretch Preferred Stock (STRC) / STRCx \u2014 perpetual preferred equity with no maturity date \u2014 so a portfolio WAM is neither published nor constructible from issuer disclosures. Searched Accountable dashboard API, Apyx STRC collateral page, and Wolf monthly securities attestations (Mar\u2013Jun 2026); none state a WAM.",
+      "sourceUrl": "https://api.accountable.apyx.fi/dashboard"
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "rationale": "Wolf & Company, P.C. AICPA examination-level Monthly Securities/Asset Balance Attestations published for March (report dates 3/24 & 3/31/2026), April (4/9 & 4/30), May (5/5 & 5/31), and June (6/17 & 6/30) 2026 \u2014 monthly cadence. Live Accountable TEE feed is continuous but does not replace the independent monthly CPA valuation pin. valuationCadenceDays=30.",
+      "sourceUrl": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation"
+    }
+  },
+  "components": {
+    "creditQuality": {
+      "quality": "weak",
+      "basis": "apyUSD is an ERC-4626 vault whose sole asset is apxUSD; economic credit risk is pass-through to Preference Foundation\u2019s DAT preferred-equity stack. Re-opened Accountable API 2026-07-27T22:45:43.737Z: collateralization 0.922477 (sub-100%), net \u221218.47M USD, redemption_value 0.9155, STRC 189.09M of 308.60M gross reserves (~70% of inventory-net reserves) vs Cash & Equivalents only 30.73M. Independent TID Research apxUSD/apyUSD reports document the June 2026 depeg (apxUSD trough ~$0.82, attested CR ~84%) and ~74% net STRC concentration after inventory netting \u2014 measured credit/mark shortfall, not absence of evidence. Preferred equity is junior to DAT indebtedness (Apyx risk docs; STRC ranking page)."
+    },
+    "seniority": {
+      "quality": "limited",
+      "basis": "Underlying STRC is Variable Rate Series A Perpetual Stretch Preferred Stock: senior to common (and junior preferreds STRK/STRD) but junior to existing/future indebtedness and to senior preferreds such as STRF (Apyx STRC collateral docs). apyUSD holders hold vault shares redeemable for apxUSD, not a senior secured claim on the securities. Dual pin: Apyx STRC ranking section + Strategy SEC 424B5 / product description of perpetual preferred stock."
+    },
+    "legalEnforceability": {
+      "quality": "weak",
+      "basis": "Apyx Terms of Service \u00a71.4 state Protocol-Generated Assets (including apyUSD) 'represent programmatic claims against the respective Protocol modules holding certain assets' and 'do not represent a claim against any particular entity or person'; \u00a714 disclaims customary legal meanings of deposit/redeem/collateral terminology; BVI Preference Capital / Preference Foundation structure with mandatory arbitration. Dual pin: ToS text + TID Research naming Preference Foundation (Carolyn Kelly) as Wolf attestation signer and noting separation from Nasdaq-listed DFDV. No bankruptcy-remote fund share or regulated trust deed identified for apyUSD holders."
+    },
+    "valuationCadence": {
+      "quality": "adequate",
+      "basis": "Independent AICPA examination-level monthly attestations by Wolf & Company, P.C. (Boston) for Mar/Apr/May/Jun 2026, re-opened as PDFs: June report dates 6/17 and 6/30/2026 (securities only \u2014 STRC/STRCx/SATA at Alpaca and on-chain STRCx; opinion letter dated July 22, 2026); May 5/5 & 5/31; April 4/9 & 4/30 (securities-only narrowing from March full-asset scope). Corroborated by Apyx third-party attestation index listing the same four monthly engagements and by Accountable live TEE dashboard (interval=live). Meets evidence-standard 'adequate' (dated independent attestation, monthly > quarterly). Note: April+ scope excludes cash/stablecoin components, so cash sleeve valuation is dashboard/issuer-only after 2026-03-31."
+    },
+    "maturityAndLiquidity": {
+      "quality": "limited",
+      "basis": "Dominant sleeve STRC is perpetual preferred (no maturity) \u2014 dual: Apyx STRC page ('Strategy\u2019s perpetual preferred stock') and Strategy product/SEC materials describing Variable Rate Series A Perpetual Stretch Preferred Stock. Cash & Equivalents buffer is thin (~11% of inventory-net reserves on Accountable pin). Apyx risk docs state DAT preferreds are less liquid than T-bills and spreads can widen under stress; June 2026 depeg (TID) demonstrated exit/liquidity stress. apyUSD unlock is asynchronous (ERC-7540-style 3\u201320 day fee window per product docs), so maturity/liquidity risk includes both perpetual collateral and delayed vault exit."
+    },
+    "custody": {
+      "quality": "limited",
+      "basis": "Wolf June 2026 attestation names marketable preferred equity held with Alpaca brokerage in Preference Foundation (or subsidiary) name and STRCx in self-custodied on-chain wallets; dual pin Wolf PDF securities breakdown + Apyx Accountable dashboard docs (brokerage/exchange/wallet connectors; AWS Nitro enclave PoR). Institutional brokerage + named third-party PoR connectors, but not a regulated fund custodian (e.g. BNY) with bankruptcy-remote segregation for token holders; STRCx self-custody Safe is operator-controlled. Grade limited, not adequate."
+    },
+    "recovery": {
+      "quality": "weak",
+      "basis": "Documented structural recovery weakness: (1) ToS deny entity-level claim and cap Company liability; (2) Apyx risk docs state DAT preferred recovery in bankruptcy may be limited or nonexistent (preferred junior to debt); (3) Capitalization Framework wind-down distributes Total Collateral Value pro-rata without a senior secured recovery waterfall for apyUSD. Dual pin: ToS \u00a71.4/\u00a710 + risk-management page; corroboration TID (no atomic on-chain redemption of apxUSD to dollars; recovery depends on off-chain STRC liquidation). Not graded weak merely from missing docs \u2014 these are affirmative negative disclosures."
+    }
+  },
+  "sources": [
+    {
+      "label": "Apyx Accountable proof-of-reserves API (live reserves_split, collateralization, redemption_value; re-opened 2026-07-27T22:45:43.737Z)",
+      "url": "https://api.accountable.apyx.fi/dashboard"
+    },
+    {
+      "label": "Apyx Accountable dashboard (public PoR UI)",
+      "url": "https://accountable.apyx.fi/"
+    },
+    {
+      "label": "Apyx Accountable dashboard documentation (reserve categories, enclave model)",
+      "url": "https://docs.apyx.fi/collateral-and-custody/accountable-dashboard"
+    },
+    {
+      "label": "Apyx third-party attestation index (Wolf & Company Mar\u2013Jun 2026)",
+      "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation"
+    },
+    {
+      "label": "Wolf & Company June 2026 Monthly Securities Balance Attestation (PDF; report dates 2026-06-17 and 2026-06-30; Alpaca + STRCx)",
+      "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2FlBCjHlOx2M99MnZqtHSt%2FJune%202026%20Attestation%20Opinion%20(Final).pdf?alt=media&token=86104e30-f8de-4eb6-885a-99705340cd33"
+    },
+    {
+      "label": "Wolf & Company May 2026 Monthly Securities Balance Attestation (PDF)",
+      "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2FIQVBFlf0hWeb6ht5Zvex%2FMay%202026%20Attestation%20Opinion%20(Final).pdf?alt=media&token=9d030bb8-f504-48ed-87cd-49e0c486cf88"
+    },
+    {
+      "label": "Wolf & Company April 2026 Monthly Securities Balance Attestation (PDF; securities-only scope)",
+      "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2Fgit-blob-aecaa8ca94217c74227fbcdac9df3efda187aa5a%2FApril%202026%20Attestation%20Opinion%20Final.pdf?alt=media"
+    },
+    {
+      "label": "Wolf & Company March 2026 Monthly Asset Balance Attestation (PDF; cash + securities scope)",
+      "url": "https://1731598137-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F6XK8DXRkFImTNSbo86o2%2Fuploads%2FBrFmPjvqlhlPtMJ4QnCO%2FMarch%202026%20Attestation%20Opinion%20Final.pdf?alt=media&token=2931863d-2ab2-4f73-b323-41d6ead4f06b"
+    },
+    {
+      "label": "Apyx apyUSD product overview (ERC-4626, unlock/redemption model)",
+      "url": "https://docs.apyx.fi/product-overview/apyusd-overview"
+    },
+    {
+      "label": "Apyx STRC collateral page (perpetual preferred; ranking senior to common / junior to debt)",
+      "url": "https://docs.apyx.fi/solution-overview/example-collateral-allocation/strc"
+    },
+    {
+      "label": "Apyx risk management (preferred equity credit, custody, unlock risks)",
+      "url": "https://docs.apyx.fi/risk-management/apyx-and-dat-risks"
+    },
+    {
+      "label": "Apyx capitalization framework (Redemption Value vs Total Collateral Value; wind-down pro-rata)",
+      "url": "https://docs.apyx.fi/solution-overview/capitalization-framework"
+    },
+    {
+      "label": "Apyx Terms of Service (no entity claim; BVI; terminology disclaimer)",
+      "url": "https://docs.apyx.fi/resources/terms-of-service"
+    },
+    {
+      "label": "TID Research apyUSD retail risk report (inherited depeg, unlock window, Wolf/Alpaca)",
+      "url": "https://tidresearch.com/reports/apyusd/"
+    },
+    {
+      "label": "TID Research apxUSD retail risk report (June 2026 depeg, CR shortfall, reserve composition)",
+      "url": "https://tidresearch.com/reports/apxusd/"
+    },
+    {
+      "label": "Strategy Inc STRC SEC prospectus supplement (Variable Rate Series A Perpetual Stretch Preferred Stock)",
+      "url": "https://www.sec.gov/Archives/edgar/data/1050446/000119312526118796/d101356d424b5.htm"
+    },
+    {
+      "label": "Ethereum apyUSD ERC-4626 vault (Etherscan)",
+      "url": "https://etherscan.io/address/0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a#readContract"
+    },
+    {
+      "label": "Ethereum PublicNode RPC (vault eth_call pin at block 25627235)",
+      "url": "https://ethereum.publicnode.com"
+    }
+  ],
+  "notes": "apyUSD is the yield-bearing ERC-4626 strategy vault over apxUSD (variantOf apxusd-apyx). Mechanism archetype rwa-credit-fund is inherited: vault totalAssets are apxUSD; economic RWA exposure is Preference Foundation\u2019s DAT preferred-equity portfolio (primarily Strategy STRC/STRCx) plus cash buffer and POL/Inventory accounting. On-chain vault at Ethereum block 25627235 is fully collateralized in apxUSD units by construction (asset=apxUSD, exchange\u22481.4025); the safety-relevant credit, seniority, custody, and recovery facts live on the parent reserve stack and issuer legal wrappers. Metrics: WAM unavailable (perpetual preferred, no published tenor ladder); valuation cadence 30 days from monthly Wolf AICPA examinations (Mar\u2013Jun 2026 PDFs re-opened). Components use documented deficiencies (sub-100% CR, depeg, ToS non-claim, preferred juniority) rather than missing-evidence weak grades. verification.verdict left PENDING for phase-2 independent verifier.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype rwa-credit-fund vocab OK. valuationCadenceDays=30 dual-sourced: (1) docs.apyx.fi third-party-attestation index lists Wolf & Company Mar/Apr/May/Jun 2026 Monthly Securities/Asset Balance Attestations; (2) June 2026 PDF independently downloaded (HTTP 200, 706KB) \u2014 AICPA examination opinion for Preference Foundation as of Report Dates 2026-06-17 and 2026-06-30, titled Monthly Securities Balance Attestation. weightedAverageMaturityDays unavailable reproduces: STRC collateral page + Final Terms name perpetual preferred / Stretch Preferred; no portfolio WAM on attestation PDFs or docs. Accountable API/UI currently HTTP 403 from this verifier IP (bot wall) so live CR pin not re-fetched; metrics under test do not require that feed. On-chain apyUSD vault via ethereum.publicnode.com: asset=apxUSD 0x98a8\u2026, totalAssets\u2248179.50M, totalSupply\u2248127.99M, exchange\u22481.4025 \u2014 matches packet construction. Component grades not re-adjudicated beyond source reachability for metric claims.",
+    "secondSource": "Wolf & Company June 2026 Monthly Securities Balance Attestation PDF (gitbook upload) + eth_call apyUSD ERC-4626 vault on ethereum.publicnode.com"
+  }
+}

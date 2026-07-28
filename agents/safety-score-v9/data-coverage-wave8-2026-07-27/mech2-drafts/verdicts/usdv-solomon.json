@@ -1,0 +1,25 @@
+{
+  "assetId": "usdv-solomon",
+  "subject": "draft",
+  "verdict": "VERIFIED-WITH-NITS",
+  "metricCheck": {
+    "hedgeCoverageRatio": "confirmed 0.683144 — protocol-data API re-fetched 2026-07-28T00:00Z returns the SAME snapshot (updatedAt 2026-07-27T00:12:08.624Z, zero drift): itemized Ceffu custody $381,473.59 (BTC 6.00110388) + $2,234.88 (SOL 33.44763168) = $383,708.47 / Binance inverse-perp shorts $559,199.99 (BTC) + $2,480.00 (SOL) = $561,679.99 → 0.6831443; rollup field $383,709.25 also reproduced",
+    "marginBufferPct": "confirmed 0 (floor disposition correct: disclosed collateral $383,708.47 + $98,838.86 + $701.37 + $0 = $483,248.70 covers 0.319599 of supply 1,512,045.796585391 → raw margin -68.040075%; all arithmetic re-computed and matching to 6dp)",
+    "lossAbsorptionShare": "confirmed 0 (API reserveFund array reproduced empty, reserveFundNotionalUsd '0'; ToU §13 re-fetched: holding USDv creates no claim/lien/recourse in property held by any issuer, custodian, treasury, hedge counterparty, DAO or service provider)",
+    "hedgeToSpotNotionalRatio": "confirmed 1.46382 (561679.99/383708.47 = 1.4638196)",
+    "disclosedCollateralShareOfSupply": "confirmed 0.319599",
+    "rawDisclosedMarginPct": "confirmed -68.040075",
+    "onchainAnchor": "confirmed — getTokenSupply for mint Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C returns uiAmount 1,512,045.796585391 at current finalized slot 435636126, bit-identical to the pin at slot 435627156 and matching protocolTvl $1,512,045.79 to within a cent"
+  },
+  "componentCheck": {
+    "venueAndCustody": "basis confirmed — minting-usdv page content (approved entities; assets 'managed through an off-exchange custody solution and hedged using derivatives'; 0.2% mint fee) verified verbatim via Wayback 2026-01-12 snapshot; Ceffu PDF re-fetched and parsed: signed attestation (Loh Teck, Director, dated 2 Apr 2026) of ≥USD 954,454.71 held as of 2026-04-01 23:59 UTC, fully in Ceffu custody, not at any exchange — custodian-issued and aggregate, so 'limited' (not 'adequate') is the correct grade per the evidence standard",
+    "hedgeReconciliation": "basis confirmed — 'weak' is admissible: the deficiency is a MEASURED shortfall from the issuer's own itemized API (disclosed custody spot covers 68.3% of disclosed short-hedge notional; hedge leg 1.46× disclosed spot), pinned with an on-chain anchor, not a mere absence of evidence",
+    "unwindCapacity": "basis confirmed — acquiring-and-redeeming page (re-fetched, live): direct mint/redeem restricted to approved counterparties with onboarding/KYC; 'Holding USDv does not by itself create access to direct redemption'",
+    "lossAbsorption": "basis confirmed — reserveFund measured empty ($0) plus ToU §13 explicit no-recourse clause = documented evidence of the deficiency; 'weak' defensible",
+    "fundingBasisStress": "not curated; nondisclosure rationale TRUE — full current docs corpus (llms-full.txt, 38KB) contains zero funding-rate/funding-P&L content, and the protocol-data, staking/stats, and staking/yield-distributions APIs (all re-fetched) expose no funding, margin, or liquidation fields",
+    "marginAndLiquidation": "not curated; nondisclosure rationale TRUE — same search; no venue-level margin balances, maintenance margins, or liquidation thresholds published anywhere"
+  },
+  "conflicts": [],
+  "mergeGuidance": "Land the draft as-is (mergeMode 'replace' of the 2026-07-20 entry is coherent: hedgeCoverageRatio 0.68452→0.683144 and venueShares ceffu 0.794347→0.794019 / solana-onchain-vaults 0.205653→0.205981 are small evidenced drifts from the custody revaluation, venueShares arithmetic re-verified — ceffu 383708.47/483248.70=0.794019, solana (98838.86+701.37)/483248.70=0.205981, binance 0, sums to 1.0). One durability nit the applier may fix at landing: two pinned source URLs (docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv and .../peg-arbitrage-mechanism) now soft-404 (generic SPA shell) after Solomon's docs restructure — their content was verified only via Wayback (web.archive.org/web/20260112171007/... and /20260112181927/...); consider noting the archive URLs in the source labels or the notes. Do not change any metric or grade.",
+  "notes": "Pins re-verified 2026-07-28T00:00Z; API snapshot did NOT drift (same updatedAt), SPL supply unchanged. Ceffu attestation staleness claim CONFIRMED: SolomonLabs/attestations repo tree (re-fetched via GitHub API) lists ceffu/2025/{2025-07-23,2025-11-07,2025-12-10}.pdf and ceffu/2026/{2026-01-16,2026-03-01,2026-04-01}.pdf — 2026-04-01 remains the latest published as of 2026-07-28, ~3.9 months stale. The ~0.5% instant-redemption reserve claim (lossAbsorption context) no longer exists in Solomon's current docs; it is verbatim in the archived peg-arbitrage page ('a small buffer (e.g. 0.5%) of protocol reserves is retained by the minting contract'), and the metric stands independently on the measured-empty reserveFund + ToU §13. Grok's usdv packet was quarantined by Grok itself and was not sought, per assignment."
+}

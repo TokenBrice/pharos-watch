@@ -1,0 +1,48 @@
+{
+  "assetId": "cdxusd-cod3x",
+  "archetype": "cdp",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "2026-07-28 re-open cod3x.org tech-stack page + DefiLlama stablecoin/418 (~$6.12M circulating); Base token 0xc0d3700000987c99b3c9009069e4f8413fd22330",
+  "metrics": {
+    "collateralizationRatio": null,
+    "liquidationCapacityRatio": null
+  },
+  "metricStates": {
+    "collateralizationRatio": {
+      "state": "not-applicable",
+      "rationale": "cdxUSD is issued as governance-limited Facilitator credit buckets rather than against independently collateralized per-token vaults. No collateralization engine or coverage ratio is published at the token level; facilitator strategy collateral is undisclosed. Dual-source: Cod3x tech-stack writeup (facilitator mint/burn under protocol limits) + DefiLlama 418 crypto-backed listing without a CR field.",
+      "sourceUrl": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+    },
+    "liquidationCapacityRatio": {
+      "state": "not-applicable",
+      "rationale": "Facilitator design has no public liquidation engine and no capital pool contractually committed to debt-offset liquidation. Dual-source: same Cod3x tech-stack description + absence of liquidation/SP surfaces on DefiLlama 418 / public Base token surface.",
+      "sourceUrl": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+    }
+  },
+  "components": {
+    "collateralizationParameters": {
+      "quality": "limited",
+      "basis": "Facilitator credit limits described by Cod3x; no dual-sourced on-chain LTV/MCR table for cdxUSD. Grade limited."
+    }
+  },
+  "sources": [
+    {
+      "label": "Cod3x tech stack (facilitators, mint/burn limits)",
+      "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+    },
+    {
+      "label": "DefiLlama stablecoin 418 Cod3x USD",
+      "url": "https://stablecoins.llama.fi/stablecoin/418"
+    },
+    {
+      "label": "Cod3x website",
+      "url": "https://www.cod3x.org/"
+    }
+  ],
+  "notes": "Both CDP metrics honestly not-applicable under facilitator model. No measured CR possible without facilitator collateral disclosure. verification PENDING.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED as honest N/A CDP packet. Archetype cdp vocab OK. cod3x.org tech-stack HTTP 200: cdxUSD mint/burn via governance-limited Facilitators/lines of credit rather than per-vault CDP collateralization; no public system CR or liquidation/SP engine. DefiLlama stablecoin/418 pegMechanism=crypto-backed confirms listing without on-chain CR fields. Both metrics null+not-applicable with dual structural evidence. collateralizationParameters limited component key valid.",
+    "secondSource": "cod3x.org unveiling-the-cod3x-tech-stack Facilitator prose + DefiLlama 418"
+  }
+}

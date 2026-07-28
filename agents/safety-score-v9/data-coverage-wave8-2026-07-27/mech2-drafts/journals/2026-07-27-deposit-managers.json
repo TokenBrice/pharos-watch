@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "kind": "onchain-mechanism-measurement",
+  "assetId": "jpyt-dephaser",
+  "archetype": "cdp",
+  "capturedAt": "2026-07-27T23:17:42Z",
+  "observations": {
+    "optimism": {
+      "block": 154797593,
+      "blockHex": "0x93a0619",
+      "blockTimestampUtc": "2026-07-27T23:12:43Z",
+      "rpc": "https://optimism-rpc.publicnode.com",
+      "jpytToken": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
+      "usdtDepositManagerProxy": "0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9",
+      "aOptUSDT": "0x6ab707aca953edaefbc4fd23ba73294241490620",
+      "jpytTotalSupplyRaw": "0x0000000000000000000000000000000000000000000000000000060a422e6d23",
+      "jpytTotalSupply": 6641129.78,
+      "totalMintedJpy": 6641129.78,
+      "totalDepositTokenUSDT": 40544.29,
+      "totalFeeAmount": 0,
+      "protocolFeeBps": 0,
+      "cooldownBlocks": 10,
+      "aTokenBalanceOfProxyUSDT": 44786.34,
+      "aaveProfitUSDT": 4242.05,
+      "averageLockInRateJpyPerUsd": 163.7994,
+      "reservesToDeposits": 1.104628
+    },
+    "base": {
+      "block": 49202308,
+      "blockHex": "0x2eec484",
+      "blockTimestampUtc": "2026-07-27T23:12:43Z",
+      "rpc": "https://base-rpc.publicnode.com",
+      "jpytToken": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
+      "usdcDepositManagerProxy": "0x0eab9d66adb8527cd7c0e7e7c1782580431ec276",
+      "aBasUSDC": "0x4e65fe4dba92790696d040ac24aa414708f5c0ab",
+      "jpytTotalSupplyRaw": "0x000000000000000000000000000000000000000000000000000000e70a942386",
+      "jpytTotalSupply": 992314.93,
+      "totalMintedJpy": 992314.93,
+      "totalDepositTokenUSDC": 6060.53,
+      "totalFeeAmount": 0,
+      "protocolFeeBps": 0,
+      "cooldownBlocks": 10,
+      "aTokenBalanceOfProxyUSDC": 6892.20,
+      "aaveProfitUSDC": 831.67,
+      "averageLockInRateJpyPerUsd": 163.734,
+      "reservesToDeposits": 1.137227
+    },
+    "combined": {
+      "jpytTotalSupply": 7633444.71,
+      "totalDepositUsd": 46604.82,
+      "aTokenReservesUsd": 51678.54,
+      "accruedAaveYieldSurplusUsd": 5073.72,
+      "aggregateReservesToDeposits": 1.108867,
+      "supplyEqualsTotalMintedJpyOnBothChains": true
+    },
+    "contractFactsFromSource": {
+      "source": "https://github.com/0xDephaser/contracts (src/UsdtDepositManager.sol, script/Deploy.s.sol)",
+      "depositFlow": "safeTransferFrom deposit token, apply protocolFeeBps, supply amountAfterFee to Aave v3 Pool (Optimism 0x794a61358D6845594F94dc1DB02A252b5b4814aD), mint JPY at Chainlink deposit-token/USD and JPY/USD rates",
+      "redemptionFlow": "requestWithdrawal burns JPYT, converts at average rate totalMintedJpy/totalDepositToken (the documented Lock-In Exchange Rate), withdraws from Aave into the contract; executeWithdrawal pays out after cooldownBlocks; no operator approval gate",
+      "operatorPowers": "OPERATOR_ROLE sets price feeds, cooldownBlocks, protocolFeeBps, and can withdraw collected fees (withdrawFeeAmount) and the Aave yield surplus (withdrawAaveProfit); UPGRADER_ROLE controls UUPS upgrades",
+      "chainlinkFeedsOptimism": {
+        "USDT/USD": "0xECef79E109e997bCA29c1c0897ec9d7b03647F5E",
+        "JPY/USD": "0x536944c3A71FEb7c1E5C66Ee37d1a148d8D8f619"
+      },
+      "aaveProfitFunction": "getCurrentAaveProfit() = aToken balanceOf(proxy) - totalDepositToken; withdrawable by OPERATOR at any time, so the surplus is not a committed backstop"
+    },
+    "audits": {
+      "optimism2024": "SolidProof, dated 16 October 2024; lists JPYT 0xc47da4cb96ce65a96844a01bfae509f9d5454534, USDT DepositManager proxy 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9, implementation 0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5",
+      "baseAndOptimism2025": "SolidProof, dated 12 September 2025; covers UsdtDepositManager.sol, UsdcDepositManager.sol, DephaserJPY.sol on Optimism and Base; lists Base USDC DepositManager proxy 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276, implementation 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb"
+    }
+  },
+  "derived": {
+    "collateralizationRatio": null,
+    "crBasis": "not-applicable: fully-reserved 1:1 FX wrapper (USD-denominated USDT/USDC reserves back a JPY-denominated liability); no over-collateralized debt position exists. For reference, live reserves/deposits measured at 1.1046 (Optimism) and 1.1372 (Base) including accrued Aave yield.",
+    "liquidationCapacityRatio": null,
+    "lcrBasis": "not-applicable: no liquidation mechanism or stability pool exists in the wrapper design"
+  },
+  "searchLog": {
+    "backstop": "Searched docs.dephaser.com (all 14 pages via llms.txt), the Terms of Service, contract source, and both audit PDFs for any protocol surplus, insurance fund, or committed backstop. Found only: (a) emergent Aave yield surplus (measured: 4,242.05 USDT + 831.67 USDC at the pinned blocks), operator-claimable via withdrawAaveProfit and not published or committed as a backstop; (b) Aave's own safety mechanisms, which protect Aave lenders, not JPYT holders. No committed backstop exists; component left uncurated.",
+    "shutdownAndBadDebt": "Searched the same corpus for wind-down/shutdown procedures and shortfall handling. Found: permissionless contract-level two-step redemption (source + on-chain params verified; no operator gate), pro-rata loss sharing via the average-rate redemption pool, and Terms of Service (effective 2024-09-12) Termination clause: 'any outstanding obligations related to locked-in positions will remain enforceable'. No formal wind-down runbook and no unconditional recapitalization commitment exists; graded limited on the lusd/bold mainline (documented mechanics without unconditional recapitalization).",
+    "attestations": "No reserve attestation or proof-of-reserves page exists for DePhaser (docs, website, GitHub checked); the on-chain reads above are the first pinned verification of the 1:1 backing."
+  },
+  "sources": [
+    "https://docs.dephaser.com/",
+    "https://docs.dephaser.com/how-it-works/money-flow",
+    "https://docs.dephaser.com/policy/terms-of-service",
+    "https://github.com/0xDephaser/contracts",
+    "https://github.com/0xDephaser/contracts/blob/main/audits/SmartContract_Audit_Solidproof_Dephaser.pdf",
+    "https://github.com/solidproof/Projects/blob/main/2025/Dephaser/SmartContract_Audit_Solidproof_Dephaser.pdf",
+    "https://optimism-rpc.publicnode.com",
+    "https://base-rpc.publicnode.com"
+  ]
+}

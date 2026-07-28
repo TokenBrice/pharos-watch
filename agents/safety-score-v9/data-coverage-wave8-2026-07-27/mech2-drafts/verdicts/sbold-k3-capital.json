@@ -1,0 +1,31 @@
+{
+  "assetId": "sbold-k3-capital",
+  "subject": "draft+packet",
+  "verdict": "VERIFIED",
+  "metricCheck": {
+    "collateralizationRatio": "confirmed null / not-applicable (wrapper originates no borrower debt; ERC-4626 allocator structure re-read in K3 technical-details)",
+    "liquidationCapacityRatio": "confirmed null / not-applicable (deposits are themselves parent liquidation capital)",
+    "asset()": "confirmed 0x6440F144b7e50D6a8439336510312d2F54BeB01D (BOLD) — raw byte-identical at block 0x1870a78 via eth.drpc.org",
+    "totalAssets()": "confirmed 7,719,437.630014434 BOLD (raw 0x0662a78d6cccb2da08f9de, byte-identical)",
+    "totalSupply()": "confirmed 7,176,569.116245205 sBOLD (raw 0x05efb29762243d94dfaaba, byte-identical)",
+    "convertToAssets(1e18)": "confirmed 1.075644574026378 BOLD/share (raw 0x0eed750a836b2b7f, byte-identical; equals totalAssets/totalSupply)",
+    "sps(0..2)": "confirmed byte-identical: WETH SP 0x5721cbbd... weight 3000bps, wstETH SP 0x9502b7c3... weight 6000bps, rETH SP 0xd442e410... weight 1000bps (60/30/10 live weights verified)",
+    "sps(3)": "confirmed execution reverted — exactly three configured pools",
+    "analogousMetrics": "vaultSharePriceBold 1.075645, vaultTotalAssetsBold 7719437.630014, vaultTotalSupplyShares 7176569.116245 — all confirmed against the re-run reads",
+    "inheritedLiquidationCoverage": "pinned 70.52% (20,879,166.76 / 29,607,199.87). Live re-fetch 2026-07-28: 20,913,846.65 / 29,747,087.29 = 70.31% — drift immaterial, methodology reproduces, still above the 0.658 adequate precedent"
+  },
+  "componentCheck": {
+    "collateralizationParameters": "not-applicable rationale TRUE (no borrower collateral positions; technical-details confirms vault only accounts BOLD)",
+    "liquidationMechanics": "not-applicable rationale TRUE (liquidation inherited from parent Liquity V2; wrapper only allocates + swaps collateral gains)",
+    "backstop": "basis confirmed (K3 docs index + contract inventory contain no wrapper-level backstop — exchange-rate section explicitly conditions compounding on 'no bad debt from unsuccessful liquidations', re-read verbatim; adequate grade rests on the inherited parent two-stage backstop measured at 70.5% SP coverage via Liquity's own stats API with the on-chain sps()/totalAssets allocation as external anchor; bold-liquity overlay entry confirms the 0.658 adequate precedent with identical methodology)",
+    "branchIsolation": "basis confirmed (introducing-sbold documents initial 60/30/10 weights, re-read; live weights verified on-chain; ybold-yearn overlay carries adequate for the same wrapper pattern — upgrade from limited is evidence-backed)",
+    "shutdownAndBadDebt": "basis confirmed (losses pass through to share rate per the 'no bad debt' condition; no wrapper-level cure disclosed — limited honest)",
+    "structuralRedemption": "basis confirmed (ERC-4626 redeem path with SwapAdapter minimum-quantity formula, reward/fee caps at 10% and max-collateral boundary, rounding in vault's favor — all re-read in technical-details; limited grade reflects mutable swap infrastructure, honest)"
+  },
+  "conflicts": [
+    "draft vs packet: packet grades backstop 'limited' citing mutable solver/swap execution risk; draft grades 'adequate' on measured 70.5% inherited SP coverage with on-chain anchor and the parent's 0.658 adequate precedent. Evidence supports the draft's adequate; the packet's execution-risk concern is already captured by the draft's structuralRedemption limited.",
+    "draft vs packet: packet contains no on-chain measurements at all; the draft adds the full block-25627256 read set and the Liquity API pin. Packet adds nothing the draft lacks."
+  ],
+  "mergeGuidance": "Land the draft as-is (replace of the 2026-07-20 entry; upgrades branchIsolation limited->adequate and adds backstop adequate, both verified above). Reject the packet: docs-only, weaker backstop grade contradicted by the measured evidence.",
+  "notes": "Every pinned eth_call re-ran byte-identical at block 25627256 via eth.drpc.org (ethereum-rpc.publicnode.com now token-gates archive calls — same caveat as other entries naming PublicNode as source). Liquity API drift: SP deposits +0.17%, supply +0.47% since pin; coverage 70.5%->70.3%, immaterial. Oddity: the API's sBOLD.tvl field returned bit-identical value to the journal pin (7,176,525.85) — appears cached/stale upstream; not load-bearing for any grade. Draft's own coordinator note stands: ybold-yearn (same parent/pattern) carries parent CR/LCR as measured metrics while this entry keeps them not-applicable — a cross-entry consistency ruling may be wanted, but the not-applicable choice is itself verified true and the packet agrees with it. Existing 2026-07-20 entry has branchIsolation limited and no backstop, so the draft's changes are genuine deltas, coherent with replace mode."
+}

@@ -1,0 +1,25 @@
+{
+  "assetId": "iauon-ondo",
+  "subject": "draft+packet",
+  "verdict": "VERIFIED",
+  "metricCheck": {
+    "weightedAverageMaturityDays": "confirmed not-applicable: FMA-filed Final Terms (cdn.sanity.io ...f8568100....pdf) re-fetched and quoted clauses verified verbatim — 'The Token is open-ended and therefore does not have a predetermined fixed maturity date' (Investor Put Option / Issuer Call Option) and 'The Underlying does not have a maturity date.' No dated-claim portfolio exists.",
+    "valuationCadenceDays": "confirmed 1: Base Prospectus daily reporting covenant verified verbatim (11:59pm GMT on 3rd Business Day after each Calculation Day; Asset-to-Obligation Ratio; obligations commence Calculation Day October 1, 2025; Verification Agent confirms via read-only access; report posted to https://ondo.finance/global-markets), plus Ondo docs daily reports and iShares daily NAV (live re-check: $76.63 as of 2026-07-27 vs pinned $76.49 as of 2026-07-24 — expected drift, daily publication confirmed, immaterial)."
+  },
+  "componentCheck": {
+    "creditQuality": "basis confirmed: FT names iShares Gold Trust (ISIN US4642852044), sponsor iShares Delaware Trust Sponsor LLC (indirect BlackRock subsidiary), depositary Bank of New York Mellon, physical gold bullion, NYSE Arca; collateral-lending bar verified verbatim ('The Issuer is not allowed to lend out Collateral, unless explicitly agreed in advance...').",
+    "seniority": "basis confirmed: BP documents continuing first-priority perfected security interest for the Security Agent (Ankura) for the benefit of Secured Parties incl. token holders; New York-law Collateral Agreement dated July 17, 2025; Account Control Agreements (Alpaca/NY law, BitGo/South Dakota law) giving perfected control; Additional Collateral guaranteed by a guarantor who must transfer it upon a Realisation Event (BP lines verified).",
+    "legalEnforceability": "basis confirmed: BP approved by FMA Liechtenstein under Regulation (EU) 2017/1129; FT filed with FMA on 11.11.2025; ISIN VGG7001AAS39; Ledger-Based Securities under art. 973d CO (verified in BP); BVI SPV with independent director per trust-and-transparency docs.",
+    "valuationCadence": "basis confirmed: daily Ankura verification covenant (commencing 2025-10-01) + monthly reporting within 15 days of month end commencing September 2025, both verified verbatim in BP; Ondo docs daily reports/monthly reconciliations by the 20th; iShares daily NAV.",
+    "maturityAndLiquidity": "basis confirmed: open-ended token with Investor Put Option (FT verbatim); instant atomic mint/burn and 24/5 trading with Off-Hours session (overview + important-notes re-fetched); deeply liquid NYSE Arca underlying.",
+    "custody": "basis confirmed: BP names Alpaca Securities LLC (Securities Account) and BitGo Trust Company, Inc. (Fiat Account) as Custodians under Account Control Agreements dated July 17, 2025, with Ankura as Security Agent and read-only Verification Agent access.",
+    "recovery": "basis confirmed: Realisation-Event enforcement via Security Agent (seize/liquidate/distribute pro rata) in BP + trust-and-transparency docs; guaranteed Additional Collateral mechanism (BP); Satisfaction and Discharge requires Officer's Certificate and Opinion of Counsel (BP 5.10.8 verified)."
+  },
+  "conflicts": [
+    "No grade conflicts: draft and packet assign identical grades (all seven adequate) and identical metrics (WAM not-applicable, valuationCadenceDays 1).",
+    "Rationale difference only (non-conflicting): draft pins WAM not-applicable to verbatim Final Terms clauses (stronger, filing-grade); packet pins it to docs-level total-return-tracker structure. Evidence supports both; draft's pin is superior.",
+    "Packet's valuationCadence sourceUrl uses the docs.ondo.finance/ondo-stocks/trust-and-transparency path variant; both it and the draft's ondo-global-markets path return HTTP 200 with the same content — immaterial."
+  ],
+  "mergeGuidance": "Land the draft as-is (insert; no existing overlay entry for iauon-ondo). The packet adds nothing the draft lacks: identical grades/metrics with weaker (docs-only) pinning, while the draft carries the FMA-filed Final Terms + FMA-approved Base Prospectus as primary regulatory-filing evidence. Do not land the packet separately. Strong correctly withheld by both: no publicly pinnable dated Ankura attestation report instance (app reports sit behind onboarding).",
+  "notes": "Re-fetched both FMA PDFs from the Ondo CDN links embedded in app.ondo.finance/assets/iauon (both file hashes match the draft's source URLs). App embedded holdings snapshot re-verified live: 'Physical Gold ()' weight 100, updatedAt 1783080477000 (2026-07-03T12:07:57Z) — exact match to journal. iShares page re-fetched: NAV $76.63 as of 2026-07-24→27 drift is normal daily republication, not a contradiction. All seven adequate grades meet the D3 regulatory-filing evidence class: dated, FMA-approved/filed enforceable documents covering each component. ReviewedAt 2026-07-27 consistent with the pin."
+}

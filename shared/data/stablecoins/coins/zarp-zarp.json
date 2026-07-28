@@ -125,7 +125,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the ethereum ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128... — no third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the ethereum ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128... \u2014 no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -150,7 +150,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the base ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128... — no third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the base ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128... \u2014 no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -175,7 +175,7 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Issuer-native deployment: the polygon ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128... — no third-party bridge mints this deployment.",
+        "reviewNote": "Issuer-native deployment: the polygon ZARP token is a proxy of ZARP's own implementation 0xe6695c23592e84ef37de8b31f24a020af82030e4 (eth_getCode 2026-07-20), and the verified mint-authority review (2026-07-15) confirms MINTER_ROLE and DEFAULT_ADMIN_ROLE on Ethereum/Base/Polygon are held only by ZARP EOAs 0x37b1af2606... and 0xf500643128... \u2014 no third-party bridge mints this deployment.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "sources": [
@@ -376,8 +376,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "verified",
     "sources": [
       {
@@ -389,7 +389,7 @@
         "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf"
       }
     ],
-    "rationale": "The live single-asset adapter publishes one aggregate ZAR fiat reserves row, so the reviewed classification is keyed to that exact 100% identity. ZARP's documentation states that each token represents one rand supported by a treasury of actual rand currency equivalents. Kempen's February 2026 agreed-upon procedures verified balances in an Old Mutual Wealth trust account and ZARP's Standard Bank call-deposit/current accounts and reconciled liabilities across Ethereum, Solana, Base, and Polygon. The report does not establish a redemption settlement time or a complete cash-versus-cash-equivalent split.",
+    "rationale": "The live single-asset adapter publishes one aggregate ZAR fiat reserves row, so the reviewed classification is keyed to that exact 100% identity. ZARP's documentation states that each token represents one rand supported by a treasury of actual rand currency equivalents. Kempen's February 2026 agreed-upon procedures verified balances in an Old Mutual Wealth trust account and ZARP's Standard Bank call-deposit/current accounts and reconciled liabilities across Ethereum, Solana, Base, and Polygon. The report does not establish a redemption settlement time or a complete cash-versus-cash-equivalent split. Write-time re-open 2026-07-28: Kempen AUP PDF still verifies ZAR collateral in Standard Bank + Old Mutual Wealth accounts totaling R87,291,970 against issued ZARP on 27 Feb 2026; ZARP docs introduction still states treasury reserve of rand currency equivalents managed by Old Mutual Wealth.",
     "compositionBasis": "ZARP treasury and Kempen reserve-assurance disclosures",
     "compositionAsOf": "2026-02-27",
     "scope": "full-composition",

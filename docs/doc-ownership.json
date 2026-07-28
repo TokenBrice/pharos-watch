@@ -110,8 +110,8 @@
       "risk": "medium",
       "docsToRead": ["matched docs/testing.md section", "matched docs/deployment-process.md section", "matched docs/scripts.md section"],
       "docsLikelyRequired": ["docs/testing.md", "docs/deployment-process.md", "docs/scripts.md"],
-      "checks": ["changed script's focused test", "npm run check:commit-derived-artifacts when history-derived generators or hooks change", "MERGE_GATE_DRY_RUN=1 npm run test:merge-gate when local rehearsal planning changes"],
-      "hardRules": ["Keep deploy-surface classification aligned with GitHub deploy behavior; the heavy local merge-gate execution is opt-in.", "Commit relevant sources before generating git-history-derived artifacts."],
+      "checks": ["changed script's focused test", "npm run check:commit-derived-artifacts when history-derived generators or hooks change", "npm run check:pr -- --base=<ref> for committed CI-policy batches"],
+      "hardRules": ["Keep deploy-surface classification aligned with GitHub deploy behavior.", "Commit relevant sources before generating git-history-derived artifacts."],
       "prefixes": [".github/", ".githooks/", "scripts/"],
       "exactPaths": ["package.json", "package-lock.json", ".gitignore"]
     },
@@ -195,7 +195,7 @@
     },
     {
       "name": "feature-flags",
-      "sources": ["src/lib/feature-flags.ts", "scripts/ci/check-feature-flag-inlining.mjs", "scripts/ci/check-stale-flags.mjs", ".github/workflows/validate-ci.yml", ".github/workflows/pages-release.yml", ".github/workflows/deploy-cloudflare.yml"],
+      "sources": ["src/lib/feature-flags.ts", "scripts/ci/check-feature-flag-inlining.mjs", "scripts/ci/check-stale-flags.mjs", ".github/workflows/pages-release.yml", ".github/workflows/deploy-cloudflare.yml"],
       "docs": ["docs/process/feature-flags.md", "docs/testing.md", "docs/deployment-process.md"],
       "notes": ["NEXT_PUBLIC_PHAROS_* flags are build-time values. Keep workflow env propagation, stale-flag checks, and inlining checks aligned."]
     },

@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 NR-recovery review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -21,11 +21,11 @@
         "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQBFtWH9omnjQJjvKMhV9wp1AR2X5H5ZgPjMxgMIDc6QZeI?e=eyMBgf"
       },
       {
-        "label": "AnchorX transparency page",
-        "url": "https://anchorx.org/transparency"
+        "label": "AnchorX public reserves data (GitHub anchorx-reserves data.json)",
+        "url": "https://raw.githubusercontent.com/v3-Swampy/anchorx-reserves/main/data.json"
       }
     ],
-    "rationale": "Kreston performed ISRS 4400 agreed-upon procedures for May 31, 2026 and verified CNH 39,198,348 of cash held at regulated financial institutions against 39,128,445 AxCNH in circulation. Kreston reviewed financial-institution records, shadowed issuer staff generating the bank records, confirmed the reserve account was in the issuer's name, and reconciled the Conflux and Ethereum supply to issuer records.",
+    "rationale": "Write-time re-open 2026-07-28: the Kreston ISRS 4400 AUP (report date 15/06/2026, as-of 31 May 2026) still verifies CNH 39,198,348 of cash held at regulated financial institutions against 39,128,445 AxCNH in circulation for AnchorX Global Limited, confirms the reserve account is in the company's name, and states company confirmation that funds are free from other claims, unrestricted for redemptions, and prohibited from other uses. The public GitHub reserves feed (consumed by anchorx.org/transparency) continues to describe reserve composition disclosures and lists the May 2026 SharePoint report among monthly attestations. Institution names remain undisclosed. Modeled as one 100% CNH cash slice.",
     "compositionBasis": "Kreston AxCNH agreed-upon procedures report as of May 31, 2026",
     "compositionAsOf": "2026-05-31",
     "scope": "full-composition",

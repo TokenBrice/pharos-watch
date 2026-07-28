@@ -61,5 +61,5 @@ npm run typecheck:worker
 Before pushing deploy-impacting endpoint changes, run:
 
 ```bash
-npm run test:merge-gate
+npm run check:pr -- --base=origin/main
 ```

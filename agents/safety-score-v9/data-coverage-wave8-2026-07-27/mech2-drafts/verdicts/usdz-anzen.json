@@ -1,0 +1,17 @@
+{
+  "assetId": "usdz-anzen",
+  "subject": "packet",
+  "verdict": "VERIFIED",
+  "metricCheck": {
+    "weightedAverageMaturityDays": "confirmed unavailable — rationale TRUE: re-opened introduction, FAQ, and rwa-partner docs in full; no portfolio WAM, WAL, tenor, or maturity ladder published anywhere",
+    "valuationCadenceDays": "confirmed unavailable — rationale TRUE: no numeric NAV/valuation cadence language (daily/weekly/monthly) on any re-opened Anzen docs page; FAQ links a transparency dashboard (rwa.anzen.finance/transparency) for solvency viewing but publishes no cadence figure, so honest nondisclosure stands"
+  },
+  "componentCheck": {
+    "creditQuality": "basis confirmed — FAQ verified verbatim: assets based in the United States, 15% single-asset concentration limit, ABS-only structures, USDz 'backed on a 1:1 basis with SPCT (Secured Private Credit Token)'; intro confirms diversified private-credit backing; rwa-partner names Percent (licensed, >$1B track record, 2% stated default rate) for underwriting; no independent rating — limited correct",
+    "legalEnforceability": "basis confirmed — FAQ verified verbatim: 'USDz is minted through audited smart contracts' and SPCT is 'a permissioned token representing tokenized real-world assets'; no public indenture/PPM found (none exists on the re-opened pages) — limited correct",
+    "custody": "basis confirmed — rwa-partner page verified verbatim: 'For underwriting and custody, Anzen has selected a licensed and well-established partner, Percent'; no named sub-custodian package — limited correct"
+  },
+  "conflicts": [],
+  "mergeGuidance": "land packet as-is",
+  "notes": "No existing overlay entry. All-unavailable packet with true rationales — exactly the honest-nondisclosure case the wave-7 standard protects; penalty signals correctly keep firing. All three component bases verified verbatim in the cited sources (intro/FAQ/rwa-partner markdown, HTTP 200). DefiLlama stablecoin 202 identity confirmed (Anzen USDz, peggedUSD). Component grades are limited and rest on issuer docs only, but each basis names its insufficiency — consistent with the evidence class."
+}

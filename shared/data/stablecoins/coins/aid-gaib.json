@@ -176,7 +176,7 @@
             "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
           }
         ],
-        "evidence": "At Ethereum block 25294761, hasRole(MINTER_ROLE, 0x410C19…) = true; eth_getCode = 4099 bytes (contract). owner() on this contract returned EOA 0x3885be… (DEFAULT_ADMIN EOA)."
+        "evidence": "At Ethereum block 25294761, hasRole(MINTER_ROLE, 0x410C19\u2026) = true; eth_getCode = 4099 bytes (contract). owner() on this contract returned EOA 0x3885be\u2026 (DEFAULT_ADMIN EOA)."
       },
       {
         "chain": "ethereum",
@@ -193,7 +193,7 @@
             "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
           }
         ],
-        "evidence": "At Ethereum block 25294761, hasRole(MINTER_ROLE, 0xE2E142…) = true; eth_getCode = 3162 bytes (contract). owner() on this contract returned 0xee0cd7c… (171-byte contract)."
+        "evidence": "At Ethereum block 25294761, hasRole(MINTER_ROLE, 0xE2E142\u2026) = true; eth_getCode = 3162 bytes (contract). owner() on this contract returned 0xee0cd7c\u2026 (171-byte contract)."
       },
       {
         "chain": "ethereum",
@@ -228,7 +228,7 @@
             "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x32793F6B11820Fa9C7039dFa640B751f491A027d/"
           }
         ],
-        "evidence": "At Ethereum block 25294761, hasRole(DEFAULT_ADMIN_ROLE, 0x32793F…) = true on Ethereum, Arbitrum, Base, and BSC. Safe API: threshold 3, 5 owners, no enabled modules, zero guard, masterCopy 0x41675C…."
+        "evidence": "At Ethereum block 25294761, hasRole(DEFAULT_ADMIN_ROLE, 0x32793F\u2026) = true on Ethereum, Arbitrum, Base, and BSC. Safe API: threshold 3, 5 owners, no enabled modules, zero guard, masterCopy 0x41675C\u2026."
       },
       {
         "chain": "ethereum",
@@ -245,7 +245,7 @@
             "url": "https://etherscan.io/address/0x18f52b3fb465118731d9e0d276d4eb3599d57596#readContract"
           }
         ],
-        "evidence": "At Ethereum block 25294761, hasRole(DEFAULT_ADMIN_ROLE, 0x3885be…) = true; eth_getCode returned no bytecode (EOA confirmed). This EOA also owns MINTER_ROLE contract 0x410C19… (owner() confirmed). Same EOA holds DEFAULT_ADMIN on Arbitrum, Base, and BSC."
+        "evidence": "At Ethereum block 25294761, hasRole(DEFAULT_ADMIN_ROLE, 0x3885be\u2026) = true; eth_getCode returned no bytecode (EOA confirmed). This EOA also owns MINTER_ROLE contract 0x410C19\u2026 (owner() confirmed). Same EOA holds DEFAULT_ADMIN on Arbitrum, Base, and BSC."
       }
     ],
     "reconciliation": "unknown",
@@ -277,7 +277,7 @@
           "url": "https://docs.gaib.ai/products/gaib-products/transparency"
         }
       ],
-      "evidence": "At Ethereum block 25294761: hasRole confirmed for all four controls (MINTER_ROLE×2 contract holders, DEFAULT_ADMIN Safe 3/5, DEFAULT_ADMIN EOA). Both MINTER_ROLE holders are contracts (4099 and 3162 bytes); 0x410C19….owner()=EOA 0x3885be…; 0xE2E142….owner()=contract 0xee0cd7c…. EOA 0x3885be… confirmed no bytecode. DEFAULT_ADMIN Safe 3/5 confirmed (threshold 3, 5 owners, no modules, no guard). Same DEFAULT_ADMIN Safe and EOA confirmed on Arbitrum, Base, and BSC via hasRole. Arb/Base/BSC MINTER_ROLE has no active holders (different impl 0xfd8cf705… from Ethereum); minting on those chains routes via bridge contract authorized by DEFAULT_ADMIN. GAIB names McMillan Woods (Hong Kong) CPA for periodic reports, but GAIB's transparency documentation scopes that work to verifying the GPU/AI-financing deployment (e.g. the June 2026 Spiceflow assurance report), not an AID reserve-versus-circulating-supply reconciliation, and AID's dollar backing is shown only via self-displayed on-chain addresses, so no credible independent recurring reconciliation of AID reserves was found and reconciliation is unknown. Singapore's stablecoin regime covers only SGD/G10-pegged issuers and no MAS licence or other prudential authorisation for GAIB/AID was located, so supervision is none. 2026-07-20 follow-up: the token is a UUPS proxy (EIP-1967 implementation 0x2db74834f556e1f19ed397e5f935a983e4c2f38b, proxiableUUID() returns the EIP-1967 slot, UPGRADE_INTERFACE_VERSION = '5.0.0', upgradeToAndCall present); upgrade authorization is role-gated in the implementation, so the DEFAULT_ADMIN_ROLE holders (Safe 0x32793F6B... 3/5 and EOA 0x3885be...) can change mint-critical logic.",
+      "evidence": "At Ethereum block 25294761: hasRole confirmed for all four controls (MINTER_ROLE\u00d72 contract holders, DEFAULT_ADMIN Safe 3/5, DEFAULT_ADMIN EOA). Both MINTER_ROLE holders are contracts (4099 and 3162 bytes); 0x410C19\u2026.owner()=EOA 0x3885be\u2026; 0xE2E142\u2026.owner()=contract 0xee0cd7c\u2026. EOA 0x3885be\u2026 confirmed no bytecode. DEFAULT_ADMIN Safe 3/5 confirmed (threshold 3, 5 owners, no modules, no guard). Same DEFAULT_ADMIN Safe and EOA confirmed on Arbitrum, Base, and BSC via hasRole. Arb/Base/BSC MINTER_ROLE has no active holders (different impl 0xfd8cf705\u2026 from Ethereum); minting on those chains routes via bridge contract authorized by DEFAULT_ADMIN. GAIB names McMillan Woods (Hong Kong) CPA for periodic reports, but GAIB's transparency documentation scopes that work to verifying the GPU/AI-financing deployment (e.g. the June 2026 Spiceflow assurance report), not an AID reserve-versus-circulating-supply reconciliation, and AID's dollar backing is shown only via self-displayed on-chain addresses, so no credible independent recurring reconciliation of AID reserves was found and reconciliation is unknown. Singapore's stablecoin regime covers only SGD/G10-pegged issuers and no MAS licence or other prudential authorisation for GAIB/AID was located, so supervision is none. 2026-07-20 follow-up: the token is a UUPS proxy (EIP-1967 implementation 0x2db74834f556e1f19ed397e5f935a983e4c2f38b, proxiableUUID() returns the EIP-1967 slot, UPGRADE_INTERFACE_VERSION = '5.0.0', upgradeToAndCall present); upgrade authorization is role-gated in the implementation, so the DEFAULT_ADMIN_ROLE holders (Safe 0x32793F6B... 3/5 and EOA 0x3885be...) can change mint-critical logic.",
       "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
       "reviewedAt": "2026-07-20"
     },
@@ -327,8 +327,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "probable",
     "sources": [
       {
@@ -342,19 +342,11 @@
       {
         "label": "GAIB AID transparency dashboard",
         "url": "https://aid.gaib.ai/transparency"
-      },
-      {
-        "label": "June 2026 Spiceflow asset-deployment assurance report",
-        "url": "https://drive.google.com/file/d/17Uy4SCY9-D-R3kf-4-atUn_9nR4HeGeC/view"
-      },
-      {
-        "label": "AID Ethereum implementation source",
-        "url": "https://sourcify.dev/server/v2/contract/1/0x2db74834f556e1f19ed397e5f935a983e4c2f38b"
       }
     ],
-    "rationale": "GAIB states that AID is fully backed by U.S. Treasuries and stable assets and is minted 1:1 with USDC, USDT, and other accepted stablecoins. The transparency dashboard's June 2026 report is accessible, but it is a limited-assurance review of Spiceflow Corp's GPU-financing asset deployment as of June 30, 2026, not an AID reserve assets-and-liabilities reconciliation. The public documentation and dashboard do not reproduce a current AID reserve component allocation. At Ethereum block 0x1859e17, the AID proxy resolved to 0x2db74834f556e1f19ed397e5f935a983e4c2f38b; the reviewed verified token source exposes token controls but no reserve-accounting view. The complete reserve envelope is retained as one slice.",
-    "compositionBasis": "GAIB AID product and transparency disclosures with a fixed-block Ethereum token-source review; constituent weights are undisclosed",
-    "compositionAsOf": "2026-07-15",
+    "rationale": "Write-time re-open 2026-07-28: AID product docs still state AID is a synthetic dollar fully backed by U.S. Treasuries and stable assets and minted 1:1 by depositing USDC, USDT, and other accepted stablecoins. Transparency docs still point to aid.gaib.ai/transparency for real-time capital deployment and reserves status and describe quarterly third-party audits for portfolio disclosures. The public materials do not reproduce a current AID reserve component allocation among Treasuries and stable assets, so the complete envelope remains one unsplit basket with basket-needs-split. No inventing of category weights.",
+    "compositionBasis": "GAIB AID product and transparency disclosures; constituent weights undisclosed",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The Treasury/stable-asset weights, stablecoin identities, custodians, and public assets-and-liabilities reconciliation are not reproduced in accessible source material.",
     "knownUnknownExposurePct": 100,
@@ -395,7 +387,7 @@
         "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
       }
     ],
-    "uncertainty": "GAIB documents the on-chain Minter and Redeemer contracts that accept USDC/USDT, but what happens to proceeds after minting — conversion into Treasuries, custodian identities, account segregation, insolvency protections, and reuse terms — is off-chain and undocumented. The June 2026 Spiceflow assurance report covers GPU-financing asset deployment, not AID reserve custody, and no AID reserve attestation is publicly retrievable.",
+    "uncertainty": "GAIB documents the on-chain Minter and Redeemer contracts that accept USDC/USDT, but what happens to proceeds after minting \u2014 conversion into Treasuries, custodian identities, account segregation, insolvency protections, and reuse terms \u2014 is off-chain and undocumented. The June 2026 Spiceflow assurance report covers GPU-financing asset deployment, not AID reserve custody, and no AID reserve attestation is publicly retrievable.",
     "knownUnknownExposurePct": 100
   },
   "liveReservesConfig": {

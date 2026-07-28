@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-A wave6",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave8 GROK-RESEARCH phase1",
     "confidence": "verified",
     "sources": [
       {
@@ -36,9 +36,9 @@
         "url": "https://docs.solstice.finance/solstice-for-users/usx.md"
       }
     ],
-    "rationale": "Solstice identifies audited cash, tokenized Treasuries, and delta-neutral hedged positions as the reserve categories. The attestation API observation fetched on 2026-07-22 reported aggregate collateralization of 1.003922 and supplied cryptographic attestation material, but no asset-level balances or category weights. The complete reserve is therefore retained as one conservatively high-risk aggregate rather than assigning unsupported constituents or weights. The slice name remains aligned to the solstice-attestation adapter row identity.",
+    "rationale": "Write-time re-open on 2026-07-28 reconfirmed dual independent sources: (1) solstice.finance/usx and docs.solstice.finance USX page both name the same three reserve categories—audited cash, tokenized Treasuries, and delta-neutral hedged positions in major digital assets—without category weights; (2) attestation-api.solstice.finance/dashboard returned collateralization 1.003922, total_reserves 525039528.63 USD, total_supply 522988257.04 USD, latest reserves.timeline point date 2026-07-22, delta_neutral true and overcollateralized true, with cryptographic SEV/merkle/zkp material, but no asset-level balances, category keys, or composition fields under reserves (keys limited to total_reserves, total_supply, timeline, verifiability, interval, delta_neutral, overcollateralized). The complete reserve is therefore retained as one conservatively high-risk aggregate rather than assigning unsupported constituents or weights. The slice name remains aligned to the solstice-attestation adapter row identity.",
     "compositionBasis": "Current Solstice collateral disclosure and aggregate reserve-versus-supply attestation",
-    "compositionAsOf": "2026-07-22",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The current split among audited cash, tokenized Treasuries, and delta-neutral hedged positions is not published; underlying instruments, custodian shares, execution venues, and hedge counterparties are also undisclosed.",
     "knownUnknownExposurePct": 100,
@@ -66,17 +66,13 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-NR-A wave6",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave8 GROK-RESEARCH phase1",
     "confidence": "probable",
     "sources": [
       {
         "label": "Solstice USX product page",
         "url": "https://solstice.finance/usx"
-      },
-      {
-        "label": "Solstice attestation API",
-        "url": "https://attestation-api.solstice.finance/dashboard"
       },
       {
         "label": "Solstice USX documentation",
@@ -87,7 +83,7 @@
         "url": "https://docs.solstice.finance/legal-documents/risk-disclosures.md"
       }
     ],
-    "uncertainty": "Solstice names Copper and Ceffu as third-party custodians but does not publish their current shares, identify hedge venues, or establish legal segregation, bankruptcy remoteness, or rehypothecation terms for the complete reserve.",
+    "uncertainty": "Solstice names Copper and Ceffu as third-party custodians (USX docs collateral-flow step; risk disclosures custody counterparty section; product page institutional custody and partner logos) but does not publish their current shares, identify hedge venues, or establish legal segregation, bankruptcy remoteness, or rehypothecation terms for the complete reserve.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -314,8 +314,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -327,7 +327,7 @@
         "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
       }
     ],
-    "rationale": "The March 31, 2026 certification reconciles 104,898,654 outstanding wCOP across six chains and COP107,966,549.02 of collateral to a Colombian bank statement, then certifies that all outstanding tokens are backed by Colombian pesos at a financial institution in Colombia. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed.",
+    "rationale": "The March 31, 2026 certification reconciles 104,898,654 outstanding wCOP across six chains and COP107,966,549.02 of collateral to a Colombian bank statement, then certifies that all outstanding tokens are backed by Colombian pesos at a financial institution in Colombia. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed. Write-time re-open 2026-07-28: independent CPA certification PDF for wCOP as of 2026-03-31 still certifies 100% local-currency bank-deposit collateral; Ripio local stablecoins page still lists the wFIAT products.",
     "compositionBasis": "Independent public accountant certification of the wCOP collateral as of March 31, 2026",
     "compositionAsOf": "2026-03-31",
     "scope": "full-composition",

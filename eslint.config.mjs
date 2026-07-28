@@ -41,7 +41,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "coverage/**",
-    // Gate/tooling caches (e.g. the merge-gate discovery Wrangler bundle) are
+    // Gate/tooling caches (e.g. the local Worker bundle proof) are
     // gitignored build outputs, never lintable source.
     ".cache/**",
     ".claude/**",

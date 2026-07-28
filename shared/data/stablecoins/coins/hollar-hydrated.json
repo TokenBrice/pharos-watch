@@ -195,8 +195,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex curation pass",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "manual-review",
     "sources": [
       {
@@ -208,7 +208,7 @@
         "url": "https://app.hydration.net/borrow/markets"
       }
     ],
-    "rationale": "Hydration documents HOLLAR as minted through its GHO-style borrow markets and supported by the HOLLAR Stability Module. The documented collateral set includes DOT, ETH, vDOT, USDT, USDC, tBTC, WBTC, and giga-token variants, but Hydration publishes no dated aggregate collateral allocation. The reserve is therefore represented as one evidenced mixed basket instead of retaining unsupported per-asset percentages.",
+    "rationale": "Write-time re-open 2026-07-28 of Hydration HOLLAR docs: HOLLAR is GHO-style overcollateralized mint against crypto collateral including DOT, ETH, vDOT, USDT, USDC, tBTC, WBTC, plus HOLLAR Stability Module. Borrow markets app URL still live. No public per-asset weight table; envelope remains 100% aggregate borrow-market/HSM collateral with ku=100.",
     "compositionBasis": "Hydration's documented HOLLAR collateral set; current per-asset and HSM-versus-borrow-market weights are unpublished",
     "scope": "full-composition",
     "knownUnknownExposure": "Current per-asset collateral weights, the share held via the HOLLAR Stability Module versus borrow positions, and per-asset utilization are not published as a dated aggregate.",
@@ -221,7 +221,8 @@
         "disposition": "basket-needs-split",
         "rationale": "The eligible collateral universe is documented, but Hydration publishes no current constituent or venue-level allocation."
       }
-    ]
+    ],
+    "compositionAsOf": "2026-07-28"
   },
   "custodyProfile": {
     "providers": [

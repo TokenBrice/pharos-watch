@@ -12,24 +12,28 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-BIND wave6",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "GROK-RESEARCH wave8 phase1",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Moore CPA TUSD Consolidated Reserves Report - July 22, 2026",
+        "label": "Moore CPA TUSD Consolidated Reserves Report - July 27, 2026",
         "url": "https://widget.verinumus.io/api/v1/tusd/report"
       },
       {
-        "label": "TUSD transparency dashboard",
+        "label": "Verinumus TUSD live snapshot API",
+        "url": "https://widget.verinumus.io/api/v1/tusd/snapshot"
+      },
+      {
+        "label": "TUSD transparency dashboard (embeds Verinumus widget)",
         "url": "https://tusd.io/transparency"
       }
     ],
-    "rationale": "The independent Chainlink/Moore live feed publishes one aggregate row named USD reserves (Moore Hong Kong attested), so the reviewed classification is keyed to that exact 100% live identity. Moore CPA's July 22 reasonable-assurance report preserves the underlying detail: $501.850 million held through First Digital Trust Limited and $78,900.88 of cash against $501.928901 million of total collateral, or 99.98% and 0.02%. The report values the First Digital position at reported cost and does not examine the fund investments' fair value.",
-    "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of July 22, 2026",
-    "compositionAsOf": "2026-07-22",
+    "rationale": "Write-time re-open 2026-07-28: Moore CPA ISAE 3000 reasonable-assurance report as of 27 July 2026 04:30:30 PM HKT (PDF via widget.verinumus.io/api/v1/tusd/report; PDF CreationDate 2026-07-27) lists Total TrueUSD tokens issued 494,515,082.75 and USD denominated collateral of US Treasury Bills $0, First Digital Trust Limited $501,850,000, and US Dollars Cash $78,900.88, totaling US$501,928,900.88 (FDT 99.98% and cash 0.02% of that total at reported cost). The same-system live snapshot (widget.verinumus.io/api/v1/tusd/snapshot, timestamp 2026-07-27T08:30:48.069Z) independently returns totalToken 494515082.75 and totalTrust 501928900.88 with no per-line composition rows. tusd.io/transparency embeds the Verinumus widget and states daily Moore Hong Kong attestations with reserve breakdown. Live classification therefore remains one 100% aggregate USD-reserves row keyed to the attested total; report-level FDT/cash detail is recorded in knownUnknownExposure and custodyProfile but cannot be split one-to-one against the live feed.",
+    "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of July 27, 2026, corroborated by Verinumus live snapshot totals and the issuer transparency embed",
+    "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "The live feed exposes the attested reserve as one aggregate row. Moore's report identifies a 99.98% First Digital Trust fund position and 0.02% cash, but the aggregate row cannot be split one-to-one for live classification and the fund's assets, liquidity, counterparties, and current fair value remain undisclosed; the report also notes ongoing litigation and restrictions affecting that collateral.",
+    "knownUnknownExposure": "The live snapshot exposes only aggregate totalTrust. Moore's report identifies a 99.98% First Digital Trust fund/other-instruments position reported at cost (fair value not examined) and 0.02% cash at Bahamian depository institutions; fund underlying assets, liquidity, counterparties, and current fair value remain undisclosed. The report notes ongoing Techteryx litigation against FDT, DIFC freezing orders up to US$456 million, and that substantially all Hong Kong depository collateral was invested for yield and is not readily convertible to cash.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -37,7 +41,7 @@
         "reserveName": "USD reserves (Moore Hong Kong attested)",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The exact live row aggregates the 99.98% opaque First Digital Trust fund position with 0.02% cash. It therefore cannot support a one-to-one tracked dependency or a more granular live classification, even though the report-level split remains recorded in this review and custody profile."
+        "rationale": "The exact live identity is a single aggregate totalTrust row. Report-level 99.98% opaque FDT fund/other instruments plus 0.02% cash cannot support a one-to-one tracked dependency or a more granular live classification, even though the report-level split is recorded in this review and custody profile."
       }
     ]
   },
@@ -59,15 +63,19 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "permitted",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-BIND wave6",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "GROK-RESEARCH wave8 phase1",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - July 22, 2026",
+        "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report - July 27, 2026",
         "url": "https://widget.verinumus.io/api/v1/tusd/report"
+      },
+      {
+        "label": "TUSD transparency dashboard (Moore Hong Kong daily attestations)",
+        "url": "https://tusd.io/transparency"
       }
     ],
-    "uncertainty": "The report describes collateral accounts held for TUSD holders and identifies First Digital Trust, but it does not name every depository institution or establish statutory bankruptcy remoteness. It states that substantially all collateral was invested for yield and records ongoing litigation over access to the First Digital position."
+    "uncertainty": "Moore Note 2 states USD collateral is held at a Hong Kong depository (First Digital Trust Limited) and Bahamian depository institutions for the benefit of TrueUSD token holders; FDT has invested all or substantially all of that collateral in other instruments at cost, with ongoing litigation over redemption. Bahamian institutions are not named. The report does not establish statutory bankruptcy remoteness. Issuer transparency corroborates Moore as the daily attestor but does not restate custodian share percentages."
   }
 }

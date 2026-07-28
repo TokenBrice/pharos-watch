@@ -35,7 +35,7 @@ import {
 } from "../safety-score-v9-supply-attribution-generation";
 import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 
-const SOURCE_CLOCK_SEC = 1_785_153_600;
+const SOURCE_CLOCK_SEC = 1_785_283_200;
 const SOURCE_AGGREGATE_USD = 2_480_000_000;
 const TARGET_AGGREGATE_USD = 3_000_000_000;
 

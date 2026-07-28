@@ -25,7 +25,7 @@ import {
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
-const PROFILE_CLOCK_SEC = Date.UTC(2026, 6, 25) / 1_000;
+const PROFILE_CLOCK_SEC = Date.UTC(2026, 6, 28) / 1_000;
 const PROFILE_FIXED_INPUT = {
   clockSec: PROFILE_CLOCK_SEC,
   liveReserveMap: {},
@@ -127,9 +127,9 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     if (review?.archetype !== "algorithmic") throw new Error("expected the production FPI profile review");
 
     expect(profile.metrics).toEqual({
-      exogenousBackingShare: 0.817,
-      reflexiveBackingShare: 0.076,
-      contractionCapacityRatio: 0.817,
+      exogenousBackingShare: 0.871,
+      reflexiveBackingShare: 0.0,
+      contractionCapacityRatio: 0.871,
     });
     expect(getSafetyScoreV9MechanismExitFacts("fpi-frax", "algorithmic", PROFILE_CLOCK_SEC)).toEqual([
       {
@@ -140,9 +140,9 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
     ]);
     expect(review).toMatchObject({
       archetype: "algorithmic",
-      exogenousBackingShare: 0.817,
-      reflexiveBackingShare: 0.076,
-      contractionCapacityRatio: 0.817,
+      exogenousBackingShare: 0.871,
+      reflexiveBackingShare: 0.0,
+      contractionCapacityRatio: 0.871,
       contractionCapacity: {
         status: { observationState: "bounded-unknown" },
         quality: null,

@@ -48,9 +48,18 @@
         "label": "Tangent USG oracles",
         "url": "https://docs.tangent.finance/docs/usg/oracle"
       },
-      {"label": "Verified ConvexFxnLPMarket implementation", "url": "https://eth.blockscout.com/address/0xA6C6193aBAf2F1b72ED251984D391eaAc7c31e77?tab=contract"},
-      {"label": "Verified CurveGaugeMarket implementation", "url": "https://eth.blockscout.com/address/0xd7a63e1ffff888488db275189078282da8a4e638?tab=contract"},
-      {"label": "Verified StakeDaoVaultV2Market implementation", "url": "https://eth.blockscout.com/address/0xBCE94d131b288590F1ef1f62622865bA1fa514e4?tab=contract"},
+      {
+        "label": "Verified ConvexFxnLPMarket implementation",
+        "url": "https://eth.blockscout.com/address/0xA6C6193aBAf2F1b72ED251984D391eaAc7c31e77?tab=contract"
+      },
+      {
+        "label": "Verified CurveGaugeMarket implementation",
+        "url": "https://eth.blockscout.com/address/0xd7a63e1ffff888488db275189078282da8a4e638?tab=contract"
+      },
+      {
+        "label": "Verified StakeDaoVaultV2Market implementation",
+        "url": "https://eth.blockscout.com/address/0xBCE94d131b288590F1ef1f62622865bA1fa514e4?tab=contract"
+      },
       {
         "label": "Finalized Ethereum block 25531905",
         "url": "https://eth.blockscout.com/block/25531905"
@@ -62,8 +71,12 @@
         "label": "USDC / fxUSD Curve LP",
         "tier": "standard-external",
         "summary": "The USDC/fxUSD market values its Curve LP through the lower of heartbeat-checked USDC and Curve-derived fxUSD.",
-        "collateralAssets": ["USDC/fxUSD Curve LP"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "USDC/fxUSD Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Tangent OracleDuoPoolStable",
@@ -72,7 +85,12 @@
             "chain": "ethereum",
             "observedAt": "2026-07-14",
             "observedBlock": 25531905,
-            "failureDomainKeys": ["tangent-usdc-chainlink-redstone", "tangent-fxusd-usdc-curve", "curve-lp-virtual-price", "ethereum"]
+            "failureDomainKeys": [
+              "tangent-usdc-chainlink-redstone",
+              "tangent-fxusd-usdc-curve",
+              "curve-lp-virtual-price",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
@@ -89,10 +107,21 @@
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. If collateral value falls below debt, permissionless seizure sends collateral to the fee treasury and records market bad debt; anyone may burn USG through repayBadDebt.",
         "shutdownOrBadDebtBehavior": "Owner pauses can stop deposits, borrowing, and leverage but not liquidation or seizure. Recorded bad debt counts against the market debt cap until repaid.",
-        "failureDomainKeys": ["tangent-market-0x849c", "tangent-oracle-0x35c6", "tangent-impl-convex-fxn-lp", "ethereum"],
+        "failureDomainKeys": [
+          "tangent-market-0x849c",
+          "tangent-oracle-0x35c6",
+          "tangent-impl-convex-fxn-lp",
+          "ethereum"
+        ],
         "sources": [
-          {"label": "Verified USDC/fxUSD market", "url": "https://eth.blockscout.com/address/0x849cf82e0ebcfeab8270cc5a3ea3b26cd481b754?tab=contract"},
-          {"label": "Verified USDC/fxUSD oracle", "url": "https://eth.blockscout.com/address/0x35c62aC45DDF3079e2dAA0b8957862A1800920da?tab=contract"}
+          {
+            "label": "Verified USDC/fxUSD market",
+            "url": "https://eth.blockscout.com/address/0x849cf82e0ebcfeab8270cc5a3ea3b26cd481b754?tab=contract"
+          },
+          {
+            "label": "Verified USDC/fxUSD oracle",
+            "url": "https://eth.blockscout.com/address/0x35c62aC45DDF3079e2dAA0b8957862A1800920da?tab=contract"
+          }
         ]
       },
       {
@@ -100,8 +129,12 @@
         "label": "reUSD / fxUSD Curve LP",
         "tier": "standard-external",
         "summary": "The reUSD/fxUSD market uses two Curve-derived component values and the LP virtual price.",
-        "collateralAssets": ["reUSD/fxUSD Curve LP"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "reUSD/fxUSD Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Tangent OracleDuoPoolStable",
@@ -110,21 +143,44 @@
             "chain": "ethereum",
             "observedAt": "2026-07-14",
             "observedBlock": 25531905,
-            "failureDomainKeys": ["tangent-reusd-scrvusd-curve", "tangent-fxusd-usdc-curve", "tangent-crvusd-chainlink-curve", "tangent-usdc-chainlink-redstone", "ethereum"]
+            "failureDomainKeys": [
+              "tangent-reusd-scrvusd-curve",
+              "tangent-fxusd-usdc-curve",
+              "tangent-crvusd-chainlink-curve",
+              "tangent-usdc-chainlink-redstone",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
         "observedAt": "2026-07-14",
         "observedBlock": 25531905,
-        "collateralParameters": [{"asset": "reUSD/fxUSD Curve LP", "maximumLtvPct": 84, "note": "Liquidation threshold 85%; market 0xa63ded87df22ee573567ad1dd87d0a71c8fcd380."}],
+        "collateralParameters": [
+          {
+            "asset": "reUSD/fxUSD Curve LP",
+            "maximumLtvPct": 84,
+            "note": "Liquidation threshold 85%; market 0xa63ded87df22ee573567ad1dd87d0a71c8fcd380."
+          }
+        ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
         "shutdownOrBadDebtBehavior": "Owner pauses do not disable liquidation or seizure. Bad debt remains market-local and consumes debt-cap capacity until repaid.",
-        "failureDomainKeys": ["tangent-market-0xa63d", "tangent-oracle-0x9f16", "tangent-impl-convex-fxn-lp", "ethereum"],
+        "failureDomainKeys": [
+          "tangent-market-0xa63d",
+          "tangent-oracle-0x9f16",
+          "tangent-impl-convex-fxn-lp",
+          "ethereum"
+        ],
         "sources": [
-          {"label": "Verified reUSD/fxUSD market", "url": "https://eth.blockscout.com/address/0xa63ded87df22ee573567ad1dd87d0a71c8fcd380?tab=contract"},
-          {"label": "Verified reUSD/fxUSD oracle", "url": "https://eth.blockscout.com/address/0x9f162292Bc39F194a3CA87e39700293bD9aa710A?tab=contract"}
+          {
+            "label": "Verified reUSD/fxUSD market",
+            "url": "https://eth.blockscout.com/address/0xa63ded87df22ee573567ad1dd87d0a71c8fcd380?tab=contract"
+          },
+          {
+            "label": "Verified reUSD/fxUSD oracle",
+            "url": "https://eth.blockscout.com/address/0x9f162292Bc39F194a3CA87e39700293bD9aa710A?tab=contract"
+          }
         ]
       },
       {
@@ -132,8 +188,12 @@
         "label": "frxUSD / OUSD Curve LP",
         "tier": "standard-external",
         "summary": "The frxUSD/OUSD market derives both component values through Curve pools backed by crvUSD and USDC fallback-aware leaves.",
-        "collateralAssets": ["frxUSD/OUSD Curve LP"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "frxUSD/OUSD Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Tangent OracleDuoPoolStable",
@@ -142,21 +202,44 @@
             "chain": "ethereum",
             "observedAt": "2026-07-14",
             "observedBlock": 25531905,
-            "failureDomainKeys": ["tangent-frxusd-crvusd-curve", "tangent-ousd-usdc-curve", "tangent-crvusd-chainlink-curve", "tangent-usdc-chainlink-redstone", "ethereum"]
+            "failureDomainKeys": [
+              "tangent-frxusd-crvusd-curve",
+              "tangent-ousd-usdc-curve",
+              "tangent-crvusd-chainlink-curve",
+              "tangent-usdc-chainlink-redstone",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
         "observedAt": "2026-07-14",
         "observedBlock": 25531905,
-        "collateralParameters": [{"asset": "frxUSD/OUSD Curve LP", "maximumLtvPct": 87.5, "note": "Liquidation threshold 88.75%; market 0x56dbc69208044748af4d33392e25fc9336f11931."}],
+        "collateralParameters": [
+          {
+            "asset": "frxUSD/OUSD Curve LP",
+            "maximumLtvPct": 87.5,
+            "note": "Liquidation threshold 88.75%; market 0x56dbc69208044748af4d33392e25fc9336f11931."
+          }
+        ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
         "shutdownOrBadDebtBehavior": "Owner pauses do not disable liquidation or seizure. Bad debt remains market-local and consumes debt-cap capacity until repaid.",
-        "failureDomainKeys": ["tangent-market-0x56db", "tangent-oracle-0xe3e9", "tangent-impl-stakedao-vault-v2", "ethereum"],
+        "failureDomainKeys": [
+          "tangent-market-0x56db",
+          "tangent-oracle-0xe3e9",
+          "tangent-impl-stakedao-vault-v2",
+          "ethereum"
+        ],
         "sources": [
-          {"label": "Verified frxUSD/OUSD market", "url": "https://eth.blockscout.com/address/0x56dbc69208044748af4d33392e25fc9336f11931?tab=contract"},
-          {"label": "Verified frxUSD/OUSD oracle", "url": "https://eth.blockscout.com/address/0xe3e9628d2B047Aa43Ab08Adc1B5Bb059ca0b1268?tab=contract"}
+          {
+            "label": "Verified frxUSD/OUSD market",
+            "url": "https://eth.blockscout.com/address/0x56dbc69208044748af4d33392e25fc9336f11931?tab=contract"
+          },
+          {
+            "label": "Verified frxUSD/OUSD oracle",
+            "url": "https://eth.blockscout.com/address/0xe3e9628d2B047Aa43Ab08Adc1B5Bb059ca0b1268?tab=contract"
+          }
         ]
       },
       {
@@ -164,8 +247,12 @@
         "label": "reUSD / scrvUSD Curve LP",
         "tier": "standard-external",
         "summary": "The reUSD/scrvUSD market shares the crvUSD Chainlink, Curve fallback, and last-good failure domain across both components.",
-        "collateralAssets": ["reUSD/scrvUSD Curve LP"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "reUSD/scrvUSD Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Tangent OracleDuoPoolStable",
@@ -174,21 +261,43 @@
             "chain": "ethereum",
             "observedAt": "2026-07-14",
             "observedBlock": 25531905,
-            "failureDomainKeys": ["tangent-reusd-scrvusd-curve", "tangent-crvusd-chainlink-curve", "curve-lp-virtual-price", "ethereum"]
+            "failureDomainKeys": [
+              "tangent-reusd-scrvusd-curve",
+              "tangent-crvusd-chainlink-curve",
+              "curve-lp-virtual-price",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
         "observedAt": "2026-07-14",
         "observedBlock": 25531905,
-        "collateralParameters": [{"asset": "reUSD/scrvUSD Curve LP", "maximumLtvPct": 84, "note": "Liquidation threshold 85%; market 0x161d6fa48b0e0152763c3929a3813bd177fc099f."}],
+        "collateralParameters": [
+          {
+            "asset": "reUSD/scrvUSD Curve LP",
+            "maximumLtvPct": 84,
+            "note": "Liquidation threshold 85%; market 0x161d6fa48b0e0152763c3929a3813bd177fc099f."
+          }
+        ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
         "shutdownOrBadDebtBehavior": "Owner pauses do not disable liquidation or seizure. Bad debt remains market-local and consumes debt-cap capacity until repaid.",
-        "failureDomainKeys": ["tangent-market-0x161d", "tangent-oracle-0xdb0f", "tangent-impl-stakedao-vault-v2", "ethereum"],
+        "failureDomainKeys": [
+          "tangent-market-0x161d",
+          "tangent-oracle-0xdb0f",
+          "tangent-impl-stakedao-vault-v2",
+          "ethereum"
+        ],
         "sources": [
-          {"label": "Verified reUSD/scrvUSD market", "url": "https://eth.blockscout.com/address/0x161d6fa48b0e0152763c3929a3813bd177fc099f?tab=contract"},
-          {"label": "Verified reUSD/scrvUSD oracle", "url": "https://eth.blockscout.com/address/0xdB0fc4aE74FA8D8a1C3d31e6e9113DBc8B2c7DAA?tab=contract"}
+          {
+            "label": "Verified reUSD/scrvUSD market",
+            "url": "https://eth.blockscout.com/address/0x161d6fa48b0e0152763c3929a3813bd177fc099f?tab=contract"
+          },
+          {
+            "label": "Verified reUSD/scrvUSD oracle",
+            "url": "https://eth.blockscout.com/address/0xdB0fc4aE74FA8D8a1C3d31e6e9113DBc8B2c7DAA?tab=contract"
+          }
         ]
       },
       {
@@ -196,8 +305,12 @@
         "label": "eUSD / USDC Curve LP",
         "tier": "standard-external",
         "summary": "The eUSD/USDC market derives eUSD through its Curve pool and uses the shared fallback-aware USDC wrapper.",
-        "collateralAssets": ["eUSD/USDC Curve LP"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "eUSD/USDC Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Tangent OracleDuoPoolStable",
@@ -206,21 +319,43 @@
             "chain": "ethereum",
             "observedAt": "2026-07-14",
             "observedBlock": 25531905,
-            "failureDomainKeys": ["tangent-eusd-usdc-curve", "tangent-usdc-chainlink-redstone", "curve-lp-virtual-price", "ethereum"]
+            "failureDomainKeys": [
+              "tangent-eusd-usdc-curve",
+              "tangent-usdc-chainlink-redstone",
+              "curve-lp-virtual-price",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
         "observedAt": "2026-07-14",
         "observedBlock": 25531905,
-        "collateralParameters": [{"asset": "eUSD/USDC Curve LP", "maximumLtvPct": 87.5, "note": "Liquidation threshold 88.75%; market 0xa6069a4a53b564eb0a312e08f5af19ae2ba5d67e."}],
+        "collateralParameters": [
+          {
+            "asset": "eUSD/USDC Curve LP",
+            "maximumLtvPct": 87.5,
+            "note": "Liquidation threshold 88.75%; market 0xa6069a4a53b564eb0a312e08f5af19ae2ba5d67e."
+          }
+        ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
         "shutdownOrBadDebtBehavior": "Owner pauses do not disable liquidation or seizure. Bad debt remains market-local and consumes debt-cap capacity until repaid.",
-        "failureDomainKeys": ["tangent-market-0xa606", "tangent-oracle-0xb8cc", "tangent-impl-stakedao-vault-v2", "ethereum"],
+        "failureDomainKeys": [
+          "tangent-market-0xa606",
+          "tangent-oracle-0xb8cc",
+          "tangent-impl-stakedao-vault-v2",
+          "ethereum"
+        ],
         "sources": [
-          {"label": "Verified eUSD/USDC market", "url": "https://eth.blockscout.com/address/0xa6069a4a53b564eb0a312e08f5af19ae2ba5d67e?tab=contract"},
-          {"label": "Verified eUSD/USDC oracle", "url": "https://eth.blockscout.com/address/0xb8Cc9E84941605F553004d188e31e2aeB4061fD2?tab=contract"}
+          {
+            "label": "Verified eUSD/USDC market",
+            "url": "https://eth.blockscout.com/address/0xa6069a4a53b564eb0a312e08f5af19ae2ba5d67e?tab=contract"
+          },
+          {
+            "label": "Verified eUSD/USDC oracle",
+            "url": "https://eth.blockscout.com/address/0xb8Cc9E84941605F553004d188e31e2aeB4061fD2?tab=contract"
+          }
         ]
       },
       {
@@ -228,8 +363,12 @@
         "label": "frxUSD / scrvUSD Curve LP",
         "tier": "standard-external",
         "summary": "The frxUSD/scrvUSD market shares the crvUSD Chainlink, Curve fallback, and last-good failure domain.",
-        "collateralAssets": ["frxUSD/scrvUSD Curve LP"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "frxUSD/scrvUSD Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Tangent OracleDuoPoolStable",
@@ -238,21 +377,43 @@
             "chain": "ethereum",
             "observedAt": "2026-07-14",
             "observedBlock": 25531905,
-            "failureDomainKeys": ["tangent-frxusd-crvusd-curve", "tangent-crvusd-chainlink-curve", "curve-lp-virtual-price", "ethereum"]
+            "failureDomainKeys": [
+              "tangent-frxusd-crvusd-curve",
+              "tangent-crvusd-chainlink-curve",
+              "curve-lp-virtual-price",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
         "observedAt": "2026-07-14",
         "observedBlock": 25531905,
-        "collateralParameters": [{"asset": "frxUSD/scrvUSD Curve LP", "maximumLtvPct": 84, "note": "Liquidation threshold 85.25%; market 0x5c996574270f439bfff5b7647ee92c1879d35a4b."}],
+        "collateralParameters": [
+          {
+            "asset": "frxUSD/scrvUSD Curve LP",
+            "maximumLtvPct": 84,
+            "note": "Liquidation threshold 85.25%; market 0x5c996574270f439bfff5b7647ee92c1879d35a4b."
+          }
+        ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
         "shutdownOrBadDebtBehavior": "Owner pauses do not disable liquidation or seizure. Bad debt remains market-local and consumes debt-cap capacity until repaid.",
-        "failureDomainKeys": ["tangent-market-0x5c99", "tangent-oracle-0xf31b", "tangent-impl-stakedao-vault-v2", "ethereum"],
+        "failureDomainKeys": [
+          "tangent-market-0x5c99",
+          "tangent-oracle-0xf31b",
+          "tangent-impl-stakedao-vault-v2",
+          "ethereum"
+        ],
         "sources": [
-          {"label": "Verified frxUSD/scrvUSD market", "url": "https://eth.blockscout.com/address/0x5c996574270f439bfff5b7647ee92c1879d35a4b?tab=contract"},
-          {"label": "Verified frxUSD/scrvUSD oracle", "url": "https://eth.blockscout.com/address/0xF31BE70c9D9596B23088125345F044065b0Bf886?tab=contract"}
+          {
+            "label": "Verified frxUSD/scrvUSD market",
+            "url": "https://eth.blockscout.com/address/0x5c996574270f439bfff5b7647ee92c1879d35a4b?tab=contract"
+          },
+          {
+            "label": "Verified frxUSD/scrvUSD oracle",
+            "url": "https://eth.blockscout.com/address/0xF31BE70c9D9596B23088125345F044065b0Bf886?tab=contract"
+          }
         ]
       },
       {
@@ -260,8 +421,12 @@
         "label": "crvUSD / USDT Curve LP",
         "tier": "standard-external",
         "summary": "The crvUSD/USDT market combines independent heartbeat-checked Chainlink leaves with Curve and RedStone fallbacks.",
-        "collateralAssets": ["crvUSD/USDT Curve LP"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "crvUSD/USDT Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Tangent OracleDuoPoolStable",
@@ -270,21 +435,43 @@
             "chain": "ethereum",
             "observedAt": "2026-07-14",
             "observedBlock": 25531905,
-            "failureDomainKeys": ["tangent-crvusd-chainlink-curve", "tangent-usdt-chainlink-redstone", "curve-lp-virtual-price", "ethereum"]
+            "failureDomainKeys": [
+              "tangent-crvusd-chainlink-curve",
+              "tangent-usdt-chainlink-redstone",
+              "curve-lp-virtual-price",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
         "observedAt": "2026-07-14",
         "observedBlock": 25531905,
-        "collateralParameters": [{"asset": "crvUSD/USDT Curve LP", "maximumLtvPct": 84, "note": "Liquidation threshold 85.25%; market 0xaed9bcae0831caf4a45739ec7910cedf2ac5d9a1."}],
+        "collateralParameters": [
+          {
+            "asset": "crvUSD/USDT Curve LP",
+            "maximumLtvPct": 84,
+            "note": "Liquidation threshold 85.25%; market 0xaed9bcae0831caf4a45739ec7910cedf2ac5d9a1."
+          }
+        ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
         "shutdownOrBadDebtBehavior": "Owner pauses do not disable liquidation or seizure. Bad debt remains market-local and consumes debt-cap capacity until repaid.",
-        "failureDomainKeys": ["tangent-market-0xaed9", "tangent-oracle-0x5d34", "tangent-impl-stakedao-vault-v2", "ethereum"],
+        "failureDomainKeys": [
+          "tangent-market-0xaed9",
+          "tangent-oracle-0x5d34",
+          "tangent-impl-stakedao-vault-v2",
+          "ethereum"
+        ],
         "sources": [
-          {"label": "Verified crvUSD/USDT market", "url": "https://eth.blockscout.com/address/0xaed9bcae0831caf4a45739ec7910cedf2ac5d9a1?tab=contract"},
-          {"label": "Verified crvUSD/USDT oracle", "url": "https://eth.blockscout.com/address/0x5d34f650c779124676Cd72922112A997A4173AEF?tab=contract"}
+          {
+            "label": "Verified crvUSD/USDT market",
+            "url": "https://eth.blockscout.com/address/0xaed9bcae0831caf4a45739ec7910cedf2ac5d9a1?tab=contract"
+          },
+          {
+            "label": "Verified crvUSD/USDT oracle",
+            "url": "https://eth.blockscout.com/address/0x5d34f650c779124676Cd72922112A997A4173AEF?tab=contract"
+          }
         ]
       },
       {
@@ -292,8 +479,12 @@
         "label": "frxUSD / DOLA Curve LP",
         "tier": "standard-external",
         "summary": "The frxUSD/DOLA market derives both components through Curve pools backed by crvUSD and USDS fallback-aware leaves.",
-        "collateralAssets": ["frxUSD/DOLA Curve LP"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "frxUSD/DOLA Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Tangent OracleDuoPoolStable",
@@ -302,21 +493,44 @@
             "chain": "ethereum",
             "observedAt": "2026-07-14",
             "observedBlock": 25531905,
-            "failureDomainKeys": ["tangent-frxusd-crvusd-curve", "tangent-dola-susds-curve", "tangent-crvusd-chainlink-curve", "tangent-usds-chainlink-curve", "ethereum"]
+            "failureDomainKeys": [
+              "tangent-frxusd-crvusd-curve",
+              "tangent-dola-susds-curve",
+              "tangent-crvusd-chainlink-curve",
+              "tangent-usds-chainlink-curve",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
         "observedAt": "2026-07-14",
         "observedBlock": 25531905,
-        "collateralParameters": [{"asset": "frxUSD/DOLA Curve LP", "maximumLtvPct": 84, "note": "Liquidation threshold 85.25%; market 0xd3d29a8752fc40d64a20bbc043147077570c1785."}],
+        "collateralParameters": [
+          {
+            "asset": "frxUSD/DOLA Curve LP",
+            "maximumLtvPct": 84,
+            "note": "Liquidation threshold 85.25%; market 0xd3d29a8752fc40d64a20bbc043147077570c1785."
+          }
+        ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
         "shutdownOrBadDebtBehavior": "Owner pauses do not disable liquidation or seizure. Bad debt remains market-local and consumes debt-cap capacity until repaid.",
-        "failureDomainKeys": ["tangent-market-0xd3d2", "tangent-oracle-0x385b", "tangent-impl-stakedao-vault-v2", "ethereum"],
+        "failureDomainKeys": [
+          "tangent-market-0xd3d2",
+          "tangent-oracle-0x385b",
+          "tangent-impl-stakedao-vault-v2",
+          "ethereum"
+        ],
         "sources": [
-          {"label": "Verified frxUSD/DOLA market", "url": "https://eth.blockscout.com/address/0xd3d29a8752fc40d64a20bbc043147077570c1785?tab=contract"},
-          {"label": "Verified frxUSD/DOLA oracle", "url": "https://eth.blockscout.com/address/0x385B0c21d2f93a76468f8E074eDE3Ef6f8Ff13CE?tab=contract"}
+          {
+            "label": "Verified frxUSD/DOLA market",
+            "url": "https://eth.blockscout.com/address/0xd3d29a8752fc40d64a20bbc043147077570c1785?tab=contract"
+          },
+          {
+            "label": "Verified frxUSD/DOLA oracle",
+            "url": "https://eth.blockscout.com/address/0x385B0c21d2f93a76468f8E074eDE3Ef6f8Ff13CE?tab=contract"
+          }
         ]
       },
       {
@@ -324,8 +538,12 @@
         "label": "BOLD / USDC Curve LP",
         "tier": "standard-external",
         "summary": "The BOLD/USDC market derives BOLD through its Curve pool and uses the shared fallback-aware USDC wrapper.",
-        "collateralAssets": ["BOLD/USDC Curve LP"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "BOLD/USDC Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Tangent OracleDuoPoolStable",
@@ -334,21 +552,43 @@
             "chain": "ethereum",
             "observedAt": "2026-07-14",
             "observedBlock": 25531905,
-            "failureDomainKeys": ["tangent-bold-usdc-curve", "tangent-usdc-chainlink-redstone", "curve-lp-virtual-price", "ethereum"]
+            "failureDomainKeys": [
+              "tangent-bold-usdc-curve",
+              "tangent-usdc-chainlink-redstone",
+              "curve-lp-virtual-price",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
         "observedAt": "2026-07-14",
         "observedBlock": 25531905,
-        "collateralParameters": [{"asset": "BOLD/USDC Curve LP", "maximumLtvPct": 90, "note": "Liquidation threshold 91.25%; market 0xc9c80e8481c2b6f979afc155bc3f979cfad19c56."}],
+        "collateralParameters": [
+          {
+            "asset": "BOLD/USDC Curve LP",
+            "maximumLtvPct": 90,
+            "note": "Liquidation threshold 91.25%; market 0xc9c80e8481c2b6f979afc155bc3f979cfad19c56."
+          }
+        ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
         "shutdownOrBadDebtBehavior": "Owner pauses do not disable liquidation or seizure. Bad debt remains market-local and consumes debt-cap capacity until repaid.",
-        "failureDomainKeys": ["tangent-market-0xc9c8", "tangent-oracle-0xf26b", "tangent-impl-stakedao-vault-v2", "ethereum"],
+        "failureDomainKeys": [
+          "tangent-market-0xc9c8",
+          "tangent-oracle-0xf26b",
+          "tangent-impl-stakedao-vault-v2",
+          "ethereum"
+        ],
         "sources": [
-          {"label": "Verified BOLD/USDC market", "url": "https://eth.blockscout.com/address/0xc9c80e8481c2b6f979afc155bc3f979cfad19c56?tab=contract"},
-          {"label": "Verified BOLD/USDC oracle", "url": "https://eth.blockscout.com/address/0xf26B689dA847DB08F6bb3B3186FDF7eDdb8e69c9?tab=contract"}
+          {
+            "label": "Verified BOLD/USDC market",
+            "url": "https://eth.blockscout.com/address/0xc9c80e8481c2b6f979afc155bc3f979cfad19c56?tab=contract"
+          },
+          {
+            "label": "Verified BOLD/USDC oracle",
+            "url": "https://eth.blockscout.com/address/0xf26B689dA847DB08F6bb3B3186FDF7eDdb8e69c9?tab=contract"
+          }
         ]
       },
       {
@@ -356,8 +596,12 @@
         "label": "frxUSD / sUSDS Curve LP",
         "tier": "standard-external",
         "summary": "The frxUSD/sUSDS market combines Curve-derived frxUSD with the heartbeat-checked USDS wrapper path.",
-        "collateralAssets": ["frxUSD/sUSDS Curve LP"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "frxUSD/sUSDS Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Tangent OracleDuoPoolStable",
@@ -366,21 +610,44 @@
             "chain": "ethereum",
             "observedAt": "2026-07-14",
             "observedBlock": 25531905,
-            "failureDomainKeys": ["tangent-frxusd-crvusd-curve", "tangent-crvusd-chainlink-curve", "tangent-usds-chainlink-curve", "curve-lp-virtual-price", "ethereum"]
+            "failureDomainKeys": [
+              "tangent-frxusd-crvusd-curve",
+              "tangent-crvusd-chainlink-curve",
+              "tangent-usds-chainlink-curve",
+              "curve-lp-virtual-price",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
         "observedAt": "2026-07-14",
         "observedBlock": 25531905,
-        "collateralParameters": [{"asset": "frxUSD/sUSDS Curve LP", "maximumLtvPct": 90, "note": "Liquidation threshold 91.25%; market 0xd2c7257efe28a1b1446904a371e3d51e1c2f7e0e."}],
+        "collateralParameters": [
+          {
+            "asset": "frxUSD/sUSDS Curve LP",
+            "maximumLtvPct": 90,
+            "note": "Liquidation threshold 91.25%; market 0xd2c7257efe28a1b1446904a371e3d51e1c2f7e0e."
+          }
+        ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
         "shutdownOrBadDebtBehavior": "Owner pauses do not disable liquidation or seizure. Bad debt remains market-local and consumes debt-cap capacity until repaid.",
-        "failureDomainKeys": ["tangent-market-0xd2c7", "tangent-oracle-0x3ccd", "tangent-impl-stakedao-vault-v2", "ethereum"],
+        "failureDomainKeys": [
+          "tangent-market-0xd2c7",
+          "tangent-oracle-0x3ccd",
+          "tangent-impl-stakedao-vault-v2",
+          "ethereum"
+        ],
         "sources": [
-          {"label": "Verified frxUSD/sUSDS market", "url": "https://eth.blockscout.com/address/0xd2c7257efe28a1b1446904a371e3d51e1c2f7e0e?tab=contract"},
-          {"label": "Verified frxUSD/sUSDS oracle", "url": "https://eth.blockscout.com/address/0x3ccd01E66172b2c1B3C17f485B7F2987Ae94dA6A?tab=contract"}
+          {
+            "label": "Verified frxUSD/sUSDS market",
+            "url": "https://eth.blockscout.com/address/0xd2c7257efe28a1b1446904a371e3d51e1c2f7e0e?tab=contract"
+          },
+          {
+            "label": "Verified frxUSD/sUSDS oracle",
+            "url": "https://eth.blockscout.com/address/0x3ccd01E66172b2c1B3C17f485B7F2987Ae94dA6A?tab=contract"
+          }
         ]
       },
       {
@@ -388,8 +655,12 @@
         "label": "RLUSD / USDC Curve LP",
         "tier": "standard-external",
         "summary": "The RLUSD/USDC market combines two heartbeat-checked Chainlink leaves with independent Curve and RedStone fallbacks.",
-        "collateralAssets": ["RLUSD/USDC Curve LP"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "RLUSD/USDC Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Tangent OracleDuoPoolStable",
@@ -398,21 +669,43 @@
             "chain": "ethereum",
             "observedAt": "2026-07-14",
             "observedBlock": 25531905,
-            "failureDomainKeys": ["tangent-rlusd-chainlink-curve", "tangent-usdc-chainlink-redstone", "curve-lp-virtual-price", "ethereum"]
+            "failureDomainKeys": [
+              "tangent-rlusd-chainlink-curve",
+              "tangent-usdc-chainlink-redstone",
+              "curve-lp-virtual-price",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
         "observedAt": "2026-07-14",
         "observedBlock": 25531905,
-        "collateralParameters": [{"asset": "RLUSD/USDC Curve LP", "maximumLtvPct": 90, "note": "Liquidation threshold 91.5%; market 0xbffbd9c9ac1645285d017a69885304831e8b9b71."}],
+        "collateralParameters": [
+          {
+            "asset": "RLUSD/USDC Curve LP",
+            "maximumLtvPct": 90,
+            "note": "Liquidation threshold 91.5%; market 0xbffbd9c9ac1645285d017a69885304831e8b9b71."
+          }
+        ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
         "shutdownOrBadDebtBehavior": "Owner pauses do not disable liquidation or seizure. Bad debt remains market-local and consumes debt-cap capacity until repaid.",
-        "failureDomainKeys": ["tangent-market-0xbffb", "tangent-oracle-0xd087", "tangent-impl-curve-gauge", "ethereum"],
+        "failureDomainKeys": [
+          "tangent-market-0xbffb",
+          "tangent-oracle-0xd087",
+          "tangent-impl-curve-gauge",
+          "ethereum"
+        ],
         "sources": [
-          {"label": "Verified RLUSD/USDC market", "url": "https://eth.blockscout.com/address/0xbffbd9c9ac1645285d017a69885304831e8b9b71?tab=contract"},
-          {"label": "Verified RLUSD/USDC oracle", "url": "https://eth.blockscout.com/address/0xD0879E35783a165965d5cD524fC9b0D1cf02b066?tab=contract"}
+          {
+            "label": "Verified RLUSD/USDC market",
+            "url": "https://eth.blockscout.com/address/0xbffbd9c9ac1645285d017a69885304831e8b9b71?tab=contract"
+          },
+          {
+            "label": "Verified RLUSD/USDC oracle",
+            "url": "https://eth.blockscout.com/address/0xD0879E35783a165965d5cD524fC9b0D1cf02b066?tab=contract"
+          }
         ]
       },
       {
@@ -420,8 +713,12 @@
         "label": "PYUSD / USDC Curve LP",
         "tier": "standard-external",
         "summary": "The PYUSD/USDC market combines two heartbeat-checked Chainlink leaves with independent RedStone fallbacks.",
-        "collateralAssets": ["PYUSD/USDC Curve LP"],
-        "chains": ["ethereum"],
+        "collateralAssets": [
+          "PYUSD/USDC Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
         "feeds": [
           {
             "provider": "Tangent OracleDuoPoolStable",
@@ -430,21 +727,43 @@
             "chain": "ethereum",
             "observedAt": "2026-07-14",
             "observedBlock": 25531905,
-            "failureDomainKeys": ["tangent-pyusd-chainlink-redstone", "tangent-usdc-chainlink-redstone", "curve-lp-virtual-price", "ethereum"]
+            "failureDomainKeys": [
+              "tangent-pyusd-chainlink-redstone",
+              "tangent-usdc-chainlink-redstone",
+              "curve-lp-virtual-price",
+              "ethereum"
+            ]
           }
         ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
         "observedAt": "2026-07-14",
         "observedBlock": 25531905,
-        "collateralParameters": [{"asset": "PYUSD/USDC Curve LP", "maximumLtvPct": 90, "note": "Liquidation threshold 91.5%; market 0x4742a56668fbacbc11087f516c4b01ebc48f716f."}],
+        "collateralParameters": [
+          {
+            "asset": "PYUSD/USDC Curve LP",
+            "maximumLtvPct": 90,
+            "note": "Liquidation threshold 91.5%; market 0x4742a56668fbacbc11087f516c4b01ebc48f716f."
+          }
+        ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
         "shutdownOrBadDebtBehavior": "Owner pauses do not disable liquidation or seizure. Bad debt remains market-local and consumes debt-cap capacity until repaid.",
-        "failureDomainKeys": ["tangent-market-0x4742", "tangent-oracle-0xcf43", "tangent-impl-curve-gauge", "ethereum"],
+        "failureDomainKeys": [
+          "tangent-market-0x4742",
+          "tangent-oracle-0xcf43",
+          "tangent-impl-curve-gauge",
+          "ethereum"
+        ],
         "sources": [
-          {"label": "Verified PYUSD/USDC market", "url": "https://eth.blockscout.com/address/0x4742a56668fbacbc11087f516c4b01ebc48f716f?tab=contract"},
-          {"label": "Verified PYUSD/USDC oracle", "url": "https://eth.blockscout.com/address/0xcf434527AEFbc808E3E3400aB489a0E25c4af4ca?tab=contract"}
+          {
+            "label": "Verified PYUSD/USDC market",
+            "url": "https://eth.blockscout.com/address/0x4742a56668fbacbc11087f516c4b01ebc48f716f?tab=contract"
+          },
+          {
+            "label": "Verified PYUSD/USDC oracle",
+            "url": "https://eth.blockscout.com/address/0xcf434527AEFbc808E3E3400aB489a0E25c4af4ca?tab=contract"
+          }
         ]
       },
       {
@@ -452,19 +771,58 @@
         "label": "msETH / WETH Curve LP staged market",
         "tier": "standard-external",
         "summary": "The authorized msETH/WETH market is unpaused and callable and holds collateral, but its debt cap and debt shares were zero at the fixed block. Its mandatory Curve-derived msETH leg and heartbeat-checked WETH leg make it a staged live branch rather than an exclusion.",
-        "collateralAssets": ["msETH/WETH Curve LP"],
-        "chains": ["ethereum"],
-        "feeds": [{"provider": "Tangent OracleDuoPoolStable", "path": "outer 0x66D7753F2e72A5d64CEe1D7ec4E1Af2110F8185A -> Curve pool 0xa4c567c662349BeC3D0fB94C4e7f85bA95E208e4 get_virtual_price; msETH 0xa7A0090B16AAEA028f5082F203A1f515e3d96E6C [same pool inverse price_oracle; ETH reference] + ETH leaf 0x0f76534bBb9e5Ee2C15f2EF7695AfaE4CEAE9CCc [Chainlink 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419, 3,600s; RedStone 0xddb637645349D0579FA627f3F583e52F53b7d600; cache]", "address": "0x66D7753F2e72A5d64CEe1D7ec4E1Af2110F8185A", "chain": "ethereum", "observedAt": "2026-07-14", "observedBlock": 25531905, "failureDomainKeys": ["tangent-mseth-curve", "tangent-weth-chainlink-fallback", "curve-lp-virtual-price", "ethereum"]}],
+        "collateralAssets": [
+          "msETH/WETH Curve LP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Tangent OracleDuoPoolStable",
+            "path": "outer 0x66D7753F2e72A5d64CEe1D7ec4E1Af2110F8185A -> Curve pool 0xa4c567c662349BeC3D0fB94C4e7f85bA95E208e4 get_virtual_price; msETH 0xa7A0090B16AAEA028f5082F203A1f515e3d96E6C [same pool inverse price_oracle; ETH reference] + ETH leaf 0x0f76534bBb9e5Ee2C15f2EF7695AfaE4CEAE9CCc [Chainlink 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419, 3,600s; RedStone 0xddb637645349D0579FA627f3F583e52F53b7d600; cache]",
+            "address": "0x66D7753F2e72A5d64CEe1D7ec4E1Af2110F8185A",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531905,
+            "failureDomainKeys": [
+              "tangent-mseth-curve",
+              "tangent-weth-chainlink-fallback",
+              "curve-lp-virtual-price",
+              "ethereum"
+            ]
+          }
+        ],
         "fallbackBehavior": "Chainlink leaves use configured fallback and then lastGoodValue in no-fail liquidation mode. Mandatory outer Curve get_virtual_price and any recursive price_oracle call are not covered by that cache; either Curve call can revert the complete market price path.",
         "observedAt": "2026-07-14",
         "observedBlock": 25531905,
-        "collateralParameters": [{"asset": "msETH/WETH Curve LP", "maximumLtvPct": 72, "note": "Liquidation threshold 76%; market 0x7b1b38cad63B0715A0adFeEB75E46431b48E73B6. Debt cap, debt shares, and bad debt were zero, while total collateral was 288932208501029515818 raw units; deposit, withdraw, and borrow pauses were all false."}],
+        "collateralParameters": [
+          {
+            "asset": "msETH/WETH Curve LP",
+            "maximumLtvPct": 72,
+            "note": "Liquidation threshold 76%; market 0x7b1b38cad63B0715A0adFeEB75E46431b48E73B6. Debt cap, debt shares, and bad debt were zero, while total collateral was 288932208501029515818 raw units; deposit, withdraw, and borrow pauses were all false."
+          }
+        ],
         "liquidationMechanism": "Permissionless immediate liquidation below health 1 transfers collateral directly or sells it through the zapping proxy. The 20% fee applies only to positive liquidation profit, is minted to the fee treasury, and is added to the liquidator's USG burn requirement.",
         "liquidationDelaySec": 0,
         "backstop": "No funded Stability Pool is used. Undercollateralized seizure records market bad debt, which anyone may repay by burning USG.",
         "shutdownOrBadDebtBehavior": "The owner may change the zero debt cap or pause entry operations. Liquidation and seizure remain available; recorded bad debt consumes debt-cap capacity until repaid.",
-        "failureDomainKeys": ["tangent-market-0x7b1b", "tangent-oracle-0x66d7", "tangent-impl-stakedao-vault-v2", "ethereum"],
-        "sources": [{"label": "Verified msETH/WETH market", "url": "https://eth.blockscout.com/address/0x7b1b38cad63B0715A0adFeEB75E46431b48E73B6?tab=contract"}, {"label": "Verified msETH/WETH oracle", "url": "https://eth.blockscout.com/address/0x66D7753F2e72A5d64CEe1D7ec4E1Af2110F8185A?tab=contract"}]
+        "failureDomainKeys": [
+          "tangent-market-0x7b1b",
+          "tangent-oracle-0x66d7",
+          "tangent-impl-stakedao-vault-v2",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Verified msETH/WETH market",
+            "url": "https://eth.blockscout.com/address/0x7b1b38cad63B0715A0adFeEB75E46431b48E73B6?tab=contract"
+          },
+          {
+            "label": "Verified msETH/WETH oracle",
+            "url": "https://eth.blockscout.com/address/0x66D7753F2e72A5d64CEe1D7ec4E1Af2110F8185A?tab=contract"
+          }
+        ]
       }
     ]
   },
@@ -501,13 +859,20 @@
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Tangent markets, Curve, Pendle, and related DeFi protocols",
-      "riskFactors": ["smart-contract", "market", "liquidity", "counterparty", "custody", "concentration"],
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-5 Safety Score V9 reserve review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -519,7 +884,7 @@
         "url": "https://eth.blockscout.com/address/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1?tab=contract"
       }
     ],
-    "rationale": "Tangent source code and product materials identify user-collateralized DeFi mint routes and the aggregate productive-collateral envelope, but do not publish current position-level collateral weights or custody allocation.",
+    "rationale": "Write-time re-open 2026-07-28 of Tangent USG overview: USG minted against productive collaterals (Curve LP tokens, Pendle PTs) via HEC/LEC markets. Verified USG contract page still live. No position-level weight table; envelope remains 100% productive DeFi collateral with ku=100.",
     "compositionBasis": "Tangent USG product and verified contract disclosures",
     "scope": "selected-slices",
     "knownUnknownExposure": "The current underlying DeFi positions, weights, and venue-level custody allocation are undisclosed.",
@@ -532,7 +897,8 @@
         "disposition": "insufficient-evidence",
         "rationale": "Tangent identifies the collateral family but does not publish a current position-level inventory for the full USG reserve."
       }
-    ]
+    ],
+    "compositionAsOf": "2026-07-28"
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,

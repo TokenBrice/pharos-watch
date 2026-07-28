@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 NR-recovery wave 3",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -36,11 +36,11 @@
         "url": "https://accountable.brix.money:8443/dashboard"
       }
     ],
-    "rationale": "Brix identifies wiTRY as an ERC-4626 claim on iTRY and iTRY as 100% backed by Digital Liquidity Fund shares representing a regulated basket of Turkish money-market funds. Accountable's 2026-07-21 snapshot verified TRY 417,674,273.64 of assets against TRY 417,674,169.25 of liabilities, but neither the dashboard nor Brix's current disclosures publish the DLF constituent funds or allocation weights. The full look-through reserve therefore remains one unsplit fund-share basket.",
-    "compositionBasis": "Brix's direct DLF backing disclosure plus Accountable's current assets-and-liabilities snapshot; DLF constituent allocation undisclosed",
-    "compositionAsOf": "2026-07-21",
+    "rationale": "Write-time re-open 2026-07-28: Brix backing docs still state iTRY is fully backed by Digital Liquidity Fund (DLF) shares representing a regulated basket of Turkish money-market funds, with wiTRY as the ERC-4626 claim path; proof-of-reserves docs still name Accountable Capital as the DVN verifier. The live Accountable dashboard API returned collateralization ~1.000101 with total_reserves TRY 420,366,478.67 against total_supply TRY 420,324,015.05 (timeline date 2026-07-27) and tokens_split for iTry/wiTRY, but neither the API nor Brix docs publish DLF constituent funds or allocation weights. The full look-through reserve therefore remains one unsplit fund-share basket with basket-needs-split.",
+    "compositionBasis": "Brix DLF backing disclosure plus Accountable live assets-and-liabilities snapshot; DLF constituent allocation undisclosed",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The Digital Liquidity Fund identity and total NAV are verified, but its current underlying Turkish money-market funds, constituent weights, issuers, maturities, and liquidity allocations are not published.",
+    "knownUnknownExposure": "The Digital Liquidity Fund identity and aggregate NAV/supply are verified, but its current underlying Turkish money-market funds, constituent weights, issuers, maturities, and liquidity allocations are not published.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

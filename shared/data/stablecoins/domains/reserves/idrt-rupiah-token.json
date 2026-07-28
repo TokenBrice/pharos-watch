@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex backing review; OpenAI Codex class-level normalization",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "probable",
     "sources": [
       {
@@ -31,7 +31,7 @@
         "url": "https://rupiahtoken.com/"
       }
     ],
-    "rationale": "The January 31, 2026 independent accountant AUP report reconciles Rp94,232,212,766 of bank collateral to the total issued Rupiah Token amount and reports a 1:1 ratio. The complete direct reserve class is IDR bank deposits, including time deposits; the report does not publish bank-level or account-type allocations.",
+    "rationale": "Write-time re-open 2026-07-28: the January 31, 2026 independent accountant AUP (Johannes Juara & Rekan / Hari Manurung CPA) still reconciles Rp94,232,212,766 of bank collateral to total issued Rupiah Token with an explicit 1:1 ratio and states procedures obtained bank statements and time-deposit certificates for each collateral account. The live rupiahtoken.com site still describes IDRT as a rupiah-pegged token with mint/redeem against rupiah bank flows and states circulating IDRT is regularly audited by an independent auditor. The complete direct reserve class remains IDR bank deposits including time deposits; bank-level and account-type allocations are not published.",
     "compositionBasis": "Independent accountant agreed-upon procedures over Rupiah Token bank collateral as of January 31, 2026",
     "compositionAsOf": "2026-01-31",
     "scope": "full-composition",
@@ -42,8 +42,8 @@
         "reserveIndex": 0,
         "reserveName": "IDR bank accounts and time deposits",
         "pct": 100,
-      "disposition": "untracked-exogenous-asset",
-      "rationale": "IDR bank deposits are external fiat reserve assets rather than a tracked stablecoin dependency; provider and maturity details remain custody and liquidity uncertainties."
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "IDR bank deposits are external fiat reserve assets rather than a tracked stablecoin dependency; provider and maturity details remain custody and liquidity uncertainties."
       }
     ]
   },

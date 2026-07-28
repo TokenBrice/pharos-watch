@@ -1,0 +1,220 @@
+{
+  "assetId": "usdv-solomon",
+  "archetype": "synthetic-delta-neutral",
+  "outcome": "READY",
+  "mergeMode": "replace",
+  "overlayEntry": {
+    "assetId": "usdv-solomon",
+    "archetype": "synthetic-delta-neutral",
+    "reviewedAt": "2026-07-27",
+    "sources": [
+      {
+        "label": "Solomon protocol-data API (live custody, vault, hedge-position and reserve-fund figures; snapshot updated 2026-07-27T00:12:08Z, fetched 2026-07-27T22:52:19Z)",
+        "url": "https://data.solomonlabs.io/api/solomon-protocol/protocol-data"
+      },
+      {
+        "label": "Solana mainnet RPC getTokenSupply for the USDv SPL mint at finalized slot 435627156",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Solomon USDv minting (approved entities, off-exchange custody, derivatives hedge, 0.2% mint fee)",
+        "url": "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv"
+      },
+      {
+        "label": "Solomon peg arbitrage mechanism (whitelisted arbitrage and the ~0.5% instant-redemption reserve buffer)",
+        "url": "https://docs.solomonlabs.org/usdv/usdv-and-susdv/peg-arbitrage-mechanism"
+      },
+      {
+        "label": "Solomon Acquire & Redeem USDv (direct mint/redeem restricted to approved counterparties; holding USDv does not create redemption access)",
+        "url": "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming"
+      },
+      {
+        "label": "Solomon Reserves and Peg Stability (reserve narrative of USDG, USDC, and planned short-dated U.S. Treasuries; re-fetched 2026-07-27)",
+        "url": "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves"
+      },
+      {
+        "label": "Solomon Transparency and Risk (dashboard scope: supply, reserve composition and ratio, stablecoin/Treasury exposure; principal-risk list naming reserve-asset, counterparty and liquidity risk; re-fetched 2026-07-27)",
+        "url": "https://docs.solomonlabs.org/usdv/transparency-and-risk"
+      },
+      {
+        "label": "Solomon main-website Terms of Use dated 2026-07-15 (Genesee Holdings Corporation, Panama, as interface Operator; SOLOMON DAO LLC, Marshall Islands, as IP-only owner; section 13: holding USDv creates no claim, title, lien or recourse in property held by any issuer, custodian, treasury, hedge counterparty, DAO or service provider)",
+        "url": "https://solomonlabs.org/terms-of-use"
+      },
+      {
+        "label": "Ceffu attestation of assets held for Sole Tech Business Ltd (Solomon Labs) as of 2026-04-01 (at least USD 954,454.71, fully in Ceffu custody, not at any digital asset exchange); verified 2026-07-27 via the SolomonLabs/attestations repository tree as the latest published report",
+        "url": "https://raw.githubusercontent.com/SolomonLabs/attestations/main/ceffu/2026/2026-04-01.pdf"
+      }
+    ],
+    "notes": "Re-measured 2026-07-27 from Solomon's live protocol-data API snapshot updated 2026-07-27T00:12:08.624Z (fetched 2026-07-27T22:52:19Z), cross-anchored to the on-chain USDv SPL supply of 1,512,045.796585391 read via getTokenSupply at Solana mainnet finalized slot 435627156, which matches the API's protocolTvl of $1,512,045.79 to within a cent and is unchanged from the 2026-07-20 measurement. hedgeCoverageRatio = itemized custody ($383,708.47: BTC 6.00110388 = $381,473.59 + SOL 33.44763168 = $2,234.88 reported at Ceffu; the API rollup field reads $383,709.25) / positionsNotionalUsd ($561,679.99: Binance inverse-perpetual shorts of $559,199.99 BTC and $2,480.00 SOL) = 0.683144: disclosed custody spot covers only 68.3% of the disclosed short-hedge notional; the reciprocal 1.463820x means the hedge leg is materially larger than disclosed spot, implying leveraged or incompletely reported positioning. marginBufferPct is conservatively floored at 0 rather than published negative: disclosed and API-itemized collateral (custody $383,708.47 + on-chain vaults $98,838.86 of USDC/USDT + yield distributors $701.37 + reserve fund $0 = $483,248.70) covers only 0.319599 of supply, a raw disclosed margin of -68.040%; no venue-level margin balances or liquidation thresholds are published, so a true margin-to-liquidation buffer cannot be computed from evidence. lossAbsorptionShare = 0: the API's reserveFund array is empty (reserveFundNotionalUsd $0), and the only documented buffer is the peg-arbitrage page's small (e.g. 0.5%) instant-redemption reserve retained by the minting contract for whitelisted users. Quality tiers: venueAndCustody limited — the docs' minting page establishes off-exchange custody hedged with derivatives, and Ceffu's first-party signed attestation (as of 2026-04-01, at least USD 954,454.71 held fully in Ceffu custody and not at any digital asset exchange) partially corroborates the custody venue, but the attestation is custodian-issued rather than independent, aggregate with no composition breakdown, now ~4 months stale with no newer report in the issuer's attestations repository, does not reconcile to the API's live custody figure ($384K), and no venue is disclosed for the ~68% of supply not covered by itemized assets. hedgeReconciliation weak — the API's own itemized figures measure a 31.7% shortfall of disclosed custody spot against disclosed short-hedge notional, a pinned measured deficiency, not an absence of evidence. unwindCapacity limited — direct mint/redeem is restricted to approved counterparties and holding USDv creates no redemption access; peg support rests on whitelisted arbitrage with a ~0.5% instant-redemption buffer. lossAbsorption weak — the reserve fund is measured empty and the 2026-07-15 Terms of Use (section 13) expressly state that holding USDv creates no claim, title, lien or recourse in property held by any issuer, custodian, treasury, hedge counterparty, DAO or service provider, confirming no loss-absorbing capital stands in front of tokenholders. fundingBasisStress and marginAndLiquidation were searched on 2026-07-27 across the full restructured docs index (llms.txt), the Transparency and Risk page, the 2026-07-15 Terms of Use, and the app's complete API surface (protocol-data, staking/stats, staking/yield-distributions are the only protocol endpoints): no funding-rate stress scenario, funding P&L, venue margin balance, or liquidation threshold is published anywhere, so both components stay bounded (omitted). The restructured docs now frame USDv as reserve-backed (USDG, USDC, planned short-dated Treasuries) while the API continues to show the Binance inverse-perp hedge book; the docs publish no reconciliation between the two narratives.",
+    "metrics": {
+      "hedgeCoverageRatio": 0.683144,
+      "marginBufferPct": 0,
+      "lossAbsorptionShare": 0
+    },
+    "analogousMetrics": {
+      "hedgeToSpotNotionalRatio": 1.46382,
+      "disclosedCollateralShareOfSupply": 0.319599,
+      "rawDisclosedMarginPct": -68.040075,
+      "reserveFundUsd": 0
+    },
+    "venueShares": [
+      {
+        "venueKey": "binance-offexchange-hedge",
+        "share": 0,
+        "failureDomains": [
+          {
+            "kind": "dex-protocol",
+            "key": "binance"
+          }
+        ]
+      },
+      {
+        "venueKey": "ceffu-offexchange-custody",
+        "share": 0.794019,
+        "failureDomains": [
+          {
+            "kind": "reserve-custodian",
+            "key": "ceffu"
+          }
+        ]
+      },
+      {
+        "venueKey": "solana-onchain-vaults",
+        "share": 0.205981,
+        "failureDomains": [
+          {
+            "kind": "chain",
+            "key": "solana"
+          }
+        ]
+      }
+    ],
+    "components": {
+      "venueAndCustody": {
+        "quality": "limited"
+      },
+      "hedgeReconciliation": {
+        "quality": "weak"
+      },
+      "unwindCapacity": {
+        "quality": "limited"
+      },
+      "lossAbsorption": {
+        "quality": "weak"
+      }
+    }
+  },
+  "journal": {
+    "filename": "2026-07-27-protocol-data-api.json",
+    "content": {
+      "schemaVersion": 1,
+      "assetId": "usdv-solomon",
+      "archetype": "synthetic-delta-neutral",
+      "capturedAt": "2026-07-27T22:52:19Z",
+      "source": {
+        "url": "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
+        "label": "Solomon protocol-data API",
+        "snapshotUpdatedAt": "2026-07-27T00:12:08.624Z",
+        "dataValidForTimestamp": 1785024000000
+      },
+      "observations": {
+        "protocolTvlUsd": 1512045.79,
+        "positionsNotionalUsdRollup": 561679.99,
+        "custodyNotionalUsdRollup": 383709.25,
+        "vaultNotionalUsdRollup": 98838.86,
+        "yieldDistributorsNotionalUsd": 701.37,
+        "reserveFundNotionalUsd": 0,
+        "positions": [
+          {"exchange": "Binance", "baseAsset": "BTC", "marketType": "Inverse", "futuresType": "Perpetual", "notionalUsd": 559199.99},
+          {"exchange": "Binance", "baseAsset": "SOL", "marketType": "Inverse", "futuresType": "Perpetual", "notionalUsd": 2480.00}
+        ],
+        "custody": [
+          {"name": "Ceffu", "asset": "BTC", "amount": 6.00110388, "amountUsd": 381473.59},
+          {"name": "Ceffu", "asset": "SOL", "amount": 33.44763168, "amountUsd": 2234.88}
+        ],
+        "vault": [
+          {"asset": "USDT", "amount": 17520, "amountUsd": 17532.47},
+          {"asset": "USDC", "amount": 81269.27, "amountUsd": 81306.39}
+        ],
+        "yieldDistributors": [
+          {"asset": "USDC", "amount": 701.37, "amountUsd": 701.37}
+        ],
+        "reserveFund": [],
+        "onchainAnchor": {
+          "rpc": "https://api.mainnet-beta.solana.com",
+          "method": "getTokenSupply",
+          "mint": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+          "finalizedSlot": 435627156,
+          "uiAmount": 1512045.796585391,
+          "note": "matches API protocolTvl to within a cent; unchanged from the 2026-07-20 read at slot 434048726"
+        }
+      },
+      "derivations": {
+        "hedgeCoverageRatio": {
+          "formula": "itemized custody (381473.59 + 2234.88) / positionsNotional (559199.99 + 2480.00)",
+          "value": 0.683144
+        },
+        "hedgeToSpotNotionalRatio": {
+          "formula": "positionsNotional / itemized custody",
+          "value": 1.46382
+        },
+        "disclosedCollateralShareOfSupply": {
+          "formula": "(custody 383708.47 + vault 98838.86 + yieldDistributors 701.37 + reserveFund 0) / supply 1512045.796585391",
+          "value": 0.319599
+        },
+        "rawDisclosedMarginPct": {
+          "formula": "(disclosed collateral - supply) / supply * 100",
+          "value": -68.040075
+        },
+        "marginBufferPct": {
+          "value": 0,
+          "disposition": "floored at 0: raw disclosed margin is -68.04%; no venue-level margin balances or liquidation thresholds are published to compute a true margin-to-liquidation buffer"
+        },
+        "lossAbsorptionShare": {
+          "value": 0,
+          "basis": "reserveFund array measured empty (reserveFundNotionalUsd $0); only documented buffer is the ~0.5% instant-redemption reserve for whitelisted users on the peg-arbitrage page"
+        }
+      },
+      "metricDisposition": {
+        "fundingBasisStress": {
+          "state": "component-omitted",
+          "rationale": "Searched 2026-07-27: full restructured docs index (llms.txt), Transparency and Risk page, Terms of Use dated 2026-07-15, and the app's complete API surface (protocol-data, staking/stats, staking/yield-distributions). No funding-rate stress scenario, funding P&L, or funding-rate disclosure is published anywhere."
+        },
+        "marginAndLiquidation": {
+          "state": "component-omitted",
+          "rationale": "No venue-level margin balances, maintenance-margin ratios, or liquidation thresholds are published in the API, docs, or attestations."
+        }
+      },
+      "sources": [
+        "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
+        "https://api.mainnet-beta.solana.com",
+        "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv",
+        "https://docs.solomonlabs.org/usdv/usdv-and-susdv/peg-arbitrage-mechanism",
+        "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+        "https://solomonlabs.org/terms-of-use",
+        "https://raw.githubusercontent.com/SolomonLabs/attestations/main/ceffu/2026/2026-04-01.pdf"
+      ]
+    }
+  },
+  "evidenceSummary": "Re-measured from the Solomon protocol-data API (snapshot updated 2026-07-27T00:12:08.624Z, fetched 2026-07-27T22:52:19Z), cross-anchored to the on-chain USDv SPL supply of 1,512,045.796585391 at Solana finalized slot 435627156 (unchanged from 2026-07-20). hedgeCoverageRatio = itemized Ceffu custody $383,708.47 / Binance inverse-perp short notional $561,679.99 = 0.683144 (was 0.68452); disclosed itemized collateral $483,248.70 covers 0.319599 of supply, raw disclosed margin -68.04%, so marginBufferPct stays floored at 0; reserveFund measured empty so lossAbsorptionShare stays 0. New pins: docs Transparency-and-Risk page and 2026-07-15 Terms of Use (section 13 expressly denies tokenholders any claim on property held by issuer/custodian/treasury/hedge counterparty), and verification that the 2026-04-01 Ceffu attestation remains the latest published (attestations repo tree checked 2026-07-27). fundingBasisStress and marginAndLiquidation were searched across the docs index, transparency pages, terms, and the app's full API surface — no funding-rate, margin, or liquidation disclosure exists; both components stay bounded.",
+  "primarySources": [
+    "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
+    "https://api.mainnet-beta.solana.com",
+    "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv",
+    "https://docs.solomonlabs.org/usdv/usdv-and-susdv/peg-arbitrage-mechanism",
+    "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming",
+    "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
+    "https://docs.solomonlabs.org/usdv/transparency-and-risk",
+    "https://solomonlabs.org/terms-of-use",
+    "https://raw.githubusercontent.com/SolomonLabs/attestations/main/ceffu/2026/2026-04-01.pdf"
+  ],
+  "blockedReason": null,
+  "missingSources": [
+    "funding-rate stress disclosure (scenario analysis or historical funding P&L for the Binance inverse-perp hedge book)",
+    "venue-level margin balances and liquidation thresholds for the Binance hedge positions",
+    "independent (non-custodian) attestation reconciling custody balances to hedge notionals",
+    "a funded reserve fund (reserveFund measured empty) or documented loss-absorbing tranche",
+    "reconciliation between the docs' reserve-backed narrative (USDG/USDC/Treasuries) and the API's hedge-book figures",
+    "a Ceffu attestation fresher than 2026-04-01 (the attestations repository lists none as of 2026-07-27)"
+  ]
+}

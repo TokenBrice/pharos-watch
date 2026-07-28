@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { keccak256 } from "viem/utils";
+import { encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 import {
   TRON_MEASURED_TARGET_SCHEMA_VERSION,
   buildTronMeasuredExecutionTargetId,
@@ -23,8 +23,14 @@ const FACTORY = "TKWJdrQkqHisa1X8HUdHEfREvTzw4pMAaY";
 const POOL = "TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ";
 const WTRX = "TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR";
 const USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+const ROUTER = "TNJVzGqKBWkJxJB5XYSqGAwUTV15U24pPq";
 const FACTORY_CODE = "0x6000";
 const PAIR_CODE = "0x6001";
+const ROUTER_CODE = "0x6002";
+const ROUTER_ABI = parseAbi([
+  "function factory() view returns (address)",
+  "function getAmountsOut(uint256 amountIn, address[] path) view returns (uint256[] amounts)",
+]);
 
 function target(): TronMeasuredExecutionTarget {
   const stablecoinId = "usdt-tether";
@@ -45,6 +51,8 @@ function target(): TronMeasuredExecutionTarget {
     factoryAddress: FACTORY,
     expectedFactoryCodeHash: keccak256(FACTORY_CODE),
     expectedPairCodeHash: keccak256(PAIR_CODE),
+    routerAddress: ROUTER,
+    expectedRouterCodeHash: keccak256(ROUTER_CODE),
     tokenIn: {
       address: USDT,
       symbol: "USDT",
@@ -128,6 +136,7 @@ describe("Tron SunSwap measured execution", () => {
       poolId: POOL,
       adapterProfileId: "sunswap-v2-router-v1",
       factoryAddress: FACTORY,
+      routerAddress: ROUTER,
       feeRate: 0.003,
     })]);
     expect(getTronMeasuredExecutionAdapterByProfile("sunswap-v2-router-v1")).toMatchObject({
@@ -216,6 +225,7 @@ describe("Tron SunSwap measured execution", () => {
       amountInRaw: "1000000000",
       amountOutRaw: "3031844470",
       route: {
+        provider: "sun-smart-router",
         poolId: POOL,
         token0: WTRX,
         token1: USDT,
@@ -336,6 +346,123 @@ describe("Tron SunSwap measured execution", () => {
     expect(retainedPool.extra).not.toHaveProperty("tronMeasuredExecutionTarget");
     expect(retainedPool.extra).not.toHaveProperty("tronMeasuredExecutionProfile");
     expect(retainedPool.extra).toHaveProperty("tronMeasuredExecution");
+  });
+
+  it("falls back to the pinned V2 router only for clean multi-hop Smart Router responses", async () => {
+    const [factoryHex, poolHex, routerHex, wtrxHex, usdtHex] = await Promise.all([
+      tronBase58ToHex(FACTORY),
+      tronBase58ToHex(POOL),
+      tronBase58ToHex(ROUTER),
+      tronBase58ToHex(WTRX),
+      tronBase58ToHex(USDT),
+    ]);
+    expect(factoryHex && poolHex && routerHex && wtrxHex && usdtHex).toBeTruthy();
+    let blockReads = 0;
+    let routerCodeReads = 0;
+    const multiHop = directQuote();
+    multiHop.data[0]!.tokens = [USDT, FACTORY, WTRX];
+    multiHop.data[0]!.poolVersions = ["v2", "v2"];
+    multiHop.data[0]!.poolKeys = [null, null];
+    multiHop.data[0]!.stepAmountsOut = ["1", "3031.844470"];
+    const getAmountsOutSelector = encodeFunctionData({
+      abi: ROUTER_ABI,
+      functionName: "getAmountsOut",
+      args: [
+        1_000_000_000n,
+        [usdtHex as `0x${string}`, wtrxHex as `0x${string}`],
+      ],
+    }).slice(0, 10);
+    const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      if (init?.method !== "POST") return new Response(JSON.stringify(multiHop));
+      const request = JSON.parse(String(init.body)) as { method: string; params: unknown[] };
+      if (request.method === "eth_blockNumber") {
+        blockReads++;
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: blockReads === 1 ? "0x64" : "0x65" }));
+      }
+      if (request.method === "eth_getCode") {
+        const address = request.params[0];
+        if (address === routerHex) routerCodeReads++;
+        const result = address === factoryHex ? FACTORY_CODE : address === routerHex ? ROUTER_CODE : PAIR_CODE;
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
+      }
+      const call = request.params[0] as { to: string; data: string };
+      let result: string;
+      if (call.to === routerHex) {
+        result = call.data.startsWith(getAmountsOutSelector)
+          ? `0x${wordUint(32n)}${wordUint(2n)}${wordUint(1_000_000_000n)}${wordUint(3_031_844_470n)}`
+          : wordAddress(factoryHex!);
+      } else if (call.data.startsWith("0xe6a43905")) result = wordAddress(poolHex!);
+      else if (call.data === "0x0dfe1681") result = wordAddress(wtrxHex!);
+      else if (call.data === "0xd21220a7") result = wordAddress(usdtHex!);
+      else result = `0x${wordUint(141_334_853_510_414n)}${wordUint(46_475_941_487_844n)}${wordUint(1n)}`;
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
+    }) as typeof fetch;
+
+    const point = await quoteTronMeasuredTarget({
+      target: target(),
+      inputUsd: 1_000,
+      routerRequestSpacingMs: 0,
+      fetchImpl,
+    });
+    expect(point).toMatchObject({
+      amountOutRaw: "3031844470",
+      route: {
+        provider: "sunswap-v2-router",
+        routerAddress: ROUTER,
+        routerCodeHash: keccak256(ROUTER_CODE),
+        routerFactoryAddress: FACTORY,
+        routeTokens: [USDT, WTRX],
+        poolVersions: ["v2"],
+      },
+    });
+    expect(blockReads).toBe(2);
+    expect(routerCodeReads).toBe(1);
+
+    const profile = buildTronMeasuredExecutionProfile({
+      target: target(),
+      targetGenerationId: "targets-1",
+      quoteGenerationId: "quotes-1",
+      quotedAt: 1_100,
+      points: [point],
+    });
+    expect(validateTronMeasuredExecutionProfile({
+      profile,
+      quotedTarget: target(),
+      currentTarget: target(),
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec: 1_100,
+    })).toEqual([]);
+    const tampered = structuredClone(profile);
+    const tamperedRoute = tampered.quoteProof[0]!.route;
+    if (tamperedRoute.provider !== "sunswap-v2-router") throw new Error("expected V2 router proof");
+    tamperedRoute.routerCodeHash = keccak256(PAIR_CODE);
+    expect(validateTronMeasuredExecutionProfile({
+      profile: tampered,
+      quotedTarget: target(),
+      currentTarget: target(),
+      expectedTargetGenerationId: "targets-1",
+      expectedQuoteGenerationId: "quotes-1",
+      nowSec: 1_100,
+    })).toContain("invalid-quote-proof");
+
+    await expect(quoteTronMeasuredTarget({
+      target: { ...target(), expectedRouterCodeHash: keccak256(PAIR_CODE) },
+      inputUsd: 1_000,
+      routerRequestSpacingMs: 0,
+      fetchImpl,
+    })).rejects.toThrow("router-code-hash-mismatch");
+    expect(routerCodeReads).toBe(2);
+
+    multiHop.data[0] = directQuote().data[0]!;
+    multiHop.data[0]!.amountOutRawReferral = "1";
+    await expect(quoteTronMeasuredTarget({
+      target: target(),
+      inputUsd: 1_000,
+      routerRequestSpacingMs: 0,
+      fetchImpl,
+    })).rejects.toThrow("exact-route-mismatch");
+    expect(routerCodeReads).toBe(2);
   });
 
   it("uses the reviewed 0.3% constant-product fee", () => {

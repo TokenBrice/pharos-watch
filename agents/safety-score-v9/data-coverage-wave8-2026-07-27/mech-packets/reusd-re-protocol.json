@@ -1,0 +1,114 @@
+{
+  "assetId": "reusd-re-protocol",
+  "archetype": "rwa-credit-fund",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "api.re.xyz/price reUSD last observation date=2026-07-26 price=1.091317 apy=6.2; app.re.xyz/metrics display Offchain Capital=$179.15M Onchain Capital=$75.54M; Ethereum tip ~block 25627229 (0x1870a5d) at research time",
+  "metrics": {
+    "weightedAverageMaturityDays": null,
+    "valuationCadenceDays": 1
+  },
+  "metricStates": {
+    "weightedAverageMaturityDays": {
+      "state": "unavailable",
+      "rationale": "No issuer-published portfolio weighted-average maturity (or residual treaty/trust-asset tenor schedule) for reUSD. Searched: (1) docs.re.xyz products and underwriting pages \u2014 qualitative short-tail vs long-tail claim-settlement discussion only, no WAM number; (2) app.re.xyz/metrics \u2014 live capital/TVL/price series and onchain token balances, no maturity field; (3) The Network Firm AUP as of 2025-10-31 \u2014 cash/MMF/Fireblocks holdings and estimated gross premium receivables by obfuscated deal, no residual maturity schedule for Regulation 114 trust assets or current treaties; (4) PPM Daily Accrual Price / Use of Capital \u2014 funding via principal-at-risk notes with a five-year program term (docs state Apr 2 2026\u2013Apr 2 2031) but reUSD is a perpetual NAV/Daily Accrual token with no stated token maturity, and holders have no direct legal claim on \u00a7114 trust assets. Cannot dual-source a current WAM without inventing look-through tenors.",
+      "sourceUrl": "https://docs.re.xyz/how-reinsurance-works/underwriting-reserving-and-timing.md"
+    },
+    "valuationCadenceDays": {
+      "state": "measured"
+    }
+  },
+  "components": {
+    "creditQuality": {
+      "quality": "limited",
+      "basis": "Issuer docs describe a diversified catastrophe-lite reinsurance book (comparison page: ~$358M total premium across small-business commercial 41%, commercial auto 28%, workers' compensation 18%, homeowners 12%, personal auto 1%) written by Cover Reinsurance SPC Ltd., a Cayman Class B(iii) CIMA-regulated insurer (SP1). Network Firm AUP (2025-10-31) independently verified existence of signed reinsurance contracts and ~$66.1M estimated gross premium receivables but explicitly did not opine on underwriting performance, claims, or collectability. No public credit ratings of the book or third-party loss-ratio examination were found. Limited grade: structured issuer portfolio description plus external contract-existence anchor; not adequate without independent credit/performance attestation."
+    },
+    "seniority": {
+      "quality": "limited",
+      "basis": "reUSD is the senior token tranche: docs (About reUSD, loss-waterfall order, comparing table) and the PPM both state that liabilities to reUSD holders rank senior in right of payment to reUSDe (mezzanine), with reinsurer equity as junior first-loss. Economic exposure to offchain capital is via unsecured, limited-recourse Principal-at-Risk Notes of Cover Re SP1 that are subordinated to cedent/policyholder claims and give token holders no direct claim on \u00a7114 trust assets. Structural seniority among protocol tranches is dual-sourced in legal PPM + product docs, but absolute recovery priority is not senior secured \u2014 limited, not strong/adequate."
+    },
+    "legalEnforceability": {
+      "quality": "limited",
+      "basis": "Binding instruments are published: PPM (ppm_v2.pdf), Platform Agreement, and Token Purchase Agreement path (docs legal-structure + disclosure). Token Issuer is Resilience (BVI) Ltd.; Resilience Foundation (Cayman IC-414560) acts as agent; Cover Re SPC Ltd. is the CIMA Class B(iii) reinsurer; Resilience Inv SPC holds segregated portfolios. Tokens are Reg S non-U.S. only with KYC. Dual primary surfaces: legal docs page linking PPM and re.xyz/disclosure entity statements. Private contractual Senior Creditor rights under Platform Agreement \u2014 not a public fund share or court-registered security interest \u2014 so limited enforceability grade."
+    },
+    "valuationCadence": {
+      "quality": "adequate",
+      "basis": "Dual independent pins of daily valuation: (1) About reUSD and comparing pages state onchain price/NAV recalculates daily at UTC 00:00; (2) PPM states Resilience SPC publishes a Daily Accrual Price recalculated at 00:00 UTC daily for issuance/redemption; (3) api.re.xyz/price returns a continuous daily reUSD series through 2026-07-26 (price 1.091317); (4) docs oracles page documents protocol-operated reUSD NAV oracle updated daily and Chainlink Data Stream sourcing that NAV. Network Firm performs daily AUP on offchain balances published via Chainlink (Avalanche re-reserves feed). Daily cadence with independent reserve attestation + live price series supports adequate valuationCadence (not strong: full AUP PDF is point-in-time Oct 2025, not a continuous monthly GAAP examination of NAV liabilities)."
+    },
+    "maturityAndLiquidity": {
+      "quality": "limited",
+      "basis": "Liquidity design is dual-sourced (About reUSD + products/res-products + risks): while onchain buffer >1% of supply, instant same-block redemption subject to per-redemption \u226410% of buffer and daily \u226420% of available capacity; 0.06% fee; if buffer <1%, fall back to quarterly queue. Live metrics show Onchain Capital $75.54M vs Offchain Capital $179.15M, so majority of capital is offchain reinsurance collateral with treaty lockup (risks page). No portfolio WAM published (metric unavailable). Limited: documented hybrid liquidity with measurable instant path but material illiquid offchain share and queue risk."
+    },
+    "custody": {
+      "quality": "adequate",
+      "basis": "Dual sources: custody-structure docs name Fireblocks MPC for onchain idle capital, deposit smart contracts, and Section 114 trust bank accounts for deployed reinsurance collateral; Network Firm AUP (2025-10-31, AICPA AUP) observed management access to bank/brokerage cash ($55.57M) and MMFs ($4.17M) and queried Fireblocks-controlled addresses for USDC/USDT/USDe/sUSDe and other tokens, totaling $154.62M supporting assets including premium receivables. Chainlink offchain reserves feed is documented as the daily publication path. Named institutional custody + independent observation of balances/ownership supports adequate custody (not strong: \u00a7114 trustee bank(s) not itemized per trust in public materials; AUP disclaimer excludes solvency/redeemability opinions)."
+    },
+    "recovery": {
+      "quality": "limited",
+      "basis": "Loss absorption order is dual-sourced across About reUSD, loss-waterfall-order, and comparing scenario tables: premiums first, then reinsurer equity (junior, ~$77M as of June 2026 per docs), then reUSDe mezzanine, then reUSD last. PPM contractual subordination aligns token priority. No external guarantee, third-party insurance wrap, or dedicated recovery fund for token holders was found; PAR notes are limited-recourse to SP1 only. Issuer stress model (0.03% impairment at 135% combined ratio) is not an independent recovery mechanism. Limited recovery design: clear internal waterfall, no external backstop."
+    }
+  },
+  "sources": [
+    {
+      "label": "Re Protocol About reUSD (senior tranche, daily UTC 00:00 NAV, Reg 114, TNF/Chainlink, redemption buffer rules)",
+      "url": "https://docs.re.xyz/products/about-reusd.md"
+    },
+    {
+      "label": "Re Protocol comparing reUSD/reUSDe (senior vs mezzanine, daily NAV, portfolio line mix, stress scenarios)",
+      "url": "https://docs.re.xyz/products/comparing-reusd-reusde.md"
+    },
+    {
+      "label": "Re Protocol loss waterfall order (equity \u2192 reUSDe \u2192 reUSD)",
+      "url": "https://docs.re.xyz/capital-stack-and-loss-waterfall/loss-waterfall-order.md"
+    },
+    {
+      "label": "Re Protocol audits / attestations / custody structure (TNF daily AUP, Fireblocks, \u00a7114 trusts, PAR notes, CIMA Class B(iii))",
+      "url": "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md"
+    },
+    {
+      "label": "Re Protocol oracles (daily reUSD NAV oracle + Chainlink Data Stream + offchain reserves feed)",
+      "url": "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/oracles.md"
+    },
+    {
+      "label": "Re Protocol underwriting, reserving, and timing (duration/claim tails qualitative; no WAM)",
+      "url": "https://docs.re.xyz/how-reinsurance-works/underwriting-reserving-and-timing.md"
+    },
+    {
+      "label": "Re Protocol legal structure index (PPM and platform agreement PDFs)",
+      "url": "https://docs.re.xyz/glossary-and-reference/legal-structure.md"
+    },
+    {
+      "label": "Resilience / Re Protocol Private Placement Memorandum ppm_v2.pdf (Daily Accrual Price 00:00 UTC; reUSD senior vs reUSDe contractual subordination; limited recourse)",
+      "url": "https://storage.googleapis.com/re-files-production/docs/ppm_v2.pdf"
+    },
+    {
+      "label": "The Network Firm Agreed-Upon Procedures Report for Resilience Foundation as of 2025-10-31 (Fireblocks + bank/brokerage + premium receivables; $154.6M supporting assets)",
+      "url": "https://storage.googleapis.com/foundation-files/AUP-Report-2025.pdf"
+    },
+    {
+      "label": "Re Protocol official daily price API (reUSD series through 2026-07-26)",
+      "url": "https://api.re.xyz/price"
+    },
+    {
+      "label": "Re App metrics dashboard (onchain/offchain capital display)",
+      "url": "https://app.re.xyz/metrics"
+    },
+    {
+      "label": "Re Protocol legal disclosures (Resilience Foundation Cayman IC-414560; Resilience BVI issuer; Cover Re SPC Class B(iii))",
+      "url": "https://re.xyz/disclosure"
+    },
+    {
+      "label": "Chainlink catalog reUSD exchange-rate Data Stream (referenced from issuer oracles page)",
+      "url": "https://data.chain.link/streams/reusd-usd-exchangerate-streams"
+    },
+    {
+      "label": "Chainlink Avalanche re-reserves feed (referenced from issuer oracles page)",
+      "url": "https://data.chain.link/feeds/avalanche/mainnet/re-reserves"
+    }
+  ],
+  "notes": "Full rwa-credit-fund mechanism packet for reusd-re-protocol (gap mechanism-risk-review). Metrics: valuationCadenceDays=1 measured from dual docs+PPM+live price API; weightedAverageMaturityDays unavailable after named search of docs/metrics/AUP/PPM (Reg 114 trust and treaty residual tenors undisclosed; onchain buffer is perpetual stablecoin liquidity). Components graded only where dual sources pin the claim; no weak-from-missing. verification.verdict left PENDING for phase-2 independent verifier. Does not edit mechanism-review-overlays-v1.json.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype rwa-credit-fund vocab OK. valuationCadenceDays=1: docs.re.xyz/products/about-reusd.md states onchain price recalculates every day at 00:00 UTC; api.re.xyz/price reUSD series last observation date=2026-07-26 price=1.091317 apy=6.2 with consecutive 1-day gaps across last 20 observations. PPM PDF and TNF AUP PDF HTTP 200. weightedAverageMaturityDays unavailable: underwriting-reserving-and-timing docs discuss claim tails qualitatively; metrics dashboard and AUP lack residual treaty/trust tenor ladder \u2014 named search holds.",
+    "secondSource": "api.re.xyz/price daily reUSD series + docs.re.xyz about-reusd.md daily 00:00 UTC accrual language"
+  }
+}

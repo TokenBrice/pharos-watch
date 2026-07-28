@@ -1,0 +1,348 @@
+{
+  "assetId": "bnusd-balanced",
+  "archetype": "cdp",
+  "outcome": "READY",
+  "mergeMode": "replace",
+  "overlayEntry": {
+    "assetId": "bnusd-balanced",
+    "archetype": "cdp",
+    "reviewedAt": "2026-07-27",
+    "sources": [
+      {
+        "label": "Balanced bnUSD stablecoin page: over-collateralization claim, Stability Fund 1:1 swap design with per-coin caps, contract-level Redemption method, Savings Rate (pinned 2026-07-20; site unreachable from the review environment on 2026-07-27)",
+        "url": "https://balanced.network/stablecoin/"
+      },
+      {
+        "label": "Balanced how-it-works page: risk/health-factor model, partial liquidation when risk reaches 100% (pinned 2026-07-20)",
+        "url": "https://balanced.network/how"
+      },
+      {
+        "label": "SODAX money market SDK docs: Aave-style pooled market on Sonic hub (reserves, aTokens, variable debt, healthFactor, E-Mode)",
+        "url": "https://docs.sodax.com/developers/packages/foundation/sdk/functional-modules/money_market.md"
+      },
+      {
+        "label": "SODAX mainnet deployments: Liquidator contract 0xc3297fbe4c404b3902852c227fefcccfa48fb7ec and bnUSD hub/spoke token addresses on Sonic",
+        "url": "https://docs.sodax.com/developers/deployments/mainnet"
+      },
+      {
+        "label": "SODAX audits index: 8 audit reports, none scoped to the EVM hub money market Pool (searched for bad-debt/deficit coverage 2026-07-27)",
+        "url": "https://docs.sodax.com/welcome-to-sodax/audits"
+      },
+      {
+        "label": "balanced.network's own stats script: official methodology for total supply (facilitator bucket) and total backing (borrower aToken collateral priced via DefiLlama)",
+        "url": "https://balanced.network/js/async-data-stablecoin.js"
+      },
+      {
+        "label": "SODAX backend API: money market reserve list, bnUSD borrower list (50), and per-borrower positions used for the backing measurement",
+        "url": "https://api.sodax.com/v1/be/moneymarket/asset/all"
+      },
+      {
+        "label": "Sonic public RPC: eth_call reads at block 76609151 of the facilitator bucket (0xaa02f94a on 0x94dC79ce9C515ba4AE4D195da8E6AB86c69BFc38), variable-debt totalSupply, Pool.getConfiguration, Aave oracle getAssetPrice, and whale aToken/debt balances",
+        "url": "https://rpc.soniclabs.com"
+      }
+    ],
+    "notes": "2026-07-27 replace of the 2026-07-20 review with a fresh full re-measurement. Mechanism unchanged: bnUSD is minted through the SODAX cross-chain money market (Aave-v3-style pool on the Sonic hub; Pool 0x553434896D39F867761859D0FE7189d2Af70514E, bnUSD debt reserve 0x94dC79ce9C515ba4AE4D195da8E6AB86c69BFc38). MEASUREMENT at Sonic block 76,609,151 (2026-07-27T22:59:10Z, https://rpc.soniclabs.com): total bnUSD supply = facilitator bucket currentBorrowed = 1,615,231.95 bnUSD (getFacilitatorBucket(0xa2cDA49735e42f0905496E40a66B3C5475Ed69dF), selector 0xaa02f94a; cross-check: variableDebtToken 0x9d6658bfdf512bc08ede9ef75d64a9e5d4f321de totalSupply = 1,616,068.32, delta 0.05%). Total backing = sum of all 50 bnUSD borrowers' aToken collateral across 24 nonzero reserves (SODAX backend API borrowers/positions, indexed ~1k blocks behind the pin), each reserve priced with the pool's own Aave oracle getAssetPrice at the pinned block (oracle 0x12835f0b71d7c94b23b64f765ab9cbcb8f5250b9) = $3,356,872.70, giving collateralizationRatio = 2.078260. Market-price cross-check (DefiLlama/CoinGecko majors, oracle for hyTB/SODA/LL) = $3,354,146.06 / CR 2.076572; the two bases agree within 0.1%. Composition: sodahyTB $1,460,165 (43.5%), sodaUSDC $706,124, sodaBTC $206,387, sodaBNB $193,123, bnUSD $139,896, sodaAVAX $108,167, sodaSUI $101,913, sodasftUSD $99,893, tail below $66k. CR rose from 1.147958 (2026-07-20) to 2.078260 almost entirely because one address (0x73135d19c488ea5b002e0e07135d992ff7e6f070) posted 1,325,359.90 hyTB aTokens (verified on-chain via balanceOf at the pinned block; hyTB is a SODAX-wrapped reserve oracle-priced $1.101712 with a T-bill-like profile: LTV 90%, liquidation threshold 95%, 5% bonus, supply cap 1.6M, borrowing disabled) and borrowed 1,352,372.26 bnUSD against it: 83.7% of all bnUSD debt sits in this single position at health factor ~1.026, so the aggregate CR overstates distributed collateral strength. PARAMETERS re-verified via Pool.getConfiguration at block 76,609,151: hyTB 90/95/105, sodaUSDC 70/80/105, sodaBTC 60/80/105, sodaSODA 60/80/105 (LTV/liqThreshold/liqBonus bps), consistent with the 2026-07-20 pattern (LTV 40-70% on volatile reserves, LT 70-95%, 5% bonus, per-reserve caps, single shared pool with no isolation flags). GRADES: collateralizationParameters strong (parameters and full backing measured directly on-chain at the pinned block); liquidationMechanics adequate (documented Aave-style open-market partial liquidations at 5% bonus; Liquidator contract 0xc3297fbe4c404b3902852c227fefcccfa48fb7ec listed in SODAX mainnet deployments; no dedicated liquidation pool, so liquidationCapacityRatio stays structurally not-applicable); backstop adequate (Stability Fund 1:1 swap design with per-coin caps plus Savings Rate, pinned to balanced.network/stablecoin from 2026-07-20; current fund size still unmeasured and no Stability Fund contract appears in the SODAX deployments list); branchIsolation limited (single shared pool, all reserves cross-collateralize bnUSD debt); structuralRedemption adequate (contract-level Redemption of bnUSD for borrower collateral minus a fee, spread across a borrower group, documented as last resort when the Stability Fund is empty). shutdownAndBadDebt RE-SEARCHED on 2026-07-27 and left uncurated: docs.balanced.network now hosts only the v1 transition guide; docs.sodax.com has no risk/bad-debt/deficit/wind-down page; the 2025-08 KupiaSec/ge6a collaborative audit is scoped to relay/asset-manager/wallet contracts, not the money market; no bad-debt socialization, deficit-elimination, or wind-down handling is documented in any Balanced/SODAX primary source. balanced.network was unreachable from the review environment during 2026-07-27T22:55-23:15Z; still-valid quotes rely on the 2026-07-20 pins.",
+    "metrics": {
+      "collateralizationRatio": 2.07826,
+      "liquidationCapacityRatio": null
+    },
+    "metricApplicability": {
+      "liquidationCapacityRatio": {
+        "state": "not-applicable",
+        "rationale": "No dedicated liquidation pool exists in the SODAX money market: undercollateralized positions are partially liquidated by third-party liquidators that repay debt and seize collateral at a 5% bonus (Aave-style open-market liquidations), so there is no liquidation pool whose capacity can be measured.",
+        "sourceUrl": "https://balanced.network/how"
+      }
+    },
+    "components": {
+      "collateralizationParameters": {
+        "quality": "strong"
+      },
+      "liquidationMechanics": {
+        "quality": "adequate"
+      },
+      "backstop": {
+        "quality": "adequate"
+      },
+      "branchIsolation": {
+        "quality": "limited"
+      },
+      "structuralRedemption": {
+        "quality": "adequate"
+      }
+    }
+  },
+  "journal": {
+    "filename": "2026-07-27-block-76609151.json",
+    "content": {
+      "schemaVersion": 1,
+      "kind": "onchain-mechanism-measurement",
+      "assetId": "bnusd-balanced",
+      "archetype": "cdp",
+      "capturedAt": "2026-07-27T23:17:42Z",
+      "observations": {
+        "sonic": {
+          "block": 76609151,
+          "blockHex": "0x490f67f",
+          "blockTimestampUnix": 1785193150,
+          "blockTimestampUtc": "2026-07-27T22:59:10Z",
+          "rpc": "https://rpc.soniclabs.com"
+        },
+        "contracts": {
+          "pool": "0x553434896D39F867761859D0FE7189d2Af70514E",
+          "bnUSDDebtReserve": "0x94dC79ce9C515ba4AE4D195da8E6AB86c69BFc38",
+          "bnUSDVariableDebtToken": "0x9d6658bfdf512bc08ede9ef75d64a9e5d4f321de",
+          "facilitator": "0xa2cDA49735e42f0905496E40a66B3C5475Ed69dF",
+          "poolAddressesProvider": "0x036ade0abaa4c82445cb7597f2d6d6130c118c7b",
+          "aaveOracle": "0x12835f0b71d7c94b23b64f765ab9cbcb8f5250b9",
+          "liquidator": "0xc3297fbe4c404b3902852c227fefcccfa48fb7ec"
+        },
+        "debt": {
+          "facilitatorBucketRaw": "0x0000000000000000000000000000000000000000000211654585005212800000000000000000000000000000000000000000000000015609e63b4584840ab4b8",
+          "facilitatorBucketCalldata": "0xaa02f94a000000000000000000000000a2cda49735e42f0905496e40a66b3c5475ed69df",
+          "facilitatorBucketWord0": 9765.625,
+          "facilitatorBucketCurrentBorrowedBnUSD": 1615231.9477681697,
+          "variableDebtTokenTotalSupplyRaw": "0x0000000000000000000000000000000000000000000156373d291e9b018e48aa",
+          "variableDebtTokenTotalSupplyBnUSD": 1616068.3151528342,
+          "crossCheckDeltaPct": 0.052
+        },
+        "backing": {
+          "method": "Sum of all 50 bnUSD borrowers' aToken collateral balances (SODAX backend API /v1/be/moneymarket/asset/0x94dC79ce9C515ba4AE4D195da8E6AB86c69BFc38/borrowers then /v1/be/moneymarket/position/{addr}, API-indexed blocks ~76.60M-76.61M), each reserve priced with the pool Aave oracle getAssetPrice at the pinned block; identical methodology to the 2026-07-20 review and to balanced.network's own stats script.",
+          "borrowerCount": 50,
+          "collateralReserveCount": 24,
+          "totalBackingUsdProtocolOracle": 3356872.7,
+          "totalBackingUsdMarketCrossCheck": 3354146.06,
+          "marketCrossCheckBasis": "DefiLlama coins API current prices fetched 2026-07-27T23:02Z (price timestamps ~1785193130) for BTC/ETH/BNB/SUI/AVAX/SOL/XLM/NEAR/HYPE/POL/S/WSTETH/WEETH/KAIA/INJ, stablecoins at $1, hyTB/SODA/LL at oracle prices (no reliable market price); the two bases agree within 0.1%.",
+          "compositionUsd": [
+            [
+              "sodahyTB",
+              1325359.904,
+              1.101712,
+              1460164.7
+            ],
+            [
+              "sodaUSDC",
+              706123.6568,
+              1.0,
+              706123.66
+            ],
+            [
+              "sodaBTC",
+              3.2363,
+              63771.545,
+              206386.72
+            ],
+            [
+              "sodaBNB",
+              340.3693,
+              567.391447,
+              193122.64
+            ],
+            [
+              "bnUSD",
+              139895.9832,
+              1.0,
+              139895.98
+            ],
+            [
+              "sodaAVAX",
+              16622.7818,
+              6.507155,
+              108167.02
+            ],
+            [
+              "sodaSUI",
+              148941.7794,
+              0.68425,
+              101913.37
+            ],
+            [
+              "sodasftUSD",
+              99892.5265,
+              1.0,
+              99892.53
+            ],
+            [
+              "sodaETH",
+              34.87,
+              1891.386219,
+              65952.63
+            ],
+            [
+              "sodaUSDT",
+              59745.6166,
+              1.0,
+              59745.62
+            ],
+            [
+              "sodaSODA",
+              2360819.6584,
+              0.021909,
+              51724.02
+            ],
+            [
+              "sodaWEETH",
+              24.5917,
+              2080.860827,
+              51171.95
+            ],
+            [
+              "sodaHYPE",
+              612.0465,
+              56.316839,
+              34468.52
+            ],
+            [
+              "sodaSOL",
+              387.2961,
+              74.441724,
+              28830.99
+            ],
+            [
+              "sodaWSTETH",
+              9.8374,
+              2345.928713,
+              23077.88
+            ],
+            [
+              "sodaNEAR",
+              7012.1235,
+              1.702586,
+              11938.74
+            ],
+            [
+              "sodaPOL",
+              98933.4744,
+              0.074312,
+              7351.91
+            ],
+            [
+              "sodaXLM",
+              31008.7303,
+              0.173519,
+              5380.6
+            ],
+            [
+              "sodaS",
+              72077.4348,
+              0.021653,
+              1560.66
+            ],
+            [
+              "sodaWBTC",
+              0.0,
+              63830.125602,
+              1.49
+            ],
+            [
+              "sodaKAIA",
+              30.2,
+              0.026464,
+              0.8
+            ],
+            [
+              "sodaLL",
+              204.795,
+              0.001284,
+              0.26
+            ],
+            [
+              "sodaINJ",
+              0.0,
+              4.745914,
+              0.0
+            ],
+            [
+              "sodaSUSDS",
+              0.0,
+              1.104395,
+              0.0
+            ]
+          ]
+        },
+        "concentration": {
+          "whaleAddress": "0x73135d19c488ea5b002e0e07135d992ff7e6f070",
+          "whaleHyTBaTokenBalanceRaw": "0x0000000000000000000000000000000000000000000118a7e7841cbe636c946e",
+          "whaleHyTBaTokenBalance": 1325359.9039543339,
+          "whaleHyTBEqualsEntireReserveSupply": true,
+          "whaleBnUSDDebtRaw": "0x000000000000000000000000000000000000000000011e603f3627809d11ec4c",
+          "whaleBnUSDDebt": 1352372.2564033011,
+          "whaleDebtSharePct": 83.73,
+          "whaleHealthFactorAtHyTBLiqThreshold95Pct": 1.0257
+        },
+        "reserveConfigurationsAtBlock": {
+          "sodahyTB": {
+            "ltvBps": 9000,
+            "liquidationThresholdBps": 9500,
+            "liquidationBonusBps": 10500,
+            "supplyCap": 1600000,
+            "borrowingEnabled": false,
+            "raw": "0x100000000000000000000003e8000186a0000000000003e801122904251c2328"
+          },
+          "sodaUSDC": {
+            "ltvBps": 7000,
+            "liquidationThresholdBps": 8000,
+            "liquidationBonusBps": 10500,
+            "supplyCap": 1000000,
+            "raw": "0x100000000000000000000003e80000f42400000c350003e8051229041f401b58"
+          },
+          "sodaBTC": {
+            "ltvBps": 6000,
+            "liquidationThresholdBps": 8000,
+            "liquidationBonusBps": 10500,
+            "supplyCap": 4000,
+            "raw": "0x100000000000000000000003e8000000fa00000003e803e8051229041f401770"
+          },
+          "sodaSODA": {
+            "ltvBps": 6000,
+            "liquidationThresholdBps": 8000,
+            "liquidationBonusBps": 10500,
+            "supplyCap": 40000000,
+            "raw": "0x100000000000000000000003e8002625a000000c350003e8051229041f401770"
+          }
+        },
+        "oraclePriceSpotChecksRaw": {
+          "sodahyTB": "0x0000000000000000000000000000000000000000000000000000000006911430",
+          "sodaSODA": "0x0000000000000000000000000000000000000000000000000000000000216e57",
+          "sodaUSDC": "0x0000000000000000000000000000000000000000000000000000000005f5e100"
+        }
+      },
+      "derived": {
+        "collateralizationRatio": 2.07826,
+        "crBasis": "totalBackingUsdProtocolOracle 3356872.70 / facilitatorBucketCurrentBorrowed 1615231.9477681697 (Sonic block 76609151); market-price cross-check CR 2.076572",
+        "liquidationCapacityRatio": null,
+        "lcrBasis": "not-applicable: no dedicated liquidation pool in the SODAX money market; open-market third-party liquidations at a 5% bonus (Aave-style), so there is no liquidation pool whose capacity can be measured"
+      },
+      "searchLog": {
+        "shutdownAndBadDebt": "Re-searched 2026-07-27: docs.balanced.network sitemap now lists only v1-transition pages (withdraw/migrate guides); docs.sodax.com sitemap has no risk/bad-debt/deficit/wind-down page (money_market.md is SDK API reference); docs.sodax.com/welcome-to-sodax/audits lists 8 audits, none scoped to the EVM hub money market Pool (the 2025-08 KupiaSec/ge6a collaborative audit covers intent-relay, asset-manager, rate-limiter, wallet contracts); balanced.network unreachable from review environment at 2026-07-27T22:55-23:15Z (curl timeout, code 000). No bad-debt socialization, deficit elimination, or wind-down documentation found; component stays uncurated (bounded-unknown).",
+        "stabilityFund": "No Stability Fund contract appears in the SODAX mainnet deployments list; the fund design remains pinned to balanced.network/stablecoin (2026-07-20 review). Current fund size not measured."
+      },
+      "sources": [
+        "https://balanced.network/stablecoin/",
+        "https://balanced.network/how",
+        "https://docs.sodax.com/developers/packages/foundation/sdk/functional-modules/money_market.md",
+        "https://docs.sodax.com/developers/deployments/mainnet",
+        "https://docs.sodax.com/welcome-to-sodax/audits",
+        "https://balanced.network/js/async-data-stablecoin.js",
+        "https://api.sodax.com/v1/be/moneymarket/asset/all",
+        "https://rpc.soniclabs.com"
+      ]
+    }
+  },
+  "evidenceSummary": "Fresh full re-measurement at Sonic block 76,609,151 (2026-07-27T22:59:10Z, rpc.soniclabs.com): debt = facilitator bucket currentBorrowed 1,615,231.95 bnUSD (selector 0xaa02f94a; cross-check variable-debt totalSupply 1,616,068.32, +0.05%); backing = $3,356,872.70 across 50 borrowers / 24 reserves priced by the pool's own Aave oracle at the pinned block (market-price cross-check $3,354,146.06). CR = 2.078260, up from 1.147958 on 2026-07-20, driven by one address (0x7313...f070) that posted the entire 1,325,359.90 hyTB aToken supply ($1.46M at oracle $1.101712) and borrowed 1,352,372.26 bnUSD against it (83.7% of all debt, health factor ~1.026 at hyTB's 95% liquidation threshold). Pool parameters re-verified via getConfiguration (hyTB 90/95/105, USDC 70/80/105, BTC 60/80/105 bps). shutdownAndBadDebt re-searched: no bad-debt/deficit/wind-down documentation exists in Balanced or SODAX primary sources; the only audits are scoped to relay/asset-manager contracts; component stays uncurated.",
+  "primarySources": [
+    "https://rpc.soniclabs.com",
+    "https://api.sodax.com/v1/be/moneymarket/asset/all",
+    "https://balanced.network/stablecoin/",
+    "https://balanced.network/how",
+    "https://balanced.network/js/async-data-stablecoin.js",
+    "https://docs.sodax.com/developers/packages/foundation/sdk/functional-modules/money_market.md",
+    "https://docs.sodax.com/developers/deployments/mainnet",
+    "https://docs.sodax.com/welcome-to-sodax/audits"
+  ],
+  "blockedReason": null,
+  "missingSources": [
+    "Balanced/SODAX documentation of bad-debt or deficit handling in the money market (does not exist)",
+    "Balanced/SODAX wind-down or shutdown runbook for bnUSD (does not exist)",
+    "Current Stability Fund size disclosure (no contract or balance published; SODAX deployments list no Stability Fund contract)"
+  ]
+}

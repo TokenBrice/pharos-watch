@@ -1160,8 +1160,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "manual-review",
     "sources": [
       {
@@ -1173,9 +1173,9 @@
         "url": "https://docs.defi.money/welcome/deployments/contracts-addresses"
       }
     ],
-    "rationale": "MONEY is a crvUSD-style CDP stablecoin: every unit is minted against overcollateralized loan positions in approved LLAMMA markets on Arbitrum, Optimism, and Base, so the reserve envelope is the aggregate of accepted crypto loan collateral. As of 2026-07-20 the defi.money website and app return HTTP 402 DEPLOYMENT_DISABLED and no current per-market collateral or debt composition is published anywhere, while DefiLlama still reports roughly $14M of MONEY circulating, so the envelope is retained as one explicitly unresolved aggregate rather than a fabricated per-asset split.",
+    "rationale": "Write-time re-open 2026-07-28 of defi.money how-is-usdmoney-made and contracts-addresses docs: MONEY is minted only by depositing supported crypto collateral into CDP/LLAMMA-style loans. Per-market collateral inventory still not published as a reconciled weight table; envelope remains 100% approved crypto loan collateral with ku=100.",
     "compositionBasis": "defi.money documented crvUSD-style CDP architecture and deployment registry; current per-market weights unpublished",
-    "compositionAsOf": "2026-07-20",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete per-market collateral split (asset identities, debt shares, and band-position conversions across Arbitrum, Optimism, and Base) is not published; the issuer frontend and API are disabled, so no current verifiable composition exists.",
     "knownUnknownExposurePct": 100,

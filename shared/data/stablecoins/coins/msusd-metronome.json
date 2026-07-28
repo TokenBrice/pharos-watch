@@ -31,8 +31,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "probable",
     "sources": [
       {
@@ -42,13 +42,17 @@
       {
         "label": "Metronome Synth liquidation design",
         "url": "https://docs.metronome.io/metronome-synth/risks/liquidation"
+      },
+      {
+        "label": "Metronome Synth supported assets",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/supported-assets"
       }
     ],
-    "rationale": "Metronome identifies USDC, DAI, FRAX, ETH, WBTC, and Vesper yield-bearing tokens as collateral assets subject to deposit caps and collateral factors. It does not publish the current collateral allocation backing outstanding msUSD, so the documented eligible envelope is retained as one bounded basket rather than a fabricated allocation.",
-    "compositionBasis": "Metronome Synth collateral-cap and liquidation documentation",
-    "compositionAsOf": "2026-07-14",
+    "rationale": "Re-opened Metronome primary docs on 2026-07-28. Deposit/mintage caps still enumerate eligible msUSD collateral (USDC, DAI, FRAX, ETH, WBTC, sfrxETH, and Vesper va-tokens) with per-asset caps and CF-based mintage formula; liquidation docs still describe multi-collateral health-factor CDP mechanics without any published live allocation. Supported-assets independently lists the same multi-collateral, multi-synth (msUSD/msETH/msBTC) envelope across Ethereum, Optimism, and Base. Because pools are cross-margin multi-synth, DepositToken balances cannot be attributed solely to msUSD without debt-side attribution the issuer does not publish. No public dashboard, attestation, or dual-source on-chain snapshot of current weights was found, so the documented eligible envelope is retained as one 100% basket-needs-split row rather than a fabricated allocation.",
+    "compositionBasis": "Metronome Synth collateral-cap, supported-assets, and liquidation documentation (re-opened 2026-07-28)",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current deposited balances and weights across the eligible collateral set are not published in the reviewed issuer documentation.",
+    "knownUnknownExposure": "Current deposited balances and weights across the eligible collateral set are not published in the reviewed issuer documentation, and cross-margin multi-synth pooling prevents treating raw DepositToken supplies as msUSD-only composition.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -56,7 +60,7 @@
         "reserveName": "Metronome Synth eligible CDP collateral basket (stablecoins, ETH, WBTC, and Vesper yield-bearing tokens)",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "The issuer names eligible collateral and limits but does not disclose current composition weights."
+        "rationale": "The issuer names eligible collateral and deposit/mintage limits but does not disclose current composition weights; multi-synth cross-margin pools prevent inventing an msUSD-only split from pool TVL."
       }
     ]
   },

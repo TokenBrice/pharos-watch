@@ -1,0 +1,21 @@
+{
+  "assetId": "nopal-nest",
+  "subject": "packet",
+  "verdict": "VERIFIED",
+  "metricCheck": {
+    "weightedAverageMaturityDays": "confirmed unavailable — rationale TRUE: re-opened Nest available-vaults (qualitative 'short-dated' only, no tenor), Nest assets page (OALS2T row: Ba2 CMS rating, Bahamas fund, zero tenor fields), BlackOpal homepage (short-duration marketing, no days); no WAM/WAL/ladder published anywhere; D3 no-extrapolation rule correctly applied",
+    "valuationCadenceDays": "confirmed 0.041666666666666664 — block-pinned eth_call REPRODUCED EXACTLY at Ethereum block 25627239 (0x1870a67, timestamp 1785192539 = 2026-07-27T22:48:59Z matches pinnedAt) via eth.drpc.org archive: accountantState() on 0x2Ed2f77a961fc92F73D1087786099c39C894Ed1D decodes exchangeRate=1081191, lastUpdateTimestamp=1785187871 (2026-07-27T21:31:11Z), minimumUpdateDelayInSeconds=3600, isPaused=0, totalSharesLastUpdate=7748839432586; getRate()=1081191 — every pinned value reproduced digit-for-digit; Nest vaults docs hourly-process language verified verbatim"
+  },
+  "componentCheck": {
+    "valuationCadence": "basis confirmed — on-chain minimumUpdateDelayInSeconds=3600 + hourly docs + price API/on-chain rate match (1.081191) all reproduced; limited grade correct (issuer-operated, no independent fund-admin attestation)",
+    "maturityAndLiquidity": "basis confirmed — available-vaults nOPAL: FX-hedged short-dated Brazilian credit-card receivables via LiquidStone II + Superstate USCC, redemption estimate T+1, composition LiquidStone 91.8% / nTBILL 4.39% / liquid 3.8%; BlackOpal page confirms short-duration receivables, true-sale FIDC, NDF hedge, daily-redeemable liquid sleeve; liquidity docs 3%–10% buffer target confirmed",
+    "custody": "basis confirmed — flow-of-funds non-custodial + third-party custodian language verified; BlackOpal 'receivables owned outright via True Sale, independently verified' verified on homepage; on-chain vault() on accountant 0x2Ed2… binds to nOPAL share 0x119dd7daff816f29d7ee47596ae5e4bdc4299165 (live eth_call, matches API vaultAddress); FIDC custodian genuinely unnamed in public sources — limited correct",
+    "creditQuality": "not checked (deliberately uncurated by packet — honest: Nest CMS Ba2 vs BlackOpal AA+ marketing conflict is real; both pages re-opened and confirm the conflict exists)",
+    "seniority": "not checked (deliberately uncurated — single-domain marketing claim; correct call)",
+    "legalEnforceability": "not checked (deliberately uncurated — no public prospectus/trust deed found in any re-opened source)",
+    "recovery": "not checked (deliberately uncurated)"
+  },
+  "conflicts": [],
+  "mergeGuidance": "land packet as-is",
+  "notes": "No existing overlay entry. Wave-6 BLOCKED(issuer-undisclosed) on cadence is genuinely resolved: the new evidence is a primary on-chain pin (minimumUpdateDelayInSeconds=3600 in the AccountantWithRateProviders state) that I independently reproduced at the exact pinned block, plus the docs hourly-process sentence. One observation for the applier: Nest last-price-update API currently reports accountantAddress 0x2afa49257c960db6d9d7114eeb085c2db1ccd98e for nOPAL chains, while the packet pinned 0x2Ed2f77a…; the pinned accountant's vault() binds on-chain to the nOPAL share token and its rate matches the live price, so the pin is on a legitimate live accountant (possibly a per-chain or legacy accountant). Not a discrepancy — both rates agree at 1.081191. NAV drifted $47,199,880.63 → $47,200,832.62 and supply +880 tokens since pin — immaterial, price unchanged. ethereum.publicnode.com now demands a token for archive calls; eth.drpc.org served the archive fine."
+  }

@@ -1,0 +1,104 @@
+{
+  "assetId": "mf-one-midas",
+  "archetype": "rwa-credit-fund",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "ethereum block 25627235 hash 0xb94f5f19b26ad05164b659518d72be2982a240d3b93db03d4268300459a838f0 timestamp 2026-07-28T00:08:11Z; mF-ONE/USD oracle 0x8D51DBC85cEef637c97D02bdaAbb5E274850e68C latestRoundData round 253 answer 111058227 (8 decimals = 1.11058227) updatedAt 2026-07-27T17:10:35Z; token totalSupply 63616254.848027974 mF-ONE",
+  "metrics": {
+    "weightedAverageMaturityDays": null,
+    "valuationCadenceDays": 1
+  },
+  "metricStates": {
+    "weightedAverageMaturityDays": {
+      "state": "unavailable",
+      "rationale": "No issuer-published portfolio weighted-average maturity for mF-ONE or Fasanara F-ONE. Steakhouse (2025-06-27, using end-April 2025 fund materials) discloses sleeve-level tenors (receivables duration under 90 days; consumer loans 8\u201312 months average) and a stale sleeve mix (39.3% receivables / 27.8% digital assets / 19.9% consumer) but no current facility-level maturity weights or a true WAM. CoinDesk/The Block confirm the multi-strategy mandate only. D3 forbids blending sleeve tenors into an unreported WAM. Searched: Midas product/docs (no mF-ONE legal-product page in docs index), Steakhouse kitchen report, CoinDesk launch coverage, SEC Form D entity page, rwa.xyz asset page.",
+      "sourceUrl": "https://kitchen.steakhouse.financial/p/midas-fasanara-mf-one-in-morpho-onchain"
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "rationale": "Published on-chain mF-ONE/USD NAV feed (oracle 0x8D51DBC85cEef637c97D02bdaAbb5E274850e68C, description 'mF-ONE/USD', 8 decimals) shows business-day update cadence: getRoundData rounds 248\u2013253 have successive weekday gaps of ~0.88\u20131.10 days (2026-07-20 through 2026-07-24 and 2026-07-27), with ~3-day weekend gaps (e.g. 2026-07-17\u219220, 2026-07-24\u219227). valuationCadenceDays=1 is the observed weekday published-NAV cadence, not a claim of independent third-party full portfolio re-marks each day (NAV path is smooth yield-like accretion). Steakhouse June 2025 text stated weekly Fasanara estimates and monthly fund-admin NAV; current chain observation supersedes that weekly claim for the published feed metric. Official fund-admin independence cadence remains single-sourced to Steakhouse and is not used as the measured metric.",
+      "sourceUrl": "https://ethereum-rpc.publicnode.com"
+    }
+  },
+  "components": {
+    "creditQuality": {
+      "quality": "limited",
+      "basis": "Dual-source mandate: Steakhouse Morpho onboarding report (2025-06-27, from Fasanara materials and onsite diligence) describes F-ONE as multi-strategy short-term private credit plus digital-asset market-neutral/market-making with typical leverage 1.3\u20131.5x; fintech lending is typically 30\u201380% of F-ONE via 140+ originators, SPV senior notes with originator junior first-loss, and receivables duration under 90 days; end-April 2025 mix included 39.3% receivables, 27.8% digital assets, 19.9% consumer loans. CoinDesk (2025-06-27) independently states mF-ONE tracks Fasanara F-ONE with allocations across fintech-originated receivables, SME lending, real-estate-backed credit, and delta-neutral digital strategies. Limited rather than adequate: material digital-asset and leveraged multi-strategy risk sits beside private credit; no dual-sourced current independent credit/fund rating of F-ONE itself (ARC a(f) cited by Steakhouse is for GDADF, not F-ONE); facility-level obligor tape and current weights are not public."
+    },
+    "seniority": {
+      "quality": "limited",
+      "basis": "Dual-source structure: Steakhouse \u00a76 states mF-ONE is a MiFID II Tokenized Bearer Bond Certificate issued by Midas Software GmbH; Infinite Tokens S.A. compartment D holds a Fasanara Investments compartment AK variable funding note (F-ONE Note) as fiduciary for issuer and tokenholders, reflecting F-ONE Sub-Fund 29 of the Luxembourg SICAV-RAIF. Midas Legal Structure docs separately describe the German Issuer Setup as contractual exposure to strategy performance without Luxembourg statutory compartmentalisation (ring-fencing applies only to Lux securitisation products). Tokenholders are several layers from underlying receivables/SPV notes and lack a public senior secured claim on portfolio assets; grade limited."
+    },
+    "legalEnforceability": {
+      "quality": "limited",
+      "basis": "Dual-source identity and instrument class: Steakhouse documents German-law MiFID II bearer bond certificates under Midas Software GmbH PPM, Luxembourg RAIF sub-fund F-ONE Sub-Fund 29, and multi-entity note/fiduciary stack. Midas Legal Structure confirms German issuer products are contractual (not Lux statutory securitisation compartments) and points investors to product offering docs. SEC Form D for 'Fasanara Investments SA, SICAV-RAIF - F-One or Sub-Fund 29' corroborates the Luxembourg fund entity. Limited: public free-access final terms/PPM for mF-ONE are not listed on Midas Legal Product Documentation index (no mF-ONE product page among mAPOLLO/mHYPER/etc.); Form D is a notice filing, not prudential authorization; cross-border insolvency enforceability for the tokenised note stack is untested in the reviewed sources."
+    },
+    "valuationCadence": {
+      "quality": "limited",
+      "basis": "Dual-source published NAV process: (1) live eth_call getRoundData/latestRoundData on Midas-registered mFONE/USD oracle 0x8D51\u2026 shows business-day published updates (pinned round 253 NAV 1.11058227 at 2026-07-27T17:10:35Z); (2) Midas Smart Contracts Registry names that address as mFONE/USD Oracle, and Midas Pricing of the mToken docs describe multi-party NAV assessment with internal cross-checks and on-chain oracle tolerance. Steakhouse describes Fasanara-estimated marks feeding the on-chain price and a monthly fund-administrator official NAV (admin independence not dual-sourced product-specifically). Limited rather than adequate: no dual-sourced independent monthly attestation product-confirmed for mF-ONE; Midas Attestation Engine docs state independent onchain verification is rolling out progressively and does not yet apply to all mTokens / does not condition price updates."
+    },
+    "maturityAndLiquidity": {
+      "quality": "limited",
+      "basis": "Dual-source structural liquidity design: Steakhouse documents a three-layer stack (target ~10% mTBILL atomic sleeve, intermediate Pareto/digital sleeve, core F-ONE with monthly subscription / quarterly fund redemptions and a stated 5% of fund NAV quarterly redemption capacity), plus Midas rolling 30-day advance redemption against last published NAV and a 0.50% fee on instant-sleeve exits. Independent corroboration of product rails: Midas Smart Contracts Registry lists mF-ONE Issuance vault 0x4143\u2026 and Redemption Vault 0x44b0\u2026; CoinDesk confirms Morpho mF-ONE/USDC repo integration for capital efficiency rather than primary full-book liquidation. Limited: primary-market liquidity is gated and sleeve-capped; full portfolio unwind is not atomic; current on-chain sleeve size and live redemption queue are not dual-sourced itemized figures in this review (Steakhouse's $0.9m atomic figure was a 2025-06-24 snapshot)."
+    },
+    "custody": {
+      "quality": "limited",
+      "basis": "Dual-source multi-layer custody path without public end-to-end segregation package: Steakhouse maps (a) on-chain mTBILL/T-bill sleeve, (b) Fasanara Digital digital-asset trading with Fireblocks/Copper named for that sleeve and CEX/DeFi venues, and (c) F-ONE shares via bankruptcy-remote Luxembourg RAIF / private-credit SPV notes held through the Infinite Tokens / F-ONE Note fiduciary. Midas Legal Structure states German-issuer products do not enjoy Lux statutory compartment ring-fencing. Limited: named crypto custodians are single-report (Steakhouse); compartment cash/receivable sub-custodians and reuse/segregation terms for the full mF-ONE stack are not dual-sourced public documents."
+    },
+    "recovery": {
+      "quality": "limited",
+      "basis": "Dual-source loss path is NAV absorption without a separate tokenholder backstop: Midas Pricing docs state mTokens are not pegged or floored and NAV moves with reference-portfolio performance (can decrease). Steakhouse states credit/default and mark-to-model impairment flow through F-ONE valuation into mF-ONE price; secondary/issuer exit options include a 10% discount to last NAV and multi-layer note unwrapping rather than a funded recovery facility. No dual-sourced insurance wrap, first-loss equity tranche at the token level, or insolvency waterfall paying tokenholders ahead of other creditors was established. Limited."
+    }
+  },
+  "sources": [
+    {
+      "label": "Steakhouse Financial mF-ONE Morpho onboarding report (structure, F-ONE mandate, liquidity stack, valuation policy, legal stack; 2025-06-27; re-opened 2026-07-28)",
+      "url": "https://kitchen.steakhouse.financial/p/midas-fasanara-mf-one-in-morpho-onchain"
+    },
+    {
+      "label": "CoinDesk launch coverage (F-ONE multi-strategy private credit + digital allocations; Morpho/Steakhouse; 2025-06-27)",
+      "url": "https://www.coindesk.com/business/2025/06/27/tokenization-firm-midas-introduces-private-credit-product-with-fasanara-morpho-and-steakhouse"
+    },
+    {
+      "label": "Midas Legal Structure (German Issuer Setup = contractual exposure without Lux statutory compartmentalisation)",
+      "url": "https://docs.midas.app/legal/legal-structure"
+    },
+    {
+      "label": "Midas Smart Contracts Registry (mFONE token, mFONE/USD oracle, issuance and redemption vaults)",
+      "url": "https://docs.midas.app/resources/smart-contracts-registry"
+    },
+    {
+      "label": "Midas Pricing of the mToken (NAV formula, multi-party update process, no peg/floor)",
+      "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
+    },
+    {
+      "label": "Midas Attestation Engine (progressive rollout; independent verification not yet all mTokens)",
+      "url": "https://docs.midas.app/transparency/the-midas-attestation-engine"
+    },
+    {
+      "label": "Midas Legal Product Documentation index (no mF-ONE product page listed among published final-terms products)",
+      "url": "https://docs.midas.app/resources/legal-product-documentation"
+    },
+    {
+      "label": "SEC Form D index for Fasanara Investments SA SICAV-RAIF F-One / Sub-Fund 29",
+      "url": "https://www.sec.gov/Archives/edgar/data/2064374/000101297525000196/xslFormDX01/primary_doc.xml"
+    },
+    {
+      "label": "mF-ONE/USD oracle proxy (MFOneCustomAggregatorFeed) eth.blockscout verified read",
+      "url": "https://eth.blockscout.com/address/0x8D51DBC85cEef637c97D02bdaAbb5E274850e68C"
+    },
+    {
+      "label": "Ethereum PublicNode RPC used for latestRoundData/getRoundData/totalSupply and block pin",
+      "url": "https://ethereum-rpc.publicnode.com"
+    },
+    {
+      "label": "Midas mF-ONE product page",
+      "url": "https://midas.app/mfone"
+    }
+  ],
+  "notes": "Wave-8 GROK-RESEARCH phase-1 mechanism packet for mf-one-midas (rwa-credit-fund). Write-time re-open 2026-07-28: Steakhouse kitchen post HTTP 200 with full structure/valuation/liquidity text; Midas Legal Structure, Smart Contracts Registry, Pricing, Attestation Engine, and Legal Product Documentation pages resolved via browser; eth_call latestRoundData on 0x8D51\u2026 returned round 253 / NAV 1.11058227 / updatedAt 2026-07-27T17:10:35Z at block 25627235; description eth_call decoded to 'mF-ONE/USD'; totalSupply 63,616,254.85 mF-ONE. Metrics: WAM unavailable (no published portfolio WAM; sleeve tenors not blended). valuationCadenceDays=1 measured from weekday oracle gaps (business-day published NAV), dual-anchored by registry identity of the oracle. All seven rwa components graded limited with dual sources; no strong/adequate claim because independent fund-admin marks, current loan tape, statutory ring-fence, and product-specific public final terms are not dual-sourced at adequate evidence class. Steakhouse June 2025 weekly-NAV narrative conflicts with July 2026 daily business-day oracle observations \u2014 metric uses current chain measurement only. verification.verdict left PENDING for phase-2.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype rwa-credit-fund vocab OK. valuationCadenceDays=1 independently reproduced via eth_call on oracle 0x8D51\u2026 (1rpc/publicnode, different from sole reliance on researcher pin): description()='mF-ONE/USD'; latestRoundData round 253 answer 111058227 (NAV 1.11058227) updatedAt 1785172235 (2026-07-27T17:10:35Z). getRoundData rounds 248\u2013253 weekday gaps \u22480.88\u20131.10 days with ~3.1d weekend gap Fri\u2192Mon \u2014 business-day cadence. mF-ONE totalSupply()=63,616,254.848027974 matches pin. weightedAverageMaturityDays unavailable: Steakhouse kitchen post (HTTP 200) discloses sleeve tenors (receivables <90d; consumer loans 8\u201312 months) and mix but no facility-level WAM \u2014 D3 forbids blending. docs.midas.app and midas.app currently HTTP 403 from verifier IP; metric claims dual-anchored by chain oracle + Steakhouse/CoinDesk without needing those pages.",
+    "secondSource": "eth_call latestRoundData/getRoundData/description on 0x8D51DBC85cEef637c97D02bdaAbb5E274850e68C via ethereum.publicnode.com + kitchen.steakhouse.financial mF-ONE report"
+  }
+}

@@ -12,7 +12,7 @@
     "navToken": false
   },
   "collateral": "Multi-collateral Sky/MakerDAO balance sheet: Spark lending exposure (~33%), stablecoins through the PSM (~32%), Grove RWA allocations (~24%), Obex (~5%), core crypto vaults (~4%), Staking Engine (~1%), and legacy RWA (~1%).",
-  "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; SKY (formerly MKR) acts as backstop (minted and sold to cover bad debt)",
+  "pegMechanism": "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC\u2194DAI swaps; SKY (formerly MKR) acts as backstop (minted and sold to cover bad debt)",
   "mechanismArchetype": "cdp",
   "llamaId": "5",
   "detailProvider": "defillama",
@@ -186,7 +186,7 @@
         "FinCEN/OFAC AML NPRM (Apr 2026)",
         "Treasury state-regime comparability NPRM (Apr 2026)",
         "Issuer disclosures and token documentation (MakerDAO/Sky docs)",
-        "Web search: MakerDAO Sky DAI GENIUS Act PPSI application 2026 — no application or intent announcement found",
+        "Web search: MakerDAO Sky DAI GENIUS Act PPSI application 2026 \u2014 no application or intent announcement found",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",
         "OCC digital asset licensing applications tracker",
@@ -469,7 +469,7 @@
             "url": "https://docs.makerdao.com/smart-contract-modules/core-module/vat-detailed-documentation"
           }
         ],
-        "evidence": "MCD_PAUSE (0xbE286431454714F511008713973d3B053A2d38f3) storage slot 4 = 172800 (delay confirmed) at block 25294761. MCD_VAT (0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B).wards(PauseProxy) returned 1 at block 25294731 — confirming governance authority over Vat parameters and debt ceilings. DAI.wards(PauseProxy)=0 is expected: governance path runs through Vat, not direct DAI token. eth_getCode confirms bytecode on all addresses."
+        "evidence": "MCD_PAUSE (0xbE286431454714F511008713973d3B053A2d38f3) storage slot 4 = 172800 (delay confirmed) at block 25294761. MCD_VAT (0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B).wards(PauseProxy) returned 1 at block 25294731 \u2014 confirming governance authority over Vat parameters and debt ceilings. DAI.wards(PauseProxy)=0 is expected: governance path runs through Vat, not direct DAI token. eth_getCode confirms bytecode on all addresses."
       }
     ],
     "review": {
@@ -496,7 +496,7 @@
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "DAI is native on Ethereum. Reviewed non-Ethereum deployments span Maker-governed and canonical rollup bridges (Arbitrum, Optimism, Base, zkSync Era, Boba, Metis, Linea, Scroll, Unichain, Taiko, Morph, Hemi, Starknet StarkGate), federation/validator bridges (Polygon PoS, Gnosis OmniBridge, Rootstock TokenBridge, PulseChain, NEAR Rainbow, Wormhole Solana, Orbit Klaytn, Multichain Kava, Celer Astar, Axelar Osmosis, Wanchain Cardano). BSC, Avalanche, Fantom, Moonriver, Moonbeam, Harmony, and Aurora remain unresolved because their live mint authority resolves only to bytecode-less EOAs (Multichain MPC, Binance peg wallet, Avalanche bridge role, Rainbow admin). Per-route bridged-supply attribution pinned on-chain 2026-07-22: Ethereum-native DAI.totalSupply() at block 25584812 = 4,638,093,582.405928 DAI (denominator). The Polygon PoS child token 0x8f3cf7ad23cd3cadbd9735aff958023239c6a063 totalSupply() at Polygon block 90651088 = 556,606,180.655442 DAI = 12.00% of DAI supply, corroborated by the L1 Polygon ERC20 predicate 0x40ec5B33f54e0E8A33A975908C5BA1c14e5BbbDf holding 584,895,715 DAI and DefiLlama per-chain attribution (554,072,601 DAI = 11.44% of DAI's 4,845,197,470 total). The Polygon PoS common-mode exposure is measured above the 10% materiality threshold, so the critical-dependency severity on the polygon-pos-bridge domains (protocol:polygon-pos-bridge and contract:polygon:0xa6fa4fb5f76172d178d61b04b0ecd319c5d1c0aa) is retained on a measured basis, not a fail-closed default. All other bridged routes are immaterial: Arbitrum 18,565,525 DAI (0.40%), Optimism 13,715,643 DAI (0.30%), Base 2,070,150 DAI (0.04%), Gnosis OmniBridge 63,561 DAI (0.001%), with every remaining canonical/opaque route below 0.75% (DefiLlama per-chain), so Polygon PoS is the only bridge domain that reaches the materiality floor.",
-    "reviewedAt": "2026-07-22",
+    "reviewedAt": "2026-07-28",
     "reviewer": "Codex Safety Score V9 bridge review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Claude T6 DAI attribution sprint (2026-07-22)",
     "confidence": "verified",
     "protocols": [
@@ -616,7 +616,7 @@
           "contract:arbitrum:0x467194771dae2967aef3ecbedd3bf9a310c76c65"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Pinned totalSupply() at Arbitrum block 486362140 on 2026-07-22 returned 18,565,525.134873 DAI, 0.40028% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) — immaterial, below the 5% floor.",
+        "reviewNote": "Pinned totalSupply() at Arbitrum block 486362140 on 2026-07-22 returned 18,565,525.134873 DAI, 0.40028% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) \u2014 immaterial, below the 5% floor.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-22",
         "observedBlock": 486362140,
@@ -646,7 +646,7 @@
           "contract:optimism:0x467194771dae2967aef3ecbedd3bf9a310c76c65"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Pinned totalSupply() at Optimism block 154541426 on 2026-07-22 returned 13,715,643.334159 DAI, 0.29572% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) — immaterial, below the 5% floor.",
+        "reviewNote": "Pinned totalSupply() at Optimism block 154541426 on 2026-07-22 returned 13,715,643.334159 DAI, 0.29572% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) \u2014 immaterial, below the 5% floor.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-22",
         "observedBlock": 154541426,
@@ -671,22 +671,41 @@
         "destinationChain": "bsc",
         "canonicalChain": "ethereum",
         "contractAddress": "0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3",
-        "protocol": "Binance-Peg authority unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "The token's live owner() is 0xF68a4b64162906efF0fF6aE34E2bB1Cd42FEf62d, but that address has no BSC bytecode. The bridge-route model cannot honestly encode this EOA as a contract controller, and no separate route-specific mint-controller contract was established. Re-verified 2026-07-20: authority state unchanged (live owner()/bridge-role reads return the same bytecode-less EOAs; no newer MigrateBridgeRole events on Avalanche DAI.e within the last 200k blocks).",
+        "protocol": "Binance-Peg DAI (Binance bridge)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller re-verified 2026-07-28 on independent BSC RPCs (bsc-dataseed.binance.org and bsc-dataseed1.defibit.io / bsc-rpc.publicnode.com): token name 'Dai Token', symbol DAI, 18 decimals; owner() = 0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d with empty bytecode (Binance-Peg mint/burn EOA). Same controller address and protocol failure domain as reviewed Binance-Peg USDT/USDC rows. eth_getCode(controller)=0x; no separate on-chain Safe threshold claimed.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-28",
         "sources": [
           {
             "label": "BscScan Binance-Peg DAI token",
             "url": "https://bscscan.com/token/0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3"
+          },
+          {
+            "label": "BSC public RPC owner() re-read (bsc-dataseed)",
+            "url": "https://bsc-dataseed.binance.org"
+          },
+          {
+            "label": "BSC independent RPC owner() corroboration (defibit)",
+            "url": "https://bsc-dataseed1.defibit.io"
+          },
+          {
+            "label": "Binance pegged tokens documentation",
+            "url": "https://www.binance.com/en/collateral-btokens"
           }
-        ]
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d",
+        "failureDomainKeys": [
+          "protocol:binance-peg",
+          "contract:bsc:0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d"
+        ],
+        "observedBlock": 112455885
       },
       {
         "id": "avalanche:0xd586e7f844cea2f87f50152665bcbc2c279d8d70",
@@ -721,26 +740,40 @@
         "destinationChain": "fantom",
         "canonicalChain": "ethereum",
         "contractAddress": "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e",
-        "protocol": "Multichain authority unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "The token's live owner() is 0xC564EE9f21Ed8A2d8E7e76c085740d5e4c5FaFbE, but that address has no Fantom bytecode. The bridge-route model cannot honestly encode this EOA as a contract controller, and no separate route-specific mint-controller contract was established. Re-verified 2026-07-20: authority state unchanged (live owner()/bridge-role reads return the same bytecode-less EOAs; no newer MigrateBridgeRole events on Avalanche DAI.e within the last 200k blocks).",
+        "protocol": "Multichain (legacy, post-exploit frozen)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller re-verified 2026-07-28 on independent Fantom RPCs (rpcapi.fantom.network and fantom.drpc.org): owner() = 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe with empty bytecode. Same Multichain DepositAddress/DcrmAddress used as controller on the reviewed Multichain USDC Fantom and Multichain fUSDT rows. Multichain MPC bridge ceased operations in July 2023 \u2014 controller identified but effectively unmaintained/frozen-legacy.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-28",
         "sources": [
           {
             "label": "Fantom explorer DAI token",
             "url": "https://explorer.fantom.network/address/0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e"
           },
           {
-            "label": "Multichain bridge repository",
-            "url": "https://github.com/anyswap/CrossChain-Router"
+            "label": "Fantom RPC owner() re-read (rpcapi.fantom.network)",
+            "url": "https://rpcapi.fantom.network"
+          },
+          {
+            "label": "Fantom independent RPC owner() corroboration (drpc)",
+            "url": "https://fantom.drpc.org"
+          },
+          {
+            "label": "Multichain developer docs (DcrmAddress pattern, via USDC Multichain Fantom peer row)",
+            "url": "https://docs.multichain.org/developer-guide/how-to-integrate-front-end-bridges"
           }
-        ]
+        ],
+        "controllerChain": "fantom",
+        "controllerAddress": "0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe",
+        "failureDomainKeys": [
+          "protocol:multichain"
+        ],
+        "observedBlock": 122537978
       },
       {
         "id": "base:0x50c5725949a6f0c72e6c4a641f24049a917db0cb",
@@ -761,7 +794,7 @@
           "contract:base:0x4200000000000000000000000000000000000010"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Pinned totalSupply() at Base block 48946141 on 2026-07-22 returned 2,070,150.298811 DAI, 0.04463% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) — immaterial, below the 5% floor.",
+        "reviewNote": "Pinned totalSupply() at Base block 48946141 on 2026-07-22 returned 2,070,150.298811 DAI, 0.04463% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) \u2014 immaterial, below the 5% floor.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-22",
         "observedBlock": 48946141,
@@ -795,7 +828,7 @@
           "contract:gnosis:0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d"
         ],
         "reviewDisposition": "reviewed",
-        "reviewNote": "Pinned totalSupply() at Gnosis block 47325121 on 2026-07-22 returned 63,561.271026 DAI, 0.00137% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) — immaterial, below the 5% floor. (Distinct from native xDAI; this is the OmniBridge-bridged DAI representation.)",
+        "reviewNote": "Pinned totalSupply() at Gnosis block 47325121 on 2026-07-22 returned 63,561.271026 DAI, 0.00137% of Ethereum-native DAI totalSupply (4,638,093,582.405928 DAI) \u2014 immaterial, below the 5% floor. (Distinct from native xDAI; this is the OmniBridge-bridged DAI representation.)",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-22",
         "observedBlock": 47325121,
@@ -1421,22 +1454,36 @@
         "destinationChain": "moonriver",
         "canonicalChain": "ethereum",
         "contractAddress": "0x80a16016cc4a2e6a2caca8a4a498b1699ff0f844",
-        "protocol": "Multichain authority unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "anyDAI (AnyswapV5-family): owner()/Vault() both return 0x10c6b61dbf44a083aec3780acf769c77be747e23, which has no Moonriver bytecode (Multichain MPC EOA). The bridge-route model cannot honestly encode an EOA as a contract controller, and no route-specific mint-controller contract was established. Re-verified 2026-07-20.",
+        "protocol": "Multichain anyDAI (legacy, post-exploit frozen)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller re-verified 2026-07-28 on independent Moonriver RPCs (moonriver-rpc.publicnode.com and rpc.api.moonriver.moonbeam.network): owner() = 0x10c6b61dbf44a083aec3780acf769c77be747e23 with empty bytecode (Multichain MPC EOA). Same Multichain MPC custody pattern as the reviewed Moonriver Multichain USDC row. Multichain ceased 2023 \u2014 frozen-legacy representation.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-28",
         "sources": [
           {
             "label": "Moonriver explorer anyDAI token",
             "url": "https://moonriver.moonscan.io/address/0x80a16016cc4a2e6a2caca8a4a498b1699ff0f844"
+          },
+          {
+            "label": "Moonriver publicnode RPC owner() re-read",
+            "url": "https://moonriver-rpc.publicnode.com"
+          },
+          {
+            "label": "Moonriver network RPC owner() corroboration",
+            "url": "https://rpc.api.moonriver.moonbeam.network"
           }
-        ]
+        ],
+        "controllerChain": "moonriver",
+        "controllerAddress": "0x10c6b61dbf44a083aec3780acf769c77be747e23",
+        "failureDomainKeys": [
+          "protocol:multichain"
+        ],
+        "observedBlock": 17170428
       },
       {
         "id": "moonbeam:0x765277eebeca2e31912c9946eae1021199b39c61",
@@ -1444,26 +1491,36 @@
         "destinationChain": "moonbeam",
         "canonicalChain": "ethereum",
         "contractAddress": "0x765277eebeca2e31912c9946eae1021199b39c61",
-        "protocol": "Multichain authority unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "multiDAI (same Multichain deployment as the reviewed Kava route): owner()/Vault() both return 0xec4486a90371c9b66f499ff3936f29f0d5af8b7e, which has no Moonbeam bytecode (Multichain MPC EOA), unlike Kava where the vault is the router contract. DefiLlama also counts an Axelar DAI (0x14df360966a1c4582d2b18edbdae432ea0a27575) on Moonbeam; the chain-level route stays unresolved while the dominant legacy representation's mint authority is an unverifiable EOA. Re-verified 2026-07-20.",
+        "protocol": "Multichain multiDAI (legacy, post-exploit frozen)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller re-verified 2026-07-28 on independent Moonbeam RPCs (rpc.api.moonbeam.network and moonbeam-rpc.publicnode.com): owner() = 0xec4486a90371c9b66f499ff3936f29f0d5af8b7e with empty bytecode (Multichain MPC EOA). Multichain ceased 2023 \u2014 frozen-legacy representation. DefiLlama may also count Axelar DAI on Moonbeam; this row covers the Multichain multiDAI contract in the profile.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-28",
         "sources": [
           {
             "label": "Moonscan multiDAI token",
             "url": "https://moonscan.io/address/0x765277eebeca2e31912c9946eae1021199b39c61"
           },
           {
-            "label": "BeamSwap token list (multiDAI)",
-            "url": "https://github.com/BeamSwap/beamswap-tokenlist"
+            "label": "Moonbeam network RPC owner() re-read",
+            "url": "https://rpc.api.moonbeam.network"
+          },
+          {
+            "label": "Moonbeam publicnode RPC owner() corroboration",
+            "url": "https://moonbeam-rpc.publicnode.com"
           }
-        ]
+        ],
+        "controllerChain": "moonbeam",
+        "controllerAddress": "0xec4486a90371c9b66f499ff3936f29f0d5af8b7e",
+        "failureDomainKeys": [
+          "protocol:multichain"
+        ],
+        "observedBlock": 16615428
       },
       {
         "id": "harmony:0xef977d2f931c1978db5f6747666fa1eacb0d0339",
@@ -1494,22 +1551,41 @@
         "destinationChain": "aurora",
         "canonicalChain": "ethereum",
         "contractAddress": "0xe3520349f477a5f6eb06107066048508498a291b",
-        "protocol": "Rainbow Bridge authority unresolved",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Verified explorer name 'Rainbow Bridged DAI (Aurora)' (EvmErc20). Its sole admin() is 0x4444588443c3a91288c5002483449aba1054192b, which carries no Aurora EVM bytecode, so the bridge-route model cannot honestly encode it as a contract controller. Verified 2026-07-20.",
+        "protocol": "Rainbow Bridge (NEAR)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller re-verified 2026-07-28 on independent Aurora RPCs (mainnet.aurora.dev and aurora.drpc.org): admin() = 0x4444588443c3a91288c5002483449aba1054192b with empty Aurora EVM bytecode (Rainbow Bridge admin EOA / near-side bridge control surface). Token verified as Rainbow Bridged DAI (EvmErc20). No Safe threshold claimed for the admin EOA.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-07-28",
         "sources": [
           {
             "label": "Aurora explorer Rainbow Bridged DAI",
             "url": "https://explorer.aurora.dev/address/0xe3520349f477a5f6eb06107066048508498a291b"
+          },
+          {
+            "label": "Aurora mainnet RPC admin() re-read",
+            "url": "https://mainnet.aurora.dev"
+          },
+          {
+            "label": "Aurora dRPC admin() corroboration",
+            "url": "https://aurora.drpc.org"
+          },
+          {
+            "label": "Aurora Rainbow Bridge repository",
+            "url": "https://github.com/aurora-is-near/rainbow-bridge"
           }
-        ]
+        ],
+        "controllerChain": "aurora",
+        "controllerAddress": "0x4444588443c3a91288c5002483449aba1054192b",
+        "failureDomainKeys": [
+          "protocol:rainbow-bridge",
+          "contract:aurora:0x4444588443c3a91288c5002483449aba1054192b"
+        ],
+        "observedBlock": 208856504
       }
     ]
   },

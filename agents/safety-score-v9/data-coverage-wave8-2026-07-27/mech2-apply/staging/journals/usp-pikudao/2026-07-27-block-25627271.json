@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "kind": "onchain-mechanism-measurement",
+  "assetId": "usp-pikudao",
+  "archetype": "synthetic-delta-neutral",
+  "capturedAt": "2026-07-27T22:56:00Z",
+  "observations": {
+    "ethereum": {
+      "block": 25627271,
+      "blockHash": "0x127eef50495f9167cb636d144fe2d23c718f4d2dad4a6245b191931e15a1eb85",
+      "blockTimestamp": "2026-07-27T22:55:23Z",
+      "rpc": "https://ethereum-rpc.publicnode.com"
+    },
+    "uspToken": {
+      "address": "0x098697ba3fee4ea76294c5d6a466a4e3b3e95fe6",
+      "totalSupplyCalldata": "0x18160ddd",
+      "totalSupplyRaw": "0x000000000000000000000000000000000000000000060de5223adc921d75beee",
+      "totalSupplyUsp": 7319172.452884225
+    },
+    "navOracle": {
+      "address": "0xb52eb13139905eb11c472100a1e86cb1961b8ef3",
+      "latestRoundDataCalldata": "0xfeaf968c",
+      "latestRoundDataRaw": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000110381000000000000000000000000000000000000000000000000000000006a67e1db000000000000000000000000000000000000000000000000000000006a67e1db0000000000000000000000000000000000000000000000000000000000000000",
+      "answerRaw": 1115009,
+      "priceUsd6Decimals": 1.115009,
+      "updatedAtUnix": 1785192923,
+      "updatedAt": "2026-07-27T22:55:23Z"
+    },
+    "backingWallets": {
+      "source": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/usp-backing-wallets",
+      "hot": {
+        "address": "0xb7f15d1122c0f91ee77c1172b9efa4c061952e3c",
+        "ethBalanceRaw": "0x2fac53cb0a716d4",
+        "ethBalance": 0.2147007967059699,
+        "getCode": "0x"
+      },
+      "cold": {
+        "address": "0x16c4150e22c53ece02bb70763625dd3d61f1e7e9",
+        "ethBalanceRaw": "0xadb3a94dcd303d",
+        "ethBalance": 0.04889271070708128,
+        "getCode": "0x",
+        "getThresholdCalldata": "0xe75235b8",
+        "getThresholdResult": "0x",
+        "getOwnersCalldata": "0xa0e67e2b",
+        "getOwnersResult": "0x"
+      },
+      "coldRewardClaim": {
+        "address": "0xa056f4a4213e78890ea6cdae7567ce9287c97726",
+        "ethBalanceRaw": "0xae4cd71c6c30f9",
+        "ethBalance": 0.04906113272618623,
+        "getCode": "0x"
+      },
+      "issuance": {
+        "address": "0x32a605e91ecc3ab972697e58712f6c9c37cabc1d",
+        "ethBalanceRaw": "0x16dd9b7c6848d69",
+        "ethBalance": 0.10297774983220773,
+        "getCode": "0x",
+        "getThresholdResult": "0x"
+      },
+      "note": "All four published backing wallets returned empty bytecode at the pinned block (externally owned accounts, consistent with the documented Fireblocks MPC operational model). Safe getThreshold()/getOwners() calls returned empty results, so the documentation's 'Safe (Gnosis Safe) multisig vault' claim for cold storage is not demonstrated on-chain for these published addresses. ERC-20 holdings were not exhaustively inventoried; DeBank links in the issuer disclosure provide a third-party portfolio view."
+    }
+  },
+  "derivations": {},
+  "metricDisposition": {
+    "hedgeCoverageRatio": {
+      "state": "unavailable",
+      "rationale": "Piku publishes no reconciled hedge notionals or net delta for the USD-TRY arbitrage leg; reserve-backing docs list only example strategy categories and third-party TVL figures."
+    },
+    "marginBufferPct": {
+      "state": "unavailable",
+      "rationale": "No exchange margin balances, maintenance requirements, or quantified liquidity-buffer figures are published; the risks documentation describes buffers only qualitatively."
+    },
+    "lossAbsorptionShare": {
+      "state": "unavailable",
+      "rationale": "No insurance fund, first-loss reserve, or quantified loss-absorption pool is disclosed in any Piku documentation page."
+    }
+  },
+  "sources": [
+    "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/reserve-backing",
+    "https://docs.piku.co/piku/piku-finance/security-and-risks/risks-and-mitigations",
+    "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/usp-backing-wallets",
+    "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/minting-and-redemption/how-to-get-usp-price",
+    "https://ethereum-rpc.publicnode.com"
+  ]
+}

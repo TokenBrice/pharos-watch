@@ -12,8 +12,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "Codex V9 reserve curation",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
     "confidence": "verified",
     "sources": [
       {
@@ -41,11 +41,11 @@
         "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use"
       }
     ],
-    "rationale": "Avant documents USDC as avUSD's mint and redemption asset, while its reserve-fund documentation states that capital backing unstaked avAssets is deployed into underlying strategies. The issuer's transparency snapshot dated 2026-07-07 lists a leveraged positive and negative book, including positive Stablecoins, Other, and derivative categories alongside negative Perpetuals. The separately reported reserve-fund balance is not modeled as the whole backing. A static positive-weight split would erase the portfolio's liabilities and hedge structure.",
-    "compositionBasis": "Issuer avUSD transparency balance sheet at 2026-07-07 and strategy documentation",
-    "compositionAsOf": "2026-07-07",
+    "rationale": "Re-opened primary sources on 2026-07-28. Core-tokens still states avUSD is minted and redeemed 1:1 versus USDC. Reserve-fund docs still state that capital backing unstaked avAssets (including avUSD) is deployed into underlying strategies, and that the separate USD Reserve Fund is a loss backstop held in base-token form rather than the full backing stock. Yield-generation docs still describe market-neutral basis trades and multi-strategy deployment with a public transparency dashboard. Independently, the issuer avUSD metrics API (re-fetched 2026-07-28) returns a liability-aware transparency snapshot with periodEnd 2026-07-21T23:59:59+00:00: netNav 115903039.8680991 USD; leverage assetsUsd 961033819.0467469 and liabilitiesUsd 1208224702.799266; breakdown rows Stablecoins 115875654.649396, Other 10940396.9552925, ETH & Derivatives 3872.714028516711, AVAX & Derivatives 2096.497147409503, BTC & Derivatives 3.34879932509148, and Perpetuals -10918995.371568. The separately reported USD reserve-fund balance API returns about 1.07e6 USD at 0xd98e1faf532b9c481c56741ab3ac47ec18d8f43a and is not modeled as whole backing. A static positive-weight split would erase the portfolio's liabilities and hedge structure, so the structural 100% leveraged market-neutral basket with known-unknown disposition is retained.",
+    "compositionBasis": "Issuer avUSD transparency balance sheet at 2026-07-21 and strategy documentation, re-opened 2026-07-28",
+    "compositionAsOf": "2026-07-21",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current constituent identities, positive and negative weights, venue exposures, hedge effectiveness, and net liability attribution are intentionally unresolved in the static record and require a liability-aware live adapter.",
+    "knownUnknownExposure": "Current constituent identities, positive and negative weights, venue exposures, hedge effectiveness, and net liability attribution remain intentionally unresolved in the static record and require a liability-aware live adapter.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {

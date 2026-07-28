@@ -1,0 +1,164 @@
+{
+  "assetId": "usp-pikudao",
+  "archetype": "synthetic-delta-neutral",
+  "outcome": "READY",
+  "mergeMode": "insert",
+  "overlayEntry": {
+    "assetId": "usp-pikudao",
+    "archetype": "synthetic-delta-neutral",
+    "reviewedAt": "2026-07-27",
+    "sources": [
+      {
+        "label": "Piku USP reserve-backing documentation (strategy categories; no dated weights, hedge notionals, or attestation)",
+        "url": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/reserve-backing"
+      },
+      {
+        "label": "Piku risks-and-mitigations documentation (Fireblocks MPC + Safe multisig custody architecture; qualitative buffer language; no insurance fund)",
+        "url": "https://docs.piku.co/piku/piku-finance/security-and-risks/risks-and-mitigations"
+      },
+      {
+        "label": "Piku USP backing-wallets disclosure (four itemized treasury wallet addresses with DeBank links)",
+        "url": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/usp-backing-wallets"
+      },
+      {
+        "label": "Piku USP price-oracle documentation (manual NAV oracle 0xb52eb13139905eb11c472100a1e86cb1961b8ef3)",
+        "url": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/minting-and-redemption/how-to-get-usp-price"
+      },
+      {
+        "label": "Pinned eth_call/eth_getBalance/eth_getCode reads of the published backing wallets, USP totalSupply, and the NAV oracle at Ethereum block 25627271 via this public RPC endpoint",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "notes": "Measured on Ethereum mainnet at pinned block 25627271 (2026-07-27T22:55:23Z, hash 0x127eef50495f9167cb636d144fe2d23c718f4d2dad4a6245b191931e15a1eb85) via ethereum-rpc.publicnode.com; journaled in the wave-8 packet draft journal 2026-07-27-block-25627271.json. USP totalSupply() = 7,319,172.452884225; the issuer-documented Chainlink-compatible NAV oracle returned answer 1.115009 (6 decimals, updatedAt 2026-07-27T22:55:23Z). Piku's documentation describes a delta-neutral USD-TRY arbitrage leg (BMMF), DeFi allocations, and a stablecoin buffer, but publishes no reconciled hedge notionals or net delta, no exchange margin balances or maintenance requirements, and no insurance or loss-absorption fund, so all three sdn metrics are honestly unavailable; the reserve-backing page lists example strategy partners with TVL figures but no issuer-attested current weights, and no transparency API or reserve dashboard exists. venueAndCustody is graded limited under D3: the issuer itemizes its custody architecture (Fireblocks MPC operational layer plus Safe multisig treasury vaults) and publishes four exact backing-wallet addresses with per-wallet roles, corroborated by pinned on-chain reads confirming the addresses exist and hold small ETH gas balances. The grade does not go higher because the published wallets returned empty bytecode (EOAs, consistent with Fireblocks MPC externally-owned accounts) and Safe getThreshold()/getOwners() calls returned empty, so the docs' 'Safe multisig vault' claim is not demonstrated on-chain for the published cold wallet, and no custodian attestation or account-segregation filing exists. hedgeReconciliation, fundingBasisStress, marginAndLiquidation, unwindCapacity, and lossAbsorption are omitted (bounded-unknown): no itemized evidence exists for any of them.",
+    "metrics": {
+      "hedgeCoverageRatio": null,
+      "marginBufferPct": null,
+      "lossAbsorptionShare": null
+    },
+    "metricApplicability": {
+      "hedgeCoverageRatio": {
+        "state": "unavailable",
+        "rationale": "Searched the Piku reserve-backing, yield-management, and risks documentation and the piku.co platform surface: the issuer describes delta-neutral USD-TRY arbitrage qualitatively but publishes no reconciled hedge notionals or net delta, and no transparency API or reserve dashboard exists. The reserve-backing page is where such a disclosure would live.",
+        "sourceUrl": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/reserve-backing"
+      },
+      "marginBufferPct": {
+        "state": "unavailable",
+        "rationale": "Searched the Piku risks-and-mitigations and reserve-backing documentation: a 'redemption liquidity buffer' and exposure limits are described only qualitatively; no exchange margin balances, maintenance requirements, or quantified buffer figures are published.",
+        "sourceUrl": "https://docs.piku.co/piku/piku-finance/security-and-risks/risks-and-mitigations"
+      },
+      "lossAbsorptionShare": {
+        "state": "unavailable",
+        "rationale": "Searched the Piku risks-and-mitigations, reserve-backing, yield-management, and platform-fees documentation: no insurance fund, first-loss reserve, or other quantified loss-absorption pool is disclosed anywhere in the issuer's documentation set.",
+        "sourceUrl": "https://docs.piku.co/piku/piku-finance/security-and-risks/risks-and-mitigations"
+      }
+    },
+    "components": {
+      "venueAndCustody": {
+        "quality": "limited"
+      }
+    }
+  },
+  "journal": {
+    "filename": "2026-07-27-block-25627271.json",
+    "content": {
+      "schemaVersion": 1,
+      "kind": "onchain-mechanism-measurement",
+      "assetId": "usp-pikudao",
+      "archetype": "synthetic-delta-neutral",
+      "capturedAt": "2026-07-27T22:56:00Z",
+      "observations": {
+        "ethereum": {
+          "block": 25627271,
+          "blockHash": "0x127eef50495f9167cb636d144fe2d23c718f4d2dad4a6245b191931e15a1eb85",
+          "blockTimestamp": "2026-07-27T22:55:23Z",
+          "rpc": "https://ethereum-rpc.publicnode.com"
+        },
+        "uspToken": {
+          "address": "0x098697ba3fee4ea76294c5d6a466a4e3b3e95fe6",
+          "totalSupplyCalldata": "0x18160ddd",
+          "totalSupplyRaw": "0x000000000000000000000000000000000000000000060de5223adc921d75beee",
+          "totalSupplyUsp": 7319172.452884225
+        },
+        "navOracle": {
+          "address": "0xb52eb13139905eb11c472100a1e86cb1961b8ef3",
+          "latestRoundDataCalldata": "0xfeaf968c",
+          "latestRoundDataRaw": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000110381000000000000000000000000000000000000000000000000000000006a67e1db000000000000000000000000000000000000000000000000000000006a67e1db0000000000000000000000000000000000000000000000000000000000000000",
+          "answerRaw": 1115009,
+          "priceUsd6Decimals": 1.115009,
+          "updatedAtUnix": 1785192923,
+          "updatedAt": "2026-07-27T22:55:23Z"
+        },
+        "backingWallets": {
+          "source": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/usp-backing-wallets",
+          "hot": {
+            "address": "0xb7f15d1122c0f91ee77c1172b9efa4c061952e3c",
+            "ethBalanceRaw": "0x2fac53cb0a716d4",
+            "ethBalance": 0.2147007967059699,
+            "getCode": "0x"
+          },
+          "cold": {
+            "address": "0x16c4150e22c53ece02bb70763625dd3d61f1e7e9",
+            "ethBalanceRaw": "0xadb3a94dcd303d",
+            "ethBalance": 0.04889271070708128,
+            "getCode": "0x",
+            "getThresholdCalldata": "0xe75235b8",
+            "getThresholdResult": "0x",
+            "getOwnersCalldata": "0xa0e67e2b",
+            "getOwnersResult": "0x"
+          },
+          "coldRewardClaim": {
+            "address": "0xa056f4a4213e78890ea6cdae7567ce9287c97726",
+            "ethBalanceRaw": "0xae4cd71c6c30f9",
+            "ethBalance": 0.04906113272618623,
+            "getCode": "0x"
+          },
+          "issuance": {
+            "address": "0x32a605e91ecc3ab972697e58712f6c9c37cabc1d",
+            "ethBalanceRaw": "0x16dd9b7c6848d69",
+            "ethBalance": 0.10297774983220773,
+            "getCode": "0x",
+            "getThresholdResult": "0x"
+          },
+          "note": "All four published backing wallets returned empty bytecode at the pinned block (externally owned accounts, consistent with the documented Fireblocks MPC operational model). Safe getThreshold()/getOwners() calls returned empty results, so the documentation's 'Safe (Gnosis Safe) multisig vault' claim for cold storage is not demonstrated on-chain for these published addresses. ERC-20 holdings were not exhaustively inventoried; DeBank links in the issuer disclosure provide a third-party portfolio view."
+        }
+      },
+      "derivations": {},
+      "metricDisposition": {
+        "hedgeCoverageRatio": {
+          "state": "unavailable",
+          "rationale": "Piku publishes no reconciled hedge notionals or net delta for the USD-TRY arbitrage leg; reserve-backing docs list only example strategy categories and third-party TVL figures."
+        },
+        "marginBufferPct": {
+          "state": "unavailable",
+          "rationale": "No exchange margin balances, maintenance requirements, or quantified liquidity-buffer figures are published; the risks documentation describes buffers only qualitatively."
+        },
+        "lossAbsorptionShare": {
+          "state": "unavailable",
+          "rationale": "No insurance fund, first-loss reserve, or quantified loss-absorption pool is disclosed in any Piku documentation page."
+        }
+      },
+      "sources": [
+        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/reserve-backing",
+        "https://docs.piku.co/piku/piku-finance/security-and-risks/risks-and-mitigations",
+        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/usp-backing-wallets",
+        "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/minting-and-redemption/how-to-get-usp-price",
+        "https://ethereum-rpc.publicnode.com"
+      ]
+    }
+  },
+  "evidenceSummary": "Pinned Ethereum block 25627271 (2026-07-27T22:55:23Z) via ethereum-rpc.publicnode.com: USP totalSupply 7,319,172.452884225; issuer-documented NAV oracle answer 1.115009 (6dp, updatedAt matching the pinned block). The four issuer-published backing wallets (hot 0xb7f1...2e3c, cold 0x16c4...e7e9, cold-reward-claim 0xa056...7726, issuance 0x32a6...bc1d) were verified to exist with small ETH gas balances but empty bytecode (EOAs); Safe getThreshold/getOwners returned empty, so the docs' Safe-multisig cold-vault claim is not on-chain-demonstrated. No hedge notionals, margin figures, or loss-absorption fund are disclosed anywhere in docs.piku.co; all three sdn metrics are unavailable. venueAndCustody graded limited (itemized custody architecture + published wallet addresses corroborated by on-chain reads; no attestation).",
+  "primarySources": [
+    "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/reserve-backing",
+    "https://docs.piku.co/piku/piku-finance/security-and-risks/risks-and-mitigations",
+    "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/usp-backing-wallets",
+    "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/minting-and-redemption/how-to-get-usp-price",
+    "https://ethereum-rpc.publicnode.com"
+  ],
+  "blockedReason": null,
+  "missingSources": [
+    "Reconciled hedge notional / net-delta disclosure for the BMMF USD-TRY arbitrage leg (no transparency API or reserve dashboard exists)",
+    "Exchange margin balances and maintenance-requirement disclosure",
+    "Insurance fund / first-loss / loss-absorption pool disclosure",
+    "Independent custodian attestation or account-segregation filing for the Fireblocks/Safe custody arrangement"
+  ]
+}

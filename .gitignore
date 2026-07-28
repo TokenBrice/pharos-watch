@@ -129,6 +129,9 @@ next-env.d.ts
 # cmcs
 .cmcs/
 
+# grok local scratch artifacts
+.grok
+
 # one-time migration artifacts
 migration-*.sql
 d1-backup-*.sql

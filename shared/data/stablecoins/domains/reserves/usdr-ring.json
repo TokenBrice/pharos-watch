@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
-    "reviewer": "TERRA-II reserve verification",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -35,9 +35,9 @@
         "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4?tab=contract"
       }
     ],
-    "rationale": "Ring's current documentation describes its public swap and wrapping stack but does not publish a reproducible USDR reserve inventory. The verified USDR and Core contracts establish permissioned issuance and governance surfaces, not the assets or positions supporting circulating USDR. The prior generic backing claim is therefore retained only as one fully unresolved aggregate rather than converted into invented constituent weights.",
+    "rationale": "Write-time re-open 2026-07-28 of docs.ring.exchange (current product is swap/wrapping stack; llms.txt lists no USDR reserve inventory) and Blockscout verified USDR/Core contract pages (permissioned issuance surface). No reproducible reserve composition; envelope remains 100% other with ku=100.",
     "compositionBasis": "Current issuer documentation and verified deployed contracts; no current reserve allocation published",
-    "compositionAsOf": "2026-07-15",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The current reserve assets, strategy positions, allocation weights, obligors, and withdrawal liquidity are not publicly reproducible.",
     "knownUnknownExposurePct": 100,

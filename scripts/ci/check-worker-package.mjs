@@ -8,7 +8,7 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 /** @param {{ run?: (command: string, args: string[], options: Record<string, unknown>) => { status?: number | null, error?: unknown } }} [options] */
 export function checkWorkerPackage({ run = spawnSync } = {}) {
   const repoRoot = process.cwd();
-  const outputDirectory = resolve(repoRoot, ".cache/merge-gate/discovery/worker-bundle");
+  const outputDirectory = resolve(repoRoot, ".cache/release-check/worker-bundle");
   rmSync(outputDirectory, { force: true, recursive: true });
   const result = run(
     "npx",

@@ -7,13 +7,20 @@
       "risk": "very-low",
       "assetClass": "other",
       "issuerOrObligor": "Canadian government and regulated Canadian financial institutions",
-      "riskFactors": ["credit", "duration", "counterparty", "custody", "liquidity", "legal"],
+      "riskFactors": [
+        "credit",
+        "duration",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "legal"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 reserve batch 7",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "verified",
     "sources": [
       {
@@ -29,9 +36,9 @@
         "url": "https://stablecorp.ca/transparency"
       }
     ],
-    "rationale": "Stablecorp's live balances API reported CAD 1,651,920.55 of total fiat reserves against CAD 1,651,920.55 QCAD supply on 2026-07-21. Stablecorp's transparency page links monthly independent QCAD attestations, including May 2026, and the regulatory order permits Canadian currency, short-term Canadian government debt, regulated CAD money-market funds, and other approved assets. Neither the live feed nor the reviewed public attestation index publishes the current allocation within that eligible basket.",
+    "rationale": "Stablecorp's live balances API reported CAD 1,651,920.55 of total fiat reserves against CAD 1,651,920.55 QCAD supply on 2026-07-21. Stablecorp's transparency page links monthly independent QCAD attestations, including May 2026, and the regulatory order permits Canadian currency, short-term Canadian government debt, regulated CAD money-market funds, and other approved assets. Neither the live feed nor the reviewed public attestation index publishes the current allocation within that eligible basket. Write-time re-open 2026-07-28: Stablecorp balances API reports totalSupply=totalFiatReserves=1,651,920.55 CAD as of 2026-07-27T23:10Z (full fiat-reserve parity) but no instrument weights; transparency page + OSC QCAD Digital Trust order still establish regulated CAD reserve posture. Envelope remains 100% fiat reserves with knownUnknownExposurePct=100 pending class split.",
     "compositionBasis": "Stablecorp live total-reserves disclosure, monthly attestation index, and the regulatory order's eligible-asset envelope",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The full eligible reserve envelope is disclosed, but the current mix among cash, short-term Canadian government debt, money-market funds, and any approved assets is not published.",
     "knownUnknownExposurePct": 100,

@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "kind": "onchain-mechanism-measurement",
+  "assetId": "sbold-k3-capital",
+  "archetype": "cdp",
+  "capturedAt": "2026-07-27T22:57:00Z",
+  "observations": {
+    "ethereum": {
+      "block": 25627256,
+      "blockHex": "0x1870a78",
+      "blockTimestamp": "2026-07-27T22:52:23Z",
+      "rpc": "https://ethereum-rpc.publicnode.com"
+    },
+    "vault": {
+      "address": "0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
+      "reads": {
+        "asset()": {
+          "calldata": "0x38d52e0f",
+          "raw": "0x0000000000000000000000006440f144b7e50d6a8439336510312d2f54beb01d",
+          "decoded": "0x6440F144b7e50D6a8439336510312d2F54BeB01D (on-chain symbol() 'BOLD', name() 'BOLD Stablecoin')"
+        },
+        "totalAssets()": {
+          "calldata": "0x01e1d114",
+          "raw": "0x0000000000000000000000000000000000000000000662a78d6cccb2da08f9de",
+          "decodedBold": 7719437.630014434
+        },
+        "totalSupply()": {
+          "calldata": "0x18160ddd",
+          "raw": "0x00000000000000000000000000000000000000000005efb29762243d94dfaaba",
+          "decodedShares": 7176569.1162452055
+        },
+        "convertToAssets(1e18)": {
+          "calldata": "0x07a2d13a0000000000000000000000000000000000000000000000000de0b6b3a7640000",
+          "raw": "0x0000000000000000000000000000000000000000000000000eed750a836b2b7f",
+          "decodedBoldPerShare": 1.075644574026378
+        },
+        "sps(0)": {
+          "calldata": "0x349bc2510000000000000000000000000000000000000000000000000000000000000000",
+          "raw": "0x0000000000000000000000005721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf0000000000000000000000000000000000000000000000000000000000000bb8000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+          "decoded": "stabilityPool 0x5721cbbd64fc7ae3ef44a0a3f9a790a9264cf9bf, weight 3000 bps (30%), collateral 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 (WETH)"
+        },
+        "sps(1)": {
+          "calldata": "0x349bc2510000000000000000000000000000000000000000000000000000000000000001",
+          "raw": "0x0000000000000000000000009502b7c397e9aa22fe9db7ef7daf21cd2aebe56b00000000000000000000000000000000000000000000000000000000000017700000000000000000000000007f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+          "decoded": "stabilityPool 0x9502b7c397e9aa22fe9db7ef7daf21cd2aebe56b, weight 6000 bps (60%), collateral 0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0 (wstETH)"
+        },
+        "sps(2)": {
+          "calldata": "0x349bc2510000000000000000000000000000000000000000000000000000000000000002",
+          "raw": "0x000000000000000000000000d442e41019b7f5c4dd78f50dc03726c44614869500000000000000000000000000000000000000000000000000000000000003e8000000000000000000000000ae78736cd615f374d3085123a210448e74fc6393",
+          "decoded": "stabilityPool 0xd442e41019b7f5c4dd78f50dc03726c446148695, weight 1000 bps (10%), collateral 0xae78736cd615f374d3085123a210448e74fc6393 (rETH)"
+        },
+        "sps(3)": {
+          "calldata": "0x349bc2510000000000000000000000000000000000000000000000000000000000000003",
+          "raw": null,
+          "decoded": "call reverted — array bounds confirm exactly three configured Stability Pools"
+        }
+      }
+    },
+    "liquityStatsApi": {
+      "url": "https://api.liquity.org/v2/ethereum.json",
+      "fetchedAt": "2026-07-27T22:56:39Z",
+      "total_bold_supply": "29607199.868216099982546109",
+      "total_coll_value": "77865103.031122161589178725",
+      "total_sp_deposits": "20879166.75853166961749901",
+      "sboldFieldTvl": 7176525.850770663
+    }
+  },
+  "derivations": {
+    "vaultSharePriceBold": {
+      "formula": "convertToAssets(1e18) / 1e18 (cross-check: totalAssets/totalSupply = 1.075644574026378)",
+      "value": 1.075644574026378
+    },
+    "inheritedParentCollateralizationRatio": {
+      "formula": "total_coll_value / total_bold_supply",
+      "value": 2.6299381021408865,
+      "disposition": "context only; parent-system figure, not an sBOLD wrapper metric"
+    },
+    "inheritedParentLiquidationCoverage": {
+      "formula": "total_sp_deposits / total_bold_supply",
+      "value": 0.7052057219685222,
+      "disposition": "basis for the backstop component grade; sBOLD deposits ride inside these pools (on-chain totalAssets 7,719,437.63 BOLD at block 25627256 is consistent with being part of the API-reported 20,879,166.76 BOLD pool deposits)"
+    }
+  },
+  "metricDisposition": {
+    "collateralizationRatio": {
+      "state": "not-applicable",
+      "rationale": "The wrapper originates no borrower debt and runs no collateralized vault system of its own; a system collateralization ratio is structurally undefined at the wrapper level."
+    },
+    "liquidationCapacityRatio": {
+      "state": "not-applicable",
+      "rationale": "The wrapper has no debt of its own to offset; its deposits are themselves liquidation capital committed to the parent BOLD system."
+    }
+  },
+  "backstopDisclosureSearch": {
+    "k3DocsIndex": "https://k3-capital.gitbook.io/sbold/llms.txt fetched 2026-07-27 — full page list (Liquity v2 Design, Introducing sBOLD, Technical Details, Interactions, Price Oracle, Audit Reports, Brand Assets); every page grepped for backstop/insurance/reserve/recapitalization/bad-debt terms",
+    "result": "No wrapper-level backstop, insurance fund, or reserve is disclosed anywhere in K3's documentation; the exchange-rate section explicitly conditions compounding on 'no bad debt from unsuccessful liquidations' (losses pass through to the share rate). Audit reports exist (ChainSecurity, Dedaub) but cover code security, not loss backstopping.",
+    "contractInventory": "Verified source (K3Capital/sBOLD master, contracts/sBold.sol + base/BaseSBold.sol): function inventory contains deposit/mint/redeem/withdraw, swap, rebalanceSPs, previews, onlyOwner setters (fees, reward, slippage, swapAdapter, priceOracle, vault, maxCollInBold), pause/unpause — no backstop, insurance, or recapitalization module."
+  },
+  "sources": [
+    "https://k3-capital.gitbook.io/sbold/technical-details",
+    "https://k3-capital.gitbook.io/sbold/introducing-sbold",
+    "https://k3-capital.gitbook.io/sbold/technical-details/interactions",
+    "https://github.com/K3Capital/sBOLD",
+    "https://api.liquity.org/v2/ethereum.json",
+    "https://ethereum-rpc.publicnode.com"
+  ]
+}

@@ -18,43 +18,603 @@
   "pegMechanism": "XAI is borrowed into existence against approved Silo collateral and burned on repayment. It has no dedicated stability module: the soft USD peg relies on arbitrage (borrow/repay always settle at $1, so a sub-$1 market price is repaid at a discount and an above-$1 price is sold) backed by DEX liquidity, while SiloDAO controls minting capacity and the XAI borrow interest rate across silos to manage circulating supply",
   "mechanismArchetype": "cdp",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "SiloDAO's 2024 deprecation plan called for XAI credit lines to be retracted and the mint module disabled. Historical v1 oracle documentation describes a configurable per-asset price-provider repository, but there is no current production XAI branch to review and the legacy branch cannot be reconstructed completely from public evidence.",
+    "tier": "redundant-with-failover",
+    "summary": "Legacy Silo v1 XAI residual debt is multi-silo. At Ethereum block 25627249, nine deprecation-listed markets retained 3,770.32 XAI of totalBorrow (cbETH 91.38% of residual debt). Solvency prices route through legacy PriceProvidersRepository 0x7C2ca9D502f2409BeceAfa68E97a176Ff805029F (quoteToken WETH). XAI debt itself is priced via ChainlinkV3PriceProvider 0xe37B8c83138caF12E57632D19c06Eb561D47e423 using the USDC/ETH aggregator 0x986b5E1e1755e3C2440e960477f25201B0a8bbD4 (heartbeat 87000s) with fallback provider 0x2f0a401966219351887A608493954A7078ef1bc0 — XAI has no independent market oracle. Dominant cbETH collateral uses Chainlink CBETH/ETH with UniswapV3PriceProviderV2 fallback. Permissionless flashLiquidate has no stability-pool backstop; SiloDAO deprecated new XAI mint capacity in 2024.",
+    "branchModel": "multi-branch",
     "branchApplicability": {
-      "disposition": "unresolved",
-      "reviewedAt": "2026-07-21",
-      "reviewer": "Codex Prompt 6b oracle review",
-      "rationale": "SiloDAO's January 2024 deprecation plan explicitly called for XAI credit lines and direct deposits to be retracted, the credit lines burned, and the XAI module deprecated so no more XAI could be minted. The official historical PriceProvidersRepository documentation establishes that Silo v1 routed supported assets to configured providers, but it does not identify the complete former XAI-specific silo or asset mapping. The verified XAI token contract also cannot reveal the retired branch's feed wiring, fallback, liquidation timing, backstop, or shutdown and bad-debt handling. A current configuration therefore does not exist, and a complete historical branch inventory is not recoverable from the reviewed public evidence.",
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-28",
+      "reviewer": "Grok wave-8 controls researcher",
+      "rationale": "SiloDAO's 2024 deprecation plan listed the XAI credit-line markets and directed credit-line burns, but residual totalBorrow remains on nine of those silos at Ethereum block 25627249 (sum 3,770.32 XAI). Each debt-bearing silo is an isolated collateral-liquidation branch with its own siloAsset oracle path, LTV/liquidation-threshold config in SiloRepository 0xd998C35B7900b344bbBe6555cc11576942Cf309d, and shared flashLiquidate mechanics. Deprecation-listed markets with zero XAI totalBorrow (LUSD, LQTY, rETH, LINK, CVX, OHM, BAL, wBTC, and related) are explicit inactive exclusions for this review, not missing branches. Inventory is the deprecation market set re-read on-chain; it is not a claim that every historical XAI silo ever created was enumerated beyond that set.",
       "sources": [
         {
           "label": "SiloDAO plan to deprecate XAI",
           "url": "https://gov.silo.finance/t/a-plan-to-deprecate-xai-stablecoin/443"
         },
         {
-          "label": "Silo PriceProvidersRepository documentation",
-          "url": "https://devdocs.silo.finance/smart-contracts-overview/oracle/priceprovidersrepository"
+          "label": "Silo legacy smart-contract registry",
+          "url": "https://devdocs.silo.finance/security/smart-contracts"
         },
         {
-          "label": "Verified XAI Ethereum token contract",
-          "url": "https://eth.blockscout.com/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac?tab=contract"
+          "label": "SiloRepository getMaximumLTV / assetStorage reads (Ethereum PublicNode)",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Finalized Ethereum block 25627249",
+          "url": "https://eth.blockscout.com/block/25627249"
         }
       ]
     },
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Prompt 6b oracle review",
-    "confidence": "limited",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 controls researcher",
+    "confidence": "verified",
     "sources": [
       {
         "label": "SiloDAO plan to deprecate XAI",
         "url": "https://gov.silo.finance/t/a-plan-to-deprecate-xai-stablecoin/443"
       },
       {
+        "label": "Silo legacy smart-contract registry",
+        "url": "https://devdocs.silo.finance/security/smart-contracts"
+      },
+      {
         "label": "Silo PriceProvidersRepository documentation",
         "url": "https://devdocs.silo.finance/smart-contracts-overview/oracle/priceprovidersrepository"
       },
       {
-        "label": "Verified XAI Ethereum token contract",
-        "url": "https://eth.blockscout.com/address/0xd7c9f0e536dc865ae858b0c0453fe76d13c3beac?tab=contract"
+        "label": "Silo flashLiquidate interface documentation",
+        "url": "https://devdocs.silo.finance/smart-contracts-overview/core-protocol/silo"
+      },
+      {
+        "label": "Verified ChainlinkV3PriceProvider source",
+        "url": "https://github.com/silo-finance/silo-core-v1/blob/master/contracts/priceProviders/chainlinkV3/ChainlinkV3PriceProvider.sol"
+      },
+      {
+        "label": "Legacy PriceProvidersRepository",
+        "url": "https://etherscan.io/address/0x7C2ca9D502f2409BeceAfa68E97a176Ff805029F#code"
+      },
+      {
+        "label": "Legacy ChainlinkV3PriceProvider",
+        "url": "https://etherscan.io/address/0xe37B8c83138caF12E57632D19c06Eb561D47e423#code"
+      },
+      {
+        "label": "Ethereum PublicNode RPC (block 25627249 reads)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "branches": [
+      {
+        "id": "xai-cbeth-silo",
+        "label": "cbETH silo residual XAI debt",
+        "tier": "redundant-with-failover",
+        "summary": "Dominant residual branch (91.38% of measured XAI totalBorrow). cbETH collateral is priced by Chainlink CBETH/ETH with UniswapV3PriceProviderV2 fallback; XAI debt is valued via the shared USDC/ETH Chainlink feed.",
+        "collateralAssets": [
+          "cbETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Silo ChainlinkV3PriceProvider (cbETH) + UniswapV3PriceProviderV2 fallback",
+            "path": "PriceProvidersRepository 0x7C2ca9D502f2409BeceAfa68E97a176Ff805029F -> ChainlinkV3PriceProvider 0xe37B8c83138caF12E57632D19c06Eb561D47e423 assetData(cbETH): aggregator CBETH/ETH 0xF017fcB346A1885194689bA23Eff2fE6fA5C483b heartbeat 87000s, forceFallback false, fallback UniswapV3PriceProviderV2 0xFAe64471ae04068e872C6A73C9F5a255c37dDbDC; XAI debt via same provider aggregator USDC/ETH 0x986b5E1e1755e3C2440e960477f25201B0a8bbD4 heartbeat 87000s fallback 0x2f0a401966219351887A608493954A7078ef1bc0; quoteToken WETH",
+            "address": "0xe37B8c83138caF12E57632D19c06Eb561D47e423",
+            "chain": "ethereum",
+            "heartbeatSec": 87000,
+            "stalenessBoundSec": 87000,
+            "observedAt": "2026-07-28",
+            "observedBlock": 25627249,
+            "failureDomainKeys": [
+              "chainlink:ethereum:cbeth-eth",
+              "uniswapv3:ethereum:silo-fallback",
+              "chainlink:ethereum:usdc-eth-as-xai",
+              "silo-legacy-price-providers-repository",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "ChainlinkV3PriceProvider.getPrice uses the aggregator when the answer is positive and updated within heartbeat and forceFallback is false; otherwise it requires a configured fallback provider and reverts if none is set. cbETH and XAI both have non-zero fallback providers at the reviewed block. Emergency manager can forceFallback when aggregator and fallback diverge by at least 10%.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 25627249,
+        "collateralParameters": [
+          {
+            "asset": "cbETH",
+            "maximumLtvPct": 80,
+            "note": "Silo 0x2eaf84b425822edF450fC5FdeEc085f2e5aDa98b; SiloRepository.getMaximumLTV=0.80e18, getLiquidationThreshold=0.85e18 at block 25627249. XAI totalBorrow 3445.327931670684."
+          }
+        ],
+        "liquidationMechanism": "Permissionless Silo.flashLiquidate(users, flashReceiverData) seizes under-threshold collateral for an IFlashLiquidationReceiver that must repay the required debt shares in the same flow. ManualLiquidation helper 0x669229276F5625046D6A1017C3258315Ba69c72E exists. protocolLiquidationFee() returned 0 at the reviewed block.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool, insurance fund, or protocol bad-debt buyer. Liquidation depends on an external flash receiver supplying XAI repayment.",
+        "shutdownOrBadDebtBehavior": "SiloDAO deprecation burned unused XAI credit lines and raised borrow rates but defines no global XAI settlement or debt socialization. If flash liquidation is uneconomic, residual XAI debt can remain open inside the isolated silo.",
+        "debtSharePct": 91.38,
+        "failureDomainKeys": [
+          "silo-legacy-cbeth-xai",
+          "chainlink:ethereum:cbeth-eth",
+          "chainlink:ethereum:usdc-eth-as-xai",
+          "silo-flash-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "cbETH Silo",
+            "url": "https://etherscan.io/address/0x2eaf84b425822edF450fC5FdeEc085f2e5aDa98b#code"
+          },
+          {
+            "label": "ChainlinkV3PriceProvider assetData/getPrice",
+            "url": "https://etherscan.io/address/0xe37B8c83138caF12E57632D19c06Eb561D47e423#code"
+          }
+        ]
+      },
+      {
+        "id": "xai-usdc-silo",
+        "label": "USDC silo residual XAI debt",
+        "tier": "redundant-with-failover",
+        "summary": "USDC collateral and XAI debt both resolve through the same USDC/ETH Chainlink aggregator with distinct configured fallbacks.",
+        "collateralAssets": [
+          "USDC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Silo ChainlinkV3PriceProvider (USDC and XAI share USDC/ETH)",
+            "path": "USDC and XAI both map to aggregator 0x986b5E1e1755e3C2440e960477f25201B0a8bbD4 (description USDC/ETH) heartbeat 87000s; USDC fallback UniswapV3PriceProviderV2 0xFAe64471ae04068e872C6A73C9F5a255c37dDbDC; XAI fallback 0x2f0a401966219351887A608493954A7078ef1bc0",
+            "address": "0xe37B8c83138caF12E57632D19c06Eb561D47e423",
+            "chain": "ethereum",
+            "heartbeatSec": 87000,
+            "stalenessBoundSec": 87000,
+            "observedAt": "2026-07-28",
+            "observedBlock": 25627249,
+            "failureDomainKeys": [
+              "chainlink:ethereum:usdc-eth",
+              "chainlink:ethereum:usdc-eth-as-xai",
+              "uniswapv3:ethereum:silo-fallback",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Same ChainlinkV3PriceProvider heartbeat/fallback rules as the cbETH branch. USDC and XAI both have non-zero fallbacks at the reviewed block.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 25627249,
+        "collateralParameters": [
+          {
+            "asset": "USDC",
+            "maximumLtvPct": 90,
+            "note": "Silo 0xFCCc27AABd0AB7a0B2Ad2B7760037B1eAb61616b; maxLTV 0.90e18, liquidationThreshold 0.95e18; XAI totalBorrow 157.42096892435703."
+          }
+        ],
+        "liquidationMechanism": "Permissionless flashLiquidate with flash-receiver repayment; protocolLiquidationFee 0.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool or protocol bad-debt buyer; external liquidator must repay XAI.",
+        "shutdownOrBadDebtBehavior": "No global XAI settlement; uneconomic residual debt can remain in the isolated USDC silo after credit-line burns.",
+        "debtSharePct": 4.17,
+        "failureDomainKeys": [
+          "silo-legacy-usdc-xai",
+          "chainlink:ethereum:usdc-eth",
+          "silo-flash-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "USDC Silo",
+            "url": "https://etherscan.io/address/0xFCCc27AABd0AB7a0B2Ad2B7760037B1eAb61616b#code"
+          },
+          {
+            "label": "USDC/ETH Chainlink aggregator",
+            "url": "https://etherscan.io/address/0x986b5E1e1755e3C2440e960477f25201B0a8bbD4"
+          }
+        ]
+      },
+      {
+        "id": "xai-gohm-silo",
+        "label": "gOHM silo residual XAI debt",
+        "tier": "standard-external",
+        "summary": "gOHM is priced by GOHMPriceProvider as OHM price from PriceProvidersRepository times on-chain gOHM index; OHM itself uses Chainlink OHMv2/ETH with UniswapV3 fallback.",
+        "collateralAssets": [
+          "gOHM"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "GOHMPriceProvider over OHM Chainlink path",
+            "path": "PriceProvidersRepository -> GOHMPriceProvider 0xba53d3a08fb8dd4309881b4e8a3bc386ea0ddb1f: getPrice = repository.getPrice(OHM 0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5) * IgOHM.index() / 1e9; OHM via ChainlinkV3PriceProvider aggregator OHMv2/ETH 0x9a72298ae3886221820B1c878d12D872087D3a23 heartbeat 87000s fallback UniswapV3PriceProviderV2 0xFAe64471ae04068e872C6A73C9F5a255c37dDbDC; XAI debt via USDC/ETH as above",
+            "address": "0xba53d3a08fb8dd4309881b4e8a3bc386ea0ddb1f",
+            "chain": "ethereum",
+            "heartbeatSec": 87000,
+            "stalenessBoundSec": 87000,
+            "observedAt": "2026-07-28",
+            "observedBlock": 25627249,
+            "failureDomainKeys": [
+              "silo-gohm-index-provider",
+              "chainlink:ethereum:ohmv2-eth",
+              "chainlink:ethereum:usdc-eth-as-xai",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "gOHM has no alternate provider of its own; it inherits OHM's Chainlink-to-UniswapV3 fallback. Index is read from the gOHM token. XAI debt uses the USDC/ETH feed with its own fallback.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 25627249,
+        "collateralParameters": [
+          {
+            "asset": "gOHM",
+            "maximumLtvPct": 70,
+            "note": "Silo 0xc413dd03555f3eb29d834b482d386b2999dc2eb0; maxLTV 0.70e18, liquidationThreshold 0.85e18; XAI totalBorrow 116.07735825623956."
+          }
+        ],
+        "liquidationMechanism": "Permissionless flashLiquidate with flash-receiver repayment; protocolLiquidationFee 0.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool or protocol bad-debt buyer.",
+        "shutdownOrBadDebtBehavior": "No global XAI settlement; residual debt can remain in the isolated gOHM silo.",
+        "debtSharePct": 3.08,
+        "failureDomainKeys": [
+          "silo-legacy-gohm-xai",
+          "silo-gohm-index-provider",
+          "silo-flash-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "gOHM Silo",
+            "url": "https://etherscan.io/address/0xc413dd03555f3eb29d834b482d386b2999dc2eb0#code"
+          },
+          {
+            "label": "GOHMPriceProvider",
+            "url": "https://etherscan.io/address/0xba53d3a08fb8dd4309881b4e8a3bc386ea0ddb1f#code"
+          }
+        ]
+      },
+      {
+        "id": "xai-usdt-silo",
+        "label": "USDT silo residual XAI debt",
+        "tier": "redundant-with-failover",
+        "summary": "USDT collateral uses Chainlink USDT/ETH with UniswapV3 fallback; XAI debt uses USDC/ETH with its fallback.",
+        "collateralAssets": [
+          "USDT"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Silo ChainlinkV3PriceProvider",
+            "path": "USDT aggregator USDT/ETH 0xEe9F2375b4bdF6387aa8265dD4FB8F16512A1d46 heartbeat 87000s fallback UniswapV3PriceProviderV2 0xFAe64471ae04068e872C6A73C9F5a255c37dDbDC; XAI via USDC/ETH 0x986b5E1e1755e3C2440e960477f25201B0a8bbD4",
+            "address": "0xe37B8c83138caF12E57632D19c06Eb561D47e423",
+            "chain": "ethereum",
+            "heartbeatSec": 87000,
+            "stalenessBoundSec": 87000,
+            "observedAt": "2026-07-28",
+            "observedBlock": 25627249,
+            "failureDomainKeys": [
+              "chainlink:ethereum:usdt-eth",
+              "chainlink:ethereum:usdc-eth-as-xai",
+              "uniswapv3:ethereum:silo-fallback",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "ChainlinkV3PriceProvider primary-with-fallback rules; both USDT and XAI have non-zero fallbacks.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 25627249,
+        "collateralParameters": [
+          {
+            "asset": "USDT",
+            "maximumLtvPct": 90,
+            "note": "Silo 0xcd888c9Bd53c1CA49b9251F74Cc93C73E22963fa; maxLTV 0.90e18, liquidationThreshold 0.95e18; XAI totalBorrow 27.745870687097124."
+          }
+        ],
+        "liquidationMechanism": "Permissionless flashLiquidate with flash-receiver repayment; protocolLiquidationFee 0.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool or protocol bad-debt buyer.",
+        "shutdownOrBadDebtBehavior": "No global XAI settlement; residual debt can remain in the isolated USDT silo.",
+        "debtSharePct": 0.74,
+        "failureDomainKeys": [
+          "silo-legacy-usdt-xai",
+          "chainlink:ethereum:usdt-eth",
+          "silo-flash-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "USDT Silo",
+            "url": "https://etherscan.io/address/0xcd888c9Bd53c1CA49b9251F74Cc93C73E22963fa#code"
+          }
+        ]
+      },
+      {
+        "id": "xai-eth-bridge-silo",
+        "label": "XAI-ETH silo residual XAI debt",
+        "tier": "standard-external",
+        "summary": "XAI silo where WETH is the borrowable bridge collateral for residual XAI debt. WETH is the repository quoteToken (unit price); XAI debt uses the USDC/ETH feed.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Quote-token identity for WETH + Chainlink USDC/ETH for XAI",
+            "path": "WETH is PriceProvidersRepository.quoteToken so price is 10**decimals with no external feed; XAI debt via ChainlinkV3PriceProvider USDC/ETH 0x986b5E1e1755e3C2440e960477f25201B0a8bbD4 heartbeat 87000s fallback 0x2f0a401966219351887A608493954A7078ef1bc0",
+            "address": "0xe37B8c83138caF12E57632D19c06Eb561D47e423",
+            "chain": "ethereum",
+            "heartbeatSec": 87000,
+            "stalenessBoundSec": 87000,
+            "observedAt": "2026-07-28",
+            "observedBlock": 25627249,
+            "failureDomainKeys": [
+              "silo-weth-quote-token",
+              "chainlink:ethereum:usdc-eth-as-xai",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "WETH has no external feed dependency. XAI falls back to 0x2f0a401966219351887A608493954A7078ef1bc0 when the USDC/ETH aggregator is stale or forced off.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 25627249,
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 85,
+            "note": "Silo 0xC8CD77d4cd9511f2822f24aD14FE9e3C97C57836 (siloAsset XAI); WETH maxLTV 0.85e18, liquidationThreshold 0.90e18; XAI totalBorrow 10.354372975542338."
+          }
+        ],
+        "liquidationMechanism": "Permissionless flashLiquidate with flash-receiver repayment; protocolLiquidationFee 0.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool or protocol bad-debt buyer.",
+        "shutdownOrBadDebtBehavior": "No global XAI settlement; residual debt can remain in the isolated XAI-ETH silo.",
+        "debtSharePct": 0.27,
+        "failureDomainKeys": [
+          "silo-legacy-xai-eth",
+          "chainlink:ethereum:usdc-eth-as-xai",
+          "silo-flash-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "XAI-ETH Silo",
+            "url": "https://etherscan.io/address/0xC8CD77d4cd9511f2822f24aD14FE9e3C97C57836#code"
+          }
+        ]
+      },
+      {
+        "id": "xai-fxs-silo",
+        "label": "FXS silo residual XAI debt",
+        "tier": "redundant-with-failover",
+        "summary": "FXS uses Chainlink FXS/USD with convertToQuote and UniswapV3 fallback; XAI debt uses USDC/ETH.",
+        "collateralAssets": [
+          "FXS"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Silo ChainlinkV3PriceProvider",
+            "path": "FXS aggregator FXS/USD 0x6Ebc52C8C1089be9eB3945C4350B68B8E4C2233f heartbeat 87000s convertToQuote true fallback UniswapV3PriceProviderV2 0xFAe64471ae04068e872C6A73C9F5a255c37dDbDC; XAI via USDC/ETH",
+            "address": "0xe37B8c83138caF12E57632D19c06Eb561D47e423",
+            "chain": "ethereum",
+            "heartbeatSec": 87000,
+            "stalenessBoundSec": 87000,
+            "observedAt": "2026-07-28",
+            "observedBlock": 25627249,
+            "failureDomainKeys": [
+              "chainlink:ethereum:fxs-usd",
+              "chainlink:ethereum:quote-aggregator",
+              "chainlink:ethereum:usdc-eth-as-xai",
+              "uniswapv3:ethereum:silo-fallback",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Chainlink primary with UniswapV3 fallback for FXS; convertToQuote also depends on the provider's quote aggregator heartbeat (7200s at review).",
+        "observedAt": "2026-07-28",
+        "observedBlock": 25627249,
+        "collateralParameters": [
+          {
+            "asset": "FXS",
+            "maximumLtvPct": 65,
+            "note": "Silo 0xf39f64D85AD89200e3b06C67F679c45798bF6a5b; maxLTV 0.65e18, liquidationThreshold 0.85e18; XAI totalBorrow 8.235017450209332."
+          }
+        ],
+        "liquidationMechanism": "Permissionless flashLiquidate with flash-receiver repayment; protocolLiquidationFee 0.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool or protocol bad-debt buyer.",
+        "shutdownOrBadDebtBehavior": "No global XAI settlement; residual debt can remain in the isolated FXS silo.",
+        "debtSharePct": 0.22,
+        "failureDomainKeys": [
+          "silo-legacy-fxs-xai",
+          "chainlink:ethereum:fxs-usd",
+          "silo-flash-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "FXS Silo",
+            "url": "https://etherscan.io/address/0xf39f64D85AD89200e3b06C67F679c45798bF6a5b#code"
+          }
+        ]
+      },
+      {
+        "id": "xai-yfi-silo",
+        "label": "YFI silo residual XAI debt",
+        "tier": "redundant-with-failover",
+        "summary": "YFI uses Chainlink YFI/ETH with BalancerV2 fallback; XAI debt uses USDC/ETH.",
+        "collateralAssets": [
+          "YFI"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Silo ChainlinkV3PriceProvider",
+            "path": "YFI aggregator YFI/ETH 0x7c5d4F8345e66f68099581Db340cd65B078C41f4 heartbeat 87000s fallback BalancerV2PriceProvider 0x2F1aA93249bcc0DF7d89739F86308c7a270F5EEd; XAI via USDC/ETH",
+            "address": "0xe37B8c83138caF12E57632D19c06Eb561D47e423",
+            "chain": "ethereum",
+            "heartbeatSec": 87000,
+            "stalenessBoundSec": 87000,
+            "observedAt": "2026-07-28",
+            "observedBlock": 25627249,
+            "failureDomainKeys": [
+              "chainlink:ethereum:yfi-eth",
+              "balancer:ethereum:silo-fallback",
+              "chainlink:ethereum:usdc-eth-as-xai",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Chainlink primary with BalancerV2 fallback for YFI; XAI has its own fallback provider.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 25627249,
+        "collateralParameters": [
+          {
+            "asset": "YFI",
+            "maximumLtvPct": 75,
+            "note": "Silo 0xa0460fceb47886920aad8a87b627f3890793d1a6; maxLTV 0.75e18, liquidationThreshold 0.85e18; XAI totalBorrow 2.513730764602248."
+          }
+        ],
+        "liquidationMechanism": "Permissionless flashLiquidate with flash-receiver repayment; protocolLiquidationFee 0.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool or protocol bad-debt buyer.",
+        "shutdownOrBadDebtBehavior": "No global XAI settlement; residual debt can remain in the isolated YFI silo.",
+        "debtSharePct": 0.07,
+        "failureDomainKeys": [
+          "silo-legacy-yfi-xai",
+          "chainlink:ethereum:yfi-eth",
+          "silo-flash-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "YFI Silo",
+            "url": "https://etherscan.io/address/0xa0460fceb47886920aad8a87b627f3890793d1a6#code"
+          }
+        ]
+      },
+      {
+        "id": "xai-wsteth-silo",
+        "label": "wstETH silo residual XAI debt",
+        "tier": "single-source-or-laggy",
+        "summary": "wstETH is priced by WSTETHPriceProvider as stETH price times stETH.getPooledEthByShares; stETH's Chainlink STETH/ETH feed has no fallback provider configured.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "WSTETHPriceProvider over stETH Chainlink",
+            "path": "WSTETHPriceProvider 0xe56955b54ae444d73a52ad3179941e1700910d35: repository.getPrice(stETH) * STETH.getPooledEthByShares(1 ether); stETH via ChainlinkV3PriceProvider aggregator STETH/ETH 0x86392dC19c0b719886221c78AB11eb8Cf5c52812 heartbeat 86400s fallback address(0); XAI via USDC/ETH",
+            "address": "0xe56955b54ae444d73a52ad3179941e1700910d35",
+            "chain": "ethereum",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-07-28",
+            "observedBlock": 25627249,
+            "failureDomainKeys": [
+              "silo-wsteth-provider",
+              "chainlink:ethereum:steth-eth-no-fallback",
+              "chainlink:ethereum:usdc-eth-as-xai",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "stETH has no Chainlink fallback; a stale or failed STETH/ETH round causes getPrice to revert rather than fail over. XAI debt retains its USDC/ETH fallback.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 25627249,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "maximumLtvPct": 80,
+            "note": "Silo 0x4f5717f1EfDec78a960f08871903B394e7Ea95Ed; maxLTV 0.80e18, liquidationThreshold 0.85e18; XAI totalBorrow 1.5552124207771605."
+          }
+        ],
+        "liquidationMechanism": "Permissionless flashLiquidate with flash-receiver repayment; protocolLiquidationFee 0.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool or protocol bad-debt buyer.",
+        "shutdownOrBadDebtBehavior": "No global XAI settlement; residual debt can remain in the isolated wstETH silo.",
+        "debtSharePct": 0.04,
+        "failureDomainKeys": [
+          "silo-legacy-wsteth-xai",
+          "chainlink:ethereum:steth-eth-no-fallback",
+          "silo-flash-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "wstETH Silo",
+            "url": "https://etherscan.io/address/0x4f5717f1EfDec78a960f08871903B394e7Ea95Ed#code"
+          },
+          {
+            "label": "WSTETHPriceProvider",
+            "url": "https://etherscan.io/address/0xe56955b54ae444d73a52ad3179941e1700910d35#code"
+          }
+        ]
+      },
+      {
+        "id": "xai-steth-ng-silo",
+        "label": "stkcvxstETH-ng silo residual XAI debt",
+        "tier": "single-source-or-laggy",
+        "summary": "Silo asset is Convex-staked Curve stETH-ng LP (stkcvxstETH-ng-f-silo). Price routes through ForwarderPriceProvider to an unverified source contract; no dual-feed path was verified.",
+        "collateralAssets": [
+          "stkcvxstETH-ng-f-silo"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "ForwarderPriceProvider",
+            "path": "PriceProvidersRepository -> ForwarderPriceProvider 0xb664ca87df549d110c59a96b10278439617d0813 priceSourceAssets(LP)=0x21e27a5e5513d6e65c4f830167390997aa84843a (unverified at review); XAI debt via USDC/ETH",
+            "address": "0xb664ca87df549d110c59a96b10278439617d0813",
+            "chain": "ethereum",
+            "observedAt": "2026-07-28",
+            "observedBlock": 25627249,
+            "failureDomainKeys": [
+              "silo-steth-ng-forwarder",
+              "silo-steth-ng-unverified-source",
+              "chainlink:ethereum:usdc-eth-as-xai",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No independent secondary feed was verified for the LP forwarder path. XAI debt retains the USDC/ETH fallback.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 25627249,
+        "collateralParameters": [
+          {
+            "asset": "stkcvxstETH-ng-f-silo",
+            "maximumLtvPct": 85,
+            "note": "Silo 0x339666A930fd79C190e824dd9d9df0393b8BD196; siloAsset 0x470f9f350642edf3cb3f2a6eb4569c0219386f0b; maxLTV 0.85e18, liquidationThreshold 0.90e18; XAI totalBorrow 1.088394174045671."
+          }
+        ],
+        "liquidationMechanism": "Permissionless flashLiquidate with flash-receiver repayment; protocolLiquidationFee 0.",
+        "liquidationDelaySec": 0,
+        "backstop": "No stability pool or protocol bad-debt buyer.",
+        "shutdownOrBadDebtBehavior": "No global XAI settlement; residual debt can remain in the isolated stETH-ng silo.",
+        "debtSharePct": 0.03,
+        "failureDomainKeys": [
+          "silo-legacy-steth-ng-xai",
+          "silo-steth-ng-forwarder",
+          "silo-flash-liquidators",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "stETH-ng Silo",
+            "url": "https://etherscan.io/address/0x339666A930fd79C190e824dd9d9df0393b8BD196#code"
+          },
+          {
+            "label": "ForwarderPriceProvider",
+            "url": "https://etherscan.io/address/0xb664ca87df549d110c59a96b10278439617d0813#code"
+          }
+        ]
       }
     ]
   },
@@ -239,13 +799,19 @@
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Silo V1 isolated lending markets and their collateral depositors",
-      "riskFactors": ["market", "counterparty", "liquidity", "smart-contract", "concentration"],
+      "riskFactors": [
+        "market",
+        "counterparty",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "OpenAI Codex V9 curation pass",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "manual-review",
     "sources": [
       {
@@ -265,9 +831,9 @@
         "url": "https://gov.silo.finance/t/a-plan-to-deprecate-xai-stablecoin/443"
       }
     ],
-    "rationale": "Silo documentation describes the isolated-market mechanism but does not publish a dated, reproducible aggregate collateral snapshot for legacy XAI credit lines. SiloDAO approved XAI's deprecation and wind-down in 2024, and no current issuer reserve report exists. The previous 89.45% USDC / 10.55% ETH split was a stale carried snapshot and has been removed; residual backing is represented as one legacy credit-line envelope.",
+    "rationale": "Write-time re-open 2026-07-28 of Silo V3 docs, XAI Ethereum contract page, and SiloDAO deprecation proposal (Jan 2024): XAI was a multi-collateral silo stablecoin without a stability module, now deprecated. No current public aggregate collateral snapshot for residual credit lines; envelope remains 100% legacy silo credit-line collateral with ku=100.",
     "compositionBasis": "Silo isolated-market documentation and the SiloDAO deprecation record; no current issuer snapshot exists",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "Current per-market collateral balances, collateral identities and weights, residual XAI debt, liquidation liquidity, and wind-down recoveries are not published in a reproducible current snapshot.",
     "knownUnknownExposurePct": 100,

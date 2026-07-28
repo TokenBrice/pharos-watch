@@ -234,8 +234,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -251,11 +251,12 @@
         "url": "https://github.com/ZephyrProtocol/zephyr"
       }
     ],
-    "rationale": "The reviewed Zephyr materials describe ZYS as the yield-bearing share exposure to the ZSD reserve, matching the exact 100% tracked zsd-zephyr-protocol dependency in the fixed metadata. The underlying ZSD reserve is an upstream asset composition and is not duplicated as a second ZYS reserve slice.",
+    "rationale": "Write-time re-open 2026-07-28 of Zephyr Protocol documentation: native assets include ZYS (Zephyr Yield Share) as the yield-bearing share of the ZSD reserve system. Source repository still public. Yield marketing page is thin; composition remains 100% tracked zsd-zephyr-protocol dependency (wrapper), ku=0 at ZYS level.",
     "compositionBasis": "Zephyr Protocol documentation, yield description, and source repository",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct ZYS reserve slice is identified; underlying ZSD backing remains the upstream asset's reserve question.",
-    "knownUnknownExposurePct": 0
+    "knownUnknownExposurePct": 0,
+    "compositionAsOf": "2026-07-28"
   },
   "custodyProfile": {
     "providers": [

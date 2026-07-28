@@ -1,0 +1,24 @@
+{
+  "assetId": "asusdf-astherus",
+  "subject": "draft+packet",
+  "verdict": "VERIFIED-WITH-NITS",
+  "metricCheck": {
+    "hedgeCoverageRatio": "confirmed null/unavailable — asUSDF is a pure staking wrapper (mint-asusdf page and FAQ re-opened: 'stake USDF to mint asUSDF', NAV-accreting); the hedge exists only at upstream USDF where no reconciled notionals are published (verified in the usdf-astherus review); draft correctly chose unavailable over not-applicable to keep the nondisclosure signal attributed upstream",
+    "marginBufferPct": "confirmed null/unavailable — wrapper posts no margin (verified in asUSDFEarn.sol source: no margin/hedge logic); upstream margin figures unpublished",
+    "lossAbsorptionShare": "confirmed null/unavailable — no loss-absorption pool in the wrapper source (dispatchReward is yield-vesting, capped by maxRewardPercent, not an insurance fund) and none disclosed upstream",
+    "wrapperUsdfBalance": "confirmed 3480167.37079955 — USDF balanceOf(0xdb57a53c...3695) at BSC block 0x6b4e368 re-run via bsc-mainnet.public.blastapi.io, raw 0x02e0f4404ec1365a5228fd matches journal byte-exact",
+    "asusdfTotalSupply": "confirmed 3268199.9317093217 — eth_call 0x18160ddd on 0x917af46b...51fb at pinned block, raw 0x02b411792a704619f7780c matches journal byte-exact",
+    "impliedWrapperNav": "confirmed 1.064857549574504 (displayed 1.064858) — recomputed from the two pinned reads; >= 1, full on-chain backing of wrapper shares verified",
+    "upstreamUsdfTotalSupply": "confirmed 111986088.07905471 at the same pinned block (matches the usdf-astherus journal byte-exact)",
+    "erc4626Reverts": "confirmed — convertToAssets(1e18) and totalAssets() both re-run at the pinned block and both return 'execution reverted', so the wrapper is not ERC-4626 and NAV derivation from raw reads is the correct method; consistent with the source (exchangePrice() is a custom getter, not ERC-4626)"
+  },
+  "componentCheck": {
+    "venueAndCustody (draft, limited)": "basis confirmed — Aster official smart-contract inventory itemizes the wrapper (0xdB57a53C...3695) and token (0x917AF46B...51Fb) exactly as journaled; the pinned GitHub source (commit 7529033, asUSDFEarn.sol re-fetched verbatim) shows asUSDF.mint occurs only inside _mintasUSDF after USDF deposit (no free-mint route) and _authorizeUpgrade is gated onlyTimeLock; pinned on-chain reads verify NAV >= 1 backing = D3 limited class met (itemized issuer data + on-chain external anchor)"
+  },
+  "conflicts": [
+    "no conflicts on metrics or components — packet agrees all three metrics unavailable with named searches and grades no components; packet sources (fund-custody, how-usdf-works, faqs, MirrorX, DefiLlama 219) all re-opened and verified",
+    "packet adds nothing the draft lacks: the draft's venueAndCustody limited (wrapper-layer, on-chain-anchored) is stronger and verified; the packet's empty-components posture is not in contradiction since it addresses the upstream layer"
+  ],
+  "mergeGuidance": "land draft with two small note corrections: (1) the notes claim the UUPS admin is 'a six-hour timelock behind a 4-of-8 Safe' — verifier re-read the chain at the pinned block: TIMELOCK_ADDRESS() = 0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861, getMinDelay() = 21600s (6 hours, confirmed), timelock PROPOSER_ROLE has 2 members (the Safe 0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f and the timelock itself), and that Safe has getThreshold() = 4 with 7 owners — so it is a 4-of-7 Safe, not 4-of-8; correct '4-of-8' to '4-of-7' (the conservative substance — upgradeable custody logic behind a timelocked multisig — is fully verified); (2) optionally re-attribute the 'T+1 hour withdrawal' detail in the mint-asusdf source label to the USDF FAQs page, where the text actually lives ('Withdrawals will be subject to a T+1 hour waiting period (2 hours)') — the claim is true, the mint-asusdf page itself does not state it; neither nit affects the grade",
+  "notes": "All pins re-verified byte-exact at BSC block 112517992 via bsc-mainnet.public.blastapi.io (bsc-rpc.publicnode.com now token-gates archive calls). The draft's timelock/Safe claims were NOT in the journal — verifier independently pinned them at the same block (TIMELOCK_ADDRESS, getMinDelay, PROPOSER_ROLE members, Safe threshold/owners all read at 0x6b4e368), so the corrected '4-of-7' wording is now evidence-backed. Wrapper share of upstream supply 0.029183981579945808 recomputed and confirmed. Packet's pinnedAt names the asUSDF token address correctly (0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb). Measurement and verification ~1h apart; no drift."
+}

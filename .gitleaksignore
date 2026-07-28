@@ -118,6 +118,16 @@
 80167254da7dcb282114ecbdf3d4d4436dfa6938:agents/plans/historical/2026-04-03-api-key-gating-implementation-plan.md:curl-auth-header:918
 80167254da7dcb282114ecbdf3d4d4436dfa6938:agents/plans/historical/2026-04-04-security-audit-remediation-implementation-plan.md:generic-api-key:455
 80167254da7dcb282114ecbdf3d4d4436dfa6938:agents/plans/historical/2026-04-05-reserve-sync-promotion-plan.md:generic-api-key:525
+7989cdf912f868f624a579ce341690af827551b2:agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech2-drafts/journals/noon-accountable-raw-2.json:generic-api-key:1
+7989cdf912f868f624a579ce341690af827551b2:agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech2-drafts/journals/noon-accountable-raw.json:generic-api-key:1
+eb17662fbcb2d01f97130325ccfce43e66493ecd:shared/data/stablecoins/coins/usdh-hubble.json:generic-api-key:292
+eb17662fbcb2d01f97130325ccfce43e66493ecd:shared/data/stablecoins/coins/usdh-hubble.json:generic-api-key:316
+ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech-packets/apyusd-apyx.json:generic-api-key:71
+ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech-packets/apyusd-apyx.json:generic-api-key:75
+ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/data-coverage-wave8-2026-07-27/mech-packets/apyusd-apyx.json:generic-api-key:83
+ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/results/data-coverage-wave8-2026-07-27/mech-packets/apyusd-apyx.json:generic-api-key:71
+ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/results/data-coverage-wave8-2026-07-27/mech-packets/apyusd-apyx.json:generic-api-key:75
+ffc2b80c4a42d1186980eb8214b5231f68ad53c5:agents/safety-score-v9/results/data-coverage-wave8-2026-07-27/mech-packets/apyusd-apyx.json:generic-api-key:83
 831812bb0006ec24d09b56d7bca7ae3a721b2e8b:worker/src/lib/mint-burn-contracts-helpers.ts:generic-api-key:42
 870dd2552c52ac369a4e104e09ec4c892cb2be9a:worker/src/cron/reserve-adapters/__tests__/chainlink-nav.test.ts:generic-api-key:20
 8a3a3cd6611be19ee5fbdd3c2b3947361702d0f6:shared/data/stablecoins/coins.generated.json:generic-api-key:14920

@@ -1,0 +1,18 @@
+{
+  "assetId": "nwisdom-nest",
+  "subject": "packet",
+  "verdict": "VERIFIED-WITH-NITS",
+  "metricCheck": {
+    "weightedAverageMaturityDays": "confirmed unavailable — rationale TRUE: no Nest or WisdomTree portfolio WAM on available-vaults, positions API, or vaults docs (all re-opened); xCRDYX row on Nest assets page carries no tenor fields",
+    "valuationCadenceDays": "confirmed 0.041666666666666664 — hourly docs language verified verbatim; cadence directly OBSERVED operating: pin price 0.95151 (getRate 951510) now appears as prevPrice in last-price-update API after a newer hourly update to 0.950559, and live on-chain getRate() on accountant 0x53148dd65f29e7be36c40bb2125ef43885a4cd5b returns 950559 — chain and API agree; consecutive hourly updates visible in updatedAt sequence"
+  },
+  "componentCheck": {
+    "creditQuality": "basis confirmed — available-vaults nWISDOM: WisdomTree CRDYX 99.2% of composition; positions API xCRDYX $2,782,901.209435487 (EXACT pin match) >98% of NAV; share price <1 MTM observation consistent with live 0.9505–0.9515 range",
+    "valuationCadence": "basis confirmed — hourly docs + live API/on-chain rate agreement (see metricCheck)",
+    "maturityAndLiquidity": "basis NOT found as written: packet says 'T+1 Nest estimate' but Nest available-vaults lists nWISDOM redemption estimate = 4 days (verified on re-open, snapshot 2026-07-27). Rest of basis (publicly traded credit vehicles + small nTBILL/liquid buffer) confirmed. Grade 'limited' unaffected — the true 4-day estimate is strictly weaker than T+1, so the error is in the conservative direction",
+    "custody": "basis confirmed — flow-of-funds non-custodial + third-party custody language; positions API exposes on-chain xCRDYX token 0xf4816ec5f0552b77cf62efd8926aef42961efebf"
+  },
+  "conflicts": [],
+  "mergeGuidance": "land packet with one correction: in maturityAndLiquidity basis replace 'T+1 Nest estimate' with '4-day Nest redemption estimate' (per Nest available-vaults, snapshot 2026-07-27)",
+  "notes": "No existing overlay entry. NAV drifted $2,811,114.29 → $2,811,092.11 and price 0.95151 → 0.950559 since pin — immaterial and fully explained by one additional hourly update (xCRDYX MTM); pinned values are preserved as prevPrice in the API, which independently corroborates both the pin and the hourly cadence. WAM-unavailable and all three other component bases verified against primary sources."
+}

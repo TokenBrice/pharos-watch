@@ -9,7 +9,7 @@ import { createReportCardsFixedInput, normalizeFixedInput } from "../report-card
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
 
-const AS_OF_SEC = 1_784_851_200;
+const AS_OF_SEC = 1_785_283_200;
 const OBSERVED_AT_SEC = AS_OF_SEC - 100;
 const ASSET_ID = "authoring-example";
 const REVIEWED_INHERITED_WRAPPERS = [

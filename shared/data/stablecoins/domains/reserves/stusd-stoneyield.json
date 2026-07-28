@@ -9,13 +9,19 @@
       "depType": "wrapper",
       "assetClass": "protocol-position",
       "issuerOrObligor": "StoneYield StrategyRouter and Venus Protocol",
-      "riskFactors": ["counterparty", "liquidity", "custody", "smart-contract", "market"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "market"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "verified",
     "sources": [
       {
@@ -27,9 +33,9 @@
         "url": "https://docs.stoneyield.io/docs/protocol/yield-generation"
       }
     ],
-    "rationale": "StoneYield documents that USDC deposits are routed by its StrategyRouter into a Venus-integrated ERC-4626 vault, where vUSDC accrues lending yield. The current strategy position is retained as one linked USDC protocol-position slice because the disclosures do not publish a durable allocation among Venus positions or future strategy modules.",
+    "rationale": "StoneYield documents that USDC deposits are routed by its StrategyRouter into a Venus-integrated ERC-4626 vault, where vUSDC accrues lending yield. The current strategy position is retained as one linked USDC protocol-position slice because the disclosures do not publish a durable allocation among Venus positions or future strategy modules. Write-time re-open 2026-07-28: StoneYield contract-design and yield-generation pages still describe USDC deposit flow StakeableAsset\u2192StrategyRouter\u2192VenuSTUSDVault\u2192Venus; 100% USDC/protocol-position envelope retained.",
     "compositionBasis": "Current StoneYield contract-design and yield-generation documentation",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-07-28",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct reserve relationship is USDC routed through the documented StrategyRouter and Venus path. Current vUSDC balances, allocation weights, and any later strategy-module allocation are not published as a durable composition.",
     "knownUnknownExposurePct": 0

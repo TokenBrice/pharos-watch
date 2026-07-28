@@ -49,13 +49,13 @@ npm run test
 npm run check:generated-artifacts
 ```
 
-GitHub's protected `PR gate` is the authoritative release check. For a large production-bound change, maintainers can collect local diagnostic evidence with:
+GitHub's protected `PR gate` is the authoritative release check. For a committed production-bound change, maintainers can run the adaptive local contract with:
 
 ```bash
-MERGE_GATE_PRODUCTION_ENV=1 npm run test:merge-gate:discover -- --target=release
+npm run check:pr -- --base=origin/main
 ```
 
-That target requires the exact `.nvmrc` runtime, a clean committed snapshot, and the intended Pages environment scoped to the rehearsal. It is intentionally broad, can be slow, and never replaces the protected PR gate. Use focused checks first when iterating; `npm run test:merge-gate` is an optional explicit local rehearsal.
+Use `npm run check:release` only when a local Pages build and Worker bundle rehearsal is useful. Neither command replaces the protected PR gate.
 
 `docs-metadata` and `sitemap-dates` calculate timestamps from committed source history. Commit relevant source changes first, regenerate those artifacts, then commit or amend their output. `npm run check:commit-derived-artifacts` verifies that settled state before the full generated-artifact check.
 

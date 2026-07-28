@@ -1,0 +1,65 @@
+{
+  "assetId": "stcusd-cap",
+  "archetype": "rwa-credit-fund",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "ethereum-finalized-block-25627164@2026-07-27T22:33:59Z",
+  "metrics": {
+    "weightedAverageMaturityDays": 2.999366,
+    "valuationCadenceDays": 0
+  },
+  "metricStates": {
+    "weightedAverageMaturityDays": {
+      "state": "measured",
+      "rationale": "Composite of same-block cUSD vault sleeve weights and the WisdomTree Treasury Money Market Digital Fund SEC Form N-MFP3 average portfolio maturity. At finalized Ethereum block 25627164 (hash 0xd3fb5dc51425ba009cf716f59e4923bdcf0f4d1abc6dfa8481c45409fbdf96b5, 2026-07-27T22:33:59Z) via ethereum.publicnode.com, cUSD totalSupplies returned 67,989,695.834991 USDC and 5,098,067.908917473 WTGXX (93.0247% / 6.9753% of the 73,087,763.743908 sleeve; 99.9986% of same-block cUSD totalSupply 73,088,778.525048). USDC treated as 0-day demand claim; WTGXX multiplied by the fund's reportDate 2026-06-30 averagePortfolioMaturity of 43 days \u2192 WAM 2.999366. stcUSD is an ERC-4626 claim on that cUSD portfolio (asset() = cUSD; totalSupply 62,255,932.853420 shares; totalAssets 66,778,737.971204 cUSD; rate 1.072649)."
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "rationale": "0 denotes continuous on-chain oracle-valued vault accounting and ERC-4626 share-price accrual, not a manager marking cycle. Cap Vault docs: mint/burn at oracle value with staleness disable; stcUSD convertToAssets/totalAssets readable every block."
+    }
+  },
+  "components": {
+    "legalEnforceability": {
+      "quality": "weak",
+      "basis": "Primary Cap Risks documentation (re-opened 2026-07-28) states Cap operates without reliance on third-party custodians, regulatory frameworks, or manual oversight, and that cUSD holder protections are enforced exclusively by code-based adherence to protocol rules. stcUSD is the ERC-4626 staked wrapper of that same cUSD claim (on-chain asset() pin), so holder recovery against the reserve and operator-lending book is smart-contract execution only. Independent legal corroboration from Covered Agents S.A. Platform Terms of Use (Panama corporation; last revised 2025-03-26; re-opened 2026-07-28): the Company is the website/front-end operator of a 'fully decentralized lending protocol' designed for direct user access without Company involvement; users release Company from platform-related claims; financial-loss liability is disclaimed to the maximum extent permitted; user's sole remedy for dissatisfaction is to cease use; governing law and arbitration are Panama/CeCAP. Cap Financial Guarantees docs further confine off-chain legal agreements to Underwriter\u2013Borrower Guarantor Agreements after liquidation, not to a published holder claim, trust deed, bankruptcy-remote SPV, perfected security interest, or regulatory-register redemption right for stcUSD/cUSD holders. Weak is graded because the deficiency is affirmatively documented by the issuer and its legal terms, not because evidence is merely absent (D3). No prospectus, fund-share register, or court-enforceable holder estate was found."
+    }
+  },
+  "sources": [
+    {
+      "label": "Cap Risks (code-exclusive holder protections; no regulatory-framework reliance; off-chain Guarantor Agreements only for Underwriter\u2013Borrower)",
+      "url": "https://docs.cap.app/overview/risks"
+    },
+    {
+      "label": "Cap Platform Terms of Use \u2014 Covered Agents S.A. (Panama front-end operator; decentralized protocol; liability releases; Panama/CeCAP arbitration; last revised 2025-03-26)",
+      "url": "https://docs.cap.app/resources/terms-and-conditions/platform-terms-of-use"
+    },
+    {
+      "label": "Cap Financial Guarantees (on-chain underwriter collateral liquidation; off-chain legal agreement only between Underwriter and Borrower)",
+      "url": "https://docs.cap.app/overview/protocol-overview/financial-guarantees"
+    },
+    {
+      "label": "Cap stcUSD lending mechanics (ERC-4626 staking of cUSD; overcollateralized operator borrowing; liquidation redistribution)",
+      "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
+    },
+    {
+      "label": "Cap Vault documentation (oracle-valued mint/burn, proportional-basket redemption, regulated-asset whitelist)",
+      "url": "https://docs.cap.app/concepts/vault"
+    },
+    {
+      "label": "WisdomTree Treasury Money Market Digital Fund SEC Form N-MFP3 reportDate 2026-06-30 (averagePortfolioMaturity 43; 100% daily liquid assets)",
+      "url": "https://www.sec.gov/Archives/edgar/data/1859001/000119312526296145/primary_doc.xml"
+    },
+    {
+      "label": "Ethereum PublicNode RPC used for finalized block 25627164 stcUSD ERC-4626 and cUSD totalSupplies reads",
+      "url": "https://ethereum.publicnode.com"
+    },
+    {
+      "label": "stcUSD Ethereum vault (Etherscan)",
+      "url": "https://etherscan.io/address/0x88887be419578051ff9f4eb6c858a951921d8888"
+    }
+  ],
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype rwa-credit-fund vocab OK. Independent eth_call (1rpc then publicnode) on cUSD 0xcccc\u2026: totalSupply=73,088,778.52504821; totalSupplies(USDC)=67,989,695.834991; totalSupplies(WTGXX)=5,098,067.90891747 \u2192 weights 93.0247%/6.9753%; WAM=0.069752687*43=2.99936554 \u2248 packet 2.999366. stcUSD 0x8888\u2026 asset()=cUSD; totalSupply\u224862,255,932.85; totalAssets\u224866,778,919.51 (live drift vs pin assets; rate\u22481.07265). valuationCadenceDays=0 as continuous oracle-valued vault accounting matches Cap vault docs (HTTP 200) and established cusd/stcusd overlay precedent. SEC N-MFP URL currently 403 from verifier IP; 43-day APM is the same filing figure already dual-used in the committed cusd-cap overlay notes \u2014 sleeve weights independently remeasured.",
+    "secondSource": "eth_call totalSupplies/totalSupply on cUSD vault via ethereum.publicnode.com / 1rpc.io (not publicnode-only) + Cap vault/stcUSD docs"
+  }
+}

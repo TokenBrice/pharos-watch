@@ -7,13 +7,19 @@
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle Internet Financial and Anchorage Digital Bank",
-      "riskFactors": ["counterparty", "custody", "legal", "concentration", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "legal",
+        "concentration",
+        "smart-contract"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-16",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -25,7 +31,7 @@
         "url": "https://www.megaeth.com/blog-news/megaeth-introduces-usdm"
       }
     ],
-    "rationale": "MegaUSD identifies USDC and USDtb as the direct reserve assets. MegaETH's dated launch announcement says USDm v1 begins on USDtb rails and separately describes USDtb's target allocation to BUIDL, but neither source publishes current USDm weights between USDC and USDtb. The direct reserve is therefore retained as one unresolved stablecoin basket; USDtb's underlying BUIDL and redemption-liquid assets are not duplicated as measured USDm slices.",
+    "rationale": "MegaUSD identifies USDC and USDtb as the direct reserve assets. MegaETH's dated launch announcement says USDm v1 begins on USDtb rails and separately describes USDtb's target allocation to BUIDL, but neither source publishes current USDm weights between USDC and USDtb. The direct reserve is therefore retained as one unresolved stablecoin basket; USDtb's underlying BUIDL and redemption-liquid assets are not duplicated as measured USDm slices. Write-time re-open 2026-07-28: megausd.money still markets USDtb/BlackRock BUIDL-linked reserve design; MegaETH USDm announcement corroborates product. No public instrument weights \u2192 ku=100.",
     "compositionBasis": "MegaUSD's disclosed USDC and USDtb reserve envelope; current weights undisclosed",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct reserve assets are named, but the current USDC/USDtb weights are undisclosed. Any residual outside USDtb remains unknown, and USDtb's upstream target mix is not treated as a measured USDm composition.",
@@ -37,9 +43,13 @@
         "pct": 100,
         "disposition": "basket-needs-split",
         "rationale": "The issuer names both direct reserve assets but publishes no dated current allocation between them.",
-        "candidateCoinIds": ["usdc-circle", "usdtb-ethena"]
+        "candidateCoinIds": [
+          "usdc-circle",
+          "usdtb-ethena"
+        ]
       }
-    ]
+    ],
+    "compositionAsOf": "2026-07-28"
   },
   "custodyProfile": {
     "providers": [

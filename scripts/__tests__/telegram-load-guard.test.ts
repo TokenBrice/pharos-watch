@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -10,33 +8,10 @@ import {
   TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS,
   TELEGRAM_LOAD_GUARD_PATHS,
 } from "../lib/telegram-load-guard.mjs";
-import { buildCommandPlan } from "../maintenance/test-merge-gate.mjs";
-import { commandTexts } from "../test-utils/ci-script-test-helpers";
-
-function extractTelegramWorkflowPaths(workflow: string): string[] {
-  const lines = workflow.split(/\r?\n/);
-  const pullRequestIndex = lines.findIndex((line) => line.trim() === "pull_request:");
-  const pathsIndex = lines.findIndex(
-    (line, index) => index > pullRequestIndex && /^\s{4}paths:\s*$/.test(line),
-  );
-  const paths: string[] = [];
-
-  for (const line of lines.slice(pathsIndex + 1)) {
-    const match = line.match(/^\s{6}-\s+"([^"]+)"\s*$/);
-    if (!match) break;
-    paths.push(match[1]);
-  }
-  return paths;
-}
+import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks.mjs";
 
 describe("Telegram load guard dependency registry", () => {
-  it("keeps the GitHub pull-request filter aligned with the reviewed registry", () => {
-    const workflow = readFileSync(
-      resolve(process.cwd(), ".github/workflows/telegram-load.yml"),
-      "utf8",
-    );
-
-    expect(extractTelegramWorkflowPaths(workflow)).toEqual(TELEGRAM_LOAD_GUARD_PATHS);
+  it("keeps the reviewed dependency paths unique", () => {
     expect(new Set(TELEGRAM_LOAD_GUARD_PATHS).size).toBe(TELEGRAM_LOAD_GUARD_PATHS.length);
   });
 
@@ -65,19 +40,19 @@ describe("Telegram load guard dependency registry", () => {
     }
   });
 
-  it("uses the same registry to select the local merge-gate advisory", () => {
+  it("uses the same registry to select the adaptive PR check", () => {
     for (const group of TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS) {
       const representative = group.examples[0];
       expect(hasTelegramLoadGuardImpact([representative])).toBe(true);
-      if (group.id !== "guard-contract") {
-        expect(commandTexts(buildCommandPlan([representative]))).toContain(TELEGRAM_LOAD_ADVISORY_COMMAND);
-      }
+      expect(buildPrStaticCheckPlan([representative]).commands.map(({ name }) => `npm run ${name}`)).toContain(
+        TELEGRAM_LOAD_ADVISORY_COMMAND,
+      );
     }
 
     expect(hasTelegramLoadGuardImpact(["scripts/lib/telegram-load-scenarios.ts"])).toBe(true);
-    expect(commandTexts(buildCommandPlan(["scripts/lib/telegram-load-scenarios.ts"]))).toContain(
-      TELEGRAM_LOAD_ADVISORY_COMMAND,
-    );
+    expect(
+      buildPrStaticCheckPlan(["scripts/lib/telegram-load-scenarios.ts"]).commands.map(({ name }) => `npm run ${name}`),
+    ).toContain(TELEGRAM_LOAD_ADVISORY_COMMAND);
 
     expect(hasTelegramLoadGuardImpact(["worker/src/api/unrelated.ts"])).toBe(false);
   });

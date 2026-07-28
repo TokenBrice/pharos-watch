@@ -1,0 +1,165 @@
+{
+  "assetId": "iusd-infinifi",
+  "archetype": "rwa-credit-fund",
+  "outcome": "READY",
+  "mergeMode": "replace",
+  "overlayEntry": {
+    "assetId": "iusd-infinifi",
+    "archetype": "rwa-credit-fund",
+    "reviewedAt": "2026-07-27",
+    "sources": [
+      {
+        "label": "infiniFi vaults page: per-farm portfolio composition, counterparty descriptions, and redemption terms (regenerated daily from the protocol API)",
+        "url": "https://docs.infinifi.xyz/vaults"
+      },
+      {
+        "label": "infiniFi slashing mechanics: two-tranche loss waterfall with liUSD junior first-loss and siUSD/iUSD senior, executed onchain",
+        "url": "https://docs.infinifi.xyz/slashing-mechanics"
+      },
+      {
+        "label": "infiniFi risk disclosures: redemption queue, AMM buyer-of-last-resort exit path, and negative-rebase loss socialization if the junior tranche is exhausted",
+        "url": "https://docs.infinifi.xyz/risk-disclosures"
+      },
+      {
+        "label": "infiniFi RedeemController documentation: instant redemption from liquid reserves, FIFO queue funded as illiquid farms mature",
+        "url": "https://docs.infinifi.xyz/dev-docs/funding/redeem-controller"
+      },
+      {
+        "label": "infiniFi yield-sharing documentation: NAV-based yield distribution over 8-hour epochs",
+        "url": "https://docs.infinifi.xyz/dev-docs/finance/yield-sharing"
+      },
+      {
+        "label": "infiniFi audits and contract governance page: Spearbit/Cantina/Certora audits, 4-of-7 multisig, 1-day and 7-day timelocks, Hypernative monitoring",
+        "url": "https://docs.infinifi.xyz/audits"
+      },
+      {
+        "label": "infiniFi real-time protocol API: per-farm assets and maturity timestamps used for the WAM derivation (fetched 2026-07-27T23:09:49Z)",
+        "url": "https://eth-api.infinifi.xyz/api/protocol/data"
+      }
+    ],
+    "notes": "infiniFi is an onchain fractional-reserve USDC credit protocol: iUSD is the USDC receipt token (1:1 mint/redeem, no fee), siUSD the staked liquid tranche, liUSD-xw locked position tokens across 1-13 week buckets, with assets duration-matched to liability buckets. This replaces the 2026-07-20 entry with a refreshed portfolio measurement; all grade rationales from that review were re-checked against the current docs and stand. Portfolio per the protocol's real-time API (fetched 2026-07-27T23:09:49Z): $61.07M total across Fasanara mGLOBAL GDADF short-dated receivables fund ($31.01M, 4w bucket, matures 2026-08-24), STRCx Strategy-preferred credit router ($10.28M, 4w, matures 2026-07-31), New Silver junior residential-investment-loan position ($5.09M, 8w, matures 2026-09-21), Spark sUSDC ($3.09M, liquid), liquid-cap reserve ($3.05M, liquid), Fasanara RWA farm ($2.58M, 4w, matures 2026-08-24), Aave v4 USDG lending ($2.25M, 1w), FalconX farm ($2.00M, 1w), Morpho Steakhouse infiniFi vault ($1.13M, 1w), Sentora PRIME (Figure HELOC-backed, $0.59M, 1w), dust elsewhere; the API also reports zero pending redemptions, $6.15M liquid assets, iUSD supply 61.07M with 40.98M staked and 19.73M locked. weightedAverageMaturityDays derivation: asset-weighted days-to-maturity from the API's per-farm maturityTimestampMs, anchored at the 2026-07-27T23:09:49Z fetch, liquid farms counted as 0 days: (31,006,179.42x28 + 10,281,475.05x4 + 5,091,234.82x56 + 2,576,818.75x28 + 2,251,935.67x7 + 2,001,760.35x7 + 1,129,978.65x7 + 586,561.61x7 + 14.61x7) / 61,073,863.63 = 1,308,350,755 / 61,073,863.63 = 21.422433 days; the published farm bucket labels (1w/4w/8w) corroborate the maturity timestamps. valuationCadenceDays = 1, unchanged: NAV is maintained by the onchain Accounting contract with yield distributed over 8-hour epochs, and the published vault page is regenerated daily from the protocol API, so valuation is at worst daily and effectively continuous onchain. Seniority and recovery: documented two-tranche waterfall in which liUSD absorbs any confirmed impairment pro-rata via an atomic onchain redemption-rate reduction (permanent, with a $25k safety buffer and post-mortem disclosure commitment; recovery proceeds are to be airdropped to slashed holders), while siUSD/iUSD seniors are impaired only after the junior tranche is exhausted, via a pro-rata negative rebase; AMM pools (Curve/Balancer/Fluid) act as a market exit path when the redemption queue is illiquid. Components are unchanged: creditQuality, seniority, valuationCadence, maturityAndLiquidity, and recovery adequate; custody limited. legalEnforceability remains omitted (bounded): the 2026-07-20 review found that docs reference 'infiniFi Labs' and Master Borrower Agreements but publish neither entity details nor the agreements; the 2026-07-27 re-check found no new legal-structure disclosure anywhere in the docs index or main site, and while a Terms page exists at app.infinifi.xyz/terms it sits behind a Cloudflare interactive challenge and could not be pinned, so it is inadmissible under the D3 standard; per that standard, absence of evidence keeps the component bounded rather than weak. Standing caveats carried forward: (1) the offchain credit legs' custody, segregation, and bankruptcy-remoteness terms (Fasanara funds, FalconX, New Silver) are not disclosed, so custody is limited rather than adequate; (2) no independent fund administrator exists - valuation is protocol-self-administered onchain (publicly verifiable, but not independent); (3) concentration risk: Fasanara GDADF alone is ~51% of assets and STRCx ~17% single-issuer credit, and the New Silver position is a junior tranche.",
+    "metrics": {
+      "weightedAverageMaturityDays": 21.422433,
+      "valuationCadenceDays": 1
+    },
+    "components": {
+      "creditQuality": {
+        "quality": "adequate"
+      },
+      "seniority": {
+        "quality": "adequate"
+      },
+      "valuationCadence": {
+        "quality": "adequate"
+      },
+      "maturityAndLiquidity": {
+        "quality": "adequate"
+      },
+      "custody": {
+        "quality": "limited"
+      },
+      "recovery": {
+        "quality": "adequate"
+      }
+    }
+  },
+  "journal": {
+    "filename": "2026-07-27-protocol-api.json",
+    "content": {
+      "schemaVersion": 1,
+      "assetId": "iusd-infinifi",
+      "archetype": "rwa-credit-fund",
+      "capturedAt": "2026-07-27T23:09:49Z",
+      "source": {
+        "url": "https://eth-api.infinifi.xyz/api/protocol/data",
+        "label": "infiniFi real-time protocol API",
+        "access": "Plain GET, returned JSON (26,504 bytes)."
+      },
+      "observations": {
+        "protocolStats": {
+          "totalTVLAssetNormalized": 61073869.302068,
+          "totalLiquidAssetNormalized": 6147904.697551,
+          "totalIlliquidAssetNormalized": 54925964.604517,
+          "pendingRedemptionsAssetNormalized": 0,
+          "iusdTotalSupplyNormalized": 61071287.208908,
+          "iusdTotalStakedNormalized": 40975405.459363915,
+          "iusdTotalLockedNormalized": 19731259.049711127,
+          "iusdTotalUnwindingNormalized": 8872476.682695689,
+          "siUsdExchangeRateNormalized": 1.0806209058399214
+        },
+        "farms": [
+          { "name": "fasanara-gdaf", "assetsUsd": 31006179.42, "bucket": 4, "daysToMaturity": 28, "matures": "2026-08-24T23:07:35Z" },
+          { "name": "strcx", "assetsUsd": 10281475.05, "bucket": 4, "daysToMaturity": 4, "matures": "2026-07-31T23:07:42Z" },
+          { "name": "new-silver-junior", "assetsUsd": 5091234.82, "bucket": 8, "daysToMaturity": 56, "matures": "2026-09-21T23:07:35Z" },
+          { "name": "spark-sUSDC-refcode", "assetsUsd": 3093652.40, "bucket": 0, "daysToMaturity": 0, "matures": null },
+          { "name": "liquid-cap", "assetsUsd": 3054252.30, "bucket": 0, "daysToMaturity": 0, "matures": null },
+          { "name": "fasanara-rwa-farm", "assetsUsd": 2576818.75, "bucket": 4, "daysToMaturity": 28, "matures": "2026-08-24T23:07:35Z" },
+          { "name": "aave-v4-usdg", "assetsUsd": 2251935.67, "bucket": 1, "daysToMaturity": 7, "matures": "2026-08-03T23:07:35Z" },
+          { "name": "falconx-farm", "assetsUsd": 2001760.35, "bucket": 1, "daysToMaturity": 7, "matures": "2026-08-03T23:07:35Z" },
+          { "name": "morpho-steakUSDCinfinifi", "assetsUsd": 1129978.65, "bucket": 1, "daysToMaturity": 7, "matures": "2026-08-03T23:07:35Z" },
+          { "name": "morpho-v2-sentora-prime", "assetsUsd": 586561.61, "bucket": 1, "daysToMaturity": 7, "matures": "2026-08-03T23:07:35Z" },
+          { "name": "morpho-v2-sentora-pyusd", "assetsUsd": 14.61, "bucket": 1, "daysToMaturity": 7, "matures": "2026-08-03T23:07:35Z" }
+        ],
+        "excludedDustFarms": ["SwapFarm ($0.67)", "RedeemController ($0.00)"]
+      },
+      "derivations": {
+        "weightedAverageMaturityDays": {
+          "formula": "sum(farm assetsUsd x daysToMaturity) / sum(farm assetsUsd), liquid farms at 0 days, anchored at the 2026-07-27T23:09:49Z fetch",
+          "computation": "(31,006,179.42x28 + 10,281,475.05x4 + 5,091,234.82x56 + 2,576,818.75x28 + 2,251,935.67x7 + 2,001,760.35x7 + 1,129,978.65x7 + 586,561.61x7 + 14.61x7) / 61,073,863.63 = 1,308,350,755 / 61,073,863.63",
+          "value": 21.422433,
+          "priorValue": 20.98,
+          "priorAnchor": "2026-07-20"
+        },
+        "valuationCadenceDays": {
+          "value": 1,
+          "note": "Onchain Accounting contract NAV with 8-hour yield epochs; vault page regenerated daily from this API. Unchanged from 2026-07-20."
+        }
+      },
+      "metricDisposition": {
+        "weightedAverageMaturityDays": {
+          "state": "measured",
+          "value": 21.422433
+        },
+        "valuationCadenceDays": {
+          "state": "measured",
+          "value": 1
+        }
+      },
+      "legalEnforceabilitySearch": {
+        "result": "no-new-pinnable-evidence",
+        "searched": [
+          "https://docs.infinifi.xyz/llms.txt (full docs index: no terms/legal page)",
+          "https://infinifi.xyz/ (rendered: no legal/terms links)",
+          "https://app.infinifi.xyz/ (footer links to app.infinifi.xyz/terms, but the page is behind a Cloudflare interactive challenge and could not be pinned)",
+          "https://docs.infinifi.xyz/dev-docs/changelog.md (no disclosure updates since 2025)"
+        ]
+      },
+      "sources": [
+        "https://eth-api.infinifi.xyz/api/protocol/data",
+        "https://docs.infinifi.xyz/vaults",
+        "https://docs.infinifi.xyz/slashing-mechanics",
+        "https://docs.infinifi.xyz/risk-disclosures",
+        "https://docs.infinifi.xyz/dev-docs/funding/redeem-controller",
+        "https://docs.infinifi.xyz/dev-docs/finance/yield-sharing",
+        "https://docs.infinifi.xyz/audits"
+      ]
+    }
+  },
+  "evidenceSummary": "Refreshed the portfolio measurement from the infiniFi real-time protocol API (fetched 2026-07-27T23:09:49Z): $61.07M TVL across 11 farms — Fasanara GDADF $31.01M (matures 2026-08-24), STRCx $10.28M (2026-07-31), New Silver junior $5.09M (2026-09-21), liquid Spark sUSDC $3.09M + liquid-cap $3.05M, Fasanara RWA $2.58M (2026-08-24), Aave v4 USDG $2.25M, FalconX $2.00M, Morpho Steakhouse $1.13M, Sentora PRIME $0.59M (1w bucket farms mature 2026-08-03); zero pending redemptions. WAM recomputed to 21.422433 days (from 20.98 on 2026-07-20) using the same asset-weighted days-to-maturity methodology. legalEnforceability gap: no new pinnable evidence — docs index and main site carry no legal/terms page; app.infinifi.xyz/terms exists but is Cloudflare-challenge-walled and unpinnable; per D3 the component stays bounded (omitted), not weak. All 2026-07-20 component grades re-checked against current docs and carried forward unchanged.",
+  "primarySources": [
+    "https://eth-api.infinifi.xyz/api/protocol/data",
+    "https://docs.infinifi.xyz/vaults",
+    "https://docs.infinifi.xyz/slashing-mechanics",
+    "https://docs.infinifi.xyz/risk-disclosures",
+    "https://docs.infinifi.xyz/dev-docs/funding/redeem-controller",
+    "https://docs.infinifi.xyz/dev-docs/finance/yield-sharing",
+    "https://docs.infinifi.xyz/audits"
+  ],
+  "blockedReason": null,
+  "missingSources": [
+    "infiniFi Labs entity details and the referenced Master Borrower Agreements (referenced in docs, never published)",
+    "Pinnable terms-of-service text (app.infinifi.xyz/terms exists but is Cloudflare-challenge-walled)",
+    "Custody, segregation, and bankruptcy-remoteness terms for the offchain credit legs (Fasanara, FalconX, New Silver)",
+    "Independent fund administrator or third-party NAV reconciliation (valuation is protocol-self-administered onchain)"
+  ]
+}

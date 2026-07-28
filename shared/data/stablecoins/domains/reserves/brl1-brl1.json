@@ -7,7 +7,12 @@
       "risk": "low",
       "assetClass": "government-security",
       "issuerOrObligor": "Federative Republic of Brazil",
-      "riskFactors": ["duration", "liquidity", "custody", "concentration"],
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
@@ -16,7 +21,12 @@
       "risk": "medium",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed regulated Brazilian financial institutions",
-      "riskFactors": ["counterparty", "liquidity", "custody", "concentration"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -25,13 +35,17 @@
       "risk": "medium",
       "assetClass": "repo",
       "issuerOrObligor": "Undisclosed repo counterparty",
-      "riskFactors": ["counterparty", "liquidity", "custody"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
     "confidence": "probable",
     "sources": [
       {
@@ -43,7 +57,7 @@
         "url": "https://brl1.io/en/como_funciona"
       }
     ],
-    "rationale": "BRL1's latest linked proof-of-reserves report discloses R$5,820,958.93 of LFTs, R$5,923.85 of bank balance, and R$929,250.86 of repos, or 86.16%, 0.09%, and 13.75% of the reported R$6,756,133.64 reserve. The May 2026 report is issuer-produced and not independently audited, so the exact composition retains probable confidence.",
+    "rationale": "BRL1's latest linked proof-of-reserves report discloses R$5,820,958.93 of LFTs, R$5,923.85 of bank balance, and R$929,250.86 of repos, or 86.16%, 0.09%, and 13.75% of the reported R$6,756,133.64 reserve. The May 2026 report is issuer-produced and not independently audited, so the exact composition retains probable confidence. Write-time re-open 2026-07-28: PoR PDF (Google Drive) still shows LFT 86.16%, Repo 13.75%, bank 0.09% totaling R$6,756,133.64 vs 6,583,047.54 BRL1 at 2026-05-01; como_funciona page still describes reserve/redemption disclosures.",
     "compositionBasis": "BRL1 issuer proof-of-reserves report",
     "compositionAsOf": "2026-05-01",
     "scope": "full-composition",

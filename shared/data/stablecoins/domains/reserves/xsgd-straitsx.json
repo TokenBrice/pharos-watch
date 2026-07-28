@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-24",
-    "reviewer": "Codex XSGD reserve report review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve re-verification",
     "confidence": "verified",
     "sources": [
       {
@@ -34,7 +34,7 @@
         "url": "https://www.straitsx.com/legal/risk-warnings-regulatory-notices-disclosures"
       }
     ],
-    "rationale": "KK Yap & Associates' independent SSAE 3000 (Revised) examination reports SGD 15,013,117 cash and SGD 11,569,694 short-dated MAS/government bills or eligible overnight reverse repos, against SGD 26,582,811 total reserves. Percentages are calculated against that reported reserve total. The report confirms that the assets are held in a trust account with an MAS-permitted safeguarding institution, but it does not split the second reported category between bills and overnight reverse repos or identify the institution.",
+    "rationale": "Re-opened 2026-07-28: KK Yap & Associates SSAE 3000 (Revised) examination as of 31 May 2026 11:59 PM ST still reports Cash SGD 15,013,117 and Bonds/notes ≤3 months residual maturity issued by MAS/government (or overnight reverse repos against AA-/Aa3 counterparties) SGD 11,569,694, totaling SGD 26,582,811 marked-to-market reserves versus SGD 26,568,488 XSGD in circulation. Percentages 56.476785% cash and 43.523215% short-dated MAS/government bills or eligible overnight reverse repos are calculated against that reserve total and re-derived on re-open. StraitsX legal disclosures (effective 18 July 2026) independently corroborate 100% reserve backing in segregated trust accounts at MAS-permitted FIs (CIMB, DBS, SCB or other permitted FIs), held on trust for token-holders and excluded from the issuer's unsecured-creditor estate. The examination does not split the second category between bills and repos or name the safeguarding institution. StraitsX /xsgd attestation list still tops out at 31 May 2026 as of this re-open (no later public report located).",
     "compositionBasis": "KK Yap & Associates independent examination as of 31 May 2026",
     "compositionAsOf": "2026-05-31",
     "scope": "full-composition",

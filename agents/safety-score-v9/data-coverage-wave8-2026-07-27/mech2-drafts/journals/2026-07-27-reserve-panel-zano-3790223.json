@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "assetId": "fusd-freedom-dollar",
+  "archetype": "algorithmic",
+  "capturedAt": "2026-07-27T22:56:51.000Z",
+  "source": {
+    "url": "https://freedomdollar.com/",
+    "label": "Freedom Dollar homepage reserves panel (server-rendered HTML)",
+    "panelSelfReportedUpdate": "7/27/2026, 10:50:04 PM"
+  },
+  "observations": {
+    "homepagePanel": {
+      "mintedTokensDisplayed": "11.4M",
+      "circulatingTokensDisplayed": "7.4M",
+      "publicReservesUsd": 11115334.03,
+      "zanoPriceUsd": 8.859,
+      "zanoReserveCount": 1254693.99,
+      "reserveHeldFusd": 4000001,
+      "coverageRatioDisplayed": "1.50x"
+    },
+    "zanoDaemon": {
+      "endpoint": "https://node.zano.org/json_rpc",
+      "height": 3790223,
+      "getinfoBracketUtc": "2026-07-27T22:56:51Z",
+      "getAssetInfo": {
+        "assetId": "86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f",
+        "currentSupplyBaseUnits": 114000000000,
+        "decimalPoint": 4,
+        "ticker": "fUSD",
+        "owner": "497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1",
+        "hiddenSupply": false
+      }
+    },
+    "whitePaperRecheck": "2026-07-27 fetch of [English]White-paper.pdf (4 pages): no emergency-recovery, shutdown, bad-debt, or holder loss-recovery waterfall text; only 'High collateralization ensures redemptions at $1 are honored even during drawdowns' and market-maker-bot peg mechanics."
+  },
+  "derivations": {
+    "mintedFusd": {
+      "formula": "currentSupplyBaseUnits / 10^decimalPoint",
+      "value": 11400000
+    },
+    "circulatingFusd": {
+      "formula": "mintedFusd - reserveHeldFusd",
+      "value": 7399999
+    },
+    "totalReserveUsd": {
+      "formula": "zanoReserveUsd + reserveHeldFusd",
+      "value": 15115335.03
+    },
+    "exogenousBackingShare": {
+      "formula": "zanoReserveUsd / totalReserveUsd = 11115334.03 / 15115335.03",
+      "value": 0.735368
+    },
+    "reflexiveBackingShare": {
+      "formula": "reserveHeldFusd / totalReserveUsd = 4000001 / 15115335.03",
+      "value": 0.264632
+    },
+    "contractionCapacityRatio": {
+      "formula": "zanoReserveUsd / circulatingFusd = 11115334.03 / 7399999",
+      "value": 1.502072,
+      "crossCheck": "issuer-displayed coverage ratio 1.50x; zanoPrice x zanoReserveCount = 8.859 x 1254693.99 = 11115334.06 (displayed 11115334.03, rounding)"
+    }
+  },
+  "sources": [
+    "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf",
+    "https://freedomdollar.com/",
+    "https://freedomdollar.com/verify-reserves",
+    "https://node.zano.org/json_rpc"
+  ]
+}

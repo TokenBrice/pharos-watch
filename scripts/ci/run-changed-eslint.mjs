@@ -1,0 +1,48 @@
+#!/usr/bin/env node
+
+import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mjs";
+import { localBin } from "../lib/local-bin.mjs";
+
+const LINTABLE_EXTENSION = /\.(?:[cm]?[jt]sx?)$/;
+
+export function selectLintableFiles(changedFiles, { exists = existsSync } = {}) {
+  return changedFiles.filter((file) => LINTABLE_EXTENSION.test(file) && exists(file));
+}
+
+export function runChangedEslint({
+  argv = process.argv.slice(2),
+  env = process.env,
+  spawn = spawnSync,
+} = {}) {
+  const { base, head, rest } = parseChangedFileArgs(argv, env);
+  const files = selectLintableFiles(collectChangedFiles({ base, head }));
+
+  if (files.length === 0) {
+    console.log(`[lint:changed] No lintable files changed in ${base}...${head}.`);
+    return 0;
+  }
+
+  console.log(`[lint:changed] Checking ${files.length} file(s) changed in ${base}...${head}.`);
+  const result = spawn(
+    localBin("eslint"),
+    [
+      ...files,
+      "--cache",
+      "--cache-strategy",
+      "content",
+      "--cache-location",
+      ".cache/eslint/",
+      "--max-warnings=0",
+      ...rest,
+    ],
+    { env, stdio: "inherit" },
+  );
+  if (result.error) throw result.error;
+  return result.status ?? 1;
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  process.exit(runChangedEslint());
+}

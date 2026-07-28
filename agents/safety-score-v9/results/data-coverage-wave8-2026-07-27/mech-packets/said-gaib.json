@@ -1,0 +1,60 @@
+{
+  "assetId": "said-gaib",
+  "archetype": "rwa-credit-fund",
+  "researchedAt": "2026-07-28",
+  "pinnedAt": "2026-07-28 re-open docs.gaib.ai sAID + AID product pages (ERC-4626 sAID; monthly NAV update first day of month; AI infra financings + T-bill/stable buffer; monthly withdrawal cohort T+2 months settle)",
+  "metrics": {
+    "weightedAverageMaturityDays": null,
+    "valuationCadenceDays": 30
+  },
+  "metricStates": {
+    "weightedAverageMaturityDays": {
+      "state": "unavailable",
+      "rationale": "sAID deploys into AI infrastructure financings (GPUs/robotics) plus stable reserve. No portfolio WAM published. Searched sAID and AID docs pages.",
+      "sourceUrl": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said.md"
+    },
+    "valuationCadenceDays": {
+      "state": "measured",
+      "rationale": "Issuer docs state sAID ERC-4626 NAV is calculated and updated on the first day of each month → valuationCadenceDays=30 as the documented update cadence (not a continuous mark). Dual-source: sAID page monthly NAV language + AID product page describing financing portfolio structure.",
+      "sourceUrl": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said.md"
+    }
+  },
+  "components": {
+    "valuationCadence": {
+      "quality": "limited",
+      "basis": "Documented monthly NAV update for sAID vault. Dual sAID + AID docs. Limited: no independent administrator attestation pin."
+    },
+    "maturityAndLiquidity": {
+      "quality": "limited",
+      "basis": "Monthly withdrawal cohorts with settlement on first day of third month (long unlock). Dual sAID unstaking section + AID liquidity buffer description. Limited: illiquid AI infra book."
+    },
+    "creditQuality": {
+      "quality": "limited",
+      "basis": "AI infrastructure financings (GPU/robotics) + T-bill/stable buffer per docs. Limited: no dual-sourced obligor ratings or loss history."
+    }
+  },
+  "sources": [
+    {
+      "label": "GAIB sAID docs",
+      "url": "https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said.md"
+    },
+    {
+      "label": "GAIB AID docs",
+      "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid.md"
+    },
+    {
+      "label": "GAIB website",
+      "url": "https://gaib.ai/"
+    },
+    {
+      "label": "DefiLlama AID 353 (related parent supply)",
+      "url": "https://stablecoins.llama.fi/stablecoin/353"
+    }
+  ],
+  "notes": "sAID is yield vault over AID financings; not $1 pegged. verification PENDING.",
+  "verification": {
+    "verdict": "REPRODUCED",
+    "verifierNotes": "REPRODUCED 2026-07-28. Archetype rwa-credit-fund vocab OK. docs.gaib.ai staked-ai-dollar-said.md HTTP 200: ERC-4626 sAID; NAV 'calculated and updated on the NAV every first day of the month' → valuationCadenceDays=30; AI infra financings + T-bill/stable buffer; 30-day unstake cycle. weightedAverageMaturityDays unavailable after named search of sAID/AID docs. Component keys valuationCadence/maturityAndLiquidity/creditQuality valid RWA.",
+    "secondSource": "docs.gaib.ai sAID.md monthly NAV language re-open + AID product structure page"
+  }
+}

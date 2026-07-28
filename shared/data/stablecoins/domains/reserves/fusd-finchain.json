@@ -7,13 +7,20 @@
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Taikang Asset Management, China Asset Management, and BNY Mellon Fund Management",
-      "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty", "legal"],
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal"
+      ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
     "confidence": "verified",
     "sources": [
       {
@@ -25,7 +32,7 @@
         "url": "https://fusd.finchain.global/#reserves"
       }
     ],
-    "rationale": "FinChain names three tokenized money-market and Treasury-liquidity fund products backing FUSD and states a minimum 100% collateralization ratio, but it does not publish current product weights in the reviewed documentation. The reserve is therefore represented as one 100% aggregate fund basket.",
+    "rationale": "Write-time re-open 2026-07-28 of FinChain FUSD reserves docs and reserve-assets page: FUSD is collateralized by tokenized U.S. Treasury / money-market products from Taikang Asset Management (HK), China Asset Management (HK), and BNY Mellon Fund Management (Luxembourg), with a stated minimum 100% collateralization ratio. Current product weights remain undisclosed, so the envelope stays one 100% fund-share basket with knownUnknownExposurePct=100. Dashboard URL re-opened (SPA shell) and still presents as the real-time reserve-ratio surface linked from docs.",
     "compositionBasis": "FinChain named FUSD reserve-fund inventory",
     "scope": "full-composition",
     "knownUnknownExposure": "Current weights across the Taikang, ChinaAMC, and BNY Mellon products, plus their underlying holdings and maturity profile, are not published.",
@@ -38,7 +45,8 @@
         "disposition": "insufficient-evidence",
         "rationale": "The three products are identified, but their current allocations are not disclosed."
       }
-    ]
+    ],
+    "compositionAsOf": "2026-07-28"
   },
   "custodyProfile": {
     "providers": [
