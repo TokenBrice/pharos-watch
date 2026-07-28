@@ -11051,44 +11051,54 @@
     {
       "assetId": "ybold-yearn",
       "archetype": "cdp",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-28",
       "sources": [
         {
-          "label": "Yearn yBOLD documentation — 1 yBOLD represents 1 BOLD deposited in Liquity V2 Stability Pools, redeemable for BOLD without withdrawal fee or waiting period, Liquity bad-debt/principal risk disclosure",
+          "label": "Yearn yBOLD documentation (ERC-4626 vault over BOLD allocated across Liquity V2 Stability Pools)",
           "url": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
         },
         {
-          "label": "Liquity V2 protocol stats API (total_coll_value, total_bold_supply, total_sp_deposits, per-branch breakdown)",
-          "url": "https://api.liquity.org/v2/ethereum.json"
+          "label": "Yearn yBOLD repository (Strategy verifies BOLD as the asset and deposits it into Liquity Stability Pools)",
+          "url": "https://github.com/yearn/yBOLD"
         },
         {
-          "label": "Liquity V2 borrowing and liquidations FAQ — per-branch max LTVs (90.91% ETH, 83.33% wstETH/rETH), Stability Pool primary liquidation, JIT and redistribution fallback, gas compensation",
-          "url": "https://docs.liquity.org/v2-faq/borrowing-and-liquidations"
+          "label": "Sherlock yBOLD audit repository (ERC-4626 BOLD allocation across three Stability Pool strategies)",
+          "url": "https://github.com/sherlock-audit/2025-05-yearn-ybold"
         },
         {
-          "label": "Liquity V2 redemptions and delegation FAQ — permissionless BOLD redemption for collateral at face value, outside-debt-proportional branch routing",
-          "url": "https://docs.liquity.org/v2-faq/redemptions-and-delegation"
-        },
-        {
-          "label": "Liquity V2 risk disclosure — per-branch Stability Pools and borrow markets, Critical/Shutdown thresholds with urgent redemptions, immutable core, unbacked-BOLD bad-debt scenario with no unconditional recapitalization",
-          "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+          "label": "Liquity V2 technical documentation (parent Stability Pool and liquidation mechanics)",
+          "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
         }
       ],
-      "notes": "yBOLD is Yearn's ERC-4626 wrapper that routes BOLD 1:1 into Liquity V2 Stability Pools; Yearn's documentation states yBOLD is always redeemable for the underlying BOLD without withdrawal fees or waiting periods and explicitly warns that Liquity V2 bad debt or Stability Pool losses can impact principal. The wrapper opens no borrower positions and adds no collateral branches, so its CDP mechanism review is the inherited Liquity V2 mechanism reviewed from Liquity's own primary documentation, re-fetched this session (consistent with the separately curated bold-liquity overlay). Metrics measured 2026-07-20 from Liquity's own protocol stats API: total collateral value $75,936,029.45 over total BOLD supply 29,840,437.96 gives collateralizationRatio 2.544736; total Stability Pool deposits 19,402,813.18 BOLD over the same supply give liquidationCapacityRatio 0.650219. COLLATERALIZATION PARAMETERS (adequate): the borrowing FAQ documents per-branch maximum LTVs of 90.91% (WETH) and 83.33% (wstETH, rETH) — i.e. 110%/120% minimum collateral ratios — with Chainlink collateral pricing per the risk disclosure; documented and verifiable, but not a regulator-supervised structure. LIQUIDATION MECHANICS (adequate): liquidations are permissionless with gas compensation (0.0375 WETH deposit plus 0.5% of collateral capped), Stability Pools burn debt as the primary path, with Just-In-Time liquidation and same-branch redistribution as documented fallbacks when a pool is empty. BACKSTOP (adequate): per-branch Stability Pools hold a measured 65.0% of BOLD supply, funded continuously by 75% of borrower interest per the risk disclosure; the wrapper's own deposits ride inside these pools. BRANCH ISOLATION (adequate): each collateral asset is an individual borrow market with its own Stability Pool, and liquidation/redistribution losses stay within that branch — the risk disclosure states borrowers and SP depositors are only exposed to their opted asset — but BOLD (and hence yBOLD) holders remain exposed to unrecovered debt from any branch, which prevents a strong rating. SHUTDOWN AND BAD DEBT (limited): the risk disclosure documents the Critical Threshold (debt-creation pause) and Shutdown Threshold (branch shutdown with urgent redemptions at favorable rates), yet also states that a severe collateral collapse can leave unbacked BOLD with no unconditional recapitalization facility, in the worst case reducing unbacked BOLD's value toward zero. STRUCTURAL REDEMPTION (adequate): any BOLD holder can permissionlessly redeem BOLD for a collateral mix at face value (routed pro-rata to outside debt), and Yearn documents 1:1 yBOLD→BOLD convertibility with no fee or wait, so yBOLD inherits a two-step structural redemption to collateral. NOT ESTABLISHED: the yBOLD vault's live per-Stability-Pool allocation (dynamic, re-evaluated every 30 minutes per Yearn docs, not fixed or independently reconciled at a pinned block in this review); the wrapper's privileged-rights lifecycle and strategy-level execution risk, which sit outside the CDP mechanism components and are tracked in the coin file's other risk reviews; and any wrapper-level backstop beyond the underlying Liquity pools (none documented).",
+      "notes": "Reviewed 2026-07-28. Yearn documents yBOLD as an ERC-4626 vault whose asset is already-issued BOLD and whose strategies allocate that BOLD across Liquity V2 Stability Pools. The implementation verifies each Stability Pool's boldToken() equals the vault asset and accounts for the compounded BOLD deposits; the Sherlock audit intake independently describes the same three-strategy ERC-4626 allocation. yBOLD therefore originates no borrower debt, operates no collateral-ratio vaults, and executes no liquidations of its own. Wrapper-level collateralization and liquidation-capacity ratios, plus the corresponding two mechanism components, are structurally not applicable. The parent BOLD system's current ratios and liquidation mechanics remain on variantOf bold-liquity and are reviewed separately rather than copied onto this wrapper. yBOLD deposits do participate in the parent Stability Pools, so the inherited backstop and branch-isolation assessments remain adequate. Parent-system bad debt can reduce wrapper principal with no disclosed wrapper-level recapitalization, keeping shutdown and bad-debt handling limited. Yearn documents redemption to BOLD without a withdrawal fee or waiting period, and the parent system provides BOLD-to-collateral redemption, supporting adequate structural redemption. NOT ESTABLISHED: a pinned-block reconciliation of the live strategy allocation, the complete privileged-rights lifecycle, withdrawal behavior under Stability Pool stress, or any wrapper-level insurance or recapitalization facility.",
       "metrics": {
-        "collateralizationRatio": 2.544736,
-        "liquidationCapacityRatio": 0.650219
+        "collateralizationRatio": null,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "not-applicable",
+          "rationale": "yBOLD is an ERC-4626 allocator of already-issued BOLD across Liquity V2 Stability Pools; it originates no borrower debt and has no collateralized vault system of its own, so a wrapper-level collateralization ratio is structurally undefined.",
+          "sourceUrl": "https://github.com/yearn/yBOLD"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "yBOLD has no debt of its own to offset; its BOLD deposits are themselves liquidation capital supplied to the parent system, so a wrapper-level liquidation-capacity ratio is structurally not applicable.",
+          "sourceUrl": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
+        }
       },
       "components": {
         "collateralizationParameters": {
-          "applicability": "measured",
-          "quality": "adequate"
+          "applicability": "not-applicable",
+          "rationale": "The wrapper accepts BOLD and allocates it to Stability Pools; it has no borrower collateral positions or collateral-ratio thresholds.",
+          "sourceUrl": "https://github.com/yearn/yBOLD"
         },
         "liquidationMechanics": {
-          "quality": "adequate"
+          "applicability": "not-applicable",
+          "rationale": "Liquidation execution belongs to the parent Liquity V2 BOLD system; yBOLD only supplies BOLD to its Stability Pools.",
+          "sourceUrl": "https://docs.yearn.fi/getting-started/products/yvaults/yBold"
         },
         "backstop": {
-          "applicability": "measured",
           "quality": "adequate"
         },
         "branchIsolation": {
