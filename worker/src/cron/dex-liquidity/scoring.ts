@@ -1225,17 +1225,20 @@ export async function computeDexPrices(
   await db.prepare("DELETE FROM dex_price_run_rows WHERE generation_id = ?").bind(generationId).run();
   throwIfAborted(signal);
 
-  let primaryPrices: Map<string, number> | null =
-    preloadedPrimaryPrices && preloadedPrimaryPrices.size > 0
-      ? preloadedPrimaryPrices
-      : null;
-  const loadPrimaryPrices = async (): Promise<Map<string, number>> => {
-    if (primaryPrices != null) return primaryPrices;
-    primaryPrices = new Map<string, number>();
+  const primaryPrices = new Map(preloadedPrimaryPrices);
+  let loadedStrictPrimaryPrices = false;
+  const loadPrimaryPrices = async (stablecoinId: string): Promise<Map<string, number>> => {
+    if (primaryPrices.has(stablecoinId) || loadedStrictPrimaryPrices) return primaryPrices;
+    loadedStrictPrimaryPrices = true;
     const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
     if (stablecoinsCache.kind === "ok") {
       for (const asset of stablecoinsCache.payload.peggedAssets) {
-        if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
+        if (
+          !primaryPrices.has(asset.id)
+          && asset.price != null
+          && typeof asset.price === "number"
+          && asset.price > 0
+        ) {
           primaryPrices.set(asset.id, asset.price);
         }
       }
@@ -1263,7 +1266,7 @@ export async function computeDexPrices(
         id,
       ) ?? [];
     if (observations.length === 0) continue;
-    const prices = await loadPrimaryPrices();
+    const prices = await loadPrimaryPrices(id);
 
     const {
       collapsed: collapsedObservations,

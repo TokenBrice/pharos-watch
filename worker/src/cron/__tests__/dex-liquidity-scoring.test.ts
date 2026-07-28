@@ -1859,6 +1859,74 @@ describe("dex-liquidity scoring", () => {
     ]);
   });
 
+  it("loads a missing strict primary price when the preloaded price map is partial", async () => {
+    vi.mocked(getCache).mockResolvedValueOnce({
+      value: JSON.stringify({
+        peggedAssets: [
+          { id: "usdt-tether", symbol: "USDT", price: 0.3 },
+        ],
+      }),
+      updatedAt: 1_700_000_000,
+    });
+
+    await computeDexPrices(
+      makeQueryDb([]),
+      new Map([
+        ["usdt-tether", [
+          makeDexPricePool({
+            poolId: "ethereum:curve-1",
+            project: "curve",
+            chain: "Ethereum",
+            tvlUsd: 100_000,
+            price: 0.3,
+            source: "dl",
+          }),
+          makeDexPricePool({
+            poolId: "base:uniswap-1",
+            project: "uniswap-v3",
+            chain: "Base",
+            tvlUsd: 100_000,
+            price: 0.31,
+            source: "direct_api",
+          }),
+          makeDexPricePool({
+            poolId: "solana:raydium-1",
+            project: "raydium",
+            chain: "Solana",
+            tvlUsd: 1_000_000,
+            price: 1,
+            source: "gecko_terminal",
+          }),
+        ]],
+      ]),
+      1_700_000_001,
+      undefined,
+      undefined,
+      undefined,
+      "dex-liquidity-1700000001",
+      new Map([["usdc-circle", 1]]),
+    );
+
+    expect(getCache).toHaveBeenCalledOnce();
+    const [, statements] = vi.mocked(batchExecute).mock.calls[0]!;
+    const upserts = statements as PreparedStatementWithMeta[];
+    expect(upserts[0]?.boundValues).toEqual([
+      "usdt-tether",
+      "USDT",
+      0.3,
+      3,
+      1_200_000,
+      0,
+      0.3,
+      JSON.stringify([
+        { protocol: "curve", chain: "Ethereum", price: 0.3, tvl: 100_000, sourceFamily: "dl" },
+        { protocol: "uniswap-v3", chain: "Base", price: 0.31, tvl: 100_000, sourceFamily: "direct_api" },
+      ]),
+      1_700_000_001,
+      "dex-liquidity-1700000001",
+    ]);
+  });
+
   it("ignores malformed cache JSON when computing DEX prices", async () => {
     vi.mocked(getCache).mockResolvedValueOnce({
       value: "{bad-json",
