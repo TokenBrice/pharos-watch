@@ -162,6 +162,9 @@ function DetailSummaryRail({
     <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
       <div className="space-y-4 pb-4">
         <RailSafetySummary items={heroModel.signalRailItems} />
+        {viewModel.reportCard ? (
+          <AccessPosturePanel rows={buildSafetyScoreV9AccessRows(viewModel.reportCard)} compact />
+        ) : null}
         <CollateralizationCard
           reviewed={mechanismCollateralization}
           liveRatio={liveCollateralizationRatio}
@@ -179,9 +182,6 @@ function DetailSummaryRail({
             dexPriceCheck={viewModel.dexPriceCheck}
             compact
           />
-        ) : null}
-        {viewModel.reportCard ? (
-          <AccessPosturePanel rows={buildSafetyScoreV9AccessRows(viewModel.reportCard)} compact />
         ) : null}
         <MechanismReviewPanel review={mechanismReview} compact />
       </div>
