@@ -39,6 +39,12 @@ export function buildUserPrompt(
   const regime = classifyRegime(data);
   const lines: string[] = [`Market regime: ${regime}`];
 
+  if (data.safetyContext?.status === "unavailable") {
+    lines.push(
+      `Editorial omission: a canonical input (${data.safetyContext.expectedModel.toUpperCase()}: ${data.safetyContext.reason}) is unavailable. Omit that topic entirely; do not mention the missing input or draw conclusions from it.`,
+    );
+  }
+
   pushDataQualityLines(lines, data);
   pushLeadRequirementLines(lines, options.leadRequirements);
   pushOngoingStoryLines(lines, data, options.recentLeadSignalIds);

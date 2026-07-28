@@ -874,8 +874,45 @@ describe("generateDailyDigest", () => {
       qualityIssueCodes: expect.arrayContaining(["unbound-safety-copy"]),
     });
     expect(result.metadata).toContain("unbound-safety-copy");
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
     expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
     expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+  });
+
+  it("repairs unbound daily copy during the standard corrective retry", async () => {
+    vi.mocked(loadIdentifiedActiveSafetyScoreSource).mockResolvedValueOnce({
+      kind: "error",
+      expectedModel: "v9",
+      reason: "v9-identity-mismatch",
+      detail: "identity mismatch",
+    });
+    const cleanResponse = JSON.parse(ANTHROPIC_OK_TEXT) as {
+      title: string;
+      text: string;
+      extended: string;
+      meta: Record<string, unknown>;
+    };
+    cleanResponse.extended = VALID_DAILY_EXTENDED.replace(
+      "Safety scores stayed A for USDT and USDC, ",
+      "The fixture's primary risk inputs were unchanged, ",
+    );
+    vi.mocked(fetchWithRetry)
+      .mockResolvedValueOnce(mockAnthropicStreamResponse(ANTHROPIC_OK_TEXT))
+      .mockResolvedValueOnce(mockAnthropicStreamResponse(JSON.stringify(cleanResponse)));
+
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(db, "anthropic-key");
+
+    expect(result.itemCount).toBe(1);
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(result.metadata).not.toContain("unbound-safety-copy");
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    expect(JSON.parse(String(insertBinds?.[5]))).not.toMatchObject({ qualityGate: "blocked" });
+    const firstRequest = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: Array<{ content: string }>;
+    };
+    expect(firstRequest.messages[0]?.content).toContain("Editorial omission:");
+    expect(firstRequest.messages[0]?.content).not.toContain("Safety source unavailable");
   });
 
   it("publishes only canonical V9 grades, pillars, reasons, caps, and full identity", async () => {

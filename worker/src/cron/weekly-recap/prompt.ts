@@ -76,7 +76,7 @@ export function buildWeeklyPrompt(
     );
   } else if (data.safetyContext?.status === "unavailable") {
     lines.push(
-      `Safety source unavailable (${data.safetyContext.expectedModel.toUpperCase()}: ${data.safetyContext.reason}); do not infer safety or grade movement from its absence.`,
+      `Editorial omission: a canonical input (${data.safetyContext.expectedModel.toUpperCase()}: ${data.safetyContext.reason}) is unavailable. Omit that topic entirely; do not mention the missing input or draw conclusions from it.`,
     );
   }
 

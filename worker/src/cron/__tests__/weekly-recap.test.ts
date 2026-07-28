@@ -485,6 +485,7 @@ describe("generateWeeklyRecap", () => {
 
     expect(result.status).toBe("degraded");
     expect(result.metadata).toContain("unbound-safety-copy:hard");
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
     expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
     expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
 
@@ -496,6 +497,35 @@ describe("generateWeeklyRecap", () => {
         reason: "v9-snapshot-unavailable",
       },
     });
+  });
+
+  it("repairs unbound weekly copy during the standard corrective retry", async () => {
+    vi.mocked(loadDigestSafetyContext).mockResolvedValueOnce({
+      status: "unavailable",
+      expectedModel: "v9",
+      identity: null,
+      publishedAt: null,
+      reason: "v9-snapshot-unavailable",
+    });
+    const db = mockD1(makeTables(), { requireMatch: true });
+    vi.mocked(fetchWithRetry)
+      .mockResolvedValueOnce(weeklyClaudeResponse())
+      .mockResolvedValueOnce(weeklyClaudeResponse({
+        extended: VALID_WEEKLY_EXTENDED.replace("grade transitions", "risk transitions"),
+      }));
+
+    const result = await generateWeeklyRecap(db, "anthropic-key", null);
+
+    expect(result.itemCount).toBe(1);
+    expect(fetchWithRetry).toHaveBeenCalledTimes(2);
+    expect(result.metadata).not.toContain("unbound-safety-copy");
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(JSON.parse(String(insert?.binds[5]))).not.toMatchObject({ qualityGate: "blocked" });
+    const firstRequest = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+      messages: Array<{ content: string }>;
+    };
+    expect(firstRequest.messages[0]?.content).toContain("Editorial omission:");
+    expect(firstRequest.messages[0]?.content).not.toContain("Safety source unavailable");
   });
 
   it("stores failed Telegram delivery state so the weekly row can be retried", async () => {

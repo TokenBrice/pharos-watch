@@ -221,6 +221,7 @@ export async function generateDailyDigest(
       depegFacts: llmSignals.topDepegs,
       prevDepegFacts: previousInputData?.topDepegs ?? [],
       recentTitles,
+      forbidSafetyClaims: inputData.safetyContext?.status !== "available",
     },
   });
   if (digestCopy.kind === "circuit-open") {
