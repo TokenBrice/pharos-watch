@@ -14,6 +14,7 @@ import {
 } from "../lib/safety-score-history-v2";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 import { loadSafetyScoreV9PublicationAttempt } from "../lib/safety-score-v9-publication-store";
+import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9-consumer-freshness";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
 
 const OPERATIONALLY_AFFECTED_HISTORY_CACHE_KEY =
@@ -76,6 +77,17 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
         itemCount: 0,
         metadata: JSON.stringify({
           reason: "v9-publication-held",
+          expectedModel: "v9",
+          historyWritesSkipped: true,
+        }),
+      };
+    }
+    if (!isSafetyScoreV9SnapshotFresh(active.snapshot, nowSec)) {
+      return {
+        status: "degraded" as const,
+        itemCount: 0,
+        metadata: JSON.stringify({
+          reason: "v9-publication-stale",
           expectedModel: "v9",
           historyWritesSkipped: true,
         }),

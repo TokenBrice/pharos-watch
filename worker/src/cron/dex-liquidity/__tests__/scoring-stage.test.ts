@@ -527,6 +527,18 @@ describe("DEX liquidity scoring stage", () => {
       expectedMajorPoolIds,
     );
 
+    harness.sqlite.prepare(
+      `UPDATE dex_liquidity_scoring_stages
+          SET state = 'consumed'
+        WHERE generation_id = ?`,
+    ).run(stored.generationId);
+    const retried = await loadDexLiquidityScoringStage(harness.db, {
+      nowSec: sourceSlotStartedAt + 6 * 60,
+      expectedSourceSlotStartedAt: sourceSlotStartedAt,
+    });
+    expect(retried.generationId).toBe(stored.generationId);
+    expect(retried.sourceSlotStartedAt).toBe(sourceSlotStartedAt);
+
     await expect(loadDexLiquidityScoringStage(harness.db, {
       nowSec: sourceSlotStartedAt + 56 * 60,
       expectedSourceSlotStartedAt: sourceSlotStartedAt,

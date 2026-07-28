@@ -71,6 +71,26 @@ describe("snapshotSafetyGradeHistory", () => {
     expect(result.metadata).toContain("v9-publication-held");
   });
 
+  it("skips history writes while the current V9 publication is stale", async () => {
+    mockLoadActiveSafetyScoreSource.mockResolvedValue({
+      kind: "v9",
+      expectedModel: "v9",
+      snapshot: makeReportCardsV9Response({ updatedAt: 1 }),
+    });
+
+    const result = await snapshotSafetyGradeHistory({} as D1Database);
+
+    expect(result).toEqual({
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "v9-publication-stale",
+        expectedModel: "v9",
+        historyWritesSkipped: true,
+      }),
+    });
+  });
+
   it("fails closed when V9 is unavailable", async () => {
     mockLoadActiveSafetyScoreSource.mockResolvedValue({
       kind: "error",
@@ -87,6 +107,7 @@ describe("snapshotSafetyGradeHistory", () => {
 
   it("does not record an affected NR as an organic grade transition", async () => {
     const current = makeReportCardsV9Response({
+      updatedAt: Math.floor(Date.now() / 1000),
       cards: [
         makeWorkerV9Card({
           score: null,
@@ -148,6 +169,7 @@ describe("snapshotSafetyGradeHistory", () => {
 
   it("suppresses the first clean recovery transition and clears its marker", async () => {
     const current = makeReportCardsV9Response({
+      updatedAt: Math.floor(Date.now() / 1000),
       cards: [makeWorkerV9Card({ grade: "A", score: 85 })],
     });
     const card = current.cards[0]!;
