@@ -1091,7 +1091,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       scoreProjectionReasonNeedingSupplementCount: projectionRows.filter((row) => row.requiresSupplementalTask).length,
       claimGroupCount,
       criticalItemCount: queue.entries.filter((entry) => entry.critical).length,
-      policyBindingReviewCount: queue.entries.filter((entry) => entry.policyBindingIssues.length > 0).length,
+      policyBindingReviewCount: registryItems.filter((item) => item.policyBinding.coordinatorReviewRequired).length,
       responsibilityCounts: queue.summary.responsibilityCounts,
       observationStateCounts: countBy(registryItems, (entry) => entry.observationState),
       gradeCounts: countBy(candidate.cards, (card) => card.grade),
