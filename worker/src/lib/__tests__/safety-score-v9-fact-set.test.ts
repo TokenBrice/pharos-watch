@@ -3938,7 +3938,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     // The 9.02 methodology identity and shared version surface rotate the
     // historical V8 evaluation build even though V8 scoring behavior is frozen.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "787f58ad74a9a5f9bb69fa3b8b84d72da8ca045fe6ee0cc03c67dd3e067bf8f7",
+      "0f292f531740e92ce48683934cb0b649ee8cb1d69459c481662396dff1e606e6",
     );
   });
 
