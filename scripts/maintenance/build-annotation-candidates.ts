@@ -338,7 +338,7 @@ async function main(): Promise<void> {
   ]);
 
   if (depegEvents == null) {
-    notes.push(`depeg tape unreachable at ${SITE_DATA_BASE_URL} — skipped`);
+    notes.push(`depeg tape unreachable at ${API_BASE_URL} — skipped`);
   } else {
     for (const e of depegEvents) {
       const c = mapDepegCandidate(e);
@@ -347,7 +347,7 @@ async function main(): Promise<void> {
   }
 
   if (blacklistEvents == null) {
-    notes.push(`freeze tape unreachable at ${SITE_DATA_BASE_URL} — skipped`);
+    notes.push(`freeze tape unreachable at ${API_BASE_URL} — skipped`);
   } else {
     for (const e of blacklistEvents) {
       const c = mapBlacklistCandidate(e, resolveCoinId);

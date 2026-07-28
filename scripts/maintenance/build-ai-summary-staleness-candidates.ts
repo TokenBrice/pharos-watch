@@ -441,7 +441,7 @@ async function main(): Promise<void> {
     current = await loadCurrent();
   } catch (err) {
     console.error(`Failed to load live data: ${(err as Error).message}`);
-    console.error("Check the credential-free Pages site-data lane, or pass --fixtures <dir>.");
+    console.error("Check PHAROS_API_KEY / PHAROS_API_BASE, or pass --fixtures <dir>.");
     process.exit(1);
     return;
   }
@@ -503,7 +503,7 @@ function writeOutputs(
     "# AI Summary Refresh Candidates",
     "",
     `Generated ${today} by \`npm run candidates:ai-summaries\`.`,
-    `Source: ${FIXTURES_DIR ? `fixtures ${FIXTURES_DIR}` : SITE_DATA_BASE_URL}`,
+    `Source: ${FIXTURES_DIR ? `fixtures ${FIXTURES_DIR}` : API_BASE_URL}`,
     "",
     `Audited ${meta.total} summaries; ${meta.unmatched} have no live report card (non-active lifecycle) and were skipped.`,
     `Stale: ${candidates.length} — high ${meta.counts.high}, medium ${meta.counts.medium}, low ${meta.counts.low}.`,
@@ -525,7 +525,7 @@ function writeOutputs(
 
   writeFileSync(
     OUTPUT_JSON,
-    JSON.stringify({ generatedAt: today, source: FIXTURES_DIR ?? SITE_DATA_BASE_URL, ...meta, candidates }, null, 2),
+    JSON.stringify({ generatedAt: today, source: FIXTURES_DIR ?? API_BASE_URL, ...meta, candidates }, null, 2),
     "utf8",
   );
 }
