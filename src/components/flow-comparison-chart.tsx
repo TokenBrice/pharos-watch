@@ -14,13 +14,9 @@ import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { MonoYAxis, TimeXAxis, ChartLegendChip } from "@/components/chart-primitives/axes";
 import { ScreenReaderDataTable } from "@/components/chart-primitives/data-table";
 import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
+import type { FlowSeriesEntry } from "@/lib/compare-derive";
 
-export interface FlowSeries {
-  id: string;
-  label: string;
-  color: string;
-  data: { ts: number; netFlowUsd: number }[];
-}
+export type FlowSeries = FlowSeriesEntry;
 
 interface FlowComparisonChartProps {
   series: FlowSeries[];

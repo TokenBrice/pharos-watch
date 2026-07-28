@@ -3,14 +3,14 @@
 import { useMemo } from "react";
 import { findCanonicalChainData, type RawChainCirculating } from "@shared/lib/chain-circulating";
 import { type ChainsResponse } from "@shared/types/chains";
-import { useRegisteredApiQueryWithMeta } from "./api-hooks";
+import { useRegisteredApiQuery } from "./api-hooks";
 import { useStablecoins } from "./use-stablecoins";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { ApiMeta } from "@/lib/api";
 
 export function useChains() {
-  return useRegisteredApiQueryWithMeta<ChainsResponse>(FRONTEND_API_QUERY_DESCRIPTORS.chains);
+  return useRegisteredApiQuery<ChainsResponse>(FRONTEND_API_QUERY_DESCRIPTORS.chains);
 }
 
 export interface ChainStablecoin {

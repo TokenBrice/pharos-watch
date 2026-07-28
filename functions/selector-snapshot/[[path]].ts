@@ -10,6 +10,8 @@ import {
   validateVerifiedSelectorSnapshot,
 } from "@shared/lib/selector/snapshot";
 import { SELECTOR_SNAPSHOT_VERIFICATION_KIND } from "@shared/lib/selector/types";
+import { readBoundedRequestBody } from "../lib/bounded-request-body";
+import { hashClientIp } from "../lib/client-ip-hash";
 import { NOINDEX_HEADER_VALUE } from "../lib/noindex";
 import { jsonError } from "../lib/proxy-utils";
 import { recomputeVerifiedSelectorSnapshot } from "../lib/selector-canonical-snapshot";
@@ -33,10 +35,7 @@ const STANDARD_RESPONSE_HEADERS = {
   "Referrer-Policy": "no-referrer",
   "X-Robots-Tag": NOINDEX_HEADER_VALUE,
 } as const;
-const SNAPSHOT_BODY_ENCODER = new TextEncoder();
 const SNAPSHOT_BODY_DECODER = new TextDecoder("utf-8", { fatal: true });
-let cachedIpHashSecret: string | null = null;
-let cachedIpHashKey: Promise<CryptoKey> | null = null;
 
 function jsonOk(body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -61,25 +60,6 @@ const POST_RATE_LIMIT_MAX_PER_WINDOW = 10;
 const POST_RATE_LIMIT_MAX_TRACKED_IPS = 5_000;
 const POST_DAILY_QUOTA_MAX_PER_IP = 100;
 const postTimestampsByIpHash = new Map<string, number[]>();
-
-function getIpHashKey(secret: string): Promise<CryptoKey> {
-  if (cachedIpHashSecret !== secret || cachedIpHashKey === null) {
-    cachedIpHashSecret = secret;
-    cachedIpHashKey = crypto.subtle.importKey(
-      "raw",
-      SNAPSHOT_BODY_ENCODER.encode(secret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    );
-  }
-  return cachedIpHashKey;
-}
-
-async function hashClientIp(ip: string, secret: string): Promise<string> {
-  const digest = await crypto.subtle.sign("HMAC", await getIpHashKey(secret), SNAPSHOT_BODY_ENCODER.encode(ip));
-  return Array.from(new Uint8Array(digest).slice(0, 16), (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
 
 async function getClientIpHash(request: Request, env: SelectorSnapshotEnv): Promise<string | null> {
   const ip = request.headers.get("CF-Connecting-IP");
@@ -192,41 +172,16 @@ function hasSnapshotSegments(params: SelectorSnapshotContext["params"]): boolean
   return raw.length > 0;
 }
 
-function oversizedContentLength(request: Request): boolean {
-  const contentLengthHeader = request.headers.get("Content-Length");
-  if (!contentLengthHeader) return false;
-  const parsed = Number(contentLengthHeader);
-  return Number.isFinite(parsed) && parsed > SELECTOR_SNAPSHOT_MAX_PAYLOAD_BYTES;
-}
-
 async function readSnapshotBody(request: Request): Promise<string | Response> {
-  if (oversizedContentLength(request)) {
+  const result = await readBoundedRequestBody(request, SELECTOR_SNAPSHOT_MAX_PAYLOAD_BYTES);
+  if (result.status === "too-large") {
     return jsonError(413, "Payload too large");
   }
-
+  if (result.status === "unreadable") {
+    return jsonError(400, "Could not read request body");
+  }
   try {
-    if (!request.body) return "";
-    const reader = request.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let totalBytes = 0;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      totalBytes += value.byteLength;
-      if (totalBytes > SELECTOR_SNAPSHOT_MAX_PAYLOAD_BYTES) {
-        await reader.cancel("Payload too large").catch(() => undefined);
-        return jsonError(413, "Payload too large");
-      }
-      chunks.push(value);
-    }
-
-    const bytes = new Uint8Array(totalBytes);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    return SNAPSHOT_BODY_DECODER.decode(bytes);
+    return SNAPSHOT_BODY_DECODER.decode(result.bytes);
   } catch {
     return jsonError(400, "Could not read request body");
   }

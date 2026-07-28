@@ -3,16 +3,14 @@ import {
   TELEGRAM_ADOPTION_CTA_PLACEMENTS,
   TELEGRAM_ADOPTION_LOW_COUNT_THRESHOLD,
 } from "@shared/lib/telegram-adoption-analytics";
+import { readBoundedRequestBody } from "./lib/bounded-request-body";
+import { hashClientIp } from "./lib/client-ip-hash";
 import { rejectIfNotSiteDataUiOrigin } from "./lib/site-data-origin";
 import { z } from "zod";
 
 const MAX_BODY_BYTES = 512;
 const GLOBAL_REQUESTS_PER_MINUTE = 3_000;
 const CLIENT_REQUESTS_PER_MINUTE = 10;
-const IP_HASH_BYTES = 16;
-const ENCODER = new TextEncoder();
-let cachedIpHashSecret: string | null = null;
-let cachedIpHashKey: Promise<CryptoKey> | null = null;
 const TelegramAdoptionClickSchema = z
   .object({
     campaign: z.literal("landing"),
@@ -46,52 +44,13 @@ function response(status: number, body: string | null = null, headers: HeadersIn
 async function readBoundedJson(request: Request): Promise<unknown | null> {
   const contentType = request.headers.get("Content-Type")?.split(";", 1)[0]?.trim().toLowerCase();
   if (contentType !== "application/json") return null;
-  const declared = Number(request.headers.get("Content-Length"));
-  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) return null;
-  if (!request.body) return null;
-
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
+  const result = await readBoundedRequestBody(request, MAX_BODY_BYTES);
+  if (result.status !== "ok") return null;
   try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!value) continue;
-      size += value.byteLength;
-      if (size > MAX_BODY_BYTES) {
-        await reader.cancel().catch(() => undefined);
-        return null;
-      }
-      chunks.push(value);
-    }
-    const bytes = new Uint8Array(size);
-    let offset = 0;
-    for (const chunk of chunks) {
-      bytes.set(chunk, offset);
-      offset += chunk.byteLength;
-    }
-    return JSON.parse(new TextDecoder().decode(bytes));
+    return JSON.parse(new TextDecoder().decode(result.bytes));
   } catch {
     return null;
   }
-}
-
-function getIpHashKey(secret: string): Promise<CryptoKey> {
-  if (cachedIpHashSecret !== secret || cachedIpHashKey === null) {
-    cachedIpHashSecret = secret;
-    cachedIpHashKey = crypto.subtle.importKey("raw", ENCODER.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
-      "sign",
-    ]);
-  }
-  return cachedIpHashKey;
-}
-
-async function hashClientIp(ip: string, secret: string): Promise<string> {
-  const digest = await crypto.subtle.sign("HMAC", await getIpHashKey(secret), ENCODER.encode(ip));
-  return Array.from(new Uint8Array(digest).slice(0, IP_HASH_BYTES), (byte) => byte.toString(16).padStart(2, "0")).join(
-    "",
-  );
 }
 
 async function getClientIpHash(request: Request, env: TelegramAdoptionPagesEnv): Promise<string | null> {

@@ -54,7 +54,7 @@ interface BootstrapDescriptor<
   descriptor: TDescriptor;
 }
 
-interface BootstrapQuery<TQueryId extends string, TMeta> {
+export interface BootstrapQuery<TQueryId extends string, TMeta> {
   id: TQueryId;
   path: string;
   fetchedAt: number;
@@ -62,7 +62,7 @@ interface BootstrapQuery<TQueryId extends string, TMeta> {
   meta: TMeta | null;
 }
 
-interface BootstrapPayload<TQueryId extends string, TMeta> {
+export interface BootstrapPayload<TQueryId extends string, TMeta> {
   version: typeof HOMEPAGE_BOOTSTRAP_VERSION;
   generatedAt: number;
   source: string | null;

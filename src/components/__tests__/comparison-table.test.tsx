@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ComparisonTable } from "@/components/comparison-table";
-import type { StablecoinData, StablecoinMeta, ReportCardGrade } from "@shared/types";
+import type { StablecoinData, StablecoinMeta } from "@shared/types";
 import { makeStablecoin } from "@/test/fixtures/stablecoins";
+import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
@@ -11,19 +12,6 @@ vi.mock("next/link", () => ({
     </a>
   ),
 }));
-
-// Local mirror of the non-exported ComparisonCoin interface
-interface ComparisonCoin {
-  id: string;
-  symbol: string;
-  name: string;
-  data: StablecoinData;
-  meta: StablecoinMeta;
-  pegScore: number | null;
-  liquidityScore: number | null;
-  safetyGrade: ReportCardGrade | null;
-  netFlow30d: number | null;
-}
 
 // Minimal StablecoinData factory — only fields ComparisonTable cares about
 function makeData(circulating: number, circulatingPrevWeek?: number): StablecoinData {
@@ -67,7 +55,7 @@ function makeMeta(id: string, symbol: string): StablecoinMeta {
   };
 }
 
-function makeCoin(id: string, symbol: string, circulating: number, netFlow30d: number | null): ComparisonCoin {
+function makeCoin(id: string, symbol: string, circulating: number, netFlow30d: number | null): ComparisonCoinEntry {
   return {
     id,
     symbol,
@@ -85,27 +73,27 @@ const PEG_RATES: Record<string, number> = { USD: 1 };
 
 describe("ComparisonTable – Net Flow 30D row", () => {
   it("renders formatted positive net flow value", () => {
-    const coins: ComparisonCoin[] = [makeCoin("usdt", "USDT", 100e9, 1_240_000_000)];
+    const coins: ComparisonCoinEntry[] = [makeCoin("usdt", "USDT", 100e9, 1_240_000_000)];
     const html = renderToStaticMarkup(<ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />);
     // getNetPrefix(1_240_000_000) = "+" and formatCurrency(1_240_000_000) = "$1.24B"
     expect(html).toContain("+$1.24B");
   });
 
   it("renders formatted negative net flow value", () => {
-    const coins: ComparisonCoin[] = [makeCoin("usdc", "USDC", 50e9, -340_000_000)];
+    const coins: ComparisonCoinEntry[] = [makeCoin("usdc", "USDC", 50e9, -340_000_000)];
     const html = renderToStaticMarkup(<ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />);
     // getNetPrefix(-340_000_000) = "" and formatCurrency(-340_000_000) = "-$340.00M"
     expect(html).toContain("-$340.00M");
   });
 
   it("renders em-dash for coin with netFlow30d: null", () => {
-    const coins: ComparisonCoin[] = [makeCoin("dai", "DAI", 5e9, null)];
+    const coins: ComparisonCoinEntry[] = [makeCoin("dai", "DAI", 5e9, null)];
     const html = renderToStaticMarkup(<ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />);
     expect(html).toContain("—");
   });
 
   it("applies font-semibold (BEST_CLASS) to the highest net flow coin", () => {
-    const coins: ComparisonCoin[] = [
+    const coins: ComparisonCoinEntry[] = [
       makeCoin("usdt", "USDT", 100e9, 1_240_000_000),
       makeCoin("usdc", "USDC", 50e9, 500_000_000),
     ];
@@ -122,7 +110,7 @@ describe("ComparisonTable – Net Flow 30D row", () => {
   });
 
   it("does not render em-dash when both coins have numeric net flows", () => {
-    const coins: ComparisonCoin[] = [
+    const coins: ComparisonCoinEntry[] = [
       makeCoin("usdt", "USDT", 100e9, 1_240_000_000),
       makeCoin("usdc", "USDC", 50e9, -340_000_000),
     ];
@@ -134,14 +122,14 @@ describe("ComparisonTable – Net Flow 30D row", () => {
   });
 
   it("renders Net Flow 30D label", () => {
-    const coins: ComparisonCoin[] = [makeCoin("usdt", "USDT", 100e9, 0)];
+    const coins: ComparisonCoinEntry[] = [makeCoin("usdt", "USDT", 100e9, 0)];
     const html = renderToStaticMarkup(<ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />);
     expect(html).toContain("Net Flow 30D");
     expect(html).toContain('<th scope="row"');
   });
 
   it("renders the desktop matrix inside the shared table foundation", () => {
-    const coins: ComparisonCoin[] = [makeCoin("usdt", "USDT", 100e9, 0)];
+    const coins: ComparisonCoinEntry[] = [makeCoin("usdt", "USDT", 100e9, 0)];
     const html = renderToStaticMarkup(<ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />);
 
     expect(html).toContain('data-table-id="live-comparison-matrix"');

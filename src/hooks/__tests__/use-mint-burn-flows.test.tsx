@@ -3,23 +3,23 @@ import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { normalizeToSignedFlowIntensity } from "@/lib/flow-intensity";
 
-const { useApiQueryWithMetaMock } = vi.hoisted(() => ({
-  useApiQueryWithMetaMock: vi.fn(),
+const { useRegisteredApiQueryMock } = vi.hoisted(() => ({
+  useRegisteredApiQueryMock: vi.fn(),
 }));
 
-vi.mock("../use-api-query", () => ({
-  useApiQueryWithMeta: useApiQueryWithMetaMock,
+vi.mock("../api-hooks", () => ({
+  useRegisteredApiQuery: useRegisteredApiQueryMock,
 }));
 
 import { useMintBurnEvents, useMintBurnFlows } from "../use-mint-burn-flows";
 
 describe("useMintBurnFlows", () => {
   beforeEach(() => {
-    useApiQueryWithMetaMock.mockReset();
+    useRegisteredApiQueryMock.mockReset();
   });
 
   it("normalizes legacy flow intensity semantics and derives missing activity fields", () => {
-    useApiQueryWithMetaMock.mockReturnValue({
+    useRegisteredApiQueryMock.mockReturnValue({
       data: {
         gauge: {
           score: 70,
@@ -66,7 +66,7 @@ describe("useMintBurnFlows", () => {
   });
 
   it("builds event queries with stable filters and offsets", () => {
-    useApiQueryWithMetaMock.mockReturnValue({
+    useRegisteredApiQueryMock.mockReturnValue({
       data: undefined,
       meta: null,
     });
@@ -79,20 +79,18 @@ describe("useMintBurnFlows", () => {
       offset: 50,
     }));
 
-    expect(useApiQueryWithMetaMock).toHaveBeenCalledWith(
-      [
-        "mint-burn-events",
-        "usdc-circle",
-        "counted",
-        "mint",
-        "effective_burn",
-        25,
-        50,
-      ],
-      "/api/mint-burn-events?stablecoin=usdc-circle&direction=mint&burnType=effective_burn&scope=counted&limit=25&offset=50",
-      30 * 60 * 1000,
+    expect(useRegisteredApiQueryMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        metaMaxAgeSec: expect.any(Number),
+        queryKey: [
+          "mint-burn-events",
+          "usdc-circle",
+          "counted",
+          "mint",
+          "effective_burn",
+          25,
+          50,
+        ],
+        path: "/api/mint-burn-events?stablecoin=usdc-circle&direction=mint&burnType=effective_burn&scope=counted&limit=25&offset=50",
       }),
     );
   });

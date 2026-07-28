@@ -1,12 +1,12 @@
 "use client";
 
-import { useRegisteredApiQueryWithMeta } from "./api-hooks";
+import { useRegisteredApiQuery } from "./api-hooks";
 import { buildBlacklistEventsPath, type FetchBlacklistEventsParams } from "@/lib/blacklist-api";
 import type { BlacklistResponse, BlacklistSummaryResponse } from "@shared/types";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 
 export function useBlacklistSummary(options?: { enabled?: boolean }) {
-  return useRegisteredApiQueryWithMeta<BlacklistSummaryResponse>(
+  return useRegisteredApiQuery<BlacklistSummaryResponse>(
     FRONTEND_API_QUERY_DESCRIPTORS.blacklistSummary,
     { enabled: options?.enabled, retry: 1 },
   );
@@ -29,5 +29,5 @@ export function useBlacklistEventsPage(params: FetchBlacklistEventsParams) {
     ],
     path: buildBlacklistEventsPath(params),
   });
-  return useRegisteredApiQueryWithMeta<BlacklistResponse>(descriptor, { retry: 1 });
+  return useRegisteredApiQuery<BlacklistResponse>(descriptor, { retry: 1 });
 }

@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import {
-  createRegisteredApiPollingQueryOptionsWithMeta,
-  useRegisteredApiQueryWithMeta,
+  createRegisteredApiPollingQueryOptions,
+  useRegisteredApiQuery,
 } from "./api-hooks";
 import type { MintBurnFlowsResponse, MintBurnPerCoinResponse, MintBurnEventsResponse } from "@shared/types";
 import { normalizeToSignedFlowIntensity, type FlowIntensitySemantics } from "@/lib/flow-intensity";
@@ -61,7 +61,7 @@ function normalizeMintBurnFlowsResponse(response: MintBurnFlowsResponse): MintBu
 
 /** Aggregate flows — returns gauge, coins[], hourly[]. No stablecoin filter. */
 export function useMintBurnFlows(hours = 24, opts?: { enabled?: boolean }) {
-  const query = useRegisteredApiQueryWithMeta<MintBurnFlowsResponse>(
+  const query = useRegisteredApiQuery<MintBurnFlowsResponse>(
     FRONTEND_API_QUERY_DESCRIPTORS.mintBurnFlows(hours),
     { enabled: opts?.enabled },
   );
@@ -76,7 +76,7 @@ export function useMintBurnFlows(hours = 24, opts?: { enabled?: boolean }) {
 }
 
 export function mintBurnFlowsCoinQueryOptions(stablecoinId: string, hours = 24, opts?: { enabled?: boolean }) {
-  return createRegisteredApiPollingQueryOptionsWithMeta<MintBurnPerCoinResponse>(
+  return createRegisteredApiPollingQueryOptions<MintBurnPerCoinResponse>(
     FRONTEND_API_QUERY_DESCRIPTORS.mintBurnFlowsCoin(stablecoinId, hours),
     { enabled: !!stablecoinId && (opts?.enabled ?? true) },
   );
@@ -86,7 +86,7 @@ export function useMintBurnEvents(
   stablecoinId: string,
   opts?: MintBurnEventsDescriptorOptions,
 ) {
-  return useRegisteredApiQueryWithMeta<MintBurnEventsResponse>(
+  return useRegisteredApiQuery<MintBurnEventsResponse>(
     FRONTEND_API_QUERY_DESCRIPTORS.mintBurnEvents(stablecoinId, opts),
   );
 }

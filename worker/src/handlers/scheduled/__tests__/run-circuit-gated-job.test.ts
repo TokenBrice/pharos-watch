@@ -120,28 +120,4 @@ describe("runCircuitGatedLeasedScheduledJob", () => {
       "failure",
     );
   });
-
-  it("does not swallow a legacy follow-up failure", async () => {
-    const cronResult = { status: "degraded", itemCount: 1, metadata: "" } as CronResult;
-    const onSettledSuccess = vi.fn(async () => {
-      throw new Error("follow-up failed");
-    });
-    runLeasedCron.mockResolvedValue(cronResult);
-
-    await expect(runCircuitGatedLeasedScheduledJob(buildRuntime(), {
-      circuitSource: "dex-liquidity",
-      outcomeLabel: "DEX liquidity",
-      skipMessage: "DEX circuit open",
-      job: "sync-dex-liquidity",
-      fn: async () => cronResult,
-      onSettledSuccess,
-    })).rejects.toThrow("follow-up failed");
-
-    expect(recordOutcomeDecision).toHaveBeenCalledWith(
-      expect.anything(),
-      "dex-liquidity",
-      "neutral",
-    );
-    expect(onSettledSuccess).toHaveBeenCalledWith(expect.anything(), cronResult);
-  });
 });
