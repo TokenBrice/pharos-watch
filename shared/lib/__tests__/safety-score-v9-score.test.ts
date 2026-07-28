@@ -83,6 +83,35 @@ describe("scoreV9EvaluatedAsset", () => {
     expect(trace.nrReasons.map((reason) => reason.code)).toContain("missing-pillar");
   });
 
+  it("rejects conflicting owners for one public fact identity", () => {
+    const reasons = [
+      {
+        code: "bounded-mechanism-review" as const,
+        path: "backing:mechanism:custody",
+        message: "Custody evidence is unresolved.",
+        responsibility: "issuer-undisclosed" as const,
+      },
+      {
+        code: "bounded-mechanism-review" as const,
+        path: "backing:mechanism:custody",
+        message: "Custody evidence is unresolved.",
+        responsibility: "producer-failed" as const,
+      },
+    ];
+    expect(() =>
+      scoreV9EvaluatedAsset(
+        input({
+          pillars: {
+            backing: pillar(70, { reasons }),
+            exit: pillar(95),
+            control: pillar(95),
+          },
+        }),
+        V9_CANDIDATE_POLICY_V1,
+      ),
+    ).toThrow(/multiple causal owners/);
+  });
+
   it("applies continuous weakest-path aggregation without a hard cap", () => {
     const trace = scoreV9EvaluatedAsset(
       input({

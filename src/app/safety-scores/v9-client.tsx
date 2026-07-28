@@ -12,7 +12,6 @@ import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
-import { SafetyScoreDataCoverage } from "./data-coverage-module";
 import { buildDataCoverageModel } from "./data-coverage-view-model";
 import {
   SafetyEmptyState,
@@ -272,9 +271,12 @@ export function ReportCardsV9Client() {
           },
         ]}
       />
-      <SafetyScoresHero stats={headlineStats} gradeCounts={gradeCounts} totalCards={totalCards} />
-
-      <SafetyScoreDataCoverage model={dataCoverage} />
+      <SafetyScoresHero
+        stats={headlineStats}
+        gradeCounts={gradeCounts}
+        totalCards={totalCards}
+        coverage={dataCoverage}
+      />
 
       <V9Controls
         gradeFilter={gradeFilter}

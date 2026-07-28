@@ -256,12 +256,34 @@ function worstEvidenceLevel(
 }
 
 function normalizeReasonList(reasons: readonly V9PillarReason[], envelope: V9ValidatedPolicyEnvelope) {
-  return [...new Map(
-    [...reasons].map((reason) => [
-      `${reason.code}\u0000${reason.path}\u0000${reason.message}\u0000${reason.responsibility}`,
-      reason,
-    ]),
-  ).values()]
+  const canonical = [
+    ...new Map(
+      [...reasons]
+        .sort(
+          (left, right) =>
+            compareText(left.code, right.code) ||
+            compareText(left.path, right.path) ||
+            compareText(left.message, right.message) ||
+            compareText(left.responsibility, right.responsibility),
+        )
+        .map((reason) => [
+          `${reason.code}\u0000${reason.path}\u0000${reason.message}\u0000${reason.responsibility}`,
+          reason,
+        ]),
+    ).values(),
+  ];
+  const byPublicIdentity = new Map<string, V9PillarReason>();
+  for (const reason of canonical) {
+    const key = `${reason.code}\u0000${reason.path}`;
+    const existing = byPublicIdentity.get(key);
+    if (existing !== undefined && existing.responsibility !== reason.responsibility) {
+      throw new Error(
+        `Safety Score v9 unresolved fact ${reason.code} at ${reason.path} has multiple causal owners`,
+      );
+    }
+    if (existing === undefined) byPublicIdentity.set(key, reason);
+  }
+  return [...byPublicIdentity.values()]
     .sort(
       (left, right) =>
         compareText(left.code, right.code) ||

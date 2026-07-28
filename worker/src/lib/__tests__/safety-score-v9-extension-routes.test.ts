@@ -60,9 +60,12 @@ function supplyFullRow(overrides: Partial<RedemptionBackstopEntry> = {}): Redemp
   };
 }
 
-function fixedInputStub(row: RedemptionBackstopEntry | undefined): ReportCardsFixedInput {
+function fixedInputStub(
+  row: RedemptionBackstopEntry | undefined,
+  clockSec = NOW,
+): ReportCardsFixedInput {
   return {
-    clockSec: NOW,
+    clockSec,
     dexGenerationId: "dex-liquidity-1",
     redemptionGenerationId: "redemption-backstops-1",
     dexLiqMap: {},
@@ -419,6 +422,45 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       "usdc-circle": { currentDeviationBps: 2, priceObservedAt: NOW },
     };
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]!.output?.valuation).toBeNull();
+  });
+
+  it("admits reviewed unresolved-output ownership only after the review date", () => {
+    const row = supplyFullRow({
+      stablecoinId: "dusd-dtrinity",
+      routeFamily: "stablecoin-redeem",
+      accessModel: "permissionless-onchain",
+      executionModel: "deterministic-basket",
+      outputAssetType: "stable-basket",
+    });
+    const historicalInput = fixedInputStub(
+      row,
+      Date.UTC(2026, 6, 13, 12) / 1_000,
+    );
+    const observation = buildSafetyScoreV9RetainedRedemptionRoutes(
+      historicalInput,
+      row.stablecoinId,
+    )[0]!.observation;
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      exitRouteObservations: [observation],
+    };
+
+    expect(
+      buildSafetyScoreV9RouteReviews(historicalInput, row.stablecoinId)[0]
+        ?.unresolvedOutputResponsibility,
+    ).toBeUndefined();
+    expect(
+      buildSafetyScoreV9RouteReviews(
+        fixedInputStub(row, Date.UTC(2026, 6, 27, 12) / 1_000),
+        row.stablecoinId,
+      )[0]?.unresolvedOutputResponsibility,
+    ).toBeUndefined();
+    expect(
+      buildSafetyScoreV9RouteReviews(
+        fixedInputStub(row, Date.UTC(2026, 6, 28, 0, 0, 1) / 1_000),
+        row.stablecoinId,
+      )[0]?.unresolvedOutputResponsibility,
+    ).toBe("producer-failed");
   });
 
   it.each(["srusd-reservoir", "wsrusd-reservoir"] as const)(

@@ -48,6 +48,8 @@ export interface V9NRReason {
   message: string;
   field?: string;
   responsibility?: V9EvidenceResponsibility;
+  /** Internal stable origin key for downstream causal-path attribution. */
+  causalKey?: string;
 }
 
 export interface V9CapTrace extends V9StructuralCap {

@@ -53,6 +53,9 @@ describe("integrateDirectApiLiquidityPhase", () => {
     expect(metrics.size).toBe(0);
     expect(priceObservations.size).toBe(0);
     expect(knownPoolIndex.exactKeys.has(`plasma:${poolAddress}`)).toBe(true);
+    expect(knownPoolIndex.exactStablecoinIdsByKey.get(`plasma:${poolAddress}`)).toEqual(
+      new Set(["usdai-usd-ai"]),
+    );
   });
 
   it("skips untracked direct API pools before identity processing", async () => {

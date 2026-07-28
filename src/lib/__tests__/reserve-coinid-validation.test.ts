@@ -221,6 +221,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "The reserve label names the subject fund itself, not an upstream OUSG dependency edge.",
   ],
   [
+    "pht-pht::Current apcxUSDT-referenced collateral envelope (unreconciled)::USDT",
+    "APACX identifies apcxUSDT as an eligible collateral wrapper but does not establish its current PHT balance or reconcile the wrapper to underlying USDT reserves.",
+  ],
+  [
     "euro3-3a-dao::Whitelisted 3A Vault collateral (USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH and other approved assets; mix undisclosed)::USDC",
     "3A reports an unweighted multi-asset vault collateral set, so no single tracked stablecoin coinId is representative.",
   ],

@@ -1,0 +1,68 @@
+{
+  "id": "usdm-monetrix",
+  "reserves": [
+    {
+      "name": "Current Monetrix strategy and custody envelope (unreconciled)",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Monetrix strategy accounts, MonetrixVault, and undisclosed venue or custody counterparties",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "OpenAI Codex V9 integration audit",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Monetrix mint guide",
+        "url": "https://doc.monetrix.xyz/guide/mint"
+      },
+      {
+        "label": "Monetrix architecture",
+        "url": "https://doc.monetrix.xyz/how-it-works/architecture"
+      },
+      {
+        "label": "Monetrix transparency overview API",
+        "url": "https://api.monetrix.xyz/data/api/transparency/overview"
+      },
+      {
+        "label": "Monetrix collateral API",
+        "url": "https://api.monetrix.xyz/data/api/collateral"
+      },
+      {
+        "label": "Monetrix positions API",
+        "url": "https://api.monetrix.xyz/data/api/positions"
+      },
+      {
+        "label": "Monetrix protocol overview API",
+        "url": "https://api.monetrix.xyz/data/api/protocol/overview"
+      }
+    ],
+    "rationale": "Monetrix documents USDC as the mint input and deploys backing into a delta-neutral Hyperliquid spot-plus-short strategy. On the 2026-07-28 re-open, the live collateral API explicitly returned backing.reconciled=false: backing.totalUsd was not presented as a non-double-counted sum of spotUsd, marginUsd, and the signed bufferUsd. The positions API separately mixed spot value, perpetual notional, and a negative idle-USDC value. Those fields do not establish that the current backing remains a 100% USDC reserve slice. The prior USDC look-through is therefore replaced by one unlinked strategy and custody envelope until Monetrix publishes a reconciled reserve equation.",
+    "compositionBasis": "Monetrix's documented USDC mint input plus live but explicitly unreconciled strategy, collateral, and supply telemetry",
+    "compositionAsOf": "2026-07-28",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "Current non-double-counted spot, margin, hedge, idle-liquidity, custody, and redemption-backing amounts are not published as a reconciled reserve composition.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Current Monetrix strategy and custody envelope (unreconciled)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer API marks the backing breakdown unreconciled and does not define a complete non-double-counted reserve equation suitable for stable reserve slices."
+      }
+    ]
+  }
+}

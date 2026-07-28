@@ -258,6 +258,60 @@ describe("Safety Score v9 backing exposure primitives", () => {
     );
   });
 
+  it("keeps mapped upstream ceilings distinct by their original causal code", () => {
+    const result = evaluateV9ReserveExposures(
+      {
+        ...asset([
+          exposure({
+            key: "parent",
+            weight: 1,
+            assetClass: "stablecoin",
+            trackedAssetId: "parent",
+          }),
+        ]),
+        resolvedUpstreamExposures: [
+          {
+            exposureKey: "parent",
+            upstreamAssetId: "parent",
+            score: 50,
+            evidenceLevel: "limited",
+            reasonCodes: [
+              "partial-reserve-review",
+              "unreviewed-reserve-envelope",
+            ],
+            reasons: [
+              {
+                code: "partial-reserve-review",
+                path: "backing:same-path",
+                responsibility: "issuer-undisclosed",
+              },
+              {
+                code: "unreviewed-reserve-envelope",
+                path: "backing:same-path",
+                responsibility: "producer-failed",
+              },
+            ],
+            failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+          },
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const mapped = result.unresolved.filter(
+      (reason) => reason.code === "bounded-unknown-reserve-exposure",
+    );
+
+    expect(mapped.map((reason) => reason.responsibility)).toEqual([
+      "issuer-undisclosed",
+      "producer-failed",
+    ]);
+    expect(new Set(mapped.map((reason) => reason.causalKey)).size).toBe(2);
+    expect(mapped.map((reason) => reason.causalKey)).toEqual([
+      "upstream:parent:partial-reserve-review:backing:same-path",
+      "upstream:parent:unreviewed-reserve-envelope:backing:same-path",
+    ]);
+  });
+
   it("is order invariant while retaining provenance in the trace", () => {
     const left = evaluateV9ReserveExposures(
       asset([
@@ -522,7 +576,19 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
       gapIds: ["wrapper:gap:reserve-composition"],
     },
     reserveExposures: [],
-    gaps: [],
+    gaps: [
+      {
+        gapId: "wrapper:gap:reserve-composition",
+        reasonCode: "missing-reserve-composition",
+        ownerDomain: "backing",
+        policyRuleId: "v9.backing.reserve-composition",
+        observationState: "missing",
+        path: { kind: "local-component", componentKey: "reserve-composition" },
+        message: "The issuer does not publish the wrapper reserve composition.",
+        evidenceRefIds: [],
+        responsibility: "issuer-undisclosed",
+      },
+    ],
     resolvedUpstreamExposures: [],
     inheritedStablecoinBacking: inherited,
   });
@@ -544,8 +610,149 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
       expect.objectContaining({ componentKey: "reserve:inherited-backing:parent", upstreamAssetId: "parent" }),
     );
     expect(result.unresolved).toEqual([
-      expect.objectContaining({ code: "partial-reserve-review", treatment: "ceiling" }),
+      expect.objectContaining({
+        code: "partial-reserve-review",
+        treatment: "ceiling",
+        responsibility: "issuer-undisclosed",
+      }),
     ]);
+  });
+
+  it("preserves every explicit owner on an inherited partial reserve", () => {
+    const base = missingReserveAsset({
+      parentAssetId: "parent",
+      parentBackingScore: 75,
+      weight: 1,
+      tier: "pure",
+      failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+    });
+    const result = evaluateV9ReserveExposures(
+      {
+        ...base,
+        reserveStatus: {
+          ...base.reserveStatus,
+          gapIds: ["wrapper:gap:issuer", "wrapper:gap:producer"],
+        },
+        gaps: [
+          {
+            ...base.gaps[0]!,
+            gapId: "wrapper:gap:issuer",
+            responsibility: "issuer-undisclosed",
+          },
+          {
+            ...base.gaps[0]!,
+            gapId: "wrapper:gap:producer",
+            responsibility: "producer-failed",
+          },
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(
+      result.unresolved
+        .filter((reason) => reason.code === "partial-reserve-review")
+        .map((reason) => reason.responsibility),
+    ).toEqual(["issuer-undisclosed", "producer-failed"]);
+  });
+
+  it("propagates an unavailable upstream's causal owner into the dependency reason", () => {
+    const result = evaluateV9ReserveExposures(
+      {
+        ...asset([
+          exposure({
+            key: "parent",
+            weight: 1,
+            assetClass: "stablecoin",
+            trackedAssetId: "parent",
+            issuer: "asset:parent",
+          }),
+        ]),
+        resolvedUpstreamExposures: [
+          {
+            exposureKey: "parent",
+            upstreamAssetId: "parent",
+            score: null,
+            evidenceLevel: "insufficient",
+            reasonCodes: ["missing-reserve-composition"],
+            reasons: [
+              {
+                code: "missing-reserve-composition",
+                responsibility: "issuer-undisclosed",
+              },
+            ],
+            failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+          },
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(result.unresolved).toContainEqual(
+      expect.objectContaining({
+        code: "material-dependency-unavailable",
+        responsibility: "issuer-undisclosed",
+      }),
+    );
+  });
+
+  it("attributes an unprojectable tracked reserve to the method unless an explicit gap owner wins", () => {
+    const input = asset([
+      exposure({
+        key: "parent",
+        weight: 1,
+        assetClass: "stablecoin",
+        trackedAssetId: "parent",
+        issuer: "asset:parent",
+      }),
+    ]);
+    const methodOwned = evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1);
+    const producerOwned = evaluateV9ReserveExposures(
+      {
+        ...input,
+        unresolvedUpstreamProjectionAttributions: [
+          {
+            causalKey: "gap:dependency-projection:producer",
+            responsibility: "producer-failed",
+          },
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const mixedOwned = evaluateV9ReserveExposures(
+      {
+        ...input,
+        unresolvedUpstreamProjectionAttributions: [
+          {
+            causalKey: "gap:dependency-projection:issuer",
+            responsibility: "issuer-undisclosed",
+          },
+          {
+            causalKey: "gap:dependency-projection:producer",
+            responsibility: "producer-failed",
+          },
+        ],
+      },
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(methodOwned.unresolved).toContainEqual(
+      expect.objectContaining({
+        code: "material-dependency-unavailable",
+        responsibility: "method-unsupported",
+      }),
+    );
+    expect(producerOwned.unresolved).toContainEqual(
+      expect.objectContaining({
+        code: "material-dependency-unavailable",
+        responsibility: "producer-failed",
+      }),
+    );
+    expect(
+      mixedOwned.unresolved
+        .filter((reason) => reason.code === "material-dependency-unavailable")
+        .map((reason) => reason.responsibility),
+    ).toEqual(["issuer-undisclosed", "producer-failed"]);
   });
 
   it("does not apply a second backing discount to a staked/vault layer", () => {

@@ -155,6 +155,7 @@ export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig>
       .min(1)
       .max(MAX_REDEMPTION_OUTPUT_ASSETS)
       .optional(),
+    unresolvedOutputDisposition: z.enum(["reviewed-external", "issuer-undisclosed"]).optional(),
     docs: z.array(RedemptionDocSourceSchema).optional(),
     reviewedAt: ReviewedAtSchema.optional(),
     notes: z.array(z.string()).optional(),
@@ -214,6 +215,30 @@ export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig>
           message: "unresolvedOutputAssetKeys cannot be combined with resolved outputAssets",
         });
       }
+    }
+    if (config.unresolvedOutputDisposition && config.outputAssets) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["unresolvedOutputDisposition"],
+        message: "unresolvedOutputDisposition cannot be combined with resolved outputAssets",
+      });
+    }
+    if (config.unresolvedOutputDisposition && !config.reviewedAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["unresolvedOutputDisposition"],
+        message: "unresolvedOutputDisposition requires reviewedAt for historical admission",
+      });
+    }
+    if (
+      config.unresolvedOutputDisposition === "reviewed-external" &&
+      !config.unresolvedOutputAssetKeys
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["unresolvedOutputDisposition"],
+        message: "reviewed-external output disposition requires unresolvedOutputAssetKeys",
+      });
     }
     if (
       config.routeFamily === "offchain-issuer" &&

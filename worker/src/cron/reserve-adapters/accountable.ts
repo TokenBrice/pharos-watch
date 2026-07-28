@@ -221,6 +221,21 @@ function buildSkippedTotalValidationWarning(
   );
 }
 
+function buildDeploymentSnapshotMetadata(
+  breakdown: Array<{ name: string; value: number }>,
+  dashboardTimestamp: string,
+  totalReserves: number | undefined,
+) {
+  const bucketTotal = breakdown.reduce((sum, entry) => sum + entry.value, 0);
+  return {
+    buckets: breakdown.map(({ name, value }) => ({ name, value })),
+    bucketTotal,
+    totalReserves: totalReserves ?? null,
+    reconciliationResidual: totalReserves != null ? totalReserves - bucketTotal : null,
+    dashboardTimestamp,
+  };
+}
+
 export function adaptAccountableDashboard(
   payload: AccountableDashboardResponse,
   params: AccountableParams,
@@ -326,6 +341,15 @@ export function adaptAccountableDashboard(
       interval: payload.data.reserves.interval,
       verifiability: payload.data.reserves.verifiability,
       totalReserves,
+      ...(bucket === "deployment"
+        ? {
+            deploymentSnapshot: buildDeploymentSnapshotMetadata(
+              breakdown,
+              payload.data.ts,
+              totalReserves,
+            ),
+          }
+        : {}),
       ...(totalReservesExcludeBuckets.size > 0
         ? { totalReservesExcludedBuckets: Array.from(totalReservesExcludeBuckets).sort() }
         : {}),

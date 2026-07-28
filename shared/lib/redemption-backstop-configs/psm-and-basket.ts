@@ -123,6 +123,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ...basketRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_YIELD_COVERAGE_WAVE_AT),
     unresolvedOutputAssetKeys: ["asset:zusd", "doc-money-on-chain"],
+    unresolvedOutputDisposition: "reviewed-external",
     costModel: fixedFee(0, "Mynt materials state redemption fees are currently disabled"),
     reviewedAt: "2026-07-27",
     docs: [

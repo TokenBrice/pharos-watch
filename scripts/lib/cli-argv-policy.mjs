@@ -42,6 +42,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/wait-pages-release-marker.mjs"),
     strict("worker/scripts/capture-report-cards-fixed-input.ts"),
     strict("worker/scripts/check-safety-score-v9-anchor-gate.ts"),
+    strict("worker/scripts/generate-safety-score-v9-b1-root-ledger.ts"),
     strict("worker/scripts/rebuild-blacklist-current-balances.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
     strict(
       "worker/scripts/reconcile-blacklist-current-balances-from-kyc-rip.ts",

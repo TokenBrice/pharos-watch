@@ -43,6 +43,7 @@ import {
   buildSafetyScoreV9MechanismReview,
   getSafetyScoreV9MechanismExitFacts,
   getSafetyScoreV9MechanismOverlayEvidence,
+  getSafetyScoreV9MechanismReviewGapDisposition,
   SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
 } from "./safety-score-v9-extension-mechanism";
 import {
@@ -1969,26 +1970,26 @@ function adaptMintReview(
     (profile.review.unresolvedQuestions?.length ?? 0) === 0 &&
     reviewedObservationState(confidence) === "known";
   const upgradeability = profile.upgradeability;
-  const controls =
-    profile.review.disposition === "unresolved"
-      ? []
-      : (profile.controls ?? []).map((control, index, allControls) =>
-          adaptMintControl(
-            meta.id,
-            control,
-            index,
-            profile.mintIncidents,
-            reviewComplete,
-            upgradeability?.canChangeMintLogic === true && upgradeability.controlRef === control.label,
-            control.directMintAbility === "cap-limited" &&
-              control.canRaiseCap === false &&
-              allControls.some(
-                (candidate, candidateIndex) =>
-                  candidateIndex !== index && candidate.chain === control.chain && candidate.canRaiseCap === true,
-              ),
-            profile.economicCapSemantics,
-          ),
-        );
+  // An unresolved aggregate inventory does not erase controls that were
+  // individually identified. Retain those controls in a partial review while
+  // the unresolved deployment surfaces remain bounded and fail closed.
+  const controls = (profile.controls ?? []).map((control, index, allControls) =>
+    adaptMintControl(
+      meta.id,
+      control,
+      index,
+      profile.mintIncidents,
+      reviewComplete,
+      upgradeability?.canChangeMintLogic === true && upgradeability.controlRef === control.label,
+      control.directMintAbility === "cap-limited" &&
+        control.canRaiseCap === false &&
+        allControls.some(
+          (candidate, candidateIndex) =>
+            candidateIndex !== index && candidate.chain === control.chain && candidate.canRaiseCap === true,
+        ),
+      profile.economicCapSemantics,
+    ),
+  );
   const directMintControl = controls.find((control) => control.capabilities.includes("mint")) ?? null;
   const inheritedFrom = profile.inheritedFrom;
   const hasExactInheritedWrapperDependency =
@@ -2055,9 +2056,11 @@ function adaptMintReview(
     profile.reconciliation && profile.reconciliation !== "unknown" ? profile.reconciliation : inferredReconciliation;
   const immutableWithoutMint = mintControl === null && upgrade.state === "immutable";
   const state = !reviewComplete
-    ? profile.review.disposition === "unresolved" || reviewedObservationState(confidence) === "missing"
-      ? "missing"
-      : "bounded-unknown"
+    ? profile.review.disposition === "unresolved" && evidenceKeys.length > 0
+      ? "bounded-unknown"
+      : reviewedObservationState(confidence) === "missing"
+        ? "missing"
+        : "bounded-unknown"
     : reconciliation === "unknown" && (issuerBackendMint || (mintControl === null && !immutableWithoutMint))
       ? "bounded-unknown"
       : "known";
@@ -2225,6 +2228,8 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
       const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
       const mechanismRiskReview = buildSafetyScoreV9MechanismReview(fixedInput, meta, archetype);
+      const mechanismReviewGapDisposition =
+        getSafetyScoreV9MechanismReviewGapDisposition(assetId, archetype, clockSec);
       const mechanismOverlayEvidence = getSafetyScoreV9MechanismOverlayEvidence(assetId, archetype, clockSec);
       if (mechanismRiskReview && mechanismOverlayEvidence) {
         reviewEvidence.add({
@@ -2282,6 +2287,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         variantKind: meta.variantKind ?? null,
         launchedAtSec: conservativeDateEndSec(meta.implementationLaunchDate ?? meta.launchDate, clockSec),
         mechanismRiskReview,
+        ...(mechanismReviewGapDisposition ? { mechanismReviewGapDisposition } : {}),
         mechanismExitFacts: getSafetyScoreV9MechanismExitFacts(assetId, archetype, clockSec),
         dependencies: {
           ...prepared.dependency,

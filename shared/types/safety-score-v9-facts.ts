@@ -1551,6 +1551,21 @@ function validateAssetReferences(
       );
     }
   }
+  const mechanismReview = asset.mechanismRiskReview.review;
+  const metricApplicability =
+    mechanismReview && "metricApplicability" in mechanismReview
+      ? (mechanismReview.metricApplicability as
+          | Record<string, { state: string; evidenceRefIds?: readonly string[] }>
+          | undefined)
+      : undefined;
+  for (const [metricKey, applicability] of Object.entries(metricApplicability ?? {})) {
+    if (applicability.state === "measured") continue;
+    captureRefs(
+      `mechanism-review:metric:${metricKey}`,
+      applicability.evidenceRefIds ?? [],
+      [],
+    );
+  }
   for (const edge of asset.dependencies.edges) captureRefs(`dependency:${edge.edgeKey}`, edge.evidenceRefIds, []);
   if (asset.cdpStressCoverage !== undefined) {
     captureRefs("cdp-stress-coverage", asset.cdpStressCoverage.evidenceRefIds, []);

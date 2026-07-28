@@ -317,6 +317,9 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
   },
   {
+    // The verified implementation emits canonical zero-address Transfer rows
+    // from _mint/_burn alongside its custom Mint/Redeem events. Track only the
+    // canonical pair so each issuer action is counted once.
     chain: ETHEREUM,
     stablecoinId: "xaut-tether",
     dustThreshold: 10,

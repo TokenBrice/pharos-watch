@@ -40,6 +40,7 @@ import {
 } from "./fixed-point";
 import {
   CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
+  CURVE_NXUSD_COMPOSITE_POOL_ADDRESS,
   CURVE_USD1_COMPOSITE_POOL_ADDRESS,
 } from "./curve-composite-identities";
 
@@ -58,6 +59,11 @@ const FACTORY_ABI = parseAbi([
   "function get_underlying_coins(address pool) view returns (address[])",
   "function get_underlying_decimals(address pool) view returns (uint256[])",
   "function is_meta(address pool) view returns (bool)",
+]);
+const LEGACY_FACTORY_ARRAY_ABI = parseAbi([
+  "function get_coins(address pool) view returns (address[4])",
+  "function get_underlying_coins(address pool) view returns (address[8])",
+  "function get_underlying_decimals(address pool) view returns (uint256[8])",
 ]);
 const ERC20_ABI = parseAbi(["function decimals() view returns (uint8)"]);
 const ERC4626_ABI = parseAbi([
@@ -81,7 +87,7 @@ interface CurveCompositeToken {
 }
 
 interface CurveCompositePolicyBase {
-  chain: "ethereum";
+  chain: "ethereum" | "avalanche";
   stablecoinId: string;
   adapterProfileId:
     | typeof CURVE_RATE_BEARING_ADAPTER_PROFILE_ID
@@ -91,6 +97,8 @@ interface CurveCompositePolicyBase {
   factoryAddress: `0x${string}`;
   expectedFactoryCodeHash: `0x${string}`;
   factoryPoolIndex: number;
+  expectedRegistryId: "factory-stable-ng" | "factory";
+  factoryArrayEncoding: "dynamic" | "legacy-fixed";
   implementationAddress: `0x${string}`;
   expectedImplementationCodeHash: `0x${string}`;
   poolTokens: readonly [CurveCompositeToken, CurveCompositeToken];
@@ -140,6 +148,8 @@ export const CURVE_DOLA_SUSDE_RATE_BEARING_POLICY: CurveRateBearingPoolPolicy = 
   factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
   expectedFactoryCodeHash: "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
   factoryPoolIndex: 298,
+  expectedRegistryId: "factory-stable-ng",
+  factoryArrayEncoding: "dynamic",
   implementationAddress: "0xdcc91f930b42619377c200ba05b7513f2958b202",
   expectedImplementationCodeHash: "0xe2a3dd8d583b86eb7f562b4307aab6e5a373ddb5c6b348e4cf63d41914f35a9f",
   poolTokens: [
@@ -198,6 +208,8 @@ export const CURVE_USD1_METAPOOL_POLICY: CurveMetapoolPolicy = {
   factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
   expectedFactoryCodeHash: "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
   factoryPoolIndex: 553,
+  expectedRegistryId: "factory-stable-ng",
+  factoryArrayEncoding: "dynamic",
   implementationAddress: "0xede71f77d7c900dca5892720e76316c6e575f0f7",
   expectedImplementationCodeHash: "0x9d37af7ff5467ed7db9fe783986e9d7dabbb9dbb5a74e1da50cea67478a584bc",
   poolTokens: [
@@ -258,15 +270,153 @@ export const CURVE_USD1_METAPOOL_POLICY: CurveMetapoolPolicy = {
   scoreEligible: false,
 };
 
+/**
+ * Exact reviewed Avalanche NXUSD metapool path. The legacy factory exposes
+ * fixed-width identity arrays; execution is NXUSD -> avUSDC through the
+ * factory-proved av3CRV base pool and get_dy_underlying.
+ */
+export const CURVE_NXUSD_METAPOOL_POLICY: CurveMetapoolPolicy = {
+  chain: "avalanche",
+  stablecoinId: "nxusd-nereus",
+  adapterProfileId: CURVE_METAPOOL_ADAPTER_PROFILE_ID,
+  poolAddress: CURVE_NXUSD_COMPOSITE_POOL_ADDRESS,
+  expectedPoolCodeHash: "0x189567179f11c501b47c595502e59f75c31e36e0a8cf95ba5f73ef6fff5d74a3",
+  factoryAddress: "0xb17b674d9c5cb2e441f8e196a2f048a81355d031",
+  expectedFactoryCodeHash: "0x7b76a635c41c7b2a6bbdd9e3a5d2df9f9c662c9292f97dd9a2a847652f5f4359",
+  factoryPoolIndex: 66,
+  expectedRegistryId: "factory",
+  factoryArrayEncoding: "legacy-fixed",
+  implementationAddress: "0xa237034249290de2b07988ac64b96f22c0e76fe0",
+  expectedImplementationCodeHash:
+    "0xa14fbe91ed30d41ab822e2d3ef28a1ae375f3e60da77348fca77b7dd0a0b8641",
+  poolTokens: [
+    {
+      address: "0xf14f4ce569cb3679e99d5059909e23b07bd2f387",
+      symbol: "NXUSD",
+      decimals: 18,
+      trackedAssetId: "nxusd-nereus",
+    },
+    {
+      address: "0x1337bedc9d22ecbe766df105c9623922a27963ec",
+      symbol: "av3CRV",
+      decimals: 18,
+    },
+  ],
+  executionTokens: [
+    {
+      address: "0xf14f4ce569cb3679e99d5059909e23b07bd2f387",
+      symbol: "NXUSD",
+      decimals: 18,
+      trackedAssetId: "nxusd-nereus",
+    },
+    {
+      address: "0x47afa96cdc9fab46904a55a6ad4bf6660b53c38a",
+      symbol: "avDAI",
+      decimals: 18,
+    },
+    {
+      address: "0x46a51127c3ce23fb7ab1de06226147f446e4a857",
+      symbol: "avUSDC",
+      decimals: 6,
+    },
+    {
+      address: "0x532e6537fea298397212f09a61e03311686f548e",
+      symbol: "avUSDT",
+      decimals: 6,
+    },
+  ],
+  inputIndex: 0,
+  outputIndex: 2,
+  quoteFunction: "get_dy_underlying",
+  metapool: {
+    basePoolAddress: "0x7f90122bf0700f9e7e1f688fe926940e8839f353",
+    expectedBasePoolCodeHash:
+      "0xa3fc544c3d02269e8a5d1fef9bda368f32ed62e6da938e202549aa1b5fc520c8",
+    basePoolTokens: [
+      {
+        address: "0x47afa96cdc9fab46904a55a6ad4bf6660b53c38a",
+        symbol: "avDAI",
+        decimals: 18,
+      },
+      {
+        address: "0x46a51127c3ce23fb7ab1de06226147f446e4a857",
+        symbol: "avUSDC",
+        decimals: 6,
+      },
+      {
+        address: "0x532e6537fea298397212f09a61e03311686f548e",
+        symbol: "avUSDT",
+        decimals: 6,
+      },
+    ],
+  },
+  mode: "shadow",
+  scoreEligible: false,
+};
+
 const POLICIES: readonly CurveCompositePoolPolicy[] = [
   CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
   CURVE_USD1_METAPOOL_POLICY,
+  CURVE_NXUSD_METAPOOL_POLICY,
 ];
 
 function canonicalAddress(value: unknown): `0x${string}` | null {
   if (typeof value !== "string") return null;
   const normalized = value.trim().toLowerCase();
   return EVM_ADDRESS_PATTERN.test(normalized) ? (normalized as `0x${string}`) : null;
+}
+
+function decodeFactoryAddressArray(
+  policy: CurveCompositePoolPolicy,
+  functionName: "get_coins" | "get_underlying_coins",
+  data: `0x${string}`,
+  expectedLength: number,
+): readonly string[] | null {
+  try {
+    const decoded = decodeFunctionResult({
+      abi:
+        policy.factoryArrayEncoding === "legacy-fixed"
+          ? LEGACY_FACTORY_ARRAY_ABI
+          : FACTORY_ABI,
+      functionName,
+      data,
+    } as never) as readonly string[];
+    if (policy.factoryArrayEncoding === "dynamic") return decoded;
+    if (
+      decoded.length < expectedLength ||
+      decoded.slice(expectedLength).some(
+        (address) => canonicalAddress(address) !== "0x0000000000000000000000000000000000000000",
+      )
+    ) return null;
+    return decoded.slice(0, expectedLength);
+  } catch {
+    return null;
+  }
+}
+
+function decodeFactoryDecimalsArray(
+  policy: CurveCompositePoolPolicy,
+  data: `0x${string}`,
+  expectedLength: number,
+): readonly bigint[] | null {
+  try {
+    const decoded = decodeFunctionResult({
+      abi:
+        policy.factoryArrayEncoding === "legacy-fixed"
+          ? LEGACY_FACTORY_ARRAY_ABI
+          : FACTORY_ABI,
+      functionName: "get_underlying_decimals",
+      data,
+    } as never) as readonly bigint[];
+    if (policy.factoryArrayEncoding === "dynamic") return decoded;
+    if (
+      decoded.length < expectedLength ||
+      decoded.slice(expectedLength).some((decimals) => decimals !== 0n)
+    ) return null;
+    return decoded.slice(0, expectedLength);
+  } catch {
+    return null;
+  }
 }
 
 export function getCurveCompositePolicy(
@@ -298,6 +448,12 @@ interface CurveCompositePoolSource {
     usdPrice: number;
     isBasePoolLpToken: boolean;
   }[];
+  underlyingCoins?: readonly {
+    address: string;
+    symbol: string;
+    decimals: number;
+    usdPrice: number;
+  }[];
 }
 
 /** Build one exact reviewed shadow target from the current Curve source row. */
@@ -319,7 +475,7 @@ export function buildCurveCompositeMeasuredExecutionTarget(input: {
     !policy ||
     curveData.apiIsBroken ||
     input.stablecoinId !== policy.stablecoinId ||
-    curveData.registryId.trim().toLowerCase() !== "factory-stable-ng" ||
+    curveData.registryId.trim().toLowerCase() !== policy.expectedRegistryId ||
     curveData.isMetaPool !== (policy.quoteFunction === "get_dy_underlying") ||
     curveData.poolCoins?.length !== policy.poolTokens.length ||
     !Number.isFinite(input.retainedTvlUsd) ||
@@ -347,13 +503,26 @@ export function buildCurveCompositeMeasuredExecutionTarget(input: {
         token.trackedAssetId
     ) return null;
   }
+  if (curveData.underlyingCoins != null) {
+    if (
+      curveData.underlyingCoins.length !== policy.executionTokens.length ||
+      curveData.underlyingCoins.some((actual, index) => {
+        const expected = policy.executionTokens[index]!;
+        return canonicalAddress(actual.address) !== expected.address ||
+          actual.symbol.trim().toLowerCase() !== expected.symbol.toLowerCase() ||
+          actual.decimals !== expected.decimals ||
+          !Number.isFinite(actual.usdPrice) ||
+          actual.usdPrice <= 0;
+      })
+    ) return null;
+  }
   const tokenIn = policy.executionTokens[policy.inputIndex];
   const tokenOut = policy.executionTokens[policy.outputIndex];
   if (!tokenIn || !tokenOut || tokenIn.trackedAssetId !== policy.stablecoinId) return null;
   const inputPrice = input.stablecoinPriceById?.get(policy.stablecoinId);
   const outputPrice = tokenOut.trackedAssetId
     ? input.stablecoinPriceById?.get(tokenOut.trackedAssetId)
-    : null;
+    : curveData.underlyingCoins?.[policy.outputIndex]?.usdPrice;
   if (
     inputPrice == null ||
     outputPrice == null ||
@@ -655,17 +824,14 @@ function createCurveCompositeDeploymentVerifier(dependencies: VerificationDepend
     if (!poolListResult || !factoryCoinsResult || !implementationResult) {
       return { ok: false, reason: "rpc-failure" };
     }
-    let factoryCoins: readonly string[];
-    try {
-      factoryCoins = decodeFunctionResult({
-        abi: FACTORY_ABI,
-        functionName: "get_coins",
-        data: factoryCoinsResult,
-      }) as readonly string[];
-    } catch {
-      return { ok: false, reason: "factory-membership-mismatch" };
-    }
+    const factoryCoins = decodeFactoryAddressArray(
+      policy,
+      "get_coins",
+      factoryCoinsResult,
+      policy.poolTokens.length,
+    );
     if (
+      !factoryCoins ||
       decodeAddress(FACTORY_ABI, "pool_list", poolListResult) !== policy.poolAddress ||
       decodeAddress(FACTORY_ABI, "get_implementation_address", implementationResult) !==
         policy.implementationAddress ||
@@ -814,16 +980,17 @@ function createCurveCompositeDeploymentVerifier(dependencies: VerificationDepend
         return { ok: false, reason: "base-pool-mismatch" };
       }
       try {
-        const underlyingCoins = decodeFunctionResult({
-          abi: FACTORY_ABI,
-          functionName: "get_underlying_coins",
-          data: underlyingCoinsResult,
-        }) as readonly string[];
-        const underlyingDecimals = decodeFunctionResult({
-          abi: FACTORY_ABI,
-          functionName: "get_underlying_decimals",
-          data: underlyingDecimalsResult,
-        }) as readonly bigint[];
+        const underlyingCoins = decodeFactoryAddressArray(
+          policy,
+          "get_underlying_coins",
+          underlyingCoinsResult,
+          policy.executionTokens.length,
+        );
+        const underlyingDecimals = decodeFactoryDecimalsArray(
+          policy,
+          underlyingDecimalsResult,
+          policy.executionTokens.length,
+        );
         const isMeta = decodeFunctionResult({
           abi: FACTORY_ABI,
           functionName: "is_meta",
@@ -832,10 +999,12 @@ function createCurveCompositeDeploymentVerifier(dependencies: VerificationDepend
         if (
           decodeAddress(FACTORY_ABI, "get_base_pool", basePoolResult) !== policy.metapool.basePoolAddress ||
           !isMeta ||
+          !underlyingCoins ||
           underlyingCoins.length !== policy.executionTokens.length ||
           underlyingCoins.some(
             (address, index) => canonicalAddress(address) !== policy.executionTokens[index]!.address,
           ) ||
+          !underlyingDecimals ||
           underlyingDecimals.length !== policy.executionTokens.length ||
           underlyingDecimals.some(
             (decimals, index) => Number(decimals) !== policy.executionTokens[index]!.decimals,
@@ -1135,35 +1304,44 @@ export function createCurveCompositeQuoteExecutor(dependencies: QuoteDependencie
       ...(prepared[index]!.failureReason ? { failureReason: prepared[index]!.failureReason } : {}),
     }));
     const valid = prepared.flatMap((entry) => entry.encoded ? [entry.encoded] : []);
-    for (let offset = 0; offset < valid.length; offset += BATCH_SIZE) {
-      throwIfAborted(input.signal);
-      const chunk = valid.slice(offset, offset + BATCH_SIZE);
-      const results = await dependencies.executeMulticall({
-        chain: chunk[0]!.policy.chain,
-        calls: chunk.map((request) => ({
-          label: request.label,
-          target: request.endpointAddress,
-          callData: request.callData,
-          allowFailure: true,
-        })),
-        blockNumber: chunk[0]!.blockNumber,
-        chainRpcs: input.chainRpcs,
-        signal: input.signal,
-        rpcBudget: input.rpcBudget,
-      });
-      input.rpcBudget?.recordChainResult(chunk[0]!.policy.chain, results != null);
-      const byLabel = new Map((results ?? []).map((result) => [result.label, result]));
-      for (const request of chunk) {
-        const result = byLabel.get(request.label);
-        outcomes[request.index] = {
-          targetId: request.target.targetId,
-          inputUsd: request.inputUsd,
-          blockNumber: request.blockNumber,
-          eligibility: request.eligibility,
-          ...(result
-            ? decodeQuotePoint(request, result)
-            : { failureReason: input.rpcBudget?.stopReason ?? "rpc-failure" }),
-        };
+    const requestGroups = new Map<string, EncodedRequest[]>();
+    for (const request of valid) {
+      const key = `${request.policy.chain}:${request.blockNumber}`;
+      const group = requestGroups.get(key) ?? [];
+      group.push(request);
+      requestGroups.set(key, group);
+    }
+    for (const group of requestGroups.values()) {
+      for (let offset = 0; offset < group.length; offset += BATCH_SIZE) {
+        throwIfAborted(input.signal);
+        const chunk = group.slice(offset, offset + BATCH_SIZE);
+        const results = await dependencies.executeMulticall({
+          chain: chunk[0]!.policy.chain,
+          calls: chunk.map((request) => ({
+            label: request.label,
+            target: request.endpointAddress,
+            callData: request.callData,
+            allowFailure: true,
+          })),
+          blockNumber: chunk[0]!.blockNumber,
+          chainRpcs: input.chainRpcs,
+          signal: input.signal,
+          rpcBudget: input.rpcBudget,
+        });
+        input.rpcBudget?.recordChainResult(chunk[0]!.policy.chain, results != null);
+        const byLabel = new Map((results ?? []).map((result) => [result.label, result]));
+        for (const request of chunk) {
+          const result = byLabel.get(request.label);
+          outcomes[request.index] = {
+            targetId: request.target.targetId,
+            inputUsd: request.inputUsd,
+            blockNumber: request.blockNumber,
+            eligibility: request.eligibility,
+            ...(result
+              ? decodeQuotePoint(request, result)
+              : { failureReason: input.rpcBudget?.stopReason ?? "rpc-failure" }),
+          };
+        }
       }
     }
     return outcomes;
@@ -1282,14 +1460,16 @@ export function validateCurveCompositeProfileProof(profile: DexMeasuredExecution
   }
   try {
     const decoded = factoryCoins
-      ? decodeFunctionResult({
-          abi: FACTORY_ABI,
-          functionName: "get_coins",
-          data: factoryCoins.returnData as `0x${string}`,
-        }) as readonly string[]
-      : [];
+      ? decodeFactoryAddressArray(
+          policy,
+          "get_coins",
+          factoryCoins.returnData as `0x${string}`,
+          policy.poolTokens.length,
+        )
+      : null;
     if (
       !bindingCallMatches(factoryCoins, policy.factoryAddress, factoryCoinsCallData) ||
+      !decoded ||
       decoded.length !== policy.poolTokens.length ||
       decoded.some(
         (address, index) => canonicalAddress(address) !== policy.poolTokens[index]!.address,
@@ -1431,19 +1611,20 @@ export function validateCurveCompositeProfileProof(profile: DexMeasuredExecution
     }).toLowerCase() as `0x${string}`;
     try {
       const coins = underlyingCoins
-        ? decodeFunctionResult({
-            abi: FACTORY_ABI,
-            functionName: "get_underlying_coins",
-            data: underlyingCoins.returnData as `0x${string}`,
-          }) as readonly string[]
-        : [];
+        ? decodeFactoryAddressArray(
+            policy,
+            "get_underlying_coins",
+            underlyingCoins.returnData as `0x${string}`,
+            policy.executionTokens.length,
+          )
+        : null;
       const decimals = underlyingDecimals
-        ? decodeFunctionResult({
-            abi: FACTORY_ABI,
-            functionName: "get_underlying_decimals",
-            data: underlyingDecimals.returnData as `0x${string}`,
-          }) as readonly bigint[]
-        : [];
+        ? decodeFactoryDecimalsArray(
+            policy,
+            underlyingDecimals.returnData as `0x${string}`,
+            policy.executionTokens.length,
+          )
+        : null;
       if (
         !bindingCallMatches(basePool, policy.factoryAddress, basePoolCallData) ||
         !bindingCallMatches(
@@ -1464,10 +1645,12 @@ export function validateCurveCompositeProfileProof(profile: DexMeasuredExecution
           functionName: "is_meta",
           data: isMeta.returnData as `0x${string}`,
         }) !== true ||
+        !coins ||
         coins.length !== policy.executionTokens.length ||
         coins.some(
           (address, index) => canonicalAddress(address) !== policy.executionTokens[index]!.address,
         ) ||
+        !decimals ||
         decimals.length !== policy.executionTokens.length ||
         decimals.some(
           (value, index) => Number(value) !== policy.executionTokens[index]!.decimals,

@@ -16,10 +16,12 @@ import {
   cleanupStaging,
   incrementRunSeq,
   readDiscoveryMeta,
+  recordDiscoveryAttemptFence,
   updateDiscoveryMeta,
   upsertStagedPools,
 } from "./persistence";
 import {
+  buildFailedCrawlDeploymentOutcomes,
   buildStaticInaccessibleDeploymentOutcomes,
   upsertDexDeploymentOutcomes,
 } from "./deployment-outcomes";
@@ -62,6 +64,55 @@ function summarizeDiscoveryError(err: unknown): string {
 
 function hasDiscoveryFinalizationWindow(deadlineMs: number): boolean {
   return Date.now() + DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS < deadlineMs;
+}
+
+async function fenceFailedDiscoveryAttempt(
+  db: D1Database,
+  candidate: DiscoveryCandidate,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<number> {
+  let outcomesWritten = 0;
+  try {
+    outcomesWritten = await upsertDexDeploymentOutcomes(
+      db,
+      buildFailedCrawlDeploymentOutcomes({
+        stablecoinId: candidate.stablecoinId,
+        deployments: candidate.targets,
+        nowSec,
+      }),
+      signal,
+    );
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "dex_discovery.failed_attempt_outcome_fence_failed",
+      job: "sync-dex-discovery",
+      message: `Failed to fence deployment outcomes for ${candidate.stablecoinId}`,
+      error,
+    });
+  }
+  try {
+    await recordDiscoveryAttemptFence(
+      db,
+      candidate.stablecoinId,
+      nowSec,
+      signal,
+    );
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "dex_discovery.failed_attempt_meta_fence_failed",
+      job: "sync-dex-discovery",
+      message: `Failed to record the discovery-attempt fence for ${candidate.stablecoinId}`,
+      error,
+    });
+  }
+  return outcomesWritten;
 }
 
 function discoveryCohort(stablecoinId: string, modulo: number): number {
@@ -285,6 +336,16 @@ export async function syncDexDiscovery(
       });
 
       try {
+        // Persist the attempt boundary before any network work. If the crawl is
+        // aborted, budget-discarded, or cannot persist its result, an older
+        // verified-empty outcome is already superseded without changing
+        // backoff counters.
+        await recordDiscoveryAttemptFence(
+          db,
+          candidate.stablecoinId,
+          nowSec,
+          signal,
+        );
         const coinDeadline = Math.min(deadlineMs, Date.now() + DEX_DISCOVERY_PER_COIN_BUDGET_MS);
         const result = await crawlCoin(
           db,
@@ -319,6 +380,10 @@ export async function syncDexDiscovery(
         } catch (persistErr) {
           rethrowIfAborted(persistErr, signal);
           // Persistence failed but crawl succeeded — do NOT record miss (H-3)
+          // or a provider-inaccessible outcome. The pre-crawl attempt fence
+          // already supersedes old empty evidence and correctly leaves this as
+          // a discovery deferral rather than mislabeling a D1 failure as a
+          // provider outage.
           console.warn("[dex-discovery] Persistence failed for", candidate.stablecoinId, persistErr);
           failedCoins.push(candidate.stablecoinId);
           failedCoinErrors[candidate.stablecoinId] = summarizeDiscoveryError(persistErr);
@@ -328,6 +393,12 @@ export async function syncDexDiscovery(
         console.warn("[dex-discovery]", candidate.stablecoinId, err);
         failedCoins.push(candidate.stablecoinId);
         failedCoinErrors[candidate.stablecoinId] = summarizeDiscoveryError(err);
+        deploymentOutcomesWritten += await fenceFailedDiscoveryAttempt(
+          db,
+          candidate,
+          nowSec,
+          signal,
+        );
         // Count crawl errors as misses so perpetually-failing coins get demoted
         // instead of staying at T1 and consuming budget every run.
         // Skip demotion for coins with existing pool coverage to avoid permanent

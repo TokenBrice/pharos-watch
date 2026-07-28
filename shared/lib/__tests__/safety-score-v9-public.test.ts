@@ -8,6 +8,11 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import type { V9PublicCardProjectionInput } from "../safety-score-v9/public";
 import { buildSafetyScoreV9Response, projectSafetyScoreV9Card } from "../safety-score-v9/public";
 import type { V9ProductionScoreTrace } from "../safety-score-v9/score";
+import {
+  SafetyScoreV9AccessPostureSchema,
+  SafetyScoreV9EvidenceSummarySchema,
+  SafetyScoreV9PillarSchema,
+} from "../../types/safety-score-v9-public";
 
 const DIGESTS = {
   policy: "a".repeat(64),
@@ -695,5 +700,42 @@ describe("Safety Score v9 public projection", () => {
         results: [base, mixed],
       }),
     ).toThrow(/mixes evaluation build/);
+  });
+
+  it("rejects duplicate code/path identities in every public reason list", () => {
+    const duplicateReasons = [
+      {
+        code: "bounded-mechanism-review" as const,
+        message: "First rendering.",
+        path: "backing:mechanism:custody",
+      },
+      {
+        code: "bounded-mechanism-review" as const,
+        message: "Second rendering.",
+        path: "backing:mechanism:custody",
+      },
+    ];
+    expect(
+      SafetyScoreV9PillarSchema.safeParse({
+        score: 70,
+        evidenceLevel: "limited",
+        freshness: "current",
+        components: [],
+        reasons: duplicateReasons,
+      }).success,
+    ).toBe(false);
+    expect(
+      SafetyScoreV9EvidenceSummarySchema.safeParse({
+        level: "limited",
+        freshness: "current",
+        reasons: duplicateReasons,
+      }).success,
+    ).toBe(false);
+    expect(
+      SafetyScoreV9AccessPostureSchema.safeParse({
+        ...access,
+        reasons: duplicateReasons,
+      }).success,
+    ).toBe(false);
   });
 });

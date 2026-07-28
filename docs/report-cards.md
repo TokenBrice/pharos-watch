@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.01`
+- **Current methodology version:** `v9.02`
 - Public response schema: report v4 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -28,6 +28,8 @@ V9 evaluates three pillars:
 The weights allocate bounded headroom; they are not an unrestricted weighted average. The evaluator applies evidence ceilings, peg behavior, track record, dependencies, wrapper-local risk, structural caps, and causally attributed danger after pillar evaluation.
 
 Missing evidence is classified by reason and ownership. A bounded documentation or integration gap can remain rateable under an explicit ceiling. An unbounded required fact returns NR. F is reserved for causally attributed measured danger rather than ordinary uncertainty.
+
+Responsibility follows causal provenance rather than the nearest compiler or evaluator stage. Explicit reason-level ownership wins; inherited reserve gaps, unavailable upstream backing or role-pillar evidence, and missing parent scores carry every originating owner into downstream reasons instead of defaulting to an integration gap. Every attributed root receives a causal-root-qualified score path even when it is the only root, so adding another root cannot rename an existing public fact; only unattributed fallbacks retain aggregate base paths, and ownership never becomes part of fact identity. Applicable-but-unpublished mechanism metrics may retain their conservative structural signal, but remain issuer-undisclosed rather than becoming measured-adverse. A reviewed external exit output whose identity is known but cannot receive a same-notional valuation is producer-failed, while an issuer-undisclosed settlement asset remains issuer-undisclosed; neither becomes scoreable. Date-only mechanism and exit-output dispositions are admitted only after their reviewed UTC day, so current curation cannot leak into earlier replay clocks. Partial mint-control reviews retain controls that were actually reviewed while unresolved deployment surfaces remain bounded and fail closed. These changes do not alter pillar weights, score aggregation, caps, or grade thresholds.
 
 Exit capacity is route-specific. A route below both the first positive 1% completion and $100K absolute-capacity breakpoints receives a zero route score; reaching $100K while still completing less than 1% caps the route at 50. Exchange-wide volume, aggregate DEX TVL, and issuer reserves do not substitute for executable capacity on the selected route.
 
@@ -107,7 +109,7 @@ The compiler validates each asset's facts independently. An attributable asset-l
 ## Frontend
 
 - `src/app/safety-scores/v9-client.tsx` owns the active ratings grid, filters, and sorting.
-- `src/app/safety-scores/data-coverage-view-model.ts` and `data-coverage-module.tsx` render the data-coverage panel: completeness, evaluated component counts per pillar, open data points split by evidence responsibility, the most common reason codes by affected assets, and held-state presentation. The panel replaces the status notice on `/safety-scores`.
+- `src/app/safety-scores/data-coverage-view-model.ts` and `data-coverage-module.tsx` render the data-coverage rail in the hero footer (`FeatureHeroSplit`'s `footer` slot), not a standalone card. Collapsed it shows one sentence of headline counts and the open-data-point split by evidence responsibility; expanding it adds the responsibility explanations, the per-count breakdowns, and the most common reason codes by affected assets. A publication hold replaces the headline sentence. The rail replaces the status notice on `/safety-scores`.
 - `src/components/report-card-mini-v9.tsx` renders the V9 card treatment.
 - `src/components/stablecoin-detail/stablecoin-safety-score-v9-card.tsx` renders detail-page score, pillars, evidence, and breakdowns.
   - Pillar breakdowns render as `groups`, not a flat row list. Backing nests its components under the Reserves and Mechanism groups the producer already computes — component `effectiveWeight` sums exactly to each group's weight — with `mechanism`-sourced components under Mechanism and both `reserve-exposure` and `reserve-concentration` under Reserves. Rows sort by weight descending, and components under `2%` of the pillar fold into a `Smaller holdings (N) · X% combined` tail once at least three qualify. Exit and Control render a single unlabelled group; Exit keeps producer order because its route components are few and already meaningfully ordered.

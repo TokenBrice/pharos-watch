@@ -14,6 +14,11 @@ import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { logWorkerEvent } from "../../lib/structured-log";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import { toErrorMessage } from "../../lib/error-utils";
+import {
+  buildDexPlaceholderScoreDetailsJson,
+  classifyDexPlaceholderCoverage,
+  type DexDeploymentCensusRow,
+} from "./deployment-census-coverage";
 
 const DEX_AGGREGATE_PRESERVE_IDS = new Set(["__global__"]);
 /** Retain one complete scoring window plus one missed half-hour producer cycle. */
@@ -717,6 +722,40 @@ export async function persistScores(
       error: toErrorMessage(error),
     });
   }
+  const deploymentCensusById = new Map<string, DexDeploymentCensusRow[]>();
+  let deploymentCensusAvailable = true;
+  try {
+    throwIfAborted(signal);
+    const censusRows = await db
+      .prepare(
+        `SELECT outcome.stablecoin_id, outcome.chain, outcome.contract_address,
+                outcome.outcome, outcome.provider_set_json, outcome.reason,
+                outcome.observed_pool_count, outcome.observed_at,
+                meta.last_crawl_at AS discovery_last_crawl_at
+           FROM dex_deployment_outcomes outcome
+           LEFT JOIN dex_discovery_meta meta
+             ON meta.stablecoin_id = outcome.stablecoin_id
+          ORDER BY outcome.stablecoin_id, outcome.chain, outcome.contract_address`,
+      )
+      .all<DexDeploymentCensusRow>();
+    throwIfAborted(signal);
+    for (const row of censusRows.results ?? []) {
+      const rows = deploymentCensusById.get(row.stablecoin_id) ?? [];
+      rows.push(row);
+      deploymentCensusById.set(row.stablecoin_id, rows);
+    }
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    deploymentCensusAvailable = false;
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "dex_deployment_census_load_failed",
+      job: "sync-dex-liquidity",
+      message: "Publishing fail-closed placeholder coverage because the DEX deployment census could not be loaded",
+      error: toErrorMessage(error),
+    });
+  }
 
   await stageDexLiquidityPublicationGeneration(db, {
     generationId,
@@ -829,6 +868,12 @@ export async function persistScores(
       throwIfAborted(signal);
       if (!metrics.has(meta.id)) {
         placeholderCount++;
+        const coverage = classifyDexPlaceholderCoverage({
+          deployments: [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])],
+          outcomeRows: deploymentCensusById.get(meta.id) ?? [],
+          nowSec,
+          censusAvailable: deploymentCensusAvailable,
+        });
         await queueStatement(
           db
             .prepare(DEX_LIQUIDITY_RUN_ROW_UPSERT_SQL)
@@ -852,7 +897,11 @@ export async function persistScores(
               null,
               0,
               null,
-              null,
+              buildDexPlaceholderScoreDetailsJson({
+                classification: coverage,
+                generationId,
+                publishedAtSec: nowSec,
+              }),
               null,
               "unobserved",
               0,

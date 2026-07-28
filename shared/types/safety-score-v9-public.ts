@@ -114,6 +114,23 @@ export const SafetyScoreV9PublicReasonSchema = z
   .strict();
 export type SafetyScoreV9PublicReason = z.infer<typeof SafetyScoreV9PublicReasonSchema>;
 
+const SafetyScoreV9PublicReasonListSchema = z
+  .array(SafetyScoreV9PublicReasonSchema)
+  .superRefine((reasons, ctx) => {
+    const identities = new Set<string>();
+    reasons.forEach((reason, index) => {
+      const identity = `${reason.code}\u0000${reason.path ?? ""}`;
+      if (identities.has(identity)) {
+        ctx.addIssue({
+          code: "custom",
+          path: [index],
+          message: "V9 public reasons must have unique code/path identities",
+        });
+      }
+      identities.add(identity);
+    });
+  });
+
 export const SafetyScoreV9NrReasonSchema = z
   .object({
     code: V9ReasonCodeSchema,
@@ -133,7 +150,7 @@ export const SafetyScoreV9PillarSchema = z
     evidenceLevel: V9EvidenceLevelSchema,
     freshness: SafetyScoreV9EvidenceFreshnessSchema,
     components: z.array(z.string().min(1)),
-    reasons: z.array(SafetyScoreV9PublicReasonSchema),
+    reasons: SafetyScoreV9PublicReasonListSchema,
   })
   .strict()
   .superRefine((pillar, ctx) => {
@@ -162,7 +179,7 @@ export const SafetyScoreV9AccessPostureSchema = z
     governance: z.enum(["immutable", "distributed", "concentrated", "single-entity", "unknown"]),
     unknownFields: z.array(AccessPostureFieldSchema),
     signals: z.array(z.string().min(1)),
-    reasons: z.array(SafetyScoreV9PublicReasonSchema),
+    reasons: SafetyScoreV9PublicReasonListSchema,
   })
   .strict()
   .superRefine((posture, ctx) => {
@@ -310,7 +327,7 @@ export const SafetyScoreV9EvidenceSummarySchema = z
   .object({
     level: V9EvidenceLevelSchema,
     freshness: SafetyScoreV9EvidenceFreshnessSchema,
-    reasons: z.array(SafetyScoreV9PublicReasonSchema),
+    reasons: SafetyScoreV9PublicReasonListSchema,
   })
   .strict();
 export type SafetyScoreV9EvidenceSummary = z.infer<typeof SafetyScoreV9EvidenceSummarySchema>;

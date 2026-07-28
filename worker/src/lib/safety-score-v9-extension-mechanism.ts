@@ -169,6 +169,13 @@ const OverlayComponentSchema = z.union([
       sourceUrl: z.string().url(),
     })
     .strict(),
+  z
+    .object({
+      applicability: z.literal("unavailable"),
+      rationale: z.string().trim().min(1),
+      sourceUrl: z.string().url(),
+    })
+    .strict(),
 ]);
 
 const OverlayMetricApplicabilitySchema = z.discriminatedUnion("state", [
@@ -241,13 +248,13 @@ export const MechanismReviewOverlaySchema = z
     for (const [componentKey, component] of Object.entries(overlay.components)) {
       if (
         "applicability" in component &&
-        component.applicability === "not-applicable" &&
+        component.applicability !== "measured" &&
         !sourceUrls.has(component.sourceUrl)
       ) {
         ctx.addIssue({
           code: "custom",
           path: ["components", componentKey, "sourceUrl"],
-          message: "Not-applicable component sourceUrl must match an overlay source",
+          message: "Non-measured component sourceUrl must match an overlay source",
         });
       }
     }
@@ -279,13 +286,13 @@ const MechanismReviewOverlayFileSchema = z
       for (const [componentKey, component] of Object.entries(overlay.components)) {
         if (
           "applicability" in component &&
-          component.applicability === "not-applicable" &&
+          component.applicability !== "measured" &&
           !sourceUrls.has(component.sourceUrl)
         ) {
           ctx.addIssue({
             code: "custom",
             path: ["overlays", overlayIndex, "components", componentKey, "sourceUrl"],
-            message: "Not-applicable component sourceUrl must match an overlay source",
+            message: "Non-measured component sourceUrl must match an overlay source",
           });
         }
       }
@@ -456,7 +463,9 @@ export function expandOverlayReview(
     review[componentField] = curated
       ? !("applicability" in curated) || curated.applicability === "measured"
         ? knownFact(kebabCase(componentField), curated.quality)
-        : notApplicableFact(kebabCase(componentField), curated.rationale)
+        : curated.applicability === "not-applicable"
+          ? notApplicableFact(kebabCase(componentField), curated.rationale)
+          : boundedFact(kebabCase(componentField), true)
       : (fallbackComponents?.[componentField] ?? boundedFact(kebabCase(componentField), true));
   }
   return V9MechanismRiskReviewSchema.parse(review);
@@ -492,6 +501,34 @@ function isMechanismOverlayCurrent(overlay: MechanismReviewOverlay, clockSec: nu
 function currentMechanismOverlay(assetId: string, archetype: string, clockSec: number): MechanismReviewOverlay | null {
   const overlay = MECHANISM_REVIEW_OVERLAYS.get(assetId);
   return overlay && overlay.archetype === archetype && isMechanismOverlayCurrent(overlay, clockSec) ? overlay : null;
+}
+
+export function getSafetyScoreV9MechanismReviewGapDisposition(
+  assetId: string,
+  archetype: string,
+  clockSec: number,
+): {
+  responsibility: "method-unsupported";
+  rationale: string;
+  componentKeys: string[];
+} | null {
+  const overlay = MECHANISM_REVIEW_OVERLAYS.get(assetId);
+  if (!overlay || overlay.archetype !== archetype) return null;
+  const reviewedAtSec = Date.parse(`${overlay.reviewedAt}T00:00:00.000Z`) / 1_000;
+  if (
+    !Number.isFinite(reviewedAtSec) ||
+    clockSec < reviewedAtSec ||
+    reviewedAtSec + DAY_SEC <= clockSec
+  ) {
+    return null;
+  }
+  return {
+    responsibility: "method-unsupported",
+    rationale:
+      `The ${overlay.reviewedAt} mechanism review exists, but the exact admission policy cannot use a ` +
+      "date-only review until its UTC day has elapsed.",
+    componentKeys: Object.keys(overlay.components).sort(),
+  };
 }
 
 export function getSafetyScoreV9MechanismOverlayEvidence(

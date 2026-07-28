@@ -1,6 +1,7 @@
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS,
 } from "@shared/lib/safety-score-version";
+import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { getMethodologyChangelogEntry } from "@shared/lib/methodology-versions/registry";
 import { createMethodologyChangelogRoute } from "../changelog-route-factory";
 import { ScoringChangelogContent, scoringAnchorId } from "./content";
@@ -11,7 +12,7 @@ const route = createMethodologyChangelogRoute({
   path: changelog.publicPath,
   metadataTitle: "Safety Scores Changelog — Version History",
   metadataDescription:
-    "Safety Score methodology history from V1 through active V9.0, including the retained V8 compatibility methodology.",
+    `Safety Score methodology history from V1 through active ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL.toUpperCase()}, including the retained V8 compatibility methodology.`,
   breadcrumbName: "Scoring Changelog",
   title: "Safety Scores Changelog",
   lead: (
@@ -21,15 +22,12 @@ const route = createMethodologyChangelogRoute({
     </>
   ),
   entries: changelog.entries,
-  sections: [
-    { id: scoringAnchorId("V9.0"), label: "V9.0" },
-    ...SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS.map((version) => ({
-      id: scoringAnchorId(version),
-      label: version,
-    })),
-  ],
+  sections: SAFETY_SCORE_METHODOLOGY_CHANGELOG_NAV_VERSIONS.map((version) => ({
+    id: scoringAnchorId(version),
+    label: version,
+  })),
   renderContent: () => <ScoringChangelogContent />,
-  citation: { id: changelog.citationId, versionLabel: "v9.0" },
+  citation: { id: changelog.citationId, versionLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL },
 });
 
 export const metadata = route.metadata;

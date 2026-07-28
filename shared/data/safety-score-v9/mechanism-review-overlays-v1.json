@@ -2321,6 +2321,11 @@
       "components": {
         "fundClaimAndSeniority": {
           "quality": "weak"
+        },
+        "lossRecoveryDesign": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed Frax overview and live balance sheet do not publish a holder loss waterfall or enforceable recapitalization commitment for legacy FRAX.",
+          "sourceUrl": "https://docs.frax.finance/frax-v3-100-cr-and-more/overview"
         }
       }
     },
@@ -3006,6 +3011,11 @@
         },
         "custodyContinuity": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed USDX disclosure and disclaimer do not link a dated independent reserve attestation or reserve-to-liability reconciliation.",
+          "sourceUrl": "https://www.htdigitalassets.com/"
         }
       }
     },
@@ -3942,6 +3952,11 @@
       "components": {
         "fundClaimAndSeniority": {
           "quality": "weak"
+        },
+        "lossRecoveryDesign": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed thBILL and tULTRA disclosures do not publish a holder loss waterfall, loss-allocation terms, or an enforceable recapitalization commitment.",
+          "sourceUrl": "https://docs.theo.xyz/thbill"
         }
       }
     },
@@ -4237,6 +4252,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed MoonPay terms and XO launch disclosure do not publish an XO-specific dated reserve report or reserve-to-liability reconciliation.",
+          "sourceUrl": "https://www.moonpay.com/es/legal/stablecoin_terms"
         }
       }
     },
@@ -4263,6 +4283,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed Telcoin customer agreement and terms do not publish a current eUSD-specific independent reserve report or reserve-to-liability reconciliation.",
+          "sourceUrl": "https://bank.telco.in/customer-agreement"
         }
       }
     },
@@ -4285,6 +4310,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "weak"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed dUSD terms and product documentation do not publish an independent reserve attestation or supply-to-reserve reconciliation.",
+          "sourceUrl": "https://docs.dtrinity.org/protocol-components/dusd"
         }
       }
     },
@@ -4989,6 +5019,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed KGST disclosure describes an attestation process but does not publish a dated independent attestation artifact or reserve-to-liability reconciliation.",
+          "sourceUrl": "https://www.kgstoken.kg/"
         }
       },
       "notes": "KGSToken's official disclosure states that KGST is fully backed 1:1 by Kyrgyz som fiat reserves held in licensed Kyrgyz banks and custodial institutions, describes an attestation process intended to keep circulating supply continuously backed, and claims oversight by the State Service for Regulation and Supervision of the Financial Market with registration of the first public offering. Claim and segregation is limited: the 1:1 backing and redemption commitment is self-reported issuer disclosure only, and no reviewed document establishes holder beneficial ownership, a trust, or bankruptcy-remote segregation. Custody continuity and assurance and reconciliation are deliberately left uncurated: no named reserve banks, custodian shares, or anti-rehypothecation terms were established, and no dated independent reserve report or attestation artifact was published on the reviewed page."
@@ -5011,6 +5046,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed Metal Dollar product disclosures do not publish current basket weights, an independent reserve attestation, or a reserve-to-liability reconciliation.",
+          "sourceUrl": "https://www.metallicus.com/metal-dollar"
         }
       },
       "notes": "Metallicus discloses Metal Dollar as a reserve-backed stablecoin index whose treasury holds USDC, PYUSD, and USDP in a smart-contract-managed basket with 1:1 mint and redeem between basket stablecoins and XMD, governed by predefined contract rules under Metal DAO oversight. Claim and segregation is limited: the basket backing and 1:1 convertibility are issuer disclosures describing an on-chain contract reserve rather than a legally segregated holder claim, and no holder terms, trust, or bankruptcy-remoteness instrument was reviewed. Custody continuity and assurance and reconciliation are deliberately left uncurated: the reviewed sources do not publish the basket contract addresses, current basket composition weights, an independent reconciliation, or any attestation for the reserve treasury."
@@ -5029,6 +5069,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed Blast documentation does not publish an independent reconciliation of USDB supply to the bridge-held assets backing it.",
+          "sourceUrl": "https://docs.blast.io/"
         }
       },
       "notes": "Blast's documentation states that users who bridge stablecoins receive USDB, that USDB yield comes from MakerDAO's on-chain T-Bill protocol, and that USDB can be redeemed for DAI when bridging back to Ethereum; USDB auto-rebases for EOAs by default. Claim and segregation is limited: the documentation establishes a functional bridge-mint and redemption path against the L1 bridge's stablecoin pool, but USDB is an L2 bridge-issued token with no documented legal claim, trust, or segregated reserve account for holders, and the underlying DAI/DSR position is a protocol-held bridge asset rather than a holder-designated reserve. Custody continuity and assurance and reconciliation are deliberately left uncurated: the reviewed documentation does not disclose the current L1 bridge reserve composition split between DAI/DSR and later USDC/USDT routes, the bridge custody or signer arrangement's failure terms, or any independent reconciliation of USDB supply to bridge-held assets."
@@ -5054,6 +5099,11 @@
         },
         "custodyContinuity": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed xReserve and Movement disclosures do not publish a USDCx-specific dated assets-and-liabilities reconciliation.",
+          "sourceUrl": "https://www.circle.com/xreserve"
         }
       },
       "notes": "Circle's xReserve disclosure states that xReserve is a Circle-deployed smart contract that holds USDC to back partner-chain stablecoins 1:1, with attestation-verified mint, burn, and 1:1 transfer flows; Movement's launch disclosure confirms USDCx is natively issued on Movement's M1 Mainnet, fully backed 1:1 by USDC held in xReserve, with reserves held transparently on-chain and no third-party bridge. Claim and segregation is limited: the 1:1 contract-held USDC reserve and burn-and-release redemption are documented and on-chain observable, but holders have no reviewed legal claim on the xReserve USDC beyond the contract mechanism, and segregation is technical rather than a documented trust or bankruptcy-remote arrangement. Custody continuity is limited: the reserve is held in a single Circle-deployed contract architecture with Circle-operated rate limits, role-based permissions, and monitoring, and the underlying USDC is itself custodied under Circle's disclosed arrangements, but no xReserve-specific custodian-failure, upgrade, or replacement terms were reviewed. Assurance and reconciliation is deliberately left uncurated: no USDCx-specific attestation or issuer-published supply-versus-reserve reconciliation was reviewed in this pass."
@@ -5101,6 +5151,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed Spark documentation and address registry do not publish an independent reconciliation of spUSDT shares to underlying USDT value.",
+          "sourceUrl": "https://docs.spark.fi/"
         }
       },
       "notes": "Spark's documentation describes Spark Savings Vaults as the user-facing savings product and the Spark Liquidity Layer as the engine deploying stablecoin capital into DeFi markets; spUSDT is the Spark Savings Vault V2 share over USDT, whose idle liquidity a permissioned Liquidity Layer taker deploys into SparkLend, Morpho, and other supported strategies while share value accrues through the vault savings rate. Claim and segregation is limited: the ERC-4626 vault share is a documented, on-chain pro-rata claim on the vault's USDT and deployed positions, but there is no legal segregation, trust, or bankruptcy-remoteness instrument, and redemption depends on vault liquidity management. Custody continuity and assurance and reconciliation are deliberately left uncurated: the reviewed sources name deployment routes but do not publish a current allocation of vault USDT across strategies, the taker's custody or failure arrangements, or an independent reconciliation of spUSDT shares to underlying USDT value."
@@ -5119,6 +5174,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed USDU documentation does not publish a current itemized supply-to-backing reconciliation or an independent reserve report.",
+          "sourceUrl": "https://usdu.gitbook.io/docs/"
         }
       },
       "notes": "USDU Finance's documentation states that USDU is minted exclusively by the protocol against productive, yield-generating on-chain collateral so that every USDU in circulation is backed by verifiable assets; the tracked backing consists of adapter-held Curve USDU/USDC LP tokens, Morpho USDU Core vault shares, and TermMax USDU vault shares. Claim and segregation is limited: protocol-minted backing held in on-chain adapters is a structural arrangement documented only by the issuer, and no holder legal claim, trust, or bankruptcy-remoteness instrument was reviewed. Custody continuity and assurance and reconciliation are deliberately left uncurated: the reviewed documentation does not publish current adapter balances or a supply-versus-backing reconciliation, no independent report exists, and the sharp supply wind-down disclosed for this asset leaves the current composition and redemption operability unverified in this pass."
@@ -5205,6 +5265,11 @@
         },
         "navValuation": {
           "quality": "limited"
+        },
+        "lossRecoveryDesign": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed Nest disclosures do not publish a holder loss waterfall, loss-allocation terms, or an enforceable recapitalization commitment for nTBILL.",
+          "sourceUrl": "https://docs.nest.credit/"
         }
       },
       "notes": "Nest's documentation states that each Nest Vault is a segregated, non-custodial smart-contract vault whose Core Vault restricts asset movement to the authorized Manager contract, whose Vault Extension calculates holdings value for transparent yield and withdrawal amounts, and whose Manager allocates into yield sources while maintaining liquid reserves; nTBILL routes into short-duration U.S. Treasury fund exposure (Janus Henderson JTRSY and Superstate USTB) plus a stablecoin liquidity buffer. Fund claim and seniority is limited: the vault share is a documented on-chain claim on a segregated contract vault, but no prospectus or legal instrument establishing holder seniority or a claim on the underlying fund shares was reviewed. NAV valuation is limited: the Vault Extension's on-chain valuation is documented, but no independent administrator or auditor strikes or verifies the nTBILL NAV in the reviewed sources. Duration and liquidity and loss recovery design are deliberately left uncurated: no current measured maturity or liquidity table for the vault's underlying fund positions was published in the reviewed sources, and no attestation or loss-waterfall commitment was established."
@@ -6793,6 +6858,11 @@
         },
         "custodyContinuity": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed StoneYield documentation and contract repository do not publish a proof-of-reserves report, attestation, or independent STUSD supply-to-vault reconciliation.",
+          "sourceUrl": "https://github.com/stoneyield/stoneyield-contracts"
         }
       }
     },
@@ -7078,6 +7148,11 @@
         },
         "durationAndLiquidity": {
           "quality": "limited"
+        },
+        "lossRecoveryDesign": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed USDm agreement and reserve disclosures do not publish a loss waterfall or enforceable recapitalization commitment for USDm-level reserve losses.",
+          "sourceUrl": "https://app.megausd.money/mint-agreement"
         }
       }
     },
@@ -7616,6 +7691,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed wFIAT disclosure and attestation index do not publish a wPEN-specific reserve attestation or certified reserve balance.",
+          "sourceUrl": "https://www.ripio.com/en/cryptos/local-stablecoins"
         }
       }
     },
@@ -7638,6 +7718,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed WUSD disclosure does not publish a dated third-party attestation, examination, or reserve-to-liability reconciliation.",
+          "sourceUrl": "https://developer.wspn.io/5768563m0"
         }
       }
     },
@@ -8504,6 +8589,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed Ondo disclosures do not publish a USDon-specific reserve attestation or assets-and-liabilities report.",
+          "sourceUrl": "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming"
         }
       }
     },
@@ -8646,6 +8736,11 @@
         },
         "custodyContinuity": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed Anzens homepage and terms do not publish a USDA reserve attestation, audit, proof-of-reserves report, or assets-and-liabilities reconciliation.",
+          "sourceUrl": "https://www.anzens.com/landing/terms-and-conditions"
         }
       }
     },
@@ -8672,6 +8767,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed BabelFish disclosures publish no attestation, and the current XUSD basket could not be reconciled from the documented contract reads.",
+          "sourceUrl": "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/what-is-babelfish.md"
         }
       }
     },
@@ -8694,6 +8794,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "weak"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed WEUSD disclosure asserts real-time auditability but publishes no reserve address, attestation, audit, or verifiable proof-of-reserves report.",
+          "sourceUrl": "https://docs.picwe.org/what-is-weusd"
         }
       }
     },
@@ -8742,36 +8847,49 @@
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed HLUSD disclosures do not publish a reserve attestation, audit, proof-of-reserves report, or reserve-to-liability reconciliation.",
+          "sourceUrl": "https://docs.stablehodl.com/overview/about-hlusd"
         }
       }
     },
     {
       "assetId": "xdai-gnosis",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-22",
       "sources": [
         {
-          "label": "Gnosis Chain docs: xDai is the native token, generated when DAI is sent to the xDai bridge on Ethereum; bridge validators mint xDai via the Gnosis reward native contract",
-          "url": "https://docs.gnosischain.com/about/tokens/xdai"
+          "label": "Gnosis xDAI bridge documentation",
+          "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
         },
         {
-          "label": "Gnosis Chain docs: the Gnosis bridge routes ERC20 tokens and xDAI between Ethereum and Gnosis Chain and back",
-          "url": "https://docs.gnosischain.com/bridges/"
+          "label": "Gnosis xDAI bridge USDS migration specification at commit 52afd25",
+          "url": "https://github.com/gnosischain/tokenbridge-contracts/blob/52afd25b05f1afa3347f2f18595748b2149df6aa/USDSMigration.md"
         },
         {
-          "label": "eth_call reads via this public RPC endpoint at Ethereum block 25572158: legacy xDai bridge 0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016 balanceOf reads (DAI and sDAI) — values in notes",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "Sky sUSDS documentation",
+          "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+        },
+        {
+          "label": "Ethereum block 25584913",
+          "url": "https://etherscan.io/block/25584913"
+        },
+        {
+          "label": "Gnosis block 47325357",
+          "url": "https://gnosis.blockscout.com/block/47325357"
         }
       ],
-      "notes": "Claim vehicle: the Gnosis/xDai TokenBridge contracts and their validator set — official docs state xDAI is minted by bridge validators when DAI is locked on the Ethereum side, and the bridge supports two-way conversion. No legal segregation vehicle exists; the 'claim' is a smart-contract bridge claim, and xDAI additionally inherits the mechanism risk of the backing asset (DAI/USDS, i.e. Sky). custodyContinuity: custody is documented in official docs as the bridge contract under validator governance (self-reported mechanism documentation -> limited). Own eth_call reads at Ethereum block 25572158 via ethereum-rpc.publicnode.com: DAI balanceOf(0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016) = 52,688,189,469,517,749 wei (~0.053 DAI); sDAI balanceOf same = 0 — the legacy bridge contract no longer holds the backing, indicating reserves were migrated to other contracts/yield positions under GnosisDAO governance that are NOT enumerated in official docs; Gnosis-side native xDAI supply is not readable via standard eth_call and explorer supply endpoints returned inconsistent figures, so a full on-chain reconciliation could NOT be established. assuranceAndReconciliation left uncurated (no attestation exists; on-chain reconciliation not establishable from official sources).",
+  "notes": "Claim vehicle: the Gnosis xDAI TokenBridge contracts and validator set. Official documentation and the pinned USDS migration specification establish that xDAI bridge collateral migrated from DAI/sDAI to USDS/sUSDS. Timestamp-aligned reads at Ethereum block 25584913 (2026-07-22T01:13:47Z) and Gnosis block 47325357 (2026-07-22T01:13:50Z) reconcile 71,756,580.335245740475084214 bridge-minted xDAI outstanding against 72,435,003.718459203233714009 USDS principal assets, or 100.95% principal coverage. claimAndSegregation remains limited because the claim is a bridge-contract claim with no reviewed legal segregation or bankruptcy-remote instrument. custodyContinuity remains limited because bridge and Sky contract custody is documented but legal failure treatment is not. Assurance is intentionally omitted from the curated overlay; the compiler derives its bounded quality from the dated onchain-proof record instead of accepting a duplicate overlay claim.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "limited"
         },
-        "custodyContinuity": {
-          "quality": "limited"
-        }
+    "custodyContinuity": {
+      "quality": "limited"
+    }
       }
     },
     {
@@ -8876,6 +8994,11 @@
         },
         "custodyContinuity": {
           "quality": "weak"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed HedgeCore documentation, repository, and fixed-block reads do not publish or establish an independent supply-to-backing reconciliation.",
+          "sourceUrl": "https://github.com/HedgeCore-Protocol/hedgecore-contracts"
         }
       }
     },
@@ -10565,6 +10688,11 @@
       "components": {
         "claimAndSegregation": {
           "quality": "weak"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed archived Goal3 audit covers smart-contract code rather than reserves, and no reserve attestation, proof-of-reserves, or circulation reconciliation is published.",
+          "sourceUrl": "https://web.archive.org/web/20231202053812/https://docs.goal3.xyz/audit"
         }
       }
     },
@@ -10661,6 +10789,11 @@
         },
         "custodyContinuity": {
           "quality": "weak"
+        },
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed wFIAT attestation index publishes reports for other currencies but no wCLP attestation, reserve report, or independent reconciliation.",
+          "sourceUrl": "https://www.ripio.com/en/cryptos/local-stablecoins"
         }
       }
     },
@@ -11671,6 +11804,11 @@
         },
         "durationAndLiquidity": {
           "quality": "limited"
+        },
+        "lossRecoveryDesign": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed sfrxUSD and frxUSD disclosures do not publish how strategy losses are allocated to holders or an enforceable recapitalization commitment.",
+          "sourceUrl": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
         }
       }
     },
@@ -16144,6 +16282,293 @@
         }
       },
       "components": {}
+    },
+    {
+      "assetId": "uusd-anything-labs",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-28",
+      "sources": [
+        {
+          "label": "Anything Labs UUSD official site, reviewed 2026-07-28",
+          "url": "https://uusd.ai/"
+        },
+        {
+          "label": "Anything Labs UUSD whitepaper",
+          "url": "https://uusd.ai/whitepaper.pdf"
+        }
+      ],
+      "notes": "Reviewed the current UUSD site and whitepaper on 2026-07-28. They describe a stablecoin issuance and settlement network, audited smart contracts, access controls, and transparent on-chain infrastructure, but do not identify the assets backing tracked UUSD, reserve accounts or custodians, a dated reserve report, or any reserve-to-circulation reconciliation. A smart-contract security review is not financial assurance. assuranceAndReconciliation is therefore recorded as applicable but issuer-undisclosed rather than assigned an invented quality.",
+      "metrics": {},
+      "components": {
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed UUSD site and whitepaper do not publish a dated reserve report or reserve-to-circulation reconciliation for tracked UUSD.",
+          "sourceUrl": "https://uusd.ai/whitepaper.pdf"
+        }
+      }
+    },
+    {
+      "assetId": "usda-alpha-partner",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-28",
+      "sources": [
+        {
+          "label": "Alpha Partner official site, reviewed 2026-07-28",
+          "url": "https://alphapartner.vip/"
+        },
+        {
+          "label": "Alpha Partner rules and trust disclosure",
+          "url": "https://ap-organization-1.gitbook.io/alpha-partners/rules-and-trust"
+        }
+      ],
+      "notes": "Reviewed the current Alpha Partner site and GitBook trust disclosure on 2026-07-28. The official material discusses U-Card settlement, internal ledgers, public address tracing, and possible custody with banking partners, but does not identify USDA reserve assets, reserve accounts or custodians, a USDA redemption mechanism, or any dated reserve attestation or assets-and-liabilities reconciliation. General platform transparency and payment-license claims are not USDA assurance evidence. assuranceAndReconciliation is therefore applicable but issuer-undisclosed.",
+      "metrics": {},
+      "components": {
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed Alpha Partner disclosure does not publish a USDA-specific reserve attestation, proof-of-reserves report, or assets-and-liabilities reconciliation.",
+          "sourceUrl": "https://ap-organization-1.gitbook.io/alpha-partners/rules-and-trust"
+        }
+      }
+    },
+    {
+      "assetId": "dusd-fluid",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-28",
+      "sources": [
+        {
+          "label": "Fluid Finance issuer FAQ for DUSD reserve and oracle design, published 2021-12-31",
+          "url": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8"
+        }
+      ],
+      "notes": "Re-reviewed Fluid Finance's issuer-authored DUSD FAQ and the current product locations on 2026-07-28. The dated FAQ describes a planned public treasury API, CeFi-validator signatures, and an audit then in progress; it does not contain a completed assurance report or a dated reserve-to-DUSD-circulation reconciliation. The current fluid.ch DUSD location did not expose a current reserve report during this review. Promised audits and a smart-contract audit are not financial reserve assurance, so assuranceAndReconciliation remains applicable but issuer-undisclosed.",
+      "metrics": {},
+      "components": {
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed issuer FAQ describes planned API signatures and an audit in progress but publishes no completed reserve assurance report or dated DUSD assets-and-liabilities reconciliation.",
+          "sourceUrl": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8"
+        }
+      }
+    },
+    {
+      "assetId": "emxn-telcoin",
+      "archetype": "fiat-cash",
+      "reviewedAt": "2026-07-28",
+      "sources": [
+        {
+          "label": "Telcoin Digital Cash product page listing eMXN and promised monthly external attestations",
+          "url": "https://www.telco.in/en/digital-cash"
+        },
+        {
+          "label": "Telcoin Terms of Use, section XXIX for eXYZ stablecoins including eMXN",
+          "url": "https://www.telco.in/en/terms-of-use"
+        }
+      ],
+      "notes": "Reviewed Telcoin's current Digital Cash page and effective 2026-06-30 Terms of Use on 2026-07-28. The terms identify eMXN as an eXYZ token issued by Telcoin LLC, backed at least 1:1 by currency or currency equivalents in segregated regulated-financial-institution accounts, with eligible-account redemption. The product page says Telcoin will publish monthly external-auditor attestations documenting reserves versus circulation, but no eMXN-specific attestation artifact or reserve-to-circulation report is linked from the reviewed disclosure. A promised cadence is not a completed assurance engagement, so assuranceAndReconciliation is applicable but issuer-undisclosed.",
+      "metrics": {},
+      "components": {
+        "assuranceAndReconciliation": {
+          "applicability": "unavailable",
+          "rationale": "The reviewed Telcoin disclosure promises monthly external attestations but does not publish an eMXN-specific attestation or reserve-to-circulation report.",
+          "sourceUrl": "https://www.telco.in/en/digital-cash"
+        }
+      }
+    },
+    {
+      "assetId": "vcred-vcred",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-28",
+      "sources": [
+        {
+          "label": "vCRED official product site, re-opened 2026-07-28",
+          "url": "https://vcred.trade/"
+        }
+      ],
+      "notes": "Reviewed the complete public vCRED product surface on 2026-07-28. It describes Atlas and Ganesh programmable vaults, single-side staking, market-making strategies, and a forthcoming vCRED access and staking token, but discloses no current vault composition, obligor or tenor data, portfolio WAM, NAV or valuation policy and cadence, legal claim, custody terms, or loss-recovery waterfall. No component quality is inferred from nondisclosure.",
+      "metrics": {
+        "weightedAverageMaturityDays": null,
+        "valuationCadenceDays": null
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "The metric applies to the credit and strategy vault archetype, but the official product site publishes no current positions, maturities, maturity ladder, WAM, or WAL.",
+          "sourceUrl": "https://vcred.trade/"
+        },
+        "valuationCadenceDays": {
+          "state": "unavailable",
+          "rationale": "The official product site publishes no NAV, valuation methodology, mark timestamp, or recurring valuation cadence for vCRED or its vaults.",
+          "sourceUrl": "https://vcred.trade/"
+        }
+      },
+      "components": {}
+    },
+    {
+      "assetId": "home-homecoin",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-28",
+      "sources": [
+        {
+          "label": "HomeCoin GitBook README pinned at 0ce86e4, covering loan backing and transparency claims",
+          "url": "https://github.com/homecoin-finance/gitbook/blob/0ce86e463c727bf5af03851f60ca5a58831c524a/README.md"
+        },
+        {
+          "label": "HomeCoin GitBook FAQ pinned at 0ce86e4, covering mortgage, Pan, and Egg mechanics",
+          "url": "https://github.com/homecoin-finance/gitbook/blob/0ce86e463c727bf5af03851f60ca5a58831c524a/getting-started/faq.md"
+        }
+      ],
+      "notes": "Pinned the official HomeCoin GitBook at commit 0ce86e463c727bf5af03851f60ca5a58831c524a and reviewed it on 2026-07-28. The docs describe mortgages repaid over many years or decades, Egg NFTs carrying lien and home fields, and a Pan that mints HOME, but publish no current loan tape, maturity distribution or WAM, dated portfolio valuation, appraisal refresh policy, or recurring NAV cadence. The generic foreclosure and lien narrative and claimed smart-contract audit do not establish current legal enforceability, loan seniority, credit quality, custody, or recovery performance, so components remain uncurated.",
+      "metrics": {
+        "weightedAverageMaturityDays": null,
+        "valuationCadenceDays": null
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "HOME is mortgage-receivable backed and maturity therefore applies, but the pinned issuer docs publish no current loan tape, maturity distribution, WAM, or WAL; they only state that mortgages repay over years or decades.",
+          "sourceUrl": "https://github.com/homecoin-finance/gitbook/blob/0ce86e463c727bf5af03851f60ca5a58831c524a/getting-started/faq.md"
+        },
+        "valuationCadenceDays": {
+          "state": "unavailable",
+          "rationale": "The pinned issuer docs say home value and lien data may be viewed, but disclose no current portfolio valuation snapshot, appraisal refresh standard, NAV method, or recurring valuation cadence.",
+          "sourceUrl": "https://github.com/homecoin-finance/gitbook/blob/0ce86e463c727bf5af03851f60ca5a58831c524a/README.md"
+        }
+      },
+      "components": {}
+    },
+    {
+      "assetId": "isc-international-stable-currency",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-28",
+      "sources": [
+        {
+          "label": "ISC current reserve dashboard, re-opened 2026-07-28",
+          "url": "https://isc.money/dashboard"
+        },
+        {
+          "label": "ISC reserve whitepaper target allocation",
+          "url": "https://wp.isc.money/how-isc-works/the-isc-reserves.md"
+        },
+        {
+          "label": "ISC reserve key concepts for target price and designed daily rebalance",
+          "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/key-concepts.md"
+        },
+        {
+          "label": "ISC reserve advanced mechanics for continuous-rebalancing design",
+          "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/advanced-mechanics.md"
+        },
+        {
+          "label": "ISC reserve oversight page describing the audit scheme as under consideration",
+          "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/oversight.md"
+        }
+      ],
+      "notes": "Re-opened the current ISC dashboard and official reserve whitepaper surfaces on 2026-07-28. The dashboard shows one issuer-published reserve snapshot last updated 2026-07-20 and describes daily basket rebalancing, while the whitepaper defines an initial target mix and designed daily reserve-basket rebalance. These sources do not publish a bond or Treasury maturity schedule, WAM or WAL, a history establishing that valuation and rebalancing execute daily, or a pinned independent NAV report. The oversight page says the audit scheme remains under consideration. Proposed mechanics and one mutable dashboard snapshot are not treated as measured recurring execution, and no component quality is inferred.",
+      "metrics": {
+        "weightedAverageMaturityDays": null,
+        "valuationCadenceDays": null
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "The reserve includes global bonds and short-term Treasuries, so maturity applies, but the issuer publishes no position-level maturities, maturity ladder, WAM, or WAL.",
+          "sourceUrl": "https://wp.isc.money/how-isc-works/the-isc-reserves.md"
+        },
+        "valuationCadenceDays": {
+          "state": "unavailable",
+          "rationale": "The whitepaper and current dashboard describe a designed daily target-basket rebalance, but one mutable issuer snapshot does not establish the recurring valuation cadence actually executed for the reserve.",
+          "sourceUrl": "https://isc.money/dashboard"
+        }
+      },
+      "components": {}
+    },
+    {
+      "assetId": "hlscope-hamilton-lane",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-28",
+      "sources": [
+        {
+          "label": "Hamilton Lane SCOPE current strategy page for monthly valuation and liquidity",
+          "url": "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund"
+        },
+        {
+          "label": "Hamilton Lane SCOPE April 2026 monthly report with dated portfolio, LTV, and seniority snapshot",
+          "url": "https://www.hamiltonlane.com/getContentAsset/bf3418cc-3f0c-4056-82e3-f81b13eb5211/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/Hamilton-Lane-SCOPE-Monthly-Report-Accumulating-AUD-April-2026.pdf?language=en-US"
+        },
+        {
+          "label": "Securitize HLSCOPE regulated feeder and onchain redemption and NAV route, 2025-11-05",
+          "url": "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
+        },
+        {
+          "label": "RedStone HLScope FUNDAMENTAL Ethereum feed, independent onchain transport with 24-hour heartbeat",
+          "url": "https://app.redstone.finance/push-feeds/HLScope_FUNDAMENTAL/ethereumMultiFeed"
+        }
+      ],
+      "notes": "Reviewed current primary surfaces on 2026-07-28. Hamilton Lane states that SCOPE valuations are calculated monthly by its valuation team and approved by its valuation committee; the dated April 2026 monthly report reports 99% first-lien senior-secured exposure, 42% weighted company-level LTV, 100% floating-rate exposure, and monthly limited liquidity. The report does not publish portfolio WAM, WAL, or a maturity ladder. Securitize identifies HLSCOPE as its regulated feeder and says redemptions use RedStone TSSO onchain NAV plus VBILL and RLUSD liquidity. RedStone advertises a 24-hour feed heartbeat, but heartbeat is delivery cadence rather than proof of a new underlying appraisal, so valuationCadenceDays remains the explicitly documented 30 days. Valuation cadence and maturity and liquidity are limited because the current packet lacks an independent valuation report, public HLSCOPE offering terms, or a measured stressed-redemption test.",
+      "metrics": {
+        "weightedAverageMaturityDays": null,
+        "valuationCadenceDays": 30
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "SCOPE is a private-credit fund, but neither the current strategy page nor the dated April 2026 report publishes a portfolio WAM, WAL, or maturity ladder; floating-rate status and monthly liquidity cannot be converted into maturity.",
+          "sourceUrl": "https://www.hamiltonlane.com/getContentAsset/bf3418cc-3f0c-4056-82e3-f81b13eb5211/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/Hamilton-Lane-SCOPE-Monthly-Report-Accumulating-AUD-April-2026.pdf?language=en-US"
+        }
+      },
+      "components": {
+        "valuationCadence": {
+          "quality": "limited"
+        },
+        "maturityAndLiquidity": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "gldy-streamex",
+      "archetype": "rwa-credit-fund",
+      "reviewedAt": "2026-07-28",
+      "sources": [
+        {
+          "label": "Streamex GLDY current product disclosure, re-opened 2026-07-28",
+          "url": "https://www.streamex.com/products/gldy/"
+        },
+        {
+          "label": "Chainlink GLDY reserve-ounces Proof of Reserve feed",
+          "url": "https://data.chain.link/feeds/base/base/gldy-reserves"
+        },
+        {
+          "label": "Streamex Q1 2026 Form 10-Q Note 9 for GLDY SPV, tokenholder interest, restricted assets, and recourse",
+          "url": "https://www.sec.gov/Archives/edgar/data/1530766/000149315226023197/R15.htm"
+        },
+        {
+          "label": "Streamex summary of the first EisnerAmper GLDY reserve examination, 2026-07-01",
+          "url": "https://ir.streamex.com/news-releases/news-release-details/streamex-corp-announces-first-independent-reserve-attestation"
+        }
+      ],
+      "notes": "Reviewed current primary disclosures on 2026-07-28. GLDY represents a non-voting equity interest in Streamex Ltd., backed by physical gold with up to 95% potentially leased. No current gold-lease maturity schedule, counterparty tenors, WAM, or WAL is public. The product page displays an LBMA benchmark each business day but expressly says charted benchmarks may differ from GLDY subscription, dividend, and redemption pricing; Chainlink reports reserve ounces rather than a valuation, so neither establishes a truthful recurring NAV valuation cadence. SEC-filed Note 9 identifies the Cayman SPV, non-voting participating equity interest, restricted SPV assets, and limited recourse, supporting adequate legal-enforceability evidence. The July 1 announcement summarizes a March 31 EisnerAmper examination, but the independent report itself is not publicly pinned, so the summary is not used to grade custody, credit, or recovery.",
+      "metrics": {
+        "weightedAverageMaturityDays": null,
+        "valuationCadenceDays": null
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "GLDY can deploy up to 95% of bullion into gold leases, so maturity applies, but the issuer publishes no current lease-counterparty tenors, maturity ladder, WAM, or WAL.",
+          "sourceUrl": "https://www.streamex.com/products/gldy/"
+        },
+        "valuationCadenceDays": {
+          "state": "unavailable",
+          "rationale": "The issuer shows a business-day LBMA benchmark but warns it may differ from GLDY transaction pricing; Chainlink reports reserve ounces rather than NAV. No public disclosure establishes the recurring valuation cadence used for subscriptions, dividends, and redemptions.",
+          "sourceUrl": "https://www.streamex.com/products/gldy/"
+        }
+      },
+      "components": {
+        "legalEnforceability": {
+          "quality": "adequate"
+        }
+      }
     }
   ]
 }

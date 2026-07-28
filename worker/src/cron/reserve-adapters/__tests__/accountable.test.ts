@@ -10,6 +10,7 @@ import yusd from "@shared/data/stablecoins/coins/yusd-aegis.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 import nusd from "@shared/data/stablecoins/coins/nusd-neutrl.json";
 import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
+import usn from "@shared/data/stablecoins/coins/usn-noon.json";
 
 const signal = AbortSignal.timeout(5_000);
 
@@ -161,6 +162,77 @@ describe("adaptAccountableDashboard", () => {
       { name: "CLOs (JAAA)", pct: 15, risk: "high" },
       { name: "Funding Rate (BTC)", pct: 5, risk: "high" },
     ]);
+  });
+
+  it("retains every USN deployment bucket and the signed same-snapshot residual without changing classifications", async () => {
+    const config = usn.liveReservesConfig as LiveReservesConfig;
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("expected Noon Accountable primary input to be http-json");
+    }
+
+    const dashboardTimestamp = "1785194915915";
+    const totalReserves = 34_400_188.21;
+    const deployment = {
+      "Private Credit (Fasanara FTAC)": 24_486_151.98,
+      "DeFi Lending": 3_521_782.048151,
+      "US Treasury Bills": 2_748_703.094363,
+      Other: 1_844_795.0026801375,
+      "CLOs (JAAA)": 1_798_755.11936221,
+      "Funding Rate (BTC)": 0.9612150669,
+    };
+
+    const result = await fetchAccountableReserves(
+      {} as never,
+      config,
+      signal,
+      {
+        requestCache: new Map([
+          [`json-get:${primary.url}:12000:null`, Promise.resolve({
+            res: "ok",
+            data: {
+              collateralization: 1.013786,
+              ts: dashboardTimestamp,
+              reserves: {
+                interval: "live",
+                verifiability: "100",
+                total_reserves: totalReserves,
+                deployment,
+              },
+            },
+          })],
+        ]),
+      },
+    );
+
+    const bucketTotal = Object.values(deployment).reduce((sum, value) => sum + value, 0);
+    expect(result.metadata?.deploymentSnapshot).toEqual({
+      buckets: Object.entries(deployment).map(([name, value]) => ({ name, value })),
+      bucketTotal,
+      totalReserves,
+      reconciliationResidual: totalReserves - bucketTotal,
+      dashboardTimestamp,
+    });
+    expect(result.metadata).toMatchObject({
+      dashboardTimestamp,
+      sourceTimestamp: 1_785_194_915,
+      freshnessMode: "verified",
+    });
+    expect(result.slices.filter((slice) => slice.coinId != null)).toEqual([
+      expect.objectContaining({
+        name: "CLOs (JAAA)",
+        coinId: "jaaa-janus-henderson-anemoy",
+        depType: "collateral",
+        risk: "high",
+      }),
+    ]);
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "Unknown / unmapped Accountable buckets",
+      risk: "high",
+    }));
+    expect(result.slices).not.toContainEqual(expect.objectContaining({
+      name: "Funding Rate (BTC)",
+    }));
   });
 
   it("maps type_split buckets and applies renameMap", () => {

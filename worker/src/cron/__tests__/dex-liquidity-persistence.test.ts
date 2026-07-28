@@ -21,6 +21,7 @@ import {
   writeHistoricalSnapshots,
 } from "../dex-liquidity/persistence";
 import type { FullScoreResult } from "../dex-liquidity/types";
+import type { DexDeploymentCensusRow } from "../dex-liquidity/deployment-census-coverage";
 
 const INACTIVE_TRACKED_STABLECOIN = TRACKED_STABLECOINS.find((coin) => !ACTIVE_IDS.has(coin.id));
 
@@ -48,6 +49,7 @@ function makeDb(options: {
   currentGenerationRows?: number;
   newerCurrentRows?: number;
   publicationState?: { value: "staged" | "published" | "failed" | null };
+  deploymentOutcomeRows?: DexDeploymentCensusRow[];
 } = {}): DexPersistenceMockDb {
   const history: Array<{ sql: string; binds: unknown[] }> = [];
 
@@ -64,6 +66,13 @@ function makeDb(options: {
           }
           return {
             results: (options.historyRows ?? []) as T[],
+            success: true,
+            meta: {},
+          };
+        }
+        if (sql.includes("FROM dex_deployment_outcomes")) {
+          return {
+            results: (options.deploymentOutcomeRows ?? []) as T[],
             success: true,
             meta: {},
           };
@@ -343,7 +352,7 @@ describe("dex-liquidity persistence", () => {
       null,
       0,
       null,
-      null,
+      expect.any(String),
       null,
       "unobserved",
       0,
@@ -353,6 +362,19 @@ describe("dex-liquidity persistence", () => {
       LIQUIDITY_METHODOLOGY_VERSION,
       1_700_000_000,
     ]);
+    expect(JSON.parse(String(usdcPlaceholder?.boundValues[19]))).toMatchObject({
+      exitRouteObservations: [],
+      exitRouteObservationCoverage: {
+        status: "unknown",
+        retainedPoolCount: 0,
+        observationCount: 0,
+      },
+      dexDeploymentCensus: {
+        state: "discovery-deferral",
+        generationId: buildDexLiquidityPublicationGenerationId(1_700_000_000),
+        publishedAtSec: 1_700_000_000,
+      },
+    });
     expect(globalRow?.boundValues).toEqual([
       buildDexLiquidityPublicationGenerationId(1_700_000_000),
       "__global__",
@@ -385,6 +407,62 @@ describe("dex-liquidity persistence", () => {
     ]);
 
     expect(getPreparedBatchStatements("INSERT INTO dex_liquidity").length).toBeGreaterThan(0);
+  });
+
+  it("binds complete reviewed-empty placeholder coverage to the publication generation", async () => {
+    const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === "aa-falconx-mev-capital");
+    if (!meta) throw new Error("expected aa-falconx-mev-capital in active registry");
+    const nowSec = 1_800_000_000;
+    const deploymentOutcomeRows: DexDeploymentCensusRow[] = [
+      ...(meta.contracts ?? []),
+      ...(meta.tradedContracts ?? []),
+    ].map((deployment) => ({
+      stablecoin_id: meta.id,
+      chain: deployment.chain,
+      contract_address: deployment.address,
+      outcome: "verified_no_pools",
+      provider_set_json: JSON.stringify(["coingecko"]),
+      reason: "A provider completed the direct-token query with no eligible pool",
+      observed_pool_count: 0,
+      observed_at: nowSec - 60,
+      discovery_last_crawl_at: nowSec - 120,
+    }));
+
+    await persistScores(
+      makeDb({ deploymentOutcomeRows }),
+      new Map(),
+      new Map(),
+      {
+        totalTvl: 0,
+        totalVol24h: 0,
+        totalVol7d: 0,
+        poolCount: 0,
+        chainCount: 0,
+        protocolTvl: {},
+        chainTvl: {},
+      },
+      nowSec,
+    );
+
+    const row = getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows")
+      .find((statement) => statement.boundValues[1] === meta.id);
+    expect(JSON.parse(String(row?.boundValues[19]))).toMatchObject({
+      exitRouteObservations: [],
+      exitRouteObservationCoverage: {
+        status: "populated",
+        retainedPoolCount: 0,
+        observationCount: 0,
+        unsupportedPoolCount: 0,
+      },
+      dexDeploymentCensus: {
+        state: "complete-empty",
+        generationId: buildDexLiquidityPublicationGenerationId(nowSec),
+        publishedAtSec: nowSec,
+        expectedDeploymentCount: deploymentOutcomeRows.length,
+        reviewedDeploymentCount: deploymentOutcomeRows.length,
+        verifiedNoPoolsCount: deploymentOutcomeRows.length,
+      },
+    });
   });
 
   it("skips tracked inactive metrics when staging the active current generation", async () => {

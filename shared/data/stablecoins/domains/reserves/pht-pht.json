@@ -1,0 +1,84 @@
+{
+  "id": "pht-pht",
+  "reserves": [
+    {
+      "name": "Current apcxUSDT-referenced collateral envelope (unreconciled)",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "APACX PHT vaults and the undisclosed apcxUSDT reserve custodian",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "OpenAI Codex V9 integration audit",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "APACX PHT product page",
+        "url": "https://www.apacx.io/PHT"
+      },
+      {
+        "label": "APACX documentation",
+        "url": "https://docs.apacx.io/"
+      },
+      {
+        "label": "APACX smart contract audits",
+        "url": "https://docs.apacx.io/technical-references/smart-contract-audits"
+      }
+    ],
+    "rationale": "APACX describes PHT as an overcollateralized CDP stablecoin and identifies apcxUSDT as its initial approved collateral wrapper, with apcxUSDC described as a planned beta asset. The reviewed sources do not publish a current PHT vault-collateral balance, an apcxUSDT reserve balance, the underlying USDT custodian, or a reconciliation from apcxUSDT claims to custodial USDT. A configured single-asset liveness probe of PHT supply cannot establish those reserve facts. The prior 100% USDT look-through is therefore replaced by one unlinked, explicitly unreconciled envelope.",
+    "compositionBasis": "APACX's documented eligible collateral category; current PHT collateral amounts and apcxUSDT underlying reserves are unreconciled",
+    "compositionAsOf": "2026-07-28",
+    "scope": "selected-slices",
+    "knownUnknownExposure": "The complete current PHT vault inventory, apcxUSDT collateral balance, custodial USDT backing, custodian identity, and any live apcxUSDC exposure are not published as a reconciled reserve snapshot.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Current apcxUSDT-referenced collateral envelope (unreconciled)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Issuer materials identify apcxUSDT as an eligible collateral wrapper but do not establish its current PHT balance or reconcile the wrapper to underlying USDT reserves."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "apcxUSDT reserve wallet TCRjE31cgksHetFLQd6JENAfBfXhHjMEFU (controller undisclosed)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "APACX PHT product page",
+        "url": "https://www.apacx.io/PHT"
+      },
+      {
+        "label": "APACX transparency page",
+        "url": "https://docs.apacx.io/transparency.md"
+      },
+      {
+        "label": "APACX mint, redeem, and bridge guide",
+        "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht.md"
+      }
+    ],
+    "uncertainty": "APACX labels apcxUSDT a custodial collateral type and publishes one reserve wallet, but the reviewed sources do not identify the wallet controller or underlying USDT custodian, account segregation, insolvency treatment, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

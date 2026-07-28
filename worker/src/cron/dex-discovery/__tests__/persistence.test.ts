@@ -5,6 +5,7 @@ import {
   incrementRunSeq,
   isValidStagedPoolId,
   readDiscoveryMeta,
+  recordDiscoveryAttemptFence,
   updateDiscoveryMeta,
   upsertStagedPools,
 } from "../persistence";
@@ -228,6 +229,34 @@ describe("discovery persistence D1 retry coverage", () => {
       lastCrawlAt: 1_710_000_000,
       lastHitAt: 1_709_900_000,
     });
+  });
+
+  it("records an attempt fence without changing existing backoff counters", async () => {
+    const prepared: Array<{ sql: string; binds: unknown[] }> = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...binds: unknown[]) => ({
+          run: async () => {
+            prepared.push({ sql, binds });
+            return { success: true, meta: { changes: 1 } };
+          },
+        }),
+      }),
+    } as unknown as D1Database;
+
+    await recordDiscoveryAttemptFence(db, "coin-a", 1_710_000_000);
+
+    expect(prepared).toHaveLength(1);
+    expect(prepared[0]?.sql).toContain(
+      "ON CONFLICT(stablecoin_id) DO UPDATE SET",
+    );
+    expect(prepared[0]?.sql).toContain(
+      "last_crawl_at = excluded.last_crawl_at",
+    );
+    expect(prepared[0]?.sql).not.toContain(
+      "DO UPDATE SET\n             consecutive_misses",
+    );
+    expect(prepared[0]?.binds).toEqual(["coin-a", 1_710_000_000]);
   });
 
   it("honors abort signals before incrementing the run sequence", async () => {

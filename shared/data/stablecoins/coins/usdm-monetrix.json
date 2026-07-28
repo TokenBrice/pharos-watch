@@ -241,49 +241,6 @@
       "disposition": "scoreable"
     }
   },
-  "reserves": [
-    {
-      "name": "USDC reserves",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle and MonetrixVault",
-      "riskFactors": [
-        "counterparty",
-        "custody",
-        "liquidity",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "unknown"
-    }
-  ],
-  "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase-1 reserve research 2026-07-28",
-    "confidence": "probable",
-    "sources": [
-      {
-        "label": "Monetrix mint guide",
-        "url": "https://doc.monetrix.xyz/guide/mint"
-      },
-      {
-        "label": "Monetrix architecture",
-        "url": "https://doc.monetrix.xyz/how-it-works/architecture"
-      },
-      {
-        "label": "Monetrix audits and contracts",
-        "url": "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts"
-      }
-    ],
-    "rationale": "Write-time re-open 2026-07-28 of Monetrix mint guide (USDC→USDM 1:1 via MonetrixVault.deposit) and architecture page (USDC deployed into delta-neutral Hyperliquid spot+short portfolio). Static envelope still identifies the documented USDC mint input as the sole tracked reserve category (100% USDC); strategy-level spot/perp constituents remain dynamic and are not a second static reserve slice. knownUnknownExposurePct stays 0 at category level.",
-    "compositionBasis": "Monetrix documented USDC mint input and strategy architecture",
-    "compositionAsOf": "2026-07-28",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "Current strategy positions, exchange custody, margin balances, and redemption liquidity are not independently published as a reconciled reserve snapshot.",
-    "knownUnknownExposurePct": 0
-  },
   "notices": [
     {
       "type": "info",

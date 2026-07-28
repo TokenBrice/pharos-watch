@@ -39,6 +39,7 @@ vi.mock("../dex-liquidity/fetch-primary", () => ({
   buildCurveLookups: vi.fn(async () => ({ curvePoolMap: new Map(), priceObservations: new Map() })),
   buildKnownPoolAddresses: vi.fn(() => ({
     exactKeys: new Set<string>(),
+    exactStablecoinIdsByKey: new Map<string, Set<string>>(),
     derivedKeyCounts: new Map<string, number>(),
     derivedToExactKeys: new Map<string, Set<string>>(),
     wildcardKeyCounts: new Map<string, number>(),
@@ -401,6 +402,7 @@ describe("syncDexLiquidity", () => {
   it("fetches bounded market telemetry before pool graphs accumulate", async () => {
     const knownPoolIndex = {
       exactKeys: new Set(["ethereum:0xpool"]),
+      exactStablecoinIdsByKey: new Map([["ethereum:0xpool", new Set(["usdt-tether"])]]),
       derivedKeyCounts: new Map([["derived", 1]]),
       derivedToExactKeys: new Map([["derived", new Set(["ethereum:0xpool"])]]),
       wildcardKeyCounts: new Map([["wildcard", 1]]),

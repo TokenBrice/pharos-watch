@@ -282,6 +282,14 @@ describe("Safety Score v9 archetype backing adapters", () => {
     // Unavailable hedge coverage fires the hedge signal the full measured
     // review (ratio 1) does not.
     expect(sdnPenalized.structuralReasons.length).toBeGreaterThan(sdnFull.structuralReasons.length);
+    expect(
+      sdnPenalized.structuralReasons.find(
+        (reason) => reason.pathKey === "mechanism:hedge-reconciliation",
+      ),
+    ).toMatchObject({
+      responsibility: "issuer-undisclosed",
+      evidenceRefIds: ["evidence:hedge-unavailable"],
+    });
 
     const rwaFull = evaluateV9Backing(asset(), rwaBase, V9_CANDIDATE_POLICY_V1);
     const rwaUnavailable = V9MechanismRiskReviewSchema.parse({
@@ -299,6 +307,14 @@ describe("Safety Score v9 archetype backing adapters", () => {
     if (rwaUnavailable.archetype !== "rwa-credit-fund") throw new Error("unexpected archetype");
     const rwaPenalized = evaluateV9Backing(asset(), rwaUnavailable, V9_CANDIDATE_POLICY_V1);
     expect(rwaPenalized.structuralReasons.length).toBeGreaterThan(rwaFull.structuralReasons.length);
+    expect(
+      rwaPenalized.structuralReasons.find(
+        (reason) => reason.pathKey === "mechanism:maturity-and-liquidity",
+      ),
+    ).toMatchObject({
+      responsibility: "issuer-undisclosed",
+      evidenceRefIds: ["evidence:wam-unavailable"],
+    });
 
     // An evidenced N/A maturity metric skips the mismatch signal entirely.
     const rwaNotApplicable = V9MechanismRiskReviewSchema.parse({

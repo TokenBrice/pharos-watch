@@ -2361,12 +2361,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.01",
+    "methodologyVersion": "9.02",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.01",
+    "version": "9.02",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2670,7 +2670,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.01",
+      "methodologyVersion": "9.02",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2681,7 +2681,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.01",
+      "methodologyVersion": "9.02",
       "publishedAt": 1772000700
     }
   },
@@ -3082,7 +3082,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | `netFlow30dUsd`       | `number`                                         | 30-day net flow (USD)                                                                                                                                                                                                                                                               |
 | `netFlow90dUsd`       | `number`                                         | 90-day net flow (USD)                                                                                                                                                                                                                                                               |
 | `largestEvent24h`     | `object \| null`                                 | Largest event in the last 24h: `{ direction, amountUsd, txHash, timestamp }`                                                                                                                                                                                                        |
-| `coverage`            | `object \| undefined`                            | Coverage metadata: `startBlock`, `lastSyncedBlock`, `lagBlocks`, `historyStartAt`, window booleans, adapter provenance (`adapterKinds`, `startBlockSource`, `startBlockConfidence`), and `status` (`full`, `partial-history`, `lagging`, `bootstrapping`, `unknown`, or `disabled`) |
+| `coverage`            | `object \| undefined`                            | Coverage metadata: `startBlock`, `lastSyncedBlock`, `lagBlocks`, retained-event `historyStartAt`, window booleans, adapter provenance (`adapterKinds`, `startBlockSource`, `startBlockConfidence`), and `status` (`full`, `partial-history`, `lagging`, `bootstrapping`, `unknown`, or `disabled`). Window booleans accept retained-event age or completed block-scan span, so `historyStartAt` can be recent or `null` while older scan progress proves mature coverage. |
 
 **`HourlyFlow`**
 

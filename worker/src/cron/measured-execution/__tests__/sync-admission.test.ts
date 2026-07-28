@@ -1,19 +1,27 @@
 import { describe, expect, it } from "vitest";
 
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
+import type { DexExitRouteObservation } from "@shared/types/market";
 import {
+  MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
   admitTargetsWithinBudget,
   estimateAdmissionCohortRpcRequestBreakdown,
   estimateAdmissionCohortRpcRequests,
   estimateAdmissionRotationCycles,
   hasCompleteDexMeasuredQuoteProgress,
   resolveMeasuredExecutionCronStatus,
+  selectExpiringScoreBearingPriorityPacket,
+  type PublishedScoreBearingDexRoute,
 } from "../sync";
 import {
   UNISWAP_V4_ADAPTER_PROFILE_ID,
   UNISWAP_V4_HOOK_FREE_ADDRESS,
   computeUniswapV4PoolId,
 } from "../uniswap-v4";
+import {
+  CURVE_DOLA_SUSDE_RATE_BEARING_POLICY,
+  CURVE_NXUSD_METAPOOL_POLICY,
+} from "../curve-composite";
 
 function target(
   stablecoinId: string,
@@ -108,7 +116,82 @@ function curveStableSwapNgTarget(): DexMeasuredExecutionTarget {
   });
 }
 
+function curveNxusdTarget(): DexMeasuredExecutionTarget {
+  const policy = CURVE_NXUSD_METAPOOL_POLICY;
+  const tokenIn = policy.executionTokens[policy.inputIndex]!;
+  const tokenOut = policy.executionTokens[policy.outputIndex]!;
+  return target(policy.stablecoinId, 328_267, "curve-nxusd", {
+    adapterProfileId: policy.adapterProfileId,
+    protocol: "curve",
+    chain: policy.chain,
+    poolId: `${policy.chain}:${policy.poolAddress}`,
+    poolTokenAddresses: policy.executionTokens.map((token) => token.address),
+    tokenIn: {
+      ...tokenIn,
+      referencePriceUsd: 0.8094,
+    },
+    tokenOut: {
+      ...tokenOut,
+      referencePriceUsd: 0.99986,
+    },
+  });
+}
+
+function publishedRoute(
+  measuredTarget: DexMeasuredExecutionTarget,
+  observedAt: number,
+): PublishedScoreBearingDexRoute {
+  const observation: DexExitRouteObservation = {
+    routeId: `dex:test:${measuredTarget.targetId}`,
+    routeFamily: "dex-amm",
+    scope: {
+      kind: "chain-contract",
+      chain: measuredTarget.chain,
+      contractOrPoolId: measuredTarget.poolId,
+      protocol: measuredTarget.protocol,
+    },
+    requestedNotionalUsd: 25_000_000,
+    settlementHorizonSec: 300,
+    maxCostBps: 200,
+    executableUsd: 10_000_000,
+    completionRatio: 0.4,
+    output: {
+      kind: "tracked-stablecoin",
+      trackedAssetIds: measuredTarget.tokenOut.trackedAssetId
+        ? [measuredTarget.tokenOut.trackedAssetId]
+        : undefined,
+      assetKeys: [`${measuredTarget.chain.toLowerCase()}:${measuredTarget.tokenOut.address}`],
+    },
+    evidenceKind: "measured-executable-depth",
+    adapterProfileId: measuredTarget.adapterProfileId,
+    confidence: "high",
+    scoreEligible: true,
+    observedAt,
+    freshnessSeconds: 0,
+    commonModeKeys: [
+      `chain:${measuredTarget.chain.toLowerCase()}`,
+      `pool:${measuredTarget.poolId}`,
+    ],
+  };
+  return { stablecoinId: measuredTarget.stablecoinId, observation };
+}
+
 describe("measured execution overflow admission", () => {
+  it("reports the default hard, admission, and reserve limits", () => {
+    expect(MEASURED_EXECUTION_ADMISSION_RUN_METADATA).toEqual({
+      admissionRpcRequestLimit: 1_220,
+      admissionFragmentationReserveRpcRequests: 80,
+      admissionRpcHardLimit: 1_300,
+    });
+    expect(
+      MEASURED_EXECUTION_ADMISSION_RUN_METADATA.admissionRpcRequestLimit +
+        MEASURED_EXECUTION_ADMISSION_RUN_METADATA
+          .admissionFragmentationReserveRpcRequests,
+    ).toBe(
+      MEASURED_EXECUTION_ADMISSION_RUN_METADATA.admissionRpcHardLimit,
+    );
+  });
+
   it("estimates setup, execution phases, and singleton-retry headroom", () => {
     expect(estimateAdmissionCohortRpcRequestBreakdown([target("coin-low", 100_000)]))
       .toEqual({ setupRpcRequests: 3, quoteRpcRequests: 7, totalRpcRequests: 10 });
@@ -215,6 +298,163 @@ describe("measured execution overflow admission", () => {
     });
     expect([...admission.admitted]).toEqual(["target-curve-usdg-ng"]);
     expect(admission.deferred.size).toBe(0);
+  });
+
+  it("counts every NXUSD composite identity proof before ordinary cursor admission", () => {
+    const measuredTarget = curveNxusdTarget();
+
+    expect(estimateAdmissionCohortRpcRequestBreakdown([measuredTarget])).toEqual({
+      setupRpcRequests: 20,
+      quoteRpcRequests: 6,
+      totalRpcRequests: 26,
+    });
+    expect(
+      admitTargetsWithinBudget([measuredTarget], {
+        maxEstimatedRpcRequests: 25,
+      }).admitted.size,
+    ).toBe(0);
+    expect(
+      [...admitTargetsWithinBudget([measuredTarget], {
+        maxEstimatedRpcRequests: 26,
+      }).admitted],
+    ).toEqual(["target-curve-nxusd"]);
+  });
+
+  it("reserves the published score-bearing packet with the earliest expiry", () => {
+    const normal = target("coin-normal", 100_000);
+    const stable = curveStableSwapNgTarget();
+    const selected = selectExpiringScoreBearingPriorityPacket(
+      [normal, stable],
+      [
+        publishedRoute(normal, 2_000),
+        publishedRoute(stable, 0),
+      ],
+    );
+
+    // Normal routes expire at +3600; the StableSwap-NG route at +7200.
+    expect(selected).toEqual({
+      targetIds: [normal.targetId],
+      observedAtSec: 2_000,
+      expiresAtSec: 5_600,
+      estimatedRpcRequests: 10,
+    });
+  });
+
+  it("keeps the two reviewed StableSwap directions atomic in priority admission", () => {
+    const packet = [curveStableSwapTarget(0), curveStableSwapTarget(1)];
+    const selected = selectExpiringScoreBearingPriorityPacket(
+      packet,
+      packet.map((row) => publishedRoute(row, 1_000)),
+    );
+
+    expect(selected).toEqual({
+      targetIds: [
+        "target-curve-3pool-0",
+        "target-curve-3pool-1",
+      ],
+      observedAtSec: 1_000,
+      expiresAtSec: 8_200,
+      estimatedRpcRequests: 20,
+    });
+  });
+
+  it("does not reserve a partial StableSwap priority packet", () => {
+    const packet = [curveStableSwapTarget(0), curveStableSwapTarget(1)];
+
+    expect(
+      selectExpiringScoreBearingPriorityPacket(
+        packet,
+        [publishedRoute(packet[0]!, 1_000)],
+      ),
+    ).toBeNull();
+  });
+
+  it("admits one bounded priority without letting it advance the tail cursor", () => {
+    const priority = target("coin-priority", 100_000);
+    const tail = target("coin-tail", 100_000, "coin-tail", {
+      chain: "base",
+      adapterProfileId: "pancakeswap-v3-quoter-v2",
+      protocol: "pancakeswap",
+    });
+    const admission = admitTargetsWithinBudget([priority, tail], {
+      cursor: "coin-priority",
+      maxEstimatedRpcRequests: 10,
+      priorityTargetIds: new Set([priority.targetId]),
+      priorityMaxEstimatedRpcRequests: 20,
+    });
+
+    expect([...admission.priorityAdmitted]).toEqual([priority.targetId]);
+    expect([...admission.admitted]).toEqual([priority.targetId]);
+    expect([...admission.deferred]).toEqual([tail.targetId]);
+    expect(admission.estimatedRpcRequests).toBe(10);
+    expect(admission.nextCursor).toBe("coin-priority");
+  });
+
+  it("rejects a priority packet above its separate reservation cap", () => {
+    const packet = [curveStableSwapTarget(0), curveStableSwapTarget(1)];
+    const admission = admitTargetsWithinBudget(packet, {
+      maxEstimatedRpcRequests: 20,
+      priorityTargetIds: new Set(packet.map((row) => row.targetId)),
+      priorityMaxEstimatedRpcRequests: 19,
+    });
+
+    expect(admission.priorityAdmitted.size).toBe(0);
+    expect(admission.estimatedRpcRequests).toBeLessThanOrEqual(20);
+  });
+
+  it("keeps the priority reservation at 20 when a caller requests a higher cap", () => {
+    const packet = [
+      curveStableSwapTarget(0),
+      curveStableSwapTarget(1),
+      target("coin-extra", 100_000, "coin-extra", {
+        chain: "base",
+        adapterProfileId: "pancakeswap-v3-quoter-v2",
+        protocol: "pancakeswap",
+      }),
+    ];
+    const admission = admitTargetsWithinBudget(packet, {
+      maxEstimatedRpcRequests: 100,
+      priorityTargetIds: new Set(packet.map((row) => row.targetId)),
+      priorityMaxEstimatedRpcRequests: 100,
+    });
+
+    expect(estimateAdmissionCohortRpcRequests(packet)).toBeGreaterThan(20);
+    expect(admission.priorityAdmitted.size).toBe(0);
+  });
+
+  it("keeps selector overrides from admitting a packet estimated above 20", () => {
+    const policy = CURVE_DOLA_SUSDE_RATE_BEARING_POLICY;
+    const tokenIn = policy.poolTokens[policy.inputIndex]!;
+    const tokenOut = policy.poolTokens[policy.outputIndex]!;
+    const composite = target(
+      policy.stablecoinId,
+      39_000_000,
+      "curve-composite",
+      {
+        adapterProfileId: policy.adapterProfileId,
+        protocol: "curve",
+        chain: policy.chain,
+        poolId: `${policy.chain}:${policy.poolAddress}`,
+        poolTokenAddresses: policy.poolTokens.map((token) => token.address),
+        tokenIn: {
+          ...tokenIn,
+          referencePriceUsd: 1.24,
+        },
+        tokenOut: {
+          ...tokenOut,
+          referencePriceUsd: 0.996,
+        },
+      },
+    );
+
+    expect(estimateAdmissionCohortRpcRequests([composite])).toBeGreaterThan(20);
+    expect(
+      selectExpiringScoreBearingPriorityPacket(
+        [composite],
+        [publishedRoute(composite, 1_000)],
+        100,
+      ),
+    ).toBeNull();
   });
 
   it("rotates the deterministic coin-level tail instead of starving it", () => {

@@ -1,5 +1,6 @@
 import {
   getDexMeasuredExecutionProbeNotionals,
+  getDexMeasuredExecutionFreshnessMaxSec,
   validateDexMeasuredExecutionProfile,
   type DexMeasuredExecutionPoolBindingProof,
   type DexMeasuredExecutionRegistryBindingProof,
@@ -8,11 +9,24 @@ import {
   type DexMeasuredExecutionTarget,
   type DexMeasuredExecutionUniswapV4PoolProof,
 } from "@shared/types/measured-execution";
+import {
+  DexExitRouteObservationSchema,
+  MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
+  type DexExitRouteObservation,
+} from "@shared/types/market";
+import {
+  canonicalExitRouteAssetKey,
+  canonicalExitRouteChain,
+  canonicalExitRouteScopedKey,
+} from "@shared/lib/exit-route-identity";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { fetchEvmBlockNumber } from "../../lib/evm-rpc";
 import { toErrorMessage } from "../../lib/error-utils";
+import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
+import { parseJsonObject } from "../../lib/json-parse";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import { forEachWithConcurrency } from "./concurrency";
@@ -91,11 +105,17 @@ import {
 } from "./uniswap-v4";
 
 const MAX_QUOTE_CALLS = 6_400;
-const MAX_RPC_REQUESTS = 800;
+const MAX_RPC_REQUESTS = 1_300;
 const RPC_ADMISSION_FRAGMENTATION_HEADROOM = 80;
 const MAX_ADMISSION_RPC_REQUESTS = MAX_RPC_REQUESTS - RPC_ADMISSION_FRAGMENTATION_HEADROOM;
 const CONSERVATIVE_MULTICALL_BATCH_SIZE = 8;
 const MAX_ADMISSION_ROTATION_CYCLES = 2;
+const MAX_EXPIRING_PRIORITY_RPC_REQUESTS = 20;
+export const MEASURED_EXECUTION_ADMISSION_RUN_METADATA = {
+  admissionRpcRequestLimit: MAX_ADMISSION_RPC_REQUESTS,
+  admissionFragmentationReserveRpcRequests: RPC_ADMISSION_FRAGMENTATION_HEADROOM,
+  admissionRpcHardLimit: MAX_RPC_REQUESTS,
+} as const;
 const MAX_RUNTIME_MS = 8 * 60 * 1_000;
 const REFINEMENT_ROUNDS = 3;
 const MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:quote-admission";
@@ -222,7 +242,12 @@ function estimateDeploymentSetupRpcRequests(deployment: TargetDeployment): numbe
     case "curve-stableswap-ng":
       return 6 + deployment.config.poolTokens.length * 2;
     case "curve-composite":
-      return deployment.config.quoteFunction === "get_dy_underlying" ? 18 : 17;
+      // Two pinned-header reads, three code proofs, three factory bindings,
+      // one five-request branch proof, then every pool coin and execution-token
+      // decimal. Derive the variable portion so wider metapools stay bounded.
+      return 13 +
+        deployment.config.poolTokens.length +
+        deployment.config.executionTokens.length;
   }
 }
 
@@ -305,13 +330,256 @@ export function estimateAdmissionCohortRpcRequests(
   return estimateAdmissionCohortRpcRequestBreakdown(targets, refinementRounds).totalRpcRequests;
 }
 
+export interface PublishedScoreBearingDexRoute {
+  stablecoinId: string;
+  observation: DexExitRouteObservation;
+}
+
+export interface ExpiringScoreBearingPriorityPacket {
+  targetIds: string[];
+  observedAtSec: number;
+  expiresAtSec: number;
+  estimatedRpcRequests: number;
+}
+
+function publishedRouteMatchesTarget(
+  row: PublishedScoreBearingDexRoute,
+  target: DexMeasuredExecutionTarget,
+): boolean {
+  const observation = row.observation;
+  if (
+    row.stablecoinId !== target.stablecoinId ||
+    observation.adapterProfileId !== target.adapterProfileId ||
+    observation.scope.kind !== "chain-contract" ||
+    canonicalExitRouteChain(observation.scope.chain) !==
+      canonicalExitRouteChain(target.chain) ||
+    canonicalExitRouteScopedKey(
+      observation.scope.chain,
+      observation.scope.contractOrPoolId,
+    ) !== canonicalExitRouteScopedKey(target.chain, target.poolId)
+  ) {
+    return false;
+  }
+  const trackedOutput = target.tokenOut.trackedAssetId;
+  if (
+    trackedOutput &&
+    observation.output.trackedAssetIds?.includes(trackedOutput)
+  ) {
+    return true;
+  }
+  return observation.output.assetKeys?.includes(
+    canonicalExitRouteAssetKey(target.chain, target.tokenOut.address),
+  ) ?? false;
+}
+
+/**
+ * Select one bounded packet whose currently published score-bearing route is
+ * closest to expiry. Identity-ambiguous observations are ignored. The legacy
+ * Curve 3pool directions remain one atomic packet.
+ */
+export function selectExpiringScoreBearingPriorityPacket(
+  targets: readonly DexMeasuredExecutionTarget[],
+  publishedRoutes: readonly PublishedScoreBearingDexRoute[],
+  maxEstimatedRpcRequests = MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
+): ExpiringScoreBearingPriorityPacket | null {
+  const effectiveMaxEstimatedRpcRequests = Math.min(
+    maxEstimatedRpcRequests,
+    MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
+  );
+  const matched = new Map<
+    string,
+    { target: DexMeasuredExecutionTarget; observedAtSec: number }
+  >();
+  for (const row of publishedRoutes) {
+    const observation = row.observation;
+    if (
+      !observation.scoreEligible ||
+      observation.evidenceKind !== "measured-executable-depth" ||
+      !observation.adapterProfileId
+    ) {
+      continue;
+    }
+    const candidates = targets.filter((target) =>
+      publishedRouteMatchesTarget(row, target),
+    );
+    if (candidates.length !== 1) continue;
+    const target = candidates[0]!;
+    const current = matched.get(target.targetId);
+    if (
+      current === undefined ||
+      observation.observedAt < current.observedAtSec
+    ) {
+      matched.set(target.targetId, {
+        target,
+        observedAtSec: observation.observedAt,
+      });
+    }
+  }
+
+  const packets = new Map<
+    string,
+    Array<{ target: DexMeasuredExecutionTarget; observedAtSec: number }>
+  >();
+  for (const row of matched.values()) {
+    const packetKey =
+      row.target.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID
+        ? [
+            row.target.stablecoinId,
+            row.target.adapterProfileId,
+            canonicalExitRouteScopedKey(row.target.chain, row.target.poolId),
+          ].join("\u0000")
+        : row.target.targetId;
+    const packet = packets.get(packetKey) ?? [];
+    packet.push(row);
+    packets.set(packetKey, packet);
+  }
+
+  return (
+    [...packets.values()]
+      .map((packet) => {
+        const packetTargets = packet
+          .map((row) => row.target)
+          .sort((left, right) => left.targetId.localeCompare(right.targetId));
+        if (
+          packetTargets[0]?.adapterProfileId ===
+          CURVE_STABLESWAP_ADAPTER_PROFILE_ID
+        ) {
+          const first = packetTargets[0];
+          const poolKey = canonicalExitRouteScopedKey(
+            first.chain,
+            first.poolId,
+          );
+          const expectedTargetIds = targets
+            .filter(
+              (target) =>
+                target.stablecoinId === first.stablecoinId &&
+                target.adapterProfileId === first.adapterProfileId &&
+                canonicalExitRouteScopedKey(target.chain, target.poolId) ===
+                  poolKey,
+            )
+            .map((target) => target.targetId)
+            .sort();
+          if (
+            expectedTargetIds.length < 2 ||
+            expectedTargetIds.length !== packetTargets.length ||
+            expectedTargetIds.some(
+              (targetId, index) =>
+                targetId !== packetTargets[index]?.targetId,
+            )
+          ) {
+            return null;
+          }
+        }
+        const estimatedRpcRequests =
+          estimateAdmissionCohortRpcRequests(packetTargets);
+        const observedAtSec = Math.min(
+          ...packet.map((row) => row.observedAtSec),
+        );
+        const expiresAtSec = Math.min(
+          ...packet.map(
+            (row) =>
+              row.observedAtSec +
+              getDexMeasuredExecutionFreshnessMaxSec(
+                row.target.adapterProfileId,
+              ),
+          ),
+        );
+        return {
+          targetIds: packetTargets.map((target) => target.targetId),
+          observedAtSec,
+          expiresAtSec,
+          estimatedRpcRequests,
+        };
+      })
+      .filter(
+        (
+          packet,
+        ): packet is ExpiringScoreBearingPriorityPacket => packet !== null,
+      )
+      .filter(
+        (packet) =>
+          packet.estimatedRpcRequests > 0 &&
+          packet.estimatedRpcRequests <= effectiveMaxEstimatedRpcRequests,
+      )
+      .sort(
+        (left, right) =>
+          left.expiresAtSec - right.expiresAtSec ||
+          left.targetIds.join("\u0000").localeCompare(
+            right.targetIds.join("\u0000"),
+          ),
+      )[0] ?? null
+  );
+}
+
+interface PublishedDexScoreDetailsRow {
+  stablecoin_id: string;
+  score_components_json: string;
+}
+
+async function loadExpiringScoreBearingPriorityPacket(
+  db: D1Database,
+  targets: readonly DexMeasuredExecutionTarget[],
+  signal?: AbortSignal,
+): Promise<ExpiringScoreBearingPriorityPacket | null> {
+  try {
+    throwIfAborted(signal);
+    const result = await db
+      .prepare(
+        `SELECT stablecoin_id, score_components_json
+           FROM dex_liquidity
+          WHERE ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
+            AND score_components_json IS NOT NULL
+            AND instr(score_components_json, '"measured-executable-depth"') > 0
+          ORDER BY stablecoin_id`,
+      )
+      .all<PublishedDexScoreDetailsRow>();
+    throwIfAborted(signal);
+    const publishedRoutes: PublishedScoreBearingDexRoute[] = [];
+    for (const row of result.results ?? []) {
+      const details = parseJsonObject(row.score_components_json);
+      const observations = DexExitRouteObservationSchema.array()
+        .max(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
+        .safeParse(details?.exitRouteObservations);
+      if (!observations.success) continue;
+      for (const observation of observations.data) {
+        publishedRoutes.push({
+          stablecoinId: row.stablecoin_id,
+          observation,
+        });
+      }
+    }
+    return selectExpiringScoreBearingPriorityPacket(
+      targets,
+      publishedRoutes,
+    );
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "measured_execution.expiring_priority_load_failed",
+      job: "sync-cl-exit-depth",
+      message: "Could not load expiring score-bearing route priority",
+      error,
+    });
+    return null;
+  }
+}
+
 export function admitTargetsWithinBudget(
   targets: readonly DexMeasuredExecutionTarget[],
-  options: { cursor?: string | null; maxEstimatedRpcRequests?: number; refinementRounds?: number } = {},
+  options: {
+    cursor?: string | null;
+    maxEstimatedRpcRequests?: number;
+    refinementRounds?: number;
+    priorityTargetIds?: ReadonlySet<string>;
+    priorityMaxEstimatedRpcRequests?: number;
+  } = {},
 ): {
   admitted: Set<string>;
   deferred: Set<string>;
   oversized: Set<string>;
+  priorityAdmitted: Set<string>;
   oversizedCoinIds: string[];
   estimatedRpcRequests: number;
   estimatedSetupRpcRequests: number;
@@ -335,15 +603,48 @@ export function admitTargetsWithinBudget(
   const admitted = new Set<string>();
   const deferred = new Set<string>();
   const oversized = new Set<string>();
+  const priorityAdmitted = new Set<string>();
   const oversizedCoinIds: string[] = [];
   const maxEstimatedRpcRequests = options.maxEstimatedRpcRequests ?? MAX_ADMISSION_RPC_REQUESTS;
   let estimatedRpcRequests = 0;
   let estimatedSetupRpcRequests = 0;
   let estimatedQuoteRpcRequests = 0;
   const admittedTargets: DexMeasuredExecutionTarget[] = [];
+  const priorityTargets = targets.filter((target) =>
+    options.priorityTargetIds?.has(target.targetId),
+  );
+  if (priorityTargets.length > 0) {
+    const priorityEstimate = estimateAdmissionCohortRpcRequestBreakdown(
+      priorityTargets,
+      options.refinementRounds ?? REFINEMENT_ROUNDS,
+    );
+    const priorityLimit = Math.min(
+      maxEstimatedRpcRequests,
+      MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
+      options.priorityMaxEstimatedRpcRequests ??
+        MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
+    );
+    if (
+      priorityEstimate.totalRpcRequests > 0 &&
+      priorityEstimate.totalRpcRequests <= priorityLimit
+    ) {
+      admittedTargets.push(...priorityTargets);
+      estimatedRpcRequests = priorityEstimate.totalRpcRequests;
+      estimatedSetupRpcRequests = priorityEstimate.setupRpcRequests;
+      estimatedQuoteRpcRequests = priorityEstimate.quoteRpcRequests;
+      for (const target of priorityTargets) {
+        admitted.add(target.targetId);
+        priorityAdmitted.add(target.targetId);
+      }
+    }
+  }
   let nextCursor = options.cursor ?? null;
   let cursorFrozen = false;
-  for (const [stablecoinId, coinTargets] of rotated) {
+  for (const [stablecoinId, originalCoinTargets] of rotated) {
+    const coinTargets = originalCoinTargets.filter(
+      (target) => !priorityAdmitted.has(target.targetId),
+    );
+    if (coinTargets.length === 0) continue;
     const refinementRounds = options.refinementRounds ?? REFINEMENT_ROUNDS;
     const coinEstimatedRpcRequests = estimateAdmissionCohortRpcRequests(
       coinTargets,
@@ -377,6 +678,7 @@ export function admitTargetsWithinBudget(
     admitted,
     deferred,
     oversized,
+    priorityAdmitted,
     oversizedCoinIds,
     estimatedRpcRequests,
     estimatedSetupRpcRequests,
@@ -387,7 +689,13 @@ export function admitTargetsWithinBudget(
 
 export function estimateAdmissionRotationCycles(
   targets: readonly DexMeasuredExecutionTarget[],
-  options: { cursor?: string | null; maxEstimatedRpcRequests?: number; refinementRounds?: number } = {},
+  options: {
+    cursor?: string | null;
+    maxEstimatedRpcRequests?: number;
+    refinementRounds?: number;
+    priorityTargetIds?: ReadonlySet<string>;
+    priorityMaxEstimatedRpcRequests?: number;
+  } = {},
 ): number | null {
   if (targets.length === 0) return 0;
   const uncovered = new Set(targets.map((target) => target.targetId));
@@ -490,6 +798,12 @@ export async function syncDexMeasuredExecution(
   }
 
   const quoteGenerationId = buildDexMeasuredQuoteGenerationId(startedAt);
+  const expiringPriority = await loadExpiringScoreBearingPriorityPacket(
+    db,
+    targetGeneration.targets,
+    signal,
+  );
+  const priorityTargetIds = new Set(expiringPriority?.targetIds ?? []);
   const admissionState = await readDexSourcePaginationState(
     db,
     MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
@@ -500,6 +814,7 @@ export async function syncDexMeasuredExecution(
     admitted,
     deferred,
     oversized,
+    priorityAdmitted,
     oversizedCoinIds,
     estimatedRpcRequests,
     estimatedSetupRpcRequests,
@@ -507,12 +822,28 @@ export async function syncDexMeasuredExecution(
     nextCursor,
   } = admitTargetsWithinBudget(targetGeneration.targets, {
     cursor: admissionCursor,
+    priorityTargetIds,
+    priorityMaxEstimatedRpcRequests: MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
   });
   const admissionRotationCycles = estimateAdmissionRotationCycles(targetGeneration.targets, {
     cursor: admissionCursor,
+    priorityTargetIds,
+    priorityMaxEstimatedRpcRequests: MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
   });
   const budgetDeferredCount = deferred.size - oversized.size;
-  const states = targetGeneration.targets.map<TargetQuoteState>((target) => ({
+  const orderedTargets = targetGeneration.targets
+    .map((target, index) => ({
+      target,
+      index,
+      priority: priorityAdmitted.has(target.targetId),
+    }))
+    .sort(
+      (left, right) =>
+        Number(right.priority) - Number(left.priority) ||
+        left.index - right.index,
+    )
+    .map((row) => row.target);
+  const states = orderedTargets.map<TargetQuoteState>((target) => ({
     target,
     deployment: deploymentForTarget(target),
     blockNumber: null,
@@ -1150,9 +1481,14 @@ export async function syncDexMeasuredExecution(
     admissionEstimatedRpcRequests: estimatedRpcRequests,
     admissionSetupEstimatedRpcRequests: estimatedSetupRpcRequests,
     admissionQuoteEstimatedRpcRequests: estimatedQuoteRpcRequests,
-    admissionRpcRequestLimit: MAX_ADMISSION_RPC_REQUESTS,
-    admissionFragmentationReserveRpcRequests: RPC_ADMISSION_FRAGMENTATION_HEADROOM,
-    admissionRpcHardLimit: MAX_RPC_REQUESTS,
+    ...MEASURED_EXECUTION_ADMISSION_RUN_METADATA,
+    expiringPriorityTargetIds: [...priorityAdmitted].sort(),
+    expiringPriorityObservedAtSec: expiringPriority?.observedAtSec ?? null,
+    expiringPriorityExpiresAtSec: expiringPriority?.expiresAtSec ?? null,
+    expiringPriorityEstimatedRpcRequests:
+      expiringPriority?.estimatedRpcRequests ?? 0,
+    expiringPriorityRpcRequestLimit:
+      MAX_EXPIRING_PRIORITY_RPC_REQUESTS,
     admissionRotationCycles,
     admissionCursor,
     nextAdmissionCursor: nextCursor,

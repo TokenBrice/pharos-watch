@@ -29,12 +29,13 @@ import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker"
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import { fetchJsonWithRetry } from "../../../lib/fetch-retry";
 import { buildDlStablecoinPoolsCache } from "../../yield-sync/cache";
-import type { LlamaPool } from "../types";
+import type { CurvePool, LlamaPool } from "../types";
 import { buildCurveLookups, fetchDataSources } from "../fetch-primary";
 import { buildPoolFingerprint } from "../pool-helpers";
 import { CURVE_CHAINS } from "../constants";
 import {
   CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
+  CURVE_NXUSD_COMPOSITE_POOL_ADDRESS,
   CURVE_USD1_COMPOSITE_POOL_ADDRESS,
 } from "../../measured-execution/curve-composite-identities";
 
@@ -572,6 +573,114 @@ describe("buildCurveLookups", () => {
     ).toBeUndefined();
     expect(
       curvePoolMap.get("ethereum:0x1111111111111111111111111111111111111111")?.basePoolAddress,
+    ).toBeUndefined();
+  });
+
+  it("retains exact NXUSD metapool underlying output identity only on the reviewed pool", async () => {
+    const avalancheIndex = CURVE_CHAINS.indexOf("avalanche");
+    const basePoolAddress = "0x7f90122BF0700F9E7e1F688fe926940E8839F353";
+    const pool: CurvePool = {
+      address: CURVE_NXUSD_COMPOSITE_POOL_ADDRESS,
+      name: "NXUSD/av3CRV",
+      amplificationCoefficient: "200",
+      coins: [
+        {
+          symbol: "NXUSD",
+          address: "0xF14f4CE569cB3679E99d5059909E23B07bd2F387",
+          poolBalance: "375108949072839290225563",
+          usdPrice: 0.8094,
+          decimals: "18",
+          isBasePoolLpToken: false,
+        },
+        {
+          symbol: "av3CRV",
+          address: "0x1337BedC9D22ecbe766dF105c9623922A27963EC",
+          poolBalance: "21712968896565567155722",
+          usdPrice: 1.135,
+          decimals: "18",
+          isBasePoolLpToken: true,
+        },
+      ],
+      underlyingCoins: [
+        {
+          symbol: "NXUSD",
+          address: "0xF14f4CE569cB3679E99d5059909E23B07bd2F387",
+          usdPrice: 0.8094,
+          decimals: "18",
+        },
+        {
+          symbol: "avDAI",
+          address: "0x47AFa96Cdc9fAb46904A55a6ad4bf6660B53c38a",
+          usdPrice: 0.99989,
+          decimals: "18",
+        },
+        {
+          symbol: "avUSDC",
+          address: "0x46A51127C3ce23fb7AB1DE06226147F446e4a857",
+          usdPrice: 0.99986,
+          decimals: "6",
+        },
+        {
+          symbol: "avUSDT",
+          address: "0x532E6537FEA298397212F09A61e03311686f548e",
+          usdPrice: 0.99882,
+          decimals: "6",
+        },
+      ],
+      usdTotal: 328_267,
+      isMetaPool: true,
+      assetTypeName: "USD",
+      totalSupply: 0,
+      registryId: "factory",
+      isBroken: false,
+      virtualPrice: "1",
+      usdTotalExcludingBasePool: 303_622,
+      creationTs: 0,
+      basePoolAddress,
+      gaugeCrvApy: null,
+    };
+    const curvePayloads = CURVE_CHAINS.map(() => null) as Array<{
+      data: { poolData: typeof pool[] };
+    } | null>;
+    curvePayloads[avalancheIndex] = {
+      data: {
+        poolData: [
+          pool,
+          { ...pool, address: "0x1111111111111111111111111111111111111111" },
+        ],
+      },
+    };
+
+    const { curvePoolMap } = await buildCurveLookups(
+      curvePayloads,
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+
+    expect(
+      curvePoolMap.get(`avalanche:${CURVE_NXUSD_COMPOSITE_POOL_ADDRESS}`),
+    ).toMatchObject({
+      basePoolAddress,
+      poolCoins: [
+        { symbol: "NXUSD", decimals: 18, isBasePoolLpToken: false },
+        { symbol: "av3CRV", decimals: 18, isBasePoolLpToken: true },
+      ],
+      underlyingCoins: [
+        { symbol: "NXUSD", decimals: 18 },
+        { symbol: "avDAI", decimals: 18 },
+        {
+          address: "0x46A51127C3ce23fb7AB1DE06226147F446e4a857",
+          symbol: "avUSDC",
+          decimals: 6,
+          usdPrice: 0.99986,
+        },
+        { symbol: "avUSDT", decimals: 6 },
+      ],
+    });
+    expect(
+      curvePoolMap.get("avalanche:0x1111111111111111111111111111111111111111")
+        ?.underlyingCoins,
     ).toBeUndefined();
   });
 

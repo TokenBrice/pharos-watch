@@ -14,8 +14,9 @@ are now admissible only under the rules below.
   `navValuation`, `durationAndLiquidity`, `lossRecoveryDesign`). These components are
   compiler-bounded by design; a curated overlay claim overrides that conservatism and is
   therefore held to the strictest sourcing bar in the scoring system.
-- The `not-applicable` / `unavailable` metric-applicability states on
-  synthetic-delta-neutral and rwa-credit-fund overlays (wave-7 decision D2).
+- The `not-applicable` / `unavailable` component-applicability states and the
+  corresponding metric-applicability states on synthetic-delta-neutral and
+  rwa-credit-fund overlays (wave-7 decision D2).
 
 ## Evidence classes
 
@@ -44,6 +45,20 @@ Wave-6 packet research produced the canonical negative examples; they remain the
   filing they link to.
 - Any source that cannot be pinned (login-walled, undated, or mutable without archive).
 
+## Component applicability states
+
+- `measured` — the component has a sourced quality claim that meets the evidence class for
+  that quality. Omitting applicability on a quality claim has the same meaning.
+- `not-applicable` — the component structurally does not apply to the mechanism. Requires a
+  rationale and a pinned primary source demonstrating the structural absence. It is not a
+  shortcut for a disclosure that could exist but was not found.
+- `unavailable` — the component applies, but the reviewed disclosure location does not
+  publish enough evidence to assign a quality. Requires a rationale naming the missing
+  disclosure and a `sourceUrl` matching the overlay's `sources` array. The component remains
+  bounded-unknown, its penalty is retained, and responsibility re-attributes to
+  issuer-undisclosed. This is a sourced nondisclosure disposition, not a quality claim or an
+  evidence closure.
+
 ## Metric applicability states (sdn / rwa)
 
 - `measured` — a numeric value with a pinned source. Default when applicability is absent.
@@ -52,9 +67,10 @@ Wave-6 packet research produced the canonical negative examples; they remain the
   demonstrating the structural absence. Skips the linked structural penalty signal.
 - `unavailable` — the metric applies but the issuer publishes no measurable value. Requires
   a rationale naming what was searched and a pinned source for where the disclosure should
-  live. The linked structural penalty signal keeps firing: unmeasured is never presumed
-  adequate. Use this state honestly — it records nondisclosure, it does not clear it; the
-  gap re-attributes to issuer-undisclosed responsibility.
+  live. The linked conservative structural signal may keep firing, but it remains
+  issuer-undisclosed rather than measured-adverse: an absent value is never converted into
+  a measured finding. Use this state honestly — it records nondisclosure, it does not clear
+  it.
 - CDP metrics never use `unavailable` (the collateralization banding needs a numeric
   ratio); the adapter rejects it with a directed error.
 
@@ -63,7 +79,10 @@ Wave-6 packet research produced the canonical negative examples; they remain the
 - Every overlay entry carries `reviewedAt` (ISO date of the evidence pin), descriptive
   source labels, and notes stating what was measured, at what timestamp/block, and why each
   grade was assigned.
-- Metric-applicability and not-applicable component `sourceUrl`s must match an entry in the
+- Date-only overlay claims become score-bearing only after the reviewed UTC day has elapsed.
+  During that day the admission gap is method-owned; clocks before the review date receive
+  neither the future overlay nor its disposition.
+- Metric-applicability and non-measured component `sourceUrl`s must match an entry in the
   overlay's `sources` array (validator-enforced).
 - Overlays are identity-bound: every batch lands through a replay on the pinned production
   envelope with an attributed mover list before push. Unexplained movers stop the batch.

@@ -603,8 +603,40 @@ describe("validateRedemptionBackstopRegistry", () => {
       ...baseConfig,
       outputAssetType: "stable-basket",
       unresolvedOutputAssetKeys: ["usdc-circle", "asset:vbusdc"],
+      unresolvedOutputDisposition: "reviewed-external",
+      reviewedAt: "2026-07-27",
     });
     expect(unresolved.success).toBe(true);
+
+    const externalWithoutIdentity = RedemptionBackstopConfigSchema.safeParse({
+      ...baseConfig,
+      unresolvedOutputDisposition: "reviewed-external",
+      reviewedAt: "2026-07-27",
+    });
+    expect(externalWithoutIdentity.success).toBe(false);
+    if (!externalWithoutIdentity.success) {
+      expect(externalWithoutIdentity.error.issues).toContainEqual(
+        expect.objectContaining({
+          path: ["unresolvedOutputDisposition"],
+          message: expect.stringContaining("requires unresolvedOutputAssetKeys"),
+        }),
+      );
+    }
+
+    const dispositionWithoutReviewDate = RedemptionBackstopConfigSchema.safeParse({
+      ...baseConfig,
+      unresolvedOutputAssetKeys: ["asset:vbusdc"],
+      unresolvedOutputDisposition: "reviewed-external",
+    });
+    expect(dispositionWithoutReviewDate.success).toBe(false);
+    if (!dispositionWithoutReviewDate.success) {
+      expect(dispositionWithoutReviewDate.error.issues).toContainEqual(
+        expect.objectContaining({
+          path: ["unresolvedOutputDisposition"],
+          message: expect.stringContaining("requires reviewedAt"),
+        }),
+      );
+    }
 
     const conflicting = RedemptionBackstopConfigSchema.safeParse({
       ...baseConfig,

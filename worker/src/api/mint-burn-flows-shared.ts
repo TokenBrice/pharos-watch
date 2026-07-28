@@ -60,8 +60,12 @@ const MINT_BURN_EXPECTED_BLOCK_TIME_SEC: Record<string, number> = {
   ethereum: 12,
 };
 
+function expectedBlockTimeSec(chainId: string): number {
+  return MINT_BURN_EXPECTED_BLOCK_TIME_SEC[chainId] ?? 12;
+}
+
 function coverageLagThresholdBlocks(chainId: string): number {
-  const blockTimeSec = MINT_BURN_EXPECTED_BLOCK_TIME_SEC[chainId] ?? 12;
+  const blockTimeSec = expectedBlockTimeSec(chainId);
   return Math.max(1, Math.min(
     MINT_BURN_COVERAGE_LAG_MAX_BLOCKS,
     Math.ceil(MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC / blockTimeSec),
@@ -560,9 +564,25 @@ export function buildCoinCoverageMap(
       ? "medium"
       : "high";
 
-    const has24hWindow = historyStartAt != null && historyStartAt <= nowSec - (24 * 3600);
-    const has30dWindow = historyStartAt != null && historyStartAt <= nowSec - (30 * DAY_SECONDS);
-    const has90dWindow = historyStartAt != null && historyStartAt <= nowSec - (90 * DAY_SECONDS);
+    // Hourly rows are activity-sparse and retained for 95 days. A quiet,
+    // fully-scanned asset can therefore have no retained first-event row even
+    // though the sync cursor proves that its configured history was observed.
+    // Use the shortest scanned span across the coin's configs as a conservative
+    // fallback so retention cannot regress established coverage to
+    // "bootstrapping".
+    const scannedWindowSec = Math.min(...configs.map((config, index) =>
+      Math.max(0, lastSyncedBlocks[index]! - config.startBlock + 1)
+        * expectedBlockTimeSec(config.chain.chainId),
+    ));
+    const has24hWindow =
+      (historyStartAt != null && historyStartAt <= nowSec - (24 * 3600))
+      || scannedWindowSec >= 24 * 3600;
+    const has30dWindow =
+      (historyStartAt != null && historyStartAt <= nowSec - (30 * DAY_SECONDS))
+      || scannedWindowSec >= 30 * DAY_SECONDS;
+    const has90dWindow =
+      (historyStartAt != null && historyStartAt <= nowSec - (90 * DAY_SECONDS))
+      || scannedWindowSec >= 90 * DAY_SECONDS;
 
     const status =
       disabled ? "disabled" :

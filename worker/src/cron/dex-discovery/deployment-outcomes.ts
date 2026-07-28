@@ -136,6 +136,23 @@ export function buildStaticInaccessibleDeploymentOutcomes(nowSec: number): DexDe
   );
 }
 
+export function buildFailedCrawlDeploymentOutcomes(params: {
+  stablecoinId: string;
+  deployments: readonly ContractDeployment[];
+  nowSec: number;
+}): DexDeploymentOutcomeWrite[] {
+  return params.deployments.map((deployment) => ({
+    stablecoinId: params.stablecoinId,
+    chain: deployment.chain,
+    address: deployment.address,
+    outcome: "provider_inaccessible",
+    providers: getDexDiscoveryProviders(deployment.chain),
+    reason: "Bounded discovery crawl failed before a complete deployment census",
+    observedPoolCount: 0,
+    observedAt: params.nowSec,
+  }));
+}
+
 export async function upsertDexDeploymentOutcomes(
   db: D1Database,
   outcomes: readonly DexDeploymentOutcomeWrite[],

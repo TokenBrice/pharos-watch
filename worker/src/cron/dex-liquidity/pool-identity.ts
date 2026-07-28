@@ -19,6 +19,7 @@ export interface PoolIdentity {
 
 export interface KnownPoolIdentityIndex {
   exactKeys: Set<string>;
+  exactStablecoinIdsByKey: Map<string, Set<string>>;
   derivedKeyCounts: Map<string, number>;
   derivedToExactKeys: Map<string, Set<string>>;
   wildcardKeyCounts: Map<string, number>;
@@ -29,6 +30,7 @@ export interface KnownPoolIdentityIndex {
 export function createKnownPoolIdentityIndex(): KnownPoolIdentityIndex {
   return {
     exactKeys: new Set<string>(),
+    exactStablecoinIdsByKey: new Map<string, Set<string>>(),
     derivedKeyCounts: new Map<string, number>(),
     derivedToExactKeys: new Map<string, Set<string>>(),
     wildcardKeyCounts: new Map<string, number>(),
@@ -39,6 +41,7 @@ export function createKnownPoolIdentityIndex(): KnownPoolIdentityIndex {
 
 export function clearKnownPoolIdentityIndex(known: KnownPoolIdentityIndex): void {
   known.exactKeys.clear();
+  known.exactStablecoinIdsByKey.clear();
   known.derivedKeyCounts.clear();
   known.derivedToExactKeys.clear();
   known.wildcardKeyCounts.clear();
@@ -224,6 +227,17 @@ export function registerKnownPoolIdentity(known: KnownPoolIdentityIndex, identit
   }
 }
 
+export function registerKnownPoolExactStablecoin(
+  known: KnownPoolIdentityIndex,
+  identity: PoolIdentity,
+  stablecoinId: string,
+): void {
+  if (!identity.exactPoolKey || !stablecoinId) return;
+  const stablecoinIds = known.exactStablecoinIdsByKey.get(identity.exactPoolKey) ?? new Set<string>();
+  stablecoinIds.add(stablecoinId);
+  known.exactStablecoinIdsByKey.set(identity.exactPoolKey, stablecoinIds);
+}
+
 function buildConcreteFeeVariantKey(derivedKey: string): string | null {
   const parts = derivedKey.split("|");
   if (parts.length !== 6 || parts[4] === "na") return null;
@@ -274,10 +288,13 @@ export function getIdentityDedupReason(
   identity: PoolIdentity,
   known: KnownPoolIdentityIndex,
   incomingCounts: { derived: number; wildcard: number },
-  options?: { allowOptionalWildcard?: boolean },
+  options?: { allowOptionalWildcard?: boolean; stablecoinId?: string },
 ): PoolDedupReason | null {
   if (identity.exactPoolKey && known.exactKeys.has(identity.exactPoolKey)) {
-    return "exact";
+    const stablecoinIds = known.exactStablecoinIdsByKey.get(identity.exactPoolKey);
+    if (!options?.stablecoinId || stablecoinIds?.has(options.stablecoinId)) {
+      return "exact";
+    }
   }
   if (identity.derivedMatchKey && incomingCounts.derived === 1) {
     // Primary derived-unique match.

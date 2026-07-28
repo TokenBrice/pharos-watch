@@ -8,6 +8,7 @@ import { SAFETY_SCORE_V7 } from "../../data/methodology-changelogs/safety-score/
 import { SAFETY_SCORE_V8 } from "../../data/methodology-changelogs/safety-score/v8";
 import {
   SAFETY_SCORE_V9_ACTIVATION,
+  SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY,
   SAFETY_SCORE_V9_ROUTE_CAPACITY,
 } from "../../data/methodology-changelogs/safety-score/v9-activation";
 import { createMethodologyVersion } from "./base";
@@ -20,6 +21,7 @@ const safetyScore = createMethodologyVersion({
   currentVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
   changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
+    SAFETY_SCORE_V9_CAUSAL_RESPONSIBILITY,
     SAFETY_SCORE_V9_ROUTE_CAPACITY,
     SAFETY_SCORE_V9_ACTIVATION,
     ...SAFETY_SCORE_V8,

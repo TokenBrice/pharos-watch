@@ -5,6 +5,7 @@ import {
   countPoolIdentityKeys,
   createKnownPoolIdentityIndex,
   getIdentityDedupReason,
+  registerKnownPoolExactStablecoin,
   registerKnownPoolIdentity,
 } from "../pool-identity";
 
@@ -12,6 +13,7 @@ describe("pool identity dedup", () => {
   it("releases every identity collection after the dedup phase", () => {
     const known = createKnownPoolIdentityIndex();
     known.exactKeys.add("ethereum:0xpool");
+    known.exactStablecoinIdsByKey.set("ethereum:0xpool", new Set(["usdc-circle"]));
     known.derivedKeyCounts.set("derived", 1);
     known.derivedToExactKeys.set("derived", new Set(["ethereum:0xpool"]));
     known.wildcardKeyCounts.set("wildcard", 1);
@@ -21,11 +23,32 @@ describe("pool identity dedup", () => {
     clearKnownPoolIdentityIndex(known);
 
     expect(known.exactKeys.size).toBe(0);
+    expect(known.exactStablecoinIdsByKey.size).toBe(0);
     expect(known.derivedKeyCounts.size).toBe(0);
     expect(known.derivedToExactKeys.size).toBe(0);
     expect(known.wildcardKeyCounts.size).toBe(0);
     expect(known.wildcardToExactKeys.size).toBe(0);
     expect(known.concreteFeeVariantKeys.size).toBe(0);
+  });
+
+  it("scopes exact dedupe to the stablecoins already credited with the physical pool", () => {
+    const known = createKnownPoolIdentityIndex();
+    const identity = buildPoolIdentity({
+      chain: "ethereum",
+      protocol: "curve",
+      poolAddressOrId: "0xabc0000000000000000000000000000000000000",
+      tokenAddresses: [],
+    });
+    registerKnownPoolIdentity(known, identity);
+    registerKnownPoolExactStablecoin(known, identity, "usdc-circle");
+
+    expect(
+      getIdentityDedupReason(identity, known, { derived: 0, wildcard: 0 }, { stablecoinId: "usdc-circle" }),
+    ).toBe("exact");
+    expect(
+      getIdentityDedupReason(identity, known, { derived: 0, wildcard: 0 }, { stablecoinId: "eur0-usual" }),
+    ).toBeNull();
+    expect(getIdentityDedupReason(identity, known, { derived: 0, wildcard: 0 })).toBe("exact");
   });
 
   it("preserves case-distinct Solana pool and token identities", () => {
