@@ -291,15 +291,28 @@ describe("DEX liquidity scoring stage", () => {
     expect(consumingPool.metrics.size).toBe(0);
   });
 
-  it("persists and keyset-loads only the exact complete fresh generation", async () => {
+  it("persists one chunk at a time and loads the newest ready generation at or before the preferred slot", async () => {
     const harness = createLatestSchemaSqlite();
     openDatabases.push(harness.sqlite);
+    const previousSource = sourceState();
+    const previousPool = poolState(40);
     const source = sourceState();
     const pool = poolState(40);
     const expectedMajorPoolIds = pool.metrics.get("major")?.topPools.map((entry) => entry.poolId);
     const sourceSlotStartedAt = 10_000;
-    const onChunkBatchPersisted = vi.fn(async () => {});
+    const previousSlotStartedAt = sourceSlotStartedAt - 30 * 60;
+    const onChunkBatchPersisted = vi.fn(async (_progress: {
+      chunkCount: number;
+      recordCount: number;
+      payloadBytes: number;
+    }) => {});
 
+    const previous = await persistDexLiquidityScoringStage(harness.db, {
+      sourceSlotStartedAt: previousSlotStartedAt,
+      syncStartSec: previousSlotStartedAt + 10,
+      sourceState: previousSource,
+      poolState: previousPool,
+    });
     const stored = await persistDexLiquidityScoringStage(harness.db, {
       sourceSlotStartedAt,
       syncStartSec: sourceSlotStartedAt + 10,
@@ -313,6 +326,8 @@ describe("DEX liquidity scoring stage", () => {
       recordCount: stored.recordCount,
       payloadBytes: stored.payloadBytes,
     });
+    expect(onChunkBatchPersisted).toHaveBeenCalledTimes(stored.chunkCount);
+    expect(onChunkBatchPersisted.mock.calls[0]?.[0]).toMatchObject({ chunkCount: 1 });
 
     const loaded = await loadDexLiquidityScoringStage(harness.db, {
       nowSec: sourceSlotStartedAt + 6 * 60,
@@ -325,7 +340,7 @@ describe("DEX liquidity scoring stage", () => {
     );
 
     await expect(loadDexLiquidityScoringStage(harness.db, {
-      nowSec: sourceSlotStartedAt + 26 * 60,
+      nowSec: sourceSlotStartedAt + 56 * 60,
       expectedSourceSlotStartedAt: sourceSlotStartedAt,
     })).rejects.toThrow("stale");
 
@@ -334,10 +349,12 @@ describe("DEX liquidity scoring stage", () => {
           SET state = 'writing'
         WHERE generation_id = ?`,
     ).run(stored.generationId);
-    await expect(loadDexLiquidityScoringStage(harness.db, {
+    const fallback = await loadDexLiquidityScoringStage(harness.db, {
       nowSec: sourceSlotStartedAt + 6 * 60,
       expectedSourceSlotStartedAt: sourceSlotStartedAt,
-    })).rejects.toThrow("incomplete");
+    });
+    expect(fallback.generationId).toBe(previous.generationId);
+    expect(fallback.sourceSlotStartedAt).toBe(previousSlotStartedAt);
   });
 
   it("recovers exact chunks and finalization after ambiguous committed D1 responses", async () => {

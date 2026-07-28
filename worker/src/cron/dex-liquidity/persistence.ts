@@ -30,7 +30,7 @@ const DEX_ROUTE_SET_HOLD_MAX_AGE_SEC = 60 * 60;
 const DEX_ROUTE_SET_HOLD_MIN_PRIOR_CAPACITY_USD = 100_000;
 const DEX_ROUTE_SET_HOLD_MAX_CAPACITY_RATIO = 0.5;
 /** Keep large bound JSON payloads from accumulating across a full generation. */
-export const DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE = 25;
+export const DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE = 5;
 const DEX_LIQUIDITY_HISTORY_INSERT_SQL = `INSERT INTO dex_liquidity_history
   (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date,
    coverage_class, coverage_confidence, source_mix_json, methodology_version,
@@ -585,7 +585,11 @@ export async function pruneOldDexLiquidityGenerations(
            SELECT generation_id
            FROM dex_liquidity_publication_generations
            WHERE started_at < ?
-             AND state IN ('published', 'failed')
+             AND state IN ('staged', 'published', 'failed')
+             AND EXISTS (
+               SELECT 1 FROM dex_liquidity_run_rows candidate_row
+               WHERE candidate_row.generation_id = dex_liquidity_publication_generations.generation_id
+             )
              AND generation_id NOT IN (
                SELECT publication_generation_id
                FROM dex_liquidity
@@ -611,7 +615,7 @@ export async function pruneOldDexLiquidityGenerations(
            SELECT candidate.rowid
              FROM dex_liquidity_publication_generations candidate
             WHERE candidate.started_at < ?
-              AND candidate.state IN ('published', 'failed')
+              AND candidate.state IN ('staged', 'published', 'failed')
               AND candidate.generation_id NOT IN (
                 SELECT publication_generation_id
                   FROM dex_liquidity

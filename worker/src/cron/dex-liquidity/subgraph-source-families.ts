@@ -66,6 +66,7 @@ type UniswapV4SubgraphPool = {
   feeTier: string;
   tickSpacing: string;
   hooks: string;
+  liquidity: string;
   totalValueLockedUSD: string;
   token0Price: string;
   token1Price: string;
@@ -377,6 +378,7 @@ export async function fetchUniswapV4Data(
         const hookAddress = pool.hooks.trim().toLowerCase();
         const feePips = parseSubgraphInteger(pool.feeTier);
         const tickSpacing = parseSubgraphInteger(pool.tickSpacing);
+        const activeLiquidity = pool.liquidity.trim();
         const tvlUsd = Number.parseFloat(pool.totalValueLockedUSD);
         const token0Decimals = parseSubgraphInteger(pool.token0.decimals);
         const token1Decimals = parseSubgraphInteger(pool.token1.decimals);
@@ -394,6 +396,7 @@ export async function fetchUniswapV4Data(
           Number.isInteger(tickSpacing) &&
           tickSpacing > 0 &&
           tickSpacing <= 32_767 &&
+          /^[0-9]+$/.test(activeLiquidity) &&
           Number.isFinite(tvlUsd) &&
           tvlUsd > 0 &&
           Number.isInteger(token0Decimals) &&
@@ -415,6 +418,7 @@ export async function fetchUniswapV4Data(
             feePips,
             tickSpacing,
             hookAddress: hookAddress as `0x${string}`,
+            activeLiquidity,
             tvlUsd,
             token0Price,
             token1Price,

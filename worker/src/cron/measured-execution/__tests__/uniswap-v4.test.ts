@@ -56,6 +56,7 @@ function candidate(
     feePips: 100,
     tickSpacing: 1,
     hookAddress,
+    activeLiquidity: "1000000",
     tvlUsd: 20_000_000,
     token0Price: 1,
     token1Price: 1,
@@ -125,6 +126,42 @@ describe("hook-free Uniswap V4 measured execution", () => {
         candidate: candidate("0x0000000000000000000000000000000000000001"),
         stablecoinPriceById: new Map([["usdc-circle", 1]]),
         chainAddressToId: new Map([[`ethereum:${USDC}`, "usdc-circle"]]),
+        retainedTvlUsd: 20_000_000,
+        capturedAt: 1_785_000_000,
+      }),
+    ).toBeNull();
+  });
+
+  it("rejects zero active liquidity and a favorable direction above the consumer ceiling", () => {
+    expect(
+      buildUniswapV4MeasuredExecutionTarget({
+        stablecoinId: "usdc-circle",
+        candidate: { ...candidate(), activeLiquidity: "0" },
+        stablecoinPriceById: new Map([
+          ["usdc-circle", 1],
+          ["usdt-tether", 1],
+        ]),
+        chainAddressToId: new Map([
+          [`ethereum:${USDC}`, "usdc-circle"],
+          [`ethereum:${USDT}`, "usdt-tether"],
+        ]),
+        retainedTvlUsd: 20_000_000,
+        capturedAt: 1_785_000_000,
+      }),
+    ).toBeNull();
+
+    expect(
+      buildUniswapV4MeasuredExecutionTarget({
+        stablecoinId: "usdc-circle",
+        candidate: { ...candidate(), token0Price: 0.97, token1Price: 1 / 0.97 },
+        stablecoinPriceById: new Map([
+          ["usdc-circle", 1],
+          ["usdt-tether", 1],
+        ]),
+        chainAddressToId: new Map([
+          [`ethereum:${USDC}`, "usdc-circle"],
+          [`ethereum:${USDT}`, "usdt-tether"],
+        ]),
         retainedTvlUsd: 20_000_000,
         capturedAt: 1_785_000_000,
       }),

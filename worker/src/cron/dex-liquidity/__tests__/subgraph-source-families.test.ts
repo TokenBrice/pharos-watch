@@ -60,6 +60,7 @@ describe("subgraph source families", () => {
     expect(buildUniswapV4PoolQuery(2000)).toContain("skip: 2000");
     expect(buildUniswapV4PoolQuery(0)).toContain("tickSpacing");
     expect(buildUniswapV4PoolQuery(0)).toContain("hooks");
+    expect(buildUniswapV4PoolQuery(0)).toContain("liquidity");
 
     const token0 = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const token1 = "0xdac17f958d2ee523a2206206994597c13d831ec7";
@@ -77,6 +78,7 @@ describe("subgraph source families", () => {
                   feeTier: "100",
                   tickSpacing: "1",
                   hooks: "0x0000000000000000000000000000000000000000",
+                  liquidity: "123456789",
                   totalValueLockedUSD: "1000000",
                   token0Price: "1",
                   token1Price: "1",
@@ -88,6 +90,7 @@ describe("subgraph source families", () => {
                   feeTier: "100",
                   tickSpacing: "1",
                   hooks: "0x0000000000000000000000000000000000000001",
+                  liquidity: "0",
                   totalValueLockedUSD: "900000",
                   token0Price: "1",
                   token1Price: "1",
@@ -112,5 +115,7 @@ describe("subgraph source families", () => {
         "0x0000000000000000000000000000000000000000",
         "0x0000000000000000000000000000000000000001",
       ]);
+    expect(result.uniswapV4ExecutionCandidates.get(key!)?.map((row) => row.activeLiquidity))
+      .toEqual(["123456789", "0"]);
   });
 });

@@ -285,6 +285,7 @@ describe("dex-liquidity persistence", () => {
         statement.sql.includes("INSERT OR REPLACE INTO dex_liquidity_run_rows")
       )
     );
+    expect(DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE).toBe(5);
     expect(candidateCalls.length).toBeGreaterThan(1);
     expect(candidateCalls.every(([, statements]) => statements.length <= DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE))
       .toBe(true);
@@ -880,7 +881,7 @@ describe("dex-liquidity persistence", () => {
 });
 
 describe("dex liquidity generation prune", () => {
-  it("deletes only terminal generations past the 3-hour horizon in bounded oldest-first batches", async () => {
+  it("deletes terminal and abandoned staged generations past the 3-hour horizon in bounded oldest-first batches", async () => {
     const executed: Array<{ kind: "run" | "first"; sql: string; binds: unknown[] }> = [];
     const statement = (sql: string, binds: unknown[] = []) => ({
       bind: (...nextBinds: unknown[]) => statement(sql, nextBinds),
@@ -905,14 +906,16 @@ describe("dex liquidity generation prune", () => {
     const [runRows, ledger, oldest] = executed;
 
     expect(runRows.sql).toContain("DELETE FROM dex_liquidity_run_rows");
-    expect(runRows.sql).toContain("state IN ('published', 'failed')");
+    expect(runRows.sql).toContain("state IN ('staged', 'published', 'failed')");
+    expect(runRows.sql).toContain("EXISTS");
+    expect(runRows.sql).toContain("SELECT 1 FROM dex_liquidity_run_rows candidate_row");
     expect(runRows.sql).toContain("SELECT publication_generation_id");
     expect(runRows.sql).toContain("stablecoin_id = '__global__'");
     expect(runRows.sql).toContain("ORDER BY started_at ASC LIMIT ?");
     expect(runRows.binds).toEqual([cutoff, 16]);
 
     expect(ledger.sql).toContain("DELETE FROM dex_liquidity_publication_generations");
-    expect(ledger.sql).toContain("state IN ('published', 'failed')");
+    expect(ledger.sql).toContain("state IN ('staged', 'published', 'failed')");
     expect(ledger.sql).toContain("SELECT publication_generation_id");
     expect(ledger.sql).toContain("NOT EXISTS");
     expect(ledger.sql).toContain("SELECT 1 FROM dex_liquidity_run_rows r");

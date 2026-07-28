@@ -494,6 +494,7 @@ export async function generateWeeklyRecap(
       kind: "weekly",
       recentMeta: recentWeeklyMeta,
       leadRequirements: buildWeeklyLeadRequirements(weeklyData),
+      forbidSafetyClaims: safetyContext.status !== "available",
     },
   });
   if (digestCopy.kind === "circuit-open") {

@@ -3,6 +3,7 @@ import { validateDigestLeadRequirements, type DigestLeadRequirement } from "./le
 import { findForbiddenTics, hasForwardLook, leadFamily, openingFingerprint, type LeadFamily } from "./voice-guards";
 import { toErrorMessage } from "../../lib/error-utils";
 import { getMetaString, normalizeStringArray } from "./digest-intelligence-utils";
+import { findDigestSafetyClaimMarkers } from "../../lib/digest-safety-context";
 
 const FORBIDDEN_PHRASES = [
   "Meanwhile, ",
@@ -42,6 +43,8 @@ export interface DigestValidationProfile {
   prevDepegFacts?: DigestDepegFact[];
   /** Trailing titles (up to ~30 editions) for long-window title dedupe. */
   recentTitles?: string[];
+  /** Fail closed and allow the standard corrective retry when canonical safety evidence is unavailable. */
+  forbidSafetyClaims?: boolean;
 }
 
 export interface DigestDepegFact {
@@ -303,6 +306,20 @@ export function validateDigestModelOutput(
   }
   if (/```/.test(`${parsed.digestTitle}\n${parsed.digestText}\n${parsed.digestExtended}`)) {
     issues.push({ code: "code-fence", severity: "hard", message: "Output contains a markdown code fence." });
+  }
+  if (
+    profile.forbidSafetyClaims &&
+    findDigestSafetyClaimMarkers({
+      title: parsed.digestTitle,
+      text: parsed.digestText,
+      extended: parsed.digestExtended,
+    }).length > 0
+  ) {
+    issues.push({
+      code: "unbound-safety-copy",
+      severity: "hard",
+      message: "Copy references an unavailable canonical input; omit that topic entirely.",
+    });
   }
   if (combinedLength > 270) {
     issues.push({ code: "tweet-too-long", severity: "hard", message: `Title + text is ${combinedLength} characters, above 270.` });

@@ -34,7 +34,8 @@ describe("DEX liquidity generation retention", () => {
       seed(`expired-${index.toString().padStart(2, "0")}`, cutoff - 1_000 + index, "failed");
     }
     seed("at-cutoff", cutoff, "failed");
-    seed("active-staged", cutoff - 5_000, "staged");
+    seed("abandoned-staged", cutoff - 5_000, "staged");
+    seed("recent-staged", cutoff + 1, "staged");
     seed("recent-failed", cutoff + 1, "failed");
     seed("current-published", cutoff - 10_000, "published");
     seed("inactive-public-row", cutoff - 9_000, "published");
@@ -58,9 +59,9 @@ describe("DEX liquidity generation retention", () => {
       error: null,
     });
     expect(second).toMatchObject({
-      deletedRunRows: 3,
-      deletedGenerationRows: 3,
-      deletedRows: 6,
+      deletedRunRows: 4,
+      deletedGenerationRows: 4,
+      deletedRows: 8,
       error: null,
     });
     expect(
@@ -69,11 +70,11 @@ describe("DEX liquidity generation retention", () => {
         .all()
         .map((row) => row.generation_id),
     ).toEqual([
-      "active-staged",
       "at-cutoff",
       "current-published",
       "inactive-public-row",
       "recent-failed",
+      "recent-staged",
     ]);
     expect(
       harness.sqlite.prepare(
@@ -102,5 +103,60 @@ describe("DEX liquidity generation retention", () => {
 
     expect(retention.deletedRows).toBe(0);
     expect(retention.error).toBe("liquidity retention unavailable");
+  });
+
+  it("does not let public references without run rows exhaust the bounded candidate set", async () => {
+    const harness = createLatestSchemaSqlite();
+    openDatabases.push(harness.sqlite);
+    const nowSec = 1_700_000_000;
+    const cutoff = nowSec - 3 * 60 * 60;
+    const insertGeneration = harness.sqlite.prepare(
+      `INSERT INTO dex_liquidity_publication_generations (
+         generation_id, started_at, state, expected_row_count,
+         written_row_count, created_at
+       ) VALUES (?, ?, 'published', 1, 1, ?)`,
+    );
+
+    for (let index = 0; index < 16; index++) {
+      const generationId = `stale-public-${index.toString().padStart(2, "0")}`;
+      const startedAt = cutoff - 1_000 + index;
+      insertGeneration.run(generationId, startedAt, startedAt);
+      harness.sqlite.prepare(
+        `INSERT INTO dex_liquidity (
+           stablecoin_id, symbol, updated_at, publication_generation_id, publication_state
+         ) VALUES (?, 'OLD', ?, ?, 'published')`,
+      ).run(`inactive-${index}`, startedAt, generationId);
+    }
+
+    insertGeneration.run("expired-unreferenced", cutoff - 500, cutoff - 500);
+    harness.sqlite.prepare(
+      `INSERT INTO dex_liquidity_run_rows (
+         generation_id, stablecoin_id, symbol, updated_at
+       ) VALUES ('expired-unreferenced', 'expired-coin', 'TST', ?)`,
+    ).run(cutoff - 500);
+
+    const retention = await pruneOldDexLiquidityGenerations(harness.db, nowSec);
+
+    expect(retention).toMatchObject({
+      deletedRunRows: 1,
+      deletedGenerationRows: 1,
+      deletedRows: 2,
+      error: null,
+    });
+    expect(
+      harness.sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM dex_liquidity_run_rows WHERE generation_id = 'expired-unreferenced'",
+      ).get(),
+    ).toEqual({ count: 0 });
+    expect(
+      harness.sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM dex_liquidity_publication_generations WHERE generation_id = 'expired-unreferenced'",
+      ).get(),
+    ).toEqual({ count: 0 });
+    expect(
+      harness.sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM dex_liquidity_publication_generations WHERE generation_id LIKE 'stale-public-%'",
+      ).get(),
+    ).toEqual({ count: 16 });
   });
 });
