@@ -222,8 +222,8 @@ describe("stablecoin V9 safety presentation", () => {
         publishedScore: 84,
         aggregationWeight: 0.35,
         stressRequest: {
-          requestedNotionalUsd: 10_000_000,
-          maxCostBps: 100,
+          requestedNotionalUsd: 25_000_000,
+          maxCostBps: 200,
           comparisonWindowSec: 86_400,
         },
         primaryRoute: {
@@ -242,6 +242,20 @@ describe("stablecoin V9 safety presentation", () => {
           confidenceFactor: 1,
           eligibilityMultiplier: 1,
           capsApplied: [],
+          capacity: {
+            executableUsd: 1_000,
+            requestedNotionalUsd: 25_000_000,
+            completionRatio: 0.00004,
+            maxCostBps: 200,
+            executionCostBps: 74,
+            settlementDelaySec: 600,
+            capacityScoringHorizon: "immediate",
+            chain: "tron",
+            protocol: "SunSwap",
+            poolId: "pool-1",
+            evidenceKind: "measured-executable-depth",
+            observedAtSec: 1_752_537_600,
+          },
         },
         diversification: null,
         alternatives: [{
@@ -251,6 +265,12 @@ describe("stablecoin V9 safety presentation", () => {
           score: 77,
           included: true,
           exclusionReason: null,
+          confidenceFactor: 0.75,
+          capacity: {
+            executableUsd: 24_580_000,
+            requestedNotionalUsd: 25_000_000,
+            completionRatio: 0.9832,
+          },
         }],
         adjustments: [],
       },
@@ -295,18 +315,38 @@ describe("stablecoin V9 safety presentation", () => {
     });
     expect(presentation.pillars[1].breakdown).toMatchObject({
       sectionLabel: "Route components",
-      alternatives: [{ label: "Curve liquidity", score: 77, included: true }],
+      alternatives: [{
+        label: "Curve liquidity",
+        score: 77,
+        included: true,
+        detail: "$24,580,000 of $25,000,000 executable · confidence 0.75x",
+      }],
     });
     // Exit keeps one unlabelled group in producer order.
     expect(presentation.pillars[1].breakdown?.groups).toHaveLength(1);
     expect(presentation.pillars[1].breakdown?.groups[0].label).toBeNull();
     expect(presentation.pillars[1].breakdown?.groups[0].rows).toEqual(expect.arrayContaining([
       expect.objectContaining({ label: "Access", score: 90, weight: 0.2 }),
-      expect.objectContaining({ label: "Capacity", score: 78, weight: 0.25 }),
+      expect.objectContaining({
+        label: "Capacity score — selected route",
+        score: 78,
+        weight: 0.25,
+      }),
     ]));
     expect(presentation.pillars[1].breakdown?.context).toEqual(expect.arrayContaining([
       { key: "primary-route", label: "Primary route", value: "Direct redemption" },
-      { key: "stress-request", label: "Stress request", value: "$10m / 100 bps / 1d" },
+      { key: "stress-request", label: "Stress request", value: "$25m / 200 bps / 1d" },
+      {
+        key: "selected-route-capacity",
+        label: "Selected route capacity",
+        value: "$1,000 of $25,000,000 executable on selected SunSwap route",
+      },
+      {
+        key: "selected-route-bound",
+        label: "Horizon / execution cost",
+        value: "10m / 74 bps observed / 200 bps bound",
+      },
+      { key: "selected-route-scope", label: "Chain / pool", value: "tron / pool-1" },
     ]));
     // The producer emits control components alphabetically, so the binding row
     // is listed last in the fixture on purpose: the pillar that scores on the

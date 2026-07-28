@@ -304,7 +304,15 @@ function backingGroups(
 function compactUsd(value: number): string {
   return value >= 1_000_000
     ? `$${(value / 1_000_000).toFixed(value >= 10_000_000 ? 0 : 1)}m`
-    : `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+    : value >= 1_000
+      ? `$${(value / 1_000).toFixed(value >= 10_000 ? 0 : 1)}k`
+      : `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
+function fullUsd(value: number): string {
+  return `$${value.toLocaleString("en-US", {
+    maximumFractionDigits: value < 1 ? 2 : 0,
+  })}`;
 }
 
 function compactDuration(valueSec: number): string {
@@ -351,6 +359,38 @@ function parseExitBreakdown(
       value: `${compactUsd(breakdown.stressRequest.requestedNotionalUsd)} / ${breakdown.stressRequest.maxCostBps.toFixed(0)} bps / ${compactDuration(breakdown.stressRequest.comparisonWindowSec)}`,
     });
   }
+  if (primaryRoute?.capacity) {
+    const capacity = primaryRoute.capacity;
+    const selectedVenue = capacity.protocol ?? primaryRoute.label;
+    context.push(
+      {
+        key: "selected-route-capacity",
+        label: "Selected route capacity",
+        value: `${fullUsd(capacity.executableUsd)} of ${fullUsd(capacity.requestedNotionalUsd)} executable on selected ${selectedVenue} route`,
+      },
+      {
+        key: "selected-route-bound",
+        label: "Horizon / execution cost",
+        value: `${compactDuration(capacity.settlementDelaySec)} / ${capacity.executionCostBps.toFixed(0)} bps observed / ${capacity.maxCostBps.toFixed(0)} bps bound`,
+      },
+    );
+    if (capacity.chain !== null || capacity.poolId !== null) {
+      context.push({
+        key: "selected-route-scope",
+        label: "Chain / pool",
+        value: [capacity.chain, capacity.poolId].filter(Boolean).join(" / "),
+      });
+    }
+    context.push({
+      key: "selected-route-evidence",
+      label: "Evidence",
+      value: `${humanizeSafetyScoreV9Value(capacity.evidenceKind)}${
+        capacity.observedAtSec === null
+          ? ""
+          : ` · ${new Date(capacity.observedAtSec * 1_000).toISOString().replace(".000Z", "Z")}`
+      }`,
+    });
+  }
   for (const [index, cap] of (primaryRoute?.capsApplied ?? []).entries()) {
     context.push({
       key: `cap-${index}`,
@@ -375,21 +415,46 @@ function parseExitBreakdown(
       weight: null,
       rows: (primaryRoute?.components ?? []).map((component) => makeRow({
         key: component.key,
-        label: component.label,
+        label: component.key === "capacity"
+          ? "Capacity score — selected route"
+          : component.label,
         score: component.score,
         weight: component.weight,
       })),
       tail: null,
     }],
-    alternatives: breakdown.alternatives.map((alternative) => ({
-      key: alternative.key,
-      label: alternative.label,
-      score: alternative.score,
-      included: alternative.included,
-      detail: alternative.exclusionReason === null
-        ? null
-        : humanizeSafetyScoreV9Value(alternative.exclusionReason),
-    })),
+    alternatives: breakdown.alternatives.map((alternative) => {
+      const confidence =
+        alternative.confidenceFactor != null &&
+        Math.abs(alternative.confidenceFactor - 1) >= 0.005
+          ? ` · confidence ${multiplierLabel(alternative.confidenceFactor)}x`
+          : "";
+      const isRedemption =
+        alternative.routeFamily === "issuer-redemption" ||
+        alternative.routeFamily === "eventual-redemption";
+      const redemptionHorizon = !isRedemption
+        ? ""
+        : alternative.capacityScoringHorizon === "eventual"
+          ? "eventual redemption horizon"
+          : alternative.settlementDelaySec === undefined
+            ? "24h/eventual redemption horizon"
+            : `${compactDuration(alternative.settlementDelaySec)} redemption horizon`;
+      return {
+        key: alternative.key,
+        label: alternative.label,
+        score: alternative.score,
+        included: alternative.included,
+        detail: alternative.exclusionReason === null
+          ? alternative.capacity
+            ? `${fullUsd(alternative.capacity.executableUsd)} of ${fullUsd(alternative.capacity.requestedNotionalUsd)} executable${
+                redemptionHorizon ? ` · ${redemptionHorizon}` : ""
+              }${confidence}`
+            : isRedemption
+            ? `${redemptionHorizon}${confidence}`
+            : confidence.slice(3) || null
+          : humanizeSafetyScoreV9Value(alternative.exclusionReason),
+      };
+    }),
   };
 }
 

@@ -166,7 +166,9 @@ describe("StablecoinSafetyScoreV9Card", () => {
     expect(screen.getByText("Route components")).toBeTruthy();
     expect(screen.getByText("Direct redemption")).toBeTruthy();
     expect(screen.getByRole("img", { name: "Access: 90 out of 100, 20% weight" })).toBeTruthy();
-    expect(screen.getByRole("img", { name: "Capacity: 78 out of 100, 25% weight" })).toBeTruthy();
+    expect(screen.getByRole("img", {
+      name: "Capacity score — selected route: 78 out of 100, 25% weight",
+    })).toBeTruthy();
     expect(screen.getByText("35% aggregation weight")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /Backing/ }));
@@ -180,6 +182,29 @@ describe("StablecoinSafetyScoreV9Card", () => {
     expect(screen.getByText("Binding")).toBeTruthy();
     expect(screen.getByText("Diagnostic")).toBeTruthy();
     expect(screen.queryByText("Scored inputs")).toBeNull();
+  });
+
+  it("shows a positive sub-one component score instead of rounding it to zero", () => {
+    const card = makeV9Card();
+    const capacity = card.breakdowns?.exit.primaryRoute?.components.find(
+      (component) => component.key === "capacity",
+    );
+    if (capacity === undefined) throw new Error("fixture lacks an Exit capacity component");
+    capacity.score = 0.13;
+
+    const response = makeReportCardsV9Response({ cards: [card] });
+    render(
+      <StablecoinSafetyScoreV9Card
+        card={card}
+        identity={response.safetyScoreIdentity}
+        publicationHealth={response.publicationHealth}
+        updatedAtMs={response.updatedAt * 1000}
+      />,
+    );
+
+    expect(screen.getByRole("img", {
+      name: "Capacity score — selected route: <1 out of 100, 25% weight",
+    })).toBeTruthy();
   });
 
   it("keeps the reviewed-input fallback for a pre-breakdown V3 card", () => {

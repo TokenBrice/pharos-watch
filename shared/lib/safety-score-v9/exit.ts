@@ -122,31 +122,28 @@ function clampScore(value: number): number {
 /** Share of the capacity component carried by completion coverage rather than absolute size. */
 const COVERAGE_SHARE_OF_CAPACITY = 0.6;
 
-/** Half the 0.01 quantum `roundTraceScore` publishes route scores at. */
-const TRACE_SCORE_QUANTUM = 0.005;
+function firstPositiveBreakpointValue(
+  points: readonly { value: number; score: number }[],
+): number {
+  return points.find((point) => point.value > 0 && point.score > 0)?.value ?? 0;
+}
 
 /**
- * Completion ratio below which a route's own capacity measurement stops being
- * observable in the score that measurement is supposed to drive.
- *
- * The coverage ladder anchors the bottom of its meaningful band at the first
- * positive breakpoint and interpolates linearly to zero below it, so coverage
- * contributes `(score/value) * ratio * COVERAGE_SHARE_OF_CAPACITY * weight` to
- * the route ladder. Below the ratio where that falls under the published
- * rounding quantum, the completion fact moves nothing, and the route is carried
- * entirely by access, settlement, execution, output and a bounded-unknown cost
- * — the exact substitution the zero-capacity floor already ruled cannot stand
- * in for capacity.
- *
- * Derived from the policy rather than chosen, and expressed as a fraction of
- * the stress request, so it scales with the asset and encodes no dollar
- * constant. Exact zero is its degenerate case.
+ * A route becomes economically material at the first positive coverage or
+ * absolute-capacity policy band. This scales for both large and small assets
+ * without deriving materiality from display rounding.
  */
-function materialCompletionRatio(policy: V9ValidatedPolicyEnvelope["policy"]["semantic"]["exit"]): number {
-  const anchor = policy.coverageRatioBreakpoints.find((point) => point.value > 0 && point.score > 0);
-  if (anchor === undefined) return 0;
-  const scorePerRatio = (anchor.score / anchor.value) * COVERAGE_SHARE_OF_CAPACITY * policy.componentWeights.capacity;
-  return scorePerRatio > 0 ? TRACE_SCORE_QUANTUM / scorePerRatio : 0;
+function hasMaterialExecutableCapacity(
+  completionRatio: number,
+  valuedExecutableUsd: number,
+  policy: V9ValidatedPolicyEnvelope["policy"]["semantic"]["exit"],
+): boolean {
+  const coverageFloor = firstPositiveBreakpointValue(policy.coverageRatioBreakpoints);
+  const absoluteFloor = firstPositiveBreakpointValue(policy.absoluteCapacityBreakpoints);
+  return (
+    (coverageFloor > 0 && completionRatio >= coverageFloor) ||
+    (absoluteFloor > 0 && valuedExecutableUsd >= absoluteFloor)
+  );
 }
 
 function roundTraceScore(value: number): number {
@@ -543,7 +540,7 @@ function evaluateRoute(
   // floor behavior below.
   if (
     isCreditableNonAtomicRedemption(route, envelope) &&
-    (valuedExecutableUsd === 0 || completionRatio < materialCompletionRatio(policy))
+    !hasMaterialExecutableCapacity(completionRatio, valuedExecutableUsd, policy)
   ) {
     return {
       routeKey: route.routeKey,
@@ -612,9 +609,21 @@ function evaluateRoute(
   if (valuedExecutableUsd === 0) {
     score = 0;
     capsApplied.push("zero-executable-capacity");
-  } else if (completionRatio < materialCompletionRatio(policy)) {
+  } else if (!hasMaterialExecutableCapacity(completionRatio, valuedExecutableUsd, policy)) {
     score = 0;
     capsApplied.push("immaterial-executable-capacity");
+  } else {
+    const firstPositiveCoverage = firstPositiveBreakpointValue(
+      policy.coverageRatioBreakpoints,
+    );
+    if (
+      firstPositiveCoverage > 0 &&
+      completionRatio < firstPositiveCoverage &&
+      score > 50
+    ) {
+      score = 50;
+      capsApplied.push("insufficient-completion:50");
+    }
   }
   const confidenceFactor = Math.min(
     policy.observationConfidenceFactors[route.observationConfidence],

@@ -98,7 +98,7 @@ bracket.
 
 The private `report-cards:fixed-input:exact` row is the deterministic compiler-input bridge. It retains the exact V8-shaped input schema only because V9 compilation and replay consume that structure; it is never served as a V8 rating.
 
-Safety Score V9 enrichment and compilation run on dedicated `+8` and `+14/+44` minute triggers. D1 fences admit them only after the matching core slot completed on the same immutable Worker version. Delayed or overlapping invocations skip before loading their runner graphs.
+Safety Score V9 supply attribution remains on the dedicated `+8` trigger. Exact V9 input preparation now runs serially after each successful `16,46` DEX publication and receives that publication's generation ID; compilation runs at `22,52`. Preparation rejects a snapshot that does not capture the expected DEX generation, and compilation re-reads the latest accepted DEX generation before enrichment and again before evaluation so an older candidate cannot publish. Delayed or overlapping invocations skip before loading their runner graphs.
 
 The compiler requires matching fixed-input, peg-provenance, attribution, methodology, and evaluation-build identities. It then evaluates V9 and writes the accepted `report-cards:v9` publication with matching health. Global or identity-level failures hold the prior accepted publication. Asset-local producer failures do not freeze unrelated ratings while at least 90% of active assets remain unaffected.
 The V9 compiler captures DEX, redemption, and live-reserve load health before

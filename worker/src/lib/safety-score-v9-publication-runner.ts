@@ -19,6 +19,7 @@ import {
   loadSafetyScoreV9PublicationHealth,
   persistSafetyScoreV9Publication,
 } from "./safety-score-v9-publication-store";
+import { logWorkerEvent } from "./structured-log";
 
 export const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
 export const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
@@ -184,6 +185,106 @@ function heldPublicationHealth(args: {
   };
 }
 
+function logPublicationGenerationDeltas(
+  candidate: Awaited<ReturnType<typeof loadSafetyScoreV9Publication>>,
+  accepted: Awaited<ReturnType<typeof loadSafetyScoreV9Publication>>,
+): void {
+  if (candidate === null || accepted === null) return;
+  const acceptedById = new Map(accepted.cards.map((card) => [card.id, card]));
+  const primaryRouteChurn: Array<Record<string, unknown>> = [];
+  const capacityChanges: Array<Record<string, unknown>> = [];
+  const pillarChanges: Array<Record<string, unknown>> = [];
+  for (const card of candidate.cards) {
+    const prior = acceptedById.get(card.id);
+    if (
+      prior === undefined ||
+      !("breakdowns" in card) ||
+      !("breakdowns" in prior) ||
+      card.breakdowns === null ||
+      prior.breakdowns === null
+    ) {
+      continue;
+    }
+    const candidatePrimary = card.breakdowns.exit.primaryRoute?.key ?? null;
+    const acceptedPrimary = prior.breakdowns.exit.primaryRoute?.key ?? null;
+    const candidateCapacity =
+      card.breakdowns.exit.primaryRoute?.capacity?.executableUsd ?? null;
+    const acceptedCapacity =
+      prior.breakdowns.exit.primaryRoute?.capacity?.executableUsd ?? null;
+    if (
+      candidatePrimary !== acceptedPrimary &&
+      primaryRouteChurn.length < 20
+    ) {
+      primaryRouteChurn.push({
+        assetId: card.id,
+        acceptedPrimary,
+        candidatePrimary,
+        exitScoreDelta:
+          card.breakdowns.exit.publishedScore -
+          prior.breakdowns.exit.publishedScore,
+      });
+    }
+    if (
+      candidateCapacity !== acceptedCapacity &&
+      capacityChanges.length < 20
+    ) {
+      capacityChanges.push({
+        assetId: card.id,
+        acceptedCapacityUsd: acceptedCapacity,
+        candidateCapacityUsd: candidateCapacity,
+        deltaUsd:
+          candidateCapacity === null || acceptedCapacity === null
+            ? null
+            : candidateCapacity - acceptedCapacity,
+      });
+    }
+    for (const pillar of ["backing", "exit", "control"] as const) {
+      const delta =
+        card.breakdowns[pillar].publishedScore -
+        prior.breakdowns[pillar].publishedScore;
+      if (Math.abs(delta) >= 1 && pillarChanges.length < 20) {
+        pillarChanges.push({ assetId: card.id, pillar, delta });
+      }
+    }
+  }
+  if (
+    primaryRouteChurn.length === 0 &&
+    capacityChanges.length === 0 &&
+    pillarChanges.length === 0
+  ) return;
+  logWorkerEvent({
+    scope: "lib",
+    level:
+      primaryRouteChurn.some(
+        (item) =>
+          typeof item.exitScoreDelta === "number" &&
+          Math.abs(item.exitScoreDelta) >= 10,
+      ) ||
+      capacityChanges.some((item) => {
+        const acceptedCapacity = item.acceptedCapacityUsd;
+        const candidateCapacity = item.candidateCapacityUsd;
+        return (
+          typeof acceptedCapacity === "number" &&
+          acceptedCapacity >= 100_000 &&
+          typeof candidateCapacity === "number" &&
+          candidateCapacity <= acceptedCapacity * 0.5
+        );
+      })
+        ? "warn"
+        : "info",
+    event: "safety_score_v9_generation_delta",
+    job: "compute-safety-score-v9",
+    message: "Safety Score V9 route or pillar state changed between accepted generations",
+    metadata: {
+      acceptedPublicationGenerationId: accepted.publicationGenerationId,
+      candidatePublicationGenerationId: candidate.publicationGenerationId,
+      primaryRouteChurn,
+      capacityChanges,
+      pillarChanges,
+    },
+  });
+}
+
 export async function runSafetyScoreV9Publication(
   input: RunSafetyScoreV9PublicationInput,
 ): Promise<SafetyScoreV9PublicationRunResult> {
@@ -241,6 +342,7 @@ export async function runSafetyScoreV9Publication(
         loadSafetyScoreV9Publication(input.db, publicationSignal),
         loadSafetyScoreV9PublicationHealth(input.db, publicationSignal),
       ]);
+      logPublicationGenerationDeltas(publication, acceptedPublication);
       assessment = assessV9Publication({
         inputHealth: fixedInput.v9PublicationInputHealth,
         candidate: publication,

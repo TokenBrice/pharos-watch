@@ -1256,6 +1256,24 @@ export const SafetyScoreV9ExitBreakdownSchema = z
         confidenceFactor: z.number().finite().min(0).max(1),
         eligibilityMultiplier: z.number().finite().min(0).max(1),
         capsApplied: z.array(z.string().min(1)),
+        capacity: z
+          .object({
+            executableUsd: z.number().finite().nonnegative(),
+            requestedNotionalUsd: z.number().finite().positive(),
+            completionRatio: z.number().finite().min(0).max(1),
+            maxCostBps: z.number().finite().nonnegative(),
+            executionCostBps: z.number().finite().nonnegative(),
+            settlementDelaySec: z.number().finite().nonnegative(),
+            capacityScoringHorizon: z.enum(["immediate", "daily", "queued", "eventual", "unknown"]),
+            chain: z.string().min(1).nullable(),
+            protocol: z.string().min(1).nullable(),
+            poolId: z.string().min(1).nullable(),
+            evidenceKind: z.string().min(1),
+            observedAtSec: z.number().int().nonnegative().nullable(),
+          })
+          .strict()
+          .nullable()
+          .optional(),
       })
       .strict()
       .nullable(),
@@ -1282,6 +1300,20 @@ export const SafetyScoreV9ExitBreakdownSchema = z
           score: ScoreSchema.nullable(),
           included: z.boolean(),
           exclusionReason: V9ReasonCodeSchema.nullable(),
+          confidenceFactor: z.number().finite().min(0).max(1).nullable().optional(),
+          capacityScoringHorizon: z
+            .enum(["immediate", "daily", "queued", "eventual", "unknown"])
+            .optional(),
+          settlementDelaySec: z.number().finite().nonnegative().optional(),
+          capacity: z
+            .object({
+              executableUsd: z.number().finite().nonnegative(),
+              requestedNotionalUsd: z.number().finite().positive(),
+              completionRatio: z.number().finite().min(0).max(1),
+            })
+            .strict()
+            .nullable()
+            .optional(),
         })
         .strict(),
     ),

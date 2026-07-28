@@ -134,6 +134,8 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
     ? null
     : `${(row.weight * 100).toFixed(row.weight * 100 < 10 ? 1 : 0)}%`;
   const hasChildren = row.children.length > 0;
+  const displayedScore =
+    row.score > 0 && row.score < 1 ? "<1" : row.score.toFixed(0);
 
   const bar = (
     <div className="grid grid-cols-[minmax(5.25rem,6.75rem)_minmax(2.5rem,1fr)_1.75rem_5.25rem] items-center gap-1.5">
@@ -143,7 +145,7 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
       <span
         className="h-2.5 overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]"
         role="img"
-        aria-label={`${row.label}: ${row.score.toFixed(0)} out of 100${weightLabel === null ? "" : `, ${weightLabel} weight`}`}
+        aria-label={`${row.label}: ${displayedScore} out of 100${weightLabel === null ? "" : `, ${weightLabel} weight`}`}
       >
         <span
           className={cn("block h-full rounded-[2px]", ROW_TONE_FILL_CLASS[row.tone])}
@@ -156,7 +158,7 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
           ROW_TONE_SCORE_CLASS[row.tone],
         )}
       >
-        {row.score.toFixed(0)}
+        {displayedScore}
       </span>
       <span className="text-right font-mono uppercase leading-tight tracking-[0.04em] text-muted-foreground">
         {weightLabel !== null ? <span className="block text-[9px]">· {weightLabel}</span> : null}
@@ -289,6 +291,13 @@ function PillarBreakdownDetails({
             </div>
           ) : null}
         </dl>
+      ) : null}
+
+      {breakdown.sectionLabel === "Route components" ? (
+        <p className="mt-2 text-[9px] leading-snug text-muted-foreground">
+          Route capacity is specific to the selected executable path. Exchange-wide volume,
+          aggregate DEX TVL, and issuer reserves do not prove the same executable amount.
+        </p>
       ) : null}
 
       <div className="mt-2.5 space-y-4">

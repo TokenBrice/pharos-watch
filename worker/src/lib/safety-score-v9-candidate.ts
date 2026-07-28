@@ -178,6 +178,13 @@ function publicDisplayMetadata(
 ): {
   labels: Record<string, string>;
   exitHolderEligibility: Record<string, V9ExitHolderEligibility>;
+  exitRouteDetails: Record<string, {
+    chain: string | null;
+    protocol: string | null;
+    poolId: string | null;
+    evidenceKind: string;
+    observedAtSec: number | null;
+  }>;
 } {
   const labels: Record<string, string> = {
     mint: "Mint authority",
@@ -228,6 +235,48 @@ function publicDisplayMetadata(
     labelIndexes.set(base, index);
     labels[route.routeKey] = (labelTotals.get(base) ?? 0) > 1 ? `${base} ${index}` : base;
   }
+  const evidenceById = new Map(
+    asset.evidence.map((evidence) => [evidence.evidenceId, evidence]),
+  );
+  const exitRouteDetails = Object.fromEntries(
+    asset.exitRoutes.map((route) => {
+      const chain = route.failureDomains.find((domain) => domain.kind === "chain")?.key ?? null;
+      const protocol = route.failureDomains.find(
+        (domain) => domain.kind === "dex-protocol" || domain.kind === "redemption-rail",
+      )?.key ?? null;
+      const scopedPool = route.routeId
+        .split(":")
+        .map((part) => {
+          try {
+            return decodeURIComponent(part);
+          } catch {
+            return part;
+          }
+        })
+        .find((part) => chain !== null && part.startsWith(`${chain.toLowerCase()}:`));
+      const routeEvidence = route.status.evidenceRefIds
+        .map((evidenceId) => evidenceById.get(evidenceId))
+        .find(
+          (item) =>
+            item?.sourceId === "report-cards-dex-route-observation" ||
+            item?.sourceId === "report-cards-redemption-route-observation" ||
+            item?.sourceId === "safety-score-v9-retained-route-overlay",
+        );
+      const evidence = routeEvidence ?? route.status.evidenceRefIds
+        .map((evidenceId) => evidenceById.get(evidenceId))
+        .find((item) => item !== undefined);
+      return [
+        route.routeKey,
+        {
+          chain,
+          protocol,
+          poolId: scopedPool?.slice(scopedPool.indexOf(":") + 1) ?? null,
+          evidenceKind: route.evidenceKind,
+          observedAtSec: evidence?.observedAtSec ?? null,
+        },
+      ];
+    }),
+  );
   return {
     labels,
     exitHolderEligibility: Object.fromEntries(
@@ -236,6 +285,7 @@ function publicDisplayMetadata(
         publicExitHolderEligibility(route.holderAccess),
       ]),
     ),
+    exitRouteDetails,
   };
 }
 

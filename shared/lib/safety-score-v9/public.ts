@@ -50,6 +50,13 @@ export interface V9PublicCardProjectionInput {
   display?: {
     labels?: Readonly<Record<string, string>>;
     exitHolderEligibility?: Readonly<Record<string, V9ExitHolderEligibility>>;
+    exitRouteDetails?: Readonly<Record<string, {
+      chain: string | null;
+      protocol: string | null;
+      poolId: string | null;
+      evidenceKind: string;
+      observedAtSec: number | null;
+    }>>;
   };
   freshness?: Partial<Record<V9QualityPillar, SafetyScoreV9EvidenceFreshness>>;
   evidenceReasons?: readonly V9PillarReason[];
@@ -269,6 +276,10 @@ function projectExitBreakdown(
     completePrimary === null
       ? undefined
       : input.display?.exitHolderEligibility?.[completePrimary.routeKey];
+  const primaryRouteDetails =
+    completePrimary === null
+      ? undefined
+      : input.display?.exitRouteDetails?.[completePrimary.routeKey];
   if (completePrimary !== null && holderEligibility === undefined) {
     throw new Error(`Safety Score v9 ${input.trace.assetId} primary exit route lacks holder eligibility metadata`);
   }
@@ -291,12 +302,24 @@ function projectExitBreakdown(
     .filter((route) => route.routeKey !== completePrimary?.routeKey)
     .sort((left, right) => compareText(left.routeKey, right.routeKey))
     .map((route) => ({
+      ...(route.capacityPoint === null
+        ? { capacity: null }
+        : {
+            capacity: {
+              executableUsd: route.capacityPoint.executableUsd,
+              requestedNotionalUsd: route.capacityPoint.requestedNotionalUsd,
+              completionRatio: route.capacityPoint.completionRatio,
+            },
+          }),
       key: route.routeKey,
       label: routeLabel(input, route),
       routeFamily: route.routeFamily,
       score: route.score,
       included: route.included,
       exclusionReason: route.exclusionReason,
+      confidenceFactor: route.confidenceFactor,
+      capacityScoringHorizon: route.capacityScoringHorizon,
+      settlementDelaySec: route.settlementDelaySec,
     }));
   const publishedScore = input.scoreInput.pillars.exit.score!;
   return {
@@ -323,6 +346,23 @@ function projectExitBreakdown(
             confidenceFactor: completePrimary.confidenceFactor!,
             eligibilityMultiplier: policy.holderEligibilityMultipliers[holderEligibility!],
             capsApplied: uniqueSorted(completePrimary.capsApplied),
+            capacity:
+              completePrimary.capacityPoint === null
+                ? null
+                : {
+                    executableUsd: completePrimary.capacityPoint.executableUsd,
+                    requestedNotionalUsd: completePrimary.capacityPoint.requestedNotionalUsd,
+                    completionRatio: completePrimary.capacityPoint.completionRatio,
+                    maxCostBps: completePrimary.capacityPoint.maxCostBps,
+                    executionCostBps: completePrimary.capacityPoint.executionCostBps,
+                    settlementDelaySec: completePrimary.settlementDelaySec,
+                    capacityScoringHorizon: completePrimary.capacityScoringHorizon,
+                    chain: primaryRouteDetails?.chain ?? null,
+                    protocol: primaryRouteDetails?.protocol ?? null,
+                    poolId: primaryRouteDetails?.poolId ?? null,
+                    evidenceKind: primaryRouteDetails?.evidenceKind ?? "unknown",
+                    observedAtSec: primaryRouteDetails?.observedAtSec ?? null,
+                  },
           },
     diversification:
       diversificationRoute === null || exit.diversificationBonus <= 0

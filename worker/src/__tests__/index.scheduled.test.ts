@@ -55,7 +55,13 @@ const cronMocks = vi.hoisted(() => ({
   syncRedemptionBackstops: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncKinesisSupply: vi.fn(async () => ({ status: "ok", itemCount: 2, metadata: "{}" })),
   stageDexLiquidityScoring: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncDexLiquidity: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
+  syncDexLiquidity: vi.fn(async () => ({
+    status: "ok",
+    itemCount: 1,
+    metadata: JSON.stringify({
+      persistence: { generationId: "dex-liquidity-1785060960" },
+    }),
+  })),
   syncYieldData: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncYieldSupplemental: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncBluechip: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -468,12 +474,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncStablecoins).toHaveBeenCalledTimes(1);
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncSafetyScoreV9SupplyAttribution).not.toHaveBeenCalled();
-    expect(cronMocks.prepareSafetyScoreV9Input).toHaveBeenCalledTimes(1);
-    expect(
-      cronMocks.prepareSafetyScoreV9Input.mock.invocationCallOrder[0],
-    ).toBeLessThan(
-      cronMocks.computeDepegResolver.mock.invocationCallOrder[0],
-    );
+    expect(cronMocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
     expect(cronMocks.syncFxRates).toHaveBeenCalledTimes(1);
     // stability-index and compute-dews run on the decoupled DEWS/PSI trigger
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
@@ -510,8 +511,8 @@ describe("worker.scheduled", () => {
     const publication = makeCtx();
     await worker.scheduled(
       {
-        cron: "14,44 * * * *",
-        scheduledTime: Date.parse("2026-07-26T12:14:00Z"),
+        cron: "22,52 * * * *",
+        scheduledTime: Date.parse("2026-07-26T12:22:00Z"),
       } as ScheduledEvent,
       env as never,
       publication.ctx,
@@ -758,7 +759,7 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.snapshotSupply).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncSafetyScoreV9SupplyAttribution).not.toHaveBeenCalled();
-    expect(cronMocks.prepareSafetyScoreV9Input).toHaveBeenCalledTimes(1);
+    expect(cronMocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
   });
 
   it("runs only DEX source staging on the 10,40 trigger", async () => {
@@ -799,9 +800,10 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
+    expect(cronMocks.prepareSafetyScoreV9Input).toHaveBeenCalledTimes(1);
     expect(cronMocks.stageDexLiquidityScoring).not.toHaveBeenCalled();
     expect(cronMocks.syncStablecoinCharts.mock.invocationCallOrder[0]).toBeGreaterThan(
-      cronMocks.syncDexLiquidity.mock.invocationCallOrder[0],
+      cronMocks.prepareSafetyScoreV9Input.mock.invocationCallOrder[0],
     );
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();

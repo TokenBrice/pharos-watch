@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.0`
+- **Current methodology version:** `v9.01`
 - Public response schema: report v4 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -29,6 +29,8 @@ The weights allocate bounded headroom; they are not an unrestricted weighted ave
 
 Missing evidence is classified by reason and ownership. A bounded documentation or integration gap can remain rateable under an explicit ceiling. An unbounded required fact returns NR. F is reserved for causally attributed measured danger rather than ordinary uncertainty.
 
+Exit capacity is route-specific. A route below both the first positive 1% completion and $100K absolute-capacity breakpoints receives a zero route score; reaching $100K while still completing less than 1% caps the route at 50. Exchange-wide volume, aggregate DEX TVL, and issuer reserves do not substitute for executable capacity on the selected route.
+
 Serial dependencies remain binding because the child cannot diversify away the parent claim. Basket dependencies contribute at their live exposure weights. Wrapper-local risks are evaluated separately from the parent asset so a wrapper cannot inherit safety it does not possess.
 
 Rateable report-v4 cards include complete Backing, Exit, and Economic Control breakdowns. Each breakdown reconciles evaluator and published values through ordered adjustments. NR cards carry explicit reason rows and have `breakdowns: null`.
@@ -37,8 +39,8 @@ Rateable report-v4 cards include complete Backing, Exit, and Economic Control br
 
 The publication pipeline has two active stages:
 
-1. `prepare-safety-score-v9-input` runs every 15 minutes. It captures the publication-exact base input and peg-provenance seed used by the V9 compiler.
-2. `compute-safety-score-v9` runs at minutes 14 and 44. It waits for the matching core slot, compiles the V9 fact set, evaluates the policy, and publishes the accepted result.
+1. `prepare-safety-score-v9-input` runs immediately after each successful half-hourly DEX publication. It captures the publication-exact base input and peg-provenance seed and binds them to that exact DEX generation.
+2. `compute-safety-score-v9` runs at minutes 22 and 52. It rejects an input whose DEX dependency no longer matches the latest accepted generation, compiles the V9 fact set, evaluates the policy, and publishes the accepted result.
 
 The private upstream input remains encoded in the exact V8-shaped fixed-input schema because the V9 compiler and deterministic replay contract consume that structure. This is a narrow internal bridge, not an active V8 rating publication. The bridge owns:
 

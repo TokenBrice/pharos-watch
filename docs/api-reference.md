@@ -2361,12 +2361,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.0",
+    "methodologyVersion": "9.01",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.0",
+    "version": "9.01",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2388,6 +2388,8 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
 The endpoint reads only the accepted `report-cards:v9` publication and its matching `report-cards:v9:publication-health` row. Missing, malformed, incomplete, or identity-inconsistent state returns `503`; the handler never recomputes a score and never falls back to V8. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
 
 Rateable cards contain mandatory report-v4/trace-v3 `backing`, `exit`, and `control` breakdowns. Each breakdown reconciles evaluator and published pillar values through ordered adjustments. Economic Control uses the minimum binding component; Backing and Exit expose bounded aggregation inputs and weights. `breakdowns` is `null` exactly when the card is `NR`.
+
+`breakdowns.exit.primaryRoute.capacity` describes the selected route rather than market-wide liquidity. It exposes `executableUsd`, `requestedNotionalUsd`, `completionRatio`, request and observed cost bounds, settlement delay and scoring horizon, chain, protocol, pool, evidence kind, and evidence timestamp. Exit alternatives expose their own horizon, delay, confidence factor, and compact capacity summary so the evidence-confidence tradeoff against a higher-capacity alternative remains visible. Issuer redemption remains a separate daily, queued, or eventual route; exchange volume, aggregate DEX TVL, and issuer reserves are not interchangeable with executable capacity on one selected route.
 
 `publicationHealth.status` is `current` or `held`. A held response serves the last accepted ratings, uses the accepted timestamp for freshness headers and `updatedAt`, adds `X-Safety-Score-Status: held`, and forces `Cache-Control: no-store`. The latest unsuccessful attempt is exposed separately through `attemptedAtSec` and bounded hold reasons. Isolated producer failures may still publish when at least 90% of active assets are unaffected; broader or identity-level failures hold the prior accepted publication.
 
@@ -2668,7 +2670,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.0",
+      "methodologyVersion": "9.01",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2679,7 +2681,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.0",
+      "methodologyVersion": "9.01",
       "publishedAt": 1772000700
     }
   },

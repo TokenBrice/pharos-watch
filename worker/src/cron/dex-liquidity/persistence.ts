@@ -1,7 +1,12 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
+import {
+  ExitRouteObservationCoverageSchema,
+  ExitRouteObservationSchema,
+  type ExitRouteObservation,
+  type ExitRouteObservationCoverage,
+} from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
@@ -16,6 +21,9 @@ const DEX_LIQUIDITY_GENERATION_RETENTION_SEC = 3 * 60 * 60;
 /** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
 const DEX_LIQUIDITY_PRUNE_MAX_GENERATIONS_PER_RUN = 16;
 const DEX_LIQUIDITY_HISTORY_RETENTION_SEC = 365 * DAY_SECONDS;
+const DEX_ROUTE_SET_HOLD_MAX_AGE_SEC = 60 * 60;
+const DEX_ROUTE_SET_HOLD_MIN_PRIOR_CAPACITY_USD = 100_000;
+const DEX_ROUTE_SET_HOLD_MAX_CAPACITY_RATIO = 0.5;
 /** Keep large bound JSON payloads from accumulating across a full generation. */
 export const DEX_LIQUIDITY_PERSISTENCE_BATCH_SIZE = 25;
 const DEX_LIQUIDITY_HISTORY_INSERT_SQL = `INSERT INTO dex_liquidity_history
@@ -65,6 +73,114 @@ type P4aFullScoreResult = FullScoreResult & {
   exitRouteObservations?: ExitRouteObservation[];
   exitRouteObservationCoverage?: ExitRouteObservationCoverage;
 };
+
+interface CurrentDexRouteSetRow {
+  stablecoin_id: string;
+  score_components_json: string | null;
+}
+
+interface HeldDexRouteSet {
+  observations: ExitRouteObservation[];
+  coverage: ExitRouteObservationCoverage;
+  previousBestCapacityUsd: number;
+  candidateBestCapacityUsd: number;
+}
+
+function stressCapacityUsd(observation: ExitRouteObservation): number {
+  return observation.capacityCurve?.find(
+    (point) =>
+      point.requestedNotionalUsd === 25_000_000 &&
+      point.maxCostBps === 200,
+  )?.executableUsd ?? 0;
+}
+
+function parseCurrentDexRouteSet(raw: string | null): {
+  observations: ExitRouteObservation[];
+  coverage: ExitRouteObservationCoverage;
+} | null {
+  if (raw === null) return null;
+  try {
+    const parsed = JSON.parse(raw) as {
+      exitRouteObservations?: unknown;
+      exitRouteObservationCoverage?: unknown;
+    };
+    const observations = ExitRouteObservationSchema.array().safeParse(
+      parsed.exitRouteObservations,
+    );
+    const coverage = ExitRouteObservationCoverageSchema.safeParse(
+      parsed.exitRouteObservationCoverage,
+    );
+    return observations.success && coverage.success
+      ? { observations: observations.data, coverage: coverage.data }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** @internal Exported for focused route-churn containment tests. */
+export function selectStillFreshDexRouteSetHold(
+  candidate: FullScoreResult,
+  previousRaw: string | null,
+  nowSec: number,
+): HeldDexRouteSet | null {
+  const candidateP4 = candidate as P4aFullScoreResult;
+  const candidateObservations = candidateP4.exitRouteObservations ?? [];
+  const previous = parseCurrentDexRouteSet(previousRaw);
+  if (
+    previous === null ||
+    candidateObservations.length === 0 ||
+    previous.observations.length === 0
+  ) {
+    return null;
+  }
+  const previousRouteIds = new Set(
+    previous.observations.map((observation) => observation.routeId),
+  );
+  const routeSetChanged = candidateObservations.some(
+    (observation) => !previousRouteIds.has(observation.routeId),
+  ) || previous.observations.some(
+    (observation) =>
+      !candidateObservations.some(
+        (candidateObservation) =>
+          candidateObservation.routeId === observation.routeId,
+      ),
+  );
+  if (!routeSetChanged) return null;
+
+  const previousBestCapacityUsd = Math.max(
+    0,
+    ...previous.observations.map(stressCapacityUsd),
+  );
+  const previousBestObservation = previous.observations.find(
+    (observation) =>
+      stressCapacityUsd(observation) === previousBestCapacityUsd,
+  );
+  if (
+    previousBestObservation === undefined ||
+    previousBestObservation.observedAt > nowSec ||
+    nowSec - previousBestObservation.observedAt >
+      DEX_ROUTE_SET_HOLD_MAX_AGE_SEC
+  ) {
+    return null;
+  }
+  const candidateBestCapacityUsd = Math.max(
+    0,
+    ...candidateObservations.map(stressCapacityUsd),
+  );
+  if (
+    previousBestCapacityUsd < DEX_ROUTE_SET_HOLD_MIN_PRIOR_CAPACITY_USD ||
+    candidateBestCapacityUsd >
+      previousBestCapacityUsd * DEX_ROUTE_SET_HOLD_MAX_CAPACITY_RATIO
+  ) {
+    return null;
+  }
+  return {
+    ...previous,
+    previousBestCapacityUsd,
+    candidateBestCapacityUsd,
+  };
+}
 
 /** @internal Exported for focused persistence tests. */
 export function buildDexScoreDetailsJson(scoreResult: FullScoreResult): string {
@@ -578,6 +694,29 @@ export async function persistScores(
   for (const id of scoreResults.keys()) {
     if (ACTIVE_IDS.has(id)) activeScoredCount++;
   }
+  const currentRouteSets = new Map<string, string | null>();
+  try {
+    const currentRows = await db
+      .prepare(
+        `SELECT stablecoin_id, score_components_json
+           FROM dex_liquidity
+          WHERE stablecoin_id != '__global__'
+            AND ${DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER}`,
+      )
+      .all<CurrentDexRouteSetRow>();
+    for (const row of currentRows.results ?? []) {
+      currentRouteSets.set(row.stablecoin_id, row.score_components_json);
+    }
+  } catch (error) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "dex_route_set_hold_load_failed",
+      job: "sync-dex-liquidity",
+      message: "Could not load current DEX route sets for churn containment",
+      error: toErrorMessage(error),
+    });
+  }
 
   await stageDexLiquidityPublicationGeneration(db, {
     generationId,
@@ -620,6 +759,33 @@ export async function persistScores(
       if (!ACTIVE_IDS.has(id)) continue;
       const sr = scoreResults.get(id);
       if (!sr) continue;
+      const heldRouteSet = selectStillFreshDexRouteSetHold(
+        sr,
+        currentRouteSets.get(id) ?? null,
+        nowSec,
+      );
+      const persistedScoreResult: FullScoreResult =
+        heldRouteSet === null
+          ? sr
+          : {
+              ...sr,
+              exitRouteObservations: heldRouteSet.observations,
+              exitRouteObservationCoverage: heldRouteSet.coverage,
+            } as FullScoreResult;
+      if (heldRouteSet !== null) {
+        logWorkerEvent({
+          scope: "lib",
+          level: "warn",
+          event: "dex_route_set_churn_held",
+          job: "sync-dex-liquidity",
+          message: "Preserved the last still-fresh asset route set after an unconfirmed capacity collapse",
+          metadata: {
+            stablecoinId: id,
+            previousBestCapacityUsd: heldRouteSet.previousBestCapacityUsd,
+            candidateBestCapacityUsd: heldRouteSet.candidateBestCapacityUsd,
+          },
+        });
+      }
 
       await queueStatement(
         db
@@ -644,7 +810,7 @@ export async function persistScores(
             sr.organicFrac,
             Math.round(m.effectiveTvl),
             sr.durability,
-            buildDexScoreDetailsJson(sr),
+            buildDexScoreDetailsJson(persistedScoreResult),
             sr.lockedLiqPct,
             sr.coverageClass,
             sr.coverageConfidence,

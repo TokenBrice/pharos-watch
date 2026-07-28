@@ -3,7 +3,6 @@ import { roundTo } from "@shared/lib/math";
 import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import {
   buildP4DexExitRouteObservations,
-  requiresP4DexScoreEligibleCapabilityCoverage,
   type P4DexRouteObservationResult,
 } from "@shared/lib/p4-exit-route-capacity";
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
@@ -109,7 +108,6 @@ function routeEvidenceRank(pool: LiquidityMetrics["topPools"][number]): number {
 
 interface DexRouteObservationPoolSelection {
   pools: LiquidityMetrics["topPools"];
-  omittedScoreEligibleCapabilityPoolCount: number;
 }
 
 function selectDexRouteObservationPoolSet(
@@ -139,10 +137,10 @@ function selectDexRouteObservationPoolSet(
       left.poolId.localeCompare(right.poolId),
   );
   return {
-    pools: ranked.slice(0, MAX_DEX_EXIT_ROUTE_OBSERVATIONS),
-    omittedScoreEligibleCapabilityPoolCount: ranked
-      .slice(MAX_DEX_EXIT_ROUTE_OBSERVATIONS)
-      .filter(requiresP4DexScoreEligibleCapabilityCoverage).length,
+    // Keep the private capability set independent from the bounded public
+    // route payload. Observations are cheap summaries and are ranked at the
+    // actual V9 stress request below, after executable capacity is known.
+    pools: ranked,
   };
 }
 
@@ -172,49 +170,225 @@ function scoreEligibleRoutePhysicalPoolKey(observation: ExitRouteObservation): s
   return observation.scoreEligible ? routeObservationPhysicalPoolKey(observation) : null;
 }
 
-function packDexRouteObservationOutputs(
+const V9_DEX_STRESS_NOTIONAL_USD = 25_000_000;
+const V9_DEX_STRESS_MAX_COST_BPS = 200;
+const MAX_ROUTES_PER_CHAIN = 6;
+const MAX_ROUTES_PER_PROTOCOL = 3;
+const MAX_ROUTES_PER_ADAPTER = 3;
+
+function executableCapacityAtV9Stress(observation: ExitRouteObservation): number {
+  const point = observation.capacityCurve?.find(
+    (candidate) =>
+      candidate.requestedNotionalUsd === V9_DEX_STRESS_NOTIONAL_USD &&
+      candidate.maxCostBps === V9_DEX_STRESS_MAX_COST_BPS,
+  );
+  return point?.executableUsd ?? 0;
+}
+
+function observationRank(left: ExitRouteObservation, right: ExitRouteObservation): number {
+  return (
+    Number(right.scoreEligible) - Number(left.scoreEligible) ||
+    executableCapacityAtV9Stress(right) - executableCapacityAtV9Stress(left) ||
+    Number(right.evidenceKind === "reserve-based-amm-simulation") -
+      Number(left.evidenceKind === "reserve-based-amm-simulation") ||
+    left.freshnessSeconds - right.freshnessSeconds ||
+    left.routeId.localeCompare(right.routeId)
+  );
+}
+
+function commonModeValue(observation: ExitRouteObservation, prefix: string): string | null {
+  return observation.commonModeKeys.find((key) => key.startsWith(prefix)) ?? null;
+}
+
+function routesAreChainProtocolIndependent(
+  left: ExitRouteObservation,
+  right: ExitRouteObservation,
+): boolean {
+  const leftChain = commonModeValue(left, "chain:");
+  const rightChain = commonModeValue(right, "chain:");
+  const leftProtocol = commonModeValue(left, "protocol:");
+  const rightProtocol = commonModeValue(right, "protocol:");
+  return (
+    (leftChain === null || rightChain === null || leftChain !== rightChain) &&
+    (leftProtocol === null || rightProtocol === null || leftProtocol !== rightProtocol)
+  );
+}
+
+interface DexRouteObservationPacking {
+  observations: ExitRouteObservation[];
+  bestIncludedCapacityUsd: number;
+  bestOmittedCapacityUsd: number;
+  omittedScoreEligibleObservationPoolCount: number;
+  maxChainConcentration: number;
+  maxProtocolConcentration: number;
+}
+
+export function selectDexRouteObservations(
   observations: readonly ExitRouteObservation[],
-): ExitRouteObservation[] {
-  const primaryObservations: ExitRouteObservation[] = [];
-  const additionalObservations: ExitRouteObservation[] = [];
-  const emittedPhysicalPoolKeys = new Set<string>();
+): DexRouteObservationPacking {
+  const ranked = [...observations].sort(observationRank);
+  const selected: ExitRouteObservation[] = [];
+  const selectedIds = new Set<string>();
+  const selectedPhysicalPools = new Set<string>();
+  const chainCounts = new Map<string, number>();
+  const protocolCounts = new Map<string, number>();
+  const adapterCounts = new Map<string, number>();
 
-  for (const observation of observations) {
-    const physicalPoolKey = routeObservationPhysicalPoolKey(observation);
-    if (emittedPhysicalPoolKeys.has(physicalPoolKey)) {
-      additionalObservations.push(observation);
-      continue;
+  const add = (observation: ExitRouteObservation, guaranteed = false): boolean => {
+    if (
+      selected.length >= MAX_DEX_EXIT_ROUTE_OBSERVATIONS ||
+      selectedIds.has(observation.routeId)
+    ) {
+      return false;
     }
-    emittedPhysicalPoolKeys.add(physicalPoolKey);
-    primaryObservations.push(observation);
+    const chain = commonModeValue(observation, "chain:");
+    const protocol = commonModeValue(observation, "protocol:");
+    const adapter = observation.adapterProfileId ?? null;
+    if (
+      !guaranteed &&
+      (
+        (chain !== null && (chainCounts.get(chain) ?? 0) >= MAX_ROUTES_PER_CHAIN) ||
+        (protocol !== null && (protocolCounts.get(protocol) ?? 0) >= MAX_ROUTES_PER_PROTOCOL) ||
+        (adapter !== null && (adapterCounts.get(adapter) ?? 0) >= MAX_ROUTES_PER_ADAPTER)
+      )
+    ) {
+      return false;
+    }
+    selected.push(observation);
+    selectedIds.add(observation.routeId);
+    selectedPhysicalPools.add(routeObservationPhysicalPoolKey(observation));
+    if (chain !== null) chainCounts.set(chain, (chainCounts.get(chain) ?? 0) + 1);
+    if (protocol !== null) protocolCounts.set(protocol, (protocolCounts.get(protocol) ?? 0) + 1);
+    if (adapter !== null) adapterCounts.set(adapter, (adapterCounts.get(adapter) ?? 0) + 1);
+    return true;
+  };
+
+  const bestCapacity = ranked.find((observation) => observation.scoreEligible);
+  if (bestCapacity) add(bestCapacity, true);
+
+  const bestExactFallback = ranked.find(
+    (observation) =>
+      observation.scoreEligible &&
+      observation.evidenceKind === "reserve-based-amm-simulation",
+  );
+  if (bestExactFallback) add(bestExactFallback, true);
+
+  if (bestCapacity) {
+    const independent = ranked.find(
+      (observation) =>
+        observation.scoreEligible &&
+        observation.routeId !== bestCapacity.routeId &&
+        routesAreChainProtocolIndependent(bestCapacity, observation),
+    );
+    if (independent) add(independent, true);
   }
 
-  const packed = primaryObservations.slice(0, MAX_DEX_EXIT_ROUTE_OBSERVATIONS);
-  for (const observation of additionalObservations) {
-    if (packed.length === MAX_DEX_EXIT_ROUTE_OBSERVATIONS) break;
-    packed.push(observation);
+  // Prefer one output from each physical pool before spending payload slots on
+  // additional outputs from a pool already represented.
+  for (const observation of ranked) {
+    if (selected.length >= MAX_DEX_EXIT_ROUTE_OBSERVATIONS) break;
+    if (selectedPhysicalPools.has(routeObservationPhysicalPoolKey(observation))) continue;
+    add(observation);
+  }
+  for (const observation of ranked) {
+    if (selected.length >= MAX_DEX_EXIT_ROUTE_OBSERVATIONS) break;
+    add(observation);
   }
 
-  return packed;
+  const selectedScoreEligiblePools = new Set(
+    selected.map(scoreEligibleRoutePhysicalPoolKey).filter((key): key is string => key != null),
+  );
+  const allScoreEligiblePools = new Set(
+    observations.map(scoreEligibleRoutePhysicalPoolKey).filter((key): key is string => key != null),
+  );
+  const omitted = ranked.filter((observation) => !selectedIds.has(observation.routeId));
+  const concentration = (counts: Map<string, number>): number =>
+    selected.length === 0 ? 0 : Math.max(0, ...counts.values()) / selected.length;
+
+  return {
+    observations: selected,
+    bestIncludedCapacityUsd: Math.max(0, ...selected.map(executableCapacityAtV9Stress)),
+    bestOmittedCapacityUsd: Math.max(0, ...omitted.map(executableCapacityAtV9Stress)),
+    omittedScoreEligibleObservationPoolCount: [...allScoreEligiblePools].filter(
+      (key) => !selectedScoreEligiblePools.has(key),
+    ).length,
+    maxChainConcentration: concentration(chainCounts),
+    maxProtocolConcentration: concentration(protocolCounts),
+  };
+}
+
+interface DexRouteSelectionDiagnostic {
+  stablecoinId: string;
+  candidateObservationCount: number;
+  publishedObservationCount: number;
+  bestIncludedCapacityUsd: number;
+  bestOmittedCapacityUsd: number;
+  maxChainConcentration: number;
+  maxProtocolConcentration: number;
 }
 
 function applyDexRouteObservationBounds(
+  stablecoinId: string,
   result: P4DexRouteObservationResult,
-  omittedScoreEligibleCapabilityPoolCount: number,
+  diagnostics: DexRouteSelectionDiagnostic[],
 ): P4DexRouteObservationResult {
-  const observations = packDexRouteObservationOutputs(result.observations);
+  const selection = selectDexRouteObservations(result.observations);
+  const observations = selection.observations;
   const droppedObservationCount = Math.max(0, result.observations.length - observations.length);
-  if (omittedScoreEligibleCapabilityPoolCount === 0 && droppedObservationCount === 0) return result;
+  const noteworthyConcentration =
+    observations.length >= 3 &&
+    (
+      selection.maxChainConcentration > 0.6 ||
+      selection.maxProtocolConcentration > 0.6
+    );
+  if (
+    diagnostics.length < 20 &&
+    (droppedObservationCount > 0 || noteworthyConcentration)
+  ) {
+    diagnostics.push({
+      stablecoinId,
+      candidateObservationCount: result.observations.length,
+      publishedObservationCount: observations.length,
+      bestIncludedCapacityUsd: selection.bestIncludedCapacityUsd,
+      bestOmittedCapacityUsd: selection.bestOmittedCapacityUsd,
+      maxChainConcentration: selection.maxChainConcentration,
+      maxProtocolConcentration: selection.maxProtocolConcentration,
+    });
+    if (noteworthyConcentration) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "dex_route_common_mode_concentration",
+        job: "sync-dex-liquidity",
+        message: "A bounded DEX route set is concentrated in one chain or protocol",
+        metadata: {
+          stablecoinId,
+          observationCount: observations.length,
+          maxChainConcentration: selection.maxChainConcentration,
+          maxProtocolConcentration: selection.maxProtocolConcentration,
+        },
+      });
+    }
+  }
+  if (droppedObservationCount === 0) return result;
+  if (selection.bestOmittedCapacityUsd > selection.bestIncludedCapacityUsd) {
+    logWorkerEvent({
+      scope: "lib",
+      level: "error",
+      event: "dex_route_capacity_dominance_violation",
+      job: "sync-dex-liquidity",
+      message: "A bounded DEX route payload omitted a higher-capacity candidate",
+      metadata: {
+        stablecoinId,
+        bestIncludedCapacityUsd: selection.bestIncludedCapacityUsd,
+        bestOmittedCapacityUsd: selection.bestOmittedCapacityUsd,
+      },
+    });
+  }
 
-  const fullScoreEligiblePoolKeys = new Set(
-    result.observations.map(scoreEligibleRoutePhysicalPoolKey).filter((key): key is string => key != null),
-  );
   const emittedScoreEligiblePoolKeys = new Set(
     observations.map(scoreEligibleRoutePhysicalPoolKey).filter((key): key is string => key != null),
   );
-  const omittedScoreEligibleObservationPoolCount = [...fullScoreEligiblePoolKeys].filter(
-    (key) => !emittedScoreEligiblePoolKeys.has(key),
-  ).length;
   const evidenceCounts =
     droppedObservationCount === 0
       ? result.coverage.evidenceCounts
@@ -227,31 +401,20 @@ function applyDexRouteObservationBounds(
     observations,
     coverage: {
       ...result.coverage,
-      retainedPoolCount: result.coverage.retainedPoolCount + omittedScoreEligibleCapabilityPoolCount,
       observationCount: observations.length,
       scoreEligibleObservationCount: observations.filter((observation) => observation.scoreEligible).length,
       scoreEligiblePoolCount: emittedScoreEligiblePoolKeys.size,
-      scoreEligibleCapabilityPoolCount:
-        (result.coverage.scoreEligibleCapabilityPoolCount ?? 0) + omittedScoreEligibleCapabilityPoolCount,
       unsupportedPoolCount:
         result.coverage.unsupportedPoolCount +
-        omittedScoreEligibleCapabilityPoolCount +
-        omittedScoreEligibleObservationPoolCount,
+        selection.omittedScoreEligibleObservationPoolCount,
       evidenceCounts,
       unsupportedReasons: {
         ...result.coverage.unsupportedReasons,
-        ...(omittedScoreEligibleCapabilityPoolCount > 0
-          ? {
-              routeSelectionCapabilityOverflow:
-                (result.coverage.unsupportedReasons.routeSelectionCapabilityOverflow ?? 0) +
-                omittedScoreEligibleCapabilityPoolCount,
-            }
-          : {}),
-        ...(omittedScoreEligibleObservationPoolCount > 0
+        ...(selection.omittedScoreEligibleObservationPoolCount > 0
           ? {
               routeObservationPayloadOverflow:
                 (result.coverage.unsupportedReasons.routeObservationPayloadOverflow ?? 0) +
-                omittedScoreEligibleObservationPoolCount,
+                selection.omittedScoreEligibleObservationPoolCount,
             }
           : {}),
       },
@@ -462,6 +625,7 @@ interface ProtocolCapDiagnostics {
 
 interface ScoreDiagnostics {
   protocolCapReductions: ProtocolCapDiagnostics;
+  routeSelection: DexRouteSelectionDiagnostic[];
   measuredExecution: {
     join: DexMeasuredExecutionJoinDiagnostics;
     solanaJoin: SolanaMeasuredExecutionJoinDiagnostics;
@@ -621,6 +785,7 @@ export async function computeStablecoinScores(
 
   const results = new Map<string, FullScoreResult>();
   const retainedPoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>();
+  const routeSelectionDiagnostics: DexRouteSelectionDiagnostic[] = [];
   const routeObservedAt = Math.max(0, Math.floor(routeObservedAtSec));
   const slipstreamMeasuredTargetsByFingerprint =
     buildDexMeasuredTargetFingerprintIndex(slipstreamMeasuredTargets.values());
@@ -934,12 +1099,13 @@ export async function computeStablecoinScores(
       retainedMeasuredRoutePools.get(id) ?? [],
     );
     const routeObservationResult = applyDexRouteObservationBounds(
+      id,
       buildP4DexExitRouteObservations({
         stablecoinId: id,
         retainedPools: routeObservationPoolSelection.pools,
         observedAt: routeObservedAt,
       }),
-      routeObservationPoolSelection.omittedScoreEligibleCapabilityPoolCount,
+      routeSelectionDiagnostics,
     );
     stripDexMeasuredExecutionInternalFields(retainedPools);
     stripSolanaMeasuredExecutionInternalFields(retainedPools);
@@ -1065,6 +1231,7 @@ export async function computeStablecoinScores(
         cappedProtocols: protocolCapDiagnostics.cappedProtocols,
         reducedTvlUsd: protocolCapDiagnostics.reducedTvlUsd + Math.round(globalCapReduction),
       },
+      routeSelection: routeSelectionDiagnostics,
       measuredExecution: {
         join: measuredExecutionJoin,
         solanaJoin: solanaMeasuredExecutionJoin,
