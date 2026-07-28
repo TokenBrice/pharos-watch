@@ -16,21 +16,23 @@ import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 import { loadSafetyScoreV9PublicationAttempt } from "../lib/safety-score-v9-publication-store";
 import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9-consumer-freshness";
 import { deleteCache, getCache, setCache } from "../lib/db-cache";
+import { parseJson } from "../lib/json-parse";
 
 const OPERATIONALLY_AFFECTED_HISTORY_CACHE_KEY =
   "safety-score-history:v2:operationally-affected";
 
 function parseOperationallyAffectedAssetIds(value: string): string[] {
-  const parsed: unknown = JSON.parse(value);
+  const parsed = parseJson(value);
+  const assetIds = parsed.ok ? parsed.value : null;
   if (
-    !Array.isArray(parsed) ||
-    parsed.some((assetId) => typeof assetId !== "string")
+    !Array.isArray(assetIds) ||
+    assetIds.some((assetId) => typeof assetId !== "string")
   ) {
     throw new Error(
       "Safety Score history operational state is malformed",
     );
   }
-  return [...new Set(parsed)].sort();
+  return [...new Set(assetIds)].sort();
 }
 
 interface LatestSafetyGradeRow {

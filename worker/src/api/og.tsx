@@ -294,7 +294,11 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     flowRow,
     price24hRow,
   ] = await Promise.all([
-    loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
+    loadStablecoinsCache(db, {
+      mode: "strict",
+      allowLegacyArray: false,
+      contract: "published",
+    }),
     loadDexLiquidityMap(db),
     db
       .prepare(
@@ -433,7 +437,11 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
 
 async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   const [stablecoinsPayload, safetySource] = await Promise.all([
-    loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false }),
+    loadStablecoinsCache(db, {
+      mode: "strict",
+      allowLegacyArray: false,
+      contract: "published",
+    }),
     loadOgSafetyScoreSource(db),
   ]);
 
@@ -693,7 +701,11 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
     return ogErrorResponse("Unknown chain", 404);
   }
 
-  const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  const stablecoinsResult = await loadStablecoinsCache(db, {
+    mode: "strict",
+    allowLegacyArray: false,
+    contract: "published",
+  });
   if (stablecoinsResult.kind !== "ok") {
     return ogDataNotYetAvailable();
   }

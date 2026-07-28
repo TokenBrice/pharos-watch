@@ -20,7 +20,7 @@ compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 preview_urls = true
 
 [limits]
-cpu_ms = 30000
+cpu_ms = 300000
 
 [observability]
 enabled = true
@@ -31,7 +31,7 @@ enabled = true
 invocation_logs = true
 ```
 
-- `cpu_ms = 30000`: hard cap on CPU time per invocation (not wall-clock runtime). This is independent from in-app wall-clock cron timeouts in `logCronRun()`. Raised from 5000 to give isolated cron triggers comfortable headroom; higher Cloudflare ceilings are vendor-plan details and are intentionally not treated as repo source of truth here.
+- `cpu_ms = 300000`: hard cap on CPU time per invocation (not wall-clock runtime). This is independent from in-app wall-clock cron timeouts in `logCronRun()`. The repository keeps this cap aligned with `worker/wrangler.toml`; Cloudflare still applies trigger-specific runtime ceilings where applicable.
 - `compatibility_date = "2026-04-18"` + `nodejs_compat`: top-level Wrangler runtime compatibility settings for the deployed Worker.
 - `global_fetch_strictly_public`: keeps Worker-origin fetches to the Worker's own public custom domains on the public edge path. `status-self-check` depends on that behavior for production-domain canaries; without it, same-Worker custom-domain self-fetches can return internal 522s while external clients remain healthy.
 - `observability.enabled`: enables Worker traces.

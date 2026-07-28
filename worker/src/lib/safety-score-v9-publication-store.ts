@@ -33,7 +33,7 @@ const V9AssetQuarantineSchema = z
   })
   .strict();
 
-export const V9PublicationAttemptSchema = z
+const V9PublicationAttemptSchema = z
   .object({
     schemaVersion: z.literal(1),
     attemptedAtSec: z.number().int().nonnegative(),

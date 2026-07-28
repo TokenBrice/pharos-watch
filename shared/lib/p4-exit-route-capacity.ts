@@ -653,7 +653,7 @@ function capabilityForPool(
   return capabilityById("discovery-pool-shaped");
 }
 
-export function requiresP4DexScoreEligibleCapabilityCoverage(pool: P4DexRoutePoolInput): boolean {
+function requiresP4DexScoreEligibleCapabilityCoverage(pool: P4DexRoutePoolInput): boolean {
   if (!Number.isFinite(pool.tvlUsd) || pool.tvlUsd <= 0 || !pool.poolId || !pool.project || !pool.chain) return true;
   if (pool.extra?.executionCapabilityGate != null) return true;
   const capability = capabilityForPool(pool);

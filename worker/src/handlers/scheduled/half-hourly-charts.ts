@@ -11,6 +11,7 @@ import { consumeDexLiquidityScoringStage } from "../../cron/dex-liquidity/orches
 import { prepareSafetyScoreV9Input } from "../../cron/prepare-safety-score-v9-input";
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import type { CronResult } from "../../lib/cron-logger";
+import { tryParseJson } from "../../lib/json-parse";
 import type { ScheduledRuntimeContext } from "./context";
 import { runScheduledSlotGroups } from "./slot-groups";
 
@@ -22,12 +23,10 @@ interface DexPublication {
 }
 
 function readDexPublication(result: CronResult): DexPublication {
-  let metadata: unknown = null;
-  try {
-    metadata = JSON.parse(result.metadata ?? "{}") as unknown;
-  } catch {
-    // A malformed producer diagnostic must not rewrite the DEX job's outcome.
-  }
+  const metadata = tryParseJson(
+    result.metadata ?? "{}",
+    "half-hourly charts DEX publication metadata",
+  );
   const persistence =
     metadata !== null
     && typeof metadata === "object"
