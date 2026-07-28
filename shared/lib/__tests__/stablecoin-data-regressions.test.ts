@@ -22,6 +22,6 @@ describe("stablecoin source-data regressions", () => {
     expect(physicalGold?.riskFactors).toEqual(
       expect.arrayContaining(["market", "custody", "counterparty", "legal", "liquidity", "concentration"]),
     );
-    expect(usdkgAsset.reserveReview.compositionAsOf).toBe("2025-11-28");
+    expect(usdkgAsset.reserveReview.compositionAsOf).toBe("2026-07-28");
   });
 });

@@ -402,10 +402,10 @@ describe("adaptAccountableDashboard", () => {
                 verifiability: "100",
                 total_reserves: { value: 1_000, name: "Total Reserves" },
                 reserves_split: [
-                  { value: 623, name: "STRC" },
-                  { value: 137, name: "Protocol Owned Liquidity" },
-                  { value: 126, name: "Cash & Equivalents" },
-                  { value: 114, name: "Inventory" },
+                  { value: 612, name: "STRC" },
+                  { value: 158, name: "Protocol Owned Liquidity" },
+                  { value: 100, name: "Cash & Equivalents" },
+                  { value: 130, name: "Inventory" },
                 ],
               },
             },
@@ -429,10 +429,10 @@ describe("adaptAccountableDashboard", () => {
       collateralizationRatio: 0.881615,
     });
     expect(result.slices).toEqual([
-      { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 62.3, risk: "high" },
-      { name: "Protocol Owned Liquidity", pct: 13.7, risk: "high" },
-      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 12.6, risk: "very-low" },
-      { name: "Inventory", pct: 11.4, risk: "high" },
+      { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 61.2, risk: "high" },
+      { name: "Protocol Owned Liquidity", pct: 15.8, risk: "high" },
+      { name: "Inventory", pct: 13, risk: "high" },
+      { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 10, risk: "very-low" },
     ]);
     expect(apxusd.reserves.map(({ name, pct, risk }) => ({ name, pct, risk }))).toEqual(result.slices);
     expect(validateAdapterOutput(result, {

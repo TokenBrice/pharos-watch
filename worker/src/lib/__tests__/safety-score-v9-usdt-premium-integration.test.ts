@@ -21,6 +21,9 @@ const EXPECTED_MARKET_ORDER = [
 
 // Scoped from the recovered 2026-07-24 exact production capture so the
 // integration test retains USDT's measured Curve routes and real wrapper facts.
+// All epoch fields (clock, freshness, observations, generation ids) are
+// uniformly shifted forward so the fixture clock stays ahead of the newest
+// reviewedAt dates in shared static data; relative ages are unchanged.
 describe("Safety Score v9 USDT premium production integration", () => {
   it("derives rank from supply and keeps the premium out of a real serial wrapper", () => {
     const fixedInput = createReportCardsFixedInput(

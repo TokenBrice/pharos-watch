@@ -3,7 +3,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createReportCardsFixedInput } from "../../report-cards-fixed-input";
 
 // Keep reviewed registry evidence current at this deterministic V9 calibration snapshot.
-const CLOCK_SEC = 1_785_153_600;
+const CLOCK_SEC = 1_785_283_200;
 const DEX_UPDATED_AT_SEC = CLOCK_SEC - 100;
 
 function resourceRoute(assetId: string) {
