@@ -13812,25 +13812,36 @@
     {
       "assetId": "wsrusd-reservoir",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-28",
       "sources": [
         {
           "label": "Reservoir Savings (srUSD/wsrUSD) product documentation",
           "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
         },
         {
-          "label": "Reservoir live on-chain reserves balance sheet (raw API)",
+          "label": "Reservoir live on-chain reserves balance sheet (raw API, fetched 2026-07-28T06:29:14Z)",
           "url": "https://app.reservoir.xyz/api/reserves/raw"
+        },
+        {
+          "label": "Reservoir proof-of-reserves (balance sheet) documentation",
+          "url": "https://docs.reservoir.xyz/products/proof-of-reserves"
         },
         {
           "label": "Blockscout verified wsrUSD Savingcoin contract source",
           "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
         }
       ],
-      "notes": "wsrUSD is a non-rebasing ERC-4626 wrapper over rUSD; rUSD's backing basket carries the credit-fund exposure. Measured 2026-07-20 from Reservoir's own live on-chain reserves API (app.reservoir.xyz/api/reserves/raw): totalAssets $35,588,399.04 versus totalLiabilities $35,301,674.85 (wsrUSD $34,375,143, srUSD $725,455, rUSD circulating $201,076) leaves $286,724 equity, a measured system collateralization of 1.008122 (100.81%). Asset composition: 70.18% DeFi lending markets (Aave GHO on Plasma/Monad, Morpho Steakhouse High-Yield USD1), 25.65% Pendle PT-USDat-27AUG2026, 3.38% Agua Global Carry ERC-4626 vault, 0.44% USDC, 0.34% Hastra PRIME RWA. weightedAverageMaturityDays 9.7488 treats the 70.18% redeemable-on-demand lending, 3.38% redeemable vault, and 0.44% USDC sleeves as 0-day and the 25.65% Pendle PT as its documented fixed maturity 2026-08-27 (38 days from the 2026-07-20 read); valuationCadenceDays 0 reflects the continuously readable on-chain balance sheet. NOT ESTABLISHED: no external credit rating or per-obligor credit quality for the underlying DeFi and RWA positions; no legal SPV, trust, or bankruptcy-remote claim wrapper for wsrUSD/rUSD holders (enforcement is smart-contract Credit Enforcer only); no independent fund administrator or auditor strikes the NAV (self-administered on-chain); the documented 105% Credit Enforcer minimum ratios could not be independently confirmed against the measured 100.81% live collateralization; the Hastra PRIME RWA sleeve's own maturity profile is undisclosed; and PSM redemption of rUSD is documented as subject to available protocol liquidity rather than a guaranteed at-par redemption.",
+      "notes": "wsrUSD is a non-rebasing ERC-4626 wrapper over rUSD; rUSD's shared backing basket carries the credit-fund exposure. Re-measured 2026-07-28 from Reservoir's live reserves API at 2026-07-28T06:29:14Z: totalAssets $35,409,805.75 versus totalLiabilities $35,112,914.40 (wsrUSD $34,195,384.57, srUSD $714,584.80, rUSD circulating $202,945.02) leaves $296,891.35 equity, a measured system collateralization of 1.008455 (100.85%). Asset composition: 45.40% Morpho Sentora PRIME, 25.83% Pendle PT-USDat-27AUG2026, 11.41% Aave GHO (Plasma), 8.95% Morpho Steakhouse Prime Instant V2, 4.20% Aave GHO (Monad), 3.67% Agua Global Carry, 0.34% Hastra PRIME, and 0.21% direct USDC. weightedAverageMaturityDays is unavailable: the Pendle sleeve has a documented fixed maturity of 2026-08-27 (30 days from the read), but the material Sentora PRIME and Agua Global Carry sleeves publish no maturity profile, so no portfolio WAM is derivable without the rejected assumption that undated vault and lending sleeves mature at zero days. valuationCadenceDays 0 reflects the continuously readable on-chain balance sheet. NOT ESTABLISHED: an external rating or per-obligor credit-quality reconciliation; a legal SPV, trust, or bankruptcy-remote claim wrapper for wsrUSD/rUSD holders; an independent fund administrator or reserve attestor; maturity profiles for the Sentora and Agua sleeves; independent confirmation that the documented Credit Enforcer minimum ratios reconcile to the live balance sheet; or guaranteed at-par PSM liquidity under stress.",
       "metrics": {
-        "weightedAverageMaturityDays": 9.7488,
+        "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 0
+      },
+      "metricApplicability": {
+        "weightedAverageMaturityDays": {
+          "state": "unavailable",
+          "rationale": "The balance sheet mixes money-market positions, Morpho and prime vaults, and a dated Pendle PT without an issuer-published portfolio WAM. The material Sentora PRIME and Agua Global Carry sleeves publish no maturity profile, so undated sleeves cannot honestly be assigned a zero-day maturity.",
+          "sourceUrl": "https://docs.reservoir.xyz/products/proof-of-reserves"
+        }
       },
       "components": {
         "creditQuality": {
