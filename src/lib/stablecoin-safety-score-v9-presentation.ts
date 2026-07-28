@@ -109,6 +109,12 @@ export interface StablecoinSafetyScoreV9PillarBreakdown {
   sectionLabel: string;
   context: StablecoinSafetyScoreV9BreakdownMeta[];
   rows: StablecoinSafetyScoreV9BreakdownRow[];
+  /**
+   * Rows that do not drive the pillar score, folded behind a disclosure. Empty
+   * for pillars whose inputs all contribute.
+   */
+  secondaryRows: StablecoinSafetyScoreV9BreakdownRow[];
+  secondaryLabel: string | null;
   alternatives: StablecoinSafetyScoreV9Alternative[];
 }
 
@@ -158,6 +164,8 @@ function parseBackingBreakdown(
       weight: component.effectiveWeight,
       status: humanizeSafetyScoreV9Value(component.observationState),
     })),
+    secondaryRows: [],
+    secondaryLabel: null,
     alternatives: [],
   };
 }
@@ -234,6 +242,8 @@ function parseExitBreakdown(
       weight: component.weight,
       status: null,
     })),
+    secondaryRows: [],
+    secondaryLabel: null,
     alternatives: breakdown.alternatives.map((alternative) => ({
       key: alternative.key,
       label: alternative.label,
@@ -249,6 +259,20 @@ function parseExitBreakdown(
 function parseControlBreakdown(
   breakdown: SafetyScoreV9ControlBreakdown,
 ): StablecoinSafetyScoreV9PillarBreakdown {
+  const toRow = (
+    component: SafetyScoreV9ControlBreakdown["components"][number],
+  ): StablecoinSafetyScoreV9BreakdownRow => ({
+    key: component.key,
+    label: component.label,
+    score: component.score,
+    weight: null,
+    status: component.binding ? "Binding" : "Diagnostic",
+  });
+  // The pillar scores on the lowest binding control, but the producer emits
+  // components alphabetically. On the widest deployments that buried both
+  // binding rows behind dozens of per-chain bridge diagnostics (usdc-circle
+  // put them at rows 49 and 50 of 50), so the rows that set the score lead and
+  // the diagnostics collapse behind a disclosure.
   return {
     aggregationWeight: breakdown.aggregationWeight,
     evaluatedScore: breakdown.evaluatedScore,
@@ -259,13 +283,9 @@ function parseControlBreakdown(
       label: "Pillar rule",
       value: "Lowest binding control",
     }, ...adjustmentContext(breakdown.adjustments)],
-    rows: breakdown.components.map((component) => ({
-      key: component.key,
-      label: component.label,
-      score: component.score,
-      weight: null,
-      status: component.binding ? "Binding" : "Diagnostic",
-    })),
+    rows: breakdown.components.filter((component) => component.binding).map(toRow),
+    secondaryRows: breakdown.components.filter((component) => !component.binding).map(toRow),
+    secondaryLabel: "Diagnostic inputs",
     alternatives: [],
   };
 }

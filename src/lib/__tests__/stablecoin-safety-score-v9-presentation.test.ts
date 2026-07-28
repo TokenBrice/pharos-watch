@@ -161,6 +161,7 @@ describe("stablecoin V9 safety presentation", () => {
         aggregationWeight: 0.25,
         method: "minimum-binding-component",
         components: [
+          { key: "abstract", label: "Abstract bridge", kind: "bridge", score: 65, binding: false, posture: "distributed" },
           { key: "mint", label: "Mint authority", kind: "mint", score: 86, binding: true, posture: "concentrated" },
           { key: "oracle", label: "Oracle design", kind: "oracle", score: 95, binding: false, posture: "distributed" },
         ],
@@ -194,9 +195,20 @@ describe("stablecoin V9 safety presentation", () => {
       { key: "primary-route", label: "Primary route", value: "Direct redemption" },
       { key: "stress-request", label: "Stress request", value: "$10m / 100 bps / 1d" },
     ]));
+    // The producer emits control components alphabetically, so the binding row
+    // is listed last here on purpose: the pillar that scores on the lowest
+    // binding control must lead with it regardless of producer order.
     expect(presentation.pillars[2].breakdown?.rows).toEqual([
       { key: "mint", label: "Mint authority", score: 86, weight: null, status: "Binding" },
+    ]);
+    expect(presentation.pillars[2].breakdown?.secondaryRows).toEqual([
+      { key: "abstract", label: "Abstract bridge", score: 65, weight: null, status: "Diagnostic" },
       { key: "oracle", label: "Oracle design", score: 95, weight: null, status: "Diagnostic" },
     ]);
+    expect(presentation.pillars[2].breakdown?.secondaryLabel).toBe("Diagnostic inputs");
+    // Backing and exit have no binding/diagnostic split, so nothing is hidden.
+    expect(presentation.pillars[0].breakdown?.secondaryRows).toEqual([]);
+    expect(presentation.pillars[0].breakdown?.secondaryLabel).toBeNull();
+    expect(presentation.pillars[1].breakdown?.secondaryRows).toEqual([]);
   });
 });

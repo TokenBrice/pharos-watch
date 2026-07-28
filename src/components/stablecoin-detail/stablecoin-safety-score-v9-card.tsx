@@ -194,6 +194,21 @@ function PillarBreakdownDetails({
         {breakdown.rows.map((row) => <ComponentScoreBar key={row.key} row={row} />)}
       </div>
 
+      {breakdown.secondaryRows.length > 0 && breakdown.secondaryLabel !== null ? (
+        <details className="group mt-3 border-t border-border/30 pt-2">
+          <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[10px] font-medium text-muted-foreground marker:content-none">
+            <span>{breakdown.secondaryLabel} ({breakdown.secondaryRows.length})</span>
+            <ChevronDown
+              className="h-3.5 w-3.5 transition-transform group-open:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
+          <div className="mt-2 space-y-2.5">
+            {breakdown.secondaryRows.map((row) => <ComponentScoreBar key={row.key} row={row} />)}
+          </div>
+        </details>
+      ) : null}
+
       {breakdown.alternatives.length > 0 ? (
         <details className="group mt-3 border-t border-border/30 pt-2">
           <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[10px] font-medium text-muted-foreground marker:content-none">
