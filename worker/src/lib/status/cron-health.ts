@@ -49,7 +49,7 @@ const CRON_HISTORY_SELECT_COLUMNS =
   "job, started_at, duration_ms, status, error, item_count, metadata, schedule_key";
 const LEGACY_IDLE_DIGEST_RECONCILIATION_SQL_FILTER = `NOT (
   job = 'daily-digest'
-  AND schedule_key = 'digestTriggerPoll'
+  AND COALESCE(schedule_key = 'digestTriggerPoll', 0)
   AND CASE
     WHEN metadata IS NOT NULL AND json_valid(metadata)
       THEN COALESCE(json_extract(metadata, '$.reason') = 'stale-slot-reconciled', 0)

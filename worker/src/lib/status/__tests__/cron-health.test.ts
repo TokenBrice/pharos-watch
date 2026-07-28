@@ -269,6 +269,47 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
       sqlite.close();
     }
   });
+
+  it("preserves legacy daily-digest failures without a schedule key", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        `INSERT INTO cron_runs
+           (job, started_at, duration_ms, status, error, item_count, metadata, schedule_key)
+         VALUES (?, ?, 100, ?, ?, 1, ?, ?)`,
+      );
+      insert.run(
+        "daily-digest",
+        NOW - 10,
+        "error",
+        "scheduled slot abandoned before child job started",
+        JSON.stringify({
+          reason: "stale-slot-reconciled",
+          childDisposition: "not_started",
+        }),
+        null,
+      );
+      insert.run(
+        "daily-digest",
+        NOW - 30,
+        "ok",
+        null,
+        JSON.stringify({ edition: "daily" }),
+        "daily0805Utc",
+      );
+
+      const snapshot = await loadCronHealth(db, NOW);
+
+      expect(snapshot.crons["daily-digest"]?.lastRun?.status).toBe("error");
+      expect(snapshot.crons["daily-digest"]?.recentRuns.map((run) => run.status)).toEqual([
+        "error",
+        "ok",
+      ]);
+      expect(snapshot.crons["daily-digest"]?.healthy).toBe(false);
+    } finally {
+      sqlite.close();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
