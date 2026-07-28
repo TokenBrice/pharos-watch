@@ -239,6 +239,7 @@ describe("snapshotSafetyGradeHistory", () => {
 
   it("writes identity-rich V9 history without a legacy V8 row", async () => {
     const snapshot = makeWorkerReportCardsV9Response({
+      updatedAt: Math.floor(Date.now() / 1000),
       cards: [
         makeWorkerV9Card({
           id: "usdc-circle",
@@ -327,6 +328,38 @@ describe("snapshotSafetyGradeHistory", () => {
       itemCount: 0,
       metadata: JSON.stringify({
         reason: "v9-publication-held",
+        expectedModel: "v9",
+        historyWritesSkipped: true,
+      }),
+    });
+    expect(batchExecute).not.toHaveBeenCalled();
+    expect(loadActiveV8SafetyScoreHistorySource).not.toHaveBeenCalled();
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("writes no V9 history row while the current publication is stale", async () => {
+    const snapshot = makeWorkerReportCardsV9Response({ updatedAt: 1 });
+    vi.mocked(loadActiveSafetyScoreSource).mockResolvedValue({
+      kind: "v9",
+      expectedModel: "v9",
+      marker: {
+        policyId: snapshot.safetyScoreIdentity.policyId,
+        policyDigest: snapshot.safetyScoreIdentity.policyDigest,
+        evaluationBuildDigest: snapshot.safetyScoreIdentity.evaluationBuildDigest,
+        methodologyVersion: snapshot.safetyScoreIdentity.methodologyVersion,
+      },
+      activationUpdatedAt: snapshot.updatedAt,
+      snapshot,
+    });
+    const db = mockD1([]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result).toEqual({
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "v9-publication-stale",
         expectedModel: "v9",
         historyWritesSkipped: true,
       }),

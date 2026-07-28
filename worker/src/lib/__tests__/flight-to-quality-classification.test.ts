@@ -7,6 +7,7 @@ import type { ReportCardCachePayload } from "../report-card-cache";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v8/evaluation-build-manifest-v1";
 import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9-consumer-freshness";
 
 function reportCardCache(scores: ReportCardCachePayload["scores"]): ReportCardCachePayload {
   return {
@@ -97,7 +98,10 @@ describe("buildFlightToQualityClassification", () => {
   });
 
   it("requires an explicit shadow-lifecycle opt-in and complete V9 snapshot", () => {
-    const snapshot = makeWorkerReportCardsV9Response({ cards: [makeWorkerV9Card()] });
+    const snapshot = makeWorkerReportCardsV9Response({
+      cards: [makeWorkerV9Card()],
+      updatedAt: Math.floor(Date.now() / 1000),
+    });
 
     expect(buildFlightToQualityClassificationFromV9Snapshot(snapshot, { allowShadowLifecycle: false })).toEqual({
       kind: "unavailable",
@@ -126,5 +130,16 @@ describe("buildFlightToQualityClassification", () => {
       },
       { allowShadowLifecycle: true },
     )).toEqual({ kind: "unavailable", reason: "publication-held" });
+  });
+
+  it("fails closed for a stale current V9 snapshot", () => {
+    const snapshot = makeWorkerReportCardsV9Response({
+      updatedAt: Math.floor(Date.now() / 1000) - SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC - 1,
+    });
+
+    expect(buildFlightToQualityClassificationFromV9Snapshot(
+      snapshot,
+      { allowShadowLifecycle: true },
+    )).toEqual({ kind: "unavailable", reason: "source-stale" });
   });
 });

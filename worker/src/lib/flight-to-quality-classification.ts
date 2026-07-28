@@ -6,6 +6,7 @@ import {
   type SafetyScorePublicationIdentity,
 } from "@shared/types/safety-score-publication";
 import { isCurrentSafetyScoreV8Identity } from "./safety-score-current-identity";
+import { isSafetyScoreV9SnapshotFresh } from "./safety-score-v9-consumer-freshness";
 
 const TRACKED_IDS = new Set(MINT_BURN_CONFIGS.map((config) => config.stablecoinId));
 
@@ -39,6 +40,7 @@ export type FlightToQualityClassificationResult =
         | "identity-mismatch"
         | "lifecycle-not-approved"
         | "publication-held"
+        | "source-stale"
         | "source-contract-invalid";
     };
 
@@ -115,6 +117,9 @@ export function buildFlightToQualityClassificationFromV9Snapshot(
   const source = parsed.data;
   if (source.publicationHealth.status === "held") {
     return { kind: "unavailable", reason: "publication-held" };
+  }
+  if (!isSafetyScoreV9SnapshotFresh(source)) {
+    return { kind: "unavailable", reason: "source-stale" };
   }
   return buildFlightToQualityClassification({
     scores: Object.fromEntries(source.cards.map((card) => [card.id, { score: card.score ?? 0, grade: card.grade }])),
