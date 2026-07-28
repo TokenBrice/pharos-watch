@@ -12977,10 +12977,10 @@
     {
       "assetId": "ftusd-flying-tulip",
       "archetype": "synthetic-delta-neutral",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-07-28",
       "sources": [
         {
-          "label": "Flying Tulip live ftUSD status API (per-chain TVL, supply, wrapper capital, delta-neutral strategy legs, circuit-breaker buffers)",
+          "label": "Flying Tulip live ftUSD status API (per-chain TVL, supply, wrapper capital, delta-neutral strategy legs, circuit-breaker buffers; snapshot lastUpdated 2026-07-28T06:27:54Z)",
           "url": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false"
         },
         {
@@ -12988,17 +12988,17 @@
           "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
         }
       ],
-      "notes": "Measured from Flying Tulip's live dashboard API snapshot lastUpdated 2026-07-20T20:16:15Z. Aggregate reserve TVL was $4,275,666.26 against $4,274,474.63 of ftUSD supply across Ethereum ($3,901,393.02 TVL / $3,900,861.15 supply) and Sonic ($374,273.24 TVL / $373,613.48 supply), a reserve excess of $1,191.63 giving marginBufferPct 0.027878 and lossAbsorptionShare 0.000279; the excess is the only first-loss capital because Flying Tulip documents no separately funded insurance pool, junior tranche, or binding treasury top-up. hedgeCoverageRatio is recorded as 1.0 as a structural characterization, not a position-level reconciliation: at this snapshot backing was ~99.98% stablecoin strategy wrappers (USDC/USDT/USSD), the two Ethereum delta-neutral legs were dormant (currentBorrows 0.00 WETH, leverage 1.000x, ~0 wstETH staked), and the only live volatile leg was one Sonic USDC->stS/wS loop (leverage 1.126x, health factor 15.95, $46,062.23 wS short) whose staked long offsets the borrow, so the system carried no material open volatile delta. All curated components are limited because the evidence is issuer-operated telemetry without an independent attestation. NOT established: an independently reproduced pinned-block reconciliation of every wrapper and strategy balance; a position-level stS long balance to reconcile the Sonic hedge exactly; a separately funded insurance/first-loss pool; the maturity or stability of the staged delta-neutral roadmap; and venue-level failure weights (venueShares omitted).",
+      "notes": "Re-measured from Flying Tulip's live dashboard API snapshot lastUpdated 2026-07-28T06:27:54Z. Aggregate reserve TVL was $4,512,957.53 against $4,511,854.15 of ftUSD supply across Ethereum ($4,143,891.52 TVL / $4,143,463.81 supply) and Sonic ($369,066.00 TVL / $368,390.34 supply), a reserve excess of $1,103.38 giving marginBufferPct 0.024455 and lossAbsorptionShare 0.000245. The excess is the only measured first-loss capital because Flying Tulip documents no separately funded insurance pool, junior tranche, or binding treasury top-up. hedgeCoverageRatio remains 1.0 as a structural characterization, not a position-level reconciliation: the Ethereum strategy reported no current WETH borrow and 1.000x leverage, while the live Sonic stS/wS loop reported 1.112x leverage, health factor 17.34, and a $40,624.10 wS short. All curated components remain limited because the measurement comes from issuer-operated telemetry without an independent reserve or position attestation. NOT ESTABLISHED: an independently reproduced pinned-block reconciliation of every wrapper and strategy balance; a position-level stS long balance sufficient to reconcile the Sonic hedge exactly; a separately funded insurance or first-loss pool; the maturity or stability of the staged delta-neutral roadmap; and venue-level failure weights (venueShares omitted).",
       "metrics": {
         "hedgeCoverageRatio": 1.0,
-        "marginBufferPct": 0.027878,
-        "lossAbsorptionShare": 0.000279
+        "marginBufferPct": 0.024455,
+        "lossAbsorptionShare": 0.000245
       },
       "analogousMetrics": {
-        "aggregateReserveTvlUsd": 4275666.2614,
-        "aggregateSupplyUsd": 4274474.6335,
-        "reserveExcessUsd": 1191.6279,
-        "sonicVolatileShortUsd": 46062.23
+        "aggregateReserveTvlUsd": 4512957.5282,
+        "aggregateSupplyUsd": 4511854.1473,
+        "reserveExcessUsd": 1103.3809,
+        "sonicVolatileShortUsd": 40624.1
       },
       "components": {
         "venueAndCustody": {
