@@ -13,6 +13,7 @@ import { USER_AGENT } from "../../lib/constants";
 import { tryParseJson } from "../../lib/json-parse";
 import { readResponseTextWithinLimitWithSignal } from "../../lib/response-body";
 import { tronBase58ToHex, tronHexAddressToBase58 } from "../../lib/tron-address";
+import { rawAmountToUsd, usdToRawAmount } from "./fixed-point";
 import { SUNSWAP_V2_ROUTER_QUOTE_URL } from "./tron-registry";
 
 const TRONGRID_JSON_RPC = "https://api.trongrid.io/jsonrpc";
@@ -399,28 +400,6 @@ async function fetchSunSwapV2RouterDirectQuote(input: {
     routerCodeHash,
     routerFactoryAddress,
   };
-}
-
-function usdToRawAmount(inputUsd: number, decimals: number, referencePriceUsd: number): bigint | null {
-  if (!Number.isFinite(inputUsd) || inputUsd <= 0 || !Number.isInteger(decimals) || decimals < 0 || decimals > 255) {
-    return null;
-  }
-  if (!Number.isFinite(referencePriceUsd) || referencePriceUsd <= 0) return null;
-  const usdScale = 1_000_000n;
-  const priceScale = 100_000_000n;
-  const usdScaled = BigInt(Math.floor(inputUsd * Number(usdScale)));
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  if (priceScaled <= 0n) return null;
-  const amount = usdScaled * 10n ** BigInt(decimals) * priceScale / (usdScale * priceScaled);
-  return amount > 0n ? amount : null;
-}
-
-function rawAmountToUsd(amount: bigint, decimals: number, referencePriceUsd: number): number {
-  const priceScale = 100_000_000n;
-  const usdScale = 1_000_000n;
-  const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-  const usdScaled = amount * priceScaled * usdScale / (10n ** BigInt(decimals) * priceScale);
-  return Number(usdScaled) / Number(usdScale);
 }
 
 export async function quoteTronMeasuredTarget(input: {

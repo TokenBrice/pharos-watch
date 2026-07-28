@@ -15,6 +15,7 @@ import { fetchEvmBlockNumber } from "../../lib/evm-rpc";
 import { toErrorMessage } from "../../lib/error-utils";
 import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
 import { rotateFromCursor } from "../shared/cursor-rotation";
+import { forEachWithConcurrency } from "./concurrency";
 import {
   buildDexMeasuredQuoteGenerationId,
   loadLatestPublishedDexMeasuredTargets,
@@ -140,22 +141,6 @@ interface TargetQuoteState {
   failedReason: string | null;
   stopped: boolean;
   bracket: { lowerPassingUsd: number; upperFailingUsd: number } | null;
-}
-
-async function runWithConcurrency<T>(
-  values: readonly T[],
-  concurrency: number,
-  run: (value: T) => Promise<void>,
-): Promise<void> {
-  let cursor = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, values.length) }, async () => {
-      while (cursor < values.length) {
-        const index = cursor++;
-        await run(values[index]!);
-      }
-    }),
-  );
 }
 
 function deploymentForTarget(target: DexMeasuredExecutionTarget): TargetDeployment | null {
@@ -565,7 +550,7 @@ export async function syncDexMeasuredExecution(
     rows.push(state);
     chainStates.set(state.target.chain, rows);
   }
-  await runWithConcurrency([...chainStates], 3, async ([chain, rows]) => {
+  await forEachWithConcurrency([...chainStates], 3, async ([chain, rows]) => {
     if (!rpcBudget.canRequestChain(chain)) {
       markBudgetStop(rows, rpcBudget.stopReason);
       return;
@@ -750,7 +735,7 @@ export async function syncDexMeasuredExecution(
     rows.push(state);
     uniswapV4StatesByChain.set(state.target.chain, rows);
   }
-  await runWithConcurrency([...uniswapV4StatesByChain.values()], 3, async (rows) => {
+  await forEachWithConcurrency([...uniswapV4StatesByChain.values()], 3, async (rows) => {
     const outcomes = await resolveUniswapV4PoolBindings({
       requests: rows.map((state) => ({
         target: state.target,
@@ -784,7 +769,7 @@ export async function syncDexMeasuredExecution(
     rows.push(state);
     quoterStatesByChain.set(state.target.chain, rows);
   }
-  await runWithConcurrency([...quoterStatesByChain.values()], 3, async (rows) => {
+  await forEachWithConcurrency([...quoterStatesByChain.values()], 3, async (rows) => {
     const rowsByFactory = new Map<string, TargetQuoteState[]>();
     for (const state of rows) {
       const deployment = state.deployment!;
@@ -857,7 +842,7 @@ export async function syncDexMeasuredExecution(
       rows.push(request);
       byChain.set(request.state.target.chain, rows);
     }
-    await runWithConcurrency([...byChain.values()], 3, async (chainRequests) => {
+    await forEachWithConcurrency([...byChain.values()], 3, async (chainRequests) => {
       const byAdapter = new Map<TargetDeployment["kind"], typeof chainRequests>();
       for (const request of chainRequests) {
         const kind = request.state.deployment!.kind;
