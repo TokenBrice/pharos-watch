@@ -314,7 +314,7 @@ describe("buildCoinCoverageMap", () => {
   it("returns bootstrapping when lastSyncedBlock is very close to startBlock", () => {
     const config = pickSingleConfigCoin();
     // lastSyncedBlock only 50 blocks past startBlock.
-    // No first-seen data → historyStartAt = null → has24hWindow = false → bootstrapping.
+    // No first-seen data and less than 24h of scanned range → bootstrapping.
     const lastSynced = config.startBlock + 50;
     const chainHead = config.startBlock + 1_000_000;
     const coverage = buildCoinCoverageMap(
@@ -328,6 +328,50 @@ describe("buildCoinCoverageMap", () => {
       status: "bootstrapping",
       isPartial: true,
       has24hWindow: false,
+    });
+  });
+
+  it("keeps fully scanned quiet XAUT coverage mature after retained event rows expire", () => {
+    const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "xaut-tether");
+    expect(config).toBeDefined();
+
+    const chainHead = 25_631_350;
+    const coverage = buildCoinCoverageMap(
+      1_785_243_764,
+      [], // XAUT's last issuance event is older than hourly retention.
+      new Map([[`${config!.chain.chainId}-${config!.contractAddress}`, chainHead - 5]]),
+      new Map([[config!.chain.chainId, chainHead]]),
+    );
+
+    expect(coverage.get(config!.stablecoinId)).toMatchObject({
+      historyStartAt: null,
+      has24hWindow: true,
+      has30dWindow: true,
+      has90dWindow: true,
+      lagBlocks: 5,
+      isPartial: false,
+      status: "full",
+    });
+  });
+
+  it("uses a quiet scanned range to distinguish partial history from bootstrapping", () => {
+    const config = pickSingleConfigCoin();
+    const tenDaysOfBlocks = Math.ceil((10 * DAY_SECONDS) / 12);
+    const chainHead = config.startBlock + tenDaysOfBlocks;
+    const coverage = buildCoinCoverageMap(
+      200 * DAY_SECONDS,
+      [],
+      new Map([[`${config.chain.chainId}-${config.contractAddress}`, chainHead]]),
+      new Map([[config.chain.chainId, chainHead]]),
+    );
+
+    expect(coverage.get(config.stablecoinId)).toMatchObject({
+      historyStartAt: null,
+      has24hWindow: true,
+      has30dWindow: false,
+      has90dWindow: false,
+      isPartial: true,
+      status: "partial-history",
     });
   });
 
@@ -373,7 +417,7 @@ describe("buildCoinCoverageMap", () => {
     const nowSec = 100 * DAY_SECONDS;
     // first_hour_ts 10 days ago → has 24h window but NOT 30d window
     const firstHourTs = nowSec - 10 * DAY_SECONDS;
-    const referenceHead = config.startBlock + 1_000_000;
+    const referenceHead = config.startBlock + Math.ceil((10 * DAY_SECONDS) / 12);
     const coverage = buildCoinCoverageMap(
       nowSec,
       [{ stablecoin_id: config.stablecoinId, chain_id: config.chain.chainId, first_hour_ts: firstHourTs }],

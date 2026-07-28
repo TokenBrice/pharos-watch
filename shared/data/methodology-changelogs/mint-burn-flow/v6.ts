@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.18",
+    title: "Retention-safe quiet coverage maturity",
+    date: "2026-07-28",
+    effectiveAt: 1785196800,
+    summary:
+      "Mint/burn coverage maturity now uses completed block-scan span when a quiet asset has no retained event row, preventing retention from sending fully observed configs back to bootstrapping.",
+    impact: [
+      "A quiet config with no retained hourly event remains full once its sync cursor proves at least 30 days of configured-chain history",
+      "Genuinely young quiet configs still progress from bootstrapping to partial history before reaching full coverage",
+      "XAUT now reports its mature, near-head Ethereum coverage instead of bootstrapping after its last hourly event aged beyond the 95-day aggregate retention window",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.17",
     title: "Tx-context shortfall exclusion recovery",
     date: "2026-06-07",
