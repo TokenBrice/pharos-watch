@@ -963,7 +963,6 @@ export function resolveV9MintControlGroupSeverity(group: V9MintControlGroupIssue
     : "high";
 }
 
-const SUPPLY_USD_RECONCILIATION_TOLERANCE = 0.01;
 const SHARE_RECONCILIATION_TOLERANCE = 0.000001;
 
 function clampShare(value: number): number {
@@ -993,26 +992,6 @@ function summarizeSupplyChainExposure(supply: V9AssetFactsV2["supply"]): V9Suppl
     };
   }
   if (supply.chainDistribution === null || supply.chainDistribution === undefined) {
-    return {
-      shareBySlug: new Map<string, number>(),
-      unattributedShare: 1,
-      unmatchedChainLabelPoolShare: poolShare,
-      complete: false,
-    };
-  }
-  const circulatingUsd = supply.circulatingUsd;
-  const distributedUsd =
-    supply.chainDistribution.chains.reduce((sum, row) => sum + row.supplyUsd, 0) +
-    supply.chainDistribution.unattributedSupplyUsd;
-  const distributedShare =
-    supply.chainDistribution.chains.reduce((sum, row) => sum + row.supplyShare, 0) +
-    supply.chainDistribution.unattributedSupplyShare;
-  const expectedShare = circulatingUsd !== null && circulatingUsd > 0 ? 1 : 0;
-  if (
-    circulatingUsd === null ||
-    Math.abs(distributedUsd - circulatingUsd) > SUPPLY_USD_RECONCILIATION_TOLERANCE ||
-    Math.abs(distributedShare - expectedShare) > SHARE_RECONCILIATION_TOLERANCE
-  ) {
     return {
       shareBySlug: new Map<string, number>(),
       unattributedShare: 1,
@@ -1328,16 +1307,11 @@ function applyRoleDependencyPillarLimits(
   envelope: V9ValidatedPolicyEnvelope,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
 ): V9ProductionScoreInput["pillars"] {
-  const projections =
-    resolved.rolePillarProjections ??
-    projectV9RoleDependencyPillarLimits(resolved, {
-      unresolvedMaterialityThreshold:
-        envelope.policy.semantic.backing.structural.materialExposureShare,
-    });
+  const projections = resolved.rolePillarProjections;
   return {
     backing: pillars.backing,
-    exit: applyRoleDependencyProjection(pillars.exit, projections.exit, envelope, evaluatedById),
-    control: applyRoleDependencyProjection(pillars.control, projections.control, envelope, evaluatedById),
+    exit: applyRoleDependencyProjection(pillars.exit, projections!.exit, envelope, evaluatedById),
+    control: applyRoleDependencyProjection(pillars.control, projections!.control, envelope, evaluatedById),
   };
 }
 
