@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { readFileSync } from "node:fs";
+import { relative } from "node:path";
+import { runCountRatchet } from "../lib/count-ratchet.mjs";
 import { collectSourceFilesUnderRoot, runAsCli } from "../lib/source-files.mjs";
 
 export const DEFAULT_JSON_PARSE_ROOTS = ["worker/src"];
@@ -52,22 +53,6 @@ export function collectWorkerJsonParseUsage(roots = DEFAULT_JSON_PARSE_ROOTS, cw
   return Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
 }
 
-function readBaseline(path, cwd) {
-  const absolute = join(cwd, path);
-  if (!existsSync(absolute)) return null;
-  const parsed = JSON.parse(readFileSync(absolute, "utf8"));
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error(`${path} must contain a JSON object`);
-  }
-  return parsed;
-}
-
-function writeBaseline(path, counts, cwd) {
-  const absolute = join(cwd, path);
-  mkdirSync(dirname(absolute), { recursive: true });
-  writeFileSync(absolute, `${JSON.stringify(counts, null, 2)}\n`);
-}
-
 /**
  * @param {{
  *   roots?: string[], baselinePath?: string, cwd?: string, updateBaseline?: boolean,
@@ -82,50 +67,23 @@ export function checkJsonParseRatchet({
   stdout = process.stdout,
   stderr = process.stderr,
 } = {}) {
-  const current = collectWorkerJsonParseUsage(roots, cwd);
-
-  if (updateBaseline) {
-    writeBaseline(baselinePath, current, cwd);
-    stdout.write(`Worker raw JSON.parse baseline updated (${Object.keys(current).length} file entries).\n`);
-    return 0;
-  }
-
-  let baseline;
-  try {
-    baseline = readBaseline(baselinePath, cwd);
-  } catch (error) {
-    stderr.write(
-      `[json-parse-ratchet] Failed to read baseline: ${error instanceof Error ? error.message : String(error)}\n`,
-    );
-    return 1;
-  }
-
-  if (!baseline) {
-    stderr.write(`[json-parse-ratchet] Missing baseline at ${baselinePath}. Run with --update-baseline.\n`);
-    return 1;
-  }
-
-  const violations = [];
-  for (const [file, count] of Object.entries(current)) {
-    const baselineCount = Number(baseline[file] ?? 0);
-    if (!Number.isFinite(baselineCount) || count > baselineCount) {
-      violations.push({ file, count, baselineCount: Number.isFinite(baselineCount) ? baselineCount : 0 });
-    }
-  }
-
-  if (violations.length > 0) {
-    stderr.write("Worker raw JSON.parse usage increased:\n\n");
-    for (const violation of violations) {
-      stderr.write(`  ${violation.file}: ${violation.count} > baseline ${violation.baselineCount}\n`);
-    }
-    stderr.write(`\nUse ${SANCTIONED_HELPER_PATH} helpers instead of adding raw JSON.parse calls.\n`);
-    return 1;
-  }
-
-  const currentTotal = Object.values(current).reduce((sum, count) => sum + count, 0);
-  const baselineTotal = Object.values(baseline).reduce((sum, count) => sum + Number(count), 0);
-  stdout.write(`Worker JSON.parse usage: OK (${currentTotal}/${baselineTotal} raw calls at or below baseline)\n`);
-  return 0;
+  return runCountRatchet({
+    collectCounts: () => collectWorkerJsonParseUsage(roots, cwd),
+    baselinePath,
+    cwd,
+    updateBaseline,
+    stdout,
+    stderr,
+    labels: {
+      baselineUpdated: "Worker raw JSON.parse baseline updated",
+      failedToReadBaseline: "[json-parse-ratchet] Failed to read baseline",
+      missingBaseline: "[json-parse-ratchet] Missing baseline",
+      increased: "Worker raw JSON.parse usage increased",
+      ok: "Worker JSON.parse usage",
+      countNoun: "raw calls",
+    },
+    remediation: `Use ${SANCTIONED_HELPER_PATH} helpers instead of adding raw JSON.parse calls.`,
+  });
 }
 
 runAsCli(import.meta.url, () => checkJsonParseRatchet({ updateBaseline: process.argv.includes("--update-baseline") }));
