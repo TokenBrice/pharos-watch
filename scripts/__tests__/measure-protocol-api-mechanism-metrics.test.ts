@@ -409,4 +409,20 @@ describe("protocol API CLI policy", () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  it("keeps replay-all scoped to protocol API refresh target directories", () => {
+    const unrelatedLegacyPath =
+      "shared/data/safety-score-v9/mechanism-measurements/iusd-infinifi/2026-07-27-protocol-api.json";
+    expect(JSON.parse(readFileSync(unrelatedLegacyPath, "utf8"))).toMatchObject({
+      schemaVersion: 1,
+      assetId: "iusd-infinifi",
+    });
+
+    const result = spawnSync("npx", ["tsx", script, "--replay-all"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/replay-all passed/);
+  });
 });

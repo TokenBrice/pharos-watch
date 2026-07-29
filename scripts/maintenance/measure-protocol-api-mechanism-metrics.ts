@@ -98,6 +98,7 @@ async function fetchRawObservation(source: {
 
 function discoverProtocolArtifacts(root: string): string[] {
   const paths: string[] = [];
+
   function visit(directory: string): void {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name);
@@ -105,7 +106,16 @@ function discoverProtocolArtifacts(root: string): string[] {
       else if (entry.isFile() && entry.name.endsWith("-protocol-api.json")) paths.push(path);
     }
   }
-  visit(resolve(root));
+
+  const absoluteRoot = resolve(root);
+  for (const assetId of Object.keys(PROTOCOL_API_TARGETS) as ProtocolApiAssetId[]) {
+    try {
+      visit(join(absoluteRoot, assetId));
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") continue;
+      throw error;
+    }
+  }
   return paths.sort();
 }
 

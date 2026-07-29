@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import ChainsPage from "./page";
-import { extractJsonLd } from "@/test/json-ld";
+import { extractJsonLd, findJsonLdNode, getJsonLdNodeArrayProperty, isJsonLdNode } from "@/test/json-ld";
 
 vi.mock("./client", () => ({
   ChainsLeaderboardClient: () => <div data-testid="chains-client">chains client</div>,
@@ -28,8 +28,9 @@ describe("ChainsPage", () => {
   it("emits CollectionPage and ItemList structured data for crawlable chain profiles", () => {
     const html = renderToStaticMarkup(<ChainsPage />);
     const jsonLd = extractJsonLd(html);
-    const collection = jsonLd.find((node) => node["@type"] === "CollectionPage");
-    const itemList = jsonLd.find((node) => node["@type"] === "ItemList");
+    const collection = findJsonLdNode(jsonLd, (node) => node["@type"] === "CollectionPage", "CollectionPage");
+    const itemList = findJsonLdNode(jsonLd, (node) => node["@type"] === "ItemList", "ItemList");
+    const itemListElement = getJsonLdNodeArrayProperty(itemList, "itemListElement");
 
     expect(collection).toMatchObject({
       "@context": "https://schema.org",
@@ -44,7 +45,7 @@ describe("ChainsPage", () => {
       "@type": "ItemList",
       "@id": "https://pharos.watch/chains/#itemlist",
     });
-    expect(itemList.itemListElement).toEqual(
+    expect(itemListElement).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           item: expect.objectContaining({
@@ -62,7 +63,10 @@ describe("ChainsPage", () => {
         }),
       ]),
     );
-    expect(itemList.itemListElement.every((item: { item: { "@type": string } }) => item.item["@type"] === "WebPage")).toBe(true);
+    expect(itemListElement.every((entry) => {
+      const item = entry.item;
+      return isJsonLdNode(item) && item["@type"] === "WebPage";
+    })).toBe(true);
     expect(JSON.stringify(jsonLd)).not.toContain("\"Product\"");
     expect(JSON.stringify(jsonLd)).not.toContain("/_site-data/");
   });
