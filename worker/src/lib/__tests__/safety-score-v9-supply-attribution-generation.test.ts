@@ -27,6 +27,7 @@ import {
   XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
   XAUT_CANONICAL_RUNTIME_CODE_SHA256,
   XAUT_CANONICAL_TOKEN_ADDRESS,
+  XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
   XAUT_TRANSPARENCY_SOURCE_ID,
   XAUT_TREASURY_ADDRESS,
   type XautLockMintObservation,
@@ -194,6 +195,9 @@ function createAcceptedGeneration(
 // already 780-1150s old when the generation is published, while wM/Centrifuge
 // route reads land within ~30s of capture.
 const XAUT_OBSERVATION_LAG_SEC = 1_000;
+// Beyond anything production emits: the only lag that can still age past XAUT's
+// 3600s override while the generation itself stays inside its 1800s window.
+const XAUT_STALE_OBSERVATION_LAG_SEC = 3_000;
 const WM_SOURCE_AGGREGATE_USD = 87_020_618.58982982;
 const WM_TARGET_AGGREGATE_USD = 91_400_000.25;
 
@@ -212,6 +216,12 @@ const WM_BLOCK_TIME_OFFSET_BY_CHAIN: Record<string, number> = {
   plume: -16,
   solana: -29,
 };
+
+/** wM's attribution observes at its latest route block time. */
+const WM_OBSERVED_OFFSET_SEC = Math.max(
+  ...Object.values(WM_BLOCK_TIME_OFFSET_BY_CHAIN),
+);
+const REVIEWED_DEPLOYMENT_MAX_AGE_SEC = 1_800;
 
 function wmObservations(): ReviewedDeploymentSupplyObservation[] {
   const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
@@ -284,20 +294,21 @@ function coTenantFixedInput(
   });
 }
 
-function laggedXautObservation(): XautLockMintObservation {
+function laggedXautObservation(lagSec: number): XautLockMintObservation {
   const observation = xautObservation();
   return {
     ...observation,
-    blockTimeSec: SOURCE_CLOCK_SEC - XAUT_OBSERVATION_LAG_SEC,
+    blockTimeSec: SOURCE_CLOCK_SEC - lagSec,
     disclosure: {
       ...observation.disclosure,
-      sourceTimestampSec:
-        SOURCE_CLOCK_SEC - XAUT_OBSERVATION_LAG_SEC - 100,
+      sourceTimestampSec: SOURCE_CLOCK_SEC - lagSec - 100,
     },
   };
 }
 
-function createCoTenantGeneration() {
+function createCoTenantGeneration(
+  xautObservationLagSec = XAUT_OBSERVATION_LAG_SEC,
+) {
   const fixedInput = coTenantFixedInput(
     SOURCE_CLOCK_SEC,
     SOURCE_AGGREGATE_USD,
@@ -308,7 +319,7 @@ function createCoTenantGeneration() {
       aggregateSupplyUsd: SOURCE_AGGREGATE_USD,
       registryFingerprint: fixedInput.registryFingerprint,
       scoringClockSec: fixedInput.clockSec,
-      observation: laggedXautObservation(),
+      observation: laggedXautObservation(xautObservationLagSec),
     })!;
   const wmAttribution = deriveReviewedDeploymentUnitPartition({
     assetId: "wm-m0",
@@ -423,15 +434,21 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
   });
 
   it("drops only the asset whose observation aged out of its own window", () => {
-    const generation = createCoTenantGeneration();
+    const generation = createCoTenantGeneration(
+      XAUT_STALE_OBSERVATION_LAG_SEC,
+    );
     expect(generation.acceptedAssetIds).toEqual([
       "wm-m0",
       "xaut-tether",
     ]);
+    const xautBoundaryClockSec =
+      SOURCE_CLOCK_SEC +
+      XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC -
+      XAUT_STALE_OBSERVATION_LAG_SEC;
 
     const bothFresh = applySafetyScoreV9SupplyAttributionGeneration(
       coTenantFixedInput(
-        SOURCE_CLOCK_SEC + 300,
+        xautBoundaryClockSec,
         TARGET_AGGREGATE_USD,
         WM_TARGET_AGGREGATE_USD,
       ),
@@ -444,10 +461,11 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     });
 
     // The generation is still inside its own freshness window, but XAUT's
-    // finalized-block observation is not. wM must keep its attribution.
+    // finalized-block observation is one second past its own bound. wM must
+    // keep its attribution.
     const xautAgedOut = applySafetyScoreV9SupplyAttributionGeneration(
       coTenantFixedInput(
-        SOURCE_CLOCK_SEC + 900,
+        xautBoundaryClockSec + 1,
         TARGET_AGGREGATE_USD,
         WM_TARGET_AGGREGATE_USD,
       ),
@@ -466,6 +484,54 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         xautAgedOut.fixedInput.safetyScoreV9SupplyAttributionById,
       ),
     ).toEqual(["wm-m0"]);
+  });
+
+  it("keeps XAUT past 1800s while co-tenants stay on the 1800s bound", () => {
+    // Owner ruling 2026-07-29: xaut-tether is the only per-asset override.
+    expect(XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC).toBe(3_600);
+
+    const generation = createCoTenantGeneration();
+    const wmBoundaryClockSec =
+      SOURCE_CLOCK_SEC +
+      REVIEWED_DEPLOYMENT_MAX_AGE_SEC +
+      WM_OBSERVED_OFFSET_SEC;
+    const xautAgeSec =
+      wmBoundaryClockSec + 1 - (SOURCE_CLOCK_SEC - XAUT_OBSERVATION_LAG_SEC);
+    expect(xautAgeSec).toBeGreaterThan(REVIEWED_DEPLOYMENT_MAX_AGE_SEC);
+    expect(xautAgeSec).toBeLessThanOrEqual(
+      XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
+    );
+
+    const atWmBound = applySafetyScoreV9SupplyAttributionGeneration(
+      coTenantFixedInput(
+        wmBoundaryClockSec,
+        TARGET_AGGREGATE_USD,
+        WM_TARGET_AGGREGATE_USD,
+      ),
+      generation,
+    );
+    expect(atWmBound).toMatchObject({
+      status: "applied",
+      acceptedAssetIds: ["wm-m0", "xaut-tether"],
+      invalidAssetIds: [],
+    });
+
+    // One second later wM's own 1800s bound expires while XAUT, whose
+    // production-shaped observation is already older, survives on its override.
+    const pastWmBound = applySafetyScoreV9SupplyAttributionGeneration(
+      coTenantFixedInput(
+        wmBoundaryClockSec + 1,
+        TARGET_AGGREGATE_USD,
+        WM_TARGET_AGGREGATE_USD,
+      ),
+      generation,
+    );
+    expect(pastWmBound).toMatchObject({
+      status: "applied",
+      acceptedAssetIds: ["xaut-tether"],
+      rejectedAssetIds: [],
+      invalidAssetIds: ["wm-m0"],
+    });
   });
 
   it("fails closed when a generation ages beyond its observation window", () => {
