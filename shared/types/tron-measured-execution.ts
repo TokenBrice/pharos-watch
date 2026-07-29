@@ -3,14 +3,9 @@ import { z } from "zod";
 import { ExitRouteCapacityPointSchema } from "./exit-route";
 import {
   DEX_MEASURED_CAPACITY_NOTIONALS_USD,
-  DEX_MEASURED_FRESHNESS_MAX_SEC,
-  DEX_MEASURED_MARGINAL_NOTIONAL_USD,
   DEX_MEASURED_MAX_COST_BPS,
-  DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO,
-  buildDexMeasuredCapacityCurve,
-  dexMeasuredCapacityPointMatchesProof,
-  getDexMeasuredExecutionProbeNotionals,
 } from "./measured-execution";
+import { validateNativeMeasuredExecutionProfile } from "./native-measured-execution";
 
 export const TRON_MEASURED_TARGET_SCHEMA_VERSION = "tron-measured-target-v1" as const;
 export const TRON_MEASURED_EXECUTION_SCHEMA_VERSION = "tron-measured-execution-v1" as const;
@@ -169,26 +164,6 @@ export function quoteSunSwapV2ConstantProduct(input: {
   return output > 0n && output < input.reserveOut ? output : null;
 }
 
-function relativeDifference(left: number, right: number): number {
-  if (!Number.isFinite(left) || !Number.isFinite(right) || left <= 0 || right <= 0) return Infinity;
-  return Math.abs(left / right - 1);
-}
-
-function rawAmountToUsd(rawAmount: string, decimals: number, referencePriceUsd: number): number | null {
-  try {
-    const amount = BigInt(rawAmount);
-    const priceScale = 100_000_000n;
-    const usdScale = 1_000_000n;
-    const priceScaled = BigInt(Math.round(referencePriceUsd * Number(priceScale)));
-    if (amount <= 0n || priceScaled <= 0n) return null;
-    const usdScaled = amount * priceScaled * usdScale / (10n ** BigInt(decimals) * priceScale);
-    const usd = Number(usdScaled) / Number(usdScale);
-    return Number.isFinite(usd) && usd > 0 ? usd : null;
-  } catch {
-    return null;
-  }
-}
-
 export type TronMeasuredExecutionValidationReason =
   | "invalid-profile"
   | "target-generation-mismatch"
@@ -218,152 +193,83 @@ export function validateTronMeasuredExecutionProfile(input: {
   const parsed = TronMeasuredExecutionProfileSchema.safeParse(input.profile);
   if (!parsed.success) return ["invalid-profile"];
   const profile = parsed.data;
-  const quotedTarget = input.quotedTarget;
-  const currentTarget = input.currentTarget;
-  const issues = new Set<TronMeasuredExecutionValidationReason>();
-
-  if (profile.targetGenerationId !== input.expectedTargetGenerationId) issues.add("target-generation-mismatch");
-  if (profile.quoteGenerationId !== input.expectedQuoteGenerationId) issues.add("quote-generation-mismatch");
-  if (profile.tokenIn.trackedAssetId !== currentTarget.stablecoinId) issues.add("tracked-input-mismatch");
-  if (profile.quotedAt > input.nowSec + 60) issues.add("future-observation");
-  if (profile.quotedAt < quotedTarget.capturedAt) issues.add("observation-before-target");
-  if (input.nowSec - profile.quotedAt > DEX_MEASURED_FRESHNESS_MAX_SEC) issues.add("stale-observation");
-
-  const snapshotMatches =
-    profile.targetId === quotedTarget.targetId &&
-    profile.adapterProfileId === quotedTarget.adapterProfileId &&
-    profile.protocol === quotedTarget.protocol &&
-    profile.poolId === quotedTarget.poolId &&
-    profile.poolType === quotedTarget.poolType &&
-    JSON.stringify(profile.tokenIn) === JSON.stringify(quotedTarget.tokenIn) &&
-    JSON.stringify(profile.tokenOut) === JSON.stringify(quotedTarget.tokenOut) &&
-    Math.abs(profile.retainedTvlUsdAtQuote - quotedTarget.retainedTvlUsd) <= 0.01 &&
-    Math.abs(profile.retainedPoolPriceUsdAtQuote - quotedTarget.retainedPoolPriceUsd) <= 0.00000001;
-  if (!snapshotMatches) issues.add("target-snapshot-mismatch");
-
-  const identityMatches =
-    profile.targetId === currentTarget.targetId &&
-    profile.poolId === currentTarget.poolId &&
-    profile.tokenIn.address === currentTarget.tokenIn.address &&
-    profile.tokenOut.address === currentTarget.tokenOut.address &&
-    profile.tokenIn.decimals === currentTarget.tokenIn.decimals &&
-    profile.tokenOut.decimals === currentTarget.tokenOut.decimals;
-  if (!identityMatches) issues.add("identity-mismatch");
-  if (relativeDifference(profile.retainedTvlUsdAtQuote, currentTarget.retainedTvlUsd) > 0.2) {
-    issues.add("retained-tvl-mismatch");
-  }
-  if (relativeDifference(profile.retainedPoolPriceUsdAtQuote, currentTarget.retainedPoolPriceUsd) > 0.02) {
-    issues.add("retained-price-mismatch");
-  }
-  if (
-    relativeDifference(profile.tokenIn.referencePriceUsd, currentTarget.tokenIn.referencePriceUsd) > 0.02 ||
-    relativeDifference(profile.tokenOut.referencePriceUsd, currentTarget.tokenOut.referencePriceUsd) > 0.02
-  ) issues.add("token-reference-price-mismatch");
-
-  const recomputedProof = profile.quoteProof.map((point) => {
-    const inputUsd = rawAmountToUsd(point.amountInRaw, profile.tokenIn.decimals, profile.tokenIn.referencePriceUsd);
-    const outputUsd = rawAmountToUsd(point.amountOutRaw, profile.tokenOut.decimals, profile.tokenOut.referencePriceUsd);
-    if (inputUsd == null || outputUsd == null) return null;
-    const costBps = Math.max(0, (1 - outputUsd / inputUsd) * 10_000);
-    return { inputUsd, outputUsd, costBps, passesCostBound: costBps <= profile.maxCostBps };
-  });
-
-  profile.quoteProof.forEach((point, index) => {
-    const route = point.route;
-    const recomputed = recomputedProof[index];
-    const inputIsToken0 = route.inputToken === route.token0 && route.outputToken === route.token1;
-    const inputIsToken1 = route.inputToken === route.token1 && route.outputToken === route.token0;
-    const routerIdentityMatches =
-      route.provider === "sun-smart-router" ||
-      (
-        route.routerAddress === currentTarget.routerAddress &&
-        route.routerCodeHash === currentTarget.expectedRouterCodeHash &&
-        route.routerFactoryAddress === currentTarget.factoryAddress
-      );
-    const reserveIn = inputIsToken0 ? route.reserve0Raw : route.reserve1Raw;
-    const reserveOut = inputIsToken0 ? route.reserve1Raw : route.reserve0Raw;
-    let expectedOutput: bigint | null = null;
-    try {
-      if (inputIsToken0 || inputIsToken1) {
-        expectedOutput = quoteSunSwapV2ConstantProduct({
-          amountIn: BigInt(route.inputAmountRaw),
-          reserveIn: BigInt(reserveIn),
-          reserveOut: BigInt(reserveOut),
+  return validateNativeMeasuredExecutionProfile<
+    TronMeasuredExecutionTarget,
+    TronMeasuredExecutionQuotePointProof,
+    TronMeasuredExecutionProfile,
+    TronMeasuredExecutionValidationReason
+  >({
+    ...input,
+    profile,
+    adapter: {
+      currentIdentityMatches(candidate, currentTarget) {
+        return (
+          candidate.targetId === currentTarget.targetId &&
+          candidate.poolId === currentTarget.poolId &&
+          candidate.tokenIn.address === currentTarget.tokenIn.address &&
+          candidate.tokenOut.address === currentTarget.tokenOut.address &&
+          candidate.tokenIn.decimals === currentTarget.tokenIn.decimals &&
+          candidate.tokenOut.decimals === currentTarget.tokenOut.decimals
+        );
+      },
+      validateQuoteProof({ profile: candidate, currentTarget, point, recomputed }, issues) {
+        const route = point.route;
+        const inputIsToken0 = route.inputToken === route.token0 && route.outputToken === route.token1;
+        const inputIsToken1 = route.inputToken === route.token1 && route.outputToken === route.token0;
+        const routerIdentityMatches =
+          route.provider === "sun-smart-router" ||
+          (
+            route.routerAddress === currentTarget.routerAddress &&
+            route.routerCodeHash === currentTarget.expectedRouterCodeHash &&
+            route.routerFactoryAddress === currentTarget.factoryAddress
+          );
+        const reserveIn = inputIsToken0 ? route.reserve0Raw : route.reserve1Raw;
+        const reserveOut = inputIsToken0 ? route.reserve1Raw : route.reserve0Raw;
+        let expectedOutput: bigint | null = null;
+        try {
+          if (inputIsToken0 || inputIsToken1) {
+            expectedOutput = quoteSunSwapV2ConstantProduct({
+              amountIn: BigInt(route.inputAmountRaw),
+              reserveIn: BigInt(reserveIn),
+              reserveOut: BigInt(reserveOut),
+            });
+          }
+        } catch {
+          expectedOutput = null;
+        }
+        if (
+          point.amountInRaw !== route.inputAmountRaw ||
+          point.amountOutRaw !== route.outputAmountRaw ||
+          route.outputAmountRaw !== route.expectedOutputAmountRaw ||
+          expectedOutput?.toString() !== route.outputAmountRaw ||
+          route.poolId !== candidate.poolId ||
+          route.factoryAddress !== currentTarget.factoryAddress ||
+          route.factoryCodeHash !== currentTarget.expectedFactoryCodeHash ||
+          route.pairCodeHash !== currentTarget.expectedPairCodeHash ||
+          !routerIdentityMatches ||
+          route.inputToken !== candidate.tokenIn.address ||
+          route.outputToken !== candidate.tokenOut.address ||
+          route.routeTokens[0] !== candidate.tokenIn.address ||
+          route.routeTokens[1] !== candidate.tokenOut.address ||
+          recomputed == null
+        ) {
+          issues.add("invalid-quote-proof");
+        }
+        if (
+          route.blockAfter < route.blockBefore ||
+          route.blockAfter - route.blockBefore > TRON_MEASURED_MAX_BLOCK_WINDOW
+        ) {
+          issues.add("invalid-block-proof");
+        }
+      },
+      buildTargetId(candidate) {
+        return buildTronMeasuredExecutionTargetId({
+          stablecoinId: candidate.tokenIn.trackedAssetId ?? "",
+          poolId: candidate.poolId,
+          tokenInAddress: candidate.tokenIn.address,
+          tokenOutAddress: candidate.tokenOut.address,
         });
-      }
-    } catch {
-      expectedOutput = null;
-    }
-    if (
-      recomputed == null ||
-      point.amountInRaw !== route.inputAmountRaw ||
-      point.amountOutRaw !== route.outputAmountRaw ||
-      route.outputAmountRaw !== route.expectedOutputAmountRaw ||
-      expectedOutput?.toString() !== route.outputAmountRaw ||
-      route.poolId !== profile.poolId ||
-      route.factoryAddress !== currentTarget.factoryAddress ||
-      route.factoryCodeHash !== currentTarget.expectedFactoryCodeHash ||
-      route.pairCodeHash !== currentTarget.expectedPairCodeHash ||
-      !routerIdentityMatches ||
-      route.inputToken !== profile.tokenIn.address ||
-      route.outputToken !== profile.tokenOut.address ||
-      route.routeTokens[0] !== profile.tokenIn.address ||
-      route.routeTokens[1] !== profile.tokenOut.address ||
-      Math.abs(recomputed.inputUsd - point.inputUsd) > 0.02 ||
-      Math.abs(recomputed.outputUsd - point.outputUsd) > 0.02 ||
-      Math.abs(recomputed.costBps - point.costBps) > 0.02 ||
-      recomputed.passesCostBound !== point.passesCostBound
-    ) issues.add("invalid-quote-proof");
-    if (
-      route.blockAfter < route.blockBefore ||
-      route.blockAfter - route.blockBefore > TRON_MEASURED_MAX_BLOCK_WINDOW
-    ) issues.add("invalid-block-proof");
+      },
+    },
   });
-
-  const marginal = recomputedProof[0];
-  if (
-    marginal == null ||
-    Math.abs(profile.marginalOutputRatio - marginal.outputUsd / marginal.inputUsd) > 0.000001
-  ) issues.add("invalid-quote-proof");
-  if (marginal == null || marginal.outputUsd / marginal.inputUsd > DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO) {
-    issues.add("quote-price-mismatch");
-  }
-
-  const rebuiltCurve = buildDexMeasuredCapacityCurve(
-    recomputedProof.filter((point): point is NonNullable<typeof point> => point != null),
-    profile.retainedTvlUsdAtQuote,
-  );
-  if (
-    rebuiltCurve.some(
-      (point, index) => !dexMeasuredCapacityPointMatchesProof(profile.capacityCurve[index], point),
-    )
-  ) {
-    issues.add("invalid-capacity-curve");
-  }
-
-  const sorted = [...profile.quoteProof].sort((left, right) => left.inputUsd - right.inputUsd);
-  const probeNotionals = getDexMeasuredExecutionProbeNotionals(profile.retainedTvlUsdAtQuote);
-  let stopped = false;
-  for (const notional of probeNotionals) {
-    const point = sorted.find((candidate) => Math.abs(candidate.inputUsd - notional) <= 0.02);
-    if (stopped ? point != null : point == null) {
-      issues.add("invalid-quote-proof");
-      break;
-    }
-    if (point && !point.passesCostBound) stopped = true;
-  }
-  if (
-    Math.abs((sorted[0]?.inputUsd ?? 0) - DEX_MEASURED_MARGINAL_NOTIONAL_USD) > 0.02 ||
-    sorted.some((point, index) => index > 0 && point.inputUsd <= sorted[index - 1]!.inputUsd)
-  ) issues.add("invalid-quote-proof");
-
-  const expectedTargetId = buildTronMeasuredExecutionTargetId({
-    stablecoinId: profile.tokenIn.trackedAssetId ?? "",
-    poolId: profile.poolId,
-    tokenInAddress: profile.tokenIn.address,
-    tokenOutAddress: profile.tokenOut.address,
-  });
-  if (profile.targetId !== expectedTargetId) issues.add("identity-mismatch");
-
-  return [...issues];
 }

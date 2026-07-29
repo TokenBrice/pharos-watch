@@ -1,16 +1,15 @@
-import type { DexExecutionCapabilityGate } from "@shared/types/market";
 import {
   toTronMeasuredExecutionPublicProfile,
   validateTronMeasuredExecutionProfile,
+  type TronMeasuredExecutionProfile,
+  type TronMeasuredExecutionTarget,
 } from "@shared/types/tron-measured-execution";
 import type { PoolEntry } from "../dex-liquidity/types";
 import { loadLatestPublishedTronMeasuredQuoteEvidence, type LoadedTronMeasuredQuoteEvidence } from "./persistence";
 import {
   createNativeMeasuredExecutionJoinDiagnostics,
-  mapNativeMeasuredExecutionValidationGate,
-  promoteNativeMeasuredExecutionProfile,
-  recordNativeMeasuredExecutionFailure,
-  resetNativeMeasuredExecutionJoinFields,
+  joinNativeMeasuredExecutionEvidence,
+  type NativeMeasuredExecutionJoinAdapter,
   type NativeMeasuredExecutionJoinDiagnostics,
 } from "./native-join";
 import {
@@ -20,6 +19,9 @@ import {
 } from "./tron-registry";
 
 export type TronMeasuredExecutionJoinDiagnostics = NativeMeasuredExecutionJoinDiagnostics;
+
+type TronMeasuredExecutionJoinQuote =
+  LoadedTronMeasuredQuoteEvidence["byTargetId"] extends Map<string, infer T> ? T : never;
 
 export async function loadTronMeasuredExecutionJoinEvidence(
   db: D1Database,
@@ -38,77 +40,40 @@ export function joinTronMeasuredExecutionEvidence(input: {
   nowSec: number;
   resolveAdapterPolicy?: (adapterProfileId: string) => TronMeasuredExecutionAdapter | null;
 }): TronMeasuredExecutionJoinDiagnostics {
-  const diagnostics = createNativeMeasuredExecutionJoinDiagnostics(input.evidence);
-  for (const pools of input.poolsByStablecoin.values()) {
-    for (const pool of pools) {
-      const target = pool.extra?.tronMeasuredExecutionTarget;
-      if (!target) continue;
-      diagnostics.targetCount++;
-      const extra = resetNativeMeasuredExecutionJoinFields(pool, "tron", target);
-      const fail = (reason: DexExecutionCapabilityGate["reason"], detail?: string) => {
-        recordNativeMeasuredExecutionFailure({
-          pool,
-          kind: "tron",
-          target,
-          diagnostics,
-          reason,
-          detail,
-        });
-      };
-      if (!input.evidence) {
-        fail("quote-missing");
-        continue;
-      }
-      const quote = input.evidence.byTargetId.get(target.targetId);
-      if (!quote) {
-        fail("quote-missing");
-        continue;
-      }
-      if (quote.status !== "measured" || !quote.profile) {
-        // A rotating admission deferral was never attempted, so it must not
-        // read as a capability failure of this exact direction.
-        fail(
-          quote.failureReason === "budget-deferred" ? "budget-deferred" : "quote-failed",
-          quote.failureReason ?? undefined,
-        );
-        continue;
-      }
-      const adapter = (input.resolveAdapterPolicy ?? getTronMeasuredExecutionAdapterByProfile)(
-        quote.profile.adapterProfileId,
-      );
-      if (!adapter || adapter.protocol !== quote.profile.protocol || adapter.poolType !== quote.profile.poolType) {
-        fail("invalid-observation", "adapter-registration-mismatch");
-        continue;
-      }
-      const issues = validateTronMeasuredExecutionProfile({
-        profile: quote.profile,
+  const adapter: NativeMeasuredExecutionJoinAdapter<
+    TronMeasuredExecutionTarget,
+    TronMeasuredExecutionProfile,
+    ReturnType<typeof toTronMeasuredExecutionPublicProfile>,
+    TronMeasuredExecutionAdapter,
+    TronMeasuredExecutionJoinQuote,
+    LoadedTronMeasuredQuoteEvidence,
+    TronMeasuredExecutionJoinDiagnostics
+  > = {
+    kind: "tron",
+    getTarget: (pool) => pool.extra?.tronMeasuredExecutionTarget,
+    createDiagnostics: createNativeMeasuredExecutionJoinDiagnostics,
+    resolvePolicy: input.resolveAdapterPolicy ?? getTronMeasuredExecutionAdapterByProfile,
+    policyMatchesProfile: (policy, profile) =>
+      policy.protocol === profile.protocol && policy.poolType === profile.poolType,
+    validateProfile: ({ profile, quote, evidence, target, nowSec }) =>
+      validateTronMeasuredExecutionProfile({
+        profile,
         quotedTarget: quote.quotedTarget,
         currentTarget: target,
-        expectedTargetGenerationId: input.evidence.targetGenerationId,
-        expectedQuoteGenerationId: input.evidence.quoteGenerationId,
-        nowSec: input.nowSec,
-      });
-      if (issues.length > 0) {
-        fail(mapNativeMeasuredExecutionValidationGate(issues), issues.join(","));
-        continue;
-      }
-      const publicProfile = toTronMeasuredExecutionPublicProfile(quote.profile);
-      extra.tronMeasuredExecution = publicProfile;
-      if (!isTronMeasuredExecutionAdapterScoreEligible(adapter)) {
-        fail("activation-pending", "shadow-score-ineligible");
-        diagnostics.measuredCount++;
-        continue;
-      }
-      promoteNativeMeasuredExecutionProfile({
-        pool,
-        kind: "tron",
-        target,
-        publicProfile,
-      });
-      diagnostics.measuredCount++;
-    }
-  }
-  return diagnostics;
+        expectedTargetGenerationId: evidence.targetGenerationId,
+        expectedQuoteGenerationId: evidence.quoteGenerationId,
+        nowSec,
+      }),
+    toPublicProfile: toTronMeasuredExecutionPublicProfile,
+    setPublicProfile: (pool, profile) => {
+      pool.extra!.tronMeasuredExecution = profile;
+    },
+    getActivationFailure: ({ policy }) =>
+      isTronMeasuredExecutionAdapterScoreEligible(policy)
+        ? null
+        : { reason: "activation-pending", detail: "shadow-score-ineligible" },
+  };
+  return joinNativeMeasuredExecutionEvidence({ ...input, adapter });
 }
 
 export function releaseTronMeasuredExecutionProofFields(pools: readonly PoolEntry[]): void {

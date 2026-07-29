@@ -389,4 +389,25 @@ describe("Solana measured execution join", () => {
       reason: "quote-failed",
     });
   });
+
+  it("keeps stale Solana evidence out of the public measured profile", () => {
+    const { pool, evidence } = fixtureJoin();
+
+    const diagnostics = joinSolanaMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([["usdc", [pool]]]),
+      evidence,
+      nowSec: 4_611,
+    });
+
+    expect(diagnostics).toMatchObject({
+      measuredCount: 0,
+      gatedCount: 1,
+      failuresByReason: { "orca-whirlpool-jupiter-v1:stale-observation": 1 },
+    });
+    expect(pool.extra?.executionCapabilityGate).toEqual({
+      family: "measured-execution",
+      reason: "stale-observation",
+    });
+    expect(pool.extra?.solanaMeasuredExecution).toBeUndefined();
+  });
 });

@@ -6,7 +6,7 @@ import {
   type SolanaMeasuredExecutionQuotePointProof,
   type SolanaMeasuredExecutionTarget,
 } from "@shared/types/solana-measured-execution";
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { throwIfAborted } from "../../lib/abort";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
 import { rotateFromCursor } from "../shared/cursor-rotation";
@@ -14,7 +14,7 @@ import {
   buildSolanaMeasuredQuoteGenerationId,
   loadLatestPublishedSolanaMeasuredTargets,
   publishSolanaMeasuredQuoteGeneration,
-  type SolanaMeasuredQuoteOutcome,
+  type PublishedSolanaMeasuredTargets,
 } from "./persistence";
 import {
   getSolanaMeasuredExecutionPriorityTarget,
@@ -26,6 +26,10 @@ import {
   normalizeSolanaMeasuredExecutionFailure,
   quoteSolanaMeasuredTarget,
 } from "./solana-quotes";
+import {
+  syncNativeMeasuredExecution,
+  type NativeMeasuredExecutionSyncAdapter,
+} from "./native-sync";
 
 const SOLANA_ADMISSION_SOURCE_KEY = "measured-execution:solana-admission";
 // Preserve twelve cursor-rotated admissions while reserving one additional
@@ -34,12 +38,6 @@ const SOLANA_ADMISSION_SOURCE_KEY = "measured-execution:solana-admission";
 // general inventory coverage or adding request concurrency.
 export const SOLANA_MEASURED_ROTATING_TARGETS_PER_RUN = 12;
 const SOLANA_RUNTIME_BUDGET_MS = 7 * 60 * 1_000;
-
-interface SolanaQuoteState {
-  target: SolanaMeasuredExecutionTarget;
-  profile: SolanaMeasuredExecutionProfile | null;
-  failureReason: string | null;
-}
 
 export function admitSolanaMeasuredTargets(
   targets: readonly SolanaMeasuredExecutionTarget[],
@@ -154,149 +152,87 @@ export async function syncSolanaDexMeasuredExecution(
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
 ): Promise<CronResult> {
-  const startedAt = Math.floor(Date.now() / 1_000);
-  const deadlineSignal = AbortSignal.timeout(SOLANA_RUNTIME_BUDGET_MS);
-  const producerSignal = signal ? AbortSignal.any([signal, deadlineSignal]) : deadlineSignal;
-  const targetGeneration = await loadLatestPublishedSolanaMeasuredTargets(db, signal);
-  if (!targetGeneration || targetGeneration.targets.length === 0) {
-    return {
-      status: "skipped_neutral",
-      itemCount: 0,
-      metadata: JSON.stringify({ reason: "solana-target-generation-missing", activation: "target-ratified" }),
-      productivity: { productive: false, reason: "solana-target-generation-missing" },
-    };
-  }
-
-  const admissionState = await readDexSourcePaginationState(db, SOLANA_ADMISSION_SOURCE_KEY, "sync-cl-exit-depth");
-  const admissionCursor = admissionState.cursor?.trim() || null;
-  const {
-    admitted,
-    nextCursor,
-    priorityExpectedCount,
-    priorityObservedCount,
-    rotatingAdmittedCount,
-    missingPriorityPolicyIds,
-  } = admitSolanaMeasuredTargets(targetGeneration.targets, admissionCursor);
-  const quoteGenerationId = buildSolanaMeasuredQuoteGenerationId(startedAt);
-  const states: SolanaQuoteState[] = targetGeneration.targets.map((target) => ({
-    target,
-    profile: null,
-    failureReason: admitted.has(target.targetId) ? null : "budget-deferred",
-  }));
-  const stateByTargetId = new Map(states.map((state) => [state.target.targetId, state] as const));
-
-  let completed = 0;
-  for (const target of orderAdmittedSolanaMeasuredTargets(targetGeneration.targets, admitted)) {
-    const state = stateByTargetId.get(target.targetId)!;
-    throwIfAborted(signal);
-    try {
-      state.profile = await measureTarget({
-        target: state.target,
-        targetGenerationId: targetGeneration.generationId,
-        quoteGenerationId,
-        jupiterApiKey,
-        signal: producerSignal,
-      });
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      state.failureReason = normalizeSolanaMeasuredExecutionFailure(error);
-    }
-    completed++;
-    await reportProgress?.({
-      stage: "solana-exact-quotes",
-      message: "Capturing Solana exact execution quotes",
-      itemsDone: completed,
-      itemsTotal: admitted.size,
-      metadata: { activation: "target-ratified", targetGenerationId: targetGeneration.generationId },
-    });
-  }
-
-  const outcomes: SolanaMeasuredQuoteOutcome[] = states.map((state) =>
-    state.profile
-      ? { target: state.target, status: "measured", profile: state.profile }
-      : {
-          target: state.target,
-          status: "failed",
-          failureReason: state.failureReason ?? "quote-failed",
-          rawPayload: {
-            adapterProfileId: state.target.adapterProfileId,
-            targetId: state.target.targetId,
-            failureReason: state.failureReason ?? "quote-failed",
-          },
-        },
-  );
-  const publishedAt = Math.floor(Date.now() / 1_000);
-  const publication = await publishSolanaMeasuredQuoteGeneration({
+  return syncNativeMeasuredExecution({
     db,
-    targetGeneration,
-    outcomes,
-    quotedAt: publishedAt,
-    generationId: quoteGenerationId,
+    credential: jupiterApiKey,
     signal,
+    reportProgress,
+    adapter: SOLANA_NATIVE_SYNC_ADAPTER,
   });
-
-  let cursorWriteStatus: "not-needed" | "written" | "missing-table" | "write-failed" = "not-needed";
-  const deferredCount = targetGeneration.targets.length - admitted.size;
-  if (deferredCount > 0 && nextCursor) {
-    const cursorWrite = await writeDexSourcePaginationState({
-      db,
-      sourceKey: SOLANA_ADMISSION_SOURCE_KEY,
-      cursor: nextCursor,
-      cycleStartedAt: admissionState.cycleStartedAt ?? startedAt,
-      nowSec: publishedAt,
-      completed: false,
-      pagesFetched: rotatingAdmittedCount,
-      diagnostics: [`deferred-targets:${deferredCount}`, `target-generation:${targetGeneration.generationId}`],
-      job: "sync-cl-exit-depth",
-    });
-    cursorWriteStatus = cursorWrite.written
-      ? "written"
-      : cursorWrite.errorClass === "not-configured"
-        ? "write-failed"
-        : cursorWrite.errorClass;
-  }
-
-  const attemptedFailureCount = states.filter(
-    (state) => admitted.has(state.target.targetId) && !state.profile,
-  ).length;
-
-  const metadata = {
-    activation: "target-ratified",
-    targetGenerationId: targetGeneration.generationId,
-    quoteGenerationId: publication.generationId,
-    targetCount: targetGeneration.targets.length,
-    measuredCount: publication.measuredCount,
-    failedCount: publication.failedCount,
-    attemptedFailureCount,
-    deferredCount,
-    priorityExpectedCount,
-    priorityObservedCount,
-    priorityAdmittedCount: priorityObservedCount,
-    rotatingAdmittedCount,
-    missingPriorityPolicyIds,
-    admissionCursor,
-    nextAdmissionCursor: nextCursor,
-    cursorWriteStatus,
-    failuresByReason: outcomes.reduce<Record<string, number>>((counts, outcome) => {
-      if (outcome.status === "failed") {
-        const reason = outcome.failureReason ?? "unknown";
-        counts[reason] = (counts[reason] ?? 0) + 1;
-      }
-      return counts;
-    }, {}),
-  };
-  return {
-    status:
-      attemptedFailureCount > 0 ||
-      missingPriorityPolicyIds.length > 0 ||
-      cursorWriteStatus === "write-failed"
-        ? "degraded"
-        : "ok",
-    itemCount: publication.measuredCount,
-    metadata: JSON.stringify(metadata),
-    productivity: {
-      productive: publication.measuredCount > 0,
-      reason: publication.measuredCount > 0 ? "published-solana-measured-execution" : "no-solana-measured-execution",
-    },
-  };
 }
+
+interface SolanaAdmissionMetadata {
+  priorityExpectedCount: number;
+  priorityObservedCount: number;
+  rotatingAdmittedCount: number;
+  missingPriorityPolicyIds: string[];
+}
+
+export const SOLANA_NATIVE_SYNC_ADAPTER: NativeMeasuredExecutionSyncAdapter<
+  SolanaMeasuredExecutionTarget,
+  SolanaMeasuredExecutionProfile,
+  string,
+  SolanaAdmissionMetadata,
+  PublishedSolanaMeasuredTargets
+> = {
+  runtimeBudgetMs: SOLANA_RUNTIME_BUDGET_MS,
+  missingTargetReason: "solana-target-generation-missing",
+  missingTargetActivation: "target-ratified",
+  progressStage: "solana-exact-quotes",
+  progressMessage: "Capturing Solana exact execution quotes",
+  productivityPublishedReason: "published-solana-measured-execution",
+  productivityEmptyReason: "no-solana-measured-execution",
+  loadTargetGeneration: loadLatestPublishedSolanaMeasuredTargets,
+  readCursor: (db) =>
+    readDexSourcePaginationState(db, SOLANA_ADMISSION_SOURCE_KEY, "sync-cl-exit-depth"),
+  admit: (targets, cursor) => {
+    const admission = admitSolanaMeasuredTargets(targets, cursor);
+    return {
+      admitted: admission.admitted,
+      orderedTargets: orderAdmittedSolanaMeasuredTargets(targets, admission.admitted),
+      nextCursor: admission.nextCursor,
+      cursorPagesFetched: admission.rotatingAdmittedCount,
+      metadata: {
+        priorityExpectedCount: admission.priorityExpectedCount,
+        priorityObservedCount: admission.priorityObservedCount,
+        rotatingAdmittedCount: admission.rotatingAdmittedCount,
+        missingPriorityPolicyIds: admission.missingPriorityPolicyIds,
+      },
+    };
+  },
+  getActivation: () => "target-ratified",
+  buildQuoteGenerationId: buildSolanaMeasuredQuoteGenerationId,
+  measureTarget: ({ target, targetGenerationId, quoteGenerationId, credential, signal }) =>
+    measureTarget({
+      target,
+      targetGenerationId,
+      quoteGenerationId,
+      jupiterApiKey: credential,
+      signal,
+    }),
+  normalizeFailure: normalizeSolanaMeasuredExecutionFailure,
+  publish: publishSolanaMeasuredQuoteGeneration,
+  writeCursor: (input) =>
+    writeDexSourcePaginationState({
+      db: input.db,
+      sourceKey: SOLANA_ADMISSION_SOURCE_KEY,
+      cursor: input.cursor,
+      cycleStartedAt: input.cycleStartedAt,
+      nowSec: input.nowSec,
+      completed: false,
+      pagesFetched: input.pagesFetched,
+      diagnostics: [
+        `deferred-targets:${input.deferredCount}`,
+        `target-generation:${input.targetGenerationId}`,
+      ],
+      job: "sync-cl-exit-depth",
+    }),
+  buildMetadata: ({ admission }) => ({
+    priorityExpectedCount: admission.metadata.priorityExpectedCount,
+    priorityObservedCount: admission.metadata.priorityObservedCount,
+    priorityAdmittedCount: admission.metadata.priorityObservedCount,
+    rotatingAdmittedCount: admission.metadata.rotatingAdmittedCount,
+    missingPriorityPolicyIds: admission.metadata.missingPriorityPolicyIds,
+  }),
+  shouldDegrade: ({ admission }) => admission.metadata.missingPriorityPolicyIds.length > 0,
+};
