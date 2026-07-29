@@ -1064,7 +1064,6 @@ function measuredOperationalMarketDepth(
 }
 
 function operationalResilienceBlockers(
-  asset: V9AssetFactsV3,
   resolved: V9ResolvedDependencyInputs,
   pillars: Readonly<Record<"backing" | "exit" | "control", V9PillarEvaluation>>,
   peg: V9ProductionScoreInput["peg"],
@@ -2487,7 +2486,6 @@ function evaluateV9FactSetRead(
             measuredMarketDepth,
             envelope.policy.semantic.operationalResilience,
             operationalResilienceBlockers(
-              asset,
               resolved,
               basePillars,
               peg,

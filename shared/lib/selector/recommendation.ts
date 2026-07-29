@@ -7,7 +7,6 @@ import type {
   ContextKey,
   MergedRow,
   SelectorChainHints,
-  SelectorInput,
   SelectorProfile,
   SelectorRankRobustness,
   SelectorRecommendation,
@@ -161,7 +160,6 @@ export function buildRecommendation(
   entry: ScoredEntry,
   rank: 1 | 2 | 3,
   profile: SelectorProfile,
-  input: SelectorInput,
   extraContextKeys: readonly ContextKey[] = [],
   rankRobustness?: SelectorRankRobustness,
 ): SelectorRecommendation | null {

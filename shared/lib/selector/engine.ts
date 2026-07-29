@@ -306,7 +306,6 @@ function buildRecommendationPhase(
       entry,
       rank,
       input.profile,
-      input,
       [],
       rankRobustnessFor(ranked, i),
     );
@@ -334,7 +333,6 @@ function buildRecommendationPhase(
         entry,
         rank,
         input.profile,
-        input,
         ["coverage-thin"],
         rankRobustnessFor(relaxed, i),
       );
@@ -359,7 +357,6 @@ function appendSelectorDebug(
       entry,
       rank,
       input.profile,
-      input,
       [],
       rankRobustnessFor(ranked, index),
     );
