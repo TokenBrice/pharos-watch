@@ -342,7 +342,19 @@ async function upsertCronProgress(
            items_total = excluded.items_total,
            message = excluded.message,
            lease_owner = excluded.lease_owner,
-           metadata = excluded.metadata`,
+           metadata = excluded.metadata
+         WHERE cron_run_progress.lease_owner IS NULL
+            OR cron_run_progress.lease_owner = excluded.lease_owner
+            OR (
+              excluded.lease_owner IS NOT NULL
+              AND NOT EXISTS (
+                SELECT 1
+                  FROM cron_leases active_lease
+                 WHERE active_lease.job = cron_run_progress.job
+                   AND active_lease.lease_owner = cron_run_progress.lease_owner
+                   AND active_lease.lease_until >= excluded.updated_at
+              )
+            )`,
       )
       .bind(
         job,
@@ -360,8 +372,21 @@ async function upsertCronProgress(
   );
 }
 
-async function clearCronProgress(db: D1Database, job: string): Promise<void> {
-  await runWithOverloadRetry(() => db.prepare("DELETE FROM cron_run_progress WHERE job = ?").bind(job).run());
+async function clearCronProgress(
+  db: D1Database,
+  job: string,
+  startedAt: number,
+  slotStartedAt: number | null,
+): Promise<void> {
+  await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `DELETE FROM cron_run_progress
+          WHERE job = ? AND started_at = ? AND slot_started_at IS ?`,
+      )
+      .bind(job, startedAt, slotStartedAt)
+      .run(),
+  );
 }
 
 // --- Main cron run logger ---
@@ -627,7 +652,7 @@ export async function logCronRun(
     await progressWriteTail;
     if (progressActivated) {
       try {
-        await clearCronProgress(db, job);
+        await clearCronProgress(db, job, startSec, slotStartedAt);
       } catch (err) {
         console.warn(`[db] Failed to clear cron progress for ${job}:`, err);
       }

@@ -417,6 +417,69 @@ describe("P4 DEX exit route observations", () => {
     };
   }
 
+  function curveDusdStableSwapNgMeasuredProfile(
+    quotedAt: number,
+    completeCycles: number,
+    successfulCycles = completeCycles,
+  ): DexMeasuredExecutionPublicProfile {
+    const profile = curveStableSwapNgMeasuredProfile(quotedAt, completeCycles, successfulCycles);
+    const poolAddress = "0x32e616f4f17d43f9a5cd9be0e294727187064cb3" as const;
+    const usdc = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" as const;
+    const dusd = "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef" as const;
+    const capacityCurve = [
+      { requestedNotionalUsd: 100_000, executableUsd: 24_900 },
+      { requestedNotionalUsd: 1_000_000, executableUsd: 24_900 },
+      { requestedNotionalUsd: 10_000_000, executableUsd: 24_900 },
+      { requestedNotionalUsd: 25_000_000, executableUsd: 24_900 },
+    ].map((point) => ({
+      ...point,
+      maxCostBps: DEX_MEASURED_MAX_COST_BPS,
+      completionRatio: point.executableUsd / point.requestedNotionalUsd,
+    }));
+    return {
+      ...profile,
+      targetId: "curve-stableswap-ng-dusd-usdc",
+      poolId: `ethereum:${poolAddress}`,
+      poolTokenAddresses: [usdc, dusd],
+      tokenIn: {
+        address: dusd,
+        symbol: "DUSD",
+        decimals: 18,
+        referencePriceUsd: 1.0331154651675625,
+        trackedAssetId: "dusd-dialectic",
+      },
+      tokenOut: {
+        address: usdc,
+        symbol: "USDC",
+        decimals: 6,
+        referencePriceUsd: 1,
+        trackedAssetId: "usdc-circle",
+      },
+      retainedTvlUsdAtQuote: 27_477.27,
+      retainedPoolPriceUsdAtQuote: 1.0331154651675625,
+      blockNumber: 25_638_735,
+      executionEndpoint: {
+        address: poolAddress,
+        codeHash: "0x1fb319d2b11164fe6584bf44ed640436ce07baa68c65e5b3b2338aa4ad8b6ac7",
+      },
+      stableSwapNgFactoryProvenance: {
+        blockNumber: 25_638_735,
+        blockHash: `0x${"34".repeat(32)}`,
+        blockCommitment: "finalized",
+        factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
+        factoryCodeHash: "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
+        poolIndex: 580,
+        registeredPoolAddress: poolAddress,
+        poolTokenAddresses: [usdc, dusd],
+      },
+      capacityCurve,
+      observationHistory: {
+        ...profile.observationHistory!,
+        conservativeCapacityCurve: capacityCurve,
+      },
+    };
+  }
+
   function curveStableSwapNgAmmModel() {
     return {
       source: "curve" as const,
@@ -1023,6 +1086,47 @@ describe("P4 DEX exit route observations", () => {
     expect(
       result.coverage.unsupportedReasons["invalidMeasuredExecution:physical-pool-provenance-mismatch"],
     ).toBe(1);
+  });
+
+  it("admits reviewed DUSD NG get_dy evidence as score-eligible measured exit coverage", () => {
+    const observedAt = 1_784_879_259;
+    const physicalPoolId = "ethereum:0x32e616f4f17d43f9a5cd9be0e294727187064cb3";
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "dusd-dialectic",
+      observedAt,
+      retainedPools: [{
+        poolId: "curve-dusd-usdc-defillama-uuid",
+        project: "curve",
+        chain: "ethereum",
+        tvlUsd: 27_477.27,
+        symbol: "DUSD-USDC",
+        poolType: "curve-stableswap-high-a",
+        source: "dl",
+        extra: {
+          measuredExecution: curveDusdStableSwapNgMeasuredProfile(observedAt - 60, 3),
+          measuredExecutionPhysicalPoolId: physicalPoolId,
+        },
+      }],
+    });
+
+    expect(result.coverage).toMatchObject({
+      capabilityMatrixVersion: "p4a.8",
+      retainedPoolCount: 1,
+      observationCount: 1,
+      scoreEligibleCapabilityPoolCount: 1,
+      scoreEligiblePoolCount: 1,
+      unsupportedPoolCount: 0,
+      evidenceCounts: { "measured-executable-depth": 1 },
+    });
+    expect(result.observations[0]).toMatchObject({
+      evidenceKind: "measured-executable-depth",
+      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
+      confidence: "high",
+      executableUsd: 24_900,
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
+      scope: { kind: "chain-contract", contractOrPoolId: physicalPoolId },
+    });
+    expect(isDexExitRouteCoverageComplete(result.coverage)).toBe(true);
   });
 
   it("rejects a partial or provenance-drifted 3pool packet instead of masking it with reserves", () => {

@@ -60,9 +60,9 @@ const CRON_TIMEOUT_OVERRIDES_MS: Record<string, number> = {
   "sync-blacklist": 12 * 60_000,
   "sync-mint-burn": 10 * 60_000,
   "sync-mint-burn-extended": 10 * 60_000,
-  // Telegram alert fan-out targets a 15-minute normal SLO for 5k watchers.
-  // Keep the app timeout under Cloudflare's scheduled-event ceiling while
-  // leaving room for cron_runs logging and sidecar skips.
+  // Telegram send loops stop admitting batches after four minutes. Leave
+  // 30 seconds for durable finalization, but fail before the next five-minute
+  // dispatch invocation can be suppressed by a still-renewing stalled lease.
   "dispatch-telegram-alerts": TELEGRAM_DISPATCH_TIMEOUT_MS,
   "snapshot-public-dataset": PUBLIC_DATASET_CRON_TIMEOUT_MS,
   // Daily digest: Anthropic budget is 12 min, wrapper caps at 14 min to leave

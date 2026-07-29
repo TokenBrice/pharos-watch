@@ -344,6 +344,56 @@ describe("enrichRowBalances", () => {
     expect(resolvedUpdates.map((entry) => entry.binds[2])).toEqual([12, 12]);
   });
 
+  it("honors a smaller repair limit for the post-scan maintenance tail", async () => {
+    vi.mocked(fetchEvmTokenBalance).mockResolvedValue(10);
+    const candidates = Array.from({ length: 10 }, (_, i) => ({
+      id: `row-${i}`,
+      chain_id: "ethereum",
+      event_type: "blacklist",
+      address: `0x${(i + 1).toString(16).padStart(40, "0")}`,
+      block_number: 100,
+      stablecoin: "USDC",
+      tx_hash: `0x${i}`,
+      config_key: null,
+      contract_address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      amount_attempt_count: 0,
+      amount_last_attempted_at: null,
+      amount_last_error_class: null,
+      amount_last_provider: null,
+      amount_source: "unavailable",
+      queue_attempt_count: 0,
+    }));
+    const db = mockD1([
+      {
+        match: "blacklist-amount-recovery-evm-candidates",
+        rows: candidates,
+      },
+    ]);
+
+    const result = await backfillAmounts(
+      db,
+      null,
+      null,
+      async <T>(fn: () => Promise<T>) => fn(),
+      makeRunBudget({ subrequestBudget: { count: 0, limit: 100 } }),
+      undefined,
+      undefined,
+      { maxRows: 10 },
+    );
+
+    expect(result).toEqual({
+      runtimeBudgetReached: false,
+      attempted: 10,
+      resolved: 10,
+      retried: 0,
+      unrecoverable: 0,
+    });
+    const candidateQuery = db.getHistory().find((entry) =>
+      entry.sql.includes("blacklist-amount-recovery-evm-candidates"),
+    );
+    expect(candidateQuery?.binds).toEqual([3, 10]);
+  });
+
   it("marks exhausted legacy derived-zero rows permanently unavailable when config cannot be resolved", async () => {
     const db = mockD1([
       {

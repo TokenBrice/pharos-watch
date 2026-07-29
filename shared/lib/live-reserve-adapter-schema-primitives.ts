@@ -569,6 +569,7 @@ const makinaStrategyParamsSchema = z
   .object({
     allocationsUrl: AbsoluteUrlSchema,
     machineAddress: EvmAddressSchema,
+    asyncRedeemerAddress: EvmAddressSchema.optional(),
     accountingTokenSymbol: z.string().min(1).optional(),
     accountingTokenDecimals: z.number().int().nonnegative().max(36).optional(),
     otherThresholdPct: z.number().positive().max(20).optional(),

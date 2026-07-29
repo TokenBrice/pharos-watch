@@ -21,15 +21,25 @@ describe("Safety Score V9 publication codec", () => {
     ).resolves.toEqual(publication);
   });
 
-  it("projects the one-release legacy envelope to its accepted publication", async () => {
+  it("rejects the retired pre-cutover legacy envelope shapes", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
-    const legacy = stableJsonStringifyV1({
+    const legacyCandidateWrapper = stableJsonStringifyV1({
       candidate: publication,
       retiredReleaseEvidence: [],
     });
 
     await expect(
-      parseSafetyScoreV9Publication(legacy),
-    ).resolves.toEqual(publication);
+      parseSafetyScoreV9Publication(legacyCandidateWrapper),
+    ).rejects.toThrow();
+
+    const stored = await serializeSafetyScoreV9Publication(publication);
+    const shadowKindEnvelope = stableJsonStringifyV1({
+      ...JSON.parse(stored),
+      kind: "safety-score-v9-shadow-envelope",
+    });
+
+    await expect(
+      parseSafetyScoreV9Publication(shadowKindEnvelope),
+    ).rejects.toThrow();
   });
 });

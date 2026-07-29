@@ -1198,7 +1198,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
   it("attributes a same-day partial mechanism component to the admission method", () => {
     const fixed = exactFixedInput({
       assetId: "uusd-anything-labs",
-      clockSec: Date.parse("2026-07-28T09:17:27.000Z") / 1_000,
+      clockSec: Date.parse("2026-07-29T09:17:27.000Z") / 1_000,
     });
     const baseline = buildSafetyScoreV9BaselineExtension(fixed);
     expect(baseline.assets[0]).toMatchObject({
@@ -1210,7 +1210,11 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       },
       mechanismReviewGapDisposition: {
         responsibility: "method-unsupported",
-        componentKeys: ["assuranceAndReconciliation"],
+        componentKeys: [
+          "assuranceAndReconciliation",
+          "claimAndSegregation",
+          "custodyContinuity",
+        ],
       },
     });
 
@@ -1224,6 +1228,32 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
         responsibility: "method-unsupported",
       }),
     );
+  });
+
+  it("attributes reviewed unavailable mechanism components to issuer nondisclosure after the date gate", () => {
+    const fixed = exactFixedInput({
+      assetId: "uusd-anything-labs",
+      clockSec: Date.parse("2026-07-30T00:00:00.000Z") / 1_000,
+    });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed);
+    expect(baseline.assets[0]).not.toHaveProperty("mechanismReviewGapDisposition");
+
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
+    for (const componentKey of [
+      "assuranceAndReconciliation",
+      "claimAndSegregation",
+      "custodyContinuity",
+    ]) {
+      expect(compiled.assets[0]!.gaps).toContainEqual(
+        expect.objectContaining({
+          path: {
+            kind: "local-component",
+            componentKey: `mechanism-review:${componentKey}`,
+          },
+          responsibility: "issuer-undisclosed",
+        }),
+      );
+    }
   });
 
   it("compiles clock-valid operational-resilience claims with one evidence record per cited source", () => {
@@ -3935,10 +3965,10 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     ).toMatchObject({ freshness: { state: "stale", maxAgeSec: V9_ACCESS_EVIDENCE_MAX_AGE_SEC } });
 
     expect(build(true).registryFingerprint).toBe(build(true, transferFact("permissionless")).registryFingerprint);
-    // The 9.02 methodology identity and shared version surface rotate the
-    // historical V8 evaluation build even though V8 scoring behavior is frozen.
+    // Shared exit-route capacity source changes rotate the historical V8
+    // evaluation build even though V8 scoring behavior is frozen.
     expect(SAFETY_SCORE_V8_EVALUATION_BUILD_DIGEST).toBe(
-      "0f292f531740e92ce48683934cb0b649ee8cb1d69459c481662396dff1e606e6",
+      "465cfa3ed313dd4eddef548fd57ae87773b5579b4c2d740f4fc63cf30b563406",
     );
   });
 

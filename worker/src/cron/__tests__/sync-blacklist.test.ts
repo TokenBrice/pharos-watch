@@ -89,6 +89,7 @@ vi.mock("../../lib/blacklist-contracts", () => ({
     signature
       ? config.events.find((event) => event.signature === signature || event.signature.split("(")[0] === signature)
       : undefined,
+  getBlacklistConfigsForSymbolAndChain: () => [],
 }));
 
 vi.mock("../../lib/alchemy-logs", () => ({
@@ -655,6 +656,71 @@ describe("syncBlacklist", () => {
     expect(meta.contractsSkipped).toBeGreaterThan(0);
     expect(meta.producerSnapshotSkipped).toBe(true);
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
+  });
+
+  it("uses the bounded maintenance tail to repair queued amounts after scan exhaustion", async () => {
+    const db = mockD1([
+      { match: "blacklist_sync_state", rows: [] },
+      {
+        match: "blacklist-amount-recovery-evm-candidates",
+        rows: [{
+          id: "repair-row-1",
+          chain_id: "ethereum",
+          event_type: "blacklist",
+          address: "0x1111111111111111111111111111111111111111",
+          block_number: 100,
+          stablecoin: "USDC",
+          tx_hash: "0xrepair",
+          config_key: null,
+          contract_address: null,
+          amount_attempt_count: 0,
+          amount_last_attempted_at: null,
+          amount_last_error_class: null,
+          amount_last_provider: null,
+          amount_source: "unavailable",
+          queue_attempt_count: 0,
+        }],
+      },
+      { match: "blacklist_events", rows: [] },
+    ]);
+
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
+    vi.mocked(fetchAlchemyLogs).mockImplementationOnce(async () => {
+      vi.setSystemTime(new Date("2025-06-15T12:10:05Z"));
+      return {
+        logs: [],
+        complete: true,
+        scannedToBlock: 20000000,
+        calls: 1,
+        maxDepth: 0,
+      };
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ result: "0x0000000000000000000000000000000000000000000000000000000000989680" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+
+    const result = await syncBlacklist(buildTestOpts({ db }));
+    const meta = JSON.parse(result.metadata);
+
+    expect(result.status).toBe("degraded");
+    expect(meta.runtimeBudgetReached).toBe(true);
+    expect(meta.amountRepairTailWindowUsed).toBe(true);
+    expect(meta.amountRepairTailLimit).toBe(10);
+    expect(meta.amountRepairAttempted).toBe(1);
+    expect(meta.amountRepairResolved).toBe(0);
+    expect(meta.amountRepairRetried).toBe(1);
+    expect(meta.maintenanceRuntimeBudgetMs).toBe(645_000);
+    const candidateQuery = db.getHistory().find((entry) =>
+      entry.sql.includes("blacklist-amount-recovery-evm-candidates"),
+    );
+    expect(candidateQuery?.binds).toEqual([3, 10]);
   });
 
   it("degrades a one-contract runtime tail and withholds producer snapshots", async () => {

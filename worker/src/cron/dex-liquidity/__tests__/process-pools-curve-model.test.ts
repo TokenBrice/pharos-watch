@@ -23,6 +23,8 @@ const USDT_3POOL = "0xdac17f958d2ee523a2206206994597c13d831ec7";
 const USDG_NG = "0xe343167631d89b6ffc58b88d6b7fb0228795491d";
 const USDC_NG = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const USDG_NG_POOL = "0xc061caa073f3d95f80f8e5428d32d2d76f5e1622";
+const DUSD_NG = "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef";
+const DUSD_NG_POOL = "0x32e616f4f17d43f9a5cd9be0e294727187064cb3";
 
 function entry(overrides: Partial<CurvePoolEntry> = {}): CurvePoolEntry {
   return {
@@ -313,7 +315,7 @@ describe("buildCurveStableswapExecutionModel", () => {
     ])), "reviewed packet should restore only when every independent price is present").toHaveLength(2);
   });
 
-  it("builds only the exact reviewed USDG -> USDC StableSwap-NG target", () => {
+  it("builds only exact reviewed StableSwap-NG get_dy targets", () => {
     const ngPool = entry({
       poolAddress: USDG_NG_POOL,
       apiIsBroken: false,
@@ -383,6 +385,53 @@ describe("buildCurveStableswapExecutionModel", () => {
     expect(build({
       curveData: { ...ngPool, registryId: "main" },
     })).toBeNull();
+
+    const dusdPool = entry({
+      poolAddress: DUSD_NG_POOL,
+      apiIsBroken: false,
+      registryId: "factory-stable-ng",
+      A: 1_000,
+      tvl: 27_477,
+      metapoolAdjustedTvl: 27_477,
+      executionCoins: [
+        { address: USDC_NG, symbol: "USDC", decimals: 6, balance: 6_877_268_070, usdPrice: 1 },
+        { address: DUSD_NG, symbol: "DUSD", decimals: 18, balance: 19_939.689669, usdPrice: 1.033115 },
+      ],
+    });
+    const dusdTarget = buildCurveStableSwapNgMeasuredExecutionTarget({
+      curveData: dusdPool,
+      chain: "ethereum",
+      stablecoinId: "dusd-dialectic",
+      chainAddressToId: new Map([
+        [`ethereum:${USDC_NG}`, "usdc-circle"],
+        [`ethereum:${DUSD_NG}`, "dusd-dialectic"],
+      ]),
+      stablecoinPriceById: new Map([
+        ["dusd-dialectic", 1.033115],
+        ["usdc-circle", 1],
+      ]),
+      retainedTvlUsd: 27_477,
+      capturedAt: 1_784_879_199,
+    });
+    expect(resolveReviewedCurveStableSwapNgPhysicalPoolId({
+      curveData: dusdPool,
+      chain: "ethereum",
+    })).toBe(`ethereum:${DUSD_NG_POOL}`);
+    expect(dusdTarget).toMatchObject({
+      adapterProfileId: "curve-stableswap-ng-factory-get-dy-v2",
+      stablecoinId: "dusd-dialectic",
+      poolId: `ethereum:${DUSD_NG_POOL}`,
+      tokenIn: {
+        address: DUSD_NG,
+        trackedAssetId: "dusd-dialectic",
+        decimals: 18,
+      },
+      tokenOut: {
+        address: USDC_NG,
+        trackedAssetId: "usdc-circle",
+        decimals: 6,
+      },
+    });
   });
 
   it("resolves only a unique close-TVL candidate from the active CryptoSwap cohort", () => {

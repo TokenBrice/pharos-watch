@@ -170,6 +170,7 @@ Applied sequentially after the baseline (fresh setup) or after the previous indi
 | 0224     | `0224_dex_liquidity_scoring_stage.sql`                        | Add generation-fenced bounded DEX pool-state chunks for the split source-build and scoring invocations                                                    |
 | 0225     | `0225_dex_archive_manifest.sql`                               | Add private-R2 DEX archive manifests, exact generation dependencies, and compact family rollout/status state                                                |
 | 0226     | `0226_safety_score_v9_canonical_cache.sql`                    | Seed canonical V9 publication and health cache keys from the accepted shadow-era values without deleting rollback state                                      |
+| 0227     | `0227_cngn_ddr_events_90718_90738_link.sql`                   | Link three reviewed cNGN live events after the 0215 repair, advance ordered lineage, and close their durable DDR repair tasks                                  |
 
 ## Retired Individual Migrations
 
@@ -285,6 +286,7 @@ Current owner rulings for append-only operational/product tables that are intent
 - `0224_dex_liquidity_scoring_stage.sql`: roll back the split scoring lane by restoring the prior Worker. Keep the additive generation/chunk tables; older Workers ignore them. Incomplete generations are never public data and can be pruned after rollback.
 - `0225_dex_archive_manifest.sql`: roll back archive behavior by restoring the prior Worker and setting both archive modes to `off`. Keep the additive manifests, dependency rows, and family state for forensic inspection; do not delete verified R2 objects or restore source rows unless the bounded restore command has independently verified schema, counts, bytes, and hash.
 - `0226_safety_score_v9_canonical_cache.sql`: roll back by restoring the prior Worker, which continues reading the retained shadow-era cache keys. Keep the additive canonical cache rows; they are inert to the prior Worker and must not be deleted during a normal rollback.
+- `0227_cngn_ddr_events_90718_90738_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, links, and ordered revisions as reviewed provenance; do not recreate the closed tasks or detach events 90718, 90729, and 90738 without a separate corrective migration.
 
 ## Rollback Procedure
 

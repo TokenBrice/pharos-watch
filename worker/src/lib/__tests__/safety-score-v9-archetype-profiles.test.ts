@@ -25,7 +25,7 @@ import {
 
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
-const PROFILE_CLOCK_SEC = Date.UTC(2026, 6, 28) / 1_000;
+const PROFILE_CLOCK_SEC = Date.UTC(2026, 6, 30) / 1_000;
 const PROFILE_FIXED_INPUT = {
   clockSec: PROFILE_CLOCK_SEC,
   liveReserveMap: {},
@@ -144,8 +144,8 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
       reflexiveBackingShare: 0.0,
       contractionCapacityRatio: 0.871,
       contractionCapacity: {
-        status: { observationState: "bounded-unknown" },
-        quality: null,
+        status: { observationState: "known" },
+        quality: "adequate",
       },
       confidenceAndIncentives: {
         status: { observationState: "known" },
@@ -156,8 +156,8 @@ describe("Safety Score v9 production-shaped archetype fixtures", () => {
         quality: "adequate",
       },
       emergencyRecovery: {
-        status: { observationState: "bounded-unknown" },
-        quality: null,
+        status: { observationState: "known" },
+        quality: "limited",
       },
       lossRecovery: {
         status: { observationState: "bounded-unknown" },

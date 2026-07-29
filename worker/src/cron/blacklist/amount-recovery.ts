@@ -34,7 +34,7 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
 import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "./amount-repair-queue";
 
-// Conservative hourly recovery cap: one D1 batch chunk and well below the
+// Conservative scheduled recovery cap: one D1 batch chunk and well below the
 // sync-blacklist 900-subrequest run budget observed in production.
 const BACKFILL_BATCH_SIZE = 100;
 const MAX_DERIVED_RECOVERY_ATTEMPTS = 3;
@@ -335,6 +335,18 @@ export interface RecoverBlacklistAmountForRowResult {
   lastProvider: BlacklistRecoveryProvider;
 }
 
+export interface BlacklistAmountBackfillResult {
+  runtimeBudgetReached: boolean;
+  attempted: number;
+  resolved: number;
+  retried: number;
+  unrecoverable: number;
+}
+
+export interface BlacklistAmountBackfillOptions {
+  maxRows?: number;
+}
+
 function inferHistoricalBalanceProvider(
   drpcApiKey: string | null,
   etherscanApiKey: string | null,
@@ -480,9 +492,14 @@ export async function backfillAmounts(
   runBudget: BlacklistRunBudget,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<{ runtimeBudgetReached: boolean }> {
+  options: BlacklistAmountBackfillOptions = {},
+): Promise<BlacklistAmountBackfillResult> {
+  const maxRows = Math.max(
+    1,
+    Math.min(BACKFILL_BATCH_SIZE, Math.floor(options.maxRows ?? BACKFILL_BATCH_SIZE)),
+  );
   if (blacklistRuntimeBudgetReached(runBudget)) {
-    return { runtimeBudgetReached: true };
+    return { runtimeBudgetReached: true, attempted: 0, resolved: 0, retried: 0, unrecoverable: 0 };
   }
 
   await refreshBlacklistAmountRepairQueue(db, Math.floor(Date.now() / 1000));
@@ -537,7 +554,7 @@ export async function backfillAmounts(
          events.timestamp DESC
        LIMIT ?`,
     )
-    .bind(MAX_DERIVED_RECOVERY_ATTEMPTS, BACKFILL_BATCH_SIZE)
+    .bind(MAX_DERIVED_RECOVERY_ATTEMPTS, maxRows)
     .all<{
       id: string;
       chain_id: string;
@@ -556,10 +573,15 @@ export async function backfillAmounts(
       queue_attempt_count: number;
     }>();
 
-  if (!result.results?.length) return { runtimeBudgetReached: false };
+  if (!result.results?.length) {
+    return { runtimeBudgetReached: false, attempted: 0, resolved: 0, retried: 0, unrecoverable: 0 };
+  }
 
   const stmts: D1PreparedStatement[] = [];
   let processedRepairRows = 0;
+  let resolvedRepairRows = 0;
+  let retriedRepairRows = 0;
+  let unrecoverableRepairRows = 0;
   const assetPriceCache = new Map<BlacklistStablecoin, number | null>();
   let runtimeBudgetHit = false;
   const getAssetPriceUsd = async (stablecoin: BlacklistStablecoin): Promise<number | null> => {
@@ -611,6 +633,11 @@ export async function backfillAmounts(
           errorClass: row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
         }),
       );
+      if (derivedRetryExhausted) {
+        unrecoverableRepairRows++;
+      } else {
+        retriedRepairRows++;
+      }
       continue;
     }
 
@@ -693,6 +720,11 @@ export async function backfillAmounts(
           errorClass: lastErrorClass,
         }),
       );
+      if (targetStatus === "permanently_unavailable") {
+        unrecoverableRepairRows++;
+      } else {
+        resolvedRepairRows++;
+      }
     } else {
       const wasLegacyDerived = row.amount_source === "derived";
       const derivedRetryExhausted =
@@ -719,6 +751,11 @@ export async function backfillAmounts(
           errorClass: lastErrorClass,
         }),
       );
+      if (derivedRetryExhausted) {
+        unrecoverableRepairRows++;
+      } else {
+        retriedRepairRows++;
+      }
     }
   }
 
@@ -727,7 +764,13 @@ export async function backfillAmounts(
     console.log(`[sync-blacklist] Backfilled amounts for ${processedRepairRows} events`);
   }
 
-  return { runtimeBudgetReached: runtimeBudgetHit };
+  return {
+    runtimeBudgetReached: runtimeBudgetHit,
+    attempted: processedRepairRows,
+    resolved: resolvedRepairRows,
+    retried: retriedRepairRows,
+    unrecoverable: unrecoverableRepairRows,
+  };
 }
 
 export async function backfillTronFromLedger(

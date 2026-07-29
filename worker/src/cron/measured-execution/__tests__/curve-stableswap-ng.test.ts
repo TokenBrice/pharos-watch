@@ -14,6 +14,7 @@ import {
 } from "@shared/types/measured-execution";
 import type { EvmBlockHeader, EvmMulticall3Call } from "../../../lib/evm-rpc";
 import {
+  CURVE_DUSD_USDC_STABLESWAP_NG_POLICY,
   CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
   CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
   createCurveStableSwapNgDeploymentVerifier,
@@ -163,8 +164,9 @@ async function validDeploymentCode(
   };
 }
 
-function target(): DexMeasuredExecutionTarget {
-  const policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
+function target(
+  policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
+): DexMeasuredExecutionTarget {
   const poolId = `${policy.chain}:${policy.poolAddress}`;
   const poolTokenAddresses = policy.poolTokens.map((token) => token.address);
   const tokenIn = {
@@ -202,7 +204,7 @@ function target(): DexMeasuredExecutionTarget {
 }
 
 describe("reviewed Curve StableSwap-NG policy", () => {
-  it("admits only the exact USDG/USDC factory deployment and direction", () => {
+  it("admits only reviewed factory deployments and directions", () => {
     expect(CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID).toBe(
       "curve-stableswap-ng-factory-get-dy-v2",
     );
@@ -217,10 +219,28 @@ describe("reviewed Curve StableSwap-NG policy", () => {
       mode: "active",
       scoreEligible: true,
     });
+    expect(CURVE_DUSD_USDC_STABLESWAP_NG_POLICY).toMatchObject({
+      chain: "ethereum",
+      stablecoinId: "dusd-dialectic",
+      poolAddress: "0x32e616f4f17d43f9a5cd9be0e294727187064cb3",
+      factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
+      factoryPoolIndex: 580,
+      inputIndex: 1,
+      outputIndex: 0,
+      mode: "active",
+      scoreEligible: true,
+    });
     expect(resolveCurveStableSwapNgTokenIndices(target())).toEqual({
       ok: true,
       inputIndex: 0,
       outputIndex: 1,
+    });
+    expect(resolveCurveStableSwapNgTokenIndices(
+      target(CURVE_DUSD_USDC_STABLESWAP_NG_POLICY),
+    )).toEqual({
+      ok: true,
+      inputIndex: 1,
+      outputIndex: 0,
     });
     expect(resolveCurveStableSwapNgTokenIndices({
       ...target(),
@@ -510,9 +530,20 @@ describe("reviewed Curve StableSwap-NG quoting", () => {
         result: 9_935_746_449_346n,
       }),
     )).toBe(9_935_746_449_346n);
+    expect(decodeFunctionData({
+      abi: POOL_ABI,
+      data: encodeCurveStableSwapNgGetDy({
+        inputIndex: 1,
+        outputIndex: 0,
+        amountInRaw: 1_000_000n,
+      }),
+    })).toMatchObject({
+      functionName: "get_dy",
+      args: [1n, 0n, 1_000_000n],
+    });
     expect(() => encodeCurveStableSwapNgGetDy({
       inputIndex: 1,
-      outputIndex: 0,
+      outputIndex: 1,
       amountInRaw: 1_000_000n,
     })).toThrow("indices or amount are invalid");
   });

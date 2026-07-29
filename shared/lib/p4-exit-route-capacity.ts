@@ -64,10 +64,68 @@ const CURVE_STABLESWAP_NG_FACTORY_ADDRESS = "0x6a8cbed756804b16e05e741edabd5cb54
 const CURVE_STABLESWAP_NG_FACTORY_CODE_HASH =
   "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd";
 const CURVE_STABLESWAP_NG_FACTORY_POOL_INDEX = 563;
+const CURVE_DUSD_STABLESWAP_NG_POOL_ADDRESS = "0x32e616f4f17d43f9a5cd9be0e294727187064cb3";
+const CURVE_DUSD_STABLESWAP_NG_POOL_TOKEN_ADDRESSES = [
+  "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+  "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef",
+] as const;
+const CURVE_DUSD_STABLESWAP_NG_FACTORY_POOL_INDEX = 580;
 const CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES = 3;
 const CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 export const P4_AMM_MODELED_TVL_MIN_RATIO = 0.5;
 export const P4_AMM_MODELED_TVL_MAX_RATIO = 2;
+
+interface CurveStableSwapNgReviewedPolicy {
+  chain: "ethereum";
+  stablecoinId: string;
+  poolAddress: string;
+  poolTokenAddresses: readonly string[];
+  tokenInAddress: string;
+  tokenOutAddress: string;
+  factoryAddress: string;
+  factoryCodeHash: string;
+  factoryPoolIndex: number;
+}
+
+const CURVE_STABLESWAP_NG_REVIEWED_POLICIES: readonly CurveStableSwapNgReviewedPolicy[] = [
+  {
+    chain: "ethereum",
+    stablecoinId: "usdg-paxos",
+    poolAddress: CURVE_STABLESWAP_NG_POOL_ADDRESS,
+    poolTokenAddresses: CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES,
+    tokenInAddress: CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[0],
+    tokenOutAddress: CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[1],
+    factoryAddress: CURVE_STABLESWAP_NG_FACTORY_ADDRESS,
+    factoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_CODE_HASH,
+    factoryPoolIndex: CURVE_STABLESWAP_NG_FACTORY_POOL_INDEX,
+  },
+  {
+    chain: "ethereum",
+    stablecoinId: "dusd-dialectic",
+    poolAddress: CURVE_DUSD_STABLESWAP_NG_POOL_ADDRESS,
+    poolTokenAddresses: CURVE_DUSD_STABLESWAP_NG_POOL_TOKEN_ADDRESSES,
+    tokenInAddress: CURVE_DUSD_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[1],
+    tokenOutAddress: CURVE_DUSD_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[0],
+    factoryAddress: CURVE_STABLESWAP_NG_FACTORY_ADDRESS,
+    factoryCodeHash: CURVE_STABLESWAP_NG_FACTORY_CODE_HASH,
+    factoryPoolIndex: CURVE_DUSD_STABLESWAP_NG_FACTORY_POOL_INDEX,
+  },
+];
+
+function reviewedCurveStableSwapNgPolicyForProfile(
+  profile: P4MeasuredExecutionPublicProfile,
+): CurveStableSwapNgReviewedPolicy | null {
+  if (profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID) return null;
+  const chain = canonicalExitRouteChain(profile.chain);
+  const endpoint = "executionEndpoint" in profile ? profile.executionEndpoint.address : "";
+  return CURVE_STABLESWAP_NG_REVIEWED_POLICIES.find(
+    (policy) =>
+      policy.chain === chain &&
+      endpoint === policy.poolAddress &&
+      canonicalExitRouteScopedKey(profile.chain, profile.poolId) ===
+        canonicalExitRouteScopedKey(policy.chain, policy.poolAddress),
+  ) ?? null;
+}
 
 type CapabilityLevel = "exact" | "partial" | "symbol-only" | "aggregate-only" | "absent";
 type NativeMeasuredExecutionPublicProfile =
@@ -191,7 +249,7 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
     scoreEligible: true,
     limitations: [
-      "Activated only for the reviewed Ethereum USDG/USDC StableSwap-NG factory pool.",
+      "Activated only for reviewed Ethereum Curve StableSwap-NG factory get_dy pools.",
       "High confidence requires three complete producer cycles and three successful observations.",
     ],
   },
@@ -769,29 +827,33 @@ function validateMeasuredExecutionProfile(
     ) issues.push("physical-pool-provenance-mismatch");
   } else if (!isNative && profile.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID) {
     const evmProfile = profile as DexMeasuredExecutionPublicProfile;
+    const policy = reviewedCurveStableSwapNgPolicyForProfile(evmProfile);
     if (
-      evmProfile.chain !== "ethereum" ||
-      evmProfile.poolId !== canonicalExitRouteAssetKey("ethereum", CURVE_STABLESWAP_NG_POOL_ADDRESS) ||
-      evmProfile.poolTokenAddresses?.length !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES.length ||
+      !policy ||
+      evmProfile.chain !== policy.chain ||
+      evmProfile.poolId !== canonicalExitRouteAssetKey(policy.chain, policy.poolAddress) ||
+      evmProfile.poolTokenAddresses?.length !== policy.poolTokenAddresses.length ||
       evmProfile.poolTokenAddresses.some(
-        (address, index) => address !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[index],
+        (address, index) => address !== policy.poolTokenAddresses[index],
       ) ||
-      evmProfile.tokenIn.address !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[0] ||
-      evmProfile.tokenOut.address !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[1]
+      evmProfile.tokenIn.address !== policy.tokenInAddress ||
+      evmProfile.tokenOut.address !== policy.tokenOutAddress ||
+      evmProfile.tokenIn.trackedAssetId !== policy.stablecoinId
     ) issues.push("invalid-curve-stableswap-ng-identity");
     const provenance = evmProfile.stableSwapNgFactoryProvenance;
     if (
+      !policy ||
       provenance == null ||
       provenance.blockNumber !== evmProfile.blockNumber ||
       !/^0x[0-9a-f]{64}$/.test(provenance.blockHash) ||
       provenance.blockCommitment !== "finalized" ||
-      provenance.factoryAddress !== CURVE_STABLESWAP_NG_FACTORY_ADDRESS ||
-      provenance.factoryCodeHash !== CURVE_STABLESWAP_NG_FACTORY_CODE_HASH ||
-      provenance.poolIndex !== CURVE_STABLESWAP_NG_FACTORY_POOL_INDEX ||
-      provenance.registeredPoolAddress !== CURVE_STABLESWAP_NG_POOL_ADDRESS ||
-      provenance.poolTokenAddresses.length !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES.length ||
+      provenance.factoryAddress !== policy.factoryAddress ||
+      provenance.factoryCodeHash !== policy.factoryCodeHash ||
+      provenance.poolIndex !== policy.factoryPoolIndex ||
+      provenance.registeredPoolAddress !== policy.poolAddress ||
+      provenance.poolTokenAddresses.length !== policy.poolTokenAddresses.length ||
       provenance.poolTokenAddresses.some(
-        (address, index) => address !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[index],
+        (address, index) => address !== policy.poolTokenAddresses[index],
       )
     ) issues.push("physical-pool-provenance-mismatch");
   } else if (!isNative) {
@@ -1223,6 +1285,9 @@ export function buildP4DexExitRouteObservations(params: {
       const isCurveStableSwapNgProfile =
         measuredProfiles.length === 1 &&
         measuredProfiles[0]!.adapterProfileId === CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID;
+      const curveStableSwapNgPolicy = isCurveStableSwapNgProfile
+        ? reviewedCurveStableSwapNgPolicyForProfile(measuredProfiles[0]!)
+        : null;
       if (
         isCurveStableSwapPacket &&
         (
@@ -1242,10 +1307,11 @@ export function buildP4DexExitRouteObservations(params: {
       if (
         isCurveStableSwapNgProfile &&
         (
+          curveStableSwapNgPolicy == null ||
           (ammModel != null &&
             (ammModel.source !== "curve" || ammModel.invariant !== "stableswap")) ||
-          measuredProfiles[0]!.tokenIn.address !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[0] ||
-          measuredProfiles[0]!.tokenOut.address !== CURVE_STABLESWAP_NG_POOL_TOKEN_ADDRESSES[1]
+          measuredProfiles[0]!.tokenIn.address !== curveStableSwapNgPolicy.tokenInAddress ||
+          measuredProfiles[0]!.tokenOut.address !== curveStableSwapNgPolicy.tokenOutAddress
         )
       ) {
         unsupportedPoolCount++;

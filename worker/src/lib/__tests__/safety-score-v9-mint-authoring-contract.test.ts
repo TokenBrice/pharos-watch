@@ -246,6 +246,88 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     expect(asset.control.structuralFailures).not.toContainEqual(expect.objectContaining({ kind: "centralized-mint" }));
   });
 
+  it("keeps DUSD's reviewed control facts bounded until the module path and incident review are explicit", () => {
+    const assetId = "dusd-dialectic";
+    const activeAssetIds = [assetId, "usdc-circle"];
+    const metaById = new Map(
+      activeAssetIds.map((id) => {
+        const meta = ACTIVE_META_BY_ID.get(id);
+        if (!meta) throw new Error(`expected registry metadata for ${id}`);
+        return [id, meta] as const;
+      }),
+    );
+    const profile = metaById.get(assetId)!.mintAuthority!;
+    const input = fixedInput(activeAssetIds);
+    const extension = buildSafetyScoreV9BaselineExtension(input, { metaById });
+    const asset = extension.assets.find((candidate) => candidate.assetId === assetId)!;
+    const controlReview = asset.controlReview;
+    if (!controlReview || !("controls" in controlReview)) {
+      throw new Error("expected DUSD's reviewed controls");
+    }
+    const mintControls = controlReview.controls.filter((control) =>
+      control.controlKey.startsWith(`mint-meta:${assetId}:`),
+    );
+    const expectedControlKeys = [
+      "mint-meta:dusd-dialectic:0:0753a29722c02f5eb3f2",
+      "mint-meta:dusd-dialectic:1:53c5cf56b4e8d9e0facf",
+      "mint-meta:dusd-dialectic:2:8a504a683206276bfc65",
+      "mint-meta:dusd-dialectic:3:1e5d1009d534d5ffa1b9",
+      "mint-meta:dusd-dialectic:4:307f52514a8019019079",
+    ];
+
+    expect(profile).toMatchObject({
+      confidence: "unknown",
+      upgradeability: {
+        controlRef: "Makina DAO - 3-of-5 Safe (ADMIN_ROLE 0)",
+      },
+      review: {
+        disposition: "unresolved",
+        unresolvedQuestions: [
+          expect.stringContaining("RecoveryModeTriggerModule"),
+          expect.stringContaining("historical review"),
+        ],
+      },
+    });
+    expect(profile.controls?.[3]).toMatchObject({
+      label: "Makina DAO - 3-of-5 Safe (ADMIN_ROLE 0)",
+      timelockDelaySec: 172800,
+      evidence: expect.stringContaining("ADMIN_ROLE 0"),
+    });
+    expect(profile.controls?.[4]).toMatchObject({
+      timelockDelaySec: 0,
+      failureDomainKeys: [
+        "eoa:ethereum:0xaa1e36165b3ac105f25549c06e1f06d573a40be3",
+        "module:ethereum:0xeec7919bab68876e14737970fe4965ab9737cd29",
+        "safe:ethereum:0x89faa3b02ef5ab185b8ace489af62748acb50afc",
+      ],
+      bypassSurfaces: [expect.stringContaining("only to request setRecoveryMode(true)")],
+    });
+    expect(controlReview.state).toBe("partially-reviewed-controls");
+    expect(mintControls.map((control) => control.controlKey)).toEqual(expectedControlKeys);
+    expect(mintControls.map((control) => control.incidentState)).toEqual(
+      Array.from({ length: expectedControlKeys.length }, () => "unknown"),
+    );
+    expect(asset.economicControlReview?.mint.status.observationState).toBe("bounded-unknown");
+
+    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
+    const compiledAsset = compiled.assets.find((candidate) => candidate.assetId === assetId)!;
+    const compiledMintControls = compiledAsset.controls.filter((control) =>
+      control.controlKey.startsWith(`mint-meta:${assetId}:`),
+    );
+    expect(compiledAsset.controlStatus).toMatchObject({
+      observationState: "bounded-unknown",
+      gapIds: [`${assetId}:gap:deployment-controls`],
+    });
+    expect(compiledMintControls.map((control) => control.status)).toEqual(
+      expectedControlKeys.map((controlKey) =>
+        expect.objectContaining({
+          observationState: "bounded-unknown",
+          gapIds: [`${assetId}:gap:deployment-control:${controlKey}`],
+        }),
+      ),
+    );
+  });
+
   it.each(["lusd-liquity", "bold-liquity"])(
     "compiles %s's reviewed immutable mint logic and governance posture",
     (stablecoinId) => {

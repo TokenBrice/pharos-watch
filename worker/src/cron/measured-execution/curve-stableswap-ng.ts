@@ -54,18 +54,18 @@ export const CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS = 3;
 
 export interface CurveStableSwapNgPoolPolicy {
   chain: "ethereum";
-  stablecoinId: "usdg-paxos";
+  stablecoinId: string;
   poolAddress: `0x${string}`;
   expectedPoolCodeHash: `0x${string}`;
   factoryAddress: `0x${string}`;
   expectedFactoryCodeHash: `0x${string}`;
   factoryPoolIndex: number;
   poolTokens: readonly [
-    { address: `0x${string}`; symbol: "USDG"; decimals: 6; trackedAssetId: "usdg-paxos" },
-    { address: `0x${string}`; symbol: "USDC"; decimals: 6; trackedAssetId: "usdc-circle" },
+    { address: `0x${string}`; symbol: string; decimals: number; trackedAssetId: string },
+    { address: `0x${string}`; symbol: string; decimals: number; trackedAssetId: string },
   ];
-  inputIndex: 0;
-  outputIndex: 1;
+  inputIndex: 0 | 1;
+  outputIndex: 0 | 1;
   mode: "active";
   scoreEligible: true;
 }
@@ -98,6 +98,40 @@ export const CURVE_USDG_USDC_STABLESWAP_NG_POLICY: CurveStableSwapNgPoolPolicy =
   mode: "active",
   scoreEligible: true,
 };
+
+/** Exact reviewed DUSD/USDC StableSwap-NG deployment. DUSD is the rate-bearing input; direct get_dy is required. */
+export const CURVE_DUSD_USDC_STABLESWAP_NG_POLICY: CurveStableSwapNgPoolPolicy = {
+  chain: "ethereum",
+  stablecoinId: "dusd-dialectic",
+  poolAddress: "0x32e616f4f17d43f9a5cd9be0e294727187064cb3",
+  expectedPoolCodeHash: "0x1fb319d2b11164fe6584bf44ed640436ce07baa68c65e5b3b2338aa4ad8b6ac7",
+  factoryAddress: "0x6a8cbed756804b16e05e741edabd5cb544ae21bf",
+  expectedFactoryCodeHash: "0xb78c1b32cd364260f3fa497ccc7e98c73cdc26bdae2d3635e763ee8b59a1d6fd",
+  factoryPoolIndex: 580,
+  poolTokens: [
+    {
+      address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      symbol: "USDC",
+      decimals: 6,
+      trackedAssetId: "usdc-circle",
+    },
+    {
+      address: "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef",
+      symbol: "DUSD",
+      decimals: 18,
+      trackedAssetId: "dusd-dialectic",
+    },
+  ],
+  inputIndex: 1,
+  outputIndex: 0,
+  mode: "active",
+  scoreEligible: true,
+};
+
+const CURVE_STABLESWAP_NG_POLICIES: readonly CurveStableSwapNgPoolPolicy[] = [
+  CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
+  CURVE_DUSD_USDC_STABLESWAP_NG_POLICY,
+];
 
 export interface CurveStableSwapNgRuntimeEvidence {
   blockTimestamp: number;
@@ -149,10 +183,11 @@ export function getCurveStableSwapNgPolicy(
   chain: string,
   poolAddress: string,
 ): CurveStableSwapNgPoolPolicy | null {
-  return chain.trim().toLowerCase() === CURVE_USDG_USDC_STABLESWAP_NG_POLICY.chain &&
-    canonicalAddress(poolAddress) === CURVE_USDG_USDC_STABLESWAP_NG_POLICY.poolAddress
-    ? CURVE_USDG_USDC_STABLESWAP_NG_POLICY
-    : null;
+  const normalizedChain = chain.trim().toLowerCase();
+  const normalizedAddress = canonicalAddress(poolAddress);
+  return CURVE_STABLESWAP_NG_POLICIES.find(
+    (policy) => policy.chain === normalizedChain && policy.poolAddress === normalizedAddress,
+  ) ?? null;
 }
 
 export function evaluateCurveStableSwapNgEligibility(input: {
@@ -565,7 +600,7 @@ export interface CurveStableSwapNgBatchOutcome {
 
 export function resolveCurveStableSwapNgTokenIndices(
   target: DexMeasuredExecutionTarget | DexMeasuredExecutionProfile,
-): { ok: true; inputIndex: 0; outputIndex: 1 } | { ok: false; reason: CurveStableSwapNgQuoteFailure } {
+): { ok: true; inputIndex: 0 | 1; outputIndex: 0 | 1 } | { ok: false; reason: CurveStableSwapNgQuoteFailure } {
   const endpointAddress =
     "executionEndpoint" in target
       ? target.executionEndpoint.address
@@ -596,8 +631,9 @@ export function encodeCurveStableSwapNgGetDy(input: {
   amountInRaw: bigint;
 }): `0x${string}` {
   if (
-    input.inputIndex !== CURVE_USDG_USDC_STABLESWAP_NG_POLICY.inputIndex ||
-    input.outputIndex !== CURVE_USDG_USDC_STABLESWAP_NG_POLICY.outputIndex ||
+    (input.inputIndex !== 0 && input.inputIndex !== 1) ||
+    (input.outputIndex !== 0 && input.outputIndex !== 1) ||
+    input.inputIndex === input.outputIndex ||
     input.amountInRaw <= 0n
   ) throw new Error("Curve StableSwap-NG quote indices or amount are invalid");
   return encodeFunctionData({
@@ -693,7 +729,14 @@ function prepareRequest(
 function decodeCurveStableSwapNgQuotePoint(
   request: Pick<
     EncodedCurveStableSwapNgRequest,
-    "amountInRaw" | "callData" | "inputIndex" | "outputIndex" | "blockNumber" | "endpointAddress" | "target"
+    | "amountInRaw"
+    | "callData"
+    | "inputIndex"
+    | "outputIndex"
+    | "blockNumber"
+    | "endpointAddress"
+    | "policy"
+    | "target"
   >,
   result: EvmMulticall3Result,
 ): { point?: DexMeasuredRawQuotePoint; failureReason?: CurveStableSwapNgQuoteFailure } {
@@ -706,8 +749,8 @@ function decodeCurveStableSwapNgQuotePoint(
       blockNumber: request.blockNumber,
       inputIndex: request.inputIndex,
       outputIndex: request.outputIndex,
-      factory: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.factoryAddress,
-      factoryPoolIndex: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.factoryPoolIndex,
+      factory: request.policy.factoryAddress,
+      factoryPoolIndex: request.policy.factoryPoolIndex,
     },
     failureReasons: {
       poolRevert: "pool-revert",

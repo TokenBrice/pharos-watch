@@ -50,7 +50,7 @@ import {
 } from "../measured-execution/curve-stableswap";
 import {
   CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
-  CURVE_USDG_USDC_STABLESWAP_NG_POLICY,
+  getCurveStableSwapNgPolicy,
 } from "../measured-execution/curve-stableswap-ng";
 import { buildCurveCompositeMeasuredExecutionTarget } from "../measured-execution/curve-composite";
 import {
@@ -430,8 +430,11 @@ export function resolveReviewedCurveStableSwapNgPhysicalPoolId(input: {
   chain: string;
 }): string | null {
   const { curveData } = input;
-  const policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
+  const policy = curveData?.poolAddress
+    ? getCurveStableSwapNgPolicy(input.chain, curveData.poolAddress)
+    : null;
   if (
+    !policy ||
     input.chain !== policy.chain ||
     !curveData ||
     curveData.apiIsBroken ||
@@ -452,7 +455,7 @@ export function resolveReviewedCurveStableSwapNgPhysicalPoolId(input: {
   return canonicalExitRouteAssetKey(input.chain, policy.poolAddress);
 }
 
-/** Build only the reviewed USDG -> USDC StableSwap-NG direction. */
+/** Build only reviewed StableSwap-NG get_dy directions. */
 export function buildCurveStableSwapNgMeasuredExecutionTarget(input: {
   curveData: CurvePoolEntry | undefined;
   chain: string;
@@ -463,12 +466,15 @@ export function buildCurveStableSwapNgMeasuredExecutionTarget(input: {
   capturedAt: number;
 }): DexMeasuredExecutionTarget | null {
   const { curveData } = input;
-  const policy = CURVE_USDG_USDC_STABLESWAP_NG_POLICY;
+  const policy = curveData?.poolAddress
+    ? getCurveStableSwapNgPolicy(input.chain, curveData.poolAddress)
+    : null;
   const physicalPoolId = resolveReviewedCurveStableSwapNgPhysicalPoolId({
     curveData,
     chain: input.chain,
   });
   if (
+    !policy ||
     physicalPoolId == null ||
     input.stablecoinId !== policy.stablecoinId ||
     !curveData?.executionCoins

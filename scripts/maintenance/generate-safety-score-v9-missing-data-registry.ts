@@ -61,7 +61,7 @@ export type V9MissingDataResolutionMode =
   | "mixed-curation-and-runtime"
   | "producer-runtime";
 
-interface WorkTypeDefinition {
+export interface WorkTypeDefinition {
   title: string;
   stream: string;
   instructions: string;
@@ -229,9 +229,9 @@ const WORK_TYPES: Record<V9MissingDataWorkType, WorkTypeDefinition> = {
     title: "Mechanism risk component review",
     stream: "MECH",
     instructions:
-      "Supply source-backed facts for the exact mechanism component. Advanced archetypes require the complete measured-metric overlay. Fiat-cash and T-bill claim/custody/NAV components are intentionally bounded by the current compiler and need a reviewed methodology capability before data can clear them.",
+      "Curate source-backed facts for the exact mechanism component in the mechanism-review overlay. Fiat-cash and T-bill components must satisfy the ratified strict evidence standard; when disclosure is insufficient, record a sourced unavailable disposition that remains bounded and non-scoring. Advanced archetypes require the complete measured-metric overlay.",
     completionCriteria:
-      "The exact component compiles as known and the component-specific bounded-mechanism-review gapId is absent from a fresh exact replay.",
+      "A fresh exact replay either compiles the exact component as known and removes its bounded-mechanism-review gapId, or confirms that an independently reviewed unavailable disposition retains the bounded-unknown gap without changing score or grade.",
     recommendedSkill: "reserve-research",
     likelyRepoAreas: [
       "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
@@ -317,6 +317,10 @@ const WORK_TYPES: Record<V9MissingDataWorkType, WorkTypeDefinition> = {
   },
 };
 
+export function workTypeDefinition(workType: V9MissingDataWorkType): Readonly<WorkTypeDefinition> {
+  return WORK_TYPES[workType];
+}
+
 const WORK_TYPE_BY_REASON: Partial<Record<string, V9MissingDataWorkType>> = {
   "bounded-mechanism-review": "MECHANISM_REVIEW",
   "missing-access-review": "ACCESS_REVIEW",
@@ -389,20 +393,12 @@ export function classifyV9ScoreProjectionWorkType(reasonCode: string): V9Missing
   return SCORE_PROJECTION_WORK_TYPE_BY_REASON[reasonCode] ?? null;
 }
 
-function mechanismResolutionMode(entry: V9EvidenceGapQueueEntryV2): V9MissingDataResolutionMode {
-  const componentKey = entry.path.kind === "local-component" ? entry.path.componentKey : "";
-  if (entry.archetype === "fiat-cash") {
-    if (componentKey.endsWith("assuranceAndReconciliation") || componentKey === "mechanism-risk-review") {
-      return "agent-curation";
-    }
-    return "methodology-capability";
-  }
-  if (entry.archetype === "tbill") {
-    if (componentKey.endsWith("lossRecoveryDesign") || componentKey === "mechanism-risk-review") {
-      return "agent-curation";
-    }
-    return "methodology-capability";
-  }
+export function mechanismResolutionMode(
+  entry: Pick<V9EvidenceGapQueueEntryV2, "archetype" | "path">,
+): V9MissingDataResolutionMode {
+  // Wave-7 D3 ratified direct overlay curation for every fiat-cash and
+  // T-bill mechanism component under the strict evidence standard.
+  if (entry.archetype === "fiat-cash" || entry.archetype === "tbill") return "agent-curation";
   return "issuer-or-onchain-evidence";
 }
 
@@ -439,7 +435,7 @@ function evidenceAction(entry: V9EvidenceGapQueueEntryV2, mode: V9MissingDataRes
   return "adjudicate-and-curate-bounded-unknown";
 }
 
-function scoreProjectionResolutionMode(
+export function scoreProjectionResolutionMode(
   workType: V9MissingDataWorkType,
   archetype: V9EvidenceGapQueueEntryV2["archetype"],
 ): V9MissingDataResolutionMode {
@@ -448,7 +444,7 @@ function scoreProjectionResolutionMode(
   }
   if (workType === "EXIT_DEX_COVERAGE" || workType === "EXIT_RUNTIME_ROUTE") return "producer-runtime";
   if (workType === "MECHANISM_REVIEW") {
-    return archetype === "fiat-cash" || archetype === "tbill" ? "methodology-capability" : "issuer-or-onchain-evidence";
+    return archetype === "fiat-cash" || archetype === "tbill" ? "agent-curation" : "issuer-or-onchain-evidence";
   }
   return "agent-curation";
 }
@@ -699,7 +695,7 @@ function priorityBand(critical: boolean, supplyUsd: number | null): string {
   return "P3";
 }
 
-function sidecarFor(source: StablecoinSourceEntry, domain: string): string | null {
+function sidecarFor(source: Pick<StablecoinSourceEntry, "sidecarFiles">, domain: string): string | null {
   return source.sidecarFiles?.find((path) => path.includes(`/domains/${domain}/`)) ?? null;
 }
 
@@ -707,11 +703,10 @@ function unique(values: Array<string | null>): string[] {
   return [...new Set(values.filter((value): value is string => value !== null))];
 }
 
-function likelyTouchpoints(
+export function likelyTouchpoints(
   workType: V9MissingDataWorkType,
-  source: StablecoinSourceEntry,
+  source: Pick<StablecoinSourceEntry, "file" | "sidecarFiles">,
   context: unknown,
-  archetype: string,
 ): string[] {
   const base = source.file;
   const reserve = sidecarFor(source, "reserves") ?? base;
@@ -753,9 +748,7 @@ function likelyTouchpoints(
         "worker/src/lib/safety-score-v9-extension.ts",
       ];
     case "MECHANISM_REVIEW":
-      return archetype === "fiat-cash" || archetype === "tbill"
-        ? unique([reserve, base, "worker/src/lib/safety-score-v9-extension-mechanism.ts"])
-        : ["shared/data/safety-score-v9/mechanism-review-overlays-v1.json", base];
+      return ["shared/data/safety-score-v9/mechanism-review-overlays-v1.json", base];
     case "MINT_AUTHORITY":
       return unique([mint]);
     case "PEG_INPUT":
@@ -883,7 +876,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         releaseSeverity: entry.releaseSeverity,
         treatment: entry.treatment,
         critical: entry.critical,
-        likelyTouchpoints: likelyTouchpoints(workType, source, context, asset.archetype),
+        likelyTouchpoints: likelyTouchpoints(workType, source, context),
         currentFactContext: context,
         existingEvidence,
         policyBinding: {
@@ -954,7 +947,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
           releaseSeverity: null,
           treatment: "score-projection",
           critical: false,
-          likelyTouchpoints: likelyTouchpoints(workType, source, context, asset.archetype),
+          likelyTouchpoints: likelyTouchpoints(workType, source, context),
           currentFactContext: context,
           existingEvidence,
           policyBinding: {
