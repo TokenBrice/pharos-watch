@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.97",
+    title: "Retired Optimism Uniswap V3 shadow lane",
+    date: "2026-07-29",
+    effectiveAt: 1785283200,
+    summary:
+      "The Optimism Uniswap V3 subgraph and QuoterV2 measured-execution lane are removed from the maintained DEX source roster after the owner accepted clean retirement.",
+    impact: [
+      "Uniswap V3 subgraph enrichment now covers Ethereum, Base, Arbitrum, and Polygon; Optimism no longer contributes source-stage UniV3 pools, price observations, or measured-execution targets",
+      "The reviewed Optimism QuoterV2 deployment is no longer scheduled for evidence collection; stale persisted profiles fail deployment validation instead of remaining shadow evidence",
+      "Other Optimism liquidity lanes, including Curve, Balancer, and Velodrome Slipstream, are unchanged",
+      "Current score-eligible exact-route cohorts are unchanged: Ethereum, Polygon, and Arbitrum Uniswap V3; Base, BSC, and Ethereum PancakeSwap V3; and Base Aerodrome Slipstream",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.96",
     title: "Capacity-dominant bounded route selection",
     date: "2026-07-28",

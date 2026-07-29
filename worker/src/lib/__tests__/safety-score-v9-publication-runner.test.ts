@@ -176,6 +176,7 @@ describe("Safety Score V9 publication runner", () => {
     const result = await runSafetyScoreV9Publication({
       db: {} as D1Database,
       fixedInput,
+      nowSec: fixedInput.clockSec,
       prepareFixedInput: async (input) => ({
         ...input,
         sourceGeneration: "mutated-source-generation",
@@ -210,6 +211,7 @@ describe("Safety Score V9 publication runner", () => {
     const result = await runSafetyScoreV9Publication({
       db: {} as D1Database,
       fixedInput,
+      nowSec: fixedInput.clockSec,
     });
 
     expect(result).toMatchObject({

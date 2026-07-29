@@ -13,7 +13,7 @@ export interface DexMeasuredExecutionDeployment {
     | "pancakeswap-v3-quoter-v2"
     | "aerodrome-slipstream-quoter-v2";
   protocol: "uniswap-v3" | "pancakeswap" | "aerodrome-slipstream";
-  chain: "ethereum" | "arbitrum" | "optimism" | "base" | "polygon" | "bsc";
+  chain: "ethereum" | "arbitrum" | "base" | "polygon" | "bsc";
   endpointAddress: `0x${string}`;
   expectedCodeHash: `0x${string}`;
   factoryAddress: `0x${string}`;
@@ -41,15 +41,6 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     chain: "arbitrum",
     endpointAddress: "0x61ffe014ba17989e743c5f6cb21bf9697530b21e",
     expectedCodeHash: "0xd8162b13ba57ce21a146063b10658bda0a3fd15c99f768c86283fce6640858a5",
-    factoryAddress: "0x1f98431c8ad98523631ae4a59f267346ea31f984",
-    expectedFactoryCodeHash: "0x4d7b8525cd5d14343fa67a732fba5b24cddba11620ca88392f4ec6c52f91fd69",
-  },
-  {
-    adapterProfileId: "uniswap-v3-quoter-v2",
-    protocol: "uniswap-v3",
-    chain: "optimism",
-    endpointAddress: "0x61ffe014ba17989e743c5f6cb21bf9697530b21e",
-    expectedCodeHash: "0xd833dcf44a912014423afa2b637f23b5db5b7dc492494cbe3f46026a6d57b424",
     factoryAddress: "0x1f98431c8ad98523631ae4a59f267346ea31f984",
     expectedFactoryCodeHash: "0x4d7b8525cd5d14343fa67a732fba5b24cddba11620ca88392f4ec6c52f91fd69",
   },
@@ -117,9 +108,10 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
  * startup generations). Base Aerodrome Slipstream was admitted to V9
  * route scoring on 2026-07-24 after full target rotation, consumer replay,
  * binding checks, and independent historical-block quote reproduction.
- * Optimism Uniswap V3 remains evidence-only after the first score-facing
- * production consumers following its 2026-07-27 review exceeded the Worker
- * memory limit. Keys not listed here remain shadow-only fail-closed. The
+ * The retired Optimism Uniswap V3 lane is no longer scheduled for evidence
+ * collection after its 2026-07-27 score-facing consumers exceeded the Worker
+ * memory limit and the owner accepted clean retirement. Keys not listed here
+ * remain shadow-only fail-closed when a reviewed deployment still exists. The
  * initial cohort was restored 2026-07-20 after the #592 security rollup
  * emptied it as an over-broad artifact.
  */
