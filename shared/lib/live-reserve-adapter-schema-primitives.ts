@@ -565,6 +565,17 @@ const nestVaultPositionsParamsSchema = z
   })
   .strict();
 
+const makinaStrategyParamsSchema = z
+  .object({
+    allocationsUrl: AbsoluteUrlSchema,
+    machineAddress: EvmAddressSchema,
+    accountingTokenSymbol: z.string().min(1).optional(),
+    accountingTokenDecimals: z.number().int().nonnegative().max(36).optional(),
+    otherThresholdPct: z.number().positive().max(20).optional(),
+    reconciliationTolerancePct: z.number().positive().max(5).optional(),
+  })
+  .strict();
+
 const quantozTransparencyParamsSchema = z
   .object({
     token: z.enum(["EURQ", "USDQ"]),
@@ -890,6 +901,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   liquityV1: liquityV1ParamsSchema,
   liquityV2Branches: liquityV2BranchesParamsSchema,
   m0WrapperUnderlying: m0WrapperUnderlyingParamsSchema,
+  makinaStrategy: makinaStrategyParamsSchema,
   mento: mentoParamsSchema,
   nestVaultPositions: nestVaultPositionsParamsSchema,
   originVaultBalances: originVaultBalancesParamsSchema,

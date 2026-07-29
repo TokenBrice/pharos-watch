@@ -1,0 +1,29 @@
+{
+  "data": {
+    "address": "0x6b006870C83b1Cd49E766Ac9209f8d68763Df721",
+    "aum": "10950000000",
+    "lastReportedAum": "11000000000",
+    "sharePrice": 1.035,
+    "shareSupply": "9661835748792270531400966",
+    "shareLimit": "75000000000000000000000000",
+    "apy7d": 0.03,
+    "apy30d": 0.04,
+    "shareToken": {
+      "address": "0x1e33E98aF620F1D563fcD3cfd3C75acE841204ef",
+      "chainId": 1,
+      "name": "Dialectic USD",
+      "symbol": "DUSD",
+      "decimals": 18
+    },
+    "accountingToken": {
+      "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "chainId": 1,
+      "name": "USD Coin",
+      "symbol": "USDC",
+      "decimals": 6
+    }
+  },
+  "meta": {
+    "generated_at": "2026-07-29T09:28:20.429Z"
+  }
+}

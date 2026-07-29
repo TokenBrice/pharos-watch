@@ -51,6 +51,14 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // CoinGecko only exposes an Ethereum market-cap row for ftUSD and currently
   // leaves it stale; aggregate the verified native Ethereum + Sonic supplies.
   "ftusd-flying-tulip": [{ chain: "ethereum" }, { chain: "sonic" }],
+  // DUSD is a Makina Machine share issued canonically on Ethereum and mirrored
+  // to Ink through Wormhole NTT locking. Ethereum totalSupply already includes
+  // the tokens escrowed for Ink, so the aggregate path must reallocate rather
+  // than sum the two deployments.
+  "dusd-dialectic": [
+    { chain: "ethereum" },
+    { chain: "ink", rpcUrl: "https://rpc-gel.inkonchain.com" },
+  ],
   "jpym-mento": [{ chain: "celo" }],
   "zarm-mento": [{ chain: "celo" }],
   "xofm-mento": [{ chain: "celo" }],
@@ -68,6 +76,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
 // the listed lock/mint representations. Reallocate that supply across chains
 // instead of adding representation supplies to the canonical total.
 export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, string>> = {
+  "dusd-dialectic": "ethereum",
   "susds-sky": "ethereum",
   "sdai-sky": "ethereum",
 };

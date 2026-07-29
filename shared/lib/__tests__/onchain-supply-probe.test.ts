@@ -119,6 +119,27 @@ describe("curated on-chain supply paths", () => {
     expect(selected?.map((entry) => entry.config.allowZeroSupply)).toEqual([true, true, true, true]);
   });
 
+  it("resolves DUSD's canonical Ethereum and Ink NTT representation path", () => {
+    const ethereumContract = {
+      chain: "ethereum",
+      address: "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef",
+      decimals: 18,
+    };
+    const inkContract = {
+      chain: "ink",
+      address: "0xa95c8ff7be2a1c898fe01b90fdc9621e8ea5c9fc",
+      decimals: 18,
+    };
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      ethereumContract,
+      inkContract,
+    ], "dusd-dialectic"));
+
+    expect(selected?.map((entry) => entry.contract)).toEqual([ethereumContract, inkContract]);
+    expect(selected?.map((entry) => entry.config.chain)).toEqual(["ethereum", "ink"]);
+    expect(selected?.[1]?.config.rpcUrl).toBe("https://rpc-gel.inkonchain.com");
+  });
+
 });
 
 describe("hasRuntimeOnchainSupplyPath", () => {

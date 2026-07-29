@@ -182,13 +182,25 @@ export function buildReserveCompositionNote(reserves: ReserveResult | null): str
     return null;
   }
 
-  const yieldBasisShare = reserves.metadata?.yieldBasisCollateralPct;
-  if (typeof yieldBasisShare !== "number" || !Number.isFinite(yieldBasisShare) || yieldBasisShare <= 0) {
-    return null;
+  const notes: string[] = [];
+  const referenceNavUsd = reserves.metadata?.referenceNavUsd;
+  if (typeof referenceNavUsd === "number" && Number.isFinite(referenceNavUsd) && referenceNavUsd > 0) {
+    const formattedNav = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4,
+    }).format(referenceNavUsd);
+    notes.push(`Strategy reference NAV is ${formattedNav} per share.`);
   }
 
-  const formattedShare = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(yieldBasisShare);
-  return `Yield Basis positions account for ${formattedShare}% of this live reserve mix.`;
+  const yieldBasisShare = reserves.metadata?.yieldBasisCollateralPct;
+  if (typeof yieldBasisShare === "number" && Number.isFinite(yieldBasisShare) && yieldBasisShare > 0) {
+    const formattedShare = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(yieldBasisShare);
+    notes.push(`Yield Basis positions account for ${formattedShare}% of this live reserve mix.`);
+  }
+
+  return notes.length > 0 ? notes.join(" ") : null;
 }
 
 export function buildReserveProvenanceNotice(

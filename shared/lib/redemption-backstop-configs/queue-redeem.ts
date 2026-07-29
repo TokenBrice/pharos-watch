@@ -163,6 +163,39 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     },
     costModel: fixedFee(0, "Tracked protocol metadata describes 1:1 mint/redeem against USDC with no fees"),
   },
+  "dusd-dialectic": {
+    ...queueRedeemBase,
+    outputAssets: ["usdc-circle"],
+    accessModel: "whitelisted-onchain",
+    holderEligibility: "whitelisted-primary",
+    settlementModel: "queued",
+    executionModel: "rules-based-nav",
+    capacityModel: { kind: "fixed-usd", amountUsd: 0, confidence: "documented-bound", basis: "fixed-buffer" },
+    costModel: undisclosedReviewedFee(
+      "Makina docs describe queued Machine redemptions into the accounting token, but public materials reviewed do not publish one fixed DUSD redemption fee",
+    ),
+    routeStatus: "unknown",
+    routeExitCorrelation: "same-protocol-liquidity",
+    reviewedAt: "2026-07-29",
+    docs: [
+      sourceRef("Makina Machine lifecycle", "https://docs.makina.finance/concepts/architecture/lifecycle", [
+        "route",
+        "settlement",
+      ]),
+      sourceRef("Makina redemptions", "https://docs.makina.finance/concepts/architecture/machine/redemptions", [
+        "route",
+        "capacity",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("Makina DUSD strategy", "https://makina.finance/strategy/dusd", ["route", "capacity"]),
+    ],
+    notes: [
+      "DUSD exits enter the AsyncRedeemer FIFO queue and have a documented 12-hour minimum finalization delay; final settlement can take longer because the operator must free USDC liquidity from the strategy.",
+      "The route is intentionally not modeled as atomic or permissionless: Makina's Risk Manager can gate redemption requests and claims with a whitelist, and public sources do not publish a maximum settlement time or reserved queue capacity.",
+      "Fresh Makina reserve telemetry supplies AUM and portfolio composition, but it does not currently expose a bounded immediately redeemable USDC queue capacity; without such telemetry the route remains capacity-unknown rather than falling back to full supply.",
+    ],
+  },
   "acred-apollo-securitize": {
     ...queueRedeemBase,
     ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),

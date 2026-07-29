@@ -211,6 +211,22 @@ describe("buildReserveCompositionNote", () => {
     );
     expect(note).toBe("Yield Basis positions account for 33.5% of this live reserve mix.");
   });
+
+  it("formats strategy reference NAV for live reserves", () => {
+    const note = buildReserveCompositionNote(
+      makeReserves({ mode: "live", metadata: { referenceNavUsd: 1.034963 } }),
+    );
+    expect(note).toBe("Strategy reference NAV is $1.0350 per share.");
+  });
+
+  it("combines reference NAV with existing composition notes", () => {
+    const note = buildReserveCompositionNote(
+      makeReserves({ mode: "live", metadata: { referenceNavUsd: 1.034963, yieldBasisCollateralPct: 33.456 } }),
+    );
+    expect(note).toBe(
+      "Strategy reference NAV is $1.0350 per share. Yield Basis positions account for 33.5% of this live reserve mix.",
+    );
+  });
 });
 
 describe("buildReserveProvenanceNotice", () => {

@@ -1,0 +1,123 @@
+{
+  "data": {
+    "base_tokens": [
+      {
+        "balance": "700000000",
+        "type": "stablecoin",
+        "protocol": null,
+        "token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "accounting_token_value": "700000000",
+        "accounting_token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "percentage": 0.07
+      },
+      {
+        "balance": "1000000000000000000000",
+        "type": null,
+        "protocol": "re",
+        "token": {
+          "address": "0x5086bf358635B81D8C47C66d1C8b9E567Db70c72",
+          "chainId": 1,
+          "name": "Re Protocol Deposit Token",
+          "symbol": "reUSD",
+          "decimals": 18
+        },
+        "accounting_token_value": "1000000000",
+        "accounting_token": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "chainId": 1,
+          "name": "USD Coin",
+          "symbol": "USDC",
+          "decimals": 6
+        },
+        "percentage": 0.0909
+      }
+    ],
+    "positions": [
+      {
+        "id": "1",
+        "value": "6850000000",
+        "updated_at_block": "25637046",
+        "updated_at": 1785310739,
+        "chain_id": 1,
+        "protocol": "morpho",
+        "strategy": "Morpho Vault USDC",
+        "type": "lending",
+        "is_debt": false,
+        "token": { "symbol": "USDC", "decimals": 6 }
+      },
+      {
+        "id": "2",
+        "value": "2600000000",
+        "updated_at_block": "25637047",
+        "updated_at": 1785310751,
+        "chain_id": 1,
+        "protocol": "aave-v4",
+        "strategy": "AaveV4 Supply frxUSD",
+        "type": "lending",
+        "is_debt": false,
+        "token": { "symbol": "USDC", "decimals": 6 }
+      },
+      {
+        "id": "3",
+        "value": "500000000",
+        "updated_at_block": "25637048",
+        "updated_at": 1785310763,
+        "chain_id": 1,
+        "protocol": "aave-v4",
+        "strategy": "AaveV4 Borrow USDC",
+        "type": "borrow",
+        "is_debt": true,
+        "token": { "symbol": "USDC", "decimals": 6 }
+      },
+      {
+        "id": "4",
+        "value": "50000000",
+        "updated_at_block": "25637049",
+        "updated_at": 1785310775,
+        "chain_id": 1,
+        "protocol": "pendle",
+        "strategy": "PT dust",
+        "type": "yield",
+        "is_debt": false,
+        "token": { "symbol": "PT-USDC", "decimals": 6 }
+      },
+      {
+        "id": "5",
+        "value": "300000000",
+        "updated_at_block": "25637050",
+        "updated_at": 1785265103,
+        "chain_id": 8453,
+        "protocol": null,
+        "strategy": null,
+        "type": null,
+        "is_debt": false,
+        "token": { "symbol": "UNKNOWN", "decimals": 6 }
+      }
+    ],
+    "stats": {
+      "by_chain": [
+        { "chain_id": 1, "value": "10700000000" },
+        { "chain_id": 8453, "value": "300000000" }
+      ],
+      "accounting_token": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "chainId": 1,
+        "name": "USD Coin",
+        "symbol": "USDC",
+        "decimals": 6
+      }
+    }
+  }
+}
