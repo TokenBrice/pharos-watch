@@ -3,12 +3,10 @@ import { scoreToV9Grade } from "./safety-score-v9-grade";
 import { V9DependencyEconomicRoleSchema } from "./dependency-types";
 import {
   V9AssetPremiumKindSchema,
-  V9CapSourceSchema,
   V9EvidenceLevelSchema,
   V9GradeSchema,
   V9QualityPillarSchema,
   V9ReasonCodeSchema,
-  type V9ReasonCode,
 } from "./safety-score-v9";
 import {
   V9EvidenceResponsibilitySchema,
@@ -22,183 +20,48 @@ import {
   V9WrapperRiskAssessmentSchema,
   V9WrapperRiskTransferMechanismSchema,
 } from "./safety-score-v9-wrapper";
+import {
+  BaseInputGenerationIdSchema,
+  CandidatePolicyVersionSchema,
+  EXIT_SCORE_TOLERANCE,
+  isUniqueSorted,
+  numbersAgree,
+  PUBLIC_SCORE_ROUNDING_HEADROOM,
+  RESPONSIBILITIES,
+  SafetyScoreV9AccessPostureSchema,
+  SafetyScoreV9CapSchema,
+  SafetyScoreV9EvidenceFreshnessSchema,
+  SafetyScoreV9NrReasonSchema,
+  SafetyScoreV9PillarSchema,
+  SafetyScoreV9PublicReasonListSchema,
+  SCORE_TOLERANCE,
+  ScoreSchema,
+  Sha256Schema,
+  V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET,
+  V9PolicyVersionSchema,
+} from "./safety-score-v9-public-facts";
+import {
+  attributedSerialParent,
+  refineCard,
+} from "./safety-score-v9-public-internal";
 
-const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
-const BaseInputGenerationIdSchema = z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/);
-const ScoreSchema = z.number().finite().min(0).max(100);
-const CandidatePolicyVersionSchema = z.string().regex(/^candidate-[a-z0-9][a-z0-9._-]*$/);
-const V9PolicyVersionSchema = z.string().regex(/^\d+\.\d+$/);
-const AccessPostureFieldSchema = z.enum(["transfer", "freezeExposure", "primaryExit", "governance"]);
-const RESPONSIBILITIES = [
-  "integration-missing",
-  "issuer-undisclosed",
-  "measured-adverse",
-  "method-unsupported",
-  "producer-failed",
-] as const;
-const SCORE_TOLERANCE = 0.0002;
-const EXIT_SCORE_TOLERANCE = 0.03;
-const PUBLIC_SCORE_ROUNDING_HEADROOM = 0.5;
-const C_MINUS_MIN_SCORE = 50;
-const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
-export const V9_BOUNDED_ATTRIBUTION_REASON_CODES = [
-  "bounded-mechanism-review",
-  "bounded-unknown-reserve-exposure",
-  "incomparable-route-requests",
-  "incomplete-dex-route-coverage",
-  "incomplete-oracle-liquidation-branch",
-  "material-bridge-supply-unmatched",
-  "material-dependency-unavailable",
-  "material-reserve-slice-unstructured",
-  "material-unknown-reserve-exposure",
-  "mint-control-question",
-  "missing-applicable-peg",
-  "missing-bridge-route-rows",
-  "missing-bridge-routes",
-  "missing-custody-profile",
-  "missing-implementation-date",
-  "missing-latest-assurance-report",
-  "missing-mint-authority",
-  "missing-oracle-profile",
-  "missing-peg-input",
-  "missing-required-oracle-branches",
-  "missing-reserve-composition",
-  "missing-runtime-route-evidence",
-  "missing-same-notional-route",
-  "missing-upgrade-control",
-  "missing-upgradeability-review",
-  "partial-reserve-review",
-  "peg-price-unavailable-adverse-history",
-  "peg-supply-floor-withheld",
-  "runtime-bridge-materiality-unavailable",
-  "selected-bridge-route-missing",
-  "selected-bridge-route-unresolved",
-  "unknown-control-cap-authority",
-  "unknown-control-mint-ability",
-  "unknown-upgrade-authority",
-  "unresolved-control-identity",
-  "unresolved-mint-authority",
-  "unresolved-oracle-branch-applicability",
-  "unsupported-same-notional-route",
-  "unreviewed-dependency-relationships",
-  "unreviewed-oracle-profile",
-  "unreviewed-reserve-envelope",
-] as const satisfies readonly V9ReasonCode[];
-const V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET =
-  new Set<V9ReasonCode>(V9_BOUNDED_ATTRIBUTION_REASON_CODES);
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function isUniqueSorted(values: readonly string[]): boolean {
-  return (
-    new Set(values).size === values.length && values.every((value, index) => index === 0 || values[index - 1]! < value)
-  );
-}
-
-function numbersAgree(left: number | null, right: number | null): boolean {
-  return left === null || right === null ? left === right : Math.abs(left - right) <= SCORE_TOLERANCE;
-}
-
-function roundAttributionValue(value: number, decimals: number): number {
-  const factor = 10 ** decimals;
-  return Math.round(Number((value * factor).toPrecision(15))) / factor;
-}
-
-export const SafetyScoreV9PublicReasonSchema = z
-  .object({
-    code: V9ReasonCodeSchema,
-    message: z.string().min(1),
-    path: z.string().min(1).nullable(),
-  })
-  .strict();
-export type SafetyScoreV9PublicReason = z.infer<typeof SafetyScoreV9PublicReasonSchema>;
-
-const SafetyScoreV9PublicReasonListSchema = z
-  .array(SafetyScoreV9PublicReasonSchema)
-  .superRefine((reasons, ctx) => {
-    const identities = new Set<string>();
-    reasons.forEach((reason, index) => {
-      const identity = `${reason.code}\u0000${reason.path ?? ""}`;
-      if (identities.has(identity)) {
-        ctx.addIssue({
-          code: "custom",
-          path: [index],
-          message: "V9 public reasons must have unique code/path identities",
-        });
-      }
-      identities.add(identity);
-    });
-  });
-
-export const SafetyScoreV9NrReasonSchema = z
-  .object({
-    code: V9ReasonCodeSchema,
-    message: z.string().min(1),
-    field: z.string().min(1).nullable(),
-    origin: z.enum(["asset", "upstream"]),
-  })
-  .strict();
-export type SafetyScoreV9NrReason = z.infer<typeof SafetyScoreV9NrReasonSchema>;
-
-export const SafetyScoreV9EvidenceFreshnessSchema = z.enum(["current", "stale", "unknown"]);
-export type SafetyScoreV9EvidenceFreshness = z.infer<typeof SafetyScoreV9EvidenceFreshnessSchema>;
-
-export const SafetyScoreV9PillarSchema = z
-  .object({
-    score: ScoreSchema.nullable(),
-    evidenceLevel: V9EvidenceLevelSchema,
-    freshness: SafetyScoreV9EvidenceFreshnessSchema,
-    components: z.array(z.string().min(1)),
-    reasons: SafetyScoreV9PublicReasonListSchema,
-  })
-  .strict()
-  .superRefine((pillar, ctx) => {
-    if (!isUniqueSorted(pillar.components)) {
-      ctx.addIssue({ code: "custom", path: ["components"], message: "V9 pillar components must be unique and sorted" });
-    }
-  });
-export type SafetyScoreV9Pillar = z.infer<typeof SafetyScoreV9PillarSchema>;
-
-export const SafetyScoreV9CapSchema = z
-  .object({
-    kind: z.string().min(1),
-    limit: ScoreSchema,
-    source: V9CapSourceSchema,
-    reason: z.string().min(1),
-    binding: z.boolean(),
-  })
-  .strict();
-export type SafetyScoreV9Cap = z.infer<typeof SafetyScoreV9CapSchema>;
-
-export const SafetyScoreV9AccessPostureSchema = z
-  .object({
-    transfer: z.enum(["permissionless", "restrictable", "permissioned", "unknown"]),
-    freezeExposure: z.enum(["none-known", "upstream", "direct", "possible", "unknown"]),
-    primaryExit: z.enum(["permissionless", "eligibility-gated", "issuer-discretionary", "none", "unknown"]),
-    governance: z.enum(["immutable", "distributed", "concentrated", "single-entity", "unknown"]),
-    unknownFields: z.array(AccessPostureFieldSchema),
-    signals: z.array(z.string().min(1)),
-    reasons: SafetyScoreV9PublicReasonListSchema,
-  })
-  .strict()
-  .superRefine((posture, ctx) => {
-    const expectedUnknown = (["transfer", "freezeExposure", "primaryExit", "governance"] as const)
-      .filter((field) => posture[field] === "unknown")
-      .sort(compareText);
-    if (JSON.stringify(posture.unknownFields) !== JSON.stringify(expectedUnknown)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["unknownFields"],
-        message: "V9 access unknown fields must exactly match unknown posture values",
-      });
-    }
-    if (!isUniqueSorted(posture.signals)) {
-      ctx.addIssue({ code: "custom", path: ["signals"], message: "V9 access signals must be unique and sorted" });
-    }
-  });
-export type SafetyScoreV9AccessPosture = z.infer<typeof SafetyScoreV9AccessPostureSchema>;
+export {
+  SafetyScoreV9AccessPostureSchema,
+  SafetyScoreV9CapSchema,
+  SafetyScoreV9EvidenceFreshnessSchema,
+  SafetyScoreV9NrReasonSchema,
+  SafetyScoreV9PillarSchema,
+  SafetyScoreV9PublicReasonSchema,
+  V9_BOUNDED_ATTRIBUTION_REASON_CODES,
+} from "./safety-score-v9-public-facts";
+export type {
+  SafetyScoreV9AccessPosture,
+  SafetyScoreV9Cap,
+  SafetyScoreV9EvidenceFreshness,
+  SafetyScoreV9NrReason,
+  SafetyScoreV9Pillar,
+  SafetyScoreV9PublicReason,
+} from "./safety-score-v9-public-facts";
 
 const SafetyScoreV9SerialDependencySchema = z
   .object({
@@ -1498,429 +1361,6 @@ const SafetyScoreV9CardShape = {
 } as const;
 const SafetyScoreV9CardObjectSchema = z.object(SafetyScoreV9CardShape).strict();
 type SafetyScoreV9CardBase = z.infer<typeof SafetyScoreV9CardObjectSchema>;
-
-function attributedSerialParent(
-  card: SafetyScoreV9CardBase,
-  path: string,
-  message: string,
-): SafetyScoreV9CardBase["dependencies"]["serial"][number] | null {
-  const parent = [...card.dependencies.serial]
-    .sort((left, right) => right.upstreamAssetId.length - left.upstreamAssetId.length)
-    .find((dependency) => {
-      const pathPrefix = `parent:${dependency.upstreamAssetId}:`;
-      const messagePrefix = `Required parent ${dependency.upstreamAssetId}: `;
-      return path.startsWith(pathPrefix) && message.startsWith(messagePrefix);
-    });
-  return parent ?? null;
-}
-
-function refineCard(
-  card: SafetyScoreV9CardBase & {
-    scoreTrace?: SafetyScoreV9ScoreTrace | SafetyScoreV9CausalScoreTrace;
-  },
-  ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
-): void {
-  const scoreTrace = card.scoreTrace;
-  if (scoreTrace !== undefined) {
-    const stages = scoreTrace.stages;
-    const serialParents = card.dependencies.serial;
-    const serialParentsResolved =
-      serialParents.length > 0 &&
-      !card.dependencies.cycleBlocked &&
-      serialParents.every((dependency) => !dependency.blocked && dependency.score !== null);
-    const rawParentScore = serialParentsResolved
-      ? Math.min(...serialParents.map((dependency) => dependency.score!))
-      : null;
-    const wrapperParentLimit = scoreTrace.wrapperParentLimit;
-    const parentCaps = card.caps.filter((cap) => cap.source === "parent");
-    if (
-      wrapperParentLimit !== null &&
-      (
-        rawParentScore === null ||
-        !numbersAgree(wrapperParentLimit.parentScore, rawParentScore) ||
-        parentCaps.length !== 1 ||
-        parentCaps[0]!.kind !== "parent" ||
-        !numbersAgree(parentCaps[0]!.limit, wrapperParentLimit.limit)
-      )
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["scoreTrace", "wrapperParentLimit"],
-        message: "V9 wrapper parent limit must reconcile to the resolved minimum serial parent and parent cap",
-      });
-    }
-    if (
-      card.bindingCap?.source === "parent" &&
-      (
-        card.bindingCap.kind !== "parent" ||
-        rawParentScore === null ||
-        !numbersAgree(
-          card.bindingCap.limit,
-          wrapperParentLimit?.limit ?? rawParentScore,
-        )
-      )
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["bindingCap"],
-        message: "V9 binding parent cap must reconcile to the resolved minimum serial parent",
-      });
-    }
-    for (const [field, legacy, explicit] of [
-      ["weightedPillarMean", card.qualityScore, stages.weightedPillarMean],
-      ["pegMultiplier", card.pegMultiplier, stages.pegMultiplier],
-      ["preCapScore", card.pegAdjustedScore, stages.preCapScore],
-      ["publishedScore", card.score, stages.publishedScore],
-    ] as const) {
-      if (!numbersAgree(legacy, explicit)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["scoreTrace", "stages", field],
-          message: `V9 explicit ${field} must match its retained card field`,
-        });
-      }
-    }
-    if ("scoreAdjustments" in scoreTrace) {
-      for (const [index, adjustment] of scoreTrace.scoreAdjustments.entries()) {
-        const relievedCaps = card.caps.filter(
-          (cap) =>
-            cap.source === adjustment.capRelief.source &&
-            cap.kind === adjustment.capRelief.kind,
-        );
-        if (
-          relievedCaps.length !== 1 ||
-          !numbersAgree(relievedCaps[0]!.limit, adjustment.capRelief.toLimit)
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "scoreAdjustments", index, "capRelief"],
-            message: "V9 score adjustment cap relief must match exactly one current card cap",
-          });
-        }
-        const unchangedCaps = card.caps.filter(
-          (cap) =>
-            cap.source !== adjustment.capRelief.source ||
-            cap.kind !== adjustment.capRelief.kind,
-        );
-        if (
-          unchangedCaps.some(
-            (cap) => adjustment.publishedScoreBefore > cap.limit + SCORE_TOLERANCE,
-          )
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "scoreAdjustments", index, "publishedScoreBefore"],
-            message: "V9 ordinary published score cannot exceed an unchanged card cap",
-          });
-        }
-      }
-    }
-    if (
-      scoreTrace.aggregation !== null &&
-      (
-        card.weakestPillar === null ||
-        scoreTrace.aggregation.weakestPillar !== card.weakestPillar.pillar ||
-        !numbersAgree(scoreTrace.aggregation.weakestScore, card.weakestPillar.score) ||
-        !numbersAgree(scoreTrace.aggregation.weightedPillarMean, card.qualityScore)
-      )
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["scoreTrace", "aggregation"],
-        message: "V9 aggregation trace must match the card's pillar summary",
-      });
-    }
-    for (const item of scoreTrace.adverseAttribution.items) {
-      if (
-        item.source === "active-depeg" &&
-        (card.bindingCap?.source !== "active-depeg" || item.path !== "peg:active-depeg")
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["scoreTrace", "adverseAttribution", "items"],
-          message: "V9 active-depeg attribution requires its canonical path and a binding active-depeg cap",
-        });
-      }
-      if (item.source === "parent-score") {
-        const parent = attributedSerialParent(card, item.path, item.message);
-        if (
-          card.bindingCap?.source !== "parent" ||
-          parent === null ||
-          parent.blocked ||
-          parent.score === null ||
-          parent.score >= C_MINUS_MIN_SCORE ||
-          rawParentScore === null ||
-          !numbersAgree(parent.score, rawParentScore)
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 parent attribution requires the binding low minimum serial parent",
-          });
-        }
-      }
-      if (item.source === "peg-performance") {
-        const pegMultiplier = stages.pegMultiplier;
-        const expectedMessage =
-          pegMultiplier === null
-            ? null
-            : `Measured peg multiplier is ${roundAttributionValue(pegMultiplier, 6)}.`;
-        if (
-          pegMultiplier === null ||
-          pegMultiplier >= DANGER_PEG_MULTIPLIER_FLOOR ||
-          item.path !== "peg:historical-performance" ||
-          item.message !== expectedMessage
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 peg-performance attribution must match the measured danger multiplier",
-          });
-        }
-      }
-      if (item.source === "pillar-score") {
-        const match = /^pillar:(backing|exit|control):/.exec(item.path);
-        const pillarScore =
-          match === null
-            ? null
-            : card.pillars[match[1] as "backing" | "exit" | "control"].score;
-        if (
-          match === null ||
-          pillarScore === null ||
-          ((card.grade === "D" || card.grade === "F") &&
-            pillarScore >= C_MINUS_MIN_SCORE)
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 pillar attribution must name a score-bearing causal pillar",
-          });
-        }
-      }
-      if (item.source === "reason") {
-        const matchingPillarReasonCodes = Object.values(card.pillars).flatMap(
-          (pillar) =>
-            pillar.score !== null && pillar.score < C_MINUS_MIN_SCORE
-              ? pillar.reasons
-                  .filter(
-                    (reason) =>
-                      reason.path === item.path &&
-                      reason.message === item.message,
-                  )
-                  .map((reason) => reason.code)
-              : [],
-        );
-        const bindingReasonCode =
-          card.bindingCap?.source === "evidence" &&
-          card.bindingCap.kind.startsWith("reason:") &&
-          card.bindingCap.reason === item.message
-            ? V9ReasonCodeSchema.safeParse(
-                card.bindingCap.kind.slice("reason:".length),
-              )
-            : null;
-        const matchingReasonCodes = [
-          ...new Set([
-            ...matchingPillarReasonCodes,
-            ...(bindingReasonCode?.success ? [bindingReasonCode.data] : []),
-          ]),
-        ];
-        if (matchingReasonCodes.length === 0) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 reason attribution must match a low pillar reason or binding evidence cap",
-          });
-        }
-        if (
-          matchingReasonCodes.length > 0 &&
-          matchingReasonCodes.every((code) =>
-            V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET.has(code),
-          )
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 measured-adverse reason attribution requires a non-bounded policy reason code",
-          });
-        }
-        const conflictsWithBoundedAttribution =
-          scoreTrace.boundedUncertaintyAttribution.items.some(
-            (candidate) =>
-              candidate.path === item.path &&
-              candidate.message === item.message,
-          );
-        if (conflictsWithBoundedAttribution) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 measured-adverse reason attribution cannot also be declared as bounded uncertainty",
-          });
-        }
-        const measuredSummary =
-          scoreTrace.evidenceResponsibility.summaries.find(
-            (summary) => summary.responsibility === "measured-adverse",
-          );
-        if (
-          measuredSummary === undefined ||
-          measuredSummary.factCount === 0 ||
-          !matchingReasonCodes.some((code) =>
-            measuredSummary.reasonCodes.includes(code),
-          )
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 reason attribution must reconcile to a measured-adverse evidence reason code",
-          });
-        }
-      }
-      if (
-        item.source === "structural-signal" &&
-        !/^structural:[a-z0-9-]+:(low|moderate|high|critical)$/.test(item.path) &&
-        !/^scenario-(cap|pillar):/.test(item.path)
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["scoreTrace", "adverseAttribution", "items"],
-          message: "V9 structural attribution requires a canonical structural or scenario path",
-        });
-      }
-      if (item.source === "track-record") {
-        ctx.addIssue({
-          code: "custom",
-          path: ["scoreTrace", "adverseAttribution", "items"],
-          message: "V9 track-record ceilings cannot authorize measured-adverse attribution",
-        });
-      }
-      if (item.source === "wrapper-local") {
-        const limit = scoreTrace.wrapperParentLimit;
-        const adjustment = limit?.adjustments.find(
-          (candidate) =>
-            item.path === `wrapper-local:${candidate.factKey}` &&
-            candidate.discountPoints > 0,
-        );
-        const expectedMessage =
-          adjustment === undefined
-            ? null
-            : `Reviewed wrapper-local ${adjustment.factKey} risk contributes ` +
-              `${adjustment.discountPoints} discount points.`;
-        if (
-          card.bindingCap?.source !== "parent" ||
-          limit === null ||
-          (!limit.factsComplete &&
-            limit.localRiskDiscount < limit.fallbackDiscount) ||
-          adjustment === undefined ||
-          item.message !== expectedMessage
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "adverseAttribution", "items"],
-            message: "V9 wrapper adverse attribution must reconcile to a binding reviewed local-risk discount",
-          });
-        }
-      }
-    }
-    for (const item of scoreTrace.boundedUncertaintyAttribution.items) {
-      if (item.source === "reason") {
-        const matchesPillarReason = Object.values(card.pillars).some((pillar) =>
-          pillar.score !== null &&
-          pillar.score < C_MINUS_MIN_SCORE &&
-          pillar.reasons.some(
-            (reason) =>
-              reason.code === item.code &&
-              reason.path === item.path &&
-              reason.message === item.message,
-          ),
-        );
-        const matchesBindingReasonCap =
-          card.bindingCap?.source === "evidence" &&
-          card.bindingCap.kind === `reason:${item.code}` &&
-          card.bindingCap.reason === item.message;
-        if (!matchesPillarReason && !matchesBindingReasonCap) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "boundedUncertaintyAttribution", "items"],
-            message: "V9 direct bounded attribution must match a low pillar reason or binding reason cap",
-          });
-        }
-      } else if (item.source === "parent-score") {
-        const parent = attributedSerialParent(card, item.path, item.message);
-        if (
-          card.bindingCap?.source !== "parent" ||
-          parent === null ||
-          parent.blocked ||
-          parent.score === null ||
-          parent.score >= C_MINUS_MIN_SCORE ||
-          rawParentScore === null ||
-          !numbersAgree(parent.score, rawParentScore)
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "boundedUncertaintyAttribution", "items"],
-            message: "V9 parent bounded attribution requires the binding low minimum serial parent",
-          });
-        }
-      } else {
-        const limit = scoreTrace.wrapperParentLimit;
-        const missingFact = limit?.missingFacts.find(
-          (candidate) =>
-            item.path === `wrapper-local:${candidate.factClass}` &&
-            item.responsibility === candidate.disposition,
-        );
-        const expectedMessage =
-          missingFact === undefined || limit === null
-            ? null
-            : `Wrapper-local ${missingFact.factClass} is ${missingFact.disposition}; ` +
-              `the ${limit.form} fallback discount bounds the unresolved local layer.`;
-        if (
-          item.code !== "bounded-mechanism-review" ||
-          card.bindingCap?.source !== "parent" ||
-          limit === null ||
-          limit.factsComplete ||
-          limit.fallbackDiscount <= limit.localRiskDiscount ||
-          missingFact === undefined ||
-          item.message !== expectedMessage
-        ) {
-          ctx.addIssue({
-            code: "custom",
-            path: ["scoreTrace", "boundedUncertaintyAttribution", "items"],
-            message: "V9 wrapper bounded attribution must reconcile to a binding fallback discount",
-          });
-        }
-      }
-    }
-    if (
-      card.score !== null &&
-      scoreTrace.evidenceResponsibility.summaries.some(
-        (summary) => summary.criticalFactCount > 0,
-      )
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["scoreTrace", "evidenceResponsibility"],
-        message: "A rated V9 card cannot retain critical unresolved facts",
-      });
-    }
-    if (
-      card.grade === "D" &&
-      scoreTrace.adverseAttribution.items.length === 0 &&
-      scoreTrace.boundedUncertaintyAttribution.items.length === 0
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["scoreTrace", "boundedUncertaintyAttribution"],
-        message: "A V9 D card requires causal measured-adverse or bounded-uncertainty attribution",
-      });
-    }
-    if (card.grade === "F" && scoreTrace.adverseAttribution.items.length === 0) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["scoreTrace", "adverseAttribution"],
-        message: "A V9 F card requires causal measured-adverse attribution",
-      });
-    }
-  }
-}
 
 function refineLegacyCard(
   card: SafetyScoreV9CardBase,
