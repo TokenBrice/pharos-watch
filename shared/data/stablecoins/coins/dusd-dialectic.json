@@ -332,8 +332,8 @@
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
-    "confidence": "verified",
-    "summary": "DUSD shares mint only through the Machine: user deposits at the current share price, and fee shares minted to the Watermark Fee Manager, whose accrual is capped by governance-set maximum rates. Durable USDC issuance stays inherited from Circle. The residual admin surface is Makina's: the Risk Manager can raise the share supply cap immediately, and the DAO can upgrade the Machine class through a shared beacon behind a 2-day AccessManager delay that the Security Council can cancel.",
+    "confidence": "unknown",
+    "summary": "DUSD shares mint only through the Machine: user deposits at the current share price, and fee shares minted to the Watermark Fee Manager, whose accrual is capped by governance-set maximum rates. Durable USDC issuance stays inherited from Circle. The residual admin surface is Makina's: the Risk Manager can raise the share supply cap immediately, and the DAO can upgrade the Machine class through a shared beacon behind a 2-day AccessManager delay. At the pinned block the Machine-beacon selector uses ADMIN_ROLE 0, whose guardian is role 0; the Security Council holds role 7 and therefore is not established as cancellation authority for that active upgrade path.",
     "inheritedFrom": "usdc-circle",
     "economicCapSemantics": "raiseable",
     "reconciliation": "periodic",
@@ -345,9 +345,9 @@
       "adminAddresses": ["0x0fcefa3f1047f35521a49cd8b06fabd588665d7f"],
       "canChangeMintLogic": true,
       "delaySec": 172800,
-      "controlRef": "Makina DAO - 3-of-5 Safe (INFRA_UPGRADE_ROLE)",
+      "controlRef": "Makina DAO - 3-of-5 Safe (ADMIN_ROLE 0)",
       "observedAt": "2026-07-29",
-      "observedBlock": 25636769,
+      "observedBlock": 25637903,
       "sources": [
         {
           "label": "Makina protocol upgrades",
@@ -371,7 +371,7 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-29",
-        "observedBlock": 25636769,
+        "observedBlock": 25637903,
         "sources": [
           {
             "label": "Makina deposits",
@@ -382,7 +382,7 @@
             "url": "https://etherscan.io/address/0x6b006870c83b1cd49e766ac9209f8d68763df721"
           }
         ],
-        "evidence": "At Ethereum block 25636769 the Machine returns shareToken() = 0x1e33e98af620f1d563fcd3cfd3c75ace841204ef, accountingToken() = USDC, shareLimit() = 75,000,000e18, and recoveryMode() = false. The share token's minter() and owner() both resolve to this Machine, so no external address can mint shares."
+        "evidence": "At Ethereum block 25637903 the Machine returns shareToken() = 0x1e33e98af620f1d563fcd3cfd3c75ace841204ef, accountingToken() = USDC, shareLimit() = 75,000,000e18, and recoveryMode() = false. The share token's minter() and owner() both resolve to this Machine, so no external address can mint shares."
       },
       {
         "chain": "ethereum",
@@ -395,7 +395,7 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-07-29",
-        "observedBlock": 25636769,
+        "observedBlock": 25637903,
         "sources": [
           {
             "label": "Makina fees",
@@ -406,7 +406,7 @@
             "url": "https://etherscan.io/address/0xa7f0121375dc52028e333f02715183a1d1a690a7"
           }
         ],
-        "evidence": "At Ethereum block 25636769 the fee manager returns mgmtFeeRatePerSecond() = 0, smFeeRatePerSecond() = 31709792 (about 0.1% annualized to the Security Module), perfFeeRate() = 1e17 (10% over a high-water mark), and sharePriceWatermark() = 1.034978 USDC. The Machine caps accrual at maxFixedFeeAccrualRate() = 951293760 and maxPerfFeeAccrualRate() = 14269406394 per second, so a misconfigured fee manager cannot mint without bound."
+        "evidence": "At Ethereum block 25637903 the fee manager returns mgmtFeeRatePerSecond() = 0, smFeeRatePerSecond() = 31709792 (about 0.1% annualized to the Security Module), perfFeeRate() = 1e17 (10% over a high-water mark), and sharePriceWatermark() = 1.034978 USDC. The Machine caps accrual at maxFixedFeeAccrualRate() = 951293760 and maxPerfFeeAccrualRate() = 14269406394 per second, so a misconfigured fee manager cannot mint without bound."
       },
       {
         "chain": "ethereum",
@@ -418,6 +418,7 @@
         "canRaiseCap": true,
         "threshold": 3,
         "signerCount": 5,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
@@ -430,13 +431,15 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
           "version": "1.4.1",
-          "observedBlock": 25636740,
+          "observedBlock": 25637903,
           "observedAt": "2026-07-29",
           "source": "onchain"
         },
         "observedAt": "2026-07-29",
-        "observedBlock": 25636740,
+        "observedBlock": 25637903,
         "failureDomainKeys": ["safe:ethereum:0x36ba7c92cd68051fb304bd4580c4a51c1d376532"],
         "sources": [
           {
@@ -448,30 +451,40 @@
             "url": "https://etherscan.io/address/0x36ba7c92cd68051fb304bd4580c4a51c1d376532"
           }
         ],
-        "evidence": "At Ethereum block 25636740 the Machine's riskManager() returns this address; getOwners() returned the five listed EOAs, getThreshold() returned 3, VERSION() returned 1.4.1, getModulesPaginated() returned an empty list, and the Safe guard slot is zero. Makina documents the share supply cap and the deposit/redemption whitelists as immediate Risk Manager settings, while risk-sensitive parameters route through the separate Risk Manager Timelock 0x38542447c49d24e617fc06113295d7aaa3bec4b6. Raising the cap admits more deposits; it does not let the Risk Manager mint shares without matching USDC."
+        "evidence": "At Ethereum block 25637903 the Machine's riskManager() returns this address; getOwners() returned the five listed EOAs, getThreshold() returned 3, VERSION() returned 1.4.1, getModulesPaginated() returned an empty list, the Safe guard slot is zero, fallbackHandler() returned 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and the singleton slot returned 0x41675c099f32341bf84bfc5382af534df5c7461a. Makina documents the share supply cap and the deposit/redemption whitelists as immediate Risk Manager settings, while risk-sensitive parameters route through the separate Risk Manager Timelock 0x38542447c49d24e617fc06113295d7aaa3bec4b6. Raising the cap admits more deposits; it does not let the Risk Manager mint shares without matching USDC."
       },
       {
         "chain": "ethereum",
         "address": "0x62244c74e1d09b3d86ef7342d354b5d7770bde10",
-        "label": "Makina DAO - 3-of-5 Safe (INFRA_UPGRADE_ROLE)",
+        "label": "Makina DAO - 3-of-5 Safe (ADMIN_ROLE 0)",
         "role": "proxy-admin",
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
         "canRaiseCap": false,
         "threshold": 3,
         "signerCount": 5,
+        "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "owners": [
+            "0x1ea560039990a08f4d64565a0282dc20f09837ee",
+            "0x1155ca4ed939a693571eb69a3b057647e6f24488",
+            "0xfec21fc665a424f4011019c2223bf00ae4b4b3c4",
+            "0x627d35e83c66fbb5a20490867bfa2aed74cbd4cc",
+            "0xf51e8f3f5380e2ba3e38b9111effe2c53a25cee1"
+          ],
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
           "version": "1.4.1",
-          "observedBlock": 25636740,
+          "observedBlock": 25637903,
           "observedAt": "2026-07-29",
           "source": "onchain"
         },
         "observedAt": "2026-07-29",
-        "observedBlock": 25636740,
+        "observedBlock": 25637903,
         "failureDomainKeys": ["safe:ethereum:0x62244c74e1d09b3d86ef7342d354b5d7770bde10"],
         "sources": [
           {
@@ -483,7 +496,7 @@
             "url": "https://etherscan.io/address/0x62244c74e1d09b3d86ef7342d354b5d7770bde10"
           }
         ],
-        "evidence": "At Ethereum block 25636740 this Safe reads VERSION() 1.4.1, getThreshold() 3 of 5 owners, no enabled modules, and a zero guard. Makina documents it as the holder of INFRA_UPGRADE_ROLE with a 2-day AccessManager delay; the AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f owns every beacon, including the Machine beacon 0x5c680ec39bafe8524f3c2fa9d5f6d65f09bd7333 whose implementation() read 0xb655ad796634562136b593397b8b4849f332213f. An upgrade could change mint logic, but only after the delay and only if the Security Council does not cancel."
+        "evidence": "At Ethereum block 25637903 this Safe reads VERSION() 1.4.1, getThreshold() 3 of 5 listed owners, no enabled modules, a zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and singleton 0x41675c099f32341bf84bfc5382af534df5c7461a. The AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f owns every beacon, including the Machine beacon 0x5c680ec39bafe8524f3c2fa9d5f6d65f09bd7333 whose implementation() read 0xb655ad796634562136b593397b8b4849f332213f. Current chain state contradicts Makina's INFRA_UPGRADE_ROLE description: getTargetFunctionRole(Machine beacon, upgradeTo(address)) returned ADMIN_ROLE 0, the DAO has that role with a 172,800-second execution delay, getRoleGuardian(0) returned role 0, and the Security Council holds role 7 rather than role 0. The DAO/original proposer can cancel its scheduled operation, but the Council is not established as cancellation authority for this active selector."
       },
       {
         "chain": "ethereum",
@@ -495,6 +508,7 @@
         "canRaiseCap": false,
         "threshold": 2,
         "signerCount": 4,
+        "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "present",
         "safe": {
           "owners": [
@@ -506,14 +520,23 @@
           "threshold": 2,
           "enabledModules": ["0xeec7919bab68876e14737970fe4965ab9737cd29"],
           "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
           "version": "1.4.1",
-          "observedBlock": 25636740,
+          "observedBlock": 25637903,
           "observedAt": "2026-07-29",
           "source": "onchain"
         },
         "observedAt": "2026-07-29",
-        "observedBlock": 25636740,
-        "failureDomainKeys": ["safe:ethereum:0x89faa3b02ef5ab185b8ace489af62748acb50afc"],
+        "observedBlock": 25637903,
+        "failureDomainKeys": [
+          "eoa:ethereum:0xaa1e36165b3ac105f25549c06e1f06d573a40be3",
+          "module:ethereum:0xeec7919bab68876e14737970fe4965ab9737cd29",
+          "safe:ethereum:0x89faa3b02ef5ab185b8ace489af62748acb50afc"
+        ],
+        "bypassSurfaces": [
+          "RecoveryModeTriggerModule 0xeec7919bab68876e14737970fe4965ab9737cd29 lets executor 0xaa1e36165b3ac105f25549c06e1f06d573a40be3 bypass the Safe's 2-of-4 threshold with zero delay only to request setRecoveryMode(true); it cannot disable Recovery Mode, rotate itself, mint DUSD, raise the share cap, or upgrade code."
+        ],
         "sources": [
           {
             "label": "Makina Security Council",
@@ -528,7 +551,7 @@
             "url": "https://etherscan.io/address/0x89faa3b02ef5ab185b8ace489af62748acb50afc"
           }
         ],
-        "evidence": "At Ethereum block 25636740 the Machine's securityCouncil() returns this address; getOwners() returned four EOAs, getThreshold() returned 2, VERSION() returned 1.4.1, and getModulesPaginated() returned enabled module 0xeec7919bab68876e14737970fe4965ab9737cd29. The module is now verified as RecoveryModeTriggerModule: its immutable SAFE is this Security Council and its only operational path lets executor 0xaa1e36165b3ac105f25549c06e1f06d573a40be3 ask the Safe to call setRecoveryMode(true) on a Machine endpoint; only the Safe can replace that executor. At block 25638710 the DUSD AsyncRedeemer reported isWhitelistEnabled() = true, finalizationDelay() = 43,200 seconds, nextRequestId() = 343, and lastFinalizedRequestId() = 342. Makina classifies the Security Council as fully trusted: it cannot mint shares, but it can trigger Recovery Mode, force an AUM update past the share-price rate limit (which changes the price at which shares mint and redeem), cancel scheduled upgrades, and slash the Security Module."
+        "evidence": "At Ethereum block 25637903 the Machine's securityCouncil() returns this address; getOwners() returned four listed EOAs, getThreshold() returned 2, VERSION() returned 1.4.1, getModulesPaginated() returned enabled module 0xeec7919bab68876e14737970fe4965ab9737cd29, the guard slot was zero, fallbackHandler() returned 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99, and the singleton slot returned 0x41675c099f32341bf84bfc5382af534df5c7461a. The module is verified as RecoveryModeTriggerModule: its immutable SAFE is this Security Council and its only operational path lets the unattributed EOA executor 0xaa1e36165b3ac105f25549c06e1f06d573a40be3 ask the Safe to call setRecoveryMode(true) on a Machine endpoint; only the Safe can replace that executor. The broad Safe path remains 2-of-4, while this narrow module path is effectively 1-of-1 and zero-delay. At block 25638710 the DUSD AsyncRedeemer reported isWhitelistEnabled() = true, finalizationDelay() = 43,200 seconds, nextRequestId() = 343, and lastFinalizedRequestId() = 342. Makina classifies the Security Council as fully trusted: it cannot mint shares, but it can trigger Recovery Mode, force an AUM update past the share-price rate limit (which changes the price at which shares mint and redeem), cancel operations where it actually has guardian or canceller authority, and slash the Security Module."
       }
     ],
     "review": {
@@ -554,6 +577,10 @@
           "url": "https://ethereum-rpc.publicnode.com"
         },
         {
+          "label": "Ethereum observation block 25637903",
+          "url": "https://etherscan.io/block/25637903"
+        },
+        {
           "label": "Blockscout verified RecoveryModeTriggerModule",
           "url": "https://eth.blockscout.com/address/0xeec7919bab68876e14737970fe4965ab9737cd29?tab=contract"
         },
@@ -564,12 +591,20 @@
         {
           "label": "Ethereum observation block 25638710",
           "url": "https://etherscan.io/block/25638710"
+        },
+        {
+          "label": "Makina January 20 incident postmortem",
+          "url": "https://makinafi.substack.com/p/post-mortem-january-20th-2026-incident"
         }
       ],
-      "evidence": "Fixed-block reads at Ethereum block 25636769 (Safe state at 25636740; module and redeemer closure at block 25638710): the DUSD share token's minter() and owner() both return the Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721, which returns accountingToken() = USDC, shareToken() = the DUSD token, shareLimit() = 75,000,000e18, recoveryMode() = false, feeManager() = 0xa7f0121375dc52028e333f02715183a1d1a690a7, depositor() = 0x94b1828f91c150c5e6776198e170aca4304903d7, redeemer() = 0x1303c26cfe06bac5bfee29907f37919643def75c, hubCaliber() = 0xd1a1c248b253f1fc60eacd90777b9a63f8c8c1bc, and authority() = the AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f. The share token itself is direct code with zero EIP-1967 slots; the Machine, redeemer, depositor, and fee manager are beacon proxies whose beacons are all owned by the AccessManager. The Security Council Safe's enabled module is verified RecoveryModeTriggerModule, bound immutably to that Safe, with an externally owned executor that can only request entry into Recovery Mode; the Safe alone can replace the executor. The DUSD AsyncRedeemer whitelist was enabled at block 25638710. Reconciliation is periodic rather than continuous because AUM refreshes on operator-triggered accounting updates bounded by caliberStaleThreshold() = 28800 seconds and maxSharePriceChangeRate() = 9512937595 per second. Supervision is none: no fund or issuer registration was found for the Dialectic USD strategy.",
-      "reviewer": "Claude stablecoin addition (issue #705)",
+      "evidence": "Fixed-block reads at Ethereum block 25637903 (module and redeemer closure at block 25638710): the DUSD share token's minter() and owner() both return the Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721, which returns accountingToken() = USDC, shareToken() = the DUSD token, shareLimit() = 75,000,000e18, recoveryMode() = false, feeManager() = 0xa7f0121375dc52028e333f02715183a1d1a690a7, depositor() = 0x94b1828f91c150c5e6776198e170aca4304903d7, redeemer() = 0x1303c26cfe06bac5bfee29907f37919643def75c, hubCaliber() = 0xd1a1c248b253f1fc60eacd90777b9a63f8c8c1bc, and authority() = the AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f. The share token itself is direct code with zero EIP-1967 slots; the Machine, redeemer, depositor, and fee manager are beacon proxies whose beacons are all owned by the AccessManager. The Machine beacon's upgradeTo(address) selector is assigned to ADMIN_ROLE 0, with a 172,800-second DAO execution delay and role 0 as its guardian; the Security Council holds role 7, so its cancellation authority for that active selector is not established. The Security Council Safe's enabled RecoveryModeTriggerModule is bound immutably to that Safe, with an unattributed EOA executor that can bypass the 2-of-4 Safe threshold only to request entry into Recovery Mode; the Safe alone can replace the executor. The DUSD AsyncRedeemer whitelist was enabled at block 25638710. Makina's January 20 incident postmortem describes an external Curve accounting/oracle propagation exploit, states that Machine-held funds were not compromised, and records Security Council activation of Recovery Mode; this is one reviewed non-qualifying incident under the privileged/unbacked-mint definition, not exhaustive evidence that no qualifying mint incident exists. Reconciliation is periodic rather than continuous because AUM refreshes on operator-triggered accounting updates bounded by caliberStaleThreshold() = 28800 seconds and maxSharePriceChangeRate() = 9512937595 per second. Supervision is none: no fund or issuer registration was found for the Dialectic USD strategy.",
+      "reviewer": "OpenAI Codex Safety Score V9 on-chain curation; Claude stablecoin addition (issue #705)",
       "reviewedAt": "2026-07-29",
-      "disposition": "scoreable"
+      "disposition": "unresolved",
+      "unresolvedQuestions": [
+        "How should the mint-authority schema and compiler represent the Security Council Safe's enabled RecoveryModeTriggerModule as a distinct zero-delay, 1-of-1 EOA subauthority limited to setRecoveryMode(true), without attributing that threshold or capability to the broader 2-of-4 Safe?",
+        "Has an explicit, scoped historical review of privileged or unbacked DUSD mint incidents, with an as-of date, sources, evidence, and disposition, been completed so incidentState can be set without inferring absence from generic review completion?"
+      ]
     }
   },
   "yieldConfig": {

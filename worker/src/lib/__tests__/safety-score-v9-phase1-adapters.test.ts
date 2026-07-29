@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import brlvMetaSource from "@shared/data/stablecoins/coins/brlv-crown.json";
+import xsgdMetaSource from "@shared/data/stablecoins/coins/xsgd-straitsx.json";
+import brlvReserveSource from "@shared/data/stablecoins/domains/reserves/brlv-crown.json";
+import xsgdReserveSource from "@shared/data/stablecoins/domains/reserves/xsgd-straitsx.json";
 import type { ReserveSlice } from "@shared/types/reserves";
 import {
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
@@ -11,6 +15,7 @@ import { deriveSafetyScoreV9PegScore } from "../safety-score-v9-fact-set";
 import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/evaluate-set";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 17) / 1_000;
+const CURATION_CLOCK_SEC = Date.UTC(2026, 6, 29, 12) / 1_000;
 const WINDOW_SEC = Math.ceil(3 * 365.25 * 86_400);
 const LIVE_RESERVES_CONFIG: NonNullable<V9ExtensionRegistryMeta["liveReservesConfig"]> = {
   adapter: "curated-validated",
@@ -433,6 +438,40 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(mismatchedPeriod, CLOCK_SEC)).toBeNull();
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(futurePeriod, CLOCK_SEC)).toBeNull();
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(staleReport, CLOCK_SEC)).toBeNull();
+  });
+
+  it("admits the curated XSGD composition through the independent-static path", () => {
+    const xsgdMeta = {
+      ...xsgdMetaSource,
+      reserves: xsgdReserveSource.reserves,
+      reserveReview: xsgdReserveSource.reserveReview,
+    } as unknown as V9ExtensionRegistryMeta;
+
+    expect(xsgdMeta.mintAuthority).toMatchObject({
+      reconciliation: "periodic",
+      supervision: "prudential",
+    });
+    expect(xsgdMeta.proofOfReserves?.cadence).toBe("semi-monthly");
+    expect(xsgdMeta.reserves?.[1]).toMatchObject({
+      assetClass: "other",
+      liquidityHorizon: "unknown",
+    });
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(xsgdMeta, CURATION_CLOCK_SEC)).toMatchObject({
+      evidenceClass: "independent",
+      provenance: "curated",
+      rows: xsgdReserveSource.reserves,
+    });
+  });
+
+  it("keeps BRLV excluded while issuer supervision remains attestation-only", () => {
+    const brlvMeta = {
+      ...brlvMetaSource,
+      reserves: brlvReserveSource.reserves,
+      reserveReview: brlvReserveSource.reserveReview,
+    } as unknown as V9ExtensionRegistryMeta;
+
+    expect(brlvMeta.mintAuthority?.supervision).toBe("attestation-only");
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(brlvMeta, CURATION_CLOCK_SEC)).toBeNull();
   });
 });
 
