@@ -175,7 +175,13 @@ async function runStablecoinChartsPublication(
   );
 
   if (!chartResult?.response.ok) {
-    console.error(`[sync-charts] DefiLlama API error: ${chartResult?.response.status ?? "no response"}`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      event: "defillama-api-unavailable",
+      message: "DefiLlama charts API error",
+      status: chartResult?.response.status ?? "no response",
+    });
     return {
       status: "degraded",
       itemCount: 0,
@@ -187,7 +193,13 @@ async function runStablecoinChartsPublication(
   const parsedBody = parseJson(chartResult.body);
   if (!parsedBody.ok) {
     /* non-blocking: DL charts API returned non-JSON; degrade gracefully so other cron jobs continue */
-    console.error(`[sync-charts] Failed to parse JSON from DefiLlama charts API: ${res.status}`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      event: "defillama-api-invalid-json",
+      message: "Failed to parse JSON from DefiLlama charts API",
+      status: res.status,
+    });
     return {
       status: "degraded",
       itemCount: 0,
@@ -197,7 +209,13 @@ async function runStablecoinChartsPublication(
   const raw = parsedBody.value as RawChartPoint[];
 
   if (!Array.isArray(raw) || raw.length < 100) {
-    console.error(`[sync-charts] Unexpected data length (${raw?.length}), skipping cache write`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      event: "defillama-payload-too-small",
+      message: "Unexpected data length; skipping cache write",
+      metadata: { rawLength: raw?.length },
+    });
     return {
       status: "degraded",
       itemCount: 0,
@@ -212,7 +230,14 @@ async function runStablecoinChartsPublication(
   });
   const invalidDateCount = raw.length - normalizedRaw.length;
   if (invalidDateCount > 0) {
-    console.warn(`[sync-charts] Dropped ${invalidDateCount} chart points with invalid dates`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      level: "warn",
+      event: "invalid-chart-dates-dropped",
+      message: "Dropped chart points with invalid dates",
+      metadata: { invalidDateCount },
+    });
   }
 
   // Fix corrupted totalCirculatingUSD values (e.g. DefiLlama RUB bug Feb 2026)
@@ -245,7 +270,14 @@ async function runStablecoinChartsPublication(
       }
     }
     if (fixes > 0) {
-      console.log(`[sync-charts] Fixed ${fixes} corrupted totalCirculatingUSD values`);
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-stablecoin-charts",
+        level: "info",
+        event: "corrupted-usd-values-fixed",
+        message: "Fixed corrupted totalCirculatingUSD values",
+        metadata: { fixes },
+      });
     }
   }
 
@@ -282,7 +314,13 @@ async function runStablecoinChartsPublication(
 
   const downsampled = downsample(normalizedRaw);
   if (downsampled.length < MIN_DOWNSAMPLED_POINTS) {
-    console.error(`[sync-charts] Downsampled payload too small (${downsampled.length}), preserving existing cache`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      event: "downsampled-payload-too-small",
+      message: "Downsampled payload too small; preserving existing cache",
+      metadata: { downsampledPointCount: downsampled.length },
+    });
     return {
       status: "degraded",
       itemCount: 0,
@@ -305,21 +343,35 @@ async function runStablecoinChartsPublication(
   let canonicalReadbackUpdatedAt: number | null = null;
   if (cacheResult.written) {
     lastWriteAdvanced = true;
-    console.log(`[sync-charts] Cached ${downsampled.length} points (from ${normalizedRaw.length} raw)`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      level: "info",
+      event: "chart-cache-published",
+      message: "Cached chart points",
+      metadata: { downsampledPointCount: downsampled.length, rawPointCount: normalizedRaw.length },
+    });
   } else {
     const canonicalCache = await getCache(db, "stablecoin-charts");
     canonicalReadbackUpdatedAt = canonicalCache?.updatedAt ?? null;
     if (canonicalCache && canonicalCache.updatedAt > syncStartSec) {
       lastWriteAdvanced = true;
-      console.log(
-        `[sync-charts] Skipped chart cache write; newer canonical cache exists ` +
-        `(updatedAt=${canonicalCache.updatedAt}, syncStartSec=${syncStartSec})`,
-      );
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-stablecoin-charts",
+        level: "info",
+        event: "chart-cache-newer-row-exists",
+        message: "Skipped chart cache write because a newer canonical cache exists",
+        metadata: { canonicalCacheUpdatedAt: canonicalCache.updatedAt, syncStartSec },
+      });
     } else {
-      console.warn(
-        `[sync-charts] Skipped chart cache write but could not confirm a newer canonical cache; ` +
-        `leaving last-write marker unchanged`,
-      );
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-stablecoin-charts",
+        level: "warn",
+        event: "chart-cache-write-unconfirmed",
+        message: "Skipped chart cache write but could not confirm a newer canonical cache; leaving last-write marker unchanged",
+      });
     }
   }
   return {

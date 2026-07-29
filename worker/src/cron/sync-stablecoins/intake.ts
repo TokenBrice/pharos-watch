@@ -104,10 +104,15 @@ async function fetchDefillamaStablecoinsPayload(
     } catch (parseErr) {
       lastError = "parse-failed";
       lastHttpStatus = result.response.status;
-      console.warn(
-        `[sync-stablecoins] DL response body parse failed on attempt ${attempts}/${DL_PARSE_MAX_ATTEMPTS}:`,
-        parseErr,
-      );
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-stablecoins",
+        level: "warn",
+        event: "defillama-response-parse-retry",
+        message: "DL response body parse failed; retrying",
+        metadata: { attempt: attempts, maxAttempts: DL_PARSE_MAX_ATTEMPTS },
+        error: parseErr,
+      });
       if (attempts < DL_PARSE_MAX_ATTEMPTS) {
         await sleepWithSignal(DL_PARSE_RETRY_BASE_DELAY_MS * attempts, signal);
       }
@@ -174,7 +179,13 @@ export async function loadStablecoinsIntake(
 
   const dlAllowed = await shouldAttemptFetch(input.db, CIRCUIT_SOURCE.DL_STABLECOINS);
   if (!dlAllowed) {
-    console.warn("[sync-stablecoins] DL stablecoins circuit open — using CG supply fallback");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "defillama-circuit-open",
+      message: "DL stablecoins circuit open; using CG supply fallback",
+    });
     return {
       kind: "fallback",
       result: await input.fallbackToCoingecko(cgData),
@@ -199,13 +210,27 @@ export async function loadStablecoinsIntake(
 
   if (!dlFetchResult.payload) {
     if (dlFetchResult.lastError === "parse-failed") {
-      console.error(
-        `[sync-stablecoins] DL response body parse failed after ${dlFetchResult.attempts} attempts (last HTTP status=${dlFetchResult.lastHttpStatus ?? "unknown"})`,
-      );
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-stablecoins",
+        event: "defillama-response-parse-failed",
+        message: "DL response body parse failed after retries",
+        metadata: {
+          attempts: dlFetchResult.attempts,
+          lastHttpStatus: dlFetchResult.lastHttpStatus ?? "unknown",
+        },
+      });
     } else {
-      console.error(
-        `[sync-stablecoins] DefiLlama API error after ${dlFetchResult.attempts} attempt(s) (last HTTP status=${dlFetchResult.lastHttpStatus ?? "no response"})`,
-      );
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-stablecoins",
+        event: "defillama-fetch-failed",
+        message: "DefiLlama API error after retries",
+        metadata: {
+          attempts: dlFetchResult.attempts,
+          lastHttpStatus: dlFetchResult.lastHttpStatus ?? "no response",
+        },
+      });
     }
     await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     return {
@@ -222,10 +247,22 @@ export async function loadStablecoinsIntake(
   const rawAssetCount = llamaData.peggedAssets?.length ?? 0;
 
   if (llamaData.peggedAssets === undefined) {
-    console.warn("[sync] DefiLlama response missing peggedAssets field — possible API contract change");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "defillama-pegged-assets-missing",
+      message: "DefiLlama response missing peggedAssets field; possible API contract change",
+    });
   }
   if (!llamaData.peggedAssets || llamaData.peggedAssets.length < MIN_VALID_ASSET_COUNT) {
-    console.error(`[sync-stablecoins] Unexpected asset count (${llamaData.peggedAssets?.length}), need ${MIN_VALID_ASSET_COUNT}+, skipping cache write`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      event: "unexpected-asset-count",
+      message: "Unexpected asset count; skipping cache write",
+      metadata: { assetCount: llamaData.peggedAssets?.length, minimumAssetCount: MIN_VALID_ASSET_COUNT },
+    });
     await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     return {
       kind: "fallback",
@@ -242,12 +279,25 @@ export async function loadStablecoinsIntake(
   let assets = mergeFrozenSnapshots(llamaData.peggedAssets, FROZEN_SNAPSHOTS);
   const injectedFrozenSnapshots = assets.length - llamaData.peggedAssets.length;
   if (injectedFrozenSnapshots > 0) {
-    console.log(`[sync-stablecoins] Injected ${injectedFrozenSnapshots} frozen-snapshot row(s)`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "info",
+      event: "frozen-snapshots-injected",
+      message: "Injected frozen-snapshot rows",
+      metadata: { injectedFrozenSnapshots },
+    });
   }
 
   const { validAssets, droppedMalformedAssets } = filterStructurallyValidAssets(assets);
   if (validAssets.length < MIN_VALID_ASSET_COUNT) {
-    console.error(`[sync-stablecoins] Only ${validAssets.length} valid assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      event: "insufficient-valid-assets",
+      message: "Too few valid assets; skipping cache write",
+      metadata: { validAssetCount: validAssets.length, minimumAssetCount: MIN_VALID_ASSET_COUNT },
+    });
     await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     return {
       kind: "fallback",
@@ -256,7 +306,14 @@ export async function loadStablecoinsIntake(
     };
   }
   if (validAssets.length < assets.length) {
-    console.warn(`[sync-stablecoins] Dropped ${assets.length - validAssets.length} malformed assets`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "malformed-assets-dropped",
+      message: "Dropped malformed assets",
+      metadata: { droppedAssetCount: assets.length - validAssets.length },
+    });
     assets = validAssets;
   }
 
@@ -272,17 +329,27 @@ export async function loadStablecoinsIntake(
 
   const canonicalDeduplication = dedupeCanonicalAssets(assets);
   if (canonicalDeduplication.duplicateRows > 0) {
-    console.warn(
-      `[sync-stablecoins] Deduped ${canonicalDeduplication.duplicateRows} canonical duplicate row(s): ` +
-      canonicalDeduplication.affectedIds.join(", "),
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "canonical-assets-deduped",
+      message: "Deduped canonical duplicate rows",
+      metadata: {
+        duplicateRows: canonicalDeduplication.duplicateRows,
+        affectedIds: canonicalDeduplication.affectedIds,
+      },
+    });
     assets = canonicalDeduplication.dedupedAssets;
   }
   if (assets.length < MIN_VALID_ASSET_COUNT) {
-    console.error(
-      `[sync-stablecoins] Canonical dedupe reduced asset count to ${assets.length} ` +
-      `(need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      event: "insufficient-canonical-assets",
+      message: "Canonical dedupe reduced asset count below the minimum; skipping cache write",
+      metadata: { assetCount: assets.length, minimumAssetCount: MIN_VALID_ASSET_COUNT },
+    });
     await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     return {
       kind: "fallback",
@@ -315,17 +382,27 @@ export async function loadStablecoinsIntake(
     assets = [...assets, ...supplementalResolution.assets];
   }
   if (supplementalResolution.restoredCount > 0 || supplementalResolution.skippedDuplicates > 0) {
-    console.log(
-      `[sync-stablecoins] Supplemental resolution: restored=${supplementalResolution.restoredCount}, ` +
-      `skippedDuplicates=${supplementalResolution.skippedDuplicates}`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "info",
+      event: "supplemental-resolution",
+      message: "Resolved supplemental assets",
+      metadata: {
+        restoredCount: supplementalResolution.restoredCount,
+        skippedDuplicates: supplementalResolution.skippedDuplicates,
+      },
+    });
   }
   if (supplementalResolution.expiredRestoreIds.length > 0) {
-    console.warn(
-      "[sync-stablecoins] Supplemental supply carry-forward expired past the " +
-      "7d ceiling (publishing without restored supply): " +
-      supplementalResolution.expiredRestoreIds.join(", "),
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "supplemental-carry-forward-expired",
+      message: "Supplemental supply carry-forward expired past the 7d ceiling; publishing without restored supply",
+      metadata: { expiredRestoreIds: supplementalResolution.expiredRestoreIds },
+    });
   }
 
   // Restore-or-degrade on tracked-id coverage: a DefiLlama list omission must
@@ -337,16 +414,23 @@ export async function loadStablecoinsIntake(
   );
   if (trackedCoverage.assets.length > 0) {
     assets = [...assets, ...trackedCoverage.assets];
-    console.warn(
-      "[sync-stablecoins] Intake omitted tracked coin(s); restored last-known-good row(s): " +
-      trackedCoverage.restoredIds.join(", "),
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "tracked-assets-restored",
+      message: "Intake omitted tracked coins; restored last-known-good rows",
+      metadata: { restoredIds: trackedCoverage.restoredIds },
+    });
   }
   if (trackedCoverage.droppedIds.length > 0) {
-    console.error(
-      "[sync-stablecoins] Tracked coin(s) missing from intake with no restorable row " +
-      "(publishing without them): " + trackedCoverage.droppedIds.join(", "),
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      event: "tracked-assets-unrestorable",
+      message: "Tracked coins are missing from intake with no restorable row; publishing without them",
+      metadata: { droppedIds: trackedCoverage.droppedIds },
+    });
   }
 
   applyTrackedAssetOverrides(assets);
@@ -359,10 +443,17 @@ export async function loadStablecoinsIntake(
     input.fxFallbackRates,
   );
   if (supplyGapReconciliation.totalReconciled > 0) {
-    console.warn(
-      `[sync-stablecoins] Reconciled ${supplyGapReconciliation.totalReconciled} tracked supply gap(s) from gap repair: ` +
-      supplyGapReconciliation.reconciledIds.join(", "),
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "supply-gaps-reconciled",
+      message: "Reconciled tracked supply gaps from gap repair",
+      metadata: {
+        totalReconciled: supplyGapReconciliation.totalReconciled,
+        reconciledIds: supplyGapReconciliation.reconciledIds,
+      },
+    });
   }
 
   return {

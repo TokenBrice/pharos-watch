@@ -24,6 +24,7 @@ import {
 } from "../lib/depeg-signals";
 import type { PendingDepegState } from "../lib/depeg-pending";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
+import { logWorkerEvent } from "../lib/structured-log";
 import { CoinGeckoSimplePriceSchema } from "../lib/upstream-schemas";
 import {
   addSource,
@@ -89,16 +90,29 @@ async function evaluateOffchainConfirmer(args: {
   } = args;
   const confirmerKey = chooseIndependentOffchainDepegConfirmer({ agreeSources, priceSource });
   if (confirmerKey == null) {
-    console.log(
-      `[depeg-confirm] ${symbol} off-chain skipped: primary agreement already includes the CoinGecko family`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "confirm-pending-depegs",
+      level: "info",
+      event: "offchain-confirmer-unneeded",
+      message: "Off-chain confirmation skipped because the primary agreement already includes the CoinGecko family",
+      metadata: { symbol },
+    });
     return { kind: "no-confirmer" };
   }
 
   const offchainLabel = "CoinGecko";
   const circuitKey = CIRCUIT_SOURCE.COINGECKO_CONFIRM;
   if (!coingeckoAllowed) {
-    console.log(`[depeg-confirm] ${symbol} ${offchainLabel} skipped: circuit open`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "confirm-pending-depegs",
+      level: "info",
+      event: "offchain-confirmer-circuit-open",
+      message: "Off-chain confirmation skipped because the circuit is open",
+      provider: offchainLabel,
+      metadata: { symbol },
+    });
     return { kind: "circuit-open", sourceKey: confirmerKey };
   }
 
@@ -125,17 +139,35 @@ async function evaluateOffchainConfirmer(args: {
     if (offchainPrice && offchainPrice > 0 && timestampStatus === "fresh") {
       const offchainSignal = deriveDepegSignal(offchainPrice, pegReference);
       const status = classifyDirectionalSignal(offchainSignal, secondaryBar, direction);
-      console.log(
-        `[depeg-confirm] ${symbol} ${offchainLabel} check: price=$${offchainPrice}, deviation=${offchainSignal?.absBps ?? "n/a"}bps, ` +
-        `bar=${secondaryBar}bps, status=${status}`
-      );
+      logWorkerEvent({
+        scope: "lib",
+        job: "confirm-pending-depegs",
+        level: "info",
+        event: "offchain-confirmer-checked",
+        message: "Off-chain confirmation checked",
+        provider: offchainLabel,
+        status,
+        metadata: {
+          symbol,
+          price: offchainPrice,
+          deviationBps: offchainSignal?.absBps ?? "n/a",
+          secondaryBarBps: secondaryBar,
+        },
+      });
       await recordOutcomeSafe(db, circuitKey, true);
       return { kind: "classified", sourceKey: confirmerKey, status, signal: offchainSignal, price: offchainPrice };
     }
     if (offchainPrice && offchainPrice > 0) {
-      console.log(
-        `[depeg-confirm] ${symbol} ${offchainLabel} skipped ${timestampStatus} timestamp=${observedAt ?? "missing"}`,
-      );
+      logWorkerEvent({
+        scope: "lib",
+        job: "confirm-pending-depegs",
+        level: "info",
+        event: "offchain-confirmer-stale",
+        message: "Off-chain confirmation skipped because the timestamp was not fresh",
+        provider: offchainLabel,
+        status: timestampStatus,
+        metadata: { symbol, observedAt: observedAt ?? "missing" },
+      });
       await recordOutcomeSafe(db, circuitKey, true);
       return {
         kind: "unavailable",
@@ -148,7 +180,16 @@ async function evaluateOffchainConfirmer(args: {
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     await recordOutcomeSafe(db, circuitKey, false);
-    console.warn(`[depeg-confirm] ${offchainLabel} fetch failed for ${symbol}:`, err);
+    logWorkerEvent({
+      scope: "lib",
+      job: "confirm-pending-depegs",
+      level: "warn",
+      event: "offchain-confirmer-fetch-failed",
+      message: "Off-chain confirmation fetch failed",
+      provider: offchainLabel,
+      metadata: { symbol },
+      error: err,
+    });
     return { kind: "unavailable", sourceKey: confirmerKey, reason: "upstream-error" };
   }
 }
@@ -207,11 +248,21 @@ export async function collectConfirmationEvidence(
       addSource(evidence.opposingSources, nativeSourceKey);
       addSource(evidence.hardOpposingSources, nativeSourceKey);
     }
-    console.log(
-      `[depeg-confirm] ${row.symbol} ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} check: ` +
-      `price=${nativePegQuote?.price ?? "n/a"}, deviation=${nativeSignal.absBps}bps, ` +
-      `bar=${secondaryBar}bps, status=${evidence.offchainStatus}`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "confirm-pending-depegs",
+      level: "info",
+      event: "native-peg-confirmation-checked",
+      message: "Native peg confirmation checked",
+      status: evidence.offchainStatus,
+      metadata: {
+        symbol: row.symbol,
+        pegCurrency: nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native",
+        price: nativePegQuote?.price ?? "n/a",
+        deviationBps: nativeSignal.absBps,
+        secondaryBarBps: secondaryBar,
+      },
+    });
   } else if (geckoId && !isNativeOrigin) {
     const result = await evaluateOffchainConfirmer({
       db,
@@ -296,12 +347,24 @@ export async function collectConfirmationEvidence(
       addSources(evidence.opposingSources, keys);
       addSources(evidence.hardOpposingSources, keys);
     }
-    console.log(
-      `[depeg-confirm] ${row.symbol} DEX check: price=$${dexRow.dex_price_usd}, deviation=${dexSignal?.absBps ?? "n/a"}bps, ` +
-      `bar=${secondaryBar}bps, aggregate=${aggregateDexStatus}, ` +
-      `confirmGroups=${confirmGroups.length}, recoverGroups=${recoverGroups.length}, ` +
-      `contradictGroups=${contradictGroups.length}, status=${evidence.dexStatus}`
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "confirm-pending-depegs",
+      level: "info",
+      event: "dex-confirmation-checked",
+      message: "DEX confirmation checked",
+      status: evidence.dexStatus,
+      metadata: {
+        symbol: row.symbol,
+        price: dexRow.dex_price_usd,
+        deviationBps: dexSignal?.absBps ?? "n/a",
+        secondaryBarBps: secondaryBar,
+        aggregateStatus: aggregateDexStatus,
+        confirmGroupCount: confirmGroups.length,
+        recoverGroupCount: recoverGroups.length,
+        contradictGroupCount: contradictGroups.length,
+      },
+    });
   } else if (dexRow != null) {
     addSource(evidence.unavailableSources, "dex:aggregate-untrusted");
   } else {
@@ -326,10 +389,21 @@ export async function collectConfirmationEvidence(
         addSource(evidence.opposingSources, "cex:binance");
         addSource(evidence.hardOpposingSources, "cex:binance");
       }
-      console.log(
-        `[depeg-confirm] ${row.symbol} CEX check: price=$${cexPrice}, deviation=${cexSignal?.absBps ?? "n/a"}bps, ` +
-        `bar=${secondaryBar}bps, status=${evidence.cexStatus}`,
-      );
+      logWorkerEvent({
+        scope: "lib",
+        job: "confirm-pending-depegs",
+        level: "info",
+        event: "cex-confirmation-checked",
+        message: "CEX confirmation checked",
+        provider: "binance",
+        status: evidence.cexStatus,
+        metadata: {
+          symbol: row.symbol,
+          price: cexPrice,
+          deviationBps: cexSignal?.absBps ?? "n/a",
+          secondaryBarBps: secondaryBar,
+        },
+      });
     }
   }
 
@@ -357,10 +431,22 @@ export async function collectConfirmationEvidence(
             poolHighTvlConfirm = candidate;
           }
         }
-        console.log(
-          `[depeg-confirm] ${row.symbol} pool confirm: price=$${pool.price} (${pool.protocol}/${pool.chain}, ` +
-          `$${(pool.tvlUsd / 1e6).toFixed(1)}M TVL), deviation=${poolSignal?.absBps ?? "n/a"}bps`,
-        );
+        logWorkerEvent({
+          scope: "lib",
+          job: "confirm-pending-depegs",
+          level: "info",
+          event: "pool-confirmation-checked",
+          message: "Pool confirmation checked",
+          metadata: {
+            symbol: row.symbol,
+            price: pool.price,
+            protocol: pool.protocol,
+            chain: pool.chain,
+            tvlUsd: pool.tvlUsd,
+            tvlMillions: (pool.tvlUsd / 1e6).toFixed(1),
+            deviationBps: poolSignal?.absBps ?? "n/a",
+          },
+        });
       } else if (currentPoolStatus === "contradict") {
         poolContradictGroups.add(poolGroupKey);
       } else if (currentPoolStatus === "recover") {
@@ -385,12 +471,23 @@ export async function collectConfirmationEvidence(
       addSources(evidence.opposingSources, keys);
       addSources(evidence.hardOpposingSources, keys);
     }
-    console.log(
-      `[depeg-confirm] ${row.symbol} pool summary: ${pools.length} pools checked, ` +
-      `confirmGroups=${poolConfirmGroups.size} (highTvl=${poolHighTvlConfirm != null}), ` +
-      `contradictGroups=${poolContradictGroups.size}, recoverGroups=${poolRecoverGroups.size}, ` +
-      `bar=${secondaryBar}bps, status=${evidence.poolStatus}`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "confirm-pending-depegs",
+      level: "info",
+      event: "pool-confirmation-summary",
+      message: "Pool confirmation summary",
+      status: evidence.poolStatus,
+      metadata: {
+        symbol: row.symbol,
+        poolCount: pools.length,
+        confirmGroupCount: poolConfirmGroups.size,
+        highTvlConfirmation: poolHighTvlConfirm != null,
+        contradictGroupCount: poolContradictGroups.size,
+        recoverGroupCount: poolRecoverGroups.size,
+        secondaryBarBps: secondaryBar,
+      },
+    });
   } else {
     addSource(evidence.unavailableSources, "pool:challenger");
   }

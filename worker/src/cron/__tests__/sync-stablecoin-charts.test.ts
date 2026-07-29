@@ -259,7 +259,13 @@ describe("syncStablecoinCharts", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as { reason: string; rawLength: number };
     expect(metadata.reason).toBe("DL API payload too small");
     expect(metadata.rawLength).toBe(1);
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Unexpected data length"));
+    expect(JSON.parse(String(errorSpy.mock.calls[0]?.[0]))).toMatchObject({
+      event: "defillama-payload-too-small",
+      job: "sync-stablecoin-charts",
+      level: "error",
+      message: "Unexpected data length; skipping cache write",
+      metadata: { rawLength: 1 },
+    });
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
   });
 

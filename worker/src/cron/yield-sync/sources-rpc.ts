@@ -11,6 +11,7 @@ import { createOptionalSourceBudget, resolveRpcUrls } from "./sources-helpers";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
 import type { ResolvedYield } from "./types";
 import { toErrorMessage } from "../../lib/error-utils";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 const OPTIONAL_PROTOCOL_RPC_BUDGET_MS = 30_000;
 const OPTIONAL_PROTOCOL_RPC_REQUEST_TIMEOUT_MS = 10_000;
@@ -78,17 +79,40 @@ function logOptionalRpcTelemetry(family: string, telemetry: OptionalRpcFamilyTel
     .join(", ");
 
   if (telemetry.missingTargetCount > 0 || telemetry.budgetExhausted) {
-    console.warn(
-      `[yield/${family}] resolved ${telemetry.resolvedTargetCount}/${telemetry.targetCount} targets `
-      + `(emitted ${telemetry.emittedCount}, attempted ${telemetry.attemptedCount}; ${reasonSummary || "no-miss-reasons"})`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "optional-rpc-family-partial",
+      message: "Optional RPC family resolved fewer than all targets",
+      source: family,
+      metadata: {
+        resolvedTargetCount: telemetry.resolvedTargetCount,
+        targetCount: telemetry.targetCount,
+        emittedCount: telemetry.emittedCount,
+        attemptedCount: telemetry.attemptedCount,
+        missingReasonSummary: reasonSummary || "no-miss-reasons",
+        missingReasonCounts: telemetry.missingReasonCounts,
+        budgetExhausted: telemetry.budgetExhausted,
+      },
+    });
     return;
   }
 
-  console.log(
-    `[yield/${family}] resolved ${telemetry.resolvedTargetCount}/${telemetry.targetCount} targets `
-    + `(emitted ${telemetry.emittedCount}, attempted ${telemetry.attemptedCount})`,
-  );
+  logWorkerEvent({
+    scope: "lib",
+    job: "sync-yield-data",
+    level: "info",
+    event: "optional-rpc-family-complete",
+    message: "Optional RPC family resolved all targets",
+    source: family,
+    metadata: {
+      resolvedTargetCount: telemetry.resolvedTargetCount,
+      targetCount: telemetry.targetCount,
+      emittedCount: telemetry.emittedCount,
+      attemptedCount: telemetry.attemptedCount,
+    },
+  });
 }
 
 function finalizeOptionalRpcTelemetry<T extends { chain: string; symbol: string }>(
@@ -223,7 +247,13 @@ export async function fetchOnChainRates(
   etherscanApiKey?: string | null,
 ): Promise<OnChainRateResult> {
   if (!chainRpcs) {
-    console.warn("[yield] No chain RPCs configured, skipping all on-chain rate fetches");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "onchain-rate-rpcs-missing",
+      message: "No chain RPCs configured; skipping all on-chain rate fetches",
+    });
     const attemptedCount = ON_CHAIN_RATE_CONFIGS.length;
     return {
       rates: new Map(),
@@ -267,7 +297,19 @@ export async function fetchOnChainRates(
   const totalFailures = Object.values(failureCounts).reduce((s, n) => s + n, 0);
   if (totalFailures > 0) {
     const breakdown = Object.entries(failureCounts).map(([k, v]) => `${k}=${v}`).join(", ");
-    console.warn(`[yield] On-chain rates: ${rates.size}/${ON_CHAIN_RATE_CONFIGS.length} ok (${breakdown})`);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "onchain-rate-fetches-partial",
+      message: "On-chain rate fetches partially failed",
+      metadata: {
+        resolvedRateCount: rates.size,
+        configuredRateCount: ON_CHAIN_RATE_CONFIGS.length,
+        failureBreakdown: breakdown,
+        failureCounts,
+      },
+    });
   }
 
   const attemptedCount = ON_CHAIN_RATE_CONFIGS.length;
@@ -404,10 +446,25 @@ export async function fetchCompoundV3SupplyRates(
         if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
         if (budget.budgetController.signal.aborted) {
           telemetry.budgetExhausted = true;
-          console.warn(`[yield] Compound V3 budget exhausted; keeping ${results.length} partial results`);
+          logWorkerEvent({
+            scope: "lib",
+            job: "sync-yield-data",
+            level: "warn",
+            event: "compound-v3-budget-exhausted",
+            message: "Compound V3 budget exhausted; keeping partial results",
+            metadata: { resultCount: results.length },
+          });
           break;
         }
-        console.warn(`[yield] Compound V3 ${target.chain}:${target.symbol} failed:`, error);
+        logWorkerEvent({
+          scope: "lib",
+          job: "sync-yield-data",
+          level: "warn",
+          event: "compound-v3-target-failed",
+          message: "Compound V3 target failed",
+          metadata: { chain: target.chain, symbol: target.symbol },
+          error,
+        });
         recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "rpc-exception");
         accountedTargets.add(targetLabel);
       }
@@ -624,10 +681,16 @@ export async function fetchAaveV3SupplyRates(
               telemetry.budgetExhausted = true;
               return;
             }
-            console.warn(
-              `[yield/aave-v3] Failed to fetch reserve data for ${target.symbol} on ${target.chain}:`,
-              toErrorMessage(err),
-            );
+            logWorkerEvent({
+              scope: "lib",
+              job: "sync-yield-data",
+              level: "warn",
+              event: "aave-v3-reserve-fetch-failed",
+              message: "Failed to fetch Aave V3 reserve data",
+              source: "aave-v3",
+              metadata: { chain: target.chain, symbol: target.symbol },
+              error: toErrorMessage(err),
+            });
             recordOptionalRpcMiss(telemetry, target.chain, targetLabel, "rpc-exception");
             accountedTargets.add(targetLabel);
           }

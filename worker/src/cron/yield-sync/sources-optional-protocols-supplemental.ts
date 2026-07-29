@@ -1,6 +1,7 @@
 import { CHAIN_META } from "@shared/lib/chains";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../lib/abort";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
@@ -231,10 +232,23 @@ export async function fetchMorphoVaultSources(signal?: AbortSignal): Promise<Res
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
     if (budget.budgetController.signal.aborted) {
-      console.warn("[yield] Morpho vault sources budget exhausted; continuing without this source family");
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-yield-data",
+        level: "warn",
+        event: "morpho-sources-budget-exhausted",
+        message: "Morpho vault sources budget exhausted; continuing without this source family",
+      });
       return [];
     }
-    console.warn("[yield] Morpho vault sources failed:", error);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "morpho-sources-failed",
+      message: "Morpho vault sources failed",
+      error,
+    });
     return [];
   } finally {
     budget.cleanup();
@@ -320,10 +334,25 @@ export async function fetchPendleMarketSources(signal?: AbortSignal): Promise<Re
       } catch (error) {
         if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
         if (budget.budgetController.signal.aborted) {
-          console.warn(`[yield] Pendle sources budget exhausted; keeping ${results.length} partial results`);
+          logWorkerEvent({
+            scope: "lib",
+            job: "sync-yield-data",
+            level: "warn",
+            event: "pendle-sources-budget-exhausted",
+            message: "Pendle sources budget exhausted; keeping partial results",
+            metadata: { resultCount: results.length },
+          });
           break;
         }
-        console.warn(`[yield] Pendle chain ${chainId} failed:`, error);
+        logWorkerEvent({
+          scope: "lib",
+          job: "sync-yield-data",
+          level: "warn",
+          event: "pendle-chain-failed",
+          message: "Pendle chain source failed",
+          metadata: { chainId },
+          error,
+        });
       }
     }
     return results;
@@ -422,10 +451,25 @@ export async function fetchYearnKongSources(signal?: AbortSignal): Promise<Resol
       } catch (error) {
         if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
         if (budget.budgetController.signal.aborted) {
-          console.warn(`[yield] Yearn Kong sources budget exhausted; keeping ${results.length} partial results`);
+          logWorkerEvent({
+            scope: "lib",
+            job: "sync-yield-data",
+            level: "warn",
+            event: "yearn-kong-sources-budget-exhausted",
+            message: "Yearn Kong sources budget exhausted; keeping partial results",
+            metadata: { resultCount: results.length },
+          });
           break;
         }
-        console.warn(`[yield] Yearn Kong chain ${chainId} failed:`, error);
+        logWorkerEvent({
+          scope: "lib",
+          job: "sync-yield-data",
+          level: "warn",
+          event: "yearn-kong-chain-failed",
+          message: "Yearn Kong chain source failed",
+          metadata: { chainId },
+          error,
+        });
       }
     }
     return results;
@@ -502,10 +546,23 @@ export async function fetchBeefySources(signal?: AbortSignal): Promise<ResolvedY
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
     if (budget.budgetController.signal.aborted) {
-      console.warn("[yield] Beefy sources budget exhausted; continuing without this source family");
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-yield-data",
+        level: "warn",
+        event: "beefy-sources-budget-exhausted",
+        message: "Beefy sources budget exhausted; continuing without this source family",
+      });
       return [];
     }
-    console.warn("[yield] Beefy sources failed:", error);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "beefy-sources-failed",
+      message: "Beefy sources failed",
+      error,
+    });
     return [];
   } finally {
     budget.cleanup();

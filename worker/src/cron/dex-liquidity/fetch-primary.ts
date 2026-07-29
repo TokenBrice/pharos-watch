@@ -137,7 +137,14 @@ export async function fetchDataSources(
             if (!pool.project || pool.exposure === "single") continue;
             fallbackDexProjects.add(pool.project);
           }
-          console.log(`[dex-liquidity] Got ${rawPoolCount} pools from DeFiLlama yields`);
+          logWorkerEvent({
+            scope: "lib",
+            job: "sync-dex-liquidity",
+            level: "info",
+            event: "defillama-yields-loaded",
+            message: "Got pools from DeFiLlama yields",
+            metadata: { rawPoolCount },
+          });
 
           // Cache minimal stablecoin pool data for yield sync (avoids redundant 13MB re-fetch)
           try {
@@ -158,7 +165,14 @@ export async function fetchDataSources(
             }));
             await setCache(db, "dl-stablecoin-pools", buildDlStablecoinPoolsCache(minimalPools));
           } catch (e) {
-            console.warn("[dex-liquidity] Failed to cache stablecoin pools for yield sync:", e);
+            logWorkerEvent({
+              scope: "lib",
+              job: "sync-dex-liquidity",
+              level: "warn",
+              event: "yield-pool-cache-failed",
+              message: "Failed to cache stablecoin pools for yield sync",
+              error: e,
+            });
           }
 
           const compacted = compactPrimaryPoolsForTrackedStablecoins(rawPools, lookups);
@@ -166,29 +180,62 @@ export async function fetchDataSources(
           pools = compacted.pools;
           dlYieldsAvailable = true;
           if (compacted.skippedUntrackedCount > 0) {
-            console.log(
-              `[dex-liquidity] Retained ${compacted.retainedPoolCount} DeFiLlama pools with tracked tokens ` +
-                `(skipped ${compacted.skippedUntrackedCount} before Curve fetching)`,
-            );
+            logWorkerEvent({
+              scope: "lib",
+              job: "sync-dex-liquidity",
+              level: "info",
+              event: "defillama-pools-compacted",
+              message: "Retained DeFiLlama pools with tracked tokens",
+              metadata: {
+                retainedPoolCount: compacted.retainedPoolCount,
+                skippedUntrackedCount: compacted.skippedUntrackedCount,
+              },
+            });
           }
         } else {
           await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
-          console.warn(`[dex-liquidity] DeFiLlama returned only ${llamaData.data?.length ?? 0} pools — degraded mode`);
+          logWorkerEvent({
+            scope: "lib",
+            job: "sync-dex-liquidity",
+            level: "warn",
+            event: "defillama-yields-degraded",
+            message: "DeFiLlama returned too few pools",
+            metadata: { poolCount: llamaData.data?.length ?? 0 },
+          });
         }
       } catch (e) {
         pools = [];
         rawPoolCount = 0;
         fallbackDexProjects.clear();
         dlYieldsAvailable = false;
-        console.warn("[dex-liquidity] DeFiLlama yields response parse failed:", toErrorMessage(e));
+        logWorkerEvent({
+          scope: "lib",
+          job: "sync-dex-liquidity",
+          level: "warn",
+          event: "defillama-yields-parse-failed",
+          message: "DeFiLlama yields response parse failed",
+          error: toErrorMessage(e),
+        });
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
       }
     } else {
-      console.warn("[dex-liquidity] DeFiLlama yields fetch failed — CG/GT will be primary pool source");
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-dex-liquidity",
+        level: "warn",
+        event: "defillama-yields-fetch-failed",
+        message: "DeFiLlama yields fetch failed; CG/GT will be the primary pool source",
+      });
       await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
     }
   } else {
-    console.warn("[dex-liquidity] DL yields circuit open — CG/GT will be primary pool source");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-dex-liquidity",
+      level: "warn",
+      event: "defillama-yields-circuit-open",
+      message: "DL yields circuit open; CG/GT will be the primary pool source",
+    });
   }
   llamaResult = null;
 
@@ -236,26 +283,56 @@ export async function fetchDataSources(
             metadata: { projectCount: dexProjects.size, tvlCapCount: protocolTvlCaps.size },
           });
         } else {
-          console.warn("[dex-liquidity] DeFiLlama protocols response had zero active DEX projects — degraded");
+          logWorkerEvent({
+            scope: "lib",
+            job: "sync-dex-liquidity",
+            level: "warn",
+            event: "defillama-protocols-empty",
+            message: "DeFiLlama protocols response had zero active DEX projects",
+          });
         }
       } catch (e) {
-        console.warn("[dex-liquidity] DeFiLlama protocols response parse failed:", toErrorMessage(e));
+        logWorkerEvent({
+          scope: "lib",
+          job: "sync-dex-liquidity",
+          level: "warn",
+          event: "defillama-protocols-parse-failed",
+          message: "DeFiLlama protocols response parse failed",
+          error: toErrorMessage(e),
+        });
         await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, false);
       }
     } else {
-      console.warn("[dex-liquidity] DeFiLlama protocols fetch failed — dead-protocol filtering degraded");
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-dex-liquidity",
+        level: "warn",
+        event: "defillama-protocols-fetch-failed",
+        message: "DeFiLlama protocols fetch failed; dead-protocol filtering is degraded",
+      });
       await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, false);
     }
   } else {
-    console.warn("[dex-liquidity] DL protocols circuit open — dead-protocol filtering degraded");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-dex-liquidity",
+      level: "warn",
+      event: "defillama-protocols-circuit-open",
+      message: "DL protocols circuit open; dead-protocol filtering is degraded",
+    });
   }
   protocolsResult = null;
 
   if (dexProjects.size === 0 && fallbackDexProjects.size > 0) {
     for (const project of fallbackDexProjects) dexProjects.add(project);
-    console.warn(
-      `[dex-liquidity] Using fallback DEX project set from yields (${dexProjects.size} projects) because protocol index is unavailable`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-dex-liquidity",
+      level: "warn",
+      event: "fallback-dex-projects",
+      message: "Using fallback DEX project set from yields because the protocol index is unavailable",
+      metadata: { projectCount: dexProjects.size },
+    });
   }
 
   // DeFiLlama bodies are consumed before Curve opens its bounded request batch.
@@ -275,13 +352,24 @@ export async function fetchDataSources(
     const curveSuccess = curvePayloads.some((payload) => payload != null);
     await recordOutcome(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API, curveSuccess);
   } else {
-    console.warn("[dex-liquidity] Curve liquidity API circuit open — skipping Curve pool data");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-dex-liquidity",
+      level: "warn",
+      event: "curve-liquidity-circuit-open",
+      message: "Curve liquidity API circuit open; skipping Curve pool data",
+    });
     curvePayloads = CURVE_CHAINS.map(() => null);
   }
 
   // Only abort if BOTH DL sources AND Curve all failed (truly catastrophic)
   if (!dlYieldsAvailable && curvePayloads.every((payload) => payload == null)) {
-    console.error("[dex-liquidity] All pool data sources failed — aborting");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-dex-liquidity",
+      event: "all-pool-sources-failed",
+      message: "All pool data sources failed; aborting",
+    });
     return null;
   }
 
@@ -536,12 +624,25 @@ export async function buildCurveLookups(
         }
       }
     } catch (err) {
-      console.warn(`[dex-liquidity] Failed to parse Curve ${CURVE_CHAINS[i]}:`, err);
+      logWorkerEvent({
+        scope: "lib",
+        job: "sync-dex-liquidity",
+        level: "warn",
+        event: "curve-payload-parse-failed",
+        message: "Failed to parse Curve payload",
+        metadata: { chain: CURVE_CHAINS[i] },
+        error: err,
+      });
     }
   }
-  console.log(
-    `[dex-liquidity] Indexed ${curvePoolMap.size} Curve pools, ${priceObservations.size} coins with Curve price obs`,
-  );
+  logWorkerEvent({
+    scope: "lib",
+    job: "sync-dex-liquidity",
+    level: "info",
+    event: "curve-pools-indexed",
+    message: "Indexed Curve pools and price observations",
+    metadata: { curvePoolCount: curvePoolMap.size, priceObservationCount: priceObservations.size },
+  });
 
   return { curvePoolMap, curvePoolCandidatesByFingerprint, priceObservations };
 }
@@ -623,9 +724,13 @@ export function buildKnownPoolAddresses(
     );
   }
 
-  console.log(
-    `[dex-liquidity] Built known pool identity index: ${known.exactKeys.size} exact keys, ` +
-      `${derivedCount} derived DL keys`,
-  );
+  logWorkerEvent({
+    scope: "lib",
+    job: "sync-dex-liquidity",
+    level: "info",
+    event: "known-pool-identity-index-built",
+    message: "Built known pool identity index",
+    metadata: { exactKeyCount: known.exactKeys.size, derivedDlKeyCount: derivedCount },
+  });
   return known;
 }

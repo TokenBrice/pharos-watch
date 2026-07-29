@@ -6,6 +6,7 @@ import { USER_AGENT } from "../../lib/constants";
 import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { throwIfAborted } from "../../lib/abort";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { buildOnChainSourceKey } from "../yield-helpers";
 import type { ResolvedYield } from "./types";
 
@@ -46,7 +47,15 @@ async function fetchEthCallUint256(
       timeoutMs: 10_000,
     });
   } catch (error) {
-    console.warn(`[yield] eth_call failed for ${to} ${data}:`, error);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "eth-call-failed",
+      message: "eth_call failed",
+      metadata: { chain, to, data },
+      error,
+    });
     return null;
   }
 }
@@ -71,7 +80,16 @@ async function fetchCoinGeckoUsdPrice(
     const price = body[geckoId]?.usd;
     return typeof price === "number" && price > 0 ? price : null;
   } catch (error) {
-    console.warn(`[yield] CoinGecko price fetch failed for ${geckoId}:`, error);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "coingecko-price-fetch-failed",
+      message: "CoinGecko price fetch failed",
+      provider: "coingecko",
+      metadata: { geckoId },
+      error,
+    });
     return null;
   }
 }
@@ -87,12 +105,24 @@ export async function fetchBprotocolLqtyOnlySource(
   coingeckoApiKey?: string | null,
 ): Promise<ResolvedYield | null> {
   if (!chainRpcs) {
-    console.warn("[yield] No chain RPCs provided for B.Protocol LQTY-only source");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "bprotocol-rpcs-missing",
+      message: "No chain RPCs provided for B.Protocol LQTY-only source",
+    });
     return null;
   }
   const rpc = getChainRpc(chainRpcs, "ethereum");
   if (!rpc) {
-    console.warn("[yield] No Ethereum RPC configured for B.Protocol LQTY-only source");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "bprotocol-ethereum-rpc-missing",
+      message: "No Ethereum RPC configured for B.Protocol LQTY-only source",
+    });
     return null;
   }
 
@@ -161,7 +191,14 @@ export async function fetchBprotocolLqtyOnlySource(
     if (signal?.aborted) {
       throw error instanceof Error ? error : new Error(String(error));
     }
-    console.warn("[yield] B.Protocol LQTY-only source failed:", error);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "bprotocol-source-failed",
+      message: "B.Protocol LQTY-only source failed",
+      error,
+    });
     return null;
   }
 }
@@ -172,12 +209,24 @@ export async function fetchCurveScrvusdCurrentRateSource(
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<ResolvedYield | null> {
   if (!chainRpcs) {
-    console.warn("[yield] No chain RPCs provided for Curve scrvUSD current-rate source");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "scrvusd-rpcs-missing",
+      message: "No chain RPCs provided for Curve scrvUSD current-rate source",
+    });
     return null;
   }
   const rpc = getChainRpc(chainRpcs, "ethereum");
   if (!rpc) {
-    console.warn("[yield] No Ethereum RPC configured for Curve scrvUSD current-rate source");
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "scrvusd-ethereum-rpc-missing",
+      message: "No Ethereum RPC configured for Curve scrvUSD current-rate source",
+    });
     return null;
   }
 
@@ -261,7 +310,14 @@ export async function fetchCurveScrvusdCurrentRateSource(
     if (signal?.aborted) {
       throw error instanceof Error ? error : new Error(String(error));
     }
-    console.warn("[yield] Curve scrvUSD current-rate source failed:", error);
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-yield-data",
+      level: "warn",
+      event: "scrvusd-source-failed",
+      message: "Curve scrvUSD current-rate source failed",
+      error,
+    });
     return null;
   }
 }
