@@ -11,7 +11,7 @@ export const ENV_BINDINGS = [
     description: "Optional frontend API-base override, mainly for local `next dev` against `wrangler dev`.",
     example: { section: "frontend", value: "" },
     runtimes: {
-      frontend: { order: 1, status: "optional" },
+      frontend: { status: "optional" },
     },
   },
   {
@@ -20,7 +20,7 @@ export const ENV_BINDINGS = [
     description: "Optional GA4 measurement ID; when unset, the site renders without analytics injection.",
     example: { section: "frontend", value: "" },
     runtimes: {
-      frontend: { order: 2, status: "optional" },
+      frontend: { status: "optional" },
     },
   },
   {
@@ -29,7 +29,7 @@ export const ENV_BINDINGS = [
     description: "Optional CI/local-smoke frontend override; when `true`, browser reads use same-origin `/_site-data/*` even on local hosts.",
     example: { section: "frontend", value: "" },
     runtimes: {
-      frontend: { order: 3, status: "optional" },
+      frontend: { status: "optional" },
     },
   },
   {
@@ -38,8 +38,8 @@ export const ENV_BINDINGS = [
     description: "Primary D1 binding for worker reads/writes; Pages uses it for optional site-data attribution telemetry and required atomic selector-snapshot write quotas.",
     docs: { includeInOperatorOriginAccess: true },
     runtimes: {
-      worker: { order: 50, status: "required" },
-      pagesSiteData: { order: 1, status: "required" },
+      worker: { status: "required" },
+      pagesSiteData: { status: "required" },
     },
   },
   {
@@ -47,7 +47,7 @@ export const ENV_BINDINGS = [
     valueType: "WorkerVersionMetadata",
     description: "Cloudflare version metadata binding attached to scheduled attempt and checkpoint telemetry for deployment correlation.",
     runtimes: {
-      worker: { order: 49, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -55,7 +55,7 @@ export const ENV_BINDINGS = [
     valueType: "RateLimit",
     description: "Cloudflare pre-authentication rate limiter for Telegram webhook requests.",
     runtimes: {
-      worker: { order: 62, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -63,7 +63,7 @@ export const ENV_BINDINGS = [
     valueType: "RateLimit",
     description: "Cloudflare pre-authentication rate limiter for Telegram Mini App session requests.",
     runtimes: {
-      worker: { order: 63, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -71,7 +71,7 @@ export const ENV_BINDINGS = [
     valueType: "RateLimit",
     description: "Cloudflare pre-authentication rate limiter for Telegram Mini App mutation requests.",
     runtimes: {
-      worker: { order: 64, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -80,7 +80,7 @@ export const ENV_BINDINGS = [
     description: "Comma-separated CORS allowlist; repo default is `https://pharos.watch,https://ops.pharos.watch`.",
     example: { section: "workerRequired", value: "https://pharos.watch,https://ops.pharos.watch" },
     runtimes: {
-      worker: { order: 51, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -89,7 +89,7 @@ export const ENV_BINDINGS = [
     description: "Status self-check external probe base URL.",
     example: { section: "workerOptional", value: "https://api.pharos.watch" },
     runtimes: {
-      worker: { order: 1, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -99,8 +99,8 @@ export const ENV_BINDINGS = [
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "sharedSiteApiSecret", value: "" },
     runtimes: {
-      worker: { order: 2, status: "optional" },
-      pagesSiteData: { order: 2, status: "required" },
+      worker: { status: "optional" },
+      pagesSiteData: { status: "required" },
     },
   },
   {
@@ -109,7 +109,7 @@ export const ENV_BINDINGS = [
     description: "Optional overlap secret accepted alongside `SITE_API_SHARED_SECRET` during the site-data rotation window.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 3, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -118,7 +118,7 @@ export const ENV_BINDINGS = [
     description: "HMAC pepper used to hash the secret portion of public API keys.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 4, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -127,7 +127,7 @@ export const ENV_BINDINGS = [
     description: "Optional overlap pepper accepted alongside `API_KEY_HASH_PEPPER` during public API key rotation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 5, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -137,8 +137,8 @@ export const ENV_BINDINGS = [
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 7, status: "optional" },
-      pagesOps: { order: 3, status: "required" },
+      worker: { status: "optional" },
+      pagesOps: { status: "required" },
     },
   },
   {
@@ -148,7 +148,7 @@ export const ENV_BINDINGS = [
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 8, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -157,7 +157,7 @@ export const ENV_BINDINGS = [
     description: "Etherscan API credential used by blacklist sync and USDS status reads.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 9, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -166,7 +166,7 @@ export const ENV_BINDINGS = [
     description: "TronGrid API credential used by Tron blacklist sync and SunSwap exact-execution reads.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 10, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -175,7 +175,7 @@ export const ENV_BINDINGS = [
     description: "dRPC credential used for L2 archive-node balance lookups.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 11, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -184,7 +184,7 @@ export const ENV_BINDINGS = [
     description: "Alchemy credential used for primary chain RPC endpoints and, when enabled, Alchemy Prices API address-price augmentation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 12, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -193,7 +193,7 @@ export const ENV_BINDINGS = [
     description: "Moralis credential used for optional exact-address token-price augmentation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 13, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -202,7 +202,7 @@ export const ENV_BINDINGS = [
     description: "Birdeye credential used for optional targeted Solana exact-address token-price augmentation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 14, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -214,7 +214,7 @@ export const ENV_BINDINGS = [
       value: "coingecko-onchain-address",
     },
     runtimes: {
-      worker: { order: 15, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -223,7 +223,7 @@ export const ENV_BINDINGS = [
     description: "The Graph credential used by DEX liquidity subgraph reads.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 16, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -232,7 +232,7 @@ export const ENV_BINDINGS = [
     description: "Anthropic credential used for daily digest generation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 18, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -241,7 +241,7 @@ export const ENV_BINDINGS = [
     description: "CoinMarketCap credential used by the price-fallback pass.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 19, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -250,7 +250,7 @@ export const ENV_BINDINGS = [
     description: "Jupiter credential used by Solana price fallback and shadow Orca exact-route quotes against `api.jup.ag`.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 20, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -259,7 +259,7 @@ export const ENV_BINDINGS = [
     description: "CoinGecko credential used for price enrichment and depeg confirmation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 21, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -268,7 +268,7 @@ export const ENV_BINDINGS = [
     description: "Optional vaults.fyi credential for the disabled-by-default supplemental yield integration.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 49, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -277,7 +277,7 @@ export const ENV_BINDINGS = [
     description: "Optional vaults.fyi supplemental yield integration flag; unset, false, or malformed values keep the integration disabled.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 50, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -286,7 +286,7 @@ export const ENV_BINDINGS = [
     description: "Optional CSV allowlist of vaults.fyi `network:vaultId` entries allowed to publish rankable supplemental yield rows.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 51, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -295,7 +295,7 @@ export const ENV_BINDINGS = [
     description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed by one supplemental yield run. Production uses 13 at the four-hour cadence and can lower the effective allowance to keep the UTC-month forecast within the monthly cap.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 52, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -304,7 +304,7 @@ export const ENV_BINDINGS = [
     description: "Optional positive integer local cap for estimated vaults.fyi credit units consumed during one UTC month. Fetches reserve credit allowance before provider work; telemetry warns before 75 percent projected or actual utilization.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 53, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -313,7 +313,7 @@ export const ENV_BINDINGS = [
     description: "Optional positive integer page cap for the audit-only vaults.fyi inventory probe.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 54, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -322,7 +322,7 @@ export const ENV_BINDINGS = [
     description: "GitHub personal access token used by the feedback -> issue bridge; required to keep `POST /api/feedback` available.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 52, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -331,7 +331,7 @@ export const ENV_BINDINGS = [
     description: "Dedicated salt for hashed-IP feedback submission throttling; required to keep `POST /api/feedback` available.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 53, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -340,7 +340,7 @@ export const ENV_BINDINGS = [
     description: "Dedicated salt for hashed-IP self-serve API key request throttling.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 54, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -349,7 +349,7 @@ export const ENV_BINDINGS = [
     description: "HMAC pepper used for private self-serve API request email lookup and duplicate-claim keys.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 55, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -358,7 +358,7 @@ export const ENV_BINDINGS = [
     description: "HMAC pepper used to hash one-time self-serve API email verification tokens.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 56, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -367,7 +367,7 @@ export const ENV_BINDINGS = [
     description: "Resend API key used to send self-serve API verification emails.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 57, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -376,7 +376,7 @@ export const ENV_BINDINGS = [
     description: "Configured sender for self-serve API verification emails, e.g. `Pharos API <api@mail.pharos.watch>`.",
     example: { section: "workerRequired", value: "Pharos API <api@mail.pharos.watch>" },
     runtimes: {
-      worker: { order: 58, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -385,7 +385,7 @@ export const ENV_BINDINGS = [
     description: "Reply-to address for self-serve API verification emails.",
     example: { section: "workerRequired", value: "api@mail.pharos.watch" },
     runtimes: {
-      worker: { order: 59, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -394,7 +394,7 @@ export const ENV_BINDINGS = [
     description: "Public website URL used to build self-serve API verification links; production value is `https://pharos.watch/api`.",
     example: { section: "workerRequired", value: "https://pharos.watch/api" },
     runtimes: {
-      worker: { order: 60, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -403,7 +403,7 @@ export const ENV_BINDINGS = [
     description: "Twitter/X digest delivery credential.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 22, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -412,7 +412,7 @@ export const ENV_BINDINGS = [
     description: "Twitter/X digest delivery credential.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 23, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -421,7 +421,7 @@ export const ENV_BINDINGS = [
     description: "Twitter/X digest delivery credential.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 24, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -430,7 +430,7 @@ export const ENV_BINDINGS = [
     description: "Twitter/X digest delivery credential.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 25, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -439,7 +439,7 @@ export const ENV_BINDINGS = [
     description: "Telegram bot credential used for digest delivery and alert dispatch.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 26, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -448,7 +448,7 @@ export const ENV_BINDINGS = [
     description: "Optional previous Telegram bot token marker used for rotation consistency checks.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 27, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -457,7 +457,7 @@ export const ENV_BINDINGS = [
     description: "Telegram target chat/channel for digest posts and announcements.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 28, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -466,7 +466,7 @@ export const ENV_BINDINGS = [
     description: "Telegram webhook secret used to authenticate the webhook lane.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 29, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -475,7 +475,7 @@ export const ENV_BINDINGS = [
     description: "Optional overlap Telegram webhook secret accepted during secret rotation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 30, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -484,7 +484,7 @@ export const ENV_BINDINGS = [
     description: "Personalized recap rollout mode: `off` (default), `dark` (DB-only projection), `canary` (exact chat-ID allowlist), or `public`.",
     example: { section: "workerOptional", value: "off" },
     runtimes: {
-      worker: { order: 30.1, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -493,7 +493,7 @@ export const ENV_BINDINGS = [
     description: "Comma-separated exact Telegram chat IDs eligible for personalized recap canary controls and delivery; ignored outside `canary` mode.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 30.2, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -502,7 +502,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn runtime disable list by stablecoin ID (CSV).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 31, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -511,7 +511,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn runtime disable list by symbol (CSV).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 32, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -520,7 +520,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn health-check major-symbols override (CSV).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 33, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -529,7 +529,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn stale-warning threshold override (seconds).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 34, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -538,7 +538,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn stale-critical threshold override (seconds).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 35, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -547,7 +547,7 @@ export const ENV_BINDINGS = [
     description: "Mint/burn stale-alert dedupe cooldown override (seconds).",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 36, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -556,7 +556,7 @@ export const ENV_BINDINGS = [
     description: "Open Exchange Rates credential used for FX cross-validation.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 37, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -565,7 +565,7 @@ export const ENV_BINDINGS = [
     description: "Banxico SIE API token required for official MXN CETES 28-day benchmark rates; when the feed fails, MXN retains the last market benchmark when available or remains unavailable for USD fallback.",
     example: { section: "workerRequired", value: "" },
     runtimes: {
-      worker: { order: 61, status: "required" },
+      worker: { status: "required" },
     },
   },
   {
@@ -574,7 +574,7 @@ export const ENV_BINDINGS = [
     description: "Cloudflare account scope used by admin D1 status metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 39, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -583,7 +583,7 @@ export const ENV_BINDINGS = [
     description: "Cloudflare API token with D1 status/analytics read access for admin metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 40, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -592,7 +592,7 @@ export const ENV_BINDINGS = [
     description: "Target D1 database ID used by admin D1 status metrics.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 41, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -601,7 +601,7 @@ export const ENV_BINDINGS = [
     description: "Global worker kill switch; when `true`, non-`OPTIONS` traffic returns `503` maintenance responses.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 42, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -610,8 +610,8 @@ export const ENV_BINDINGS = [
     description: "Operational telemetry kill switch for low-value route/source attribution writes on Worker and Pages site-data lanes.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 43, status: "optional" },
-      pagesSiteData: { order: 4, status: "optional" },
+      worker: { status: "optional" },
+      pagesSiteData: { status: "optional" },
     },
   },
   {
@@ -620,7 +620,7 @@ export const ENV_BINDINGS = [
     description: "Worker-only operational telemetry kill switch for per-key public API attribution writes.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 44, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -629,7 +629,7 @@ export const ENV_BINDINGS = [
     description: "Scheduled job-attempt ledger mode. `off` disables, `shadow` records best-effort telemetry, and `write` makes bootstrap, lease-state, progress-heartbeat, and terminal persistence part of the owned job contract.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 45, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -638,7 +638,7 @@ export const ENV_BINDINGS = [
     description: "Optional CSV allowlist for job-attempt ledger recording. Unset records all scheduled jobs when the ledger mode is enabled.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 46, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -647,7 +647,7 @@ export const ENV_BINDINGS = [
     description: "Reserve interruption recovery mode. Unset or `off` skips recovery scans; `shadow` reads eligibility only; `reconcile` seals abandoned attempts and prepares replay without claiming; `recover` also claims and replays prepared attempts.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 49, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -656,7 +656,7 @@ export const ENV_BINDINGS = [
     description: "Explicit preview-only arming gate for reserve recovery fault injection. Only a normalized literal `true` enables the test harness; unset or any other value disables it.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 49.1, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -665,7 +665,7 @@ export const ENV_BINDINGS = [
     description: "Data-invariant mode: `off` skips, `shadow` records only, `status` degrades on findings, and `alert` turns critical findings into terminal errors.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
-      worker: { order: 48, status: "optional" },
+      worker: { status: "optional" },
     },
   },
   {
@@ -675,9 +675,9 @@ export const ENV_BINDINGS = [
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "workerReserved", value: "https://ops.pharos.watch" },
     runtimes: {
-      worker: { order: 1, status: "reserved" },
-      pagesOps: { order: 1, status: "optional" },
-      pagesSiteData: { order: 3, status: "optional" },
+      worker: { status: "reserved" },
+      pagesOps: { status: "optional" },
+      pagesSiteData: { status: "optional" },
     },
   },
   {
@@ -687,8 +687,8 @@ export const ENV_BINDINGS = [
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "workerReserved", value: "https://ops-api.pharos.watch" },
     runtimes: {
-      worker: { order: 2, status: "reserved" },
-      pagesOps: { order: 2, status: "optional" },
+      worker: { status: "reserved" },
+      pagesOps: { status: "optional" },
     },
   },
   {
@@ -698,8 +698,8 @@ export const ENV_BINDINGS = [
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "workerReserved", value: "" },
     runtimes: {
-      worker: { order: 3, status: "reserved" },
-      pagesOps: { order: 4, status: "required" },
+      worker: { status: "reserved" },
+      pagesOps: { status: "required" },
     },
   },
   {
@@ -709,7 +709,7 @@ export const ENV_BINDINGS = [
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "pagesOpsRequired", value: "" },
     runtimes: {
-      pagesOps: { order: 1, status: "required" },
+      pagesOps: { status: "required" },
     },
   },
   {
@@ -719,7 +719,7 @@ export const ENV_BINDINGS = [
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "pagesOpsRequired", value: "" },
     runtimes: {
-      pagesOps: { order: 2, status: "required" },
+      pagesOps: { status: "required" },
     },
   },
   {
@@ -729,7 +729,7 @@ export const ENV_BINDINGS = [
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "pagesOptional", value: "https://pharos.watch" },
     runtimes: {
-      pagesSiteData: { order: 2, status: "optional" },
+      pagesSiteData: { status: "optional" },
     },
   },
   {
@@ -739,7 +739,7 @@ export const ENV_BINDINGS = [
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "pagesSiteDataRequired", value: "https://site-api.pharos.watch" },
     runtimes: {
-      pagesSiteData: { order: 3, status: "required" },
+      pagesSiteData: { status: "required" },
     },
   },
   {
@@ -748,7 +748,7 @@ export const ENV_BINDINGS = [
     description: "KV namespace binding for the Pages-only Stablecoin Picker snapshot store at `functions/selector-snapshot/[[path]].ts`; new content-addressed `s:{sid}` entries carry server-recomputed trust metadata, while legacy entries remain client-unverified. HMAC-IP write-quota counters live in D1 for atomic reservations.",
     example: { section: "pagesSiteDataRequired", value: "" },
     runtimes: {
-      pagesSiteData: { order: 5, status: "required" },
+      pagesSiteData: { status: "required" },
     },
   },
   {
@@ -758,7 +758,7 @@ export const ENV_BINDINGS = [
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "pagesSiteDataRequired", value: "" },
     runtimes: {
-      pagesSiteData: { order: 4, status: "required" },
+      pagesSiteData: { status: "required" },
     },
   },
   {
@@ -768,29 +768,18 @@ export const ENV_BINDINGS = [
     docs: { includeInOperatorOriginAccess: true },
     example: { section: "pagesSiteDataRequired", value: "" },
     runtimes: {
-      pagesSiteData: { order: 6, status: "required" },
+      pagesSiteData: { status: "required" },
     },
   },
 ] satisfies readonly EnvBindingDefinition[];
 
 export type EnvBindingKey = (typeof ENV_BINDINGS)[number]["key"];
 
-export function compareRuntimeOrder(
-  left: EnvBindingDefinition,
-  right: EnvBindingDefinition,
-  runtime: EnvRuntimeName,
-) {
-  return (left.runtimes[runtime]?.order ?? Number.MAX_SAFE_INTEGER)
-    - (right.runtimes[runtime]?.order ?? Number.MAX_SAFE_INTEGER);
-}
-
 function getBindingsForRuntime(
   runtime: EnvRuntimeName,
   status: EnvRuntimeStatus,
 ): EnvBindingDefinition[] {
-  return ENV_BINDINGS
-    .filter((binding) => binding.runtimes[runtime]?.status === status)
-    .sort((left, right) => compareRuntimeOrder(left, right, runtime));
+  return ENV_BINDINGS.filter((binding) => binding.runtimes[runtime]?.status === status);
 }
 
 export function getRuntimeEnvKeys(

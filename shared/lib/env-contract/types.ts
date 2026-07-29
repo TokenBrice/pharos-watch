@@ -13,7 +13,6 @@ export type EnvExampleSection =
   | "pagesOptional";
 
 interface EnvRuntimeUsage {
-  order: number;
   status: EnvRuntimeStatus;
 }
 

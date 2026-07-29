@@ -1,8 +1,5 @@
 import type { EnvExampleSection } from "./types.ts";
-import {
-  ENV_BINDINGS,
-  compareRuntimeOrder,
-} from "./registry.ts";
+import { ENV_BINDINGS } from "./registry.ts";
 
 const ENV_EXAMPLE_SECTION_ORDER: readonly {
   comments: readonly string[];
@@ -83,20 +80,6 @@ function renderValueLine(key: string, value: string): string {
   return `${key}=${value}`;
 }
 
-function bindingOrder(binding: (typeof ENV_BINDINGS)[number]): number {
-  if (binding.example?.section === "frontend") {
-    return binding.runtimes.frontend?.order ?? Number.MAX_SAFE_INTEGER;
-  }
-  if (binding.runtimes.worker?.status === "required") return binding.runtimes.worker.order;
-  if (binding.runtimes.pagesOps?.status === "required") return binding.runtimes.pagesOps.order;
-  if (binding.runtimes.pagesSiteData?.status === "required") return binding.runtimes.pagesSiteData.order;
-  return Number.MAX_SAFE_INTEGER;
-}
-
-function compareBindingKeys(left: (typeof ENV_BINDINGS)[number], right: (typeof ENV_BINDINGS)[number]): number {
-  return left.key.localeCompare(right.key);
-}
-
 export function renderEnvExample(): string {
   const lines: string[] = [];
 
@@ -107,34 +90,7 @@ export function renderEnvExample(): string {
 
     lines.push(...section.comments);
 
-    const bindings = ENV_BINDINGS
-      .filter((binding) => binding.example?.section === section.key);
-
-    if (section.key === "workerOptional" || section.key === "workerReserved") {
-      const ordered = bindings
-        .slice()
-        .sort((left, right) => compareRuntimeOrder(left, right, "worker") || compareBindingKeys(left, right));
-      for (const binding of ordered) {
-        lines.push(renderValueLine(binding.key, binding.example?.value ?? ""));
-      }
-      continue;
-    }
-
-    if (section.key === "pagesOptional") {
-      const ordered = bindings
-        .slice()
-        .sort((left, right) => compareRuntimeOrder(left, right, "pagesSiteData") || compareBindingKeys(left, right));
-      for (const binding of ordered) {
-        lines.push(renderValueLine(binding.key, binding.example?.value ?? ""));
-      }
-      continue;
-    }
-
-    const ordered = bindings
-      .slice()
-      .sort((left, right) => bindingOrder(left) - bindingOrder(right) || compareBindingKeys(left, right));
-
-    for (const binding of ordered) {
+    for (const binding of ENV_BINDINGS.filter((binding) => binding.example?.section === section.key)) {
       lines.push(renderValueLine(binding.key, binding.example?.value ?? ""));
     }
   }
