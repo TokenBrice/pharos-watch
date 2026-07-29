@@ -1,0 +1,718 @@
+import {
+  evaluateV9ExitAssetFacts,
+  resolveV9ExitCapacityAtRequest,
+  selectV9ExitStressRequest,
+} from "@shared/lib/safety-score-v9/exit";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
+import type {
+  V9AssetFactsV2,
+  V9DeploymentControlFactV2,
+  V9EconomicControlReviewV2,
+  V9EffectiveDependenciesV3,
+  V9ExitRouteFactV2,
+  V9FactStatusV2,
+  V9ReserveExposureFactV2,
+} from "@shared/types/safety-score-v9-facts";
+import {
+  V9WrapperLocalFactsSchema,
+  type V9ApplicableWrapperLocalFacts,
+  type V9WrapperFactDisposition,
+  type V9WrapperLocalDimensionFact,
+  type V9WrapperLocalFacts,
+  type V9WrapperRiskAssessment,
+} from "@shared/types/safety-score-v9-wrapper";
+import {
+  componentResearchEvidence,
+  fallbackResearchEvidence,
+  type AssetBuildContext,
+} from "./safety-score-v9-fact-set-context";
+
+interface WrapperLocalFactBuildInputs {
+  implementation: V9AssetFactsV2["implementation"];
+  dependencies: V9EffectiveDependenciesV3;
+  reserveStatus: V9FactStatusV2;
+  reserveExposures: readonly V9ReserveExposureFactV2[];
+  exitStatus: V9FactStatusV2;
+  exitRoutes: readonly V9ExitRouteFactV2[];
+  controlStatus: V9FactStatusV2;
+  controls: readonly V9DeploymentControlFactV2[];
+  economicControlReview: V9EconomicControlReviewV2;
+  peg: V9AssetFactsV2["peg"];
+  supply: V9AssetFactsV2["supply"];
+}
+
+function uniqueEvidenceRefIds(values: readonly string[]): string[] {
+  return [...new Set(values)].sort(compareText);
+}
+
+function wrapperFactDisposition(
+  context: AssetBuildContext,
+  statuses: readonly V9FactStatusV2[],
+  fallback: Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable"> = "integration-missing",
+): Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable"> {
+  const responsibilities = statuses.flatMap((status) =>
+    status.gapIds.flatMap((gapId) => {
+      const responsibility = context.gaps.get(gapId)?.responsibility;
+      return responsibility ? [responsibility] : [];
+    }),
+  );
+  if (responsibilities.includes("issuer-undisclosed")) return "issuer-undisclosed";
+  if (responsibilities.includes("method-unsupported")) return "method-unsupported";
+  if (
+    responsibilities.includes("producer-failed") ||
+    statuses.some((status) => status.observationState === "stale")
+  ) {
+    return "producer-failed";
+  }
+  return fallback;
+}
+
+function reviewedWrapperFact(
+  context: AssetBuildContext,
+  assessment: V9WrapperRiskAssessment,
+  signals: readonly string[],
+  evidenceRefIds: readonly string[],
+): V9WrapperLocalDimensionFact {
+  const evidence = uniqueEvidenceRefIds(evidenceRefIds);
+  return {
+    disposition: "reviewed",
+    assessment,
+    signals: [...signals],
+    evidenceRefIds: evidence.length > 0 ? evidence : [fallbackResearchEvidence(context)],
+  };
+}
+
+function unavailableWrapperFact(
+  disposition: Exclude<V9WrapperFactDisposition, "reviewed" | "not-applicable">,
+  signal: string,
+  evidenceRefIds: readonly string[] = [],
+): V9WrapperLocalDimensionFact {
+  return {
+    disposition,
+    assessment: null,
+    signals: [signal],
+    evidenceRefIds: uniqueEvidenceRefIds(evidenceRefIds),
+  };
+}
+
+function notApplicableWrapperFact(signal: string, evidenceRefIds: readonly string[] = []): V9WrapperLocalDimensionFact {
+  return {
+    disposition: "not-applicable",
+    assessment: null,
+    signals: [signal],
+    evidenceRefIds: uniqueEvidenceRefIds(evidenceRefIds),
+  };
+}
+
+function wrapperControlRisk(
+  control: V9DeploymentControlFactV2,
+): { assessment: V9WrapperRiskAssessment; signals: string[] } {
+  if (control.incidentState === "active") {
+    return { assessment: "critical", signals: [`active-control-incident:${control.controlKey}`] };
+  }
+  if (
+    control.claimImpairment === "unbounded" ||
+    control.economicLossScope === "global-claim" ||
+    control.capSemantics.kind === "unbounded"
+  ) {
+    return { assessment: "high", signals: [`unbounded-claim-control:${control.controlKey}`] };
+  }
+  if (
+    control.claimImpairment === "bounded" ||
+    control.economicLossScope === "reserve-claim" ||
+    control.capSemantics.kind === "raiseable"
+  ) {
+    return { assessment: "moderate", signals: [`claim-affecting-control:${control.controlKey}`] };
+  }
+  return { assessment: "low", signals: [`non-claim-control:${control.controlKey}`] };
+}
+
+function worstWrapperRisk(values: readonly V9WrapperRiskAssessment[]): V9WrapperRiskAssessment {
+  const rank: Readonly<Record<V9WrapperRiskAssessment, number>> = {
+    none: 0,
+    low: 1,
+    moderate: 2,
+    high: 3,
+    critical: 4,
+  };
+  return [...values].sort((left, right) => rank[right] - rank[left])[0] ?? "none";
+}
+
+
+interface WrapperLocalBuildState {
+  form: V9ApplicableWrapperLocalFacts["form"];
+  wrapperEdge: V9EffectiveDependenciesV3["edges"][number] | undefined;
+  reviewedFormEvidence: string[];
+  controlEvidenceRefIds: string[];
+  reserveEvidenceRefIds: string[];
+  routeEvidenceRefIds: string[];
+}
+
+function buildWrapperStructuralDimensions(
+  context: AssetBuildContext,
+  input: WrapperLocalFactBuildInputs,
+  state: WrapperLocalBuildState,
+): {
+  contractMutability: V9WrapperLocalDimensionFact;
+  custodyEscrow: V9WrapperLocalDimensionFact;
+  strategyComplexity: V9WrapperLocalDimensionFact;
+  leverage: V9WrapperLocalDimensionFact;
+  rehypothecationCorrelation: V9WrapperLocalDimensionFact;
+  shareAccountingNavOracle: V9WrapperLocalDimensionFact;
+} {
+  const {
+    form,
+    wrapperEdge,
+    reviewedFormEvidence,
+    controlEvidenceRefIds,
+    reserveEvidenceRefIds,
+  } = state;
+  let contractMutability: V9WrapperLocalDimensionFact;
+  const upgrade = input.economicControlReview.mint.upgrade;
+  if (input.economicControlReview.mint.status.observationState !== "known") {
+    contractMutability = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.economicControlReview.mint.status]),
+      "wrapper-upgrade-review-unavailable",
+      controlEvidenceRefIds,
+    );
+  } else if (upgrade.state === "immutable" || upgrade.state === "not-applicable") {
+    contractMutability = reviewedWrapperFact(
+      context,
+      "none",
+      [`wrapper-upgrade-state:${upgrade.state}`],
+      controlEvidenceRefIds,
+    );
+  } else if (upgrade.state === "reviewed" && upgrade.controlKey !== null) {
+    const upgradeControl = input.controls.find((control) => control.controlKey === upgrade.controlKey);
+    if (!upgradeControl || upgradeControl.status.observationState !== "known") {
+      contractMutability = unavailableWrapperFact(
+        "integration-missing",
+        `reviewed-upgrade-control-not-compiled:${upgrade.controlKey}`,
+        controlEvidenceRefIds,
+      );
+    } else {
+      const delayAssessment: V9WrapperRiskAssessment =
+        upgradeControl.delaySec === null || upgradeControl.delaySec < 86_400
+          ? "high"
+          : upgradeControl.delaySec < 604_800
+            ? "moderate"
+            : "low";
+      const authorityRisk = wrapperControlRisk(upgradeControl);
+      contractMutability = reviewedWrapperFact(
+        context,
+        worstWrapperRisk([delayAssessment, authorityRisk.assessment]),
+        [
+          `wrapper-upgrade-authority:${upgradeControl.authority?.model ?? "unknown"}`,
+          `wrapper-upgrade-delay-sec:${upgradeControl.delaySec ?? "undisclosed"}`,
+          ...authorityRisk.signals,
+        ],
+        controlEvidenceRefIds,
+      );
+    }
+  } else {
+    contractMutability = unavailableWrapperFact(
+      "issuer-undisclosed",
+      "wrapper-upgrade-authority-undisclosed",
+      controlEvidenceRefIds,
+    );
+  }
+
+  let custodyEscrow: V9WrapperLocalDimensionFact;
+  const custody = context.asset.wrapperCustodyReview ?? null;
+  if (custody !== null) {
+    const custodyEvidence = componentResearchEvidence(context, "wrapper-local:custodyEscrow");
+    const hasUnknown =
+      custody.segregation === "unknown" ||
+      custody.bankruptcyRemoteness === "unknown" ||
+      custody.knownUnknownExposureShare === null ||
+      custody.knownUnknownExposureShare > 0;
+    custodyEscrow = hasUnknown
+      ? unavailableWrapperFact(
+          "issuer-undisclosed",
+          `wrapper-custody-terms-incomplete:${custody.knownUnknownExposureShare ?? "unknown"}`,
+          custodyEvidence,
+        )
+      : reviewedWrapperFact(
+          context,
+          custody.segregation === "segregated" && custody.bankruptcyRemoteness === "structured"
+            ? "low"
+            : custody.bankruptcyRemoteness === "none"
+              ? "high"
+              : "moderate",
+          [
+            `wrapper-custody-providers:${custody.providers.length}`,
+            `wrapper-custody-segregation:${custody.segregation}`,
+            `wrapper-custody-bankruptcy-remoteness:${custody.bankruptcyRemoteness}`,
+          ],
+          custodyEvidence,
+        );
+  } else if (form === "pure" && wrapperEdge !== undefined) {
+    custodyEscrow = notApplicableWrapperFact(
+      "pure-wrapper-custody-is-the-serial-parent-contract-claim",
+      reviewedFormEvidence,
+    );
+  } else {
+    custodyEscrow = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),
+      "wrapper-custody-or-escrow-review-unavailable",
+      reserveEvidenceRefIds,
+    );
+  }
+
+  let strategyComplexity: V9WrapperLocalDimensionFact;
+  if (form === "pure" && wrapperEdge !== undefined) {
+    strategyComplexity = reviewedWrapperFact(
+      context,
+      "none",
+      ["pure-wrapper-has-no-local-strategy"],
+      reviewedFormEvidence,
+    );
+  } else if (
+    context.asset.variantKind === "savings-passthrough" ||
+    context.asset.variantKind === "risk-absorption"
+  ) {
+    const riskAbsorption = context.asset.variantKind === "risk-absorption";
+    strategyComplexity = reviewedWrapperFact(
+      context,
+      riskAbsorption ? "moderate" : "low",
+      [
+        riskAbsorption
+          ? "native-wrapper-adds-reviewed-loss-absorption-layer"
+          : "native-wrapper-is-single-parent-savings-passthrough",
+      ],
+      reviewedFormEvidence,
+    );
+  } else if (context.asset.variantKind === "strategy-vault") {
+    const highComplexity =
+      input.reserveExposures.some((exposure) => exposure.assetClass === "private-credit") ||
+      (custody?.knownUnknownExposureShare ?? 0) > 0;
+    strategyComplexity = reviewedWrapperFact(
+      context,
+      highComplexity ? "high" : "moderate",
+      [
+        highComplexity
+          ? "strategy-vault-has-private-or-unknown-credit-exposure"
+          : "strategy-vault-adds-third-party-allocation-layer",
+        `wrapper-strategy-reserve-components:${input.reserveExposures.length}`,
+      ],
+      uniqueEvidenceRefIds([...reviewedFormEvidence, ...reserveEvidenceRefIds]),
+    );
+  } else {
+    strategyComplexity = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.reserveStatus]),
+      "wrapper-strategy-complexity-review-unavailable",
+      reserveEvidenceRefIds,
+    );
+  }
+
+  let leverage: V9WrapperLocalDimensionFact;
+  if (form === "pure" && wrapperEdge !== undefined) {
+    leverage = notApplicableWrapperFact(
+      "pure-wrapper-has-no-local-strategy-leverage",
+      reviewedFormEvidence,
+    );
+  } else if (input.reserveStatus.observationState === "known") {
+    const leverageFactors = input.reserveExposures.flatMap((exposure) =>
+      exposure.riskFactors.filter((factor) => /\b(leverage|leveraged|borrowing|debt-financed)\b/i.test(factor)),
+    );
+    leverage =
+      leverageFactors.length > 0
+        ? reviewedWrapperFact(
+            context,
+            "high",
+            leverageFactors.map((factor) => `wrapper-leverage-factor:${factor}`),
+            reserveEvidenceRefIds,
+          )
+        : unavailableWrapperFact(
+            "issuer-undisclosed",
+            "wrapper-leverage-review-does-not-establish-absence",
+            reserveEvidenceRefIds,
+          );
+  } else {
+    leverage = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),
+      "wrapper-leverage-review-unavailable",
+      reserveEvidenceRefIds,
+    );
+  }
+
+  let rehypothecationCorrelation: V9WrapperLocalDimensionFact;
+  if (custody !== null) {
+    const custodyEvidence = componentResearchEvidence(context, "wrapper-local:rehypothecationCorrelation");
+    rehypothecationCorrelation =
+      custody.rehypothecation === "unknown"
+        ? unavailableWrapperFact(
+            "issuer-undisclosed",
+            "wrapper-rehypothecation-terms-undisclosed",
+            custodyEvidence,
+          )
+        : reviewedWrapperFact(
+            context,
+            custody.rehypothecation === "prohibited"
+              ? "low"
+              : custody.rehypothecation === "conditional"
+                ? "moderate"
+                : "high",
+            [
+              `wrapper-rehypothecation:${custody.rehypothecation}`,
+              `wrapper-custody-provider-count:${custody.providers.length}`,
+            ],
+            custodyEvidence,
+          );
+  } else if (form === "pure" && wrapperEdge !== undefined) {
+    rehypothecationCorrelation = notApplicableWrapperFact(
+      "pure-wrapper-parent-correlation-is-applied-by-serial-dependency",
+      reviewedFormEvidence,
+    );
+  } else {
+    rehypothecationCorrelation = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.reserveStatus], "issuer-undisclosed"),
+      "wrapper-rehypothecation-correlation-review-unavailable",
+      reserveEvidenceRefIds,
+    );
+  }
+
+  let shareAccountingNavOracle: V9WrapperLocalDimensionFact;
+  if (form === "pure") {
+    shareAccountingNavOracle = reviewedWrapperFact(
+      context,
+      "none",
+      ["pure-wrapper-fixed-parent-claim-accounting"],
+      reviewedFormEvidence,
+    );
+  } else if (
+    (context.asset.variantKind === "savings-passthrough" ||
+      context.asset.variantKind === "risk-absorption" ||
+      context.asset.variantKind === "strategy-vault") &&
+    input.peg.referenceKind === "nav" &&
+    input.peg.status.observationState === "known"
+  ) {
+    const oracleTier = input.economicControlReview.oracle.tier;
+    const weakOracle =
+      oracleTier === "single-source-or-laggy" || oracleTier === "opaque-or-unknown";
+    shareAccountingNavOracle = reviewedWrapperFact(
+      context,
+      weakOracle ? "high" : "moderate",
+      [
+        `wrapper-share-form:${context.asset.variantKind}`,
+        `wrapper-share-reference-kind:${input.peg.referenceKind}`,
+        `wrapper-share-oracle-tier:${oracleTier ?? "not-applicable"}`,
+      ],
+      uniqueEvidenceRefIds([
+        ...reviewedFormEvidence,
+        ...input.peg.status.evidenceRefIds,
+        ...input.economicControlReview.oracle.status.evidenceRefIds,
+      ]),
+    );
+  } else {
+    shareAccountingNavOracle = unavailableWrapperFact(
+      wrapperFactDisposition(
+        context,
+        [input.peg.status, input.economicControlReview.mint.status],
+        "integration-missing",
+      ),
+      "wrapper-share-accounting-or-nav-oracle-review-unavailable",
+      [...input.peg.status.evidenceRefIds, ...input.economicControlReview.mint.status.evidenceRefIds],
+    );
+  }
+  return {
+    contractMutability,
+    custodyEscrow,
+    strategyComplexity,
+    leverage,
+    rehypothecationCorrelation,
+    shareAccountingNavOracle,
+  };
+}
+
+function buildWrapperExitDimensions(
+  context: AssetBuildContext,
+  input: WrapperLocalFactBuildInputs,
+  state: WrapperLocalBuildState,
+): {
+  withdrawalTerms: V9WrapperLocalDimensionFact;
+  measuredUnwind: V9WrapperLocalDimensionFact;
+} {
+  const { routeEvidenceRefIds } = state;
+  const knownRedemptionRoutes = input.exitRoutes.filter(
+    (route) =>
+      route.lane === "redemption" &&
+      (route.status.observationState === "known" || route.status.observationState === "stale"),
+  );
+  let withdrawalTerms: V9WrapperLocalDimensionFact;
+  if (knownRedemptionRoutes.length === 0) {
+    withdrawalTerms = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.exitStatus]),
+      "wrapper-withdrawal-fee-or-gate-terms-unavailable",
+      routeEvidenceRefIds,
+    );
+  } else if (knownRedemptionRoutes.some((route) => route.feeEvidence === "undisclosed-reviewed")) {
+    withdrawalTerms = unavailableWrapperFact(
+      "issuer-undisclosed",
+      "wrapper-withdrawal-fee-undisclosed",
+      routeEvidenceRefIds,
+    );
+  } else {
+    const termsRisk = knownRedemptionRoutes.map((route): V9WrapperRiskAssessment => {
+      if (
+        route.holderAccess === "issuer-only" ||
+        route.executionModel === "discretionary" ||
+        route.executionCertainty === "discretionary"
+      ) {
+        return "critical";
+      }
+      if (route.settlementModel === "queued" || route.executionModel === "queued") {
+        return (route.settlementSlaSec ?? Number.POSITIVE_INFINITY) > 604_800 ? "high" : "moderate";
+      }
+      if (
+        route.holderAccess === "allowlisted" ||
+        route.holderAccess === "institutional-eligible" ||
+        route.executionCertainty === "conditional"
+      ) {
+        return "moderate";
+      }
+      return "low";
+    });
+    withdrawalTerms = reviewedWrapperFact(
+      context,
+      worstWrapperRisk(termsRisk),
+      knownRedemptionRoutes.flatMap((route) => [
+        `wrapper-withdrawal-access:${route.holderAccess}`,
+        `wrapper-withdrawal-execution:${route.executionModel}`,
+        `wrapper-withdrawal-settlement:${route.settlementModel}:${route.settlementSlaSec ?? "atomic"}`,
+      ]),
+      routeEvidenceRefIds,
+    );
+  }
+
+  const stressRequest =
+    input.supply.status.observationState === "known"
+      ? selectV9ExitStressRequest(input.supply.circulatingUsd, V9_CANDIDATE_POLICY_V1)
+      : null;
+  const admittedDocumentedUnwindRouteKeys =
+    stressRequest === null
+      ? new Set<string>()
+      : new Set(
+          evaluateV9ExitAssetFacts(
+            {
+              supply: input.supply,
+              exitStatus: input.exitStatus,
+              exitRoutes: [...input.exitRoutes],
+            },
+            V9_CANDIDATE_POLICY_V1,
+          ).routes.flatMap((route) => (route.included ? [route.routeKey] : [])),
+        );
+  const observedUnwindRoutes = input.exitRoutes.filter(
+    (route) =>
+      (route.status.observationState === "known" && route.scoreEligible && route.capacityCurve.length > 0) ||
+      // Undisclosed-fee credit is conditionally withheld by a later danger gate
+      // that is unavailable while facts are being compiled.
+      (route.feeEvidence !== "undisclosed-reviewed" &&
+        admittedDocumentedUnwindRouteKeys.has(route.routeKey)),
+  );
+  let measuredUnwind: V9WrapperLocalDimensionFact;
+  const stressCompletions =
+    stressRequest === null
+      ? []
+      : observedUnwindRoutes.flatMap((route) => {
+          const point = resolveV9ExitCapacityAtRequest(route.capacityCurve, stressRequest);
+          return point === null ? [] : [point.completionRatio];
+        });
+  if (stressCompletions.length > 0) {
+    const bestCompletion = Math.max(...stressCompletions);
+    measuredUnwind = reviewedWrapperFact(
+      context,
+      bestCompletion >= 0.95
+        ? "none"
+        : bestCompletion >= 0.8
+          ? "low"
+          : bestCompletion >= 0.5
+            ? "moderate"
+            : bestCompletion > 0
+              ? "high"
+              : "critical",
+      [
+        `wrapper-measured-unwind-policy-notional:${stressRequest!.requestedNotionalUsd}`,
+        `wrapper-measured-unwind-policy-completion:${bestCompletion}`,
+        `wrapper-measured-unwind-route-count:${observedUnwindRoutes.length}`,
+      ],
+      routeEvidenceRefIds,
+    );
+  } else if (input.exitStatus.observationState === "known" && stressRequest !== null) {
+    measuredUnwind = reviewedWrapperFact(
+      context,
+      "critical",
+      ["wrapper-measured-unwind:no-score-eligible-capacity"],
+      routeEvidenceRefIds,
+    );
+  } else {
+    measuredUnwind = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.exitStatus], "producer-failed"),
+      "wrapper-measured-unwind-unavailable",
+      routeEvidenceRefIds,
+    );
+  }
+  return { withdrawalTerms, measuredUnwind };
+}
+
+function buildWrapperLossAbsorptionFact(
+  context: AssetBuildContext,
+  input: WrapperLocalFactBuildInputs,
+  state: WrapperLocalBuildState,
+): V9WrapperLocalDimensionFact {
+  const { reviewedFormEvidence, controlEvidenceRefIds } = state;
+  let lossAbsorptionEmergencyControls: V9WrapperLocalDimensionFact;
+  if (
+    context.asset.variantKind === "pure-wrapper" ||
+    context.asset.variantKind === "savings-passthrough"
+  ) {
+    lossAbsorptionEmergencyControls = notApplicableWrapperFact(
+      "wrapper-design-has-no-local-holder-loss-absorption-layer",
+      reviewedFormEvidence,
+    );
+  } else if (input.controlStatus.observationState === "known") {
+    const localControls =
+      context.asset.variantKind === "strategy-vault"
+        ? input.controls.filter((control) => control.controlKind !== "bridge")
+        : [];
+    const controlRisks = localControls.map(wrapperControlRisk);
+    lossAbsorptionEmergencyControls =
+      controlRisks.length > 0
+        ? reviewedWrapperFact(
+            context,
+            worstWrapperRisk([
+              ...controlRisks.map((risk) => risk.assessment),
+              ...(context.asset.variantKind === "risk-absorption" ? (["moderate"] as const) : []),
+            ]),
+            [
+              ...controlRisks.flatMap((risk) => risk.signals),
+              ...(context.asset.variantKind === "risk-absorption"
+                ? ["wrapper-holder-bears-protocol-loss-absorption"]
+                : ["strategy-vault-holder-loss-controls-reviewed"]),
+            ],
+            controlEvidenceRefIds,
+          )
+        : unavailableWrapperFact(
+            "integration-missing",
+            "wrapper-emergency-control-review-has-no-local-controls",
+            controlEvidenceRefIds,
+          );
+  } else {
+    lossAbsorptionEmergencyControls = unavailableWrapperFact(
+      wrapperFactDisposition(context, [input.controlStatus]),
+      "wrapper-loss-absorption-or-emergency-control-review-unavailable",
+      controlEvidenceRefIds,
+    );
+  }
+  return lossAbsorptionEmergencyControls;
+}
+
+export function buildWrapperLocalFacts(
+  context: AssetBuildContext,
+  input: WrapperLocalFactBuildInputs,
+): V9WrapperLocalFacts {
+  const wrapperEdge = input.dependencies.edges.find(
+    (edge) => edge.pathKind === "serial-dependency" && edge.dependencyType === "wrapper",
+  );
+  const form =
+    context.asset.variantKind === "pure-wrapper"
+      ? "pure"
+      : context.asset.variantKind === "savings-passthrough" ||
+          context.asset.variantKind === "risk-absorption"
+        ? "native-staked"
+        : context.asset.variantKind === "strategy-vault" || wrapperEdge !== undefined
+          ? "strategy-vault"
+          : null;
+  const formEvidenceRefIds = uniqueEvidenceRefIds([
+    ...input.implementation.status.evidenceRefIds,
+    ...input.dependencies.status.evidenceRefIds,
+    ...(wrapperEdge?.evidenceRefIds ?? []),
+  ]);
+  if (form === null) {
+    return V9WrapperLocalFactsSchema.parse({
+      schemaVersion: 1,
+      applicability: "not-wrapper",
+      evidenceRefIds:
+        formEvidenceRefIds.length > 0 ? formEvidenceRefIds : [fallbackResearchEvidence(context)],
+    });
+  }
+  const reviewedFormEvidence =
+    formEvidenceRefIds.length > 0 ? formEvidenceRefIds : [fallbackResearchEvidence(context)];
+  const controlEvidenceRefIds = uniqueEvidenceRefIds([
+    ...input.controlStatus.evidenceRefIds,
+    ...input.economicControlReview.mint.status.evidenceRefIds,
+    ...input.controls.flatMap((control) => control.status.evidenceRefIds),
+  ]);
+  const reserveEvidenceRefIds = uniqueEvidenceRefIds([
+    ...input.reserveStatus.evidenceRefIds,
+    ...input.reserveExposures.flatMap((exposure) => exposure.status.evidenceRefIds),
+    ...(wrapperEdge?.evidenceRefIds ?? []),
+  ]);
+  const routeEvidenceRefIds = uniqueEvidenceRefIds([
+    ...input.exitStatus.evidenceRefIds,
+    ...input.exitRoutes.flatMap((route) => [
+      ...route.status.evidenceRefIds,
+      ...route.settlementEvidenceRefIds,
+      ...route.output.status.evidenceRefIds,
+      ...(route.output.valuation?.evidenceRefIds ?? []),
+    ]),
+  ]);
+  const state: WrapperLocalBuildState = {
+    form,
+    wrapperEdge,
+    reviewedFormEvidence,
+    controlEvidenceRefIds,
+    reserveEvidenceRefIds,
+    routeEvidenceRefIds,
+  };
+  const {
+    contractMutability,
+    custodyEscrow,
+    strategyComplexity,
+    leverage,
+    rehypothecationCorrelation,
+    shareAccountingNavOracle,
+  } = buildWrapperStructuralDimensions(context, input, state);
+  const { withdrawalTerms, measuredUnwind } = buildWrapperExitDimensions(
+    context,
+    input,
+    state,
+  );
+  const lossAbsorptionEmergencyControls = buildWrapperLossAbsorptionFact(
+    context,
+    input,
+    state,
+  );
+
+  const facts: V9ApplicableWrapperLocalFacts = {
+    schemaVersion: 1,
+    applicability: "wrapper",
+    form,
+    formDisposition: "reviewed",
+    formSignals: [
+      `wrapper-form:${form}`,
+      `wrapper-form-source:${context.asset.variantKind ?? "serial-wrapper-dependency"}`,
+    ],
+    formEvidenceRefIds: reviewedFormEvidence,
+    facts: {
+      contractMutability,
+      custodyEscrow,
+      strategyComplexity,
+      leverage,
+      rehypothecationCorrelation,
+      shareAccountingNavOracle,
+      withdrawalTerms,
+      measuredUnwind,
+      lossAbsorptionEmergencyControls,
+    },
+    riskTransfer: {
+      disposition: "not-applicable",
+      mechanism: "none",
+      maximumParentLossAbsorptionPoints: 0,
+      signals: ["no-documented-parent-loss-absorption-credit"],
+      evidenceRefIds: [],
+    },
+  };
+  return V9WrapperLocalFactsSchema.parse(facts);
+}

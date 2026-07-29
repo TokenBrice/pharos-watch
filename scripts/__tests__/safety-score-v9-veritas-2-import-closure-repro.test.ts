@@ -21,7 +21,7 @@ const OMITTED_SCORE_BEARING_IMPORTS = [
   },
   {
     path: "shared/lib/exit-route-output.ts",
-    importedBy: "worker/src/lib/safety-score-v9-fact-set.ts",
+    importedBy: "worker/src/lib/safety-score-v9-fact-set-exit.ts",
     importSpecifier: "@shared/lib/exit-route-output",
   },
   {
