@@ -53,28 +53,7 @@ Detection signals:
    ```
 
    Expected response: `{ "ok": true, "deleted": <number> }`. Repeating the same filtered clear after rows are gone is safe and returns `deleted: 0`. The endpoint dead-letters cleared rows with `reason = 'manual_clear'` before deleting them.
-3. **Clear stale rows past TTL.** Filtered by age. Expired rows are copied to `telegram_alert_dead_letters` by either the scheduled dispatcher cleanup (`reason = 'ttl_expired'`) or this manual endpoint (`reason = 'manual_clear'`) before deletion.
-
-   ```bash
-   curl -X POST \
-        -H "CF-Access-Client-Id: $CF_ID" \
-        -H "CF-Access-Client-Secret: $CF_SECRET" \
-        -H "X-Pharos-Admin: 1" \
-        "https://ops-api.pharos.watch/api/telegram-pending?older_than_sec=3600&dry_run=1"
-   ```
-
-   Then clear if the previewed count is expected:
-
-   ```bash
-   curl -X POST \
-        -H "CF-Access-Client-Id: $CF_ID" \
-        -H "CF-Access-Client-Secret: $CF_SECRET" \
-        -H "X-Pharos-Admin: 1" \
-        -H "Idempotency-Key: clear-telegram-pending-older-than-3600-$(date +%s)" \
-        "https://ops-api.pharos.watch/api/telegram-pending?older_than_sec=3600"
-   ```
-
-   The endpoint accepts exactly one query filter: `chat_id` or `older_than_sec`. It refuses unfiltered requests and requests with both filters by design.
+3. **Let scheduled expiry cleanup handle expired rows.** Do not use `older_than_sec` as an expiry filter: it filters `created_at`, not `expires_at`, and can therefore cancel still-live risk, launch, or recap alerts. Scheduled cleanup evaluates explicit expiry (with the legacy two-hour fallback), dead-letters expired rows with `reason = 'ttl_expired'`, and marks their targets expired before deletion.
 4. **Pause low-priority sends.** Do not run admin broadcasts or historical replays while 429 dominates. The live broadcast endpoint also refuses an unavailable transport circuit/permit and requires a successful private canary plus a hard 15-minute TTL reserve, but those guards do not justify adding low-priority work during an active storm. Risk alerts take priority over recovery notices.
 5. **Investigate root cause.** If 429 is sustained without an obvious driver, check Cloudflare logs for outbound Telegram POSTs and confirm no client is replaying historical events through a non-production dispatcher.
 6. **Last resort: pause affected delivery modes.** Use the authenticated `GET /api/admin-telegram-delivery-control` state and its generation-fenced `POST` action. Pause `fresh` to stop new risk sends, `pending` to stop backlog drain, or `admin` to stop broadcasts; each pause must have a reason and expires within 24 hours. Follow [`telegram-bot-wide-outage.md`](./telegram-bot-wide-outage.md) for request bodies and recovery. Do not use `reset-circuit-breaker` to pause sends: it deletes breaker state and lets the next run probe again.
