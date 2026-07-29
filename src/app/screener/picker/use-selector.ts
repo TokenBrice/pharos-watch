@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  runSelector,
   validateSelectorSnapshotResponse,
   type SelectorInput,
   type SelectorOutput,
@@ -15,6 +16,7 @@ import {
 } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { isValidSelectorSnapshotId } from "./selector-state";
+import { buildSelectorRows } from "./selector-data-adapter";
 import { RequestFailure, RequestSequence, isRequestCancellation, requestJson } from "@/lib/request";
 
 export type UseSelectorResult =
@@ -33,6 +35,11 @@ export type UseSelectorResult =
 
 type SnapshotFetchResult =
   { kind: "found"; output: SelectorOutput } | { kind: "missing" } | { kind: "error"; reason: string };
+
+type SelectorEngineResult =
+  | { kind: "pending" }
+  | { kind: "ready"; output: SelectorOutput }
+  | { kind: "error"; reason: string };
 
 async function defaultFetchSnapshot(sid: string, signal: AbortSignal): Promise<SnapshotFetchResult> {
   if (!isValidSelectorSnapshotId(sid)) {
@@ -136,6 +143,64 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
     queryDataOrErrorSettled(redemptionBackstops) &&
     (liveInput?.profile !== "yield" || queryDataOrErrorSettled(yieldRankings));
 
+  const selectorTimestamp = Math.max(
+    stablecoins.dataUpdatedAt ?? 0,
+    pegSummary.dataUpdatedAt ?? 0,
+    reportCards.dataUpdatedAt ?? 0,
+    stressSignals.dataUpdatedAt ?? 0,
+    dexLiquidity.dataUpdatedAt ?? 0,
+    yieldRankings.dataUpdatedAt ?? 0,
+    bluechipRatings.dataUpdatedAt ?? 0,
+    redemptionBackstops.dataUpdatedAt ?? 0,
+  );
+
+  const engineResult = useMemo<SelectorEngineResult>(() => {
+    if (!liveInput || !datasetReady) return { kind: "pending" };
+
+    const dataset = buildSelectorRows({
+      stablecoinsData: stablecoins.data ?? null,
+      pegCurrency: liveInput.pegCurrency,
+      pegData: pegSummary.data ?? null,
+      reportData: reportCards.data ?? null,
+      stressData: stressSignals.data ?? null,
+      dexData: dexLiquidity.data ?? null,
+      yieldData: yieldRankings.data ?? null,
+      bluechipData: bluechipRatings.data ?? null,
+      redemptionData: redemptionBackstops.data ?? null,
+      now: selectorTimestamp,
+    });
+
+    try {
+      return {
+        kind: "ready",
+        output: runSelector(
+          liveInput,
+          { rows: dataset.rows },
+          {
+            timestamp: dataset.timestamp,
+            datasetHash: dataset.datasetHash,
+            methodologyVersions: dataset.methodologyVersions,
+          },
+        ),
+      };
+    } catch (error) {
+      console.error("[selector] Selector engine failed", error);
+      return { kind: "error", reason: "engine-failed" };
+    }
+  }, [
+    bluechipRatings.data,
+    datasetReady,
+    dexLiquidity.data,
+    liveInput,
+    pegSummary.data,
+    redemptionBackstops.data,
+    reportCards.data,
+    selectorTimestamp,
+    stablecoins.data,
+    stressSignals.data,
+    yieldRankings.data,
+  ]);
+
   if (sid) {
     if (snapshotState.kind === "loading") return { status: "snapshot-loading" };
     if (snapshotState.kind === "found") {
@@ -143,8 +208,13 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
         status: "snapshot-found",
         output: snapshotState.output,
         isFrozen: true,
-        liveOutput: null,
-        liveStatus: criticalQueryFailed ? "error" : !datasetReady ? "loading" : "error",
+        liveOutput: engineResult.kind === "ready" ? engineResult.output : null,
+        liveStatus:
+          criticalQueryFailed || engineResult.kind === "error"
+            ? "error"
+            : engineResult.kind === "ready"
+              ? "ready"
+              : "loading",
       };
     }
     if (snapshotState.kind === "error") {
@@ -154,14 +224,18 @@ export function useSelector(input: SelectorInput | null, sid: string | null): Us
       if (!input) return { status: "error", reason: "snapshot-not-found" };
       if (criticalQueryFailed) return { status: "error", reason: "selector-data-unavailable" };
       if (!datasetReady) return { status: "snapshot-loading" };
-      return { status: "error", reason: "v9-selector-thresholds-unreviewed" };
+      if (engineResult.kind === "ready") {
+        return { status: "snapshot-miss", output: engineResult.output, bannerKey: "snapshot-miss" };
+      }
+      return { status: "error", reason: engineResult.kind === "error" ? engineResult.reason : "engine-failed" };
     }
   }
 
   if (!input) return { status: "loading" };
   if (criticalQueryFailed) return { status: "error", reason: "selector-data-unavailable" };
   if (!datasetReady) return { status: "loading" };
-  return { status: "error", reason: "v9-selector-thresholds-unreviewed" };
+  if (engineResult.kind === "ready") return { status: "ready", output: engineResult.output };
+  return { status: "error", reason: engineResult.kind === "error" ? engineResult.reason : "engine-failed" };
 }
 
 function queryDataOrErrorSettled(query: { data?: unknown; error?: unknown }): boolean {

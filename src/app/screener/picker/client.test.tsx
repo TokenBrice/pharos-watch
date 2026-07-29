@@ -120,17 +120,15 @@ function jsonResponse(payload: unknown, status = 200): Response {
   });
 }
 
+const { runSelectorMock } = vi.hoisted(() => ({
+  runSelectorMock: vi.fn(),
+}));
+
 vi.mock("@shared/lib/selector", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("@shared/lib/selector/types");
   return {
     ...actual,
-    runSelector: vi.fn((input: SelectorInput) =>
-      mockSelectorOutput({
-        profile: input.profile,
-        pegCurrency: input.pegCurrency ?? "USD",
-        input,
-      }),
-    ),
+    runSelector: runSelectorMock,
     buildScreenerUrl: vi.fn((_input: unknown, baseUrl: string) => ({
       url: `${baseUrl}?dewsMax=60`,
       divergenceWarnings: [],
@@ -154,6 +152,21 @@ vi.mock("@shared/lib/selector", async () => {
     ENGINE_VERSION: "selector-v1.2",
   };
 });
+
+vi.mock("./selector-data-adapter", () => ({
+  buildSelectorRows: vi.fn(() => ({
+    rows: new Map(),
+    timestamp: 1_700_000_000_000,
+    datasetHash: "abc123",
+    methodologyVersions: {
+      safetyScore: "v9",
+      pegScoreAndDews: "v3",
+      yieldIntelligence: "v8",
+      bluechipAlignment: "unversioned",
+      exclusionFilters: "selector-v1.2",
+    },
+  })),
+}));
 
 // ----------------------------------------------------------------------------
 // Hooks: stub the data-fetching layer so the engine receives "ready" data.
@@ -237,6 +250,14 @@ beforeEach(() => {
   resetBrowserStorage();
   setUrlSearch("");
   installMatchMediaMock();
+  runSelectorMock.mockReset();
+  runSelectorMock.mockImplementation((input: SelectorInput) =>
+    mockSelectorOutput({
+      profile: input.profile,
+      pegCurrency: input.pegCurrency ?? "USD",
+      input,
+    }),
+  );
 });
 
 afterEach(() => {
@@ -290,15 +311,6 @@ describe("SelectorClient — state machine", () => {
     expect(screen.queryByLabelText(/AUD/i)).toBeNull();
   });
 
-  it("fails closed when a completed live flow reaches unreviewed V9 thresholds", async () => {
-    setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
-    render(<SelectorClient />);
-    expect(
-      await screen.findByText(/Selector could not produce a result \(v9-selector-thresholds-unreviewed\)/i),
-    ).toBeTruthy();
-  });
-
-  describe.skip("live result presentation pending reviewed V9 thresholds", () => {
   it("renders the result page with mocked engine output", async () => {
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
     render(<SelectorClient />);
@@ -318,7 +330,7 @@ describe("SelectorClient — state machine", () => {
     const mod = await import("@shared/lib/selector");
     const engineError = new Error("engine exploded");
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation(() => {
       throw engineError;
     });
 
@@ -335,7 +347,7 @@ describe("SelectorClient — state machine", () => {
 
   it("offers a Telegram subscribe command for the shortlisted stablecoins", async () => {
     const mod = await import("@shared/lib/selector");
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation((input: SelectorInput) =>
       mockSelectorOutput({
         input,
         recommended: [
@@ -374,7 +386,7 @@ describe("SelectorClient — state machine", () => {
 
   it("excludes unsafe snapshot tokens from the Telegram subscribe command", async () => {
     const mod = await import("@shared/lib/selector");
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation((input: SelectorInput) =>
       mockSelectorOutput({
         input,
         recommended: [
@@ -421,7 +433,7 @@ describe("SelectorClient — state machine", () => {
 
   it("shows near misses even when a shortlist is present", async () => {
     const mod = await import("@shared/lib/selector");
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation((input: SelectorInput) =>
       mockSelectorOutput({
         input,
         closestSurvivors: [
@@ -448,7 +460,7 @@ describe("SelectorClient — state machine", () => {
 
   it("does not render a duplicate compare link inside the shortlist section", async () => {
     const mod = await import("@shared/lib/selector");
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation((input: SelectorInput) =>
       mockSelectorOutput({
         profile: "yield",
         pegCurrency: "GOLD",
@@ -508,7 +520,6 @@ describe("SelectorClient — state machine", () => {
       }),
     ).toBeNull();
   });
-  });
 
   it("does not advance desktop depeg, venue, or exit choices until Next", async () => {
     setUrlSearch("p=treasury&h=1to6m&d=tight&v=custody&u=24h&step=4");
@@ -533,9 +544,7 @@ describe("SelectorClient — state machine", () => {
     expect(screen.queryByText(/tracked USD stablecoins/)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /See my shortlist/i }));
-    expect(
-      await screen.findByText(/Selector could not produce a result \(v9-selector-thresholds-unreviewed\)/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/tracked USD stablecoins/i)).toBeTruthy();
   });
 
   it("keeps mobile answer handlers local until the sticky CTA commits results", async () => {
@@ -562,15 +571,12 @@ describe("SelectorClient — state machine", () => {
     expect(screen.queryByText(/tracked USD stablecoins/)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /See my shortlist/i }));
-    expect(
-      await screen.findByText(/Selector could not produce a result \(v9-selector-thresholds-unreviewed\)/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/tracked USD stablecoins/i)).toBeTruthy();
   });
 
-  describe.skip("live result freshness controls pending reviewed V9 thresholds", () => {
   it("blocks Trading share links when per-input staleness exceeds its cadence-aware limit", async () => {
     const mod = await import("@shared/lib/selector");
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation((input: SelectorInput) =>
       mockSelectorOutput({
         profile: "trading",
         input,
@@ -595,7 +601,7 @@ describe("SelectorClient — state machine", () => {
 
   it("blocks Trading share links when required freshness timestamps are missing", async () => {
     const mod = await import("@shared/lib/selector");
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce((input: SelectorInput) =>
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation((input: SelectorInput) =>
       mockSelectorOutput({
         profile: "trading",
         input,
@@ -616,7 +622,6 @@ describe("SelectorClient — state machine", () => {
     const copy = await screen.findByRole("button", { name: /Copy share link/i });
     expect(copy.hasAttribute("disabled")).toBe(true);
   });
-  });
 
   it("jumps directly to an answer step from result edit chips and clears snapshot state", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mockSelectorOutput()));
@@ -634,7 +639,7 @@ describe("SelectorClient — state machine", () => {
     vi.unstubAllGlobals();
   });
 
-  it.skip("offers a session-scoped restore for the last live result after V9 thresholds are reviewed", async () => {
+  it("offers a session-scoped restore for the last live result", async () => {
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
     render(<SelectorClient />);
     expect(await screen.findByText("USDC")).toBeTruthy();
@@ -655,10 +660,10 @@ describe("SelectorClient — state machine", () => {
 });
 
 describe("SelectorClient — empty state", () => {
-  it.skip("renders SelectorEmptyState after V9 thresholds are reviewed", async () => {
+  it("renders SelectorEmptyState", async () => {
     // Re-mock for this test only:
     const mod = await import("@shared/lib/selector");
-    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementationOnce(() => mockSelectorOutput({ recommended: [] }));
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation(() => mockSelectorOutput({ recommended: [] }));
 
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
     render(<SelectorClient />);
@@ -756,7 +761,7 @@ describe("SelectorClient — snapshot recall", () => {
     vi.unstubAllGlobals();
   });
 
-  it("fails closed when a missing snapshot cannot be recomputed under unreviewed V9 thresholds", async () => {
+  it("shows a snapshot-miss banner when a missing snapshot is recomputed from current data", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}, 404));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -769,9 +774,8 @@ describe("SelectorClient — snapshot recall", () => {
       await Promise.resolve();
     });
 
-    expect(
-      await screen.findByText(/Selector could not produce a result \(v9-selector-thresholds-unreviewed\)/i),
-    ).toBeTruthy();
+    expect(await screen.findByText(/Original snapshot no longer cached/i)).toBeTruthy();
+    expect(screen.getByText("USDC")).toBeTruthy();
 
     vi.unstubAllGlobals();
   });
@@ -805,7 +809,7 @@ describe("SelectorClient — snapshot recall", () => {
     vi.unstubAllGlobals();
   });
 
-  it("keeps a frozen snapshot visible when compare-to-today is unavailable under V9", async () => {
+  it("keeps a frozen snapshot visible and compares it to current data", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mockSelectorOutput()));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -816,7 +820,7 @@ describe("SelectorClient — snapshot recall", () => {
     fireEvent.click(compare);
 
     expect(screen.getByText(/Showing snapshot/i)).toBeTruthy();
-    expect(screen.queryByText(/Current shortlist comparison/i)).toBeNull();
+    expect(screen.getByText(/Current shortlist comparison/i)).toBeTruthy();
 
     vi.unstubAllGlobals();
   });
