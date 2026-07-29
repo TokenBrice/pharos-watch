@@ -48,8 +48,8 @@ const FILTER_FIELD_CLASS_NAME =
   "h-9 min-w-0 rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40";
 
 const CRON_STATE_LABELS: Readonly<Record<CronWorkbenchState, string>> = {
-  unhealthy: "Unhealthy",
-  degraded: "Degraded",
+  unhealthy: "Unavailable",
+  degraded: "Run warning",
   unknown: "Unknown",
   skipped: "Skipped",
   running: "Running",
@@ -706,8 +706,8 @@ function CronWorkbenchControls({
           >
             <option value="attention">Needs attention</option>
             <option value="all">All states</option>
-            <option value="unhealthy">Unhealthy</option>
-            <option value="degraded">Degraded</option>
+            <option value="unhealthy">Unavailable</option>
+            <option value="degraded">Run warning</option>
             <option value="unknown">Unknown</option>
             <option value="skipped">Skipped</option>
             <option value="running">Running</option>
@@ -770,7 +770,13 @@ function CronWorkbenchControls({
           ) : null}
         </div>
       </div>
-      <RecentRunLegend />
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-5 gap-y-2">
+        <RecentRunLegend />
+        <p className="max-w-2xl text-[11px] leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground">State:</span> Unavailable means there is no fresh usable run.
+          Run warning means the job completed but reported partial, fallback, or threshold metadata.
+        </p>
+      </div>
     </div>
   );
 }
@@ -1022,9 +1028,9 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                         </p>
                       </div>
                       <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-                        {group.summary.visible}/{group.summary.total} shown · {group.summary.unhealthy} unhealthy ·{" "}
-                        {group.summary.degraded} degraded · {group.summary.unknown} unknown · {group.summary.skipped}{" "}
-                        skipped · {group.summary.running} running
+                        {group.summary.visible}/{group.summary.total} shown · {group.summary.unhealthy} unavailable ·{" "}
+                        {group.summary.degraded} warning{group.summary.degraded === 1 ? "" : "s"} ·{" "}
+                        {group.summary.unknown} unknown · {group.summary.skipped} skipped · {group.summary.running} running
                       </span>
                     </div>
                   </th>

@@ -23,7 +23,7 @@ export function CronsSection({ data, runningCrons, cronGroups }: CronsSectionPro
         <>
           <SummaryBadge label="Impacting" value={String(data.summary.availabilityImpactingUnhealthyCrons)} />
           <SummaryBadge label="Watch" value={String(data.summary.watchUnhealthyCrons)} />
-          <SummaryBadge label="Degraded" value={String(data.summary.degradedCrons)} />
+          <SummaryBadge label="Warnings" value={String(data.summary.degradedCrons)} />
           <SummaryBadge label="Running" value={String(runningCrons)} />
         </>
       }

@@ -93,6 +93,7 @@ describe("CronsSection", () => {
     expect(screen.getByTestId("cron-row-sync-stablecoins")).toBeTruthy();
     expect(screen.getByRole("table", { name: "Cron jobs by trigger group" })).toBeTruthy();
     expect(screen.getAllByText("Healthy").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Unavailable means there is no fresh usable run/)).toBeTruthy();
   });
 
   it("renders trigger-group boundaries and canonical severity ordering inside each group", () => {
@@ -128,7 +129,7 @@ describe("CronsSection", () => {
 
     expect(screen.getAllByText("15-minute slot").length).toBeGreaterThan(0);
     expect(screen.getAllByText("5-minute slot").length).toBeGreaterThan(0);
-    expect(screen.getByText(/3\/3 shown · 2 unhealthy · 1 degraded/)).toBeTruthy();
+    expect(screen.getByText(/3\/3 shown · 2 unavailable · 1 warning/)).toBeTruthy();
     const firstGroup = screen.getByRole("rowgroup", { name: "15-minute slot cron jobs" });
     const rowIds = within(firstGroup)
       .getAllByTestId(/^cron-row-/)
@@ -155,7 +156,7 @@ describe("CronsSection", () => {
     });
 
     const row = screen.getByTestId("cron-row-weekly-recap");
-    expect(within(row).getByText("Degraded")).toBeTruthy();
+    expect(within(row).getByText("Run warning")).toBeTruthy();
     expect(within(row).getByText("Completed with warnings (latest required run)")).toBeTruthy();
     const warningBadge = screen
       .getAllByText("Completed with warnings")
@@ -182,7 +183,7 @@ describe("CronsSection", () => {
     });
 
     const row = screen.getByTestId("cron-row-weekly-recap");
-    expect(within(row).getByText("Unhealthy")).toBeTruthy();
+    expect(within(row).getByText("Unavailable")).toBeTruthy();
     expect(within(row).getByText("Failed (latest required run)")).toBeTruthy();
   });
 
@@ -205,8 +206,8 @@ describe("CronsSection", () => {
 
     const row = screen.getByTestId("cron-row-compute-safety-score-v9");
     expect(within(row).getByText("Skipped")).toBeTruthy();
-    expect(within(row).queryByText("Unhealthy")).toBeNull();
-    expect(screen.getByText(/1\/1 shown · 0 unhealthy · 0 degraded · 0 unknown · 1 skipped/)).toBeTruthy();
+    expect(within(row).queryByText("Unavailable")).toBeNull();
+    expect(screen.getByText(/1\/1 shown · 0 unavailable · 0 warnings · 0 unknown · 1 skipped/)).toBeTruthy();
   });
 
   it("combines state, impact, trigger-group, running, and search filters", () => {
