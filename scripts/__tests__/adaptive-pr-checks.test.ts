@@ -81,4 +81,15 @@ describe("adaptive PR checks", () => {
       "check:worker-package",
     );
   });
+
+  it("selects structural checks for production and validation surfaces", () => {
+    for (const path of [
+      "src/lib/feature-flags.ts",
+      "worker/src/cron/sync-stablecoins.ts",
+      "scripts/ci/check-provider-resilience.mjs",
+      ".github/workflows/nightly-validation.yml",
+    ]) {
+      expect(buildPrStaticCheckPlan([path]).commands.map((command) => command.name)).toContain("check:structural");
+    }
+  });
 });
