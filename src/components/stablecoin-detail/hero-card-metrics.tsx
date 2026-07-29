@@ -87,15 +87,34 @@ function CompactMetricCell({
   );
 }
 
+function formatPriceReferenceLine({
+  coinData,
+  pegRef,
+  pegReferenceUnavailable,
+  isNavToken,
+}: {
+  coinData: StablecoinData;
+  pegRef: number;
+  pegReferenceUnavailable: boolean;
+  isNavToken: boolean;
+}): string {
+  if (pegReferenceUnavailable) return "Peg reference unavailable";
+  if (isNavToken) return "NAV token — no fixed peg";
+  return formatPegDeviation(coinData.price, pegRef);
+}
+
 export function HeroCompactPriceCell({
   coin,
   coinData,
   price: { pegRef, deviationBps, pegReferenceUnavailable, isNavToken, limitedDepegCoverageNote },
 }: HeroPriceCardProps) {
   const price = formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
-  const deviationLabel = pegReferenceUnavailable
-    ? "Peg reference unavailable"
-    : formatPegDeviation(coinData.price, pegRef).toUpperCase();
+  const deviationLabel = formatPriceReferenceLine({
+    coinData,
+    pegRef,
+    pegReferenceUnavailable,
+    isNavToken,
+  }).toUpperCase();
   return (
     <CompactMetricCell
       label={`Price${coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}`}
@@ -384,7 +403,7 @@ export function HeroPriceCard({
   price: { pegRef, gaugeDeviationBps, deviationBps, pegReferenceUnavailable, isNavToken, limitedDepegCoverageNote },
   mobile = false,
 }: HeroPriceCardProps) {
-  const showGauge = coinData.price != null && pegRef > 0 && !pegReferenceUnavailable;
+  const showGauge = coinData.price != null && pegRef > 0 && !pegReferenceUnavailable && !isNavToken;
   // Full 4-decimal precision on every tier: at 3 decimals a stablecoin price
   // reads as a ~10bps deviation that the peg line right below contradicts.
   const price = formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
@@ -417,7 +436,7 @@ export function HeroPriceCard({
                   : deviationColorClass(Math.abs(deviationBps))
             }`}
           >
-            {pegReferenceUnavailable ? "Peg reference unavailable" : formatPegDeviation(coinData.price, pegRef)}
+            {formatPriceReferenceLine({ coinData, pegRef, pegReferenceUnavailable, isNavToken })}
           </p>
           {limitedDepegCoverageNote ? (
             <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">{limitedDepegCoverageNote}</p>

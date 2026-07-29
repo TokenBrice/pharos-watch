@@ -31,6 +31,7 @@ import { fetchLiquityNativeActivePoolReserves } from "./liquity-native-active-po
 import { fetchLiquityV2BranchReserves } from "./liquity-v2-branches";
 import { fetchM0Reserves } from "./m0";
 import { fetchM0WrapperUnderlyingReserves } from "./m0-wrapper-underlying";
+import { fetchMakinaStrategyReserves } from "./makina-strategy";
 import { fetchMentoReserves } from "./mento";
 import { fetchNestVaultPositionsReserves } from "./nest-vault-positions";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
@@ -99,6 +100,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "liquity-v2-branches": fetchLiquityV2BranchReserves,
   m0: fetchM0Reserves,
   "m0-wrapper-underlying": fetchM0WrapperUnderlyingReserves,
+  "makina-strategy": fetchMakinaStrategyReserves,
   mento: fetchMentoReserves,
   "nest-vault-positions": fetchNestVaultPositionsReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,

@@ -344,6 +344,59 @@ describe("HeroCard", () => {
     expect(html).toContain("Compare");
   });
 
+  it("does not render NAV appreciation as a fixed-dollar peg deviation", () => {
+    const navCoin = {
+      ...coin,
+      id: "dusd-dialectic",
+      symbol: "DUSD",
+      name: "Dialectic USD",
+      flags: {
+        ...coin.flags,
+        backing: "crypto-backed" as const,
+        governance: "centralized-dependent" as const,
+        yieldBearing: true,
+        rwa: false,
+        navToken: true,
+      },
+    };
+    const navCoinData = {
+      ...coinData,
+      id: "dusd-dialectic",
+      symbol: "DUSD",
+      name: "Dialectic USD",
+      price: 1.035,
+    };
+    const html = renderToStaticMarkup(
+      <HeroCardUnderTest
+        coin={navCoin}
+        coinData={navCoinData}
+        logoSrc="/logos/dusd.svg"
+        isNavToken
+        mcap={1_035_000}
+        supply={1_000_000}
+        prevDay={1_000_000}
+        prevWeek={1_000_000}
+        prevMonth={1_000_000}
+        performanceVsUsd1y={null}
+        pegRef={1}
+        deviationBps={350}
+        gaugeDeviationBps={350}
+        pegScoreResult={null}
+        liquidityData={liquidityData}
+        yieldRanking={yieldRanking}
+        stressSignal={stressSignal}
+        reportCard={reportCardWithDirectBlacklistRisk}
+        verdict={{ archetype: "yield-bearing-hybrid", label: "Yield-Bearing Hybrid" }}
+        onOpenFeedback={() => {}}
+      />,
+    );
+
+    expect(html).toContain("NAV token — no fixed peg");
+    expect(html).not.toContain("+350 bps");
+    expect(html).not.toContain("+350 BPS");
+    expect(html).not.toContain("peg-gauge:350");
+  });
+
   it("keeps the subject case study callout docked inside the hero card", () => {
     const html = renderToStaticMarkup(
       <HeroCardUnderTest

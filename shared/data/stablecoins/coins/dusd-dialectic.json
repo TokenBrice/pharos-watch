@@ -2,7 +2,7 @@
   "id": "dusd-dialectic",
   "name": "Dialectic USD",
   "symbol": "DUSD",
-  "oneLiner": "DUSD is Dialectic's USDC-denominated Makina vault share; its price rises with strategy yield as the operator rotates capital across AMM and lending venues.",
+  "oneLiner": "DUSD is Dialectic's USDC-accounted Makina strategy share with queued exits, upstream USDC freeze exposure, and NAV tied to deployed positions.",
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "USD",
@@ -35,9 +35,8 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "dialectic-usd-vault",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
-    "reviewedStatus": true,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Makina deposits and whitelisting",
@@ -48,7 +47,8 @@
         "url": "https://docs.makina.finance/concepts/architecture/machine/redemptions"
       }
     ],
-    "evidence": "The MachineShare ERC-20 itself has no per-address freeze or blacklist function, but DUSD holders carry two reviewed exposures. The strategy's accounting token is Circle USDC, whose confirmed centralized freeze surface reaches the Machine's idle balance and its USDC positions. Separately, the Makina Risk Manager can enable an address whitelist on the AsyncRedeemer that gates both requesting a redemption and claiming assets, which can withhold the exit route from named holders.",
+    "sourceFreeRationale": "The MachineShare ERC-20 itself has no reviewed local freeze, blacklist, pause, seizure, or arbitrary holder-burn function.",
+    "evidence": "DUSD holder balances are not reviewed as locally blacklistable by the Dialectic USD share token. The remaining freeze exposure is upstream: the strategy's accounting token is Circle USDC, whose centralized freeze surface reaches idle USDC and USDC-denominated positions. Separately, the Makina Risk Manager can enable an address whitelist on the AsyncRedeemer that gates requesting a redemption and claiming assets; Pharos treats that as exit-route access risk, not a DUSD transfer blacklist.",
     "reviewer": "Claude stablecoin addition (issue #705)",
     "reviewedAt": "2026-07-29"
   },
@@ -188,11 +188,47 @@
   "governanceQuality": "multisig",
   "reserves": [
     {
-      "name": "USDC-denominated Dialectic strategy positions across Makina Calibers",
-      "pct": 100,
+      "name": "Morpho lending positions",
+      "pct": 42.9,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Morpho vault borrowers and curators reached through Makina Caliber instructions",
+      "riskFactors": ["smart-contract", "liquidity", "counterparty"],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Aave positions",
+      "pct": 28.2,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Aave markets reached through Makina Caliber instructions",
+      "riskFactors": ["smart-contract", "liquidity", "market"],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Pareto / FalconX credit exposure",
+      "pct": 12.4,
       "risk": "high",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Dialectic operator and the AMM and money-market venues approved in the Makina instruction set",
+      "issuerOrObligor": "Pareto / FalconX credit tranche obligors reached through the Dialectic strategy",
+      "riskFactors": ["credit", "counterparty", "liquidity"],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Re Protocol exposure",
+      "pct": 11.6,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Re Protocol deposit-token exposure reached through the Dialectic strategy",
+      "riskFactors": ["credit", "counterparty", "liquidity", "smart-contract"],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Royco junior-tranche and incentive positions",
+      "pct": 4.9,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Royco incentive markets and junior-tranche counterparties reached through the Dialectic strategy",
       "riskFactors": ["counterparty", "smart-contract", "liquidity", "market"],
       "liquidityHorizon": "over-seven-days"
     }
@@ -213,23 +249,18 @@
       {
         "label": "Makina strategies API",
         "url": "https://api.makina.finance/v1/strategies"
+      },
+      {
+        "label": "Makina DUSD allocation API",
+        "url": "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations"
       }
     ],
-    "rationale": "Makina publishes DUSD's total AUM, share price, and share supply, and the Machine values every position in USDC terms, but it does not publish durable per-venue weights. The operator rotates across chains, pools, and incentive programs continuously, so the reserve is represented as one dynamic USDC-denominated strategy envelope rather than a snapshot that would go stale.",
-    "compositionBasis": "Makina Machine on-chain AUM accounting and the Makina strategies API",
+    "rationale": "Makina publishes DUSD's total AUM, share price, share supply, and current allocations by protocol, chain, base-token balance, and position. The static fallback uses the material buckets from the 2026-07-29 allocation snapshot while live reserve sync refreshes weights from Makina's strategy accounting API.",
+    "compositionBasis": "Makina Machine accounting plus the Makina strategy and allocation APIs",
     "compositionAsOf": "2026-07-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "Per-venue and per-position weights are not published as durable percentages, and the AUM figure depends on operator-triggered accounting updates plus Wormhole CCQ readings of spoke Calibers within an 8-hour staleness threshold.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "USDC-denominated Dialectic strategy positions across Makina Calibers",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "The Machine reports one aggregate AUM number covering idle balance, four Calibers, and in-flight bridge transfers; splitting it into linkable constituents needs a pinned snapshot or a live composition adapter that Makina does not currently expose."
-      }
-    ]
+    "knownUnknownExposure": "The 2026-07-29 pinned allocation snapshot identifies the material protocol buckets; dust and unlabelled exposure were below static display materiality and are retained by the live adapter when present.",
+    "knownUnknownExposurePct": 0
   },
   "proofOfReserves": {
     "type": "real-time",
@@ -237,6 +268,30 @@
     "provider": "Makina on-chain Machine accounting",
     "attestorTier": "self",
     "cadence": "real-time"
+  },
+  "liveReservesConfig": {
+    "adapter": "makina-strategy",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "makina-strategy",
+    "display": {
+      "url": "https://makina.finance/strategy/dusd",
+      "label": "Makina DUSD strategy accounting"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721"
+      }
+    },
+    "params": {
+      "allocationsUrl": "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations",
+      "machineAddress": "0x6b006870C83b1Cd49E766Ac9209f8d68763Df721",
+      "accountingTokenSymbol": "USDC",
+      "accountingTokenDecimals": 6,
+      "otherThresholdPct": 2,
+      "reconciliationTolerancePct": 0.5
+    }
   },
   "mintAuthority": {
     "mintPath": "wrapped-or-variant-inherited",

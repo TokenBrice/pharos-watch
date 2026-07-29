@@ -154,6 +154,11 @@ describe("report-card blacklist authority", () => {
     // fpi-frax: TERRA re-review found an owner-controlled ProxyAdmin upgrade path
     // on Fraxtal (upgrade-control, not active freeze), re-graded to "possible".
     expect(resolved.get("fpi-frax")).toBe("possible");
+    // DUSD: the MachineShare token has no reviewed local holder freeze path.
+    // The blacklist surface is inherited from the USDC accounting-token
+    // exposure, while AsyncRedeemer access gating is modeled separately as
+    // redemption access rather than transfer blacklistability.
+    expect(resolved.get("dusd-dialectic")).toBe("inherited");
     for (const meta of TRACKED_STABLECOINS) {
       expect(meta.canBeBlacklisted).not.toBe("dilutable");
       expect("canBeBlacklistedSource" in meta).toBe(false);
