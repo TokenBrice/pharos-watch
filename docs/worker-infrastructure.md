@@ -292,18 +292,18 @@ The daily `prune-cron-history` job owns bounded cleanup for cron observability, 
 | `report_card_evidence_journal` | Bounded diagnostic provenance - 45 days and 32 rows per asset | Reserve attempt/admission/fallback records are immutable and content-addressed, but the store prunes them on each append. Exact V9 fixed inputs retain only the latest two records per asset; neither the table nor its fixed-input projection participates in scoring or public responses. |
 | `safety_score_v9_supply_attribution_journal` | Bounded diagnostic provenance - 45 days and 32 rows per asset | Reviewed-deployment supply attempts record immutable accepted/rejected and aggregate-only fallback outcomes without RPC URLs, payloads, or raw errors. The current post-publication attempt is appended after loading prior evidence, so only the latest two prior rows can enter the next private V9 fixed input; scoring and public responses ignore the projection. |
 
-### Stale D1 Schema Inventory
+### Completed D1 Schema Cleanup
 
-Several migration-era tables are intentionally schema-retained until a separate destructive D1 cleanup rollout runs. Current Worker code does not read or write:
+The 2026-07-29 operated D1 cleanup removed stale migration-era tables from production after Time Travel verification and fresh zero-use source searches. Historical migration files still define or reference these objects for lineage and fresh-database replay until the next accepted baseline squash, but current production D1 no longer has:
 
-| Table                        | Replaced by / current runtime path                                                        | Cleanup status                                                                                                                                                                                                                         |
-| ---------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `public_api_rate_limit`      | Cloudflare zone rule `api-rate-limit-ip` plus keyed `api_key_rate_limit`                  | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup; 2026-07-29 D1 inventory found 3 rows, latest bucket `2026-04-25 01:51:00Z`, and no runtime readers/writers outside baseline migration/docs/tests           |
-| `api_request_source_stats`   | `api_request_consumer_stats` and `api_key_request_stats`                                  | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup; 2026-07-29 D1 inventory found 31,158 rows, latest bucket `2026-04-04 10:16:00Z`, and no runtime readers/writers outside historical migrations/docs        |
-| `api_key_request_rate_limit` | `api_key_request_rate_limit_v2`                                                           | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup after the completed May 2026 v2 rollout; 2026-07-29 D1 inventory found 5 rows, latest bucket `2026-05-11 12:00:00Z`, and no v1 runtime readers/writers outside historical migrations/docs |
-| `feedback_submissions`       | GitHub issue creation plus `feedback_rate_limit`; no durable submission persistence today | queued in `worker/migrations/MANIFEST.md` for dedicated destructive cleanup unless feedback D1 persistence is deliberately reintroduced; 2026-07-29 D1 inventory found 0 rows and no runtime readers/writers outside historical migrations/docs/tests |
+| Removed production object | Current runtime path |
+| --- | --- |
+| `public_api_rate_limit` | Cloudflare zone rule `api-rate-limit-ip` plus keyed `api_key_rate_limit` |
+| `api_request_source_stats` | `api_request_consumer_stats` and `api_key_request_stats` |
+| `api_key_request_rate_limit` | `api_key_request_rate_limit_v2` |
+| `feedback_submissions` | GitHub issue creation plus `feedback_rate_limit`; there is no durable submission persistence today |
 
-Do not drop these in a normal migration. Destructive cleanup requires production backup/Time Travel verification, fresh zero-use evidence, and a dedicated rollout after compatible Worker code has soaked.
+Do not use a normal migration for destructive cleanup. Future stale-table removals still require production backup/Time Travel verification, fresh zero-use evidence, and a dedicated operated rollout after compatible Worker code has soaked.
 
 ### CORS Headers
 
