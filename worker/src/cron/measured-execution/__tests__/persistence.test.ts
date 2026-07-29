@@ -432,7 +432,7 @@ describe("measured execution publication", () => {
         targets: [],
         capturedAt: 1_700_000_000,
       }),
-    ).rejects.toThrow("empty measured target generation");
+    ).rejects.toThrow("empty DEX measured target generation");
     expect(prepare).not.toHaveBeenCalled();
   });
 
@@ -446,7 +446,7 @@ describe("measured execution publication", () => {
         outcomes: [],
         quotedAt: 1_700_000_100,
       }),
-    ).rejects.toThrow("empty measured quote generation");
+    ).rejects.toThrow("empty DEX measured quote generation");
     expect(prepare).not.toHaveBeenCalled();
   });
 

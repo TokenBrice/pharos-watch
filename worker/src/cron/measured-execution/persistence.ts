@@ -197,6 +197,61 @@ async function latestPublishedGeneration(
   );
 }
 
+/** Superseded quote generations inside the lookback whose row count still matches the published ledger, newest first. */
+async function loadSupersededQuoteGenerationIds(input: {
+  db: D1Database;
+  quoteSurface: string;
+  publishedAtFloor: number;
+  signal?: AbortSignal;
+}): Promise<string[]> {
+  const result = await runWithOverloadRetry(
+    () =>
+      input.db
+        .prepare(
+          `SELECT history_generation.generation_id
+       FROM surface_publication_generations history_generation
+       WHERE history_generation.surface = ? AND history_generation.state = 'superseded'
+         AND history_generation.published_at IS NOT NULL AND history_generation.published_at >= ?
+         AND history_generation.expected_rows IS NOT NULL
+         AND history_generation.published_rows = history_generation.expected_rows
+         AND history_generation.expected_rows = (
+           SELECT COUNT(*)
+           FROM dex_measured_execution_quotes complete_quotes
+           WHERE complete_quotes.generation_id = history_generation.generation_id
+         )
+       ORDER BY history_generation.published_at DESC, history_generation.generation_id DESC`,
+        )
+        .bind(input.quoteSurface, input.publishedAtFloor)
+        .all<{ generation_id: string }>(),
+    3,
+    input.signal,
+  );
+  return (result.results ?? []).map((row) => row.generation_id);
+}
+
+/**
+ * A historical quote row is reusable only when its target parses back to the same
+ * identity and its terminal state is internally consistent: measured rows carry a
+ * profile bound to the same target and quote generation, failed rows carry a reason.
+ */
+function isCoherentHistoricalQuoteRow(
+  row: QuoteRow,
+  target: { targetId: string },
+  profile: NativeMeasuredProfile | null,
+): boolean {
+  if (target.targetId !== row.target_id) return false;
+  if (row.status === "measured") {
+    return (
+      profile != null &&
+      row.failure_reason == null &&
+      profile.targetId === row.target_id &&
+      profile.targetGenerationId === row.target_generation_id &&
+      profile.quoteGenerationId === row.generation_id
+    );
+  }
+  return profile == null && Boolean(row.failure_reason?.trim());
+}
+
 async function loadCurrentMeasuredQuoteEvidence<
   TTarget extends { targetId: string },
   TProfile extends {
@@ -454,123 +509,14 @@ export async function publishDexMeasuredTargetInventory(input: {
   capturedAt: number;
   signal?: AbortSignal;
 }): Promise<{ generationId: string; rowCount: number }> {
-  const parsedTargets = input.targets.map((target) => DexMeasuredExecutionTargetSchema.parse(target));
-  if (parsedTargets.length === 0) {
-    throw new Error("Refusing to publish an empty measured target generation");
-  }
-  const targetIds = new Set(parsedTargets.map((target) => target.targetId));
-  if (targetIds.size !== parsedTargets.length)
-    throw new Error("Measured target inventory contains duplicate target ids");
-  const previous = await latestPublishedGeneration(input.db, DEX_MEASURED_TARGET_SURFACE, input.signal);
-  const id = generationId("dex-measured-targets", input.capturedAt);
-
-  try {
-    await runWithOverloadRetry(
-      () =>
-        input.db
-          .prepare(
-            `INSERT INTO surface_publication_generations
-       (surface, generation_id, started_at, state, expected_rows, previous_generation_id,
-        producer_schedule_key, producer_job, producer_path, producer_kind)
-       VALUES (?, ?, ?, 'candidate', ?, ?, 'halfHourlyOffset', 'sync-dex-liquidity', 'halfHourlyOffset', 'scheduled-job')`,
-          )
-          .bind(
-            DEX_MEASURED_TARGET_SURFACE,
-            id,
-            input.capturedAt,
-            parsedTargets.length,
-            previous?.generation_id ?? null,
-          )
-          .run(),
-      3,
-      input.signal,
-    );
-
-    const rows = parsedTargets.map(
-      (target) =>
-        [
-          id,
-          target.targetId,
-          target.stablecoinId,
-          target.adapterProfileId,
-          target.protocol,
-          target.chain,
-          target.poolId,
-          target.capturedAt,
-          JSON.stringify(target),
-        ] as const,
-    );
-    await batchExecute(
-      input.db,
-      prepareMultiRowInsertStatements(
-        input.db,
-        `INSERT INTO dex_measured_execution_targets
-       (generation_id, target_id, stablecoin_id, adapter_profile_id, protocol, chain, pool_id, captured_at, target_json)`,
-        rows,
-      ),
-      { signal: input.signal },
-    );
-
-    const count = await input.db
-      .prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets WHERE generation_id = ?")
-      .bind(id)
-      .first<{ count: number }>();
-    if (Number(count?.count ?? -1) !== parsedTargets.length) {
-      throw new Error(
-        `Measured target generation row mismatch: expected=${parsedTargets.length} actual=${count?.count ?? -1}`,
-      );
-    }
-    await publishGenerationPointer({
-      db: input.db,
-      surface: DEX_MEASURED_TARGET_SURFACE,
-      generationId: id,
-      previousGenerationId: previous?.generation_id ?? null,
-      nowSec: input.capturedAt,
-      rowCount: parsedTargets.length,
-      validationSummary: { exactTargetCount: parsedTargets.length },
-      signal: input.signal,
-    });
-    return { generationId: id, rowCount: parsedTargets.length };
-  } catch (error) {
-    await markGenerationFailed(input.db, DEX_MEASURED_TARGET_SURFACE, id, String(error));
-    throw error;
-  }
+  return publishNativeMeasuredTargetInventory(DEX_PERSISTENCE, input);
 }
 
 export async function loadLatestPublishedDexMeasuredTargets(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<PublishedDexMeasuredTargets | null> {
-  const generation = await latestPublishedGeneration(db, DEX_MEASURED_TARGET_SURFACE, signal);
-  if (!generation) return null;
-  const result = await runWithOverloadRetry(
-    () =>
-      db
-        .prepare(
-          `SELECT generation_id, target_id, target_json
-     FROM dex_measured_execution_targets
-     WHERE generation_id = ?
-     ORDER BY stablecoin_id, target_id`,
-        )
-        .bind(generation.generation_id)
-        .all<TargetRow>(),
-    3,
-    signal,
-  );
-  const targets = (result.results ?? []).map((row) =>
-    DexMeasuredExecutionTargetSchema.parse(parsePersistedJson(row.target_json, "DEX measured target JSON")),
-  );
-  if (
-    (generation.expected_rows != null && generation.expected_rows !== targets.length) ||
-    (generation.published_rows != null && generation.published_rows !== targets.length)
-  ) {
-    throw new Error(`Published measured target generation ${generation.generation_id} is incomplete`);
-  }
-  return {
-    generationId: generation.generation_id,
-    targets,
-    publishedAt: generation.published_at ?? generation.started_at,
-  };
+  return loadLatestPublishedNativeMeasuredTargets(DEX_PERSISTENCE, db, signal);
 }
 
 export async function publishDexMeasuredQuoteGeneration(input: {
@@ -581,115 +527,7 @@ export async function publishDexMeasuredQuoteGeneration(input: {
   generationId?: string;
   signal?: AbortSignal;
 }): Promise<{ generationId: string; measuredCount: number; failedCount: number }> {
-  if (input.targetGeneration.targets.length === 0 || input.outcomes.length === 0) {
-    throw new Error("Refusing to publish an empty measured quote generation");
-  }
-  const targetIds = new Set(input.targetGeneration.targets.map((target) => target.targetId));
-  const outcomeIds = new Set(input.outcomes.map((outcome) => outcome.target.targetId));
-  if (
-    outcomeIds.size !== input.outcomes.length ||
-    targetIds.size !== outcomeIds.size ||
-    [...targetIds].some((targetId) => !outcomeIds.has(targetId))
-  )
-    throw new Error("Measured quote outcomes do not exactly cover the target generation");
-
-  const previous = await latestPublishedGeneration(input.db, DEX_MEASURED_QUOTE_SURFACE, input.signal);
-  const id = input.generationId ?? buildDexMeasuredQuoteGenerationId(input.quotedAt);
-  const measuredCount = input.outcomes.filter((outcome) => outcome.status === "measured").length;
-  const failedCount = input.outcomes.length - measuredCount;
-  try {
-    await runWithOverloadRetry(
-      () =>
-        input.db
-          .prepare(
-            `INSERT INTO surface_publication_generations
-       (surface, generation_id, started_at, state, expected_rows, previous_generation_id,
-        dependency_snapshot_json, producer_schedule_key, producer_job, producer_path, producer_kind)
-       VALUES (?, ?, ?, 'candidate', ?, ?, ?, 'halfHourlyMeasuredExecution', 'sync-cl-exit-depth',
-        'halfHourlyMeasuredExecution', 'scheduled-job')`,
-          )
-          .bind(
-            DEX_MEASURED_QUOTE_SURFACE,
-            id,
-            input.quotedAt,
-            input.outcomes.length,
-            previous?.generation_id ?? null,
-            JSON.stringify({ targetGenerationId: input.targetGeneration.generationId }),
-          )
-          .run(),
-      3,
-      input.signal,
-    );
-
-    const rows = input.outcomes.map((outcome) => {
-      if (
-        (outcome.status === "measured" && (!outcome.profile || outcome.failureReason != null)) ||
-        (outcome.status === "failed" && (outcome.profile != null || !outcome.failureReason?.trim()))
-      )
-        throw new Error(`Measured quote outcome ${outcome.target.targetId} has an invalid terminal state`);
-      const profile = outcome.profile ? DexMeasuredExecutionProfileSchema.parse(outcome.profile) : null;
-      if (
-        profile &&
-        (profile.targetId !== outcome.target.targetId ||
-          profile.targetGenerationId !== input.targetGeneration.generationId ||
-          profile.quoteGenerationId !== id)
-      )
-        throw new Error(`Measured quote outcome ${outcome.target.targetId} has mismatched generation identity`);
-      return [
-        id,
-        input.targetGeneration.generationId,
-        outcome.target.targetId,
-        outcome.target.stablecoinId,
-        outcome.target.adapterProfileId,
-        outcome.target.protocol,
-        outcome.target.chain,
-        outcome.target.poolId,
-        outcome.status,
-        outcome.failureReason ?? null,
-        profile?.quotedAt ?? null,
-        profile?.blockNumber ?? null,
-        profile ? JSON.stringify(profile) : null,
-        // Raw producer envelopes duplicate the measured profile's quoteProof; persist them
-        // only for failed outcomes, where they are the sole structured failure evidence.
-        outcome.status === "failed" && outcome.rawPayload != null ? JSON.stringify(outcome.rawPayload) : null,
-      ] as const;
-    });
-    await batchExecute(
-      input.db,
-      prepareMultiRowInsertStatements(
-        input.db,
-        `INSERT INTO dex_measured_execution_quotes
-       (generation_id, target_generation_id, target_id, stablecoin_id, adapter_profile_id, protocol, chain,
-        pool_id, status, failure_reason, quoted_at, block_number, quote_profile_json, raw_quote_payload_json)`,
-        rows,
-      ),
-      { signal: input.signal },
-    );
-
-    const count = await input.db
-      .prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes WHERE generation_id = ?")
-      .bind(id)
-      .first<{ count: number }>();
-    if (Number(count?.count ?? -1) !== input.outcomes.length) {
-      throw new Error(
-        `Measured quote generation row mismatch: expected=${input.outcomes.length} actual=${count?.count ?? -1}`,
-      );
-    }
-    await publishGenerationPointer({
-      db: input.db,
-      surface: DEX_MEASURED_QUOTE_SURFACE,
-      generationId: id,
-      previousGenerationId: previous?.generation_id ?? null,
-      nowSec: input.quotedAt,
-      rowCount: input.outcomes.length,
-      validationSummary: { measuredCount, failedCount, targetGenerationId: input.targetGeneration.generationId },
-      signal: input.signal,
-    });
-    return { generationId: id, measuredCount, failedCount };
-  } catch (error) {
-    await markGenerationFailed(input.db, DEX_MEASURED_QUOTE_SURFACE, id, String(error));
-    throw error;
-  }
+  return publishNativeMeasuredQuoteGeneration(DEX_PERSISTENCE, input);
 }
 
 export async function loadLatestPublishedDexMeasuredQuoteEvidence(
@@ -761,29 +599,12 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
   // Reuse the newest still-fresh measured row for that exact target identity;
   // consumer validation below retains the original quote clock and snapshot.
   try {
-    const historyGenerationResult = await runWithOverloadRetry(
-      () =>
-        db
-          .prepare(
-            `SELECT history_generation.generation_id
-       FROM surface_publication_generations history_generation
-       WHERE history_generation.surface = ? AND history_generation.state = 'superseded'
-         AND history_generation.published_at IS NOT NULL AND history_generation.published_at >= ?
-         AND history_generation.expected_rows IS NOT NULL
-         AND history_generation.published_rows = history_generation.expected_rows
-         AND history_generation.expected_rows = (
-           SELECT COUNT(*)
-           FROM dex_measured_execution_quotes complete_quotes
-           WHERE complete_quotes.generation_id = history_generation.generation_id
-         )
-       ORDER BY history_generation.published_at DESC, history_generation.generation_id DESC`,
-          )
-          .bind(DEX_MEASURED_QUOTE_SURFACE, latestPublishedAt - DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC)
-          .all<{ generation_id: string }>(),
-      3,
+    const historyGenerationIds = await loadSupersededQuoteGenerationIds({
+      db,
+      quoteSurface: DEX_MEASURED_QUOTE_SURFACE,
+      publishedAtFloor: latestPublishedAt - DEX_MEASURED_HISTORY_LOOKBACK_MAX_SEC,
       signal,
-    );
-    const historyGenerationIds = (historyGenerationResult.results ?? []).map((row) => row.generation_id);
+    });
     if (historyGenerationIds.length > 0) {
       const historyGenerationIdsJson = JSON.stringify(historyGenerationIds);
       const historicalTargetResult = await runWithOverloadRetry(
@@ -868,17 +689,8 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
             ? DexMeasuredExecutionProfileSchema.safeParse(profileJson.value)
             : null;
           const profile = profileResult?.success ? profileResult.data : null;
-          if (
-            !targetResult.success ||
-            targetResult.data.targetId !== row.target_id ||
-            (row.status === "measured" &&
-              (profile === null ||
-                row.failure_reason !== null ||
-                profile.targetId !== row.target_id ||
-                profile.targetGenerationId !== row.target_generation_id ||
-                profile.quoteGenerationId !== row.generation_id)) ||
-            (row.status === "failed" && (profile !== null || !row.failure_reason?.trim()))
-          ) {
+          const quotedTarget = targetResult.success ? targetResult.data : null;
+          if (quotedTarget === null || !isCoherentHistoricalQuoteRow(row, quotedTarget, profile)) {
             recordIntegrityBarrier();
             continue;
           }
@@ -904,7 +716,7 @@ export async function loadLatestPublishedDexMeasuredQuoteEvidence(
             continue;
           }
           byTargetId.set(row.target_id, {
-            quotedTarget: targetResult.data,
+            quotedTarget,
             status: "measured",
             failureReason: null,
             profile: options.deferProfiles ? null : profile,
@@ -1101,6 +913,18 @@ interface NativeLoadedQuoteEvidence<TTarget, TProfile> {
     }
   >;
 }
+
+const DEX_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget, DexMeasuredExecutionProfile> = {
+  label: "DEX",
+  activation: "active",
+  targetSurface: DEX_MEASURED_TARGET_SURFACE,
+  quoteSurface: DEX_MEASURED_QUOTE_SURFACE,
+  targetGenerationPrefix: "dex-measured-targets",
+  quoteGenerationPrefix: "dex-measured-quotes",
+  targetSchema: DexMeasuredExecutionTargetSchema,
+  profileSchema: DexMeasuredExecutionProfileSchema,
+  profileBlockNumber: (profile) => profile.blockNumber,
+};
 
 const SOLANA_PERSISTENCE: NativePersistenceConfig<SolanaMeasuredExecutionTarget, SolanaMeasuredExecutionProfile> = {
   label: "Solana",
@@ -1341,6 +1165,8 @@ async function publishNativeMeasuredQuoteGeneration<
         profile?.quotedAt ?? null,
         profile ? config.profileBlockNumber(profile) : null,
         profile ? JSON.stringify(profile) : null,
+        // Raw producer envelopes duplicate the measured profile's quoteProof; persist them
+        // only for failed outcomes, where they are the sole structured failure evidence.
         outcome.status === "failed" && outcome.rawPayload != null ? JSON.stringify(outcome.rawPayload) : null,
       ] as const;
     });
@@ -1450,32 +1276,12 @@ async function loadLatestPublishedSolanaMeasuredQuoteEvidenceWithLkg(
   }
 
   try {
-    const historyGenerationResult = await runWithOverloadRetry(
-      () =>
-        db
-          .prepare(
-            `SELECT history_generation.generation_id
-       FROM surface_publication_generations history_generation
-       WHERE history_generation.surface = ? AND history_generation.state = 'superseded'
-         AND history_generation.published_at IS NOT NULL AND history_generation.published_at >= ?
-         AND history_generation.expected_rows IS NOT NULL
-         AND history_generation.published_rows = history_generation.expected_rows
-         AND history_generation.expected_rows = (
-           SELECT COUNT(*)
-           FROM dex_measured_execution_quotes complete_quotes
-           WHERE complete_quotes.generation_id = history_generation.generation_id
-         )
-       ORDER BY history_generation.published_at DESC, history_generation.generation_id DESC`,
-          )
-          .bind(
-            SOLANA_MEASURED_QUOTE_SURFACE,
-            currentEvidence.publishedAt - DEX_MEASURED_FRESHNESS_MAX_SEC,
-          )
-          .all<{ generation_id: string }>(),
-      3,
+    const historyGenerationIds = await loadSupersededQuoteGenerationIds({
+      db,
+      quoteSurface: SOLANA_MEASURED_QUOTE_SURFACE,
+      publishedAtFloor: currentEvidence.publishedAt - DEX_MEASURED_FRESHNESS_MAX_SEC,
       signal,
-    );
-    const historyGenerationIds = (historyGenerationResult.results ?? []).map((row) => row.generation_id);
+    });
     if (historyGenerationIds.length === 0) return { ...currentEvidence, byTargetId };
 
     const historyGenerationIdsJson = JSON.stringify(historyGenerationIds);
@@ -1517,17 +1323,8 @@ async function loadLatestPublishedSolanaMeasuredQuoteEvidenceWithLkg(
           ? SolanaMeasuredExecutionProfileSchema.safeParse(profileJson.value)
           : null;
         const profile = profileResult?.success ? profileResult.data : null;
-        const rowIsValid =
-          targetResult?.success === true &&
-          targetResult.data.targetId === row.target_id &&
-          ((row.status === "measured" &&
-            profile != null &&
-            row.failure_reason == null &&
-            profile.targetId === row.target_id &&
-            profile.targetGenerationId === row.target_generation_id &&
-            profile.quoteGenerationId === row.generation_id) ||
-            (row.status === "failed" && profile == null && Boolean(row.failure_reason?.trim())));
-        if (!rowIsValid) {
+        const quotedTarget = targetResult?.success ? targetResult.data : null;
+        if (quotedTarget === null || !isCoherentHistoricalQuoteRow(row, quotedTarget, profile)) {
           blockedTargetIds.add(row.target_id);
           continue;
         }
@@ -1541,7 +1338,7 @@ async function loadLatestPublishedSolanaMeasuredQuoteEvidenceWithLkg(
           continue;
         }
         byTargetId.set(row.target_id, {
-          quotedTarget: targetResult.data,
+          quotedTarget,
           status: "measured",
           failureReason: null,
           profile,
