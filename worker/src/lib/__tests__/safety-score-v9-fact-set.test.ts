@@ -5011,6 +5011,7 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       route("hyperevm:0x4444444444444444444444444444444444444444"),
     ]);
     expect(canonicalOrphan.asset.economicControlReview?.bridge.status.observationState).toBe("known");
+    expect(canonicalOrphan.asset.economicControlReview?.bridge.status.applicability.state).toBe("not-applicable");
     expect(
       canonicalOrphan.asset.controlReview?.state === "reviewed-controls"
         ? canonicalOrphan.asset.controlReview.controls.find((control) => control.deploymentKey.startsWith("hyperevm:"))
