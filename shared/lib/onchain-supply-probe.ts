@@ -30,6 +30,7 @@ const STARKNET_ADDRESS_RE = /^0x[0-9a-fA-F]{1,64}$/;
 // ICP canister ids are 10-byte principals in base32-with-CRC text form, i.e.
 // four groups of five characters plus a three-character tail. Longer
 // self-authenticating (user) principals are deliberately rejected.
+// eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-width principal pattern; finite quantifiers, no backtracking risk.
 const ICP_CANISTER_ID_RE = /^[a-z2-7]{5}(-[a-z2-7]{5}){3}-[a-z2-7]{3}$/;
 
 /**

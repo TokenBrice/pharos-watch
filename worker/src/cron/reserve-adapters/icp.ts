@@ -11,7 +11,8 @@ import { fetchJsonWithRetry } from "./request";
 const ICRC_LEDGER_API_BASE_URLS = ["https://icrc-api.internetcomputer.org/api/v1/ledgers"] as const;
 
 /** Text-form principals are base32-with-CRC groups; nothing else may reach the URL. */
-const ICP_CANISTER_ID_RE = /^[a-z2-7]+(-[a-z2-7]+)*$/;
+// eslint-disable-next-line security/detect-unsafe-regex -- separator-delimited groups cannot overlap; no ambiguous backtracking path.
+const ICP_CANISTER_ID_RE = /^[a-z2-7]{5}(-[a-z2-7]{5}){3}-[a-z2-7]{3}$/;
 
 interface IcrcLedgerResponse {
   icrc1_metadata?: {
