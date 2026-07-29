@@ -253,6 +253,11 @@ describe("handleRemediateBlacklistAmountGaps", () => {
         rows: [],
         runMeta: { changes: 1 },
       },
+      {
+        match: "DELETE FROM cache WHERE key = ?",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
     ], { requireMatch: true });
 
     const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
@@ -277,16 +282,37 @@ describe("handleRemediateBlacklistAmountGaps", () => {
         resolvedZero: number;
         providerFailed: number;
       };
+      cacheInvalidation: {
+        attempted: number;
+        deleted: number;
+        failed: number;
+      };
     };
     expect(body.applied).toMatchObject({
       resolved: 1,
       resolvedZero: 1,
       providerFailed: 0,
     });
+    expect(body.cacheInvalidation).toEqual({
+      attempted: 5,
+      deleted: 5,
+      failed: 0,
+    });
 
     const updateCall = db.getHistory().find((entry) => entry.sql.includes("UPDATE blacklist_events"));
     expect(updateCall).toBeTruthy();
     expect(updateCall?.binds[0]).toBe(0);
     expect(updateCall?.binds[4]).toBe("resolved");
+    const deletedCacheKeys = db.getHistory()
+      .filter((entry) => entry.sql.includes("DELETE FROM cache WHERE key = ?"))
+      .map((entry) => entry.binds[0])
+      .sort();
+    expect(deletedCacheKeys).toEqual([
+      "blacklist:gap-metrics:producer:v1:86400:core",
+      "blacklist:gap-metrics:producer:v1:86400:full",
+      "blacklist:gap-metrics:v1:86400:core",
+      "blacklist:gap-metrics:v1:86400:full",
+      "blacklist:summary:producer:v1",
+    ]);
   });
 });

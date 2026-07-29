@@ -2,6 +2,11 @@ import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isBlacklistAmountGapStatus } from "@shared/lib/blacklist";
 import { BLACKLIST_AMOUNT_STATUS_VALUES } from "@shared/types/market";
+import {
+  BLACKLIST_GAP_METRICS_CACHE_VERSION,
+  getBlacklistGapMetricsCacheKey,
+  type BlacklistGapMetricsCacheKind,
+} from "./blacklist-cache-keys";
 
 export interface BlacklistGapMetrics {
   totalEvents: number;
@@ -24,12 +29,9 @@ export interface BlacklistGapMetricsOptions {
   cacheTtlSec?: number;
 }
 
-const BLACKLIST_GAP_METRICS_CACHE_VERSION = 1;
 const DEFAULT_BLACKLIST_GAP_METRICS_CACHE_TTL_SEC = 300;
 const DEFAULT_BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC =
   API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 2;
-
-type BlacklistGapMetricsCacheKind = "producer" | "request";
 
 interface CachedBlacklistGapMetricsPayload {
   version: typeof BLACKLIST_GAP_METRICS_CACHE_VERSION;
@@ -54,16 +56,6 @@ function normalizeOptions(input: number | BlacklistGapMetricsOptions | undefined
     producerSnapshotTtlSec: input?.producerSnapshotTtlSec ?? 0,
     cacheTtlSec: input?.cacheTtlSec ?? 0,
   };
-}
-
-function getCacheKey(
-  options: Pick<Required<BlacklistGapMetricsOptions>, "recentWindowSec" | "includeDistributions">,
-  kind: BlacklistGapMetricsCacheKind,
-): string {
-  if (kind === "producer") {
-    return `blacklist:gap-metrics:producer:v${BLACKLIST_GAP_METRICS_CACHE_VERSION}:${options.recentWindowSec}:${options.includeDistributions ? "full" : "core"}`;
-  }
-  return `blacklist:gap-metrics:v${BLACKLIST_GAP_METRICS_CACHE_VERSION}:${options.recentWindowSec}:${options.includeDistributions ? "full" : "core"}`;
 }
 
 function isMetricsPayload(value: unknown): value is BlacklistGapMetrics {
@@ -131,7 +123,7 @@ async function readCachedMetrics(
   if (ttlSec <= 0) return null;
   const row = await db
     .prepare("/* blacklist-gap-metrics-cache-read */ SELECT value, updated_at FROM cache WHERE key = ?")
-    .bind(getCacheKey(options, kind))
+    .bind(getBlacklistGapMetricsCacheKey(options, kind))
     .first<{ value: string; updated_at: number }>();
   if (!row || now - row.updated_at > ttlSec) return null;
   const parsed = parseCachedMetrics(row.value, options);
@@ -167,7 +159,7 @@ async function writeMetricsCacheRow(
   };
   await db
     .prepare("/* blacklist-gap-metrics-cache-write */ INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-    .bind(getCacheKey(options, kind), JSON.stringify(payload), freshnessAt)
+    .bind(getBlacklistGapMetricsCacheKey(options, kind), JSON.stringify(payload), freshnessAt)
     .run();
 }
 
