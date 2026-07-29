@@ -154,3 +154,4 @@ output/playwright/
 .superpowers/
 
 /agents/
+__pycache__/
