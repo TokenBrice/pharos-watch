@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type SVGProps } from "react";
-import { useTheme } from "next-themes";
-import { Activity, KeyRound, Monitor, Moon, Search, Send, Sparkles, Sun } from "lucide-react";
+import { Activity, KeyRound, Search, Send, Sparkles } from "lucide-react";
 import { PharosLogo } from "@/components/pharos-logo";
+import { ThemeControls } from "@/components/theme-controls";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,46 +84,6 @@ function NavMenuItem({ item }: { item: NavItem }) {
         <span className="text-sm font-medium text-foreground">{item.label}</span>
       </Link>
     </DropdownMenuItem>
-  );
-}
-
-// dark / light / system controls, folded into the overflow menu per the Figma.
-function ThemeControls() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    // next-themes: only read the resolved theme after mount so the active
-    // highlight doesn't cause a hydration mismatch. One-shot, empty deps.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
-  const options = [
-    { value: "dark", label: "Dark", icon: Moon },
-    { value: "light", label: "Light", icon: Sun },
-    { value: "system", label: "System", icon: Monitor },
-  ] as const;
-  return (
-    <div className="flex items-center gap-1 px-1.5 py-1">
-      {options.map((opt) => {
-        const Icon = opt.icon;
-        const active = mounted && theme === opt.value;
-        return (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => setTheme(opt.value)}
-            aria-label={`${opt.label} theme`}
-            aria-pressed={active}
-            className={cn(
-              "inline-flex size-8 items-center justify-center rounded-md transition-colors",
-              active ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
-            )}
-          >
-            <Icon className="size-4" aria-hidden />
-          </button>
-        );
-      })}
-    </div>
   );
 }
 
@@ -328,7 +288,7 @@ export function TopNav() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <ThemeControls />
+            <ThemeControls density="desktop" />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
