@@ -19,6 +19,7 @@ import {
   DEFILLAMA_YIELDS_URL,
   DEFILLAMA_PROTOCOLS_URL,
   CURVE_API_BASE,
+  CURVE_API_CHAIN_PATHS,
   CURVE_CHAINS,
   DEX_LIQUIDITY_POOL_MIN_TVL_USD,
 } from "./constants";
@@ -264,7 +265,7 @@ export async function fetchDataSources(
   if (curveCircuitAllowed) {
     const curveResults = await mapWithConcurrency(CURVE_CHAINS, CURVE_API_FETCH_CONCURRENCY, (chain) =>
       fetchJsonWithRetry<CurveApiPayload>(
-        `${CURVE_API_BASE}/${chain}`,
+        `${CURVE_API_BASE}/${CURVE_API_CHAIN_PATHS[chain] ?? chain}`,
         { headers: { "User-Agent": USER_AGENT }, signal },
         2,
         { timeoutMs: PRIMARY_SOURCE_JSON_TIMEOUT_MS },

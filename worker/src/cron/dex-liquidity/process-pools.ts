@@ -570,6 +570,38 @@ export function resolveActiveCurveCryptoSwapCandidateByTvl(
   return policy?.mode === "active" && policy.scoreEligible ? candidate : null;
 }
 
+/**
+ * Resolve a Curve coin-set join that failed closed because two physical pools
+ * share the same coins. The retained DeFiLlama TVL identifies exactly one of
+ * them, and only a plain StableSwap pool is admitted: CryptoSwap and metapool
+ * candidates keep the unresolved join rather than crossing into a family this
+ * execution capability cannot model. The drift tolerance is the one the
+ * CryptoSwap join already uses.
+ */
+export function resolveCurveStableswapCandidateByTvl(
+  candidates: readonly CurvePoolEntry[],
+  retainedTvlUsd: number,
+): CurvePoolEntry | null {
+  if (!Number.isFinite(retainedTvlUsd) || retainedTvlUsd <= 0) return null;
+  const matching = candidates.filter(
+    (candidate) =>
+      Number.isFinite(candidate.tvl) &&
+      candidate.tvl > 0 &&
+      Math.abs(candidate.tvl / retainedTvlUsd - 1) <= ACTIVE_CURVE_CRYPTOSWAP_MAX_TVL_RELATIVE_DRIFT,
+  );
+  if (matching.length !== 1) return null;
+  const candidate = matching[0]!;
+  if (
+    candidate.apiIsBroken ||
+    candidate.isMetaPool ||
+    isCryptoSwap(candidate.registryId) ||
+    !candidate.executionCoins
+  ) {
+    return null;
+  }
+  return candidate;
+}
+
 /** Match DeFiLlama pools to tracked stablecoins and compute per-pool metrics. */
 export function processPoolMetrics(
   pools: LlamaPool[],
@@ -839,6 +871,15 @@ export function processPoolMetrics(
         // Pool-level price: use Curve per-token price when available
         const poolPrice = curveData?.tokenPrices[meta.symbol.toUpperCase()];
 
+        // A coin set shared by two physical Curve pools loses its address-grade
+        // join; the retained TVL identifies the plain StableSwap one.
+        const curveStableswapExecutionMatch =
+          protocol === "curve" && !curveAddressMatch && fpCurveKey != null
+            ? resolveCurveStableswapCandidateByTvl(
+                curvePoolCandidatesByFingerprint.get(fpCurveKey) ?? [],
+                pool.tvlUsd,
+              )
+            : null;
         // Exact stableswap execution model: address-matched plain Curve pools
         // whose complete per-coin inputs survived capture. The fee is not
         // published by the pools endpoint, so the model carries a documented
@@ -846,7 +887,7 @@ export function processPoolMetrics(
         const curveExecutionCapability =
           protocol === "curve"
             ? buildCurveStableswapExecutionCapability(
-                curveAddressMatch ? curveData : undefined,
+                curveAddressMatch ? curveData : (curveStableswapExecutionMatch ?? undefined),
                 chainNorm,
                 id,
                 chainAddressToId,

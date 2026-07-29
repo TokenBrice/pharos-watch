@@ -15,8 +15,9 @@ export const DEFILLAMA_PROTOCOLS_URL = "https://api.llama.fi/protocols";
 export const CURVE_API_BASE = "https://api.curve.finance/v1/getPools/all";
 // Chains the Curve getPools/all endpoint serves and the join consumes. The
 // endpoint also covers optimism, avalanche, fantom, and kava (verified
-// 2026-07-19); it does not serve gnosis, monad, or plasma. New entries are
-// appended so persisted payload indexes stay aligned with earlier captures.
+// 2026-07-19); it answers monad and plasma with an empty pool list (verified
+// 2026-07-29). New entries are appended so persisted payload indexes stay
+// aligned with earlier captures.
 export const CURVE_CHAINS = [
   "ethereum",
   "base",
@@ -30,10 +31,27 @@ export const CURVE_CHAINS = [
   "avalanche",
   "fantom",
   "kava",
+  "gnosis",
 ] as const;
+/**
+ * Curve addresses Gnosis by its legacy `xdai` network name (verified
+ * 2026-07-29: `/all/xdai` returns pool data, `/all/gnosis` returns an error).
+ * Every other chain requests the endpoint with the Pharos chain id verbatim,
+ * which is also the key the join writes into the Curve pool map.
+ */
+export const CURVE_API_CHAIN_PATHS: Record<string, string> = { gnosis: "xdai" };
 export const DEX_LIQUIDITY_POOL_MIN_TVL_USD = 10_000;
 
-// Uniswap V3 subgraph IDs per chain
+// Uniswap V3 subgraph IDs per chain. Chain expansion is measured-execution
+// coupled: adding a chain here only turns that chain's DeFiLlama `uniswap-v3`
+// rows from `measured-execution:target-unresolved` into targets that still fail
+// closed at `quote-missing` until a reviewed QuoterV2 deployment for the chain
+// is pinned in ../measured-execution/registry.ts and ratified, so a chain added
+// alone moves reason codes without adding exit-route coverage. Every added
+// chain also joins this family's parallel per-chain fan-out, the cost that
+// retired the Optimism lane (docs/dex-liquidity.md). Celo and BSC candidate
+// subgraph, factory, and QuoterV2 evidence is recorded in the
+// exact-dex-route-coverage activation packet.
 export const UNIV3_SUBGRAPHS: Record<string, string> = {
   ethereum: "5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV",
   base: "FUbEPQw1oMghy39fwWBFY5fE6MXPXZQtjncQy2cXdrNS",
