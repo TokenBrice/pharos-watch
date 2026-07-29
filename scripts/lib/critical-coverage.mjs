@@ -263,6 +263,7 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS = [
 ];
 // Waived high-stakes candidates mapped to their review deadline. The completeness
 // guard fails once a reviewAfter date passes, forcing enrollment or a new deadline.
+/** @type {Record<string, string>} */
 export const CRITICAL_COVERAGE_WAIVERS = {
   "worker/src/cron/depeg-resolver/constants.ts": "2026-08-30",
   "worker/src/cron/depeg-resolver/storage-adapters.ts": "2026-08-30",
