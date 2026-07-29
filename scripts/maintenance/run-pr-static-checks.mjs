@@ -36,6 +36,7 @@ export function buildPrStaticCheckPlan(changedFiles) {
     { name: "typecheck" },
     { name: "check:env-contract" },
     { name: "check:shared-types-imports" },
+    { name: "check:critical-coverage-completeness" },
   ];
 
   if (changedFiles.some((file) => ROOT_DEPENDENCY_PATHS.has(file))) {

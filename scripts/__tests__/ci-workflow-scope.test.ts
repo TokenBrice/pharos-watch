@@ -27,6 +27,24 @@ describe("CI workflow scope", () => {
     expect(nightly).toContain("node-version: \"26\"");
   });
 
+  it("runs the critical ratchet only for PRs that touch enrolled critical source", () => {
+    const workflow = readRepoFile(".github/workflows/pull-request-checks.yml");
+
+    expect(workflow).toContain("critical_coverage_changed: ${{ steps.classify.outputs.critical_coverage_changed }}");
+    expect(workflow).toContain("name: Touched critical coverage");
+    expect(workflow).toContain("needs.detect-changes.outputs.critical_coverage_changed == 'true'");
+    expect(workflow).toContain("CRITICAL_COVERAGE_COMPARE_REF: ${{ github.event.pull_request.base.sha }}");
+    expect(workflow).toContain("Touched critical coverage failed: ${CRITICAL_COVERAGE_RESULT}.");
+  });
+
+  it("makes the weekly all-critical coverage ratchet blocking", () => {
+    const workflow = readRepoFile(".github/workflows/critical-coverage-ratchet.yml");
+
+    expect(workflow).toContain("CRITICAL_COVERAGE_RATCHET_ALL: \"1\"");
+    expect(workflow).toContain("npm run coverage:critical");
+    expect(workflow).not.toContain("continue-on-error");
+  });
+
   it("packages the Worker before production D1 mutation", () => {
     const workflow = readRepoFile(".github/workflows/deploy-cloudflare.yml");
     const packageStep = workflow.indexOf("npm run check:worker-package");

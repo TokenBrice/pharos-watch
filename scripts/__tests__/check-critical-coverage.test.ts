@@ -8,6 +8,7 @@ import {
 } from "../test-utils/ci-script-test-helpers";
 
 import {
+  CRITICAL_COVERAGE_BRANCH_FLOORS,
   getChangedFilesFromGit,
   isAllZeroSha,
   parseChangedFilesFromEnv,
@@ -23,6 +24,21 @@ import {
   validateCriticalCoverageWaiverMetadata,
 } from "../lib/critical-coverage.mjs";
 import { CRITICAL_TEST_FILES } from "../lib/critical-test-files.mjs";
+
+function buildCriticalLcov({ branchCoverage = {}, lineCoverage = {} } = {}) {
+  return CRITICAL_FILES.map((file) => {
+    const { lf = 10, lh = 10 } = lineCoverage[file] ?? {};
+    const { brf, brh } = branchCoverage[file] ?? {};
+    return [
+      `SF:${file}`,
+      `DA:1,${lh > 0 ? 1 : 0}`,
+      `LF:${lf}`,
+      `LH:${lh}`,
+      ...(brf == null ? [] : [`BRF:${brf}`, `BRH:${brh}`]),
+      "end_of_record",
+    ].join("\n");
+  }).join("\n");
+}
 
 describe("critical coverage changed-file detection", () => {
   it("parses explicit changed files before falling back to git", () => {
@@ -88,6 +104,7 @@ describe("critical coverage changed-file detection", () => {
         log: () => {},
         error: (message: string) => errors.push(message),
       }),
+      completenessOptions: { candidateFiles: [], waivers: {} },
       exit: captureProcessExit((code) => {
         if (code !== undefined) exits.push(code);
       }),
@@ -352,6 +369,7 @@ describe("critical coverage changed-file detection", () => {
       "DA:2,1",
       "LF:2",
       "LH:2",
+      ...(CRITICAL_COVERAGE_BRANCH_FLOORS[file] == null ? [] : ["BRF:2", "BRH:2"]),
       "end_of_record",
     ].join("\n")).join("\n");
     const baseline = {
@@ -384,6 +402,7 @@ describe("critical coverage changed-file detection", () => {
         error: (message: string) => errors.push(message),
         warn: (message: string) => logs.push(message),
       }),
+      completenessOptions: { candidateFiles: [], waivers: {} },
       exit: captureProcessExit((code) => {
         if (code !== undefined) exits.push(code);
       }),
@@ -393,5 +412,88 @@ describe("critical coverage changed-file detection", () => {
     expect(exits).toEqual([]);
     expect(logs).toContain("[coverage] Ratchet targets: all critical files (CRITICAL_COVERAGE_RATCHET_ALL=1)");
     expect(logs.filter((line) => line.includes("RATCHET PASS"))).toHaveLength(CRITICAL_FILES.length);
+  });
+
+  it("fails a touched critical file when its line coverage regresses from the baseline", () => {
+    const file = "worker/src/lib/price-consensus.ts";
+    const errors: string[] = [];
+    const exits: number[] = [];
+    const files = new Map<string, string>([
+      [
+        "coverage/lcov.info",
+        buildCriticalLcov({
+          branchCoverage: Object.fromEntries(Object.keys(CRITICAL_COVERAGE_BRANCH_FLOORS).map((path) => [path, { brf: 10, brh: 10 }])),
+          lineCoverage: { [file]: { lf: 10, lh: 5 } },
+        }),
+      ],
+      [".ci/critical-coverage-baseline.json", JSON.stringify({ files: { [file]: 51 } })],
+    ]);
+
+    runCriticalCoverageCheck({
+      env: testEnv({ CRITICAL_COVERAGE_CHANGED_FILES: file }),
+      fsImpl: mockFsImpl({
+        existsSync: (path: string) => files.has(path),
+        readFileSync: (path: string) => files.get(path) ?? "",
+      }),
+      execFile: mockExecFileSync(() => ""),
+      consoleImpl: mockConsole({
+        log: () => {},
+        error: (message: string) => errors.push(message),
+      }),
+      completenessOptions: { candidateFiles: [], waivers: {} },
+      exit: captureProcessExit((code) => {
+        if (code !== undefined) exits.push(code);
+      }),
+    });
+
+    expect(exits).toEqual([1]);
+    expect(errors).toContain("[coverage] REGRESSION worker/src/lib/price-consensus.ts: 50.0% < baseline 51.0% (tolerance 0.0%)");
+  });
+
+  it("fails boundary coverage when a provider error branch falls below its floor", () => {
+    const file = "worker/src/lib/evm-rpc.ts";
+    const errors: string[] = [];
+    const exits: number[] = [];
+    const files = new Map<string, string>([
+      [
+        "coverage/lcov.info",
+        buildCriticalLcov({
+          branchCoverage: {
+            ...Object.fromEntries(Object.keys(CRITICAL_COVERAGE_BRANCH_FLOORS).map((path) => [path, { brf: 10, brh: 10 }])),
+            [file]: { brf: 10, brh: 3 },
+          },
+        }),
+      ],
+      [".ci/critical-coverage-baseline.json", JSON.stringify({ files: {} })],
+    ]);
+
+    runCriticalCoverageCheck({
+      env: testEnv({ CRITICAL_COVERAGE_CHANGED_FILES: file }),
+      fsImpl: mockFsImpl({
+        existsSync: (path: string) => files.has(path),
+        readFileSync: (path: string) => files.get(path) ?? "",
+      }),
+      execFile: mockExecFileSync(() => ""),
+      consoleImpl: mockConsole({
+        log: () => {},
+        error: (message: string) => errors.push(message),
+      }),
+      completenessOptions: { candidateFiles: [], waivers: {} },
+      exit: captureProcessExit((code) => {
+        if (code !== undefined) exits.push(code);
+      }),
+    });
+
+    expect(exits).toEqual([1]);
+    expect(errors).toContain("[coverage] BRANCH FAIL worker/src/lib/evm-rpc.ts: 30.0% (3/10) < 40.0%");
+  });
+
+  it("keeps branch/error-path floors at provider, auth, scoring, and publication boundaries", () => {
+    expect(CRITICAL_COVERAGE_BRANCH_FLOORS).toEqual({
+      "worker/src/lib/auth.ts": 40,
+      "worker/src/lib/evm-rpc.ts": 40,
+      "worker/src/lib/safety-scores.ts": 40,
+      "worker/src/lib/price-publication-state.ts": 40,
+    });
   });
 });

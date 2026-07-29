@@ -46,6 +46,7 @@
     "test:invariants": "vitest run src/lib/__tests__/critical-invariants.test.ts worker/src/lib/__tests__/api-utils.test.ts worker/src/cron/__tests__/sync-stablecoins.test.ts worker/src/cron/__tests__/sync-yield-data-publication-cache.test.ts worker/src/cron/__tests__/sync-yield-data-discovery-coverage.test.ts worker/src/cron/__tests__/sync-yield-data-rates-history.test.ts worker/src/cron/__tests__/sync-yield-data-lending-degradation.test.ts",
     "coverage:critical": "node scripts/maintenance/run-critical-coverage.mjs",
     "coverage:critical:update-baseline": "node scripts/maintenance/update-critical-coverage-baseline.mjs",
+    "check:critical-coverage-completeness": "node scripts/ci/check-critical-coverage-completeness.mjs",
     "check:pr": "node scripts/maintenance/run-pr-checks.mjs",
     "check:pr:static": "node scripts/maintenance/run-pr-static-checks.mjs",
     "check:release": "npm run build && npm run check:feature-flag-inlining && npm run seo:check && npm run check:worker-package",

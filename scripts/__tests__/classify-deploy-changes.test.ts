@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  classifyChangedFiles,
   classifyDeployChanges,
   hasDeployImpact,
   hasOnlyInternalDocsImpact,
@@ -221,6 +222,11 @@ describe("hasDeployImpact", () => {
 });
 
 describe("classifyDeployChanges", () => {
+  it("marks enrolled critical source changes for the targeted coverage ratchet", () => {
+    expect(classifyChangedFiles(["worker/src/lib/auth.ts"]).criticalCoverageChanged).toBe(true);
+    expect(classifyChangedFiles(["worker/src/lib/auth.test.ts"]).criticalCoverageChanged).toBe(false);
+  });
+
   it("runs the full worker deploy path for non-push events", () => {
     const result = classifyDeployChanges({ eventName: "workflow_dispatch" });
     expect(result.deployRequired).toBe(true);
@@ -229,6 +235,7 @@ describe("classifyDeployChanges", () => {
     expect(result.pagesChanged).toBe(true);
     expect(result.pagesDeployRequired).toBe(true);
     expect(result.docsOnly).toBe(false);
+    expect(result.criticalCoverageChanged).toBe(true);
   });
 
   it("falls back to full worker deploy when the push base sha is unavailable", () => {

@@ -73,7 +73,14 @@ describe("adaptive PR checks", () => {
       "typecheck",
       "check:env-contract",
       "check:shared-types-imports",
+      "check:critical-coverage-completeness",
     ]);
+  });
+
+  it("runs the critical-coverage completeness guard for every non-doc PR path", () => {
+    expect(buildPrStaticCheckPlan(["worker/src/lib/auth.ts"]).commands.map((command) => command.name)).toContain(
+      "check:critical-coverage-completeness",
+    );
   });
 
   it("packages Worker changes in the adaptive PR lane", () => {

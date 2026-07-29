@@ -17,6 +17,15 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const LCOV_PATH = "coverage/lcov.info";
 
+// Explicit branch floors at external provider, authentication, scoring, and
+// publication boundaries. These cover the error paths that line coverage can miss.
+export const CRITICAL_COVERAGE_BRANCH_FLOORS = {
+  "worker/src/lib/auth.ts": 40,
+  "worker/src/lib/evm-rpc.ts": 40,
+  "worker/src/lib/safety-scores.ts": 40,
+  "worker/src/lib/price-publication-state.ts": 40,
+};
+
 // Explicit per-file minimums for critical reliability paths.
 function getCriticalThresholds(env = process.env) {
   return {
@@ -31,6 +40,32 @@ function getCriticalThresholds(env = process.env) {
     "worker/src/api/status.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_STATUS ?? "40"),
     "worker/src/cron/dex-liquidity/orchestrator.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR ?? "55"),
     "worker/src/lib/api-pagination.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_API_PAGINATION ?? "70"),
+  };
+}
+
+function getCriticalBranchThresholds(env = process.env) {
+  const getThreshold = (value, fallback) => {
+    const parsed = Number.parseFloat(value ?? "");
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  return {
+    "worker/src/lib/auth.ts": getThreshold(
+      env.CRITICAL_COVERAGE_BRANCH_THRESHOLD_AUTH,
+      CRITICAL_COVERAGE_BRANCH_FLOORS["worker/src/lib/auth.ts"],
+    ),
+    "worker/src/lib/evm-rpc.ts": getThreshold(
+      env.CRITICAL_COVERAGE_BRANCH_THRESHOLD_EVM_RPC,
+      CRITICAL_COVERAGE_BRANCH_FLOORS["worker/src/lib/evm-rpc.ts"],
+    ),
+    "worker/src/lib/safety-scores.ts": getThreshold(
+      env.CRITICAL_COVERAGE_BRANCH_THRESHOLD_SAFETY_SCORES,
+      CRITICAL_COVERAGE_BRANCH_FLOORS["worker/src/lib/safety-scores.ts"],
+    ),
+    "worker/src/lib/price-publication-state.ts": getThreshold(
+      env.CRITICAL_COVERAGE_BRANCH_THRESHOLD_PRICE_PUBLICATION_STATE,
+      CRITICAL_COVERAGE_BRANCH_FLOORS["worker/src/lib/price-publication-state.ts"],
+    ),
   };
 }
 
@@ -151,6 +186,7 @@ export function runCriticalCoverageCheck({
   fsImpl = fs,
   execFile = execFileSync,
   consoleImpl = console,
+  completenessOptions = {},
   exit = process.exit,
 } = {}) {
   const threshold = Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD ?? "40");
@@ -159,8 +195,9 @@ export function runCriticalCoverageCheck({
   const compareRef = (env.CRITICAL_COVERAGE_COMPARE_REF ?? "").trim();
   const ratchetAll = env.CRITICAL_COVERAGE_RATCHET_ALL === "1";
   const criticalThresholds = getCriticalThresholds(env);
+  const criticalBranchThresholds = getCriticalBranchThresholds(env);
 
-  if (!runCriticalCoverageCompletenessGuard({ consoleImpl, exit })) {
+  if (!runCriticalCoverageCompletenessGuard({ ...completenessOptions, consoleImpl, exit })) {
     return;
   }
 
@@ -220,6 +257,23 @@ export function runCriticalCoverageCheck({
       consoleImpl.error(`[coverage] FAIL ${file}: ${line} < ${fileThreshold.toFixed(1)}%`);
     } else {
       consoleImpl.log(`[coverage] PASS ${file}: ${line} (threshold ${fileThreshold.toFixed(1)}%)`);
+    }
+
+    const branchThreshold = criticalBranchThresholds[file];
+    if (Number.isFinite(branchThreshold)) {
+      if (!Number.isFinite(cov.branchPct)) {
+        failed = true;
+        consoleImpl.error(`[coverage] MISSING BRANCH COVERAGE: ${file}`);
+      } else if (cov.branchPct < branchThreshold) {
+        failed = true;
+        consoleImpl.error(
+          `[coverage] BRANCH FAIL ${file}: ${cov.branchPct.toFixed(1)}% (${cov.brh}/${cov.brf}) < ${branchThreshold.toFixed(1)}%`,
+        );
+      } else {
+        consoleImpl.log(
+          `[coverage] BRANCH PASS ${file}: ${cov.branchPct.toFixed(1)}% (${cov.brh}/${cov.brf}) (threshold ${branchThreshold.toFixed(1)}%)`,
+        );
+      }
     }
   }
 
