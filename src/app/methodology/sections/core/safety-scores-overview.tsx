@@ -29,7 +29,9 @@ export function SafetyScoresOverview() {
         reviewed external exit output whose identity is known but cannot be valued is attributed to producer failure,
         while an issuer-undisclosed settlement asset stays issuer-undisclosed; neither becomes scoreable. Date-only
         dispositions enter replay only after their reviewed UTC day. Partial control reviews retain the controls that
-        were actually reviewed while unresolved surfaces remain bounded and fail closed. These are provenance and
+        were actually reviewed while unresolved surfaces remain bounded and fail closed. Subthreshold unrecognized
+        chain-label supply pools are tolerated by the bridge-materiality proof and no longer surface as public
+        evidence-responsibility facts; material unmatched bridge supply still fails closed. These are provenance and
         evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.
       </p>
       <p>
