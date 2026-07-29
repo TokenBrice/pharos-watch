@@ -164,7 +164,7 @@ export async function withAdmin(
 // Per-isolate cache: the HMAC key is derived once per Worker isolate and
 // reused for every `timingSafeCompare` call in that isolate. Module-scope
 // `let` is intentional here — see docs/worker-infrastructure.md
-// "Module-Scope Isolate-Local State" for the cache-pattern allowlist.
+// "Isolate-Local State Registry" for the cache-pattern allowlist.
 // The key never leaves the isolate (extractable=false) and is regenerated
 // on every cold start; it's purely a performance cache to avoid generating
 // a fresh CryptoKey per request.

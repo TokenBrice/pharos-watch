@@ -57,6 +57,11 @@ import {
   METHODOLOGY_DOC_VERSION_CHECKS,
   METHODOLOGY_PROVENANCE_FILES,
 } from "./methodology-manifest";
+import {
+  ISOLATE_LOCAL_STATE_DOC_END,
+  ISOLATE_LOCAL_STATE_DOC_START,
+  renderIsolateLocalStateDocumentation,
+} from "../../../shared/lib/isolate-local-state-registry";
 
 function checkMethodologyVersions(failures: Failure[]): void {
   for (const check of METHODOLOGY_DOC_VERSION_CHECKS) {
@@ -273,6 +278,24 @@ function checkWorkerLimitsDoc(failures: Failure[]): void {
   expectNumber(failures, file, "feedback rate-limit window minutes", feedbackNumbers[1] ?? null, FEEDBACK_RATE_LIMIT_WINDOW_SEC / 60);
   expectNumber(failures, file, "circuit open threshold", circuitNumbers[0] ?? null, CIRCUIT_OPEN_THRESHOLD);
   expectNumber(failures, file, "circuit probe interval minutes", circuitNumbers[1] ?? null, CIRCUIT_PROBE_INTERVAL_SEC / 60);
+}
+
+function checkWorkerInfrastructureIsolateStateDoc(failures: Failure[]): void {
+  const file = "docs/worker-infrastructure.md";
+  const doc = read(file);
+  const start = doc.indexOf(ISOLATE_LOCAL_STATE_DOC_START);
+  const end = doc.indexOf(ISOLATE_LOCAL_STATE_DOC_END);
+  const found = start >= 0 && end >= start
+    ? doc.slice(start, end + ISOLATE_LOCAL_STATE_DOC_END.length)
+    : null;
+
+  expectEqual(
+    failures,
+    file,
+    "isolate-local state registry",
+    found,
+    renderIsolateLocalStateDocumentation(),
+  );
 }
 
 function checkChainsApiDoc(failures: Failure[], doc: string): void {
@@ -535,6 +558,7 @@ export function runDocSyncChecks(): Failure[] {
   checkDewsDoc(failures);
   checkLiquidityDoc(failures);
   checkWorkerLimitsDoc(failures);
+  checkWorkerInfrastructureIsolateStateDoc(failures);
   checkApiFreshnessDoc(failures, apiReferenceDoc);
   checkStatusDashboardDoc(failures);
   checkChainsApiDoc(failures, apiReferenceDoc);

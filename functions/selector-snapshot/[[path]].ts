@@ -53,7 +53,7 @@ function jsonOk(body: unknown): Response {
  * Legitimate use is 1-2 snapshot creations per session.
  * The durable daily quota uses D1 conditional upsert semantics because KV
  * read-modify-write counters are not atomic across isolates/colos.
- * Accepted residual risk and KV cost ceiling: see functions/AGENTS.md (S-062).
+ * Accepted residual risk and KV cost ceiling: see docs/screener-picker-page.md.
  */
 const POST_RATE_LIMIT_WINDOW_MS = 60_000;
 const POST_RATE_LIMIT_MAX_PER_WINDOW = 10;
