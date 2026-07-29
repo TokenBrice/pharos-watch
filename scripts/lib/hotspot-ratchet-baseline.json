@@ -34,6 +34,11 @@
     "maxFunctionLines": 654,
     "branchCount": 45
   },
+  "shared/lib/safety-score-v9/evaluate-asset.ts": {
+    "fileLines": 1662,
+    "maxFunctionLines": 217,
+    "branchCount": 159
+  },
   "shared/lib/safety-score-v9/formula.ts": {
     "fileLines": 1378,
     "maxFunctionLines": 509,
@@ -48,6 +53,11 @@
     "fileLines": 1988,
     "maxFunctionLines": 239,
     "branchCount": 204
+  },
+  "shared/types/safety-score-v9-public.ts": {
+    "fileLines": 1731,
+    "maxFunctionLines": 75,
+    "branchCount": 105
   },
   "shared/types/stablecoin-meta-schemas.ts": {
     "fileLines": 1305,

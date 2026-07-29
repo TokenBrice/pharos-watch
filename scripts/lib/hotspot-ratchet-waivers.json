@@ -7,14 +7,6 @@
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract portability and bulk operation handlers from the general Mini App mutation dispatcher while preserving the shared auth, rate-limit, generation, and response contracts."
   },
-  "worker/src/lib/safety-score-v9-fact-set.ts": {
-    "disposition": "queued-p4",
-    "notes": "Safety Score V9 fact compilation is currently 4,296 file lines with a 493-line maximum function and 332 branches. Keep this explicit interim waiver only while the focused V9 module decomposition preserves existing fact-compilation contracts.",
-    "owner": "tokenbrice",
-    "createdAt": "2026-07-29",
-    "reviewAfter": "2026-08-28",
-    "nextAction": "P3-04: Decompose V9 fact compilation by evidence domain, then remove this waiver and lower the hotspot ratchet."
-  },
   "shared/types/market.ts": {
     "disposition": "queued-p4",
     "notes": "Market types are currently 1,049 file lines with a 42-line maximum function and 17 branches.",
@@ -22,14 +14,6 @@
     "createdAt": "2026-07-29",
     "reviewAfter": "2026-08-28",
     "nextAction": "P3-05: owned review - type module split to be scoped"
-  },
-  "shared/types/safety-score-v9-public.ts": {
-    "disposition": "queued-p4",
-    "notes": "Safety Score V9 public types are currently 2,283 file lines with a 407-line maximum function and 156 branches.",
-    "owner": "tokenbrice",
-    "createdAt": "2026-07-29",
-    "reviewAfter": "2026-08-28",
-    "nextAction": "P3-04 tranche 4: split public/fact/internal schemas"
   },
   "worker/src/cron/reserve-adapters/erc4626-single-asset.ts": {
     "disposition": "queued-p4",
@@ -54,14 +38,6 @@
     "createdAt": "2026-07-11",
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract API-key query/mutation state and dialog orchestration into focused hooks, leaving ApiKeysPanel responsible for composition."
-  },
-  "shared/lib/safety-score-v9/evaluate-set.ts": {
-    "disposition": "queued-p4",
-    "notes": "The V9 set evaluator owns deterministic cohort evaluation and aggregation after activation simplification. Its current file and branch size should be reduced only in a focused behavior-preserving pass.",
-    "owner": "safety-score-v9",
-    "createdAt": "2026-07-23",
-    "reviewAfter": "2026-10-23",
-    "nextAction": "Separate per-asset evaluation from set-level aggregation without reintroducing activation orchestration."
   },
   "shared/lib/p4-exit-route-capacity.ts": {
     "disposition": "queued-p4",
@@ -102,5 +78,13 @@
     "createdAt": "2026-07-30",
     "reviewAfter": "2026-08-28",
     "nextAction": "P3-05 follow-up tranche: split the Mini App client shell into focused child components."
+  },
+  "worker/src/api/backfill-supply-history.ts": {
+    "disposition": "queued-p4",
+    "notes": "The supply-history backfill endpoint is currently 1061 file lines with a 289-line maximum function and 128 branches. It entered the hotspot candidate window when larger files were decomposed; it was not grown by recent work.",
+    "owner": "tokenbrice",
+    "createdAt": "2026-07-30",
+    "reviewAfter": "2026-08-28",
+    "nextAction": "P3-05 follow-up tranche: split backfill parsing, validation, and persistence phases."
   }
 }

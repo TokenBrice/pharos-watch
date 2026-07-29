@@ -60,6 +60,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/build-data/build-client-registry.mjs", "build"),
     exempt("scripts/ci/check-build-attribution.mjs", "read-only"),
     exempt("scripts/ci/check-cloudflare-account-state-drift.mjs", "read-only"),
+    exempt("scripts/ci/check-critical-coverage-completeness.mjs", "read-only"),
     exempt("scripts/ci/check-critical-coverage.mjs", "test"),
     exempt("scripts/ci/check-cron-connection-budget.ts", "read-only"),
     exempt("scripts/ci/check-cron-console-usage.mjs", "build"),
