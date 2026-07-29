@@ -57,7 +57,7 @@ const cronMocks = vi.hoisted(() => ({
   syncRedemptionBackstops: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncKinesisSupply: vi.fn(async () => ({ status: "ok", itemCount: 2, metadata: "{}" })),
   stageDexLiquidityScoring: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
-  syncDexLiquidity: vi.fn(async () => ({
+  consumeDexLiquidityScoringStage: vi.fn(async () => ({
     status: "ok",
     itemCount: 1,
     metadata: JSON.stringify({
@@ -288,9 +288,8 @@ vi.mock("../cron/sync-live-reserves", () => ({ syncLiveReserves: cronMocks.syncL
 vi.mock("../cron/sync-redemption-backstops", () => ({ syncRedemptionBackstops: cronMocks.syncRedemptionBackstops }));
 vi.mock("../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: cronMocks.syncKinesisSupply }));
 vi.mock("../cron/dex-liquidity/orchestrator", () => ({
-  syncDexLiquidity: cronMocks.syncDexLiquidity,
   stageDexLiquidityScoring: cronMocks.stageDexLiquidityScoring,
-  consumeDexLiquidityScoringStage: cronMocks.syncDexLiquidity,
+  consumeDexLiquidityScoringStage: cronMocks.consumeDexLiquidityScoringStage,
 }));
 vi.mock("../cron/sync-yield-data", () => ({ syncYieldData: cronMocks.syncYieldData }));
 vi.mock("../cron/sync-yield-supplemental", () => ({ syncYieldSupplemental: cronMocks.syncYieldSupplemental }));
@@ -783,7 +782,7 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
     expect(cronMocks.stageDexLiquidityScoring).toHaveBeenCalledTimes(1);
-    expect(cronMocks.syncDexLiquidity).not.toHaveBeenCalled();
+    expect(cronMocks.consumeDexLiquidityScoringStage).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
@@ -804,7 +803,7 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.syncStablecoinCharts).toHaveBeenCalledTimes(1);
-    expect(cronMocks.syncDexLiquidity).toHaveBeenCalledTimes(1);
+    expect(cronMocks.consumeDexLiquidityScoringStage).toHaveBeenCalledTimes(1);
     expect(cronMocks.prepareSafetyScoreV9Input).toHaveBeenCalledTimes(1);
     expect(cronMocks.stageDexLiquidityScoring).not.toHaveBeenCalled();
     expect(cronMocks.syncStablecoinCharts.mock.invocationCallOrder[0]).toBeGreaterThan(
@@ -829,7 +828,7 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
-    expect(cronMocks.syncDexLiquidity).not.toHaveBeenCalled();
+    expect(cronMocks.consumeDexLiquidityScoringStage).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).toHaveBeenCalledTimes(1);
     expect(cronMocks.computeAndStoreStabilityIndex).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
@@ -855,7 +854,7 @@ describe("worker.scheduled", () => {
     await Promise.all(waits);
 
     expect(cronMocks.stageDexLiquidityScoring).toHaveBeenCalledTimes(1);
-    expect(cronMocks.syncDexLiquidity).not.toHaveBeenCalled();
+    expect(cronMocks.consumeDexLiquidityScoringStage).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
@@ -878,7 +877,7 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncYieldData).toHaveBeenCalledTimes(1);
     expect(cronMocks.syncStablecoinCharts).not.toHaveBeenCalled();
-    expect(cronMocks.syncDexLiquidity).not.toHaveBeenCalled();
+    expect(cronMocks.consumeDexLiquidityScoringStage).not.toHaveBeenCalled();
     expect(cronMocks.syncYieldSupplemental).not.toHaveBeenCalled();
   });
 
