@@ -12,6 +12,7 @@ import {
 } from "../../shared/types/depeg-resolver-review";
 import type { DdrFactor, DdrFactorCode, DdrFactorSeverity } from "../../shared/types/depeg-resolver";
 import { mean, median } from "../../shared/lib/stats";
+import { formatPercentFromRatio } from "../../shared/lib/format";
 import {
   PROD_ORIGIN,
   fetchJson,
@@ -702,7 +703,7 @@ export function buildDdrrCalibrationReport(
 }
 
 function formatPercent(value: number | null): string {
-  return value == null ? "n/a" : `${(value * 100).toFixed(1)}%`;
+  return value == null ? "n/a" : formatPercentFromRatio(value, 1);
 }
 
 function formatHours(value: number | null): string {

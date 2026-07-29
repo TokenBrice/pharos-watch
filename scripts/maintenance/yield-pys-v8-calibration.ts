@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 
 import { computePYS, computePysComponents, yieldStabilityToApyVarianceScore } from "../../shared/lib/yield-scoring";
 import { clamp } from "../../shared/lib/math";
+import { formatPercentFromRatio } from "../../shared/lib/format";
 import { YieldRankingsResponseSchema, type YieldRanking } from "../../shared/types/yield";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -166,7 +167,7 @@ export function buildCalibrationReport(rankings: RankingWithRisk[], generatedAt:
     "| --- | ---: | ---: | ---: |",
     ...CALIBRATION_FIELDS.map((field) => {
       const stats = nullCoverage[field];
-      return `| ${field} | ${stats.present} | ${stats.missing} | ${formatPercent(stats.nullRate)} |`;
+      return `| ${field} | ${stats.present} | ${stats.missing} | ${formatPercentFromRatio(stats.nullRate, 1)} |`;
     }),
     "",
     "## Non-USD Cohort Checks",
@@ -472,10 +473,6 @@ function sortByAfterRank(a: ScoredRow, b: ScoredRow): number {
 
 function formatNumber(value: number): string {
   return Number.isFinite(value) ? value.toFixed(2).replace(/\.00$/, "") : "0";
-}
-
-function formatPercent(value: number): string {
-  return `${(value * 100).toFixed(1)}%`;
 }
 
 function escapeCell(value: string): string {
