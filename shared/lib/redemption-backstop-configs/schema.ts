@@ -16,17 +16,8 @@ import {
   NonNegativeNumberSchema,
   PositiveNumberSchema,
 } from "../../types";
-import type {
-  RedemptionBackstopConfig,
-  RedemptionCapacityModel,
-  RedemptionCostModel,
-  RedemptionCostTerms,
-  RedemptionV9ComposedDexExit,
-  RedemptionV9RouteReviewTerms,
-} from "./shared";
-import { isRedemptionSettlementAtLeastAsConservative } from "./shared";
-
-type RedemptionBackstopDocSourceConfig = NonNullable<RedemptionBackstopConfig["docs"]>[number];
+import type { RedemptionDocSource } from "../../types";
+import { isRedemptionSettlementAtLeastAsConservative } from "./settlement";
 
 const REVIEWED_AT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_REDEMPTION_OUTPUT_ASSETS = 16;
@@ -55,13 +46,13 @@ const RedemptionDocSourceSupportsSchema = z.array(RedemptionDocSourceSupportSche
   }
 });
 
-const RedemptionDocSourceSchema: z.ZodType<RedemptionBackstopDocSourceConfig> = z.strictObject({
+const RedemptionDocSourceSchema: z.ZodType<RedemptionDocSource> = z.strictObject({
   label: z.string().min(1),
   url: HttpUrlSchema,
   supports: RedemptionDocSourceSupportsSchema.optional(),
 });
 
-const RedemptionCapacityModelSchema: z.ZodType<RedemptionCapacityModel> = z.discriminatedUnion("kind", [
+const RedemptionCapacityModelSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("supply-full"),
     confidence: StaticCapacityConfidenceSchema.optional(),
@@ -86,12 +77,23 @@ const RedemptionCapacityModelSchema: z.ZodType<RedemptionCapacityModel> = z.disc
     fallbackRatio: RatioSchema.optional(),
     fallbackUsd: NonNegativeNumberSchema.optional(),
     confidence: StaticCapacityConfidenceSchema.optional(),
+    /**
+     * Overrides the adapter-derived capacity confidence on the resolved
+     * live-telemetry path. Use when a live reserve read is a bounded proxy
+     * for true redeemability — e.g. sBOLD's Stability-Pool-withdrawable BOLD,
+     * which K3 can temporarily restrict on collateral-exposure thresholds — so
+     * the measured capacity still scores but at a documented-bound confidence
+     * (modelConfidence "medium") rather than the adapter's live-direct default
+     * (which would resolve to "high"). Distinct from `confidence`, which only
+     * labels the fallback path when live metadata is unavailable.
+     */
     liveCapacityConfidence: StaticCapacityConfidenceSchema.optional(),
     basis: RedemptionCapacityBasisSchema.optional(),
   }),
 ]);
 
-// Mirrors RedemptionCostScenarioConfig in shared.ts; keep runtime and validation fields aligned.
+export type RedemptionCapacityModel = z.infer<typeof RedemptionCapacityModelSchema>;
+
 const RedemptionCostShapeSchema = {
   flatFeeUsd: NonNegativeNumberSchema.optional(),
   minFeeUsd: NonNegativeNumberSchema.optional(),
@@ -102,12 +104,12 @@ const RedemptionCostShapeSchema = {
   feeScenario: RedemptionFeeScenarioSchema.optional(),
 };
 
-const RedemptionCostTermsSchema: z.ZodType<RedemptionCostTerms> = z.strictObject(RedemptionCostShapeSchema);
-const RedemptionV9RouteReviewTermsSchema: z.ZodType<RedemptionV9RouteReviewTerms> = z.strictObject({
+const RedemptionCostTermsSchema = z.strictObject(RedemptionCostShapeSchema);
+const RedemptionV9RouteReviewTermsSchema = z.strictObject({
   minRedeemUsd: NonNegativeNumberSchema.optional(),
   settlementModel: RedemptionSettlementModelSchema.optional(),
 });
-const RedemptionV9ComposedDexExitSchema: z.ZodType<RedemptionV9ComposedDexExit> = z.strictObject({
+const RedemptionV9ComposedDexExitSchema = z.strictObject({
   intermediateAssetId: z.string().min(1),
   conversionModel: z.literal("permissionless-atomic-wrap"),
   chain: z.string().min(1),
@@ -116,7 +118,11 @@ const RedemptionV9ComposedDexExitSchema: z.ZodType<RedemptionV9ComposedDexExit> 
   docs: z.array(RedemptionDocSourceSchema).min(1),
 });
 
-const RedemptionCostModelSchema: z.ZodType<RedemptionCostModel> = z.discriminatedUnion("kind", [
+export type RedemptionCostTerms = z.infer<typeof RedemptionCostTermsSchema>;
+export type RedemptionV9RouteReviewTerms = z.infer<typeof RedemptionV9RouteReviewTermsSchema>;
+export type RedemptionV9ComposedDexExit = z.infer<typeof RedemptionV9ComposedDexExitSchema>;
+
+const RedemptionCostModelSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("fee-bps"),
     feeBps: NonNegativeNumberSchema,
@@ -133,7 +139,9 @@ const RedemptionCostModelSchema: z.ZodType<RedemptionCostModel> = z.discriminate
   }),
 ]);
 
-export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig> = z
+export type RedemptionCostModel = z.infer<typeof RedemptionCostModelSchema>;
+
+export const RedemptionBackstopConfigSchema = z
   .strictObject({
     routeFamily: RedemptionRouteFamilySchema,
     accessModel: RedemptionAccessModelSchema,
@@ -142,19 +150,65 @@ export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig>
     outputAssetType: RedemptionOutputAssetTypeSchema,
     capacityModel: RedemptionCapacityModelSchema,
     costModel: RedemptionCostModelSchema,
+    /**
+     * Reviewed cost terms projected only by the Safety Score V9 route adapter.
+     *
+     * This compatibility overlay keeps evidence corrections made after the V8
+     * methodology freeze from changing the public V8 redemption producer.
+     */
     v9RouteCostTerms: RedemptionCostTermsSchema.optional(),
+    /**
+     * Reviewed route constraints projected only by the Safety Score V9 adapter.
+     *
+     * Validation permits only settlement semantics that are at least as
+     * conservative as the frozen V8 config. Runtime projection also preserves
+     * any stricter constraint carried by the captured redemption row.
+     */
     v9RouteReviewTerms: RedemptionV9RouteReviewTermsSchema.optional(),
+    /**
+     * Reviewed fee-free wrap composed with the intermediate asset's captured DEX
+     * routes. This is projected only into V9 and does not alter the V8 producer.
+     */
     v9ComposedDexExit: RedemptionV9ComposedDexExitSchema.optional(),
     holderEligibility: RedemptionHolderEligibilitySchema.optional(),
     routeStatus: z.enum(["open", "unknown"]).optional(),
     routeExitCorrelation: RedemptionRouteExitCorrelationSchema.optional(),
+    /**
+     * Per-config escape hatch for routes whose documented rail composes with a
+     * downstream rail the holder still has to exercise — e.g., a permissionless
+     * ERC-20 wrapper (wM, USDSC) whose `unwrap()` only returns the underlying,
+     * which itself requires an institutional redemption. The route-family caps
+     * in `redemption-backstop-scoring.ts` handle the common cases; use this when
+     * the family shape alone would overstate the actual exit quality.
+     */
     totalScoreCap: z.number().gt(0).lte(100).optional(),
+    /**
+     * Concrete redemption output assets, when the documented rail names them.
+     * Tracked stablecoin ids (e.g. "usdc-circle") for stable-single /
+     * stable-basket outputs; canonical `asset:<symbol>` keys (e.g.
+     * "asset:weth") for collateral outputs. Drives exit-route output
+     * resolution — leave unset when the output composition is not documented.
+     */
     outputAssets: z.array(z.string().min(1)).min(1).max(MAX_REDEMPTION_OUTPUT_ASSETS).optional(),
+    /**
+     * Complete reviewed output identities that cannot yet be represented as
+     * tracked, priceable `outputAssets`. These stay explicitly unresolved and
+     * never make an output scoreable; they only preserve bounded diagnostics
+     * instead of collapsing a known untracked basket into an anonymous gap.
+     */
     unresolvedOutputAssetKeys: z
       .array(z.string().min(1))
       .min(1)
       .max(MAX_REDEMPTION_OUTPUT_ASSETS)
       .optional(),
+    /**
+     * Causal disposition for an output that remains deliberately unresolved.
+     *
+     * `reviewed-external` means the documented identity is known but the
+     * runtime producer cannot yet value the external/untracked output.
+     * `issuer-undisclosed` means the reviewed issuer materials do not disclose
+     * the settlement asset. Neither disposition makes the output scoreable.
+     */
     unresolvedOutputDisposition: z.enum(["reviewed-external", "issuer-undisclosed"]).optional(),
     docs: z.array(RedemptionDocSourceSchema).optional(),
     reviewedAt: ReviewedAtSchema.optional(),
@@ -367,6 +421,8 @@ export const RedemptionBackstopConfigSchema: z.ZodType<RedemptionBackstopConfig>
       }
     }
   });
+
+export type RedemptionBackstopConfig = z.infer<typeof RedemptionBackstopConfigSchema>;
 
 export function currentUtcDate(): string {
   return new Date().toISOString().slice(0, 10);
