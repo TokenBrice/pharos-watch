@@ -16,11 +16,9 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-workspace
-      # Advisory full-lockfile scope (dev + build chain), broader than the
-      # production deploy gate `npm run audit:deps` (--omit=dev). This lane is
-      # expected to stay green; any future high/critical full-lockfile advisory
-      # should be fixed, pinned away, or explicitly documented in
-      # docs/deployment-process.md before being treated as accepted. Do not run
-      # `npm audit fix --force` outside a dedicated dependency tranche.
-      - run: npm audit --audit-level=high
-      - run: npm audit signatures
+      # Full-lockfile scope includes dev/build dependencies. The verifier is
+      # fail-closed and accepts only an unexpired, exact registry entry.
+      - run: node scripts/ci/verify-dependency-audit.mjs
+      - name: Verify package signatures
+        if: always()
+        run: npm audit signatures

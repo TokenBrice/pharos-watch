@@ -35,6 +35,16 @@ describe("CI workflow scope", () => {
     expect(migrationStep).toBeGreaterThan(packageStep);
   });
 
+  it("verifies package signatures even when the full-lockfile audit fails", () => {
+    const workflow = readRepoFile(".github/workflows/dependency-audit.yml");
+    const auditStep = workflow.indexOf("node scripts/ci/verify-dependency-audit.mjs");
+    const signatureStep = workflow.indexOf("npm audit signatures");
+
+    expect(auditStep).toBeGreaterThan(-1);
+    expect(signatureStep).toBeGreaterThan(auditStep);
+    expect(workflow.slice(auditStep, signatureStep)).toMatch(/if:\s*always\(\)/);
+  });
+
   it("runs CodeQL after merge and weekly, not per PR", () => {
     const workflow = readRepoFile(".github/workflows/codeql.yml");
 
