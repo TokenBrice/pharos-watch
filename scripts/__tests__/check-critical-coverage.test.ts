@@ -147,17 +147,7 @@ describe("critical coverage changed-file detection", () => {
     expect(
       findCriticalCoverageCandidatesMissingEnrollment(candidateFiles, {
         criticalFiles: ["worker/src/cron/sync-stablecoins/enrolled.ts"],
-        waivers: {
-          "worker/src/cron/sync-stablecoins/waived.ts": {
-            disposition: "covered-by-enrolled-entrypoint",
-            owner: "platform",
-            createdAt: "2026-06-05",
-            reviewAfter: "2026-09-05",
-            reason: "covered elsewhere",
-            nextAction: "add direct tests before enrollment",
-            directEnrollmentCondition: "direct tests cover critical behavior",
-          },
-        },
+        waivers: { "worker/src/cron/sync-stablecoins/waived.ts": "2026-09-05" },
       }),
     ).toEqual(["worker/src/cron/sync-stablecoins/missing.ts"]);
   });
@@ -165,17 +155,7 @@ describe("critical coverage changed-file detection", () => {
   it("validates waiver metadata and rejects waivers for enrolled files", () => {
     expect(
       validateCriticalCoverageWaiverMetadata(
-        {
-          "worker/src/lib/price-consensus.ts": {
-            disposition: "covered-by-enrolled-entrypoint",
-            owner: "platform",
-            createdAt: "2026-06-05",
-            reviewAfter: "2026-09-05",
-            reason: "covered elsewhere",
-            nextAction: "add direct tests before enrollment",
-            directEnrollmentCondition: "direct tests cover critical behavior",
-          },
-        },
+        { "worker/src/lib/price-consensus.ts": "2026-09-05" },
         {
           candidateFiles: ["worker/src/lib/price-consensus.ts"],
           criticalFiles: ["worker/src/lib/price-consensus.ts"],
@@ -186,24 +166,8 @@ describe("critical coverage changed-file detection", () => {
     expect(
       validateCriticalCoverageWaiverMetadata(
         {
-          "worker/src/lib/new-price-helper.ts": {
-            disposition: "unknown",
-            owner: "",
-            createdAt: "not-a-date",
-            reviewAfter: "not-a-date",
-            reason: "",
-            nextAction: "",
-            directEnrollmentCondition: "",
-          },
-          "worker/src/lib/old-review-helper.ts": {
-            disposition: "covered-by-enrolled-entrypoint",
-            owner: "platform",
-            createdAt: "2026-06-05",
-            reviewAfter: "2026-01-01",
-            reason: "covered elsewhere",
-            nextAction: "review helper",
-            directEnrollmentCondition: "direct tests cover helper behavior",
-          },
+          "worker/src/lib/new-price-helper.ts": "not-a-date",
+          "worker/src/lib/old-review-helper.ts": "2026-09-05",
         },
         {
           candidateFiles: ["worker/src/lib/new-price-helper.ts", "worker/src/lib/old-review-helper.ts"],
@@ -211,37 +175,14 @@ describe("critical coverage changed-file detection", () => {
         },
       ),
     ).toEqual([
-      'worker/src/lib/new-price-helper.ts: invalid waiver disposition "unknown"',
-      "worker/src/lib/new-price-helper.ts: missing waiver reason",
-      "worker/src/lib/new-price-helper.ts: missing waiver owner",
-      "worker/src/lib/new-price-helper.ts: missing or invalid waiver createdAt",
       "worker/src/lib/new-price-helper.ts: missing or invalid waiver reviewAfter",
-      "worker/src/lib/new-price-helper.ts: missing waiver nextAction",
-      "worker/src/lib/new-price-helper.ts: missing waiver directEnrollmentCondition",
-      "worker/src/lib/old-review-helper.ts: waiver reviewAfter must be on or after createdAt",
     ]);
   });
 
   it("collects and enforces critical waiver review queues", () => {
     const waivers = {
-      "worker/src/lib/overdue-price-helper.ts": {
-        disposition: "covered-by-enrolled-entrypoint",
-        owner: "platform",
-        createdAt: "2026-06-05",
-        reviewAfter: "2026-06-10",
-        reason: "covered elsewhere",
-        nextAction: "review overdue helper",
-        directEnrollmentCondition: "direct tests cover helper behavior",
-      },
-      "worker/src/lib/upcoming-price-helper.ts": {
-        disposition: "covered-by-enrolled-entrypoint",
-        owner: "platform",
-        createdAt: "2026-06-05",
-        reviewAfter: "2026-06-30",
-        reason: "covered elsewhere",
-        nextAction: "review upcoming helper",
-        directEnrollmentCondition: "direct tests cover helper behavior",
-      },
+      "worker/src/lib/overdue-price-helper.ts": "2026-06-10",
+      "worker/src/lib/upcoming-price-helper.ts": "2026-06-30",
     };
     const candidateFiles = Object.keys(waivers);
 
@@ -252,24 +193,8 @@ describe("critical coverage changed-file detection", () => {
         lookaheadDays: 14,
       }),
     ).toEqual({
-      due: [
-        {
-          file: "worker/src/lib/overdue-price-helper.ts",
-          owner: "platform",
-          reviewAfter: "2026-06-10",
-          nextAction: "review overdue helper",
-          directEnrollmentCondition: "direct tests cover helper behavior",
-        },
-      ],
-      upcoming: [
-        {
-          file: "worker/src/lib/upcoming-price-helper.ts",
-          owner: "platform",
-          reviewAfter: "2026-06-30",
-          nextAction: "review upcoming helper",
-          directEnrollmentCondition: "direct tests cover helper behavior",
-        },
-      ],
+      due: [{ file: "worker/src/lib/overdue-price-helper.ts", reviewAfter: "2026-06-10" }],
+      upcoming: [{ file: "worker/src/lib/upcoming-price-helper.ts", reviewAfter: "2026-06-30" }],
     });
 
     const errors: string[] = [];
@@ -292,9 +217,7 @@ describe("critical coverage changed-file detection", () => {
 
     expect(exits).toEqual([1]);
     expect(errors).toContain("[coverage] Critical coverage waiver reviews are due or overdue:");
-    expect(errors).toContain(
-      "  worker/src/lib/overdue-price-helper.ts reviewAfter=2026-06-10 owner=platform nextAction=review overdue helper",
-    );
+    expect(errors).toContain("  worker/src/lib/overdue-price-helper.ts reviewAfter=2026-06-10");
   });
 
   it("fails the checker when a high-stakes candidate lacks enrollment or waiver", () => {
@@ -337,7 +260,6 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/cron/telegram-alert-source-events.ts",
       "worker/src/cron/telegram-alert-target-plans/coordinator.ts",
       "worker/src/cron/telegram-alert-target-plans/materialization.ts",
-      "worker/src/cron/telegram-legacy-overflow-import.ts",
       "worker/src/cron/dispatch-telegram-routing.ts",
       "worker/src/cron/dispatch-telegram-delivery.ts",
       "worker/src/cron/telegram-pending/lifecycle.ts",
@@ -365,9 +287,10 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/lib/safety-score-v9-publication-store.ts",
     ]));
     expect(CRITICAL_COVERAGE_WAIVERS).toEqual(expect.objectContaining({
-      "worker/src/api/safety-score-history.ts": expect.objectContaining({ disposition: "deferred-ratchet" }),
-      "worker/src/lib/psi-recompute.ts": expect.objectContaining({ disposition: "deferred-ratchet" }),
-      "shared/lib/redemption-backstop-scoring.ts": expect.objectContaining({ disposition: "deferred-ratchet" }),
+      "worker/src/api/safety-score-history.ts": "2026-09-05",
+      "worker/src/lib/psi-recompute.ts": "2026-09-05",
+      "shared/lib/redemption-backstop-scoring.ts": "2026-09-05",
+      "worker/src/lib/depeg-resolver-store-validators.ts": "2026-08-30",
     }));
     expect(CRITICAL_TEST_FILES).toEqual(expect.arrayContaining([
       "worker/src/cron/__tests__/dispatch-telegram-alerts-delivery-queue.test.ts",
@@ -375,7 +298,6 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/cron/__tests__/telegram-pending-queue.test.ts",
       "worker/src/cron/__tests__/telegram-alert-target-effects.test.ts",
       "worker/src/cron/__tests__/telegram-authoritative-target-plans-sqlite.test.ts",
-      "worker/src/cron/__tests__/telegram-legacy-overflow-import.test.ts",
       "worker/src/cron/__tests__/telegram-fresh-delivery-fence.test.ts",
       "worker/src/cron/__tests__/telegram-pending-lifecycle-migration.test.ts",
       "worker/src/cron/__tests__/telegram-pending-preference-revalidation.test.ts",
@@ -400,6 +322,29 @@ describe("critical coverage changed-file detection", () => {
       "worker/src/lib/__tests__/safety-score-v9-publication-runner.test.ts",
       "worker/src/lib/__tests__/safety-score-v9-publication-store.test.ts",
     ]));
+  });
+
+  it("fails once the checked-in waiver review deadlines pass", () => {
+    const errors: string[] = [];
+    const exits: number[] = [];
+
+    expect(
+      runCriticalCoverageCompletenessGuard({
+        candidateFiles: collectCriticalCoverageCandidates(),
+        waivers: CRITICAL_COVERAGE_WAIVERS,
+        reviewToday: new Date("2026-09-06T00:00:00.000Z"),
+        consoleImpl: mockConsole({
+          error: (message: string) => errors.push(message),
+          log: () => {},
+        }),
+        exit: captureProcessExit((code) => {
+          if (code !== undefined) exits.push(code);
+        }),
+      }),
+    ).toBe(false);
+
+    expect(exits).toEqual([1]);
+    expect(errors).toContain("[coverage] Critical coverage waiver reviews are due or overdue:");
   });
 
   it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {
