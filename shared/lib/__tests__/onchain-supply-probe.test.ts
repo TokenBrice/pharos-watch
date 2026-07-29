@@ -98,6 +98,26 @@ describe("curated on-chain supply paths", () => {
     ], "ftusd-flying-tulip"))).toBeNull();
   });
 
+  it("resolves apyUSD's reviewed CCIP burn/mint deployments", () => {
+    const ethereumContract = {
+      chain: "ethereum",
+      address: "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+      decimals: 18,
+    };
+    const baseContract = {
+      chain: "base",
+      address: "0x2c271ddf484ac0386d216eb7eb9ff02d4dc0f6aa",
+      decimals: 18,
+    };
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      ethereumContract,
+      baseContract,
+    ], "apyusd-apyx"));
+
+    expect(selected?.map((entry) => entry.contract)).toEqual([ethereumContract, baseContract]);
+    expect(selected?.map((entry) => entry.config.chain)).toEqual(["ethereum", "base"]);
+  });
+
   it("resolves CHFAU's reviewed native deployments with zero-supply legs allowed", () => {
     const ethereumContract = { chain: "ethereum", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 };
     const polygonContract = { chain: "polygon", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 };
