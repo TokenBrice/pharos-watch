@@ -23,7 +23,7 @@ vi.mock("../../../lib/coingecko-onchain", async () => {
   );
   return {
     ...actual,
-    fetchCgTokenPoolsWithStatus: vi.fn(async () => ({ ok: true, pools: [] })),
+    fetchCgTokenPoolsWithStatus: vi.fn(async () => ({ transportOk: true, schemaDegraded: false, pools: [] })),
   };
 });
 
@@ -292,7 +292,8 @@ describe("crawlCoin DexScreener hardening", () => {
 
   it("keeps CoinGecko onchain staging output aligned with current discovery rows", async () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
-      ok: true,
+      transportOk: true,
+      schemaDegraded: false,
       pools: [
         {
           id: "cg-pool",
@@ -360,7 +361,8 @@ describe("crawlCoin DexScreener hardening", () => {
 
   it("preserves non-EVM CoinGecko pool and token identities from provider ingress", async () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
-      ok: true,
+      transportOk: true,
+      schemaDegraded: false,
       pools: [
         {
           id: "solana_PoolCase",
@@ -484,8 +486,8 @@ describe("crawlCoin DexScreener hardening", () => {
       },
     } as never;
     vi.mocked(fetchCgTokenPoolsWithStatus)
-      .mockResolvedValueOnce({ ok: true, pools: [sharedPool] })
-      .mockResolvedValueOnce({ ok: true, pools: [sharedPool] });
+      .mockResolvedValueOnce({ transportOk: true, schemaDegraded: false, pools: [sharedPool] })
+      .mockResolvedValueOnce({ transportOk: true, schemaDegraded: false, pools: [sharedPool] });
 
     const knownPoolIds = new Set<string>();
     const usdcResult = await crawlCoin(
@@ -512,7 +514,8 @@ describe("crawlCoin DexScreener hardening", () => {
 
   it("rejects CoinGecko onchain pools whose tracked token price is implausible", async () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
-      ok: true,
+      transportOk: true,
+      schemaDegraded: false,
       pools: [
         {
           id: "eth_0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2236",
@@ -549,7 +552,11 @@ describe("crawlCoin DexScreener hardening", () => {
   });
 
   it("records CoinGecko onchain failures when the helper reports a bad response", async () => {
-    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({ ok: false, pools: [] });
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
+      transportOk: false,
+      schemaDegraded: false,
+      pools: [],
+    });
 
     const result = await crawlCoin(
       createMockDb(),
@@ -563,8 +570,35 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_ONCHAIN, false);
   });
 
+  it("keeps CoinGecko schema-degraded responses out of circuit failure accounting", async () => {
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
+      transportOk: true,
+      schemaDegraded: true,
+      pools: [],
+    });
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "usdc-circle",
+      [{ chain: "ethereum", address: "0xAbC", decimals: 6 }],
+      "test-key",
+      new Set(),
+    );
+
+    expect(result.pools).toEqual([]);
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_ONCHAIN, true);
+    expect(result.deploymentOutcomes[0]).toMatchObject({
+      outcome: "provider_inaccessible",
+      reason: "A completed direct-token provider response was schema-degraded",
+    });
+  });
+
   it("falls back to GeckoTerminal when CoinGecko onchain returns no usable price observation", async () => {
-    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({ ok: true, pools: [] });
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
+      transportOk: true,
+      schemaDegraded: false,
+      pools: [],
+    });
     vi.mocked(crawlTokenPools).mockImplementationOnce(async (config) => {
       expect(config.tokens).toEqual([
         {
@@ -589,7 +623,11 @@ describe("crawlCoin DexScreener hardening", () => {
   });
 
   it("preserves non-EVM token case in GeckoTerminal requests", async () => {
-    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({ ok: true, pools: [] });
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
+      transportOk: true,
+      schemaDegraded: false,
+      pools: [],
+    });
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({ ok: true, pairs: [] });
     vi.mocked(crawlTokenPools).mockImplementationOnce(async (config) => {
       expect(config.tokens).toEqual([
@@ -620,7 +658,7 @@ describe("crawlCoin DexScreener hardening", () => {
 
     vi.mocked(fetchCgTokenPoolsWithStatus).mockImplementation(async (network) => {
       events.push(`cg:${network}`);
-      return { ok: true, pools: [] };
+      return { transportOk: true, schemaDegraded: false, pools: [] };
     });
     vi.mocked(crawlTokenPools).mockImplementation(async () => {
       events.push("gt");
@@ -661,7 +699,11 @@ describe("crawlCoin DexScreener hardening", () => {
   it("contains optional Curve timeouts without failing the coin crawl", async () => {
     const timeout = new DOMException("The operation was aborted due to timeout", "TimeoutError");
 
-    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({ ok: true, pools: [] });
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({
+      transportOk: true,
+      schemaDegraded: false,
+      pools: [],
+    });
     vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
     vi.mocked(fetchJsonWithRetry).mockImplementation(async (url) => {
       if (String(url).includes("api.curve.finance")) throw timeout;
@@ -688,7 +730,11 @@ describe("crawlCoin DexScreener hardening", () => {
   it("reports chains unsupported by every discovery pool provider", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({ ok: true, pools: [] });
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({
+      transportOk: true,
+      schemaDegraded: false,
+      pools: [],
+    });
     vi.mocked(fetchJsonWithRetry).mockResolvedValueOnce({
       response: new Response(null, { status: 200 }),
       body: { tickers: [] },

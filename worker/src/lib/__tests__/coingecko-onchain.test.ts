@@ -19,6 +19,27 @@ import {
   parseCgPoolVolume,
 } from "../coingecko-onchain";
 
+const validPool = {
+  id: "pool-1",
+  type: "pool",
+  attributes: {
+    address: "0xpool",
+    name: "USDC / USDT",
+    pool_created_at: null,
+    base_token_price_usd: "1",
+    quote_token_price_usd: "1",
+    reserve_in_usd: "100000",
+    h24_volume_usd: "10000",
+    pool_fee_percentage: null,
+    locked_liquidity_percentage: null,
+  },
+  relationships: {
+    base_token: { data: { id: "eth_0xbase", type: "token" } },
+    quote_token: { data: { id: "eth_0xquote", type: "token" } },
+    dex: { data: { id: "uniswap-v3", type: "dex" } },
+  },
+};
+
 describe("coingecko-onchain", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -37,13 +58,14 @@ describe("coingecko-onchain", () => {
     expect(sleepWithSignal).toHaveBeenCalledWith(RATE_LIMITS.COINGECKO_ONCHAIN_MS, signal);
   });
 
-  it("fetches token pools and handles non-array or non-ok responses", async () => {
+  it("keeps valid pool members when a sibling is missing attributes", async () => {
+    const { attributes: _attributes, ...missingAttributes } = validPool;
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify({ data: [{ id: "pool-1" }] }), { status: 200 }),
+      new Response(JSON.stringify({ data: [validPool, missingAttributes] }), { status: 200 }),
     );
 
     const pools = await fetchCgTokenPools("eth", "0xabc");
-    expect(pools).toEqual([{ id: "pool-1" }]);
+    expect(pools).toEqual([validPool]);
     expect(fetchWithRetry).toHaveBeenCalledWith(
       expect.stringContaining("/onchain/networks/eth/tokens/0xabc/pools?include=base_token,quote_token&page=1"),
       expect.objectContaining({
@@ -57,18 +79,51 @@ describe("coingecko-onchain", () => {
     );
 
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify({ data: { bad: true } }), { status: 200 }),
+      new Response(JSON.stringify({ data: [validPool, missingAttributes] }), { status: 200 }),
     );
-    expect(await fetchCgTokenPools("eth", "0xdef")).toEqual([]);
-
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", { status: 500 }));
-    expect(await fetchCgTokenPools("eth", "0xghi")).toEqual([]);
+    await expect(fetchCgTokenPoolsWithStatus("eth", "0xdef")).resolves.toEqual({
+      transportOk: true,
+      schemaDegraded: true,
+      pools: [validPool],
+    });
   });
 
-  it("exposes token-pool fetch status for circuit breaker accounting", async () => {
+  it("marks all-invalid and malformed relationship responses as schema-degraded", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [{ id: "pool-1" }] }), { status: 200 }),
+    );
+    await expect(fetchCgTokenPoolsWithStatus("eth", "0xall-invalid")).resolves.toEqual({
+      transportOk: true,
+      schemaDegraded: true,
+      pools: [],
+    });
+
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: [{
+            ...validPool,
+            relationships: {
+              ...validPool.relationships,
+              dex: { data: { id: "uniswap-v3", type: 1 } },
+            },
+          }],
+        }),
+        { status: 200 },
+      ),
+    );
+    await expect(fetchCgTokenPoolsWithStatus("eth", "0xmalformed-relationship")).resolves.toEqual({
+      transportOk: true,
+      schemaDegraded: true,
+      pools: [],
+    });
+  });
+
+  it("separates transport health from malformed payloads for circuit breaker accounting", async () => {
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", { status: 500 }));
     await expect(fetchCgTokenPoolsWithStatus("eth", "0xghi")).resolves.toEqual({
-      ok: false,
+      transportOk: false,
+      schemaDegraded: false,
       pools: [],
     });
 
@@ -76,7 +131,17 @@ describe("coingecko-onchain", () => {
       new Response(JSON.stringify({ data: [] }), { status: 200 }),
     );
     await expect(fetchCgTokenPoolsWithStatus("eth", "0xempty")).resolves.toEqual({
-      ok: true,
+      transportOk: true,
+      schemaDegraded: false,
+      pools: [],
+    });
+
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: { bad: true } }), { status: 200 }),
+    );
+    await expect(fetchCgTokenPoolsWithStatus("eth", "0xnon-array")).resolves.toEqual({
+      transportOk: true,
+      schemaDegraded: true,
       pools: [],
     });
   });
@@ -84,7 +149,8 @@ describe("coingecko-onchain", () => {
   it("treats CoinGecko onchain lookup misses as source-healthy empty results", async () => {
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", { status: 404 }));
     await expect(fetchCgTokenPoolsWithStatus("eth", "0xmissing")).resolves.toEqual({
-      ok: true,
+      transportOk: true,
+      schemaDegraded: false,
       pools: [],
     });
 

@@ -107,12 +107,12 @@ export async function crawlCoinGeckoPoolsStage({
         apiKey,
         { maxRetries: 0, timeoutMs: DISCOVERY_STAGE_TIMEOUT_MS.cgOnchain },
       );
-      await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, result.ok);
+      await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, result.transportOk);
       providerChecks.push({
         chain,
         address,
         provider: "coingecko",
-        status: result.ok ? "success" : "failure",
+        status: !result.transportOk ? "failure" : result.schemaDegraded ? "degraded" : "success",
       });
 
       for (const pool of result.pools) {

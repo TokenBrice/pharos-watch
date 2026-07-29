@@ -83,6 +83,11 @@ export function classifyDexDeploymentOutcomes(params: {
       .filter((check) => check.status === "failure")
       .map((check) => deploymentKey(check.chain, check.address)),
   );
+  const degradedChecks = new Set(
+    params.providerChecks
+      .filter((check) => check.status === "degraded")
+      .map((check) => deploymentKey(check.chain, check.address)),
+  );
 
   return params.deployments.map((deployment) => {
     const providers = getDexDiscoveryProviders(deployment.chain);
@@ -112,6 +117,18 @@ export function classifyDexDeploymentOutcomes(params: {
         outcome: "verified_no_pools",
         providers,
         reason: "A provider completed the direct-token query with no eligible pool",
+        observedPoolCount: 0,
+        observedAt: params.nowSec,
+      };
+    }
+    if (degradedChecks.has(key)) {
+      return {
+        stablecoinId: params.stablecoinId,
+        chain: deployment.chain,
+        address: deployment.address,
+        outcome: "provider_inaccessible",
+        providers,
+        reason: "A completed direct-token provider response was schema-degraded",
         observedPoolCount: 0,
         observedAt: params.nowSec,
       };

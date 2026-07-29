@@ -56,12 +56,61 @@ export interface CgFetchOptions {
 }
 
 export interface CgTokenPoolsResult {
-  ok: boolean;
+  transportOk: boolean;
+  schemaDegraded: boolean;
   pools: CgPool[];
 }
 
 const CG_ONCHAIN_LOOKUP_MISS_STATUSES = new Set([400, 404]);
 const CG_ONCHAIN_DEFAULT_TIMEOUT_MS = 15_000;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isStringOrNull(value: unknown): value is string | null {
+  return typeof value === "string" || value === null;
+}
+
+function isCgPoolAttributes(value: unknown): value is CgPoolAttributes {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.address === "string" &&
+    typeof value.name === "string" &&
+    isStringOrNull(value.pool_created_at) &&
+    isStringOrNull(value.base_token_price_usd) &&
+    isStringOrNull(value.quote_token_price_usd) &&
+    isStringOrNull(value.reserve_in_usd) &&
+    isStringOrNull(value.h24_volume_usd) &&
+    isStringOrNull(value.pool_fee_percentage) &&
+    isStringOrNull(value.locked_liquidity_percentage) &&
+    (value.volume_usd === undefined ||
+      value.volume_usd === null ||
+      (isRecord(value.volume_usd) && isStringOrNull(value.volume_usd.h24)))
+  );
+}
+
+function isCgPoolRelationship(value: unknown): value is { data: { id: string; type: string } } {
+  return (
+    isRecord(value) &&
+    isRecord(value.data) &&
+    typeof value.data.id === "string" &&
+    typeof value.data.type === "string"
+  );
+}
+
+function isCgPool(value: unknown): value is CgPool {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.type === "string" &&
+    isCgPoolAttributes(value.attributes) &&
+    isRecord(value.relationships) &&
+    isCgPoolRelationship(value.relationships.base_token) &&
+    isCgPoolRelationship(value.relationships.quote_token) &&
+    isCgPoolRelationship(value.relationships.dex)
+  );
+}
 
 async function readCgOnchainJsonBody<T>(
   response: Response,
@@ -113,8 +162,9 @@ export async function fetchCgTokenPoolsWithStatus(
   apiKey: string | null = null,
   options?: CgFetchOptions,
 ): Promise<CgTokenPoolsResult> {
-  let ok = true;
-  return fetchPagedTokenPools({
+  let transportOk = true;
+  let schemaDegraded = false;
+  const rawPools = await fetchPagedTokenPools<unknown>({
     maxPages: CG_ONCHAIN_TOKEN_POOLS_MAX_PAGES,
     pageSize: CG_ONCHAIN_TOKEN_POOLS_PAGE_SIZE,
     fetchPage: async (page) => {
@@ -133,7 +183,7 @@ export async function fetchCgTokenPoolsWithStatus(
         if (res && CG_ONCHAIN_LOOKUP_MISS_STATUSES.has(res.status)) {
           await cancelResponseBodyQuietly(res);
         } else {
-          ok = false;
+          transportOk = false;
         }
         return [];
       }
@@ -143,12 +193,18 @@ export async function fetchCgTokenPoolsWithStatus(
         signal,
       );
       if (!Array.isArray(json.data)) {
-        ok = false;
+        schemaDegraded = true;
         return [];
       }
-      return json.data as CgPool[];
+      return json.data;
     },
-  }).then((pools) => ({ ok, pools }));
+  });
+  const pools = rawPools.filter((pool): pool is CgPool => {
+    const valid = isCgPool(pool);
+    if (!valid) schemaDegraded = true;
+    return valid;
+  });
+  return { transportOk, schemaDegraded, pools };
 }
 
 /**
