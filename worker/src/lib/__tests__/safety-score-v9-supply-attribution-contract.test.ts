@@ -308,7 +308,7 @@ describe("Centrifuge burn/mint deployment supply attribution contract", () => {
     ).toHaveLength(8);
     expect(
       buildReviewedDeploymentRouteInventory("acrdx-anemoy-apollo")!.routes,
-    ).toHaveLength(5);
+    ).toHaveLength(6);
 
     const attribution = deriveCentrifuge();
     expect(attribution).not.toBeNull();

@@ -273,6 +273,14 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
         "https://rpc1.monad.xyz",
       ],
     },
+    "optimism:0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "799525537471dc553ff39869d51105dd1ed4965cb205343248c76b8b6f1c33b6",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: 12,
+    },
     "base:0x9477724bb54ad5417de8baff29e59df3fb4da74f": {
       runtime: "evm",
       liabilityModel: "protocol-burn-mint",
