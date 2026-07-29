@@ -40,6 +40,32 @@ function poolFor(address: string): StagedPool {
   };
 }
 
+function createRecordingDb(): { db: D1Database; statements: Array<{ sql: string; values: unknown[] }> } {
+  const statements: Array<{ sql: string; values: unknown[] }> = [];
+  const db = {
+    prepare: vi.fn((sql: string) => ({
+      bind: vi.fn((...values: unknown[]) => {
+        statements.push({ sql, values });
+        return {};
+      }),
+    })),
+    batch: vi.fn(async (batched: unknown[]) => batched.map(() => ({ meta: { changes: 1 } }))),
+  } as unknown as D1Database;
+  return { db, statements };
+}
+
+function outcomeWrite(overrides: { chain: string; address: string }) {
+  return {
+    stablecoinId: "test",
+    outcome: "observed_pools" as const,
+    providers: ["coingecko"],
+    reason: "test",
+    observedPoolCount: 1,
+    observedAt: 100,
+    ...overrides,
+  };
+}
+
 describe("DEX deployment outcomes", () => {
   it("separates observed, verified empty, and inaccessible outcomes", () => {
     const observed = classifyDexDeploymentOutcomes({
@@ -137,40 +163,33 @@ describe("DEX deployment outcomes", () => {
   });
 
   it("persists canonical deployment addresses without lowercasing non-EVM identities", async () => {
-    const boundRows: unknown[][] = [];
-    const db = {
-      prepare: vi.fn(() => ({
-        bind: vi.fn((...values: unknown[]) => {
-          boundRows.push(values);
-          return {};
-        }),
-      })),
-      batch: vi.fn(async (statements: unknown[]) => statements.map(() => ({ meta: { changes: 1 } }))),
-    } as unknown as D1Database;
+    const { db, statements } = createRecordingDb();
 
     await upsertDexDeploymentOutcomes(db, [
-      {
-        stablecoinId: "test",
-        chain: "solana",
-        address: "MintCase",
-        outcome: "observed_pools",
-        providers: ["coingecko"],
-        reason: "test",
-        observedPoolCount: 1,
-        observedAt: 100,
-      },
-      {
-        stablecoinId: "test",
-        chain: "ethereum",
-        address: "0xAbC",
-        outcome: "observed_pools",
-        providers: ["coingecko"],
-        reason: "test",
-        observedPoolCount: 1,
-        observedAt: 100,
-      },
+      outcomeWrite({ chain: "solana", address: "MintCase" }),
+      outcomeWrite({ chain: "ethereum", address: "0xAbC" }),
     ]);
 
-    expect(boundRows.map((values) => values[2])).toEqual(["MintCase", "0xabc"]);
+    expect(statements.filter((statement) => statement.sql.startsWith("INSERT")).map((statement) => statement.values[2])).toEqual([
+      "MintCase",
+      "0xabc",
+    ]);
+  });
+
+  it("deletes the superseded lowercase twin of a non-EVM deployment", async () => {
+    const { db, statements } = createRecordingDb();
+
+    await upsertDexDeploymentOutcomes(db, [
+      outcomeWrite({ chain: "solana", address: "MintCase" }),
+      outcomeWrite({ chain: "ethereum", address: "0xAbC" }),
+      outcomeWrite({ chain: "solana", address: "alreadylowercase" }),
+    ]);
+
+    const deletes = statements.filter((statement) => statement.sql.startsWith("DELETE"));
+    expect(deletes).toHaveLength(1);
+    expect(deletes[0]!.values).toEqual(["test", "solana", "mintcase"]);
+    // The cleanup runs before the canonical write for the same deployment.
+    expect(statements[0]!.sql.startsWith("DELETE")).toBe(true);
+    expect(statements[1]!.values[2]).toBe("MintCase");
   });
 });

@@ -38,8 +38,23 @@ ON CONFLICT(stablecoin_id, chain, contract_address) DO UPDATE SET
   waiver_reason = excluded.waiver_reason,
   waiver_expires_at = excluded.waiver_expires_at`;
 
+const DELETE_SUPERSEDED_OUTCOME_SQL = `DELETE FROM dex_deployment_outcomes
+WHERE stablecoin_id = ? AND chain = ? AND contract_address = ?`;
+
 function deploymentKey(chain: string, address: string): string {
   return canonicalExitRouteAssetKey(chain, address);
+}
+
+/**
+ * Rows written before non-EVM identities were preserved case-sensitively are
+ * keyed under a lowercased address, so the canonical upsert cannot reach them.
+ * They freeze at their last pre-canonical outcome and stay in the census as a
+ * second deployment for the same mint. Delete the superseded twin alongside the
+ * canonical write instead of leaving every reader to filter it out.
+ */
+function supersededLowercaseAddress(canonicalAddress: string): string | null {
+  const lowercased = canonicalAddress.toLowerCase();
+  return lowercased === canonicalAddress ? null : lowercased;
 }
 
 function matchesDeployment(pool: StagedPool, deployment: ContractDeployment): boolean {
@@ -159,14 +174,19 @@ export async function upsertDexDeploymentOutcomes(
   signal?: AbortSignal,
 ): Promise<number> {
   if (outcomes.length === 0) return 0;
-  const statements = outcomes.map((outcome) => {
+  const statements = outcomes.flatMap((outcome) => {
     const waiver = getActiveDexCoverageWaiver(outcome.stablecoinId, outcome.chain, outcome.observedAt);
-    return db
+    const address = canonicalExitRouteScopedId(outcome.chain, outcome.address);
+    const superseded = supersededLowercaseAddress(address);
+    const cleanupStmt = superseded
+      ? db.prepare(DELETE_SUPERSEDED_OUTCOME_SQL).bind(outcome.stablecoinId, outcome.chain, superseded)
+      : null;
+    const upsertStmt = db
       .prepare(UPSERT_OUTCOME_SQL)
       .bind(
         outcome.stablecoinId,
         outcome.chain,
-        canonicalExitRouteScopedId(outcome.chain, outcome.address),
+        address,
         outcome.outcome,
         JSON.stringify(outcome.providers),
         outcome.reason,
@@ -176,6 +196,7 @@ export async function upsertDexDeploymentOutcomes(
         waiver?.reason ?? null,
         waiver?.expiresAt ?? null,
       );
+    return cleanupStmt ? [cleanupStmt, upsertStmt] : [upsertStmt];
   });
   await batchExecute(db, statements, { chunkSize: 50, signal });
   return outcomes.length;

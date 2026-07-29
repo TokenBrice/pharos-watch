@@ -66,11 +66,11 @@ export interface DexLiquidityLoadResult {
 
 type DeploymentCoverage = NonNullable<DexLiquiditySnapshot["deploymentCoverage"]>;
 
-function deploymentKey(stablecoinId: string, chain: string, address: string): string {
+export function deploymentKey(stablecoinId: string, chain: string, address: string): string {
   return `${stablecoinId}\u0000${canonicalExitRouteAssetKey(chain, address)}`;
 }
 
-const CURRENT_DEPLOYMENT_KEYS = new Set(
+export const CURRENT_DEPLOYMENT_KEYS = new Set(
   ACTIVE_STABLECOINS.flatMap((meta) =>
     [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])].map((deployment) =>
       deploymentKey(meta.id, deployment.chain, deployment.address),

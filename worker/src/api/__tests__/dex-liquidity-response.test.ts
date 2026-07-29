@@ -192,10 +192,12 @@ describe("selectTrendBaseline", () => {
 describe("buildDexDeploymentCoverage", () => {
   it("keeps verified empty separate from inaccessible and expires waivers", () => {
     const rows = [
+      // Registry-true deployments: rows keyed outside the current registry are
+      // filtered out as superseded identities before coverage is built.
       {
-        stablecoin_id: "coin",
+        stablecoin_id: "usdt-tether",
         chain: "ethereum",
-        contract_address: "0x1",
+        contract_address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
         outcome: "verified_no_pools" as const,
         provider_set_json: JSON.stringify(["coingecko"]),
         reason: "verified empty",
@@ -206,9 +208,9 @@ describe("buildDexDeploymentCoverage", () => {
         waiver_expires_at: null,
       },
       {
-        stablecoin_id: "coin",
-        chain: "cardano",
-        contract_address: "asset1",
+        stablecoin_id: "usdt-tether",
+        chain: "tron",
+        contract_address: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
         outcome: "provider_inaccessible" as const,
         provider_set_json: "[]",
         reason: "unsupported",
@@ -220,11 +222,11 @@ describe("buildDexDeploymentCoverage", () => {
       },
     ];
 
-    const active = buildDexDeploymentCoverage(rows, 150).get("coin");
+    const active = buildDexDeploymentCoverage(rows, 150).get("usdt-tether");
     expect(active).toMatchObject({ verifiedNoPools: 1, providerInaccessible: 1 });
     expect(active?.deployments[1]?.waiver).toMatchObject({ owner: "data-platform", expiresAt: 200 });
 
-    const expired = buildDexDeploymentCoverage(rows, 200).get("coin");
+    const expired = buildDexDeploymentCoverage(rows, 200).get("usdt-tether");
     expect(expired?.deployments[1]?.waiver).toBeNull();
   });
 });
