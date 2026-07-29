@@ -72,6 +72,26 @@ describe("check-cron-schedule-sync", () => {
     expect(report.scheduleKeyByExpression.get("40 * * * *")).toBe("dexSlot");
   });
 
+  it("requires consolidation before the reviewed physical trigger topology grows", () => {
+    const report = evaluateCronScheduleSync({
+      cronSchedules: {
+        slotA: "1 * * * *",
+        slotB: "2 * * * *",
+      },
+      cronJobDefinitions: [{ job: "job-a" }, { job: "job-b" }],
+      cronConnectionBudgetEntries: [{ job: "job-a" }, { job: "job-b" }],
+      growthPolicy: { maxPhysicalTriggersBeforeRebalance: 1 },
+      scheduledSlotPlans: {
+        slotA: { jobChains: [["job-a"]] },
+        slotB: { jobChains: [["job-b"]] },
+      },
+      wranglerCronTriggers: ["1 * * * *", "2 * * * *"],
+    });
+
+    expect(report.physicalTriggerLimitExceeded).toBe(true);
+    expect(report.failed).toBe(true);
+  });
+
   it("reports configured trigger drift as missing and extra slots", () => {
     const report = evaluateCronScheduleSync({
       cronSchedules: {

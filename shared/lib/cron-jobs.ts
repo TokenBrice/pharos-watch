@@ -65,6 +65,22 @@ export const CRON_CONNECTION_BUDGET = {
   fullForNewFetchHeavyWorkAt: 5,
 } as const;
 
+/**
+ * Growth limits for the reviewed cron topology. Raising either limit requires
+ * the consolidation/rebalance and execution-substrate review in the cron
+ * trigger policy.
+ */
+export const CRON_GROWTH_HEADROOM_POLICY = {
+  maxPhysicalTriggersBeforeRebalance: 25,
+  maxFetchCapableEntriesBeforeRebalance: 32,
+  maxHeadroomFullTriggersBeforeRebalance: 2,
+  queuesOrWorkflowsReview: {
+    p95DurationMs: 10 * 60 * 1000,
+    fanoutPerRun: 1_000,
+    connectionPressureAt: 5,
+  },
+} as const;
+
 export type CronScheduleKey = keyof typeof CRON_SCHEDULE_DEFINITIONS;
 export type CronScheduleExpression = (typeof CRON_SCHEDULE_DEFINITIONS)[CronScheduleKey]["schedule"];
 export type CronTriggerMode = "shared" | "isolated";
