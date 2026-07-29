@@ -4,15 +4,7 @@ import {
   SafetyScorePublicationIdentitySchema,
   type SafetyScorePublicationIdentity,
 } from "@shared/types/safety-score-publication";
-import { getCache, setCache } from "../lib/db-cache";
 import {
-  TELEGRAM_ALERT_TTL_SEC,
-  TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
-  TELEGRAM_MAX_MESSAGES_PER_RUN,
-} from "../lib/telegram-constants";
-import { deliverTelegramSubscriberQueue, type DeliverTelegramSubscriberQueueResult } from "./dispatch-telegram-delivery";
-import {
-  estimatedPlannedChunks,
   formatPlannedSubscribers,
   planSubscriberQueue,
   selectChatsToFormat,
@@ -22,13 +14,7 @@ import {
 } from "./dispatch-telegram-routing";
 import { hasEscalation } from "./dispatch-telegram-predicates";
 import { isQuietHoursActive } from "./telegram-quiet-hours";
-import {
-  loadChatsInBackoff,
-  readTelegramGlobalBackoff,
-  type PendingDrainResult,
-} from "./telegram-pending";
 import { isValidPendingSourceEventId } from "../lib/telegram-pending-provenance";
-import { OVERFLOW_PLAN_CACHE_KEY } from "../lib/telegram-overflow-plan-cache";
 
 export {
   OVERFLOW_PLAN_CACHE_KEY,
@@ -165,111 +151,8 @@ export function parseLegacyOverflowPlanBacklog(value: string): ParsedLegacyOverf
   };
 }
 
-export async function readOverflowPlanBacklog(
-  db: D1Database,
-  nowSec: number,
-): Promise<OverflowPlannedSubscriberAlert[]> {
-  const cached = await getCache(db, OVERFLOW_PLAN_CACHE_KEY);
-  if (!cached) return [];
-  const parsed = parseLegacyOverflowPlanBacklog(cached.value);
-  return parsed.kind === "ok" ? parsed.plans.filter((plan) => plan.expiresAt > nowSec) : [];
-}
-
-function withOverflowPlanExpiry(plan: PlannedSubscriberAlert, nowSec: number): OverflowPlannedSubscriberAlert {
-  const existingExpiresAt = finiteNumber((plan as OverflowPlannedSubscriberAlert).expiresAt);
-  return {
-    ...plan,
-    expiresAt: existingExpiresAt != null
-      ? Math.floor(existingExpiresAt)
-      : nowSec + TELEGRAM_ALERT_TTL_SEC[plan.alertType],
-  };
-}
-
-async function writeOverflowPlanBacklog(
-  db: D1Database,
-  plans: readonly PlannedSubscriberAlert[],
-  nowSec: number,
-  shouldWrite: boolean,
-): Promise<void> {
-  if (!shouldWrite) return;
-  await setCache(
-    db,
-    OVERFLOW_PLAN_CACHE_KEY,
-    JSON.stringify({
-      version: OVERFLOW_PLAN_CACHE_VERSION,
-      writtenAt: nowSec,
-      plans: plans.map((plan) => withOverflowPlanExpiry(plan, nowSec)),
-    }),
-  );
-}
-
-export async function drainOverflowBacklogOnly(args: {
-  db: D1Database;
-  botToken: string;
-  overflowBacklog: readonly PlannedSubscriberAlert[];
-  drainResult: PendingDrainResult;
-  nowSec: number;
-  signal?: AbortSignal;
-  markTelegramDeliveryStarted?: () => void;
-}): Promise<DeliverTelegramSubscriberQueueResult | null> {
-  if (args.overflowBacklog.length === 0) return null;
-  const [chatsInBackoff, globalBackoffUntil] = await Promise.all([
-    loadChatsInBackoff(args.db, args.nowSec),
-    readTelegramGlobalBackoff(args.db, args.nowSec),
-  ]);
-  return deliverTelegramSubscriberQueue({
-    db: args.db,
-    botToken: args.botToken,
-    subscriberQueue: [],
-    overflowPlanned: args.overflowBacklog,
-    overflowFormatBudget: TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
-    drainResult: args.drainResult,
-    maxMessagesPerRun: TELEGRAM_MAX_MESSAGES_PER_RUN,
-    nowSec: args.nowSec,
-    chatsInBackoff,
-    globalBackoffUntil,
-    dispatchStartedAtMs: Date.now(),
-    signal: args.signal,
-    markTelegramDeliveryStarted: args.markTelegramDeliveryStarted,
-  });
-}
-
-export async function persistEventlessOverflowBacklog(
-  db: D1Database,
-  result: DeliverTelegramSubscriberQueueResult | null,
-  overflowBacklog: readonly PlannedSubscriberAlert[],
-  nowSec: number,
-): Promise<void> {
-  if (!result) return;
-  await writeOverflowPlanBacklog(
-    db,
-    result.remainingOverflowPlanned,
-    nowSec,
-    result.pendingEnqueued > 0 ||
-      result.remainingOverflowPlanned.length !== overflowBacklog.length,
-  );
-}
-
-function splitFreshPlansForOverflowPriority(
-  plannedQueue: readonly PlannedSubscriberAlert[],
-  overflowBacklog: readonly PlannedSubscriberAlert[],
-  formatBudget: number,
-): {
-  toFormat: PlannedSubscriberAlert[];
-  overflowPlanned: PlannedSubscriberAlert[];
-  overflowFormatBudget: number;
-} {
-  const overflowFormatBudget = Math.min(formatBudget, estimatedPlannedChunks(overflowBacklog));
-  const freshFormatBudget = Math.max(0, formatBudget - overflowFormatBudget);
-  const { toFormat, overflow } = freshFormatBudget > 0
-    ? selectChatsToFormat(plannedQueue, freshFormatBudget)
-    : { toFormat: [], overflow: [...plannedQueue] };
-  return { toFormat, overflowPlanned: overflow, overflowFormatBudget };
-}
-
 export function buildOverflowAwareSubscriberQueue(args: {
   alertsByChat: Map<string, AlertsByChatEntry>;
-  overflowBacklog: readonly PlannedSubscriberAlert[];
   nowSec: number;
   formatBudget: number;
   sourceEventId?: string;
@@ -278,8 +161,6 @@ export function buildOverflowAwareSubscriberQueue(args: {
   plannedQueue: PlannedSubscriberAlert[];
   subscriberQueue: RoutedSubscriberAlert[];
   overflowPlanned: PlannedSubscriberAlert[];
-  combinedOverflowPlanned: PlannedSubscriberAlert[];
-  overflowFormatBudget: number;
   resolveDisableNotification: (entry: AlertsByChatEntry) => boolean;
 } {
   const resolveDisableNotification = (entry: AlertsByChatEntry): boolean =>
@@ -296,33 +177,12 @@ export function buildOverflowAwareSubscriberQueue(args: {
     args.sourceEventId,
     args.safetyScoreIdentity,
   );
-  const { toFormat, overflowPlanned, overflowFormatBudget } = splitFreshPlansForOverflowPriority(
-    plannedQueue,
-    args.overflowBacklog,
-    args.formatBudget,
-  );
+  const { toFormat, overflow } = selectChatsToFormat(plannedQueue, args.formatBudget);
   const subscriberQueue = formatPlannedSubscribers(toFormat, resolveDisableNotification);
   return {
     plannedQueue,
     subscriberQueue,
-    overflowPlanned,
-    combinedOverflowPlanned: [...args.overflowBacklog, ...overflowPlanned],
-    overflowFormatBudget,
+    overflowPlanned: overflow,
     resolveDisableNotification,
   };
-}
-
-export async function persistFanoutOverflowBacklog(
-  db: D1Database,
-  remainingOverflowPlanned: readonly PlannedSubscriberAlert[],
-  overflowBacklog: readonly PlannedSubscriberAlert[],
-  overflowPlanned: readonly PlannedSubscriberAlert[],
-  nowSec: number,
-): Promise<void> {
-  await writeOverflowPlanBacklog(
-    db,
-    remainingOverflowPlanned,
-    nowSec,
-    overflowBacklog.length > 0 || overflowPlanned.length > 0,
-  );
 }

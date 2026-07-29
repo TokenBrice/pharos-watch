@@ -49,8 +49,6 @@ export interface TelegramFanoutPlan {
   plannedQueue: PlannedSubscriberAlert[];
   subscriberQueue: RoutedSubscriberAlert[];
   overflowPlanned: PlannedSubscriberAlert[];
-  combinedOverflowPlanned: PlannedSubscriberAlert[];
-  overflowFormatBudget: number;
   resolveDisableNotification: (entry: AlertsByChatEntry) => boolean;
   perAlertTypeTargets: PerAlertTypeTargets;
   freshCandidateChats: number;
@@ -224,7 +222,6 @@ export function buildTelegramAlertsByChat(
 export function buildTelegramFanoutPlan(args: {
   events: TelegramFanoutPlanEvents;
   inputs: FanoutSubscriptionInputs;
-  overflowBacklog: readonly PlannedSubscriberAlert[];
   burstMarkers: BurstMarkerMap;
   nowSec: number;
   formatBudget?: number;
@@ -234,7 +231,6 @@ export function buildTelegramFanoutPlan(args: {
   sourceEventId?: string;
 }): TelegramFanoutPlan {
   const {
-    overflowBacklog,
     nowSec,
     formatBudget = TELEGRAM_MAX_MESSAGES_PER_RUN + TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
   } = args;
@@ -244,12 +240,9 @@ export function buildTelegramFanoutPlan(args: {
     plannedQueue,
     subscriberQueue,
     overflowPlanned,
-    combinedOverflowPlanned,
-    overflowFormatBudget,
     resolveDisableNotification,
   } = buildOverflowAwareSubscriberQueue({
     alertsByChat,
-    overflowBacklog,
     nowSec,
     formatBudget,
     sourceEventId: args.sourceEventId,
@@ -260,8 +253,6 @@ export function buildTelegramFanoutPlan(args: {
     plannedQueue,
     subscriberQueue,
     overflowPlanned,
-    combinedOverflowPlanned,
-    overflowFormatBudget,
     resolveDisableNotification,
     perAlertTypeTargets: buildPerAlertTypeTargets(subscriberQueue),
     freshCandidateChats: plannedQueue.length,
