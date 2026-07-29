@@ -14,6 +14,8 @@ import { formatAddress } from "@shared/lib/format";
 import type { StablecoinMeta } from "@shared/types";
 
 type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];
+type ContractInfo = ReturnType<typeof deriveContractInfo>;
+type ContractRowVariant = "compact" | "detail" | "labeled";
 
 function getContractKey(contract: ContractDeployment): string {
   return `${contract.chain}:${contract.address}`;
@@ -206,49 +208,10 @@ function CompactContractRow({
 
   return (
     <div className="flex min-w-0 items-center gap-2 rounded-lg bg-background/45 px-2 py-1.5">
-      {chain?.logoPath ? (
-        <Image
-          src={chain.logoPath}
-          alt=""
-          width={20}
-          height={20}
-          className={`h-5 w-5 shrink-0 rounded-full object-contain${chain.darkInvert ? " dark:invert" : ""}`}
-        />
-      ) : (
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
-          {chainName.charAt(0).toUpperCase()}
-        </span>
-      )}
-      <Link
-        href={`/chains/${contract.chain}/`}
-        className="pharos-focus-ring min-w-0 shrink-0 rounded-sm text-sm font-medium text-foreground hover:underline"
-      >
-        <span className="block max-w-[7rem] truncate">{chainName}</span>
-      </Link>
-      <span className="ml-auto min-w-0 truncate font-mono text-xs text-muted-foreground" title={contract.address}>
-        {formatAddress(contract.address)}
-      </span>
-      <button
-        type="button"
-        onClick={() => onCopy(contract.chain, contract.address)}
-        className="pharos-focus-ring relative inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        title="Copy address"
-        aria-label={`Copy ${chainName} contract address`}
-      >
-        <ContractCopyIcons copied={copied} iconClass="h-3 w-3" />
-      </button>
-      {explorerUrl ? (
-        <a
-          href={explorerUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="pharos-focus-ring inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          title={`View on ${chainName} explorer`}
-          aria-label={`View ${chainName} contract on explorer`}
-        >
-          <ExternalLink className="h-3 w-3" aria-hidden="true" />
-        </a>
-      ) : null}
+      <ContractChainIdentity contract={contract} chain={chain} chainName={chainName} variant="compact" />
+      <ContractAddress address={contract.address} variant="compact" />
+      <ContractCopyAction contract={contract} chainName={chainName} copied={copied} onCopy={onCopy} variant="compact" />
+      <ContractExplorerAction chain={chain} chainName={chainName} explorerUrl={explorerUrl} variant="compact" />
     </div>
   );
 }
@@ -291,37 +254,12 @@ function ContractDetailRow({
           {label ? (
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
           ) : null}
-          <Link
-            href={`/chains/${contract.chain}/`}
-            className="pharos-focus-ring mt-0.5 inline-flex max-w-full rounded-sm text-sm font-medium hover:underline"
-          >
-            <span className="truncate">{chainName}</span>
-          </Link>
-          <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{formatAddress(contract.address)}</p>
+          <ContractChainIdentity contract={contract} chain={chain} chainName={chainName} variant="detail" />
+          <ContractAddress address={contract.address} variant="detail" />
         </div>
-        <button
-          type="button"
-          onClick={() => onCopy(contract.chain, contract.address)}
-          className="pharos-focus-ring relative inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
-          title="Copy address"
-          aria-label={`Copy ${chainName} contract address`}
-        >
-          <span className="relative inline-flex h-4 w-4 items-center justify-center">
-            <ContractCopyIcons copied={copied} iconClass="h-4 w-4" />
-          </span>
-        </button>
+        <ContractCopyAction contract={contract} chainName={chainName} copied={copied} onCopy={onCopy} variant="detail" />
       </div>
-      {explorerUrl ? (
-        <a
-          href={explorerUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
-        >
-          View on {chain?.name ? `${chain.name} explorer` : "explorer"}
-          <ExternalLink className="h-3 w-3" />
-        </a>
-      ) : null}
+      <ContractExplorerAction chain={chain} chainName={chainName} explorerUrl={explorerUrl} variant="detail" />
     </div>
   );
 }
@@ -342,50 +280,187 @@ function ContractLabeledRow({
 
   return (
     <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border/40 bg-background/40 py-1 pl-2.5 pr-1">
+      <ContractChainIdentity contract={contract} chain={chain} chainName={chainName} variant="labeled" />
+      <ContractAddress address={contract.address} variant="labeled" />
+      <ContractCopyAction contract={contract} chainName={chainName} copied={copied} onCopy={onCopy} variant="labeled" />
+      <ContractExplorerAction chain={chain} chainName={chainName} explorerUrl={explorerUrl} variant="labeled" />
+    </div>
+  );
+}
+
+function ContractChainIdentity({
+  contract,
+  chain,
+  chainName,
+  variant,
+}: {
+  contract: ContractDeployment;
+  chain: ContractInfo["chain"];
+  chainName: string;
+  variant: ContractRowVariant;
+}) {
+  if (variant === "detail") {
+    return (
+      <Link
+        href={`/chains/${contract.chain}/`}
+        className="pharos-focus-ring mt-0.5 inline-flex max-w-full rounded-sm text-sm font-medium hover:underline"
+      >
+        <span className="truncate">{chainName}</span>
+      </Link>
+    );
+  }
+
+  const isCompact = variant === "compact";
+
+  return (
+    <>
       {chain?.logoPath ? (
         <Image
           src={chain.logoPath}
           alt=""
-          width={18}
-          height={18}
-          className={`h-[18px] w-[18px] shrink-0 rounded-full object-contain${chain.darkInvert ? " dark:invert" : ""}`}
+          width={isCompact ? 20 : 18}
+          height={isCompact ? 20 : 18}
+          className={
+            isCompact
+              ? `h-5 w-5 shrink-0 rounded-full object-contain${chain.darkInvert ? " dark:invert" : ""}`
+              : `h-[18px] w-[18px] shrink-0 rounded-full object-contain${chain.darkInvert ? " dark:invert" : ""}`
+          }
         />
       ) : (
-        <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
+        <span
+          className={
+            isCompact
+              ? "flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground"
+              : "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground"
+          }
+        >
           {chainName.charAt(0).toUpperCase()}
         </span>
       )}
       <Link
         href={`/chains/${contract.chain}/`}
-        className="pharos-focus-ring min-w-0 shrink-0 rounded-sm text-sm font-medium hover:underline"
+        className={
+          isCompact
+            ? "pharos-focus-ring min-w-0 shrink-0 rounded-sm text-sm font-medium text-foreground hover:underline"
+            : "pharos-focus-ring min-w-0 shrink-0 rounded-sm text-sm font-medium hover:underline"
+        }
       >
-        <span className="block max-w-[9rem] truncate">{chainName}</span>
+        <span className={isCompact ? "block max-w-[7rem] truncate" : "block max-w-[9rem] truncate"}>{chainName}</span>
       </Link>
-      <span className="ml-auto truncate font-mono text-xs text-muted-foreground" title={contract.address}>
-        {formatAddress(contract.address)}
-      </span>
+    </>
+  );
+}
+
+function ContractAddress({ address, variant }: { address: string; variant: ContractRowVariant }) {
+  if (variant === "detail") {
+    return <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{formatAddress(address)}</p>;
+  }
+
+  return variant === "compact" ? (
+    <span className="ml-auto min-w-0 truncate font-mono text-xs text-muted-foreground" title={address}>
+      {formatAddress(address)}
+    </span>
+  ) : (
+    <span className="ml-auto truncate font-mono text-xs text-muted-foreground" title={address}>
+      {formatAddress(address)}
+    </span>
+  );
+}
+
+function ContractCopyAction({
+  contract,
+  chainName,
+  copied,
+  onCopy,
+  variant,
+}: {
+  contract: ContractDeployment;
+  chainName: string;
+  copied: boolean;
+  onCopy: (chain: string, address: string) => void;
+  variant: ContractRowVariant;
+}) {
+  const onClick = () => onCopy(contract.chain, contract.address);
+
+  if (variant === "detail") {
+    return (
       <button
         type="button"
-        onClick={() => onCopy(contract.chain, contract.address)}
-        className="pharos-focus-ring relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+        onClick={onClick}
+        className="pharos-focus-ring relative inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
         title="Copy address"
         aria-label={`Copy ${chainName} contract address`}
       >
-        <ContractCopyIcons copied={copied} iconClass="h-3.5 w-3.5" />
+        <span className="relative inline-flex h-4 w-4 items-center justify-center">
+          <ContractCopyIcons copied={copied} iconClass="h-4 w-4" />
+        </span>
       </button>
-      {explorerUrl ? (
-        <a
-          href={explorerUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="pharos-focus-ring inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
-          title={`View on ${chainName} explorer`}
-          aria-label={`View ${chainName} contract on explorer`}
-        >
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-        </a>
-      ) : null}
-    </div>
+    );
+  }
+
+  const isCompact = variant === "compact";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        isCompact
+          ? "pharos-focus-ring relative inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          : "pharos-focus-ring relative inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+      }
+      title="Copy address"
+      aria-label={`Copy ${chainName} contract address`}
+    >
+      <ContractCopyIcons copied={copied} iconClass={isCompact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+    </button>
+  );
+}
+
+function ContractExplorerAction({
+  chain,
+  chainName,
+  explorerUrl,
+  variant,
+}: {
+  chain: ContractInfo["chain"];
+  chainName: string;
+  explorerUrl: string | null;
+  variant: ContractRowVariant;
+}) {
+  if (!explorerUrl) return null;
+
+  if (variant === "detail") {
+    return (
+      <a
+        href={explorerUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="pharos-focus-ring mt-2 inline-flex min-h-10 items-center gap-1 rounded-md text-xs text-frost-blue hover:underline"
+      >
+        View on {chain?.name ? `${chain.name} explorer` : "explorer"}
+        <ExternalLink className="h-3 w-3" />
+      </a>
+    );
+  }
+
+  const isCompact = variant === "compact";
+
+  return (
+    <a
+      href={explorerUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={
+        isCompact
+          ? "pharos-focus-ring inline-flex size-6 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          : "pharos-focus-ring inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+      }
+      title={`View on ${chainName} explorer`}
+      aria-label={`View ${chainName} contract on explorer`}
+    >
+      <ExternalLink className={isCompact ? "h-3 w-3" : "h-3.5 w-3.5"} aria-hidden="true" />
+    </a>
   );
 }
 
