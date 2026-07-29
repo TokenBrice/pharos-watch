@@ -657,6 +657,28 @@ function attributionGroups(
     }));
 }
 
+/**
+ * The causal split on its own, without building every pillar breakdown. The
+ * summary rail renders the score-construction module beside the card and only
+ * needs this slice; running the full presentation twice per page would rebuild
+ * all three pillar breakdowns for nothing.
+ */
+export interface StablecoinSafetyScoreV9Attribution {
+  /** Measured and found adverse. Always self-attributed, so ungrouped. */
+  adverseMessages: string[];
+  /** Unresolved facts, grouped by whose gap they are. */
+  boundedGroups: StablecoinSafetyScoreV9AttributionGroup[];
+}
+
+export function buildSafetyScoreV9Attribution(
+  card: StablecoinSafetyScoreV9Card,
+): StablecoinSafetyScoreV9Attribution {
+  return {
+    adverseMessages: uniqueMessages(card.scoreTrace.adverseAttribution.items.map((item) => item.message)),
+    boundedGroups: attributionGroups(card.scoreTrace.boundedUncertaintyAttribution.items),
+  };
+}
+
 export interface StablecoinSafetyScoreV9Presentation {
   accessRows: Array<{ key: string; label: string; value: string }>;
   /** Measured and found adverse. Always self-attributed, so ungrouped. */
@@ -685,10 +707,7 @@ export function buildStablecoinSafetyScoreV9Presentation(
 ): StablecoinSafetyScoreV9Presentation {
   return {
     traceParts: traceParts(card),
-    adverseMessages: uniqueMessages(
-      card.scoreTrace.adverseAttribution.items.map((item) => item.message),
-    ),
-    boundedGroups: attributionGroups(card.scoreTrace.boundedUncertaintyAttribution.items),
+    ...buildSafetyScoreV9Attribution(card),
     pillars: PILLARS.map(([key, label]) => {
       const pillar = card.pillars[key];
       const evidenceSummary = isUnknown(pillar.freshness)

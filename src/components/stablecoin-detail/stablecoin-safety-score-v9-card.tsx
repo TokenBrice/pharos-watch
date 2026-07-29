@@ -6,7 +6,6 @@ import {
   Award,
   ChevronDown,
   History,
-  ScanSearch,
   ShieldCheck,
   Table2,
 } from "lucide-react";
@@ -19,6 +18,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { scoreToV9Grade } from "@shared/types/safety-score-v9-grade";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
+import { ScoreConstructionPanel } from "@/components/stablecoin-detail/score-construction-panel";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { MethodologyHint } from "@/components/methodology-hint";
@@ -31,6 +31,7 @@ import {
   humanizeSafetyScoreV9Value,
   type StablecoinSafetyScoreV9Presentation,
 } from "@/lib/stablecoin-safety-score-v9-presentation";
+import type { TransferReviewView } from "@/lib/transfer-review";
 import { cn } from "@/lib/utils";
 
 const HEADER_ICON_BUTTON_CLASS =
@@ -261,6 +262,37 @@ function PillarBreakdownDetails({
     breakdown.evaluatedScore !== null &&
     breakdown.publishedScore !== null &&
     Math.abs(breakdown.evaluatedScore - breakdown.publishedScore) >= 0.05;
+  const contextRowCount = breakdown.context.length + (scoreChanged ? 1 : 0);
+  // The exit pillar's route measurements run to six rows of long key/value
+  // prose inside an already-nested disclosure. Past two rows the grid is the
+  // densest thing on the card, so it collapses; short contexts stay inline.
+  const collapseContext = contextRowCount > 2;
+  const contextList = (
+    <>
+      <dl className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+        {breakdown.context.map((item) => (
+          <div key={item.key} className="flex min-w-0 items-baseline justify-between gap-3">
+            <dt className="min-w-0 break-words text-[10px] text-muted-foreground">{item.label}</dt>
+            <dd className="min-w-0 break-words text-right font-mono text-[10px] text-foreground">{item.value}</dd>
+          </div>
+        ))}
+        {scoreChanged ? (
+          <div className="flex min-w-0 items-baseline justify-between gap-3">
+            <dt className="min-w-0 break-words text-[10px] text-muted-foreground">Evaluator to published</dt>
+            <dd className="shrink-0 text-right font-mono text-[10px] text-foreground">
+              {breakdown.evaluatedScore!.toFixed(1)} to {breakdown.publishedScore!.toFixed(1)}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+      {breakdown.sectionLabel === "Route components" ? (
+        <p className="mt-2 text-[9px] leading-snug text-muted-foreground">
+          Route capacity is specific to the selected executable path. Exchange-wide volume,
+          aggregate DEX TVL, and issuer reserves do not prove the same executable amount.
+        </p>
+      ) : null}
+    </>
+  );
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -274,30 +306,18 @@ function PillarBreakdownDetails({
         ) : null}
       </div>
 
-      {breakdown.context.length > 0 || scoreChanged ? (
-        <dl className="mt-2 grid gap-x-4 gap-y-1 border-y border-border/30 py-2 sm:grid-cols-2">
-          {breakdown.context.map((item) => (
-            <div key={item.key} className="flex min-w-0 items-baseline justify-between gap-3">
-              <dt className="truncate text-[10px] text-muted-foreground">{item.label}</dt>
-              <dd className="min-w-0 break-words text-right font-mono text-[10px] text-foreground">{item.value}</dd>
-            </div>
-          ))}
-          {scoreChanged ? (
-            <div className="flex min-w-0 items-baseline justify-between gap-3">
-              <dt className="truncate text-[10px] text-muted-foreground">Evaluator to published</dt>
-              <dd className="shrink-0 text-right font-mono text-[10px] text-foreground">
-                {breakdown.evaluatedScore!.toFixed(1)} to {breakdown.publishedScore!.toFixed(1)}
-              </dd>
-            </div>
-          ) : null}
-        </dl>
-      ) : null}
-
-      {breakdown.sectionLabel === "Route components" ? (
-        <p className="mt-2 text-[9px] leading-snug text-muted-foreground">
-          Route capacity is specific to the selected executable path. Exchange-wide volume,
-          aggregate DEX TVL, and issuer reserves do not prove the same executable amount.
-        </p>
+      {contextRowCount > 0 ? (
+        collapseContext ? (
+          <details className="group mt-2 border-y border-border/30 py-1.5">
+            <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[10px] font-medium text-muted-foreground marker:content-none">
+              <span>Measurement detail ({contextRowCount})</span>
+              <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <div className="pt-2">{contextList}</div>
+          </details>
+        ) : (
+          <div className="mt-2 border-y border-border/30 py-2">{contextList}</div>
+        )
       ) : null}
 
       <div className="mt-2.5 space-y-4">
@@ -429,19 +449,14 @@ function PillarRow({
             aria-hidden="true"
           />
         </span>
-        <span className="mt-2 grid grid-cols-[6.75rem_minmax(0,1fr)_2.25rem] items-center gap-2.5">
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-            Pillar score
-          </span>
-          <span className="h-2.5 overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]">
-            <span
-              className={cn("block h-full rounded-[2px]", pillar.score === null ? "bg-muted-foreground/25" : "bg-neutral-500 dark:bg-[#858585]")}
-              style={{ width: `${pillar.score ?? 0}%` }}
-            />
-          </span>
-          <span className="text-right font-mono text-[10px] tabular-nums text-muted-foreground">
-            {pillar.score === null ? "—" : pillar.score.toFixed(0)}
-          </span>
+        <span
+          className="mt-2 block h-2.5 overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]"
+          aria-hidden="true"
+        >
+          <span
+            className={cn("block h-full rounded-[2px]", pillar.score === null ? "bg-muted-foreground/25" : "bg-neutral-500 dark:bg-[#858585]")}
+            style={{ width: `${pillar.score ?? 0}%` }}
+          />
         </span>
       </button>
       {hasDetails && open ? (
@@ -513,64 +528,6 @@ function CapSection({ card }: { card: StablecoinSafetyScoreV9DisplayCard }) {
   );
 }
 
-/**
- * The causal split V9 computes but the card never showed: what was measured and
- * found adverse, versus what stayed unresolved and whose gap that is. The
- * second list names Pharos's own gaps as ours rather than hiding them behind a
- * neutral "not measured".
- */
-function WhyNotHigher({
-  card,
-  presentation,
-}: {
-  card: StablecoinSafetyScoreV9DisplayCard;
-  presentation: StablecoinSafetyScoreV9Presentation;
-}) {
-  const { adverseMessages, boundedGroups } = presentation;
-  if (adverseMessages.length === 0 && boundedGroups.length === 0) return null;
-  return (
-    <section className="border-b border-border/40 pb-3" aria-labelledby={`${card.id}-v9-why`}>
-      <div className="flex items-center gap-2">
-        <ScanSearch className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-        <h3 id={`${card.id}-v9-why`} className="text-sm font-semibold">Why not higher</h3>
-      </div>
-
-      {adverseMessages.length > 0 ? (
-        <div className="mt-2">
-          <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-            Measured and adverse
-          </p>
-          <ul className="mt-1 space-y-1 text-xs leading-relaxed text-muted-foreground">
-            {adverseMessages.map((message) => <li key={message}>{message}</li>)}
-          </ul>
-        </div>
-      ) : null}
-
-      {boundedGroups.length > 0 ? (
-        <div className="mt-3">
-          <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-            Unresolved evidence
-          </p>
-          <dl className="mt-1 space-y-2">
-            {boundedGroups.map((group) => (
-              <div key={group.key}>
-                <dt className="text-xs font-medium text-foreground/85">
-                  {group.label} ({group.messages.length})
-                </dt>
-                <dd>
-                  <ul className="mt-0.5 space-y-1 text-xs leading-relaxed text-muted-foreground">
-                    {group.messages.map((message) => <li key={message}>{message}</li>)}
-                  </ul>
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
 export interface StablecoinSafetyScoreV9CardProps {
   card: StablecoinSafetyScoreV9DisplayCard;
   identity: ReportCardsV9Response["safetyScoreIdentity"];
@@ -578,6 +535,7 @@ export interface StablecoinSafetyScoreV9CardProps {
   updatedAtMs: number | null;
   stablecoinName?: string;
   rightColumn?: ReactNode;
+  transferReview?: TransferReviewView | null;
 }
 
 export function StablecoinSafetyScoreV9Card({
@@ -587,6 +545,7 @@ export function StablecoinSafetyScoreV9Card({
   updatedAtMs,
   stablecoinName,
   rightColumn,
+  transferReview = null,
 }: StablecoinSafetyScoreV9CardProps) {
   const presentation = buildStablecoinSafetyScoreV9Presentation(card);
   const hasRightColumn = rightColumn !== null && rightColumn !== undefined;
@@ -611,12 +570,7 @@ export function StablecoinSafetyScoreV9Card({
           )}
         </div>
         <p className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
-          {[...presentation.traceParts, presentation.evidenceSummary].map((part, index) => (
-            <span key={part}>
-              {index > 0 ? <span className="mr-2" aria-hidden="true">·</span> : null}
-              {part}
-            </span>
-          ))}
+          <span>{presentation.evidenceSummary}</span>
         </p>
       </div>
 
@@ -628,7 +582,7 @@ export function StablecoinSafetyScoreV9Card({
 
       <ScoreAdjustment card={card} />
       <CapSection card={card} />
-      <WhyNotHigher card={card} presentation={presentation} />
+      <ScoreConstructionPanel card={card} />
       {presentation.primaryReasons.length > 0 ? (
         <section className="border-b border-border/40 pb-3" aria-labelledby={`${card.id}-v9-reasons`}>
           <h3 id={`${card.id}-v9-reasons`} className="text-sm font-semibold">Rating notes</h3>
@@ -637,7 +591,7 @@ export function StablecoinSafetyScoreV9Card({
           </ul>
         </section>
       ) : null}
-      <AccessPosturePanel rows={presentation.accessRows} />
+      <AccessPosturePanel rows={presentation.accessRows} review={transferReview} />
     </div>
   );
 

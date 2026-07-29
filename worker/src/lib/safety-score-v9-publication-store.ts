@@ -33,7 +33,22 @@ const V9AssetQuarantineSchema = z
   })
   .strict();
 
-export const V9PublicationAttemptSchema = z
+const V9PublicationAttemptFailureSchema = z
+  .object({
+    stage: z.enum([
+      "base-input",
+      "v9-enrichment",
+      "compile",
+      "publication-gate",
+      "publication-write",
+      "aborted",
+    ]),
+    code: z.string().min(1).max(160),
+    message: z.string().min(1).max(500),
+  })
+  .strict();
+
+const V9PublicationAttemptSchema = z
   .object({
     schemaVersion: z.literal(1),
     attemptedAtSec: z.number().int().nonnegative(),
@@ -46,6 +61,7 @@ export const V9PublicationAttemptSchema = z
     publicationGenerationId: z.string().min(1).nullable(),
     quarantines: z.array(V9AssetQuarantineSchema),
     affectedAssetIds: z.array(z.string().min(1)),
+    failure: V9PublicationAttemptFailureSchema.optional(),
   })
   .strict()
   .superRefine((attempt, ctx) => {
@@ -110,6 +126,13 @@ export const V9PublicationAttemptSchema = z
         code: "custom",
         path: ["affectedAssetIds"],
         message: "A partial publication requires affected assets",
+      });
+    }
+    if ((attempt.outcome === "failed") !== (attempt.failure !== undefined)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["failure"],
+        message: "Only failed attempts must carry failure metadata",
       });
     }
   });
@@ -223,11 +246,15 @@ export interface PersistSafetyScoreV9PublicationInput {
   signal?: AbortSignal;
 }
 
-export async function persistSafetyScoreV9Publication(
-  db: D1Database,
-  input: PersistSafetyScoreV9PublicationInput,
-): Promise<void> {
-  throwIfAborted(input.signal);
+export interface PersistSafetyScoreV9PublicationAttemptInput {
+  publicationAttempt: V9PublicationAttempt;
+  publicationClockSec: number;
+  signal?: AbortSignal;
+}
+
+function validatePublicationAttemptInput(
+  input: PersistSafetyScoreV9PublicationAttemptInput,
+): V9PublicationAttempt {
   if (
     !Number.isInteger(input.publicationClockSec) ||
     input.publicationClockSec < 0
@@ -236,6 +263,74 @@ export async function persistSafetyScoreV9Publication(
       "Safety Score v9 publication clock must be non-negative epoch seconds",
     );
   }
+  const attempt = V9PublicationAttemptSchema.parse(
+    input.publicationAttempt,
+  );
+  if (attempt.attemptedAtSec !== input.publicationClockSec) {
+    throw new Error(
+      "Safety Score v9 publication attempt does not match its attempt clock",
+    );
+  }
+  return attempt;
+}
+
+export async function persistSafetyScoreV9PublicationAttempt(
+  db: D1Database,
+  input: PersistSafetyScoreV9PublicationAttemptInput,
+): Promise<void> {
+  throwIfAborted(input.signal);
+  const attempt = validatePublicationAttemptInput(input);
+  const attemptValue = stableJsonStringifyV1(attempt);
+  const existingAttempt = await loadSafetyScoreV9PublicationAttempt(
+    db,
+    input.signal,
+  );
+  if (
+    existingAttempt !== null &&
+    stableJsonStringifyV1(existingAttempt) !== attemptValue &&
+    attempt.attemptedAtSec <= existingAttempt.attemptedAtSec
+  ) {
+    throw new SafetyScoreV9PublicationConflictError(
+      "Stale or conflicting Safety Score v9 publication attempt update",
+    );
+  }
+  await executeAtomicBatch(
+    db,
+    [
+      db
+        .prepare(
+          `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+           ON CONFLICT(key) DO UPDATE SET
+             value = CASE
+               WHEN cache.updated_at < excluded.updated_at
+                 OR (cache.updated_at = excluded.updated_at AND cache.value = excluded.value)
+               THEN excluded.value
+               ELSE NULL
+             END,
+             updated_at = CASE
+               WHEN cache.updated_at < excluded.updated_at
+                 OR (cache.updated_at = excluded.updated_at AND cache.value = excluded.value)
+               THEN excluded.updated_at
+               ELSE -1
+             END`,
+        )
+        .bind(
+          SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
+          attemptValue,
+          input.publicationClockSec,
+        ),
+    ],
+    { signal: input.signal },
+  );
+  throwIfAborted(input.signal);
+}
+
+export async function persistSafetyScoreV9Publication(
+  db: D1Database,
+  input: PersistSafetyScoreV9PublicationInput,
+): Promise<void> {
+  throwIfAborted(input.signal);
+  validatePublicationAttemptInput(input);
   const health = V9PublicationHealthSchema.parse(input.publicationHealth);
   const attempt = V9PublicationAttemptSchema.parse(
     input.publicationAttempt,

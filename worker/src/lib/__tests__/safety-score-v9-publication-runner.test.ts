@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   loadHealth: vi.fn(),
   loadPublication: vi.fn(),
   persist: vi.fn(),
+  persistAttempt: vi.fn(),
 }));
 
 vi.mock("../safety-score-v9-candidate", () => ({
@@ -23,6 +24,7 @@ vi.mock("../safety-score-v9-publication-store", () => ({
   loadSafetyScoreV9Publication: mocks.loadPublication,
   loadSafetyScoreV9PublicationHealth: mocks.loadHealth,
   persistSafetyScoreV9Publication: mocks.persist,
+  persistSafetyScoreV9PublicationAttempt: mocks.persistAttempt,
 }));
 
 const { runSafetyScoreV9Publication } = await import(
@@ -51,6 +53,7 @@ describe("Safety Score V9 publication runner", () => {
     mocks.loadHealth.mockReset().mockResolvedValue(null);
     mocks.loadPublication.mockReset().mockResolvedValue(null);
     mocks.persist.mockReset().mockResolvedValue(undefined);
+    mocks.persistAttempt.mockReset().mockResolvedValue(undefined);
   });
 
   it("publishes an accepted canonical candidate", async () => {
@@ -138,5 +141,164 @@ describe("Safety Score V9 publication runner", () => {
         }),
       }),
     );
+  });
+
+  it("fails before mutation when the override clock is invalid", async () => {
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+      nowSec: -1,
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      stage: "base-input",
+      code: "safety-score-v9-publication-base-input-Error",
+    });
+    expect(mocks.build).not.toHaveBeenCalled();
+    expect(mocks.persist).not.toHaveBeenCalled();
+    expect(mocks.persistAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        publicationClockSec: expect.any(Number),
+        publicationAttempt: expect.objectContaining({
+          outcome: "failed",
+          publicationGenerationId: null,
+          failure: expect.objectContaining({
+            stage: "base-input",
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("fails when preparation mutates the authoritative base input", async () => {
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+      prepareFixedInput: async (input) => ({
+        ...input,
+        sourceGeneration: "mutated-source-generation",
+      }),
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      stage: "v9-enrichment",
+    });
+    expect(mocks.build).not.toHaveBeenCalled();
+    expect(mocks.persistAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        publicationClockSec: fixedInput.clockSec,
+        publicationAttempt: expect.objectContaining({
+          attemptedAtSec: fixedInput.clockSec,
+          outcome: "failed",
+          failure: expect.objectContaining({
+            stage: "v9-enrichment",
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("records a failed attempt when compilation fails", async () => {
+    mocks.build.mockImplementation(() => {
+      throw new Error("compiler fixture failure");
+    });
+
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      stage: "compile",
+      message: "compiler fixture failure",
+    });
+    expect(mocks.persistAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        publicationClockSec: fixedInput.clockSec,
+        publicationAttempt: expect.objectContaining({
+          outcome: "failed",
+          failure: expect.objectContaining({
+            stage: "compile",
+            message: "compiler fixture failure",
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("holds when publication assessment loading fails", async () => {
+    mocks.loadPublication.mockRejectedValue(new Error("read failed"));
+
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+    });
+
+    expect(result).toMatchObject({
+      status: "held",
+      reasons: [expect.objectContaining({ code: "assessment-failed" })],
+    });
+    expect(mocks.persist).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        publicationAttempt: expect.objectContaining({
+          outcome: "held",
+        }),
+      }),
+    );
+    expect(mocks.persistAttempt).not.toHaveBeenCalled();
+  });
+
+  it("records a failed attempt when publication writing fails", async () => {
+    mocks.persist.mockRejectedValue(new Error("write failed"));
+
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      stage: "publication-write",
+      message: "write failed",
+    });
+    expect(mocks.persistAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        publicationAttempt: expect.objectContaining({
+          outcome: "failed",
+          failure: expect.objectContaining({
+            stage: "publication-write",
+            message: "write failed",
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("returns an aborted failure without attempting a follow-up ledger write", async () => {
+    const controller = new AbortController();
+    controller.abort(new DOMException("cancelled", "AbortError"));
+
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+      signal: controller.signal,
+      prepareFixedInput: async (_input, signal) => {
+        throw signal.reason;
+      },
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      stage: "aborted",
+    });
+    expect(mocks.persistAttempt).not.toHaveBeenCalled();
   });
 });

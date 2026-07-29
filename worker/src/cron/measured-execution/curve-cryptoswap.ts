@@ -1,7 +1,6 @@
 import { decodeFunctionData, decodeFunctionResult, encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 
 import {
-  DEX_MEASURED_MAX_COST_BPS,
   buildDexMeasuredExecutionTargetId,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
@@ -23,10 +22,8 @@ import {
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
 import { forEachWithConcurrency } from "./concurrency";
-import {
-  rawAmountToUsdOrNull as rawAmountToUsd,
-  usdToRawAmount,
-} from "./fixed-point";
+import { usdToRawAmount } from "./fixed-point";
+import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
 
 const CURVE_CRYPTOSWAP_ABI = parseAbi(["function get_dy(uint256 i,uint256 j,uint256 dx) view returns (uint256)"]);
 const CURVE_CRYPTOSWAP_DEPENDENCY_ABI = parseAbi([
@@ -626,43 +623,23 @@ export function decodeCurveCryptoSwapQuotePoint(
   >,
   result: EvmMulticall3Result,
 ): { point?: DexMeasuredRawQuotePoint; failureReason?: CurveCryptoSwapQuoteFailure } {
-  if (!result.success) return { failureReason: "pool-revert" };
-  const amountOutRaw = decodeCurveCryptoSwapGetDy(result.returnData);
-  if (amountOutRaw == null) return { failureReason: "malformed-pool-return" };
-  const inputUsd = rawAmountToUsd(
-    request.amountInRaw,
-    request.target.tokenIn.decimals,
-    request.target.tokenIn.referencePriceUsd,
-  );
-  const outputUsd = rawAmountToUsd(
-    amountOutRaw,
-    request.target.tokenOut.decimals,
-    request.target.tokenOut.referencePriceUsd,
-  );
-  if (inputUsd == null || inputUsd <= 0 || outputUsd == null) {
-    return { failureReason: "malformed-pool-return" };
-  }
-  const costBps = Math.max(0, (1 - outputUsd / inputUsd) * 10_000);
-  return {
-    point: {
-      amountInRaw: request.amountInRaw.toString(),
-      amountOutRaw: amountOutRaw.toString(),
-      callData: request.callData,
-      returnData: result.returnData.toLowerCase() as `0x${string}`,
-      inputUsd,
-      outputUsd,
-      costBps,
-      passesCostBound: costBps <= DEX_MEASURED_MAX_COST_BPS,
-      adapterMetadata: {
-        executionPool: request.endpointAddress,
-        blockNumber: request.blockNumber,
-        inputIndex: request.inputIndex,
-        outputIndex: request.outputIndex,
-        generation: request.policy.generation,
-        shadow: true,
-      },
+  return decodeCurveMeasuredRawQuotePoint({
+    request,
+    result,
+    decodeAmountOutRaw: decodeCurveCryptoSwapGetDy,
+    adapterMetadata: {
+      executionPool: request.endpointAddress,
+      blockNumber: request.blockNumber,
+      inputIndex: request.inputIndex,
+      outputIndex: request.outputIndex,
+      generation: request.policy.generation,
+      shadow: true,
     },
-  };
+    failureReasons: {
+      poolRevert: "pool-revert",
+      malformedPoolReturn: "malformed-pool-return",
+    },
+  });
 }
 
 export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwapQuoteDependencies) {

@@ -1,6 +1,7 @@
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import type { ExitRouteObservationCoverage } from "@shared/types/market";
 import type { ContractDeployment } from "@shared/types/core";
+import { tryParseJson } from "../../lib/json-parse";
 import { DISCOVERY_TIERS } from "../dex-discovery/types";
 
 const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.8";
@@ -73,20 +74,16 @@ function increment(
 }
 
 function parseProviderCount(raw: string): number | null {
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) &&
-      new Set(parsed).size === parsed.length &&
-      parsed.every(
-        (provider) =>
-          typeof provider === "string" &&
-          DEX_DISCOVERY_PROVIDER_IDS.has(provider),
-      )
-      ? parsed.length
-      : null;
-  } catch {
-    return null;
-  }
+  const parsed = tryParseJson(raw, "dex deployment census provider set");
+  return Array.isArray(parsed) &&
+    new Set(parsed).size === parsed.length &&
+    parsed.every(
+      (provider) =>
+        typeof provider === "string" &&
+        DEX_DISCOVERY_PROVIDER_IDS.has(provider),
+    )
+    ? parsed.length
+    : null;
 }
 
 function buildCoverage(

@@ -7,6 +7,14 @@ import type { DexExecutionCapabilityGate } from "@shared/types/market";
 import type { PoolEntry } from "../dex-liquidity/types";
 import { loadLatestPublishedSolanaMeasuredQuoteEvidence, type LoadedSolanaMeasuredQuoteEvidence } from "./persistence";
 import {
+  createNativeMeasuredExecutionJoinDiagnostics,
+  mapNativeMeasuredExecutionValidationGate,
+  promoteNativeMeasuredExecutionProfile,
+  recordNativeMeasuredExecutionFailure,
+  resetNativeMeasuredExecutionJoinFields,
+  type NativeMeasuredExecutionJoinDiagnostics,
+} from "./native-join";
+import {
   getSolanaMeasuredExecutionAdapterByProfile,
   getSolanaMeasuredExecutionPriorityTarget,
   isSolanaMeasuredExecutionPriorityTargetScoreEligible,
@@ -15,14 +23,8 @@ import {
 import { quoteRaydiumClmmSingleSegment } from "./solana-clmm-math";
 import { RAYDIUM_CLMM_PROGRAM_ID } from "./solana-quotes";
 
-export interface SolanaMeasuredExecutionJoinDiagnostics {
-  targetCount: number;
-  measuredCount: number;
-  gatedCount: number;
-  failuresByReason: Record<string, number>;
+export interface SolanaMeasuredExecutionJoinDiagnostics extends NativeMeasuredExecutionJoinDiagnostics {
   lastKnownGoodCount: number;
-  quoteGenerationId: string | null;
-  targetGenerationId: string | null;
 }
 
 function hasRequiredRaydiumOnStateProof(
@@ -58,14 +60,6 @@ function hasRequiredRaydiumOnStateProof(
   });
 }
 
-function gate(reason: DexExecutionCapabilityGate["reason"]): DexExecutionCapabilityGate {
-  return { family: "measured-execution", reason };
-}
-
-function increment(record: Record<string, number>, reason: string): void {
-  record[reason] = (record[reason] ?? 0) + 1;
-}
-
 export async function loadSolanaMeasuredExecutionJoinEvidence(
   db: D1Database,
   signal?: AbortSignal,
@@ -77,12 +71,6 @@ export async function loadSolanaMeasuredExecutionJoinEvidence(
   }
 }
 
-function mapValidationGate(issues: readonly string[]): DexExecutionCapabilityGate["reason"] {
-  if (issues.includes("stale-observation")) return "stale-observation";
-  if (issues.some((issue) => issue.includes("generation-mismatch"))) return "generation-mismatch";
-  return "invalid-observation";
-}
-
 export function joinSolanaMeasuredExecutionEvidence(input: {
   poolsByStablecoin: Map<string, PoolEntry[]>;
   evidence: LoadedSolanaMeasuredQuoteEvidence | null;
@@ -90,34 +78,24 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
   resolveAdapterPolicy?: (adapterProfileId: string) => SolanaMeasuredExecutionAdapterRegistration | null;
 }): SolanaMeasuredExecutionJoinDiagnostics {
   const diagnostics: SolanaMeasuredExecutionJoinDiagnostics = {
-    targetCount: 0,
-    measuredCount: 0,
-    gatedCount: 0,
-    failuresByReason: {},
+    ...createNativeMeasuredExecutionJoinDiagnostics(input.evidence),
     lastKnownGoodCount: 0,
-    quoteGenerationId: input.evidence?.quoteGenerationId ?? null,
-    targetGenerationId: input.evidence?.targetGenerationId ?? null,
   };
   for (const pools of input.poolsByStablecoin.values()) {
     for (const pool of pools) {
       const target = pool.extra?.solanaMeasuredExecutionTarget;
       if (!target) continue;
       diagnostics.targetCount++;
-      pool.extra = { ...(pool.extra ?? {}) };
-      delete pool.extra.solanaMeasuredExecution;
-      delete pool.extra.solanaMeasuredExecutionProfile;
-      pool.extra.solanaMeasuredExecutionPhysicalPoolId = target.poolId;
-      delete pool.extra.nativeMeasuredExecution;
-      delete pool.extra.nativeMeasuredExecutionPhysicalPoolId;
+      const extra = resetNativeMeasuredExecutionJoinFields(pool, "solana", target);
       const fail = (reason: DexExecutionCapabilityGate["reason"], detail?: string) => {
-        pool.extra!.executionCapabilityGate = gate(reason);
-        pool.extra!.solanaMeasuredExecutionDiagnostic = {
-          adapterProfileId: target.adapterProfileId,
-          targetId: target.targetId,
-          ...(detail ? { detail: detail.slice(0, 300) } : {}),
-        };
-        diagnostics.gatedCount++;
-        increment(diagnostics.failuresByReason, `${target.adapterProfileId}:${reason}`);
+        recordNativeMeasuredExecutionFailure({
+          pool,
+          kind: "solana",
+          target,
+          diagnostics,
+          reason,
+          detail,
+        });
       };
       if (!input.evidence) {
         fail("quote-missing");
@@ -148,11 +126,11 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
         nowSec: input.nowSec,
       });
       if (issues.length > 0) {
-        fail(mapValidationGate(issues), issues.join(","));
+        fail(mapNativeMeasuredExecutionValidationGate(issues), issues.join(","));
         continue;
       }
       const publicProfile = toSolanaMeasuredExecutionPublicProfile(quote.profile);
-      pool.extra.solanaMeasuredExecution = publicProfile;
+      extra.solanaMeasuredExecution = publicProfile;
       const policy = getSolanaMeasuredExecutionPriorityTarget(target);
       if (!isSolanaMeasuredExecutionPriorityTargetScoreEligible(target)) {
         fail("activation-pending", policy ? "shadow-score-ineligible" : "unratified-target");
@@ -163,18 +141,15 @@ export function joinSolanaMeasuredExecutionEvidence(input: {
         fail("invalid-observation", "raydium-onstate-proof-invalid");
         continue;
       }
-      pool.extra.nativeMeasuredExecution = publicProfile;
-      pool.extra.nativeMeasuredExecutionPhysicalPoolId = target.poolId;
-      if (pool.extra.executionCapabilityGate?.family === "measured-execution") {
-        delete pool.extra.executionCapabilityGate;
-      }
-      pool.extra.solanaMeasuredExecutionDiagnostic = {
-        adapterProfileId: target.adapterProfileId,
-        targetId: target.targetId,
+      promoteNativeMeasuredExecutionProfile({
+        pool,
+        kind: "solana",
+        target,
+        publicProfile,
         ...(quote.resolution === "last-known-good"
           ? { detail: `last-known-good-after:${quote.latestFailureReason ?? "quote-missing"}` }
           : {}),
-      };
+      });
       if (quote.resolution === "last-known-good") diagnostics.lastKnownGoodCount++;
       diagnostics.measuredCount++;
     }

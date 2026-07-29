@@ -1,4 +1,4 @@
-import { canonicalExitRouteAssetKey, canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteChain } from "@shared/lib/exit-route-identity";
 import {
   TRON_MEASURED_TARGET_SCHEMA_VERSION,
   TronMeasuredExecutionTargetSchema,
@@ -8,11 +8,13 @@ import {
 } from "@shared/types/tron-measured-execution";
 import type { DexApiPool, DexApiPoolToken } from "../../lib/dex-api-types";
 import {
-  deriveTokenUsdPrice,
-  getTokenReferenceUsdPrice,
   resolveStablecoinIdForDexApiToken,
 } from "../../lib/dex-api-token-pricing";
 import type { PriceValidationReferences } from "../../lib/price-validation";
+import {
+  buildNativeMeasuredExecutionToken,
+  buildNativeMeasuredPoolDirectionKey,
+} from "./native-inventory";
 import {
   SUNSWAP_V2_FACTORY_ADDRESS,
   SUNSWAP_V2_FACTORY_CODE_HASH,
@@ -21,7 +23,11 @@ import {
 } from "./tron-registry";
 
 export function buildTronMeasuredPoolDirectionKey(stablecoinId: string, poolId: string): string {
-  return `${stablecoinId.trim().toLowerCase()}|${canonicalExitRouteAssetKey("tron", poolId)}`;
+  return buildNativeMeasuredPoolDirectionKey({
+    stablecoinId,
+    chain: "tron",
+    poolId,
+  });
 }
 
 function buildToken(input: {
@@ -33,54 +39,17 @@ function buildToken(input: {
   validationReferences?: PriceValidationReferences;
   stablecoinPriceById?: Map<string, number>;
 }): TronMeasuredExecutionToken | null {
-  const trackedAssetId = resolveStablecoinIdForDexApiToken(
-    "tron",
-    input.token,
-    input.chainAddressToId,
-    input.symbolToChainScopedIds,
-  );
-  const trackedPrice = getTokenReferenceUsdPrice(
-    input.token,
-    "tron",
-    input.chainAddressToId,
-    input.symbolToChainScopedIds,
-    input.validationReferences,
-    input.stablecoinPriceById,
-  );
-  const sourcePrice =
-    input.token.priceUsd != null && Number.isFinite(input.token.priceUsd) && input.token.priceUsd > 0
-      ? input.token.priceUsd
-      : null;
-  const referencePriceUsd = trackedPrice ?? sourcePrice ?? deriveTokenUsdPrice(
-    input.pool,
-    input.tokenIndex,
-    input.chainAddressToId,
-    input.symbolToChainScopedIds,
-    input.validationReferences,
-    input.stablecoinPriceById,
-  );
-  const symbol = input.token.symbol.trim();
-  if (
-    referencePriceUsd == null ||
-    !Number.isFinite(referencePriceUsd) ||
-    referencePriceUsd <= 0 ||
-    !symbol ||
-    !Number.isInteger(input.token.decimals) ||
-    input.token.decimals < 0 ||
-    input.token.decimals > 255
-  ) return null;
-  return {
-    address: input.token.address.trim(),
-    symbol,
-    decimals: input.token.decimals,
-    referencePriceUsd,
-    referencePriceSource: trackedPrice != null
-      ? "tracked"
-      : sourcePrice != null
-        ? "source-token-usd"
-        : "pool-implied",
-    ...(trackedAssetId ? { trackedAssetId } : {}),
-  };
+  return buildNativeMeasuredExecutionToken({
+    chain: "tron",
+    pool: input.pool,
+    token: input.token,
+    tokenIndex: input.tokenIndex,
+    chainAddressToId: input.chainAddressToId,
+    symbolToChainScopedIds: input.symbolToChainScopedIds,
+    validationReferences: input.validationReferences,
+    stablecoinPriceById: input.stablecoinPriceById,
+    allowSourceTokenUsd: true,
+  }) as TronMeasuredExecutionToken | null;
 }
 
 export function buildTronMeasuredExecutionTargets(input: {

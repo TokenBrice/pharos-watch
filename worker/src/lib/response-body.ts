@@ -1,3 +1,5 @@
+import { parseJson } from "./json-parse";
+
 export async function drainResponseBody(response: Response): Promise<void> {
   if (response.bodyUsed || !response.body) {
     return;
@@ -74,26 +76,13 @@ function assertTextWithinLimit(text: string, maxBytes: number): void {
   }
 }
 
-export async function readResponseTextWithinLimitWithSignal(
+async function readResponseTextStreamWithSignal(
   response: Response,
   maxBytes: number,
-  signal?: AbortSignal,
+  signal: AbortSignal | undefined,
+  overflowMode: "throw" | "truncate",
 ): Promise<string> {
-  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
-    throw new RangeError(`maxBytes must be a non-negative safe integer; received ${maxBytes}`);
-  }
-
-  const declaredBytes = declaredResponseLength(response);
-  if (declaredBytes != null && declaredBytes > maxBytes) {
-    await cancelResponseBodyQuietly(response);
-    throw new ResponseBodyTooLargeError(maxBytes, declaredBytes);
-  }
-  if (!response.body) {
-    if (typeof response.text !== "function") return "";
-    const text = await readResponseBodyWithSignal(response, signal, async () => await response.text());
-    assertTextWithinLimit(text, maxBytes);
-    return text;
-  }
+  if (!response.body) return "";
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -128,12 +117,28 @@ export async function readResponseTextWithinLimitWithSignal(
       if (result.done) break;
 
       const chunk = result.value instanceof Uint8Array ? result.value : new Uint8Array(result.value);
-      totalBytes += chunk.byteLength;
-      if (totalBytes > maxBytes) {
-        await reader.cancel().catch(() => undefined);
-        throw new ResponseBodyTooLargeError(maxBytes, totalBytes);
+      if (overflowMode === "throw") {
+        totalBytes += chunk.byteLength;
+        if (totalBytes > maxBytes) {
+          await reader.cancel().catch(() => undefined);
+          throw new ResponseBodyTooLargeError(maxBytes, totalBytes);
+        }
+        text += decoder.decode(chunk, { stream: true });
+        continue;
       }
-      text += decoder.decode(chunk, { stream: true });
+
+      const remaining = maxBytes - totalBytes;
+      if (remaining <= 0) {
+        await reader.cancel().catch(() => undefined);
+        break;
+      }
+      const slice = chunk.byteLength > remaining ? chunk.slice(0, remaining) : chunk;
+      totalBytes += slice.byteLength;
+      text += decoder.decode(slice, { stream: totalBytes < maxBytes });
+      if (chunk.byteLength > remaining || totalBytes >= maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        break;
+      }
     }
 
     if (signal?.aborted) throw abortReason(signal);
@@ -142,6 +147,30 @@ export async function readResponseTextWithinLimitWithSignal(
   } finally {
     if (signal && onAbort) signal.removeEventListener("abort", onAbort);
   }
+}
+
+export async function readResponseTextWithinLimitWithSignal(
+  response: Response,
+  maxBytes: number,
+  signal?: AbortSignal,
+): Promise<string> {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
+    throw new RangeError(`maxBytes must be a non-negative safe integer; received ${maxBytes}`);
+  }
+
+  const declaredBytes = declaredResponseLength(response);
+  if (declaredBytes != null && declaredBytes > maxBytes) {
+    await cancelResponseBodyQuietly(response);
+    throw new ResponseBodyTooLargeError(maxBytes, declaredBytes);
+  }
+  if (!response.body) {
+    if (typeof response.text !== "function") return "";
+    const text = await readResponseBodyWithSignal(response, signal, async () => await response.text());
+    assertTextWithinLimit(text, maxBytes);
+    return text;
+  }
+
+  return await readResponseTextStreamWithSignal(response, maxBytes, signal, "throw");
 }
 
 export async function readResponseJsonWithinLimitWithSignal<TResult = unknown>(
@@ -215,60 +244,5 @@ export async function readResponseTextBoundedWithSignal(
   maxBytes: number,
   signal?: AbortSignal,
 ): Promise<string> {
-  if (!response.body) return "";
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let total = 0;
-  let text = "";
-  let onAbort: (() => void) | null = null;
-  let abortPromise: Promise<never> | null = null;
-
-  if (signal) {
-    if (signal.aborted) {
-      await reader.cancel(abortReason(signal)).catch(() => undefined);
-      throw abortReason(signal);
-    }
-    abortPromise = new Promise<never>((_resolve, reject) => {
-      onAbort = () => {
-        void reader.cancel(abortReason(signal)).catch(() => undefined);
-        reject(abortReason(signal));
-      };
-      signal.addEventListener("abort", onAbort, { once: true });
-    });
-  }
-
-  try {
-    for (;;) {
-      if (signal?.aborted) {
-        throw abortReason(signal);
-      }
-      const result = abortPromise
-        ? await Promise.race([reader.read(), abortPromise])
-        : await reader.read();
-      const { done, value } = result;
-      if (done) break;
-      const chunk = value instanceof Uint8Array ? value : new Uint8Array(value);
-      const remaining = maxBytes - total;
-      if (remaining <= 0) {
-        await reader.cancel();
-        break;
-      }
-      const slice = chunk.byteLength > remaining ? chunk.slice(0, remaining) : chunk;
-      total += slice.byteLength;
-      text += decoder.decode(slice, { stream: total < maxBytes });
-      if (chunk.byteLength > remaining || total >= maxBytes) {
-        await reader.cancel();
-        break;
-      }
-    }
-    if (signal?.aborted) {
-      throw abortReason(signal);
-    }
-    text += decoder.decode();
-    return text;
-  } finally {
-    if (signal && onAbort) signal.removeEventListener("abort", onAbort);
-  }
+  return await readResponseTextStreamWithSignal(response, maxBytes, signal, "truncate");
 }
-import { parseJson } from "./json-parse";

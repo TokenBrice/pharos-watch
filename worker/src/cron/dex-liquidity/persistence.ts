@@ -12,6 +12,7 @@ import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } fro
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { logWorkerEvent } from "../../lib/structured-log";
+import { tryParseJson } from "../../lib/json-parse";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import { toErrorMessage } from "../../lib/error-utils";
 import {
@@ -103,23 +104,23 @@ function parseCurrentDexRouteSet(raw: string | null): {
   coverage: ExitRouteObservationCoverage;
 } | null {
   if (raw === null) return null;
-  try {
-    const parsed = JSON.parse(raw) as {
-      exitRouteObservations?: unknown;
-      exitRouteObservationCoverage?: unknown;
-    };
-    const observations = ExitRouteObservationSchema.array().safeParse(
-      parsed.exitRouteObservations,
-    );
-    const coverage = ExitRouteObservationCoverageSchema.safeParse(
-      parsed.exitRouteObservationCoverage,
-    );
-    return observations.success && coverage.success
-      ? { observations: observations.data, coverage: coverage.data }
-      : null;
-  } catch {
+  const parsed = tryParseJson(raw, "dex liquidity previous route set");
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
     return null;
   }
+  const parsedRouteSet = parsed as {
+    exitRouteObservations?: unknown;
+    exitRouteObservationCoverage?: unknown;
+  };
+  const observations = ExitRouteObservationSchema.array().safeParse(
+    parsedRouteSet.exitRouteObservations,
+  );
+  const coverage = ExitRouteObservationCoverageSchema.safeParse(
+    parsedRouteSet.exitRouteObservationCoverage,
+  );
+  return observations.success && coverage.success
+    ? { observations: observations.data, coverage: coverage.data }
+    : null;
 }
 
 /** @internal Exported for focused route-churn containment tests. */

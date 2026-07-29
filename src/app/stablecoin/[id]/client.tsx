@@ -14,8 +14,10 @@ import {
   type StablecoinDetailSummary,
 } from "@/hooks/use-stablecoin-detail-view-model";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
+import type { MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
+import type { TransferReviewView } from "@/lib/transfer-review";
 import type { StablecoinDetailCoinMeta } from "@/lib/stablecoin-detail-mint-authority-view-model";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { DetailContent } from "./detail-content";
@@ -67,8 +69,10 @@ interface StablecoinDetailClientProps {
   staticCoin: StablecoinStaticMeta;
   logoSrc?: string;
   collateralUsageEntries?: readonly CollateralUsageEntry[];
+  mechanismBacking?: MechanismBackingView | null;
   mechanismCollateralization?: MechanismCollateralizationView | null;
   mechanismReview?: MechanismReviewView | null;
+  transferReview?: TransferReviewView | null;
   staticProfileContent?: ReactNode;
   exploreNextContent?: ReactNode;
   faqContent?: ReactNode;
@@ -81,8 +85,10 @@ export default function StablecoinDetailClient({
   staticCoin,
   logoSrc,
   collateralUsageEntries = [],
+  mechanismBacking = null,
   mechanismCollateralization = null,
   mechanismReview = null,
+  transferReview = null,
   staticProfileContent = null,
   exploreNextContent = null,
   faqContent = null,
@@ -141,8 +147,10 @@ export default function StablecoinDetailClient({
       heroRef={heroRef}
       historyGateRef={historyGateRef}
       onActiveBannerChange={setActiveBannerId}
+      mechanismBacking={mechanismBacking}
       mechanismCollateralization={mechanismCollateralization}
       mechanismReview={mechanismReview}
+      transferReview={transferReview}
       onFeedbackOpenChange={setFeedbackOpen}
       overviewGateRef={overviewGateRef}
       staticHasCollateralUsage={staticCoin.hasCollateralUsage}

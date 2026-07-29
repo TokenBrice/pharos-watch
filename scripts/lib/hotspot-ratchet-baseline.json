@@ -19,6 +19,11 @@
     "maxFunctionLines": 341,
     "branchCount": 149
   },
+  "shared/lib/safety-score-v9/backing.ts": {
+    "fileLines": 1515,
+    "maxFunctionLines": 166,
+    "branchCount": 104
+  },
   "shared/lib/safety-score-v9/control.ts": {
     "fileLines": 1195,
     "maxFunctionLines": 665,
@@ -30,12 +35,12 @@
     "branchCount": 45
   },
   "shared/lib/safety-score-v9/formula.ts": {
-    "fileLines": 1376,
+    "fileLines": 1378,
     "maxFunctionLines": 509,
     "branchCount": 128
   },
   "shared/lib/redemption-backstop-configs/queue-redeem.ts": {
-    "fileLines": 918,
+    "fileLines": 920,
     "maxFunctionLines": 44,
     "branchCount": 5
   },
@@ -50,14 +55,14 @@
     "branchCount": 82
   },
   "shared/types/safety-score-v9-facts.ts": {
-    "fileLines": 1973,
-    "maxFunctionLines": 224,
-    "branchCount": 201
+    "fileLines": 1988,
+    "maxFunctionLines": 239,
+    "branchCount": 204
   },
   "shared/types/safety-score-v9-public.ts": {
-    "fileLines": 2233,
+    "fileLines": 2282,
     "maxFunctionLines": 407,
-    "branchCount": 155
+    "branchCount": 156
   },
   "shared/types/stablecoin-meta-schemas.ts": {
     "fileLines": 1305,
@@ -110,7 +115,7 @@
     "branchCount": 0
   },
   "src/app/methodology/sections/core/safety-scores-section.tsx": {
-    "fileLines": 22,
+    "fileLines": 25,
     "maxFunctionLines": 15,
     "branchCount": 0
   },
@@ -120,8 +125,8 @@
     "branchCount": 0
   },
   "src/app/methodology/sections/core/mint-burn-flow-section.tsx": {
-    "fileLines": 286,
-    "maxFunctionLines": 256,
+    "fileLines": 287,
+    "maxFunctionLines": 257,
     "branchCount": 0
   },
   "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
@@ -205,8 +210,8 @@
     "branchCount": 0
   },
   "worker/src/cron/daily-digest.ts": {
-    "fileLines": 512,
-    "maxFunctionLines": 453,
+    "fileLines": 513,
+    "maxFunctionLines": 454,
     "branchCount": 34
   },
   "worker/src/cron/dispatch-telegram-alerts.ts": {
@@ -215,12 +220,12 @@
     "branchCount": 11
   },
   "worker/src/cron/dex-liquidity/scoring.ts": {
-    "fileLines": 1523,
-    "maxFunctionLines": 487,
-    "branchCount": 119
+    "fileLines": 1693,
+    "maxFunctionLines": 490,
+    "branchCount": 131
   },
   "worker/src/cron/dex-liquidity/orchestrator.ts": {
-    "fileLines": 1278,
+    "fileLines": 1294,
     "maxFunctionLines": 251,
     "branchCount": 28
   },
@@ -230,14 +235,14 @@
     "branchCount": 45
   },
   "worker/src/cron/dex-liquidity/staging-merge.ts": {
-    "fileLines": 726,
-    "maxFunctionLines": 366,
-    "branchCount": 83
+    "fileLines": 754,
+    "maxFunctionLines": 376,
+    "branchCount": 86
   },
   "worker/src/cron/measured-execution/curve-composite.ts": {
-    "fileLines": 1502,
+    "fileLines": 1688,
     "maxFunctionLines": 352,
-    "branchCount": 116
+    "branchCount": 127
   },
   "worker/src/cron/reserve-adapters/sfrxusd-crosschain-redemption.ts": {
     "fileLines": 1831,
@@ -300,8 +305,8 @@
     "branchCount": 2
   },
   "worker/src/cron/weekly-recap.ts": {
-    "fileLines": 657,
-    "maxFunctionLines": 472,
+    "fileLines": 658,
+    "maxFunctionLines": 473,
     "branchCount": 28
   },
   "worker/src/cron/yield-config.ts": {
@@ -340,14 +345,14 @@
     "branchCount": 0
   },
   "worker/src/lib/safety-score-v9-extension.ts": {
-    "fileLines": 2349,
-    "maxFunctionLines": 249,
-    "branchCount": 273
+    "fileLines": 2359,
+    "maxFunctionLines": 252,
+    "branchCount": 275
   },
   "worker/src/lib/safety-score-v9-fact-set.ts": {
-    "fileLines": 3805,
+    "fileLines": 4174,
     "maxFunctionLines": 493,
-    "branchCount": 304
+    "branchCount": 321
   },
   "worker/src/lib/telegram-usage-analytics.ts": {
     "fileLines": 604,

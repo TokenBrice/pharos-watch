@@ -16,6 +16,15 @@ import {
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 
 const NOW = 1_775_900_000;
+const EXPECTED_CANARY_CHECK_IDS = [
+  "dex-liquidity-current-publication",
+  "dex-liquidity-global-row",
+  "stablecoins-cache-active-count",
+  "psi-latest-sample",
+  "dews-latest-signal",
+  "safety-score-v9-publication",
+  "yield-gbp-benchmark-current",
+];
 
 function activeV9(options: { held?: boolean; updatedAt?: number } = {}) {
   const updatedAt = options.updatedAt ?? NOW - 60;
@@ -630,7 +639,36 @@ describe("worker data invariant canaries", () => {
 
     await loadCanaryStatus(db, NOW + 60, "alert");
 
-    expect(db.getHistory()[0]?.binds).toEqual(["alert", "alert"]);
+    expect(db.getHistory()[0]?.binds).toEqual([
+      "alert",
+      ...EXPECTED_CANARY_CHECK_IDS,
+      "alert",
+      ...EXPECTED_CANARY_CHECK_IDS,
+    ]);
+  });
+
+  it("constrains status summaries to active canary check ids", async () => {
+    const db = mockD1(
+      [
+        {
+          match: "FROM worker_canary_runs",
+          matchBinds: [
+            "status",
+            ...EXPECTED_CANARY_CHECK_IDS,
+            "status",
+            ...EXPECTED_CANARY_CHECK_IDS,
+          ],
+          rows: [],
+        },
+      ],
+      { requireMatch: true },
+    );
+
+    await loadCanaryStatus(db, NOW + 60, "status");
+
+    const query = db.getHistory()[0];
+    expect(query?.sql).toContain("check_id IN");
+    expect(query?.binds).not.toContain("report-card-cache-methodology");
   });
 
   it("prunes canary run rows older than the retention cutoff", async () => {

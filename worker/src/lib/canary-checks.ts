@@ -619,6 +619,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     run: checkGbpBenchmarkCurrent,
   },
 ] as const;
+const ACTIVE_CANARY_CHECK_IDS = CANARY_CHECKS.map((definition) => definition.checkId);
 
 async function runOneCanaryCheck(
   db: D1Database,
@@ -813,6 +814,7 @@ export async function loadCanaryStatus(
   mode: WorkerCanaryMode = "off",
 ): Promise<CanaryStatus> {
   if (mode === "off" || mode === "shadow") return emptyCanaryStatus(now);
+  const activeCheckIdPlaceholders = ACTIVE_CANARY_CHECK_IDS.map(() => "?").join(", ");
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -822,14 +824,16 @@ export async function loadCanaryStatus(
              SELECT check_id, MAX(observed_at) AS observed_at
                FROM worker_canary_runs
               WHERE mode = ?
+                AND check_id IN (${activeCheckIdPlaceholders})
               GROUP BY check_id
            ) latest
              ON latest.check_id = r.check_id
             AND latest.observed_at = r.observed_at
           WHERE r.mode = ?
+            AND r.check_id IN (${activeCheckIdPlaceholders})
           ORDER BY r.check_id ASC`,
       )
-      .bind(mode, mode)
+      .bind(mode, ...ACTIVE_CANARY_CHECK_IDS, mode, ...ACTIVE_CANARY_CHECK_IDS)
       .all<WorkerCanaryRunRow>(),
   );
 

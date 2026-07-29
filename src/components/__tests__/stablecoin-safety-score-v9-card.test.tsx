@@ -57,7 +57,8 @@ describe("StablecoinSafetyScoreV9Card", () => {
 
     expect(screen.getAllByText("A").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/84/).length).toBeGreaterThan(0);
-    expect(screen.getByText("Pre-cap 86.9")).toBeTruthy();
+    expect(screen.queryByText("Pre-cap 86.9")).toBeNull();
+    expect(screen.getByLabelText("How this score is built")).toBeTruthy();
     expect(screen.getByText("Backing")).toBeTruthy();
     expect(screen.getByText("Exit")).toBeTruthy();
     expect(screen.getByText("Economic Control")).toBeTruthy();

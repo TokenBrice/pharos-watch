@@ -234,6 +234,9 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/cron/dex-liquidity/challenger-persistence.ts::detectDexPriceChallengerTableState",
   "worker/src/cron/dex-liquidity/challenger-persistence.ts::selectDexPriceChallengerRowsFromPools",
   "worker/src/cron/dex-liquidity/geckoterminal-shared.ts::getGtPoolKind",
+  // Consumed by worker/scripts/generate-safety-score-v9-b1-root-ledger.ts
+  // outside this runtime-only scan.
+  "worker/src/cron/dex-liquidity/deployment-census-coverage.ts::buildDexKnownEmptyRouteCoverage",
   "worker/src/cron/dex-liquidity/pool-identity.ts::buildKnownPoolIdentityIndex",
   "worker/src/cron/dex-liquidity/token-resolution.ts::normalizeTokenAddress",
   "worker/src/cron/dex-liquidity/token-resolution.ts::resolveStablecoinToken",

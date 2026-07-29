@@ -7,6 +7,7 @@ import {
   loadSafetyScoreV9PublicationAttempt,
   loadSafetyScoreV9PublicationHealth,
   persistSafetyScoreV9Publication,
+  persistSafetyScoreV9PublicationAttempt,
   SAFETY_SCORE_V9_CACHE_KEYS,
 } from "../safety-score-v9-publication-store";
 
@@ -114,5 +115,71 @@ describe("Safety Score V9 publication store", () => {
       { key: SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt },
       { key: SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth },
     ]);
+  });
+
+  it("records failed attempt metadata without replacing publication or health", async () => {
+    const { db } = database();
+    const publication = makeWorkerSafetyScoreV9Publication({
+      publishedAtSec: 110,
+    });
+    const currentHealth = {
+      schemaVersion: 1 as const,
+      status: "current" as const,
+      acceptedPublicationGenerationId:
+        publication.publicationGenerationId,
+      acceptedAtSec: publication.publishedAtSec,
+      attemptedAtSec: publication.publishedAtSec,
+      heldSinceSec: null,
+      reasons: [],
+    };
+
+    await persistSafetyScoreV9Publication(db, {
+      publication,
+      publicationHealth: currentHealth,
+      publicationAttempt: {
+        schemaVersion: 1,
+        attemptedAtSec: publication.publishedAtSec,
+        outcome: "published-clean",
+        publicationGenerationId:
+          publication.publicationGenerationId,
+        quarantines: [],
+        affectedAssetIds: [],
+      },
+      publicationClockSec: publication.publishedAtSec,
+    });
+
+    await persistSafetyScoreV9PublicationAttempt(db, {
+      publicationAttempt: {
+        schemaVersion: 1,
+        attemptedAtSec: 130,
+        outcome: "failed",
+        publicationGenerationId: null,
+        quarantines: [],
+        affectedAssetIds: [],
+        failure: {
+          stage: "compile",
+          code: "safety-score-v9-publication-compile-Error",
+          message: "compiler failed",
+        },
+      },
+      publicationClockSec: 130,
+    });
+
+    await expect(loadSafetyScoreV9Publication(db)).resolves.toEqual(
+      publication,
+    );
+    await expect(loadSafetyScoreV9PublicationHealth(db)).resolves.toEqual(
+      currentHealth,
+    );
+    await expect(loadSafetyScoreV9PublicationAttempt(db)).resolves.toMatchObject(
+      {
+        outcome: "failed",
+        publicationGenerationId: null,
+        failure: {
+          stage: "compile",
+          message: "compiler failed",
+        },
+      },
+    );
   });
 });

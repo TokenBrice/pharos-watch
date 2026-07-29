@@ -50,7 +50,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/p4-exit-route-capacity.ts",
-      "sha256": "08d5d29d13c9686b3093d617b2a16333cf7a2d8ee6a33776325c5bd0b2cc9f0e"
+      "sha256": "07c1704912ed981783960800941251aed3e79cd308190753590fbb6fc8012baf"
     },
     {
       "path": "shared/lib/redemption-backstop-capacity.ts",
@@ -202,7 +202,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/backing.ts",
-      "sha256": "7d7560b86158ef59288d6637f7035ed82e9672de9c668512e3d795792b5ba775"
+      "sha256": "e8f7e9276a7e030774bcac91d49e6b94219c40a36766984b8da36a5339fffefa"
     },
     {
       "path": "shared/lib/safety-score-v9/compile.ts",
@@ -441,7 +441,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "a7177e8ede754619d98f56fe18b9d65dbfd29f4ac27701a6bbeb1f60fcb92949"
     }
   ],
-  "digest": "0b839dff00a25270f6ce3838a1c2585ef6ffd16c2c586b284f7f7134f53083a0"
+  "digest": "65be6bc5afb75c59ec5f4315bb0b9ea926d7d05286c0bbaec4b7fc6490646932"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
