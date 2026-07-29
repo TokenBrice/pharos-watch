@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { getReserveAdapter } from "../index";
-import { adaptMakinaStrategyReserves } from "../makina-strategy";
+import { adaptMakinaStrategyReserves, buildMakinaRedemptionMetadata } from "../makina-strategy";
 import { validateAdapterOutput } from "../validate";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
@@ -63,6 +63,59 @@ describe("makina-strategy adapter", () => {
   it("passes shared adapter output validation", () => {
     const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, ALLOCATIONS_FIXTURE, PARAMS);
 
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("makina-strategy") ?? undefined }).valid)
+      .toBe(true);
+  });
+
+  it("publishes current AsyncRedeemer access, delay, and queue-index telemetry", () => {
+    expect(buildMakinaRedemptionMetadata({
+      whitelistEnabled: true,
+      finalizationDelaySec: 43_200,
+      nextRequestId: 343,
+      lastFinalizedRequestId: 342,
+    })).toEqual({
+      redemption: {
+        freshnessKind: "same-run-onchain",
+        holderEligibility: "whitelisted-primary",
+        settlementDelaySec: 43_200,
+        routeStatus: "cohort-limited",
+        routeStatusSource: "onchain",
+        routeStatusReason:
+          "AsyncRedeemer whitelist is enabled; requests and claims are limited to approved holders",
+        sourceUrls: [
+          "https://eth.blockscout.com/address/0x1303c26cfe06bac5bfee29907f37919643def75c?tab=contract",
+        ],
+      },
+      redemptionQueue: {
+        nextRequestId: 343,
+        lastFinalizedRequestId: 342,
+        unfinalizedRequestSpan: 0,
+      },
+    });
+  });
+
+  it("keeps queue telemetry valid without claiming executable capacity or fees", () => {
+    const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, ALLOCATIONS_FIXTURE, PARAMS, {
+      whitelistEnabled: false,
+      finalizationDelaySec: 43_200,
+      nextRequestId: 350,
+      lastFinalizedRequestId: 342,
+    });
+
+    expect(result.metadata?.redemption).toMatchObject({
+      freshnessKind: "same-run-onchain",
+      holderEligibility: "any-holder",
+      settlementDelaySec: 43_200,
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+    });
+    expect(result.metadata?.redemptionQueue).toEqual({
+      nextRequestId: 350,
+      lastFinalizedRequestId: 342,
+      unfinalizedRequestSpan: 7,
+    });
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.metadata?.redemption).not.toHaveProperty("feeBps");
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("makina-strategy") ?? undefined }).valid)
       .toBe(true);
   });

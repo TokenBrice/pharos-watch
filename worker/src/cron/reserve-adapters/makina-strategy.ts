@@ -2,7 +2,9 @@ import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
+import { rethrowIfAborted } from "../../lib/abort";
 import {
+  buildRedemptionSnapshotMetadata,
   fetchJsonWithRetry,
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
@@ -10,6 +12,7 @@ import {
   reserveInfoWarning,
   verifiedFreshnessMetadata,
 } from "./helpers";
+import { fetchOnchainUint256 } from "./onchain";
 
 interface MakinaStrategyEnvelope {
   data?: MakinaStrategyData;
@@ -95,18 +98,113 @@ interface MakinaBucketValue {
 interface MakinaStrategyParams {
   allocationsUrl: string;
   machineAddress: string;
+  asyncRedeemerAddress?: string;
   accountingTokenSymbol?: string;
   accountingTokenDecimals?: number;
   otherThresholdPct?: number;
   reconciliationTolerancePct?: number;
 }
 
+export interface MakinaRedemptionState {
+  whitelistEnabled: boolean;
+  finalizationDelaySec: number;
+  nextRequestId: number;
+  lastFinalizedRequestId: number;
+}
+
 const DEFAULT_ACCOUNTING_DECIMALS = 6;
 const DEFAULT_OTHER_THRESHOLD_PCT = 2;
 const DEFAULT_RECONCILIATION_TOLERANCE_PCT = 0.5;
+const IS_WHITELIST_ENABLED_SELECTOR = "0x184d69ab";
+const FINALIZATION_DELAY_SELECTOR = "0xf9823a5c";
+const NEXT_REQUEST_ID_SELECTOR = "0x6a84a985";
+const LAST_FINALIZED_REQUEST_ID_SELECTOR = "0x667a739e";
 
 function readParams(config: LiveReservesConfig): MakinaStrategyParams {
   return parseLiveReserveAdapterParams("makina-strategy", config.params);
+}
+
+function readSafeOnchainNumber(value: bigint | null): number | null {
+  if (value == null || value < 0n || value > BigInt(Number.MAX_SAFE_INTEGER)) return null;
+  return Number(value);
+}
+
+export function buildMakinaRedemptionMetadata(state: MakinaRedemptionState) {
+  const unfinalizedRequestSpan = Math.max(
+    0,
+    state.nextRequestId - state.lastFinalizedRequestId - 1,
+  );
+
+  return {
+    ...buildRedemptionSnapshotMetadata({
+      freshnessKind: "same-run-onchain",
+      holderEligibility: state.whitelistEnabled ? "whitelisted-primary" : "any-holder",
+      settlementDelaySec: state.finalizationDelaySec,
+      routeStatus: state.whitelistEnabled ? "cohort-limited" : "open",
+      routeStatusSource: "onchain",
+      routeStatusReason: state.whitelistEnabled
+        ? "AsyncRedeemer whitelist is enabled; requests and claims are limited to approved holders"
+        : "AsyncRedeemer whitelist is disabled",
+      sourceUrls: [
+        "https://eth.blockscout.com/address/0x1303c26cfe06bac5bfee29907f37919643def75c?tab=contract",
+      ],
+    }),
+    redemptionQueue: {
+      nextRequestId: state.nextRequestId,
+      lastFinalizedRequestId: state.lastFinalizedRequestId,
+      unfinalizedRequestSpan,
+    },
+  };
+}
+
+async function fetchMakinaRedemptionState(
+  asyncRedeemerAddress: string | undefined,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<MakinaRedemptionState | null> {
+  if (!asyncRedeemerAddress) return null;
+
+  const call = (data: string) =>
+    fetchOnchainUint256({
+      contract: asyncRedeemerAddress,
+      data,
+      signal,
+      ctx,
+      chain: "ethereum",
+      rpcMode: "etherscan-proxy",
+    });
+  let reads: Awaited<ReturnType<typeof call>>[];
+  try {
+    reads = await Promise.all([
+      call(IS_WHITELIST_ENABLED_SELECTOR),
+      call(FINALIZATION_DELAY_SELECTOR),
+      call(NEXT_REQUEST_ID_SELECTOR),
+      call(LAST_FINALIZED_REQUEST_ID_SELECTOR),
+    ]);
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    return null;
+  }
+  const [whitelistRaw, delayRaw, nextRaw, finalizedRaw] = reads;
+  const finalizationDelaySec = readSafeOnchainNumber(delayRaw);
+  const nextRequestId = readSafeOnchainNumber(nextRaw);
+  const lastFinalizedRequestId = readSafeOnchainNumber(finalizedRaw);
+  if (
+    whitelistRaw == null ||
+    (whitelistRaw !== 0n && whitelistRaw !== 1n) ||
+    finalizationDelaySec == null ||
+    nextRequestId == null ||
+    lastFinalizedRequestId == null
+  ) {
+    return null;
+  }
+
+  return {
+    whitelistEnabled: whitelistRaw === 1n,
+    finalizationDelaySec,
+    nextRequestId,
+    lastFinalizedRequestId,
+  };
 }
 
 function asArray(value: unknown): unknown[] {
@@ -261,6 +359,7 @@ export function adaptMakinaStrategyReserves(
   strategy: MakinaStrategyEnvelope,
   allocations: MakinaAllocationsEnvelope,
   params: MakinaStrategyParams,
+  redemptionState?: MakinaRedemptionState | null,
 ): AdapterResult {
   const strategyData = strategy.data;
   const allocationData = allocations.data;
@@ -453,6 +552,7 @@ export function adaptMakinaStrategyReserves(
       apy7d: typeof strategyData.apy7d === "number" ? strategyData.apy7d : undefined,
       apy30d: typeof strategyData.apy30d === "number" ? strategyData.apy30d : undefined,
       unknownExposurePct,
+      ...(redemptionState ? buildMakinaRedemptionMetadata(redemptionState) : {}),
       details: {
         proofKind: "makina-strategy-accounting-api",
         reconciliationKind: "allocation-net-value-equals-last-reported-aum",
@@ -482,9 +582,10 @@ export async function fetchMakinaStrategyReserves(
 ): Promise<AdapterResult> {
   const primary = requireJsonInputFromConfig(config, "makina-strategy");
   const params = readParams(config);
-  const [strategy, allocations] = await Promise.all([
+  const [strategy, allocations, redemptionState] = await Promise.all([
     fetchJsonWithRetry<MakinaStrategyEnvelope>(primary.url, signal, 12_000, ctx),
     fetchJsonWithRetry<MakinaAllocationsEnvelope>(params.allocationsUrl, signal, 12_000, ctx),
+    fetchMakinaRedemptionState(params.asyncRedeemerAddress, signal, ctx),
   ]);
-  return adaptMakinaStrategyReserves(strategy, allocations, params);
+  return adaptMakinaStrategyReserves(strategy, allocations, params, redemptionState);
 }
