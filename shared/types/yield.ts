@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { isRecord } from "../lib/type-guards";
 import { MethodologyEnvelopeSchema, YieldTypeSchema } from "./core";
 import { ReportCardGradeSchema } from "./report-cards";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
@@ -227,8 +226,12 @@ function hasOwn(value: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === "object" && !Array.isArray(value);
+}
+
 export function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null {
-  if (!isRecord(value)) return null;
+  if (!isPlainRecord(value)) return null;
 
   const normalized: Record<string, unknown> = {};
   for (const field of YIELD_SOURCE_RISK_FIELDS) {
