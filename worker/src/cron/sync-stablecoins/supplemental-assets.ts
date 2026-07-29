@@ -90,8 +90,8 @@ export async function fetchSupplementalTrackedTokens(
   // Keep supplemental families serial. This path overlaps with the main
   // DefiLlama stablecoins fetch, so gold's batched protocol reads, silver's CG
   // pair, and fiat-cg's on-chain fallbacks must not stack in one trigger.
-  const goldTokens = await fetchGoldTokens(cgData, signal, db);
-  const silverTokens = await fetchSilverTokens(cgData, signal, coingeckoApiKey, db);
+  const goldTokens = await fetchGoldTokens(cgData, signal, db, chainRpcs);
+  const silverTokens = await fetchSilverTokens(cgData, signal, coingeckoApiKey, db, chainRpcs);
   const fiatCgTokens = await fetchFiatCoinGeckoTokens(cgData, signal, chainRpcs, fxFallbackRates, db);
 
   return { goldTokens, silverTokens, fiatCgTokens };

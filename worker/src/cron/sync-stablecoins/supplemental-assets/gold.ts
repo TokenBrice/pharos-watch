@@ -3,17 +3,24 @@ import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { CIRCUIT_SOURCE, DEFILLAMA_API, USER_AGENT } from "../../../lib/constants";
 import { throwIfAborted } from "../../../lib/abort";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
+import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import type { PeggedAsset } from "../enrich-prices";
 import {
   buildPricedSupplementalAsset,
   fetchSupplementalPriceData,
+  resolveCuratedAggregateSupplementalSupply,
   toPositiveFiniteNumber,
   type CoinGeckoMcapData,
 } from "./shared";
 
 const GOLD_METAS = ACTIVE_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "GOLD");
 
-export async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortSignal, db?: D1Database): Promise<PeggedAsset[]> {
+export async function fetchGoldTokens(
+  cgData: CoinGeckoMcapData,
+  signal?: AbortSignal,
+  db?: D1Database,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+): Promise<PeggedAsset[]> {
   throwIfAborted(signal);
   try {
     const priceData = await fetchSupplementalPriceData(GOLD_METAS, "gold", signal, db);
@@ -76,19 +83,26 @@ export async function fetchGoldTokens(cgData: CoinGeckoMcapData, signal?: AbortS
       }
     }
 
-    return GOLD_METAS
-      .map((meta) => {
-        const mcap = mcapMap[meta.id] ?? 0;
-        if (!mcap) {
-          console.warn(`[gold] No mcap for ${meta.symbol}, including with mcap=0`);
-        }
+    // Commodity upstreams publish an aggregate market cap with no per-chain
+    // split, so curated aggregate probes are the only per-chain supply path
+    // here. Keep them serial: this lane shares the trigger connection pool.
+    const tokens: PeggedAsset[] = [];
+    for (const meta of GOLD_METAS) {
+      const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal);
+      const mcap = aggregate?.mcap ?? mcapMap[meta.id] ?? 0;
+      if (!mcap) {
+        console.warn(`[gold] No mcap for ${meta.symbol}, including with mcap=0`);
+      }
 
-        return buildPricedSupplementalAsset(meta, priceData, cgData, {
-          mcap,
-          supplySource: mcapSourceById[meta.id] ?? "coingecko-fallback",
-        });
-      })
-      .filter((token): token is PeggedAsset => token !== null);
+      const token = buildPricedSupplementalAsset(meta, priceData, cgData, {
+        mcap,
+        supplySource: aggregate?.supplySource ?? mcapSourceById[meta.id] ?? "coingecko-fallback",
+        chainCirculating: aggregate?.chainCirculating,
+      });
+      if (token) tokens.push(token);
+    }
+
+    return tokens;
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.error("[gold] fetchGoldTokens failed:", err);
