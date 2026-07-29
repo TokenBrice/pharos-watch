@@ -460,9 +460,19 @@ describe("buildCurveStableswapExecutionModel", () => {
         "ethereum",
       ),
     ).toBeNull();
+    // R3 promoted the reviewed Ethereum TwoCrypto census, so a family-anchored
+    // address now resolves like a pinned one.
     expect(
       resolveActiveCurveCryptoSwapCandidateByTvl(
         [{ ...active, poolAddress: "0xe79fb88c7937b39b3e1cabd44faefa5258578b2d" }],
+        active.tvl,
+        "ethereum",
+      )?.poolAddress,
+    ).toBe("0xe79fb88c7937b39b3e1cabd44faefa5258578b2d");
+    // A still-shadow generation (tricrypto-ng has no reviewed family) stays out.
+    expect(
+      resolveActiveCurveCryptoSwapCandidateByTvl(
+        [{ ...active, poolAddress: "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14" }],
         active.tvl,
         "ethereum",
       ),

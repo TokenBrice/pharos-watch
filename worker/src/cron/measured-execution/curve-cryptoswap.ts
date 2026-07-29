@@ -42,11 +42,26 @@ export const CURVE_CRYPTOSWAP_ADAPTER_PROFILE_ID = "curve-cryptoswap-get-dy-v1" 
 
 export type CurveCryptoSwapGeneration = "legacy-cryptoswap" | "twocrypto-ng" | "tricrypto-ng" | "special-tridbr";
 
+/**
+ * How a policy proves it is quoting the pool it claims.
+ *
+ * - `pinned-pool-code` pins that individual pool's runtime code hash and every
+ *   dependency address/hash by hand.
+ * - `reviewed-deployment-family` pins the deployment family instead (factory,
+ *   factory-selected views implementation, immutable math contract). Curve NG
+ *   bakes constructor immutables into each pool's runtime code, so pool code
+ *   hashes are per-pool and cannot be pre-pinned without a production capture;
+ *   the family triple is what actually proves the generation, which is the
+ *   graduation bar the shadow census was waiting on.
+ */
+export type CurveCryptoSwapIdentityAnchor = "pinned-pool-code" | "reviewed-deployment-family";
+
 export interface CurveCryptoSwapPoolPolicy {
   chain: "ethereum" | "arbitrum" | "base" | "polygon";
   poolAddress: `0x${string}`;
   generation: CurveCryptoSwapGeneration;
   mode: "shadow" | "active";
+  identityAnchor: CurveCryptoSwapIdentityAnchor;
   scoreEligible: boolean;
   expectedPoolCodeHash?: `0x${string}`;
   expectedFactoryAddress?: `0x${string}`;
@@ -62,6 +77,54 @@ const ETHEREUM_TWOCRYPTO_FACTORY = "0x98ee851a00abee0d95d08cf4ca2bdce32aeaaf7f";
 const ETHEREUM_TWOCRYPTO_FACTORY_CODE_HASH = "0xbb7ab663bc3ea17b6e97e4fa41bc7b5912b49e8835cce4d9643b86ac5b29b986";
 const ETHEREUM_TWOCRYPTO_VIEWS = "0x07cdebf81977e111b08c126defa07818d0045b80";
 const ETHEREUM_TWOCRYPTO_VIEWS_CODE_HASH = "0x150bdfd73c90c22774ddcbf6672214afc6e2587afa27fb145576138382de7d9c";
+const ETHEREUM_TWOCRYPTO_MATH_A = "0xbfddf58cb6ef84e115ff47c10e49a80b2653ea13";
+const ETHEREUM_TWOCRYPTO_MATH_A_CODE_HASH = "0x8d9625bc2747c3d3471e2cd9dd3a3dd3855271b6a4c711b6b7c2e576163211f2";
+const ETHEREUM_TWOCRYPTO_MATH_B = "0x79839c2d74531a8222c0f555865aac1834e82e51";
+const ETHEREUM_TWOCRYPTO_MATH_B_CODE_HASH = "0xe97fd5e910f41e3c85fd62c320b19b05e505422366e8c2cad63af015338b38d7";
+
+export interface CurveCryptoSwapReviewedDeploymentFamily {
+  chain: CurveCryptoSwapPoolPolicy["chain"];
+  generation: CurveCryptoSwapGeneration;
+  factoryAddress: `0x${string}`;
+  factoryCodeHash: `0x${string}`;
+  viewsAddress: `0x${string}`;
+  viewsCodeHash: `0x${string}`;
+  /** Every reviewed immutable math deployment the factory has selected. */
+  mathDeployments: readonly { address: `0x${string}`; codeHash: `0x${string}` }[];
+}
+
+/**
+ * Deployment families whose factory, views implementation, and math contracts
+ * are already reviewed by the pinned active cohort below. Every address and
+ * hash here is the same evidence the eight hand-pinned pools carry; nothing is
+ * asserted for a family that has no pinned pool.
+ */
+export const CURVE_CRYPTOSWAP_REVIEWED_FAMILIES: readonly CurveCryptoSwapReviewedDeploymentFamily[] = [
+  {
+    chain: "ethereum",
+    generation: "twocrypto-ng",
+    factoryAddress: ETHEREUM_TWOCRYPTO_FACTORY,
+    factoryCodeHash: ETHEREUM_TWOCRYPTO_FACTORY_CODE_HASH,
+    viewsAddress: ETHEREUM_TWOCRYPTO_VIEWS,
+    viewsCodeHash: ETHEREUM_TWOCRYPTO_VIEWS_CODE_HASH,
+    mathDeployments: [
+      { address: ETHEREUM_TWOCRYPTO_MATH_A, codeHash: ETHEREUM_TWOCRYPTO_MATH_A_CODE_HASH },
+      { address: ETHEREUM_TWOCRYPTO_MATH_B, codeHash: ETHEREUM_TWOCRYPTO_MATH_B_CODE_HASH },
+    ],
+  },
+] as const;
+
+export function getCurveCryptoSwapReviewedDeploymentFamily(
+  chain: string,
+  generation: CurveCryptoSwapGeneration,
+): CurveCryptoSwapReviewedDeploymentFamily | null {
+  const normalizedChain = chain.trim().toLowerCase();
+  return (
+    CURVE_CRYPTOSWAP_REVIEWED_FAMILIES.find(
+      (family) => family.chain === normalizedChain && family.generation === generation,
+    ) ?? null
+  );
+}
 
 function activeEthereumTwocryptoPolicy(
   poolAddress: `0x${string}`,
@@ -74,6 +137,7 @@ function activeEthereumTwocryptoPolicy(
     poolAddress,
     generation: "twocrypto-ng",
     mode: "active",
+    identityAnchor: "pinned-pool-code",
     scoreEligible: true,
     expectedPoolCodeHash,
     expectedFactoryAddress: ETHEREUM_TWOCRYPTO_FACTORY,
@@ -82,6 +146,31 @@ function activeEthereumTwocryptoPolicy(
     expectedViewsCodeHash: ETHEREUM_TWOCRYPTO_VIEWS_CODE_HASH,
     expectedMathAddress,
     expectedMathCodeHash,
+    transferSemanticsReviewed: true,
+  };
+}
+
+/**
+ * Reviewed census pool promoted under ruling R3 (2026-07-29): the owner granted
+ * the generation and transfer-semantics validation the census was waiting on,
+ * so these pools quote through the same measured `get_dy` adapter as the pinned
+ * cohort. Their runtime dependency triple is still proven at the pinned quote
+ * block against the reviewed family; only the per-pool bytecode pin is absent,
+ * because Curve NG bakes per-pool immutables into the runtime code and that
+ * hash can only come from a production capture.
+ */
+function familyVerifiedPolicy(
+  chain: CurveCryptoSwapPoolPolicy["chain"],
+  poolAddress: `0x${string}`,
+  generation: CurveCryptoSwapGeneration,
+): CurveCryptoSwapPoolPolicy {
+  return {
+    chain,
+    poolAddress,
+    generation,
+    mode: "active",
+    identityAnchor: "reviewed-deployment-family",
+    scoreEligible: true,
     transferSemanticsReviewed: true,
   };
 }
@@ -96,6 +185,7 @@ function shadowPolicy(
     poolAddress,
     generation,
     mode: "shadow",
+    identityAnchor: "pinned-pool-code",
     scoreEligible: false,
     transferSemanticsReviewed: false,
   };
@@ -133,11 +223,11 @@ export const CURVE_CRYPTOSWAP_SHADOW_COHORT: readonly CurveCryptoSwapPoolPolicy[
     "0xbfddf58cb6ef84e115ff47c10e49a80b2653ea13",
     "0x8d9625bc2747c3d3471e2cd9dd3a3dd3855271b6a4c711b6b7c2e576163211f2",
   ),
-  shadowPolicy("ethereum", "0xe79fb88c7937b39b3e1cabd44faefa5258578b2d", "twocrypto-ng"),
-  shadowPolicy("ethereum", "0x384ca8992f955009bdd94849488e580559590157", "twocrypto-ng"),
-  shadowPolicy("ethereum", "0x4fdccb810f22578ad6700fc10a8c9b6c1df61852", "twocrypto-ng"),
-  shadowPolicy("ethereum", "0xca546ae6c3b2bb9fba2b6e5eeb0881097cece5b0", "twocrypto-ng"),
-  shadowPolicy("ethereum", "0x592878b920101946fb5915ab97961bc546f211cc", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0xe79fb88c7937b39b3e1cabd44faefa5258578b2d", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0x384ca8992f955009bdd94849488e580559590157", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0x4fdccb810f22578ad6700fc10a8c9b6c1df61852", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0xca546ae6c3b2bb9fba2b6e5eeb0881097cece5b0", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0x592878b920101946fb5915ab97961bc546f211cc", "twocrypto-ng"),
   shadowPolicy("ethereum", "0x06ac09ca29369e2483533eb68dfe0a4d4143543d", "tricrypto-ng"),
   shadowPolicy("ethereum", "0x4ebdf703948ddcea3b11f675b4d1fba9d2414a14", "tricrypto-ng"),
   activeEthereumTwocryptoPolicy(
@@ -158,14 +248,14 @@ export const CURVE_CRYPTOSWAP_SHADOW_COHORT: readonly CurveCryptoSwapPoolPolicy[
     "0x79839c2d74531a8222c0f555865aac1834e82e51",
     "0xe97fd5e910f41e3c85fd62c320b19b05e505422366e8c2cad63af015338b38d7",
   ),
-  shadowPolicy("ethereum", "0xec977f46467a3021785cff88894886e617abd65b", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0xec977f46467a3021785cff88894886e617abd65b", "twocrypto-ng"),
   shadowPolicy("ethereum", "0x66da369fc5dbba0774da70546bd20f2b242cd34d", "special-tridbr"),
   shadowPolicy("ethereum", "0x98a7f18d4e56cfe84e3d081b40001b3d5bd3eb8b", "legacy-cryptoswap"),
-  shadowPolicy("ethereum", "0x26d85588b9ed20aba4fa8fb9b3c8977c4aad133c", "twocrypto-ng"),
-  shadowPolicy("ethereum", "0x57129759d0e23116c1e7402dbc084e53d2e209a2", "twocrypto-ng"),
-  shadowPolicy("ethereum", "0x43b98eea5c689f0036918f590a4b55f22d853734", "twocrypto-ng"),
-  shadowPolicy("ethereum", "0x51a57b0a36ef63828929683609fa1fc12c72a776", "twocrypto-ng"),
-  shadowPolicy("ethereum", "0x027b40f5917fcd0eac57d7015e120096a5f92ca9", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0x26d85588b9ed20aba4fa8fb9b3c8977c4aad133c", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0x57129759d0e23116c1e7402dbc084e53d2e209a2", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0x43b98eea5c689f0036918f590a4b55f22d853734", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0x51a57b0a36ef63828929683609fa1fc12c72a776", "twocrypto-ng"),
+  familyVerifiedPolicy("ethereum", "0x027b40f5917fcd0eac57d7015e120096a5f92ca9", "twocrypto-ng"),
   shadowPolicy("base", "0x6771bb9ec8da900eeba738599c3cc4f8fc07aea7d", "twocrypto-ng"),
   shadowPolicy("base", "0xba0c274085a078d19c46f2d902698a841cbfb289", "twocrypto-ng"),
   shadowPolicy("arbitrum", "0x590f7e2b211fa5ff7840dd3c425b543363797701", "twocrypto-ng"),
@@ -248,6 +338,41 @@ export function evaluateCurveCryptoSwapEligibility(input: {
     if (evidence.legacyIsKilled) return { ok: false, reason: "legacy-pool-killed" };
   } else if (evidence.ngKillMethodUnavailable !== true) {
     return { ok: false, reason: "ng-kill-method-not-proven-absent" };
+  }
+
+  if (policy.identityAnchor === "reviewed-deployment-family") {
+    const family = getCurveCryptoSwapReviewedDeploymentFamily(policy.chain, policy.generation);
+    if (family == null) return { ok: false, reason: "runtime-allowlist-incomplete" };
+    if (canonicalCodeHash(evidence.poolCodeHash) == null) return { ok: false, reason: "runtime-code-unavailable" };
+    const factoryAddress = canonicalAddress(evidence.factoryAddress);
+    const viewsAddress = canonicalAddress(evidence.viewsAddress);
+    const mathAddress = canonicalAddress(evidence.mathAddress);
+    if (
+      factoryAddress == null ||
+      canonicalCodeHash(evidence.factoryCodeHash) == null ||
+      viewsAddress == null ||
+      canonicalCodeHash(evidence.viewsCodeHash) == null ||
+      mathAddress == null ||
+      canonicalCodeHash(evidence.mathCodeHash) == null
+    )
+      return { ok: false, reason: "dependency-code-unavailable" };
+    const mathDeployment = family.mathDeployments.find((entry) => entry.address === mathAddress);
+    if (factoryAddress !== family.factoryAddress || viewsAddress !== family.viewsAddress || mathDeployment == null) {
+      return { ok: false, reason: "dependency-identity-mismatch" };
+    }
+    if (
+      !matchesCodeHash(evidence.factoryCodeHash, family.factoryCodeHash) ||
+      !matchesCodeHash(evidence.viewsCodeHash, family.viewsCodeHash) ||
+      !matchesCodeHash(evidence.mathCodeHash, mathDeployment.codeHash)
+    )
+      return { ok: false, reason: "dependency-code-hash-mismatch" };
+    if (!policy.transferSemanticsReviewed || evidence.transferSemanticsReviewed !== true) {
+      return { ok: false, reason: "transfer-semantics-unreviewed" };
+    }
+    if (policy.scoreEligible && (evidence.onChainPoolTokenAddresses?.length ?? 0) < 2) {
+      return { ok: false, reason: "pool-token-order-unverified" };
+    }
+    return policy.scoreEligible ? { ok: true } : { ok: false, reason: "shadow-score-ineligible" };
   }
 
   const expectedHashes = [
@@ -801,6 +926,17 @@ export function validateCurveCryptoSwapProfileProof(profile: DexMeasuredExecutio
   const endpointAddress = canonicalAddress(profile.executionEndpoint.address);
   const policy = endpointAddress == null ? null : getCurveCryptoSwapShadowPolicy(profile.chain, endpointAddress);
   if (policy == null) issues.add("execution-pool-not-in-cohort");
+  // A pinned policy binds the exact pool bytecode. A family-anchored policy has
+  // no pre-pinned pool hash (Curve NG bakes per-pool immutables into the
+  // runtime code), so the profile must at least carry a readable one; its
+  // factory/views/math triple is proven producer-side at the pinned block.
+  else if (
+    policy.identityAnchor === "pinned-pool-code"
+      ? profile.executionEndpoint.codeHash !== policy.expectedPoolCodeHash
+      : canonicalCodeHash(profile.executionEndpoint.codeHash) == null
+  ) {
+    issues.add("endpoint-code-hash-mismatch");
+  }
   const indices = resolveCurveCryptoSwapTokenIndices(profile);
   if (!indices.ok) issues.add(indices.reason);
 
