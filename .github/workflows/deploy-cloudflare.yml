@@ -89,6 +89,8 @@ jobs:
       - uses: ./.github/actions/setup-workspace
       - name: Check Worker migrations
         run: npm run check:migrations
+      - name: Package Worker before D1 mutation
+        run: npm run check:worker-package
       - name: Apply production D1 migrations
         run: cd worker && npx --no-install wrangler d1 migrations apply stablecoin-db --remote
       - name: Deploy Worker

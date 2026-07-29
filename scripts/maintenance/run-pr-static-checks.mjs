@@ -47,6 +47,7 @@ export function buildPrStaticCheckPlan(changedFiles) {
       { name: "check:sql-safety" },
       { name: "check:worker-boundary" },
       { name: "check:worker-config" },
+      { name: "check:worker-package" },
     );
   }
 

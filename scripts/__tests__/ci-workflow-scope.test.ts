@@ -26,6 +26,15 @@ describe("CI workflow scope", () => {
     expect(nightly).toContain("node-version: \"26\"");
   });
 
+  it("packages the Worker before production D1 mutation", () => {
+    const workflow = readRepoFile(".github/workflows/deploy-cloudflare.yml");
+    const packageStep = workflow.indexOf("npm run check:worker-package");
+    const migrationStep = workflow.indexOf("wrangler d1 migrations apply stablecoin-db --remote");
+
+    expect(packageStep).toBeGreaterThan(-1);
+    expect(migrationStep).toBeGreaterThan(packageStep);
+  });
+
   it("runs CodeQL after merge and weekly, not per PR", () => {
     const workflow = readRepoFile(".github/workflows/codeql.yml");
 

@@ -100,7 +100,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
    - produces a successful no-op when neither surface needs deployment. There is no separate guard or no-op job.
 2. `deploy-worker`
    - runs only when `worker_required=true`, on `ubuntu-latest`, with the protected `production` environment;
-   - installs the lockfile workspace, runs `npm run check:migrations`, and applies remote D1 migrations;
+   - installs the lockfile workspace, runs `npm run check:migrations`, proves the strict Worker bundle with `npm run check:worker-package`, and only then applies remote D1 migrations;
    - deploys once with `cd worker && npx --no-install wrangler deploy --strict --message ...`; Wrangler synchronizes the checked-in Worker configuration and triggers as part of that supported path;
    - queries `wrangler deployments status --json` once and requires the SHA-tagged deployment to be the sole active version at 100% traffic;
    - fails visibly on migration, deploy, or activation-proof failure. It does not preview-upload, poll deployment status, make a custom-domain request from shared GitHub egress, run browser/ops/transport checks, or automatically roll back.

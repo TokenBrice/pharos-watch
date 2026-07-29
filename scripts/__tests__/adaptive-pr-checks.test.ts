@@ -63,4 +63,10 @@ describe("adaptive PR checks", () => {
       "check:shared-types-imports",
     ]);
   });
+
+  it("packages Worker changes in the adaptive PR lane", () => {
+    expect(buildPrStaticCheckPlan(["worker/src/index.ts"]).commands.map((command) => command.name)).toContain(
+      "check:worker-package",
+    );
+  });
 });
