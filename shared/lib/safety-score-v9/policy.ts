@@ -186,17 +186,6 @@ export function resolveV9ReasonPolicy(envelope: V9ValidatedPolicyEnvelope, code:
   };
 }
 
-export function normalizeV9UnresolvedFacts(
-  envelope: V9ValidatedPolicyEnvelope,
-  facts: readonly V9UnresolvedFact[],
-): V9UnresolvedFact[] {
-  assertV9ValidatedPolicyEnvelope(envelope);
-  return facts.map((fact) => ({
-    ...fact,
-    critical: resolveV9ReasonPolicy(envelope, fact.code).critical,
-  }));
-}
-
 export function assertV9UnresolvedFactsMatchPolicy(
   envelope: V9ValidatedPolicyEnvelope,
   facts: readonly V9UnresolvedFact[],

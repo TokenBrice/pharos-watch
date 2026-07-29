@@ -359,7 +359,7 @@ function scoreFromMaturity(
   );
 }
 
-export function scoreV9ReserveExposureClassification(
+function scoreV9ReserveExposureClassification(
   exposure: Pick<V9ReserveExposureFactV2, "assetClass" | "liquidityHorizon" | "maturityDaysMax">,
   policy: V9BackingEvaluationPolicy,
 ): number {

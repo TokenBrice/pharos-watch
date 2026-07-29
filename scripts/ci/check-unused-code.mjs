@@ -107,8 +107,6 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/pricing-pipeline-version.ts::getPricingPipelineVersionAt",
   // Consumed by the report-card calibration CLI outside this runtime-only scan.
   "shared/lib/redemption-backstop-scoring.ts::isExitRouteObservationScoreEligible",
-  // Consumed by the v9 readiness CLI outside this runtime-only scan.
-  "shared/lib/safety-score-v9-compiler.ts::assertExactReportCardIds",
   // Safety Score v9 operational CLIs run outside this runtime-only graph. Keep
   // their inputs coupled to the production policy, timing, and envelope schemas.
   "shared/lib/safety-score-v9-research.ts::loadV9MethodologyPolicy",

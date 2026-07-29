@@ -125,7 +125,6 @@ export const CRITICAL_TEST_FILES = [
   "shared/lib/__tests__/report-card-blacklist-authority.test.ts",
   "shared/lib/__tests__/blacklist-active-records.test.ts",
   "shared/lib/__tests__/sha256-stable-json.test.ts",
-  "shared/lib/__tests__/safety-score-v9-compiler.test.ts",
   "shared/lib/__tests__/safety-score-v9-matched-invariants.test.ts",
   "shared/lib/__tests__/safety-score-v9-research.test.ts",
   "shared/lib/__tests__/safety-score-v9-supply-attribution-journal.test.ts",
