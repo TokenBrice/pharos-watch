@@ -12,6 +12,7 @@ import type { FaqItem } from "@/lib/faq";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
 
 const reportCardsDescription =
@@ -60,7 +61,7 @@ export default createClientFeaturePage({
     path: "/safety-scores/",
     title: "Safety Scores",
     methodology: {
-      version: "V9.0",
+      version: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
       changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
     },
     headerActions: <ShareButton ogPath="/api/og/safety-scores" />,
