@@ -45,6 +45,24 @@ describe("half-hourly measured execution result aggregation", () => {
     expect(merged.status).toBe("degraded");
   });
 
+  it("retains shadow Tron quote failures as diagnostics", () => {
+    const merged = mergeMeasuredExecutionResults(
+      result("ok", "evm"),
+      result("ok", "solana", 0, { activation: "target-ratified" }),
+      result("degraded", "tron", 1, {
+        activation: "shadow",
+        cursorWriteStatus: "not-needed",
+        failuresByReason: { "profile-validation:quote-price-mismatch": 1 },
+      }),
+    );
+    const metadata = JSON.parse(merged.metadata!);
+
+    expect(merged.status).toBe("ok");
+    expect(metadata.laneStatuses.tron).toBe("degraded");
+    expect(metadata.tron.activation).toBe("shadow");
+    expect(metadata.tron.attemptedFailureCount).toBe(1);
+  });
+
   it("preserves active EVM degradation", () => {
     const merged = mergeMeasuredExecutionResults(
       result("degraded", "evm", 1),
