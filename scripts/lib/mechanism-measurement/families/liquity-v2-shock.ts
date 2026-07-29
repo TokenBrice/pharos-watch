@@ -1,12 +1,14 @@
 import { decodeAddressWord, decodeUintWord, normalizeAddress, type PinnedBlock } from "../core";
 import type { ShockCallJournal, ShockCodeSpec, ShockEthCallSpec } from "../shock-journal";
 import {
+  buildCdpShockMeasurement,
   buildMeasuredFacts,
   deltaPpm,
   isWithinDeltaPpm,
+  readAddress,
+  readUint,
   requireCodePinCoverage,
   requirePass,
-  serialiseAggregateScenario,
   serialiseScenario,
   type PassCheck,
 } from "../shock-producer";
@@ -44,25 +46,6 @@ interface BranchGraph {
   scr: bigint;
   liquidationPenaltySp: bigint;
   liquidationPenaltyRedistribution: bigint;
-}
-
-async function readUint(
-  caller: ShockCallJournal,
-  spec: ShockEthCallSpec,
-  wordIndex = 0,
-  label = spec.name,
-): Promise<bigint> {
-  const data = await caller.call(spec);
-  const value = decodeUintWord(data, wordIndex, label);
-  caller.recordDecoded(value.toString());
-  return value;
-}
-
-async function readAddress(caller: ShockCallJournal, spec: ShockEthCallSpec): Promise<string> {
-  const data = await caller.call(spec);
-  const value = normalizeAddress(decodeAddressWord(data, spec.name), spec.name);
-  caller.recordDecoded(value);
-  return value;
 }
 
 function computeCr(collateral: bigint, debt: bigint, price: bigint): bigint {
@@ -782,30 +765,15 @@ export async function measureLiquityV2ShockCoverage(
   const codePins = await caller.captureCodes(codeSpecs);
   requireCodePinCoverage(checks, codeSpecs, codePins);
 
-  return {
-    schemaVersion: 1,
-    kind: "cdp-shock-coverage-measurement",
-    assetId: target.assetId,
-    archetype: "cdp",
-    family: target.family,
-    applicability: { state: "measured", failureReason: null },
-    completeness: { complete: true, blockers: [] },
-    chain: target.chain,
-    rpcUrl,
+  return buildCdpShockMeasurement({
+    caller,
+    target,
     block,
-    sourcePin: target.sourcePin,
-    shockPolicy: {
-      scoreShockFractionPpm: SCORE_SHOCK_FRACTION_PPM,
-      sensitivityShockFractionsPpm: [...SHOCK_FRACTIONS_PPM],
-      debtReconciliationTolerancePpm: DEBT_RECONCILIATION_TOLERANCE_PPM,
-    },
-    calls: caller.calls,
+    rpcUrl,
     codePins,
     branches: branchOutputs,
-    aggregateScenarios: aggregateScenarios.map(serialiseAggregateScenario),
+    aggregateScenarios,
     measuredFacts,
     checks,
-    sources: [...target.sources],
-    tool: { name: "measure-cdp-shock-coverage", version: "1" },
-  };
+  });
 }
