@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { median } from "@shared/lib/stats";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { CIRCUIT_SOURCE, USER_AGENT } from "../constants";
 import { fetchJsonWithRetry } from "../fetch-retry";
@@ -92,13 +93,6 @@ function parseFinitePositiveDecimal(value: string): number | null {
 function parseTimestampSec(value: string): number | null {
   const parsedMs = Date.parse(value);
   return Number.isFinite(parsedMs) && parsedMs > 0 ? Math.floor(parsedMs / 1_000) : null;
-}
-
-function median(values: readonly number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0 ? ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2 : (sorted[middle] ?? null);
 }
 
 async function fetchKavaJson(url: string, signal?: AbortSignal): Promise<unknown | null> {

@@ -7,6 +7,7 @@ import {
   type TronMeasuredExecutionQuotePointProof,
   type TronMeasuredExecutionTarget,
 } from "@shared/types/tron-measured-execution";
+import { isRecord } from "@shared/lib/type-guards";
 import { decodeFunctionResult, encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
@@ -31,10 +32,6 @@ const SUNSWAP_V2_ROUTER_ABI = parseAbi([
 ]);
 
 type FetchLike = typeof fetch;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function combineSignal(signal: AbortSignal | undefined): AbortSignal {
   const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);

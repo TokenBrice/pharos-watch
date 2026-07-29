@@ -16,6 +16,7 @@ import {
 } from "./yield-sync/benchmarks";
 import { throwIfAborted } from "../lib/abort";
 import { loadRiskFreeRateRegistry } from "./yield-sync/sources-riskfree";
+import { isRecord, numberValue } from "@shared/lib/type-guards";
 import type { YieldBenchmarkKey } from "@shared/types/yield";
 import type { Env } from "../lib/env";
 
@@ -122,14 +123,6 @@ interface GbpRetainedFallbackStreak {
   recoveredSource?: string | null;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
-}
-
-function numberOrNull(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 function stringOrNull(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
@@ -153,21 +146,21 @@ function parseGbpRetainedFallbackStreak(value: string | null | undefined): GbpRe
   try {
     const parsed = JSON.parse(value);
     if (!isRecord(parsed)) throw new Error("not an object");
-    const consecutiveRetainedRuns = numberOrNull(parsed.consecutiveRetainedRuns) ?? 0;
-    const consecutiveFreshRuns = numberOrNull(parsed.consecutiveFreshRuns) ?? 0;
+    const consecutiveRetainedRuns = numberValue(parsed.consecutiveRetainedRuns) ?? 0;
+    const consecutiveFreshRuns = numberValue(parsed.consecutiveFreshRuns) ?? 0;
     return {
       consecutiveRetainedRuns: Math.max(0, Math.floor(consecutiveRetainedRuns)),
       consecutiveFreshRuns: Math.max(0, Math.floor(consecutiveFreshRuns)),
-      firstRetainedAt: numberOrNull(parsed.firstRetainedAt),
-      lastRetainedAt: numberOrNull(parsed.lastRetainedAt),
-      lastFreshAt: numberOrNull(parsed.lastFreshAt),
+      firstRetainedAt: numberValue(parsed.firstRetainedAt),
+      lastRetainedAt: numberValue(parsed.lastRetainedAt),
+      lastFreshAt: numberValue(parsed.lastFreshAt),
       lastFreshSource: stringOrNull(parsed.lastFreshSource),
       lastFreshRecordDate: stringOrNull(parsed.lastFreshRecordDate),
       lastFallbackMode: stringOrNull(parsed.lastFallbackMode),
       lastMarketSource: stringOrNull(parsed.lastMarketSource),
       lastMarketRecordDate: stringOrNull(parsed.lastMarketRecordDate),
-      lastMarketFetchedAt: numberOrNull(parsed.lastMarketFetchedAt),
-      recoveredAt: numberOrNull(parsed.recoveredAt),
+      lastMarketFetchedAt: numberValue(parsed.lastMarketFetchedAt),
+      recoveredAt: numberValue(parsed.recoveredAt),
       recoveredSource: stringOrNull(parsed.recoveredSource),
     };
   } catch {

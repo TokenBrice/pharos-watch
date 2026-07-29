@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 
 import { computePYS, computePysComponents, yieldStabilityToApyVarianceScore } from "../../shared/lib/yield-scoring";
 import { clamp } from "../../shared/lib/math";
+import { percentileNearestRank } from "../../shared/lib/stats";
 import { formatPercentFromRatio } from "../../shared/lib/format";
 import { YieldRankingsResponseSchema, type YieldRanking } from "../../shared/types/yield";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -376,18 +377,11 @@ function readVenueRiskTier(row: RankingWithRisk): string | null {
 
 function summarizeDistribution(values: number[]) {
   return {
-    p10: percentile(values, 0.1),
-    p50: percentile(values, 0.5),
-    p90: percentile(values, 0.9),
+    p10: percentileNearestRank(values, 10) ?? 0,
+    p50: percentileNearestRank(values, 50) ?? 0,
+    p90: percentileNearestRank(values, 90) ?? 0,
     max: values.length ? Math.max(...values) : 0,
   };
-}
-
-function percentile(values: number[], p: number): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  if (sorted.length === 0) return 0;
-  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * p) - 1));
-  return sorted[index];
 }
 
 function summarizeNullCoverage(

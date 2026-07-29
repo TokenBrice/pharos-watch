@@ -1,6 +1,8 @@
 import { formatCompactUsdShort } from "@shared/lib/format";
 import { TELEGRAM_RECAP_TARGET_BODY_CHARACTERS } from "@shared/lib/telegram-recap-policy";
 import { MINI_APP_PAYLOAD_NAMES } from "@shared/lib/telegram-mini-app-payloads";
+import { numberValue } from "@shared/lib/type-guards";
+import { escapeHtml } from "./telegram";
 import { selectTelegramRecapFacts, type TelegramRecapScopedFact } from "./telegram-recap-ranking";
 
 export interface TelegramRecapDigestLink {
@@ -26,16 +28,8 @@ export interface TelegramRecapFormattedMessage {
   omittedFactCount: number;
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-
 function recapMiniAppUrl(payload: string): string {
   return `https://pharos.watch/pharoswatchbot/app/?startapp=${payload}`;
-}
-
-function numberValue(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function textValue(value: unknown): string | null {

@@ -1,6 +1,7 @@
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { resolvePsiInclusiveStablecoinId } from "@shared/lib/stablecoin-id-registry";
+import { percentileNearestRank } from "@shared/lib/stats";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   errorResponse,
@@ -540,13 +541,7 @@ async function handleBacktestMetrics(db: D1Database): Promise<Response> {
 
   const detected = perAnchor.filter((entry) => entry.detected);
   const falsePositiveDays = negativeControls.reduce((sum, entry) => sum + entry.falsePositiveDays, 0);
-  const leadTimes = detected
-    .map((entry) => entry.leadTimeDays!)
-    .sort((a, b) => a - b);
-  const percentile = (q: number): number | null =>
-    leadTimes.length === 0
-      ? null
-      : leadTimes[Math.min(leadTimes.length - 1, Math.floor(q * leadTimes.length))];
+  const leadTimes = detected.map((entry) => entry.leadTimeDays!);
   const byPegType: Record<string, { anchors: number; detected: number; recall: number }> = {};
   for (const entry of perAnchor) {
     const key = entry.pegType ?? "unknown";
@@ -566,8 +561,8 @@ async function handleBacktestMetrics(db: D1Database): Promise<Response> {
     recall: BACKTEST_ANCHORS.length === 0 ? 0 : truePositives / BACKTEST_ANCHORS.length,
     falsePositiveDays,
     falseNegativeIncidents,
-    leadTimeDaysP50: percentile(0.5),
-    leadTimeDaysP90: percentile(0.9),
+    leadTimeDaysP50: percentileNearestRank(leadTimes, 50),
+    leadTimeDaysP90: percentileNearestRank(leadTimes, 90),
     alertChurn: {
       averageAlertDaysPerAnchor:
         perAnchor.length === 0 ? 0 : perAnchor.reduce((sum, entry) => sum + entry.alertDays, 0) / perAnchor.length,
