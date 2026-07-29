@@ -629,7 +629,10 @@ export function joinDexMeasuredExecutionEvidence(input: {
       }
       const profile = materializeDexMeasuredQuoteProfile(quote);
       if (quote.status !== "measured" || !profile) {
-        fail("quote-failed", quote.failureReason ?? undefined);
+        fail(
+          quote.failureReason === "budget-deferred" ? "budget-deferred" : "quote-failed",
+          quote.failureReason ?? undefined,
+        );
         continue;
       }
       const genericIssues = validateDexMeasuredExecutionProfile({

@@ -1413,6 +1413,45 @@ describe("P4 DEX exit route observations", () => {
     }
   });
 
+  it("carves rotating quote-budget deferrals out of route-budget accounting", () => {
+    // Same producer surface, with the rotating Solana quote budget as the only
+    // remaining gap: 3 targets deferred before any capability was exercised.
+    const rotationDeferredCoverage = {
+      status: "populated" as const,
+      capabilityMatrixVersion: "p4a.8",
+      retainedPoolCount: 372,
+      observationCount: 10,
+      scoreEligibleObservationCount: 10,
+      scoreEligiblePoolCount: 10,
+      scoreEligibleCapabilityPoolCount: 277,
+      unsupportedPoolCount: 362,
+      evidenceCounts: { "reserve-based-amm-simulation": 7, "measured-executable-depth": 3 },
+      unsupportedReasons: {
+        "executionCapabilityGate:measured-execution:budget-deferred": 3,
+        "nonExecutableEvidence:defillama-pool-shaped": 8,
+        "nonExecutableEvidence:discovery-pool-shaped": 87,
+        routeObservationPayloadOverflow: 264,
+      },
+    };
+    expect(ExitRouteObservationCoverageSchema.safeParse(rotationDeferredCoverage).success).toBe(true);
+    expect(isDexExitRouteCoverageComplete(rotationDeferredCoverage)).toBe(false);
+    expect(isDexExitRouteCoverageWithinRouteBudget(rotationDeferredCoverage)).toBe(true);
+
+    // An attempted measurement that produced no valid profile is a genuine
+    // capability gap and stays in the denominator.
+    expect(
+      isDexExitRouteCoverageWithinRouteBudget({
+        ...rotationDeferredCoverage,
+        unsupportedReasons: {
+          "executionCapabilityGate:measured-execution:quote-failed": 3,
+          "nonExecutableEvidence:defillama-pool-shaped": 8,
+          "nonExecutableEvidence:discovery-pool-shaped": 87,
+          routeObservationPayloadOverflow: 264,
+        },
+      }),
+    ).toBe(false);
+  });
+
   it("rejects internally inconsistent producer coverage counts", () => {
     const coverage = {
       status: "populated",

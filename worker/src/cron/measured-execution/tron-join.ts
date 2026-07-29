@@ -65,7 +65,12 @@ export function joinTronMeasuredExecutionEvidence(input: {
         continue;
       }
       if (quote.status !== "measured" || !quote.profile) {
-        fail("quote-failed", quote.failureReason ?? undefined);
+        // A rotating admission deferral was never attempted, so it must not
+        // read as a capability failure of this exact direction.
+        fail(
+          quote.failureReason === "budget-deferred" ? "budget-deferred" : "quote-failed",
+          quote.failureReason ?? undefined,
+        );
         continue;
       }
       const adapter = (input.resolveAdapterPolicy ?? getTronMeasuredExecutionAdapterByProfile)(
