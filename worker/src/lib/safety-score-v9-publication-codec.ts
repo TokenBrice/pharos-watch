@@ -10,7 +10,6 @@ import { sha256Hex } from "./hash";
 import { parseJson } from "./json-parse";
 
 const PUBLICATION_STORAGE_KIND = "safety-score-v9-publication";
-const LEGACY_SHADOW_STORAGE_KIND = "safety-score-v9-shadow-envelope";
 const STORAGE_SCHEMA_VERSION = 1;
 
 const SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES = 1_900_000;
@@ -35,10 +34,7 @@ const CacheIdentitySchema = z
 const StorageEnvelopeSchema = z
   .object({
     storageSchemaVersion: z.literal(STORAGE_SCHEMA_VERSION),
-    kind: z.enum([
-      PUBLICATION_STORAGE_KIND,
-      LEGACY_SHADOW_STORAGE_KIND,
-    ]),
+    kind: z.literal(PUBLICATION_STORAGE_KIND),
     encoding: z.literal("gzip-base64"),
     identity: CacheIdentitySchema,
     payloadSha256: Sha256Schema,
@@ -132,25 +128,11 @@ async function gunzipBytesBounded(
 function parsePublicationPayload(
   raw: string,
   label: string,
-  allowLegacyEnvelope: boolean,
 ): SafetyScoreV9CurrentResponse {
   const parsed = parseJson(raw);
   if (!parsed.ok) throw new Error(`Malformed ${label} JSON: ${parsed.message}`);
   if (stableJsonStringifyV1(parsed.value) !== raw) {
     throw new Error(`${label} JSON is not canonical`);
-  }
-  const current = SafetyScoreV9CurrentResponseSchema.safeParse(parsed.value);
-  if (current.success) return current.data;
-  if (
-    allowLegacyEnvelope &&
-    parsed.value &&
-    typeof parsed.value === "object" &&
-    !Array.isArray(parsed.value) &&
-    "candidate" in parsed.value
-  ) {
-    return SafetyScoreV9CurrentResponseSchema.parse(
-      (parsed.value as { candidate: unknown }).candidate,
-    );
   }
   return SafetyScoreV9CurrentResponseSchema.parse(parsed.value);
 }
@@ -161,8 +143,7 @@ function compressedStorageCandidate(value: unknown): boolean {
   return (
     candidate.storageSchemaVersion !== undefined ||
     candidate.encoding === "gzip-base64" ||
-    candidate.kind === PUBLICATION_STORAGE_KIND ||
-    candidate.kind === LEGACY_SHADOW_STORAGE_KIND
+    candidate.kind === PUBLICATION_STORAGE_KIND
   );
 }
 
@@ -226,7 +207,6 @@ export async function parseSafetyScoreV9Publication(
     return parsePublicationPayload(
       storedValue,
       "Safety Score v9 publication",
-      true,
     );
   }
 
@@ -290,7 +270,6 @@ export async function parseSafetyScoreV9Publication(
   const publication = parsePublicationPayload(
     canonical,
     "Safety Score v9 publication",
-    storage.kind === LEGACY_SHADOW_STORAGE_KIND,
   );
   if (
     stableJsonStringifyV1(publicationIdentity(publication)) !==
