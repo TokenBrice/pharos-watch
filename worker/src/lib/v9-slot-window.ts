@@ -40,10 +40,6 @@ export const V9_MEMORY_LANE_LEASE_KEY =
 const V9_MEMORY_LANE_POLL_MS = 1_000;
 const V9_MEMORY_LANE_TTL_MARGIN_SEC = 30;
 
-function coreSlotResultAdmitsV9(resultStatus: string | null): boolean {
-  return resultStatus === "ok" || resultStatus === "degraded";
-}
-
 function neutralSkip(
   reason: string,
   metadata: Record<string, unknown>,
@@ -108,12 +104,12 @@ export async function waitForV9MemoryLaneRelease(
 /**
  * Admits canonical V9 work only after the matching public quarter-hour slot
  * has completed on the active Worker version and while an absolute pre-quarter
- * execution window remains. A degraded core slot is still terminal enough for
- * admission; the V9 compiler's exact fixed-input, seed, and DEX-generation
- * checks decide whether publication is safe. The shared V9 lane lease
- * serializes V9 work and keeps later triggers from loading their job graphs. A
- * prior active invocation of the same V9 schedule lane still fails closed,
- * while unrelated scheduled slots cannot suppress canonical publication.
+ * execution window remains. Requiring a successful core slot prevents V9 from
+ * publishing current-clock generations from stale stablecoin data after the
+ * core producer degrades. The shared V9 lane lease serializes V9 work and keeps
+ * later triggers from loading their job graphs. A prior active invocation of
+ * the same V9 schedule lane still fails closed, while unrelated scheduled slots
+ * cannot suppress canonical publication.
  */
 export async function runV9AfterCoreWithinWindow(
   options: V9SlotWindowOptions,
@@ -167,7 +163,7 @@ export async function runV9AfterCoreWithinWindow(
 
         if (
           coreSlot?.state !== "finished" ||
-          !coreSlotResultAdmitsV9(coreSlot.result_status) ||
+          coreSlot.result_status !== "ok" ||
           coreSlot.worker_version !== options.workerVersion
         ) {
           return neutralSkip("v9-core-slot-not-ready", {
