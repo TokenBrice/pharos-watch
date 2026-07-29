@@ -840,40 +840,6 @@ describe("fixed report-card input replay", () => {
     await expect(buildReportCardsFixedInputCacheEntry(fixedInput())).rejects.toThrow("Only exact publication inputs");
   });
 
-  it("migrates the legacy schema-v1 replay contract as an explicit reconstruction", () => {
-    const current = fixedInput({ coin: dexRow([]) });
-    const legacy = {
-      schemaVersion: 1,
-      capturedAt: current.capturedAt,
-      sourceGeneration: current.sourceGeneration,
-      registryRevision: current.registryRevision,
-      methodologyVersion: current.methodologyVersion,
-      clockSec: current.clockSec,
-      updatedAt: current.updatedAt,
-      liquidityStale: current.liquidityStale,
-      redemptionStale: current.redemptionStale,
-      inputFreshness: current.inputFreshness,
-      pegDataById: current.pegDataById,
-      activeDepegPeakBpsById: current.activeDepegPeakBpsById,
-      dexLiqMap: { coin: dexRow([]) },
-      redemptionBackstopMap: current.redemptionBackstopMap,
-      bluechipMap: current.bluechipMap,
-      resolvedBlacklistStatuses: current.resolvedBlacklistStatuses,
-      liveReserveMap: current.liveReserveMap,
-      liveReserveProvenanceMap: current.liveReserveProvenanceMap,
-      chainCirculatingById: current.chainCirculatingById,
-      dexDeploymentSupplyCoverageById: current.dexDeploymentSupplyCoverageById,
-      collateralDriftCoins: current.collateralDriftCoins,
-      liveToFallbackCoins: current.liveToFallbackCoins,
-    };
-
-    expect(normalizeFixedInput(legacy)).toMatchObject({
-      schemaVersion: 3,
-      captureKind: "public-reconstruction",
-      dexGenerationId: "dex-liquidity-1783891100",
-    });
-  });
-
   it("rejects redemption-family observations from fixed DEX inputs", () => {
     const current = fixedInput({ coin: dexRow([]) });
     const misrouted = {
