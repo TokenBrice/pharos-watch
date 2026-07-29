@@ -93,31 +93,9 @@ Implemented in D1 via the `feedback_rate_limit` table. Logic:
 4. If no row is inserted, the endpoint returns `429 Too Many Submissions`.
 5. Rows older than 3600 seconds are pruned in a non-blocking fire-and-forget call.
 
-**D1 schema** (`feedback_rate_limit` is part of `worker/migrations/0000_baseline.sql`; `feedback_submissions` was added by `worker/migrations/0078_feedback_submissions.sql` but is not used by the current runtime):
+**D1 schema** (`feedback_rate_limit` is part of `worker/migrations/0000_baseline.sql`; historical migration `worker/migrations/0078_feedback_submissions.sql` added `feedback_submissions`, but production D1 removed that unused table during the 2026-07-29 operated cleanup):
 
 ```sql
-CREATE TABLE IF NOT EXISTS feedback_submissions (
-  submission_id TEXT PRIMARY KEY,
-  created_at INTEGER NOT NULL,
-  submitted_at INTEGER,
-  status TEXT NOT NULL,
-  feedback_type TEXT NOT NULL,
-  title TEXT,
-  description TEXT NOT NULL,
-  expected_value TEXT,
-  stablecoin_id TEXT,
-  stablecoin_name TEXT,
-  page_url TEXT NOT NULL,
-  peg_value TEXT,
-  contact_consent INTEGER NOT NULL DEFAULT 0,
-  contact_channel TEXT,
-  contact_handle TEXT,
-  github_target_kind TEXT,
-  github_target_number INTEGER,
-  github_target_url TEXT,
-  last_error TEXT
-);
-
 CREATE TABLE IF NOT EXISTS feedback_rate_limit (
   ip_hash      TEXT    NOT NULL,
   submitted_at INTEGER NOT NULL   -- Unix timestamp (seconds)
@@ -127,7 +105,7 @@ CREATE INDEX IF NOT EXISTS idx_feedback_rate_limit_ip
   ON feedback_rate_limit(ip_hash, submitted_at);
 ```
 
-`feedback_submissions` is schema-retained only, not an active append-only archive. The current runtime path creates the GitHub issue directly, does not persist one row per submission, and treats the table as part of the next separately coordinated destructive D1 cleanup unless durable feedback persistence is deliberately reintroduced with privacy/retention docs and tests. The 2026-07-29 D1 inventory found zero rows. If durable feedback persistence returns, define its retention window before re-enabling writes.
+The current runtime path creates the GitHub issue directly and does not persist one row per submission. If durable feedback persistence returns, define its privacy model and retention window before re-enabling writes.
 
 #### Auto-verification (data corrections)
 

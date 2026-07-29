@@ -223,11 +223,10 @@ export default function PrivacyPage() {
             When GA4 is enabled, analytics data is retained for 14 months per Google&apos;s default settings. We do not
             maintain user-account databases. Feedback submissions are sent to GitHub Issues for product support and
             issue tracking; optional follow-up contact details are included there when you provide them. The worker
-            stores rate-limit metadata for feedback abuse prevention. A legacy `feedback_submissions` table exists in
-            the D1 schema for now, has no current rows, and is queued for a separate destructive cleanup; the current
-            submission path does not write to it. Self-serve API key requests are stored for operator review and
-            duplicate-claim enforcement; verification tokens are stored only as hashes and expire after 30 minutes.
-            Issued self-serve API keys expire after 60 days by default. Homepage shortcut
+            stores rate-limit metadata for feedback abuse prevention. The current submission path does not persist a
+            separate D1 submission row. Self-serve API key requests are stored for operator review and duplicate-claim
+            enforcement; verification tokens are stored only as hashes and expire after 30 minutes. Issued self-serve
+            API keys expire after 60 days by default. Homepage shortcut
             preferences remain until reset or browser site data is cleared. Picker localStorage remains until browser
             site data is cleared. Picker KV snapshots are retained for five years because they are content-addressed
             analytical records rather than user-account records.

@@ -285,7 +285,7 @@ Pages proxy code and smoke tooling continue emitting only the current secret thr
 
 ### 9. Maintain the WAF rate-limiting rule
 
-Zone-level rate-limiting rule `api-rate-limit-ip` deflects volumetric floods at the Cloudflare edge, before any Worker or D1 write happens. It complements, but does not replace, the Worker `api_key_rate_limit` table for keyed public API traffic plus the feedback and self-serve API-key request limiters. The old `public_api_rate_limit` table is queued for a separate destructive cleanup; the keyed-only public API gate no longer writes to it.
+Zone-level rate-limiting rule `api-rate-limit-ip` deflects volumetric floods at the Cloudflare edge, before any Worker or D1 write happens. It complements, but does not replace, the Worker `api_key_rate_limit` table for keyed public API traffic plus the feedback and self-serve API-key request limiters. The old `public_api_rate_limit` production table was removed during the 2026-07-29 operated D1 cleanup; the keyed-only public API gate no longer writes to it.
 
 Parameters of record:
 
