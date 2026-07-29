@@ -1026,16 +1026,9 @@ export async function drainPendingQueue(
   const sentClaimsToDelete: Array<{ claim: PendingDeliveryClaim; row: PendingAlertRow }> = [];
   const blockedRowsToDelete: DeadLetterPendingRow[] = [];
   const permanentRowsToDelete: DeadLetterPendingRow[] = [];
-  const maxAttemptRowsToDelete: DeadLetterPendingRow[] = [];
   const preferenceRowsToDelete: DeadLetterPendingRow[] = [];
   const completedIds = new Set<number>();
-  const retryUpdates: PendingRetryUpdate[] = [];
   const deferUpdates: PendingDeferUpdate[] = [];
-  const executionUnknownOutcomes: Array<{
-    claim: PendingDeliveryClaim;
-    row: PendingAlertRow;
-    errorClass: string | null;
-  }> = [];
   // Per-result outcome kinds, tallied in one pass after the send loop so each
   // counter derives from exactly one source of truth.
   const outcomeKinds: PendingResultClassification["kind"][] = [];
@@ -1327,13 +1320,6 @@ export async function drainPendingQueue(
       case "execution-unknown": {
         if (!deliveryClaim) throw new Error(`Telegram ambiguous result lost delivery ownership (${result.id})`);
         if (!pendingRow) throw new Error(`Telegram ambiguous result lost pending row (${result.id})`);
-        if (!checkpointedOutcome) {
-          executionUnknownOutcomes.push({
-            claim: deliveryClaim,
-            row: pendingRow,
-            errorClass: classification.errorClass,
-          });
-        }
         break;
       }
       case "blocked": {
@@ -1355,7 +1341,6 @@ export async function drainPendingQueue(
       }
       case "retry": {
         if (!deliveryClaim) throw new Error(`Telegram retry result lost delivery ownership (${result.id})`);
-        if (!checkpointedOutcome) retryUpdates.push({ ...classification.retryUpdate, ...deliveryClaim });
         pushTargetStatus("queued", classification.targetErrorClass);
         if (classification.retryUpdate.notBeforeAt != null) {
           predecessorRetryAtByChat.set(result.chatId, classification.retryUpdate.notBeforeAt);
@@ -1364,19 +1349,10 @@ export async function drainPendingQueue(
           rateLimited = true;
           rateLimitRetryAfterSec = classification.rateLimit.retryAfterSec;
           rateLimitNotBeforeAt = Math.max(rateLimitNotBeforeAt ?? 0, classification.rateLimit.notBeforeAt);
-          if (classification.rateLimit.scope === "global" && !checkpointedOutcome) {
-            await setTelegramGlobalBackoff(db, rateLimitNotBeforeAt);
-          }
         }
         break;
       }
       case "dropped-max-attempts": {
-        if (pendingRow && !checkpointedOutcome) maxAttemptRowsToDelete.push(pendingDeadLetterSnapshot(
-          pendingRow,
-          deliveryClaim,
-          outcomeAt,
-          result.errorClass ?? pendingRow.last_error_class,
-        ));
         pushTargetStatus("failed", classification.errorClass);
         break;
       }
@@ -1404,7 +1380,6 @@ export async function drainPendingQueue(
   const dropped = droppedMaxAttemptsFallback + droppedPermanentFailure + preferenceRowsToDelete.length;
 
   await flushChatSuccessResets(db, chatsToResetOnSuccess);
-  await markPendingExecutionUnknown(db, executionUnknownOutcomes, nowSec);
   await recordPendingDrainTelemetry(db, deliveryDiagnostics, targetStatusUpdates);
   await recordTelegramAlertTargetCancellations(db, targetCancellations);
 
@@ -1418,13 +1393,11 @@ export async function drainPendingQueue(
   const terminalDeleteGroups: Array<{ rows: DeadLetterPendingRow[]; reason: PendingDeadLetterReason }> = [
     { rows: blockedRowsToDelete, reason: "blocked_disabled" },
     { rows: permanentRowsToDelete, reason: "permanent_failure" },
-    { rows: maxAttemptRowsToDelete, reason: "max_attempts" },
     { rows: preferenceRowsToDelete, reason: "preference_changed" },
   ];
   await deleteSentPendingAlerts(db, sentClaimsToDelete.map(({ claim }) => claim.id));
   await deadLetterAndDeleteTerminalPendingGroups(db, terminalDeleteGroups, nowSec);
   await persistPendingDeferrals(db, deferUpdates, claimOwner, nowSec);
-  await persistPendingRetries(db, retryUpdates, nowSec);
   for (const [oldChatId, newChatId] of migratedChatIds) {
     await migrateTelegramChatId(db, oldChatId, newChatId);
   }
