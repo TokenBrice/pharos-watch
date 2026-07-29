@@ -47,9 +47,21 @@ export interface FluidResolverDeployment {
 }
 
 /**
- * Resolver deployments and runtime bytecode reviewed on 2026-07-15. Fluid is
- * intentionally shadow-only until every activation gate in the FORGE design
- * has passed.
+ * Resolver deployments and runtime bytecode reviewed on 2026-07-15; all four
+ * pinned hashes were re-verified against live runtime code on 2026-07-29.
+ * Activation is cohort-scoped exactly like the QuoterV2 registry: Fluid stays
+ * shadow-only and score-ineligible until the reviewed activation gates pass,
+ * and registry presence alone never makes a lane score-eligible. The
+ * 2026-07-29 evidence packet at
+ * agents/safety-score-v9-producer-failed-remediation/artifacts/exact-dex-route-coverage/activation-fluid.json
+ * records what already holds (no bytecode drift, live shadow observations on
+ * Ethereum and Arbitrum, and an independent latest-block reproduction of a
+ * published marginal output ratio) and the gaps that still block promotion:
+ * this adapter carries no on-chain pool binding, so `poolId` and
+ * `poolTokenAddresses` are trusted from the Fluid tickers API instead of being
+ * proved through the Fluid DexFactory, and Base and Polygon have no published
+ * shadow observation to review. Score eligibility additionally requires the
+ * shared P4 capability matrix to admit this adapter profile.
  */
 export const FLUID_RESOLVER_DEPLOYMENTS: readonly FluidResolverDeployment[] = [
   {
