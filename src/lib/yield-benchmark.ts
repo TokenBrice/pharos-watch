@@ -4,7 +4,10 @@ import type {
   YieldBenchmarkRegistry,
   YieldBenchmarkSelectionMode,
 } from "@shared/types";
-import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
+import type { YieldRanking } from "@shared/types/yield";
+import type { YieldRankingSummary } from "@shared/types/yield-summary";
+
+type YieldWorkbenchRanking = YieldRanking | YieldRankingSummary;
 
 type YieldBenchmarkLike = {
   benchmarkKey?: YieldBenchmarkKey;

@@ -24,7 +24,7 @@ export function getYieldAlternateSourceCount(row: YieldWorkbenchRanking): number
   return isYieldRankingSummary(row) ? row.alternateSourceCount : row.altSources.length;
 }
 
-export function getYieldAvailableSources(
+function getYieldAvailableSources(
   row: YieldWorkbenchRanking,
 ): Array<{ sourceKey: string; yieldSource: string }> {
   const selected = row.provenance?.sourceKey
@@ -40,7 +40,7 @@ export function getYieldAvailableSources(
   ];
 }
 
-export function getYieldRankChangeAttribution(
+function getYieldRankChangeAttribution(
   row: YieldWorkbenchRanking,
 ): YieldRankChangeAttribution | null | undefined {
   if (!isYieldRankingSummary(row)) return row.rankChangeAttribution;
