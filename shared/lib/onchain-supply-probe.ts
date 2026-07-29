@@ -7,6 +7,11 @@ export interface CuratedOnchainSupplyContractConfig {
   chain: string;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
+  /**
+   * Some reviewed native deployments are live with zero supply. Keep this
+   * opt-in so ordinary aggregate paths still fail closed on empty reads.
+   */
+  allowZeroSupply?: boolean;
 }
 
 export interface CuratedAggregateOnchainSupplyContract {
@@ -34,6 +39,15 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // zero supply row. Use only verified live deployments and fail closed if any
   // configured chain cannot be read, so this cannot silently undercount.
   "cadd-cad-digital": [{ chain: "ethereum" }, { chain: "base" }],
+  // AllUnity lists CHFAU as issuer-native on Ethereum, Polygon, Base, and Tempo.
+  // DefiLlama does not list it and CoinGecko exposes no usable market cap, so
+  // aggregate the reviewed deployments and allow live zero-supply legs.
+  "chfau-allunity": [
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "polygon", allowZeroSupply: true },
+    { chain: "base", allowZeroSupply: true },
+    { chain: "tempo", allowZeroSupply: true },
+  ],
   // CoinGecko only exposes an Ethereum market-cap row for ftUSD and currently
   // leaves it stale; aggregate the verified native Ethereum + Sonic supplies.
   "ftusd-flying-tulip": [{ chain: "ethereum" }, { chain: "sonic" }],

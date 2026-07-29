@@ -19,6 +19,8 @@ const PUBLIC_RPC_URLS: Record<string, string> = {
   plasma: "https://rpc.plasma.to",
   // Required for usdnr-nerona's m0-wrapper-underlying additional-deployment aggregation
   fluent: "https://rpc.fluent.xyz",
+  // Required for reviewed CHFAU native supply aggregation.
+  tempo: "https://rpc.tempo.xyz",
 };
 
 const EXTRA_FALLBACK_RPC_URLS: Record<string, string[]> = {

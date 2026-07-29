@@ -98,6 +98,27 @@ describe("curated on-chain supply paths", () => {
     ], "ftusd-flying-tulip"))).toBeNull();
   });
 
+  it("resolves CHFAU's reviewed native deployments with zero-supply legs allowed", () => {
+    const ethereumContract = { chain: "ethereum", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 };
+    const polygonContract = { chain: "polygon", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 };
+    const baseContract = { chain: "base", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 };
+    const tempoContract = { chain: "tempo", address: "0x20c00000000000000000000042109aef2f8b28e1", decimals: 6 };
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      ethereumContract,
+      polygonContract,
+      baseContract,
+      tempoContract,
+    ], "chfau-allunity"));
+
+    expect(selected?.map((entry) => entry.contract)).toEqual([
+      ethereumContract,
+      polygonContract,
+      baseContract,
+      tempoContract,
+    ]);
+    expect(selected?.map((entry) => entry.config.allowZeroSupply)).toEqual([true, true, true, true]);
+  });
+
 });
 
 describe("hasRuntimeOnchainSupplyPath", () => {
