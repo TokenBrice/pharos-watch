@@ -22,12 +22,17 @@ import { rethrowIfAborted } from "../../lib/abort";
 import {
   decodeFunctionResult,
   encodeFunctionData,
-  keccak256,
   parseAbi,
 } from "viem/utils";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress } from "./evm";
+import {
+  EIP1967_IMPLEMENTATION_SLOT,
+  implementationAddressFromSlot,
+  multicallResultByLabel,
+  runtimeCodeHash,
+} from "./onchain-identity";
 
 type Erc4626Params = LiveReserveAdapterParamsByKey["erc4626-single-asset"];
 type Hex = `0x${string}`;
@@ -46,8 +51,6 @@ const E18 = 10n ** 18n;
 const BPS = 10_000;
 const OFT_DECIMAL_CONVERSION_RATE = 10n ** 12n;
 const COST_REQUESTS_USD = [100_000, 1_000_000, 5_000_000, 25_000_000] as const;
-const EIP1967_IMPLEMENTATION_SLOT =
-  "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 
 const ROUTE_ABI = parseAbi([
   "function paused() view returns (bool)",
@@ -165,22 +168,12 @@ function rejected(
   return { status: "rejected", attemptedAtSec, rejectionCode, ...blocks };
 }
 
-function resultByLabel(
-  results: readonly EvmMulticall3Result[],
-  label: string,
-): Hex | null {
-  const result = results.find((candidate) => candidate.label === label);
-  return result?.success && result.returnData !== "0x"
-    ? result.returnData
-    : null;
-}
-
 function decodeResult(
   results: readonly EvmMulticall3Result[],
   label: string,
   functionName: string,
 ): unknown {
-  const data = resultByLabel(results, label);
+  const data = multicallResultByLabel(results, label);
   if (!data) return null;
   try {
     return decodeFunctionResult({
@@ -242,15 +235,6 @@ function normalizeExpectedAddress(address: string): string | null {
 function addressAsBytes32(address: string): Hex | null {
   const normalized = normalizeExpectedAddress(address);
   return normalized ? (`0x${normalized.slice(2).padStart(64, "0")}` as Hex) : null;
-}
-
-function implementationAddress(storage: Hex | null): string | null {
-  if (!storage || !/^0x[0-9a-fA-F]{64}$/.test(storage)) return null;
-  return normalizeEvmAddress(`0x${storage.slice(-40)}`);
-}
-
-function codeHash(code: Hex | null): string | null {
-  return code ? keccak256(code).toLowerCase() : null;
 }
 
 function toRouteBlock(
@@ -484,7 +468,7 @@ async function verifyContractIdentities(args: {
         : entry.manifest.expectedImplementationRuntimeCodeHash;
     if (
       !expectedHash ||
-      codeHash(entry.code) !== expectedHash.toLowerCase()
+      runtimeCodeHash(entry.code) !== expectedHash.toLowerCase()
     ) {
       return {
         status: "rejected",
@@ -531,7 +515,7 @@ async function verifyContractIdentities(args: {
       );
     }),
   );
-  if (slots.some((slot) => implementationAddress(slot) == null)) {
+  if (slots.some((slot) => implementationAddressFromSlot(slot) == null)) {
     return {
       status: "rejected",
       rejectionCode: "implementation-unavailable",
@@ -540,7 +524,7 @@ async function verifyContractIdentities(args: {
   if (
     slots.some(
       (slot, index) =>
-        implementationAddress(slot) !==
+        implementationAddressFromSlot(slot) !==
         normalizeExpectedAddress(proxies[index].implementationAddress),
     )
   ) {

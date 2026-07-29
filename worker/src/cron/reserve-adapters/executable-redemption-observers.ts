@@ -19,6 +19,11 @@ import {
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress } from "./evm";
+import {
+  EIP1967_IMPLEMENTATION_SLOT,
+  implementationAddressFromSlot,
+  multicallResultByLabel,
+} from "./onchain-identity";
 import { throwIfAborted } from "../../lib/abort";
 
 type Hex = `0x${string}`;
@@ -28,8 +33,6 @@ const RPC_DEADLINE_MS = 10_000;
 const BLOCK_MAX_AGE_SEC = 10 * 60;
 const BLOCK_FUTURE_SKEW_SEC = 60;
 const OBSERVATION_BLOCK_LAG = 2;
-const EIP1967_IMPLEMENTATION_SLOT =
-  "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 
 const ERC20_ABI = parseAbi([
   "function balanceOf(address account) view returns (uint256)",
@@ -240,22 +243,17 @@ function resultData(
   results: readonly EvmMulticall3Result[],
   label: string,
 ): Hex {
-  const result = results.find((candidate) => candidate.label === label);
-  if (!result?.success || result.returnData === "0x") {
+  const data = multicallResultByLabel(results, label);
+  if (!data) {
     fail(coinId, `${label} unavailable`);
   }
-  return result.returnData;
+  return data;
 }
 
 function normalizedAddress(coinId: string, value: unknown, label: string): string {
   const normalized = normalizeEvmAddress(typeof value === "string" ? value : undefined);
   if (!normalized) fail(coinId, `${label} returned an invalid address`);
   return normalized;
-}
-
-function storageAddress(value: Hex | null): string | null {
-  if (!value || !/^0x[0-9a-fA-F]{64}$/.test(value)) return null;
-  return normalizeEvmAddress(`0x${value.slice(-40)}`);
 }
 
 function sameAddressSet(actual: readonly string[], expected: readonly string[]): boolean {
@@ -320,7 +318,7 @@ async function verifyProxyIdentity(
       ),
     { signal },
   );
-  if (storageAddress(implementationWord) !== identity.implementationAddress) {
+  if (implementationAddressFromSlot(implementationWord) !== identity.implementationAddress) {
     fail(coinId, `implementation identity drift at ${identity.address}`);
   }
   await verifyDirectIdentity(
