@@ -7,6 +7,14 @@
     "reviewAfter": "2026-10-11",
     "nextAction": "Extract portability and bulk operation handlers from the general Mini App mutation dispatcher while preserving the shared auth, rate-limit, generation, and response contracts."
   },
+  "worker/src/cron/dex-liquidity/process-pools.ts": {
+    "disposition": "queued-p4",
+    "notes": "DEX pool processing is currently 1,081 file lines with a 475-line maximum function and 120 branches. Keep this explicit interim waiver only while the focused decomposition preserves the existing DEX processing contracts.",
+    "owner": "tokenbrice",
+    "createdAt": "2026-07-29",
+    "reviewAfter": "2026-08-28",
+    "nextAction": "P2-01: Decompose DEX pool processing into typed admission, enrichment, execution-capability, and accumulation phases, then remove this waiver and lower the hotspot ratchet."
+  },
   "worker/src/cron/reserve-adapters/erc4626-single-asset.ts": {
     "disposition": "queued-p4",
     "notes": "The ERC-4626 single-asset adapter now owns on-chain ERC-4626 reserve reads plus validated Morpho V1/V2 liquidity telemetry for curated vault exits. Keep it explicitly waived for this release gate; split Morpho liquidity clients from the generic ERC-4626 reserve path in a focused reserve-adapter cleanup pass.",
