@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  computeSupplyAttributionJournalIdV1,
+  type SupplyAttributionJournalV1Payload,
+} from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import type { ChainRpcConfig } from "../chain-registry";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import wmMetaSource from "@shared/data/stablecoins/coins/wm-m0.json";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
+import { buildReviewedDeploymentRouteInventory } from "../safety-score-v9-supply-attribution-contract";
+import { buildXautRepresentationGroupInventory } from "../safety-score-v9-xaut-supply-attribution-contract";
 
 const rpcMocks = vi.hoisted(() => ({
   observeCentrifugeReviewedDeploymentUnitPartitionAttempt: vi.fn(),
@@ -100,6 +106,122 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     rpcMocks.observeCentrifugeReviewedDeploymentUnitPartitionAttempt.mockReset();
     rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockReset();
     rpcMocks.observeWmReviewedDeploymentUnitPartitionAttempt.mockReset();
+  });
+
+  it("preserves exact per-asset capture and journal characterization vectors", async () => {
+    const fixedInput = {
+      activeAssetIds: ["wm-m0", "xaut-tether", "jtrsy-anemoy"],
+      clockSec: OBSERVED_AT_SEC,
+      sourceGeneration: "report-cards:v8:fixture",
+      baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+      registryFingerprint: "a".repeat(64),
+      chainCirculatingById: {
+        "wm-m0": {},
+        "xaut-tether": {},
+        "jtrsy-anemoy": {},
+      },
+      aggregateCirculatingById: {
+        "wm-m0": {
+          circulating: { peggedUSD: 87_020_618.58982982 },
+          observedAtSec: OBSERVED_AT_SEC,
+        },
+        "xaut-tether": {
+          circulating: { peggedGOLD: XAUT_AGGREGATE_SUPPLY_USD },
+          observedAtSec: OBSERVED_AT_SEC,
+        },
+        "jtrsy-anemoy": {
+          circulating: { peggedUSD: 1_000_000 },
+          observedAtSec: OBSERVED_AT_SEC,
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+    const uuids = [
+      "00000000-0000-4000-8000-000000000001",
+      "00000000-0000-4000-8000-000000000002",
+      "00000000-0000-4000-8000-000000000003",
+    ] as const;
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(
+      OBSERVED_AT_SEC * 1_000,
+    );
+    const uuidSpy = vi.spyOn(crypto, "randomUUID");
+    for (const uuid of uuids) uuidSpy.mockReturnValueOnce(uuid);
+
+    const capture = await captureSafetyScoreV9SupplyAttribution(
+      fixedInput,
+    ).finally(() => {
+      uuidSpy.mockRestore();
+      nowSpy.mockRestore();
+    });
+    const journalVectors = [
+      {
+        assetId: "xaut-tether",
+        sourceId:
+          "xaut.canonical-lock-mint-group-partition.v2" as const,
+        sourceOriginClass:
+          "issuer-disclosure-plus-onchain" as const,
+        routeInventoryDigest:
+          buildXautRepresentationGroupInventory()!.digest,
+      },
+      {
+        assetId: "wm-m0",
+        sourceId:
+          "wm.reviewed-deployment-unit-partition.v1" as const,
+        sourceOriginClass: "onchain-observation" as const,
+        routeInventoryDigest:
+          buildReviewedDeploymentRouteInventory("wm-m0")!.digest,
+      },
+      {
+        assetId: "jtrsy-anemoy",
+        sourceId:
+          "centrifuge.reviewed-deployment-unit-partition.v1" as const,
+        sourceOriginClass: "onchain-observation" as const,
+        routeInventoryDigest:
+          buildReviewedDeploymentRouteInventory("jtrsy-anemoy")!.digest,
+      },
+    ];
+    const expectedJournalRecords = journalVectors.map(
+      (vector, index) => {
+        const payload: SupplyAttributionJournalV1Payload = {
+          schemaVersion: 1,
+          lane: "supply-attribution",
+          assetId: vector.assetId,
+          attemptId: `supply-attribution:${uuids[index]}`,
+          sourceId: vector.sourceId,
+          sourceOriginClass: vector.sourceOriginClass,
+          baseInputGenerationId: fixedInput.baseInputGenerationId,
+          sourceGeneration: fixedInput.sourceGeneration,
+          registryFingerprint: fixedInput.registryFingerprint,
+          routeInventoryDigest: vector.routeInventoryDigest,
+          attemptCode: "supply-attribution.collector.attempted",
+          admissionCode:
+            "supply-attribution.admission.rejected-upstream",
+          fallbackCode:
+            "supply-attribution.fallback.aggregate-only",
+          rejectionCode: "chain-rpc-unavailable",
+          attemptedAtSec: OBSERVED_AT_SEC,
+          completedAtSec: OBSERVED_AT_SEC,
+          scoringClockSec: OBSERVED_AT_SEC,
+          sourceObservedAtSec: null,
+          failedRouteId: null,
+          contentSha256: null,
+        };
+        return {
+          ...payload,
+          journalId: computeSupplyAttributionJournalIdV1(payload),
+        };
+      },
+    );
+
+    expect(capture).toEqual({
+      attributionById: {},
+      captureClockSec: OBSERVED_AT_SEC,
+      expectedAssetIds: [
+        "wm-m0",
+        "xaut-tether",
+        "jtrsy-anemoy",
+      ],
+      journalRecords: expectedJournalRecords,
+    });
   });
 
   it("partitions aggregate XAUT without double-counting its XAUt0 lockbox", () => {

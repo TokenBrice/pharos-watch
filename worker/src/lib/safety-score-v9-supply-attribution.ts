@@ -3,6 +3,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   admissionCodeForSupplyAttributionRejection,
   createSupplyAttributionJournalV1,
+  type SupplyAttributionRejectionCode,
   type SupplyAttributionJournalV1,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { rethrowIfAborted } from "./abort";
@@ -14,11 +15,9 @@ import {
 } from "./safety-score-v9-supply-attribution-contract";
 import {
   observeCentrifugeReviewedDeploymentUnitPartitionAttempt,
-  type CentrifugeReviewedDeploymentObservationAttempt,
 } from "./safety-score-v9-centrifuge-supply-observer";
 import {
   observeWmReviewedDeploymentUnitPartitionAttempt,
-  type WmReviewedDeploymentObservationAttempt,
 } from "./safety-score-v9-wm-supply-observer";
 import {
   buildXautRepresentationGroupInventory,
@@ -26,7 +25,6 @@ import {
 } from "./safety-score-v9-xaut-supply-attribution-contract";
 import {
   observeXautRepresentationGroupSupplyAttributionAttempt,
-  type XautSupplyAttributionObservationAttempt,
 } from "./safety-score-v9-xaut-supply-observer";
 
 const LOCK_MINT_SHARE_SCALE = 10n ** 15n;
@@ -136,31 +134,97 @@ export function deriveLockMintSupplyPartition(input: {
   };
 }
 
-function buildCentrifugeSupplyAttributionJournalRecord(input: {
+type SupplyAttributionValue = Exclude<
+  V9SupplyAttributionById[string],
+  { model: "canonical-lock-mint-partition-v1" }
+>;
+
+type SupplyAttributionObservationAttempt =
+  | {
+      status: "accepted";
+      attribution: SupplyAttributionValue;
+    }
+  | {
+      status: "rejected";
+      rejectionCode: SupplyAttributionRejectionCode;
+      failedRouteId: string | null;
+      rejectedSourceObservedAtSec?: number | null;
+    };
+
+interface SupplyAttributionAssetDescriptor {
   assetId: string;
+  sourceId: SupplyAttributionJournalV1["sourceId"];
+  sourceOriginClass: SupplyAttributionJournalV1["sourceOriginClass"];
+  routeInventoryDigest: () => string | null;
+  observe: (input: {
+    aggregateSupplyUsd: number;
+    registryFingerprint: string;
+    scoringClockSec: number;
+    chainRpcs: Map<string, ChainRpcConfig>;
+    signal?: AbortSignal;
+  }) => Promise<SupplyAttributionObservationAttempt>;
+}
+
+function supplyAttributionAssetDescriptors():
+  SupplyAttributionAssetDescriptor[] {
+  return [
+    {
+      assetId: XAUT_ASSET_ID,
+      sourceId: "xaut.canonical-lock-mint-group-partition.v2",
+      sourceOriginClass: "issuer-disclosure-plus-onchain",
+      routeInventoryDigest:
+        () => buildXautRepresentationGroupInventory()?.digest ?? null,
+      observe: observeXautRepresentationGroupSupplyAttributionAttempt,
+    },
+    {
+      assetId: "wm-m0",
+      sourceId: "wm.reviewed-deployment-unit-partition.v1",
+      sourceOriginClass: "onchain-observation",
+      routeInventoryDigest:
+        () => buildReviewedDeploymentRouteInventory("wm-m0")?.digest ?? null,
+      observe: observeWmReviewedDeploymentUnitPartitionAttempt,
+    },
+    ...CENTRIFUGE_BURN_MINT_ASSET_IDS.map(
+      (assetId): SupplyAttributionAssetDescriptor => ({
+        assetId,
+        sourceId: "centrifuge.reviewed-deployment-unit-partition.v1",
+        sourceOriginClass: "onchain-observation",
+        routeInventoryDigest:
+          () => buildReviewedDeploymentRouteInventory(assetId)?.digest ?? null,
+        observe: (input) =>
+          observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
+            assetId,
+            ...input,
+          }),
+      }),
+    ),
+  ];
+}
+
+function buildSupplyAttributionJournalRecord(input: {
+  descriptor: SupplyAttributionAssetDescriptor;
   fixedInput: Readonly<ReportCardsFixedInput>;
   attemptId: string;
   attemptedAtSec: number;
   completedAtSec: number;
-  captureClockSec: number;
-  outcome: CentrifugeReviewedDeploymentObservationAttempt;
+  scoringClockSec: number;
+  outcome: SupplyAttributionObservationAttempt;
 }): SupplyAttributionJournalV1 {
-  const inventory = buildReviewedDeploymentRouteInventory(input.assetId);
-  const outcome = input.outcome;
+  const { descriptor, outcome } = input;
   return createSupplyAttributionJournalV1({
     schemaVersion: 1,
     lane: "supply-attribution",
-    assetId: input.assetId,
+    assetId: descriptor.assetId,
     attemptId: input.attemptId,
-    sourceId: "centrifuge.reviewed-deployment-unit-partition.v1",
-    sourceOriginClass: "onchain-observation",
+    sourceId: descriptor.sourceId,
+    sourceOriginClass: descriptor.sourceOriginClass,
     baseInputGenerationId: input.fixedInput.baseInputGenerationId,
     sourceGeneration: input.fixedInput.sourceGeneration,
     registryFingerprint: input.fixedInput.registryFingerprint,
     routeInventoryDigest:
       outcome.status === "accepted"
         ? outcome.attribution.routeInventoryDigest
-        : inventory?.digest ?? null,
+        : descriptor.routeInventoryDigest(),
     attemptCode: "supply-attribution.collector.attempted",
     admissionCode:
       outcome.status === "accepted"
@@ -177,11 +241,11 @@ function buildCentrifugeSupplyAttributionJournalRecord(input: {
       : {}),
     attemptedAtSec: input.attemptedAtSec,
     completedAtSec: input.completedAtSec,
-    scoringClockSec: input.captureClockSec,
+    scoringClockSec: input.scoringClockSec,
     sourceObservedAtSec:
       outcome.status === "accepted"
         ? outcome.attribution.observedAtSec
-        : null,
+        : outcome.rejectedSourceObservedAtSec ?? null,
     failedRouteId:
       outcome.status === "rejected" ? outcome.failedRouteId : null,
     contentSha256:
@@ -191,106 +255,66 @@ function buildCentrifugeSupplyAttributionJournalRecord(input: {
   });
 }
 
-function buildXautSupplyAttributionJournalRecord(input: {
+async function runSupplyAttributionAssetCapture(input: {
+  descriptor: SupplyAttributionAssetDescriptor;
   fixedInput: Readonly<ReportCardsFixedInput>;
-  attemptId: string;
-  attemptedAtSec: number;
-  completedAtSec: number;
-  captureClockSec: number;
-  outcome: XautSupplyAttributionObservationAttempt;
-}): SupplyAttributionJournalV1 {
-  const inventory = buildXautRepresentationGroupInventory();
-  const outcome = input.outcome;
-  return createSupplyAttributionJournalV1({
-    schemaVersion: 1,
-    lane: "supply-attribution",
-    assetId: XAUT_ASSET_ID,
-    attemptId: input.attemptId,
-    sourceId: "xaut.canonical-lock-mint-group-partition.v2",
-    sourceOriginClass: "issuer-disclosure-plus-onchain",
-    baseInputGenerationId: input.fixedInput.baseInputGenerationId,
-    sourceGeneration: input.fixedInput.sourceGeneration,
-    registryFingerprint: input.fixedInput.registryFingerprint,
-    routeInventoryDigest:
-      outcome.status === "accepted"
-        ? outcome.attribution.routeInventoryDigest
-        : inventory?.digest ?? null,
-    attemptCode: "supply-attribution.collector.attempted",
-    admissionCode:
-      outcome.status === "accepted"
-        ? "supply-attribution.admission.accepted"
-        : admissionCodeForSupplyAttributionRejection(
-            outcome.rejectionCode,
-          ),
-    fallbackCode:
-      outcome.status === "accepted"
-        ? "supply-attribution.fallback.not-used"
-        : "supply-attribution.fallback.aggregate-only",
-    ...(outcome.status === "rejected"
-      ? { rejectionCode: outcome.rejectionCode }
-      : {}),
-    attemptedAtSec: input.attemptedAtSec,
-    completedAtSec: input.completedAtSec,
-    scoringClockSec: input.captureClockSec,
-    sourceObservedAtSec:
-      outcome.status === "accepted"
-        ? outcome.attribution.observedAtSec
-        : outcome.rejectedSourceObservedAtSec,
-    failedRouteId:
-      outcome.status === "rejected" ? outcome.failedRouteId : null,
-    contentSha256:
-      outcome.status === "accepted"
-        ? sha256Hex(stableJsonStringifyV1(outcome.attribution))
-        : null,
-  });
-}
-
-function buildWmSupplyAttributionJournalRecord(input: {
-  fixedInput: Readonly<ReportCardsFixedInput>;
-  attemptId: string;
-  attemptedAtSec: number;
-  completedAtSec: number;
-  captureClockSec: number;
-  outcome: WmReviewedDeploymentObservationAttempt;
-}): SupplyAttributionJournalV1 {
-  const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
-  const outcome = input.outcome;
-  return createSupplyAttributionJournalV1({
-    schemaVersion: 1,
-    lane: "supply-attribution",
-    assetId: "wm-m0",
-    attemptId: input.attemptId,
-    sourceId: "wm.reviewed-deployment-unit-partition.v1",
-    sourceOriginClass: "onchain-observation",
-    baseInputGenerationId: input.fixedInput.baseInputGenerationId,
-    sourceGeneration: input.fixedInput.sourceGeneration,
-    registryFingerprint: input.fixedInput.registryFingerprint,
-    routeInventoryDigest:
-      outcome.status === "accepted"
-        ? outcome.attribution.routeInventoryDigest
-        : inventory?.digest ?? null,
-    attemptCode: "supply-attribution.collector.attempted",
-    admissionCode: outcome.status === "accepted"
-      ? "supply-attribution.admission.accepted"
-      : admissionCodeForSupplyAttributionRejection(outcome.rejectionCode),
-    fallbackCode: outcome.status === "accepted"
-      ? "supply-attribution.fallback.not-used"
-      : "supply-attribution.fallback.aggregate-only",
-    ...(outcome.status === "rejected"
-      ? { rejectionCode: outcome.rejectionCode }
-      : {}),
-    attemptedAtSec: input.attemptedAtSec,
-    completedAtSec: input.completedAtSec,
-    scoringClockSec: input.captureClockSec,
-    sourceObservedAtSec: outcome.status === "accepted"
-      ? outcome.attribution.observedAtSec
-      : null,
-    failedRouteId:
-      outcome.status === "rejected" ? outcome.failedRouteId : null,
-    contentSha256: outcome.status === "accepted"
-      ? sha256Hex(stableJsonStringifyV1(outcome.attribution))
-      : null,
-  });
+  chainRpcs?: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
+  observationClockSec: (attemptedAtSec: number) => number;
+  attributionById: V9SupplyAttributionById;
+  journalRecords: SupplyAttributionJournalV1[];
+}): Promise<void> {
+  const attemptedAtSec = Math.floor(Date.now() / 1_000);
+  const scoringClockSec = input.observationClockSec(attemptedAtSec);
+  const attemptId = `supply-attribution:${crypto.randomUUID()}`;
+  let outcome: SupplyAttributionObservationAttempt;
+  try {
+    outcome =
+      input.chainRpcs && input.chainRpcs.size > 0
+        ? await input.descriptor.observe({
+            aggregateSupplyUsd: aggregateSupplyUsd(
+              input.fixedInput,
+              input.descriptor.assetId,
+            ),
+            registryFingerprint: input.fixedInput.registryFingerprint,
+            scoringClockSec,
+            chainRpcs: input.chainRpcs,
+            signal: input.signal,
+          })
+        : {
+            status: "rejected",
+            rejectionCode: "chain-rpc-unavailable",
+            failedRouteId: null,
+            rejectedSourceObservedAtSec: null,
+          };
+  } catch (error) {
+    rethrowIfAborted(error, input.signal);
+    outcome = {
+      status: "rejected",
+      rejectionCode: "deployment-state-unavailable",
+      failedRouteId: null,
+      rejectedSourceObservedAtSec: null,
+    };
+  }
+  const completedAtSec = Math.max(
+    attemptedAtSec,
+    Math.floor(Date.now() / 1_000),
+  );
+  if (outcome.status === "accepted") {
+    input.attributionById[input.descriptor.assetId] =
+      outcome.attribution;
+  }
+  input.journalRecords.push(
+    buildSupplyAttributionJournalRecord({
+      descriptor: input.descriptor,
+      fixedInput: input.fixedInput,
+      attemptId,
+      attemptedAtSec,
+      completedAtSec,
+      scoringClockSec,
+      outcome,
+    }),
+  );
 }
 
 /**
@@ -333,153 +357,17 @@ export async function captureSafetyScoreV9SupplyAttribution(
   const attributionById: V9SupplyAttributionById = {};
   const journalRecords: SupplyAttributionJournalV1[] = [];
 
-  if (expectedAssetIdSet.has(XAUT_ASSET_ID)) {
-    const attemptedAtSec = Math.floor(Date.now() / 1_000);
-    const scoringClockSec = observationClockSec(attemptedAtSec);
-    const attemptId = `supply-attribution:${crypto.randomUUID()}`;
-    let outcome: XautSupplyAttributionObservationAttempt;
-    try {
-      outcome =
-        chainRpcs && chainRpcs.size > 0
-          ? await observeXautRepresentationGroupSupplyAttributionAttempt({
-              aggregateSupplyUsd: aggregateSupplyUsd(
-                fixedInput,
-                XAUT_ASSET_ID,
-              ),
-              registryFingerprint: fixedInput.registryFingerprint,
-              scoringClockSec,
-              chainRpcs,
-              signal,
-            })
-          : {
-              status: "rejected",
-              rejectionCode: "chain-rpc-unavailable",
-              rejectedSourceObservedAtSec: null,
-              failedRouteId: null,
-            };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      outcome = {
-        status: "rejected",
-        rejectionCode: "deployment-state-unavailable",
-        rejectedSourceObservedAtSec: null,
-        failedRouteId: null,
-      };
-    }
-    const completedAtSec = Math.max(
-      attemptedAtSec,
-      Math.floor(Date.now() / 1_000),
-    );
-    if (outcome.status === "accepted") {
-      attributionById[XAUT_ASSET_ID] = outcome.attribution;
-    }
-    journalRecords.push(
-      buildXautSupplyAttributionJournalRecord({
-        fixedInput,
-        attemptId,
-        attemptedAtSec,
-        completedAtSec,
-        captureClockSec: scoringClockSec,
-        outcome,
-      }),
-    );
-  }
-
-  if (expectedAssetIdSet.has("wm-m0")) {
-    const attemptedAtSec = Math.floor(Date.now() / 1_000);
-    const scoringClockSec = observationClockSec(attemptedAtSec);
-    const attemptId = `supply-attribution:${crypto.randomUUID()}`;
-    let outcome: WmReviewedDeploymentObservationAttempt;
-    try {
-      outcome =
-        chainRpcs && chainRpcs.size > 0
-          ? await observeWmReviewedDeploymentUnitPartitionAttempt({
-              aggregateSupplyUsd: aggregateSupplyUsd(fixedInput, "wm-m0"),
-              registryFingerprint: fixedInput.registryFingerprint,
-              scoringClockSec,
-              chainRpcs,
-              signal,
-            })
-          : {
-              status: "rejected",
-              rejectionCode: "chain-rpc-unavailable",
-              failedRouteId: null,
-            };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      outcome = {
-        status: "rejected",
-        rejectionCode: "deployment-state-unavailable",
-        failedRouteId: null,
-      };
-    }
-    const completedAtSec = Math.max(
-      attemptedAtSec,
-      Math.floor(Date.now() / 1_000),
-    );
-    if (outcome.status === "accepted") {
-      attributionById["wm-m0"] = outcome.attribution;
-    }
-    journalRecords.push(
-      buildWmSupplyAttributionJournalRecord({
-        fixedInput,
-        attemptId,
-        attemptedAtSec,
-        completedAtSec,
-        captureClockSec: scoringClockSec,
-        outcome,
-      }),
-    );
-  }
-
-  for (const assetId of CENTRIFUGE_BURN_MINT_ASSET_IDS) {
-    if (!expectedAssetIdSet.has(assetId)) continue;
-    const attemptedAtSec = Math.floor(Date.now() / 1_000);
-    const scoringClockSec = observationClockSec(attemptedAtSec);
-    const attemptId = `supply-attribution:${crypto.randomUUID()}`;
-    let outcome: CentrifugeReviewedDeploymentObservationAttempt;
-    try {
-      outcome =
-        chainRpcs && chainRpcs.size > 0
-          ? await observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
-              assetId,
-              aggregateSupplyUsd: aggregateSupplyUsd(fixedInput, assetId),
-              registryFingerprint: fixedInput.registryFingerprint,
-              scoringClockSec,
-              chainRpcs,
-              signal,
-            })
-          : {
-              status: "rejected",
-              rejectionCode: "chain-rpc-unavailable",
-              failedRouteId: null,
-            };
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      outcome = {
-        status: "rejected",
-        rejectionCode: "deployment-state-unavailable",
-        failedRouteId: null,
-      };
-    }
-    const completedAtSec = Math.max(
-      attemptedAtSec,
-      Math.floor(Date.now() / 1_000),
-    );
-    if (outcome.status === "accepted") {
-      attributionById[assetId] = outcome.attribution;
-    }
-    journalRecords.push(
-      buildCentrifugeSupplyAttributionJournalRecord({
-        assetId,
-        fixedInput,
-        attemptId,
-        attemptedAtSec,
-        completedAtSec,
-        captureClockSec: scoringClockSec,
-        outcome,
-      }),
-    );
+  for (const descriptor of supplyAttributionAssetDescriptors()) {
+    if (!expectedAssetIdSet.has(descriptor.assetId)) continue;
+    await runSupplyAttributionAssetCapture({
+      descriptor,
+      fixedInput,
+      chainRpcs,
+      signal,
+      observationClockSec,
+      attributionById,
+      journalRecords,
+    });
   }
 
   return {

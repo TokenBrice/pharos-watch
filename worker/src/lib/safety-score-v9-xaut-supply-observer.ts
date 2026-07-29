@@ -8,7 +8,6 @@ import {
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
   type EvmBlockHeader,
-  type EvmMulticall3Result,
 } from "./evm-rpc";
 import {
   DECIMALS_SELECTOR,
@@ -33,6 +32,13 @@ import {
   type XautLockMintObservation,
   type XautRepresentationGroupSupplyAttributionV2,
 } from "./safety-score-v9-xaut-supply-attribution-contract";
+import {
+  decodeEvmAddress,
+  decodeEvmAddressHex,
+  decodeEvmHexBytes,
+  decodeEvmUint256,
+  safetyScoreV9EvmObservationOptions,
+} from "./safety-score-v9-supply-observation-primitives";
 
 const EIP1967_IMPLEMENTATION_SLOT =
   "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
@@ -120,51 +126,10 @@ function rpcOptions(
   chainRpcs: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ) {
-  return {
+  return safetyScoreV9EvmObservationOptions({
     chainRpcs,
     signal,
-    timeoutMs: 10_000,
-    maxRetries: 1,
-  };
-}
-
-function decodeUint256(result: EvmMulticall3Result | undefined): bigint | null {
-  if (!result?.success || !/^0x[0-9a-fA-F]{64}$/.test(result.returnData)) {
-    return null;
-  }
-  return BigInt(result.returnData);
-}
-
-function decodeAddressHex(value: string | undefined): string | null {
-  if (!value || !/^0x[0-9a-fA-F]{64}$/.test(value)) return null;
-  const address = `0x${value.slice(-40).toLowerCase()}`;
-  return /^0x[0-9a-f]{40}$/.test(address) &&
-    address !== "0x0000000000000000000000000000000000000000"
-    ? address
-    : null;
-}
-
-function decodeAddress(result: EvmMulticall3Result | undefined): string | null {
-  return result?.success ? decodeAddressHex(result.returnData) : null;
-}
-
-function decodeHexBytes(value: string): Uint8Array | null {
-  const body = value.startsWith("0x") ? value.slice(2) : value;
-  if (
-    body.length === 0 ||
-    body.length % 2 !== 0 ||
-    !/^[0-9a-fA-F]+$/.test(body)
-  ) {
-    return null;
-  }
-  const bytes = new Uint8Array(body.length / 2);
-  for (let index = 0; index < bytes.length; index += 1) {
-    bytes[index] = Number.parseInt(
-      body.slice(index * 2, index * 2 + 2),
-      16,
-    );
-  }
-  return bytes;
+  });
 }
 
 function parseTimestampSec(value: unknown): number | null {
@@ -489,20 +454,20 @@ export async function observeXautRepresentationGroupSupplyAttributionAttempt(
     return reject("deployment-state-unavailable", XAUT_CANONICAL_ROUTE_ID);
   }
 
-  const canonicalTotalSupplyRaw = decodeUint256(results[0]);
-  const decimalsRaw = decodeUint256(results[1]);
-  const treasuryBalanceRaw = decodeUint256(results[2]);
-  const adapterLockedSupplyRaw = decodeUint256(results[3]);
-  const adapterTokenAddress = decodeAddress(results[4]);
-  const adapterEndpointAddress = decodeAddress(results[5]);
-  const canonicalImplementationAddress = decodeAddressHex(
+  const canonicalTotalSupplyRaw = decodeEvmUint256(results[0]);
+  const decimalsRaw = decodeEvmUint256(results[1]);
+  const treasuryBalanceRaw = decodeEvmUint256(results[2]);
+  const adapterLockedSupplyRaw = decodeEvmUint256(results[3]);
+  const adapterTokenAddress = decodeEvmAddress(results[4]);
+  const adapterEndpointAddress = decodeEvmAddress(results[5]);
+  const canonicalImplementationAddress = decodeEvmAddressHex(
     canonicalImplementationSlot,
   );
-  const adapterImplementationAddress = decodeAddressHex(
+  const adapterImplementationAddress = decodeEvmAddressHex(
     adapterImplementationSlot,
   );
-  const canonicalRuntimeBytes = decodeHexBytes(canonicalRuntimeCode);
-  const adapterRuntimeBytes = decodeHexBytes(adapterRuntimeCode);
+  const canonicalRuntimeBytes = decodeEvmHexBytes(canonicalRuntimeCode);
+  const adapterRuntimeBytes = decodeEvmHexBytes(adapterRuntimeCode);
   if (
     canonicalTotalSupplyRaw === null ||
     decimalsRaw === null ||
@@ -535,10 +500,10 @@ export async function observeXautRepresentationGroupSupplyAttributionAttempt(
       ),
     ]);
   const canonicalImplementationBytes = canonicalImplementationCode
-    ? decodeHexBytes(canonicalImplementationCode)
+    ? decodeEvmHexBytes(canonicalImplementationCode)
     : null;
   const adapterImplementationBytes = adapterImplementationCode
-    ? decodeHexBytes(adapterImplementationCode)
+    ? decodeEvmHexBytes(adapterImplementationCode)
     : null;
   if (!canonicalImplementationBytes || !adapterImplementationBytes) {
     return reject("deployment-state-unavailable", XAUT_CANONICAL_ROUTE_ID);

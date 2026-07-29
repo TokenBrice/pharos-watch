@@ -11,6 +11,7 @@ import {
   XAUT_CANONICAL_IMPLEMENTATION_CODE_SHA256,
   XAUT_CANONICAL_RUNTIME_CODE_SHA256,
   XAUT_CANONICAL_TOKEN_ADDRESS,
+  XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
   XAUT_TRANSPARENCY_SOURCE_ID,
   XAUT_TREASURY_ADDRESS,
 } from "../safety-score-v9-xaut-supply-attribution-contract";
@@ -410,7 +411,8 @@ describe("XAUT representation-group supply observer", () => {
         {
           aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
           registryFingerprint: "a".repeat(64),
-          scoringClockSec: BLOCK_TIME_SEC + 1_801,
+          scoringClockSec:
+            BLOCK_TIME_SEC + XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC + 1,
           chainRpcs: chainRpcs(),
         },
         stale,
