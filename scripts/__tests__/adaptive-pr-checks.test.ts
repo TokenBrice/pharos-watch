@@ -45,6 +45,18 @@ describe("adaptive PR checks", () => {
     ]);
   });
 
+  it("always selects global invariants for unrelated source changes", () => {
+    const selected = selectPrTestFiles(["src/components/unrelated-source.test.ts"]);
+
+    expect(selected).toEqual(
+      expect.arrayContaining([
+        "src/lib/__tests__/reserve-coinid-validation.test.ts",
+        "worker/src/cron/__tests__/telegram-recap-cost-boundary.test.ts",
+        "src/components/unrelated-source.test.ts",
+      ]),
+    );
+  });
+
   it("selects impacted generated artifacts and downstream dependants", () => {
     const registry = [
       { id: "catalog", sourcePaths: ["data/**"] },
