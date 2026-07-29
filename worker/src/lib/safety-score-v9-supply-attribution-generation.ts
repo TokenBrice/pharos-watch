@@ -490,6 +490,7 @@ export type SafetyScoreV9SupplyAttributionGenerationApplication =
       fixedInput: ReportCardsFixedInput;
       acceptedAssetIds: string[];
       rejectedAssetIds: string[];
+      invalidAssetIds: string[];
     }
   | {
       status: "unavailable" | "incompatible";
@@ -556,6 +557,8 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
 
   const attributionById:
     ReportCardsFixedInput["safetyScoreV9SupplyAttributionById"] = {};
+  const appliedAssetIds: string[] = [];
+  const invalidAssetIds: string[] = [];
   for (const assetId of generation.acceptedAssetIds) {
     const stored = generation.attributionById[assetId]!;
     const aggregate = aggregateSupplyUsd(fixedInput, assetId);
@@ -576,15 +579,16 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
               observation: stored.observation,
             })
           : null;
+    // Each accepted asset carries its own observation contract, so a re-derivation
+    // failure (typically an observation that aged past that asset's own window
+    // while the generation itself is still fresh) drops only that asset's row.
+    // Co-tenant assets keep their attribution instead of failing closed with it.
     if (!attribution) {
-      return {
-        status: "incompatible",
-        generationId: generation.generationId,
-        fixedInput: withoutSupplyAttribution(fixedInput),
-        reason: `accepted-attribution-invalid:${assetId}`,
-      };
+      invalidAssetIds.push(assetId);
+      continue;
     }
     attributionById[assetId] = attribution;
+    appliedAssetIds.push(assetId);
   }
 
   return {
@@ -594,7 +598,8 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
       ...fixedInput,
       safetyScoreV9SupplyAttributionById: attributionById,
     }),
-    acceptedAssetIds: [...generation.acceptedAssetIds],
+    acceptedAssetIds: appliedAssetIds,
     rejectedAssetIds: [...generation.rejectedAssetIds],
+    invalidAssetIds,
   };
 }

@@ -10,6 +10,12 @@ import {
   type ReportCardsFixedInput,
 } from "../report-cards-fixed-input";
 import {
+  buildReviewedDeploymentRouteInventory,
+  deriveReviewedDeploymentUnitPartition,
+  expectedWmDeploymentIdentity,
+  type ReviewedDeploymentSupplyObservation,
+} from "../safety-score-v9-supply-attribution-contract";
+import {
   buildXautTransparencySource,
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT0_ADAPTER_ADDRESS,
@@ -184,6 +190,190 @@ function createAcceptedGeneration(
   );
 }
 
+// Production XAUT observations are pinned to a finalized Ethereum block and are
+// already 780-1150s old when the generation is published, while wM/Centrifuge
+// route reads land within ~30s of capture.
+const XAUT_OBSERVATION_LAG_SEC = 1_000;
+const WM_SOURCE_AGGREGATE_USD = 87_020_618.58982982;
+const WM_TARGET_AGGREGATE_USD = 91_400_000.25;
+
+const WM_RAW_SUPPLY_BY_ROUTE: Record<string, string> = {
+  "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291": "86712798085682",
+  "arbitrum:0x437cc33344a0b27a429f795ff6b469c72698b291": "88459935972",
+  "base:0x437cc33344a0b27a429f795ff6b469c72698b291": "70802728527",
+  "plume:0x437cc33344a0b27a429f795ff6b469c72698b291": "0",
+  "solana:mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp": "247794997129",
+};
+
+const WM_BLOCK_TIME_OFFSET_BY_CHAIN: Record<string, number> = {
+  ethereum: -25,
+  arbitrum: -18,
+  base: -17,
+  plume: -16,
+  solana: -29,
+};
+
+function wmObservations(): ReviewedDeploymentSupplyObservation[] {
+  const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
+  if (!inventory) throw new Error("Missing wM route inventory");
+  return inventory.routes.map((route, index) => {
+    const identity = expectedWmDeploymentIdentity(route.routeId);
+    const rawSupply = WM_RAW_SUPPLY_BY_ROUTE[route.routeId];
+    const blockTimeOffset =
+      WM_BLOCK_TIME_OFFSET_BY_CHAIN[route.chainId];
+    if (!identity || rawSupply === undefined || blockTimeOffset === undefined) {
+      throw new Error(`Missing wM fixture row for ${route.routeId}`);
+    }
+    const common = {
+      routeId: route.routeId,
+      chainId: route.chainId,
+      contractAddress: route.contractAddress,
+      decimals: route.decimals,
+      rawSupply,
+      blockNumberOrSlot: (25_000_000 + index).toString(),
+      blockTimeSec: SOURCE_CLOCK_SEC + blockTimeOffset,
+    };
+    return identity.runtime === "evm"
+      ? {
+          ...common,
+          blockHash: `0x${(index + 1).toString(16).repeat(64)}`,
+          runtimeCodeSha256: identity.runtimeCodeSha256,
+          implementationAddress: identity.implementationAddress,
+          implementationCodeSha256: identity.implementationCodeSha256,
+          underlyingTokenAddress: identity.underlyingTokenAddress,
+          controllerAddress: identity.controllerAddress,
+        }
+      : {
+          ...common,
+          blockHash: "B".repeat(44),
+          programOwner: identity.programOwner,
+          mintAuthority: identity.mintAuthority,
+          controllerAddress: identity.controllerAddress,
+          controllerProgramOwner: identity.controllerProgramOwner,
+        };
+  });
+}
+
+/** Adds wM to the expected inventory by removing its upstream chain supply. */
+function coTenantFixedInput(
+  clockSec: number,
+  xautAggregateSupplyUsd: number,
+  wmAggregateSupplyUsd: number,
+): ReportCardsFixedInput {
+  const base = withClockAndAggregate(
+    createSafetyScoreV9FullRegistryInput(),
+    clockSec,
+    xautAggregateSupplyUsd,
+  );
+  const {
+    baseInputGenerationId: _baseInputGenerationId,
+    ...withoutBaseIdentity
+  } = base;
+  const { "wm-m0": _wmChainSupply, ...chainCirculatingById } =
+    base.chainCirculatingById;
+  return normalizeFixedInput({
+    ...withoutBaseIdentity,
+    chainCirculatingById,
+    aggregateCirculatingById: {
+      ...base.aggregateCirculatingById,
+      "wm-m0": {
+        circulating: { peggedUSD: wmAggregateSupplyUsd },
+        observedAtSec: clockSec,
+      },
+    },
+  });
+}
+
+function laggedXautObservation(): XautLockMintObservation {
+  const observation = xautObservation();
+  return {
+    ...observation,
+    blockTimeSec: SOURCE_CLOCK_SEC - XAUT_OBSERVATION_LAG_SEC,
+    disclosure: {
+      ...observation.disclosure,
+      sourceTimestampSec:
+        SOURCE_CLOCK_SEC - XAUT_OBSERVATION_LAG_SEC - 100,
+    },
+  };
+}
+
+function createCoTenantGeneration() {
+  const fixedInput = coTenantFixedInput(
+    SOURCE_CLOCK_SEC,
+    SOURCE_AGGREGATE_USD,
+    WM_SOURCE_AGGREGATE_USD,
+  );
+  const xautAttribution =
+    deriveXautRepresentationGroupSupplyAttribution({
+      aggregateSupplyUsd: SOURCE_AGGREGATE_USD,
+      registryFingerprint: fixedInput.registryFingerprint,
+      scoringClockSec: fixedInput.clockSec,
+      observation: laggedXautObservation(),
+    })!;
+  const wmAttribution = deriveReviewedDeploymentUnitPartition({
+    assetId: "wm-m0",
+    aggregateSupplyUsd: WM_SOURCE_AGGREGATE_USD,
+    registryFingerprint: fixedInput.registryFingerprint,
+    scoringClockSec: fixedInput.clockSec,
+    observations: wmObservations(),
+  })!;
+  const completedAtSec = SOURCE_CLOCK_SEC + 10;
+  const journalFor = (
+    assetId: string,
+    sourceId: SupplyAttributionJournalV1Payload["sourceId"],
+    sourceOriginClass: SupplyAttributionJournalV1Payload["sourceOriginClass"],
+    attribution: { routeInventoryDigest: string; observedAtSec: number },
+  ) =>
+    createSupplyAttributionJournalV1({
+      schemaVersion: 1,
+      lane: "supply-attribution",
+      assetId,
+      attemptId: `supply-attribution:co-tenant-${assetId}`,
+      sourceId,
+      sourceOriginClass,
+      baseInputGenerationId: fixedInput.baseInputGenerationId,
+      sourceGeneration: fixedInput.sourceGeneration,
+      registryFingerprint: fixedInput.registryFingerprint,
+      routeInventoryDigest: attribution.routeInventoryDigest,
+      attemptCode: "supply-attribution.collector.attempted",
+      admissionCode: "supply-attribution.admission.accepted",
+      fallbackCode: "supply-attribution.fallback.not-used",
+      attemptedAtSec: completedAtSec - 1,
+      completedAtSec,
+      scoringClockSec: fixedInput.clockSec,
+      sourceObservedAtSec: attribution.observedAtSec,
+      failedRouteId: null,
+      contentSha256: sha256Hex(stableJsonStringifyV1(attribution)),
+    });
+
+  return createSafetyScoreV9SupplyAttributionGeneration({
+    fixedInput,
+    capturedAtSec: completedAtSec,
+    capture: {
+      captureClockSec: fixedInput.clockSec,
+      expectedAssetIds: ["wm-m0", "xaut-tether"],
+      attributionById: {
+        "wm-m0": wmAttribution,
+        "xaut-tether": xautAttribution,
+      },
+      journalRecords: [
+        journalFor(
+          "wm-m0",
+          "wm.reviewed-deployment-unit-partition.v1",
+          "onchain-observation",
+          wmAttribution,
+        ),
+        journalFor(
+          "xaut-tether",
+          "xaut.canonical-lock-mint-group-partition.v2",
+          "issuer-disclosure-plus-onchain",
+          xautAttribution,
+        ),
+      ],
+    },
+  });
+}
+
 describe("isolated Safety Score V9 supply attribution generation", () => {
   it("round-trips a complete content-addressed generation", () => {
     const generation = createAcceptedGeneration();
@@ -230,6 +420,52 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       attribution.canonical.currentSupplyUsd +
         attribution.representationGroup.currentSupplyUsd,
     ).toBeCloseTo(TARGET_AGGREGATE_USD, 6);
+  });
+
+  it("drops only the asset whose observation aged out of its own window", () => {
+    const generation = createCoTenantGeneration();
+    expect(generation.acceptedAssetIds).toEqual([
+      "wm-m0",
+      "xaut-tether",
+    ]);
+
+    const bothFresh = applySafetyScoreV9SupplyAttributionGeneration(
+      coTenantFixedInput(
+        SOURCE_CLOCK_SEC + 300,
+        TARGET_AGGREGATE_USD,
+        WM_TARGET_AGGREGATE_USD,
+      ),
+      generation,
+    );
+    expect(bothFresh).toMatchObject({
+      status: "applied",
+      acceptedAssetIds: ["wm-m0", "xaut-tether"],
+      invalidAssetIds: [],
+    });
+
+    // The generation is still inside its own freshness window, but XAUT's
+    // finalized-block observation is not. wM must keep its attribution.
+    const xautAgedOut = applySafetyScoreV9SupplyAttributionGeneration(
+      coTenantFixedInput(
+        SOURCE_CLOCK_SEC + 900,
+        TARGET_AGGREGATE_USD,
+        WM_TARGET_AGGREGATE_USD,
+      ),
+      generation,
+    );
+    expect(xautAgedOut).toMatchObject({
+      status: "applied",
+      generationId: generation.generationId,
+      acceptedAssetIds: ["wm-m0"],
+      rejectedAssetIds: [],
+      invalidAssetIds: ["xaut-tether"],
+    });
+    if (xautAgedOut.status !== "applied") throw new Error(xautAgedOut.reason);
+    expect(
+      Object.keys(
+        xautAgedOut.fixedInput.safetyScoreV9SupplyAttributionById,
+      ),
+    ).toEqual(["wm-m0"]);
   });
 
   it("fails closed when a generation ages beyond its observation window", () => {
