@@ -4063,6 +4063,16 @@
     "reviewedAt": "2026-06-13",
     "factsAsOf": "2026-06-13"
   },
+  "dusd-dialectic": {
+    "title": "Dialectic's Book, Tokenised",
+    "text": "A USDC-denominated Makina vault share whose price floats with strategy performance — Dialectic's trading book, not a dollar claim.\n\nDepositors hand USDC to a Makina \"Machine\" that Dialectic operates, rotating capital through AMM liquidity and money-market positions on Ethereum, Base, Arbitrum, and Monad. The share price is just AUM divided by supply, so it has drifted to roughly $1.03 since the vault opened in late September 2025 — and it can fall just as mechanically if positions sour. Exits are queued, not instant: redemptions run through a FIFO async queue with a 12-hour minimum finalisation delay, and settlement waits on the operator closing positions and bridging liquidity back to Ethereum. The guardrails are unusually explicit for a strategy vault — a Merkle-gated instruction set the operator cannot step outside, per-position loss caps, a 10% performance fee behind a high-water mark, eight audits across ChainSecurity, OtterSec, SigmaPrime, Cantina, and Enigma Dark, and an optional Security Module whose staked shares absorb losses first — but a fully trusted 2-of-4 Security Council can still enter Recovery Mode and force an AUM update past the share-price rate limit. At roughly $6M of shares outstanding this is an early-stage book: read DUSD as a professionally managed {{term:yield-bearing}}yield-bearing{{/term}} fund share, not a par-{{term:redemption}}redeemable{{/term}} stablecoin.",
+    "updatedAt": "2026-07-29",
+    "authoredBy": "ai",
+    "model": "claude-opus-5",
+    "reviewedBy": "Claude stablecoin addition (issue #705)",
+    "reviewedAt": "2026-07-29",
+    "factsAsOf": "2026-07-29"
+  },
   "ousd-open-standard": {
     "title": "The Everything-Consortium Dollar",
     "text": "Open USD is what happens when 140-plus of the biggest names in payments and banking — Visa, Mastercard, American Express, Stripe, BlackRock, BNY Mellon, Coinbase — decide they would rather split reserve income among themselves than hand it to Circle. Announced June 30, 2026 and operated by an independent company, Open Standard, whose board is drawn from its own partners, OUSD promises fee-free minting, no volume limits, and most of the reserve yield routed back to the businesses that adopt it. The pitch is GENIUS Act compliance and neutral, shared governance; the reality, for now, is a launch announcement with no mainnet contracts, named custodian, or attestation. Markets took it seriously anyway — Circle's stock fell roughly 15-17% on the news, even though some OUSD backers such as BlackRock and BNY are also core partners in Circle's own ecosystem. The unresolved question is the one that has dogged every mega-consortium before it: 140 partners are easy to announce and very hard to align. Launch is promised 'later in 2026,' natively on Solana, with Stellar and Plasma also named as partners.",
