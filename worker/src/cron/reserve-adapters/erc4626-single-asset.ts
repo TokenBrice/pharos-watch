@@ -12,6 +12,11 @@ import {
   encodeUint256,
 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
+import {
+  decodeAbiWordAt,
+  decodeStrictAddressArrayWord,
+  decodeUint256Word,
+} from "./abi-decode";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
 import {
   decimalNumberFromBigInt,
@@ -219,7 +224,6 @@ const YEARN_V3_TOTAL_IDLE_SELECTOR = "0x9aa7df94";
 const YEARN_V3_GET_DEFAULT_QUEUE_SELECTOR = "0xa9bbf1cc";
 const YEARN_V3_STRATEGIES_SELECTOR = "0x39ebf823";
 const YEARN_V3_MAX_REDEEM_SELECTOR = "0xd905777e";
-const ABI_WORD_HEX_LENGTH = 64;
 const MAX_YEARN_V3_QUEUE_LENGTH = 10;
 // K3 sBOLD calcFragments() -> (totalBold, boldAmount, collValue, collInBold).
 // Word index 1 (boldAmount) is the compounded BOLD across the vault's Liquity V2
@@ -316,53 +320,6 @@ function parseNonNegativeBigIntLike(value: unknown): bigint | null {
   return parsed >= 0n ? parsed : null;
 }
 
-function normalizeAbiHex(raw: string | null): string | null {
-  if (!raw || !raw.startsWith("0x")) return null;
-  const hex = raw.slice(2);
-  if (hex.length === 0 || hex.length % ABI_WORD_HEX_LENGTH !== 0 || !/^[0-9a-fA-F]+$/.test(hex)) return null;
-  return hex;
-}
-
-function getAbiWord(raw: string | null, index: number): string | null {
-  const hex = normalizeAbiHex(raw);
-  if (hex == null || index < 0) return null;
-  const start = index * ABI_WORD_HEX_LENGTH;
-  const end = start + ABI_WORD_HEX_LENGTH;
-  if (end > hex.length) return null;
-  return hex.slice(start, end);
-}
-
-function parseAbiUint256Word(raw: string | null, index: number): bigint | null {
-  const word = getAbiWord(raw, index);
-  if (word == null) return null;
-  return BigInt(`0x${word}`);
-}
-
-function parseAbiAddressWord(raw: string | null, index: number): string | null {
-  const word = getAbiWord(raw, index);
-  if (word == null) return null;
-  const normalized = word.toLowerCase();
-  if (!/^0{24}[0-9a-f]{40}$/.test(normalized)) return null;
-  return `0x${normalized.slice(-40)}`;
-}
-
-function parseAbiAddressArray(raw: string | null): string[] | null {
-  const offsetBytes = parseAbiUint256Word(raw, 0);
-  if (offsetBytes == null || offsetBytes % 32n !== 0n) return null;
-  const offsetWords = Number(offsetBytes / 32n);
-  if (!Number.isSafeInteger(offsetWords) || offsetWords < 1) return null;
-  const length = parseAbiUint256Word(raw, offsetWords);
-  if (length == null || length > BigInt(MAX_YEARN_V3_QUEUE_LENGTH)) return null;
-  const lengthNumber = Number(length);
-  const addresses: string[] = [];
-  for (let index = 0; index < lengthNumber; index += 1) {
-    const address = parseAbiAddressWord(raw, offsetWords + 1 + index);
-    if (address == null) return null;
-    addresses.push(address);
-  }
-  return addresses;
-}
-
 async function fetchYearnV3WithdrawableLiquidityTelemetry(args: {
   coinId: string;
   contractAddress: string;
@@ -396,8 +353,10 @@ async function fetchYearnV3WithdrawableLiquidityTelemetry(args: {
     };
   }
 
-  const defaultQueue = parseAbiAddressArray(defaultQueueResult);
-  const totalIdleRaw = parseAbiUint256Word(totalIdleResult, 0);
+  const defaultQueue = decodeStrictAddressArrayWord(defaultQueueResult, {
+    maxItems: MAX_YEARN_V3_QUEUE_LENGTH,
+  });
+  const totalIdleRaw = decodeUint256Word(decodeAbiWordAt(totalIdleResult, 0));
   if (totalIdleRaw == null) {
     return {
       telemetry: null,
@@ -436,7 +395,7 @@ async function fetchYearnV3WithdrawableLiquidityTelemetry(args: {
   for (const strategyAddress of defaultQueue) {
     throwIfAborted(args.signal);
     const strategyParamsResult = await args.call(`${YEARN_V3_STRATEGIES_SELECTOR}${encodeAddress(strategyAddress)}`);
-    const currentDebtRaw = parseAbiUint256Word(strategyParamsResult, 2);
+    const currentDebtRaw = decodeUint256Word(decodeAbiWordAt(strategyParamsResult, 2));
     if (currentDebtRaw == null) {
       return {
         telemetry: null,
@@ -504,7 +463,9 @@ async function fetchSboldSpWithdrawableLiquidityTelemetry(args: {
   warnings: LiveReserveWarning[];
 }> {
   const result = await args.call(SBOLD_CALC_FRAGMENTS_SELECTOR);
-  const withdrawableRaw = parseAbiUint256Word(result, SBOLD_CALC_FRAGMENTS_LIQUID_BOLD_WORD_INDEX);
+  const withdrawableRaw = decodeUint256Word(
+    decodeAbiWordAt(result, SBOLD_CALC_FRAGMENTS_LIQUID_BOLD_WORD_INDEX),
+  );
   if (withdrawableRaw == null) {
     return {
       telemetry: null,
