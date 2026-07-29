@@ -165,7 +165,7 @@ describe("buildTrackedIdSet", () => {
     expect(allVariants.has("wm-m0")).toBe(true);
     expect(allVariants.has("iusd-initia")).toBe(true);
     expect(allVariants.has("usds-sky")).toBe(false);
-    expect(allVariants.size).toBe(49);
+    expect(allVariants.size).toBe(50);
 
     const strategy = buildTrackedIdSet(["variant-strategy-vault"]);
     expect(strategy).toEqual(
@@ -174,6 +174,7 @@ describe("buildTrackedIdSet", () => {
         "autousd-auto-finance",
         "apyusd-apyx",
         "bbqusdc-steakhouse",
+        "dusd-dialectic",
         "eearn-ember",
         "fxsave-f-x-protocol",
         "gtusdc-gauntlet",
