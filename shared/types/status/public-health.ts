@@ -82,7 +82,7 @@ export interface TelegramHealthSummary extends SafetyAlertFieldsNullable, Partia
   lastDispatchStatus: string | null;
 }
 
-export interface MintBurnHealthQueryErrors {
+interface MintBurnHealthQueryErrors {
   latestSuccessfulSyncAt: string | null;
   rowCount: string | null;
 }

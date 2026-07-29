@@ -5,7 +5,7 @@ export { StatusHealthValueSchema } from "./schema-primitives";
 
 export type CacheStatus = z.infer<typeof CacheStatusSchema>;
 export type StatusHealthValue = z.infer<typeof StatusHealthValueSchema>;
-export type StatusHealthOrUnknown = z.infer<typeof StatusHealthOrUnknownSchema>;
+type StatusHealthOrUnknown = z.infer<typeof StatusHealthOrUnknownSchema>;
 
 export interface StatusCause {
   code: string;
@@ -226,7 +226,7 @@ export interface BlacklistReconciliationStatus {
   completedAt: number | null;
 }
 
-export interface RepairDebtKindSummary {
+interface RepairDebtKindSummary {
   openCount: number;
   oldestAgeSec: number | null;
   nextRunnerDueAt: number | null;
@@ -242,7 +242,7 @@ export interface RepairDebtSummary {
   source: "worker-repair-tasks" | "worker-repair-tasks+ddr-cache-fallback" | "ddr-cache-fallback" | "unavailable";
 }
 
-export interface DatasetFreshness {
+interface DatasetFreshness {
   stablecoins: number | null;
   blacklist: number | null;
   mintBurn: number | null;

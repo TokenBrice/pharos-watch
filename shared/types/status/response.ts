@@ -160,7 +160,7 @@ export interface StatusResponse {
   classificationWarnings?: ClassificationWarning[];
 }
 
-export type StatusReserveComposition = ReserveCompositionOverview & {
+type StatusReserveComposition = ReserveCompositionOverview & {
   status: StatusHealthValue;
   freshCoverageRatio: number;
   authoritativeFreshCoverageRatio: number;

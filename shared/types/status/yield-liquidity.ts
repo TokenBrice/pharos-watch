@@ -53,7 +53,7 @@ export interface YieldSourceRiskCoverageSummary {
   fields: Record<YieldSourceRiskCoverageField, YieldSourceRiskFieldCoverage>;
 }
 
-export interface YieldComparisonAnchorFreshnessExample {
+interface YieldComparisonAnchorFreshnessExample {
   stablecoinId: string;
   symbol: string;
   sourceKey: string;
@@ -62,7 +62,7 @@ export interface YieldComparisonAnchorFreshnessExample {
   comparisonAnchorObservedAt: number;
 }
 
-export interface YieldComparisonAnchorFreshnessSummary {
+interface YieldComparisonAnchorFreshnessSummary {
   status: YieldHealthFieldStatus;
   anchoredRowCount: number | null;
   staleAnchorCount: number | null;
@@ -73,7 +73,7 @@ export interface YieldComparisonAnchorFreshnessSummary {
   staleAnchorExamplesTruncated: boolean;
 }
 
-export interface YieldBenchmarkHealthEntry {
+interface YieldBenchmarkHealthEntry {
   key: string;
   label: string | null;
   currency: string | null;
@@ -88,7 +88,7 @@ export interface YieldBenchmarkHealthEntry {
   status: YieldHealthFieldStatus;
 }
 
-export interface YieldBenchmarkRegistryHealthSummary {
+interface YieldBenchmarkRegistryHealthSummary {
   status: YieldHealthFieldStatus;
   usedBenchmarkCount: number;
   healthyBenchmarkCount: number;
@@ -242,7 +242,7 @@ export interface ClassificationWarning {
   threshold: number;
 }
 
-export interface CoinGeckoPriceDiffRow {
+interface CoinGeckoPriceDiffRow {
   stablecoinId: string;
   symbol: string;
   name: string;

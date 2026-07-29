@@ -98,7 +98,7 @@ export interface DependencyHealthItem {
   runbookPath: string | null;
 }
 
-export interface DependencyRootCauseGroup {
+interface DependencyRootCauseGroup {
   rootDependencyId: string;
   rootStatus: DependencyHealthStatus;
   rootReason: string | null;
@@ -154,7 +154,7 @@ export interface ProviderCircuitHealth {
 export type CanaryRunStatus = "ok" | "degraded" | "error" | "skipped";
 export type CanaryRunSeverity = "info" | "warning" | "error" | "critical";
 
-export interface CanaryStatusCheck {
+interface CanaryStatusCheck {
   checkId: string;
   label: string;
   description: string;
