@@ -131,6 +131,28 @@ describe("reliability URL modes", () => {
 });
 
 describe("reliability issue model", () => {
+  it("classifies probes through the shared triage classifier, including non-2xx below 400", () => {
+    const model = buildReliabilityWorkspaceModel(
+      input({
+        probes: [
+          { path: "/api/redirected", status: 302, latencyMs: 15 },
+          { path: "/api/degraded", status: 200, latencyMs: 15, semanticStatus: "degraded" },
+          { path: "/api/ok", status: 204, latencyMs: 15, semanticStatus: "healthy" },
+        ],
+      }),
+    );
+
+    // A non-2xx response below 400 without a semantic status reads as stale on
+    // the triage dashboard, so it is critical here too rather than healthy.
+    expect(model.endpoints.unhealthyProbes.map((probe) => probe.path)).toEqual([
+      "/api/redirected",
+      "/api/degraded",
+    ]);
+    expect(model.endpoints.healthyProbes.map((probe) => probe.path)).toEqual(["/api/ok"]);
+    expect(model.issues.find((issue) => issue.id === "endpoint:/api/redirected")?.kind).toBe("critical");
+    expect(model.issues.find((issue) => issue.id === "endpoint:/api/degraded")?.kind).toBe("warning");
+  });
+
   it("deduplicates the same cause across overall, availability, and data-quality arrays", () => {
     const cause: StatusCause = {
       code: "fixture_duplicate",

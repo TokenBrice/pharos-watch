@@ -19,13 +19,10 @@ import { percentileNearestRank } from "@shared/lib/stats";
 export type DashboardSectionId =
   "overview" | "pipeline" | "crons" | "reliability" | "actions" | "credentials" | "comms" | "history";
 
+/** Descriptor for the lanes that can surface in the Triage "needs attention" list. */
 export interface DashboardSection {
-  id: DashboardSectionId;
-  label: string;
-  kicker: string;
+  id: Extract<DashboardSectionId, "pipeline" | "crons" | "reliability" | "comms">;
   title: string;
-  description: string;
-  accentClassName: string;
   value: string;
   valueClassName?: string;
   summary: string;
@@ -68,8 +65,6 @@ export interface DashboardQuerySync {
   hasData: boolean;
   updatedAtMs: number;
   updatedAtSec: number | null;
-  lastSuccessAtMs: number | null;
-  lastAttemptAtMs: number | null;
   ageSec: number | null;
   errorMessage: string | null;
   state: DashboardQueryEvidenceState;
@@ -172,7 +167,7 @@ const ACTIVE_PRICE_COVERAGE_CAUSE_CODES = new Set([ACTIVE_PRICE_COVERAGE_CAUSE_C
 
 const MULTI_INSTANCE_CAUSE_CODES = new Set(["cache_warning"]);
 
-function getProbeDisplayStatus(probe: EndpointProbeResult): StatusHealthValue {
+export function getProbeDisplayStatus(probe: EndpointProbeResult): StatusHealthValue {
   if (probe.status == null || probe.status >= 400) return "stale";
   if (probe.semanticStatus) return probe.semanticStatus;
   return probe.status >= 200 && probe.status < 300 ? "healthy" : "stale";
@@ -201,7 +196,6 @@ function buildQuerySync({
   required,
   hasData,
   updatedAtMs,
-  lastAttemptAtMs,
   nowMs,
   error,
 }: {
@@ -210,17 +204,10 @@ function buildQuerySync({
   required: boolean;
   hasData: boolean;
   updatedAtMs: number;
-  lastAttemptAtMs?: number;
   nowMs: number;
   error: Error | null;
 }): DashboardQuerySync {
   const safeUpdatedAtMs = Number.isFinite(updatedAtMs) ? updatedAtMs : 0;
-  const safeLastAttemptAtMs =
-    Number.isFinite(lastAttemptAtMs) && (lastAttemptAtMs ?? 0) > 0
-      ? lastAttemptAtMs!
-      : safeUpdatedAtMs > 0
-        ? safeUpdatedAtMs
-        : null;
   const ageSec = safeUpdatedAtMs > 0 ? Math.max(0, Math.floor((nowMs - safeUpdatedAtMs) / 1000)) : null;
   const isStale = hasData && ageSec != null && ageSec * 1000 > STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs;
   const state: DashboardQueryEvidenceState = !hasData
@@ -238,8 +225,6 @@ function buildQuerySync({
     hasData,
     updatedAtMs: safeUpdatedAtMs,
     updatedAtSec: safeUpdatedAtMs > 0 ? Math.floor(safeUpdatedAtMs / 1000) : null,
-    lastSuccessAtMs: safeUpdatedAtMs > 0 ? safeUpdatedAtMs : null,
-    lastAttemptAtMs: safeLastAttemptAtMs,
     ageSec,
     errorMessage: error?.message ?? null,
     state,
@@ -732,15 +717,6 @@ interface DashboardSectionPriority {
   count: number;
 }
 
-const NO_SECTION_PRIORITY: DashboardSectionPriority = {
-  active: false,
-  severity: 0,
-  publicImpact: 0,
-  evidenceRisk: 0,
-  persistence: 0,
-  count: 0,
-};
-
 function buildSectionPriority({
   data,
   healthData,
@@ -755,7 +731,7 @@ function buildSectionPriority({
   issueGroups: DashboardIssueGroups;
   evidence: DashboardEvidence;
   commsModel: CommsWorkbenchModel;
-}): Record<DashboardSectionId, DashboardSectionPriority> {
+}): Record<DashboardSection["id"], DashboardSectionPriority> {
   const evidencePriority =
     evidence.state === "stale" || evidence.state === "unavailable" ? 2 : evidence.state === "partial" ? 1 : 0;
   const reliabilityStatus = Math.max(
@@ -785,8 +761,10 @@ function buildSectionPriority({
       : 0;
   const commsCount = commsModel.delivery.pendingDeliveries ?? 0;
 
+  // Overview, Credentials, and History are never causal lanes, and recommendations
+  // are attached to their causal lane in Triage: the Actions catalog remains
+  // directly reachable, but it is not a duplicate cause.
   return {
-    overview: NO_SECTION_PRIORITY,
     pipeline: {
       active: STATUS_PRIORITY[data.dataQualityStatus] > 0 || pipelineIssues.length > 0,
       severity: STATUS_PRIORITY[data.dataQualityStatus],
@@ -818,10 +796,6 @@ function buildSectionPriority({
       persistence: 0,
       count: (browserProbeSummary?.failCount ?? 0) + data.summary.availabilityImpactingCronErrors,
     },
-    // Recommendations are attached to their causal lane in Triage. The
-    // catalog remains directly reachable, but it is not a duplicate cause.
-    actions: NO_SECTION_PRIORITY,
-    credentials: NO_SECTION_PRIORITY,
     comms: {
       active: commsModel.delivery.health !== "healthy",
       severity: commsStatus,
@@ -830,7 +804,6 @@ function buildSectionPriority({
       persistence: commsModel.delivery.oldestBacklogAgeSec ?? 0,
       count: commsCount,
     },
-    history: NO_SECTION_PRIORITY,
   };
 }
 
@@ -846,20 +819,10 @@ function compareSectionPriority(left: DashboardSectionPriority, right: Dashboard
 
 function buildAttentionSections(
   sections: readonly DashboardSection[],
-  sectionPriority: Record<DashboardSectionId, DashboardSectionPriority>,
+  sectionPriority: Record<DashboardSection["id"], DashboardSectionPriority>,
 ): DashboardSection[] {
-  const sectionOrder: DashboardSectionId[] = [
-    "overview",
-    "pipeline",
-    "crons",
-    "reliability",
-    "actions",
-    "credentials",
-    "comms",
-    "history",
-  ];
+  const sectionOrder: Array<DashboardSection["id"]> = ["pipeline", "crons", "reliability", "comms"];
   return sections
-    .filter((section) => section.id !== "overview" && section.id !== "credentials" && section.id !== "history")
     .filter((section) => sectionPriority[section.id].active)
     .sort((a, b) => {
       const priorityDelta = compareSectionPriority(sectionPriority[a.id], sectionPriority[b.id]);
@@ -871,65 +834,30 @@ function buildAttentionSections(
 
 function buildDashboardSections({
   data,
-  allTransitions,
-  latestTransition,
-  overallTone,
   pipelineTone,
-  issueGroups,
-  evidence,
-  decision,
-  statusHoldingAge,
   browserProbeSummary,
   cronGroups,
   runningCrons,
-  recommendedActions,
   commsModel,
 }: {
   data: StatusResponse;
-  allTransitions: StatusResponse["timeline"];
-  latestTransition: StatusResponse["timeline"][number] | null;
-  overallTone: ReturnType<typeof getStatusTone>;
   pipelineTone: ReturnType<typeof getStatusTone>;
-  issueGroups: DashboardIssueGroups;
-  evidence: DashboardEvidence;
-  decision: DashboardDecision;
-  statusHoldingAge: number;
   browserProbeSummary: BrowserProbeSummary | null;
   cronGroups: DashboardCronGroup[];
   runningCrons: number;
-  recommendedActions: readonly StatusActionRecommendation[];
   commsModel: CommsWorkbenchModel;
 }): DashboardSection[] {
   return [
     {
-      id: "overview",
-      label: "Triage",
-      kicker: "Command Center",
-      title: "Triage",
-      description: "Current service state, evidence quality, issue classes, recommended action, and diagnostics.",
-      accentClassName: "border-l-frost-blue",
-      value: overallTone.label,
-      valueClassName: overallTone.valueClassName,
-      summary: `${issueGroups.impacting.length} impacting, ${issueGroups.warnings.length} warnings, ${issueGroups.maintenance.length} maintenance, evidence ${evidence.state}, next: ${decision.nextStepLabel.toLowerCase()}, last change ${formatElapsedSeconds(statusHoldingAge)} ago`,
-    },
-    {
       id: "pipeline",
-      label: "Pipeline",
-      kicker: "Data Pipeline",
       title: "Pipeline Health",
-      description: "Dataset recency, price coverage, supply drift, liquidity coverage, and discovery backlog.",
-      accentClassName: "border-l-cyan-500",
       value: pipelineTone.label,
       valueClassName: pipelineTone.valueClassName,
       summary: `${data.dataQuality.missingPrices} missing prices, ${data.dataQuality.staleOnchainSupply} stale on-chain feeds, ${data.dataQuality.blacklistMissingAmounts} blacklist gaps`,
     },
     {
       id: "reliability",
-      label: "Reliability",
-      kicker: "Service Health",
       title: "Probes, breakers, and cache pressure",
-      description: "Browser endpoint probes, public route health, circuit state, and stale cache detection.",
-      accentClassName: "border-l-amber-500",
       value: browserProbeSummary ? `${browserProbeSummary.passCount}/${browserProbeSummary.sampleCount}` : "Unknown",
       valueClassName:
         browserProbeSummary && browserProbeSummary.failCount > 0
@@ -939,11 +867,7 @@ function buildDashboardSections({
     },
     {
       id: "crons",
-      label: "Crons",
-      kicker: "Schedulers",
       title: "Cron Lanes",
-      description: "Grouped by trigger theme so failures, degraded runs, and in-flight leases are easier to scan.",
-      accentClassName: "border-l-orange-500",
       value: `${data.summary.availabilityImpactingUnhealthyCrons} impacting`,
       valueClassName:
         data.summary.availabilityImpactingUnhealthyCrons > 0
@@ -952,35 +876,8 @@ function buildDashboardSections({
       summary: `${cronGroups.length} groups, ${data.summary.watchUnhealthyCrons} watch unhealthy, ${data.summary.degradedCrons} degraded jobs, ${runningCrons} running now`,
     },
     {
-      id: "actions",
-      label: "Actions",
-      kicker: "Operations",
-      title: "Actions",
-      description: "Recommended recovery actions, backfills, audits, diagnostics, and recent execution results.",
-      accentClassName: "border-l-emerald-500",
-      value: recommendedActions.length > 0 ? `${recommendedActions.length} suggested` : "Clear",
-      valueClassName:
-        recommendedActions.length > 0 ? "text-amber-700 dark:text-amber-400" : "text-green-700 dark:text-green-400",
-      summary: `${recommendedActions.length} recommended actions, ${data.summary.cronErrors} cron errors`,
-    },
-    {
-      id: "credentials",
-      label: "Credentials",
-      kicker: "Access",
-      title: "Credentials",
-      description: "API-key inventory, creation, rotation, deactivation, and rate-limit controls.",
-      accentClassName: "border-l-slate-500",
-      value: "Managed",
-      valueClassName: "text-foreground",
-      summary: "API-key inventory and lifecycle controls",
-    },
-    {
       id: "comms",
-      label: "Comms",
-      kicker: "Messaging",
       title: "Comms",
-      description: "Telegram delivery, pending queues, alert-ready audiences, and outbound operator messaging.",
-      accentClassName: "border-l-teal-500",
       value:
         commsModel.delivery.health === "unknown"
           ? "Unknown"
@@ -1001,16 +898,6 @@ function buildDashboardSections({
           : `${commsModel.audience.deliverableChats} alert-ready chats.`
       }`,
     },
-    {
-      id: "history",
-      label: "History",
-      kicker: "Incident Log",
-      title: "Incident History",
-      description: "Persisted transitions for drills, regressions, and dwell-state validation.",
-      accentClassName: "border-l-rose-500",
-      value: latestTransition ? formatTransitionLabel(latestTransition) : "No transitions",
-      summary: `${allTransitions.length} transitions in view, latest ${latestTransition ? formatElapsedSeconds(Math.max(0, data.timestamp - latestTransition.at)) : "—"} ago`,
-    },
   ];
 }
 
@@ -1025,11 +912,6 @@ interface BuildStatusDashboardOptions {
     probesUpdatedAt: number;
     historyUpdatedAt: number;
     requestSourceUpdatedAt: number;
-    statusAttemptedAt?: number;
-    healthAttemptedAt?: number;
-    probesAttemptedAt?: number;
-    historyAttemptedAt?: number;
-    requestSourceAttemptedAt?: number;
   };
   nowMs: number;
   statusError?: Error | null;
@@ -1061,7 +943,6 @@ export function buildStatusDashboardData({
       required: true,
       hasData: true,
       updatedAtMs: querySyncs.statusUpdatedAt,
-      lastAttemptAtMs: querySyncs.statusAttemptedAt,
       nowMs,
       error: statusError,
     }),
@@ -1071,7 +952,6 @@ export function buildStatusDashboardData({
       required: true,
       hasData: healthData != null,
       updatedAtMs: querySyncs.healthUpdatedAt,
-      lastAttemptAtMs: querySyncs.healthAttemptedAt,
       nowMs,
       error: healthError,
     }),
@@ -1081,7 +961,6 @@ export function buildStatusDashboardData({
       required: true,
       hasData: probes !== undefined,
       updatedAtMs: querySyncs.probesUpdatedAt,
-      lastAttemptAtMs: querySyncs.probesAttemptedAt,
       nowMs,
       error: probesError,
     }),
@@ -1091,7 +970,6 @@ export function buildStatusDashboardData({
       required: false,
       hasData: historyTransitions !== undefined || querySyncs.historyUpdatedAt > 0,
       updatedAtMs: querySyncs.historyUpdatedAt,
-      lastAttemptAtMs: querySyncs.historyAttemptedAt,
       nowMs,
       error: historyError,
     }),
@@ -1101,30 +979,21 @@ export function buildStatusDashboardData({
       required: false,
       hasData: querySyncs.requestSourceUpdatedAt > 0,
       updatedAtMs: querySyncs.requestSourceUpdatedAt,
-      lastAttemptAtMs: querySyncs.requestSourceAttemptedAt,
       nowMs,
       error: requestSourceError,
     }),
   ];
   const evidence = buildDashboardEvidence(syncDetails, nowMs);
   const freshnessFloorMs = evidence.oldestRequiredSuccessAtMs;
-  const clientDataAgeSec = evidence.oldestRequiredAgeSec;
   const browserProbeSummary = buildBrowserProbeSummary(probes, querySyncs.probesUpdatedAt);
   const cronGroups = buildDashboardCronGroups(data);
   const runningCrons = countRunningDashboardCrons(data);
   const healthDiffersFromStatus = healthData != null && healthData.status !== data.overallStatus;
   const publicHealthNeedsCallout = healthData != null && (healthData.status !== "healthy" || healthDiffersFromStatus);
-  const allTransitions = historyTransitions ?? data.timeline;
-  const latestTransition = allTransitions[0] ?? null;
+  const latestTransition = (historyTransitions ?? data.timeline)[0] ?? null;
   const recommendedActions = deriveStatusActionRecommendations({ causes: data.causes, crons: data.crons });
-  const normalizedIssues = normalizeStatusIssues(data.causes, buildPublicHealthStatusCauses(healthData));
-  const issueGroups = groupDashboardIssues(normalizedIssues);
+  const issueGroups = groupDashboardIssues(normalizeStatusIssues(data.causes, buildPublicHealthStatusCauses(healthData)));
   const decision = buildDashboardDecision({ data, healthData, evidence, issueGroups, recommendedActions });
-  const blockerCauses = issueGroups.impacting;
-  const overallCauseCount = issueGroups.impacting.length;
-  const warningCauseCount = issueGroups.warnings.length;
-  const maintenanceCauseCount = issueGroups.maintenance.length;
-  const watchCauseCount = issueGroups.watches.length;
   const statusHoldingAge = Math.max(0, data.timestamp - data.state.lastChangedAt);
   const overallTone =
     decision.systemState === "unknown" ? getStatusTone(data.overallStatus) : getStatusTone(decision.systemState);
@@ -1160,50 +1029,25 @@ export function buildStatusDashboardData({
     evidence,
     commsModel,
   });
-  const baseSections = buildDashboardSections({
-    data,
-    allTransitions,
-    latestTransition,
-    overallTone,
-    pipelineTone,
-    issueGroups,
-    evidence,
-    decision,
-    statusHoldingAge,
-    browserProbeSummary,
-    cronGroups,
-    runningCrons,
-    recommendedActions,
-    commsModel,
-  });
-  const attentionSections = buildAttentionSections(baseSections, sectionPriority);
+  const attentionSections = buildAttentionSections(
+    buildDashboardSections({ data, pipelineTone, browserProbeSummary, cronGroups, runningCrons, commsModel }),
+    sectionPriority,
+  );
 
   return {
-    allTransitions,
     attentionSections,
-    blockerCauses,
     browserProbeSummary,
-    clientDataAgeSec,
     clientDataStale,
-    cronGroups,
     decision,
     evidence,
     freshnessFloorMs,
     healthDiffersFromStatus,
     latestTransition,
     notices,
-    normalizedIssues,
     issueGroups,
-    maintenanceCauseCount,
-    overallCauseCount,
-    warningCauseCount,
-    watchCauseCount,
     overallTone,
-    publicHealthNeedsCallout,
     querySyncs: syncDetails,
     recommendedActions,
-    runningCrons,
-    sections: baseSections,
     statusHoldingAge,
   };
 }

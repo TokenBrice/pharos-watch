@@ -94,9 +94,6 @@ export function useCriticalOpsModel() {
   const statusUpdatedAt = statusQuery.dataUpdatedAt;
   const healthUpdatedAt = healthQuery.dataUpdatedAt;
   const probesUpdatedAt = probesQuery.dataUpdatedAt;
-  const statusErrorUpdatedAt = statusQuery.errorUpdatedAt;
-  const healthErrorUpdatedAt = healthQuery.errorUpdatedAt;
-  const probesErrorUpdatedAt = probesQuery.errorUpdatedAt;
 
   const model = useMemo(
     () =>
@@ -112,9 +109,6 @@ export function useCriticalOpsModel() {
               probesUpdatedAt,
               historyUpdatedAt: 0,
               requestSourceUpdatedAt: 0,
-              statusAttemptedAt: Math.max(statusUpdatedAt, statusErrorUpdatedAt),
-              healthAttemptedAt: Math.max(healthUpdatedAt, healthErrorUpdatedAt),
-              probesAttemptedAt: Math.max(probesUpdatedAt, probesErrorUpdatedAt),
             },
             nowMs,
             statusError: backgroundStatusError,
@@ -129,15 +123,12 @@ export function useCriticalOpsModel() {
       backgroundStatusError,
       healthData,
       healthError,
-      healthErrorUpdatedAt,
       healthUpdatedAt,
       nowMs,
       probesData,
       probesError,
-      probesErrorUpdatedAt,
       probesUpdatedAt,
       statusData,
-      statusErrorUpdatedAt,
       statusUpdatedAt,
     ],
   );

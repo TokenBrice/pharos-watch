@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { StatusResponseSchema, TELEGRAM_ALERT_TYPES } from "@shared/types/status";
 import { buildActionReadinessChecks } from "@/lib/status/admin-ops-insights";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
-import { buildStatusDashboardData } from "@/lib/status-dashboard-model";
+import { buildStatusDashboardData, type DashboardIssueGroups } from "@/lib/status-dashboard-model";
 import {
   makeActionBlockedStatusResponse,
   makeActionRecommendedStatusResponse,
@@ -22,6 +22,13 @@ import {
   makeSectionLoaderFailureStatusResponse,
   makeStaleEvidenceInputs,
 } from "@/test-utils/status-fixtures";
+
+/** Issue identity across every kind, in the dashboard's own kind order. */
+function issueIdentities(groups: DashboardIssueGroups) {
+  return [...groups.impacting, ...groups.warnings, ...groups.maintenance, ...groups.watches].map(
+    ({ code, kind, publicImpacting }) => [code, kind, publicImpacting],
+  );
+}
 
 describe("status review fixtures", () => {
   it("keeps every status variant inside the runtime response schema", () => {
@@ -98,7 +105,7 @@ describe("status review fixtures", () => {
 
       expect({
         states: [dashboard.decision.systemState, dashboard.decision.publicState, dashboard.decision.adminState, dashboard.evidence.state, dashboard.decision.nextStep],
-        issues: dashboard.normalizedIssues.map(({ code, kind, publicImpacting }) => [code, kind, publicImpacting]),
+        issues: issueIdentities(dashboard.issueGroups),
         noticeIds: dashboard.notices.map((notice) => notice.id),
       }).toEqual(scenario.expected);
     }
@@ -110,8 +117,7 @@ describe("status review fixtures", () => {
     const changedDashboard = buildStatusDashboardData(
       makeCurrentStatusDashboardInputs({ data: changedCauseCode, healthData: makeDegradedPublicHealthResponse() }),
     );
-    expect(changedDashboard.normalizedIssues.map(({ code, kind, publicImpacting }) => [code, kind, publicImpacting]))
-      .toEqual([["cache_ratio_unknown", "warning", false]]);
+    expect(issueIdentities(changedDashboard.issueGroups)).toEqual([["cache_ratio_unknown", "warning", false]]);
 
     const publicationWithoutFailureNotice = structuredClone(publicationQueryUnavailable);
     delete publicationWithoutFailureNotice.publicationHealth?.failedSurfaces;

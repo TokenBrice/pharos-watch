@@ -9,7 +9,7 @@ import type {
   StatusResponse,
   StatusSectionKey,
 } from "@shared/types";
-import { normalizeStatusIssues, type BrowserProbeSummary } from "@/lib/status-dashboard-model";
+import { getProbeDisplayStatus, normalizeStatusIssues, type BrowserProbeSummary } from "@/lib/status-dashboard-model";
 
 const RELIABILITY_MODE_QUERY_PARAM = "view";
 
@@ -169,8 +169,9 @@ function addIssue(map: Map<string, ReliabilityIssue>, issue: ReliabilityIssue): 
 }
 
 function probeKind(probe: EndpointProbeResult): ReliabilityIssueKind | null {
-  if (probe.semanticStatus === "stale" || probe.status == null || probe.status >= 400) return "critical";
-  if (probe.semanticStatus === "degraded") return "warning";
+  const status = getProbeDisplayStatus(probe);
+  if (status === "stale") return "critical";
+  if (status === "degraded") return "warning";
   return null;
 }
 
