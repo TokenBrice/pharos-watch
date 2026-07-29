@@ -564,7 +564,8 @@ export function isDexExitRouteCoverageComplete(coverage: ExitRouteObservationCov
  * the completeness denominator — a surface whose every budget-admitted
  * capability pool carries a score-eligible observation is fully covered by
  * design, and the overflow count remains visible as diagnostics in
- * `unsupportedReasons.routeSelectionCapabilityOverflow`. Exact-route SCORING
+ * `unsupportedReasons.routeObservationPayloadOverflow` — the key the
+ * sync-dex-liquidity payload-budget trim actually emits. Exact-route SCORING
  * eligibility keeps the strict predicate above: route-budget completeness must
  * never widen which portfolios may replace the aggregate DEX path.
  */
@@ -579,7 +580,7 @@ export function isDexExitRouteCoverageWithinRouteBudget(
   )
     return false;
 
-  const selectionOverflowCount = coverage.unsupportedReasons["routeSelectionCapabilityOverflow"] ?? 0;
+  const selectionOverflowCount = coverage.unsupportedReasons["routeObservationPayloadOverflow"] ?? 0;
   const budgetCapabilityPoolCount = coverage.scoreEligibleCapabilityPoolCount - selectionOverflowCount;
   return (
     budgetCapabilityPoolCount > 0 &&

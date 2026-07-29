@@ -1299,7 +1299,7 @@ describe("P4 DEX exit route observations", () => {
       scoreEligibleCapabilityPoolCount: 283,
       unsupportedPoolCount: 273,
       evidenceCounts: { "measured-executable-depth": 10 },
-      unsupportedReasons: { routeSelectionCapabilityOverflow: 273 },
+      unsupportedReasons: { routeObservationPayloadOverflow: 273 },
     };
     expect(isDexExitRouteCoverageComplete(overflowOnlyCoverage)).toBe(false);
     expect(isDexExitRouteCoverageWithinRouteBudget(overflowOnlyCoverage)).toBe(true);
@@ -1315,7 +1315,7 @@ describe("P4 DEX exit route observations", () => {
       scoreEligibleCapabilityPoolCount: 12,
       unsupportedPoolCount: 8,
       unsupportedReasons: {
-        routeSelectionCapabilityOverflow: 2,
+        routeObservationPayloadOverflow: 2,
         "executionCapabilityGate:measured-execution:quote-failed": 6,
       },
     };
@@ -1348,6 +1348,69 @@ describe("P4 DEX exit route observations", () => {
     expect(
       isDexExitRouteCoverageWithinRouteBudget({ ...overflowOnlyCoverage, capabilityMatrixVersion: "p4a.3" }),
     ).toBe(false);
+  });
+
+  it("reads the route-overflow reason key the producer actually emits", () => {
+    // Captured verbatim from a sync-dex-liquidity run for
+    // usd1-world-liberty-financial: the payload-budget trim writes
+    // `routeObservationPayloadOverflow`. Hand-written fixtures previously used
+    // an invented key, so the carve-out could never fire on real coverage.
+    const producerCoverage = {
+      status: "populated" as const,
+      capabilityMatrixVersion: "p4a.8",
+      retainedPoolCount: 372,
+      observationCount: 10,
+      scoreEligibleObservationCount: 10,
+      scoreEligiblePoolCount: 10,
+      scoreEligibleCapabilityPoolCount: 277,
+      unsupportedPoolCount: 362,
+      evidenceCounts: { "reserve-based-amm-simulation": 7, "measured-executable-depth": 3 },
+      unsupportedReasons: {
+        "executionCapabilityGate:measured-execution:activation-pending": 2,
+        "executionCapabilityGate:measured-execution:quote-failed": 8,
+        "executionCapabilityGate:measured-execution:target-unresolved": 9,
+        "executionCapabilityGate:measured-execution:quote-missing": 1,
+        "executionCapabilityGate:measured-execution:stale-observation": 1,
+        "executionCapabilityGate:raydium-amm:incomplete-exact-capture": 1,
+        "nonExecutableEvidence:defillama-pool-shaped": 8,
+        "nonExecutableEvidence:discovery-pool-shaped": 87,
+        routeObservationPayloadOverflow: 245,
+      },
+    };
+    expect(ExitRouteObservationCoverageSchema.safeParse(producerCoverage).success).toBe(true);
+    // 22 capability pools are still gated, so the carve-out alone cannot
+    // certify this surface even once the key matches.
+    expect(isDexExitRouteCoverageWithinRouteBudget(producerCoverage)).toBe(false);
+
+    // Same surface with the gated pools cleared: the only unobserved
+    // capability pools are payload-budget omissions, so budget accounting
+    // certifies it. This assertion fails whenever the predicate reads a key
+    // the producer does not emit.
+    const gatesClearedCoverage = {
+      ...producerCoverage,
+      unsupportedReasons: {
+        "nonExecutableEvidence:defillama-pool-shaped": 8,
+        "nonExecutableEvidence:discovery-pool-shaped": 87,
+        routeObservationPayloadOverflow: 267,
+      },
+    };
+    expect(ExitRouteObservationCoverageSchema.safeParse(gatesClearedCoverage).success).toBe(true);
+    expect(isDexExitRouteCoverageWithinRouteBudget(gatesClearedCoverage)).toBe(true);
+
+    // Any other reason key stays in the completeness denominator, including
+    // the `routeSelectionCapabilityOverflow` key that never shipped.
+    for (const driftedKey of ["routeSelectionCapabilityOverflow", "routeSelectionBudgetOverflow"]) {
+      expect(
+        isDexExitRouteCoverageWithinRouteBudget({
+          ...gatesClearedCoverage,
+          unsupportedReasons: {
+            "nonExecutableEvidence:defillama-pool-shaped": 8,
+            "nonExecutableEvidence:discovery-pool-shaped": 87,
+            [driftedKey]: 267,
+          },
+        }),
+      ).toBe(false);
+    }
   });
 
   it("rejects internally inconsistent producer coverage counts", () => {
