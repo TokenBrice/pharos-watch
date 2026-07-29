@@ -46,6 +46,8 @@ const DRPC_CHAINS: Record<string, string> = {
   celo: "celo",
 };
 
+const PUBLIC_ONLY_EVM_CHAINS = ["tempo"] as const;
+
 export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map<string, ChainRpcConfig> {
   const configs: ChainRpcConfig[] = [];
 
@@ -95,6 +97,22 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Map
         explorerUrl: CHAIN_META[chainId]!.explorerUrl,
       });
     }
+  }
+
+  for (const chainId of PUBLIC_ONLY_EVM_CHAINS) {
+    if (configs.some((config) => config.chainId === chainId)) continue;
+    const meta = CHAIN_META[chainId];
+    const publicRpc = getPublicRpcUrl(chainId);
+    if (!meta || meta.type !== "evm" || !publicRpc) continue;
+
+    configs.push({
+      chainId,
+      chainName: meta.name,
+      type: "evm",
+      rpcUrl: publicRpc,
+      fallbackRpcUrl: getSecondaryFallbackRpcUrl(chainId),
+      explorerUrl: meta.explorerUrl,
+    });
   }
 
   if (alchemyApiKey) {

@@ -16,7 +16,11 @@ import {
   CURATED_ONCHAIN_SUPPLY_EXCLUSIONS,
   type SupplementalOnChainSupplySource,
 } from "../../../lib/onchain-supply-exclusions";
-import { fetchOnchainUint256, probeTrackedTokenSupply } from "../../reserve-adapters/helpers";
+import {
+  fetchErc20TotalSupply,
+  fetchOnchainUint256,
+  probeTrackedTokenSupply,
+} from "../../reserve-adapters/helpers";
 import { runBoundedQueue } from "../../shared/bounded-queue";
 
 export { computeExcludedBalanceAdjustedSupplyRaw };
@@ -107,7 +111,7 @@ async function fetchOnChainSupplyForContract(input: {
   priceUsd: number;
   chainRpcs?: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
-  curated?: { rpcUrl?: string; fallbackRpcUrl?: string };
+  curated?: { rpcUrl?: string; fallbackRpcUrl?: string; allowZeroSupply?: boolean };
 }): Promise<{
   mcap: number;
   supplySource: SupplementalOnChainSupplySource;
@@ -118,36 +122,53 @@ async function fetchOnChainSupplyForContract(input: {
   const supplySignal = input.signal ?? AbortSignal.timeout(10_000);
   const chainRpc =
     input.supplyContract.chain === "solana" ? undefined : input.chainRpcs?.get(input.supplyContract.chain);
+  const allowZeroSupply = input.curated?.allowZeroSupply === true;
 
   try {
-    const raw = await probeTrackedTokenSupply(
-      input.meta,
-      probeInput,
-      supplySignal,
-      "fiat-cg",
-      undefined,
-      input.curated?.rpcUrl ?? chainRpc?.rpcUrl,
-      input.curated?.fallbackRpcUrl ?? chainRpc?.fallbackRpcUrl,
-    );
-    if (raw <= 0n) return null;
+    const rpcUrl = input.curated?.rpcUrl ?? chainRpc?.rpcUrl;
+    const fallbackRpcUrl = input.curated?.fallbackRpcUrl ?? chainRpc?.fallbackRpcUrl;
+    const raw =
+      allowZeroSupply && probeInput.kind === "onchain-evm"
+        ? await fetchErc20TotalSupply(
+          probeInput,
+          input.supplyContract.address,
+          supplySignal,
+          undefined,
+          rpcUrl,
+          fallbackRpcUrl,
+        )
+        : await probeTrackedTokenSupply(
+          input.meta,
+          probeInput,
+          supplySignal,
+          "fiat-cg",
+          undefined,
+          rpcUrl,
+          fallbackRpcUrl,
+        );
+    if (raw == null || (raw <= 0n && !allowZeroSupply)) return null;
 
-    const adjustment = await adjustOnChainSupplyForExcludedBalances({
-      meta: input.meta,
-      supplyContract: input.supplyContract,
-      totalSupplyRaw: raw,
-      signal: supplySignal,
-      chainRpc,
-      curatedRpc: input.curated,
-    });
+    const adjustment = raw > 0n
+      ? await adjustOnChainSupplyForExcludedBalances({
+        meta: input.meta,
+        supplyContract: input.supplyContract,
+        totalSupplyRaw: raw,
+        signal: supplySignal,
+        chainRpc,
+        curatedRpc: input.curated,
+      })
+      : null;
     const supplyRaw = adjustment?.raw ?? raw;
     const supplySource = adjustment?.supplySource ?? "onchain-total-supply";
     const supply = Number(supplyRaw) / 10 ** contractDecimals(input.supplyContract);
     const mcap = supply * input.priceUsd;
-    if (Number.isFinite(mcap) && mcap > 0) {
+    if (Number.isFinite(mcap) && (mcap > 0 || allowZeroSupply)) {
       const chainLabel = contractChainLabel(input.supplyContract);
-      console.log(
-        `[fiat-cg] ${chainLabel} supply fallback for ${input.meta.symbol}: ${supply.toFixed(2)} units -> $${mcap.toFixed(2)} mcap`,
-      );
+      if (mcap > 0) {
+        console.log(
+          `[fiat-cg] ${chainLabel} supply fallback for ${input.meta.symbol}: ${supply.toFixed(2)} units -> $${mcap.toFixed(2)} mcap`,
+        );
+      }
       return { mcap, supplySource, chain: input.supplyContract.chain, chainLabel };
     }
   } catch (err) {

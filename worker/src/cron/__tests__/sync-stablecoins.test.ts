@@ -33,6 +33,12 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
     detailProvider: "coingecko",
     flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
   }));
+  const chfauContracts = [
+    { chain: "ethereum", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 },
+    { chain: "polygon", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 },
+    { chain: "base", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 },
+    { chain: "tempo", address: "0x20c00000000000000000000042109aef2f8b28e1", decimals: 6 },
+  ];
 
   const stablecoins = [
     {
@@ -105,7 +111,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
       symbol: "CHFAU",
       geckoId: "allunity-chf",
       detailProvider: "coingecko",
-      contracts: [{ chain: "ethereum", address: "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78", decimals: 6 }],
+      contracts: chfauContracts,
       flags: { pegCurrency: "CHF", backing: "rwa-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
     {
@@ -211,7 +217,9 @@ vi.mock("@shared/lib/stablecoins/registry", () => {
     ["chfau-allunity", {
       geckoId: "allunity-chf",
       cmcSlug: undefined,
-      flags: { navToken: false },
+      detailProvider: "coingecko",
+      contracts: chfauContracts,
+      flags: { navToken: false, pegCurrency: "CHF", backing: "rwa-backed", yieldBearing: false, governance: "centralized" },
     }],
     ["cadd-cad-digital", {
       geckoId: "cad-digital",
@@ -2502,7 +2510,10 @@ describe("syncStablecoins", () => {
     ]);
     const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
     const evmSupplySpy = vi.spyOn(evmRpcModule, "fetchEvmUint256AtBlock")
-      .mockResolvedValueOnce(1_500_000_000_000n);
+      .mockResolvedValueOnce(1_500_000_000_000n)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(0n);
 
     const dlData = makeDlResponse(60);
     mockFetchWithRetry([
@@ -2515,9 +2526,35 @@ describe("syncStablecoins", () => {
 
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(61);
-    expect(evmSupplySpy).toHaveBeenCalledWith(
+    expect(evmSupplySpy).toHaveBeenCalledTimes(4);
+    expect(evmSupplySpy).toHaveBeenNthCalledWith(
+      1,
       "ethereum",
       "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+      "0x18160ddd",
+      "latest",
+      expect.any(Object),
+    );
+    expect(evmSupplySpy).toHaveBeenNthCalledWith(
+      2,
+      "polygon",
+      "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+      "0x18160ddd",
+      "latest",
+      expect.any(Object),
+    );
+    expect(evmSupplySpy).toHaveBeenNthCalledWith(
+      3,
+      "base",
+      "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+      "0x18160ddd",
+      "latest",
+      expect.any(Object),
+    );
+    expect(evmSupplySpy).toHaveBeenNthCalledWith(
+      4,
+      "tempo",
+      "0x20c00000000000000000000042109aef2f8b28e1",
       "0x18160ddd",
       "latest",
       expect.any(Object),
@@ -2535,6 +2572,11 @@ describe("syncStablecoins", () => {
     expect(chfau?.priceConfidence).toBeNull();
     expect(chfau?.supplySource).toBe("onchain-total-supply");
     expect((chfau?.circulating as Record<string, number> | undefined)?.peggedCHF).toBeCloseTo(1_710_000, 6);
+    const chainCirculating = chfau?.chainCirculating as Record<string, { current: number }> | undefined;
+    expect(chainCirculating?.Ethereum?.current).toBeCloseTo(1_710_000, 6);
+    expect(chainCirculating?.Polygon?.current).toBe(0);
+    expect(chainCirculating?.Base?.current).toBe(0);
+    expect(chainCirculating?.Tempo?.current).toBe(0);
   });
 
   it("reuses fresh cached prices during CG supply fallback when CoinGecko spot values fail validation", async () => {
