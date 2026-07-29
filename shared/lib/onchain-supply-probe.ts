@@ -176,6 +176,145 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "megaeth", rpcUrl: "https://mainnet.megaeth.com/rpc", fallbackRpcUrl: "https://megaeth.drpc.org", allowZeroSupply: true },
     { chain: "sei", rpcUrl: "https://evm-rpc.sei-apis.com", fallbackRpcUrl: "https://sei-evm-rpc.publicnode.com" },
   ],
+  // cUSDO runs an independent ERC-4626 wrapper on each chain over that chain's
+  // own USDO, so nothing escrows anything. Verified 2026-07-29: every remote
+  // vault's asset() is the local USDO and its totalAssets() equals its own USDO
+  // balance, Ethereum cUSDO balanceOf(self) is 0, and CoinGecko's circulating
+  // supply reproduces the Ethereum+Base+BSC sum exactly. The Solana mint adds
+  // 817,113.90 cUSDO (+5.3%) that CoinGecko never indexes.
+  "cusdo-openeden": [{ chain: "ethereum" }, { chain: "base" }, { chain: "bsc" }, { chain: "solana" }],
+  // sUSDai is an Arbitrum-native ERC-4626 vault carried to Ethereum, Base and
+  // Plasma as LayerZero OFT satellites. Verified 2026-07-29: the OAdapter
+  // 0xffb20098fd7b8e84762eea4609f299d101427f24 holds zero sUSDai on every chain
+  // (it burns rather than escrows), and the Arbitrum vault's totalAssets() only
+  // reconciles to the quoted NAV against GLOBAL shares, so the four legs sum.
+  "susdai-usd-ai": [
+    { chain: "arbitrum" },
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "plasma", rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
+  ],
+  // sYUSD stakes each chain's own YUSD in a local ERC-4626 vault. Verified
+  // 2026-07-29: the BSC vault's asset() is BSC YUSD and its totalAssets()
+  // equals its own YUSD balance, so it is locally backed rather than escrowed
+  // against Ethereum. BSC holds 0.0094% of supply, so allow it to read zero.
+  "syusd-aegis": [{ chain: "ethereum" }, { chain: "bsc", allowZeroSupply: true }],
+  // USDK and XO are single-deployment Solana assets that already resolve
+  // through the single-contract probe. They are configured here only so the
+  // aggregate lane publishes a per-chain row: the reviewed M0 Portal lock/mint
+  // escrows the underlying $M, never USDK or XO, so the mint totalSupply is the
+  // whole global supply and the published aggregate is unchanged.
+  "usdk-kast": [{ chain: "solana" }],
+  "xo-exodus": [{ chain: "solana" }],
+  // IAUon and SLVon are Ondo tokenized-commodity shares with no canonical-chain
+  // escrow: verified 2026-07-29 that the Ethereum holder set contains no bridge
+  // or adapter contract near the remote supplies, and CoinGecko's total supply
+  // is the exact four-chain sum for IAUon. The HyperEVM legs are reviewed live
+  // deployments holding zero (IAUon) and dust (SLVon), so they may read zero.
+  "iauon-ondo": [
+    { chain: "ethereum" },
+    { chain: "bsc" },
+    { chain: "solana" },
+    { chain: "hyperevm", rpcUrl: "https://rpc.hyperliquid.xyz/evm", fallbackRpcUrl: "https://rpc.hypurrscan.io", allowZeroSupply: true },
+  ],
+  "slvon-ondo": [
+    { chain: "ethereum" },
+    { chain: "bsc" },
+    { chain: "solana" },
+    { chain: "hyperevm", rpcUrl: "https://rpc.hyperliquid.xyz/evm", fallbackRpcUrl: "https://rpc.hypurrscan.io", allowZeroSupply: true },
+  ],
+  // mHYPER's four deployments are independent EIP-1967 proxies with different
+  // implementations and no shared adapter. Verified 2026-07-29: the only
+  // Ethereum holder near the 570,380.39 remote sum is Midas' own
+  // MHyperRedemptionVaultWithSwapper (592,828.73), a redemption buffer rather
+  // than a bridge lockbox, so the reviewed deployments sum. Katana holds dust.
+  "mhyper-midas": [
+    { chain: "ethereum" },
+    { chain: "monad", rpcUrl: "https://rpc.monad.xyz", fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" },
+    { chain: "plasma", rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
+    { chain: "katana", rpcUrl: "https://rpc.katana.network", fallbackRpcUrl: "https://rpc.katanarpc.com", allowZeroSupply: true },
+  ],
+  // sDOLA's four remote deployments share byte-identical owner-minted ERC-20
+  // bytecode with no token()/l1Token()/bridge() surface and no Ethereum escrow,
+  // so they sum. Every one of them carries deployment seed dust (Base 0.0212,
+  // the rest wei-level), so all four legs must tolerate a zero read.
+  "sdola-inverse-finance": [
+    { chain: "ethereum" },
+    { chain: "base", allowZeroSupply: true },
+    { chain: "optimism", allowZeroSupply: true },
+    { chain: "arbitrum", allowZeroSupply: true },
+    { chain: "berachain", rpcUrl: "https://rpc.berachain.com", fallbackRpcUrl: "https://berachain-rpc.publicnode.com", allowZeroSupply: true },
+  ],
+  // thBILL is a LayerZero OFT mesh whose Ethereum leg is the MyOFTAdapter
+  // lockbox 0xfDD22Ce6D1F66bc0Ec89b20BF16CcB6670F55A5a. Verified 2026-07-29:
+  // it escrows 37,999,100.42 thBILL against 37,998,884.22 minted on Arbitrum,
+  // Base, HyperEVM and Stable, so Ethereum totalSupply() is the conserved
+  // global total and is reallocated below. The Stable-chain representation is
+  // not a tracked deployment yet, so its balance stays inside the Ethereum
+  // bucket (susde-ethena TON/Aptos precedent) instead of failing closed.
+  "thbill-theo": [
+    { chain: "ethereum" },
+    { chain: "arbitrum" },
+    { chain: "base", allowZeroSupply: true },
+    { chain: "hyperevm", rpcUrl: "https://rpc.hyperliquid.xyz/evm", fallbackRpcUrl: "https://rpc.hypurrscan.io" },
+  ],
+  // wiTRY's Ethereum escrow 0x698b7518711bDe4832fDc19F5262DF705c713006 holds
+  // 346,349,590.501584 wiTRY, bit-for-bit the MegaETH totalSupply(), so 94% of
+  // the Ethereum total is really MegaETH float and must be reallocated. The
+  // published aggregate is unchanged; only the per-chain split moves.
+  "witry-brix": [
+    { chain: "ethereum" },
+    { chain: "megaeth", rpcUrl: "https://mainnet.megaeth.com/rpc", fallbackRpcUrl: "https://megaeth.drpc.org" },
+  ],
+  // KRWQ's five spokes are self-referencing LayerZero OFTs that all resolve
+  // peers(30101) to the Ethereum OFT Adapter 0xbdc82654f3574a113cdbd62f39cbe02e5b522d57
+  // (approvalRequired() === true). Verified 2026-07-29: that adapter escrows
+  // 790,548,884.86 KRWQ against a 790,537,884.86 spoke total, so summing would
+  // double count. Note: this drops the published supply from CoinGecko's
+  // Ethereum+Base double count to the conserved 1,069,438,010.15 KRWQ. The
+  // Codex leg is a 5 KRWQ seed mint, so allow it to read zero.
+  "krwq-iq": [
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "polygon" },
+    { chain: "fraxtal", rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" },
+    { chain: "codex", rpcUrl: "https://rpc.codex.xyz", fallbackRpcUrl: "https://81224.rpc.thirdweb.com", allowZeroSupply: true },
+    { chain: "morph-l2", rpcUrl: "https://rpc.morphl2.io", fallbackRpcUrl: "https://morph.drpc.org" },
+  ],
+  // syrupUSDT is an Ethereum ERC-4626 vault mirrored by Chainlink CCIP BurnMint
+  // spokes. Verified 2026-07-29: the Ethereum LockReleaseTokenPool
+  // 0xDE76A096C5eadDdf97Af3fE15ee49d32AEDa9822 escrows 280,871,803.77
+  // syrupUSDT against a 280,871,803.67 spoke total, and the vault's 406.1M USDT
+  // only reconciles to the quoted 1.14 NAV against Ethereum shares alone, so
+  // the canonical total is reallocated rather than summed.
+  "syrupusdt-maple": [
+    { chain: "ethereum" },
+    { chain: "plasma", rpcUrl: "https://rpc.plasma.to", fallbackRpcUrl: "https://plasma.drpc.org" },
+    { chain: "bsc" },
+    { chain: "mantle", rpcUrl: "https://rpc.mantle.xyz", fallbackRpcUrl: "https://mantle-rpc.publicnode.com" },
+    { chain: "ink", rpcUrl: "https://rpc-gel.inkonchain.com", fallbackRpcUrl: "https://ink.drpc.org" },
+  ],
+  // srUSD has the same Reservoir shape as wsrUSD but a different adapter:
+  // 0x316cd39632Cac4F4CdfC21757c4500FE12f64514 (SrusdOftAdapter). Verified
+  // 2026-07-29: it escrows 6,882.636512 srUSD, exactly the Berachain
+  // totalSupply(), so Ethereum is the conserved total and is reallocated.
+  "srusd-reservoir": [
+    { chain: "ethereum" },
+    { chain: "berachain", rpcUrl: "https://rpc.berachain.com", fallbackRpcUrl: "https://berachain-rpc.publicnode.com" },
+  ],
+  // PGOLD is issuer-native on Arbitrum, which is the conserved global total:
+  // its Chainlink CCIP LockRelease pool 0x5b5CE779709360A6B6906b79CAc5029A5B7CCdc4
+  // escrows exactly the Ethereum + Pharos burn/mint supply (1,110.0 verified
+  // 2026-07-29), and the LayerZero OFTAdapter 0xbfd47e6098017c04957ba218dade65e23f661793
+  // escrows the ApeChain OFT representation. Reallocate rather than sum.
+  // ApeChain and Pharos are absent from buildChainRpcs(), so pin reviewed
+  // public endpoints; any unreadable leg still fails the aggregate closed.
+  "pgold-pleasing": [
+    { chain: "arbitrum" },
+    { chain: "ethereum" },
+    { chain: "apechain", rpcUrl: "https://rpc.apechain.com/http", fallbackRpcUrl: "https://apechain.calderachain.xyz/http" },
+    { chain: "pharos", rpcUrl: "https://api.zan.top/public/pharos-mainnet", fallbackRpcUrl: "https://pharos.drpc.org" },
+  ],
 };
 
 // These canonical-chain totalSupply values already include tokens escrowed for
@@ -188,6 +327,12 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "susde-ethena": "ethereum",
   "wsrusd-reservoir": "ethereum",
   "savusd-avant": "avalanche",
+  "thbill-theo": "ethereum",
+  "witry-brix": "ethereum",
+  "krwq-iq": "ethereum",
+  "syrupusdt-maple": "ethereum",
+  "srusd-reservoir": "ethereum",
+  "pgold-pleasing": "arbitrum",
 };
 
 export function isZephyrScannerSupplyId(id: string): boolean {
