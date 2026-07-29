@@ -1,0 +1,376 @@
+import {
+  buildReportCardsV9DependencyGraph,
+  type ReportCardsV9Response,
+} from "@shared/types/report-cards-v9";
+import { scoreToV9Grade } from "@shared/types/safety-score-v9-grade";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+
+type V9PillarKey = keyof SafetyScoreV9CurrentCard["pillars"];
+type V9Breakdowns = Exclude<SafetyScoreV9CurrentCard["breakdowns"], null>;
+type V9ExitRoute = NonNullable<V9Breakdowns["exit"]["primaryRoute"]>;
+type V9ControlComponent = V9Breakdowns["control"]["components"][number];
+
+interface V9PillarOffset {
+  offset: number;
+  minimum?: number;
+  maximum?: number;
+}
+
+export interface ReportCardsV9CardFixturePreset {
+  defaultScore: number;
+  defaultQualityScore: number;
+  qualityScoreFromOverridePillars: boolean;
+  defaultPegMultiplier: number;
+  defaultPegAdjustedScore: "score" | number;
+  pillarComponents: readonly string[];
+  pillarOffsets: Record<V9PillarKey, V9PillarOffset>;
+  defaultWeakestPillar: "minimum" | V9PillarKey;
+  breakdowns: {
+    nullWhenAnyPillarIsNull: boolean;
+    backingComponent: {
+      key: string;
+      label: string;
+    };
+    exit: {
+      stressRequest: V9Breakdowns["exit"]["stressRequest"];
+      primaryRoute: Pick<V9ExitRoute, "key" | "label" | "routeFamily">;
+    };
+    controlComponent: Pick<V9ControlComponent, "key" | "label" | "kind" | "posture">;
+  };
+  accessPostureSignals: readonly string[];
+  overridesBeforeDerivedValues: boolean;
+}
+
+export interface ReportCardsV9ResponseFixturePreset {
+  safetyScoreIdentity: ReportCardsV9Response["safetyScoreIdentity"];
+  defaultUpdatedAt: number;
+  asOfSec: number;
+  source: ReportCardsV9Response["source"];
+}
+
+const EXIT_COMPONENTS = [
+  { key: "access", label: "Access", weight: 0.2 },
+  { key: "settlement", label: "Settlement", weight: 0.15 },
+  { key: "executionCertainty", label: "Execution certainty", weight: 0.15 },
+  { key: "capacity", label: "Capacity", weight: 0.25 },
+  { key: "outputAssetQuality", label: "Output asset quality", weight: 0.15 },
+  { key: "cost", label: "Cost", weight: 0.1 },
+] as const;
+
+function applyPillarOffset(score: number, offset: V9PillarOffset): number {
+  const adjusted = score + offset.offset;
+  if (offset.minimum !== undefined) {
+    return Math.max(offset.minimum, adjusted);
+  }
+  if (offset.maximum !== undefined) {
+    return Math.min(offset.maximum, adjusted);
+  }
+  return adjusted;
+}
+
+function buildBreakdowns(
+  preset: ReportCardsV9CardFixturePreset,
+  score: number | null,
+  pillars: SafetyScoreV9CurrentCard["pillars"],
+): V9Breakdowns | null {
+  if (
+    score === null ||
+    (
+      preset.breakdowns.nullWhenAnyPillarIsNull &&
+      (pillars.backing.score === null ||
+        pillars.exit.score === null ||
+        pillars.control.score === null)
+    )
+  ) {
+    return null;
+  }
+
+  return {
+    backing: {
+      evaluatedScore: pillars.backing.score!,
+      publishedScore: pillars.backing.score!,
+      aggregationWeight: 0.4,
+      adjustments: [],
+      groups: [{
+        key: "reserves",
+        label: "Reserves",
+        score: pillars.backing.score!,
+        effectiveWeight: 1,
+      }],
+      components: [{
+        key: preset.breakdowns.backingComponent.key,
+        label: preset.breakdowns.backingComponent.label,
+        source: "reserve-exposure",
+        score: pillars.backing.score!,
+        effectiveWeight: 1,
+        weightedContribution: pillars.backing.score!,
+        observationState: "known",
+      }],
+    },
+    exit: {
+      evaluatedScore: pillars.exit.score!,
+      publishedScore: pillars.exit.score!,
+      aggregationWeight: 0.35,
+      adjustments: [],
+      stressRequest: preset.breakdowns.exit.stressRequest,
+      primaryRoute: {
+        ...preset.breakdowns.exit.primaryRoute,
+        score: pillars.exit.score!,
+        components: EXIT_COMPONENTS.map(({ key, label, weight }) => ({
+          key,
+          label,
+          score: pillars.exit.score!,
+          weight,
+          weightedContribution: pillars.exit.score! * weight,
+        })),
+        confidenceFactor: 1,
+        eligibilityMultiplier: 1,
+        capsApplied: [],
+      },
+      diversification: null,
+      alternatives: [],
+    },
+    control: {
+      evaluatedScore: pillars.control.score!,
+      publishedScore: pillars.control.score!,
+      aggregationWeight: 0.25,
+      adjustments: [],
+      method: "minimum-binding-component",
+      components: [{
+        ...preset.breakdowns.controlComponent,
+        score: pillars.control.score!,
+        binding: true,
+      }],
+    },
+  } satisfies V9Breakdowns;
+}
+
+export function makeReportCardsV9Card(
+  preset: ReportCardsV9CardFixturePreset,
+  overrides: Partial<SafetyScoreV9CurrentCard> = {},
+): SafetyScoreV9CurrentCard {
+  const score = overrides.score === undefined ? preset.defaultScore : overrides.score;
+  const grade = overrides.grade ?? scoreToV9Grade(score);
+  const reviewedPillarScores = overrides.pillars === undefined
+    ? []
+    : Object.values(overrides.pillars)
+        .map((pillar) => pillar.score)
+        .filter((pillarScore): pillarScore is number => pillarScore !== null);
+  const qualityScore = overrides.qualityScore === undefined
+    ? preset.qualityScoreFromOverridePillars && reviewedPillarScores.length > 0
+      ? reviewedPillarScores.reduce((sum, pillarScore) => sum + pillarScore, 0) /
+        reviewedPillarScores.length
+      : preset.defaultQualityScore
+    : overrides.qualityScore;
+  const pegMultiplier =
+    overrides.pegMultiplier === undefined
+      ? preset.defaultPegMultiplier
+      : overrides.pegMultiplier;
+  const pegAdjustedScore = overrides.pegAdjustedScore === undefined
+    ? preset.defaultPegAdjustedScore === "score"
+      ? score
+      : preset.defaultPegAdjustedScore
+    : overrides.pegAdjustedScore;
+  const pillar = (pillarScore: number | null) => ({
+    score: pillarScore,
+    evidenceLevel: "adequate" as const,
+    freshness: "current" as const,
+    components: [...preset.pillarComponents],
+    reasons: [],
+  });
+  const pillars = overrides.pillars ?? {
+    backing: pillar(
+      qualityScore === null
+        ? null
+        : applyPillarOffset(qualityScore, preset.pillarOffsets.backing),
+    ),
+    exit: pillar(
+      qualityScore === null
+        ? null
+        : applyPillarOffset(qualityScore, preset.pillarOffsets.exit),
+    ),
+    control: pillar(
+      qualityScore === null
+        ? null
+        : applyPillarOffset(qualityScore, preset.pillarOffsets.control),
+    ),
+  };
+  const defaultWeakestPillar = (
+    Object.entries(pillars) as Array<
+      [V9PillarKey, (typeof pillars)["backing"]]
+    >
+  )
+    .filter((entry) => entry[1].score !== null)
+    .sort((left, right) => left[1].score! - right[1].score!)[0];
+  const weakestPillar = overrides.weakestPillar !== undefined
+    ? overrides.weakestPillar
+    : qualityScore === null ||
+        (preset.defaultWeakestPillar === "minimum" && defaultWeakestPillar === undefined)
+      ? null
+      : preset.defaultWeakestPillar === "minimum"
+        ? {
+            pillar: defaultWeakestPillar![0],
+            score: defaultWeakestPillar![1].score!,
+          }
+        : {
+            pillar: preset.defaultWeakestPillar,
+            score: pillars[preset.defaultWeakestPillar].score!,
+          };
+  const breakdowns = overrides.breakdowns !== undefined
+    ? overrides.breakdowns
+    : buildBreakdowns(preset, score, pillars);
+  const baseCard = {
+    id: "usdc-circle",
+    pegMultiplier,
+    pegAdjustedScore,
+    caps: [],
+    bindingCap: null,
+    nrReasons: [],
+    reasonCodes: [],
+    evidence: { level: "adequate" as const, freshness: "current" as const, reasons: [] },
+    accessPosture: {
+      transfer: "restrictable" as const,
+      freezeExposure: "direct" as const,
+      primaryExit: "eligibility-gated" as const,
+      governance: "single-entity" as const,
+      unknownFields: [],
+      signals: [...preset.accessPostureSignals],
+      reasons: [],
+    },
+    dependencies: { serial: [], basket: [], cycleBlocked: false as const, reasonCodes: [] },
+    stressStateDigest: null,
+  };
+  const derivedValues = {
+    score,
+    grade,
+    qualityScore,
+    pillars,
+    weakestPillar,
+    breakdowns,
+  };
+  const card = (
+    preset.overridesBeforeDerivedValues
+      ? {
+          ...baseCard,
+          ...overrides,
+          ...derivedValues,
+        }
+      : {
+          ...baseCard,
+          ...derivedValues,
+          ...overrides,
+        }
+  ) satisfies Omit<SafetyScoreV9CurrentCard, "scoreTrace">;
+  const hasScoreStages =
+    card.qualityScore !== null &&
+    card.pegMultiplier !== null &&
+    card.pegAdjustedScore !== null &&
+    card.score !== null &&
+    card.weakestPillar !== null;
+
+  return {
+    ...card,
+    scoreTrace: overrides.scoreTrace ?? {
+      schemaVersion: 3,
+      legacyAliases: {
+        qualityScore: "weighted-pillar-mean",
+        pegAdjustedScore: "post-deployment-pre-cap-score",
+        score: "post-cap-public-score",
+      },
+      aggregation: hasScoreStages
+        ? {
+            method: "smooth-bounded-headroom",
+            score: card.qualityScore!,
+            weightedPillarMean: card.qualityScore!,
+            weakestPillar: card.weakestPillar!.pillar,
+            weakestScore: card.weakestPillar!.score,
+            headroom: 20,
+          }
+        : null,
+      stages: {
+        weightedPillarMean: card.qualityScore,
+        aggregatedQualityScore: hasScoreStages ? card.qualityScore : null,
+        pegMultiplier: card.pegMultiplier,
+        baseAssetScore: card.pegAdjustedScore,
+        deploymentAdjustedScore: card.pegAdjustedScore,
+        deploymentAdjustmentPoints: hasScoreStages ? 0 : null,
+        preCapScore: card.pegAdjustedScore,
+        publishedScore: card.score,
+      },
+      deploymentRisk: {
+        method: "holder-slice-exposure-weighted-v2",
+        totalAdjustmentPoints: hasScoreStages ? 0 : null,
+        adjustments: [],
+        unresolvedExposures: [],
+      },
+      adverseAttribution: {
+        semantics: "causal-measured-adverse-v1",
+        items: [],
+      },
+      boundedUncertaintyAttribution: {
+        semantics: "causal-bounded-uncertainty-v1",
+        items: [],
+      },
+      evidenceResponsibility: {
+        semantics: "limiting-fact-owner-v1",
+        totalFactCount: 0,
+        summaries: [
+          { responsibility: "integration-missing", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "issuer-undisclosed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "measured-adverse", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "method-unsupported", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+          { responsibility: "producer-failed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
+        ],
+      },
+      scoreAdjustments: [],
+      wrapperParentLimit: null,
+    },
+  };
+}
+
+export function makeReportCardsV9Response(
+  preset: ReportCardsV9ResponseFixturePreset,
+  makeCard: () => SafetyScoreV9CurrentCard,
+  overrides: Partial<ReportCardsV9Response> = {},
+): ReportCardsV9Response {
+  const cards = overrides.cards ?? [makeCard()];
+  const safetyScoreIdentity = overrides.safetyScoreIdentity ?? {
+    ...preset.safetyScoreIdentity,
+  };
+  const updatedAt = overrides.updatedAt ?? preset.defaultUpdatedAt;
+  return {
+    model: "v9",
+    schemaVersion: 4,
+    lifecycle: "active",
+    safetyScoreIdentity,
+    methodology: {
+      version: safetyScoreIdentity.methodologyVersion,
+      policy: { id: safetyScoreIdentity.policyId, semanticDigest: safetyScoreIdentity.policyDigest },
+    },
+    asOfSec: preset.asOfSec,
+    updatedAt,
+    publicationHealth: overrides.publicationHealth ?? {
+      schemaVersion: 1,
+      status: "current",
+      acceptedPublicationGenerationId:
+        safetyScoreIdentity.publicationGenerationId,
+      acceptedAtSec: updatedAt,
+      attemptedAtSec: updatedAt,
+      heldSinceSec: null,
+      reasons: [],
+    },
+    completeness: {
+      expectedCount: cards.length,
+      ratedCount: cards.filter((card) => card.grade !== "NR").length,
+      notRatedCount: cards.filter((card) => card.grade === "NR").length,
+      notRatedIds: cards.filter((card) => card.grade === "NR").map((card) => card.id).sort(),
+    },
+    source: {
+      ...preset.source,
+      sourceGenerations: { ...preset.source.sourceGenerations },
+    },
+    cards,
+    dependencyGraph: buildReportCardsV9DependencyGraph(cards),
+    ...overrides,
+  };
+}
