@@ -3505,6 +3505,42 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(compiled.assets[0]!.gaps.map((gap) => gap.reasonCode)).not.toContain("missing-peg-input");
   });
 
+  it("keeps NXUSD's event-bearing peg row a producer gap instead of quiet zero deviation", () => {
+    // NXUSD carries a resolved -376 bps incident inside its tracked window and
+    // has no usable current price, so its null deviation is unobserved rather
+    // than quiet. Coercing it to 0 bps would publish a peg reading that the
+    // live DEX check contradicts, so the quiet-observation rule must stop at
+    // rows with no recorded events.
+    const fixed = exactFixedInput({
+      assetId: "nxusd-nereus",
+      pegScore: 100,
+      currentDeviationBps: null,
+      depegEventCoverageLimited: false,
+      activeDepeg: false,
+      eventCount: 1,
+      worstDeviationBps: -376,
+      lastEventAt: AS_OF_SEC - 1,
+      pegPct: 99.67,
+      severityScore: 99.44,
+      spreadPenalty: 0,
+    });
+
+    const reviewed = extension();
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.assetId = "nxusd-nereus";
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+
+    expect(compiled.assets[0]!.assetId).toBe("nxusd-nereus");
+    expect(compiled.assets[0]!.peg).toMatchObject({
+      status: { observationState: "bounded-unknown" },
+      pegScore: null,
+      currentDeviationBps: null,
+    });
+    expect(compiled.assets[0]!.gaps).toContainEqual(
+      expect.objectContaining({ reasonCode: "missing-peg-input", responsibility: "producer-failed" }),
+    );
+  });
+
   it("keeps an active peg row suppressed when its depeg peak is absent", () => {
     const fixed = exactFixedInput({ pegScore: 27, currentDeviationBps: null, activeDepeg: true });
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension());
