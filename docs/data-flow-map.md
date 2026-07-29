@@ -38,7 +38,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 | Timeline / Tape events                | Depeg, freeze, safety-score, PSI, DEWS, mint/burn, yield, methodology, cemetery, and lifecycle source tables/static registries                                                                                                                                                                                                                                                                                                               | `worker/src/cron/project-tape.ts` projects source transitions through class-specific tape projectors on the DEWS/PSI DB-only lane                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `tape_events`                                                                                                                                                                                                                                                               | `GET /api/events`                                                                                                                                                                                             | `useEvents`, `useLatestEvents`, `useTimelineFeedData`                                                                                                                                                                       | `/timeline/` cross-class event feed and homepage timeline modules                                                                                     |
 
 The DEX flow has an additive measured-execution subflow. Pinned Uniswap
-V3, PancakeSwap V3, and Base Aerodrome Slipstream QuoterV2/factory RPC
+V3 on Ethereum, Polygon, and Arbitrum, PancakeSwap V3, and Base Aerodrome Slipstream QuoterV2/factory RPC
 reads, the Fluid resolver adapter, reviewed Curve CryptoSwap `get_dy` pools,
 the Ethereum hook-free Uniswap V4 PoolManager/StateView/Quoter shadow adapter,
 the exact Ethereum legacy Curve 3pool StableSwap `get_dy(int128,int128,uint256)`
@@ -86,12 +86,10 @@ post-activation scoring consumers exceeded the Worker memory limit. Generic
 Raydium, Orca, Meteora, and unreviewed measured cohorts remain
 score-ineligible while their activation evidence is pending. Fresh Solana LKG
 evidence is permitted only after explicit operational collection failure;
-semantic or malformed rows remain barriers. SunSwap V2
-returned to shadow after its first two active DEX-scoring invocations exceeded
-the Worker memory limit. The phase-split D1 handoff now removes source/provider
-graphs from the scoring invocation, and the reviewed Tron SunSwap profile was
-reactivated only after current complete 21/21 shadow generations plus healthy
-`16,46` consumers. A Smart Router response containing only multi-hop candidates
+semantic or malformed rows remain barriers. SunSwap V2's activation and
+rollback history is incident context only; current registry state is shadow and
+score-ineligible while target and quote collection continue for revalidation.
+A Smart Router response containing only multi-hop candidates
 may use the pinned V2 Router's exact direct-path quote; invalid direct candidates
 and missing, failed, stale, or identity-mismatched profiles remain target-level fail-closed. SunSwap census
 rows are excluded from liquidity scoring and price consensus; its latest-only
