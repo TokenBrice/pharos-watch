@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
@@ -79,14 +79,6 @@ function withClockAndAggregate(
   });
 }
 
-function sourceFixedInput(): ReportCardsFixedInput {
-  return withClockAndAggregate(
-    createSafetyScoreV9FullRegistryInput(),
-    SOURCE_CLOCK_SEC,
-    SOURCE_AGGREGATE_USD,
-  );
-}
-
 function xautObservation(): XautLockMintObservation {
   return {
     chainId: "ethereum",
@@ -125,8 +117,7 @@ function xautObservation(): XautLockMintObservation {
   };
 }
 
-function acceptedGenerationFixture() {
-  const fixedInput = sourceFixedInput();
+function acceptedGenerationFixture(fixedInput: ReportCardsFixedInput) {
   const attribution =
     deriveXautRepresentationGroupSupplyAttribution({
       aggregateSupplyUsd: SOURCE_AGGREGATE_USD,
@@ -180,15 +171,6 @@ function createAcceptedGenerationFromFixture(
       journalRecords: [journal],
     },
   });
-}
-
-function createAcceptedGeneration(
-  journalOverrides: Partial<SupplyAttributionJournalV1Payload> = {},
-) {
-  return createAcceptedGenerationFromFixture(
-    acceptedGenerationFixture(),
-    journalOverrides,
-  );
 }
 
 // Production XAUT observations are pinned to a finalized Ethereum block and are
@@ -265,30 +247,24 @@ function wmObservations(): ReviewedDeploymentSupplyObservation[] {
 }
 
 /** Adds wM to the expected inventory by removing its upstream chain supply. */
-function coTenantFixedInput(
-  clockSec: number,
-  xautAggregateSupplyUsd: number,
+function withWmAggregate(
+  input: ReportCardsFixedInput,
   wmAggregateSupplyUsd: number,
 ): ReportCardsFixedInput {
-  const base = withClockAndAggregate(
-    createSafetyScoreV9FullRegistryInput(),
-    clockSec,
-    xautAggregateSupplyUsd,
-  );
   const {
     baseInputGenerationId: _baseInputGenerationId,
     ...withoutBaseIdentity
-  } = base;
+  } = input;
   const { "wm-m0": _wmChainSupply, ...chainCirculatingById } =
-    base.chainCirculatingById;
+    input.chainCirculatingById;
   return normalizeFixedInput({
     ...withoutBaseIdentity,
     chainCirculatingById,
     aggregateCirculatingById: {
-      ...base.aggregateCirculatingById,
+      ...input.aggregateCirculatingById,
       "wm-m0": {
         circulating: { peggedUSD: wmAggregateSupplyUsd },
-        observedAtSec: clockSec,
+        observedAtSec: input.clockSec,
       },
     },
   });
@@ -307,13 +283,9 @@ function laggedXautObservation(lagSec: number): XautLockMintObservation {
 }
 
 function createCoTenantGeneration(
+  fixedInput: ReportCardsFixedInput,
   xautObservationLagSec = XAUT_OBSERVATION_LAG_SEC,
 ) {
-  const fixedInput = coTenantFixedInput(
-    SOURCE_CLOCK_SEC,
-    SOURCE_AGGREGATE_USD,
-    WM_SOURCE_AGGREGATE_USD,
-  );
   const xautAttribution =
     deriveXautRepresentationGroupSupplyAttribution({
       aggregateSupplyUsd: SOURCE_AGGREGATE_USD,
@@ -385,9 +357,83 @@ function createCoTenantGeneration(
   });
 }
 
+type FixtureCache = {
+  acceptedFixture: ReturnType<typeof acceptedGenerationFixture>;
+  acceptedGeneration: ReturnType<
+    typeof createSafetyScoreV9SupplyAttributionGeneration
+  >;
+  target: ReportCardsFixedInput;
+  staleTarget: ReportCardsFixedInput;
+  coTenantStaleGeneration: ReturnType<typeof createCoTenantGeneration>;
+  coTenantGeneration: ReturnType<typeof createCoTenantGeneration>;
+  coTenantAtXautBoundary: ReportCardsFixedInput;
+  coTenantPastXautBoundary: ReportCardsFixedInput;
+  coTenantAtWmBoundary: ReportCardsFixedInput;
+  coTenantPastWmBoundary: ReportCardsFixedInput;
+};
+
+let fixtures: FixtureCache;
+
+function buildFixtureCache(): FixtureCache {
+  const fullRegistryInput = createSafetyScoreV9FullRegistryInput();
+  const source = withClockAndAggregate(
+    fullRegistryInput,
+    SOURCE_CLOCK_SEC,
+    SOURCE_AGGREGATE_USD,
+  );
+  const acceptedFixture = acceptedGenerationFixture(source);
+  const coTenantSource = withWmAggregate(
+    source,
+    WM_SOURCE_AGGREGATE_USD,
+  );
+  const xautBoundaryClockSec =
+    SOURCE_CLOCK_SEC +
+    XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC -
+    XAUT_STALE_OBSERVATION_LAG_SEC;
+  const wmBoundaryClockSec =
+    SOURCE_CLOCK_SEC +
+    REVIEWED_DEPLOYMENT_MAX_AGE_SEC +
+    WM_OBSERVED_OFFSET_SEC;
+  const coTenantTarget = (
+    clockSec: number,
+  ): ReportCardsFixedInput =>
+    withWmAggregate(
+      withClockAndAggregate(source, clockSec, TARGET_AGGREGATE_USD),
+      WM_TARGET_AGGREGATE_USD,
+    );
+
+  return {
+    acceptedFixture,
+    acceptedGeneration: createAcceptedGenerationFromFixture(acceptedFixture),
+    target: withClockAndAggregate(
+      source,
+      SOURCE_CLOCK_SEC + 15 * 60,
+      TARGET_AGGREGATE_USD,
+    ),
+    staleTarget: withClockAndAggregate(
+      source,
+      SOURCE_CLOCK_SEC + 10 + 30 * 60 + 1,
+      TARGET_AGGREGATE_USD,
+    ),
+    coTenantStaleGeneration: createCoTenantGeneration(
+      coTenantSource,
+      XAUT_STALE_OBSERVATION_LAG_SEC,
+    ),
+    coTenantGeneration: createCoTenantGeneration(coTenantSource),
+    coTenantAtXautBoundary: coTenantTarget(xautBoundaryClockSec),
+    coTenantPastXautBoundary: coTenantTarget(xautBoundaryClockSec + 1),
+    coTenantAtWmBoundary: coTenantTarget(wmBoundaryClockSec),
+    coTenantPastWmBoundary: coTenantTarget(wmBoundaryClockSec + 1),
+  };
+}
+
 describe("isolated Safety Score V9 supply attribution generation", () => {
+  beforeAll(() => {
+    fixtures = buildFixtureCache();
+  });
+
   it("round-trips a complete content-addressed generation", () => {
-    const generation = createAcceptedGeneration();
+    const generation = fixtures.acceptedGeneration;
     expect(
       parseSafetyScoreV9SupplyAttributionGeneration(
         serializeSafetyScoreV9SupplyAttributionGeneration(generation),
@@ -401,15 +447,9 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
   });
 
   it("re-derives accepted raw observations against the current aggregate", () => {
-    const generation = createAcceptedGeneration();
-    const target = withClockAndAggregate(
-      sourceFixedInput(),
-      SOURCE_CLOCK_SEC + 15 * 60,
-      TARGET_AGGREGATE_USD,
-    );
     const applied = applySafetyScoreV9SupplyAttributionGeneration(
-      target,
-      generation,
+      fixtures.target,
+      fixtures.acceptedGeneration,
     );
 
     expect(applied.status).toBe("applied");
@@ -434,24 +474,14 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
   });
 
   it("drops only the asset whose observation aged out of its own window", () => {
-    const generation = createCoTenantGeneration(
-      XAUT_STALE_OBSERVATION_LAG_SEC,
-    );
+    const generation = fixtures.coTenantStaleGeneration;
     expect(generation.acceptedAssetIds).toEqual([
       "wm-m0",
       "xaut-tether",
     ]);
-    const xautBoundaryClockSec =
-      SOURCE_CLOCK_SEC +
-      XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC -
-      XAUT_STALE_OBSERVATION_LAG_SEC;
 
     const bothFresh = applySafetyScoreV9SupplyAttributionGeneration(
-      coTenantFixedInput(
-        xautBoundaryClockSec,
-        TARGET_AGGREGATE_USD,
-        WM_TARGET_AGGREGATE_USD,
-      ),
+      fixtures.coTenantAtXautBoundary,
       generation,
     );
     expect(bothFresh).toMatchObject({
@@ -464,11 +494,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     // finalized-block observation is one second past its own bound. wM must
     // keep its attribution.
     const xautAgedOut = applySafetyScoreV9SupplyAttributionGeneration(
-      coTenantFixedInput(
-        xautBoundaryClockSec + 1,
-        TARGET_AGGREGATE_USD,
-        WM_TARGET_AGGREGATE_USD,
-      ),
+      fixtures.coTenantPastXautBoundary,
       generation,
     );
     expect(xautAgedOut).toMatchObject({
@@ -490,7 +516,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     // Owner ruling 2026-07-29: xaut-tether is the only per-asset override.
     expect(XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC).toBe(3_600);
 
-    const generation = createCoTenantGeneration();
+    const generation = fixtures.coTenantGeneration;
     const wmBoundaryClockSec =
       SOURCE_CLOCK_SEC +
       REVIEWED_DEPLOYMENT_MAX_AGE_SEC +
@@ -503,11 +529,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     );
 
     const atWmBound = applySafetyScoreV9SupplyAttributionGeneration(
-      coTenantFixedInput(
-        wmBoundaryClockSec,
-        TARGET_AGGREGATE_USD,
-        WM_TARGET_AGGREGATE_USD,
-      ),
+      fixtures.coTenantAtWmBoundary,
       generation,
     );
     expect(atWmBound).toMatchObject({
@@ -519,11 +541,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     // One second later wM's own 1800s bound expires while XAUT, whose
     // production-shaped observation is already older, survives on its override.
     const pastWmBound = applySafetyScoreV9SupplyAttributionGeneration(
-      coTenantFixedInput(
-        wmBoundaryClockSec + 1,
-        TARGET_AGGREGATE_USD,
-        WM_TARGET_AGGREGATE_USD,
-      ),
+      fixtures.coTenantPastWmBoundary,
       generation,
     );
     expect(pastWmBound).toMatchObject({
@@ -535,14 +553,9 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
   });
 
   it("fails closed when a generation ages beyond its observation window", () => {
-    const generation = createAcceptedGeneration();
-    const staleTarget = withClockAndAggregate(
-      sourceFixedInput(),
-      generation.capturedAtSec + 30 * 60 + 1,
-      TARGET_AGGREGATE_USD,
-    );
+    const generation = fixtures.acceptedGeneration;
     const applied = applySafetyScoreV9SupplyAttributionGeneration(
-      staleTarget,
+      fixtures.staleTarget,
       generation,
     );
 
@@ -557,7 +570,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
   });
 
   it("uses the shorter retry cadence for complete rejected generations", () => {
-    const accepted = createAcceptedGeneration();
+    const accepted = fixtures.acceptedGeneration;
     const {
       generationId: _generationId,
       ...acceptedPayload
@@ -590,7 +603,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
   });
 
   it("rejects malformed journal references even when the generation hash is recomputed", () => {
-    const accepted = createAcceptedGeneration();
+    const accepted = fixtures.acceptedGeneration;
     const { generationId: _generationId, ...payload } = accepted;
     const malformedPayload = {
       ...payload,
@@ -614,7 +627,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
   });
 
   it("rejects journal provenance that is not bound to the accepted capture", () => {
-    const fixture = acceptedGenerationFixture();
+    const fixture = fixtures.acceptedFixture;
     const mismatches: Array<{
       label: string;
       overrides: Partial<SupplyAttributionJournalV1Payload>;
@@ -667,7 +680,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
   });
 
   it("rejects an accepted journal without the matching accepted attribution", () => {
-    const fixture = acceptedGenerationFixture();
+    const fixture = fixtures.acceptedFixture;
     const journal = createSupplyAttributionJournalV1(
       fixture.journalPayload,
     );
