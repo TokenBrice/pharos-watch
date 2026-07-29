@@ -120,7 +120,6 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/safety-score-v9/evidence-gap-queue.ts::buildV9EvidenceGapQueue",
   "shared/lib/safety-score-v9/evidence-gap-queue.ts::parseV9EvidenceGapQueue",
   // Consumed by scripts/lib/redemption-backstop-validation.ts (out-of-scan-scope).
-  "shared/lib/redemption-backstop-configs/factory.ts::getBackstopRegistrySourceFilePaths",
   "shared/lib/redemption-backstop-configs/policies.ts::REDEMPTION_BACKSTOP_POLICY_ENTRIES",
   // Exercised directly by the config-helper contract suite; production route composition uses the V9 wrapper.
   "shared/lib/redemption-backstop-configs/shared.ts::resolveRedemptionCostBpsAtNotional",

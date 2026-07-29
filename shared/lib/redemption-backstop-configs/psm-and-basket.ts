@@ -1,4 +1,5 @@
 import type { RedemptionBackstopConfig } from "./shared";
+import { defineRecordEntries } from "./factory";
 import {
   applyTrackedReviewedDocs,
   basketRedeemBase,
@@ -425,3 +426,6 @@ applyTrackedReviewedDocs(
 );
 
 applyTrackedReviewedDocs(PSM_AND_BASKET_BACKSTOP_CONFIGS, ["usd3-reserve-protocol"], REVIEWED_RESERVE_PROTOCOL_DTF_AT);
+
+/** Declared after the doc backfills above so the entries carry the finished configs. */
+export const PSM_AND_BASKET_BACKSTOP_ENTRIES = defineRecordEntries(PSM_AND_BASKET_BACKSTOP_CONFIGS);

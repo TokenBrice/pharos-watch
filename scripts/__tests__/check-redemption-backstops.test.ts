@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { validateRedemptionBackstopRegistry } from "../lib/redemption-backstop-validation";
+import { defineRecordEntries } from "@shared/lib/redemption-backstop-configs/factory";
 import type { RedemptionBackstopConfigManifestEntry } from "@shared/lib/redemption-backstop-configs";
 import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 
@@ -31,6 +32,7 @@ function validateFixture(
       name: "fixture",
       filePath: "fixture.ts",
       configs,
+      entries: defineRecordEntries(configs),
       allowedRouteFamilies: ["offchain-issuer", "stablecoin-redeem", "psm-swap"],
       ...manifestOverrides,
     },

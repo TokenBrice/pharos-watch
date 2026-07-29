@@ -1,5 +1,5 @@
 import type { RedemptionBackstopConfig } from "./shared";
-import { defineBackstopRegistry, defineBatch, defineRecordEntries } from "./factory";
+import { defineBackstopRegistry, defineBatch, defineRecordEntries, rebindEntriesToRegistry } from "./factory";
 import {
   applyTrackedReviewedDocs,
   collateralRedeemBase,
@@ -134,7 +134,7 @@ const mentoBrokerPoolRedeemConfig: RedemptionBackstopConfig = {
   ],
 };
 
-export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = defineBackstopRegistry([
+const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
   ...defineBatch(BASE_COLLATERAL_REDEEM_IDS, collateralRedeemBase, { sourceFilePath: SOURCE_FILE_PATH }),
   ...defineBatch(
     ["jpym-mento"],
@@ -788,7 +788,10 @@ export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackst
       ],
     },
   }),
-]);
+];
+
+export const COLLATERAL_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> =
+  defineBackstopRegistry(COLLATERAL_REDEEM_REGISTRY_ENTRIES);
 
 applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, [
   "feusd-felix",
@@ -808,3 +811,9 @@ applyTrackedReviewedDocs(
 );
 
 applyTrackedReviewedDocs(COLLATERAL_REDEEM_BACKSTOP_CONFIGS, ["hbd-hive"], REVIEWED_HIVE_HBD_AT);
+
+/** Declared after the doc backfills above so the entries carry the finished configs. */
+export const COLLATERAL_REDEEM_BACKSTOP_ENTRIES = rebindEntriesToRegistry(
+  COLLATERAL_REDEEM_REGISTRY_ENTRIES,
+  COLLATERAL_REDEEM_BACKSTOP_CONFIGS,
+);

@@ -1,4 +1,4 @@
-import { defineBackstopRegistry, defineRecordEntries } from "../factory";
+import { defineBackstopRegistry, defineRecordEntries, rebindEntriesToRegistry } from "../factory";
 import { applyTrackedReviewedDocs } from "../shared";
 import { BASE_OFFCHAIN_ISSUER_ENTRIES } from "./base-batches";
 import { COMMODITY_OFFCHAIN_CONFIGS } from "./commodity";
@@ -9,7 +9,7 @@ import { REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS } from "./remediation-and-l
 import { REVIEWED_NON_USD_BATCH_AT, REVIEWED_REMEDIATION_AT } from "./shared";
 import type { RedemptionBackstopConfig } from "../shared";
 
-export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = defineBackstopRegistry([
+const OFFCHAIN_ISSUER_REGISTRY_ENTRIES = [
   ...BASE_OFFCHAIN_ISSUER_ENTRIES,
   ...defineRecordEntries(COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS, {
     overrideReason: "Reviewed issuer-specific config replaces the shared offchain issuer default.",
@@ -31,7 +31,10 @@ export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstop
     overrideReason: "Reviewed remediation or late-audit config replaces the shared offchain issuer default.",
     sourceFilePath: "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
   }),
-]);
+];
+
+export const OFFCHAIN_ISSUER_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> =
+  defineBackstopRegistry(OFFCHAIN_ISSUER_REGISTRY_ENTRIES);
 
 applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [
   "usdt-tether",
@@ -79,4 +82,10 @@ applyTrackedReviewedDocs(
     "rusd-royal-dollar",
   ],
   REVIEWED_NON_USD_BATCH_AT,
+);
+
+/** Declared after the doc backfills above so the entries carry the finished configs. */
+export const OFFCHAIN_ISSUER_BACKSTOP_ENTRIES = rebindEntriesToRegistry(
+  OFFCHAIN_ISSUER_REGISTRY_ENTRIES,
+  OFFCHAIN_ISSUER_BACKSTOP_CONFIGS,
 );

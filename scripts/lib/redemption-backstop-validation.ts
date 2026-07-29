@@ -15,10 +15,6 @@ import {
   type RedemptionRouteFamily,
 } from "@shared/types/redemption";
 import { RedemptionBackstopConfigSchema, currentUtcDate } from "@shared/lib/redemption-backstop-configs/schema";
-import {
-  getBackstopRegistryOverrideReasons,
-  getBackstopRegistrySourceFilePaths,
-} from "@shared/lib/redemption-backstop-configs/factory";
 import type {
   RedemptionBackstopConfig,
   RedemptionCapacityModel,
@@ -173,15 +169,11 @@ export function validateRedemptionBackstopRegistry(
   const manifest = options.manifest ?? REDEMPTION_BACKSTOP_CONFIG_MANIFEST;
   const mergedConfigs = options.mergedConfigs ?? mergeManifestConfigsForValidation(manifest);
   const overrideReasonById = new Map<string, string>();
-  for (const moduleEntry of manifest) {
-    for (const [id, reason] of getBackstopRegistryOverrideReasons(moduleEntry.configs)) {
-      overrideReasonById.set(id, reason);
-    }
-  }
   const sourceFileById = new Map<string, string>();
   for (const moduleEntry of manifest) {
-    for (const [id, sourceFilePath] of getBackstopRegistrySourceFilePaths(moduleEntry.configs)) {
-      sourceFileById.set(id, sourceFilePath);
+    for (const entry of moduleEntry.entries) {
+      if (entry.overrideReason) overrideReasonById.set(entry.id, entry.overrideReason);
+      if (entry.sourceFilePath) sourceFileById.set(entry.id, entry.sourceFilePath);
     }
   }
   const findings: RedemptionRegistryFinding[] = [];
@@ -1015,11 +1007,14 @@ function validateStaticConfigSourceFile(
 
   visit(sourceFile);
 
+  const approvedOverrideIds = new Set(
+    moduleEntry.entries.filter((entry) => entry.overrideReason).map((entry) => entry.id),
+  );
   const seenInModule = new Map<string, "expandIds" | "property">();
   for (const entry of registryEntries) {
     const previous = seenInModule.get(entry.id);
     if (previous) {
-      if (!getBackstopRegistryOverrideReasons(moduleEntry.configs).has(entry.id)) {
+      if (!approvedOverrideIds.has(entry.id)) {
         addFinding(
           findings,
           "error",
