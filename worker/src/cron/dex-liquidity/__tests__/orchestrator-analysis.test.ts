@@ -438,4 +438,58 @@ describe("analyzeDexLiquidityPostScoring", () => {
     expect(analysis.sourceCoverage.valueBaselineSource).toBe("dex_liquidity_global");
     expect(analysis.hardValueGuard).toBe(true);
   });
+
+  it("degrades cron status when rejected primary-pool TVL reaches the materiality threshold", () => {
+    const analysis = {
+      previousCoverageBaselineAvailable: true,
+      nearCoverageGuard: false,
+      nearValueGuard: false,
+      nearMajorCoverageGuard: false,
+    } as Awaited<ReturnType<typeof analyzeDexLiquidityPostScoring>>;
+    const base = {
+      criticalSourceFailures: [],
+      analysis,
+      persistence: {
+        placeholderCount: 0,
+        inactiveMetricRowsSkipped: 0,
+        inactiveMetricIdsSkipped: [],
+        orphanRowsDeleted: 0,
+        orphanCleanupFailed: false,
+      },
+      historicalSnapshot: {
+        snapshotRowsWritten: 0,
+        skipped: false,
+        writeFailed: false,
+        historyRowsPruned: 0,
+        retentionPruneFailed: false,
+      },
+    };
+
+    expect(
+      isDexLiquidityDegraded({
+        ...base,
+        poolRejections: [
+          {
+            reason: "invalid-pool-identity",
+            poolIds: ["0xmaterial"],
+            count: 1,
+            tvlUsd: 10_000,
+          },
+        ],
+      }),
+    ).toBe(true);
+    expect(
+      isDexLiquidityDegraded({
+        ...base,
+        poolRejections: [
+          {
+            reason: "invalid-pool-identity",
+            poolIds: ["0xsubthreshold"],
+            count: 1,
+            tvlUsd: 9_999,
+          },
+        ],
+      }),
+    ).toBe(false);
+  });
 });

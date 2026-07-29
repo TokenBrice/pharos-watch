@@ -193,6 +193,7 @@ function poolState(totalPools = 7_402): DexLiquidityPoolState {
       },
     },
     metrics,
+    poolRejections: [],
     pancakeMeasuredExecutionTargets: new Map(),
     fluidMeasuredExecutionTargets: new Map(),
     slipstreamMeasuredExecutionTargets: new Map(),

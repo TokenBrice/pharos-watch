@@ -689,6 +689,7 @@ function finishScoringStageDecode(decoder: ScoringStageDecoder): {
     },
     poolState: {
       ...decoder.poolHeader,
+      poolRejections: decoder.poolHeader.poolRejections ?? [],
       metrics: decoder.metrics,
       pancakeMeasuredExecutionTargets: decoder.pancakeMeasuredExecutionTargets,
       fluidMeasuredExecutionTargets: decoder.fluidMeasuredExecutionTargets,

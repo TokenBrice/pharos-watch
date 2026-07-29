@@ -48,8 +48,9 @@ vi.mock("../dex-liquidity/fetch-primary", () => ({
   })),
 }));
 
-vi.mock("../dex-liquidity/process-pools", () => ({
-  processPoolMetrics: vi.fn(() => new Map()),
+vi.mock("../dex-liquidity/process-pools", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../dex-liquidity/process-pools")>()),
+  processPoolMetrics: vi.fn(() => ({ metrics: new Map(), rejections: [] })),
 }));
 
 vi.mock("../dex-liquidity/staging-merge", () => ({
@@ -634,7 +635,7 @@ describe("dex liquidity scoring stage cycle", () => {
     const knownPoolCalls = vi.mocked(buildKnownPoolAddresses).mock.calls;
     const processPoolCalls = vi.mocked(processPoolMetrics).mock.calls;
     expect(knownPoolCalls[knownPoolCalls.length - 1]?.[0]).toEqual([trackedPool]);
-    expect(processPoolCalls[processPoolCalls.length - 1]?.[0]).toEqual([trackedPool]);
+    expect(processPoolCalls[processPoolCalls.length - 1]?.[0]?.pools).toEqual([trackedPool]);
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ rowsRead: rawPoolCount });
     expect(progressUpdates.find((update) => update.stage === "primary-sources-loaded")).toMatchObject({
       metadata: { countTotals: { defillamaPools: rawPoolCount } },

@@ -2,12 +2,18 @@ import type { HistoricalSnapshotWriteResult, PersistScoresResult } from "./persi
 import type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
 import type { DexPaginationPersistenceSummary } from "../../lib/dex-api-common";
 import type { DexPricePersistenceDiagnostics } from "./scoring";
+import {
+  POOL_REJECTION_MATERIAL_TVL_USD,
+  hasMaterialPoolRejections,
+} from "./process-pools";
+import type { PoolProcessingRejection } from "./process-pool-types";
 
 export type { DexLiquidityPostScoreAnalysis } from "./orchestrator-analysis";
 export { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
 
 export function isDexLiquidityDegraded(params: {
   criticalSourceFailures: string[];
+  poolRejections?: PoolProcessingRejection[];
   analysis: DexLiquidityPostScoreAnalysis;
   persistence: PersistScoresResult;
   dexPriceDiagnostics?: DexPricePersistenceDiagnostics;
@@ -15,6 +21,7 @@ export function isDexLiquidityDegraded(params: {
 }): boolean {
   return (
     params.criticalSourceFailures.length > 0 ||
+    hasMaterialPoolRejections(params.poolRejections) ||
     !params.analysis.previousCoverageBaselineAvailable ||
     params.analysis.nearCoverageGuard ||
     params.analysis.nearValueGuard ||
@@ -44,6 +51,7 @@ export function buildDexLiquidityCronMetadata(params: {
     threshold?: number;
     conflict?: string;
   }>;
+  poolRejections: PoolProcessingRejection[];
   directApiSourceSummary: {
     acceptedByProtocolChain: Record<string, number>;
     excludedByReason: Record<string, number>;
@@ -71,10 +79,18 @@ export function buildDexLiquidityCronMetadata(params: {
   persistence: PersistScoresResult;
   historicalSnapshot: HistoricalSnapshotWriteResult;
 }): Record<string, unknown> {
+  const rejectedPoolCount = params.poolRejections.reduce(
+    (sum, rejection) => sum + rejection.count,
+    0,
+  );
+  const rejectedPoolTvlUsd = params.poolRejections.reduce(
+    (sum, rejection) => sum + rejection.tvlUsd,
+    0,
+  );
   return {
     rowsRead: params.rowsRead,
     rowsWritten: params.rowsWritten,
-    rowsDropped: 0,
+    rowsDropped: rejectedPoolCount,
     stagedPoolsMerged: params.stagedPoolsMerged,
     stagedPoolsSkipped: params.stagedPoolsSkipped,
     stagedPoolsSkippedByExactIdentity: params.stagedPoolsSkippedByExactIdentity,
@@ -82,6 +98,13 @@ export function buildDexLiquidityCronMetadata(params: {
     stagedPoolsSkippedByOptionalWildcardIdentity: params.stagedPoolsSkippedByOptionalWildcardIdentity,
     stagedPoolsSkippedByAuthoritativeProtocol: params.stagedPoolsSkippedByAuthoritativeProtocol,
     stagedPoolSkipDimensions: params.stagedPoolSkipDimensions,
+    poolRejections: params.poolRejections,
+    poolRejectionMateriality: {
+      thresholdTvlUsd: POOL_REJECTION_MATERIAL_TVL_USD,
+      rejectedPoolCount,
+      rejectedPoolTvlUsd,
+      material: hasMaterialPoolRejections(params.poolRejections),
+    },
     directApiSourceSummary: params.directApiSourceSummary,
     sourceCoverage: {
       ...params.sourceCoverage,
@@ -111,6 +134,6 @@ export function buildDexLiquidityCronMetadata(params: {
       historicalSnapshotRowsPruned: params.historicalSnapshot.historyRowsPruned,
       historicalSnapshotRetentionPruneFailed: params.historicalSnapshot.retentionPruneFailed,
     },
-    validationFailures: 0,
+    validationFailures: rejectedPoolCount,
   };
 }
