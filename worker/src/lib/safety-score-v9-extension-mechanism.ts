@@ -5,6 +5,7 @@ import {
   projectV9MechanismProfile,
   type V9MechanismProfileComponentProjection,
 } from "@shared/lib/safety-score-v9/mechanism-profiles";
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
@@ -22,10 +23,6 @@ import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
 type MechanismMeta = Pick<StablecoinMeta, "id" | "reserves" | "reserveReview" | "custodyProfile" | "proofOfReserves">;
 
 const MECHANISM_POLICY_RULE_ID = "v9.backing.mechanism-review";
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function status(observationState: V9FactStatusV2["observationState"], componentKey: string): V9FactStatusV2 {
   // The fact-set compiler rebinds these statuses to the research-overlay

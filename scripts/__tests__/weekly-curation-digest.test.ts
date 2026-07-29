@@ -22,7 +22,7 @@ describe("weekly curation coverage", () => {
     const oneLiner = analyzeOneLiner(coins);
     const archetype = analyzeArchetype(coins, baseline);
     expect([attestor.total - attestor.missing.length, attestor.total]).toEqual([85, 85]);
-    expect([oneLiner.total - oneLiner.missing.length, oneLiner.total]).toEqual([366, 366]);
+    expect([oneLiner.total - oneLiner.missing.length, oneLiner.total]).toEqual([367, 367]);
     expect([archetype.tracked - archetype.missing.length, archetype.tracked]).toEqual([39, 39]);
     expect(archetype.unknown).toEqual([]);
   });

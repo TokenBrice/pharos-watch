@@ -42,18 +42,13 @@ Reference models:
 
 ### Methodology href routes
 
-Available routes under `src/app/methodology/`:
+List the current routes from the directory — it wins over any snapshot here:
 
-  - Safety Score → `/methodology/scoring-changelog/`
-  - Yield → `/methodology/yield-changelog/`
-  - Liquidity Score → `/methodology/liquidity-score-changelog/`
-  - PegScore / DEWS / depeg → `/methodology/depeg-changelog/`
-  - Pricing pipeline → `/methodology/pricing-pipeline-changelog/`
-  - Stability Index (PSI) → `/methodology/stability-index-changelog/`
-  - Mint/burn flows → `/methodology/mint-burn-flow-changelog/`
-  - Blacklist tracker → `/methodology/blacklist-tracker-changelog/`
-  - Chain Health → `/methodology/chain-health-changelog/`
-  - General overview → `/methodology/`
+```bash
+ls src/app/methodology/ | grep changelog
+```
+
+Non-obvious name mappings: Safety Score → `scoring-changelog`; PegScore / DEWS / depeg events → `depeg-changelog`; DDR verdicts → `depeg-resolver-changelog`; PSI → `stability-index-changelog`. General overview → `/methodology/`.
 
 ### Quality guidelines
 

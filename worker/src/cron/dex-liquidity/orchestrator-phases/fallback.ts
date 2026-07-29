@@ -7,9 +7,6 @@ import { getFallbackTargets } from "../fetch-fallbacks";
 import type { DexPriceObs, LiquidityMetrics } from "../types";
 
 export interface FallbackCrawlerPhaseResult {
-  dsFallbackCoins: number;
-  cgTickerFallbackCoins: number;
-  coverageRecoveredCoins: number;
   weakCoverageCoinsBeforeFallback: number;
   directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
 }
@@ -43,22 +40,7 @@ export async function runFallbackCrawlerPhase(params: {
       "inline discovery is disabled in the scoring lane",
   );
 
-  const weakCoverageTargetIdsAfterFallback = new Set(
-    getFallbackTargets(params.metrics, params.priceObservations, { requireTrackedContracts: true }).map(
-      (meta) => meta.id,
-    ),
-  );
-  let coverageRecoveredCoins = 0;
-  for (const stablecoinId of weakCoverageTargetIdsBeforeFallback) {
-    if (!weakCoverageTargetIdsAfterFallback.has(stablecoinId)) {
-      coverageRecoveredCoins++;
-    }
-  }
-
   return {
-    dsFallbackCoins: 0,
-    cgTickerFallbackCoins: 0,
-    coverageRecoveredCoins,
     weakCoverageCoinsBeforeFallback: weakCoverageTargetIdsBeforeFallback.size,
     directCexOrderbookDepth: params.directCexOrderbookDepth,
   };

@@ -37,6 +37,9 @@ Promotion is always editorial. Do not auto-write annotations from the queue.
 
 ### Step 1 — Read the queue and the current annotations file
 
+If the queue has no candidate rows at all (fresh or deferred), report "queue
+empty" with the `last_swept_at` date and stop — no edits anywhere.
+
 1. Read `agents/annotation-candidates.md` from top to bottom. Group rows by
    date header so the older candidates surface first.
 2. Read `shared/data/annotations/curated-annotations.ts`. For each coin
@@ -77,11 +80,17 @@ Entry shape (mirror existing file rules):
 
 Place each new entry inside the per-coin array in `ts` ascending order.
 
+Queue rows with kind hint `launch` have no matching enum kind — existing
+launch annotations curate under `governance` (e.g. the USDe/USDS mainnet
+launch entries); follow that precedent.
+
 #### Drop
 
 Add a `dropped: <one-line reason>` annotation next to the row in the
-queue. Do not delete the row in place — instead, when finishing the
-sweep, strip dropped rows wholesale as part of the queue rewrite (Step 4).
+queue (a same-line suffix is safe — the producer only parses the leading
+`date | coin | kind` fields). Do not delete the row in place — instead,
+when finishing the sweep, strip dropped rows wholesale as part of the
+queue rewrite (Step 4).
 
 Common drop reasons:
 

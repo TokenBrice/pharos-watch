@@ -7,10 +7,6 @@ describe("challenger legacy fallback", () => {
     const db = mockD1(
       [
         {
-          match: "FROM sqlite_master",
-          rows: [],
-        },
-        {
           match: "FROM dex_price_challenger_snapshots",
           rows: [],
           throwError: new Error("no such table: dex_price_challenger_snapshots"),
@@ -88,8 +84,9 @@ describe("challenger legacy fallback", () => {
     const db = mockD1(
       [
         {
-          match: "FROM sqlite_master",
+          match: "FROM dex_price_challenger_snapshots",
           rows: [],
+          throwError: new Error("no such table: dex_price_challenger_snapshots"),
         },
         {
           match: "FROM dex_liquidity",

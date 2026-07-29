@@ -1,196 +1,31 @@
 import { BPS_PER_UNIT } from "../math";
 import { trackedRedemptionDocSources } from "../redemption-backstop-docs";
 import type {
-  RedemptionAccessModel,
-  RedemptionCapacityBasis,
-  RedemptionCapacityConfidence,
   RedemptionDocSource,
   RedemptionDocSourceSupport,
-  RedemptionExecutionModel,
   RedemptionFeeConfidence,
-  RedemptionFeeScenario,
-  RedemptionFeeModelKind,
   RedemptionHolderEligibility,
-  RedemptionOutputAssetType,
-  RedemptionRouteExitCorrelation,
-  RedemptionRouteStatus,
-  RedemptionRouteFamily,
-  RedemptionSettlementModel,
 } from "../../types";
+import type {
+  RedemptionBackstopConfig,
+  RedemptionCostModel,
+} from "./schema";
 
-// Keep these fields in sync with RedemptionCostShapeSchema in schema.ts.
-export interface RedemptionCostTerms {
-  flatFeeUsd?: number;
-  minFeeUsd?: number;
-  feeBpsMin?: number;
-  feeBpsMax?: number;
-  gasOrBridgeCostUsd?: number;
-  stressFeeBps?: number;
-  feeScenario?: RedemptionFeeScenario;
-}
+/**
+ * Config shapes are defined once as zod schemas in `./schema` and inferred back
+ * to TypeScript there. These re-exports keep the historical import site working
+ * and stay type-only so `zod` never enters a runtime bundle through this module.
+ */
+export type {
+  RedemptionBackstopConfig,
+  RedemptionCapacityModel,
+  RedemptionCostModel,
+  RedemptionCostTerms,
+  RedemptionV9ComposedDexExit,
+  RedemptionV9RouteReviewTerms,
+} from "./schema";
 
-export interface RedemptionV9RouteReviewTerms {
-  minRedeemUsd?: number;
-  settlementModel?: RedemptionSettlementModel;
-}
-
-export interface RedemptionV9ComposedDexExit {
-  intermediateAssetId: string;
-  conversionModel: "permissionless-atomic-wrap";
-  chain: string;
-  wrapperContract: string;
-  reviewedAt: string;
-  docs: RedemptionDocSource[];
-}
-
-const REDEMPTION_SETTLEMENT_CONSERVATISM: readonly RedemptionSettlementModel[] = [
-  "atomic",
-  "immediate",
-  "same-day",
-  "days",
-  "queued",
-];
-
-export function isRedemptionSettlementAtLeastAsConservative(
-  candidate: RedemptionSettlementModel,
-  baseline: RedemptionSettlementModel,
-): boolean {
-  return (
-    REDEMPTION_SETTLEMENT_CONSERVATISM.indexOf(candidate) >=
-    REDEMPTION_SETTLEMENT_CONSERVATISM.indexOf(baseline)
-  );
-}
-
-export function resolveMoreConservativeRedemptionSettlement(
-  left: RedemptionSettlementModel,
-  right: RedemptionSettlementModel,
-): RedemptionSettlementModel {
-  return isRedemptionSettlementAtLeastAsConservative(right, left) ? right : left;
-}
-
-type StaticRedemptionCapacityConfidence = Exclude<RedemptionCapacityConfidence, "live-direct" | "live-proxy">;
-
-export type RedemptionCostModel =
-  | ({
-      kind: "fee-bps";
-      feeBps: number;
-      feeDescription?: string;
-      confidence?: Extract<RedemptionFeeConfidence, "fixed">;
-    } & RedemptionCostTerms)
-  | ({
-      kind: "dynamic-or-unclear";
-      feeDescription?: string;
-      confidence?: Exclude<RedemptionFeeConfidence, "fixed">;
-      feeModelKind?: Exclude<RedemptionFeeModelKind, "fixed-bps">;
-    } & RedemptionCostTerms);
-
-export type RedemptionCapacityModel =
-  | {
-      kind: "supply-full";
-      confidence?: StaticRedemptionCapacityConfidence;
-      basis?: RedemptionCapacityBasis;
-    }
-  | {
-      kind: "supply-ratio";
-      ratio: number;
-      dailyLimitUsd?: number;
-      confidence?: StaticRedemptionCapacityConfidence;
-      basis?: RedemptionCapacityBasis;
-    }
-  | {
-      kind: "fixed-usd";
-      amountUsd: number;
-      dailyLimitUsd?: number;
-      confidence?: StaticRedemptionCapacityConfidence;
-      basis?: RedemptionCapacityBasis;
-    }
-  | {
-      kind: "reserve-sync-metadata";
-      fallbackRatio?: number;
-      fallbackUsd?: number;
-      confidence?: StaticRedemptionCapacityConfidence;
-      /**
-       * Overrides the adapter-derived capacity confidence on the resolved
-       * live-telemetry path. Use when a live reserve read is a bounded proxy
-       * for true redeemability — e.g. sBOLD's Stability-Pool-withdrawable BOLD,
-       * which K3 can temporarily restrict on collateral-exposure thresholds — so
-       * the measured capacity still scores but at a documented-bound confidence
-       * (modelConfidence "medium") rather than the adapter's live-direct default
-       * (which would resolve to "high"). Distinct from `confidence`, which only
-       * labels the fallback path when live metadata is unavailable.
-       */
-      liveCapacityConfidence?: StaticRedemptionCapacityConfidence;
-      basis?: RedemptionCapacityBasis;
-    };
-
-export interface RedemptionBackstopConfig {
-  routeFamily: RedemptionRouteFamily;
-  accessModel: RedemptionAccessModel;
-  settlementModel: RedemptionSettlementModel;
-  executionModel: RedemptionExecutionModel;
-  outputAssetType: RedemptionOutputAssetType;
-  capacityModel: RedemptionCapacityModel;
-  costModel: RedemptionCostModel;
-  /**
-   * Reviewed cost terms projected only by the Safety Score V9 route adapter.
-   *
-   * This compatibility overlay keeps evidence corrections made after the V8
-   * methodology freeze from changing the public V8 redemption producer.
-   */
-  v9RouteCostTerms?: RedemptionCostTerms;
-  /**
-   * Reviewed route constraints projected only by the Safety Score V9 adapter.
-   *
-   * Validation permits only settlement semantics that are at least as
-   * conservative as the frozen V8 config. Runtime projection also preserves
-   * any stricter constraint carried by the captured redemption row.
-   */
-  v9RouteReviewTerms?: RedemptionV9RouteReviewTerms;
-  /**
-   * Reviewed fee-free wrap composed with the intermediate asset's captured DEX
-   * routes. This is projected only into V9 and does not alter the V8 producer.
-   */
-  v9ComposedDexExit?: RedemptionV9ComposedDexExit;
-  holderEligibility?: RedemptionHolderEligibility;
-  routeStatus?: Extract<RedemptionRouteStatus, "open" | "unknown">;
-  routeExitCorrelation?: RedemptionRouteExitCorrelation;
-  /**
-   * Per-config escape hatch for routes whose documented rail composes with a
-   * downstream rail the holder still has to exercise — e.g., a permissionless
-   * ERC-20 wrapper (wM, USDSC) whose `unwrap()` only returns the underlying,
-   * which itself requires an institutional redemption. The route-family caps
-   * in `redemption-backstop-scoring.ts` handle the common cases; use this when
-   * the family shape alone would overstate the actual exit quality.
-   */
-  totalScoreCap?: number;
-  /**
-   * Concrete redemption output assets, when the documented rail names them.
-   * Tracked stablecoin ids (e.g. "usdc-circle") for stable-single /
-   * stable-basket outputs; canonical `asset:<symbol>` keys (e.g.
-   * "asset:weth") for collateral outputs. Drives exit-route output
-   * resolution — leave unset when the output composition is not documented.
-   */
-  outputAssets?: string[];
-  /**
-   * Complete reviewed output identities that cannot yet be represented as
-   * tracked, priceable `outputAssets`. These stay explicitly unresolved and
-   * never make an output scoreable; they only preserve bounded diagnostics
-   * instead of collapsing a known untracked basket into an anonymous gap.
-   */
-  unresolvedOutputAssetKeys?: string[];
-  /**
-   * Causal disposition for an output that remains deliberately unresolved.
-   *
-   * `reviewed-external` means the documented identity is known but the
-   * runtime producer cannot yet value the external/untracked output.
-   * `issuer-undisclosed` means the reviewed issuer materials do not disclose
-   * the settlement asset. Neither disposition makes the output scoreable.
-   */
-  unresolvedOutputDisposition?: "reviewed-external" | "issuer-undisclosed";
-  docs?: RedemptionDocSource[];
-  reviewedAt?: string;
-  notes?: string[];
-}
+export { resolveMoreConservativeRedemptionSettlement } from "./settlement";
 
 export function resolveDefaultHolderEligibility(
   config: Pick<RedemptionBackstopConfig, "accessModel">,

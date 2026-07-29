@@ -3,8 +3,7 @@ import {
   defineBackstopRegistry,
   defineBatch,
   defineOverride,
-  getBackstopRegistryOverrideReasons,
-  getBackstopRegistrySourceFilePaths,
+  defineRecordEntries,
 } from "@shared/lib/redemption-backstop-configs/factory";
 import { buildRedemptionBackstopRegistry } from "@shared/lib/redemption-backstop-configs/manifest";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
@@ -29,7 +28,15 @@ const baseConfig: RedemptionBackstopConfig = {
   },
 };
 
-function validateFixture(manifest: RedemptionBackstopConfigManifestEntry[]) {
+type ManifestFixture = Omit<RedemptionBackstopConfigManifestEntry, "entries">;
+
+/** Fixtures declare configs only; entries carry no extra metadata unless a test adds it. */
+function toManifest(modules: ManifestFixture[]): RedemptionBackstopConfigManifestEntry[] {
+  return modules.map((module) => ({ ...module, entries: defineRecordEntries(module.configs) }));
+}
+
+function validateFixture(modules: ManifestFixture[]) {
+  const manifest = toManifest(modules);
   return validateRedemptionBackstopRegistry({
     manifest,
     mergedConfigs: Object.assign({}, ...manifest.map((entry) => entry.configs)),
@@ -46,7 +53,7 @@ describe("validateRedemptionBackstopRegistry", () => {
     ).toThrow(/duplicated without an override reason/);
   });
 
-  it("records factory override reasons for audit output", () => {
+  it("lets a later entry with an override reason win", () => {
     const registry = defineBackstopRegistry([
       ...defineBatch(["usdt-tether"], baseConfig),
       defineOverride(
@@ -58,9 +65,6 @@ describe("validateRedemptionBackstopRegistry", () => {
     ]);
 
     expect(registry["usdt-tether"].settlementModel).toBe("days");
-    expect(getBackstopRegistryOverrideReasons(registry).get("usdt-tether")).toBe(
-      "Reviewed issuer terms document slower settlement.",
-    );
   });
 
   it("keeps redemption policy approvals in owned shared config", () => {
@@ -165,34 +169,7 @@ describe("validateRedemptionBackstopRegistry", () => {
 
   it("reports duplicate IDs when using the default merged registry path", () => {
     const result = validateRedemptionBackstopRegistry({
-      manifest: [
-        {
-          name: "issuer-a",
-          filePath: "issuer-a.ts",
-          configs: { "usdt-tether": baseConfig },
-          allowedRouteFamilies: ["offchain-issuer"],
-        },
-        {
-          name: "issuer-b",
-          filePath: "issuer-b.ts",
-          configs: { "usdt-tether": baseConfig },
-          allowedRouteFamilies: ["offchain-issuer"],
-        },
-      ],
-    });
-
-    expect(result.findings).toContainEqual(
-      expect.objectContaining({
-        severity: "error",
-        code: "duplicate-id",
-        stablecoinId: "usdt-tether",
-      }),
-    );
-  });
-
-  it("fails fast when the runtime registry builder sees duplicate shard IDs", () => {
-    expect(() =>
-      buildRedemptionBackstopRegistry([
+      manifest: toManifest([
         {
           name: "issuer-a",
           filePath: "issuer-a.ts",
@@ -206,13 +183,42 @@ describe("validateRedemptionBackstopRegistry", () => {
           allowedRouteFamilies: ["offchain-issuer"],
         },
       ]),
+    });
+
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({
+        severity: "error",
+        code: "duplicate-id",
+        stablecoinId: "usdt-tether",
+      }),
+    );
+  });
+
+  it("fails fast when the runtime registry builder sees duplicate shard IDs", () => {
+    expect(() =>
+      buildRedemptionBackstopRegistry(
+        toManifest([
+          {
+            name: "issuer-a",
+            filePath: "issuer-a.ts",
+            configs: { "usdt-tether": baseConfig },
+            allowedRouteFamilies: ["offchain-issuer"],
+          },
+          {
+            name: "issuer-b",
+            filePath: "issuer-b.ts",
+            configs: { "usdt-tether": baseConfig },
+            allowedRouteFamilies: ["offchain-issuer"],
+          },
+        ]),
+      ),
     ).toThrow(
       'Duplicate redemption backstop config id "usdt-tether" appears in both issuer-a (issuer-a.ts) and issuer-b (issuer-b.ts).',
     );
   });
 
-  it("attaches override and source-file metadata to the merged runtime registry", () => {
-    const issuerRegistry = defineBackstopRegistry([
+  it("carries entry override and source-file metadata into the merged registry and audit", () => {
+    const issuerEntries = [
       ...defineBatch(["usdt-tether"], baseConfig, { sourceFilePath: "issuer-base.ts" }),
       defineOverride(
         "usdt-tether",
@@ -221,30 +227,42 @@ describe("validateRedemptionBackstopRegistry", () => {
         "Reviewed issuer terms document slower settlement.",
         { sourceFilePath: "issuer-override.ts" },
       ),
-    ]);
-
-    const registry = buildRedemptionBackstopRegistry([
+    ];
+    const manifest: RedemptionBackstopConfigManifestEntry[] = [
       {
         name: "issuer",
         filePath: "issuer.ts",
-        configs: issuerRegistry,
+        configs: defineBackstopRegistry(issuerEntries),
+        entries: issuerEntries,
         allowedRouteFamilies: ["offchain-issuer"],
       },
       {
         name: "plain",
         filePath: "plain.ts",
-        configs: {
-          "usdc-circle": baseConfig,
-        },
+        configs: { "usdc-circle": baseConfig },
+        entries: defineRecordEntries({ "usdc-circle": baseConfig }, { sourceFilePath: "plain.ts" }),
         allowedRouteFamilies: ["offchain-issuer"],
       },
-    ]);
+    ];
 
-    expect(getBackstopRegistryOverrideReasons(registry).get("usdt-tether")).toBe(
-      "Reviewed issuer terms document slower settlement.",
+    const registry = buildRedemptionBackstopRegistry(manifest);
+    expect(registry["usdt-tether"].settlementModel).toBe("days");
+
+    const audit = validateRedemptionBackstopRegistry({ manifest, mergedConfigs: registry });
+    expect(audit.auditRows).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        filePath: "issuer-override.ts",
+        overrideReason: "Reviewed issuer terms document slower settlement.",
+      }),
     );
-    expect(getBackstopRegistrySourceFilePaths(registry).get("usdt-tether")).toBe("issuer-override.ts");
-    expect(getBackstopRegistrySourceFilePaths(registry).get("usdc-circle")).toBe("plain.ts");
+    expect(audit.auditRows).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "usdc-circle",
+        filePath: "plain.ts",
+        overrideReason: null,
+      }),
+    );
   });
 
   it("reports route family mismatches with owner metadata", () => {
@@ -287,14 +305,14 @@ describe("validateRedemptionBackstopRegistry", () => {
     ]);
 
     const result = validateRedemptionBackstopRegistry({
-      manifest: [
+      manifest: toManifest([
         {
           name: "issuer",
           filePath: "issuer.ts",
           configs: { "usdt-tether": baseConfig },
           allowedRouteFamilies: ["offchain-issuer"],
         },
-      ],
+      ]),
       mergedConfigs: { "usdt-tether": baseConfig },
       sourceTextByPath,
     });

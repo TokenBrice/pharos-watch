@@ -9,8 +9,11 @@ import {
 describe("env contract manifest", () => {
   it("keeps the worker required binding order stable", () => {
     expect(getRuntimeEnvKeys("worker", "required")).toEqual([
-      "CF_VERSION_METADATA",
       "DB",
+      "CF_VERSION_METADATA",
+      "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT",
+      "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT",
+      "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT",
       "CORS_ORIGIN",
       "GITHUB_PAT",
       "FEEDBACK_IP_SALT",
@@ -22,18 +25,15 @@ describe("env contract manifest", () => {
       "API_KEY_SELF_SERVE_EMAIL_REPLY_TO",
       "API_KEY_SELF_SERVE_PUBLIC_BASE_URL",
       "BANXICO_TOKEN",
-      "TELEGRAM_WEBHOOK_PREAUTH_RATE_LIMIT",
-      "TELEGRAM_MINI_APP_SESSION_PREAUTH_RATE_LIMIT",
-      "TELEGRAM_MINI_APP_MUTATION_PREAUTH_RATE_LIMIT",
     ]);
   });
 
   it("keeps the Pages ops required binding order stable", () => {
     expect(getRuntimeEnvKeys("pagesOps", "required")).toEqual([
-      "OPS_API_SERVICE_TOKEN_ID",
-      "OPS_API_SERVICE_TOKEN_SECRET",
       "CF_ACCESS_TEAM_DOMAIN",
       "CF_ACCESS_OPS_UI_AUD",
+      "OPS_API_SERVICE_TOKEN_ID",
+      "OPS_API_SERVICE_TOKEN_SECRET",
     ]);
   });
 

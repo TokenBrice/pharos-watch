@@ -7,10 +7,6 @@ import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../lib/telegram-constants";
 import { reportDigestProgress } from "./digest/progress";
 import { pendingCapacityFields } from "./dispatch-telegram-alerts-fanout";
 import {
-  drainOverflowBacklogOnly,
-  persistEventlessOverflowBacklog,
-} from "./dispatch-telegram-overflow";
-import {
   emptyResult,
   pendingDispatchFields,
   pendingTailState,
@@ -18,7 +14,6 @@ import {
   safetySourceFields,
   type DispatchResult,
 } from "./dispatch-telegram-result";
-import type { PlannedSubscriberAlert } from "./dispatch-telegram-routing";
 import {
   assignSharedDispatchState,
   writePresetFailureCount,
@@ -99,7 +94,6 @@ export interface EventlessFastPathContext {
   suppressedMethodologyChanges: number;
   suppressedSafetyChangesAtSeed: number;
   pendingCapacityBefore: PendingCapacitySnapshot;
-  overflowBacklog: readonly PlannedSubscriberAlert[];
   nowSec: number;
   dispatchStartedAtMs: number;
   chatsWithActiveSnooze: number;
@@ -206,7 +200,6 @@ export async function executeEventlessFastPath({
   suppressedMethodologyChanges,
   suppressedSafetyChangesAtSeed,
   pendingCapacityBefore,
-  overflowBacklog,
   nowSec,
   dispatchStartedAtMs,
   chatsWithActiveSnooze,
@@ -237,16 +230,6 @@ export async function executeEventlessFastPath({
   const expiredCount = pendingCapacityBefore.expired > 0
     ? await cleanupExpiredPendingAlerts(db, nowSec)
     : 0;
-  const overflowDeliveryResult = await drainOverflowBacklogOnly({
-    db,
-    botToken,
-    overflowBacklog,
-    drainResult,
-    nowSec,
-    signal,
-    markTelegramDeliveryStarted,
-  });
-  await persistEventlessOverflowBacklog(db, overflowDeliveryResult, overflowBacklog, nowSec);
   const pendingCapacityAfter = await readPendingCapacityAfterLifecycle(
     db,
     nowSec,
@@ -254,7 +237,6 @@ export async function executeEventlessFastPath({
     drainResult,
     expiredCount,
     {
-      pendingEnqueued: overflowDeliveryResult?.pendingEnqueued ?? 0,
       forceRefresh: pendingCapacityBefore.due > 0 || pendingCapacityBefore.expired > 0 || archivedExecutionUnknownCount > 0,
     },
   );
@@ -270,23 +252,17 @@ export async function executeEventlessFastPath({
     messagesSent: drainResult.sent,
     blockedUsersCleanedUp: drainResult.blockedCleanedUp,
     blockedUsersCleanupFailed: drainResult.blockedCleanupFailed,
-    cappedAtLimit: overflowDeliveryResult?.cappedAtLimit ?? false,
-    ...pendingDispatchFields(drainResult, {
-      expiredCount,
-      pendingEnqueued: overflowDeliveryResult?.pendingEnqueued ?? 0,
-    }),
+    ...pendingDispatchFields(drainResult, { expiredCount }),
     reserveSourceUnavailable,
     ...reserveSourceFields(reserveSourceAssessment),
     ...pendingCapacityFields(pendingCapacityAfter),
     pendingCapacityBefore,
     pendingCapacityAfter,
-    freshOverflow: overflowDeliveryResult?.freshOverflow ?? 0,
     chatsWithActiveSnooze,
     ...safetySourceFields(
       safetySourceAssessment,
       safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
     ),
-    perAlertType: overflowDeliveryResult?.perAlertType ?? base.perAlertType,
     suppressedSafetyChangesAtSeed,
     eventlessFastPath: true,
   };

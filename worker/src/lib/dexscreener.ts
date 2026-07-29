@@ -12,7 +12,6 @@ import { USER_AGENT } from "./constants";
 import { toErrorMessage } from "./error-utils";
 import { readResponseTextBoundedWithSignal, readResponseTextWithSignal } from "./response-body";
 
-export { DS_CHAIN_MAP } from "@shared/lib/chains";
 
 const DS_TOKEN_API = "https://api.dexscreener.com/tokens/v1";
 const DEXSCREENER_API_HEADERS = {

@@ -72,16 +72,12 @@ export type CronStatusImpact = "critical" | "watch";
 
 const _cronSchedules: Record<string, CronScheduleExpression> = {};
 const _cronTriggerSchedules: Record<string, readonly string[]> = {};
-const _cronIntervals: Record<string, number> = {};
-const _cronOffsets: Record<string, number> = {};
 for (const [scheduleKey, definition] of Object.entries(CRON_SCHEDULE_DEFINITIONS)) {
   _cronSchedules[scheduleKey] = definition.schedule;
   _cronTriggerSchedules[scheduleKey] =
     "triggerSchedules" in definition
       ? [...definition.triggerSchedules]
       : [definition.schedule];
-  _cronIntervals[scheduleKey] = definition.intervalSec;
-  _cronOffsets[scheduleKey] = definition.offsetSec;
 }
 
 export const CRON_SCHEDULES = Object.freeze(_cronSchedules as Record<CronScheduleKey, CronScheduleExpression>);
@@ -93,8 +89,6 @@ export const CRON_SCHEDULES = Object.freeze(_cronSchedules as Record<CronSchedul
 export const CRON_TRIGGER_SCHEDULES = Object.freeze(
   _cronTriggerSchedules as Record<CronScheduleKey, readonly string[]>,
 );
-const CRON_SCHEDULE_INTERVALS = Object.freeze(_cronIntervals as Record<CronScheduleKey, number>);
-const CRON_SCHEDULE_BUCKET_OFFSETS = Object.freeze(_cronOffsets as Record<CronScheduleKey, number>);
 
 export interface CronGroupDefinition {
   key: CronGroupKey;
@@ -660,7 +654,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
 ] as const;
 
 export const CRON_JOB_DEFINITIONS: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS_BASE.map((definition) => {
-  const intervalSec = definition.intervalSec ?? CRON_SCHEDULE_INTERVALS[definition.scheduleKey];
+  const intervalSec = definition.intervalSec ?? CRON_SCHEDULE_DEFINITIONS[definition.scheduleKey].intervalSec;
   return {
     ...definition,
     intervalSec,
@@ -715,7 +709,7 @@ export const CRON_CONNECTION_BUDGET_ENTRIES: readonly CronConnectionBudgetMeta[]
 ].map((definition) => ({
   ...definition,
   schedule: CRON_SCHEDULES[definition.scheduleKey],
-  intervalSec: CRON_SCHEDULE_INTERVALS[definition.scheduleKey],
+  intervalSec: CRON_SCHEDULE_DEFINITIONS[definition.scheduleKey].intervalSec,
 }));
 
 /** Job name → expected interval in seconds, derived from definitions. */
@@ -749,8 +743,8 @@ export function getCronSlotStartedAtForSchedule(
   scheduleKey: CronScheduleKey | null | undefined,
   scheduledTimeMs?: number | null,
 ): number {
-  const intervalSec = scheduleKey ? CRON_SCHEDULE_INTERVALS[scheduleKey] : null;
-  const offsetSec = scheduleKey ? CRON_SCHEDULE_BUCKET_OFFSETS[scheduleKey] : 0;
+  const intervalSec = scheduleKey ? CRON_SCHEDULE_DEFINITIONS[scheduleKey].intervalSec : null;
+  const offsetSec = scheduleKey ? CRON_SCHEDULE_DEFINITIONS[scheduleKey].offsetSec : 0;
   const rawTimestampSec = Number.isFinite(scheduledTimeMs)
     ? Math.floor(Number(scheduledTimeMs) / 1000)
     : Math.floor(Date.now() / 1000);

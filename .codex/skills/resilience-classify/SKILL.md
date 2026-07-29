@@ -1,21 +1,22 @@
 ---
 name: resilience-classify
-description: Add explicit resilience overrides (`chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`) where `inferResilienceDefaults()` is too optimistic. Use when adding a stablecoin or auditing report-card accuracy.
+description: Add explicit resilience overrides (`chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`) where `inferResilienceDefaults()` is too optimistic. Use when adding a stablecoin or auditing Selector rankings and DDR depeg-duration verdicts.
 ---
 
 # Resilience Classify
 
 Use this skill to identify coins whose resilience defaults are wrong and to add only the override fields that differ from inference.
 
+**What these fields drive today:** the Selector's ranking and "what to watch" explanations (`shared/lib/selector/`) and the DDR depeg-duration resolver's verdict strata (`shared/lib/depeg-resolver/`). They do **not** feed Safety Score V9 — published safety grades will not move from these overrides, so do not promise or expect grade changes.
+
 ## Read First
 
-- Read `inferResilienceDefaults()` in `shared/lib/report-card-policy.ts` (imported by `shared/lib/report-cards.ts`).
-- Read `docs/report-cards.md` for the scoring model and tier meanings.
+- Read `inferResilienceDefaults()` in `shared/lib/report-card-policy.ts` for the default inference these overrides correct.
 - This skill is only for `chainTier`, `deploymentModel`, `collateralQuality`, and `custodyModel`. Leave `governanceQuality` alone unless the user explicitly asked for it.
 
 ## Workflow
 
-1. Read the stablecoin entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json`). Treat the runtime stablecoin re-export as import-only.
+1. Read the stablecoin entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json`). For coins with a reserves sidecar, the reserve composition that informs `collateralQuality`/`custodyModel` lives in `shared/data/stablecoins/domains/reserves/<id>.json`, not the base file. Treat the runtime stablecoin re-export as import-only.
 2. Compute or reason through the default inference from `backing` and `governance`.
 3. Flag candidate mismatches when you see:
 - non-Ethereum primary deployment
@@ -33,18 +34,11 @@ Use this skill to identify coins whose resilience defaults are wrong and to add 
 - `collateralQuality`: what is the riskiest significant backing component?
 - `custodyModel`: is collateral onchain, institutionally custodied, or effectively exchange/counterparty held?
 
-6. Apply only fields that differ from defaults in the matching per-coin JSON file. Keep the diff minimal and regenerate `shared/data/stablecoins/coins.generated.json`.
-
-7. Regenerate `shared/data/stablecoins/coins.generated.json` and run `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`.
+6. Apply only fields that differ from defaults in the matching per-coin JSON file, keeping the diff minimal. Then regenerate with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`, run `npm run check:stablecoin-data`, and run `npm run check:generated-artifacts` so dependent projections converge; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`.
 
 ## Tiers
 
-The lists below mirror `CHAIN_TIER_VALUES` / `DEPLOYMENT_MODEL_VALUES` / `COLLATERAL_QUALITY_VALUES` / `CUSTODY_MODEL_VALUES` in `shared/types/core.ts` — the source file wins.
-
-- `chainTier`: `ethereum`, `stage1-l2`, `mature-alt-l1`, `established-alt-l1`, `unproven`
-- `deploymentModel`: `single-chain`, `canonical-bridge`, `third-party-bridge`, `native-multichain`
-- `collateralQuality`: `native`, `eth-lst`, `rwa`, `alt-lst-bridged-or-mixed`, `exotic`
-- `custodyModel`: `onchain`, `institutional-top`, `institutional-regulated`, `institutional-unregulated`, `institutional-sanctioned`, `cex`
+The valid values are `CHAIN_TIER_VALUES` / `DEPLOYMENT_MODEL_VALUES` / `COLLATERAL_QUALITY_VALUES` / `CUSTODY_MODEL_VALUES` in `shared/types/core.ts` — read the source file; do not rely on any list quoted elsewhere.
 
 ## Decision Rules
 

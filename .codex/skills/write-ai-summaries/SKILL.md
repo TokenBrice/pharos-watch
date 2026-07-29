@@ -23,17 +23,22 @@ Match the Pharos daily digest voice — sardonic, analytical, opinionated but fa
 
 ### Structure per Summary
 
-Each summary has three fields:
+Each summary is a `StablecoinAiSummary` — `shared/types/editorial.ts` is the authoritative shape. AI-authored entries carry provenance alongside the editorial core:
 
 ```json
 {
   "ID": {
     "title": "Short Punchy Title",
     "text": "3-6 sentences of editorial narrative.",
-    "updatedAt": "YYYY-MM-DD"
+    "updatedAt": "YYYY-MM-DD",
+    "authoredBy": "ai",
+    "model": "<authoring model id>",
+    "factsAsOf": "YYYY-MM-DD"
   }
 }
 ```
+
+`reviewedBy`/`reviewedAt` exist too but are set only after the named reviewer approves — never pre-stamp them.
 
 - **title**: 2-5 word catchy label in title case (e.g., "Too Big to Depeg", "The Basis Trade, Tokenized", "Swiss Stubbornness, Tokenized"). Think newspaper column headers
 - **text**: 3-6 sentences. Tell the reader what the numbers _mean_. Cover: what it is, what makes it interesting/different, what the key tension or risk is. End with a punch
@@ -41,9 +46,7 @@ Each summary has three fields:
 
 ### Data Sources
 
-Summaries must be grounded in Pharos's own data, not just external research. Consult these sources:
-
-Extended reference (edge cases, history, examples): read ./reference.md when needed.
+Summaries must be grounded in Pharos's own data, not just external research. The field-by-field catalog of what to read — static metadata and live analytical data — lives in ./reference.md; read it when authoring.
 
 ### Process
 
@@ -68,7 +71,7 @@ It writes `agents/ai-summary-candidates.{md,json}` and never edits summaries. Pr
 3. Preserve still-correct claims and the existing title unless the title itself is stale. Do not rewrite sound prose for variety.
 4. Re-run the producer and confirm refreshed entries no longer appear as `high` or `medium`.
 
-DEWS bands and exact event counts are especially volatile; describe tendencies unless the current value is the editorial point. Overall letter grades may be cited, but exact numeric scores should be exceptional.
+DEWS bands and exact event counts are especially volatile; describe tendencies unless the current value is the editorial point. Overall letter grades may be cited, but exact numeric scores should be exceptional. Grade vocabulary is Safety Score V9: the producer reconciles the overall grade and the three pillar grades (backing, exit, economic control) — retired V8 dimension names (peg stability, liquidity, resilience, decentralization, dependency risk) are flagged as stale on the next producer run, so never write new prose in those terms.
 
 For AI-drafted entries set `authoredBy`, `model`, `updatedAt`, and `factsAsOf` to the actual authoring context. Set `reviewedBy` and `reviewedAt` only after the named reviewer has approved the batch; never pre-stamp owner review.
 
@@ -82,7 +85,7 @@ When choosing what to highlight, consider these angles (pick the most interestin
 - **Notable history**: Depegs, regulatory actions, governance drama, pivots
 - **Competitive dynamics**: Who does it compete with and why might it win or lose?
 - **Irony or contradiction**: The most interesting stablecoins contain contradictions worth pointing out
-- **Safety profile**: What does the report card reveal? A strong grade with one weak dimension, a surprising F in dependency risk, or a coin that scores well despite its reputation — these are editorial gold
+- **Safety profile**: What does the report card reveal? A strong grade with one weak pillar, a coin held under a binding cap ("why not higher"), an NR on missing evidence, or a coin that scores well despite its reputation — these are editorial gold
 
 ### Anti-Patterns
 

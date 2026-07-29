@@ -93,7 +93,7 @@ describe("status dashboard model", () => {
     });
 
     expect(STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs).toBe(180_000);
-    expect(model.clientDataAgeSec).toBe(190);
+    expect(model.evidence.oldestRequiredAgeSec).toBe(190);
     expect(model.clientDataStale).toBe(true);
     expect(model.querySyncs.find((sync) => sync.key === "health")?.stale).toBe(true);
     expect(model.evidence.state).toBe("stale");
@@ -169,12 +169,10 @@ describe("status dashboard model", () => {
 
     const model = buildModel(data);
 
-    expect(model.normalizedIssues).toHaveLength(4);
     expect(model.issueGroups.impacting.map((issue) => issue.code)).toEqual(["missing_prices_stale"]);
     expect(model.issueGroups.warnings.map((issue) => issue.code)).toEqual(["reserve_sync_degraded"]);
     expect(model.issueGroups.maintenance.map((issue) => issue.code)).toEqual(["ddr_repair_debt_present"]);
     expect(model.issueGroups.watches.map((issue) => issue.code)).toEqual(["missing_prices_elevated"]);
-    expect(model.overallCauseCount).toBe(1);
   });
 
   it("keeps a healthy system healthy when only planned maintenance remains", () => {
@@ -203,7 +201,7 @@ describe("status dashboard model", () => {
     expect(model.decision.summary).toBe(
       "Public service healthy. Evidence current. No immediate action; one maintenance item is queued.",
     );
-    expect(model.blockerCauses).toEqual([]);
+    expect(model.issueGroups.impacting).toEqual([]);
   });
 
   it("treats a never-loaded required query as partial evidence instead of a zero-age success", () => {
@@ -229,7 +227,6 @@ describe("status dashboard model", () => {
       oldestRequiredSuccessAtMs: null,
       oldestRequiredAgeSec: null,
     });
-    expect(model.clientDataAgeSec).toBeNull();
     expect(model.clientDataStale).toBe(true);
     expect(model.decision.nextStep).toBe("refresh-evidence");
     expect(model.notices.some((notice) => notice.id === "client-partial")).toBe(true);
@@ -243,8 +240,6 @@ describe("status dashboard model", () => {
       hasData: false,
       updatedAtMs: 0,
       updatedAtSec: null,
-      lastSuccessAtMs: null,
-      lastAttemptAtMs: null,
       ageSec: null,
       errorMessage: "initial request failed",
       state: "unavailable",
@@ -264,10 +259,7 @@ describe("status dashboard model", () => {
       data: BASE_STATUS,
       healthData: BASE_HEALTH,
       probes: [],
-      querySyncs: {
-        ...BASE_QUERY_SYNCS,
-        healthAttemptedAt: 1_010_000,
-      },
+      querySyncs: BASE_QUERY_SYNCS,
       nowMs: 1_010_000,
       healthError: new Error("refresh timed out"),
       probesError: null,
@@ -283,8 +275,7 @@ describe("status dashboard model", () => {
     expect(model.querySyncs.find((sync) => sync.key === "health")).toMatchObject({
       hasData: true,
       state: "partial",
-      lastAttemptAtMs: 1_010_000,
-      lastSuccessAtMs: 1_000_000,
+      errorMessage: "refresh timed out",
       updatedAtMs: 1_000_000,
     });
     expect(model.decision.nextStep).toBe("refresh-evidence");
@@ -295,10 +286,7 @@ describe("status dashboard model", () => {
       data: BASE_STATUS,
       healthData: BASE_HEALTH,
       probes: [],
-      querySyncs: {
-        ...BASE_QUERY_SYNCS,
-        statusAttemptedAt: 1_010_000,
-      },
+      querySyncs: BASE_QUERY_SYNCS,
       nowMs: 1_010_000,
       statusError: new Error("status refresh timed out"),
       healthError: null,
@@ -427,8 +415,6 @@ describe("status dashboard model", () => {
       "Live prices are unavailable for 1 active asset: NXUSD. Stablecoin listings and price-dependent analytics may be incomplete until coverage recovers.",
     );
     expect(model.issueGroups.warnings[0]?.runbookUrl).toBe("https://example.com/stablecoins-cache");
-    expect(model.overallCauseCount).toBe(0);
-    expect(model.warningCauseCount).toBe(1);
     expect(model.decision.nextStep).toBe("observe-next-run");
   });
 
@@ -468,7 +454,7 @@ describe("status dashboard model", () => {
     });
 
     expect(model.issueGroups.warnings.some((issue) => issue.code === "active_price_coverage_incomplete")).toBe(false);
-    expect(model.overallCauseCount).toBe(0);
+    expect(model.issueGroups.impacting).toHaveLength(0);
   });
 
   it("maps unknown exact active-price coverage to the stablecoin price surface", () => {
@@ -522,7 +508,6 @@ describe("status dashboard model", () => {
     });
 
     expect(model.healthDiffersFromStatus).toBe(true);
-    expect(model.publicHealthNeedsCallout).toBe(true);
     expect(model.notices.find((notice) => notice.id === "public-health")).toMatchObject({
       title: "Public /api/health reports degraded",
       tone: "warning",
@@ -573,18 +558,15 @@ describe("status dashboard model", () => {
     };
 
     const model = buildModel(data);
-    const comms = model.sections.find((section) => section.id === "comms");
 
     expect(model.attentionSections.some((section) => section.id === "comms")).toBe(false);
-    expect(comms).toMatchObject({ value: "2 pending", valueClassName: "text-green-700 dark:text-green-400" });
   });
 
   it("surfaces missing Comms telemetry as Unknown attention", () => {
     const data = { ...makeHealthyStatusResponse(), telegramBot: null };
     const model = buildModel(data);
-    const comms = model.sections.find((section) => section.id === "comms");
+    const comms = model.attentionSections.find((section) => section.id === "comms");
 
-    expect(model.attentionSections.some((section) => section.id === "comms")).toBe(true);
     expect(comms).toMatchObject({ value: "Unknown", valueClassName: "text-muted-foreground" });
     expect(comms?.summary).toContain("Telegram delivery telemetry is unavailable");
   });
@@ -690,6 +672,6 @@ describe("status dashboard model", () => {
 
     const actionModel = buildModel(makeActionRecommendedStatusResponse());
     expect(actionModel.recommendedActions.length).toBeGreaterThan(0);
-    expect(actionModel.attentionSections.some((section) => section.id === "actions")).toBe(false);
+    expect(actionModel.attentionSections.map((section) => section.id)).not.toContain("actions");
   });
 });

@@ -1,4 +1,5 @@
 import { v9RepresentationGroupRouteKey } from "@shared/lib/safety-score-v9/facts";
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -185,10 +186,6 @@ export const XautRepresentationGroupSupplyAttributionV2Schema = z.strictObject({
   }),
   observation: XautLockMintObservationSchema,
 });
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function canonicalStrings(values: readonly string[]): string[] {
   return [...new Set(values)].sort(compareText);

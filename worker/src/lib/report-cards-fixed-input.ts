@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { BluechipRatingsMapSchema } from "@shared/types/bluechip";
-import { DexLiquidityMapSchema, PegSummaryCoinSchema } from "@shared/types/market";
+import { PegSummaryCoinSchema } from "@shared/types/market";
 import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import { ReportCardsResponseSchema, type ReportCardsResponse } from "@shared/types/report-cards";
@@ -13,13 +13,11 @@ import {
   computeRedemptionPayloadFingerprint,
   computeReportCardsRegistryFingerprint,
   normalizeFixedDexLiquidityMap,
-  normalizeFixedInputExitRouteObservations,
   normalizeFixedRedemptionBackstopMap,
   normalizeReportCardsReplayPayload,
   normalizeReportCardsFixedInputMethodologyVersions,
   projectFixedDexLiquidityMap,
   projectReportCardsFixedInputMethodologyVersions,
-  type FixedDexLiquidityRow,
 } from "@shared/lib/report-cards-fixed-input-identity";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import { sha256Hex } from "@shared/lib/sha256";
@@ -234,25 +232,6 @@ const FixedInputPayloadFields = {
   liveToFallbackCoins: z.array(z.string()).default([]),
 };
 
-const LegacyReportCardsFixedInputV1Schema = z
-  .object({
-    schemaVersion: z.literal(1),
-    ...FixedInputPayloadFields,
-    dexLiqMap: DexLiquidityMapSchema,
-  })
-  .strict();
-
-const LegacyReportCardsFixedInputV2Schema = z
-  .object({
-    schemaVersion: z.literal(2),
-    ...FixedInputPayloadFields,
-    dexGenerationId: z.string().min(1),
-    dexPayloadFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-    registryFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-    dexLiqMap: DexLiquidityMapSchema,
-  })
-  .strict();
-
 const LegacyReportCardsFixedInputV3Schema = z
   .object({
     schemaVersion: z.literal(3),
@@ -445,121 +424,6 @@ export async function parseReportCardsFixedInputCacheValue(value: unknown): Prom
 
 function uniqueSorted(values: Iterable<string>): string[] {
   return [...new Set(values)].sort();
-}
-
-function projectLegacyDexMap(
-  dexLiqMap: Record<string, z.infer<typeof DexLiquidityMapSchema>[string]>,
-): Record<string, FixedDexLiquidityRow> {
-  return Object.fromEntries(
-    Object.entries(dexLiqMap).map(([id, row]) => [
-      id,
-      FixedDexLiquidityRowSchema.parse({
-        liquidityScore: row.liquidityScore,
-        concentrationHhi: row.concentrationHhi,
-        poolCount: row.poolCount,
-        chainCount: row.chainCount,
-        coverageClass: row.coverageClass,
-        coverageConfidence: row.coverageConfidence,
-        liquidityEvidenceClass: row.liquidityEvidenceClass,
-        hasMeasuredLiquidityEvidence: row.hasMeasuredLiquidityEvidence,
-        effectiveTvlUsd: row.effectiveTvlUsd,
-        balanceMeasuredTvlUsd: row.balanceMeasuredTvlUsd,
-        organicMeasuredTvlUsd: row.organicMeasuredTvlUsd,
-        deploymentCoverage: row.deploymentCoverage,
-        exitRouteObservations: row.exitRouteObservations,
-        exitRouteObservationCoverage: row.exitRouteObservationCoverage,
-        methodologyVersion: row.methodologyVersion,
-        updatedAt: row.updatedAt,
-      }),
-    ]),
-  );
-}
-
-function computeLegacyDexLiquidityPayloadFingerprint(
-  dexLiqMap: z.infer<typeof DexLiquidityMapSchema>,
-  dexGenerationId: string,
-): string {
-  const normalized = sortedRecord(
-    Object.fromEntries(
-      Object.entries(dexLiqMap).map(([id, row]) => [
-        id,
-        {
-          ...row,
-          ...(row.exitRouteObservations !== undefined
-            ? { exitRouteObservations: normalizeFixedInputExitRouteObservations(row.exitRouteObservations) }
-            : {}),
-        },
-      ]),
-    ),
-  );
-  return sha256Hex(
-    stableJsonStringifyV1({
-      domain: "report-cards.fixed-input.dex-payload.v1",
-      dexGenerationId,
-      dexLiqMap: normalized,
-    }),
-  );
-}
-
-function deriveDexGenerationId(dexLiqMap: Record<string, FixedDexLiquidityRow>): string {
-  const updatedAtValues = uniqueSorted(Object.values(dexLiqMap).map((row) => String(row.updatedAt)));
-  if (updatedAtValues.length !== 1) {
-    throw new Error(`Fixed input DEX payload spans ${updatedAtValues.length} producer timestamps`);
-  }
-  return `dex-liquidity-${updatedAtValues[0]}`;
-}
-
-function deriveRedemptionGenerationId(
-  redemptionBackstopMap: ReportCardsFixedInput["redemptionBackstopMap"],
-  fallbackUpdatedAt: number | null,
-): string {
-  const updatedAtValues = uniqueSorted(Object.values(redemptionBackstopMap).map((row) => String(row.updatedAt)));
-  if (updatedAtValues.length > 1) {
-    throw new Error(`Fixed input redemption payload spans ${updatedAtValues.length} producer timestamps`);
-  }
-  const updatedAt = updatedAtValues[0] ?? (fallbackUpdatedAt == null ? "unavailable" : String(fallbackUpdatedAt));
-  return `redemption-backstops-${updatedAt}`;
-}
-
-function migrateLegacyFixedInput(value: unknown): LegacyReportCardsFixedInputV3 | null {
-  const v2 = LegacyReportCardsFixedInputV2Schema.safeParse(value);
-  const legacy = v2.success ? v2.data : LegacyReportCardsFixedInputV1Schema.safeParse(value).data;
-  if (!legacy) return null;
-  const dexLiqMap = projectLegacyDexMap(legacy.dexLiqMap);
-  const dexGenerationId = v2.success ? v2.data.dexGenerationId : deriveDexGenerationId(dexLiqMap);
-  if (
-    v2.success &&
-    v2.data.dexPayloadFingerprint !== computeLegacyDexLiquidityPayloadFingerprint(v2.data.dexLiqMap, dexGenerationId) &&
-    v2.data.dexPayloadFingerprint !==
-      computeDexLiquidityPayloadFingerprint(projectLegacyDexMap(v2.data.dexLiqMap), dexGenerationId)
-  ) {
-    throw new Error("Legacy fixed input DEX payload fingerprint does not match its payload and generation");
-  }
-  const redemptionGenerationId = deriveRedemptionGenerationId(
-    legacy.redemptionBackstopMap,
-    legacy.inputFreshness.redemptionBackstops.updatedAt,
-  );
-  return LegacyReportCardsFixedInputV3Schema.parse({
-    ...legacy,
-    schemaVersion: 3,
-    captureKind: "public-reconstruction",
-    activeAssetIds: ACTIVE_STABLECOINS.map((coin) => coin.id).sort(),
-    dexGenerationId,
-    redemptionGenerationId,
-    dexPayloadFingerprint: computeDexLiquidityPayloadFingerprint(dexLiqMap, dexGenerationId),
-    redemptionPayloadFingerprint: computeRedemptionPayloadFingerprint(
-      legacy.redemptionBackstopMap,
-      redemptionGenerationId,
-    ),
-    registryFingerprint: v2.success ? v2.data.registryFingerprint : computeReportCardsRegistryFingerprint(),
-    inputMethodologyVersions: projectReportCardsFixedInputMethodologyVersions({
-      methodologyVersion: legacy.methodologyVersion,
-      dexLiqMap: legacy.dexLiqMap,
-      pegDataById: legacy.pegDataById,
-      redemptionBackstopMap: legacy.redemptionBackstopMap,
-    }),
-    dexLiqMap,
-  });
 }
 
 export type ReportCardsFixedInputDraft = Omit<
@@ -843,8 +707,6 @@ function parseReportCardsFixedInput(value: unknown): ReportCardsFixedInput | Leg
   if (parsed.success) return parsed.data;
   const v3 = LegacyReportCardsFixedInputV3Schema.safeParse(value);
   if (v3.success) return v3.data;
-  const migrated = migrateLegacyFixedInput(value);
-  if (migrated) return migrated;
   const issue = parsed.error.issues[0];
   throw new Error(`Malformed fixed report-card input at ${issue?.path.join(".") || "root"}: ${issue?.message}`);
 }

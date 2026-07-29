@@ -1,4 +1,5 @@
 import type { RedemptionBackstopConfig } from "./shared";
+import { defineRecordEntries } from "./factory";
 import {
   applyTrackedReviewedDocs,
   cloneRedemptionBackstopConfig,
@@ -917,3 +918,6 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
 };
 
 applyTrackedReviewedDocs(QUEUE_REDEEM_BACKSTOP_CONFIGS, ["iusd-infinifi"], REVIEWED_REMEDIATION_AT);
+
+/** Declared after the doc backfill above so the entries carry the finished configs. */
+export const QUEUE_REDEEM_BACKSTOP_ENTRIES = defineRecordEntries(QUEUE_REDEEM_BACKSTOP_CONFIGS);

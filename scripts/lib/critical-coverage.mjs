@@ -165,7 +165,6 @@ export const CRITICAL_FILES = [
   "worker/src/cron/dispatch-telegram-authoritative-path.ts",
   "worker/src/cron/dispatch-telegram-authoritative-planning.ts",
   "worker/src/cron/dispatch-telegram-routing.ts",
-  "worker/src/cron/dispatch-telegram-delivery.ts",
   "worker/src/cron/telegram-alert-source-events.ts",
   "worker/src/cron/telegram-alert-job-target-outcomes.ts",
   "worker/src/lib/telegram-delivery-sli.ts",
@@ -175,7 +174,6 @@ export const CRITICAL_FILES = [
   "worker/src/cron/telegram-alert-target-plans/materialization.ts",
   "worker/src/cron/telegram-alert-target-plans/read-model.ts",
   "worker/src/cron/telegram-alert-target-plans/source-state.ts",
-  "worker/src/cron/telegram-legacy-overflow-import.ts",
   "worker/src/cron/telegram-pending/capacity.ts",
   "worker/src/cron/telegram-pending/cleanup.ts",
   "worker/src/cron/telegram-pending/dead-letter.ts",
@@ -203,7 +201,6 @@ export const CRITICAL_FILES = [
   "shared/lib/mint-authority-scoring.ts",
   "shared/lib/peg-score.ts",
   "shared/lib/psi-eligible.ts",
-  "shared/lib/safety-score-v9-compiler.ts",
   "shared/lib/safety-score-v9-research.ts",
   "shared/lib/safety-score-v9-supply-attribution-journal.ts",
   "shared/lib/yield-scoring.ts",
@@ -263,93 +260,83 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS = [
   /^shared\/lib\/(?!(?:[^/]*-(?:version|colors))\.ts$)[^/]*(score|scoring|freshness|psi)[^/]*\.ts$/,
   /^functions\/lib\/[^/]*proxy[^/]*\.ts$/,
 ];
-const CRITICAL_COVERAGE_WAIVER_CREATED_AT = "2026-06-05";
-const CRITICAL_COVERAGE_WAIVER_DEFAULT_REVIEW_AFTER = "2026-09-05";
-const CRITICAL_COVERAGE_WAIVER_DDR_REVIEW_AFTER = "2026-08-30";
-const CRITICAL_COVERAGE_WAIVER_DISPOSITIONS = new Set([
-  "covered-by-enrolled-entrypoint",
-  "barrel-or-contract",
-  "deferred-ratchet",
-]);
-
-export const CRITICAL_COVERAGE_WAIVED_FILES = [
-  "worker/src/cron/depeg-resolver/constants.ts",
-  "worker/src/cron/depeg-resolver/storage-adapters.ts",
-  "worker/src/cron/dews/contracts.ts",
-  "worker/src/cron/dews/progress.ts",
-  "worker/src/cron/sync-live-reserves-config.ts",
-  "worker/src/cron/sync-stablecoins/cache-publication.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-coingecko-low-volume-pass.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-defillama-pass.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-dexscreener-pass.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-fallback.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-jupiter-pass.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-pass-common.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-passes.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary-consensus.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary-gt-probe.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary-hardening.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary-shared.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-primary.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-progress.ts",
-  "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts",
-  "worker/src/cron/sync-stablecoins/fallback-cache.ts",
-  "worker/src/cron/sync-stablecoins/fallback-enrichment.ts",
-  "worker/src/cron/sync-stablecoins/fallback-fx.ts",
-  "worker/src/cron/sync-stablecoins/fallback-intake.ts",
-  "worker/src/cron/sync-stablecoins/fallback-publish.ts",
-  "worker/src/cron/sync-stablecoins/fallback.ts",
-  "worker/src/cron/sync-stablecoins/intake.ts",
-  "worker/src/cron/sync-stablecoins/main-publication.ts",
-  "worker/src/cron/sync-stablecoins/metadata.ts",
-  "worker/src/cron/sync-stablecoins/phase-helpers.ts",
-  "worker/src/cron/sync-stablecoins/post-enrichment.ts",
-  "worker/src/cron/sync-stablecoins/runtime.ts",
-  "worker/src/cron/sync-stablecoins/shared.ts",
-  "worker/src/cron/sync-stablecoins/stages.ts",
-  "worker/src/cron/sync-stablecoins/supplemental-assets.ts",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/fiat-cg.ts",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/gold.ts",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/onchain-supply.ts",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/shared.ts",
-  "worker/src/cron/sync-stablecoins/supplemental-assets/silver.ts",
-  "worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts",
-  "worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts",
-  "worker/src/cron/sync-stablecoins/tracked-asset-overrides.ts",
-  "worker/src/cron/sync-stablecoins/zephyr-zsd.ts",
-  "worker/src/api/safety-score-history.ts",
-  "worker/src/lib/address-price-providers/alchemy.ts",
-  "worker/src/lib/address-price-providers/birdeye.ts",
-  "worker/src/lib/address-price-providers/coingecko-onchain.ts",
-  "worker/src/lib/address-price-providers/moralis.ts",
-  "worker/src/lib/authoritative-price-sources.ts",
-  "worker/src/lib/coingecko-simple-price.ts",
-  "worker/src/lib/depeg-resolver-assessment-store.ts",
-  "worker/src/lib/depeg-resolver-errata-store.ts",
-  "worker/src/lib/depeg-resolver-methodology.ts",
-  "worker/src/lib/depeg-resolver-repair-store.ts",
-  "worker/src/lib/depeg-resolver-review-snapshot-cache.ts",
-  "worker/src/lib/depeg-resolver-snapshot-cache.ts",
-  "worker/src/lib/depeg-resolver-store-validators.ts",
-  "worker/src/lib/dex-api-token-pricing.ts",
-  "worker/src/lib/live-reserves-store.ts",
-  "worker/src/lib/native-peg-implied-prices.ts",
-  "worker/src/lib/pricing-provider-diagnostics.ts",
-  "worker/src/lib/pricing-provider-lifecycle.ts",
-  "worker/src/lib/psi-history-universe.ts",
-  "worker/src/lib/psi-recompute.ts",
-  "worker/src/lib/psi-replay.ts",
-  "shared/lib/psi-contribution.ts",
-  "shared/lib/psi-eligible-client.ts",
-  "shared/lib/psi-view-model.ts",
-  "shared/lib/redemption-backstop-scoring.ts",
-];
-
-export const CRITICAL_COVERAGE_WAIVERS = Object.fromEntries(
-  CRITICAL_COVERAGE_WAIVED_FILES.map((file) => [file, buildCriticalCoverageWaiver(file)]),
-);
+// Waived high-stakes candidates mapped to their review deadline. The completeness
+// guard fails once a reviewAfter date passes, forcing enrollment or a new deadline.
+/** @type {Record<string, string>} */
+export const CRITICAL_COVERAGE_WAIVERS = {
+  "worker/src/cron/depeg-resolver/constants.ts": "2026-08-30",
+  "worker/src/cron/depeg-resolver/storage-adapters.ts": "2026-08-30",
+  "worker/src/cron/dews/contracts.ts": "2026-09-05",
+  "worker/src/cron/dews/progress.ts": "2026-09-05",
+  "worker/src/cron/sync-live-reserves-config.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/cache-publication.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-coingecko-low-volume-pass.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-defillama-pass.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-dexscreener-pass.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-fallback.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-jupiter-pass.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-pass-common.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-passes.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-primary-consensus.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-primary-gt-probe.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-primary-hardening.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-primary-provider-collection.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-primary-shared.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-primary.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-progress.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/fallback-cache.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/fallback-enrichment.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/fallback-fx.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/fallback-intake.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/fallback-publish.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/fallback.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/intake.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/main-publication.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/metadata.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/phase-helpers.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/post-enrichment.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/runtime.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/shared.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/stages.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/supplemental-assets.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/supplemental-assets/fiat-cg.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/supplemental-assets/gold.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/supplemental-assets/onchain-supply.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/supplemental-assets/shared.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/supplemental-assets/silver.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/tracked-asset-overrides.ts": "2026-09-05",
+  "worker/src/cron/sync-stablecoins/zephyr-zsd.ts": "2026-09-05",
+  "worker/src/api/safety-score-history.ts": "2026-09-05",
+  "worker/src/lib/address-price-providers/alchemy.ts": "2026-09-05",
+  "worker/src/lib/address-price-providers/birdeye.ts": "2026-09-05",
+  "worker/src/lib/address-price-providers/coingecko-onchain.ts": "2026-09-05",
+  "worker/src/lib/address-price-providers/moralis.ts": "2026-09-05",
+  "worker/src/lib/authoritative-price-sources.ts": "2026-09-05",
+  "worker/src/lib/coingecko-simple-price.ts": "2026-09-05",
+  "worker/src/lib/depeg-resolver-assessment-store.ts": "2026-08-30",
+  "worker/src/lib/depeg-resolver-errata-store.ts": "2026-08-30",
+  "worker/src/lib/depeg-resolver-methodology.ts": "2026-08-30",
+  "worker/src/lib/depeg-resolver-repair-store.ts": "2026-08-30",
+  "worker/src/lib/depeg-resolver-review-snapshot-cache.ts": "2026-08-30",
+  "worker/src/lib/depeg-resolver-snapshot-cache.ts": "2026-08-30",
+  "worker/src/lib/depeg-resolver-store-validators.ts": "2026-08-30",
+  "worker/src/lib/dex-api-token-pricing.ts": "2026-09-05",
+  "worker/src/lib/live-reserves-store.ts": "2026-09-05",
+  "worker/src/lib/native-peg-implied-prices.ts": "2026-09-05",
+  "worker/src/lib/pricing-provider-diagnostics.ts": "2026-09-05",
+  "worker/src/lib/pricing-provider-lifecycle.ts": "2026-09-05",
+  "worker/src/lib/psi-history-universe.ts": "2026-09-05",
+  "worker/src/lib/psi-recompute.ts": "2026-09-05",
+  "worker/src/lib/psi-replay.ts": "2026-09-05",
+  "shared/lib/psi-contribution.ts": "2026-09-05",
+  "shared/lib/psi-eligible-client.ts": "2026-09-05",
+  "shared/lib/psi-view-model.ts": "2026-09-05",
+  "shared/lib/redemption-backstop-scoring.ts": "2026-09-05",
+};
 
 export function normalizePath(value) {
   return value.replaceAll("\\", "/");
@@ -418,7 +405,7 @@ export function findStaleCriticalCoverageWaivers(candidateFiles, waivers = CRITI
 }
 
 /**
- * @param {Record<string, object>} waivers
+ * @param {Record<string, string>} waivers
  * @param {{ candidateFiles?: string[], criticalFiles?: string[] }} [options]
  */
 export function validateCriticalCoverageWaiverMetadata(
@@ -432,41 +419,13 @@ export function validateCriticalCoverageWaiverMetadata(
   const candidateSet = candidateFiles ? new Set(candidateFiles) : null;
   const criticalSet = new Set(criticalFiles);
 
-  for (const [file, waiver] of Object.entries(waivers)) {
+  for (const [file, reviewAfter] of Object.entries(waivers)) {
     if (candidateSet && !candidateSet.has(file)) continue;
     if (criticalSet.has(file)) {
       errors.push(`${file}: already enrolled in critical coverage; remove waiver`);
     }
-    if (!waiver || typeof waiver !== "object") {
-      errors.push(`${file}: missing waiver metadata`);
-      continue;
-    }
-    if (!CRITICAL_COVERAGE_WAIVER_DISPOSITIONS.has(waiver.disposition)) {
-      errors.push(`${file}: invalid waiver disposition "${waiver.disposition ?? "missing"}"`);
-    }
-    if (typeof waiver.reason !== "string" || waiver.reason.trim().length === 0) {
-      errors.push(`${file}: missing waiver reason`);
-    }
-    if (typeof waiver.owner !== "string" || waiver.owner.trim().length === 0) {
-      errors.push(`${file}: missing waiver owner`);
-    }
-    if (!isValidDateOnly(waiver.createdAt)) {
-      errors.push(`${file}: missing or invalid waiver createdAt`);
-    }
-    if (!isValidDateOnly(waiver.reviewAfter)) {
+    if (!isValidDateOnly(reviewAfter)) {
       errors.push(`${file}: missing or invalid waiver reviewAfter`);
-    }
-    if (isValidDateOnly(waiver.createdAt) && isValidDateOnly(waiver.reviewAfter) && waiver.reviewAfter < waiver.createdAt) {
-      errors.push(`${file}: waiver reviewAfter must be on or after createdAt`);
-    }
-    if (typeof waiver.nextAction !== "string" || waiver.nextAction.trim().length === 0) {
-      errors.push(`${file}: missing waiver nextAction`);
-    }
-    if (
-      typeof waiver.directEnrollmentCondition !== "string" ||
-      waiver.directEnrollmentCondition.trim().length === 0
-    ) {
-      errors.push(`${file}: missing waiver directEnrollmentCondition`);
     }
   }
 
@@ -474,7 +433,7 @@ export function validateCriticalCoverageWaiverMetadata(
 }
 
 /**
- * @param {Record<string, object>} waivers
+ * @param {Record<string, string>} waivers
  * @param {{ today?: Date, lookaheadDays?: number, candidateFiles?: string[] }} [options]
  */
 export function collectCriticalCoverageWaiverReviewQueue(
@@ -493,19 +452,13 @@ export function collectCriticalCoverageWaiverReviewQueue(
   const due = [];
   const upcoming = [];
 
-  for (const [file, waiver] of Object.entries(waivers)) {
+  for (const [file, reviewAfter] of Object.entries(waivers)) {
     if (candidateSet && !candidateSet.has(file)) continue;
-    if (!isValidDateOnly(waiver?.reviewAfter)) continue;
-    const row = {
-      file,
-      owner: waiver.owner ?? "unknown",
-      reviewAfter: waiver.reviewAfter,
-      nextAction: waiver.nextAction ?? "",
-      directEnrollmentCondition: waiver.directEnrollmentCondition ?? "",
-    };
-    if (waiver.reviewAfter <= todayString) {
+    if (!isValidDateOnly(reviewAfter)) continue;
+    const row = { file, reviewAfter };
+    if (reviewAfter <= todayString) {
       due.push(row);
-    } else if (waiver.reviewAfter <= lookaheadString) {
+    } else if (reviewAfter <= lookaheadString) {
       upcoming.push(row);
     }
   }
@@ -548,149 +501,6 @@ function isHighStakesCoverageCandidate(file) {
     HIGH_STAKES_COVERAGE_CANDIDATE_PREFIXES.some((prefix) => file.startsWith(prefix)) ||
     HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS.some((pattern) => pattern.test(file))
   );
-}
-
-function buildCriticalCoverageWaiver(file) {
-  const isContractOnly =
-    file.endsWith("/constants.ts") ||
-    file.endsWith("/contracts.ts") ||
-    file.endsWith("-config.ts") ||
-    file.endsWith("authoritative-price-sources.ts") ||
-    file.endsWith("live-reserves-store.ts");
-  const isDeferred =
-    file.endsWith("storage-adapters.ts") ||
-    file.endsWith("pricing-provider-lifecycle.ts") ||
-    file.endsWith("pricing-provider-diagnostics.ts") ||
-    file.endsWith("pricing-source-policy.ts") ||
-    file.endsWith("redemption-backstop-scoring.ts") ||
-    file.endsWith("safety-score-history.ts") ||
-    file.includes("/psi-");
-  const disposition = isContractOnly ? "barrel-or-contract" : isDeferred ? "deferred-ratchet" : "covered-by-enrolled-entrypoint";
-
-  return {
-    disposition,
-    owner: "platform",
-    createdAt: CRITICAL_COVERAGE_WAIVER_CREATED_AT,
-    reviewAfter: waiverReviewAfterForFile(file),
-    reason: waiverReasonForFile(file),
-    nextAction: waiverNextActionForFile(file, disposition),
-    directEnrollmentCondition: waiverDirectEnrollmentConditionForFile(file, disposition),
-  };
-}
-
-function waiverReviewAfterForFile(file) {
-  if (file.includes("/depeg-resolver/") || file.includes("/depeg-resolver-")) {
-    return CRITICAL_COVERAGE_WAIVER_DDR_REVIEW_AFTER;
-  }
-  return CRITICAL_COVERAGE_WAIVER_DEFAULT_REVIEW_AFTER;
-}
-
-function waiverReasonForFile(file) {
-  if (file.includes("/sync-stablecoins/")) {
-    return "Pricing sync split helper is covered through the enrolled sync-stablecoins/enrich-prices critical suite; promote it when it becomes an independently edited decision surface.";
-  }
-  if (file.includes("/address-price-providers/")) {
-    return "Provider-specific fetcher is covered through the enrolled address-price provider suite, but not ratcheted independently until provider-specific critical behavior grows.";
-  }
-  if (file.endsWith("authoritative-price-sources.ts") || file.endsWith("live-reserves-store.ts")) {
-    return "Barrel module with no standalone runtime behavior; ratchet the concrete implementation modules instead.";
-  }
-  if (file.includes("/depeg-resolver/")) {
-    return "DDR helper is covered by enrolled depeg-resolver cron tests, but is not a standalone critical-coverage target yet.";
-  }
-  if (file.endsWith("depeg-resolver-methodology.ts")) {
-    return "DDR methodology envelope helper is covered by enrolled depeg-resolver API tests that assert the public methodology payload.";
-  }
-  if (file.includes("/depeg-resolver-")) {
-    return "DDR durable store or validator module is covered by depeg-resolver store/cron tests, but is tracked as a reviewed support surface until promoted to a standalone critical-coverage target.";
-  }
-  if (file.includes("/dews/")) {
-    return "DEWS support helper is covered by the enrolled compute-dews suite; promote it if it becomes a scoring decision boundary.";
-  }
-  if (file.includes("sync-live-reserves")) {
-    return "Live-reserve support/config helper is covered by the enrolled sync-live-reserves suite; promote it if it starts owning persistence or scoring logic.";
-  }
-  if (file.includes("/psi-")) {
-    return "PSI support module has focused tests outside the critical coverage lane; keep waived until PSI recompute/history or client-display tests join the critical suite.";
-  }
-  if (file.endsWith("redemption-backstop-scoring.ts")) {
-    return "Redemption backstop scoring has focused tests outside the critical coverage lane; keep waived until report-card scoring joins the critical suite.";
-  }
-  if (file.endsWith("safety-score-history.ts")) {
-    return "Safety score history endpoint has focused API tests outside the critical coverage lane; keep waived until that endpoint joins the critical suite.";
-  }
-  return "Reviewed high-stakes support module; current critical behavior is covered by an enrolled entrypoint test suite.";
-}
-
-function waiverNextActionForFile(file, disposition) {
-  if (disposition === "barrel-or-contract") {
-    return "Keep as a metadata-only waiver while the module remains a barrel, config, or contract surface; enroll the concrete runtime module instead.";
-  }
-  if (file.includes("/sync-stablecoins/")) {
-    return "Review split pricing helpers for independent source-selection, fallback, or publication behavior before the next coverage ratchet cycle.";
-  }
-  if (file.includes("/address-price-providers/")) {
-    return "Add provider-specific critical tests before promoting the fetcher from entrypoint-covered waiver to direct coverage.";
-  }
-  if (file.endsWith("depeg-resolver-incident-store.ts") || file.endsWith("depeg-resolver-publication-store.ts")) {
-    return "Add direct DDR store tests for row mapping, state transitions, malformed payloads, and D1 failures before enrollment.";
-  }
-  if (file.includes("/depeg-resolver/") || file.includes("/depeg-resolver-")) {
-    return "Review DDR support helpers after the store-level test tranche and promote any decision-boundary module to direct coverage.";
-  }
-  if (file.includes("/dews/")) {
-    return "Promote to direct coverage if the helper starts owning DEWS scoring decisions instead of support plumbing.";
-  }
-  if (file.includes("sync-live-reserves") || file.includes("live-reserves-store")) {
-    return "Promote reserve support modules when persistence, scoring, or row-decoding behavior has direct critical tests.";
-  }
-  if (file.includes("/psi-")) {
-    return "Promote PSI support modules when the PSI recompute/history or client-display test lane is added to critical coverage.";
-  }
-  if (file.endsWith("redemption-backstop-scoring.ts")) {
-    return "Promote redemption backstop scoring when report-card scoring tests become part of critical coverage.";
-  }
-  if (file.endsWith("safety-score-history.ts")) {
-    return "Promote the safety-score history endpoint when its focused API tests become part of critical coverage.";
-  }
-  return "Review whether entrypoint coverage still exercises the file's critical behavior; add direct tests before enrollment.";
-}
-
-function waiverDirectEnrollmentConditionForFile(file, disposition) {
-  if (disposition === "barrel-or-contract") {
-    return "Runtime behavior is added to this module, or the barrel starts hiding critical branch logic that cannot be ratcheted through concrete implementation files.";
-  }
-  if (file.includes("/sync-stablecoins/")) {
-    return "Focused critical tests cover the helper's source selection, fallback, cache-publication, or payload-shaping behavior without relying only on the enrolled sync entrypoint.";
-  }
-  if (file.includes("/address-price-providers/")) {
-    return "Provider-specific tests cover success, malformed response, non-OK response, timeout or circuit behavior, and normalized diagnostics.";
-  }
-  if (file.endsWith("depeg-resolver-incident-store.ts")) {
-    return "Direct incident-store tests cover row mapping, lock transitions, malformed payload handling, and D1 failure behavior.";
-  }
-  if (file.endsWith("depeg-resolver-publication-store.ts")) {
-    return "Direct publication-store tests cover publication row mapping, payload validation, projection reads, and D1 failure behavior.";
-  }
-  if (file.includes("/depeg-resolver/") || file.includes("/depeg-resolver-")) {
-    return "Direct DDR tests cover the helper's decision boundary or durable-store behavior instead of only cron-level orchestration.";
-  }
-  if (file.includes("/dews/")) {
-    return "Direct DEWS tests cover scoring or source-state decisions owned by the helper.";
-  }
-  if (file.includes("sync-live-reserves") || file.includes("live-reserves-store")) {
-    return "Direct reserve tests cover persistence, row decoding, or scoring behavior owned by the module.";
-  }
-  if (file.includes("/psi-")) {
-    return "Direct PSI recompute, replay, eligibility, contribution, or display tests are included in the critical coverage suite.";
-  }
-  if (file.endsWith("redemption-backstop-scoring.ts")) {
-    return "Direct redemption backstop scoring tests are included in the critical coverage suite.";
-  }
-  if (file.endsWith("safety-score-history.ts")) {
-    return "Focused safety-score history API tests are included in the critical coverage suite.";
-  }
-  return "Direct critical tests cover this module's high-stakes behavior independently of the enrolled entrypoint suite.";
 }
 
 function toUtcDateOnly(date) {

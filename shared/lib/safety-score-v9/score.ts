@@ -23,6 +23,7 @@ import {
 import type { V9OperationalResilienceResult } from "./operational-resilience";
 import type { V9WrapperParentLimit } from "./wrapper-risk";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
+import { compareText } from "./primitives";
 
 export interface V9PillarReason {
   code: V9ReasonCode;
@@ -98,10 +99,6 @@ export function projectV9DependencyScore(
 }
 
 const PILLAR_KEYS = ["backing", "exit", "control"] as const;
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 export function propagateV9SerialParentAdverseAttribution(
   upstreamAssetId: string,

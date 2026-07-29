@@ -761,11 +761,6 @@ export interface StatusDashboardModelFixtureInputs {
     probesUpdatedAt: number;
     historyUpdatedAt: number;
     requestSourceUpdatedAt: number;
-    statusAttemptedAt: number;
-    healthAttemptedAt: number;
-    probesAttemptedAt: number;
-    historyAttemptedAt: number;
-    requestSourceAttemptedAt: number;
   };
   nowMs: number;
   statusError: Error | null;
@@ -797,11 +792,6 @@ export function makeCurrentStatusDashboardInputs(
       probesUpdatedAt: updatedAt,
       historyUpdatedAt: updatedAt,
       requestSourceUpdatedAt: updatedAt,
-      statusAttemptedAt: updatedAt,
-      healthAttemptedAt: updatedAt,
-      probesAttemptedAt: updatedAt,
-      historyAttemptedAt: updatedAt,
-      requestSourceAttemptedAt: updatedAt,
     },
     nowMs: STATUS_FIXTURE_NOW_MS,
     statusError: null,
@@ -829,10 +819,6 @@ export function makeMissingNeverLoadedEvidenceInputs(): StatusDashboardModelFixt
       probesUpdatedAt: 0,
       historyUpdatedAt: 0,
       requestSourceUpdatedAt: 0,
-      healthAttemptedAt: 0,
-      probesAttemptedAt: 0,
-      historyAttemptedAt: 0,
-      requestSourceAttemptedAt: 0,
     },
   });
 }
@@ -844,23 +830,14 @@ export function makeStaleEvidenceInputs(): StatusDashboardModelFixtureInputs {
       statusUpdatedAt: staleAt,
       healthUpdatedAt: staleAt,
       probesUpdatedAt: staleAt,
-      statusAttemptedAt: staleAt,
-      healthAttemptedAt: staleAt,
-      probesAttemptedAt: staleAt,
     },
   });
 }
 
 export function makeBackgroundRefreshFailureInputs(): StatusDashboardModelFixtureInputs {
-  const failedAttemptAt = STATUS_FIXTURE_NOW_MS - 1_000;
   return makeCurrentStatusDashboardInputs({
     statusError: new Error("Fixture status refresh failed; retained last-good data."),
     healthError: new Error("Fixture health refresh failed; retained last-good data."),
     probesError: new Error("Fixture probe refresh failed; retained last-good data."),
-    querySyncs: {
-      statusAttemptedAt: failedAttemptAt,
-      healthAttemptedAt: failedAttemptAt,
-      probesAttemptedAt: failedAttemptAt,
-    },
   });
 }

@@ -24,6 +24,7 @@ import type { V9ExitEvaluationResult, V9ExitHolderEligibility } from "./exit";
 import type { V9PillarReason, V9ProductionScoreInput, V9ProductionScoreTrace } from "./score";
 import type { V9PublicStressState } from "./stress";
 import { computeV9ResultDigest } from "./trace";
+import { compareText, uniqueSorted } from "./primitives";
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
   reasons?: readonly V9PillarReason[];
@@ -100,14 +101,6 @@ const ROUTE_FAMILY_LABELS: Readonly<Record<string, string>> = {
   "protocol-redemption": "Protocol redemption",
   "eventual-redemption": "Eventual redemption",
 };
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function uniqueSorted<T extends string>(values: readonly T[]): T[] {
-  return [...new Set(values)].sort(compareText);
-}
 
 function humanizeLabel(value: string): string {
   const tail = value.includes(":") ? value.slice(value.lastIndexOf(":") + 1) : value;

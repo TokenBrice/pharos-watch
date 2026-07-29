@@ -201,7 +201,6 @@
     "shared/lib/mint-authority-scoring.ts": 89.9,
     "shared/lib/peg-score.ts": 92.1,
     "shared/lib/psi-eligible.ts": 100,
-    "shared/lib/safety-score-v9-compiler.ts": 85.6,
     "shared/lib/safety-score-v9-research.ts": 98.3,
     "shared/lib/safety-score-v9-supply-attribution-journal.ts": 89.7,
     "shared/lib/yield-scoring.ts": 89.3,

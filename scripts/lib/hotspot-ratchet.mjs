@@ -10,7 +10,6 @@ export const TARGET_FILES = [
   "shared/lib/report-cards.ts",
   "shared/lib/format.ts",
   "shared/lib/redemption-backstop-scoring.ts",
-  "shared/lib/safety-score-v9-compiler.ts",
   "shared/lib/safety-score-v9/backing.ts",
   "shared/lib/safety-score-v9/control.ts",
   "shared/lib/safety-score-v9/coverage.ts",

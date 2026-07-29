@@ -23,7 +23,6 @@ const STABLECOINS_CACHE_WITH_USDC = JSON.stringify({
 
 const mockShouldAttemptFetch = vi.fn();
 const mockRecordOutcome = vi.fn();
-const mockInspectLegacyOverflowBacklog = vi.fn();
 const fixtureSqliteDatabases: DatabaseSync[] = [];
 
 function safetyScoreIdentity(publicationGenerationId: string) {
@@ -45,14 +44,6 @@ vi.mock("../../lib/circuit-breaker", () =>
     recordOutcomeFn: mockRecordOutcome,
   }),
 );
-
-vi.mock("../telegram-legacy-overflow-import", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../telegram-legacy-overflow-import")>();
-  return {
-    ...actual,
-    inspectAndImportLegacyOverflowBacklog: mockInspectLegacyOverflowBacklog,
-  };
-});
 
 const mockSendToChat = vi.fn();
 const mockSendBatch = vi.fn();
@@ -136,10 +127,8 @@ vi.mock("../../lib/telegram-alerts", async (importOriginal) => {
 });
 
 const { dispatchTelegramAlerts } = await import("../dispatch-telegram-alerts");
-const { deliverTelegramSubscriberQueue } = await import("../dispatch-telegram-delivery");
 const { pruneOverflowPlanBacklogForChat } = await import("../dispatch-telegram-overflow");
-const { buildDedupeKey, emptyDrainResult } = await import("../telegram-pending");
-const { TELEGRAM_MAX_MESSAGES_PER_RUN, TELEGRAM_FORMAT_BUDGET_ALLOWANCE, TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } =
+const { TELEGRAM_MAX_MESSAGES_PER_RUN, TELEGRAM_FORMAT_BUDGET_ALLOWANCE } =
   await import("../../lib/telegram-constants");
 
 function makeCanonicalSafetySourceCaches(
@@ -309,7 +298,6 @@ function resetDispatchTelegramAlertsTest() {
   formatConsolidatedMessageSpy.mockReset();
   mockShouldAttemptFetch.mockReset();
   mockRecordOutcome.mockReset();
-  mockInspectLegacyOverflowBacklog.mockReset();
   mockSendToChat.mockReset();
   mockSendBatch.mockReset();
   telegramDeliveryTranscript.length = 0;
@@ -318,16 +306,6 @@ function resetDispatchTelegramAlertsTest() {
 
   mockShouldAttemptFetch.mockResolvedValue(true);
   mockRecordOutcome.mockResolvedValue(undefined);
-  mockInspectLegacyOverflowBacklog.mockResolvedValue({
-    state: "absent",
-    digest: null,
-    sourceEventId: null,
-    observedBytes: 0,
-    observedPlanCount: null,
-    importCursor: 0,
-    importedTargetCount: 0,
-    errorClass: null,
-  });
   mockSendToChat.mockImplementation(async (chatId, html, botToken, options) =>
     recordDisabledTelegramDelivery(chatId, html, botToken, options ?? {}),
   );
@@ -874,24 +852,6 @@ function readCacheValue(sqlite: DatabaseSync, key: string): string | null {
   return row?.value ?? null;
 }
 
-function recordPendingEnqueueAttempts(sqlite: DatabaseSync): void {
-  sqlite.exec(`
-    CREATE TABLE telegram_pending_enqueue_transcript (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      dedupe_key TEXT NOT NULL,
-      attempts INTEGER NOT NULL,
-      not_before_at INTEGER,
-      expires_at INTEGER
-    );
-    CREATE TRIGGER record_telegram_pending_enqueue_attempt
-    BEFORE INSERT ON telegram_pending_alerts
-    BEGIN
-      INSERT INTO telegram_pending_enqueue_transcript (dedupe_key, attempts, not_before_at, expires_at)
-      VALUES (NEW.dedupe_key, NEW.attempts, NEW.not_before_at, NEW.expires_at);
-    END;
-  `);
-}
-
 function defaultDispatchCaches(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const now = nowSec();
   const safety = makeCanonicalSafetySourceCaches({}, now - 60);
@@ -909,21 +869,15 @@ export {
   STABLECOINS_CACHE_WITH_USDC,
   mockShouldAttemptFetch,
   mockRecordOutcome,
-  mockInspectLegacyOverflowBacklog,
   mockSendToChat,
-  mockSendBatch,
   telegramDeliveryTranscript,
   scriptTelegramDeliveries,
   scriptTelegramDeliveriesForChat,
   formatConsolidatedMessageSpy,
   dispatchTelegramAlerts,
-  deliverTelegramSubscriberQueue,
   pruneOverflowPlanBacklogForChat,
-  buildDedupeKey,
-  emptyDrainResult,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
-  TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
   seedActiveSafetySource,
   makeSafetySnapshotCache,
   makeDewsOverflowPlan,
@@ -933,6 +887,5 @@ export {
   createDispatchHarness,
   defaultDispatchCaches,
   readCacheValue,
-  recordPendingEnqueueAttempts,
   type CronProgressUpdate,
 };

@@ -108,9 +108,7 @@ export function runCriticalCoverageCompletenessGuard({
     if (waiverReviewQueue.upcoming.length > 0) {
       consoleImpl.log("[coverage] Critical coverage waiver reviews due soon:");
       for (const waiver of waiverReviewQueue.upcoming) {
-        consoleImpl.log(
-          `  ${waiver.file} reviewAfter=${waiver.reviewAfter} owner=${waiver.owner} nextAction=${waiver.nextAction}`,
-        );
+        consoleImpl.log(`  ${waiver.file} reviewAfter=${waiver.reviewAfter}`);
       }
     }
     return true;
@@ -138,9 +136,7 @@ export function runCriticalCoverageCompletenessGuard({
   if (waiverReviewQueue.due.length > 0) {
     consoleImpl.error("[coverage] Critical coverage waiver reviews are due or overdue:");
     for (const waiver of waiverReviewQueue.due) {
-      consoleImpl.error(
-        `  ${waiver.file} reviewAfter=${waiver.reviewAfter} owner=${waiver.owner} nextAction=${waiver.nextAction}`,
-      );
+      consoleImpl.error(`  ${waiver.file} reviewAfter=${waiver.reviewAfter}`);
     }
   }
   consoleImpl.error(

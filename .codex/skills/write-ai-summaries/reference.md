@@ -10,8 +10,8 @@ Stablecoin metadata lives in `shared/data/stablecoins/coins/*.json` (generated i
 
 - **Classification flags**: `flags.backing`, `flags.governance`, `flags.pegCurrency`, `flags.yieldBearing`, `flags.navToken`
 - **Collateral & mechanism**: `collateral` (free-text description), `pegMechanism` (how peg is maintained)
-- **Reserve composition**: `reserves[]` — slices with `name`, `pct`, `risk` (very-low to very-high), and optional `coinId` + `depType` for dependency tracking. This reveals concentration risk, exotic collateral, and upstream dependencies
-- **Resilience sub-factors**: `custodyModel` (onchain / institutional-top / institutional-regulated / institutional-unregulated / cex), `chainTier` (ethereum / stage1-l2 / mature-alt-l1 / unproven), `collateralQuality` (native / rwa / eth-lst / exotic), `governanceQuality` (immutable-code / dao-governance / multisig / regulated-entity / single-entity), `deploymentModel` (single-chain / canonical-bridge / native-multichain)
+- **Reserve composition**: `reserves[]` — slices with `name`, `pct`, `coinId` + `depType` for dependency tracking, and the V9 scoring fields (`assetClass`, `issuerOrObligor`, `liquidityHorizon`, `maturityDaysMax`, `riskFactors`) that make a reserve-structure paragraph specific. For many coins this lives in the sidecar `shared/data/stablecoins/domains/reserves/<id>.json`, alongside `reserveReview` and `custodyProfile` — not the base file
+- **Resilience sub-factors**: `custodyModel`, `chainTier`, `collateralQuality`, `governanceQuality`, `deploymentModel` — valid values live in `shared/types/core.ts` (the source file wins). These drive the Selector and DDR verdicts, not V9 grades
 - **Jurisdiction**: `jurisdiction.country`, `jurisdiction.regulator`, `jurisdiction.license`
 - **Proof of reserves**: `proofOfReserves.type` (independent-audit / real-time / self-reported), `.provider`
 - **Dependencies**: `dependencies[]` — upstream stablecoins with `weight` and `type` (wrapper / mechanism / collateral)
@@ -25,11 +25,11 @@ Stablecoin metadata lives in `shared/data/stablecoins/coins/*.json` (generated i
 
 The detail page at `pharos.watch/stablecoin/{id}` shows live scoring and analytical data. Use the browser tool (claude-in-chrome or Playwright in Claude Code; `agent-browser` in Codex) to check:
 
-- **Report card**: Overall grade (A+ to F/NR) and 5-dimension breakdown — peg stability, liquidity, resilience, decentralization, dependency risk. Look for the interesting story: a strong overall grade with one weak dimension, or vice versa
+- **Report card (Safety Score V9)**: Overall grade (A+ to F, or NR when evidence is insufficient) and the three pillars — backing, exit, economic control — with per-mechanism breakdown bars, binding caps ("why not higher"), and the mechanism review panel. Look for the interesting story: a strong overall grade with one weak pillar, a cap-held score, or an NR on a well-known coin
 - **Peg score**: 0-100 score, active depeg status, depeg event count, worst historical deviation
 - **Liquidity score**: 0-100 score, DEX TVL, concentration (HHI), coverage class (primary vs fallback)
 - **Redemption backstop**: Route family (stablecoin-redeem / collateral-redeem / psm-swap / offchain-issuer), access model (permissionless vs whitelisted), settlement speed, fee bps, capacity ratio
-- **DEWS stress band**: CALM / WATCH / ALERT / WARNING / DANGER
+- **DEWS stress band**: CALM→DANGER scale; the band vocabulary lives in `shared/lib/dews-config.ts` (source file wins)
 - **Yield**: Current APY, yield-to-risk ratio, safety grade
 - **Mint/burn flows**: Net flow direction, flow intensity, pressure shift
 

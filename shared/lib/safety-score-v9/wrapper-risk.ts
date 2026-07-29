@@ -6,6 +6,7 @@ import {
   type V9WrapperLocalFactKey,
   type V9WrapperRiskAssessment,
 } from "../../types/safety-score-v9-wrapper";
+import { compareText } from "./primitives";
 
 export type { V9WrapperForm } from "../../types/safety-score-v9-wrapper";
 
@@ -69,10 +70,6 @@ const ASSESSMENT_MULTIPLIER = {
   high: 0.7,
   critical: 1,
 } as const satisfies Readonly<Record<V9WrapperRiskAssessment, number>>;
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function roundPoints(value: number): number {
   return Math.round(value * 10_000) / 10_000;

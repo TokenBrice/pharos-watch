@@ -23,6 +23,7 @@ import {
   type SafetyScorePublicationIdentity,
 } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
+import { isRecord } from "@shared/lib/type-guards";
 import { ReportCardsV9CompatibleResponseSchema } from "@shared/types/report-cards-v9";
 
 const IMMUTABLE_CACHE_CONTROL = "public, s-maxage=31536000, max-age=31536000, immutable";
@@ -71,10 +72,6 @@ function safeParseSafetyScoreIdentity(value: string): SafetyScorePublicationIden
 
 function parseSafetyScoreIdentity(value: unknown): SafetyScorePublicationIdentity | null {
   return SafetyScorePublicationIdentitySchema.safeParse(value).data ?? null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 interface StoredSnapshotEnvelope {

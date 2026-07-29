@@ -83,24 +83,6 @@ async function loadTargetEffectRows(
   return rowsByIdentity;
 }
 
-export function createTelegramFreshTargetOwner(): string {
-  const cryptoObj = (globalThis as {
-    crypto?: {
-      randomUUID?: () => string;
-      getRandomValues?: <T extends ArrayBufferView>(array: T) => T;
-    };
-  }).crypto;
-  if (!cryptoObj) throw new Error("Web Crypto is required for Telegram fresh target ownership");
-  const suffix = cryptoObj.randomUUID?.() ?? (() => {
-    if (!cryptoObj.getRandomValues) {
-      throw new Error("Secure randomness is required for Telegram fresh target ownership");
-    }
-    const words = cryptoObj.getRandomValues(new Uint32Array(4));
-    return [...words].map((word) => word.toString(16).padStart(8, "0")).join("");
-  })();
-  return `fresh-${suffix}`;
-}
-
 /**
  * Claim exact manifest targets before a send wave. Only an expired pre-effect
  * claim may be taken over; `sending` is never reclaimed automatically.

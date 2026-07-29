@@ -11,6 +11,7 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { decodeJsonString } from "../../../lib/cache-json";
 import { isMissingTableError } from "../../../lib/db";
+import { toErrorMessage } from "../../../lib/error-utils";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../../lib/dex-liquidity";
 import {
   CONTRACT_CONFIGS,
@@ -102,10 +103,6 @@ interface DexLiquidityPublicationGenerationRow {
   published_at: number | null;
   failed_at: number | null;
   failure_reason: string | null;
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 async function loadDexLiquidityPublicationDiagnostics(

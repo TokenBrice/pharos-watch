@@ -25,6 +25,7 @@ const USAGE_DAILY_RETENTION_SEC = 400 * DAY_SEC;
 const CHAT_DIAGNOSTICS_RETENTION_SEC = 90 * DAY_SEC;
 const SHORT_LIVED_CHAT_CACHE_RETENTION_SEC = 7 * DAY_SEC;
 const RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC = 30 * DAY_SEC;
+const MINI_APP_MUTATION_BURST_CACHE_PREFIX = "telegram:mini-app-mutation-burst:";
 const RETENTION_DELETE_BATCH_LIMIT = 10_000;
 const HIGH_VOLUME_RETENTION_DELETE_LIMIT = 100_000;
 export const TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT = 1_000;
@@ -109,40 +110,26 @@ export interface CappedDeleteResult {
   cappedAtLimit: boolean;
 }
 
+interface CappedDeleteOptions {
+  signal?: AbortSignal;
+  totalLimit?: number;
+  /** Cutoff placeholders the statement binds ahead of its LIMIT. */
+  cutoffBindCount?: 1 | 2;
+}
+
 async function deleteOlderThanCapped(
   db: D1Database,
   sql: string,
   cutoff: number | string,
-  signal?: AbortSignal,
-  totalLimit = RETENTION_DELETE_BATCH_LIMIT,
+  options: CappedDeleteOptions = {},
 ): Promise<CappedDeleteResult> {
+  const { signal, totalLimit = RETENTION_DELETE_BATCH_LIMIT, cutoffBindCount = 2 } = options;
   let pruned = 0;
   while (pruned < totalLimit) {
     throwIfAborted(signal);
     const batchLimit = Math.min(RETENTION_DELETE_BATCH_LIMIT, totalLimit - pruned);
-    const result = await runWithOverloadRetry(() => db.prepare(sql).bind(cutoff, cutoff, batchLimit).run(), 3, signal);
-    const batchPruned = Number(result.meta?.changes ?? 0);
-    pruned += batchPruned;
-    if (batchPruned < batchLimit) break;
-  }
-  return {
-    pruned,
-    cappedAtLimit: pruned >= totalLimit,
-  };
-}
-
-async function deleteSourceChildrenOlderThanCapped(
-  db: D1Database,
-  sql: string,
-  cutoff: number,
-  signal?: AbortSignal,
-  totalLimit = RETENTION_DELETE_BATCH_LIMIT,
-): Promise<CappedDeleteResult> {
-  let pruned = 0;
-  while (pruned < totalLimit) {
-    throwIfAborted(signal);
-    const batchLimit = Math.min(RETENTION_DELETE_BATCH_LIMIT, totalLimit - pruned);
-    const result = await runWithOverloadRetry(() => db.prepare(sql).bind(cutoff, batchLimit).run(), 3, signal);
+    const binds = cutoffBindCount === 2 ? [cutoff, cutoff, batchLimit] : [cutoff, batchLimit];
+    const result = await runWithOverloadRetry(() => db.prepare(sql).bind(...binds).run(), 3, signal);
     const batchPruned = Number(result.meta?.changes ?? 0);
     pruned += batchPruned;
     if (batchPruned < batchLimit) break;
@@ -202,7 +189,7 @@ async function pruneTelegramHighGrowthRetention(
     )`;
 
   try {
-    const legacyTargetItems = await deleteSourceChildrenOlderThanCapped(
+    const legacyTargetItems = await deleteOlderThanCapped(
       db,
       `/* pharos:telegram:legacy-terminal-target-items-retention */
        DELETE FROM telegram_alert_job_target_items
@@ -217,14 +204,13 @@ async function pruneTelegramHighGrowthRetention(
            LIMIT ?
         )`,
       terminalCutoff,
-      signal,
-      highGrowthDeleteLimit,
+      { signal, totalLimit: highGrowthDeleteLimit, cutoffBindCount: 1 },
     );
     result.legacyTargetItemsPruned = legacyTargetItems.pruned;
     result.cappedAtLimit ||= legacyTargetItems.cappedAtLimit;
     throwIfAborted(signal);
 
-    const legacyTargets = await deleteSourceChildrenOlderThanCapped(
+    const legacyTargets = await deleteOlderThanCapped(
       db,
       `/* pharos:telegram:legacy-terminal-targets-retention */
        DELETE FROM telegram_alert_job_targets
@@ -236,8 +222,7 @@ async function pruneTelegramHighGrowthRetention(
            LIMIT ?
         )`,
       terminalCutoff,
-      signal,
-      highGrowthDeleteLimit,
+      { signal, totalLimit: highGrowthDeleteLimit, cutoffBindCount: 1 },
     );
     result.legacyTargetsPruned = legacyTargets.pruned;
     result.cappedAtLimit ||= legacyTargets.cappedAtLimit;
@@ -265,8 +250,7 @@ async function pruneTelegramHighGrowthRetention(
              LIMIT ?
       )`,
       terminalCutoff,
-      signal,
-      highGrowthDeleteLimit,
+      { signal, totalLimit: highGrowthDeleteLimit },
     );
     result.legacyTerminalJobsPruned = legacyTerminalJobs.pruned;
     result.cappedAtLimit ||= legacyTerminalJobs.cappedAtLimit;
@@ -294,8 +278,7 @@ async function pruneTelegramHighGrowthRetention(
              LIMIT ?
       )`,
       unresolvedCutoff,
-      signal,
-      highGrowthDeleteLimit,
+      { signal, totalLimit: highGrowthDeleteLimit },
     );
     result.staleUnresolvedJobsPruned = staleUnresolvedJobs.pruned;
     result.cappedAtLimit ||= staleUnresolvedJobs.cappedAtLimit;
@@ -440,7 +423,40 @@ export function pruneTelegramMiniAppMutationBurstCache(
   cutoff: number,
   signal?: AbortSignal,
 ): Promise<CappedDeleteResult> {
-  return deleteCachePrefixOlderThanCapped(db, "telegram:mini-app-mutation-burst:", cutoff, signal);
+  return deleteCachePrefixOlderThanCapped(db, MINI_APP_MUTATION_BURST_CACHE_PREFIX, cutoff, signal);
+}
+
+/**
+ * One homogeneous capped-delete retention step. `countsTowardRunBudget` marks
+ * the high-volume families whose cap truncates the whole retention run.
+ */
+type TelegramRetentionDeleteStep =
+  | {
+      name: string;
+      sql: string;
+      cutoff: number | string;
+      cutoffBindCount: 1 | 2;
+      totalLimit?: number;
+      countsTowardRunBudget?: boolean;
+    }
+  | {
+      name: string;
+      cachePrefix: string;
+      cutoff: number;
+    };
+
+function runTelegramRetentionDeleteStep(
+  db: D1Database,
+  step: TelegramRetentionDeleteStep,
+  signal?: AbortSignal,
+): Promise<CappedDeleteResult> {
+  return "cachePrefix" in step
+    ? deleteCachePrefixOlderThanCapped(db, step.cachePrefix, step.cutoff, signal)
+    : deleteOlderThanCapped(db, step.sql, step.cutoff, {
+      signal,
+      totalLimit: step.totalLimit,
+      cutoffBindCount: step.cutoffBindCount,
+    });
 }
 
 export async function runTelegramRetentionCleanup(
@@ -477,9 +493,16 @@ export async function runTelegramRetentionCleanup(
     signal,
   );
   throwIfAborted(signal);
-  const targetPlanItems = await deleteSourceChildrenOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_target_plan_items
+
+  // `day` is TEXT (YYYY-MM-DD) in telegram_usage_daily and
+  // telegram_watcher_lifecycle_daily; an integer cutoff would never match. Bind
+  // the cutoff as a YYYY-MM-DD string so the comparison is text-vs-text.
+  const cutoffDayString = new Date((nowSec - USAGE_DAILY_RETENTION_SEC) * 1000).toISOString().slice(0, 10);
+
+  const retentionDeleteSteps = [
+    {
+      name: "targetPlanItems",
+      sql: `DELETE FROM telegram_alert_target_plan_items
       WHERE rowid IN (
         SELECT child.rowid
           FROM telegram_alert_source_events source
@@ -490,15 +513,14 @@ export async function runTelegramRetentionCleanup(
          ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
          LIMIT ?
       )`,
-    workflowCutoff,
-    signal,
-    HIGH_VOLUME_RETENTION_DELETE_LIMIT,
-  );
-  throwIfAborted(signal);
-
-  const targetPlanPages = await deleteSourceChildrenOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_target_plan_pages
+      cutoff: workflowCutoff,
+      cutoffBindCount: 1,
+      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
+      countsTowardRunBudget: true,
+    },
+    {
+      name: "targetPlanPages",
+      sql: `DELETE FROM telegram_alert_target_plan_pages
       WHERE rowid IN (
         SELECT child.rowid
           FROM telegram_alert_source_events source
@@ -509,14 +531,12 @@ export async function runTelegramRetentionCleanup(
          ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
          LIMIT ?
       )`,
-    workflowCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const planningSubscribers = await deleteSourceChildrenOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_planning_subscribers
+      cutoff: workflowCutoff,
+      cutoffBindCount: 1,
+    },
+    {
+      name: "planningSubscribers",
+      sql: `DELETE FROM telegram_alert_planning_subscribers
       WHERE rowid IN (
         SELECT child.rowid
           FROM telegram_alert_source_events source
@@ -527,15 +547,14 @@ export async function runTelegramRetentionCleanup(
          ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
          LIMIT ?
       )`,
-    workflowCutoff,
-    signal,
-    HIGH_VOLUME_RETENTION_DELETE_LIMIT,
-  );
-  throwIfAborted(signal);
-
-  const targetExpiryProgress = await deleteSourceChildrenOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_target_expiry_progress
+      cutoff: workflowCutoff,
+      cutoffBindCount: 1,
+      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
+      countsTowardRunBudget: true,
+    },
+    {
+      name: "targetExpiryProgress",
+      sql: `DELETE FROM telegram_alert_target_expiry_progress
       WHERE rowid IN (
         SELECT child.rowid
           FROM telegram_alert_source_events source
@@ -547,14 +566,12 @@ export async function runTelegramRetentionCleanup(
          ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
          LIMIT ?
       )`,
-    workflowCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const replayJobTargetItems = await deleteSourceChildrenOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_job_target_items
+      cutoff: workflowCutoff,
+      cutoffBindCount: 1,
+    },
+    {
+      name: "replayJobTargetItems",
+      sql: `DELETE FROM telegram_alert_job_target_items
       WHERE rowid IN (
         SELECT item.rowid
           FROM telegram_alert_source_events source
@@ -575,15 +592,14 @@ export async function runTelegramRetentionCleanup(
          ORDER BY source.completed_at ASC, source.source_event_id ASC, item.rowid ASC
          LIMIT ?
       )`,
-    replayCutoff,
-    signal,
-    HIGH_VOLUME_RETENTION_DELETE_LIMIT,
-  );
-  throwIfAborted(signal);
-
-  const replayJobTargets = await deleteSourceChildrenOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_job_targets
+      cutoff: replayCutoff,
+      cutoffBindCount: 1,
+      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
+      countsTowardRunBudget: true,
+    },
+    {
+      name: "replayJobTargets",
+      sql: `DELETE FROM telegram_alert_job_targets
       WHERE rowid IN (
         SELECT target.rowid
           FROM telegram_alert_source_events source
@@ -602,15 +618,14 @@ export async function runTelegramRetentionCleanup(
          ORDER BY source.completed_at ASC, source.source_event_id ASC, target.rowid ASC
          LIMIT ?
       )`,
-    replayCutoff,
-    signal,
-    HIGH_VOLUME_RETENTION_DELETE_LIMIT,
-  );
-  throwIfAborted(signal);
-
-  const targetPlans = await deleteSourceChildrenOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_target_plans
+      cutoff: replayCutoff,
+      cutoffBindCount: 1,
+      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
+      countsTowardRunBudget: true,
+    },
+    {
+      name: "targetPlans",
+      sql: `DELETE FROM telegram_alert_target_plans
       WHERE rowid IN (
         SELECT plan.rowid
           FROM telegram_alert_source_events source
@@ -627,15 +642,14 @@ export async function runTelegramRetentionCleanup(
          ORDER BY source.completed_at ASC, source.source_event_id ASC, plan.rowid ASC
          LIMIT ?
       )`,
-    replayCutoff,
-    signal,
-    HIGH_VOLUME_RETENTION_DELETE_LIMIT,
-  );
-  throwIfAborted(signal);
-
-  const replayJobs = await deleteSourceChildrenOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_jobs
+      cutoff: replayCutoff,
+      cutoffBindCount: 1,
+      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
+      countsTowardRunBudget: true,
+    },
+    {
+      name: "replayJobs",
+      sql: `DELETE FROM telegram_alert_jobs
       WHERE rowid IN (
         SELECT job.rowid
           FROM telegram_alert_source_events source
@@ -650,14 +664,12 @@ export async function runTelegramRetentionCleanup(
          ORDER BY source.completed_at ASC, source.source_event_id ASC, job.rowid ASC
          LIMIT ?
       )`,
-    replayCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const replaySourceResolutionTargets = await deleteSourceChildrenOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_source_resolution_targets
+      cutoff: replayCutoff,
+      cutoffBindCount: 1,
+    },
+    {
+      name: "replaySourceResolutionTargets",
+      sql: `DELETE FROM telegram_alert_source_resolution_targets
       WHERE rowid IN (
         SELECT child.rowid
           FROM telegram_alert_source_events source
@@ -668,14 +680,12 @@ export async function runTelegramRetentionCleanup(
          ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
          LIMIT ?
       )`,
-    replayCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const replaySourceResolutionMemberships = await deleteSourceChildrenOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_source_resolution_memberships
+      cutoff: replayCutoff,
+      cutoffBindCount: 1,
+    },
+    {
+      name: "replaySourceResolutionMemberships",
+      sql: `DELETE FROM telegram_alert_source_resolution_memberships
       WHERE rowid IN (
         SELECT child.rowid
           FROM telegram_alert_source_events source
@@ -686,14 +696,12 @@ export async function runTelegramRetentionCleanup(
          ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
          LIMIT ?
       )`,
-    replayCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const replaySourceResolutionPages = await deleteSourceChildrenOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_source_resolution_pages
+      cutoff: replayCutoff,
+      cutoffBindCount: 1,
+    },
+    {
+      name: "replaySourceResolutionPages",
+      sql: `DELETE FROM telegram_alert_source_resolution_pages
       WHERE rowid IN (
         SELECT child.rowid
           FROM telegram_alert_source_events source
@@ -704,14 +712,12 @@ export async function runTelegramRetentionCleanup(
          ORDER BY source.completed_at ASC, source.source_event_id ASC, child.rowid ASC
          LIMIT ?
       )`,
-    replayCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const replaySourceEvents = await deleteOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_source_events
+      cutoff: replayCutoff,
+      cutoffBindCount: 1,
+    },
+    {
+      name: "replaySourceEvents",
+      sql: `DELETE FROM telegram_alert_source_events
       WHERE completed_at < ?
         AND rowid IN (
           SELECT source.rowid
@@ -734,88 +740,70 @@ export async function runTelegramRetentionCleanup(
            ORDER BY source.completed_at ASC, source.rowid ASC
            LIMIT ?
         )`,
-    replayCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const deadLetters = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_alert_dead_letters WHERE expired_at < ? AND id IN (SELECT id FROM telegram_alert_dead_letters WHERE expired_at < ? ORDER BY expired_at ASC, id ASC LIMIT ?)",
-    alertAuditCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const auditJobTargetItems = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_alert_job_target_items WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_job_target_items WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-    alertAuditCutoff,
-    signal,
-    HIGH_VOLUME_RETENTION_DELETE_LIMIT,
-  );
-  throwIfAborted(signal);
-
-  const auditJobTargets = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_alert_job_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_job_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-    alertAuditCutoff,
-    signal,
-    HIGH_VOLUME_RETENTION_DELETE_LIMIT,
-  );
-  throwIfAborted(signal);
-
-  const auditJobs = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_alert_jobs WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_jobs WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-    alertAuditCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const auditSourceResolutionTargets = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_alert_source_resolution_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-    alertAuditCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const auditSourceResolutionMemberships = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_alert_source_resolution_memberships WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_memberships WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-    alertAuditCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const auditSourceResolutionPages = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_alert_source_resolution_pages WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_pages WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-    alertAuditCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const freezeTargets = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_freeze_alert_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_freeze_alert_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
-    alertAuditCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const freezeEvents = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_freeze_alert_events WHERE detected_at < ? AND rowid IN (SELECT rowid FROM telegram_freeze_alert_events WHERE detected_at < ? ORDER BY detected_at ASC, rowid ASC LIMIT ?)",
-    alertAuditCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const auditSourceEvents = await deleteOlderThanCapped(
-    db,
-    `DELETE FROM telegram_alert_source_events
+      cutoff: replayCutoff,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "deadLetters",
+      sql: "DELETE FROM telegram_alert_dead_letters WHERE expired_at < ? AND id IN (SELECT id FROM telegram_alert_dead_letters WHERE expired_at < ? ORDER BY expired_at ASC, id ASC LIMIT ?)",
+      cutoff: alertAuditCutoff,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "auditJobTargetItems",
+      sql: "DELETE FROM telegram_alert_job_target_items WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_job_target_items WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+      cutoff: alertAuditCutoff,
+      cutoffBindCount: 2,
+      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
+      countsTowardRunBudget: true,
+    },
+    {
+      name: "auditJobTargets",
+      sql: "DELETE FROM telegram_alert_job_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_job_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+      cutoff: alertAuditCutoff,
+      cutoffBindCount: 2,
+      totalLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
+      countsTowardRunBudget: true,
+    },
+    {
+      name: "auditJobs",
+      sql: "DELETE FROM telegram_alert_jobs WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_jobs WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+      cutoff: alertAuditCutoff,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "auditSourceResolutionTargets",
+      sql: "DELETE FROM telegram_alert_source_resolution_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+      cutoff: alertAuditCutoff,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "auditSourceResolutionMemberships",
+      sql: "DELETE FROM telegram_alert_source_resolution_memberships WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_memberships WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+      cutoff: alertAuditCutoff,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "auditSourceResolutionPages",
+      sql: "DELETE FROM telegram_alert_source_resolution_pages WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_alert_source_resolution_pages WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+      cutoff: alertAuditCutoff,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "freezeTargets",
+      sql: "DELETE FROM telegram_freeze_alert_targets WHERE created_at < ? AND rowid IN (SELECT rowid FROM telegram_freeze_alert_targets WHERE created_at < ? ORDER BY created_at ASC, rowid ASC LIMIT ?)",
+      cutoff: alertAuditCutoff,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "freezeEvents",
+      sql: "DELETE FROM telegram_freeze_alert_events WHERE detected_at < ? AND rowid IN (SELECT rowid FROM telegram_freeze_alert_events WHERE detected_at < ? ORDER BY detected_at ASC, rowid ASC LIMIT ?)",
+      cutoff: alertAuditCutoff,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "auditSourceEvents",
+      sql: `DELETE FROM telegram_alert_source_events
       WHERE detected_at < ?
         AND rowid IN (
           SELECT source.rowid
@@ -838,10 +826,138 @@ export async function runTelegramRetentionCleanup(
            ORDER BY source.detected_at ASC, source.rowid ASC
            LIMIT ?
         )`,
-    alertAuditCutoff,
-    signal,
-  );
-  throwIfAborted(signal);
+      cutoff: alertAuditCutoff,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "usageDaily",
+      sql: "DELETE FROM telegram_usage_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_usage_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
+      cutoff: cutoffDayString,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "watcherLifecycle",
+      sql: "DELETE FROM telegram_watcher_lifecycle_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_watcher_lifecycle_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
+      cutoff: cutoffDayString,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "adoptionDaily",
+      sql: "DELETE FROM telegram_adoption_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_adoption_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
+      cutoff: cutoffDayString,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "adoptionRetention",
+      sql: "DELETE FROM telegram_adoption_retention_daily WHERE measurement_day < ? AND rowid IN (SELECT rowid FROM telegram_adoption_retention_daily WHERE measurement_day < ? ORDER BY measurement_day ASC, rowid ASC LIMIT ?)",
+      cutoff: cutoffDayString,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "adoptionIngressQuota",
+      sql: "DELETE FROM telegram_adoption_ingress_quota WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_adoption_ingress_quota WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
+      cutoff: nowSec - 2 * DAY_SEC,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "adoptionClientQuota",
+      sql: "DELETE FROM telegram_adoption_client_quota WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_adoption_client_quota WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
+      cutoff: nowSec - 2 * DAY_SEC,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "diagnostics",
+      sql: "DELETE FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
+      cutoff: nowSec - CHAT_DIAGNOSTICS_RETENTION_SEC,
+      cutoffBindCount: 2,
+    },
+    {
+      name: "commandCooldownCache",
+      cachePrefix: "telegram:command-cooldown:",
+      cutoff: nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    },
+    {
+      name: "miniAppMutationBurstCache",
+      cachePrefix: MINI_APP_MUTATION_BURST_CACHE_PREFIX,
+      cutoff: nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    },
+    {
+      name: "miniAppAdoptionSessionCache",
+      cachePrefix: TELEGRAM_ADOPTION_SESSION_CACHE_PREFIX,
+      cutoff: nowSec - TELEGRAM_ADOPTION_SESSION_TTL_SEC,
+    },
+    {
+      name: "commandFloodCache",
+      cachePrefix: "telegram:command-flood:",
+      cutoff: nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    },
+    {
+      name: "chatMemberCache",
+      cachePrefix: "telegram:chat-member:",
+      cutoff: nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    },
+    {
+      name: "chatAdminsCache",
+      cachePrefix: "telegram:chat-admins:",
+      cutoff: nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    },
+    {
+      name: "groupWelcomeCache",
+      cachePrefix: "telegram:group-welcome:",
+      cutoff: nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
+    },
+    {
+      name: "reEngagementWarningCache",
+      cachePrefix: "telegram:re-engagement-warned:",
+      cutoff: nowSec - RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC,
+    },
+  ] as const satisfies readonly TelegramRetentionDeleteStep[];
+
+  const stepResults = {} as Record<(typeof retentionDeleteSteps)[number]["name"], CappedDeleteResult>;
+  for (const step of retentionDeleteSteps) {
+    throwIfAborted(signal);
+    stepResults[step.name] = await runTelegramRetentionDeleteStep(db, step, signal);
+  }
+
+  const {
+    targetPlanItems,
+    targetPlanPages,
+    planningSubscribers,
+    targetExpiryProgress,
+    replayJobTargetItems,
+    replayJobTargets,
+    targetPlans,
+    replayJobs,
+    replaySourceResolutionTargets,
+    replaySourceResolutionMemberships,
+    replaySourceResolutionPages,
+    replaySourceEvents,
+    deadLetters,
+    auditJobTargetItems,
+    auditJobTargets,
+    auditJobs,
+    auditSourceResolutionTargets,
+    auditSourceResolutionMemberships,
+    auditSourceResolutionPages,
+    freezeTargets,
+    freezeEvents,
+    auditSourceEvents,
+    usageDaily,
+    watcherLifecycle,
+    adoptionDaily,
+    adoptionRetention,
+    adoptionIngressQuota,
+    adoptionClientQuota,
+    diagnostics,
+    commandCooldownCache,
+    miniAppMutationBurstCache,
+    miniAppAdoptionSessionCache,
+    commandFloodCache,
+    chatMemberCache,
+    chatAdminsCache,
+    groupWelcomeCache,
+    reEngagementWarningCache,
+  } = stepResults;
 
   const jobTargetItems = {
     pruned: replayJobTargetItems.pruned + auditJobTargetItems.pruned,
@@ -872,129 +988,6 @@ export async function runTelegramRetentionCleanup(
     cappedAtLimit: replaySourceEvents.cappedAtLimit || auditSourceEvents.cappedAtLimit,
   };
 
-  // `day` is TEXT (YYYY-MM-DD) in telegram_usage_daily and
-  // telegram_watcher_lifecycle_daily; an integer cutoff would never match. Bind
-  // the cutoff as a YYYY-MM-DD string so the comparison is text-vs-text.
-  const cutoffDayString = new Date((nowSec - USAGE_DAILY_RETENTION_SEC) * 1000).toISOString().slice(0, 10);
-
-  const usageDaily = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_usage_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_usage_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
-    cutoffDayString,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const watcherLifecycle = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_watcher_lifecycle_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_watcher_lifecycle_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
-    cutoffDayString,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const adoptionDaily = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_adoption_daily WHERE day < ? AND rowid IN (SELECT rowid FROM telegram_adoption_daily WHERE day < ? ORDER BY day ASC, rowid ASC LIMIT ?)",
-    cutoffDayString,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const adoptionRetention = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_adoption_retention_daily WHERE measurement_day < ? AND rowid IN (SELECT rowid FROM telegram_adoption_retention_daily WHERE measurement_day < ? ORDER BY measurement_day ASC, rowid ASC LIMIT ?)",
-    cutoffDayString,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const adoptionIngressQuota = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_adoption_ingress_quota WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_adoption_ingress_quota WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
-    nowSec - 2 * DAY_SEC,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const adoptionClientQuota = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_adoption_client_quota WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_adoption_client_quota WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
-    nowSec - 2 * DAY_SEC,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const diagnostics = await deleteOlderThanCapped(
-    db,
-    "DELETE FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? AND rowid IN (SELECT rowid FROM telegram_chat_delivery_diagnostics WHERE updated_at < ? ORDER BY updated_at ASC, rowid ASC LIMIT ?)",
-    nowSec - CHAT_DIAGNOSTICS_RETENTION_SEC,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const commandCooldownCache = await deleteCachePrefixOlderThanCapped(
-    db,
-    "telegram:command-cooldown:",
-    nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const miniAppMutationBurstCache = await pruneTelegramMiniAppMutationBurstCache(
-    db,
-    nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const miniAppAdoptionSessionCache = await deleteCachePrefixOlderThanCapped(
-    db,
-    TELEGRAM_ADOPTION_SESSION_CACHE_PREFIX,
-    nowSec - TELEGRAM_ADOPTION_SESSION_TTL_SEC,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const commandFloodCache = await deleteCachePrefixOlderThanCapped(
-    db,
-    "telegram:command-flood:",
-    nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const chatMemberCache = await deleteCachePrefixOlderThanCapped(
-    db,
-    "telegram:chat-member:",
-    nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const chatAdminsCache = await deleteCachePrefixOlderThanCapped(
-    db,
-    "telegram:chat-admins:",
-    nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const groupWelcomeCache = await deleteCachePrefixOlderThanCapped(
-    db,
-    "telegram:group-welcome:",
-    nowSec - SHORT_LIVED_CHAT_CACHE_RETENTION_SEC,
-    signal,
-  );
-  throwIfAborted(signal);
-
-  const reEngagementWarningCache = await deleteCachePrefixOlderThanCapped(
-    db,
-    "telegram:re-engagement-warned:",
-    nowSec - RE_ENGAGEMENT_WARNING_CACHE_RETENTION_SEC,
-    signal,
-  );
-
   const totalPruned =
     processedUpdates.pruned +
     recapTargets.deletedTargets +
@@ -1003,43 +996,11 @@ export async function runTelegramRetentionCleanup(
     highGrowthRetention.legacyTerminalJobsPruned +
     highGrowthRetention.staleUnresolvedJobsPruned +
     highGrowthRetention.staleUnresolvedSourcesPruned +
-    targetPlanItems.pruned +
-    targetPlans.pruned +
-    targetPlanPages.pruned +
-    planningSubscribers.pruned +
-    targetExpiryProgress.pruned +
-    deadLetters.pruned +
-    jobTargetItems.pruned +
-    jobTargets.pruned +
-    jobs.pruned +
-    sourceResolutionTargets.pruned +
-    sourceResolutionMemberships.pruned +
-    sourceResolutionPages.pruned +
-    sourceEvents.pruned +
-    freezeTargets.pruned +
-    freezeEvents.pruned +
-    usageDaily.pruned +
-    watcherLifecycle.pruned +
-    adoptionDaily.pruned +
-    adoptionRetention.pruned +
-    adoptionIngressQuota.pruned +
-    adoptionClientQuota.pruned +
-    diagnostics.pruned +
-    commandCooldownCache.pruned +
-    miniAppMutationBurstCache.pruned +
-    miniAppAdoptionSessionCache.pruned +
-    commandFloodCache.pruned +
-    chatMemberCache.pruned +
-    chatAdminsCache.pruned +
-    groupWelcomeCache.pruned +
-    reEngagementWarningCache.pruned;
+    retentionDeleteSteps.reduce((sum, step) => sum + stepResults[step.name].pruned, 0);
   const retentionDeleteCapped =
     highGrowthRetention.cappedAtLimit ||
-    targetPlanItems.cappedAtLimit ||
-    targetPlans.cappedAtLimit ||
-    planningSubscribers.cappedAtLimit ||
-    jobTargetItems.cappedAtLimit ||
-    jobTargets.cappedAtLimit;
+    retentionDeleteSteps.some((step) =>
+      "countsTowardRunBudget" in step && step.countsTowardRunBudget && stepResults[step.name].cappedAtLimit);
 
   return createCronResult({
     status: highGrowthRetention.error ? "degraded" : "ok",

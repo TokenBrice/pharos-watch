@@ -154,32 +154,6 @@ export function filterPrimaryPoolsPreferDirectApi(
   };
 }
 
-export async function syncDexLiquidity(
-  db: D1Database,
-  graphApiKey: string | null,
-  signal?: AbortSignal,
-  coingeckoApiKey?: string | null,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-  reportProgress?: CronProgressReporter,
-): Promise<CronResult> {
-  const ctx: DexLiquidityRunContext = {
-    db,
-    graphApiKey,
-    signal,
-    coingeckoApiKey,
-    chainRpcs,
-    reportProgress,
-    syncStartSec: Math.floor(Date.now() / 1000),
-  };
-
-  const sourceState = await loadDexLiquiditySourceState(ctx);
-  const poolState = await buildDexLiquidityPoolState(ctx, sourceState);
-  const scoringSourceState = buildDexLiquidityScoringSourceState(sourceState);
-  const scoreState = await scoreDexLiquidityPoolState(ctx, scoringSourceState, poolState);
-  const persistenceState = await persistDexLiquidityScoreState(ctx, scoringSourceState, poolState, scoreState);
-  return buildDexLiquidityCronResult(scoringSourceState, poolState, scoreState, persistenceState);
-}
-
 async function buildDexLiquidityScoringStageState(
   ctx: DexLiquidityRunContext,
 ): Promise<{
@@ -898,7 +872,6 @@ async function buildDexLiquidityPoolState(
           0,
         ),
         weakCoverageCoinsBeforeFallback: fallback.weakCoverageCoinsBeforeFallback,
-        coverageRecoveredCoins: fallback.coverageRecoveredCoins,
       },
     },
   });
@@ -970,9 +943,6 @@ async function scoreDexLiquidityPoolState(
     stagedMergedCount: poolState.stagedMergedCount,
     stagedSkippedCount: poolState.stagedSkippedCount,
     weakCoverageCoinsBeforeFallback: poolState.fallback.weakCoverageCoinsBeforeFallback,
-    coverageRecoveredCoins: poolState.fallback.coverageRecoveredCoins,
-    dsFallbackCoins: poolState.fallback.dsFallbackCoins,
-    cgTickerFallbackCoins: poolState.fallback.cgTickerFallbackCoins,
     directCexOrderbookDepth: poolState.fallback.directCexOrderbookDepth,
     dlYieldsAvailable: sourceState.dlYieldsAvailable,
     dlProtocolsAvailable: sourceState.dlProtocolsAvailable,

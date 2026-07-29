@@ -10,6 +10,7 @@ import {
   TronMeasuredExecutionTargetSchema,
   type TronMeasuredExecutionTarget,
 } from "@shared/types/tron-measured-execution";
+import { isRecord } from "@shared/lib/type-guards";
 import { executeAtomicBatch } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/cron-lease";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
@@ -211,10 +212,6 @@ function assertUniqueMapKey<T>(map: Map<string, T>, key: string, label: string):
   if (map.has(key)) {
     throw new Error(`DEX liquidity scoring stage contains duplicate ${label} key "${key}"`);
   }
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
 function requireFiniteNumber(value: unknown, label: string): number {
@@ -489,7 +486,7 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
       if (record.schemaVersion !== DEX_LIQUIDITY_SCORING_STAGE_SCHEMA_VERSION) {
         throw new Error(`Unsupported DEX liquidity scoring stage schema version ${record.schemaVersion}`);
       }
-      if (!isObject(record.source) || !isObject(record.pool)) {
+      if (!isRecord(record.source) || !isRecord(record.pool)) {
         throw new Error("DEX liquidity scoring stage contains an invalid header");
       }
       decoder.sourceHeader = record.source;
@@ -516,7 +513,7 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
     case "price-observation": {
       if (
         typeof record.stablecoinId !== "string" ||
-        !isObject(record.observation) ||
+        !isRecord(record.observation) ||
         typeof record.observation.chain !== "string" ||
         typeof record.observation.protocol !== "string"
       ) {
@@ -536,7 +533,7 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
     case "metric": {
       if (
         typeof record.stablecoinId !== "string" ||
-        !isObject(record.metric) ||
+        !isRecord(record.metric) ||
         record.metric.stablecoinId !== record.stablecoinId ||
         !Array.isArray(record.metric.chains) ||
         !record.metric.chains.every((chain) => typeof chain === "string") ||
@@ -559,7 +556,7 @@ function decodeScoringStageRecord(decoder: ScoringStageDecoder, record: ScoringS
     case "pool": {
       if (
         typeof record.stablecoinId !== "string" ||
-        !isObject(record.pool) ||
+        !isRecord(record.pool) ||
         typeof record.pool.poolId !== "string" ||
         typeof record.pool.project !== "string" ||
         typeof record.pool.chain !== "string"

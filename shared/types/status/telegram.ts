@@ -30,7 +30,7 @@ export interface TelegramPendingDeliveryBacklog {
   completedPendingCleanup?: number;
 }
 
-export interface TelegramWatcherLifecycleSnapshot {
+interface TelegramWatcherLifecycleSnapshot {
   date: string;
   snapshotAt: number;
   activeWatchers: number;
@@ -45,7 +45,7 @@ export interface TelegramWatcherLifecycleSnapshot {
   pendingDeliveries: number;
 }
 
-export interface TelegramWebhookEffectLifecycle {
+interface TelegramWebhookEffectLifecycle {
   planned: number;
   started: number;
   executionUnknown: number;
@@ -55,7 +55,7 @@ export interface TelegramWebhookEffectLifecycle {
   lowerBound: boolean;
 }
 
-export interface TelegramPersonalizedRecapTelemetry {
+interface TelegramPersonalizedRecapTelemetry {
   enabledPrivateChats: number;
   due: number;
   queued: number;
@@ -66,7 +66,7 @@ export interface TelegramPersonalizedRecapTelemetry {
 }
 
 export type TelegramDeliverySliEvidenceQuality = "complete" | "partial" | "empty";
-export type TelegramDeliverySliEvidenceFreshness = "fresh" | "stale" | "empty";
+type TelegramDeliverySliEvidenceFreshness = "fresh" | "stale" | "empty";
 
 export interface TelegramDeliveryLatencySli {
   eligibleCount: number;
@@ -238,15 +238,13 @@ const TelegramTelemetryQualitySchema = z.object({
   unavailableFields: z.array(z.string()),
   errors: z.record(z.string(), z.string()).optional(),
 });
-export type TelegramTelemetryQuality = z.infer<typeof TelegramTelemetryQualitySchema>;
+type TelegramTelemetryQuality = z.infer<typeof TelegramTelemetryQualitySchema>;
 
 const TelegramPulsePrivacySchema = z.object({
   exactActiveWatchers: z.boolean(),
   lowCardinalityThreshold: z.number(),
   suppressedFields: z.array(z.string()),
 });
-export type TelegramPulsePrivacy = z.infer<typeof TelegramPulsePrivacySchema>;
-
 const TelegramWatcherHistoryPointSchema = z.object({
   date: z.string(),
   timestamp: z.number(),
@@ -295,7 +293,7 @@ export const TelegramPulseSchema = TelegramPulseBaseSchema.transform((pulse) => 
 }));
 export type TelegramPulse = z.infer<typeof TelegramPulseSchema>;
 
-export interface TelegramDispatchEventsDetected {
+interface TelegramDispatchEventsDetected {
   dews: number;
   depeg: number;
   depegTriggered: number;
@@ -417,7 +415,7 @@ export interface TelegramDispatchCronResult {
   perAlertType: PerAlertTypeDelivery;
 }
 
-export type ParsedTelegramDispatchEventsDetected = {
+type ParsedTelegramDispatchEventsDetected = {
   [K in keyof TelegramDispatchEventsDetected]: number | null;
 };
 

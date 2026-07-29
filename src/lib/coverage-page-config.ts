@@ -557,18 +557,7 @@ export const MOBILE_PREVIEW_FEATURES: readonly CoverageFeatureKey[] = [
   "flows",
 ] as const;
 
-export type LegendCategory =
-  | "general"
-  | "price"
-  | "safety"
-  | "dex"
-  | "reserves"
-  | "redemption"
-  | "yield"
-  | "flows"
-  | "blacklist"
-  | "dependency"
-  | "mintAuthority";
+export type LegendCategory = "general" | CoverageFeatureKey;
 
 interface LegendItem {
   term: string;
@@ -625,30 +614,17 @@ const LEGEND_CATEGORY_ORDER: readonly LegendCategory[] = [
   "mintAuthority",
 ] as const;
 
-// Map each per-feature legend category to its source feature key.
-const FEATURE_KEY_BY_CATEGORY: Record<Exclude<LegendCategory, "general">, CoverageFeatureKey> = {
-  price: "price",
-  safety: "safety",
-  dex: "dex",
-  reserves: "reserves",
-  redemption: "redemption",
-  yield: "yield",
-  flows: "flows",
-  blacklist: "blacklist",
-  dependency: "dependency",
-  mintAuthority: "mintAuthority",
-};
-
 // Assembled at module load: general entries + per-feature entries derived from
 // COVERAGE_FEATURE_LEGEND_ITEMS, preserving the public LegendItem shape.
 const LEGEND_ITEMS: readonly LegendItem[] = [
   ...GENERAL_LEGEND_ITEMS,
-  ...(Object.keys(FEATURE_KEY_BY_CATEGORY) as Array<Exclude<LegendCategory, "general">>).flatMap((category) =>
-    COVERAGE_FEATURE_LEGEND_ITEMS[FEATURE_KEY_BY_CATEGORY[category]].map((item) => ({
-      term: item.term,
-      category,
-      description: item.description,
-    })),
+  ...LEGEND_CATEGORY_ORDER.filter((category): category is CoverageFeatureKey => category !== "general").flatMap(
+    (category) =>
+      COVERAGE_FEATURE_LEGEND_ITEMS[category].map((item) => ({
+        term: item.term,
+        category,
+        description: item.description,
+      })),
   ),
 ];
 

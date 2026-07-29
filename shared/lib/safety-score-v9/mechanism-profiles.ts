@@ -4,6 +4,7 @@ import type {
   V9ObservationState,
 } from "../../types/safety-score-v9-fact-primitives";
 import type { V9MechanismQualityLevel } from "../../types/safety-score-v9-backing";
+import { compareText } from "./primitives";
 
 const V9MechanismQualityLevelSchema = z.enum(["strong", "adequate", "limited", "weak", "failed"]);
 
@@ -120,10 +121,6 @@ const QUALITY_ORDER: readonly V9MechanismQualityLevel[] = [
   "weak",
   "failed",
 ];
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function unavailableObservationState(
   disposition: Exclude<V9MechanismProfileFact["disposition"], "supported">,

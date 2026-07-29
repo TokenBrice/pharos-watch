@@ -3,6 +3,7 @@ import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import type { V9ScoreAdjustmentTrace } from "./formula";
 import type { V9ProductionScoreTrace } from "./score";
+import { compareText } from "./primitives";
 
 const V9_RESULT_DIGEST_DOMAIN = "safety-score-v9.result.v2";
 
@@ -21,10 +22,6 @@ export interface V9CompactScoreTrace {
   policyDigest: string;
   evaluationBuildDigest: string;
   asOfSec: number;
-}
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 export function projectCompactV9ScoreTrace(trace: V9ProductionScoreTrace): V9CompactScoreTrace {

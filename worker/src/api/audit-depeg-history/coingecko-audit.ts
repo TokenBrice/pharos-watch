@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { sleep } from "../../lib/abort";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { DEPEG_SECONDARY_THRESHOLD_RATIO, getDepegThresholdBps, USER_AGENT } from "../../lib/constants";
@@ -40,10 +41,6 @@ const AUDIT_CG_FETCH_START_INTERVAL_MS = 200;
 const AUDIT_CG_FETCH_CONCURRENCY = 4;
 
 type PriceValidationReferences = Awaited<ReturnType<typeof loadPriceValidationReferences>>;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function createFetchStartLimiter(intervalMs: number): () => Promise<void> {
   let nextStartAt = 0;

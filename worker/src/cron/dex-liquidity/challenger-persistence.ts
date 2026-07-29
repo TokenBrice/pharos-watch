@@ -3,10 +3,8 @@ export type {
   DexPriceChallengerSnapshotRow,
   DexPriceChallengerPublicationInput,
   DexPriceChallengerPublicationPlan,
-  DexPriceChallengerTableState,
 } from "./challenger-publish";
 export {
-  detectDexPriceChallengerTableState,
   selectDexPriceChallengerRowsFromPools,
   publishDexPriceChallengerSnapshots,
 } from "./challenger-publish";

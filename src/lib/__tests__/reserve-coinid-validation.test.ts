@@ -236,6 +236,10 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "euro3-3a-dao::Whitelisted 3A Vault collateral (USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH and other approved assets; mix undisclosed)::DAI",
     "3A reports an unweighted multi-asset vault collateral set, so no single tracked stablecoin coinId is representative.",
   ],
+  [
+    "dusd-dialectic::USDC-denominated Dialectic strategy positions across Makina Calibers::USDC",
+    "The slice is the deployed Makina strategy envelope (AMM and money-market positions), not held USDC; DUSD's USDC relationship is already carried by variantOf/pegReferenceId, so a coinId here would double-count the dependency.",
+  ],
 ]);
 
 describe("reserve coinId validation", () => {

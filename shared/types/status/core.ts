@@ -226,7 +226,7 @@ export interface BlacklistReconciliationStatus {
   completedAt: number | null;
 }
 
-export interface RepairDebtKindSummary {
+interface RepairDebtKindSummary {
   openCount: number;
   oldestAgeSec: number | null;
   nextRunnerDueAt: number | null;

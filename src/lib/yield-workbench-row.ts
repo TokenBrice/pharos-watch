@@ -1,5 +1,16 @@
+import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import { formatYieldDecisionReasonLine } from "@/lib/yield-decision-ledger";
-import { YIELD_DECISION_REASON_LABELS } from "@/lib/yield-presentation";
+import {
+  PYS_NULL_REASON_TEXT,
+  YIELD_DECISION_REASON_LABELS,
+  buildRankChangeChipDisplay,
+} from "@/lib/yield-presentation";
+import {
+  YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
+  YIELD_SOURCE_CONFIDENCE_STYLES,
+  getYieldSourceFreshnessDisplay,
+  getYieldSourceRiskDrivers,
+} from "@/lib/yield-source-risk";
 import type { YieldBenchmarkSelectionMode, YieldRankChangeAttribution, YieldRanking } from "@shared/types/yield";
 import type { YieldRankingSummary } from "@shared/types/yield-summary";
 
@@ -13,7 +24,7 @@ export function getYieldAlternateSourceCount(row: YieldWorkbenchRanking): number
   return isYieldRankingSummary(row) ? row.alternateSourceCount : row.altSources.length;
 }
 
-export function getYieldAvailableSources(
+function getYieldAvailableSources(
   row: YieldWorkbenchRanking,
 ): Array<{ sourceKey: string; yieldSource: string }> {
   const selected = row.provenance?.sourceKey
@@ -29,7 +40,7 @@ export function getYieldAvailableSources(
   ];
 }
 
-export function getYieldRankChangeAttribution(
+function getYieldRankChangeAttribution(
   row: YieldWorkbenchRanking,
 ): YieldRankChangeAttribution | null | undefined {
   if (!isYieldRankingSummary(row)) return row.rankChangeAttribution;
@@ -55,6 +66,44 @@ export function getYieldBenchmarkSelectionMode(row: YieldWorkbenchRanking): Yiel
 
 export function isYieldBenchmarkFallback(row: YieldWorkbenchRanking): boolean {
   return getYieldBenchmarkSelectionMode(row) === "fallback-usd" || row.benchmarkIsFallback === true;
+}
+
+/** A source-risk penalty above this multiplier reads as materially risky on every yield surface. */
+const MATERIAL_SOURCE_RISK_PENALTY = 1.05;
+
+/**
+ * Row-level presentation values shared by the desktop instrument row and the
+ * mobile card. Both surfaces derived these identically; the PYS breakdown stays
+ * per-surface because their handling of it deliberately differs.
+ */
+export function deriveYieldRowPresentation(row: YieldWorkbenchRanking) {
+  const confidenceTier = row.provenance?.confidenceTier ?? null;
+  const rawSourceRiskPenalty = row.sourceRisk?.sourceRiskPenalty ?? null;
+
+  return {
+    confidenceStyle: confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] : null,
+    confidenceLabel: confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier].label : null,
+    freshness: getYieldSourceFreshnessDisplay({
+      sourceAgeSeconds: row.sourceRisk?.sourceAgeSeconds,
+      sourceFreshness: row.provenance?.sourceFreshness,
+      warningSignals: row.warningSignals,
+    }),
+    sourceRiskScore: row.sourceRisk?.sourceRiskScore ?? null,
+    rawSourceRiskPenalty,
+    sourceRiskMaterial: rawSourceRiskPenalty !== null && rawSourceRiskPenalty > MATERIAL_SOURCE_RISK_PENALTY,
+    sourceRiskDrivers: getYieldSourceRiskDrivers({
+      sourceRisk: row.sourceRisk,
+      sourceChanged: row.provenance?.sourceSwitch ?? false,
+      sourceFreshness: row.provenance?.sourceFreshness,
+      warningSignals: row.warningSignals,
+    }),
+    rankChip: buildRankChangeChipDisplay(getYieldRankChangeAttribution(row)),
+    pysNullReasonText:
+      row.pharosYieldScore === null && row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null,
+    availableSources: getYieldAvailableSources(row),
+    altSourceCount: getYieldAlternateSourceCount(row),
+    benchmarkReferenceText: getYieldBenchmarkReferenceText(row),
+  };
 }
 
 export function getYieldWorkbenchDataSource(row: YieldWorkbenchRanking): string {

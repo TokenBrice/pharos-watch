@@ -2,7 +2,7 @@
 
 Shared by `contract-enrich` and `contract-populate` (which symlinks this file). Use it when translating external chain names, applying supply thresholds, or mapping CoinGecko platforms.
 
-- Prefer existing IDs from `shared/lib/chains/index.ts` whenever the repo already supports the chain.
+- Prefer existing IDs from `shared/lib/chains/index.ts` whenever the repo already supports the chain. `CHAIN_META` and `CHAIN_ALIASES` there are the source of truth — when this file and the registry disagree, the registry wins; check `CHAIN_ALIASES` before assuming a name is unmapped.
 - This file is a curated translation map, not an exhaustive inventory of every current chain in the repo.
 - DefiLlama list endpoint values are already USD-denominated.
 
@@ -36,7 +36,7 @@ Ink                      -> ink
 Moonriver                -> moonriver
 Kaia                     -> klaytn
 Plume Mainnet            -> plume
-Hyperliquid L1           -> hyperevm
+Hyperliquid L1           -> hyperliquid
 Monad                    -> monad
 XDC                      -> xdc
 Mantle                   -> mantle
@@ -88,32 +88,20 @@ Osmosis                  -> osmosis
 Mantra                   -> mantra
 Provenance               -> provenance
 Hydradx                  -> hydration
-Ronin                    -> ronin
 Corn                     -> corn
 Cronos                   -> cronos
-Lisk                     -> lisk
 Rootstock                -> rootstock
-EOS                      -> eos
 Stacks                   -> stacks
 Flow                     -> flow
-IoTeX                    -> iotex
-MultiversX               -> multiversx
 Injective                -> injective
-Zilliqa                  -> zilliqa
 Conflux                  -> conflux
 PulseChain               -> pulsechain
 Etherlink                -> etherlink
 MegaETH                  -> megaeth
 Immutable zkEVM          -> immutable-zkevm
-Heco                     -> heco
-OKExChain                -> okxchain
-Fogo                     -> fogo
 Movement                 -> movement
 Sophon                   -> sophon
-Story                    -> story
-VeChain                  -> vechain
 Abstract                 -> abstract
-EDU Chain                -> educhain
 Hemi                     -> hemi
 Mezo                     -> mezo
 ```
@@ -182,7 +170,6 @@ scroll                   -> scroll
 blast                    -> blast
 mode-network             -> mode
 manta-pacific            -> manta
-ronin                    -> ronin
 bob-network              -> bob
 corn-network             -> corn
 berachain                -> berachain
@@ -217,14 +204,9 @@ provenance               -> provenance
 hydration                -> hydration
 xdai                     -> gnosis
 cronos                   -> cronos
-lisk                     -> lisk
 rootstock                -> rootstock
-eos                      -> eos
 flow                     -> flow
-iotex                    -> iotex
-multiversx               -> multiversx
 injective                -> injective
-zilliqa                  -> zilliqa
 conflux                  -> conflux
 pulsechain               -> pulsechain
 ```
@@ -240,14 +222,29 @@ q-mainnet
 binancecoin
 ```
 
-## New Chain Checklist
+## Known External Chains Without Registry Support
 
-When a verified platform maps to a chain ID that is not yet in `shared/lib/chains/index.ts`, add:
+These names appear in DefiLlama / CoinGecko data but have **no** `CHAIN_META` entry. Report them as unsupported and skip — do not invent a chain ID or write one of these names into a coin's `contracts`:
 
-- `name`
-- `explorerUrl`
-- `evmChainId` or `null`
-- `type`
-- `logoPath`
+```text
+Ronin / ronin
+Lisk / lisk
+EOS / eos
+IoTeX / iotex
+MultiversX / multiversx
+Zilliqa / zilliqa
+Heco
+OKExChain
+Fogo
+Story
+VeChain
+EDU Chain
+```
 
-Maintain the existing ordering and alignment style in `CHAIN_META`.
+(Names, not ids — no id exists until the chain is added to the registry.)
+
+## New Chain Checklist (escalation path — not part of a normal enrich run)
+
+Adding a chain is a separate, deliberate chain-support task that needs an explicit user/owner decision — enrich/populate runs report unsupported chains and stop. Note: `shared/lib/chains/index.ts` is a Safety Score V9 identity-bound surface (edits rotate the evaluation-build identity), so chain additions must land as reviewed, standalone changes.
+
+When that task is authorized: add a `CHAIN_META` entry mirroring the fields and alignment style of a comparable existing entry (the registry file wins on required fields), plus an alias in `CHAIN_ALIASES` if external sources use a different name, then remove the chain from the unsupported list above.

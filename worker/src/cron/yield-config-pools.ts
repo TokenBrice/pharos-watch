@@ -27,6 +27,8 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   "syrupusdt-maple": "8edfdf02-cdbb-43f7-bca6-954e5fe56813",
   // yoUSD - pendle SY yield token, Base, $1.3M TVL, ~8.0% APY
   "yousd-yield-optimizer": "c7c9e2c5-a3ea-4e6e-80d7-090fd2d604c5",
+  // DUSD - makina native machine share, Ethereum, $5.8M TVL, ~4.0% APY
+  "dusd-dialectic": "a0387f4b-18ba-5fb5-8171-0f177254dfeb",
   // bUSD0 - usual-usd0 liquid bond, Ethereum, $500M+ TVL, ~3.3% APY
   "busd0-usual": "55b0893b-1dbb-47fd-9912-5e439cd3d511",
   // ── Wave 1: Native yield coins (C+ or above) ─────────────────────

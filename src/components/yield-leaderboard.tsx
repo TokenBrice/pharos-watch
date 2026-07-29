@@ -24,29 +24,15 @@ import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import { computePysBreakdown, formatYieldWarningSignal, getPysColor } from "@/lib/yield-constants";
-import {
-  YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
-  YIELD_SOURCE_CONFIDENCE_STYLES,
-  YIELD_SOURCE_DEPTH_DEFINITIONS,
-  getYieldSourceFreshnessDisplay,
-  formatYieldSourceRiskSummary,
-  getYieldSourceRiskDrivers,
-} from "@/lib/yield-source-risk";
+import { YIELD_SOURCE_DEPTH_DEFINITIONS, formatYieldSourceRiskSummary } from "@/lib/yield-source-risk";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { YieldCohortChip } from "@/components/yield-cohort-chip";
 import { YieldWhyPysStrip } from "@/components/yield-why-pys-strip";
-import { PYS_NULL_REASON_TEXT, buildRankChangeChipDisplay } from "@/lib/yield-presentation";
 import { trackEvent } from "@/lib/analytics";
-import {
-  getYieldAlternateSourceCount,
-  getYieldAvailableSources,
-  getYieldRankChangeAttribution,
-  isYieldBenchmarkFallback,
-} from "@/lib/yield-workbench-row";
+import { deriveYieldRowPresentation, isYieldBenchmarkFallback } from "@/lib/yield-workbench-row";
 import { downloadCsvWithPreamble, type CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
@@ -468,24 +454,21 @@ export function YieldMobileCard({
   const stabilityPct = row.yieldStability !== null ? Math.round(row.yieldStability * 100) : null;
   const tvlLabel = row.sourceTvlUsd !== null ? formatCurrency(row.sourceTvlUsd) : "—";
   const warningCount = row.warningSignals.length;
-  const benchmarkReferenceText = getYieldBenchmarkReferenceText(row);
-  const altSourceCount = getYieldAlternateSourceCount(row);
-  const availableSources = getYieldAvailableSources(row);
-  const confidenceTier = row.provenance?.confidenceTier ?? null;
-  const confidenceStyle = confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] : null;
-  const confidenceLabel = confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier].label : null;
-  const freshness = getYieldSourceFreshnessDisplay({
-    sourceAgeSeconds: row.sourceRisk?.sourceAgeSeconds,
-    sourceFreshness: row.provenance?.sourceFreshness,
-    warningSignals: row.warningSignals,
-  });
-  const sourceRiskScore = row.sourceRisk?.sourceRiskScore ?? null;
-  const rawSourceRiskPenalty = row.sourceRisk?.sourceRiskPenalty ?? null;
-  const sourceRiskMaterial = rawSourceRiskPenalty !== null && rawSourceRiskPenalty > 1.05;
   const sourceRiskSummary = formatYieldSourceRiskSummary(row.sourceRisk);
-  const pysNullReasonText =
-    row.pharosYieldScore === null && row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null;
-  const rankChip = buildRankChangeChipDisplay(getYieldRankChangeAttribution(row));
+  const {
+    confidenceStyle,
+    confidenceLabel,
+    freshness,
+    sourceRiskScore,
+    rawSourceRiskPenalty,
+    sourceRiskMaterial,
+    sourceRiskDrivers,
+    rankChip,
+    pysNullReasonText,
+    availableSources,
+    altSourceCount,
+    benchmarkReferenceText,
+  } = deriveYieldRowPresentation(row);
 
   // WHY: only used when expanded with a non-null PYS; cheap to compute inline rather than extracting a helper.
   const { adjustedRiskPenalty, benchmarkSpread, sourceRiskPenalty, sustainabilityMult } = computePysBreakdown(
@@ -495,12 +478,6 @@ export function YieldMobileCard({
     row.benchmarkRate,
     row.sourceRisk?.sourceRiskPenalty ?? null,
   );
-  const sourceRiskDrivers = getYieldSourceRiskDrivers({
-    sourceRisk: row.sourceRisk,
-    sourceChanged: row.provenance?.sourceSwitch ?? false,
-    sourceFreshness: row.provenance?.sourceFreshness,
-    warningSignals: row.warningSignals,
-  });
 
   return (
     <article

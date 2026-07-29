@@ -10,11 +10,7 @@ import {
   loadFanoutSubscriptionInputs,
   type FanoutSubscriptionInputs,
 } from "../dispatch-telegram-alerts-fanout";
-import {
-  emptyAlerts,
-  type PlannedSubscriberAlert,
-  type SubscriberRow,
-} from "../dispatch-telegram-routing";
+import { type SubscriberRow } from "../dispatch-telegram-routing";
 
 const NOW_SEC = 1_800_000_000;
 
@@ -85,27 +81,6 @@ function fanoutEvents(overrides: Partial<TelegramFanoutPlanEvents> = {}): Telegr
     launchPromoted: [],
     reservePromoted: [],
     ...overrides,
-  };
-}
-
-function overflowPlan(chatId: string): PlannedSubscriberAlert {
-  return {
-    chatId,
-    alertType: "dews",
-    estimatedChunks: 1,
-    entry: {
-      lastActiveAt: NOW_SEC - 1,
-      alerts: {
-        ...emptyAlerts(),
-        dews: [DEWS_WARNING],
-      },
-      quietHoursEnabled: false,
-      quietHoursStartUtc: null,
-      quietHoursEndUtc: null,
-      timezone: null,
-      specificCount: 1,
-      globalCount: 0,
-    },
   };
 }
 
@@ -191,24 +166,17 @@ describe("dispatch telegram fanout planning", () => {
     const plan = buildTelegramFanoutPlan({
       events: fanoutEvents({ dewsChanges: [DEWS_WARNING] }),
       inputs,
-      overflowBacklog: [overflowPlan("cached-overflow")],
       burstMarkers: {},
       nowSec: NOW_SEC,
-      formatBudget: 2,
+      formatBudget: 1,
     });
 
     expect(plan.plannedQueue.map((entry) => entry.chatId)).toEqual(["global", "preset", "direct"]);
     expect(plan.subscriberQueue.map((entry) => entry.chatId)).toEqual(["global"]);
     expect(plan.overflowPlanned.map((entry) => entry.chatId)).toEqual(["preset", "direct"]);
-    expect(plan.combinedOverflowPlanned.map((entry) => entry.chatId)).toEqual([
-      "cached-overflow",
-      "preset",
-      "direct",
-    ]);
     expect(plan.freshCandidateChats).toBe(3);
     expect(plan.freshCandidateCount).toBe(3);
     expect(plan.formattedChats).toBe(1);
-    expect(plan.overflowFormatBudget).toBe(1);
     expect(plan.perAlertTypeTargets.dews).toEqual({ chats: 1, chunks: 1 });
     expect(plan.presetFailure).toBe(false);
   });

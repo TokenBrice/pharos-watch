@@ -2,6 +2,7 @@ import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety
 import type { V9AssetFactsV2, V9ExitRouteFactV2 } from "../../types/safety-score-v9-facts";
 import type { ExitRouteObservationHistory } from "../../types/exit-route";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
+import { clampScore } from "./primitives";
 
 export type V9ExitAccess = "permissionless-onchain" | "whitelisted-onchain" | "issuer-api" | "manual";
 export type V9ExitSettlement = "atomic" | "immediate" | "same-day" | "days" | "queued";
@@ -114,10 +115,6 @@ const EMPTY_HORIZONS: Readonly<Record<V9ExitHorizon, V9ExitHorizonTrace>> = {
   "near-term": { primaryRouteKey: null, score: null },
   queued: { primaryRouteKey: null, score: null },
 };
-
-function clampScore(value: number): number {
-  return Math.max(0, Math.min(100, value));
-}
 
 /** Share of the capacity component carried by completion coverage rather than absolute size. */
 const COVERAGE_SHARE_OF_CAPACITY = 0.6;

@@ -138,7 +138,6 @@ async function buildPageRoutedByChat(
     sourceEventId: context.sourceEventId,
     events: context.events,
     inputs,
-    overflowBacklog: [],
     burstMarkers: {},
     nowSec: context.nowSec,
     formatBudget: Math.max(1, chatIds.length * 64),

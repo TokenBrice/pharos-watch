@@ -113,6 +113,8 @@ A coin is ready-to-promote only if **all three** of the following hold.
 
 Before recommending promotion, also run `stablecoin-runtime-price-marketcap-gate` and record the accepted active runtime path. A promoted asset must have both a fetchable current price and a fetchable market-cap / circulating-supply path.
 
+State the Safety Score V9 consequences in the promotion report: a freshly promoted coin scores under launch-age track-record ceilings (`trackRecordCeilings` in `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` — the policy file wins) and typically publishes as NR until reserve/custody/reconciliation evidence is curated. Do not imply it will grade like an established asset on day one.
+
 1. **Listed externally with real supply:**
    - DefiLlama: entry on `https://stablecoins.llama.fi/stablecoins` with non-zero `circulating`, **OR**
    - CoinGecko: entry reachable via `https://api.coingecko.com/api/v3/search?query={symbol}` whose detail endpoint returns non-zero `market_data.market_cap.usd` **and** non-zero `circulating_supply`
@@ -127,7 +129,7 @@ Report format:
 - Preview only: `**{Name} has a preview listing, not ready** — CoinGecko entry exists but circulating/market-cap are zero; keep tracking`
 - Ambiguous: `**{Name} possible match, unverified** — {reason}; recommend manual confirmation before next run`
 
-Do **NOT** execute the promotion (removing `status: "pre-launch"`, adding `llamaId`, normalizing across chains, moving the entry out of `shared/data/stablecoins/coins/*.json` by status change, etc.) — that's a manual, coordinated process that requires schema changes beyond the scope of this skill.
+Do **NOT** execute the promotion (removing `status: "pre-launch"`, adding `llamaId`, normalizing across chains, moving the entry out of `shared/data/stablecoins/coins/*.json` by status change, etc.) — that's a manual, coordinated process owned by `stablecoin-addition-orchestrator`; hand the ready-to-promote report off to it.
 
 After reporting, update `agents/pre-launch-deferred.md`: one line per unresolved outcome (`{coin} — {finding} — checked {YYYY-MM-DD} — re-check when {trigger}`). Refresh the checked date on re-verified items and delete entries that resolved this run.
 

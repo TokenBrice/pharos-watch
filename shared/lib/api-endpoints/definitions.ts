@@ -159,35 +159,18 @@ type AdminDualModeMutationDefinition<T extends EndpointDefinitionFactoryInput> =
   readonly cacheBypass: T["cacheBypass"] extends boolean ? T["cacheBypass"] : true;
 };
 
-const ENDPOINT_METADATA_FACTORY_MARKER: unique symbol = Symbol("endpointMetadataFactory");
-
-type FactoryMarkedEndpoint = BaseEndpointDefinition & {
-  readonly [ENDPOINT_METADATA_FACTORY_MARKER]?: true;
-};
-
-function markFactoryDefinition<const T extends BaseEndpointDefinition>(definition: T): T {
-  Object.defineProperty(definition, ENDPOINT_METADATA_FACTORY_MARKER, {
-    value: true,
-  });
-  return definition;
-}
-
-function isFactoryMarkedEndpoint(endpoint: BaseEndpointDefinition): boolean {
-  return (endpoint as FactoryMarkedEndpoint)[ENDPOINT_METADATA_FACTORY_MARKER] === true;
-}
-
 function publicGet<const T extends EndpointDefinitionFactoryInput>(definition: T): PublicGetDefinition<T> {
-  return markFactoryDefinition({
+  return {
     cacheBypass: false,
     ...definition,
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
-  } as PublicGetDefinition<T>);
+  } as PublicGetDefinition<T>;
 }
 
 function publicPostExempt<const T extends EndpointDefinitionFactoryInput>(definition: T): PublicPostDefinition<T> {
-  return markFactoryDefinition({
+  return {
     cacheBypass: true,
     publicApiAccess: "exempt",
     siteDataAccess: "denied",
@@ -195,39 +178,39 @@ function publicPostExempt<const T extends EndpointDefinitionFactoryInput>(defini
     methods: ["POST"],
     adminRequired: false,
     mutatingAdmin: false,
-  } as PublicPostDefinition<T>);
+  } as PublicPostDefinition<T>;
 }
 
 function adminGet<const T extends EndpointDefinitionFactoryInput>(definition: T): AdminGetDefinition<T> {
-  return markFactoryDefinition({
+  return {
     cacheBypass: true,
     ...definition,
     methods: ["GET"],
     adminRequired: true,
     mutatingAdmin: false,
-  } as AdminGetDefinition<T>);
+  } as AdminGetDefinition<T>;
 }
 
 function adminMutation<const T extends EndpointDefinitionFactoryInput>(definition: T): AdminMutationDefinition<T> {
-  return markFactoryDefinition({
+  return {
     cacheBypass: true,
     ...definition,
     methods: ["POST"],
     adminRequired: true,
     mutatingAdmin: true,
-  } as AdminMutationDefinition<T>);
+  } as AdminMutationDefinition<T>;
 }
 
 function adminDualModeMutation<const T extends EndpointDefinitionFactoryInput>(
   definition: T,
 ): AdminDualModeMutationDefinition<T> {
-  return markFactoryDefinition({
+  return {
     cacheBypass: true,
     ...definition,
     methods: ["GET", "POST"],
     adminRequired: true,
     mutatingAdmin: true,
-  } as AdminDualModeMutationDefinition<T>);
+  } as AdminDualModeMutationDefinition<T>;
 }
 
 export interface StatusPageAction {
@@ -583,6 +566,9 @@ const BASE_ENDPOINT_DEFINITIONS = [
     path: API_PATHS.yieldSourceDecisions(),
   }),
   {
+    // GET lists keys; POST creates a key. No factory matches because the admin
+    // mutation gate is enforced inside the route handler: this endpoint
+    // intentionally supports both read and write operations on the same path.
     key: "api-keys",
     path: API_PATHS.apiKeys(),
     methods: ["GET", "POST"],
@@ -1093,25 +1079,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "admin",
   }),
 ] as const satisfies readonly BaseEndpointDefinition[];
-
-const ENDPOINT_METADATA_FACTORY_EXEMPT_KEYS = new Set<string>([
-  // GET lists keys; POST creates a key. The admin mutation gate is enforced
-  // inside the route handler because this endpoint intentionally supports both
-  // read and write operations on the same path.
-  "api-keys",
-]);
-
-function assertStandardEndpointMetadataUsesFactories(definitions: readonly BaseEndpointDefinition[]): void {
-  for (const endpoint of definitions) {
-    if (isFactoryMarkedEndpoint(endpoint)) continue;
-    if (ENDPOINT_METADATA_FACTORY_EXEMPT_KEYS.has(endpoint.key)) continue;
-    throw new Error(
-      `Endpoint "${endpoint.key}" repeats standard method/auth/cache metadata; use an endpoint metadata factory or add an explicit exemption.`,
-    );
-  }
-}
-
-assertStandardEndpointMetadataUsesFactories(BASE_ENDPOINT_DEFINITIONS);
 
 export type EndpointKey = (typeof BASE_ENDPOINT_DEFINITIONS)[number]["key"];
 export type EndpointDefinitionByKey<K extends EndpointKey> = Extract<(typeof ENDPOINT_DEFINITIONS)[number], { key: K }>;

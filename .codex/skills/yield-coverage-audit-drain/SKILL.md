@@ -38,9 +38,10 @@ Use whichever access path is already authenticated in the workspace:
 npx wrangler d1 execute stablecoin-db --remote --command "select key, value, updated_at from cache where key = 'yield-coverage-audit';"
 ```
 
-If remote D1 is unavailable, run the local monthly audit path or use the most
-recent cached payload already present in test fixtures or run output. Do not
-mutate production D1 from this skill.
+If remote D1 is unavailable, fall back to the most recent cached payload
+already present in test fixtures or prior run output — the audit itself runs
+only as a Worker cron (`worker/src/handlers/scheduled/monthly-yield-audit.ts`);
+there is no local npm entrypoint. Do not mutate production D1 from this skill.
 
 Record the snapshot date, `reportedAt`, queue counts, and whether the payload
 was production, local, or fixture-derived.
@@ -66,9 +67,25 @@ Handle queue items by `kind`:
 - `quarantine-ready-to-restore`: verify the live deterministic probe, the
   exchange-rate envelope, source freshness, and reason the adapter was
   quarantined before restoring hourly coverage.
+- `unmatched-high-tvl-pool` / `missing-protocol`: a high-TVL stablecoin pool or
+  protocol has no local coverage mapping. Decide venue map, allowlist, or
+  adapter candidacy — or record a documented intentional gap; do not leave the
+  row unaddressed just because it is watch-severity.
+- `venue-risk-config-missing`: an active source's venue protocol has no
+  reviewed entry in `YIELD_RISK_CONFIG`
+  (`shared/lib/yield-source-risk-registry.ts`). Author a reviewed risk entry
+  from source evidence; do not guess sub-scores.
+- `stale-venue-risk-score`: a `YIELD_RISK_CONFIG` entry's `reviewedAt` has
+  exceeded the review cadence. Re-review the venue and refresh the entry
+  (sub-scores and `reviewedAt`); do not bump the date without a re-review.
 - `manifest-missing` / `ranking-missing`: check whether this is a source gap,
   publication gate, safety gate, stale benchmark, or intentional gap. Do not
   force coverage around a guard without written rationale.
+
+The kind list above mirrors `YieldCoverageAuditQueueItemKind` in
+`shared/types/status/yield-liquidity.ts` — the source file wins; triage any
+kind not listed here from its emitting code in
+`worker/src/cron/yield-coverage-audit.ts`.
 
 ### 2. Verify source identity
 
@@ -154,6 +171,9 @@ Add `worker/src/cron/__tests__/fetch-tbill-rate.test.ts` when benchmarks change,
 and frontend status/methodology tests when public status or UI copy changes.
 
 ## Output
+
+If the queue is empty, report the snapshot source/date and zero counts, then
+stop — do not hunt for speculative coverage work outside the queue.
 
 End the drain with:
 

@@ -4,9 +4,9 @@ Reference for adding a tracked asset to Pharos.
 
 Current source of truth is the per-coin JSON registry under `shared/data/stablecoins/coins/*.json` plus selective research sidecars under `shared/data/stablecoins/domains/<domain>/*.json`, loaded through the generated runtime aggregate `shared/data/stablecoins/coins.generated.json`, and validated by `shared/lib/stablecoins/schema.ts`. Pre-launch entries are ordinary per-coin files with `status: "pre-launch"`. Eligibility and lifecycle decisions follow [Stablecoin Listing Policy](../listing-policy.md). The older top-level stablecoin barrel, helper-constructor paths, and legacy category-shard edit paths are obsolete; the Claude/Codex skills (`stablecoin-addition-orchestrator`, `stablecoin-runtime-price-marketcap-gate`, `stablecoin-info-fetch`, `contract-populate`, `contract-enrich`, `reserve-research`, `write-ai-summaries`, `resilience-classify`, `pre-launch-update`, `coingecko-id-verif`) remain supported and can be used per their own triggers. Sidecar ownership and migrations are documented in [Stablecoin Research Sidecars](./stablecoin-research-sidecars.md).
 
-> Completion gate: do not consider the job done until every phase below has been evaluated. The minimum normal diff is the per-coin registry JSON, regenerated `shared/data/stablecoins/coins.generated.json`, `shared/data/stablecoins/canonical-order.json`, `data/logos.json`, and `data/ai-summaries.json`. If the asset needs runtime coverage, also evaluate yield, live reserves, redemption backstops, mint/burn, Mint Authority, Bluechip, and history-backfill branches.
+> Completion gate: do not consider the job done until every phase below has been evaluated. The minimum committed diff is the per-coin registry JSON, `shared/data/stablecoins/canonical-order.json`, `shared/data/stablecoins/listing-decisions.json`, `data/logos.json`, `data/ai-summaries.json`, the hand-edited couplings and test snapshots in Phase 4a and 4b, and the checked-in registry-derived artifacts in Phase 4c. The regenerated `shared/data/stablecoins/coins.generated.json` is required for the build and the checks but is gitignored, so it never appears in the diff. If the asset needs runtime coverage, also evaluate yield, live reserves, redemption backstops, mint/burn, Mint Authority, Bluechip, Safety Score V9 scoreability, and history-backfill branches.
 
-> **Agent navigation** — ~57 KB; Grep the phase you need instead of reading wholesale: Source Of Truth · Guardrails · Phase 0 Decide What You Are Adding · Phase 1 Eligibility · Phase 2 Research Packet · Phase 3 Classification · Phase 3.5 Editorial Coverage Gate · Phase 4 Edit The Registry · Phase 5 Downstream Coverage Branches · Phase 6 Static Assets And Editorial Copy · Phase 7 Validate · Phase 8 Merge, Push, Deploy, Backfill · Phase 9 Post-Deploy Verification · Quick Reference.
+> **Agent navigation** — ~62 KB; Grep the phase you need instead of reading wholesale: Source Of Truth · Guardrails · Phase 0 Decide What You Are Adding · Phase 1 Eligibility · Phase 2 Research Packet · Phase 3 Classification · Phase 3.5 Editorial Coverage Gate · Phase 4 Edit The Registry (4a hand-edited couplings · 4b test snapshots · 4c checked-in artifacts) · Phase 5 Downstream Coverage Branches · Phase 6 Static Assets And Editorial Copy · Phase 7 Validate · Phase 8 Merge, Push, Deploy, Backfill · Phase 9 Post-Deploy Verification · Quick Reference.
 
 ---
 
@@ -465,11 +465,53 @@ Use `sourceFreeRationale` instead of `review.sources` only when the review is in
   - Gold/silver assets need a `geckoId` for the commodity supplemental path.
   - Do not rely on `canonical-order.json` alone; static routes can exist before the Worker `/api/stablecoins` cache has a row.
 - If `mintAuthority` is present, keep it sourced and schema-valid; if it is missing for a high-value active addition, record the intentional gap in Phase 5 coverage notes.
-- Update the coupled static files that hard-code the tracked set — the build and tests fail on **every** addition (active or pre-launch) until these match the registry:
-  - `src/lib/stablecoin-static-data.ts` — the status count constants (`TRACKED_STABLECOIN_COUNT`, `ACTIVE_STABLECOIN_COUNT`, `PRE_LAUNCH_STABLECOIN_COUNT`, …), `ACTIVE_PEG_CURRENCY_COUNTS`, the `TRACKED_STABLECOIN_IDS` array (canonical order), and `NON_ACTIVE_STABLECOIN_ID_SET` for pre-launch, quarantined, delisted, and frozen entries.
-  - `src/lib/command-palette-search-data.ts` — add a `COMMAND_PALETTE_STABLECOINS` search row; `src/lib/__tests__/stablecoin-static-data.test.ts` enforces sync with the shared registry.
-  - `shared/lib/__tests__/stablecoins.test.ts` — hardcoded tracked/active length expectations.
+- Work the three coupling groups below. The build, tests, and generated-artifact gates fail on **every** addition (active or pre-launch) until they match the registry.
 - Use `npm run check:stablecoin-data` before moving on.
+
+### 4a. Hand-edited source that hard-codes the tracked set
+
+| File | What to change | Applies to |
+| --- | --- | --- |
+| `src/lib/stablecoin-static-data.ts` | Status count constants (`TRACKED_STABLECOIN_COUNT`, `ACTIVE_STABLECOIN_COUNT`, `PRE_LAUNCH_STABLECOIN_COUNT`, …), the listing-class counters (`CORE_AGGREGATE_STABLECOIN_COUNT`, `ACTIVE_VARIANT_STABLECOIN_COUNT`, `ACTIVE_STABLE_VALUE_INVESTMENT_COUNT`), `ACTIVE_PEG_CURRENCY_COUNTS`, the `TRACKED_STABLECOIN_IDS` array (canonical order), and `NON_ACTIVE_STABLECOIN_ID_SET` for pre-launch, quarantined, delisted, and frozen entries | Every addition. Only the counter matching the derived listing class moves, so check which class Phase 1 resolved. |
+| `src/lib/command-palette-search-data.ts` | One `COMMAND_PALETTE_STABLECOINS` search row | Every addition |
+
+`src/lib/__tests__/stablecoin-static-data.test.ts` enforces both against the shared registry; it needs no edit of its own.
+
+### 4b. Hardcoded catalog snapshots in tests
+
+These are deliberate tripwires, not incidental fixtures. Update the expectation to the new
+value; do not weaken the assertion.
+
+| File | What moves | Applies to |
+| --- | --- | --- |
+| `shared/lib/__tests__/stablecoins.test.ts` | `EXPECTED_TRACKED_STABLECOIN_COUNT`, and the implementation-scope variant ID list | Count on every addition; the ID list only for `variantOf` children |
+| `src/components/__tests__/stablecoin-table-logic.test.ts` | `buildTrackedIdSet` variant-set size and the per-`variantKind` ID sets | Variants only |
+| `scripts/__tests__/weekly-curation-digest.test.ts` | `oneLiner` total; separately the attestor-tier total and the archetype cohort total | `oneLiner` on every active or pre-launch addition; attestor tier when `proofOfReserves.type === "independent-audit"`; archetype when the coin enters the fixed `topByRank` cohort |
+| `scripts/__tests__/bridge-route-coverage-audit.test.ts` | `applicableMultiDeploymentCoins` and `reviewedProfiles` | When `contracts[]` covers more than one chain |
+| `src/lib/__tests__/reserve-coinid-validation.test.ts` | A `REVIEWED_WARNING_IDS` entry with the reason | Only when a new `reserves[].name` contains a tracked ticker and the slice intentionally carries no `coinId`. Link the slice with `coinId` instead whenever that is honest. |
+
+### 4c. Registry-derived artifacts that are checked in
+
+Every one of these hashes or enumerates the tracked catalog, so a coin addition moves them and
+`npm run check:generated-artifacts` fails until they are regenerated and committed.
+
+| Artifact | Regenerate with | Notes |
+| --- | --- | --- |
+| `shared/data/stablecoins/report-card-registry-fingerprint.generated.ts` | `node scripts/maintenance/generate-stablecoin-prevalidated-registry.mjs` | Report cards read this precomputed fingerprint instead of hashing the catalog at runtime |
+| `public/datasets/stablecoin-cemetery.json` | `npx tsx scripts/maintenance/generate-cemetery-dataset.ts` | Only the `coins.generated.json` source checksum moves for a live addition; the paired `.csv` moves only when a frozen or dead row changes |
+| `public/llms.txt` | `npx tsx scripts/maintenance/generate-llms-txt.ts` | Active-stablecoin count in the summary line plus one per-coin entry |
+| `src/generated/sitemap-dates.json` | `npx tsx scripts/maintenance/generate-sitemap-dates.ts` | Commit-derived: the coin source must be committed first. See Phase 7. |
+
+Also regenerate the gitignored projections, which are not committed but which the build, the
+tests, and `check:stablecoin-data` all read:
+`coins.generated.json`, `coins.client.generated.json`, `coins.compliance.generated.json`,
+`coins.telegram-mini-app.generated.json`, `coins.prevalidated.generated.ts`, and
+`legacy-llama-redirects.generated.json` (only moves when the coin has a `llamaId`).
+
+Gotcha worth recognising: if the client projection is stale, a large number of unrelated test
+files fail at import with `[client-registry] canonical-order.json references unknown stablecoin
+ID: <id>` rather than with a catalog assertion. Run
+`node scripts/build-data/build-client-registry.mjs` and re-run.
 
 ---
 
@@ -477,7 +519,7 @@ Use `sourceFreeRationale` instead of `review.sources` only when the review is in
 
 Do not assume every branch applies. Evaluate each one explicitly.
 
-Record a short coverage decision note for every branch before validation: logo/summary, live reserves, yield, redemption backstop, mint/burn, Mint Authority, Bluechip, price/discovery, and history backfill. Mark each as added, not applicable, or intentional gap with a reason. This prevents silent omissions from looking like completed work.
+Record a short coverage decision note for every branch before validation: logo/summary, live reserves, yield, redemption backstop, mint/burn, Mint Authority, Bluechip, price/discovery, Safety Score V9 scoreability, and history backfill. Mark each as added, not applicable, or intentional gap with a reason. This prevents silent omissions from looking like completed work.
 
 If the coin is active and reached Pharos through a recent launch (a `pre-launch` → `active` transition within the last 90 days, or DefiLlama first observation within 90 days), append a `launch` candidate row to `agents/annotation-candidates.md` so the chart-annotation editorial loop picks it up at the next sweep. Pre-launch promotions and historical additions do not need this — they are higher-touch and the maintainer chooses whether to surface them.
 
@@ -617,6 +659,21 @@ Evaluate whether the asset needs any of these metadata fields:
 - `tradedContracts` for market-traded variants the runtime should recognize separately
 - `pegReferenceId` for derivative NAV wrappers
 
+### 5i. Safety Score V9 scoreability
+
+A bare new coin publishes as `NR`, not as a low score. Mechanism components and mint facts stay
+`missing` until a hand-authored mechanism review overlay exists in
+`shared/data/safety-score-v9/mechanism-review-overlays-v1.json`; the measurement producers
+iterate curated allowlists and do not pick a new coin up on their own. Author the overlay per
+[Mechanism Overlay Evidence Standard](./mechanism-overlay-evidence-standard.md), or record an
+intentional NR-until-overlay gap in the Phase 5 coverage notes.
+
+Overlays are identity-bound: a batch lands through a replay on the pinned production envelope
+with an attributed mover list, and unexplained movers stop the batch. Treat overlay authoring as
+a deliberate reviewed change rather than a side effect of an addition, and expect
+`npm run check:generated-artifacts` to report the `safety-score-v9-evaluation-build` manifest as
+stale until the rotated identity is regenerated and committed.
+
 ---
 
 ## Phase 6 - Static Assets And Editorial Copy
@@ -708,6 +765,7 @@ Before running commands, confirm the addition-specific artifacts:
 - `data/logos.json` has a canonical-ID key and the referenced local file exists, or the skip reason is documented
 - `data/ai-summaries.json` has a canonical-ID key, or the skip reason is documented
 - high-value active additions have either a reviewed `mintAuthority` profile or a documented intentional gap
+- the Phase 4a couplings, Phase 4b test snapshots, and Phase 4c checked-in artifacts all match the new catalog
 - downstream coverage decision notes cover every Phase 5 branch
 
 For a normal stablecoin addition, generate the working-tree projections and run focused checks first:

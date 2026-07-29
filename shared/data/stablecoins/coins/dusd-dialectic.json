@@ -1,0 +1,481 @@
+{
+  "id": "dusd-dialectic",
+  "name": "Dialectic USD",
+  "symbol": "DUSD",
+  "oneLiner": "DUSD is Dialectic's USDC-denominated Makina vault share; its price rises with strategy yield as the operator rotates capital across AMM and lending venues.",
+  "flags": {
+    "backing": "crypto-backed",
+    "pegCurrency": "USD",
+    "governance": "centralized-dependent",
+    "yieldBearing": true,
+    "rwa": false,
+    "navToken": true
+  },
+  "variantOf": "usdc-circle",
+  "variantKind": "strategy-vault",
+  "pegReferenceId": "usdc-circle",
+  "collateral": "USDC deposited into the Dialectic USD Makina Machine and deployed by the Dialectic operator into AMM liquidity and money-market positions through Calibers on Ethereum, Base, Arbitrum, and Monad; execution is bounded by a Risk-Manager-curated Merkle instruction set, per-position and per-swap loss caps, and base-token allowlists, and an optional Security Module stakes DUSD shares as a slashable first-loss buffer",
+  "pegMechanism": "DUSD is not par-redeemable. Its price is the Machine's AUM divided by share supply in USDC terms, so it appreciates with strategy yield and can fall when the strategy loses value or the Security Council forces an AUM update past the share-price rate limit. Deposits mint shares atomically at the current share price through the DirectDepositor; exits go through the AsyncRedeemer FIFO queue with a 12-hour minimum finalization delay and settlement that depends on the operator freeing accounting-token liquidity",
+  "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-07-29",
+    "reviewer": "Claude stablecoin addition (issue #705)",
+    "rationale": "DUSD is a USDC-accounted Makina Machine share allocated across approved DeFi venues, not a borrower CDP or a synthetic hedge. It inherits the fiat-cash archetype of its USDC parent; the archetype describes the accounting base, not the deployed strategy risk.",
+    "sources": [
+      {
+        "label": "Makina Machine share price and AUM",
+        "url": "https://docs.makina.finance/concepts/architecture/machine/share-price"
+      },
+      {
+        "label": "Makina strategy deployments",
+        "url": "https://docs.makina.finance/strategies/deployments"
+      }
+    ]
+  },
+  "detailProvider": "coingecko",
+  "geckoId": "dialectic-usd-vault",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Makina deposits and whitelisting",
+        "url": "https://docs.makina.finance/concepts/architecture/machine/deposits"
+      },
+      {
+        "label": "Makina redemptions and whitelisting",
+        "url": "https://docs.makina.finance/concepts/architecture/machine/redemptions"
+      }
+    ],
+    "evidence": "The MachineShare ERC-20 itself has no per-address freeze or blacklist function, but DUSD holders carry two reviewed exposures. The strategy's accounting token is Circle USDC, whose confirmed centralized freeze surface reaches the Machine's idle balance and its USDC positions. Separately, the Makina Risk Manager can enable an address whitelist on the AsyncRedeemer that gates both requesting a redemption and claiming assets, which can withhold the exit route from named holders.",
+    "reviewer": "Claude stablecoin addition (issue #705)",
+    "reviewedAt": "2026-07-29"
+  },
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://makina.finance/strategy/dusd"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/makinafinance"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.makina.finance"
+    },
+    {
+      "label": "Curator",
+      "url": "https://dialectic.com"
+    },
+    {
+      "label": "Audits",
+      "url": "https://docs.makina.finance/contracts/security"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef",
+      "decimals": 18
+    },
+    {
+      "chain": "ink",
+      "address": "0xa95c8ff7be2a1c898fe01b90fdc9621e8ea5c9fc",
+      "decimals": 18
+    }
+  ],
+  "chainTier": "ethereum",
+  "deploymentModel": "third-party-bridge",
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "DUSD is issued only on Ethereum by the Dialectic USD Machine. A Wormhole NTT route mirrors a small slice onto Ink: the Ethereum NTT manager runs in LOCKING mode, so bridged units are collateralized by DUSD locked on Ethereum and Ethereum totalSupply already reflects the full share supply.",
+    "reviewedAt": "2026-07-29",
+    "reviewer": "Claude stablecoin addition (issue #705)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Wormhole Native Token Transfers (lock-mint)",
+        "url": "https://api.makina.finance/v1/strategies"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Makina strategy deployments",
+        "url": "https://docs.makina.finance/strategies/deployments"
+      },
+      {
+        "label": "Makina machine token cross-chain transfer",
+        "url": "https://docs.makina.finance/concepts/architecture/machine/machine-token"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x1e33e98af620f1d563fcd3cfd3c75ace841204ef",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x1e33e98af620f1d563fcd3cfd3c75ace841204ef",
+        "protocol": "Makina MachineShare native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ethereum block 25636769 the share token reads name \"Dialectic USD\", symbol DUSD, 18 decimals, totalSupply 5,618,599.537452822458574240, and minter()/owner() = the Dialectic USD Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721. The Machine's accountingToken() is USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and shareToken() returns this token. Shares mint only through the Machine's deposit and fee paths.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-29",
+        "observedBlock": 25636769,
+        "sources": [
+          {
+            "label": "DUSD share token on Etherscan",
+            "url": "https://etherscan.io/address/0x1e33e98af620f1d563fcd3cfd3c75ace841204ef"
+          },
+          {
+            "label": "Makina strategy deployments",
+            "url": "https://docs.makina.finance/strategies/deployments"
+          }
+        ]
+      },
+      {
+        "id": "ink:0xa95c8ff7be2a1c898fe01b90fdc9621e8ea5c9fc",
+        "sourceChain": "ethereum",
+        "destinationChain": "ink",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa95c8ff7be2a1c898fe01b90fdc9621e8ea5c9fc",
+        "protocol": "Wormhole NTT (lock on Ethereum, mint on Ink)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Ink block 51809006 the Ink token reads name \"Dialectic USD\", symbol DUSD, 18 decimals, totalSupply 6,236.4968, and minter() = the NTT manager 0xaba79e9b4238e85b75a5812ced64b4f6527e9adb. At Ethereum block 25636769 the same manager address returns mode() = 0 (LOCKING), token() = the Ethereum DUSD share, getThreshold() = 1, and holds exactly 6,236.4968 DUSD, matching the Ink supply. The single transceiver is Wormhole 0x5bbe375969712252a75c5762af85455b79fcbf08. Because the hub locks rather than burns, Ethereum totalSupply is the complete share supply and the Ink units must not be added to it.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-29",
+        "observedBlock": 51809006,
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xaba79e9b4238e85b75a5812ced64b4f6527e9adb",
+        "failureDomainKeys": [
+          "protocol:wormhole-ntt",
+          "contract:ethereum:0xaba79e9b4238e85b75a5812ced64b4f6527e9adb"
+        ],
+        "sources": [
+          {
+            "label": "DUSD on Ink explorer",
+            "url": "https://explorer.inkonchain.com/address/0xa95c8ff7be2a1c898fe01b90fdc9621e8ea5c9fc"
+          },
+          {
+            "label": "Makina strategies API (NTT route)",
+            "url": "https://api.makina.finance/v1/strategies"
+          },
+          {
+            "label": "Ink public RPC",
+            "url": "https://rpc-gel.inkonchain.com"
+          }
+        ]
+      }
+    ]
+  },
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "USDC-denominated Dialectic strategy positions across Makina Calibers",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Dialectic operator and the AMM and money-market venues approved in the Makina instruction set",
+      "riskFactors": ["counterparty", "smart-contract", "liquidity", "market"],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-29",
+    "reviewer": "Claude stablecoin addition (issue #705)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Makina Machine share price and AUM",
+        "url": "https://docs.makina.finance/concepts/architecture/machine/share-price"
+      },
+      {
+        "label": "Makina Caliber positions",
+        "url": "https://docs.makina.finance/concepts/architecture/caliber/positions"
+      },
+      {
+        "label": "Makina strategies API",
+        "url": "https://api.makina.finance/v1/strategies"
+      }
+    ],
+    "rationale": "Makina publishes DUSD's total AUM, share price, and share supply, and the Machine values every position in USDC terms, but it does not publish durable per-venue weights. The operator rotates across chains, pools, and incentive programs continuously, so the reserve is represented as one dynamic USDC-denominated strategy envelope rather than a snapshot that would go stale.",
+    "compositionBasis": "Makina Machine on-chain AUM accounting and the Makina strategies API",
+    "compositionAsOf": "2026-07-29",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Per-venue and per-position weights are not published as durable percentages, and the AUM figure depends on operator-triggered accounting updates plus Wormhole CCQ readings of spoke Calibers within an 8-hour staleness threshold.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USDC-denominated Dialectic strategy positions across Makina Calibers",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The Machine reports one aggregate AUM number covering idle balance, four Calibers, and in-flight bridge transfers; splitting it into linkable constituents needs a pinned snapshot or a live composition adapter that Makina does not currently expose."
+      }
+    ]
+  },
+  "proofOfReserves": {
+    "type": "real-time",
+    "url": "https://makina.finance/strategy/dusd",
+    "provider": "Makina on-chain Machine accounting",
+    "attestorTier": "self",
+    "cadence": "real-time"
+  },
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "DUSD shares mint only through the Machine: user deposits at the current share price, and fee shares minted to the Watermark Fee Manager, whose accrual is capped by governance-set maximum rates. Durable USDC issuance stays inherited from Circle. The residual admin surface is Makina's: the Risk Manager can raise the share supply cap immediately, and the DAO can upgrade the Machine class through a shared beacon behind a 2-day AccessManager delay that the Security Council can cancel.",
+    "inheritedFrom": "usdc-circle",
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "periodic",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "beacon",
+      "proxyAddresses": ["0x6b006870c83b1cd49e766ac9209f8d68763df721"],
+      "implementationAddresses": ["0xb655ad796634562136b593397b8b4849f332213f"],
+      "adminAddresses": ["0x0fcefa3f1047f35521a49cd8b06fabd588665d7f"],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Makina DAO - 3-of-5 Safe (INFRA_UPGRADE_ROLE)",
+      "observedAt": "2026-07-29",
+      "observedBlock": 25636769,
+      "sources": [
+        {
+          "label": "Makina protocol upgrades",
+          "url": "https://docs.makina.finance/concepts/governance/protocol-upgrades"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x6b006870c83b1cd49e766ac9209f8d68763df721",
+        "label": "Dialectic USD Machine (share issuer)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "capDescription": "The Machine mints DUSD only against deposited USDC at the current share price, and only up to the Risk-Manager-set share supply cap of 75,000,000 shares. It does not mint the underlying USDC.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-29",
+        "observedBlock": 25636769,
+        "sources": [
+          {
+            "label": "Makina deposits",
+            "url": "https://docs.makina.finance/concepts/architecture/machine/deposits"
+          },
+          {
+            "label": "Dialectic USD Machine on Etherscan",
+            "url": "https://etherscan.io/address/0x6b006870c83b1cd49e766ac9209f8d68763df721"
+          }
+        ],
+        "evidence": "At Ethereum block 25636769 the Machine returns shareToken() = 0x1e33e98af620f1d563fcd3cfd3c75ace841204ef, accountingToken() = USDC, shareLimit() = 75,000,000e18, and recoveryMode() = false. The share token's minter() and owner() both resolve to this Machine, so no external address can mint shares."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa7f0121375dc52028e333f02715183a1d1a690a7",
+        "label": "Watermark Fee Manager (fee-share dilution)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Fees are charged by minting new shares to fee recipients rather than skimming the accounting token, so they dilute existing holders. Accrual is bounded by the Machine's maxFixedFeeAccrualRate and maxPerfFeeAccrualRate.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-29",
+        "observedBlock": 25636769,
+        "sources": [
+          {
+            "label": "Makina fees",
+            "url": "https://docs.makina.finance/concepts/architecture/machine/fees"
+          },
+          {
+            "label": "Watermark Fee Manager on Etherscan",
+            "url": "https://etherscan.io/address/0xa7f0121375dc52028e333f02715183a1d1a690a7"
+          }
+        ],
+        "evidence": "At Ethereum block 25636769 the fee manager returns mgmtFeeRatePerSecond() = 0, smFeeRatePerSecond() = 31709792 (about 0.1% annualized to the Security Module), perfFeeRate() = 1e17 (10% over a high-water mark), and sharePriceWatermark() = 1.034978 USDC. The Machine caps accrual at maxFixedFeeAccrualRate() = 951293760 and maxPerfFeeAccrualRate() = 14269406394 per second, so a misconfigured fee manager cannot mint without bound."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x36ba7c92cd68051fb304bd4580c4a51c1d376532",
+        "label": "Makina Risk Manager - 3-of-5 Safe (share supply cap)",
+        "role": "cap-admin",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x43ab63360b0b2e3e7937e218a51b5c9c4dc0b240",
+            "0x8be82972ae1d050d446be55439c5061a3a7dfa84",
+            "0x6f59929ebab4502b6ccd0fffbd1436d9554050f2",
+            "0x5bd7cdf312840398c73d0543c9e9aa287090c02b",
+            "0xb060a431573716949607760159be84c263e98801"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "version": "1.4.1",
+          "observedBlock": 25636740,
+          "observedAt": "2026-07-29",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-29",
+        "observedBlock": 25636740,
+        "failureDomainKeys": ["safe:ethereum:0x36ba7c92cd68051fb304bd4580c4a51c1d376532"],
+        "sources": [
+          {
+            "label": "Makina Risk Manager",
+            "url": "https://docs.makina.finance/concepts/governance/risk-manager"
+          },
+          {
+            "label": "Risk Manager Safe on Etherscan",
+            "url": "https://etherscan.io/address/0x36ba7c92cd68051fb304bd4580c4a51c1d376532"
+          }
+        ],
+        "evidence": "At Ethereum block 25636740 the Machine's riskManager() returns this address; getOwners() returned the five listed EOAs, getThreshold() returned 3, VERSION() returned 1.4.1, getModulesPaginated() returned an empty list, and the Safe guard slot is zero. Makina documents the share supply cap and the deposit/redemption whitelists as immediate Risk Manager settings, while risk-sensitive parameters route through the separate Risk Manager Timelock 0x38542447c49d24e617fc06113295d7aaa3bec4b6. Raising the cap admits more deposits; it does not let the Risk Manager mint shares without matching USDC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x62244c74e1d09b3d86ef7342d354b5d7770bde10",
+        "label": "Makina DAO - 3-of-5 Safe (INFRA_UPGRADE_ROLE)",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "version": "1.4.1",
+          "observedBlock": 25636740,
+          "observedAt": "2026-07-29",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-29",
+        "observedBlock": 25636740,
+        "failureDomainKeys": ["safe:ethereum:0x62244c74e1d09b3d86ef7342d354b5d7770bde10"],
+        "sources": [
+          {
+            "label": "Makina protocol upgrades",
+            "url": "https://docs.makina.finance/concepts/governance/protocol-upgrades"
+          },
+          {
+            "label": "Makina DAO Safe on Etherscan",
+            "url": "https://etherscan.io/address/0x62244c74e1d09b3d86ef7342d354b5d7770bde10"
+          }
+        ],
+        "evidence": "At Ethereum block 25636740 this Safe reads VERSION() 1.4.1, getThreshold() 3 of 5 owners, no enabled modules, and a zero guard. Makina documents it as the holder of INFRA_UPGRADE_ROLE with a 2-day AccessManager delay; the AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f owns every beacon, including the Machine beacon 0x5c680ec39bafe8524f3c2fa9d5f6d65f09bd7333 whose implementation() read 0xb655ad796634562136b593397b8b4849f332213f. An upgrade could change mint logic, but only after the delay and only if the Security Council does not cancel."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x89faa3b02ef5ab185b8ace489af62748acb50afc",
+        "label": "Makina Security Council - 2-of-4 Safe (guardian, recovery mode, slashing)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "threshold": 2,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "owners": [
+            "0xbd414c655afee5e010cc6f0e8e2c4ea1f159fafd",
+            "0x814c56f5358e3c485632efe412ceef905ce33812",
+            "0x27c858d6d14c68db22835eb0319b59d4a3681ac7",
+            "0x7140ca96f2633134b6cb04bc903ce2642d72565c"
+          ],
+          "threshold": 2,
+          "enabledModules": ["0xeec7919bab68876e14737970fe4965ab9737cd29"],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "version": "1.4.1",
+          "observedBlock": 25636740,
+          "observedAt": "2026-07-29",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-29",
+        "observedBlock": 25636740,
+        "failureDomainKeys": ["safe:ethereum:0x89faa3b02ef5ab185b8ace489af62748acb50afc"],
+        "sources": [
+          {
+            "label": "Makina Security Council",
+            "url": "https://docs.makina.finance/concepts/governance/security-council"
+          },
+          {
+            "label": "Makina recovery mode",
+            "url": "https://docs.makina.finance/concepts/security/recovery-mode"
+          },
+          {
+            "label": "Security Council Safe on Etherscan",
+            "url": "https://etherscan.io/address/0x89faa3b02ef5ab185b8ace489af62748acb50afc"
+          }
+        ],
+        "evidence": "At Ethereum block 25636740 the Machine's securityCouncil() returns this address; getOwners() returned four EOAs, getThreshold() returned 2, VERSION() returned 1.4.1, and getModulesPaginated() returned one enabled module 0xeec7919bab68876e14737970fe4965ab9737cd29 whose purpose Makina does not document publicly, so the module status is recorded as present rather than none-detected. Makina classifies the Security Council as fully trusted: it cannot mint shares, but it can trigger Recovery Mode, force an AUM update past the share-price rate limit (which changes the price at which shares mint and redeem), cancel scheduled upgrades, and slash the Security Module."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Makina fees",
+          "url": "https://docs.makina.finance/concepts/architecture/machine/fees"
+        },
+        {
+          "label": "Makina protocol upgrades",
+          "url": "https://docs.makina.finance/concepts/governance/protocol-upgrades"
+        },
+        {
+          "label": "Makina trust model and risk",
+          "url": "https://docs.makina.finance/concepts/security/trust-and-risk"
+        },
+        {
+          "label": "Makina strategy deployments",
+          "url": "https://docs.makina.finance/strategies/deployments"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "evidence": "Fixed-block reads at Ethereum block 25636769 (Safe state at 25636740): the DUSD share token's minter() and owner() both return the Machine 0x6b006870c83b1cd49e766ac9209f8d68763df721, which returns accountingToken() = USDC, shareToken() = the DUSD token, shareLimit() = 75,000,000e18, recoveryMode() = false, feeManager() = 0xa7f0121375dc52028e333f02715183a1d1a690a7, depositor() = 0x94b1828f91c150c5e6776198e170aca4304903d7, redeemer() = 0x1303c26cfe06bac5bfee29907f37919643def75c, hubCaliber() = 0xd1a1c248b253f1fc60eacd90777b9a63f8c8c1bc, and authority() = the AccessManager 0x0fcefa3f1047f35521a49cd8b06fabd588665d7f. The share token itself is direct code with zero EIP-1967 slots; the Machine, redeemer, depositor, and fee manager are beacon proxies whose beacons are all owned by the AccessManager. Reconciliation is periodic rather than continuous because AUM refreshes on operator-triggered accounting updates bounded by caliberStaleThreshold() = 28800 seconds and maxSharePriceChangeRate() = 9512937595 per second. Supervision is none: no fund or issuer registration was found for the Dialectic USD strategy.",
+      "reviewer": "Claude stablecoin addition (issue #705)",
+      "reviewedAt": "2026-07-29",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [
+        "Identify the enabled Safe module 0xeec7919bab68876e14737970fe4965ab9737cd29 on the Security Council multisig; Makina names Hypernative Guardian as a multisig safeguard but does not publish the module address.",
+        "Confirm whether the AsyncRedeemer whitelist is currently disabled for DUSD; the schema supports it and the Risk Manager can enable it immediately."
+      ]
+    }
+  },
+  "yieldConfig": {
+    "yieldSource": "Dialectic USD Makina strategy",
+    "yieldType": "nav-appreciation"
+  },
+  "launchDate": "2025-09-30"
+}

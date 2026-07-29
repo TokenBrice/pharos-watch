@@ -1,4 +1,5 @@
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { V9Grade, V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 
 /**
@@ -194,10 +195,6 @@ export interface V9AnchorGateReport {
   }>;
   gradeThresholds: Array<{ grade: V9RatedGrade; minScore: number }>;
   verdicts: V9AnchorGateVerdict[];
-}
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function gradeThresholdMap(policy: V9ValidatedPolicyEnvelope): ReadonlyMap<V9RatedGrade, number> {

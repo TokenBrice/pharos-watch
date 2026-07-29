@@ -20,6 +20,8 @@ Use this skill from the Pharos repository root when the user asks to:
 - Start with `docs/agent-task-router.md` and read only the docs for the matched task family.
 - Use `docs/doc-ownership.json` to decide which docs may need updates.
 - Keep `/docs/` and `README.md` as the verified documentation corpus. Do not create committed planning archives.
+- Do not re-verify what CI already guards: file-path citations (`check:doc-source-paths`), internal doc links (`check:verified-doc-links`), doc/agent sync (`check:doc-sync`, `check:agent-doc-sync`), and the generated API contract (`check:docs-api-reference` / openapi / postman). Spend audit effort on semantic claims those checks cannot see.
+- `docs/api-reference.md` is far over the wholesale-read threshold — navigate it via its top navigation block plus Grep or offset reads only.
 - Mirror durable top-level guidance between `AGENTS.md` and `CLAUDE.md`, or move it into `docs/process/*` and reference it from both.
 - If pricing pipeline, PSI, PegScore/DEWS, LiquidityScore, Report Cards, blacklist tracker, mint/burn flow, yield intelligence, Chain Health, or other methodology behavior changes, update `/methodology`, the owning methodology doc, and the structured entry under `shared/data/methodology-changelogs/`.
 - Methodology versions increase numerically: after `v5.9`, use `v5.91` or `v6.0`, not `v5.10`.
@@ -105,7 +107,7 @@ For broad docs work, prefer the specific failing check first, then `npm run chec
 
 ### 5. Broad Audit With Subagents
 
-For a broad docs-vs-code audit in Claude Code, use `.claude/workflows/docs-maintenance.mjs`. Its default mode verifies and adjudicates the corpus; pass `mode: "remediate"` to apply grouped, adjudicated fixes.
+For a broad docs-vs-code audit in Claude Code, use `.claude/workflows/docs-maintenance.mjs`. Its default mode verifies and adjudicates the corpus; pass `mode: "remediate"` to apply grouped, adjudicated fixes. **Prerequisite:** its Load phase reads `agents/doc-verify/manifest.json` (gitignored, not produced by any script) — author that manifest first (`{docs:[{path, lines, category, sourceHints}]}` over the corpus) or the workflow fails at load.
 
 In Codex, or for a narrower family-scoped pass, use `references/subagents.md` to split the audit by docs family. Subagents should be read-only unless assigned a narrow doc write set.
 

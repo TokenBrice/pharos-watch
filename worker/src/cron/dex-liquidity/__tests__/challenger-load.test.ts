@@ -7,13 +7,6 @@ describe("challenger load", () => {
     const db = mockD1(
       [
         {
-          match: "FROM sqlite_master",
-          rows: [
-            { name: "dex_price_challengers" },
-            { name: "dex_price_challenger_snapshots" },
-          ],
-        },
-        {
           match: "SELECT stablecoin_id\n     FROM dex_liquidity",
           rows: [],
         },
@@ -76,13 +69,6 @@ describe("challenger load", () => {
   it("loads published challenger snapshots when present, falls back per coin, and keeps empty snapshots authoritative", async () => {
     const db = mockD1(
       [
-        {
-          match: "FROM sqlite_master",
-          rows: [
-            { name: "dex_price_challengers" },
-            { name: "dex_price_challenger_snapshots" },
-          ],
-        },
         {
           match: "FROM dex_price_challenger_snapshots",
           rows: [

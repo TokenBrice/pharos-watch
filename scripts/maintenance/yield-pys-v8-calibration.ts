@@ -4,6 +4,8 @@ import { dirname, resolve } from "node:path";
 
 import { computePYS, computePysComponents, yieldStabilityToApyVarianceScore } from "../../shared/lib/yield-scoring";
 import { clamp } from "../../shared/lib/math";
+import { percentileNearestRank } from "../../shared/lib/stats";
+import { formatPercentFromRatio } from "../../shared/lib/format";
 import { YieldRankingsResponseSchema, type YieldRanking } from "../../shared/types/yield";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -166,7 +168,7 @@ export function buildCalibrationReport(rankings: RankingWithRisk[], generatedAt:
     "| --- | ---: | ---: | ---: |",
     ...CALIBRATION_FIELDS.map((field) => {
       const stats = nullCoverage[field];
-      return `| ${field} | ${stats.present} | ${stats.missing} | ${formatPercent(stats.nullRate)} |`;
+      return `| ${field} | ${stats.present} | ${stats.missing} | ${formatPercentFromRatio(stats.nullRate, 1)} |`;
     }),
     "",
     "## Non-USD Cohort Checks",
@@ -375,18 +377,11 @@ function readVenueRiskTier(row: RankingWithRisk): string | null {
 
 function summarizeDistribution(values: number[]) {
   return {
-    p10: percentile(values, 0.1),
-    p50: percentile(values, 0.5),
-    p90: percentile(values, 0.9),
+    p10: percentileNearestRank(values, 10) ?? 0,
+    p50: percentileNearestRank(values, 50) ?? 0,
+    p90: percentileNearestRank(values, 90) ?? 0,
     max: values.length ? Math.max(...values) : 0,
   };
-}
-
-function percentile(values: number[], p: number): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  if (sorted.length === 0) return 0;
-  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * p) - 1));
-  return sorted[index];
 }
 
 function summarizeNullCoverage(
@@ -472,10 +467,6 @@ function sortByAfterRank(a: ScoredRow, b: ScoredRow): number {
 
 function formatNumber(value: number): string {
   return Number.isFinite(value) ? value.toFixed(2).replace(/\.00$/, "") : "0";
-}
-
-function formatPercent(value: number): string {
-  return `${(value * 100).toFixed(1)}%`;
 }
 
 function escapeCell(value: string): string {

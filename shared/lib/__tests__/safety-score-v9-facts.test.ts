@@ -12,7 +12,6 @@ import {
   computeV9FactSetDigest,
   parseCompiledV9FactSetV2,
   parseCompiledV9FactSetV3,
-  projectPublicV9FactSetV2,
   readCompiledV9FactSetForEvaluation,
   upgradeCompiledV9FactSetV2,
   upgradeV9FactGapV2,
@@ -2505,26 +2504,5 @@ describe("Safety Score v9 normalized fact protocol", () => {
         rawInputs: {},
       }),
     ).toThrow("Unrecognized key");
-  });
-
-  it("emits a compact public projection without full evidence, reserve, control, or gap-message data", () => {
-    const projection = projectPublicV9FactSetV2(compileV9FactSetV2(coreFixture()));
-    const alpha = projection.assets[0]!;
-    expect(alpha.dependencies).toHaveLength(2);
-    expect(alpha.exitRoutes).toHaveLength(3);
-    expect(alpha.supply.circulatingUsd).toBe(10_000_000);
-    expect(alpha.gaps[0]).toMatchObject({
-      reasonCode: "unsupported-same-notional-route",
-      policyRuleId: "exit.route.supported-model",
-      pathKind: "optional-exit",
-    });
-    const serialized = JSON.stringify(projection);
-    expect(serialized).not.toContain("fixture-source");
-    expect(serialized).not.toContain("Cash");
-    expect(serialized).not.toContain("safe:admin");
-    expect(serialized).not.toContain("retained pool");
-    expect(serialized).not.toContain("claimAndSegregation");
-    expect(serialized).not.toContain("reconciliation");
-    expect(serialized).not.toContain("freeze:none-reviewed");
   });
 });

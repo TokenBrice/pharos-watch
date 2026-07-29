@@ -294,6 +294,7 @@
     "zys-zephyr-protocol": "stablecoin-variant",
     "autousd-auto-finance": "stablecoin-variant",
     "eearn-ember": "stablecoin-variant",
+    "dusd-dialectic": "stablecoin-variant",
     "yusd-yieldfi": "stablecoin-variant",
     "spusd-soulpeg": "core-stablecoin",
     "uusd-anything-labs": "core-stablecoin",

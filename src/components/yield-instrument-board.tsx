@@ -20,22 +20,9 @@ import {
 } from "@/components/yield-leaderboard-row-parts";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
-import { getYieldBenchmarkReferenceText } from "@/lib/yield-benchmark";
 import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
-import {
-  YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
-  YIELD_SOURCE_CONFIDENCE_STYLES,
-  getYieldSourceFreshnessDisplay,
-  getYieldSourceRiskDrivers,
-} from "@/lib/yield-source-risk";
-import { PYS_NULL_REASON_TEXT, buildRankChangeChipDisplay } from "@/lib/yield-presentation";
 import { trackEvent } from "@/lib/analytics";
-import {
-  getYieldAlternateSourceCount,
-  getYieldAvailableSources,
-  getYieldRankChangeAttribution,
-  getYieldBenchmarkSelectionMode,
-} from "@/lib/yield-workbench-row";
+import { deriveYieldRowPresentation, getYieldBenchmarkSelectionMode } from "@/lib/yield-workbench-row";
 import type { YieldTableSortKey } from "@/components/yield-table-logic";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
@@ -238,41 +225,24 @@ function YieldInstrumentRowBase({
     }),
     [row.apy30d, row.benchmarkRate, row.sourceRisk?.sourceRiskPenalty, row.yieldStability, safetyScore, scalingFactor],
   );
-  const confidenceTier = row.provenance?.confidenceTier ?? null;
-  const confidenceStyle = confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] : null;
-  const confidenceLabel = confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier].label : null;
-  const freshness = useMemo(
-    () => getYieldSourceFreshnessDisplay({
-      sourceAgeSeconds: row.sourceRisk?.sourceAgeSeconds,
-      sourceFreshness: row.provenance?.sourceFreshness,
-      warningSignals: row.warningSignals,
-    }),
-    [row.provenance?.sourceFreshness, row.sourceRisk?.sourceAgeSeconds, row.warningSignals],
-  );
-  const sourceRiskScore = row.sourceRisk?.sourceRiskScore ?? null;
-  const rawSourceRiskPenalty = row.sourceRisk?.sourceRiskPenalty ?? null;
-  const sourceRiskMaterial = rawSourceRiskPenalty !== null && rawSourceRiskPenalty > 1.05;
-  const rankAttribution = getYieldRankChangeAttribution(row);
-  const rankChip = useMemo(() => buildRankChangeChipDisplay(rankAttribution), [rankAttribution]);
-  const pysNullReasonText =
-    row.pharosYieldScore === null && row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null;
-  const benchmarkReferenceText = useMemo(() => getYieldBenchmarkReferenceText(row), [row]);
-  const sourceRiskDrivers = useMemo(
-    () =>
-      getYieldSourceRiskDrivers({
-        sourceRisk: row.sourceRisk,
-        sourceChanged: row.provenance?.sourceSwitch ?? false,
-        sourceFreshness: row.provenance?.sourceFreshness,
-        warningSignals: row.warningSignals,
-      }),
-    [row.provenance?.sourceFreshness, row.provenance?.sourceSwitch, row.sourceRisk, row.warningSignals],
-  );
-  const availableSources = useMemo(() => getYieldAvailableSources(row), [row]);
+  const {
+    confidenceStyle,
+    confidenceLabel,
+    freshness,
+    sourceRiskScore,
+    rawSourceRiskPenalty,
+    sourceRiskMaterial,
+    sourceRiskDrivers,
+    rankChip,
+    pysNullReasonText,
+    availableSources,
+    altSourceCount,
+    benchmarkReferenceText,
+  } = useMemo(() => deriveYieldRowPresentation(row), [row]);
 
   // WHY: USD-fallback benchmark on a non-USD peg yields a currency-mismatched score; surface a caveat.
   const isCurrencyMismatchedBenchmark =
     getYieldBenchmarkSelectionMode(row) === "fallback-usd" && row.peg !== null && row.peg !== "USD";
-  const altSourceCount = getYieldAlternateSourceCount(row);
   const totalSourceCount = 1 + altSourceCount;
   const warningCount = row.warningSignals.length;
   const benchmarkRate = row.benchmarkRate ?? riskFreeRate;

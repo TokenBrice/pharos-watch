@@ -6,6 +6,7 @@ import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { tronBase58ToHex } from "../src/lib/tron-address";
+import { chunkArray } from "../src/lib/collections";
 import { CONTRACT_CONFIGS } from "../src/lib/blacklist-contracts";
 import { fetchKycRipRows, parsePositiveInteger, type KycRipCurrentBalanceRow } from "./lib/kyc-rip";
 import { parseDestructiveOperationArgs } from "./lib/destructive-operation-guard";
@@ -491,8 +492,7 @@ function loadStoredEvents(d1: RemoteD1Client, events: readonly FrozenManifestEve
   if (events.length === 0) return [];
   const txHashes = [...new Set(events.map((event) => event.txHash))];
   const rows: StoredEvent[] = [];
-  for (let index = 0; index < txHashes.length; index += 80) {
-    const chunk = txHashes.slice(index, index + 80);
+  for (const chunk of chunkArray(txHashes, 80)) {
     rows.push(
       ...d1.query<StoredEvent>(
         `SELECT id, tx_hash, event_type, event_signature, address, block_number, timestamp,
@@ -605,8 +605,8 @@ function buildBalanceExpectations(
 function loadStoredBalances(d1: RemoteD1Client, addresses: readonly string[]): StoredBalance[] {
   if (addresses.length === 0) return [];
   const rows: StoredBalance[] = [];
-  for (let index = 0; index < addresses.length; index += 80) {
-    const chunk = addresses.slice(index, index + 80).map((address) => address.toLowerCase());
+  for (const addressChunk of chunkArray(addresses, 80)) {
+    const chunk = addressChunk.map((address) => address.toLowerCase());
     rows.push(
       ...d1.query<StoredBalance>(
         `SELECT address, amount_native, amount_usd, source, config_key, contract_address

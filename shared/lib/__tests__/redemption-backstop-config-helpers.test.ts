@@ -3,8 +3,7 @@ import {
   defineBackstopRegistry,
   defineBatch,
   defineOverride,
-  getBackstopRegistryOverrideReasons,
-  getBackstopRegistrySourceFilePaths,
+  rebindEntriesToRegistry,
 } from "@shared/lib/redemption-backstop-configs/factory";
 import {
   applyTrackedReviewedDocs,
@@ -70,9 +69,9 @@ describe("redemption backstop config helpers", () => {
     expect(baseConfig.docs![0]!.supports).toEqual(["route", "fees"]);
   });
 
-  it("clones registry entries and records source file paths", () => {
+  it("clones registry entries and keeps source file paths on the entries", () => {
     const baseConfig = createBaseConfig();
-    const registry = defineBackstopRegistry([
+    const entries = [
       ...defineBatch(["alpha", "beta"], baseConfig, { sourceFilePath: "shared/base.ts" }),
       defineOverride(
         "alpha",
@@ -84,7 +83,8 @@ describe("redemption backstop config helpers", () => {
         "Reviewed override for alpha.",
         { sourceFilePath: "shared/override.ts" },
       ),
-    ]);
+    ];
+    const registry = defineBackstopRegistry(entries);
 
     baseConfig.docs![0]!.supports!.push("capacity");
     registry["alpha"]!.docs![0]!.supports!.push("fees");
@@ -92,9 +92,26 @@ describe("redemption backstop config helpers", () => {
     expect(registry["alpha"]!.settlementModel).toBe("days");
     expect(registry["alpha"]!.docs![0]!.supports).toEqual(["route", "fees"]);
     expect(registry["beta"]!.docs![0]!.supports).toEqual(["route", "fees"]);
-    expect(getBackstopRegistryOverrideReasons(registry).get("alpha")).toBe("Reviewed override for alpha.");
-    expect(getBackstopRegistrySourceFilePaths(registry).get("alpha")).toBe("shared/override.ts");
-    expect(getBackstopRegistrySourceFilePaths(registry).get("beta")).toBe("shared/base.ts");
+    const alphaEntries = entries.filter((entry) => entry.id === "alpha");
+    expect(alphaEntries[alphaEntries.length - 1]).toMatchObject({
+      overrideReason: "Reviewed override for alpha.",
+      sourceFilePath: "shared/override.ts",
+    });
+    expect(entries.find((entry) => entry.id === "beta")).toMatchObject({ sourceFilePath: "shared/base.ts" });
+  });
+
+  it("rebinds entries to a registry mutated after it was built", () => {
+    const entries = defineBatch(["alpha", "beta"], createBaseConfig(), { sourceFilePath: "shared/base.ts" });
+    const registry = defineBackstopRegistry(entries);
+    applyTrackedReviewedDocs(registry, ["alpha"], "2026-01-02");
+
+    const rebound = rebindEntriesToRegistry(entries, registry);
+
+    expect(rebound.map((entry) => entry.id)).toEqual(["alpha", "beta"]);
+    expect(rebound[0]!.config).toBe(registry["alpha"]);
+    expect(rebound[0]!.config.reviewedAt).toBe("2026-01-02");
+    expect(rebound[0]!.sourceFilePath).toBe("shared/base.ts");
+    expect(entries[0]!.config.reviewedAt).toBeUndefined();
   });
 
   it("rejects blank override reasons", () => {

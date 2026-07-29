@@ -1,5 +1,6 @@
 import shockCoverageRegistryAsset from "@shared/data/safety-score-v9/shock-coverage-measurements-v1.json";
 import { V9CdpStressCoverageFactSchema, type V9CdpStressCoverageFact } from "@shared/types/safety-score-v9-backing";
+import { isRecord } from "@shared/lib/type-guards";
 import { z } from "zod";
 
 const RegistryEntrySchema = z
@@ -105,10 +106,6 @@ const RegistrySchema = z
 
 const SHOCK_COVERAGE_REGISTRY = RegistrySchema.parse(shockCoverageRegistryAsset);
 type RegistryEntry = z.infer<typeof RegistryEntrySchema>;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 function latestMeasurement(assetId: string, asOfSec: number): RegistryEntry | null {
   const eligible = SHOCK_COVERAGE_REGISTRY.measurements

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinData } from "@shared/types/market";
 import type { DexApiPool } from "../../lib/dex-api-common";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import type { CronProgressUpdate } from "../../lib/cron-logger";
+import type { CronProgressReporter, CronProgressUpdate, CronResult } from "../../lib/cron-logger";
 import type { LlamaPool } from "../dex-liquidity/types";
 
 function makeDirectApiResult() {
@@ -86,9 +86,85 @@ vi.mock("../dex-liquidity/persistence", () => ({
   writeHistoricalSnapshots: vi.fn(async () => {}),
 }));
 
+// The stage tables round-trip is covered by dex-liquidity/__tests__/scoring-stage.test.ts
+// against real SQLite; here the D1 layer is replaced by an in-memory chunk buffer so the
+// two production entrypoints still exchange the exact encoded scoring input.
+const scoringStage = vi.hoisted(() => ({
+  chunks: [] as Array<{ payload: string; payloadBytes: number; recordCount: number }>,
+  sourceSlotStartedAt: 0,
+  syncStartSec: 0,
+}));
+
+vi.mock("../dex-liquidity/scoring-stage", async () => {
+  const actual = await vi.importActual<typeof import("../dex-liquidity/scoring-stage")>(
+    "../dex-liquidity/scoring-stage",
+  );
+  return {
+    ...actual,
+    persistDexLiquidityScoringStage: vi.fn(
+      async (_db: D1Database, input: Parameters<typeof actual.persistDexLiquidityScoringStage>[1]) => {
+        scoringStage.chunks = [];
+        let recordCount = 0;
+        let payloadBytes = 0;
+        for (const chunk of actual.encodeDexLiquidityScoringStageChunks(
+          input.sourceState,
+          input.poolState,
+          actual.DEX_LIQUIDITY_SCORING_STAGE_MAX_CHUNK_BYTES,
+          true,
+        )) {
+          scoringStage.chunks.push({ ...chunk });
+          recordCount += chunk.recordCount;
+          payloadBytes += chunk.payloadBytes;
+        }
+        scoringStage.sourceSlotStartedAt = input.sourceSlotStartedAt;
+        scoringStage.syncStartSec = input.syncStartSec;
+        return {
+          generationId: `dex-liquidity-scoring-stage:${input.sourceSlotStartedAt}`,
+          sourceSlotStartedAt: input.sourceSlotStartedAt,
+          chunkCount: scoringStage.chunks.length,
+          recordCount,
+          payloadBytes,
+          retention: {
+            cutoff: 0,
+            deletedRows: 0,
+            deletedChunkRows: 0,
+            deletedStageRows: 0,
+            oldestRemainingAt: null,
+            durationMs: 0,
+            error: null,
+          },
+        };
+      },
+    ),
+    loadDexLiquidityScoringStage: vi.fn(async () => {
+      const decoded = actual.decodeDexLiquidityScoringStageChunks(scoringStage.chunks);
+      return {
+        generationId: `dex-liquidity-scoring-stage:${scoringStage.sourceSlotStartedAt}`,
+        sourceSlotStartedAt: scoringStage.sourceSlotStartedAt,
+        syncStartSec: scoringStage.syncStartSec,
+        sourceState: decoded.sourceState,
+        poolState: decoded.poolState,
+      };
+    }),
+    markDexLiquidityScoringStageConsumed: vi.fn(async () => {}),
+  };
+});
+
+vi.mock("../dex-liquidity/challenger-persistence", async () => {
+  const actual = await vi.importActual<typeof import("../dex-liquidity/challenger-persistence")>(
+    "../dex-liquidity/challenger-persistence",
+  );
+  return {
+    ...actual,
+    publishDexPriceChallengerSnapshots: vi.fn(async () => ({
+      publishedStablecoins: 0,
+      skippedStablecoins: 0,
+      missingTables: false,
+    })),
+  };
+});
+
 vi.mock("../dex-liquidity/fetch-fallbacks", () => ({
-  fetchDsFallbackPools: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
-  fetchCgTickersFallback: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
   getFallbackTargets: vi.fn(() => []),
 }));
 
@@ -135,7 +211,7 @@ vi.mock("../../lib/cex-orderbooks", () => ({
   })),
 }));
 
-import { syncDexLiquidity } from "../dex-liquidity/orchestrator";
+import { consumeDexLiquidityScoringStage, stageDexLiquidityScoring } from "../dex-liquidity/orchestrator";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
 import { buildCurveLookups, fetchDataSources, buildKnownPoolAddresses } from "../dex-liquidity/fetch-primary";
@@ -153,7 +229,6 @@ import { filterPrimaryPoolsPreferDirectApi } from "../dex-liquidity/orchestrator
 import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
-import { fetchCgTickersFallback, fetchDsFallbackPools } from "../dex-liquidity/fetch-fallbacks";
 import { fetchMajorStablecoinOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 
 const db = {
@@ -171,6 +246,19 @@ const db = {
   exec: async () => ({ count: 0, duration: 0 }),
   dump: async () => new ArrayBuffer(0),
 } as unknown as D1Database;
+
+/** Drive the scheduled composition: the stage producer followed by its consumer. */
+async function runDexLiquidityScoringCycle(
+  database: D1Database,
+  graphApiKey: string | null,
+  signal?: AbortSignal,
+  coingeckoApiKey?: string | null,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  reportProgress?: CronProgressReporter,
+): Promise<CronResult> {
+  await stageDexLiquidityScoring(database, graphApiKey, signal, coingeckoApiKey, chainRpcs, reportProgress);
+  return await consumeDexLiquidityScoringStage(database, signal, reportProgress);
+}
 
 function makeTrackedStablecoin(id: string, symbol: string, price: number): StablecoinData {
   const nowSec = Math.floor(Date.now() / 1000);
@@ -200,7 +288,7 @@ function makeTrackedStablecoin(id: string, symbol: string, price: number): Stabl
   };
 }
 
-describe("syncDexLiquidity", () => {
+describe("dex liquidity scoring stage cycle", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(fetchDataSources).mockResolvedValue({
@@ -224,7 +312,7 @@ describe("syncDexLiquidity", () => {
 
   it("throws on catastrophic source failure instead of silently returning", async () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce(null);
-    await expect(syncDexLiquidity(db, "graph-key")).rejects.toThrow("catastrophic source failure");
+    await expect(runDexLiquidityScoringCycle(db, "graph-key")).rejects.toThrow("catastrophic source failure");
   });
 
   it("returns degraded when non-catastrophic critical source family fails", async () => {
@@ -239,7 +327,7 @@ describe("syncDexLiquidity", () => {
       dlProtocolsAvailable: false,
     });
 
-    const result = await syncDexLiquidity(db, "graph-key");
+    const result = await runDexLiquidityScoringCycle(db, "graph-key");
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -274,7 +362,7 @@ describe("syncDexLiquidity", () => {
       dlProtocolsAvailable: false,
     });
 
-    const result = await syncDexLiquidity(db, "graph-key");
+    const result = await runDexLiquidityScoringCycle(db, "graph-key");
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -340,7 +428,7 @@ describe("syncDexLiquidity", () => {
       dump: async () => new ArrayBuffer(0),
     } as unknown as D1Database;
 
-    const result = await syncDexLiquidity(guardDb, "graph-key");
+    const result = await runDexLiquidityScoringCycle(guardDb, "graph-key");
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -360,7 +448,7 @@ describe("syncDexLiquidity", () => {
   });
 
   it("returns ok when required source families succeed", async () => {
-    const result = await syncDexLiquidity(db, "graph-key");
+    const result = await runDexLiquidityScoringCycle(db, "graph-key");
 
     expect(result.status).toBe("ok");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -370,7 +458,6 @@ describe("syncDexLiquidity", () => {
       sourceCoverage?: {
         nearCoverageGuard?: boolean;
         weakCoverageCoins?: number;
-        coverageRecoveredCoins?: number;
         directCexOrderbookDepth?: {
           observations: number;
           maxDepthDown2PctUsdBySymbol: Record<string, number>;
@@ -386,7 +473,6 @@ describe("syncDexLiquidity", () => {
     expect(metadata.stagedPoolsSkippedByUniqueDerivedIdentity).toBe(0);
     expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(false);
     expect(metadata.sourceCoverage?.weakCoverageCoins).toBe(0);
-    expect(metadata.sourceCoverage?.coverageRecoveredCoins).toBe(0);
     expect(metadata.sourceCoverage?.directCexOrderbookDepth).toMatchObject({
       observations: 3,
       maxDepthDown2PctUsdBySymbol: { USDT: 1_000_000, USDC: 500_000 },
@@ -395,8 +481,6 @@ describe("syncDexLiquidity", () => {
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
     expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(0);
     expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
-    expect(fetchDsFallbackPools).not.toHaveBeenCalled();
-    expect(fetchCgTickersFallback).not.toHaveBeenCalled();
   });
 
   it("fetches bounded market telemetry before pool graphs accumulate", async () => {
@@ -437,7 +521,7 @@ describe("syncDexLiquidity", () => {
       };
     });
 
-    await syncDexLiquidity(db, "graph-key");
+    await runDexLiquidityScoringCycle(db, "graph-key");
   });
 
   it("finishes direct providers before loading primary sources", async () => {
@@ -461,7 +545,7 @@ describe("syncDexLiquidity", () => {
       };
     });
 
-    await syncDexLiquidity(db, "graph-key");
+    await runDexLiquidityScoringCycle(db, "graph-key");
 
     expect(fetchDataSources).toHaveBeenCalledOnce();
   });
@@ -472,7 +556,7 @@ describe("syncDexLiquidity", () => {
       progressUpdates.push(update);
     });
 
-    await syncDexLiquidity(db, "graph-key", undefined, undefined, undefined, reportProgress);
+    await runDexLiquidityScoringCycle(db, "graph-key", undefined, undefined, undefined, reportProgress);
 
     const directApiFetch = progressUpdates.find((update) => update.stage === "direct-api-fetch");
     const scoringComplete = progressUpdates.find((update) => update.stage === "scoring-complete");
@@ -543,7 +627,7 @@ describe("syncDexLiquidity", () => {
     });
     const progressUpdates: CronProgressUpdate[] = [];
 
-    const result = await syncDexLiquidity(db, "graph-key", undefined, undefined, undefined, async (update) => {
+    const result = await runDexLiquidityScoringCycle(db, "graph-key", undefined, undefined, undefined, async (update) => {
       progressUpdates.push(update);
     });
 
@@ -702,7 +786,7 @@ describe("syncDexLiquidity", () => {
     );
 
     const startedAt = Math.floor(Date.now() / 1000);
-    const result = await syncDexLiquidity(db, "graph-key");
+    const result = await runDexLiquidityScoringCycle(db, "graph-key");
     expect(mergeStagedPools).toHaveBeenCalledOnce();
     const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
     const scoreCall = scoreCalls[scoreCalls.length - 1];
@@ -759,7 +843,7 @@ describe("syncDexLiquidity", () => {
       errors: ["query poolType type error"],
     });
 
-    const result = await syncDexLiquidity(db, "graph-key");
+    const result = await runDexLiquidityScoringCycle(db, "graph-key");
 
     expect(result.status).toBe("ok");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
@@ -779,7 +863,7 @@ describe("syncDexLiquidity", () => {
     const fluidGate = deferred<ReturnType<typeof makeDirectApiResult>>();
     vi.mocked(fetchFluidPools).mockImplementationOnce(() => fluidGate.promise);
 
-    const syncPromise = syncDexLiquidity(db, "graph-key");
+    const syncPromise = runDexLiquidityScoringCycle(db, "graph-key");
 
     await vi.waitFor(() => expect(fetchFluidPools).toHaveBeenCalledOnce());
     expect(fetchDataSources).not.toHaveBeenCalled();
@@ -796,7 +880,7 @@ describe("syncDexLiquidity", () => {
   it("passes scheduled chain RPCs into Fluid enrichment", async () => {
     const chainRpcs = new Map<string, ChainRpcConfig>();
 
-    await syncDexLiquidity(db, "graph-key", undefined, undefined, chainRpcs);
+    await runDexLiquidityScoringCycle(db, "graph-key", undefined, undefined, chainRpcs);
 
     expect(fetchFluidPools).toHaveBeenCalledWith(expect.any(AbortSignal), chainRpcs);
   });
@@ -845,7 +929,7 @@ describe("syncDexLiquidity", () => {
       return new Map([["usdc-circle", []]]);
     });
 
-    await syncDexLiquidity(db, "graph-key");
+    await runDexLiquidityScoringCycle(db, "graph-key");
 
     expect(convertedStablecoinPrices).toBeInstanceOf(Map);
     expect(Array.from(convertedStablecoinPrices?.entries() ?? [])).toEqual([
@@ -863,7 +947,7 @@ describe("syncDexLiquidity", () => {
   it("warns and falls back to reference pricing when the stablecoins cache is unusable", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    await syncDexLiquidity(db, "graph-key");
+    await runDexLiquidityScoringCycle(db, "graph-key");
 
     expect(warnSpy).toHaveBeenCalledWith(
       "[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing and market cap data; using reference-only / absolute fallback",
@@ -1023,7 +1107,7 @@ describe("syncDexLiquidity", () => {
       dump: async () => new ArrayBuffer(0),
     } as unknown as D1Database;
 
-    const result = await syncDexLiquidity(driftDb, "graph-key");
+    const result = await runDexLiquidityScoringCycle(driftDb, "graph-key");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       sourceCoverage?: {
         qualityDriftSeverity?: string;

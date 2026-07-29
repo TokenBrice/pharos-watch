@@ -14,11 +14,6 @@
     "maxFunctionLines": 124,
     "branchCount": 113
   },
-  "shared/lib/safety-score-v9-compiler.ts": {
-    "fileLines": 1529,
-    "maxFunctionLines": 341,
-    "branchCount": 149
-  },
   "shared/lib/safety-score-v9/backing.ts": {
     "fileLines": 1515,
     "maxFunctionLines": 166,

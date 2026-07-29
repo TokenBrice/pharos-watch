@@ -7,15 +7,10 @@ export interface RedemptionBackstopRegistryEntry {
   sourceFilePath?: string;
 }
 
-const REGISTRY_OVERRIDE_REASONS = new WeakMap<Record<string, RedemptionBackstopConfig>, Map<string, string>>();
-const REGISTRY_SOURCE_FILE_PATHS = new WeakMap<Record<string, RedemptionBackstopConfig>, Map<string, string>>();
-
 export function defineBackstopRegistry(
   entries: readonly RedemptionBackstopRegistryEntry[],
 ): Record<string, RedemptionBackstopConfig> {
   const configs: Record<string, RedemptionBackstopConfig> = {};
-  const overrideReasons = new Map<string, string>();
-  const sourceFilePaths = new Map<string, string>();
 
   for (const entry of entries) {
     const hasExistingConfig = Object.prototype.hasOwnProperty.call(configs, entry.id);
@@ -24,17 +19,26 @@ export function defineBackstopRegistry(
     }
 
     configs[entry.id] = cloneRedemptionBackstopConfig(entry.config);
-    if (entry.overrideReason) {
-      overrideReasons.set(entry.id, entry.overrideReason);
-    }
-    if (entry.sourceFilePath) {
-      sourceFilePaths.set(entry.id, entry.sourceFilePath);
-    }
   }
 
-  REGISTRY_OVERRIDE_REASONS.set(configs, overrideReasons);
-  REGISTRY_SOURCE_FILE_PATHS.set(configs, sourceFilePaths);
   return configs;
+}
+
+/**
+ * Re-point a family's entries at the config objects held by its own registry.
+ *
+ * A family that calls `applyTrackedReviewedDocs` after `defineBackstopRegistry`
+ * backfills docs onto the registry's clones, not onto the source configs the
+ * entries were built from. Rebinding lets the exported entry array carry those
+ * backfills to the manifest. Entry order, override reasons, and source file
+ * paths are untouched; duplicate ids resolve to the winning config, which is
+ * what the manifest would have read off the registry anyway.
+ */
+export function rebindEntriesToRegistry(
+  entries: readonly RedemptionBackstopRegistryEntry[],
+  configs: Record<string, RedemptionBackstopConfig>,
+): RedemptionBackstopRegistryEntry[] {
+  return entries.map((entry) => ({ ...entry, config: configs[entry.id] ?? entry.config }));
 }
 
 /**
@@ -89,38 +93,28 @@ export function defineOverride(
 }
 
 /**
- * Build registry entries from a `Record<id, config>`, attaching a `sourceFilePath`
- * and an override reason. Supply `overrideReason` to apply one reason to every
- * entry (uniform override of a shared default), or `overrideReasonForIds` to attach
- * a reason only to the ids it returns a string for (the rest stay un-flagged).
+ * Build registry entries from a `Record<id, config>`, optionally attaching a
+ * `sourceFilePath` and an override reason. Supply `overrideReason` to apply one
+ * reason to every entry (uniform override of a shared default), or
+ * `overrideReasonForIds` to attach a reason only to the ids it returns a string
+ * for (the rest stay un-flagged). Omit `sourceFilePath` when the entries live in
+ * the manifest module's own file and should inherit its path.
  */
 export function defineRecordEntries(
   configs: Record<string, RedemptionBackstopConfig>,
   options: {
     overrideReason?: string;
     overrideReasonForIds?: (id: string) => string | undefined;
-    sourceFilePath: string;
-  },
+    sourceFilePath?: string;
+  } = {},
 ): RedemptionBackstopRegistryEntry[] {
   return Object.entries(configs).map(([id, config]) => {
     const overrideReason = options.overrideReason ?? options.overrideReasonForIds?.(id);
     return {
       id,
       config,
-      sourceFilePath: options.sourceFilePath,
+      ...(options.sourceFilePath ? { sourceFilePath: options.sourceFilePath } : {}),
       ...(overrideReason ? { overrideReason } : {}),
     };
   });
-}
-
-export function getBackstopRegistryOverrideReasons(
-  configs: Record<string, RedemptionBackstopConfig>,
-): ReadonlyMap<string, string> {
-  return REGISTRY_OVERRIDE_REASONS.get(configs) ?? new Map();
-}
-
-export function getBackstopRegistrySourceFilePaths(
-  configs: Record<string, RedemptionBackstopConfig>,
-): ReadonlyMap<string, string> {
-  return REGISTRY_SOURCE_FILE_PATHS.get(configs) ?? new Map();
 }

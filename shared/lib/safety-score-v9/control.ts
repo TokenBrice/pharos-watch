@@ -17,6 +17,7 @@ import {
   resolveV9ReasonPolicy,
 } from "./policy";
 import { isV9UncanonicalizedChainPoolRoute } from "./facts";
+import { canonicalDomains, compareText, domainKey, uniqueSorted } from "./primitives";
 
 export type V9MintReconciliation = "continuous" | "periodic" | "not-applicable" | "unknown";
 export type V9MintSupervision = "prudential" | "attestation-only" | "none" | "unknown";
@@ -220,24 +221,6 @@ const ORACLE_BRANCHES = [
   "backstop",
   "shutdown-bad-debt",
 ] as const satisfies readonly V9OracleBranchKind[];
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function uniqueSorted(values: readonly string[]): string[] {
-  return [...new Set(values)].sort(compareText);
-}
-
-function failureDomainKey(domain: V9FailureDomainRef): string {
-  return `${domain.kind}:${domain.key}`;
-}
-
-function canonicalFailureDomains(domains: readonly V9FailureDomainRef[]): V9FailureDomainRef[] {
-  return [...new Map(domains.map((domain) => [failureDomainKey(domain), domain])).values()].sort((left, right) =>
-    compareText(failureDomainKey(left), failureDomainKey(right)),
-  );
-}
 
 function isKnownRequired(status: V9FactStatusV2): boolean {
   return status.applicability.state === "required" && status.observationState === "known";
@@ -551,10 +534,10 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   };
 
   const addStructuralFailure = (failure: V9ControlStructuralFailure) => {
-    const domains = canonicalFailureDomains(failure.failureDomains);
+    const domains = canonicalDomains(failure.failureDomains);
     const controlKeys = uniqueSorted(failure.controlKeys);
     const key = `${failure.kind}:${failure.binding}:${controlKeys.join("+")}:${domains
-      .map(failureDomainKey)
+      .map(domainKey)
       .join("+")}`;
     structuralFailures.set(key, { ...failure, controlKeys, failureDomains: domains });
   };
@@ -710,14 +693,14 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     const componentControlKeys = uniqueSorted(
       [mintControl?.controlKey, upgradeControl?.controlKey].filter((value): value is string => value !== undefined),
     );
-    const componentFailureDomains = canonicalFailureDomains([
+    const componentFailureDomains = canonicalDomains([
       ...(mintControl?.failureDomains ?? []),
       ...(upgradeControl?.failureDomains ?? []),
     ]);
     const mintControlKeys = mintControl === null ? [] : [mintControl.controlKey];
-    const mintFailureDomains = canonicalFailureDomains(mintControl?.failureDomains ?? []);
+    const mintFailureDomains = canonicalDomains(mintControl?.failureDomains ?? []);
     const upgradeControlKeys = upgradeControl === null ? [] : [upgradeControl.controlKey];
-    const upgradeFailureDomains = canonicalFailureDomains(upgradeControl?.failureDomains ?? []);
+    const upgradeFailureDomains = canonicalDomains(upgradeControl?.failureDomains ?? []);
     const mintBinding = mintControl === null ? true : bindingByMateriality(mintControl, materialShareThreshold);
     const mintReconciled = mint.reconciliation === "continuous" || mint.reconciliation === "periodic";
     const gradedPostureScore =
@@ -899,7 +882,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       addReason("missing-oracle-profile", "local-component", "oracle:tier");
     } else {
       const linkedControls = [...oracleControls.values()];
-      const failureDomains = canonicalFailureDomains(linkedControls.flatMap((control) => control.failureDomains));
+      const failureDomains = canonicalDomains(linkedControls.flatMap((control) => control.failureDomains));
       components.push({
         componentKey: "oracle",
         kind: "oracle",
@@ -1025,7 +1008,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         score: policy.control.bridgeTierQuality[route.tier],
         binding,
         controlKeys: [control.controlKey],
-        failureDomains: canonicalFailureDomains(control.failureDomains),
+        failureDomains: canonicalDomains(control.failureDomains),
       });
       if (route.tier === "external-lock-mint" || route.tier === "opaque-or-unknown") {
         addStructuralFailure({
@@ -1164,7 +1147,7 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
     .filter((control) => isKnownRequired(control.status))
     .filter((control) => bindingByMateriality(control, materialShareThreshold))
     .flatMap((control) => control.failureDomains);
-  const failureDomains = canonicalFailureDomains([
+  const failureDomains = canonicalDomains([
     ...bindingControlFailureDomains,
     ...normalizedComponents.filter((component) => component.binding).flatMap((component) => component.failureDomains),
     ...normalizedStructuralFailures.filter((failure) => failure.binding).flatMap((failure) => failure.failureDomains),

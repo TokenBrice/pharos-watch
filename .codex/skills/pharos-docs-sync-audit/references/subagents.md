@@ -1,6 +1,6 @@
 # Pharos Docs Sync Audit Subagents
 
-Codex currently exposes generic `explorer` and `worker` subagent roles. Use these templates for bounded documentation audits when the user authorizes subagent use.
+Codex currently exposes generic `explorer` and `worker` subagent roles; in Claude Code, use the read-only `Explore` agent type for `explorer` roles and a general-purpose agent with a narrow write scope for `worker`. Use these templates for bounded documentation audits when the user authorizes subagent use.
 
 ## docs-truth-auditor
 

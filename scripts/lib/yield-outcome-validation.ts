@@ -1,3 +1,4 @@
+import { mean, median } from "../../shared/lib/stats";
 import { computePYS } from "../../shared/lib/yield-scoring";
 import {
   digestYieldOutcomeDataset,
@@ -151,19 +152,6 @@ export interface YieldOutcomeValidationReport {
 function metric(value: number | null): number | null {
   if (value == null || !Number.isFinite(value)) return null;
   return Math.round(value * METRIC_PRECISION) / METRIC_PRECISION;
-}
-
-function mean(values: readonly number[]): number | null {
-  return values.length === 0 ? null : values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function median(values: readonly number[]): number | null {
-  if (values.length === 0) return null;
-  const sorted = [...values].sort((left, right) => left - right);
-  const midpoint = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0
-    ? ((sorted[midpoint - 1] ?? 0) + (sorted[midpoint] ?? 0)) / 2
-    : (sorted[midpoint] ?? null);
 }
 
 function rate(numerator: number, denominator: number): number {

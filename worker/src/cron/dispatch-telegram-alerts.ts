@@ -16,7 +16,6 @@ import {
   readPendingCapacitySnapshot,
   type PendingCapacitySnapshot,
 } from "./telegram-pending";
-import type { PlannedSubscriberAlert } from "./dispatch-telegram-routing";
 import {
   buildTelegramDispatchEvents,
   countSuppressedSafetyChangesAtSeed,
@@ -41,7 +40,6 @@ import {
   recoverIncompleteTelegramSourceEvent,
 } from "./dispatch-telegram-source-lifecycle";
 import { executeAuthoritativeFanoutPath } from "./dispatch-telegram-authoritative-path";
-import { inspectAndImportLegacyOverflowBacklog } from "./telegram-legacy-overflow-import";
 import { dispatchFreezeAlertOutbox } from "./telegram-freeze-outbox";
 
 export type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
@@ -59,7 +57,6 @@ interface FullFanoutPathContext {
   sourceEvent: TelegramAlertSourceEvent;
   suppressedSafetyChangesAtSeed: number;
   pendingCapacityBefore: PendingCapacitySnapshot;
-  overflowBacklog: readonly PlannedSubscriberAlert[];
   nowSec: number;
   dispatchStartedAtMs: number;
   chatsWithActiveSnooze: number;
@@ -102,7 +99,6 @@ async function dispatchTelegramAlertsImpl(
   });
   const dispatchStartedAtMs = Date.now();
   const dispatchNowSec = Math.floor(dispatchStartedAtMs / 1000);
-  const legacyOverflowImport = await inspectAndImportLegacyOverflowBacklog(db, dispatchNowSec);
   const allowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
   if (!allowed) {
     const nowSec = dispatchNowSec;
@@ -168,7 +164,6 @@ async function dispatchTelegramAlertsImpl(
 
     const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
     const pendingCapacityBefore = await readPendingCapacitySnapshot(db, nowSec);
-    const overflowBacklog: readonly PlannedSubscriberAlert[] = [];
     assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
     await reportDigestProgress(reportProgress, {
       stage: "source-loaded",
@@ -186,9 +181,6 @@ async function dispatchTelegramAlertsImpl(
             : 0,
           reserveDriftIds: snapshotState.currentReserveDriftIds.length,
           chatsWithActiveSnooze,
-          overflowBacklogChats: overflowBacklog.length,
-          legacyOverflowImportState: legacyOverflowImport.state,
-          legacyOverflowImportCursor: legacyOverflowImport.importCursor,
           freezeOutboxState: freezeOutbox.state,
           freezeObserved: freezeOutbox.observed,
           freezeQueued: freezeOutbox.queued,
@@ -336,7 +328,6 @@ async function dispatchTelegramAlertsImpl(
         suppressedMethodologyChanges,
         suppressedSafetyChangesAtSeed,
         pendingCapacityBefore,
-        overflowBacklog,
         nowSec,
         dispatchStartedAtMs,
         chatsWithActiveSnooze,
@@ -374,7 +365,6 @@ async function dispatchTelegramAlertsImpl(
       },
       sourceEvent,
       pendingCapacityBefore,
-      overflowBacklog,
       suppressedSafetyChangesAtSeed,
       nowSec,
       dispatchStartedAtMs,

@@ -2,17 +2,16 @@ import type { PegCurrency } from "@shared/types";
 
 // Static projection of the stablecoin registry for global shell and metadata copy.
 // Keep in sync with shared/lib/stablecoins via src/lib/__tests__/stablecoin-static-data.test.ts.
-export const TRACKED_STABLECOIN_COUNT = 403;
-export const ACTIVE_STABLECOIN_COUNT = 335;
+export const TRACKED_STABLECOIN_COUNT = 404;
+export const ACTIVE_STABLECOIN_COUNT = 336;
 export const CORE_AGGREGATE_STABLECOIN_COUNT = 257;
-export const ACTIVE_VARIANT_STABLECOIN_COUNT = 49;
+export const ACTIVE_VARIANT_STABLECOIN_COUNT = 50;
 export const ACTIVE_STABLE_VALUE_INVESTMENT_COUNT = 29;
 export const PRE_LAUNCH_STABLECOIN_COUNT = 31;
-export const FROZEN_STABLECOIN_COUNT = 19;
 export const DEAD_STABLECOIN_COUNT = 89;
 
 export const ACTIVE_PEG_CURRENCY_COUNTS = {
-  USD: 246,
+  USD: 247,
   RUB: 1,
   EUR: 17,
   BRL: 6,
@@ -372,6 +371,7 @@ export const TRACKED_STABLECOIN_IDS = [
   "zys-zephyr-protocol",
   "autousd-auto-finance",
   "eearn-ember",
+  "dusd-dialectic",
   "yusd-yieldfi",
   "spusd-soulpeg",
   "uusd-anything-labs",
@@ -556,32 +556,9 @@ const NON_ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set([
   "gyen-gyen",
 ] as const);
 
-export const ACTIVE_STABLECOIN_IDS = TRACKED_STABLECOIN_IDS.filter((id) => !NON_ACTIVE_STABLECOIN_ID_SET.has(id));
+const ACTIVE_STABLECOIN_IDS = TRACKED_STABLECOIN_IDS.filter((id) => !NON_ACTIVE_STABLECOIN_ID_SET.has(id));
 
 export const ACTIVE_STABLECOIN_ID_SET: ReadonlySet<string> = new Set(ACTIVE_STABLECOIN_IDS);
-
-export const HOMEPAGE_TOP_ACTIVE_STABLECOINS = [
-  { id: "usdt-tether", name: "Tether", symbol: "USDT" },
-  { id: "susdt-spark", name: "Spark Savings USDT", symbol: "spUSDT" },
-  { id: "steakusdt-steakhouse", name: "Steakhouse USDT V2", symbol: "steakUSDT" },
-  { id: "usdc-circle", name: "USD Coin", symbol: "USDC" },
-  { id: "susdc-spark", name: "Spark Savings USDC", symbol: "spUSDC" },
-  { id: "gtusdcp-gauntlet", name: "Gauntlet USDC Prime", symbol: "gtUSDCp" },
-  { id: "gtusdc-gauntlet", name: "Gauntlet USDC Prime V1", symbol: "gtUSDC" },
-  { id: "yvusdc-yearn", name: "Yearn v3 USDC Vault", symbol: "yvUSDC-1" },
-  { id: "steakusdc-steakhouse", name: "Steakhouse USDC V2", symbol: "steakUSDC" },
-  { id: "bbqusdc-steakhouse", name: "Smokehouse USDC", symbol: "bbqUSDC" },
-  { id: "usde-ethena", name: "Ethena USDe", symbol: "USDe" },
-  { id: "srusde-strata", name: "Strata Senior USDe", symbol: "srUSDe" },
-  { id: "susde-ethena", name: "Ethena Staked USDe", symbol: "sUSDe" },
-  { id: "usds-sky", name: "Sky Dollar", symbol: "USDS" },
-  { id: "susds-sky", name: "Sky Savings USDS", symbol: "sUSDS" },
-  { id: "stusds-sky", name: "Staked USDS", symbol: "stUSDS" },
-  { id: "usd1-world-liberty-financial", name: "World Liberty Financial USD", symbol: "USD1" },
-  { id: "susd1plus-lorenzo", name: "staked USD1+", symbol: "sUSD1+" },
-  { id: "dai-makerdao", name: "Dai", symbol: "DAI" },
-  { id: "sdai-sky", name: "Savings Dai", symbol: "sDAI" },
-] as const;
 
 export const HOMEPAGE_TOP_CORE_STABLECOINS = [
   { id: "usdt-tether", name: "Tether", symbol: "USDT" },

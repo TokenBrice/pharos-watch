@@ -12,7 +12,6 @@ import {
   assertV9UnresolvedFactsMatchPolicy,
   assertV9ValidatedPolicyEnvelope,
   loadV9MethodologyPolicy,
-  normalizeV9UnresolvedFacts,
   resolveV9ReasonPolicy,
 } from "../safety-score-v9/policy";
 import { V9_BOUNDED_ATTRIBUTION_REASON_CODES } from "../../types/safety-score-v9-public";
@@ -272,9 +271,9 @@ describe("Safety Score v9 methodology policy", () => {
       ceiling: { kind: "reason:material-unknown-reserve-exposure", limit: 69 },
     });
     expect(() => assertV9UnresolvedFactsMatchPolicy(V9_CANDIDATE_POLICY_V1, [raw])).toThrow(/contradict policy/);
-    const normalized = normalizeV9UnresolvedFacts(V9_CANDIDATE_POLICY_V1, [raw]);
-    expect(normalized[0]?.critical).toBe(false);
-    expect(() => assertV9UnresolvedFactsMatchPolicy(V9_CANDIDATE_POLICY_V1, normalized)).not.toThrow();
+    expect(() =>
+      assertV9UnresolvedFactsMatchPolicy(V9_CANDIDATE_POLICY_V1, [{ ...raw, critical: false }]),
+    ).not.toThrow();
     expect(() =>
       V9UnresolvedFactSchema.parse({
         code: "future-unregistered-reason",
@@ -292,7 +291,6 @@ describe("Safety Score v9 methodology policy", () => {
     };
     expect(() => assertV9ValidatedPolicyEnvelope(forgedPolicy)).toThrow(/loadV9MethodologyPolicy/);
     expect(() => assertV9ReasonCodesRegistered(forgedPolicy, [])).toThrow(/loadV9MethodologyPolicy/);
-    expect(() => normalizeV9UnresolvedFacts(forgedPolicy, [])).toThrow(/loadV9MethodologyPolicy/);
     expect(() => assertV9UnresolvedFactsMatchPolicy(forgedPolicy, [])).toThrow(/loadV9MethodologyPolicy/);
   });
 

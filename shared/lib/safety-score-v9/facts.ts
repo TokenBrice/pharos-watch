@@ -3,7 +3,6 @@ import {
   CompiledV9FactSetV3Schema,
   V9FactSetCoreV2Schema,
   V9FactSetCoreV3Schema,
-  V9PublicFactSetProjectionV2Schema,
   type CompiledV9FactSetV2,
   type CompiledV9FactSetV3,
   type V9EvidenceResponsibility,
@@ -11,8 +10,6 @@ import {
   type V9FactGapV2,
   type V9FactSetCoreV2,
   type V9FactSetCoreV3,
-  type V9FactStatusV2,
-  type V9PublicFactSetProjectionV2,
 } from "../../types/safety-score-v9-facts";
 import type { DependencyType, V9DependencyEconomicRole } from "../../types/dependency-types";
 import {
@@ -311,100 +308,4 @@ export function readCompiledV9FactSetForEvaluation(input: unknown): V9Evaluation
     return { sourceSchemaVersion: 3, sourceFactSetDigest: factSet.v9FactSetDigest, factSet };
   }
   throw new Error(`Unsupported Safety Score v9 fact-set schema version: ${String(schemaVersion)}`);
-}
-
-function statusesForProjection(asset: V9AssetFactsV2): readonly V9FactStatusV2[] {
-  const mechanismStatuses = asset.mechanismRiskReview.review
-    ? Object.values(asset.mechanismRiskReview.review).flatMap((value) =>
-        value !== null && typeof value === "object" && "status" in value ? [value.status as V9FactStatusV2] : [],
-      )
-    : [];
-  return [
-    asset.implementation.status,
-    asset.mechanismRiskReview.status,
-    ...mechanismStatuses,
-    asset.dependencies.status,
-    asset.reserveStatus,
-    ...asset.reserveExposures.map((exposure) => exposure.status),
-    asset.exitStatus,
-    ...asset.exitRoutes.flatMap((route) => [route.status, route.output.status]),
-    asset.controlStatus,
-    ...asset.controls.map((control) => control.status),
-    asset.economicControlReview.mint.status,
-    asset.economicControlReview.oracle.status,
-    ...asset.economicControlReview.oracle.branches.map((branch) => branch.status),
-    asset.economicControlReview.bridge.status,
-    asset.accessReview.transfer.status,
-    asset.accessReview.freeze.status,
-    ...asset.accessReview.freeze.reviews.map((review) => review.status),
-    asset.peg.status,
-    asset.supply.status,
-  ];
-}
-
-function stateCounts(asset: V9AssetFactsV2) {
-  const counts = {
-    known: 0,
-    missing: 0,
-    stale: 0,
-    unsupported: 0,
-    boundedUnknown: 0,
-    notApplicable: 0,
-    applicabilityUnresolved: 0,
-  };
-  for (const status of statusesForProjection(asset)) {
-    if (status.observationState === "known") counts.known += 1;
-    else if (status.observationState === "missing") counts.missing += 1;
-    else if (status.observationState === "stale") counts.stale += 1;
-    else if (status.observationState === "unsupported") counts.unsupported += 1;
-    else counts.boundedUnknown += 1;
-    if (status.applicability.state === "not-applicable") counts.notApplicable += 1;
-    if (status.applicability.state === "unresolved") counts.applicabilityUnresolved += 1;
-  }
-  return counts;
-}
-
-/** Compact projection excludes full evidence, private messages, controls, and reserve classifications. */
-export function projectPublicV9FactSetV2(input: CompiledV9FactSetV2): V9PublicFactSetProjectionV2 {
-  const factSet = parseCompiledV9FactSetV2(input);
-  return V9PublicFactSetProjectionV2Schema.parse({
-    schemaVersion: 2,
-    baseInputGenerationId: factSet.baseInputGenerationId,
-    v9FactSetDigest: factSet.v9FactSetDigest,
-    asOfSec: factSet.asOfSec,
-    activeAssetIds: factSet.activeAssetIds,
-    assets: factSet.assets.map((asset) => ({
-      assetId: asset.assetId,
-      archetype: asset.archetype,
-      stateCounts: stateCounts(asset),
-      dependencies: asset.dependencies.edges.map((edge) => ({
-        upstreamAssetId: edge.upstreamAssetId,
-        dependencyType: edge.dependencyType,
-        pathKind: edge.pathKind,
-        economicRole: edge.economicRole,
-        weight: edge.weight,
-      })),
-      exitRoutes: asset.exitRoutes.map((route) => ({
-        routeKey: route.routeKey,
-        lane: route.lane,
-        observationState: route.status.observationState,
-        scoreEligible: route.scoreEligible,
-      })),
-      supply: {
-        observationState: asset.supply.status.observationState,
-        circulatingUsd: asset.supply.circulatingUsd,
-        selectedRouteSupplyShare: asset.supply.selectedRouteSupplyShare,
-        unknownRouteSupplyShare: asset.supply.unknownRouteSupplyShare,
-        unreviewedRouteSupplyShare: asset.supply.unreviewedRouteSupplyShare,
-      },
-      gaps: asset.gaps.map((gap) => ({
-        gapId: gap.gapId,
-        reasonCode: gap.reasonCode,
-        ownerDomain: gap.ownerDomain,
-        policyRuleId: gap.policyRuleId,
-        observationState: gap.observationState,
-        pathKind: gap.path.kind,
-      })),
-    })),
-  });
 }

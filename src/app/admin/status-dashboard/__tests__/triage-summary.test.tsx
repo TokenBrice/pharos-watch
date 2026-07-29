@@ -3,7 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
-import { buildStatusDashboardData } from "@/lib/status-dashboard-model";
+import { buildStatusDashboardData, type DashboardSection } from "@/lib/status-dashboard-model";
 
 vi.mock("@/components/status/freshness-indicator", () => ({
   FreshnessIndicator: () => <span>freshness</span>,
@@ -51,8 +51,12 @@ describe("TriageSummary workspace links", () => {
       requestSourceError: null,
       historyTransitions: undefined,
     });
-    const pipelineSection = model.sections.find((section) => section.id === "pipeline");
-    if (!pipelineSection) throw new Error("Pipeline section fixture missing");
+    const pipelineSection: DashboardSection = {
+      id: "pipeline",
+      title: "Pipeline Health",
+      value: "Healthy",
+      summary: "0 missing prices, 0 stale on-chain feeds, 0 blacklist gaps",
+    };
 
     render(
       <TriageSummary

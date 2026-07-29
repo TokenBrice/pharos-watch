@@ -4,6 +4,7 @@ import type {
   SolanaMeasuredExecutionTarget,
   SolanaMeasuredRouteProof,
 } from "@shared/types/solana-measured-execution";
+import { isRecord } from "@shared/lib/type-guards";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { USER_AGENT } from "../../lib/constants";
 import { tryParseJson } from "../../lib/json-parse";
@@ -36,10 +37,6 @@ interface RaydiumClmmPoolState {
   tokenMint1: string;
   liquidity: string;
   sqrtPriceX64: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function toBase58(bytes: Uint8Array): string {

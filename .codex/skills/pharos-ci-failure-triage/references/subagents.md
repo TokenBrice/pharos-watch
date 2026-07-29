@@ -1,6 +1,6 @@
 # Pharos CI Failure Triage Subagents
 
-Codex currently exposes generic `explorer` and `worker` subagent roles. Use these templates for bounded CI/deploy investigations when the user authorizes subagent use.
+Codex currently exposes generic `explorer` and `worker` subagent roles; in Claude Code, use the read-only `Explore` agent type for both roles below. Use these templates for bounded CI/deploy investigations when the user authorizes subagent use.
 
 ## github-actions-log-investigator
 

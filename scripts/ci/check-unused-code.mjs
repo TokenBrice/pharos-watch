@@ -107,8 +107,6 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/pricing-pipeline-version.ts::getPricingPipelineVersionAt",
   // Consumed by the report-card calibration CLI outside this runtime-only scan.
   "shared/lib/redemption-backstop-scoring.ts::isExitRouteObservationScoreEligible",
-  // Consumed by the v9 readiness CLI outside this runtime-only scan.
-  "shared/lib/safety-score-v9-compiler.ts::assertExactReportCardIds",
   // Safety Score v9 operational CLIs run outside this runtime-only graph. Keep
   // their inputs coupled to the production policy, timing, and envelope schemas.
   "shared/lib/safety-score-v9-research.ts::loadV9MethodologyPolicy",
@@ -122,7 +120,6 @@ const EXPORT_ALLOWLIST = new Set([
   "shared/lib/safety-score-v9/evidence-gap-queue.ts::buildV9EvidenceGapQueue",
   "shared/lib/safety-score-v9/evidence-gap-queue.ts::parseV9EvidenceGapQueue",
   // Consumed by scripts/lib/redemption-backstop-validation.ts (out-of-scan-scope).
-  "shared/lib/redemption-backstop-configs/factory.ts::getBackstopRegistrySourceFilePaths",
   "shared/lib/redemption-backstop-configs/policies.ts::REDEMPTION_BACKSTOP_POLICY_ENTRIES",
   // Exercised directly by the config-helper contract suite; production route composition uses the V9 wrapper.
   "shared/lib/redemption-backstop-configs/shared.ts::resolveRedemptionCostBpsAtNotional",
@@ -231,7 +228,6 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/api/telegram-webhook-resolution.ts::resolveCoinTargets",
   "worker/src/cron/blacklist/evm-source.ts::parseEvmLogs",
   "worker/src/cron/blacklist/evm-source.ts::resolveRpcLogTarget",
-  "worker/src/cron/dex-liquidity/challenger-persistence.ts::detectDexPriceChallengerTableState",
   "worker/src/cron/dex-liquidity/challenger-persistence.ts::selectDexPriceChallengerRowsFromPools",
   "worker/src/cron/dex-liquidity/geckoterminal-shared.ts::getGtPoolKind",
   // Consumed by worker/scripts/generate-safety-score-v9-b1-root-ledger.ts
