@@ -3,10 +3,17 @@ import type { StablecoinMeta } from "@shared/types/core";
 
 const fetchErc20TotalSupplyMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
+const fetchOnchainUint256Mock = vi.fn();
+const fetchSolanaTokenSupplyMock = vi.fn();
+const fetchStarknetTotalSupplyMock = vi.fn();
+const fetchIcrcLedgerTotalSupplyMock = vi.fn();
 
 vi.mock("../../../reserve-adapters/helpers", () => ({
   fetchErc20TotalSupply: (...args: unknown[]) => fetchErc20TotalSupplyMock(...args),
-  fetchOnchainUint256: vi.fn(),
+  fetchOnchainUint256: (...args: unknown[]) => fetchOnchainUint256Mock(...args),
+  fetchSolanaTokenSupply: (...args: unknown[]) => fetchSolanaTokenSupplyMock(...args),
+  fetchStarknetTotalSupply: (...args: unknown[]) => fetchStarknetTotalSupplyMock(...args),
+  fetchIcrcLedgerTotalSupply: (...args: unknown[]) => fetchIcrcLedgerTotalSupplyMock(...args),
   probeTrackedTokenSupply: (...args: unknown[]) => probeTrackedTokenSupplyMock(...args),
 }));
 
@@ -56,10 +63,115 @@ function makeChfauMeta(): StablecoinMeta {
   } as StablecoinMeta;
 }
 
+const SUSDE_OFT = "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2";
+const SUSDE_REPRESENTATION_CHAINS = [
+  "plasma", "linea", "fraxtal", "hyperevm", "berachain", "zircuit", "metis", "xlayer",
+  "base", "bsc", "morph-l2", "scroll", "kava", "swellchain", "mode", "mantle",
+  "arbitrum", "manta", "blast", "optimism", "zksync", "avalanche", "solana",
+];
+
+function makeSusdeMeta(): StablecoinMeta {
+  return {
+    id: "susde-ethena",
+    name: "Staked USDe",
+    symbol: "sUSDe",
+    detailProvider: "coingecko",
+    contracts: [
+      { chain: "ethereum", address: "0x9d39a5de30e57443bff2a8307a4256c8797a3497", decimals: 18 },
+      ...SUSDE_REPRESENTATION_CHAINS.map((chain) => ({ chain, address: SUSDE_OFT, decimals: 18 })),
+    ],
+    flags: {
+      pegCurrency: "USD",
+      backing: "crypto-backed",
+      governance: "centralized-dependent",
+      yieldBearing: true,
+      navToken: true,
+    },
+  } as StablecoinMeta;
+}
+
+function makeAcrdxMeta(): StablecoinMeta {
+  const share = "0x9477724bb54ad5417de8baff29e59df3fb4da74f";
+  const spoke = "0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245";
+  return {
+    id: "acrdx-anemoy-apollo",
+    name: "Anemoy Apollo",
+    symbol: "ACRDX",
+    detailProvider: "coingecko",
+    contracts: [
+      { chain: "ethereum", address: share, decimals: 18 },
+      { chain: "plume", address: share, decimals: 18 },
+      { chain: "monad", address: spoke, decimals: 18 },
+      { chain: "base", address: share, decimals: 18 },
+      { chain: "optimism", address: spoke, decimals: 18 },
+      { chain: "solana", address: "ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G", decimals: 6 },
+    ],
+    flags: {
+      pegCurrency: "USD",
+      backing: "rwa-backed",
+      governance: "centralized",
+      yieldBearing: true,
+      navToken: true,
+    },
+  } as StablecoinMeta;
+}
+
+function makeGldtMeta(): StablecoinMeta {
+  const evm = "0x86856814e74456893cfc8946bedcbb472b5fa856";
+  return {
+    id: "gldt-gold-dao",
+    name: "Gold Token",
+    symbol: "GLDT",
+    detailProvider: "commodity",
+    contracts: [
+      { chain: "ethereum", address: evm, decimals: 8 },
+      { chain: "base", address: evm, decimals: 8 },
+      { chain: "arbitrum", address: evm, decimals: 8 },
+      { chain: "icp", address: "6c7su-kiaaa-aaaar-qaira-cai", decimals: 8 },
+    ],
+    flags: {
+      pegCurrency: "GOLD",
+      backing: "rwa-backed",
+      governance: "centralized-dependent",
+      yieldBearing: false,
+      navToken: false,
+    },
+  } as StablecoinMeta;
+}
+
+function makeMre7yieldMeta(): StablecoinMeta {
+  return {
+    id: "mre7yield-midas",
+    name: "Midas Re7 Yield",
+    symbol: "mRe7YIELD",
+    detailProvider: "coingecko",
+    contracts: [
+      { chain: "ethereum", address: "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf", decimals: 18 },
+      { chain: "etherlink", address: "0x733d504435a49fc8c4e9759e756c2846c92f0160", decimals: 18 },
+      {
+        chain: "starknet",
+        address: "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
+        decimals: 18,
+      },
+    ],
+    flags: {
+      pegCurrency: "USD",
+      backing: "rwa-backed",
+      governance: "centralized",
+      yieldBearing: true,
+      navToken: true,
+    },
+  } as StablecoinMeta;
+}
+
 describe("fetchCuratedAggregateOnChainMcap", () => {
   beforeEach(() => {
     fetchErc20TotalSupplyMock.mockReset();
     probeTrackedTokenSupplyMock.mockReset();
+    fetchOnchainUint256Mock.mockReset();
+    fetchSolanaTokenSupplyMock.mockReset();
+    fetchStarknetTotalSupplyMock.mockReset();
+    fetchIcrcLedgerTotalSupplyMock.mockReset();
   });
 
   it("reallocates canonical lock/mint supply without double counting representations", async () => {
@@ -121,5 +233,114 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     });
 
     await expect(fetchCuratedAggregateOnChainMcap(makeChfauMeta(), 1.12)).resolves.toBeNull();
+  });
+
+  function mockSusdeLegs(): void {
+    // Every configured representation reads 10; the X Layer leg is the one
+    // allowZeroSupply leg and therefore bypasses the probe.
+    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
+      input?.chain === "ethereum" ? 1_000n * 10n ** 18n : 10n * 10n ** 18n,
+    );
+    fetchErc20TotalSupplyMock.mockResolvedValue(10n * 10n ** 18n);
+  }
+
+  it("splits sUSDe's canonical row into free float and an unattributed escrow remainder", async () => {
+    mockSusdeLegs();
+    // The OFT adapter escrows 300, but only 230 of it is claimed by configured
+    // representation legs: TON, Aptos and unmatched escrow are the remaining 70.
+    fetchOnchainUint256Mock.mockResolvedValue(300n * 10n ** 18n);
+
+    const result = await fetchCuratedAggregateOnChainMcap(makeSusdeMeta(), 1);
+
+    expect(result?.mcap).toBe(1_000);
+    expect(result?.chainCirculating?.Ethereum).toBe(700);
+    expect(result?.chainCirculating?.["sUSDe unattributed OFT escrow"]).toBe(70);
+    const published = Object.values(result?.chainCirculating ?? {}).reduce((sum, value) => sum + value, 0);
+    expect(published).toBeCloseTo(1_000, 6);
+    // balanceOf(0x211cc4dd…) on the canonical Ethereum sUSDe contract.
+    expect(fetchOnchainUint256Mock.mock.calls[0]?.[0]).toMatchObject({
+      chain: "ethereum",
+      contract: "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      data: `0x70a08231${SUSDE_OFT.slice(2).padStart(64, "0")}`,
+    });
+  });
+
+  it("fails sUSDe closed when the escrow balance cannot be read or is inconsistent", async () => {
+    mockSusdeLegs();
+    fetchOnchainUint256Mock.mockResolvedValue(null);
+    await expect(fetchCuratedAggregateOnChainMcap(makeSusdeMeta(), 1)).resolves.toBeNull();
+
+    // Escrow smaller than the configured representations means the lock/mint
+    // model no longer holds, so the aggregate must not publish a negative row.
+    fetchOnchainUint256Mock.mockResolvedValue(100n * 10n ** 18n);
+    await expect(fetchCuratedAggregateOnChainMcap(makeSusdeMeta(), 1)).resolves.toBeNull();
+  });
+
+  it("reads ACRDX's zero-supply Solana mint instead of failing the aggregate closed", async () => {
+    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
+      if (input?.chain === "ethereum") return 378_869n * 10n ** 18n;
+      if (input?.chain === "plume") return 32_320_262n * 10n ** 18n;
+      if (input?.chain === "monad") return 9_837_361n * 10n ** 18n;
+      if (input?.chain === "optimism") return 97_931n * 10n ** 18n;
+      return null;
+    });
+    fetchErc20TotalSupplyMock.mockResolvedValue(0n);
+    fetchSolanaTokenSupplyMock.mockResolvedValue(0n);
+
+    const result = await fetchCuratedAggregateOnChainMcap(makeAcrdxMeta(), 1);
+
+    expect(result?.mcap).toBe(42_634_423);
+    expect(result?.chainCirculating?.Base).toBe(0);
+    expect(result?.chainCirculating?.Solana).toBe(0);
+    expect(fetchSolanaTokenSupplyMock).toHaveBeenCalledTimes(1);
+    // The Solana leg must never route through the probe, which rejects zero.
+    expect(probeTrackedTokenSupplyMock.mock.calls.every(([, input]) => input?.kind !== "onchain-solana")).toBe(true);
+  });
+
+  it("reallocates GLDT's canonical ICP ledger supply across its Omnity EVM legs", async () => {
+    fetchIcrcLedgerTotalSupplyMock.mockResolvedValue(59_450_000_000_000n);
+    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
+      if (input?.chain === "ethereum") return 764_444_464n;
+      if (input?.chain === "base") return 534_540_392_636n;
+      return null;
+    });
+    fetchErc20TotalSupplyMock.mockResolvedValue(0n);
+
+    const result = await fetchCuratedAggregateOnChainMcap(makeGldtMeta(), 1);
+
+    expect(result?.mcap).toBe(594_500);
+    expect(result?.chainCirculating?.["Internet Computer"]).toBeCloseTo(589_146.951629, 6);
+    expect(result?.chainCirculating?.Base).toBeCloseTo(5_345.40392636, 6);
+    expect(result?.chainCirculating?.Ethereum).toBeCloseTo(7.64444464, 6);
+    expect(result?.chainCirculating?.Arbitrum).toBe(0);
+    expect(fetchIcrcLedgerTotalSupplyMock.mock.calls[0]?.[0]).toMatchObject({
+      canisterId: "6c7su-kiaaa-aaaar-qaira-cai",
+    });
+  });
+
+  it("sums mRe7YIELD's Starknet leg into the aggregate denominator", async () => {
+    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
+      if (input?.chain === "ethereum") return 6_792_507n * 10n ** 18n;
+      if (input?.chain === "etherlink") return 1_041_331n * 10n ** 18n;
+      return null;
+    });
+    fetchStarknetTotalSupplyMock.mockResolvedValue(175_676n * 10n ** 18n);
+
+    const result = await fetchCuratedAggregateOnChainMcap(makeMre7yieldMeta(), 1);
+
+    expect(result?.mcap).toBe(8_009_514);
+    expect(result?.chainCirculating?.Starknet).toBe(175_676);
+    expect(fetchStarknetTotalSupplyMock.mock.calls[0]?.[0]).toMatchObject({
+      contract: "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
+    });
+  });
+
+  it("fails mRe7YIELD closed when the Starknet leg cannot be read", async () => {
+    probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
+      input?.chain === "ethereum" ? 6_792_507n * 10n ** 18n : 1_041_331n * 10n ** 18n,
+    );
+    fetchStarknetTotalSupplyMock.mockRejectedValue(new Error("starknet_call failed"));
+
+    await expect(fetchCuratedAggregateOnChainMcap(makeMre7yieldMeta(), 1)).resolves.toBeNull();
   });
 });

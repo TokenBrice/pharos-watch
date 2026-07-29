@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
+import { resolveChainId } from "@shared/lib/chains";
 import {
   CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS,
+  CURATED_AGGREGATE_ESCROW_RESIDUALS,
   hasRuntimeOnchainSupplyPath,
   isZephyrScannerSupplyId,
+  onchainSupplyProbeFamily,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSingleOnchainSupplyProbeContract,
   selectSupplementalOnchainSupplyProbeContract,
@@ -51,6 +54,43 @@ describe("supportsOnchainSupplyProbe", () => {
       chain: "unknown",
       address: "0x0000000000000000000000000000000000000001",
       decimals: 18,
+    })).toBe(false);
+  });
+
+  // Platform extension: non-EVM legs must be able to join a fail-closed
+  // aggregate instead of poisoning it for the whole asset.
+  it("accepts Starknet felts and ICP canister ids and reports their reader family", () => {
+    const starknet = {
+      chain: "starknet",
+      address: "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
+      decimals: 18,
+    };
+    const icp = { chain: "icp", address: "6c7su-kiaaa-aaaar-qaira-cai", decimals: 8 };
+
+    expect(onchainSupplyProbeFamily(starknet)).toBe("starknet");
+    expect(onchainSupplyProbeFamily(icp)).toBe("icp");
+    expect(onchainSupplyProbeFamily({ chain: "ethereum", address: `0x${"1".repeat(40)}`, decimals: 6 })).toBe("evm");
+    expect(onchainSupplyProbeFamily({
+      chain: "solana",
+      address: "So11111111111111111111111111111111111111112",
+      decimals: 6,
+    })).toBe("solana");
+  });
+
+  it("rejects malformed Starknet and ICP addresses", () => {
+    expect(supportsOnchainSupplyProbe({ chain: "starknet", address: "0xnot-a-felt", decimals: 18 })).toBe(false);
+    expect(supportsOnchainSupplyProbe({ chain: "starknet", address: `0x${"1".repeat(65)}`, decimals: 18 }))
+      .toBe(false);
+    // Self-authenticating (user) principals are longer than a canister id.
+    expect(supportsOnchainSupplyProbe({
+      chain: "icp",
+      address: "thrhh-hnmzu-kjquw-6ebmf-vdhed-yf2ry-avwy7-2jrrm-byg34-zoqaz-wqe",
+      decimals: 8,
+    })).toBe(false);
+    expect(supportsOnchainSupplyProbe({
+      chain: "icp",
+      address: "0x0000000000000000000000000000000000000001",
+      decimals: 8,
     })).toBe(false);
   });
 });
@@ -373,23 +413,118 @@ describe("curated on-chain supply paths", () => {
     expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["witry-brix"]).toBe("ethereum");
   });
 
-  // Shape variant: a reallocating mesh with an untracked representation. The
-  // Stable-chain thBILL leg is not a tracked deployment, so its balance stays
-  // inside the Ethereum bucket rather than failing the aggregate closed.
-  it("reallocates thBILL without configuring its untracked Stable-chain leg", () => {
+  // Shape variant: a reallocating mesh whose Stable-chain representation became
+  // a tracked deployment, so it now reallocates out of the Ethereum bucket
+  // instead of hiding inside it.
+  it("reallocates thBILL including its Stable-chain leg", () => {
     const oft = "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a";
     const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
       { chain: "ethereum", address: "0x5fa487bca6158c64046b2813623e20755091da0b", decimals: 6 },
       { chain: "arbitrum", address: oft, decimals: 6 },
       { chain: "base", address: oft, decimals: 6 },
       { chain: "hyperevm", address: oft, decimals: 6 },
+      { chain: "stable", address: oft, decimals: 6 },
     ], "thbill-theo"));
 
     const chains = selected?.map((entry) => entry.config.chain) ?? [];
-    expect(chains).toEqual(["ethereum", "arbitrum", "base", "hyperevm"]);
-    expect(chains).not.toContain("stable");
+    expect(chains).toEqual(["ethereum", "arbitrum", "base", "hyperevm", "stable"]);
     expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["thbill-theo"]).toBe("ethereum");
     expect(selected?.find((entry) => entry.config.chain === "base")?.config.allowZeroSupply).toBe(true);
+    // Stable is absent from the worker RPC registry, so the leg pins endpoints.
+    expect(selected?.find((entry) => entry.config.chain === "stable")?.config.rpcUrl).toBe("https://rpc.stable.xyz");
+  });
+
+  // Shape: Centrifuge V3 burn/mint share bridge. Every reviewed deployment is
+  // configured, including two that read exactly zero today - the Solana leg only
+  // became configurable once allowZeroSupply started governing Solana reads.
+  it("sums every reviewed ACRDX deployment including its zero-supply legs", () => {
+    const share = "0x9477724bb54ad5417de8baff29e59df3fb4da74f";
+    const spoke = "0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245";
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      { chain: "ethereum", address: share, decimals: 18 },
+      { chain: "plume", address: share, decimals: 18 },
+      { chain: "monad", address: spoke, decimals: 18 },
+      { chain: "base", address: share, decimals: 18 },
+      { chain: "optimism", address: spoke, decimals: 18 },
+      { chain: "solana", address: "ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G", decimals: 6 },
+    ], "acrdx-anemoy-apollo"));
+
+    expect(selected?.map((entry) => entry.config.chain)).toEqual([
+      "ethereum",
+      "plume",
+      "monad",
+      "optimism",
+      "base",
+      "solana",
+    ]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["acrdx-anemoy-apollo"]).toBeUndefined();
+    expect(selected?.find((entry) => entry.config.chain === "base")?.config.allowZeroSupply).toBe(true);
+    expect(selected?.find((entry) => entry.config.chain === "solana")?.config.allowZeroSupply).toBe(true);
+    // Optimism is in the worker chain registry, so it needs no pinned endpoint.
+    expect(selected?.find((entry) => entry.config.chain === "optimism")?.config.rpcUrl).toBeUndefined();
+  });
+
+  // Shape: non-EVM native leg. Omnity escrows GLDT inside an ICP canister, so
+  // the ledger total already contains the EVM float and is reallocated.
+  it("reallocates GLDT's canonical ICP ledger across its Omnity EVM legs", () => {
+    const evm = "0x86856814e74456893cfc8946bedcbb472b5fa856";
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      { chain: "ethereum", address: evm, decimals: 8 },
+      { chain: "base", address: evm, decimals: 8 },
+      { chain: "arbitrum", address: evm, decimals: 8 },
+      { chain: "icp", address: "6c7su-kiaaa-aaaar-qaira-cai", decimals: 8 },
+    ], "gldt-gold-dao"));
+
+    expect(selected?.map((entry) => entry.config.chain)).toEqual(["icp", "ethereum", "base", "arbitrum"]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["gldt-gold-dao"]).toBe("icp");
+    // Arbitrum is a reviewed deployment that currently reads exactly zero.
+    expect(selected?.find((entry) => entry.config.chain === "arbitrum")?.config.allowZeroSupply).toBe(true);
+  });
+
+  // Shape: Starknet legs on two assets served by one adapter. Neither escrows
+  // the others, so the reviewed deployments sum.
+  it("resolves the Starknet legs of mRe7YIELD and sUSN as summed aggregates", () => {
+    const mre7 = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      { chain: "ethereum", address: "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf", decimals: 18 },
+      { chain: "etherlink", address: "0x733d504435a49fc8c4e9759e756c2846c92f0160", decimals: 18 },
+      {
+        chain: "starknet",
+        address: "0x04be8945e61dc3e19ebadd1579a6bd53b262f51ba89e6f8b0c4bc9a7e3c633fc",
+        decimals: 18,
+      },
+    ], "mre7yield-midas"));
+
+    expect(mre7?.map((entry) => entry.config.chain)).toEqual(["ethereum", "etherlink", "starknet"]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["mre7yield-midas"]).toBeUndefined();
+    expect(mre7?.find((entry) => entry.config.chain === "etherlink")?.config.rpcUrl)
+      .toBe("https://node.mainnet.etherlink.com");
+    // The Starknet reader carries its own endpoints, so the leg pins none.
+    expect(mre7?.find((entry) => entry.config.chain === "starknet")?.config.rpcUrl).toBeUndefined();
+
+    const susn = selectCuratedAggregateOnchainSupplyProbeContracts(makeMeta([
+      { chain: "ethereum", address: "0xe24a3dc889621612422a64e6388927901608b91d", decimals: 18 },
+      { chain: "zksync", address: "0xb6a09d426861c63722aa0b333a9ce5d5a9b04c4f", decimals: 18 },
+      { chain: "sophon", address: "0xb87dbe27db932bacaaa96478443b6519d52c5004", decimals: 18 },
+      {
+        chain: "starknet",
+        address: "0x02411565ef1a14decfbe83d2e987cced918cd752508a3d9c55deb67148d14d17",
+        decimals: 18,
+      },
+    ], "susn-noon"));
+
+    expect(susn?.map((entry) => entry.config.chain)).toEqual(["ethereum", "zksync", "sophon", "starknet"]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["susn-noon"]).toBeUndefined();
+    expect(susn?.find((entry) => entry.config.chain === "sophon")?.config.rpcUrl).toBe("https://rpc.sophon.xyz");
+  });
+
+  it("keeps sUSDe's unattributed escrow label outside the canonical chain registry", () => {
+    const residual = CURATED_AGGREGATE_ESCROW_RESIDUALS["susde-ethena"];
+
+    expect(residual?.escrowAddress).toBe("0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2");
+    // The label must not canonicalize, or the remainder would be credited to a
+    // real chain instead of the V9 unmatched-chain-label pool.
+    expect(resolveChainId(residual!.unattributedChainLabel)).toBeNull();
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["susde-ethena"]).toBe("ethereum");
   });
 
 });

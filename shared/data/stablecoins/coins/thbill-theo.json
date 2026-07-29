@@ -54,6 +54,11 @@
       "chain": "hyperevm",
       "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
       "decimals": 6
+    },
+    {
+      "chain": "stable",
+      "address": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+      "decimals": 6
     }
   ],
   "canBeBlacklisted": true,
@@ -76,9 +81,9 @@
   "deploymentModel": "native-multichain",
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "thBILL is Ethereum-native (pinned proxy) and reaches Arbitrum, Base, and HyperEVM through Theo's documented LayerZero OFT V2 contract (shared address 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a, endpoint/peers read 2026-07-20), administered by the Theo 4-of-6 Admin Multisig.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "summary": "thBILL is Ethereum-native (pinned proxy) and reaches Arbitrum, Base, HyperEVM, and Stable through Theo's documented LayerZero OFT V2 contract (shared address 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a, endpoint/peers read 2026-07-20 and 2026-07-29), administered by the Theo 4-of-6 Admin Multisig.",
+    "reviewedAt": "2026-07-29",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle); Claude V9 bridge-deployment materiality wave3",
     "confidence": "verified",
     "protocols": [
       {
@@ -221,6 +226,39 @@
           {
             "label": "thBILL hyperevm OFT (endpoint() = 0x1a44076050125825900e736c501f859c50fE728c, read 2026-07-20)",
             "url": "https://hyperevmscan.io/address/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
+          }
+        ]
+      },
+      {
+        "id": "stable:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+        "destinationChain": "stable",
+        "contractAddress": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+        "protocol": "LayerZero OFT V2",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "LayerZero OFT V2 representation of Ethereum-native thBILL on Stable (evm chainId 988): the token sits at the same shared CREATE2 address 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a and returned symbol thBILL, 6 decimals, totalSupply 35,612,981.743756 (read 2026-07-29 at block 33586875 on rpc.stable.xyz and stable.drpc.org). endpoint() = the LayerZero V2 endpoint deployed on Stable, 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, with peers wired to the Ethereum, Arbitrum, Base, and HyperEVM eids; oftVersion() reports the OFT V2 interface and sharedDecimals() = 6. owner() resolves to the Theo 4-of-6 Admin Multisig 0x94877640dd9e6f1e3cb56bf7b5665b7152601295, matching the other OFT legs. The Ethereum OFT Adapter 0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a escrows this supply, so the Stable leg reallocates from the canonical Ethereum bucket rather than adding to it.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-29",
+        "observedBlock": 33586875,
+        "sourceChain": "ethereum",
+        "controllerChain": "stable",
+        "controllerAddress": "0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:stable:0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
+        ],
+        "sources": [
+          {
+            "label": "Theo docs — thBILL OFT addresses",
+            "url": "https://docs.theo.xyz/resources/addresses"
+          },
+          {
+            "label": "thBILL stable OFT (endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, read 2026-07-29)",
+            "url": "https://stablescan.xyz/address/0xfdd22ce6d1f66bc0ec89b20bf16ccb6670f55a5a"
           }
         ]
       }

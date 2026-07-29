@@ -24,6 +24,26 @@ export const ZEPHYR_ZYS_ASSET_ID = "zys-zephyr-protocol";
 
 const ZEPHYR_SCANNER_SUPPLY_IDS = new Set([ZEPHYR_ZSD_ASSET_ID, ZEPHYR_ZYS_ASSET_ID]);
 const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+// Starknet contract addresses are felts: hex, up to 252 bits, usually written
+// zero-padded to 64 nibbles.
+const STARKNET_ADDRESS_RE = /^0x[0-9a-fA-F]{1,64}$/;
+// ICP canister ids are 10-byte principals in base32-with-CRC text form, i.e.
+// four groups of five characters plus a three-character tail. Longer
+// self-authenticating (user) principals are deliberately rejected.
+const ICP_CANISTER_ID_RE = /^[a-z2-7]{5}(-[a-z2-7]{5}){3}-[a-z2-7]{3}$/;
+
+/**
+ * Supply-read families the probe lanes can dispatch. EVM and Solana are the
+ * original two; Starknet and ICP were added so non-EVM legs can join
+ * fail-closed curated aggregates instead of poisoning them.
+ */
+export type OnchainSupplyProbeFamily = "evm" | "solana" | "starknet" | "icp";
+
+const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeFamily>> = {
+  solana: "solana",
+  starknet: "starknet",
+  icp: "icp",
+};
 
 export const CURATED_ONCHAIN_SUPPLY_CONTRACTS: Record<string, CuratedOnchainSupplyContractConfig> = {
   // No upstream market row exists for Spark Savings USDC yet, but the Ethereum
@@ -62,6 +82,67 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   "dusd-dialectic": [
     { chain: "ethereum" },
     { chain: "ink", rpcUrl: "https://rpc-gel.inkonchain.com" },
+  ],
+  // ACRDX is a Centrifuge V3 share token bridged burn-and-mint through the
+  // source-chain Spoke, so the reviewed deployments sum: Ethereum holds only
+  // 378,869.49 of 42.6M shares and is structurally incapable of escrowing the
+  // others. Verified 2026-07-29: Ethereum 378,869.49 + Plume 32,320,262.97 +
+  // Monad 9,837,361.46 + Optimism 97,931.995 + Base 0 + Solana 0 =
+  // 42,634,425.93, a -14.95% restatement of CoinGecko's 50,014,229.92, which has
+  // been frozen at a constant share count for 30 days and reconciles to no
+  // on-chain combination (ftUSD/CHFAU stale-upstream precedent; owner-ratified
+  // 2026-07-29). Base and the Solana mint are reviewed live deployments that
+  // currently read exactly zero.
+  "acrdx-anemoy-apollo": [
+    { chain: "ethereum" },
+    { chain: "plume", rpcUrl: "https://rpc.plume.org", fallbackRpcUrl: "https://plume.drpc.org" },
+    { chain: "monad", rpcUrl: "https://rpc.monad.xyz", fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" },
+    { chain: "optimism" },
+    { chain: "base", allowZeroSupply: true },
+    { chain: "solana", allowZeroSupply: true },
+  ],
+  // GLDT is native on the Internet Computer and reaches Ethereum, Base and
+  // Arbitrum through Omnity's ICP-custody lock/mint bridge, so the ICP ledger
+  // total already contains the EVM float and is reallocated rather than summed.
+  // Verified 2026-07-29: icrc1_total_supply 594,500.00000000 (the ic0.app
+  // replica query and the DFINITY ICRC REST indexer agree to the unit, and
+  // CoinGecko publishes exactly that figure) against Base 5,345.40392636 +
+  // Ethereum 7.64444464 + Arbitrum 0, so every bridge leg is far below the 10%
+  // deployment floor.
+  "gldt-gold-dao": [
+    { chain: "icp" },
+    { chain: "ethereum" },
+    { chain: "base" },
+    { chain: "arbitrum", allowZeroSupply: true },
+  ],
+  // mRe7YIELD is Ethereum-native with independent Midas burn/mint deployments on
+  // Etherlink and Starknet, so the reviewed legs sum. Verified 2026-07-29:
+  // Ethereum 6,792,507.39 + Etherlink 1,041,331.43 + Starknet 175,676.21.
+  // Etherlink is 13.00% of that total, above the 10% deployment floor, so this
+  // aggregate publishes a genuine material bridge leg instead of a cap. Known
+  // gap: CoinGecko also indexes a TAC deployment
+  // (0x0a72ed3c34352ab2dd912b30f2252638c873d6f0, symbol mRe7YIELD, 630,603.35
+  // read 2026-07-29) that Pharos neither tracks nor reviews; TAC has no chain
+  // registry entry, so that leg stays outside this aggregate and Etherlink
+  // publishes at 13.00% rather than its true 12.05%.
+  "mre7yield-midas": [
+    { chain: "ethereum" },
+    { chain: "etherlink", rpcUrl: "https://node.mainnet.etherlink.com" },
+    { chain: "starknet" },
+  ],
+  // sUSN is Ethereum-native with Noon-operated Hyperlane warp representations on
+  // zkSync, Sophon and Starknet. Verified 2026-07-29: a 200-holder sweep that
+  // accounts for the entire Ethereum supply finds no warp-collateral escrow
+  // holding the 2,027,155 remote total, so the legs sum rather than reallocate.
+  // Ethereum 23,976,706.12 + Starknet 1,904,518.96 + zkSync 120,966.89 + Sophon
+  // 1,669.17. Same known gap as mRe7YIELD: an untracked TAC deployment
+  // (0x5ced7f73b76a555ccb372cc0f0137bec5665f81e, 161,475.02 sUSN) is 0.62% of
+  // the true total and stays outside this aggregate.
+  "susn-noon": [
+    { chain: "ethereum" },
+    { chain: "zksync", rpcUrl: "https://mainnet.era.zksync.io", fallbackRpcUrl: "https://zksync.drpc.org" },
+    { chain: "sophon", rpcUrl: "https://rpc.sophon.xyz" },
+    { chain: "starknet" },
   ],
   "jpym-mento": [{ chain: "celo" }],
   "zarm-mento": [{ chain: "celo" }],
@@ -250,13 +331,15 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // it escrows 37,999,100.42 thBILL against 37,998,884.22 minted on Arbitrum,
   // Base, HyperEVM and Stable, so Ethereum totalSupply() is the conserved
   // global total and is reallocated below. The Stable-chain representation is
-  // not a tracked deployment yet, so its balance stays inside the Ethereum
-  // bucket (susde-ethena TON/Aptos precedent) instead of failing closed.
+  // now a tracked deployment (chainId 988, 35,612,981.743756 thBILL read
+  // 2026-07-29 on two independent endpoints), so it reallocates out of the
+  // Ethereum bucket and the per-chain split is finally true.
   "thbill-theo": [
     { chain: "ethereum" },
     { chain: "arbitrum" },
     { chain: "base", allowZeroSupply: true },
     { chain: "hyperevm", rpcUrl: "https://rpc.hyperliquid.xyz/evm", fallbackRpcUrl: "https://rpc.hypurrscan.io" },
+    { chain: "stable", rpcUrl: "https://rpc.stable.xyz", fallbackRpcUrl: "https://stable.drpc.org" },
   ],
   // wiTRY's Ethereum escrow 0x698b7518711bDe4832fDc19F5262DF705c713006 holds
   // 346,349,590.501584 wiTRY, bit-for-bit the MegaETH totalSupply(), so 94% of
@@ -322,6 +405,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
 // instead of adding representation supplies to the canonical total.
 export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, string>> = {
   "dusd-dialectic": "ethereum",
+  "gldt-gold-dao": "icp",
   "susds-sky": "ethereum",
   "sdai-sky": "ethereum",
   "susde-ethena": "ethereum",
@@ -335,13 +419,64 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "pgold-pleasing": "arbitrum",
 };
 
+export interface CuratedAggregateEscrowResidualConfig {
+  /** Canonical-chain lockbox that escrows every representation's supply. */
+  escrowAddress: string;
+  /**
+   * Deliberately non-canonical `chainCirculating` label for escrowed supply
+   * that no configured representation leg claims. `resolveChainId()` must
+   * return null for it so V9 pools it under the unmatched-chain-label route
+   * instead of silently crediting it to the canonical chain.
+   */
+  unattributedChainLabel: string;
+}
+
+/**
+ * Canonical-chain escrow reads that split a reallocating aggregate's canonical
+ * row into free float and an explicit unattributed remainder. Without this the
+ * remainder (untracked representations plus any escrow that matches no route)
+ * hides inside the canonical chain's published supply and grows unobserved.
+ */
+export const CURATED_AGGREGATE_ESCROW_RESIDUALS: Readonly<
+  Record<string, CuratedAggregateEscrowResidualConfig>
+> = {
+  // The Ethereum OFT Adapter escrows every sUSDe representation, including the
+  // TON jetton and Aptos fungible asset that have no supply probe. Verified
+  // 2026-07-29 against canonical Ethereum totalSupply 1,240,195,620.187629:
+  // TON 2,397,958.18 (0.1934%) + Aptos 1,074,420.00 (0.0866%) + 13,587,459.52
+  // of escrow matching no reviewed route (1.0956%) were all being published as
+  // Ethereum float while the TON and Aptos controls reported a hard 0 share.
+  "susde-ethena": {
+    escrowAddress: "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+    unattributedChainLabel: "sUSDe unattributed OFT escrow",
+  },
+};
+
 export function isZephyrScannerSupplyId(id: string): boolean {
   return ZEPHYR_SCANNER_SUPPLY_IDS.has(id);
 }
 
+/**
+ * Resolve which supply reader can read a tracked deployment, or null when no
+ * reader exists for that chain family or the address shape is wrong.
+ */
+export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): OnchainSupplyProbeFamily | null {
+  switch (NON_EVM_PROBE_FAMILY_BY_CHAIN[contract.chain]) {
+    case "solana":
+      return contract.address.length > 0 ? "solana" : null;
+    case "starknet":
+      return STARKNET_ADDRESS_RE.test(contract.address) ? "starknet" : null;
+    case "icp":
+      return ICP_CANISTER_ID_RE.test(contract.address) ? "icp" : null;
+    default:
+      break;
+  }
+
+  return CHAIN_META[contract.chain]?.type === "evm" && EVM_ADDRESS_RE.test(contract.address) ? "evm" : null;
+}
+
 export function supportsOnchainSupplyProbe(contract: OnchainSupplyContract): boolean {
-  if (contract.chain === "solana") return contract.address.length > 0;
-  return CHAIN_META[contract.chain]?.type === "evm" && EVM_ADDRESS_RE.test(contract.address);
+  return onchainSupplyProbeFamily(contract) !== null;
 }
 
 export function selectSingleOnchainSupplyProbeContract(meta: StablecoinMeta): OnchainSupplyContract | null {
