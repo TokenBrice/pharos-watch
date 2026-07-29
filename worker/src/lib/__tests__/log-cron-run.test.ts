@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { logCronRun } from "../cron-logger";
 import { CRON_ABANDONED_JOB_GRACE_MS, CronJobAbandonedError } from "../cron-lease";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 describe("logCronRun", () => {
   const db = mockD1([
@@ -121,6 +122,66 @@ describe("logCronRun", () => {
     expect(operations).toContain("progress-upsert");
     expect(operations).toContain("progress-clear");
     expect(operations).toContain("cron-run");
+  });
+
+  it("keeps active leased progress across an overlapping invocation", async () => {
+    const { sqlite, db: sqliteDb } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const activeProgress = {
+      job: "dispatch-telegram-alerts",
+      started_at: nowSec - 120,
+      slot_started_at: nowSec - 300,
+      updated_at: nowSec - 1,
+      stage: "source-loading",
+      lease_owner: "active-owner",
+    };
+    try {
+      sqlite
+        .prepare(
+          `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+           VALUES (?, ?, ?, ?, ?)`,
+        )
+        .run(activeProgress.job, activeProgress.lease_owner, nowSec + 300, nowSec, nowSec);
+      sqlite
+        .prepare(
+          `INSERT INTO cron_run_progress
+             (job, started_at, slot_started_at, updated_at, stage, lease_owner)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          activeProgress.job,
+          activeProgress.started_at,
+          activeProgress.slot_started_at,
+          activeProgress.updated_at,
+          activeProgress.stage,
+          activeProgress.lease_owner,
+        );
+
+      await logCronRun(
+        sqliteDb,
+        activeProgress.job,
+        async (_signal, reportProgress) => {
+          await reportProgress({
+            stage: "skipped-locked",
+            leaseOwner: "contending-owner",
+          });
+          return { status: "skipped_locked" };
+        },
+        { slotStartedAt: nowSec },
+      );
+
+      expect(
+        sqlite
+          .prepare(
+            `SELECT job, started_at, slot_started_at, updated_at, stage, lease_owner
+               FROM cron_run_progress
+              WHERE job = ?`,
+          )
+          .get(activeProgress.job),
+      ).toEqual(activeProgress);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("persists slot_started_at into cron_runs and cron_run_progress when provided", async () => {

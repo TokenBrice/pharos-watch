@@ -20,6 +20,14 @@ describe("cron timeout budget resolution", () => {
     });
   });
 
+  it("fails the five-minute Telegram lane before its next scheduled invocation", () => {
+    expect(resolveCronTimeoutBudget("dispatch-telegram-alerts")).toMatchObject({
+      configuredTimeoutMs: 4 * 60_000 + 30_000,
+      effectiveTimeoutMs: 4 * 60_000 + 30_000,
+      truncated: false,
+    });
+  });
+
   it("caps a late-starting job to the remaining controlled slot budget", () => {
     const slotStartedAtMs = 1_000_000;
     const nowMs = slotStartedAtMs + SCHEDULED_SLOT_JOB_BUDGET_MS - 12_000;

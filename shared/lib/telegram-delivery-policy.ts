@@ -23,8 +23,15 @@ export const TELEGRAM_ALERT_TTL_SEC = {
 /** The dedicated Telegram alert dispatcher runs every five minutes. */
 export const TELEGRAM_DISPATCH_INTERVAL_SEC = 5 * 60;
 
-/** Hard application timeout for the Telegram dispatch job. */
-export const TELEGRAM_DISPATCH_TIMEOUT_MS = 14 * 60_000;
+/**
+ * Hard application timeout for the Telegram dispatch job.
+ *
+ * The send loop stops admitting batches at four minutes. Keep a short
+ * finalization window after that boundary, but fail before the next five-minute
+ * invocation so an unabortable D1 operation cannot renew a lease across
+ * several dispatch slots.
+ */
+export const TELEGRAM_DISPATCH_TIMEOUT_MS = 4 * 60_000 + 30_000;
 
 /** Stop starting fresh/pending send batches before the outer job deadline. */
 export const TELEGRAM_DISPATCH_SOFT_DEADLINE_MS = 4 * 60_000;
