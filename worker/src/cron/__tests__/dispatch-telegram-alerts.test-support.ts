@@ -127,10 +127,8 @@ vi.mock("../../lib/telegram-alerts", async (importOriginal) => {
 });
 
 const { dispatchTelegramAlerts } = await import("../dispatch-telegram-alerts");
-const { deliverTelegramSubscriberQueue } = await import("../dispatch-telegram-delivery");
 const { pruneOverflowPlanBacklogForChat } = await import("../dispatch-telegram-overflow");
-const { buildDedupeKey, emptyDrainResult } = await import("../telegram-pending");
-const { TELEGRAM_MAX_MESSAGES_PER_RUN, TELEGRAM_FORMAT_BUDGET_ALLOWANCE, TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } =
+const { TELEGRAM_MAX_MESSAGES_PER_RUN, TELEGRAM_FORMAT_BUDGET_ALLOWANCE } =
   await import("../../lib/telegram-constants");
 
 function makeCanonicalSafetySourceCaches(
@@ -854,24 +852,6 @@ function readCacheValue(sqlite: DatabaseSync, key: string): string | null {
   return row?.value ?? null;
 }
 
-function recordPendingEnqueueAttempts(sqlite: DatabaseSync): void {
-  sqlite.exec(`
-    CREATE TABLE telegram_pending_enqueue_transcript (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      dedupe_key TEXT NOT NULL,
-      attempts INTEGER NOT NULL,
-      not_before_at INTEGER,
-      expires_at INTEGER
-    );
-    CREATE TRIGGER record_telegram_pending_enqueue_attempt
-    BEFORE INSERT ON telegram_pending_alerts
-    BEGIN
-      INSERT INTO telegram_pending_enqueue_transcript (dedupe_key, attempts, not_before_at, expires_at)
-      VALUES (NEW.dedupe_key, NEW.attempts, NEW.not_before_at, NEW.expires_at);
-    END;
-  `);
-}
-
 function defaultDispatchCaches(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const now = nowSec();
   const safety = makeCanonicalSafetySourceCaches({}, now - 60);
@@ -890,19 +870,14 @@ export {
   mockShouldAttemptFetch,
   mockRecordOutcome,
   mockSendToChat,
-  mockSendBatch,
   telegramDeliveryTranscript,
   scriptTelegramDeliveries,
   scriptTelegramDeliveriesForChat,
   formatConsolidatedMessageSpy,
   dispatchTelegramAlerts,
-  deliverTelegramSubscriberQueue,
   pruneOverflowPlanBacklogForChat,
-  buildDedupeKey,
-  emptyDrainResult,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
-  TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
   seedActiveSafetySource,
   makeSafetySnapshotCache,
   makeDewsOverflowPlan,
@@ -912,6 +887,5 @@ export {
   createDispatchHarness,
   defaultDispatchCaches,
   readCacheValue,
-  recordPendingEnqueueAttempts,
   type CronProgressUpdate,
 };

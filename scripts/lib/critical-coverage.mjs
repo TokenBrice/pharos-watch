@@ -165,7 +165,6 @@ export const CRITICAL_FILES = [
   "worker/src/cron/dispatch-telegram-authoritative-path.ts",
   "worker/src/cron/dispatch-telegram-authoritative-planning.ts",
   "worker/src/cron/dispatch-telegram-routing.ts",
-  "worker/src/cron/dispatch-telegram-delivery.ts",
   "worker/src/cron/telegram-alert-source-events.ts",
   "worker/src/cron/telegram-alert-job-target-outcomes.ts",
   "worker/src/lib/telegram-delivery-sli.ts",

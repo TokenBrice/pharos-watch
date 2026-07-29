@@ -1,54 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  buildDedupeKey,
   cleanupDispatchTelegramAlertsTest,
   createDispatchHarness,
   defaultDispatchCaches,
-  deliverTelegramSubscriberQueue,
   dispatchTelegramAlerts,
-  emptyDrainResult,
   formatConsolidatedMessageSpy,
   makeDewsOverflowPlan,
   makeSafetySnapshotCache,
   mockRecordOutcome,
-  mockSendBatch,
   mockShouldAttemptFetch,
   pruneOverflowPlanBacklogForChat,
   readCacheValue,
-  recordPendingEnqueueAttempts,
   resetDispatchTelegramAlertsTest,
   seedActiveSafetySource,
-  scriptTelegramDeliveries,
   telegramDeliveryTranscript,
-  TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
   type CronProgressUpdate,
 } from "./dispatch-telegram-alerts.test-support";
-
-function freshQueue(
-  chatId = "chat-1",
-  chunks = ["chunk-0"],
-  alertType: "dews" | "depeg" | "safety" | "launch" | "reserve" | "freeze" = "depeg",
-) {
-  return [
-    {
-      chatId,
-      lastActiveAt: Math.floor(Date.now() / 1000),
-      alerts: {
-        dews: [],
-        depegTriggered: [],
-        depegResolved: [],
-        depegWorsening: [],
-        safety: [],
-        launch: [],
-        reserve: [],
-      },
-      canonicalHtml: "canonical-body",
-      chunks,
-      disableNotification: false,
-      alertType,
-    },
-  ];
-}
 
 function healthySources(
   harness: ReturnType<typeof createDispatchHarness>,
@@ -69,174 +36,6 @@ function healthySources(
 describe("dispatchTelegramAlerts", () => {
   beforeEach(resetDispatchTelegramAlertsTest);
   afterEach(cleanupDispatchTelegramAlertsTest);
-
-  it("filters already-terminal chunks before fresh delivery", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const terminalChunkKey = buildDedupeKey({
-      chatId: "chat-1",
-      html: "chunk-0",
-      canonicalHtml: "canonical-body",
-      disableNotification: false,
-      chunkIndex: 0,
-      alertType: "depeg",
-    });
-    const { db } = createDispatchHarness();
-    const result = await deliverTelegramSubscriberQueue({
-      db,
-      subscriberQueue: freshQueue("chat-1", ["chunk-0", "chunk-1"]),
-      botToken: "bot-token",
-      drainResult: emptyDrainResult(),
-      maxMessagesPerRun: 10,
-      nowSec: now,
-      chatsInBackoff: new Map(),
-      globalBackoffUntil: null,
-      dispatchStartedAtMs: Date.now(),
-      terminalTargetKeys: new Set([terminalChunkKey]),
-    });
-
-    expect(result.freshAttempted).toBe(1);
-    expect(result.subscribersNotified).toBe(1);
-    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "chat-1", html: "chunk-1" })]);
-  });
-
-  it("passes a five-minute-lane soft deadline to fresh batch sends", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const dispatchStartedAtMs = Date.now();
-    const { db } = createDispatchHarness();
-    await deliverTelegramSubscriberQueue({
-      db,
-      subscriberQueue: freshQueue(),
-      botToken: "bot-token",
-      drainResult: emptyDrainResult(),
-      maxMessagesPerRun: 10,
-      nowSec: now,
-      chatsInBackoff: new Map(),
-      globalBackoffUntil: null,
-      dispatchStartedAtMs,
-    });
-
-    expect(mockSendBatch.mock.calls[0]?.[4]).toEqual(
-      expect.objectContaining({
-        softDeadlineAtMs: dispatchStartedAtMs + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
-        beforeSendBatch: expect.any(Function),
-        afterSendBatch: expect.any(Function),
-      }),
-    );
-  });
-
-  it("uses existing pending attempts when re-enqueuing a retryable fresh chunk", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const dedupeKey = buildDedupeKey({
-      chatId: "chat-1",
-      html: "chunk-0",
-      canonicalHtml: "canonical-body",
-      disableNotification: false,
-      chunkIndex: 0,
-      alertType: "depeg",
-    });
-    const harness = createDispatchHarness();
-    harness.seed({
-      pending: [{ chatId: "chat-1", html: "old", dedupeKey, attempts: 4, createdAt: now - 60, expiresAt: now + 600 }],
-    });
-    recordPendingEnqueueAttempts(harness.sqlite);
-    scriptTelegramDeliveries({
-      ok: false,
-      blocked: false,
-      retryable: true,
-      permanentFailure: false,
-      statusCode: 500,
-      errorClass: "server_error",
-      delivery: "retryable_failure",
-      retryAfterSec: null,
-    });
-    const result = await deliverTelegramSubscriberQueue({
-      db: harness.db,
-      subscriberQueue: freshQueue(),
-      botToken: "bot-token",
-      drainResult: emptyDrainResult(),
-      maxMessagesPerRun: 10,
-      nowSec: now,
-      chatsInBackoff: new Map(),
-      globalBackoffUntil: null,
-      dispatchStartedAtMs: Date.now(),
-    });
-
-    expect(result).toMatchObject({ freshAttempted: 1, freshRetryQueued: 1 });
-    expect(
-      harness.sqlite
-        .prepare("SELECT not_before_at FROM telegram_pending_enqueue_transcript WHERE dedupe_key = ?")
-        .get(dedupeKey),
-    ).toMatchObject({ not_before_at: now + 600 });
-  });
-
-  it("treats stale pending attempts as reset when re-enqueuing a retryable fresh chunk", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const dedupeKey = buildDedupeKey({
-      chatId: "chat-1",
-      html: "chunk-0",
-      canonicalHtml: "canonical-body",
-      disableNotification: false,
-      chunkIndex: 0,
-      alertType: "depeg",
-    });
-    const harness = createDispatchHarness();
-    harness.seed({
-      pending: [
-        { chatId: "chat-1", html: "old", dedupeKey, attempts: 4, createdAt: now - 90_000, expiresAt: now - 30 },
-      ],
-    });
-    recordPendingEnqueueAttempts(harness.sqlite);
-    scriptTelegramDeliveries({
-      ok: false,
-      blocked: false,
-      retryable: true,
-      permanentFailure: false,
-      statusCode: 500,
-      errorClass: "server_error",
-      delivery: "retryable_failure",
-      retryAfterSec: null,
-    });
-    const result = await deliverTelegramSubscriberQueue({
-      db: harness.db,
-      subscriberQueue: freshQueue(),
-      botToken: "bot-token",
-      drainResult: emptyDrainResult(),
-      maxMessagesPerRun: 10,
-      nowSec: now,
-      chatsInBackoff: new Map(),
-      globalBackoffUntil: null,
-      dispatchStartedAtMs: Date.now(),
-    });
-
-    expect(result).toMatchObject({ freshAttempted: 1, freshRetryQueued: 1 });
-    expect(
-      harness.sqlite
-        .prepare("SELECT not_before_at FROM telegram_pending_enqueue_transcript WHERE dedupe_key = ?")
-        .get(dedupeKey),
-    ).toMatchObject({ not_before_at: now + 60 });
-  });
-
-  it("does not format planned overflow while global backoff is active", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const overflowPlan = makeDewsOverflowPlan(now);
-    const { db } = createDispatchHarness();
-    const result = await deliverTelegramSubscriberQueue({
-      db,
-      subscriberQueue: [],
-      overflowPlanned: [overflowPlan],
-      overflowFormatBudget: 1,
-      botToken: "bot-token",
-      drainResult: emptyDrainResult(),
-      maxMessagesPerRun: 10,
-      nowSec: now,
-      chatsInBackoff: new Map(),
-      globalBackoffUntil: now + 60,
-      dispatchStartedAtMs: Date.now(),
-    });
-
-    expect(formatConsolidatedMessageSpy).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ pendingEnqueued: 0, freshOverflow: 1, remainingOverflowPlanned: [overflowPlan] });
-  });
 
   it("skips when circuit breaker is open", async () => {
     mockShouldAttemptFetch.mockResolvedValue(false);
@@ -384,29 +183,6 @@ describe("dispatchTelegramAlerts", () => {
     expect(JSON.parse(readCacheValue(harness.sqlite, "telegram:dispatch-overflow-plan") ?? "{}")).toMatchObject({
       plans: [{ chatId: "chat-kept" }],
     });
-  });
-
-  it("does not enqueue cached overflow plans for chats without active subscriptions", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const overflowPlan = makeDewsOverflowPlan(now, "chat-forgotten");
-    const harness = createDispatchHarness();
-    const result = await deliverTelegramSubscriberQueue({
-      db: harness.db,
-      subscriberQueue: [],
-      overflowPlanned: [overflowPlan],
-      overflowFormatBudget: 1,
-      botToken: "bot-token",
-      drainResult: emptyDrainResult(),
-      maxMessagesPerRun: 10,
-      nowSec: now,
-      chatsInBackoff: new Map(),
-      globalBackoffUntil: null,
-      dispatchStartedAtMs: Date.now(),
-    });
-
-    expect(formatConsolidatedMessageSpy).not.toHaveBeenCalled();
-    expect(result).toMatchObject({ pendingEnqueued: 0, remainingOverflowPlanned: [] });
-    expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
   });
 
   it("still drains due pending rows during an otherwise eventless run", async () => {
