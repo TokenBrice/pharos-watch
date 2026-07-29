@@ -122,7 +122,7 @@ There is no Pages browser installation, local proxy, GitHub Jobs API polling, de
 
 ## Operational Acceptance
 
-Workflow success proves deployment identity, not every runtime behavior. Record deployment proof and operational acceptance separately.
+Workflow success proves activation identity, not every runtime behavior. The read-only `post-deploy-acceptance` job adds narrow runtime-health evidence for each surface that successfully deployed; it records `passed`, `failed`, or explicitly `pending` in the workflow summary without mutating production or rolling anything back. Record deployment proof and operational acceptance separately.
 
 | Change risk                     | Deployment proof                                       | Operational acceptance                                                                                                   |
 | ------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
@@ -131,7 +131,7 @@ Workflow success proves deployment identity, not every runtime behavior. Record 
 | Cron/scheduler/ingestion/memory | Worker activation                                      | First matching scheduled execution completes within its expected status, duration, memory, and publication contract      |
 | D1 migration plus runtime use   | Migration and Worker activation steps succeed          | First affected read/write or scheduled path succeeds; rollback notes acknowledge that Worker rollback does not revert D1 |
 
-Use `npm run ops:watch-worker-cron` for bounded read-only cron evidence and `npm run ops:night-watch-worker` only when the owning rollout requires a longer observation window. Until the relevant execution occurs, report “deployment succeeded; operational acceptance pending” rather than “production healthy.”
+The acceptance job reads the public Pages shell after a Pages release and the public Worker health endpoint after a Worker release. A Worker release also records its first matching scheduled execution as `pending`, because a short deploy job cannot safely wait for and correlate a future cron run. Use `npm run ops:watch-worker-cron` for that bounded read-only cron evidence and `npm run ops:night-watch-worker` only when the owning rollout requires a longer observation window. Until the relevant execution occurs, report “deployment succeeded; operational acceptance pending” rather than “production healthy.”
 
 ## GitHub Deploy Inputs
 
@@ -149,6 +149,12 @@ Repository secrets consumed only by jobs attached to the production environment:
 The Cloudflare credentials authorize Worker/D1 and Pages deployment. Re-enter these values as environment-scoped secrets before deleting their repository-scoped copies; GitHub does not expose existing secret values for automated migration. Secret values are never recorded in the repository. The matching Pages and Worker `SITE_API_SHARED_SECRET` bindings remain Cloudflare-managed; scheduled refreshes reach that authenticated Worker lane through the Pages proxy without exposing the secret to the GitHub runner.
 
 The manual zone-cache recovery workflow additionally requires the Cloudflare token to grant `Zone Read` and `Cache Purge` for `pharos.watch`. Normal Pages and Worker deployment permissions do not imply those zone permissions.
+
+The scheduled Cloudflare account-state drift workflow uses the separate
+repository secret `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN`. It is a dedicated
+read-only credential and is not attached to the production environment; see
+[`docs/operator-origin-access.md`](./operator-origin-access.md) for its scope
+and the secret-free manifest it checks.
 
 Scheduled artifact PR secret:
 
