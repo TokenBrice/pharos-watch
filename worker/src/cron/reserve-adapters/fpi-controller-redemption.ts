@@ -22,6 +22,7 @@ import {
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { normalizeEvmAddress } from "./evm";
+import { multicallResultByLabel } from "./onchain-identity";
 
 type FpiParams = LiveReserveAdapterParamsByKey["frax-fpi-collateral"];
 type Hex = `0x${string}`;
@@ -95,11 +96,6 @@ function rejected(
   });
 }
 
-function resultByLabel(results: readonly EvmMulticall3Result[], label: string): Hex | null {
-  const result = results.find((candidate) => candidate.label === label);
-  return result?.success && result.returnData !== "0x" ? result.returnData : null;
-}
-
 type ControllerFunctionName =
   | "FPI_TKN"
   | "FRAX"
@@ -121,7 +117,7 @@ function decodeResult(
   label: string,
   functionName: ControllerFunctionName,
 ): unknown {
-  const data = resultByLabel(results, label);
+  const data = multicallResultByLabel(results, label);
   if (!data) return null;
   try {
     return decodeFunctionResult({
@@ -139,7 +135,7 @@ function decodePriceFeedResult(
   label: string,
   functionName: "decimals" | "latestRoundData",
 ): unknown {
-  const data = resultByLabel(results, label);
+  const data = multicallResultByLabel(results, label);
   if (!data) return null;
   try {
     return decodeFunctionResult({
@@ -157,7 +153,7 @@ function decodeCpiTrackerResult(
   label: string,
   functionName: "currPegPrice" | "lastUpdateTime",
 ): unknown {
-  const data = resultByLabel(results, label);
+  const data = multicallResultByLabel(results, label);
   if (!data) return null;
   try {
     return decodeFunctionResult({
@@ -171,7 +167,7 @@ function decodeCpiTrackerResult(
 }
 
 function decodeBalance(results: readonly EvmMulticall3Result[]): bigint | null {
-  const data = resultByLabel(results, "controller-frax-balance");
+  const data = multicallResultByLabel(results, "controller-frax-balance");
   if (!data) return null;
   try {
     const decoded = decodeFunctionResult({
