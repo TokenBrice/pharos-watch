@@ -78,7 +78,7 @@ describe("runV9AfterCoreWithinWindow", () => {
     }));
   });
 
-  it("runs only after the matching quarter-hour core slot completed on the current Worker", async () => {
+  it("runs after the matching quarter-hour core slot completed on the current Worker", async () => {
     const scheduledTimeMs = Date.parse("2026-07-26T12:14:00Z");
     vi.useFakeTimers();
     vi.setSystemTime(scheduledTimeMs + 2_000);
@@ -112,6 +112,33 @@ describe("runV9AfterCoreWithinWindow", () => {
         ttlSec: 60,
         heartbeatSec: 15,
       }),
+    );
+  });
+
+  it("admits V9 after a degraded same-version core slot", async () => {
+    const scheduledTimeMs = Date.parse("2026-07-26T12:23:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(scheduledTimeMs + 1_000);
+    const fixture = dbWithCoreSlot({
+      state: "finished",
+      result_status: "degraded",
+      worker_version: "worker-v2",
+    });
+    const run = vi.fn(async () => ({
+      status: "ok" as const,
+      itemCount: 335,
+    }));
+
+    const result = await runV9AfterCoreWithinWindow(
+      options(fixture.db, scheduledTimeMs),
+      run,
+    );
+
+    expect(result.status).toBe("ok");
+    expect(result.itemCount).toBe(335);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(fixture.bind).toHaveBeenCalledWith(
+      Math.floor(Date.parse("2026-07-26T12:15:00Z") / 1_000),
     );
   });
 
