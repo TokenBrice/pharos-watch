@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   classifyV9MissingDataWorkType,
   classifyV9ScoreProjectionWorkType,
+  likelyTouchpoints,
+  mechanismResolutionMode,
+  scoreProjectionResolutionMode,
+  workTypeDefinition,
   type V9MissingDataWorkType,
 } from "../maintenance/generate-safety-score-v9-missing-data-registry";
 
@@ -56,5 +60,60 @@ describe("Safety Score v9 missing-data work routing", () => {
 
   it("does not turn known structural risk into a missing-data task", () => {
     expect(classifyV9ScoreProjectionWorkType("correlated-exit-routes")).toBeNull();
+  });
+
+  it.each([
+    ["fiat-cash", "claimAndSegregation"],
+    ["fiat-cash", "custodyContinuity"],
+    ["fiat-cash", "assuranceAndReconciliation"],
+    ["tbill", "fundClaimAndSeniority"],
+    ["tbill", "navValuation"],
+    ["tbill", "durationAndLiquidity"],
+    ["tbill", "lossRecoveryDesign"],
+  ] as const)("routes ratified %s %s evidence to agent curation", (archetype, componentKey) => {
+    expect(
+      mechanismResolutionMode({
+        archetype,
+        path: { kind: "local-component", componentKey: `mechanism-review:${componentKey}` },
+      } as Parameters<typeof mechanismResolutionMode>[0]),
+    ).toBe("agent-curation");
+  });
+
+  it("keeps advanced-archetype mechanism gaps on measured evidence routes", () => {
+    expect(
+      mechanismResolutionMode({
+        archetype: "rwa-credit-fund",
+        path: { kind: "local-component", componentKey: "mechanism-review:seniority" },
+      } as Parameters<typeof mechanismResolutionMode>[0]),
+    ).toBe("issuer-or-onchain-evidence");
+  });
+
+  it.each(["fiat-cash", "tbill"] as const)(
+    "routes %s score-projection mechanism gaps to agent curation",
+    (archetype) => {
+      expect(scoreProjectionResolutionMode("MECHANISM_REVIEW", archetype)).toBe("agent-curation");
+    },
+  );
+
+  it("directs mechanism review work to the overlay under the ratified evidence standard", () => {
+    const definition = workTypeDefinition("MECHANISM_REVIEW");
+    expect(definition.instructions).toContain("ratified strict evidence standard");
+    expect(definition.instructions).toContain("unavailable disposition that remains bounded and non-scoring");
+    expect(definition.instructions).not.toContain("methodology capability");
+    expect(definition.completionCriteria).toContain("retains the bounded-unknown gap without changing score or grade");
+
+    expect(
+      likelyTouchpoints(
+        "MECHANISM_REVIEW",
+        {
+          file: "shared/data/stablecoins/coins/fixture.json",
+          sidecarFiles: ["shared/data/stablecoins/domains/reserves/fixture.json"],
+        },
+        null,
+      ),
+    ).toEqual([
+      "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
+      "shared/data/stablecoins/coins/fixture.json",
+    ]);
   });
 });
