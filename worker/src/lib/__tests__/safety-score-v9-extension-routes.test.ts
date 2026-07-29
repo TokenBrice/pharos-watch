@@ -463,6 +463,97 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
     ).toBe("producer-failed");
   });
 
+  it("prices the dTRINITY vault-bridge receipt basket through each receipt's underlying", () => {
+    const row = supplyFullRow({
+      stablecoinId: "dusd-dtrinity",
+      routeFamily: "stablecoin-redeem",
+      accessModel: "permissionless-onchain",
+      executionModel: "deterministic-basket",
+      outputAssetType: "stable-basket",
+    });
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      exitRouteObservations: [
+        buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!.observation,
+      ],
+    };
+    const fixedInput = fixedInputStub(row);
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = Object.fromEntries(
+      (
+        [
+          ["usdc-circle", 3],
+          ["usdt-tether", -21],
+          ["usds-sky", 1],
+          ["susds-sky", 4],
+          ["frxusd-frax", -2],
+          ["sfrxusd-frax", 5],
+          ["dai-makerdao", -4],
+          ["sdai-sky", 6],
+          ["ausd-agora", -1],
+        ] as const
+      ).map(([assetId, deviationBps]) => [
+        assetId,
+        { currentDeviationBps: deviationBps, priceObservedAt: NOW },
+      ]),
+    );
+
+    // vbUSDC/vbUSDT keep their captured untracked identities; only their value
+    // comes from the reviewed one-for-one vault-bridge conversion.
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output).toMatchObject({
+      kind: "basket",
+      assetKeys: [
+        "asset:vbusdc",
+        "asset:vbusdt",
+        "ausd-agora",
+        "dai-makerdao",
+        "frxusd-frax",
+        "sdai-sky",
+        "sfrxusd-frax",
+        "susds-sky",
+        "usdc-circle",
+        "usds-sky",
+        "usdt-tether",
+      ],
+      valuation: {
+        basis: "price",
+        referenceAssetKey: "asset:vbusdt",
+        unitValueUsd: 1 - 21 / 10_000,
+        expectedUnitValueUsd: 1,
+        sourceId: "safety-score-v9-extension-fixed-rate-receipt",
+        confidence: "medium",
+      },
+    });
+
+    // Dropping the receipts' underlying leaves the basket unresolved rather
+    // than valuing it from the remaining legs.
+    const { "usdt-tether": _dropped, ...withoutUnderlying } = fixedInput.pegDataById;
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = withoutUnderlying;
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!.output).toBeNull();
+  });
+
+  it("leaves an unresolved basket unresolved when a leg has no reviewed conversion", () => {
+    const row = supplyFullRow({
+      stablecoinId: "dllr-sovryn",
+      routeFamily: "stablecoin-redeem",
+      accessModel: "permissionless-onchain",
+      executionModel: "deterministic-basket",
+      outputAssetType: "stable-basket",
+    });
+    row.capacityProfile = {
+      ...row.capacityProfile!,
+      exitRouteObservations: [
+        buildSafetyScoreV9RetainedRedemptionRoutes(fixedInputStub(row), row.stablecoinId)[0]!.observation,
+      ],
+    };
+    const fixedInput = fixedInputStub(row, Date.UTC(2026, 6, 28, 0, 0, 1) / 1_000);
+    (fixedInput as { pegDataById: Record<string, unknown> }).pegDataById = {
+      "doc-money-on-chain": { currentDeviationBps: -5, priceObservedAt: NOW },
+    };
+    const review = buildSafetyScoreV9RouteReviews(fixedInput, row.stablecoinId)[0]!;
+    expect(review.output).toBeNull();
+    expect(review.unresolvedOutputResponsibility).toBe("producer-failed");
+  });
+
   it.each(["srusd-reservoir", "wsrusd-reservoir"] as const)(
     "values the composed %s redemption route through its final USDC output",
     (stablecoinId) => {
