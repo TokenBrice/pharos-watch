@@ -26,7 +26,7 @@ window, status snapshots, relevant `cron_runs` metadata, and the rollback value.
 
 | Control                        | Checked-in mode | Promotion evidence                                                                                                                                                                        | Immediate rollback                                   |
 | ------------------------------ | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `WORKER_JOB_LEDGER_MODE`       | `shadow`        | Two clean producer cycles with no ledger bootstrap, lease-state, progress-heartbeat, terminal-write, status-loader, or prune failures                                                     | `shadow`, then `off` if writes themselves are unsafe |
+| `WORKER_JOB_LEDGER_MODE`       | `write` for `reserve-recovery` only | Two clean producer cycles with no ledger bootstrap, lease-state, progress-heartbeat, terminal-write, status-loader, or prune failures. The first write cohort is intentionally narrowed to `reserve-recovery`; non-allowlisted attempt telemetry is paused until the mode returns to shadow/full allowlist or a broader write cohort is accepted. | `shadow`, then `off` if writes themselves are unsafe |
 | `WORKER_CANARY_MODE`           | `status`        | Consecutive current 7/7 clean cycles with no persistence failures; promotion currently stops at `status` until alert routing has separate acceptance evidence                              | `shadow`, then `off`                                 |
 | `WORKER_RESERVE_RECOVERY_MODE` | `shadow`        | Eligibility has no unexplained blockers, two preview cancellations reconcile exactly, and a preview recovery completes the suffix and all sidecars without duplicate authoritative writes | `reconcile`, `shadow`, or `off`; retain checkpoints  |
 
@@ -45,9 +45,14 @@ Use `WORKER_JOB_LEDGER_ALLOWLIST` as a CSV of job names for first activation.
 Leave it unset only after targeted jobs show expected attempt, heartbeat,
 terminal-state, status, and prune behavior.
 
-Current checked-in Worker config starts the shadow soak with:
-`WORKER_JOB_LEDGER_MODE=shadow` and
-`WORKER_JOB_LEDGER_ALLOWLIST=sync-dex-discovery,sync-live-reserves,reserve-recovery,sync-cl-exit-depth,sync-dex-liquidity-stage,sync-dex-liquidity,sync-stablecoins,sync-yield-data`.
+Current checked-in Worker config promotes the first narrow write cohort with
+`WORKER_JOB_LEDGER_MODE=write` and
+`WORKER_JOB_LEDGER_ALLOWLIST=reserve-recovery`. This was chosen because the
+five-minute recovery lane had a clean shadow window while the full observed
+allowlist was still blocked by stablecoin publication/price coverage. While
+this narrow cohort is active, status attempt-health covers only
+`reserve-recovery`; restore the broader allowlist before evaluating full-ledger
+promotion.
 
 ## Verification
 
