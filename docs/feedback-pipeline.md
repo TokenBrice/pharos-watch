@@ -127,7 +127,7 @@ CREATE INDEX IF NOT EXISTS idx_feedback_rate_limit_ip
   ON feedback_rate_limit(ip_hash, submitted_at);
 ```
 
-`feedback_submissions` is schema-retained only, not an active append-only archive. The current runtime path creates the GitHub issue directly, does not persist one row per submission, and treats the table as part of the next separately coordinated destructive D1 cleanup unless durable feedback persistence is deliberately reintroduced with privacy/retention docs and tests. If durable feedback persistence returns, define its retention window before re-enabling writes.
+`feedback_submissions` is schema-retained only, not an active append-only archive. The current runtime path creates the GitHub issue directly, does not persist one row per submission, and treats the table as part of the next separately coordinated destructive D1 cleanup unless durable feedback persistence is deliberately reintroduced with privacy/retention docs and tests. The 2026-07-29 D1 inventory found zero rows. If durable feedback persistence returns, define its retention window before re-enabling writes.
 
 #### Auto-verification (data corrections)
 
