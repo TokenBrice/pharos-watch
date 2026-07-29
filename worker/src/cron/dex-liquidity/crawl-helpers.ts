@@ -8,7 +8,7 @@ import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, GtNewPool } from "./types";
 import { buildPoolFingerprint, normalizeProtocol } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
-import { makeChainAddressKey } from "./token-resolution";
+import { buildChainAddressKey } from "./token-resolution";
 import { CURVE_CHAINS } from "./constants";
 
 export type CrawlStats = {
@@ -127,9 +127,9 @@ function resolveStablecoinSide(
   if (canonicalExitRouteScopedId(chain, baseTokenAddress) === address) return "base";
   if (canonicalExitRouteScopedId(chain, quoteTokenAddress) === address) return "quote";
 
-  const baseId = chainAddressToId.get(makeChainAddressKey(chain, baseTokenAddress));
+  const baseId = chainAddressToId.get(buildChainAddressKey(chain, baseTokenAddress));
   if (baseId === stablecoinId) return "base";
-  const quoteId = chainAddressToId.get(makeChainAddressKey(chain, quoteTokenAddress));
+  const quoteId = chainAddressToId.get(buildChainAddressKey(chain, quoteTokenAddress));
   if (quoteId === stablecoinId) return "quote";
   return null;
 }

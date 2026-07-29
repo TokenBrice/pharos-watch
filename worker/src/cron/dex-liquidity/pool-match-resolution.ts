@@ -1,6 +1,6 @@
 import type { LlamaPool, SymbolLookups } from "./types";
 import { parsePoolSymbols } from "./pool-helpers";
-import { getChainScopedSymbolIds, makeChainAddressKey, normalizeTokenAddress } from "./token-resolution";
+import { buildChainAddressKey, getChainScopedSymbolIds, normalizeTokenAddress } from "./token-resolution";
 
 export interface LlamaPoolStablecoinMatch {
   hasUnderlyingTokenAddresses: boolean;
@@ -19,7 +19,7 @@ export function resolveLlamaPoolStablecoinMatches(
 
   if (hasUnderlyingTokenAddresses) {
     for (const addr of pool.underlyingTokens ?? []) {
-      const id = lookups.chainAddressToId.get(makeChainAddressKey(pool.chain, addr));
+      const id = lookups.chainAddressToId.get(buildChainAddressKey(pool.chain, addr));
       if (id) matchedIds.add(id);
     }
   }

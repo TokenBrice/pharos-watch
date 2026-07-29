@@ -10,7 +10,7 @@ import { RATE_LIMITS } from "../../lib/rate-limit";
 import { classifyCgPool, parseCgPool } from "../dex-liquidity/coingecko-onchain-shared";
 import { normalizeProtocol } from "../dex-liquidity/pool-helpers";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
-import { makeChainAddressKey } from "../dex-liquidity/token-resolution";
+import { buildChainAddressKey } from "../dex-liquidity/token-resolution";
 import { DISCOVERY_STAGE_TIMEOUT_MS, type CrawlStageContext, toStagedPool } from "./staged-pool";
 import type { DexDeploymentProviderCheck } from "./types";
 
@@ -97,7 +97,7 @@ export async function crawlCoinGeckoPoolsStage({
       await dependencies.sleepWithSignal(RATE_LIMITS.COINGECKO_ONCHAIN_MS, context.signal);
     }
     cgRequests++;
-    const targetKey = makeChainAddressKey(chain, address);
+    const targetKey = buildChainAddressKey(chain, address);
 
     try {
       const result = await dependencies.fetchCgTokenPoolsWithStatus(
