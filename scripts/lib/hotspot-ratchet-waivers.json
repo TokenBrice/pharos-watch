@@ -15,6 +15,14 @@
     "reviewAfter": "2026-08-28",
     "nextAction": "P2-01: Decompose DEX pool processing into typed admission, enrichment, execution-capability, and accumulation phases, then remove this waiver and lower the hotspot ratchet."
   },
+  "worker/src/lib/safety-score-v9-fact-set.ts": {
+    "disposition": "queued-p4",
+    "notes": "Safety Score V9 fact compilation is currently 4,296 file lines with a 493-line maximum function and 332 branches. Keep this explicit interim waiver only while the focused V9 module decomposition preserves existing fact-compilation contracts.",
+    "owner": "tokenbrice",
+    "createdAt": "2026-07-29",
+    "reviewAfter": "2026-08-28",
+    "nextAction": "P3-04: Decompose V9 fact compilation by evidence domain, then remove this waiver and lower the hotspot ratchet."
+  },
   "worker/src/cron/reserve-adapters/erc4626-single-asset.ts": {
     "disposition": "queued-p4",
     "notes": "The ERC-4626 single-asset adapter now owns on-chain ERC-4626 reserve reads plus validated Morpho V1/V2 liquidity telemetry for curated vault exits. Keep it explicitly waived for this release gate; split Morpho liquidity clients from the generic ERC-4626 reserve path in a focused reserve-adapter cleanup pass.",

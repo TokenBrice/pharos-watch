@@ -76,7 +76,6 @@ export const TARGET_FILES = [
   "worker/src/lib/status-evaluation.ts",
   "worker/src/lib/status-reliability.ts",
   "worker/src/lib/safety-score-v9-extension.ts",
-  "worker/src/lib/safety-score-v9-fact-set.ts",
   "worker/src/lib/telegram-usage-analytics.ts",
 ];
 

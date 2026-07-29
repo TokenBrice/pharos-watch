@@ -14,6 +14,7 @@ import {
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
 import { throwIfAborted } from "../../../lib/abort";
 import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
+import { logWorkerEvent } from "../../../lib/structured-log";
 import {
   computeExcludedBalanceAdjustedSupplyRaw,
   CURATED_ONCHAIN_SUPPLY_EXCLUSIONS,
@@ -275,9 +276,16 @@ async function fetchEscrowHeldMcap(input: {
     const mcap = (Number(balance) / 10 ** contractDecimals(input.supplyContract)) * input.priceUsd;
     return Number.isFinite(mcap) && mcap > 0 ? mcap : null;
   } catch (err) {
-    console.warn(
-      `[fiat-cg] escrow balance probe failed for ${input.meta.symbol}: ${String(err).slice(0, 200)}`,
-    );
+    logWorkerEvent({
+      scope: "lib",
+      level: "warn",
+      event: "onchain_supply.escrow_balance_probe_failed",
+      job: "sync-stablecoins",
+      source: "fiat-cg",
+      message: "Escrow balance probe failed",
+      error: err,
+      metadata: { symbol: input.meta.symbol },
+    });
     return null;
   }
 }

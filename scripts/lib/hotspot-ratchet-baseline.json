@@ -344,11 +344,6 @@
     "maxFunctionLines": 252,
     "branchCount": 275
   },
-  "worker/src/lib/safety-score-v9-fact-set.ts": {
-    "fileLines": 4174,
-    "maxFunctionLines": 493,
-    "branchCount": 321
-  },
   "worker/src/lib/telegram-usage-analytics.ts": {
     "fileLines": 604,
     "maxFunctionLines": 150,
