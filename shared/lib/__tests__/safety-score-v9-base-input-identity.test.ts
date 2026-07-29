@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  BASE_INPUT_GENERATION_ID_PREFIX,
-  computeBaseInputGenerationId,
-  projectBaseInputIdentityV1,
-} from "@shared/lib/safety-score-v9/base-input-identity";
+  REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX,
+  computeReportCardsBaseInputGenerationId,
+  projectReportCardsBaseInputIdentity,
+} from "@shared/lib/report-cards-base-input-identity";
 
 const A = "a".repeat(64);
 const B = "b".repeat(64);
@@ -39,7 +39,7 @@ function baseInput() {
 
 describe("V9 base-input identity", () => {
   it("canonicalizes set-like registry and methodology arrays", () => {
-    const projected = projectBaseInputIdentityV1(baseInput());
+    const projected = projectReportCardsBaseInputIdentity(baseInput());
 
     expect(projected.registry.activeAssetIds).toEqual(["usdc-circle", "usdt-tether"]);
     expect(projected.producerMethodologyVersions).toEqual({
@@ -64,10 +64,10 @@ describe("V9 base-input identity", () => {
       },
     };
 
-    const generationId = computeBaseInputGenerationId(left);
-    expect(generationId).toBe(computeBaseInputGenerationId(right));
-    expect(generationId.startsWith(BASE_INPUT_GENERATION_ID_PREFIX)).toBe(true);
-    expect(generationId.slice(BASE_INPUT_GENERATION_ID_PREFIX.length)).toMatch(/^[a-f0-9]{64}$/);
+    const generationId = computeReportCardsBaseInputGenerationId(left);
+    expect(generationId).toBe(computeReportCardsBaseInputGenerationId(right));
+    expect(generationId.startsWith(REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX)).toBe(true);
+    expect(generationId.slice(REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX.length)).toMatch(/^[a-f0-9]{64}$/);
     expect(generationId).toBe("report-cards-input:v1:f755e130eaac7816dfeffb7a18893d903308d166b1e22336f37f3a563b48cecd");
   });
 
@@ -101,14 +101,16 @@ describe("V9 base-input identity", () => {
     const changed = baseInput();
     mutate(changed);
 
-    expect(computeBaseInputGenerationId(changed)).not.toBe(computeBaseInputGenerationId(original));
+    expect(computeReportCardsBaseInputGenerationId(changed)).not.toBe(
+      computeReportCardsBaseInputGenerationId(original),
+    );
   });
 
   it("rejects source clocks later than the publication clock", () => {
     const input = baseInput();
     input.sourceUpdatedAtSec = input.publicationClockSec + 1;
 
-    expect(() => projectBaseInputIdentityV1(input)).toThrow(/publication clock/);
+    expect(() => projectReportCardsBaseInputIdentity(input)).toThrow(/publication clock/);
   });
 
   it.each(["dexLiquidity", "pegScore", "redemptionBackstop"] as const)(
@@ -117,7 +119,7 @@ describe("V9 base-input identity", () => {
       const input = baseInput();
       input.producerMethodologyVersions[field] = [];
 
-      expect(() => projectBaseInputIdentityV1(input)).toThrow(/At least one producer methodology version/);
+      expect(() => projectReportCardsBaseInputIdentity(input)).toThrow(/At least one producer methodology version/);
     },
   );
 
@@ -128,7 +130,7 @@ describe("V9 base-input identity", () => {
     ["operator capture time", { capturedAt: "2027-01-15T08:00:00.000Z" }],
     ["operator revision", { registryRevision: "deadbeef" }],
   ])("rejects excluded %s metadata", (_label, extra) => {
-    expect(() => projectBaseInputIdentityV1({ ...baseInput(), ...extra })).toThrow();
+    expect(() => projectReportCardsBaseInputIdentity({ ...baseInput(), ...extra })).toThrow();
   });
 
   it("rejects a safety-score methodology key in the producer version object", () => {
@@ -139,6 +141,6 @@ describe("V9 base-input identity", () => {
     };
     input.producerMethodologyVersions.safetyScore = ["8.17"];
 
-    expect(() => projectBaseInputIdentityV1(input)).toThrow();
+    expect(() => projectReportCardsBaseInputIdentity(input)).toThrow();
   });
 });
