@@ -1,4 +1,3 @@
-import { detectDexPriceChallengerTableState } from "./challenger-publish";
 import { loadLegacyDexPoolChallengers } from "./challenger-legacy";
 import { isMissingTableError } from "../../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
@@ -67,7 +66,6 @@ export async function loadPublishedDexPoolChallengers(
   maxAgeSec: number,
   nowSec: number,
 ): Promise<DexPriceChallengerLoadResult> {
-  const state = await detectDexPriceChallengerTableState(db);
   let legacy: LegacyDexPoolChallengerLoadResult | null = null;
   const loadLegacy = async (): Promise<LegacyDexPoolChallengerLoadResult> => {
     legacy ??= await loadLegacyDexPoolChallengers(db, minPoolTvlUsd, maxAgeSec, nowSec);
@@ -84,29 +82,6 @@ export async function loadPublishedDexPoolChallengers(
       staleSnapshotCoins: [],
     },
   });
-
-  if (!state.challengersTable || !state.snapshotsTable) {
-    const loadedLegacy = await loadLegacy();
-    recordRuntimeFallbackUsage("dex-challenger-legacy", {
-      reason: "missing-tables",
-      topPoolCoins: loadedLegacy.topPoolCoins.size,
-      fallbackCoins: loadedLegacy.fallbackCoins.size,
-    });
-    return {
-      challengersByStablecoin: loadedLegacy.challengersByStablecoin,
-      diagnostics: {
-        mode:
-          loadedLegacy.topPoolCoins.size > 0 || loadedLegacy.fallbackCoins.size > 0
-            ? "legacy"
-            : "absent",
-        missingTables: true,
-        emptyPublishedCoins: [],
-        incompletePublishedCoins: [],
-        legacyFallbackCoins: [...new Set([...loadedLegacy.topPoolCoins, ...loadedLegacy.fallbackCoins])],
-        staleSnapshotCoins: [],
-      },
-    };
-  }
 
   const legacyQueryFallbackResult = async (
     reason: "snapshot-query-failed" | "challenger-query-failed",

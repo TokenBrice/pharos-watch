@@ -898,7 +898,6 @@ async function buildDexLiquidityPoolState(
           0,
         ),
         weakCoverageCoinsBeforeFallback: fallback.weakCoverageCoinsBeforeFallback,
-        coverageRecoveredCoins: fallback.coverageRecoveredCoins,
       },
     },
   });
@@ -970,9 +969,6 @@ async function scoreDexLiquidityPoolState(
     stagedMergedCount: poolState.stagedMergedCount,
     stagedSkippedCount: poolState.stagedSkippedCount,
     weakCoverageCoinsBeforeFallback: poolState.fallback.weakCoverageCoinsBeforeFallback,
-    coverageRecoveredCoins: poolState.fallback.coverageRecoveredCoins,
-    dsFallbackCoins: poolState.fallback.dsFallbackCoins,
-    cgTickerFallbackCoins: poolState.fallback.cgTickerFallbackCoins,
     directCexOrderbookDepth: poolState.fallback.directCexOrderbookDepth,
     dlYieldsAvailable: sourceState.dlYieldsAvailable,
     dlProtocolsAvailable: sourceState.dlProtocolsAvailable,

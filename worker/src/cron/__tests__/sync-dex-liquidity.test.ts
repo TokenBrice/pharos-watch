@@ -86,9 +86,21 @@ vi.mock("../dex-liquidity/persistence", () => ({
   writeHistoricalSnapshots: vi.fn(async () => {}),
 }));
 
+vi.mock("../dex-liquidity/challenger-persistence", async () => {
+  const actual = await vi.importActual<typeof import("../dex-liquidity/challenger-persistence")>(
+    "../dex-liquidity/challenger-persistence",
+  );
+  return {
+    ...actual,
+    publishDexPriceChallengerSnapshots: vi.fn(async () => ({
+      publishedStablecoins: 0,
+      skippedStablecoins: 0,
+      missingTables: false,
+    })),
+  };
+});
+
 vi.mock("../dex-liquidity/fetch-fallbacks", () => ({
-  fetchDsFallbackPools: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
-  fetchCgTickersFallback: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
   getFallbackTargets: vi.fn(() => []),
 }));
 
@@ -153,7 +165,6 @@ import { filterPrimaryPoolsPreferDirectApi } from "../dex-liquidity/orchestrator
 import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
 import { processPoolMetrics } from "../dex-liquidity/process-pools";
 import { mergeStagedPools } from "../dex-liquidity/staging-merge";
-import { fetchCgTickersFallback, fetchDsFallbackPools } from "../dex-liquidity/fetch-fallbacks";
 import { fetchMajorStablecoinOrderbookDepthSummary } from "../../lib/cex-orderbooks";
 
 const db = {
@@ -370,7 +381,6 @@ describe("syncDexLiquidity", () => {
       sourceCoverage?: {
         nearCoverageGuard?: boolean;
         weakCoverageCoins?: number;
-        coverageRecoveredCoins?: number;
         directCexOrderbookDepth?: {
           observations: number;
           maxDepthDown2PctUsdBySymbol: Record<string, number>;
@@ -386,7 +396,6 @@ describe("syncDexLiquidity", () => {
     expect(metadata.stagedPoolsSkippedByUniqueDerivedIdentity).toBe(0);
     expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(false);
     expect(metadata.sourceCoverage?.weakCoverageCoins).toBe(0);
-    expect(metadata.sourceCoverage?.coverageRecoveredCoins).toBe(0);
     expect(metadata.sourceCoverage?.directCexOrderbookDepth).toMatchObject({
       observations: 3,
       maxDepthDown2PctUsdBySymbol: { USDT: 1_000_000, USDC: 500_000 },
@@ -395,8 +404,6 @@ describe("syncDexLiquidity", () => {
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
     expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(0);
     expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
-    expect(fetchDsFallbackPools).not.toHaveBeenCalled();
-    expect(fetchCgTickersFallback).not.toHaveBeenCalled();
   });
 
   it("fetches bounded market telemetry before pool graphs accumulate", async () => {

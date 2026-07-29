@@ -45,11 +45,6 @@ export interface DexPriceChallengerPublicationPlan {
   cleanupStatements: DexPriceChallengerSqlStatement[];
 }
 
-export interface DexPriceChallengerTableState {
-  challengersTable: boolean;
-  snapshotsTable: boolean;
-}
-
 interface DexPriceChallengerSqlStatement {
   sql: string;
   binds: unknown[];
@@ -103,26 +98,6 @@ export function getDexPriceChallengerPublicationStatements(
 
 function toLowerString(value: string): string {
   return value.trim().toLowerCase();
-}
-
-export async function detectDexPriceChallengerTableState(db: D1Database): Promise<DexPriceChallengerTableState> {
-  try {
-    const rows = await db
-      .prepare(
-        `SELECT name
-         FROM sqlite_master
-         WHERE type = 'table' AND name IN ('dex_price_challengers', 'dex_price_challenger_snapshots')`,
-      )
-      .all<{ name: string }>();
-    const names = new Set((rows.results ?? []).map((row) => row.name));
-    return {
-      challengersTable: names.has("dex_price_challengers"),
-      snapshotsTable: names.has("dex_price_challenger_snapshots"),
-    };
-  } catch {
-    /* non-blocking: challenger tables may not exist yet; treat as absent so callers skip challenger logic */
-    return { challengersTable: false, snapshotsTable: false };
-  }
 }
 
 export function buildDexPriceChallengerPublicationPlan(
@@ -270,18 +245,6 @@ export async function publishDexPriceChallengerSnapshots(
   missingTables: boolean;
 }> {
   const snapshotAt = Math.floor(requireFiniteNumber(input.snapshotAt, "dex-price-challengers: snapshotAt"));
-  const state = await detectDexPriceChallengerTableState(db);
-  if (!state.challengersTable || !state.snapshotsTable) {
-    if (input.consumeRetainedPools) {
-      for (const pools of input.retainedPoolsByStablecoin.values()) pools.length = 0;
-      input.retainedPoolsByStablecoin.clear();
-    }
-    return {
-      publishedStablecoins: 0,
-      skippedStablecoins: ACTIVE_STABLECOINS.length,
-      missingTables: true,
-    };
-  }
 
   const pendingPayloadStatements: D1PreparedStatement[] = [];
   const flushPendingPayloadStatements = async (): Promise<void> => {

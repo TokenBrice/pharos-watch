@@ -183,9 +183,6 @@ function poolState(totalPools = 7_402): DexLiquidityPoolState {
   ]);
   return {
     fallback: {
-      dsFallbackCoins: 0,
-      cgTickerFallbackCoins: 0,
-      coverageRecoveredCoins: 2,
       weakCoverageCoinsBeforeFallback: 7,
       directCexOrderbookDepth: {
         checkedSymbols: 2,

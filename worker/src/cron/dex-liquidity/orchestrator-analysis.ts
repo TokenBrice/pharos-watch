@@ -259,9 +259,6 @@ export interface DexLiquidityPostScoreAnalysis {
     previousCoverageClasses: CoverageClasses;
     priceObservationCoins: number;
     weakCoverageCoins: number;
-    coverageRecoveredCoins: number;
-    dsFallbackCoins: number;
-    cgTickerFallbackCoins: number;
     directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
     measuredBalanceCoveragePct: number;
     syntheticOnlyCoins: number;
@@ -308,9 +305,6 @@ export async function analyzeDexLiquidityPostScoring(params: {
   stagedMergedCount: number;
   stagedSkippedCount: number;
   weakCoverageCoinsBeforeFallback: number;
-  coverageRecoveredCoins: number;
-  dsFallbackCoins: number;
-  cgTickerFallbackCoins: number;
   directCexOrderbookDepth: DirectCexOrderbookDepthSummary | null;
   dlYieldsAvailable: boolean;
   dlProtocolsAvailable: boolean;
@@ -646,9 +640,6 @@ export async function analyzeDexLiquidityPostScoring(params: {
       previousCoverageClasses,
       priceObservationCoins: params.priceObservations.size,
       weakCoverageCoins: params.weakCoverageCoinsBeforeFallback,
-      coverageRecoveredCoins: params.coverageRecoveredCoins,
-      dsFallbackCoins: params.dsFallbackCoins,
-      cgTickerFallbackCoins: params.cgTickerFallbackCoins,
       directCexOrderbookDepth: params.directCexOrderbookDepth,
       measuredBalanceCoveragePct,
       syntheticOnlyCoins,
