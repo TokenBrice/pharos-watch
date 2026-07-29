@@ -3474,8 +3474,9 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
     expect(trace.preCapScore).toBeLessThan(missingPeakTrace.preCapScore!);
   });
 
-  it("treats quiet scored peg history as explicit zero current deviation", () => {
+  it("treats XTUSD's quiet scored peg history as explicit zero current deviation", () => {
     const fixed = exactFixedInput({
+      assetId: "xtusd-xt",
       pegScore: 100,
       currentDeviationBps: null,
       activeDepeg: false,
@@ -3487,9 +3488,13 @@ describe("Safety Score v9 exact base fact-set adapter", { timeout: V9_EVALUATION
       spreadPenalty: 0,
     });
 
-    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension());
+    const reviewed = extension();
+    reviewed.registryFingerprint = fixed.registryFingerprint;
+    reviewed.assets[0]!.assetId = "xtusd-xt";
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
     const peg = compiled.assets[0]!.peg;
 
+    expect(compiled.assets[0]!.assetId).toBe("xtusd-xt");
     expect(peg).toMatchObject({
       status: { observationState: "known" },
       pegScore: 100,
