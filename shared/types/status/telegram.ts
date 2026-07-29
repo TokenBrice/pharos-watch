@@ -350,14 +350,14 @@ export type ReserveAlertSourceState = (typeof RESERVE_ALERT_SOURCE_STATE_VALUES)
  * cron metadata and Telegram health summary surfaces. The cron *result* type
  * has a non-null `safetyAlertSourceState`, so it cannot share this shape.
  */
-interface SafetyAlertFieldsNullable {
+export interface SafetyAlertFieldsNullable {
   safetyAlertSourceState: SafetyAlertSourceState | null;
   safetyAlertSourceAgeSeconds: number | null;
   safetyAlertsSuppressed: boolean;
   safetyAlertSourceGeneration: string | null;
 }
 
-interface ReserveAlertFieldsNullable {
+export interface ReserveAlertFieldsNullable {
   reserveAlertSourceState: ReserveAlertSourceState | null;
   reserveAlertSourceAgeSeconds: number | null;
   reserveAlertsSuppressed: boolean;
