@@ -21,6 +21,7 @@ export const SAFETY_SCORE_V9_CACHE_KEYS = {
   publication: "report-cards:v9",
   publicationHealth: "report-cards:v9:publication-health",
   publicationAttempt: "report-cards:v9:last-attempt",
+  failedPublicationAttempt: "report-cards:v9:last-failed-attempt",
 } as const;
 
 const V9AssetQuarantineSchema = z
@@ -190,8 +191,9 @@ export async function loadSafetyScoreV9PublicationHealth(
   return health;
 }
 
-export async function loadSafetyScoreV9PublicationAttempt(
+async function loadSafetyScoreV9PublicationAttemptAtKey(
   db: D1Database,
+  key: string,
   signal?: AbortSignal,
 ): Promise<V9PublicationAttempt | null> {
   throwIfAborted(signal);
@@ -199,7 +201,7 @@ export async function loadSafetyScoreV9PublicationAttempt(
     () =>
       db
         .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-        .bind(SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt)
+        .bind(key)
         .first<{ value: string; updated_at: number }>(),
     3,
     signal,
@@ -217,6 +219,28 @@ export async function loadSafetyScoreV9PublicationAttempt(
     );
   }
   return attempt;
+}
+
+export async function loadSafetyScoreV9PublicationAttempt(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<V9PublicationAttempt | null> {
+  return loadSafetyScoreV9PublicationAttemptAtKey(
+    db,
+    SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
+    signal,
+  );
+}
+
+export async function loadSafetyScoreV9FailedPublicationAttempt(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<V9PublicationAttempt | null> {
+  return loadSafetyScoreV9PublicationAttemptAtKey(
+    db,
+    SAFETY_SCORE_V9_CACHE_KEYS.failedPublicationAttempt,
+    signal,
+  );
 }
 
 export async function loadSafetyScoreV9Publication(
@@ -281,7 +305,12 @@ export async function persistSafetyScoreV9PublicationAttempt(
   throwIfAborted(input.signal);
   const attempt = validatePublicationAttemptInput(input);
   const attemptValue = stableJsonStringifyV1(attempt);
-  const existingAttempt = await loadSafetyScoreV9PublicationAttempt(
+  if (attempt.outcome !== "failed") {
+    throw new Error(
+      "Attempt-only Safety Score v9 persistence requires a failed attempt",
+    );
+  }
+  const existingAttempt = await loadSafetyScoreV9FailedPublicationAttempt(
     db,
     input.signal,
   );
@@ -315,7 +344,7 @@ export async function persistSafetyScoreV9PublicationAttempt(
              END`,
         )
         .bind(
-          SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
+          SAFETY_SCORE_V9_CACHE_KEYS.failedPublicationAttempt,
           attemptValue,
           input.publicationClockSec,
         ),
