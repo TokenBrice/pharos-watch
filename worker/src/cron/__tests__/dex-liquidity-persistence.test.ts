@@ -499,6 +499,71 @@ describe("dex-liquidity persistence", () => {
     });
   });
 
+  it("classifies the deployment census for a scored row that retained no pool", async () => {
+    // hlusd-hela shape: a metrics row sends the asset down the scoring path, so
+    // it never reaches the placeholder loop and would otherwise publish an
+    // `unknown` coverage with an empty unsupportedReasons map.
+    const meta = ACTIVE_STABLECOINS.find((coin) => coin.id === "hlusd-hela");
+    if (!meta) throw new Error("expected hlusd-hela in active registry");
+    const nowSec = 1_800_000_000;
+    const metrics = initMetrics(meta.id, meta.symbol);
+    metrics.totalTvlUsd = 1_000;
+    metrics.poolCount = 1;
+
+    await persistScores(
+      makeDb(),
+      new Map([[meta.id, metrics]]),
+      new Map([
+        [
+          meta.id,
+          makeFullScoreResult({
+            exitRouteObservations: [],
+            exitRouteObservationCoverage: {
+              status: "unknown",
+              capabilityMatrixVersion: "p4a.8",
+              retainedPoolCount: 0,
+              observationCount: 0,
+              scoreEligibleObservationCount: 0,
+              scoreEligiblePoolCount: 0,
+              scoreEligibleCapabilityPoolCount: 0,
+              unsupportedPoolCount: 0,
+              evidenceCounts: {},
+              unsupportedReasons: {},
+            },
+          } as Partial<FullScoreResult>),
+        ],
+      ]),
+      {
+        totalTvl: 0,
+        totalVol24h: 0,
+        totalVol7d: 0,
+        poolCount: 0,
+        chainCount: 0,
+        protocolTvl: {},
+        chainTvl: {},
+      },
+      nowSec,
+    );
+
+    const row = extractDexLiquidityRunRows(
+      getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
+    ).find((candidate) => candidate[1] === meta.id);
+    expect(JSON.parse(String(row?.[19]))).toMatchObject({
+      exitRouteObservationCoverage: {
+        status: "unknown",
+        retainedPoolCount: 0,
+        unsupportedReasons: { deploymentCensusNoReviewedScope: 1 },
+      },
+      dexDeploymentCensus: {
+        state: "unsupported-method",
+        generationId: buildDexLiquidityPublicationGenerationId(nowSec),
+        publishedAtSec: nowSec,
+        expectedDeploymentCount: 0,
+        unsupportedChainDeploymentCount: 0,
+      },
+    });
+  });
+
   it("skips tracked inactive metrics when staging the active current generation", async () => {
     const activeMetrics = initMetrics("usdt-tether", "USDT");
     activeMetrics.totalTvlUsd = 123;

@@ -31,7 +31,13 @@ export function SafetyScoresOverview() {
         dispositions enter replay only after their reviewed UTC day. Partial control reviews retain the controls that
         were actually reviewed while unresolved surfaces remain bounded and fail closed. Subthreshold unrecognized
         chain-label supply pools are tolerated by the bridge-materiality proof and no longer surface as public
-        evidence-responsibility facts; material unmatched bridge supply still fails closed. These are provenance and
+        evidence-responsibility facts; material unmatched bridge supply still fails closed. Coverage that no
+        supported adapter can observe is unsupported methodology rather than producer failure: deployment census
+        coverage is reported per chain instead of all or nothing, an exit surface whose census remainder is
+        unsupported reports unsupported route evidence, and an unreviewed dependency set on an asset with no
+        live-reserve adapter is unsupported rather than failed. An asset with no usable price whose tracked peg
+        record is already adverse is measured adverse, while a clean record with no usable price stays a quiet
+        observation and its deviation is never coerced to zero. These are provenance and
         evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.
       </p>
       <p>

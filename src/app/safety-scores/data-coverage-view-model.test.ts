@@ -136,6 +136,107 @@ describe("buildDataCoverageModel", () => {
     expect(model.gapTypes.every((gap) => !gap.label.includes("-"))).toBe(true);
   });
 
+  it("keeps measured findings out of the missing-input inventory", () => {
+    // `peg-supply-floor-withheld` stands in for every measured-adverse code,
+    // including the v9.04 addition `peg-price-unavailable-adverse-history`:
+    // the module's headline, bar and inventory all cover missing data only, so
+    // a measured peg finding must never read as an input we failed to collect.
+    const response = makeReportCardsV9Response({
+      cards: [
+        withGaps(makeV9Card({ id: "aaa-one" }), [
+          {
+            responsibility: "measured-adverse",
+            factCount: 4,
+            criticalFactCount: 0,
+            reasonCodes: ["peg-supply-floor-withheld"],
+          },
+          {
+            responsibility: "method-unsupported",
+            factCount: 1,
+            criticalFactCount: 0,
+            reasonCodes: ["missing-runtime-route-evidence"],
+          },
+        ]),
+      ],
+    });
+
+    const model = buildDataCoverageModel(response)!;
+
+    expect(model.gapTypes.map((gap) => gap.code)).toEqual(["missing-runtime-route-evidence"]);
+    expect(model.openGapCount).toBe(1);
+    expect(model.gapOwners.map((owner) => owner.responsibility)).toEqual(["method-unsupported"]);
+  });
+
+  it("counts an asset once when one reason code is split across two owners", () => {
+    // v9.04 reclassification: the DEX exit codes are producer-failed for some
+    // gaps and method-unsupported for others, so a single asset can raise the
+    // same code under two summaries.
+    const response = makeReportCardsV9Response({
+      cards: [
+        withGaps(makeV9Card({ id: "aaa-one" }), [
+          {
+            responsibility: "producer-failed",
+            factCount: 1,
+            criticalFactCount: 0,
+            reasonCodes: ["missing-runtime-route-evidence"],
+          },
+          {
+            responsibility: "method-unsupported",
+            factCount: 2,
+            criticalFactCount: 0,
+            reasonCodes: ["missing-runtime-route-evidence"],
+          },
+        ]),
+      ],
+    });
+
+    const model = buildDataCoverageModel(response)!;
+
+    expect(model.gapTypes).toEqual([
+      {
+        code: "missing-runtime-route-evidence",
+        label: "No live exit-route observation",
+        assetCount: 1,
+      },
+    ]);
+    expect(model.openGapCount).toBe(3);
+  });
+
+  it("names the reclassified inputs by what is absent rather than by fault", () => {
+    const response = makeReportCardsV9Response({
+      cards: [
+        withGaps(makeV9Card({ id: "aaa-one" }), [
+          {
+            responsibility: "method-unsupported",
+            factCount: 3,
+            criticalFactCount: 0,
+            reasonCodes: [
+              "incomplete-dex-route-coverage",
+              "missing-runtime-route-evidence",
+              "unreviewed-dependency-relationships",
+            ],
+          },
+        ]),
+      ],
+    });
+
+    const model = buildDataCoverageModel(response)!;
+
+    expect(
+      Object.fromEntries(model.gapTypes.map((gap) => [gap.code, gap.label])),
+    ).toEqual({
+      "incomplete-dex-route-coverage": "DEX exit routes not fully covered",
+      "missing-runtime-route-evidence": "No live exit-route observation",
+      "unreviewed-dependency-relationships": "Dependency relationships not reconciled with reserves",
+    });
+    expect(model.gapOwners[0]).toMatchObject({
+      responsibility: "method-unsupported",
+      label: "No supported method",
+      detail: "No method can measure this input for this asset yet. Nothing upstream failed.",
+    });
+    expect(model.gapTypes.every((gap) => !/fail/i.test(gap.label))).toBe(true);
+  });
+
   it("counts gaps carried by not-rated cards", () => {
     const notRated = withGaps(
       makeV9Card({

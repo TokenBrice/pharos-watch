@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.03",
+  "releaseVersion": "9.04",
   "semantic": {
     "formula": {
       "pillarWeights": {
@@ -1132,25 +1132,6 @@
       "auditClassification": "missing-data"
     },
     {
-      "code": "immaterial-unrecognized-chain-pool",
-      "ownerDomain": "control",
-      "archetypes": [
-        "*"
-      ],
-      "pathKinds": [
-        "deployment-control"
-      ],
-      "defaultFactClass": "missing-bounded-exposure",
-      "boundedness": "exposure-bounded",
-      "permittedTreatments": [
-        "diagnostic"
-      ],
-      "defaultTreatment": "diagnostic",
-      "releaseSeverity": "diagnostic",
-      "publicLabel": "Unrecognized chain supply is pooled below the common-mode materiality floor",
-      "auditClassification": "missing-data"
-    },
-    {
       "code": "implementation-parent-cycle",
       "ownerDomain": "dependency",
       "archetypes": [
@@ -1617,6 +1598,30 @@
       "releaseSeverity": "review-required",
       "publicLabel": "Peg input is missing",
       "auditClassification": "missing-data",
+      "ceilingRule": {
+        "source": "named-ceiling",
+        "key": "peg-unverified"
+      }
+    },
+    {
+      "code": "peg-price-unavailable-adverse-history",
+      "ownerDomain": "peg",
+      "archetypes": [
+        "*"
+      ],
+      "pathKinds": [
+        "peg",
+        "local-component"
+      ],
+      "defaultFactClass": "missing-global-bounded",
+      "boundedness": "globally-bounded",
+      "permittedTreatments": [
+        "ceiling"
+      ],
+      "defaultTreatment": "ceiling",
+      "releaseSeverity": "review-required",
+      "publicLabel": "No usable price exists and the tracked peg record is adverse",
+      "auditClassification": "measured-structural",
       "ceilingRule": {
         "source": "named-ceiling",
         "key": "peg-unverified"

@@ -1,6 +1,7 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import type { ContractDeployment } from "@shared/types/core";
 import {
   ExitRouteObservationCoverageSchema,
   ExitRouteObservationSchema,
@@ -16,8 +17,10 @@ import { tryParseJson } from "../../lib/json-parse";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import { toErrorMessage } from "../../lib/error-utils";
 import {
+  buildDexDeploymentCensusDetail,
   buildDexPlaceholderScoreDetailsJson,
   classifyDexPlaceholderCoverage,
+  type DexDeploymentCensusDetailParams,
   type DexDeploymentCensusRow,
 } from "./deployment-census-coverage";
 
@@ -73,6 +76,8 @@ const DEX_LIQUIDITY_PUBLISH_CURRENT_SET_SQL = DEX_LIQUIDITY_ROW_COLUMNS.filter((
   .join(",\n  ");
 const DEX_LIQUIDITY_CURRENT_PUBLISHED_FILTER =
   "(publication_generation_id IS NULL OR publication_generation_id IN (SELECT generation_id FROM dex_liquidity_publication_generations WHERE state = 'published'))";
+
+type ActiveStablecoinMeta = (typeof ACTIVE_STABLECOINS)[number];
 
 type P4aFullScoreResult = FullScoreResult & {
   exitRouteObservations?: ExitRouteObservation[];
@@ -187,15 +192,25 @@ export function selectStillFreshDexRouteSetHold(
   };
 }
 
-/** @internal Exported for focused persistence tests. */
-export function buildDexScoreDetailsJson(scoreResult: FullScoreResult): string {
+/**
+ * @internal Exported for focused persistence tests.
+ *
+ * A scored asset whose route surface retained no pool carries the same evidence
+ * question as a placeholder row, so it publishes the deployment census too: its
+ * producer coverage would otherwise be an `unknown` status with an empty
+ * `unsupportedReasons` map, which no downstream reader can classify.
+ */
+export function buildDexScoreDetailsJson(
+  scoreResult: FullScoreResult,
+  census: DexDeploymentCensusDetailParams | null = null,
+): string {
   const p4aResult = scoreResult as P4aFullScoreResult;
+  const coverage = census?.classification.coverage ?? p4aResult.exitRouteObservationCoverage;
   return JSON.stringify({
     ...scoreResult.components,
     ...(p4aResult.exitRouteObservations != null ? { exitRouteObservations: p4aResult.exitRouteObservations } : {}),
-    ...(p4aResult.exitRouteObservationCoverage != null
-      ? { exitRouteObservationCoverage: p4aResult.exitRouteObservationCoverage }
-      : {}),
+    ...(coverage != null ? { exitRouteObservationCoverage: coverage } : {}),
+    ...(census != null ? { dexDeploymentCensus: buildDexDeploymentCensusDetail(census) } : {}),
   });
 }
 
@@ -296,6 +311,14 @@ export function buildDexExitRouteHistoryJson(scoreResult: FullScoreResult): stri
     observations: p4aResult.exitRouteObservations ?? [],
     coverage: p4aResult.exitRouteObservationCoverage ?? null,
   });
+}
+
+const activeMetaById = new Map<string, ActiveStablecoinMeta>(
+  ACTIVE_STABLECOINS.map((meta) => [meta.id, meta]),
+);
+
+function censusDeployments(meta: ActiveStablecoinMeta | undefined): ContractDeployment[] {
+  return meta === undefined ? [] : [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])];
 }
 
 function setsEqual(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
@@ -842,6 +865,23 @@ export async function persistScores(
               exitRouteObservations: heldRouteSet.observations,
               exitRouteObservationCoverage: heldRouteSet.coverage,
             } as FullScoreResult;
+      // A scored row that retained no pool never reaches the placeholder loop,
+      // so classify its deployment census here instead of publishing coverage
+      // that carries no reason at all.
+      const scoredCoverage = (persistedScoreResult as P4aFullScoreResult).exitRouteObservationCoverage;
+      const scoredCensus: DexDeploymentCensusDetailParams | null =
+        scoredCoverage != null && scoredCoverage.retainedPoolCount === 0
+          ? {
+              classification: classifyDexPlaceholderCoverage({
+                deployments: censusDeployments(activeMetaById.get(id)),
+                outcomeRows: deploymentCensusById.get(id) ?? [],
+                nowSec,
+                censusAvailable: deploymentCensusAvailable,
+              }),
+              generationId,
+              publishedAtSec: nowSec,
+            }
+          : null;
       if (heldRouteSet !== null) {
         logWorkerEvent({
           scope: "lib",
@@ -877,7 +917,7 @@ export async function persistScores(
         sr.organicFrac,
         Math.round(m.effectiveTvl),
         sr.durability,
-        buildDexScoreDetailsJson(persistedScoreResult),
+        buildDexScoreDetailsJson(persistedScoreResult, scoredCensus),
         sr.lockedLiqPct,
         sr.coverageClass,
         sr.coverageConfidence,
@@ -897,7 +937,7 @@ export async function persistScores(
       if (!metrics.has(meta.id)) {
         placeholderCount++;
         const coverage = classifyDexPlaceholderCoverage({
-          deployments: [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])],
+          deployments: censusDeployments(meta),
           outcomeRows: deploymentCensusById.get(meta.id) ?? [],
           nowSec,
           censusAvailable: deploymentCensusAvailable,

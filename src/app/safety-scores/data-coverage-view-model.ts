@@ -10,18 +10,27 @@ import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-regist
  * Plain-English labels for the public V9 reason codes. The enum values are
  * evaluator identifiers, not reader-facing copy, so every code surfaced in the
  * data-coverage module carries an explicit label instead of a humanized slug.
+ *
+ * Retired codes keep their label. The static page bundle and the Worker that
+ * serves the report cards deploy independently, so a client can be handed a
+ * payload authored either side of a methodology bump; an unlabelled code would
+ * render an empty inventory row. Completeness for live codes is enforced below.
  */
-const REASON_CODE_LABELS: Record<V9ReasonCode, string> = {
+const REASON_CODE_LABELS = {
   "bounded-mechanism-review": "Mechanism review incomplete",
   "bounded-unknown-reserve-exposure": "Part of the reserve is unidentified",
   "correlated-exit-routes": "Exit routes share the same failure point",
   "critical-unresolved": "A rating-critical input is unresolved",
   "future-dated-input-fact": "An input is dated in the future",
   "historical-critical-input": "A rating-critical input is out of date",
+  // Retired by methodology 9.04; label retained per the note above.
   "immaterial-unrecognized-chain-pool": "Small liquidity pool not recognized",
   "implementation-parent-cycle": "Circular dependency on a parent asset",
   "incomparable-route-requests": "Exit routes cannot be compared like for like",
-  "incomplete-dex-route-coverage": "DEX exit routes only partly covered",
+  // Reads true for both shapes this code now covers: a partly covered surface,
+  // and one with no reviewed pool at all because a deployment chain has no
+  // registered discovery provider (v9.04 reclassification).
+  "incomplete-dex-route-coverage": "DEX exit routes not fully covered",
   "incomplete-oracle-liquidation-branch": "Oracle liquidation path only partly reviewed",
   "inherited-access-exposure": "Freeze exposure inherited from a reviewed upstream asset",
   "insufficient-evidence": "Not enough evidence to rate this input",
@@ -41,13 +50,17 @@ const REASON_CODE_LABELS: Record<V9ReasonCode, string> = {
   "missing-oracle-profile": "Oracle setup not documented",
   "missing-parent-score": "Parent asset has no score",
   "missing-peg-input": "Peg reference data missing",
+  "peg-price-unavailable-adverse-history": "No usable price, and the peg record is adverse",
   "peg-supply-floor-withheld": "Peg deviation withheld below the $1M supply floor",
   "missing-pillar": "A scoring pillar has no inputs",
   "missing-access-review": "Transfer and freeze powers not reviewed",
   "missing-pillar-evidence": "A scoring pillar has no evidence",
   "missing-required-oracle-branches": "Required oracle paths not documented",
   "missing-reserve-composition": "Reserve composition not published",
-  "missing-runtime-route-evidence": "Live exit-route data unavailable",
+  // Neutral on cause: the same code now covers a feed that did not deliver and
+  // a chain Pharos has no discovery provider for. "No observation" is true of
+  // both; "unavailable" implied a failure that did not always happen.
+  "missing-runtime-route-evidence": "No live exit-route observation",
   "missing-same-notional-route": "No exit route at the tested size",
   "missing-upgrade-control": "Upgrade controls not identified",
   "missing-upgradeability-review": "Contract upgradeability not reviewed",
@@ -66,10 +79,16 @@ const REASON_CODE_LABELS: Record<V9ReasonCode, string> = {
   "unresolved-mint-authority": "Mint authority unresolved",
   "unresolved-oracle-branch-applicability": "Oracle path applicability unresolved",
   "unsupported-same-notional-route": "Exit route cannot be tested at size",
-  "unreviewed-dependency-relationships": "Dependency relationships not reviewed",
+  // The collateral identities are reviewed; what is absent is their
+  // reconciliation against a measured reserve envelope, which for an asset with
+  // no live-reserve adapter no method can produce at all.
+  "unreviewed-dependency-relationships": "Dependency relationships not reconciled with reserves",
   "unreviewed-oracle-profile": "Oracle setup not reviewed",
   "unreviewed-reserve-envelope": "Reserve scope not reviewed",
-};
+} satisfies Record<string, string>;
+
+/** Compile-time guard: every live reason code must carry a label. */
+const _liveReasonCodeLabels: Record<V9ReasonCode, string> = REASON_CODE_LABELS;
 
 /**
  * Reader-facing owner of a gap. `measured-adverse` is excluded from the module:
@@ -94,7 +113,7 @@ const GAP_OWNERS = [
   {
     responsibility: "method-unsupported",
     label: "No supported method",
-    detail: "No method can measure this input for this asset yet.",
+    detail: "No method can measure this input for this asset yet. Nothing upstream failed.",
   },
 ] as const satisfies ReadonlyArray<{
   responsibility: V9EvidenceResponsibility;
@@ -113,6 +132,7 @@ export interface DataCoverageGapOwner {
 export interface DataCoverageGapType {
   code: V9ReasonCode;
   label: string;
+  /** Distinct assets carrying the code under a missing-data owner. */
   assetCount: number;
 }
 
@@ -208,23 +228,32 @@ export function buildDataCoverageModel(
 
   // The headline counts MISSING data: only the four gap-owner classes shown
   // in the module's own attribution bar. Measured classifications (adverse or
-  // structural findings) are facts we hold, not absences, and stay out of the
-  // count just as they stay out of the bar.
+  // structural findings) are facts we hold, not absences, so they stay out of
+  // the count, out of the bar, and out of the reason-code inventory the bar
+  // expands into — `peg-price-unavailable-adverse-history` is a measured peg
+  // finding and would otherwise read as a missing input.
   const missingResponsibilities = new Set<V9EvidenceResponsibility>(
     GAP_OWNERS.map((owner) => owner.responsibility),
   );
   for (const card of response.cards) {
     const responsibility = card.scoreTrace.evidenceResponsibility;
+    // Deduplicated per card: one reason code can now be raised twice for the
+    // same asset under two different owners (v9.04 splits the DEX exit and
+    // dependency codes between producer-failed and method-unsupported), and the
+    // inventory reports assets, not gaps.
+    const missingCodesForAsset = new Set<V9ReasonCode>();
     for (const summary of responsibility.summaries) {
-      if (missingResponsibilities.has(summary.responsibility)) openGapCount += summary.factCount;
       criticalGapCount += summary.criticalFactCount;
       gapCountByOwner.set(
         summary.responsibility,
         (gapCountByOwner.get(summary.responsibility) ?? 0) + summary.factCount,
       );
-      for (const code of summary.reasonCodes) {
-        assetCountByCode.set(code, (assetCountByCode.get(code) ?? 0) + 1);
-      }
+      if (!missingResponsibilities.has(summary.responsibility)) continue;
+      openGapCount += summary.factCount;
+      for (const code of summary.reasonCodes) missingCodesForAsset.add(code);
+    }
+    for (const code of missingCodesForAsset) {
+      assetCountByCode.set(code, (assetCountByCode.get(code) ?? 0) + 1);
     }
 
     if (card.breakdowns === null) continue;

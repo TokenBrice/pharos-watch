@@ -84,6 +84,7 @@ import {
   ExitRouteObservationSchema,
   RedemptionExitRouteObservationSchema,
   type ExitRouteObservation,
+  type ExitRouteObservationCoverage,
 } from "@shared/types/exit-route";
 import { getDexMeasuredExecutionFreshnessMaxSec } from "@shared/types/measured-execution";
 import { ReserveSliceSchema, type ReserveSlice } from "@shared/types/reserves";
@@ -1653,21 +1654,40 @@ function reconcileCollateralDependencyMappings(
       ...reserveExposures.flatMap((exposure) => exposure.status.evidenceRefIds),
     ]),
   ].sort(compareText);
-  const producerOmittedCuratedEnvelope =
+  // A missing reserve envelope is only a producer failure when a reserve
+  // producer was expected at all. `liveToFallbackCoins` is exactly the set of
+  // assets that declare a `liveReservesConfig` but published no scoring-grade
+  // snapshot this run (`summarizeCollateralDriftFromLiveReserveMap`), so the
+  // union with `liveReserveMap` is precisely "this asset has a live-reserve
+  // adapter". An asset in neither has no producer to fail: its envelope gap is
+  // a method limit, not a misattributed producer failure (owner ruling
+  // 2026-07-29, usdh-hubble).
+  const liveReserveProducerExpected =
+    context.fixedInput.liveReserveMap[context.asset.assetId] != null ||
+    context.fixedInput.liveToFallbackCoins.includes(context.asset.assetId);
+  const omittedCuratedEnvelope =
     reserveExposures.length === 0 &&
     dependencies.source === "curated-reserve" &&
     dependencies.edges.some((edge) => edge.economicRole === "basket-exposure");
+  const producerOmittedCuratedEnvelope = omittedCuratedEnvelope && liveReserveProducerExpected;
+  const unsupportedCuratedEnvelope = omittedCuratedEnvelope && !liveReserveProducerExpected;
   const status =
     dependencies.status.observationState === "known"
       ? missingLocalFact(context, {
           componentKey: "effective-dependencies",
           reasonCode: "unreviewed-dependency-relationships",
           ownerDomain: "dependency",
-          responsibility: producerOmittedCuratedEnvelope ? "producer-failed" : "integration-missing",
+          responsibility: producerOmittedCuratedEnvelope
+            ? "producer-failed"
+            : unsupportedCuratedEnvelope
+              ? "method-unsupported"
+              : "integration-missing",
           policyRuleId: "v9.dependencies.edge-exposure-mapping",
           message: producerOmittedCuratedEnvelope
             ? "Reviewed collateral identities exist, but the exact fixed input contains no reserve envelope to reconcile."
-            : "A collateral dependency edge lacks an exact mapping to the captured reserve exposures.",
+            : unsupportedCuratedEnvelope
+              ? "Reviewed collateral identities exist, but no live-reserve adapter is configured for this asset, so no reserve envelope can be measured."
+              : "A collateral dependency edge lacks an exact mapping to the captured reserve exposures.",
           observationState: "bounded-unknown",
           evidenceRefIds,
         }).status
@@ -2084,6 +2104,46 @@ function buildRoute(
   };
 }
 
+/**
+ * Owner rulings 2026-07-29 (R1-A / R1-B / R4 scope). A DEX exit surface can be
+ * uncovered for two structurally different reasons, and only one of them is a
+ * producer failure:
+ *
+ * - `census-unsupported`: the deployment census could not certify the asset's
+ *   footprint because at least one deployment chain has no registered discovery
+ *   provider (`deploymentCensusUnsupportedMethod`). Pharos has no method for
+ *   that chain — nothing failed. The remaining census reasons (provider outage,
+ *   unscheduled scope, pools lost between discovery and scoring, invalid or
+ *   stale outcomes) are genuine producer failures and stay `producer-failed`.
+ * - `no-exact-capable-venue`: retained pools exist, but no adapter family in the
+ *   capability matrix recognises any of them and no capability gate is holding
+ *   one back. "Pharos has no execution model for any venue this asset trades
+ *   on" is exactly `method-unsupported`, and it is anti-fragile: the day an
+ *   adapter lands, the surface silently returns to the scored path.
+ *
+ * Everything else keeps the producer attribution.
+ */
+type V9DexSurfaceUnsupportedKind = "census-unsupported" | "no-exact-capable-venue";
+
+function classifyUnsupportedDexSurface(
+  coverage: ExitRouteObservationCoverage | undefined,
+): V9DexSurfaceUnsupportedKind | null {
+  if (coverage == null) return null;
+  if (coverage.retainedPoolCount === 0) {
+    return (coverage.unsupportedReasons["deploymentCensusUnsupportedMethod"] ?? 0) > 0
+      ? "census-unsupported"
+      : null;
+  }
+  // `scoreEligibleCapabilityPoolCount` is optional: an absent count proves
+  // nothing about the venue set, so it must fail closed to producer attribution.
+  const heldByCapabilityGate = Object.keys(coverage.unsupportedReasons).some((reason) =>
+    reason.startsWith("executionCapabilityGate:"),
+  );
+  return coverage.scoreEligibleCapabilityPoolCount === 0 && !heldByCapabilityGate
+    ? "no-exact-capable-venue"
+    : null;
+}
+
 function buildRoutes(context: AssetBuildContext): {
   exitStatus: V9FactStatusV2;
   exitRoutes: V9ExitRouteFactV2[];
@@ -2207,6 +2267,31 @@ function buildRoutes(context: AssetBuildContext): {
         exitRoutes: [],
       };
     }
+    // R4 scope (owner ruling 2026-07-29): a zero-route surface whose census
+    // could not certify the footprint for lack of any registered discovery
+    // provider is a method limit, not a producer failure.
+    // The reason code stays `missing-runtime-route-evidence` because it is the
+    // only registered exit code whose policy `pathKinds` admit a
+    // `local-component` path; `unsupported-same-notional-route` is registered
+    // for `optional-exit` only, and emitting it here would stamp every
+    // reclassified gap `path-kind-not-permitted` in the evidence queue. The
+    // `unsupported` observation state plus the explicit responsibility already
+    // carry the ruling; the code swap rides the v9.04 policy bump.
+    if (classifyUnsupportedDexSurface(emptyCoverage) === "census-unsupported") {
+      return {
+        exitStatus: missingLocalFact(context, {
+          componentKey: "exit-routes",
+          reasonCode: "missing-runtime-route-evidence",
+          ownerDomain: "exit",
+          responsibility: "method-unsupported",
+          policyRuleId: "v9.exit.same-notional-route",
+          message:
+            "The deployment census carries no registered discovery provider for at least one deployment chain, so no same-notional exit route can be observed.",
+          observationState: "unsupported",
+        }).status,
+        exitRoutes: [],
+      };
+    }
     return {
       exitStatus: missingLocalFact(context, {
         componentKey: "exit-routes",
@@ -2245,18 +2330,35 @@ function buildRoutes(context: AssetBuildContext): {
     (coverage.retainedPoolCount === 0 || isDexExitRouteCoverageWithinRouteBudget(coverage));
   const portfolioGapIds = [...gapIds];
   if (!dexSurfaceComplete) {
+    // R1-A / R1-B (owner ruling 2026-07-29). The legacy single message asserted
+    // that reviewed execution-capability pools exist but are unobserved, which
+    // is false for a surface with zero retained pools: there is nothing that
+    // "does not all carry" an observation. Attribution and message now follow
+    // the surface's actual shape, and the bounded-unknown observation state is
+    // unchanged so the exit floor does not move.
+    const unsupportedSurface = classifyUnsupportedDexSurface(coverage);
     portfolioGapIds.push(
       addGap(
         context,
         createV9FactGapV3({
           gapId: `${context.asset.assetId}:gap:exit-portfolio-coverage`,
+          // `incomplete-dex-route-coverage` is the registered exit code for a
+          // `local-component` aggregate path; see the zero-route branch for why
+          // the `unsupported-same-notional-route` swap waits on the policy bump.
           reasonCode: "incomplete-dex-route-coverage",
           ownerDomain: "exit",
           policyRuleId: "v9.exit.same-notional-route",
           observationState: "bounded-unknown",
-          responsibility: "producer-failed",
+          responsibility: unsupportedSurface === null ? "producer-failed" : "method-unsupported",
           path: { kind: "local-component", componentKey: "exit-portfolio-coverage" },
-          message: "Reviewed DEX execution-capability pools do not all carry score-eligible exact route observations.",
+          message:
+            unsupportedSurface === "census-unsupported"
+              ? "The deployment census carries no registered discovery provider for at least one deployment chain, so the DEX exit surface could not be certified."
+              : unsupportedSurface === "no-exact-capable-venue"
+                ? "No reviewed execution model recognizes any retained pool, so this asset has no exact-capable DEX venue."
+                : coverage != null && coverage.retainedPoolCount === 0
+                  ? "The deployment census could not certify this asset's DEX footprint, so no reviewed execution-capability pool exists."
+                  : "Reviewed DEX execution-capability pools do not all carry score-eligible exact route observations.",
           evidenceRefIds,
         }),
       ),
@@ -2732,6 +2834,19 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     peg.currentDeviationBps === null &&
     peg.depegEventCoverageLimited === true &&
     !peg.activeDepeg;
+  // Owner ruling 2026-07-29 (P4, nxusd-nereus): when the producer reports that
+  // no usable price observation exists AND the asset's tracked record already
+  // holds adverse peg evidence, the null deviation is neither a feed failure
+  // nor a quiet observation - it is unobservable, and the only thing Pharos has
+  // measured about this peg is adverse. The deviation is still never coerced to
+  // zero: a clean record with no usable price stays on the quiet path, and the
+  // DEX quote is never admitted as a price source.
+  const priceUnavailableWithAdverseRecord =
+    reference !== null &&
+    pegScore !== null &&
+    peg.currentDeviationBps === null &&
+    peg.currentPriceUnavailable === true &&
+    (peg.activeDepeg === true || peg.eventCount > 0 || peg.worstDeviationBps !== null);
   let status: V9FactStatusV2;
   if (evidence.freshness.state === "stale") {
     status = missingLocalFact(context, {
@@ -2752,14 +2867,22 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
           ? "missing-applicable-peg"
           : supplyFloorWithheld
             ? "peg-supply-floor-withheld"
-            : "missing-peg-input",
+            : priceUnavailableWithAdverseRecord
+              ? "peg-price-unavailable-adverse-history"
+              : "missing-peg-input",
       ownerDomain: "peg",
       responsibility:
-        reference === null ? "integration-missing" : supplyFloorWithheld ? "measured-adverse" : "producer-failed",
+        reference === null
+          ? "integration-missing"
+          : supplyFloorWithheld || priceUnavailableWithAdverseRecord
+            ? "measured-adverse"
+            : "producer-failed",
       policyRuleId: "v9.peg.current",
       message: supplyFloorWithheld
         ? "Peg deviation is withheld by the $1M supply floor: below it, deviation fails closed by methodology design."
-        : "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
+        : priceUnavailableWithAdverseRecord
+          ? "No usable price observation exists for this asset and its tracked peg record is adverse, so the current deviation is unobservable rather than at peg."
+          : "The peg row lacks an explicit reference, score, deviation, or active-depeg peak.",
       observationState: "bounded-unknown",
       evidenceRefIds: [evidenceId],
     }).status;

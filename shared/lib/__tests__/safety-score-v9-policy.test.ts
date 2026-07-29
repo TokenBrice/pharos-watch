@@ -24,7 +24,7 @@ describe("Safety Score v9 methodology policy", () => {
   it("loads the committed V9 policy with a frozen semantic digest", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.policyId).toBe("safety-score-v9");
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("active");
-    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("9.03");
+    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("9.04");
     // ROTATION-1 (owner rulings 2026-07-23): share-band materiality 0.10/0.25, T5 credit 10,
     // undisclosedFeeRouteScoreCeiling 52, commodity-allocated reserve class and
     // non-counterparty reserve-issuer concentration exemption, plus the
@@ -35,7 +35,7 @@ describe("Safety Score v9 methodology policy", () => {
     // ceiling as missing-peg-input) for deviations withheld by the $1M
     // supply floor - both measured-structural, both score-neutral clones.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "44e4f344d3ab1c75b9ca24a1b1f8532efe5fb25901f9d1a9c11b45f39385529d",
+      "c61656e68732b3b045b23a750025e23e6f7fce09ab97b516fe1f941701525082",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);

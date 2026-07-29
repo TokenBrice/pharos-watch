@@ -74,3 +74,24 @@ export const SAFETY_SCORE_V9_UNRECOGNIZED_CHAIN_LABEL_TOLERANCE: MethodologyChan
   commits: [],
   reconstructed: false,
 };
+
+export const SAFETY_SCORE_V9_UNSUPPORTED_EXIT_COVERAGE: MethodologyChangelogEntry = {
+  version: "9.04",
+  title: "Unsupported coverage separated from producer failure",
+  date: "2026-07-29",
+  effectiveAt: 1785353342,
+  summary:
+    "Exit-coverage, route-evidence, and dependency gaps that no supported adapter can observe are now attributed to unsupported methodology instead of transient producer failure, deployment census coverage is reported per chain, and a peg with no usable price but an adverse record becomes measured adverse.",
+  impact: [
+    "Deployment census coverage is evaluated per chain: deployments on chains with no supported liquidity provider are reported as an explicit unsupported remainder instead of leaving the whole asset's coverage unknown, so a clean supported scope publishes real coverage",
+    "An exit surface with no retained pool, or with retained pools but no score-eligible execution-capability pool, is attributed to unsupported methodology when its census remainder is methodology-unsupported and no execution-capability gate applies; genuine producer failures keep producer-failed responsibility",
+    "Runtime route evidence for that unsupported cohort is reported as unsupported rather than missing, so later adapter coverage silently returns those assets to scoring without a responsibility rewrite",
+    "Unreviewed dependency relationships are unsupported methodology when the asset has no live-reserve adapter and remain producer-failed when one exists, correcting the misattributed hubble USDH dependency gap",
+    "Zero-pool and zero-exact-capable exit surfaces carry their own gap messages; the reviewed-capability-pool message is now emitted only where reviewed execution-capability pools actually exist",
+    "An asset with no usable current price whose tracked peg record is already adverse is classified as measured adverse instead of a producer feed failure, while a clean record with no usable price stays a quiet observation and the deviation is never coerced to zero",
+    "The unreachable subthreshold unrecognized chain-label pool reason is retired from the reason registry",
+    "Reclassified surfaces stay bounded and remain at the same evidence ceiling, so pillar weights, score aggregation, caps, and grade thresholds are unchanged and no published grade moves",
+  ],
+  commits: [],
+  reconstructed: false,
+};
