@@ -4,9 +4,8 @@ import { evaluateValidatedV9FactSet, type V9EvaluatedSet } from "@shared/lib/saf
 import type { V9ExitHolderEligibility } from "@shared/lib/safety-score-v9/exit";
 import { DEX_ROUTE_SOURCE_CAPABILITIES } from "@shared/lib/p4-exit-route-capacity";
 import { assertV9ValidatedPolicyEnvelope, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { buildSafetyScoreV9Response } from "@shared/lib/safety-score-v9/public";
-import { sha256Hex } from "@shared/lib/sha256";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { CompiledV9FactSetV3 } from "@shared/types/safety-score-v9-facts";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
@@ -150,10 +149,6 @@ export interface SafetyScoreV9PublicationResult {
   producerCapabilityDigest: string;
   quarantines: readonly V9AssetQuarantine[];
   quarantineAffectedAssetIds: readonly string[];
-}
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function sortedUnique(values: Iterable<string>): string[] {
@@ -328,27 +323,23 @@ function deepFreeze<T>(value: T): Readonly<T> {
   return value;
 }
 
-function digest(domain: string, payload: unknown): string {
-  return sha256Hex(stableJsonStringifyV1({ domain, payload }));
-}
-
 function computeSafetyScoreV9CompilerFactSchemaDigest(
   identityValue: SafetyScoreV9CompilerFactSchemaIdentityV1,
 ): string {
   const identity = SafetyScoreV9CompilerFactSchemaIdentityV1Schema.parse(identityValue);
-  return digest(SAFETY_SCORE_V9_COMPILER_FACT_SCHEMA_DIGEST_DOMAIN, identity);
+  return domainDigest(SAFETY_SCORE_V9_COMPILER_FACT_SCHEMA_DIGEST_DOMAIN, identity);
 }
 
 export function computeSafetyScoreV9ProducerCapabilityDigest(
   identityValue: SafetyScoreV9ProducerCapabilityIdentityV1,
 ): string {
   const identity = SafetyScoreV9ProducerCapabilityIdentityV1Schema.parse(identityValue);
-  return digest(SAFETY_SCORE_V9_PRODUCER_CAPABILITY_DIGEST_DOMAIN, identity);
+  return domainDigest(SAFETY_SCORE_V9_PRODUCER_CAPABILITY_DIGEST_DOMAIN, identity);
 }
 
 export function computeSafetyScoreV9CandidateId(identityValue: SafetyScoreV9CandidateIdentityV1): string {
   const identity = SafetyScoreV9CandidateIdentityV1Schema.parse(identityValue);
-  return `safety-score-v9:v1:${digest(SAFETY_SCORE_V9_CANDIDATE_ID_DIGEST_DOMAIN, identity)}`;
+  return `safety-score-v9:v1:${domainDigest(SAFETY_SCORE_V9_CANDIDATE_ID_DIGEST_DOMAIN, identity)}`;
 }
 
 function compilerFactSchemaIdentity(
@@ -402,7 +393,7 @@ function producerCapabilityIdentity(
       peg: sortedUnique(fixedInput.inputMethodologyVersions.pegScore),
     },
     dexRouteCapabilityMatrixVersions: [
-      `declared-source-capabilities:v1:${digest(
+      `declared-source-capabilities:v1:${domainDigest(
         "safety-score-v9.dex-route-source-capabilities.v1",
         DEX_ROUTE_SOURCE_CAPABILITIES,
       )}`,
@@ -504,7 +495,7 @@ function buildSafetyScoreV9CandidatePipeline(
     input.releaseCandidateId === undefined
       ? computeSafetyScoreV9CandidateId(candidateIdentity)
       : ReleaseCandidateIdSchema.parse(input.releaseCandidateId);
-  const publicationGenerationId = `report-cards:v9:v1:${digest("safety-score-v9.publication.v1", {
+  const publicationGenerationId = `report-cards:v9:v1:${domainDigest("safety-score-v9.publication.v1", {
     candidateId,
     baseInputGenerationId: evaluatedSet.baseInputGenerationId,
     factSetDigest: evaluatedSet.factSetDigest,
@@ -607,7 +598,7 @@ export function buildSafetyScoreV9PublicationFromNormalizedInput(
     input.releaseCandidateId === undefined
       ? computeSafetyScoreV9CandidateId(candidateIdentity)
       : ReleaseCandidateIdSchema.parse(input.releaseCandidateId);
-  const publicationGenerationId = `report-cards:v9:v1:${digest("safety-score-v9.publication.v1", {
+  const publicationGenerationId = `report-cards:v9:v1:${domainDigest("safety-score-v9.publication.v1", {
     candidateId,
     baseInputGenerationId: evaluatedSet.baseInputGenerationId,
     factSetDigest: evaluatedSet.factSetDigest,

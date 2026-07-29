@@ -1,4 +1,5 @@
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -294,10 +295,6 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
 export const CENTRIFUGE_BURN_MINT_ASSET_IDS = Object.freeze(
   Object.keys(CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES).sort(compareText),
 );
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function routeChain(routeId: string): string | null {
   const separator = routeId.indexOf(":");

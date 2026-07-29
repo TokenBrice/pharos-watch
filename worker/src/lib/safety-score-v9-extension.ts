@@ -6,7 +6,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
-import { sha256Hex } from "@shared/lib/sha256";
+import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
@@ -116,10 +116,6 @@ interface PreparedDependency {
   issueCodes: string[];
 }
 
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type ResearchEvidence = ExtensionAsset["researchEvidence"][number];
 type ComponentEvidence = ExtensionAsset["componentEvidence"][number];
@@ -141,10 +137,6 @@ const DEPLOYMENT_MATERIAL_SHARE_THRESHOLD =
 // RULED D-J (2026-07-19): below this floor the unrecognized-chain-label pool is
 // a bounded/diagnostic condition; at or above it the pool stays fail-closed.
 const COMMON_MODE_MATERIAL_SHARE_THRESHOLD = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.commonModeShareThreshold;
-
-function digest(domain: string, payload: unknown): string {
-  return sha256Hex(stableJsonStringifyV1({ domain, payload }));
-}
 
 const ISSUER_ENTITY_STOPWORDS = new Set([
   "llc",
@@ -405,7 +397,7 @@ export function buildReviewedReserveClassifications(
     });
   }
 
-  const reviewKey = digest("safety-score-v9.reserve-classification-review.v1", review).slice(0, 16);
+  const reviewKey = domainDigest("safety-score-v9.reserve-classification-review.v1", review).slice(0, 16);
   return classifications.map((classification) => {
     const live = liveByExposureKey.get(classification.exposureKey);
     const match = reviewedByExposureKey.get(classification.exposureKey);
@@ -700,7 +692,7 @@ class ReviewEvidenceBuilder {
         )
       : [null];
     const evidenceKeys = sources.map((source, index) => {
-      const contentSha256 = digest("safety-score-v9.reviewed-metadata-evidence.v1", {
+      const contentSha256 = domainDigest("safety-score-v9.reviewed-metadata-evidence.v1", {
         assetId: this.assetId,
         sourceId: args.sourceId,
         reviewedAt: args.reviewedAt,
@@ -903,7 +895,7 @@ function adaptMintControl(
       : reviewComplete
         ? "none"
         : "unknown";
-  const controlKey = `mint-meta:${assetId}:${index}:${digest("safety-score-v9.mint-control-key.v1", {
+  const controlKey = `mint-meta:${assetId}:${index}:${domainDigest("safety-score-v9.mint-control-key.v1", {
     chain: control.chain ?? null,
     address: control.address?.toLowerCase() ?? null,
     label: control.label,
@@ -1518,7 +1510,7 @@ function adaptOracleReview(
             ),
             controlKey: null,
             mechanismKey: complete
-              ? `oracle-mechanism:${meta.id}:${branchKind}:${digest("safety-score-v9.oracle-branch.v1", {
+              ? `oracle-mechanism:${meta.id}:${branchKind}:${domainDigest("safety-score-v9.oracle-branch.v1", {
                   branchKind,
                   branches: profile.branches,
                 }).slice(0, 16)}`
@@ -1558,7 +1550,7 @@ function bridgeControl(
   const mintsRepresentation = capabilities.includes("bridge-mint");
   const reviewed = route.reviewDisposition === "reviewed";
   return {
-    controlKey: `bridge-meta:${assetId}:${digest("safety-score-v9.bridge-control-key.v1", route.id).slice(0, 20)}`,
+    controlKey: `bridge-meta:${assetId}:${domainDigest("safety-score-v9.bridge-control-key.v1", route.id).slice(0, 20)}`,
     deploymentKey: route.id,
     controlKind: "bridge",
     scope: "deployment",
@@ -1585,7 +1577,7 @@ function unmatchedBridgeControl(
   route: NonNullable<ExtensionAsset["supplyReview"]>["selectedBridgeRoutes"][number],
 ): ControlOverlay {
   return {
-    controlKey: `bridge-supply:${assetId}:${digest("safety-score-v9.unmatched-bridge-control-key.v1", route.deploymentRouteKey).slice(0, 20)}`,
+    controlKey: `bridge-supply:${assetId}:${domainDigest("safety-score-v9.unmatched-bridge-control-key.v1", route.deploymentRouteKey).slice(0, 20)}`,
     deploymentKey: route.deploymentRouteKey,
     controlKind: "bridge",
     scope: "deployment",
@@ -1631,7 +1623,7 @@ function representationGroupBridgeControl(
         domain.key.startsWith("contract:"),
     ) ?? failureDomains[0];
   return {
-    controlKey: `bridge-group:${assetId}:${digest(
+    controlKey: `bridge-group:${assetId}:${domainDigest(
       "safety-score-v9.representation-group-bridge-control-key.v1",
       route.deploymentRouteKey,
     ).slice(0, 20)}`,
@@ -2148,7 +2140,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     clockSec,
   );
   const registryObservedAtSec = boundedObservedAt(fixedInput.updatedAt, clockSec);
-  const liveReservesGenerationDigest = digest("safety-score-v9.live-reserves.v1", {
+  const liveReservesGenerationDigest = domainDigest("safety-score-v9.live-reserves.v1", {
     reserves: fixedInput.liveReserveMap,
     provenance: fixedInput.liveReserveProvenanceMap,
   });
@@ -2160,12 +2152,12 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     fixedInput.updatedAt,
     clockSec,
   );
-  const pegGenerationDigest = digest("safety-score-v9.peg.v1", {
+  const pegGenerationDigest = domainDigest("safety-score-v9.peg.v1", {
     pegDataById: fixedInput.pegDataById,
     navPriceById: fixedInput.navPriceById ?? {},
     activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
   });
-  const researchOverlaysGenerationDigest = digest("safety-score-v9.research-overlays.v3", {
+  const researchOverlaysGenerationDigest = domainDigest("safety-score-v9.research-overlays.v3", {
     registryRevision: fixedInput.registryRevision,
     mechanismReviewOverlaysDigest: SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST,
     operationalResilienceOverlaysDigest: SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST,

@@ -1,9 +1,6 @@
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { computeSafetyScoreV9ReserveExposureKey } from "./safety-score-v9-fact-set";
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 export function buildSafetyScoreV9ReserveClassifications(slices: readonly ReserveSlice[]) {
   const byKey = new Map<string, ReserveSlice>();

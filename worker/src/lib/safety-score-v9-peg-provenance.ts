@@ -1,5 +1,5 @@
 import { computePegScore, type PegScoreResult } from "@shared/lib/peg-score";
-import { sha256Hex } from "@shared/lib/sha256";
+import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   DEPEG_EVENT_CLOSE_REASON_VALUES,
@@ -342,7 +342,7 @@ export const SafetyScoreV9PegProvenanceSummarySchema = z
       }
     }
     const { contentSha256: _contentSha256, ...payload } = summary;
-    if (summary.contentSha256 !== digest(SUMMARY_DIGEST_DOMAIN, payload)) {
+    if (summary.contentSha256 !== domainDigest(SUMMARY_DIGEST_DOMAIN, payload)) {
       ctx.addIssue({
         code: "custom",
         path: ["contentSha256"],
@@ -378,7 +378,7 @@ const SafetyScoreV9PegProvenanceSeedSchema = z
   .superRefine((seed, ctx) => {
     const { contentSha256, ...payload } = seed;
     if (
-      contentSha256 !== digest(EXACT_SEED_DIGEST_DOMAIN, payload)
+      contentSha256 !== domainDigest(EXACT_SEED_DIGEST_DOMAIN, payload)
     ) {
       ctx.addIssue({
         code: "custom",
@@ -443,10 +443,6 @@ export interface CaptureSafetyScoreV9PegProvenanceInput {
 }
 
 type CanonicalPegEvent = z.infer<typeof PegProvenanceEventSchema>;
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function canonicalEventOrder(left: CanonicalPegEvent, right: CanonicalPegEvent): number {
   return (
@@ -610,10 +606,6 @@ function updateClassStats(
       : Math.max(stats.latestEventAtSec, event.startedAt);
 }
 
-function digest(domain: string, payload: unknown): string {
-  return sha256Hex(stableJsonStringifyV1({ domain, payload }));
-}
-
 function parseEvent(value: DepegEvent, index: number): CanonicalPegEvent {
   const parsed = PegProvenanceEventSchema.safeParse(value);
   if (!parsed.success) {
@@ -774,7 +766,7 @@ export function buildSafetyScoreV9PegProvenanceSummary(
     clockSec,
   );
 
-  const eventSetSha256 = digest(EVENT_SET_DIGEST_DOMAIN, {
+  const eventSetSha256 = domainDigest(EVENT_SET_DIGEST_DOMAIN, {
     assetId,
     clockSec,
     trackingStartSec,
@@ -808,7 +800,7 @@ export function buildSafetyScoreV9PegProvenanceSummary(
 
   return SafetyScoreV9PegProvenanceSummarySchema.parse({
     ...summaryPayload,
-    contentSha256: digest(SUMMARY_DIGEST_DOMAIN, summaryPayload),
+    contentSha256: domainDigest(SUMMARY_DIGEST_DOMAIN, summaryPayload),
   });
 }
 
@@ -879,7 +871,7 @@ export function buildSafetyScoreV9PegProvenanceSeedCacheEntry(input: {
   };
   const seed = SafetyScoreV9PegProvenanceSeedSchema.parse({
     ...payload,
-    contentSha256: digest(EXACT_SEED_DIGEST_DOMAIN, payload),
+    contentSha256: domainDigest(EXACT_SEED_DIGEST_DOMAIN, payload),
   });
   const value = stableJsonStringifyV1(seed);
   const storedBytes = new TextEncoder().encode(value).byteLength;

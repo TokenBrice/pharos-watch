@@ -1,4 +1,6 @@
 import type { V9FailureDomainRef } from "../../types/safety-score-v9-fact-primitives";
+import { sha256Hex } from "../sha256";
+import { stableJsonStringifyV1 } from "../stable-json";
 
 export function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -20,6 +22,10 @@ export function canonicalDomains(domains: readonly V9FailureDomainRef[]): V9Fail
   return [...new Map(domains.map((domain) => [domainKey(domain), domain])).values()].sort((left, right) =>
     compareText(domainKey(left), domainKey(right)),
   );
+}
+
+export function domainDigest(domain: string, payload: unknown): string {
+  return sha256Hex(stableJsonStringifyV1({ domain, payload }));
 }
 
 export function deepFreeze<T>(value: T): Readonly<T> {

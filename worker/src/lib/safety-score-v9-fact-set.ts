@@ -26,7 +26,7 @@ import {
   createV9FactGapV3,
   optionalExitV9Path,
 } from "@shared/lib/safety-score-v9/reasons";
-import { sha256Hex } from "@shared/lib/sha256";
+import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
@@ -103,10 +103,6 @@ import {
 const CanonicalTextSchema = z.string().trim().min(1);
 const UnixSecondsSchema = z.number().int().nonnegative();
 const FractionSchema = z.number().finite().min(0).max(1);
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => string) {
   return z
@@ -703,10 +699,6 @@ interface AssetBuildContext {
   readonly gaps: Map<string, V9FactGapV3>;
 }
 
-function digest(domain: string, payload: unknown): string {
-  return sha256Hex(stableJsonStringifyV1({ domain, payload }));
-}
-
 function projectResearchOverlayPayload(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(projectResearchOverlayPayload);
   if (value === null || typeof value !== "object") return value;
@@ -898,7 +890,7 @@ function buildOperationalResilienceFact(context: AssetBuildContext): V9Operation
             observedAtSec: publishedAtSec,
             publishedAtSec,
             url: source.url,
-            contentSha256: digest("safety-score-v9.operational-resilience-source.v1", {
+            contentSha256: domainDigest("safety-score-v9.operational-resilience-source.v1", {
               assetId: overlay.assetId,
               source,
             }),
@@ -1340,7 +1332,7 @@ function buildDependencies(context: AssetBuildContext): V9EffectiveDependenciesV
               sourceGenerationId: source.generationId,
               disposition: "observed",
               observedAtSec: source.observedAtSec,
-              contentSha256: digest("safety-score-v9.effective-dependencies.v1", overlay),
+              contentSha256: domainDigest("safety-score-v9.effective-dependencies.v1", overlay),
               maxAgeSec: source.maxAgeSec,
             },
             context.fixedInput.clockSec,
@@ -1394,7 +1386,7 @@ function buildDependencies(context: AssetBuildContext): V9EffectiveDependenciesV
 }
 
 export function computeSafetyScoreV9ReserveExposureKey(slice: ReserveSlice): string {
-  return `reserve:${digest("safety-score-v9.reserve-exposure-key.v1", {
+  return `reserve:${domainDigest("safety-score-v9.reserve-exposure-key.v1", {
     name: slice.name.trim(),
     coinId: slice.coinId ?? null,
     dependencyType: slice.depType ?? null,
@@ -1417,7 +1409,7 @@ function reserveSourceEvidence(
         sourceGenerationId: source.generationId,
         disposition: "observed",
         observedAtSec: provenance?.fetchedAt ?? source.observedAtSec,
-        contentSha256: digest("safety-score-v9.reserve-exposure.v1", slices),
+        contentSha256: domainDigest("safety-score-v9.reserve-exposure.v1", slices),
         maxAgeSec: source.maxAgeSec,
       },
       context.fixedInput.clockSec,
@@ -1744,7 +1736,7 @@ function routeEvidence(
         sourceGenerationId: retained ? context.extension.sources.researchOverlays.generationId : generationId,
         disposition,
         observedAtSec: observation.observedAt,
-        contentSha256: digest("safety-score-v9.route-observation.v1", observation),
+        contentSha256: domainDigest("safety-score-v9.route-observation.v1", observation),
         maxAgeSec,
         rejection,
       },
@@ -2182,7 +2174,7 @@ function buildRoutes(context: AssetBuildContext): {
             sourceGenerationId: context.fixedInput.dexGenerationId,
             disposition: "observed",
             observedAtSec: context.fixedInput.dexLiqMap[context.asset.assetId]!.updatedAt,
-            contentSha256: digest("safety-score-v9.exit-route-observation-coverage.v1", emptyCoverage),
+            contentSha256: domainDigest("safety-score-v9.exit-route-observation-coverage.v1", emptyCoverage),
             maxAgeSec: context.extension.routeFreshness.dexMaxAgeSec,
           },
           context.fixedInput.clockSec,
@@ -2706,7 +2698,7 @@ function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
         sourceGenerationId: source.generationId,
         disposition: "observed",
         observedAtSec,
-        contentSha256: digest("safety-score-v9.peg-fact.v1", peg),
+        contentSha256: domainDigest("safety-score-v9.peg-fact.v1", peg),
         maxAgeSec: source.maxAgeSec,
       },
       context.fixedInput.clockSec,
@@ -2847,7 +2839,7 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
         sourceGenerationId: source.generationId,
         disposition: "observed",
         observedAtSec,
-        contentSha256: digest("safety-score-v9.aggregate-supply.v1", aggregate),
+        contentSha256: domainDigest("safety-score-v9.aggregate-supply.v1", aggregate),
         maxAgeSec: SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
       },
       context.fixedInput.clockSec,
@@ -2922,7 +2914,7 @@ function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
           context.asset.assetId,
           source.observedAtSec,
         ),
-        contentSha256: digest("safety-score-v9.chain-supply.v1", chainRows),
+        contentSha256: domainDigest("safety-score-v9.chain-supply.v1", chainRows),
         maxAgeSec: source.maxAgeSec,
       },
       context.fixedInput.clockSec,
@@ -4071,7 +4063,7 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
     );
   }
   assertSafetyScoreV9ExactExtensionAssets(fixedInput, extension);
-  const researchPayloadSha256 = digest(
+  const researchPayloadSha256 = domainDigest(
     "safety-score-v9.research-overlay.v1",
     projectResearchOverlayPayload(extension.assets),
   );
@@ -4082,7 +4074,7 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
       ? []
       : [{ assetId: asset.assetId, cdpStressCoverage: asset.cdpStressCoverage }],
   );
-  const shockCoveragePayloadSha256 = digest("safety-score-v9.cdp-shock-coverage-source.v1", shockCoveragePayload);
+  const shockCoveragePayloadSha256 = domainDigest("safety-score-v9.cdp-shock-coverage-source.v1", shockCoveragePayload);
   const shockCoverageObservedAtSec = shockCoveragePayload.reduce(
     (latest, entry) => Math.max(latest, entry.cdpStressCoverage.source?.block.timestampUnix ?? 0),
     0,
@@ -4118,7 +4110,7 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
       },
       liveReserves: {
         generationId: extension.sources.liveReserves.generationId,
-        payloadSha256: digest("safety-score-v9.live-reserves.v1", {
+        payloadSha256: domainDigest("safety-score-v9.live-reserves.v1", {
           reserves: fixedInput.liveReserveMap,
           provenance: fixedInput.liveReserveProvenanceMap,
         }),
@@ -4126,7 +4118,7 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
       },
       chainSupply: {
         generationId: extension.sources.chainSupply.generationId,
-        payloadSha256: digest(
+        payloadSha256: domainDigest(
           "safety-score-v9.chain-supply.v1",
           safetyScoreV9ChainSupplySourcePayload(fixedInput),
         ),
@@ -4134,7 +4126,7 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
       },
       peg: {
         generationId: extension.sources.peg.generationId,
-        payloadSha256: digest("safety-score-v9.peg.v1", {
+        payloadSha256: domainDigest("safety-score-v9.peg.v1", {
           pegDataById: fixedInput.pegDataById,
           navPriceById: fixedInput.navPriceById ?? {},
           activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,

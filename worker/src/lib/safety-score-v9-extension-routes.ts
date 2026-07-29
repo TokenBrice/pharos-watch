@@ -7,6 +7,7 @@ import {
   type RedemptionBackstopConfig,
 } from "@shared/lib/redemption-backstops";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
 import {
   getDexMeasuredExecutionFreshnessMaxSec,
@@ -27,10 +28,6 @@ type RouteOutputReview = NonNullable<RouteReview["output"]>;
 type RouteValuation = NonNullable<RouteOutputReview["valuation"]>;
 type RedemptionSettlementModel = RedemptionBackstopConfig["settlementModel"];
 type ComposedDexExit = NonNullable<RedemptionBackstopConfig["v9ComposedDexExit"]>;
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function capacityPoints(observation: ExitRouteObservation): RouteReview["executionCosts"] {
   const points = observation.capacityCurve ?? [

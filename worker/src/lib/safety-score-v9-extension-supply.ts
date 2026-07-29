@@ -5,6 +5,7 @@ import {
   V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX,
 } from "@shared/lib/safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
 import { safetyScoreV9ChainRows } from "./safety-score-v9-supply-attribution";
@@ -16,10 +17,6 @@ import {
 
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type SupplyReview = NonNullable<ExtensionAsset["supplyReview"]>;
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function canonicalChainKey(raw: string): string {
   return resolveChainId(raw) ?? raw.toLowerCase();
