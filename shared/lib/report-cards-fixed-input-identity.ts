@@ -122,7 +122,7 @@ function normalizeFixedInputExitRouteObservation<T extends ExitRouteObservation>
   } as T;
 }
 
-export function normalizeFixedInputExitRouteObservations<T extends ExitRouteObservation>(
+function normalizeFixedInputExitRouteObservations<T extends ExitRouteObservation>(
   observations: readonly T[] | null | undefined,
 ): T[] | null | undefined {
   if (observations == null) return observations;

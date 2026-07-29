@@ -228,7 +228,6 @@ const EXPORT_ALLOWLIST = new Set([
   "worker/src/api/telegram-webhook-resolution.ts::resolveCoinTargets",
   "worker/src/cron/blacklist/evm-source.ts::parseEvmLogs",
   "worker/src/cron/blacklist/evm-source.ts::resolveRpcLogTarget",
-  "worker/src/cron/dex-liquidity/challenger-persistence.ts::detectDexPriceChallengerTableState",
   "worker/src/cron/dex-liquidity/challenger-persistence.ts::selectDexPriceChallengerRowsFromPools",
   "worker/src/cron/dex-liquidity/geckoterminal-shared.ts::getGtPoolKind",
   // Consumed by worker/scripts/generate-safety-score-v9-b1-root-ledger.ts
