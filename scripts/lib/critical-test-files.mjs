@@ -38,7 +38,6 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/cron/__tests__/telegram-alert-target-effects.test.ts",
   "worker/src/cron/__tests__/telegram-authoritative-target-plan-contract.test.ts",
   "worker/src/cron/__tests__/telegram-authoritative-target-plans-sqlite.test.ts",
-  "worker/src/cron/__tests__/telegram-legacy-overflow-import.test.ts",
   "worker/src/cron/__tests__/telegram-fresh-delivery-fence.test.ts",
   "worker/src/cron/__tests__/telegram-pending-lifecycle-migration.test.ts",
   "worker/src/cron/__tests__/telegram-pending-preference-revalidation.test.ts",

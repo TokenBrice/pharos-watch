@@ -10,7 +10,6 @@ import {
   formatConsolidatedMessageSpy,
   makeDewsOverflowPlan,
   makeSafetySnapshotCache,
-  mockInspectLegacyOverflowBacklog,
   mockRecordOutcome,
   mockSendBatch,
   mockShouldAttemptFetch,
@@ -333,18 +332,8 @@ describe("dispatchTelegramAlerts", () => {
     });
   });
 
-  it("drains a pending target produced by the legacy importer during an eventless run", async () => {
+  it("drains a legacy-source pending target during an eventless run", async () => {
     const now = Math.floor(Date.now() / 1000);
-    mockInspectLegacyOverflowBacklog.mockResolvedValue({
-      state: "imported",
-      digest: "a".repeat(64),
-      sourceEventId: "telegram-source:legacy-overflow:v1:imported",
-      observedBytes: 1_024,
-      observedPlanCount: 1,
-      importCursor: 1,
-      importedTargetCount: 1,
-      errorClass: null,
-    });
     const harness = createDispatchHarness();
     healthySources(harness, { dews: [{ stablecoinId: "usdc-circle", score: 12, band: "CALM" }] });
     harness.seed({
@@ -371,7 +360,6 @@ describe("dispatchTelegramAlerts", () => {
     expect(formatConsolidatedMessageSpy).not.toHaveBeenCalled();
     expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "chat-imported" })]);
     expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_pending_alerts").get()).toEqual({ count: 0 });
-    expect(mockInspectLegacyOverflowBacklog).toHaveBeenCalledWith(harness.db, now);
   });
 
   it("prunes forgotten chats from the stored overflow plan backlog", async () => {

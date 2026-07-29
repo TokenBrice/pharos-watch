@@ -40,7 +40,6 @@ import {
   recoverIncompleteTelegramSourceEvent,
 } from "./dispatch-telegram-source-lifecycle";
 import { executeAuthoritativeFanoutPath } from "./dispatch-telegram-authoritative-path";
-import { inspectAndImportLegacyOverflowBacklog } from "./telegram-legacy-overflow-import";
 import { dispatchFreezeAlertOutbox } from "./telegram-freeze-outbox";
 
 export type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
@@ -100,7 +99,6 @@ async function dispatchTelegramAlertsImpl(
   });
   const dispatchStartedAtMs = Date.now();
   const dispatchNowSec = Math.floor(dispatchStartedAtMs / 1000);
-  const legacyOverflowImport = await inspectAndImportLegacyOverflowBacklog(db, dispatchNowSec);
   const allowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
   if (!allowed) {
     const nowSec = dispatchNowSec;
@@ -183,8 +181,6 @@ async function dispatchTelegramAlertsImpl(
             : 0,
           reserveDriftIds: snapshotState.currentReserveDriftIds.length,
           chatsWithActiveSnooze,
-          legacyOverflowImportState: legacyOverflowImport.state,
-          legacyOverflowImportCursor: legacyOverflowImport.importCursor,
           freezeOutboxState: freezeOutbox.state,
           freezeObserved: freezeOutbox.observed,
           freezeQueued: freezeOutbox.queued,

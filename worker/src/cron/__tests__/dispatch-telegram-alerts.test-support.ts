@@ -23,7 +23,6 @@ const STABLECOINS_CACHE_WITH_USDC = JSON.stringify({
 
 const mockShouldAttemptFetch = vi.fn();
 const mockRecordOutcome = vi.fn();
-const mockInspectLegacyOverflowBacklog = vi.fn();
 const fixtureSqliteDatabases: DatabaseSync[] = [];
 
 function safetyScoreIdentity(publicationGenerationId: string) {
@@ -45,14 +44,6 @@ vi.mock("../../lib/circuit-breaker", () =>
     recordOutcomeFn: mockRecordOutcome,
   }),
 );
-
-vi.mock("../telegram-legacy-overflow-import", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../telegram-legacy-overflow-import")>();
-  return {
-    ...actual,
-    inspectAndImportLegacyOverflowBacklog: mockInspectLegacyOverflowBacklog,
-  };
-});
 
 const mockSendToChat = vi.fn();
 const mockSendBatch = vi.fn();
@@ -309,7 +300,6 @@ function resetDispatchTelegramAlertsTest() {
   formatConsolidatedMessageSpy.mockReset();
   mockShouldAttemptFetch.mockReset();
   mockRecordOutcome.mockReset();
-  mockInspectLegacyOverflowBacklog.mockReset();
   mockSendToChat.mockReset();
   mockSendBatch.mockReset();
   telegramDeliveryTranscript.length = 0;
@@ -318,16 +308,6 @@ function resetDispatchTelegramAlertsTest() {
 
   mockShouldAttemptFetch.mockResolvedValue(true);
   mockRecordOutcome.mockResolvedValue(undefined);
-  mockInspectLegacyOverflowBacklog.mockResolvedValue({
-    state: "absent",
-    digest: null,
-    sourceEventId: null,
-    observedBytes: 0,
-    observedPlanCount: null,
-    importCursor: 0,
-    importedTargetCount: 0,
-    errorClass: null,
-  });
   mockSendToChat.mockImplementation(async (chatId, html, botToken, options) =>
     recordDisabledTelegramDelivery(chatId, html, botToken, options ?? {}),
   );
@@ -909,7 +889,6 @@ export {
   STABLECOINS_CACHE_WITH_USDC,
   mockShouldAttemptFetch,
   mockRecordOutcome,
-  mockInspectLegacyOverflowBacklog,
   mockSendToChat,
   mockSendBatch,
   telegramDeliveryTranscript,

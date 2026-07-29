@@ -142,18 +142,16 @@ GROUP BY planning_outcome
 ORDER BY chats DESC;
 ```
 
-Bounded expiry debt and legacy cache import state:
+Bounded expiry debt:
 
 ```sql
 SELECT *
 FROM telegram_alert_target_expiry_progress
 WHERE state = 'running'
 ORDER BY updated_at, source_event_id;
-
-SELECT * FROM telegram_legacy_overflow_state WHERE singleton = 1;
 ```
 
-Do not manually advance a baseline while expiry debt remains, reset a plan generation, or route a `telegram-source:legacy-overflow:v1:*` source through the normal planner. The legacy importer owns that namespace.
+Do not manually advance a baseline while expiry debt remains or reset a plan generation. `telegram_legacy_overflow_state` and any surviving `telegram-source:legacy-overflow:v1:*` source rows are a terminal audit trail of the removed one-time importer; nothing writes them any more.
 
 Targets that missed one alert:
 

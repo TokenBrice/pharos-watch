@@ -193,8 +193,7 @@ Admin recovery paths preserve the same effect and queue boundaries. Chat diagnos
 - `worker/src/cron/dispatch-telegram-state.ts` (snapshot loading + assembly, the shared dispatch-state handoff to the five-minute lane, and the preset-failure counter)
 - `worker/src/cron/dispatch-telegram-routing.ts` (event routing → per-chat alert bundles, cheap chunk estimation, newest-first pre-format selection, quiet-hours filter, chunk expansion)
 - `worker/src/cron/dispatch-telegram-delivery.ts` (delivery orchestration: budget split, fresh send, retry/overflow enqueue, global backoff stamp)
-- `worker/src/cron/dispatch-telegram-overflow.ts` (strict rolling-compatible parser and chat-pruning helpers for the retired overflow cache)
-- `worker/src/cron/telegram-legacy-overflow-import.ts` (strict, cursorable import of the retired overflow cache into synthetic source/target/pending lineage)
+- `worker/src/cron/dispatch-telegram-overflow.ts` (overflow-aware subscriber queue construction and the forget-path chat-pruning re-export for the retired overflow cache)
 - `worker/src/cron/telegram-alert-target-plans.ts`, `telegram-alert-target-plans/*`, `telegram-alert-target-plan-contract.ts` (planning ownership, frozen subscriber ledger, rendered plans/items/pages, bounded expiry, delivery-open and pending handoff)
 - `worker/src/cron/telegram-alert-job-target-outcomes.ts` (exclusive final-state projection and job counter reconciliation)
 - `worker/src/cron/dispatch-telegram-terminal-targets.ts` (`pruneAlreadyTerminalSubscribers`: drops already-terminal dedupe-key targets before fresh send)
@@ -270,7 +269,7 @@ The provenance correction required no D1 migration because these two tables and 
   - `telegram_alert_planning_subscribers` — detection-time subscriber cohort and durable per-chat planning outcomes (Dispatch)
   - `telegram_alert_target_plan_pages` / `telegram_alert_target_plans` / `telegram_alert_target_plan_items` — rendered manifest, immutable page bounds, target counts, and source-item lineage (Dispatch)
   - `telegram_alert_target_expiry_progress` — bounded source-expiry reconciliation debt (Dispatch)
-  - `telegram_legacy_overflow_state` — strict one-time cache-import state and audit (Dispatch)
+  - `telegram_legacy_overflow_state` — terminal audit of the retired one-time cache import; no code reads or writes it since the importer was removed, and the table drop is a separate coordinated rollout
   - `telegram_alert_job_target_items` — normalized source-item coverage for consolidated target chunks (Dispatch)
   - `telegram_alert_dead_letters` — terminal failure audit (Queue)
   - `telegram_processed_updates` — webhook idempotency (Ingress)

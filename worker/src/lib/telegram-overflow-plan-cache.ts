@@ -2,7 +2,7 @@ import { isRecord } from "@shared/lib/type-guards";
 import { getCache, setCache } from "./db-cache";
 import { parseJsonObject } from "./json-parse";
 
-export const OVERFLOW_PLAN_CACHE_KEY = "telegram:dispatch-overflow-plan";
+const OVERFLOW_PLAN_CACHE_KEY = "telegram:dispatch-overflow-plan";
 const OVERFLOW_PLAN_CACHE_VERSION = 1;
 
 export async function pruneOverflowPlanBacklogForChat(

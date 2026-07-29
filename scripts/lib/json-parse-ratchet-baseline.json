@@ -30,7 +30,6 @@
   "worker/src/cron/dex-liquidity/orchestrator-analysis.ts": 1,
   "worker/src/cron/dex-liquidity/staging-merge.ts": 1,
   "worker/src/cron/digest/anthropic-stream.ts": 3,
-  "worker/src/cron/dispatch-telegram-overflow.ts": 1,
   "worker/src/cron/dispatch-telegram-state.ts": 1,
   "worker/src/cron/fetch-tbill-rate.ts": 1,
   "worker/src/cron/reserve-adapters/defillama.ts": 1,
