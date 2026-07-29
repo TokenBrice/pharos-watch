@@ -21,6 +21,7 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
+import { executeAdaptiveMulticall } from "./adaptive-multicall";
 import { forEachWithConcurrency } from "./concurrency";
 import { usdToRawAmount } from "./fixed-point";
 import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
@@ -768,11 +769,6 @@ export function decodeCurveCryptoSwapQuotePoint(
 }
 
 export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwapQuoteDependencies) {
-  interface AdaptiveChunkResult {
-    results: EvmMulticall3Result[];
-    budgetStopReasonsByLabel: Map<string, DexMeasuredExecutionBudgetStopReason>;
-  }
-
   async function executeAdaptiveChunk(input: {
     chain: string;
     calls: readonly EvmMulticall3Call[];
@@ -780,47 +776,28 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
     chainRpcs: Map<string, ChainRpcConfig>;
     signal?: AbortSignal;
     rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }): Promise<AdaptiveChunkResult> {
-    if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.chain)) {
-      return { results: [], budgetStopReasonsByLabel: new Map() };
-    }
-    let budgetStopReason: DexMeasuredExecutionBudgetStopReason | null = null;
-    const result = await dependencies.executeMulticall({
-      ...input,
-      onBudgetStop: (reason) => {
-        budgetStopReason = reason;
-      },
+  }) {
+    return executeAdaptiveMulticall<EvmMulticall3Call, EvmMulticall3Result>({
+      chain: input.chain,
+      calls: input.calls,
+      blockNumber: input.blockNumber,
+      signal: input.signal,
+      execute: ({ chain, calls, blockNumber, signal, onBudgetStop }) =>
+        dependencies.executeMulticall({
+          chain,
+          calls,
+          blockNumber,
+          chainRpcs: input.chainRpcs,
+          signal,
+          rpcBudget: input.rpcBudget,
+          onBudgetStop,
+        }),
+      failureResult: (call) => ({ label: call.label, success: false, returnData: "0x" }),
+      getLabel: (call) => call.label,
+      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs, budget: input.rpcBudget } : {}),
+      failedAttemptAccounting: "all",
+      unattemptedResult: "omit",
     });
-    if (result != null) {
-      input.rpcBudget?.recordChainResult(input.chain, true);
-      return { results: result, budgetStopReasonsByLabel: new Map() };
-    }
-    if (budgetStopReason == null && input.rpcBudget && Date.now() >= input.rpcBudget.deadlineMs) {
-      budgetStopReason = "runtime-deadline-exceeded";
-    }
-    if (budgetStopReason != null) {
-      return {
-        results: [],
-        budgetStopReasonsByLabel: new Map(input.calls.map((call) => [call.label, budgetStopReason!])),
-      };
-    }
-    input.rpcBudget?.recordChainResult(input.chain, false);
-    if (input.calls.length === 1) {
-      return {
-        results: [{ label: input.calls[0]!.label, success: false, returnData: "0x" }],
-        budgetStopReasonsByLabel: new Map(),
-      };
-    }
-    const midpoint = Math.ceil(input.calls.length / 2);
-    const left = await executeAdaptiveChunk({ ...input, calls: input.calls.slice(0, midpoint) });
-    const right = await executeAdaptiveChunk({ ...input, calls: input.calls.slice(midpoint) });
-    return {
-      results: [...left.results, ...right.results],
-      budgetStopReasonsByLabel: new Map([
-        ...left.budgetStopReasonsByLabel,
-        ...right.budgetStopReasonsByLabel,
-      ]),
-    };
   }
 
   return async function quoteCurveCryptoSwapRequests(input: {

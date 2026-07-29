@@ -287,7 +287,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
   });
 
-  it("does not trip the chain circuit while an oversized batch succeeds after halving", async () => {
+  it("preserves the Quoter adaptive multicall golden split", async () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);
     const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
@@ -323,7 +323,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     )).toBe(true);
   });
 
-  it("attributes a request rejected by the hard RPC budget to that budget", async () => {
+  it("preserves the Quoter adaptive multicall golden budget-exhaustion result", async () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);
     const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
@@ -353,7 +353,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     expect(outcomes[0]?.failureReason).toBe("request-budget-exhausted");
   });
 
-  it("attributes a quote that cannot start before the runtime deadline to that deadline", async () => {
+  it("preserves the Quoter adaptive multicall golden deadline result", async () => {
     const fixture = REPLAYS[0]!;
     const target = makeTarget(fixture);
     const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
@@ -371,6 +371,39 @@ describe("QuoterV2 pinned-block replay proofs", () => {
     });
 
     expect(outcomes[0]?.failureReason).toBe("runtime-deadline-exceeded");
+  });
+
+  it("preserves the Quoter adaptive multicall golden unattempted result", async () => {
+    const fixture = REPLAYS[0]!;
+    const target = makeTarget(fixture);
+    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 100,
+      deadlineMs: Date.now() + 60_000,
+    });
+
+    const outcomes = await quoteQuoterV2Requests({
+      requests: Array.from({ length: 4 }, () => ({
+        target,
+        inputUsd: 1_000,
+        endpointAddress: deployment.endpointAddress,
+      })),
+      blockNumber: fixture.blockNumber,
+      chainRpcs: new Map(),
+      rpcBudget: budget,
+    });
+
+    expect(rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mock.calls.map((call) => call[1].length)).toEqual([
+      4, 2, 1, 1,
+    ]);
+    expect(budget.openChains).toEqual([fixture.chain]);
+    expect(outcomes.map((outcome) => outcome.failureReason)).toEqual([
+      "quoter-rpc-unavailable",
+      "quoter-rpc-unavailable",
+      "quoter-rpc-unavailable",
+      "quoter-rpc-unavailable",
+    ]);
   });
 
   it("retries failed inner quotes as serialized singletons", async () => {

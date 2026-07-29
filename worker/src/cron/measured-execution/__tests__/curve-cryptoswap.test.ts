@@ -483,7 +483,7 @@ describe("Curve CryptoSwap quote transport", () => {
     });
   });
 
-  it("caps batches at eight and adaptively isolates a failed Multicall", async () => {
+  it("preserves the Curve adaptive multicall golden split", async () => {
     const sizes: number[] = [];
     const executeMulticall = vi.fn(async (input: { calls: readonly { label: string }[] }) => {
       sizes.push(input.calls.length);
@@ -507,7 +507,7 @@ describe("Curve CryptoSwap quote transport", () => {
     expect(outcomes.every((outcome) => outcome.point?.amountOutRaw === "0")).toBe(true);
   });
 
-  it("attributes only a budget-rejected pool call to the hard RPC budget", async () => {
+  it("preserves the Curve adaptive multicall golden budget-exhaustion result", async () => {
     const executeMulticall = vi.fn(async (input: {
       onBudgetStop?: (reason: "request-budget-exhausted") => void;
     }) => {
@@ -528,6 +528,61 @@ describe("Curve CryptoSwap quote transport", () => {
     });
 
     expect(outcomes[0]?.failureReason).toBe("request-budget-exhausted");
+  });
+
+  it("preserves the Curve adaptive multicall golden deadline result", async () => {
+    const executeMulticall = vi.fn(async () => null);
+    const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 100,
+      deadlineMs: Date.now() - 1,
+    });
+
+    const outcomes = await quote({
+      requests: [{
+        target: makeTarget(),
+        inputUsd: 1_000,
+        blockNumber: ETHEREUM_BLOCK,
+        endpointAddress: TWOCRYPTO_POOL,
+      }],
+      chainRpcs: new Map(),
+      rpcBudget: budget,
+    });
+
+    expect(outcomes[0]?.failureReason).toBe("runtime-deadline-exceeded");
+  });
+
+  it("preserves the Curve adaptive multicall golden unattempted result", async () => {
+    const sizes: number[] = [];
+    const executeMulticall = vi.fn(async (input: { calls: readonly { label: string }[] }) => {
+      sizes.push(input.calls.length);
+      return null;
+    });
+    const quote = createCurveCryptoSwapQuoteExecutor({ executeMulticall });
+    const budget = createDexMeasuredExecutionRpcBudget({
+      maxRequests: 100,
+      deadlineMs: Date.now() + 60_000,
+    });
+
+    const outcomes = await quote({
+      requests: Array.from({ length: 4 }, () => ({
+        target: makeTarget(),
+        inputUsd: 1_000,
+        blockNumber: ETHEREUM_BLOCK,
+        endpointAddress: TWOCRYPTO_POOL,
+      })),
+      chainRpcs: new Map(),
+      rpcBudget: budget,
+    });
+
+    expect(sizes).toEqual([4, 2]);
+    expect(budget.openChains).toEqual(["ethereum"]);
+    expect(outcomes.map((outcome) => outcome.failureReason)).toEqual([
+      "pool-revert",
+      "pool-revert",
+      "pool-revert",
+      "pool-revert",
+    ]);
   });
 
   it("does not relabel a genuine pool revert from an already stopped budget", async () => {
