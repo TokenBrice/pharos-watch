@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import CemeteryPage from "./page";
-import { extractJsonLd } from "@/test/json-ld";
+import { extractJsonLd, findJsonLdNode } from "@/test/json-ld";
 
 vi.mock("@/components/cemetery-client", () => ({
   CemeteryClient: () => <section>cemetery tombstones</section>,
@@ -22,7 +22,7 @@ describe("CemeteryPage", () => {
   it("emits cemetery Dataset downloads without site-data URLs", () => {
     const html = renderToStaticMarkup(<CemeteryPage />);
     const jsonLd = extractJsonLd(html);
-    const dataset = jsonLd.find((node) => node["@type"] === "Dataset");
+    const dataset = findJsonLdNode(jsonLd, (node) => node["@type"] === "Dataset", "Dataset");
 
     expect(dataset).toMatchObject({
       "@context": "https://schema.org",
