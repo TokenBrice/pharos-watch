@@ -6,6 +6,11 @@ import { describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/safety-score-version";
 import {
+  safetyScorePublicationIdentitiesAreComparable,
+  safetyScorePublicationIdentitiesMatch,
+} from "@shared/lib/safety-score-publication";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import {
   SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL,
   fetchSafetyScoreHistoryCompatibilityRows,
   fetchSafetyScoreHistoryV2Rows,
@@ -71,7 +76,9 @@ function v8Identity(overrides: Partial<SafetyScoreHistoryV8Identity> = {}): Safe
   };
 }
 
-function v9Identity() {
+function v9Identity(
+  overrides: Partial<SafetyScoreV9PublicationIdentity> = {},
+): SafetyScoreV9PublicationIdentity {
   return {
     model: "v9" as const,
     schemaVersion: 1 as const,
@@ -81,20 +88,43 @@ function v9Identity() {
     evaluationBuildDigest: digest("e"),
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
     publicationGenerationId: "safety-score-v9:300",
+    ...overrides,
   };
 }
 
 describe("Safety Score history V2", () => {
-  it("retains exact provenance while comparing ordinary publications within one model series", () => {
-    const current = v8Identity();
-    const refreshed = v8Identity({
+  it("matches the shared V8/V9 identity split and merge contract", () => {
+    const v8Current = v8Identity();
+    const v8Refreshed = v8Identity({
       baseInputGenerationId: `report-cards-input:v1:${digest("c")}`,
       publicationGenerationId: "report-cards:8.17:201",
     });
+    const v9Current = v9Identity();
+    const v9Refreshed = v9Identity({
+      baseInputGenerationId: `report-cards-input:v1:${digest("f")}`,
+      publicationGenerationId: "safety-score-v9:301",
+    });
+    const v9PolicyBoundary = v9Identity({ policyDigest: digest("f") });
 
-    expect(safetyScoreHistoryIdentitiesMatch(current, refreshed)).toBe(false);
-    expect(safetyScoreHistoryIdentitiesAreComparable(current, refreshed)).toBe(true);
-    expect(safetyScoreHistoryIdentitiesAreComparable(current, v9Identity())).toBe(false);
+    const comparisons = [
+      { left: v8Current, right: v8Current, exact: true, comparable: true },
+      { left: v8Current, right: v8Refreshed, exact: false, comparable: true },
+      { left: v9Current, right: v9Current, exact: true, comparable: true },
+      { left: v9Current, right: v9Refreshed, exact: false, comparable: true },
+      { left: v9Current, right: v9PolicyBoundary, exact: false, comparable: false },
+      { left: v8Current, right: v9Current, exact: false, comparable: false },
+    ];
+
+    for (const { left, right, exact, comparable } of comparisons) {
+      expect(safetyScoreHistoryIdentitiesMatch(left, right)).toBe(exact);
+      expect(safetyScoreHistoryIdentitiesAreComparable(left, right)).toBe(comparable);
+      expect(safetyScoreHistoryIdentitiesMatch(left, right)).toBe(
+        safetyScorePublicationIdentitiesMatch(left, right),
+      );
+      expect(safetyScoreHistoryIdentitiesAreComparable(left, right)).toBe(
+        safetyScorePublicationIdentitiesAreComparable(left, right),
+      );
+    }
   });
 
   it("dual-writes a legacy organic row and its immutable identity-rich V2 twin", async () => {

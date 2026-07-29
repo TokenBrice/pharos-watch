@@ -1,8 +1,30 @@
-import type { SafetyScorePublicationIdentity } from "../types/safety-score-publication";
+/**
+ * Runtime-neutral identity fields used to determine whether two publication
+ * records are exact matches or belong to the same organic series.
+ */
+export type SafetyScorePublicationIdentityContract =
+  | {
+      model: "v8";
+      schemaVersion: number;
+      methodologyVersion: string;
+      evaluationBuildDigest: string;
+      baseInputGenerationId: string;
+      publicationGenerationId: string;
+    }
+  | {
+      model: "v9";
+      schemaVersion: number;
+      methodologyVersion: string;
+      policyId: string;
+      policyDigest: string;
+      evaluationBuildDigest: string;
+      baseInputGenerationId: string;
+      publicationGenerationId: string;
+    };
 
 export function safetyScorePublicationIdentitiesMatch(
-  left: SafetyScorePublicationIdentity,
-  right: SafetyScorePublicationIdentity,
+  left: SafetyScorePublicationIdentityContract,
+  right: SafetyScorePublicationIdentityContract,
 ): boolean {
   if (
     left.model !== right.model ||
@@ -23,8 +45,8 @@ export function safetyScorePublicationIdentitiesMatch(
  * series. Model, schema, methodology, policy, and evaluator build may not.
  */
 export function safetyScorePublicationIdentitiesAreComparable(
-  left: SafetyScorePublicationIdentity,
-  right: SafetyScorePublicationIdentity,
+  left: SafetyScorePublicationIdentityContract,
+  right: SafetyScorePublicationIdentityContract,
 ): boolean {
   if (
     left.model !== right.model ||

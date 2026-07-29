@@ -4,6 +4,7 @@ import type {
   SafetyScoreV9PublicationIdentity,
 } from "../../types/safety-score-publication";
 import {
+  type SafetyScorePublicationIdentityContract,
   safetyScorePublicationIdentitiesAreComparable,
   safetyScorePublicationIdentitiesMatch,
 } from "../safety-score-publication";
@@ -42,9 +43,15 @@ function v9Identity(
 
 describe("Safety Score publication identity comparisons", () => {
   it("requires an exact V8 publication identity match", () => {
-    const identity = v8Identity();
+    const identity = v8Identity() satisfies SafetyScorePublicationIdentityContract;
 
     expect(safetyScorePublicationIdentitiesMatch(identity, { ...identity })).toBe(true);
+    expect(
+      safetyScorePublicationIdentitiesMatch(
+        identity,
+        v8Identity({ baseInputGenerationId: `report-cards-input:v1:${digest("f")}` }),
+      ),
+    ).toBe(false);
     expect(
       safetyScorePublicationIdentitiesMatch(
         identity,
@@ -74,9 +81,15 @@ describe("Safety Score publication identity comparisons", () => {
   });
 
   it("binds V9 matches and organic comparisons to the policy identity", () => {
-    const identity = v9Identity();
+    const identity = v9Identity() satisfies SafetyScorePublicationIdentityContract;
 
     expect(safetyScorePublicationIdentitiesMatch(identity, { ...identity })).toBe(true);
+    expect(
+      safetyScorePublicationIdentitiesMatch(
+        identity,
+        v9Identity({ publicationGenerationId: "report-cards:v9:101" }),
+      ),
+    ).toBe(false);
     expect(
       safetyScorePublicationIdentitiesMatch(
         identity,
